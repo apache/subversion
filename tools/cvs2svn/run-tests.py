@@ -59,12 +59,18 @@ tmp_dir = 'tmp'
 #----------------------------------------------------------------------
 
 
+class RunProgramException:
+  pass
+
 def run_program(program, error_re, *varargs):
   """Run PROGRAM with VARARGS, return stdout as a list of lines.
-  If there is any stderr, print it and then exit with error, unless
-  ERROR_RE is not None, in which case it is a string regular
-  expression that must match some line of the error output; if it
-  matches, return None, else return 1."""
+  If there is any stderr and ERROR_RE is None, raise
+  RunProgramException, and print the stderr lines if
+  svntest.main.verbose_mode is true.
+
+  If ERROR_RE is not None, it is a string regular expression that must
+  match some line of the error output; if it matches, return None,
+  else return 1."""
   out, err = svntest.main.run_command(program, 1, 0, *varargs)
   if err:
     if error_re:
@@ -72,11 +78,13 @@ def run_program(program, error_re, *varargs):
         if re.match(error_re, line):
           return None
       return 1  # We never matched, so return 1 for failure to match
-    print '\n%s said:\n' % program
-    for line in err:
-      print '   ' + line,
-    print
-    sys.exit(1)
+    else:
+      if svntest.main.verbose_mode:
+        print '\n%s said:\n' % program
+        for line in err:
+          print '   ' + line,
+        print
+      raise RunProgramException
   elif error_re:
     return 1
   return out
@@ -84,16 +92,20 @@ def run_program(program, error_re, *varargs):
 
 def run_cvs2svn(error_re, *varargs):
   """Run cvs2svn with VARARGS, return stdout as a list of lines.
-  If there is any stderr, print it and then exit with error, unless
-  ERROR_RE is not None, in which case it is a string regular
-  expression that must match some line of the error output; if it
-  matches, return None, else return 1."""
+  If there is any stderr and ERROR_RE is None, raise
+  RunProgramException, and print the stderr lines if
+  svntest.main.verbose_mode is true.
+
+  If ERROR_RE is not None, it is a string regular expression that must
+  match some line of the error output; if it matches, return None,
+  else return 1."""
   return run_program(cvs2svn, error_re, *varargs)
 
 
 def run_svn(*varargs):
   """Run svn with VARARGS; return stdout as a list of lines.
-  If stderr, print stderr lines and exit with error."""
+  If there is any stderr, raise RunProgramException, and print the
+  stderr lines if svntest.main.verbose_mode is true."""
   return run_program(svn, None, *varargs)
 
 
@@ -215,7 +227,7 @@ def erase(path):
 # The log_dictionary comes from parse_log(svn_repos).
 already_converted = { }
 
-def ensure_conversion(name, error_re=None, no_prune=None):
+def ensure_conversion(name, error_re=None, trunk_only=None, no_prune=None):
   """Convert CVS repository NAME to Subversion, but only if it has not
   been converted before by this invocation of this script.  If it has
   been converted before, do nothing.
@@ -231,8 +243,14 @@ def ensure_conversion(name, error_re=None, no_prune=None):
   the tuple (None, None, None) if it fails as expected, or (1, 1, 1)
   if it fails to fail in the expected way.
 
+  If TRUNK_ONLY is set, then pass the --trunk-only option to cvs2svn.py
+  if converting NAME for the first time.
+
   If NO_PRUNE is set, then pass the --no-prune option to cvs2svn.py
-  when converting.
+  if converting NAME for the first time.
+
+  If there is an error, but ERROR_RE is not set, then just raise
+  svntest.Failure.
 
   NAME is just one word.  For example, 'main' would mean to convert
   './test-data/main-cvsrepos', and after the conversion, the resulting
@@ -257,13 +275,29 @@ def ensure_conversion(name, error_re=None, no_prune=None):
       erase(svnrepos)
       erase(wc)
       
-      if no_prune:
-        ret = run_cvs2svn(error_re, '--trunk-only', '--no-prune',
-                          '--create', '-s',
-                          svnrepos, cvsrepos)
-      else:
-        ret = run_cvs2svn(error_re, '--trunk-only', '--create', '-s',
-                          svnrepos, cvsrepos)
+      ### I'd have preferred to assemble an arg list conditionally and
+      ### then apply() it, or use extended call syntax.  But that
+      ### didn't work as expected; I don't know why, it's never been a
+      ### problem before.  But since the trunk_only arg will soon go
+      ### away anyway, no point spending much effort on supporting it
+      ### elegantly.  Hence the four way conditional below.
+      try:
+        if no_prune:
+          if trunk_only:
+            ret = run_cvs2svn(error_re, '--trunk-only', '--no-prune',
+                              '--create', '-s',
+                              svnrepos, cvsrepos)
+          else:
+            ret = run_cvs2svn(error_re, '--no-prune', '--create', '-s',
+                              svnrepos, cvsrepos)
+        else:
+          if trunk_only:
+            ret = run_cvs2svn(error_re, '--trunk-only', '--create', '-s',
+                              svnrepos, cvsrepos)
+          else:
+            ret = run_cvs2svn(error_re, '--create', '-s', svnrepos, cvsrepos)
+      except RunProgramException:
+        raise svntest.Failure
 
       # If we were expecting an error with error_re, then return Nones
       # if we matched it, or 1s if not.
@@ -298,7 +332,7 @@ def show_usage():
 
 def attr_exec():
   "detection of the executable flag"
-  repos, wc, logs = ensure_conversion('main')
+  repos, wc, logs = ensure_conversion('main', None, 1)
   st = os.stat(os.path.join(wc, 'trunk', 'single-files', 'attr-exec'))
   if not st[0] & stat.S_IXUSR:
     raise svntest.Failure
@@ -322,7 +356,7 @@ def overlapping_branch():
 
 def tolerate_corruption():
   "convert as much as can, despite a corrupt ,v file"
-  repos, wc, logs = ensure_conversion('corrupt')
+  repos, wc, logs = ensure_conversion('corrupt', None, 1)
   if not ((logs[1].changed_paths.get('/trunk') == 'A')
           and (logs[1].changed_paths.get('/trunk/good') == 'A')
           and (len(logs[1].changed_paths) == 2)):
@@ -332,15 +366,23 @@ def tolerate_corruption():
 
 def space_fname():
   "conversion of filename with a space"
-  repos, wc, logs = ensure_conversion('main')
+  repos, wc, logs = ensure_conversion('main', None, 1)
   if not os.path.exists(os.path.join(wc, 'trunk', 'single-files',
                                      'space fname')):
     raise svntest.Failure
 
 
+def phoenix_branch():
+  "convert a branch file rooted in a 'dead' revision"
+  repos, wc, logs = ensure_conversion('phoenix')
+  # We'll figure out the right probes when we get the bug fixed; for
+  # now, the fact that cvs2svn.py raises an exception is enough to
+  # make this test fail as expected.
+
+
 def two_quick():
   "two commits in quick succession"
-  repos, wc, logs = ensure_conversion('main')
+  repos, wc, logs = ensure_conversion('main', None, 1)
   out = run_svn('log', os.path.join(wc, 'trunk', 'single-files', 'twoquick'))
   num_revisions = 0
   for line in out:
@@ -385,7 +427,7 @@ def prune_with_care():
   # In the test below, 'trunk/full-prune/first' represents
   # cookie, and 'trunk/full-prune/second' represents NEWS.
 
-  repos, wc, logs = ensure_conversion('main')
+  repos, wc, logs = ensure_conversion('main', None, 1)
 
   # Confirm that revision 4 removes '/trunk/full-prune/first',
   # and that revision 6 removes '/trunk/full-prune'.
@@ -428,7 +470,7 @@ def double_delete():
   # handle a file in the root of the repository (there were some
   # bugs in cvs2svn's svn path construction for top-level files); and
   # the --no-prune option.
-  repos, wc, logs = ensure_conversion('double-delete', None, 1)
+  repos, wc, logs = ensure_conversion('double-delete', None, 1, 1)
   
   path = '/trunk/twice-removed'
 
@@ -451,7 +493,7 @@ def double_delete():
 def simple_commits():
   "simple trunk commits"
   # See test-data/main-cvsrepos/proj/README.
-  repos, wc, logs = ensure_conversion('main')
+  repos, wc, logs = ensure_conversion('main', None, 1)
 
   # The initial import.
   for path in ('/trunk/proj', '/trunk/proj/default', '/trunk/proj/sub1',
@@ -492,7 +534,7 @@ def simple_commits():
 def interleaved_commits():
   "two interleaved trunk commits, with different log msgs"
   # See test-data/main-cvsrepos/proj/README.
-  repos, wc, logs = ensure_conversion('main')
+  repos, wc, logs = ensure_conversion('main', None, 1)
 
   # The initial import.
   for path in ('/trunk/interleaved',
@@ -553,7 +595,7 @@ def interleaved_commits():
 def simple_tags():
   "simple tags"
   # See test-data/main-cvsrepos/proj/README.
-  repos, wc, logs = ensure_conversion('main')
+  repos, wc, logs = ensure_conversion('main', None, 1)
 
   ### The actual revision number here (and in other tests) will have
   ### to change when tags and branches are recognized.
@@ -609,7 +651,7 @@ def simple_tags():
 def simple_branch_commits():
   "simple branch commits"
   # See test-data/main-cvsrepos/proj/README.
-  repos, wc, logs = ensure_conversion('main')
+  repos, wc, logs = ensure_conversion('main', None, 1)
 
   ### The actual revision number here (and in other tests) will have
   ### to change when tags and branches are recognized.
@@ -629,7 +671,7 @@ def simple_branch_commits():
 def mixed_commit():
   "a commit affecting both trunk and a branch"
   # See test-data/main-cvsrepos/proj/README.
-  repos, wc, logs = ensure_conversion('main')
+  repos, wc, logs = ensure_conversion('main', None, 1)
 
   for path in ('/trunk/proj/sub2/default', 
                '/branches/B_MIXED/proj/sub2/branch_B_MIXED_only'):
@@ -644,7 +686,7 @@ def mixed_commit():
 def split_branch():
   "a branch created at different times in different places"
   # See test-data/main-cvsrepos/proj/README.
-  repos, wc, logs = ensure_conversion('main')
+  repos, wc, logs = ensure_conversion('main', None, 1)
   # Don't yet know the exact revision numbers, but basically we're
   # testing these steps from test-data/main-cvsrepos/proj/README:
   # 
@@ -679,6 +721,7 @@ test_list = [ None,
               bogus_tag,
               overlapping_branch,
               tolerate_corruption,
+              XFail(phoenix_branch),
               attr_exec,
               space_fname,
               two_quick,
