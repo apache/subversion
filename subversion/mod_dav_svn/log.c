@@ -236,15 +236,9 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
         continue;
 
       if (strcmp(child->name, "start-revision") == 0)
-        {
-          /* ### assume no white space, no child elems, etc */
-          start = SVN_STR_TO_REV(child->first_cdata.first->text);
-        }
+        start = SVN_STR_TO_REV(dav_xml_get_cdata(child, resource->pool, 1));
       else if (strcmp(child->name, "end-revision") == 0)
-        {
-          /* ### assume no white space, no child elems, etc */
-          end = SVN_STR_TO_REV(child->first_cdata.first->text);
-        }
+        end = SVN_STR_TO_REV(dav_xml_get_cdata(child, resource->pool, 1));
       else if (strcmp(child->name, "discover-changed-paths") == 0)
         {
           /* ### todo: value doesn't matter, presence alone is enough?
