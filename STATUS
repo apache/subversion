@@ -35,7 +35,7 @@ Candidate changes:
     Justification:
       Regression fix.
     Votes:
-      +1: lundblad, sussman
+      +1: lundblad, sussman, bliss
 
   * r11215, r11264
       SVN has needed a good packaging script for Win32 since forever.
