@@ -1990,7 +1990,7 @@ main (int argc, const char * const *argv)
         {
           svn_error_clear
             (svn_cmdline_fprintf (stderr, pool,
-                                  _("subcommand argument required\n")));
+                                  _("Subcommand argument required\n")));
           subcommand_help (NULL, NULL, pool);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
@@ -2046,7 +2046,7 @@ main (int argc, const char * const *argv)
         {
           svn_error_clear
             (svn_cmdline_fprintf (stderr, pool,
-                                  _("repository argument required\n")));
+                                  _("Repository argument required\n")));
           subcommand_help (NULL, NULL, pool);
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
@@ -2103,7 +2103,7 @@ main (int argc, const char * const *argv)
           svn_error_clear
             (svn_cmdline_fprintf
              (stderr, pool,
-              _("subcommand '%s' doesn't accept option '%s'\n"
+              _("Subcommand '%s' doesn't accept option '%s'\n"
                 "Type 'svnlook help %s' for usage.\n"),
               subcommand->name, optstr, subcommand->name));
           svn_pool_destroy (pool);
