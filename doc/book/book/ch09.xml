@@ -228,7 +228,7 @@ $ svn commit -m "They don't make Sunday."
         <varlistentry>
           <term><option>--new</option> <replaceable>ARG</replaceable></term>
           <listitem>
-            <para>Uses ARG as the newer target.</para>
+            <para>Uses <replaceable>ARG</replaceable> as the newer target.</para>
           </listitem>
         </varlistentry>
       
@@ -306,7 +306,7 @@ $ svn commit -m "They don't make Sunday."
         <varlistentry>
           <term><option>--old</option> <replaceable>ARG</replaceable></term>
           <listitem>
-            <para>Uses ARG as the older target.</para>
+            <para>Uses <replaceable>ARG</replaceable> as the older target.</para>
           </listitem>
         </varlistentry>
       
@@ -622,7 +622,8 @@ $ svn blame http://svn.red-bean.com/repos/test/readme.txt
       <refentry>
         <refnamediv>
           <refname>svn cat</refname>
-          <refpurpose>Outputs the contents of the specified files or URLs.</refpurpose>
+          <refpurpose>Outputs the contents of the specified files or
+            URLs.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -884,9 +885,10 @@ Updated to revision 3.
         <refsect1>
           <title>Examples</title>
 
-          <para>Well, there's not much to the examples here as <command>svn
-            cleanup</command> generates no output.  If you pass no PATH, '.'
-            is used.</para>
+          <para>Well, there's not much to the examples here as
+            <command>svn cleanup</command> generates no output.  If
+            you pass no PATH, <quote><filename>.</filename></quote> is
+            used.</para>
 
           <screen>
 $ svn cleanup
@@ -974,7 +976,7 @@ $ svn cleanup /path/to/working-copy
 
           <para>Commit a simple modification to a file with the
             commit message on the command line and an implicit
-            target of your current directory (<quote>.</quote>):</para>
+            target of your current directory (<quote><filename>.</filename></quote>):</para>
           
           <screen>
 $ svn commit -m "added howto section."
@@ -1040,8 +1042,9 @@ Committed revision 7.
           <title>Description</title>
           
           <para>Copy a file in a working copy or in the repository.
-            SRC and DST can each be either a working copy
-            (WC) path or URL:</para>
+            <replaceable>SRC</replaceable> and
+            <replaceable>DST</replaceable> can each be either a
+            working copy (WC) path or URL:</para>
             
             <variablelist>
 
@@ -1167,7 +1170,7 @@ Committed revision 9.
 </screen>
 
           <tip>
-            <para>This is the easiest way to 'tag' a revision in
+            <para>This is the easiest way to <quote>tag</quote> a revision in
               your repository&mdash;just <command>svn copy</command>
               that revision (usually HEAD) into your tags directory.</para>
           </tip>
@@ -1204,7 +1207,7 @@ Committed revision 13.
         <refsect1>
           <title>Description</title>
 
-          <para>Items specified by PATH are scheduled
+          <para>Items specified by <replaceable>PATH</replaceable> are scheduled
             for deletion upon the next commit.  Files (and
             directories that have not been committed) are
             immediately removed from the working copy.  The command
@@ -1310,13 +1313,14 @@ D         over-there
           <title>Description</title>
 
           <para>Display the differences between two paths.  Each
-            TARGET can be either a working copy path or URL.  If no
-            TARGET is specified, a value of '.' is assumed.</para>
+            <replaceable>TARGET</replaceable> can be either a working copy path or URL.  If no
+            <replaceable>TARGET</replaceable> is specified, a value of
+            <quote><filename>.</filename></quote> is assumed.</para>
 
-          <para>If TARGET is a URL, then revs N and M must be given
+          <para>If <replaceable>TARGET</replaceable> is a URL, then revs N and M must be given
             via the <option>--revision</option>.</para>
 
-          <para>If TARGET is a working copy path, then the
+          <para>If <replaceable>TARGET</replaceable> is a working copy path, then the
           <option>--revision</option> switch means:</para>
 
           <variablelist>
@@ -1324,14 +1328,19 @@ D         over-there
             <varlistentry>
               <term><command>--revision N:M</command></term>
               <listitem>
-                <para>The server compares TARGET@N and TARGET@M.</para>
+                <para>The server compares
+                <replaceable>TARGET</replaceable>@<replaceable>N</replaceable>
+                and
+                <replaceable>TARGET</replaceable>@<replaceable>M</replaceable>.</para>
               </listitem>
             </varlistentry>
 
             <varlistentry>
               <term><command>--revision N</command></term>
               <listitem>
-                <para>The client compares TARGET@N against working copy.</para>
+                <para>The client compares
+                  <replaceable>TARGET</replaceable>@<replaceable>N</replaceable>
+                against working copy.</para>
               </listitem>
             </varlistentry>
 
@@ -1339,16 +1348,20 @@ D         over-there
               <term><command>(no --revision)</command></term>
               <listitem>
                 <para>The client compares base and working copies of
-                  TARGET.</para>
+                  <replaceable>TARGET</replaceable>.</para>
               </listitem>
             </varlistentry>
 
           </variablelist>
 
           <para>If the alternate syntax is used, the server compares
-            URL1 and URL2 at revisions N and M respectively.  If
-            either N or M are omitted, a value of HEAD is
-            assumed.</para>
+            <replaceable>URL1</replaceable> and
+            <replaceable>URL2</replaceable> at revisions
+            <replaceable>N</replaceable> and
+            <replaceable>M</replaceable> respectively.  If either
+            <replaceable>N</replaceable> or
+            <replaceable>M</replaceable> are omitted, a value of HEAD
+            is assumed.</para>
 
           <para>By default, <command>svn diff</command> ignores the
             ancestry of files and merely compares the contents of the
@@ -1422,7 +1435,7 @@ Index: COMMITTERS
 +++ COMMITTERS	(working copy)
 </screen>
 
-          <para>Compare revision 3000 to revision 3500 using '@'
+          <para>Compare revision 3000 to revision 3500 using <quote>@</quote>
             syntax:</para>
 
           <screen>
@@ -1488,16 +1501,20 @@ Index: COMMITTERS
         <refsect1>
           <title>Description</title>
 
-          <para>The first form exports a clean directory tree from
-            the repository specified by URL, at revision REV if it
-            is given, otherwise at HEAD, into PATH. If PATH is
-            omitted, the last component of the URL is used for the
-            local directory name.</para>
+          <para>The first form exports a clean directory tree from the
+            repository specified by URL, at revision REV if it is
+            given, otherwise at HEAD, into
+            <replaceable>PATH</replaceable>. If
+            <replaceable>PATH</replaceable> is omitted, the last
+            component of the URL is used for the local directory
+            name.</para>
 
           <para>The second form exports a clean directory tree from
-            the working copy specified by PATH1 into PATH2.  All
-            local changes will be preserved, but files not under
-            version control will not be copied.</para>
+            the working copy specified by
+            <replaceable>PATH1</replaceable> into
+            <replaceable>PATH2</replaceable>.  All local changes will
+            be preserved, but files not under version control will not
+            be copied.</para>
         </refsect1>
 
         <refsect1>
@@ -1610,10 +1627,13 @@ Exported revision 15.
         <refsect1>
           <title>Description</title>
 
-          <para>Recursively commit a copy of <literal>PATH</literal>
-            to <literal>URL</literal>.  If <literal>PATH</literal>
-            is omitted '.' is assumed.  Parent directories are created
-            in the repository as necessary.</para>
+          <para>Recursively commit a copy of
+            <replaceable>PATH</replaceable> to
+            <replaceable>URL</replaceable>.  If
+            <replaceable>PATH</replaceable> is omitted
+            <quote><filename>.</filename></quote> is assumed.  Parent
+            directories are created in the repository as
+            necessary.</para>
         </refsect1>
 
         <refsect1>
@@ -1655,7 +1675,7 @@ Exported revision 15.
         <refsect1>
           <title>Examples</title>
 
-          <para>This imports the local directory 'myproj' into the
+          <para>This imports the local directory <filename>myproj</filename> into the
             root of your repository:</para>
 
           <screen>
@@ -1666,9 +1686,9 @@ Transmitting file data .........
 Committed revision 16.
 </screen>
 
-          <para>This imports the local directory 'myproj' into
-            'trunk/vendors' in your repository.  The directory
-            'trunk/vendors' need not exist before you import into
+          <para>This imports the local directory <filename>myproj</filename> into
+            <filename>trunk/vendors</filename> in your repository.  The directory
+            <filename>trunk/vendors</filename> need not exist before you import into
             it&mdash;<command>svn import</command> will
             recursively create directories for you:</para>
           <screen>
@@ -1792,19 +1812,26 @@ Last Changed Date: 2003-01-16 23:21:19 -0600 (Thu, 16 Jan 2003)
         <refsect1>
           <title>Description</title>
 
-          <para>List each TARGET file and the contents of each TARGET
-            directory as they exist in the repository.  If TARGET is a
-            working copy path, the corresponding repository URL will be
-            used.</para>
-          <para>The default TARGET is '.', meaning the repository URL
-            of the current working copy directory.</para>
+          <para>List each <replaceable>TARGET</replaceable> file and
+            the contents of each <replaceable>TARGET</replaceable>
+            directory as they exist in the repository.  If
+            <replaceable>TARGET</replaceable> is a working copy path,
+            the corresponding repository URL will be used.</para>
+
+          <para>The default <replaceable>TARGET</replaceable> is
+            <quote><filename>.</filename></quote>, meaning the
+            repository URL of the current working copy
+            directory.</para>
+
           <para>With <option>--verbose</option>, the following fields show
             the status of the item:</para>
+
           <itemizedlist>
-            <listitem><para>Revision number of the last commit</para></listitem>
-            <listitem><para>Author of the last commit</para></listitem>
-            <listitem><para>Size (in bytes)</para></listitem>
-            <listitem><para>Date and time of the last commit</para></listitem>
+            <listitem><para>Revision number of the last
+            commit</para></listitem> <listitem><para>Author of the
+            last commit</para></listitem> <listitem><para>Size (in
+            bytes)</para></listitem> <listitem><para>Date and time of
+            the last commit</para></listitem>
           </itemizedlist>
         </refsect1>
 
@@ -1887,17 +1914,17 @@ svn list --verbose file:///tmp/repos
           <para>The default target is the path of your current
             directory.  If no arguments are supplied, <command>svn
             log</command> shows the log messages for all files and
-            directories inside of (and including) the current
-            working directory of your working copy.  You can refine
-            the results by specifying a path, one or more
-            revisions, or any combination of the two.
-            The default revision range for a local path is BASE:1.</para>
+            directories inside of (and including) the current working
+            directory of your working copy.  You can refine the
+            results by specifying a path, one or more revisions, or
+            any combination of the two.  The default revision range
+            for a local path is <literal>BASE:1</literal>.</para>
 
           <para>If you specify a URL alone, then it prints log
             messages for everything that the URL contains.  If you
             add paths past the URL, only messages for those paths
             under that URL will be printed.  The default revision range
-            for a URL is HEAD:1.</para>
+            for a URL is <literal>HEAD:1</literal>.</para>
 
           <para>With <option>--verbose</option>, <command>svn log</command>
             will also print all affected paths with each log message.
@@ -1908,8 +1935,9 @@ svn list --verbose file:///tmp/repos
           <para>Each log message is printed just once, even if more
             than one of the affected paths for that revision were
             explicitly requested.  Logs follow copy history by
-            default.  Use --stop-on-copy to disable this behavior,
-            which can be useful for determining branch points.</para>
+            default.  Use <option>--stop-on-copy</option> to disable
+            this behavior, which can be useful for determining branch
+            points.</para>
 
         </refsect1>
         <refsect1>
@@ -2044,9 +2072,9 @@ r15 | ...
             this:</para>
 
           <screen>
-$ svn log -r 14 > mylog
-$ svn log -r 19 >> mylog
-$ svn log -r 27 >> mylog
+$ svn log -r 14 &gt; mylog
+$ svn log -r 19 &gt;&gt; mylog
+$ svn log -r 27 &gt;&gt; mylog
 $ cat mylog
 ------------------------------------------------------------------------
 r14 | ... 
@@ -2067,9 +2095,9 @@ r27 | ...
 
 
           <screen>
-$ svn log --incremental -r 14 > mylog
-$ svn log --incremental -r 19 >> mylog
-$ svn log --incremental -r 27 >> mylog
+$ svn log --incremental -r 14 &gt; mylog
+$ svn log --incremental -r 19 &gt;&gt; mylog
+$ svn log --incremental -r 27 &gt;&gt; mylog
 $ cat mylog
 ------------------------------------------------------------------------
 r14 | ... 
@@ -2119,7 +2147,8 @@ Made a change.
       <refentry>
         <refnamediv>
           <refname>svn merge</refname>
-          <refpurpose>Apply the differences between two sources to a working copy path.</refpurpose>
+          <refpurpose>Apply the differences between two sources to a
+          working copy path.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -2129,20 +2158,26 @@ Made a change.
         <refsect1>
           <title>Description</title>
 
-          <para>In the first form, the source URLs are specified
-            at revisions N and M.  These are the two sources to be
-            compared.  The revisions default to HEAD if omitted.</para>
+          <para>In the first form, the source URLs are specified at
+            revisions <replaceable>N</replaceable> and
+            <replaceable>M</replaceable>.  These are the two sources
+            to be compared.  The revisions default to HEAD if
+            omitted.</para>
 
-          <para>In the second form, SOURCE can be a URL or working
-            copy item, in which case the corresponding URL is used.
-            This URL, at revisions N and M, defines the two sources
-            to be compared.</para>
+          <para>In the second form, <replaceable>SOURCE</replaceable>
+            can be a URL or working copy item, in which case the
+            corresponding URL is used.  This URL, at revisions
+            <replaceable>N</replaceable> and
+            <replaceable>M</replaceable>, defines the two sources to
+            be compared.</para>
 
-          <para>WCPATH is the working copy path that will receive
-            the changes. If WCPATH is omitted, a default value of
-            '.' is assumed, unless the sources have identical
-            basenames that match a file within '.': in which case,
-            the differences will be applied to that file.</para>
+          <para><replaceable>WCPATH</replaceable> is the working copy
+            path that will receive the changes. If
+            <replaceable>WCPATH</replaceable> is omitted, a default
+            value of <quote><filename>.</filename></quote> is assumed,
+            unless the sources have identical basenames that match a
+            file within <quote><filename>.</filename></quote>: in which
+            case, the differences will be applied to that file.</para>
 
           <para>Unlike <command>svn diff</command>, the merge command
             takes the ancestry of a file into consideration when
@@ -2236,13 +2271,15 @@ U  thhgttg.txt
         <refsect1>
           <title>Description</title>
 
-          <para>Create a directory with a name given by the final component
-            of the PATH or URL.  A directory specified by a working copy PATH
-            is scheduled for addition in the working copy.
-            A directory specified by a URL is created in
-            the repository via an immediate commit.  Multiple directory
-            URLs are committed atomically.  In both cases all the
-            intermediate directories must already exist.</para>
+          <para>Create a directory with a name given by the final
+            component of the <replaceable>PATH</replaceable> or URL.
+            A directory specified by a working copy
+            <replaceable>PATH</replaceable> is scheduled for addition
+            in the working copy.  A directory specified by a URL is
+            created in the repository via an immediate commit.
+            Multiple directory URLs are committed atomically.  In both
+            cases all the intermediate directories must already
+            exist.</para>
         </refsect1>
 
         <refsect1>
@@ -2484,7 +2521,8 @@ property `release-date' deleted from repository revision '26'
       <refentry>
         <refnamediv>
           <refname>svn propedit</refname>
-          <refpurpose>Edit the property of one or more items under version control.</refpurpose>
+          <refpurpose>Edit the property of one or more items under
+            version control.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -2722,11 +2760,12 @@ Properties on 'foo.c':
         <refsect1>
           <title>Description</title>
 
-          <para>Set PROPNAME to PROPVAL on files, directories, or
-          revisions. The first example creates a versioned, local
-          property change in the working copy, and the second creates
-          an unversioned, remote property change on a repository
-          revision.</para>
+          <para>Set <replaceable>PROPNAME</replaceable> to
+            <replaceable>PROPVAL</replaceable> on files, directories,
+            or revisions. The first example creates a versioned, local
+            property change in the working copy, and the second
+            creates an unversioned, remote property change on a
+            repository revision.</para>
 
           <tip>
             <para>Subversion has a number of <quote>special</quote>
@@ -2829,7 +2868,7 @@ property `owner-pic' set on 'moo.c'
               in a Subversion repository.  Your repository
               administrator must explicitly enable revision property
               modifications by creating a hook named
-              'pre-revprop-change'. See <xref
+              <literal>pre-revprop-change</literal>. See <xref
               linkend="svn-ch-5-sect-2.1"/> for more information on
               hook scripts.</para>
           </warning>
@@ -3399,9 +3438,10 @@ Head revision:   981
         <refsect1>
           <title>Examples</title>
 
-          <para>If you're currently inside the directory 'vendors'
-            which was branched to 'vendors-with-fix' and you'd like
-            to switch your working copy to that branch:</para>
+          <para>If you're currently inside the directory
+            <filename>vendors</filename> which was branched to
+            <filename>vendors-with-fix</filename> and you'd like to
+            switch your working copy to that branch:</para>
 
           <screen>
 $ svn switch http://svn.red-bean.com/repos/branches/vendors-with-fix .
@@ -3720,7 +3760,8 @@ Updated to revision 30.
       <refentry>
         <refnamediv>
           <refname>svnadmin create</refname>
-          <refpurpose>Create a new, empty repository at REPOS_PATH.</refpurpose>
+          <refpurpose>Create a new, empty repository at
+            <replaceable>REPOS_PATH</replaceable>.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -3773,11 +3814,14 @@ $ svnadmin create /usr/local/svn/repos
           <title>Description</title>
 
           <para>Dump the contents of filesystem to stdout in a
-            'dumpfile' portable format, sending feedback to stderr.
-            Dump revisions LOWER rev through UPPER rev.  If no
-            revisions are given, dump all revision trees.  If only
-            LOWER is given, dump that one revision tree.  See <xref
-            linkend="svn-ch-5-sect-3.5"/> for a practical use. </para>
+            <quote>dumpfile</quote> portable format, sending feedback
+            to stderr.  Dump revisions
+            <replaceable>LOWER</replaceable> rev through
+            <replaceable>UPPER</replaceable> rev.  If no revisions are
+            given, dump all revision trees.  If only
+            <replaceable>LOWER</replaceable> is given, dump that one
+            revision tree.  See <xref linkend="svn-ch-5-sect-3.5"/>
+            for a practical use. </para>
             </refsect1>
         <refsect1>
           <title>Switches</title>
@@ -4177,7 +4221,7 @@ $ svnadmin rmtxns /usr/local/svn/repos/  `svnadmin lstxns /usr/local/svn/repos/`
           <title>Examples</title>
 
           <para>Set the log message for revision 19 to the contents of
-            the file 'msg':</para>
+            the file <filename>msg</filename>:</para>
 
           <screen>
 $ svnadmin setlog /usr/local/svn/repos/ -r 19 msg
@@ -4667,7 +4711,8 @@ REVISION   PATH &lt;ID&gt;
       <refentry>
         <refnamediv>
           <refname>svnlook info</refname>
-          <refpurpose>Print the author, datestamp, log message size, and log message.</refpurpose>
+          <refpurpose>Print the author, datestamp, log message size,
+            and log message.</refpurpose>
         </refnamediv>
         <refsect1>
           <title>Synopsis</title>
@@ -4692,7 +4737,8 @@ REVISION   PATH &lt;ID&gt;
         <refsect1>
           <title>Examples</title>
 
-          <para>This shows the info output for revision 40 in our sample repository.</para>
+          <para>This shows the info output for revision 40 in our
+            sample repository.</para>
 
           <screen>
 $ svnlook info -r 40 /usr/local/svn/repos
@@ -4807,7 +4853,7 @@ mustard
           <title>Description</title>
 
           <para>List the properties of a path in the repository.  With
-            -v, show the property values too.</para>
+            <option>--verbose</option>, show the property values too.</para>
 
           </refsect1>
 
@@ -4863,7 +4909,7 @@ $ svnlook proplist /usr/local/svn/repos /trunk/README
         <refsect1>
           <title>Description</title>
 
-          <para>Print the tree, starting at PATH_IN_REPOS (if
+          <para>Print the tree, starting at <replaceable>PATH_IN_REPOS</replaceable> (if
             supplied, at the root of the tree otherwise), optionally
             showing node revision ids.</para>
         </refsect1>
