@@ -267,7 +267,7 @@ def show_usage():
 def attr_exec():
   "detection of the executable flag"
   repos, wc, logs = ensure_conversion('main')
-  st = os.stat(os.path.join(wc, 'single-files', 'trunk', 'attr-exec'))
+  st = os.stat(os.path.join(wc, 'trunk', 'single-files', 'attr-exec'))
   if not st[0] & stat.S_IXUSR:
     raise svntest.Failure
 
@@ -275,15 +275,15 @@ def attr_exec():
 def space_fname():
   "conversion of filename with a space"
   repos, wc, logs = ensure_conversion('main')
-  if not os.path.exists(os.path.join(wc, 'single-files',
-                                     'trunk', 'space fname')):
+  if not os.path.exists(os.path.join(wc, 'trunk', 'single-files',
+                                     'space fname')):
     raise svntest.Failure
 
 
 def two_quick():
   "two commits in quick succession"
   repos, wc, logs = ensure_conversion('main')
-  out = run_svn('log', os.path.join(wc, 'single-files', 'trunk', 'twoquick'))
+  out = run_svn('log', os.path.join(wc, 'trunk', 'single-files', 'twoquick'))
   num_revisions = 0
   for line in out:
     if line.find("rev ") == 0:
@@ -298,24 +298,24 @@ def prune_with_care():
   # directory src/gnu/usr.bin/cvs/contrib/pcl-cvs/ in FreeBSD's CVS
   # repository (see issue #1302).  Step 4 is the doozy:
   #
-  #   revision 1:  adds blah/trunk/, adds blah/trunk/cookie
-  #   revision 2:  adds blah/trunk/NEWS
-  #   revision 3:  deletes blah/trunk/cookie
-  #   revision 4:  deletes blah/  [re-deleting blah/trunk/cookie pruned blah!]
+  #   revision 1:  adds trunk/blah/, adds trunk/blah/cookie
+  #   revision 2:  adds trunk/blah/NEWS
+  #   revision 3:  deletes trunk/blah/cookie
+  #   revision 4:  deletes blah   [re-deleting trunk/blah/cookie pruned blah!]
   #   revision 5:  does nothing
   #   
   # After fixing cvs2svn, the sequence (correctly) looks like this:
   #
-  #   revision 1:  adds blah/trunk/, adds blah/trunk/cookie
-  #   revision 2:  adds blah/trunk/NEWS
-  #   revision 3:  deletes blah/trunk/cookie
-  #   revision 4:  does nothing    [because blah/trunk/cookie already deleted]
-  #   revision 5:  deletes blah/
+  #   revision 1:  adds trunk/blah/, adds trunk/blah/cookie
+  #   revision 2:  adds trunk/blah/NEWS
+  #   revision 3:  deletes trunk/blah/cookie
+  #   revision 4:  does nothing    [because trunk/blah/cookie already deleted]
+  #   revision 5:  deletes blah
   # 
   # The difference is in 4 and 5.  In revision 4, it's not correct to
-  # prune blah/, because trunk/NEWS is still in there, so revision 4
-  # does nothing now.  But when we delete NEWS in 5, that should
-  # bubble up and prune blah/ instead.
+  # prune blah/, because NEWS is still in there, so revision 4 does
+  # nothing now.  But when we delete NEWS in 5, that should bubble up
+  # and prune blah/ instead.
   #
   # ### Note that empty revisions like 4 are probably going to become
   # ### at least optional, if not banished entirely from cvs2svn's
@@ -329,8 +329,8 @@ def prune_with_care():
 
   repos, wc, logs = ensure_conversion('main')
 
-  # Confirm that revision 4 removes '/full-prune/trunk/first',
-  # and that revision 6 removes '/full-prune'.
+  # Confirm that revision 4 removes '/trunk/full-prune/first',
+  # and that revision 6 removes '/trunk/full-prune'.
   #
   # Also confirm similar things about '/full-prune-reappear/...',
   # which is similar, except that later on it reappears, restored
@@ -341,23 +341,23 @@ def prune_with_care():
   # pruning from going farther than the subdirectory containing first
   # and second.
 
-  for path in ('/full-prune/trunk/first',
-               '/full-prune-reappear/trunk/sub/first',
-               '/partial-prune/trunk/sub/first'):
+  for path in ('/trunk/full-prune/first',
+               '/trunk/full-prune-reappear/sub/first',
+               '/trunk/partial-prune/sub/first'):
     if not (logs[4].changed_paths.get(path) == 'D'):
       print "Revision 4 failed to remove '%s'." % path
       raise svntest.Failure
 
-  for path in ('/full-prune',
-               '/full-prune-reappear',
-               '/partial-prune/trunk/sub'):
+  for path in ('/trunk/full-prune',
+               '/trunk/full-prune-reappear',
+               '/trunk/partial-prune/sub'):
     if not (logs[6].changed_paths.get(path) == 'D'):
       print "Revision 6 failed to remove '%s'." % path
       raise svntest.Failure
 
-  for path in ('/full-prune-reappear',
-               '/full-prune-reappear/trunk',
-               '/full-prune-reappear/trunk/appears-later'):
+  for path in ('/trunk/full-prune-reappear',
+               '/trunk/full-prune-reappear',
+               '/trunk/full-prune-reappear/appears-later'):
     if not (logs[19].changed_paths.get(path) == 'A'):
       print "Revision 19 failed to create path '%s'." % path
       raise svntest.Failure
@@ -396,13 +396,13 @@ def simple_commits():
   repos, wc, logs = ensure_conversion('main')
 
   # The initial import.
-  for path in ('/proj/trunk', '/proj/trunk/default', '/proj/trunk/sub1',
-               '/proj/trunk/sub1/default', '/proj/trunk/sub1/subsubA',
-               '/proj/trunk/sub1/subsubA/default', '/proj/trunk/sub1/subsubB',
-               '/proj/trunk/sub1/subsubB/default', '/proj/trunk/sub2',
-               '/proj/trunk/sub2/default', '/proj/trunk/sub2/subsubA',
-               '/proj/trunk/sub2/subsubA/default', '/proj/trunk/sub3',
-               '/proj/trunk/sub3/default'):
+  for path in ('/trunk/proj', '/trunk/proj/default', '/trunk/proj/sub1',
+               '/trunk/proj/sub1/default', '/trunk/proj/sub1/subsubA',
+               '/trunk/proj/sub1/subsubA/default', '/trunk/proj/sub1/subsubB',
+               '/trunk/proj/sub1/subsubB/default', '/trunk/proj/sub2',
+               '/trunk/proj/sub2/default', '/trunk/proj/sub2/subsubA',
+               '/trunk/proj/sub2/subsubA/default', '/trunk/proj/sub3',
+               '/trunk/proj/sub3/default'):
     if not (logs[11].changed_paths.get(path) == 'A'):
       raise svntest.Failure
 
@@ -410,7 +410,7 @@ def simple_commits():
     raise svntest.Failure
     
   # The first commit.
-  for path in ('/proj/trunk/sub1/subsubA/default', '/proj/trunk/sub3/default'):
+  for path in ('/trunk/proj/sub1/subsubA/default', '/trunk/proj/sub3/default'):
     if not (logs[12].changed_paths.get(path) == 'M'):
       raise svntest.Failure
 
@@ -418,12 +418,12 @@ def simple_commits():
     raise svntest.Failure
 
   # The second commit.
-  for path in ('/proj/trunk/default', '/proj/trunk/sub1/default',
-               '/proj/trunk/sub1/subsubA/default',
-               '/proj/trunk/sub1/subsubB/default',
-               '/proj/trunk/sub2/default',
-               '/proj/trunk/sub2/subsubA/default',
-               '/proj/trunk/sub3/default'):
+  for path in ('/trunk/proj/default', '/trunk/proj/sub1/default',
+               '/trunk/proj/sub1/subsubA/default',
+               '/trunk/proj/sub1/subsubB/default',
+               '/trunk/proj/sub2/default',
+               '/trunk/proj/sub2/subsubA/default',
+               '/trunk/proj/sub3/default'):
     if not (logs[13].changed_paths.get(path) == 'M'):
       raise svntest.Failure
 
@@ -437,18 +437,17 @@ def interleaved_commits():
   repos, wc, logs = ensure_conversion('main')
 
   # The initial import.
-  for path in ('/interleaved',
-               '/interleaved/trunk',
-               '/interleaved/trunk/1',
-               '/interleaved/trunk/2',
-               '/interleaved/trunk/3',
-               '/interleaved/trunk/4',
-               '/interleaved/trunk/5',
-               '/interleaved/trunk/a',
-               '/interleaved/trunk/b',
-               '/interleaved/trunk/c',
-               '/interleaved/trunk/d',
-               '/interleaved/trunk/e',):
+  for path in ('/trunk/interleaved',
+               '/trunk/interleaved/1',
+               '/trunk/interleaved/2',
+               '/trunk/interleaved/3',
+               '/trunk/interleaved/4',
+               '/trunk/interleaved/5',
+               '/trunk/interleaved/a',
+               '/trunk/interleaved/b',
+               '/trunk/interleaved/c',
+               '/trunk/interleaved/d',
+               '/trunk/interleaved/e',):
     if not (logs[15].changed_paths.get(path) == 'A'):
       raise svntest.Failure
 
@@ -461,11 +460,11 @@ def interleaved_commits():
 
   def check_letters(rev, logs):
     'Return 1 if REV is the rev where only letters were committed, else None.'
-    for path in ('/interleaved/trunk/a',
-                 '/interleaved/trunk/b',
-                 '/interleaved/trunk/c',
-                 '/interleaved/trunk/d',
-                 '/interleaved/trunk/e',):
+    for path in ('/trunk/interleaved/a',
+                 '/trunk/interleaved/b',
+                 '/trunk/interleaved/c',
+                 '/trunk/interleaved/d',
+                 '/trunk/interleaved/e',):
       if not (logs[rev].changed_paths.get(path) == 'M'):
         return None
     if logs[rev].msg.find('Committing letters only.') != 0:
@@ -474,11 +473,11 @@ def interleaved_commits():
 
   def check_numbers(rev, logs):
     'Return 1 if REV is the rev where only numbers were committed, else None.'
-    for path in ('/interleaved/trunk/1',
-                 '/interleaved/trunk/2',
-                 '/interleaved/trunk/3',
-                 '/interleaved/trunk/4',
-                 '/interleaved/trunk/5',):
+    for path in ('/trunk/interleaved/1',
+                 '/trunk/interleaved/2',
+                 '/trunk/interleaved/3',
+                 '/trunk/interleaved/4',
+                 '/trunk/interleaved/5',):
       if not (logs[rev].changed_paths.get(path) == 'M'):
         return None
     if logs[rev].msg.find('Committing numbers only.') != 0:
@@ -559,9 +558,9 @@ def simple_branch_commits():
   if not logs.has_key(14):
     raise svntest.Failure
 
-  for path in ('/proj/branches/B_MIXED/default',
-               '/proj/branches/B_MIXED/sub1/default',
-               '/proj/branches/B_MIXED/sub2/subsubA/default'):
+  for path in ('/branches/B_MIXED/proj/default',
+               '/branches/B_MIXED/proj/sub1/default',
+               '/branches/B_MIXED/proj/sub2/subsubA/default'):
     if not (logs[14].changed_paths.get(path) == 'M'):
       raise svntest.Failure
 
@@ -574,8 +573,8 @@ def mixed_commit():
   # See test-data/main-cvsrepos/proj/README.
   repos, wc, logs = ensure_conversion('main')
 
-  for path in ('/proj/trunk/sub2/default', 
-               '/proj/branches/B_MIXED/sub2/branch_B_MIXED_only'):
+  for path in ('/trunk/proj/sub2/default', 
+               '/branches/B_MIXED/proj/sub2/branch_B_MIXED_only'):
     if not (logs[13].changed_paths.get(path) == 'M'):
       raise svntest.Failure
 
