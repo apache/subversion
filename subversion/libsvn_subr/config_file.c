@@ -459,7 +459,7 @@ svn_error_t *
 svn_config_ensure (apr_pool_t *pool)
 {
   const char *path;
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   apr_status_t apr_err;
   svn_error_t *err;
 

@@ -38,7 +38,7 @@ svn_error_t *
 svn_client_cleanup (const char *dir,
                     apr_pool_t *pool)
 {
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
 
   SVN_ERR (svn_io_check_path (dir, &kind, pool));
   if (kind != svn_node_dir)

@@ -325,7 +325,7 @@ open_writable_binary_file (apr_file_t **fh,
   full_path = "";
   for (i = 0; i < path_pieces->nelts; i++)
     {
-      enum svn_node_kind kind;
+      svn_node_kind_t kind;
       const char *piece = ((const char **) (path_pieces->elts))[i];
       full_path = svn_path_join (full_path, piece, pool);
       SVN_ERR (svn_io_check_path (full_path, &kind, pool));

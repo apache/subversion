@@ -36,7 +36,7 @@
 svn_error_t *
 svn_wc__ensure_directory (const char *path, apr_pool_t *pool)
 {
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   svn_error_t *err = svn_io_check_path (path, &kind, pool);
 
   if (err)

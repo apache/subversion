@@ -280,7 +280,7 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
     {
       /* Since no physical lock gets created we must check PATH is not a
          file. */
-      enum svn_node_kind node_kind;
+      svn_node_kind_t node_kind;
       SVN_ERR (svn_io_check_path (path, &node_kind, pool));
       if (node_kind != svn_node_dir)
         return svn_error_createf (SVN_ERR_WC_INVALID_LOCK, 0, NULL, pool,
@@ -582,7 +582,7 @@ svn_wc__adm_is_cleanup_required (svn_boolean_t *cleanup,
                                  svn_wc_adm_access_t *adm_access,
                                  apr_pool_t *pool)
 {
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   const char *log_path = svn_wc__adm_path (svn_wc_adm_access_path (adm_access),
                                            FALSE, pool, SVN_WC__ADM_LOG, NULL);
 

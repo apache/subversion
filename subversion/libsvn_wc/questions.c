@@ -48,7 +48,7 @@ svn_wc_check_wc (const char *path,
                  apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   
@@ -129,7 +129,7 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
   const char *entryname;
   apr_hash_t *entries = NULL;
   const svn_wc_entry_t *entry;
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   if (kind == svn_node_dir)
@@ -318,7 +318,7 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
   const char *textbase_filename;
   svn_boolean_t equal_timestamps;
   apr_pool_t *subpool = svn_pool_create (pool);
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
 
   /* Sanity check:  if the path doesn't exist, return FALSE. */
   SVN_ERR (svn_io_check_path (filename, &kind, subpool));
@@ -376,7 +376,7 @@ svn_wc_conflicted_p (svn_boolean_t *text_conflicted_p,
                      apr_pool_t *pool)
 {
   const char *path;
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   apr_pool_t *subpool = svn_pool_create (pool);  /* ### Why? */
 
   *text_conflicted_p = FALSE;

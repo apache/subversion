@@ -444,7 +444,7 @@ svn_wc_statuses (apr_hash_t *statushash,
                  svn_boolean_t no_ignore,
                  apr_pool_t *pool)
 {
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   const svn_wc_entry_t *entry;
 
   /* Is PATH a directory or file? */

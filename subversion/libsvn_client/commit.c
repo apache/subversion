@@ -319,7 +319,7 @@ import (const char *path,
         apr_pool_t *pool)
 {
   void *root_baton;
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   apr_hash_t *files = apr_hash_make (pool);
   apr_hash_index_t *hi;
 

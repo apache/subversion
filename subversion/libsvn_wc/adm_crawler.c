@@ -183,7 +183,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
       apr_ssize_t klen;
       void *val;
       const svn_wc_entry_t *current_entry; 
-      enum svn_node_kind *dirent_kind;
+      svn_node_kind_t *dirent_kind;
       svn_boolean_t missing = FALSE;
 
       /* Get the next entry */
@@ -238,7 +238,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
         }
       
       /* Is the entry on disk?  Set a flag if not. */
-      dirent_kind = (enum svn_node_kind *) apr_hash_get (dirents, key, klen);
+      dirent_kind = (svn_node_kind_t *) apr_hash_get (dirents, key, klen);
       if (! dirent_kind)
         missing = TRUE;
       

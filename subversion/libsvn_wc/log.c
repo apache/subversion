@@ -188,7 +188,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
 {
   const char *filepath;
   const char *tmp_text_base;
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   svn_wc_keywords_t *keywords;
   apr_status_t apr_err;
   apr_file_t *ignored;
@@ -521,7 +521,7 @@ log_do_modify_entry (struct log_runner *loggy,
   if ((modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)
       && (! strcmp (valuestr, SVN_WC_TIMESTAMP_WC)))
     {
-      enum svn_node_kind tfile_kind;
+      svn_node_kind_t tfile_kind;
       apr_time_t text_time;
 
       err = svn_io_check_path (tfile, &tfile_kind, loggy->pool);
@@ -547,7 +547,7 @@ log_do_modify_entry (struct log_runner *loggy,
       && (! strcmp (valuestr, SVN_WC_TIMESTAMP_WC)))
     {
       const char *pfile;
-      enum svn_node_kind pfile_kind;
+      svn_node_kind_t pfile_kind;
       apr_time_t prop_time;
 
       err = svn_wc__prop_path (&pfile, tfile, 0, loggy->pool);
@@ -1325,7 +1325,7 @@ svn_wc_cleanup (const char *path,
   apr_hash_index_t *hi;
   const char *log_path = svn_wc__adm_path (path, 0, pool,
                                            SVN_WC__ADM_LOG, NULL);
-  enum svn_node_kind kind;
+  svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t cleanup;
   int is_wc;

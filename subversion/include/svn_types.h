@@ -111,7 +111,7 @@ enum svn_recurse_kind
 /* A general subversion directory entry. */
 typedef struct svn_dirent
 {
-  enum svn_node_kind kind;  /* node kind */
+  svn_node_kind_t kind;  /* node kind */
   apr_off_t size;           /* length of file text, or 0 for directories */
   svn_boolean_t has_props;  /* does the node have props? */
 

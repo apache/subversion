@@ -128,7 +128,7 @@ copy_file_administratively (const char *src_path,
                             void *notify_baton,
                             apr_pool_t *pool)
 {
-  enum svn_node_kind dst_kind;
+  svn_node_kind_t dst_kind;
   const svn_wc_entry_t *src_entry, *dst_entry;
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
@@ -201,7 +201,7 @@ copy_file_administratively (const char *src_path,
      As long as we're copying the text-base over, we should copy the
      working and pristine propfiles over too. */
   {
-    enum svn_node_kind kind;
+    svn_node_kind_t kind;
     const char *src_wprop, *src_bprop, *dst_wprop, *dst_bprop;
 
     /* Discover the paths to the two text-base files */
@@ -339,7 +339,7 @@ svn_wc_copy (const char *src_path,
              apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
-  enum svn_node_kind src_kind;
+  svn_node_kind_t src_kind;
 
   SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, src_path, FALSE, TRUE,
                                   pool));

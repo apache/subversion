@@ -79,7 +79,7 @@ svn_client_ls (apr_hash_t **dirents,
   svn_ra_plugin_t *ra_lib;  
   void *ra_baton, *session;
   svn_revnum_t rev;
-  enum svn_node_kind url_kind;
+  svn_node_kind_t url_kind;
 
   /* Get the RA library that handles URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));

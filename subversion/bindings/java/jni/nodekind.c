@@ -106,7 +106,7 @@ nodekind__create(JNIEnv *env, jboolean *hasException, jint nodekind)
 
 jobject
 nodekind__create_from_svn_node_kind(JNIEnv *env, jboolean *hasException,
-                                   enum svn_node_kind nodekind)
+                                   svn_node_kind_t nodekind)
 {
   /**
    * right now, all we do is cast the enum to an int. thats about it
