@@ -46,27 +46,6 @@
 /*** Harvesting Commit Candidates ***/
 
 
-/* If DIR isn't already in the LOCKED_DIRS hash, attempt to lock it.
-   If the lock is successful, add DIR to the LOCKED_DIRS hash.  Use
-   the hash's pool for adding new items, and POOL for any other
-   allocations. */
-static svn_error_t *
-lock_dir (apr_hash_t *locked_dirs,
-          const char *dir,
-          apr_pool_t *pool)
-{
-  apr_pool_t *hash_pool = apr_hash_pool_get (locked_dirs);
-
-  if (! apr_hash_get (locked_dirs, dir, APR_HASH_KEY_STRING))
-    {
-      SVN_ERR (svn_wc_lock (dir, 0, pool));
-      apr_hash_set (locked_dirs, apr_pstrdup (hash_pool, dir), 
-                    APR_HASH_KEY_STRING, (void *)1);
-    }
-  return SVN_NO_ERROR;
-}
-
-
 /* Add a new commit candidate (described by all parameters except
    `COMMITTABLES') to the COMMITABLES hash. */
 static void
@@ -128,7 +107,6 @@ add_committable (apr_hash_t *committables,
    added with history as URL.  */
 static svn_error_t *
 harvest_committables (apr_hash_t *committables,
-                      apr_hash_t *locked_dirs,
                       const char *path,
                       const char *url,
                       const char *copyfrom_url,
@@ -289,12 +267,6 @@ harvest_committables (apr_hash_t *committables,
   /* Now, if this is something to commit, add it to our list. */
   if (state_flags)
     {
-      /* If the commit item is a directory, lock it, else lock its parent. */
-      if (entry->kind == svn_node_dir)
-        SVN_ERR (lock_dir (locked_dirs, path, pool));
-      else
-        SVN_ERR (lock_dir (locked_dirs, p_path, pool));
-
       /* Finally, add the committable item. */
       add_committable (committables, path, entry->kind, url,
                        cf_url ? entry->copyfrom_rev : entry->revision, 
@@ -319,11 +291,12 @@ harvest_committables (apr_hash_t *committables,
            hi = apr_hash_next (hi))
         {
           const void *key;
-          apr_ssize_t klen;
           void *val;
           const char *name;
           const char *used_url = NULL;
           const char *name_uri = NULL;
+
+          /* ### Why do we need to alloc these? */
           const char *full_path = apr_pstrdup (loop_pool, path);
           const char *this_url = apr_pstrdup (loop_pool, url);
           const char *this_cf_url
@@ -331,14 +304,14 @@ harvest_committables (apr_hash_t *committables,
 
           /* Get the next entry.  Name is an entry name; value is an
              entry structure. */
-          apr_hash_this (hi, &key, &klen, &val);
-          name = (const char *) key;
-
+          apr_hash_this (hi, &key, NULL, &val);
+          name = key;
+          
           /* Skip "this dir" */
           if (! strcmp (name, SVN_WC_ENTRY_THIS_DIR))
             continue;
 
-          this_entry = (svn_wc_entry_t *) val;
+          this_entry = val;
           name_uri = svn_path_uri_encode (name, loop_pool);
 
           /* Skip subdirectory entries when we're not recursing.
@@ -368,7 +341,7 @@ harvest_committables (apr_hash_t *committables,
 
           /* Recurse. */
           SVN_ERR (harvest_committables 
-                   (committables, locked_dirs, full_path,
+                   (committables, full_path,
                     used_url ? used_url : this_entry->url,
                     this_cf_url,
                     (svn_wc_entry_t *)val, 
@@ -390,7 +363,6 @@ harvest_committables (apr_hash_t *committables,
 
 svn_error_t *
 svn_client__harvest_committables (apr_hash_t **committables,
-                                  apr_hash_t **locked_dirs,
                                   const char *parent_dir,
                                   apr_array_header_t *targets,
                                   svn_boolean_t nonrecursive,
@@ -400,9 +372,6 @@ svn_client__harvest_committables (apr_hash_t **committables,
 
   /* Create the COMMITTABLES hash. */
   *committables = apr_hash_make (pool);
-
-  /* Create the LOCKED_DIRS hash. */
-  *locked_dirs = apr_hash_make (pool);
 
   /* ### Would be nice to use an iteration pool here, but need to
      first look into lifetime issues w/ anything passed to
@@ -490,7 +459,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
            target);
 
       /* Handle our TARGET. */
-      SVN_ERR (harvest_committables (*committables, *locked_dirs, target, 
+      SVN_ERR (harvest_committables (*committables, target, 
                                      url, NULL, entry, NULL, FALSE, FALSE, 
                                      nonrecursive, pool));
 
@@ -504,7 +473,6 @@ svn_client__harvest_committables (apr_hash_t **committables,
 
 svn_error_t *
 svn_client__get_copy_committables (apr_hash_t **committables,
-                                   apr_hash_t **locked_dirs,
                                    const char *new_url,
                                    const char *target,
                                    apr_pool_t *pool)
@@ -514,9 +482,6 @@ svn_client__get_copy_committables (apr_hash_t **committables,
   /* Create the COMMITTABLES hash. */
   *committables = apr_hash_make (pool);
 
-  /* Create the LOCKED_DIRS hash. */
-  *locked_dirs = apr_hash_make (pool);
-
   /* Read the entry for TARGET. */
   SVN_ERR (svn_wc_entry (&entry, target, FALSE, pool));
   if (! entry)
@@ -524,7 +489,7 @@ svn_client__get_copy_committables (apr_hash_t **committables,
       (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, pool, target);
       
   /* Handle our TARGET. */
-  SVN_ERR (harvest_committables (*committables, *locked_dirs, target, 
+  SVN_ERR (harvest_committables (*committables, target, 
                                  new_url, entry->url, entry, NULL,
                                  FALSE, TRUE, FALSE, pool));
 

@@ -185,48 +185,37 @@ svn_wc_set_wc_prop (const char *path,
 
 svn_error_t *
 svn_wc_process_committed (const char *path,
+                          svn_wc_adm_access_t *adm_access,
                           svn_boolean_t recurse,
                           svn_revnum_t new_revnum,
                           const char *rev_date,
                           const char *rev_author,
                           apr_pool_t *pool)
 {
-  svn_error_t *err;
   apr_status_t apr_err;
-  const char *log_parent, *base_name;
+  const char *base_name;
   svn_stringbuf_t *logtags;
   apr_file_t *log_fp = NULL;
   char *revstr = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, new_revnum);
   svn_stringbuf_t *checksum = NULL;
+
+  SVN_ERR (svn_wc_adm_write_check (adm_access));
 
   /* Set PATH's working revision to NEW_REVNUM; if REV_DATE and
      REV_AUTHOR are both non-NULL, then set the 'committed-rev',
      'committed-date', and 'last-author' entry values; and set the
      checksum if a file. */
 
-  /* Write a log file in the adm dir of path. */
+  /* Open a log file in the administrative directory */
+  SVN_ERR (svn_wc__open_adm_file (&log_fp, adm_access->path, SVN_WC__ADM_LOG,
+                                  (APR_WRITE | APR_APPEND | APR_CREATE),
+                                  pool));
 
-  /* (First, try to write a logfile directly in PATH.) */
-  log_parent = path;
-  base_name = SVN_WC_ENTRY_THIS_DIR;
-  err = svn_wc__open_adm_file (&log_fp, log_parent, SVN_WC__ADM_LOG,
-                               (APR_WRITE | APR_APPEND | APR_CREATE),
-                               pool);
-  if (err)   /* ### should check for specific error(s) */
+  base_name = svn_path_is_child (adm_access->path, path, pool);
+  if (base_name)
     {
-      /* (Ah, PATH must be a file.  So create a logfile in its
-         parent instead.) */
-
+      /* PATH must be some sort of file */
       const char *tmp_text_base;
-
-      svn_error_clear_all (err);
-      svn_path_split_nts (path, &log_parent, &base_name, pool);
-      if (svn_path_is_empty_nts (log_parent))
-        log_parent = ".";
-
-      SVN_ERR (svn_wc__open_adm_file (&log_fp, log_parent, SVN_WC__ADM_LOG,
-                                      (APR_WRITE|APR_APPEND|APR_CREATE),
-                                      pool));
 
       /* We know that the new text base is sitting in the adm tmp area
          by now, because the commit succeeded. */
@@ -253,7 +242,9 @@ svn_wc_process_committed (const char *path,
       const char *pdir;
       svn_wc_entry_t tmp_entry;
 
-      if (svn_path_is_empty_nts (log_parent))
+      base_name = SVN_WC_ENTRY_THIS_DIR;
+
+      if (svn_path_is_empty_nts (path))
         {
           /* We have an empty path.  Since there is no way to examine
              the parent of an empty path, we ensure that the parent
@@ -265,7 +256,7 @@ svn_wc_process_committed (const char *path,
         {
           /* We were given a directory, so we look at that dir's "this
              dir" entry. */
-          pdir = log_parent;
+          pdir = path;
         }
 
       tmp_entry.kind = svn_node_dir;
@@ -324,17 +315,14 @@ svn_wc_process_committed (const char *path,
                                 path);
     }
       
-  SVN_ERR (svn_wc__close_adm_file (log_fp, log_parent, SVN_WC__ADM_LOG,
+  SVN_ERR (svn_wc__close_adm_file (log_fp, adm_access->path, SVN_WC__ADM_LOG,
                                    TRUE, /* sync */
                                    pool));
 
 
   /* Run the log file we just created. */
-  SVN_ERR (svn_wc__run_log (log_parent, pool));
+  SVN_ERR (svn_wc__run_log (adm_access, pool));
             
-  /* The client's commit routine will take care of removing all
-     locks en masse. */
-
   if (recurse)
     {
       apr_hash_t *entries;
@@ -352,6 +340,7 @@ svn_wc_process_committed (const char *path,
           const char *name;
           svn_wc_entry_t *current_entry;
           const char *this_path;
+          svn_wc_adm_access_t *child_access;
 
           apr_hash_this (hi, &key, NULL, &val);
           name = key;
@@ -363,11 +352,17 @@ svn_wc_process_committed (const char *path,
           
           /* Create child path by telescoping the main path. */
           this_path = svn_path_join (path, name, subpool);
+
+          if (current_entry->kind == svn_node_dir)
+             SVN_ERR (svn_wc_adm_retrieve (&child_access, adm_access, this_path,
+                                           subpool));
+          else
+             child_access = adm_access;
           
           /* Recurse, but only allow further recursion if the child is
              a directory.  */
           SVN_ERR (svn_wc_process_committed 
-                   (this_path, 
+                   (this_path, child_access,
                     (current_entry->kind == svn_node_dir) ? TRUE : FALSE,
                     new_revnum, rev_date, rev_author, subpool));
 
@@ -634,8 +629,19 @@ svn_wc_delete (const char *path,
         {
           /* Deleting a directory that has been added but not yet
              committed is easy, just remove the adminstrative dir. */
+
+          /* ### I suspect that when svn_wc__entry_modify requires an
+             ### access baton we will want to hold the baton for the entire
+             ### function, at which stage this open will fail and can be
+             ### removed. */
+          svn_wc_adm_access_t *adm_access;
+          SVN_ERR (svn_wc_adm_open (&adm_access, NULL, path, TRUE, FALSE,
+                                    pool));
+
           SVN_ERR (svn_wc_remove_from_revision_control
-                   (path, SVN_WC_ENTRY_THIS_DIR, FALSE, pool));
+                   (adm_access, SVN_WC_ENTRY_THIS_DIR, FALSE, pool));
+
+          SVN_ERR (svn_wc_adm_close (adm_access));
         }
       else
         {
@@ -1199,27 +1205,35 @@ svn_wc_revert (const char *path,
          entry. */
       svn_boolean_t was_deleted = FALSE;
       const char *parent, *basey;
+      svn_wc_adm_access_t *adm_access;
 
+      svn_path_split_nts (path, &parent, &basey, pool);
       if (entry->kind == svn_node_file)
-        was_deleted = entry->deleted;
+        {
+          was_deleted = entry->deleted;
+          SVN_ERR (svn_wc_adm_open (&adm_access, NULL, parent, TRUE, FALSE,
+                                    pool));
+        }
       else if (entry->kind == svn_node_dir)
         {
           apr_hash_t *entries;
           svn_wc_entry_t *parents_entry;
-          svn_path_split_nts (path, &parent, &basey, pool);
           SVN_ERR (svn_wc_entries_read (&entries, parent, TRUE, pool));
           parents_entry = apr_hash_get (entries, basey, APR_HASH_KEY_STRING);
           if (parents_entry)
             was_deleted = parents_entry->deleted;
+          SVN_ERR (svn_wc_adm_open (&adm_access, NULL, path, TRUE, TRUE, 
+                                    pool));
         }
 
       /* Remove the item from revision control. */
       if (entry->kind == svn_node_dir)
         SVN_ERR (svn_wc_remove_from_revision_control 
-                 (path, SVN_WC_ENTRY_THIS_DIR, FALSE, pool));
+                 (adm_access, SVN_WC_ENTRY_THIS_DIR, FALSE, pool));
       else
-        SVN_ERR (svn_wc_remove_from_revision_control (p_dir, bname, 
+        SVN_ERR (svn_wc_remove_from_revision_control (adm_access, bname,
                                                       FALSE, pool));
+      SVN_ERR (svn_wc_adm_close (adm_access));
 
       /* Recursivity is taken care of by svn_wc_remove_from_revision_control, 
          and we've definitely reverted PATH at this point. */
@@ -1369,7 +1383,7 @@ svn_wc_get_pristine_copy_path (const char *path,
 
 
 svn_error_t *
-svn_wc_remove_from_revision_control (const char *path, 
+svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
                                      const char *name,
                                      svn_boolean_t destroy_wf,
                                      apr_pool_t *pool)
@@ -1379,7 +1393,9 @@ svn_wc_remove_from_revision_control (const char *path,
   svn_boolean_t left_something = FALSE;
   apr_pool_t *subpool = svn_pool_create (pool);
   apr_hash_t *entries = NULL;
-  const char *full_path = apr_pstrdup (pool, path);
+  const char *full_path = apr_pstrdup (pool, adm_access->path);
+
+  SVN_ERR (svn_wc_adm_write_check (adm_access));
 
   /* NAME is either a file's basename or SVN_WC_ENTRY_THIS_DIR. */
   is_file = (strcmp (name, SVN_WC_ENTRY_THIS_DIR)) ? TRUE : FALSE;
@@ -1395,9 +1411,9 @@ svn_wc_remove_from_revision_control (const char *path,
                                          subpool));
 
       /* Remove NAME from PATH's entries file: */
-      SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, adm_access->path, FALSE, pool));
       svn_wc__entry_remove (entries, name);
-      SVN_ERR (svn_wc__entries_write (entries, path, pool));
+      SVN_ERR (svn_wc__entries_write (entries, adm_access->path, pool));
 
       /* Remove text-base/NAME.svn-base, prop/NAME, prop-base/NAME.svn-base,
          wcprops/NAME */
@@ -1465,7 +1481,8 @@ svn_wc_remove_from_revision_control (const char *path,
       }
       
       /* Recurse on each file and dir entry. */
-      SVN_ERR (svn_wc_entries_read (&entries, path, FALSE, subpool));
+      SVN_ERR (svn_wc_entries_read (&entries, adm_access->path, FALSE,
+                                    subpool));
       
       for (hi = apr_hash_first (subpool, entries); 
            hi;
@@ -1486,7 +1503,7 @@ svn_wc_remove_from_revision_control (const char *path,
           if (current_entry->kind == svn_node_file)
             {
               err = svn_wc_remove_from_revision_control
-                (path, current_entry_name, destroy_wf, subpool);
+                (adm_access, current_entry_name, destroy_wf, subpool);
 
               if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
                 {
@@ -1498,10 +1515,13 @@ svn_wc_remove_from_revision_control (const char *path,
             }
           else if (current_entry_name && (current_entry->kind == svn_node_dir))
             {
-              const char *entrypath = svn_path_join (path, current_entry_name,
+              svn_wc_adm_access_t *entry_access;
+              const char *entrypath = svn_path_join (adm_access->path,
+                                                     current_entry_name,
                                                      subpool);
-
-              err = svn_wc_remove_from_revision_control (entrypath,
+              SVN_ERR (svn_wc_adm_retrieve (&entry_access, adm_access,
+                                            entrypath, pool));
+              err = svn_wc_remove_from_revision_control (entry_access,
                                                          SVN_WC_ENTRY_THIS_DIR,
                                                          destroy_wf, subpool);
               if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
@@ -1519,7 +1539,7 @@ svn_wc_remove_from_revision_control (const char *path,
 
       /* Remove the entire administrative .svn area, thereby removing
          _this_ dir from revision control too. */
-      SVN_ERR (svn_wc__adm_destroy (path, subpool));
+      SVN_ERR (svn_wc__adm_destroy (adm_access, subpool));
       
       /* If caller wants us to recursively nuke everything on disk, go
          ahead, provided that there are no dangling local-mod files
@@ -1532,7 +1552,7 @@ svn_wc_remove_from_revision_control (const char *path,
              *non*-recursive dir_remove should work.  If it doesn't,
              no big deal.  Just assume there are unversioned items in
              there and set "left_something" */
-          err = svn_io_dir_remove_nonrecursive (path, subpool);
+          err = svn_io_dir_remove_nonrecursive (adm_access->path, subpool);
           if (err)
             left_something = TRUE;
         }
