@@ -150,3 +150,9 @@ If you need to debug the server, follow this recipe:
 The '-X' switch runs httpd in a single thread, and insures it won't
 detach from the tty.  As soon as it starts, it will sit and wait for
 requests.  Then hit control-C and set your breakpoint.
+
+kfogel adds:
+
+Hmmm, I had thought httpd 2.0 also had these options: -DONE_PROCESS
+and -DNO_DETACH.  How are they related to -X, and/or should they be
+used in combination with -X?  Anyone know?
