@@ -58,6 +58,19 @@ cl_prompt (char **info,
   return SVN_NO_ERROR;
 }
 
+static VALUE
+commit_info_to_array (svn_client_commit_info_t *commit_info)
+{
+  VALUE obj;
+  obj = rb_ary_new2 (3);
+  rb_ary_store (obj, 0, INT2NUM (commit_info->revision));
+  rb_ary_store (obj, 1,
+                commit_info->date ? rb_str_new2 (commit_info->date) : Qnil);
+  rb_ary_store (obj, 2,
+                commit_info->author ? rb_str_new2 (commit_info->author) : Qnil);
+  return obj;
+}
+
 static void
 free_cl (void *p)
 {
@@ -255,6 +268,7 @@ static VALUE
 cl_mkdir (int argc, VALUE *argv, VALUE self)
 {
   VALUE aPath, aMessage;
+  svn_client_commit_info_t *commit_info;
   svn_stringbuf_t *path, *message;
   svn_client_auth_baton_t *auth_baton;
   apr_pool_t *pool;
@@ -273,20 +287,26 @@ cl_mkdir (int argc, VALUE *argv, VALUE self)
     message = svn_stringbuf_ncreate (StringValuePtr (aMessage),
                                      RSTRING (aMessage)->len, pool);
 
-  err = svn_client_mkdir (path, auth_baton, message, pool);
-
-  apr_pool_destroy (pool);
+  err = svn_client_mkdir (&commit_info, path, auth_baton, message, pool);
 
   if (err)
-    svn_ruby_raise (err);
+    {
+      apr_pool_destroy (pool);
+      svn_ruby_raise (err);
+    }
 
-  return Qnil;
+  {
+    VALUE obj = commit_info_to_array (commit_info);
+    apr_pool_destroy (pool);
+    return obj;
+  }
 }
 
 static VALUE
 cl_delete (int argc, VALUE *argv, VALUE self)
 {
   VALUE aPath, force, aMessage;
+  svn_client_commit_info_t *commit_info;
   svn_stringbuf_t *path, *message;
   svn_client_auth_baton_t *auth_baton;
   apr_pool_t *pool;
@@ -304,15 +324,20 @@ cl_delete (int argc, VALUE *argv, VALUE self)
   else
     message = svn_stringbuf_create (StringValuePtr (aMessage), pool);
 
-  err = svn_client_delete (path, RTEST (force), auth_baton,
+  err = svn_client_delete (&commit_info, path, RTEST (force), auth_baton,
                            message, pool);
 
-  apr_pool_destroy (pool);
-
   if (err)
-    svn_ruby_raise (err);
+    {
+      apr_pool_destroy (pool);
+      svn_ruby_raise (err);
+    }
 
-  return Qnil;
+  {
+    VALUE obj = commit_info_to_array (commit_info);
+    apr_pool_destroy (pool);
+    return obj;
+  }
 }
 
 /* Parse arg [logMsg, beforeEditor, afterEditor, [xmlFile, revision]] */
@@ -372,8 +397,7 @@ static VALUE
 cl_import (int argc, VALUE *argv, VALUE self)
 {
   VALUE aURL, aPath, aEntry, rest;
-  svn_revnum_t committed_rev;
-  const char *committed_date, *committed_author;
+  svn_client_commit_info_t *commit_info;
   const svn_delta_edit_fns_t *before_editor = NULL;
   void *before_edit_baton = NULL;
   const svn_delta_edit_fns_t *after_editor = NULL;
@@ -413,8 +437,7 @@ cl_import (int argc, VALUE *argv, VALUE self)
   else
     log_msg = NULL;
 
-  err = svn_client_import (&committed_rev,
-                           &committed_date, &committed_author,
+  err = svn_client_import (&commit_info,
                            before_editor, before_edit_baton,
                            after_editor, after_edit_baton,
                            auth_baton, path, URL, new_entry,
@@ -424,20 +447,9 @@ cl_import (int argc, VALUE *argv, VALUE self)
       apr_pool_destroy (pool);
       svn_ruby_raise (err);
     }
-  apr_pool_destroy (pool);
-
   {
-    VALUE obj;
-    obj = rb_ary_new2 (3);
-    rb_ary_store (obj, 0, INT2NUM (committed_rev));
-    rb_ary_store (obj, 1,
-                  committed_date
-                  ? rb_str_new2 (committed_date)
-                  : Qnil);
-    rb_ary_store (obj, 2,
-                  committed_author
-                  ? rb_str_new2 (committed_author)
-                  : Qnil);
+    VALUE obj = commit_info_to_array (commit_info);
+    apr_pool_destroy (pool);
     return obj;
   }
 }
@@ -446,8 +458,7 @@ static VALUE
 cl_commit (int argc, VALUE *argv, VALUE self)
 {
   VALUE aTargets, rest;
-  svn_revnum_t committed_rev;
-  const char *committed_date, *committed_author;
+  svn_client_commit_info_t *commit_info;
   const svn_delta_edit_fns_t *before_editor = NULL;
   void *before_edit_baton = NULL;
   const svn_delta_edit_fns_t *after_editor = NULL;
@@ -487,8 +498,7 @@ cl_commit (int argc, VALUE *argv, VALUE self)
   else
     log_msg = NULL;
 
-  err = svn_client_commit (&committed_rev,
-                           &committed_date, &committed_author,
+  err = svn_client_commit (&commit_info,
                            before_editor, before_edit_baton,
                            after_editor, after_edit_baton,
                            auth_baton, targets,
@@ -498,20 +508,10 @@ cl_commit (int argc, VALUE *argv, VALUE self)
       apr_pool_destroy (pool);
       svn_ruby_raise (err);
     }
-  apr_pool_destroy (pool);
 
   {
-    VALUE obj;
-    obj = rb_ary_new2 (3);
-    rb_ary_store (obj, 0, INT2NUM (committed_rev));
-    rb_ary_store (obj, 1,
-                  committed_date
-                  ? rb_str_new2 (committed_date)
-                  : Qnil);
-    rb_ary_store (obj, 2,
-                  committed_author
-                  ? rb_str_new2 (committed_author)
-                  : Qnil);
+    VALUE obj = commit_info_to_array (commit_info);
+    apr_pool_destroy (pool);
     return obj;
   }
 }
@@ -609,6 +609,7 @@ static VALUE
 cl_copy (int argc, VALUE *argv, VALUE self)
 {
   VALUE srcPath, srcRev, dstPath, aMessage, beforeEditor, afterEditor;
+  svn_client_commit_info_t *commit_info;
   svn_stringbuf_t *src_path, *dst_path, *message;
   svn_client_auth_baton_t *auth_baton;
   svn_revnum_t src_rev;
@@ -640,16 +641,22 @@ cl_copy (int argc, VALUE *argv, VALUE self)
   else
     message = svn_stringbuf_ncreate (StringValuePtr (aMessage),
 				     RSTRING (aMessage)->len, pool);
-  err = svn_client_copy (src_path, src_rev, dst_path,
+  err = svn_client_copy (&commit_info, src_path, src_rev, dst_path,
 			 auth_baton, message,
 			 before_editor, before_edit_baton,
 			 after_editor, after_edit_baton, pool);
 
-  apr_pool_destroy (pool);
   if (err)
-    svn_ruby_raise (err);
+    {
+      apr_pool_destroy (pool);
+      svn_ruby_raise (err);
+    }
 
-  return Qnil;
+  {
+    VALUE obj = commit_info_to_array (commit_info);
+    apr_pool_destroy (pool);
+    return obj;
+  }
 }
 
 static VALUE
@@ -691,7 +698,7 @@ cl_propget (VALUE class, VALUE name, VALUE aTarget, VALUE recurse)
 
   pool = svn_pool_create (NULL);
   err = svn_client_propget (&props, StringValuePtr (name),
-                            StringValuePtr (aTareget), RTEST (recurse), pool);
+                            StringValuePtr (aTarget), RTEST (recurse), pool);
 
   if (err)
     {
