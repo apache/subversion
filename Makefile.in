@@ -116,7 +116,7 @@ PYTHON = @PYTHON@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 
-PYTHON_DISTUTIL = setup.py                                               \
+PYTHON_DISTUTIL = $(SWIG_SRC_DIR)/python/setup.py                        \
                   -I$(SWIG_SRC_DIR)                                      \
                   -I$(abs_srcdir)/subversion/include $(SVN_APR_INCLUDES) \
                   -S$(SWIG_SRC_DIR)                                      \
