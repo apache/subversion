@@ -239,7 +239,7 @@ find_dir_entry (dag_node_t *node, const char *name)
           skel_t *entry = entry_list->children;
 
           /* search the entry list for one whose name matches NAME.  */
-          for (entry = entry_list->children; entry; entry->entry->next)
+          for (entry = entry_list->children; entry; entry = entry->next)
             if (svn_fs__matches_atom (entry->children, name))
               return entry;
         }
