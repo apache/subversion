@@ -76,6 +76,7 @@ svn_wc__ensure_wc (svn_stringbuf_t *path,
 svn_error_t *
 svn_wc__ensure_uniform_revision (svn_stringbuf_t *dir_path,
                                  svn_revnum_t revision,
+                                 svn_boolean_t recurse,
                                  apr_pool_t *pool)
 {
   apr_hash_t *entries;
@@ -164,11 +165,11 @@ svn_wc__ensure_uniform_revision (svn_stringbuf_t *dir_path,
       
       /* If entry is a dir (and not `.', and not scheduled for
          addition), then recurse into it. */
-      else if ((current_entry->kind == svn_node_dir)
+      else if (recurse && (current_entry->kind == svn_node_dir)
                && current_entry_name
                && (current_entry->schedule != svn_wc_schedule_add))
         SVN_ERR (svn_wc__ensure_uniform_revision (full_entry_path,
-                                                  revision, subpool));
+                                                  revision, recurse, subpool));
     }
 
   /* We're done examining this dir's entries, so free them. */

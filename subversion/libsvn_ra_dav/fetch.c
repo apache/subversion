@@ -1314,6 +1314,7 @@ make_reporter (void *session_baton,
                void **report_baton,
                svn_revnum_t revision,
                svn_stringbuf_t *target,
+               svn_boolean_t recurse,
                const svn_delta_edit_fns_t *editor,
                void *edit_baton,
                svn_boolean_t is_status)
@@ -1388,6 +1389,18 @@ make_reporter (void *session_baton,
         }
     }
 
+  /* mod_dav_svn will assume recursive, unless it finds this element. */
+  if (!recurse)
+    {
+      const char * data = "<S:recursive>no</S:recursive>";
+      status = apr_file_write_full(rb->tmpfile, data, strlen(data), NULL);
+      if (status)
+        {
+          msg = "Failed writing the target to the report tempfile.";
+          goto error;
+        }
+    }
+
   *reporter = &ra_dav_reporter;
   *report_baton = rb;
 
@@ -1404,6 +1417,7 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
                                     void **report_baton,
                                     svn_revnum_t revision_to_update_to,
                                     svn_stringbuf_t *update_target,
+                                    svn_boolean_t recurse,
                                     const svn_delta_edit_fns_t *wc_update,
                                     void *wc_update_baton)
 {
@@ -1412,6 +1426,7 @@ svn_error_t * svn_ra_dav__do_update(void *session_baton,
                         report_baton,
                         revision_to_update_to,
                         update_target,
+                        recurse,
                         wc_update,
                         wc_update_baton,
                         FALSE); /* is_status */
@@ -1422,6 +1437,7 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
                                     const svn_ra_reporter_t **reporter,
                                     void **report_baton,
                                     svn_stringbuf_t *status_target,
+                                    svn_boolean_t recurse,
                                     const svn_delta_edit_fns_t *wc_status,
                                     void *wc_status_baton)
 {
@@ -1430,6 +1446,7 @@ svn_error_t * svn_ra_dav__do_status(void *session_baton,
                         report_baton,
                         SVN_INVALID_REVNUM,
                         status_target,
+                        recurse,
                         wc_status,
                         wc_status_baton,
                         TRUE); /* is_status */

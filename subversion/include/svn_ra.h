@@ -319,6 +319,7 @@ typedef struct svn_ra_plugin_t
                              void **report_baton,
                              svn_revnum_t revision_to_update_to,
                              svn_stringbuf_t *update_target,
+                             svn_boolean_t recurse,
                              const svn_delta_edit_fns_t *update_editor,
                              void *update_baton);
 
@@ -345,6 +346,7 @@ typedef struct svn_ra_plugin_t
                              const svn_ra_reporter_t **reporter,
                              void **report_baton,
                              svn_stringbuf_t *status_target,
+                             svn_boolean_t recurse,
                              const svn_delta_edit_fns_t *status_editor,
                              void *status_baton);
 

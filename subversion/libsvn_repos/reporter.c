@@ -51,6 +51,9 @@ typedef struct svn_repos_report_baton_t
      maps pathnames (char *) to revision numbers (svn_revnum_t). */
   apr_hash_t *path_rev_hash;
 
+  /* Whether or not to recurse into the directories */
+  svn_boolean_t recurse;
+
   /* Pool from the session baton. */
   apr_pool_t *pool;
 
@@ -172,7 +175,7 @@ svn_repos_finish_report (void *report_baton)
   SVN_ERR (svn_fs_revision_root (&rev_root, rbaton->fs,
                                  rbaton->revnum_to_update_to,
                                  rbaton->pool));
-  
+
   /* Ah!  The good stuff!  svn_repos_update does all the hard work. */
   SVN_ERR (svn_repos_dir_delta (rbaton->txn_root, 
                                 rbaton->base_path, 
@@ -183,6 +186,7 @@ svn_repos_finish_report (void *report_baton)
                                 rbaton->update_editor,
                                 rbaton->update_edit_baton,
                                 rbaton->text_deltas,
+                                rbaton->recurse,
                                 rbaton->pool));
                            
   /* Still here?  Great!  Throw out the transaction. */
@@ -214,6 +218,7 @@ svn_repos_begin_report (void **report_baton,
                         svn_stringbuf_t *fs_base,
                         svn_stringbuf_t *target,
                         svn_boolean_t text_deltas,
+                        svn_boolean_t recurse,
                         const svn_delta_edit_fns_t *editor,
                         void *edit_baton,
                         apr_pool_t *pool)
@@ -231,6 +236,7 @@ svn_repos_begin_report (void **report_baton,
   rbaton->base_path = fs_base;
   rbaton->target = target;
   rbaton->text_deltas = text_deltas;
+  rbaton->recurse = recurse;
   rbaton->pool = pool;
   
   /* Hand reporter back to client. */

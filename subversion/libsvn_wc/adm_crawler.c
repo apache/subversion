@@ -1553,6 +1553,7 @@ report_revisions (svn_stringbuf_t *wc_path,
                   svn_pool_feedback_t *fbtable,
                   svn_boolean_t print_unrecognized,
                   svn_boolean_t restore_files,
+                  svn_boolean_t recurse,
                   apr_pool_t *pool)
 {
   apr_hash_t *entries, *dirents;
@@ -1720,7 +1721,7 @@ report_revisions (svn_stringbuf_t *wc_path,
                                              current_entry->revision));
             }
 
-          else if (current_entry->kind == svn_node_dir)
+          else if (current_entry->kind == svn_node_dir && recurse)
             {
               if (missing)
                 {
@@ -1764,6 +1765,7 @@ report_revisions (svn_stringbuf_t *wc_path,
                                            reporter, report_baton, fbtable,
                                            print_unrecognized,
                                            restore_files,
+                                           recurse,
                                            subpool));
               }
             } /* end directory case */
@@ -1890,6 +1892,7 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
                         void *report_baton,
                         svn_boolean_t print_unrecognized,
                         svn_boolean_t restore_files,
+                        svn_boolean_t recurse,
                         apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -1957,7 +1960,8 @@ svn_wc_crawl_revisions (svn_stringbuf_t *path,
                                   svn_stringbuf_create ("", pool),
                                   base_rev,
                                   reporter, report_baton, fbtable, 
-                                  print_unrecognized, restore_files, pool);
+                                  print_unrecognized, restore_files,
+                                  recurse, pool);
           if (err)
             {
               /* Clean up the fs transaction. */
