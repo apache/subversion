@@ -2,10 +2,6 @@
 
 # Testing merging and conflict resolution.
 
-# FIXME: see FIXME comment in svn-test.sh, regarding test #6.  When
-# that is working again, then this exit should be removed.
-exit 0
-
 SVN_PROG=../svn
 XML_DIR=$1
 TEST_DIR_1=t1
