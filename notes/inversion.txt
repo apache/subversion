@@ -2,7 +2,7 @@
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.33 $ of this document.)
+              ($Revision: 1.34 $ of this document.)
 
 * Introduction
 
@@ -67,7 +67,7 @@ inconsistent state.
 
 ** Text vs Binary issues are handled better than in CVS
 
-... depending on your definition of "better", of course!
+... depending on your definition of "better", of course.
 
 Historically, binary files have been problematic in CVS for two
 unrelated reasons: keyword expansion, and line-end conversion.
@@ -87,10 +87,10 @@ plaintext, of course -- doing line-end conversion on an image file or
 other binary would only mess it up.
 
 Both transformations are possible only with plain text files.  CVS
-only recognizes two file types: plain text, and binary.  For its
-initial release, at least, Inversion recognizes the same two types
-(later, maybe it will be able to do keyword substitution inside
-word-processor formats, etc).  
+only recognizes two file types anyway: plain text, and binary.
+Inversion, for its initial release at least, will recognize the same
+two types (later, it may learn to do keyword substitution inside
+word-processor formats, etc).
 
 The question is, how does Inversion determine whether a file is plain
 text or not?
@@ -120,43 +120,29 @@ happened to contain keywords.  But these problems are somewhat rare,
 of course, and usually easily remedied, so I'm not entirely convinced
 that defaulting to `on' would be all that bad either... thoughts?)
 
-*** Binary files, merging strategies, and content knowledge
-
- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-
-Whether Inversion is able to merge changes into a file gracefully, or
-show diffs, depends on whether diffing and/or merging tools are
-defined for that type of file.  Right now, we know that text files are
-supported.  (How does Inversion know whether something's text file or
-not?  Well, you can tell it the type explicitly, or ask it to deduce
-on the fly.)
-
-Also, for text files, Inversion can do platform-specific end-of-line
-conversion (CRLF vs LF, etc), just like CVS.
-
-Regarding keyword expansion: Inversion does support it, but only on
-request.  By default, keyword expansion is off -- if you do not ask
-for expansion for a given file or group of files, Inversion will not
-modify content.
+By the way, any of the above properties attached to a file are really
+attached to its first version, and then each new version inherits from
+the previous version, except when told otherwise.  Thus changes to
+file type are recorded like any other historical data (in practice,
+the type will probably be stored in the entity's property list, see
+implementation discussions farther down).
 
 ** I18N/Multilingual support: non-ASCII encodings can be treated as text.
+
+It would be good for Inversion to understand all the UTF encodings, so
+it can treat such files like plain text.  How hard would this be?  If
+we can't do them all, can we do the most common ones?
+
+(It may be workable to just treat everything as UTF-8 at first; for
+non-UTF-8 text files with a few "meta" characters, this might at worst
+result in some number of bytes after the meta character being
+ignored... no big loss, except when a keyword code or line-end falls
+within the lost bytes, but that probably wouldn't happen too often...)
 
 *** User-visible messages
 
 Inversion can be localized so that its messages print out in a
 build-time-configured language.
-
-*** Text vs non-text data
-
-In situations where Inversion needs to make an educated guess as to
-whether a file is text or not, its takes into account the possibility
-of non-ASCII text.  Furthermore, any textual operations on file data
-(such as diffing, annotation, and keyword expansion) obey the
-conventions of whatever UTF-* encoding the file appears to be.
-
-The user will have a way of signalling to Inversion that a file is to
-be treated as a particular encoding, so that users are not dependent
-on Inversion's guessing capability.
 
 ** Branching and tagging are constant-time operations in Inversion.
 
@@ -205,35 +191,59 @@ above is the general idea.  Note that per-object merge records will
 need to be maintained on the server side, since people often need to
 merge project subsets.
 
-** Inversion does not set log message policy.
+** Inversion has flexible log message policy
 
 A small matter, but one dear to our hearts...
 
-Log messages are a matter of project policy, not VC software policy.
-If you leave off a log message, then Inversion defaults to an empty
-message -- unless the project admin sets the right bit, in which case
-log messages will be required *for that project only*.
+Log messages are a matter of project policy, not version control
+software policy.  If you give no log message, then Inversion defaults
+to an empty message -- unless the project admin sets the right
+configuration option, in which case log messages will be required *for
+that project only*.
 
 (CVS tries to require log messages, but fails: we've all seen
 thousands of empty log messages in CVS, meaning the user committed
 with deliberately empty quotes, so let's please stop the madness now.)
 
-** Conflicts do not munge working files (unless requested).
+** Conflicts are handled as in CVS, but a little better
 
-CVS's conflict resolution mechanism folds repository changes into the
-working files, even when they conflict with changes there.  This is
-often winning, in text files, but it doesn't work for binary files and
-sometimes it's not so great for text either.
+For text files, Inversion resolves conflicts similarly to CVS, by
+folding repository changes into the working files.
 
-Inversion only does it that way if asked to; otherwise, it puts the
-repository version of the file somewhere nearby, and the user can use
-whatever comparison tools she wants to resolve the conflict.  When
-Inversion *does* munge the working file, it first preserves an
-unmunged copy somewhere nearby, in case the user regrets the update.
+For *both* text and binary files, Inversion also always puts the
+pristine repository version in one temporary file, and the pristine
+working copy version in another temporary file.
 
-Inversion can optionally make educated guesses about what's binary and
-what's text, so the user gets the right conflict resolution mechanism
-for the context.
+Thus, in a text conflict, the user has three files to choose from
+
+   1) the combined file, with conflict markers
+   2) the original working copy file
+   3) the repository revision from which the update was taken
+
+CVS provides the first two, but doesn't directly provide the third.
+It's true that one could retrieve the repository version from the
+repository (using update -p or whatever), but it's more convenient to
+have it right at hand.  When the conflict has been resolved and the
+working copy is being committed, Inversion can automatically remove
+the two pristine files.
+
+*** Content knowledge allows better conflict resolution strategies
+
+Certain kinds of conflicts can be resolved without human intervention.
+For example, files in the format of /etc/passwd just need to keep
+lines unique on username and/or user ID.  But when merging new
+repository data into a modified working copy of such a file, it's
+possible to get a textual conflict even with no "semantic conflict".
+
+If the Inversion client knew something about the format of passwd
+files, then it could merge in the new lines without creating a
+conflict.
+
+A similar rule could be used for ChangeLogs, based on the date in the
+header lines.  And so on.
+
+These features may not be in the first release of Inversion, but let's
+keep them in mind.
 
 ** Support for plug-in client-side diff programs
 
@@ -246,7 +256,7 @@ fancy visual comparison product.
 
 Probably basic text diffing should be built into the client, but that
 doesn't obviate the need to for clients to be able to specify
-alternate (or additional) difference viewers.
+alternate (or additional) difference viewers even for text.
 
 * Design
 
@@ -869,21 +879,108 @@ history):
   myproj   |___1_______2________3________4________5_________6_____...etc...
                                                  /
                                                 /
-              _________________________________/
-             /
-            /
-           /______________________________________________________
-  xproj    |___6_______7________8________9________10________11____...etc...
+                   .----(back to myproj)-----> +
+                  /
+                 /
+            ____/_________________________________________________
+  xproj    |___5_______6________7________8________9_________10____...etc...
 
 
- XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+The xproj branch starts at version 5; if you ask for a version 5 or
+younger, you will get it, but it will be same as that version of
+myproj.  (The reasons for doing things this way will become clear
+later.)
+
+Right after xproj is created, it has no nodes of its own -- every
+request is referred to myproj's repository.
+
+When you commit a change to `foo', here's what happens:
+
+In order to commit a new version of foo, we'd have to change foo's
+parent node to refer to the new foo node.  But we can't -- we don't
+have write access to myproj!  So we have to make a local copy of foo's
+parent.  But that leaves the parent's parent, over in myproj, still
+pointing at myproj's version of the parent...
+
+You can see where this is going, I'm sure.
+
+The problem bubbles right up to the top, requiring us to create a root
+node locally.  All its dir_entries that are not ancestors of foo just
+refer back to nodes in myproj; those that are ancestors refer to new
+local copies of nodes along the line of ancestry, all the way down to
+foo:
+
+            ______________________________________________________
+  myproj   |___1_______2________3________4________5_________6_____...etc...
+                                                 /
+                                                /
+                   .----(back to myproj)-----> +
+                  /
+                 /
+            ____/_________________________________________________
+  xproj    |___5_______6________7________8________9_________10____...etc...
+                       |
+                       |
+                    ___|_____
+                   |D        |
+                   |         |
+                   | README -------------.
+                   |         |            \
+                   |   A     |             \
+                   |    \    |              \
+                   |   B \   |               \        (points back
+                   |__/___\__|                \______  to a node
+                     /     \                           in myproj)
+                    /       \
+                   /         \
+                  /           \ ________
+           (points back        |D       |
+            to a node          |        |
+            in myproj)         | subA   |
+                               |___\____|
+                                    \
+                                     \
+                                   ___\____
+                                  |D       |
+                                  |        |
+                                  | fish   |
+                                  |___\____|
+                                       \
+                                        \
+                                      ___\____
+                                     |D       |
+                                     |        |
+                                     | foo    |
+                                     |___\____|
+                                          \
+                                           \
+                                         ___\____
+                                        |F       |        (points back
+                                        |  (5)---------->  to a node
+                                        |        |         in myproj)
+                                        |________|
 
 
+This "line-of-ancestry copying" looks a lot more expensive than it
+actually is.  Remember that this example project consists mostly of
+directories, but a real project is mostly files, whose nodes never
+need to be copied except when they change.  And directory nodes only
+need to be copied the first time one of their descendents changes --
+after that, the directory node is already there.
 
-  [Still writing this up, although we know how it works.  The basic
-  thing to note is how once you start committing on a copy,
-  line-of-ancestry copying is forced.] 
+Thus, a branch fills out over time, eventually holding a more-or-less
+complete skeleton of the project's directories, plus any changed or
+added files.
 
+The exact method by which local entries "point back" to the original
+project is not settled yet.  It might be some general URL-like syntax
+that we can use in all sorts of circumstances, like
+
+   user@inv.hostname.domain:repositoryname:myproj:5:/A/subA/fish/foo
+
+(This will come in handy later, when we need a way to get unique
+labels for the diffy chromosome chunks in partial merging... but more
+about that when we get to it. :-) )
 
 *** Merging branches
 
@@ -917,13 +1014,17 @@ store anything in inv_props, only Inversion handles that.
       plist *inv_props;              /* Properties managed by Inversion. */
       plist *usr_props;              /* Properties ignored by Inversion. */
 
+      /* I think we might need parent pointers to do multiple hard
+         links correctly; but there might be another way... */
+      struct node **parents;
+
       /* See notes about locking above.  This may be stored as
          "out-of-band" data outside the node. */
       lock *lock;
 
       /* I'm conjecturing that dir_entries will be stored as chains;
-         it may turn out to be more sensible to store them as text,
-         just like regular contents. */
+         but it may turn out to be more sensible to store them as
+         text, just like regular contents. */
       union contents {
         struct dir_entry **dir_entries;
         char *data;
@@ -1142,9 +1243,9 @@ working, since they probably don't affect the rest of the design much.
 
 * Jason's comments
 
-     *Please note that these comments are based on an older*
-     *incarnation of the design.  I haven't gone over them yet*
-     *to see which ones still apply.  -kff*
+     Please note that these comments are based on an older
+     incarnation of the design.  I haven't gone over them yet
+     to see which ones still apply.  -kff
 
 
 --------------------8-<-------cut-here---------8-<-----------------------
