@@ -36,7 +36,8 @@ typedef struct repos_node_t
   const char *name;
   struct repos_node_t *sibling;
   struct repos_node_t *child;
-  
+  svn_fs_id_t *id;
+
 } repos_node_t;
 
 
@@ -67,20 +68,12 @@ svnlook_find_child_by_name (repos_node_t *parent,
 /*** Editor stuff ***/
 
 svn_error_t *
-svnlook_rev_changes_editor (const svn_delta_edit_fns_t **editor,
-                            void **edit_baton,
-                            svn_fs_t *fs,
-                            svn_fs_root_t *root,
-                            svn_fs_root_t *base_root,
-                            apr_pool_t *pool);
-
-
-svn_error_t *
-svnlook_txn_changes_editor (const svn_delta_edit_fns_t **editor,
-                            void **edit_baton,
-                            svn_fs_t *fs,
-                            svn_fs_root_t *root,
-                            apr_pool_t *pool);
+svnlook_tree_delta_editor (const svn_delta_edit_fns_t **editor,
+                           void **edit_baton,
+                           svn_fs_t *fs,
+                           svn_fs_root_t *root,
+                           svn_fs_root_t *base_root,
+                           apr_pool_t *pool);
 
 repos_node_t *
 svnlook_edit_baton_tree (void *edit_baton);
