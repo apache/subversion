@@ -20,6 +20,7 @@
 #include <assert.h>
 #include <string.h>
 #include "svn_pools.h"
+#include "svn_private_config.h"
 
 
 svn_error_t *
@@ -43,7 +44,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
   if (strncmp (URL, "file://", 7) != 0)
     return svn_error_createf 
       (SVN_ERR_RA_ILLEGAL_URL, NULL, 
-       "Local URL '%s' does not contain 'file://' prefix", URL);
+       _("Local URL '%s' does not contain 'file://' prefix"), URL);
   
   /* Then, skip what's between the "file://" prefix and the next
      occurance of '/' -- this is the hostname, and we are considering
@@ -54,14 +55,14 @@ svn_ra_local__split_URL (svn_repos_t **repos,
   if (! path)
     return svn_error_createf 
       (SVN_ERR_RA_ILLEGAL_URL, NULL, 
-       "Local URL '%s' contains only a hostname, no path", URL);
+       _("Local URL '%s' contains only a hostname, no path"), URL);
 
   /* Currently, the only hostnames we are allowing are the empty
      string and 'localhost' */
   if ((hostname != path) && (strncmp (hostname, "localhost/", 10) != 0))
     return svn_error_createf
       (SVN_ERR_RA_ILLEGAL_URL, NULL, 
-       "Local URL '%s' contains unsupported hostname", URL);
+       _("Local URL '%s' contains unsupported hostname"), URL);
 
 
   /* Duplicate the URL, starting at the top of the path */
@@ -101,14 +102,14 @@ svn_ra_local__split_URL (svn_repos_t **repos,
   if (!repos_root)
     return svn_error_createf 
       (SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED, NULL,
-       "Unable to open repository '%s'", URL);
+       _("Unable to open repository '%s'"), URL);
 
   /* Attempt to open a repository at URL. */
   err = svn_repos_open (repos, repos_root, pool);
   if (err)
     return svn_error_createf 
       (SVN_ERR_RA_LOCAL_REPOS_OPEN_FAILED, err,
-       "Unable to open repository '%s'", URL);
+       _("Unable to open repository '%s'"), URL);
 
   /* What remains of URL after being hacked at in the previous step is
      REPOS_URL.  FS_PATH is what we've hacked off in the process. */

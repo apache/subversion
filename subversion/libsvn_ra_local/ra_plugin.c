@@ -93,9 +93,9 @@ reporter_link_path (void *reporter_baton,
   repos_url_len = strlen(rbaton->session->repos_url);
   if (strncmp(url, rbaton->session->repos_url, repos_url_len) != 0)
     return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
-                              "'%s'\n"
-                              "is not the same repository as\n"
-                              "'%s'", url, rbaton->session->repos_url);
+                              _("'%s'\n"
+                                "is not the same repository as\n"
+                                "'%s'"), url, rbaton->session->repos_url);
   fs_path = url + repos_url_len;
 
   return svn_repos_link_path (rbaton->report_baton, path,
@@ -221,7 +221,7 @@ svn_ra_local__open (void **session_baton,
                                       &(session->fs_path),
                                       session->repository_URL,
                                       session->pool),
-             "Unable to open an ra_local session to URL");
+             _("Unable to open an ra_local session to URL"));
 
   /* Encode the repos_url into repos_root for get_repos_root. */
   session->repos_root = svn_path_uri_encode (session->repos_url, pool);
@@ -459,9 +459,9 @@ make_reporter (void *session_baton,
       if (strncmp (other_url, sbaton->repos_url, repos_url_len) != 0)
         return svn_error_createf 
           (SVN_ERR_RA_ILLEGAL_URL, NULL,
-           "'%s'\n"
-           "is not the same repository as\n"
-           "'%s'", other_url, sbaton->repos_url);
+           _("'%s'\n"
+             "is not the same repository as\n"
+             "'%s'"), other_url, sbaton->repos_url);
 
       other_fs_path = other_url + repos_url_len;
     }
@@ -915,7 +915,7 @@ svn_ra_local__get_locations (void *session_baton,
 static const svn_ra_plugin_t ra_local_plugin = 
 {
   "ra_local",
-  "Module for accessing a repository on local disk.",
+  N_("Module for accessing a repository on local disk."),
   svn_ra_local__open,
   svn_ra_local__get_latest_revnum,
   svn_ra_local__get_dated_revision,
@@ -950,8 +950,8 @@ svn_ra_local_init (int abi_version,
   if (abi_version < 1
       || abi_version > SVN_RA_ABI_VERSION)
     return svn_error_createf (SVN_ERR_RA_UNSUPPORTED_ABI_VERSION, NULL,
-                              "Unsupported RA plugin ABI version (%d) "
-                              "for ra_local.", abi_version);
+                              _("Unsupported RA plugin ABI version (%d) "
+                                "for ra_local"), abi_version);
 
   apr_hash_set (hash, "file", APR_HASH_KEY_STRING, &ra_local_plugin);
 
