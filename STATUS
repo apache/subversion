@@ -9,14 +9,20 @@ Status of 1.1.0:
 
 Candidate changes:
 
-  * 10299:
+  * r10299:
     When configured without Berkeley DB, make libsvn_fs default to
     the fsfs back-end.
     Votes:
       +1: epg, rooneg
 
-  * 10313:
+  * r10313:
     Shouldn't tell people that --without-berkeley-db will keep us
     from building the server parts of Subversion when it really doesn't.
     Votes:
       +1: rooneg, epg
+
+  * r10317
+    URIs never should end in a / when returned from svn_path_canonicalize().
+    Justification: http://svn/ would result in an assertion failure. Very ugly.
+    Votes:
+      +1: breser
