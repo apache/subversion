@@ -103,7 +103,7 @@ svn_make_vcdiff_parser (svn_txdelta_window_handler_t *handler,
 
   new_vcdiff_parser->pool = pool;
   new_vcdiff_parser->subpool = 
-    apr_make_sub_pool (new_vcdiff_parser->pool, NULL);
+    svn_pool_create (new_vcdiff_parser->pool, NULL);
 
   /* Important:  notice that the parser's buffer lives in a subpool */
   new_vcdiff_parser->buffer = 
@@ -166,7 +166,7 @@ svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
 
   /* Make a new subpool to continue buffering. */
 
-  parser->subpool = apr_make_sub_pool (parser->pool, NULL);
+  parser->subpool = svn_pool_create (parser->pool, NULL);
 
   parser->buffer = svn_string_create ("", parser->subpool);
   

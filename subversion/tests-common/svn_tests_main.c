@@ -141,6 +141,7 @@ main (int argc, char *argv[])
       printf ("apr_initialize() failed.\n");
       exit (1);
     }
+  /* This is one place we don't use svn_pool_create(). */
   if (apr_create_pool (&pool, NULL) != APR_SUCCESS)
     {
       printf ("apr_create_pool() failed.\n");

@@ -123,7 +123,7 @@ main (int argc, char **argv)
   char *src_file = NULL;
 
   apr_initialize ();
-  apr_create_pool (&pool, NULL);
+  pool = svn_pool_create (NULL, NULL);
 
   if ((argc < 2) || (argc > 3))
     {

@@ -76,7 +76,7 @@ svn_error_t *
 svn_txdelta__init_window (svn_txdelta_window_t **window,
                           svn_txdelta_stream_t *stream)
 {
-  apr_pool_t *pool = apr_make_sub_pool (stream->pool, NULL);
+  apr_pool_t *pool = svn_pool_create (stream->pool, NULL);
   assert (pool != NULL);
 
   (*window) = apr_palloc (pool, sizeof (**window));
@@ -155,7 +155,7 @@ svn_txdelta (svn_txdelta_stream_t **stream,
              void *target_baton,
              apr_pool_t *pool)
 {
-  apr_pool_t *subpool = apr_make_sub_pool (pool, NULL);
+  apr_pool_t *subpool = svn_pool_create (pool, NULL);
   assert (subpool != NULL);
 
   *stream = apr_palloc (pool, sizeof (**stream));
@@ -193,7 +193,7 @@ svn_txdelta_next_window (svn_txdelta_window_t **window,
       svn_error_t *err = SVN_NO_ERROR;
       apr_size_t source_len = svn_txdelta__window_size;
       apr_size_t target_len = svn_txdelta__window_size;
-      apr_pool_t *temp_pool = apr_make_sub_pool (stream->pool, NULL);
+      apr_pool_t *temp_pool = svn_pool_create (stream->pool, NULL);
       char *buffer = apr_palloc (temp_pool, source_len + target_len);
 
       /* Read the source and target streams. */

@@ -49,8 +49,14 @@
 
 
 #include <stdarg.h>
+#include <assert.h>
+#include "apr_lib.h"
+#include "apr_general.h"
+#include "apr_pools.h"
 #include "apr_strings.h"
 #include "svn_error.h"
+
+#define SVN_ERROR_POOL "svn-error-pool"
 
 
 
@@ -68,30 +74,25 @@ make_error_internal (apr_status_t apr_err,
   apr_pool_t *newpool;
   char *permanent_msg;
 
-  /* kff todo: okay, this is where we could implement Greg Stein's
-     idea.  Instead of making a new subpool of POOL, we'd discover a
-     `global' error pool as an attribute of POOL, and make a subpool
-     under that.  (It's important to still make a subpool, so that
-     callers can free individual errors).  Before we make such a
-     change, we need to ensure that all subpool creation in Subversion
-     happens in an inherity way, i.e., through apr_create_pool(), not
-     apr_make_sub_pool(). */
-
-  /* Make a new subpool, or maybe use child's pool. */
+  /* Make a new subpool of the active error pool, or else use child's pool. */
   if (pool)
     {
-      apr_status_t apr_stat;
-      apr_stat = apr_create_pool (&newpool, pool);
-      if (apr_stat) /* Can't even allocate?  Get out of town. */
-        exit (1);   /* kff todo: is this a good reaction? */
+      apr_pool_t *error_pool;
+      apr_get_userdata ((void **) &error_pool, SVN_ERROR_POOL, pool);
+      if (error_pool)
+        newpool = svn_pool_create (error_pool, NULL);
+      else
+        newpool = pool;
     }
   else if (child)
     newpool = child->pool;
-  else         /* can't happen */
-    exit (1);  /* kff todo: is this a good reaction? */
+  else            /* can't happen */
+    return NULL;  /* kff todo: is this a good reaction? */
+
+  assert (newpool != NULL);
 
   /* Create the new error structure */
-  new_error = (svn_error_t *) apr_palloc (newpool, sizeof(svn_error_t));
+  new_error = (svn_error_t *) apr_palloc (newpool, sizeof (svn_error_t));
 
   /* Copy the message to permanent storage. */
   if (ap)
@@ -112,6 +113,67 @@ make_error_internal (apr_status_t apr_err,
   return new_error;
 }
 
+
+
+/*** Setting a semi-global error pool. ***/
+
+static int
+default_abort (int retcode)
+{
+  abort ();
+}
+
+
+apr_pool_t *
+svn_pool_create (apr_pool_t *cont_pool,
+                 int (*abort_func) (int retcode))
+{
+  apr_pool_t *ret_pool;
+  apr_status_t apr_err;
+  apr_pool_t *error_pool;
+
+  if (! abort_func)
+    abort_func = default_abort;
+
+  apr_err = apr_create_pool (&ret_pool, cont_pool);
+  if (apr_err)
+    (*abort_func) (apr_err);
+
+  if (cont_pool)
+    {
+      apr_get_userdata ((void **) &error_pool, SVN_ERROR_POOL, cont_pool);
+      if (! error_pool)
+        (*abort_func) (SVN_ERR_BAD_CONTAINING_POOL);
+    }
+  else
+    {
+      apr_err = apr_create_pool (&error_pool, ret_pool);
+      if (apr_err)
+        (*abort_func) (apr_err);
+    }
+
+  /* Set the error pool on its parent. */
+  apr_err = apr_set_userdata (error_pool,
+                              SVN_ERROR_POOL,
+                              apr_null_cleanup,
+                              ret_pool);
+  if (apr_err)
+    (*abort_func) (apr_err);
+
+  /* Set the error pool on itself. */
+  apr_err = apr_set_userdata (error_pool,
+                              SVN_ERROR_POOL,
+                              apr_null_cleanup,
+                              error_pool);
+  if (apr_err)
+    (*abort_func) (apr_err);
+
+  return ret_pool;
+}
+
+
+
+/*** Creating and destroying errors. ***/
 
 /*
   svn_create_error() : for creating nested exception structures.
