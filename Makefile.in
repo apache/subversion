@@ -54,6 +54,7 @@ prefix = @prefix@
 exec_prefix = @exec_prefix@
 libdir = @libdir@
 base_libdir = @libdir@
+dav_libdir = @libdir@
 fs_libdir = @libdir@
 bindir = @bindir@
 fs_bindir = @bindir@
