@@ -229,7 +229,7 @@ svn_error_t *
 svn_error_dup (svn_error_t *err)
 {
   apr_pool_t *pool;
-  svn_error_t *new_err = NULL, *tmp_err;
+  svn_error_t *new_err = NULL, *tmp_err = NULL;
 
   if (apr_pool_create (&pool, NULL))
     abort ();
