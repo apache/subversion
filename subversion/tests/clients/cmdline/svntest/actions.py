@@ -275,7 +275,7 @@ def run_and_verify_merge(dir, rev1, rev2, url,
                          b_baton = None,
                          check_props = 0):
 
-  """Run 'svn merge -rREV1:REV2 URL' from inside DIR.
+  """Run 'svn merge -rREV1:REV2 URL DIR'
 
   If ERROR_RE_STRING, the merge must exit with error, and the error
   message must match regular expression ERROR_RE_STRING.
@@ -306,13 +306,9 @@ def run_and_verify_merge(dir, rev1, rev2, url,
   ### should pass "" as the wc_dir for now, until we can run merge on
   ### a target deeper than ".".
 
-  saved_cwd = os.getcwd()
-  os.chdir(dir)
-
   # Update and make a tree of the output.
   out, err = main.run_svn (error_re_string,
-                           'merge', '-r', rev1 + ':' + rev2, url)
-  os.chdir(saved_cwd)
+                           'merge', '-r', rev1 + ':' + rev2, url, dir)
 
   if (error_re_string):
     rm = re.compile(error_re_string)

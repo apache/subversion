@@ -245,29 +245,16 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
     "       svn log http://www.example.com/repo/project foo.c bar.c\n",
     {'r', 'D', 'v', svn_cl__targets_opt, svn_cl__auth_username_opt,
      svn_cl__auth_password_opt, svn_cl__strict_opt, svn_cl__xml_opt} },
-
-  /* ### NOTE:  see issue #748.  The WCPATH argument to merge is
-     temporarily disabled until we fix this bug.
   
-    { "merge", svn_cl__merge, {0},
+  { "merge", svn_cl__merge, {0},
     "apply the differences between two paths to a working copy path.\n"
-    "usage:  svn merge PATH1[@N] PATH2[@M] [WCPATH]\n\n"
+    "usage:  svn merge PATH1[@N] PATH2[@M] [WCPATH]\n"
+    "    or  svn merge -rN:M PATH [WCPATH]\n\n"
     "  * PATH1 and PATH2 are either working-copy paths or URLs, specified at\n"
     "    revisions N and M.  These are the two sources to be compared.\n"
-    "  * WCPATH is the working-copy path that will receive the changes.\n\n"
-    "    - If either N or M are omitted, HEAD revision is assumed.\n"   
-    "    - If WCPATH is omitted, a value of '.' is assumed.\n"
-    "    - If PATH1 and PATH2 are identical, an alternate syntax is allowed:\n"
-    "            svn merge -rN:M PATH [WCPATH]\n",
-    {'r', 'D', 'n', svn_cl__force_opt,
-     svn_cl__auth_username_opt, svn_cl__auth_password_opt} }, */
-
-  { "merge", svn_cl__merge, {0},
-    "apply the differences between two paths into working copy '.' \n"
-    "usage:  svn merge PATH1[@N] PATH2[@M]\n"
-    "    or  svn merge -rN:M PATH\n\n"
-    "    Each PATH is either a working-copy path or URL, specified at\n"
-    "    revisions N and M.  These are the two sources to be compared.\n",
+    "    N and M default to HEAD if omitted.\n\n"
+    "  * WCPATH is the working-copy path that will receive the changes.\n"
+    "    If omitted, a default value of '.' is assumed.\n\n",
     {'r', 'D', 'n', svn_cl__force_opt,
      svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
   
