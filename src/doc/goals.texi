@@ -1,12 +1,11 @@
 @node Goals
 @chapter Goals
 
-The goal of the Subversion project is to take over CVS's current and
-future user base.  The first release has all the major features of CVS,
-plus certain new features that CVS users often wish they had.
-
-Generally, Subversion's interface to a particular feature is similar to
-CVS's, except when there's a compelling reason to do otherwise.
+The goal of the Subversion project is write a version control system
+that takes over CVS's current and future user base.  The first release
+has all the major features of CVS, plus certain new features that CVS
+users often wish they had.  In general, Subversion works like CVS,
+except where there's a compelling reason to be different.
 
 So what does Subversion have that CVS doesn't?
 
@@ -21,11 +20,11 @@ contents.
 Tagging and branching are constant-time and constant-space.
 
 @item
-It is natively client/server, hence much more maintainable than CVS.
-(In CVS, the client/server protocol was added as an afterthought.
+It is natively client-server, hence much more maintainable than CVS.
+(In CVS, the client-server protocol was added as an afterthought.
 This means that most new features have to be implemented twice, or at
 least more than once: code for the local case, and code for the
-client/server case.)
+client-server case.)
 
 @item
 The repository is organized efficiently and comprehensibly.  (Without
@@ -92,29 +91,31 @@ particular revision, Subversion just does the right thing.
 
 Historically, binary files have been problematic in CVS for two
 unrelated reasons: keyword expansion, and line-end conversion.
-
+@*
+@itemize @bullet
+@item
 @dfn{Keyword expansion} is when CVS expands "$Revision$" into "$Revision
 1.1$", for example.  There are a number of keywords in CVS: "$Author$",
 "$Date$", and so on.
-
+@*
+@item
 @dfn{Line-end conversion} is when CVS gives plaintext files in the
 working copy the appropriate line-ending conventions for that platform.
 For example, a Unix working copy would use LF, but a Windows working
 copy would use CRLF.  (Like CVS, the repository always stores text files
 in Unix LF format).
-
+@end itemize
+@*
 Both keyword substitution and line-end conversion are sensible only for
 plain text files.  CVS only recognizes two file types anyway: plaintext
 and binary.  And CVS assumes files are plain text unless you tell it
 otherwise.
 
 Subversion recognizes the same two types.  The question is, how does it
-determine which type a file is?
-
-Experience with CVS suggests that assuming text unless told otherwise
-is a losing strategy -- people frequently forget to mark images and
-other opaque formats as binary, then later they wonder why CVS mangled
-their data.
+determine which type a file is?  Experience with CVS suggests that
+assuming text unless told otherwise is a losing strategy -- people
+frequently forget to mark images and other opaque formats as binary,
+then later they wonder why CVS mangled their data.
 
 So Subversion assumes a file is binary, unless it matches a standard
 text pattern (.c, .h, .pl, .html, .txt, README, and so on).  When
@@ -122,13 +123,12 @@ necessary, the user can explicitly set the type for a file or file
 pattern.
 
 Text files undergo line-end conversion by default.  Users can turn
-line-end conversion on or off per file pattern, or per file.
-
-Text files do *not* undergo keyword substitution by default, on the
-theory that if someone wants substitution and isn't getting it, they'll
-look in the manual; but if they are getting it and didn't want it, they
-might just be confused and not know what to do.  Users can turn
-substitution on or off per project, or per file pattern, or per file.
+line-end conversion on or off per file pattern, or per file.  Text files
+do *not* undergo keyword substitution by default, on the theory that if
+someone wants substitution and isn't getting it, they'll look in the
+manual; but if they are getting it and didn't want it, they might just
+be confused and not know what to do.  Users can turn substitution on or
+off per project, or per file pattern, or per file.
 
 Both of these changes are done on the client side; the repository does
 not even know about them.
@@ -186,9 +186,6 @@ branch and tag commands, with the latter initializing the clone as
 read-only (i.e., if a static snapshot is going to become an active line
 of development, one at least wants users to be aware of the change).
 
-(Ben sez:  don't forget to mention that branches and clones are visible
-in the Subversion filesystem namespace!)
-
 @c -----------------------------------------------------------------------
 @node Miscellaneous new behaviors
 @subsection Miscellaneous new behaviors
@@ -198,7 +195,6 @@ in the Subversion filesystem namespace!)
 * Client side diff plug-ins
 * Better merging
 * Conflict resolution
-* Multisite and local repository
 @end menu
 
 @c -----------------------------------------------------------------------
@@ -268,66 +264,3 @@ the client side; but this is not scheduled for the first release.  Note
 that users can use their own merge tools anyway, since all the original
 files are available.
 
-@c -----------------------------------------------------------------------
-@node Multisite and local repository
-@subsubsection Multisite and local repository
-
-Two commonly requested enhancements for CVS are "multisite" and "local
-repositories".  Although the two terms are sometimes used
-interchangably, they refer to two different things (explained below).
-Subversion can eventually support both, but they are not priorities
-for the first release.  Nothing in the design prevents them from being
-added on later.
-
-(Ben sez:  The "Multisite" section below needs to be rewritten to
-describe the master/slave replicating server-caching model.  The "Local"
-repository section needs to be rewritten to explain how cheap clones
-(branches) give us this behavior for free;  of course, for the first
-release of subversion, these quick branches will only be
-intra-repository, not inter-.)
-
-
-@enumerate
-
-@item Multisite
-
-This is like the ClearCase multisite feature.  Essentially, it is a
-redundant distributed repository.  The repository exists on two or
-more cooperatively mirroring servers (each one presumably being close,
-network-wise, to its intended users).  Commits on any server are
-visible on all of them.  I'm not sure how conflict resolution is
-handled when people at different mirrors change the same file at at
-the same time -- perhaps one of the commits is backed out and returned
-to that user?  Hmmm.
-
-Anyway, CVS has gotten away with simply assuming decent Net access for
-all users; this doesn't satisfy everyone, but for the first release of
-Subversion we should probably do the same.
-
-@item Local repository
-
-This is one that people request a lot: the ability to commit changes
-first to a local "working repository" (not visible to the rest of the
-world), and then commit what's in the working repository to the real
-repository (with the several commits maybe being folded into one
-commit).
-
-Why do people want this?  I think mostly it's the psychological
-comfort of making a snapshot whenever one reaches a good stopping
-point, but not necessarily wanting all those "comfort points" to
-become publically-visible commits.  This is understandable, but of
-course the local repository will have to refuse to commit changes if
-any of the files turn out not to be up-to-date.  (There may also be a
-very cheap way to implement 90% of this feature by making skeleton
-duplicates of the working copy's directory tree and copying the
-changed files into that skeleton...)
-
-(Are there any other reasons people want this feature?  I remember
-seeing posts on info-cvs explaining what appeared to be other reasons,
-but frankly I could never understand them very well...)
-
-For now, similar effects are achievable without involving the version
-control system, so this feature is not a priority for the first
-release of Subversion.  Unless someone can explain a clear way to
-implement it, and another reason why it's important to support it.
-@end enumerate

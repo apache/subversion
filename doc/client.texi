@@ -1,4 +1,40 @@
 @node Client
 @chapter Client
 
-@c whee again
+The Subversion client is built on two libraries: one handles working
+copy management, the other communicates with the server.  The initial
+client is a Unix-style command-line tool (like standard CVS), but there
+is no reason why that has to be the only client.  The libraries are
+there to separate Subversion-specific functionality from user-interface
+decisions; a GUI client can use the libraries as easily as a
+command-line client can.
+
+This chapter describes the two libraries, and the layout of working
+copies.
+
+todo: note how the network access library is not really network right
+now!
+
+@menu
+* What working copies look like
+* The working copy management library
+* The network access library
+@end menu
+
+@c -----------------------------------------------------------------------
+@node Text vs binary issues
+@subsection Text vs binary issues
+
+fish
+
+@c -----------------------------------------------------------------------
+@node The working copy management library
+@subsection The working copy management library
+
+fish
+
+@c -----------------------------------------------------------------------
+@node The network access library
+@section The network access library
+
+fish
