@@ -44,6 +44,8 @@ else { fprintf(stderr, "'%s';", (char*)str); } \
 }
 #define SVN_JNI__DEBUG_DEC(dec) \
 { fprintf(stderr, #dec "=%d;", dec); }
+#define SVN_JNI__DEBUG_LONG(dec) \
+{ fprintf(stderr, #dec "=%ld;", dec); }
 
 #endif
 
