@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os
+import string, sys, re, os, shutil
 
 # Our testing module
 import svntest
@@ -398,6 +398,8 @@ def log_with_empty_repos(sbox):
   "test 'svn log' on an empty repository"
 
   # Create virgin repos
+  if os.path.exists(sbox.repo_dir):
+    shutil.rmtree(sbox.repo_dir)
   svntest.main.create_repos(sbox.repo_dir)
 
   stdout_lines, stderr_lines = svntest.main.run_svn\
