@@ -65,11 +65,12 @@ svn_cl__update (apr_getopt_t *os,
     svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
                           FALSE, pool);
 
-  for (i = 0; i < condensed_targets->nelts; i++, svn_pool_clear (subpool))
+  for (i = 0; i < condensed_targets->nelts; i++)
     {
       const char *target = ((const char **) (condensed_targets->elts))[i];
       svn_error_t *err;
 
+      svn_pool_clear (subpool);
       err = svn_client_update (target,
                                &(opt_state->start_revision),
                                opt_state->nonrecursive ? FALSE : TRUE,

@@ -168,7 +168,7 @@ svn_cl__propedit (apr_getopt_t *os,
         }
 
       /* For each target, edit the property PNAME. */
-      for (i = 0; i < targets->nelts; i++, svn_pool_clear (subpool))
+      for (i = 0; i < targets->nelts; i++)
         {
           apr_hash_t *props;
           const char *target = ((const char **) (targets->elts))[i];
@@ -179,6 +179,7 @@ svn_cl__propedit (apr_getopt_t *os,
           svn_wc_adm_access_t *adm_access;
           const svn_wc_entry_t *entry;
           
+          svn_pool_clear (subpool);
           if (svn_path_is_url (target))
             {
               /* ### If/when svn_client_propset() supports setting

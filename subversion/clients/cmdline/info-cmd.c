@@ -252,12 +252,13 @@ svn_cl__info (apr_getopt_t *os,
   /* Add "." if user passed 0 arguments. */
   svn_opt_push_implicit_dot_target (targets, pool);
 
-  for (i = 0; i < targets->nelts; i++, svn_pool_clear (subpool))
+  for (i = 0; i < targets->nelts; i++)
     {
       const char *target = ((const char **) (targets->elts))[i];
       svn_wc_adm_access_t *adm_access;
       const svn_wc_entry_t *entry;
 
+      svn_pool_clear (subpool);
       SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, target, FALSE,
                                       opt_state->recursive, subpool));
       SVN_ERR (svn_wc_entry (&entry, target, adm_access, FALSE, subpool));

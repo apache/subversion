@@ -108,9 +108,11 @@ svn_cl__propdel (apr_getopt_t *os,
       apr_pool_t *subpool = svn_pool_create (pool);
 
       /* For each target, remove the property PNAME. */
-      for (i = 0; i < targets->nelts; i++, svn_pool_clear (subpool))
+      for (i = 0; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];
+
+          svn_pool_clear (subpool);
           SVN_ERR (svn_client_propset (pname_utf8, NULL, target,
                                        opt_state->recursive, subpool));
           if (! opt_state->quiet) 
