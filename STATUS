@@ -153,3 +153,10 @@ Candidate changes:
     Votes:
       +1: sussman
 
+  * r10505
+    Remove 'svn_node_special' from svn_node_kind_t.
+    Justification:
+      A simple API clensing; we don't want svn 1.1 to have this
+      junk.  If it does, we'll have to support it until 2.0.
+    Votes:
+      +1: sussman
