@@ -326,22 +326,11 @@ typedef struct svn_delta_edit_fns_t
      caller (producer) is pushing tree delta data at the callee
      (consumer).
 
-     At the start of traversal, the consumer provides two batons:
-
-     - EDIT_BATON, a baton global to the entire delta edit.  The
-       producer should pass this value as the EDIT_BATON argument to
-       every callback.
-
-     - DIR_BATON, a baton representing the root directory.  Each
-       callback function that adds, deletes, or changes objects in
-       some directory takes a directory baton argument representing
-       the directory in which the change takes place.  Given the
-       initial root baton, the producer can use `add_directory' or
-       `replace_directory', which return batons for subdirectories,
-       as explained below.
-
-     In the case of `svn_xml_parse', these would be the EDIT_BATON
-     and DIR_BATON arguments.  Other producers will work differently.
+     At the start of traversal, the consumer provides EDIT_BATON, a
+     baton global to the entire delta edit.  The producer should pass
+     this value as the EDIT_BATON argument to every callback.  In the
+     case of `svn_xml_parse', this would be the EDIT_BATON argument.
+     Other producers will work differently.
 
      Most of the callbacks work in the obvious way:
 
@@ -349,13 +338,21 @@ typedef struct svn_delta_edit_fns_t
          add_file        add_directory    
          replace_file    replace_directory
 
-     These all take a PARENT_BATON argument, indicating the directory
-     the change takes place in, and a NAME argument, giving the name
-     of the file, directory, or directory entry to change.  (NAME is
-     always a single path component, never a full directory path.)
+     Each of these takes a directory baton, indicating the directory
+     in which the change takes place, and a NAME argument, giving the
+     name of the file, subdirectory, or directory entry to change.
+     (NAME is always a single path component, never a full directory
+     path.)
 
-     While the consumer provides a directory baton for the root of the
-     tree being changed (as explained above), the `add_directory' and
+     Since every call requires a parent directory baton, including
+     add_directory and replace_directory, where do we ever get our
+     initial directory baton, to get things started?  The
+     `replace_root' function returns a baton for the top directory of
+     the change.  In general, the producer needs to invoke the
+     editor's `replace_root' function before it can get anything done.
+
+     While `replace_root' provides a directory baton for the root of
+     the tree being changed, the `add_directory' and
      `replace_directory' callbacks provide batons for other
      directories.  Like the callbacks above, they take a PARENT_BATON
      and a single path component NAME, and then return a new baton for
@@ -366,6 +363,7 @@ typedef struct svn_delta_edit_fns_t
      So, if we already have subdirectories named `foo' and `foo/bar',
      then the producer can create a new file named `foo/bar/baz.c' by
      calling:
+        replace_root () --- yielding a baton ROOT for the top directory
         replace_directory (ROOT, "foo") --- yielding a baton F for `foo'
         replace_directory (F, "bar") --- yielding a baton B for `foo/bar'
         add_file (B, "baz.c")
@@ -397,6 +395,17 @@ typedef struct svn_delta_edit_fns_t
      resulting object.  */
 
 
+  /* Set *ROOT_BATON to a baton for the top directory of the change.
+     (This is the top of the subtree being changed, not necessarily
+     the root of the filesystem.)  Like any other directory baton, the
+     producer should call `close_directory' on ROOT_BATON when they're
+     done.  */
+  svn_error_t *(*replace_root) (svn_string_t *ancestor_path,
+                                svn_vernum_t ancestor_version,
+                                void *edit_baton,
+                                void **dir_baton);
+
+
   /* Deleting things.  */
        
   /* Remove the directory entry named NAME.  */
@@ -407,29 +416,6 @@ typedef struct svn_delta_edit_fns_t
 
   /* Creating and modifying directories.  */
   
-  /* This is like replace_directory(), except that because it's the
-     root dir, it takes neither parent baton nor name (note that by
-     "root dir", we mean the root dir of this change, which may or may
-     not be the root dir of the repository).
-
-     This function sets DIR_BATON, which will be the dir baton for its
-     matching close_directory() and the parent baton for any child
-     calls.
-
-     kff todo:
-
-     Jim: you're probably thinking, this ought to be documented in a
-     more independent fashion.  We agree. :-)  But just needed to get
-     'em up and running right now since libsvn_wc is bottlenecked on
-     it.  I think you'd probably document it better, so please have
-     at it if you'd like, or if you want me to do it I'm happy to as
-     well. */
-  svn_error_t *(*replace_root) (svn_string_t *ancestor_path,
-                                svn_vernum_t ancestor_version,
-                                void *edit_baton,
-                                void **dir_baton);
-
-
   /* We are going to add a new subdirectory named NAME.  We will use
      the value this callback stores in *CHILD_BATON as the
      PARENT_BATON for further changes in the new subdirectory.  The
@@ -519,7 +505,7 @@ typedef struct svn_delta_edit_fns_t
 
      The callback should set *HANDLER to a text delta window
      handler; we will then call *HANDLER on successive text
-     delta windows as we recieve them.  The callback should set
+     delta windows as we receive them.  The callback should set
      *HANDLER_BATON to the value we should pass as the BATON
      argument to *HANDLER.  */
   svn_error_t *(*apply_textdelta) (void *edit_baton,
