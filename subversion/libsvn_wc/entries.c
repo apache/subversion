@@ -204,7 +204,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
           entry->kind = svn_node_dir;
         else
           return svn_error_createf 
-            (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
+            (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL, pool,
              "Entry '%s' has invalid node kind",
              (name ? name : SVN_WC_ENTRY_THIS_DIR));
         *modify_flags |= SVN_WC__ENTRY_MODIFY_KIND;
@@ -1618,7 +1618,7 @@ svn_wc_walk_entries (const char *path,
                           show_deleted, pool);
 
   else
-    return svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL, pool,
                               "%s: unrecognized node kind.", path);
 }
 

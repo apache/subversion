@@ -334,7 +334,7 @@ svn_ra_dav__open (void **session_baton,
   if (ne_sock_init() != 0)
     {
       ne_uri_free(&uri);
-      return svn_error_create(SVN_ERR_RA_SOCK_INIT, 0, NULL, pool,
+      return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, 0, NULL, pool,
                               "network socket initialization failed");
     }
 
@@ -352,7 +352,7 @@ svn_ra_dav__open (void **session_baton,
       if (ne_supports_ssl() == 0)
         {
           ne_uri_free(&uri);
-          return svn_error_create(SVN_ERR_RA_SOCK_INIT, 0, NULL, pool,
+          return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, 0, NULL, pool,
                                   "SSL is not supported");
         }
     }

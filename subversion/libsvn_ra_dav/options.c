@@ -123,7 +123,7 @@ svn_error_t * svn_ra_dav__get_activity_collection(
   if (oc.activity_coll == NULL)
     {
       /* ### error */
-      return svn_error_create(SVN_ERR_RA_OPTIONS_REQUEST_FAILED,
+      return svn_error_create(SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED,
                               0, NULL, pool,
                               "The OPTIONS response did not include the "
                               "requested activity-collection-set.\n"

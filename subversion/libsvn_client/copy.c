@@ -79,7 +79,7 @@ wc_to_wc_copy (const char *src_path,
   /* Verify that SRC_PATH exists. */
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
   if (src_kind == svn_node_none)
-    return svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL, pool,
                               "path `%s' does not exist.", src_path);
 
   /* If DST_PATH does not exist, then its basename will become a new
@@ -276,7 +276,7 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
     }
   else
     {
-      return svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
+      return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL, pool,
                                 "unrecognized node kind of %s.", dst_url);
     }
 
@@ -437,10 +437,10 @@ reconcile_errors (svn_error_t *commit_err,
       err = commit_err;
     }
 
-  /* Else, create a new "general" error that will head off the errors
+  /* Else, create a new "general" error that will lead off the errors
      that follow. */
   else
-    err = svn_error_create (SVN_ERR_GENERAL, 0, NULL, pool,
+    err = svn_error_create (SVN_ERR_BASE, 0, NULL, pool,
                             "Commit succeeded, but other errors follow:");
 
   /* If there was an unlock error... */

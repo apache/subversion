@@ -52,7 +52,8 @@ extern "C" {
 #define SVN_ERROR_START \
 	static const err_defn error_table[] = { \
 	  { SVN_WARNING, "Warning" },
-#define SVN_ERRDEF(n, s) { n, s },
+#define SVN_ERR_CATEGORY_FIRST(num, offset, str) { num, str },
+#define SVN_ERRDEF(num, str) { num, str },
 #define SVN_ERROR_END { 0, NULL } };
 
 #elif !defined(SVN_ERROR_ENUM_DEFINED)
@@ -60,7 +61,8 @@ extern "C" {
 #define SVN_ERROR_START \
 	typedef enum svn_errno_t { \
 	  SVN_WARNING = APR_OS_START_USEERR + 1,
-#define SVN_ERRDEF(n, s) n,
+#define SVN_ERR_CATEGORY_FIRST(num, offset, str) num = offset,
+#define SVN_ERRDEF(num, str) num,
 #define SVN_ERROR_END SVN_ERR_LAST } svn_errno_t;
 
 #define SVN_ERROR_ENUM_DEFINED
@@ -69,56 +71,58 @@ extern "C" {
 
 /* Define custom Subversion error numbers, in the range reserved for
    that in APR: from APR_OS_START_USEERR to APR_OS_START_SYSERR (see
-   apr_errno.h).  */
+   apr_errno.h).
+
+   Error numbers are divided into categories of up to 5000 errors
+   each.  Since we're dividing up the APR user error space, which has
+   room for 500,000 errors, we can have up to 100 categories.
+   Categories are fixed-size; if a category has fewer than 5000
+   errors, then it just ends with a range of unused numbers.
+
+   To maintain binary compatibility, please observe these guidelines:
+
+      - When adding a new error, always add on the end of the
+        appropriate category, so that the real values of existing
+        errors are not changed.
+
+      - When deleting an error, leave a placeholder by putting
+        "OBSOLETE" into the error's name ("SVN_OBSOLETE_ERR_BLAH"),
+        again so that the values of other errors are not perturbed.
+
+      - The first error in a category always gets assigned the 
+        category's start value, using SVN_ERR_CATEGORY_FIRST.
+*/
+
+#define SVN_ERR_CATEGORY_SIZE 5000
+
+/* Start off at 5000, to leave room for SVN_WARNING and any other such
+   beasts we might create in the future. */
+#define SVN_ERR_BAD_CATEGORY_START      ( 1 * SVN_ERR_CATEGORY_SIZE)
+#define SVN_ERR_XML_CATEGORY_START      ( 2 * SVN_ERR_CATEGORY_SIZE)
+#define SVN_ERR_IO_CATEGORY_START       ( 3 * SVN_ERR_CATEGORY_SIZE)
+#define SVN_ERR_STREAM_CATEGORY_START   ( 4 * SVN_ERR_CATEGORY_SIZE)
+#define SVN_ERR_NODE_CATEGORY_START     ( 5 * SVN_ERR_CATEGORY_SIZE)
+#define SVN_ERR_ENTRY_CATEGORY_START    ( 6 * SVN_ERR_CATEGORY_SIZE)
+#define SVN_ERR_WC_CATEGORY_START       ( 7 * SVN_ERR_CATEGORY_SIZE)
+#define SVN_ERR_FS_CATEGORY_START       ( 8 * SVN_ERR_CATEGORY_SIZE)
+#define SVN_ERR_REPOS_CATEGORY_START    ( 9 * SVN_ERR_CATEGORY_SIZE)
+#define SVN_ERR_RA_CATEGORY_START       (10 * SVN_ERR_CATEGORY_SIZE)
+#define SVN_ERR_RA_DAV_CATEGORY_START   (11 * SVN_ERR_CATEGORY_SIZE)
+#define SVN_ERR_RA_LOCAL_CATEGORY_START (12 * SVN_ERR_CATEGORY_SIZE)
+#define SVN_ERR_SVNDIFF_CATEGORY_START  (13 * SVN_ERR_CATEGORY_SIZE)
+#define SVN_ERR_APMOD_CATEGORY_START    (14 * SVN_ERR_CATEGORY_SIZE)
+#define SVN_ERR_CLIENT_CATEGORY_START   (15 * SVN_ERR_CATEGORY_SIZE)
+#define SVN_ERR_MISC_CATEGORY_START     (16 * SVN_ERR_CATEGORY_SIZE)
+#define SVN_ERR_CL_CATEGORY_START       (17 * SVN_ERR_CATEGORY_SIZE)
+
 SVN_ERROR_START
 
-  SVN_ERRDEF (SVN_ERR_GENERAL, 
-              "A general problem occured") /* This should ONLY be used
-                                              to add information to existing
-                                              error chains!! */
+  /* validation ("BAD_FOO") errors */
 
-  SVN_ERRDEF (SVN_ERR_PLUGIN_LOAD_FAILURE,
-              "Failure loading plugin")
+  SVN_ERR_CATEGORY_FIRST (SVN_ERR_BAD_CONTAINING_POOL,
+                          SVN_ERR_BAD_CATEGORY_START,
+                          "Bad parent pool passed to svn_make_pool()")
 
-  SVN_ERRDEF (SVN_ERR_UNKNOWN_FS_ACTION,
-              "Unknown fs action")
-
-  SVN_ERRDEF (SVN_ERR_UNEXPECTED_EOF,
-              "Unexpected end of file")
-
-  SVN_ERRDEF (SVN_ERR_MALFORMED_FILE,
-              "Malformed file")
-
-  SVN_ERRDEF (SVN_ERR_MALFORMED_STREAM_DATA,
-              "Malformed stream data")
-
-  SVN_ERRDEF (SVN_ERR_UNRECOGNIZED_STREAM_DATA,
-              "Unrecognized stream data")
-
-  SVN_ERRDEF (SVN_ERR_INCOMPLETE_DATA,
-              "Incomplete data")
-
-  SVN_ERRDEF (SVN_ERR_INCORRECT_PARAMS,
-              "Incorrect parameters given")
-
-  SVN_ERRDEF (SVN_ERR_MALFORMED_XML,
-              "XML data was not well-formed")
-
-  SVN_ERRDEF (SVN_ERR_UNVERSIONED_RESOURCE,
-              "Tried a versioning operation on an unversioned resource")
-
-  SVN_ERRDEF (SVN_ERR_UNEXPECTED_NODE_KIND,
-              "Unexpected node kind found")
-
-  SVN_ERRDEF (SVN_ERR_UNFRUITFUL_DESCENT,
-              "WC descent came up empty")
-
-  SVN_ERRDEF (SVN_ERR_BAD_CONTAINING_POOL,
-              "Bad parent pool passed to svn_make_pool()")
-
-  SVN_ERRDEF (SVN_ERR_TEST_FAILED,
-              "Test failed")
-       
   SVN_ERRDEF (SVN_ERR_BAD_FILENAME,
               "Bogus filename")
 
@@ -134,29 +138,11 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_BAD_REVISION,
               "Bogus revision number")
 
-  SVN_ERRDEF (SVN_ERR_UNSUPPORTED_FEATURE,
-              "Trying to use an unsupported feature")
+  /* xml errors */
 
-  SVN_ERRDEF (SVN_ERR_MISSING_ENV_VARIABLE,
-              "Missing environment variable")
-
-  SVN_ERRDEF (SVN_ERR_UNKNOWN_NODE_KIND,
-              "Unknown svn_node_kind")
-
-  SVN_ERRDEF (SVN_ERR_UNKNOWN_PROP_KIND,
-              "Unknown svn_prop_kind")
-
-  SVN_ERRDEF (SVN_ERR_ILLEGAL_TARGET,
-              "Illegal target for the requested operation")
-
-  SVN_ERRDEF (SVN_ERR_DELTA_MD5_CHECKSUM_ABSENT,
-              "MD5 checksum is missing")
-
-  SVN_ERRDEF (SVN_ERR_DIR_NOT_EMPTY,
-              "Directory needs to be empty but is not")
-
-  SVN_ERRDEF (SVN_ERR_XML_ATTRIB_NOT_FOUND,
-              "No such XML tag attribute")
+  SVN_ERR_CATEGORY_FIRST (SVN_ERR_XML_ATTRIB_NOT_FOUND,
+                          SVN_ERR_XML_CATEGORY_START,
+                          "No such XML tag attribute")
 
   SVN_ERRDEF (SVN_ERR_XML_MISSING_ANCESTRY,
               "<delta-pkg> is missing ancestry")
@@ -164,8 +150,14 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_XML_UNKNOWN_ENCODING,
               "Unrecognized binary data encoding; can't decode")
 
-  SVN_ERRDEF (SVN_ERR_IO_INCONSISTENT_EOL,
-              "Inconsistent line ending style")
+  SVN_ERRDEF (SVN_ERR_XML_MALFORMED,
+              "XML data was not well-formed")
+
+  /* io errors */
+
+  SVN_ERR_CATEGORY_FIRST (SVN_ERR_IO_INCONSISTENT_EOL,
+                          SVN_ERR_IO_CATEGORY_START,
+                          "Inconsistent line ending style")
 
   SVN_ERRDEF (SVN_ERR_IO_UNKNOWN_EOL,
               "Unrecognized line ending style")
@@ -176,8 +168,32 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
               "Ran out of unique names")
 
-  SVN_ERRDEF (SVN_ERR_ENTRY_NOT_FOUND,
-              "Can't find an entry")
+  /* stream errors */
+
+  SVN_ERR_CATEGORY_FIRST (SVN_ERR_STREAM_UNEXPECTED_EOF,
+                          SVN_ERR_STREAM_CATEGORY_START,
+                          "Unexpected EOF on stream")
+
+  SVN_ERRDEF (SVN_ERR_STREAM_MALFORMED_DATA,
+              "Malformed stream data")
+
+  SVN_ERRDEF (SVN_ERR_STREAM_UNRECOGNIZED_DATA,
+              "Unrecognized stream data")
+
+  /* node errors */
+
+  SVN_ERR_CATEGORY_FIRST (SVN_ERR_NODE_UNKNOWN_KIND,
+                          SVN_ERR_NODE_CATEGORY_START,
+                          "Unknown svn_node_kind")
+
+  SVN_ERRDEF (SVN_ERR_NODE_UNEXPECTED_KIND,
+              "Unexpected node kind found")
+
+  /* entry errors */
+
+  SVN_ERR_CATEGORY_FIRST (SVN_ERR_ENTRY_NOT_FOUND,
+                          SVN_ERR_ENTRY_CATEGORY_START,
+                          "Can't find an entry")
 
   SVN_ERRDEF (SVN_ERR_ENTRY_EXISTS,
               "Entry already exists")
@@ -191,8 +207,11 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_ENTRY_ATTRIBUTE_INVALID,
               "Entry has an invalid attribute")
 
-  SVN_ERRDEF (SVN_ERR_WC_OBSTRUCTED_UPDATE,
-              "Obstructed update")
+  /* wc errors */
+
+  SVN_ERR_CATEGORY_FIRST (SVN_ERR_WC_OBSTRUCTED_UPDATE,
+                          SVN_ERR_WC_CATEGORY_START,
+                          "Obstructed update")
 
   SVN_ERRDEF (SVN_ERR_WC_UNWIND_MISMATCH,
               "Mismatch popping the WC unwind stack")
@@ -248,8 +267,11 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_WC_NODE_KIND_CHANGE,
               "Cannot change node kind")
 
-  SVN_ERRDEF (SVN_ERR_FS_GENERAL,
-              "General filesystem error")
+  /* fs errors */
+
+  SVN_ERR_CATEGORY_FIRST (SVN_ERR_FS_GENERAL,
+                          SVN_ERR_FS_CATEGORY_START,
+                          "General filesystem error")
 
   SVN_ERRDEF (SVN_ERR_FS_CLEANUP,
               "Error closing filesystem")
@@ -332,11 +354,17 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_FS_MALFORMED_SKEL,
               "Malformed skeleton data")
 
-  SVN_ERRDEF (SVN_ERR_TXN_OUT_OF_DATE,
+  SVN_ERRDEF (SVN_ERR_FS_TXN_OUT_OF_DATE,
               "Transaction is out of date")
 
-  SVN_ERRDEF (SVN_ERR_REPOS_LOCKED,
-              "The repository is locked, perhaps for db recovery.")
+  SVN_ERRDEF (SVN_ERR_FS_BERKELEY_DB,
+              "Berkeley DB error")
+
+  /* repos errors */
+
+  SVN_ERR_CATEGORY_FIRST (SVN_ERR_REPOS_LOCKED,
+                          SVN_ERR_REPOS_CATEGORY_START,
+                          "The repository is locked, perhaps for db recovery.")
 
   SVN_ERRDEF (SVN_ERR_REPOS_HOOK_FAILURE,
               "A repository hook failed.")
@@ -347,16 +375,14 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_REPOS_NO_DATA_FOR_REPORT,
               "A report cannot be generated because no data was supplied.")
 
-  SVN_ERRDEF (SVN_ERR_EXTERNAL_PROGRAM,
-              "Error calling external program")
+  SVN_ERRDEF (SVN_ERR_REPOS_BAD_REVISION_REPORT,
+              "Bogus revision report")
+ 
+  /* generic ra errors */
 
-  SVN_ERRDEF (SVN_ERR_BERKELEY_DB,
-              "Berkeley DB error")
-
-  /* ### need to come up with a mechanism for RA-specific errors */
-
-  SVN_ERRDEF (SVN_ERR_RA_ILLEGAL_URL,
-              "Bad URL passed to RA layer")
+  SVN_ERR_CATEGORY_FIRST (SVN_ERR_RA_ILLEGAL_URL,
+                          SVN_ERR_RA_CATEGORY_START,
+                          "Bad URL passed to RA layer")
 
   SVN_ERRDEF (SVN_ERR_RA_NOT_AUTHORIZED,
               "Authorization failed")
@@ -367,45 +393,38 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_RA_NOT_IMPLEMENTED,
               "Repository access method not implemented")
        
-  /* These RA errors are specific to ra_dav */
+  /* ra_dav errors */
 
-    SVN_ERRDEF (SVN_ERR_RA_SOCK_INIT,
-                "RA layer failed to init socket layer")
+  SVN_ERR_CATEGORY_FIRST (SVN_ERR_RA_DAV_SOCK_INIT,
+                          SVN_ERR_RA_DAV_CATEGORY_START,
+                          "RA layer failed to init socket layer")
 
-    SVN_ERRDEF (SVN_ERR_RA_HOSTNAME_LOOKUP,
-                "RA layer failed hostname lookup")
+  SVN_ERRDEF (SVN_ERR_RA_DAV_CREATING_REQUEST,
+              "RA layer failed to create HTTP request")
 
-    SVN_ERRDEF (SVN_ERR_RA_CREATING_REQUEST,
-                "RA layer failed to create HTTP request")
+  SVN_ERRDEF (SVN_ERR_RA_DAV_REQUEST_FAILED,
+              "RA layer request failed")
 
-    SVN_ERRDEF (SVN_ERR_RA_REQUEST_FAILED,
-                "RA layer request failed")
-
-    SVN_ERRDEF (SVN_ERR_RA_OPTIONS_REQUEST_FAILED,
-                "RA layer didn't receive requested OPTIONS info")
+  SVN_ERRDEF (SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED,
+              "RA layer didn't receive requested OPTIONS info")
     
-    SVN_ERRDEF (SVN_ERR_RA_PROPS_NOT_FOUND,
-                "RA layer failed to fetch properties")
+  SVN_ERRDEF (SVN_ERR_RA_DAV_PROPS_NOT_FOUND,
+              "RA layer failed to fetch properties")
 
-   SVN_ERRDEF (SVN_ERR_RA_ALREADY_EXISTS,
-               "RA layer file already exists")
+  SVN_ERRDEF (SVN_ERR_RA_DAV_ALREADY_EXISTS,
+              "RA layer file already exists")
 
-  /* End of ra_dav errors */
-
-  /* These RA errors are specific to ra_local */
+  /* ra_local errors */
   
-    SVN_ERRDEF (SVN_ERR_RA_REPOSITORY_NOT_FOUND,
-                "Couldn't find a repository.")
+  SVN_ERR_CATEGORY_FIRST (SVN_ERR_RA_LOCAL_REPOS_NOT_FOUND,
+                          SVN_ERR_RA_LOCAL_CATEGORY_START,
+                          "Couldn't find a repository.")
 
-    SVN_ERRDEF (SVN_ERR_RA_BAD_REVISION_REPORT,
-                "Bogus revision report")
- 
-  /* End of ra_local errors */
+  /* svndiff errors */
 
-  /* BEGIN svndiff errors */
-
-  SVN_ERRDEF (SVN_ERR_SVNDIFF_INVALID_HEADER,
-              "Svndiff data has invalid header")
+  SVN_ERR_CATEGORY_FIRST (SVN_ERR_SVNDIFF_INVALID_HEADER,
+                          SVN_ERR_SVNDIFF_CATEGORY_START,
+                          "Svndiff data has invalid header")
 
   SVN_ERRDEF (SVN_ERR_SVNDIFF_CORRUPT_WINDOW,
               "Svndiff data contains corrupt window")
@@ -419,12 +438,11 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_SVNDIFF_UNEXPECTED_END,
               "Svndiff data ends unexpectedly")
 
-  /* END svndiff errors */
+  /* mod_dav_svn errors */
 
-  /* BEGIN mod_dav_svn errors */
-
-  SVN_ERRDEF (SVN_ERR_APMOD_MISSING_PATH_TO_FS,
-              "Apache has no path to an SVN filesystem")
+  SVN_ERR_CATEGORY_FIRST (SVN_ERR_APMOD_MISSING_PATH_TO_FS,
+                          SVN_ERR_APMOD_CATEGORY_START,
+                          "Apache has no path to an SVN filesystem")
 
   SVN_ERRDEF (SVN_ERR_APMOD_MALFORMED_URI,
               "Apache got a malformed URI")
@@ -435,12 +453,11 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_APMOD_BAD_BASELINE,
               "Baseline incorrect")
 
- /* END mod_dav_svn errors*/
+  /* libsvn_client errors */
 
-  /* BEGIN libsvn_client errors */
-
-  SVN_ERRDEF (SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED,
-              "A path under revision control is needed for this operation")
+  SVN_ERR_CATEGORY_FIRST (SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED,
+                          SVN_ERR_CLIENT_CATEGORY_START,
+         "A path under revision control is needed for this operation")
 
   SVN_ERRDEF (SVN_ERR_CLIENT_RA_ACCESS_REQUIRED,
               "Repository access is needed for this operation")
@@ -460,13 +477,53 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_CLIENT_MODIFIED,
               "Attempting restricted operation for modified resource")
 
-  /* END libsvn_client errors */
+  /* misc errors */
 
+  SVN_ERR_CATEGORY_FIRST (SVN_ERR_BASE,
+                          SVN_ERR_MISC_CATEGORY_START,
+                          "A problem occured; see later errors for details")
 
-  /* BEGIN Client errors */
+  SVN_ERRDEF (SVN_ERR_PLUGIN_LOAD_FAILURE,
+              "Failure loading plugin")
 
-  SVN_ERRDEF (SVN_ERR_CL_ARG_PARSING_ERROR,
-              "Client error in parsing arguments")
+  SVN_ERRDEF (SVN_ERR_MALFORMED_FILE,
+              "Malformed file")
+
+  SVN_ERRDEF (SVN_ERR_INCOMPLETE_DATA,
+              "Incomplete data")
+
+  SVN_ERRDEF (SVN_ERR_INCORRECT_PARAMS,
+              "Incorrect parameters given")
+
+  SVN_ERRDEF (SVN_ERR_UNVERSIONED_RESOURCE,
+              "Tried a versioning operation on an unversioned resource")
+
+  SVN_ERRDEF (SVN_ERR_TEST_FAILED,
+              "Test failed")
+       
+  SVN_ERRDEF (SVN_ERR_UNSUPPORTED_FEATURE,
+              "Trying to use an unsupported feature")
+
+  SVN_ERRDEF (SVN_ERR_UNKNOWN_PROP_KIND,
+              "Unknown svn_prop_kind")
+
+  SVN_ERRDEF (SVN_ERR_ILLEGAL_TARGET,
+              "Illegal target for the requested operation")
+
+  SVN_ERRDEF (SVN_ERR_DELTA_MD5_CHECKSUM_ABSENT,
+              "MD5 checksum is missing")
+
+  SVN_ERRDEF (SVN_ERR_DIR_NOT_EMPTY,
+              "Directory needs to be empty but is not")
+
+  SVN_ERRDEF (SVN_ERR_EXTERNAL_PROGRAM,
+              "Error calling external program")
+
+  /* command-line client errors */
+
+  SVN_ERR_CATEGORY_FIRST (SVN_ERR_CL_ARG_PARSING_ERROR,
+                          SVN_ERR_CL_CATEGORY_START,
+                          "Client error in parsing arguments")
 
   SVN_ERRDEF (SVN_ERR_CL_INSUFFICIENT_ARGS,
               "Not enough args provided")
@@ -489,18 +546,11 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_CL_NO_EXTERNAL_EDITOR,
               "No external editor available")
 
-  /* END Client errors */
-        
-  /* BEGIN Generic UI related errors */
-  SVN_ERRDEF (SVN_ERR_CANCELED,
-              "Something, probably the user, canceled the operation")
-  /* END Generic UI related errors */
-  
-
 SVN_ERROR_END
 
 
 #undef SVN_ERROR_START
+#undef SVN_ERR_CATEGORY_FIRST
 #undef SVN_ERRDEF
 #undef SVN_ERROR_END
 

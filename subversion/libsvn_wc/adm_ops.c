@@ -153,7 +153,7 @@ svn_wc__do_update_cleanup (const char *path,
     }
 
   else
-    return svn_error_createf (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
+    return svn_error_createf (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL, pool,
                               "Unrecognized node kind: '%s'\n", path);
 
   return SVN_NO_ERROR;
@@ -1264,7 +1264,7 @@ svn_wc_revert (const char *path,
         }
       else  /* Else it's `none', or something exotic like a symlink... */
         return svn_error_createf
-          (SVN_ERR_UNKNOWN_NODE_KIND, 0, NULL, pool,
+          (SVN_ERR_NODE_UNKNOWN_KIND, 0, NULL, pool,
            "Unknown or unexpected kind for path %s", path);
 
       /* Remove the item from revision control. */

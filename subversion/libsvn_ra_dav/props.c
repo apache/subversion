@@ -363,7 +363,7 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
     }
 
   if (404 == status_code)
-    return svn_error_createf(SVN_ERR_RA_PROPS_NOT_FOUND, 0, NULL, pool,
+    return svn_error_createf(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, 0, NULL, pool,
                              "Failed to fetch props for '%s'", url);
 
   *results = pc.props;
@@ -442,7 +442,7 @@ svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
   if (value == NULL)
     {
       /* ### need an SVN_ERR here */
-      return svn_error_createf(SVN_ERR_RA_PROPS_NOT_FOUND, 0, NULL, pool,
+      return svn_error_createf(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, 0, NULL, pool,
                                "%s was not present on the resource.", name);
     }
 
@@ -526,7 +526,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
         if (! err)
           break;   /* found an existing parent! */
 
-        if (err->apr_err != SVN_ERR_RA_REQUEST_FAILED)
+        if (err->apr_err != SVN_ERR_RA_DAV_REQUEST_FAILED)
           return err;  /* found a _real_ error */
 
         /* else... lop off the basename and try again. */
@@ -807,7 +807,7 @@ svn_ra_dav__do_check_path(svn_node_kind_t *kind,
        * error to `svn_node_none' if we're sure that's what the error
        * means; for example, the test used to be this
        *
-       *   (err && (err->apr_err == SVN_ERR_RA_PROPS_NOT_FOUND))
+       *   (err && (err->apr_err == SVN_ERR_RA_DAV_PROPS_NOT_FOUND))
        *
        * which seemed reasonable...
        *
