@@ -403,7 +403,7 @@ file_diff (struct dir_baton *dir_baton,
              already expensive, translating twice for the sake of code
              modularity is liveable. */
           SVN_ERR (svn_wc_translated_file (&translated, path, adm_access,
-                                           pool));
+                                           TRUE, pool));
           
           err = dir_baton->edit_baton->callbacks->file_changed
             (NULL, NULL,
@@ -926,7 +926,7 @@ close_file (void *file_baton,
       const char *translated;
       
       SVN_ERR (svn_wc_translated_file (&translated, b->path, adm_access,
-                                       b->pool));
+                                       TRUE, b->pool));
 
       err1 = b->edit_baton->callbacks->file_changed
         (NULL, NULL,
