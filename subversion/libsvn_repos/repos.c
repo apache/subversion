@@ -994,6 +994,7 @@ svn_repos_create (svn_repos_t **repos_p,
                   apr_pool_t *pool)
 {
   svn_repos_t *repos;
+  svn_error_t *err;
 
   /* Allocate a repository object. */
   repos = apr_pcalloc (pool, sizeof (*repos));
@@ -1006,7 +1007,15 @@ svn_repos_create (svn_repos_t **repos_p,
              _("Repository creation failed"));
   
   /* Create a Berkeley DB environment for the filesystem. */
-  SVN_ERR (svn_fs_create (&repos->fs, repos->db_path, fs_config, pool));
+  if ((err = svn_fs_create (&repos->fs, repos->db_path, fs_config, pool)))
+    {
+      /* If there was an error making the filesytem, e.g. unknown/supported
+       * filesystem type.  Clean up after ourselves.  Yes this is safe because
+       * create_repos_structure will fail if the path existed before we started
+       * so we can't accidentally remove a directory that previously existed. */
+      svn_error_clear (svn_io_remove_dir (path, pool));
+      return err;
+    }
 
   *repos_p = repos;
   return SVN_NO_ERROR;
