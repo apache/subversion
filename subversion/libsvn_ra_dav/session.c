@@ -1126,10 +1126,10 @@ svn_ra_dav__lock(svn_ra_session_t *session,
    custom POST.  Ben, this shim's for you. */
 static svn_error_t *
 shim_svn_ra_dav__unlock(svn_ra_session_t *session,
-                   const char *path,
-                   const char *token,
-                   svn_boolean_t force,
-                   apr_pool_t *pool)
+                        const char *path,
+                        const char *token,
+                        svn_boolean_t force,
+                        apr_pool_t *pool)
 {
   svn_ra_dav__session_t *ras = session->priv;
   int rv;
@@ -1137,18 +1137,8 @@ shim_svn_ra_dav__unlock(svn_ra_session_t *session,
   struct lock_request_baton *lrb;
   struct ne_lock *nlock;
 
-  /* Build context for neon callbacks and then register them. */
-  lrb = apr_pcalloc(pool, sizeof(*lrb));
-  lrb->force = force;
-  lrb->pool = pool;
-  ne_hook_create_request(ras->sess, create_request_hook, lrb);
-  ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
-
-  /* ### sussman TODO: if force, token is NULL; fetch it first. */
-
   /* Make a neon lock structure containing token and full URL to unlock. */
   nlock = ne_lock_create();
-  nlock->token = ne_strdup(token);
   url = svn_path_url_add_component (ras->url, path, pool);  
   if ((rv = ne_uri_parse(url, &(nlock->uri))))
     {
@@ -1156,6 +1146,34 @@ shim_svn_ra_dav__unlock(svn_ra_session_t *session,
       return svn_ra_dav__convert_error(ras->sess, _("Failed to parse URI"),
                                        rv, pool);
     }
+
+  /* In the case of 'force', we might not have a token at all.
+     Unfortunately, ne_unlock() insists on sending one, and mod_dav
+     insists on having a valid token for UNLOCK requests.  That means
+     we need to fetch the token. */
+  if (! token)
+    {
+      svn_lock_t *lock;
+
+      SVN_ERR (svn_ra_dav__get_lock(session, &lock, path, pool));
+      if (! lock)
+        return svn_error_createf (SVN_ERR_RA_NOT_LOCKED, NULL,
+                                  _("'%s' is not locked in the repository"),
+                                  path);
+      
+      nlock->token = ne_strdup(lock->token);
+    }
+  else
+    {
+      nlock->token = ne_strdup(token);
+    }
+
+  /* Build context for neon callbacks and then register them. */
+  lrb = apr_pcalloc(pool, sizeof(*lrb));
+  lrb->force = force;
+  lrb->pool = pool;
+  ne_hook_create_request(ras->sess, create_request_hook, lrb);
+  ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
 
   /* Issue UNLOCK request. */
   rv = ne_unlock(ras->sess, nlock);
@@ -1293,7 +1311,7 @@ lock_receiver(void *userdata,
 }
 
 
-static svn_error_t *
+svn_error_t *
 svn_ra_dav__get_lock(svn_ra_session_t *session,
                      svn_lock_t **lock,
                      const char *path,

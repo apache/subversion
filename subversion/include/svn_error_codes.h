@@ -620,6 +620,11 @@ SVN_ERROR_START
               SVN_ERR_RA_CATEGORY_START + 6,
               "Unsupported RA plugin ABI version")
 
+  SVN_ERRDEF (SVN_ERR_RA_NOT_LOCKED,
+              SVN_ERR_RA_CATEGORY_START + 7,
+              "Path is not locked")
+
+
   /* ra_dav errors */
 
   SVN_ERRDEF (SVN_ERR_RA_DAV_SOCK_INIT,

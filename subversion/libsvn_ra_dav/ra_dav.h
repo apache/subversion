@@ -763,6 +763,14 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
                       const char *path,
                       apr_pool_t *pool);
 
+/*
+ * Implements the get_lock RA layer function. */
+svn_error_t *
+svn_ra_dav__get_lock(svn_ra_session_t *session,
+                     svn_lock_t **lock,
+                     const char *path,
+                     apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
