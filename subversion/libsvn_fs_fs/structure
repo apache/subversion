@@ -19,6 +19,15 @@ We will need:
 revisions so that they can be atomically replaced without rewriting
 the entire rev file.)
 
+Node-revision IDs
+-----------------
+
+In order to maintain a close relationship to the BDB implementation,
+we must be able to efficiently look up a node-rev given only its ID.
+To allow this, the txn-id field of a node-ID contains either
+"r<rev>/<offset>" for a node-revision within a committed revision, or
+"t<txnid>" for a node-revision within an uncommitted transaction.
+
 Revision file format
 --------------------
 
@@ -52,7 +61,7 @@ extensibility.  The following fields are defined:
 
   id        The ID of the node-rev
   type      "file" or "dir"
-  pred      "<rev> <offset>" giving location of predecessor node-rev
+  pred      The ID of the predecessor node-rev
   count     Count of node-revs since the base of the node
   rep       "<rev> <offset> <length> <size>"
             <rev> and <offset> give location of rep
@@ -61,14 +70,14 @@ extensibility.  The following fields are defined:
   props     "<rev> <offset>" giving location of property list
   cpath     FS pathname node was created at
   copyfrom  "{soft|hard} <rev> <path>" of copyfrom data
-  copyroot  "<rev> <offset>" giving location of root of copy
+  copyroot  The ID of the root node-revision of the copy
 
 The predecessor of a node-rev crosses copy history; together with the
 count field, it allows efficient determination of the base for
 skip-deltas.  The first node-rev of a node contains no "pred" field.
 In a node-revision resulting from a copy, the "copyfrom" field gives
-the copyfrom data; in other node-revs, the "copyroot" field gives the
-location of the root of the copy.  (Note that since copy IDs are
+the copyfrom data; in other node-revs, the "copyroot" field identifies
+the root node-revision of the copy.  (Note that since copy IDs are
 initially inherited from parent directory to child, the root of a
 node-rev's copy may belong to a different node, perhaps of a different
 type, than the node-rev itself does.)
@@ -97,11 +106,10 @@ pointed to by the directory.
 Transaction layout
 ------------------
 
-The transaction layout needs to have easily mutable directories, but
-also quickly transformable into a rev file.  So we store changed-file
-data into a prototype rev file, and changed-directory data in a
-directory tree which mirrors the changed part of the transaction.
-Each changed directory will contain a special file for directory
-property changes, a file for each changed file underneath it
-(containing the offset and ID of the file's new node-rev) and a
-subdirectory for each changed directory underneath it.
+A transaction directory will look something like this:
+
+  rev                  Protype rev file with new text reps
+  <node-id>.<copy-id>  Subdir for each new node-rev
+    props                New property list for node-rev
+    contents             Subdir containing new directory contents
+    node-rev             New node-rev data
