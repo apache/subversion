@@ -1107,9 +1107,9 @@ svn_wc_cleanup (svn_stringbuf_t *path,
     }
 
   /* Lock this working copy directory if it isn't already. */
-  SVN_ERR (svn_wc__locked (&locked, path, pool));
+  SVN_ERR (svn_wc_locked (&locked, path, pool));
   if (! locked)
-    SVN_ERR (svn_wc__lock (path, 0, pool));
+    SVN_ERR (svn_wc_lock (path, 0, pool));
 
   /* Is there a log?  If so, run it. */
   err = svn_io_check_path (log_path->data, &kind, pool);
@@ -1140,7 +1140,7 @@ svn_wc_cleanup (svn_stringbuf_t *path,
      directory still exists after running the log! */
   if (svn_wc__adm_path_exists (path, 0, pool, NULL))
     {
-      err = svn_wc__unlock (path, pool);
+      err = svn_wc_unlock (path, pool);
       if (err && APR_STATUS_IS_ENOENT(err->apr_err))
         svn_error_clear_all (err);
       else if (err)

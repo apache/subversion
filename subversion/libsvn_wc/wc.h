@@ -78,23 +78,6 @@ svn_error_t *svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
 
 
 
-/*** Locking. ***/
-
-/* Lock the working copy administrative area.
-   Wait for WAIT_FOR seconds if encounter another lock, trying again every
-   second, then return 0 if success or an SVN_ERR_WC_LOCKED error if
-   failed to obtain the lock. */
-svn_error_t *svn_wc__lock (svn_stringbuf_t *path, int wait_for, apr_pool_t *pool);
-
-/* Unlock PATH, or error if can't. */
-svn_error_t *svn_wc__unlock (svn_stringbuf_t *path, apr_pool_t *pool);
-
-/* Set *LOCKED to non-zero if PATH is locked, else set it to zero. */
-svn_error_t *svn_wc__locked (svn_boolean_t *locked, 
-                             svn_stringbuf_t *path,
-                             apr_pool_t *pool);
-
-
 /*** Names and file/dir operations in the administrative area. ***/
 
 /* Create DIR as a working copy directory. */

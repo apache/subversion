@@ -38,6 +38,27 @@
 /*** Harvesting Commit Candidates ***/
 
 
+/* If DIR isn't already in the LOCKED_DIRS hash, attempt to lock it.
+   If the lock is successful, add DIR to the LOCKED_DIRS hash.  Use
+   the hash's pool for adding new items, and POOL for any other
+   allocations. */
+static svn_error_t *
+lock_dir (apr_hash_t *locked_dirs,
+          svn_stringbuf_t *dir,
+          apr_pool_t *pool)
+{
+  apr_pool_t *hash_pool = apr_hash_pool_get (locked_dirs);
+
+  if (! apr_hash_get (locked_dirs, dir->data, dir->len))
+    {
+      SVN_ERR (svn_wc_lock (dir, 0, pool));
+      apr_hash_set (locked_dirs, apr_pstrdup (hash_pool, dir->data), 
+                    dir->len, (void *)1);
+    }
+  return SVN_NO_ERROR;
+}
+
+
 /* Add a new commit candidate to the COMMITABLES hash.  PATH, ENTRY,
    TEXT_MODS and PROP_MODS all refer to the new commit candidate. */
 static void
@@ -89,6 +110,7 @@ add_committable (apr_hash_t *committables,
 */
 static svn_error_t *
 harvest_committables (apr_hash_t *committables,
+                      apr_hash_t *locked_dirs,
                       svn_stringbuf_t *path,
                       svn_stringbuf_t *url,
                       svn_wc_entry_t *entry,
@@ -99,6 +121,7 @@ harvest_committables (apr_hash_t *committables,
   apr_hash_t *entries = NULL;
   svn_boolean_t text_mod = FALSE, prop_mod = FALSE;
   apr_byte_t state_flags = 0;
+  svn_stringbuf_t *p_path = NULL;
 
   assert (entry);
   assert (url);
@@ -158,7 +181,6 @@ harvest_committables (apr_hash_t *committables,
     {
       svn_boolean_t wc_root = FALSE;
       svn_wc_entry_t *p_entry;
-      svn_stringbuf_t *p_path;
 
       /* If this is a WC root ... well, something is probably wrong. */
       SVN_ERR (svn_wc_is_wc_root (&wc_root, path, subpool));
@@ -228,7 +250,26 @@ harvest_committables (apr_hash_t *committables,
 
   /* Now, if this is something to commit, add it to our list. */
   if (state_flags)
-    add_committable (committables, path, url, entry, state_flags);
+    {
+      /* If the commit item is a directory, lock it. */
+      if (entry->kind == svn_node_dir)
+        lock_dir (locked_dirs, path, pool);
+
+      /* Else, try to lock its parent directory (calculating it if we
+         haven't done so already. */
+      else
+        {
+          if (! p_path)
+            {
+              p_path = svn_stringbuf_dup (path, pool);
+              svn_path_remove_component (p_path);
+            }
+          lock_dir (locked_dirs, p_path, pool);
+        }
+
+      /* Finally, add the committable item. */
+      add_committable (committables, path, url, entry, state_flags);
+    }
 
   /* For directories, recursively handle each of their entries.  
      ### todo: if do_delete==TRUE, we could skip this.  deleted
@@ -269,7 +310,7 @@ harvest_committables (apr_hash_t *committables,
 
           /* Recurse. */
           SVN_ERR (harvest_committables 
-                   (committables, full_path,
+                   (committables, locked_dirs, full_path,
                     this_entry->url ? this_entry->url : this_url, 
                     (svn_wc_entry_t *)val, 
                     adds_only,
@@ -302,9 +343,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
   /* Create the COMMITTABLES hash. */
   *committables = apr_hash_make (pool);
 
-  /* Create the LOCKED_DIRS hash. 
-     ### TODO: It would be nice if this function actually used this.
-     I'll get around to it Real Soon Now (tm) */
+  /* Create the LOCKED_DIRS hash. */
   *locked_dirs = apr_hash_make (pool);
 
   do
@@ -332,8 +371,8 @@ svn_client__harvest_committables (apr_hash_t **committables,
            target->data);
 
       /* Handle our TARGET. */
-      SVN_ERR (harvest_committables (*committables, target, entry->url, 
-                                     entry, FALSE,  pool));
+      SVN_ERR (harvest_committables (*committables, *locked_dirs, target, 
+                                     entry->url, entry, FALSE, pool));
 
       /* Reset our base path for the next iteration, and increment our
          counter. */
@@ -525,7 +564,7 @@ pop_stack (apr_array_header_t *db_stack,
 static int
 count_components (const char *path)
 {
-  int count = 0;
+  int count = 1;
   const char *instance = path;
 
   if ((strlen (path) == 1) && (path[0] == '/'))
@@ -675,8 +714,8 @@ svn_client__do_commit (apr_array_header_t *commit_items,
      driving the editor. */
   for (i = 0; i < commit_items->nelts; i++)
     {
-      svn_stringbuf_t *commit_url, *item_url, *item_dir, *item_name;
-      svn_stringbuf_t *common;
+      svn_stringbuf_t *last_url, *item_url, *item_dir, *item_name;
+      svn_stringbuf_t *common = NULL;
       svn_client_commit_item_t *item
         = ((svn_client_commit_item_t **) commit_items->elts)[i];
       
@@ -685,11 +724,9 @@ svn_client__do_commit (apr_array_header_t *commit_items,
 
       /*** Step A - Find the common ancestor of the last commit item
            and the current one.  For the first iteration, this is just
-           the BASE_URL.  ***/
-      if (i == 0)
-        common = svn_stringbuf_dup (base_url, pool);
-      else
-        common = svn_path_get_longest_ancestor (commit_url, item_url, pool);
+           the empty string.  ***/
+      if (i > 0)
+        common = svn_path_get_longest_ancestor (last_url, item_url, pool);
       if (! common)
         common = svn_stringbuf_create ("", pool);
 
@@ -698,11 +735,11 @@ svn_client__do_commit (apr_array_header_t *commit_items,
            Sometimes there is nothing to do here (like, for the first
            iteration, or when the last commit item was an ancestor of
            the current item).  ***/
-      if ((i > 0) && (commit_url->len > common->len))
+      if ((i > 0) && (last_url->len > common->len))
         {
           int j, count;
 
-          count = count_components (commit_url->data + common->len + 1);
+          count = count_components (last_url->data + common->len + 1);
           for (j = 0; j < count; j++)
             {
               SVN_ERR (pop_stack (db_stack, &stack_ptr, editor));
@@ -714,13 +751,34 @@ svn_client__do_commit (apr_array_header_t *commit_items,
       svn_path_split (item_url, &item_dir, &item_name, pool);
       if (item_dir->len > common->len)
         {
-          int j, count;
+          char *rel = apr_pstrdup (pool, item_dir->data);
+          char *piece = rel + common->len + 1;
 
-          count = count_components (item_dir->data + common->len + 1);
-          for (j = 0; j < count; j++)
+          while (1)
             {
-              SVN_ERR (push_stack ("foo", db_stack, &stack_ptr, 
-                                   editor, NULL, j, FALSE, pool));
+              /* Find the first separator. */
+              piece = strchr (piece, '/');
+
+              /* Temporarily replace it with a NULL terminator. */
+              if (piece)
+                *piece = 0;
+
+              /* Open the subdirectory. */
+              SVN_ERR (push_stack (rel, db_stack, &stack_ptr, 
+                                   editor, NULL, item->entry->revision, 
+                                   FALSE, pool));
+              
+              /* If we temporarily replaced a '/' with a NULL,
+                 un-replace it and move our piece pointer to the
+                 character after the '/' we found.  If there was no
+                 piece found, though, we're done.  */
+              if (piece)
+                {
+                  *piece = '/';
+                  piece++;    
+                }
+              else
+                break;
             }
         }
 
@@ -728,7 +786,8 @@ svn_client__do_commit (apr_array_header_t *commit_items,
       SVN_ERR (do_item_commit (item_url->data, item, editor,
                                db_stack, &stack_ptr, fb_stack, pool));
 
-      commit_url = item_url;
+      /* Save our state for the next iteration. */
+      last_url = (item->entry->kind == svn_node_dir) ? item_url : item_dir;
     }
 
   /* Close the edit. */
@@ -743,8 +802,18 @@ svn_client__do_commit (apr_array_header_t *commit_items,
 
 struct edit_baton
 {
-  const char *base_url;
+  const char *path;
 };
+
+
+static void *
+make_baton (const char *path, apr_pool_t *pool)
+{
+  struct edit_baton *new_baton 
+    = apr_pcalloc (pool, sizeof (struct edit_baton *));
+  new_baton->path = apr_pstrdup (pool, path);
+  return ((void *) new_baton);
+}
 
 
 static svn_error_t *
@@ -754,8 +823,8 @@ open_root (void *edit_baton,
            void **root_baton)
 {
   struct edit_baton *eb = edit_baton;
-  printf ("TEST EDIT STARTED (base url=%s)\n", eb->base_url);
-  *root_baton = edit_baton;
+  printf ("TEST EDIT STARTED (base url=%s)\n", eb->path);
+  *root_baton = make_baton (eb->path, dir_pool);
   return SVN_NO_ERROR;
 }
 
@@ -768,7 +837,7 @@ add_item (const char *path,
           void **baton)
 {
   printf ("   Adding  : %s\n", path);
-  *baton = parent_baton;
+  *baton = make_baton (path, pool);
   return SVN_NO_ERROR;
 }
 
@@ -789,10 +858,19 @@ open_item (const char *path,
            apr_pool_t *pool,
            void **baton)
 {
-  printf ("   Sending : %s\n", path);
-  *baton = parent_baton;
+  printf ("   Opening : %s\n", path);
+  *baton = make_baton (path, pool);
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+close_item (void *baton)
+{
+  struct edit_baton *this = baton;
+  printf ("   Closing : %s\n", this->path);
+  return SVN_NO_ERROR;
+}
+
 
 static svn_error_t *
 change_prop (void *file_baton,
@@ -830,13 +908,15 @@ get_test_editor (const svn_delta_editor_t **editor,
   svn_delta_editor_t *ed = svn_delta_default_editor (pool);
   struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
 
-  eb->base_url = apr_pstrdup (pool, base_url);
+  eb->path = apr_pstrdup (pool, base_url);
 
   ed->open_root = open_root;
   ed->add_directory = add_item;
   ed->open_directory = open_item;
-  ed->open_file = open_item;
+  ed->close_directory = close_item;
   ed->add_file = add_item;
+  ed->open_file = open_item;
+  ed->close_file = close_item;
   ed->delete_entry = delete_entry;
   ed->apply_textdelta = apply_textdelta;
   ed->change_dir_prop = change_prop;
@@ -853,3 +933,4 @@ get_test_editor (const svn_delta_editor_t **editor,
  * local variables:
  * eval: (load-file "../../tools/dev/svn-dev.el")
  * end: */
+

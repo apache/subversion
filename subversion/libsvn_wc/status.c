@@ -238,7 +238,7 @@ assemble_status (svn_wc_status_t **status,
   /* 4. Check for locked directory. */
 
   if (entry->kind == svn_node_dir)
-    SVN_ERR (svn_wc__locked (&locked_p, path, pool));
+    SVN_ERR (svn_wc_locked (&locked_p, path, pool));
 
 
   /* 5. Easy out:  unless we're fetching -every- entry, don't bother
