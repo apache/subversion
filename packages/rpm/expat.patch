@@ -1,5 +1,5 @@
---- subversion-0.7.0/build.conf.orig	Tue Jan 15 22:19:41 2002
-+++ subversion-0.7.0/build.conf	Tue Jan 15 22:23:16 2002
+--- subversion-0.9.0/build.conf.orig	Fri Feb 15 01:48:59 2002
++++ subversion-0.9.0/build.conf	Fri Feb 15 01:56:33 2002
 @@ -63,7 +63,7 @@
  type = exe
  path = subversion/clients/cmdline
@@ -26,7 +26,16 @@
  
  # Library needed by all subversion clients
  [libsvn_client]
-@@ -155,12 +155,12 @@
+@@ -141,7 +141,7 @@
+ type = lib
+ install = base-lib
+ path = subversion/libsvn_subr
+-libs =  $(SVN_APR_LIBS) libexpat
++libs =  $(SVN_APR_LIBS) -lexpat
+ 
+ # Working copy management lib
+ [libsvn_wc]
+@@ -161,12 +161,12 @@
  install = apache-mod
  
  # Simple XML-parsing lib
@@ -44,7 +53,7 @@
  
  # ----------------------------------------------------------------------------
  #
-@@ -188,7 +188,7 @@
+@@ -209,7 +209,7 @@
  sources = fs-test.c
  install = fs-test
  libs = libsvn_test libsvn_test_fs libsvn_fs libsvn_delta libsvn_subr
@@ -53,7 +62,7 @@
  # run-fs-tests.sh will run this for us
  testing = skip
  
-@@ -198,7 +198,7 @@
+@@ -219,7 +219,7 @@
  path = subversion/tests/libsvn_fs
  sources = skel-test.c
  install = fs-test
@@ -62,7 +71,7 @@
  # run-fs-tests.sh will run this for us
  testing = skip
  
-@@ -208,7 +208,7 @@
+@@ -229,7 +229,7 @@
  path = subversion/tests/libsvn_fs
  sources = key-test.c
  install = fs-test
@@ -71,7 +80,7 @@
  # run-fs-tests.sh will run this for us
  testing = skip
  
-@@ -219,7 +219,7 @@
+@@ -240,7 +240,7 @@
  sources = strings-reps-test.c
  install = fs-test
  libs = libsvn_test libsvn_test_fs libsvn_fs libsvn_delta libsvn_subr
@@ -80,7 +89,7 @@
  # run-fs-tests.sh will run this for us
  testing = skip
  
-@@ -229,7 +229,7 @@
+@@ -250,7 +250,7 @@
  path = subversion/tests/libsvn_repos
  sources = md5args.c
  install = test
@@ -89,7 +98,7 @@
  # run-repos-tests.sh will run this for us
  testing = skip
  
-@@ -240,7 +240,7 @@
+@@ -261,7 +261,7 @@
  sources = repos-test.c dir-delta-editor.c
  install = fs-test
  libs = libsvn_test libsvn_test_fs libsvn_repos libsvn_fs libsvn_delta
@@ -98,7 +107,7 @@
  # run-repos-tests.sh will run this for us
  testing = skip
  
-@@ -250,7 +250,7 @@
+@@ -271,7 +271,7 @@
  path = subversion/tests/libsvn_subr
  sources = hashdump-test.c
  install = test
@@ -107,7 +116,7 @@
  
  # test svn_stringbuf_t utilities
  [stringtest]
-@@ -258,7 +258,7 @@
+@@ -279,7 +279,7 @@
  path = subversion/tests/libsvn_subr
  sources = stringtest.c
  install = test
@@ -116,7 +125,7 @@
  
  # test path library
  [path-test]
-@@ -266,7 +266,7 @@
+@@ -287,7 +287,7 @@
  path = subversion/tests/libsvn_subr
  sources = path-test.c
  install = test
@@ -125,7 +134,7 @@
  
  # test eol conversion and keyword substitution routines
  [translate-test]
-@@ -274,7 +274,7 @@
+@@ -295,7 +295,7 @@
  path = subversion/tests/libsvn_wc
  sources = translate-test.c
  install = test
@@ -134,7 +143,7 @@
  
  # use random data to test delta processing
  [random-test]
-@@ -282,7 +282,7 @@
+@@ -303,7 +303,7 @@
  path = subversion/tests/libsvn_delta
  sources = random-test.c
  install = test
@@ -143,7 +152,16 @@
  
  
  ### Tests that are simply broken (fix?)  ----------
-@@ -294,7 +294,7 @@
+@@ -314,7 +314,7 @@
+ path = subversion/tests/libsvn_delta
+ sources = delta-combine-test.c
+ install = test
+-libs = libsvn_test libsvn_delta libsvn_subr $(SVN_APR_LIBS) libexpat
++libs = libsvn_test libsvn_delta libsvn_subr $(SVN_APR_LIBS) -lexpat
+ # disabled for now -- the delta combiner isn't written, and we
+ # don't really have any idea if the interface would be compatible 
+ # with this test, anyway.
+@@ -327,7 +327,7 @@
  sources = ra-local-test.c
  install = fs-test
  libs = libsvn_test libsvn_ra libsvn_fs libsvn_delta libsvn_subr
@@ -152,7 +170,7 @@
  # disabled for now, BROKEN.
  testing = skip
  
-@@ -307,7 +307,7 @@
+@@ -340,7 +340,7 @@
  path = subversion/tests/libsvn_subr
  sources = target-test.c
  install = test
@@ -161,7 +179,7 @@
  # target-test.sh will run this for us
  testing = skip
  
-@@ -317,7 +317,7 @@
+@@ -350,7 +350,7 @@
  path = subversion/tests/libsvn_delta
  sources = xml-output-test.c
  install = test
@@ -170,7 +188,7 @@
  # this is really redundant with our XML svn-test*.sh tests.
  testing = skip
  
-@@ -327,7 +327,7 @@
+@@ -360,7 +360,7 @@
  path = subversion/tests/libsvn_wc
  sources = checkout-test.c
  install = test
@@ -179,7 +197,7 @@
  # this is really redundant with our XML svn-test*.sh tests.
  testing = skip
  
-@@ -337,7 +337,7 @@
+@@ -370,7 +370,7 @@
  path = subversion/tests/libsvn_wc
  sources = commit-test.c
  install = test
@@ -188,7 +206,7 @@
  # this is really redundant with our XML svn-test*.sh tests.
  testing = skip
  
-@@ -350,7 +350,7 @@
+@@ -383,7 +383,7 @@
  path = subversion/tests/libsvn_delta
  sources = deltaparse-test.c
  install = test
@@ -197,7 +215,7 @@
  testing = skip
  
  
-@@ -363,7 +363,7 @@
+@@ -396,7 +396,7 @@
  path = subversion/tests/libsvn_delta
  sources = svndiff-test.c
  install = test
@@ -206,7 +224,7 @@
  testing = skip
  
  # compare two files, print txdelta windows
-@@ -372,7 +372,7 @@
+@@ -405,7 +405,7 @@
  path = subversion/tests/libsvn_delta
  sources = vdelta-test.c
  install = test
