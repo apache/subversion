@@ -143,15 +143,6 @@ the section for unapproved changes.)
        +1: kfogel, philip, ghudson, brane
 
 
-    * r8296
-      Change to correctly build Fedora Core 1 RPMs.
-      Justification: Without this the generated package name
-         contains "Unknown" instead of the platform abbreviation.
-      Notes:
-      Votes:
-       +1: david, ghudson, jszakmeister
-
-
     * r8361
       Fix wc-to-wc copies with non-ASCII characters in a non-UTF-8 locale.
       Justification: obvious run-time bug, trivial fix
