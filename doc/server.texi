@@ -41,6 +41,8 @@ and the @dfn{Subversion Server} library.
   @itemize
   @item
     some writable disk space
+  @item
+    (for now) Berkeley DB library
   @end itemize
 @item
   @b{Provides:}
@@ -48,7 +50,7 @@ and the @dfn{Subversion Server} library.
   @item
     a repository for storing files
   @item
-    support for multiple concurrent accesses (via a lock manager)
+    concurrent client transactions
   @item
     enforcement of user & group permissions
   @end itemize
@@ -63,43 +65,18 @@ contents, the Subversion Filesystem records changes to file meta-data
 @node API
 @subsection API
 
-This is almost the same API that the client calls, but now prefixed with
-@code{fs_}.  For a full explanation, see @xref{The repository access
-library}.
+There are two main files that describe the Subversion filesystem.
 
-The only differences are the lack of the @code{status()} and
-@code{update()} routines.  Instead of receiving and returning entire
-skeltas or deltas, the filesystem provides the ability to inquire about
-only one node at a time via @code{fs_cmp()} and @code{fs_get_delta()}.
+First, read the section below (@xref{Repostitory Structure}) for a
+general overview of how the fileystem works.
 
-@table @code
-@item ver_t fs_latest (repos, user)
-@item prop_t fs_get_ver_prop (repos, user, ver, propname)
-@item proplist_t fs_get_ver_proplist (repos, user, ver)
-@item proplist_t fs_get_ver_propnames (repos, user, ver)
-@item node_t fs_read (repos, user, ver, path)
-@item str_t fs_get_node_prop (repos, user, ver, path, propname)
-@item str_t fs_get_dirent_prop (repos, user, ver, path, propname)
-@item proplist_t fs_get_node_proplist (repos, ver, path)
-@item proplist_t fs_get_dirent_proplist (repos, user, ver, path)
-@item proplist_t fs_get_node_propnames (repos, user, ver, path)
-@item proplist_t fs_get_dirent_propnames (repos, user, ver, path)
-@item diff_t fs_get_diff (repos, user, ver1, path1, ver2, path2)
-@item token_t fs_submit (repos, user, skelta)
-@item ver_t fs_write (repos, user, delta, token)
-@item bool_t fs_abandon (repos, user, token)
+Once you've done this, read Jim Blandy's own structural overview, which
+explains how nodes and versions are organized (among other things) in
+the filesystem implementation: @file{subversion/libsvn_fs/structure}.
 
-@item bool_t fs_cmp (repos, user, ver1, path1, ver2, path2)
-  Compare two nodes in the repository, return whether they are identical.
-@item delta_t fs_get_delta (repos, user, ver1, path1, ver2, path2)
-  Compare two nodes in the repository, return the difference between them.
+Finally, read the well-documented API in
+@file{subversion/include/svn_fs.h}.
 
-@end table
-
-Note that in addition to checking against concurrent commits,
-@code{fs_submit()} also protects against committing changes from
-out-of-date base versions, that is, the situation where the node in the
-repository has changed since the base version mentioned in the skelta.
 
 @c ------------------------------------
 @node Repository Structure
@@ -794,114 +771,12 @@ For the initial release of Subversion,
 @section Server Library
 
 
-@menu
-* Server Library Overview::     
-* Multiplexing::                
-* Policy Enforcement::          
-* Plug-Ins::                    
-* Security::                    
-@end menu
+This library no longer exists in the current Subversion design; all
+functionality that it would have provided will come out Apache and
+mod_DAV_SVN.
 
-@node Server Library Overview
-@subsection Server Library Overview
-
-@itemize @bullet
-@item
-  @b{Requires:}
-  @itemize
-  @item
-    the Subversion Filesystem interface
-  @end itemize
-@item
-  @b{Provides:}
-  @itemize
-  @item
-    the ability to interact with any repository on a system
-  @item
-    the ability to enforce server-side policies
-  @item
-    the ability to load server-side plug-ins
-  @end itemize
-@end itemize
-
-
-@node Multiplexing
-@subsection Multiplexing
-
-The Subversion Server Library (@dfn{svn_svr}), in its simplest sense,
-acts a basic multiplexer for the repository API calls coming from the
-Subversion client.  (@xref{The repository access library}.)  The
-Subversion Server Library provides the exact same API as the client
-repository library, prefixed now by @code{svr_}:
-
-@table @code
-@item ver_t svr_latest (repos, user)
-@item prop_t svr_get_ver_prop (repos, user, ver, propname)
-@item proplist_t svr_get_ver_proplist (repos, user, ver)
-@item proplist_t svr_get_ver_propnames (repos, user, ver)
-@item node_t svr_read (repos, user, ver, path)
-@item str_t svr_get_node_prop (repos, user, ver, path, propname)
-@item str_t svr_get_dirent_prop (repos, user, ver, path, propname)
-@item proplist_t svr_get_node_proplist (repos, ver, path)
-@item proplist_t svr_get_dirent_proplist (repos, user, ver, path)
-@item proplist_t svr_get_node_propnames (repos, user, ver, path)
-@item proplist_t svr_get_dirent_propnames (repos, user, ver, path)
-@item skelta_t svr_get_status (repos, user, skelta)
-@item delta_t svr_get_update (repos, user, skelta)
-@item delta_t svr_get_delta (repos, user, ver1, path1, ver2, path2)
-@item diff_t svr_get_diff (repos, user, ver1, path1, ver2, path2)
-@item token_t svr_submit (repos, user, skelta)
-@item ver_t svr_write (repos, user, delta, token)
-@item bool_t svr_abandon (repos, user, token)
-@end table
-
-These routines are ``wrappers'' that execute filesystem calls against a
-particular repository.
-
-Most of the wrappers map directly to filesystem calls, except for the
-@code{svr_get_status()} and @code{svr_get_update()} routines.
-@code{svr_get_status()} actually iterates over a skelta structure and
-makes repeated calls to @code{fs_cmp()}, while @code{svr_get_update()}
-makes repeated calls to @code{fs_get_delta()}, composing the returned
-deltas into a single final delta.
-
-@node Policy Enforcement
-@subsection Policy Enforcement
-
-When starting up, svn_svr will read a configuration file @file{svn.conf}
-(much like Apache's @file{httpd.conf}) which, among other things, will
-specify a list of server policies to implement.
-
-Because filesystem calls are ``wrappered'' by svn_svr, it has the
-opportunity to intercept and interpret them according to policy.
-
-For example, an administrator may wish to take a repository ``off-line''
-for backup purposes.  She can specify this in the @file{svn.conf} file,
-and any filesystem calls to that repository are then intercepted and
-(kindly) rejected by svn_svr.
-
-
-@node Plug-Ins
-@subsection Plug-Ins
-
-It's important that svn_svr be extensible;  by allowing users to write
-their own server-side libraries, the server's abilities can potentially
-grow forever.
-
-We define the term @dfn{plug-in} to refer to a library designed to be
-loaded into svn_svr's address space.  This term is used intentionally
-(instead of "module") so as not to be confused with either Apache
-modules or ``CVS-like'' modules.  Each plug-in potentially implements a
-new set of server "methods".
-
-The @file{svn.conf} file specifies a list of available plug-ins, the new
-methods they provide, and the real shared-object pathnames on disk.
-When a client requests a particular method, svn_svr then knows which
-plug-in to "auto-load".
-
-For ideas on future server-side plug-ins, @xref{Future}.
-
-
+Only a small part of the spec has been left behind -- mainly to provide
+ideas for the future.
 
 
 @node Security
@@ -917,11 +792,12 @@ Subversion has two levels of security, both abstracted.
 @node Username Authentication
 @subsubsection Username Authentication
 
-First of all, the Subversion server does @emph{not} authenticate users
--- it never asks a client user to prove his/her identity.  Instead,
-authentication is soley the responsibility of the network layer.  Every
-Subversion user @emph{must} have an account in an external database that
-is understood by some network layer.  (@xref{Network Layer}.)
+First of all, the Subversion filesystem does @emph{not} authenticate
+users -- it never asks a client user to prove his/her identity.
+Instead, authentication is soley the responsibility of the network
+layer.  Every Subversion user @emph{must} have an account in an external
+database that is understood by some network layer.  (@xref{Network
+Layer}.)
 
 For example, for a vanilla Apache network layer, each client user could
 authenticate against a standard Apache access control file.  More
@@ -954,7 +830,7 @@ By @dfn{authorization}, we mean answering the question:
 
 @end quotation
 
-The Subversion server provides a single interface for answering this
+The Subversion filesystem provides a single interface for answering this
 question.
 
 @table @code
