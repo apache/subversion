@@ -9,6 +9,12 @@ SVN_RA_LIB_LINK = @SVN_RA_LIB_LINK@
 
 DOC_DIRS = doc/programmer/design doc/handbook doc/handbook/translations/french
 
+SWIG_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig
+SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
+SWIG_DIRS = subversion/bindings/swig            \
+            subversion/bindings/swig/python     \
+            subversion/bindings/swig/python/svn
+
 EXTERNAL_PROJECT_DIRS = @SVN_SUBDIRS@
 
 NEON_LIBS = @NEON_LIBS@
@@ -158,7 +164,7 @@ check-clean:
 		tests.log
 
 mkdir-init:
-	@list='$(BUILD_DIRS) $(DOC_DIRS)'; for i in $$list doc; do \
+	@list='$(BUILD_DIRS) $(DOC_DIRS) $(SWIG_DIRS)'; for i in $$list doc; do \
 	    echo "mkdir $$i" ; \
 	    $(MKDIR) $$i ; \
 	done
@@ -209,15 +215,19 @@ doc-clean:
         done
 
 swig-py-ext:
-	(cd subversion/bindings/swig/python;                \
-	 $(PYTHON) setup.py                                 \
-	    -I.. -I../../../include $(SVN_APR_INCLUDES)     \
-	    -L$(prefix)/lib -L$(SVN_APR_PREFIX)/lib         \
-            build)
+	(cd $(SWIG_SRC_DIR)/python;                                \
+	 $(PYTHON) setup.py                                        \
+	    -I$(SWIG_SRC_DIR)                                      \
+	    -I$(abs_srcdir)/subversion/include $(SVN_APR_INCLUDES) \
+	    -S$(SWIG_SRC_DIR)                                      \
+	    -L$(prefix)/lib -L$(SVN_APR_PREFIX)/lib                \
+            build --build-base=$(SWIG_BUILD_DIR)/python/build)
 
 install-swig-py-ext:
-	(cd subversion/bindings/swig/python;                \
-	 $(PYTHON) setup.py install --prefix $(prefix))
+	(cd $(SWIG_BUILD_DIR)/python;                       \
+	 $(PYTHON) $(SWIG_SRC_DIR)/python/setup.py          \
+	    -S$(SWIG_SRC_DIR)                               \
+            install --prefix $(prefix))
 
 ### Build a tarball.
 dist: 
