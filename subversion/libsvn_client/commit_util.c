@@ -824,7 +824,7 @@ svn_client__condense_commit_items (const char **base_url,
       flags[4] = (this_item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
                    ? 'c' : '-';
       flags[5] = '\0';
-      fprintf (stderr, "   %s  %6" SVN_REVNUM_T_FMT "  '%s' (%s)\n", 
+      fprintf (stderr, "   %s  %6ld  '%s' (%s)\n", 
                flags,
                this_item->revision,
                this_item->url ? this_item->url : "",
@@ -1334,7 +1334,7 @@ add_file (const char *path,
   const char *copystuffs = "";
   if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
     copystuffs = apr_psprintf (pool, 
-                               " (copied from %s:%" SVN_REVNUM_T_FMT ")",
+                               " (copied from %s:%ld)",
                                copyfrom_path,
                                copyfrom_revision);
   fprintf (stderr, "   Adding  : %s%s\n", path, copystuffs);
@@ -1429,7 +1429,7 @@ add_directory (const char *path,
   const char *copystuffs = "";
   if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
     copystuffs = apr_psprintf (pool, 
-                               " (copied from %s:%" SVN_REVNUM_T_FMT ")",
+                               " (copied from %s:%ld)",
                                copyfrom_path,
                                copyfrom_revision);
   fprintf (stderr, "   Adding  : %s%s\n", path, copystuffs);

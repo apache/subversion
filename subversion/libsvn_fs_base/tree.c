@@ -377,7 +377,7 @@ not_found (svn_fs_root_t *root, const char *path)
     return
       svn_error_createf
       (SVN_ERR_FS_NOT_FOUND, 0,
-       "File not found: revision '%" SVN_REVNUM_T_FMT "', path '%s'",
+       "File not found: revision '%ld', path '%s'",
        root->rev, path);
 }
 
@@ -398,8 +398,8 @@ already_exists (svn_fs_root_t *root, const char *path)
     return
       svn_error_createf
       (SVN_ERR_FS_ALREADY_EXISTS, 0,
-       "File already exists: filesystem '%s', revision '%" SVN_REVNUM_T_FMT
-       "', path '%s'", fs->path, root->rev, path);
+       "File already exists: filesystem '%s', revision '%ld', path '%s'",
+       fs->path, root->rev, path);
 }
 
 

@@ -94,7 +94,7 @@ print_dirents (apr_hash_t *dirents,
 
           sprintf (size_buf, "%" SVN_FILESIZE_T_FMT, dirent->size);
 
-          printf ("%7"SVN_REVNUM_T_FMT" %-8.8s %10s %12s %s%s\n",
+          printf ("%7ld %-8.8s %10s %12s %s%s\n",
                   dirent->created_rev,
                   stdout_author ? stdout_author : " ? ",
                   (dirent->kind == svn_node_file) ? size_buf : "",

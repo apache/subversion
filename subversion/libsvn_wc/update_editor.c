@@ -835,7 +835,7 @@ do_entry_deletion (struct edit_baton *eb,
      accurate reports about itself in the future. */
   if (strcmp (path, eb->target) == 0)
     {
-      tgt_rev_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
+      tgt_rev_str = apr_psprintf (pool, "%ld",
                                   *(eb->target_revision));
 
       svn_xml_make_open_tag (&log_item, pool, svn_xml_self_closing,
@@ -1786,7 +1786,7 @@ install_file (svn_wc_notify_state_t *content_state,
       if (copyfrom_url)
         {
           assert (SVN_IS_VALID_REVNUM (copyfrom_rev));
-          rev_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, copyfrom_rev);
+          rev_str = apr_psprintf (pool, "%ld", copyfrom_rev);
         }
 
       svn_xml_make_open_tag
@@ -1960,7 +1960,7 @@ install_file (svn_wc_notify_state_t *content_state,
   /* Write log entry which will bump the revision number.  Also, just
      in case we're overwriting an existing phantom 'deleted' or
      'absent' entry, be sure to remove the hiddenness. */
-  revision_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, new_revision);
+  revision_str = apr_psprintf (pool, "%ld", new_revision);
   svn_xml_make_open_tag (&log_accum,
                          pool,
                          svn_xml_self_closing,
@@ -2055,9 +2055,9 @@ install_file (svn_wc_notify_state_t *content_state,
                  old and new text-bases. */
               SVN_ERR (svn_wc_entry (&e, file_path, adm_access, FALSE, pool));
               assert (e != NULL);
-              oldrev_str = apr_psprintf (pool, ".r%" SVN_REVNUM_T_FMT,
+              oldrev_str = apr_psprintf (pool, ".r%ld",
                                          e->revision);
-              newrev_str = apr_psprintf (pool, ".r%" SVN_REVNUM_T_FMT,
+              newrev_str = apr_psprintf (pool, ".r%ld",
                                          new_revision);
               
               /* Merge the changes from the old-textbase (TXTB) to

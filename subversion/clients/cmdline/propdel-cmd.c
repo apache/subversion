@@ -94,8 +94,7 @@ svn_cl__propdel (apr_getopt_t *os,
           const char *pname_stdout;
           SVN_ERR (svn_cmdline_cstring_from_utf8 (&pname_stdout,
                                                   pname_utf8, pool));
-          printf ("property '%s' deleted from repository revision '%"
-                  SVN_REVNUM_T_FMT"'\n",
+          printf ("property '%s' deleted from repository revision '%ld'\n",
                   pname_stdout, rev);
         }      
     }

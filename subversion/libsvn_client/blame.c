@@ -400,7 +400,7 @@ svn_client_blame (const char *target,
   else
     return svn_error_createf (APR_EGENERAL, NULL,
                               "Revision action '%c' for "
-                              "revision %" SVN_REVNUM_T_FMT " of '%s'"
+                              "revision %ld of '%s'"
                               "lacks a prior revision",
                               lmb.action, lmb.eldest->revision,
                               lmb.eldest->path);

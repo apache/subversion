@@ -228,12 +228,12 @@ copy_versioned_files (const char *from,
                      to the revision number, and set the author to
                      "(local)" since we can't always determine the
                      current user's username */
-                  fmt = "%" SVN_REVNUM_T_FMT "M";
+                  fmt = "%ldM";
                   author = "(local)";
                 }
               else
                 {
-                  fmt = "%" SVN_REVNUM_T_FMT;
+                  fmt = "%ld";
                   author = entry->cmt_author;
                 }
               

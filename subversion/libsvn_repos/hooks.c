@@ -235,7 +235,7 @@ svn_repos__hooks_post_commit (svn_repos_t *repos,
 
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
-      args[2] = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
+      args[2] = apr_psprintf (pool, "%ld", rev);
       args[3] = NULL;
 
       SVN_ERR (run_hook_cmd ("post-commit", hook, args, FALSE, NULL, pool));
@@ -265,7 +265,7 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
 
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
-      args[2] = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
+      args[2] = apr_psprintf (pool, "%ld", rev);
       args[3] = author ? author : "";
       args[4] = name;
       args[5] = NULL;
@@ -310,7 +310,7 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
 
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
-      args[2] = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
+      args[2] = apr_psprintf (pool, "%ld", rev);
       args[3] = author ? author : "";
       args[4] = name;
       args[5] = NULL;

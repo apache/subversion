@@ -78,7 +78,7 @@ print_status (const char *path,
       else if (status->copied)
         working_rev = "-";
       else
-        sprintf (working_rev_buf, "%" SVN_REVNUM_T_FMT,
+        sprintf (working_rev_buf, "%ld",
                  status->entry->revision);
 
       if (status->repos_text_status != svn_wc_status_none
@@ -90,7 +90,7 @@ print_status (const char *path,
       if (show_last_committed)
         {
           if (status->entry && SVN_IS_VALID_REVNUM (status->entry->cmt_rev))
-            sprintf(commit_rev_buf, "%" SVN_REVNUM_T_FMT,
+            sprintf(commit_rev_buf, "%ld",
                     status->entry->cmt_rev);
           else if (status->entry)
             commit_rev = " ? ";

@@ -359,11 +359,11 @@ svn_error_t * svn_ra_dav__get_log(void *session_baton,
   svn_stringbuf_appendcstr(request_body, log_request_head);
   svn_stringbuf_appendcstr(request_body,
                            apr_psprintf(ras->pool,
-                                        "<S:start-revision>%" SVN_REVNUM_T_FMT
+                                        "<S:start-revision>%ld"
                                         "</S:start-revision>", start));
   svn_stringbuf_appendcstr(request_body,
                            apr_psprintf(ras->pool,
-                                        "<S:end-revision>%" SVN_REVNUM_T_FMT
+                                        "<S:end-revision>%ld"
                                         "</S:end-revision>", end));
   if (discover_changed_paths)
     {

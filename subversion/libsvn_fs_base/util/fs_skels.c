@@ -900,7 +900,7 @@ svn_fs_base__unparse_transaction_skel (skel_t **skel_p,
     {
       /* Committed transactions have a revision number... */
       svn_fs_base__prepend (svn_fs_base__str_atom
-                            (apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
+                            (apr_psprintf (pool, "%ld",
                                            transaction->revision), pool), \
                             skel);
     }

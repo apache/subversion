@@ -178,21 +178,21 @@ notify (void *baton,
             if (SVN_IS_VALID_REVNUM (revision))
               {
                 if (nb->is_export)
-                  printf ("Exported %srevision %" SVN_REVNUM_T_FMT ".\n",
+                  printf ("Exported %srevision %ld.\n",
                           nb->in_external ? "external at " : "",
                           revision);
                 else if (nb->is_checkout)
-                  printf ("Checked out %srevision %" SVN_REVNUM_T_FMT ".\n",
+                  printf ("Checked out %srevision %ld.\n",
                           nb->in_external ? "external at " : "",
                           revision);
                 else
                   {
                     if (nb->received_some_change)
-                      printf ("Updated %sto revision %" SVN_REVNUM_T_FMT ".\n",
+                      printf ("Updated %sto revision %ld.\n",
                               nb->in_external ? "external " : "",
                               revision);
                     else
-                      printf ("%st revision %" SVN_REVNUM_T_FMT ".\n",
+                      printf ("%st revision %ld.\n",
                               nb->in_external ? "External a" : "A",
                               revision);
                   }
@@ -223,7 +223,7 @@ notify (void *baton,
 
     case svn_wc_notify_status_completed:
       if (SVN_IS_VALID_REVNUM (revision))
-        printf ("Status against revision: %6" SVN_REVNUM_T_FMT "\n", revision);
+        printf ("Status against revision: %6ld\n", revision);
       break;
 
     case svn_wc_notify_commit_modified:

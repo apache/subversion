@@ -245,7 +245,7 @@ log_message_receiver (void *baton,
   SVN_ERR (svn_stream_printf (lb->out, pool, SEP_STRING));
 
   SVN_ERR (svn_stream_printf (lb->out, pool,
-                              "r%" SVN_REVNUM_T_FMT " | %s | %s",
+                              "r%ld | %s | %s",
                               rev, author_stdout, date_stdout));
 
   if (! lb->omit_log_message)
@@ -285,7 +285,7 @@ log_message_receiver (void *baton,
                        (&path_stdout, log_item->copyfrom_path, pool));
               copy_data 
                 = apr_psprintf (pool, 
-                                " (from %s:%" SVN_REVNUM_T_FMT ")",
+                                " (from %s:%ld)",
                                 path_stdout,
                                 log_item->copyfrom_rev);
             }
@@ -364,7 +364,7 @@ log_message_receiver_xml (void *baton,
   if (rev == 0)
     return SVN_NO_ERROR;
 
-  revstr = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, rev);
+  revstr = apr_psprintf (pool, "%ld", rev);
   /* <logentry revision="xxx"> */
   svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "logentry",
                          "revision", revstr, NULL);
@@ -417,7 +417,7 @@ log_message_receiver_xml (void *baton,
               svn_stringbuf_t *escpath = svn_stringbuf_create ("", pool);
               svn_xml_escape_attr_cstring (&escpath,
                                            log_item->copyfrom_path, pool);
-              revstr = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, 
+              revstr = apr_psprintf (pool, "%ld", 
                                      log_item->copyfrom_rev);
               svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "path",
                                      "action", action,

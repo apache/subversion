@@ -208,7 +208,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   svn_fs_root_t *root;
   svn_error_t *serr;
   const char *vcc;
-  char revbuf[20]; /* long enough for SVN_REVNUM_T_FMT */
+  char revbuf[20]; /* long enough for a long int */
   svn_string_t *creationdate, *creator_displayname;
 
   serr = svn_fs_revision_root(&root, repos->fs, new_rev, pool);
@@ -229,7 +229,7 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                           NULL, 0 /* add_href */, pool);
 
   /* the version-name of the baseline is the revision number */
-  sprintf(revbuf, "%" SVN_REVNUM_T_FMT, new_rev);
+  sprintf(revbuf, "%ld", new_rev);
 
   /* get the creationdate and creator-displayname of the new revision, too. */
   serr = svn_fs_revision_prop(&creationdate, repos->fs, new_rev,

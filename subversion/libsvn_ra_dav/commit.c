@@ -643,7 +643,7 @@ static svn_error_t * commit_delete_entry(const char *path,
 
   if (SVN_IS_VALID_REVNUM(revision))
     {
-      const char *revstr = apr_psprintf(pool, "%" SVN_REVNUM_T_FMT, revision);
+      const char *revstr = apr_psprintf(pool, "%ld", revision);
       extra_headers = apr_hash_make(pool);
       apr_hash_set(extra_headers, SVN_DAV_VERSION_NAME_HEADER,
                    APR_HASH_KEY_STRING, revstr);

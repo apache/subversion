@@ -53,7 +53,7 @@ blame_receiver (void *baton,
   const char *time_utf8;
   const char *time_stdout;
   const char *rev_str = SVN_IS_VALID_REVNUM (revision) 
-                        ? apr_psprintf (pool, "%6" SVN_REVNUM_T_FMT, revision)
+                        ? apr_psprintf (pool, "%6ld", revision)
                         : "     -";
   
   if (opt_state->verbose)

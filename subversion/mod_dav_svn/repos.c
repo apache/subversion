@@ -1549,8 +1549,8 @@ dav_error * dav_svn_resource_kind (request_rec *r,
             return dav_svn_convert_err
               (serr, HTTP_INTERNAL_SERVER_ERROR,
                apr_psprintf(r->pool,
-                            "Could not open root of revision %" 
-                            SVN_REVNUM_T_FMT, base_rev),
+                            "Could not open root of revision %ld",
+                            base_rev),
                r->pool);
       
           serr = svn_fs_check_path (kind, base_rev_root,
@@ -1779,7 +1779,7 @@ const char * dav_svn_getetag(const dav_resource *resource, apr_pool_t *pool)
   /* Use the "weak" format of the etag for collections because our GET
      requests on collections include dynamic data (the HEAD revision,
      the build version of Subversion, etc.). */
-  return apr_psprintf(pool, "%s\"%" SVN_REVNUM_T_FMT "/%s\"",
+  return apr_psprintf(pool, "%s\"%ld/%s\"",
                       resource->collection ? "W/" : "",
                       created_rev,
                       apr_xml_quote_string(pool,
@@ -2017,7 +2017,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
 
         if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
           title = apr_psprintf(resource->pool,
-                               "Revision %" SVN_REVNUM_T_FMT ": %s",
+                               "Revision %ld: %s",
                                resource->info->root.rev, title);
 
         if (resource->info->repos->repo_name)
@@ -2046,7 +2046,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
           ap_fprintf(output, bb, " name=\"%s\"",
                      apr_xml_quote_string(resource->pool, name, 1));
         if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
-          ap_fprintf(output, bb, " rev=\"%" SVN_REVNUM_T_FMT "\"",
+          ap_fprintf(output, bb, " rev=\"%ld\"",
                      resource->info->root.rev);
         if (href)
           ap_fprintf(output, bb, " path=\"%s\"",
@@ -2774,7 +2774,7 @@ dav_resource *dav_svn_create_working_resource(dav_resource *base,
 
   if (base->baselined)
     path = apr_psprintf(base->pool,
-                        "/%s/wbl/%s/%" SVN_REVNUM_T_FMT,
+                        "/%s/wbl/%s/%ld",
                         base->info->repos->special_uri,
                         activity_id, base->info->root.rev);
   else

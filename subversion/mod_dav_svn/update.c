@@ -493,16 +493,15 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
 
           if (bc_url)
             elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
-                               "copyfrom-path=\"%s\" copyfrom-rev=\"%"
-                               SVN_REVNUM_T_FMT "\" "
+                               "copyfrom-path=\"%s\" copyfrom-rev=\"%ld\" "
                                "bc-url=\"%s\">" DEBUG_CR,
                                DIR_OR_FILE(is_dir),
                                qname, qcopy, copyfrom_revision,
                                bc_url);
           else
             elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
-                               "copyfrom-path=\"%s\" copyfrom-rev=\"%"
-                               SVN_REVNUM_T_FMT "\">" DEBUG_CR,
+                               "copyfrom-path=\"%s\""
+                               " copyfrom-rev=\"%ld\">" DEBUG_CR,
                                DIR_OR_FILE(is_dir),
                                qname, qcopy, copyfrom_revision);
         }
@@ -535,8 +534,8 @@ static svn_error_t * open_helper(svn_boolean_t is_dir,
   item_baton_t *child = make_child_baton(parent, path, pool);
   const char *qname = apr_xml_quote_string(pool, child->name, 1);
 
-  SVN_ERR( send_xml(child->uc, "<S:open-%s name=\"%s\" rev=\"%"
-                    SVN_REVNUM_T_FMT "\">" DEBUG_CR,
+  SVN_ERR( send_xml(child->uc, "<S:open-%s name=\"%s\""
+                    " rev=\"%ld\">" DEBUG_CR,
                     DIR_OR_FILE(is_dir), qname, base_revision));
   SVN_ERR( send_vsn_url(child, pool) );
   *child_baton = child;
@@ -654,7 +653,7 @@ static svn_error_t * upd_set_target_revision(void *edit_baton,
   SVN_ERR( maybe_start_update_report(uc) );
 
   if (! uc->resource_walk)
-    SVN_ERR( send_xml(uc, "<S:target-revision rev=\"%" SVN_REVNUM_T_FMT 
+    SVN_ERR( send_xml(uc, "<S:target-revision rev=\"%ld"
                       "\"/>" DEBUG_CR, target_revision) );
 
   return SVN_NO_ERROR;
@@ -688,7 +687,7 @@ static svn_error_t * upd_open_root(void *edit_baton,
     }
   else    
     {
-      SVN_ERR( send_xml(uc, "<S:open-directory rev=\"%" SVN_REVNUM_T_FMT "\">"
+      SVN_ERR( send_xml(uc, "<S:open-directory rev=\"%ld\">"
                         DEBUG_CR, base_revision) );
     }
 
