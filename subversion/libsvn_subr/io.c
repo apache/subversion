@@ -613,7 +613,6 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
   svn_node_kind_t kind;
   apr_status_t status;
   const char *dst_path;
-  const char *dst_path_apr;
   apr_dir_t *this_dir;
   apr_finfo_t this_entry;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
@@ -644,15 +643,9 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
                               "Destination '%s' already exists",
                               dst_path);
   
-  SVN_ERR (svn_path_cstring_from_utf8 (&dst_path_apr, dst_path, pool));
-
   /* Create the new directory. */
   /* ### TODO: copy permissions? */
-  status = apr_dir_make (dst_path_apr, APR_OS_DEFAULT, pool);
-  if (status)
-    return svn_error_createf (status, NULL,
-                              "Unable to create directory '%s'",
-                              dst_path);
+  SVN_ERR (svn_io_dir_make (dst_path, APR_OS_DEFAULT, pool));
 
   /* Loop over the dirents in SRC.  ('.' and '..' are auto-excluded) */
   SVN_ERR (svn_io_dir_open (&this_dir, src, subpool));
@@ -736,16 +729,13 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
 svn_error_t *
 svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
 {
-  const char *path_apr;
-  apr_status_t apr_err;
+  svn_error_t *err;
   char *dir;
 
   if (svn_path_is_empty (path))
     /* Empty path (current dir) is assumed to always exist,
        so we do nothing, per docs. */
     return SVN_NO_ERROR;
-
-  SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, path, pool));
 
 #if 0
   /* ### Use this implementation if/when apr_dir_make_recursive is
@@ -759,25 +749,23 @@ svn_io_make_dir_recursively (const char *path, apr_pool_t *pool)
 #else
 
   /* Try to make PATH right out */
-  apr_err = apr_dir_make (path_apr, APR_OS_DEFAULT, pool);
+  err = svn_io_dir_make (path, APR_OS_DEFAULT, pool);
 
-  /* It's OK if PATH exists */
-  if (!apr_err || APR_STATUS_IS_EEXIST(apr_err))
-    return SVN_NO_ERROR;
-
-  if (APR_STATUS_IS_ENOENT(apr_err))
+  if (! err || APR_STATUS_IS_EEXIST (err->apr_err))
     {
-      /* Missing an intermediate dir */
+      /* We succeeded, or path already exists; either way we're done. */
+      svn_error_clear (err);
+      return SVN_NO_ERROR;
+    }
+  else if (APR_STATUS_IS_ENOENT (err->apr_err))
+    {
+      /* Missing an intermediate dir. */
       dir = svn_path_dirname (path, pool);
       SVN_ERR (svn_io_make_dir_recursively (dir, pool));
-
-      apr_err = apr_dir_make (path_apr, APR_OS_DEFAULT, pool);
-      if (!apr_err)
-        return SVN_NO_ERROR;
+      return svn_io_dir_make (path, APR_OS_DEFAULT, pool);
     }
-
-  /* If we get here, there must be an apr_err. */
-  return svn_error_wrap_apr (apr_err, "Can't make '%s'", path);
+  else
+    return err;
 #endif
 }
 
@@ -2143,6 +2131,19 @@ dir_make (const char *path, apr_fileperms_t perm,
   /* APR doesn't like "" directories */
   if (path_apr[0] == '\0')
     path_apr = ".";
+
+#if (APR_OS_DEFAULT & APR_WSTICKY)
+  /* The APR shipped with httpd 2.0.50 contains a bug where
+     APR_OS_DEFAULT encompasses the setuid, setgid, and sticky bits.
+     There is a special case for file creation, but not directory
+     creation, so directories wind up getting created with the sticky
+     bit set.  (There is no such thing as a setuid directory, and the
+     setgid bit is apparently ignored at mkdir() time.)  If we detect
+     this problem, work around it by unsetting those bits if we are
+     passed APR_OS_DEFAULT. */
+  if (perm == APR_OS_DEFAULT)
+    perm &= ~(APR_USETID | APR_GSETID | APR_WSTICKY);
+#endif
 
   status = apr_dir_make (path_apr, perm, pool);
 

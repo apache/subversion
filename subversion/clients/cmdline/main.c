@@ -744,6 +744,7 @@ main (int argc, const char * const *argv)
   int i, num_opts = 0;
   const svn_opt_subcommand_desc_t *subcommand = NULL;
   const char *dash_m_arg = NULL, *dash_F_arg = NULL;
+  const char *path_utf8;
   apr_status_t apr_err;
   svn_cl__cmd_baton_t command_baton;
   svn_auth_baton_t *ab;
@@ -967,9 +968,8 @@ main (int argc, const char * const *argv)
         opt_state.new_target = apr_pstrdup (pool, opt_arg);
         break;
       case svn_cl__config_dir_opt:
-        opt_state.config_dir = apr_pstrdup (pool,
-                                            svn_path_canonicalize (opt_arg,
-                                                                   pool));
+        err = svn_utf_cstring_to_utf8 (&path_utf8, opt_arg, pool);
+        opt_state.config_dir = svn_path_canonicalize (path_utf8, pool);
         break;
       case svn_cl__autoprops_opt:
         if (opt_state.no_autoprops)

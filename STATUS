@@ -23,21 +23,11 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
-  * r10616, r10638, r10642
-    Work around directory creation bug in APR shipped with httpd 2.0.50.
-    Justification:
-      Not a tiny patch, but most of the pieces are simple and
-      independent.  Bug breaks shared working copies and litters
-      unsightly sticky bits around people's working copies and
-      repositories.
-    Votes:
-      +1: ghudson, maxb, lundblad
-
   * r10645
     Add new abbreviation 'Revision' for 'LastChangedRevision'.
     Justification:
       Tiny patch. Drastically eases conversion from CVS for repositories
-      using $Revision$ and wanting to continue to use it for subversion - 
+      using $Revision$ and wanting to continue to use it for subversion -
       a simple propset, rather than text changes to every affected file.
       Patch has been filed in the issue for more than a year!
     Votes:
@@ -58,5 +48,5 @@ Candidate changes:
       Tiny patch. If a user has an old apache on their system, but didn't ask
       us to use it, we shouldn't abort ./configure, just don't use it.
     Votes:
-      +1: maxb 
+      +1: maxb
 
