@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-04-03 19:53-0300\n"
-"PO-Revision-Date: 2005-04-03 19:54-0300\n"
+"POT-Creation-Date: 2005-04-05 00:12-0300\n"
+"PO-Revision-Date: 2005-04-04 23:34-0300\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Spanish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1521,7 +1521,7 @@ msgstr ""
 "El mensaje de log es una ruta (¿la intención fue usar -F?); use '--force-"
 "log' para forzar la acción"
 
-#: clients/cmdline/main.c:1429
+#: clients/cmdline/main.c:1433
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
@@ -2495,7 +2495,7 @@ msgid "HTTP Path Not Found"
 msgstr "Ruta HTTP no encontrada"
 
 #: include/svn_error_codes.h:698
-msgid "Failed to excute WebDAV PROPPATCH"
+msgid "Failed to execute WebDAV PROPPATCH"
 msgstr "Falló la ejecución de PROPPATCH de WebDAV"
 
 #: include/svn_error_codes.h:703 include/svn_error_codes.h:735
@@ -3494,11 +3494,11 @@ msgstr "almacenar registro de copia"
 
 #: libsvn_fs_base/bdb/copies-table.c:112
 msgid "allocating new copy ID (getting 'next-key')"
-msgstr ""
+msgstr "reservando nuevo ID de copia (obteniendo 'next-key')"
 
 #: libsvn_fs_base/bdb/copies-table.c:130
 msgid "bumping next copy key"
-msgstr ""
+msgstr "generando siguiente clave de copia"
 
 #: libsvn_fs_base/bdb/copies-table.c:169
 msgid "deleting entry from 'copies' table"
@@ -3514,7 +3514,7 @@ msgstr "reservar nuevo ID de nodo (obteniendo 'next-key')"
 
 #: libsvn_fs_base/bdb/nodes-table.c:117
 msgid "bumping next node ID key"
-msgstr ""
+msgstr "generando siguiente clave de ID de nodo"
 
 #: libsvn_fs_base/bdb/nodes-table.c:154
 #, c-format
@@ -3639,7 +3639,7 @@ msgstr ""
 #: libsvn_fs_base/dag.c:801
 #, c-format
 msgid "Attempted to make a child clone with an illegal name '%s'"
-msgstr ""
+msgstr "Se intentó crear un clon hijo con un nombre ilegal '%s'"
 
 #: libsvn_fs_base/dag.c:926
 #, c-format
@@ -3933,21 +3933,21 @@ msgstr "Módulo para trabajar con un repositorio Berkeley DB."
 msgid "Unsupported FS loader version (%d) for bdb"
 msgstr "Versión de cargador FS (%d) no soportada para bdb"
 
-#: libsvn_fs_base/lock.c:449 libsvn_fs_fs/lock.c:618
+#: libsvn_fs_base/lock.c:449 libsvn_fs_fs/lock.c:644
 #, c-format
 msgid "Cannot verify lock on path '%s'; no username available"
 msgstr ""
 "No se puede verificar el bloqueo sobre la ruta '%s'; no hay un nombre de "
 "usuario disponible"
 
-#: libsvn_fs_base/lock.c:455 libsvn_fs_fs/lock.c:624
+#: libsvn_fs_base/lock.c:455 libsvn_fs_fs/lock.c:650
 #, c-format
 msgid "User %s does not own lock on path '%s' (currently locked by %s)"
 msgstr ""
 "El usuario %s no es el dueño del bloqueo sobre la ruta '%s' (actualmente "
 "bloqueada por %s)"
 
-#: libsvn_fs_base/lock.c:462 libsvn_fs_fs/lock.c:631
+#: libsvn_fs_base/lock.c:462 libsvn_fs_fs/lock.c:657
 #, c-format
 msgid "Cannot verify lock on path '%s'; no matching lock-token available"
 msgstr ""
@@ -3961,7 +3961,7 @@ msgstr "La representación no es de tipo 'delta'"
 #: libsvn_fs_base/reps-strings.c:495
 #, c-format
 msgid "Diff version inconsistencies in representation '%s'"
-msgstr ""
+msgstr "Inconsistencias en la versión de diff en la representación '%s'"
 
 #: libsvn_fs_base/reps-strings.c:758
 #, c-format
@@ -3997,7 +3997,7 @@ msgstr "La rep '%s' no es inmutable"
 #: libsvn_fs_base/reps-strings.c:1018
 #, c-format
 msgid "Rep '%s' both mutable and non-fulltext"
-msgstr ""
+msgstr "La rep '%s' es a la vez mutable y no-textocompleto"
 
 #: libsvn_fs_base/reps-strings.c:1318
 msgid "Failed to get new string key"
@@ -4060,7 +4060,7 @@ msgstr "No se pudo abrir '%s'"
 
 #: libsvn_fs_base/tree.c:1407 libsvn_fs_fs/tree.c:1152
 msgid "Asking props changed in two different filesystems"
-msgstr ""
+msgstr "Se piden propiedades cambiadas en dos sistemas de archivos diferentes"
 
 #: libsvn_fs_base/tree.c:1741
 msgid "Corrupt DB: faulty predecessor count"
@@ -4126,7 +4126,7 @@ msgstr ""
 
 #: libsvn_fs_base/tree.c:3937 libsvn_fs_fs/tree.c:2589
 msgid "Asking contents changed in two different filesystems"
-msgstr ""
+msgstr "Se piden contenidos cambiados en dos sistemas de archivos diferentes"
 
 #: libsvn_fs_base/tree.c:3946 libsvn_fs_base/tree.c:3951
 #: libsvn_fs_fs/tree.c:2598 libsvn_fs_fs/tree.c:2603
@@ -4171,7 +4171,7 @@ msgstr ""
 
 #: libsvn_fs_fs/fs.c:272
 msgid "Module for working with a plain file (FSFS) repository."
-msgstr "Módulo para trabajar con un repositorio de archivos simples (FSFS)."
+msgstr "Módulo para usar un repositorio basado en archivos comunes (FSFS)."
 
 #: libsvn_fs_fs/fs.c:306
 #, c-format
@@ -4325,11 +4325,11 @@ msgstr "No se puede asignar contenido de tipo 'texto' a un directorio"
 msgid "Corrupt current file"
 msgstr "Archivo actual corrupto"
 
-#: libsvn_fs_fs/fs_fs.c:3767
+#: libsvn_fs_fs/fs_fs.c:3787
 msgid "Transaction out of date"
 msgstr "La transacción está obsoleta"
 
-#: libsvn_fs_fs/fs_fs.c:4036
+#: libsvn_fs_fs/fs_fs.c:4063
 msgid "No such transaction"
 msgstr "No existe tal transacción"
 
@@ -4342,6 +4342,16 @@ msgstr "No se pudo escribir el archivo de hashes lock/entries '%s'"
 #, c-format
 msgid "Can't parse lock/entries hashfile '%s'"
 msgstr "No se pudo interpretar el archivo de hash de locks/entries '%s'"
+
+#: libsvn_fs_fs/lock.c:740 libsvn_fs_fs/lock.c:761
+#, c-format
+msgid "Path '%s' doesn't exist in HEAD revision"
+msgstr "la ruta '%s' no existe en la revisión HEAD"
+
+#: libsvn_fs_fs/lock.c:766
+#, c-format
+msgid "Lock failed: newer version of '%s' exists"
+msgstr "Falló el bloqueo: existe una versión más nueva de '%s'"
 
 #: libsvn_fs_fs/revs-txns.c:214
 msgid "Transaction cleanup failed"
@@ -4631,42 +4641,42 @@ msgstr "Falló la inicialización del 'socket' de red"
 msgid "SSL is not supported"
 msgstr "No se soporta SSL"
 
-#: libsvn_ra_dav/session.c:757
+#: libsvn_ra_dav/session.c:755
 #, c-format
 msgid "Invalid config: unable to load certificate file '%s'"
 msgstr "Configuración inválida: imposible cargar archivo de certificado '%s'"
 
-#: libsvn_ra_dav/session.c:845
+#: libsvn_ra_dav/session.c:843
 msgid "The UUID property was not found on the resource or any of its parents"
 msgstr ""
 "La propiedad UUID no se encontró en el recurso ni en ninguno de sus padres"
 
-#: libsvn_ra_dav/session.c:853
+#: libsvn_ra_dav/session.c:851
 msgid "Please upgrade the server to 0.19 or later"
 msgstr "Por favor actualice el servidor a la versión 0.19 o posterior"
 
-#: libsvn_ra_dav/session.c:1018 libsvn_ra_dav/session.c:1143
+#: libsvn_ra_dav/session.c:1016 libsvn_ra_dav/session.c:1141
 msgid "Failed to parse URI"
 msgstr "Falló el análisis de un URI"
 
-#: libsvn_ra_dav/session.c:1041
+#: libsvn_ra_dav/session.c:1039
 msgid "Lock request failed"
 msgstr "El pedido de bloqueo falló"
 
-#: libsvn_ra_dav/session.c:1158
+#: libsvn_ra_dav/session.c:1156
 #, c-format
 msgid "'%s' is not locked in the repository"
 msgstr "'%s' no está bloqueado en el repositorio"
 
-#: libsvn_ra_dav/session.c:1195
+#: libsvn_ra_dav/session.c:1193
 msgid "Unlock request failed"
 msgstr "El pedido de desbloquear falló"
 
-#: libsvn_ra_dav/session.c:1379
+#: libsvn_ra_dav/session.c:1377
 msgid "Failed to fetch lock information"
 msgstr "El pedido de información de bloqueos falló"
 
-#: libsvn_ra_dav/session.c:1454
+#: libsvn_ra_dav/session.c:1452
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_dav"
 msgstr "Versión de cargador RA (%d) no soportada para ra_dav"
@@ -5030,6 +5040,8 @@ msgid ""
 "Invalid editor anchoring; at least one of the input paths is not a directory "
 "and there was no source entry"
 msgstr ""
+"Anclaje del editor inválido; por lo menos una de las rutas de entrada no es "
+"un directorio y no había entrada origen"
 
 #: libsvn_repos/dump.c:416
 #, c-format
@@ -7702,7 +7714,7 @@ msgstr "raíz del directorio a servir"
 
 #: svnserve/main.c:113
 msgid "deprecated; use repository config file"
-msgstr ""
+msgstr "desrecomendado; use el arhivo de configuración del repositorio"
 
 #: svnserve/main.c:114
 msgid "tunnel mode"
