@@ -866,7 +866,7 @@ svn_wc__wcprop_set (svn_stringbuf_t *name,
   if (err)
     return
       svn_error_quick_wrap
-      (err, "svn_wc__wcprop_get: failed to load props from disk.");
+      (err, "svn_wc__wcprop_set: failed to load props from disk.");
 
   /* Now we have all the properties in our hash.  Simply merge the new
      property into it. */
