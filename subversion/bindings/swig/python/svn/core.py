@@ -38,7 +38,7 @@ def run_app(func, *args, **kw):
 
 # some minor patchups
 svn_pool_destroy = apr_pool_destroy
-
+svn_pool_clear = apr_pool_clear
 
 class Stream:
   def __init__(self, stream):
