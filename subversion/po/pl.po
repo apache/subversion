@@ -34,8 +34,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-08-30 11:53+0200\n"
-"PO-Revision-Date: 2004-08-25 23:36+0200\n"
+"POT-Creation-Date: 2004-09-07 08:35+0200\n"
+"PO-Revision-Date: 2004-09-07 08:38+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -241,7 +241,7 @@ msgstr "Wersja bazowa pliku w chwili wystąpienia konfliktu: %s\n"
 #: clients/cmdline/info-cmd.c:174
 #, c-format
 msgid "Conflict Previous Working File: %s\n"
-msgstr "Wesja robocza pliku w chwili wystąpienia konfliktu: %s\n"
+msgstr "Wersja robocza pliku w chwili wystąpienia konfliktu: %s\n"
 
 #: clients/cmdline/info-cmd.c:178
 #, c-format
@@ -254,7 +254,13 @@ msgstr ""
 msgid "Conflict Properties File: %s\n"
 msgstr "Plik z opisem konfliktu atrybutów: %s\n"
 
-#: clients/cmdline/info-cmd.c:257
+#: clients/cmdline/info-cmd.c:252
+msgid "'svn info' only works on working copy paths, not URLs"
+msgstr ""
+"'svn info' działa tylko na ścieżkach kopii roboczej, \n"
+"a nie na URLach"
+
+#: clients/cmdline/info-cmd.c:264
 #, c-format
 msgid ""
 "%s:  (Not a versioned resource)\n"
@@ -292,8 +298,8 @@ msgstr "wymuś wykonanie operacji"
 msgid "force validity of log message source"
 msgstr "wymuś uznanie opisu zmian za poprawny"
 
-#: clients/cmdline/main.c:67 clients/cmdline/main.c:68 svnadmin/main.c:199
-#: svnadmin/main.c:202 svnlook/main.c:89 svnlook/main.c:92
+#: clients/cmdline/main.c:67 clients/cmdline/main.c:68 svnadmin/main.c:221
+#: svnadmin/main.c:224 svnlook/main.c:89 svnlook/main.c:92
 msgid "show help on a subcommand"
 msgstr "wyświetl tekst pomocy dla polecenia"
 
@@ -452,7 +458,7 @@ msgstr "działaj na atrybucie wersji (do użycia wraz z -r)"
 msgid "relocate via URL-rewriting"
 msgstr "zmień URL repozytorium"
 
-#: clients/cmdline/main.c:136 svnadmin/main.c:241
+#: clients/cmdline/main.c:136 svnadmin/main.c:263
 msgid "read user configuration files from directory ARG"
 msgstr "pobierz konfigurację użytkownika z katalogu ARG"
 
@@ -639,6 +645,34 @@ msgid ""
 "\n"
 "  Use just 'svn diff' to display local modifications in a working copy.\n"
 msgstr ""
+"Pokaż listę różnic pomiędzy dwoma obiektami.\n"
+"Wykorzystanie:\n"
+"       1. diff [-r N[:M]] [--old STARY] [--new NOWY] [ŚCIEŻKA...]\n"
+"       2. diff -r N:M URL\n"
+"       3. diff [-r N[:M]] URL1[@N] URL2[@M]\n"
+"\n"
+"  1. Pokaż listę różnic między STARY a NOWY. ŚCIEŻKi, o ile są podane,\n"
+"     są traktowane jako względne w stosunku do STARY i NOWY i\n"
+"     ograniczają porównanie do podanych katalogów lub plików. Tak\n"
+"     STARY, jak NOWY mogą mieć formę bądź ścieżki w ramach kopii\n"
+"     roboczej, bądź też adresu w repozytorum - URL lub URL@WERSJA.\n"
+"\n"
+"     Domyślną wartością STARY jest '.' (katalog bieżący) a domyślną\n"
+"     wartością NOWY jest STARY.  Domyślną wartością N jest BASE lub,\n"
+"     jeśli STARY jest URLem, HEAD.  Domyślną wartością M jest aktualna\n"
+"     wersja robocza lub, jeśli NOWY jest URLem, HEAD.\n"
+"\n"
+"     '-r N' ustala wersję STARY na N, '-r N:M' dodatkowo ustala wersję\n"
+"     NOWY na M.\n"
+"\n"
+"  2. Skrót dla 'svn diff -r N:M --old=URL --new=URL\n"
+"     (porównanie między dwoma wersjami podanego pliku lub katalogu).\n"
+"\n"
+"  3. Skrót dla 'svn diff [-r N[:M]] --old=URL1 --new=URL2\n"
+"\n"
+"  W szczególności prosty zapis 'svn diff' prezentuje zmiany\n"
+"  wprowadzone w kopii roboczej w stosunku do wersji pobranej z\n"
+"  repozytorium (zmiany do zatwierdzenia).\n"
 
 #: clients/cmdline/main.c:285
 msgid ""
@@ -693,7 +727,7 @@ msgid ""
 "  If PATH is omitted '.' is assumed.  Parent directories are created\n"
 "  as necessary in the repository.\n"
 msgstr ""
-"Umieść w repozytorium plik lub katalog dotychczas nie podlegajacy\n"
+"Umieść w repozytorium plik lub katalog dotychczas nie podlegający\n"
 "zarządzaniu wesjami.\n"
 "Wykorzystanie: import [ŚCIEŻKA] URL\n"
 "\n"
@@ -711,8 +745,8 @@ msgstr ""
 "Przedstaw szczegółowe informacje o podanym pliku lub katalogu.\n"
 "Wykorzystanie: info [ŚCIEŻKA]\n"
 "\n"
-"   Wypisuje informacje o każdym z podanych parametrów (domyślnie o .\n"
-"   czyli katalogu bieżacym).\n"
+"   Wypisuje informacje o każdym z podanych parametrów (domyślnie\n"
+"    o '.' czyli katalogu bieżącym).\n"
 
 #: clients/cmdline/main.c:336
 msgid ""
@@ -1007,6 +1041,7 @@ msgstr ""
 "\n"
 
 #: clients/cmdline/main.c:500
+#, fuzzy
 msgid ""
 "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME [PROPVAL | -F VALFILE] PATH...\n"
@@ -1024,7 +1059,8 @@ msgid ""
 "      Author, LastChangedBy    - The last person to modify the file.\n"
 "      Date, LastChangedDate    - The date/time the object was last "
 "modified.\n"
-"      Rev, LastChangedRevision - The last revision the object changed.\n"
+"      Rev, Revision,           - The last revision the object changed.\n"
+"      LastChangedRevision\n"
 "      Id                       - A compressed summary of the previous\n"
 "                                   4 keywords.\n"
 "    svn:executable - If present, make the file executable. This\n"
@@ -1087,7 +1123,7 @@ msgstr ""
 "        foo             http://example.com/repos/zig\n"
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
 
-#: clients/cmdline/main.c:543
+#: clients/cmdline/main.c:544
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -1105,7 +1141,7 @@ msgstr ""
 "  możliwość zatwierdzenia zmian. Powinno być używane po ręcznym\n"
 "  rozwikłaniu konfliktu.\n"
 
-#: clients/cmdline/main.c:552
+#: clients/cmdline/main.c:553
 msgid ""
 "Restore pristine working copy file (undo most local edits).\n"
 "usage: revert PATH...\n"
@@ -1121,7 +1157,7 @@ msgstr ""
 "  Do działania nie wymaga dostępu do sieci, automatycznie rozwiązuje\n"
 "  wszelkie konflikty.\n"
 
-#: clients/cmdline/main.c:562
+#: clients/cmdline/main.c:563
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -1258,7 +1294,7 @@ msgstr ""
 "                 965       687 joe          wc/zig.c\n"
 "    Head revision:   981\n"
 
-#: clients/cmdline/main.c:629
+#: clients/cmdline/main.c:630
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL [PATH]\n"
@@ -1288,7 +1324,7 @@ msgstr ""
 "     (np. zmienia się sposób dostępu albo nazwa maszyny) ale kopia\n"
 "     robocza nadal odpowiada temu samemu katalogowi w repozytorium.\n"
 
-#: clients/cmdline/main.c:650
+#: clients/cmdline/main.c:651
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -1329,40 +1365,40 @@ msgstr ""
 "  ten sposób informacja o zmianach w samym pliku a w drugiej o\n"
 "  zmianach w jego atrybutach.\n"
 
-#: clients/cmdline/main.c:724 svnadmin/main.c:56
+#: clients/cmdline/main.c:725 svnadmin/main.c:75
 msgid "Caught signal"
 msgstr "Złapano sygnał"
 
-#: clients/cmdline/main.c:821 svnadmin/main.c:941
+#: clients/cmdline/main.c:822 svnadmin/main.c:1006
 msgid ""
 "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr ""
 "Wielokrotnie podano opcję numeru wersji; spróbuj '-r M:N' zamiast '-r M -r N'"
 
-#: clients/cmdline/main.c:833 svnadmin/main.c:958
+#: clients/cmdline/main.c:834 svnadmin/main.c:1023
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Błąd składniowy w numerze wersji '%s'"
 
-#: clients/cmdline/main.c:978 clients/cmdline/main.c:988
+#: clients/cmdline/main.c:979 clients/cmdline/main.c:989
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "Opcje --auto-props i --no-auto-props nie mogą występować równocześnie"
 
-#: clients/cmdline/main.c:1004
+#: clients/cmdline/main.c:1005
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "Błąd składniowy w nazwie native-eol '%s'"
 
-#: clients/cmdline/main.c:1047
+#: clients/cmdline/main.c:1048
 msgid "Subcommand argument required\n"
 msgstr "Polecenie wymaga podania parametru\n"
 
-#: clients/cmdline/main.c:1065 svnadmin/main.c:1075 svnlook/main.c:1962
+#: clients/cmdline/main.c:1066 svnadmin/main.c:1143 svnlook/main.c:1962
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Nieznane polecenie: '%s'\n"
 
-#: clients/cmdline/main.c:1098
+#: clients/cmdline/main.c:1099
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -1371,13 +1407,13 @@ msgstr ""
 "Polecenie '%s' nie obsługuje opcji '%s'.\n"
 "Użyj 'svn help %s' by otrzymać informacje o sposobie jego używania.\n"
 
-#: clients/cmdline/main.c:1132
+#: clients/cmdline/main.c:1133
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr ""
 "Plik z opisem zmian jest plikiem podlegającym zarządzaniu wersjami;\n"
 "użyj '--force-log' by wymusić jego użycie."
 
-#: clients/cmdline/main.c:1150
+#: clients/cmdline/main.c:1151
 msgid ""
 "The log message is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -1385,7 +1421,7 @@ msgstr ""
 "Opis zmian jest ścieżką (chciano użyć -F?); użyj --force-log by\n"
 "wymusić użycie takiego opisu "
 
-#: clients/cmdline/main.c:1345
+#: clients/cmdline/main.c:1346
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
@@ -3209,7 +3245,7 @@ msgstr "Błędny nagłówek w pliku wersji"
 #: libsvn_fs_fs/fs_fs.c:480 libsvn_fs_fs/fs_fs.c:494 libsvn_fs_fs/fs_fs.c:501
 #: libsvn_fs_fs/fs_fs.c:508 libsvn_fs_fs/fs_fs.c:516 libsvn_fs_fs/fs_fs.c:524
 msgid "Malformed text rep offset line in node-rev"
-msgstr ""
+msgstr "Błędny offset reprezentacji w node-rev"
 
 #: libsvn_fs_fs/fs_fs.c:593
 msgid "Missing kind field in node-rev"
@@ -3229,7 +3265,7 @@ msgstr "Błędna linia copyfrom w node-rev"
 
 #: libsvn_fs_fs/fs_fs.c:779 libsvn_fs_fs/fs_fs.c:2917
 msgid "Attempted to write to non-transaction"
-msgstr ""
+msgstr "Próba zapisu node-rev o stałym ID"
 
 #: libsvn_fs_fs/fs_fs.c:863
 msgid "Malformed representation header"
@@ -3295,16 +3331,20 @@ msgstr "Brak wymaganego ID wersji obiektu"
 #: libsvn_fs_fs/fs_fs.c:1745
 msgid "Invalid change ordering: new node revision ID without delete"
 msgstr ""
+"Niewłaściwy porządek zmian: ID nowego węzła wersji nie jest\n"
+"zmianą typu usunięcie ścieżki"
 
 #: libsvn_fs_fs/fs_fs.c:1756
 msgid "Invalid change ordering: non-add change on deleted path"
 msgstr ""
+"Niewłaściwy porządek zmian: zmiana typu non-add poprzedza\n"
+"usunięcie ścieżki"
 
 #: libsvn_fs_fs/fs_fs.c:1901 libsvn_fs_fs/fs_fs.c:1909
 #: libsvn_fs_fs/fs_fs.c:1941 libsvn_fs_fs/fs_fs.c:1961
 #: libsvn_fs_fs/fs_fs.c:1995 libsvn_fs_fs/fs_fs.c:2000
 msgid "Invalid changes line in rev-file"
-msgstr ""
+msgstr "Niewłaściwe zmiany w pliku wersji"
 
 #: libsvn_fs_fs/fs_fs.c:1934
 msgid "Invalid change kind in rev file"
@@ -3871,7 +3911,7 @@ msgstr ""
 msgid "Type '%s help' for usage.\n"
 msgstr "Użyj '%s help' by otrzymać podstawowe instrukcje.\n"
 
-#: libsvn_subr/subst.c:939 libsvn_wc/props.c:986
+#: libsvn_subr/subst.c:946 libsvn_wc/props.c:986
 #, c-format
 msgid "File '%s' has inconsistent newlines"
 msgstr "Plik '%s' ma niejednolite znaki końca wiersza"
@@ -4618,74 +4658,82 @@ msgstr "Brak informacji o pochodzeniu '%s'"
 msgid "Unable to make any directories"
 msgstr "Nieudane tworzenie jakichkolwiek katalogów"
 
-#: svnadmin/main.c:72
+#: svnadmin/main.c:92
 msgid "Can't open stdio file"
 msgstr "Błąd otwierania pliku"
 
-#: svnadmin/main.c:100
+#: svnadmin/main.c:121
 msgid "Repository argument required"
 msgstr "Parametr podający repozytorium jest wymagany"
 
-#: svnadmin/main.c:105
+#: svnadmin/main.c:126
 #, c-format
 msgid "'%s' is an URL when it should be a path"
 msgstr "'%s' jest URLem a powinien być ścieżką"
 
-#: svnadmin/main.c:205 svnlook/main.c:95 svnversion/main.c:201
+#: svnadmin/main.c:227 svnlook/main.c:95 svnversion/main.c:201
 msgid "show version information"
 msgstr "podaj informację o wersji"
 
-#: svnadmin/main.c:208
+#: svnadmin/main.c:230
 msgid "specify revision number ARG (or X:Y range)"
 msgstr "podaj informację o wersji (lub zakres X:Y)"
 
-#: svnadmin/main.c:211
+#: svnadmin/main.c:233
 msgid "dump incrementally"
 msgstr "dump inkrementalny"
 
-#: svnadmin/main.c:214
+#: svnadmin/main.c:236
 msgid "use deltas in dump output"
 msgstr "używaj delt w wyniku dump"
 
-#: svnadmin/main.c:217
+#: svnadmin/main.c:239
 msgid "bypass the repository hook system"
 msgstr "pomiń skrypty repozytorium"
 
-#: svnadmin/main.c:220
+#: svnadmin/main.c:242
 msgid "no progress (only errors) to stderr"
 msgstr "nie informuj o postępie prac, podawaj jedynie informacje o błędach"
 
-#: svnadmin/main.c:223
+#: svnadmin/main.c:245
 msgid "ignore any repos UUID found in the stream"
 msgstr "ignoruj jakiekolwiek UUID repozytorium"
 
-#: svnadmin/main.c:226
+#: svnadmin/main.c:248
 msgid "set repos UUID to that found in stream, if any"
 msgstr "ustal UUID repozytorium na obecne w pliku dump i ile tylko jest zadane"
 
-#: svnadmin/main.c:229
+#: svnadmin/main.c:251
 msgid "type of repository: 'bdb' or 'fsfs'"
 msgstr "rodzaj repozytorium: 'bdb' lub 'fsfs'"
 
-#: svnadmin/main.c:232
+#: svnadmin/main.c:254
 msgid "load at specified directory in repository"
 msgstr "ładuj w podanym katalogu repozytorium"
 
-#: svnadmin/main.c:235
+#: svnadmin/main.c:257
 msgid "disable fsync at transaction commit [Berkeley DB]"
 msgstr ""
 "wyłącz synchronizację zapisu na dysk przy zatwierdzaniu transakcji\n"
 "[Berkeley DB]"
 
-#: svnadmin/main.c:238
+#: svnadmin/main.c:260
 msgid "disable automatic log file removal [Berkeley DB]"
 msgstr "wyłącz automatyczne usuwanie zbędnych logów [Berkeley DB]"
 
-#: svnadmin/main.c:244
+#: svnadmin/main.c:266
 msgid "remove redundant log files from source repository"
 msgstr "usuń zbędne logi z repozytorium"
 
-#: svnadmin/main.c:256
+#: svnadmin/main.c:269
+msgid ""
+"wait instead of exit if the the repository is in\n"
+"                             use by another process"
+msgstr ""
+"zamiast wyjść czekaj jeśli repozytorium jest w\n"
+"                              użyciu przez inny proces"
+
+#: svnadmin/main.c:282
 msgid ""
 "usage: svnadmin create REPOS_PATH\n"
 "\n"
@@ -4695,7 +4743,7 @@ msgstr ""
 "\n"
 "Stwórz nowe, puste repozytorium w podanym katalogu\n"
 
-#: svnadmin/main.c:262
+#: svnadmin/main.c:288
 msgid ""
 "usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n"
 "\n"
@@ -4713,7 +4761,7 @@ msgstr ""
 "wersjami. W razie braku parametru -r polecenie domyślnie działa na\n"
 "wersji HEAD (najnowszej).\n"
 
-#: svnadmin/main.c:271
+#: svnadmin/main.c:297
 msgid ""
 "usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n"
 "\n"
@@ -4735,7 +4783,7 @@ msgstr ""
 "obejmował różnicę między nią a wersją wcześniejszą a nie pełny zrzut\n"
 "tej wersji.\n"
 
-#: svnadmin/main.c:282
+#: svnadmin/main.c:308
 msgid ""
 "usage: svnadmin help [SUBCOMMAND...]\n"
 "\n"
@@ -4745,7 +4793,7 @@ msgstr ""
 "\n"
 "Opisuje działanie podanego polecenia.\n"
 
-#: svnadmin/main.c:287
+#: svnadmin/main.c:313
 msgid ""
 "usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n"
 "\n"
@@ -4756,7 +4804,7 @@ msgstr ""
 "Tworzy kopię repozytorium w nowym katalogu - bez konieczności\n"
 "zatrzymywania repozytorium lub wstrzymywania obsługi klientów.\n"
 
-#: svnadmin/main.c:292
+#: svnadmin/main.c:318
 msgid ""
 "usage: svnadmin list-dblogs REPOS_PATH\n"
 "\n"
@@ -4772,7 +4820,7 @@ msgstr ""
 "UWAGA: zmodyfikowanie lub skasowanie logów bądących jeszcze w użyciu\n"
 "spowoduje uszkodzenie repozytorium.\n"
 
-#: svnadmin/main.c:299
+#: svnadmin/main.c:325
 msgid ""
 "usage: svnadmin list-unused-dblogs REPOS_PATH\n"
 "\n"
@@ -4784,7 +4832,7 @@ msgstr ""
 "Wypisuje listę logów Berkeley DB które nie są już używane.\n"
 "\n"
 
-#: svnadmin/main.c:304
+#: svnadmin/main.c:330
 msgid ""
 "usage: svnadmin load REPOS_PATH\n"
 "\n"
@@ -4801,7 +4849,7 @@ msgstr ""
 "na podane w wczytywanym zrzucie. Informacja o postępie prac jest\n"
 "wypisywana na wyjściu błędów.\n"
 
-#: svnadmin/main.c:314
+#: svnadmin/main.c:340
 msgid ""
 "usage: svnadmin lstxns REPOS_PATH\n"
 "\n"
@@ -4811,16 +4859,15 @@ msgstr ""
 "\n"
 "Wypisuje nazwy wszystkich nie zatwierdzonych transakcji.\n"
 
-#: svnadmin/main.c:319
+#: svnadmin/main.c:345
+#, fuzzy
 msgid ""
 "usage: svnadmin recover REPOS_PATH\n"
 "\n"
 "Run the Berkeley DB recovery procedure on a repository.  Do\n"
 "this if you've been getting errors indicating that recovery\n"
-"ought to be run.\n"
-"\n"
-"WARNING: only run this when you are SURE you're the only process\n"
-"accessing the repository.  Requires exclusive access.\n"
+"ought to be run.  Recovery requires exclusive access and will\n"
+"exit if the repository is in use by another process.\n"
 "\n"
 msgstr ""
 "wykorzystanie: svnadmin recover KATALOG_REP\n"
@@ -4833,7 +4880,7 @@ msgstr ""
 "Konieczny jest wyłączny dostęp.\n"
 "\n"
 
-#: svnadmin/main.c:328
+#: svnadmin/main.c:353
 msgid ""
 "usage: svnadmin rmtxns REPOS_PATH TXN_NAME...\n"
 "\n"
@@ -4843,7 +4890,7 @@ msgstr ""
 "\n"
 "Usuwa podaną transakcję/transakcje.\n"
 
-#: svnadmin/main.c:333
+#: svnadmin/main.c:358
 msgid ""
 "usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n"
 "\n"
@@ -4870,7 +4917,7 @@ msgstr ""
 "UWAGA: historia zmian atrybutów wersji nie jest przechowywana, to\n"
 "polecenie spowoduje nieodwracalne zastąpienie starego opisu nowym.\n"
 
-#: svnadmin/main.c:347
+#: svnadmin/main.c:372
 msgid ""
 "usage: svnadmin verify REPOS_PATH\n"
 "\n"
@@ -4880,20 +4927,20 @@ msgstr ""
 "\n"
 "Weryfikuje poprawność danych znajdujących się w repozytorium.\n"
 
-#: svnadmin/main.c:470 svnadmin/main.c:525
+#: svnadmin/main.c:496 svnadmin/main.c:551
 msgid "First revision cannot be higher than second"
 msgstr "Pierwsza wersja nie może być wyższa niż druga"
 
-#: svnadmin/main.c:479
+#: svnadmin/main.c:505
 #, c-format
 msgid "Deltifying revision %ld..."
 msgstr "Wyliczanie różnic dla wersji %ld..."
 
-#: svnadmin/main.c:483
+#: svnadmin/main.c:509
 msgid "done.\n"
 msgstr "zrobione.\n"
 
-#: svnadmin/main.c:552
+#: svnadmin/main.c:578
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
 "Type \"svnadmin help <subcommand>\" for help on a specific subcommand.\n"
@@ -4907,11 +4954,28 @@ msgstr ""
 "\n"
 "Dostępne polecenia:\n"
 
-#: svnadmin/main.c:629
-msgid "Please wait; recovering the repository may take some time...\n"
-msgstr "Proszę czekać; odtwarzanie repozytorium może trwać długo...\n"
+#: svnadmin/main.c:653
+msgid ""
+"Repository lock acquired.\n"
+"Please wait; recovering the repository may take some time...\n"
+msgstr ""
+"Uzyskano blokadę repozytorium.\n"
+"Proszę czekać; odtwarzanie repozytorium może trwać długo...\n"
 
-#: svnadmin/main.c:635
+#: svnadmin/main.c:688
+#, fuzzy
+msgid ""
+"Failed to get exclusive repository access; perhaps another process\n"
+"such as httpd, svnserve or svn has it open?"
+msgstr ""
+"Oczekiwanie na blokadę repozytorium; możliwe, że inny proces blokuje dostęp\n"
+
+#: svnadmin/main.c:693
+msgid "Waiting on repository lock; perhaps another process has it open?\n"
+msgstr ""
+"Oczekiwanie na blokadę repozytorium; możliwe, że inny proces blokuje dostęp\n"
+
+#: svnadmin/main.c:700
 msgid ""
 "\n"
 "Recovery completed.\n"
@@ -4919,33 +4983,33 @@ msgstr ""
 "\n"
 "Odtwarzanie zakończone.\n"
 
-#: svnadmin/main.c:642
+#: svnadmin/main.c:707
 #, c-format
 msgid "The latest repos revision is %ld.\n"
 msgstr "Najnowsza wersja repozytorium to %ld.\n"
 
-#: svnadmin/main.c:750
+#: svnadmin/main.c:815
 #, c-format
 msgid "Transaction '%s' removed.\n"
 msgstr "Usunięto transakcję '%s'.\n"
 
-#: svnadmin/main.c:774
+#: svnadmin/main.c:839
 msgid "Missing revision"
 msgstr "Brak wersji"
 
-#: svnadmin/main.c:777
+#: svnadmin/main.c:842
 msgid "Only one revision allowed"
 msgstr "Tylko jedna wersja jest dozwolona"
 
-#: svnadmin/main.c:783
+#: svnadmin/main.c:848
 msgid "Exactly one file argument required"
 msgstr "Wymagany dokładnie jeden parametr - plik"
 
-#: svnadmin/main.c:1053 svnlook/main.c:1939
+#: svnadmin/main.c:1121 svnlook/main.c:1939
 msgid "subcommand argument required\n"
 msgstr "polecenie wymaga parametrów\n"
 
-#: svnadmin/main.c:1143
+#: svnadmin/main.c:1211
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -5389,29 +5453,148 @@ msgstr "wyeksportowano\n"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "%s' nie podlegające zarządzaniu wersjami i nie eksportowane\n"
 
-#~ msgid "file"
-#~ msgstr "plik"
+#~ msgid "unknown command: '%s'\n"
+#~ msgstr "Nieznane polecenie: '%s'\n"
 
-#~ msgid "directory"
-#~ msgstr "katalog"
+#~ msgid ""
+#~ "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
+#~ "Type \"svndumpfilter help <subcommand>\" for help on a specific "
+#~ "subcommand.\n"
+#~ "\n"
+#~ "Available subcommands:\n"
+#~ msgstr ""
+#~ "ogólne wykorzystanie: svnadmin POLECENIE KATALOG_REP  [PARAMETRY i "
+#~ "OPCJE...]\n"
+#~ "Komenda \"svnadmin help <polecenie>\" prezentuje tekst pomocy dla "
+#~ "podanego\n"
+#~ "polecenia.\n"
+#~ "\n"
+#~ "Dostępne polecenia:\n"
 
-#~ msgid "restoring text"
-#~ msgstr "odtwarzanie treści"
+#~ msgid ""
+#~ "Describe the usage of this program or its subcommands.\n"
+#~ "usage: svndumpfilter help [SUBCOMMAND...]\n"
+#~ msgstr ""
+#~ "Opisz sposób używania tego programu lub jednego z jego poleceń.\n"
+#~ "Wykorzystanie: help [POLECENIE...]\n"
 
-#~ msgid "removing props"
-#~ msgstr "usuwanie atrybutów"
+#~ msgid "Don't filter revision properties."
+#~ msgstr "Nie filtruj atrybutów wersji."
 
-#~ msgid "restoring props"
-#~ msgstr "odtwarzanie atrybutów"
+#~ msgid "Invalid copy source path '%s'"
+#~ msgstr "Błędna składnia ścieżki '%s'"
 
-#~ msgid "Error '%s' for '%s'"
-#~ msgstr "Błąd '%s' dla '%s'"
+#~ msgid "Unknown status '%s' in command response"
+#~ msgstr "Komenda zwróciła nieznany status '%s'"
 
-#~ msgid "Impossibly long relative URL"
-#~ msgstr "Względny URL jest zbyt długi"
+#~ msgid "Malformed error list"
+#~ msgstr "Zły format listy błędów"
 
-#~ msgid "WARNING: error decoding UTF-8 for ?\n"
-#~ msgstr "OSTRZEŻENIE: błąd odczytu UTF-8 dla ?\n"
+#~ msgid "Empty error list"
+#~ msgstr "Pusta lista błędów"
+
+#~ msgid "Number is larger than maximum"
+#~ msgstr "Wartość liczby przekracza dopuszczalne maksimum"
+
+#~ msgid "String length larger than maximum"
+#~ msgstr "Długość tekstu przekracza dopuszczalne maksimum"
+
+#~ msgid "Connection closed unexpectedly"
+#~ msgstr "Nieoczekiwane przerwanie połączenia sieciowego"
+
+#~ msgid "Can't read from connection"
+#~ msgstr "Nie można czytać z połączenia"
+
+#~ msgid "Can't write to connection"
+#~ msgstr "Nie można pisać do połączenia"
+
+#~ msgid "Unknown command '%s'"
+#~ msgstr "Nieznane polecenie: '%s'"
+
+#~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
+#~ msgstr "Nieobsługiwana wersja interfejsu modułu RA (%d) dla ra_svn."
+
+#~ msgid "Module for accessing a repository using the svn network protocol."
+#~ msgstr ""
+#~ "Moduł umożliwiający dostęp do repozytorium przy pomocy protokołu svn."
+
+#~ msgid "Location entry not a list"
+#~ msgstr "Wpis w lokalizacjach nie jest listą"
+
+#~ msgid "Changed-path entry not a list"
+#~ msgstr "Wpis w liście zmienionych ścieżek nie jest listą"
+
+#~ msgid "Log entry not a list"
+#~ msgstr "Element log nie jest listą"
+
+#~ msgid "Dirlist element not a list"
+#~ msgstr "Element dirlist nie jest listą"
+
+#~ msgid "Non-string as part of file contents"
+#~ msgstr "Plik zawiera dane, nie będące tekstem"
+
+#~ msgid "Server did not send repository root"
+#~ msgstr "Serwer nie przesłał głównego katalogu repozytorium"
+
+#~ msgid "impossibly long repository root from server"
+#~ msgstr "Ścieżka katalogu głównego repozytorium jest zbyt długa"
+
+#~ msgid "Server requires minimum version %d"
+#~ msgstr "Serwer wymaga co najmniej wersji %d"
+
+#~ msgid "Illegal svn repository URL '%s'"
+#~ msgstr "Nieprawidłowy URL '%s' repozytorium svn"
+
+#~ msgid "Can't create tunnel"
+#~ msgstr "Nie udało się utworzyć tunelu"
+
+#~ msgid "Error in child process: %s"
+#~ msgstr "Błąd procesu potomnego: %s"
+
+#~ msgid "Can't tokenize command '%s'"
+#~ msgstr "Nieznane polecenie '%s'"
+
+#~ msgid "Tunnel scheme %s requires environment variable %s to be defined"
+#~ msgstr "Tunel %s wymaga zdefiniowania zmiennej środowiskowej %s"
+
+#~ msgid "Undefined tunnel scheme '%s'"
+#~ msgstr "Nieznany tunel '%s'"
+
+#~ msgid "Cannot negotiate authentication mechanism"
+#~ msgstr "Nie można określić sposobu autoryzacji"
+
+#~ msgid "Unexpected server response to authentication"
+#~ msgstr "Nieoczekiwana odpowiedź serwera na autoryzację"
+
+#~ msgid "Authentication error from server: %s"
+#~ msgstr "Błąd autoryzacji na serwerze: %s"
+
+#~ msgid "Unrecognized node kind '%s' from server"
+#~ msgstr "Nieznany rodzaj obiektu: '%s' z serwera"
+
+#~ msgid "Proplist element not a list"
+#~ msgstr "Element proplist nie jest listą"
+
+#~ msgid "Can't connect to host '%s'"
+#~ msgstr "Nieudane połączenie z komputerem '%s'"
+
+#~ msgid "Can't create socket"
+#~ msgstr "Nie udało się utworzyć gniazdka"
+
+#~ msgid "Unknown hostname '%s'"
+#~ msgstr "Nie znaleziono komputera '%s'"
+
+#~ msgid "Print client version info\n"
+#~ msgstr "podaj wersję klienta\n"
+
+#~ msgid "Can't create directory '%s'"
+#~ msgstr "Nie można stworzyć katalogu '%s'"
+
+#~ msgid "Unknown revision kind"
+#~ msgstr "Nieznany rodzaj wersji"
+
+#~ msgid "'%s' is a URL, but revision kind requires a working copy"
+#~ msgstr "'%s' jest URLem, tymczasem rodzaj wersji wymaga kopii roboczej"
 
 #~ msgid ""
 #~ "Display the differences between two paths.\n"
@@ -5467,150 +5650,26 @@ msgstr "%s' nie podlegające zarządzaniu wersjami i nie eksportowane\n"
 #~ "  wprowadzone w kopii roboczej w stosunku do wersji pobranej z\n"
 #~ "  repozytorium (zmiany do zatwierdzenia).\n"
 
-#~ msgid "'%s' is a URL, but revision kind requires a working copy"
-#~ msgstr "'%s' jest URLem, tymczasem rodzaj wersji wymaga kopii roboczej"
+#~ msgid "WARNING: error decoding UTF-8 for ?\n"
+#~ msgstr "OSTRZEŻENIE: błąd odczytu UTF-8 dla ?\n"
 
-#~ msgid "Unknown revision kind"
-#~ msgstr "Nieznany rodzaj wersji"
+#~ msgid "Impossibly long relative URL"
+#~ msgstr "Względny URL jest zbyt długi"
 
-#~ msgid "Can't create directory '%s'"
-#~ msgstr "Nie można stworzyć katalogu '%s'"
+#~ msgid "Error '%s' for '%s'"
+#~ msgstr "Błąd '%s' dla '%s'"
 
-#~ msgid "Print client version info\n"
-#~ msgstr "podaj wersję klienta\n"
+#~ msgid "restoring props"
+#~ msgstr "odtwarzanie atrybutów"
 
-#~ msgid "Unknown hostname '%s'"
-#~ msgstr "Nie znaleziono komputera '%s'"
+#~ msgid "removing props"
+#~ msgstr "usuwanie atrybutów"
 
-#~ msgid "Can't create socket"
-#~ msgstr "Nie udało się utworzyć gniazdka"
+#~ msgid "restoring text"
+#~ msgstr "odtwarzanie treści"
 
-#~ msgid "Can't connect to host '%s'"
-#~ msgstr "Nieudane połączenie z komputerem '%s'"
+#~ msgid "directory"
+#~ msgstr "katalog"
 
-#~ msgid "Proplist element not a list"
-#~ msgstr "Element proplist nie jest listą"
-
-#~ msgid "Unrecognized node kind '%s' from server"
-#~ msgstr "Nieznany rodzaj obiektu: '%s' z serwera"
-
-#~ msgid "Authentication error from server: %s"
-#~ msgstr "Błąd autoryzacji na serwerze: %s"
-
-#~ msgid "Unexpected server response to authentication"
-#~ msgstr "Nieoczekiwana odpowiedź serwera na autoryzację"
-
-#~ msgid "Cannot negotiate authentication mechanism"
-#~ msgstr "Nie można określić sposobu autoryzacji"
-
-#~ msgid "Undefined tunnel scheme '%s'"
-#~ msgstr "Nieznany tunel '%s'"
-
-#~ msgid "Tunnel scheme %s requires environment variable %s to be defined"
-#~ msgstr "Tunel %s wymaga zdefiniowania zmiennej środowiskowej %s"
-
-#~ msgid "Can't tokenize command '%s'"
-#~ msgstr "Nieznane polecenie '%s'"
-
-#~ msgid "Error in child process: %s"
-#~ msgstr "Błąd procesu potomnego: %s"
-
-#~ msgid "Can't create tunnel"
-#~ msgstr "Nie udało się utworzyć tunelu"
-
-#~ msgid "Illegal svn repository URL '%s'"
-#~ msgstr "Nieprawidłowy URL '%s' repozytorium svn"
-
-#~ msgid "Server requires minimum version %d"
-#~ msgstr "Serwer wymaga co najmniej wersji %d"
-
-#~ msgid "impossibly long repository root from server"
-#~ msgstr "Ścieżka katalogu głównego repozytorium jest zbyt długa"
-
-#~ msgid "Server did not send repository root"
-#~ msgstr "Serwer nie przesłał głównego katalogu repozytorium"
-
-#~ msgid "Non-string as part of file contents"
-#~ msgstr "Plik zawiera dane, nie będące tekstem"
-
-#~ msgid "Dirlist element not a list"
-#~ msgstr "Element dirlist nie jest listą"
-
-#~ msgid "Log entry not a list"
-#~ msgstr "Element log nie jest listą"
-
-#~ msgid "Changed-path entry not a list"
-#~ msgstr "Wpis w liście zmienionych ścieżek nie jest listą"
-
-#~ msgid "Location entry not a list"
-#~ msgstr "Wpis w lokalizacjach nie jest listą"
-
-#~ msgid "Module for accessing a repository using the svn network protocol."
-#~ msgstr ""
-#~ "Moduł umożliwiający dostęp do repozytorium przy pomocy protokołu svn."
-
-#~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
-#~ msgstr "Nieobsługiwana wersja interfejsu modułu RA (%d) dla ra_svn."
-
-#~ msgid "Unknown command '%s'"
-#~ msgstr "Nieznane polecenie: '%s'"
-
-#~ msgid "Can't write to connection"
-#~ msgstr "Nie można pisać do połączenia"
-
-#~ msgid "Can't read from connection"
-#~ msgstr "Nie można czytać z połączenia"
-
-#~ msgid "Connection closed unexpectedly"
-#~ msgstr "Nieoczekiwane przerwanie połączenia sieciowego"
-
-#~ msgid "String length larger than maximum"
-#~ msgstr "Długość tekstu przekracza dopuszczalne maksimum"
-
-#~ msgid "Number is larger than maximum"
-#~ msgstr "Wartość liczby przekracza dopuszczalne maksimum"
-
-#~ msgid "Empty error list"
-#~ msgstr "Pusta lista błędów"
-
-#~ msgid "Malformed error list"
-#~ msgstr "Zły format listy błędów"
-
-#~ msgid "Unknown status '%s' in command response"
-#~ msgstr "Komenda zwróciła nieznany status '%s'"
-
-#~ msgid "Waiting on repository lock; perhaps another process has it open?\n"
-#~ msgstr ""
-#~ "Oczekiwanie na blokadę repozytorium; możliwe, że inny proces blokuje "
-#~ "dostęp\n"
-
-#~ msgid "Invalid copy source path '%s'"
-#~ msgstr "Błędna składnia ścieżki '%s'"
-
-#~ msgid "Don't filter revision properties."
-#~ msgstr "Nie filtruj atrybutów wersji."
-
-#~ msgid ""
-#~ "Describe the usage of this program or its subcommands.\n"
-#~ "usage: svndumpfilter help [SUBCOMMAND...]\n"
-#~ msgstr ""
-#~ "Opisz sposób używania tego programu lub jednego z jego poleceń.\n"
-#~ "Wykorzystanie: help [POLECENIE...]\n"
-
-#~ msgid ""
-#~ "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
-#~ "Type \"svndumpfilter help <subcommand>\" for help on a specific "
-#~ "subcommand.\n"
-#~ "\n"
-#~ "Available subcommands:\n"
-#~ msgstr ""
-#~ "ogólne wykorzystanie: svnadmin POLECENIE KATALOG_REP  [PARAMETRY i "
-#~ "OPCJE...]\n"
-#~ "Komenda \"svnadmin help <polecenie>\" prezentuje tekst pomocy dla "
-#~ "podanego\n"
-#~ "polecenia.\n"
-#~ "\n"
-#~ "Dostępne polecenia:\n"
-
-#~ msgid "unknown command: '%s'\n"
-#~ msgstr "Nieznane polecenie: '%s'\n"
+#~ msgid "file"
+#~ msgstr "plik"
