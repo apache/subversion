@@ -586,10 +586,9 @@ svn_repos_create (svn_repos_t **repos_p, const char *path, apr_pool_t *pool)
   /* Write the top-level README file. */
   {
     apr_file_t *readme_file = NULL;
-    apr_size_t written = 0;
     const char *readme_file_name
       = apr_psprintf (pool, "%s/%s", path, SVN_REPOS__README);
-    const char *readme_contents =
+    static const char * const readme_contents =
       "This is a Subversion repository; use the `svnadmin' tool to examine\n"
       "it.  Do not add, delete, or modify files here unless you know how\n"
       "to avoid corrupting the repository.\n"
@@ -612,7 +611,7 @@ svn_repos_create (svn_repos_t **repos_p, const char *path, apr_pool_t *pool)
                                 "opening `%s' for writing", readme_file_name);
 
     apr_err = apr_file_write_full (readme_file, readme_contents,
-                                   strlen (readme_contents), &written);
+                                   strlen (readme_contents), NULL);
     if (! APR_STATUS_IS_SUCCESS (apr_err))
       return svn_error_createf (apr_err, 0, 0, pool,
                                 "writing to `%s'", readme_file_name);
