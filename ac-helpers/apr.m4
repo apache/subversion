@@ -70,11 +70,10 @@ Please either remove that subdir or don't use the --with-apr option.])
     APR_LIBS='$(abs_builddir)/apr'
     APRVARS=$abs_builddir/apr/APRVARS
     SVN_SUBDIR_CONFIG(apr)
-    APR_SUBDIR=apr
+    SVN_SUBDIRS="$SVN_SUBDIRS apr"
   else
     SVN_FIND_APR
   fi
-  AC_SUBST(APR_SUBDIR)
 
 
   dnl Get libraries and thread flags from APR ---------------------
@@ -86,17 +85,16 @@ Please either remove that subdir or don't use the --with-apr option.])
     LIBS="$LIBS $EXTRA_LIBS"
   else
     AC_MSG_WARN([APRVARS not found])
-    SVN_GET_APR
+    SVN_DOWNLOAD_APR
   fi
 
-  dnl APR
   if test -n "$APR_INCLUDES" ; then
-    SVN_APR_INCLUDES="-I$APR_INCLUDES"
+    SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES -I$APR_INCLUDES"
     if test "$abs_srcdir" != "$abs_builddir" && test -d $abs_srcdir/apr ; then
-      SVN_APR_INCLUDES="-I$abs_srcdir/apr/include $SVN_APR_INCLUDES"
+      SVN_EXTRA_INCLUDES="$SVN_EXTRA_INCLUDES -I$abs_srcdir/apr/include"
     fi
   fi
-  AC_SUBST(SVN_APR_INCLUDES)
+
   if test -z "$APR_LIBS" ; then
     SVN_APR_LIBS="-lapr $LIBTOOL_LIBS"
   else
@@ -121,10 +119,9 @@ AC_DEFUN(SVN_FIND_APR,
 ])
 
 
-dnl SVN_GET_APR()
-dnl no apr found, print out a message telling
-dnl the user what to do
-AC_DEFUN(SVN_GET_APR,
+dnl SVN_DOWNLOAD_APR()
+dnl no apr found, print out a message telling the user what to do
+AC_DEFUN(SVN_DOWNLOAD_APR,
 [
   echo "No Apache Portable Runtime (APR) library can be found."
   echo "Either install APR on this system and supply appropriate"

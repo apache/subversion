@@ -45,7 +45,7 @@ Please either remove that subdir or don't use the --with-neon option.])
       if test "$NEON_WANTED" != "$NEON_VERSION"; then
         echo "You have a neon/ subdir containing version $NEON_VERSION,"
         echo "but Subversion needs neon ${NEON_WANTED}."
-        SVN_GET_NEON()
+        SVN_DOWNLOAD_NEON()
       else
         echo "Using neon found in source directory."
         SVN_NEON_INCLUDES=-'I$(abs_srcdir)/neon/src'
@@ -76,8 +76,8 @@ dnl Configure neon --------------------------
           # this will include -DNEON_SSL if neon was built with SSL support
           CFLAGS="$CFLAGS `$SHELL $abs_builddir/neon/neon-config --cflags | sed -e "s/-I[^ ]*//g"`"
         fi
-    
-        NEON_SUBDIR=neon
+
+	SVN_SUBDIRS="$SVN_SUBDIRS neon"
       fi
     else
       # no --with-neon switch, and no neon subdir, look in PATH
@@ -89,7 +89,7 @@ dnl Configure neon --------------------------
         if test "$NEON_WANTED" != "$NEON_VERSION"; then
           echo "You have neon version $NEON_VERSION,"
           echo "but Subversion needs neon $NEON_WANTED."
-          SVN_GET_NEON()
+          SVN_DOWNLOAD_NEON()
         else
           SVN_NEON_INCLUDES=`$neon_config --cflags | sed -e 's/-D.*//g'`
           NEON_LIBS=`$neon_config --libs | sed -e 's/-lneon//g'`
@@ -100,31 +100,27 @@ dnl Configure neon --------------------------
         # no neon subdir, no neon-config in PATH
         AC_MSG_RESULT([nothing])
         echo "No suitable neon can be found."
-        SVN_GET_NEON()
+        SVN_DOWNLOAD_NEON()
       fi
     fi
   ])
   
   AC_SUBST(SVN_NEON_INCLUDES)
-  AC_SUBST(NEON_SUBDIR)
   AC_SUBST(NEON_LIBS)
 ])
 
 
-dnl SVN_GET_NEON()
-dnl no neon found, print out a message telling
-dnl the user what to do
-AC_DEFUN(SVN_GET_NEON,
+dnl SVN_DOWNLOAD_NEON()
+dnl no neon found, print out a message telling the user what to do
+AC_DEFUN(SVN_DOWNLOAD_NEON,
 [
   echo "Please either install neon ${NEON_WANTED} on this system"
   echo ""
   echo "or"
   echo ""
   echo "get neon ${NEON_WANTED} from:"
-  echo "${NEON_URL}"
+  echo "    ${NEON_URL}"
   echo "unpack the archive using tar/gunzip and rename the resulting"
   echo "directory from ./neon-${NEON_WANTED}/ to ./neon/"
   AC_MSG_ERROR([no suitable neon found])
 ])
-
-

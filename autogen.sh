@@ -119,7 +119,13 @@ rm -rf autom4te.cache
 # Run apr/buildconf if it exists.
 if test -x "apr/buildconf" ; then
   echo "Creating configuration files for apr." # apr's equivalent of autogen.sh
-  cd apr; ./buildconf
+  (cd apr && ./buildconf)
+fi
+
+# Run apr-util/buildconf if it exists.
+if test -x "apr-util/buildconf" ; then
+  echo "Creating configuration files for apr-util."
+  (cd apr-util && ./buildconf)
 fi
 
 echo ""
