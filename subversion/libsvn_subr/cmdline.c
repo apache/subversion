@@ -42,7 +42,7 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
   OSVERSIONINFO os_version;
   os_version.dwOSVersionInfoSize = sizeof(os_version);
   if (!GetVersionEx(&os_version)
-      || os_version.dwPlatformId == VER_PLATFORM_WIN32_WINDOWS)
+      || os_version.dwPlatformId != VER_PLATFORM_WIN32_WINDOWS)
   {
     UINT codepage = GetACP();
     if (!SetConsoleCP(codepage))
