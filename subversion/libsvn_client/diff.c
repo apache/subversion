@@ -1518,8 +1518,8 @@ diff_repos_repos (const apr_array_header_t *options,
   anchor2 = url2;
   target1 = NULL;
   target2 = NULL;
-  SVN_ERR (ra_lib->check_path (&kind1, session1, "", rev1, temppool));
-  SVN_ERR (ra_lib->check_path (&kind2, session2, "", rev2, temppool));
+  SVN_ERR (ra_lib->check_path (session1, "", rev1, &kind1, temppool));
+  SVN_ERR (ra_lib->check_path (session2, "", rev2, &kind2, temppool));
   if (same_urls)
     {
       if ((kind1 == svn_node_none) && (kind2 == svn_node_none))

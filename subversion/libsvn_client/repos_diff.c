@@ -498,10 +498,10 @@ delete_entry (const char *path,
   svn_wc_notify_state_t state;
 
   /* We need to know if this is a directory or a file */
-  SVN_ERR (pb->edit_baton->ra_lib->check_path (&kind,
-                                               pb->edit_baton->ra_session,
+  SVN_ERR (pb->edit_baton->ra_lib->check_path (pb->edit_baton->ra_session,
                                                path,
                                                pb->edit_baton->revision,
+                                               &kind,
                                                pool));
 
   /* Missing access batons are a problem during delete */

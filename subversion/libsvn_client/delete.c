@@ -175,8 +175,8 @@ delete_urls (svn_client_commit_info_t **commit_info,
       const char *path = APR_ARRAY_IDX (targets, i, const char *);
       path = svn_path_uri_decode (path, pool);
       APR_ARRAY_IDX (targets, i, const char *) = path;
-      SVN_ERR (ra_lib->check_path (&kind, session, path, 
-                                   SVN_INVALID_REVNUM, pool));
+      SVN_ERR (ra_lib->check_path (session, path, SVN_INVALID_REVNUM,
+                                   &kind, pool));
       if (kind == svn_node_none)
         return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
                                   "URL '%s' does not exist", path);
