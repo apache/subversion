@@ -1,20 +1,39 @@
 import org.tigris.subversion.lib.*;
+import java.util.Hashtable;
+import java.util.Enumeration;
 
 public class TestStatus extends Object
 {
   public static void main(String[] args)
   {
-    ClientImpl client;
+    Client client;
 
     try 
       {
-        System.out.println("trying to create ClientImpl");
-        client = new ClientImpl();
- 	
-        System.out.println("sucess\nnow for the Test");
-        client.status("Test", true, false, false);
+	  Hashtable hashtable;
 
-        System.out.println("success again!");
+	  System.out.println("trying to get Client...");
+	  client = Factory.getClient();
+ 	
+	  System.out.println("sucess\nrun status...");
+	  hashtable = client.status(".", true, false, false);
+
+	  System.out.println("success\nand here the result:\n");
+
+	  if( hashtable != null )
+	  {
+	    Enumeration enu=hashtable.elements();
+	    int i=0;
+
+	    while( enu.hasMoreElements() )
+	      {
+		String value=(String)enu.nextElement();
+		System.out.println(value);
+		i++;
+	      }
+
+	      System.out.println("hashtable is non-zero");
+	  }
       }
     catch(Exception e)
       {
