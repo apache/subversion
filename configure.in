@@ -592,6 +592,7 @@ if test "$enable_shared" = "no" -o "$enable_dso" != "yes"; then
   AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL, 1,
       [Defined if libsvn_client should link against libsvn_ra_local])
   svn_ra_lib_deps="\$(RA_LOCAL_DEPS)"
+  svn_ra_lib_install_deps="install-ramod-lib"
   svn_ra_lib_link="\$(RA_LOCAL_LINK)"
 
   AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_SVN, 1,
@@ -603,31 +604,38 @@ if test "$enable_shared" = "no" -o "$enable_dso" != "yes"; then
     AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_DAV, 1,
           [Defined if libsvn_client should link against libsvn_ra_dav])
     svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_DAV_DEPS)"
+    svn_ra_lib_install_deps="$svn_ra_lib_install_deps install-dav-lib"
     svn_ra_lib_link="$svn_ra_lib_link \$(RA_DAV_LINK)"
   fi
 
   SVN_RA_LIB_DEPS=$svn_ra_lib_deps
+  SVN_RA_LIB_INSTALL_DEPS=$svn_ra_lib_install_deps
   SVN_RA_LIB_LINK=$svn_ra_lib_link
 
   AC_DEFINE(SVN_LIBSVN_FS_LINKS_FS_FS, 1,
       [Defined if libsvn_fs should link against libsvn_fs_fs])
   svn_fs_lib_deps="\$(FS_FS_DEPS)"
+  svn_fs_lib_install_deps="install-fsmod-lib"
   svn_fs_lib_link="\$(FS_FS_LINK)"
 
   if test "$svn_lib_berkeley_db" = "yes"; then
   AC_DEFINE(SVN_LIBSVN_FS_LINKS_FS_BASE, 1,
       [Defined if libsvn_fs should link against libsvn_fs_base])
     svn_fs_lib_deps="$svn_fs_lib_deps \$(FS_BASE_DEPS)"
+    svn_fs_lib_install_deps="$svn_fs_lib_install_deps install-bdb-lib"
     svn_fs_lib_link="$svn_fs_lib_link \$(FS_BASE_LINK)"
   fi
 
   SVN_FS_LIB_DEPS=$svn_fs_lib_deps
+  SVN_FS_LIB_INSTALL_DEPS=$svn_fs_lib_install_deps
   SVN_FS_LIB_LINK=$svn_fs_lib_link
 fi
 
 AC_SUBST(SVN_RA_LIB_DEPS)
+AC_SUBST(SVN_RA_LIB_INSTALL_DEPS)
 AC_SUBST(SVN_RA_LIB_LINK)
 AC_SUBST(SVN_FS_LIB_DEPS)
+AC_SUBST(SVN_FS_LIB_INSTALL_DEPS)
 AC_SUBST(SVN_FS_LIB_LINK)
 
 

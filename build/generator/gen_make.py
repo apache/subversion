@@ -88,6 +88,11 @@ class Generator(gen_base.GeneratorBase):
       targ_varname = string.replace(target, '-', '_')
       objnames = string.join(build_path_strip(path, objects))
 
+      # Add additional install dependencies if necessary
+      if target_ob.add_install_deps:
+        self.ofile.write('install-%s: %s\n'
+          % (target_ob.install, target_ob.add_install_deps))
+
       if isinstance(target_ob, gen_base.TargetJava):
         self.ofile.write(
           '%s_DEPS = %s %s\n'

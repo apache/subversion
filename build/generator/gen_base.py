@@ -294,6 +294,7 @@ class Target(DependencyNode):
     self.desc = options.get('description')
     self.path = options.get('path', '')
     self.add_deps = options.get('add-deps', '')
+    self.add_install_deps = options.get('add-install-deps', '')
     self.msvc_name = options.get('msvc-name') # override project name
 
   def add_dependencies(self):
