@@ -117,3 +117,11 @@ Candidate changes:
     Add an example wrapper to help svn+ssh users using setgid svnserve.
     Votes:
       +1: epg
+
+Binding canidate changes:
+
+  * r8829, r8834
+    Fix bindings on Windows.
+    Votes:
+      +1: breser
+
