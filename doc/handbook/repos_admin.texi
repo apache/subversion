@@ -10,10 +10,9 @@ In this section, we'll mainly focus on how to use the
 * Creating a repository::       
 * Examining a repository::      
 * Repository hooks::            
+* Repository maintenance::
+* Networking a repository::
 @end menu
-@c * Repository maintenance::
-@c * Tweaking a repository::
-@c * Networking a repository::
 @c * Migrating a repository::
 
 
@@ -68,6 +67,10 @@ Where pre- and post-commit hook scripts live.  (And someday, read-hooks.)
 A single file lives here;  repository readers and writers take out
 shared locks on this file.  Do not remove this file.
 @end table
+
+Once the repository has been created, it's very likely that you'll
+want to use the svn client to import an initial tree.  (Try
+@command{svn help import}, or @xref{Other Commands}.)
 
 
 @c ------------------------------------------------------------------
@@ -292,4 +295,151 @@ the script use @command{svnlook} to examine a transaction or revision
 tree.  It produces output that is both human- and machine-readable, so
 hook scripts can easily parse it.  Note that `svnlook' is read-only --
 it can only inspect, not change the repository.
+
+
+@c ------------------------------------------------------------------
+@node Repository maintenance
+@section Repository maintenance
+
+
+@subsection Berkeley DB management
+
+At the time of writing, the subversion repository has only one
+database back-end:  Berkeley DB.  All of your filesystem's structure
+and data live in a set of tables within @file{repos/db/}.
+
+Berkeley DB comes with a number of tools for managing these files, and
+they have their own excellent documentation.  (See
+@url{http://www.sleepycat.com}, or just read man pages.)  We won't
+cover all of these tools here; rather, we'll mention just a few of the
+more common procedures that repository administrators might need.
+
+First, remember that Berkeley DB has genuine transactions.  Every
+attempt to change the DB is first logged.  If anything ever goes
+wrong, the DB can back itself up to a previous ``checkpoint'' and
+replay transactions to get the data back into a sane state.  
+
+In our experience, we have seen situations where a bug in Subversion
+(which causes a crash) can sometimes have a side-effect of leaving the
+DB environment in a 'locked' state.  Any further attempts to read or
+write to the repository just sit there, waiting on the lock.
+
+To ``unwedge'' the repository, use @command{db_recover}:
+
+@example
+$ db_recover -ve -h repos/db
+db_recover: Finding last valid log LSN: file: 40 offset 4080873
+db_recover: Checkpoint at: [40][4080333]
+db_recover: Checkpoint LSN: [40][4080333]
+db_recover: Previous checkpoint: [40][4079793]
+db_recover: Checkpoint at: [40][4079793]
+db_recover: Checkpoint LSN: [40][4079793]
+db_recover: Previous checkpoint: [40][4078761]
+db_recover: Recovery complete at Sun Jul 14 07:15:42 2002
+db_recover: Maximum transaction id 80000000 Recovery checkpoint [40][4080333]
+@end example
+
+
+Second, a repository administrator may need to manage the growth of
+logfiles.  At any given time, the DB environment is using at least one
+logfile to log transactions;  when the ``current'' logfile grows to 10
+megabytes, a new logfile is started, and the old one continues to
+exist.
+
+Thus, after a while, you may see a whole group of 10MB logfiles lying
+around the environment.  At this point, you can make a choice: if you
+leave every single logfile behind, it's guaranteed that
+@command{db_recover} will always be able to replay every single DB
+transaction, all the way back to the first commit.  (This is the
+``safe'', or perhaps paranoid, route.)  On the other hand, you can ask
+Berkeley DB to tell you which logfiles are no longer being actively
+written to:
+
+@example
+$ db_archive -a -h repos/db
+log.0000000023
+log.0000000024
+log.0000000029
+@end example
+
+Subversion's own repository uses a post-commit-hook script, which,
+after performing a ``hot-backup'' of the repository, removes these
+excess logfiles.  (In the Subversion source tree, see
+@url{tools/backup/hot-backup.py})
+
+This script also illustrates the safe way to perform a backup of the
+repository while it's still up and running: recursively copy the
+entire repository directory, then re-copy the logfiles listed by
+@command{db_recover -l}.
+
+Finally, note that Berkeley DB has a whole locking subsystem;  in
+extremely intensive svn operations, we have seen situations where the
+DB enviroment runs out of locks.  The maximum number of locks can be
+adjusted by changing the values in the @file{repos/db/DB_CONFIG}
+file.  Don't change the default values unless you know what you're
+doing;  be sure to read
+@url{http://www.sleepycat.com/docs/ref/lock/max.html} first.
+
+
+@subsection Tweaking with svnadmin 
+
+The @command{svnadmin} tool has some subcommands that are specifically
+useful to repository administrators.  Be careful with
+@command{svnadmin}!  Unlike @command{svnlook}, which is read-only,
+@command{svnadmin} has the ability to modify the repository.
+
+The most-used feature is probably @command{svnadmin setlog}.  A
+commit's log message is an unversioned property directly attached to
+the revision object; there's only one log message per revision.
+Sometimes a user screws up the message, and it needs to be replaced:
+
+@example
+$ echo "Here is the new, correct log message" > newlog.txt
+$ svnadmin setlog myrepos 388 newlog.txt
+@end example
+
+There's a nice CGI script in @file{tools/cgi/} that allows people
+(with commit-access passwords) to tweak existing log messages via web
+browser.
+
+Another common use of @command{svnadmin} is to inspect and clean up
+old, dead transactions.  Commits and updates both create transaction
+trees, but occasionally a bug or crash can leave them lying around.
+By inspecting the datestamp on a transaction, an administrator can
+make a judgement call and remove it:
+
+@example
+$ svnadmin lstxns myrepos
+319
+321
+$ svnadmin lstxns --long myrepos
+Transaction 319
+Created: 2002-07-14T12:57:22.748388Z
+[...]
+$ svnadmin rmtxns myrepos 319 321
+@end example
+
+@c ### Hey guys, are going to continue to support 'svnadmin undeltify'??
+
+Another useful subcommand: @command{svnadmin undeltify}.  Remember
+that the latest version of each file is stored as fulltext in the
+repository, but that earlier revisions of files are stored as 'deltas'
+against each next-most-recent revisions.  When a user attempts to
+access an earlier revision, the repository must apply a sequence of
+backwards-deltas to the newest fulltexts in order to derive the older
+data.
+
+If a particular revision tree is extremely popular, the administrator
+can speed up the access time to this tree by ``undeltifying'' any path
+within the revision -- that is, by converting every file to fulltext:
+
+@example
+$ svnadmin undeltify myrepos 230 /project/tags/release-1.3
+Undeltifying `/project/tags/release-1.3' in revision 230...done.
+@end example
+
+
+@c ------------------------------------------------------------------
+@node Networking a repository
+@section Networking a repository
 

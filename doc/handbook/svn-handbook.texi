@@ -105,8 +105,8 @@ This manual is a general guide to the Subversion revision control system.
 @end menu
 
 @include getting_started.texi
-@include repos_admin.texi
 @include client.texi
+@include repos_admin.texi
 @include license.texi
 
 @bye
