@@ -49,12 +49,15 @@ Candidate changes:
     Votes:
       +1: breser, kfogel
 
-  * r10557:
+  * r10557, r10566:
     Display verbose Berkeley DB errors.
     Justification:
       "Invalid argument" simply isn't helpful! :-)
+    Notes:
+       2nd changeset is just a casting & docstring fixes.
     Votes:
-      +1: maxb
+      +1: sussman
+     (+0: maxb, I assume, since he wrote it.)
 
   * r10561:
     Make swig-wrapped svn_fs_create and svn_fs_open usable.
