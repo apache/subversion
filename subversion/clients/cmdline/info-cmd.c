@@ -197,9 +197,17 @@ print_info (const char *target,
                                           _("Lock Expires"), pool));
       
       if (info->lock->comment)
-        /* NOTE: The stdio will handle newline translation. */
-        SVN_ERR (svn_cmdline_printf (pool, _("Lock Comment: %s\n"),
-                                     info->lock->comment));
+        {
+          int comment_lines;
+          /* NOTE: The stdio will handle newline translation. */
+          comment_lines = svn_cstring_count_newlines (info->lock->comment);
+          SVN_ERR (svn_cmdline_printf (pool,
+                                       _("Lock Comment: (%i %s)\n%s"),
+                                       comment_lines, 
+                                       (comment_lines > 1) ? "lines" : "line",
+                                       info->lock->comment ? 
+                                       info->lock->comment : "none"));
+        }
     }
 
   /* Print extra newline separator. */
