@@ -111,18 +111,16 @@ class CollectData(rcsparse.Sink):
     self.branchlist = { }
     self.default_branch = None
 
-  def set_branch_name(self, revision, name):
-    """Record that REVISION is the branch number for branch NAME, and
-    that NAME sprouts from REVISION .
-    REVISION is an RCS branch number with an odd number of components,
+  def set_branch_name(self, branch_number, name):
+    """Record that BRANCH_NUMBER is the branch number for branch NAME,
+    and that NAME sprouts from BRANCH_NUMBER .
+    BRANCH_NUMBER is an RCS branch number with an odd number of components,
     for example '1.7.2' (never '1.7.0.2')."""
-    if not self.branch_names.has_key(revision):
-      # The revision->branch mapping always maps to the branch number,
-      # not a revision number.
-      self.branch_names[revision] = name
-      # But the branchlist is keyed on the revision number from which
-      # the branch sprouts, so strip off the odd final component. 
-      sprout_rev = revision[:revision.rfind(".")]
+    if not self.branch_names.has_key(branch_number):
+      self.branch_names[branch_number] = name
+      # The branchlist is keyed on the revision number from which the
+      # branch sprouts, so strip off the odd final component.
+      sprout_rev = branch_number[:branch_number.rfind(".")]
       if not self.branchlist.has_key(sprout_rev):
         self.branchlist[sprout_rev] = []
       self.branchlist[sprout_rev].append(name)
@@ -130,8 +128,8 @@ class CollectData(rcsparse.Sink):
       sys.stderr.write("%s: in '%s':\n"
                        "   branch '%s' already has name '%s',\n"
                        "   cannot also have name '%s', ignoring the latter\n"
-                       % (warning_prefix, self.fname, revision,
-                          self.branch_names[revision], name))
+                       % (warning_prefix, self.fname, branch_number,
+                          self.branch_names[branch_number], name))
 
   def rev_to_branch_name(self, revision):
     """Return the name of the branch on which REVISION lies.
