@@ -22,6 +22,7 @@ AC_ARG_WITH(apache,
         if test -r $withval/modules/dav/main/mod_dav.h; then
 		APACHE_INCLUDES="$APACHE_INCLUDES -I$withval/include -I$withval/os/unix -I$withval/modules/dav/main -I$withval/srclib/apr/include -I$withval/srclib/apr-util/include"
 		APACHE_TARGET=$withval/modules/dav/svn
+		INSTALL_APACHE_RULE=install-mods-static
 		BINNAME=mod_dav_svn.a
 
   		AC_MSG_RESULT(yes - Apache 2.0.x)
@@ -85,6 +86,8 @@ if test -n "$APXS"; then
     APXS_CC="`$APXS -q CC`"
     APACHE_INCLUDES="$APACHE_INCLUDES -I$APXS_INCLUDE -I$APXS_INCLUDE/apr -I$APXS_INCLUDE/xml"
 
+    INSTALL_APACHE_RULE=install-mods-static
+
     AC_SUBST(APXS)
     AC_SUBST(BINNAME)
     AC_SUBST(INSTALL_IT)
@@ -97,13 +100,12 @@ if test "$BINNAME" = ""; then
     echo "         --with-apxs or --with-apache must be used"
     echo "=================================================================="
 else
-    APACHE_MODULES=mod_dav_svn
+    BUILD_APACHE_RULE=apache-mods
 fi
 AC_SUBST(APACHE_TARGET)
-AC_SUBST(APACHE_MODULES)
 AC_SUBST(APACHE_INCLUDES)
-
-AM_CONDITIONAL(IS_STATIC_APACHE, test -n "$APACHE_TARGET")
+AC_SUBST(BUILD_APACHE_RULE)
+AC_SUBST(INSTALL_APACHE_RULE)
 
 # there aren't any flags that interest us ...
 #if test -n "$APXS"; then

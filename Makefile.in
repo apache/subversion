@@ -1,0 +1,126 @@
+
+top_builddir = @abs_builddir@
+top_srcdir = @top_srcdir@
+
+SVN_TEST_FS_LIBS = @FS_LIBS@
+
+SVN_CLIENT_DEPS = @LIBSVN_CLIENT_DEPS@
+
+SVN_APR_LIBS = @SVN_APR_LIBS@
+SVN_EXPAT_LIBS = @SVN_EXPAT_LIBS@
+SVN_NEON_LIBS = @SVN_NEON_LIBS@
+
+#SVN_DB_LIBS = -L/usr/local/BerkeleyDB.3.2/lib -ldb
+#DB_INCLUDES = -I/usr/local/BerkeleyDB.3.2/include
+
+LIBS = @LIBS@
+
+prefix = @prefix@
+exec_prefix = @exec_prefix@
+libdir = @libdir@
+sbindir = @sbindir@
+bindir = @bindir@
+includedir = @includedir@
+
+CC = @CC@
+
+LIBTOOL = @LIBTOOL@
+LTFLAGS = --silent
+LT_LDFLAGS =
+
+INCLUDES = @SVN_INCLUDES@ @SVN_APR_INCLUDES@ @SVN_NEON_INCLUDES@ \
+		@SVN_EXPAT_INCLUDES@ $(DB_INCLUDES)
+
+APACHE_INCLUDES = @APACHE_INCLUDES@
+APACHE_TARGET = @APACHE_TARGET@
+INSTALL_APACHE_RULE = @INSTALL_APACHE_RULE@
+
+mkinstalldirs = @MKDIR@
+
+CFLAGS = @CFLAGS@
+CPPFLAGS = @CPPFLAGS@
+LDFLAGS =
+
+COMPILE = $(CC) $(CPPFLAGS) $(CFLAGS) $(INCLUDES)
+LT_COMPILE = $(LIBTOOL) $(LTFLAGS) --mode=compile $(COMPILE) -o $@ -c $<
+
+COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CFLAGS) $(APACHE_INCLUDES) $(INCLUDES) -o $@ -c $<
+
+LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(LT_LDFLAGS) $(COMPILE) $(LDFLAGS) -rpath $(libdir)
+
+INSTALL = @INSTALL@
+INSTALL_LIB = $(LIBTOOL) --mode=install $(INSTALL)
+INSTALL_BIN = $(LIBTOOL) --mode=install $(INSTALL)
+INSTALL_SBIN = $(LIBTOOL) --mode=install $(INSTALL)
+INSTALL_INCLUDE = $(INSTALL) -m 644
+INSTALL_MOD_SHARED = @APXS@ -i -a
+INSTALL_MOD_STATIC = $(INSTALL) -m 644
+
+all: libs programs @FS_RULES@ @BUILD_APACHE_RULE@
+
+@INCLUDE_OUTPUTS@
+
+clean:
+	@list='$(CLEAN_DIRS)'; for i in $$list; do \
+	    echo "Cleaning $$i ..." ; \
+	    (cd $$i && rm -f *.o *.lo *.a *.la *.so *.obj && rm -rf .libs) ; \
+	done
+	rm -f $(CLEAN_FILES)
+
+distclean: clean
+	rm -f Makefile config.cache config.log config.status libtool \
+		svn_private_config.h
+
+extraclean: distclean
+	rm -f build-outputs.mk svn_private_config.in aclocal.m4 configure
+
+install: install-lib install-include install-bin install-sbin \
+		$(INSTALL_APACHE_RULE)
+
+check: $(TEST_PROGRAMS)
+	@logfile=`pwd`/tests.log ; \
+	echo > $$logfile ; \
+	failed=no ; \
+	list='$(TEST_PROGRAMS)'; for prog in $$list; do \
+	    progbase=`echo $$prog | sed 's?.*/??'` ; \
+	    progdir=`echo $$prog | sed 's?/[^/]*$$??'` ; \
+	    echo ; \
+	    echo -n "Running all sub-tests in $$progbase..." ; \
+	    (cd $$progdir && ./$$progbase) >> $$logfile ; \
+	    if test $$? -eq 0; then \
+		echo "SUCCESS" ; \
+	    else \
+		failed=yes; \
+		echo "FAILED" ; \
+		echo "--- at least one sub-test FAILED, check tests.log." ; \
+	    fi; \
+	done ; \
+	if test "$$failed" = "yes"; then \
+	    grep FAIL $$logfile || /bin/true ; \
+	fi
+
+## Use Karl's script to create a Changelog from CVS.
+
+log: changelog
+
+ChangeLog: changelog
+
+changelog:
+	cvs2cl.pl --fsf -r -S -U ./AUTHORS            \
+            subversion doc www expat-lite notes tools \
+            `find . -type f -maxdepth 1`
+
+#
+# Implicit rules for creating outputs from input files
+#
+.SUFFIXES:
+.SUFFIXES: .c .lo .o .la-a .la
+
+.c.o:
+	$(COMPILE) -o $@ -c $<
+
+.c.lo:
+	$(LT_COMPILE)
+
+.la.la-a:
+	sed "/library_names/s/'.*'/''/" $< > $@

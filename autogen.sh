@@ -2,20 +2,7 @@
 
 ### Run this to produce everything needed for configuration. ###
 
-# First check that we're using at least automake 1.4, lest
-#  we get infinite loops from the command `SUBDIRS = . tests'
-#
-# Note: this dependency on Perl is fine: only SVN developers use autogen.sh
-#       and we can state that dev people need Perl on their machine
-#
-automake --version | perl -ne 'if (/\(GNU automake\) ([0-9].[0-9])/) {print;  if ($1 < 1.4) {exit 1;}}'
-
-if [ $? -ne 0 ]; then
-    echo "Error: you need automake 1.4 or later.  Please upgrade."
-    exit 1
-fi
-
-# Meta-configure apr/ subdir
+# Make sure the APR directory is present
 if [ ! -d apr ]; then
   echo ""
   echo "...Uh oh, there is a problem."
@@ -31,7 +18,10 @@ if [ ! -d apr ]; then
   exit 1
 fi
 
-# Handle the neon/ subdir
+# run a quick test to ensure required tools are kosher
+(cd apr && build/buildcheck.sh) || exit 1
+
+# Make sure the Neon directory is present
 NEON_WANTED=0.11.0
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_WANTED}.tar.gz"
 
@@ -62,9 +52,48 @@ if test "$NEON_WANTED" != "$NEON_VERSION"; then
   exit 1
 fi
 
-# Produce aclocal.m4, so autoconf gets the automake macros it needs
-echo "Creating aclocal.m4..."
-aclocal -I ac-helpers
+#
+# Handle some libtool helper files
+#
+# ### eventually, we can/should toss this in favor of simply using
+# ### APR's libtool. deferring to a second round of change...
+#
+echo "Copying libtool helper files..."
+
+libtoolize=`apr/build/PrintPath glibtoolize libtoolize`
+if [ "x$libtoolize" = "x" ]; then
+    echo "libtoolize not found in path"
+    exit 1
+fi
+
+$libtoolize --copy --automake
+
+ltpath=`dirname $libtoolize`
+ltfile=`cd $ltpath/../share/aclocal ; pwd`/libtool.m4
+
+if [ ! -f $ltfile ]; then
+    echo "$ltfile not found"
+    exit 1
+fi
+
+rm -f ac-helpers/libtool.m4
+cp $ltfile ac-helpers/libtool.m4
+
+# This is just temporary until people's workspaces are cleared -- remove
+# any old aclocal.m4 left over from prior build so it doesn't cause errors.
+rm -f aclocal.m4
+
+# Create the file detailing all of the build outputs for SVN.
+#
+# Note: this dependency on Python is fine: only SVN developers use autogen.sh
+#       and we can state that dev people need Python on their machine
+if test "$1" = "-s"; then
+  echo "Creating build-outputs.mk (no dependencies)..."
+  ./gen-make.py -s build.conf ;
+else
+  echo "Creating build-outputs.mk..."
+  ./gen-make.py build.conf ;
+fi
 
 # Produce config.h.in
 # Do this before the automake (automake barfs if the header isn't available).
@@ -72,10 +101,6 @@ aclocal -I ac-helpers
 # on aclocal.m4
 echo "Creating svn_private_config.h.in..."
 autoheader
-
-# Produce all the `Makefile.in's, verbosely, and create neat missing things
-# like `libtool', `install-sh', etc.
-automake --add-missing --verbose --foreign
 
 # If there's a config.cache file, we may need to delete it.  
 # If we have an existing configure script, save a copy for comparison.
