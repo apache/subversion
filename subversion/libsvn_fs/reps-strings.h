@@ -18,13 +18,12 @@
 #ifndef SVN_LIBSVN_FS_REPS_STRINGS_H
 #define SVN_LIBSVN_FS_REPS_STRINGS_H
 
-#include "db.h"
+#include <db.h>
+
 #include "svn_io.h"
 #include "svn_fs.h"
-#include "trail.h"
 
-#include "bdb/reps-table.h"
-#include "bdb/strings-table.h"
+#include "trail.h"
 
 
 #ifdef __cplusplus

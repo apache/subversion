@@ -24,7 +24,7 @@
 #include "err.h"
 #include "node-rev.h"
 #include "reps-strings.h"
-#include "bdb/dbt.h"
+
 #include "bdb/nodes-table.h"
 
 
