@@ -28,6 +28,7 @@ libsvn_fs_la_SOURCES =				\
 			trail.c			\
 			trail.h			\
 			tree.h			\
+			txn.c			\
 			txn.h			\
 			txn-table.c		\
 			txn-table.h		\
