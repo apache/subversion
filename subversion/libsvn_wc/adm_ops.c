@@ -56,16 +56,7 @@ svn_wc__ensure_wc (svn_stringbuf_t *path,
                    svn_revnum_t revision,
                    apr_pool_t *pool)
 {
-  svn_error_t *err;
-
-  err = svn_wc__ensure_adm (path,
-                            url,
-                            revision,
-                            pool);
-  if (err)
-    return err;
-
-  return SVN_NO_ERROR;
+  return svn_wc__ensure_adm (path, url, revision, pool);
 }
 
 
