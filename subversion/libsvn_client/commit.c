@@ -197,6 +197,7 @@ import_dir (const svn_delta_edit_fns_t *editor,
 
           /* Recurse. */
           SVN_ERR (import_dir (editor, this_dir_baton, new_path, subpool));
+          SVN_ERR (editor->close_directory (this_dir_baton));
         }
       else if (this_entry.filetype == APR_REG)
         {
