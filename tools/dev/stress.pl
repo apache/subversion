@@ -85,12 +85,13 @@ use Cwd;
 # Repository check/create
 sub init_repo
   {
-    my ( $repo, $create, $no_sync ) = @_;
+    my ( $repo, $create, $no_sync, $fsfs ) = @_;
     if ( $create )
       {
         rmtree([$repo]) if -e $repo;
         my $svnadmin_cmd = "svnadmin create $repo";
-        $svnadmin_cmd = "$svnadmin_cmd --bdb-txn-nosync" if $no_sync;
+        $svnadmin_cmd .= " --fs-type fsfs" if $fsfs;
+        $svnadmin_cmd .= " --bdb-txn-nosync" if $no_sync;
         system( $svnadmin_cmd) and die "$svnadmin_cmd: failed: $?\n";
       }
     else
@@ -270,6 +271,7 @@ usage: stress.pl [-c] [-h] [-i num] [-n num] [-s secs] [-x num] [-D num]
 where
   -c cause repository creation
   -d don't make the status calls
+  -f use --fs-type fsfs during repository creation
   -h show this help information (other options will be ignored)
   -i the ID (valid IDs are 0 to 9, default is 0 if -c given, 1 otherwise)
   -n the number of sets of changes to commit
@@ -297,6 +299,7 @@ where
     $cmd_opts{'W'} = 0;            # create with --bdb-txn-nosync
     $cmd_opts{'c'} = 0;            # create repository
     $cmd_opts{'d'} = 0;            # disable status
+    $cmd_opts{'f'} = 0;            # create with --fs-type fsfs
     $cmd_opts{'h'} = 0;            # help
     $cmd_opts{'i'} = 0;            # ID
     $cmd_opts{'n'} = 200;          # sets of changes
@@ -304,7 +307,7 @@ where
     $cmd_opts{'s'} = -1;           # sleep interval
     $cmd_opts{'x'} = 4;            # files to modify
 
-    getopts( 'cdhi:n:ps:x:D:F:N:P:R:U:W', \%cmd_opts ) or die $usage;
+    getopts( 'cdfhi:n:ps:x:D:F:N:P:R:U:W', \%cmd_opts ) or die $usage;
 
     # print help info (and exit nicely) if requested
     if ( $cmd_opts{'h'} )
@@ -337,7 +340,8 @@ srand 123456789;
 
 my %cmd_opts = ParseCommandLine();
 
-my $repo = init_repo $cmd_opts{'R'}, $cmd_opts{'c'}, $cmd_opts{'W'};
+my $repo = init_repo( $cmd_opts{'R'}, $cmd_opts{'c'}, $cmd_opts{'W'},
+                      $cmd_opts{'f'} );
 
 # [Windows compat]
 # Replace backslashes in the path, and tweak the number of slashes

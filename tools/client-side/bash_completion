@@ -223,7 +223,7 @@ _svnadmin ()
 
 	# options that require a parameter
 	# note: continued lines must end '|' continuing lines must start '|'
-	optsParam="-r|--revision|--parent-dir"
+	optsParam="-r|--revision|--parent-dir|--fs-type"
 
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
@@ -237,7 +237,7 @@ _svnadmin ()
 	cmdOpts=
 	case ${COMP_WORDS[1]} in
 	create)
-		cmdOpts="--bdb-txn-nosync --bdb-log-keep --config-dir"
+		cmdOpts="--bdb-txn-nosync --bdb-log-keep --config-dir --fs-type"
 		;;
 	deltify)
 		cmdOpts="-r --revision -q --quiet"
