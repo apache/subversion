@@ -43,7 +43,7 @@ test "$TEST_BINDINGS_SWIG_PERL" = "yes" && {
 # With swig-py run following targets:
 # build, install
 BINDING_NAME="swig-py"
-test "$TEST_BINDINGS_SWIG_PYHTON" = "yes" && {
+test "$TEST_BINDINGS_SWIG_PYTHON" = "yes" && {
     $NICE $EXEC_PATH/svntest-bindings-generic.sh \
        "$BUILD_TYPE" "$BINDING_NAME" \
        "swig-py" "install-swig-py" ""
