@@ -495,7 +495,8 @@ dump_node (struct edit_baton *eb,
                                          pool));
           if (eb->stream)
             SVN_ERR (svn_stream_printf (eb->stream, pool,
-                                        SVN_REPOS_DUMPFILE_PROP_DELTA ": true\n"));
+                                        SVN_REPOS_DUMPFILE_PROP_DELTA 
+                                        ": true\n"));
         }
       write_hash_to_stringbuf (prophash, oldhash, &propstring, pool);
       proplen = propstring->len;

@@ -51,7 +51,7 @@ typedef struct svn_txdelta__ops_baton_t {
 /* Context for composing windows. */
 typedef struct svn_txdelta__compose_ctx_t
 {
-  svn_filesize_t sview_offset;       /* Source view offset in the combined window */
+  svn_filesize_t sview_offset;  /* Source view offset in the combined window */
   apr_size_t sview_len;         /* Source view length in the combined window */
   svn_boolean_t use_second;     /* TRUE if window_B is the composite. */
 } svn_txdelta__compose_ctx_t;

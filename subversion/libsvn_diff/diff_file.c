@@ -301,7 +301,8 @@ svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
 
       curp = endp = file_baton->buffer[idx];
       file_baton->chunk[idx]++;
-      length = file_baton->chunk[idx] == last_chunk ? offset_in_chunk(file_baton->size[idx]) : CHUNK_SIZE;
+      length = file_baton->chunk[idx] == last_chunk ? 
+        offset_in_chunk(file_baton->size[idx]) : CHUNK_SIZE;
       endp += length;
       file_baton->endp[idx] = endp;
 
@@ -387,7 +388,8 @@ svn_diff__file_token_compare(void *baton,
             {
               /* Read a chunk from disk into a buffer */
               bufp[i] = buffer[i];
-              length[i] = total_length > COMPARE_CHUNK_SIZE ? COMPARE_CHUNK_SIZE : total_length;
+              length[i] = total_length > COMPARE_CHUNK_SIZE ? 
+                COMPARE_CHUNK_SIZE : total_length;
 
               SVN_ERR(read_chunk(file_baton->file[idx[i]],
                                  file_baton->path[idx[i]],

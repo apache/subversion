@@ -19,7 +19,9 @@
  * @brief Caching of Java class references and method IDs.
  */
 
-#if defined(SVN_SWIG_JAVA_DEFINE_CACHE) || defined(SVN_SWIG_JAVA_INIT_CACHE) || defined(SVN_SWIG_JAVA_TERM_CACHE) || !defined(SVN_SWIG_JAVACACHE_INCLUDED)
+#if defined(SVN_SWIG_JAVA_DEFINE_CACHE) || defined(SVN_SWIG_JAVA_INIT_CACHE) \
+    || defined(SVN_SWIG_JAVA_TERM_CACHE) || \
+    !defined(SVN_SWIG_JAVACACHE_INCLUDED)
 
 #ifdef __cplusplus
 extern "C" {
@@ -94,20 +96,34 @@ SVN_SWIG_JAVA_CACHE_START
 
 SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_long,"java/lang/Long")
 SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_string,"java/lang/String")
-SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_outofmemoryerror,"java/lang/OutOfMemoryError")
-SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_outputstream,"java/io/OutputStream")
-SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_inputstream,"java/io/InputStream")
-SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_list,"java/util/ArrayList")
+SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_outofmemoryerror,
+                              "java/lang/OutOfMemoryError")
+SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_outputstream,
+                              "java/io/OutputStream")
+SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_inputstream,
+                              "java/io/InputStream")
+SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_list,
+                              "java/util/ArrayList")
 SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_list,"java/util/List")
 SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_list,"java/util/Map")
-SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_subversionexception,"org/tigris/subversion/SubversionException")
-SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_clientprompt,"org/tigris/subversion/client/ClientPrompt")
+SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_subversionexception,
+                              "org/tigris/subversion/SubversionException")
+SVN_SWIG_JAVA_CACHE_CLASS_DEF(jenv,svn_swig_java_cls_clientprompt,
+                              "org/tigris/subversion/client/ClientPrompt")
 
-SVN_SWIG_JAVA_CACHE_METHOD_DEF(jenv,svn_swig_java_mid_long_longvalue,svn_swig_java_cls_long,"longValue","()J")
-SVN_SWIG_JAVA_CACHE_METHOD_DEF(jenv,svn_swig_java_mid_outputstream_write,svn_swig_java_cls_outputstream,"write","([B)V")
-SVN_SWIG_JAVA_CACHE_METHOD_DEF(jenv,svn_swig_java_mid_inputstream_read,svn_swig_java_cls_inputstream,"read","([B)I")
-SVN_SWIG_JAVA_CACHE_METHOD_DEF(jenv,svn_swig_java_mid_subversionexception_init,svn_swig_java_cls_subversionexception,"<init>","(Ljava/lang/String;Ljava/lang/Throwable;JLjava/lang/String;J)V")
-SVN_SWIG_JAVA_CACHE_METHOD_DEF(jenv,svn_swig_java_mid_clientprompt_prompt,svn_swig_java_cls_clientprompt,"prompt","(Ljava/lang/String;Z)Ljava/lang/String;")
+SVN_SWIG_JAVA_CACHE_METHOD_DEF(jenv,svn_swig_java_mid_long_longvalue,
+                               svn_swig_java_cls_long,"longValue","()J")
+SVN_SWIG_JAVA_CACHE_METHOD_DEF(jenv,svn_swig_java_mid_outputstream_write,
+                               svn_swig_java_cls_outputstream,"write","([B)V")
+SVN_SWIG_JAVA_CACHE_METHOD_DEF(jenv,svn_swig_java_mid_inputstream_read,
+                               svn_swig_java_cls_inputstream,"read","([B)I")
+SVN_SWIG_JAVA_CACHE_METHOD_DEF(jenv,svn_swig_java_mid_subversionexception_init,
+                               svn_swig_java_cls_subversionexception,"<init>",
+                               "(Ljava/lang/String;Ljava/lang/Throwable;"
+                               "JLjava/lang/String;J)V")
+SVN_SWIG_JAVA_CACHE_METHOD_DEF(jenv,svn_swig_java_mid_clientprompt_prompt,
+                               svn_swig_java_cls_clientprompt,"prompt",
+                               "(Ljava/lang/String;Z)Ljava/lang/String;")
 
 SVN_SWIG_JAVA_CACHE_END
 

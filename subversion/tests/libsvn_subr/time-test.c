@@ -132,7 +132,8 @@ test_time_invariant (const char **msg,
     {
       return svn_error_createf
         (SVN_ERR_TEST_FAILED, NULL,
-         "svn_time_from_cstring ( svn_time_to_cstring (n) ) returned time '%" APR_TIME_T_FMT
+         "svn_time_from_cstring ( svn_time_to_cstring (n) ) returned time '%" 
+         APR_TIME_T_FMT
          "' instead of '%" APR_TIME_T_FMT "'",
          timestamp,current_timestamp);
     }

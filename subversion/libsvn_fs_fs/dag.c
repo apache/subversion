@@ -938,8 +938,9 @@ svn_fs__things_different (svn_boolean_t *props_changed,
 
   /* Compare contents keys. */
   if (contents_changed != NULL)
-    *contents_changed = (! svn_fs__fs_noderev_same_rep_key (noderev1->data_rep,
-                                                            noderev2->data_rep));
+    *contents_changed = 
+      (! svn_fs__fs_noderev_same_rep_key (noderev1->data_rep,
+                                          noderev2->data_rep));
   
   return SVN_NO_ERROR;
 }

@@ -428,7 +428,8 @@ svn_xml_make_header (svn_stringbuf_t **str, apr_pool_t *pool)
 {
   if (*str == NULL)
     *str = svn_stringbuf_create ("", pool);
-  svn_stringbuf_appendcstr (*str, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
+  svn_stringbuf_appendcstr (*str,
+                            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
 }
 
 

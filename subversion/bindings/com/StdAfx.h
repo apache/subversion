@@ -59,6 +59,7 @@ extern "C" {
 
 
 //{{AFX_INSERT_LOCATION}}
-// Microsoft Visual C++ will insert additional declarations immediately before the previous line.
+// Microsoft Visual C++ will insert additional declarations 
+// immediately before the previous line.
 
-#endif // !defined(AFX_STDAFX_H__C6D9D561_DBA4_4B5F_B745_EEE2067A9253__INCLUDED)
+#endif //!defined(AFX_STDAFX_H__C6D9D561_DBA4_4B5F_B745_EEE2067A9253__INCLUDED)

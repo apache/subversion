@@ -32,7 +32,8 @@
 #include "swigutil_pl.h"
 
 /* element convertors for perl -> c */
-typedef void *(*pl_element_converter_t)(SV *value, void *ctx, apr_pool_t *pool);
+typedef void *(*pl_element_converter_t)(SV *value, void *ctx, 
+                                        apr_pool_t *pool);
 
 static void *convert_pl_string (SV *value, void *dummy, apr_pool_t *pool)
 {
@@ -41,7 +42,8 @@ static void *convert_pl_string (SV *value, void *dummy, apr_pool_t *pool)
     return *result;
 }
 
-static void *convert_pl_obj (SV *value, swig_type_info *tinfo, apr_pool_t *pool)
+static void *convert_pl_obj (SV *value, swig_type_info *tinfo, 
+                             apr_pool_t *pool)
 {
     void **result = apr_palloc(pool, sizeof(void *));
     if (SWIG_ConvertPtr(value, result, tinfo, 0) < 0) {
@@ -100,9 +102,10 @@ apr_hash_t *svn_swig_pl_objs_to_hash_by_name(SV *source,
 }
 
 /* perl -> c array convertors */
-static const apr_array_header_t *svn_swig_pl_to_array (SV *source,
-                                                       pl_element_converter_t cv,
-                                                       void *ctx, apr_pool_t *pool)
+static const 
+apr_array_header_t *svn_swig_pl_to_array (SV *source,
+                                          pl_element_converter_t cv,
+                                          void *ctx, apr_pool_t *pool)
 {
     int targlen;
     apr_array_header_t *temp;
@@ -642,7 +645,9 @@ thunk_apply_textdelta(void *file_baton,
 					 base_checksum, pool, poolinfo));
     if (SvOK(result)) {
 	if (SvROK(result) && SvTYPE(SvRV(result)) == SVt_PVAV) {
-	    swig_type_info *handler_info = SWIG_TypeQuery("svn_txdelta_window_handler_t"), *void_info = SWIG_TypeQuery("void *");
+	    swig_type_info *handler_info = 
+              SWIG_TypeQuery("svn_txdelta_window_handler_t");
+            swig_type_info *void_info = SWIG_TypeQuery("void *");
 	    AV *array = (AV *)SvRV(result);
 
 	    if (SWIG_ConvertPtr(*av_fetch (array, 0, 0),
@@ -907,7 +912,8 @@ svn_error_t *svn_ra_make_callbacks(svn_ra_callbacks_t **cb,
     (*cb)->invalidate_wc_props = NULL;
     auth_baton = *hv_fetch((HV *)SvRV(perl_callbacks), "auth", 4, 0);
 
-    if (SWIG_ConvertPtr(auth_baton, (void **)&(*cb)->auth_baton, tinfo,0) < 0) {
+    if (SWIG_ConvertPtr(auth_baton, 
+                        (void **)&(*cb)->auth_baton, tinfo,0) < 0) {
 	croak("Unable to convert from SWIG Type");
     }
     *c_baton = perl_callbacks;
@@ -1122,7 +1128,8 @@ svn_error_t *svn_swig_pl_get_commit_log_func(const char **log_msg,
     } else if (SvPOK(SvRV(tmp_file_sv))) {
 	*tmp_file = apr_pstrdup(pool, SvPV_nolen(SvRV(tmp_file_sv)));
     } else {
-        croak("Invalid value in tmp_file reference, must be undef or a string");    
+        croak("Invalid value in tmp_file reference, "
+              "must be undef or a string");    
     }
 
     if (sv_derived_from (result, "_p_svn_error_t")) {
@@ -1154,9 +1161,11 @@ svn_error_t *svn_swig_pl_cancel_func(void *cancel_baton) {
 	    croak("Unable to convert from SWIG Type");
 	}
     } else if (SvIOK(result) && SvIV(result)) {
-        ret_val = svn_error_create(SVN_ERR_CANCELLED, NULL,"By cancel callback");
+        ret_val = svn_error_create(SVN_ERR_CANCELLED, NULL,
+                                   "By cancel callback");
     } else if (SvTRUE(result) && SvPOK(result)) {
-        ret_val = svn_error_create(SVN_ERR_CANCELLED, NULL, SvPV_nolen(result));
+        ret_val = svn_error_create(SVN_ERR_CANCELLED, NULL, 
+                                   SvPV_nolen(result));
     } else {
         ret_val = SVN_NO_ERROR;
     }
@@ -1379,7 +1388,8 @@ apr_file_t *svn_swig_pl_make_file (SV *file, apr_pool_t *pool)
     } else if (SvROK(file) && SvTYPE(SvRV(file)) == SVt_PVGV) {
         apr_status_t status;
         apr_os_file_t osfile = PerlIO_fileno(IoIFP(sv_2io(file)));
-        status = apr_os_file_put (&apr_file, &osfile, O_CREAT | O_WRONLY, pool);
+        status = apr_os_file_put (&apr_file, &osfile, 
+                                  O_CREAT | O_WRONLY, pool);
         if (status)
             return NULL;
     }

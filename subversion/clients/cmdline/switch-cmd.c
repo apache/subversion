@@ -62,7 +62,8 @@ rewrite_urls(apr_array_header_t *targets,
       for (i = 2; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];
-          SVN_ERR (svn_client_relocate (target, from, to, recurse, ctx, subpool));
+          SVN_ERR (svn_client_relocate (target, from, to, recurse, 
+                                        ctx, subpool));
           svn_pool_clear (subpool);
         }
     }

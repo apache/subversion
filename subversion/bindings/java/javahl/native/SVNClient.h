@@ -42,42 +42,61 @@ class SVNClient :public SVNBase
 public:
 	const char * getConfigDirectory();
 	void setConfigDirectory(const char *configDir);
-	jbyteArray blame(const char *path, Revision& revisionStart, Revision &revisionEnd);
-	void blame(const char *path, Revision &revisionStart, Revision &revisionEnd, BlameCallback *callback);
-	void relocate(const char *from, const char *to, const char *path, bool recurse);
+	jbyteArray blame(const char *path, Revision& revisionStart,
+                         Revision &revisionEnd);
+	void blame(const char *path, Revision &revisionStart, 
+                   Revision &revisionEnd, BlameCallback *callback);
+	void relocate(const char *from, const char *to, const char *path,
+                      bool recurse);
 	jbyteArray fileContent(const char *path, Revision &revision);
-	void propertyCreate(const char *path, const char *name, JNIByteArray &value, bool recurse);
-	void propertyCreate(const char *path, const char *name, const char *value, bool recurse);
+	void propertyCreate(const char *path, const char *name, 
+                            JNIByteArray &value, bool recurse);
+	void propertyCreate(const char *path, const char *name,
+                            const char *value, bool recurse);
 	void propertyRemove(const char *path, const char *name, bool recurse);
-	void propertySet(const char *path, const char *name, JNIByteArray &value, bool recurse);
-	void propertySet(const char *path, const char *name, const char *value, bool recurse);
+	void propertySet(const char *path, const char *name,
+                         JNIByteArray &value, bool recurse);
+	void propertySet(const char *path, const char *name, const char *value,
+                         bool recurse);
 	jobjectArray properties(jobject jthis, const char *path);
-	void merge(const char *path1, Revision &revision1, const char *path2, Revision &revision2,const char *localPath, bool force, bool recurse);
-	void doImport(const char *path, const char *url, const char *message, bool recurse);
-	jlong doSwitch(const char *path, const char *url, Revision &revision, bool recurse);
+	void merge(const char *path1, Revision &revision1, const char *path2,
+                   Revision &revision2, const char *localPath, bool force,
+                   bool recurse);
+	void doImport(const char *path, const char *url, const char *message,
+                      bool recurse);
+	jlong doSwitch(const char *path, const char *url, Revision &revision,
+                       bool recurse);
 	jlong doExport(const char *srcPath, const char *destPath, Revision &revision, bool force);
 	void resolved(const char *path, bool recurse);
 	void cleanup(const char *path);
 	void mkdir(Targets &targets, const char *message);
-	void move(const char *srcPath, const char *destPath, const char *message, Revision &revision, bool force);
-	void copy(const char *srcPath, const char *destPath, const char *message, Revision &revision);
+	void move(const char *srcPath, const char *destPath,
+                  const char *message, Revision &revision, bool force);
+	void copy(const char *srcPath, const char *destPath,
+                  const char *message, Revision &revision);
 	jlong commit(Targets &targets, const char *message, bool recurse);
 	jlong update(const char *path, Revision &revision, bool recurse);
 	void add(const char *path, bool recurse);
 	void revert(const char *path, bool recurse);
 	void remove(Targets &targets, const char *message,bool force);
 	void notification(Notify *notify);
-	jlong checkout(const char *moduleName, const char *destPath, Revision &revision, bool recurse);
-	jobjectArray logMessages(const char *path, Revision &revisionStart, Revision &revisionEnd);
+	jlong checkout(const char *moduleName, const char *destPath,
+                       Revision &revision, bool recurse);
+	jobjectArray logMessages(const char *path, Revision &revisionStart,
+                                 Revision &revisionEnd);
 	void setPrompt(Prompter *prompter);
 	void password(const char *password);
 	void username(const char *username);
 	jobject singleStatus(const char *path, bool onServer);
-	jobjectArray status(const char *path, bool descend, bool onServer, bool getAll, bool noIgnore);
+	jobjectArray status(const char *path, bool descend, bool onServer,
+                            bool getAll, bool noIgnore);
 	jobjectArray list(const char *url, Revision &revision, bool recurse);
-	jobject revProperty(jobject jthis, const char *path, const char *name, Revision &rev);
+	jobject revProperty(jobject jthis, const char *path, const char *name,
+                            Revision &rev);
 	jobject propertyGet(jobject jthis, const char *path, const char *name);
-	void diff(const char *target1, Revision &revision1, const char *target2, Revision &revision2, const char *outfileName,bool recurse);
+	void diff(const char *target1, Revision &revision1,
+                  const char *target2, Revision &revision2,
+                  const char *outfileName,bool recurse);
 
 	const char * getLastPath();
 	void finalize();
@@ -87,26 +106,38 @@ public:
 	SVNClient();
 	virtual ~SVNClient();
 private:
-	void propertySet(const char *path, const char *name, svn_string_t *value, bool recurse);
-	jobject createJavaProperty(jobject jthis, const char *path, const char *name, svn_string_t *value);
+	void propertySet(const char *path, const char *name,
+                         svn_string_t *value, bool recurse);
+	jobject createJavaProperty(jobject jthis, const char *path,
+                                   const char *name, svn_string_t *value);
 	jobject createJavaDirEntry(const char *path, svn_dirent_t *dirent);
 	svn_client_ctx_t * getContext(const char *message);
 	Notify *m_notify;
 	Prompter *m_prompter;
     Path m_lastPath;
-	static svn_error_t *getCommitMessage(const char **log_msg, const char **tmp_file,
-                                apr_array_header_t *commit_items, void *baton,
-                                apr_pool_t *pool);
-	void *getCommitMessageBaton(const char *message, const char *baseDir = NULL);
+	static svn_error_t *getCommitMessage(const char **log_msg,
+                                             const char **tmp_file,
+                                             apr_array_header_t *commit_items,
+                                             void *baton,
+                                             apr_pool_t *pool);
+	void *getCommitMessageBaton(const char *message,
+                                    const char *baseDir = NULL);
     std::string m_userName;
     std::string m_passWord;
 	std::string m_configDir;
-	static jobject createJavaStatus(const char *path, svn_wc_status_t *status);
+	static jobject createJavaStatus(const char *path,
+                                        svn_wc_status_t *status);
 	static jint mapStatusKind(int svnKind);
-	static svn_error_t *messageReceiver (void *baton, apr_hash_t * changed_paths,
-                 svn_revnum_t rev, const char *author, const char *date,
-                 const char *msg, apr_pool_t * pool);
-	static void statusReceiver(void *baton, const char *path, svn_wc_status_t *status);
+	static svn_error_t *messageReceiver(void *baton,
+                                            apr_hash_t * changed_paths,
+                                            svn_revnum_t rev,
+                                            const char *author,
+                                            const char *date,
+                                            const char *msg,
+                                            apr_pool_t * pool);
+	static void statusReceiver(void *baton,
+                                   const char *path, svn_wc_status_t *status);
 };
 
-#endif // !defined(AFX_SVNCLIENT_H__B5A135CD_3D7C_4ABC_8D75_643B14507979__INCLUDED_)
+#endif
+// !defined(AFX_SVNCLIENT_H__B5A135CD_3D7C_4ABC_8D75_643B14507979__INCLUDED_)

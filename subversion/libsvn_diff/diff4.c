@@ -81,16 +81,17 @@
    5. Added line in affected text range in P: this is a dependency problem
       -- part of the change T:18-T:19 depends on changes introduced to T after
       B branched. There are several possible behaviors, depending on what the
-      user wants. One is to generate an informative error, stating that T:18-T:19
-      depends on some other change (T:N-T:M, where N>=8, M<=18, and M-N == 1);
-      the exact revisions can be discovered automatically using the same process
-      as "cvs annotate", though it may take some time to do so. Another option is
-      to include the change in P, as an insertion of the "after" version of the
-      text, and adjust line numbers and mappings accordingly. (And if all this
-      isn't sounding a lot like a directory merge algorithm, try drinking more of
-      the Kool-Aid.) A third option is to include it as an insertion, but with
-      metadata (such as CVS-style conflict markers) indicating that the line
-      attempting to be patched does not exist in B. 
+      user wants. One is to generate an informative error, stating that 
+      T:18-T:19 depends on some other change (T:N-T:M, where N>=8, M<=18,
+      and M-N == 1); the exact revisions can be discovered automatically using
+      the same process as "cvs annotate", though it may take some time to do
+      so. Another option is to include the change in P, as an insertion of the
+      "after" version of the text, and adjust line numbers and mappings
+      accordingly. (And if all this isn't sounding a lot like a directory
+      merge algorithm, try drinking more of the Kool-Aid.) A third option is
+      to include it as an insertion, but with metadata (such as CVS-style
+      conflict markers) indicating that the line attempting to be patched
+      does not exist in B. 
 
    6. Deleted line that is in-range in P: request another universe -- this
       situation can't happen in ours. 
@@ -261,7 +262,8 @@ svn_diff_diff4(svn_diff_t **diff,
     {
       if (hunk->type == svn_diff__type_conflict)
         {
-          svn_diff__resolve_conflict(hunk, &position_list[1], &position_list[2], pool);
+          svn_diff__resolve_conflict(hunk, &position_list[1], 
+                                     &position_list[2], pool);
         }
     }
 

@@ -619,12 +619,14 @@ substitute_and_verify (const char *test_name,
       if (contents->len < idx)
         return svn_error_createf
           (SVN_ERR_MALFORMED_FILE, NULL,
-           "'%s' has short contents at line %" APR_SIZE_T_FMT, dst_fname, i + 1);
+           "'%s' has short contents at line %" APR_SIZE_T_FMT, 
+           dst_fname, i + 1);
 
       if (strncmp (contents->data + idx, expect[i], strlen (expect[i])) != 0)
         return svn_error_createf
           (SVN_ERR_MALFORMED_FILE, NULL, 
-           "'%s' has wrong contents at line %" APR_SIZE_T_FMT, dst_fname, i + 1);
+           "'%s' has wrong contents at line %" APR_SIZE_T_FMT, 
+           dst_fname, i + 1);
 
       /* Else, the data is correct, at least up to the next eol. */
 

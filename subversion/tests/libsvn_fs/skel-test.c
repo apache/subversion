@@ -303,7 +303,8 @@ parse_implicit_length (const char **msg,
    bytes at DATA, in explicit-length form, using SEP as the separator
    between the length and the data.  */
 static void
-put_explicit_length (svn_stringbuf_t *str, const char *data, apr_size_t len, char sep)
+put_explicit_length (svn_stringbuf_t *str, const char *data, apr_size_t len, 
+                     char sep)
 {
   char *buf = malloc (len + 100);
   apr_size_t length_len;
@@ -559,7 +560,9 @@ parse_list (const char **msg,
 
                         put_list_start (str,  (apr_byte_t)sep, sep_count);
                         for (i = 0; i < list_len; i++)
-                          put_implicit_length_byte (str,  (apr_byte_t)atom_byte,  (apr_byte_t)sep);
+                          put_implicit_length_byte (str,
+                                                    (apr_byte_t)atom_byte,
+                                                    (apr_byte_t)sep);
                         put_list_end (str,  (apr_byte_t)sep, sep_count);
 
                         skel = parse_str (str, pool);
@@ -568,8 +571,10 @@ parse_list (const char **msg,
                         for (child = skel->children;
                              child;
                              child = child->next)
-                          if (! check_implicit_length_byte (child,  (apr_byte_t)atom_byte))
-                            return fail (pool, "list was reparsed incorrectly");
+                          if (! check_implicit_length_byte 
+                                 (child, (apr_byte_t)atom_byte))
+                            return fail (pool, 
+                                         "list was reparsed incorrectly");
                       }
 
                   /* Try the atom containing every character that's

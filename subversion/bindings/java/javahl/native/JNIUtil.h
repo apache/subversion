@@ -64,7 +64,9 @@ public:
 	enum { formatBufferSize = 2048 };
 	enum { noLog, errorLog, exceptionLog, entryLog } LogLevel;
 private:
-	static void assembleErrorMessage(svn_error_t *err, int depth, apr_status_t parent_apr_err, std::string &buffer);
+	static void assembleErrorMessage(svn_error_t *err, int depth,
+                                         apr_status_t parent_apr_err,
+                                         std::string &buffer);
 	static Pool * g_requestPool;
 	static int g_logLevel;
 	static void setExceptionThrown();
@@ -79,4 +81,5 @@ private:
 	static std::ofstream g_logStream;
 };
 
-#endif // !defined(AFX_JNIUTIL_H__82301908_C6CB_4A77_8A28_899E72FBEEFF__INCLUDED_)
+#endif
+// !defined(AFX_JNIUTIL_H__82301908_C6CB_4A77_8A28_899E72FBEEFF__INCLUDED_)

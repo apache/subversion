@@ -613,7 +613,8 @@ subcommand_recover (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
-list_dblogs (apr_getopt_t *os, void *baton, svn_boolean_t only_unused, apr_pool_t *pool)
+list_dblogs (apr_getopt_t *os, void *baton, svn_boolean_t only_unused,
+             apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
   apr_array_header_t *logfiles;

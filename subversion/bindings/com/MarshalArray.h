@@ -154,7 +154,8 @@ CComDynamicMarshalledUnkArray<piid>::Add(IUnknown* pUnk)
         else if (m_nSize == 1)
         {
                 // create array
-                pp = (IUnknown**)malloc(sizeof(IUnknown*)*_DEFAULT_VECTORLENGTH);
+                pp = (IUnknown**)malloc(sizeof(IUnknown*) *
+                                        _DEFAULT_VECTORLENGTH);
                 if (pp == NULL)
                         return 0;
                 memset(pp, 0, sizeof(IUnknown*)*_DEFAULT_VECTORLENGTH);

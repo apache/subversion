@@ -39,15 +39,19 @@
 #   define JCALL1(func, jenv, ar1) jenv->func(ar1)
 #   define JCALL2(func, jenv, ar1, ar2) jenv->func(ar1, ar2)
 #   define JCALL3(func, jenv, ar1, ar2, ar3) jenv->func(ar1, ar2, ar3)
-#   define JCALL4(func, jenv, ar1, ar2, ar3, ar4) jenv->func(ar1, ar2, ar3, ar4)
-#   define JCALL7(func, jenv, ar1, ar2, ar3, ar4, ar5, ar6, ar7) jenv->func(ar1, ar2, ar3, ar4, ar5, ar6, ar7)
+#   define JCALL4(func, jenv, ar1, ar2, ar3, ar4) \
+                      jenv->func(ar1, ar2, ar3, ar4)
+#   define JCALL7(func, jenv, ar1, ar2, ar3, ar4, ar5, ar6, ar7) \
+                      jenv->func(ar1, ar2, ar3, ar4, ar5, ar6, ar7)
 #else
 #   define JCALL0(func, jenv) (*jenv)->func(jenv)
 #   define JCALL1(func, jenv, ar1) (*jenv)->func(jenv, ar1)
 #   define JCALL2(func, jenv, ar1, ar2) (*jenv)->func(jenv, ar1, ar2)
 #   define JCALL3(func, jenv, ar1, ar2, ar3) (*jenv)->func(jenv, ar1, ar2, ar3)
-#   define JCALL4(func, jenv, ar1, ar2, ar3, ar4) (*jenv)->func(jenv, ar1, ar2, ar3, ar4)
-#   define JCALL7(func, jenv, ar1, ar2, ar3, ar4, ar5, ar6, ar7) (*jenv)->func(jenv, ar1, ar2, ar3, ar4, ar5, ar6, ar7)
+#   define JCALL4(func, jenv, ar1, ar2, ar3, ar4) \
+                      (*jenv)->func(jenv, ar1, ar2, ar3, ar4)
+#   define JCALL7(func, jenv, ar1, ar2, ar3, ar4, ar5, ar6, ar7) \
+                      (*jenv)->func(jenv, ar1, ar2, ar3, ar4, ar5, ar6, ar7)
 #endif
 #endif
 
@@ -205,7 +209,8 @@ jobject svn_swig_java_c_strings_to_list(JNIEnv *jenv, char **strings)
   jclass cls = JCALL1(FindClass, jenv, "java/util/ArrayList");
   jobject list = JCALL2(NewObject, jenv, cls,
                         JCALL3(GetMethodID, jenv, cls, "<init>", "()V"));
-  jmethodID add = JCALL3(GetMethodID, jenv, cls, "add", "(Ljava/lang/Object;)Z");
+  jmethodID add = JCALL3(GetMethodID, jenv, cls, "add", 
+                         "(Ljava/lang/Object;)Z");
   char *s;
   jobject obj;
   while ((s = *strings++) != NULL)
@@ -883,7 +888,9 @@ svn_error_t *svn_swig_java_log_message_receiver(void *baton,
       const char *message,
       apr_pool_t *pool)
 {
-    return svn_error_create(APR_EGENERAL, NULL, "TODO: svn_swig_java_get_commit_log_func is not implemented yet");
+    return svn_error_create
+      (APR_EGENERAL, NULL, 
+       "TODO: svn_swig_java_get_commit_log_func is not implemented yet");
 }
 
 /* Prompt for username */
@@ -995,9 +1002,9 @@ static svn_error_t *read_outputstream(void *baton,
                                       char *buffer,
                                       apr_size_t *len)
 {
-  svn_error_t *svn_error = svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, 
-                                            NULL,
-                                            "Can't read from write only stream");
+  svn_error_t *svn_error = svn_error_create
+    (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
+     "Can't read from write only stream");
   return svn_error;                   
 } 
 
@@ -1027,7 +1034,8 @@ static svn_error_t *write_outputstream(void *baton,
       goto error;
     }
 
-  JCALL3(CallVoidMethod, jenv, stream_baton->stream, svn_swig_java_mid_outputstream_write, bytearray);
+  JCALL3(CallVoidMethod, jenv, stream_baton->stream,
+         svn_swig_java_mid_outputstream_write, bytearray);
   exc = JCALL0(ExceptionOccurred, jenv);
   if (exc)
     {

@@ -70,8 +70,8 @@ svn_cl__update (apr_getopt_t *os,
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
 
       if (! opt_state->quiet)
-        svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
-                              FALSE, subpool);
+        svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, 
+                              FALSE, FALSE, FALSE, subpool);
 
       err = svn_client_update (NULL, target,
                                &(opt_state->start_revision),

@@ -19,7 +19,8 @@
 #define JNI_VER_MINOR	8
 #define JNI_VER_MICRO	0
 
-#define JNI_VER_NUM        APR_STRINGIFY(JNI_VER_MAJOR) "." APR_STRINGIFY(JNI_VER_MINOR) "." APR_STRINGIFY(JNI_VER_MICRO)
+#define JNI_VER_NUM APR_STRINGIFY(JNI_VER_MAJOR) "." \
+        APR_STRINGIFY(JNI_VER_MINOR) "." APR_STRINGIFY(JNI_VER_MICRO)
 
 /** Version number with tag (contains no whitespace) */
 #define JNI_VER_NUMBER     JNI_VER_NUM
