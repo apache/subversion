@@ -47,13 +47,12 @@ Commit access for specific areas:
 
   Bindings:
 
-          xela   Alexander Müller <alex@littleblue.de>       (Java bindings)
-        morten   Morten Ludvigsen <morten@2ps.dk>            (bindings)
-      jespersm   Jesper Steen Møller <jesper@selskabet.org>  (bindings)
-        knacke   Kai Nacke <kai.nacke@redstar.de>            (bindings)
-       pmayweg   Patrick Mayweg <mayweg@qint.de>             (Java bindings)
-          rey4   Russell Yanofsky <rey4@columbia.edu>        (bindings)
-         clkao   Chia-liang Kao <clkao@clkao.org>            (perl bindings)
+        morten   Morten Ludvigsen <morten@2ps.dk>            (Swig-Java b.)
+      jespersm   Jesper Steen Møller <jesper@selskabet.org>  (Swig-Java b.)
+        knacke   Kai Nacke <kai.nacke@redstar.de>            (Swig-Java b.)
+       pmayweg   Patrick Mayweg <mayweg@qint.de>             (JavaHL bindings)
+          rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
+         clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
 
   Packages:
 
@@ -108,8 +107,9 @@ Commit access for specific areas:
       dbrouard   Diego Brouard <dbrouard@gmail.com>          (doc: es)
   gerhardoettl   Gerhard Oettl <gerhard.oettl.ml@oesoft.at>  (doc: de)
   
-  Subprojects that are complete or inactive:
+  Subprojects that are complete or abandoned:
 
+          xela   Alexander Müller <alex@littleblue.de>       (Java JNI b.)
        yoshiki   Yoshiki Hayashi <yoshiki@xemacs.org>        (Non-SWIG Ruby b.)
         mmacek   Marko Maček <Marko.Macek@gmx.net>           (cvs2svn branch)
           mass   David Waite <mass@akuma.org>                (certs branch)
