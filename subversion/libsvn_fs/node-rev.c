@@ -251,12 +251,6 @@ deltify (svn_fs_id_t *target_id,
   svn_stream_set_read (target_stream, svn_fs__rep_read_contents);
 
   svn_txdelta (&txdelta_stream, source_stream, target_stream, trail->pool);
-
-  /* Prepare to produce an svndiff-format diff from text delta windows.
-     OUTPUT is a writable generic stream to write the svndiff data to.
-     Allocation takes place in a sub-pool of POOL.  On return, *HANDLER
-     is set to a window handler function and *HANDLER_BATON is set to
-     the value to pass as the BATON argument to *HANDLER.  */
   svn_txdelta_to_svndiff (new_target_stream,
                           trail->pool,
                           &new_target_handler,
