@@ -5,16 +5,28 @@
 
 $LastChangedDate$
 
-   ********************************************************************
-   ***                                                              ***
-   ***  Note: this is PRE-ALPHA code.  Don't use it on real data,   ***
-   ***  except for Subversion itself, and that only because hordes  ***
-   ***  of selfless volunteers are standing by ready to help you    ***
-   ***  if you get yourself in a pickle.                            ***
-   ***                                                              ***
-   ********************************************************************
+   *** Note: Subversion is PRE-ALPHA code.  Don't use it on real data. ***
+
+Contents:
+
+     I. BUILD REQUIREMENTS
+
+    II. INSTALLATION
+     A. Bootstrapping From A Tarball Or RPM
+     B. Building The Latest Source Under Unix
+     C. Building Under Unix In Different Directories
+     D. Bootstrapping From A Zip File Under Windows
+     E. Building The Latest Source Under Windows
+
+   III. BUILDING A SUBVERSION SERVER
+     A. Set Up Apache
+     B. Make And Install The Subversion Server
+     C. Configuring Apache For Subversion
+     D. Running And Testing
+
 
 I.    BUILD REQUIREMENTS
+      ==================
 
       Subversion depends on a number of third party tools and libraries.
       If you are bootstrapping from a tarball or an RPM then you will
@@ -228,16 +240,18 @@ I.    BUILD REQUIREMENTS
 
 
 
-II.   INSTALLATION OF SUBVERSION
+II.   INSTALLATION
+      ============
 
-  A.  BOOTSTRAPPING FROM A TARBALL OR RPM
+  A.  Bootstrapping From A Tarball Or RPM
+      -----------------------------------
 
       In order to get the very latest Subversion source code, you need
       to check it out of a Subversion repository, and therefore you
       first need a Subversion client.
 
 
-      1.  BOOSTRAPPING FROM TARBALL
+      1.  Boostrapping From Tarball
 
       Download the most recent distribution tarball from:
 
@@ -263,7 +277,7 @@ II.   INSTALLATION OF SUBVERSION
           ...
 
 
-      2.  BOOTSTRAPPING FROM RPM
+      2.  Bootstrapping From RPM
 
       If you are using Linux (or any OS that can use RPM) then another
       possibility is to download the binary RPM from the
@@ -300,7 +314,12 @@ II.   INSTALLATION OF SUBVERSION
       one-line build procedure.
 
 
-  B.  BUILDING THE LATEST SOURCE UNDER UNIX
+  B.  Building The Latest Source Under Unix
+      -------------------------------------
+
+      (These instructions assume you have already installed Subversion
+      and checked out a Subversion working copy.  See the section
+      "Bootstrapping From A Tarball Or RPM" above for more.)
 
       You can discard the directory created by the tarball; you're
       about to build the latest, greatest Subversion client.
@@ -364,7 +383,8 @@ II.   INSTALLATION OF SUBVERSION
           # make install
 
 
-  C.  BUILDING UNDER UNIX IN DIFFERENT DIRECTORIES
+  C.  Building Under Unix In Different Directories
+      --------------------------------------------
 
       It is possible to configure and build Subversion on Unix in a
       directory other than the working copy. For example
@@ -410,7 +430,8 @@ II.   INSTALLATION OF SUBVERSION
       into a another working copy.
 
 
-  D.  BOOTSTRAPPING FROM A ZIP FILE UNDER WINDOWS
+  D.  Bootstrapping From A Zip File Under Windows
+      -------------------------------------------
 
       Of all the ways of getting a Subversion client, this is the
       easiest. Just download the ZIP file, run your unzipping utility
@@ -434,7 +455,12 @@ II.   INSTALLATION OF SUBVERSION
       programs, as described in section I.10.
 
 
-  E.  BUILDING THE LATEST SOURCE UNDER WINDOWS
+  E.  Building The Latest Source Under Windows
+      ----------------------------------------
+
+      (These instructions assume you have already installed Subversion
+      and checked out a Subversion working copy.  See the section
+      "Bootstrapping From A Zip File Under Windows" above for more.)
 
       There is some support for building Subversion on Win32 platforms.
       The project files included in the source tree are from Microsoft
@@ -518,8 +544,10 @@ II.   INSTALLATION OF SUBVERSION
 
 
 III.  BUILDING A SUBVERSION SERVER
+      ============================
 
-  A.  SETUP APACHE
+  A.  Set Up Apache
+      -------------
 
       (Following the BOOTSTRAPPING FROM RPM procedures above will install and
       build the latest Subversion server for Linux RedHat 7.1, 7.2, and PPC
@@ -527,7 +555,7 @@ III.  BUILDING A SUBVERSION SERVER
       installed when the SUBVERSION RPM is built.)
 
 
-      1.  OBTAINING AND INSTALLING APACHE 2.0
+      1.  Obtaining And Installing Apache 2.0
 
       Checkout the "httpd-2.0" cvs module from apache.org.  If you have
       questions about the Apache 2.0 build, please consult the HTTPD
@@ -580,6 +608,9 @@ III.  BUILDING A SUBVERSION SERVER
 
           $ make depend && make && make install
 
+  B.  Make And Install The Subversion Server
+      --------------------------------------
+
       Go back into your subversion working copy and run ./autogen.sh if
       you need to.  Then run:
 
@@ -609,7 +640,8 @@ III.  BUILDING A SUBVERSION SERVER
       /usr/local/apache2/modules/.
 
 
-      2.  CONFIGURING APACHE FOR SUBVERSION
+  C.  Configuring Apache For Subversion
+      ---------------------------------
 
       Add this to the *bottom* of /usr/local/apache2/conf/httpd.conf:
 
@@ -677,7 +709,8 @@ III.  BUILDING A SUBVERSION SERVER
       Berkeley DB files!  This is a very common problem.
 
 
-      3.  RUNNING AND TESTING
+  D.  Running And Testing
+      -------------------
 
       Fire up apache 2.0:
 
@@ -699,4 +732,3 @@ III.  BUILDING A SUBVERSION SERVER
       error logfile, /usr/local/apache2/logs/error_log.  For more
       information about tracing problems, see "Debugging the server"
       in the HACKING file.
-
