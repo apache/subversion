@@ -164,7 +164,7 @@ alloc_entry (apr_pool_t *pool)
 {
   svn_wc__entry_t *entry = apr_pcalloc (pool, sizeof (*entry));
   entry->version    = SVN_INVALID_VERNUM;
-  entry->kind       = svn_invalid_kind;
+  entry->kind       = svn_node_none;
   entry->attributes = apr_make_hash (pool);
   return entry;
 }
@@ -220,9 +220,9 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
                           SVN_WC__ENTRIES_ATTR_KIND, APR_HASH_KEY_STRING);
 
         if ((! kindstr) || (strcmp (kindstr->data, "file") == 0))
-          entry->kind = svn_file_kind;
+          entry->kind = svn_node_file;
         else if (strcmp (kindstr->data, "dir") == 0)
-          entry->kind = svn_dir_kind;
+          entry->kind = svn_node_dir;
         else
           {
             svn_string_t *name
@@ -284,7 +284,7 @@ take_from_entry (svn_wc__entry_t *src, svn_wc__entry_t *dst, apr_pool_t *pool)
 {
   /* Inherits parent's version if don't have a version of one's own,
      unless this is a subdirectory. */
-  if ((dst->version == SVN_INVALID_VERNUM) && (dst->kind != svn_dir_kind))
+  if ((dst->version == SVN_INVALID_VERNUM) && (dst->kind != svn_node_dir))
     dst->version = src->version;
   
   if (! dst->ancestor)
@@ -369,11 +369,11 @@ sync_entry (svn_wc__entry_t *entry, apr_pool_t *pool)
                 entry->ancestor);
   
   /* Kind. */
-  if (entry->kind == svn_dir_kind)
+  if (entry->kind == svn_node_dir)
     apr_hash_set (entry->attributes,
                   SVN_WC__ENTRIES_ATTR_KIND, APR_HASH_KEY_STRING,
                   svn_string_create ("dir", pool));
-  else if (entry->kind != svn_invalid_kind)  /* default to file kind */
+  else if (entry->kind != svn_node_none)  /* default to file kind */
     apr_hash_set (entry->attributes,
                   SVN_WC__ENTRIES_ATTR_KIND, APR_HASH_KEY_STRING,
                   NULL);
@@ -580,7 +580,7 @@ stuff_entry_v (apr_hash_t *entries,
   /* Set up the explicit attributes. */
   if (version != SVN_INVALID_VERNUM)
     entry->version = version;
-  if (kind != svn_invalid_kind)
+  if (kind != svn_node_none)
     entry->kind = kind;
   if (timestamp)
     entry->timestamp = timestamp;

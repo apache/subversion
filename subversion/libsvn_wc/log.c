@@ -149,7 +149,7 @@ replace_text_base (svn_string_t *path,
   if (err)
     return err;
 
-  if (kind == svn_invalid_kind)
+  if (kind == svn_node_none)
     return SVN_NO_ERROR;  /* tolerate mop-up calls gracefully */
   else
     return svn_wc__sync_text_base (filepath, pool);
@@ -203,7 +203,7 @@ remove_from_version_control (struct log_runner *loggy, svn_string_t *name)
     
     /* Else we have a text-base copy, so use it. */
 
-    if (kind == svn_file_kind)
+    if (kind == svn_node_file)
       {
         apr_status_t apr_err;
         svn_boolean_t same;
@@ -374,7 +374,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
           err = svn_wc__entry_merge_sync (loggy->path,
                                           sname,
                                           atoi (verstr),
-                                          svn_file_kind,
+                                          svn_node_file,
                                           0,
                                           timestamp,
                                           loggy->pool,
@@ -449,7 +449,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                       "error checking existence of %s",
                                       name));
               
-              if (kind == svn_file_kind)
+              if (kind == svn_node_file)
                 {
                   svn_boolean_t same;
                   err = svn_wc__files_contents_same_p (&same,
@@ -494,7 +494,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
               err = svn_wc__entry_merge_sync (loggy->path,
                                               sname,
                                               atoi (verstr),
-                                              svn_file_kind,
+                                              svn_node_file,
                                               SVN_WC__ENTRY_CLEAR,
                                               timestamp,
                                               loggy->pool,
@@ -655,7 +655,7 @@ svn_wc__cleanup (svn_string_t *path,
       else
         care_about_this_dir = 1;
 
-      if (entry->kind == svn_dir_kind)
+      if (entry->kind == svn_node_dir)
         {
           svn_string_t *subdir = svn_string_dup (path, pool);
           svn_path_add_component (subdir,
@@ -736,7 +736,7 @@ svn_wc__log_commit (svn_string_t *path,
           && (strcmp ((char *) key, SVN_WC__ENTRIES_THIS_DIR) == 0))
         continue;
 
-      if (entry->kind == svn_dir_kind)
+      if (entry->kind == svn_node_dir)
         {
           svn_string_t *subdir = svn_string_dup (path, pool);
           svn_path_add_component (subdir,
@@ -753,7 +753,7 @@ svn_wc__log_commit (svn_string_t *path,
           char *verstr = apr_psprintf (pool, "%ld", version);
           apr_file_t *log_fp = NULL;
           
-          /* entry->kind == svn_file_kind, but was the file actually
+          /* entry->kind == svn_node_file, but was the file actually
              involved in the commit? */
           
           if (targets)

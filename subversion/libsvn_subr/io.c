@@ -57,6 +57,8 @@
 #include "svn_error.h"
 #include "svn_io.h"
 
+
+
 svn_error_t *
 svn_io_check_path (svn_string_t *path,
                    enum svn_node_kind *kind,
@@ -72,22 +74,88 @@ svn_io_check_path (svn_string_t *path,
                               "svn_io_check_path: "
                               "problem checking path %s",
                               path->data);
-  else if (apr_err == APR_ENOENT)         /* which is better, this test... */
-    *kind = svn_invalid_kind;
-  else if (finfo.filetype == APR_NOFILE)  /* ... or this one? */
-    *kind = svn_invalid_kind;
+  else if (apr_err == APR_ENOENT)
+    *kind = svn_node_none;
+  else if (finfo.filetype == APR_NOFILE)
+    *kind = svn_node_unknown;
   else if (finfo.filetype == APR_REG)
-    *kind = svn_file_kind;
+    *kind = svn_node_file;
   else if (finfo.filetype == APR_DIR)
-    *kind = svn_dir_kind;
+    *kind = svn_node_dir;
 #if 0
   else if (finfo.filetype == APR_LINK)
-    *kind = svn_symlink_kind;
-#endif /* 0, we will support symlinks but not yet */
+    *kind = svn_node_symlink;  /* we support symlinks someday, but not yet */
+#endif /* 0 */
   else
-    *kind = svn_invalid_kind;  /* Subversion does not recognize this kind. */
+    *kind = svn_node_unknown;
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_io_tmp_name (svn_string_t **tmp_name,
+                 svn_string_t *path,
+                 apr_pool_t *pool)
+{
+  char number_buf[6];
+  int i;
+  apr_size_t iterating_portion_idx;
+  const char *suffix = "tmp";
+
+  /* Would be nice to use process ID for the random portion, but
+     that's not portable.  So instead we use the pointer as an
+     unsigned int. */
+  int random_portion_width;
+  char *random_portion = apr_psprintf (pool, "%u%n",
+                                       tmp_name,
+                                       &random_portion_width);
+
+  *tmp_name = svn_string_dup (path, pool);
+
+  /* Not sure of a portable PATH_MAX constant to use here, so just
+     guessing at 255. */
+  if ((*tmp_name)->len >= 255)
+    {
+      int chop_amt = ((*tmp_name)->len - 255)
+                      + random_portion_width
+                      + 7
+                      + strlen (suffix);
+      svn_string_chop (*tmp_name, chop_amt);
+    }
+
+  iterating_portion_idx = (*tmp_name)->len + random_portion_width + 2;
+  svn_string_appendcstr (*tmp_name,
+                         apr_psprintf (pool, ".%s.00000.%s",
+                                       random_portion, suffix));
+
+  for (i = 1; i < 99999; i++)
+    {
+      svn_error_t *err;
+      enum svn_node_kind kind;
+
+      /* Tweak last attempted name to get the next one. */
+      sprintf (number_buf, "%05d", i);
+      (*tmp_name)->data[iterating_portion_idx + 0] = number_buf[0];
+      (*tmp_name)->data[iterating_portion_idx + 1] = number_buf[1];
+      (*tmp_name)->data[iterating_portion_idx + 2] = number_buf[2];
+      (*tmp_name)->data[iterating_portion_idx + 3] = number_buf[3];
+      (*tmp_name)->data[iterating_portion_idx + 4] = number_buf[4];
+
+      err = svn_io_check_path (*tmp_name, &kind, pool);
+      if (err)
+        return svn_error_quick_wrap (err, "svn_io_tmp_name: ");
+      else if (kind == svn_node_none)
+        return SVN_NO_ERROR;
+    }
+
+  *tmp_name = NULL;
+  return svn_error_createf (SVN_ERR_WC_UNIQUE_TMP_NAME_UNAVAILABLE,
+                            0,
+                            NULL,
+                            pool,
+                            "svn_io_tmp_name: unable to make a tmp name for "
+                            "%s", path->data);
 }
 
 

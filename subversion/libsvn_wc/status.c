@@ -86,7 +86,7 @@ add_status_structure (apr_hash_t *statushash,
     statstruct->flag = svn_wc_status_conflicted;
   else 
     {
-      if (entry->kind == svn_file_kind)
+      if (entry->kind == svn_node_file)
         {
           svn_boolean_t modified_p;
 
@@ -136,7 +136,7 @@ svn_wc_get_status (apr_hash_t *statushash,
   
   /* If path points to only one file, return just one status structure
      in the STATUSHASH */
-  if (kind == svn_file_kind)
+  if (kind == svn_node_file)
     {
       svn_string_t *dirpath, *basename;
 
@@ -165,7 +165,7 @@ svn_wc_get_status (apr_hash_t *statushash,
 
 
   /* Fill the hash with a status structure for *each* entry in PATH */
-  else if (kind == svn_dir_kind)
+  else if (kind == svn_node_dir)
     {
       apr_hash_index_t *hi;
 

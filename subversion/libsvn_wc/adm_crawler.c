@@ -419,7 +419,7 @@ do_postfix_text_deltas (apr_hash_t *affected_targets,
       apr_hash_this (hi, &key, &keylen, &val);
       tb = val;
 
-      if (tb->entry->kind != svn_file_kind)
+      if (tb->entry->kind != svn_node_file)
         continue;
 
       filepath = svn_string_create ((char *) key, pool);
@@ -556,7 +556,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
           
           /* Now replace the entry, either by calling replace_file()
              or replace_dir(). */
-          if (current_entry->kind == svn_file_kind)
+          if (current_entry->kind == svn_node_file)
             {
               struct target_baton *tb = apr_pcalloc (top_pool, sizeof (*tb));
               svn_string_t *longpath;
@@ -581,7 +581,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
                             longpath->data, longpath->len, tb);              
             }
 
-          else if (current_entry->kind == svn_dir_kind)
+          else if (current_entry->kind == svn_node_dir)
             {
               void *new_dir_baton;
               svn_string_t *new_path = svn_string_dup (path, subpool);
@@ -643,7 +643,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
       else if ((current_entry->flags) & SVN_WC__ENTRY_ADD)
         {
           /* Adding a new directory: */
-          if (current_entry->kind == svn_dir_kind)
+          if (current_entry->kind == svn_node_dir)
             {
               void *new_dir_baton;
               svn_string_t *new_path = svn_string_dup (path, subpool);
@@ -680,7 +680,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
             }
       
           /* Adding a new file: */
-          else if (current_entry->kind == svn_file_kind)
+          else if (current_entry->kind == svn_node_file)
             {
               struct target_baton *tb = apr_pcalloc (top_pool, sizeof (*tb));
               svn_string_t *longpath;
@@ -719,7 +719,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
         }
 
       /* Is this entry a modified file? */      
-      else if (current_entry->kind == svn_file_kind)      
+      else if (current_entry->kind == svn_node_file)      
         {
           struct target_baton *tb = apr_pcalloc (top_pool, sizeof (*tb));
           svn_string_t *longpath;
@@ -765,7 +765,7 @@ process_subdirectory (svn_string_t *path, void *dir_baton,
       /* Okay, we're not adding or deleting anything, nor is this a
          modified file.  However, if the this entry is a directory, we
          must recurse! */
-      else if ((current_entry->kind == svn_dir_kind) 
+      else if ((current_entry->kind == svn_node_dir) 
                && (current_entry_name != NULL))
         {
           /* Recurse, using a NULL dir_baton.  Why NULL?  Because that

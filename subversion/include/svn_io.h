@@ -60,10 +60,33 @@
 
 
 /* If PATH exists, set *KIND to the appropriate kind, else set it to
-   svn_invalid_kind. */
+   svn_unknown_kind. */
 svn_error_t *svn_io_check_path (svn_string_t *path,
                                 enum svn_node_kind *kind,
                                 apr_pool_t *pool);
+
+
+/* Set *TMP_NAME to a unique filename in the same directory as PATH.
+ *
+ * It doesn't matter if PATH is a file or directory, the tmp name will
+ * be in PATH's parent either way.
+ *
+ * *TMP_NAME will never be exactly the same as PATH, even if PATH does
+ * not exist.
+ * 
+ * *TMP_NAME is allocated in POOL.
+ *
+ * Since there's no guarantee how long the tmp name will remain unique
+ * after it is chosen, a part of the name is generated randomly; this
+ * makes on-disk collisions less likely, though it can't eliminate
+ * them entirely.
+ * 
+ * Avoiding C tmpnam() because not thread-safe.
+ * Avoiding C tempname() because it tries standard tmp areas first.
+ */
+svn_error_t *svn_io_tmp_name (svn_string_t **tmp_name,
+                              svn_string_t *path,
+                              apr_pool_t *pool);
 
 
 
@@ -102,10 +125,6 @@ typedef svn_error_t *svn_write_fn_t (void *baton,
 				     const char *data,
 				     apr_size_t *len,
 				     apr_pool_t *pool);
-
-
-
-
 
 
 /* A posix-like read function of type svn_read_fn_t (see above).
