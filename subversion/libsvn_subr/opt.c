@@ -2,7 +2,7 @@
  * opt.c :  option and argument parsing for Subversion command lines
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -688,7 +688,7 @@ print_version_info (const char *pgm_name,
                     apr_pool_t *pool)
 {
   static const char info[] =
-    "Copyright (C) 2000-2002 CollabNet.\n"
+    "Copyright (C) 2000-2003 CollabNet.\n"
     "Subversion is open source software, see http://subversion.tigris.org/\n";
 
   if (quiet)

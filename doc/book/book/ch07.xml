@@ -535,10 +535,10 @@ make_new_directory (const char *repos_path,
      
       <screen>
 $ svn --version
-svn, version 0.14.3 (dev build)
-   compiled Oct  7 2002, 07:52:08
+svn, version 0.16.0
+   compiled Jan  3 2003, 16:43:58
 
-Copyright (C) 2000-2002 CollabNet.
+Copyright (C) 2000-2003 CollabNet.
 Subversion is open source software, see http://subversion.tigris.org/
 
 The following repository access (RA) modules are available:

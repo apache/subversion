@@ -55,7 +55,7 @@ les plus évidents. Les utilisateurs actuels de CVS sont la la cible
 prévilégiée de Subversion. Tout utilisateur de CVS doit être capable
 d'utiliser Subversion après un petit effort.
 
-Collabnet (@uref{http://www.collab.net}) a fourni les moyens initiaux
+CollabNet (@uref{http://www.collab.net}) a fourni les moyens initiaux
 nécessaires en 2000 pour débuter le travail de développement. Cette
 initiative est devenue un important projet open-source poussé par la
 communauté des développeurs de logiciel libre.
@@ -680,10 +680,10 @@ disponible sur votre client Subversion :
 
 @example
 $ svn --version
-Subversion Client, version N
-compiled Jan 26 2002, 16:43:58
+svn, version 0.16.0
+   compiled Jan  3 2003, 16:43:58
 
-Copyright (C) 2000-2002 CollabNet.
+Copyright (C) 2000-2003 CollabNet.
 Subversion is open source software, see @uref{http://subversion.tigris.org/}
 
 The following repository access (RA) modules are available:

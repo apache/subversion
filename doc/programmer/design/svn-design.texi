@@ -1,10 +1,10 @@
 \input texinfo  @c -*-texinfo-*-
 
 @comment Subversion Design
-@comment Copyright (C) 1999, 2000 CollabNet
+@comment Copyright (C) 1999-2003 CollabNet
 
 @c  ================================================================
-@c  Copyright (c) 2000 CollabNet.  All rights reserved.
+@c  Copyright (c) 2000-2003 CollabNet.  All rights reserved.
 @c  
 @c  Redistribution and use in source and binary forms, with or without
 @c  modification, are permitted provided that the following conditions are
@@ -85,7 +85,7 @@ END-INFO-DIR-ENTRY
 
 @page
 @vskip 0pt plus 1filll
-Copyright @copyright{} 2000 Collab.Net, Inc. @*
+Copyright @copyright{} 2000-2003 Collab.Net, Inc. @*
 See @xref{License} for details. @*
 First version: June 2000.  @*
 $LastChangedDate$
