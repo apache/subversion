@@ -48,6 +48,11 @@ public class LogMessage
         return new Revision.Number(revision);
     }
 
+    public long getRevisionNumber()
+    {
+        return revision;
+    }
+
     public String getAuthor()
     {
         return author;
