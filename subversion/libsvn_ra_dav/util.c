@@ -45,15 +45,11 @@ typedef struct {
   svn_stringbuf_t *cdata_accum;              /* stringbuffer for CDATA */
 } neon_shim_baton_t;
 
-/** Find a given element in the table of elements.
- *
- * The table of XML elements @a table is searched until element identified by
- * namespace @a nspace and name @a name is found. If no elements are found,
- * tries to find and return element identified by @c ELEM_unknown. If that is
- * not found, returns NULL pointer. */
-static const svn_ra_dav__xml_elm_t *
-lookup_elem(const svn_ra_dav__xml_elm_t *table, const char *nspace,
-            const char *name)
+
+const svn_ra_dav__xml_elm_t *
+svn_ra_dav__lookup_xml_elem(const svn_ra_dav__xml_elm_t *table,
+                            const char *nspace,
+                            const char *name)
 {
   /* placeholder for `unknown' element if it's present */
   const svn_ra_dav__xml_elm_t *elem_unknown = NULL;
@@ -78,19 +74,20 @@ lookup_elem(const svn_ra_dav__xml_elm_t *table, const char *nspace,
 
 /** Fill in temporary structure for ELEM_unknown element.
  *
- * Call only for element ELEM_unknown!
- * For Neon 0.23 API compatibility, we need to fill the XML element structure
- * with real namespace and element name, as "old-style" handler used to get
- * that from Neon parser. This is a hack, so don't expect it to be elegant.
- * The @a elem_pointer is a reference to element pointer which is returned
- * by lookup_elem, and supposedly points at en entry in the XML elements
- * table supplied by an "old-style" handler. @a elem_unknown_temporary is
- * a reference to XML element structure allocated on the stack. There's
- * no reason to allocate it anywhere else because it's going to use
- * @a nspace and @a name which are passed into the "new-style" handler by
- * the Neon parser, so the structure pointed at by @a elem_unknown_temporary
- * must die when the calling function completes. This function is designed
- * to be called from "new-style" startelm and endelm callbacks. */
+ * Call only for element ELEM_unknown!  For Neon 0.23 API
+ * compatibility, we need to fill the XML element structure with real
+ * namespace and element name, as "old-style" handler used to get that
+ * from Neon parser. This is a hack, so don't expect it to be elegant.
+ * The @a elem_pointer is a reference to element pointer which is
+ * returned by svn_ra_dav__lookup_xml_elem, and supposedly points at
+ * en entry in the XML elements table supplied by an "old-style"
+ * handler. @a elem_unknown_temporary is a reference to XML element
+ * structure allocated on the stack. There's no reason to allocate it
+ * anywhere else because it's going to use @a nspace and @a name which
+ * are passed into the "new-style" handler by the Neon parser, so the
+ * structure pointed at by @a elem_unknown_temporary must die when the
+ * calling function completes. This function is designed to be called
+ * from "new-style" startelm and endelm callbacks. */
 static void
 handle_unknown(const svn_ra_dav__xml_elm_t **elem_pointer,
                svn_ra_dav__xml_elm_t *elem_unknown_temporary,
@@ -122,8 +119,8 @@ shim_startelm(void *userdata, int parent_state, const char *nspace,
 {
   neon_shim_baton_t *baton = userdata;
   svn_ra_dav__xml_elm_t elem_unknown_temporary;
-  const svn_ra_dav__xml_elm_t *elem = lookup_elem(baton->elements, nspace,
-                                                  name);
+  const svn_ra_dav__xml_elm_t *elem =
+    svn_ra_dav__lookup_xml_elem(baton->elements, nspace, name);
   int rc;
 
   if (!elem)
@@ -184,8 +181,8 @@ static int shim_endelm(void *userdata, int state, const char *nspace,
 {
   const neon_shim_baton_t *baton = userdata;
   svn_ra_dav__xml_elm_t elem_unknown_temporary;
-  const svn_ra_dav__xml_elm_t *elem = lookup_elem(baton->elements, nspace,
-                                                  name);
+  const svn_ra_dav__xml_elm_t *elem =
+    svn_ra_dav__lookup_xml_elem(baton->elements, nspace, name);
   int rc;
 
   if (!elem)
@@ -203,7 +200,21 @@ static int shim_endelm(void *userdata, int state, const char *nspace,
   return 0; /* no error */
 }
 
-void svn_ra_dav__xml_push_handler(ne_xml_parser *p,
+/** Push an XML handler onto Neon's handler stack.
+ *
+ * Parser @a p uses a stack of handlers to process XML. The handler is
+ * composed of validation callback @a validate_cb, start-element
+ * callback @a startelm_cb, and end-element callback @a endelm_cb, which
+ * collectively handle elements supplied in an array @a elements. Parser
+ * passes given user baton @a userdata to all callbacks.
+ * This is a new function on top of ne_xml_push_handler, adds memory pool
+ * @a pool as the last parameter. This parameter is not used with Neon
+ * 0.23.9, but will be with Neon 0.24. When Neon 0.24 is used, ra_dav
+ * receives calls from the new interface and performs functions described
+ * above by itself, using @a elements and calling callbacks according to
+ * 0.23 interface.
+ */
+static void shim_xml_push_handler(ne_xml_parser *p,
                                   const svn_ra_dav__xml_elm_t *elements,
                                   svn_ra_dav__xml_validate_cb validate_cb,
                                   svn_ra_dav__xml_startelm_cb startelm_cb,
@@ -442,22 +453,32 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
 
 
 
-svn_error_t *
-svn_ra_dav__parsed_request(ne_session *sess,
-                           const char *method,
-                           const char *url,
-                           const char *body,
-                           apr_file_t *body_file,
-                           void set_parser (ne_xml_parser *parser,
-                                            void *baton),
-                           const svn_ra_dav__xml_elm_t *elements, 
-                           svn_ra_dav__xml_validate_cb validate_cb,
-                           svn_ra_dav__xml_startelm_cb startelm_cb, 
-                           svn_ra_dav__xml_endelm_cb endelm_cb,
-                           void *baton,
-                           apr_hash_t *extra_headers,
-                           int *status_code,
-                           apr_pool_t *pool)
+/* See doc string for svn_ra_dav__parsed_request.  The only new
+   parameter here is use_neon_shim, which if true, means that
+   VALIDATE_CB, STARTELM_CB, and ENDELM_CB are expecting the old,
+   pre-0.24 Neon api, so use a shim layer to translate for them. */
+static svn_error_t *
+parsed_request(ne_session *sess,
+               const char *method,
+               const char *url,
+               const char *body,
+               apr_file_t *body_file,
+               void set_parser (ne_xml_parser *parser,
+                                void *baton),
+               const svn_ra_dav__xml_elm_t *elements,
+               svn_boolean_t use_neon_shim,
+               /* These three are defined iff use_neon_shim is defined. */
+               svn_ra_dav__xml_validate_cb validate_compat_cb,
+               svn_ra_dav__xml_startelm_cb startelm_compat_cb, 
+               svn_ra_dav__xml_endelm_cb endelm_compat_cb,
+               /* These three are defined iff use_neon_shim is NOT defined. */
+               ne_xml_startelm_cb *startelm_cb,
+               ne_xml_cdata_cb *cdata_cb,
+               ne_xml_endelm_cb *endelm_cb,
+               void *baton,
+               apr_hash_t *extra_headers,
+               int *status_code,
+               apr_pool_t *pool)
 {
   ne_request *req;
   ne_decompress *decompress_main;
@@ -506,9 +527,18 @@ svn_ra_dav__parsed_request(ne_session *sess,
 
   /* create a parser to read the normal response body */
   success_parser = ne_xml_create();
-  svn_ra_dav__xml_push_handler(success_parser, elements,
-                               validate_cb, startelm_cb, endelm_cb,
-                               baton, pool);
+
+  if (use_neon_shim)
+    {
+      shim_xml_push_handler(success_parser, elements,
+                            validate_compat_cb, startelm_compat_cb,
+                            endelm_compat_cb, baton, pool);
+    }
+  else
+    {
+      ne_xml_push_handler(success_parser, startelm_cb, cdata_cb,
+                          endelm_cb, baton);
+    }
 
   /* ### HACK: Set the parser's error to the empty string.  Someday we
      hope neon will let us have an easy way to tell the difference
@@ -525,9 +555,13 @@ svn_ra_dav__parsed_request(ne_session *sess,
 
   /* create a parser to read the <D:error> response body */
   error_parser = ne_xml_create();
-  svn_ra_dav__xml_push_handler(error_parser, error_elements,
-                               validate_error_elements, start_err_element,
-                               end_err_element, &err, pool); 
+
+  /* ### The error callbacks are local to this file and are still
+     ### using the Neon <= 0.23 API.  They need to be upgraded.  In
+     ### the meantime, we ignore the value of use_neon_shim here. */
+  shim_xml_push_handler(error_parser, error_elements,
+                        validate_error_elements, start_err_element,
+                        end_err_element, &err, pool);
 
   /* Register the "main" accepter and body-reader with the request --
      the one to use when the HTTP status is 2XX */
@@ -631,7 +665,55 @@ svn_ra_dav__parsed_request(ne_session *sess,
 }
 
 
+svn_error_t *
+svn_ra_dav__parsed_request(ne_session *sess,
+                           const char *method,
+                           const char *url,
+                           const char *body,
+                           apr_file_t *body_file,
+                           void set_parser (ne_xml_parser *parser,
+                                            void *baton),
+                           ne_xml_startelm_cb *startelm_cb,
+                           ne_xml_cdata_cb *cdata_cb,
+                           ne_xml_endelm_cb *endelm_cb,
+                           void *baton,
+                           apr_hash_t *extra_headers,
+                           int *status_code,
+                           apr_pool_t *pool)
+{
+  return parsed_request(sess, method, url,
+                        body, body_file, set_parser, NULL, FALSE,
+                        NULL, NULL, NULL, startelm_cb, cdata_cb, endelm_cb,
+                        baton, extra_headers, status_code, pool);
+}
 
+
+svn_error_t *
+svn_ra_dav__parsed_request_compat(ne_session *sess,
+                                  const char *method,
+                                  const char *url,
+                                  const char *body,
+                                  apr_file_t *body_file,
+                                  void set_parser (ne_xml_parser *parser,
+                                                   void *baton),
+                                  const svn_ra_dav__xml_elm_t *elements, 
+                                  svn_ra_dav__xml_validate_cb validate_cb,
+                                  svn_ra_dav__xml_startelm_cb startelm_cb, 
+                                  svn_ra_dav__xml_endelm_cb endelm_cb,
+                                  void *baton,
+                                  apr_hash_t *extra_headers,
+                                  int *status_code,
+                                  apr_pool_t *pool)
+{
+  return parsed_request(sess, method, url,
+                        body, body_file, set_parser, elements,
+                        TRUE, validate_cb, startelm_cb, endelm_cb,
+                        NULL, NULL, NULL, baton, extra_headers, status_code,
+                        pool);
+}
+
+
+
 svn_error_t *
 svn_ra_dav__maybe_store_auth_info(svn_ra_session_t *ras)
 {
@@ -667,9 +749,9 @@ svn_ra_dav__request_dispatch(int *code_p,
 
   /* attach a standard <D:error> body parser to the request */
   error_parser = ne_xml_create();
-  svn_ra_dav__xml_push_handler(error_parser, error_elements,
-                               validate_error_elements, start_err_element,
-                               end_err_element, &err, pool);
+  shim_xml_push_handler(error_parser, error_elements,
+                        validate_error_elements, start_err_element,
+                        end_err_element, &err, pool);
   ne_add_response_body_reader(request, ra_dav_error_accepter,
                               ne_xml_parse_v, error_parser);
 

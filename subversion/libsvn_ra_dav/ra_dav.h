@@ -75,63 +75,45 @@ typedef struct {
 } svn_ra_dav__xml_elm_t;
 
 
-/** (Neon 0.23) Validate a new child element.
+/** (Neon 0.23) Callback to validate a new child element.
  *
- * Callback for @c svn_ra_dav__xml_push_handler. @a parent and @a child
- * are element ids found in the array of elements, @a userdata is a user
- * baton. Returns:
+ * @a parent and @a child are element ids found in the array of
+ * elements, @a userdata is a user baton. Returns:
+ *
  * SVN_RA_DAV__XML_VALID   - this is a valid element processed by this
  *                           handler;
  * SVN_RA_DAV__XML_INVALID - this is not a valid element, parsing should
  *                           stop;
  * SVN_RA_DAV__XML_DECLINE - this handler doesn't know about this element,
- *                           someone else may handle it. */
+ *                           someone else may handle it.
+ * 
+ * (See @a shim_xml_push_handler in util.c for more information.) */
 typedef int svn_ra_dav__xml_validate_cb(void *userdata,
                                         svn_ra_dav__xml_elmid parent,
                                         svn_ra_dav__xml_elmid child);
 
-/** (Neon 0.23) Start parsing a new child element.
+/** (Neon 0.23) Callback to start parsing a new child element.
  *
- * Callback for @c svn_ra_dav__xml_push_handler. @a userdata is a user
- * baton. @elm is a member of elements array, and @a atts is an array
- * of name-value XML attributes.
- * See @c svn_ra_dav__xml_validate_cb for return values. */
+ * @a userdata is a user baton. @elm is a member of elements array,
+ * and @a atts is an array of name-value XML attributes.
+ * See @c svn_ra_dav__xml_validate_cb for return values. 
+ *
+ * (See @a shim_xml_push_handler in util.c for more information.) */
 typedef int svn_ra_dav__xml_startelm_cb(void *userdata,
                                         const svn_ra_dav__xml_elm_t *elm,
                                         const char **atts);
 
-/** (Neon 0.23) Finish parsing a child element.
+/** (Neon 0.23) Callback to finish parsing a child element.
  *
  * Callback for @c svn_ra_dav__xml_push_handler. @a userdata is a user
  * baton. @elm is a member of elements array, and @a cdata is the contents
  * of the element.
- * See @c svn_ra_dav__xml_validate_cb for return values. */
+ * See @c svn_ra_dav__xml_validate_cb for return values.
+ *
+ * (See @a shim_xml_push_handler in util.c for more information.) */
 typedef int svn_ra_dav__xml_endelm_cb(void *userdata,
                                       const svn_ra_dav__xml_elm_t *elm,
                                       const char *cdata);
-
-
-/** Push an XML handler onto Neon's handler stack.
- *
- * Parser @a p uses a stack of handlers to process XML. The handler is
- * composed of validation callback @a validate_cb, start-element
- * callback @a startelm_cb, and end-element callback @a endelm_cb, which
- * collectively handle elements supplied in an array @a elements. Parser
- * passes given user baton @a userdata to all callbacks.
- * This is a new function on top of ne_xml_push_handler, adds memory pool
- * @a pool as the last parameter. This parameter is not used with Neon
- * 0.23.9, but will be with Neon 0.24. When Neon 0.24 is used, ra_dav
- * receives calls from the new interface and performs functions described
- * above by itself, using @a elements and calling callbacks according to
- * 0.23 interface.
- */
-void svn_ra_dav__xml_push_handler(ne_xml_parser *p,
-                                  const svn_ra_dav__xml_elm_t *elements,
-                                  svn_ra_dav__xml_validate_cb validate_cb,
-                                  svn_ra_dav__xml_startelm_cb startelm_cb,
-                                  svn_ra_dav__xml_endelm_cb endelm_cb,
-                                  void *userdata,
-                                  apr_pool_t *pool);
 
 
 
@@ -494,16 +476,26 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
                                                 apr_file_t *body_file);
 
 
+/** Find a given element in the table of elements.
+ *
+ * The table of XML elements @a table is searched until element identified by
+ * namespace @a nspace and name @a name is found. If no elements are found,
+ * tries to find and return element identified by @c ELEM_unknown. If that is
+ * not found, returns NULL pointer. */
+const svn_ra_dav__xml_elm_t *
+svn_ra_dav__lookup_xml_elem(const svn_ra_dav__xml_elm_t *table,
+                            const char *nspace,
+                            const char *name);
+
+
 /* Send a METHOD request (e.g., "MERGE", "REPORT", "PROPFIND") to URL
  * in session SESS, and parse the response.  If BODY is non-null, it is
  * the body of the request, else use the contents of file BODY_FILE
  * as the body.
  *
- * ELEMENTS is the set of xml elements to recognize in the response.
- *
  * VALIDATE_CB, STARTELM_CB, and ENDELM_CB are Neon validation, start
- * element, and end element handlers, respectively.  BATON is passed
- * to each as userdata.
+ * element, and end element handlers, respectively, from Neon > 0.24.
+ * BATON is passed to each as userdata.
  *
  * SET_PARSER is a callback function which, if non-NULL, is called
  * with the XML parser and BATON.  This is useful for providers of
@@ -525,15 +517,39 @@ svn_ra_dav__parsed_request(ne_session *sess,
                            apr_file_t *body_file,
                            void set_parser (ne_xml_parser *parser,
                                             void *baton),
-                           const svn_ra_dav__xml_elm_t *elements, 
-                           svn_ra_dav__xml_validate_cb validate_cb,
-                           svn_ra_dav__xml_startelm_cb startelm_cb, 
-                           svn_ra_dav__xml_endelm_cb endelm_cb,
+                           ne_xml_startelm_cb *startelm_cb,
+                           ne_xml_cdata_cb *cdata_cb,
+                           ne_xml_endelm_cb *endelm_cb,
                            void *baton,
                            apr_hash_t *extra_headers,
                            int *status_code,
                            apr_pool_t *pool);
   
+
+/* Same as svn_ra_dav__parsed_request, except:
+ *
+ * ELEMENTS is the set of xml elements to recognize in the response.
+ *
+ * The callbacks VALIDATE_CB, STARTELM_CB, and ENDELM_CB, are written
+ * for the Neon <= 0.23 API.
+ */
+svn_error_t *
+svn_ra_dav__parsed_request_compat(ne_session *sess,
+                                  const char *method,
+                                  const char *url,
+                                  const char *body,
+                                  apr_file_t *body_file,
+                                  void set_parser (ne_xml_parser *parser,
+                                                   void *baton),
+                                  const svn_ra_dav__xml_elm_t *elements, 
+                                  svn_ra_dav__xml_validate_cb validate_cb,
+                                  svn_ra_dav__xml_startelm_cb startelm_cb, 
+                                  svn_ra_dav__xml_endelm_cb endelm_cb,
+                                  void *baton,
+                                  apr_hash_t *extra_headers,
+                                  int *status_code,
+                                  apr_pool_t *pool);
+
 
 /* ### add SVN_RA_DAV_ to these to prefix conflicts with (sys) headers? */
 enum {
@@ -570,6 +586,7 @@ enum {
   ELEM_merge_response,
   ELEM_merged_set,
   ELEM_options_response,
+  ELEM_set_prop,
   ELEM_remove_prop,
   ELEM_resourcetype,
   ELEM_get_content_length,
@@ -592,6 +609,7 @@ enum {
   ELEM_delete_entry,
   ELEM_fetch_file,
   ELEM_fetch_props,
+  ELEM_txdelta,
   ELEM_log_date,
   ELEM_log_item,
   ELEM_log_report,

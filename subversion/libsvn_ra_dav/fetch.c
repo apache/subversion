@@ -42,6 +42,7 @@
 #include "svn_delta.h"
 #include "svn_io.h"
 #include "svn_md5.h"
+#include "svn_base64.h"
 #include "svn_ra.h"
 #include "svn_path.h"
 #include "svn_xml.h"
@@ -54,7 +55,7 @@
 #define CHKERR(e)               \
 do {                            \
   if ((rb->err = (e)) != NULL)  \
-    return SVN_RA_DAV__XML_INVALID;      \
+    return NE_XML_ABORT;        \
 } while(0)
 
 typedef struct {
@@ -152,6 +153,22 @@ typedef struct {
   svn_stringbuf_t *cpathstr;
   svn_stringbuf_t *href;
 
+  /* Empty string means no encoding, "base64" means base64. */
+  svn_stringbuf_t *encoding;
+
+  /* These are used when receiving an inline txdelta, and null at all
+     other times. */
+  svn_txdelta_window_handler_t whandler;
+  void *whandler_baton;
+  svn_stream_t *svndiff_decoder;
+  svn_stream_t *base64_decoder;
+
+  /* A generic accumulator for elements that have small bits of cdata,
+     like md5_checksum, href, etc.  Uh, or where our own API gives us
+     no choice about holding them in memory, as with prop values, ahem.  
+     This is always the empty stringbuf when not in use. */
+  svn_stringbuf_t *cdata_accum;
+
   const char *current_wcprop_path;
   svn_boolean_t is_switch;
 
@@ -167,13 +184,19 @@ typedef struct {
      it's not really updating the top level directory. */
   const char *target;
 
+  /* A modern server will understand our "send-all" attribute on the
+     update report request, and will put a "send-all" attribute on
+     its response.  If we see that attribute, we set this to true,
+     otherwise, it stays false (i.e., it's not a modern server). */
+  svn_boolean_t receiving_all;
+
   svn_error_t *err;
 
 } report_baton_t;
 
-static const char report_head[] = "<S:update-report xmlns:S=\""
-                                   SVN_XML_NAMESPACE
-                                   "\">" DEBUG_CR;
+static const char report_head[]
+   = "<S:update-report send-all=\"true\" xmlns:S=\""
+      SVN_XML_NAMESPACE "\">" DEBUG_CR;
 static const char report_tail[] = "</S:update-report>" DEBUG_CR;
 
 static const svn_ra_dav__xml_elm_t report_elements[] =
@@ -187,9 +210,11 @@ static const svn_ra_dav__xml_elm_t report_elements[] =
   { SVN_XML_NAMESPACE, "absent-directory", ELEM_absent_directory, 0 },
   { SVN_XML_NAMESPACE, "open-file", ELEM_open_file, 0 },
   { SVN_XML_NAMESPACE, "add-file", ELEM_add_file, 0 },
+  { SVN_XML_NAMESPACE, "txdelta", ELEM_txdelta, 0 },
   { SVN_XML_NAMESPACE, "absent-file", ELEM_absent_file, 0 },
   { SVN_XML_NAMESPACE, "delete-entry", ELEM_delete_entry, 0 },
   { SVN_XML_NAMESPACE, "fetch-props", ELEM_fetch_props, 0 },
+  { SVN_XML_NAMESPACE, "set-prop", ELEM_set_prop, 0 },
   { SVN_XML_NAMESPACE, "remove-prop", ELEM_remove_prop, 0 },
   { SVN_XML_NAMESPACE, "fetch-file", ELEM_fetch_file, 0 },
   { SVN_XML_NAMESPACE, "prop", ELEM_SVN_prop, 0 },
@@ -1044,12 +1069,12 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
                       svn_time_to_cstring(timestamp, pool));
 
   *revision = SVN_INVALID_REVNUM;
-  err = svn_ra_dav__parsed_request(ras->sess, "REPORT",
-                                   ras->root.path, body, NULL, NULL,
-                                   drev_report_elements,
-                                   drev_validate_element,
-                                   drev_start_element, drev_end_element,
-                                   revision, NULL, NULL, pool);
+  err = svn_ra_dav__parsed_request_compat(ras->sess, "REPORT",
+                                          ras->root.path, body, NULL, NULL,
+                                          drev_report_elements,
+                                          drev_validate_element,
+                                          drev_start_element, drev_end_element,
+                                          revision, NULL, NULL, pool);
   if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
     return svn_error_quick_wrap(err, "Server does not support date-based "
                                 "operations.");
@@ -1281,6 +1306,7 @@ static int validate_element(void *userdata,
           || child == ELEM_open_file
           || child == ELEM_add_file
           || child == ELEM_fetch_props
+          || child == ELEM_set_prop
           || child == ELEM_remove_prop
           || child == ELEM_delete_entry
           || child == ELEM_SVN_prop
@@ -1294,6 +1320,7 @@ static int validate_element(void *userdata,
           || child == ELEM_add_directory
           || child == ELEM_absent_file
           || child == ELEM_add_file
+          || child == ELEM_set_prop
           || child == ELEM_SVN_prop
           || child == ELEM_checked_in)
         return SVN_RA_DAV__XML_VALID;
@@ -1304,7 +1331,9 @@ static int validate_element(void *userdata,
       if (child == ELEM_checked_in
           || child == ELEM_fetch_file
           || child == ELEM_SVN_prop
+          || child == ELEM_txdelta
           || child == ELEM_fetch_props
+          || child == ELEM_set_prop
           || child == ELEM_remove_prop)
         return SVN_RA_DAV__XML_VALID;
       else
@@ -1312,6 +1341,8 @@ static int validate_element(void *userdata,
 
     case ELEM_add_file:
       if (child == ELEM_checked_in
+          || child == ELEM_txdelta
+          || child == ELEM_set_prop
           || child == ELEM_SVN_prop)
         return SVN_RA_DAV__XML_VALID;
       else
@@ -1322,6 +1353,10 @@ static int validate_element(void *userdata,
         return SVN_RA_DAV__XML_VALID;
       else
         return SVN_RA_DAV__XML_INVALID;
+
+    case ELEM_set_prop:
+      /* Prop name is an attribute, prop value is CDATA, so no child elts. */
+      return SVN_RA_DAV__XML_VALID;
 
     case ELEM_SVN_prop:
       /*      if (child == ELEM_version_name
@@ -1367,9 +1402,10 @@ static void push_dir(report_baton_t *rb,
   di->pool = pool;
 }
 
-/* This implements the `svn_ra_dav__xml_startelm_cb' prototype. */
-static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
-                         const char **atts)
+/* This implements the `ne_xml_startelm_cb' prototype. */
+static int
+start_element(void *userdata, int parent_state, const char *nspace,
+              const char *elt_name, const char **atts)
 {
   report_baton_t *rb = userdata;
   const char *att;
@@ -1383,9 +1419,29 @@ static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
   svn_stringbuf_t *pathbuf;
   apr_pool_t *subpool;
   const char *base_checksum = NULL;
+  const svn_ra_dav__xml_elm_t *elm;
+  int rc;
+
+  elm = svn_ra_dav__lookup_xml_elem(report_elements, nspace, elt_name);
+
+  if (elm == NULL)
+    return NE_XML_DECLINE;
+
+  rc = validate_element(NULL, parent_state, elm->id);
+
+  if (rc != SVN_RA_DAV__XML_VALID)
+    return (rc == SVN_RA_DAV__XML_DECLINE) ? NE_XML_DECLINE : NE_XML_ABORT;
 
   switch (elm->id)
     {
+    case ELEM_update_report:
+      att = get_attr(atts, "send-all");
+
+      if (att && (strcmp(att, "true") == 0))
+        rb->receiving_all = TRUE;
+
+      break;
+
     case ELEM_target_revision:
       att = get_attr(atts, "rev");
       /* ### verify we got it. punt on error. */
@@ -1509,15 +1565,21 @@ static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
       /* push the new baton onto the directory baton stack */
       push_dir(rb, new_dir_baton, pathbuf, subpool);
 
-      /* Property fetching is implied in addition. */
+      /* Property fetching is implied in addition.  This flag is only
+         for parsing old-style reports; it is ignored when talking to
+         a modern server. */
       TOP_DIR(rb).fetch_props = TRUE;
 
       bc_url = get_attr(atts, "bc-url");
-      if (bc_url)
+
+      /* In non-modern report responses, we're just told to fetch the
+         props later.  In that case, we can at least do a pre-emptive
+         depth-1 propfind on the directory right now; this prevents
+         individual propfinds on added-files later on, thus reducing
+         the number of network turnarounds (though not by as much as
+         simply getting a modern report response!).  */
+      if ((! rb->receiving_all) && bc_url)
         {
-          /* Cool, we can do a pre-emptive depth-1 propfind on the
-             directory; this prevents us from doing individual
-             propfinds on added-files later on.  */
           apr_hash_t *bc_children;
           CHKERR( svn_ra_dav__get_props(&bc_children,
                                         rb->ras->sess2,
@@ -1615,9 +1677,40 @@ static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
                                       crev, rb->file_pool,
                                       &rb->file_baton) );
 
-      /* Property fetching is implied in addition. */
+      /* Property fetching is implied in addition.  This flag is only
+         for parsing old-style reports; it is ignored when talking to
+         a modern server. */
       rb->fetch_props = TRUE;
 
+      break;
+
+    case ELEM_txdelta:
+      CHKERR( (*rb->editor->apply_textdelta)(rb->file_baton,
+                                             NULL, /* ### base_checksum */
+                                             rb->file_pool,
+                                             &(rb->whandler),
+                                             &(rb->whandler_baton)) );
+      
+      rb->svndiff_decoder = svn_txdelta_parse_svndiff(rb->whandler,
+                                                      rb->whandler_baton,
+                                                      TRUE, rb->file_pool);
+      
+      rb->base64_decoder = svn_base64_decode(rb->svndiff_decoder,
+                                             rb->file_pool);
+      break;
+
+    case ELEM_set_prop:
+      {
+        const char *encoding = get_attr(atts, "encoding");
+        name = get_attr(atts, "name");
+        /* ### verify we got it. punt on error. */
+        svn_stringbuf_set(rb->namestr, name);
+        if (encoding)
+          svn_stringbuf_set(rb->encoding, encoding);
+        else
+          svn_stringbuf_setempty(rb->encoding);
+      }
+      
       break;
 
     case ELEM_remove_prop:
@@ -1698,7 +1791,7 @@ static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
       break;
     }
 
-  return SVN_RA_DAV__XML_VALID;
+  return elm->id;
 }
 
 
@@ -1707,6 +1800,11 @@ add_node_props (report_baton_t *rb, apr_pool_t *pool)
 {
   svn_ra_dav_resource_t *rsrc = NULL;
   apr_hash_t *props = NULL;
+
+  /* Do nothing if parsing a modern report, because the properties
+     already come inline. */
+  if (rb->receiving_all)
+    return SVN_NO_ERROR;
 
   /* Do nothing if we aren't fetching content.  */
   if (!rb->fetch_content)
@@ -1769,13 +1867,54 @@ add_node_props (report_baton_t *rb, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* This implements the `svn_ra_dav__xml_endelm_cb' prototype. */
-static int end_element(void *userdata, 
-                       const svn_ra_dav__xml_elm_t *elm,
-                       const char *cdata)
+/* This implements the `ne_xml_cdata_cb' prototype. */
+static int cdata_handler(void *userdata, int state,
+                         const char *cdata, size_t len)
+{
+  report_baton_t *rb = userdata;
+
+  switch(state)
+    {
+    case ELEM_href:
+    case ELEM_set_prop:
+    case ELEM_md5_checksum:
+    case ELEM_version_name:
+    case ELEM_creationdate:
+    case ELEM_creator_displayname:
+      svn_stringbuf_appendbytes(rb->cdata_accum, cdata, len);
+      break;
+
+    case ELEM_txdelta:
+      {
+        apr_size_t nlen = len;
+
+        CHKERR( svn_stream_write(rb->base64_decoder, cdata, &nlen) );
+        if (nlen != len)
+          {
+            /* Short write without associated error?  "Can't happen." */
+            CHKERR( svn_error_createf(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
+                                      "error writing to '%s'",
+                                      rb->namestr->data) );
+          }
+      }
+      break;
+    }
+
+  return 0; /* no error */
+}
+
+/* This implements the `ne_xml_endelm_cb' prototype. */
+static int end_element(void *userdata, int state,
+                       const char *nspace, const char *elt_name)
 {
   report_baton_t *rb = userdata;
   const svn_delta_editor_t *editor = rb->editor;
+  const svn_ra_dav__xml_elm_t *elm;
+
+  elm = svn_ra_dav__lookup_xml_elem(report_elements, nspace, elt_name);
+
+  if (elm == NULL)
+    return NE_XML_DECLINE;
 
   switch (elm->id)
     {
@@ -1811,19 +1950,22 @@ static int end_element(void *userdata,
          retrieve the href before fetching. */
 
       /* fetch file */
-      CHKERR( simple_fetch_file(rb->ras->sess2,
-                                rb->href->data,
-                                TOP_DIR(rb).pathbuf->data,
-                                rb->fetch_content,
-                                rb->file_baton,
-                                NULL,  /* no base checksum in an add */
-                                rb->editor,
-                                rb->ras->callbacks->get_wc_prop,
-                                rb->ras->callback_baton,
-                                rb->file_pool) );
+      if (! rb->receiving_all)
+        {
+          CHKERR( simple_fetch_file(rb->ras->sess2,
+                                    rb->href->data,
+                                    TOP_DIR(rb).pathbuf->data,
+                                    rb->fetch_content,
+                                    rb->file_baton,
+                                    NULL,  /* no base checksum in an add */
+                                    rb->editor,
+                                    rb->ras->callbacks->get_wc_prop,
+                                    rb->ras->callback_baton,
+                                    rb->file_pool) );
 
-      /* fetch node props as necessary. */
-      CHKERR( add_node_props(rb, rb->file_pool) );
+          /* fetch node props as necessary. */
+          CHKERR( add_node_props(rb, rb->file_pool) );
+        }
 
       /* close the file and mark that we are no longer operating on a file */
       CHKERR( (*rb->editor->close_file)(rb->file_baton,
@@ -1835,6 +1977,14 @@ static int end_element(void *userdata,
       svn_path_remove_component(TOP_DIR(rb).pathbuf);
       svn_pool_destroy(rb->file_pool);
       rb->file_pool = NULL;
+      break;
+
+    case ELEM_txdelta:
+      CHKERR( svn_stream_close(rb->base64_decoder) );
+      rb->whandler = NULL;
+      rb->whandler_baton = NULL;
+      rb->svndiff_decoder = NULL;
+      rb->base64_decoder = NULL;
       break;
 
     case ELEM_open_file:
@@ -1853,13 +2003,61 @@ static int end_element(void *userdata,
       rb->file_pool = NULL;
       break;
 
+    case ELEM_set_prop:
+      {
+        svn_string_t decoded_value;
+        const svn_string_t *decoded_value_p;
+        apr_pool_t *pool;
+        
+        if (rb->file_baton)
+          pool = rb->file_pool;
+        else
+          pool = TOP_DIR(rb).pool;
+
+        decoded_value.data = rb->cdata_accum->data;
+        decoded_value.len = rb->cdata_accum->len;
+
+        /* Determine the cdata encoding, if any. */
+        if (svn_stringbuf_isempty(rb->encoding))
+          {
+            decoded_value_p = &decoded_value;
+          }
+        else if (strcmp(rb->encoding->data, "base64") == 0)
+          {
+            decoded_value_p = svn_base64_decode_string(&decoded_value, pool);
+            svn_stringbuf_setempty(rb->encoding);
+          }
+        else
+          {
+            CHKERR( svn_error_createf(SVN_ERR_XML_UNKNOWN_ENCODING, NULL,
+                                      "'%s'", rb->encoding->data) );
+            svn_stringbuf_setempty(rb->encoding);  /* probably pointless */
+          }
+
+        /* Set the prop. */
+        if (rb->file_baton)
+          {
+            rb->editor->change_file_prop(rb->file_baton, rb->namestr->data, 
+                                         decoded_value_p, pool);
+          }
+        else
+          {
+            rb->editor->change_dir_prop(TOP_DIR(rb).baton, rb->namestr->data, 
+                                        decoded_value_p, pool);
+          }
+      }
+
+      svn_stringbuf_setempty(rb->cdata_accum);
+      break;
+      
     case ELEM_href:
       /* do nothing if we aren't fetching content. */
       if (!rb->fetch_content)
         break;
-
+      
       /* record the href that we just found */
-      svn_ra_dav__copy_href(rb->href, cdata);
+      svn_ra_dav__copy_href(rb->href, rb->cdata_accum->data);
+      svn_stringbuf_setempty(rb->cdata_accum);
       
       /* if we're within a <resource> tag, then just call the generic
          RA set_wcprop_callback directly;  no need to use the
@@ -1908,7 +2106,11 @@ static int end_element(void *userdata,
     case ELEM_md5_checksum:
       /* We only care about file checksums. */
       if (rb->file_baton)
-        rb->result_checksum = apr_pstrdup(rb->file_pool, cdata);
+        {
+          rb->result_checksum = apr_pstrdup(rb->file_pool,
+                                            rb->cdata_accum->data);
+        }
+      svn_stringbuf_setempty(rb->cdata_accum);
       break;
 
     case ELEM_version_name:
@@ -1924,9 +2126,10 @@ static int end_element(void *userdata,
         void *baton = rb->file_baton ? rb->file_baton : TOP_DIR(rb).baton;
         svn_string_t valstr;
 
-        valstr.data = cdata;
-        valstr.len = strlen(cdata);
+        valstr.data = rb->cdata_accum->data;
+        valstr.len = rb->cdata_accum->len;
         CHKERR( set_special_wc_prop(name, &valstr, setter, baton, pool) );
+        svn_stringbuf_setempty(rb->cdata_accum);
       }
       break;
   
@@ -1934,7 +2137,7 @@ static int end_element(void *userdata,
       break;
     }
 
-  return SVN_RA_DAV__XML_VALID;
+  return 0;
 }
 
 
@@ -2085,6 +2288,7 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   rb->dirs = apr_array_make(rb->ras->pool, 5, sizeof(dir_item_t));
   rb->namestr = MAKE_BUFFER(rb->ras->pool);
   rb->cpathstr = MAKE_BUFFER(rb->ras->pool);
+  rb->encoding = MAKE_BUFFER(rb->ras->pool);
   rb->href = MAKE_BUFFER(rb->ras->pool);
 
   /* get the VCC.  if this doesn't work out for us, don't forget to
@@ -2099,8 +2303,10 @@ static svn_error_t * reporter_finish_report(void *report_baton)
   /* dispatch the REPORT. */
   err = svn_ra_dav__parsed_request(rb->ras->sess, "REPORT", vcc,
                                    NULL, rb->tmpfile, NULL,
-                                   report_elements, validate_element,
-                                   start_element, end_element, rb,
+                                   start_element,
+                                   cdata_handler,
+                                   end_element,
+                                   rb,
                                    NULL, &http_status, rb->ras->pool);
 
   /* we're done with the file */
@@ -2168,6 +2374,12 @@ make_reporter (void *session_baton,
   rb->fetch_content = fetch_content;
   rb->is_switch = dst_path ? TRUE : FALSE;
   rb->target = target;
+  rb->receiving_all = FALSE;
+  rb->whandler = NULL;
+  rb->whandler_baton = NULL;
+  rb->svndiff_decoder = NULL;
+  rb->base64_decoder = NULL;
+  rb->cdata_accum = svn_stringbuf_create("", pool);
 
   /* Neon "pulls" request body content from the caller. The reporter is
      organized where data is "pushed" into self. To match these up, we use

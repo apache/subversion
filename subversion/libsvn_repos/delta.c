@@ -498,8 +498,8 @@ change_file_prop (struct context *c,
 
 /* Generate the appropriate property editing calls to turn the
    properties of SOURCE_PATH into those of TARGET_PATH.  If
-   SOURCE_PATH is NULL, treat it as if it were a file with no
-   properties.  Pass OBJECT on to the editor function wrapper
+   SOURCE_PATH is NULL, this is an add, so assume the target starts
+   with no properties.  Pass OBJECT on to the editor function wrapper
    CHANGE_FN. */
 static svn_error_t *
 delta_proplists (struct context *c,
@@ -547,20 +547,29 @@ delta_proplists (struct context *c,
           /* Transmit the committed-date. */
           svn_fs_revision_prop (&committed_date, fs, committed_rev, 
                                 SVN_PROP_REVISION_DATE, subpool);
-          SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_COMMITTED_DATE, 
-                              committed_date, subpool));
+          if (committed_date || source_path)
+            {
+              SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_COMMITTED_DATE, 
+                                  committed_date, subpool));
+            }
 
           /* Transmit the last-author. */
           svn_fs_revision_prop (&last_author, fs, committed_rev, 
                                 SVN_PROP_REVISION_AUTHOR, subpool);
-          SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_LAST_AUTHOR,
-                              last_author, subpool));
+          if (last_author || source_path)
+            {
+              SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_LAST_AUTHOR,
+                                  last_author, subpool));
+            }
 
           /* Transmit the UUID. */
           svn_fs_get_uuid (fs, &uuid, subpool);
-          SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_UUID,
-                              svn_string_create(uuid, subpool),
-                              subpool));
+          if (uuid || source_path)
+            {
+              SVN_ERR (change_fn (c, object, SVN_PROP_ENTRY_UUID,
+                                  svn_string_create(uuid, subpool),
+                                  subpool));
+            }
         }
     }
 
