@@ -294,7 +294,9 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
         if (! strcmp (text_timestr->data, SVN_WC_TIMESTAMP_WC))
           {
             /* Special case:  a magic string that means 'get this value
-               from the working copy' -- we ignore it here. */
+               from the working copy' -- we ignore it here, trusting
+               that the caller of this function know what to do about
+               it.  */
           }
         else
           entry->text_time = svn_wc__string_to_time (text_timestr);
@@ -310,7 +312,9 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
         if (! strcmp (prop_timestr->data, SVN_WC_TIMESTAMP_WC))
           {
             /* Special case:  a magic string that means 'get this value
-               from the working copy' -- we ignore it here. */
+               from the working copy' -- we ignore it here, trusting
+               that the caller of this function know what to do about
+               it.  */
           }
         else
           entry->prop_time = svn_wc__string_to_time (prop_timestr);
