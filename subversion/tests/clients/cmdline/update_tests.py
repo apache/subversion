@@ -1002,16 +1002,21 @@ def update_receive_illegal_name(sbox):
 
   # This tests the revision 4334 fix for issue #1068.
   wc_dir = sbox.wc_dir
+  legal_url = svntest.main.current_repo_url + '/A/D/G/svn'
   illegal_url = svntest.main.current_repo_url + '/A/D/G/.svn'
-  outlines, errlines = svntest.main.run_svn(None, 'mkdir', '-m', 'log msg',
-                                            illegal_url)
+  # Ha!  The client doesn't allow us to mkdir a '.svn' but it does
+  # allow us to copy to a '.svn' so ...
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', '-m', 'log msg',
+                                     legal_url)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mv', '-m', 'log msg',
+                                     legal_url, illegal_url)
   out, err = svntest.main.run_svn(1, 'up', wc_dir)
-
-  if err:
-    return 0
-  else:
-    return 1
-
+  for line in err:
+    if re.search("Obstructed update", line):
+      return 0
+  raise svntest.Failure
 
 ########################################################################
 # Run the tests
@@ -1031,12 +1036,7 @@ test_list = [ None,
               update_replace_dir,
               update_single_file,
               prop_update_on_scheduled_delete,
-              ### Skipping this test because our client no longer allows you
-              ### to do 'svn mkdir URL' where URL ends with '.svn'.  Karl
-              ### suggests that we use svnadmin load on a manufactured
-              ### dumpfile in order to get a repos with a .svn directory
-              ### in it.
-              Skip(update_receive_illegal_name, 1)
+              update_receive_illegal_name
              ]
 
 if __name__ == '__main__':
