@@ -90,6 +90,10 @@ def guarantee_greek_repository(path):
   if not os.path.exists(os.path.dirname(path)):
     os.makedirs(os.path.dirname(path))
   shutil.copytree(main.pristine_dir, path)
+
+  # make the repos world-writeable, for mod_dav_svn's sake.
+  os.system('chmod -R a+rw ' + path)
+    
   if os.path.exists(main.current_repo_dir):
     os.unlink(main.current_repo_dir)                              
   os.symlink(os.path.basename(path), main.current_repo_dir)
