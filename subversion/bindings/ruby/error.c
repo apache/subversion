@@ -104,6 +104,7 @@ svn_ruby_init_error (void)
   define_error (SVN_ERR_UNVERSIONED_RESOURCE, "UnversionedResource");
   define_error (SVN_ERR_UNFRUITFUL_DESCENT, "UnfruitfulDescent");
   define_error (SVN_ERR_BAD_FILENAME, "BadFilename");
+  define_error (SVN_ERR_BAD_URL, "BadURL");
   define_error (SVN_ERR_UNSUPPORTED_FEATURE, "UnsupportedFeature");
   define_error (SVN_ERR_UNKNOWN_NODE_KIND, "UnknownNodeKind");
   define_error (SVN_ERR_DELTA_MD5_CHECKSUM_ABSENT, "DeltaMd5ChecksumAbsent");
