@@ -76,25 +76,15 @@ chdir($tmp_dir)
     or die "$0: cannot chdir `$tmp_dir': $!\n";
 
 # get the auther, date, and log from svnlook
-my @command = ($svnlook, $repos, 'rev', $rev, 'info');
-my ($status, @svnlooklines) = &safe_read_from_pipe(@command);
-if ($status) {
-    die join("\n", "$0: @command failed with this output:", @svnlooklines),
-        "\n";
-}
+my @svnlooklines = &read_from_process($svnlook, $repos, 'rev', $rev, 'info');
 my $author = shift @svnlooklines;
 my $date = shift @svnlooklines;
 shift @svnlooklines;
 my @log = map { "$_\n" } @svnlooklines;
 
 # figure out what directories have changed (using svnlook)
-my @dirschanged;
-@command = ($svnlook, $repos, 'rev', $rev, 'dirs-changed');
-($status, @dirschanged) = &safe_read_from_pipe(@command);
-if ($status) {
-    die join("\n", "$0: @command failed with this output:", @dirschanged),
-        "\n";
-}
+my @dirschanged = &read_from_process($svnlook, $repos,
+                                     'rev', $rev, 'dirs-changed');
 my $rootchanged = 0;
 grep 
 {
@@ -105,12 +95,7 @@ grep
 @dirschanged; 
 
 # figure out what's changed (using svnlook)
-@command = ($svnlook, $repos, 'rev', $rev, 'changed');
-($status, @svnlooklines) = &safe_read_from_pipe(@command);
-if ($status) {
-    die join("\n", "$0: @command failed with this output:", @svnlooklines),
-        "\n";
-}
+@svnlooklines = &read_from_process($svnlook, $repos, 'rev', $rev, 'changed');
 
 # parse the changed nodes
 my @adds = ();
@@ -118,8 +103,8 @@ my @dels = ();
 my @mods = ();
 foreach my $line (@svnlooklines)
 {
-    my $path;
-    my $code;
+    my $path = '';
+    my $code = '';
 
     # split the line up into the modification code (ignore propmods) and path
     if ($line =~ /^(.).  (.*)$/)
@@ -140,13 +125,7 @@ foreach my $line (@svnlooklines)
 }
 
 # get the diff from svnlook
-my @difflines;
-@command = ($svnlook, $repos, 'rev', $rev, 'diff');
-($status, @difflines) = &safe_read_from_pipe(@command);
-if ($status) {
-    die join("\n", "$0: @command failed with this output:", @difflines),
-        "\n";
-}
+my @difflines = &read_from_process($svnlook, $repos, 'rev', $rev, 'diff');
 
 ######################################################################
 # Mail headers
@@ -305,5 +284,17 @@ sub safe_read_from_pipe {
     return ($result, @output);
   } else {
     return $result;
+  }
+}
+
+sub read_from_process {
+  unless (@_) {
+    croak "$0: read_from_process passed no arguments.\n";
+  }
+  my ($status, @output) = &safe_read_from_pipe(@_);
+  if ($status) {
+    return ("$0: @_ failed with this output:", @output);
+  } else {
+    return @output;
   }
 }
