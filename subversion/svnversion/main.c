@@ -83,14 +83,6 @@ main(int argc, char *argv[])
                            FALSE, FALSE, &ctx, pool);
   if (err)
     {
-      svn_node_kind_t kind;
-      svn_error_t *err3 = svn_io_check_path (wc_path, &kind, pool);
-      if (! err3 && kind == svn_node_dir)
-        {
-          printf ("exported\n");
-          svn_pool_destroy (pool);
-          return EXIT_SUCCESS;
-        }
       svn_handle_error (err, stderr, 0);
       svn_pool_destroy (pool);
       return EXIT_FAILURE;
@@ -135,7 +127,7 @@ main(int argc, char *argv[])
       status = apr_hash_get (status_hash, wc_path, APR_HASH_KEY_STRING);
       if (! status)
         switched = TRUE;
-      else
+      else if (status->entry)
         {
           apr_size_t len1 = strlen (trail_url);
           apr_size_t len2 = strlen (status->entry->url);
@@ -145,6 +137,32 @@ main(int argc, char *argv[])
         }
     }
 
+  if (! SVN_IS_VALID_REVNUM (min_revnum))
+    {
+      svn_node_kind_t kind;
+
+      svn_error_t *err2 = svn_io_check_path (wc_path, &kind, pool);
+      if (err2)
+        {
+          fprintf (stderr, "error examining '%s'\n", wc_path);
+          svn_pool_destroy (pool);
+          return EXIT_FAILURE;
+        }
+      else if (kind != svn_node_dir)
+        {
+          fprintf (stderr, "'%s' not versioned, and not exported\n", wc_path);
+          svn_pool_destroy (pool);
+          return EXIT_FAILURE;
+        }
+      else
+        {
+          printf ("exported\n");
+          svn_pool_destroy (pool);
+          return EXIT_SUCCESS;
+        }
+    }
+
+  /* Else it was versioned, so summarize its revision(s). */
   printf ("%" SVN_REVNUM_T_FMT, min_revnum);
   if (min_revnum != max_revnum)
     printf (":%" SVN_REVNUM_T_FMT, max_revnum);

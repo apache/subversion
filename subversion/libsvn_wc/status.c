@@ -701,20 +701,18 @@ svn_wc_statuses (apr_hash_t *statushash,
   /* Fill the hash with a status structure for *each* entry in PATH */
   else
     {
-      /* Sanity check to make sure that we're being called on a working copy.
-         This isn't strictly necessary, since svn_wc_entries_read will fail 
-         anyway, but it lets us return a more meaningful error. */ 
       int wc_format_version;
       svn_boolean_t is_root;
       const svn_wc_entry_t *parent_entry;
 
       SVN_ERR (svn_wc_check_wc (path, &wc_format_version, pool));
 
-      /* a "version" of 0 means a non-wc directory */
+      /* A wc format of 0 means this directory is not being versioned
+         at all (not by Subversion, anyway). */
       if (wc_format_version == 0)
-        return svn_error_createf
-          (SVN_ERR_WC_NOT_DIRECTORY, NULL,
-           "svn_wc_statuses: '%s' is not a working copy directory", path);
+        return add_status_structure
+          (statushash, path, NULL, NULL, NULL,
+           svn_node_dir, FALSE, FALSE, notify_func, notify_baton, pool);
 
       SVN_ERR (svn_wc_is_wc_root (&is_root, path, adm_access, pool));
       if (! is_root)
