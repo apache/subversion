@@ -28,6 +28,7 @@
 %import svn_types.i
 %import svn_string.i
 %import svn_delta.i
+%import svn_wc.i
 
 /* -----------------------------------------------------------------------
    don't wrap the following items
@@ -109,44 +110,6 @@
 %typemap(perl5,out) apr_hash_t *prop_hash {
     $result = svn_swig_pl_prophash_to_hash($1);
     argvi++;
-}
-
-/* -----------------------------------------------------------------------
-   handle svn_wc_notify_func_t/baton pairs
-*/
-
-%typemap(python,in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
-
-  $1 = svn_swig_py_notify_func;
-  $2 = $input; /* our function is the baton. */
-}
-
-%typemap(java,in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
-
-  $1 = svn_swig_java_notify_func;
-  $2 = (void*)$input; /* our function is the baton. */
-}
-
-%typemap(jni) svn_wc_notify_func_t "jobject"
-%typemap(jtype) svn_wc_notify_func_t "org.tigris.subversion.wc.Notifier"
-%typemap(jstype) svn_wc_notify_func_t "org.tigris.subversion.wc.Notifier"
-%typemap(javain) svn_wc_notify_func_t "$javainput"
-%typemap(javaout) svn_wc_notify_func_t {
-    return $jnicall;
-  }
-
-/* -----------------------------------------------------------------------
-   handle svn_wc_notify_func_t/baton pairs
-*/
-
-%typemap(python,in) (svn_wc_status_func_t status_func, void *status_baton) {
-  $1 = svn_swig_py_status_func;
-  $2 = $input; /* our function is the baton. */
-}
-
-%typemap(perl5,in) (svn_wc_status_func_t status_func, void *status_baton) {
-  $1 = svn_swig_pl_status_func;
-  $2 = $input; /* our function is the baton. */
 }
 
 /* -----------------------------------------------------------------------
