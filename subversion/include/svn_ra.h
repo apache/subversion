@@ -528,6 +528,8 @@ typedef struct svn_ra_plugin_t
    *
    * The working copy will be updated to @a revision_to_update_to, or the
    * "latest" revision if this arg is invalid.
+   *
+   * Use @a pool for memory allocation.
    */
   svn_error_t *(*do_switch) (void *session_baton,
                              const svn_ra_reporter_t **reporter,
@@ -537,7 +539,8 @@ typedef struct svn_ra_plugin_t
                              svn_boolean_t recurse,
                              const char *switch_url,
                              const svn_delta_editor_t *update_editor,
-                             void *update_baton);
+                             void *update_baton,
+                             apr_pool_t *pool);
 
   /** Ask the network layer to describe the status of a working copy
    * with respect to the @a head revision of the repository.

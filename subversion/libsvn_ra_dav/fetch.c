@@ -2642,10 +2642,9 @@ svn_error_t * svn_ra_dav__do_switch(void *session_baton,
                                     svn_boolean_t recurse,
                                     const char *switch_url,
                                     const svn_delta_editor_t *wc_update,
-                                    void *wc_update_baton)
+                                    void *wc_update_baton,
+                                    apr_pool_t *pool)
 {
-  svn_ra_session_t *ras = session_baton;
-
   return make_reporter (session_baton,
                         reporter,
                         report_baton,
@@ -2657,7 +2656,7 @@ svn_error_t * svn_ra_dav__do_switch(void *session_baton,
                         wc_update,
                         wc_update_baton,
                         TRUE, /* fetch_content */
-                        ras->pool);
+                        pool);
 }
 
 
