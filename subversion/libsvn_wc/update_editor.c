@@ -28,7 +28,6 @@
 #include <apr_tables.h>
 #include <apr_file_io.h>
 #include <apr_strings.h>
-#include <apr_thread_proc.h>
 
 #include "svn_types.h"
 #include "svn_pools.h"
@@ -40,7 +39,6 @@
 #include "svn_io.h"
 #include "svn_md5.h"
 #include "svn_base64.h"
-#include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_private_config.h"
 #include "svn_time.h"

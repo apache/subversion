@@ -28,7 +28,6 @@
 #include <apr_strings.h>
 #include <apr_tables.h>
 #include <apr_general.h>
-#include <apr_lib.h>
 #include <apr_signal.h>
 
 #include "svn_cmdline.h"
@@ -42,7 +41,6 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_opt.h"
-#include "svn_time.h"
 #include "svn_utf.h"
 #include "svn_auth.h"
 #include "cl.h"

@@ -28,7 +28,6 @@
 #include <apr_strings.h>
 
 #include "svn_version.h"
-#include "svn_pools.h"
 
 #include "dav_svn.h"
 

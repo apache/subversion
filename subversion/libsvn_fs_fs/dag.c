@@ -18,12 +18,11 @@
 #include <string.h>
 #include <assert.h>
 
-#include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_time.h"
 #include "svn_error.h"
-#include "svn_md5.h"
 #include "svn_fs.h"
+#include "svn_props.h"
 
 #include "dag.h"
 #include "err.h"

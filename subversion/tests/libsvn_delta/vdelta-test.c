@@ -19,7 +19,6 @@
 #include <apr_want.h>
 
 #include <apr_general.h>
-#include <apr_lib.h>
 #include <assert.h>
 
 #include "svn_delta.h"

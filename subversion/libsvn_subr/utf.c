@@ -25,7 +25,6 @@
 #include <apr_strings.h>
 #include <apr_lib.h>
 #include <apr_xlate.h>
-#include <apr_thread_proc.h>
 
 #include "svn_string.h"
 #include "svn_error.h"

@@ -24,18 +24,13 @@
 #include <assert.h>
 #include <apr_strings.h>
 #include <apr_pools.h>
-#include <apr_hash.h>
 
 #include "client.h"
 
 #include "svn_wc.h"
 #include "svn_delta.h"
 #include "svn_client.h"
-#include "svn_string.h"
 #include "svn_error.h"
-#include "svn_path.h"
-#include "svn_test.h"
-#include "svn_io.h"
 
 #include "svn_private_config.h"
 

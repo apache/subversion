@@ -20,7 +20,6 @@
 
 #include <stdlib.h>
 #include <stdarg.h>
-#include <apr_strings.h>
 
 #include "svn_private_config.h"
 #include "svn_fs.h"

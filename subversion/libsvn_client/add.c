@@ -33,6 +33,7 @@
 #include "svn_path.h"
 #include "svn_io.h"
 #include "svn_config.h"
+#include "svn_props.h"
 #include "client.h"
 
 #include "svn_private_config.h"

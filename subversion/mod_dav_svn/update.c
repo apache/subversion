@@ -32,6 +32,7 @@
 #include "svn_xml.h"
 #include "svn_path.h"
 #include "svn_dav.h"
+#include "svn_props.h"
 
 #include "dav_svn.h"
 #include <http_request.h>

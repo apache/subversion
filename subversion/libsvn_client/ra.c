@@ -29,6 +29,7 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_path.h"
+#include "svn_props.h"
 #include "client.h"
 
 #include "svn_private_config.h"

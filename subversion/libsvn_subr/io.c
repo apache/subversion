@@ -53,7 +53,6 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_io.h"
-#include "svn_base64.h"
 #include "svn_pools.h"
 #include "svn_utf.h"
 #include "svn_config.h"

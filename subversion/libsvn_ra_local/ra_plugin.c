@@ -23,6 +23,8 @@
 #include "svn_repos.h"
 #include "svn_pools.h"
 #include "svn_time.h"
+#include "svn_props.h"
+#include "svn_path.h"
 #include "svn_private_config.h"
 
 #define APR_WANT_STRFUNC

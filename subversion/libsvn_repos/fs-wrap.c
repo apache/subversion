@@ -22,6 +22,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
+#include "svn_props.h"
 #include "svn_repos.h"
 #include "repos.h"
 

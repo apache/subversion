@@ -25,10 +25,7 @@
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_fs.h"
-#include "svn_md5.h"
-#include "svn_path.h"
 #include "svn_repos.h"
-#include "svn_pools.h"
 
 
 /*** Backstory ***/

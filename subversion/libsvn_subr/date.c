@@ -15,8 +15,8 @@
  * ====================================================================
  */
 
-#include <apr_lib.h>
 #include <svn_time.h>
+#include "svn_error.h"
 
 /* Valid rule actions */
 enum rule_action {

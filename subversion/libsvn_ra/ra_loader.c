@@ -29,7 +29,6 @@
 
 #include "svn_version.h"
 #include "svn_error.h"
-#include "svn_io.h"
 #include "svn_ra.h"
 #include "svn_private_config.h"
 

@@ -37,6 +37,7 @@
 #include "svn_dav.h"
 #include "svn_sorts.h"
 #include "svn_version.h"
+#include "svn_props.h"
 
 #include "dav_svn.h"
 #include "mod_dav_svn.h"

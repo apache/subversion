@@ -18,13 +18,13 @@
 #include <assert.h>
 #include <string.h>
 
-#include <apr_strings.h>
 #include <apr_tables.h>
 #include <apr_pools.h>
 
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_fs.h"
+#include "svn_props.h"
 
 #include "fs.h"
 #include "dag.h"

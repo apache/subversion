@@ -22,8 +22,8 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_string.h"
-#include "svn_hash.h"
 #include "svn_path.h"
+#include "svn_props.h"
 
 #include <apr_lib.h>
 
