@@ -86,14 +86,13 @@ svn_error_t *svn_fs__rep_contents (svn_string_t *str,
 
 
 /* Return a stream to read the contents of REP_KEY.  Allocate the stream
-   in POOL, and start reading at OFFSET in the rep's contents.
+   in POOL.
 
    If TRAIL is non-null, the stream's reads are part of TRAIL;
    otherwise, each read happens in an internal, one-off trail. 
    POOL may be TRAIL->pool.  */
 svn_stream_t *svn_fs__rep_contents_read_stream (svn_fs_t *fs,
                                                 const char *rep_key,
-                                                apr_size_t offset,
                                                 trail_t *trail,
                                                 apr_pool_t *pool);
 

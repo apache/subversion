@@ -626,7 +626,6 @@ struct rep_read_baton
 static struct rep_read_baton *
 rep_read_get_baton (svn_fs_t *fs,
                     const char *rep_key,
-                    apr_size_t offset,
                     trail_t *trail,
                     apr_pool_t *pool)
 {
@@ -637,7 +636,7 @@ rep_read_get_baton (svn_fs_t *fs,
   b->trail = trail;
   b->pool = pool;
   b->rep_key = rep_key;
-  b->offset = offset;
+  b->offset = 0;
 
   return b;
 }
@@ -957,12 +956,11 @@ rep_write_contents (void *baton,
 svn_stream_t *
 svn_fs__rep_contents_read_stream (svn_fs_t *fs,
                                   const char *rep_key,
-                                  apr_size_t offset,
                                   trail_t *trail,
                                   apr_pool_t *pool)
 {
   struct rep_read_baton *rb
-    = rep_read_get_baton (fs, rep_key, offset, trail, pool);
+    = rep_read_get_baton (fs, rep_key, trail, pool);
 
   svn_stream_t *rs = svn_stream_create (rb, pool);
   svn_stream_set_read (rs, rep_read_contents);
@@ -1223,10 +1221,8 @@ svn_fs__rep_deltify (svn_fs_t *fs,
   svn_stream_set_write (new_target_stream, write_svndiff_strings);
 
   /* Get streams to our source and target text data. */
-  source_stream = svn_fs__rep_contents_read_stream (fs, source, 0,
-                                                    trail, pool);
-  target_stream = svn_fs__rep_contents_read_stream (fs, target, 0,
-                                                    trail, pool);
+  source_stream = svn_fs__rep_contents_read_stream (fs, source, trail, pool);
+  target_stream = svn_fs__rep_contents_read_stream (fs, target, trail, pool);
 
   /* Setup a stream to convert the textdelta data into svndiff windows. */
   svn_txdelta (&txdelta_stream, source_stream, target_stream, pool);
@@ -1413,7 +1409,7 @@ svn_fs__rep_undeltify (svn_fs_t *fs,
   svn_stream_set_write (target_stream, write_string);
 
   /* Set up the source stream. */
-  source_stream = svn_fs__rep_contents_read_stream (fs, rep_key, 0,
+  source_stream = svn_fs__rep_contents_read_stream (fs, rep_key,
                                                     trail, trail->pool);
 
   apr_md5_init (&context);
