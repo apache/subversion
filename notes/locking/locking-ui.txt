@@ -313,10 +313,10 @@ II. New Client Behaviors
                    Name: foo.c
                    URL: http://..../
                    [...]
-                   You have a lock on this object:
-                       - by user 'harry'
-                       - at time 2004-07-20 21:11:11 -0400
-                       - lock comment:  "mine mine mine."
+                   Lock Token: 465610b1-33eb-0310-8a02-cae41507c13a
+                   Lock Owner: lundblad
+                   Lock Comment: Refactoring.
+                   Lock Creation Date: 2004-12-14 14:49:36 +0100 (Tue, 14 Dec 2004)
                  
 
                    $ svn info http://host/repos/file2
