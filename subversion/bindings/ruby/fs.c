@@ -174,14 +174,11 @@ static VALUE
 fs_close (VALUE self)
 {
   svn_ruby_fs_t *fs;
-  svn_error_t *err;
 
   Data_Get_Struct (self, svn_ruby_fs_t, fs);
   if (fs->closed)
     rb_raise (rb_eRuntimeError, "closed fs");
-  err = svn_fs_close_fs (fs->fs);
-  if (err)
-    svn_ruby_raise (err);
+
   fs->closed = TRUE;
 
   return Qnil;
