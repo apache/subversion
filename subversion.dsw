@@ -120,18 +120,6 @@ Package=<4>
 
 ###############################################################################
 
-Project: "mod_dav_svn"=.\subversion\mod_dav_svn\mod_dav_svn.dsp - Package Owner=<4>
-
-Package=<5>
-{{{
-}}}
-
-Package=<4>
-{{{
-}}}
-
-###############################################################################
-
 Project: "apr"=.\apr\apr.dsp - Package Owner=<4>
 
 Package=<5>
@@ -144,7 +132,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "aprutil"=.\apr-util\aprutil.dsp - Package Owner=<4>
+Project: "aprutil"=".\apr-util\aprutil.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -152,6 +140,9 @@ Package=<5>
 
 Package=<4>
 {{{
+    Begin Project Dependency
+    Project_Dep_Name gen_uri_delims
+    End Project Dependency
     Begin Project Dependency
     Project_Dep_Name apr
     End Project Dependency
@@ -162,7 +153,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "xml"=.\apr-util\xml\expat\lib\xml.dsp - Package Owner=<4>
+Project: "gen_uri_delims"=".\apr-util\uri\gen_uri_delims.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -170,24 +161,6 @@ Package=<5>
 
 Package=<4>
 {{{
-}}}
-
-###############################################################################
-
-Project: "neon"=.\build\win32\neon.dsp - Package Owner=<4>
-
-Package=<5>
-{{{
-}}}
-
-Package=<4>
-{{{
-    Begin Project Dependency
-    Project_Dep_Name aprutil
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name xml
-    End Project Dependency
 }}}
 
 ###############################################################################
@@ -340,6 +313,36 @@ Package=<4>
 {{{
     Begin Project Dependency
     Project_Dep_Name __config__
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "mod_dav_svn"=.\subversion\mod_dav_svn\mod_dav_svn.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "neon"=.\build\win32\neon.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name aprutil
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name xml
     End Project Dependency
 }}}
 
@@ -803,6 +806,18 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name libsvn_tests_main
     End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "xml"=".\apr-util\xml\expat\lib\xml.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
 }}}
 
 ###############################################################################
