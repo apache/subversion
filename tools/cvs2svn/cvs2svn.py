@@ -620,9 +620,7 @@ class RepositoryMirror:
     components = string.split(path, '/')
     path_so_far = None
 
-    deletions = None
-    if expected_entries:
-      deletions = []
+    deletions = []
 
     parent_key = marshal.loads(self.revs_db[str(self.youngest)])
     parent = marshal.loads(self.nodes_db[parent_key])
@@ -1560,6 +1558,31 @@ class SymbolicNameTracker:
         rev = pair[0]
     return rev
 
+  # Helper for copy_descend().
+  def cleanup_entries(self, rev, entries, is_tag):
+    """Return a copy of ENTRIES, minus the individual entries whose
+    highest scoring revision doesn't match REV (and also, minus and
+    special '/'-denoted flags).  IS_TAG is 1 or None, based on whether
+    this work is being done for the sake of a tag or a branch."""
+    if is_tag:
+      opening_key = self.tags_opening_revs_key
+      closing_key = self.tags_closing_revs_key
+    else:
+      opening_key = self.br_opening_revs_key
+      closing_key = self.br_closing_revs_key
+
+    new_entries = {}
+    for key in entries.keys():
+      if key[0] == '/': # Skip flags
+        continue
+      entry = entries.get(key)
+      val = marshal.loads(self.db[entry])
+      scores = self.score_revisions(val.get(opening_key), val.get(closing_key))
+      best_rev = self.best_rev(scores, rev + 1)
+      if rev == best_rev:
+        new_entries[key] = entry
+    return new_entries
+      
   # Helper for fill_branch().
   def copy_descend(self, dumper, ctx, name, parent, entry_name,
                    parent_rev, src_path, dst_path, is_tag, jit_new_rev=None):
@@ -1609,17 +1632,18 @@ class SymbolicNameTracker:
         else:
           copy_dst = make_path(ctx, dst_path, name, None)
 
+        expected_entries = self.cleanup_entries(rev, val, is_tag)
         if (rev != parent_rev):
           if jit_new_rev and jit_new_rev[0]:
             dumper.start_revision(make_revision_props(ctx, name, is_tag))
             jit_new_rev[0] = None
-          if dumper.copy_path(src_path, rev, copy_dst, val):
+          if dumper.copy_path(src_path, rev, copy_dst, expected_entries):
             parent_rev = rev
         else:
           # Even if we kept the already-present revision of this entry
           # instead of copying a new one, we still need to prune out
           # anything that's not part of the symbolic name.
-          dumper.prune_entries(copy_dst, val)
+          dumper.prune_entries(copy_dst, expected_entries)
 
         # Record that this copy is done:
         val[copyfrom_rev_key] = parent_rev

@@ -594,7 +594,7 @@ def simple_tags():
   # See test-data/main-cvsrepos/proj/README.
   repos, wc, logs = ensure_conversion('main')
  
-  rev = 37
+  rev = 36
   if not logs.has_key(rev):
     raise svntest.Failure
   if not logs[rev].changed_paths == {
@@ -604,7 +604,7 @@ def simple_tags():
     }:
     raise svntest.Failure
 
-  rev = 39
+  rev = 38
   if not logs.has_key(rev):
     raise svntest.Failure
   if not logs[rev].changed_paths == {
