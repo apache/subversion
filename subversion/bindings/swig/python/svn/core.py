@@ -114,21 +114,17 @@ def secs_from_timestr(svn_datetime, pool):
   return aprtime / 1000000
 
 
-# Names that are not to be exported - del-ed at end
-import sys
-
 # ============================================================================
-# Reusable code segment. This code is duplicated in the several locations.
-# THIS IS THE MASTER COPY.
-#
-# Duplicates are located at:
+# Variations on this code are used in other places:
 # - subversion/build/generator/gen_win.py
 # - cvs2svn/cvs2svn
-#  
-# Please keep all copies in sync, and the list above up-to-date.
-#
-if sys.platform == "win32":
-  _escape_shell_arg_re = re.compile(r'(\\+)(\"|$)')
+
+# Names that are not to be exported
+import sys as _sys, string as _string
+
+if _sys.platform == "win32":
+  import re as _re
+  _escape_shell_arg_re = _re.compile(r'(\\+)(\"|$)')
 
   def escape_shell_arg(arg):
     # The (very strange) parsing rules used by the C runtime library are
@@ -136,10 +132,10 @@ if sys.platform == "win32":
     # http://msdn.microsoft.com/library/en-us/vclang/html/_pluslang_Parsing_C.2b2b_.Command.2d.Line_Arguments.asp
 
     # double up slashes, but only if they are followed by a quote character
-    arg = re.sub(_escape_shell_arg_re, r'\1\1\2', arg)
+    arg = _re.sub(_escape_shell_arg_re, r'\1\1\2', arg)
 
     # surround by quotes and escape quotes inside
-    arg = '"' + string.replace(arg, '"', '"^""') + '"'
+    arg = '"' + _string.replace(arg, '"', '"^""') + '"'
     return arg
 
 
@@ -155,11 +151,11 @@ if sys.platform == "win32":
     # the leading character and removing the last quote character."
     # So to prevent the argument string from being changed we add an extra set
     # of quotes around it here.
-    return '"' + string.join(map(escape_shell_arg, argv), " ") + '"'
+    return '"' + _string.join(map(escape_shell_arg, argv), " ") + '"'
 
 else:
   def escape_shell_arg(str):
-    return "'" + string.replace(str, "'", "'\\''") + "'"
+    return "'" + _string.replace(str, "'", "'\\''") + "'"
 
   def argv_to_command_string(argv):
     """Flatten a list of command line arguments into a command string.
@@ -168,9 +164,5 @@ else:
     shell which os functions like popen() and system() invoke internally.
     """
 
-    return string.join(map(escape_shell_arg, argv), " ")
+    return _string.join(map(escape_shell_arg, argv), " ")
 # ============================================================================
-
-
-# Do not export these names
-del sys
