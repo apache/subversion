@@ -166,9 +166,7 @@ XML_validation_error (apr_pool_t *pool,
    FRAME and examining parents, so it is important that frame has
    _already_ been linked into the digger's stack. */
 static void
-maybe_derive_ancestry (svn_delta__stackframe_t *first_frame,
-                       svn_delta__stackframe_t *dest_frame,
-                       apr_pool_t *pool)
+maybe_derive_ancestry (svn_delta__stackframe_t *dest_frame, apr_pool_t *pool)
 {
   svn_delta__stackframe_t *p = dest_frame->previous;
 
@@ -346,7 +344,7 @@ do_stack_append (svn_delta__digger_t *digger,
   new_frame->previous = youngest_frame;
 
   /* Set up any unset ancestry information. */
-  maybe_derive_ancestry (digger->stack, new_frame, pool);
+  maybe_derive_ancestry (new_frame, pool);
 
   return SVN_NO_ERROR;
 }
