@@ -789,7 +789,7 @@ The following repository access (RA) modules are available:
       underscore (<literal>"__"</literal>).  Functions private a given
       source file have no special prefixing, and are declared
       <literal>static</literal>.  Of course, a compiler isn't
-      iterested in these naming conventions, but they definitely help
+      interested in these naming conventions, but they definitely help
       to clarify the scopy of a given function or datatype.</para>
 
     <!-- ***************************************************************** -->
