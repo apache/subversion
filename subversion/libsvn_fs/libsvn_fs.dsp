@@ -111,15 +111,15 @@ SOURCE=".\key-gen.c"
 # End Source File
 # Begin Source File
 
-SOURCE=".\node-rev.c"
-# End Source File
-# Begin Source File
-
 SOURCE=".\nodes-table.c"
 # End Source File
 # Begin Source File
 
 SOURCE=.\proplist.c
+# End Source File
+# Begin Source File
+
+SOURCE=".\reps-strings.c"
 # End Source File
 # Begin Source File
 
@@ -163,10 +163,6 @@ SOURCE=.\validate.c
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE=".\convert-size.h"
-# End Source File
-# Begin Source File
-
 SOURCE=".\dag.h"
 # End Source File
 # Begin Source File
@@ -195,10 +191,6 @@ SOURCE=".\key-gen.h"
 # End Source File
 # Begin Source File
 
-SOURCE=".\node-rev.h"
-# End Source File
-# Begin Source File
-
 SOURCE=".\nodes-table.h"
 # End Source File
 # Begin Source File
@@ -207,15 +199,15 @@ SOURCE=.\proplist.h
 # End Source File
 # Begin Source File
 
+SOURCE=".\reps-strings.h"
+# End Source File
+# Begin Source File
+
 SOURCE=".\reps-table.h"
 # End Source File
 # Begin Source File
 
 SOURCE=".\rev-table.h"
-# End Source File
-# Begin Source File
-
-SOURCE=.\revision.h
 # End Source File
 # Begin Source File
 
