@@ -48,7 +48,7 @@ typedef struct svn_ra_local__session_baton_t
   const char *repository_URL;
 
   /* The user accessing the repository. */
-  char *username;
+  const char *username;
 
   /* The URL above, decoded and split into two components. */
   const char *repos_url;
