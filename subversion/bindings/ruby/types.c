@@ -56,7 +56,6 @@ svn_ruby_init_types (void)
   define_prop (mSvnProp, "REVISION_DATE", SVN_PROP_REVISION_DATE);
   define_prop (mSvnProp, "MIME_TYPE", SVN_PROP_MIME_TYPE);
   define_prop (mSvnProp, "IGNORE", SVN_PROP_IGNORE);
-  define_prop (mSvnProp, "CHARSET", SVN_PROP_CHARSET);
   define_prop (mSvnProp, "WC_PREFIX", SVN_PROP_WC_PREFIX);
   define_prop (mSvnProp, "CUSTOM_PREFIX", SVN_PROP_CUSTOM_PREFIX);
 }
