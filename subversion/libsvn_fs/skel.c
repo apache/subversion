@@ -393,7 +393,10 @@ unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
     {
       /* Append an atom to STR.  */
       if (use_implicit (skel))
-	svn_string_appendbytes (str, skel->data, skel->len, pool);
+	{
+	  svn_string_appendbytes (str, skel->data, skel->len, pool);
+	  svn_string_appendbytes (str, " ", 1, pool);
+	}
       else
 	{
 	  /* Append the length to STR.  */
@@ -418,18 +421,10 @@ unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
     {
       /* Append a list to STR.  */
       skel_t *child;
-      int len;
       int i;
 
-      /* How many elements are in the list?  */
-      len = 0;
-      for (child = skel->children; child; child = child->next)
-	len++;
-
-      /* The opening paren is indented.  */
-      svn_string_ensure (str, str->len + depth * 2 + 1, pool);
-      for (i = 0; i < depth * 2; i++)
-	str->data[str->len++] = ' ';
+      /* The opening paren has been indented by the parent, if necessary.  */
+      svn_string_ensure (str, str->len + 1, pool);
       str->data[str->len++] = '(';
       
       depth++;
@@ -442,7 +437,8 @@ unparse (skel_t *skel, svn_string_t *str, int depth, apr_pool_t *pool)
 	  str->data[str->len++] = '\n';
 	  for (i = 0; i < depth * 2; i++)
 	    str->data[str->len++] = ' ';
-	  unparse (child, str, depth, pool);
+	  if (! unparse (child, str, depth, pool))
+	    return 0;
 	}
 
       depth--;
