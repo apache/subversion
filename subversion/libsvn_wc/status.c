@@ -62,28 +62,27 @@
 
 
 
-/* Given an ENTRY object representing PATH, build a status structure
-   and store it in STATUSHASH.  */
+/* Fill in STATUS with ENTRY.
+   ENTRY's pool must not be shorter-lived than STATUS's, since ENTRY
+   will be stored directly, not copied. */
 static svn_error_t *
-add_status_structure (apr_hash_t *statushash,
-                      svn_string_t *path,
-                      svn_wc_entry_t *entry,
-                      apr_pool_t *pool)
+assemble_status (svn_wc_status_t *status,
+                 svn_string_t *path,
+                 svn_wc_entry_t *entry,
+                 apr_pool_t *pool)
 {
   svn_error_t *err;
-  svn_wc_status_t *statstruct = apr_pcalloc (pool, sizeof(*statstruct));
 
   /* Copy info from entry struct to status struct */
-  statstruct->entry = entry;
-  statstruct->repos_rev = SVN_INVALID_REVNUM;  /* svn_client_status()
-                                                  will fill this in */
-  
+  status->entry = entry;
+  status->repos_rev = SVN_INVALID_REVNUM;  /* caller fills in */
+
   if (entry->flags & SVN_WC_ENTRY_ADD)
-    statstruct->flag = svn_wc_status_added;
+    status->flag = svn_wc_status_added;
   else if (entry->flags & SVN_WC_ENTRY_DELETE)
-    statstruct->flag = svn_wc_status_deleted;
+    status->flag = svn_wc_status_deleted;
   else if (entry->flags & SVN_WC_ENTRY_CONFLICT)
-    statstruct->flag = svn_wc_status_conflicted;
+    status->flag = svn_wc_status_conflicted;
   else 
     {
       if (entry->kind == svn_node_file)
@@ -94,17 +93,58 @@ add_status_structure (apr_hash_t *statushash,
           if (err) return err;
 
           if (modified_p)
-            statstruct->flag = svn_wc_status_modified;
+            status->flag = svn_wc_status_modified;
         }
     }
 
   /* At this point, if the object is neither (M)odified nor marked
      for (D)eletion or (A)ddition, then set the flag blank. */
-  if (! statstruct->flag)
-    statstruct->flag = svn_wc_status_none;
+  if (! status->flag)
+    status->flag = svn_wc_status_none;
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Given an ENTRY object representing PATH, build a status structure
+   and store it in STATUSHASH.  */
+static svn_error_t *
+add_status_structure (apr_hash_t *statushash,
+                      svn_string_t *path,
+                      svn_wc_entry_t *entry,
+                      apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_wc_status_t *statstruct = apr_pcalloc (pool, sizeof (*statstruct));
+
+  err = assemble_status (statstruct, path, entry, pool);
+  if (err)
+    return err;
 
   apr_hash_set (statushash, path->data, path->len, statstruct);
   
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_status (svn_wc_status_t **status,
+               svn_string_t *path,
+               apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_wc_status_t *s = apr_pcalloc (pool, sizeof (*s));
+  svn_wc_entry_t *entry = NULL;
+
+  err = svn_wc_entry (&entry, path, pool);
+  if (err)
+    return err;
+
+  err = assemble_status (s, path, entry, pool);
+  if (err)
+    return err;
+  
+  *status = s;
   return SVN_NO_ERROR;
 }
 

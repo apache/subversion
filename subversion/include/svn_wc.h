@@ -123,6 +123,12 @@ typedef struct svn_wc_entry_t
 #define SVN_WC_ENTRY_THIS_DIR  ""
 
 
+/* Set *ENTRY according to PATH. */
+svn_error_t *svn_wc_entry (svn_wc_entry_t **entry,
+                           svn_string_t *path,
+                           apr_pool_t *pool);
+
+
 
 /* Structure for holding the "status" of a working copy item. 
    The item's entry data is in ENTRY, augmented and possibly shadowed
@@ -151,6 +157,13 @@ typedef struct svn_wc_status_t
 svn_error_t *svn_wc_statuses (apr_hash_t *statushash,
                               svn_string_t *path,
                               apr_pool_t *pool);
+
+
+/* Fill *STATUS for PATH, allocating in POOL, with the exception of
+   the repos_rev field, which is normally filled in by the caller. */
+svn_error_t *svn_wc_status (svn_wc_status_t **status,
+                            svn_string_t *path,
+                            apr_pool_t *pool);
 
 
 
