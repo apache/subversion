@@ -13,10 +13,10 @@
       you are familiar, then hopefully you'll find it interesting to
       see how Subversion implements these ideas.</para>
 
-    <para>Either way, maintaining branches is a fundamental part of
-      version control.  If you're going to allow Subversion to manage
-      your data, then this is a feature you'll eventually come to
-      depend on.</para>
+    <para>Either way, branching is a fundamental part of version
+      control.  If you're going to allow Subversion to manage your
+      data, then this is a feature you'll eventually come to depend
+      on.</para>
 
   </simplesect>
 
@@ -32,26 +32,27 @@
     <para>Suppose it's your job to maintain a document for a division
       in your company, a handbook of some sort.  One day a different
       division asks you for the same handbook, but with a few parts
-      'tweaked' for their specific department, since they do things
-      slightly differently.</para>
+      'tweaked' for them, since they do things slightly
+      differently.</para>
 
     <para>What do you do in this situation?  You do the obvious thing:
       you make a second copy of your document, and begin maintaining
       the two copies separately.  As each department asks you to make
-      specific changes, you incorporate them into one copy or the
+      small changes, you incorporate them into one copy or the
       other.</para>
 
-    <para>Of course, often you want to make the same change to *both*
+    <para>Of course, often you want to make the same change to both
       copies.  For example, if you discover a typo in the first copy,
       it's very likely that the same typo exists in the second copy.
       The two documents are almost the same, after all; they only
       differ in small, specific ways.</para>
 
-    <para>This is the basic concept of a "branch" -- namely, a line of
-      development that exists independently of another line, yet still
-      shares a common history if you look far enough back in time.  A
-      branch always begins life as a copy of something, and moves on
-      from there, generating its own history.</para>
+    <para>This is the basic concept of a <firstterm>branch</firstterm>
+      &mdash; namely, a line of development that exists independently of
+      another line, yet still shares a common history if you look far
+      enough back in time.  A branch always begins life as a copy of
+      something, and moves on from there, generating its own
+      history.</para>
 
       <figure id="svn-ch4-dia1">
         <title>Branches of development</title>
@@ -73,111 +74,344 @@
   <!-- ======================== SECTION 2 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-2">
-    <title>Branching with svn cp</title> 
+    <title>Using branches</title> 
 
     <para>At this point, you should understand how each commit creates
       an entire new filesystem tree (called a "revision") in the
       repository.  If not, go back and read about revisions in  <xref
-      linkend="svn-ch-2-sect-3.2"/></para>
+      linkend="svn-ch-2-sect-3.2"/>.</para>
 
-    <para>As you may have suspected, the filesystem doesn't grow 652
-      new inodes each time a new revision is created.  Instead, each
-      new tree is <emphasis>mostly</emphasis> made of pointers to
-      already-existing nodes; new nodes are created only for changed
-      items, and all the rest of the revision tree is <quote>shared
-      storage</quote> with other revision trees.  This technique
-      demonstrates how the filesystem is able to make <quote>cheap
-      copies</quote> of things.  These cheap copies are nothing more
-      than directory entries that point to existing nodes.  And this
-      is the basis of tags and branches.</para>
+    <para>For this chapter, we'll go back to the same example from
+      Chapter 2.  Remember that you and your collaborator, Felix, are
+      sharing a repository that contains two projects,
+      <filename>paint</filename> and <filename>write.</filename>
+      Notice, however, that this time somebody has created two new
+      top-level directories in the repository, called
+      <filename>trunk</filename> and <filename>branches</filename>.
+      The projects themselves are subdirectories of
+      <filename>trunk</filename>, and the reason for this will become
+      clearer later on.</para>
     
-    <para>Suppose we have a repository whose head tree is revision 82.
-      In this repository is a subdirectory <filename>mooIRC</filename>
-      that contains a software project that is ready to be tagged.
-      How do we tag it?  Very simple: make a <quote>cheap</quote> copy
-      of this directory.  In other words, create a new directory entry
-      (somewhere else in the filesystem) that points to this
-      <emphasis>specific</emphasis> node that represents directory
-      <filename>mooIRC</filename> in revision 82.  Of course, you can
-      name the new directory entry whatever you want -- probably a
-      tag-name like <filename>mooIRC-beta</filename>.</para>
+      <figure id="svn-ch4-dia2">
+        <title>Starting repository layout</title>
+        <graphic fileref="images/ch04dia2.png"/>
+      </figure>
+
+    <para>As before, assume that you and Felix both have working
+      copies of the <filename>/trunk/write</filename> project.</para>
+
+    <para>Let's say that you've been given the task of performing a
+      radical reorganization of the project.  Not only is it a wide
+      change (it will affect all the files in the project), but it's a
+      very large change (it will take a long time to write.)  The
+      problem here is that you don't want to interfere with Felix, who
+      is in the process of fixing small bugs here and there.  He's
+      depending on the fact that the latest version of the project is
+      always usable.  If you start committing your changes bit-by-bit,
+      you'll surely break things for Felix.</para>
+
+    <para>One strategy is to crawl into a hole: you and Felix can stop
+      sharing information for a week or two.  That is, start gutting
+      and reorganizing all the files in your working copy, but don't
+      commit or update until you're completely finished with the task.
+      There are are number of problems with this, though.  First, it's
+      not very safe.  Most people like to save their work to the
+      repository frequently, should something bad accidentally happen
+      to their working copy.  Second, it's not very flexible.  If you
+      do your work on different computers (perhaps you have a working
+      copy of <filename>/trunk/write</filename> on two different
+      machines), you'll need to manually copy your changes back and
+      forth, or just do all the work on a single computer.  Finally,
+      when you're finished, you might find it very difficult to commit
+      your changes.  Felix (or others) may have made many other
+      changes in the repository that are difficult to merge into your
+      working copy -- especially all at once.</para>
+
+    <para>The better solution, of course, is to create your own
+      branch, or line of development, in the repository.  This allows
+      you to save your half-broken work frequently without interfering
+      with others, yet you can still selectively share information
+      with your collaborators.  You'll see exactly how this works
+      later on.</para>
+
+  <sect2 id="svn-ch-4-sect-2.1">
+    <title>Creating a branch</title> 
+      
+      <para>So how do we create a branch?  Very simple -- you make a
+        copy of the project in the repository using the <command>svn
+        copy</command> command.  Subversion is not only able to copy
+        single files, but whole directories as well.  In this case,
+        you want to make a copy of the
+        <filename>/trunk/write</filename> directory.  Where should the
+        new copy live?  It doesn't really matter; Subversion doesn't
+        care.  It's a matter of project policy.  Let's say that your
+        team has a policy of creating branches in the
+        <filename>/branches/write</filename> area of the repository,
+        and you want to name your branch "my-write-branch".  So you
+        want to create a new directory,
+        <filename>/branches/write/my-write-branch</filename>, which
+        starts as a copy of <filename>/trunk/write</filename>. </para>
+
+      <para>There are two different ways to make a copy.  We'll
+        demonstrate the messy way first, just to make the concept
+        clear.  To begin, check out a working copy of the root
+        (<filename>/</filename>) of the repository:</para>
+
+<screen>
+$ svn checkout http://svn.example.com/repos bigwc
+A  bigwc/branches/
+A  bigwc/branches/write
+A  bigwc/branches/paint
+A  bigwc/trunk/
+A  bigwc/trunk/write
+A  bigwc/trunk/write/Makefile
+A  bigwc/trunk/write/document.c
+A  bigwc/trunk/write/search.c
+A  bigwc/trunk/paint
+A  bigwc/trunk/paint/Makefile
+A  bigwc/trunk/paint/canvas.c
+A  bigwc/trunk/paint/brush.c
+Checked out revision 340.
+</screen>
+
+      <para>And now it's simply a matter of giving two working-copy
+        paths to the <command>svn copy</command> command:</para>
+
+<screen>
+$ cd bigwc
+$ svn copy trunk/write branches/write/my-write-branch
+$ svn status
+A  +   branches/write/my-write-branch
+</screen>
+
+      <para>In this case, the <command>svn copy</command> command
+        recursively copied the <filename>trunk/write</filename>
+        working directory to a new working directory,
+        <filename>branches/write/my-write-branch</filename>.  As you can see
+        from the <command>svn status</command> command, the new
+        directory is now scheduled for addition to the repository.
+        But also notice the '+' next to the letter A.  This indicates
+        that the scheduled addition is a <emphasis>copy</emphasis> of
+        something, not something new.  When you commit your changes,
+        Subversion will create
+        <filename>/branches/write/my-write-branch</filename> in the
+        repository by copying <filename>/trunk/write</filename>,
+        rather than resending all of the working copy data over the
+        network:</para>
+
+<screen>
+$ svn commit -m "Creating a private branch of /trunk/write."
+Adding      branches/write/my-write-branch
+Committed revision 341.
+</screen>
+
+      <para>And now the easier method of creating a branch, which we
+        should have told you about in first place: the <command>svn
+        copy</command> is able to operate on two URLs.</para>
+
+<screen>
+$ svn copy http://svn.example.com/repos/trunk/write \
+           http://svn.example.com/repos/branches/write/my-write-branch \
+      -m "Creating a private branch of /trunk/write"
+
+Committed revision 341.
+</screen>
+
+      <para>There's really no difference between these two methods.
+        Both procedures create a new directory in revision 341, and
+        the new directory is a copy of
+        <filename>/trunk/write</filename>.  Notice that the second
+        method, however, performs an <emphasis>immediate</emphasis>
+        commit.  It's an easier procedure, because it doesn't require
+        you to check out a large mirror of the repository.  In fact,
+        this technique doesn't even require you to have a working copy
+        at all! </para>
+      
+      <figure id="svn-ch4-dia3">
+        <title>Repository with new copy</title>
+        <graphic fileref="images/ch04dia3.png"/>
+      </figure>
+      
+      <sidebar>
+        <title>Cheap copies</title>
+        
+        <para>At this point, you might be thinking to yourself: "Holy
+          cow, the repository is copying entire directories -- doesn't
+          that mean that the repository will get really huge if you
+          start making copies of big projects?"</para>
+        
+        <para>This is a valid concern!  However, no need to worry.
+          Subversion's repository has a clever internal design.  When
+          the repository copies something, it doesn't actually
+          duplicate any data.  Instead, it creates a new directory
+          entry that points to an <emphasis>existing</emphasis> tree.
+          If you're a Unix user, this is the same concept as a
+          hard-link.  From there, the copy is said to be "lazy".  That
+          is, if you commit a change to one file within the copied
+          directory, then only that file changes -- the rest of the
+          files continue to exist as links to the original files in
+          the original directory.</para>
+      
+        <para>This is why you'll often hear Subversion users talk
+          about "cheap copies".  It doesn't matter how large the
+          directory is -- it takes a very tiny, constant amount of
+          time to make a copy of it.  In fact, this feature is the
+          basis of how commits work in Subversion: each revision is a
+          "cheap copy" of the previous revision, with a few items
+          lazily changed within.  To read more about this, look at
+          Subversion's Design document.  <!-- ### link?  is this in
+          the book?  URL?  --></para>
+
+        <para>The point here is that copies are cheap, both in time
+          and space.  Make branches as early and often as you
+          want. </para>
+      </sidebar>
+
+    </sect2>
     
-    <para>The easiest way to make this copy is with <command>svn
-      cp</command>, which, incidentally, can operate entirely on URLs,
-      so that the copy happens only on the server-side:</para>
+    <sect2 id="svn-ch-4-sect-2.2">
+      <title>Working with your branch</title> 
 
-    <screen>
-      $ svn cp http://foo.com/repos/mooIRC http://foo.com/repos/mooIRC-beta
-      Committed revision 83.
-    </screen>
+      <para>Now that you've created a new branch of the project, you
+        can check out a new working copy to start using it:</para>
 
-    <para>Now, as long as you never touch the contents of the
-      directory <filename>mooIRC-beta</filename>, that entry will
-      forever point to a node that looks the way
-      <filename>mooIRC</filename> did at a specific moment in time
-      (however it looked in revision 82).  And that's exactly what a
-      <firstterm>tag</firstterm> is.</para>
+<screen>
+$ svn checkout http://svn.example.com/repos/branches/write/my-write-branch
+A  my-write-branch/Makefile
+A  my-write-branch/document.c
+A  my-write-branch/search.c
+Checked out revision 341.
+</screen>
 
-    <para>But suppose <filename>mooIRC-beta</filename> isn't sacred,
-      and instead you decide to start making commits to it.  And
-      suppose you <emphasis>also</emphasis> continue to make commits
-      in the original <filename>mooIRC</filename> directory.  Then you
-      have two directories that started out looking identical -- their
-      common ancestor was <filename>mooIRC</filename> in revision 82
-      -- but now have diverged their contents over time.  In other
-      words, they represent different <firstterm>branches</firstterm>
-      of the project.</para>
+      <para>There's nothing special about this working copy; it simply
+        mirrors a different location of the repository.  When you
+        commit changes, however, Felix won't ever see them when he
+        updates.  His working copy is of
+        <filename>/trunk/write</filename>.</para>
 
-    <para>It's very important to note that the Subversion filesystem
-      is <emphasis>not</emphasis> aware of <quote>tags</quote> or
-      <quote>branches.</quote> It's only aware of directories, and all
-      directories are equal.  The tag and branch concepts are purely
-      <emphasis>human</emphasis> meanings attached to particular
-      directories.</para>
+      <para>Let's pretend that a week goes by, and the following
+      commits happen:</para>
 
-    <para>For this reason, it's up to users (and the Subversion
-      repository administrator) to choose sane policies that help
-      elucidate these labels.  For example, here's a good way to lay
-      out your repository:</para>
+      <itemizedlist>
+        <listitem>
+          You make a change to
+          <filename>/branches/write/my-write-branch/search.c</filename>,
+          which creates revision 342.
+        </listitem>
 
-    <screen>
-      /
-      /projectA
-      /projectA/trunk/
-      /projectA/branches/
-      /projectA/tags/
-      /projectB
-      /projectB/trunk/
-      /projectB/branches/
-      /projectB/tags/
-    </screen>
+        <listitem>
+          You make a change to
+          <filename>/branches/write/my-write-branch/document.c</filename>,
+          which creates revision 343.
+        </listitem>
 
-    <para>Each time <filename>/projectA/trunk</filename> reaches a
-      taggable state, make a copy of the directory somewhere in
-      <filename>/projectA/tags/</filename>, and set the copy to
-      read-only.  Use the same procedure to create a branch in
-      <filename>/projectA/branches/</filename>.</para>
+        <listitem>
+          Felix makes a change to
+          <filename>/trunk/write/document.c</filename>, which creates
+          revision 344.
+        </listitem>
+      </itemizedlist>
 
-    <para>An alternate way to lay out a repository:</para>
+      <para>Things get interesting when you look at the history of
+        changes made to your copy of
+        <filename>document.c</filename>:</para>
 
-    <screen>
-      /
-      /trunk
-      /trunk/projectA
-      /trunk/projectB
-      /branches
-      /branches/projectA
-      /branches/projectB
-      /tags
-      /tags/projectA
-      /tags/projectB
-    </screen>
+<screen>
+$ pwd
+/home/user/my-write-branch
 
-    <para>Or, of course, you could just place each project into a
-      dedicated repository.  It's up to you.  For examples on how to
-      create a repository with one of these structures, <xref
-      linkend="svn-ch-5"/><!-- ###TODO Make this xref (Creating a
-      repository) more specific -Fitz -->.</para>
+$ svn log document.c
+------------------------------------------------------------------------
+rev 343:  user | 2002-11-07 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
+
+* document.c:  frozzled the wazjub.
+
+------------------------------------------------------------------------
+rev 303:  felix | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
+
+* document.c:  changed a docstring.
+
+------------------------------------------------------------------------
+rev 98:  felix | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
+
+* document.c:  adding this file to the project.
+
+------------------------------------------------------------------------
+</screen>
+
+      <para>Notice that Subversion is tracing the history of your
+      <filename>document.c</filename> all the way back through time,
+      traversing the point where it was copied.  (Remember that your
+      branch was created in revision 341.)  Now look what happens when
+      Felix runs the same command on his copy of the file:</para>
+
+<screen>
+$ pwd
+/home/felix/write
+
+$ svn log document.c
+------------------------------------------------------------------------
+rev 344:  felix | 2002-11-07 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
+
+* document.c:  fix a bunch of spelling errors.
+
+------------------------------------------------------------------------
+rev 303:  felix | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
+
+* document.c:  changed a docstring.
+
+------------------------------------------------------------------------
+rev 98:  felix | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
+
+* document.c:  adding this file to the project.
+
+------------------------------------------------------------------------
+</screen>
+
+      <para>Felix sees his own revision 344 change, but not the change
+      you made in revision 343.  As far as Subversion is concerned,
+      these two commits affected different files in different
+      repository locations.  However, Subversion
+      <emphasis>does</emphasis> show that the two files share a common
+      history.  Before the branch-copy was made in revision 341, they
+      used to be the same file.  That's why you and Felix both see
+      revisions 303 and 98.</para>
+
+      <para>There are now two independent lines of development
+      happening.  A diagram makes it easier to visualize:</para>
+
+      <figure id="svn-ch4-dia4">
+        <title>The branching of one file's history</title>
+        <graphic fileref="images/ch04dia4.png"/>
+      </figure>
+
+    </sect2>
+
+    <sect2 id="svn-ch-4-sect-2.3">
+      <title>The moral of the story</title> 
+
+      <para>There are two important lessons that you should remember
+      from this section.</para>
+
+      <orderedlist>
+        <listitem>
+          <para>Unlike many other version control systems,
+            Subversion's branches exist in <emphasis>normal filesystem
+            space</emphasis>, not in some imaginary extra
+            dimension.</para>
+        </listitem>
+        <listitem>
+          <para>Subversion has no internal concept of a "branch" --
+          only copies.  When you copy a directory, the resulting
+          directory is only a "branch" because
+          <emphasis>you</emphasis> attach that meaning to it.  You may
+          think of the directory differently, or treat it differently,
+          but to Subversion it's just an ordinary directory that
+          happens to have been created by copying.</para>
+        </listitem>
+      </orderedlist>
+
+    </sect2>
 
   </sect1>
 
@@ -185,46 +419,198 @@
   <!-- ======================== SECTION 3 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-3">
-    <title>Switching to a Branch with svn switch</title>
-
-    <para>The <command>svn switch</command> command allows you to
-      <quote>move</quote> some or all of your working copy to a branch
-      or tag.  For example, suppose I have a working copy of
-      <filename>mooIRC</filename>, and I'd like to work on some
-      subsystem as it appears in a subdirectory of
-      <filename>mooIRC-beta</filename>.  At the same time, I want the
-      rest my working copy to remain on the original
-      <filename>mooIRC</filename> branch.  To do this, I switch the
-      appropriate subdir to the new branch location:</para>
-
-    <screen>
-      $ svn switch http://foo.com/repos/mooIRC-beta/subsystems/renderer \
-                   mooIRC/subsystems/renderer
+    <title>Copying changes between branches</title>
       
-      U  mooIRC/subsystems/renderer/foo.c
-      U  mooIRC/subsystems/renderer/bar.h
-      U  mooIRC/subsystems/renderer/baz.c
-    </screen>
+    <para>Okay, so now you and Felix are working on parallel branches
+      of the project.  The good news is that you're not interfering
+      with each other.  The bad news is that it's very easy to drift
+      <emphasis>too</emphasis> far apart.  Remember that one of the
+      problems with the "crawl in a hole" strategy is that by the time
+      you're finished with your branch, it may be near-impossible to
+      merge your changes back into the main branch.</para>
 
-    <para>Now my working copy of the <filename>renderer</filename>
-      subdirectory represents a different location on the
-      server.</para>
+    <para>Instead, you and Felix should continue to share changes as
+      you work.  It's up to you to decide which changes are worth
+      sharing; Subversion can gives you the ability to selectively
+      "copy" changes between branches.  Here's how.</para>
 
-    <para>Really, <command>svn switch</command> is just a fancier
-      version of <command>svn update</command>.  Whereas <command>svn
-      update</command> has the ability to move your working copy
-      through time (either by updating to the latest revision, or by
-      updating to a specific revision given with
-      <option>-r</option>), <command>svn switch</command> is
-      able to move your working copy through time
-      <emphasis>and</emphasis> space.</para>
+    <para>In the previous section, we mentioned that both you and
+      Felix made changes to <filename>document.c</filename> on
+      different branches.  If you look at Felix's log message for
+      revision 344, you can see that he fixed some spelling errors.
+      No doubt, your copy of the same file still has the same spelling
+      errors.  It's likely that your future changes to this file will
+      be affecting the same areas that have the spelling errors, so
+      you're in for some potential conflicts when you merge your
+      branches someday.  It's better, then, to receive Felix's change
+      now, <emphasis>before</emphasis> you start working too heavily
+      in the same places.</para>
 
-    <para>If your working copy contains a number of
-      <quote>switched</quote> subtrees from different repository
-      locations, it continues to function as normal.  When you update,
-      you'll receive patches to each subtree as appropriate.  When you
-      commit, your local changes will still be applied as a single,
-      atomic change to the repository.</para>
+    <para>Enter the <command>svn merge</command> command.  This
+      command, it turns out, is a very close cousin to the
+      <command>svn diff</command> command (which you read about in
+      Chapter 3.)  Both commands are able to compare any two objects
+      in the repository and describe the differences.  For example,
+      you can ask <command>svn diff</command> to show you the exact
+      change made by Felix in revision 344:</para>
+
+<screen>
+$ svn diff -r343:344 http://svn.example.com/repos/trunk/write
+
+Index: document.c
+===================================================================
+--- document.c	(revision 343)
++++ document.c	(revision 344)
+@@ -147,7 +147,7 @@
+     case 6:  sprintf(info->operating_system, "HPFS (OS/2 or NT)"); break;
+     case 7:  sprintf(info->operating_system, "Macintosh"); break;
+     case 8:  sprintf(info->operating_system, "Z-System"); break;
+-    case 9:  sprintf(info->operating_system, "CPM"); break;
++    case 9:  sprintf(info->operating_system, "CP/M"); break;
+     case 10:  sprintf(info->operating_system, "TOPS-20"); break;
+     case 11:  sprintf(info->operating_system, "NTFS (Windows NT)"); break;
+     case 12:  sprintf(info->operating_system, "QDOS"); break;
+@@ -164,7 +164,7 @@
+     low = (unsigned short) read_byte(gzfile);  /* read LSB */
+     high = (unsigned short) read_byte(gzfile); /* read MSB */
+     high = high &lt;&lt; 8;  /* interpret MSB correctly */
+-    total = low + high; /* add them togethe for correct total */
++    total = low + high; /* add them together for correct total */
+ 
+     info->extra_header = (unsigned char *) my_malloc(total);
+     fread(info->extra_header, total, 1, gzfile);
+@@ -241,7 +241,7 @@
+      Store the offset with ftell() ! */
+ 
+   if ((info->data_offset = ftell(gzfile))== -1) {
+-    printf("error: ftell() retturned -1.\n");
++    printf("error: ftell() returned -1.\n");
+     exit(1);
+   }
+ 
+@@ -249,7 +249,7 @@
+   printf("I believe start of compressed data is %u\n", info->data_offset);
+   #endif
+   
+-  /* Set postion eight bytes from the end of the file. */
++  /* Set position eight bytes from the end of the file. */
+ 
+   if (fseek(gzfile, -8, SEEK_END)) {
+     printf("error: fseek() returned non-zero\n");
+</screen>
+      
+    <para>The <command>svn merge</command> is almost exactly the same.
+      Instead of printing the differences to your terminal, however,
+      it applies them directly to your working copy as <emphasis>local
+      modifications</emphasis>:</para>
+    
+<screen>
+$ svn merge -r343:344 http://svn.example.com/repos/trunk/write
+U  document.c
+
+$ svn status
+M  document.c
+</screen>
+
+    <para>Your working copy now contains Felix's change &mdash; it has
+      been "copied" from his branch to your working copy.  At this
+      point, it's up to you to review the local modifications and make
+      sure they're all good.  In another scenario, it's possible that
+      things may not have gone so well, and that
+      <filename>document.c</filename> may have entered a conflicted
+      state.  You might need to resolve the conflict by hand, or if
+      you're really disgusted, simply give up and <command>svn
+      revert</command> the local change.  But assuming the changes are
+      working and you're confident that the merge was good, you can
+      <command>svn commit</command> the change as usual.  At that
+      point, the change has been merged into your repository branch.
+      In version control terminology, this act of copying changes is
+      commonly called <firstterm>porting</firstterm> changes between
+      branches.</para>
+
+    <para>A question may be on your mind, especially if you're a Unix
+      user: why bother to use <command>svn merge</command> at all?
+      Why not simply use the operating system's
+      <command>patch</command> command to accomplish the same job?
+      For example:</para>
+
+<screen>
+$ svn diff -r343:344 http://svn.example.com/repos/trunk/write > patchfile
+$ patch -p0  &lt; patchfile
+Patching file document.c using Plan A...
+Hunk #1 succeeded at 147.
+Hunk #2 succeeded at 164.
+Hunk #3 succeeded at 241.
+Hunk #4 succeeded at 249.
+done
+</screen>
+
+    <para>In this particular case, yes, there really is no difference.
+      But <command>svn merge</command> has special abilities that
+      surpass the <command>patch</command> program.  The file format
+      used by <command>patch</command> is quite limited; it's only
+      able to tweak file contents.  There's no way to represent
+      changes to <emphasis>trees</emphasis>, such as the addition,
+      removal, or renaming of files and directories.  If Felix's
+      change had, say, added a new directory, the output of
+      <command>svn diff</command> wouldn't have mentioned it at all.
+      <command>svn diff</command> only outputs the limited
+      patch-format, so there are some ideas it simply can't
+      express. <!-- ### FOOTNOTE about a better patch format
+      someday.--> The <command>svn merge</command> command, however,
+      can express tree-changes by directly applying them to your
+      working copy.</para>
+
+    <para>A word of warning: while <command>svn diff</command> and
+      <command>svn merge</command> are very similar in concept, they
+      do have different syntax in many cases.  Be sure to read about
+      them in Chapter 8 for details, or ask <command>svn
+      help</command>.  For example, <command>svn merge</command>
+      insists on a working-copy path as a 'target', i.e. a place where
+      it should apply the tree-changes.  It defaults to the current
+      working directory, so if you want changes applied somewhere
+      else, you'll need to say so:</para>
+
+<screen>
+$ svn merge -r343:344 http://svn.example.com/repos/trunk/write my-write-branch
+U   my-write-branch/document.c
+</screen>
+
+      <!-- ### fix the damn left arrow quoting problem in both screen
+      examples -->
+    
+    <sidebar>
+      <title>The repeated merge problem</title>
+
+      <para>Merging changes from one branch to another sounds simple
+        enough, but in practice it can sometimes become a headache.
+        The problem is that if you repeatedly merge changes from
+        branch A to branch B, you may accidentally merge the same
+        change <emphasis>twice</emphasis>.  When this happens, you'll
+        often get a conflict:  Subversion will attempt to contextually
+        merge a change into a file that already contains the
+        change.</para>
+
+      <para>This is a problem that plagues many version control
+        systems, including both CVS and Subversion.  For now, the only
+        way to avoid this problem in Subversion is to carefully keep
+        track of which changes have been merged, and which haven't.
+        Specifically, when you create a branch directory, remember
+        what revision it was created in.  When you merge a revision
+        (or range of revisions) into your working copy, you'll need to
+        remember them as well.  If you forget any of this information,
+        you can rediscover it by examining the output of <command>svn
+        log --verbose branch-dir</command>.  But the point is that
+        each subsequent merge needs to be carefully constructed by
+        hand, making sure that previously-merged revisions aren't
+        re-merged again.</para>
+
+      <para>Of course, Subversion has plans to solve this problem
+        sometime after release 1.0.  All of this merging information
+        can be tracked in property metadata (see <xref
+        linkend="svn-ch-6-sect-2"/>), and thus Subversion will someday
+        be able to automatically avoid repeated merges.</para>
+    </sidebar>
 
   </sect1>
 
@@ -232,42 +618,76 @@
   <!-- ======================== SECTION 4 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-4">
-    <title>Moving changes with svn merge</title>
+    <title>Removing a change from the repository</title>
 
-    <para>Suppose a team of programmers working on the
-      <filename>mooIRC-beta</filename> branch have fixed a critical
-      bug, and the team working on the original
-      <filename>mooIRC</filename> branch would like to apply that
-      change as well.</para>
+    <para>A common use for <command>svn merge</command> is to roll
+      back a change that has already been committed.  Suppose you
+      decide that the change made way back in revision 303, which
+      changed a docstring in <filename>document.c</filename>, is
+      completely wrong.  It never should have been committed.  You can
+      use <command>svn merge</command> to "undo" the change in your
+      working copy, and then commit the local modification to the
+      repository.  All you need to do is do specify a
+      <emphasis>reverse</emphasis> difference:</para>
 
-    <para>The <command>svn merge</command> command is the answer.  You
-      can think of <command>svn merge</command> as a special kind of
-      <command>svn diff</command>; only instead of displaying unified
-      diffs to the screen, it <emphasis>applies</emphasis> the
-      differences to your working copy as if they were local
-      changes.</para>
+<screen>
+$ svn merge -r 303:302 http://svn.example.com/trunk/write
+U  document.c
 
-    <para>For example, suppose the bug fix happened in a commit to the
-      <filename>mooIRC-beta</filename> branch in revision 102.</para>
+$ svn status
+M  document.c
+
+$ svn commit -m "Undoing change committed in r303."
+Sending    document.c
+Transmitting file data .
+Committed revision 350.
+</screen>
+
+    <para>One way to think about repository revisions is as
+      <firstterm>changesets</firstterm>.  That is, each revision
+      number is the name of a particular group of changes.  By using
+      the <option>-r</option> switch, you can ask <command>svn
+      merge</command> to apply a changeset, or whole range of
+      changesets, to your working copy.  In our case of undoing a
+      change, we're asking <command>svn merge</command> to apply
+      changeset #303 to our working copy
+      <emphasis>backwards</emphasis>.</para>
     
-    <screen>
-      $ svn diff -r 101:102 http://foo.com/repos/mooIRC-beta
-      
-     &hellip;   # diffs sent to screen
-      
-      $ svn merge -r 101:102 http://foo.com/repos/mooIRC-beta mooIRC
-      U   mooIRC/glorb.c
-      U   mooIRC/src/floo.h
-    </screen>
+    <para>Keep in mind that rolling back a change like this is just
+      like any other <command>svn merge</command> operation, so you
+      should use <command>svn status</command> and <command>svn
+      diff</command> to confirm that your work is in the state you
+      want it to be in, and then use <command>svn commit</command> to
+      send the final version to the repository.  After committing,
+      this particular changeset in no longer reflected in the HEAD
+      revision.</para>
 
-    <para>While the output of <command>svn merge</command> looks
-      similar to <command>svn update</command> or <command>svn
-      switch</command>, it is in fact only applying temporary changes
-      to the working files.  Once the differences are applied as local
-      changes, you can examine them as usual with <command>svn
-      diff</command>, <command>svn status</command>, or undo them with
-      <command>svn revert</command> as usual.  If the changes are
-      acceptable, you can commit them.</para>
+    <para>Again, you may be thinking: well, that really didn't undo
+      the commit, did it?  The change still exists in revision 303.
+      If somebody checks out a version of the
+      <filename>write</filename> project between revisions 303 and
+      349, they'll still see the bad change, right?</para>
+
+    <para>Yes, that's true.  When we talk about "removing" a change,
+      we're really talking about "removing it from HEAD".  The
+      original change still exists in the repository's history.  For
+      most situations, this is good enough.  Most people are only
+      interested in tracking the HEAD of a project anyway.  There are
+      special cases, however, where you really might want to destroy
+      all evidence of the commit.  (Perhaps somebody accidentally
+      committed a confidential document.)  This isn't so easy, it
+      turns out, because Subversion was deliberately designed to never
+      lose information.  Revisions are assumed to be immutable, and
+      thus build upon one another.  Removing a revision from history
+      would cause a domino effect, creating chaos in all subsequent
+      revisions and possibly invalidating all working copies.</para>
+
+    <para>The Subversion project has plans, however, to someday
+      implement an <command>svnadmin obliterate</command> command.  It
+      would probably involve taking the repository off-line, removing
+      a revision, and then "rewriting" all subsequent revisions.  At
+      the time of writing, however, this command isn't scheduled to
+      exist until sometime after the release of Subversion 1.0.</para>
 
   </sect1>
 
@@ -275,91 +695,323 @@
   <!-- ======================== SECTION 5 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-5">
-    <title>Rolling back a change with svn merge</title>
+    <title>Tags</title>
 
-    <para>Another common use for <command>svn merge</command> is for
-      rolling back a change that has been committed.  Say you commit
-      some changes in revision 10, and later decide that they were a
-      mistake.  You can easily revert the tree to the state it was in
-      at revision 9 with an <command>svn merge</command>
-      command.</para>
+    <para>Another common version control concept is a
+      <firstterm>tag</firstterm>.  A tag is just a "snapshot" of a
+      project in time.  In Subversion, this idea already seems to be
+      everywhere.  Each repository revision is exactly that &mdash; a
+      snapshot of the filesystem after each commit.</para>
 
-    <screen>
-      $ svn commit -m "change some stuff"
-      Sending        bar.c
-      Sending        foo.c
-      Transmitting file data ..
-      Committed revision 10.
-      $
-      
-      &hellip; # developer continues on and realizes he made a mistake
-      
-      $ svn merge -r 10:9 .
-      U ./bar.c
-      U ./foo.c
-      $ svn commit -m "oops, reverting revision 10"
-      Sending        bar.c
-      Sending        foo.c
-      Transmitting file data ..
-      Committed revision 11.
-    </screen>
-    
-    <para>If you aren't rolling back the changes to your current
-      directory (say you want to roll back one specific file, or all
-      the files in one specific subdirectory), then the syntax is
-      slightly different, as you have to tell <command>svn
-      merge</command> where it should merge the changes into.</para>
+    <para>However, people often want to give more human-friendly names
+      to tags, like "beta-5".  And they want to make snapshots of
+      smaller subdirectories of the filesystem.  After all, it's not
+      so easy to remember that the fifth beta candidate of a piece of
+      software is a particular subdirectory of revision 4822.</para>
 
-    <screen>
-      $ svn merge -r 10:9 baz/ baz/
-      U ./baz/bar.c
-      U ./baz/foo.c
-      $ svn commit -m "reverting revision 10's changes in baz/"
-      Sending        baz/bar.c
-      Sending        baz/foo.c
-      Transmitting file data ..
-      Committed revision 12.
-      $
-      
-      &hellip; # developer continues on and later makes another mistake
-      
-      $ svn merge -r 13:12 baz/foo.c baz/foo.c
-      U ./baz/foo.c
-      $ svn commit -m "reverting revision 12's change to foo.c"
-      Sending        baz/foo.c
-      Transmitting file data .
-      Committed revision 15.
-    </screen>
-    
-    <para>Keep in mind that rolling back a change like this is just
-      like any other <command>svn merge</command> operation, so you
-      should use <command>svn status</command> and <command>svn
-      diff</command> to confirm that your work is in the state you
-      want it to be in, and then use <command>svn commit</command> to
-      send the final version to the repository.</para>
+    <para>Once again, <command>svn copy</command> comes to the rescue.
+      What could be easier?  If you want to create a snapshot of
+      <filename>/trunk/write</filename> exactly as it looks in
+      the HEAD revision, then make a copy of it:</para>
+
+<screen>
+$ svn copy http://svn.example.com/repos/trunk/write \
+           http://svn.example.com/repos/tags/write/beta-5 \
+      -m "Tagging the beta-5 release of the 'write' project."
+
+Committed revision 351.
+</screen>
+
+    <para>This example assumes that a <filename>/tags/write</filename>
+      directory already exists.  After the copy completes, the new
+      <filename>beta-5</filename> directory is forever a snapshot of
+      how the project looked in the HEAD revision at the time you made
+      the copy.  Of course you might want to be more precise about
+      exactly which revision you copy, in case somebody else may have
+      committed changes to the project when you weren't looking.  So
+      if you know that revision 350 of
+      <filename>/trunk/write</filename> is exactly the snapshot you
+      want, you can specify it by passing the <option>-r350</option>
+      option to the copy command.</para>
+
+    <para>But wait a moment: isn't this tag-creation procedure the
+      same procedure we used to create a branch?  Yes, in fact, it is.
+      The shocking truth is that in Subversion, there's no difference
+      between a tag and a branch.  Tags and branches are both just
+      ordinary directories that are created by copying.  As we
+      mentioned earlier, the only reason a copied directory is a "tag"
+      is because <emphasis>humans</emphasis> have decided to treat it
+      that way: as long as nobody ever commits to the directory, it
+      forever remains a snapshot.  If people start committing to it,
+      it becomes a branch.
+      </para>
+
+    <para>If you are administering a repository, there are two
+      approaches you can take to managing tags.  The first approach is
+      "hands off": as a matter of project policy, decide where your
+      tags will live, and make sure all users know to how treat the
+      directories they copy in there.  (That is, make sure they know
+      not to commit to them.)  The second approach is more paranoid:
+      you can use one of the access-control scripts provided with
+      Subversion to prevent anyone from doing anything but creating
+      new copies in the tags-area (###cross-ref a section that
+      demonstrates how to use these scripts?).  The paranoid approach,
+      however, isn't usually necessary.  If a user accidentally
+      commits a change to a tag-directory, you can simply undo the
+      change as discussed in the previous section.  This is version
+      control, after all!</para>
 
   </sect1>
-
 
   <!-- ================================================================= -->
   <!-- ======================== SECTION 6 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-4-sect-6">
-    <title>Removing a Branch or Tag with svn rm</title>
+    <title>Branch maintenance</title>
 
-    <para>The <command>svn rm</command> command can operate on URLs.
-      A file or directory can be <quote>remotely</quote> deleted from
-      the repository, with no working copy present:</para>
+    <para>You may have noticed by now that Subversion is extremely
+      flexible.  Because it implements branches and tags with the same
+      underlying mechanism (directory copies), and because branches
+      and tags appear in normal filesystem space, many people find
+      Subversion intimidating.  It's almost <emphasis>too</emphasis>
+      flexible.</para>
 
-    <screen>
-      $ svn rm http://foo.com/repos/tags/mooIRC-bad-tag -m "deleting bad tag"
-      Committed revision 1023.
-    </screen>
+    <para>For this reason, there are some standard, recommended ways
+      to lay out a repository.  Most people create a
+      <filename>trunk</filename> directory to hold the "main line" of
+      development, a <filename>branches</filename> directory to
+      contain branch copies, and a <filename>tags</filename> directory
+      to contain tag copies.  If a repository holds only one project,
+      then often people create these top-level directories:</para>
 
-    <para>Of course, this is still a form of immediate commit, so some kind of
-      log message is still required.</para>
+<screen>
+/trunk
+/branches
+/tags
+</screen>
 
-    <para>Enough said!</para>
+    <para>If a repository contains multiple projects, people often
+      index their layout by branch:</para>
+
+<screen>
+/trunk/paint
+/trunk/write
+/branches/paint
+/branches/write
+/tags/paint
+/tags/write
+</screen>
+
+    <para>...or by project:</para>
+
+<screen>
+/paint/trunk
+/paint/branches
+/paint/tags
+/write/trunk
+/write/branches
+/write/tags
+</screen>
+
+    <para>Of course, you're free to ignore these common layouts.  You
+      can create any sort of variation, whatever works best for you or
+      your team.  Remember that whatever you choose, it's not a
+      permanent commitment.  You can reorganize your repository at any
+      time.  Because branches and tags are ordinary directories, the
+      <command>svn mv</command> command can move or rename them
+      however you wish.  Switching from one layout to another is just
+      a matter by issuing a series of server-side moves; if you don't
+      like the way things are organized in the repository, just juggle
+      the directories around!</para>
+
+    <para>Another nice feature of Subversion's model is that branches
+      and tags can have finite lifetimes, just like any other
+      versioned item.  For example, suppose you eventually finish all
+      your work on your personal branch of the
+      <filename>write</filename> project.  After merging all of your
+      changes back into <filename>/trunk/write</filename>, there's no
+      need for your private branch to stick around anymore:</para>
+
+<screen>
+$ svn rm http://svn.example.com/repos/branches/write/my-write-branch \
+         -m "Removing obsolete branch of write project."
+
+Committed revision 375.
+</screen>
+
+    <para>And now your branch is gone.  Of course it's not really
+      gone:  the directory is simply missing from the HEAD revision, no
+      longer distracting anyone.  If you look at an earlier revision,
+      of course, you'll still be able to find your old branch.</para>
+
+    <para>In this case, your branch had a relatively short lifetime:
+      you may have created it to fix a bug or implement a new feature.
+      When your task is done, so is the branch.  In software
+      development, though, it's also common to have two "main"
+      branches running side-by-side for very long periods.  For
+      example, suppose it's time to release a stable
+      <filename>write</filename> project to the public, and you know
+      it's going to take a couple of months to shake bugs out of the
+      software.  You don't want people to add new features to the
+      project, but you don't want to tell all developers to stop
+      programming either.  So instead, you create a "stable" branch of
+      the software that won't change much:</para>
+
+<screen>
+$ svn cp http://svn.example.com/repos/trunk/write \
+         http://svn.example.com/branches/write/release-1.0
+         -m "Creating stable release branch of write project."
+
+Committed revision 377.
+</screen>
+
+    <para>And now developers are free to continue adding cutting-edge
+      (or experimental) features to <filename>/trunk/write</filename>,
+      and you can declare a project policy that only bugfixes are to
+      be committed to
+      <filename>/branches/write/release-1.0</filename>.  That is, as
+      people continue to work on the trunk, a human selectively ports
+      bugfixes over to the release branch.  Even after the release
+      branch has shipped out the door, you'll probably continue to
+      maintain the branch for a long time &mdash; that is, as long as
+      you continue to support that release for customers.</para>
+
+  </sect1>
+
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 7 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-4-sect-7">
+    <title>Switching a working copy</title>
+
+    <para>Subversion has one final trick up its sleeve: the
+    <command>svn switch</command> command.</para>
+
+    <para> The <command>svn switch</command> transforms an existing
+      working copy into a different branch.  While this command isn't
+      strictly necessary for working with branches, it provides a nice
+      shortcut to users.  In our earlier example, after creating your
+      private branch, you checked out a fresh working copy of the new
+      repository directory.  Instead, you could simply asked
+      Subversion to change your working copy of
+      <filename>/trunk/write</filename> to mirror the new branch
+      location:</para>
+
+<screen>
+$ cd write
+
+$ svn info | grep Url
+Url: http://svn.example.com/trunk/write
+
+$ svn switch http://svn.example.com/branches/write/my-write-branch
+U   document.c
+U   search.c
+U   Makefile
+Updated to revision 341.
+
+$ svn info | grep Url
+Url: http://svn.example.com/branches/write/my-write-branch
+</screen>
+
+    <para>After "switching" to the branch, your working copy is no
+      different than what you would get from doing a fresh checkout of
+      the directory.  And it's usually more efficient to use this
+      command, because often branches only differ by a small degree.
+      The server sends only the minimal set of changes necessary to
+      make your working copy reflect the branch.</para>
+
+    <para>Of course, most projects are more complicated than our
+      <filename>write</filename> example.  Users often create a branch
+      of a project's subdirectory, and then use <command>svn
+      switch</command> to move that specific subdirectory in their
+      working copy to the new branch.  Or sometimes users will only
+      switch a single working file to a branch.  That way, they can
+      continue to receive normal updates to most of their working
+      copy, but the "switched" portions will remain immune (unless
+      someone commits a change to their branch.)  This feature adds a
+      whole new dimension to the concept of a "mixed working copy":
+      not only can working copies contain a mixture of working
+      revisions, but a mixture of repository locations as well.</para>
+    
+    <para>If your working copy contains a number of switched subtrees
+      from different repository locations, it continues to function as
+      normal.  When you update, you'll receive patches to each subtree
+      as appropriate.  When you commit, your local changes will still
+      be applied as a single, atomic change to the repository.</para>
+
+    <para>A final note:  while it's okay for your working copy to
+      reflect a hodgepodge of repository locations, these locations
+      must all be within the <emphasis>same</emphasis> repository.
+      Subversion repositories aren't yet able to communicate with one
+      another;  that's a feature planned beyond Subversion 1.0.</para>
+
+    <sidebar>
+      <title>Switches and updates</title>
+      
+      <para>Have you noticed that the output of <command>svn
+          switch</command> and <command>svn update</command> look the
+          same?  That's because they <emphasis>are</emphasis> the
+          same.</para>
+
+      <para>The switch command is actually a strict superset of the
+        update command.  For people curious about implementation, the
+        commands work like this:</para>
+      
+      <itemizedlist>
+        <listitem><para>The client describes the working copy to the
+            repository, mixed revisions and all.</para></listitem>
+        
+        <listitem><para>A temporary tree is constructed within the
+            repository that is an exact replica of the working
+            copy.</para></listitem>
+
+        <listitem><para>The repository compares the temporary tree
+            with some revision tree, and sends a tree-delta back to
+            the client.</para></listitem>
+
+        <listitem><para>The client applies the tree-delta to the
+            working copy, so the working copy now reflects the revision
+            tree.</para></listitem>
+      </itemizedlist>
+
+      <para>The only difference between <command>svn switch</command>
+        and <command>svn update</command> is that the update command
+        compares two identical repository locations.  That is, if your
+        working copy is a mirror of <filename>/trunk/write</filename>,
+        then <command>svn update</command> will automatically compare
+        your working copy to <filename>/trunk/write</filename> in the
+        HEAD revision.  If you're switching your working copy to a
+        branch, then <command>svn switch</command> will compare your
+        working copy to some other branch-directory in the HEAD
+        revision.</para>
+
+      <para>In other words, an update moves your working copy through
+        time.  A switch moves your working copy through time
+        <emphasis>and</emphasis> space.</para>
+    </sidebar>
+
+  </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 8 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-4-sect-8">
+    <title>Summary</title>
+
+    <para>We've covered a lot of ground in this chapter.  We've
+      discussed the concepts of tags and branches, and demonstrated
+      how Subversion implements these concepts by copying directories
+      with the <command>svn copy</command> command.  We've shown how
+      to use <command>svn merge</command> to copy changes from one
+      branch to another, or roll back bad changes.  We've gone over
+      the use of <command>svn switch</command> to create
+      mixed-location working copies.  And we've talked about how one
+      might manage the organization and lifetimes of branches in a
+      repository.</para>
+
+    <para>Remember the Subversion mantra: branches are cheap.  So use
+      them liberally!</para>
 
   </sect1>
 
