@@ -163,7 +163,7 @@ svn_path_last_component (svn_string_t *path,
 
 /* See ../include/svn_path.h for details. */
 void
-svn_path_split (svn_string_t *path, 
+svn_path_split (const svn_string_t *path, 
                 svn_string_t **dirpath,
                 svn_string_t **basename,
                 enum svn_path_style style,

@@ -941,54 +941,59 @@ close_file (void *file_baton)
   if (err)
     return err;
 
-  /* kff todo: if we return before unlocking, which is possible below,
-     that is probably badness... */
-
-  /* kff todo:
-     
-     Okay, let's plan this whole diff/log/update/merge thing a bit
-     better, in the cold light of morning, as it were (actually, it's
-     early afternoon, but I'm told that's hacker virtual morning).
-
-     When we reach close_file() for file `blah', the following are
+  /*
+     When we reach close_file() for file `F', the following are
      true:
 
-         - The new pristine text of blah, if any, is present in
-           SVN/tmp/text-base/blah; and the file_baton is appropriately
-           marked if so.
+         - The new pristine text of F, if any, is present in
+           SVN/tmp/text-base/F, and the file_baton->text_changed is
+           set if necessary.
 
-         - The new pristine props for blah, if any, are present inside
-           the file_baton's `properties' hash; and the file_baton is
-           appropriately marked if so.
+         - The new pristine props for F, if any, are present in
+           the file_baton->baseprops hash, and
+           file_baton->prop_changed is set if necessary.
 
-         - The SVN/entries file still reflects the old blah.
+         - The SVN/entries file still reflects the old F.
 
-         - And SVN/text-base/blah is the old pristine blah, too.
+         - SVN/text-base/F is the old pristine F.
 
-      The goal is to update the local working copy of blah to reflect
+         - SVN/prop-base/F is the old pristine F props.
+
+      The goal is to update the local working copy of F to reflect
       the changes received from the repository, preserving any local
       modifications, in an interrupt-safe way.  So we first write our
       intentions to SVN/log, then run over the log file doing each
-      operation in turn.  For a given operation, you can always tell
-      whether or not it has already been done; thus, those that have
-      already been done are ignored, and when we reach the end of the
-      log file, we remove it.
+      operation in turn.  For a given operation, you can tell by
+      inspection whether or not it has already been done; thus, those
+      that have already been done are no-ops, and when we reach the
+      end of the log file, we remove it.
 
       Because we must preserve local changes, the actual order of
-      operations is this:
+      operations to update F is this:
+
+         1. receive svndiff data D
+         2. svnpatch SVN/text-base/F < D > SVN/tmp/text-base/F
+         3. gdiff -u SVN/text-base/F SVN/tmp/text-base/F > SVN/tmp/F.blah.tmp
+         4. cp SVN/tmp/text-base/F SVN/text-base/F
+         5. gpatch F < SVN/tmp/F.tmpfile
+              ==> possibly producing F.blah.rej
+
+       A finer granularity view of the above process is:
+
+       kff todo fooo: doc'ing here
 
          0. Write file_baton->properties to SVN/tmp/prop
 
          1. Discover and save local mods (right now, this means do a
-            GNU diff -c on ./SVN/text-base/blah vs ./blah, and save
+            GNU diff -u on ./SVN/text-base/F vs ./F, and save
             the result somewhere).
 
          2. Write out the following SVN/log entries, omitting any that
             aren't applicable of course:
 
-              <merge-text name="blah" saved-mods="..."/>
+              <merge-text name="F" saved-mods="..."/>
                  <!-- Will attempt to merge local changes into the new
-                      text.  When done, ./blah will reflect the new
+                      text.  When done, ./F will reflect the new
                       state, either by having the changes folded in,
                       having them folded in with conflict markers, or
                       not having them folded in (in which case the
@@ -998,20 +1003,20 @@ close_file (void *file_baton)
                       the updating of the text-base will already be
                       logged by the time any of this runs, so it's "as
                       good as done".  -->
-              <replace-text-base name="blah"/>
+              <replace-text-base name="F"/>
                   <!-- Now that the merge step is done, it's safe to
                        replace the old pristine copy with the new,
-                       updated one, copying `./SVN/tmp/text-base/blah'
-                       to `./SVN/text-base/blah' -->
-              <merge-props name="blah">
+                       updated one, copying `./SVN/tmp/text-base/F'
+                       to `./SVN/text-base/F' -->
+              <merge-props name="F">
                   <!-- This really just detects and warns about
                        conflicts between local prop changes and
                        received prop changes.  I'm not sure merging is
                        really applicable here. -->
-              <replace-prop-base name="blah"/>
+              <replace-prop-base name="F"/>
                   <!-- You know what to do. -->
-              <set-entry name="blah" version="N"/>
-                  <!-- Once everything else is done, we can set blah's
+              <set-entry name="F" version="N"/>
+                  <!-- Once everything else is done, we can set F's
                        entry to version N, changing the ./SVN/entries
                        file. -->
          
@@ -1020,7 +1025,6 @@ close_file (void *file_baton)
             that means it _was_ done, so just count it and move on.
             When all entries have been done, the operation is
             complete, so remove SVN/log.
-            
   */
 
   /* Save local mods. */
@@ -1060,13 +1064,15 @@ close_file (void *file_baton)
                              svn_string_create ("kff todo", fb->pool),
                              NULL);
       
-      /* Replace text base. */
+      /* Move new text base over old text base. */
       svn_xml_make_open_tag (&entry_accum,
                              fb->pool,
                              svn_xml_self_closing,
-                             SVN_WC__LOG_REPLACE_TEXT_BASE,
+                             SVN_WC__LOG_MV,
                              SVN_WC__LOG_ATTR_NAME,
-                             fb->name,
+                             svn_wc__text_base_path (fb->name, 1, fb->pool),
+                             SVN_WC__LOG_ATTR_DEST,
+                             svn_wc__text_base_path (fb->name, 0, fb->pool),
                              NULL);
     }
   

@@ -107,7 +107,7 @@ svn_string_t *svn_path_last_component (svn_string_t *path,
 /* Divide PATH into DIRPATH and BASENAME, return them by reference,
    in their own storage in POOL.  The separator between DIRPATH and
    BASENAME is not included in either of the new names. */
-void svn_path_split (svn_string_t *path, 
+void svn_path_split (const svn_string_t *path,
                      svn_string_t **dirpath,
                      svn_string_t **basename,
                      enum svn_path_style style,

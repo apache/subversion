@@ -58,6 +58,10 @@
 
 
 
+#define SVN_WC__TMP_EXT ".tmp"
+#define SVN_WC__REJ_EXT ".rej"
+
+
 /*** Asking questions about a working copy. ***/
 
 /* Return an error unless PATH is a valid working copy.
@@ -232,7 +236,7 @@ svn_wc__sync_text_base (svn_string_t *path, apr_pool_t *pool);
 
 /* Return a path to PATH's text-base file.
    If TMP is set, return a path to the tmp text-base file. */
-svn_string_t *svn_wc__text_base_path (svn_string_t *path,
+svn_string_t *svn_wc__text_base_path (const svn_string_t *path,
                                       svn_boolean_t tmp,
                                       apr_pool_t *pool);
 

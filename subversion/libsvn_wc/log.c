@@ -106,10 +106,10 @@ merge_text (svn_string_t *path,
 /* Move a file NAME to DEST, assuming that PATH is the common parent
    of both locations.  */
 static svn_error_t *
-move_file (svn_string_t *path,
-           const char *name,
-           const char *dest,
-           apr_pool_t *pool)
+rename_within_directory (svn_string_t *path,
+                         const char *name,
+                         const char *dest,
+                         apr_pool_t *pool)
 {
   apr_status_t status;
   svn_string_t *full_from_path, *full_dest_path;
@@ -123,7 +123,8 @@ move_file (svn_string_t *path,
   status = apr_rename_file (full_from_path->data, full_dest_path->data, pool);
   if (status)
     return svn_error_createf (status, 0, NULL, pool,
-                              "move_file:  can't move %s to %s",
+                              "rename_within_directory: "
+                              "can't move %s to %s",
                               name, dest);
 
   return SVN_NO_ERROR;
@@ -272,19 +273,6 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
         /* Note that saved_mods is allowed to be null. */
         err = merge_text (loggy->path, name, saved_mods, loggy->pool);
     }
-  else if (strcmp (eltname, SVN_WC__LOG_REPLACE_TEXT_BASE) == 0)
-    {
-      if (! name)
-        return signal_error
-          (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
-                                     0,
-                                     NULL,
-                                     loggy->pool,
-                                     "missing name attr in %s",
-                                     loggy->path->data));
-      else
-        err = replace_text_base (loggy->path, name, loggy->pool);
-    }
   else if (strcmp (eltname, SVN_WC__LOG_MV) == 0)
     {
       /* Grab a "dest" attribute as well. */
@@ -307,7 +295,10 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                      "missing dest attr in %s",
                                      loggy->path->data));
       else
-        err = move_file (loggy->path, name, dest, loggy->pool);
+        err = rename_within_directory (loggy->path,
+                                       name,
+                                       dest,
+                                       loggy->pool);
     }
   else if (strcmp (eltname, SVN_WC__LOG_DELETE_ENTRY) == 0)
     {

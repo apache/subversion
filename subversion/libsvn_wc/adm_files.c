@@ -460,7 +460,7 @@ svn_wc__sync_text_base (svn_string_t *path, apr_pool_t *pool)
 
 
 svn_string_t *
-svn_wc__text_base_path (svn_string_t *path,
+svn_wc__text_base_path (const svn_string_t *path,
                         svn_boolean_t tmp,
                         apr_pool_t *pool)
 {
