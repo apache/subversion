@@ -68,7 +68,7 @@
       which are just text files in standard INI format (with
       <quote>sections</quote> providing the second tier).  These files
       can be easily edited using your favorite text editor (such as
-      emacs or vi), and contain directives read by the client to
+      Emacs or vi), and contain directives read by the client to
       determine which of several optional behaviors the user
       prefers.</para>
 

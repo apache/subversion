@@ -694,7 +694,7 @@ Updated to revision 2.
       <para>Once you've finished making changes, you need to commit
         them to the repository, but before you do so, it's usually a
         good idea to take a look at exactly what you've changed.  By
-        examining your changes before you commit, you can not only
+        examining your changes before you commit, you cannot only
         make a more accurate log message, but you may discover that
         you've inadvertently changed a file, and this gives you a
         chance to revert those changes before committing.
