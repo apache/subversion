@@ -4795,7 +4795,7 @@ large_file_integrity (const char **msg,
 
   /* Create a filesystem and repository. */
   SVN_ERR (svn_test__create_fs_and_repos 
-           (&fs, "test-repo-check-all-revisions", pool));
+           (&fs, "test-repo-large-file-integrity", pool));
 
   /* Set up our file contents string buffer. */
   contents.data = apr_palloc (pool, filesize);
