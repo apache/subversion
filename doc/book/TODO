@@ -112,7 +112,12 @@ To be fixed by sussman:
     "networking a repository" will be broken out into a whole
     chapter.   Outline will look something like this:
 
-      * svn authn overview
+      * Which server to use?
+
+        - no server is more "official" than any other:  comparison
+          chart showing advs/disads of each.
+
+      * client authentication
 
         - how svn AuthN works in general ('pull' model; how commit
           info is stored in revprops; what an empty svn:author means)
@@ -144,6 +149,12 @@ To be fixed by sussman:
              - blanket access control via 'Require' directive
              - per-path access control via mod_authz_svn
        
+      * Accessing the repository via multiple methods
+ 
+        - why you'd want to
+        - repository perm problems, wrappers, etc.
+
+
   - new 'svn diff' UI (when it's done) -- affects ch03, ch08, and
     maybe other chapters.
 
@@ -159,10 +170,17 @@ To be fixed by sussman:
     svn+ssh://.   Actually;  look at r7060.  Maybe it *does* do
     something now.
 
-  - ch04:  add use-case of resurrecting a deleted file.  (how do I
-    find out where the file was deleted?  how to use 'merge' to get it
-    back?  how to use 'copy' to get it back?)
+  - ch04:  new "use-cases" section:
 
+      - resurrecting a deleted file or directory.  (how do I find out
+        where the item was deleted?  how to use 'merge' to get it
+        back;  how to use 'copy' to get it back.)
+
+      - move use-case to new section:  undoing a committed change.
+
+      - move use-case to new section:  merging one branch to another.
+
+       
   - in httpd.conf setup, remind people not to put the svn <Location>
     within an existing DocumentRoot, else the 301 error.
 
