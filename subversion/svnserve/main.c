@@ -231,7 +231,7 @@ int main(int argc, const char *const *argv)
           read_only = TRUE;
           fprintf(stderr, "Warning: -R is deprecated.\n");
           fprintf(stderr, "Anonymous access is now read-only by default.\n");
-          fprintf(stderr, "To control access, use svnserve.conf in repos:\n");
+          fprintf(stderr, "To change, use conf/svnserve.conf in repos:\n");
           fprintf(stderr, "  [general]\n");
           fprintf(stderr, "  anon-access = read|write|none (default read)\n");
           fprintf(stderr, "  auth-access = read|write|none (default write)\n");
@@ -246,10 +246,10 @@ int main(int argc, const char *const *argv)
           believe_username = TRUE;
           fprintf(stderr, "Warning: -u is deprecated and will go away.\n");
           fprintf(stderr, "svnserve now supports password authentication.\n");
-          fprintf(stderr, "To configure, create svnserve.conf in repos:\n");
+          fprintf(stderr, "To configure, put conf/svnserve.conf in repos:\n");
           fprintf(stderr, "  [general]\n");
           fprintf(stderr, "  password-db = FILENAME\n");
-          fprintf(stderr, "In FILENAME (may be relative to repos dir) put:\n");
+          fprintf(stderr, "In FILENAME (may be relative to conf dir) put:\n");
           fprintf(stderr, "  [users]\n");
           fprintf(stderr, "  USERNAME = PASSWORD\n");
           fprintf(stderr, "  ...\n");

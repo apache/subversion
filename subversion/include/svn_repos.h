@@ -138,6 +138,12 @@ const char *svn_repos_path (svn_repos_t *repos, apr_pool_t *pool);
  */
 const char *svn_repos_db_env (svn_repos_t *repos, apr_pool_t *pool);
 
+/** Return path to @a repos's config directory, allocated in @a pool. */
+const char *svn_repos_conf_dir (svn_repos_t *repos, apr_pool_t *pool);
+
+/** Return path to @a repos's svnserve.conf, allocated in @a pool. */
+const char *svn_repos_svnserve_conf (svn_repos_t *repos, apr_pool_t *pool);
+
 /** Return path to @a repos's lock directory, allocated in @a pool. */
 const char *svn_repos_lock_dir (svn_repos_t *repos, apr_pool_t *pool);
 
