@@ -1223,9 +1223,10 @@ delete_entry (dag_node_t *parent,
   SVN_ERR (svn_fs__dag_get_node (&node, parent->fs, id, trail));
   if (svn_fs__dag_is_directory (node))
     {
-      skel_t *nr;
-      SVN_ERR (svn_fs__get_node_revision (&nr, parent->fs, id, trail));
-      if (require_empty && (svn_fs__list_length (nr->children->next)))
+      skel_t *entries_here;
+      SVN_ERR (svn_fs__dag_dir_entries_skel (&entries_here, node, trail));
+
+      if (require_empty && (svn_fs__list_length (entries_here)))
         {
           return svn_error_createf
             (SVN_ERR_FS_DIR_NOT_EMPTY, 0, NULL, parent->pool,
@@ -1305,7 +1306,12 @@ svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
         }
     }
 
-  /* ... then delete the node itself. */
+  /* ... then delete the node itself, after deleting any mutable
+     representations and strings it points to. */
+
+  /* ### kff todo: not actually deleting those representations and
+     strings yet, coming soon. */
+  
   SVN_ERR (svn_fs__delete_node_revision (fs, id, trail));
   
   return SVN_NO_ERROR;
