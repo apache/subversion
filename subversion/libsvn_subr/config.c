@@ -361,35 +361,148 @@ find_option (svn_config_t *cfg, const char *section, const char *option,
   if (sec_ptr != NULL && option != NULL)
     {
       cfg_section_t *sec = sec_ptr;
+      cfg_option_t *opt;
 
       /* Canonicalize the option key */
       svn_stringbuf_set (cfg->tmp_key, option);
       make_hash_key (cfg->tmp_key->data);
 
-      return apr_hash_get (sec->options, cfg->tmp_key->data,
-                           cfg->tmp_key->len);
+      opt = apr_hash_get (sec->options, cfg->tmp_key->data,
+                          cfg->tmp_key->len);
+      /* NOTE: ConfigParser's sections are case sensitive. */
+      if (opt == NULL
+          && apr_strnatcasecmp(section, SVN_CONFIG__DEFAULT_SECTION) != 0)
+        /* Options which aren't found in the requested section are
+           also sought after in the default section. */
+        opt = find_option (cfg, SVN_CONFIG__DEFAULT_SECTION, option, &sec);
+      return opt;
     }
 
   return NULL;
 }
 
 
-/* Set *VALUEP according to the OPT's value. */
+/* Has a bi-directional dependency with make_string_from_option(). */
 static void
-make_string_from_option (const char **valuep,
-                         svn_config_t *cfg, cfg_option_t *opt)
+expand_option_value (svn_config_t *cfg, cfg_section_t *section,
+                     const char *opt_value, const char **opt_x_valuep,
+                     apr_pool_t *x_pool);
+
+
+/* Set *VALUEP according to the OPT's value.  A value for X_POOL must
+   only ever be passed into this function by expand_option_value(). */
+static void
+make_string_from_option (const char **valuep, svn_config_t *cfg,
+                         cfg_section_t *section, cfg_option_t *opt,
+                         apr_pool_t* x_pool)
 {
-  /* ### TODO: Expand the option's value */
-  (void)(cfg);
+  apr_pool_t *tmp_pool = (x_pool ? x_pool : svn_pool_create (cfg->x_pool));
+  expand_option_value (cfg, section, opt->value, &opt->x_value, tmp_pool);
+  opt->expanded = TRUE;
 
   /* For legacy reasons, the cfg is still using counted-length strings
      internally.  But the public interfaces just use null-terminated
      C strings now, so below we ignore length and use only data. */ 
 
   if (opt->x_value)
-    *valuep = opt->x_value;
+    {
+      if (!x_pool)
+        /* Grab the fully expanded value from tmp_pool before its
+           disappearing act. */
+        opt->x_value = apr_pstrmemdup (cfg->x_pool, opt->x_value,
+                                       strlen (opt->x_value));
+      *valuep = opt->x_value;
+    }
   else
     *valuep = opt->value;
+
+  if (!x_pool)
+    svn_pool_destroy (tmp_pool);
+}
+
+
+#define FMT_START     "%("
+#define FMT_END       ")s"
+#define FMT_START_LEN (sizeof (FMT_START) - 1)
+#define FMT_END_LEN   (sizeof (FMT_END) - 1)
+
+
+static void
+expand_option_value (svn_config_t *cfg, cfg_section_t *section,
+                     const char *opt_value, const char **opt_x_valuep,
+                     apr_pool_t *x_pool)
+{
+  svn_stringbuf_t *buf = NULL;
+  const char *parse_from = opt_value;
+  const char *copy_from = parse_from;
+  const char *name_start, *name_end;
+
+  while (parse_from != NULL
+         && *parse_from != '\0'
+         && (name_start = strstr (parse_from, FMT_START)) != NULL)
+    {
+      name_start += FMT_START_LEN;
+      if (*name_start == '\0')
+        /* FMT_START at end of opt_value. */
+        break;
+
+      name_end = strstr (name_start, FMT_END);
+      if (name_end != NULL)
+        {
+          cfg_option_t *x_opt;
+          apr_size_t len = name_end - name_start;
+          char *name = apr_pstrmemdup (x_pool, name_start, len);
+
+          x_opt = find_option (cfg, section->name, name, NULL);
+
+          if (x_opt != NULL)
+            {
+              const char *cstring;
+
+              /* Pass back the sub-pool originally provided by
+                 make_string_from_option() as an indication of when it
+                 should terminate. */
+              make_string_from_option (&cstring, cfg, section, x_opt, x_pool);
+
+              /* Append the plain text preceding the expansion. */
+              len = name_start - FMT_START_LEN - copy_from;
+              if (buf == NULL)
+                {
+                  buf = svn_stringbuf_ncreate (copy_from, len, x_pool);
+                  cfg->x_values = TRUE;
+                }
+              else
+                svn_stringbuf_appendbytes(buf, copy_from, len);
+
+              /* Append the expansion and adjust parse pointers. */
+              svn_stringbuf_appendcstr (buf, cstring);
+              parse_from = name_end + FMT_END_LEN;
+              copy_from = parse_from;
+            }
+          else
+            /* Though ConfigParser considers the failure to resolve
+               the requested expansion an exception condition, we
+               consider it to be plain text, and look for the start of
+               the next one. */
+            parse_from = name_end + FMT_END_LEN;
+        }
+      else
+        /* Though ConfigParser treats unterminated format specifiers
+           as an exception condition, we consider them to be plain
+           text.  The fact that there are no more format specifier
+           endings means we're done parsing. */
+        parse_from = NULL;
+    }
+
+  if (buf != NULL)
+    {
+      /* Copy the remainder of the plain text. */
+      svn_stringbuf_appendcstr (buf, copy_from);
+
+      *opt_x_valuep = apr_pstrmemdup (x_pool, buf->data, buf->len);
+    }
+  else
+    *opt_x_valuep = NULL;
 }
 
 
@@ -401,11 +514,12 @@ svn_config_get (svn_config_t *cfg, const char **valuep,
 {
   if (cfg)
     {
-      cfg_option_t *opt = find_option (cfg, section, option, NULL);
+      cfg_section_t *sec;
+      cfg_option_t *opt = find_option (cfg, section, option, &sec);
       if (opt != NULL)
-        make_string_from_option (valuep, cfg, opt);
+        make_string_from_option (valuep, cfg, sec, opt, NULL);
       else
-        *valuep = default_value;   /* ### TODO: Expand default_value */
+        expand_option_value (cfg, sec, default_value, valuep, cfg->x_pool);
     }
   else
     *valuep = default_value;
@@ -481,7 +595,7 @@ svn_config_enumerate (svn_config_t *cfg, const char *section,
       opt = opt_ptr;
 
       ++count;
-      make_string_from_option (&temp_value, cfg, opt);
+      make_string_from_option (&temp_value, cfg, sec, opt, NULL);
       if (!callback (opt->name, temp_value, baton))
         break;
     }
