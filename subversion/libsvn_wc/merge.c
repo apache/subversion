@@ -37,10 +37,11 @@ svn_wc_merge (const char *left,
   svn_stringbuf_t *parent_dir, *basename;
   svn_stringbuf_t *tmp_target;
   apr_file_t *tmp_f;
+  svn_wc_keywords_t *keywords;
+  enum svn_wc__eol_style eol_style;
+  const char *eol;
   apr_status_t apr_err;
   int exit_code;
-
-  abort ();  /* this is not ready yet, callers should blow up */
 
   /* The merge target must be under revision control. */
   {
@@ -146,24 +147,43 @@ svn_wc_merge (const char *left,
           (apr_err, 0, NULL, pool,
            "svn_wc_merge: unable to close tmp file `%s'", target_copy);
 
-      /* What about translation??  Ben said:
-       *
-       *   cp-and-translate merged-result merge_target
-       *   rm merged-result (and merge_target.tmp)
-       */
+      /* We preserve all the files with keywords expanded and line
+         endings in local (working) form. */
 
+      /* NOTE: Callers must ensure that the svn:eol-style and
+         svn:keywords property values are correct in the currently
+         installed props.  With 'svn merge', it's no big deal.  But
+         when 'svn up' calls this routine, it needs to make sure that
+         this routine is using the newest property values that may
+         have been received *during* the update.  Since this routine
+         will be run from within a log-command, svn_wc_install_file
+         needs to make sure that a previous log-command to 'install
+         latest props' has already executed first.  Ben and I just
+         checked, and that is indeed the order in which the log items
+         are written, so everything should be fine.  Really.  */
+
+      /* Preserve LEFT in expanded form. */
+      SVN_ERR (svn_wc__get_keywords (&keywords, left, NULL, pool));
+      SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol, left, pool));
+      SVN_ERR (svn_wc_copy_and_translate (left, left_copy->data, eol,
+                                          FALSE, keywords, TRUE, pool));
+
+      /* Preserve RIGHT in expanded form. */
+      SVN_ERR (svn_wc__get_keywords (&keywords, right, NULL, pool));
+      SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol, right, pool));
+      SVN_ERR (svn_wc_copy_and_translate (right, right_copy->data, eol,
+                                          FALSE, keywords, TRUE, pool));
+
+      /* Preserve MERGE_TARGET, which is already in expanded form. */
+      SVN_ERR (svn_wc_copy_and_translate (merge_target, target_copy->data, eol,
+                                          FALSE, keywords, TRUE, pool));
     }
 
-  /* ### PROBLEM: Callers need to be careful about making sure the
-     values of svn:eol-style and svn:keywords are correct in the
-     currently installed props.  With 'svn merge', it's no big deal.
-     But when 'svn up' calls this routine, it needs to make sure that
-     this routine is using the newest property values that may have
-     been received *during* the update.  Since this routine will be
-     run from within a log-command, svn_wc_install_file needs to make
-     sure that a previous log-command to 'install latest props' has
-     already executed first.  */
-
+  /* Replace MERGE_TARGET with the new merged file, expanding. */
+  SVN_ERR (svn_wc__get_keywords (&keywords, merge_target, NULL, pool));
+  SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol, merge_target, pool));
+  SVN_ERR (svn_wc_copy_and_translate (tmp_target->data, merge_target, eol,
+                                      FALSE, keywords, TRUE, pool));
   return SVN_NO_ERROR;
 }
 

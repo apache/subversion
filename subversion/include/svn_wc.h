@@ -928,7 +928,7 @@ svn_error_t *svn_wc_diff (svn_stringbuf_t *anchor,
    and RIGHT into MERGE_TARGET.  (It may help to know that LEFT,
    RIGHT, and MERGE_TARGET correspond to "OLDER", "YOURS", and "MINE",
    respectively, in the diff3 documentation.)  Keywords and line
-   endings are untranslated during the merge.
+   endings are in repository form during the merge.
 
    MERGE_TARGET must be under version control; if it is not, return
    SVN_ERR_NO_SUCH_ENTRY.
@@ -1092,8 +1092,13 @@ svn_boolean_t svn_wc_keywords_differ (svn_wc_keywords_t *a,
    Recommendation: if EXPAND is false, then you don't care about the
    keyword values, so pass empty strings as non-null signifiers.
 
-   Note: If EOL_STR and KEYWORDS are NULL, behavior is just a
-   byte-for-byte copy.  */
+   Notes: 
+
+   See svn_wc__get_keywords() and svn_wc__get_eol_style() for a
+   convenient way to get EOL_STR and KEYWORDS if in libsvn_wc.
+
+   If EOL_STR and KEYWORDS are NULL, behavior is just a byte-for-byte
+   copy.  */
 svn_error_t *svn_wc_copy_and_translate (const char *src,
                                         const char *dst,
                                         const char *eol_str,
