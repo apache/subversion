@@ -436,6 +436,7 @@ def run_one_test(n, test_list):
     return 1
 
   # Clear the repos paths for this test
+  global current_repo_dir, current_repo_url
   current_repo_dir = None
   current_repo_url = None
 
