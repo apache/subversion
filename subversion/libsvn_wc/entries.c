@@ -62,12 +62,14 @@
 svn_error_t *
 svn_wc__entries_init (const char *path,
                       const char *url,
+                      svn_revnum_t initial_rev,
                       apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_file_t *f = NULL;
   svn_stringbuf_t *accum = NULL;
-  char *initial_revstr = apr_psprintf (pool, "%d", 0);
+  char *initial_revstr =  apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
+                                        initial_rev);
 
   /* Create the entries file, which must not exist prior to this. */
   SVN_ERR (svn_wc__open_adm_file (&f, path, SVN_WC__ADM_ENTRIES,
@@ -98,6 +100,8 @@ svn_wc__entries_init (const char *path,
      initial_revstr,
      SVN_WC__ENTRY_ATTR_URL,
      url,
+     SVN_WC__ENTRY_ATTR_INCOMPLETE,
+     "true",
      NULL);
 
   /* Close the top-level form. */
@@ -326,6 +330,34 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
         *modify_flags |= SVN_WC__ENTRY_MODIFY_DELETED;
       }
   }
+
+  /* Is this entry incomplete? */
+  {
+    const char *incompletestr;
+      
+    incompletestr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, 
+                                  APR_HASH_KEY_STRING);
+        
+    entry->incomplete = FALSE;
+    if (incompletestr)
+      {
+        if (! strcmp (incompletestr, "true"))
+          entry->incomplete = TRUE;
+        else if (! strcmp (incompletestr, "false"))
+          entry->incomplete = FALSE;
+        else if (! strcmp (incompletestr, ""))
+          entry->incomplete = FALSE;
+        else
+          return svn_error_createf 
+            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+             "Entry '%s' has invalid '%s' value",
+             (name ? name : SVN_WC_ENTRY_THIS_DIR),
+             SVN_WC__ENTRY_ATTR_INCOMPLETE);
+
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_INCOMPLETE;
+      }
+  }
+
 
   /* Attempt to set up timestamps. */
   {
@@ -902,6 +934,10 @@ write_entry (svn_stringbuf_t **output,
   apr_hash_set (atts, SVN_WC__ENTRY_ATTR_DELETED, APR_HASH_KEY_STRING,
                 (entry->deleted ? "true" : NULL));
 
+  /* Incomplete state */
+  apr_hash_set (atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, APR_HASH_KEY_STRING,
+                (entry->incomplete ? "true" : NULL));
+
   /* Timestamps */
   if (entry->text_time)
     {
@@ -1165,6 +1201,10 @@ fold_entry (apr_hash_t *entries,
   /* Deleted state */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_DELETED)
     cur_entry->deleted = entry->deleted;
+
+  /* Incomplete state */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_INCOMPLETE)
+    cur_entry->incomplete = entry->incomplete;
 
   /* Text/prop modification times */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)

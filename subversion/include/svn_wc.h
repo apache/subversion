@@ -573,6 +573,9 @@ typedef struct svn_wc_entry_t
   /** deleted, but parent rev lags behind */
   svn_boolean_t deleted;
 
+  /** for THIS_DIR entry, implies whole entries file is incomplete */
+  svn_boolean_t incomplete;
+
   /** copyfrom location */
   const char *copyfrom_url;
 
