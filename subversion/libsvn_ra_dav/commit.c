@@ -76,6 +76,25 @@ typedef struct
 
 } resource_t;
 
+
+/* Context for parsing <D:error> bodies, used when we call ne_copy(). */
+struct copy_baton
+{
+  /* The method neon is about to execute. */
+  const char *method;
+  
+  /* A parser for handling <D:error> responses from mod_dav_svn. */
+  ne_xml_parser *error_parser;
+
+  /* If <D:error> is returned, here's where the parsed result goes. */
+  svn_error_t *err;
+
+  /* A place for allocating fields in this structure. */
+  apr_pool_t *pool;
+};
+
+
+
 typedef struct
 {
   svn_ra_dav__session_t *ras;
@@ -98,6 +117,10 @@ typedef struct
   /* The commit callback and baton */
   svn_commit_callback_t callback;
   void *callback_baton;
+
+  /* A context for neon COPY request callbacks. */
+  struct copy_baton *cb;
+
 } commit_ctx_t;
 
 typedef struct
@@ -685,18 +708,22 @@ static svn_error_t * commit_delete_entry(const char *path,
 }
 
 
-/* Context for parsing <D:error> bodies, used when we call ne_copy(). */
-struct copy_baton
+
+/* A callback of type ne_create_request_fn;  called whenever neon
+   creates a request. */
+static void 
+create_request_hook(ne_request *req,
+                    void *userdata,
+                    const char *method,
+                    const char *requri)
 {
-  /* A parser for handling <D:error> responses from mod_dav_svn. */
-  ne_xml_parser *error_parser;
+  struct copy_baton *cb = userdata;
 
-  /* If <D:error> is returned, here's where the parsed result goes. */
-  svn_error_t *err;
-
-  /* A place for allocating fields in this structure. */
-  apr_pool_t *pool;
-};
+  if (strcmp(method, "COPY") == 0)
+    cb->method = apr_pstrdup(cb->pool, method);
+  else
+    cb->method = NULL;
+}
 
 
 /* A callback of type ne_pre_send_fn;  called whenever neon is just
@@ -708,9 +735,15 @@ pre_send_hook(ne_request *req,
 {
   struct copy_baton *cb = userdata;
 
-  cb->error_parser = ne_xml_create();
-  svn_ra_dav__add_error_handler(req, cb->error_parser,
-                                &(cb->err), cb->pool);
+  if (! cb->method)
+    return;
+
+  if (strcmp(cb->method, "COPY") == 0)
+    {
+      cb->error_parser = ne_xml_create();
+      svn_ra_dav__add_error_handler(req, cb->error_parser,
+                                    &(cb->err), cb->pool);
+    }
 }
 
 
@@ -752,7 +785,6 @@ static svn_error_t * commit_add_dir(const char *path,
     {
       svn_string_t bc_url, bc_relative;
       const char *copy_src;
-      struct copy_baton *cb;
       int status;
 
       /* This add has history, so we need to do a COPY. */
@@ -776,13 +808,6 @@ static svn_error_t * commit_add_dir(const char *path,
                                             bc_relative.data, 
                                             workpool);
 
-
-      /* Before ne_copy() sends the COPY request, it will call our
-         pre_send_hook() callback which attaches a <D:error> parser. */
-      cb = apr_pcalloc(workpool, sizeof(*cb));
-      cb->pool = workpool;
-      ne_hook_pre_send(parent->cc->ras->sess, pre_send_hook, cb);
-
       /* Have neon do the COPY. */
       status = ne_copy(parent->cc->ras->sess,
                        1,                   /* overwrite */
@@ -791,25 +816,25 @@ static svn_error_t * commit_add_dir(const char *path,
                        child->rsrc->wr_url); /* dest URI */
 
       /* Did we get a <D:error> response? */
-      if (cb->err)
+      if (parent->cc->cb->err)
         {
-          if (cb->error_parser)
-            ne_xml_destroy(cb->error_parser);
-          return cb->err;
+          if (parent->cc->cb->error_parser)
+            ne_xml_destroy(parent->cc->cb->error_parser);
+          return parent->cc->cb->err;
         }
 
       /* Did we get some error from neon? */
       if (status != NE_OK)
         {
           const char *msg = apr_psprintf(dir_pool, "COPY of %s", path);
-          if (cb->error_parser)
-            ne_xml_destroy(cb->error_parser);
+          if (parent->cc->cb->error_parser)
+            ne_xml_destroy(parent->cc->cb->error_parser);
           return svn_ra_dav__convert_error(parent->cc->ras->sess,
                                            msg, status, workpool);
         }
 
-      if (cb->error_parser)
-        ne_xml_destroy(cb->error_parser);
+      if (parent->cc->cb->error_parser)
+        ne_xml_destroy(parent->cc->cb->error_parser);
     }
 
   /* Add this path to the valid targets hash. */
@@ -972,7 +997,6 @@ static svn_error_t * commit_add_file(const char *path,
     {
       svn_string_t bc_url, bc_relative;
       const char *copy_src;
-      struct copy_baton *cb;
       int status;
 
       /* This add has history, so we need to do a COPY. */
@@ -996,13 +1020,6 @@ static svn_error_t * commit_add_file(const char *path,
                                             bc_relative.data, 
                                             workpool);
 
-
-      /* Before ne_copy() sends the COPY request, it will call our
-         pre_send_hook() callback which attaches a <D:error> parser. */
-      cb = apr_pcalloc(workpool, sizeof(*cb));
-      cb->pool = workpool;
-      ne_hook_pre_send(parent->cc->ras->sess, pre_send_hook, cb);
-
       /* Have neon do the COPY. */
       status = ne_copy(parent->cc->ras->sess,
                        1,                   /* overwrite */
@@ -1011,25 +1028,25 @@ static svn_error_t * commit_add_file(const char *path,
                        file->rsrc->wr_url); /* dest URI */
 
       /* Did we get a <D:error> response? */
-      if (cb->err)
+      if (parent->cc->cb->err)
         {
-          if (cb->error_parser)
-            ne_xml_destroy(cb->error_parser);
-          return cb->err;
+          if (parent->cc->cb->error_parser)
+            ne_xml_destroy(parent->cc->cb->error_parser);
+          return parent->cc->cb->err;
         }
 
       /* Did we get some error from neon? */
       if (status != NE_OK)
         {
           const char *msg = apr_psprintf(file_pool, "COPY of %s", path);
-          if (cb->error_parser)
-            ne_xml_destroy(cb->error_parser);
+          if (parent->cc->cb->error_parser)
+            ne_xml_destroy(parent->cc->cb->error_parser);
           return svn_ra_dav__convert_error(parent->cc->ras->sess,
                                            msg, status, workpool);
         }
       
-      if (cb->error_parser)
-        ne_xml_destroy(cb->error_parser);
+      if (parent->cc->cb->error_parser)
+        ne_xml_destroy(parent->cc->cb->error_parser);
     }
 
   /* Add this path to the valid targets hash. */
@@ -1345,6 +1362,11 @@ svn_error_t * svn_ra_dav__get_commit_editor2(void *session_baton,
   svn_ra_dav__session_t *ras = session_baton;
   svn_delta_editor_t *commit_editor;
   commit_ctx_t *cc;
+  struct copy_baton *cb;
+
+  /* Build a copy_baton for COPY requests. */
+  cb = apr_pcalloc(pool, sizeof(*cb));
+  cb->pool = pool;
 
   /* Build the main commit editor's baton. */
   cc = apr_pcalloc(pool, sizeof(*cc));
@@ -1356,6 +1378,7 @@ svn_error_t * svn_ra_dav__get_commit_editor2(void *session_baton,
   cc->log_msg = log_msg;
   cc->callback = callback;
   cc->callback_baton = callback_baton;
+  cc->cb = cb;
 
   /* If the caller didn't give us any way of storing wcprops, then
      there's no point in getting back a MERGE response full of VR's. */
@@ -1379,6 +1402,12 @@ svn_error_t * svn_ra_dav__get_commit_editor2(void *session_baton,
   ** log message onto the thing.
   */
   SVN_ERR( apply_log_message(cc, log_msg, pool) );
+
+  /* Register request hooks in the neon session.  They specifically
+     allow any COPY requests (ne_copy()) to parse <D:error>
+     responses.  They're no-ops for other requests. */
+  ne_hook_create_request(ras->sess, create_request_hook, cb);
+  ne_hook_pre_send(ras->sess, pre_send_hook, cb);
 
   /*
   ** Set up the editor.
