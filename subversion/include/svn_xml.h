@@ -101,7 +101,8 @@ svn_error_t *svn_xml_parse (svn_xml_parser_t *parser,
 
 /* The way to officially bail out of xml parsing:
    Store ERROR in SVN_PARSER and set all expat callbacks to NULL. */
-void signal_expat_bailout (svn_error_t *error, svn_xml_parser_t *svn_parser);
+void svn_xml_signal_bailout (svn_error_t *error,
+                             svn_xml_parser_t *svn_parser);
 
 
 
