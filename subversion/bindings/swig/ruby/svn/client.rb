@@ -1,6 +1,8 @@
 require "English"
 require "svn/error"
 require "svn/util"
+require "svn/core"
+require "svn/fs"
 require "svn/ext/client"
 
 module Svn

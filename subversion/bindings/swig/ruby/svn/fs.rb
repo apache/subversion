@@ -2,8 +2,8 @@ require "English"
 require "tempfile"
 require "svn/error"
 require "svn/util"
-require "svn/ext/fs"
 require "svn/repos"
+require "svn/ext/fs"
 
 module Svn
   module Fs
