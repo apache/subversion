@@ -666,6 +666,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
 {
   file_read_ctx_t frc = { 0 };
 
+  /* ### todo#510: convert to new apply_text interface. */
   SVN_ERR_W( (*editor->apply_textdelta)(file_baton,
                                         base_checksum, result_checksum,
                                         pool,

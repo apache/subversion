@@ -101,14 +101,6 @@ static svn_error_t *delta_proplists (struct context *c,
                                      apr_pool_t *pool);
 
 
-/* Constructing deltas for file constents.  */
-static svn_error_t *send_text_delta (struct context *c,
-                                     void *file_baton,
-                                     const char *base_checksum,
-                                     const char *result_checksum,
-                                     svn_txdelta_stream_t *delta_stream,
-                                     apr_pool_t *pool);
-
 static svn_error_t *delta_files (struct context *c, 
                                  void *file_baton,
                                  const char *source_path,
@@ -568,48 +560,6 @@ delta_proplists (struct context *c,
 /* Constructing deltas for file constents.  */
 
 
-/* Change the contents of FILE_BATON in C->editor, according to the
-   text delta from DELTA_STREAM.  Pass BASE_CHECKSUM and
-   RESULT_CHECKSUM along to C->editor->apply_textdelta. */
-static svn_error_t *
-send_text_delta (struct context *c,
-                 void *file_baton,
-                 const char *base_checksum,
-                 const char *result_checksum,
-                 svn_txdelta_stream_t *delta_stream,
-                 apr_pool_t *pool)
-{
-  svn_txdelta_window_handler_t delta_handler;
-  void *delta_handler_baton;
-
-  /* Get a handler that will apply the delta to the file.  */
-  SVN_ERR (c->editor->apply_textdelta 
-           (file_baton, base_checksum, result_checksum, pool,
-            &delta_handler, &delta_handler_baton));
-
-  /* Our editor didn't provide a window handler, so don't sweat the deltas. */
-  if (delta_handler == NULL)
-    return SVN_NO_ERROR;
-
-  if (c->text_deltas && delta_stream)
-    {
-      /* Deliver the delta stream to the file.  */
-      SVN_ERR (svn_txdelta_send_txstream (delta_stream,
-                                          delta_handler,
-                                          delta_handler_baton,
-                                          pool));
-    }
-  else
-    {
-      /* The caller doesn't want text delta data.  Just send a single
-         NULL window. */
-      SVN_ERR (delta_handler (NULL, delta_handler_baton));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Make the appropriate edits on FILE_BATON to change its contents and
    properties from those in SOURCE_PATH to those in TARGET_PATH. */
 static svn_error_t *
@@ -644,10 +594,10 @@ delta_files (struct context *c,
     }
 
   /* If there is a change, and the context indicates that we should
-     care about it, then hand it off to a delta stream.  */
+     care about it, then send it through the editor.  */
   if (changed)
     {
-      svn_txdelta_stream_t *delta_stream = NULL;
+      svn_stream_t *source_stream = NULL, *target_stream = NULL;
       unsigned char source_digest[MD5_DIGESTSIZE];
       unsigned char target_digest[MD5_DIGESTSIZE];
       const char *source_hex_digest = NULL;
@@ -655,13 +605,17 @@ delta_files (struct context *c,
 
       if (c->text_deltas)
         {
-          /* Get a delta stream turning an empty file into one having
-             TARGET_PATH's contents.  */
-          SVN_ERR (svn_fs_get_file_delta_stream 
-                   (&delta_stream, 
-                    source_path ? c->source_root : NULL,
-                    source_path ? source_path : NULL,
-                    c->target_root, target_path, subpool));
+          SVN_ERR (svn_fs_file_contents (&target_stream,
+                                         c->target_root,
+                                         target_path,
+                                         subpool));
+          if (source_path)
+            {
+              SVN_ERR (svn_fs_file_contents (&source_stream,
+                                             c->source_root,
+                                             source_path,
+                                             subpool));
+            }
         }
 
       if (source_path)
@@ -678,9 +632,9 @@ delta_files (struct context *c,
 
       target_hex_digest = svn_md5_digest_to_cstring (target_digest, subpool);
 
-      SVN_ERR (send_text_delta (c, file_baton,
-                                source_hex_digest, target_hex_digest,
-                                delta_stream, subpool));
+      SVN_ERR (c->editor->apply_text
+               (file_baton, source_hex_digest, target_hex_digest,
+                source_stream, target_stream, c->editor, subpool));
     }
 
   /* Cleanup. */

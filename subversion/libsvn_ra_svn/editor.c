@@ -564,6 +564,7 @@ static svn_error_t *ra_svn_handle_apply_textdelta(svn_ra_svn_conn_t *conn,
   /* Parse arguments, make the editor call, and respond. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &token));
   SVN_CMD_ERR(lookup_token(ds, token, &entry, pool));
+  /* ### todo#510: convert to new apply_text interface. */
   SVN_CMD_ERR(ds->editor->apply_textdelta(entry->baton, NULL, NULL,
                                           pool, &wh, &wh_baton));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, "b", (wh != NULL)));

@@ -3138,6 +3138,14 @@ window_consumer (svn_txdelta_window_t *window, void *baton)
      ### advantage of the buffering capability. this will be important
      ### when we export an FS API function for writing a fulltext into
      ### the FS, rather than forcing that fulltext thru apply_textdelta.
+
+     ### ------------------- Update (28 Jan 2003) --------------------
+     ### We do have an FS API for writing fulltext directly now (see
+     ### svn_fs_apply_text).  Furthermore, the conversion of editors
+     ### to use editor->apply_text(), which is a pull instead of push
+     ### interface, probably makes a lot of the above easier.  See
+     ### issue #510 for details.
+     ### -------------------------------------------------------------
   */
 
   /* Check to see if we need to purge the portion of the contents that
