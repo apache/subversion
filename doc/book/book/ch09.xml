@@ -5096,6 +5096,145 @@ $ svnlook youngest /tmp/repos/
 
     </sect2>
   </sect1>
+
+  <!-- ================================================================= -->
+  <!-- ======================== SECTION 4 ============================== -->
+  <!-- ================================================================= -->
+  <sect1 id="svn-ch-9-sect-4">
+
+    <title><command>svnserve</command></title>
+    
+    <para><command>svnserve</command> allows access to Subversion
+      repositories using the <literal>svn</literal> network protocol.
+      You can run svnserve either as a standalone server process, or
+      you can have another process, such as <command>inetd</command>,
+      <command>xinetd</command> or <command>sshd</command>, launch it
+      for you.</para>
+
+    <para>Once the client has selected a repository by transmitting
+      its URL, <command>svnserve</command> reads a file named
+      <filename>conf/svnserve.conf</filename> in the repository
+      directory to determine repository-specific settings such as what
+      authentication database to use and what authorization policies
+      to apply.  See <xref linkend="svn-ch-6-sect-3"/> for details of
+      the <filename>svnserve.conf</filename> file.</para>
+    
+    <sect2 id="svn-ch-9-sect-4.1">
+      <title><command>svnserve</command> Switches</title>
+      
+      <para>Unlike the previous commands we've
+        described. <command>svnserve</command> has no
+        subcommands&mdash;<command>svnserve</command> is controlled
+        exclusively by switches.</para>
+
+      <variablelist>
+
+        <varlistentry>
+          <term><option>--daemon</option> (<option>-d</option>)</term>
+          <listitem>
+            <para>Causes <command>svnserve</command> to run in daemon
+              mode.  <command>svnserve</command> backgrounds itself
+              and accepts and serves TCP/IP connections on the svn
+              port (3690, by default).</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>--listen-port</option>=<replaceable>PORT</replaceable></term>
+          <listitem>
+            <para>Causes svnserve to listen on
+              <replaceable>PORT</replaceable> when run in daemon
+              mode.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>--listen-host</option>=<replaceable>HOST</replaceable></term>
+          <listitem>
+            <para>Causes <command>svnserve</command> to listen on the
+              interface specified by <replaceable>HOST</replaceable>,
+              which may be either a hostname or an IP address.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>--foreground</option></term>
+          <listitem>
+            <para>When used together with <option>-d</option>, this
+              switch causes <command>svnserve</command> to stay in the
+              foreground.  This switch is mainly useful for
+              debugging.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>--inetd</option> (<option>-i</option>)</term>
+          <listitem>
+            <para>Causes <command>svnserve</command> to use the
+              stdin/stdout file descriptors, as is appropriate for a
+              daemon running out of <command>inetd</command>.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>--help</option> (<option>-h</option>)</term>
+          <listitem>
+            <para>Displays a usage summary and exits.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>--root</option>=<replaceable>ROOT</replaceable>
+          (<option>-r</option>=<replaceable>ROOT</replaceable>)</term>
+          <listitem>
+            <para>Sets the virtual root for repositories served by
+              <command>svnserve</command>.  The pathname in URLs
+              provided by the client will be interpreted relative to
+              this root, and will not be allowed to escape this
+              root.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>--tunnel</option> (<option>-t</option>)</term>
+          <listitem>
+            <para>Causes <command>svnserve</command> to run in tunnel
+              mode, which is just like the <command>inetd</command>
+              mode of operation (serve one connection over
+              stdin/stdout) except that the connection is considered
+              to be pre-authenticated with the username of the current
+              uid.  This flag is selected by the client when running
+              over a tunnel agent such as
+              <command>ssh</command>.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>--threads</option> (<option>-T</option>)</term>
+          <listitem>
+            <para>When running in daemon mode, causes
+              <command>svnserve</command> to spawn a thread instead of
+              a process for each connection.  The
+              <command>svnserve</command> process still backgrounds
+              itself at startup time.</para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term><option>--listen-once</option> (<option>-X</option>)</term>
+          <listitem>
+            <para>Causes <command>svnserve</command> to accept one
+              connection on the svn port, serve it, and exit.  This
+              option is mainly useful for debugging.</para>
+          </listitem>
+        </varlistentry>
+
+      </variablelist>
+
+    </sect2>
+
+  </sect1>
+
 </chapter>
 
 <!--
