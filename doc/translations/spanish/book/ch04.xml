@@ -1511,12 +1511,13 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       subdirectorio particular de la revisión 4822.</para>
 
     <sect2 id="svn-ch-4-sect-6.1">
-      <title>Creating a Simple Tag</title>
+      <title>Creando una etiqueta simple</title>
 
-      <para>Once again, <command>svn copy</command> comes to the
-        rescue.  If you want to create a snapshot of
-        <filename>/calc/trunk</filename> exactly as it looks in the
-        <literal>HEAD</literal> revision, then make a copy of it:</para>
+      <para>De nuevo, <command>svn copy</command> viene al
+        rescate. Si desea crear una instantánea de
+        <filename>/calc/trunk</filename> exáctamente tal y como
+        se ve en la revisión <literal>HEAD</literal>, haga una
+        copia:</para>
 
 <screen>
 $ svn copy http://svn.example.com/repos/calc/trunk \
@@ -1526,20 +1527,20 @@ $ svn copy http://svn.example.com/repos/calc/trunk \
 Committed revision 351.
 </screen>
 
-      <para>This example assumes that a
-        <filename>/calc/tags</filename> directory already exists.  (If it
-        doesn't, see <xref linkend="svn-ch-9-sect-1.2-re-mkdir"/>).
-        After the copy completes, the new
-        <filename>release-1.0</filename> directory is forever a
-        snapshot of how the project looked in the
-        <literal>HEAD</literal> revision at the time you made the
-        copy.  Of course you might want to be more precise about
-        exactly which revision you copy, in case somebody else may
-        have committed changes to the project when you weren't
-        looking.  So if you know that revision 350 of
-        <filename>/calc/trunk</filename> is exactly the snapshot you
-        want, you can specify it by passing <option>-r 350</option> to
-        the <command>svn copy</command> command.</para>
+      <para>Este ejemplo asume que ya existe un directorio
+        <filename>/calc/tags</filename>.  (Si no existe,
+        vea <xref linkend="svn-ch-9-sect-1.2-re-mkdir"/>).
+        Tras finalizar la copia, el nuevo directorio
+        <filename>lanzamiento-1.0</filename> será para siempre
+        una instantánea del aspecto que tenía la revisión
+        <literal>HEAD</literal> del projecto en el momento que
+        realizó la copia. Por supuesto puede querer ser más
+        preciso sobre qué revisión exacta copiar, en caso de
+        que alguien realice un cambio al proyecto mientras no
+        está observando. Así que si sabe que la revisión 350
+        de <filename>/calc/trunk</filename> es exáctamente la
+        instantánea que desea, puede especificarla pasando <option>-r
+        350</option> al comando <command>svn copy</command>.</para>
 
       <para>But wait a moment: isn't this tag-creation procedure the
         same procedure we used to create a branch?  Yes, in fact, it
