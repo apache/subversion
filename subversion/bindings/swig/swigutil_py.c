@@ -820,6 +820,7 @@ static const svn_delta_editor_t thunk_editor = {
   thunk_add_file,
   thunk_open_file,
   thunk_apply_textdelta,
+  NULL,   /* ### need thunk_apply_text() */
   thunk_change_file_prop,
   thunk_close_file,
   thunk_close_edit,
