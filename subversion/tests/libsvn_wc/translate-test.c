@@ -1454,61 +1454,60 @@ mixed_to_crlf_unexpand_author_date_rev_url (const char **msg,
 
 /* The test table.  */
 
-svn_error_t * (*test_funcs[]) (const char **msg,
-                               svn_boolean_t msg_only,
-                               apr_pool_t *pool) = {
-  0,
+struct svn_test_descriptor_t test_funcs[] =
+  {
+    SVN_TEST_NULL,
   /* The no-op conversion. */
-  noop,
-  /* Conversions resulting in crlf, no keywords involved. */
-  crlf_to_crlf,
-  lf_to_crlf,
-  cr_to_crlf,
-  mixed_to_crlf,
-  /* Conversions resulting in lf, no keywords involved. */
-  lf_to_lf,
-  crlf_to_lf,
-  cr_to_lf,
-  mixed_to_lf,
-  /* Conversions resulting in cr, no keywords involved. */
-  crlf_to_cr,
-  lf_to_cr,
-  cr_to_cr,
-  mixed_to_cr,
-  /* Random eol stuff. */
-  mixed_no_repair,
-  /* Keyword expansion alone, no eol conversion involved. */
-  expand_author,
-  expand_date,
-  expand_author_date,
-  expand_author_rev,
-  expand_rev,
-  expand_rev_url,
-  expand_author_date_rev_url,
-  /* Keyword expansion and eol conversion together. */
-  lf_to_crlf_expand_author,
-  mixed_to_lf_expand_author_date,
-  crlf_to_cr_expand_author_rev,
-  cr_to_crlf_expand_rev,
-  cr_to_crlf_expand_rev_url,
-  mixed_to_crlf_expand_author_date_rev_url,
-  /* Keyword unexpansion alone, no eol conversion involved. */
-  unexpand_author,
-  unexpand_date,
-  unexpand_author_date,
-  unexpand_author_rev,
-  unexpand_rev,
-  unexpand_rev_url,
-  unexpand_author_date_rev_url,
-  /* Keyword unexpansion and eol conversion together. */
-  lf_to_crlf_unexpand_author,
-  mixed_to_lf_unexpand_author_date,
-  crlf_to_cr_unexpand_author_rev,
-  cr_to_crlf_unexpand_rev,
-  cr_to_crlf_unexpand_rev_url,
-  mixed_to_crlf_unexpand_author_date_rev_url,
-  0
-};
+    SVN_TEST_PASS (noop),
+    /* Conversions resulting in crlf, no keywords involved. */
+    SVN_TEST_PASS (crlf_to_crlf),
+    SVN_TEST_PASS (lf_to_crlf),
+    SVN_TEST_PASS (cr_to_crlf),
+    SVN_TEST_PASS (mixed_to_crlf),
+    /* Conversions resulting in lf, no keywords involved. */
+    SVN_TEST_PASS (lf_to_lf),
+    SVN_TEST_PASS (crlf_to_lf),
+    SVN_TEST_PASS (cr_to_lf),
+    SVN_TEST_PASS (mixed_to_lf),
+    /* Conversions resulting in cr, no keywords involved. */
+    SVN_TEST_PASS (crlf_to_cr),
+    SVN_TEST_PASS (lf_to_cr),
+    SVN_TEST_PASS (cr_to_cr),
+    SVN_TEST_PASS (mixed_to_cr),
+    /* Random eol stuff. */
+    SVN_TEST_PASS (mixed_no_repair),
+    /* Keyword expansion alone, no eol conversion involved. */
+    SVN_TEST_PASS (expand_author),
+    SVN_TEST_PASS (expand_date),
+    SVN_TEST_PASS (expand_author_date),
+    SVN_TEST_PASS (expand_author_rev),
+    SVN_TEST_PASS (expand_rev),
+    SVN_TEST_PASS (expand_rev_url),
+    SVN_TEST_PASS (expand_author_date_rev_url),
+    /* Keyword expansion and eol conversion together. */
+    SVN_TEST_PASS (lf_to_crlf_expand_author),
+    SVN_TEST_PASS (mixed_to_lf_expand_author_date),
+    SVN_TEST_PASS (crlf_to_cr_expand_author_rev),
+    SVN_TEST_PASS (cr_to_crlf_expand_rev),
+    SVN_TEST_PASS (cr_to_crlf_expand_rev_url),
+    SVN_TEST_PASS (mixed_to_crlf_expand_author_date_rev_url),
+    /* Keyword unexpansion alone, no eol conversion involved. */
+    SVN_TEST_PASS (unexpand_author),
+    SVN_TEST_PASS (unexpand_date),
+    SVN_TEST_PASS (unexpand_author_date),
+    SVN_TEST_PASS (unexpand_author_rev),
+    SVN_TEST_PASS (unexpand_rev),
+    SVN_TEST_PASS (unexpand_rev_url),
+    SVN_TEST_PASS (unexpand_author_date_rev_url),
+    /* Keyword unexpansion and eol conversion together. */
+    SVN_TEST_PASS (lf_to_crlf_unexpand_author),
+    SVN_TEST_PASS (mixed_to_lf_unexpand_author_date),
+    SVN_TEST_PASS (crlf_to_cr_unexpand_author_rev),
+    SVN_TEST_PASS (cr_to_crlf_unexpand_rev),
+    SVN_TEST_PASS (cr_to_crlf_unexpand_rev_url),
+    SVN_TEST_PASS (mixed_to_crlf_unexpand_author_date_rev_url),
+    SVN_TEST_NULL
+  };
 
 
 

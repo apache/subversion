@@ -449,19 +449,18 @@ test_decompose (const char **msg,
 
 /* The test table.  */
 
-svn_error_t * (*test_funcs[]) (const char **msg,
-                               svn_boolean_t msg_only,
-                               apr_pool_t *pool) = {
-  0,
-  test_path_is_child,
-  test_path_split,
-  test_is_url,
-  test_uri_encode,
-  test_join,
-  test_basename,
-  test_decompose,
-  0
-};
+struct svn_test_descriptor_t test_funcs[] =
+  {
+    SVN_TEST_NULL,
+    SVN_TEST_PASS (test_path_is_child),
+    SVN_TEST_PASS (test_path_split),
+    SVN_TEST_PASS (test_is_url),
+    SVN_TEST_PASS (test_uri_encode),
+    SVN_TEST_PASS (test_join),
+    SVN_TEST_PASS (test_basename),
+    SVN_TEST_PASS (test_decompose),
+    SVN_TEST_NULL
+  };
 
 
 

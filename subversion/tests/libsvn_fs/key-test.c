@@ -20,6 +20,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "svn_error.h"
+#include "svn_test.h"
 #include "apr.h"
 #include "../../libsvn_fs/key-gen.h"
 
@@ -188,11 +189,9 @@ next_key (const char **msg,
 
 /* The test table.  */
 
-svn_error_t *(*test_funcs[]) (const char **msg, 
-                              svn_boolean_t msg_only,
-                              apr_pool_t *pool) = 
-{
-  0,
-  next_key,
-  0
-};
+struct svn_test_descriptor_t test_funcs[] =
+  {
+    SVN_TEST_NULL,
+    SVN_TEST_PASS (next_key),
+    SVN_TEST_NULL
+  };

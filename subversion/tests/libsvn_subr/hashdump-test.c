@@ -27,6 +27,7 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_hash.h"
+#include "svn_test.h"
 
 
 /* Convert an apr_status_t into an svn_error_t.  */
@@ -203,16 +204,14 @@ test3 (const char **msg,
 */
 
 /* An array of all test functions */
-svn_error_t *(*test_funcs[])(const char **msg, 
-                             svn_boolean_t msg_only,
-                             apr_pool_t *pool) =
-{
-  NULL,
-  test1,
-  test2,
-  test3,
-  NULL
-};
+struct svn_test_descriptor_t test_funcs[] =
+  {
+    SVN_TEST_NULL,
+    SVN_TEST_PASS (test1),
+    SVN_TEST_PASS (test2),
+    SVN_TEST_PASS (test3),
+    SVN_TEST_NULL
+  };
 
 
 

@@ -30,6 +30,7 @@
 #include "svn_io.h"
 #include "svn_error.h"
 #include "svn_string.h"   /* This includes <apr_*.h> */
+#include "svn_test.h"
 
 
 /* A quick way to create error messages.  */
@@ -451,25 +452,23 @@ test12 (const char **msg,
 */
 
 /* An array of all test functions */
-svn_error_t *(*test_funcs[])(const char **msg, 
-                             svn_boolean_t msg_only,
-                             apr_pool_t *pool) =
-{
-  NULL,
-  test1,
-  test2,
-  test3,
-  test4,
-  test5,
-  test6,
-  test7,
-  test8,
-  test9,
-  test10,
-  test11,
-  test12,
-  NULL
-};
+struct svn_test_descriptor_t test_funcs[] =
+  {
+    SVN_TEST_NULL,
+    SVN_TEST_PASS (test1),
+    SVN_TEST_PASS (test2),
+    SVN_TEST_PASS (test3),
+    SVN_TEST_PASS (test4),
+    SVN_TEST_PASS (test5),
+    SVN_TEST_PASS (test6),
+    SVN_TEST_PASS (test7),
+    SVN_TEST_PASS (test8),
+    SVN_TEST_PASS (test9),
+    SVN_TEST_PASS (test10),
+    SVN_TEST_PASS (test11),
+    SVN_TEST_PASS (test12),
+    SVN_TEST_NULL
+  };
 
 
 

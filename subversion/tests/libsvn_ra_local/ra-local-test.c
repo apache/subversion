@@ -34,6 +34,7 @@
 #include "svn_ra.h"
 #include "svn_fs.h"
 #include "svn_client.h"
+#include "svn_test.h"
 #include "../../libsvn_ra_local/ra_local.h"
 
 /* Notice that we're including the FS API above.  This isn't because
@@ -329,18 +330,19 @@ split_url_test_2 (const char **msg)
 
 /* The test table.  */
 
-svn_error_t * (*test_funcs[]) (const char **msg) = {
-  0,
+struct svn_test_descriptor_t test_funcs[] =
+  {
+    SVN_TEST_NULL,
 #ifdef ENABLE_SPLIT_URL_TESTS
-  split_url_test_1,
-  split_url_test_2,
+    SVN_TEST_PASS (split_url_test_1),
+    SVN_TEST_PASS (split_url_test_2),
 #endif /* ENABLE_SPLIT_URL_TESTS */
 #ifndef NOT_FIXED_YET
-  open_ra_session,
-  get_youngest_rev,
+    SVN_TEST_PASS (open_ra_session),
+    SVN_TEST_PASS (get_youngest_rev),
 #endif /* NOT_FIXED_YET */
-  0
-};
+    SVN_TEST_NULL
+  };
 
 #undef NOT_FIXED_YET
 

@@ -22,6 +22,7 @@
 #include "apr.h"
 #include "svn_pools.h"
 #include "svn_string.h"
+#include "svn_test.h"
 #include "../../libsvn_fs/fs.h"
 #include "../../libsvn_fs/util/skel.h"
 
@@ -902,16 +903,14 @@ unparse_list (const char **msg,
 
 /* The test table.  */
 
-svn_error_t *(*test_funcs[]) (const char **msg, 
-                              svn_boolean_t msg_only,
-                              apr_pool_t *pool) = 
-{
-  0,
-  parse_implicit_length,
-  parse_explicit_length,
-  parse_invalid_atoms,
-  parse_list,
-  unparse_implicit_length,
-  unparse_list,
-  0
-};
+struct svn_test_descriptor_t test_funcs[] =
+  {
+    SVN_TEST_NULL,
+    SVN_TEST_PASS (parse_implicit_length),
+    SVN_TEST_PASS (parse_explicit_length),
+    SVN_TEST_PASS (parse_invalid_atoms),
+    SVN_TEST_PASS (parse_list),
+    SVN_TEST_PASS (unparse_implicit_length),
+    SVN_TEST_PASS (unparse_list),
+    SVN_TEST_NULL
+  };

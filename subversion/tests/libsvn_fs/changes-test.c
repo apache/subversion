@@ -20,6 +20,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "svn_error.h"
+#include "svn_test.h"
 #include "apr.h"
 #include "../fs-helpers.h"
 #include "../../libsvn_fs/util/skel.h"
@@ -551,16 +552,15 @@ changes_fetch (const char **msg,
 
 /* The test table.  */
 
-svn_error_t * (*test_funcs[]) (const char **msg,
-                               svn_boolean_t msg_only,
-                               apr_pool_t *pool) = {
-  0,
-  changes_add,
-  changes_fetch_raw,
-  changes_delete,
-  changes_fetch,
-  0
-};
+struct svn_test_descriptor_t test_funcs[] =
+  {
+    SVN_TEST_NULL,
+    SVN_TEST_PASS (changes_add),
+    SVN_TEST_PASS (changes_fetch_raw),
+    SVN_TEST_PASS (changes_delete),
+    SVN_TEST_PASS (changes_fetch),
+    SVN_TEST_NULL
+  };
 
 
 

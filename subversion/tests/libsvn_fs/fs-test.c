@@ -29,7 +29,6 @@
 #include "svn_delta.h"
 #include "svn_test.h"
 
-#include "../svn_tests.h"
 #include "../fs-helpers.h"
 
 #include "../../libsvn_fs/fs.h"
@@ -2729,14 +2728,19 @@ copy_test (const char **msg,
 }
 
 
-#if 0 /* ### todo: svn_fs_link() as we knew it no longer exists.  This
-         test should be rewritten as a test of svn_fs_revision_link()
-         or discarded. */
 static svn_error_t *
 link_test (const char **msg,
            svn_boolean_t msg_only,
            apr_pool_t *pool)
 {
+  *msg = "linking, so no copy history";
+  if (msg_only)
+    return SVN_NO_ERROR;
+  return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL, pool, "XFAIL");
+
+#if 0 /* ### todo: svn_fs_link() as we knew it no longer exists.  This
+         test should be rewritten as a test of svn_fs_revision_link()
+         or discarded. */
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root, *rev_root;
@@ -2884,8 +2888,8 @@ link_test (const char **msg,
   /* Close the filesystem. */
   SVN_ERR (svn_fs_close_fs (fs));
   return SVN_NO_ERROR;
-}
 #endif /* 0 */
+}
 
 /* This tests deleting of mutable nodes.  We build a tree in a
  * transaction, then try to delete various items in the tree.  We
@@ -5607,47 +5611,46 @@ branch_test (const char **msg,
 
 /* The test table.  */
 
-svn_error_t * (*test_funcs[]) (const char **msg,
-                               svn_boolean_t msg_only,
-                               apr_pool_t *pool) = {
-  0,
-  create_berkeley_filesystem,
-  open_berkeley_filesystem,
-  trivial_transaction,
-  reopen_trivial_transaction,
-  create_file_transaction,
-  verify_txn_list,
-  call_functions_with_unopened_fs,
-  write_and_read_file,
-  create_mini_tree_transaction,
-  create_greek_tree_transaction,
-  list_directory,
-  revision_props,
-  transaction_props,
-  node_props,
-  delete_mutables,
-  delete,
-  abort_txn,
-  test_tree_node_validation,
-  fetch_youngest_rev,
-  basic_commit,
-  copy_test,
-  /* link_test, */
-  merging_commit,
-  commit_date,
-  check_old_revisions,
-  check_all_revisions,
-  medium_file_integrity,
-  large_file_integrity,
-  check_root_revision,
-  undeltify_deltify,
-  test_node_created_rev,
-  check_related,
-  revisions_changed,
-  canonicalize_abspath,
-  branch_test,
-  0
-};
+struct svn_test_descriptor_t test_funcs[] =
+  {
+    SVN_TEST_NULL,
+    SVN_TEST_PASS (create_berkeley_filesystem),
+    SVN_TEST_PASS (open_berkeley_filesystem),
+    SVN_TEST_PASS (trivial_transaction),
+    SVN_TEST_PASS (reopen_trivial_transaction),
+    SVN_TEST_PASS (create_file_transaction),
+    SVN_TEST_PASS (verify_txn_list),
+    SVN_TEST_PASS (call_functions_with_unopened_fs),
+    SVN_TEST_PASS (write_and_read_file),
+    SVN_TEST_PASS (create_mini_tree_transaction),
+    SVN_TEST_PASS (create_greek_tree_transaction),
+    SVN_TEST_PASS (list_directory),
+    SVN_TEST_PASS (revision_props),
+    SVN_TEST_PASS (transaction_props),
+    SVN_TEST_PASS (node_props),
+    SVN_TEST_PASS (delete_mutables),
+    SVN_TEST_PASS (delete),
+    SVN_TEST_PASS (abort_txn),
+    SVN_TEST_PASS (test_tree_node_validation),
+    SVN_TEST_PASS (fetch_youngest_rev),
+    SVN_TEST_PASS (basic_commit),
+    SVN_TEST_PASS (copy_test),
+    SVN_TEST_XFAIL (link_test),
+    SVN_TEST_PASS (merging_commit),
+    SVN_TEST_PASS (commit_date),
+    SVN_TEST_PASS (check_old_revisions),
+    SVN_TEST_PASS (check_all_revisions),
+    SVN_TEST_PASS (medium_file_integrity),
+    SVN_TEST_PASS (large_file_integrity),
+    SVN_TEST_PASS (check_root_revision),
+    SVN_TEST_PASS (undeltify_deltify),
+    SVN_TEST_PASS (test_node_created_rev),
+    SVN_TEST_PASS (check_related),
+    SVN_TEST_PASS (revisions_changed),
+    SVN_TEST_PASS (canonicalize_abspath),
+    SVN_TEST_PASS (branch_test),
+    SVN_TEST_NULL
+  };
 
 
 /* 
