@@ -980,7 +980,7 @@ write_entry (svn_stringbuf_t **output,
           /* If this is not the "this dir" entry, and the uuid is
              the same as that of the "this dir" entry, don't write out
              the uuid. */
-          if (entry->uuid)
+          if (entry->uuid && this_dir->uuid)
             {
               if (strcmp(entry->uuid, this_dir->uuid) == 0)
                 apr_hash_set (atts, SVN_WC__ENTRY_ATTR_UUID, 
