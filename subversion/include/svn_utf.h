@@ -34,6 +34,18 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/** @since New in 1.1.
+ * Initialize the UTF-8 encoding/decoding routines.
+ * Allocate cached translation handles in a subpool of @a pool.
+ * NOTE: It is optional to call this function, but if it is used, no other
+ * svn function may be in use in other threads during the call of this
+ * function or when @a pool is cleared or destroyed.
+ * Initializing the UTF-8 routines will improve performance.
+ * NOTE: In svn 1.1.0, this function is a placeholder; we expect to
+ * fill in the implementation in svn 1.1.1.
+ */
+void svn_utf_initialize (apr_pool_t *pool);
+
 /** Set @a *dest to a utf8-encoded stringbuf from native stringbuf @a src;
  * allocate @a *dest in @a pool.
  */
