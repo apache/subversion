@@ -534,7 +534,7 @@ svn_wc__do_property_merge (svn_string_t *path,
                 svn_string_t *tmpname;
 
                 /* Get path to /temporary/ local prop file */
-                err = svn_wc__prop_path (&tmppath, path, 1, pool);
+                err = svn_wc__prop_path (&tmppath, full_path, 1, pool);
                 if (err) return err;
 
                 /* Reserve a .prej file based on it.  */
