@@ -1142,7 +1142,8 @@ merge_props_changed (svn_wc_adm_access_t *adm_access,
     {
       err = svn_wc_merge_prop_diffs (state, path, adm_access, props,
                                      FALSE, merge_b->dry_run, subpool);
-      if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND))
+      if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
+		  || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
         {
           /* if the entry doesn't exist in the wc, just 'skip' over
              this part of the tree-delta. */

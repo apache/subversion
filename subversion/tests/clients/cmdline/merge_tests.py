@@ -21,7 +21,7 @@ import shutil, string, sys, re, os
 
 # Our testing module
 import svntest
-from svntest import wc
+from svntest import wc, SVNAnyOutput
 
 # (abbreviation)
 Item = wc.StateItem
@@ -2074,6 +2074,59 @@ def merge_funny_chars_on_path(sbox):
                                         wc_dir)
 
 
+#----------------------------------------------------------------------
+def merge_prop_change_to_deleted_target(sbox):
+  "merge prop change into deleted target"
+  # For issue #2132.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add a property to alpha.
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'foo_val',
+                                     alpha_path)
+
+  # Commit the property add as r2.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev=2)
+  expected_status.tweak('A/B/E/alpha', wc_rev=2, status='  ')
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output, expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Remove alpha entirely.
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', alpha_path)
+  expected_output = wc.State(wc_dir, {
+    'A/B/E/alpha'  : Item(verb='Deleting'),
+    })
+  expected_status.tweak(repos_rev=3)
+  expected_status.tweak(wc_rev=2)
+  expected_status.remove('A/B/E/alpha')
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        alpha_path)
+
+  # Try merging the original propset, which applies to a target that
+  # no longer exists.  The bug would only reproduce when run from
+  # inside the wc, so we cd in there.
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(wc_dir)
+    svntest.actions.run_and_verify_svn("Merge errored unexpectedly",
+                                       SVNAnyOutput, None,
+                                       'merge', '-r1:2', '.')
+  finally:
+    os.chdir(saved_cwd)
+
+
 ########################################################################
 # Run the tests
 
@@ -2097,6 +2150,7 @@ test_list = [ None,
               dry_run_adds_file_with_prop,
               merge_binary_with_common_ancestry,
               merge_funny_chars_on_path,
+              merge_prop_change_to_deleted_target,
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.
