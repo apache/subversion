@@ -141,7 +141,7 @@ svn_auth_first_credentials (void **credentials,
                             apr_pool_t *pool)
 {
   int i;
-  svn_error_t *err_chain;
+  svn_error_t *err_chain = NULL;
   provider_set_t *table;
   provider_t *provider = NULL;
   void *creds = NULL;
