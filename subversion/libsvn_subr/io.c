@@ -14,6 +14,9 @@
 
 
 
+#include <stdio.h>
+#include <assert.h>
+#include <errno.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include "svn_types.h"
@@ -21,6 +24,16 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_io.h"
+
+
+
+struct svn_stream_t {
+  void *baton;
+  svn_read_fn_t *read_fn;
+  svn_write_fn_t *write_fn;
+  svn_close_fn_t *close_fn;
+  apr_pool_t *pool;
+};
 
 
 
@@ -408,6 +421,214 @@ svn_io_file_affected_time (apr_time_t *apr_time,
 
 
 
+/*** Generic streams. ***/
+
+svn_stream_t *
+svn_stream_create (void *baton, apr_pool_t *pool)
+{
+  svn_stream_t *stream;
+
+  stream = apr_palloc (pool, sizeof (*stream));
+  stream->baton = baton;
+  stream->read_fn = NULL;
+  stream->write_fn = NULL;
+  stream->pool = pool;
+  return stream;
+}
+
+
+void
+svn_stream_set_read (svn_stream_t *stream, svn_read_fn_t read_fn)
+{
+  stream->read_fn = read_fn;
+}
+
+
+void
+svn_stream_set_write (svn_stream_t *stream, svn_write_fn_t write_fn)
+{
+  stream->write_fn = write_fn;
+}
+
+
+void
+svn_stream_set_close (svn_stream_t *stream, svn_close_fn_t close_fn)
+{
+  stream->close_fn = close_fn;
+}
+
+
+svn_error_t *
+svn_stream_read (svn_stream_t *stream, char *buffer, apr_size_t *len)
+{
+  apr_pool_t *subpool;
+  svn_error_t *err;
+
+  assert (stream->read_fn != NULL);
+  subpool = svn_pool_create (stream->pool);
+  err = stream->read_fn (stream->baton, buffer, len, subpool);
+  apr_destroy_pool (subpool);
+  return err;
+}
+
+
+svn_error_t *
+svn_stream_write (svn_stream_t *stream, const char *data, apr_size_t *len)
+{
+  apr_pool_t *subpool;
+  svn_error_t *err;
+
+  assert (stream->write_fn != NULL);
+  subpool = svn_pool_create (stream->pool);
+  err = stream->write_fn (stream->baton, data, len, subpool);
+  apr_destroy_pool (subpool);
+  return err;
+}
+
+
+svn_error_t *
+svn_stream_close (svn_stream_t *stream)
+{
+  if (stream->close_fn == NULL)
+    return SVN_NO_ERROR;
+  return stream->close_fn (stream->baton);
+}
+
+
+
+/*** Generic stream for APR files ***/
+struct baton_apr {
+  apr_file_t *file;
+  apr_pool_t *pool;
+};
+
+
+static svn_error_t *
+read_handler_apr (void *baton, char *buffer, apr_size_t *len, apr_pool_t *pool)
+{
+  struct baton_apr *btn = baton;
+  apr_status_t status;
+
+  status = apr_full_read (btn->file, buffer, *len, len);
+  if (!APR_STATUS_IS_SUCCESS(status) && !APR_STATUS_IS_EOF(status))
+    return svn_error_create (status, 0, NULL, btn->pool, "reading file");
+  else
+    return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+write_handler_apr (void *baton, const char *data, apr_size_t *len,
+                   apr_pool_t *pool)
+{
+  struct baton_apr *btn = baton;
+  apr_status_t status;
+
+  status = apr_full_write (btn->file, data, *len, len);
+  if (!APR_STATUS_IS_SUCCESS(status))
+    return svn_error_create (status, 0, NULL, btn->pool, "writing file");
+  else
+    return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+close_handler_apr (void *baton)
+{
+  struct baton_apr *btn = baton;
+  apr_status_t status;
+
+  status = apr_close (btn->file);
+  if (!APR_STATUS_IS_SUCCESS(status))
+    return svn_error_create (status, 0, NULL, btn->pool, "closing file");
+  else
+    return SVN_NO_ERROR;
+}
+
+
+svn_stream_t *
+svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool)
+{
+  struct baton_apr *baton = apr_palloc (pool, sizeof (*baton));
+  svn_stream_t *stream;
+
+  baton->file = file;
+  baton->pool = pool;
+  stream = svn_stream_create (baton, pool);
+  svn_stream_set_read (stream, read_handler_apr);
+  svn_stream_set_write (stream, write_handler_apr);
+  svn_stream_set_close (stream, close_handler_apr);
+  return stream;
+}
+
+
+
+/*** Generic stream for stdio files ***/
+struct baton_stdio {
+  FILE *fp;
+  apr_pool_t *pool;
+};
+
+
+static svn_error_t *
+read_handler_stdio (void *baton, char *buffer, apr_size_t *len,
+                    apr_pool_t *pool)
+{
+  struct baton_stdio *btn = baton;
+  svn_error_t *err = SVN_NO_ERROR;
+  apr_size_t count;
+
+  count = fread (buffer, 1, *len, btn->fp);
+  if (count < *len && ferror(btn->fp))
+    err = svn_error_create (0, errno, NULL, btn->pool, "reading file");
+  *len = count;
+  return err;
+}
+
+
+static svn_error_t *
+write_handler_stdio (void *baton, const char *data, apr_size_t *len,
+                     apr_pool_t *pool)
+{
+  struct baton_stdio *btn = baton;
+  svn_error_t *err = SVN_NO_ERROR;
+  apr_size_t count;
+
+  count = fwrite (data, 1, *len, btn->fp);
+  if (count < *len)
+    err = svn_error_create (0, errno, NULL, btn->pool, "reading file");
+  *len = count;
+  return err;
+}
+
+
+static svn_error_t *
+close_handler_stdio (void *baton)
+{
+  struct baton_stdio *btn = baton;
+
+  if (fclose (btn->fp) != 0)
+    return svn_error_create (0, errno, NULL, btn->pool, "closing file");
+  else
+    return SVN_NO_ERROR;
+}
+
+
+svn_stream_t *svn_stream_from_stdio (FILE *fp, apr_pool_t *pool)
+{
+  struct baton_stdio *baton = apr_palloc (pool, sizeof (*baton));
+  svn_stream_t *stream;
+
+  baton->fp = fp;
+  baton->pool = pool;
+  stream = svn_stream_create (baton, pool);
+  svn_stream_set_read (stream, read_handler_stdio);
+  svn_stream_set_write (stream, write_handler_stdio);
+  svn_stream_set_close (stream, close_handler_stdio);
+  return stream;
+}
+
+
 /* 
  * local variables:
  * eval: (load-file "../svn-dev.el")
