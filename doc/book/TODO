@@ -78,6 +78,10 @@ ch06:
      authorization cell: note that per-directory *write* access can
      still be done by a hook script (but not read access).
 
+appA:
+
+   - explain why 'svn commit; svn log' won't show the commit.
+
 
 -----------------------------------------------
 
