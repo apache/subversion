@@ -265,6 +265,9 @@ svn_fs_bdb__changes_fetch (apr_hash_t **changes_p,
       change_t *change;
       skel_t *result_skel;
 
+      /* Clear the per-iteration subpool. */
+      svn_pool_clear (subpool);
+
       /* RESULT now contains a change record associated with KEY.  We
          need to parse that skel into an change_t structure ...  */
       result_skel = svn_fs_base__parse_skel (result.data, result.size,
@@ -321,9 +324,6 @@ svn_fs_bdb__changes_fetch (apr_hash_t **changes_p,
       db_err = cursor->c_get (cursor, &query, &result, DB_NEXT_DUP);
       if (! db_err)
         svn_fs_base__track_dbt (&result, trail->pool);
-
-      /* Clear the per-iteration subpool. */
-      svn_pool_clear (subpool);
     }
 
   /* Destroy the per-iteration subpool. */

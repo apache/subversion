@@ -342,6 +342,8 @@ svn_repos_get_logs3 (svn_repos_t *repos,
       svn_string_t *author, *date, *message;
       apr_hash_t *changed_paths = NULL;
 
+      svn_pool_clear (subpool);
+
       /* If we have a list of revs for use, check to make sure this is
          one of them.  */
       if (revs)
@@ -419,8 +421,6 @@ svn_repos_get_logs3 (svn_repos_t *repos,
 
       if (++count == limit)
         break;
-      
-      svn_pool_clear (subpool);
     }
 
   svn_pool_destroy (subpool);

@@ -112,6 +112,8 @@ svn_cl__checkout (apr_getopt_t *os,
       const char *true_url;
       svn_opt_revision_t peg_revision;
 
+      svn_pool_clear (subpool);
+
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
 
       /* Validate the REPOS_URL */
@@ -150,7 +152,6 @@ svn_cl__checkout (apr_getopt_t *os,
                                      opt_state->nonrecursive ? FALSE : TRUE,
                                      opt_state->ignore_externals,
                                      ctx, subpool));
-      svn_pool_clear (subpool);
     }
   svn_pool_destroy (subpool);
   

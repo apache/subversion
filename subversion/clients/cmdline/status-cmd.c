@@ -106,6 +106,8 @@ svn_cl__status (apr_getopt_t *os,
     {
       const char *target = ((const char **) (targets->elts))[i];
 
+      svn_pool_clear (subpool);
+
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
 
       /* Retrieve a hash of status structures with the information
@@ -122,8 +124,6 @@ svn_cl__status (apr_getopt_t *os,
                                    opt_state->no_ignore,
                                    opt_state->ignore_externals,
                                    ctx, subpool));
-
-      svn_pool_clear (subpool);
     }
 
   svn_pool_destroy (subpool);

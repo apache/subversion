@@ -460,6 +460,8 @@ harvest_committables (apr_hash_t *committables,
           const char *this_cf_url = cf_url ? cf_url : copyfrom_url;
           svn_wc_adm_access_t *dir_access = adm_access;
 
+          svn_pool_clear (loop_pool);
+
           /* Get the next entry.  Name is an entry name; value is an
              entry structure. */
           apr_hash_this (hi, &key, NULL, &val);
@@ -509,7 +511,6 @@ harvest_committables (apr_hash_t *committables,
                                            NULL,
                                            SVN_CLIENT_COMMIT_ITEM_DELETE);
                           svn_error_clear (lockerr);
-                          svn_pool_clear (loop_pool);
                           continue; /* don't recurse! */
                         }
                       else
@@ -536,8 +537,6 @@ harvest_committables (apr_hash_t *committables,
                     FALSE,
                     ctx,
                     loop_pool));
-
-          svn_pool_clear (loop_pool);
         }
 
       svn_pool_destroy (loop_pool);
@@ -592,6 +591,7 @@ svn_client__harvest_committables (apr_hash_t **committables,
       const svn_wc_entry_t *entry;
       const char *target;
 
+      svn_pool_clear (subpool);
       /* Add the relative portion of our full path (if there are no
          relative paths, TARGET will just be PARENT_DIR for a single
          iteration. */
@@ -680,7 +680,6 @@ svn_client__harvest_committables (apr_hash_t **committables,
                                      FALSE, nonrecursive, ctx, subpool));
 
       i++;
-      svn_pool_clear (subpool);
     }
   while (i < targets->nelts);
 
@@ -1210,6 +1209,7 @@ svn_client__do_commit (const char *base_url,
       svn_boolean_t fulltext = FALSE;
       svn_wc_adm_access_t *item_access;
       
+      svn_pool_clear (subpool);
       /* Get the next entry. */
       apr_hash_this (hi, &key, &klen, &val);
       mod = val;
@@ -1244,8 +1244,6 @@ svn_client__do_commit (const char *base_url,
           tempfile = apr_pstrdup (apr_hash_pool_get (*tempfiles), tempfile);
           apr_hash_set (*tempfiles, tempfile, APR_HASH_KEY_STRING, (void *)1);
         }
-
-      svn_pool_clear (subpool);
     }
 
   svn_pool_destroy (subpool);

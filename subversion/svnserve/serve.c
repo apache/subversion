@@ -703,6 +703,8 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           name = key;
           fsent = val;
 
+          svn_pool_clear(subpool);
+
           file_path = svn_path_join(full_path, name, subpool);
           entry = apr_pcalloc(pool, sizeof(*entry));
 
@@ -733,7 +735,6 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
           /* Store the entry. */
           apr_hash_set(entries, name, APR_HASH_KEY_STRING, entry);
-          svn_pool_clear(subpool);
         }
       svn_pool_destroy(subpool);
     }

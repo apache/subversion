@@ -729,14 +729,14 @@ svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,
 
   do
     {
+      /* free the window (if any) */
+      svn_pool_clear (wpool);
+
       /* read in a single delta window */
       SVN_ERR( svn_txdelta_next_window (&window, txstream, wpool));
 
       /* shove it at the handler */
       SVN_ERR( (*handler)(window, handler_baton));
-
-      /* free the window (if any) */
-      svn_pool_clear (wpool);
     }
   while (window != NULL);
 

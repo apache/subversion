@@ -1147,6 +1147,8 @@ svn_wc__entries_write (apr_hash_t *entries,
       void *val;
       svn_wc_entry_t *this_entry;
 
+      svn_pool_clear (subpool);
+
       /* Get the entry and make sure its attributes are up-to-date. */
       apr_hash_this (hi, &key, NULL, &val);
       this_entry = val;
@@ -1157,7 +1159,6 @@ svn_wc__entries_write (apr_hash_t *entries,
 
       /* Append the entry to BIGSTR */
       write_entry (&bigstr, this_entry, key, this_dir, subpool);
-      svn_pool_clear (subpool);
     }
 
   svn_pool_destroy (subpool);

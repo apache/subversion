@@ -406,6 +406,8 @@ svn_wc_process_committed (const char *path,
           const char *this_path;
           svn_wc_adm_access_t *child_access;
 
+          svn_pool_clear (subpool);
+
           apr_hash_this (hi, &key, NULL, &val);
           name = key;
           current_entry = val;
@@ -431,8 +433,6 @@ svn_wc_process_committed (const char *path,
                    (this_path, child_access,
                     (current_entry->kind == svn_node_dir) ? TRUE : FALSE,
                     new_revnum, rev_date, rev_author, NULL, subpool));
-
-          svn_pool_clear (subpool);
         }
 
       svn_pool_destroy (subpool); 
@@ -493,6 +493,9 @@ mark_tree (svn_wc_adm_access_t *adm_access,
       const char *base_name;
       svn_wc_entry_t *dup_entry;
 
+      /* Clear our per-iteration pool. */
+      svn_pool_clear (subpool);
+
       /* Get the next entry */
       apr_hash_this (hi, &key, NULL, &val);
       entry = val;
@@ -533,9 +536,6 @@ mark_tree (svn_wc_adm_access_t *adm_access,
                         svn_wc_notify_state_unknown,
                         svn_wc_notify_state_unknown,
                         SVN_INVALID_REVNUM);
-
-      /* Clear our per-iteration pool. */
-      svn_pool_clear (subpool);
     }
   
   /* Handle "this dir" for states that need it done post-recursion. */
@@ -1628,6 +1628,8 @@ svn_wc_revert (const char *path,
           const char *keystring;
           const char *full_entry_path;
 
+          svn_pool_clear (subpool);
+
           /* Get the next entry */
           apr_hash_this (hi, &key, NULL, NULL);
           keystring = key;
@@ -1644,8 +1646,6 @@ svn_wc_revert (const char *path,
                                   use_commit_times,
                                   cancel_func, cancel_baton,
                                   notify_func, notify_baton, subpool));
-
-          svn_pool_clear (subpool);
         }
       
         svn_pool_destroy (subpool);
@@ -1773,6 +1773,8 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
           const char *current_entry_name;
           const svn_wc_entry_t *current_entry; 
           
+          svn_pool_clear (subpool);
+
           apr_hash_this (hi, &key, NULL, &val);
           current_entry = val;
           if (! strcmp (key, SVN_WC_ENTRY_THIS_DIR))
@@ -1841,7 +1843,6 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
                     return err;
                 }
             }
-          svn_pool_clear (subpool);
         }
 
       /* At this point, every directory below this one has been

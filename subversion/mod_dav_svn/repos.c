@@ -2088,6 +2088,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         const char *href = name;
         svn_boolean_t is_dir = (entry->kind == svn_node_dir);
 
+        svn_pool_clear(entry_pool);
+
         /* append a trailing slash onto the name for directories. we NEED
            this for the href portion so that the relative reference will
            descend properly. for the visible portion, it is just nice. */
@@ -2121,7 +2123,6 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
                        "    <%s name=\"%s\" href=\"%s\"></%s>\n",
                        tag, name, href, tag);
           }
-        svn_pool_clear(entry_pool);
       }
 
     svn_pool_destroy(entry_pool);

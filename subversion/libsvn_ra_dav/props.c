@@ -1044,9 +1044,9 @@ svn_ra_dav__do_proppatch (svn_ra_dav__session_t *ras,
         {
           const void *key;
           void *val;
+          svn_pool_clear(subpool);
           apr_hash_this(hi, &key, NULL, &val);
           do_setprop(body, key, val, subpool);
-          svn_pool_clear(subpool);
         }
       ne_buffer_zappend(body, "</D:prop></D:set>");
       svn_pool_destroy(subpool);

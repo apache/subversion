@@ -2399,10 +2399,12 @@ svn_io_dir_walk (const char *dirname,
   /* iteration subpool */
   subpool = svn_pool_create (pool);
 
-  for ( ; ; svn_pool_clear (subpool))
+  while (1)
     {
       const char *name_utf8;
       const char *full_path;
+
+      svn_pool_clear (subpool);
 
       apr_err = apr_dir_read (&finfo, wanted, handle);
       if (APR_STATUS_IS_ENOENT (apr_err))

@@ -820,6 +820,8 @@ subcommand_rmtxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       const char *txn_name_utf8;
       svn_error_t *err;
 
+      svn_pool_clear (subpool);
+
       SVN_ERR (svn_utf_cstring_to_utf8 (&txn_name_utf8, txn_name, subpool));
 
       /* Try to open the txn.  If that succeeds, try to abort it. */
@@ -851,9 +853,9 @@ subcommand_rmtxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
             (svn_cmdline_printf (subpool, _("Transaction '%s' removed.\n"),
                                  txn_name));
         }
-
-      svn_pool_clear (subpool);
     }
+
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
