@@ -47,7 +47,7 @@ fi
 echo "buildcheck: libtool version $lt_pversion (ok)"
 
 # check for the correct version of Neon
-NEON_WANTED=0.17.2
+NEON_WANTED=0.18.2
 if test -d ./neon; then
   NEON_VERSION="`./ac-helpers/get-neon-ver.sh neon`"
   if test "$NEON_WANTED" != "$NEON_VERSION"; then
