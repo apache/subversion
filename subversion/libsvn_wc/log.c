@@ -136,8 +136,7 @@ signal_error (struct log_runner *loggy, svn_error_t *err)
                                              err,
                                              loggy->pool,
                                              "in directory %s",
-                                             loggy->path->data,
-                                             NULL),
+                                             loggy->path->data),
                           loggy->parser);
 }
 
@@ -240,7 +239,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                      NULL,
                                      loggy->pool,
                                      "missing name attr in %s",
-                                     loggy->path));
+                                     loggy->path->data));
       else
         /* Note that saved_mods is allowed to be null. */
         err = merge_text (loggy->path, name, saved_mods, loggy->pool);
@@ -254,7 +253,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                      NULL,
                                      loggy->pool,
                                      "missing name attr in %s",
-                                     loggy->path));
+                                     loggy->path->data));
       else
         err = replace_text_base (loggy->path, name, loggy->pool);
     }
@@ -269,7 +268,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                      NULL,
                                      loggy->pool,
                                      "missing name attr in %s",
-                                     loggy->path));
+                                     loggy->path->data));
 
       sname = svn_string_create (name, loggy->pool);
 
@@ -289,7 +288,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                      NULL,
                                      loggy->pool,
                                      "missing name attr in %s",
-                                     loggy->path));
+                                     loggy->path->data));
       else if (! verstr)
         return signal_error
           (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
@@ -350,7 +349,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                      NULL,
                                      loggy->pool,
                                      "missing name attr in %s",
-                                     loggy->path));
+                                     loggy->path->data));
       else if (! verstr)
         return signal_error
           (loggy, svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG,
@@ -468,7 +467,7 @@ start_handler (void *userData, const XML_Char *eltname, const XML_Char **atts)
                                  NULL,
                                  loggy->pool,
                                  "unrecognized element in %s",
-                                 loggy->path));
+                                 loggy->path->data));
 
   if (err)
     svn_xml_signal_bailout (err, loggy->parser);

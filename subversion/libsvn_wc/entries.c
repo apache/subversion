@@ -238,7 +238,7 @@ handle_start_tag (void *userData, const char *tagname, const char **atts)
                                   "entry %s in dir %s",
                                   (name ?
                                    name->data : SVN_WC__ENTRIES_THIS_DIR),
-                                  accum->path),
+                                  accum->path->data),
                accum->parser);
           }
       }
