@@ -1002,6 +1002,67 @@ svn_fs_make_file (svn_fs_root_t *root,
 }
 
 
+/* --- Machinery for svn_fs_file_contents() ---  */
+
+
+/* Local baton type for txn_body_get_file_contents. */
+typedef struct file_contents_baton_t
+{
+  /* The file we want to read. */
+  svn_fs_root_t *root;
+  const char *path;
+
+  /* The dag_node that will be made from the above. */
+  dag_node_t *node;
+    
+  /* The readable file stream that will be made from the
+     dag_node. (And returned to the caller.) */
+  svn_stream_t *file_stream;
+
+} file_contents_baton_t;
+
+
+/* Main body of svn_fs_file_contents;  converts a root/path pair into
+   a readable file stream (in the context of a db txn). */
+static svn_error_t *
+txn_body_get_file_contents (void *baton, trail_t *trail)
+{
+  file_contents_baton_t *fb = (file_contents_baton_t *) baton;
+
+  /* First create a dag_node_t from the root/path pair. */
+  SVN_ERR (get_dag (&(fb->node), fb->root, fb->path, trail));
+  
+  /* Then create a readable stream from the dag_node_t. */
+  SVN_ERR (svn_fs__dag_get_contents (&(fb->file_stream),
+                                     fb->node,
+                                     trail));
+  return SVN_NO_ERROR;
+}     
+
+
+
+svn_error_t *
+svn_fs_file_contents (svn_stream_t **contents,
+                      svn_fs_root_t *root,
+                      const char *path,
+                      apr_pool_t *pool)
+{
+  file_contents_baton_t *fb = apr_pcalloc (pool, sizeof(*fb));
+  fb->root = root;
+  fb->path = path;
+
+  /* Create the readable stream in the context of a db txn.  */
+  SVN_ERR (svn_fs__retry_txn (svn_fs_root_fs (root),
+                              txn_body_get_file_contents, fb, pool));
+  
+  *contents = fb->file_stream;
+  return SVN_NO_ERROR;
+}
+
+/* --- End machinery for svn_fs_file_contents() ---  */
+
+
+
 /* --- Machinery for svn_fs_apply_textdelta() ---  */
 
 
@@ -1029,7 +1090,7 @@ typedef struct txdelta_baton_t
   const char *path;
   
   /* Derived from the file info */
-  parent_path_t *parent_path;
+  dag_node_t *node;
   svn_stream_t *source_stream;
 
   /* Pool used by db txns */
@@ -1059,19 +1120,14 @@ txn_body_get_source_stream (void *baton, trail_t *trail)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
 
-  /* Construct a path of dag_node_t's from path up to root. */
-  SVN_ERR (open_path (&(tb->parent_path),
-                      tb->root,
-                      tb->path,
-                      0,          /* return err if path doesn't exist */
-                      trail));
+  /* First create a dag_node_t from the root/path pair. */
+  SVN_ERR (get_dag (&(tb->node), tb->root, tb->path, trail));
   
   /* If we get here without error, then the path to the file must
-     exist.  The file's dag_node_t is the very first one in
-     tb->parent_path;  we now convert it into a generic readable
+     exist.  Now convert the dag_node into a generic readable
      stream. */
   SVN_ERR (svn_fs__dag_get_contents (&(tb->source_stream),
-                                     tb->parent_path->node,
+                                     tb->node,
                                      trail));
   return SVN_NO_ERROR;
 }
@@ -1084,7 +1140,7 @@ txn_body_write_target_string (void *baton, trail_t *trail)
 {
   txdelta_baton_t *tb = (txdelta_baton_t *) baton;
 
-  SVN_ERR (svn_fs__dag_set_contents (tb->parent_path->node,
+  SVN_ERR (svn_fs__dag_set_contents (tb->node,
                                      tb->target_string,
                                      trail));
 
