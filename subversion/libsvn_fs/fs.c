@@ -417,9 +417,9 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
       "#   http://www.sleepycat.com/docs/ref/lock/max.html\n"
       "#\n"
       "# before tweaking these values.\n"
-      "set_lk_max_locks   1000\n"
-      "set_lk_max_lockers 1000\n"
-      "set_lk_max_objects 1000\n";
+      "set_lk_max_locks   2000\n"
+      "set_lk_max_lockers 2000\n"
+      "set_lk_max_objects 2000\n";
 
     apr_err = apr_file_open (&dbconfig_file, dbconfig_file_name,
                              APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
