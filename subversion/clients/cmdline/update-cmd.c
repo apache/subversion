@@ -71,7 +71,10 @@ svn_cl__update (apr_getopt_t *os,
 
       SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor,
                                                 &trace_edit_baton,
-                                                parent_dir, pool));
+                                                parent_dir, 
+                                                FALSE, /* is checkout */
+                                                FALSE,
+                                                pool));
 
       SVN_ERR (svn_client_update
                (NULL, NULL,

@@ -118,7 +118,7 @@ svn_cl__merge (apr_getopt_t *os,
 
   SVN_ERR (svn_wc_get_actual_target (targetpath, &parent_dir, &entry, pool));
   SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor, &trace_edit_baton,
-                                            parent_dir, pool));
+                                            parent_dir, FALSE, TRUE, pool));
 
   SVN_ERR (svn_client_merge (trace_editor, trace_edit_baton,
                              auth_baton,
