@@ -331,7 +331,7 @@ do_open (svn_wc_adm_access_t **adm_access,
          svn_wc_adm_access_t *associated,
          const char *path,
          svn_boolean_t write_lock,
-         svn_boolean_t tree_lock,
+         int depth,
          svn_boolean_t under_construction,
          apr_pool_t *pool)
 {
@@ -396,12 +396,16 @@ do_open (svn_wc_adm_access_t **adm_access,
         SVN_ERR (maybe_upgrade_format (lock, pool));
     }
 
-  if (tree_lock)
+  if (depth != 0)
     {
       apr_hash_t *entries;
       apr_hash_index_t *hi;
       apr_pool_t *subpool = svn_pool_create (pool);
 
+      /* Reduce depth since we are about to recurse */
+      if (depth > 0)
+        depth--;
+      
       /* Ask for the deleted entries because most operations request them
          at some stage, getting them now avoids a second file parse. */
       SVN_ERR (svn_wc_entries_read (&entries, lock, TRUE, subpool));
@@ -429,7 +433,7 @@ do_open (svn_wc_adm_access_t **adm_access,
           entry_path = svn_path_join (lock->path, entry->name, subpool);
 
           /* Don't use the subpool pool here, the lock needs to persist */
-          err = do_open (&entry_access, lock, entry_path, write_lock, tree_lock,
+          err = do_open (&entry_access, lock, entry_path, write_lock, depth,
                          FALSE, lock->pool);
           if (err)
             {
@@ -496,6 +500,7 @@ do_open (svn_wc_adm_access_t **adm_access,
   return SVN_NO_ERROR;
 }
 
+/* To preserve API compatibility with Subversion 1.0.0 */
 svn_error_t *
 svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
                  svn_wc_adm_access_t *associated,
@@ -504,7 +509,19 @@ svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
                  svn_boolean_t tree_lock,
                  apr_pool_t *pool)
 {
-  return do_open (adm_access, associated, path, write_lock, tree_lock, FALSE,
+  return svn_wc_adm_open_depth (adm_access, associated, path, write_lock,
+                                (tree_lock ? -1 : 0), pool);
+}
+
+svn_error_t *
+svn_wc_adm_open_depth (svn_wc_adm_access_t **adm_access,
+                       svn_wc_adm_access_t *associated,
+                       const char *path,
+                       svn_boolean_t write_lock,
+                       int depth,
+                       apr_pool_t *pool)
+{
+  return do_open (adm_access, associated, path, write_lock, depth, FALSE,
                   pool);
 }
 
@@ -513,10 +530,11 @@ svn_wc__adm_pre_open (svn_wc_adm_access_t **adm_access,
                       const char *path,
                       apr_pool_t *pool)
 {
-  return do_open (adm_access, NULL, path, TRUE, FALSE, TRUE, pool);
+  return do_open (adm_access, NULL, path, TRUE, 0, TRUE, pool);
 }
-     
 
+
+/* To preserve API compatibility with Subversion 1.0.0 */
 svn_error_t *
 svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
                        svn_wc_adm_access_t *associated,
@@ -525,6 +543,19 @@ svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
                        svn_boolean_t tree_lock,
                        apr_pool_t *pool)
 {
+  return svn_wc_adm_probe_open_depth (adm_access, associated, path,
+                                      write_lock, (tree_lock ? -1 : 0), pool);
+}
+
+
+svn_error_t *
+svn_wc_adm_probe_open_depth (svn_wc_adm_access_t **adm_access,
+                             svn_wc_adm_access_t *associated,
+                             const char *path,
+                             svn_boolean_t write_lock,
+                             int depth,
+                             apr_pool_t *pool)
+{
   svn_error_t *err;
   const char *dir;
   int wc_format;
@@ -532,14 +563,14 @@ svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
   SVN_ERR (probe (&dir, path, &wc_format, pool));
 
   /* If we moved up a directory, then the path is not a directory, or it
-     is not under version control. In either case, the notion of a tree_lock
+     is not under version control. In either case, the notion of a depth
      does not apply to the provided path. Disable it so that we don't end
      up trying to lock more than we need.  */
   if (dir != path)
-    tree_lock = FALSE;
+    depth = 0;
 
-  err = svn_wc_adm_open (adm_access, associated, dir, write_lock, tree_lock,
-                         pool);
+  err = svn_wc_adm_open_depth (adm_access, associated, dir, write_lock, 
+                               depth, pool);
   if (err)
     {
       svn_error_t *err2;
@@ -636,6 +667,7 @@ svn_wc_adm_probe_retrieve (svn_wc_adm_access_t **adm_access,
 }
 
 
+/* To preserve API compatibility with Subversion 1.0.0 */
 svn_error_t *
 svn_wc_adm_probe_try (svn_wc_adm_access_t **adm_access,
                       svn_wc_adm_access_t *associated,
@@ -643,6 +675,18 @@ svn_wc_adm_probe_try (svn_wc_adm_access_t **adm_access,
                       svn_boolean_t write_lock,
                       svn_boolean_t tree_lock,
                       apr_pool_t *pool)
+{
+  return svn_wc_adm_probe_try_depth (adm_access, associated, path, write_lock,
+                                     (tree_lock ? -1 : 0), pool);
+}
+
+svn_error_t *
+svn_wc_adm_probe_try_depth (svn_wc_adm_access_t **adm_access,
+                            svn_wc_adm_access_t *associated,
+                            const char *path,
+                            svn_boolean_t write_lock,
+                            int depth,
+                            apr_pool_t *pool)
 {
   svn_error_t *err;
 
@@ -654,9 +698,9 @@ svn_wc_adm_probe_try (svn_wc_adm_access_t **adm_access,
   if (err && (err->apr_err == SVN_ERR_WC_NOT_LOCKED))
     {
       svn_error_clear (err);
-      err = svn_wc_adm_probe_open (adm_access, associated,
-                                   path, write_lock, tree_lock,
-                                   svn_wc_adm_access_pool (associated));
+      err = svn_wc_adm_probe_open_depth (adm_access, associated,
+                                         path, write_lock, depth,
+                                         svn_wc_adm_access_pool (associated));
 
       /* If the path is not a versioned directory, we just return a
          null access baton with no error.  Note that of the errors we

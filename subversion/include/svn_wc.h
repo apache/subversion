@@ -76,14 +76,18 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
  * to the set containing @a associated.  @a associated can be @c NULL, in 
  * which case @a adm_access is the start of a new set.
  *
- * If @a tree_lock is @c TRUE then the working copy directory hierarchy under
- * @a path will be locked.  All the access batons will become part of the set
- * containing @a adm_access.  This is an all-or-nothing option, if it is not
- * possible to lock the entire tree then an error will be returned and
- * @a adm_access will be invalid, with the exception that subdirectories of
- * @a path that are missing from the physical filesystem will not be locked
- * and will not cause an error.  The error @c SVN_ERR_WC_LOCKED will be
- * returned if a subdirectory of @a path is already write locked.
+ * @a depth specifies how much to lock.  Zero means just the specified
+ * directory. Any negative value means to lock the entire working copy
+ * directory hierarchy under @a path. A positive value indicates the number of
+ * levels of directories to lock - 1 means just immediate subdirectories, 2
+ * means immediate subdirectories and their subdirectories, etc.  All the
+ * access batons will become part of the set containing @a adm_access.  This
+ * is an all-or-nothing option, if it is not possible to lock all the
+ * requested directories then an error will be returned and @a adm_access will
+ * be invalid, with the exception that subdirectories of @a path that are
+ * missing from the physical filesystem will not be locked and will not cause
+ * an error.  The error @c SVN_ERR_WC_LOCKED will be returned if a
+ * subdirectory of @a path is already write locked.
  *
  * @a pool will be used to allocate memory for the baton and any subsequently
  * cached items.  If @a adm_access has not been closed when the pool is
@@ -95,6 +99,19 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
  * the longest lifetime of all the batons in the set.  This implies it must be
  * the root of the hierarchy.
  */
+svn_error_t *svn_wc_adm_open_depth (svn_wc_adm_access_t **adm_access,
+                                    svn_wc_adm_access_t *associated,
+                                    const char *path,
+                                    svn_boolean_t write_lock,
+                                    int depth,
+                                    apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_adm_open_depth().  @a depth is set to -1 if @a tree_lock is
+ * @c TRUE, else 0.
+ *
+ * Provided for backward compatibility with the Subversion 1.0.0 API.
+ */
 svn_error_t *svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
                               svn_wc_adm_access_t *associated,
                               const char *path,
@@ -104,13 +121,26 @@ svn_error_t *svn_wc_adm_open (svn_wc_adm_access_t **adm_access,
 
 /** Checks the working copy to determine the node type of @a path.  If 
  * @a path is a versioned directory then the behaviour is like that of
- * @c svn_wc_adm_open, otherwise, if @a path is a file or does not
- * exist, then the behaviour is like that of @c svn_wc_adm_open with
+ * @c svn_wc_adm_open_depth, otherwise, if @a path is a file or does not
+ * exist, then the behaviour is like that of @c svn_wc_adm_open_depth with
  * @a path replaced by the parent directory of @a path.  If @a path is
  * an unversioned directory, the behaviour is also like that of
- * @c svn_wc_adm_open on the parent, except that if the open fails,
+ * @c svn_wc_adm_open_depth on the parent, except that if the open fails,
  * then the returned SVN_ERR_WC_NOT_DIRECTORY error refers to @a path,
  * not to @a path's parent.
+ */
+svn_error_t *svn_wc_adm_probe_open_depth (svn_wc_adm_access_t **adm_access,
+                                          svn_wc_adm_access_t *associated,
+                                          const char *path,
+                                          svn_boolean_t write_lock,
+                                          int depth,
+                                          apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_adm_probe_open_depth().  @a depth is set to -1 if
+ * @a tree_lock is @c TRUE, else 0.
+ *
+ * Provided for backward compatibility with the Subversion 1.0.0 API.
  */
 svn_error_t *svn_wc_adm_probe_open (svn_wc_adm_access_t **adm_access,
                                     svn_wc_adm_access_t *associated,
@@ -149,8 +179,8 @@ svn_error_t *svn_wc_adm_probe_retrieve (svn_wc_adm_access_t **adm_access,
  *
  * First, try to obtain @a *adm_access via @c svn_wc_adm_probe_retrieve(),
  * but if this fails because @a associated can't give a baton for
- * @a path or @a path's parent, then try @c svn_wc_adm_probe_open(),
- * this time passing @a write_lock and @a tree_lock.  If there is
+ * @a path or @a path's parent, then try @c svn_wc_adm_probe_open_depth(),
+ * this time passing @a write_lock and @a depth.  If there is
  * still no access because @a path is not a versioned directory, then
  * just set @a *adm_access to null and return success.  But if it is
  * because @a path is locked, then return the error @c SVN_ERR_WC_LOCKED,
@@ -162,6 +192,19 @@ svn_error_t *svn_wc_adm_probe_retrieve (svn_wc_adm_access_t **adm_access,
  * @a associated.
  *
  * Use @a pool only for local processing, not to allocate @a *adm_access.
+ */
+svn_error_t *svn_wc_adm_probe_try_depth (svn_wc_adm_access_t **adm_access,
+                                         svn_wc_adm_access_t *associated,
+                                         const char *path,
+                                         svn_boolean_t write_lock,
+                                         int depth,
+                                         apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_adm_probe_try_depth().  @a depth is set to -1 if
+ * @a tree_lock is @c TRUE, else 0.
+ *
+ * Provided for backward compatibility with the Subversion 1.0.0 API.
  */
 svn_error_t *svn_wc_adm_probe_try (svn_wc_adm_access_t **adm_access,
                                    svn_wc_adm_access_t *associated,
