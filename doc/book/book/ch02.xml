@@ -379,8 +379,8 @@ $ svn co file://localhost/path/to/repos
 &hellip;
 </screen>
 
-        <para>Also, Windows users of the <literal>file:</literal>
-          scheme will need to use an unofficially
+        <para>Also, users of the <literal>file:</literal> scheme on
+          Windows platforms will need to use an unofficially
           <quote>standard</quote> syntax for accessing repositories
           that are on the same machine, but on a different drive, than
           the client's current working drive.  Either of the two
