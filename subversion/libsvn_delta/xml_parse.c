@@ -69,22 +69,36 @@
 #include "svn_delta.h"
 #include "apr_strings.h"
 #include "xmlparse.h"
+#include "delta.h"
 
 
 
 
 
 
-/* Search for NAME in expat ATTS array, place into VALUE.
-   If NAME does not exist in ATTS, return simple error. */
-static svn_error_t *
-get_attribute_value (const char **atts, char *name, char **value)
+/* Return the value associated with NAME in expat attribute array ATTS,
+   else return NULL.  (There could never be a NULL attribute value in
+   the XML, although the empty string is possible.)
+   
+   ATTS is an array of c-strings: even-numbered indexes are names,
+   odd-numbers hold values.  If all is right, it should end on an
+   even-numbered index pointing to NULL.
+*/
+/* kff todo: caller is responsible for flagging errors now; make sure
+   calling code is adjusted accordingly. */
+static const char *
+get_attribute_value (const char **atts, char *name)
 {
-  /* TODO */
+  while (**atts)
+    {
+      if (strcmp (atts[0], name) == 0)
+        return atts[1];
+      else
+        atts += 2; /* continue looping */
+    }
 
-  return SVN_ERR_XML_ATTRIB_NOT_FOUND;
-
-  return SVN_NO_ERROR;
+  /* Else no such attribute name seen. */
+  return NULL;
 }
 
 
@@ -340,6 +354,9 @@ do_directory_callback (svn_delta_digger_t *digger,
 {
   svn_error_t *err;
   void *child_baton;
+  /* kff todo: should be (svn_string_t *) here?  I'm beginning to
+     wonder if it's such a good idea to use svn_string_t in situations
+     where (char *) is so much more natural, though... */
   char *ancestor, *ver;
   svn_pdelta_t *pdelta = NULL;
   svn_string_t *base_path = NULL;
@@ -362,11 +379,11 @@ do_directory_callback (svn_delta_digger_t *digger,
                              
   /* Search through ATTS, looking for any "ancestor" or "ver"
      attributes of the current <dir> tag. */
-  err = get_attribute_value (atts, "ancestor", &ancestor);
-  if (! err)
+  ancestor = get_attribute_value (atts, "ancestor");
+  if (ancestor)
     base_path = svn_string_create (ancestor, digger->pool);
-  err = get_attribute_value (atts, "ver", &ver);
-  if (! err)
+  ver = get_attribute_value (atts, "ver");
+  if (ver)
     base_version = atoi (ver);
 
   /* Call our walker's callback. */
@@ -465,11 +482,11 @@ do_file_callback (svn_delta_digger_t *digger,
                              
   /* Search through ATTS, looking for any "ancestor" or "ver"
      attributes of the current <dir> tag. */
-  err = get_attribute_value (atts, "ancestor", &ancestor);
-  if (! err)
+  ancestor = get_attribute_value (atts, "ancestor");
+  if (ancestor)
     base_path = svn_string_create (ancestor, digger->pool);
-  err = get_attribute_value (atts, "ver", &ver);
-  if (! err)
+  ver = get_attribute_value (atts, "ver");
+  if (ver)
     base_version = atoi (ver);
 
   /* Call our walker's callback, and get back a vcdiff handler & baton. */
@@ -594,8 +611,8 @@ xml_handle_start (void *userData, const char *name, const char **atts)
     }
 
   /* Set "name" field in frame, if there's any such attribute in ATTS */
-  err = get_attribute_value (atts, "name", &value);
-  if (! err)
+  value = get_attribute_value (atts, "name");
+  if (value)
     frame->name = svn_string_create (value, digger->pool);
   
   /*  Append new frame to stack, validating in the process. 
