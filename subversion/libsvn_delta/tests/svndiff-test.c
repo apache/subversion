@@ -38,8 +38,8 @@ main (int argc, char **argv)
   svn_txdelta (&txdelta_stream, svn_stream_from_stdio (source_file, NULL),
 	       svn_stream_from_stdio (target_file, NULL), NULL);
 
-  svn_base64_encode (svn_stream_from_stdio (stdout, NULL), NULL,
-                     &base64_stream);
+  base64_stream = svn_base64_encode (svn_stream_from_stdio (stdout, NULL),
+                                     NULL);
   svn_txdelta_to_svndiff (base64_stream, NULL, &svndiff_handler,
                           &svndiff_baton);
   do {

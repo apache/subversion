@@ -725,9 +725,9 @@ do_begin_textdelta (svn_xml__digger_t *digger)
     return err;
 
   /* Now create an svndiff parser based on the consumer/baton we got. */
-  svn_txdelta_parse_svndiff (window_consumer, consumer_baton, digger->pool,
-                             &intermediate);
-  svn_base64_decode (intermediate, digger->pool, &digger->svndiff_parser);
+  intermediate = svn_txdelta_parse_svndiff (window_consumer, consumer_baton,
+                                            digger->pool);
+  digger->svndiff_parser = svn_base64_decode (intermediate, digger->pool);
   
   return SVN_NO_ERROR;
 }

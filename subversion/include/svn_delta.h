@@ -209,15 +209,13 @@ void svn_txdelta_to_svndiff (svn_stream_t *output,
                              svn_txdelta_window_handler_t **handler,
                              void **handler_baton);
 
-/* Prepare to parse an svndiff-format string into a text delta.  On
-   return, *PARSE is set to a writable generic stream which will parse
-   the data, invoking HANDLER with HANDLER_BATON whenever a new window
-   is ready.  You must perform a zero-length write to *PARSE at the
-   end of your data stream.  */
-void svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t *handler,
-                                void *handler_baton,
-                                apr_pool_t *pool,
-                                svn_stream_t **parse);
+/* Return a writable generic stream which will parse svndiff-format
+   data into a text delta, invoking HANDLER with HANDLER_BATON
+   whenever a new window is ready.  You must perform a zero-length
+   write to *PARSE at the end of your data stream.  */
+svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t *handler,
+                                         void *handler_baton,
+                                         apr_pool_t *pool);
 
 
 

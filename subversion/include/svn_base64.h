@@ -18,17 +18,13 @@
 
 #include "svn_io.h"
 
-/* Prepare to encode binary data in base64 format.  On return, *ENCODE
-   will be set to a writable generic stream which encodes input and
-   writes the encoded data to OUTPUT.  */
-void svn_base64_encode (svn_stream_t *output, apr_pool_t *pool,
-			svn_stream_t **encode);
+/* Return a writable generic stream which will encode binary data in
+   base64 format and write the encoded data to OUTPUT.  */
+svn_stream_t *svn_base64_encode (svn_stream_t *output, apr_pool_t *pool);
 
-/* Prepare to decode base64-encoded data.  On return, *DECODE will be
-   set to a writable generic stream which decodes input and writes the
-   decoded data to OUTPUT.  */
-void svn_base64_decode (svn_stream_t *output, apr_pool_t *pool,
-			svn_stream_t **decode);
+/* Return a writable generic stream which will decode base64-encoded
+   data and write the decoded data to OUTPUT.  */
+svn_stream_t *svn_base64_decode (svn_stream_t *output, apr_pool_t *pool);
 
 
 /* Simpler interfaces for encoding and decoding base64 data assuming
