@@ -314,6 +314,11 @@ const char *dav_svn_get_xslt_uri(request_rec *r);
 dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
                                 const char *message, apr_pool_t *pool);
 
+/* Test PATH for canonicalness (defined as "what won't make the
+   svn_path_* functions immediately explode), returning an
+   HTTP_BAD_REQUEST error tag if the test fails. */
+dav_error * dav_svn__test_canonical(const char *path, apr_pool_t *pool);
+
 /* activity functions for looking up, storing, and deleting
    ACTIVITY->TXN mappings */
 const char *dav_svn_get_txn(const dav_svn_repos *repos,

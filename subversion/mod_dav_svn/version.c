@@ -30,6 +30,7 @@
 #include "svn_dav.h"
 #include "svn_time.h"
 #include "svn_pools.h"
+#include "svn_dav.h"
 
 #include "dav_svn.h"
 
@@ -950,10 +951,12 @@ dav_error *dav_svn__get_locations_report(const dav_resource *resource,
   ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-                           "The request does not contain the 'svn:' "
-                           "namespace, so it is not going to have certain "
-                           "required elements.");
+      return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+                               "The request does not contain the 'svn:' "
+                               "namespace, so it is not going to have certain "
+                               "required elements.",
+                               SVN_DAV_ERROR_NAMESPACE,
+                               SVN_DAV_ERROR_TAG);
     }
 
   /* Gather the parameters. */
@@ -973,15 +976,21 @@ dav_error *dav_svn__get_locations_report(const dav_resource *resource,
           APR_ARRAY_PUSH(location_revisions, svn_revnum_t) = revision;
         }
       else if (strcmp(child->name, "path") == 0)
-        relative_path = dav_xml_get_cdata(child, resource->pool, 0);
+        {
+          relative_path = dav_xml_get_cdata(child, resource->pool, 0);
+          if ((derr = dav_svn__test_canonical(relative_path, resource->pool)))
+            return derr;
+        }
     }
 
   /* Now we should have the parameters ready - let's
      check if they are all present. */
   if (! (relative_path && SVN_IS_VALID_REVNUM(peg_revision)))
     {
-      return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
-                           "Not all parameters passed.");
+      return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+                               "Not all parameters passed.",
+                               SVN_DAV_ERROR_NAMESPACE,
+                               SVN_DAV_ERROR_TAG);       
     }
 
   /* Append the relative paths to the base FS path to get an

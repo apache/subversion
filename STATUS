@@ -79,16 +79,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r12904
-    Fix some assertions that were killing Apache children due to non-
-    canonicalized paths entering the system via JavaSVN's custom REPORT
-    requests.  Part of issue #2199.
-    Justification:
-      Assertions on the server lead to unclean BDB shutdowns, which lead
-      to the amassing of locks, which lead (ultimately) to downtime.
-    Votes:
-      +1: cmpilato, sussman, philip
-
   * r12637, r12640
     Very bad memory handling in svndumpfilter - caches an entire revision
     of data in memory.
