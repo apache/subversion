@@ -1,8 +1,8 @@
-    Oh Most Noble and Virile Emacs, please be in -*- outline-*- mode!
+    Oh Most Noble and Virile Emacs, please be in -*- outline -*- mode!
 
      Inversion: A Version Control System You Actually Want To Use
      ------------------------------------------------------------
-              ($Revision: 1.3 $ of this document.)
+              ($Revision: 1.4 $ of this document.)
 
 * Introduction
 
@@ -56,9 +56,9 @@ repository is always readable.
 Naturally!
 
 By the way, rename support means you can trace through ancestry by
-name <i>or</i> by entity.  For example, if you say "Give me version 12
+name *or* by entity.  For example, if you say "Give me version 12
 of foo.c", you might mean version 12 of the file whose name is
-<i>now</i> foo.c (but perhaps it was named bar.c back at version 12),
+*now* foo.c (but perhaps it was named bar.c back at version 12),
 or you might mean the file whose name was foo.c in version 12 (perhaps
 that file no longer exists, or has a different name now).  Inversion
 offers a way to specify which interpretation you want, while
@@ -68,7 +68,7 @@ that.
 
 ** Binary files are handled just like anything else.
 
-That's right, no more "-kb" flag. <tt>:-)</tt>
+That's right, no more "-kb" flag. :-)
 
 Whether Inversion is able to merge changes into a file gracefully, or
 show diffs, depends on whether diffing and/or merging tools are
@@ -112,7 +112,7 @@ If you start committing on the copy, then it's a branch.  Voila!
 By default, inversion uses per-project namespaces for copies, to avoid
 cross-project name conflicts.
 
-[Thanks to Jim Blandy &lt;jimb@red-bean.com&gt; for pointing out that
+[Thanks to Jim Blandy <jimb@red-bean.com> for pointing out that
 `copy' is a clean way to get both tagging and branching.]
 
 ** Repeated merges are handled gracefully.
@@ -124,16 +124,16 @@ working copy, rather than a formal repository version).
 
 BUT, Ivn remembers what has already been merged, and doesn't merge
 anything twice unless forced to.  So if you merge the differences
-between &lt;Branch A, Version N&gt; and &lt;Branch A, Tip&gt; into
-&lt;Branch B&gt;, and then you do it again a month later, the second
-merge will only get the changes from &lt;Branch A, Previous Tip&gt; to
-&lt;Branch A, Current Tip&gt;, <i>not</i> from &lt;Branch A, Version
-N&gt; to &lt;Branch A, Current Tip&gt;.
+between <Branch A, Version N> and <Branch A, Tip> into
+<Branch B>, and then you do it again a month later, the second
+merge will only get the changes from <Branch A, Previous Tip> to
+<Branch A, Current Tip>, *not* from <Branch A, Version
+N> to <Branch A, Current Tip>.
 
-<i>This will require a more complete specification, of course, but
+This will require a more complete specification, of course, but
 above is the general idea.  Note that per-object merge records will
 need to be maintained on the server side, since people often need to
-merge project subsets.</i>
+merge project subsets.
 
 ** Inversion does not set log message policy.
 
@@ -142,12 +142,11 @@ A small matter, but one dear to our hearts...
 Log messages are a matter of project policy, not VC software policy.
 If you leave off a log message, then Inversion defaults to an empty
 message -- unless the project admin sets the right bit, in which case
-log messages will be required <i>for that project only</i>.
+log messages will be required *for that project only*.
 
 (CVS tries to require log messages, but fails: we've all seen
-thousands of empty log messages in CVS, where the user did
-<tt>commit&nbsp;-m&nbsp;""</tt> or whatever, so let's please stop the
-madness now.)
+thousands of empty log messages in CVS, meaning the user committed
+with deliberately empty quotes, so let's please stop the madness now.)
 
 ** Conflicts do not munge working files (unless requested).
 
@@ -159,7 +158,7 @@ sometimes it's not so great for text either.
 Inversion only does it that way if asked to; otherwise, it puts the
 repository version of the file somewhere nearby, and the user can use
 whatever comparison tools she wants to resolve the conflict.  When
-Inversion <i>does</i> munge the working file, it first preserves an
+Inversion *does* munge the working file, it first preserves an
 unmunged copy somewhere nearby, in case the user regrets the update.
 
 Inversion can optionally make educated guesses about what's binary and
@@ -455,7 +454,7 @@ This section describes the process of implementing Inversion -- what
 order we do things in, and how.
 
 The design needs to be evaluated across common operations, such as:
-updating a project, updating <i>part</i> of a project, committing from
+updating a project, updating *part* of a project, committing from
 an up-to-date-working copy, committing from a non-up-to-date working
 copy where the locally modified files are up-to-date, the same but
 where the locally modified files are not up-to-date, the same but with
