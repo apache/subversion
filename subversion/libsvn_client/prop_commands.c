@@ -162,7 +162,7 @@ svn_client_propset (const char *propname,
                               "Bad property name: '%s'", propname);
 
   SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target, TRUE,
-                                   -1, pool));
+                                   recurse ? -1 : 0, pool));
   SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
   if (!node)
     return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
@@ -564,7 +564,7 @@ svn_client_propget (apr_hash_t **props,
       svn_boolean_t pristine;
 
       SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target,
-                                       FALSE, -1, pool));
+                                       FALSE, recurse ? -1 : 0, pool));
       SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
       if (! node)
         return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
@@ -921,7 +921,7 @@ svn_client_proplist (apr_array_header_t **props,
       svn_boolean_t pristine;
 
       SVN_ERR (svn_wc_adm_probe_open2 (&adm_access, NULL, target,
-                                       FALSE, -1, pool));
+                                       FALSE, recurse ? -1 : 0, pool));
       SVN_ERR (svn_wc_entry (&node, target, adm_access, FALSE, pool));
       if (! node)
         return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
