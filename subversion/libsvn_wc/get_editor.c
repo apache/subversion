@@ -330,12 +330,12 @@ struct file_baton
 /* Make a file baton, using a new subpool of PARENT_DIR_BATON's pool.
    NAME is just one component, not a path. */
 static struct file_baton *
-make_file_baton (struct dir_baton *parent_dir_baton, svn_stringbuf_t *name)
+make_file_baton (struct dir_baton *parent_dir_baton,
+                 svn_stringbuf_t *name,
+                 apr_pool_t *subpool)
 {
-  apr_pool_t *subpool = svn_pool_create (parent_dir_baton->pool);
   struct file_baton *f = apr_pcalloc (subpool, sizeof (*f));
-  svn_stringbuf_t *path = svn_stringbuf_dup (parent_dir_baton->path,
-                                       subpool);
+  svn_stringbuf_t *path = svn_stringbuf_dup (parent_dir_baton->path, subpool);
 
   /* Make the file's on-disk name. */
   svn_path_add_component (path, name);
@@ -883,17 +883,19 @@ add_or_open_file (svn_stringbuf_t *name,
   apr_hash_t *entries = NULL;
   svn_wc_entry_t *entry;
   svn_boolean_t is_wc;
+  apr_pool_t *subpool = svn_pool_create (parent_dir_baton->pool);
 
   /* ### kff todo: if file is marked as removed by user, then flag a
      conflict in the entry and proceed.  Similarly if it has changed
      kind.  see issuezilla task #398. */
-  
-  SVN_ERR (svn_io_get_dirents (&dirents, parent_dir_baton->path,
-                               parent_dir_baton->pool));
-  SVN_ERR (svn_wc_entries_read (&entries,
-                                parent_dir_baton->path,
-                                parent_dir_baton->pool));
 
+  /* ### it would be nice to get the dirents and entries *once* and stash
+     ### them in the directory baton. */
+  SVN_ERR (svn_io_get_dirents (&dirents, parent_dir_baton->path, subpool));
+  SVN_ERR (svn_wc_entries_read (&entries, parent_dir_baton->path, subpool));
+
+  /* ### hmm. couldn't we just use svn_wc_entry() rather than entries_read
+     ### and this hash lookup? */
   entry = apr_hash_get (entries, name->data, name->len);
   
   /* Sanity checks. */
@@ -904,7 +906,7 @@ add_or_open_file (svn_stringbuf_t *name,
      update-driver is very confused. */
   if (adding && apr_hash_get (dirents, name->data, name->len))
     return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, parent_dir_baton->pool,
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, subpool,
        "Can't add '%s':\n object of same name already exists in '%s'",
        name->data, parent_dir_baton->path->data);
 
@@ -924,8 +926,7 @@ add_or_open_file (svn_stringbuf_t *name,
 
   /* If replacing, make sure the .svn entry already exists. */
   if ((! adding) && (! entry))
-    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL,
-                              parent_dir_baton->pool,
+    return svn_error_createf (SVN_ERR_ENTRY_NOT_FOUND, 0, NULL, subpool,
                               "trying to open non-versioned file "
                               "%s in directory %s",
                               name->data, parent_dir_baton->path->data);
@@ -933,18 +934,15 @@ add_or_open_file (svn_stringbuf_t *name,
         
   /* Make sure we've got a working copy to put the file in. */
   /* kff todo: need stricter logic here */
-  err = svn_wc_check_wc (parent_dir_baton->path, &is_wc,
-                         parent_dir_baton->pool);
-  if (err)
-    return err;
-  else if (! is_wc)
+  SVN_ERR (svn_wc_check_wc (parent_dir_baton->path, &is_wc, subpool));
+  if (! is_wc)
     return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, parent_dir_baton->pool,
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, subpool,
        "add_or_open_file: %s is not a working copy directory",
        parent_dir_baton->path->data);
 
   /* Set up the file's baton. */
-  fb = make_file_baton (parent_dir_baton, name);
+  fb = make_file_baton (parent_dir_baton, name, subpool);
   *file_baton = fb;
 
 
