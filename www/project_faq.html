@@ -51,7 +51,8 @@
 <li><a href="#multi-proj">How do I manage several different projects
     under Subversion?</a></li>
 <li><a href="#multi-merge">How do I merge two completely separate repositories?</a></li>
-<li><a href="#nfs">Should I store my repository on a NFS server?</a></li> 
+<li><a href="#nfs">Should I store my repository / working copy on a
+    NFS server?</a></li>
 <li><a href="#bdblogs">Why is my repository taking up so much disk space?</a></li>
 <li><a href="#reposperms">How do I set repository permissions correctly?</a></li>
 <li><a href="#readonly">Why do read-only operations still need repository write access?</a></li>
@@ -749,23 +750,34 @@ equivalent to CVS modules:</p>
 
 <![CDATA[=========================================================]]>
   
-<h3><a name="nfs">Should I store my repository on a NFS server?</a></h3>
+<h3><a name="nfs">Should I store my repository / working copy on a NFS
+server?</a></h3>
 
-<p>No, don't ever do that.  Berkeley DB does not <a
-href="http://www.sleepycat.com/docs/ref/env/remote.html">support
-storage of databases on remote file systems</a>.  Some NFS servers
-claim that they explicitly support use of BDB on NFS-mounted
+<p>If you are using a repository with the Berkeley DB back end
+(currently the default), do <i>not</i> access the repository via NFS.
+BDB <a href="http://www.sleepycat.com/docs/ref/env/remote.html">does
+not support storage of databases on remote file systems</a>.  Some NFS
+servers claim that they explicitly support use of BDB on NFS-mounted
 partitions, but we've only ever seen BDB databases get corrupted when
 living on an NFS or SMB network drive.</p>
 
-<p>A working copy, however, <b>can</b> be stored on a NFS server (i.e.
-your home directory is on a NFS server).  On Linux NFS servers, due to the
-volume of renames used internally in Subversion when checking out files,
-some users have reported that 'subtree checking' should be disabled (it's
-enabled by default).  Please see <a
-href="http://nfs.sourceforge.net/nfs-howto/server.html"
->NFS Howto Server Guide</a> and <b>exports(5)</b> for more information on
-how to disable subtree checking.</p>
+<p>If you are using the <a href="http://web.mit.edu/ghudson/info/fsfs"
+>FSFS</a> repository back end, then storing the repository on a moderne
+NFS server (i.e., one that supports locking) should be fine.</p>
+
+<p>Working copies can be stored on NFS (one common scenario is when
+your home directory is on a NFS server).  On Linux NFS servers, due to
+the volume of renames used internally in Subversion when checking out
+files, some users have reported that 'subtree checking' should be
+disabled (it's enabled by default).  Please see <a
+href="http://nfs.sourceforge.net/nfs-howto/server.html" >NFS Howto
+Server Guide</a> and <b>exports(5)</b> for more information on how to
+disable subtree checking.</p>
+
+<p>We've had at least one report of working copies getting wedged
+after being accessed via SMB.  The server in question was running a
+rather old version of Samba (2.2.7a).  The problem didn't recur with a
+newer Samba (3.0.6).</p>
 
 <![CDATA[=========================================================]]>
   
