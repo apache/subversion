@@ -18,7 +18,8 @@
  * @file svn_path.h
  * @brief A path manipulation library
  *
- * All incoming and outgoing paths are in UTF-8.
+ * All incoming and outgoing paths are non-null and in UTF-8, unless
+ * otherwise documented.
  * 
  * No result path ever ends with a separator, no matter whether the
  * path is a file or directory, because we always canonicalize() it.
@@ -340,10 +341,12 @@ svn_boolean_t svn_path_is_url (const char *path);
 /** Return @c TRUE iff @a path is URI-safe, @c FALSE otherwise. */
 svn_boolean_t svn_path_is_uri_safe (const char *path);
 
-/** Return a URI-encoded copy of @a path, allocated in @a pool. */
+/** Return a URI-encoded copy of @a path, allocated in @a pool.  If
+    @a path is NULL, just return NULL. */
 const char *svn_path_uri_encode (const char *path, apr_pool_t *pool);
 
-/** Return a URI-decoded copy of @a path, allocated in @a pool. */
+/** Return a URI-decoded copy of @a path, allocated in @a pool.  If
+    @a path is NULL, just return NULL. */
 const char *svn_path_uri_decode (const char *path, apr_pool_t *pool);
 
 /** Extend @a url by a single @a component, URI-encoding that @a component
