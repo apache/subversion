@@ -805,7 +805,7 @@ X      3rd_party           # this dir is part of an externals definition
 ?      foo.o               # svn doesn't manage foo.o
 !      some_dir            # svn manages this, but it's either missing or incomplete
 ~      qux                 # versioned as dir, but is file, or vice versa
-I      .screenrc           # this file is ignored
+I      .screenrc           # svn doesn't manage this, and is configured to ignore it
 A  +   moved_dir           # added with history of where it came from
 M  +   moved_dir/README    # added with history and has local modifications
 D      stuff/fish.c        # this file is scheduled for deletion
@@ -922,14 +922,17 @@ C      stuff/loot/lump.c   # this file has conflicts from an update
           <varlistentry>
             <term><computeroutput>I      item</computeroutput></term>
             <listitem>
-              <para>Subversion is <quote>ignoring</quote> the file,
-                directory, or symbolic link <filename>item</filename>,
-                probably because you told it to.  For more information
-                on ignored files, see <xref
+              <para>The file, directory, or symbolic link
+                <filename>item</filename> is not under version control,
+                and Subversion is configured to ignore it during
+                <command>svn add</command>, <command>svn import</command>
+                and <command>svn status</command> operations.  For more
+                information on ignored files, see <xref
                 linkend="svn-ch-7-sect-2.3.3"/>.  Note that this
                 symbol only shows up if you pass the
                 <option>--no-ignore</option> option to <command>svn
-                status</command>.</para>
+                status</command>&mdash;otherwise the file would be
+                ignored and not listed at all!</para>
             </listitem>
           </varlistentry>
 
