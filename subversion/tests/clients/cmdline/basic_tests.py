@@ -630,13 +630,23 @@ def basic_revert(sbox):
   beta_path = os.path.join(wc_dir, 'A', 'B', 'E', 'beta')
   iota_path = os.path.join(wc_dir, 'iota')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  zeta_path = os.path.join(wc_dir, 'A', 'D', 'H', 'zeta')
   svntest.main.file_append(beta_path, "Added some text to 'beta'.")
   svntest.main.file_append(iota_path, "Added some text to 'iota'.")
   svntest.main.file_append(rho_path, "Added some text to 'rho'.")
+  svntest.main.file_append(zeta_path, "Added some text to 'zeta'.")
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'add', zeta_path)
+  if len (stderr_lines) > 0:
+    print "Add command printed the following to stderr:"
+    print stderr_lines
+    return 1
 
   # Verify modified status.
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.tweak('A/B/E/beta', 'iota', 'A/D/G/rho', status='M ')
+  expected_output.add({
+    'A/D/H/zeta' : Item(status='A ', wc_rev=0, repos_rev=1),
+    })
 
   if svntest.actions.run_and_verify_status (wc_dir, expected_output):
     return 1
@@ -653,6 +663,11 @@ def basic_revert(sbox):
     print stderr_lines
     return 1
   stdout_lines, stderr_lines = svntest.main.run_svn(None, 'revert', rho_path)
+  if len (stderr_lines) > 0:
+    print "Revert command printed the following to stderr:"
+    print stderr_lines
+    return 1
+  stdout_lines, stderr_lines = svntest.main.run_svn(None, 'revert', zeta_path)
   if len (stderr_lines) > 0:
     print "Revert command printed the following to stderr:"
     print stderr_lines
@@ -679,6 +694,11 @@ def basic_revert(sbox):
   lines = fp.readlines()
   if not ((len (lines) == 1) and (lines[0] == "This is the file 'rho'.")):
     print "Revert failed to restore original text."
+    return 1
+  fp = open(zeta_path, 'r')
+  lines = fp.readlines()
+  if not ((len (lines) == 1) and (lines[0] == "Added some text to 'zeta'.")):
+    print "Revert failed to leave unversioned text."
     return 1
 
   # Finally, check that reverted file is not readonly
