@@ -470,6 +470,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
 
     case SVN_PROPID_md5_checksum:
       if ((! resource->collection)
+          && (! resource->baselined)
           && (resource->type == DAV_RESOURCE_TYPE_REGULAR
               || resource->type == DAV_RESOURCE_TYPE_WORKING
               || resource->type == DAV_RESOURCE_TYPE_VERSION))
