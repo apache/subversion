@@ -71,17 +71,21 @@ struct svn_auth_baton_t
   /* run-time parameters needed by providers. */
   apr_hash_t *parameters;
 
+  /* cache of the last set of credentials returned of each kind.
+     maps const char *cred_kind ==> void *.  */
+  apr_hash_t *last_creds;
+
 };
 
 /* Abstracted iteration baton */
 struct svn_auth_iterstate_t
 {
+  const char *cred_kind;       /* what kind of creds are we mining? */
   provider_set_t *table;       /* the table being searched */
   int provider_idx;            /* the current provider (row) */
   svn_boolean_t got_first;     /* did we get the provider's first creds? */
   void *provider_iter_baton;   /* the provider's own iteration context */
-  void *last_creds;            /* the last set of credentials returned */
-  apr_hash_t *parameters;      /* pointer to auth_baton's runtime params */
+  svn_auth_baton_t *ab;        /* the original auth_baton. */
 };
 
 
@@ -99,6 +103,7 @@ svn_auth_open (svn_auth_baton_t **auth_baton,
   ab = apr_pcalloc (pool, sizeof (*ab));
   ab->tables = apr_hash_make (pool);
   ab->parameters = apr_hash_make (pool);
+  ab->last_creds = apr_hash_make (pool);
   ab->pool = pool;
 
   /* Register each provider in order.  Providers of different
@@ -155,11 +160,12 @@ svn_auth_first_credentials (void **credentials,
                             svn_auth_baton_t *auth_baton,
                             apr_pool_t *pool)
 {
-  int i;
+  int i = 0;
   provider_set_t *table;
   svn_auth_provider_object_t *provider = NULL;
   void *creds = NULL;
   void *iter_baton = NULL;
+  svn_boolean_t got_first = FALSE;
   svn_auth_iterstate_t *iterstate;
 
   /* Get the appropriate table of providers for CRED_KIND. */
@@ -169,17 +175,30 @@ svn_auth_first_credentials (void **credentials,
                               "No provider registered for '%s' credentials.",
                               cred_kind);
 
-  /* Find a provider that can give "first" credentials. */
-  for (i = 0; i < table->providers->nelts; i++)
+  /* First, see if we have cached creds in the auth_baton. */
+  creds = apr_hash_get (auth_baton->last_creds,
+                        cred_kind, APR_HASH_KEY_STRING);
+  if (creds)
     {
-      provider = APR_ARRAY_IDX(table->providers, i,
-                               svn_auth_provider_object_t *);
-      SVN_ERR (provider->vtable->first_credentials 
-               (&creds, &iter_baton, provider->provider_baton,
-                auth_baton->parameters, pool));
-
-      if (creds != NULL)
-        break;
+      got_first = FALSE;
+    }
+  /* If not, find a provider that can give "first" credentials. */
+  else
+    {
+      for (i = 0; i < table->providers->nelts; i++)
+        {
+          provider = APR_ARRAY_IDX(table->providers, i,
+                                   svn_auth_provider_object_t *);
+          SVN_ERR (provider->vtable->first_credentials 
+                   (&creds, &iter_baton, provider->provider_baton,
+                    auth_baton->parameters, auth_baton->pool));
+          
+          if (creds != NULL)
+            {
+              got_first = TRUE;
+              break;
+            }
+        }
     }
 
   if (! creds)
@@ -188,13 +207,17 @@ svn_auth_first_credentials (void **credentials,
     {
       /* Build an abstract iteration state. */
       iterstate = apr_pcalloc (pool, sizeof(*iterstate));
+      iterstate->cred_kind = apr_pstrdup (auth_baton->pool, cred_kind);
       iterstate->table = table;
       iterstate->provider_idx = i;
-      iterstate->got_first = TRUE;
+      iterstate->got_first = got_first;
       iterstate->provider_iter_baton = iter_baton;
-      iterstate->last_creds = creds;
-      iterstate->parameters = auth_baton->parameters;
+      iterstate->ab = auth_baton;
       *state = iterstate;
+
+      /* Have the auth_baton remember the latest creds as well */
+      apr_hash_set (auth_baton->last_creds,
+                    cred_kind, APR_HASH_KEY_STRING, creds);
     }
 
   *credentials = creds;
@@ -205,8 +228,7 @@ svn_auth_first_credentials (void **credentials,
 
 svn_error_t *
 svn_auth_next_credentials (void **credentials,
-                           svn_auth_iterstate_t *state,
-                           apr_pool_t *pool)
+                           svn_auth_iterstate_t *state)
 {
   svn_auth_provider_object_t *provider;
   provider_set_t *table = state->table;
@@ -224,7 +246,8 @@ svn_auth_next_credentials (void **credentials,
         {
           SVN_ERR (provider->vtable->first_credentials 
                    (&creds, &(state->provider_iter_baton),
-                    provider->provider_baton, state->parameters, pool));
+                    provider->provider_baton, state->ab->parameters,
+                    state->ab->pool));
           state->got_first = TRUE;
         }
       else
@@ -232,16 +255,20 @@ svn_auth_next_credentials (void **credentials,
           if (provider->vtable->next_credentials)
             SVN_ERR (provider->vtable->next_credentials 
                      (&creds, state->provider_iter_baton,
-                      state->parameters, pool));
+                      state->ab->parameters, state->ab->pool));
         }
 
       if (creds != NULL)
-        break;
+        {
+          /* Have the auth_baton remember the latest creds. */
+          apr_hash_set (state->ab->last_creds,
+                        state->cred_kind, APR_HASH_KEY_STRING, creds);
+          break;
+        }
 
       state->got_first = FALSE;
     }
 
-  state->last_creds = creds;
   *credentials = creds;
 
   return SVN_NO_ERROR;
@@ -255,8 +282,14 @@ svn_auth_save_credentials (svn_auth_iterstate_t *state,
   int i;
   svn_auth_provider_object_t *provider;
   svn_boolean_t save_succeeded = FALSE;
+  void *last_creds;
 
-  if (! (state && state->last_creds))
+  if (! state)
+    return SVN_NO_ERROR;
+
+  last_creds = apr_hash_get (state->ab->last_creds,
+                             state->cred_kind, APR_HASH_KEY_STRING);
+  if (! last_creds)
     return SVN_NO_ERROR;
 
   /* First, try to save the creds using the provider that produced them. */
@@ -265,9 +298,9 @@ svn_auth_save_credentials (svn_auth_iterstate_t *state,
                             svn_auth_provider_object_t *);
   if (provider->vtable->save_credentials)
     SVN_ERR (provider->vtable->save_credentials (&save_succeeded, 
-                                                 state->last_creds,
+                                                 last_creds,
                                                  provider->provider_baton,
-                                                 state->parameters,
+                                                 state->ab->parameters,
                                                  pool));
   if (save_succeeded)
     return SVN_NO_ERROR;
@@ -281,8 +314,8 @@ svn_auth_save_credentials (svn_auth_iterstate_t *state,
                                svn_auth_provider_object_t *);
       if (provider->vtable->save_credentials)
         SVN_ERR (provider->vtable->save_credentials 
-                 (&save_succeeded, state->last_creds,
-                  provider->provider_baton, state->parameters, pool));
+                 (&save_succeeded, last_creds,
+                  provider->provider_baton, state->ab->parameters, pool));
 
       if (save_succeeded)
         break;
