@@ -8,7 +8,8 @@ libsvn_fs_la_SOURCES = convert-size.c		\
 		       fs.c			\
 		       id.c			\
 		       nodes-table.c		\
-		       skel.c
+		       skel.c			\
+		       tree.c
 
 # Set aside for the moment:
 #		       delta.c			\
