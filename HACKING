@@ -383,13 +383,13 @@ In addition to the GNU standards, Subversion uses these conventions:
       so you get svn-dev.el and svnbook.el when needed:
 
          ;;; Begin Subversion development section
-         (defun svn-find-file-hook ()
+         (defun my-find-file-hook ()
            (if (string-match "projects/svn/" buffer-file-name)
                (load "~/projects/svn/tools/dev/svn-dev"))
            (if (string-match "projects/svn/doc/book" buffer-file-name)
                (load "~/projects/svn/doc/book/tools/svnbook")))
 
-         (add-hook 'find-file-hooks 'svn-find-file-hook)
+         (add-hook 'find-file-hooks 'my-find-file-hook)
          ;;; End Subversion development section
 
       You'll need to customize the paths for your setup, of course.
