@@ -736,7 +736,8 @@ static svn_error_t *fetch_file(ne_session *sess,
      simple_fetch_file() params related to fetching version URLs (for
      fetching deltas) */
   err = simple_fetch_file(sess, bc_url, NULL, TRUE, compression, file_baton, 
-                          NULL, checksum->data, editor, NULL, NULL, pool);
+                          NULL, (checksum ? checksum->data : NULL),
+                          editor, NULL, NULL, pool);
   if (err)
     {
       /* ### do we really need to bother with closing the file_baton? */
