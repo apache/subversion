@@ -32,7 +32,7 @@
  * Do you want to debug code in this file?
  * Just uncomment the following define.
  */
-#define SVN_JNI__DEBUG_VECTOR
+//#define SVN_JNI__DEBUG_VECTOR
 
 /*** Code ***/
 jobject
