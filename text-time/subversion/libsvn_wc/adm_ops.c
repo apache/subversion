@@ -1310,7 +1310,16 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
              than the 'now' time that already exists. */
           if (use_commit_times && (! special))
             {
-              SVN_ERR (svn_io_set_file_affected_time (entry->cmt_date,
+              const svn_string_t *mtime;
+
+              SVN_ERR (svn_wc_prop_get (&mtime, SVN_PROP_TEXT_TIME, 
+                                        fullpath, adm_access, pool));
+
+              tstamp = entry->cmt_date;
+              if (mtime)
+                svn_time_from_cstring ( &tstamp, mtime->data, pool);
+
+              SVN_ERR (svn_io_set_file_affected_time (tstamp,
                                                       fullpath, pool));
               tstamp = entry->cmt_date;
             }

@@ -209,6 +209,20 @@ import_file (const svn_delta_editor_t *editor,
           void *pval;
 
           apr_hash_this (hi, &pname, NULL, &pval);
+
+          /* if the svn:text-time property is set, use the current file
+           * date instead of the value */
+          if (strcmp (pname, SVN_PROP_TEXT_TIME) == 0)
+            {
+              apr_time_t mtime;
+
+              SVN_ERR (svn_io_file_affected_time (&mtime, path, pool) );
+              pval=svn_string_create( 
+                                     svn_time_to_cstring (mtime, pool),
+                                     pool );
+            }
+
+
           SVN_ERR (editor->change_file_prop (file_baton, pname, pval, pool));
         }
     }

@@ -103,7 +103,7 @@ copy_one_versioned_file (const char *from,
   svn_subst_eol_style_t style;
   apr_hash_t *props;
   const char *base;
-  svn_string_t *eol_style, *keywords, *executable, *externals, *special;
+  svn_string_t *eol_style, *keywords, *executable, *externals, *special, *text_time;
   const char *eol = NULL;
   svn_boolean_t local_mod = FALSE;
   apr_time_t tm;
@@ -153,6 +153,8 @@ copy_one_versioned_file (const char *from,
                             APR_HASH_KEY_STRING);
   special = apr_hash_get (props, SVN_PROP_SPECIAL,
                           APR_HASH_KEY_STRING);
+  text_time = apr_hash_get (props, SVN_PROP_TEXT_TIME,
+                            APR_HASH_KEY_STRING);
   
   if (eol_style)
     SVN_ERR (get_eol_style (&style, &eol, eol_style->data, native_eol));
@@ -166,6 +168,9 @@ copy_one_versioned_file (const char *from,
   else
     {
       tm = entry->cmt_date;
+
+      if (text_time)
+        SVN_ERR(svn_time_from_cstring (&tm, text_time->data, iterpool));
     }
 
   if (keywords)
@@ -439,6 +444,7 @@ struct file_baton
   const char *url;
   const char *author;
   apr_time_t date;
+  svn_boolean_t date_is_mtime;
 
   /* Pool associated with this baton. */
   apr_pool_t *pool;
@@ -629,11 +635,21 @@ change_file_prop (void *file_baton,
   else if (strcmp (name, SVN_PROP_EXECUTABLE) == 0)
     fb->executable_val = svn_string_dup (value, fb->pool);
 
+  /* if we have a specific text-time for this file, it overrides
+   * the commit-timestamp */
+  else if (strcmp (name, SVN_PROP_TEXT_TIME) == 0)
+    {
+      fb->date_is_mtime=TRUE;
+      SVN_ERR (svn_time_from_cstring (&fb->date, value->data, fb->pool));
+    }
+
   /* Try to fill out the baton's keywords-structure too. */
   else if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_REV) == 0)
     fb->revision = apr_pstrdup (fb->pool, value->data);
 
   else if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
+    /* do not overwrite timestamp */
+    if (!fb->date_is_mtime)
       SVN_ERR (svn_time_from_cstring (&fb->date, value->data, fb->pool));
 
   else if (strcmp (name, SVN_PROP_ENTRY_LAST_AUTHOR) == 0)

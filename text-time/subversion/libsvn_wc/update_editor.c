@@ -525,6 +525,7 @@ struct file_baton
      that comes through as an 'entry prop', and will be used to set
      the working file's timestamp if it's added.  */
   const char *last_changed_date;
+  svn_boolean_t last_changed_is_for_entry;
 
   /* Bump information for the directory this file lives in */
   struct bump_dir_info *bump_info;
@@ -1695,9 +1696,17 @@ change_file_prop (void *file_baton,
 
   /* Special case: if the file is added during a checkout, cache the
      last-changed-date propval for future use. */
-  if (eb->use_commit_times
-      && (strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0))
+  if (eb->use_commit_times && value)
+    {
+      if ( (strcmp (name, SVN_PROP_TEXT_TIME) == 0) )
+        {
     fb->last_changed_date = apr_pstrdup (fb->pool, value->data);
+          fb->last_changed_is_for_entry = 1;
+        }
+      if ( (strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0) &&
+           !fb->last_changed_is_for_entry)
+        fb->last_changed_date = apr_pstrdup (fb->pool, value->data);
+    }
 
   return SVN_NO_ERROR;
 }
