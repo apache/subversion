@@ -1224,7 +1224,8 @@ do_single_file_merge (const char *URL1,
    a more pressing issue.
  */
 
-
+/* Return a "you can't do that" error, optionally wrapping another
+   error CHILD_ERR. */
 static svn_error_t *
 unsupported_diff_error (svn_error_t *child_err)
 {
@@ -1234,6 +1235,12 @@ unsupported_diff_error (svn_error_t *child_err)
 }
 
 
+/* Perform a diff between two working-copy paths.  
+   
+   PATH1 and PATH2 are both working copy paths.  REVISION1 and
+   REVISION2 are their respective revisions.
+
+   All other options are the same as thos passed to svn_client_diff(). */
 static svn_error_t *
 diff_wc_wc (const apr_array_header_t *options,
             const char *path1,
@@ -1249,6 +1256,10 @@ diff_wc_wc (const apr_array_header_t *options,
   svn_wc_adm_access_t *adm_access;
   const char *anchor, *target;
   svn_node_kind_t kind;
+
+  /* Assert that we have valid input. */
+  assert (! svn_path_is_url (path1));
+  assert (! svn_path_is_url (path2));
 
   /* Currently we support only the case where path1 and path2 are the
      same path. */
@@ -1285,6 +1296,12 @@ diff_wc_wc (const apr_array_header_t *options,
 }
 
 
+/* Perform a diff between two working-copy paths.  
+   
+   PATH1 and PATH2 may be either URLs or the working copy paths.
+   REVISION1 and REVISION2 are their respective revisions.
+
+   All other options are the same as thos passed to svn_client_diff(). */
 static svn_error_t *
 diff_repos_repos (const apr_array_header_t *options,
                   const char *path1,
@@ -1438,6 +1455,13 @@ diff_repos_repos (const apr_array_header_t *options,
 }
 
 
+/* Perform a diff between two working-copy paths.  
+   
+   PATH1 may be either a URL or a working copy paths.  PATH2 is a
+   working copy path.  REVISION1 and REVISION2 are their respective
+   revisions.  If REVERSE is TRUE, the diff will be done in reverse.
+
+   All other options are the same as thos passed to svn_client_diff(). */
 static svn_error_t *
 diff_repos_wc (const apr_array_header_t *options,
                const char *path1,
@@ -1465,6 +1489,9 @@ diff_repos_wc (const apr_array_header_t *options,
   void *diff_edit_baton;
   const char *auth_dir;
   svn_boolean_t rev2_is_base = (revision2->kind == svn_opt_revision_base);
+
+  /* Assert that we have valid input. */
+  assert (! svn_path_is_url (path2));
 
   /* Figure out URL1. */
   SVN_ERR (convert_to_url (&url1, path1, pool));
@@ -1545,6 +1572,7 @@ diff_repos_wc (const apr_array_header_t *options,
 }
 
 
+/* This is basically just the guts of svn_client_diff(). */
 static svn_error_t *
 do_diff (const apr_array_header_t *options,
          const char *path1,
