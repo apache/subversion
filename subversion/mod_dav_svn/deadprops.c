@@ -25,6 +25,7 @@
 
 #include "dav_svn.h"
 #include "svn_xml.h"
+#include "svn_pools.h"
 
 
 struct dav_db {
@@ -177,10 +178,10 @@ static dav_error *dav_svn_db_open(apr_pool_t *p, const dav_resource *resource,
   db = apr_pcalloc(p, sizeof(*db));
 
   db->resource = resource;
-  db->p = p;
+  db->p = svn_pool_create(p);
 
   /* ### temp hack */
-  db->work = svn_stringbuf_ncreate("", 0, p);
+  db->work = svn_stringbuf_ncreate("", 0, db->p);
 
   /* ### use RO and node's mutable status to look for an error? */
 
@@ -191,7 +192,7 @@ static dav_error *dav_svn_db_open(apr_pool_t *p, const dav_resource *resource,
 
 static void dav_svn_db_close(dav_db *db)
 {
-  /* nothing to do */
+  svn_pool_destroy(db->p);
 }
 
 static dav_error *dav_svn_db_define_namespaces(dav_db *db, dav_xmlns_info *xi)
