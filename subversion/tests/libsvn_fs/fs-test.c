@@ -4681,9 +4681,12 @@ get_file_digest (unsigned char digest[MD5_DIGESTSIZE],
 }
 
 
+/* Return a pseudo-random number in the range [0,SCALAR) i.e. return
+   a number N such that 0 <= N < SCALAR */
 static int my_rand (int scalar)
 {
-  return (int)(((float)rand() / (float)RAND_MAX) * (float)scalar);
+  /* Assumes RAND_MAX+1 can be exactly represented in a double */
+  return (int)(((double)rand() / ((double)RAND_MAX+1.0)) * (double)scalar);
 }
 
 
@@ -4701,7 +4704,7 @@ random_data_to_buffer (char *buf,
   apr_size_t offset;
 
   int ds_off = 0;
-  char dataset[10] = "0123456789";
+  const char *dataset = "0123456789";
   int dataset_size = strlen (dataset);
 
   if (full)

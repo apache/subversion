@@ -315,7 +315,7 @@ svn_path_remove_component (svn_stringbuf_t *path)
     svn_stringbuf_setempty (path);
   else
     {
-      if (path->data[path->len - 1] == SVN_PATH_SEPARATOR)
+      if (path->len && path->data[path->len - 1] == SVN_PATH_SEPARATOR)
           path->data[--path->len] = '\0';
     }
 }
