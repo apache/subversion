@@ -282,8 +282,8 @@ svn_parse (ap_hash_t **uberhash, svn_string_t *filename, ap_pool_t *pool)
 
             /* store this new hash in our uberhash */
             ap_hash_set (*uberhash, 
-                         new_section,         /* key: ptr to bytestring */
-                         sizeof(svn_string_t),/* the length of the key */
+                         new_section->data,   /* key: bytestring */
+                         new_section->len,    /* the length of the key */
                          new_section_hash);   /* val: ptr to the new hash */
             break;
           }
@@ -339,8 +339,8 @@ svn_parse (ap_hash_t **uberhash, svn_string_t *filename, ap_pool_t *pool)
 
             /* Store key and val in the currently active hash */
             ap_hash_set (current_hash,
-                         new_key,             /* key: ptr to bytestring */
-                         sizeof(svn_string_t),
+                         new_key->data,       /* key: bytestring data */
+                         new_key->len,        /* length of key */
                          new_val);            /* val: ptr to bytestring */
             break;
           }         /* default: */
@@ -385,7 +385,7 @@ svn_hash_print (ap_hash_t *hash, FILE *stream)
   ap_hash_index_t *hash_index;   /* this represents a hash entry */
   void *key, *val;
   size_t keylen;
-  svn_string_t *keystring, *valstring;
+  svn_string_t keystring, *valstring;
 
   fprintf (stream, "\n-----> Printing hash:\n");
 
@@ -397,12 +397,15 @@ svn_hash_print (ap_hash_t *hash, FILE *stream)
       ap_hash_this (hash_index, &key, &keylen, &val);
 
       /* Cast things nicely */
-      keystring =  key;
+      keystring.data = key;
+      keystring.len = keylen;
+      keystring.blocksize = keylen;
+
       valstring =  val;
 
       /* Print them out nicely */
       fprintf (stream, "Key: `");
-      svn_string_print (keystring, stream, FALSE, FALSE);
+      svn_string_print (&keystring, stream, FALSE, FALSE);
       fprintf (stream, "', ");
 
       fprintf (stream, "Val: `");
@@ -428,7 +431,7 @@ svn_uberhash_print (ap_hash_t *uberhash, FILE *stream)
   ap_hash_index_t *hash_index;   /* this represents a hash entry */
   void *key, *val;
   size_t keylen;
-  svn_string_t *keystring;
+  svn_string_t keystring;
   ap_hash_t *valhash;
 
   fprintf (stream, "\n-> Printing Uberhash:\n");
@@ -441,12 +444,15 @@ svn_uberhash_print (ap_hash_t *uberhash, FILE *stream)
       ap_hash_this (hash_index, &key, &keylen, &val);
 
       /* Cast things nicely */
-      keystring = key;
+      keystring.data = key;
+      keystring.len = keylen;
+      keystring.blocksize = keylen;
+
       valhash = val;
 
       /* Print them out nicely */
       fprintf (stream, "---> Hashname: `");
-      svn_string_print (keystring, stream, FALSE, FALSE);
+      svn_string_print (&keystring, stream, FALSE, FALSE);
       fprintf (stream, "'\n");
 
       svn_hash_print (valhash, stream);
