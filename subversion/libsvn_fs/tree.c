@@ -886,27 +886,68 @@ svn_fs_change_node_prop (svn_fs_root_t *root,
 
 /* Merging trees. */
  
-struct reroot_txn_args
+struct reroot_path_args
 {
-  svn_fs_t *fs;
-  const char *txn_name;
+  svn_fs_root_t *root;
+  const char *path;
   svn_fs_id_t *id;
 };
 
 
-/* Change one or both roots of an as-yet-unchanged transaction.
-   Assuming that BATON points to a struct reroot_txn_args *, then do:
-   
-     svn_fs__dag_reroot_txn (BATON->fs, BATON->TXN_NAME, BATON->id, trail);
+/* Assuming that BATON points to a struct reroot_path_args *, then:
 
+   Change PATH in ROOT to point to ID.  ROOT must be a txn root, and
+   PATH in ROOT should currently point at an immutable node (although
+   this function does not check that).
+
+   If PATH is the root directory, then ROOT's txn must be pristine
+   and will be rerooted, by a call to
+
+      svn_fs__dag_reroot_txn (ROOT->fs, ROOT->txn, ID, TRAIL);
+
+   Otherwise, the appropriate entry in PATH's parent will be created
+   or set, pointing at ID.
 */
 static svn_error_t *
-txn_body_reroot_txn (void *baton, trail_t *trail)
+txn_body_reroot_path (void *baton, trail_t *trail)
 {
-  struct reroot_txn_args *args = baton;
+  struct reroot_path_args *args = baton;
+  parent_path_t *head;
+  
+  SVN_ERR (open_path (&head, args->root, args->path, 0, trail));
+  
+  if (head->parent == NULL)
+    {
+      /* We're changing the root, so we need to set target's txn to
+         use either source_id or source_id's content as its txn root.
+         This is subtle, and not particularly elegant, but I don't see
+         any way around it:
+         
+         If source_id refers to an immutable node, then we
+         should set both of txn's roots.  In other words, the
+         txn gets re-based, having never been modified.
+         
+         If source_id refers to a mutable node, then we
+         certainly don't want to share it with target, so we
+         make a new mutable root for target and *copy*
+         source_id's content over.
+         
+         svn_fs__dag_reroot_txn does all this for us.
+      */
 
-  SVN_ERR (svn_fs__dag_reroot_txn (args->fs, args->txn_name, args->id, trail));
-
+      SVN_ERR (svn_fs__dag_reroot_txn (args->root->fs,
+                                       args->root->txn,
+                                       args->id, trail));
+    }
+  else     /* we're not changing the root */
+    {
+      SVN_ERR (make_path_mutable (args->root, head->parent,
+                                  args->path, trail));
+      
+      SVN_ERR (svn_fs__dag_set_entry (head->parent->node, head->entry,
+                                      args->id, trail));
+    }
+  
   return SVN_NO_ERROR;
 }
 
@@ -922,6 +963,7 @@ svn_fs_merge (const char **conflict_p,
               apr_pool_t *pool)
 {
   svn_fs_id_t *source_id, *target_id, *ancestor_id;
+  int source_is_dir, target_is_dir, ancestor_is_dir;
 
   /* Make sure we're merging into a txn. */
   if (! svn_fs_is_txn_root (target_root))
@@ -944,81 +986,38 @@ svn_fs_merge (const char **conflict_p,
 
   /* Else proceed, knowing ancestor != source, and source != target. */
 
-#if 0   /* in development */
+  SVN_ERR (svn_fs_is_dir (&source_is_dir, source_root, source_path, pool));
+  SVN_ERR (svn_fs_is_dir (&target_is_dir, target_root, target_path, pool));
+  SVN_ERR (svn_fs_is_dir (&ancestor_is_dir, ancestor_root, ancestor_path,
+                          pool));
 
   /* target has not changed since ancestor, so merge from source */
   if (svn_fs_id_eq (ancestor_id, target_id))
     {
       /* Target must take the change between ancestor and source.
          This means updating target's entry in its parent; or if it's
-         the root, updating the target txn itself. */
+         the root, updating the target txn itself.
 
-      const char *next;
-      char *target_parent = next_entry_name (&next, target_path, pool);
+         Note that if this is happening, it implies a mighty silly
+         circumstance on our caller's part.  But it would be
+         rather arbitrary of us to insist that callers only
+         pass in targets where changes have already been made.  */
 
-      if ((target_parent[0] == '\0')
-          && ((next == NULL) || (next[0] == '\0')))
-        {
-          /* target_path is the unchanged root, so we need to set
-             target's txn to use either source_id or source_id's
-             content as its txn root.  This is subtle, and not
-             particularly elegant, but I don't see any way around
-             it:
-             
-             If source_id refers to an immutable node, then we
-             should set both of txn's roots.  In other words, the
-             txn gets re-based, without ever having been
-             modified.
-             
-             If source_id refers to a mutable node, then we
-             certainly don't want to share it with target, so we
-             make a new mutable root for target and *copy*
-             source_id's content over.
-             
-             Note that all of this presumes a mighty silly
-             circumstance on our caller's part.  But it would be
-             rather arbitrary of us to insist that callers only
-             pass in targets where changes have already been made.
-          */
+      struct reroot_path_args args;
 
-          struct reroot_txn_args args;
-          
-          args.txn_name = svn_fs_txn_root_name (target_root, pool);
-          args.id = source_id;
-          args.fs = target_root->fs;
-          
-          SVN_ERR (svn_fs__retry_txn (target_root->fs, txn_body_reroot_txn,
-                                      &args, pool));
-        }
-      else     /* target is not the root */
-        {
-          parent_path_t *t_head;
-          parent_path_t *target_parent;
-          dag_node_t *target_parent_node;
-          char *target_entry_name; 
+      args.root = target_root;
+      args.path = target_path;
+      args.id = source_id;
 
-          /* kff todo: move this stuff out to txn_body helpers */
-
-          SVN_ERR (open_path (&t_head, target_root, target_path, 0, trail));
-          target_entry_name = t_head->entry;
-          target_parent = t_head->parent;
-          target_parent_node = target_parent->node;
-
-          SVN_ERR (make_path_mutable (target_root, target_parent,
-                                      target_path, trail));
-
-          SVN_ERR (svn_fs__dag_set_entry (target_parent_node,
-                                          entry_name, source_id,
-                                          trail));
-        }
+      SVN_ERR (svn_fs__retry_txn (target_root->fs,
+                                  txn_body_reroot_path,
+                                  &args, pool));
     }
-  /* ancestor is dir, source is dir, target is dir */
-  else if (svn_fs_is_dir (source_root, source_path)
-           && svn_fs_is_dir (target_root, target_path)
-           && svn_fs_is_dir (ancestor_root, ancestor_path))
+  else if (ancestor_is_dir && source_is_dir && target_is_dir)
     {
       apr_hash_t *source_entries, *target_entries, *ancestor_entries;
       apr_hash_index_t *hi;
+      svn_fs_dirent_t *ent;
       
       SVN_ERR (svn_fs_dir_entries
                (&source_entries, source_root, source_path, pool));
@@ -1038,34 +1037,61 @@ svn_fs_merge (const char **conflict_p,
           
           apr_hash_this (hi, &key, &klen, &val);
           
-          /* E exists in target and source */
+          /* E exists in target and source as well as ancestor */
           if (apr_hash_get (source_entries, key, klen)
               && apr_hash_get (target_entries, key, klen))
             {
               char *new_apath, *new_spath, *new_tpath;
-              char *new_component = apr_palloc (pool, klen + 1);
+              char *new = apr_pstrndup (pool, key, klen);
 
-              strncpy (new_component, key, klen);
-              new_component[klen] = '\0';
+              /* ### kff todo: would be nice to be using
+                 charstar-based path functions here.  For now, we
+                 avoid leading slashes by checking for the empty
+                 (root) path explicitly.  Ick.  */
 
-              new_apath = apr_psprintf (pool, "%s/%s", ancestor_path,
-                                        new_component);
-              new_spath = apr_psprintf (pool, "%s/%s", source_path,
-                                        new_component);
-              new_tpath = apr_psprintf (pool, "%s/%s", target_path,
-                                        new_component);
+              if (ancestor_path[0] == '\0')
+                new_apath = new;
+              else
+                new_apath = apr_psprintf (pool, "%s/%s", ancestor_path, new);
 
+              if (source_path[0] == '\0')
+                new_spath = new;
+              else
+                new_spath = apr_psprintf (pool, "%s/%s", source_path, new);
+
+              if (target_path[0] == '\0')
+                new_tpath = new;
+              else
+                new_tpath = apr_psprintf (pool, "%s/%s", target_path, new);
+              
               SVN_ERR (svn_fs_merge (conflict_p,
-                                     source_root, source_path,
-                                     target_root, target_path,
-                                     ancestor_root, ancestor_path,
+                                     source_root, new_spath,
+                                     target_root, new_tpath,
+                                     ancestor_root, new_apath,
                                      pool));
             }
           /* E exists in source but not target */
-          else if (apr_hash_get (source_entries, key, klen)
+          else if ((ent = apr_hash_get (source_entries, key, klen))
                    && (! apr_hash_get (target_entries, key, klen)))
             {
-              target takes source;
+              /* target takes source */
+              struct reroot_path_args args;
+              char *newpath;
+
+              /* ### kff todo: again, abstracting to char * path
+                 functions would be a good thing. */
+              if (target_path[0] == '\0')
+                newpath = ent->name;
+              else
+                newpath = apr_psprintf (pool, "%s/%s", target_path, ent->name);
+              
+              args.root = target_root;
+              args.path = newpath;
+              args.id = ent->id;
+              
+              SVN_ERR (svn_fs__retry_txn (target_root->fs,
+                                          txn_body_reroot_path,
+                                          &args, pool));
             }
           
           /* The remaining two cases are;
@@ -1098,7 +1124,28 @@ svn_fs_merge (const char **conflict_p,
           /* E does not exist in target */
           if (! apr_hash_get (target_entries, key, klen))
             {
-              target takes E from source;
+              /* target takes source */
+
+              /* ### kff todo: big code duplication here with the
+                 similar case in the loop of ancestor's entries. */
+
+              struct reroot_path_args args;
+              char *newpath;
+              
+              /* ### kff todo: again, abstracting to char * path
+                 functions would be a good thing. */
+              if (target_path[0] == '\0')
+                newpath = ent->name;
+              else
+                newpath = apr_psprintf (pool, "%s/%s", target_path, ent->name);
+              
+              args.root = target_root;
+              args.path = newpath;
+              args.id = ent->id;
+              
+              SVN_ERR (svn_fs__retry_txn (target_root->fs,
+                                          txn_body_reroot_path,
+                                          &args, pool));
             }
           else   /* else E exists in target */
             {
@@ -1112,7 +1159,7 @@ svn_fs_merge (const char **conflict_p,
                 {
                   *conflict_p = target_path;
                   return svn_error_createf
-                    (SVN_ERR_FS_CONFLICT, 0, NULL,
+                    (SVN_ERR_FS_CONFLICT, 0, NULL, pool,
                      "conflict at \"%s\"", target_path);
                 }
               /* The remaining case is: E exists in target and is same
@@ -1124,21 +1171,18 @@ svn_fs_merge (const char **conflict_p,
       
       /* All entries in ancestor and source have been accounted for.
        *
-       * Any entry name in target that does not exist in ancestor
-       * or source is a non-conflicting add, so we don't need to
-       * do anything about it.
+       * Any entry E in target that does not exist in ancestor or
+       * source is a non-conflicting add, so we don't need to do
+       * anything about it. 
        */
     }
   else  /* they are distinct node revisions, and not all directories */
     {
       *conflict_p = target_path;
       return svn_error_createf
-        (SVN_ERR_FS_CONFLICT, 0, NULL,
+        (SVN_ERR_FS_CONFLICT, 0, NULL, pool,
          "conflict at \"%s\"", target_path);
     }
-
-#endif /* 0 */
-
 
   return SVN_NO_ERROR;
 }

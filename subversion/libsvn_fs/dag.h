@@ -227,11 +227,12 @@ svn_error_t *svn_fs__dag_dir_entries (skel_t **entries_p,
                                       trail_t *trail);
 
 
-/* Set ENTRY in NODE to point to ID, as part of TRAIL.
+/* Set ENTRY_NAME in NODE to point to ID, as part of TRAIL.
    NODE must be a mutable directory.  ID can refer to a mutable or
-   immutable node.  If ENTRY does not exist, it will be created.  */
+   immutable node.  If ENTRY_NAME does not exist, it will be 
+   created.  */
 svn_error_t *svn_fs__dag_set_entry (dag_node_t *node,
-                                    const char *entry,
+                                    const char *entry_name,
                                     svn_fs_id_t *id,
                                     trail_t *trail);
 
