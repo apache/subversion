@@ -75,6 +75,15 @@ section for approved changes.)
            Message-Id:  <200401082033.i08KXMv45357@newton.ch.collab.net>
 
 
+   * r8223
+     major mod_dav_svn memleak fix:  use a subpool during REPORT parsing.
+     Justification:  extremely simple fix, embarrassing memory leak. (200M+)
+     Notes:  typical "needs a subpool" leak, like all the ones we fixed
+             last October.
+     Votes:
+      +1: sussman, cmpilato
+
+
 Core changes that already have three +1 votes and no vetos.  (If you
 veto something below, or remove a threshold vote, please move it to
 the section for unapproved changes.)
