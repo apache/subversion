@@ -66,6 +66,8 @@
 
 /*** Command dispatch. ***/
 
+/* Map names to commands and their help strings.
+   FIXME: the help strings could give a lot more detail... */
 static svn_cl__cmd_desc_t cmd_table[] = {
   /* add */
   { "add",        NULL,       TRUE,  svn_cl__add,
@@ -116,6 +118,7 @@ static svn_cl__cmd_desc_t cmd_table[] = {
 static svn_cl__cmd_desc_t *
 get_cmd_table_entry (const char *cmd_name)
 {
+  int max = sizeof (cmd_table) / sizeof (cmd_table[0]);
   int i;
 
   if (cmd_name == NULL)
@@ -124,11 +127,21 @@ get_cmd_table_entry (const char *cmd_name)
       return NULL;
     }
 
+  /* Special case: treat `--help' and friends as though they were the
+     `help' command, so they work the same as the command. */
+  if ((strcmp (cmd_name, "--help") == 0)
+      || (strcmp (cmd_name, "-help") == 0)
+      || (strcmp (cmd_name, "-h") == 0)
+      || (strcmp (cmd_name, "-?") == 0))
+    {
+      cmd_name = "help";
+    }
+
   /* Regardless of the option chosen, the user gets --help :-) */
   if (cmd_name[0] == '-')
     return NULL;
 
-  for (i = 0; i < sizeof (cmd_table); i++)
+  for (i = 0; i < max; i++)
     if (strcmp (cmd_name, cmd_table[i].cmd_name) == 0)
       return cmd_table + i;
 
@@ -273,26 +286,109 @@ svn_cl__parse_options (int argc,
 
 /*** Help. ***/
 
-static void
-print_command_help (char *cmd, apr_pool_t *pool)
+/* Return the canonical command table entry for CMD (which may be the
+ * entry for CMD itself, or some other entry if CMD is a short
+ * synonym).  
+ * 
+ * CMD must be a valid command name; the behavior is
+ * undefined if it is not.
+ */
+static svn_cl__cmd_desc_t *
+get_canonical_command (const char *cmd)
 {
-  printf ("THIS CODE IN PROGRESS\n");
+  svn_cl__cmd_desc_t *cmd_desc = get_cmd_table_entry (cmd);
+
+  if ((! cmd_desc) || (! cmd_desc->short_for))
+    return cmd_desc;
+  else
+    return get_cmd_table_entry (cmd_desc->short_for);
+}
+
+
+/* Return an apr array of the command table entries for all synonyms
+ * of canonical command CMD.  The array will not include the entry for
+ * CMD itself.
+ */
+static apr_array_header_t *
+get_canonical_cmd_synonyms (const char *cmd, apr_pool_t *pool)
+{
+  size_t max = sizeof (cmd_table) / sizeof (cmd_table[0]);
+  apr_array_header_t *ary
+    = apr_make_array (pool, 0, sizeof (svn_cl__cmd_desc_t *));
+  int i;
+
+  for (i = 0; i < max; i++)
+    if ((cmd_table[i].short_for != NULL)
+        && (strcmp (cmd, cmd_table[i].short_for) == 0))
+      *((svn_cl__cmd_desc_t **)apr_push_array (ary)) = cmd_table + i;
+
+  return ary;
+}
+
+
+static void
+print_command_and_maybe_help (const char *cmd,
+                              svn_boolean_t help,
+                              apr_pool_t *pool)
+{
+  svn_cl__cmd_desc_t *canonical_cmd = get_canonical_command (cmd);
+  apr_array_header_t *synonyms;
+  int i;
+
+  if (! canonical_cmd)
+    return;
+
+  synonyms = get_canonical_cmd_synonyms (canonical_cmd->cmd_name, pool);
+
+  printf ("%s", canonical_cmd->cmd_name);
+
+  if (! (apr_is_empty_table (synonyms)))
+    printf (" (");
+  for (i = 0; i < synonyms->nelts; i++)
+    {
+      svn_cl__cmd_desc_t *this
+        = (((svn_cl__cmd_desc_t **) (synonyms)->elts)[i]);
+
+      printf ("%s", this->cmd_name);
+      if (! (i == (synonyms->nelts - 1)))
+        printf (", ");
+    }
+  if (! (apr_is_empty_table (synonyms)))
+    printf (")");
+
+  if (help)
+    {
+      printf (": ");
+      printf ("%s\n", canonical_cmd->help);
+    }
+}
+
+
+static void
+print_command_help (const char *cmd, apr_pool_t *pool)
+{
+  print_command_and_maybe_help (cmd, TRUE, pool);
 }
 
 
 static void
 print_generic_help (apr_pool_t *pool)
 {
-#if 0
+  size_t max = sizeof (cmd_table) / sizeof (cmd_table[0]);
   static const char usage[] =
     "usage: svn <subcommand> [options] [args]\n"
-    "\n"
     "Type \"svn help <subcommand>\" for help on a specific subcommand.\n"
-    "Available subcommands are:\n"
-    "\n";
-#endif /* 0 */
+    "Available subcommands are:\n";
+  int i;
 
-  printf ("THIS CODE IN PROGRESS\n");
+  printf ("%s", usage);
+  for (i = 0; i < max; i++)
+    if (cmd_table[i].short_for == NULL)
+      {
+        printf ("   ");
+        print_command_and_maybe_help (cmd_table[i].cmd_name, FALSE, pool);
+        printf ("\n");
+      }
 }
 
 
@@ -303,30 +399,12 @@ svn_cl__help (int argc, char **argv, apr_pool_t *pool)
     {
       int i;
       for (i = 2; i < argc; i++)
-          print_command_help (argv[i], pool);
+        print_command_help (argv[i], pool);
     }
   else
     {
       print_generic_help (pool);
     }
-
-#if 0
-  int ix = 0;
-  svn_cl__cmd_desc_t* pCD = cmd_table;
-
-  fputs( zUsage, stdout );
-
-  for (;;)
-    {
-      printf( "  %-8s", (pCD++)->cmd_name );
-      if (++ix >= sizeof( cmd_table ) / sizeof( cmd_table[0] ))
-        break;
-      if ((ix % 7) == 0)
-        fputc( '\n', stdout );
-    }
-
-  fputc( '\n', stdout );
-#endif /* 0 */
 
   return SVN_NO_ERROR;
 }
