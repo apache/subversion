@@ -26,7 +26,7 @@
     <para>Suppose it's your job to maintain a document for a division
       in your company, a handbook of some sort.  One day a different
       division asks you for the same handbook, but with a few parts
-      'tweaked' for them, since they do things slightly
+      <quote>tweaked</quote> for them, since they do things slightly
       differently.</para>
 
     <para>What do you do in this situation?  You do the obvious thing:
@@ -553,10 +553,10 @@ Index: integer.c
      printf("error: fseek() returned non-zero\n");
 </screen>
       
-      <para>The <command>svn merge</command> is almost exactly the
-        same.  Instead of printing the differences to your terminal,
-        however, it applies them directly to your working copy as
-        <emphasis>local modifications</emphasis>:</para>
+      <para>The <command>svn merge</command> command is almost exactly
+        the same.  Instead of printing the differences to your
+        terminal, however, it applies them directly to your working
+        copy as <emphasis>local modifications</emphasis>:</para>
     
 <screen>
 $ svn merge -r 343:344 http://svn.example.com/repos/calc/trunk
@@ -1171,7 +1171,7 @@ Committed revision 350.
         is find the revision in which you deleted the file or
         directory.  You can do this visually, or by using another tool
         to examine the log output (via <command>grep</command>, or
-        perhaps via an incremental search in an editor.)</para>
+        perhaps via an incremental search in an editor).</para>
 
       <screen>
 $ cd parent-dir
@@ -1241,7 +1241,7 @@ Committed revision 1390.
 
       <para>The plus sign in the status output indicates that the item
         isn't merely scheduled for addition, but scheduled for
-        addition <quote>with history.</quote> Subversion remembers
+        addition <quote>with history</quote>. Subversion remembers
         where it was copied from.  In the future, running <command>svn
         log</command> on this file will traverse back through the
         file's resurrection and through all the history it had prior
@@ -1309,8 +1309,8 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
 
       <orderedlist>
         <listitem>
-          <para>Copy the project's entire 'trunk' to a new branch
-            directory.</para>
+          <para>Copy the project's entire <quote>trunk</quote> to a
+            new branch directory.</para>
         </listitem>
         <listitem>
           <para>Switch only <emphasis>part</emphasis> of the trunk
@@ -1323,13 +1323,13 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       <command>svn switch</command> to move only that subdirectory to
       the branch.  (Or sometimes users will switch just a single
       working file to the branch!)  That way, they can continue to
-      receive normal 'trunk' updates to most of their working copy,
-      but the switched portions will remain immune (unless someone
-      commits a change to their branch).  This feature adds a whole
-      new dimension to the concept of a <quote>mixed working
-      copy</quote>&mdash;not only can working copies contain a mixture
-      of working revisions, but a mixture of repository locations as
-      well.</para>
+      receive normal <quote>trunk</quote> updates to most of their
+      working copy, but the switched portions will remain immune
+      (unless someone commits a change to their branch).  This feature
+      adds a whole new dimension to the concept of a <quote>mixed
+      working copy</quote>&mdash;not only can working copies contain a
+      mixture of working revisions, but a mixture of repository
+      locations as well.</para>
     
     <para>If your working copy contains a number of switched subtrees
       from different repository locations, it continues to function as

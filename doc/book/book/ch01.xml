@@ -519,15 +519,22 @@ Checked out revision 1.
       back into the repository.</para>
 
     <itemizedlist>
-      <listitem><para>Enter your working copy and edit a
-      file's contents.</para></listitem>
-      <listitem><para>Run <command>svn diff</command> to see unified
-      diff output of your changes.</para></listitem>
-      <listitem><para>Run <command>svn commit</command> to commit the
-      new version of your file to the repository.</para></listitem>
-      <listitem><para>Run <command>svn update</command> to bring your
-      working copy <quote>up-to-date</quote> with the repository.
-      </para></listitem>
+      <listitem>
+        <para>Enter your working copy and edit a file's
+          contents.</para>
+      </listitem>
+      <listitem>
+        <para>Run <command>svn diff</command> to see unified diff
+          output of your changes.</para>
+      </listitem>
+      <listitem>
+        <para>Run <command>svn commit</command> to commit the new
+          version of your file to the repository.</para>
+      </listitem>
+      <listitem>
+        <para>Run <command>svn update</command> to bring your working
+          copy <quote>up-to-date</quote> with the repository.</para>
+      </listitem>
     </itemizedlist>
 
     <para>For a full tour of all the things you can do with your

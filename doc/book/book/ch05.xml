@@ -95,7 +95,7 @@
         repository (not really affecting anything, but still taking up
         space).</para>
 
-     <para>In theory, someday whole workflow applications might
+      <para>In theory, someday whole workflow applications might
         revolve around more fine-grained control of transaction
         lifetime.  It is feasible to imagine a system whereby each
         transaction slated to become a revision is left in stasis well
@@ -526,20 +526,20 @@ conf/  dav/  db/  format  hooks/  locks/  README.txt
       the items you see in your new repository directory:</para>
 
     <variablelist>
-     <varlistentry>
+      <varlistentry>
         <term>conf</term>
         <listitem>
           <para>A directory containing repository configuration files.</para>
         </listitem>
       </varlistentry>
-     <varlistentry>
+      <varlistentry>
         <term>dav</term>
         <listitem>
           <para>A directory provided to Apache and mod_dav_svn for
             their private housekeeping data.</para>
         </listitem>
       </varlistentry>
-     <varlistentry>
+      <varlistentry>
         <term>db</term>
         <listitem>
           <para>Where all of your versioned data resides.  This
@@ -548,28 +548,28 @@ conf/  dav/  db/  format  hooks/  locks/  README.txt
             containing revision files.</para>
         </listitem>
       </varlistentry>
-     <varlistentry>
+      <varlistentry>
         <term>format</term>
         <listitem>
           <para>A file whose contents are a single integer value that
             dictates the version number of the repository layout.</para>
         </listitem>
       </varlistentry>
-     <varlistentry>
+      <varlistentry>
         <term>hooks</term>
         <listitem>
           <para>A directory full of hook script templates (and hook
             scripts themselves, once you've installed some).</para>
         </listitem>
       </varlistentry>
-     <varlistentry>
+      <varlistentry>
         <term>locks</term>
         <listitem>
           <para>A directory for Subversion's repository locking
             data, used for tracking accessors to the repository.</para>
         </listitem>
       </varlistentry>
-     <varlistentry>
+      <varlistentry>
         <term>README.txt</term>
         <listitem>
           <para>A file which merely informs its readers that they
@@ -1821,7 +1821,7 @@ $ svnadmin setlog myrepos newlog.txt -r 388
           property changes, and so on.  In other words, be very
           careful about what you are changing, and how you change
           it.</para>
-       </warning>
+      </warning>
 
       <para>Another common use of <command>svnadmin</command> is to
         query the repository for outstanding&mdash;possibly
