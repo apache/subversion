@@ -66,3 +66,24 @@ Candidate changes:
     bindings on platforms with stricter linking requirements.
     Votes:
       +1: maxb
+
+  * r10159
+    Require neon-0.24.7.  Fixes some nasty zlib bugs.
+    Justification:  fixes malformed XML errors from large
+                    ra_dav checkouts/updates/etc.  
+    Votes:
+      +1: sussman
+
+  * r10148
+    Fixes crash when deleting a revprop.
+    Justification:  it's a crash.  we shouldn't ever crash.
+    Votes:
+      +1: sussman
+
+  * r10132
+    Allow user to interrupt between auth prompts.
+    Justification:  not a critical bugfix, but something users have 
+                    repeatedly complained about.
+    Votes:
+      +0: sussman (not yet reviewed)
+
