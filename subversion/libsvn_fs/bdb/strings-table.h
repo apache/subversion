@@ -90,7 +90,7 @@ svn_error_t *svn_fs__bdb_string_size (svn_filesize_t *size,
  * SVN_ERR_FS_NO_SUCH_STRING.
  *
  * Note: to overwrite the old contents of a string, call
- * svn_fs__string_clear() and then svn_fs__string_append().  */
+ * svn_fs__bdb_string_clear() and then svn_fs__bdb_string_append().  */
 svn_error_t *svn_fs__bdb_string_append (svn_fs_t *fs,
                                         const char **key,
                                         apr_size_t len,
