@@ -79,11 +79,10 @@
       Chapter 2.  Remember that you and your collaborator, Sally, are
       sharing a repository that contains two projects,
       <filename>paint</filename> and <filename>calc.</filename>
-      Notice, however, that this time somebody has created two new
-      top-level directories in the repository, called
-      <filename>trunk</filename> and <filename>branches</filename>.
-      The projects themselves are subdirectories of
-      <filename>trunk</filename>, which we'll explain later on.</para>
+      Notice, however, that each project directory now contains
+      subdirectories named <filename>trunk</filename> and
+      <filename>branches</filename>.  The reason for this will soon
+      become clear.</para>
     
       <figure id="svn-ch-4-dia2">
         <title>Starting Repository Layout</title>
@@ -91,16 +90,23 @@
       </figure>
 
     <para>As before, assume that Sally and you both have working
-      copies of the <filename>/trunk/calc</filename> project.</para>
+      copies of the <quote>calc</quote> project.  Specifically, you
+      each have a working copy of <filename>/calc/trunk</filename>.
+      All the files for the project are in this subdirectory (rather
+      than in <filename>/calc</filename>itself, because your team has
+      decided that <filename>/calc/trunk</filename> is where the
+      <quote>main line</quote> of development is going to take
+      place.</para>
 
     <para>Let's say that you've been given the task of performing a
       radical reorganization of the project.  It will take a long time
       to write, and will affect all the files in the project.  The
       problem here is that you don't want to interfere with Sally, who
       is in the process of fixing small bugs here and there.  She's
-      depending on the fact that the latest version of the project is
-      always usable.  If you start committing your changes bit-by-bit,
-      you'll surely break things for Sally.</para>
+      depending on the fact that the latest version of the project (in
+      <filename>/calc/trunk</filename>) is always usable.  If you
+      start committing your changes bit-by-bit, you'll surely break
+      things for Sally.</para>
 
     <para>One strategy is to crawl into a hole: you and Sally can stop
       sharing information for a week or two.  That is, start gutting
@@ -111,15 +117,20 @@
       repository frequently, should something bad accidentally happen
       to their working copy.  Second, it's not very flexible.  If you
       do your work on different computers (perhaps you have a working
-      copy of <filename>/trunk/calc</filename> on two different
+      copy of <filename>/calc/trunk</filename> on two different
       machines), you'll need to manually copy your changes back and
       forth, or just do all the work on a single computer.  By that
       same token, it's difficult to share your changes-in-progress
-      with anyone else. Finally, when you're finished with all your
-      changes, you might find it very difficult to commit your
-      changes.  Sally (or others) may have made many other changes in
-      the repository that are difficult to merge into your working
-      copy&mdash;especially all at once.</para>
+      with anyone else.  A common software development <quote>best
+      practice</quote> to allow your peers to review your work as you
+      go.  If nobody sees your intermediate commits, you lose
+      potential feedback.  Finally, when you're finished with all your
+      changes, you might find it very difficult to re-merge your final
+      work with the rest of the company's main body of code.  Sally
+      (or others) may have made many other changes in the repository
+      that are difficult to incorporate into your working
+      copy&mdash;especially if you run <command>svn update</command>
+      after weeks of isolation.</para>
 
     <para>The better solution is to create your own branch, or line of
       development, in the repository.  This allows you to save your
@@ -131,39 +142,33 @@
   <sect2 id="svn-ch-4-sect-2.1">
     <title>Creating a Branch</title> 
       
-      <para>Creating a branch is very simple&mdash;you make a copy of the
-        project in the repository using the <command>svn
+      <para>Creating a branch is very simple&mdash;you make a copy of
+        the project in the repository using the <command>svn
         copy</command> command.  Subversion is not only able to copy
         single files, but whole directories as well.  In this case,
         you want to make a copy of the
-        <filename>/trunk/calc</filename> directory.  Where should the
-        new copy live?  Wherever you wish&mdash;it's a matter of project
-        policy.  Let's say that your team has a policy of creating
-        branches in the <filename>/branches/calc</filename> area of
-        the repository, and you want to name your branch
+        <filename>/calc/trunk</filename> directory.  Where should the
+        new copy live?  Wherever you wish&mdash;it's a matter of
+        project policy.  Let's say that your team has a policy of
+        creating branches in the <filename>/calc/branches</filename>
+        area of the repository, and you want to name your branch
         "my-calc-branch".  You'll want to create a new directory,
-        <filename>/branches/calc/my-calc-branch</filename>, which
-        starts as a copy of <filename>/trunk/calc</filename>. </para>
+        <filename>/calc/branches/my-calc-branch</filename>, which
+        begins its life as a copy of
+        <filename>/calc/trunk</filename>. </para>
 
       <para>There are two different ways to make a copy.  We'll
         demonstrate the messy way first, just to make the concept
-        clear.  To begin, check out a working copy of the root
-        (<filename>/</filename>) of the repository:</para>
+        clear.  To begin, check out a working copy of the project's
+        root directory, <filename>/calc</filename>:</para>
 
 <screen>
-$ svn checkout http://svn.example.com/repos bigwc
-A  bigwc/branches/
-A  bigwc/branches/calc
-A  bigwc/branches/paint
+$ svn checkout http://svn.example.com/repos/calc bigwc
 A  bigwc/trunk/
-A  bigwc/trunk/calc
-A  bigwc/trunk/calc/Makefile
-A  bigwc/trunk/calc/integer.c
-A  bigwc/trunk/calc/button.c
-A  bigwc/trunk/paint
-A  bigwc/trunk/paint/Makefile
-A  bigwc/trunk/paint/canvas.c
-A  bigwc/trunk/paint/brush.c
+A  bigwc/trunk/Makefile
+A  bigwc/trunk/integer.c
+A  bigwc/trunk/button.c
+A  bigwc/branches/
 Checked out revision 340.
 </screen>
 
@@ -173,40 +178,40 @@ Checked out revision 340.
 
 <screen>
 $ cd bigwc
-$ svn copy trunk/calc branches/calc/my-calc-branch
+$ svn copy trunk/ branches/my-calc-branch
 $ svn status
-A  +   branches/calc/my-calc-branch
+A  +   branches/my-calc-branch
 </screen>
 
       <para>In this case, the <command>svn copy</command> command
-        recursively copies the <filename>trunk/calc</filename>
-        working directory to a new working directory,
-        <filename>branches/calc/my-calc-branch</filename>.  As you
-        can see from the <command>svn status</command> command, the
-        new directory is now scheduled for addition to the repository.
-        But also notice the + sign next to the letter A.  This
-        indicates that the scheduled addition is a
+        recursively copies the <filename>trunk/</filename> working
+        directory to a new working directory,
+        <filename>branches/my-calc-branch</filename>.  As you can see
+        from the <command>svn status</command> command, the new
+        directory is now scheduled for addition to the repository.
+        But also notice the <quote>+</quote> sign next to the letter
+        A.  This indicates that the scheduled addition is a
         <emphasis>copy</emphasis> of something, not something new.
         When you commit your changes, Subversion will create
-        <filename>/branches/calc/my-calc-branch</filename> in the
-        repository by copying <filename>/trunk/calc</filename>,
-        rather than resending all of the working copy data over the
+        <filename>/calc/branches/my-calc-branch</filename> in the
+        repository by copying <filename>/calc/trunk</filename>, rather
+        than resending all of the working copy data over the
         network:</para>
 
 <screen>
-$ svn commit -m "Creating a private branch of /trunk/calc."
-Adding      branches/calc/my-calc-branch
+$ svn commit -m "Creating a private branch of /calc/trunk."
+Adding      branches/my-calc-branch
 Committed revision 341.
 </screen>
 
       <para>And now the easier method of creating a branch, which we
         should have told you about in the first place: <command>svn
-        copy</command> is able to operate on two URLs.</para>
+        copy</command> is able to operate directly on two URLs.</para>
 
 <screen>
-$ svn copy http://svn.example.com/repos/trunk/calc \
-           http://svn.example.com/repos/branches/calc/my-calc-branch \
-      -m "Creating a private branch of /trunk/calc"
+$ svn copy http://svn.example.com/repos/calc/trunk \
+           http://svn.example.com/repos/calc/branches/my-calc-branch \
+      -m "Creating a private branch of /calc/trunk."
 
 Committed revision 341.
 </screen>
@@ -214,9 +219,10 @@ Committed revision 341.
       <para>There's really no difference between these two methods.
         Both procedures create a new directory in revision 341, and
         the new directory is a copy of
-        <filename>/trunk/calc</filename>.  Notice that the second
+        <filename>/calc/trunk</filename>.  Notice that the second
         method, however, performs an <emphasis>immediate</emphasis>
-        commit.<footnote> <para>Subversion does not support
+        commit.
+        <footnote> <para>Subversion does not support
         cross-repository copying.  When using URLs with <command>svn
         copy</command> or <command>svn move</command>, you can only
         copy items within the same repository.</para>
@@ -256,8 +262,11 @@ Committed revision 341.
           Subversion's website and read about the "bubble up" method
           in Subversion's design documents.)</para>
 
-        <para>The point here is that copies are cheap, both in time
-          and space.  Make branches as often as you want. </para>
+        <para>Of course, these internal mechanics of copying and
+          sharing data are hidden from the user, who simply sees
+          copies of trees.  The main point here is that copies are
+          cheap, both in time and space.  Make branches as often as
+          you want. </para>
       </sidebar>
 
     </sect2>
@@ -269,7 +278,7 @@ Committed revision 341.
         check out a new working copy to start using it:</para>
 
 <screen>
-$ svn checkout http://svn.example.com/repos/branches/calc/my-calc-branch
+$ svn checkout http://svn.example.com/repos/calc/branches/my-calc-branch
 A  my-calc-branch/Makefile
 A  my-calc-branch/integer.c
 A  my-calc-branch/button.c
@@ -280,12 +289,10 @@ Checked out revision 341.
         mirrors a different directory in the repository.  When you
         commit changes, however, Sally won't ever see them when she
         updates.  Her working copy is of
-        <filename>/trunk/calc</filename>.  Also, be sure to read <xref
-        linkend="svn-ch-4-sect-5"/> later in this chapter, too: the
-        <command>svn switch</command> command is an alternative to
-        checking out a new working copy of the branch; it allows you
-        to convert an existing working copy (or portion thereof) to
-        reflect the new branch location.</para>
+        <filename>/calc/trunk</filename>.  (Be sure to read <xref
+        linkend="svn-ch-4-sect-5"/> later in this chapter: the
+        <command>svn switch</command> command is an alternate way of
+        creating a working copy of a branch.)</para>
 
       <para>Let's pretend that a week goes by, and the following
       commits happen:</para>
@@ -293,19 +300,19 @@ Checked out revision 341.
       <itemizedlist>
         <listitem><para>
           You make a change to
-          <filename>/branches/calc/my-calc-branch/button.c</filename>,
+          <filename>/calc/branches/my-calc-branch/button.c</filename>,
           which creates revision 342.</para>
         </listitem>
 
         <listitem><para>
           You make a change to
-          <filename>/branches/calc/my-calc-branch/integer.c</filename>,
+          <filename>/calc/branches/my-calc-branch/integer.c</filename>,
           which creates revision 343.</para>
         </listitem>
 
         <listitem><para>
           Sally makes a change to
-          <filename>/trunk/calc/integer.c</filename>, which creates
+          <filename>/calc/trunk/integer.c</filename>, which creates
           revision 344.</para>
         </listitem>
       </itemizedlist>
@@ -326,19 +333,32 @@ Checked out revision 341.
 $ pwd
 /home/user/my-calc-branch
 
-$ svn log integer.c
+$ svn log --verbose integer.c
 ------------------------------------------------------------------------
 r343 | user | 2002-11-07 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
+Changed paths:
+   M /calc/branches/my-calc-branch/integer.c
 
 * integer.c:  frozzled the wazjub.
 
 ------------------------------------------------------------------------
+r341 | user | 2002-11-03 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
+Changed paths:
+   A /calc/branches/my-calc-branch (from /calc/trunk:340)
+
+Creating a private branch of /calc/trunk.
+
+------------------------------------------------------------------------
 r303 | sally | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
+Changed paths:
+   M /calc/trunk/integer.c
 
 * integer.c:  changed a docstring.
 
 ------------------------------------------------------------------------
 r98 | sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
+Changed paths:
+   M /calc/trunk/integer.c
 
 * integer.c:  adding this file to the project.
 
@@ -346,28 +366,37 @@ r98 | sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
 </screen>
 
       <para>Notice that Subversion is tracing the history of your
-      <filename>integer.c</filename> all the way back through time,
-      traversing the point where it was copied.  (Remember that your
-      branch was created in revision 341.)  Now look what happens when
-      Sally runs the same command on her copy of the file:</para>
+      branch's <filename>integer.c</filename> all the way back through
+      time, even traversing the point where it was copied.  It shows
+      the creation of the branch as an event in the history, because
+      <filename>integer.c</filename> was implicitly copied when all of
+      <filename>/calc/trunk/</filename> was copied.  Now look what
+      happens when Sally runs the same command on her copy of the
+      file:</para>
 
 <screen>
 $ pwd
 /home/sally/calc
 
-$ svn log integer.c
+$ svn log --verbose integer.c
 ------------------------------------------------------------------------
 r344 | sally | 2002-11-07 15:27:56 -0600 (Thu, 07 Nov 2002) | 2 lines
+Changed paths:
+   M /calc/trunk/integer.c
 
 * integer.c:  fix a bunch of spelling errors.
 
 ------------------------------------------------------------------------
 r303 | sally | 2002-10-29 21:14:35 -0600 (Tue, 29 Oct 2002) | 2 lines
+Changed paths:
+   M /calc/trunk/integer.c
 
 * integer.c:  changed a docstring.
 
 ------------------------------------------------------------------------
 r98 | sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
+Changed paths:
+   M /calc/trunk/integer.c
 
 * integer.c:  adding this file to the project.
 
@@ -381,7 +410,7 @@ r98 | sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
       <emphasis>does</emphasis> show that the two files share a common
       history.  Before the branch-copy was made in revision 341, they
       used to be the same file.  That's why you and Sally both see
-      revisions 303 and 98.</para>
+      the changes made in revisions 303 and 98.</para>
 
     </sect2>
 
@@ -395,12 +424,12 @@ r98 | sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
         <listitem>
           <para>Unlike many other version control systems,
             Subversion's branches exist as <emphasis>normal filesystem
-            directories</emphasis> in the repository, not in some
-            extra dimension.  These directories just happen to carry
-            some extra historical information.</para>
+            directories</emphasis> in the repository, not in an extra
+            dimension.  These directories just happen to carry some
+            extra historical information.</para>
         </listitem>
         <listitem>
-          <para>Subversion has no internal concept of a "branch"
+          <para>Subversion has no internal concept of a branch
           &mdash; only copies.  When you copy a directory, the
           resulting directory is only a "branch" because
           <emphasis>you</emphasis> attach that meaning to it.  You may
@@ -473,7 +502,7 @@ r98 | sally | 2002-02-22 15:35:29 -0600 (Fri, 22 Feb 2002) | 2 lines
         change made by Sally in revision 344:</para>
 
 <screen>
-$ svn diff -r 343:344 http://svn.example.com/repos/trunk/calc
+$ svn diff -r 343:344 http://svn.example.com/repos/calc/trunk
 
 Index: integer.c
 ===================================================================
@@ -523,7 +552,7 @@ Index: integer.c
         <emphasis>local modifications</emphasis>:</para>
     
 <screen>
-$ svn merge -r 343:344 http://svn.example.com/repos/trunk/calc
+$ svn merge -r 343:344 http://svn.example.com/repos/calc/trunk
 U  integer.c
 
 $ svn status
@@ -576,7 +605,7 @@ Committed revision 360.
           For example:</para>
 
 <screen>
-$ svn diff -r 343:344 http://svn.example.com/repos/trunk/calc > patchfile
+$ svn diff -r 343:344 http://svn.example.com/repos/calc/trunk > patchfile
 $ patch -p0  &lt; patchfile
 Patching file integer.c using Plan A...
 Hunk #1 succeeded at 147.
@@ -643,7 +672,7 @@ done
         target directory to receive the changes: </para>
       
 <screen>
-$ svn merge -r 343:344 http://svn.example.com/repos/trunk/calc my-calc-branch
+$ svn merge -r 343:344 http://svn.example.com/repos/calc/trunk my-calc-branch
 U   my-calc-branch/integer.c
 </screen>
 
@@ -724,7 +753,7 @@ U   my-calc-branch/integer.c
           command:</para>
 
         <screen>
-$ svn merge --dry-run -r 343:344 http://svn.example.com/repos/trunk/calc
+$ svn merge --dry-run -r 343:344 http://svn.example.com/repos/calc/trunk
 U  integer.c
 
 $ svn status
@@ -744,33 +773,33 @@ $ svn status
         <title>Subversion and Changesets</title>
 
         <para>Everyone seems to have a slightly different definition
-          of "changeset", or a least a different expectation of what
-          it means for a version control system to have "changeset
-          features".  For our purpose, let's say that a changeset is
-          just a collection of changes with a unique name.  The
-          changes might include textual edits to file contents,
-          modifications to tree structure, or tweaks to metadata.  In
-          more common speak, a changeset is just a patch with a name
-          you can refer to.</para>
+          of <quote>changeset</quote>, or a least a different
+          expectation of what it means for a version control system to
+          have <quote>changeset features</quote>.  For our purpose,
+          let's say that a changeset is just a collection of changes
+          with a unique name.  The changes might include textual edits
+          to file contents, modifications to tree structure, or tweaks
+          to metadata.  In more common speak, a changeset is just a
+          patch with a name you can refer to.</para>
 
-        <para>In Subversion, a global revision number 'N' names a tree
+        <para>In Subversion, a global revision number N names a tree
           in the repository: it's the way the repository looked after
           the Nth commit.  It's also the name of an implicit
           changeset: if you compare tree N with tree N-1, you can
           derive the exact patch that was committed.  For this reason,
-          it's easy to think of "revision N" as not just a tree, but a
-          changeset as well.  If you use an issue tracker to manage
-          bugs, you can use the revision numbers to refer to
-          particular patches that fix bugs&mdash;for example, "this
-          issue was fixed by revision 9238."  Somebody can then run
-          <command>svn log -r9238</command> to read about the exact
-          changeset which fixed the bug, and run <command>svn diff
-          -r9237:9238</command> to see the patch itself.  And
-          Subversion's merge command also uses revision numbers.  You
-          can merge specific changesets from one branch to another by
-          naming them in the merge arguments: <command>svn merge
-          -r9237:9238</command> would merge changeset #9238 into your
-          working copy.</para>
+          it's easy to think of <quote>revision N</quote> as not just
+          a tree, but a changeset as well.  If you use an issue
+          tracker to manage bugs, you can use the revision numbers to
+          refer to particular patches that fix bugs&mdash;for example,
+          <quote>this issue was fixed by revision 9238.</quote>.
+          Somebody can then run <command>svn log -r9238</command> to
+          read about the exact changeset which fixed the bug, and run
+          <command>svn diff -r9237:9238</command> to see the patch
+          itself.  And Subversion's merge command also uses revision
+          numbers.  You can merge specific changesets from one branch
+          to another by naming them in the merge arguments:
+          <command>svn merge -r9237:9238</command> would merge
+          changeset #9238 into your working copy.</para>
       </sidebar>
 
 
@@ -804,9 +833,9 @@ $ svn status
         scenario?  Remember that this command compares two trees, and
         applies the differences to a working copy.  So to receive the
         changes, you need to have a working copy of the trunk.  We'll
-        assume that you still have your original one lying around
-        (fully updated), or that you checked out a new working copy of
-        <filename>/trunk/calc</filename>.</para>
+        assume that either you still have your original one lying
+        around (fully updated), or that you recently checked out a
+        fresh working copy of <filename>/calc/trunk</filename>.</para>
 
       <para>But which two trees should be compared?  At first glance,
         the answer may seem obvious: just compare the latest trunk
@@ -832,11 +861,11 @@ $ svn status
       <para>Here's the final merging procedure, then:</para>
 
 <screen>
-$ cd trunk/calc
+$ cd calc/trunk
 $ svn up
 At revision 405.
 
-$ svn merge -r 341:HEAD http://svn.example.com/repos/branches/calc/my-calc-branch
+$ svn merge -r 341:HEAD http://svn.example.com/repos/calc/branches/my-calc-branch
 U   integer.c
 U   button.c
 U   Makefile
@@ -867,16 +896,16 @@ Committed revision 406.
         revision is now 480, and you're ready to do another merge from
         your private branch to the trunk.  But as discussed in <xref
         linkend="svn-ch-4-sect-3.2"/>, you don't want to merge the
-        changes you've already merged before;  you only want to merge
-        everything "new" on your branch since the last time you
-        merged.</para>
+        changes you've already merged before; you only want to merge
+        everything <quote>new</quote> on your branch since the last
+        time you merged.  The trick is to figure out what's new.</para>
 
       <para>The first step is to run <command>svn log</command> on the
         trunk, and look for a log message about the last time you
         merged from the branch:</para>
 
       <screen>
-$ cd trunk/calc
+$ cd calc/trunk
 $ svn log
 &hellip;
 ------------------------------------------------------------------------
@@ -894,11 +923,11 @@ Merged my-calc-branch changes r341:405 into the trunk.
         that: revisions 406 through HEAD.</para>
 
 <screen>
-$ cd trunk/calc
+$ cd calc/trunk
 $ svn up
 At revision 480.
 
-$ svn merge -r 406:480 http://svn.example.com/repos/branches/calc/my-calc-branch
+$ svn merge -r 406:480 http://svn.example.com/repos/calc/branches/my-calc-branch
 U   integer.c
 U   button.c
 U   Makefile
@@ -925,7 +954,7 @@ Committed revision 481.
       <para>Another common use for <command>svn merge</command> is to
         roll back a change that has already been committed.  Suppose
         you working away happily on a working copy of
-        <filename>/trunk/calc</filename>, and you discover that the
+        <filename>/calc/trunk</filename>, and you discover that the
         change made way back in revision 303, which changed
         <filename>integer.c</filename>, is completely wrong.  It never
         should have been committed.  You can use <command>svn
@@ -936,7 +965,7 @@ Committed revision 481.
 
 
 <screen>
-$ svn merge -r 303:302 http://svn.example.com/trunk/calc
+$ svn merge -r 303:302 http://svn.example.com/repos/calc/trunk
 U  integer.c
 
 $ svn status
@@ -1045,8 +1074,8 @@ $ svn log --verbose
 ------------------------------------------------------------------------
 r808 | joe | 2003-12-26 14:29:40 -0600 (Fri, 26 Dec 2003) | 3 lines
 Changed paths:
-   D /trunk/calc/real.c
-   M /trunk/calc/integer.c
+   D /calc/trunk/real.c
+   M /calc/trunk/integer.c
 
 &hellip;
 </screen>
@@ -1057,7 +1086,7 @@ Changed paths:
         was deleted in revision 808.  Therefore, the last version of
         the file to exist was in the revision right before that.
         Conclusion: you want to resurrect the path
-        <filename>/trunk/calc/real.c</filename> from revision
+        <filename>/calc/trunk/real.c</filename> from revision
         807.</para>
 
       <para>That was the hard part &mdash; the research.  Now that you
@@ -1091,12 +1120,12 @@ Changed paths:
 
       <screen>
 $ svn copy --revision 807 \
-           http://svn.example.com/repos/trunk/calc/real.c ./real.c
+           http://svn.example.com/repos/calc/trunk/real.c ./real.c
 
 $ svn status
 A  +   real.c
 
-$ svn commit -m "Resurrected real.c from revision 807, /trunk/calc/real.c."
+$ svn commit -m "Resurrected real.c from revision 807, /calc/trunk/real.c."
 Adding    real.c
 Transmitting file data .
 Committed revision 1390.
@@ -1104,8 +1133,8 @@ Committed revision 1390.
 
       <para>The plus sign in the status output indicates that the item
         isn't merely scheduled for addition, but scheduled for
-        addition "with history."  Subversion remembers where it was
-        copied from.  In the future, running <command>svn
+        addition <quote>with history.</quote> Subversion remembers
+        where it was copied from.  In the future, running <command>svn
         log</command> on this file will traverse back through the
         file's resurrection and through all the history it had prior
         to revision 807.  In other words, this new
@@ -1133,23 +1162,23 @@ Committed revision 1390.
       after creating your private branch, you checked out a fresh
       working copy of the new repository directory.  Instead, you can
       simply ask Subversion to change your working copy of
-      <filename>/trunk/calc</filename> to mirror the new branch
+      <filename>/calc/trunk</filename> to mirror the new branch
       location:</para>
 
 <screen>
 $ cd calc
 
 $ svn info | grep URL
-URL: http://svn.example.com/trunk/calc
+URL: http://svn.example.com/repos/calc/trunk
 
-$ svn switch http://svn.example.com/branches/calc/my-calc-branch
+$ svn switch http://svn.example.com/repos/calc/branches/my-calc-branch
 U   integer.c
 U   button.c
 U   Makefile
 Updated to revision 341.
 
 $ svn info | grep URL
-URL: http://svn.example.com/branches/calc/my-calc-branch
+URL: http://svn.example.com/repos/calc/branches/my-calc-branch
 </screen>
 
     <para>After "switching" to the branch, your working copy is no
@@ -1226,13 +1255,13 @@ URL: http://svn.example.com/branches/calc/my-calc-branch
         update command always compares two identical paths.</para>
       
        <para>That is, if your working copy is a mirror of
-        <filename>/trunk/calc</filename>, then <command>svn
+        <filename>/calc/trunk</filename>, then <command>svn
         update</command> will automatically compare your working copy
-        of <filename>/trunk/calc</filename> to
-        <filename>/trunk/calc</filename> in the HEAD revision.  If
+        of <filename>/calc/trunk</filename> to
+        <filename>/calc/trunk</filename> in the HEAD revision.  If
         you're switching your working copy to a branch, then
         <command>svn switch</command> will compare your working copy
-        of <filename>/trunk/calc</filename> to some
+        of <filename>/calc/trunk</filename> to some
         <emphasis>other</emphasis> branch-directory in the HEAD
         revision.</para>
 
@@ -1248,9 +1277,9 @@ URL: http://svn.example.com/branches/calc/my-calc-branch
       allows you to perform all sorts of clever tricks.</para>
 
     <para>For example, suppose you have a working copy of
-      <filename>/trunk</filename> and make a number of changes to it.
-      Then you suddenly realize that you meant to make the changes to
-      a branch instead.  No problem!  When you <command>svn
+      <filename>/calc/trunk</filename> and make a number of changes to
+      it.  Then you suddenly realize that you meant to make the
+      changes to a branch instead.  No problem!  When you <command>svn
       switch</command> your working copy to the branch, the local
       changes will remain.  You can then test and commit them to the
       branch.</para>
@@ -1265,10 +1294,11 @@ URL: http://svn.example.com/branches/calc/my-calc-branch
     <title>Tags</title>
 
     <para>Another common version control concept is a
-      <firstterm>tag</firstterm>.  A tag is just a "snapshot" of a
-      project in time.  In Subversion, this idea already seems to be
-      everywhere.  Each repository revision is exactly that &mdash; a
-      snapshot of the filesystem after each commit.</para>
+      <firstterm>tag</firstterm>.  A tag is just a
+      <quote>snapshot</quote> of a project in time.  In Subversion,
+      this idea already seems to be everywhere.  Each repository
+      revision is exactly that &mdash; a snapshot of the filesystem
+      after each commit.</para>
 
     <para>However, people often want to give more human-friendly names
       to tags, like "release-1.0".  And they want to make snapshots of
@@ -1281,19 +1311,19 @@ URL: http://svn.example.com/branches/calc/my-calc-branch
 
       <para>Once again, <command>svn copy</command> comes to the
         rescue.  If you want to create a snapshot of
-        <filename>/trunk/calc</filename> exactly as it looks in the
+        <filename>/calc/trunk</filename> exactly as it looks in the
         HEAD revision, then make a copy of it:</para>
 
 <screen>
-$ svn copy http://svn.example.com/repos/trunk/calc \
-           http://svn.example.com/repos/tags/calc/release-1.0 \
+$ svn copy http://svn.example.com/repos/calc/trunk \
+           http://svn.example.com/repos/calc/tags/release-1.0 \
       -m "Tagging the 1.0 release of the 'calc' project."
 
 Committed revision 351.
 </screen>
 
       <para>This example assumes that a
-        <filename>/tags/calc</filename> directory already exists.
+        <filename>/calc/tags</filename> directory already exists.
         After the copy completes, the new
         <filename>release-1.0</filename> directory is forever a
         snapshot of how the project looked in the HEAD revision at the
@@ -1301,7 +1331,7 @@ Committed revision 351.
         precise about exactly which revision you copy, in case
         somebody else may have committed changes to the project when
         you weren't looking.  So if you know that revision 350 of
-        <filename>/trunk/calc</filename> is exactly the snapshot you
+        <filename>/calc/trunk</filename> is exactly the snapshot you
         want, you can specify it by passing <option>-r 350</option>
         to the <command>svn copy</command> command.</para>
 
@@ -1310,23 +1340,24 @@ Committed revision 351.
         is.  In Subversion, there's no difference between a tag and a
         branch.  Both are just ordinary directories that are created
         by copying.  Just as with branches, the only reason a copied
-        directory is a "tag" is because <emphasis>humans</emphasis>
-        have decided to treat it that way: as long as nobody ever
-        commits to the directory, it forever remains a snapshot.  If
-        people start committing to it, it becomes a branch.</para>
+        directory is a <quote>tag</quote> is because
+        <emphasis>humans</emphasis> have decided to treat it that way:
+        as long as nobody ever commits to the directory, it forever
+        remains a snapshot.  If people start committing to it, it
+        becomes a branch.</para>
 
       <para>If you are administering a repository, there are two
         approaches you can take to managing tags.  The first approach
-        is "hands off": as a matter of project policy, decide where
-        your tags will live, and make sure all users know how to treat
-        the directories they copy in there.  (That is, make sure they
-        know not to commit to them.)  The second approach is more
-        paranoid: you can use one of the access-control scripts
-        provided with Subversion to prevent anyone from doing anything
-        but creating new copies in the tags-area (###cross-ref a
-        section that demonstrates how to use these scripts?).  The
-        paranoid approach, however, isn't usually necessary.  If a
-        user accidentally commits a change to a tag-directory, you can
+        is <quote>hands off</quote>: as a matter of project policy,
+        decide where your tags will live, and make sure all users know
+        how to treat the directories they copy in there.  (That is,
+        make sure they know not to commit to them.)  The second
+        approach is more paranoid: you can use one of the
+        access-control scripts provided with Subversion to prevent
+        anyone from doing anything but creating new copies in the
+        tags-area (See <xref linkend="svn-ch-6"/>.)  The paranoid
+        approach, however, isn't usually necessary.  If a user
+        accidentally commits a change to a tag-directory, you can
         simply undo the change as discussed in the previous section.
         This is version control, after all.</para>
 
@@ -1344,8 +1375,8 @@ Committed revision 351.
         number of subdirectories and many more files.  In the course
         of your work, you may decide that you need to create a working
         copy that is designed to have specific features and bugfixes.
-        You can accomplish this by selectively pinning files or
-        directories at particular revisions (using <command>svn update
+        You can accomplish this by selectively backdating files or
+        directories to particular revisions (using <command>svn update
         -r</command> liberally), or by switching files and directories
         to particular branches (making use of <command>svn
         switch</command>).  When you're done, your working copy is a
@@ -1357,7 +1388,7 @@ Committed revision 351.
         work here. In this case, you want to make a snapshot of your
         exact working copy arrangement and store it in the repository.
         Luckily, <command>svn copy</command> actually has four
-        different uses (which you can read about in Chapter 8),
+        different uses (which you can read about in Chapter 9),
         including the ability to copy a working-copy tree to the
         repository:</para>
 
@@ -1365,13 +1396,13 @@ Committed revision 351.
 $ ls
 ./    ../   my-working-copy/
 
-$ svn copy my-working-copy http://svn.example.com/repos/tags/calc/mytag
+$ svn copy my-working-copy http://svn.example.com/repos/calc/tags/mytag
 
 Committed revision 352.
 </screen>
 
       <para>Now there is a new directory in the repository,
-        <filename>/tags/calc/mytag</filename>, which is an exact
+        <filename>/calc/tags/mytag</filename>, which is an exact
         snapshot of your working copy &mdash; mixed revisions, urls,
         and all.</para>
 
@@ -1409,8 +1440,8 @@ Committed revision 352.
       
       <para>There are some standard, recommended ways to organize a
         repository.  Most people create a <filename>trunk</filename>
-        directory to hold the "main line" of development, a
-        <filename>branches</filename> directory to contain branch
+        directory to hold the <quote>main line</quote> of development,
+        a <filename>branches</filename> directory to contain branch
         copies, and a <filename>tags</filename> directory to contain
         tag copies.  If a repository holds only one project, then
         often people create these top-level directories:</para>
@@ -1435,16 +1466,28 @@ Committed revision 352.
 /calc/tags
 </screen>
 
-      <para>Of course, you're free to ignore these common layouts.  You
-        can create any sort of variation, whatever works best for you or
-        your team.  Remember that whatever you choose, it's not a
-        permanent commitment.  You can reorganize your repository at any
-        time.  Because branches and tags are ordinary directories, the
-        <command>svn move</command> command can move or rename them
-        however you wish.  Switching from one layout to another is just
-        a matter of issuing a series of server-side moves; if you don't
-        like the way things are organized in the repository, just juggle
-        the directories around.</para>
+      <para>Of course, you're free to ignore these common layouts.
+        You can create any sort of variation, whatever works best for
+        you or your team.  Remember that whatever you choose, it's not
+        a permanent commitment.  You can reorganize your repository at
+        any time.  Because branches and tags are ordinary directories,
+        the <command>svn move</command> command can move or rename
+        them however you wish.  Switching from one layout to another
+        is just a matter of issuing a series of server-side moves; if
+        you don't like the way things are organized in the repository,
+        just juggle the directories around.</para>
+
+      <para>Remember, though, that while moving directories may be
+        easy to do, you need to be considerate of your users as well.
+        Your juggling can be disorienting to users with existing
+        working copies.  If a user has a working copy of a particular
+        repository directory, your <command>svn move</command>
+        operation might remove the path from the latest revision.
+        When the user next runs <command>svn update</command>, they'll
+        be told that their working copy represents a path that no
+        longer exists, and the user will be forced to <command>svn
+        switch</command> to the new location.
+        </para>
       
     </sect2>
     
@@ -1456,12 +1499,12 @@ Committed revision 352.
         other versioned item.  For example, suppose you eventually
         finish all your work on your personal branch of the
         <filename>calc</filename> project.  After merging all of your
-        changes back into <filename>/trunk/calc</filename>, there's
+        changes back into <filename>/calc/trunk</filename>, there's
         no need for your private branch directory to stick around
         anymore:</para>
 
 <screen>
-$ svn delete http://svn.example.com/repos/branches/calc/my-calc-branch \
+$ svn delete http://svn.example.com/repos/calc/branches/my-calc-branch \
              -m "Removing obsolete branch of calc project."
 
 Committed revision 375.
@@ -1482,8 +1525,8 @@ Committed revision 375.
         copy -r</command> to copy it from the old revision:</para>
 
 <screen>
-$ svn copy -r 374 http://svn.example.com/repos/branches/calc/my-calc-branch \
-                  http://svn.example.com/repos/branches/calc/my-calc-branch
+$ svn copy -r 374 http://svn.example.com/repos/calc/branches/my-calc-branch \
+                  http://svn.example.com/repos/calc/branches/my-calc-branch
 
 Committed revision 376.
 </screen>
@@ -1502,8 +1545,8 @@ Committed revision 376.
         of the software that won't change much:</para>
 
 <screen>
-$ svn copy http://svn.example.com/repos/trunk/calc \
-         http://svn.example.com/branches/calc/stable-1.0 \
+$ svn copy http://svn.example.com/repos/calc/trunk \
+         http://svn.example.com/repos/calc/branches/stable-1.0 \
          -m "Creating stable branch of calc project."
 
 Committed revision 377.
@@ -1511,9 +1554,9 @@ Committed revision 377.
 
       <para>And now developers are free to continue adding
         cutting-edge (or experimental) features to
-        <filename>/trunk/calc</filename>, and you can declare a
+        <filename>/calc/trunk</filename>, and you can declare a
         project policy that only bugfixes are to be committed to
-        <filename>/branches/calc/stable-1.0</filename>.  That is, as
+        <filename>/calc/branches/stable-1.0</filename>.  That is, as
         people continue to work on the trunk, a human selectively
         ports bugfixes over to the stable branch.  Even after the
         stable branch has shipped, you'll probably continue to
