@@ -1005,14 +1005,12 @@ reown_file (const char *path_apr,
   return SVN_NO_ERROR;
 }
 
-/* Used by svn_io_set_file_read_write_carefully for caching this value. */
-static apr_fileperms_t default_file_perms = 0;
-
 /* Create a temp file so that we can use the temp file's mask when
    setting PATH (and any other file for the life of the process) to
    read-write (on Unix).  */
 static svn_error_t *
-cache_default_file_perms (const char *path, apr_pool_t *pool)
+get_default_file_perms (const char *path, apr_fileperms_t *perms,
+                        apr_pool_t *pool)
 {
   apr_status_t status;
   apr_finfo_t finfo;
@@ -1035,7 +1033,7 @@ cache_default_file_perms (const char *path, apr_pool_t *pool)
                                          "file at '%s' (file close error)"),
                                path);
 
-  default_file_perms = finfo.protection;
+  *perms = finfo.protection;
   return SVN_NO_ERROR;
 }
 
@@ -1071,11 +1069,8 @@ svn_io_set_file_read_write_carefully (const char *path,
     {
       perms_to_set = finfo.protection;
       if (enable_write) /* Make read-write. */
-        {
-          if (!default_file_perms)
-            SVN_ERR (cache_default_file_perms (path, pool));
-          perms_to_set = default_file_perms;
-        }
+        SVN_ERR (get_default_file_perms (path, &perms_to_set, 
+                                         pool));
       else /* Make read-only. */
         {
           if (finfo.protection & APR_UREAD)
