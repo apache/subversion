@@ -46,7 +46,7 @@ typedef struct {
 		((child)->field ? (child)->field : (parent)->field)
 
 /* Note: the "dav_svn" prefix is mandatory */
-extern module MODULE_VAR_EXPORT dav_svn_module;
+extern module AP_MODULE_DECLARE_DATA dav_svn_module;
 
 
 static void dav_svn_init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp,
@@ -200,24 +200,24 @@ static const dav_provider dav_svn_provider =
     NULL                        /* binding */
 };
 
-static void register_hooks(void)
+static void register_hooks(apr_pool_t *pconf)
 {
-    ap_hook_post_config(dav_svn_init, NULL, NULL, AP_HOOK_MIDDLE);
-    ap_hook_header_parser(dav_svn_header_parser, NULL, NULL, AP_HOOK_MIDDLE);
+    ap_hook_post_config(dav_svn_init, NULL, NULL, APR_HOOK_MIDDLE);
+    ap_hook_header_parser(dav_svn_header_parser, NULL, NULL, APR_HOOK_MIDDLE);
 
     /* our provider */
-    dav_register_provider(NULL /* ### pconf */, "svn", &dav_svn_provider);
+    dav_register_provider(pconf, "svn", &dav_svn_provider);
 
     /* live property handling */
-    ap_hook_gather_propsets(dav_svn_gather_propsets, NULL, NULL,
-                            AP_HOOK_MIDDLE);
-    ap_hook_find_liveprop(dav_svn_find_liveprop, NULL, NULL, AP_HOOK_MIDDLE);
-    ap_hook_insert_all_liveprops(dav_svn_insert_all_liveprops, NULL, NULL,
-                                 AP_HOOK_MIDDLE);
-    dav_svn_register_uris(NULL /* ### pconf */);
+    dav_hook_gather_propsets(dav_svn_gather_propsets, NULL, NULL,
+                             APR_HOOK_MIDDLE);
+    dav_hook_find_liveprop(dav_svn_find_liveprop, NULL, NULL, APR_HOOK_MIDDLE);
+    dav_hook_insert_all_liveprops(dav_svn_insert_all_liveprops, NULL, NULL,
+                                  APR_HOOK_MIDDLE);
+    dav_svn_register_uris(pconf);
 }
 
-module MODULE_VAR_EXPORT dav_svn_module =
+module AP_MODULE_DECLARE_DATA dav_svn_module =
 {
     STANDARD20_MODULE_STUFF,
     dav_svn_create_dir_config,	/* dir config creater */
