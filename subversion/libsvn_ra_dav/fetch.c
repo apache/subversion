@@ -1503,7 +1503,8 @@ svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
 svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
                                           svn_revnum_t rev,
                                           const char *name,
-                                          const svn_string_t *value)
+                                          const svn_string_t *value,
+                                          apr_pool_t *pool)
 {
   const char *val = NULL;
   svn_ra_session_t *ras = session_baton;
@@ -1540,7 +1541,7 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
                                           ras->url,
                                           rev,
                                           wanted_props, /* DAV:auto-version */
-                                          ras->pool));
+                                          pool));
 
   /* ### TODO: if we got back some value for the baseline's
          'DAV:auto-version' property, interpret it.  We *don't* want
@@ -1558,7 +1559,7 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
   if (value)
     {
       svn_stringbuf_t *valstr = NULL;
-      svn_xml_escape_cdata_cstring(&valstr, value->data, ras->pool);
+      svn_xml_escape_cdata_cstring(&valstr, value->data, pool);
       val = valstr->data;
     }
 
@@ -1569,7 +1570,7 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
   rv = ne_proppatch(ras->sess, baseline->url, po);
   if (rv != NE_OK)
     {
-      const char *msg = apr_psprintf(ras->pool,
+      const char *msg = apr_psprintf(pool,
                                      "applying property change to %s",
                                      baseline->url);
       return svn_ra_dav__convert_error(ras->sess, msg, rv);

@@ -421,10 +421,10 @@ static svn_error_t *ra_svn_get_dated_rev(void *sess, svn_revnum_t *rev,
 
 static svn_error_t *ra_svn_change_rev_prop(void *sess, svn_revnum_t rev,
                                            const char *name,
-                                           const svn_string_t *value)
+                                           const svn_string_t *value,
+                                           apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = sess;
-  apr_pool_t *pool = conn->pool;
 
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "change-rev-prop", "rcs",
                                rev, name, value));

@@ -298,11 +298,14 @@ typedef struct svn_ra_plugin_t
    *
    * Set the property @a name to @a value on revision @a rev.
    * Please note that properties attached to revisions are **unversioned**.
+   *
+   * Use @a pool for memory allocation.
    */
   svn_error_t *(*change_rev_prop) (void *session_baton,
                                    svn_revnum_t rev,
                                    const char *name,
-                                   const svn_string_t *value);
+                                   const svn_string_t *value,
+                                   apr_pool_t *pool);
 
   /** Set @a *props to the list of unversioned properties attached to
    * revision @a rev.
