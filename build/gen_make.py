@@ -114,6 +114,13 @@ class MakefileGenerator(gen_base.GeneratorBase):
           src = self.graph.get_sources(gen_base.DT_OBJECT, obj)[0]
           self.ofile.write('%s: %s\n\t$(COMPILE_SWIG_PY)\n' % (obj, src))
         self.ofile.write('\n')
+      elif custom == 'swig-java':
+        self.ofile.write('# build this with -DSWIGJAVA and -I$(JDK)/include\n')
+        for obj in objects:
+          ### FIXME: We have no back-compat requirements, so use all sources
+          src = self.graph.get_sources(gen_base.DT_OBJECT, obj)[0]
+          self.ofile.write('%s: %s\n\t$(COMPILE_SWIG_JAVA)\n' % (obj, src))
+        self.ofile.write('\n')
 
     # for each install group, write a rule to install its outputs
     for itype, i_targets in self.graph.get_deps(gen_base.DT_INSTALL):

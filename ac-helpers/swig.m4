@@ -60,6 +60,7 @@ AC_DEFUN(SVN_FIND_SWIG,
           ;;
     esac
     if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes"; then
+      ### TODO: When it's ready, add the swig-java-lib rule here.
       SWIG_BUILD_RULES="$SWIG_BUILD_RULES swig-py-lib"
       SWIG_INSTALL_RULES="$SWIG_INSTALL_RULES install-swig-py-lib"
 
@@ -87,10 +88,17 @@ AC_DEFUN(SVN_FIND_SWIG,
       ])
       SWIG_PY_INCLUDES="-I$ac_cv_python_includes"
     fi
+
+    if test "$JDK" != "none" -a "$SWIG_SUITABLE" = "yes"; then
+      for dir in `find "$JDK/include" -type d -print`; do
+        SWIG_JAVA_INCLUDES="$SWIG_JAVA_INCLUDES -I$dir"
+      done
+    fi
   fi
   AC_SUBST(SWIG_BUILD_RULES)
   AC_SUBST(SWIG_INSTALL_RULES)
   AC_SUBST(SWIG_PY_INCLUDES)
+  AC_SUBST(SWIG_JAVA_INCLUDES)
   AC_SUBST(SWIG_LIBSWIG_DIR)
   AC_SUBST(SWIG_LDFLAGS)
 ])

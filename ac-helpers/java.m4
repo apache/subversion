@@ -1,8 +1,6 @@
 dnl
 dnl java.m4: Locates the JDK and its include files and libraries.
 dnl
-dnl Substitutes the @JDK@ token.
-dnl
 
 AC_DEFUN(SVN_CHECK_JDK,
 [
@@ -52,5 +50,6 @@ AC_DEFUN(SVN_FIND_JDK,
   fi
   AC_MSG_RESULT([$JDK_SUITABLE])
 
-  AC_SUBST(JDK)
+  dnl We use JDK in the swig.m4 macros, not in the Makefile
+  dnl AC_SUBST(JDK)
 ])
