@@ -24,7 +24,7 @@
 
 #include "svn_error.h"
 #include "svn_test.h"
-#include "../../libsvn_fs/key-gen.h"
+#include "../../libsvn_fs_base/key-gen.h"
 
 
 

@@ -487,15 +487,15 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   const char *path_native;
   base_fs_data_t *bfd;
 
+  SVN_ERR (check_bdb_version (pool));
+  SVN_ERR (check_already_open (fs));
+
   apr_pool_cleanup_register (fs->pool, fs, cleanup_fs_apr,
                              apr_pool_cleanup_null);
 
-  bfd = apr_palloc (fs->pool, sizeof (*bfd));
+  bfd = apr_pcalloc (fs->pool, sizeof (*bfd));
   fs->vtable = &fs_vtable;
   fs->fsap_data = bfd;
-
-  SVN_ERR (check_bdb_version (pool));
-  SVN_ERR (check_already_open (fs));
 
   /* Initialize the fs's path. */
   fs->path = apr_pstrdup (fs->pool, path);
@@ -574,15 +574,15 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   const char *path_native;
   base_fs_data_t *bfd;
 
+  SVN_ERR (check_bdb_version (pool));
+  SVN_ERR (check_already_open (fs));
+
   apr_pool_cleanup_register (fs->pool, fs, cleanup_fs_apr,
                              apr_pool_cleanup_null);
 
-  bfd = apr_palloc (fs->pool, sizeof (*bfd));
+  bfd = apr_pcalloc (fs->pool, sizeof (*bfd));
   fs->vtable = &fs_vtable;
   fs->fsap_data = bfd;
-
-  SVN_ERR (check_bdb_version (pool));
-  SVN_ERR (check_already_open (fs));
 
   /* Initialize paths. */
   fs->path = apr_pstrdup (fs->pool, path);

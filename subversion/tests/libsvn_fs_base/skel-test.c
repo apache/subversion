@@ -25,8 +25,8 @@
 #include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_test.h"
-#include "../../libsvn_fs/fs.h"
-#include "../../libsvn_fs/util/skel.h"
+#include "../../libsvn_fs_base/fs.h"
+#include "../../libsvn_fs_base/util/skel.h"
 
 
 /* Some utility functions.  */

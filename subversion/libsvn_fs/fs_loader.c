@@ -45,17 +45,17 @@ static svn_error_t *
 get_library_vtable (fs_library_vtable_t **vtable, const char *fsap_name,
                     apr_pool_t *pool)
 {
-#if 0
   /* XXX Placeholder implementation.  The real implementation should
      support DSO-loading of back-end libraries and should return an
      error rather than aborting if fsap_name is unrecognized. */
   if (strcmp(fsap_name, "base") == 0)
     *vtable = &svn_fs_base__vtable;
+#if 0
   else if (strcmp(fsap_name, "fsfs") == 0)
     *vtable = &svn_fs_fs__vtable;
+#endif
   else
     abort();
-#endif
   return SVN_NO_ERROR;
 }
 
@@ -98,7 +98,6 @@ write_fsap_name (const char *path, const char *fsap_name, apr_pool_t *pool)
   const char *fsap_filename;
   apr_file_t *file;
 
-  SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, pool));
   fsap_filename = svn_path_join (path, FSAP_NAME_FILENAME, pool);
   SVN_ERR (svn_io_file_open (&file, fsap_filename,
                              APR_WRITE|APR_CREATE|APR_TRUNCATE|APR_BUFFERED,
