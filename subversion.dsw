@@ -38,6 +38,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name svnlook
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name svn_com
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -94,6 +97,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name tests_libsvn_subr_target
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name tests_libsvn_subr_time
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name tests_libsvn_wc_checkout
@@ -757,6 +763,30 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name apr
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "tests_libsvn_subr_time"=.\subversion\tests\libsvn_subr\time_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name __config__
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_subr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name apr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsvn_tests_main
     End Project Dependency
 }}}
 

@@ -52,14 +52,11 @@ CSVNWorkingCopy::check_wc(BSTR bstrDir, VARIANT_BOOL *pfIsValid)
 	HRESULT hr;
 	svn_error_t *error;
 	svn_boolean_t is_wc;
-	svn_stringbuf_t *path;
 
 	if (pfIsValid == NULL)
 		return E_POINTER;
 
-	path = svn_stringbuf_create(W2A(bstrDir), g_pool);
-
-	error = svn_wc_check_wc(path, &is_wc, g_pool);
+	error = svn_wc_check_wc(W2A(bstrDir), &is_wc, g_pool);
 
 	if (error) {
 		hr = convert_err_to_hresult(error);
@@ -282,7 +279,6 @@ CSVNWorkingCopy::wc_statuses(BSTR bstrPath, VARIANT_BOOL getAll, SAFEARRAY **pps
 	apr_hash_t *hash;
 	svn_error_t *error;
 	svn_wc_status_t *status;
-	svn_stringbuf_t *path;
 	apr_hash_index_t *hi;
 	SAFEARRAY *psa;
 	SAFEARRAYBOUND rgsBound;
@@ -296,8 +292,7 @@ CSVNWorkingCopy::wc_statuses(BSTR bstrPath, VARIANT_BOOL getAll, SAFEARRAY **pps
         svn_boolean_t get_all = (getAll != VARIANT_TRUE ? FALSE : TRUE);
 
 	hash = apr_hash_make(g_pool);
-	path = svn_stringbuf_create(W2A(bstrPath), g_pool);
-	error = svn_wc_statuses(hash, path,
+	error = svn_wc_statuses(hash, W2A(bstrPath),
                                 FALSE, // FIXME: descend or not, rassilon?
                                 FALSE, get_all, g_pool);
 	if (error) {
