@@ -95,7 +95,7 @@ svn_ruby_init_error (void)
 				    rb_eStandardError);
 
   define_error (SVN_WARNING, "Warning");
-  define_error (SVN_ERR_PLUGIN_LOAD_FAILURE, "ErrPluginLoadFailure");
+  define_error (SVN_ERR_PLUGIN_LOAD_FAILURE, "PluginLoadFailure");
   define_error (SVN_ERR_UNKNOWN_FS_ACTION, "UnknownFsAction");
   define_error (SVN_ERR_UNEXPECTED_EOF, "UnexpectedEof");
   define_error (SVN_ERR_MALFORMED_FILE, "MalformedFile");
@@ -109,7 +109,7 @@ svn_ruby_init_error (void)
   define_error (SVN_ERR_UNKNOWN_NODE_KIND, "UnknownNodeKind");
   define_error (SVN_ERR_DELTA_MD5_CHECKSUM_ABSENT, "DeltaMd5ChecksumAbsent");
   define_error (SVN_ERR_XML_ATTRIB_NOT_FOUND, "XmlAttribNotFound");
-  define_error (SVN_ERR_XML_MISSING_ANCESTRY, "xmlmissingancestry");
+  define_error (SVN_ERR_XML_MISSING_ANCESTRY, "XmlMissingAncestry");
   define_error (SVN_ERR_XML_UNKNOWN_ENCODING, "XmlUnknownEncoding");
   define_error (SVN_ERR_IO_INCONSISTENT_EOL, "IoInconsistentEOL");
   define_error (SVN_ERR_IO_UNKNOWN_EOL, "IoUnknownEOL");
@@ -119,7 +119,6 @@ svn_ruby_init_error (void)
   define_error (SVN_ERR_ENTRY_MISSING_REVISION, "EntryMissingRevision");
   define_error (SVN_ERR_ENTRY_MISSING_URL, "EntryMissingURL");
   define_error (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, "EntryAttributeInvalid");
-  define_error (SVN_ERR_ENTRY_BOGUS_MERGE, "EntryBogusMerge");
   define_error (SVN_ERR_WC_OBSTRUCTED_UPDATE, "WcObstructedUpdate");
   define_error (SVN_ERR_WC_UNWIND_MISMATCH, "WcUnwindMismatch");
   define_error (SVN_ERR_WC_UNWIND_EMPTY, "WcUnwindEmpty");

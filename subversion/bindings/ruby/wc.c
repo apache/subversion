@@ -16,6 +16,7 @@
 #include <svn_string.h>
 #include <svn_pools.h>
 #include <svn_wc.h>
+#include <svn_client.h>
 
 #include "svn_ruby.h"
 #include "wc.h"
