@@ -1,0 +1,84 @@
+								-*-text-*-
+
+BUILDING SWIG BINDINGS FOR SVN
+
+
+Step 1:  Build & install the proper version of SWIG.
+
+  In particular, our bindings might be very sensitive to tiny changes
+  between versions of SWIG.  At the time of writing, I believe that we
+  require exactly version 1.3.12.
+
+    * Go to http://www.swig.org, download the sourceball, unpack.
+
+    * In the SWIG-X.X.X directory, run ./configure.
+
+       If you plan to build the python bindings, and have a system
+       with more than one version of python installed, you may need
+       to pass
+
+             --with-python=/path/to/correct/python/binary
+ 
+       to the configure script.  You certainly don't want to use any
+       version of python older than 2.0.
+
+    * run 'make && make install'
+
+    * Now cd into the 'Runtime' subdir, and run 'make' there as well.
+      (No, don't ask me why the top-level 'make' doesn't do this
+      automatically, I have no idea.)  This will create various shared
+      glue libraries to bind to different languages.  If you get an
+      error, don't freak out:  check to see that libswigpy was created
+      (or whatever language you care about).  If it exists, you're in
+      good shape.  Go ahead and 'make install' from this area anyway.
+
+    * To verify you have the goodz installed, check that these things
+      were created, assuming your $PREFIX was /usr/local/lib:
+
+           - /usr/local/lib/swig1.3/*.i
+           - /usr/local/lib/libswig*.so
+           - /usr/local/bin/swig
+
+
+Step 2:  Build Subversion.
+
+  See Subversion's own INSTALL file for details.
+
+  Make sure that Subversion's ./configure script sees your installed SWIG!
+  It tries to detect SWIG near the very end of its output.
+
+
+
+SPECIFIC LANGUAGE BINDINGS
+
+
+*  Python
+
+   1.  cd subversion/bindings/swig/python
+
+   2.  python setup.py build
+
+       Note that the 'setup.py' script has some hardcoded paths at the
+       top; you might need to edit them so that your installed svn
+       libraries and headers can be found.
+
+   3.  python setup.py install [--prefix PREFIX]
+
+       If you specified '--with-prefix' to subversion's configure
+       script, you'll need to use it again here.
+
+   4.  Verify that an 'svn' package has been created.  It should be
+       sitting right in the current directory:  a subdir containing
+       .py files and an __init__.py.  Also verify that the package was
+       installed to a public area.  (For example, some place like
+       /usr/local/lib/python2.2/site-packages/svn)
+
+   5.  Try some demo programs.  From the top of your svn working copy,
+       cd tools/examples/, and try running 'svnlook.py'.
+
+
+
+*  Java?
+
+
+*  Perl?
