@@ -31,15 +31,42 @@
 #include "svn_io.h"
 
 /* Key for the error pool itself. */
-#define SVN_ERROR_POOL              "svn-error-pool"
+static const char SVN_ERROR_POOL[] = "svn-error-pool";
 
 /* Key for a boolean signifying whether the error pool is a subpool of
    the pool whose prog_data we got it from. */
-#define SVN_ERROR_POOL_ROOTED_HERE  "svn-error-pool-rooted-here"
+static const char SVN_ERROR_POOL_ROOTED_HERE[] = "svn-error-pool-rooted-here";
+
+/* file_line for the non-debug case. */
+static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
 
 
 
+
+
 /*** helpers for creating errors ***/
+#ifdef SVN_DEBUG
+#undef svn_error_create
+#undef svn_error_createf
+#undef svn_error_quick_wrap
+#endif
+
+
+/* XXX FIXME: These should be protected by a thread mutex.
+   svn_error__locate and make_error_internal should cooperate
+   in locking and unlocking it. */
+static const char *error_file = NULL;
+static long error_line = -1;
+void
+svn_error__locate (const char *file, long line)
+{
+#ifdef SVN_DEBUG
+  /* XXX TODO: Lock mutex here */
+  error_file = file;
+  error_line = line;
+#endif
+}
+
 
 static svn_error_t *
 make_error_internal (apr_status_t apr_err,
@@ -75,6 +102,14 @@ make_error_internal (apr_status_t apr_err,
   new_error->src_err = src_err;
   new_error->child   = child;
   new_error->pool    = newpool;  
+#ifdef SVN_DEBUG
+  new_error->file    = error_file;
+  new_error->line    = error_line;
+  /* XXX TODO: Unlock mutex here */
+#else
+  new_error->file    = NULL;
+  new_error->line    = -1;
+#endif
 
   return new_error;
 }
@@ -285,15 +320,24 @@ svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
   /* Pretty-print the error */
   /* Note: we can also log errors here someday. */
 
+#ifdef SVN_DEBUG
+  if (err->file)
+    fprintf (stream, "\n%s:%ld\n", err->file, err->line);
+  else
+    fprintf (stream, "\n%s\n", SVN_FILE_LINE_UNDEFINED);
+#else
+  fputc ('\n', stream);
+#endif /* SVN_DEBUG */
+
   /* Is this a Subversion-specific error code? */
   if ((err->apr_err > APR_OS_START_USEERR) 
       && (err->apr_err <= APR_OS_START_CANONERR))
-    fprintf (stream, "\nsvn_error: #%d : <%s>\n", err->apr_err,
+    fprintf (stream, "svn_error: #%d : <%s>\n", err->apr_err,
              svn_strerror (err->apr_err, buf, sizeof (buf)));
 
   /* Otherwise, this must be an APR error code. */
   else
-    fprintf (stream, "\napr_error: #%d, src_err %d : <%s>\n",
+    fprintf (stream, "apr_error: #%d, src_err %d : <%s>\n",
              err->apr_err,
              err->src_err,
              apr_strerror (err->apr_err, buf, sizeof(buf)));
@@ -327,7 +371,6 @@ svn_handle_warning (void *data, const char *fmt, ...)
 }
 
 
-/*-----------------------------------------------------------------*/
 
 /* svn_strerror() and helpers */
 
@@ -357,6 +400,7 @@ svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
 
 
 
+/*-----------------------------------------------------------------*/
 /*
    Macros to make the preprocessor logic less confusing.
    We need to always have svn_pool_xxx aswell as
@@ -472,13 +516,13 @@ svn_pool_clear_debug (apr_pool_t *pool, const char *file_line)
 apr_pool_t *
 svn_pool_create (apr_pool_t *pool)
 {
-  return svn_pool_create_debug (pool, "svn:<undefined>");
+  return svn_pool_create_debug (pool, SVN_FILE_LINE_UNDEFINED);
 }
 
 void
 svn_pool_clear (apr_pool_t *pool)
 {
-  svn_pool_clear_debug (pool, "svn:<undefined>");
+  svn_pool_clear_debug (pool, SVN_FILE_LINE_UNDEFINED);
 }
 #endif /* APR_POOL_DEBUG */
 

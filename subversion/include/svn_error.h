@@ -40,6 +40,10 @@ extern "C" {
    there for the reasons why. */
 #include "svn_error_codes.h"
 
+/* Set the error location for debug mode. */
+void svn_error__locate (const char *file, long line);
+
+
 /* Put a English description of STATCODE into BUF and return BUF,
    null-terminated.  STATCODE is either an svn error or apr error.  */
 char *svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize);
@@ -74,6 +78,11 @@ svn_error_t *svn_error_create (apr_status_t apr_err,
                                apr_pool_t *pool,
                                const char *message);
 
+#ifdef SVN_DEBUG
+#define svn_error_create \
+  (svn_error__locate(__FILE__,__LINE__), (svn_error_create))
+#endif
+
 /* Create an error structure with the given APR_ERR, SRC_ERR, CHILD,
    and POOL, with a printf-style error message produced by passing
    FMT, ... through apr_psprintf.  */
@@ -85,12 +94,20 @@ svn_error_t *svn_error_createf (apr_status_t apr_err,
                                 ...)
        __attribute__ ((format (printf, 5, 6)));
 
+#ifdef SVN_DEBUG
+#define svn_error_createf \
+  (svn_error__locate(__FILE__,__LINE__), (svn_error_createf))
+#endif
 
 /* A quick n' easy way to create a wrappered exception with your own
    message, before throwing it up the stack.  (It uses all of the
    child's fields.)  */
 svn_error_t *svn_error_quick_wrap (svn_error_t *child, const char *new_msg);
 
+#ifdef SVN_DEBUG
+#define svn_error_quick_wrap \
+  (svn_error__locate(__FILE__,__LINE__), (svn_error_quick_wrap))
+#endif
 
 /* Add NEW to the end of CHAIN's chain of errors; i.e., NEW will be
    the last child error in CHAIN.  */

@@ -47,6 +47,11 @@ typedef struct svn_error
   struct svn_error *child;   /* ptr to the error we "wrap" */
   apr_pool_t *pool;          /* The pool holding this error and any
                                 child errors it wraps */
+
+  /* Source file and line where the error originated.
+     Only used iff SVN_DEBUG. */
+  const char *file;
+  long line;
 } svn_error_t;
 
 
