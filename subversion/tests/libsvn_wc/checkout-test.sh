@@ -21,6 +21,9 @@ done
 #    ./checkout-test checkout-${num}.delta ${num}/this/is/a/test/dir
 # done
 
+echo
+echo -n "Running all sub-tests in checkout-test"...
 ./checkout-test ${TEST_DELTA} this
+echo "SUCCESS"
 
 # That's it.  Right now, we test by inspecting them by hand.
