@@ -74,8 +74,8 @@ book-html-chunk: $(BOOK_ALL_SOURCE)
 	$(XSLTPROC) $(BOOK_HTML_XSLTPROC_OPTS) \
            --output $(BOOK_HTML_CHUNK_DIR)/ \
 	   $(XSL_HTML_CHUNK) $(BOOK_XML_SOURCE)
-	cp -R $(BOOK_DIR)/styles.css $(BOOK_HTML_CHUNK_DIR)
-	cp -R $(BOOK_DIR)/images/*.png $(BOOK_HTML_CHUNK_DIR)
+	cp $(BOOK_DIR)/styles.css $(BOOK_HTML_CHUNK_DIR)
+	cp $(BOOK_DIR)/images/*.png $(BOOK_HTML_CHUNK_DIR)
 
 book-pdf: $(BOOK_PDF_TARGET)
 
