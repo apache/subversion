@@ -79,17 +79,17 @@ Candidate changes:
     Notes: This was originally reported here: http://bugs.debian.org/235755
     This fix doesn't try to fix the ipv6 issue, just the SIGSEGV.
     Votes:
-      +1: dwhedon
+      +1: dwhedon, jerenkrantz
 
   * r8890
     Implement anonymous access checking in mod_authz_svn.
     Fix access checking even if no user authentication is required.
     Justification: Will make a configuration more secure by default.
     Votes:
-      +1: striker
+      +1: striker, jerenkrantz
 
   * r8892
     Finish Issue #1588 - mod_authz_svn should work with SVNParentPath.
     Notes: No API changes.
     Votes:
-      +1: striker
+      +1: striker, jerenkrantz
