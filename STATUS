@@ -168,3 +168,11 @@ Approved changes (further review is welcome, but not required):
       http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=275545
     Votes:
       +1: breser
+
+  * r12117
+    Fix merges that replace directories.
+    Justification:
+      Without this fix it is impossible to merge some sets of revisions in one
+      step.
+    Votes:
+      +1: breser
