@@ -50,7 +50,7 @@ Candidate changes:
     Backporting result:
       Merge without conflicts (at r10652).
     Votes:
-      +1: dionisos, cmpilato
+      +1: dionisos, cmpilato, lundblad
 
   * r10674
     Make ./configure behave nicer in the presence of old Apache.
