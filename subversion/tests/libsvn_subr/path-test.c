@@ -642,7 +642,13 @@ test_canonicalize (const char **msg,
     { "foo/../",              "foo/.." },
     { "foo/../.",             "foo/.." },
     { "foo//.//bar",          "foo/bar" },
+#ifdef WIN32
+    /* We allow UNC paths on Windows */
+    { "///foo",               "//foo" },
+#else
+    /* But not on other platforms */
     { "///foo",               "/foo" },
+#endif
     { "/.//./.foo",           "/.foo" },
     { ".///.foo",             ".foo" },
     { "../foo",               "../foo" },
