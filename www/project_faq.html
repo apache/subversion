@@ -783,11 +783,13 @@ href="#wedged-repos">more info</a>).</p>
 
 <p>The logfiles will grow forever, eating up disk space, unless you,
 (as the repository administrator) do something about it.  At any given
-moment, Berkeley DB is only using a couple of logfiles actively; the
-rest can be safely deleted.  If you keep all the logfiles around
-forever, then in theory Berkeley DB can replay every change to your
-repository from the day it was born.  But in practice, if you're
-making backups, it's probably not worth the cost in disk space.</p>
+moment, Berkeley DB is only using a few logfiles actively (see <a
+href="http://subversion.tigris.org/servlets/ReadMsg?list=users&msgNo=15194"
+>this post</a> and its associated thread); the rest can be safely
+deleted.  If you keep all the logfiles around forever, then in theory
+Berkeley DB can replay every change to your repository from the day it
+was born.  But in practice, if you're making backups, it's probably
+not worth the cost in disk space.</p>
 
 <p>Use <code>svnadmin</code> to see
 which log files can be deleted.  You may want a cron job to do this.</p>
