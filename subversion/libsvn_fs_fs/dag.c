@@ -1050,7 +1050,7 @@ svn_fs__dag_copy (dag_node_t *to_node,
       to_noderev->copyfrom_path = svn_fs__dag_get_created_path (from_node);
       to_noderev->copyfrom_rev = from_rev;
       to_noderev->copykind = svn_fs__copy_kind_real;
-      /* Set the coyproot equal to our own id. */
+      /* Set the copyroot equal to our own id. */
       to_noderev->copyroot = NULL;
 
       SVN_ERR (svn_fs__fs_create_successor (&id, fs, src_id, to_noderev,

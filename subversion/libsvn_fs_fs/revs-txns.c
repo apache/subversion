@@ -186,23 +186,6 @@ svn_fs__set_rev_prop (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-
-struct change_rev_prop_args {
-  svn_revnum_t rev;
-  const char *name;
-  const svn_string_t *value;
-};
-
-
-static svn_error_t *
-txn_body_change_rev_prop (void *baton, apr_pool_t *pool)
-{
-  abort ();
-
-  return SVN_NO_ERROR;
-}
-
-
 svn_error_t *
 svn_fs_change_rev_prop (svn_fs_t *fs,
                         svn_revnum_t rev,
@@ -210,14 +193,7 @@ svn_fs_change_rev_prop (svn_fs_t *fs,
                         const svn_string_t *value,
                         apr_pool_t *pool)
 {
-  struct change_rev_prop_args args;
-
-  SVN_ERR (svn_fs__check_fs (fs));
-
-  args.rev = rev;
-  args.name = name;
-  args.value = value;
-  SVN_ERR (svn_fs__retry_txn (fs, txn_body_change_rev_prop, &args, pool));
+  SVN_ERR (svn_fs__set_rev_prop (fs, rev, name, value, pool));
 
   return SVN_NO_ERROR;
 }
