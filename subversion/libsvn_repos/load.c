@@ -674,10 +674,10 @@ new_revision_record (void **revision_baton,
       SVN_ERR (svn_fs_txn_root (&(rb->txn_root), rb->txn, pool));
       
       if (pb->outstream)
-        svn_stream_printf (pb->outstream, pool,
-                           "<<< Started new transaction, based on "
-                           "original revision %"
-                           SVN_REVNUM_T_FMT "\n", rb->rev);
+        SVN_ERR (svn_stream_printf (pb->outstream, pool,
+                                    "<<< Started new transaction, based on "
+                                    "original revision %"
+                                    SVN_REVNUM_T_FMT "\n", rb->rev));
     }
 
   /* If we're parsing revision 0, only the revision are (possibly)
@@ -727,7 +727,7 @@ maybe_add_with_history (struct node_baton *nb,
       if (pb->outstream)
         {
           apr_size_t len = 9;
-          svn_stream_write (pb->outstream, "COPIED...", &len);
+          SVN_ERR (svn_stream_write (pb->outstream, "COPIED...", &len));
         }
     }
 
@@ -771,23 +771,26 @@ new_node_record (void **node_baton,
     case svn_node_action_change:
       {
         if (pb->outstream)
-          svn_stream_printf (pb->outstream, pool,
-                             "     * editing path : %s ...", nb->path);
+          SVN_ERR (svn_stream_printf (pb->outstream, pool,
+                                      "     * editing path : %s ...",
+                                      nb->path));
         break;
       }
     case svn_node_action_delete:
       {
         if (pb->outstream)
-          svn_stream_printf (pb->outstream, pool,
-                             "     * deleting path : %s ...", nb->path);
+          SVN_ERR (svn_stream_printf (pb->outstream, pool,
+                                      "     * deleting path : %s ...",
+                                      nb->path));
         SVN_ERR (svn_fs_delete (rb->txn_root, nb->path, pool));
         break;
       }
     case svn_node_action_add:
       {
         if (pb->outstream)
-          svn_stream_printf (pb->outstream, pool,
-                             "     * adding path : %s ...", nb->path);
+          SVN_ERR (svn_stream_printf (pb->outstream, pool,
+                                      "     * adding path : %s ...",
+                                      nb->path));
 
         SVN_ERR (maybe_add_with_history (nb, rb, pool));
         break;
@@ -795,8 +798,9 @@ new_node_record (void **node_baton,
     case svn_node_action_replace:
       {
         if (pb->outstream)
-          svn_stream_printf (pb->outstream, pool,
-                             "     * replacing path : %s ...", nb->path);
+          SVN_ERR (svn_stream_printf (pb->outstream, pool,
+                                      "     * replacing path : %s ...",
+                                      nb->path));
 
         SVN_ERR (svn_fs_delete (rb->txn_root, nb->path, pool));
 
@@ -914,7 +918,7 @@ close_node (void *baton)
   if (pb->outstream)
     {
       apr_size_t len = 7;
-      svn_stream_write (pb->outstream, " done.\n", &len);
+      SVN_ERR (svn_stream_write (pb->outstream, " done.\n", &len));
     }
   
   return SVN_NO_ERROR;
@@ -959,16 +963,19 @@ close_revision (void *baton)
     {
       if (new_rev == rb->rev)
         {
-          svn_stream_printf (pb->outstream, rb->pool,
-                             "\n------- Committed revision %" SVN_REVNUM_T_FMT
-                             " >>>\n\n", new_rev);
+          SVN_ERR (svn_stream_printf (pb->outstream, rb->pool,
+                                      "\n------- Committed revision %"
+                                      SVN_REVNUM_T_FMT
+                                      " >>>\n\n", new_rev));
         }
       else
         {
-          svn_stream_printf (pb->outstream, rb->pool,
-                             "\n------- Committed new rev %" SVN_REVNUM_T_FMT
-                             " (loaded from original rev %" SVN_REVNUM_T_FMT
-                             ") >>>\n\n", new_rev, rb->rev);
+          SVN_ERR (svn_stream_printf (pb->outstream, rb->pool,
+                                      "\n------- Committed new rev %"
+                                      SVN_REVNUM_T_FMT
+                                      " (loaded from original rev %"
+                                      SVN_REVNUM_T_FMT
+                                      ") >>>\n\n", new_rev, rb->rev));
         }
     }
 

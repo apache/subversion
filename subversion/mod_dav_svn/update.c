@@ -1355,7 +1355,9 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
 
       serr = svn_fs_check_path(&dst_kind, uc.rev_root, dst_path,
                                resource->pool);
-      /* ### what to do with this error? */
+      if (serr)
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "Failed to find the kind of a path");
 
       if (dst_kind == svn_node_dir)
         {
@@ -1363,7 +1365,11 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
              the new vsn-rsc-urls for the switched dir.  this walk
              contains essentially nothing but <add> tags. */
           svn_fs_root_t *zero_root;
-          svn_fs_revision_root(&zero_root, repos->fs, 0, resource->pool);
+          serr = svn_fs_revision_root(&zero_root, repos->fs, 0,
+                                      resource->pool);
+          if (serr)
+            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                       "Failed to find the revision root");
 
           send_xml(&uc, "<S:resource-walk>" DEBUG_CR);
 

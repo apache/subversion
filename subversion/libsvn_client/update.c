@@ -98,8 +98,9 @@ svn_client__update_internal (svn_revnum_t *result_rev,
                   SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
 
   /* See if the user wants last-commit timestamps instead of current ones. */
-  svn_config_get_bool (cfg, &use_commit_times, SVN_CONFIG_SECTION_MISCELLANY,
-                       SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE);
+  SVN_ERR (svn_config_get_bool (cfg, &use_commit_times,
+                                SVN_CONFIG_SECTION_MISCELLANY,
+                                SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE));
 
   /* Get the RA vtable that matches URL. */
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));

@@ -382,8 +382,8 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                      SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, NULL);
       svn_config_get(cfg, &timeout_str, SVN_CONFIG_SECTION_GLOBAL, 
                      SVN_CONFIG_OPTION_HTTP_TIMEOUT, NULL);
-      svn_config_get_bool(cfg, compression, SVN_CONFIG_SECTION_GLOBAL,
-                          SVN_CONFIG_OPTION_HTTP_COMPRESSION, FALSE);
+      SVN_ERR(svn_config_get_bool(cfg, compression, SVN_CONFIG_SECTION_GLOBAL,
+                                  SVN_CONFIG_OPTION_HTTP_COMPRESSION, FALSE));
       svn_config_get(cfg, &debug_str, SVN_CONFIG_SECTION_GLOBAL, 
                      SVN_CONFIG_OPTION_NEON_DEBUG_MASK, NULL);
     }
@@ -406,8 +406,9 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                      SVN_CONFIG_OPTION_HTTP_PROXY_PASSWORD, *proxy_password);
       svn_config_get(cfg, &timeout_str, server_group, 
                      SVN_CONFIG_OPTION_HTTP_TIMEOUT, timeout_str);
-      svn_config_get_bool(cfg, compression, server_group,
-                          SVN_CONFIG_OPTION_HTTP_COMPRESSION, *compression);
+      SVN_ERR(svn_config_get_bool(cfg, compression, server_group,
+                                  SVN_CONFIG_OPTION_HTTP_COMPRESSION,
+                                  *compression));
       svn_config_get(cfg, &debug_str, server_group, 
                      SVN_CONFIG_OPTION_NEON_DEBUG_MASK, debug_str);
     }

@@ -50,16 +50,20 @@ int main(int argc, char *argv[])
   apr_pool_t *pool;
   svn_stream_t *ostream;
   int rc;
+  svn_error_t *svn_err;
 
   apr_initialize();
 
   pool = svn_pool_create(NULL);
 
-  svn_stream_for_stdout(&ostream, pool);
-
-  if (argc == 3)
+  svn_err = svn_stream_for_stdout(&ostream, pool);
+  if (svn_err)
     {
-      svn_error_t *svn_err;
+      svn_handle_error(svn_err, stdout, FALSE);
+      rc = 2;
+    }
+  else if (argc == 3)
+    {
       svn_boolean_t has_changes;
 
       svn_err = do_diff(ostream, argv[1], argv[2], &has_changes, pool);
@@ -75,8 +79,9 @@ int main(int argc, char *argv[])
     }
   else
     {
-      svn_stream_printf(ostream, pool,
-                        "Usage: %s <file1> <file2>\n", argv[0]);
+      svn_error_clear(svn_stream_printf(ostream, pool,
+                                        "Usage: %s <file1> <file2>\n",
+                                        argv[0]));
       rc = 2;
     }
 

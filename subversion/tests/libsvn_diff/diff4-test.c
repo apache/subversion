@@ -54,17 +54,20 @@ int main(int argc, char *argv[])
   apr_pool_t *pool;
   svn_stream_t *ostream;
   int rc = 0;
+  svn_error_t *svn_err;
 
   apr_initialize();
 
   pool = svn_pool_create(NULL);
 
-  svn_stream_for_stdout(&ostream, pool);
-
-  if (argc == 5)
+  svn_err = svn_stream_for_stdout(&ostream, pool);
+  if (svn_err)
     {
-      svn_error_t *svn_err;
-
+      svn_handle_error(svn_err, stdout, FALSE);
+      rc = 2;
+    }
+  else if (argc == 5)
+    {
       svn_err = do_diff4(ostream,
                          argv[2], argv[1], argv[3], argv[4],
                          pool);
@@ -76,8 +79,9 @@ int main(int argc, char *argv[])
     }
   else
     {
-      svn_stream_printf(ostream, pool,
-                        "Usage: %s <mine> <older> <yours> <ancestor>\n", argv[0]);
+      svn_error_clear(svn_stream_printf
+        (ostream, pool, "Usage: %s <mine> <older> <yours> <ancestor>\n",
+         argv[0]));
       rc = 2;
     }
 

@@ -944,7 +944,7 @@ repos_to_wc_copy (const char *src_url,
       fstream = svn_stream_from_aprfile (fp, pool);
       SVN_ERR (ra_lib->get_file
                (sess, "", src_revnum, fstream, &real_rev, &new_props, pool));
-      svn_stream_close (fstream);
+      SVN_ERR (svn_stream_close (fstream));
       SVN_ERR (svn_io_file_close (fp, pool));
 
       /* If SRC_REVNUM is invalid (HEAD), then REAL_REV is now the

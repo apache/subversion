@@ -88,8 +88,11 @@ revert (const char *path,
                       APR_HASH_KEY_STRING)
       : NULL;
 
-    svn_config_get_bool (cfg, &use_commit_times, SVN_CONFIG_SECTION_MISCELLANY,
-                         SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE);
+    if ((err = svn_config_get_bool (cfg, &use_commit_times,
+                                    SVN_CONFIG_SECTION_MISCELLANY,
+                                    SVN_CONFIG_OPTION_USE_COMMIT_TIMES,
+                                    FALSE)))
+      goto out;
   }
 
   err = svn_wc_revert (path, adm_access, recursive, use_commit_times,

@@ -94,18 +94,31 @@ svn_revnum_t dav_svn_get_safe_cr(svn_fs_root_t *root,
   svn_fs_root_t *other_root;
   svn_fs_t *fs = svn_fs_root_fs(root);
   const svn_fs_id_t *id, *other_id;
+  svn_error_t *err;
 
-  if (svn_fs_node_id(&id, root, path, pool))
-    return revision;   /* couldn't get id of root/path */
+  if ((err = svn_fs_node_id(&id, root, path, pool)))
+    {
+      svn_error_clear(err);
+      return revision;   /* couldn't get id of root/path */
+    }
 
-  if (get_last_history_rev(&history_rev, root, path, pool))
-    return revision;   /* couldn't find last history rev */
+  if ((err = get_last_history_rev(&history_rev, root, path, pool)))
+    {
+      svn_error_clear(err);
+      return revision;   /* couldn't find last history rev */
+    }
   
-  if (svn_fs_revision_root(&other_root, fs, history_rev, pool))
-    return revision;   /* couldn't open the history rev */
+  if ((err = svn_fs_revision_root(&other_root, fs, history_rev, pool)))
+    {
+      svn_error_clear(err);
+      return revision;   /* couldn't open the history rev */
+    }
 
-  if (svn_fs_node_id(&other_id, other_root, path, pool))
-    return revision;   /* couldn't get id of other_root/path */
+  if ((err = svn_fs_node_id(&other_id, other_root, path, pool)))
+    {
+      svn_error_clear(err);
+      return revision;   /* couldn't get id of other_root/path */
+    }
 
   if (svn_fs_compare_ids(id, other_id) == 0)
     return history_rev;  /* the history rev is safe!  the same node

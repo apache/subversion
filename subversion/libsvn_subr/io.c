@@ -1451,8 +1451,9 @@ svn_io_run_diff3 (const char *dir,
     SVN_ERR (svn_config_get_config (&config, pool));
     cfg = config ? apr_hash_get (config, SVN_CONFIG_CATEGORY_CONFIG,
                                  APR_HASH_KEY_STRING) : NULL;
-    svn_config_get_bool (cfg, &has_arg, SVN_CONFIG_SECTION_HELPERS, 
-                         SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG, TRUE);
+    SVN_ERR (svn_config_get_bool (cfg, &has_arg, SVN_CONFIG_SECTION_HELPERS,
+                                  SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG,
+                                  TRUE));
     if (has_arg)
       {
         const char *diff_cmd, *diff_utf8;
