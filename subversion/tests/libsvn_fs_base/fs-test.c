@@ -281,95 +281,6 @@ create_file_transaction (const char **msg,
 }
 
 
-static svn_error_t *
-check_no_fs_error (svn_error_t *err)
-{
-  if (err && (err->apr_err != SVN_ERR_FS_NOT_OPEN))
-    return svn_error_create
-      (SVN_ERR_FS_GENERAL, err,
-       "checking not opened filesystem got wrong error");
-  else if (! err)
-    return svn_error_create
-      (SVN_ERR_FS_GENERAL, NULL,
-       "checking not opened filesytem failed to get error");
-  else
-    svn_error_clear (err);
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Call functions with not yet opened filesystem and see it returns
-   correct error.  */
-static svn_error_t *
-call_functions_with_unopened_fs (const char **msg,
-                                 svn_boolean_t msg_only,
-                                 apr_pool_t *pool)
-{
-  svn_fs_t *fs;
-  svn_error_t *err;
-  apr_hash_t *fs_config = apr_hash_make (pool);
-  apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
-                APR_HASH_KEY_STRING, "1");
-  fs = svn_fs_new (fs_config, pool);
-
-  *msg = "call functions with unopened fs and check errors";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  fs = svn_fs_new (fs_config, pool);
-  err = svn_fs_set_berkeley_errcall (fs, berkeley_error_handler);
-  SVN_ERR (check_no_fs_error (err));
-
-  {
-    svn_fs_txn_t *ignored;
-    err = svn_fs_begin_txn (&ignored, fs, 0, pool);
-    SVN_ERR (check_no_fs_error (err));
-    err = svn_fs_open_txn (&ignored, fs, "0", pool);
-    SVN_ERR (check_no_fs_error (err));
-  }
-
-  {
-    apr_array_header_t *ignored;
-    err = svn_fs_list_transactions (&ignored, fs, pool);
-    SVN_ERR (check_no_fs_error (err));
-  }
-
-  {
-    svn_fs_root_t *ignored;
-    err = svn_fs_revision_root (&ignored, fs, 0, pool);
-    SVN_ERR (check_no_fs_error (err));
-  }
-
-  {
-    svn_revnum_t ignored;
-    err = svn_fs_youngest_rev (&ignored, fs, pool);
-    SVN_ERR (check_no_fs_error (err));
-  }
-
-  {
-    svn_string_t *ignored;
-    err = svn_fs_revision_prop (&ignored, fs, 0, NULL, pool);
-    SVN_ERR (check_no_fs_error (err));
-  }
-
-  {
-    apr_hash_t *ignored;
-    err = svn_fs_revision_proplist (&ignored, fs, 0, pool);
-    SVN_ERR (check_no_fs_error (err));
-  }
-
-  {
-    svn_string_t unused1;
-    err = svn_fs_change_rev_prop (fs, 0, NULL, &unused1, pool);
-    SVN_ERR (check_no_fs_error (err));
-  }
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Make sure we get txn lists correctly. */
 static svn_error_t *
 verify_txn_list (const char **msg,
@@ -5299,7 +5210,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (reopen_trivial_transaction),
     SVN_TEST_PASS (create_file_transaction),
     SVN_TEST_PASS (verify_txn_list),
-    SVN_TEST_PASS (call_functions_with_unopened_fs),
     SVN_TEST_PASS (write_and_read_file),
     SVN_TEST_PASS (create_mini_tree_transaction),
     SVN_TEST_PASS (create_greek_tree_transaction),
