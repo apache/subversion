@@ -12,8 +12,8 @@
 	
 // SVNStatus.h : Declaration of the CSVNStatus COM object.
 
-#ifndef __SVNSTATUS_H_
-#define __SVNSTATUS_H_
+#ifndef WINSVN_STATUS_H_
+#define WINSVN_STATUS_H_
 #pragma once
 
 #include "resource.h"       // main symbols

@@ -10,8 +10,8 @@
  * ====================================================================
  */
 
-#ifndef __SVN_MARHSALL_H_
-#define __SVN_MARSHALL_H_
+#ifndef WINSVN_MARHSALL_H_
+#define WINSVN_MARSHALL_H_
 #pragma once
 
 // This class is a thread independant container
