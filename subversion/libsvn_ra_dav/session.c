@@ -149,10 +149,8 @@ static svn_boolean_t match_in_list(const char *str,
                                    const char *list,
                                    apr_pool_t *pool)
 {
-  apr_array_header_t *subvals = NULL;
+  apr_array_header_t *subvals = svn_cstring_split(list, ",", TRUE, pool);
   int i;
-
-  svn_cstring_split(&subvals, list, ",", TRUE, pool);
 
   for (i = 0; i < subvals->nelts; i++)
     {
