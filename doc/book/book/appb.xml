@@ -5,184 +5,126 @@
   <!-- ======================== SECTION 1 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ap-b-sect-1">
-      <title>Common Problems</title>
+    <title>Common Problems</title>
+    
+    <para>There are a number of problems you may run into in the
+      course of installing and using Subversion.  Some of these will
+      be resolved once you get a better idea of how Subversion does
+      things, while others are caused because you're used to the way
+      that other version control systems work.  Still other problems
+      might be unsolvable due to bugs in some of the operating systems
+      that Subversion runs on (considering the wide array of OS'es
+      that Subversion runs on, it's amazing that we don't encounter
+      many more of these).</para>
 
-      <para>There are a number of problems you may run into in the
-        course of installing and using Subversion.  Some of these will
-        be resolved once you get a better idea of how Subversion does
-        things, while others are caused because you're used to the way
-        that other version control systems work.  Still other problems
-        might be unsolvable due to bugs in some of the operating
-        systems that Subversion runs on (considering the wide array of
-        OS'es that Subversion runs on, it's amazing that we don't
-        encounter many more of these).</para>
-
-      <para>The following list has been compiled over the course of
-        several years of Subversion usage, and they cover just about
-        every frequently occurring problem that you'll see in
-        Subversion&mdash;from building, to installing, to using
-        Subversion.  If you can't find the problem you're having here,
-        or you've tried everything we recommend with no success, send
-        mail to <email>users@subversion.tigris.org</email> with a
-        detailed description of the problem you're having
-        <footnote><para>Remember that the amount of detail you provide
-        about your setup and your problem is directly proportional to
-        the likelihood of getting an answer from the mailing list.
-        You're encouraged to include everything short of what you had
-        for breakfast and your mother's maiden name.  </para>
-        </footnote> </para>
+    <para>The following list has been compiled over the course of
+      years of Subversion usage.  If you can't find the problem you're
+      having here, look at the most up-to-date version of the FAQ on
+      Subversion's main website.  If you're still stuck, then send
+      mail to <email>users@subversion.tigris.org</email> with a
+      detailed description of the problem you're having
+      <footnote><para>Remember that the amount of detail you provide
+      about your setup and your problem is directly proportional to
+      the likelihood of getting an answer from the mailing list.
+      You're encouraged to include everything short of what you had
+      for breakfast and your mother's maiden name.  </para>
+      </footnote> </para>
       
-      <itemizedlist>
-        <title>Problems Using Subversion</title>
-        
-        <listitem>
-          <para>Every time I try to access my repository,
-            <command>svn</command> just hangs.</para>
-        </listitem>
-        
-        <listitem>
-          <para>Every time I try to run <command>svn</command>, it
-            says my working copy is locked.</para>
-        </listitem>
-
-        <listitem>
-          <para>I'm getting errors finding or opening a repository,
-            but I know my repository URL is correct.</para>
-        </listitem>
-
-        <listitem>
-          <para>How can I specify a Windows drive letter in a
-            <literal>file://</literal> URL?</para>
-        </listitem>
-
-        <listitem>
-          <para>I'm having trouble doing write operations to a
-            Subversion repository over a network.</para>
-        </listitem>
-
-        <listitem>
-          <para>Under Windows XP, the Subversion server sometimes
-            seems to send out corrupted data.</para>
-        </listitem>
-
-        <listitem>
-          <para>What is the best method of doing a network trace of
-            the conversation between a Subversion client and
-            server?</para>
-        </listitem>
-      </itemizedlist>
-
-      <itemizedlist>
-        <title>Problems Building Subversion</title>
-
-        <listitem>
-          <para>I just built the distribution binary, and when I try
-            to check out Subversion, I get an error about an
-            <quote>Unrecognized URL scheme</quote>.</para>
-        </listitem>
-
-        <listitem>
-          <para>When I run <command>configure</command>, I get errors
-            like <literal>subs-1.sed line 38: Unterminated `s'
-            command</literal>.</para>
-        </listitem>
-
-        <listitem>
-          <para>I'm having trouble building Subversion under Windows
-          with MSVC++ 6.0.</para>
-        </listitem>
-      </itemizedlist>
-
+  
+    <sect2 id="svn-ap-b-sect-1.2">
+      <title>Problems Using Subversion</title>
       
-      <sect2 id="svn-ap-b-sect-1.2">
-        <title>Problems Using Subversion</title>
-
       <sect3 id="svn-ap-b-sect-1.2.1">
-          <title>Every Time I Try to Access My Repository, My
-          Subversion Client Just Hangs.</title>
+        <title>Every time I try to access my repository, my Subversion
+          client just hangs.</title>
+        
+        <para>Your repository is not corrupt, nor is your data
+          lost. If your process accesses the repository directly
+          (mod_dav_svn, svnlook, svnadmin, or if you access a
+          `file://' URL), then it's using Berkeley DB to access your
+          data.  Berkeley DB is journaling system, meaning that it
+          logs everything it is about to do before it does so.  If
+          your process is interrupted (kill signal or segfault), then
+          a lockfile is left behind, along with a logfile describing
+          unfinished business.  Any other process that attempts to
+          access the database will just hang, waiting for the lockfile
+          to disappear.  To awaken your repository, you need to ask
+          Berkeley DB to either finish the work, or rewind the
+          database to a previous state that is known to be
+          consistent.</para>
 
-          <para>Subversion uses Berkeley DB, which keeps your data in
-            a series of database files.  Berkeley DB is journaling
-            system, meaning that it logs every action it is about to
-            perform before it actually performs the action. If your
-            client is interrupted while in the process of talking to
-            the database, then a lockfile is left behind in the
-            database, along with a log file describing the unfinished
-            actions.</para>
+        <para>Make sure you run this command as the user that owns and
+          manages the database, and not as root, else it will leave
+          root-owned files in the db directory which cannot be opened
+          by the non-root user that manages the database, which is
+          typically either you or your Apache process.  Also be sure
+          to have the correct umask set when you run recover, since
+          failing to do so will lock out users that are in the group
+          allowed to access the repository.</para>
 
-          <para>Any other client that attempts to access the database
-            will just hang, waiting for the lockfile to disappear. To
-            awaken your repository, you need to tell Berkeley DB to
-            either finish the work, or rewind the database to a
-            previous state that is known to be consistent.  To do
-            this, run the following command from the machine that
-            contains your Subversion Repository:</para>
+        <para>Simply run:</para>
 
-          <screen>          
+<screen>
 $ svnadmin recover /path/to/repos
 </screen>
 
-          <para>Be sure that you disable all access to the repository
-            before doing this (by shutting down httpd or
-            svnserve). Make sure you run this command as the user that
-            owns and manages the database, and not as root, else it
-            will leave root-owned files in the
-            <filename>db/</filename> directory which cannot be opened
-            by the non-root user that manages the database, which is
-            typically either you or your Apache httpd process.</para>
-
-        </sect3>
-
-
-        <sect3 id="svn-ap-b-sect-1.2.2">
-          <title>Every Time I Try to Run <command>svn</command>, It
-            Says My Working Copy is Locked.</title>
-
-          <para>Subversion's working copy, just like Berkeley DB, uses
-            a journaling mechanism to perform all actions. That is, it
-            logs everything it is about to do before it does so. If
-            <command>svn</command> is interrupted while performing an
-            action, then one or more lockfiles are left behind, along
-            with log files describing then unfinished
-            actions. (<command>svn status</command> will show an
-            <literal>L</literal> next to locked directories.)</para>
-
-          <para>Any other process that attempts to access the working
-            copy will fail when it sees the locks. To awaken your
-            working copy, you need to tell the svn client to finish
-            the work.  To fix this, run this command from the top of
-            your working copy:</para>
-
-          <screen>
+        <para>Once the command has completed, check the permissions in the
+          <filename>db/</filename> directory of the repository.</para>
+        
+      </sect3>
+      
+      
+      <sect3 id="svn-ap-b-sect-1.2.2">
+        <title>Every time I try to run <command>svn</command>, it
+          says my working copy is locked.</title>
+        
+        <para>Subversion's working copy, just like Berkeley DB, uses a
+          journaling mechanism to perform all actions. That is, it
+          logs everything it is about to do before it does so. If
+          <command>svn</command> is interrupted while performing an
+          action, then one or more lockfiles are left behind, along
+          with log files describing then unfinished
+          actions. (<command>svn status</command> will show an
+          <literal>L</literal> next to locked directories.)</para>
+        
+        <para>Any other process that attempts to access the working
+          copy will fail when it sees the locks. To awaken your
+          working copy, you need to tell the client to finish the
+          work.  To fix this, run this command from the top of your
+          working copy:</para>
+        
+        <screen>
 $ svn cleanup working-copy
 </screen>
 
-        </sect3>
+      </sect3>
 
+      
+      <sect3 id="svn-ap-b-sect-1.2.3">
+        <title>I'm getting errors finding or opening a repository,
+          but I know my repository URL is correct.</title>
 
-        <sect3 id="svn-ap-b-sect-1.2.3">
-          <title>I'm Getting Errors Finding or Opening a Repository,
-            but I Know My Repository URL is Correct.</title>
+        <para>See <xref linkend="svn-ap-b-sect-1.2.1"/>.</para>
 
-          <para>See <xref linkend="svn-ap-b-sect-1.2.1"/>.</para>
+        <para>You might also have a permissions problem opening the
+          repository.  See <xref linkend="svn-ch-6-sect-5"/>.</para>
+      </sect3>
 
-        </sect3>
-
-
-        <sect3 id="svn-ap-b-sect-1.2.4">
-          <title>How can I specify a Windows drive letter in a
-            <literal>file://</literal> URL?</title>
-
-          <para>See <xref linkend="svn-ch-02-sidebar-1"/>.</para>
-        </sect3>
-
-        <sect3 id="svn-ap-b-sect-1.2.5">
-          <title>I'm Having Trouble Doing Write Operations to a
-            Subversion Repository over a Network</title>
-          
-          <para>If import works fine over local access:</para>
-          
-          <screen>
+      
+      <sect3 id="svn-ap-b-sect-1.2.4">
+        <title>How can I specify a Windows drive letter in a
+          <literal>file://</literal> URL?</title>
+        
+        <para>See <xref linkend="svn-ch-02-sidebar-1"/>.</para>
+      </sect3>
+      
+      <sect3 id="svn-ap-b-sect-1.2.5">
+        <title>I'm having trouble doing write operations to a
+          Subversion repository over a network.</title>
+        
+        <para>If import works fine over local access:</para>
+        
+        <screen>
 $ mkdir test
 $ touch test/testfile
 $ svn import test file:///var/svn/test -m "Initial import"
@@ -191,170 +133,361 @@ Transmitting file data .
 Committed revision 1.
 </screen>
 
-          <para>But not from a remote host:</para>
-
-          <screen>
+        <para>But not from a remote host:</para>
+        
+        <screen>
 $ svn import test http://svn.red-bean.com/test -m "Initial import"
 harry's password: xxxxxxx
 
-svn_error: #21110 : 
+svn_error: &hellip; The specified activity does not exist.
+</screen>
+        
+        <para>We've seen this when the <filename>REPOS/dav/</filename>
+          directory is not writable by the httpd process. Check the
+          permissions to ensure that Apache httpd can write to the
+          <filename>dav/</filename> directory (and to the
+          corresponding <filename>db/</filename> directory, of
+          course).</para>
+        
+      </sect3>
 
-The specified activity does not exist.
+
+      <sect3 id="svn-ap-b-sect-1.2.6">
+        <title>Under Windows XP, the Subversion server sometimes
+          seems to send out corrupted data.</title>
+        
+        <para>You need to install Window XP Service Pack 1 to fix a
+          TCP/IP stack bug in the operating system.  You can get all
+          sorts of information about that Service Pack at <systemitem
+          class="url">http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949</systemitem>.</para>
+      </sect3>
+      
+      
+      <sect3 id="svn-ap-b-sect-1.2.7">
+        <title>What is the best method of doing a network trace of
+          the conversation between a Subversion client and
+          Apache server?</title>
+        
+        <para>Use Ethereal to eavesdrop on the conversation:</para>
+
+        <note>
+          <para>The following instructions are specific to the
+            graphical version of Ethereal, and may not apply to the
+            command line version (whose binary is usually named
+            <command>tethereal</command>).</para>
+        </note>
+        
+        <itemizedlist>
+          <listitem>
+            <para>Pull down the Capture menu, and choose
+              Start.</para>
+          </listitem>
+          
+          <listitem>
+            <para>Type port 80 for Filter, and turn off promiscuous
+              mode.</para>
+          </listitem>
+          
+          <listitem>
+            <para>Run your Subversion client.</para>
+          </listitem>
+          
+          <listitem>
+            <para>Hit Stop. Now you have a capture. It looks like a
+              huge list of lines.</para>
+          </listitem>
+          
+          <listitem>
+            <para>Click on the Protocol column to sort.</para>
+          </listitem>
+          
+          <listitem>
+            <para>Then, click on the first relevant TCP line to
+              select it.</para>
+          </listitem>
+          
+          <listitem>
+            <para>Right click, and choose Follow TCP Stream. You'll
+              be presented with the request/response pairs of the
+              Subversion client's HTTP conversion.</para>
+          </listitem>
+        </itemizedlist>
+        
+        <para>Alternatively, you may set a parameter in your client's
+          <filename>servers</filename> run-time configuration file to
+          cause neon's debugging output to appear.  The numeric value
+          of neon-debug is a combination of the
+          <literal>NE_DBG_*</literal> values in the header file
+          <filename>ne_utils.h</filename>. Setting the
+          <literal>neon-debug-mask</literal> variable to 130
+          (i.e. <literal>NE_DBG_HTTP + NE_DBG_HTTPBODY</literal>) will
+          cause the HTTP data to be shown.</para>
+
+        <para>You may well want to disable compression when doing a
+          network trace by tweaking the
+          <literal>http-compression</literal> parameter in the same
+          file.</para>
+      </sect3>
+
+      <sect3 id="svn-ap-b-sect-1.2.8">
+        <title>I just built the distribution binary, and when I try to
+          check out Subversion, I get an error about an "Unrecognized
+          URL scheme."</title>
+        
+        <para>Subversion uses a plugin system to allow access to
+          repositories.  Currently there are three of these plugins:
+          ra_local allows access to a local repository, ra_dav which
+          allows access to a repository via WebDAV, and ra_svn allows
+          local or remote access via the svnserve server.  When you
+          attempt to perform an operation in subversion, the program
+          tries to dynamically load a plugin based on the URL scheme.
+          A `file://' URL will try to load ra_local, and an `http://'
+          URL will try to load ra_dav.</para>
+
+        <para>The error you are seeing means that the dynamic
+          linker/loader can't find the plugins to load.  This normally
+          happens when you build subversion with shared libraries,
+          then attempt to run it without first running 'make install'.
+          Another possible cause is that you ran make install, but the
+          libraries were installed in a location that the dynamic
+          linker/loader doesn't recognize.  Under Linux, you can allow
+          the linker/loader to find the libraries by adding the
+          library directory to <filename>/etc/ld.so.conf</filename>
+          and running ldconfig.  If you don't wish to do this, or you
+          don't have root access, you can also specify the library
+          directory in the LD_LIBRARY_PATH environment
+          variable.</para>
+        </sect3>
+
+
+      <sect3 id="svn-ap-b-sect-1.2.9">
+        <title>Why does the 'svn revert' command require an explicit
+          target? Why is it not recursive by default? This behavior
+          differs from almost all the other subcommands.</title>
+
+        <para>The short answer: it's for your own good.</para>
+
+        <para>Subversion places a very high priority on protecting
+          your data, and not just your versioned data.  Modifications
+          that you make to already-versioned files, and new files
+          scheduled for addition to the version control system, must
+          be treated with care.</para>
+        
+        <para>Making the <command>svn revert</command> command require
+          an explicit target&mdash;even if that target is just
+          '.'&mdash;is one way of accomplishing that.  This
+          requirement (as well as requiring you to supply the
+          <option>--recursive</option> flag if you want that behavior)
+          is intended to make you really think about what you're
+          doing, because once your files are reverted, your local
+          modifications are gone forever.</para>        
+      </sect3>
+
+
+      <sect3 id="svn-ap-b-sect-1.2.10">
+        <title>When I start Apache, mod_dav_svn complains about a "bad
+          database version", that it found db-3.X, rather than
+          db-4.X.</title>
+
+        <para>Your apr-util linked against DB-3, and svn linked
+          against DB-4.  Unfortunately, the DB symbols aren't
+          different.  When mod_dav_svn is loaded into Apache's
+          process-space, it ends up resolving the symbol names against
+          apr-util's DB-3 library.</para>
+
+        <para>The solution is to make sure apr-util compiles against
+          DB-4.  You can do this by passing specific switches to
+          either apr-util's or apache's configure: "--with-dbm=db4
+          --with-berkeley-db=/the/db/prefix".</para>
+      </sect3>
+
+
+      <sect3 id="svn-ap-b-sect-1.2.11">
+        <title>I'm getting "Function not implemented" errors on RedHat
+          9, and nothing works. How do I fix this?</title>
+
+        <para>This is not really a problem with Subversion, but it often
+          affects Subversion users.</para>
+
+        <para>RedHat 9 and Fedora ship with a Berkeley DB library that
+          relies on the kernel support for NPTL (the Native Posix
+          Threads Library).  The kernels that RedHat provides have
+          this support built in, but if you compile your own kernel,
+          then you may well not have the NPTL support.  If that is the
+          case, then you will see errors like this:</para>
+
+<screen>
+svn: Berkeley DB error
+svn: Berkeley DB error while creating environment for filesystem tester/db:
+Function not implemented
 </screen>
 
-          <para>We've seen this when the
-            <filename>REPOS/dav/</filename> directory is not writable
-            by the httpd process. Check the permissions to ensure that
-            Apache httpd can write to the <filename>dav/</filename>
-            directory (and to the corresponding
-            <filename>db/</filename> directory, of course).</para>
+        <para>This can be fixed in one of several ways:</para>
 
-        </sect3>
+        <itemizedlist>
+          <listitem><para>Rebuild db4 for the kernel you're
+          using.</para></listitem>
 
+          <listitem><para>Use a RedHat 9 kernel.</para></listitem>
 
-        <sect3 id="svn-ap-b-sect-1.2.6">
-          <title>Under Windows XP, the Subversion Server Sometimes
-            Seems to Send Out Corrupted Data.</title>
+          <listitem><para>Apply the NPTL patches to the kernel you're
+              using.</para></listitem>
 
-          <para>You need to install Window XP Service Pack 1.  You can
-            get all sorts of information about that Service Pack at
-            <systemitem
-            class="url">http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949</systemitem>
-            for details.</para>
-        </sect3>
+          <listitem><para>Use a recent (2.5.x) kernel with the NPTL support
+              included.</para></listitem>
 
-
-        <sect3 id="svn-ap-b-sect-1.2.7">
-          <title>What is the Best Method of Doing a Network Trace of
-            the Conversation Between a Subversion Client and
-            Server?</title>
-
-          <para>Use Ethereal to eavesdrop on the conversation:</para>
-
-          <note>
-            <para>The following instructions are specific to the
-              graphical version of Ethereal, and may not apply to the
-              command line version (whose binary is usually named
-              <command>tethereal</command>).</para>
-          </note>
-
-          <itemizedlist>
-            <listitem>
-              <para>Pull down the Capture menu, and choose
-              Start.</para>
-            </listitem>
-            
-            <listitem>
-              <para>Type port 80 for Filter, and turn off promiscuous
-                mode.</para>
-            </listitem>
-            
-            <listitem>
-              <para>Run your Subversion client.</para>
-            </listitem>
-
-            <listitem>
-              <para>Hit Stop. Now you have a capture. It looks like a
-                huge list of lines.</para>
-            </listitem>
-
-            <listitem>
-              <para>Click on the Protocol column to sort.</para>
-            </listitem>
-
-            <listitem>
-              <para>Then, click on the first relevant TCP line to
-              select it.</para>
-            </listitem>
-
-            <listitem>
-              <para>Right click, and choose Follow TCP Stream. You'll
-                be presented with the request/response pairs of the
-                Subversion client's HTTP conversion.</para>
-            </listitem>
-          </itemizedlist>
-
-          <para>Alternatively, you may set the http-debug parameter in
-            the server's configuration file to cause neon's debugging
-            output to appear when you run the svn client. The numeric
-            value of neon-debug is a combination of the
-            <literal>NE_DBG_*</literal> values in the header file
-            <filename>ne_utils.h</filename>. Setting
-            <literal>http-debug</literal> to 130
-            (i.e. <literal>NE_DBG_HTTP + NE_DBG_HTTPBODY</literal>)
-            will cause the HTTP data to be shown.</para>
-
-          <para>You may well want to disable compression when doing a
-            network trace, see the compression parameter in the config
-            configuration file.</para>
-        </sect3>
-
-      </sect2>
+          <listitem><para>Check if environment variable
+              <literal>LD_ASSUME_KERNEL</literal> is set to 2.2.5, and
+              if so, unset it before starting Subversion
+              (Apache). (You usually would set this variable to run
+              Wine or Winex on RedHat 9)</para></listitem>
+        </itemizedlist>          
+      </sect3>
 
 
-      <sect2 id="svn-ap-b-sect-1.3">
-        <title>Problems Building Subversion</title>
+      <sect3 id="svn-ap-b-sect-1.2.12">
+        <title>Why does log say "(no author)" for files committed
+          or imported via Apache (ra_dav)?</title>
 
-        <sect3 id="svn-ap-b-sect-1.3.1">
-          <title>I Just Built the Distribution Binary, and When I Try
-            to Check Out Subversion, I Get an Error About an
-            <quote>Unrecognized URL Scheme</quote></title>
+        <para>If you allow anonymous write access to the repository
+          via Apache, the Apache server never challenges the client
+          for a username, and instead permits the write operation
+          without authentication.  Since Subversion has no idea who
+          did the operation, this results in a log like this:</para>
 
+<screen>
+$ svn log
+------------------------------------------------------------------------
+rev 24:&nbsp; (no author) | 2003-07-29 19:28:35 +0200 (Tue, 29 Jul 2003)
+&hellip;
+</screen>
 
-          <para>Subversion uses a plugin system to allow access to
-            repositories. Currently there are three of these plugins:
-            <literal>ra_local</literal> allows access to a local
-            repository, <literal>ra_dav</literal> which allows access
-            to a repository via WebDAV, and <literal>ra_svn</literal>
-            allows local or remote access via the svnserve
-            server. When you attempt to perform an operation in
-            Subversion, the client tries to dynamically load a plugin
-            based on the URL scheme. A <literal>file://</literal> URL
-            will try to load <literal>ra_local</literal>, an
-            <literal>http://</literal> URL will try to load ra_dav,
-            and so on.</para>
-
-          <para>The error you are seeing means that the dynamic
-            linker/loader can't find the plugins to load. This
-            normally happens when you build Subversion with shared
-            libraries, then attempt to run it without first running
-            <literal>make install'</literal> Another possible cause is
-            that you ran make install, but the libraries were
-            installed in a location that the dynamic linker/loader
-            doesn't recognize. Under Linux, you can allow the
-            linker/loader to find the libraries by adding the library
-            directory to <filename>/etc/ld.so.conf</filename> and
-            running <command>ldconfig</command>. If you don't wish to
-            do this, or you don't have root access, you can also
-            specify the library directory in the
-            <literal>LD_LIBRARY_PATH</literal> environment
-            variable.</para>
-        </sect3>
+        <para>Read about adding authentication in <xref
+            linkend="svn-ch-6"/>.</para>
+      </sect3>
 
 
-        <sect3 id="svn-ap-b-sect-1.3.2">
-          <title>When I Run <command>configure</command>, I Get Errors
-            Like <literal>subs-1.sed line 38: Unterminated `s'
-            command</literal></title>
+      <sect3 id="svn-ap-b-sect-1.2.13">
+        <title>I'm getting occasional "Access Denied" errors on
+          Windows.  They seem to happen at random.</title>
 
-          <para>You probably have old copies of
-            <filename>/usr/local/bin/apr-config</filename> and
-            <filename>/usr/local/bin/apu-config</filename> on your
-            system. Remove them, make sure the
-            <filename>apr/</filename> and
-            <filename>apr-util/</filename> that you're building with
-            are completely up-to-date, and try again.</para>
-        </sect3>
+        <para>These appear to be due to the various Windows services
+          that monitor the filesystem for changes (anti-virus
+          software, indexing services, the COM+ Event Notification
+          Service).  This is not really a bug in Subversion, which
+          makes it difficult for to fix.  A summary of the current
+          state of the investigation is available at <systemitem
+          class="url">http://www.contactor.se/~dast/svn/archive-2003-10/0136.shtml</systemitem>.
+          A workaround that should reduce the incidence rate for most
+          people was implemented in revision 7598.</para>
+      </sect3>
 
 
-        <sect3 id="svn-ap-b-sect-1.3.3">
-          <title>I'm Having Trouble Building Subversion Under Windows
-          with MSVC++ 6.0.</title>
+      <sect3 id="svn-ap-b-sect-1.2.14">
+        <title>On FreeBSD, certain operations (especially svnadmin
+          create) sometimes hang.</title>
 
-          <para>You need to get the latest platform SDK. The one that
-            ships with VCa++ 6.0 is not recent enough.</para>
+        <para>This is usually due to a lack of available entropy on
+          the system.  Subversion asks APR to generate random numbers
+          to create UUIDs from time to time, and certain operating
+          systems will block for high-quality randomness.  You
+          probably need to configure the system to gather entropy from
+          sources such as hard-disk and network interrupts.  Consult
+          your system manpages, specifically
+          <command>random(4)</command> and
+          <command>rndcontrol(8)</command> on how to effect this
+          change.  Another workaround is to compile APR against
+          <filename>/dev/urandom</filename> instead of
+          <filename>/dev/random</filename>.</para>
+      </sect3>
 
-        </sect3>
+
+      <sect3 id="svn-ap-b-sect-1.2.15">
+        <title>I can see my repository in a web browser, but 'svn
+          checkout' gives me an error about "301 Moved
+          Permanently".</title> 
+
+        <para>It means your httpd.conf is misconfigured.  Usually this
+          error happens when you've defined the Subversion virtual
+          "location" to exist within two different scopes at the same
+          time.</para>
+
+        <para>For example, if you've exported a repository as
+            <literal>&lt;Location /www/foo&gt;</literal>, but you've
+            also set your <literal>DocumentRoot</literal> to be
+            <filename>/www</filename>, then you're in trouble.  When
+            the request comes in for
+            <filename>/www/foo/bar</filename>, apache doesn't know
+            whether to find a <emphasis>real</emphasis> file named
+            <filename>/foo/bar</filename> within your
+            <literal>DocumentRoot</literal>, or whether to ask
+            mod_dav_svn to fetch a file <filename>/bar</filename> from
+            the <filename>/www/foo</filename> repository.  Usually the
+            former case wins, and hence the "Moved Permanently"
+            error.</para>
+
+        <para>The solution is to make sure your repository
+          <literal>&lt;Location&gt;</literal> does not overlap or live
+          within any areas already exported as normal web
+          shares.</para>
+      </sect3>
+
+      
+      <sect3 id="svn-ap-b-sect-1.2.16">
+        <title>I'm trying to look at an old version of my file, but svn
+          says something about "path not found".</title>
+
+        <para>A nice feature of Subversion is that the repository
+          understands copies and renames, and preserves the historical
+          connections.  For example, if you copy
+          <filename>/trunk</filename> to
+          <filename>/branches/mybranch</filename>, then the repository
+          understands that every file in the branch has a
+          "predecessor" in the trunk.  Running <filename>svn log
+          --verbose</filename> will show you the historical copy, so
+          you can see the rename:</para>
+
+<screen>
+r7932 | joe | 2003-12-03 17:54:02 -0600 (Wed, 03 Dec 2003) | 1 line
+Changed paths:
+   A /branches/mybranch (from /trunk:7931)
+</screen>
+
+        <para>Unfortunately, while the repository is aware of copies
+          and renames, almost all the svn client subcommands in
+          version 1.0 are <emphasis>not</emphasis> aware.  Commands
+          like <command>svn diff</command>, <command>svn
+          merge</command>, and <command>svn cat</command> ought to
+          understand and follow renames, but don't yet do this.  It's
+          scheduled as post-1.0 feature.  For example, if you ask
+          <command>svn diff</command> to compare two earlier versions
+          of <filename>/branches/mybranch/foo.c</filename>, the
+          command will not automatically understand that the task
+          actually requires comparing two versions of
+          <filename>/trunk/foo.c</filename>, due to the rename.
+          Instead, you'll see an error about how the branch-path
+          doesn't exist in the earlier revisions.</para>
+
+        <para>The workaround for all problems of this sort is to do
+          the legwork yourself.  That is: <emphasis>you</emphasis>
+          need to be aware of any renamed paths, discover them
+          yourself using <command>svn log -v</command>, and then
+          provide them explicitly to the svn client.  For example,
+          instead of running</para>
+
+<screen>
+$ svn diff -r 1000:2000 http://host/repos/branches/mybranch/foo.c
+svn: Filesystem has no item
+svn: '/branches/mybranch/foo.c' not found in the repository at revision 1000
+</screen>
+
+        <para>...you would instead run</para>
+
+<screen>
+$ svn diff -r1000:2000 http://host/repos/trunk/foo.c
+...
+</screen>
+      </sect3>
 
       </sect2>
 
