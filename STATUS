@@ -74,7 +74,8 @@ section for approved changes.)
         pages.  Also require correct apr/apr-util, and apache RPM versions.
      Justification: Packaging fixes and additions.
      Votes:
-      +1 (concept): gstein, kfogel
+      +1 (concept): gstein
+      +1: kfogel
 
 
    * Issue #1681
