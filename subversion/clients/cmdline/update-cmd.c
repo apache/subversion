@@ -51,15 +51,16 @@ svn_cl__update (apr_getopt_t *os,
 
   for (i = 0; i < condensed_targets->nelts; i++)
     {
-      svn_stringbuf_t *target = ((svn_stringbuf_t **) (condensed_targets->elts))[i];
+      svn_stringbuf_t *target = 
+        ((svn_stringbuf_t **) (condensed_targets->elts))[i];
       const svn_delta_edit_fns_t *trace_editor;
       void *trace_edit_baton;
       svn_stringbuf_t *parent_dir, *entry;
 
-      SVN_ERR (svn_wc_get_actual_update_target (target,
-                                                &parent_dir,
-                                                &entry,
-                                                pool));
+      SVN_ERR (svn_wc_get_actual_target (target,
+                                         &parent_dir,
+                                         &entry,
+                                         pool));
 
       SVN_ERR (svn_cl__get_trace_update_editor (&trace_editor,
                                                 &trace_edit_baton,

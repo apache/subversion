@@ -67,6 +67,16 @@ svn_cl__commit (apr_getopt_t *os,
                                       svn_path_local_style,
                                       pool));
 
+  if ((! condensed_targets) || (! condensed_targets->nelts))
+    {
+      svn_stringbuf_t *parent_dir, *basename;
+
+      SVN_ERR (svn_wc_get_actual_target (base_dir, &parent_dir, 
+                                         &basename, pool));
+      if (basename)
+        svn_stringbuf_set (base_dir, parent_dir->data);
+    }
+
   /* ...so we can have a common parent path to pass to the trace
      editor.  Note that what we are actually passing here is the
      difference between the absolute path of the current working

@@ -367,8 +367,8 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
                void *after_edit_baton,                   
                svn_stringbuf_t *base_dir,
                apr_array_header_t *condensed_targets,
-               svn_stringbuf_t *url,            /* null unless importing */
-               svn_stringbuf_t *new_entry,      /* null except when importing */
+               svn_stringbuf_t *url,        /* null unless importing */
+               svn_stringbuf_t *new_entry,  /* null except when importing */
                svn_stringbuf_t *log_msg,
                svn_stringbuf_t *xml_dst,
                svn_revnum_t revision,
@@ -601,6 +601,35 @@ svn_client_commit (const svn_delta_edit_fns_t *before_editor,
                                       targets,
                                       svn_path_local_style,
                                       pool));
+
+  /* If we calculated only a base_dir and no relative targets, this
+     must mean that we are being asked to commit a single directory.
+     In order to do this properly, we need to anchor our commit up one
+     directory level, so long as our anchor is still a versioned
+     directory. */
+  if ((! condensed_targets) || (! condensed_targets->nelts))
+    {
+      svn_stringbuf_t *parent_dir, *basename;
+
+      SVN_ERR (svn_wc_get_actual_target (base_dir, &parent_dir, 
+                                         &basename, pool));
+      if (basename)
+        {
+          /* Our new "grandfather directory" is the parent directory
+             of the former one. */
+          svn_stringbuf_set (base_dir, parent_dir->data);
+
+          /* Make the array if it wasn't already created. */
+          if (! condensed_targets)
+            condensed_targets = apr_array_make 
+              (pool, targets->nelts, sizeof (svn_stringbuf_t *));
+
+          /* Now, push this basename as a relative path to our new
+             base directory. */
+          (*((svn_stringbuf_t **)apr_array_push 
+             (condensed_targets))) = basename;
+        }
+    }
 
   SVN_ERR (send_to_repos (before_editor, before_edit_baton,
                           after_editor, after_edit_baton,                   

@@ -474,18 +474,17 @@ svn_error_t *svn_wc_get_update_editor (svn_stringbuf_t *dest,
  * Conditionally split PATH into a PARENT_DIR and an ENTRY in that
  * parent_dir for the purposes of updates.
  *
- * PARENT_DIR is the directory at which the update editor should be
- * rooted.
+ * PARENT_DIR is the directory at which the update or commit editor
+ * should be rooted.
  *
- * ENTRY is the actual thing in the PARENT_DIR that should be updated,
- * or NULL if the entire directory should be updated.
+ * ENTRY is the actual thing in the PARENT_DIR that should be updated
+ * or committed, or NULL if the entire directory is the target.
  *
- * Do all necessary allocations in POOL.
- */
-svn_error_t *svn_wc_get_actual_update_target (svn_stringbuf_t *path,
-                                              svn_stringbuf_t **parent_dir,
-                                              svn_stringbuf_t **entry,
-                                              apr_pool_t *pool);
+ * Do all necessary allocations in POOL.  */
+svn_error_t *svn_wc_get_actual_target (svn_stringbuf_t *path,
+                                       svn_stringbuf_t **parent_dir,
+                                       svn_stringbuf_t **entry,
+                                       apr_pool_t *pool);
 
 
 /* Like svn_wc_get_update_editor(), except that:
