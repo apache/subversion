@@ -558,7 +558,7 @@ verify_lock (svn_fs_t *fs,
                          APR_HASH_KEY_STRING) == NULL)
     return svn_error_createf 
       (SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
-       _("Cannot verify lock on path '%s'; no matching lock-token avaliable"),
+       _("Cannot verify lock on path '%s'; no matching lock-token available"),
        lock->path);
     
   return SVN_NO_ERROR;
