@@ -171,13 +171,14 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
 
 
 svn_error_t *
-svn_repos_revisions_changed (apr_array_header_t **revs,
-                             svn_fs_t *fs,
-                             const char *path,
-                             svn_revnum_t start,
-                             svn_revnum_t end,
-                             svn_boolean_t cross_copies,
-                             apr_pool_t *pool)
+svn_repos_history (svn_fs_t *fs,
+                   const char *path,
+                   svn_repos_history_func_t history_func,
+                   void *history_baton,
+                   svn_revnum_t start,
+                   svn_revnum_t end,
+                   svn_boolean_t cross_copies,
+                   apr_pool_t *pool)
 {
   svn_fs_history_t *history;
   apr_pool_t *oldpool = svn_pool_create (pool);
@@ -206,9 +207,6 @@ svn_repos_revisions_changed (apr_array_header_t **revs,
       end = tmprev;
     }
 
-  /* Allocate our return array. */
-  *revs = apr_array_make (pool, 4, sizeof (history_rev));
-
   /* Get a revision root for END, and an initial HISTORY baton.  */
   SVN_ERR (svn_fs_revision_root (&root, fs, end, pool));
   SVN_ERR (svn_fs_node_history (&history, root, path, oldpool));
@@ -227,9 +225,7 @@ svn_repos_revisions_changed (apr_array_header_t **revs,
       if (! history)
         break;
 
-      /* Fetch the location information for this history step.
-         ### We would probably just use POOL if we actually cared
-         ### about the HISTORY_PATH. */
+      /* Fetch the location information for this history step. */
       SVN_ERR (svn_fs_history_location (&history_path, &history_rev,
                                         history, newpool));
       
@@ -237,7 +233,10 @@ svn_repos_revisions_changed (apr_array_header_t **revs,
          here. */
       if (history_rev < start)
         break;
-      APR_ARRAY_PUSH (*revs, svn_revnum_t) = history_rev;
+
+      /* Call the user-provided callback function. */
+      SVN_ERR (history_func (history_baton, history_path, 
+                             history_rev, newpool));
 
       /* We're done with the old history item, so we can clear its
          pool, and then toggle our notion of "the old pool". */

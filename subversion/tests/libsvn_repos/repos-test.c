@@ -473,6 +473,19 @@ print_chrevs (const apr_array_header_t *revs_got,
 }
 
 
+/* Implements svn_repos_history_func_t interface.  Accumulate history
+   revisions the apr_array_header_t * which is the BATON. */
+static svn_error_t *
+history_to_revs_array (void *baton,
+                       const char *path,
+                       svn_revnum_t revision,
+                       apr_pool_t *pool)
+{
+  apr_array_header_t *revs_array = baton;
+  APR_ARRAY_PUSH (revs_array, svn_revnum_t) = revision;
+  return SVN_NO_ERROR;
+}
+
 struct revisions_changed_results
 {
   const char *path;
@@ -493,7 +506,7 @@ revisions_changed (const char **msg,
   svn_fs_root_t *txn_root, *rev_root;
   svn_revnum_t youngest_rev = 0;
   
-  *msg = "test svn_repos_revisions_changed";
+  *msg = "test svn_repos_history() (partially)";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -653,8 +666,6 @@ revisions_changed (const char **msg,
       { "A/D/H/omega",    5,    {        8,    6,       3, 2, 1    } }
     };
     
-    apr_array_header_t *revs;
-
     /* Now, for each path in the revision, get its changed-revisions
        array and compare the array to the static results above.  */
     for (j = 0; j < 25; j++)
@@ -663,9 +674,11 @@ revisions_changed (const char **msg,
         const char *path = test_data[j].path;
         int num_revs = test_data[j].num_revs;
         const svn_revnum_t *revs_changed = test_data[j].revs_changed;
+        apr_array_header_t *revs = apr_array_make (spool, 10, 
+                                                   sizeof (svn_revnum_t));
 
-        SVN_ERR (svn_repos_revisions_changed (&revs, fs, path, 0, 
-                                              youngest_rev, TRUE, spool));
+        SVN_ERR (svn_repos_history (fs, path, history_to_revs_array, revs, 
+                                    0, youngest_rev, TRUE, spool));
 
         /* Are we at least looking at the right number of returned
            revisions? */

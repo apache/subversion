@@ -842,14 +842,6 @@ Available subcommands:
           </varlistentry>
 
           <varlistentry>
-            <term><literal>lscr</literal></term>
-            <listitem>
-              <para>List the revisions in which a given path in the
-                repository was modified.</para>
-            </listitem>
-          </varlistentry>
-
-          <varlistentry>
             <term><literal>lstxns</literal></term>
             <listitem>
               <para>List the names of uncommitted Subversion

@@ -425,19 +425,33 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
                               apr_pool_t *pool);
 
 
-/** Allocate aned return and array @a revs of revisions (type @c
- * svn_revnum_t) in which @a path in @a fs changed, bounded by the
- * revisions @a start and @a end.  Only cross filesystem copy history
- * if @a cross_copies is @c TRUE.  And do all of this in @a pool.
+/** Callback type for use with svn_repos_history().  @a path and @a
+ * revision represent interesting history locations in the lifetime
+ * of the path passed to svn_repos_history().  @a baton is the same
+ * baton given to svn_repos_history().  @a pool is provided for the
+ * convenience of the implementor, who should not expect it to live
+ * longer than a single callback call.
+ */
+typedef svn_error_t *svn_repos_history_func_t (void *baton,
+                                               const char *path,
+                                               svn_revnum_t revision,
+                                               apr_pool_t *pool);
+
+/** Call @a history_func (with @a history_baton) for each interesting
+ * history location in the lifetime of @a path in @a fs, from the
+ * youngest of @a end and @ start to the oldest.  Only cross
+ * filesystem copy history if @a cross_copies is @c TRUE.  And do all
+ * of this in @a pool.
  */
 svn_error_t *
-svn_repos_revisions_changed (apr_array_header_t **revs,
-                             svn_fs_t *fs,
-                             const char *path,
-                             svn_revnum_t start,
-                             svn_revnum_t end,
-                             svn_boolean_t cross_copies,
-                             apr_pool_t *pool);
+svn_repos_history (svn_fs_t *fs,
+                   const char *path,
+                   svn_repos_history_func_t history_func,
+                   void *history_baton,
+                   svn_revnum_t start,
+                   svn_revnum_t end,
+                   svn_boolean_t cross_copies,
+                   apr_pool_t *pool);
 
 /* ### other queries we can do someday --
 

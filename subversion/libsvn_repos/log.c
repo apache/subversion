@@ -116,6 +116,21 @@ detect_changed (apr_hash_t **changed,
 }
 
 
+
+/* Implements svn_repos_history_func_t interface.  Accumulate history
+   revisions the apr_array_header_t * which is the BATON. */
+static svn_error_t *
+history_to_revs_array (void *baton,
+                       const char *path,
+                       svn_revnum_t revision,
+                       apr_pool_t *pool)
+{
+  apr_array_header_t *revs_array = baton;
+  APR_ARRAY_PUSH (revs_array, svn_revnum_t) = revision;
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_repos_get_logs (svn_repos_t *repos,
                     const apr_array_header_t *paths,
@@ -174,9 +189,11 @@ svn_repos_get_logs (svn_repos_t *repos,
       if (paths->nelts == 1)
         {
           /* Get the changed revisions for this path. */
-          SVN_ERR (svn_repos_revisions_changed 
-                   (&revs, fs, APR_ARRAY_IDX (paths, 0, const char *),
-                    start, end, strict_node_history ? 0 : 1, pool));
+          const char *this_path = APR_ARRAY_IDX (paths, 0, const char *);
+          revs = apr_array_make (pool, 64, sizeof (svn_revnum_t));
+          SVN_ERR (svn_repos_history (fs, this_path, history_to_revs_array, 
+                                      revs, start, end, 
+                                      strict_node_history ? 0 : 1, pool));
         }
       else
         {
@@ -188,14 +205,15 @@ svn_repos_get_logs (svn_repos_t *repos,
           for (i = 0; i < paths->nelts; i++)
             {
               const char *this_path = APR_ARRAY_IDX (paths, i, const char *);
-              apr_array_header_t *changed_revs;
+              apr_array_header_t *changed_revs = 
+                apr_array_make (pool, 64, sizeof (svn_revnum_t));
               int j;
 
               /* Get the changed revisions for this path, and add them to
                  the hash (this will eliminate duplicates). */
-              SVN_ERR (svn_repos_revisions_changed 
-                       (&changed_revs, fs, this_path,
-                        start, end, strict_node_history ? 0 : 1, pool));
+              SVN_ERR (svn_repos_history (fs, this_path, history_to_revs_array,
+                                          changed_revs, start, end, 
+                                          strict_node_history ? 0 : 1, pool));
               for (j = 0; j < changed_revs->nelts; j++)
                 {
                   /* We're re-using the memory allocated for the array

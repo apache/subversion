@@ -3686,72 +3686,6 @@ $ svnadmin load /usr/local/svn/restored &lt; repos-backup
       <!-- ================================================================= -->
       <refentry>
         <refnamediv>
-          <refname>svnadmin lscr</refname>
-          <refpurpose>Print, one-per-line and youngest-to-eldest,
-            the revisions in which PATH was modified.</refpurpose>
-        </refnamediv>
-        <refsect1>
-          <title>Synopsis</title>
-          <programlisting>svnadmin lscr REPOS_PATH PATH [--copies]</programlisting>
-        </refsect1>
-        <refsect1>
-          <title>Description</title>
-
-          <para><command>lscr</command>
-            <footnote>
-              <para>It's not immediately obvious, but lscr stands for
-                <emphasis>L</emphasis>i<emphasis>S</emphasis>t
-                <emphasis>C</emphasis>hanged
-                <emphasis>R</emphasis>evisions.  That's what happens
-                when you let programmers come up with names for
-                commands.</para>
-            </footnote>
-            prints, one-per-line and youngest-to-eldest, the revisions
-            in which PATH was modified.  Use the COPIES flag to allow
-            this operation to cross copy history while searching for
-            revisions.  PATH must exist in the HEAD of the
-            repository.</para>
-        </refsect1>
-
-        <refsect1>
-          <title>Switches</title>
-
-          <screen>
---copies
-          </screen>
-        </refsect1>
-
-        <refsect1>
-          <title>Examples</title>
-
-          <para>List the revisions in which a path was
-            modified:</para>
-
-          <screen>
-$ svnadmin lscr /usr/local/svn/repos/ test-moved-file
-34
-33
-          </screen>
-
-          <para>List the revisions in which a path was modified
-            including changes that occurred before it was
-            moved/copied:</para>
-
-          <screen>
-$ svnadmin lscr /usr/local/svn/repos/ test-moved-file --copies
-34
-33
-15
-14
-&hellip;
-          </screen>
-
-        </refsect1>
-      </refentry>
-
-      <!-- ================================================================= -->
-      <refentry>
-        <refnamediv>
           <refname>svnadmin lstxns</refname>
           <refpurpose>Print the names of all uncommitted transactions.</refpurpose>
         </refnamediv>
@@ -4297,6 +4231,66 @@ trunk/vendors/deli/
             and forgot to invite it to your last party.</para>
         </refsect1>
 
+      </refentry>
+
+      <!-- ================================================================= -->
+      <refentry>
+        <refnamediv>
+          <refname>svnlook history</refname>
+          <refpurpose>Print information about the history of a path in
+            the repository (or the root directory if no path is
+            supplied).</refpurpose>
+        </refnamediv>
+        <refsect1>
+          <title>Synopsis</title>
+          <programlisting>svnlook history REPOS_PATH 
+            [PATH_IN_REPOS]</programlisting>
+        </refsect1>
+        <refsect1>
+          <title>Description</title>
+
+          <para>Print information about the history of a path in
+            the repository (or the root directory if no path is
+            supplied).</para>
+        </refsect1>
+
+        <refsect1>
+          <title>Switches</title>
+
+          <screen>
+--revision (-r)
+--show-ids
+          </screen>
+        </refsect1>
+
+        <refsect1>
+          <title>Examples</title>
+
+          <para>This shows the history output for the path
+            <filename>/tags/1.0</filename> as of revision 15 in our
+            sample repository.</para>
+
+          <screen>
+$ svnlook history -r 20 /usr/local/svn/repos /tags/1.0 --show-ids
+REVISION   PATH &lt;ID&
+--------   ----
+      19   /tags/1.0 <1.2.12>
+      17   /branches/1.0-rc2 <1.1.10>
+      16   /branches/1.0-rc2 <1.1.x>
+      14   /trunk <1.0.q>
+      13   /trunk <1.0.o>
+      11   /trunk <1.0.k>
+       9   /trunk <1.0.g>
+       8   /trunk <1.0.e>
+       7   /trunk <1.0.b>
+       6   /trunk <1.0.9>
+       5   /trunk <1.0.7>
+       4   /trunk <1.0.6>
+       2   /trunk <1.0.3>
+       1   /trunk <1.0.2>
+          </screen>
+          
+        </refsect1>
       </refentry>
 
       <!-- ================================================================= -->
