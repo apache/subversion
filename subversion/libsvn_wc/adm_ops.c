@@ -863,8 +863,21 @@ revert_admin_things (svn_stringbuf_t *parent_dir,
              missing altogether), copy the text-base out into
              the working copy, and update the timestamp in the entries
              file. */
+          enum svn_wc__eol_style eol_style;
+          const char *eol;
           pristine_thing = svn_wc__text_base_path (full_path, 0, pool);
-          err = svn_io_copy_file (pristine_thing, full_path, pool);
+
+          SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol,
+                                          full_path->data, pool));
+
+          if (eol_style == svn_wc__eol_style_native)
+            err = svn_io_copy_and_translate (pristine_thing->data,
+                                             full_path->data,
+                                             eol, FALSE, /* don't repair */
+                                             NULL, NULL, NULL, NULL, FALSE,
+                                             pool);
+          else
+            err = svn_io_copy_file (pristine_thing, full_path, pool);
           if (err)
             return svn_error_createf 
               (err->apr_err, 0, NULL, pool,
