@@ -102,56 +102,6 @@ print_tree (svn_fs_root_t *root,
 }
 
 
-static svn_error_t *
-do_deltify_undeltify (svn_fs_root_t *root,
-                      const char *path,
-                      int is_deltify,
-                      apr_pool_t *pool)
-{
-  /* do the (un-)deltification */
-  printf ("%seltifying `%s'...", is_deltify ? "D" : "Und", path);
-  if (is_deltify)
-    SVN_ERR (svn_fs_deltify (root, path, 0, pool));
-  else
-    SVN_ERR (svn_fs_undeltify (root, path, 0, pool));
-  printf ("done.\n");
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-deltify_undeltify (svn_fs_root_t *root,
-                   const char *path,
-                   int is_deltify,
-                   apr_pool_t *pool)
-{
-  apr_hash_t *entries;
-  apr_pool_t *subpool;
-  apr_hash_index_t *hi;
-  int is_dir;
-
-  /* (Un)deltify PATH. */
-  SVN_ERR (do_deltify_undeltify (root, path, is_deltify, pool));
-
-  /* If PATH is not a directory, we're done. */
-  SVN_ERR (svn_fs_is_dir (&is_dir, root, path, pool));
-  if (! is_dir)
-    return SVN_NO_ERROR;
-
-  /* Else, read PATH's entries and recurse. */
-  subpool = svn_pool_create (pool);
-  SVN_ERR (svn_fs_dir_entries (&entries, root, path, pool));
-  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      apr_hash_this (hi, &key, NULL, NULL);
-      deltify_undeltify (root, svn_path_join (path, key, subpool),
-                         is_deltify, subpool);
-      svn_pool_clear (subpool);
-    }
-  svn_pool_destroy (subpool);
-  return SVN_NO_ERROR;
-}
 
 
 /*** Argument parsing and usage. ***/
@@ -266,12 +216,12 @@ parse_command (const char *command)
     return svnadmin_cmd_setlog;
   else if (! strcmp (command, "shell"))
     return svnadmin_cmd_shell;
-#if 0 /* svn_fs_deltify() is not currently implemented. */
   else if (! strcmp (command, "undeltify"))
     return svnadmin_cmd_undeltify;
-#endif /* 0 */
+#if 0 /* svn_fs_deltify() is not currently implemented. */
   else if (! strcmp (command, "deltify"))
     return svnadmin_cmd_deltify;
+#endif /* 0 */
   else if (! strcmp (command, "dump"))
     return svnadmin_cmd_dump;
   else if (! strcmp (command, "load"))
@@ -642,6 +592,7 @@ main (int argc, const char * const *argv)
     case svnadmin_cmd_undeltify:
       {
         svn_revnum_t the_rev;
+        int is_dir = 0;
         svn_fs_root_t *rev_root;
         const char *node;
         int is_deltify = (command == svnadmin_cmd_deltify);
@@ -663,8 +614,22 @@ main (int argc, const char * const *argv)
         /* open the revision root */
         INT_ERR (svn_fs_revision_root (&rev_root, fs, the_rev, pool));
 
+        /* see if PATH represents a directory (this doubles as an
+           existence check!) */
+        INT_ERR (svn_fs_is_dir (&is_dir, rev_root, node, pool));
+
         /* do the (un-)deltification */
-        INT_ERR (deltify_undeltify (rev_root, node, is_deltify, pool));
+        printf ("%seltifying `%s' in revision %" SVN_REVNUM_T_FMT "...", 
+                is_deltify ? "D" : "Und", node, the_rev);
+        if (is_deltify)
+          {
+            INT_ERR (svn_fs_deltify (rev_root, node, is_dir ? 1 : 0, pool));
+          }
+        else
+          {
+            INT_ERR (svn_fs_undeltify (rev_root, node, is_dir ? 1 : 0, pool));
+          }
+        printf ("done.\n");
       }
       break;
 
