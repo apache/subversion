@@ -1,12 +1,53 @@
 # if you see @VERSION@ or @RELEASE@ here, then this spec file
 # was not generated from the makefile. you can replace these tokens
 # with the appropraite numbers, or use the makefile.
+%define _topdir	@RPMDIR@
+%define _tmppath /tmp
+%define _signature	gpg
+%define _gpg_name	Mandrake Linux
+%define _gpg_path	./gnupg
+%define distribution	Mandrake Linux
+%define vendor	MandrakeSoft
+
+%define apache_ver   @APACHE_VER@
+%define apache_dir   @APACHE_DIR@
+%define apache_conf  @APACHE_CONF@
+%define db4_rpm      @DB4_RPM@
+%define db4_ver      @DB4_VER@
+%define neon_rpm     @NEON_RPM@
+%define neon_ver     @NEON_VER@
+%define mod_activate @MOD_ACTIVATE@
+%define svn_root     @BUILDROOT@
+%define namever      @NAMEVER@
+%define relver       @RELVER@
+
+@BLESSED@
+@RELEASE_MODE@
+@SKIP_DEPS@
+@APR_CONFIG@
+@APU_CONFIG@
+@APXS@
+@WITH_APXS@
+@WITH_APR@
+@WITH_APU@
+@EDITOR@
+@SILENT@
+@SILENT_FLAG@
+@USE_APACHE2@
 
 %define name subversion
-%define version @VERSION@
-%define repos_rev @REPOS_REV@
-%define release @REPOS_REV@.@MDK_RELEASE@mdk
-%define apache_ver 2.0.43
+%define version      @VERSION@
+%define release      @RELVER@mdk
+%define repos_rev    @REPOS_REV@
+%define usr /usr
+%define build_dir   $RPM_BUILD_DIR/%{name}-%{version}
+%define lib_dir     %{build_dir}/%{name}
+%define tarball     %{name}-%{namever}.tar.bz2
+%define mod_conf    46_mod_dav_svn.conf
+%define rc_file     subversion.rc-%{namever}
+%define py_patch    python_swig_setup.py.patch
+%define svn_patch   svn-install.patch-%{namever}
+%define svn_version svn-version.patch-%{namever}
 
 Summary:	Wicked CVS Replacement
 Name:		%{name}
@@ -14,14 +55,17 @@ Version:	%{version}
 Release:	%{release}
 License:	BSD
 URL:		http://subversion.tigris.org
-Source0:	subversion-%{version}-%{repos_rev}.tar.bz2
-Source1:	46_mod_dav_svn.conf
-Patch0:		svn-install.patch
+Source0:	%{tarball}
+Source1:	%{mod_conf}
+Source2:	%{rc_file}
+Source3:	%{py_patch}
+Patch0:		%{svn_patch}
+Patch1:		%{svn_version}
 Packager:	Michael Ballbach <ballbach@rten.net>
-BuildRoot:	%_tmppath/%name-%version-%release-root
+BuildRoot:      %{svn_root}
 BuildRequires:	apache2-devel >= %{apache_ver}
-BuildRequires:	libneon0.23-devel >= 0.23.4
-BuildRequires:	libdb4.0-devel >= 4.0.14
+BuildRequires:	%{neon_rpm}-devel >= %{neon_ver}
+BuildRequires:	%{db4_rpm}-devel >= %{db4_ver}
 BuildRequires:	texinfo
 BuildRequires:	zlib-devel
 BuildRequires:	autoconf2.5 >= 2.50
@@ -29,6 +73,7 @@ BuildRequires:	bison
 BuildRequires:	flex
 BuildRequires:	libldap2-devel
 BuildRequires:	libsasl2-devel
+BuildRequires:  krb5-devel
 BuildRequires:	python >= 2.2.0
 BuildRequires:	libpython2.2-devel
 BuildRequires:	swig
@@ -55,7 +100,7 @@ servers.
 Provides: %{name} = %{version}-%{release}
 Group:    Development/Other
 Summary:  Common Files for Subversion
-Requires: libapr0 >= 2.0.43
+Requires: libapr0 >= %{apache_ver}
 %description base
 This package contains all the common files required to run subversion
 components.
@@ -74,7 +119,7 @@ called subversion-client-svn for remote svn client access. (NOT over WebDAV)
 Summary:  Local Repository Access for Subversion
 Group:    Development/Other
 Requires: %{name}-base = %{version}-%{release}
-Requires: libdb4.0 >= 4.0.14
+Requires: %{db4_rpm} >= %{db4_ver}
 %description repos
 This package contains the libraries required to allow subversion to access
 local repositories. In addition, subversion-client-local is required for the
@@ -82,6 +127,7 @@ subversion client (`svn') to utilize these repositories directly.
 
 This package also includes the `svnadmin' and `svnlook' programs.
 
+%if %{use_apache2}
 %package server
 Summary:  Subversion Server Module for Apache
 Group:    Development/Other
@@ -90,11 +136,12 @@ Requires: %{name}-repos = %{version}-%{release}
 %description server
 The apache2 server extension SO for running a subversion server.
 
+%endif
 %package client-dav
 Summary:  Network Web-DAV Repository Access for the Subversion Client
 Group:    Development/Other
 Requires: %{name}-client-common = %{version}-%{release}
-Requires: libneon0.23 >= 0.23.4
+Requires: %{neon_rpm} >= %{neon_ver}
 %description client-dav
 This package contains the libraries required to allow the subversion client
 (`svn') to access network subversion repositories over Web-DAV.
@@ -128,7 +175,7 @@ libraries.
 Summary:  Subversion Misc. Tools
 Group:    Development/Other
 Requires: %{name}-base = %{version}-%{release}
-Requires: db4-utils
+Requires: db4-utils => %{db4_ver}
 %description tools
 This package contains a myriad tools for subversion. This package also contains
 'cvs2svn' - a program for migrating CVS repositories into Subversion repositories.
@@ -187,71 +234,80 @@ required by several of the tools.
 %{_libdir}/libsvn*.la
 %{_includedir}/subversion-1
 
+%if %{use_apache2}
 %files server
 %defattr(-,root,root)
-%config /etc/httpd/conf.d/46_mod_dav_svn.conf
-/etc/httpd/2.0/modules/mod_authz_svn.la
-/etc/httpd/2.0/modules/mod_authz_svn.so
-/etc/httpd/2.0/modules/mod_dav_svn.la
-/etc/httpd/2.0/modules/mod_dav_svn.so
+%config %{apache_conf}/%{mod_conf}
+%{apache_dir}/mod_authz_svn.so
+%{apache_dir}/mod_dav_svn.so
+%endif
 
 ################################
 ######### Build Stages ######### 
 ################################
 %prep
-%setup -q
-./autogen.sh
-LDFLAGS="-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_client/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_delta/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_fs/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_repos/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_dav/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_ra_local/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_subr/.libs \
-	-L$RPM_BUILD_DIR/subversion-%{version}/subversion/libsvn_wc/.libs" \
+%setup -q -n %{name}-%{namever}
+%patch0 -p1
+%patch1 -p1
+./autogen.sh %{?release_mode} \
+	     %{?skip_deps}
+LDFLAGS="-L%{lib_dir}/libsvn_client/.libs \
+	-L%{lib_dir}/libsvn_delta/.libs \
+	-L%{lib_dir}/libsvn_fs/.libs \
+	-L%{lib_dir}/libsvn_repos/.libs \
+	-L%{lib_dir}/libsvn_ra/.libs \
+	-L%{lib_dir}/libsvn_ra_dav/.libs \
+	-L%{lib_dir}/libsvn_ra_local/.libs \
+	-L%{lib_dir}/libsvn_subr/.libs \
+	-L%{lib_dir}/libsvn_wc/.libs" \
 	./configure \
-	--prefix=/usr \
+	%{?silent} \
+	%{mod_activate} \
+	--prefix=%{usr} \
+	--mandir=%{usr}/share/man \
+	--libexecdir=%{apache_dir} \
+	--sysconfdir=%{apache_conf} \
 	--with-swig \
 	--enable-shared \
 	--enable-dso \
-	--with-berkeley-db=/usr \
-	--with-apr=/usr/bin/apr-config \
-	--with-apr-util=/usr/bin/apu-config \
-	--with-neon=/usr \
-	--with-apxs=/usr/sbin/apxs2
-%patch0 -p1
-
+	--with-berkeley-db=%{usr} \
+	%{?editor} \
+	%{?with_apr}%{?apr_config} \
+	%{?with_apu}%{?apu_config} \
+	--with-neon=%{usr} \
+	%{?with_apxs}%{?apxs}
 %build
-%make
+DESTDIR="$RPM_BUILD_ROOT" %make %{?silent_flag}
 
 ################################
 ######### Installation ######### 
 ################################
 %install
-rm -rf $RPM_BUILD_ROOT
+rm -rf "$RPM_BUILD_ROOT"
 
 # do the normal make install, and copy our apache2 configuration file
-make install \
-	prefix=$RPM_BUILD_ROOT/usr \
-	mandir=$RPM_BUILD_ROOT/usr/share/man \
-	fs_libdir=$RPM_BUILD_ROOT/usr/lib \
-	base_libdir=$RPM_BUILD_ROOT/usr/lib \
-	libexecdir=$RPM_BUILD_ROOT/%{apache_dir}/lib
-	fs_libdir=$RPM_BUILD_ROOT/usr/lib \
-	fs_bindir=$RPM_BUILD_ROOT/usr/bin \
-	base_libdir=$RPM_BUILD_ROOT/usr/lib \
-	swig_py_libdir=$RPM_BUILD_ROOT/usr/lib
+DESTDIR="$RPM_BUILD_ROOT" \
+	prefix=%{usr} \
+	mandir=%{usr}/share/man \
+	base_libdir=%{usr}/lib \
+	libexecdir=%{apache_dir} \
+	sysconfdir=%{apache_conf} \
+	fs_libdir=%{usr}/lib \
+	fs_bindir=%{usr}/bin \
+	swig_py_libdir=%{usr}/lib \
+	make %{?silent_flag} install 
 	
-mkdir -p $RPM_BUILD_ROOT/etc/httpd/conf.d
-cp %{SOURCE1} $RPM_BUILD_ROOT/etc/httpd/conf.d
+%if %{use_apache2}
+mkdir -p $RPM_BUILD_ROOT/%{apache_conf}
+cp %{SOURCE1} $RPM_BUILD_ROOT/%{apache_conf}
+%endif
 
 # copy everything in tools into a share directory
 mkdir -p $RPM_BUILD_ROOT/%{_datadir}/%{name}-%{version}
 cp -r tools $RPM_BUILD_ROOT/%{_datadir}/%{name}-%{version}
 
 %clean
-rm -rf $RPM_BUILD_ROOT
+rm -rf $RPM_BUILD_ROOT 
 
 ##################################
 ###### Post and Pre Scripts ###### 
@@ -276,6 +332,41 @@ rm -rf $RPM_BUILD_ROOT
 
 %post repos -p /sbin/ldconfig
 %postun repos -p /sbin/ldconfig
+
+%pre server
+APACHECTL=/usr/sbin/apachectl
+if [ -x "$APACHECTL" ] && [ "$USER" == "root" ] ; then
+  $APACHECTL stop
+else
+  echo Unable to stop apache - need to be root
+fi
+%post server 
+APACHECTL=/usr/sbin/apachectl
+if [ -x "$APACHECTL" ] && [ "$USER" == "root" ] ; then
+  if $APACHECTL configtest ; then
+    $APACHECTL start
+  else
+    echo Please check your apache configuration
+  fi
+else
+  echo Unable to stop apache - need to be root
+fi
+%preun server
+APACHECTL=/usr/sbin/apachectl
+if [ -x "$APACHECTL" ] && [ "$USER" == "root" ] ; then
+  $APACHECTL stop
+fi
+%postun server
+APACHECTL=/usr/sbin/apachectl
+if [ -x "$APACHECTL" ] && [ "$USER" == "root" ] ; then
+  if $APACHECTL configtest ; then
+    $APACHECTL start
+  else
+    echo Please check your apache configuration
+  fi
+else
+  echo Unable to stop apache - need to be root
+fi
 
 ############################
 ######## Change Log ######## 
