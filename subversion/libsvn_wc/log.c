@@ -62,14 +62,11 @@
 static void
 start_handler (void *userData, const XML_Char *name, const XML_Char **atts)
 {
-  /* kff todo */
-}
+  const char *att;
 
-
-static void
-end_handler (void *userData, const XML_Char *name)
-{
-  /* kff todo */
+  printf ("\nLOG HANDLER: %s\n", name);
+  while ((att = *atts++))
+    printf ("   %s\n", att);
 }
 
 
@@ -87,16 +84,69 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
 {
   svn_error_t *err = NULL;
   apr_status_t apr_err;
-  int placeholder;
   XML_Parser parser;
-  struct log_runner logress;
+  struct log_runner *logress = apr_palloc (pool, sizeof (*logress));
+  char buf[BUFSIZ];
+  apr_ssize_t buf_len;
+  apr_file_t *f = NULL;
 
-  parser = svn_xml_make_parser (&placeholder,
-                                start_handler,
-                                end_handler,
-                                NULL);  /* no data handler for log files */
+  const char *log_start
+    = "<svn-wc-log xmlns=\"http://subversion.tigris.org/xmlns\">\n";
+  const char *log_end
+    = "</svn-wc-log>\n";
+
+  parser = svn_xml_make_parser (&logress, start_handler, NULL, NULL);
   
-  /* kff todo: pretend everything worked for now. */
+  /* Start the log off with a pointless opening element tag. */
+  if (! XML_Parse (parser, log_start, strlen (log_start), 0))
+    goto expat_error;
+
+  /* Parse the log file's contents. */
+  err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_LOG, APR_READ, pool);
+  if (err)
+    goto any_error;
+  
+  do {
+    buf_len = sizeof (buf);
+    apr_err = apr_read (f, buf, &buf_len);
+
+    if (! XML_Parse (parser, buf, buf_len, 0))
+      {
+        apr_close (f);
+        goto expat_error;
+      }
+    
+    if (apr_err == APR_EOF)
+      {
+        apr_close (f);
+        break;
+      }
+  } while (apr_err == APR_SUCCESS);
+
+
+  /* End the log with a pointless closing element tag. */
+  if (! XML_Parse (parser, log_end, sizeof (log_end), 0))
+    goto expat_error;
+
+  /* Apparently, Expat returns 0 on fatal error *except* for the
+     final call, at which time it always returns 0.  Ben, does this
+     match your experience? */
+  if (XML_Parse (parser, NULL, 0, 1) != 0)
+    {
+    expat_error:
+      /* Uh oh, expat *itself* choked somehow! */
+      err = svn_error_createf
+        (SVN_ERR_MALFORMED_XML, 0, NULL, pool, 
+         "%s at line %d",
+         XML_ErrorString (XML_GetErrorCode (parser)),
+         XML_GetCurrentLineNumber (parser));
+      
+    any_error:
+      /* Kill the expat parser and return its error */
+      XML_ParserFree (parser);      
+      return err;
+    }
+
   err = svn_wc__remove_adm_thing (path, SVN_WC__ADM_LOG, pool);
 
   XML_ParserFree (parser);
