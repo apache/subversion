@@ -94,7 +94,7 @@
       sistema de control de versiones inicial, las limitaciones de CVS
       fueron obvias <!--TODO: obvious..."evidentes" mejor?--> desde el 
       principio, y CollabNet sabía que tendría que encontrar algo mejor. 
-      Desafortunadamente, CVS se había convertido en el estandard
+      Desafortunadamente, CVS se había convertido en el estándar
       <foreignphrase>de facto</foreignphrase> en el mundo del código
       abierto <!--TODO: open source... codigo abierto--> porque <emphasis> 
       no había </emphasis> <!--TODO:there <emphasis> wasn't</emphasis>
@@ -273,7 +273,7 @@
             can plug into--> al Servidor de HTTP Apache como un modulo de
             extensión. Esto da a Subversion una gran ventaja en estabilidad
             e interoperabilidad, y acceso instantáneo a las características
-            existentes que ofrece este servidor&mdash;autentificación,
+            existentes que ofrece este servidor&mdash;autenticación,
             autorización, comprensión del hilo <!--TODO:wire compression,
             and so on-->, etcétera. También está disponible un proceso
             más ligero, un servidor de Subversion independiente.
