@@ -15,3 +15,8 @@ The following repository access (RA) modules are available:
 * ra_svn : Module for accessing a repository using the svn network protocol.
   - handles 'svn' schema
 
+The following repository back-end (FS) modules are available:
+
+* fs_base : Module for working with a Berkeley DB repository.
+* fs_fs : Module for working with a plain file (FSFS) repository.
+

@@ -153,8 +153,16 @@ static void help(apr_pool_t *pool)
 
 static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
 {
-  return svn_opt_print_help(os, "svnserve", TRUE, FALSE, NULL, NULL,
-                            NULL, NULL, NULL, pool);
+  const char *fs_desc_start
+    = _("The following repository back-end (FS) modules are available:\n\n");
+
+  svn_stringbuf_t *version_footer;
+
+  version_footer = svn_stringbuf_create (fs_desc_start, pool);
+  SVN_ERR (svn_fs_print_modules (version_footer, pool));
+
+  return svn_opt_print_help(os, "svnserve", TRUE, FALSE, version_footer->data,
+                            NULL, NULL, NULL, NULL, pool);
 }
   
 

@@ -266,6 +266,12 @@ fs_version (void)
   SVN_VERSION_BODY;
 }
 
+static const char *
+fs_get_description (void)
+{
+  return _("Module for working with a plain file (FSFS) repository.");
+}
+
 
 
 /* Base FS library vtable, used by the FS loader library. */
@@ -276,6 +282,7 @@ static fs_library_vtable_t library_vtable = {
   fs_open,
   fs_delete_fs,
   fs_hotcopy,
+  fs_get_description,
   fs_set_errcall,
   fs_recover,
   fs_logfiles

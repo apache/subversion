@@ -1020,16 +1020,18 @@ svn_error_t *svn_ra_get_locks (svn_ra_session_t *session,
 
 /** @since New in 1.2.
  *
- * Return a @a *descriptions string (allocated in @a pool) that is a textual
- * list of all available RA libraries.
+ * Append a textual list of all available RA modules to the stringbuf
+ * @a output.
  */
-svn_error_t *svn_ra_print_ra_libraries2 (svn_stringbuf_t **descriptions,
-                                         apr_pool_t *pool);
+svn_error_t *svn_ra_print_modules (svn_stringbuf_t *output,
+                                   apr_pool_t *pool);
 
 
 /** @deprecated Provided for backwards compatibility with the 1.1 API.
  *
- * Similar to @c svn_ra_print_libraries2.  @a ra_baton is ignored. */
+ * Similar to @c svn_ra_print_modules.
+ * @a ra_baton is ignored.
+ */
 svn_error_t *svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
                                         void *ra_baton,
                                         apr_pool_t *pool);
