@@ -160,8 +160,6 @@ def main(fname, oname=None, skip_depends=0):
 
     ofile.write('%s: %s\n\n' % (g_name, string.join(target_names)))
 
-  ofile.write('BUILD_DIRS = %s\n' % string.join(target_dirs.keys()))
-
   cfiles = [ ]
   for target in targets.values():
     # .la files are handled by the standard 'clean' rule; clean all the
@@ -255,8 +253,15 @@ def main(fname, oname=None, skip_depends=0):
   scripts, s_errors = _collect_paths(parser.get('test-scripts', 'paths'))
   errors = errors or s_errors
 
+  script_dirs = []
+  for script in scripts:
+    script_dirs.append(re.compile("[-a-z0-9A-Z_.]*$").sub("", script))
+
   fs_scripts, fs_errors = _collect_paths(parser.get('fs-test-scripts', 'paths'))
   errors = errors or fs_errors
+
+  ofile.write('BUILD_DIRS = %s %s\n' % (string.join(target_dirs.keys()),
+					string.join(script_dirs)))
 
   ofile.write('FS_TEST_DEPS = %s\n\n' % string.join(fs_test_deps + fs_scripts))
   ofile.write('FS_TEST_PROGRAMS = %s\n\n' % 
