@@ -20,7 +20,6 @@
 #include "dag.h"
 #include "err.h"
 #include "fs.h"
-#include "node-rev.h"
 #include "nodes-table.h"
 #include "txn-table.h"
 #include "rev-table.h"
@@ -78,8 +77,6 @@ struct dag_node_t
 
 };
 
-
-/* Creating nodes. */
 
 /* Looks at node-revision NODE_REV's 'kind' to see if it matches the
    kind described by KINDSTR. */
@@ -167,7 +164,6 @@ node_rev_set_mutable_flag (skel_t *content,
                            svn_fs_id_t *parent_id,
                            apr_pool_t *pool)
 {
-  /* ### tweakit: see comment in node_rev_has_mutable_flag() above. */
   if (node_rev_has_mutable_flag (content))
     return;
   else
@@ -262,10 +258,6 @@ get_node_revision (skel_t **skel_p,
 {
   skel_t *node_revision;
 
-  /* ### tweakit: I think this function doesn't change just because
-     we're getting most content out of the node revision itself, but
-     must think more.  Comments... Mike?  Anyone?*/
-
   /* If we've already got a copy, there's no need to read it in.  */
   if (! node->node_revision)
     {
@@ -289,8 +281,6 @@ set_node_revision (dag_node_t *node,
                    skel_t *skel,
                    trail_t *trail)
 {
-  /* ### tweakit: see comment in get_node_revision() above. */
-
   /* Write it out.  */
   SVN_ERR (svn_fs__put_node_revision (node->fs, node->id, skel, trail));
 
@@ -321,8 +311,6 @@ svn_fs__dag_get_node (dag_node_t **node,
 {
   dag_node_t *new_node;
   skel_t *contents;
-
-  /* ### tweakit: beautiful -- nothing to change here. */
 
   /* Construct the node. */
   new_node = apr_pcalloc (trail->pool, sizeof (*new_node));
@@ -404,31 +392,36 @@ svn_fs__dag_init_fs (svn_fs_t *fs)
 
 
 /* Trivial helper/accessor functions. */
-int svn_fs__dag_is_file (dag_node_t *node)
+int 
+svn_fs__dag_is_file (dag_node_t *node)
 {
   return (node->kind == dag_node_kind_file ? TRUE : FALSE);
 }
 
 
-int svn_fs__dag_is_directory (dag_node_t *node)
+int 
+svn_fs__dag_is_directory (dag_node_t *node)
 {
   return (node->kind == dag_node_kind_dir ? TRUE : FALSE);
 }
 
 
-int svn_fs__dag_is_copy (dag_node_t *node)
+int 
+svn_fs__dag_is_copy (dag_node_t *node)
 {
   return (node->kind == dag_node_kind_copy ? TRUE : FALSE);
 }
 
 
-const svn_fs_id_t *svn_fs__dag_get_id (dag_node_t *node)
+const svn_fs_id_t *
+svn_fs__dag_get_id (dag_node_t *node)
 {
   return node->id;
 }
 
 
-svn_fs_t *svn_fs__dag_get_fs (dag_node_t *node)
+svn_fs_t *
+svn_fs__dag_get_fs (dag_node_t *node)
 {
   return node->fs;
 }
@@ -565,6 +558,7 @@ get_dir_entries (skel_t **entries,
                                           rep_key->data,
                                           rep_key->len);
           svn_string_t unparsed_entries;
+          skel_t *entry;
 
           /* Get the representation. */
           SVN_ERR (svn_fs__read_rep (&rep, fs, key, trail));
@@ -574,6 +568,16 @@ get_dir_entries (skel_t **entries,
           *entries = svn_fs__parse_skel ((char *) unparsed_entries.data,
                                          unparsed_entries.len,
                                          trail->pool);
+
+          /* Check entries are well-formed. */
+          for (entry = (*entries)->children; entry; entry = entry->next)
+            {
+              /* ENTRY must be a list of two elements. */
+              if (svn_fs__list_length (entry) != 2)
+                return svn_error_create (SVN_ERR_FS_CORRUPT, 0, 
+                                         NULL, trail->pool,
+                                         "Malformed directory entry.");
+            }
         }
       else
         return 
@@ -640,12 +644,10 @@ dir_entry_from_node (skel_t **entry,
                      const char *name,
                      trail_t *trail)
 {
-  skel_t *pnode_rev, *entries;
+  skel_t *entries;
 
-  SVN_ERR (get_node_revision (&pnode_rev, parent, trail));
-  SVN_ERR (get_dir_entries (&entries, parent->fs, pnode_rev, trail));
-  SVN_ERR (find_dir_entry (entry, entries, name, trail));
-  return SVN_NO_ERROR;
+  SVN_ERR (svn_fs__dag_dir_entries_skel (&entries, parent, trail));
+  return find_dir_entry (entry, entries, name, trail);
 }
 
 
@@ -853,9 +855,7 @@ svn_fs__dag_dir_entries_skel (skel_t **entries_p,
                               dag_node_t *node,
                               trail_t *trail)
 {
-  skel_t *node_rev, *entries, *entry;
-  
-  /* ### tweakit: this will change in the obvious way. */
+  skel_t *node_rev;
 
   if (! svn_fs__dag_is_directory (node))
     return svn_error_create
@@ -864,21 +864,7 @@ svn_fs__dag_dir_entries_skel (skel_t **entries_p,
   
   /* Get the NODE-REVISION for this node. */
   SVN_ERR (get_node_revision (&node_rev, node, trail));
-  
-  /* Directory entries start at the second element of a node-revision
-     skel, itself a list. */
-  entries = node_rev->children->next;
-  
-  /* Check entries are well-formed. */
-  for (entry = entries->children; entry; entry = entry->next)
-    {
-      /* ENTRY must be a list of two elements. */
-      if (svn_fs__list_length (entry) != 2)
-        return svn_error_create (SVN_ERR_FS_CORRUPT, 0, NULL, trail->pool,
-                                 "Malformed directory entry.");
-    }
-  
-  *entries_p = entries;
+  SVN_ERR (get_dir_entries (entries_p, node->fs, node_rev, trail));
   return SVN_NO_ERROR;
 }
 
@@ -890,9 +876,6 @@ svn_fs__dag_dir_entries_hash (apr_hash_t **table_p,
 {
   skel_t *entries, *entry;
   apr_hash_t *table;
-
-  /* ### tweakit: this shouldn't need to change at all, as it just
-     uses svn_fs__dag_dir_entries_skel(). */
 
   SVN_ERR (svn_fs__dag_dir_entries_skel (&entries, node, trail));
 
@@ -986,20 +969,21 @@ svn_fs__dag_get_proplist (skel_t **proplist_p,
                           trail_t *trail)
 {
   skel_t *node_rev;
-  skel_t *header;
+  skel_t *rep;
+  svn_string_t propstr;
   
   /* Go get a fresh NODE-REVISION for this node. */
   SVN_ERR (get_node_revision (&node_rev, node, trail));
 
-  /* ### tweakit: Mmmm, well, no, retrive the proplist via reps,
-     etc.  Pretty simple change. */
+  /* Get rep for properties. */
+  rep = node_rev->children->next;
 
-  /* The node "header" is the first element of a node-revision skel,
-     itself a list. */
-  header = node_rev->children;
-
-  /* The property list is the 2nd item in the header skel. */
-  *proplist_p = header->children->next;
+  /* Get the string associated with the property rep, parsing it as a
+     skel. */
+  SVN_ERR (string_from_rep (&propstr, node->fs, rep, trail));
+  *proplist_p = svn_fs__parse_skel ((char *) propstr.data,
+                                    propstr.len,
+                                    trail->pool);
 
   return SVN_NO_ERROR;
 }
@@ -2087,3 +2071,6 @@ svn_fs__dag_commit_txn (svn_revnum_t *new_rev,
  * eval: (load-file "../svn-dev.el")
  * end:
  */
+
+
+

@@ -21,34 +21,42 @@ svn_fs_get_file_delta_stream  (svn_txdelta_stream_t **stream_p, svn_fs_root_t *s
 
 And these are all the exported functions implemented in dag.c:
 
-   svn_fs__dag_check_mutable
-   svn_fs__dag_get_node
-   svn_fs__dag_init_fs
-   svn_fs__dag_dir_entries_skel
-   svn_fs__dag_dir_entries_hash
-   svn_fs__dag_set_entry
-   svn_fs__dag_get_proplist
-   svn_fs__dag_set_proplist
-   svn_fs__dag_revision_root
-   svn_fs__dag_txn_root
-   svn_fs__dag_txn_base_root
-   svn_fs__dag_clone_child
-   svn_fs__dag_clone_root
-   svn_fs__dag_delete
-   svn_fs__dag_delete_tree
-   svn_fs__dag_delete_if_mutable
-   svn_fs__dag_make_file
-   svn_fs__dag_make_dir
-   svn_fs__dag_link
-   svn_fs__dag_get_contents
-   svn_fs__dag_file_length
-   svn_fs__dag_set_contents
-   svn_fs__dag_dup
-   svn_fs__dag_open
-   svn_fs__dag_rename
-   svn_fs__dag_make_copy
-   svn_fs__dag_get_copy
-   svn_fs__dag_commit_txn
+   DONE:
+      svn_fs__dag_check_mutable
+      svn_fs__dag_get_node
+      svn_fs__dag_init_fs
+      svn_fs__dag_dir_entries_skel
+      svn_fs__dag_dir_entries_hash
+      svn_fs__dag_is_file
+      svn_fs__dag_is_directory
+      svn_fs__dag_is_copy
+      svn_fs__dag_get_id
+      svn_fs__dag_get_fs
+      svn_fs__dag_get_proplist
+      svn_fs__dag_revision_root
+      svn_fs__dag_txn_root
+      svn_fs__dag_txn_base_root
+      svn_fs__dag_clone_root
+
+   NOT-SO-DONE (read: "Not Done At All, Really")
+      svn_fs__dag_set_entry
+      svn_fs__dag_set_proplist
+      svn_fs__dag_clone_child
+      svn_fs__dag_delete
+      svn_fs__dag_delete_tree
+      svn_fs__dag_delete_if_mutable
+      svn_fs__dag_make_file
+      svn_fs__dag_make_dir
+      svn_fs__dag_link
+      svn_fs__dag_get_contents
+      svn_fs__dag_file_length
+      svn_fs__dag_set_contents
+      svn_fs__dag_dup
+      svn_fs__dag_open
+      svn_fs__dag_rename
+      svn_fs__dag_make_copy
+      svn_fs__dag_get_copy
+      svn_fs__dag_commit_txn
 
 
 -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- -*- 

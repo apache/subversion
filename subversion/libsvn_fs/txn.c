@@ -26,7 +26,6 @@
 #include "err.h"
 #include "trail.h"
 #include "rev-table.h"
-#include "node-rev.h"
 #include "txn-table.h"
 #include "tree.h"
 
