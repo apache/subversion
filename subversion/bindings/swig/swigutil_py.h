@@ -34,6 +34,11 @@
 #include "svn_client.h"
 #include "svn_repos.h"
 
+#if SVN_SWIG_VERSION >= 103020
+#include "python/precommon.swg"
+#define SWIG_NewPointerObj SWIG_Python_NewPointerObj
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
