@@ -5131,7 +5131,7 @@ check_related (const char **msg,
     struct path_rev_t
     {
       const char *path;
-      const svn_revnum_t rev;
+      svn_revnum_t rev;
     };
 
     /* Our 16 existing files/revisions. */
