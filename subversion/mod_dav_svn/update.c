@@ -454,7 +454,8 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
     }
 #undef NSLEN
                 
-  qname = apr_xml_quote_string (b->pool, name, 1);
+  /* apr_xml_quote_string doesn't realloc if there is nothing to quote */
+  qname = apr_xml_quote_string (b->pool, apr_pstrdup (b->pool, name), 1);
   if (value)
     {
       if (! b->changed_props)
