@@ -1034,7 +1034,7 @@ static svn_error_t *ra_svn_log2(void *baton, const apr_array_header_t *paths,
     }
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)(?r)bbn)", start, end,
                                  discover_changed_paths, strict_node_history,
-                                 limit));
+                                 (apr_uint64_t) limit));
   SVN_ERR(handle_auth_request(sess, pool));
 
   /* Read the log messages. */
