@@ -1234,8 +1234,9 @@ svn_fs__dag_get_contents (svn_stream_t **contents,
      the stream that we're not providing it a trail that lives across
      reads.  This means the stream will do each read in a one-off,
      temporary trail.  */
-  *contents = svn_fs__rep_contents_read_stream (file->fs, noderev->data_key,
-                                                FALSE, trail, pool);
+  SVN_ERR (svn_fs__rep_contents_read_stream (contents, file->fs,
+                                             noderev->data_key,
+                                             FALSE, trail, pool));
 
   /* Note that we're not registering any `close' func, because there's
      nothing to cleanup outside of our trail.  When the trail is

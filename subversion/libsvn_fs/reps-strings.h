@@ -85,14 +85,17 @@ svn_error_t *svn_fs__rep_contents (svn_string_t *str,
                                    trail_t *trail);
 
 
-/* Return a stream to read the contents of REP_KEY.  Allocate the stream
-   in POOL.
+/* Set *RS_P to a stream to read the contents of REP_KEY in FS.
+   Allocate the stream in POOL.
+
+   REP_KEY may be null, in which case reads just return 0 bytes.
 
    If USE_TRAIL_FOR_READS is TRUE, the stream's reads are part
    of TRAIL; otherwise, each read happens in an internal, one-off
    trail (though TRAIL is still required).  POOL may be TRAIL->pool. */
-svn_stream_t *
-svn_fs__rep_contents_read_stream (svn_fs_t *fs,
+svn_error_t *
+svn_fs__rep_contents_read_stream (svn_stream_t **rs_p,
+                                  svn_fs_t *fs,
                                   const char *rep_key,
                                   svn_boolean_t use_trail_for_reads,
                                   trail_t *trail,
