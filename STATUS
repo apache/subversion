@@ -111,11 +111,24 @@ Already have three +1 votes:
      Votes:
       +1: clkao, rooneg, kfogel
 
+
    * r8238
      Update Perl bindings test suite for API change introduced in r8216
      disallowing NULL in dir_delta target.
      Votes:
       +1: clkao, rooneg, epg
+
+
+   * r7998, r8000, r8018, r8075, r8117, r8118, r8158
+     Perl bindings fixes and enhacements to date.
+     Justification: Strictly perl only, not even affecting build system.
+                    The bindings are not complete to be considered as
+                    1.0, the maintainer wishes svn to include the
+                    latest version in order to provide better supports.
+     Votes:
+      +1: clkao, epg, rooneg
+      +0: jerenkrantz
+
 
 Don't yet have three +1 votes:
 
@@ -164,14 +177,3 @@ Don't yet have three +1 votes:
      Justification: API stability; low risk because of bindings only change.
      Votes:
       +0: gstein
-
-
-   * r7998, r8000, r8018, r8075, r8117, r8118, r8158
-     Perl bindings fixes and enhacements to date.
-     Justification: Strictly perl only, not even affecting build system.
-                    The bindings are not complete to be considered as
-                    1.0, the maintainer wishes svn to include the
-                    latest version in order to provide better supports.
-     Votes:
-      +1: clkao, epg, rooneg
-      +0: jerenkrantz
