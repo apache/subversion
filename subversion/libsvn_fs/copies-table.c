@@ -85,7 +85,7 @@ put_copy (svn_fs_t *fs,
 
 
 svn_error_t *
-svn_fs__reserve_copy_id (char **id_p,
+svn_fs__reserve_copy_id (const char **id_p,
                          svn_fs_t *fs,
                          trail_t *trail)
 {

@@ -459,74 +459,74 @@ open_path (parent_path_t **parent_path_p,
   /* The portion of PATH we haven't traversed yet.  */
   const char *rest = path;
 
-    {
-      SVN_ERR (root_node (&here, root, trail));
-      parent_path = make_parent_path (here, 0, 0, pool);
+  SVN_ERR (root_node (&here, root, trail));
+  parent_path = make_parent_path (here, 0, 0, pool);
       
-      /* Whenever we are at the top of this loop:
-         - HERE is our current directory,
-         - REST is the path we're going to find in HERE, and 
-         - PARENT_PATH includes HERE and all its parents.  */
-      for (;;)
+  /* Whenever we are at the top of this loop:
+     - HERE is our current directory,
+     - REST is the path we're going to find in HERE, and 
+     - PARENT_PATH includes HERE and all its parents.  */
+  for (;;)
+    {
+      const char *next;
+      char *entry;
+      dag_node_t *child;
+      
+      /* Parse out the next entry from the path.  */
+      entry = next_entry_name (&next, rest, pool);
+      
+      if (*entry == '\0')
         {
-          const char *next;
-          char *entry;
-          dag_node_t *child;
+          /* Given the behavior of next_entry_name, this happens when
+             the path either starts or ends with a slash.  In either
+             case, we stay put: the current directory stays the same,
+             and we add nothing to the parent path.  */
+          child = here;
+        }
+      else
+        {
+          /* If we found a directory entry, follow it.  */
+          svn_error_t *svn_err = svn_fs__dag_open (&child, here,
+                                                   entry, trail);
           
-          /* Parse out the next entry from the path.  */
-          entry = next_entry_name (&next, rest, pool);
-          
-          if (*entry == '\0')
-            /* Given the behavior of next_entry_name, this happens when
-               the path either starts or ends with a slash.  In either
-               case, we stay put: the current directory stays the same,
-               and we add nothing to the parent path.  */
-            child = here;
-          else
+          /* "file not found" requires special handling.  */
+          if (svn_err && svn_err->apr_err == SVN_ERR_FS_NOT_FOUND)
             {
-              /* If we found a directory entry, follow it.  */
-              svn_error_t *svn_err = svn_fs__dag_open (&child, here,
-                                                       entry, trail);
+              /* If this was the last path component, and the caller
+                 said it was optional, then don't return an error;
+                 just put a zero node pointer in the path.  */
               
-              /* "file not found" requires special handling.  */
-              if (svn_err && svn_err->apr_err == SVN_ERR_FS_NOT_FOUND)
+              svn_error_clear_all (svn_err);
+              
+              if ((flags & open_path_last_optional)
+                  && (! next || *next == '\0'))
                 {
-                  /* If this was the last path component, and the caller
-                     said it was optional, then don't return an error;
-                     just put a zero node pointer in the path.  */
-
-                  svn_error_clear_all (svn_err);
-
-                  if ((flags & open_path_last_optional)
-                      && (! next || *next == '\0'))
-                    {
-                      parent_path = make_parent_path (0, entry,
-                                                      parent_path, pool);
-                      break;
-                    }
-                  else
-                    /* Build a better error message than svn_fs__dag_open
-                       can provide, giving the root and full path name.  */
-                    return not_found (root, path);
+                  parent_path = make_parent_path (0, entry,
+                                                  parent_path, pool);
+                  break;
                 }
-              
-              /* Other errors we return normally.  */
-              SVN_ERR (svn_err);
-              
-              parent_path = make_parent_path (child, entry, parent_path, pool);
+              else
+                /* Build a better error message than svn_fs__dag_open
+                   can provide, giving the root and full path name.  */
+                return not_found (root, path);
             }
           
-          /* Are we finished traversing the path?  */
-          if (! next)
-            break;
+          /* Other errors we return normally.  */
+          SVN_ERR (svn_err);
           
-          /* The path isn't finished yet; we'd better be in a directory.  */
-          if (! svn_fs__dag_is_directory (child))
-            return svn_fs__err_not_directory (fs, path);
-          
-          rest = next;
-          here = child;
+          parent_path = make_parent_path (child, entry, parent_path, pool);
         }
+      
+      /* Are we finished traversing the path?  */
+      if (! next)
+        break;
+      
+      /* The path isn't finished yet; we'd better be in a directory.  */
+      if (! svn_fs__dag_is_directory (child))
+        return svn_fs__err_not_directory (fs, path);
+      
+      rest = next;
+      here = child;
     }
 
   *parent_path_p = parent_path;
@@ -547,7 +547,7 @@ make_path_mutable (svn_fs_root_t *root,
 {
   dag_node_t *clone;
   const char *txn_id = svn_fs_txn_root_name (root, trail->pool);
-  const char *copy_id = NULL;  /* ### this will be passed in */
+  const char *copy_id = NULL; /* ### this will get passed in */
 
   {
     svn_boolean_t is_mutable;

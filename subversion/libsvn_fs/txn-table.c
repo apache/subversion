@@ -95,7 +95,7 @@ put_txn (svn_fs_t *fs,
 /* Allocate a Subversion transaction ID in FS, as part of TRAIL.  Set
    *ID_P to the new transaction ID, allocated in TRAIL->pool.  */
 static svn_error_t *
-allocate_txn_id (char **id_p,
+allocate_txn_id (const char **id_p,
                  svn_fs_t *fs,
                  trail_t *trail)
 {
@@ -133,12 +133,12 @@ allocate_txn_id (char **id_p,
 
 
 svn_error_t *
-svn_fs__create_txn (char **txn_name_p,
+svn_fs__create_txn (const char **txn_name_p,
                     svn_fs_t *fs,
                     const svn_fs_id_t *root_id,
                     trail_t *trail)
 {
-  char *txn_name;
+  const char *txn_name;
   svn_fs__transaction_t txn;
 
   SVN_ERR (allocate_txn_id (&txn_name, fs, trail));
@@ -292,6 +292,31 @@ svn_fs__set_txn_base (svn_fs_t *fs,
       SVN_ERR (put_txn (fs, txn, txn_name, trail));
     }
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs__add_txn_copy (svn_fs_t *fs,
+                      const char *txn_name,
+                      const char *copy_id,
+                      trail_t *trail)
+{
+  svn_fs__transaction_t *txn;
+
+  /* Get the transaction and ensure its mutability. */
+  SVN_ERR (svn_fs__get_txn (&txn, fs, txn_name, trail));
+  if (is_committed (txn))
+    return svn_fs__err_txn_not_mutable (fs, txn_name);
+
+  /* Allocate a new array if this transaction has no copies. */
+  if (! txn->copies)
+    txn->copies = apr_array_make (trail->pool, 1, sizeof (copy_id));
+
+  /* Add COPY_ID to the array. */
+  (*((const char **)(apr_array_push (txn->copies)))) = copy_id;
+
+  /* Finally, write out the transaction. */
+  return put_txn (fs, txn, txn_name, trail);
 }
 
 

@@ -31,6 +31,7 @@
 #include "node-rev.h"
 #include "txn-table.h"
 #include "rev-table.h"
+#include "copies-table.h"
 #include "reps-table.h"
 #include "strings-table.h"
 #include "reps-strings.h"
@@ -139,16 +140,14 @@ copy_node_revision (svn_fs__node_revision_t *noderev,
 {
   svn_fs__node_revision_t *nr = apr_pcalloc (pool, sizeof (*nr));
   nr->kind = noderev->kind;
-  nr->revision = noderev->revision;
-  if (noderev->ancestor_path)
-    nr->ancestor_path = apr_pstrdup (pool, noderev->ancestor_path);
-  nr->ancestor_rev = noderev->ancestor_rev;
+  if (noderev->predecessor_id)
+    nr->predecessor_id = svn_fs__id_copy (noderev->predecessor_id, pool);
   if (noderev->prop_key)
     nr->prop_key = apr_pstrdup (pool, noderev->prop_key);
   if (noderev->data_key)
     nr->data_key = apr_pstrdup (pool, noderev->data_key);
-  if ((noderev->kind == svn_node_file) && (noderev->edit_data_key))
-    nr->edit_data_key = apr_pstrdup (pool, noderev->edit_data_key);
+  if ((noderev->kind == svn_node_file) && (noderev->edit_key))
+    nr->edit_key = apr_pstrdup (pool, noderev->edit_key);
 
   return nr;
 }
@@ -310,23 +309,31 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
   svn_revnum_t rev;
   svn_fs_t *fs = fs_baton;
   svn_string_t date;
-  char *txn_id;
+  const char *txn_id;
+  const char *copy_id;
   svn_fs_id_t *root_id = svn_fs_parse_id ("0.0.0", 5, trail->pool);
-
+  
   /* Create empty root directory with node revision 0.0. */
   memset (&noderev, 0, sizeof (noderev));
   noderev.kind = svn_node_dir;
-  noderev.revision = 0;
-  noderev.ancestor_rev = SVN_INVALID_REVNUM;
   SVN_ERR (svn_fs__put_node_revision (fs, root_id, &noderev, trail));
 
   /* Create a new transaction (better have an id of "0") */
   SVN_ERR (svn_fs__create_txn (&txn_id, fs, root_id, trail));
   if (strcmp (txn_id, "0"))
-    return svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
-                              "initial transaction id `0' in filesystem `%s'",
-                              fs->path);
-    
+    return svn_error_createf 
+      (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
+       "initial transaction id not `0' in filesystem `%s'", fs->path);
+
+  /* Create a default copy (better have an id of "0") */
+  SVN_ERR (svn_fs__reserve_copy_id (&copy_id, fs, trail));
+  if (strcmp (copy_id, "0"))
+    return svn_error_createf 
+      (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
+       "initial copy id not `0' in filesystem `%s'", fs->path);
+  SVN_ERR (svn_fs__create_copy (copy_id, fs, NULL, SVN_INVALID_REVNUM, 
+                                root_id, trail));
+
   /* Link it into filesystem revision 0. */
   revision.id = root_id;
   revision.proplist = NULL;
@@ -565,8 +572,6 @@ make_entry (dag_node_t **child_p,
   /* Create the new node's NODE-REVISION */
   memset (&new_noderev, 0, sizeof (new_noderev));
   new_noderev.kind = is_dir ? svn_node_dir : svn_node_file;
-  new_noderev.revision = SVN_INVALID_REVNUM;
-  new_noderev.ancestor_rev = SVN_INVALID_REVNUM;
   SVN_ERR (svn_fs__create_node (&new_node_id, svn_fs__dag_get_fs (parent),
                                 &new_noderev, txn_id, trail));
 
@@ -1076,9 +1081,8 @@ svn_fs__dag_delete_if_mutable (svn_fs_t *fs,
     SVN_ERR (svn_fs__delete_rep_if_mutable (fs, noderev->data_key, trail));
 
   /* Delete any mutable edit representation (files only). */
-  if ((svn_fs__dag_is_file (node)) && noderev->edit_data_key)
-    SVN_ERR (svn_fs__delete_rep_if_mutable (fs, noderev->edit_data_key, 
-                                            trail));
+  if ((svn_fs__dag_is_file (node)) && noderev->edit_key)
+    SVN_ERR (svn_fs__delete_rep_if_mutable (fs, noderev->edit_key, trail));
 
   /* Delete the node revision itself. */
   SVN_ERR (svn_fs__delete_node_revision (fs, id, trail));
@@ -1257,16 +1261,15 @@ svn_fs__dag_get_edit_stream (svn_stream_t **contents,
   /* If this node already has an EDIT-DATA-KEY, destroy the data
      associated with that key.  ### todo: should this return an error
      instead?  */
-  if (noderev->edit_data_key)
-    SVN_ERR (svn_fs__delete_rep_if_mutable (fs, noderev->edit_data_key, 
-                                            trail));
+  if (noderev->edit_key)
+    SVN_ERR (svn_fs__delete_rep_if_mutable (fs, noderev->edit_key, trail));
 
   /* Now, let's ensure that we have a new EDIT-DATA-KEY available for
      use. */
   SVN_ERR (svn_fs__get_mutable_rep (&mutable_rep_key, NULL, fs, trail));
   
   /* We made a new rep, so update the node revision. */
-  noderev->edit_data_key = mutable_rep_key;
+  noderev->edit_key = mutable_rep_key;
   SVN_ERR (svn_fs__put_node_revision (fs, file->id, noderev, trail));
 
   /* Return a writable stream with which to set new contents. */
@@ -1306,7 +1309,7 @@ svn_fs__dag_finalize_edits (dag_node_t *file,
 
   /* If this node has no EDIT-DATA-KEY, this is a no-op.  ### todo:
      should this return an error? */
-  if (! noderev->edit_data_key)
+  if (! noderev->edit_key)
     return SVN_NO_ERROR;
 
   /* Now, we want to delete the old representation and replace it with
@@ -1314,8 +1317,8 @@ svn_fs__dag_finalize_edits (dag_node_t *file,
      everything is being properly referred to by the node-revision
      skel. */
   old_data_key = noderev->data_key;
-  noderev->data_key = noderev->edit_data_key;
-  noderev->edit_data_key = NULL;
+  noderev->data_key = noderev->edit_key;
+  noderev->edit_key = NULL;
   SVN_ERR (svn_fs__put_node_revision (fs, file->id, noderev, trail));
   
   /* Only *now* can we safely destroy the old representation (if it
@@ -1389,28 +1392,33 @@ svn_fs__dag_copy (dag_node_t *to_node,
   if (preserve_history)
     {
       svn_fs__node_revision_t *from_noderev, *to_noderev;
-      
+      const char *copy_id;
+      svn_fs_t *fs = svn_fs__dag_get_fs (from_node);
+      const svn_fs_id_t *src_id = svn_fs__dag_get_id (from_node);
+
       /* Make a copy of the original node revision. */
       SVN_ERR (get_node_revision (&from_noderev, from_node, trail));
       to_noderev = copy_node_revision (from_noderev, trail->pool);
       
-      /* Set the copy info in the new node revision. */
-      to_noderev->ancestor_path = from_path;
-      to_noderev->ancestor_rev = from_rev;
+      /* Reserve a copy ID for this new copy. */
+      SVN_ERR (svn_fs__reserve_copy_id (&copy_id, fs, trail));
 
-      /* The new node doesn't know what revision it was created in yet. */
-      to_noderev->revision = SVN_INVALID_REVNUM;
-      
-      /* ### todo:  This will become a *successor id* now! */
+      /* Create a successor with its predecessor pointing at the copy
+         source. */
+      to_noderev->predecessor_id = svn_fs__id_copy (src_id, trail->pool);
+      SVN_ERR (svn_fs__create_successor (&id, fs, src_id, to_noderev,
+                                         copy_id, txn_id, trail));
 
-      /* Store the new node under a new id in the filesystem.  Note:
-         The id is not related to from_node's id.  This is because the
-         new node is not a next revision of from_node, but rather a
-         copy of it.  Since for copies, all the ancestry information
-         we care about is recorded in the copy options, there is no
-         reason to make the id's be related.  */
-      SVN_ERR (svn_fs__create_node (&id, to_node->fs, to_noderev, 
-                                    txn_id, trail));
+      /* Now that we've done the copy, we need to add the information
+         about the copy to the `copies' table, using the COPY_ID we
+         reserved above.  */
+      SVN_ERR (svn_fs__create_copy (copy_id, fs, from_path, from_rev, 
+                                    id, trail));
+
+      /* Finally, add the COPY_ID to the transaction's list of copies
+         so that, if this transaction is aborted, the `copies' table
+         entry we added above will be cleaned up. */
+      SVN_ERR (svn_fs__add_txn_copy (fs, txn_id, copy_id, trail));
     }
   else  /* don't preserve history */
     {
@@ -1431,17 +1439,25 @@ svn_fs__dag_copied_from (svn_revnum_t *rev_p,
                          trail_t *trail)
 {
   svn_fs__node_revision_t *noderev;
+  const svn_fs_id_t *id = svn_fs__dag_get_id (node), *pred_id;
 
   SVN_ERR (get_node_revision (&noderev, node, trail));
-  if (noderev->ancestor_path && SVN_IS_VALID_REVNUM (noderev->ancestor_rev))
+  if ((pred_id = noderev->predecessor_id))
     {
-      *rev_p = noderev->ancestor_rev;
-      *path_p = apr_pstrdup (trail->pool, noderev->ancestor_path);
-    }
-  else
-    {
-      *rev_p = SVN_INVALID_REVNUM;
-      *path_p = NULL;
+      const char *id_copy_id = svn_fs__id_copy_id (id);
+      const char *pred_copy_id = svn_fs__id_copy_id (pred_id);
+
+      /* If NODE's copy id differs from that of its predecessor, then
+         NODE was the target of a copy operation.  */
+      if (strcmp (id_copy_id, pred_copy_id))
+        {
+          svn_fs__copy_t *copy;
+          SVN_ERR (svn_fs__get_copy (&copy, svn_fs__dag_get_fs (node),
+                                     id_copy_id, trail));
+          *rev_p = copy->src_revision;
+          *path_p = copy->src_path; /* no need to copy since we
+                                       fetched this in TRAIL */
+        }
     }
 
   return SVN_NO_ERROR;
@@ -1480,7 +1496,7 @@ make_node_immutable (dag_node_t *node,
 
   /* Make sure there is no outstanding EDIT-DATA-KEY associated with
      this node.  If there is, we have a problem. */
-  if (svn_fs__dag_is_file (node) && noderev->edit_data_key)
+  if (svn_fs__dag_is_file (node) && noderev->edit_key)
     {
       svn_string_t *id_str = svn_fs_unparse_id (node->id, trail->pool);
       return svn_error_createf 
@@ -1493,7 +1509,6 @@ make_node_immutable (dag_node_t *node,
     SVN_ERR (svn_fs__make_rep_immutable (node->fs, noderev->prop_key, trail));
   if (noderev->data_key)
     SVN_ERR (svn_fs__make_rep_immutable (node->fs, noderev->data_key, trail));
-  noderev->revision = rev;
   
   return SVN_NO_ERROR;
 }

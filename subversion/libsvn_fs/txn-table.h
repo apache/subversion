@@ -37,7 +37,7 @@ int svn_fs__open_transactions_table (DB **transactions_p,
 /* Create a new transaction in FS as part of TRAIL, with an initial
    root and base root ID of ROOT_ID.  Set *TXN_NAME_P to the name of the
    new transaction, allocated in TRAIL->pool.  */
-svn_error_t *svn_fs__create_txn (char **txn_name_p,
+svn_error_t *svn_fs__create_txn (const char **txn_name_p,
                                  svn_fs_t *fs,
                                  const svn_fs_id_t *root_id,
                                  trail_t *trail);
@@ -103,6 +103,17 @@ svn_error_t *svn_fs__get_txn_ids (const svn_fs_id_t **root_id_p,
 svn_error_t *svn_fs__set_txn_root (svn_fs_t *fs,
                                    const char *txn_name,
                                    const svn_fs_id_t *root_id,
+                                   trail_t *trail);
+
+
+/* Add COPY_ID to the list of copies made under the Subversion
+   transaction TXN_NAME in FS as part of TRAIL.
+
+   Returns SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
+   transaction that has already been committed.  */
+svn_error_t *svn_fs__add_txn_copy (svn_fs_t *fs,
+                                   const char *txn_name,
+                                   const char *copy_id,
                                    trail_t *trail);
 
 

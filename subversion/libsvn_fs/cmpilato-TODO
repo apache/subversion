@@ -99,14 +99,6 @@ FUNC to detect when a copy event has been "crossed").  Sleep on this.
 
 --
 
-Need to remember to fix up svn_fs__node_revision_t to be accurate with
-respect to `structure'.  I think I can fly most of the way without
-doing this conversion, though, so I'd like to make this a separate
-change.  Oh, and rename the `edit_data_key' to just the `edit_key',
-will ya?
-
---
-
 Hm...looks like we can't remove the stabilization walk until we find a
 better time to mark our representations as immutable, or stop using a
 mutability flag on those skels.  Major disappointment.
@@ -118,5 +110,12 @@ revisions will.  *That* should eliminate the stabilization walk, since
 the minute the txn is committed, all those reps become effectively
 immutable.
 
+--
 
+svn_fs__dag_check_mutable still has dumb arguments.  Fix it.
+
+--
+
+Still need to do `copy_id' inheritence walk in open_path or
+make_path_mutable or something...
 

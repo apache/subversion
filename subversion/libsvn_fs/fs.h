@@ -127,13 +127,9 @@ typedef struct
   /* node kind */
   svn_node_kind_t kind;
 
-  /* revision in which this node was committed (< 1 here means this node
-     is mutable -- not yet committed */
-  svn_revnum_t revision;
-
-  /* ancestor path/revision */
-  const char *ancestor_path;
-  svn_revnum_t ancestor_rev;
+  /* predecessor node revision id, or NULL if there is no predecessor
+     for this node revision */
+  svn_fs_id_t *predecessor_id;
 
   /* representation key for this node's properties.  may be NULL if
      there are no properties.  */
@@ -145,7 +141,7 @@ typedef struct
 
   /* representation key for this node's text-data-in-progess (files
      only).  NULL if no edits are currently in-progress. */
-  const char *edit_data_key;
+  const char *edit_key;
 
 } svn_fs__node_revision_t;
 

@@ -101,12 +101,12 @@ txn_body_begin_txn (void *baton,
 {
   struct begin_txn_args *args = baton;
   const svn_fs_id_t *root_id;
-  char *svn_txn_id;
+  const char *txn_id;
 
   SVN_ERR (svn_fs__rev_get_root (&root_id, args->fs, args->rev, trail));
-  SVN_ERR (svn_fs__create_txn (&svn_txn_id, args->fs, root_id, trail));
+  SVN_ERR (svn_fs__create_txn (&txn_id, args->fs, root_id, trail));
 
-  *args->txn_p = make_txn (args->fs, svn_txn_id, args->rev, trail->pool);
+  *args->txn_p = make_txn (args->fs, txn_id, args->rev, trail->pool);
   return SVN_NO_ERROR;
 }
 

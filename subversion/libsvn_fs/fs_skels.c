@@ -123,24 +123,24 @@ is_valid_representation_skel (skel_t *skel)
 static int
 is_valid_node_revision_header_skel (skel_t *skel, skel_t **kind_p)
 {
-  if (svn_fs__list_length (skel) >= 2)
-    {
-      if (skel->children->is_atom && skel->children->next->is_atom)
-        {
-          skel_t *copy_option = skel->children->next->next;
-          if (copy_option)
-            {
-              if (! ((svn_fs__list_length (copy_option) == 3)
-                     && svn_fs__matches_atom (copy_option->children, "copy")
-                     && copy_option->children->next->is_atom
-                     && copy_option->children->next->next->is_atom))
-                return 0;
-            }
+  int len = svn_fs__list_length (skel);
 
-          *kind_p = skel->children;
-          return 1;
-        }
-    }
+  if (len < 1)
+    return 0;
+
+  /* set the *KIND_P pointer. */
+  *kind_p = skel->children;
+
+  /* without predecessor... */
+  if ((len == 1)
+      && skel->children->is_atom)
+    return 1;
+
+  /* or with predecessor... */
+  if ((len == 2)
+      && skel->children->is_atom
+      && skel->children->next->is_atom)
+    return 1;
 
   return 0;
 }
@@ -165,18 +165,13 @@ is_valid_node_revision_skel (skel_t *skel)
             return 1;
           
           if (svn_fs__matches_atom (kind, "file")
-              && len >= 3
+              && ((len == 3) || (len == 4))
               && header->next->is_atom
               && header->next->next->is_atom)
             {
-              if ((len == 3) && (! header->next->next->next))
-                return 1;
-
-              /* edit-data-key can only exist on mutable file nodes. */
-              if ((len == 4) 
-                  && (header->children->next->len == 0)
-                  && (header->next->next->next->is_atom))
-                return 1;
+              if ((len == 4) && (! header->next->next->next->is_atom))
+                return 0;
+              return 1;
             }
         }
     }
@@ -452,47 +447,30 @@ svn_fs__parse_node_revision_skel (svn_fs__node_revision_t **noderev_p,
   else
     noderev->kind = svn_node_file;
 
-  /* REVISION */
-  if (header_skel->children->next->len)
-    noderev->revision = atoi (apr_pstrmemdup 
-                              (pool,
-                               header_skel->children->next->data,
-                               header_skel->children->next->len));
-  else
-    noderev->revision = SVN_INVALID_REVNUM;
-
-  /* COPY */
-  if (header_skel->children->next->next)
+  /* PREDECESSOR-ID */
+  if (header_skel->children->next)
     {
-      skel_t *copy_skel = header_skel->children->next->next;
-      noderev->ancestor_rev 
-        = atoi (apr_pstrmemdup (pool,
-                                copy_skel->children->next->data,
-                                copy_skel->children->next->len));
-      noderev->ancestor_path
-        = apr_pstrmemdup (pool, copy_skel->children->next->next->data,
-                          copy_skel->children->next->next->len);
+      noderev->predecessor_id 
+        = svn_fs_parse_id (header_skel->children->next->data,
+                           header_skel->children->next->len, pool);
     }
       
   /* PROP-KEY */
   if (skel->children->next->len)
-    noderev->prop_key = apr_pstrmemdup (pool, 
-                                        skel->children->next->data,
+    noderev->prop_key = apr_pstrmemdup (pool, skel->children->next->data,
                                         skel->children->next->len);
 
   /* DATA-KEY */
   if (skel->children->next->next->len)
-    noderev->data_key = apr_pstrmemdup (pool, 
-                                        skel->children->next->next->data,
+    noderev->data_key = apr_pstrmemdup (pool, skel->children->next->next->data,
                                         skel->children->next->next->len);
 
   /* EDIT-DATA-KEY (optional, files only) */
   if ((noderev->kind == svn_node_file) 
       && skel->children->next->next->next
       && skel->children->next->next->next->len)
-    noderev->edit_data_key 
-      = apr_pstrmemdup (pool, 
-                        skel->children->next->next->next->data,
+    noderev->edit_key 
+      = apr_pstrmemdup (pool, skel->children->next->next->next->data,
                         skel->children->next->next->next->len);
 
   /* Return the structure. */
@@ -855,33 +833,18 @@ svn_fs__unparse_node_revision_skel (skel_t **skel_p,
 {
   skel_t *skel;
   skel_t *header_skel;
-  const char *rev_str;
 
   /* Create the skel. */
   skel = svn_fs__make_empty_list (pool);
   header_skel = svn_fs__make_empty_list (pool);
 
-  /* COPY */
-  if (noderev->ancestor_path && SVN_IS_VALID_REVNUM (noderev->ancestor_rev))
+  /* PREDECESSOR-ID */
+  if (noderev->predecessor_id)
     {
-      skel_t *copy_skel = svn_fs__make_empty_list (pool);
-      rev_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, 
-                              noderev->ancestor_rev);
-      svn_fs__prepend (svn_fs__str_atom (noderev->ancestor_path, 
-                                         pool), copy_skel);
-      svn_fs__prepend (svn_fs__str_atom (rev_str, pool), copy_skel);
-      svn_fs__prepend (svn_fs__str_atom ("copy", pool), copy_skel);
-      svn_fs__prepend (copy_skel, header_skel);
+      svn_string_t *id_str = svn_fs_unparse_id (noderev->predecessor_id, pool);
+      svn_fs__prepend (svn_fs__mem_atom (id_str->data, id_str->len, pool), 
+                       header_skel);
     }
-
-  /* REVISION */
-  if (SVN_IS_VALID_REVNUM (noderev->revision))
-    {
-      rev_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT, noderev->revision);
-      svn_fs__prepend (svn_fs__str_atom (rev_str, pool), header_skel);
-    }
-  else
-    svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), header_skel);
 
   /* KIND */
   if (noderev->kind == svn_node_file)
@@ -893,8 +856,8 @@ svn_fs__unparse_node_revision_skel (skel_t **skel_p,
 
   /* EDIT-DATA-KEY (optional) */
   if ((noderev->kind == svn_node_file)
-      && ((noderev->edit_data_key) && (*noderev->edit_data_key)))
-    svn_fs__prepend (svn_fs__str_atom (noderev->edit_data_key, pool), skel);
+      && ((noderev->edit_key) && (*noderev->edit_key)))
+    svn_fs__prepend (svn_fs__str_atom (noderev->edit_key, pool), skel);
 
   /* DATA-KEY */
   if ((noderev->data_key) && (*noderev->data_key))
@@ -940,8 +903,11 @@ svn_fs__unparse_copy_skel (skel_t **skel_p,
   svn_fs__prepend (svn_fs__mem_atom (tmp_str->data, tmp_str->len, pool), skel);
 
   /* SRC-PATH */
-  svn_fs__prepend (svn_fs__str_atom (copy->src_path, pool), skel);
-  
+  if ((copy->src_path) && (*copy->src_path))
+    svn_fs__prepend (svn_fs__str_atom (copy->src_path, pool), skel);
+  else
+    svn_fs__prepend (svn_fs__mem_atom (NULL, 0, pool), skel);
+
   /* "copy" */
   svn_fs__prepend (svn_fs__str_atom ("copy", pool), skel);
 
