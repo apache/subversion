@@ -96,7 +96,7 @@ svn_diff__file_datasource_open(void *baton,
                                file_baton->path[idx]);
     }
 
-  file_baton->buffer[idx] = apr_palloc(file_baton->pool, finfo.size + 1);
+  file_baton->buffer[idx] = apr_palloc(file_baton->pool, finfo.size);
   rv = apr_file_read_full(file, file_baton->buffer[idx], finfo.size, NULL);
   if (rv != APR_SUCCESS)
     {
@@ -113,7 +113,6 @@ svn_diff__file_datasource_open(void *baton,
 
   file_baton->curp[idx] = file_baton->buffer[idx];
   file_baton->endp[idx] = file_baton->buffer[idx] + finfo.size;
-  *file_baton->endp[idx] = '\n';
 
   return NULL;
 }
@@ -163,8 +162,10 @@ svn_diff__file_datasource_get_next_token(void **token, void *baton,
 
   file_token->length = 0;
 
-  eol = strchr(curp, '\n');
-  if (eol != endp)
+  eol = memchr(curp, '\n', endp - curp);
+  if (!eol)
+    eol = endp;
+  else
     eol++;
 
   file_token->line = curp;
