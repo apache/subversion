@@ -47,7 +47,7 @@
 DIST_SANDBOX=.dist_sandbox
 
 ### Estimated current version of your working copy
-WC_VERSION=`svn st -vN doc/README | awk '{print $2}'`
+WC_VERSION=`svn st -vN doc/README | awk '{print $1}'`
 
 ### The "REV" part of ${DISTNAME}-rREV.tar.gz
 if test -z "$1" || test "$1" = "HEAD"; then

@@ -1,11 +1,10 @@
 XSLTPROC = xsltproc
-RUN_FOP = tools/bin/run-fop.sh
 
 ## You shouldn't normally need to edit anything below here.
 SHELL = /bin/sh
 
 BOOK_TOP = .
-BOOK_DIR = book
+BOOK_DIR = ${BOOK_TOP}/book
 BOOK_HTML_TARGET = $(BOOK_DIR)/book.html
 BOOK_PDF_TARGET = $(BOOK_DIR)/book.pdf
 BOOK_PS_TARGET = $(BOOK_DIR)/book.ps
@@ -13,7 +12,7 @@ BOOK_FO_TARGET = $(BOOK_DIR)/book.fo
 BOOK_XML_SOURCE = $(BOOK_DIR)/book.xml
 BOOK_ALL_SOURCE = $(BOOK_DIR)/*.xml
 
-MDOCS_DIR = misc-docs
+MDOCS_DIR = ${BOOK_TOP}/misc-docs
 MDOCS_HTML_TARGET = $(MDOCS_DIR)/misc-docs.html
 MDOCS_PDF_TARGET = $(MDOCS_DIR)/misc-docs.pdf
 MDOCS_PS_TARGET = $(MDOCS_DIR)/misc-docs.ps
@@ -21,10 +20,11 @@ MDOCS_FO_TARGET = $(MDOCS_DIR)/misc-docs.fo
 MDOCS_XML_SOURCE = $(MDOCS_DIR)/misc-docs.xml
 MDOCS_ALL_SOURCE = $(MDOCS_DIR)/*.xml
 
-XSL_DIR = tools/xsl
+XSL_DIR = ${BOOK_TOP}/tools/xsl
 XSL_FO = $(XSL_DIR)/fo/docbook.xsl
 XSL_HTML = $(XSL_DIR)/html/docbook.xsl
 
+RUN_FOP = ${BOOK_TOP}/tools/bin/run-fop.sh
 
 all: all-html all-pdf all-ps
 
