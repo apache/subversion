@@ -25,7 +25,9 @@
 #include "svn_client.h"
 #include "svn_path.h"
 #include "svn_error.h"
+#include "svn_sorts.h"
 #include "svn_utf.h"
+#include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "cl.h"
@@ -33,28 +35,37 @@
 
 /*** Code. ***/
 
+static int
+compare_cstring_as_paths (const svn_item_t *a, const svn_item_t *b)
+{
+  return svn_path_compare_paths_nts ((char *)a->key, (char *)b->key);
+}
 
 static svn_error_t *
 print_dirents (const char *url,
                apr_hash_t *dirents,
                apr_pool_t *pool)
 {
-  apr_hash_index_t *hi;
+  apr_array_header_t *array;
+  int i;
+
+  array = apr_hash_sorted_keys (dirents, compare_cstring_as_paths, pool);
   
   printf ("%s:\n", url);
 
-  for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
+  for (i = 0; i < array->nelts; ++i)
     {
       const char *utf8_entryname, *native_entryname;
       const char *native_author;
       svn_dirent_t *dirent;
+      svn_item_t *item;
       char timestr[20];
-      const void *key;
-      void *val;
-      
-      apr_hash_this (hi, &key, NULL, &val);
-      utf8_entryname = (const char *) key;
-      dirent = (svn_dirent_t *) val;
+     
+      item = &APR_ARRAY_IDX (array, i, svn_item_t);
+
+      utf8_entryname = item->key;
+
+      dirent = apr_hash_get (dirents, utf8_entryname, item->klen);
 
       SVN_ERR (svn_utf_cstring_from_utf8 (&native_entryname,
                                           utf8_entryname, pool));      
@@ -81,7 +92,7 @@ print_dirents (const char *url,
       printf ("%c %7"SVN_REVNUM_T_FMT" %8.8s %8ld %12s %s%s\n", 
               dirent->has_props ? 'P' : '_',
               dirent->created_rev,
-              dirent->last_author ? dirent->last_author : "      ? ",
+              native_author ? native_author : "      ? ",
               (long int) dirent->size,
               timestr,
               native_entryname,
