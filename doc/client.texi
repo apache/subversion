@@ -87,7 +87,7 @@ described in @cite{Hunt, J. J., Vo, K.-P., and Tichy, W. F.  An
 empirical study of delta algorithms.  Lecture Notes in Computer Science
 1167 (July 1996), 49-66.}  Currently, the output of this algorithm is
 stored in a custom data format called @dfn{svndiff}, invented by Greg
-Hudson <@email{ghudson@@mit.edu}> (a Subversion developer).
+Hudson (<@email{ghudson@@mit.edu}>), a Subversion developer.
 
 The concrete form of a text delta, used for transmitting such deltas
 over the net, is a well-formed XML element, having the following form:

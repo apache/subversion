@@ -1,19 +1,22 @@
 @node Protocol
 @chapter Protocol
 
-The network layer of Subversion is not yet defined.
+The Subversion client library @code{libsvn_ra_dav} uses the @emph{Neon}
+library to generate WebDAV DeltaV requests and sends them to a
+"Subversion-aware" Apache server.
 
-@itemize @bullet
-@item
-  For the initial ``proof-of-concept'' release, there will be no network
-layer at all.  The Subversion client libraries will link directly
-against the Subversion server libraries.  This will allow identical APIs
-to match up one-to-one for testing.
-@item
-  For the first ``real'' release, we will use Apache as a kind of
-generic, all-purpose server.  The client API calls will be translated
-into custom HTTP methods (possibly WebDAV methods); a custom Apache
-module will interpret them and make calls into the Subversion server
-libraries.  For details, @xref{Network Layer}.
-@end itemize
+This Apache server is running @emph{mod_DAV} and @emph{mod_DAV_SVN},
+which translates the requests into Subversion filesystem calls.  
+
+For more info, @xref{Network Layer}.
+
+For a detailed description of exactly how Greg Stein
+(<@email{gstein@@lyra.org}>) is mapping the WebDAV DeltaV spec to
+Subversion, see his paper:  @file{notes/webdav-usage.html}
+
+For more information on WebDAV and the DeltaV extensions, see
+@uref{http://www.webdav.org} and @uref{http://www.webdav.org/deltav}.
+
+For more information on @emph{Neon}, see
+@uref{http://www.webdav.org/neon}.
 
