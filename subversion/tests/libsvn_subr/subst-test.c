@@ -769,6 +769,147 @@ mixed_no_repair (const char **msg,
 
 
 
+/** Keyword substitution. **/
+
+static svn_error_t *
+author (const char **msg,
+        svn_boolean_t msg_only,
+        apr_pool_t *pool)
+{
+  *msg = "expand author keyword";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("author", "\n", NULL, 0, NULL, NULL, "jrandom", NULL, pool));
+
+  SVN_ERR (substitute_and_verify
+           ("author", "\r\n", NULL, 0, NULL, NULL, "jrandom", NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+author_date (const char **msg,
+             svn_boolean_t msg_only,
+             apr_pool_t *pool)
+{
+  *msg = "expand author and date keywords";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("author_date", "\n", NULL, 0,
+            NULL, "Wed Jan  9 07:49:05 2002", "jrandom", NULL, pool));
+
+  SVN_ERR (substitute_and_verify
+           ("author_date", "\r\n", NULL, 0,
+            NULL, "Wed Jan  9 07:49:05 2002", "jrandom", NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+author_rev (const char **msg,
+            svn_boolean_t msg_only,
+            apr_pool_t *pool)
+{
+  *msg = "expand author and rev keywords";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("author_rev", "\n", NULL, 0,
+            "1729", NULL, "jrandom", NULL, pool));
+
+  SVN_ERR (substitute_and_verify
+           ("author_rev", "\r\n", NULL, 0,
+            "1729", NULL, "jrandom", NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+rev (const char **msg,
+     svn_boolean_t msg_only,
+     apr_pool_t *pool)
+{
+  *msg = "expand rev keyword";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("rev", "\n", NULL, 0,
+            "1729", NULL, NULL, NULL, pool));
+
+  SVN_ERR (substitute_and_verify
+           ("rev", "\r\n", NULL, 0,
+            "1729", NULL, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+rev_url (const char **msg,
+         svn_boolean_t msg_only,
+         apr_pool_t *pool)
+{
+  *msg = "expand rev and url keywords";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("rev_url", "\n", NULL, 0,
+            "1729", NULL, NULL, "http://subversion.tigris.org", pool));
+
+  SVN_ERR (substitute_and_verify
+           ("rev_url", "\r\n", NULL, 0,
+            "1729", NULL, NULL, "http://subversion.tigris.org", pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+author_date_rev_url (const char **msg,
+                     svn_boolean_t msg_only,
+                     apr_pool_t *pool)
+{
+  *msg = "expand author, date, rev, and url keywords";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (substitute_and_verify
+           ("author_date_rev_url", "\n", NULL, 0,
+            "1729",
+            "Wed Jan  9 07:49:05 2002",
+            "jrandom",
+            "http://subversion.tigris.org",
+            pool));
+
+  SVN_ERR (substitute_and_verify
+           ("author_date_rev_url", "\r\n", NULL, 0,
+            "1729",
+            "Wed Jan  9 07:49:05 2002",
+            "jrandom",
+            "http://subversion.tigris.org",
+            pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* The test table.  */
 
 svn_error_t * (*test_funcs[]) (const char **msg,
@@ -799,15 +940,14 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   mixed_to_lfcr,
   /* Random eol stuff. */
   mixed_no_repair,
-#if 0
   /* Keywords alone, no eol conversion involved. */
   author,
   author_date,
   author_rev,
+  rev,
   rev_url,
   author_date_rev_url,
   /* Keywords and eol conversion together. */
-#endif /* 0 */
   0
 };
 
