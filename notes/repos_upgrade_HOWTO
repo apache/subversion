@@ -65,7 +65,7 @@ HOW TO UPGRADE YOUR REPOSITORY:
      want to free up some disk space by removing unused BerkeleyDB
      logfiles:
 
-        $ svnadmin list-unused-dblogs newrepos --only-unused | xargs rm
+        $ svnadmin list-unused-dblogs newrepos | xargs rm
 
   4. Don't forget to copy over any hook scripts (and DB_CONFIG, if you
      changed it) from the old to the new repository:
