@@ -602,327 +602,286 @@ log_do_committed (struct log_runner *loggy,
                   const XML_Char **atts)
 {
   svn_error_t *err;
-  const char *revstr
-    = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_REVISION, atts);
-  svn_wc_entry_t tmp_entry;
+  apr_pool_t *pool = loggy->pool; 
+  int is_this_dir = (strcmp (name, SVN_WC_ENTRY_THIS_DIR) == 0);
+  const char *rev = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_REVISION, atts);
+  svn_stringbuf_t *sname = svn_stringbuf_create (name, pool);
   svn_boolean_t wc_root;
+  svn_stringbuf_t *full_path;
+  svn_stringbuf_t *pdir, *basename;
+  apr_hash_t *entries;
+  svn_wc_entry_t *entry;
+  apr_time_t text_time = 0; /* By default, don't override old stamp. */
+  apr_time_t prop_time = 0; /* By default, don't override old stamp. */
+  svn_node_kind_t kind;
 
-  if (! revstr)
-    return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
+  /* Determine the actual full path of the affected item. */
+  full_path = svn_stringbuf_dup (loggy->path, pool);
+  if (! is_this_dir)
+    svn_path_add_component (full_path, sname);
+
+
+  /*** Perform sanity checking operations ***/
+
+  /* If no new post-commit revision was given us, bail with an error. */
+  if (! rev)
+    return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, pool,
                               "missing revision attr for %s", name);
-  else
-    {
-      svn_stringbuf_t *working_file = NULL;
-      svn_stringbuf_t *tmp_base;
-      apr_time_t text_time = 0; /* By default, don't override old stamp. */
-      apr_time_t prop_time = 0; /* By default, don't override old stamp. */
-      enum svn_node_kind kind;
-      svn_wc_entry_t *entry;
-      svn_stringbuf_t *prop_path, *tmp_prop_path, *prop_base_path;
-      svn_stringbuf_t *sname = svn_stringbuf_create (name, loggy->pool);
-      svn_boolean_t is_this_dir;
-
-      /* `name' is either a file's basename, or SVN_WC_ENTRY_THIS_DIR. */
-      is_this_dir = (strcmp (name, SVN_WC_ENTRY_THIS_DIR)) ? FALSE : TRUE;
       
-      /* Determine the actual full path of the affected item so we can
-         easily read its entry and check its state. */
+  /* Read the entry for the affected item.  If we can't find the
+     entry, or if the entry states that our item is not either "this
+     dir" or a file kind, perhaps this isn't really the entry our log
+     creator was expecting.  */
+  SVN_ERR (svn_wc_entry (&entry, full_path, pool));
+  if ((! entry) || ((! is_this_dir) && (entry->kind != svn_node_file)))
+    return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, pool,
+                              "log command for dir '%s' is mislocated", name);
+
+
+  /*** Handle the committed deletion case ***/
+
+  /* If the committed item was scheduled for deletion, it needs to
+     now be removed from revision control.  Once that is accomplished,
+     we are finished handling this item.  */
+  if (entry->schedule == svn_wc_schedule_delete)
+    {
+      /* If we are suppose to delete "this dir", drop a 'killme' file
+         into my own adminstrative dir as a signal for svn_wc__run_log() 
+         to blow away the administrative area after it is finished
+         processing this logfile.  */
+      if (is_this_dir)
+        return svn_wc__make_adm_thing (loggy->path, SVN_WC__ADM_KILLME,
+                                       svn_node_file, APR_OS_DEFAULT,
+                                       0, pool);
+
+      /* Else, we're deleting a file, and we can safely remove files
+         from revision control without screwing something else up. */
+      else
+        return svn_wc_remove_from_revision_control (loggy->path, sname, 
+                                                    FALSE, pool);
+    }
+
+
+  /*** Mark the committed item committed-to-date ***/
+
+  
+  /* If "this dir" has been replaced (delete + add), all its
+     immmediate children *must* be either scheduled for deletion (they
+     were children of "this dir" during the "delete" phase of its
+     replacement), added (they are new children of the replaced dir),
+     or replaced (they are new children of the replace dir that have
+     the same names as children that were present during the "delete"
+     phase of the replacement).  
+
+     Children which are added or replaced will have been reported as
+     individual commit targets, and thus will be re-visited by
+     log_do_committed().  Children which were marked for deletion,
+     however, need to be outright removed from revision control.  */
+  if ((entry->schedule == svn_wc_schedule_replace) && is_this_dir)
+    {
+      apr_hash_index_t *hi;
+              
+      /* Loop over all children entries, look for items scheduled for
+         deletion. */
+      SVN_ERR (svn_wc_entries_read (&entries, loggy->path, pool));
+      for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+        {
+          const void *key;
+          apr_ssize_t klen;
+          void *val;
+          svn_wc_entry_t *cur_entry; 
+                  
+          /* Get the next entry */
+          apr_hash_this (hi, &key, &klen, &val);
+          cur_entry = (svn_wc_entry_t *) val;
+                  
+          /* Skip each entry that isn't scheduled for deletion. */
+          if (cur_entry->schedule != svn_wc_schedule_delete)
+            continue;
+          
+          /* Determine what arguments to hand to our removal function,
+             and let BASENAME double as an "ok" flag to run that function. */
+          basename = NULL;
+          if (cur_entry->kind == svn_node_file)
+            {
+              pdir = loggy->path;
+              basename = svn_stringbuf_create ((const char *)key, pool);
+            }
+          else if (cur_entry->kind == svn_node_dir)
+            {
+              pdir = svn_stringbuf_dup (loggy->path, pool);
+              svn_path_add_component_nts (pdir, (const char *) key);
+              basename = svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, pool);
+            }
+
+          if (basename)
+            SVN_ERR (svn_wc_remove_from_revision_control 
+                     (pdir, basename, FALSE, pool));
+        }
+    }
+
+
+  /* For file commit items, we need to "install" the user's working
+     file as the new `text-base' in the administrative area.  A copy
+     of this file should have been dropped into our `tmp/text-base'
+     directory during the commit process.  Part of this process
+     involves setting the textual timestamp for this entry.  We'd like
+     to just use the timestamp of the working file, but it is possible that
+     at some point during the commit, the real working file might have
+     changed again.  If that has happened, we'll use the timestamp of
+     the copy of this file in `tmp/text-base'. */
+  if (! is_this_dir)
+    {
+      svn_stringbuf_t *wf = full_path, *tmpf;
+
+      /* Make sure our working file copy is present in the temp area. */
+      tmpf = svn_wc__text_base_path (wf, 1, pool);
+      if ((err = svn_io_check_path (tmpf, &kind, pool)))
+        return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
+                                  "error checking existence: %s", name);
+      if (kind == svn_node_file)
+        {
+          svn_boolean_t same;
+          svn_stringbuf_t *chosen;
+
+          /* Verify that the working file is the same as the tmpf file. */
+          if ((err = svn_wc__versioned_file_modcheck (&same, wf, tmpf, pool)))
+            return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
+                                      "error comparing `%s' and `%s'",
+                                      wf->data, tmpf->data);
+
+          /* If they are the same, use the working file's timestamp,
+             else use the tmpf file's timestamp. */
+          chosen = same ? wf : tmpf;
+
+          /* Get the timestamp from our chosen file. */
+          if ((err = svn_io_file_affected_time (&text_time, chosen, pool)))
+            return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
+                                      "error getting affected time: %s",
+                                      chosen->data);
+                  
+          /* Finally, install a new `text-base' item. */
+          if ((err = replace_text_base (loggy->path, name, pool)))
+            return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
+                                      "error replacing text-base: %s", name);
+        }
+    }
+              
+  /* Now check for property commits.  If a property commit occured, a
+     copy of the "working" property file should have been dumped in
+     the admistrative `tmp' area.  We'll let that tmpfile's existence
+     be a signal that we need to do post-commit property processing.
+     Also, we have to again decide which timestamp to use (see the
+     text-time case above).  */
+  {
+    svn_stringbuf_t *wf, *tmpf, *basef;
+
+    SVN_ERR (svn_wc__prop_path (&tmpf, is_this_dir ? loggy->path : full_path,
+                                1, pool));
+    if ((err = svn_io_check_path (tmpf, &kind, pool)))
+      return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
+                                "error checking existence: %s", name);
+    if (kind == svn_node_file)
       {
-        svn_stringbuf_t *full_path;
+        svn_boolean_t same;
+        apr_status_t status;
+        svn_stringbuf_t *chosen;
 
-        full_path = svn_stringbuf_dup (loggy->path, loggy->pool);
-        if (! is_this_dir)
-          svn_path_add_component (full_path, sname);
-        SVN_ERR (svn_wc_entry (&entry, full_path, loggy->pool));
-        if ((! is_this_dir) && (entry->kind != svn_node_file))
-          return svn_error_createf 
-            (SVN_ERR_WC_BAD_ADM_LOG, 0, NULL, loggy->pool,
-             "log command for directory '%s' mislocated", name);
+        /* Get property file pathnames (not from the `tmp' area) depending
+           on whether we're examining a file or THIS_DIR */
+        SVN_ERR (svn_wc__prop_path (&wf, 
+                                    is_this_dir ? loggy->path : full_path, 
+                                    0, pool));
+        SVN_ERR (svn_wc__prop_base_path (&basef,
+                                         is_this_dir ? loggy->path : full_path,
+                                         0, pool));
+        
+        /* We need to decide which prop-timestamp to use, just like we
+           did with text-time above. */
+        if ((err = svn_wc__files_contents_same_p (&same, wf, tmpf, pool)))
+          return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
+                                    "error comparing `%s' and `%s'",
+                                    wf->data, tmpf->data);
+
+        /* If they are the same, use the working file's timestamp,
+           else use the tmp_base file's timestamp. */
+        chosen = same ? wf : tmpf;
+
+        /* Get the timestamp of our chosen file. */
+        if ((err = svn_io_file_affected_time (&prop_time, chosen, pool)))
+          return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
+                                    "error getting affected time: %s", chosen);
+        
+        /* Make the tmp prop file the new pristine one.  Note that we
+           have to temporarily set the file permissions for writability. */
+        SVN_ERR (svn_io_set_file_read_write (basef->data, TRUE, pool));
+        if ((status = apr_file_rename (tmpf->data, basef->data, pool)))
+          return svn_error_createf (status, 0, NULL, pool, 
+                                    "error renaming `%s' to `%s'",
+                                    tmpf->data, basef->data);
+        SVN_ERR (svn_io_set_file_read_only (basef->data, FALSE, pool));
       }
+  }   
 
-      /* What to do if the committed entry was scheduled for deletion: */
-      if (entry && (entry->schedule == svn_wc_schedule_delete))
-        {
-          if (is_this_dir)
-            /* Drop a 'killme' file into my own adminstrative dir;
-               this signals the svn_wc__run_log() to blow away .svn/
-               after its done with this logfile.  */
-            SVN_ERR (svn_wc__make_adm_thing (loggy->path,
-                                             SVN_WC__ADM_KILLME,
-                                             svn_node_file, 
-                                             APR_OS_DEFAULT,
-                                             0,
-                                             loggy->pool));
-          else
-            /* We can safely remove files from revision control
-               without screwing something else up. */
-            SVN_ERR (svn_wc_remove_from_revision_control
-                     (loggy->path, sname, FALSE, loggy->pool));
-        }
-               
-      else   /* entry not deleted, so mark commited-to-date */
-        {
-          svn_stringbuf_t *pdir, *basename;
-          apr_hash_t *entries;
+  /* Files have been moved, and timestamps have been found.  It is now
+     fime for The Big Entry Modification. */
+  entry->revision = SVN_STR_TO_REV (rev);
+  entry->kind = is_this_dir ? svn_node_dir : svn_node_file;
+  entry->schedule = svn_wc_schedule_normal;
+  entry->copied = FALSE;
+  entry->text_time = text_time;
+  entry->prop_time = prop_time;
+  entry->conflict_old = NULL;
+  entry->conflict_new = NULL;
+  entry->conflict_wrk = NULL;
+  entry->prejfile = NULL;
+  entry->copyfrom_url = NULL;
+  entry->copyfrom_rev = SVN_INVALID_REVNUM;
+  if ((err = svn_wc__entry_modify (loggy->path, sname, entry,
+                                   (SVN_WC__ENTRY_MODIFY_REVISION 
+                                    | SVN_WC__ENTRY_MODIFY_SCHEDULE 
+                                    | SVN_WC__ENTRY_MODIFY_COPIED
+                                    | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
+                                    | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
+                                    | SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
+                                    | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
+                                    | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK
+                                    | SVN_WC__ENTRY_MODIFY_PREJFILE
+                                    | SVN_WC__ENTRY_MODIFY_TEXT_TIME
+                                    | SVN_WC__ENTRY_MODIFY_PROP_TIME
+                                    | SVN_WC__ENTRY_MODIFY_FORCE),
+                                   pool)))
+    return svn_error_createf
+      (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
+       "error modifying entry: %s", name);
 
-          if ((entry && (entry->schedule == svn_wc_schedule_replace))
-              && is_this_dir)
-            {
-              apr_hash_index_t *hi;
-              
-              /* If THIS_DIR has been replaced, all its immmediate
-                 children *must* be either marked as {D, A, or R}.
-                 Children which are A or R will be reported as individual
-                 commit-targets, and thus will be re-visited by
-                 log_do_committed().  Children which are marked as D,
-                 however, need to be outright removed from revision
-                 control.  */
-              
-              /* Loop over all children entries, look for D markers. */
-              SVN_ERR (svn_wc_entries_read (&entries, loggy->path,
-                                            loggy->pool));
-              
-              for (hi = apr_hash_first (loggy->pool, entries); 
-                   hi; 
-                   hi = apr_hash_next (hi))
-                {
-                  const void *key;
-                  const char *keystring;
-                  apr_ssize_t klen;
-                  void *val;
-                  svn_stringbuf_t *current_entry_name;
-                  svn_wc_entry_t *current_entry; 
-                  
-                  /* Get the next entry */
-                  apr_hash_this (hi, &key, &klen, &val);
-                  keystring = (const char *) key;
-                  current_entry = (svn_wc_entry_t *) val;
-                  
-                  /* Skip each entry that isn't scheduled for deletion. */
-                  if (current_entry->schedule != svn_wc_schedule_delete)
-                    continue;
-                  
-                  /* Get the name of entry, remove from revision control. */
-                  current_entry_name = svn_stringbuf_create (keystring,
-                                                             loggy->pool);
-                  
-                  if (current_entry->kind == svn_node_file)
-                    SVN_ERR (svn_wc_remove_from_revision_control 
-                             (loggy->path,
-                              current_entry_name,
-                              FALSE, loggy->pool));
-                  
-                  else if (current_entry->kind == svn_node_dir)
-                    {
-                      svn_stringbuf_t *parent = svn_stringbuf_dup
-                        (loggy->path, loggy->pool);
-                      svn_stringbuf_t *thisdir =
-                        svn_stringbuf_create (SVN_WC_ENTRY_THIS_DIR, 
-                                              loggy->pool);
-                      svn_path_add_component (parent, current_entry_name);
-                      SVN_ERR (svn_wc_remove_from_revision_control
-                               (parent, thisdir, FALSE, loggy->pool));
-                    }
-                }
-            }
+  /* If we aren't looking at "this dir" (meaning we are looking at a
+     file), we are finished.  From here on out, it's all about a
+     directory's entry in its parent.  */
+  if (! is_this_dir)
+    return SVN_NO_ERROR;
 
-          if (! is_this_dir)
-            {
-              /* If we get here, `name' is a file's basename.
-                 `basename' is an svn_stringbuf_t version of it.  Check
-                 for textual changes. */
-              working_file = svn_stringbuf_dup (loggy->path, loggy->pool);
-              svn_path_add_component (working_file,
-                                      sname);
-              tmp_base = svn_wc__text_base_path (working_file, 1, loggy->pool);
-              
-              err = svn_io_check_path (tmp_base, &kind, loggy->pool);
-              if (err)
-                return svn_error_createf
-                  (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
-                   "error checking existence of %s", name);
-              
-              if (kind == svn_node_file)
-                {
-                  svn_boolean_t same;
+  /* For directories, we also have to reset the state in the parent's
+     entry for this directory, unless the current directory is a `WC
+     root' (meaning, our parent directory on disk is not our parent in
+     Version Control Land), in which case we're all finished here. */
+  SVN_ERR (svn_wc_is_wc_root (&wc_root, loggy->path, pool));
+  if (wc_root)
+    return SVN_NO_ERROR;
 
-                  err = svn_wc__versioned_file_modcheck (&same,
-                                                         working_file,
-                                                         tmp_base,
-                                                         loggy->pool);
-                  if (err)
-                    return svn_error_createf 
-                      (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
-                       "error comparing %s and %s",
-                       working_file->data, tmp_base->data);
-                  
-                  /* What's going on here: the working copy has been
-                     copied to tmp/text-base/ during the commit.  That's
-                     what `tmp_base' points to.  If we get here, we know
-                     the commit was successful, and we need make tmp_base
-                     into the real text-base.  *However*, which timestamp
-                     do we put on the entry?  It's possible that during
-                     the commit the working file may have changed.  If
-                     that's the case, use tmp_base's timestamp.  If
-                     there's been no local mod, it's okay to use the
-                     working file's timestamp. */
-                  err = svn_io_file_affected_time 
-                    (&text_time, same ? working_file : tmp_base, loggy->pool);
-                  if (err)
-                    return svn_error_createf 
-                      (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
-                       "error getting file_affected_time on %s",
-                       same ? working_file->data : tmp_base->data);
-                  
-                  err = replace_text_base (loggy->path, name, loggy->pool);
-                  if (err)
-                    return svn_error_createf 
-                      (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
-                       "error replacing text base for %s", name);
-                }
-            }
-              
-          /* Now check for property commits. */
-
-          /* Get property file pathnames, depending on whether we're
-             examining a file or THIS_DIR */
-          SVN_ERR (svn_wc__prop_path 
-                   (&prop_path,
-                    is_this_dir ? loggy->path : working_file,
-                    0 /* not tmp */, loggy->pool));
-          
-          SVN_ERR (svn_wc__prop_path 
-                   (&tmp_prop_path, 
-                    is_this_dir ? loggy->path : working_file,
-                    1 /* tmp */, loggy->pool));
-          
-          SVN_ERR (svn_wc__prop_base_path 
-                   (&prop_base_path,
-                    is_this_dir ? 
-                    loggy->path : working_file,
-                    0 /* not tmp */, loggy->pool));
-
-          /* Check for existence of tmp_prop_path */
-          err = svn_io_check_path (tmp_prop_path, &kind, loggy->pool);
-          if (err)
-            return svn_error_createf
-              (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
-               "error checking existence of %s", name);
-          
-          if (kind == svn_node_file)
-            {
-              /* Magic inference: if there's a working property file
-                 sitting in the tmp area, then we must have committed
-                 properties on this file or dir.  Time to sync. */
-              
-              /* We need to decide which prop-timestamp to use, just
-                 like we did with text-time. */             
-              svn_boolean_t same;
-              apr_status_t status;
-              err = svn_wc__files_contents_same_p (&same,
-                                                   prop_path,
-                                                   tmp_prop_path,
-                                                   loggy->pool);
-              if (err)
-                return svn_error_createf 
-                  (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
-                   "error comparing %s and %s",
-                   prop_path->data, tmp_prop_path->data);
-
-              err = svn_io_file_affected_time 
-                (&prop_time, same ? prop_path : tmp_prop_path, loggy->pool);
-              if (err)
-                return svn_error_createf 
-                  (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
-                   "error getting file_affected_time on %s",
-                   same ? prop_path->data : tmp_prop_path->data);
-
-              /* Remove read-only flag on terminated file. */
-              SVN_ERR (svn_io_set_file_read_write (prop_base_path->data,
-                                                   TRUE,
-                                                   loggy->pool));
-
-              /* Make the tmp prop file the new pristine one. */
-              status = apr_file_rename (tmp_prop_path->data,
-                                        prop_base_path->data,
-                                        loggy->pool);
-              if (status)
-                return svn_error_createf (status, 0, NULL, loggy->pool,
-                                          "error renaming %s to %s",
-                                          tmp_prop_path->data,
-                                          prop_base_path->data);
-
-              SVN_ERR (svn_io_set_file_read_only (prop_base_path->data,
-                                                  FALSE,
-                                                  loggy->pool));
-            }
-          
-
-          /* Files have been moved, and timestamps are found.  Time
-             for The Big Entry Modification. */
-          tmp_entry.revision = SVN_STR_TO_REV (revstr);
-          tmp_entry.kind = is_this_dir ? svn_node_dir : svn_node_file;
-          tmp_entry.schedule = svn_wc_schedule_normal;
-          tmp_entry.copied = FALSE;
-          tmp_entry.text_time = text_time;
-          tmp_entry.prop_time = prop_time;
-          tmp_entry.conflict_old = NULL;
-          tmp_entry.conflict_new = NULL;
-          tmp_entry.conflict_wrk = NULL;
-          tmp_entry.prejfile = NULL;
-          tmp_entry.copyfrom_url = NULL;
-          tmp_entry.copyfrom_rev = SVN_INVALID_REVNUM;
-          err = svn_wc__entry_modify (loggy->path, sname, &tmp_entry,
-                                      (SVN_WC__ENTRY_MODIFY_REVISION 
-                                       | SVN_WC__ENTRY_MODIFY_SCHEDULE 
-                                       | SVN_WC__ENTRY_MODIFY_COPIED
-                                       | SVN_WC__ENTRY_MODIFY_COPYFROM_URL
-                                       | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
-                                       | SVN_WC__ENTRY_MODIFY_CONFLICT_OLD
-                                       | SVN_WC__ENTRY_MODIFY_CONFLICT_NEW
-                                       | SVN_WC__ENTRY_MODIFY_CONFLICT_WRK
-                                       | SVN_WC__ENTRY_MODIFY_PREJFILE
-                                       | SVN_WC__ENTRY_MODIFY_TEXT_TIME
-                                       | SVN_WC__ENTRY_MODIFY_PROP_TIME
-                                       | SVN_WC__ENTRY_MODIFY_FORCE),
-                                      loggy->pool);
-          if (err)
-            return svn_error_createf
-              (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
-               "error modifying entry %s", name);
-
-          /* Get outta here if we aren't looking at "this dir".  From
-             here on out, it's all about a directory's entry in its
-             parent.  */
-          if (! is_this_dir)
-            return SVN_NO_ERROR;
-
-          /* Also, if this is a directory, don't forget to reset the
-             state in the parent's entry for this directory (unless
-             the current directory is a `WC root' (meaning, our parent
-             directory on disk is not our parent in Version Control
-             Land). */
-          SVN_ERR (svn_wc_is_wc_root (&wc_root, loggy->path, loggy->pool));
-          if (wc_root)
-            return SVN_NO_ERROR;
-          svn_path_split (loggy->path, &pdir, &basename, loggy->pool);
-
-          /* Make sure our entry exists in the parent (if the parent
+  /* Make sure our entry exists in the parent (if the parent
              is even a SVN working copy directory). */
-          SVN_ERR (svn_wc_entries_read (&entries, pdir, loggy->pool));
-          if (apr_hash_get (entries, basename->data, APR_HASH_KEY_STRING))
-            {
-              err = svn_wc__entry_modify (pdir, basename, &tmp_entry,
-                                          (SVN_WC__ENTRY_MODIFY_SCHEDULE 
-                                           | SVN_WC__ENTRY_MODIFY_COPIED
-                                           | SVN_WC__ENTRY_MODIFY_FORCE),
-                                          loggy->pool);
-              if (err)
-                return svn_error_createf
-                  (SVN_ERR_WC_BAD_ADM_LOG, 0, err, loggy->pool,
-                   "error merge_syncing %s", name);
-            }
-        }
+  svn_path_split (loggy->path, &pdir, &basename, pool);
+  SVN_ERR (svn_wc_entries_read (&entries, pdir, pool));
+  if (apr_hash_get (entries, basename->data, APR_HASH_KEY_STRING))
+    {
+      if ((err = svn_wc__entry_modify (pdir, basename, entry,
+                                       (SVN_WC__ENTRY_MODIFY_SCHEDULE 
+                                        | SVN_WC__ENTRY_MODIFY_COPIED
+                                        | SVN_WC__ENTRY_MODIFY_FORCE),
+                                       pool)))
+        return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
+                                  "error merge_syncing %s", name);
     }
 
   return SVN_NO_ERROR;
