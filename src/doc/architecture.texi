@@ -6,104 +6,87 @@ Subversion is conceptually divided into a number of separable layers.
 
 Assuming that the programmatic interface of each layer is well-defined,
 it is easy to customize the different parts of the system.  Contributors
-can write new client apps, new network protocols, new servers, new
-server features, and new database back-ends.
+can write new client apps, new network protocols, new server processes,
+new server features, and new storage back-ends.
 
 The following diagram illustrates the "layered" architecture, and where
 each particular interface lies.
 
 @example
 
-             +--------------------+  
+             +--------------------+
              | commandline or GUI |
-             |    client app      |           
- +---------------------+-------------------+ <====== Client interface
- |    Working Copy     |  Network Access   |                         
- |   Management Lib    |       Lib         |                         
- +---------------------+---------+---------+ <====== Network interface
-                       |      libneon      |                          
-                       +---------+---------+   
-                      ^              ^        
-                     /              / 
+             |    client app      |
+         +----------------------------+      <====== Client interface
+         |      Client Library        |
+ +-------+----------------------------+----+ <====== Network interface
+ |    Working Copy     | Repository Access |
+ |   Management lib    |       lib         |
+ +---------------------+---------+---------+
+                       |      libneon      |
+                       +---------+---------+
+                      ^              ^
+                     /              /
                DAV  /              /  HTTP
-                   /              /       
-                  v              v        
-          +---------+    +---------+      
-          |         |    |         |        
-          | Apache  |    | Apache  |        
-          |         |    |         |      
-          +---------+    +---------+      
-          | mod_DAV |    |         |      
+                   /              /
+                  v              v
+          +---------+    +---------+
+          |         |    |         |
+          | Apache  |    | Apache  |
+          |         |    |         |
+          +---------+    +---------+
+          | mod_DAV |    |         |
         +-------------+  | mod_SVN |
         | mod_DAV_SVN |  |         |
  +------+-------------+--+---------+-------+ <===== Server interface
- |                                         |                        
- |            Main SVN Library             |                        
- |                                         |                        
+ |                                         |
+ |            Main SVN Library             |
+ |                                         |
  +-----------------------------------------+ <===== Filesystem interface
- |                                         |                            
- |          Subversion Filesystem          |                            
- |                                         |                            
+ |                                         |
+ |          Subversion Filesystem          |
+ |                                         |
  +-----------------------------------------+
-               
+
 @end example
 @c Let's just say that emacs' "picture" mode is an excellent thing!
 
 
 @menu
-* Semantics::                 Common ideas passed through the layers.
-* Client Layer::              Client-side overview. 
+* Client Layer::              Client-side overview.
 * Network Layer::             Network overview.
 * Server Layer::              Server-side overview.
 @end menu
-
-@c ------------------------------------------------------------------
-@node Semantics
-@section Semantics
-
-In order to communicate properly, the Subversion client and server must
-agree on a set of high-level operations that are required to perform
-version control.  This includes:
-
-@itemize @bullet
-@item
-      the ability to discuss differences between repository and working
-      copy (by exchanging "delta" objects)
-@item
-      the ability to read or write a file's text or properties
-@item
-      the ability to update or commit a working copy
-@item
-      the ability to work with branches and tags
-@end itemize
-
-These operations are made concrete in the interfaces (APIs) provided by
-certain client and server header files.  (More on this below.)
 
 @c ------------------------------------------------------------------
 @node Client Layer
 @section Client Layer
 
 The Subversion client is a binary application (either command-line or
-GUI) which links to two shared libraries.
+GUI) which draws upon three libraries.
 
 The first shared library provides an API for managing the client's
 "working copy" of a project.  This includes concepts like local renaming
-or removal of files, patching files, extracting diffs, and a slew of
-routines for maintaining administrative files in the SVN/ directory.
+or removal of files, patching files, extracting local diffs, and a some
+of routines for maintaining administrative files in the SVN/ directory.
 
-The second shared library provides an API for requests that require
-talking to a subversion server.  This includes routines to open a
-connection to a server via a protocol of choice.  However, most of the
-API represents operations defined by the "main" Subversion library.
+The second shared library provides an API for exchanging information
+with a Subversion repository.  This includes the ability to read files,
+write new versions of files, and ask the repository to compare a working
+copy against its latest version.
 
-For interface details, @xref{Client}.
-        
+The third library provides ``high-level'' client functions such as
+@code{update()} and @code{commit()}, which involve the using the
+routines in @emph{both} of the other two client libraries.
+
+For details, @xref{Client}.
+
 @c ------------------------------------------------------------------
 @node Network Layer
 @section Network Layer
 
-The network layer's job is to move Subversion's semantics over a wire.
+The network layer's job is to move the repository API requests over a
+wire.
 
 On the client side, a network library translates these ideas into a set
 of either HTTP 1.1 or WebDAV method extensions.  (HTTP 1.1 allows one to
@@ -135,8 +118,8 @@ Subversion's layered architecture certainly doesn't @emph{prevent}
 anyone from writing a totally new network layer!)
 
 Depending on whether DAV or HTTP 1.1 is used, an appropriate Apache
-module will translate the method-requests directly into calls to the
-"main" Subversion library.
+module will translate the method-requests back into API calls against a
+particular repository.
 
 For details, @xref{Protocol}.
 
@@ -147,18 +130,18 @@ For details, @xref{Protocol}.
 The back-end of Subversion consists of two libraries: the Main
 Subversion library and the Subversion Filesystem.
 
-The @dfn{Main Subversion library} provides an API representing general
-version-control services that the client requires, such as the ability
-to talk about changes between working copies and the repository.
+The @dfn{Main Subversion library} implements the same repository API
+that the client uses, but @emph{multiplexes} the calls to different
+repositories on the server machine.
 
-These high-level routines make calls directly into the @dfn{Subversion
-Filesystem library}.  The Subversion Filesystem is a simple, abstract
-UNIX-like filesystem, but with a small twist: @code{write ()} calls are
-versioned and atomic, and no data is ever deleted!
+Finally, the client's function calls reach a particular repository and
+are interpreted by the @dfn{Subversion Filesystem library}.  The
+Subversion Filesystem is a simple, abstract UNIX-like filesystem, but
+with a small twist: @code{write ()} calls are versioned and atomic, and
+no data is ever deleted!
 
 These filesystem calls then talk to disk, either through a set of
-Berkeley DBM files, or a more powerful SQL database.  (Although any
-back-end with a concept of "transactions" will work.)
+Berkeley DBM files, or a more powerful SQL database.
 
 For a more detailed explanation: @xref{Server}.
 
