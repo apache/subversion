@@ -40,4 +40,7 @@ post-configure:
 	@${REINPLACE_CMD} 's/install-swig-py-lib//g' ${WRKSRC}/Makefile
 	@${REINPLACE_CMD} 's/swig-py-lib//g' ${WRKSRC}/Makefile
 
+post-install:
+	@${CAT} pkg-message
+
 .include <bsd.port.mk>
