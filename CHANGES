@@ -34,6 +34,8 @@ http://svn.collab.net/repos/svn/tags/0.33.0
  * 'svn log --xml' now obeys the '-q' flag (r7555)
  * cvs2svn.py bugfixes, especially issue #1440
  * book and documentation updates
+ * removed server config options ssl-ignore-invalid-date and
+   ssl-override-cert-hostname (r7644) 
  * many other enhancements, minor features, and bugfixes not listed here
 
  Developer-visible changes:
