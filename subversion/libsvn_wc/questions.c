@@ -463,9 +463,23 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   if (kind != svn_node_file)
     {
       /* If we get here, we know that the property file exists, but
-         the base property file doesn't.  Somebody must have started
-         adding properties, so that's a local change! */
-      *modified_p = TRUE;
+         the base property file doesn't. 
+         
+         This means somebody has recently created properties for the
+         first time, and hasn't yet committed.
+
+         BUT:  they may have removed them again, leaving an empty
+         property file.  Check for this. */
+      int hash_size;
+      apr_hash_t *props = apr_hash_make (pool);
+
+      SVN_ERR (svn_wc__load_prop_file (prop_path, props, pool));
+      hash_size = apr_hash_count (props);
+      if (hash_size)
+        *modified_p = TRUE;
+      else
+        *modified_p = FALSE;
+
       return SVN_NO_ERROR;
     }              
   
