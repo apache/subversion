@@ -47,13 +47,9 @@ svn_cl__export (apr_getopt_t *os,
   auth_baton = svn_cl__make_auth_baton (opt_state, pool);
 
   if (opt_state->args->nelts == 1) 
-    {
-      svn_path_split_nts(((const char **) (opt_state->args->elts))[0], NULL, &to, pool);
-    }
+    svn_path_split_nts(((const char **) (opt_state->args->elts))[0], NULL, &to, pool);
   else if (opt_state->args->nelts == 2) 
-    {
-      to = ((const char **) (opt_state->args->elts))[1];
-    }
+    to = ((const char **) (opt_state->args->elts))[1];
   else
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, 0, pool, "");
 
