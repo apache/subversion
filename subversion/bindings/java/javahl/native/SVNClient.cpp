@@ -1013,7 +1013,14 @@ svn_client_ctx_t * SVNClient::getContext(const char *message)
 {
 	apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
     svn_auth_baton_t *ab;
-	svn_client_ctx_t *ctx = (svn_client_ctx_t *) apr_pcalloc (JNIUtil::getRequestPool()->pool(), sizeof (*ctx));
+	//svn_client_ctx_t *ctx = (svn_client_ctx_t *) apr_pcalloc (JNIUtil::getRequestPool()->pool(), sizeof (*ctx));
+	svn_client_ctx_t *ctx;
+	svn_error_t *err = NULL;
+    if (( err = svn_client_create_context(&ctx, pool)))
+    {
+		JNIUtil::handleSVNError(err);
+        return NULL;
+    }
 
     apr_array_header_t *providers
       = apr_array_make (pool, 10, sizeof (svn_auth_provider_object_t *));
@@ -1078,8 +1085,7 @@ svn_client_ctx_t * SVNClient::getContext(const char *message)
 	ctx->log_msg_baton = getCommitMessageBaton(message);
 	ctx->cancel_func = NULL;
 	ctx->cancel_baton = NULL;
-	svn_error_t *err = NULL;
-    if (( err = svn_config_get_config (&(ctx->config), NULL, JNIUtil::getRequestPool()->pool())))
+    if (( err = svn_config_get_config (&(ctx->config), NULL, pool)))
     {
 		JNIUtil::handleSVNError(err);
         return NULL;
