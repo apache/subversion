@@ -50,10 +50,8 @@ get_library_vtable (fs_library_vtable_t **vtable, const char *fsap_name,
      error rather than aborting if fsap_name is unrecognized. */
   if (strcmp(fsap_name, "base") == 0)
     *vtable = &svn_fs_base__vtable;
-#if 0
   else if (strcmp(fsap_name, "fsfs") == 0)
     *vtable = &svn_fs_fs__vtable;
-#endif
   else
     abort();
   return SVN_NO_ERROR;

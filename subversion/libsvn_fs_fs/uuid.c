@@ -23,11 +23,11 @@
 
 
 svn_error_t *
-svn_fs_get_uuid (svn_fs_t *fs,
+svn_fs_fs__get_uuid (svn_fs_t *fs,
                  const char **uuid,
                  apr_pool_t *pool)
 {
-  SVN_ERR (svn_fs__check_fs (fs));
+  SVN_ERR (svn_fs_fs__check_fs (fs));
 
   SVN_ERR (svn_fs__fs_get_uuid (uuid, fs, pool));
 
@@ -35,7 +35,7 @@ svn_fs_get_uuid (svn_fs_t *fs,
 }
 
 svn_error_t *
-svn_fs_set_uuid (svn_fs_t *fs,
+svn_fs_fs__set_uuid (svn_fs_t *fs,
                  const char *uuid,
                  apr_pool_t *pool)
 {

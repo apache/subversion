@@ -32,7 +32,7 @@ extern "C" {
 
 /* Verify that FS refers to an open database; return an appropriate
    error if this is not the case.  */
-svn_error_t *svn_fs__check_fs (svn_fs_t *fs);
+svn_error_t *svn_fs_fs__check_fs (svn_fs_t *fs);
 
 
 

@@ -29,11 +29,12 @@
 #include "fs.h"
 #include "dag.h"
 #include "err.h"
-#include "id.h"
 #include "tree.h"
 #include "revs-txns.h"
 #include "key-gen.h"
 #include "fs_fs.h"
+
+#include "../libsvn_fs/fs_loader.h"
 
 
 /*** Helpers ***/
@@ -66,13 +67,13 @@ get_txn (svn_fs__transaction_t **txn_p,
 /*** Revisions ***/
 
 svn_error_t *
-svn_fs_youngest_rev (svn_revnum_t *youngest_p,
-                     svn_fs_t *fs,
-                     apr_pool_t *pool)
+svn_fs_fs__youngest_rev (svn_revnum_t *youngest_p,
+                         svn_fs_t *fs,
+                         apr_pool_t *pool)
 {
   svn_revnum_t youngest;
   
-  SVN_ERR (svn_fs__check_fs (fs));
+  SVN_ERR (svn_fs_fs__check_fs (fs));
   SVN_ERR (svn_fs__fs_youngest_revision (&youngest, fs, pool));
   
   *youngest_p = youngest;
@@ -81,14 +82,14 @@ svn_fs_youngest_rev (svn_revnum_t *youngest_p,
 }
 
 svn_error_t *
-svn_fs_revision_proplist (apr_hash_t **table_p,
-                          svn_fs_t *fs,
-                          svn_revnum_t rev,
-                          apr_pool_t *pool)
+svn_fs_fs__revision_proplist (apr_hash_t **table_p,
+                              svn_fs_t *fs,
+                              svn_revnum_t rev,
+                              apr_pool_t *pool)
 {
   apr_hash_t *table;
 
-  SVN_ERR (svn_fs__check_fs (fs));
+  SVN_ERR (svn_fs_fs__check_fs (fs));
   SVN_ERR (svn_fs__fs_revision_proplist (&table, fs, rev, pool));
 
   *table_p = table;
@@ -98,15 +99,15 @@ svn_fs_revision_proplist (apr_hash_t **table_p,
 
 
 svn_error_t *
-svn_fs_revision_prop (svn_string_t **value_p,
-                      svn_fs_t *fs,
-                      svn_revnum_t rev,
-                      const char *propname,
-                      apr_pool_t *pool)
+svn_fs_fs__revision_prop (svn_string_t **value_p,
+                          svn_fs_t *fs,
+                          svn_revnum_t rev,
+                          const char *propname,
+                          apr_pool_t *pool)
 {
   apr_hash_t *table;
 
-  SVN_ERR (svn_fs__check_fs (fs));
+  SVN_ERR (svn_fs_fs__check_fs (fs));
   SVN_ERR (svn_fs__fs_revision_proplist (&table, fs, rev, pool));
 
   *value_p = NULL;
@@ -136,13 +137,13 @@ svn_fs__set_rev_prop (svn_fs_t *fs,
 }
 
 svn_error_t *
-svn_fs_change_rev_prop (svn_fs_t *fs,
-                        svn_revnum_t rev,
-                        const char *name,
-                        const svn_string_t *value,
-                        apr_pool_t *pool)
+svn_fs_fs__change_rev_prop (svn_fs_t *fs,
+                            svn_revnum_t rev,
+                            const char *name,
+                            const svn_string_t *value,
+                            apr_pool_t *pool)
 {
-  SVN_ERR (svn_fs__check_fs (fs));
+  SVN_ERR (svn_fs_fs__check_fs (fs));
   SVN_ERR (svn_fs__set_rev_prop (fs, rev, name, value, pool));
 
   return SVN_NO_ERROR;
@@ -187,13 +188,13 @@ svn_fs__get_txn_ids (const svn_fs_id_t **root_id_p,
 /* Generic transaction operations.  */
 
 svn_error_t *
-svn_fs_txn_proplist (apr_hash_t **table_p,
-                     svn_fs_txn_t *txn,
-                     apr_pool_t *pool)
+svn_fs_fs__txn_proplist (apr_hash_t **table_p,
+                         svn_fs_txn_t *txn,
+                         apr_pool_t *pool)
 {
   svn_fs_t *fs = txn->fs;
 
-  SVN_ERR (svn_fs__check_fs (fs));
+  SVN_ERR (svn_fs_fs__check_fs (fs));
 
   SVN_ERR (svn_fs__fs_txn_proplist (table_p, txn, pool));
 
@@ -202,15 +203,15 @@ svn_fs_txn_proplist (apr_hash_t **table_p,
 
 
 svn_error_t *
-svn_fs_txn_prop (svn_string_t **value_p,
-                 svn_fs_txn_t *txn,
-                 const char *propname,
-                 apr_pool_t *pool)
+svn_fs_fs__txn_prop (svn_string_t **value_p,
+                     svn_fs_txn_t *txn,
+                     const char *propname,
+                     apr_pool_t *pool)
 {
   apr_hash_t *table;
   svn_fs_t *fs = txn->fs;
 
-  SVN_ERR (svn_fs__check_fs (fs));
+  SVN_ERR (svn_fs_fs__check_fs (fs));
 
   SVN_ERR (svn_fs_txn_proplist (&table, txn, pool));
 
@@ -222,34 +223,46 @@ svn_fs_txn_prop (svn_string_t **value_p,
 }
 
 svn_error_t *
-svn_fs_change_txn_prop (svn_fs_txn_t *txn,
-                        const char *name,
-                        const svn_string_t *value,
-                        apr_pool_t *pool)
+svn_fs_fs__change_txn_prop (svn_fs_txn_t *txn,
+                            const char *name,
+                            const svn_string_t *value,
+                            apr_pool_t *pool)
 {
   svn_fs_t *fs = txn->fs;
 
-  SVN_ERR (svn_fs__check_fs (fs));
+  SVN_ERR (svn_fs_fs__check_fs (fs));
 
   SVN_ERR (svn_fs__fs_change_txn_prop (txn, name, value, pool));
 
   return SVN_NO_ERROR;
 }
 
+static txn_vtable_t txn_vtable = {
+  svn_fs_fs__commit_txn,
+  svn_fs_fs__abort_txn,
+  svn_fs_fs__txn_prop,
+  svn_fs_fs__txn_proplist,
+  svn_fs_fs__change_txn_prop,
+  svn_fs_fs__txn_root
+};
+
 /* Note:  it is acceptable for this function to call back into
    public FS API interfaces because it does not itself use trails.  */
 svn_error_t *
-svn_fs_begin_txn (svn_fs_txn_t **txn_p,
-                  svn_fs_t *fs,
-                  svn_revnum_t rev,
-                  apr_pool_t *pool)
+svn_fs_fs__begin_txn (svn_fs_txn_t **txn_p,
+                      svn_fs_t *fs,
+                      svn_revnum_t rev,
+                      apr_pool_t *pool)
 {
   svn_string_t date;
 
-  SVN_ERR (svn_fs__check_fs (fs));
+  SVN_ERR (svn_fs_fs__check_fs (fs));
 
   SVN_ERR (svn_fs__fs_begin_txn (txn_p, fs, rev, pool));
 
+  (*txn_p)->vtable = &txn_vtable;
+  (*txn_p)->fsap_data = NULL;
+  
   /* Put a datestamp on the newly created txn, so we always know
      exactly how old it is.  (This will help sysadmins identify
      long-abandoned txns that may need to be manually removed.)  When
@@ -259,15 +272,16 @@ svn_fs_begin_txn (svn_fs_txn_t **txn_p,
   date.len = strlen (date.data);
   SVN_ERR (svn_fs_change_txn_prop (*txn_p, SVN_PROP_REVISION_DATE, 
                                    &date, pool));
+  
 
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_fs_txn_name (const char **name_p,
-                 svn_fs_txn_t *txn,
-                 apr_pool_t *pool)
+svn_fs_fs__txn_name (const char **name_p,
+                     svn_fs_txn_t *txn,
+                     apr_pool_t *pool)
 {
   *name_p = apr_pstrdup (pool, txn->id);
   return SVN_NO_ERROR;
@@ -275,33 +289,36 @@ svn_fs_txn_name (const char **name_p,
 
 
 svn_revnum_t
-svn_fs_txn_base_revision (svn_fs_txn_t *txn)
+svn_fs_fs__txn_base_revision (svn_fs_txn_t *txn)
 {
   return txn->base_rev;
 }
 
 svn_error_t *
-svn_fs_open_txn (svn_fs_txn_t **txn_p,
-                 svn_fs_t *fs,
-                 const char *name,
-                 apr_pool_t *pool)
+svn_fs_fs__open_txn (svn_fs_txn_t **txn_p,
+                     svn_fs_t *fs,
+                     const char *name,
+                     apr_pool_t *pool)
 {
   svn_fs_txn_t *txn;
 
-  SVN_ERR (svn_fs__check_fs (fs));
+  SVN_ERR (svn_fs_fs__check_fs (fs));
 
   SVN_ERR (svn_fs__fs_open_txn (&txn, fs, name, pool));
+
+  txn->vtable = &txn_vtable;
+  txn->fsap_data = NULL;
   
   *txn_p = txn;
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_fs_purge_txn (svn_fs_t *fs,
-                  const char *txn_id,
-                  apr_pool_t *pool)
+svn_fs_fs__purge_txn (svn_fs_t *fs,
+                      const char *txn_id,
+                      apr_pool_t *pool)
 {
-  SVN_ERR (svn_fs__check_fs (fs));
+  SVN_ERR (svn_fs_fs__check_fs (fs));
 
   SVN_ERR (svn_fs__fs_purge_txn (fs, txn_id, pool));
   
@@ -309,10 +326,10 @@ svn_fs_purge_txn (svn_fs_t *fs,
 }
 
 svn_error_t *
-svn_fs_abort_txn (svn_fs_txn_t *txn,
-                  apr_pool_t *pool)
+svn_fs_fs__abort_txn (svn_fs_txn_t *txn,
+                      apr_pool_t *pool)
 {
-  SVN_ERR (svn_fs__check_fs (txn->fs));
+  SVN_ERR (svn_fs_fs__check_fs (txn->fs));
 
   /* Now, purge it. */
   SVN_ERR_W (svn_fs_purge_txn (txn->fs, txn->id, pool),
@@ -322,16 +339,17 @@ svn_fs_abort_txn (svn_fs_txn_t *txn,
 }
 
 svn_error_t *
-svn_fs_list_transactions (apr_array_header_t **names_p,
-                          svn_fs_t *fs,
-                          apr_pool_t *pool)
+svn_fs_fs__list_transactions (apr_array_header_t **names_p,
+                              svn_fs_t *fs,
+                              apr_pool_t *pool)
 {
   apr_array_header_t *names;
 
-  SVN_ERR (svn_fs__check_fs (fs));
+  SVN_ERR (svn_fs_fs__check_fs (fs));
 
   SVN_ERR (svn_fs__fs_list_transactions (&names, fs, pool));
 
   *names_p = names;
   return SVN_NO_ERROR;
 }
+

@@ -26,10 +26,12 @@
 #include "fs.h"
 #include "err.h"
 
+#include "../libsvn_fs/fs_loader.h"
+
 svn_error_t *
-svn_fs__check_fs (svn_fs_t *fs)
+svn_fs_fs__check_fs (svn_fs_t *fs)
 {
-  if (fs->fs_path)
+  if (fs->path)
     return SVN_NO_ERROR;
   else
     return svn_error_create (SVN_ERR_FS_NOT_OPEN, 0,

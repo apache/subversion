@@ -1,4 +1,4 @@
-/* tree.h : internal interface to tree node functions
+/* uuid.h : internal interface to uuid functions
  *
  * ====================================================================
  * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
@@ -15,8 +15,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS_TREE_H
-#define SVN_LIBSVN_FS_TREE_H
+#ifndef SVN_LIBSVN_FS_UUID_H
+#define SVN_LIBSVN_FS_UUID_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,24 +25,17 @@ extern "C" {
 
 
 /* These functions implement some of the calls in the FS loader
-   library's fs and txn vtables. */
+   library's fs vtable. */
 
-svn_error_t *svn_fs_fs__revision_root (svn_fs_root_t **root_p, svn_fs_t *fs,
-                                       svn_revnum_t rev, apr_pool_t *pool);
-
-svn_error_t *svn_fs_fs__deltify (svn_fs_t *fs, svn_revnum_t rev,
-                                 apr_pool_t *pool);
-
-svn_error_t *svn_fs_fs__commit_txn (const char **conflict_p,
-                                    svn_revnum_t *new_rev, svn_fs_txn_t *txn,
+svn_error_t *svn_fs_fs__get_uuid (svn_fs_t *fs, const char **uuid,
                                     apr_pool_t *pool);
 
-svn_error_t *svn_fs_fs__txn_root (svn_fs_root_t **root_p, svn_fs_txn_t *txn,
-                                  apr_pool_t *pool);
+svn_error_t *svn_fs_fs__set_uuid (svn_fs_t *fs, const char *uuid,
+                                    apr_pool_t *pool);
 
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS_TREE_H */
+#endif /* SVN_LIBSVN_FS_UUID_H */

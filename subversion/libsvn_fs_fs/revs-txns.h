@@ -26,26 +26,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-
-
-/* The private structure underlying the public svn_fs_txn_t typedef.  */
-
-struct svn_fs_txn_t
-{
-  /* The filesystem to which this transaction belongs.  */
-  svn_fs_t *fs;
-
-  /* The revision on which this transaction is based, or
-     SVN_INVALID_REVISION if the transaction is not based on a
-     revision at all. */
-  svn_revnum_t base_rev;
-
-  /* The ID of this transaction --- a null-terminated string.
-     This is the key into the `transactions' table.  */
-  const char *id;
-};
-
-
 
 /*** Revisions ***/
 
@@ -87,6 +67,53 @@ svn_error_t *svn_fs__get_txn_ids (const svn_fs_id_t **root_id_p,
                                   svn_fs_t *fs,
                                   const char *txn_name,
                                   apr_pool_t *pool);
+
+
+/* These functions implement some of the calls in the FS loader
+   library's fs and txn vtables. */
+svn_error_t *svn_fs_fs__youngest_rev (svn_revnum_t *youngest_p, svn_fs_t *fs,
+                                      apr_pool_t *pool);
+
+svn_error_t *svn_fs_fs__revision_prop (svn_string_t **value_p, svn_fs_t *fs,
+                                       svn_revnum_t rev,
+                                       const char *propname,
+                                       apr_pool_t *pool);
+
+svn_error_t *svn_fs_fs__revision_proplist (apr_hash_t **table_p,
+                                           svn_fs_t *fs,
+                                           svn_revnum_t rev,
+                                           apr_pool_t *pool);
+
+svn_error_t *svn_fs_fs__change_rev_prop (svn_fs_t *fs, svn_revnum_t rev,
+                                         const char *name,
+                                         const svn_string_t *value,
+                                         apr_pool_t *pool);
+
+svn_error_t *svn_fs_fs__begin_txn (svn_fs_txn_t **txn_p, svn_fs_t *fs,
+                                   svn_revnum_t rev, apr_pool_t *pool);
+
+svn_error_t *svn_fs_fs__open_txn (svn_fs_txn_t **txn, svn_fs_t *fs,
+                                  const char *name, apr_pool_t *pool);
+
+svn_error_t *svn_fs_fs__purge_txn (svn_fs_t *fs, const char *txn_id,
+                                   apr_pool_t *pool);
+
+svn_error_t *svn_fs_fs__list_transactions (apr_array_header_t **names_p,
+                                           svn_fs_t *fs, apr_pool_t *pool);
+
+svn_error_t *svn_fs_fs__abort_txn (svn_fs_txn_t *txn, apr_pool_t *pool);
+
+svn_error_t *svn_fs_fs__txn_prop (svn_string_t **value_p, svn_fs_txn_t *txn,
+                                  const char *propname, apr_pool_t *pool);
+
+svn_error_t *svn_fs_fs__txn_proplist (apr_hash_t **table_p,
+                                      svn_fs_txn_t *txn,
+                                      apr_pool_t *pool);
+
+svn_error_t *svn_fs_fs__change_txn_prop (svn_fs_txn_t *txn, const char *name,
+                                         const svn_string_t *value,
+                                         apr_pool_t *pool);
+
 
 
 #ifdef __cplusplus

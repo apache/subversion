@@ -29,9 +29,10 @@
 #include "err.h"
 #include "fs.h"
 #include "key-gen.h"
-#include "id.h"
 #include "revs-txns.h"
 #include "fs_fs.h"
+
+#include "../libsvn_fs/fs_loader.h"
 
 
 /* Initializing a filesystem.  */
@@ -158,7 +159,7 @@ get_node_revision (svn_fs__node_revision_t **noderev_p,
 svn_boolean_t svn_fs__dag_check_mutable (dag_node_t *node, 
                                          const char *txn_id)
 {
-  return (svn_fs__id_txn_id (svn_fs__dag_get_id (node)) != NULL);
+  return (svn_fs_fs__get_id_txn (svn_fs__dag_get_id (node)) != NULL);
 }
 
 
@@ -196,7 +197,7 @@ svn_fs__dag_get_revision (svn_revnum_t *rev,
                           apr_pool_t *pool)
 {
   /* Look up the committed revision from the Node-ID. */
-  *rev = svn_fs__id_rev (node->id);
+  *rev = svn_fs_fs__get_id_rev (node->id);
 
   return SVN_NO_ERROR;
 }
@@ -509,7 +510,8 @@ svn_fs__dag_set_proplist (dag_node_t *node,
       svn_string_t *idstr = svn_fs_unparse_id (node->id, node->pool);
             return svn_error_createf
               (SVN_ERR_FS_NOT_MUTABLE, NULL,
-               "Can't set proplist on *immutable* node-revision %s", idstr->data);
+               "Can't set proplist on *immutable* node-revision %s",
+               idstr->data);
     }
 
   /* Go get a fresh NODE-REVISION for this node. */
@@ -729,7 +731,8 @@ svn_fs__dag_delete (dag_node_t *parent,
                                  dirent->id, pool));
 
   /* If mutable, remove it and any mutable children from db. */
-  SVN_ERR (svn_fs__dag_delete_if_mutable (parent->fs, dirent->id, txn_id, pool));
+  SVN_ERR (svn_fs__dag_delete_if_mutable (parent->fs, dirent->id, txn_id,
+                                          pool));
 
   /* Remove this entry from its parent's entries list. */
   SVN_ERR (svn_fs__fs_set_entry (parent->fs, txn_id, parent_noderev, name,

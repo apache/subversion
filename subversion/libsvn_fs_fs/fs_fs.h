@@ -18,6 +18,13 @@
 #ifndef SVN_LIBSVN_FS__FS_FS_H
 #define SVN_LIBSVN_FS__FS_FS_H
 
+svn_revnum_t svn_fs_fs__get_id_rev (const svn_fs_id_t *id);
+
+apr_off_t svn_fs_fs__get_id_offset (const svn_fs_id_t *id);
+
+const char *svn_fs_fs__get_id_txn (const svn_fs_id_t *id);
+
+
 /* Open the fs_fs filesystem pointed to by PATH and associate it with
    filesystem object FS.  Use POOL for temporary allocations. */
 svn_error_t *svn_fs__fs_open (svn_fs_t *fs,
