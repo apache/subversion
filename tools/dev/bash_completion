@@ -109,19 +109,19 @@ _svn()
 		cmdOpts="$mOpts $rOpts $qOpts $pOpts --force"
 		;;
 	propdel|pdel)
-		cmdOpts="$qOpts -R --recursive $rOpts"
+		cmdOpts="$qOpts -R --recursive $rOpts --revprop"
 		;;
 	propedit|pedit|pe)
-		cmdOpts="$rOpts"
+		cmdOpts="$rOpts --revprop"
 		;;
 	propget|pget|pg)
-		cmdOpts="-R --recursive $rOpts"
+		cmdOpts="-R --recursive $rOpts --revprop"
 		;;
 	proplist|plist|pl)
-		cmdOpts="-v --verbose -R --recursive $rOpts"
+		cmdOpts="-v --verbose -R --recursive $rOpts --revprop"
 		;;
 	propset|pset|ps)
-		cmdOpts="-F --file $qOpts --targets -R --recursive"
+		cmdOpts="-F --file $qOpts --targets -R --recursive --revprop"
 		;;
 	revert)
 		cmdOpts="--targets -R --recursive $qOpts"
