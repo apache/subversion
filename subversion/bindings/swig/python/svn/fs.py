@@ -120,7 +120,7 @@ class FileDiff:
           
     # the windows implementation of popen2 requires a string
     if sys.platform == "win32":
-      cmd = _escape_msvcrt_shell_command(cmd)
+      cmd = core.argv_to_command_string(cmd)
 
     # open the pipe, forget the end for writing to the child (we won't),
     # and then return the file object for reading from the child.
@@ -142,42 +142,4 @@ class FileDiff:
       except OSError:
         pass
 
-def _escape_msvcrt_shell_command(argv):
-  """Flatten a list of command line arguments into a command string.
 
-  The resulting command string is expected to be passed to the system shell
-  (cmd.exe) which os functions like popen() and system() invoke internally.
-
-  The command line will be broken up correctly by Windows programs linked
-  with the Microsoft C runtime. (Programs using other runtimes like Cygwin
-  parse their command lines differently).
-  """
-
-  # According cmd's usage notes (cmd /?), it parses the command line by
-  # "seeing if the first character is a quote character and if so, stripping
-  # the leading character and removing the last quote character."
-  # So to prevent the argument string from being changed we add an extra set
-  # of quotes around it here.
-  return '"' + string.join(map(_escape_msvcrt_shell_arg, argv), " ") + '"'
-
-def _escape_msvcrt_shell_arg(arg):
-  """Escape a command line argument.
-
-  This escapes a command line argument to be passed to an MSVCRT program
-  via the shell (cmd.exe). It uses shell escapes as well as escapes for
-  MSVCRT.
-  """
-
-  # The (very strange) parsing rules used by the C runtime library are
-  # described at:
-  # http://msdn.microsoft.com/library/en-us/vclang/html/_pluslang_Parsing_C.2b2b_.Command.2d.Line_Arguments.asp
-
-  # double up slashes, but only if they are followed by a quote character
-  arg = re.sub(_re_slashquote, r'\1\1\2', arg)
-
-  # surround by quotes and escape quotes inside
-  arg = '"' + string.replace(arg, '"', '"^""') + '"'
-
-  return arg
-
-_re_slashquote = re.compile(r'(\\+)(\"|$)')
