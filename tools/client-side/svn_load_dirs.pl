@@ -107,12 +107,6 @@ if ($repos_load_rel_path ne '.' and -d $repos_load_rel_path)
 # most portable way, by writing a file with a single \n in non-binary
 # mode and then reading the file in binary mode.
 my $native_eol = &determine_native_eol;
-print "Native EOL on this system is ";
-for (my $i=0; $i<length($native_eol); ++$i)
-  {
-    printf "\\%03o", ord(substr($native_eol, $i, 1));
-  }
-print ".\n";
 
 # The remaining command line arguments should be directories.  Check
 # that they all exist and that there are no duplicates.
@@ -1387,24 +1381,26 @@ sub determine_native_eol
     or die "$0: cannot open `$filename' for reading: $!\n";
   local $/;
   undef $/;
-  $native_eol = <NL_TEST>;
+  my $eol = <NL_TEST>;
   close(NL_TEST)
     or die "$0: cannot close `$filename' for reading: $!\n";
   unlink($filename) or
     die "$0: cannot unlink `$filename': $!\n";
 
-  my $native_eol_length = length($native_eol);
-  unless ($native_eol_length)
+  my $eol_length = length($eol);
+  unless ($eol_length)
     {
       die "$0: native eol length on this system is 0.\n";
     }
 
   print "Native EOL on this system is ";
-  for (my $i=0; $i<$native_eol_length; ++$i)
+  for (my $i=0; $i<$eol_length; ++$i)
     {
-      printf "\\%03o", ord(substr($native_eol, $i, 1));
+      printf "\\%03o", ord(substr($eol, $i, 1));
     }
   print ".\n";
+
+  $eol;
 }
 
 # Take a filename, open the file and replace all CR, CRLF and LF's
