@@ -83,12 +83,12 @@ II. Client Cookbook
 
   1. checkout
   2. basic work cycle  
-       1. making changes:  editing, rm, add, revert
+       1. making changes:  editing, rm, add, revert, cp, mv
        2. examining the wc:  status, info, local diff
        3. sending changes:  commit
        3. receiving changes:  update, resolve (conflicts)
   3. getting history from the repository:  network diff, log
-  4. branches and tags:  cp, switch, merge
+  4. branches and tags:  cp, mv, switch, merge
   5. properties
       a. general use:  pl, pg, ps, pe, pd
       b. "magic" properties:  eol-style, keywords, executable
