@@ -162,7 +162,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
     if (revision_str)
       {
-        entry->revision = (svn_revnum_t) atol (revision_str->data);
+        entry->revision = SVN_STR_TO_REV (revision_str->data);
         *modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
       }
     else

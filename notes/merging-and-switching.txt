@@ -48,6 +48,11 @@ and Y:PATH2 and sends the difference to the client.
     someday).  In other words, the applied changes end up looking like
     local modifications.
 
+    [Actually, in a merge PATH1 usually does equal PATH2 -- in fact,
+    that's how it always is in CVS, in a sense.  So I think
+    supporting the PATH1 != PATH2 case in merge should not be a high
+    priority.  -kff]
+
   * In a switch, PATH1 does not necessarily equal PATH2, and we *do*
     rewrite the working copy metadata (specifically, revisions are
     bumped and URLs are changed).
@@ -98,40 +103,82 @@ to facilitate merging.
 
 *** Implementation details ***
 
-And as a rule, only the Subversion client generates context diffs and
-applies them (right now by running 'diff' and 'patch' externally.)
-Therefore, the objective is to create *two* sets of fulltext files in
-some client-side temporary area.  The first fulltext set represents
-X:P, and the second fulltext set represents Y:Q.  The client then
-compares the two sets, generates context diffs, and applies the
-context diffs to the working copy's working files.
+Heh, two completely different possibilities here:
 
-The naive approach would be to just directly ask the server for both
-sets of fulltexts.  (We still consider this an option!)
+1. Only the Subversion client generates context diffs and applies them
+   (right now by running 'diff' and 'patch' externally.)  Therefore,
+   the objective is to create *two* sets of fulltext files in some
+   client-side temporary area.  The first fulltext set represents X:P,
+   and the second fulltext set represents Y:Q.  The client then
+   compares the two sets, generates context diffs, and applies the
+   context diffs to the working copy's working files.
 
-A more complex approach (which we'll attempt) is a network
-optimization -- it's a way of creating both sets of fulltexts on the
-client using minimal network traffic:
+   The naive approach would be to just directly ask the server for
+   both sets of fulltexts.  (We still consider this an option!)
 
-   * The client builds a transaction on the server that is a
-     "reflection" of the working-copy, mixed revisions and all.
+   A more complex approach (which we'll attempt) is a network
+   optimization -- it's a way of creating both sets of fulltexts on
+   the client using minimal network traffic:
 
-   * The server sends a tree-delta between the reflection and X:P; the
-     client then applies these binary diffs to copies of the
-     working-copy's text-bases in order to reconstruct the fulltexts
-     of X:P.
+     * The client builds a transaction on the server that is a
+       "reflection" of the working-copy, mixed revisions and all.
 
-   * The server sends a tree-delta between X:P and Y:Q;  the client
-     then applies these binary diffs to copies of the X:P fulltexts in
-     order to reconstruct the fulltexts of Y:Q.
+     * The server sends a tree-delta between the reflection and X:P;
+       the client then applies these binary diffs to copies of the
+       working-copy's text-bases in order to reconstruct the fulltexts
+       of X:P.
 
-And that's it!  We have both sets of fulltexts.  The client generates
-context diffs between them and patches the working copy.
+     * The server sends a tree-delta between X:P and Y:Q; the client
+       then applies these binary diffs to copies of the X:P fulltexts
+       in order to reconstruct the fulltexts of Y:Q.
 
-As mentioned earlier, this process doesn't touch any working-copy
-metadata in .svn/.  Only the working files are patched, so the
-differences appear as local modifications.  At that point, the user
-manually resolves any conflicts.
+  And that's it!  We have both sets of fulltexts.  The client
+  generates context diffs between them and patches the working copy.
+
+  As mentioned earlier, this process doesn't touch any working-copy
+  metadata in .svn/.  Only the working files are patched, so the
+  differences appear as local modifications.  At that point, the user
+  manually resolves any conflicts.
+
+
+2. What is the difference between these two commands?
+
+        svn merge -rX:Y <URL>
+        svn diff  -rX:Y <URL> | patch
+
+   :-) ?  If we have an extended patch format, supporting copies,
+   renames, deletes, and properties (like we've been planning), then
+   there isn't formally even any need for a "merge" command -- it's a
+   trivial wrapper around "svn diff" and patch.
+
+   In other words, much of the work described in Plan 1 above has
+   already been done by Philip Martin in his diff editors.  Maybe we
+   should just take advantage of that?  There's still the issue of
+   recording metadata about the merge, but presumably that would come
+   from the extended patch format.
+
+   Random thoughts from Karl:
+
+   I do wonder if it's always desirable to merge properties anyway.
+   Most of the properties we have are subversion-specific, and when I
+   think of the kinds of merges I've done in the past, I can't think
+   of a case where having the property changes merge would be
+   desirable.  Ooooh, but when we use the properties to record what
+   has been previously merged, then having them travel *with* the
+   changes is useful.  For example:
+
+       $ svn merge -r18:20 http://svn.collab.net/repos/branches/rel_1
+       $ svn ci
+           ===> produces .../trunk/whatever/blah, revision 100
+
+       Then the next week:
+
+       $ svn switch http://svn.collab.net/repos/branches/rel_2
+       $ svn merge -r97:153 http://svn.collab.net/repos/trunk/whatever/blah
+
+   In a situation like that, you want the rel_1 branch merge into
+   trunk to travel with the trunk changes you're now merging into
+   rel_2.
 
 
 Switching

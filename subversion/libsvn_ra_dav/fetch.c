@@ -1206,13 +1206,13 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
       /* ### verify we got it. punt on error. */
 
       CHKERR( (*rb->editor->set_target_revision)(rb->edit_baton,
-                                                 (svn_revnum_t) atol(att)) );
+                                                 SVN_STR_TO_REV(att)) );
       break;
 
     case ELEM_open_directory:
       att = get_attr(atts, "rev");
       /* ### verify we got it. punt on error. */
-      base = (svn_revnum_t) atol(att);
+      base = SVN_STR_TO_REV(att);
       if (rb->dirs->nelts == 0)
         {
           pathbuf = svn_stringbuf_create(".", rb->ras->pool);
@@ -1257,7 +1257,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
           att = get_attr(atts, "copyfrom-rev");
           /* ### verify we got it. punt on error. */
-          crev = (svn_revnum_t) atol(att);
+          crev = SVN_STR_TO_REV(att);
         }
 
       parent_dir = &TOP_DIR(rb);
@@ -1278,7 +1278,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
     case ELEM_open_file:
       att = get_attr(atts, "rev");
       /* ### verify we got it. punt on error. */
-      base = (svn_revnum_t) atol(att);
+      base = SVN_STR_TO_REV(att);
 
       name = get_attr(atts, "name");
       /* ### verify we got it. punt on error. */
@@ -1309,7 +1309,7 @@ static int start_element(void *userdata, const struct ne_xml_elm *elm,
 
           att = get_attr(atts, "copyfrom-rev");
           /* ### verify we got it. punt on error. */
-          crev = (svn_revnum_t) atol(att);
+          crev = SVN_STR_TO_REV(att);
         }
 
       parent_dir = &TOP_DIR(rb);

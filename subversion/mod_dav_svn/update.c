@@ -460,7 +460,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
       if (child->ns == ns && strcmp(child->name, "target-revision") == 0)
         {
           /* ### assume no white space, no child elems, etc */
-          revnum = (svn_revnum_t) atol(child->first_cdata.first->text);
+          revnum = SVN_STR_TO_REV(child->first_cdata.first->text);
         }
       if (child->ns == ns && strcmp(child->name, "update-target") == 0)
         {
@@ -545,7 +545,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             const char *path;
 
             /* ### assume first/only attribute is the rev */
-            rev = (svn_revnum_t) atol(child->attr->value);
+            rev = SVN_STR_TO_REV(child->attr->value);
 
             /* get cdata, stipping whitespace */
             path = dav_xml_get_cdata(child, resource->pool, 1);

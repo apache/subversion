@@ -4939,8 +4939,8 @@ check_root_revision (const char **msg,
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, pool)); 
   SVN_ERR (svn_fs_node_id (&args.id, rev_root, "", pool));
   SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_node_revision, &args, pool));
-  test_rev = (svn_revnum_t)
-    atol ((SVN_FS__NR_HDR_REV (SVN_FS__NR_HEADER (args.node_rev)))->data);
+  test_rev = SVN_STR_TO_REV ((SVN_FS__NR_HDR_REV
+                              (SVN_FS__NR_HEADER (args.node_rev)))->data);
   if (test_rev != youngest_rev)
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, 0, NULL, pool,
@@ -4964,8 +4964,8 @@ check_root_revision (const char **msg,
       SVN_ERR (svn_fs_node_id (&args.id, rev_root, "", pool));
       SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_node_revision, 
                                   &args, pool));
-      test_rev = (svn_revnum_t)
-        atol ((SVN_FS__NR_HDR_REV (SVN_FS__NR_HEADER (args.node_rev)))->data);
+      test_rev = SVN_STR_TO_REV ((SVN_FS__NR_HDR_REV
+                                  (SVN_FS__NR_HEADER (args.node_rev)))->data);
       if (test_rev != youngest_rev)
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, 0, NULL, pool,
