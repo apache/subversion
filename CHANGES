@@ -62,6 +62,11 @@ See the 1.1 release notes for a more verbose overview of the changes since
  * fixed: allow propget of props with colon in name (issue #1807)
  * fixed: 'svnadmin load' computation of copyfrom-rev (issue #1795)
  * fixed: runtime config files created with proper line-endings (issue #1803)
+ * fixed: make svnserve's authn work on usernames with spaces (r10385)
+ * fixed: have svnserve use repos UUID as default authn realm (r10394)
+ * fixed: segfault when history-following hits 'empty' revision (r10368)
+ * fixed: overzealous out-of-dateness checks in 'svn cp wc URL' (issue 1994)
+ * fixed: don't URI-encode path in mod_dav_svn XML listings (r10461)
  * general improvement and normalization of error messages
  * many improvements to contributed tools:  mailer.py, psvn.el, etc.
 
@@ -96,6 +101,10 @@ See the 1.1 release notes for a more verbose overview of the changes since
  * fixed: only verify media type of svn:mime-type, not encoding (r10126)
  * fixed: handle '//'  and '..' in svn_path_canonicalize (issue #1779)
  * fixed: double URI escaping (issue #1814)
+ * fixed: potential mod_dav_svn crashes/memleaks (r10478)
+ * fixed: better 'svnadmin verify  verification (r10508, r10509)
+ * fixed: encoding of get_repos_url_result (r10353, 10375)
+ * fixed: prevent canonicalized URIs from ending in '/' (r10317)
  * huge improvements to python, perl, java bindings
  * huge changes to win32 build system
 
