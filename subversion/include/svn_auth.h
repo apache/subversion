@@ -190,30 +190,28 @@ typedef struct
 
 /** SSL server verification.
  *
- *  @a cert contains two inner structures representing fields from the
- *  server and issuer certificates, as well as the start and expiry
- *  times.  @a failures_allow is set for each flag allowed.
- *
- *  failures flags defined within neon:
- *  * SVN_AUTH_SSL_NOTYETVALID : certificate is not yet valid
- *  * SVN_AUTH_SSL_EXPIRED     : certificate has expired
- *  * SVN_AUTH_SSL_CNMISMATCH  : name on certificate does not match server
- *  * SVN_AUTH_SSL_UNKNOWNCA   : cert is signed by an untrusted authority
+ *  If @a trust_permanantly is set to true by the provider, the
+ *  certificate will be trusted permanently.
  */
-#define SVN_AUTH_SSL_NOTYETVALID (1<<0)
-#define SVN_AUTH_SSL_EXPIRED     (1<<1)
-#define SVN_AUTH_SSL_CNMISMATCH  (1<<2)
-#define SVN_AUTH_SSL_UNKNOWNCA   (1<<3)
-#define SVN_AUTH_SSL_FAILMASK    (0x0f)
-
 #define SVN_AUTH_CRED_SERVER_SSL "svn.ssl.server"
-
 typedef struct
 {
-  int failures_allow;
-
+  svn_boolean_t trust_permanantly;
 } svn_auth_cred_server_ssl_t;
 
+
+/** SSL server certificate information.
+ */
+typedef struct {
+  const char *hostname;
+  const char *fingerprint;
+  const char *valid_from;
+  const char *valid_until;
+  const char *issuer_dname;
+
+  /* The full certificate as base-64 encoded DER */
+  const char *ascii_cert;
+} svn_auth_ssl_server_cert_info_t;
 
 
 /** Credential-constructing prompt functions. **/
@@ -265,22 +263,23 @@ typedef svn_error_t *
 /** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
  * @a baton is an implementation-specific closure.
  *
- * @a failures_in is a failure bitmask, see (for example) 
- * 
- *      @c SVN_AUTH_SSL_NOTYETVALID
- *      @c SVN_AUTH_SSL_EXPIRED
- *      @c SVN_AUTH_SSL_CNMISMATCH
- *      @c SVN_AUTH_SSL_UNKNOWNCA
- *      @c SVN_AUTH_SSL_FAILMASK
- * 
- * for more information.
+ * @a cert_info is a structure describing the server cert that was
+ * presented to the client, and @a failures is a bitmask that
+ * describes exactly why the cert could not be automatically validated.
+ * (See the #define error flag values below.)
+ *
  */
-typedef svn_error_t *
-(*svn_auth_ssl_server_prompt_func_t) (svn_auth_cred_server_ssl_t **cred,
-                                      void *baton,
-                                      int failures_in,
-                                      apr_pool_t *pool);
+#define SVN_AUTH_SSL_NOTYETVALID (1<<0)
+#define SVN_AUTH_SSL_EXPIRED     (1<<1)
+#define SVN_AUTH_SSL_CNMISMATCH  (1<<2)
+#define SVN_AUTH_SSL_UNKNOWNCA   (1<<3)
 
+typedef svn_error_t *(*svn_auth_ssl_server_prompt_func_t) (
+  svn_auth_cred_server_ssl_t **cred,
+  void *baton,
+  int failures,
+  const svn_auth_ssl_server_cert_info_t *cert_info,
+  apr_pool_t *pool);
 
 /** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
  * @a baton is an implementation-specific closure.
@@ -361,8 +360,13 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 
 /** The following property is for ssl server cert providers. This
     provides the detected failures by the certificate validator */
-#define SVN_AUTH_PARAM_SSL_SERVER_FAILURES_IN SVN_AUTH_PARAM_PREFIX \
+#define SVN_AUTH_PARAM_SSL_SERVER_FAILURES SVN_AUTH_PARAM_PREFIX \
   "ssl:failures"
+
+/** The following property is for ssl server cert providers. This
+    provides the cert info (svn_auth_ssl_server_cert_info_t). */
+#define SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO SVN_AUTH_PARAM_PREFIX \
+  "ssl:cert-info"
 
 /** Some providers need access to the @c svn_config_t configuration
     for individual servers in order to properly operate */
@@ -372,6 +376,7 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 /** A configuration directory that overrides the default 
     ~/.subversion. */
 #define SVN_AUTH_PARAM_CONFIG_DIR SVN_AUTH_PARAM_PREFIX "config-dir"
+
 /** Get an initial set of credentials.
  *
  * Ask @a auth_baton to set @a *credentials to a set of credentials

@@ -182,53 +182,74 @@ svn_cl__auth_username_prompt (svn_auth_cred_username_t **cred_p,
 
 /* This implements 'svn_auth_ssl_server_prompt_func_t'. */
 svn_error_t *
-svn_cl__auth_ssl_server_prompt (svn_auth_cred_server_ssl_t **cred_p,
-                                void *baton,
-                                int failures_in,
-                                apr_pool_t *pool)
+svn_cl__auth_ssl_server_prompt (
+  svn_auth_cred_server_ssl_t **cred_p,
+  void *baton,
+  int failures,
+  const svn_auth_ssl_server_cert_info_t *cert_info,
+  apr_pool_t *pool)
 {
-  svn_boolean_t previous_output = FALSE;
-  int failure;
+  int allow_perm_accept = failures & SVN_AUTH_SSL_UNKNOWNCA;
   const char *choice;
-
   svn_stringbuf_t *buf = svn_stringbuf_create
-    ("Error validating server certificate: ", pool);
+    ("Error validating server certificate:\n", pool);
 
-  failure = failures_in & SVN_AUTH_SSL_UNKNOWNCA;
-  if (failure)
+  if (failures & SVN_AUTH_SSL_UNKNOWNCA)
     {
-      svn_stringbuf_appendcstr (buf, "Unknown certificate issuer");
-      previous_output = TRUE;
+      svn_stringbuf_appendcstr (buf, " - Unknown certificate issuer\n");
+      svn_stringbuf_appendcstr (buf, "   Fingerprint: ");
+      svn_stringbuf_appendcstr (buf, cert_info->fingerprint);
+      svn_stringbuf_appendcstr (buf, "\n");
+      svn_stringbuf_appendcstr (buf, "   Distinguished name: ");
+      svn_stringbuf_appendcstr (buf, cert_info->issuer_dname);
+      svn_stringbuf_appendcstr (buf, "\n");
     }
 
-  failure = failures_in & SVN_AUTH_SSL_CNMISMATCH;
-  if (failure)
+  if (failures & SVN_AUTH_SSL_CNMISMATCH)
     {
-      if (previous_output)
-        {
-          svn_stringbuf_appendcstr (buf, ", ");
-        }
-      svn_stringbuf_appendcstr (buf, "Hostname mismatch");
-      previous_output = TRUE;
+      svn_stringbuf_appendcstr (buf, " - Hostname mismatch (");
+      svn_stringbuf_appendcstr (buf, cert_info->hostname);
+      svn_stringbuf_appendcstr (buf, ")\n");
     } 
-  failure = failures_in & (SVN_AUTH_SSL_EXPIRED | SVN_AUTH_SSL_NOTYETVALID);
-  if (failure)
+
+  if (failures & SVN_AUTH_SSL_NOTYETVALID)
     {
-      if (previous_output)
-        {
-          svn_stringbuf_appendcstr (buf, ", ");
-        }
-      svn_stringbuf_appendcstr (buf, "Certificate expired or not yet valid");
-      previous_output = TRUE;
+      svn_stringbuf_appendcstr (buf, " - Certificate is not yet valid\n");
+      svn_stringbuf_appendcstr (buf, "   Valid from ");
+      svn_stringbuf_appendcstr (buf, cert_info->valid_from);
+      svn_stringbuf_appendcstr (buf, "\n");
     }
 
-  svn_stringbuf_appendcstr (buf, ". Accept? (y/N): ");
+  if (failures & SVN_AUTH_SSL_EXPIRED)
+    {
+      svn_stringbuf_appendcstr (buf, " - Certificate has expired\n");
+      svn_stringbuf_appendcstr (buf, "   Valid until ");
+      svn_stringbuf_appendcstr (buf, cert_info->valid_until);
+      svn_stringbuf_appendcstr (buf, "\n");
+    }
+
+  if (allow_perm_accept)
+    {
+      svn_stringbuf_appendcstr (buf,
+                                "(R)eject, accept (t)emporarily or accept "
+                                "(p)ermanently? ");
+    }
+  else
+    {
+      svn_stringbuf_appendcstr (buf, "(R)eject or accept (t)emporarily? ");
+    }
   SVN_ERR (prompt (&choice, buf->data, FALSE, pool));
-  
-  if (choice && (choice[0] == 'y' || choice[0] == 'Y'))
+
+  if (choice && (choice[0] == 't' || choice[0] == 'T'))
     {
       *cred_p = apr_pcalloc (pool, sizeof (**cred_p));
-      (*cred_p)->failures_allow = failures_in;
+      (*cred_p)->trust_permanantly = FALSE;
+    }
+  else if (allow_perm_accept &&
+           choice && (choice[0] == 'p' || choice[0] == 'P'))
+    {
+      *cred_p = apr_pcalloc (pool, sizeof (**cred_p));
+      (*cred_p)->trust_permanantly = TRUE;
     }
   else
     {
