@@ -21,7 +21,10 @@ sub AUTOLOAD {
     my @ret = &{"plugin_invoke_$AUTOLOAD"}(@{$self}{qw/ra session/}, @_,
 					   $self->{pool});
 
-    return $#ret ? bless [@ret], 'SVN::Ra::Reporter' : $ret[0];
+    return $ret[0] unless $#ret;
+
+    return ($AUTOLOAD eq 'get_commit_editor') ? [@ret] :
+	bless [@ret], 'SVN::Ra::Reporter';
 }
 
 sub new {
