@@ -1254,6 +1254,13 @@ from the full committers; it is assumed that sponsors know what
 they're doing and will watch the partial committer's first few commits
 to make sure everything's going smoothly.
 
+Patches submitted by a partial committer may be committed by that
+committer even if they are outside that person's domain.  This
+requires approval (often expressed as a +1 vote) from at least one
+full committer.  In such a case, the approval should be noted in the
+log message, like so:
+
+Approved by: lundblad
 
 
 The configuration/build system under unix
