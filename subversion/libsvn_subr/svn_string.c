@@ -31,7 +31,7 @@
 /* Our own realloc, since APR doesn't have one.  Note: this is a
    generic realloc for memory pools, *not* for strings. */
 static void *
-my__realloc (char *data, const apr_size_t oldsize, const apr_size_t request, 
+my__realloc (char *data, apr_size_t oldsize, apr_size_t request, 
              apr_pool_t *pool)
 {
   void *new_area;
@@ -72,8 +72,7 @@ create_string (const char *data, apr_size_t size,
 }
 
 svn_string_t *
-svn_string_ncreate (const char *bytes, const apr_size_t size, 
-                    apr_pool_t *pool)
+svn_string_ncreate (const char *bytes, apr_size_t size, apr_pool_t *pool)
 {
   char *data;
 
@@ -251,8 +250,7 @@ create_stringbuf (char *data, apr_size_t size, apr_pool_t *pool)
 }
 
 svn_stringbuf_t *
-svn_stringbuf_ncreate (const char *bytes, const apr_size_t size, 
-                       apr_pool_t *pool)
+svn_stringbuf_ncreate (const char *bytes, apr_size_t size, apr_pool_t *pool)
 {
   char *data;
 
@@ -308,7 +306,7 @@ svn_stringbuf_createf (apr_pool_t *pool, const char *fmt, ...)
 
 
 void 
-svn_stringbuf_fillchar (svn_stringbuf_t *str, const unsigned char c)
+svn_stringbuf_fillchar (svn_stringbuf_t *str, unsigned char c)
 {
   memset (str->data, c, str->len);
 }
@@ -375,7 +373,7 @@ svn_stringbuf_ensure (svn_stringbuf_t *str, apr_size_t minimum_size)
 
 void
 svn_stringbuf_appendbytes (svn_stringbuf_t *str, const char *bytes, 
-                           const apr_size_t count)
+                           apr_size_t count)
 {
   apr_size_t total_len;
   void *start_address;

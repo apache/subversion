@@ -120,7 +120,7 @@ svn_string_t *svn_string_create (const char *cstring,
 /** Create a new bytestring containing a generic string of bytes 
  * (NON-null-terminated) */
 svn_string_t *svn_string_ncreate (const char *bytes,
-                                  const apr_size_t size, 
+                                  apr_size_t size, 
                                   apr_pool_t *pool);
 
 /** Create a new string with the contents of the given stringbuf */
@@ -183,7 +183,7 @@ svn_stringbuf_t *svn_stringbuf_create (const char *cstring,
  * (NON-null-terminated)
  */
 svn_stringbuf_t *svn_stringbuf_ncreate (const char *bytes,
-                                        const apr_size_t size, 
+                                        apr_size_t size, 
                                         apr_pool_t *pool);
 
 /** Create a new stringbuf with the contents of the given string */
@@ -227,7 +227,7 @@ svn_boolean_t svn_stringbuf_isempty (const svn_stringbuf_t *str);
 void svn_stringbuf_chop (svn_stringbuf_t *str, apr_size_t bytes);
 
 /** Fill bytestring @a str with character @a c. */
-void svn_stringbuf_fillchar (svn_stringbuf_t *str, const unsigned char c);
+void svn_stringbuf_fillchar (svn_stringbuf_t *str, unsigned char c);
 
 /** Append an array of bytes onto @a targetstr.
  *
@@ -235,7 +235,7 @@ void svn_stringbuf_fillchar (svn_stringbuf_t *str, const unsigned char c);
  */
 void svn_stringbuf_appendbytes (svn_stringbuf_t *targetstr,
                                 const char *bytes, 
-                                const apr_size_t count);
+                                apr_size_t count);
 
 /** Append an @c svn_stringbuf_t onto @a targetstr.
  *

@@ -56,9 +56,9 @@ extern "C" {
 */
 svn_error_t *svn_wc__do_update_cleanup (const char *path,
                                         svn_wc_adm_access_t *adm_access,
-                                        const svn_boolean_t recursive,
+                                        svn_boolean_t recursive,
                                         const char *base_url,
-                                        const svn_revnum_t new_revision,
+                                        svn_revnum_t new_revision,
                                         svn_wc_notify_func_t notify_func,
                                         void *notify_baton,
                                         svn_boolean_t remove_missing_dirs,
