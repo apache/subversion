@@ -29,7 +29,7 @@
 
 #include "svn_pools.h"
 #include "svn_error.h"
-
+#include "svn_tests.h"
 
 /* All Subversion test programs include an array of function pointers
    (all of our sub-tests) that begins and ends with a NULL entry. */
