@@ -35,6 +35,7 @@
 
 static svn_error_t *
 dir_deltas (const char **msg,
+            svn_boolean_t msg_only,
             apr_pool_t *pool)
 { 
   svn_fs_t *fs;
@@ -49,6 +50,9 @@ dir_deltas (const char **msg,
   apr_pool_t *subpool;
 
   *msg = "test svn_repos_dir_delta";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* The Test Plan
      
@@ -355,6 +359,7 @@ dir_deltas (const char **msg,
 /* The test table.  */
 
 svn_error_t * (*test_funcs[]) (const char **msg,
+                               svn_boolean_t msg_only,
                                apr_pool_t *pool) = {
   0,
   dir_deltas,

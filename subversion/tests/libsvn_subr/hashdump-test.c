@@ -55,13 +55,18 @@ const char *review =
 
 
 static svn_error_t *
-test1 (const char **msg, apr_pool_t *pool)
+test1 (const char **msg, 
+       svn_boolean_t msg_only,
+       apr_pool_t *pool)
 {
   apr_status_t result;
   svn_stringbuf_t *key;
   apr_file_t *f;
 
   *msg = "write a hash to a file";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Build a hash in memory, and fill it with test data. */
   proplist = apr_hash_make (pool);
@@ -101,12 +106,17 @@ test1 (const char **msg, apr_pool_t *pool)
 
 
 static svn_error_t *
-test2 (const char **msg, apr_pool_t *pool)
+test2 (const char **msg, 
+       svn_boolean_t msg_only,
+       apr_pool_t *pool)
 {
   apr_status_t result;
   apr_file_t *f;
 
   *msg = "read a file into a hash";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   new_proplist = apr_hash_make (pool);
 
@@ -122,7 +132,9 @@ test2 (const char **msg, apr_pool_t *pool)
 
 
 static svn_error_t *
-test3 (const char **msg, apr_pool_t *pool)
+test3 (const char **msg, 
+       svn_boolean_t msg_only,
+       apr_pool_t *pool)
 {
   apr_hash_index_t *this;
   svn_error_t *err;
@@ -131,13 +143,16 @@ test3 (const char **msg, apr_pool_t *pool)
 
   *msg = "write hash out, read back in, compare";
 
+  if (msg_only)
+    return SVN_NO_ERROR;
+
   /* Build a hash in global variable "proplist", then write to a file. */
-  err = test1 (&ignored, pool);
+  err = test1 (&ignored, FALSE, pool);
   if (err)
     return err;
 
   /* Read this file back into global variable "new_proplist" */
-  err = test2 (&ignored, pool);
+  err = test2 (&ignored, FALSE, pool);
   if (err)
     return err;
 
@@ -188,7 +203,9 @@ test3 (const char **msg, apr_pool_t *pool)
 */
 
 /* An array of all test functions */
-svn_error_t *(*test_funcs[])(const char **msg, apr_pool_t *pool) =
+svn_error_t *(*test_funcs[])(const char **msg, 
+                             svn_boolean_t msg_only,
+                             apr_pool_t *pool) =
 {
   NULL,
   test1,

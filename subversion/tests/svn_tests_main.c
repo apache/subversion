@@ -34,6 +34,7 @@
 /* All Subversion test programs include an array of function pointers
    (all of our sub-tests) that begins and ends with a NULL entry. */
 extern svn_error_t *(*test_funcs[])(const char **msg, 
+                                    svn_boolean_t msg_only,
                                     apr_pool_t *pool);
 
 /* ================================================================= */
@@ -57,7 +58,10 @@ get_array_size (void)
 /* Execute a test number TEST_NUM.  Pretty-print test name and dots
    according to our test-suite spec, and return the result code. */
 static int
-do_test_num (const char *progname, int test_num, apr_pool_t *pool)
+do_test_num (const char *progname, 
+             int test_num, 
+             svn_boolean_t msg_only,
+             apr_pool_t *pool)
 {
   svn_error_t *err;
   int array_size = get_array_size();
@@ -71,17 +75,27 @@ do_test_num (const char *progname, int test_num, apr_pool_t *pool)
     }
 
   /* Do test */
-  err = test_funcs[test_num](&msg, pool);
+  err = test_funcs[test_num](&msg, msg_only, pool);
 
   /* If we got an error, print it out.  */
   if (err)
     svn_handle_error (err, stdout, 0);
 
-  printf ("%s: %s %2d: %s\n", 
-          err ? "FAIL" : "PASS",
-          progname,
-          test_num, 
-          msg ? msg : "(test did not provide name)");
+  if (msg_only)
+    {
+      printf ("%s %2d: %s\n",
+              progname,
+              test_num,
+              msg ? msg : "(test did not provide name)");
+    }
+  else
+    {
+      printf ("%s: %s %2d: %s\n", 
+              err ? "FAIL" : "PASS",
+              progname,
+              test_num, 
+              msg ? msg : "(test did not provide name)");
+    }
 
   return err != SVN_NO_ERROR;
 }
@@ -121,32 +135,49 @@ main (int argc, char *argv[])
 
   if (argc >= 2)  /* notice command-line arguments */
     {
-      for (i = 1; i < argc; i++)
+      if (! strcmp (argv[1], "list"))
         {
-          if (apr_isdigit (argv[i][0]))
-            {
-              ran_a_test = 1;
-              test_num = atoi (argv[i]);
-              if (do_test_num (prog_name, test_num, pool))
-                got_error = 1;
+          ran_a_test = 1;
 
+          /* run all tests with MSG_ONLY set to TRUE */
+          for (i = 1; i <= array_size; i++)
+            {
+              if (do_test_num (prog_name, i, TRUE, pool))
+                got_error = 1;
+              
               /* Clear the per-function pool */
               svn_pool_clear (pool);
             }
-          else
+        }
+      else
+        {
+          for (i = 1; i < argc; i++)
             {
-              /* (probably) a source directory pathname */
-              printf ("notice: ignoring argument %d\n", i);
+              if (apr_isdigit (argv[i][0]))
+                {
+                  ran_a_test = 1;
+                  test_num = atoi (argv[i]);
+                  if (do_test_num (prog_name, test_num, FALSE, pool))
+                    got_error = 1;
+                  
+                  /* Clear the per-function pool */
+                  svn_pool_clear (pool);
+                }
+              else
+                {
+                  /* (probably) a source directory pathname */
+                  printf ("notice: ignoring argument %d\n", i);
+                }
             }
         }
     }
 
-  if (!ran_a_test)
+  if (! ran_a_test)
     {
       /* just run all tests */
       for (i = 1; i <= array_size; i++)
         {
-          if (do_test_num (prog_name, i, pool))
+          if (do_test_num (prog_name, i, FALSE, pool))
             got_error = 1;
 
           /* Clear the per-function pool */

@@ -58,7 +58,9 @@ Instead, your code should define an externally visible array
 
     /* The test table.  */
 
-    svn_error_t *(*test_funcs[]) (const char **msg) = {
+    svn_error_t *(*test_funcs[]) (const char **msg,
+                                  svn_boolean_t msg_only,
+                                  apr_pool_t *pool) = {
       0,
       test_a,
       test_b,
@@ -74,10 +76,14 @@ the array.
 
 Each test function has the following type:
 
-	svn_error_t *f (const char **NAME);
+	svn_error_t *f (const char **MSG,
+                        svn_boolean_t MSG_ONLY
+                        apr_pool_t *POOL);
 
-When called, a test function should set *NAME to its name, and perform
-a test.  If the test passes, the function should return SVN_NO_ERROR;
+When called, a test function should first set *MSG to a brief (as in,
+half-line) description of the test.  Then, if MSG_ONLY is TRUE, the
+test should immediately return SVN_NO_ERROR.  Else it should perform a
+test.  If the test passes, the function should return SVN_NO_ERROR;
 otherwise, it should return an error object, built using the functions
 in svn_error.h.
 

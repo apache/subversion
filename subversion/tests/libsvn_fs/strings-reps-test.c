@@ -74,13 +74,18 @@ txn_body_delete_rep (void *baton, trail_t *trail)
 /* Representation Table Test functions. */
 
 static svn_error_t *
-write_new_rep (const char **msg, apr_pool_t *pool)
+write_new_rep (const char **msg, 
+               svn_boolean_t msg_only,
+               apr_pool_t *pool)
 {
   struct rep_args args;
   const char *rep = "(fulltext a83t2Z0q)";
   svn_fs_t *fs;
 
   *msg = "Write a new rep, get a new key back.";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR (svn_test__create_fs_and_repos
@@ -106,7 +111,9 @@ write_new_rep (const char **msg, apr_pool_t *pool)
 
 
 static svn_error_t *
-write_rep (const char **msg, apr_pool_t *pool)
+write_rep (const char **msg, 
+           svn_boolean_t msg_only,
+           apr_pool_t *pool)
 {
   struct rep_args new_args;
   struct rep_args args;
@@ -115,6 +122,9 @@ write_rep (const char **msg, apr_pool_t *pool)
   svn_fs_t *fs;
 
   *msg = "Write a new rep, then overwrite it.";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR (svn_test__create_fs_and_repos
@@ -151,7 +161,9 @@ write_rep (const char **msg, apr_pool_t *pool)
 
 
 static svn_error_t *
-read_rep (const char **msg, apr_pool_t *pool)
+read_rep (const char **msg, 
+          svn_boolean_t msg_only,
+          apr_pool_t *pool)
 {
   struct rep_args new_args;
   struct rep_args args;
@@ -162,6 +174,9 @@ read_rep (const char **msg, apr_pool_t *pool)
   svn_fs_t *fs;
 
   *msg = "Write and overwrite a new rep; confirm with reads.";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR (svn_test__create_fs_and_repos
@@ -232,7 +247,9 @@ read_rep (const char **msg, apr_pool_t *pool)
 
 
 static svn_error_t *
-delete_rep (const char **msg, apr_pool_t *pool)
+delete_rep (const char **msg, 
+            svn_boolean_t msg_only,
+            apr_pool_t *pool)
 {
   struct rep_args new_args;
   struct rep_args delete_args;
@@ -242,6 +259,9 @@ delete_rep (const char **msg, apr_pool_t *pool)
   svn_error_t *err;
 
   *msg = "Write, then delete, a new rep; confirm deletion.";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR (svn_test__create_fs_and_repos
@@ -438,13 +458,18 @@ static const char *bigstring3 =
 
 
 static svn_error_t *
-test_strings (const char **msg, apr_pool_t *pool)
+test_strings (const char **msg, 
+              svn_boolean_t msg_only,
+              apr_pool_t *pool)
 {
   struct string_args args;
   svn_fs_t *fs;
   svn_stringbuf_t *string;
 
   *msg = "Test many strings table functions together.";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR (svn_test__create_fs_and_repos
@@ -540,12 +565,17 @@ test_strings (const char **msg, apr_pool_t *pool)
 
 
 static svn_error_t *
-write_null_string (const char **msg, apr_pool_t *pool)
+write_null_string (const char **msg, 
+                   svn_boolean_t msg_only,
+                   apr_pool_t *pool)
 {
   struct string_args args;
   svn_fs_t *fs;
 
   *msg = "Write a null string.";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR (svn_test__create_fs_and_repos
@@ -562,12 +592,17 @@ write_null_string (const char **msg, apr_pool_t *pool)
 
 
 static svn_error_t *
-abort_string (const char **msg, apr_pool_t *pool)
+abort_string (const char **msg, 
+              svn_boolean_t msg_only,
+              apr_pool_t *pool)
 {
   struct string_args args, args2;
   svn_fs_t *fs;
 
   *msg = "Write a string, then abort during an overwrite.";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR (svn_test__create_fs_and_repos
@@ -625,13 +660,18 @@ abort_string (const char **msg, apr_pool_t *pool)
 }
 
 static svn_error_t *
-copy_string (const char **msg, apr_pool_t *pool)
+copy_string (const char **msg, 
+             svn_boolean_t msg_only,
+             apr_pool_t *pool)
 {
   struct string_args args;
   svn_fs_t *fs;
   const char *old_key;
 
   *msg = "Create and copy a string";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   /* Create a new fs and repos */
   SVN_ERR (svn_test__create_fs_and_repos
@@ -675,6 +715,7 @@ copy_string (const char **msg, apr_pool_t *pool)
 /* The test table.  */
 
 svn_error_t * (*test_funcs[]) (const char **msg,
+                               svn_boolean_t msg_only,
                                apr_pool_t *pool) = {
   0,
   write_new_rep,

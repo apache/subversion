@@ -26,7 +26,9 @@
 
 
 static svn_error_t *
-next_key (const char **msg, apr_pool_t *pool)
+next_key (const char **msg, 
+          svn_boolean_t msg_only,
+          apr_pool_t *pool)
 {
   apr_size_t len, olen;
 
@@ -68,6 +70,9 @@ next_key (const char **msg, apr_pool_t *pool)
 
 
   *msg = "testing sequential alphanumeric key generation";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
 
   len = strlen (this_1);
   olen = len;
@@ -183,7 +188,10 @@ next_key (const char **msg, apr_pool_t *pool)
 
 /* The test table.  */
 
-svn_error_t *(*test_funcs[]) (const char **msg, apr_pool_t *pool) = {
+svn_error_t *(*test_funcs[]) (const char **msg, 
+                              svn_boolean_t msg_only,
+                              apr_pool_t *pool) = 
+{
   0,
   next_key,
   0
