@@ -213,7 +213,7 @@ test_crlf_crlf (const char **msg,
   SVN_ERR (create_file (src, "\r\n", pool));
   SVN_ERR (verify_file (src, "\r\n", pool));
   SVN_ERR (svn_io_copy_and_translate
-           (src, dst, "\r\n", 0, NULL, NULL, NULL, pool));
+           (src, dst, "\r\n", 0, NULL, NULL, NULL, NULL, pool));
   SVN_ERR (verify_file (dst, "\r\n", pool));
 
   return SVN_NO_ERROR;
@@ -237,7 +237,7 @@ test_lf_crlf (const char **msg,
   SVN_ERR (create_file (src, "\n", pool));
   SVN_ERR (verify_file (src, "\n", pool));
   SVN_ERR (svn_io_copy_and_translate
-           (src, dst, "\r\n", 0, NULL, NULL, NULL, pool));
+           (src, dst, "\r\n", 0, NULL, NULL, NULL, NULL, pool));
   SVN_ERR (verify_file (dst, "\r\n", pool));
 
   return SVN_NO_ERROR;
@@ -261,7 +261,7 @@ test_cr_crlf (const char **msg,
   SVN_ERR (create_file (src, "\r", pool));
   SVN_ERR (verify_file (src, "\r", pool));
   SVN_ERR (svn_io_copy_and_translate
-           (src, dst, "\r\n", 0, NULL, NULL, NULL, pool));
+           (src, dst, "\r\n", 0, NULL, NULL, NULL, NULL, pool));
   SVN_ERR (verify_file (dst, "\r\n", pool));
 
   return SVN_NO_ERROR;
@@ -284,7 +284,7 @@ test_mixed_to_crlf (const char **msg,
   SVN_ERR (remove_file (src, pool));
   SVN_ERR (create_file (src, NULL, pool));
   SVN_ERR (svn_io_copy_and_translate
-           (src, dst, "\r\n", 0, NULL, NULL, NULL, pool));
+           (src, dst, "\r\n", 0, NULL, NULL, NULL, NULL, pool));
   SVN_ERR (verify_file (dst, "\r\n", pool));
 
   return SVN_NO_ERROR;
@@ -308,7 +308,7 @@ test_lf_lf (const char **msg,
   SVN_ERR (create_file (src, "\n", pool));
   SVN_ERR (verify_file (src, "\n", pool));
   SVN_ERR (svn_io_copy_and_translate
-           (src, dst, "\n", 0, NULL, NULL, NULL, pool));
+           (src, dst, "\n", 0, NULL, NULL, NULL, NULL, pool));
   SVN_ERR (verify_file (dst, "\n", pool));
 
   return SVN_NO_ERROR;
@@ -332,7 +332,7 @@ test_crlf_lf (const char **msg,
   SVN_ERR (create_file (src, "\r\n", pool));
   SVN_ERR (verify_file (src, "\r\n", pool));
   SVN_ERR (svn_io_copy_and_translate
-           (src, dst, "\n", 0, NULL, NULL, NULL, pool));
+           (src, dst, "\n", 0, NULL, NULL, NULL, NULL, pool));
   SVN_ERR (verify_file (dst, "\n", pool));
 
   return SVN_NO_ERROR;
@@ -356,7 +356,7 @@ test_cr_lf (const char **msg,
   SVN_ERR (create_file (src, "\r", pool));
   SVN_ERR (verify_file (src, "\r", pool));
   SVN_ERR (svn_io_copy_and_translate
-           (src, dst, "\n", 0, NULL, NULL, NULL, pool));
+           (src, dst, "\n", 0, NULL, NULL, NULL, NULL, pool));
   SVN_ERR (verify_file (dst, "\n", pool));
 
   return SVN_NO_ERROR;
@@ -379,7 +379,7 @@ test_mixed_to_lf (const char **msg,
   SVN_ERR (remove_file (src, pool));
   SVN_ERR (create_file (src, NULL, pool));
   SVN_ERR (svn_io_copy_and_translate
-           (src, dst, "\n", 0, NULL, NULL, NULL, pool));
+           (src, dst, "\n", 0, NULL, NULL, NULL, NULL, pool));
   SVN_ERR (verify_file (dst, "\n", pool));
 
   return SVN_NO_ERROR;

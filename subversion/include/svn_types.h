@@ -124,8 +124,11 @@ enum svn_recurse_kind
 /* The mime-type of a given file. */
 #define SVN_PROP_MIME_TYPE  SVN_PROP_PREFIX "mime-type"
 
-/* The ignore patters for given directory. */
+/* The ignore patterns for a given directory. */
 #define SVN_PROP_IGNORE  SVN_PROP_PREFIX "ignore"
+
+/* The line ending style for a given file. */
+#define SVN_PROP_EOL_STYLE  SVN_PROP_PREFIX "eol-style"
 
 /* The character set of a given file. */
 #define SVN_PROP_CHARSET  SVN_PROP_PREFIX "charset"
@@ -174,6 +177,59 @@ enum svn_recurse_kind
 /* When custom, user-defined properties are passed over the wire, they will
    have this prefix added to their name */
 #define SVN_PROP_CUSTOM_PREFIX SVN_PROP_PREFIX "custom:"
+
+
+
+/*** Keyword substitution. ***/
+
+/* The maximum size of an expanded or un-expanded keyword. */
+#define SVN_KEYWORD_MAX_LEN    255
+
+/* All the keywords Subversion recognizes.
+ * 
+ * Note that there is a better, more general proposal out there, see
+ * 
+ *    http://subversion.tigris.org/servlets/ReadMsg?msgId=49180&listName=dev
+ *    =====
+ *    From: "Jonathan M. Manning" <jmanning@alisa-jon.net>
+ *    To: dev@subversion.tigris.org
+ *    Date: Fri, 14 Dec 2001 11:56:54 -0500
+ *    Message-ID: <87970000.1008349014@bdldevel.bl.bdx.com>
+ *    Subject: Re: keywords
+ *
+ * and Eric Gillespie's support of same:
+ * 
+ *    http://subversion.tigris.org/servlets/ReadMsg?msgId=48658&listName=dev
+ *    =====
+ *    From: "Eric Gillespie, Jr." <epg@pretzelnet.org>
+ *    To: dev@subversion.tigris.org
+ *    Date: Wed, 12 Dec 2001 09:48:42 -0500
+ *    Message-ID: <87k7vsebp1.fsf@vger.pretzelnet.org>
+ *    Subject: Re: Customizable Keywords
+ *
+ * However, it is considerably more complex than the scheme below.
+ * For now we're going with simplicity, hopefully the more general
+ * solution can be done post-1.0.
+ */
+
+/* The most recent revision in which this file was changed. */
+#define SVN_KEYWORD_REVISION_LONG    "LastChangedRevision"
+#define SVN_KEYWORD_REVISION_SHORT   "Rev"
+
+/* The most recent date (repository time) when this file was changed. */
+#define SVN_KEYWORD_DATE_LONG        "LastChangedDate"
+#define SVN_KEYWORD_DATE_SHORT       "Date"
+
+/* Who most recently committed to this file. */
+#define SVN_KEYWORD_AUTHOR_LONG      "LastChangedBy"
+#define SVN_KEYWORD_AUTHOR_SHORT     "Author"
+
+/* The URL for the head revision of this file. */
+#define SVN_KEYWORD_URL_LONG         "HeadURL"
+#define SVN_KEYWORD_URL_SHORT        "URL"
+
+
+
 
 
 

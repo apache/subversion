@@ -136,40 +136,35 @@ svn_error_t *svn_io_append_file (svn_stringbuf_t *src,
                                  apr_pool_t *pool);
 
 
-/* The maximum size of an expanded or un-expanded keyword. */
-#define SVN_IO_MAX_KEYWORD_LEN    78
-
-/* Copy the contents of SRC to DST, overwriting DST if it exists, and
-   performing necessary newline and keyword translations.
+/* Copy the contents of SRC to DST, overwriting DST if it exists,
+   possibly performing line ending and keyword translations.
 
    If EOL_STR is non-NULL, replace whatever bytestring SRC uses to
-   denote line endings with EOL_STR in the output.  If SRC is
-   determined to have an inconsistent line ending style, then if
-   REPAIR is FALSE, return SVN_ERR_IO_INCONSISTENT_EOL and remove DST,
-   else if REPAIR is TRUE, repair DST by converting newlines of all
-   known formats to EOL_STR.
+   denote line endings with EOL_STR in the output.  If SRC has an
+   inconsistent line ending style, then: if REPAIR is FALSE, return
+   SVN_ERR_IO_INCONSISTENT_EOL and remove DST, else if REPAIR is TRUE,
+   convert any line ending in SRC to EOL_STR in DST.  Recognized line
+   endings are: "\n", "\r", "\r\n", and "\n\r".
 
-   NOTE:  This function currently only notices the following line
-   ending strings: "\n", "\r", "\r\n", and "\n\r".  
+   Expand keywords using REVISION, DATE, AUTHOR, and URL as the new
+   values; NULL for any of these parameters indicates that that
+   keyword should not be expanded.  Keywords are detected only if they
+   are no longer than SVN_IO_MAX_KEYWORD_LEN bytes, including the
+   delimiters and the keyword itself.
 
-   Also, perform keyword substitution, using AUTHOR, REVISION, and
-   DATE were necessary to expand keywords.  NULL for any of these
-   parameters indicates that related keyword for that parameter should
-   not be expanded.
+   Implication of above:
 
-   NOTE: Keywords are detected only if they are equal to or smaller
-   than (in bytes) SVN_IO_MAX_KEYWORD_LEN.
-
-   As is turns out, if EOL_STR, AUTHOR, REVISION, and DATE are all
-   NULL, this function is basically a byte-for-byte copy.  
+   If EOL_STR, REVISION, DATE, AUTHOR, and URL are all NULL, just do a
+   byte-for-byte copy.
 */
 svn_error_t *svn_io_copy_and_translate (const char *src,
                                         const char *dst,
                                         const char *eol_str,
                                         svn_boolean_t repair,
-                                        const char *author,
                                         const char *revision,
                                         const char *date,
+                                        const char *author,
+                                        const char *url,
                                         apr_pool_t *pool);
 
 /* Read a line from FILE into BUF, but not exceeding *LIMIT bytes.
