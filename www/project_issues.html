@@ -46,6 +46,70 @@
    feasible, you will likely be asked to return here and file a new
    issue in the Issue Tracker.</p>
 
+<h2>What the Fields Mean</h2>
+
+<p>When an issue is first filed, it automatically goes in the
+<b>"---"</b> milestone, meaning it is unscheduled.  A developer will
+examine it and maybe talk to other developers, then estimate the bug's
+severity, the effort required to fix it, and schedule it in a numbered
+milestone, for example <b><a
+href="http://subversion.tigris.org/issues/buglist.cgi?target_milestone=0.28"
+>0.28</a></b>.  (Or they may put it the <b><a
+href="http://subversion.tigris.org/issues/buglist.cgi?target_milestone=Post-1.0"
+>Post-1.0</a></b> or <b><a
+href="http://subversion.tigris.org/issues/buglist.cgi?target_milestone=inapplicable"
+>inapplicable</a></b> milestones, if they consider it tolerable in
+Subversion 1.0.)
+</p>
+
+<p>
+If it goes into a pre-1.0 milestone, it is usually also assigned to
+someone (but please always check with a developer before assigning an
+issue to them).  Also, remember that an issue filed in Post-1.0 can
+still be fixed before the 1.0 release, if some committer decides they
+want to -- "Post-1.0" merely means that we wouldn't block the release
+on that issue.
+</p>
+
+<p>
+Severity is represented in the <b>Priority</b> field.  Here is how
+priority numbers map to severity:
+</p>
+
+<p>
+<ul>
+
+   <li><b>P1:</b> <i>Prevents working from getting done, causes data
+         loss, or BFI ("Bad First Impression" -- too embarrassing for
+         a 1.0 release).</i>
+   </li>
+
+   <li><b>P2:</b> <i>Workaround required to get stuff done.</i>
+   </li>
+
+   <li><b>P3:</b> <i>Like P2, but rarely encountered in normal usage.</i>
+   </li>
+
+   <li><b>P4:</b> <i>Developer concern only, API stability or
+         cleanliness issue.</i>
+   </li>
+
+   <li><b>P5:</b> <i>Nice to fix, but in a pinch we could live with it.</i>
+   </li>
+
+</ul>
+</p>
+
+<p>
+Effort Required is represented in the <b>Status Whiteboard</b> with an
+"<b>e number</b>", which is the average of the most optimistic and
+most pessimistic projections for number of engineer/days needed to
+fix the bug.  The e number always comes first, so we can sort on the
+field, but we include the actual spread after it, so we know when
+we're dealing with a wide range.  For example
+"<b>e2.5&nbsp;(2&nbsp;/&nbsp;3)</b>" is not quite the same as 
+"<b>e2.5&nbsp;(1&nbsp;/&nbsp;4)</b>"!
+
 <h2>Enter the Issue Tracker</h2>
 
 <p>And so, with further ado, we give you (drumroll&hellip;) the
