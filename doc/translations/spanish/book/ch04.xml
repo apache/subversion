@@ -1437,19 +1437,20 @@ URL: http://svn.example.com/repos/calc/branches/my-calc-branch
       más información y un ejemplo.</para> </footnote></para>
     
     <sidebar>
-      <title>Switches and Updates</title>
+      <title>Cambios y actualizaciones</title>
       
-      <para>Have you noticed that the output of <command>svn
-          switch</command> and <command>svn update</command> look the
-        same?  The switch command is actually a superset of the
-        update command.</para>
+      <para>¿Se ha dado cuenta de que la salida de los comandos
+        <command>svn switch</command> y <command>svn update</command>
+        parecen iguales?  El comando de cambio es de hecho un
+        superconjunto del comando de actualización.</para>
 
-      <para>When you run <command>svn update</command>, you're asking
-        the repository to compare two trees.  The repository does so,
-        and then sends a description of the differences back to the
-        client. The only difference between <command>svn
-        switch</command> and <command>svn update</command> is that the
-        update command always compares two identical paths.</para>
+      <para>Cuando ejecuta <command>svn update</command>, está
+        preguntándole al repositorio que compare dos árboles. El
+        repositorio lo hace, y entonces envía una descripción
+        de las diferencias al cliente.  La única diferencia entre
+        <command>svn switch</command> y <command>svn update</command>
+        es que el comando de actualización siempre compara dos
+        rutas idénticas.</para>
       
        <para>That is, if your working copy is a mirror of
         <filename>/calc/trunk</filename>, then <command>svn
