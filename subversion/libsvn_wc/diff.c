@@ -576,11 +576,13 @@ file_diff (struct dir_baton *dir_baton,
           if (translated != path)
             err2 = svn_io_remove_file (translated, pool);
 
-          if (err)
+          if (err && err2)
             {
               svn_error_compose (err, err2);
               return err;
             }
+          if (err)
+            return err;
           if (err2)
             return err2;
         }
