@@ -210,7 +210,7 @@ svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
                                              apr_pool_t *pool);
 
-/** Parse an array of @c svn_item_t structures as a tuple, using a
+/** Parse an array of @c svn_sort__item_t structures as a tuple, using a
  * printf-like interface.  The format string @a fmt may contain:
  *
  *<pre>

@@ -36,7 +36,7 @@
 /*** Code. ***/
 
 static int
-compare_items_as_paths (const svn_item_t *a, const svn_item_t *b)
+compare_items_as_paths (const svn_sort__item_t *a, const svn_sort__item_t *b)
 {
   return svn_path_compare_paths ((const char *)a->key, (const char *)b->key);
 }
@@ -49,15 +49,15 @@ print_dirents (apr_hash_t *dirents,
   apr_array_header_t *array;
   int i;
 
-  array = apr_hash_sorted_keys (dirents, compare_items_as_paths, pool);
+  array = svn_sort__hash (dirents, compare_items_as_paths, pool);
   
   for (i = 0; i < array->nelts; ++i)
     {
       const char *utf8_entryname, *stdout_entryname;
       svn_dirent_t *dirent;
-      svn_item_t *item;
+      svn_sort__item_t *item;
      
-      item = &APR_ARRAY_IDX (array, i, svn_item_t);
+      item = &APR_ARRAY_IDX (array, i, svn_sort__item_t);
 
       utf8_entryname = item->key;
 

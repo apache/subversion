@@ -2001,14 +2001,15 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
       }
 
     /* get a sorted list of the entries */
-    sorted = apr_hash_sorted_keys(entries, svn_sort_compare_items_as_paths,
-                                  resource->pool);
+    sorted = svn_sort__hash(entries, svn_sort_compare_items_as_paths,
+                            resource->pool);
 
     entry_pool = svn_pool_create(resource->pool);
 
     for (i = 0; i < sorted->nelts; ++i)
       {
-        const svn_item_t *item = &APR_ARRAY_IDX(sorted, i, const svn_item_t);
+        const svn_sort__item_t *item = &APR_ARRAY_IDX(sorted, i,
+                                                      const svn_sort__item_t);
         const svn_fs_dirent_t *entry = item->value;
         const char *name = item->key;
         const char *href = name;

@@ -31,7 +31,7 @@
 
 
 
-/*** apr_hash_sorted_keys() ***/
+/*** svn_sort__hash() ***/
 
 /* (Should this be a permanent part of APR?)
 
@@ -51,7 +51,7 @@
 
    Therefore, it makes sense to store pointers to {void *, size_t}
    structures in our array.  No such apr object exists... BUT... if we
-   can use a new type svn_item_t which contains {char *, size_t, void
+   can use a new type svn_sort__item_t which contains {char *, size_t, void
    *}.  If store these objects in our array, we get the hash value
    *for free*.  When looping over the final array, we don't need to
    call apr_hash_get().  Major bonus!
@@ -59,7 +59,8 @@
 
 
 int
-svn_sort_compare_items_as_paths (const svn_item_t *a, const svn_item_t *b)
+svn_sort_compare_items_as_paths (const svn_sort__item_t *a,
+                                 const svn_sort__item_t *b)
 {
   const char *astr, *bstr;
 
@@ -84,25 +85,22 @@ svn_sort_compare_revisions (const void *a, const void *b)
 }
 
 
-#ifndef apr_hash_sort_keys
-
-/* see svn_sorts.h for documentation */
 apr_array_header_t *
-apr_hash_sorted_keys (apr_hash_t *ht,
-                      int (*comparison_func) (const svn_item_t *,
-                                              const svn_item_t *),
-                      apr_pool_t *pool)
+svn_sort__hash (apr_hash_t *ht,
+                int (*comparison_func) (const svn_sort__item_t *,
+                                        const svn_sort__item_t *),
+                apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   apr_array_header_t *ary;
 
   /* allocate an array with only one element to begin with. */
-  ary = apr_array_make (pool, 1, sizeof(svn_item_t));
+  ary = apr_array_make (pool, 1, sizeof(svn_sort__item_t));
 
   /* loop over hash table and push all keys into the array */
   for (hi = apr_hash_first (pool, ht); hi; hi = apr_hash_next (hi))
     {
-      svn_item_t *item = apr_array_push (ary);
+      svn_sort__item_t *item = apr_array_push (ary);
 
       apr_hash_this (hi, &item->key, &item->klen, &item->value);
     }
@@ -113,7 +111,6 @@ apr_hash_sorted_keys (apr_hash_t *ht,
 
   return ary;
 }
-#endif /* apr_hash_sort_keys */
 
 
 
@@ -296,22 +293,4 @@ svn_prop_needs_translation (const char *propname)
      props need it.  */
 
   return svn_prop_is_svn_prop (propname);
-}
-
-
-void *
-apr_array_prepend (apr_array_header_t *arr)
-{
-  /* Call apr_array_push() to ensure that enough room has been
-     alloced. */
-  apr_array_push (arr);
-  
-  /* Now, shift all the things in the array down one spot. */
-  memmove (arr->elts + arr->elt_size,  
-           arr->elts,
-           ((arr->nelts - 1) * arr->elt_size));
-  
-  /* Finally, return the pointer to the first array member so our
-     caller could put stuff there. */
-  return arr->elts;
 }

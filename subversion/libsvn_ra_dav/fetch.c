@@ -928,7 +928,7 @@ svn_error_t *svn_ra_dav__get_dir(void *session_baton,
           if (propval == NULL)
             entry->size = 0;
           else
-            entry->size = apr_atoui64(propval->data);
+            entry->size = svn__atoui64(propval->data);
           
           /* does this resource contain any 'svn' or 'custom' properties,
              i.e.  ones actually created and set by the user? */
