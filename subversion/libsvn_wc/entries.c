@@ -1808,16 +1808,18 @@ svn_wc_mark_missing_deleted (const char *path,
     {
       const char *parent_path, *bname;
       svn_wc_adm_access_t *adm_access;
-      svn_wc_entry_t *newent
-        = apr_pcalloc (pool, sizeof(*newent));
+      svn_wc_entry_t newent;
       
-      newent->deleted = TRUE;
+      newent.deleted = TRUE;
+      newent.schedule = svn_wc_schedule_normal;
 
       svn_path_split (path, &parent_path, &bname, pool);
 
       SVN_ERR (svn_wc_adm_retrieve (&adm_access, parent, parent_path, pool));
-      SVN_ERR (svn_wc__entry_modify (adm_access, bname, newent,
-                                     SVN_WC__ENTRY_MODIFY_DELETED,
+      SVN_ERR (svn_wc__entry_modify (adm_access, bname, &newent,
+                                     (SVN_WC__ENTRY_MODIFY_DELETED
+                                      | SVN_WC__ENTRY_MODIFY_SCHEDULE
+                                      | SVN_WC__ENTRY_MODIFY_FORCE),
                                      TRUE, /* sync right away */ pool));
 
       return SVN_NO_ERROR;

@@ -587,10 +587,10 @@ def revert_inside_newly_added_dir(sbox):
 
 #----------------------------------------------------------------------
 # Regression test for issue #1609:
-# 'svn status' should show a schedule-replace directory as 'R' not '?'
+# 'svn status' should show a schedule-add directory as 'A' not '?'
 
-def status_replaced_directory(sbox):
-  "status on a replaced directory"
+def status_add_deleted_directory(sbox):
+  "status after add of deleted directory"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -612,13 +612,21 @@ def status_replaced_directory(sbox):
                                      'ci', '-m', 'log msg', wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', A_path)
   
-  # Now check that status says replaced.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
-  expected_status.tweak('A', status='R ', wc_rev=0)
+  expected_status = svntest.wc.State(wc_dir,
+                                     { ''     : Item(status='  ', wc_rev=1),
+                                       'A'    : Item(status='A ', wc_rev=0),
+                                       'iota' : Item(status='  ', wc_rev=1),
+                                       })
+  expected_status.tweak(repos_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-
+  # Update will *not* remove the entry for A despite it being marked
+  # deleted.
+  svntest.actions.run_and_verify_svn(None, ['At revision 2.\n'], [],
+                                     'up', wc_dir)
+  expected_status.tweak('', 'iota', wc_rev=2)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 ########################################################################
 # Run the tests
@@ -647,7 +655,7 @@ test_list = [ None,
               unschedule_missing_added,
               delete_missing,
               revert_inside_newly_added_dir,
-              Skip(status_replaced_directory, "see issue #1611"),
+              status_add_deleted_directory,
              ]
 
 if __name__ == '__main__':
