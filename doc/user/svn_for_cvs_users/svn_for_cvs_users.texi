@@ -34,6 +34,7 @@ A Subversion quick-start guide for CVS users.
 * Directory versioning::
 * Conflicts::
 * Binary files::
+* Committing::
 * Branches and tags::
 * Real docs::
 @end menu
@@ -343,6 +344,24 @@ line-ending conversions.  Also, when a binary file is "merged" during
 update, no real merge occurs.  Instead, Subversion creates two files
 side-by-side in your working copy; the one containing your local
 modifications is renamed with an ".orig" extension.
+
+
+
+@node Committing
+@section Committing
+
+Unlike CVS, SVN can handle anonymous and authorized users in the same
+repository.  There is no need for an anonymous user or a separate
+repository.  If the SVN server requests authorization when committing,
+the client should prompt you for your authorization (password).
+
+Also, the command-line client does not currently bring up an editor.  
+Therefore, you must write the log entry @b{before} committing and 
+pass the log file path when committing:
+
+@example
+svn commit -F <path to your new log entry>
+@end example
 
 
 
