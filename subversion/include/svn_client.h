@@ -441,6 +441,12 @@ svn_client_revert (svn_stringbuf_t *path,
    MESSAGE to immediately attempt to commit the copy action in the
    repository.
 
+   If the operation involves interaction between the working copy and
+   the repository, there may be an editor drive, in which case the
+   BEFORE_EDITOR, BEFORE_EDIT_BATON and AFTER_EDITOR, AFTER_EDIT_BATON
+   will be wrapped around the edit using svn_delta_wrap_editor()
+   (which see in svn_delta.h).
+
    If neither SRC_PATH nor DST_PATH is a URL, then this is just a
    variant of svn_client_add, where the DST_PATH items are scheduled
    for addition as copies.  No changes will happen to the repository
@@ -452,6 +458,10 @@ svn_client_copy (svn_stringbuf_t *src_path,
                  svn_stringbuf_t *dst_path,
                  svn_client_auth_baton_t *auth_baton,
                  svn_stringbuf_t *message,
+                 const svn_delta_edit_fns_t *before_editor,
+                 void *before_edit_baton,
+                 const svn_delta_edit_fns_t *after_editor,
+                 void *after_edit_baton,
                  apr_pool_t *pool);
 
 

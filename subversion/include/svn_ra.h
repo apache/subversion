@@ -286,9 +286,10 @@ typedef struct svn_ra_plugin_t
                                      svn_ra_close_commit_func_t close_func,
                                      void *close_baton);
 
-  /* Ask the network layer to check out a copy of the repository URL
-     specified in open(), using EDITOR and EDIT_BATON to create a
-     working copy. */
+  /* Check out revision REVISION of the url specified in
+     SESSION_BATON, using EDITOR and EDIT_BATON to create the working
+     copy.  If RECURSE is non-zero, create the full working tree, else
+     just its topmost directory. */
   svn_error_t *(*do_checkout) (void *session_baton,
                                svn_revnum_t revision,
                                svn_boolean_t recurse,

@@ -297,6 +297,10 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
                   svn_stringbuf_t *dst_path, 
                   svn_client_auth_baton_t *auth_baton,
                   svn_stringbuf_t *message,
+                  const svn_delta_edit_fns_t *before_editor,
+                  void *before_edit_baton,
+                  const svn_delta_edit_fns_t *after_editor,
+                  void *after_edit_baton,
                   apr_pool_t *pool)
 {
   void *ra_baton, *sess, *cb_baton;
@@ -318,9 +322,16 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
   /* Verify that SRC_URL exists in the repository. */
   SVN_ERR (ra_lib->check_path (&src_kind, sess, "", src_rev));
   if (src_kind == svn_node_none)
-    return svn_error_createf
-      (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
-       "path `%s' does not exist in revision `%ld'", src_url->data, src_rev);
+    {
+      if (SVN_IS_VALID_REVNUM (src_rev))
+        return svn_error_createf
+          (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
+           "path `%s' not found in revision `%ld'", src_url->data, src_rev);
+      else
+        return svn_error_createf
+          (SVN_ERR_FS_NOT_FOUND, 0, NULL, pool,
+           "path `%s' not found in head revision", src_url->data);
+    }
 
   /* There are two interfering sets of cases to watch out for here:
    *
@@ -343,6 +354,7 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
    * 2 under A.
    */
 
+  /* First, figure out about dst. */
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
   if (dst_kind == svn_node_dir)
     {
@@ -358,34 +370,39 @@ repos_to_wc_copy (svn_stringbuf_t *src_url,
     return svn_error_createf (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
                               "file `%s' already exists.", dst_path->data);
 
-  /* Get a checkout editor. */
+  /* Now that dst_path has possibly been reset, check that there's
+     nothing in the way of the upcoming checkout. */
+  SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
+  if (dst_kind != svn_node_none)
+    return svn_error_createf (SVN_ERR_WC_OBSTRUCTED_UPDATE, 0, NULL, pool,
+                              "`%s' is in the way", dst_path->data);
+
+  /* ### todo: We won't always punt on non-dir src like this. */
+  if (src_kind != svn_node_dir)
+    return svn_error_createf
+      (SVN_ERR_WC_ENTRY_EXISTS, 0, NULL, pool,
+       "can't copy non-directory `%s' to a wc yet", src_url->data);
+    
+  /* Get a checkout editor and wrap it. */
   SVN_ERR (svn_wc_get_checkout_editor (dst_path,
                                        src_url,
                                        src_rev,
-                                       1, /* ### recurse? */
+                                       1,
                                        &editor,
                                        &edit_baton,
                                        pool));
 
+  svn_delta_wrap_editor (&editor, &edit_baton,
+                         before_editor, before_edit_baton,
+                         editor, edit_baton,
+                         after_editor, after_edit_baton, pool);
 
-  /* ### todo: it might be nice for "svn cp" to print out what it's
-   * doing as it's doing it, when the network is involved.  This
-   * probably means taking before_ and after_ editors, which means
-   * they'd need to be passed through from svn_client_copy() and
-   * svn_client_move().  Not everyone would use them; for example,
-   * wc_to_wc_copy() wouldn't bother.
-   *
-   * See checkout.c:svn_client_checkout() for an example of the editor
-   * wrapping I'm talking about.
-   */
-
-  abort ();
+  SVN_ERR (ra_lib->do_checkout (sess, src_rev, 1, editor, edit_baton));
 
 #if 0
   /* some notes for myself */
 
-  1. do the checkout;
-  2. do these things in order, or write a routine that does them:
+  do these things in order, or write a routine that does them:
     recursively_remove_all_wcprops ():
     svn_wc_add_directory ():
     // ---> which just calls add_to_revision_control(), which needs to
@@ -404,6 +421,10 @@ setup_copy (svn_stringbuf_t *src_path,
             svn_stringbuf_t *dst_path,
             svn_client_auth_baton_t *auth_baton,
             svn_stringbuf_t *message,
+            const svn_delta_edit_fns_t *before_editor,
+            void *before_edit_baton,
+            const svn_delta_edit_fns_t *after_editor,
+            void *after_edit_baton,
             svn_boolean_t is_move,
             apr_pool_t *pool)
 {
@@ -461,7 +482,10 @@ setup_copy (svn_stringbuf_t *src_path,
 
   else if ((src_is_url) && (! dst_is_url))
     SVN_ERR (repos_to_wc_copy (src_path, src_rev, dst_path, auth_baton,
-                               message, pool));
+                               message,
+                               before_editor, before_edit_baton,
+                               after_editor, after_edit_baton,
+                               pool));
 
   else
     SVN_ERR (repos_to_repos_copy (src_path, src_rev, dst_path, auth_baton,
@@ -479,10 +503,16 @@ svn_client_copy (svn_stringbuf_t *src_path,
                  svn_stringbuf_t *dst_path,
                  svn_client_auth_baton_t *auth_baton,
                  svn_stringbuf_t *message,
+                 const svn_delta_edit_fns_t *before_editor,
+                 void *before_edit_baton,
+                 const svn_delta_edit_fns_t *after_editor,
+                 void *after_edit_baton,
                  apr_pool_t *pool)
 {
   return setup_copy (src_path, src_rev, dst_path, auth_baton, message,
-                     FALSE, /* is_move */ pool);
+                     before_editor, before_edit_baton,
+                     after_editor, after_edit_baton,
+                     FALSE /* is_move */, pool);
 }
 
 
@@ -495,7 +525,9 @@ svn_client_move (svn_stringbuf_t *src_path,
                  apr_pool_t *pool)
 {
   return setup_copy (src_path, src_rev, dst_path, auth_baton, message,
-                     TRUE, /* is_move */ pool);
+                     NULL, NULL,  /* no before_editor, before_edit_baton */
+                     NULL, NULL,  /* no after_editor, after_edit_baton */
+                     TRUE /* is_move */, pool);
 }
 
 
