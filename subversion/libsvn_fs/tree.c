@@ -1427,7 +1427,10 @@ deltify_mutable (svn_fs_t *fs,
           SVN_ERR (deltify_mutable (fs, root, 
                                     svn_path_join (path, key, subpool),
                                     txn_id, subpool));
+          svn_pool_clear (subpool);
         }
+
+      svn_pool_destroy (subpool);
     }
 
   /* Finally, do the deltification. */
