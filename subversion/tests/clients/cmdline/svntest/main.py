@@ -211,7 +211,7 @@ def get_post_commit_hook_path(repo_dir):
 
 
 # Run any binary, logging the command line (TODO: and return code)
-def _run_command(command, error_expected, *varargs):
+def run_command(command, error_expected, binary_mode=0, *varargs):
   """Run COMMAND with VARARGS; return stdout, stderr as lists of lines.
   If ERROR_EXPECTED is None, any stderr also will be printed."""
 
@@ -223,8 +223,13 @@ def _run_command(command, error_expected, *varargs):
   if verbose_mode:
     print 'CMD:', os.path.basename(command) + args,
 
+  if binary_mode:
+    mode = 'b'
+  else:
+    mode = 't'
+
   start = time.time()
-  infile, outfile, errfile = os.popen3(command + args)
+  infile, outfile, errfile = os.popen3(command + args, mode)
 
   stdout_lines = outfile.readlines()
   stderr_lines = errfile.readlines()
@@ -246,21 +251,21 @@ def _run_command(command, error_expected, *varargs):
 def run_svn(error_expected, *varargs):
   """Run svn with VARARGS; return stdout, stderr as lists of lines.
   If ERROR_EXPECTED is None, any stderr also will be printed."""
-  return _run_command(svn_binary, error_expected, *varargs)
+  return run_command(svn_binary, error_expected, 0, *varargs)
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
   "Run svnadmin with VARARGS, returns stdout, stderr as list of lines."
-  return _run_command(svnadmin_binary, 1, *varargs)
+  return run_command(svnadmin_binary, 1, 0, *varargs)
 
 # For running svnlook.  Ignores the output.
 def run_svnlook(*varargs):
   "Run svnlook with VARARGS, returns stdout, stderr as list of lines."
-  return _run_command(svnlook_binary, 1, *varargs)
+  return run_command(svnlook_binary, 1, 0, *varargs)
 
 def run_svnversion(*varargs):
   "Run svnversion with VARARGS, returns stdout, stderr as list of lines."
-  return _run_command(svnversion_binary, 1, *varargs)
+  return run_command(svnversion_binary, 1, 0, *varargs)
 
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):
