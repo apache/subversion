@@ -210,12 +210,15 @@ def usage(retcode=255):
   print 'Usage: %s [OPTIONS] DIRECTORY' % (sys.argv[0])
   print ''
   print 'Options:'
+  print '    --help, -h  : Show this usage message.'
   print '    --seed ARG  : Use seed ARG to scramble the tree.'
   print '    --use-svn   : Use Subversion (as "svn") to perform file additions'
   print '                  and removals.'
   print '    --use-cvs   : Use CVS (as "cvs") to perform file additions'
   print '                  and removals.'
   print '    --dry-run   : Don\'t actually change the disk.'
+  print '    --limit N   : Limit the scrambling to a maximum of N operations.'
+  print '    --quiet, -q : Run in stealth mode!'
   sys.exit(retcode)
 
 
