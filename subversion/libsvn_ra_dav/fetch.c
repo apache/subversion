@@ -122,12 +122,6 @@ typedef struct {
 
 } report_baton_t;
 
-#ifdef SVN_DEBUG
-#define DEBUG_CR "\n"
-#else
-#define DEBUG_CR ""
-#endif
-
 static const char report_head[] = "<S:update-report xmlns:S=\""
                                    SVN_XML_NAMESPACE
                                    "\">" DEBUG_CR;

@@ -617,7 +617,6 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
   const char *txn_name = dav_svn_get_txn(comb->priv.repos,
                                          comb->priv.root.activity_id);
   apr_pool_t *pool = comb->res.pool;
-  svn_fs_txn_t *txn;
   svn_error_t *serr;
 
   if (txn_name == NULL)
@@ -630,17 +629,9 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
     }
   comb->priv.root.txn_name = txn_name;
 
-  if (comb->res.baselined)
-    {
-      /* a Working Baseline */
-
-      /* ### are we really done? */
-
-      return NULL;
-    }
-
   /* get the FS transaction, given its name */
-  serr = svn_fs_open_txn(&txn, comb->priv.repos->fs, txn_name, pool);
+  serr = svn_fs_open_txn(&comb->priv.root.txn, comb->priv.repos->fs, txn_name,
+                         pool);
   if (serr != NULL)
     {
       if (serr->apr_err == SVN_ERR_FS_NO_SUCH_TRANSACTION)
@@ -653,8 +644,18 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
                                  "corresponding to the specified activity.");
     }
 
+  if (comb->res.baselined)
+    {
+      /* a Working Baseline */
+
+      /* if the transaction exists, then the working resource exists */
+      comb->res.exists = TRUE;
+
+      return NULL;
+    }
+
   /* get the root of the tree */
-  serr = svn_fs_txn_root(&comb->priv.root.root, txn, pool);
+  serr = svn_fs_txn_root(&comb->priv.root.root, comb->priv.root.txn, pool);
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

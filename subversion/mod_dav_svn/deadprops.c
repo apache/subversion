@@ -36,16 +36,24 @@ static dav_error *dav_svn_db_open(apr_pool_t *p, const dav_resource *resource,
 {
   dav_db *db;
 
-  /* Baselines and some resource types do not have deadprop databases. */
-  /* ### baselines might in the future; clients "could" attach a property
-     ### to the working baseline. */
-  if ((resource->type == DAV_RESOURCE_TYPE_VERSION && resource->baselined)
-      || resource->type == DAV_RESOURCE_TYPE_HISTORY
+  /* Some resource types do not have deadprop databases. Specifically:
+     REGULAR, VERSION, and WORKING resources have them. (SVN does not
+     have WORKSPACE resources, and isn't covered here) */
+  if (resource->type == DAV_RESOURCE_TYPE_HISTORY
       || resource->type == DAV_RESOURCE_TYPE_ACTIVITY
       || resource->type == DAV_RESOURCE_TYPE_PRIVATE)
     {
       *pdb = NULL;
       return NULL;
+    }
+
+  /* If the DB is being opened R/W, and this isn't a working resource, then
+     we have a problem! */
+  if (!ro && resource->type != DAV_RESOURCE_TYPE_WORKING)
+    {
+      return dav_new_error(p, HTTP_CONFLICT, 0,
+                           "Properties may only be changed on working "
+                           "resources.");
     }
 
   db = apr_pcalloc(p, sizeof(*db));
@@ -72,9 +80,19 @@ static dav_error *dav_svn_db_fetch(dav_db *db, dav_datum key,
   svn_stringbuf_t *propval;
   svn_error_t *serr;
 
-  serr = svn_fs_node_prop(&propval, db->resource->info->root.root,
-                          db->resource->info->repos_path,
-                          &propname, db->p);
+  /* Working Baseline, Baseline, or (Working) Version resource */
+  if (db->resource->baselined)
+    if (db->resource->type == DAV_RESOURCE_TYPE_WORKING)
+      serr = svn_fs_txn_prop(&propval, db->resource->info->root.txn,
+                             &propname, db->p);
+    else
+      serr = svn_fs_revision_prop(&propval, db->resource->info->repos->fs,
+                                  db->resource->info->root.rev,
+                                  &propname, db->p);
+  else
+    serr = svn_fs_node_prop(&propval, db->resource->info->root.root,
+                            db->resource->info->repos_path,
+                            &propname, db->p);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not fetch a property");
@@ -100,9 +118,14 @@ static dav_error *dav_svn_db_store(dav_db *db, dav_datum key, dav_datum value)
 
   /* ### hope node is open, and it is mutable */
 
-  serr = svn_fs_change_node_prop(db->resource->info->root.root,
-                                 db->resource->info->repos_path,
-                                 &propname, &propval, db->resource->pool);
+  /* Working Baseline or Working (Version) Resource */
+  if (db->resource->baselined)
+    serr = svn_fs_change_txn_prop(db->resource->info->root.txn,
+                                  &propname, &propval, db->resource->pool);
+  else
+    serr = svn_fs_change_node_prop(db->resource->info->root.root,
+                                   db->resource->info->repos_path,
+                                   &propname, &propval, db->resource->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not change a property");
@@ -120,9 +143,14 @@ static dav_error *dav_svn_db_remove(dav_db *db, dav_datum key)
 
   /* ### hope node is open, and it is mutable */
 
-  serr = svn_fs_change_node_prop(db->resource->info->root.root,
-                                 db->resource->info->repos_path,
-                                 &propname, NULL, db->resource->pool);
+  /* Working Baseline or Working (Version) Resource */
+  if (db->resource->baselined)
+    serr = svn_fs_change_txn_prop(db->resource->info->root.txn,
+                                  &propname, NULL, db->resource->pool);
+  else
+    serr = svn_fs_change_node_prop(db->resource->info->root.root,
+                                   db->resource->info->repos_path,
+                                   &propname, NULL, db->resource->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not remove a property");
@@ -139,9 +167,19 @@ static int dav_svn_db_exists(dav_db *db, dav_datum key)
   svn_stringbuf_t *propval;
   svn_error_t *serr;
 
-  serr = svn_fs_node_prop(&propval, db->resource->info->root.root,
-                          db->resource->info->repos_path,
-                          &propname, db->p);
+  /* Working Baseline, Baseline, or (Working) Version resource */
+  if (db->resource->baselined)
+    if (db->resource->type == DAV_RESOURCE_TYPE_WORKING)
+      serr = svn_fs_txn_prop(&propval, db->resource->info->root.txn,
+                             &propname, db->p);
+    else
+      serr = svn_fs_revision_prop(&propval, db->resource->info->repos->fs,
+                                  db->resource->info->root.rev,
+                                  &propname, db->p);
+  else
+    serr = svn_fs_node_prop(&propval, db->resource->info->root.root,
+                            db->resource->info->repos_path,
+                            &propname, db->p);
 
   /* ### try and dispose of the value? */
 
@@ -173,8 +211,18 @@ static dav_error *dav_svn_db_firstkey(dav_db *db, dav_datum *pkey)
     {
       svn_error_t *serr;
 
-      serr = svn_fs_node_proplist(&db->props, db->resource->info->root.root,
-                                  db->resource->info->repos_path, db->p);
+      /* Working Baseline, Baseline, or (Working) Version resource */
+      if (db->resource->baselined)
+        if (db->resource->type == DAV_RESOURCE_TYPE_WORKING)
+          serr = svn_fs_txn_proplist(&db->props, db->resource->info->root.txn,
+                                     db->p);
+        else
+          serr = svn_fs_revision_proplist(&db->props,
+                                          db->resource->info->repos->fs,
+                                          db->resource->info->root.rev, db->p);
+      else
+        serr = svn_fs_node_proplist(&db->props, db->resource->info->root.root,
+                                    db->resource->info->repos_path, db->p);
       if (serr != NULL)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                    "could not begin sequencing through "
