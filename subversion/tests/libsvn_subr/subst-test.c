@@ -16,6 +16,18 @@
  * ====================================================================
  */
 
+
+
+/* Advice to those adding new tests to this file: 
+ * ==============================================
+ *
+ * Read the doc string for substitute_and_verify(), then read the
+ * test functions themselves -- they're small, and they'll be very
+ * easy to understand once you know substitute_and_verify().
+ */
+
+
+
 #include <stdio.h>
 #include <string.h>
 #include <apr_general.h>
