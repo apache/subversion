@@ -10,6 +10,8 @@ Karl&nbsp;Fogel&nbsp;<tt>&lt;kfogel@collab.net&gt;</tt>
 <p>
 $LastChangedDate$
 <br>
+Original Date: 22 May, 2001
+<br>
 Canonical URL: <a href="http://svn.collab.net/repos/svn/trunk/www/variance-adjusted-patching.html">http://svn.collab.net/repos/svn/trunk/www/variance-adjusted-patching.html</a>
 <p>
 <hr>  <!-- ====================================================== -->
@@ -17,7 +19,7 @@ Canonical URL: <a href="http://svn.collab.net/repos/svn/trunk/www/variance-adjus
 
 <p>
 
-Revision control systems that use traditional context diff / unidiff
+Version control systems that use traditional context diff / unidiff
 format for branch merging tend to fail spuriously in high variance
 situations.  A "high variance" situation is one where the branch text
 differs from the source text by more than roughly 5-10%, counting
@@ -54,7 +56,7 @@ changing the diff T:18-T:19 so that it applies cleanly to B:10.
 This is possible because for any given line that a patch hunk expects
 to see in the target text (e.g., in a context diff, these would be the
 context lines, plus the "before" version of affected lines), the
-revision control system can know that line's history in both source
+version control system can know that line's history in both source
 and target, if there is a common ancestor to examine.  The process is
 very similar to the calculations done by "<tt>cvs&nbsp;annotate</tt>".
 Informally speaking, one of the following is true for each such line,
@@ -110,7 +112,7 @@ ignoring floating due to out-of-bounds insertion and deletion:
       Either way, the line needs to be changed to the "corresponding"
       line in the target text -- that is, the line that, in target,
       now occupies the place of the obsolete expected line.  The
-      revision control system has enough information to determine 
+      version control system has enough information to determine 
       which of the two cases above applies, and can use that to
       decide which of the lines currently in target is the best
       candidate to substitute for the missing line.
@@ -127,7 +129,7 @@ in the expected-text portions of the diff.
 <p>
 
 Although the patch program can adjust for floating at application
-time, the revision control system can also adjust the line numbers in
+time, the version control system can also adjust the line numbers in
 hunks to compensate for any insertions or deletions that have
 happened, in either source or target, outside the areas covered by the
 hunks.  This can result in a patch that applies perfectly, without any
@@ -140,7 +142,7 @@ patch program's own offset adjustment and fuzz factor to handle those.
 
 The above rules are an informal explanation of how variance adjustment
 works.  Below, the algorithm is described somewhat more formally, to
-show how the revision control system would do variance adjustment in
+show how the version control system would do variance adjustment in
 any situation.  Note that the algorithm is actually <i>too</i>
 powerful -- if taken to its logical limits, it can generate patches
 that apply cleanly even when the user would almost certainly prefer a
