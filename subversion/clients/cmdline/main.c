@@ -345,7 +345,7 @@ svn_cl__get_canonical_command (const char *cmd_name)
 /* Print an option OPT nicely into a STRING allocated in POOL.  If DOC
    is set, include generic documentation string of option.*/
 static void
-format_option (char **string,
+format_option (const char **string,
                const apr_getopt_option_t *opt,
                svn_boolean_t doc,
                apr_pool_t *pool)
@@ -354,7 +354,7 @@ format_option (char **string,
 
   if (opt == NULL)
     {
-      *string = apr_psprintf (pool, "?");
+      *string = "?";
       return;
     }
 
@@ -475,7 +475,7 @@ print_command_info (const svn_cl__cmd_desc_t *cmd_desc,
               /* print the option's docstring */
               if (option)
                 {
-                  char *optstr;
+                  const char *optstr;
                   format_option (&optstr, option, TRUE, pool);
                   fprintf (stream, "  %s\n", optstr);
                 }
@@ -1022,7 +1022,7 @@ main (int argc, const char * const *argv)
   for (i = 0; i < num_opts; i++)
     if (! subcommand_takes_option (subcommand, received_opts[i]))
       {
-        char *optstr;
+        const char *optstr;
         const apr_getopt_option_t *badopt = 
           svn_cl__get_option_from_enum (received_opts[i], svn_cl__options);
         format_option (&optstr, badopt, FALSE, pool);
