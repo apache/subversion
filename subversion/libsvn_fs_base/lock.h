@@ -79,7 +79,8 @@ svn_error_t *
 svn_fs_base__get_lock_from_path_helper (svn_lock_t **lock_p,
                                         const char *path,
                                         const svn_node_kind_t kind,
-                                        trail_t *trail);
+                                        trail_t *trail,
+                                        apr_pool_t *pool);
   
 
 /* Implements main logic of 'svn_fs_get_locks' (or in this case,
@@ -88,12 +89,13 @@ svn_error_t *
 svn_fs_base__get_locks_helper (apr_hash_t **locks_p,
                                const char *path,
                                const svn_node_kind_t kind,
-                               trail_t *trail);
+                               trail_t *trail,
+                               apr_pool_t *pool);
 
 
 /* Examine PATH (of kind KIND) for existing locks, and check whether
-   they can be used.  Do all work in the context of TRAIL, using
-   TRAIL->pool for temporary allocations.
+   they can be used.  Do all work in the context of TRAIL, using POOL
+   for temporary allocations.
 
    If no locks are present, return SVN_NO_ERROR.
 
@@ -116,7 +118,8 @@ svn_fs_base__get_locks_helper (apr_hash_t **locks_p,
 svn_error_t *svn_fs_base__allow_locked_operation (const char *path,
                                                   svn_node_kind_t kind,
                                                   svn_boolean_t recurse,
-                                                  trail_t *trail);
+                                                  trail_t *trail,
+                                                  apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

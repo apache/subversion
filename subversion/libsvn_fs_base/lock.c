@@ -79,7 +79,7 @@ txn_body_lock (void *baton, trail_t *trail)
   const char *fs_username;
   svn_lock_t *new_lock;
 
-  SVN_ERR (svn_fs_base__get_path_kind (&kind, args->path, trail));
+  SVN_ERR (svn_fs_base__get_path_kind (&kind, args->path, trail, trail->pool));
 
   /* Until we implement directory locks someday, we only allow locks
      on files or non-existent paths. */
@@ -99,7 +99,7 @@ txn_body_lock (void *baton, trail_t *trail)
     {
       svn_revnum_t created_rev;
       SVN_ERR (svn_fs_base__get_path_created_rev (&created_rev, args->path,
-                                                  trail));
+                                                  trail, trail->pool));
 
       /* SVN_INVALID_REVNUM means the path doesn't exist.  So
          apparently somebody is trying to lock something in their
@@ -126,7 +126,8 @@ txn_body_lock (void *baton, trail_t *trail)
      clear for locking, because the bdb funcs just cleared out both
      of the tables for us.   */
   SVN_ERR (svn_fs_base__get_lock_from_path_helper (&existing_lock,
-                                                   args->path, kind, trail));
+                                                   args->path, kind, 
+                                                   trail, trail->pool));
   if (existing_lock)
     {
       if (! args->force)
@@ -139,10 +140,11 @@ txn_body_lock (void *baton, trail_t *trail)
           /* Force was passed, so fs_username is "stealing" the
              lock from lock->owner.  Destroy the existing lock. */
           SVN_ERR (svn_fs_bdb__lock_delete (trail->fs,
-                                            existing_lock->token, trail));
+                                            existing_lock->token, 
+                                            trail, trail->pool));
           SVN_ERR (svn_fs_bdb__lock_token_delete (trail->fs,
                                                   existing_lock->path,
-                                                  kind, trail));
+                                                  kind, trail, trail->pool));
         }          
     }
 
@@ -150,9 +152,9 @@ txn_body_lock (void *baton, trail_t *trail)
   SVN_ERR (generate_new_lock (&new_lock, trail->fs, args->path, fs_username,
                               args->comment, args->timeout, trail->pool));
   SVN_ERR (svn_fs_bdb__lock_add (trail->fs, new_lock->token,
-                                 new_lock, trail));
+                                 new_lock, trail, trail->pool));
   SVN_ERR (svn_fs_bdb__lock_token_add (trail->fs, args->path, kind,
-                                       new_lock->token, trail));
+                                       new_lock->token, trail, trail->pool));
   *(args->lock_p) = new_lock;
 
   return SVN_NO_ERROR;
@@ -203,7 +205,7 @@ txn_body_attach_lock (void *baton, trail_t *trail)
   svn_node_kind_t kind = svn_node_file;
   svn_lock_t *existing_lock;
 
-  SVN_ERR (svn_fs_base__get_path_kind (&kind, lock->path, trail));
+  SVN_ERR (svn_fs_base__get_path_kind (&kind, lock->path, trail, trail->pool));
 
   /* Until we implement directory locks someday, we only allow locks
      on files or non-existent paths. */
@@ -226,7 +228,7 @@ txn_body_attach_lock (void *baton, trail_t *trail)
     {
       svn_revnum_t created_rev;
       SVN_ERR (svn_fs_base__get_path_created_rev (&created_rev, lock->path,
-                                                  trail));
+                                                  trail, trail->pool));
 
       /* SVN_INVALID_REVNUM means the path doesn't exist.  So
          apparently somebody is trying to lock something in their
@@ -245,7 +247,8 @@ txn_body_attach_lock (void *baton, trail_t *trail)
 
   /* Is the path already locked? */
   SVN_ERR (svn_fs_base__get_lock_from_path_helper (&existing_lock,
-                                                   lock->path, kind, trail));
+                                                   lock->path, kind, 
+                                                   trail, trail->pool));
   if (existing_lock)
     {
       if (! args->force)
@@ -258,17 +261,19 @@ txn_body_attach_lock (void *baton, trail_t *trail)
           /* Force was passed, so fs_username is "stealing" the
              lock from lock->owner.  Destroy the existing lock. */
           SVN_ERR (svn_fs_bdb__lock_delete (trail->fs,
-                                            existing_lock->token, trail));
+                                            existing_lock->token, 
+                                            trail, trail->pool));
           SVN_ERR (svn_fs_bdb__lock_token_delete (trail->fs,
                                                   existing_lock->path,
-                                                  kind, trail));
+                                                  kind, trail, trail->pool));
         }
     }
 
   /* Write the incoming lock into our tables. */
-  SVN_ERR (svn_fs_bdb__lock_add (trail->fs, lock->token, lock, trail));
+  SVN_ERR (svn_fs_bdb__lock_add (trail->fs, lock->token, lock, 
+                                 trail, trail->pool));
   SVN_ERR (svn_fs_bdb__lock_token_add (trail->fs, lock->path, kind,
-                                       lock->token, trail));
+                                       lock->token, trail, trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -332,11 +337,11 @@ txn_body_unlock (void *baton, trail_t *trail)
   const char *lock_token;
   svn_lock_t *lock;
 
-  SVN_ERR (svn_fs_base__get_path_kind (&kind, args->path, trail));
+  SVN_ERR (svn_fs_base__get_path_kind (&kind, args->path, trail, trail->pool));
 
   /* This could return SVN_ERR_FS_BAD_LOCK_TOKEN or SVN_ERR_FS_LOCK_EXPIRED. */
   SVN_ERR (svn_fs_bdb__lock_token_get (&lock_token, trail->fs, args->path,
-                                       kind, trail));
+                                       kind, trail, trail->pool));
 
   /* If not breaking the lock, we need to do some more checking. */
   if (!args->force)
@@ -345,7 +350,8 @@ txn_body_unlock (void *baton, trail_t *trail)
       if (strcmp (lock_token, args->token) != 0)
         return svn_fs_base__err_no_such_lock (trail->fs, args->path);
 
-      SVN_ERR (svn_fs_bdb__lock_get (&lock, trail->fs, lock_token, trail));
+      SVN_ERR (svn_fs_bdb__lock_get (&lock, trail->fs, lock_token, 
+                                     trail, trail->pool));
 
       /* There better be a username attached to the fs. */
       if (!trail->fs->access_ctx || !trail->fs->access_ctx->username)
@@ -360,8 +366,10 @@ txn_body_unlock (void *baton, trail_t *trail)
     }
 
   /* Remove a row from each of the locking tables. */
-  SVN_ERR (svn_fs_bdb__lock_delete (trail->fs, lock_token, trail));
-  return svn_fs_bdb__lock_token_delete (trail->fs, args->path, kind, trail);
+  SVN_ERR (svn_fs_bdb__lock_delete (trail->fs, lock_token, 
+                                    trail, trail->pool));
+  return svn_fs_bdb__lock_token_delete (trail->fs, args->path, kind, 
+                                        trail, trail->pool);
 }
 
 
@@ -387,12 +395,14 @@ svn_error_t *
 svn_fs_base__get_lock_from_path_helper (svn_lock_t **lock_p,
                                         const char *path,
                                         const svn_node_kind_t kind,
-                                        trail_t *trail)
+                                        trail_t *trail,
+                                        apr_pool_t *pool)
 {
   const char *lock_token;
   svn_error_t *err;
   
-  err = svn_fs_bdb__lock_token_get (&lock_token, trail->fs, path, kind, trail);
+  err = svn_fs_bdb__lock_token_get (&lock_token, trail->fs, path, kind, 
+                                    trail, pool);
 
   /* We've deliberately decided that this function doesn't tell the
      caller *why* the lock is unavailable.  */
@@ -408,7 +418,7 @@ svn_fs_base__get_lock_from_path_helper (svn_lock_t **lock_p,
     SVN_ERR (err);
 
   /* Same situation here.  */
-  err = svn_fs_bdb__lock_get (lock_p, trail->fs, lock_token, trail);
+  err = svn_fs_bdb__lock_get (lock_p, trail->fs, lock_token, trail, pool);
   if (err && ((err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
               || (err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)))
     {
@@ -436,10 +446,10 @@ txn_body_get_lock_from_path (void *baton, trail_t *trail)
   struct lock_token_get_args *args = baton;
   svn_node_kind_t kind = svn_node_none;
 
-  SVN_ERR (svn_fs_base__get_path_kind (&kind, args->path, trail));
-
+  SVN_ERR (svn_fs_base__get_path_kind (&kind, args->path, trail, trail->pool));
   return svn_fs_base__get_lock_from_path_helper (args->lock_p,
-                                                 args->path, kind, trail);
+                                                 args->path, kind, 
+                                                 trail, trail->pool);
 }
 
 
@@ -466,9 +476,10 @@ svn_error_t *
 svn_fs_base__get_locks_helper (apr_hash_t **locks_p,
                                const char *path,
                                const svn_node_kind_t kind,
-                               trail_t *trail)
+                               trail_t *trail,
+                               apr_pool_t *pool)
 {
-  return svn_fs_bdb__locks_get (locks_p, trail->fs, path, kind, trail);
+  return svn_fs_bdb__locks_get (locks_p, trail->fs, path, kind, trail, pool);
 }
 
 
@@ -485,10 +496,9 @@ txn_body_get_locks (void *baton, trail_t *trail)
   struct locks_get_args *args = baton;
   svn_node_kind_t kind = svn_node_none;
 
-  SVN_ERR (svn_fs_base__get_path_kind (&kind, args->path, trail));
-
+  SVN_ERR (svn_fs_base__get_path_kind (&kind, args->path, trail, trail->pool));
   return svn_fs_base__get_locks_helper (args->locks_p, args->path,
-                                        kind, trail);
+                                        kind, trail, trail->pool);
 }
 
 
@@ -581,14 +591,16 @@ svn_error_t *
 svn_fs_base__allow_locked_operation (const char *path,
                                      svn_node_kind_t kind,
                                      svn_boolean_t recurse,
-                                     trail_t *trail)
+                                     trail_t *trail,
+                                     apr_pool_t *pool)
 {
   if (kind == svn_node_dir && recurse)
     {
       apr_hash_t *locks;
       
       /* Discover all locks at or below the path. */
-      SVN_ERR (svn_fs_base__get_locks_helper (&locks, path, kind, trail));
+      SVN_ERR (svn_fs_base__get_locks_helper (&locks, path, kind, 
+                                              trail, pool));
 
       /* Easy out. */
       if (apr_hash_count (locks) == 0)
@@ -596,7 +608,7 @@ svn_fs_base__allow_locked_operation (const char *path,
 
       /* Some number of locks exist below path; are we allowed to
          change them? */
-      return verify_locks (trail->fs, locks, trail->pool);      
+      return verify_locks (trail->fs, locks, pool);
     }
 
   /* We're either checking a file, or checking a dir non-recursively: */
@@ -605,13 +617,13 @@ svn_fs_base__allow_locked_operation (const char *path,
 
       /* Discover any lock attached to the path. */
       SVN_ERR (svn_fs_base__get_lock_from_path_helper (&lock, path,
-                                                       kind, trail));
+                                                       kind, trail, pool));
 
       /* Easy out. */
       if (! lock)
         return SVN_NO_ERROR;
 
       /* The path is locked;  are we allowed to change it? */
-      return verify_lock (trail->fs, lock, trail->pool);
+      return verify_lock (trail->fs, lock, pool);
     }
 }

@@ -1312,7 +1312,7 @@ txn_body_change_node_prop (void *baton,
     SVN_ERR (svn_fs_base__allow_locked_operation 
              (args->path,
               svn_fs_base__dag_node_kind (parent_path->node),
-              0, trail));
+              0, trail, trail->pool));
 
   SVN_ERR (make_path_mutable (args->root, parent_path, args->path, 
                               trail, trail->pool));
@@ -2608,7 +2608,7 @@ txn_body_commit (void *baton, trail_t *trail)
       /* always do a non-recursive lock check on a file. */         
       if (kind == svn_node_file)        
         SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_file,
-                                                      0, trail));
+                                                      0, trail, trail->pool));
 
       /* if a directory wasn't added or deleted, then it must be
          listed because of a propchange only;  do a non-recursive
@@ -2618,7 +2618,7 @@ txn_body_commit (void *baton, trail_t *trail)
         SVN_ERR (svn_fs_base__allow_locked_operation 
                  (path, svn_node_dir,                 
                   (change->change_kind == svn_fs_path_change_modify) ? 0 : 1,
-                  trail));
+                  trail, trail->pool));
     }
 
   /* Else, commit the txn. */
@@ -2913,9 +2913,9 @@ txn_body_make_dir (void *baton,
   if (args->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     {
       SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_dir,
-                                                    1, trail));
+                                                    1, trail, trail->pool));
       SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_file,
-                                                    0, trail));
+                                                    0, trail, trail->pool));
     }
 
   /* Create the subdirectory.  */
@@ -2991,11 +2991,9 @@ txn_body_delete (void *baton,
   if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     {
       svn_node_kind_t kind = svn_fs_base__dag_node_kind (parent_path->node);
-      SVN_ERR (svn_fs_base__allow_locked_operation 
-               (path,
-                kind,
-                (kind == svn_node_dir) ? 1 : 0,
-                trail));
+      svn_boolean_t recurse = (kind == svn_node_dir) ? TRUE : FALSE;
+      SVN_ERR (svn_fs_base__allow_locked_operation (path, kind, recurse,
+                                                    trail, trail->pool));
     }
   
   /* Make the parent directory mutable, and do the deletion.  */
@@ -3080,11 +3078,9 @@ txn_body_copy (void *baton,
   if (to_root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     {
       svn_node_kind_t kind = svn_fs_base__dag_node_kind (from_node);
-      SVN_ERR (svn_fs_base__allow_locked_operation 
-               (to_path,
-                kind,
-                (kind == svn_node_dir) ? 1 : 0,
-                trail));
+      svn_boolean_t recurse = (kind == svn_node_dir) ? TRUE : FALSE;
+      SVN_ERR (svn_fs_base__allow_locked_operation (to_path, kind, recurse,
+                                                    trail, trail->pool));
     }
 
   /* If the destination node already exists as the same node as the
@@ -3316,9 +3312,9 @@ txn_body_make_file (void *baton,
   if (args->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     {
       SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_dir,
-                                                    1, trail));
+                                                    1, trail, trail->pool));
       SVN_ERR (svn_fs_base__allow_locked_operation (path, svn_node_file,
-                                                    0, trail));
+                                                    0, trail, trail->pool));
     }
 
   /* Create the file.  */
@@ -3642,9 +3638,8 @@ txn_body_apply_textdelta (void *baton, trail_t *trail)
   /* Check to see if path is locked;  if so, check that we can use it. */
   if (tb->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     SVN_ERR (svn_fs_base__allow_locked_operation 
-             (tb->path,
-              svn_fs_base__dag_node_kind (parent_path->node),
-              0, trail));
+             (tb->path, svn_fs_base__dag_node_kind (parent_path->node),
+              FALSE, trail, trail->pool));
 
   /* Now, make sure this path is mutable. */
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, 
@@ -3833,9 +3828,8 @@ txn_body_apply_text (void *baton, trail_t *trail)
   /* Check to see if path is locked;  if so, check that we can use it. */
   if (tb->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     SVN_ERR (svn_fs_base__allow_locked_operation 
-             (tb->path,
-              svn_fs_base__dag_node_kind (parent_path->node),
-              0, trail));
+             (tb->path, svn_fs_base__dag_node_kind (parent_path->node),
+              FALSE, trail, trail->pool));
 
   /* Now, make sure this path is mutable. */
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, 
@@ -4527,7 +4521,8 @@ make_txn_root (svn_fs_t *fs,
 svn_error_t *
 svn_fs_base__get_path_kind (svn_node_kind_t *kind,
                             const char *path,
-                            trail_t *trail)
+                            trail_t *trail,
+                            apr_pool_t *pool)
 {
   svn_revnum_t head_rev;
   svn_fs_root_t *root;
@@ -4535,16 +4530,15 @@ svn_fs_base__get_path_kind (svn_node_kind_t *kind,
   svn_error_t *err;
 
   /* Get HEAD revision, */
-  SVN_ERR (svn_fs_bdb__youngest_rev (&head_rev, trail->fs,
-                                     trail, trail->pool));
+  SVN_ERR (svn_fs_bdb__youngest_rev (&head_rev, trail->fs, trail, pool));
 
   /* Then convert it into a root_t, */
   SVN_ERR (svn_fs_base__dag_revision_root (&root_dir, trail->fs, head_rev,
-                                           trail, trail->pool));
-  root = make_revision_root (trail->fs, head_rev, root_dir, trail->pool);
+                                           trail, pool));
+  root = make_revision_root (trail->fs, head_rev, root_dir, pool);
 
   /* And get the dag_node for path in the root_t. */
-  err = get_dag (&path_node, root, path, trail, trail->pool);
+  err = get_dag (&path_node, root, path, trail, pool);
   if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
     {
       *kind = svn_node_none;
@@ -4561,7 +4555,8 @@ svn_fs_base__get_path_kind (svn_node_kind_t *kind,
 svn_error_t *
 svn_fs_base__get_path_created_rev (svn_revnum_t *rev,
                                    const char *path,
-                                   trail_t *trail)
+                                   trail_t *trail,
+                                   apr_pool_t *pool)
 {
   svn_revnum_t head_rev, created_rev;
   svn_fs_root_t *root;
@@ -4569,16 +4564,15 @@ svn_fs_base__get_path_created_rev (svn_revnum_t *rev,
   svn_error_t *err;
 
   /* Get HEAD revision, */
-  SVN_ERR (svn_fs_bdb__youngest_rev (&head_rev, trail->fs,
-                                     trail, trail->pool));
+  SVN_ERR (svn_fs_bdb__youngest_rev (&head_rev, trail->fs, trail, pool));
 
   /* Then convert it into a root_t, */
   SVN_ERR (svn_fs_base__dag_revision_root (&root_dir, trail->fs, head_rev,
-                                           trail, trail->pool));
-  root = make_revision_root (trail->fs, head_rev, root_dir, trail->pool);
+                                           trail, pool));
+  root = make_revision_root (trail->fs, head_rev, root_dir, pool);
 
   /* And get the dag_node for path in the root_t. */
-  err = get_dag (&path_node, root, path, trail, trail->pool);
+  err = get_dag (&path_node, root, path, trail, pool);
   if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
     {
       *rev = SVN_INVALID_REVNUM;
@@ -4589,7 +4583,7 @@ svn_fs_base__get_path_created_rev (svn_revnum_t *rev,
   
   /* Find the created_rev of the dag_node. */
   SVN_ERR (svn_fs_base__dag_get_revision (&created_rev, path_node, 
-                                          trail, trail->pool));
+                                          trail, pool));
 
   *rev = created_rev;
   return SVN_NO_ERROR;

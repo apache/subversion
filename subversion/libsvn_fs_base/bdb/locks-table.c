@@ -69,18 +69,18 @@ svn_error_t *
 svn_fs_bdb__lock_add (svn_fs_t *fs,
                       const char *lock_token,
                       svn_lock_t *lock,
-                      trail_t *trail)
+                      trail_t *trail,
+                      apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   skel_t *lock_skel;
   DBT key, value;
 
   /* Convert native type to skel. */
-  SVN_ERR (svn_fs_base__unparse_lock_skel (&lock_skel, lock,
-                                           trail->pool));
+  SVN_ERR (svn_fs_base__unparse_lock_skel (&lock_skel, lock, pool));
 
   svn_fs_base__str_to_dbt (&key, lock_token);
-  svn_fs_base__skel_to_dbt (&value, lock_skel, trail->pool);
+  svn_fs_base__skel_to_dbt (&value, lock_skel, pool);
   svn_fs_base__trail_debug (trail, "lock", "add");
   SVN_ERR (BDB_WRAP (fs, "storing lock record",
                      bfd->locks->put (bfd->locks, trail->db_txn,
@@ -94,7 +94,8 @@ svn_fs_bdb__lock_add (svn_fs_t *fs,
 svn_error_t *
 svn_fs_bdb__lock_delete (svn_fs_t *fs,
                          const char *lock_token,
-                         trail_t *trail)
+                         trail_t *trail,
+                         apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key;
@@ -117,7 +118,8 @@ svn_error_t *
 svn_fs_bdb__lock_get (svn_lock_t **lock_p,
                       svn_fs_t *fs,
                       const char *lock_token,
-                      trail_t *trail)
+                      trail_t *trail,
+                      apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   DBT key, value;
@@ -130,26 +132,24 @@ svn_fs_bdb__lock_get (svn_lock_t **lock_p,
                             svn_fs_base__str_to_dbt (&key, lock_token),
                             svn_fs_base__result_dbt (&value),
                             0);
-  svn_fs_base__track_dbt (&value, trail->pool);
+  svn_fs_base__track_dbt (&value, pool);
 
   if (db_err == DB_NOTFOUND)
     return svn_fs_base__err_bad_lock_token (fs, lock_token);
   SVN_ERR (BDB_WRAP (fs, "reading lock", db_err));
 
   /* Parse TRANSACTION skel */
-  skel = svn_fs_base__parse_skel (value.data, value.size, trail->pool);
+  skel = svn_fs_base__parse_skel (value.data, value.size, pool);
   if (! skel)
     return svn_fs_base__err_corrupt_lock (fs, lock_token);
 
   /* Convert skel to native type. */
-  SVN_ERR (svn_fs_base__parse_lock_skel (&lock, skel,
-                                         trail->pool));
+  SVN_ERR (svn_fs_base__parse_lock_skel (&lock, skel, pool));
 
   /* Possibly auto-expire the lock. */
-  if (lock->expiration_date
-      && (apr_time_now() > lock->expiration_date))
+  if (lock->expiration_date && (apr_time_now() > lock->expiration_date))
     {
-      SVN_ERR (svn_fs_bdb__lock_delete (fs, lock_token, trail));
+      SVN_ERR (svn_fs_bdb__lock_delete (fs, lock_token, trail, pool));
       return svn_fs_base__err_lock_expired (fs, lock_token); 
     }
 
@@ -165,20 +165,19 @@ svn_fs_bdb__locks_get (apr_hash_t **locks_p,
                        svn_fs_t *fs,
                        const char *path,
                        const svn_node_kind_t kind,
-                       trail_t *trail)
+                       trail_t *trail,
+                       apr_pool_t *pool)
 {
   base_fs_data_t *bfd = fs->fsap_data;
   const char *lookup_path = path;
   DBC *cursor;
   DBT key, value;
   int db_err;
-  apr_pool_t *subpool = svn_pool_create (trail->pool);
+  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_hash_t *locks = apr_hash_make (pool);
 
-  apr_hash_t *locks = apr_hash_make(trail->pool);
-
-  if ((kind == svn_node_dir)
-      && (strcmp (path, "/") != 0))
-    lookup_path = apr_pstrcat (trail->pool, path, "/", NULL);
+  if ((kind == svn_node_dir) && (strcmp (path, "/") != 0))
+    lookup_path = apr_pstrcat (pool, path, "/", NULL);
 
   svn_fs_base__trail_debug (trail, "lock-tokens", "cursor");
   db_err = bfd->lock_tokens->cursor (bfd->lock_tokens, trail->db_txn,
@@ -227,8 +226,8 @@ svn_fs_bdb__locks_get (apr_hash_t **locks_p,
           child_path[key.size - 1] = '\0';
 
       /* Make sure the token points to an existing, non-expired lock,
-         by doing a lookup in the `locks' table. */
-      err = svn_fs_bdb__lock_get (&lock, fs, lock_token, trail);
+         by doing a lookup in the `locks' table.  Use 'pool'. */
+      err = svn_fs_bdb__lock_get (&lock, fs, lock_token, trail, pool);
       if (err && ((err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
                   || (err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)))
         {
@@ -238,19 +237,19 @@ svn_fs_bdb__locks_get (apr_hash_t **locks_p,
              from `lock-tokens' table as well, then skip to the next
              matching path-key. */
           SVN_ERR (svn_fs_bdb__lock_token_delete (fs, child_path,
-                                                  child_kind, trail));
+                                                  child_kind, trail, subpool));
           continue;
         }
       else if (err)
         return err;
 
       /* Lock is verified, return it in the hash. */
-      apr_hash_set (locks, apr_pstrdup(trail->pool, child_path), 
+      apr_hash_set (locks, apr_pstrdup (pool, child_path), 
                     APR_HASH_KEY_STRING, lock);
 
       svn_fs_base__result_dbt (&key);
       svn_fs_base__result_dbt (&value);
-      db_err = cursor->c_get(cursor, &key, &value, DB_NEXT);
+      db_err = cursor->c_get (cursor, &key, &value, DB_NEXT);
     }
 
   svn_pool_destroy (subpool);

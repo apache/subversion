@@ -46,7 +46,8 @@ int svn_fs_bdb__open_locks_table (DB **locks_p,
 svn_error_t *svn_fs_bdb__lock_add (svn_fs_t *fs,
                                    const char *lock_token,
                                    svn_lock_t *lock,
-                                   trail_t *trail);
+                                   trail_t *trail,
+                                   apr_pool_t *pool);
 
 
 /* Remove the lock whose key is LOCK_TOKEN from the `locks' table of
@@ -56,12 +57,12 @@ svn_error_t *svn_fs_bdb__lock_add (svn_fs_t *fs,
    table key. */
 svn_error_t *svn_fs_bdb__lock_delete (svn_fs_t *fs,
                                       const char *lock_token,
-                                      trail_t *trail);
+                                      trail_t *trail,
+                                      apr_pool_t *pool);
 
 
 /* Retrieve the lock *LOCK_P pointed to by LOCK_TOKEN from the `locks'
-   table of FS, as part of TRAIL.  Perform all allocations in
-   TRAIL->pool.
+   table of FS, as part of TRAIL.  Perform all allocations in POOL.
 
    Return SVN_ERR_FS_BAD_LOCK_TOKEN if LOCK_TOKEN does not exist as a
    table key.
@@ -72,7 +73,8 @@ svn_error_t *svn_fs_bdb__lock_delete (svn_fs_t *fs,
 svn_error_t *svn_fs_bdb__lock_get (svn_lock_t **lock_p,
                                    svn_fs_t *fs,
                                    const char *lock_token,
-                                   trail_t *trail);
+                                   trail_t *trail,
+                                   apr_pool_t *pool);
 
 
 /* Retrieve a hash of locks in *LOCKS_P, representing all locks
@@ -80,7 +82,7 @@ svn_error_t *svn_fs_bdb__lock_get (svn_lock_t **lock_p,
    a file or directory.
 
    The hash maps (const char *)path -> (svn_lock_t *)lock.  All
-   allocations are made in TRAIL->pool.
+   allocations are made in POOL.
 
    If no locks exist below PATH, return an empty hash.
 
@@ -92,7 +94,8 @@ svn_error_t *svn_fs_bdb__locks_get (apr_hash_t **locks_p,
                                     svn_fs_t *fs,
                                     const char *path,
                                     const svn_node_kind_t kind,
-                                    trail_t *trail);
+                                    trail_t *trail,
+                                    apr_pool_t *pool);
 
 
 
