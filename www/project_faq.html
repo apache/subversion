@@ -19,7 +19,7 @@
 <li><a href="#filesystem">What's all this about a new filesystem?  Is
     it like ext2?</a></li> 
 <li><a href="#apache-extension">I heard that Subversion is an Apache
-    extension?</a></li> 
+    extension?  What does it use for servers?</a></li> 
 <li><a href="#need-apache">Does this mean I have to set up Apache to
     use Subversion?</a></li> 
 <li><a href="#multiple-apachim">I run Apache 1.x right now, and can't
@@ -59,8 +59,6 @@
     sometimes talk about when upgrading a Subversion server?</a></li> 
 <li><a href="#sspi">How do I allow clients to authenticate against a
     Windows domain controller using SSPI Authentication?</a></li>
-<li><a href="#deltification">How do I enable repository deltification,
-    and why?</a></li>
 <li><a href="#adm-dir">I don't like the ".svn" directory name, and
     prefer "SVN" or something else.  How do I change it?</a></li>
 <li><a href="#case-change">I checked in a file but had the wrong case 
@@ -239,10 +237,10 @@ accidentally discover that your clients and servers no longer
 href="http://apr.apache.org">Apache Portable Runtime</a> library, as a
 portability layer.  Although the Subversion client will compile
 anywhere APR does, the Subversion server depends on <a
-href="http://www.sleepycat.com">Berkeley DB</a> (as well as Apache
-2.X, but Apache is as portable as APR).  In theory Berkeley DB is
-portable to most of those platforms as well (except Win95/Win98, where
-it's known not to work due to shared-memory segment problems).</p>
+href="http://www.sleepycat.com">Berkeley DB</a>.  In theory Berkeley
+DB is portable to most of those platforms as well (except Win95/Win98,
+where it's known not to work due to shared-memory segment
+problems).</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -262,18 +260,18 @@ versions of files and directories are saved.</p>
 <![CDATA[-----------------------------------------------------------]]>
 
 <h3><a name="apache-extension">I heard that Subversion is an Apache
-extension?</a></h3>
+extension?  What does it use for servers?</a></h3>
 
-<p>No.  Subversion is a set of libraries.  It comes with a command-line
-client that uses them.  The Subversion <i>server</i> is Apache + <a
-href="http://www.webdav.org/mod_dav">mod_dav</a> + mod_dav_svn, and
-the last module uses the Subversion libraries to speak to a
-repository.  For more information about how Subversion uses WebDAV as
-its network protocol, see our <a
-href="http://subversion.tigris.org/servlets/ProjectDocumentList">docs.</a>
-Also, as an alternative to Apache, you can use a small standalone
-Subversion server process.  This will allow you to tunnel a custom
-protocol over ssh.</p>
+<p>No.  Subversion is a set of libraries.  It comes with a
+command-line client that uses them.  There are two different
+Subversion server processes: either <b>svnserve</b>, which is small
+standalone program similar to cvs pserver, or Apache <b>httpd-2.0</b>
+using a special <b>mod_dav_svn</b> module.  <b>svnserve</b> speaks a
+custom protocol, while <b>mod_dav_svn</b> uses WebDAV as its network
+protocol.  See <a
+href="http://svnbook.red-bean.com/html-chunk/ch06.html">chapter 6</a>
+in the Subversion book to learn more.</p>
+
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -284,12 +282,14 @@ use Subversion?</a></h3>
 
 <p>The long answer:  if you just want to access a repository, then you
  only need to build a Subversion client.  If you want to <b>host</b> a
- networked repository, then you either need to set up Apache2 or use
- our standalone server process over ssh.</p>
+ networked repository, then you either need to set up either Apache2
+ or an "svnserve" server.</p>
 
 <p>For more details about setting up a network accessible Subversion
-server, please read our <a
-href="http://svn.collab.net/repos/svn/trunk/INSTALL">INSTALL</a> document.</p>
+server, see <a
+href="http://svnbook.red-bean.com/html-chunk/ch06.html">chapter 6</a>
+in the Subversion book.</p>
+
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -297,13 +297,18 @@ href="http://svn.collab.net/repos/svn/trunk/INSTALL">INSTALL</a> document.</p>
 switch to Apache 2.0 just to serve Subversion repositories.
 Does that mean I can't run a Subversion server?</a></h3>
 
-<p> Don't worry, you can run Apache 2.0 on a different port, while
-continuing to run Apache 1.x on port 80.  Different versions of Apache
-can happily coexist on the same machine.  Just change the
-<tt>Listen</tt> directive in httpd.conf from "<tt>Listen&nbsp;80</tt>"
-to "<tt>Listen&nbsp;8080</tt>" or whatever port number you want, and
-make sure to specify that port when you publish your repository URL
-(e.g., <tt>http://svn.mydomain.com:8080/repos/blah/trunk/</tt>).</p>
+<p>No, you can run <b>svnserve</b> as a Subversion server.  It works
+extremely well.</p>
+
+<p>If you want WebDAV and all the other "goodies" that come with the
+Apache server, then yes, you'll need Apache 2.0.  It's always an
+option to run Apache 2.0 on a different port while continuing to run
+Apache 1.x on port 80.  Different versions of Apache can happily
+coexist on the same machine.  Just change the <tt>Listen</tt>
+directive in httpd.conf from "<tt>Listen&nbsp;80</tt>" to
+"<tt>Listen&nbsp;8080</tt>" or whatever port number you want, and make
+sure to specify that port when you publish your repository URL (e.g.,
+<tt>http://svn.mydomain.com:8080/repos/blah/trunk/</tt>).</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -472,20 +477,27 @@ schema is supported by running <tt>svn --version</tt>.</p>
 <h3><a name="paranoid"/>My admins don't want me to have a HTTP server for
     Subversion.  What can I do if I still want remote usage?</h3>
 
+<p>A simple opton is to use the <b>svnserve</b> server instead of
+Apache.  See <a
+href="http://svnbook.red-bean.com/html-chunk/ch06.html">chapter 6</a>
+in the Subversion book for details.</p>
+
+<p>However, if your admins don't want you to run Apache, it's very
+likely they don't want you to run a custom server process on port 3690
+either!  So the rest of this answer assumes that your admins
+<i>are</i> okay you using an existing SSH infrastructure.</p>
+
 <p>If you previously used CVS, you may have used SSH to login to the
-CVS server.  The ra_svn Subversion access method is the equivalent way of doing
-this with Subversion.  Just use the "svn+ssh" prefix to your Subversion
-repository URL.
+CVS server.  The ra_svn Subversion access method is the equivalent way
+of doing this with Subversion.  Just use the "svn+ssh" prefix to your
+Subversion repository URL.</p>
 <pre>
 $ svn checkout svn+ssh://your.domain.com/full/path/to/repository
 </pre>
-</p>
 
-<p>The preferred solution would be to use ra_dav combined
-with an Apache HTTP server configured with mod_ssl and appropriate
-authentication support.  This should provide enough security for most
-users.  However, we realize that there are places that do not allow
-adding servers of any kind with external connectivity.</p>
+<p>This makes your SSH program launch a private 'svnserve' process on
+the remote box, which accesses the repository as your UID and tunnels
+the information back over the encrypted link.</p>
 
 <p>However, another solution that can be used instead is to leverage
 SSH port forwarding to connect to the protected server via ra_dav.
@@ -905,51 +917,7 @@ the client, but to use the Windows domain controller to authenticate
 the credentials.</p>
 
 <![CDATA[=========================================================]]>
- 
-<h3><a name="deltification">How do I enable repository deltification,
-    and why?</h3>
-
-<p>The simple answer is, deltification can make your repository take
-up less space, and you should set it up by putting a line like this in
-your <tt>REPOSITORY/hooks/post-commit</tt> file:</p>
-
-<p>
-<pre>
-   nice -2 /path/to/installed/svnadmin deltify "$REPOS" -r "$REV" &
-</pre>
-</p>
-
-<p>(The above example is for Unix, Windows would be different.)</p>
-
-<p>The long answer is a bit more complex.  If you do deltification,
-you'll also want to clean up repository db logfiles on a regular
-basis, otherwise deltification won't result in any actual space
-savings.  See "<a href="#bdblogs">Why is my repository taking up so
-much disk space?</a>" to learn how to clean up Berkeley DB logfiles.
-</p>
-
-<p>For general information about deltification, see:</p>
-
-<p>
-<blockquote>
-<a href="http://subversion.tigris.org/servlets/ReadMsg?list=users&msgNo=2946"
-  >http://subversion.tigris.org/servlets/ReadMsg?list=users&msgNo=2946</a>
-</blockquote>
-</p>
-
-<p>For more on the current deltification situation, and our long term
-plan to improve it, see:</p>
-
-<p>
-<blockquote>
-<a href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=49401"
-  >http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=49401</a>
-</blockquote>
-</p>
-
-
-<![CDATA[=========================================================]]>
- 
+  
 <h3><a name="adm-dir">I don't like the ".svn" directory name, and
     prefer "SVN" or something else.  How do I change it?</h3>
 
