@@ -243,3 +243,13 @@ svn_fs_base__err_corrupt_lock (svn_fs_t *fs, const char *lock_token)
      "Corrupt lock in 'locks' table for '%s' in filesystem '%s'",
      lock_token, fs->path);
 }
+
+svn_error_t *
+svn_fs_base__err_no_such_lock (svn_fs_t *fs, const char *path)
+{
+  return
+    svn_error_createf
+    (SVN_ERR_FS_NO_SUCH_LOCK, 0,
+     "No lock on path '%s' in filesystem '%s'",
+     path, fs->path);
+}

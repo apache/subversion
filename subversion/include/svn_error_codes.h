@@ -526,6 +526,9 @@ SVN_ERROR_START
               SVN_ERR_FS_CATEGORY_START + 38,
               "Username does not match lock owner")
 
+  SVN_ERRDEF (SVN_ERR_FS_NO_SUCH_LOCK,
+              SVN_ERR_FS_CATEGORY_START + 39,
+              "Filesystem has no such lock")
 
   /* repos errors */
 

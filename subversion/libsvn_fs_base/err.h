@@ -113,6 +113,9 @@ svn_error_t *svn_fs_base__err_bad_lock_token (svn_fs_t *fs,
 svn_error_t *svn_fs_base__err_corrupt_lock (svn_fs_t *fs,
                                             const char *lock_token);
 
+/* SVN_ERR_FS_NO_SUCH_LOCK: there is no lock on PATH in FS.  */
+svn_error_t *svn_fs_base__err_no_such_lock (svn_fs_t *fs, const char *path);
+
 
 #ifdef __cplusplus
 }

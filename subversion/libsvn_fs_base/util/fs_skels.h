@@ -62,6 +62,7 @@ svn_fs_base__parse_transaction_skel (transaction_t **transaction_p,
 
 /* Parse a `REPRESENTATION' SKEL into *REP_P.  Use POOL for all
    allocations.  */
+
 svn_error_t *
 svn_fs_base__parse_representation_skel (representation_t **rep_p,
                                         skel_t *skel,
@@ -100,14 +101,6 @@ svn_error_t *
 svn_fs_base__parse_lock_skel (svn_lock_t **lock_p,
                               skel_t *skel,
                               apr_pool_t *pool);
-
-/* Parse a `LOCK-NODE' SKEL into *LOCK_NODE_P.
-   Use POOL for all allocations. */
-svn_error_t *
-svn_fs_base__parse_lock_node_skel (lock_node_t **lock_node_p,
-                                   skel_t *skel,
-                                   apr_pool_t *pool);
-
 
 
 
@@ -179,14 +172,6 @@ svn_error_t *
 svn_fs_base__unparse_lock_skel (skel_t **skel_p,
                                 const svn_lock_t *lock,
                                 apr_pool_t *pool);
-
-
-/* Unparse LOCK_NODE into a `LOCK-NODE' skel *SKEL_P.  Use POOL for
-   all allocations.  */
-svn_error_t *
-svn_fs_base__unparse_lock_node_skel (skel_t **skel_p,
-                                     const lock_node_t *lock_node,
-                                     apr_pool_t *pool);
 
 
 

@@ -72,7 +72,7 @@ typedef struct
   DB *transactions;
   DB *uuids;
   DB *locks;
-  DB *lock_nodes;
+  DB *lock_tokens;
 
   /* A boolean for tracking when we have a live Berkeley DB
      transaction trail alive. */

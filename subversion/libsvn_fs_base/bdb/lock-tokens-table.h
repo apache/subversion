@@ -35,17 +35,21 @@ int svn_fs_bdb__open_lock_tokens_table (DB **locks_tokens_p,
                                         DB_ENV *env,
                                         svn_boolean_t create);
 
+/* TODO */
 svn_error_t *
 svn_fs_bdb__lock_token_add (svn_fs_t *fs,
                             const char *path,
                             const char *lock_token,
                             trail_t *trail);
 
+
+/* TODO */
 svn_error_t *
 svn_fs_bdb__lock_token_delete (svn_fs_t *fs,
                                const char *path,
                                trail_t *trail);
 
+/* TODO */
 svn_error_t *
 svn_fs_bdb__lock_token_get (const char **lock_token_p,
                             svn_fs_t *fs,
@@ -53,6 +57,7 @@ svn_fs_bdb__lock_token_get (const char **lock_token_p,
                             trail_t *trail);
 
 
+/* TODO */
 svn_error_t *
 svn_fs_bdb__lock_tokens_get (apr_hash_t **lock_tokens_p,
                              svn_fs_t *fs,
@@ -60,8 +65,15 @@ svn_fs_bdb__lock_tokens_get (apr_hash_t **lock_tokens_p,
                              trail_t *trail);
 
 
+svn_error_t *
+svn_fs_bdb__lock_token_exists (svn_boolean_t *token_exists,
+                               svn_fs_t *fs,
+                               const char *path,
+                               trail_t *trail);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS_LOCKS_TABLE_H */
+#endif /* SVN_LIBSVN_FS_LOCK_TOKENS_TABLE_H */

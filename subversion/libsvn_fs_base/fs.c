@@ -54,6 +54,7 @@
 #include "bdb/strings-table.h"
 #include "bdb/uuids-table.h"
 #include "bdb/locks-table.h"
+#include "bdb/lock-tokens-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -164,6 +165,7 @@ cleanup_fs (svn_fs_t *fs)
   SVN_ERR (cleanup_fs_db (fs, &bfd->strings, "strings"));
   SVN_ERR (cleanup_fs_db (fs, &bfd->uuids, "uuids"));
   SVN_ERR (cleanup_fs_db (fs, &bfd->locks, "locks"));
+  SVN_ERR (cleanup_fs_db (fs, &bfd->lock_tokens, "lock-tokens"));
 
   /* Finally, close the environment.  */
   bfd->env = 0;
@@ -605,6 +607,10 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
                       svn_fs_bdb__open_locks_table (&bfd->locks,
                                                     bfd->env, TRUE));
   if (svn_err) goto error;
+  svn_err = BDB_WRAP (fs, "creating 'lock-nodes' table",
+                      svn_fs_bdb__open_lock_tokens_table (&bfd->lock_tokens,
+                                                          bfd->env, TRUE));
+  if (svn_err) goto error;
 
   /* Initialize the DAG subsystem. */
   svn_err = svn_fs_base__dag_init_fs (fs);
@@ -689,8 +695,12 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
                                                     bfd->env, FALSE));
   if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "opening 'locks' table",
-                      svn_fs_bdb__open_uuids_table (&bfd->locks,
+                      svn_fs_bdb__open_locks_table (&bfd->locks,
                                                     bfd->env, FALSE));
+  if (svn_err) goto error;
+  svn_err = BDB_WRAP (fs, "opening 'lock-nodes' table",
+                      svn_fs_bdb__open_lock_tokens_table (&bfd->lock_tokens,
+                                                         bfd->env, FALSE));
   if (svn_err) goto error;
 
   return SVN_NO_ERROR;
@@ -1102,6 +1112,8 @@ base_hotcopy (const char *src_path,
                                 "uuids", pagesize, pool));
   SVN_ERR (copy_db_file_safely (src_path, dest_path,
                                 "locks", pagesize, pool));
+  SVN_ERR (copy_db_file_safely (src_path, dest_path,
+                                "lock-tokens", pagesize, pool));
 
   {
     apr_array_header_t *logfiles;
