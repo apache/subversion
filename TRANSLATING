@@ -13,10 +13,12 @@ $LastChangedDate$
 * Software version requirements
 * Starting a new translation
 * Updating existing po files
+* Verifying your po file
 * Requirements for po and mo files
 * Conventions for the empty string msgid section
 * Translation teams
 * Single versus double quotes
+* Error message conventions
 
 
 
@@ -56,12 +58,21 @@ After that, you should perform the following steps:
 2) run ./autogen.sh
 3) run ./configure
 4) run make locale-gnu-pot
-  This step is currently only supported for GNU gettext Makefile based systems
+  This step is currently only supported for GNU gettext Makefile based
+  systems
 5) Copy the generated subversion.pot to a file named LANG.po, where LANG
   is the language code of your language.
 
 Steps (2) and (3) generate a Makefile; step (4) generates
 subversion/po/subversion.pot
+
+The header comment of the pot file contains a line like this:
+
+  # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+
+Because the Subversion project has a policy not to put names in its files,
+please don't fill it out; delete it instead.  (See HACKING for a
+description of this convention.)
 
 
 
@@ -73,6 +84,22 @@ facilitate maintenance of existing po files.  To update po files on
 systems with GNU gettext run
 
     make locale-gnu-po-update
+
+
+
+Verifying your po file
+======================
+
+Before submitting to the mailing list or committing to the repository,
+please make sure your po file 'compiles'.  You can do this with these
+steps (on Makefile based systems):
+
+1) run './autogen.sh'
+2) run './configure' (with the appropriate arguments)
+3) run 'make locale'
+
+The autogen.sh step is important, since it adds new po files as
+dependencies of to 'locale' build target.
 
 
 
@@ -92,7 +119,9 @@ fact that bind_textdomain_codeset() is not portable across implementations.
 
 To satisfy the first requirement po files are required to be UTF-8
 encoded.  The build system makes sure that the second requirement is
-satisfied. (Though this is yet to be implemented.)
+satisfied.  Note that at least GNU gettext dislikes the absence of the
+charset designator and will generate an error along the lines of "Won't be
+able to do characterset conversion" because of it.
 
 
 
@@ -126,3 +155,12 @@ they did not standardise quoting, please follow the project guidelines per
 HACKING.  If they did: follow them :-)
 
 
+
+Error message conventions
+=========================
+
+Since translators will generally see all error messages in the code, it's
+important to know that there is a special section in HACKING about this
+category of strings.  Here the same applies as does for the quotes: Adhere
+to them on all points for which there is no explicit policy set out by the
+translation team for your language.
