@@ -35,10 +35,15 @@ AC_DEFUN(SVN_LIB_APRUTIL,
   AC_MSG_CHECKING([APR-UTIL version])    
   apu_version="`$apu_config --version`"
   if test $? -ne 0; then
-    AC_MSG_ERROR([
-        apu-config --version failed.
-        Your apu-config doesn't support the --version switch, please upgrade
-        to APR-UTIL more recent than 2002-Nov-05.])
+    # This is a hack as suggested by Ben Collins-Sussman.  It can be
+    # removed after apache 2.0.44 has been released.  (The apu-config
+    # shipped in 2.0.43 contains a correct version number, but
+    # stupidly doesn't understand the --version switch.)
+    apu_version=`grep "APRUTIL_DOTTED_VERSION=" $(which $apu_config) | tr -d "APRUTIL_DOTTED_VERSION="| tr -d '"'`
+    #AC_MSG_ERROR([
+    #    apu-config --version failed.
+    #    Your apu-config doesn't support the --version switch, please upgrade
+    #    to APR-UTIL more recent than 2002-Nov-05.])
   fi
   AC_MSG_RESULT([$apu_version])
 
