@@ -59,10 +59,10 @@
 <p>
 <strong>Troubleshooting:</strong>
 </p>
-<li><a href="#wedged-repos">What the heck!  Every time I try to access
+<li><a href="#wedged-repos">Every time I try to access
     my repository, the process just hangs.  Is my repository
     corrupt?</a></li>
-<li><a href="#wedged-wc">What the heck!  Every time I try to run a svn
+<li><a href="#wedged-wc">Every time I try to run a svn
     command, it says my working copy is locked.  Is my working copy
     corrupt?</a></li>
 <li><a href="#unrecognized-url-error">I just built the distribution
@@ -275,8 +275,8 @@ href="http://svn.collab.net/repos/svn/trunk/INSTALL">INSTALL</a> document.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h3>I run Apache 1.x right now, and can't switch to Apache 2.0 just to
-serve Subversion repositories.  <a name="multiple-apachim">
+<h3><a name="multiple-apachim">I run Apache 1.x right now, and can't
+switch to Apache 2.0 just to serve Subversion repositories.
 Does that mean I can't run a Subversion server?</a></h3>
 
 <p> Don't worry, you can run Apache 2.0 on a different port, while
@@ -632,28 +632,27 @@ forever, then in theory Berkeley DB can replay every change to your
 repository from the day it was born.  But in practice, if you're
 making backups, it's probably not worth the cost in disk space.</p>
 
-<p>Run the <code>db_archive</code> command in the db/ area to see
+<p>Use <code>svnadmin</code> to see
 which log files can be deleted.  You may want a cron job to do this.</p>
 
 <pre>
-$ db_archive -a -h /repos/db
+$ svnadmin list-unused-dblogs /repos
 /repos/db/log.000003
 /repos/db/log.000004
 [...]
 
+$ svnadmin list-unused-dblogs /repos | xargs rm
+# disk space reclaimed!
+</pre>
+
+<p>You could instead use Berkeley DB's <code>db_archive</code> command:</p>
+
+<pre>
 $ db_archive -a -h /repos/db | xargs rm
 # disk space reclaimed!
 </pre>
 
-<p>Or, if you are running a Subversion release <em>later</em> than
-0.24.2, then there's no need to locate the correct
-<code>db_archive</code> command or set of arguments.  Just use
-<code>svnadmin</code>:</p>
-
-<pre>
-$ svnadmin list-unused-dblogs /repos | xargs rm
-# disk space reclaimed!
-</pre>
+<p>See also <code>svnadmin copy</code> or <code>hotbackup.py</code>.</p>
 
 
 <![CDATA[=========================================================]]>
@@ -848,8 +847,8 @@ change, and no dump/load is necessary. </p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h3>What the heck! Every time I try to access my repository, the
-process just hangs. Is my repository <a name="wedged-repos">corrupt?</a></h3>
+<h3><a name="wedged-repos">Every time I try to access my repository, the
+process just hangs. Is my repository corrupt?</a></h3>
 
 <p>
 Your repository is not corrupt, nor is your data lost. If your process
@@ -890,9 +889,8 @@ svnadmin recover /path/to/repos
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h3>What the heck! Every time I try to run a svn command, it says my
-working copy is locked. Is my working copy <a name="wedged-wc">
-corrupt?</a></h3>
+<h3><a name="wedged-wc">Every time I try to run a svn command, it says my
+working copy is locked. Is my working copy corrupt?</a></h3>
 
 <p>
 Your working copy is not corrupt, nor is your data lost.  Subversion's
@@ -911,9 +909,9 @@ svn cleanup working-copy
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h3>I just built the distribution binary, and when I try to check out
-Subversion, I get an error about an "Unrecognized URL scheme."  What's up
-with<a name="unrecognized-url-error"> that?</a></h3>
+<h3><a name="unrecognized-url-error">I just built the distribution binary,
+and when I try to check out Subversion, I get an error about an
+"Unrecognized URL scheme."  What's up with that?</a></h3>
 
 <p>Subversion uses a plugin system to allow access to repositories.
 Currently there are three of these plugins: ra_local allows access to
@@ -945,9 +943,9 @@ variable.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h3>When I run `<tt>configure</tt>', I get errors about
+<h3><a name="configure-sed-error">When I run `<tt>configure</tt>', I get errors about
 <tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>.
-What<a name="configure-sed-error">'s wrong?</a></h3>
+What's wrong?</a></h3>
 
 <p>
 You probably have old copies of
@@ -959,8 +957,8 @@ building with are completely up-to-date, and try again.
 
 <![CDATA[-----------------------------------------------------------]]>
  
-<h3>I'm having trouble building Subversion under Windows with MSVC++ 6.0.
-<a name="windows-msvc-build"> What should I do?</a></h3>
+<h3><a name="windows-msvc-build">I'm having trouble building Subversion
+under Windows with MSVC++ 6.0.  What should I do?</a></h3>
 
 <p>
 Probably you just need to get the latest platform SDK.  The one that
@@ -982,7 +980,7 @@ Repository URLs</a> in the Subversion Book for more details.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h3>I'm having trouble doing write <a name="write-over-dav">
+<h3><a name="write-over-dav">I'm having trouble doing write
     operations to a Subversion repository over a network.</a></h3>
 
 <p>For example, one user reported that imports worked fine over local
@@ -1017,8 +1015,8 @@ to the <tt>dav/</tt> directory (and to <tt>db/</tt>, of course).  </p>
 <![CDATA[=========================================================]]>
 
 
-<h3>Under Windows XP, the Subversion server sometimes seems to send
-    out corrupted data. <a name="windows-xp-server"> Can this really
+<h3><a name="windows-xp-server">Under Windows XP, the Subversion server
+    sometimes seems to send out corrupted data.  Can this really
     be happening?</a></h3>
 
 <p>You need to install Window XP Service Pack 1.  You can get all
