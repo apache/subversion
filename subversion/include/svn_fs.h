@@ -878,9 +878,9 @@ typedef svn_error_t *svn_fs_commit_hook_t (svn_revnum_t new_revision,
 
 
 /* Return an EDITOR and EDIT_BATON to commit changes to BASE_REVISION
- * of FS.  The directory baton returned by (*EDITOR)->begin_edit is
- * for the root of the tree; all edits must start at the top and
- * descend. 
+ * of FS, with LOG_MSG as the commit message.  The directory baton
+ * returned by (*EDITOR)->begin_edit is for the root of the tree; all
+ * edits must start at the top and descend.
  *
  * Calling (*EDITOR)->close_edit completes the commit.  Before
  * close_edit returns, but after the commit has succeeded, it will
@@ -893,6 +893,7 @@ svn_error_t *svn_fs_get_editor (svn_delta_edit_fns_t **editor,
                                 void **edit_baton,
                                 svn_fs_t *fs,
                                 svn_revnum_t base_revision,
+                                svn_string_t *log_msg,
                                 svn_fs_commit_hook_t hook,
                                 void *hook_baton,
                                 apr_pool_t *pool);

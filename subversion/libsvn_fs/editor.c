@@ -25,6 +25,9 @@ struct edit_baton
 {
   apr_pool_t *pool;
 
+  /* Commit message for this commit. */
+  svn_string_t *log_msg;
+
   /* Hook to run when when the commit is done. */
   svn_fs_commit_hook_t *hook;
   void *hook_baton;
@@ -55,6 +58,8 @@ begin_edit (void *edit_baton, void **root_baton)
   db->edit_baton = edit_baton;
   db->parent = NULL;
   db->name = svn_string_create ("", eb->pool);
+
+  
 
   *root_baton = db;
   return SVN_NO_ERROR;
@@ -213,12 +218,14 @@ svn_fs_get_editor (svn_delta_edit_fns_t **editor,
                    void **edit_baton,
                    svn_fs_t *fs,
                    svn_revnum_t base_revision,
+                   svn_string_t *log_msg,
                    svn_fs_commit_hook_t *hook,
                    void *hook_baton,
                    apr_pool_t *pool)
 {
   svn_delta_edit_fns_t *e = svn_delta_default_editor (pool);
-  struct edit_baton *eb = apr_pcalloc (pool, sizeof (*eb));
+  apr_pool_t *subpool = svn_pool_create (pool);
+  struct edit_baton *eb = apr_pcalloc (subpool, sizeof (*eb));
 
   /* Set up the editor. */
   e->begin_edit        = begin_edit;
@@ -235,7 +242,8 @@ svn_fs_get_editor (svn_delta_edit_fns_t **editor,
   e->close_edit        = close_edit;
 
   /* Set up the edit baton. */
-  eb->pool = pool;
+  eb->pool = subpool;
+  eb->log_msg = svn_string_dup (log_msg, subpool);
   eb->hook = hook;
   eb->hook_baton = hook_baton;
 
