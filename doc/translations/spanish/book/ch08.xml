@@ -611,36 +611,39 @@ The following repository access (RA) modules are available:
           la configuración de su cortafuegos para permitir que
           Subversion funcione.</para>
   
-        <para>Subversion uses HTTP and WebDAV (with DeltaV) to
-          communicate with an Apache server.  You can read more about
-          this in the WebDAV section of this chapter, but in short,
-          WebDAV and DeltaV are extensions to the standard HTTP 1.1
-          protocol that enable sharing and versioning of files over
-          the web.  Apache 2.0 comes with mod_dav, an Apache module
-          that understands the DAV extensions to HTTP.  Subversion
-          itself supplies mod_dav_svn, though, which is another Apache
-          module that works in conjunction with (really, as a back-end
-          to) mod_dav to provide Subversion's specific implementations
-          of WebDAV and DeltaV.</para>
+        <para>Subversion usa HTTP y WebDAV (junto con DeltaV)
+          para comunicarse con un servidor Apache. Puede leer
+          más sobre esto en la sección WebDAV de este capítulo,
+          pero en pocas palabras, WebDAV y DeltaV son extensiones
+          al protocolo HTTP 1.1 estándar que permiten compartir y
+          versionar ficheros a través de la web. Apache 2.0 viene
+          con mod_dav, un módulo Apache que entiende las extensiones
+          DAV de HTTP.  El propio Subversion proporciona mod_dav_sv,
+          que es otro módulo de Apache que funciona junto con mod_dav
+          (realmente, es su motor) para proporcionar implementaciones
+          específicas de Subversion de WebDAV y DeltaV.</para>
 
-        <para>When communicating with a repository over HTTP, the RA
-          loader library chooses libsvn_ra_dav as the proper access
-          module.  The Subversion client makes calls into the generic
-          RA interface, and libsvn_ra_dav maps those calls (which
-          embody rather large-scale Subversion actions) to a set of
-          HTTP/WebDAV requests.  Using the Neon library, libsvn_ra_dav
-          transmits those requests to the Apache server.  Apache
-          receives these requests (exactly as it does generic HTTP
-          requests that your web browser might make), notices that the
-          requests are directed at a URL that is configured as a DAV
-          location (using the <sgmltag>Location</sgmltag> directive in
-          <filename>httpd.conf</filename>), and hands the request off
-          to its own mod_dav module.  When properly configured,
-          mod_dav knows to use Subversion's mod_dav_svn for any
-          filesystem-related needs, as opposed to the generic
-          mod_dav_fs that comes with Apache.  So ultimately, the
-          client is communicating with mod_dav_svn, which binds
-          directly to the Subversion Repository Layer.</para>
+        <para>Cuando se comunica con un repositorio por HTTP,
+          la librería cargadora RA selecciona libsvn_ra_dav como el
+          módulo correcto de acceso. El cliente de Subversion realiza
+          llamadas sobre la interfaz genérica RA, y libsvn_ra_dav
+          relaciona esas llamadas (que tienden a englobar acciones
+          Subversion a gran escala) con un conjunto de peticiones
+          HTTP/WebDAV. Usando la librería Neon, libsvn_ra_dav
+          transmite esas peticiones al servidor Apache. Apache
+          recibe estas peticiones (exáctamente igual que con las
+          peticiones genéricas HTTP que su navegador pudiera hacer),
+          se da cuenta de que estas peticiones están dirigidas
+          a una URL que está configurada como una localización
+          DAV (usando la directiva <sgmltag>Location</sgmltag>
+          en <filename>httpd.conf</filename>), y pasa la petición
+          a su propio módulo mod_dav. Configurado correctamente,
+          mod_dav sabe que debe usar mod_dav_svn de Subversion para
+          cualquier necesidad relacionada con el sistema de ficheros,
+          a diferencia del módulo genérico mod_dav_fs que viene
+          con Apache.  Así que finalmente el cliente se comunica
+          con mod_dav_svn, que enlaza directamente con la capa de
+          repositorio de Subversion.</para>
   
         <para>That was a simplified description of the actual
           exchanges taking place, though.  For example, the Subversion
