@@ -1,5 +1,5 @@
 %define apache_version 2.0.41-0.1
-%define neon_version 0.22.0
+%define neon_version 0.23.2
 %define apache_dir /usr/local/apache2
 # If you don't have 360+ MB of free disk space or don't want to run checks then
 # set make_check to 0.
@@ -31,7 +31,7 @@ BuildPreReq: db-devel >= 4.0.14
 BuildPreReq: expat-devel
 BuildPreReq: gdbm-devel
 BuildPreReq: libtool >= 1.4.2
-BuildPreReq: neon = %{neon_version}
+BuildPreReq: neon-devel = %{neon_version}
 BuildPreReq: openssl-devel
 BuildPreReq: python
 BuildPreReq: texinfo
