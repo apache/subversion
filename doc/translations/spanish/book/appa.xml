@@ -476,15 +476,16 @@ X    Resource is external to this working copy (comes from another
     <para>Para determinar si es posible una fusión de contexto,
       Subversion examina la propiedad <literal>svn:mime-type</literal>.
       Si el fichero no tiene la propiedad <literal>svn:mime-type</literal>,
-      o tiene un mime-type que es textual (e.j. <literal>text/*</literal>),
-      Subversion asume que es texto. Si no, Subversion asume que el
-      fichero es binario. Subversion también ayuda a los usuarios
-      ejecutando un algoritmo de detección de binarios en los comandos
-      <command>svn import</command> y <command>svn add</command>. Estos
-      comandos harán una buena conjetura y despues (posiblemente) fije
-      una propiedad <literal>svn:mime-type</literal> binaria en el
-      fichero que es agregado. (Si Subversion supone mal, el usuario
-      siempre puede borrar o editar a mano la propiedad.)</para>
+      o tiene un tipo MIME que es textual (por ejemplo
+      <literal>text/*</literal>), Subversion asume que es texto. Si no,
+      Subversion asume que el fichero es binario. Subversion también
+      ayuda a los usuarios ejecutando un algoritmo de detección de
+      binarios en los comandos <command>svn import</command> y
+      <command>svn add</command>. Estos comandos harán una buena
+      conjetura y despues (posiblemente) fije una propiedad
+      <literal>svn:mime-type</literal> binaria en el fichero que es
+      agregado. (Si Subversion supone mal, el usuario siempre puede
+      borrar o editar a mano la propiedad.)</para>
 
   </sect1>
 
