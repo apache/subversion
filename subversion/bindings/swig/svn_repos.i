@@ -103,6 +103,16 @@ typedef void * svn_repos_file_rev_handler_t;
   $2 = $input; /* our function is the baton. */
 }
 
+/* -----------------------------------------------------------------------
+   handle svn_repos_fs_get_locks
+*/
+%typemap(python,in,numinputs=0) apr_hash_t **locks = apr_hash_t **OUTPUT;
+%typemap(python,argout,fragment="t_output_helper") apr_hash_t **locks {
+    $result = t_output_helper(
+        $result,
+        svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_lock_t));
+}
+
 
 /* -----------------------------------------------------------------------
    handle svn_repos_authz_read_func_t/baton pairs
