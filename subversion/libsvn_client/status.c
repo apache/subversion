@@ -83,16 +83,28 @@ svn_client_status (apr_hash_t **statushash,
 
       if (! err)
         {
+          svn_error_t *ra_err;
           apr_hash_index_t *hi;
           svn_revnum_t latest_revnum;
+          svn_boolean_t rev_unknown = FALSE;
 
-          /* Open an RA session to URL, get latest revnum, close session. */
-          SVN_ERR (svn_client_authenticate (&session, 
+          /* Open an RA session to URL, get latest revnum, close
+             session. 
+
+             Don't throw network errors;  just treat them as
+             non-fatal. */
+          ra_err = svn_client_authenticate (&session, 
                                             ra_lib,
                                             svn_stringbuf_create (URL, pool),
-                                            path, auth_obj, pool));
-          SVN_ERR (ra_lib->get_latest_revnum (session, &latest_revnum));
-          SVN_ERR (ra_lib->close (session));
+                                            path, auth_obj, pool);
+          if (ra_err) rev_unknown = TRUE;
+            
+          ra_err = ra_lib->get_latest_revnum (session, &latest_revnum);
+          if (ra_err) rev_unknown = TRUE;
+
+          ra_err = ra_lib->close (session);
+          if (ra_err) rev_unknown = TRUE;
+
           if (auth_obj->storage_callback)
             SVN_ERR (auth_obj->storage_callback (auth_obj->storage_baton));
 
@@ -103,10 +115,13 @@ svn_client_status (apr_hash_t **statushash,
               void *val;
               apr_size_t klen;
               svn_wc_status_t *status;
-
+              
               apr_hash_this (hi, &key, &klen, &val);
               status = (svn_wc_status_t *) val;
-              status->repos_rev = latest_revnum;
+              if (rev_unknown)
+                status->repos_rev = (svn_revnum_t) SVN_INVALID_REVNUM;
+              else
+                status->repos_rev = latest_revnum;
             } 
         }
     }
