@@ -178,6 +178,9 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#plaintext-passwords">Ahhh!  I just discovered that my
     Subversion client is caching passwords in plain-text on disk!
     AHHH!</a></li>
+<li><a href="#bdb41-tabletype-bug">I'm getting the error "svn: bdb: call
+    implies an access method which is inconsistent with previous
+    calls". How do I fix this?</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -2186,6 +2189,44 @@ instantly.  The only utility of the the scrambling is to prevent users
 (like root) from accidentally seeing the password.  Nobody's cared
 enough to to do this for Subversion yet; if you're interested, send
 patches to the dev@ list.</p>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="bdb41-tabletype-bug">I'm getting the error "svn: bdb: call
+    implies an access method which is inconsistent with previous
+    calls". How do I fix this?</a></h3>
+
+<p>Berkeley DB 4.1 has shown itself to be rather unstable - both 4.0
+and 4.2 are better.  This error message is a symptom of one unique way
+in which 4.1 will sometimes break.</p>
+
+<p>The problem is that the database format field for one of the tables
+that make up a Subversion BDB-type repository has become corrupted.
+For unknown reasons, this is almost always the 'copies' table, which
+switches from the 'btree' type to the 'recno' type.  Simple recovery
+procedures are outlined below - if they do not succeed, you should
+contact the Subversion Users <a
+  href="mailto:users@subversion.tigris.org">mailing list</a>.</p>
+
+<ul>
+  <li>Ensure that no other processes will attempt to access your
+  repository.</li>
+  <li>Now, <b>back up your repository</b> to a tar or zip file or
+  similar.
+  <li>Change to the <tt>db</tt> subdirectory of your repository.</li>
+  <li><tt>rm __db.* log.*</tt></li>
+  <li><tt>db_dump -p -r copies &gt; copies.dump</tt></li>
+  <li>Now edit <tt>copies.dump</tt>.  In the section near the top,
+  change "<tt>type=recno</tt>" to "<tt>type=btree</tt>", and delete
+  the line beginning "<tt>re_len=</tt>".</li>
+  <li><tt>rm copies</tt></li>
+  <li><tt>db_load &lt; copies.dump</tt></li>
+  <li><tt>svnadmin dump .. &gt; ../../my-recovered.svndump</tt></li>
+  <li>Now create a new repository, reload the dump file just produced,
+  and copy across any custom hooks or configuration.  Verify that the
+  highest revision number in the new repository is what you think it
+  should be.</li>
+</ul>
 
 
 
