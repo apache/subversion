@@ -81,6 +81,18 @@ svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
                               apr_pool_t *pool);
 
 
+/* Apply the instructions from WINDOW to a source view SBUF to produce
+   a target view TBUF.  SBUF is assumed to have WINDOW->sview_len
+   bytes of data and TBUF is assumed to have room for TLEN bytes of
+   output.  TLEN may be more than WINDOW->tview_len, so return the
+   actual number of bytes written.  This is purely a memory operation;
+   nothing can go wrong as long as we have a valid window.  */
+void
+svn_txdelta__apply_instructions (svn_txdelta_window_t *window,
+                                 const char *sbuf, char *tbuf,
+                                 apr_size_t *tlen);
+
+
 
 /* These are the in-memory tree-delta stackframes; they are used to
  * keep track of a delta's state while the XML stream is being parsed.
