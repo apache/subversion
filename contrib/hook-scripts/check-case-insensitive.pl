@@ -147,7 +147,7 @@ unless (@added) {
 
 # Get the shortest directory name which has changed, this will be the path
 # into the repository to use to get the history.
-$cmd = "$svnlook \"$repos\" $flag $txn";
+$cmd = "$svnlook dirs-changed \"$repos\" $flag $txn";
 print STDERR "$cmd\n" if ($debug);
 open(SVNLOOK, $openstr, $cmd)
   or die("$0: cannot open '$cmd' pipe for reading: $!\n");
