@@ -1520,18 +1520,19 @@ class SymbolicNameTracker:
             dumper.start_revision(make_revision_props(ctx, name, is_tag))
             jit_new_rev[0] = None
           dumper.copy_path(src_path, parent_rev, copy_dst, val)
-          # Record that this copy is done:
-          val[copyfrom_rev_key] = parent_rev
-          if val.has_key(opening_key):
-            del val[opening_key]
-          if val.has_key(closing_key):
-            del val[closing_key]
-          self.db[key] = marshal.dumps(val)
         else:
           # Even if we kept the already-present revision of this entry
           # instead of copying a new one, we still need to prune out
           # anything that's not part of the symbolic name.
           dumper.prune_entries(copy_dst, val)
+
+        # Record that this copy is done:
+        val[copyfrom_rev_key] = parent_rev
+        if val.has_key(opening_key):
+          del val[opening_key]
+        if val.has_key(closing_key):
+          del val[closing_key]
+        self.db[key] = marshal.dumps(val)
 
     for ent in val.keys():
       if not ent[0] == '/':
