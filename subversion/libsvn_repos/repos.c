@@ -831,7 +831,6 @@ get_repos (svn_repos_t **repos_p,
 {
   apr_status_t apr_err;
   svn_repos_t *repos;
-  svn_error_t *err;
 
   /* Verify the validity of our repository format. */
   SVN_ERR (check_repos_version (path, pool));
