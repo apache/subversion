@@ -1519,6 +1519,23 @@ with a diff to the new one.  For example:
                                    svn_cancel_func_t cancel_func,
                                    void *cancel_baton,
                                    apr_pool_t *pool);
+
+When the major release number changes, the "best" new API in a series
+generally replaces all the previous ones (assuming it subsumes their
+functionality), and it will take the name of the original API.  Thus,
+marking 'svn_repos_dump_fs' as deprecated in 1.1.x doesn't mean that
+2.0.0 doesn't have 'svn_repos_dump_fs', it just means the function's
+signature will be different: it will have the signature held by
+svn_repos_dump_fs2 (or svn_repos_dump_fs3, or whatever) in 1.1.x.  The
+numbered-suffix names disappear, and there is a single (shiny, new)
+svn_repos_dump_fs2 again.
+
+One exception to this replacement strategy is when the old function
+has a totally unsatisfying name anyway.  Deprecation is a chance to
+fix that: we give the new API a totally new name, mark the old API as
+deprecated, point to the new API; then at the major version change, we
+remove the old API, but don't rename the new one to the old name,
+because its new name is fine.
    
 
 
