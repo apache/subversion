@@ -258,16 +258,12 @@ static svn_error_t * fetch_dirents(svn_ra_session_t *ras,
               subdir->parent_baton = dir_baton;
 
               PUSH_SUBDIR(subdirs, subdir);
-
-              printf("  ... pushing subdir: %s\n", r->url);
             }
         }
       else
         {
           svn_ra_dav_resource_t **file = apr_array_push(files);
           *file = r;
-
-          printf("  ... found file: %s -> %s\n", r->url, get_vsn_url(r));
         }
     }
 
@@ -319,7 +315,6 @@ static svn_error_t *simple_fetch_file(svn_ra_session_t *ras,
   svn_error_t *err2;
   int rv;
 
-  printf("[fetch_file]\n");
   err = (*editor->apply_textdelta)(file_baton,
                                    &frc.handler,
                                    &frc.handler_baton);
@@ -360,8 +355,6 @@ static svn_error_t *fetch_file(svn_ra_session_t *ras,
   svn_error_t *err2;
   svn_string_t *name;
   void *file_baton;
-
-  printf("fetching and saving %s\n", bc_url);
 
   name = my_basename(bc_url, pool);
   err = (*editor->add_file)(name, dir_baton,
@@ -426,7 +419,6 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
   relpath = apr_hash_get(rsrc->propset,
                          SVN_RA_DAV__PROP_BASELINE_RELPATH,
                          APR_HASH_KEY_STRING);
-  printf("vcc='%s' relpath='%s'\n", vcc, relpath);
   if (vcc == NULL || relpath == NULL)
     {
       /* ### better error reporting... */
@@ -458,7 +450,6 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
                                   "DAV:checked-in was not present on the "
                                   "version-controlled configuration.");
         }
-      printf("baseline='%s'\n", baseline);
 
       SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras, baseline, NULL,
                                               baseline_props, pool) );
@@ -482,7 +473,6 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
                     SVN_RA_DAV__PROP_BASELINE_COLLECTION, APR_HASH_KEY_STRING);
   vsn_name = apr_hash_get(rsrc->propset,
                           SVN_RA_DAV__PROP_VERSION_NAME, APR_HASH_KEY_STRING);
-  printf("bc='%s' vsn_name='%s'\n", bc, vsn_name);
   if (bc == NULL || vsn_name == NULL)
     {
       /* ### better error reporting... */
@@ -593,7 +583,6 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
           /* We're not in the root, add a directory */
           name = my_basename(url, ras->pool);
 
-          printf("adding directory: %s\n", name->data);
           err = (*editor->add_directory) (name, parent_baton,
                                           NULL, SVN_INVALID_REVNUM,
                                           &this_baton);
@@ -668,7 +657,6 @@ svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
   SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras, ras->root.path,
                                           NULL, starting_props, pool) );
   vcc = apr_hash_get(rsrc->propset, SVN_RA_DAV__PROP_VCC, APR_HASH_KEY_STRING);
-  printf("vcc='%s'\n", vcc);
   if (vcc == NULL)
     {
       /* ### better error reporting... */
@@ -692,14 +680,12 @@ svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
                               "DAV:checked-in was not present on the "
                               "version-controlled configuration.");
     }
-  printf("baseline='%s'\n", baseline);
 
   /* rsrc will be the latest Baseline. The revision is in DAV:version-name */
   SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras, baseline, NULL,
                                           baseline_props, pool) );
   vsn_name = apr_hash_get(rsrc->propset,
                           SVN_RA_DAV__PROP_VERSION_NAME, APR_HASH_KEY_STRING);
-  printf("vsn_name='%s'\n", vsn_name);
   if (vsn_name == NULL)
     {
       /* ### better error reporting... */
@@ -728,8 +714,6 @@ svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
 
 static int validate_element(hip_xml_elmid parent, hip_xml_elmid child)
 {
-  printf("validate: parent=%d  child=%d\n", parent, child);
-
   /* We're being very strict with the validity of XML elements here. If
      something exists that we don't know about, then we might not update
      the client properly. We also make various assumptions in the element
@@ -826,8 +810,6 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
   void *new_dir_baton;
   svn_error_t *err;
 
-  printf("start: id=%d\n", elm->id);
-
   switch (elm->id)
     {
     case ELEM_target_revision:
@@ -844,10 +826,8 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
 
       if (rb->dirs->nelts == 0)
         {
-          printf("[replace_root] base=%ld\n", base);
           err = (*rb->editor->replace_root)(rb->edit_baton, base,
                                             &new_dir_baton);
-          printf("[replace_root] new_dir_baton=0x%08lx\n", (long)new_dir_baton);
         }
       else
         {
@@ -855,7 +835,6 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
           /* ### verify we got it. punt on error. */
           svn_string_set(rb->namestr, name);
 
-          printf("[replace_dir] name='%s' base=%ld\n", rb->namestr->data, base);
           err = (*rb->editor->replace_directory)(rb->namestr,
                                                  TOP_DIR(rb).baton, base,
                                                  &new_dir_baton);
@@ -883,7 +862,6 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
           crev = atol(att);
         }
 
-      printf("[add_dir] name=%s\n", rb->namestr->data);
       CHKERR( (*rb->editor->add_directory)(rb->namestr, TOP_DIR(rb).baton,
                                            cpath, crev, &new_dir_baton) );
 
@@ -902,7 +880,6 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
       /* ### verify we got it. punt on error. */
       svn_string_set(rb->namestr, name);
 
-      printf("[replace_file] name=%s\n", rb->namestr->data);
       CHKERR( (*rb->editor->replace_file)(rb->namestr, TOP_DIR(rb).baton, base,
                                           &rb->file_baton) );
       break;
@@ -923,7 +900,6 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
           crev = atol(att);
         }
 
-      printf("[add_file] name=%s\n", rb->namestr->data);
       CHKERR( (*rb->editor->add_file)(rb->namestr, TOP_DIR(rb).baton,
                                       cpath, crev, &rb->file_baton) );
       break;
@@ -950,7 +926,6 @@ static int start_element(void *userdata, const struct hip_xml_elm *elm,
       /* ### verify we got it. punt on error. */
       svn_string_set(rb->namestr, name);
 
-      printf("[delete_entry] name=%s\n", rb->namestr->data);
       CHKERR( (*rb->editor->delete_entry)(rb->namestr, TOP_DIR(rb).baton) );
       break;
 
@@ -973,13 +948,10 @@ static int end_element(void *userdata, const struct hip_xml_elm *elm,
   report_baton_t *rb = userdata;
   svn_error_t *err;
 
-  printf("end: id=%d\n", elm->id);
-
   switch (elm->id)
     {
     case ELEM_replace_directory:
     case ELEM_add_directory:
-      printf("[close_dir] baton=0x%08lx\n", (long)TOP_DIR(rb).baton);
       /* close the topmost directory, and pop it from the stack */
       CHKERR( (*rb->editor->close_directory)(TOP_DIR(rb).baton) );
       --rb->dirs->nelts;
@@ -998,14 +970,12 @@ static int end_element(void *userdata, const struct hip_xml_elm *elm,
       /* FALLTHRU */
 
     case ELEM_replace_file:
-      printf("[close_file] baton=0x%08lx\n", (long)rb->file_baton);
       /* close the file and mark that we are no longer operating on a file */
       CHKERR( (*rb->editor->close_file)(rb->file_baton) );
       rb->file_baton = NULL;
       break;
 
     case DAV_ELM_href:
-      printf("[got href] '%s'\n", cdata);
       /* record the href that we just found */
       svn_ra_dav__copy_href(rb->href, cdata);
 

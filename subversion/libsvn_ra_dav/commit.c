@@ -322,8 +322,6 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
       return NULL;
     }
 
-  printf("[checkout_resource] CHECKOUT: %s\n", res->url);
-
   /* assert: res->vsn_url != NULL */
 
   /* ### send a CHECKOUT resource on res->vsn_url; include cc->activity_url;
@@ -389,8 +387,6 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc, resource_t *res)
   uri_free(&parse);
   free((void *)locn);
 
-  printf("[checkout_resource]   ==> %s\n", res->wr_url);
-
   return NULL;
 }
 
@@ -431,8 +427,6 @@ static svn_error_t * do_proppatch(svn_ra_session_t *ras,
   /* ### we should have res->wr_url */
   /* ### maybe pass wr_url rather than resource_t* */
 
-  printf("[do_proppatch] PROPPATCH: %s\n", rsrc->url);
-
   return NULL;
 }
 
@@ -452,7 +446,6 @@ static svn_error_t * commit_replace_root(void *edit_baton,
   rsrc->local_path = svn_string_create("", cc->ras->pool);
 
   SVN_ERR( get_version_url(cc, rsrc) );
-  printf("[replace_root] vsn_url='%s'\n", rsrc->vsn_url);
 
   apr_hash_set(cc->resources, rsrc->url, APR_HASH_KEY_STRING, rsrc);
 
@@ -474,7 +467,6 @@ static svn_error_t * commit_delete_entry(svn_string_t *name,
   int code;
 
   /* get the URL to the working collection */
-  printf("[delete_entry] ");
   SVN_ERR( checkout_resource(parent->cc, parent->rsrc) );
 
   /* create the URL for the child resource */
@@ -500,8 +492,6 @@ static svn_error_t * commit_delete_entry(svn_string_t *name,
   *(const char **)apr_array_push(parent->cc->deleted) =
     apr_pstrcat(pool, parent->rsrc->local_path->data, "/", name->data, NULL);
 
-  printf("[delete] DELETE: %s\n", child);
-
   return NULL;
 }
 
@@ -520,7 +510,6 @@ static svn_error_t * commit_add_dir(svn_string_t *name,
 
   /* check out the parent resource so that we can create the new collection
      as one of its children. */
-  printf("[add_dir] ");
   SVN_ERR( checkout_resource(parent->cc, parent->rsrc) );
 
   child = apr_pcalloc(pool, sizeof(*child));
@@ -536,10 +525,7 @@ static svn_error_t * commit_add_dir(svn_string_t *name,
       /* ### need error */
     }
 
-  printf("[add_dir] MKCOL: %s\n", child->rsrc->url);
-
   *child_baton = child;
-  printf("[add_dir] child=0x%08lx\n", (long)child);
   return NULL;
 }
 
@@ -566,7 +552,6 @@ static svn_error_t * commit_rep_dir(svn_string_t *name,
   */
 
   *child_baton = child;
-  printf("[replace_dir] child=0x%08lx\n", (long)child);
   return NULL;
 }
 
@@ -580,11 +565,7 @@ static svn_error_t * commit_change_dir_prop(void *dir_baton,
   record_prop_change(dir->cc->ras->pool, &dir->prop_changes, name, value);
 
   /* do the CHECKOUT sooner rather than later */
-  printf("[change_dir_prop] ");
   SVN_ERR( checkout_resource(dir->cc, dir->rsrc) );
-
-  printf("[change_dir_prop] %s: %s=%s\n",
-         dir->rsrc->url, name->data, value->data);
 
   return NULL;
 }
@@ -592,8 +573,6 @@ static svn_error_t * commit_change_dir_prop(void *dir_baton,
 static svn_error_t * commit_close_dir(void *dir_baton)
 {
   resource_baton_t *dir = dir_baton;
-
-  printf("[close_dir] baton=0x%08lx\n", (long)dir);
 
   /* Perform all of the property changes on the directory. Note that we
      checked out the directory when the first prop change was noted. */
@@ -626,7 +605,6 @@ static svn_error_t * commit_add_file(svn_string_t *name,
   /* ### ancestor_path is ignored for now */
 
   /* do the CHECKOUT now. we'll PUT the new file later on. */
-  printf("[add_file] parent=0x%08lx ", (long)parent);
   SVN_ERR( checkout_resource(parent->cc, parent->rsrc) );
 
   file = apr_pcalloc(pool, sizeof(*file));
@@ -657,7 +635,6 @@ static svn_error_t * commit_rep_file(svn_string_t *name,
   SVN_ERR( add_child(&file->rsrc, parent->cc, parent->rsrc, name->data, 0) );
 
   /* do the CHECKOUT now. we'll PUT the new file contents later on. */
-  printf("[rep_file] ");
   SVN_ERR( checkout_resource(parent->cc, file->rsrc) );
 
   /* ### wait for apply_txdelta before doing a PUT. it might arrive a
@@ -698,7 +675,6 @@ static svn_error_t * commit_stream_close(void *baton)
   /* close the temp file; we'll reopen as a FILE* for Neon */
   (void) apr_file_close(pb->tmpfile);
 
-  printf("[commit_stream_close] PUT %s\n", rsrc->wr_url);
   /* create/prep the request */
   req = http_request_create(cc->ras->sess, "PUT", rsrc->wr_url);
   if (req == NULL)
@@ -738,7 +714,6 @@ static svn_error_t * commit_stream_close(void *baton)
                                rv, rsrc->wr_url);
     }
 
-  printf("[commit_stream_close] result=%d\n", code);
   /* if it didn't returned 201 (Created) or 204 (No Content), then puke */
   /* ### is that right? what else might we see? be more robust. */
   if (code != 201 && code != 204)
@@ -789,8 +764,6 @@ static svn_error_t * commit_apply_txdelta(void *file_baton,
 
   svn_txdelta_to_svndiff(stream, subpool, handler, handler_baton);
 
-  printf("[apply_txdelta] PUT: %s\n", file->rsrc->url);
-
   return NULL;
 }
 
@@ -805,11 +778,7 @@ static svn_error_t * commit_change_file_prop(
   record_prop_change(file->cc->ras->pool, &file->prop_changes, name, value);
 
   /* do the CHECKOUT sooner rather than later */
-  printf("[change_file_prop] ");
   SVN_ERR( checkout_resource(file->cc, file->rsrc) );
-
-  printf("[change_file_prop] %s: %s=%s\n",
-         file->rsrc->url, name->data, value->data);
 
   return NULL;
 }
@@ -820,7 +789,6 @@ static svn_error_t * commit_close_file(void *file_baton)
 
   /* Perform all of the property changes on the file. Note that we
      checked out the file when the first prop change was noted. */
-  printf("[close_file] ");
   SVN_ERR( do_proppatch(file->cc->ras, file->rsrc, file->prop_changes) );
 
   return NULL;
@@ -830,10 +798,6 @@ static svn_error_t * commit_close_file(void *file_baton)
 static svn_error_t * commit_close_edit(void *edit_baton)
 {
   commit_ctx_t *cc = edit_baton;
-
-  /* ### MERGE the activity */
-  printf("[close_edit] MERGE: %s\n",
-         cc->activity_url ? cc->activity_url : "(activity)");
 
   /* ### different pool? */
   SVN_ERR( svn_ra_dav__merge_activity(cc->ras,
