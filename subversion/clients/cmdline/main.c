@@ -1351,6 +1351,12 @@ main (int argc, const char * const *argv)
     }
   else
     {
+      /* Ensure that stdout is flushed, so the user will see any write errors.
+         This makes sure that output is not silently lost. */
+      err = svn_cmdline_fflush (stdout);
+      if (err)
+        return error_exit (err, stdout, FALSE, pool);
+
       svn_pool_destroy (pool);
       return EXIT_SUCCESS;
     }

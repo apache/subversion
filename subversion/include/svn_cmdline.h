@@ -105,6 +105,12 @@ svn_error_t *svn_cmdline_fputs (const char *string,
                                 FILE *stream,
                                 apr_pool_t *pool);
 
+/** Flush output buffers of the stdio @a stream, returning an error if that
+ * fails.  This is just a wrapper for the standard fflush function for
+ * consistent error handling. */
+
+svn_error_t *svn_cmdline_fflush (FILE *stream);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
