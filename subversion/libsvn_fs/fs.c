@@ -319,7 +319,14 @@ dir_empty (const char *path, apr_pool_t *pool)
 
 
 
-/* Configuration files. */
+/* Paths. */
+
+const char *
+svn_fs_repository (svn_fs_t *fs)
+{
+  return fs->path;
+}
+
 
 const char *
 svn_fs_conf_dir (svn_fs_t *fs)
@@ -559,6 +566,7 @@ create_conf (svn_fs_t *fs, const char *path)
   return SVN_NO_ERROR;
 }
 
+
 svn_error_t *
 svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 {
@@ -587,6 +595,9 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
              path);
         }
     }
+
+  /* Initialize the fs's path. */
+  fs->path = apr_pstrdup (fs->pool, path);
 
   /* Create the DAV sandbox directory.  */
   fs->dav_path = apr_psprintf (fs->pool, "%s/%s",
@@ -700,7 +711,14 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 
   SVN_ERR (check_already_open (fs));
 
-  fs->env_path = apr_psprintf (fs->pool, "%s/%s", path, SVN_FS__REPOS_DB_DIR);
+  /* Initialize paths. */
+  fs->path = apr_pstrdup (fs->pool, path);
+  fs->dav_path = apr_psprintf (fs->pool, "%s/%s",
+                               path, SVN_FS__REPOS_DAV_DIR);
+  fs->conf_path = apr_psprintf (fs->pool, "%s/%s",
+                                path, SVN_FS__REPOS_CONF_DIR);
+  fs->env_path = apr_psprintf (fs->pool, "%s/%s",
+                               path, SVN_FS__REPOS_DB_DIR);
 
   svn_err = allocate_env (fs);
   if (svn_err) goto error;

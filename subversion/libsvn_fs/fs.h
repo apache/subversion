@@ -47,6 +47,9 @@ struct svn_fs_t {
      or system resources it holds.  */
   apr_pool_t *pool;
 
+  /* The path to the repository's top-level directory. */
+  char *path;
+
   /* The path to the repository's dav directory. */
   char *dav_path;
 

@@ -529,7 +529,10 @@ svn_error_t *svn_fs_change_txn_prop (svn_fs_txn_t *txn,
 
 
 
-/* Repository configuration paths. */
+/* Repository paths. */
+
+/* Return the path to FS's repository. */
+const char *svn_fs_repository (svn_fs_t *fs);
 
 /* Return the path to FS's configuration directory. */
 const char *svn_fs_conf_dir (svn_fs_t *fs);
