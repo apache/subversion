@@ -136,37 +136,98 @@ delete_strings (apr_array_header_t *keys,
 
 /*** Reading the contents from a representation. ***/
 
-/* This is a very special, extremely complicated window handler. Its
-   deep purpose is to return the parsed window to the caller. */
-struct window_handler_baton
+struct compose_handler_baton
 {
+  /* The combined window, and the pool it's allocated from. */
   svn_txdelta_window_t *window;
   apr_pool_t *window_pool;
+
+  /* The trail for this operation. WINDOW_POOL will be a child of
+     TRAIL->pool. No allocations will be made from TRAIL->pool itself. */
+  trail_t *trail;
+
+  /* TRUE when no more windows have to be read/combined. */
+  svn_boolean_t done;
+
+  /* TRUE if we've just started reading a new window. We need this
+     because the svndiff handler will push a NULL window at the end of
+     the stream, and we have to ignore that; but we must also know
+     when it's appropriate to push a NULL window at the combiner. */
+  svn_boolean_t init;
 };
 
+
+/* Handle one window. If BATON is emtpy, copy the WINDOW into it;
+   otherwise, combine WINDOW with the one in BATON. */
+
 static svn_error_t *
-window_handler (svn_txdelta_window_t *window, void *baton)
+compose_handler (svn_txdelta_window_t *window, void *baton)
 {
-  struct window_handler_baton *wb = baton;
-  assert ((window == NULL) != (wb->window == NULL));
-  if (window)
-    wb->window = svn_txdelta__copy_window(window, wb->window_pool);
+  struct compose_handler_baton *cb = baton;
+  assert (!cb->done || window == NULL);
+  assert (cb->trail && cb->trail->pool);
+
+  if (!cb->init && !window)
+    return SVN_NO_ERROR;
+
+  if (cb->window)
+    {
+      /* Combine the incoming window with whatever's in the baton. */
+      apr_pool_t *composite_pool = svn_pool_create (cb->trail->pool);
+      svn_txdelta_window_t *composite;
+      svn_txdelta__compose_ctx_t context = { 0 };
+
+      composite = svn_txdelta__compose_windows
+        (window, cb->window, &context, composite_pool);
+
+      if (composite)
+        {
+          svn_pool_destroy (cb->window_pool);
+          cb->window = composite;
+          cb->window_pool = composite_pool;
+        }
+      else if (context.use_second)
+        {
+          svn_pool_destroy (composite_pool);
+          cb->window->sview_offset = context.sview_offset;
+          cb->window->sview_len = context.sview_len;
+
+          /* This can only happen if the window doesn't touch
+             source data; so ... */
+          cb->done = TRUE;
+        }
+      else
+        /* Can't happen, because cb->window can't be NULL. */
+        abort ();
+    }
+  else if (window)
+    {
+      /* Copy the (first) window into the baton. */
+      apr_pool_t *window_pool = svn_pool_create (cb->trail->pool);
+      assert (cb->window_pool == NULL);
+      cb->window = svn_txdelta__copy_window(window, window_pool);
+      cb->window_pool = window_pool;
+      cb->done = (window->sview_len == 0 || window->src_ops == 0);
+    }
+  else
+    cb->done = TRUE;
+
+  cb->init = FALSE;
   return SVN_NO_ERROR;
 }
 
 
-/* Read one delta window from REP[CUR_CHUNK], allocating from
-   WINDOW_POOL, which is a subpool ot TRAIL's pool. */
+
+/* Read one delta window from REP[CUR_CHUNK] and push it at the
+   composition handler. */
+
 static svn_error_t *
-get_one_window (svn_txdelta_window_t **window,
-                apr_pool_t **window_pool,
+get_one_window (struct compose_handler_baton *cb,
                 svn_fs_t *fs,
                 svn_fs__representation_t *rep,
-                int cur_chunk,
-                trail_t *trail)
+                int cur_chunk)
 {
   svn_stream_t *wstream;
-  struct window_handler_baton wb;
   char diffdata[4096];   /* hunk of svndiff data */
   apr_size_t off;        /* offset into svndiff data */
   apr_size_t amt;        /* how much svndiff data to/was read */
@@ -175,22 +236,15 @@ get_one_window (svn_txdelta_window_t **window,
   apr_array_header_t *chunks = rep->contents.delta.chunks;
   svn_fs__rep_delta_chunk_t *this_chunk;
 
+  cb->init = TRUE;
   if (chunks->nelts <= cur_chunk)
-    {
-      *window = NULL;
-      *window_pool = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  wb.window = NULL;
-  wb.window_pool = *window_pool = svn_pool_create (trail->pool);
+    return compose_handler (NULL, cb);
 
   /* Set up a window handling stream for the svndiff data. */
-  wstream = svn_txdelta_parse_svndiff (window_handler, &wb, TRUE,
-                                       *window_pool);
+  wstream = svn_txdelta_parse_svndiff (compose_handler, cb, TRUE,
+                                       cb->trail->pool);
 
-  /* First things first:  send the "SVN\0" header through the
-     stream. */
+  /* First things first: send the "SVN\0" header through the stream. */
   diffdata[0] = 'S';
   diffdata[1] = 'V';
   diffdata[2] = 'N';
@@ -210,15 +264,16 @@ get_one_window (svn_txdelta_window_t **window,
     {
       amt = sizeof (diffdata);
       SVN_ERR (svn_fs__string_read (fs, str_key, diffdata,
-                                    off, &amt, trail));
+                                    off, &amt, cb->trail));
       off += amt;
       SVN_ERR (svn_stream_write (wstream, diffdata, &amt));
     }
   while (amt != 0);
   SVN_ERR (svn_stream_close (wstream));
 
-  assert (wb.window != NULL);
-  *window = wb.window;
+  assert (!cb->init);
+  assert (cb->window != NULL);
+  assert (cb->window_pool != NULL);
   return SVN_NO_ERROR;
 }
 
@@ -243,71 +298,36 @@ rep_undeltify_range (svn_fs_t *fs,
 
   do
     {
-      svn_fs__representation_t *rep;
-      svn_txdelta_window_t *window_B;
-      apr_pool_t *wpool_B;
-      int cur_rep;
-
+      struct compose_handler_baton cb = { NULL, NULL, trail, FALSE, FALSE };
       char *source_buf, *target_buf;
       apr_size_t target_len;
+      int cur_rep;
 
-      rep = APR_ARRAY_IDX (deltas, 0, svn_fs__representation_t*);
-      SVN_ERR (get_one_window
-               (&window_B, &wpool_B, fs, rep, cur_chunk, trail));
+      for (cur_rep = 0; !cb.done && cur_rep < deltas->nelts; ++cur_rep)
+        {
+          svn_fs__representation_t *const rep =
+            APR_ARRAY_IDX (deltas, cur_rep, svn_fs__representation_t*);
+          SVN_ERR (get_one_window (&cb, fs, rep, cur_chunk));
+        }
 
-      if (!window_B)
+      if (!cb.window)
           /* That's it, no more source data is available. */
           break;
 
-      for (cur_rep = 1; cur_rep < deltas->nelts; ++cur_rep)
-        {
-          svn_txdelta_window_t *window_A, *composite;
-          apr_pool_t *wpool_A, *wpool_composite;
-          svn_txdelta__compose_ctx_t context = { 0 };
-          rep = APR_ARRAY_IDX (deltas, cur_rep, svn_fs__representation_t*);
-          SVN_ERR (get_one_window
-                   (&window_A, &wpool_A, fs, rep, cur_chunk, trail));
-
-          wpool_composite = svn_pool_create (trail->pool);
-          composite = svn_txdelta__compose_windows
-            (window_A, window_B, &context, wpool_composite);
-
-          svn_pool_destroy (wpool_A);
-          if (composite)
-            {
-              svn_pool_destroy (wpool_B);
-              window_B = composite;
-              wpool_B = wpool_composite;
-            }
-          else if (context.use_second)
-            {
-              svn_pool_destroy (wpool_composite);
-              window_B->sview_offset = context.sview_offset;
-              window_B->sview_len = context.sview_len;
-
-              /* This can only happen if the window doesn't touch
-                 source data; so ... */
-              break;
-            }
-          else
-            /* Can't happen, because window_B should never be NULL. */
-            abort ();
-        }
-
       /* The source view length should not be 0 if there are source
          copy ops in the window. */
-      assert (window_B->sview_len > 0 || window_B->src_ops == 0);
+      assert (cb.window->sview_len > 0 || cb.window->src_ops == 0);
 
-      /* window_B is the combined delta window. Read the source text
+      /* cb.window is the combined delta window. Read the source text
          into a buffer. */
-      if (fulltext && window_B->sview_len > 0 && window_B->src_ops > 0)
+      if (fulltext && cb.window->sview_len > 0 && cb.window->src_ops > 0)
         {
-          apr_size_t source_len = window_B->sview_len;
-          source_buf = apr_palloc (wpool_B, source_len);
+          apr_size_t source_len = cb.window->sview_len;
+          source_buf = apr_palloc (cb.window_pool, source_len);
           SVN_ERR (svn_fs__string_read
                    (fs, fulltext->contents.fulltext.string_key,
-                    source_buf, window_B->sview_offset, &source_len, trail));
-          assert (source_len == window_B->sview_len);
+                    source_buf, cb.window->sview_offset, &source_len, trail));
+          assert (source_len == cb.window->sview_len);
         }
       else
         {
@@ -317,7 +337,7 @@ rep_undeltify_range (svn_fs_t *fs,
       if (offset > 0)
         {
           target_len = *len - len_read + offset;
-          target_buf = apr_palloc (wpool_B, target_len);
+          target_buf = apr_palloc (cb.window_pool, target_len);
         }
       else
         {
@@ -325,7 +345,7 @@ rep_undeltify_range (svn_fs_t *fs,
           target_buf = buf;
         }
 
-      svn_txdelta__apply_instructions (window_B, source_buf,
+      svn_txdelta__apply_instructions (cb.window, source_buf,
                                        target_buf, &target_len);
       if (offset > 0)
         {
@@ -334,7 +354,8 @@ rep_undeltify_range (svn_fs_t *fs,
           memcpy (buf, target_buf + offset, target_len);
           offset = 0; /* Read from the beginning of the next chunk. */
         }
-      svn_pool_destroy (wpool_B); /* Don't need this window any more. */
+      /* Don't need this window any more. */
+      svn_pool_destroy (cb.window_pool);
 
       len_read += target_len;
       buf += target_len;
@@ -347,6 +368,7 @@ rep_undeltify_range (svn_fs_t *fs,
 }
 
 
+
 /* Calculate the index of the chunk in REP that contains OFFSET, and
    find the relative offset within the chunk.  Return -1 if offset is
    beyond the end of the represented data.
