@@ -10,13 +10,15 @@ short-term tasks to it, if that's helpful.
 ------------------------------------------------------------------------
 
 Ben todo:
-   - timestamp code:  track *both* text and property timestamps independently. 
-   - split modified_p() into two versions -- one for text, one for props
-   - get_editor.c (close_file):  new logic to anywhere from 0 to 2 timestamps,
-     depending on whether local mods are detected.
    - props.c:  output conflict values too
    - adm_crawler.c: finish emitting properties and doing proper
      conflict detection
+   - Oy.  Do properties on *directories* work yet?  :)  Test n' hack.
+   - why do .prej files get created *above* the working copy?
+   - update-after-editor: isn't printing `G' for prop merges.  isn't
+     printing `C' for either textual or property conflicts.  fix this.
+   - need to split "reject-file" entry attribute into one for text,
+     one for props.
 
 Karl working copy todo:
    - use apr process api instead of system(), don't use redirection
