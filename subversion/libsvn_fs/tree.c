@@ -37,6 +37,7 @@
 #include "clones-table.h"
 #include "txn-table.h"
 #include "dag.h"
+#include "tree.h"
 
 
 
@@ -152,7 +153,6 @@ struct svn_fs_node_t
 /* Internal node operations.  */
 
 
-#if 0
 /* Return a new, partially initialized node object in FS, allocated
    from POOL.  */
 static svn_fs_node_t *
@@ -171,6 +171,7 @@ new_node_object (svn_fs_t *fs,
 }
 
 
+#if 0
 /* Create a clone path referring to the directory entry named NAME in
    the directory given by PARENT.  Allocate the new node in POOL.  */
 static clone_path_t *
@@ -297,7 +298,7 @@ check_for_clone (svn_fs_node_t *node,
       svn_fs_id_t *root_id, *base_root_id;
 
       /* Find the transaction's current root directory.  */
-      svn_fs__get_txn (&root_id, &base_root_id, node->txn, trail);
+      svn_fs__get_txn (&root_id, &base_root_id, node->fs, node->txn, trail);
 
       /* If NODE refers to the transaction's current root, we're up to
 	 date.  */
@@ -861,4 +862,33 @@ svn_fs_copy (svn_fs_node_t *parent,
 	     apr_pool_t *pool)
 {
   abort ();
+}
+
+
+
+/* Creating transaction and revision root nodes.  */
+
+
+svn_error_t *
+svn_fs__txn_root_node (svn_fs_node_t **root_p,
+		       svn_fs_t *fs,
+		       const char *txn,
+		       trail_t *trail)
+{
+  svn_fs_id_t *root_id, *base_root_id;
+  dag_node_t *dag_root;
+  svn_fs_node_t *root;
+
+  SVN_ERR (svn_fs__get_txn (&root_id, &base_root_id, fs, txn, trail));
+  SVN_ERR (svn_fs__dag_txn_node (&dag_root, fs, txn, root_id, trail));
+
+  root = new_node_object (fs, trail->pool);
+  root->kind = kind_directory;
+  root->txn = apr_pstrdup (root->pool, txn);
+  root->is_cloned = ! svn_fs_id_eq (root_id, base_root_id);
+  root->clone_path = 0;		/* accurate in either case */
+  root->dag_node = dag_root;
+
+  *root_p = root;
+  return 0;
 }
