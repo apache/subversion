@@ -6,6 +6,7 @@
 for execfile in gen-make.py \
                 dist.sh \
                 build/buildcheck.sh \
+                build/getversion.py \
                 build/PrintPath \
                 ac-helpers/get-neon-ver.sh \
                 ac-helpers/check-diff.sh \
