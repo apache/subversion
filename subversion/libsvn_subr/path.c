@@ -132,8 +132,11 @@ svn_path_remove_component (svn_stringbuf_t *path, enum svn_path_style style)
 
   if (! svn_stringbuf_chop_back_to_char (path, dirsep))
     svn_stringbuf_setempty (path);
-
-  svn_path_canonicalize (path, style);
+  else
+    {
+      if (path->data[path->len - 1] == dirsep)
+          path->data[--path->len] = '\0';
+    }
 }
 
 
