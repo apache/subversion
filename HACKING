@@ -897,33 +897,33 @@ project files included in the source tree are from Microsoft Visual
 C++ 6.x; earlier versions of the compiler are not supported at this
 time.
 
-To build the client components, you'll need a copy of neon 0.18.2. The
+To build the client components, you'll need a copy of neon 0.18.5. The
 sources are available at
 
-   http://www.webdav.org/neon/neon-0.18.2.tar.gz
+   http://www.webdav.org/neon/neon-0.18.5.tar.gz
 
 Unpack the distribution into the root directory of the Subversion
-source tree and rename the directory neon-0.18.2 to neon.  The MSVC
-project files in this archive are not up-to-date, so building the neon
-libraries is not straight-forward.  Pre-built neon libraries are
-available on the Subversion downloads page, named
+source tree (henceforth know as <SVN> -- that's where you found this
+file) and rename the directory neon-0.18.5 to neon.
 
-   libneon-0.18.2-svn-win32.zip
+[NOTE: The neon library supports secure connections with OpenSSL and
+   on-the-wire compression with zlib. If you want to use those features,
+   you should edit the file <SVN>\build\win32\build_neon.bat to point
+   to the appropriate directories.
+   You can get a copy of OpenSSL, including instructions for building
+   and packaging on Windows, at http://www.openssl.org/.
+   Zlib is available from http://www.gzip.org/zlib/. I recommend just
+   using the pre-build package,
 
-Unpack the archive into the <SVN>\neon directory. (<SVN> is the root
-of the source tree, the directory where you found the file you're
-reading.)  You'll get the pre-built libneon.lib and libneonD.lib, as
-well as the modified project files used to build them, the config.hw
-file and the complete (unmodified) neon/src directory.
+      http://www.gzip.org/zlib/contrib/zlib-Win32.zip
 
-   IMPORTANT NOTE: These neon libraries should *only* be used when
-      building Subversion. They were build to depend on the verson
-      of expat-lite in the Subversion sources.
+   The neon build scripts are set up to use those libraries.]
 
-If you want to build the server components, you'll also need a copy of
-Berkeley DB, version 4.0.14 or newer. The sources are available at
-http://www.sleepycat.com. There is a binary distibution on the Subversion
-downloads page, named
+
+If you want to build the (local) server components, you'll also need a
+copy of Berkeley DB, version 4.0.14 or newer. The sources are available
+at http://www.sleepycat.com. There is a binary distibution on the
+Subversion downloads page, named
 
    db-4.0.14-win32.zip
 
@@ -932,9 +932,14 @@ tree as <SVN>\db4-win32. It's a good idea to add <SVN>\db4-win32\bin to
 your PATH, so that Subversion can find the Berkeley DB DLLs.
 
 If you build Berkeley DB from the source, you will have to copy the
-file <DB3>\build_win32\db.h to <SVN>\db4-win32\include, and all
-the import libraries to <SVN>\db4-win32\lib. Again, the DLLs
-should be somewhere in your path.
+file ...db-4.0.14\build_win32\db.h to <SVN>\db4-win32\include, and all
+the import libraries to <SVN>\db4-win32\lib. Again, the DLLs should be
+somewhere in your path.
+
+[NOTE: This binary package of Berkeley DB is provided for convenience
+   only. Please don't address questions about Berkeley DB that aren't
+   directly related to using Subversion to the project list.]
+
 
 The workspace `subversion.dsw' at the top of the source tree includes
 all the necessary projects. Right now, only static libraries are
@@ -945,9 +950,13 @@ drivers.
 You will have to edit the file svn_private_config.hw to set the
 correct paths for diff and patch.
 
+[NOTE: There have been reports that Subversion will find diff.exe
+   and patch.exe if they are in your path. This seems to be caused
+   by some inconsistency in APR, so don't rely on this behaviour.]
 
-NOTE: There have been rumours that Subversion on Win32 can be build
-using the latest cygwin. ymmv.
+
+[NOTE: There have been rumours that Subversion on Win32 can be build
+   using the latest cygwin. ymmv.]
 
 
 

@@ -143,6 +143,10 @@ SOURCE=.\revert.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\revisions.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\status.c
 # End Source File
 # Begin Source File
