@@ -92,6 +92,35 @@ Candidate changes:
     Votes:
       +1: lundblad
 
+  * r12100, r12111, r12114
+    Fix output of notifications when merging a deletion of a directory.
+    Justification:
+      It just looks ugly and sloppy.
+    Branch: 1.1.x-r12100
+    Votes:
+      +1: breser
+
+  * r12102
+    Fix a slight ABI/API incompatability between 1.0.x and 1.1.x
+    Justification:
+      If we treat the Apache modules as just another client then e broke our
+      compatability rules.  This fixes it and makes the Debian folks happy
+      who have an open bug on the issue.  See:
+      http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=275545
+    Votes:
+      +1: breser
+
+  * r12117
+    Fix merges that replace directories.
+    Justification:
+      Without this fix it is impossible to merge some sets of revisions in one
+      step.
+    Branch: 1.1.x-r12117
+    Votes:
+      +1: breser
+
+
+
 Approved changes (further review is welcome, but not required):
 
   * r11439, r11669
@@ -156,30 +185,3 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: josander
       +0: maxb
-
-  * r12100, r12111, r12114
-    Fix output of notifications when merging a deletion of a directory.
-    Justification:
-      It just looks ugly and sloppy.
-    Branch: 1.1.x-r12100
-    Votes:
-      +1: breser
-
-  * r12102
-    Fix a slight ABI/API incompatability between 1.0.x and 1.1.x
-    Justification:
-      If we treat the Apache modules as just another client then e broke our
-      compatability rules.  This fixes it and makes the Debian folks happy
-      who have an open bug on the issue.  See:
-      http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=275545
-    Votes:
-      +1: breser
-
-  * r12117
-    Fix merges that replace directories.
-    Justification:
-      Without this fix it is impossible to merge some sets of revisions in one
-      step.
-    Branch: 1.1.x-r12117
-    Votes:
-      +1: breser
