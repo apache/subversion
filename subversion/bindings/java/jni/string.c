@@ -119,9 +119,8 @@ string__c_to_stringbuf(JNIEnv *env,
       if( result == NULL )
         {
           misc__throw_exception_by_name(env, 
-                                        SVN_JNI_SUBVERSION_EXCEPTION,
-                                        "svn_stringbuf_create_from_string" \
-                                        " failed");
+                                        SVN_JNI__SUBVERSION_EXCEPTION,
+                                        SVN_JNI__ERROR_CREATE_STRINGBUF);
           _hasException = JNI_TRUE;
         }
     }
