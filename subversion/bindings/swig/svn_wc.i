@@ -37,7 +37,8 @@
    these types (as 'type **') will always be an OUT param
 */
 %apply SWIGTYPE **OUTPARAM {
-    svn_wc_entry_t **
+    svn_wc_entry_t **,
+    svn_wc_adm_access_t **
 };
 
 /* ----------------------------------------------------------------------- */
