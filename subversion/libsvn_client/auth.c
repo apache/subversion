@@ -665,9 +665,7 @@ client_ssl_prompt_first_cred (void **credentials,
                               apr_pool_t *pool)
 {
   cred_ssl_provider_baton *pb = provider_baton;
-  const char *cert_file = NULL, *key_file = NULL;
-  size_t cert_file_len;
-  const char *extension;
+  const char *cert_file = NULL;
   svn_auth_cred_client_ssl_t *cred;
 
   SVN_ERR (pb->prompt_func (&cert_file, "client certificate filename: ", FALSE,

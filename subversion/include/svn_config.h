@@ -66,8 +66,6 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_SSL_IGNORE_INVALID_DATE   "ssl-ignore-invalid-date"
 #define SVN_CONFIG_OPTION_SSL_IGNORE_HOST_MISMATCH  "ssl-ignore-host-mismatch"
 #define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_FILE      "ssl-client-cert-file"
-#define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_TYPE      "ssl-client-cert-type"
-#define SVN_CONFIG_OPTION_SSL_CLIENT_KEY_FILE       "ssl-client-key-file"
 #define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_PASSWORD  "ssl-client-cert-password"
 
 #define SVN_CONFIG_CATEGORY_CONFIG          "config"
