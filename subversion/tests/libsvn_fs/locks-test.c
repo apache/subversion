@@ -15,25 +15,14 @@
  * ====================================================================
  */
 
-/* TODO how many of these can I get rid of? */
-#include <stdlib.h>
 #include <string.h>
 #include <apr_pools.h>
 #include <apr_time.h>
-#include <apr_md5.h>
 
-#include "svn_pools.h"
 #include "svn_error.h"
-#include "svn_time.h"
 #include "svn_fs.h"
-#include "svn_path.h"
-#include "svn_delta.h"
-#include "svn_md5.h"
-#include "svn_props.h"
 
 #include "../fs-helpers.h"
-
-#define SET_STR(ps, s) ((ps)->data = (s), (ps)->len = strlen(s))
 
 
 /*-----------------------------------------------------------------*/
