@@ -695,7 +695,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_RA_DAV_PROPPATCH_FAILED,
               SVN_ERR_RA_DAV_CATEGORY_START + 8,
-              "Failed to excute WebDAV PROPPATCH")
+              "Failed to execute WebDAV PROPPATCH")
 
   /* @since New in 1.2 */
   SVN_ERRDEF (SVN_ERR_RA_DAV_MALFORMED_DATA,
