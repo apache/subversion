@@ -2090,7 +2090,11 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         if (gen_html)
           name = href;
 
+	/* We quote special characters in both XML and HTML. */
+	name = apr_xml_quote_string(entry_pool, name, !gen_html);
+
         href = ap_escape_uri(entry_pool, href);
+	href = apr_xml_quote_string(entry_pool, href, 1);
 
         if (gen_html)
           {
@@ -2101,8 +2105,6 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         else
           {
             const char *const tag = (is_dir ? "dir" : "file");
-            name = apr_xml_quote_string(entry_pool, name, 1);
-            href = apr_xml_quote_string(entry_pool, href, 1);
             
             /* ### This is where the we could search for props */
 
