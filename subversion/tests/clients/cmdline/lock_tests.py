@@ -48,10 +48,11 @@ def lock_file(sbox):
   svntest.actions.duplicate_dir(wc_dir, wc_b)
 
   # lock a file as wc_author
-  file_path = os.path.join(sbox.wc_dir, 'binary_file')
-  file_path_b = os.path.join(sbox.wc_dir, 'binary_file')
+  fname = 'iota'
+  file_path = os.path.join(sbox.wc_dir, fname)
+  file_path_b = os.path.join(wc_b, fname)
+
   svntest.main.file_append(file_path, "This represents a binary file\n")
-  svntest.main.run_svn(None, 'add', file_path)
   svntest.main.run_svn(None, 'commit',
                        '--username', svntest.main.wc_author,
                        '--password', svntest.main.wc_passwd,
@@ -62,17 +63,36 @@ def lock_file(sbox):
                                      '-m', '', file_path)
 
   # --- Meanwhile, in our other working copy... ---
+  err_re = ".*User Sally does not own lock on path.*"
 
+  svntest.main.run_svn(None, 'update', wc_b)
+  # -- Try to change a file --
   # change the locked file
   svntest.main.file_append(file_path_b, "Covert tweak\n")
 
-  err_re = ".*User Sally does not own lock on path.*"
+
   # attempt (and fail) to commit as user Sally
   svntest.actions.run_and_verify_commit (wc_b, None, None, err_re,
                                          None, None, None, None,
                                          '--username', "Sally",
                                          '--password', "bighair",
                                          '-m', '', file_path_b)
+
+  # Revert our change that we failed to commit
+  svntest.main.run_svn(None, 'revert', file_path_b)
+
+  # -- Try to change a property --
+  # change the locked file's properties
+  svntest.main.run_svn(None, 'propset', 'sneakyuser', 'Sally', file_path_b)
+
+  # attempt (and fail) to commit as user Sally
+  svntest.actions.run_and_verify_commit (wc_b, None, None, err_re,
+                                         None, None, None, None,
+                                         '--username', "Sally",
+                                         '--password', "bighair",
+                                         '-m', '', file_path_b)
+
+
 
 
 #----------------------------------------------------------------------
