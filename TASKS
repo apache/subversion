@@ -10,7 +10,9 @@ to take something on.
    text diff, but a real binary diff).  The interface would be
    something like this:
 
-      make_bdiff (apr_file_t *seekable_src, apr_file_t *streamy_target)
+      apr_status_t make_bdiff (apr_file_t **out,
+                               apr_file_t *seekable_src, 
+                               apr_file_t *streamy_target);
 
    Josh MacDonald's xdelta might be a good place to start
    (see http://www.xcf.berkeley.edu/~jmacd/xdelta.html), although it
