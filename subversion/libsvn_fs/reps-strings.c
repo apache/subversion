@@ -956,7 +956,6 @@ struct write_rep_args
   struct rep_write_baton *wb;   /* Destination.       */
   const char *buf;              /* Data.              */
   apr_size_t len;               /* How much to write. */
-  const char *txn_id;           /* Transaction ID.    */  
 };
 
 

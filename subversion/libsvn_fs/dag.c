@@ -567,7 +567,7 @@ set_entry (dag_node_t *parent,
                                               txn_id, TRUE, trail, 
                                               trail->pool));
   len = raw_entries_buf->len;
-  svn_stream_write (wstream, raw_entries_buf->data, &len);
+  SVN_ERR (svn_stream_write (wstream, raw_entries_buf->data, &len));
   return SVN_NO_ERROR;
 }
 
