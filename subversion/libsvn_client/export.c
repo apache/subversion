@@ -622,10 +622,16 @@ svn_client_export (svn_revnum_t *result_rev,
            been given a working copy path */
         revision->kind = svn_opt_revision_working;
       else
-        use_ra = TRUE;
+        {
+          use_ra = TRUE;
+          SVN_ERR (svn_client_url_from_path (&from, from, pool));
+          if (! from)
+            return svn_error_createf (SVN_ERR_ENTRY_MISSING_URL, NULL,
+                                      "'%s' has no URL", from);
+        }
     }
 
-  if (svn_path_is_url (from))
+  if (svn_path_is_url (from) || use_ra)
     {
       const char *URL;
       svn_revnum_t revnum;
