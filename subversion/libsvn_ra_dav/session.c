@@ -849,6 +849,12 @@ struct lock_request_baton
   /* The creation-date returned for newly created lock. */
   apr_time_t creation_date;
 
+  /* A parser for handling <D:error> responses from mod_dav_svn. */
+  ne_xml_parser *error_parser;
+
+  /* If <D:error> is returned, here's where the parsed result goes. */
+  svn_error_t *err;
+
   /* A place for allocating fields in this structure. */
   apr_pool_t *pool;
 };
@@ -935,6 +941,10 @@ pre_send_hook(ne_request *req,
                                      handle_creationdate_header, lrb);
     }
 
+  /* Register a response handler capable of parsing <D:error> */
+  lrb->error_parser = ne_xml_create();
+  svn_ra_dav__add_error_handler(req, lrb->error_parser,
+                                &(lrb->err), lrb->pool);
 }
 
 
@@ -978,6 +988,18 @@ svn_ra_dav__lock(void *session_baton,
 
   /* Issue LOCK request. */
   rv = ne_lock(ras->sess, nlock);
+
+  /* Did we get a <D:error> response? */
+  if (lrb->err)
+    {
+      ne_lock_destroy(nlock);
+      if (lrb->error_parser)
+        ne_xml_destroy(lrb->error_parser);
+
+      return lrb->err;
+    }
+
+  /* Did we get some other sort of neon error? */
   if (rv)
     return svn_ra_dav__convert_error(ras->sess,
                                      "Lock request failed", rv, pool);
@@ -999,7 +1021,10 @@ svn_ra_dav__lock(void *session_baton,
     slock->expiration_date = slock->creation_date + 
                              apr_time_from_sec(nlock->timeout);
   
+  /* Free neon things. */
   ne_lock_destroy(nlock);
+  if (lrb->error_parser)
+    ne_xml_destroy(lrb->error_parser);
 
   *lock = slock;
   return SVN_NO_ERROR;
