@@ -5,7 +5,7 @@ Version 0.22.0 (released 24 Apr 2003, revision XXXX, branches/release-0.22)
  * svn diff and merge now have --ignore-ancestry option (#1034)
  * svn ci -N DIR no longer errors during post-commit (#1239)
  * update vn-svn.el (#1250, #1253)
- * improvements to svn_load_dirs.pl (#1223, 1215)
+ * improvements to svn_load_dirs.pl (#1223, #1215)
  * misc ra_svn bug fixes and protocol change
  * fix mmap failures on HP-UX
  * fix some client memory leaks
