@@ -181,6 +181,10 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                 "Must authenticate with listed mechanism");
 }
 
+/* Perform an authentication request in order to get an access level of
+ * REQUIRED or higher.  Since the client may escape the authentication
+ * exchange, the caller should check current_access(b) to see if
+ * authentication succeeded. */
 static svn_error_t *auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                  server_baton_t *b, enum access_type required)
 {
@@ -193,6 +197,8 @@ static svn_error_t *auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   do
     {
       SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "w(?c)", &mech, &mecharg));
+      if (!*mech)
+        break;
       SVN_ERR(auth(conn, pool, mech, mecharg, b, required, &success));
     }
   while (!success);
@@ -216,11 +222,14 @@ static svn_error_t *must_have_write_access(svn_ra_svn_conn_t *conn,
 
   if (b->user == NULL && get_access(b, AUTHENTICATED) == WRITE_ACCESS
       && (b->tunnel || b->pwdb) && b->protocol_version >= 2)
-    return auth_request(conn, pool, b, WRITE_ACCESS);
+    SVN_ERR(auth_request(conn, pool, b, WRITE_ACCESS));
 
-  return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR,
-                          svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                                           "Connection is read-only"), NULL);
+  if (current_access(b) != WRITE_ACCESS)
+    return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR,
+                            svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                             "Connection is read-only"), NULL);
+
+  return SVN_NO_ERROR;
 }
 
 /* --- REPORTER COMMAND SET --- */
@@ -1086,6 +1095,13 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
                                      &caplist, &client_url));
       SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
       err = find_repos(client_url, root, &b, pool);
+      if (!err)
+        {
+          SVN_ERR(auth_request(conn, pool, &b, READ_ACCESS));
+          if (current_access(&b) == NO_ACCESS)
+            err = svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                   "Not authorized for access");
+        }
       if (err)
         {
           io_err = svn_ra_svn_write_cmd_failure(conn, pool, err);
@@ -1093,7 +1109,6 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, const char *root,
           SVN_ERR(io_err);
           return svn_ra_svn_flush(conn, pool);
         }
-      SVN_ERR(auth_request(conn, pool, &b, READ_ACCESS));
     }
   else
     return SVN_NO_ERROR;

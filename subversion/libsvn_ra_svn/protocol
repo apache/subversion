@@ -112,9 +112,10 @@ otherwise, the client responds with a tuple matching the prototype:
   auth-response: ( mech:word [ token:string ] )
 
 mech specifies the SASL mechanism and token, if present, gives the
-"initial response" of the authentication exchange.  Upon receiving the
-client's auth-response, the server sends a series of challenges, each
-a tuple matching the prototype:
+"initial response" of the authentication exchange.  The client may
+specify an empty mechanism to decline authentication; otherwise, upon
+receiving the client's auth-response, the server sends a series of
+challenges, each a tuple matching the prototype:
 
   challenge: ( step ( token:string ) )
            | ( failure ( message:string ) )
