@@ -1,12 +1,6 @@
 <chapter id="svn-ch-2">
   <title>Basic Concepts</title>
 
-  <!-- Look, I know there are a lot of firstterm tags here.  But
-  remember the name of the chapter: Basic Concepts.  That pretty much
-  means this chapter is all about defining terms for the first time,
-  right?  :-)-->
-
-    
   <simplesect>
     <para>This chapter is a short, casual introduction to Subversion.
       If you're new to version control, this chapter is definitely for
@@ -61,11 +55,8 @@
       systems that are designed to record and track changes to data
       over time.
     </para>
-
   </sect1>
 
-
-  <!-- the philosophical section --> 
   <sect1 id="svn-ch-2-sect-2">
     <title>Versioning Models</title>
     
