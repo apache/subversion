@@ -36,11 +36,13 @@
 
 
 /* when we begin a checkout, we fetch these from the "public" resources to
-   steer us towards a Baseline Collection */
+   steer us towards a Baseline Collection. we fetch the resourcetype to
+   verify that we're accessing a collection. */
 static const dav_propname starting_props[] =
 {
   { "DAV:", "version-controlled-configuration" },
   { "SVN:", "baseline-relative-path" },
+  { "DAV:", "resourcetype" },
   { NULL }
 };
 
@@ -249,6 +251,10 @@ static svn_error_t *fetch_file(svn_ra_session_t *ras,
   if (rv != HTTP_OK)
     {
       /* ### other GET responses? */
+
+      /* ### need an SVN_ERR here */
+      return svn_error_create(APR_EGENERAL, 0, NULL, pool,
+                              http_get_error(ras->sess));
     }
 
   /* note: handler_baton was "closed" in fetch_file_reader() */
@@ -290,6 +296,7 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
                                     svn_revnum_t *target_rev,
                                     const char **bc_root)
 {
+  apr_pool_t *pool = ras->pool;
   svn_ra_dav_resource_t *rsrc;
   const char *vcc;
   const char *relpath;
@@ -308,19 +315,28 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
      SVN:baseline-relative-path properties from the session root URL */
 
   SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras, ras->root.path,
-                                          NULL, starting_props, ras->pool) );
+                                          NULL, starting_props, pool) );
   if (!rsrc->is_collection)
     {
       /* ### eek. what to do? */
+
+      /* ### need an SVN_ERR here */
+      return svn_error_create(APR_EGENERAL, 0, NULL, pool,
+                              "URL does not identify a collection.");
     }
 
   vcc = apr_hash_get(rsrc->propset, SVN_RA_DAV__PROP_VCC, APR_HASH_KEY_STRING);
   relpath = apr_hash_get(rsrc->propset,
                          SVN_RA_DAV__PROP_BASELINE_RELPATH,
                          APR_HASH_KEY_STRING);
+  printf("vcc='%s' relpath='%s'\n", vcc, relpath);
   if (vcc == NULL || relpath == NULL)
     {
       /* ### better error reporting... */
+
+      /* ### need an SVN_ERR here */
+      return svn_error_create(APR_EGENERAL, 0, NULL, pool,
+                              "URL does not identify a collection.");
     }
 
   if (revision == SVN_INVALID_REVNUM)
@@ -332,16 +348,22 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
       /* Get the Baseline from the DAV:checked-in value, then fetch its
          DAV:baseline-collection property. */
       SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras, vcc, NULL,
-                                              vcc_props, ras->pool) );
+                                              vcc_props, pool) );
       baseline = apr_hash_get(rsrc->propset, SVN_RA_DAV__PROP_CHECKED_IN,
                               APR_HASH_KEY_STRING);
       if (baseline == NULL)
         {
           /* ### better error reporting... */
+
+          /* ### need an SVN_ERR here */
+          return svn_error_create(APR_EGENERAL, 0, NULL, pool,
+                                  "DAV:checked-in was not present on the "
+                                  "version-controlled configuration.");
         }
+      printf("baseline='%s'\n", baseline);
 
       SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras, baseline, NULL,
-                                              baseline_props, ras->pool) );
+                                              baseline_props, pool) );
     }
   else
     {
@@ -353,7 +375,7 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
 
       apr_snprintf(label, sizeof(label), "%ld", revision);
       SVN_ERR( svn_ra_dav__get_props_resource(&rsrc, ras, vcc, label,
-                                              baseline_props, ras->pool) );
+                                              baseline_props, pool) );
     }
 
   /* rsrc is the Baseline. We will checkout from the DAV:baseline-collection.
@@ -362,20 +384,27 @@ static svn_error_t * begin_checkout(svn_ra_session_t *ras,
                     SVN_RA_DAV__PROP_BASELINE_COLLECTION, APR_HASH_KEY_STRING);
   vsn_name = apr_hash_get(rsrc->propset,
                           SVN_RA_DAV__PROP_VERSION_NAME, APR_HASH_KEY_STRING);
+  printf("bc='%s' vsn_name='%s'\n", bc, vsn_name);
   if (bc == NULL || vsn_name == NULL)
     {
       /* ### better error reporting... */
+
+      /* ### need an SVN_ERR here */
+      return svn_error_create(APR_EGENERAL, 0, NULL, pool,
+                              "DAV:baseline-collection and/or "
+                              "DAV:version-name was not present on the "
+                              "baseline resource.");
     }
 
   /* ### use value from above instead of this temporary */
-  *activity_url = svn_string_create("test-activity", ras->pool);
+  *activity_url = svn_string_create("test-activity", pool);
 
   *target_rev = atoi(vsn_name);
 
   /* The root for the checkout is the Baseline Collection root, plus the
      relative location of the public URL to its repository root. */
   /* ### this assumes bc has a trailing slash. fix this code one day. */
-  *bc_root = apr_psprintf(ras->pool, "%s%s", bc, relpath);
+  *bc_root = apr_psprintf(pool, "%s%s", bc, relpath);
 
   return NULL;
 }
@@ -463,7 +492,7 @@ svn_error_t * svn_ra_dav__do_checkout(void *session_baton,
             return SVN_NO_ERROR;
         }
 
-      if (strlen(url) > strlen(ras->root.path))
+      if (strlen(url) > strlen(bc_root))
         {
           svn_string_t *name;
 

@@ -198,7 +198,9 @@ static void *create_private(void *userdata, const char *url)
 {
   prop_ctx_t *pc = userdata;
   struct uri parsed_url;
+  char *url_path;
   svn_ra_dav_resource_t *r = apr_pcalloc(pc->pool, sizeof(*r));
+  apr_size_t len;
 
   /* parse the PATH element out of the URL
 
@@ -206,13 +208,20 @@ static void *create_private(void *userdata, const char *url)
      server-relative path.
   */
   (void) uri_parse(url, &parsed_url, NULL);
-  r->url = apr_pstrdup(pc->pool, parsed_url.path);
+  url_path = apr_pstrdup(pc->pool, parsed_url.path);
   uri_free(&parsed_url);
 
+  /* clean up trailing slashes from the URL */
+  len = strlen(url_path);
+  if (len > 1 && url_path[len - 1] == '/')
+    url_path[len - 1] = '\0';
+  r->url = url_path;
+
+  /* the properties for this resource */
   r->propset = apr_hash_make(pc->pool);
 
   /* store this resource into the top-level hash table */
-  apr_hash_set(pc->props, r->url, APR_HASH_KEY_STRING, r);
+  apr_hash_set(pc->props, url_path, APR_HASH_KEY_STRING, r);
 
   return r;
 }
@@ -305,15 +314,8 @@ static int end_element(void *userdata, const struct hip_xml_elm *elm,
                        const char *cdata)
 {
   prop_ctx_t *pc = userdata;
-  svn_ra_dav_resource_t *r;
-  const elem_defn *defn = defn_from_id(elm->id);
+  svn_ra_dav_resource_t *r = dav_propfind_current_private(pc->dph);
   const char *name;
-
-  /* if this element isn't a property, then skip it */
-  if (defn == NULL || !defn->is_property)
-    return 0;
-
-  r = dav_propfind_current_private(pc->dph);
 
   if (elm->id == DAV_ELM_href)
     {
@@ -327,6 +329,12 @@ static int end_element(void *userdata, const struct hip_xml_elm *elm,
     }
   else
     {
+      const elem_defn *defn = defn_from_id(elm->id);
+
+      /* if this element isn't a property, then skip it */
+      if (defn == NULL || !defn->is_property)
+        return 0;
+
       name = defn->name;
     }
 
@@ -349,7 +357,8 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
   int rv;
   prop_ctx_t pc = { 0 };
 
-  pc.props = apr_hash_make(pool);
+  pc.pool = pool;
+  pc.props = apr_hash_make(pc.pool);
 
   pc.dph = dav_propfind_create(ras->sess, url, depth);
   dav_propfind_set_complex(pc.dph, which_props, create_private, &pc);
@@ -365,7 +374,7 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
         {
         case HTTP_CONNECT:
           /* ### need an SVN_ERR here */
-          return svn_error_createf(0, 0, NULL, pool,
+          return svn_error_createf(APR_EGENERAL, 0, NULL, pool,
                                    "Could not connect to server "
                                    "(%s, port %d).",
                                    ras->root.host, ras->root.port);
@@ -375,7 +384,7 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
                                   "Authentication failed on server.");
         default:
           /* ### need an SVN_ERR here */
-          return svn_error_create(0, 0, NULL, pool,
+          return svn_error_create(APR_EGENERAL, 0, NULL, pool,
                                   http_get_error(ras->sess));
         }
     }
@@ -396,7 +405,7 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
 
   SVN_ERR( svn_ra_dav__get_props(&props, ras, url, DAV_DEPTH_ZERO,
                                  label, which_props, pool) );
-  *rsrc = apr_hash_get(props, ras->root.path, APR_HASH_KEY_STRING);
+  *rsrc = apr_hash_get(props, url, APR_HASH_KEY_STRING);
   if (*rsrc == NULL)
     {
       /* ### should have been in there... */

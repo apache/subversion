@@ -40,6 +40,7 @@ static svn_error_t * svn_ra_open (void **session_baton,
                                   apr_pool_t *pool)
 {
   const char *repository = repository_name->data;
+  apr_size_t len;
 
   http_session *sess;
   struct uri uri = { 0 };
@@ -90,6 +91,11 @@ static svn_error_t * svn_ra_open (void **session_baton,
       return svn_error_createf(SVN_ERR_RA_HOSTNAME_LOOKUP, 0, NULL, pool,
                                "Hostname not found: %s", uri.host);
     }
+
+  /* clean up trailing slashes from the URL */
+  len = strlen(uri.path);
+  if (len > 1 && uri.path[len - 1] == '/')
+    uri.path[len - 1] = '\0';
 
   ras = apr_pcalloc(pool, sizeof(*ras));
   ras->pool = pool;
