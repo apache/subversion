@@ -1849,7 +1849,8 @@ pre-commit.tmpl
         <para><command>svnlook</command> har en <!-- &#164; -->likefrem 
           syntaks:</para>
             
-        <!-- &#164; Legg inn norsk versjon --><screen>
+        <!-- &#164; Legg inn norsk versjon -->
+        <screen>
 $ svnlook help
 general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS &amp; OPTIONS ...]
 Note: any subcommand which takes the '--revision' and '--transaction'
@@ -2933,6 +2934,7 @@ $ svnadmin create spreadsheet; svnadmin load spreadsheet &lt; ss-dumpfile
 $
 </screen>
 
+        <!-- @ENGLISH {{{
         <para>Both of <command>svndumpfilter</command>'s subcommands
           accept options for deciding how to deal with
           <quote>empty</quote> revisions.  If a given revision
@@ -2941,27 +2943,48 @@ $
           unwanted.  So to give the user control over what to do with
           those revisions, <command>svndumpfilter</command> provides
           the following command-line options:</para>
+        @ENGLISH }}} -->
+        <para>Begge delkommandoene til <command>svndumpfilter</command> 
+          godtar valg for &#229; bestemme hva de skal gj&#248;re med 
+          <quote>tomme</quote> revisjoner.
+          Hvis en gitt revisjon bare inneholdt forandringer i stier som 
+          ble filtrert bort kan denne revisjonen som n&#229; er tom bli 
+          betraktet som uinteressant eller til og med u&#248;nsket.
+          S&#229; for &#229; gi brukeren kontroll over hva som skal gj&#248;res med 
+          disse revisjonene, har <command>svndumpfilter</command> disse 
+          kommandolinjevalgene:</para>
 
         <variablelist>
           <varlistentry>
             <term><option>--drop-empty-revs</option></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>Do not generate empty revisions at all&mdash;just
                 omit them.</para>
+              @ENGLISH }}} -->
+              <para>Ikke lag tomme revisjoner i det hele tatt &#8212; utelat 
+                dem.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
             <term><option>--renumber-revs</option></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>If empty revisions are dropped (using the
-                <option>--drop-empty-revs</option> option), change the
+                <option>-&#64738;-drop-empty-revs</option> option), change the
                 revision numbers of the remaining revisions so that
                 there are no gaps in the numeric sequence.</para>
+              @ENGLISH }}} -->
+              <para>Hvis tomme revisjoner er droppet (ved bruk av valget 
+                <option>--drop-empty-revs</option>), forandres 
+                revisjonsnumrene p&#229; de gjenv&#230;rende revisjonene s&#229; det 
+                ikke blir mellomrom i den numeriske sekvensen.</para>
             </listitem>
           </varlistentry>
           <varlistentry>
             <term><option>--preserve-revprops</option></term>
             <listitem>
+              <!-- @ENGLISH {{{
               <para>If empty revisions are not dropped, preserve the
                 revision properties (log message, author, date, custom
                 properties, etc.) for those empty revisions.
@@ -2969,10 +2992,20 @@ $
                 original datestamp, and a generated log message that
                 indicates that this revision was emptied by
                 <command>svndumpfilter</command>.</para>
+              @ENGLISH }}} -->
+              <para>Hvis tomme revisjoner ikke droppes, ta vare p&#229; 
+                revisjonsegenskaper (loggmelding, forfatter, dato, 
+                egendefinerte egenskaper og s&#229; videre) for disse tomme 
+                revisjonene.
+                Eller vil tomme revisjoner bare inneholde det originale 
+                tidspunktet og en generert loggmelding som indikerer at 
+                denne revisjonen ble t&#248;mt av 
+                <command>svndumpfilter</command>.</para>
             </listitem>
           </varlistentry>
         </variablelist>
         
+        <!-- @ENGLISH {{{
         <para>While <command>svndumpfilter</command> can be very
           useful, and a huge timesaver, there are unfortunately a
           couple of gotchas.  First, this utility is overly sensitive
@@ -2980,13 +3013,31 @@ $
           dump file are specified with or without leading slashes.
           You'll want to look at the <literal>Node-path</literal> and
           <literal>Copyfrom-path</literal> headers.</para>
+        @ENGLISH }}} -->
+        <para>Selv om <command>svndumpfilter</command> kan v&#230;re veldig 
+          nyttig og sparer masse tid, er det dessverre et par ting &#229; 
+          passe p&#229;.
+          For det f&#248;rste er dette verkt&#248;yet overf&#248;lsom for <!-- &#164; Finn 
+          et mer brukervennlig ord for &#171;semantikk&#187; -->sti-semantikk.
+          Legg merke til om stiene i dumpfilen er spesifisert med eller 
+          uten skr&#229;streker i starten.
+          Dette vil du se i <literal>Node-path</literal> og 
+          <literal>Copyfrom-path</literal> i headerne.</para>
 
+        <!-- @ENGLISH {{{
         <screen>
 &hellip;
 Node-path: spreadsheet/Makefile
 &hellip;
 </screen>
+        @ENGLISH }}} -->
+        <screen>
+&#8230;
+Node-path: spreadsheet/Makefile
+&#8230;
+</screen>
 
+        <!-- @ENGLISH {{{
         <para>If the paths have leading slashes, you should
           include leading slashes in the paths you pass to
           <command>svndumpfilter include</command> and
@@ -3001,7 +3052,23 @@ Node-path: spreadsheet/Makefile
           </footnote>
           you should probably normalize those paths so they all
           have, or lack, leading slashes.</para>
+        @ENGLISH }}} -->
+        <para>Hvis stiene har innledende skr&#229;streker, skal du ogs&#229; ha 
+          innledende skr&#229;streker i stiene som du leverer til 
+          <command>svndumpfilter include</command> og 
+          <command>svndumpfilter exclude</command> (og hvis de ikke har 
+          det, skal du ikke gj&#248;re det).
+          Videre, hvis dumpfilen din har inkonsekvent bruk av innledende 
+          skr&#229;streker av en eller annen grunn,<footnote>
+          <para>Selv om <command>svnadmin dump</command> har en 
+            konsekvent regel om innledende skr&#229;streker &#8212; &#229; ikke 
+            inkludere dme &#8212; kan det v&#230;re at andre programmer som 
+            genererer dumpdata ikke er like 
+            konsekvente.</para></footnote>
+          b&#248;r du normalisere disse stiene s&#229; de alle enten har eller 
+          mangler innledende skr&#229;streker.</para>
 
+        <!-- @ENGLISH {{{
         <para>Also, copied paths can give you some trouble.
           Subversion supports copy operations in the repository, where
           a new path is created by copying some already existing path.
@@ -3020,12 +3087,33 @@ Node-path: spreadsheet/Makefile
           readily available.  If you suspect that you have any copies
           of this sort in your repository, you might want to rethink
           your set of included/excluded paths.</para>
+        @ENGLISH }}} -->
+        <para>I tillegg kan kopierte stier gi deg litt tr&#248;bbel.
+          Subversion st&#248;tter kopioperasjoner i depotet, der en ny sti 
+          blir opprettet ved &#229; kopiere en allerede eksisterende sti.
+          Det er mulig at p&#229; et eller annet punkt i livsl&#248;pet til 
+          depotet blir en fil eller katalog kopiert fra en plass som 
+          <command>svndumpfilter</command> utelater, til en plass som 
+          den inkluderer.
+          For &#229; gj&#248;re dumpdataene <!-- &#164; self-sufficient -->selvforsynt, 
+          m&#229; <command>svndumpfilter</command> vise tilleggingen av den 
+          nye stien &#8212; inkludert innholdet av alle filer opprettet av 
+          kopieringen &#8212; og ikke vise denne tilleggingen som en kopiering 
+          fra en kilde som ikke eksisterer i den filtrerte 
+          dumpdatastr&#248;mmen.
+          Men fordi dumpformatet i Subversion bare viser hva som ble 
+          forandret i hver revisjon, kan det v&#230;re at innholdet i kilden 
+          for kopien ikke er <!-- &#164; readily --> tilgjengelig.
+          Hvis du har mistanke om at du har denslags kopier i depotet 
+          ditt, vil du kanskje tenke gjennom valget ditt av 
+          inkluderte/utelatte stier p&#229; nytt.</para>
 
       </sect3>
 
       <sect3 id="svn-ch-5-sect-3.1.4">
         <title>svnshell.py</title>
 
+        <!-- @ENGLISH {{{
         <para>The Subversion source tree also comes with a shell-like
           interface to the repository.  The
           <command>svnshell.py</command> Python script (located in
@@ -3034,7 +3122,17 @@ Node-path: spreadsheet/Makefile
           those properly compiled and installed in order for this
           script to work) to connect to the repository and filesystem
           libraries.</para>
+        @ENGLISH }}} -->
+        <para>Kildekodetreet til Subversion kommer ogs&#229; med et 
+          skall-lignende grensesnitt til depotet.
+          Python-skriptet <command>svnshell.py</command> (lokalisert i 
+          <filename>tools/examples/</filename> i kildekodetreet) bruker 
+          Subversions <!-- &#164; Det h&#818;&#248;&#818;r&#818;e&#818;s&#818; riktig ut, men er det det? 
+          -->spr&#229;kbindinger (s&#229; du m&#229; ha disse skikkelig kompilert og 
+          installert for at dette skriptet skal virke) for &#229; koble seg 
+          til depot- og filsystembibliotekene.</para>
 
+        <!-- @ENGLISH {{{
         <para>Once started, the program behaves similarly to a shell
           program, allowing you to browse the various directories in
           your repository.  Initially, you are
@@ -3043,7 +3141,18 @@ Node-path: spreadsheet/Makefile
           presented with a command prompt.  You can use the
           <literal>help</literal> command at any time to display a
           list of available commands and what they do.</para>
+        @ENGLISH }}} -->
+        <para>N&#229;r det er startet, oppf&#248;rer programmet som likt et skall 
+          og lar deg bla gjennom de forskjellige katalogene i depotet 
+          ditt.
+          I starten er du <quote>plassert</quote> i rotkatalogen for 
+          <literal>HEAD</literal>-revisjonen i depotet, og du f&#229;r en 
+          kommandolinje.
+          Du kan bruke <literal>help</literal>-kommandoen til enhver tid 
+          for &#229; vise en liste over tilgjengelige kommandoer og hva de 
+          gj&#248;r.</para>
 
+        <!-- @ENGLISH {{{
         <screen>
 $ svnshell.py /path/to/repos
 &lt;rev: 2 /&gt;$  help
@@ -3058,7 +3167,25 @@ Available commands:
   youngest     : list the youngest browsable revision number
 &lt;rev: 2 /&gt;$
 </screen>
+        @ENGLISH }}} -->
+        <!-- &#164; Den der b&#248;r virkelig fornorskes, men det tar vi seinere. 
+        Eller kan vi det? Det er jo ikke noe i18n-opplegg p&#229; svnshell.py 
+        for &#248;yeblikket. Hm. --><screen>
+$ svnshell.py /sti/til/depot
+&lt;rev: 2 /&gt;$  help
+Available commands:
+  cat FILE     : dump the contents of FILE
+  cd DIR       : change the current working directory to DIR
+  exit         : exit the shell
+  ls [PATH]    : list the contents of the current directory
+  lstxns       : list the transactions available for browsing
+  setrev REV   : set the current revision to browse
+  settxn TXN   : set the current transaction to browse
+  youngest     : list the youngest browsable revision number
+&lt;rev: 2 /&gt;$
+</screen>
 
+        <!-- @ENGLISH {{{
         <para>Navigating the directory structure of your repository is
           done in the same way you would navigate a regular Unix or
           Windows shell&mdash;using the <literal>cd</literal> command.
@@ -3073,9 +3200,28 @@ Available commands:
           display the contents of the current directory, and you can
           use the <literal>cat</literal> command to display the
           contents of a file.</para>
+        @ENGLISH }}} -->
+        <para>Navigering i katalogstrukturen til depotet ditt gj&#248;res p&#229; 
+          samme m&#229;ten som du gj&#248;r i et vanlig Unix- eller Windowsskall &#8212; 
+          ved &#229; bruke kommandoen <literal>cd</literal>.
+          Kommandolinjeprompten vil til enhver tid vise deg hvilken 
+          revisjon (inneholder forstavelsen <literal>rev:</literal>) 
+          eller transaksjon (inneholder forstavelsen 
+          <literal>txn:</literal>) du unders&#248;ker for &#248;yeblikket, og 
+          stiplasseringen i denne revisjonen eller transaksjonen.
+          Du kan forandre din n&#229;v&#230;rende revisjon eller transaksjon med 
+          henholdsvis <literal>setrev</literal>- og 
+          <literal>settxn</literal>-kommandoen.
+          Som i et Unixskall kan du bruke kommandoen 
+          <literal>ls</literal> for &#229; vise innholdet av den n&#229;v&#230;rende 
+          katalogen, og du kan bruke <literal>cat</literal>-kommandoen 
+          for &#229; vise innholdet av en fil.</para>
 
         <example id="svn-ch-8-sect-3.1.3-ex-1">
+          <!-- @ENGLISH {{{
           <title>Using svnshell to Navigate the Repository</title>
+          @ENGLISH }}} -->
+          <title>Bruk av svnshell for &#229; navigere i depotet</title>
 
           <screen>
 &lt;rev: 2 /&gt;$ ls
@@ -3111,13 +3257,23 @@ $
 </screen>
         </example>
 
+        <!-- @ENGLISH {{{
         <para>As you can see in the previous example, multiple
           commands may be specified at a single command prompt,
           separated by a semicolon.  Also, the shell understands the
           notions of relative and absolute paths, and will properly
           handle the <literal>.</literal> and
           <literal>..</literal> special path components.</para>
+        @ENGLISH }}} -->
+        <para>Som du ser i det forrige eksempelet kan flere kommandoer 
+          bli spesifisert p&#229; en enkelt kommandolinje, separert med et 
+          semikolon.
+          I tillegg forst&#229;r skallet <!-- &#164; notions of --> relative og 
+          absolutte stier og vil behandle stikomponentene 
+          <literal>.</literal> og <literal>..</literal> p&#229; en skikkelig 
+          m&#229;te.</para>
 
+        <!-- @ENGLISH {{{
         <para>The <literal>youngest</literal> command displays the
           youngest revision.  This is useful for determining the range
           of valid revisions you can use as arguments to the
@@ -3130,20 +3286,52 @@ $
           browsable transactions is the same list that
           <command>svnadmin lstxns</command> returns, and the same
           list that is valid for use with <command>svnlook</command>'s
-          <option>--transaction</option> option.</para>
+          <option>-&#64738;-transaction</option> option.</para>
+        @ENGLISH }}} -->
+        <para><literal>youngest</literal>-kommandoen viser den yngste 
+          revisjonen.
+          Dette er nyttig for &#229; ansl&#229; omr&#229;det av gyldige revisjoner du 
+          kan bruke som argumenter til 
+          <literal>setrev</literal>-kommandoen &#8212; du har lov til &#229; bla 
+          gjennom alle revisjonene (husk at de benevnes med heltall) 
+          mellom 0 til og med den yngste.
+          &#197; ansl&#229; de gyldige transaksjonene som du kan bla gjennom er 
+          ikke like <!-- &#164; &#171;Nydelig&#187; blir fors&#229;vidt ikke helt korrekt. 
+          Sjekkes ut n&#229;r jeg kommer p&#229; en maskin med skikkelig python. 
+          -->enkelt.
+          Bruk <command>lstxns</command>-kommandoen for &#229; liste 
+          transaksjonene som du kan bla gjennom.
+          Listen med transaksjoner som du kan bla gjennom er den samme 
+          som <command>svnadmin lstxns</command> returnerer, og den 
+          samme listen som er gyldig for bruk sammen med 
+          <command>svnlook</command>-valget 
+          <option>--transaction</option>.</para>
 
+        <!-- @ENGLISH {{{
         <para>Once you've finished using the shell, you can exit
           cleanly by using the <command>exit</command> command.
           Alternatively, you can supply an end-of-file
           character&mdash;Control-D (though some Win32 Python
           distributions use the Windows Control-Z convention
           instead).</para>
+        @ENGLISH }}} -->
+        <para>N&#229;r du er ferdig med &#229; bruke skallet, kan du trygt 
+          avslutte ved &#229; bruke <command>exit</command>-kommandoen.
+          Alternativt kan du skrive et filslutt-tegn &#8212; Ctrl-d (<!-- &#164; 
+          &#171;though&#187; &#8594; &#171;selv om&#187;. svnshell.py sjekker for EOF i linje 46. 
+          Betyr det at CTRL-d brukes uansett, eller varierer det med 
+          CTRL-z ? -->selv om noen Win32-distribusjoner av Python bruker 
+          Windows-varianten Ctrl-z istedenfor).</para>
 
       </sect3>
 
       <sect3 id="svn-ch-5-sect-3.1.5">
+        <!-- @ENGLISH {{{
         <title>Berkeley DB Utilities</title>
+        @ENGLISH }}} -->
+        <title>Berkeley DB-verkt&#248;y</title>
 
+        <!-- @ENGLISH {{{
         <para>If you're using a Berkeley DB repository, then all of
           your versioned filesystem's structure and data live in a set
           of database tables within the <filename>db</filename>
@@ -3153,7 +3341,17 @@ $
           tools (you can see the documentation for these tools at
           SleepyCat's website, <systemitem
           class="url">http://www.sleepycat.com/</systemitem>).</para>
+        @ENGLISH }}} -->
+        <para>Hvis du bruker et Berkeley DB-depot, vil alle strukturer 
+          og data v&#230;re i et sett med databasetabeller i katalogen 
+          <filename>db</filename> i depotet ditt.
+          Denne underkatalogen er en vanlig Berkeley DB milj&#248;katalog, og 
+          kan derfor bli brukt i forbindelse med alle Berkeley 
+          databaseverkt&#248;y (du kan se dokumentasjonen for disse 
+          verkt&#248;yene p&#229; SleepyCats hjemmeside, <systemitem 
+          class="url">http://www.sleepycat.com/</systemitem>).</para>
 
+        <!-- @ENGLISH {{{
         <para>For day-to-day Subversion use, these tools are
           unnecessary.  Most of the functionality typically needed for
           Subversion repositories has been duplicated in the
@@ -3164,7 +3362,20 @@ $
           <command>db_archive</command> command, and <command>svnadmin
           recover</command> reflects the common use-cases of the
           <command>db_recover</command> utility.</para>
+        @ENGLISH }}} -->
+        <para>For daglig Subversionbruk er disse verkt&#248;yene un&#248;dvendige.
+          Mesteparten av funksjonaliteten som vanligvis er n&#248;dvendig for 
+          Subversiondepot er blitt duplisert i 
+          <command>svnadmin</command>-verkt&#248;yet.
+          For eksempel, <command>svnadmin list-unused-dblogs</command> 
+          og <command>svnadmin list-dblogs</command> utf&#248;rer en <!-- &#164; 
+          subset -->del av hva Berkeley-kommandoen 
+          <command>db_archive</command> gj&#248;r, og <command>svnadmin 
+          recover</command> gjenspeiler de vanlige <!-- &#164; use-cases 
+          -->bruksm&#229;ter for 
+          <command>db_recover</command>-programmet.</para>
             
+        <!-- @ENGLISH {{{
         <para>There are still a few Berkeley DB utilities that you
           might find useful.  The <command>db_dump</command> and
           <command>db_load</command> programs write and read,
@@ -3177,6 +3388,22 @@ $
           utility can provide useful information about the status of
           your Berkeley DB environment, including detailed statistics
           about the locking and storage subsystems.</para>
+        @ENGLISH }}} -->
+        <para>Det er fortsatt noen f&#229; Berkeley DB-programmer som du kan 
+          finne nyttige.
+          Programmene <command>db_dump</command> og 
+          <command>db_load</command> skriver og leser <!-- &#164; Blir det 
+          rar setning hvis h. st&#229;r her? -->henholdsvis et tilpasset 
+          filformat som beskriver n&#248;kler og verdier i en Berkeley 
+          DB-database.
+          Siden Berkeley DB-databaser ikke er portable p&#229; kryss av 
+          maskinarkitekturer, er dette formatet en nyttig m&#229;te &#229; 
+          overf&#248;re disse databasene fra maskin til maskin, uavhengig av 
+          arkitektur eller operativsystem.
+          I tillegg kan programmet <command>db_stat</command> gi deg 
+          nyttig informasjon om statusen til Berkeley DB-milj&#248;et, 
+          inkludert detaljert statistikk om undersystemer som tar seg av 
+          l&#229;sing og lagring.</para>
 
       </sect3>
     </sect2>
