@@ -569,7 +569,7 @@ txn_node_rev_id(struct parse_baton *pb, struct entry *entry, apr_pool_t *pool)
 static const char *
 txn_revstr(struct parse_baton *pb, svn_revnum_t rev, apr_pool_t *pool)
 {
-  return (rev == pb->current_rev) ? "this"
+  return (rev == pb->current_rev) ? "-1"
     : apr_psprintf(pool, "%" SVN_REVNUM_T_FMT, rev);
 }
 
@@ -578,7 +578,7 @@ txn_repstr(struct parse_baton *pb, struct rep_pointer *rep,
            svn_boolean_t only_this, apr_pool_t *pool)
 {
   if (rep->rev == pb->current_rev && only_this)
-    return "this";
+    return "-1";
 
   return apr_psprintf(pool, "%s %" APR_OFF_T_FMT " %" APR_OFF_T_FMT
                       " %" APR_OFF_T_FMT " %s",
