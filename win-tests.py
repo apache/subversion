@@ -1,10 +1,14 @@
 """Driver for running the tests on Windows.
 
-Usage: python win-tests.py [option]
+Usage: python win-tests.py [option] [test-path]
     -r, --release      test the Release configuration
     -d, --debug        test the Debug configuration (default)
-    -u URL, --url=URL  run DAV tests against URL
+    -u URL, --url=URL  run ra_dav or ra_svn tests against URL; will start
+                       svnserve for ra_svn tests
     -v, --verbose      talk more
+
+    --svnserve-args=list   comma-separated list of arguments for svnserve;
+                           default is '-d,-r,<test-path-root>'
 """
 
 
@@ -45,9 +49,11 @@ client_tests = ['subversion/tests/clients/cmdline/getopt_tests.py',
 
 import os, sys, string, shutil, traceback
 import getopt
+import ConfigParser
 
-opts, args = getopt.getopt(sys.argv[1:], 'rdvcu:',
-                           ['release', 'debug', 'verbose', 'cleanup', 'url='])
+opts, args = getopt.getopt(sys.argv[1:], 'rdvcu:sS:',
+                           ['release', 'debug', 'verbose', 'cleanup', 'url=',
+                            'svnserve-args='])
 if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
@@ -59,6 +65,8 @@ verbose = 0
 cleanup = None
 objdir = 'Debug'
 log = 'tests.log'
+run_svnserve = None
+svnserve_args = None
 
 for opt,arg in opts:
   if opt in ['-r', '--release']:
@@ -77,12 +85,15 @@ for opt,arg in opts:
       log = 'dav-tests.log'
     elif arg[:3] == 'svn':
       log = 'svn-tests.log'
+      run_svnserve = 1
     else:
       # Don't know this schema, but who're we to judge whether it's
       # correct or not?
       log = 'url-tests.log'
+  elif opt == '--svnserve-args':
+    svnserve_args = string.split(arg, ',')
+    run_svnserve = 1
 
-print 'Testing', objdir, 'configuration on', repo_loc
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -122,6 +133,48 @@ def copy_execs(dummy, dirname, names):
     except:
       traceback.print_exc(file=sys.stdout)
       pass
+
+def locate_libs():
+  "Move APR DLLs to a known location and set env vars"
+  def get(cp, section, option, default):
+    if cp.has_option(section, option):
+      return cp.get(section, option)
+    else:
+      return default
+
+  cp = ConfigParser.ConfigParser()
+  cp.read('gen-make.opts')
+  apr_path = get(cp, 'options', '--with-apr', 'apr')
+  apr_dll_path = os.path.join(apr_path, objdir, 'libapr.dll')
+  aprutil_path = get(cp, 'options', '--with-apr-util', 'apr-util')
+  aprutil_dll_path = os.path.join(aprutil_path, objdir, 'libaprutil.dll')
+  apriconv_path = get(cp, 'options', '--with-apr-iconv', 'apr-iconv')
+  apriconv_dll_path = os.path.join(apriconv_path, objdir, 'libapriconv.dll')
+  apriconv_so_path = os.path.join(apriconv_path, objdir, 'iconv')
+
+  shutil.copy(apr_dll_path, abs_objdir)
+  shutil.copy(aprutil_dll_path, abs_objdir)
+  shutil.copy(apriconv_dll_path, abs_objdir)
+
+  os.environ['APR_ICONV_PATH'] = apriconv_so_path
+  os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
+
+def start_svnserve():
+  "Run svnserve for ra_svn tests"
+  global svnserve_args
+  svnserve_name = 'svnserve.exe'
+  svnserve_path = os.path.join(abs_objdir,
+                               'subversion', 'svnserve', svnserve_name)
+  svnserve_root = os.path.join(abs_builddir,
+                               'subversion', 'tests', 'clients', 'cmdline')
+  if not svnserve_args:
+    svnserve_args = [svnserve_name, '-d', '-r', svnserve_root]
+  else:
+    svnserve_args = [svnserve_name] + svnserve_args
+  os.spawnv(os.P_NOWAIT, svnserve_path, svnserve_args)
+
+# Move the binaries to the test directory
+locate_libs()
 if create_dirs:
   old_cwd = os.getcwd()
   try:
@@ -136,6 +189,10 @@ if create_dirs:
 
 
 # Run the tests
+if run_svnserve:
+  print 'Starting', objdir, 'svnserve'
+  start_svnserve()
+print 'Testing', objdir, 'configuration on', repo_loc
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 import run_tests
 th = run_tests.TestHarness(abs_srcdir, abs_builddir, sys.executable, None,

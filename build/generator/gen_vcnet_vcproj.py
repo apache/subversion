@@ -99,16 +99,16 @@ class Generator(gen_win.WinGeneratorBase):
 
     # apr doesn't supply vcproj files, so move our pre-defined ones
     # over if they don't match
-    self.move_proj_file('apr', 'apr.vcproj')
-    self.move_proj_file('apr-iconv', 'apriconv.vcproj')
-    self.move_proj_file(os.path.join('apr-iconv','ccs'),
+    self.move_proj_file(self.apr_path, 'apr.vcproj')
+    self.move_proj_file(self.apr_iconv_path, 'apriconv.vcproj')
+    self.move_proj_file(os.path.join(self.apr_iconv_path,'ccs'),
                         'apriconv_ccs_modules.vcproj')
-    self.move_proj_file(os.path.join('apr-iconv','ces'),
+    self.move_proj_file(os.path.join(self.apr_iconv_path,'ces'),
                         'apriconv_ces_modules.vcproj')
-    self.move_proj_file('apr-util', 'aprutil.vcproj')
-    self.move_proj_file(os.path.join('apr-util','uri'),
+    self.move_proj_file(self.apr_util_path, 'aprutil.vcproj')
+    self.move_proj_file(os.path.join(self.apr_util_path,'uri'),
                         'gen_uri_delims.vcproj')
-    self.move_proj_file(os.path.join('apr-util','xml', 'expat', 'lib'),
+    self.move_proj_file(os.path.join(self.apr_util_path,'xml', 'expat', 'lib'),
                         'xml.vcproj')
 
     install_targets = self.get_install_targets()

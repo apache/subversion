@@ -40,6 +40,9 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       os.unlink(src)
 
   def parse_options(self, options):
+    self.apr_path = os.path.abspath('apr')
+    self.apr_util_path = os.path.abspath('apr-util')
+    self.apr_iconv_path = os.path.abspath('apr-iconv')
     self.bdb_path = None
     self.httpd_path = None
     self.zlib_path = None
@@ -54,6 +57,12 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     for opt, val in options:
       if opt == '--with-berkeley-db':
         self.bdb_path = os.path.abspath(val)
+      elif opt == '--with-apr':
+        self.apr_path = os.path.abspath(val)
+      elif opt == '--with-apr-util':
+        self.apr_util_path = os.path.abspath(val)
+      elif opt == '--with-apr-iconv':
+        self.apr_iconv_path = os.path.abspath(val)
       elif opt == '--with-httpd':
         self.httpd_path = os.path.abspath(val)
         del self.skip_sections['mod_dav_svn']
@@ -154,7 +163,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
         print 'Wrote %s' % svnissdeb
 
     # Generate the build_neon.bat file
-    data = {'zlib_path': self.zlib_path,
+    data = {'expat_path': self.apr_util_path + '/xml/expat/lib',
+            'zlib_path': self.zlib_path,
             'openssl_path': self.openssl_path}
     self.write_with_template(os.path.join('build', 'win32', 'build_neon.bat'),
                              'build_neon.ezt', data)
@@ -241,6 +251,7 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                                              gen_base.TargetProject)
     section.create_targets(self.graph, dep.name + "_fake", self.cfg,
                            self._extension_map)
+    section.target.msvc_name = dep.msvc_name and dep.msvc_name + "_fake"
     self.graph.add(gen_base.DT_LINK, section.target.name, dep)
     dep.msvc_fake = section.target
     return section.target
@@ -313,6 +324,10 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     # underscores and replace *-test with test_* (so that the test
     # programs are visually separare from the rest of the projects)
     for target in install_targets:
+      if target.msvc_name:
+        target.proj_name = target.msvc_name
+        continue
+
       name = target.name
       pos = string.find(name, '-test')
       if pos >= 0:
@@ -330,13 +345,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
       depends = []
     else:
       depends = self.sections['__CONFIG__'].get_dep_targets(target)
-
-    ### If we link everything with the dynamic apr library instead of the
-    ### static one we could get rid of a lot of this special case apache 
-    ### code...
-    if isinstance(target, gen_base.TargetApacheMod):
-      depends.extend(self.graph.get_sources(gen_base.DT_NONLIB, target.name))
-      return depends
 
     depends.extend(self.get_win_depends(target))
 
@@ -363,7 +371,8 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     top_call = top_static or not isinstance(target, gen_base.TargetLib) \
                or not target.msvc_static 
 
-    for dep in self.graph.get_sources(gen_base.DT_LINK, target.name):
+    for dep in (self.graph.get_sources(gen_base.DT_LINK, target.name) +
+                self.graph.get_sources(gen_base.DT_NONLIB, target.name)):
       if not isinstance(dep, gen_base.Target):
         continue
 
@@ -395,9 +404,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     if isinstance(target, gen_base.TargetApacheMod):
       if target.name == 'mod_dav_svn':
         fakedefines.extend(["AP_DECLARE_EXPORT"])
-      pass
-    else:
-      fakedefines.extend(["APR_DECLARE_STATIC","APU_DECLARE_STATIC"])
 
     if isinstance(target, gen_base.TargetSWIG):
       fakedefines.append("SWIG_GLOBAL")
@@ -424,21 +430,22 @@ class WinGeneratorBase(gen_base.GeneratorBase):
                                         ""],
                                        rootpath)
       fakeincludes.extend([
-        self.httpd_path + "/srclib/apr/include",
-        self.httpd_path + "/srclib/apr-util/include",
-        self.httpd_path + "/srclib/apr-util/xml/expat/lib",
+        self.apr_path + "/include",
+        self.apr_util_path + "/include",
+        self.apr_util_path + "/xml/expat/lib",
         self.httpd_path + "/include"
         ])
     elif isinstance(target, gen_base.TargetSWIG):
       fakeincludes = self.map_rootpath(["subversion/bindings/swig",
                                         "subversion/include",
-                                        "apr/include",
-                                        "apr-util/include"], rootpath)
+                                        self.apr_path + "/include",
+                                        self.apr_util_path + "/include"],
+                                       rootpath)
     else:
       fakeincludes = self.map_rootpath(["subversion/include",
-                                        "apr/include",
-                                        "apr-util/include",
-                                        "apr-util/xml/expat/lib",
+                                        self.apr_path + "/include",
+                                        self.apr_util_path + "/include",
+                                        self.apr_util_path + "/xml/expat/lib",
                                         "neon/src",
                                         self.dbincpath,
                                         ""],
@@ -456,9 +463,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.extend([
         self.httpd_path + "/%s" % cfg,
-        self.httpd_path + "/srclib/apr/%s" % cfg,
-        self.httpd_path + "/srclib/apr-util/%s" % cfg,
-        self.httpd_path + "/srclib/apr-util/xml/expat/lib/%s" % libcfg
         ])
       if target.name == 'mod_dav_svn':
         fakelibdirs.extend([self.httpd_path + "/modules/dav/main/%s" % cfg])
@@ -469,23 +473,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     "Return the list of external libraries needed for target"
 
     dblib = self.dblibname+(cfg == 'Debug' and 'd.lib' or '.lib')
-
-    if isinstance(target, gen_base.TargetApacheMod):
-      if target.name == 'mod_dav_svn':
-        libs = [ dblib,
-                 'mod_dav.lib' ]
-      else:
-        libs = []
-      libs.extend([ 'xml.lib',
-                    'libapr.lib',
-                    'libaprutil.lib',
-                    'libhttpd.lib',
-                    'mswsock.lib',
-                    'ws2_32.lib',
-                    'advapi32.lib',
-                    'rpcrt4.lib',
-                    'shfolder.lib' ])
-      return libs
 
     if not isinstance(target, gen_base.TargetLinked):
       return []
@@ -515,15 +502,6 @@ class WinGeneratorBase(gen_base.GeneratorBase):
     "Return the list of source files that need to be compliled for target"
 
     sources = { }
-
-    if isinstance(target, gen_base.TargetApacheMod):
-      # get (fname, reldir) pairs for dependent libs
-      for dep_tgt in self.get_win_depends(target):
-        if not isinstance(dep_tgt, gen_base.TargetLib):
-          continue
-        subdir = string.replace(dep_tgt.name, 'libsvn_', '')
-        for src in self.get_win_sources(dep_tgt, subdir):
-          sources[src] = None
 
     for obj in self.graph.get_sources(gen_base.DT_LINK, target.name):
       if isinstance(obj, gen_base.Target):
