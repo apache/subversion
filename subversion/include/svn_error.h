@@ -197,6 +197,7 @@ void svn_handle_warning (FILE *stream, svn_error_t *error);
     svn_error_t *svn_err__temp = (expr);                    \
     if (svn_err__temp) {                                    \
       svn_handle_error (svn_err__temp, stderr, FALSE);      \
+      svn_error_clear (svn_err__temp);                      \
       return EXIT_FAILURE; }                                \
   } while (0)
 
