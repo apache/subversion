@@ -49,7 +49,7 @@ static svn_error_t *
 write_new_rep (const char **msg, apr_pool_t *pool)
 {
   struct write_new_rep_args args;
-  const char *rep = "(\"fulltext\" \"a83t2Z0q\")";
+  const char *rep = "(fulltext a83t2Z0q)";
 
   *msg = "Write a new rep, get a new key back.";
 
@@ -67,8 +67,6 @@ write_new_rep (const char **msg, apr_pool_t *pool)
     return svn_error_create (SVN_ERR_FS_GENERAL, 0, NULL, pool,
                              "error writing new representation");
 
-  printf ("GOT KEY: %s\n", args.key);
-  
   return SVN_NO_ERROR;
 }
 
