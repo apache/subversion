@@ -762,7 +762,8 @@ representation_string (representation_t *rep,
                          " %" SVN_FILESIZE_T_FMT " %s",
                          rep->revision, rep->offset, rep->size,
                          rep->expanded_size,
-                         svn_md5_digest_to_cstring (rep->checksum, pool));
+                         svn_md5_digest_to_cstring_display (rep->checksum,
+                                                            pool));
 }
 
 /* Write the node-revision NODEREV into the file FILE.  Temporary
@@ -1600,12 +1601,13 @@ rep_read_contents (void *baton,
           rb->checksum_finalized = TRUE;
           apr_md5_final (checksum, &rb->md5_context);
           if (! svn_md5_digests_match (checksum, rb->checksum))
-            return svn_error_createf (SVN_ERR_FS_CORRUPT, NULL,
+            return svn_error_createf
+              (SVN_ERR_FS_CORRUPT, NULL,
                _("Checksum mismatch while reading representation:\n"
                  "   expected:  %s\n"
                  "     actual:  %s\n"),
-               svn_md5_digest_to_cstring (rb->checksum, rb->pool),
-               svn_md5_digest_to_cstring (checksum, rb->pool));
+               svn_md5_digest_to_cstring_display (rb->checksum, rb->pool),
+               svn_md5_digest_to_cstring_display (checksum, rb->pool));
         }
     }
   return SVN_NO_ERROR;

@@ -781,7 +781,8 @@ svn_wc_transmit_text_deltas (const char *path,
           unsigned char tb_digest[APR_MD5_DIGESTSIZE];
 
           SVN_ERR (svn_io_file_checksum (tb_digest, tb, pool));
-          base_digest_hex = svn_md5_digest_to_cstring (tb_digest, pool);
+          base_digest_hex = svn_md5_digest_to_cstring_display (tb_digest,
+                                                               pool);
 
           if (strcmp (base_digest_hex, ent->checksum) != 0)
             {
