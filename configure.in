@@ -8,7 +8,7 @@ dnl First line is *required*;  sanity-checks that the our src dir exists.
 AC_INIT(subversion/include/svn_types.h)
 
 dnl Required to initialize all of the `automake' macros
-AM_INIT_AUTOMAKE(Subversion, 0.0, no-define)
+AM_INIT_AUTOMAKE(subversion, 0.1, no-define)
 
 dnl AC_CONFIG_HEADER causes `autoheader' to produce config.h.in for us.
 dnl   (We can add custom defines by creating ./acconfig.h if we wish.)
@@ -99,9 +99,10 @@ dnl            subversion/libsvn_vcdiff/Makefile                 \
 dnl            subversion/libsvn_svr/tests/Makefile])
 
 AC_OUTPUT([Makefile                                           \
+           doc/Makefile                                       \
            subversion/Makefile                                \
            subversion/libsvn_string/Makefile                  \
            subversion/libsvn_string/tests/Makefile            \
-           subversion/libsvn_subr/Makefile                  \
-           subversion/libsvn_subr/tests/Makefile            \
+           subversion/libsvn_subr/Makefile                    \
+           subversion/libsvn_subr/tests/Makefile              \
           ])

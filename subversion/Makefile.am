@@ -7,4 +7,3 @@
 ##         libsvn_wc
 
 SUBDIRS = libsvn_string libsvn_subr
-

@@ -1,26 +1,33 @@
-Design documentation for Subversion is here.
+Documentation for Subversion is here, in texinfo format.
 
-You'll want to get 
+The auto-generated 'Makefile' knows how to build the following targets:
 
-   ftp://ftp.gnu.org/pub/gnu/texinfo/texinfo-4.0.tar.gz
+   info  (the default target)
+   dvi
+   ps
+   pdf
+   txt
+   html
+   everything:  info dvi ps pdf txt html
 
-and use the up-to-date `makeinfo' found therein.
 
-============================================================================
+   ... and also standard "log, install, etc."  The "www" rule
+automatically copies all necessary docs to ../www for web-site updates.
+
+To build particular things, you'll need one or more of:
+
+  * the `makeinfo' from ftp://ftp.gnu.org/pub/gnu/texinfo/texinfo-4.0.tar.gz
+  * Karl Fogel's `cvs2cl.pl' script, which creates a ChangeLog from CVS.
+  * the `dvipdf' script from Ghostscript (pipes dvi | ps | Ghostscript)
+
+
+
+
+-------------- DOC NOTES ---------------------------------------------------
+
+-------------
 JimB fixed up a lot of our Texinfo problems, here's what he says:
-============================================================================
-
-I think I've got things straightened out now.  Unfortunately, I don't
-seem to have permission to check anything into the repository.  We are
-working on the Tigris repository again, right?
-
-savonarola:doc$ cvs commit
-cvs commit: Examining .
-Waiting for Emacs...Done
-cvs server: User 'jimb' cannot access .
-cvs server: User 'jimb' cannot access .
-cvs server: User 'jimb' cannot access .
-
+-------------
 
 Anyway, once I can commit things, here's the scoop:
 
