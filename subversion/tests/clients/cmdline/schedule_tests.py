@@ -18,7 +18,7 @@
 ######################################################################
 
 # General modules
-import string, sys, os.path
+import string, sys, os, shutil
 
 # Our testing module
 import svntest
@@ -535,6 +535,64 @@ def commit_delete_dirs(sbox):
   return 1
   return 0
 
+#----------------------------------------------------------------------
+# Regression test for issue #863:
+#
+# Suppose here is a either scheduled-add file or directory which is
+# also missing.  If I want to make the working copy forget all
+# knowledge of the item ("unschedule" the addition), then either 'svn
+# revert' or 'svn rm' will make that happen, with no errors.  The
+# entry is simply removed from the entries file.
+
+def unschedule_missing_added(sbox):
+  "schedule: unschedule addition on missing items"
+
+  wc_dir = sbox.wc_dir
+
+  if svntest.actions.make_repo_and_wc(sbox):
+    return 1
+
+  # Create some files and dirs, then schedule them for addition
+  file1_path = os.path.join(wc_dir, 'file1')
+  file2_path = os.path.join(wc_dir, 'file2')
+  dir1_path = os.path.join(wc_dir, 'dir1')
+  dir2_path = os.path.join(wc_dir, 'dir2')
+  
+  svntest.main.file_append(file1_path, "This is the file 'file1'.")
+  svntest.main.file_append(file2_path, "This is the file 'file2'.")
+  svntest.main.run_svn(None, 'add', file1_path, file2_path)
+  svntest.main.run_svn(None, 'mkdir', dir1_path, dir2_path)
+  
+  # Make sure the 4 adds show up as such in status
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'file1' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'file2' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'dir1' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'dir2' : Item(status='A ', wc_rev=0, repos_rev=1),
+    })
+
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
+  # Poof, all 4 added things are now missing in action.
+  os.remove(file1_path)
+  os.remove(file2_path)
+  shutil.rmtree(dir1_path)
+  shutil.rmtree(dir2_path)
+
+  # Unschedule the additions, using 'svn rm' and 'svn revert'.
+  svntest.main.run_svn(None, 'rm', file1_path, dir1_path)
+  svntest.main.run_svn(None, 'revert', file2_path, dir2_path)
+
+  # 'svn st' should now show absolutely zero local mods.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  if svntest.actions.run_and_verify_status(wc_dir, expected_status):
+    return 1
+
+  return 0
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -560,6 +618,7 @@ test_list = [ None,
               Skip(XFail(commit_add_executable), (os.name != 'posix')),
               XFail(commit_delete_files),
               XFail(commit_delete_dirs),
+              unschedule_missing_added,
              ]
 
 if __name__ == '__main__':
