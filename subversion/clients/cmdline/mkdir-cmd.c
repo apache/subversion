@@ -67,7 +67,7 @@ svn_cl__mkdir (apr_getopt_t *os,
                 &svn_cl__get_log_message,
                 svn_cl__make_log_msg_baton (opt_state, NULL, pool),
                 notify_func, notify_baton, pool));
-      if (commit_info)
+      if (commit_info && ! opt_state->quiet)
         svn_cl__print_commit_info (commit_info);
     }
 

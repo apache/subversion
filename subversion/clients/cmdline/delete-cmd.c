@@ -91,7 +91,7 @@ svn_cl__delete (apr_getopt_t *os,
          notify_func, notify_baton, subpool);
       if (err)
         return svn_cl__may_need_force (err);
-      if (commit_info)
+      if (commit_info && ! opt_state->quiet)
         svn_cl__print_commit_info (commit_info);
       
       svn_pool_clear (subpool);
