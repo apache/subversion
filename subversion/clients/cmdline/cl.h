@@ -75,7 +75,6 @@ typedef struct svn_cl__opt_state_t
 
   const char *message;           /* log message */
   const char *xml_file;          /* xml source/target file */ /* UTF-8! */
-  const char *target;            /* target, T in "svn co -d T" */ /* UTF-8! */
   const char *ancestor_path;     /* ### todo: who sets this? */
   svn_boolean_t force;           /* be more forceful, as in "svn rm -f ..." */
   svn_boolean_t quiet;           /* sssh...avoid unnecessary output */

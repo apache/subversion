@@ -58,7 +58,7 @@ def basic_checkout(sbox):
   A_url = os.path.join(svntest.main.current_repo_url, 'A')
   stdout_lines, stderr_lines = svntest.main.run_svn ("Obstructed update",
                                                      'checkout', A_url,
-                                                     '-d', wc_dir)
+                                                     wc_dir)
 
   # Make some changes to the working copy
   mu_path = os.path.join(wc_dir, 'A', 'mu')
@@ -87,7 +87,7 @@ def basic_checkout(sbox):
   # Repeat checkout of original URL into working copy with modifications
   url = svntest.main.current_repo_url
   stdout_lines, stderr_lines = svntest.main.run_svn (None, 'checkout', url,
-                                                     '-d', wc_dir)
+                                                     wc_dir)
   if len (stderr_lines) != 0:
     print "repeat checkout failed"
     return 1

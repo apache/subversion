@@ -49,7 +49,6 @@
 
 const apr_getopt_option_t svn_cl__options[] =
   {
-    {"destination",   'd', 1, "put results in new directory ARG"}, 
     {"force",         svn_cl__force_opt, 0, "force operation to run"},
     {"help",          'h', 0, "show help on a subcommand"},
     /* ### APR is broken. we can't pass NULL for the name, as the doc says */
@@ -130,8 +129,10 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
 
   { "checkout", svn_cl__checkout, {"co"},
     "Check out a working copy from a repository.\n"
-    "usage: svn checkout REPOS_URL\n",    
-    {'d', 'r', 'D', 'q', 'n',
+    "usage: svn checkout REPOS_URL [DESTINATION]\n"
+    "  Note: If DESTINATION is omitted, the basename of the REPOS_URL will\n"
+    "  be used as the destination.\n",
+    {'r', 'D', 'q', 'n',
      svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__xml_file_opt }  },
 
@@ -144,8 +145,8 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   { "commit", svn_cl__commit, {"ci"},
     "Send changes from your working copy to the repository.\n"
     "usage: svn commit [TARGETS]\n\n"
-    "   Be sure to use one of -m or -F to send a log message;\n"
-    "   the -r switch is only for use with --xml-file.\n",
+    "  Be sure to use one of -m or -F to send a log message;\n"
+    "  the -r switch is only for use with --xml-file.\n",
     {'m', 'F', 'q', 'n', svn_cl__targets_opt,
      svn_cl__force_opt, svn_cl__auth_username_opt, svn_cl__auth_password_opt,
      svn_cl__xml_file_opt, 'r', svn_cl__msg_encoding_opt} },
@@ -357,7 +358,7 @@ const svn_cl__cmd_desc_t svn_cl__cmd_table[] =
   
   { "switch", svn_cl__switch, {"sw"},
     "Update working copy to mirror a new URL\n"
-    "usage: switch [TARGET] REPOS_URL\n\n" /* ### should args be reversed? */
+    "usage: switch REPOS_URL [TARGET]\n\n"
     "   Note:  this is the way to move a working copy to a new branch.\n",
     {'r', 'D', 'n', svn_cl__auth_username_opt, svn_cl__auth_password_opt} },
  
@@ -973,15 +974,6 @@ main (int argc, const char * const *argv)
       case svn_cl__xml_file_opt:
         err = svn_utf_cstring_to_utf8 (&opt_state.xml_file, opt_arg,
                                        NULL, pool);
-        if (err)
-          {
-            svn_handle_error (err, stdout, FALSE);
-            svn_pool_destroy (pool);
-            return EXIT_FAILURE;
-          }
-        break;
-      case 'd':
-        err = svn_utf_cstring_to_utf8 (&opt_state.target, opt_arg, NULL, pool);
         if (err)
           {
             svn_handle_error (err, stdout, FALSE);
