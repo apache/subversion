@@ -65,9 +65,9 @@ const char *dav_svn_get_txn(const dav_svn_repos *repos,
           return NULL;
         }
       txn_name = apr_pstrdup(repos->pool, value.dptr);   /* null-term'd */
+      apr_dbm_freedatum(dbm, value);
     }
 
-  apr_dbm_freedatum(dbm, value);
   apr_dbm_close(dbm);
 
   return txn_name;
