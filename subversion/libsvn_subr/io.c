@@ -1969,25 +1969,6 @@ svn_io_dir_walk (const char *dirname,
 }
 
 
-svn_error_t *
-svn_io_file_printf (apr_file_t *fptr, const char *format, ...)
-{
-  va_list ap;
-  const char *buf, *buf_apr;
-
-  va_start (ap, format);
-  buf = apr_pvsprintf (apr_file_pool_get (fptr), format, ap); 
-  va_end(ap);
-
-  SVN_ERR (svn_path_cstring_from_utf8 (&buf_apr, buf,
-                                       apr_file_pool_get (fptr)));
-
-  return do_io_file_wrapper_cleanup
-    (fptr, apr_file_puts (buf_apr, fptr), "write to",
-     apr_file_pool_get (fptr));
-}
-
-
 
 /**
  * Determine if a directory is empty or not.
