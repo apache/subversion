@@ -69,14 +69,32 @@ svn_wc_merge (const char *left,
     }
   else
     {
+      /* The target is already in repository form, so we just need to
+         operate on a copy of it. */
       SVN_ERR (svn_io_open_unique_file (&tmp_f,
                                         &tmp_target,
                                         merge_target,
                                         SVN_WC__TMP_EXT,
                                         FALSE,
                                         pool));
+      apr_err = apr_file_close (tmp_f);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        return svn_error_createf
+          (apr_err, 0, NULL, pool,
+           "svn_wc_merge: unable to close tmp file `%s'", tmp_target->data);
+      
+      SVN_ERR (svn_io_copy_file (merge_target, tmp_target->data, FALSE, pool));
+
+      apr_err = apr_file_open (&tmp_f, tmp_target->data,
+                               APR_WRITE, APR_OS_DEFAULT, pool);
+      if (! APR_STATUS_IS_SUCCESS (apr_err))
+        return svn_error_createf
+          (apr_err, 0, NULL, pool,
+           "svn_wc_merge: unable to open tmp file `%s'", tmp_target->data);
     }
 
+  /* tmp_target is now guaranteed to point to a repository-form copy
+     of merge_target. */
   svn_path_split (target, &parent_dir, &basename, pool);
   SVN_ERR (svn_io_run_diff3 (parent_dir->data,
                              tmp_target->data, left, right,
@@ -93,7 +111,7 @@ svn_wc_merge (const char *left,
 
   if (exit_code == 1)  /* got a conflict */
     {
-      /* Preserve the three files pre-merge files, and modify the
+      /* Preserve the three pre-merge files, and modify the
          entry (mark as conflicted, track the preserved files). */ 
 
       svn_stringbuf_t *left_copy, *right_copy, *target_copy;
@@ -177,14 +195,38 @@ svn_wc_merge (const char *left,
       /* Preserve MERGE_TARGET, which is already in expanded form. */
       SVN_ERR (svn_wc_copy_and_translate (merge_target, target_copy->data, eol,
                                           FALSE, keywords, TRUE, pool));
+
+      /* Mark merge_target's entry as "Conflicted". */
+      
+
+      /* ### need to track these 3 backup files in the entries file */
+
     }
 
-  /* Replace MERGE_TARGET with the new merged file, expanding. */
+  /* Unconditionally replace MERGE_TARGET with the new merged file,
+     expanding. */
   SVN_ERR (svn_wc__get_keywords (&keywords, merge_target, NULL, pool));
   SVN_ERR (svn_wc__get_eol_style (&eol_style, &eol, merge_target, pool));
   SVN_ERR (svn_wc_copy_and_translate (tmp_target->data, merge_target, eol,
                                       FALSE, keywords, TRUE, pool));
-  return SVN_NO_ERROR;
+
+  /* Don't forget to clean up tmp_target. */
+  apr_err = apr_file_remove (tmp_target->data, pool);
+  if (! APR_STATUS_IS_SUCCESS (apr_err))
+    return svn_error_createf
+      (apr_err, 0, NULL, pool,
+       "svn_wc_merge: unable to delete tmp file `%s'", tmp_target->data);
+
+
+  /* The docstring promises we'll return a CONFLICT error if
+     appropriate;  presumably callers will specifically look for this. */
+  if (exit_code == 1)
+    return svn_error_createf
+      (SVN_ERR_WC_CONFLICT, 0, NULL, pool,
+       "svn_wc_merge: `%s' had conflicts during merge", merge_target);
+
+  else
+    return SVN_NO_ERROR;
 }
 
 
