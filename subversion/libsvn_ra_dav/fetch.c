@@ -1494,6 +1494,7 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
                                           const char *name,
                                           const svn_string_t *value)
 {
+  const char *val = NULL;
   svn_ra_session_t *ras = session_baton;
   svn_ra_dav_resource_t *baseline;
   svn_boolean_t is_svn_prop;
@@ -1543,9 +1544,16 @@ svn_error_t *svn_ra_dav__change_rev_prop (void *session_baton,
   propname_struct.name = is_svn_prop ? (name + sizeof(SVN_PROP_PREFIX) - 1) 
                                      : name;
 
+  if (value)
+    {
+      svn_stringbuf_t *valstr = NULL;
+      svn_xml_escape_cdata_cstring(&valstr, value->data, ras->pool);
+      val = valstr->data;
+    }
+
   po[0].name = &propname_struct;
   po[0].type = value ? ne_propset : ne_propremove;
-  po[0].value = value? value->data : NULL; /* ### ESCAPE binary value!! */
+  po[0].value = val;
   
   rv = ne_proppatch(ras->sess, baseline->url, po);
   if (rv != NE_OK)
