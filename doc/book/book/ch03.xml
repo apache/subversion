@@ -272,7 +272,7 @@
         <varlistentry>
           <term>File changes</term>
           <listitem>
-            <para>This is the simplest sort of change.  Unlike other revision control
+            <para>This is the simplest sort of change.  Unlike other version control
               systems, you don't need to tell Subversion that you intend to change a
               file; just do it.  Later on, Subversion will be able to automatically
               detect which files have been changed.</para>
@@ -467,7 +467,7 @@
           <listitem>
             <para>The file or directory
               <filename>file_or_dir</filename> indicates that this file
-              or directory is not under revision control.  You can
+              or directory is not under version control.  You can
               silence the question marks by either passing the
               <option>--quiet</option> (<option>-q</option>)
               switch to <command>svn status</command>, or by setting the
@@ -481,7 +481,7 @@
           <term><computeroutput>!      file_or_dir</computeroutput></term>
           <listitem>
             <para>The file or directory
-              <filename>file_or_dir</filename> is under revision
+              <filename>file_or_dir</filename> is under version
               control but the working copy is missing.  This happens
               if the file or directory is removed using a
               non-Subversion command.  A quick <command>svn
@@ -495,7 +495,7 @@
           <term><computeroutput>~     file_or_dir</computeroutput></term>
           <listitem>
             <para>The file or directory
-           <filename>file_or_dir</filename> is under revision control
+           <filename>file_or_dir</filename> is under version control
            as one kind of object, but what's actually on disk is some
            other kind.  For example, Subversion might be expecting a
            file, but the user has removed the file and created a

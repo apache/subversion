@@ -26,7 +26,7 @@
     <title>Target audience</title>
 
     <para>The intended audience of this book is anyone who has used a
-      revision control system before, although perhaps not Subversion
+      version control system before, although perhaps not Subversion
       or CVS.  It assumes that the reader is computer-literate, and
       reasonably comfortable at a Unix command-line.</para>
 
@@ -48,17 +48,17 @@
 
       <title>History of Revision Control</title>
       
-      <para>Subversion is a free/open-source <firstterm>revision
+      <para>Subversion is a free/open-source <firstterm>version
           control system</firstterm>.  That is, Subversion manages
         files over time.  The files are placed into a central
         <firstterm>repository</firstterm>.  The repository is much
         like an ordinary file server, except that it remembers every
         change ever made to your files.  This allows you to recover
         older versions of your files, or browse the history of how
-        your files changed.  Many people think of a revision control
+        your files changed.  Many people think of a version control
         system as a sort of ``time machine.''</para>
       
-      <para>Some revision control systems are also <firstterm>software
+      <para>Some version control systems are also <firstterm>software
           configuration management</firstterm> (SCM) systems.  These
         systems are specifically tailored to manage trees of source
         code, and have many features that are specific to software
@@ -79,7 +79,7 @@
         can find more information about CVS at <systemitem
           class="url">http://www.cvshome.org/</systemitem>.</para>
       
-      <para>At the time of writing, CVS is the standard Free revision
+      <para>At the time of writing, CVS is the standard Free version
         control system used by the open-source community.  It has a
         hard-earned, well-deserved reputation as stable and useful
         software, and has a design that makes it perfect for
