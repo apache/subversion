@@ -7,29 +7,6 @@ dnl python bindings.
 
 AC_DEFUN(SVN_CHECK_SWIG,
 [
-  AC_ARG_ENABLE(swig-bindings,
-                AC_HELP_STRING([--enable-swig-bindings=LIST],
-                               [Build swig bindings for LIST targets only. 
-                                LIST is a comma separated list of targets
-                                or 'all' for all available targets; currently
-                                perl and python are supported
-                                (default=all)]),
-  [
-    case "$enableval" in
-      "yes")
-         SWIG_BINDINGS_ENABLE(all)
-      ;;
-      "no")
-      ;;
-      *)
-         SWIG_BINDINGS_ENABLE($enableval)
-      ;;
-    esac
-  ],
-  [
-    SWIG_BINDINGS_ENABLE(all)
-  ])
-
   AC_ARG_WITH(swig,
               AC_HELP_STRING([--with-swig=PATH],
                              [Try to use 'PATH/bin/swig' to build the
@@ -51,20 +28,6 @@ AC_DEFUN(SVN_CHECK_SWIG,
   [
     SVN_FIND_SWIG(check)
   ])
-])
-
-AC_DEFUN(SWIG_BINDINGS_ENABLE,
-[
-  bindings=$1
-
-  if test "$bindings" = "all"; then
-    bindings="perl,python,ruby"
-  fi
-
-  for binding in `echo "$bindings" | sed -e "s/,/ /g"`; do
-    eval "svn_swig_bindings_enable_$binding='yes'"
-    AC_MSG_NOTICE([Enabled swig binding: $binding])
-  done
 ])
 
 AC_DEFUN(SVN_FIND_SWIG,
@@ -145,7 +108,7 @@ AC_DEFUN(SVN_FIND_SWIG,
       SWIG_LIBSWIG_DIR="$ac_cv_swig_swiglib_dir"
     fi
     
-    if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_python" = "yes"; then
+    if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes"; then
       AC_MSG_NOTICE([Configuring python swig binding])
       AC_CACHE_CHECK([if swig needs -L for its libraries],
         [ac_cv_swig_ldflags],[
@@ -217,7 +180,7 @@ AC_DEFUN(SVN_FIND_SWIG,
                          [ for apr_int64_t])
     fi
 
-    if test "$PERL" != "none" -a "$SWIG_SUITABLE" = "yes" -a "$svn_swig_bindings_enable_perl" = "yes"; then
+    if test "$PERL" != "none" -a "$SWIG_SUITABLE" = "yes"; then
       AC_MSG_CHECKING([perl version])
       dnl Note that the q() bit is there to avoid unbalanced brackets
       dnl which m4 really doesn't like.
@@ -233,8 +196,7 @@ AC_DEFUN(SVN_FIND_SWIG,
 
     if test "$RUBY" != "none" -a \
         "$SWIG_SUITABLE" = "yes" -a \
-        "$SWIG_VERSION" -ge "103024" -a \
-        "$svn_swig_bindings_enable_ruby" = "yes"; then
+        "$SWIG_VERSION" -ge "103024"; then
 
       AC_MSG_NOTICE([Configuring Ruby SWIG binding])
       SWIG_CLEAN_RULES="$SWIG_CLEAN_RULES clean-swig-rb" 
