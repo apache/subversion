@@ -75,13 +75,13 @@
 #define WIN32_RETRY_LOOP(err, expr)                                        \
   do                                                                       \
     {                                                                      \
-      const apr_status_t os_err = APR_TO_OS_ERROR (err);                   \
+      apr_status_t os_err = APR_TO_OS_ERROR (err);                         \
       int sleep_count = 1000;                                              \
       int retries;                                                         \
       for (retries = 0;                                                    \
            retries < 100 && (os_err == ERROR_ACCESS_DENIED                 \
                              || os_err == ERROR_SHARING_VIOLATION);        \
-           ++retries)                                                      \
+           ++retries, os_err = APR_TO_OS_ERROR (err))                      \
         {                                                                  \
           apr_sleep (sleep_count);                                         \
           if (sleep_count < 128000)                                        \
