@@ -97,7 +97,7 @@ dnl Check for libtool -- we'll definitely need it for all our shared libs!
 echo "configuring libtool now"
 AC_PROG_LIBTOOL
 
-NEON_WANTED=0.17.1
+NEON_WANTED=0.17.2
 SVN_LIB_NEON($NEON_WANTED)
 
 dnl find Apache
