@@ -44,10 +44,10 @@ struct diff_cmd_baton {
 
 /* This is an svn_wc_diff_cmd_t callback */
 static svn_error_t *
-svn_client__diff_cmd (svn_stringbuf_t *path1,
-                      svn_stringbuf_t *path2,
-                      svn_stringbuf_t *label,
-                      void *baton)
+diff_cmd (svn_stringbuf_t *path1,
+          svn_stringbuf_t *path2,
+          svn_stringbuf_t *label,
+          void *baton)
 {
   struct diff_cmd_baton *diff_cmd_baton = baton;
   apr_status_t status;
@@ -210,7 +210,7 @@ svn_client_diff (svn_stringbuf_t *path,
          not contact the repository and simply uses the text base */
       return svn_wc_diff (anchor,
                           target,
-                          svn_client__diff_cmd, &diff_cmd_baton,
+                          diff_cmd, &diff_cmd_baton,
                           recurse,
                           pool);
     }
@@ -240,7 +240,7 @@ svn_client_diff (svn_stringbuf_t *path,
     {
       /* The working copy is involved if only one revision is given */
       SVN_ERR (svn_wc_get_diff_editor (anchor, target,
-                                       svn_client__diff_cmd, &diff_cmd_baton,
+                                       diff_cmd, &diff_cmd_baton,
                                        recurse,
                                        &diff_editor, &diff_edit_baton,
                                        pool));
@@ -276,7 +276,7 @@ svn_client_diff (svn_stringbuf_t *path,
                                             auth_baton, pool));
 
       SVN_ERR (svn_client__get_diff_editor (target,
-                                            svn_client__diff_cmd,
+                                            diff_cmd,
                                             &diff_cmd_baton,
                                             recurse,
                                             ra_lib, session2,
