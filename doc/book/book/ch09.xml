@@ -636,7 +636,8 @@ A         otherdir/docs/baz.doc
           <title>Examples</title>
 
           <para>If you want to see blame annotated source for
-            readme.txt in your test repository:</para>
+            <filename>readme.txt</filename> in your test
+            repository:</para>
           <screen>
 $ svn blame http://svn.red-bean.com/repos/test/readme.txt
      3      sally This is a README file.
@@ -782,7 +783,7 @@ Latest revision fresh from the repository!
           <title>Examples</title>
 
           <para>Check out a working copy into a directory called
-            'mine':</para>
+            <filename>mine</filename>:</para>
 
           <screen>
 $ svn checkout file:///tmp/repos/test mine
@@ -810,7 +811,7 @@ quiz  test
 
           <para>Check out 2 different directories into two separate
             working copies, but place both into a directory called
-            'working copies':</para>
+            <filename>working-copies</filename>:</para>
 
           <screen>
 $ svn checkout file:///tmp/repos/test  file:///tmp/repos/quiz working-copies
