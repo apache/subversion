@@ -105,7 +105,7 @@ dnl find Apache
 SVN_FIND_APACHE
 
 dnl ### should we ever bother with the system install?
-INSTALL="$top_srcdir/apr/build/install.sh"
+INSTALL="\$top_srcdir/apr/build/install.sh"
 AC_SUBST(INSTALL)
 
 dnl use APR's mkdir to enable creating intervening directories
