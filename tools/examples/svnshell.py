@@ -234,7 +234,7 @@ class SVNShell(Cmd):
     newpath = self._parts_to_path(self._path_to_parts(path))
 
     # if PATH is absolute, use it, else append it to the existing path.
-    if path[0] == '/' or self.path == '/':
+    if path.startswith('/') or self.path == '/':
       newpath = '/' + newpath
     else:
       newpath = self.path + '/' + newpath
@@ -281,7 +281,61 @@ class SVNShell(Cmd):
     else:
       self.prompt = "<txn: " + self.txn
     self.prompt += " " + self.path + ">$ "
+  
+  def _complete(self, text, line, begidx, endidx, limit_node_kind=None):
+    """Generic tab completer.  Takes the 4 standard parameters passed to a
+    cmd.Cmd completer function, plus LIMIT_NODE_KIND, which should be a
+    svn.core.svn_node_foo constant to restrict the returned completions to, or
+    None for no limit.  Catches and displays exceptions, because otherwise
+    they are silently ignored - which is quite frustrating when debugging!""" 
+    try:
+      args = line.split()
+      if len(args) > 1:
+        arg = args[1]
+      else:
+        arg = ""
+      dirs = arg.split('/')  
+      user_elem = dirs[-1]
+      user_dir = "/".join(dirs[:-1] + [''])
+
+      canon_dir = self._parse_path(user_dir)
+
+      entries = fs.dir_entries(self.root, canon_dir, self.taskpool)
+      acceptable_completions = []
+      for name, dirent_t in entries.items():
+        if not name.startswith(user_elem):
+          continue
+        if limit_node_kind and dirent_t.kind != limit_node_kind:
+          continue
+        if dirent_t.kind == core.svn_node_dir:
+          name += '/'
+        acceptable_completions.append(name)
+      if limit_node_kind == core.svn_node_dir or not limit_node_kind:
+        if user_elem in ('.', '..'):
+          for extraname in ('.', '..'):
+            if extraname.startswith(user_elem):
+              acceptable_completions.append(extraname + '/')
+      return acceptable_completions
+    except:
+      ei = sys.exc_info()
+      sys.stderr.write("EXCEPTION WHILST COMPLETING\n")
+      import traceback
+      traceback.print_tb(ei[2])
+      sys.stderr.write("%s: %s\n" % (ei[0], ei[1]))
+      raise
     
+  def complete_cd(self, text, line, begidx, endidx):
+    return self._complete(text, line, begidx, endidx, core.svn_node_dir)
+
+  def complete_cat(self, text, line, begidx, endidx):
+    return self._complete(text, line, begidx, endidx, core.svn_node_file)
+
+  def complete_ls(self, text, line, begidx, endidx):
+    return self._complete(text, line, begidx, endidx)
+
+  def complete_pcat(self, text, line, begidx, endidx):
+    return self._complete(text, line, begidx, endidx)
+
 
 def _basename(path):
   "Return the basename for a '/'-separated path."
