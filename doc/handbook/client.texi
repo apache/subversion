@@ -187,8 +187,152 @@ Ben, this one's all yours. :)
 @node Properties
 @section Properties
 
+A Property is a piece of meta data about a file, and using Subversion,
+you can attach any bit of data to a file as a property. A property
+consists of two parts--a @dfn{key} which identifies the value, and the
+@dfn{value} itself. Some examples of properties are:
+
+@example
+key:   svn:ignore
+value: Makefile
+       *.o
+       *~
+       .*~
+key:   svn:executable
+value: on
+@end example
+
+The first property listed above is usually set on a directory to tell
+Subversion which files (or regexps) to ignore when performing actions on
+that directory. The second property tells the Subversion client to set
+the executable bit on the corresponding file. You can also use
+properties to keep arbitrary data for your own purposes.
+
+@example
+Ben, what are some good examples, keeping in mind that:
+     "Names of user properties should be URI's, to avoid conflicts
+     between organizations." from svn-manual.txt
+@end example
+
+@subheading Setting a Property's Value
+
+To set a property on file (or directory), use @command{svn propset}.
+
+@example
+$ svn propset svn:ignore foo .
+property `svn:ignore' set on '.'
+$
+@end example
+
+Even though you've added a property to '.', you need to commit to send
+your changes to the repository. Check your changes using @command{svn status}
+
+@example
+$ svn status
+_M     .
+$
+@end example
+
+The 'M' in the 2nd column indicates that you've modified the properties
+for '.' @command{svn diff} will even show you what properties have changed:
+
+@example
+$ svn diff
+Property changes on: .
+___________________________________________________________________
+Name: svn:ignore
+   + foo
+
+$
+@end example
+
+
+@subheading Getting a Property's Value
+
+Once you've set a property, you can get the value by using @command{svn propget}
+
+@example
+$ svn propget svn:ignore .
+foo
+$
+@end example
+
+That's about all there is to it.
+
+@subheading Listing Properties
+
+To view the properties on a file or directory, use @command{svn
+proplist}. This will list the keys for all the properties, but not the
+values.
+
+@example
+$ svn proplist .
+Properties on '.':
+  svn:ignore
+$
+@end example
+
+@subheading Editing a Property
+
+Subversion provides a great convenience method for editing existing
+properties called @command{svn propedit}. When you invoke it, Subversion
+will open the value of the property in question in your favorite editor
+(or at least the editor that you've defined as $EDITOR in your shell),
+and you can edit the value just as you would edit any text file. This is
+exceptionally convenient for properties that are a newline separated
+array of values, such as 'svn:ignore'.
+
+@command{svn propedit} only changes your working copy, so don't forget
+to commit your changes.
+
+@subheading Deleting Properties
+
+Finally, there is @command{svn propdel} for deleting properties.
+
+@example
+$ svn propdel silly-mistake .
+property `silly-mistake' deleted from '.'.
+$
+@end example
+
+Like propset and propedit, @command{svn propdel} only changes your
+working copy, so don't forget to commit your changes.
+
+
+That pretty much covers the property commands. Use @command{svn help
+<commandname>} help on the propset, propget, proplist, propedit, and
+propdel commanads.
+
 @node Modules
 @section Modules
 
 @node Other Commands
 @section Other Commands
+
+@subheading Add
+
+@subheading Cleanup
+
+@subheading Copy
+
+@subheading Delete
+
+@subheading Export
+
+@subheading Help
+
+@subheading Import
+
+@subheading Info
+
+@subheading Merge
+
+@subheading Make Directory
+
+@subheading Move
+
+@subheading Revert
+
+@subheading Resolve
+
+@subheading Switch
