@@ -34,6 +34,8 @@
 #include <assert.h>
 #include <stdlib.h>  /* for qsort() */
 
+
+
 
 /*** Harvesting Commit Candidates ***/
 
@@ -184,6 +186,10 @@ harvest_committables (apr_hash_t *committables,
       if (entry->copyfrom_url)
         {
           state_flags |= SVN_CLIENT_COMMIT_ITEM_IS_COPY;
+          adds_only = FALSE;
+        }
+      else
+        {
           adds_only = TRUE;
         }
     }
@@ -229,9 +235,10 @@ harvest_committables (apr_hash_t *committables,
         }
     }
 
-  /* Else, we'll have to look for local text or property mods to
-     determine if the path might be committable. */
-  else
+  /* Else, if we aren't deleting this item, we'll have to look for
+     local text or property mods to determine if the path might be
+     committable. */
+  else if (! (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
     {
       /* Check for local mods: text+props for files, props alone for dirs. */
       if (entry->kind == svn_node_file)
@@ -257,11 +264,12 @@ harvest_committables (apr_hash_t *committables,
       add_committable (committables, path, url, entry, state_flags);
     }
 
-  /* For directories, recursively handle each of their entries.  
-     ### todo: if do_delete==TRUE, we could skip this.  deleted
-     sub-things would not be reported as committables, but it would
-     save us the recursion step. */
-  if ((entries) && (! (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)))
+  /* For directories, recursively handle each of their entries (except
+     when the directory is being deleted, unless the deletion is part
+     of a replacement ... how confusing). */
+  if ((entries) 
+      && ((! (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
+          || (state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)))
     {
       apr_hash_index_t *hi;
       svn_wc_entry_t *this_entry;
@@ -454,7 +462,7 @@ svn_client__condense_commit_items (svn_stringbuf_t **base_url,
         }
     }
 
-#if 0
+#ifdef SVN_CLIENT_COMMIT_DEBUG
   /* ### TEMPORARY CODE ### */
   printf ("COMMITTABLES: (base url=%s)\n", (*base_url)->data);
   for (i = 0; i < ci->nelts; i++)
@@ -462,7 +470,7 @@ svn_client__condense_commit_items (svn_stringbuf_t **base_url,
       url = (((svn_client_commit_item_t **) ci->elts)[i])->url;
       printf ("   %s\n", url->data ? url->data : "");
     }  
-#endif
+#endif /* SVN_CLIENT_COMMIT_DEBUG */
 
   return SVN_NO_ERROR;
 }
@@ -672,8 +680,8 @@ do_item_commit (const char *url,
   /* Finally, handle text mods (in that we need to open a file if it
      hasn't already been opened, and we need to put the file baton in
      our FILES hash). */
-  if ((kind == svn_node_file) &&
-      (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS))
+  if ((kind == svn_node_file) 
+      && (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS))
     {
       struct file_mod_t mod;
 
@@ -699,13 +707,13 @@ do_item_commit (const char *url,
 }
 
 
-#if 0
+#ifdef SVN_CLIENT_COMMIT_DEBUG
 /* Prototype for function below */
 static svn_error_t *get_test_editor (const svn_delta_editor_t **editor,
                                      void **edit_baton,
                                      const char *base_url,
                                      apr_pool_t *pool);
-#endif /* 0 */
+#endif /* SVN_CLIENT_COMMIT_DEBUG */
 
 svn_error_t *
 svn_client__do_commit (svn_stringbuf_t *base_url,
@@ -724,7 +732,7 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
     = apr_array_make (pool, 1, sizeof (struct file_mod_t));
   int i, stack_ptr = 0;
 
-#if 0 /* ### TEMPORARY ### */
+#ifdef SVN_CLIENT_COMMIT_DEBUG
   {
     const svn_delta_editor_t *test_editor;
     void *test_edit_baton;
@@ -734,7 +742,7 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
                                editor, edit_baton,
                                test_editor, test_edit_baton, pool);
   }
-#endif /* 0 */
+#endif /* SVN_CLIENT_COMMIT_DEBUG */
 
   /* We start by opening the root. */
   SVN_ERR (init_stack (&db_stack, &stack_ptr, editor, edit_baton, pool));
@@ -846,7 +854,7 @@ svn_client__do_commit (svn_stringbuf_t *base_url,
 }
 
 
-#if 0
+#ifdef SVN_CLIENT_COMMIT_DEBUG
 
 /*** Temporary test editor ***/
 
@@ -977,7 +985,7 @@ get_test_editor (const svn_delta_editor_t **editor,
   *edit_baton = eb;
   return SVN_NO_ERROR;
 }
-#endif /* 0 */
+#endif /* SVN_CLIENT_COMMIT_DEBUG */
   
 
 /* 

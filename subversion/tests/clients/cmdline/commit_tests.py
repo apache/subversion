@@ -484,7 +484,7 @@ def commit_unversioned_thing(sbox):
   return svntest.actions.run_and_verify_commit (wc_dir,
                                                 None,
                                                 None,
-                                                "unversioned",
+                                                "Can't find an entry",
                                                 None, None,
                                                 None, None,
                                                 os.path.join(wc_dir,'blorg'))
