@@ -27,11 +27,11 @@
       to be the successor to CVS.  The designers set out to win the
       hearts of CVS users in two ways; first, by creating a
       open-source version control system with a similar design (and
-      "look and feel") as CVS, and second, by attempting to fix the
-      most noticeable flaws in CVS.  While the result isn't
-      necessarily the next great evolution in version control design,
-      Subversion <emphasis>is</emphasis> something that is very
-      powerful, very useable, and very flexible.
+      "look and feel") as CVS, and second, by attempting to fix most
+      of CVS's noticeable flaws.  While the result isn't necessarily
+      the next great evolution in version control design, Subversion
+      <emphasis>is</emphasis> something that is very powerful, very
+      useable, and very flexible.
     </para>
 
   </simplesect>
@@ -57,7 +57,7 @@
       Subversion, and therefore it is the scenario underlying all of
       the book's examples.  But keep in mind that Subversion can be
       used to manage changes to any sort of information: images,
-      music, databases, literature, and so on.  To Subversion, all
+      music, databases, documentation, and so on.  To Subversion, all
       data is just data.</para>
     
     <para>While this book is written with the assumption that the
