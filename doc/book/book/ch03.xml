@@ -7,18 +7,20 @@
 
   <simplesect>
 
-    <para>How to make a lovely gumbo with your Subversion client, in
-      11 easy steps.</para>
+    <para>Now we will go into the details of using Subversion in your
+      day to day work.  By the time you reach the end of this chapter,
+      you will be able to perform almost all the tasks you need to use
+      Subversion in a normal day's work.  You'll start with an initial
+      checkout of your code, and walk through making changes and
+      examining those changes. You'll also see how to bring changes
+      made by others into your working copy, examine them, and work
+      through any conflicts that might arise.</para>
 
-    <para>This chapter goes into more of the gritty details of client
-      commands.  For a first overview of the client's CVS-like
-      <quote>copy-modify-merge</quote> model of development, see <xref
-        linkend="svn-ch-2"/>.</para>
-    
-    <para>This chapter by no means covers every option to every client
-      subcommand.  Instead, it's a conversational introduction to the
-      most common tasks you'll encounter.  When in doubt, run
-      <command>svn help</command>.</para>
+    <para>Note that this chapter is not meant to be an exhaustive list
+      of all Subversion's commands&mdash;rather, it's a conversational
+      introduction to the most common Subversion tasks you'll
+      encounter.  For a complete reference of all commands, see <xref
+      linkend="svn-ch-8"/>.</para>
 
   </simplesect>
 
@@ -26,15 +28,15 @@
   <!-- ======================== SECTION 1 ============================== -->
   <!-- ================================================================= -->
   <sect1 id="svn-ch-3-sect-1">
-    <title>Subversion's built in help facility</title>
+    <title>Help!</title>
 
 
-    <para>Before reading on, here is the most important piece of
-      information you'll ever need when using Subversion: <command>svn
-        help</command>.  The Subversion command-line client tries to be
-      self-documenting; at any time, a quick <command>svn help
-        &lt;subcommand&gt;</command> will describe the syntax, switches,
-      and behavior of <command>subcommand</command>.</para>
+    <para>Before reading on, here is the most important command you'll
+      ever need when using Subversion: <command>svn help</command>.
+      The Subversion command-line client tries to be
+      self-documenting&mdash;at any time, a quick <command>svn help
+      &lt;subcommand&gt;</command> will describe the syntax, switches,
+      and behavior of the <command>subcommand</command>.</para>
 
   </sect1>
 
@@ -44,7 +46,11 @@
   <sect1 id="svn-ch-3-sect-2">
     <title>Import</title>
 
-    <para>See <xref linkend="svn-ch-5"/>.<!-- ###TODO be more specific in this xref -Fitz -->
+    <para><command>svn import</command> is used to import a new
+    project into a Subversion repository.  While this is most likely
+    the very first thing you will do when you set up your Subversion
+    server, it's not something that happens very often.  For a
+    detailed description of import, see <xref linkend="svn-ch-5"/>.
     </para>
 
   </sect1>
@@ -59,7 +65,8 @@
       repository by doing a <firstterm>checkout</firstterm> of your
       project.  <quote>Checking out</quote> will provide you with a
       local copy of the <literal>HEAD</literal> (latest revision) of
-      the Subversion repository that you checked out.</para>
+      the Subversion repository that you specify on the command
+      line.</para>
     
 
     <screen>
@@ -73,44 +80,63 @@
       Checked out revision 2499.
     </screen>
     
+    <sidebar>
+      <title>Repository Layout</title>
+
+      <para>If you're wondering what <literal>trunk</literal> is all
+        about in the above URL, it's part of the way that we recommend
+        you lay out your Subversion repository. That is, when you
+        create a new Subversion repository, you should make three
+        top-level directories: <literal>trunk</literal>,
+        <literal>tags</literal>, and <literal>branches</literal>.
+        Just take my word for it right now. We'll talk a lot more
+        about these in <xref linkend="svn-ch-5"/>.</para>
+
+    </sidebar>
+
     <para>Although the above example checks out the trunk directory,
       you can just as easily checkout any deep subdirectory of a
       repository by specifying the subdirectory in the checkout
       URL:</para>
     
     <screen>
-      $ svn co http://svn.collab.net/repos/svn/trunk/doc/handbook
-      A  handbook/svn-handbook.texi
-      A  handbook/getting_started.texi
-      A  handbook/outline.txt
-      A  handbook/license.texi
-      A  handbook/repos_admin.texi
-      A  handbook/client.texi
-      Checked out revision 2499.
+$ svn co http://svn.collab.net/repos/svn/trunk/doc/book/tools
+A  tools/readme-dblite.html
+A  tools/fo-stylesheet.xsl
+A  tools/svnbook.el
+A  tools/dtd
+A  tools/dtd/dblite.dtd
+&hellip;
+Checked out revision 3678.
     </screen>
     
     <para>Since Subversion uses a <quote>copy-modify-merge</quote>
-      model instead of <quote>lock-modify-unlock,</quote> you're now
-      ready to start making changes to the files that you've checked
-      out, known collectively as your <firstterm>working
-        copy</firstterm>. You can even delete the entire working copy
-      and forget about it entirely&mdash;there's no need to notify the
-      Subversion server unless you're ready to <firstterm>check
-        in</firstterm> changes, a new file, or even a directory.</para>
-    
-    <para>Every directory in a working copy contains an
-      <firstterm>administrative area</firstterm>, a subdirectory named
-      <filename>.svn</filename>.  Normal <command>ls</command>
-      commands won't show this subdirectory, but it's vital.  Whatever
-      you do, don't delete or change anything in the administrative
-      area!  Subversion depends on it to manage your working
-      copy.</para>
-    
-    <para>You can run <command>svn help checkout</command> for command
-      line options to checkout, although one option is very
-      common and worth mentioning: you can specify a directory
-      after your repository url.  This places your working copy
-      into the new directory that you name.  For example:</para>
+      model instead of <quote>lock-modify-unlock,</quote> (See <xref
+      linkend="svn-ch-2"/>) you're now ready to start making changes
+      to the files that you've checked out, known collectively as your
+      <firstterm>working copy</firstterm>. You can even delete the
+      entire working copy and forget about it&mdash;there's
+      no need to notify the Subversion server unless you're ready to
+      <firstterm>check in</firstterm> changes, a new file, or even a
+      directory.</para>
+
+    <sidebar>
+      <title>What's with the <filename>.svn</filename> directory?</title>
+
+      <para>Every directory in a working copy contains an
+        <firstterm>administrative area</firstterm>, a subdirectory
+        named <filename>.svn</filename>.  Usually, directory listing
+        commands won't show this subdirectory, but it's vital.
+        Whatever you do, don't delete or change anything in the
+        administrative area!  Subversion depends on it to manage your
+        working copy.</para>
+
+    </sidebar>
+
+    <para>While you can certainly check out a working copy with the
+      url of the repository as the only argument, you can also specify
+      a directory after your repository url.  This places your working
+      copy into the new directory that you name.  For example:</para>
     
     <screen>
       $ svn co http://svn.collab.net/repos/svn/trunk subv
@@ -122,6 +148,10 @@
       &hellip;
       Checked out revision 2499.
     </screen>
+    
+    <para>That will place your working copy in a directory named
+      <literal>subv</literal> instead of a directory named
+      <literal>trunk</literal> as was the case above.</para>
 
   </sect1>
 
