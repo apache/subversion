@@ -37,3 +37,11 @@ int svn_fs__putsize (char *data, apr_size_t len, apr_size_t value);
 
 
 #endif /* SVN_LIBSVN_FS_CONVERT_SIZE_H */
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

@@ -42,7 +42,7 @@ svn_error_t *svn_fs__dberr (apr_pool_t *pool, int db_err);
    There is no separator between the two messages; if you want one,
    you should include it in FMT.  */
 svn_error_t *svn_fs__dberrf (apr_pool_t *pool, int db_err,
-			     const char *fmt, ...);
+                             const char *fmt, ...);
 
 
 /* Check the return status from the Berkeley DB operation.  If the
@@ -52,8 +52,8 @@ svn_error_t *svn_fs__dberrf (apr_pool_t *pool, int db_err,
    - OPERATION is a gerund clause describing what we were trying to do.
    - DB_ERR is the return status from the Berkeley DB function.  */
 svn_error_t *svn_fs__wrap_db (svn_fs_t *fs,
-			      const char *operation,
-			      int db_err);
+                              const char *operation,
+                              int db_err);
 
 
 /* A terse wrapper for svn_fs__check_db.  */
@@ -62,11 +62,11 @@ svn_error_t *svn_fs__wrap_db (svn_fs_t *fs,
 
 /* If EXPR returns a non-zero value, return it.  This is like SVN_ERR,
    but for functions that return a Berkeley DB error code.  */
-#define DB_ERR(expr)				\
-  do {						\
-    int db_err__temp = (expr);			\
-    if (db_err__temp)				\
-      return db_err__temp;			\
+#define DB_ERR(expr)                            \
+  do {                                          \
+    int db_err__temp = (expr);                  \
+    if (db_err__temp)                           \
+      return db_err__temp;                      \
   } while (0)
 
 
@@ -81,11 +81,11 @@ svn_error_t *svn_fs__check_fs (svn_fs_t *fs);
 
 /* SVN_ERR_FS_CORRUPT: the REPRESENTATION skel of node ID in FS is corrupt.  */
 svn_error_t *svn_fs__err_corrupt_representation (svn_fs_t *fs,
-						 const svn_fs_id_t *id);
+                                                 const svn_fs_id_t *id);
 
 /* SVN_ERR_FS_CORRUPT: the NODE-REVISION skel of node ID in FS is corrupt.  */
 svn_error_t *svn_fs__err_corrupt_node_revision (svn_fs_t *fs,
-						const svn_fs_id_t *id);
+                                                const svn_fs_id_t *id);
 
 /* SVN_ERR_FS_CORRUPT: the REVISION skel of revision REV in FS is corrupt.  */
 svn_error_t *svn_fs__err_corrupt_fs_revision (svn_fs_t *fs,
@@ -97,8 +97,8 @@ svn_error_t *svn_fs__err_corrupt_id (svn_fs_t *fs, const svn_fs_id_t *id);
 /* SVN_ERR_FS_CORRUPT: the clone record for BASE_PATH in SVN_TXN in FS
    is corrupt.  */
 svn_error_t *svn_fs__err_corrupt_clone (svn_fs_t *fs,
-					const char *svn_txn,
-					const char *base_path);
+                                        const char *svn_txn,
+                                        const char *base_path);
 
 /* SVN_ERR_FS_CORRUPT: something in FS refers to node revision ID, but
    that node revision doesn't exist.  */
@@ -131,3 +131,11 @@ svn_error_t *svn_fs__err_no_such_txn (svn_fs_t *fs, const char *txn);
 
 
 #endif /* SVN_LIBSVN_FS_ERR_H */
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

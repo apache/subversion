@@ -39,3 +39,11 @@ svn_error_t *svn_fs__revision_root (svn_fs_id_t **id,
 
 
 #endif /* SVN_LIBSVN_FS_REVISION_H */
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

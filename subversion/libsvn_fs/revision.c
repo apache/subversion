@@ -30,8 +30,8 @@ corrupt_revision (svn_fs_t *fs, svn_revnum_t v)
 {
   return
     svn_error_createf (SVN_ERR_FS_CORRUPT, 0, 0, fs->pool,
-		       "corrupt root data for revision %ld of filesystem `%s'",
-		       v, fs->env_path);
+                       "corrupt root data for revision %ld of filesystem `%s'",
+                       v, fs->env_path);
 }
 
 
@@ -40,8 +40,8 @@ no_such_revision (svn_fs_t *fs, svn_revnum_t v)
 {
   return
     svn_error_createf (SVN_ERR_FS_NO_SUCH_REVISION, 0, 0, fs->pool,
-		       "filesystem `%s' has no revision number %ld",
-		       fs->env_path, v);
+                       "filesystem `%s' has no revision number %ld",
+                       fs->env_path, v);
 }
 
 
@@ -136,10 +136,10 @@ svn_fs__revision_root (svn_fs_id_t **id_p,
    Do any necessary temporary allocation in POOL.  */
 static svn_error_t *
 put_revision_skel (svn_revnum_t *v_p,
-		  svn_fs_t *fs,
-		  skel_t *skel,
-		  DB_TXN *txn,
-		  apr_pool_t *pool)
+                  svn_fs_t *fs,
+                  skel_t *skel,
+                  DB_TXN *txn,
+                  apr_pool_t *pool)
 {
   db_recno_t recno;
   DB *revisions = fs->revisions;
@@ -154,7 +154,7 @@ put_revision_skel (svn_revnum_t *v_p,
   key.flags |= DB_DBT_USERMEM;
 
   SVN_ERR (DB_WRAP (fs, "adding new revision",
-		    revisions->put (revisions, txn,
+                    revisions->put (revisions, txn,
                                     &key,
                                     svn_fs__skel_to_dbt (&value, skel, pool),
                                     DB_APPEND)));
@@ -179,15 +179,15 @@ static svn_error_t *
 make_revisions (svn_fs_t *fs, int create)
 {
   SVN_ERR (DB_WRAP (fs, "allocating `revisions' table object",
-		    db_create (&fs->revisions, fs->env, 0)));
+                    db_create (&fs->revisions, fs->env, 0)));
   SVN_ERR (DB_WRAP (fs,
-		    (create
-		     ? "creating `revisions' table"
-		     : "opening `revisions' table"),
-		    fs->revisions->open (fs->revisions, "revisions", 0,
-					 DB_RECNO,
-					 create ? (DB_CREATE | DB_EXCL) : 0,
-					 0666)));
+                    (create
+                     ? "creating `revisions' table"
+                     : "opening `revisions' table"),
+                    fs->revisions->open (fs->revisions, "revisions", 0,
+                                         DB_RECNO,
+                                         create ? (DB_CREATE | DB_EXCL) : 0,
+                                         0666)));
 
   return 0;
 }
@@ -209,3 +209,11 @@ svn_fs__open_revisions (svn_fs_t *fs)
 {
   return make_revisions (fs, 0);
 }
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

@@ -23,8 +23,8 @@
    one if it doesn't exist.  Set *CLONES_P to the new table.  
    Return a Berkeley DB error code.  */
 int svn_fs__open_clones_table (DB **clones_p,
-			       DB_ENV *env,
-			       int create);
+                               DB_ENV *env,
+                               int create);
 
 
 /* Set *CLONE_P to the entry from the `clones' table for
@@ -33,10 +33,10 @@ int svn_fs__open_clones_table (DB **clones_p,
    *CLONE_P is either zero or a well-formed CLONE skel.  Allocate
    the result in TRAIL->pool.  */
 svn_error_t *svn_fs__check_clone (skel_t **clone_p,
-				  svn_fs_t *fs,
-				  const char *svn_txn,
-				  const char *base_path,
-				  trail_t *trail);
+                                  svn_fs_t *fs,
+                                  const char *svn_txn,
+                                  const char *base_path,
+                                  trail_t *trail);
 
 
 /* If CLONE indicates that a node was cloned, set *CLONE_ID_P to
@@ -52,28 +52,36 @@ int svn_fs__is_cloned (skel_t **clone_id_p, skel_t *clone);
    non-zero.  Else, return zero.  CLONE must be a well-formed
    CLONE skel.  */
 int svn_fs__is_renamed (skel_t **parent_clone_id_p,
-			skel_t **entry_name_p,
-			skel_t *clone);
+                        skel_t **entry_name_p,
+                        skel_t *clone);
 
 
 /* Record that BASE_PATH was cloned in the Subversion transaction
    SVN_TXN to produce node CLONE_ID in FS, as part of TRAIL.  */
 svn_error_t *svn_fs__record_clone (svn_fs_t *fs,
-				   const char *svn_txn,
-				   const char *base_path,
-				   const svn_fs_id_t *clone_id,
-				   trail_t *trail);
+                                   const char *svn_txn,
+                                   const char *base_path,
+                                   const svn_fs_id_t *clone_id,
+                                   trail_t *trail);
 
 
 /* Record that BASE_PATH was renamed in the Subversion transaction
    SVN_TXN, and is now named ENTRY_NAME in the mutable directory
    PARENT_ID, as part of TRAIL.  */
 svn_error_t *svn_fs__record_rename (svn_fs_t *fs,
-				    const char *svn_txn,
-				    const char *base_path,
-				    const svn_fs_id_t *parent_id,
-				    const char *entry_name,
-				    trail_t *trail);
+                                    const char *svn_txn,
+                                    const char *base_path,
+                                    const svn_fs_id_t *parent_id,
+                                    const char *entry_name,
+                                    trail_t *trail);
 
 
 #endif /* SVN_LIBSVN_FS_CLONES_TABLE_H */
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

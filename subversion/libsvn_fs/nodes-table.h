@@ -26,8 +26,8 @@
    one if it doesn't exist.  Set *NODES_P to the new table.  
    Return a Berkeley DB error code.  */
 int svn_fs__open_nodes_table (DB **nodes_p,
-			      DB_ENV *env,
-			      int create);
+                              DB_ENV *env,
+                              int create);
 
 
 /* Set *SKEL_P to point to the REPRESENTATION skel for the node ID in
@@ -36,10 +36,10 @@ int svn_fs__open_nodes_table (DB **nodes_p,
 
    This verifies that *SKEL_P is a well-formed REPRESENTATION skel.  */
 svn_error_t *svn_fs__get_rep (skel_t **skel_p,
-			      svn_fs_t *fs,
-			      const svn_fs_id_t *id,
-			      DB_TXN *db_txn,
-			      apr_pool_t *pool);
+                              svn_fs_t *fs,
+                              const svn_fs_id_t *id,
+                              DB_TXN *db_txn,
+                              apr_pool_t *pool);
 
 
 /* Store SKEL as the REPRESENTATION skel of node ID in FS, as part of
@@ -48,10 +48,10 @@ svn_error_t *svn_fs__get_rep (skel_t **skel_p,
 
    This verifies that SKEL is a well-formed REPRESENTATION skel.  */
 svn_error_t *svn_fs__put_rep (svn_fs_t *fs,
-			      const svn_fs_id_t *id,
-			      skel_t *skel,
-			      DB_TXN *db_txn,
-			      apr_pool_t *pool);
+                              const svn_fs_id_t *id,
+                              skel_t *skel,
+                              DB_TXN *db_txn,
+                              apr_pool_t *pool);
 
 
 /* Check FS's `nodes' table to find an unused node number, and set
@@ -59,9 +59,9 @@ svn_error_t *svn_fs__put_rep (svn_fs_t *fs,
    FS, as part of DB_TXN.  Allocate the new ID, and do all temporary
    allocation, in POOL.  */
 svn_error_t *svn_fs__new_node_id (svn_fs_id_t **id_p,
-				  svn_fs_t *fs,
-				  DB_TXN *db_txn,
-				  apr_pool_t *pool);
+                                  svn_fs_t *fs,
+                                  DB_TXN *db_txn,
+                                  apr_pool_t *pool);
 
 
 /* Set *SUCCESSOR_P to the ID of an immediate successor to node
@@ -72,10 +72,18 @@ svn_error_t *svn_fs__new_node_id (svn_fs_id_t **id_p,
    simply ID with its rightmost revision number increased; otherwise,
    the successor is a new branch from ID.  */
 svn_error_t *svn_fs__new_successor_id (svn_fs_id_t **successor_p,
-				       svn_fs_t *fs,
-				       const svn_fs_id_t *id,
-				       DB_TXN *db_txn, 
-				       apr_pool_t *pool);
+                                       svn_fs_t *fs,
+                                       const svn_fs_id_t *id,
+                                       DB_TXN *db_txn, 
+                                       apr_pool_t *pool);
 
 
 #endif /* SVN_LIBSVN_FS_NODES_TABLE_H */
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

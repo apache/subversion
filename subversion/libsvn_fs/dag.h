@@ -58,7 +58,7 @@ typedef struct dag_node_t dag_node_t;
 /* Return a new dag_node_t object referring to the same node as NODE,
    allocated in TRAIL->pool.  */
 dag_node_t *svn_fs__dag_dup (dag_node_t *node,
-			     trail_t *trail);
+                             trail_t *trail);
 
 
 /* Return the filesystem containing NODE.  */
@@ -87,16 +87,16 @@ int svn_fs__dag_is_directory (dag_node_t *node);
    list of NODE, as part of TRAIL.  This guarantees that *PROPLIST_P
    is well-formed.  Allocate the skel in TRAIL->pool.  */
 svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
-				       dag_node_t *node,
-				       trail_t *trail);
+                                       dag_node_t *node,
+                                       trail_t *trail);
 
 
 /* Set the property list of NODE to PROPLIST, as part of TRAIL.  The
    node being changed must be mutable.  This verifies that PROPLIST is
    well-formed.  */
 svn_error_t *svn_fs__dag_set_proplist (dag_node_t *node,
-				       skel_t *proplist,
-				       trail_t *trail);
+                                       skel_t *proplist,
+                                       trail_t *trail);
 
 
 /* Make a new mutable clone of the node named NAME in PARENT, and
@@ -106,9 +106,9 @@ svn_error_t *svn_fs__dag_set_proplist (dag_node_t *node,
    TRAIL->pool.  PARENT must be mutable.  NAME must be a single path
    component; it cannot be a slash-separated directory path.  */
 svn_error_t *svn_fs__dag_clone_child (dag_node_t **child_p,
-				      dag_node_t *parent,
-				      const char *name,
-				      trail_t *trail);
+                                      dag_node_t *parent,
+                                      const char *name,
+                                      trail_t *trail);
 
 
 
@@ -118,19 +118,19 @@ svn_error_t *svn_fs__dag_clone_child (dag_node_t **child_p,
 /* Open the root of revision REV of filesystem FS, as part of TRAIL.
    Set *NODE_P to the new node.  Allocate the node in TRAIL->pool.  */
 svn_error_t *svn_fs__dag_revision_root (dag_node_t **node_p,
-					svn_fs_t *fs,
-					svn_revnum_t rev,
-					trail_t *trail);
+                                        svn_fs_t *fs,
+                                        svn_revnum_t rev,
+                                        trail_t *trail);
 
 
 /* Open the mutable node in the transaction named TXN whose ID is ID
    in FS, as part of TRAIL; set *NODE_P to the new node.  Allocate the
    node in TRAIL->pool.  */
 svn_error_t *svn_fs__dag_txn_node (dag_node_t **node_p,
-				   svn_fs_t *fs,
-				   const char *txn,
-				   const svn_fs_id_t *id,
-				   trail_t *trail);
+                                   svn_fs_t *fs,
+                                   const char *txn,
+                                   const svn_fs_id_t *id,
+                                   trail_t *trail);
 
 
 /* Clone the root directory of SVN_TXN in FS, and update the
@@ -139,9 +139,9 @@ svn_error_t *svn_fs__dag_txn_node (dag_node_t **node_p,
    root directory clone.  Do all this as part of TRAIL, and allocate
    *ROOT_P in TRAIL->pool.  */
 svn_error_t *svn_fs__dag_clone_root (dag_node_t **root_p,
-				     svn_fs_t *fs,
-				     const char *svn_txn,
-				     trail_t *trail);
+                                     svn_fs_t *fs,
+                                     const char *svn_txn,
+                                     trail_t *trail);
 
 
 /* Commit the transaction SVN_TXN in FS, as part of TRAIL.  This entails:
@@ -158,8 +158,8 @@ svn_error_t *svn_fs__dag_clone_root (dag_node_t **root_p,
    Consume temporary space at most proportional to the maximum depth
    of SVN_TXN's tree of mutable nodes.  */
 svn_error_t *svn_fs__dag_commit_txn (svn_fs_t *fs,
-				     const char *svn_txn,
-				     trail_t *trail);
+                                     const char *svn_txn,
+                                     trail_t *trail);
 
 
 
@@ -171,18 +171,18 @@ svn_error_t *svn_fs__dag_commit_txn (svn_fs_t *fs,
    single path component; it cannot be a slash-separated directory
    path.  */
 svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
-			       dag_node_t *parent,
-			       const char *name,
-			       trail_t *trail);
+                               dag_node_t *parent,
+                               const char *name,
+                               trail_t *trail);
 
 
 /* Create a link to CHILD in PARENT named NAME, as part of TRAIL.
    PARENT must be mutable.  NAME must be a single path component; it
    cannot be a slash-separated directory path.  */
 svn_error_t *svn_fs__dag_link (dag_node_t *parent,
-			       dag_node_t *child,
-			       const char *name,
-			       trail_t *trail);
+                               dag_node_t *child,
+                               const char *name,
+                               trail_t *trail);
 
 
 /* Delete the directory entry named NAME from PARENT, as part of
@@ -190,8 +190,8 @@ svn_error_t *svn_fs__dag_link (dag_node_t *parent,
    component; it cannot be a slash-separated directory path.  If the
    node being deleted is a mutable directory, it must be empty.  */
 svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
-				 const char *name,
-				 trail_t *trail);
+                                 const char *name,
+                                 trail_t *trail);
 
 
 /* Create a new mutable directory named NAME in PARENT, as part of
@@ -202,9 +202,9 @@ svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
    currently have an entry named NAME.  Do any temporary allocation in
    TRAIL->pool.  */
 svn_error_t *svn_fs__dag_make_dir (dag_node_t **child_p,
-				   dag_node_t *parent,
-				   const char *name,
-				   trail_t *trail);
+                                   dag_node_t *parent,
+                                   const char *name,
+                                   trail_t *trail);
 
 
 
@@ -215,16 +215,16 @@ svn_error_t *svn_fs__dag_make_dir (dag_node_t **child_p,
    contents of FILE, as part of TRAIL.  Allocate the stream in
    TRAIL->pool.  */
 svn_error_t *svn_fs__dag_get_contents (svn_stream_t **contents,
-				       dag_node_t *file,
-				       trail_t *trail);
+                                       dag_node_t *file,
+                                       trail_t *trail);
 
 
 /* Set the contents of FILE to CONTENTS, as part of TRAIL.  (Yes, this
    interface will need to be revised to handle large files; let's get
    things working first.)  */
 svn_error_t *svn_fs__dag_set_contents (dag_node_t *file,
-				       svn_string_t *contents,
-				       trail_t *trail);
+                                       svn_string_t *contents,
+                                       trail_t *trail);
 
 
 /* Create a new mutable file named NAME in PARENT, as part of TRAIL.
@@ -233,9 +233,9 @@ svn_error_t *svn_fs__dag_set_contents (dag_node_t *file,
    has no properties.  PARENT must be mutable.  NAME must be a single
    path component; it cannot be a slash-separated directory path.  */
 svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
-				    dag_node_t *parent,
-				    const char *name,
-				    trail_t *trail);
+                                    dag_node_t *parent,
+                                    const char *name,
+                                    trail_t *trail);
 
 
 
@@ -248,12 +248,20 @@ svn_error_t *svn_fs__dag_make_file (dag_node_t **child_p,
    slash-separated directory path.  The source of the copy must be
    immutable. */
 svn_error_t *svn_fs__dag_make_copy (dag_node_t **child_p,
-				    dag_node_t *parent,
-				    const char *name,
+                                    dag_node_t *parent,
+                                    const char *name,
                                     svn_revnum_t source_revision,
                                     const char *source_path,
-				    trail_t *trail);
+                                    trail_t *trail);
 
 
 
 #endif /* SVN_LIBSVN_FS_DAG_H */
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

@@ -32,15 +32,15 @@ struct undo {
 
 static svn_error_t *
 begin_trail (trail_t **trail_p,
-	     svn_fs_t *fs,
-	     apr_pool_t *pool)
+             svn_fs_t *fs,
+             apr_pool_t *pool)
 {
   trail_t *trail = apr_palloc (pool, sizeof (*trail));
 
   trail->pool = pool;
   trail->undo = 0;
   SVN_ERR (DB_WRAP (fs, "beginning Berkeley DB transaction",
-		    txn_begin (fs->env, 0, &trail->db_txn, 0)));
+                    txn_begin (fs->env, 0, &trail->db_txn, 0)));
 
   *trail_p = trail;
   return 0;
@@ -49,7 +49,7 @@ begin_trail (trail_t **trail_p,
 
 static svn_error_t *
 abort_trail (trail_t *trail,
-	     svn_fs_t *fs)
+             svn_fs_t *fs)
 {
   struct undo *undo;
 
@@ -58,7 +58,7 @@ abort_trail (trail_t *trail,
     undo->func (undo->baton);
 
   SVN_ERR (DB_WRAP (fs, "aborting Berkeley DB transaction",
-		    txn_abort (trail->db_txn)));
+                    txn_abort (trail->db_txn)));
  
   apr_pool_destroy (trail->pool);
 
@@ -68,9 +68,9 @@ abort_trail (trail_t *trail,
 
 svn_error_t *
 svn_fs__retry_txn (svn_fs_t *fs,
-		   svn_error_t *(*txn_body) (void *baton, trail_t *trail),
-		   void *baton,
-		   apr_pool_t *pool)
+                   svn_error_t *(*txn_body) (void *baton, trail_t *trail),
+                   void *baton,
+                   apr_pool_t *pool)
 {
   for (;;)
     {
@@ -83,22 +83,22 @@ svn_fs__retry_txn (svn_fs_t *fs,
       svn_err = (*txn_body) (baton, trail);
 
       if (! svn_err)
-	{
-	  /* The transaction succeeded!  Commit it.  */
-	  SVN_ERR (DB_WRAP (fs,
-			    "committing Berkeley DB transaction",
-			    txn_commit (trail->db_txn, 0)));
-	  return 0;
-	}
+        {
+          /* The transaction succeeded!  Commit it.  */
+          SVN_ERR (DB_WRAP (fs,
+                            "committing Berkeley DB transaction",
+                            txn_commit (trail->db_txn, 0)));
+          return 0;
+        }
 
       /* Is this a real error, or do we just need to retry?  */
       if (svn_err->apr_err != SVN_ERR_BERKELEY_DB
-	  || svn_err->src_err != DB_LOCK_DEADLOCK)
-	{
-	  /* Ignore any error returns.  The first error is more valuable.  */
-	  abort_trail (trail, fs);
-	  return svn_err;
-	}
+          || svn_err->src_err != DB_LOCK_DEADLOCK)
+        {
+          /* Ignore any error returns.  The first error is more valuable.  */
+          abort_trail (trail, fs);
+          return svn_err;
+        }
 
       /* We deadlocked.  Abort the transaction, and try again.  */
       SVN_ERR (abort_trail (trail, fs));
@@ -108,8 +108,8 @@ svn_fs__retry_txn (svn_fs_t *fs,
 
 void
 svn_fs__record_undo (trail_t *trail,
-		     void (*func) (void *baton),
-		     void *baton)
+                     void (*func) (void *baton),
+                     void *baton)
 {
   struct undo *undo = apr_palloc (trail->pool, sizeof (*undo));
 
@@ -118,3 +118,11 @@ svn_fs__record_undo (trail_t *trail,
   undo->prev = trail->undo;
   trail->undo = undo;
 }
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

@@ -31,6 +31,7 @@ char *svn_fs__txn_id (svn_fs_txn_t *txn);
 
 #endif /* SVN_LIBSVN_FS_TXN_H */
 
+
 
 /* 
  * local variables:

@@ -64,17 +64,25 @@ typedef struct trail_t trail_t;
    either aborts or commits before it returns.  If we don't somehow
    complete all our transactions, later operations could deadlock.  */
 svn_error_t *svn_fs__retry_txn (svn_fs_t *fs,
-				svn_error_t *(*txn_body) (void *baton,
-							  trail_t *trail),
-				void *baton,
-				apr_pool_t *pool);
+                                svn_error_t *(*txn_body) (void *baton,
+                                                          trail_t *trail),
+                                void *baton,
+                                apr_pool_t *pool);
 
 
 /* Record than a change to an in-memory structure took place as part
    of TRAIL which can be undone by applying FUNC to BATON.  */
 void svn_fs__record_undo (trail_t *trail,
-			  void (*func) (void *baton),
-			  void *baton);
+                          void (*func) (void *baton),
+                          void *baton);
 
 
 #endif /* SVN_LIBSVN_FS_TRAIL_H */
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */

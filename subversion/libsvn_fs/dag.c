@@ -99,10 +99,10 @@ svn_fs__dag_init_fs (svn_fs_t *fs)
    ### obviously, they don't work and will need to be filled in...
 */
 svn_error_t *svn_fs__dag_txn_node (dag_node_t **node_p,
-				   svn_fs_t *fs,
-				   const char *txn,
-				   const svn_fs_id_t *id,
-				   trail_t *trail)
+                                   svn_fs_t *fs,
+                                   const char *txn,
+                                   const svn_fs_id_t *id,
+                                   trail_t *trail)
 {
   abort();
   /* NOTREACHED */
@@ -119,25 +119,25 @@ const svn_fs_id_t *svn_fs__dag_get_id (dag_node_t *node)
   return NULL;
 }
 svn_error_t *svn_fs__dag_get_proplist (skel_t **proplist_p,
-				       dag_node_t *node,
-				       trail_t *trail)
+                                       dag_node_t *node,
+                                       trail_t *trail)
 {
   abort();
   /* NOTREACHED */
   return NULL;
 }
 svn_error_t *svn_fs__dag_set_proplist (dag_node_t *node,
-				       skel_t *proplist,
-				       trail_t *trail)
+                                       skel_t *proplist,
+                                       trail_t *trail)
 {
   abort();
   /* NOTREACHED */
   return NULL;
 }
 svn_error_t *svn_fs__dag_clone_child (dag_node_t **child_p,
-				      dag_node_t *parent,
-				      const char *name,
-				      trail_t *trail)
+                                      dag_node_t *parent,
+                                      const char *name,
+                                      trail_t *trail)
 {
   abort();
   /* NOTREACHED */
@@ -200,22 +200,23 @@ svn_fs__dag_clone_root (dag_node_t **root_p,
 
 
 svn_error_t *svn_fs__dag_open (dag_node_t **child_p,
-			       dag_node_t *parent,
-			       const char *name,
-			       trail_t *trail)
+                               dag_node_t *parent,
+                               const char *name,
+                               trail_t *trail)
 {
   abort();
   /* NOTREACHED */
   return NULL;
 }
 svn_error_t *svn_fs__dag_delete (dag_node_t *parent,
-				 const char *name,
-				 trail_t *trail)
+                                 const char *name,
+                                 trail_t *trail)
 {
   abort();
   /* NOTREACHED */
   return NULL;
 }
+
 
 
 /* 

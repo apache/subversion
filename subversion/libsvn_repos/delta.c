@@ -41,8 +41,8 @@ struct context {
    NAME is the name of the property to change.  VALUE is the new value
    for the property, or zero if the property should be deleted.  */
 typedef svn_error_t *proplist_change_fn_t (void *object,
-					   svn_string_t *name,
-					   svn_string_t *value);
+                                           svn_string_t *name,
+                                           svn_string_t *value);
 
 
 
@@ -50,32 +50,32 @@ typedef svn_error_t *proplist_change_fn_t (void *object,
 
 /* See the functions themselves for descriptions.  */
 static svn_error_t *delta_dirs (struct context *c, void *dir_baton,
-				svn_fs_dir_t *source,
-				svn_string_t *source_path,
-				svn_fs_dir_t *target);
+                                svn_fs_dir_t *source,
+                                svn_string_t *source_path,
+                                svn_fs_dir_t *target);
 static svn_error_t *replace (struct context *c, void *dir_baton,
-			     svn_fs_dir_t *source, svn_string_t *source_path,
-			     svn_fs_dir_t *target,
-			     svn_fs_dirent_t *target_entry);
+                             svn_fs_dir_t *source, svn_string_t *source_path,
+                             svn_fs_dir_t *target,
+                             svn_fs_dirent_t *target_entry);
 static svn_error_t *delete (struct context *c, void *dir_baton,
-			    svn_string_t *name);
+                            svn_string_t *name);
 static svn_error_t *add (struct context *c, void *dir_baton,
-			 svn_fs_dir_t *source, svn_string_t *source_path,
-			 svn_fs_dir_t *target, svn_string_t *name);
+                         svn_fs_dir_t *source, svn_string_t *source_path,
+                         svn_fs_dir_t *target, svn_string_t *name);
 static svn_error_t *delta_files (struct context *c, void *file_baton,
-				 svn_fs_file_t *ancestor_file,
-				 svn_fs_file_t *target_file);
+                                 svn_fs_file_t *ancestor_file,
+                                 svn_fs_file_t *target_file);
 static svn_error_t *file_from_scratch (struct context *c,
-				       void *file_baton,
-				       svn_fs_file_t *target_file);
+                                       void *file_baton,
+                                       svn_fs_file_t *target_file);
 static svn_error_t *delta_proplists (struct context *c,
-				     svn_fs_proplist_t *source,
-				     svn_fs_proplist_t *target,
-				     proplist_change_fn_t *change_fn,
-				     void *object);
+                                     svn_fs_proplist_t *source,
+                                     svn_fs_proplist_t *target,
+                                     proplist_change_fn_t *change_fn,
+                                     void *object);
 static svn_error_t *dir_from_scratch (struct context *c,
-				      void *dir_baton,
-				      svn_fs_dir_t *target);
+                                      void *dir_baton,
+                                      svn_fs_dir_t *target);
 
 
 /* Public interface to delta computation.  */
@@ -83,10 +83,10 @@ static svn_error_t *dir_from_scratch (struct context *c,
 
 svn_error_t *
 svn_fs_dir_delta (svn_fs_dir_t *source,
-		  svn_fs_dir_t *target,
-		  svn_delta_edit_fns_t *editor,
-		  void *edit_baton,
-		  apr_pool_t *parent_pool)
+                  svn_fs_dir_t *target,
+                  svn_delta_edit_fns_t *editor,
+                  void *edit_baton,
+                  apr_pool_t *parent_pool)
 {
   svn_error_t *svn_err = 0;
   apr_pool_t *pool = svn_pool_create (parent_pool);
@@ -121,9 +121,9 @@ svn_fs_dir_delta (svn_fs_dir_t *source,
 /* Forward declarations for functions local to this section.
    See the functions themselves for descriptions.  */
 static svn_error_t *delta_dir_props (struct context *c,
-				     void *dir_baton,
-				     svn_fs_dir_t *source,
-				     svn_fs_dir_t *target);
+                                     void *dir_baton,
+                                     svn_fs_dir_t *source,
+                                     svn_fs_dir_t *target);
 
 /* Emit deltas to turn SOURCE into TARGET_DIR.  Assume that DIR_BATON
    represents the directory we're constructing to the editor in the
@@ -131,8 +131,8 @@ static svn_error_t *delta_dir_props (struct context *c,
    of the delta, or the empty string if SOURCE is the top itself.  */
 static svn_error_t *
 delta_dirs (struct context *c, void *dir_baton,
-	    svn_fs_dir_t *source, svn_string_t *source_path,
-	    svn_fs_dir_t *target)
+            svn_fs_dir_t *source, svn_string_t *source_path,
+            svn_fs_dir_t *target)
 {
   svn_fs_dirent_t **source_entries, **target_entries;
   int si, ti;
@@ -148,51 +148,51 @@ delta_dirs (struct context *c, void *dir_baton,
   while (source_entries[si] || target_entries[ti])
     {
       /* Compare the names of the current directory entries in both
-	 source and target.  If they're equal, then we've found an
-	 entry common to both directories.  Otherwise, whichever entry
-	 comes `earlier' in the sort order doesn't exist in the other
-	 directory, so we've got an add or a delete.
+         source and target.  If they're equal, then we've found an
+         entry common to both directories.  Otherwise, whichever entry
+         comes `earlier' in the sort order doesn't exist in the other
+         directory, so we've got an add or a delete.
 
-	 (Note: it's okay if si or ti point at the zero that
-	 terminates the arrays; see the comments for
-	 svn_fs_compare_dirents.)  */
+         (Note: it's okay if si or ti point at the zero that
+         terminates the arrays; see the comments for
+         svn_fs_compare_dirents.)  */
       int name_cmp = svn_fs_compare_dirents (source_entries[si],
-					     target_entries[ti]);
+                                             target_entries[ti]);
 
       /* Does an entry by this name exist in both the source and the
          target?  */
       if (name_cmp == 0)
-	{
-	  /* Compare the node numbers.  */
-	  if (! svn_fs_id_eq (source_entries[si]->id, target_entries[ti]->id))
-	    {
-	      /* The name is the same, but the node has changed.
-		 This is a replace.  */
-	      SVN_ERR (replace (c, dir_baton,
-				source, source_path,
-				target, source_entries[si]));
-	    }
+        {
+          /* Compare the node numbers.  */
+          if (! svn_fs_id_eq (source_entries[si]->id, target_entries[ti]->id))
+            {
+              /* The name is the same, but the node has changed.
+                 This is a replace.  */
+              SVN_ERR (replace (c, dir_baton,
+                                source, source_path,
+                                target, source_entries[si]));
+            }
 
-	  /* This entry is now dealt with in both the source and target.  */
-	  si++, ti++;
-	}
+          /* This entry is now dealt with in both the source and target.  */
+          si++, ti++;
+        }
 
       /* If the current source entry is "before" the current target
-	 entry, then that source entry was deleted.  */
+         entry, then that source entry was deleted.  */
       else if (name_cmp < 0)
-	{
-	  SVN_ERR (delete (c, dir_baton, source_entries[si]->name));
-	  si++;
-	}
+        {
+          SVN_ERR (delete (c, dir_baton, source_entries[si]->name));
+          si++;
+        }
 
       /* A new entry has been added.  */
       else
-	{
-	  SVN_ERR (add (c, dir_baton,
-			source, source_path, target,
-			target_entries[ti]->name));
-	  ti++;
-	}
+        {
+          SVN_ERR (add (c, dir_baton,
+                        source, source_path, target,
+                        target_entries[ti]->name));
+          ti++;
+        }
     }
 
   return 0;
@@ -202,9 +202,9 @@ delta_dirs (struct context *c, void *dir_baton,
 /* Comparing directories' property lists.  */
 static svn_error_t *
 delta_dir_props (struct context *c,
-		 void *dir_baton,
-		 svn_fs_dir_t *source,
-		 svn_fs_dir_t *target)
+                 void *dir_baton,
+                 svn_fs_dir_t *source,
+                 svn_fs_dir_t *target)
 {
   svn_fs_proplist_t *source_props
     = (source ? svn_fs_node_proplist (svn_fs_dir_to_node (source)) : 0);
@@ -212,7 +212,7 @@ delta_dir_props (struct context *c,
     = svn_fs_node_proplist (svn_fs_dir_to_node (target));
 
   return delta_proplists (c, source_props, target_props,
-			  c->editor->change_dir_prop, dir_baton);
+                          c->editor->change_dir_prop, dir_baton);
 }
 
 
@@ -239,15 +239,15 @@ struct dirent_plist_baton {
 /* Forward declarations for functions local to this section.
    See the functions themselves for descriptions.  */
 static svn_error_t *replace_related (struct context *c,
-				     void *dir_baton,
-				     svn_fs_dir_t *target,
-				     svn_string_t *target_name,
-				     svn_fs_dir_t *ancestor_dir,
-				     svn_string_t *ancestor_dir_path,
-				     svn_string_t *ancestor_name);
+                                     void *dir_baton,
+                                     svn_fs_dir_t *target,
+                                     svn_string_t *target_name,
+                                     svn_fs_dir_t *ancestor_dir,
+                                     svn_string_t *ancestor_dir_path,
+                                     svn_string_t *ancestor_name);
 static svn_error_t *replace_from_scratch (struct context *c, void *dir_baton,
-					  svn_fs_dir_t *target,
-					  svn_string_t *name);
+                                          svn_fs_dir_t *target,
+                                          svn_string_t *name);
 
 
 /* Do a `replace' edit in DIR_BATON turning the entry named
@@ -260,9 +260,9 @@ static svn_error_t *replace_from_scratch (struct context *c, void *dir_baton,
    
 static svn_error_t *
 replace (struct context *c, void *dir_baton,
-	 svn_fs_dir_t *source, svn_string_t *source_path,
-	 svn_fs_dir_t *target,
-	 svn_fs_dirent_t *target_entry)
+         svn_fs_dir_t *source, svn_string_t *source_path,
+         svn_fs_dir_t *target,
+         svn_fs_dirent_t *target_entry)
 {
   svn_fs_dirent_t **source_entries;
   int best, best_distance;
@@ -283,19 +283,19 @@ replace (struct context *c, void *dir_baton,
     best = -1;
     for (i = 0; source_entries[i]; i++)
       {
-	/* Find the distance between the target entry and this source
-	   entry.  This returns -1 if they're completely unrelated.
-	   Here we're using ID distance as an approximation for delta
-	   size.  */
-	int distance = svn_fs_id_distance (target_entry->id,
-					   source_entries[i]->id);
+        /* Find the distance between the target entry and this source
+           entry.  This returns -1 if they're completely unrelated.
+           Here we're using ID distance as an approximation for delta
+           size.  */
+        int distance = svn_fs_id_distance (target_entry->id,
+                                           source_entries[i]->id);
 
-	if (distance != -1
-	    && (best == -1 || distance < best_distance))
-	  {
-	    best = i;
-	    best_distance = distance;
-	  }
+        if (distance != -1
+            && (best == -1 || distance < best_distance))
+          {
+            best = i;
+            best_distance = distance;
+          }
       }
   }
 
@@ -306,9 +306,9 @@ replace (struct context *c, void *dir_baton,
   else
     /* We've found an ancestor; do a replace relative to that.  */
     SVN_ERR (replace_related (c, dir_baton,
-			      target, target_entry->name, 
-			      source, source_path,
-			      source_entries[best]->name));
+                              target, target_entry->name, 
+                              source, source_path,
+                              source_entries[best]->name));
 
   return 0;
 }
@@ -319,7 +319,7 @@ replace (struct context *c, void *dir_baton,
    named NAME in TARGET.  */
 static svn_error_t *
 replace_from_scratch (struct context *c, void *dir_baton,
-		      svn_fs_dir_t *target, svn_string_t *name)
+                      svn_fs_dir_t *target, svn_string_t *name)
 {
   svn_fs_node_t *new;
 
@@ -334,7 +334,7 @@ replace_from_scratch (struct context *c, void *dir_baton,
 
       SVN_ERR (c->editor->replace_file (name, dir_baton, 0, 0, &file_baton));
       SVN_ERR (file_from_scratch (c, file_baton,
-				  svn_fs_node_to_file (new)));
+                                  svn_fs_node_to_file (new)));
       SVN_ERR (c->editor->close_file (file_baton));
     }
   else if (svn_fs_node_is_dir (new))
@@ -342,9 +342,9 @@ replace_from_scratch (struct context *c, void *dir_baton,
       void *subdir_baton;
 
       SVN_ERR (c->editor->replace_directory (name, dir_baton,
-					     0, 0, &subdir_baton));
+                                             0, 0, &subdir_baton));
       SVN_ERR (dir_from_scratch (c, subdir_baton, 
-				 svn_fs_node_to_dir (new)));
+                                 svn_fs_node_to_dir (new)));
       SVN_ERR (c->editor->close_directory (subdir_baton));
     }
   else
@@ -364,9 +364,9 @@ replace_from_scratch (struct context *c, void *dir_baton,
    is the path to ANCESTOR_DIR from the top of the delta.  */
 static svn_error_t *
 replace_related (struct context *c, void *dir_baton,
-		 svn_fs_dir_t *target, svn_string_t *target_name,
-		 svn_fs_dir_t *ancestor_dir, svn_string_t *ancestor_dir_path,
-		 svn_string_t *ancestor_name)
+                 svn_fs_dir_t *target, svn_string_t *target_name,
+                 svn_fs_dir_t *ancestor_dir, svn_string_t *ancestor_dir_path,
+                 svn_string_t *ancestor_name)
 {
   svn_string_t *ancestor_path;
   svn_revnum_t ancestor_revision;
@@ -381,7 +381,7 @@ replace_related (struct context *c, void *dir_baton,
   /* Compute the full name of the ancestor.  */
   ancestor_path = svn_string_dup (ancestor_dir_path, c->pool);
   svn_path_add_component (ancestor_path, ancestor_name,
-			  svn_path_repos_style);
+                          svn_path_repos_style);
 
   /* Get the ancestor's revision number.  */
   ancestor_revision = svn_fs_node_revision (a);
@@ -392,13 +392,13 @@ replace_related (struct context *c, void *dir_baton,
 
       /* Do the replace, yielding a baton for the file.  */
       SVN_ERR (c->editor->replace_file (target_name, dir_baton,
-					ancestor_path, ancestor_revision,
-					&file_baton));
+                                        ancestor_path, ancestor_revision,
+                                        &file_baton));
 
       /* Apply the text delta.  */
       SVN_ERR (delta_files (c, file_baton,
-			    svn_fs_node_to_file (a),
-			    svn_fs_node_to_file (t)));
+                            svn_fs_node_to_file (a),
+                            svn_fs_node_to_file (t)));
 
       /* Close the editor's file baton.  */
       SVN_ERR (c->editor->close_file (file_baton));
@@ -409,15 +409,15 @@ replace_related (struct context *c, void *dir_baton,
 
       /* Do the replace, yielding a baton for the new subdirectory.  */
       SVN_ERR (c->editor->replace_directory (target_name,
-					     dir_baton,
-					     ancestor_path, ancestor_revision,
-					     &subdir_baton));
+                                             dir_baton,
+                                             ancestor_path, ancestor_revision,
+                                             &subdir_baton));
 
       /* Compute the delta for those subdirs.  */
       SVN_ERR (delta_dirs (c, subdir_baton,
-			   svn_fs_node_to_dir (a),
-			   ancestor_path,
-			   svn_fs_node_to_dir (t)));
+                           svn_fs_node_to_dir (a),
+                           ancestor_path,
+                           svn_fs_node_to_dir (t)));
 
       /* Close the editor's subdirectory baton.  */
       SVN_ERR (c->editor->close_directory (subdir_baton));
@@ -440,7 +440,7 @@ replace_related (struct context *c, void *dir_baton,
 /* Emit a delta to delete the entry named NAME from DIR_BATON.  */
 static svn_error_t *
 delete (struct context *c, void *dir_baton,
-	svn_string_t *name)
+        svn_string_t *name)
 {
   return c->editor->delete_entry (name, dir_baton);
 }
@@ -465,20 +465,20 @@ add (struct context *c, void *dir_baton,
 /* Forward declarations for functions local to this section.
    See the functions themselves for descriptions.  */
 static svn_error_t *delta_file_props (struct context *c,
-				      void *file_baton,
-				      svn_fs_file_t *ancestor_file,
-				      svn_fs_file_t *target_file);
+                                      void *file_baton,
+                                      svn_fs_file_t *ancestor_file,
+                                      svn_fs_file_t *target_file);
 static svn_error_t *send_text_delta (struct context *c,
-				     void *file_baton,
-				     svn_txdelta_stream_t *delta_stream);
+                                     void *file_baton,
+                                     svn_txdelta_stream_t *delta_stream);
 
 
 /* Make the appropriate edits on FILE_BATON to change its contents and
    properties from those on ANCESTOR_FILE to those on TARGET_FILE.  */
 static svn_error_t *
 delta_files (struct context *c, void *file_baton,
-	     svn_fs_file_t *ancestor_file,
-	     svn_fs_file_t *target_file)
+             svn_fs_file_t *ancestor_file,
+             svn_fs_file_t *target_file)
 {
   svn_txdelta_stream_t *delta_stream;
 
@@ -503,8 +503,8 @@ delta_files (struct context *c, void *file_baton,
    those of TARGET_FILE.  */
 static svn_error_t *
 file_from_scratch (struct context *c,
-		   void *file_baton,
-		   svn_fs_file_t *target_file)
+                   void *file_baton,
+                   svn_fs_file_t *target_file)
 {
   svn_txdelta_stream_t *delta_stream;
 
@@ -527,9 +527,9 @@ file_from_scratch (struct context *c,
    treat it as if it were a file with no properties.  */
 static svn_error_t *
 delta_file_props (struct context *c,
-		  void *file_baton,
-		  svn_fs_file_t *ancestor_file,
-		  svn_fs_file_t *target_file)
+                  void *file_baton,
+                  svn_fs_file_t *ancestor_file,
+                  svn_fs_file_t *target_file)
 {
   svn_fs_proplist_t *ancestor_props
     = (ancestor_file
@@ -539,7 +539,7 @@ delta_file_props (struct context *c,
     = svn_fs_node_proplist (svn_fs_file_to_node (target_file));
 
   return delta_proplists (c, ancestor_props, target_props,
-			  c->editor->change_file_prop, file_baton);
+                          c->editor->change_file_prop, file_baton);
 }
 
 
@@ -547,23 +547,23 @@ delta_file_props (struct context *c,
    text delta from in DELTA_STREAM.  */
 static svn_error_t *
 send_text_delta (struct context *c,
-		 void *file_baton,
-		 svn_txdelta_stream_t *delta_stream)
+                 void *file_baton,
+                 svn_txdelta_stream_t *delta_stream)
 {
   svn_txdelta_window_handler_t *delta_handler;
   void *delta_handler_baton;
 
   /* Get a handler that will apply the delta to the file.  */
   SVN_ERR (c->editor->apply_textdelta (file_baton,
-				       &delta_handler, &delta_handler_baton));
+                                       &delta_handler, &delta_handler_baton));
 
   /* Read windows from the delta stream, and apply them to the file.  */
   {
     svn_txdelta_window_t *window;
     do
       {
-	SVN_ERR (svn_txdelta_next_window (&window, delta_stream));
-	SVN_ERR (delta_handler (window, delta_handler_baton));
+        SVN_ERR (svn_txdelta_next_window (&window, delta_stream));
+        SVN_ERR (delta_handler (window, delta_handler_baton));
       }
     while (window);
   }
@@ -581,10 +581,10 @@ send_text_delta (struct context *c,
    OBJECT.  */
 static svn_error_t *
 delta_proplists (struct context *c,
-		 svn_fs_proplist_t *source,
-		 svn_fs_proplist_t *target,
-		 proplist_change_fn_t *change_fn,
-		 void *object)
+                 svn_fs_proplist_t *source,
+                 svn_fs_proplist_t *target,
+                 proplist_change_fn_t *change_fn,
+                 void *object)
 {
   /* It would be nice if we could figure out some way to use the
      history information to avoid reading in and scanning the entire
@@ -613,7 +613,7 @@ delta_proplists (struct context *c,
 
       source_names = null_prop_name_list;
       /* It doesn't matter what we set source_values to, because we should
-	 never fetch anything from it.  */
+         never fetch anything from it.  */
       source_values = 0;
     }
 
@@ -631,31 +631,31 @@ delta_proplists (struct context *c,
       /* If the two names are equal, then a property by the given name
          exists on both files.  */
       if (cmp == 0)
-	{
-	  /* Get the values of the property.  */
-	  svn_string_t *sv = apr_hash_get (source_values, sn->data, sn->len);
-	  svn_string_t *tv = apr_hash_get (target_values, tn->data, tn->len);
+        {
+          /* Get the values of the property.  */
+          svn_string_t *sv = apr_hash_get (source_values, sn->data, sn->len);
+          svn_string_t *tv = apr_hash_get (target_values, tn->data, tn->len);
 
-	  /* Does the property have the same value on both files?  */
-	  if (! svn_string_compare (sv, tv))
-	    SVN_ERR (change_fn (object, tn, tv));
+          /* Does the property have the same value on both files?  */
+          if (! svn_string_compare (sv, tv))
+            SVN_ERR (change_fn (object, tn, tv));
 
-	  si++, ti++;
-	}
+          si++, ti++;
+        }
       /* If the source name comes earlier, then it's been deleted.  */
       else if (cmp < 0)
-	{
-	  SVN_ERR (change_fn (object, sn, 0));
-	  si++;
-	}
+        {
+          SVN_ERR (change_fn (object, sn, 0));
+          si++;
+        }
       /* If the target name comes earlier, then it's been added.  */
       else
-	{
-	  /* Get the value of the property.  */
-	  svn_string_t *tv = apr_hash_get (target_values, tn->data, tn->len);
-	  SVN_ERR (change_fn (object, tn, tv));
-	  ti++;
-	}
+        {
+          /* Get the value of the property.  */
+          svn_string_t *tv = apr_hash_get (target_values, tn->data, tn->len);
+          SVN_ERR (change_fn (object, tn, tv));
+          ti++;
+        }
     }
 
   return 0;
@@ -667,8 +667,8 @@ delta_proplists (struct context *c,
 
 static svn_error_t *
 dir_from_scratch (struct context *c,
-		  void *dir_baton,
-		  svn_fs_dir_t *target)
+                  void *dir_baton,
+                  svn_fs_dir_t *target)
 {
   /* ...; */
   return SVN_NO_ERROR;
@@ -680,9 +680,9 @@ dir_from_scratch (struct context *c,
 
 svn_error_t *
 svn_fs_file_delta (svn_txdelta_stream_t **stream,
-		   svn_fs_file_t *source_file,
-		   svn_fs_file_t *target_file,
-		   apr_pool_t *pool)
+                   svn_fs_file_t *source_file,
+                   svn_fs_file_t *target_file,
+                   apr_pool_t *pool)
 {
   svn_stream_t *source, *target;
   svn_txdelta_stream_t *delta_stream;
@@ -700,3 +700,11 @@ svn_fs_file_delta (svn_txdelta_stream_t **stream,
   *stream = delta_stream;
   return 0;
 }
+
+
+
+/* 
+ * local variables:
+ * eval: (load-file "../svn-dev.el")
+ * end:
+ */
