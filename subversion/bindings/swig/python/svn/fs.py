@@ -23,6 +23,7 @@ import sys
 import popen2
 import string
 import re
+import __builtin__
 
 import libsvn.fs
 import core
@@ -78,7 +79,8 @@ class FileDiff:
     return 0
 
   def _dump_contents(self, file, root, path, pool):
-    fp = open(file, 'w+')
+    fp = __builtin__.open(file, 'w+') # avoid namespace clash with
+                                      # trimmed-down svn_fs_open()
     if path is not None:
       stream = file_contents(root, path, pool)
       try:
