@@ -34,9 +34,6 @@ public final class NodeKind
     /* something's here, but we don't know what */
     public static final int unknown = 3;
 
-    /* a special file */
-    public static final int special = 4;
-
     /**
      * mapping for the constants to text
      */
@@ -46,7 +43,6 @@ public final class NodeKind
 		"file",
 		"dir ",
 		"unknown",
-        "special",
 	};
     /**
      * Returns the textual representation for a NodeKind

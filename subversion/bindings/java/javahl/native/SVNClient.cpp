@@ -2490,8 +2490,6 @@ jint SVNClient::mapNodeKind(int nodeKind)
         return org_tigris_subversion_javahl_NodeKind_dir;
     case svn_node_unknown:
         return org_tigris_subversion_javahl_NodeKind_unknown;
-    case svn_node_special:
-        return org_tigris_subversion_javahl_NodeKind_special;
     default:
         return org_tigris_subversion_javahl_NodeKind_unknown;
     }
