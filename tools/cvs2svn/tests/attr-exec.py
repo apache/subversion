@@ -1,6 +1,6 @@
 import cmptag
 
-cmptag.check_tags("testcvs1", "attr-exec",
+cmptag.check_tags("cvsrepos", "attr-exec",
                   [
                       ( None, "/trunk" )
                   ]);

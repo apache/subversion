@@ -1,6 +1,6 @@
 import cmptag
 
-cmptag.check_tags("testcvs1", "test1", 
+cmptag.check_tags("cvsrepos", "test1", 
                   [
                       # trunk
                       ( None, "/trunk" ),

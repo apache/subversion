@@ -16,11 +16,16 @@ def do_cvs2svn(repo, module, target):
         raise "cvs2svn failed"
 
 def clean_cvs2svn():
-    os.unlink("cvs2svn-data.revs");
-    os.unlink("cvs2svn-data.tags");
-    os.unlink("cvs2svn-data.resync");
-    os.unlink("cvs2svn-data.c-revs");
-    os.unlink("cvs2svn-data.s-revs");
+    if os.path.exists('cvs2svn-data.revs'):
+        os.unlink('cvs2svn-data.revs')
+    if os.path.exists('cvs2svn-data.tags'):
+        os.unlink('cvs2svn-data.tags')
+    if os.path.exists('cvs2svn-data.resync'):
+        os.unlink('cvs2svn-data.resync')
+    if os.path.exists('cvs2svn-data.c-revs'):
+        os.unlink('cvs2svn-data.c-revs')
+    if os.path.exists('cvs2svn-data.s-revs'):
+        os.unlink('cvs2svn-data.s-revs')
 
 def svn_checkout(repo, branch, target):
     rc = os.system("svn co file://%s/%s%s %s >>test.log" % (os.getcwd(), repo, branch, target));
@@ -61,10 +66,14 @@ def check_tag(cvs_repo, module, tag, svn_repo, path):
 
 
 def check_tags(cvs_repo, module, tags):
+    # Clean up from any previous runs first.
+    if os.path.exists('svn-repo.tmp'):
+        shutil.rmtree('svn-repo.tmp')
+    if os.path.exists('svn-repo.tmp'):
+        os.unlink('test.log')
+    clean_cvs2svn()
+
     do_cvs2svn(cvs_repo, module, 'svn-repo.tmp');
     for tag, path in tags:
         print "        checking tag %s -> %s" % (tag, path)
         check_tag(cvs_repo, module, tag, "svn-repo.tmp", path);
-    shutil.rmtree("svn-repo.tmp");
-    clean_cvs2svn();
-    os.unlink("test.log");

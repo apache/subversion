@@ -1,6 +1,6 @@
 import cmptag
 
-cmptag.check_tags("testcvs1", "twoquick", 
+cmptag.check_tags("cvsrepos", "twoquick", 
                   [
                       ( None, "/trunk" ),
                       ( "after", "/tags/after" ),
