@@ -180,22 +180,19 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
       /* Open an RA session to URL */
       SVN_ERR (ra_lib->open (&session, url, pool));
       
-      /*
-       * ### kff todo fooo working here.
-       *
-       * Pass a no-op revision bumping routine to get_commit_editor
-       * below, in the import case.
-       */
-
       /* Fetch RA commit editor, giving it svn_wc_set_revision(). */
       SVN_ERR (ra_lib->get_commit_editor
                (session,
                 &editor, &edit_baton,
                 log_msg,
-                svn_wc_get_wc_prop,  /* wc prop fetching routine */
-                svn_wc_set_wc_prop,  /* wc prop setting routine */
-                svn_wc_set_revision, /* revision bumping routine */
-                &ccb));              /* baton for both funcs */
+                /* wc prop fetching routine */
+                is_import ? NULL : svn_wc_get_wc_prop,
+                /* wc prop setting routine */
+                is_import ? NULL : svn_wc_set_wc_prop,
+                /* revision bumping routine */
+                is_import ? NULL : svn_wc_set_revision,
+                /* baton for the three funcs */
+                &ccb));
     }
 
 
@@ -208,12 +205,8 @@ send_to_repos (const svn_delta_edit_fns_t *before_editor,
   /* Do the commit. */
   if (is_import)
     {
-      /* Crawl a directory tree, importing. 
-       * ### kff todo fooo working here.
-       */
-      /*
-        SVN_ERR (svn_wc_import (path, editor, edit_baton, pool));
-      */
+      /* Crawl a directory tree, importing. */
+      SVN_ERR (svn_wc_import (path, new_entry, editor, edit_baton, pool));
     }
   else
     {
