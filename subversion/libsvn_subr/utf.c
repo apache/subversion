@@ -397,7 +397,7 @@ svn_utf_cstring_from_utf8_fuzzy (const char *src,
                                  apr_pool_t *pool)
 {
   const char *src_orig = src;
-  apr_off_t new_len = 0;
+  apr_size_t new_len = 0;
   char *new;
   const char *new_orig;
   svn_error_t *err;
