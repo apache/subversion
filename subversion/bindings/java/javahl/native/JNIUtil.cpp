@@ -354,7 +354,7 @@ void JNIUtil::handleAPRError(int error, const char *op)
 	{
 		return;
 	}
-    apr_snprintf(buffer, formatBufferSize, "an error occurred in function %s with return value %d",
+    apr_snprintf(buffer, formatBufferSize, _("an error occurred in function %s with return value %d"),
 		op, error);
 
 	throwError(buffer);
@@ -434,7 +434,6 @@ void JNIUtil::initLogFile(int level, jstring path)
 	if(g_logLevel > noLog)
 	{
 		g_logStream.open(myPath, std::ios::app);
-		//g_logStream.open(myPath, std::ios_base::app);
 	}
 }
 
@@ -533,8 +532,6 @@ jbyteArray JNIUtil::makeJByteArray(const signed char *data, int length)
 void JNIUtil::assembleErrorMessage(svn_error_t *err, int depth, apr_status_t parent_apr_err, std::string &buffer)
 {
     char errbuf[256];
-//  char utfbuf[2048];
-//  const char *err_string;
 
   /* Pretty-print the error */
   /* Note: we can also log errors here someday. */
@@ -553,7 +550,7 @@ void JNIUtil::assembleErrorMessage(svn_error_t *err, int depth, apr_status_t par
       buffer.append("\n");
     }
   if (err->message)
-	  buffer.append("svn: ").append(err->message).append("\n");
+	  buffer.append(_("svn: ")).append(err->message).append("\n");
 
   if (err->child)
     assembleErrorMessage(err->child, depth + 1, err->apr_err, buffer);

@@ -34,6 +34,7 @@
 #include <svn_config.h>
 #include <svn_io.h>
 #include <svn_path.h>
+#include "svn_private_config.h"
 #include "org_tigris_subversion_javahl_Status_Kind.h"
 #include "org_tigris_subversion_javahl_Revision.h"
 #include "org_tigris_subversion_javahl_NodeKind.h"
@@ -967,7 +968,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                        pool.pool());
 	if (rv != APR_SUCCESS) 
 	{
-		err = svn_error_create(rv, NULL,"Cannot open file.");
+		err = svn_error_create(rv, NULL,_("Cannot open file."));
  		JNIUtil::handleSVNError(err);
 		return;
 	}
@@ -992,7 +993,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
 	rv = apr_file_close(outfile);
 	if (rv != APR_SUCCESS) 
 	{
-		err = svn_error_create(rv, NULL,"Cannot close file.");
+		err = svn_error_create(rv, NULL,_("Cannot close file."));
  		JNIUtil::handleSVNError(err);
 		return;
 	}
@@ -1502,13 +1503,13 @@ jbyteArray SVNClient::fileContent(const char *path, Revision &revision)
                                    APR_FINFO_MIN, pool.pool());
 		if(apr_err)
 		{
-			JNIUtil::handleAPRError(apr_err, "open file");
+			JNIUtil::handleAPRError(apr_err, _("open file"));
 			return NULL;
 		}
 		apr_err = apr_file_open(&file, base_path, APR_READ, 0, pool.pool());
 		if(apr_err)
 		{
-			JNIUtil::handleAPRError(apr_err, "open file");
+			JNIUtil::handleAPRError(apr_err, _("open file"));
 			return NULL;
 		}
 		read_stream = svn_stream_from_aprfile(file, pool.pool());
@@ -1525,13 +1526,13 @@ jbyteArray SVNClient::fileContent(const char *path, Revision &revision)
                                    APR_FINFO_MIN, pool.pool());
 		if(apr_err)
 		{
-			JNIUtil::handleAPRError(apr_err, "open file");
+			JNIUtil::handleAPRError(apr_err, _("open file"));
 			return NULL;
 		}
 		apr_err = apr_file_open(&file, ori_path, APR_READ, 0, pool.pool());
 		if(apr_err)
 		{
-			JNIUtil::handleAPRError(apr_err, "open file");
+			JNIUtil::handleAPRError(apr_err, _("open file"));
 			return NULL;
 		}
 		read_stream = svn_stream_from_aprfile(file, pool.pool());
@@ -1677,7 +1678,7 @@ jobject SVNClient::revProperty(jobject jthis, const char *path, const char *name
   if(URL == NULL)
   {
 	  JNIUtil::handleSVNError(svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                "Either a URL or versioned item is required."));
+                                _("Either a URL or versioned item is required.")));
 	  return NULL;
   }
       
@@ -1730,10 +1731,10 @@ blame_receiver (void *baton,
 {
   svn_stream_t *out = (svn_stream_t*)baton;
   const char *rev_str = SVN_IS_VALID_REVNUM (revision) 
-                        ? apr_psprintf (pool, "%6" SVN_REVNUM_T_FMT, revision)
-                        : "     -";
-  return svn_stream_printf (out, pool, "%s %10s %s\n", rev_str, 
-                            author ? author : "         -", line);
+                        ? apr_psprintf (pool, _("%6" SVN_REVNUM_T_FMT), revision)
+                        : _("     -");
+  return svn_stream_printf (out, pool, _("%s %10s %s\n"), rev_str, 
+                            author ? author : _("         -"), line);
 }
 jbyteArray SVNClient::blame(const char *path, Revision &revisionStart, Revision &revisionEnd)
 {
