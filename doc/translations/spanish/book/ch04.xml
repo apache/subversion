@@ -1372,18 +1372,19 @@ $ svn info | grep URL
 URL: http://svn.example.com/repos/calc/branches/my-calc-branch
 </screen>
 
-    <para>After <quote>switching</quote> to the branch, your working
-      copy is no different than what you would get from doing a fresh
-      checkout of the directory.  And it's usually more efficient to
-      use this command, because often branches only differ by a small
-      degree.  The server sends only the minimal set of changes
-      necessary to make your working copy reflect the branch
-      directory.</para>
+    <para>Tras <quote>cambiar</quote> a la rama, su copia local
+      no diferirá en nada a una copia local nueva obtenida del mismo
+      directorio. Y normalmente es más eficiente usar este comando,
+      dado que a menudo las ramas sólo difieren entre sí en pocas
+      cosas. El servidor manda únicamente el conjunto mínimo de
+      cambios necesarios para hacer que su copia local de trabajo
+      refleje el directorio de la rama.</para>
 
-    <para>The <command>svn switch</command> command also takes a
-      <option>--revision</option> (<option>-r</option>) option, so you
-      need not always move your working copy to the <quote>tip</quote>
-      of the branch.</para>
+    <para>El comando <command>svn switch</command> también permite
+      usar la opción <option>--revision</option>
+      (<option>-r</option>), por lo que no siempre tendrá que
+      cambiar su copia local a la <quote>punta</quote> <!-- TODO
+      tip != punta? --> de la rama.</para>
 
     <para>Of course, most projects are more complicated than our
       <filename>calc</filename> example, containing multiple
