@@ -87,7 +87,7 @@ def make_local_props(sbox):
   actual_disk_tree = svntest.tree.build_tree_from_wc(wc_dir, 1)
 
   # Compare actual vs. expected disk trees.
-  svntest.tree.compare_trees(expected_disk.old_tree(), actual_disk_tree)
+  svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
 
 #----------------------------------------------------------------------
 
