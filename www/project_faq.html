@@ -54,6 +54,8 @@
 <li><a href="#in-place-import">How can I do an in-place 'import'
     (i.e. add a tree to subversion without moving or deleting the
     original working copy)?</a></li> 
+<li><a href="#dumpload">What is this "dump/load cycle" people
+    sometimes talk about when upgrading a Subversion server?</a></li> 
 <p>
 <strong>Troubleshooting:</strong>
 </p>
@@ -779,6 +781,65 @@ version control inside a brand-new repository you created using:
 to create working copies for directories which do not yet exist in the
 repository.
 </p>
+
+<![CDATA[=========================================================]]>
+
+<h3><a name="dumpload">What is this "dump/load cycle" people
+    sometimes talk about when upgrading a Subversion server?</a></h3>
+
+<p>Subversion's repository database schema changes occasionally during
+development.  We try to keep such changes to a minimum, but Subversion
+<i>is</i> pre-1.0 software, and we want to ship 1.0 with the best
+schema we can.  If a schema change happens between Subversion releases
+X and Y, then repository administrators upgrading to Y must do the
+following: </p>
+
+<p>
+<ol>
+ <li>Shut down svnserve, Apache, and anything else that might be
+     accessing the repository.
+ </li>
+
+ <li>
+ <b>
+ <tt>svnadmin&nbsp;dump&nbsp;/path/to/repository&nbsp;>&nbsp;dumpfile.txt</tt>
+ </b>,
+   using version X of svnadmin.
+ </li>
+
+ <li>
+ <b>
+ <tt>mv&nbsp;/path/to/repository&nbsp;/path/to/saved-old-repository</tt>
+ </b>
+ </li>
+
+ <li>Now upgrade to Subversion Y (i.e., build and install Y, replacing X).
+ </li>
+
+ <li>
+ <b><tt>svnadmin&nbsp;create&nbsp;/path/to/repository</tt></b>, using version
+   Y of svnadmin.
+ </li>
+
+ <li>
+ <b>
+ <tt>svnadmin&nbsp;load&nbsp;/path/to/repository&nbsp;<&nbsp;dumpfile.txt</tt>
+ </b>,
+   again using version Y of svnadmin.
+ </li>
+
+ <li>Copy over hook scripts, etc, from the old repository to the new one.
+ </li>
+
+ <li>Restart svnserve, Apache, etc.
+ </li>
+</ol>
+</p>
+
+<p> See
+<a href="http://svnbook.red-bean.com/html-chunk/ch05s03.html#svn-ch-5-sect-3.4"
+>http://svnbook.red-bean.com/html-chunk/ch05s03.html#svn-ch-5-sect-3.4</a>
+for more details on dumping and loading.</p>
 
 
 <![CDATA[=========================================================]]>
