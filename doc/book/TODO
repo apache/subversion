@@ -68,5 +68,16 @@ Here is a list of all the things that the Subversion Book DOESN'T yet cover.
   - clarify that 'svn copy/move' *only* works within a single
     repository.  cross-repository copying is a post-1.0 feature.
 
+  - I think we need to add  a *bit* more background on "how berkeley db"
+    works.  It's not clear to most readers 1) what the db logfiles are,
+    2) that they need to be pruned regularly, 3) that they grow *even*
+    if you only do checkouts and updates.   Ben wrote an email about
+    this which should probably be assimilated into ch05:
 
-  
+      http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=38769
+
+    While it's not our job to turn the readers into BDB experts, I
+    think this level of information is the exact right level of BDB
+    knowledge that users/admins need to use svn well.
+
+  - document 'svn switch --relocate'.
