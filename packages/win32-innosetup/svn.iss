@@ -72,7 +72,7 @@ Source: {#= path_setup_in}\doc\svn-doc.chm; DestDir: {app}\doc
 
 ; VC7 Runtime
 #ifdef VC7
-Source: {#= path_msvcr70_dll}\msvcr70.dll; DestDir: {sys}; Flags: sharedfile uninsneveruninstall onlyifdoesntexist
+Source: {#= path_msvcr70_dll}\msvcr70.dll; DestDir: {app}\bin
 #endif
 
 ;SSL
