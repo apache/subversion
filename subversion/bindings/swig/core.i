@@ -258,6 +258,7 @@ void apr_terminate(void);
 apr_status_t apr_time_ansi_put(apr_time_t *result, time_t input);
 
 void apr_pool_destroy(apr_pool_t *p);
+void apr_pool_clear(apr_pool_t *p);
 
 apr_status_t *apr_file_open_stdout (apr_file_t **out, apr_pool_t *pool);
 apr_status_t *apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
@@ -265,9 +266,7 @@ apr_status_t *apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
 /* -----------------------------------------------------------------------
    pool functions renaming since swig doesn't take care of the #define's
 */
-%rename (svn_pool_destroy) apr_pool_destroy;
 %rename (svn_pool_create) svn_pool_create_ex;
-%rename (svn_pool_clear) apr_pool_clear;
 %ignore svn_pool_create_ex_debug;
 %typemap(default) apr_allocator_t *allocator {
     $1 = NULL;
