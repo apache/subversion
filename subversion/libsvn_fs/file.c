@@ -172,7 +172,7 @@ read_string_fn (void *baton,
 		apr_size_t *len,
 		apr_pool_t *pool)
 {
-  struct read_string *rs = (struct read_string *) baton;
+  struct read_string *rs = baton;
   int remaining = rs->contents->len - rs->offset;
 
   /* How many bytes are we actually going to deliver?  */
@@ -209,7 +209,7 @@ svn_fs_file_contents (svn_read_fn_t **contents,
   rs->offset = 0;
 
   *contents = read_string_fn;
-  *contents_baton = (void *) rs;
+  *contents_baton = rs;
 
   return 0;
 }
