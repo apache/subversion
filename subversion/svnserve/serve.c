@@ -846,6 +846,20 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { NULL }
 };
 
+/* Skip past the scheme part of a URL, including the tunnel specification
+ * if present.  Return NULL if the scheme part is invalid for ra_svn. */
+static const char *skip_scheme_part(const char *url)
+{
+  if (strncmp(url, "svn", 3) != 0)
+    return NULL;
+  url += 3;
+  if (*url == '+')
+    url += strcspn(url, ":");
+  if (strncmp(url, "://", 3) != 0)
+    return NULL;
+  return url + 3;
+}
+
 static svn_error_t *find_repos(const char *url, const char *root,
                                svn_repos_t **repos, const char **repos_url,
                                const char **fs_path, apr_pool_t *pool)
@@ -859,13 +873,12 @@ static svn_error_t *find_repos(const char *url, const char *root,
   /* Decode any escaped characters in the URL. */
   url = svn_path_uri_decode(url, pool);
 
-  /* Verify the scheme part. */
-  if (strncmp(url, "svn://", 6) != 0)
+  /* Skip past the scheme and authority part. */
+  client_path = skip_scheme_part(url);
+  if (client_path == NULL)
     return svn_error_createf(SVN_ERR_BAD_URL, NULL,
                              "Non-svn URL passed to svn server: '%s'", url);
-
-  /* Skip past the authority part. */
-  client_path = strchr(url + 6, '/');
+  client_path = strchr(client_path, '/');
   client_path = (client_path == NULL) ? "" : client_path + 1;
 
   SVN_ERR(svn_path_cstring_from_utf8(&client_path_apr,

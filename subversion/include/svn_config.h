@@ -61,7 +61,6 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_HTTP_TIMEOUT              "http-timeout"
 #define SVN_CONFIG_OPTION_HTTP_COMPRESSION          "http-compression"
 #define SVN_CONFIG_OPTION_NEON_DEBUG_MASK           "neon-debug-mask"
-#define SVN_CONFIG_OPTION_SVN_TUNNEL_AGENT          "svn-tunnel-agent"
 #define SVN_CONFIG_OPTION_SSL_AUTHORITIES_FILE      "ssl-authorities-file"
 #define SVN_CONFIG_OPTION_SSL_IGNORE_UNKNOWN_CA     "ssl-ignore-unknown-ca"
 #define SVN_CONFIG_OPTION_SSL_IGNORE_INVALID_DATE   "ssl-ignore-invalid-date"
@@ -83,6 +82,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_GLOBAL_IGNORES            "global-ignores"
 #define SVN_CONFIG_OPTION_LOG_ENCODING              "log-encoding"
 #define SVN_CONFIG_OPTION_TEMPLATE_ROOT             "template-root"
+#define SVN_CONFIG_SECTION_TUNNELS              "tunnels"
 
 
 /** Read configuration information from the standard sources and merge
