@@ -310,7 +310,7 @@ Let's work through an example node revision:
 
 The entry for key "2345" in `representations' is:
 
-   ("delta" "2343" "1729" CHECKSUM)
+   ("delta" "2343" ("svndiff" "1729") CHECKSUM)
 
 and the entry for key "2343" in `representations' is:
 
@@ -318,10 +318,10 @@ and the entry for key "2343" in `representations' is:
 
 while the entry for key "1729" in `strings' is:
 
-   ("svndiff" DATA)   /* DATA being some unprintable svndiff glob */
+   <some unprintable glob of svndiff data>
 
 which, when applied to the fulltext at key "1001" in strings, results
-in this fulltext:
+in this new fulltext:
 
    "((some text) (that looks) (deceptively like) (directory entries))"
 
@@ -332,12 +332,12 @@ file contents, not as a directory entry list.
 
 Representations know nothing about ancestry -- the `representations'
 table never refers to node revision id's, only to strings or to other
-representations.  In other words, the `nodes' table allows recovery of
-ancestry information, while the `representations' and `strings' tables
-together allow deltification and undeltification *independently* of
-ancestry.  At present, Subversion generally stores the youngest
-strings in "fulltext" form, and older strings as "delta"s against
-them.  However, there's nothing magic about that particular
+representations.  In other words, while the `nodes' table allows
+recovery of ancestry information, the `representations' and `strings'
+tables together handle deltification and undeltification
+*independently* of ancestry.  At present, Subversion generally stores
+the youngest strings in "fulltext" form, and older strings as "delta"s
+against them.  However, there's nothing magic about that particular
 arrangement.  Other interesting alternatives:
 
    - We could store the N most recently accessed strings as fulltexts,
@@ -352,35 +352,6 @@ Since the filesystem interface doesn't expose these details, we can
 change the representation pretty much as we please to optimize
 whatever parameter we care about --- storage size, speed, robustness,
 etc.
-
-
-
-DELTA: how we represent text deltas
-
-The job of a DELTA form is to describe how to turn one byte string
-(the `source' string) into another (the `target' string).  The context
-of the DELTA form needs specify exactly what the source and target
-strings are.
-
-At the moment, there is only one form of DELTA allowed:
-
-("svndiff" DATA)
-    DATA is an atom whose contents are a VCDIFF-form diff.
-
-
-
-CHECKSUM: how we represent checksums
-
-The job of a CHECKSUM form is to provide a constant-size distinctive
-value, computed entirely from a given string.  If two strings have
-different checksums, then we know those two strings must be different.
-Assuming we use a good checksum algorithm, if two strings have the
-same checksum, it is likely that the strings are equal.
-
-There is only one form of CHECKSUM skel at the moment:
-
-("md5" BYTES)
-    BYTES is the 128-bit MD5 hash value of the string.
 
 
 
@@ -734,21 +705,20 @@ Representations:
 
          REPRESENTATION ::= FULLTEXT | DELTA ;
                FULLTEXT ::= ("fulltext" STRING-KEY) ;
-                  DELTA ::= ("delta" REP-KEY STRING-KEY CHECKSUM) ;
-
-             STRING-KEY ::= atom ;
+                  DELTA ::= ("delta" REP-KEY DIFF CHECKSUM) ;
+                   DIFF ::= ("svndiff" STRING-KEY) ;
                 REP-KEY ::= atom ;
+             STRING-KEY ::= atom ;
 
                CHECKSUM ::= ("md5" BYTES) ;
                   BYTES ::= atom ;
 
 Strings:
 
-                 STRING ::= RAWTEXT | LISTTEXT | DELTATEXT
+                 STRING ::= RAWTEXT | LISTTEXT | DIFFTEXT
                 RAWTEXT ::= /{anything.class}*/ ;
                SKELTEXT ::= list ;
-              DELTATEXT ::= ("svndiff" BYTES) ;
-                  BYTES ::= atom ;
+               DIFFTEXT ::= /{anything.class}*/ ;
 
 
 Lexical elements
