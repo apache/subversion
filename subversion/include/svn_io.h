@@ -193,6 +193,16 @@ svn_error_t *svn_io_set_file_executable (const char *path,
                                          svn_boolean_t ignore_enoent,
                                          apr_pool_t *pool);
 
+/* Determine whether a file is executable by the current user.  
+ * Set *EXECUTABLE to TRUE if the file PATH is executable by the 
+ * current user, otherwise set it to FALSE.  
+ * 
+ * On Windows and on platforms without userids, always returns FALSE.
+ */
+svn_error_t *svn_io_is_file_executable(svn_boolean_t *executable, 
+                                       const char *path, 
+                                       apr_pool_t *pool);
+
 
 /* Read a line from FILE into BUF, but not exceeding *LIMIT bytes.
  * Does not include newline, instead '\0' is put there.

@@ -365,7 +365,7 @@ def update_modified_with_translation(sbox):
     'A/D/G/rho' : Item(status='CU'),
     })
 
-  expected_disk = svntest.main.greek_state.copy()
+  expected_disk = svntest.actions.get_virginal_disk()
   expected_disk.tweak('A/D/G/rho', contents="""<<<<<<< .mine
 1
 2

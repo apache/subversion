@@ -62,11 +62,11 @@ def get_routine_status_state(wc_dir):
 
 #----------------------------------------------------------------------
 
-def get_routine_disk_state(wc_dir):
+def get_routine_disk_state(wc_dir, check_props=0):
   """get the routine disk list for WC_DIR at the completion of an
   initial call to do_routine_switching()"""
 
-  disk = svntest.main.greek_state.copy()
+  disk = svntest.actions.get_virginal_disk(check_props)
 
   # iota has the same contents as gamma
   disk.tweak('iota', contents=disk.desc['A/D/gamma'].contents)
@@ -101,7 +101,7 @@ def do_routine_switching(wc_dir, verify):
       })
 
     # Create expected disk tree (iota will have gamma's contents)
-    expected_disk = svntest.main.greek_state.copy()
+    expected_disk = svntest.actions.get_virginal_disk()
     expected_disk.tweak('iota',
                         contents=expected_disk.desc['A/D/gamma'].contents)
 
@@ -381,7 +381,7 @@ def full_rev_update(sbox):
     })
 
   # Create expected disk tree
-  expected_disk = get_routine_disk_state(wc_dir)
+  expected_disk = get_routine_disk_state(wc_dir, 1)
     
   # Create expected status
   expected_status = get_routine_status_state(wc_dir)
@@ -503,7 +503,7 @@ def rev_update_switched_things(sbox):
     })
 
   # Create expected disk tree
-  expected_disk = get_routine_disk_state(wc_dir)
+  expected_disk = get_routine_disk_state(wc_dir, 1)
   expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.apple")
   expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.watermelon")
   expected_disk.tweak('A/B/E/alpha',
