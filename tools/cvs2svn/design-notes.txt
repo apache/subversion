@@ -67,9 +67,11 @@ The fields are:
    2. a digest of the log message + author
    3. the type of change ("C"hange, or "D"elete)
    4. the revision number
-   5. the branch name, or "*" if none
-   6. the number of tags (followed by the tag names, space-delimited)
-   7. the number of branches (followed by the branch names, space-delimited)
+   5. the branch on which this commit happened, or "*" if not on a branch
+   6. the number of tags rooted at this revision (followed by their
+        names, space-delimited)  
+   7. the number of branches rooted at this revision (followed by
+        their names, space-delimited) 
    8. the path of the RCS file in the repository
 
 (Of course, in the above example, fields 6 and 7 are "0", so they have
