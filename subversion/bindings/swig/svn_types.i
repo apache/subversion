@@ -279,10 +279,9 @@
 }
 
 /* -----------------------------------------------------------------------
-   Wrap the digest output of svn_io_file_checksum and
-   svn_fs_file_md5_checksum
+   Wrap the digest output for functions populating digests.
 */
-%typemap(perl5, in, numinputs=0) unsigned char digest[] ($*1_type temp[33]) {
+%typemap(perl5, in, numinputs=0) unsigned char digest[ANY] ($*1_type temp[33]) {
     $1 = ($1_ltype)temp;
 }
 
@@ -290,6 +289,11 @@
     ST(argvi) = sv_newmortal();
     sv_setpv((SV*)ST(argvi++), svn_md5_digest_to_cstring ($1,_global_pool));
 }
+
+%apply unsigned char digest[ANY]
+    { unsigned char *result_digest,
+      unsigned char *digest
+    };
 
 /* -----------------------------------------------------------------------
   useful convertors for svn_opt_revision_t
