@@ -80,6 +80,14 @@ dag_node_t *svn_fs__dag_dup (dag_node_t *node,
 svn_fs_t *svn_fs__dag_get_fs (dag_node_t *node);
 
 
+/* Return the revision number REV stored in NODE as part of TRAIL.  If
+   NODE has never been committed as part of a revision, set REV to
+   SVN_INVALID_REVNUM.  */
+svn_error_t *svn_fs__dag_get_revision (svn_revnum_t *rev,
+                                       dag_node_t *node,
+                                       trail_t *trail);
+
+
 /* Return the node revision ID of NODE.  The value returned is shared
    with NODE, and will be deallocated when NODE is.  */
 const svn_fs_id_t *svn_fs__dag_get_id (dag_node_t *node);

@@ -279,6 +279,23 @@ svn_fs__dag_get_node (dag_node_t **node,
 }
 
 
+
+svn_error_t *
+svn_fs__dag_get_revision (svn_revnum_t *rev,
+                          dag_node_t *node,
+                          trail_t *trail)
+{
+  skel_t *node_rev;
+
+  SVN_ERR (get_node_revision (&node_rev, node, trail));
+  *rev = atoi ((SVN_FS__NR_HDR_REV (SVN_FS__NR_HEADER (node_rev)))->data);
+  if (*rev == 0)
+    *rev = SVN_INVALID_REVNUM;
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Trail body for svn_fs__dag_init_fs. */
 static svn_error_t *
 txn_body_dag_init_fs (void *fs_baton, trail_t *trail)

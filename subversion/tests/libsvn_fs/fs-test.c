@@ -28,6 +28,7 @@
 
 #include "../../libsvn_fs/fs.h"
 #include "../../libsvn_fs/dag.h"
+#include "../../libsvn_fs/node-rev.h"
 #include "../../libsvn_fs/rev-table.h"
 #include "../../libsvn_fs/nodes-table.h"
 #include "../../libsvn_fs/trail.h"
@@ -4751,6 +4752,91 @@ large_file_integrity (const char **msg,
 }
 
 
+struct get_node_revision_args
+{
+  svn_fs_t *fs;
+  svn_fs_id_t *id;
+  skel_t *node_rev;
+};
+
+
+static svn_error_t *
+txn_body_get_node_revision (void *baton, trail_t *trail)
+{
+  struct get_node_revision_args *args = baton;
+
+  return svn_fs__get_node_revision (&(args->node_rev), args->fs, 
+                                    args->id, trail);
+}
+
+
+static svn_error_t *
+check_root_revision (const char **msg,
+                     apr_pool_t *pool)
+{ 
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t youngest_rev, test_rev;
+  struct get_node_revision_args args;
+  int i;
+
+  *msg = "make sure the root node's stored revision is accurate";
+
+  /* Create a filesystem and repository. */
+  SVN_ERR (svn_test__create_fs_and_repos 
+           (&fs, "test-repo-check-root-revision", pool));
+
+  /* Initialize this once for all time. */
+  args.fs = fs;
+
+  /* Create and commit the greek tree. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
+  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+  SVN_ERR (svn_fs_close_txn (txn));
+
+  /* Root node's revision should be the same as YOUNGEST_REV. */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, pool)); 
+  SVN_ERR (svn_fs_node_id (&args.id, rev_root, "", pool));
+  SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_node_revision, &args, pool));
+  test_rev = atoi ((SVN_FS__NR_HDR_REV 
+                    (SVN_FS__NR_HEADER (args.node_rev)))->data);
+  if (test_rev != youngest_rev)
+    return svn_error_createf
+      (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+       "Root node in revision %lu has unexpected stored revision %lu",
+       youngest_rev, test_rev);
+
+  for (i = 0; i < 10; i++)
+    {
+      /* Create and commit the greek tree. */
+      SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
+      SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+      SVN_ERR (svn_test__set_file_contents 
+               (txn_root, "iota", 
+                apr_psprintf (pool, "iota version %d", i + 2), pool));
+
+      SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn));
+      SVN_ERR (svn_fs_close_txn (txn));
+
+      /* Root node's revision should be the same as YOUNGEST_REV. */
+      SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, pool)); 
+      SVN_ERR (svn_fs_node_id (&args.id, rev_root, "", pool));
+      SVN_ERR (svn_fs__retry_txn (fs, txn_body_get_node_revision, 
+                                  &args, pool));
+      test_rev = atoi ((SVN_FS__NR_HDR_REV 
+                        (SVN_FS__NR_HEADER (args.node_rev)))->data);
+      if (test_rev != youngest_rev)
+        return svn_error_createf
+          (SVN_ERR_FS_GENERAL, 0, NULL, pool,
+           "Root node in revision %lu has unexpected stored revision %lu",
+           youngest_rev, test_rev);
+    }
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -4786,6 +4872,7 @@ svn_error_t * (*test_funcs[]) (const char **msg,
   check_old_revisions,
   check_all_revisions,
   large_file_integrity,
+  check_root_revision,
   0
 };
 
