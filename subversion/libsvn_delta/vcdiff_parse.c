@@ -113,19 +113,13 @@ svn_make_vcdiff_parser (svn_txdelta_window_handler_t *handler,
 }
 
 
-
-
-/* Create a new window from PARSER->SUBPOOL, and send it off to the
-   caller's consumer routine, then create a new SUBPOOL in PARSER so
-   that it can continue buffering data.  */
-
 /* Note: this dummy routine assumes there's nothing but raw ASCII in
    the buffer, and only creates a single kind of txdelta_op: the
    "append new text" kind.  It places one such op into a window and
    sends the window off.  The *real* vcdiff code will place a number
    of ops into a window, based on the decoded bytestream.  */
 svn_error_t *
-svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
+svn_vcdiff__send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
 {
   svn_error_t *err;
 
@@ -158,7 +152,7 @@ svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
       err = (* (parser->consumer_func)) (window, parser->consumer_baton);
       if (err)
         return svn_error_quick_wrap 
-          (err, "svn_vcdiff_send_window: consumer_func choked.");
+          (err, "svn_vcdiff__send_window: consumer_func choked.");
     }
   
   /* Now that the window consumer is done, free the window/sub-pool */
@@ -175,11 +169,25 @@ svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, apr_size_t len)
 }
 
 
+svn_error_t *
+svn_vcdiff__send_terminal_window (svn_vcdiff_parser_t *parser)
+{
+  svn_error_t *err;
 
+  if (parser->consumer_func)
+    {
+      err = (* (parser->consumer_func)) (NULL, parser->consumer_baton);
+      if (err)
+        return svn_error_quick_wrap 
+          (err, "svn_vcdiff__send_terminal_window: consumer_func choked.");
+    }
+  
+  return SVN_NO_ERROR;
+}
 
 /* Parse another block of bytes in the vcdiff-format stream managed by
    PARSER.  When we've accumulated enough data for a complete window,
-   call svn_vcdiff_send_window().  */
+   call svn_vcdiff__send_window().  */
 
 /* Note: this dummy routine thinks a "window" is just a certain number
    of bytes received.  The *real* vcdiff code will decode the vcdiff
@@ -198,7 +206,13 @@ svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
     {
       /* This means the caller has finished sending the vcdiff
          bytestream, so flush any remaining bytes in our buffer.  */
-      err = svn_vcdiff_send_window (parser, parser->buffer->len);
+      err = svn_vcdiff__send_window (parser, parser->buffer->len);
+      if (err)
+        return err;
+
+      /* Then send a null window, to indicate that this window stream
+         is done. */
+      err = svn_vcdiff__send_terminal_window (parser);
       if (err)
         return err;
 
@@ -215,7 +229,7 @@ svn_vcdiff_parse (svn_vcdiff_parser_t *parser,
         {
           /* Send off exactly that many bytes as a window to the
              consumer routine */
-          err = svn_vcdiff_send_window (parser, SVN_VCDIFF_WINDOW_SIZE);
+          err = svn_vcdiff__send_window (parser, SVN_VCDIFF_WINDOW_SIZE);
           if (err)
             return err;
         }

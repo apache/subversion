@@ -361,11 +361,11 @@ window_handler (svn_txdelta_window_t *window, void *baton)
      case, clean up the handler.  */
   if (! fb->dir_baton->edit_baton->is_checkout)
     {
-      err2 = svn_wc__close_text_base (hb->source, fb->path, 0, window->pool);
+      err2 = svn_wc__close_text_base (hb->source, fb->path, 0, fb->pool);
       if (err2 != SVN_NO_ERROR && err == SVN_NO_ERROR)
         err = err2;
     }
-  err2 = svn_wc__close_text_base (hb->dest, fb->path, 0, window->pool);
+  err2 = svn_wc__close_text_base (hb->dest, fb->path, 0, fb->pool);
   if (err2 != SVN_NO_ERROR && err == SVN_NO_ERROR)
     err = err2;
   apr_destroy_pool (hb->pool);
@@ -591,14 +591,6 @@ add_file (svn_string_t *name,
   struct dir_baton *parent_dir_baton = (struct dir_baton *) parent_baton;
   struct file_baton *fb;
   svn_error_t *err;
-
-  /* kff todo fooo: this should go away once we can guarantee a call
-     either to {add,replace}_directory() or start_edit() before the
-     first add_file(). */
-  {
-    /* fooo: nothing can happen until the first dir_baton is taken
-       care of, fix callers to make this happen */
-  }
 
   /* Make sure we've got a working copy to put the file in. */
   err = svn_wc__check_wc (parent_dir_baton->path, parent_dir_baton->pool);

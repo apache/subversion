@@ -58,8 +58,15 @@
 #define DELTA_H
 
 
-svn_error_t * svn_vcdiff_send_window (svn_vcdiff_parser_t *parser, 
+/* Create a new window from PARSER->SUBPOOL, and send it off to the
+   caller's consumer routine, then create a new SUBPOOL in PARSER so
+   that it can continue buffering data.  */
+svn_error_t *svn_vcdiff__send_window (svn_vcdiff_parser_t *parser, 
                                       apr_size_t len);
+
+/* Send a null window to parser's consumer, signifying the end of this
+   window stream. */
+svn_error_t *svn_vcdiff__send_terminal_window (svn_vcdiff_parser_t *parser);
 
 
 /* Private interface for text deltas. */
