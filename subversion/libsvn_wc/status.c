@@ -87,6 +87,7 @@ add_ignore_patterns (const char *dirpath,
 }                  
 
 
+                        
 /* Fill in *STATUS for PATH, whose entry data is in ENTRY.  Allocate
    *STATUS in POOL. 
 
@@ -119,18 +120,27 @@ assemble_status (svn_wc_status_t **status,
   enum svn_wc_status_kind final_text_status = svn_wc_status_normal;
   enum svn_wc_status_kind final_prop_status = svn_wc_status_none;
 
+  /* Check the path kind for PATH. */
+  SVN_ERR( svn_io_check_path (path, &path_kind, pool));
+
   if (! entry)
     {
       /* return a blank structure. */
       stat = apr_pcalloc (pool, sizeof(*stat));
       stat->entry = NULL;
       stat->repos_rev = SVN_INVALID_REVNUM;
-      stat->text_status = final_text_status;       
-      stat->prop_status = final_prop_status;    
+      stat->text_status = svn_wc_status_none;
+      stat->prop_status = svn_wc_status_none;
       stat->repos_text_status = svn_wc_status_none;
       stat->repos_prop_status = svn_wc_status_none;
       stat->locked = FALSE;
       stat->copied = FALSE;
+
+      /* If this path has no entry, but IS present on disk, it's
+         unversioned. */
+      if (path_kind != svn_node_none)
+        stat->text_status = svn_wc_status_unversioned;
+
       *status = stat;
       return SVN_NO_ERROR;
     }
@@ -212,8 +222,6 @@ assemble_status (svn_wc_status_t **status,
         missing.  This overrides every possible state *except*
         deletion.  (If something is deleted or scheduled for it, we
         don't care if the working file exists.)  */
-  
-  SVN_ERR( svn_io_check_path (path, &path_kind, pool));
   if ((path_kind == svn_node_none)
       && (final_text_status != svn_wc_status_deleted))
     final_text_status = svn_wc_status_absent;

@@ -115,14 +115,8 @@ tweak_statushash (void *edit_baton,
     {
       svn_stringbuf_t *pathkey = svn_stringbuf_create (path, pool);
         
-      if (repos_text_status == svn_wc_status_added)
-        /* Make an empty status struct */
-        statstruct = apr_pcalloc (pool, sizeof(*statstruct));
-      else
-        /* If this PATH isn't 'added', it must already exist in the
-           working copy.  Use the public API to get a statstruct: */
-        SVN_ERR (svn_wc_status (&statstruct, pathkey, pool));
-
+      /* Use the public API to get a statstruct: */
+      SVN_ERR (svn_wc_status (&statstruct, pathkey, pool));
 
       /* Put the path/struct into the hash. */
       apr_hash_set (statushash, pathkey->data, pathkey->len, statstruct);
