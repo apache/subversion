@@ -48,14 +48,14 @@ languages = {
 
   'python':   (Include('"Python.h"'),
                If('SVN_SWIG_VERSION >= 103020'),
-               File('python', 'precommon.swg'),
+               Include('"python/precommon.swg"'),
                Endif(),
                File('common.swg'),
                File('python', 'pyrun.swg')),
 
   'perl':     (File('common.swg'),
                If('SVN_SWIG_VERSION >= 103020'),
-               File('perl5', 'precommon.swg'),
+               Include('"perl5/precommon.swg"'),
                Endif(),
                File('perl5', 'perlrun.swg')),
 
