@@ -1214,8 +1214,8 @@ id_check_ancestor (int *is_ancestor,
   dag_node_t *node1, *node2;
 
   /* Get the nodes. */
-  svn_fs__dag_get_node (&node1, fs, id1, trail);
-  svn_fs__dag_get_node (&node2, fs, id2, trail);
+  SVN_ERR (svn_fs__dag_get_node (&node1, fs, id1, trail));
+  SVN_ERR (svn_fs__dag_get_node (&node2, fs, id2, trail));
   
   /* Do the test.  If the test fails, we'll just go with "not an
      ancestor" for now.  ### better come back and check this out.  */
@@ -1234,8 +1234,8 @@ id_is_parent (int *is_parent,
   dag_node_t *node1, *node2;
 
   /* Get the nodes. */
-  svn_fs__dag_get_node (&node1, fs, id1, trail);
-  svn_fs__dag_get_node (&node2, fs, id2, trail);
+  SVN_ERR (svn_fs__dag_get_node (&node1, fs, id1, trail));
+  SVN_ERR (svn_fs__dag_get_node (&node2, fs, id2, trail));
 
   return svn_fs__dag_is_parent (is_parent, node1, node2, trail);
 }              
