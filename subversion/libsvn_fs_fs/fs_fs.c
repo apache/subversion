@@ -1834,7 +1834,10 @@ svn_fs_fs__file_length (svn_filesize_t *length,
                         node_revision_t *noderev,
                         apr_pool_t *pool)
 {
-  *length = noderev->data_rep->expanded_size;
+  if (noderev->data_rep)
+    *length = noderev->data_rep->expanded_size;
+  else
+    *length = 0;
 
   return SVN_NO_ERROR;
 }
@@ -1866,7 +1869,10 @@ svn_fs_fs__file_checksum (unsigned char digest[],
                           node_revision_t *noderev,
                           apr_pool_t *pool)
 {
-  memcpy (digest, noderev->data_rep->checksum, APR_MD5_DIGESTSIZE);
+  if (noderev->data_rep)
+    memcpy (digest, noderev->data_rep->checksum, APR_MD5_DIGESTSIZE);
+  else
+    memset (digest, 0, APR_MD5_DIGESTSIZE);
 
   return SVN_NO_ERROR;
 }
