@@ -1598,7 +1598,7 @@ apply_textdelta (void *file_baton,
       
       tb = svn_wc__text_base_path (fb->path, FALSE, pool);
       SVN_ERR (svn_io_file_checksum (digest, tb, pool));
-      hex_digest = svn_md5_digest_to_cstring (digest, pool);
+      hex_digest = svn_md5_digest_to_cstring_display (digest, pool);
       
       /* Compare the base_checksum here, rather than in the window
          handler, because there's no guarantee that the handler will
@@ -2273,7 +2273,8 @@ install_file (svn_wc_notify_state_t *content_state,
                                SVN_WC__LOG_ATTR_NAME,
                                base_name,
                                SVN_WC__ENTRY_ATTR_CHECKSUM,
-                               svn_md5_digest_to_cstring (digest, pool),
+                               svn_md5_digest_to_cstring_display (digest,
+                                                                  pool),
                                NULL);
       }
     }

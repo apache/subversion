@@ -903,7 +903,7 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
   if (expected_checksum)
     {
       apr_md5_final(digest, &md5_context);
-      hex_digest = svn_md5_digest_to_cstring(digest, pool);
+      hex_digest = svn_md5_digest_to_cstring_display(digest, pool);
       if (strcmp(hex_digest, expected_checksum) != 0)
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH, NULL,

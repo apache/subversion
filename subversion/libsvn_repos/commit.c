@@ -504,8 +504,8 @@ close_file (void *file_baton,
       SVN_ERR (svn_fs_file_md5_checksum
                (digest, fb->edit_baton->txn_root, fb->path, pool));
       hex_digest = svn_md5_digest_to_cstring (digest, pool);
-      
-      if (strcmp (text_checksum, hex_digest) != 0)
+
+      if (hex_digest && strcmp (text_checksum, hex_digest) != 0)
         {
           return svn_error_createf
             (SVN_ERR_CHECKSUM_MISMATCH, NULL,

@@ -967,7 +967,8 @@ static svn_error_t * upd_close_file(void *file_baton,
 {
   item_baton_t *file = file_baton;
 
-  file->text_checksum = apr_pstrdup(file->pool, text_checksum);
+  file->text_checksum = text_checksum ?
+    apr_pstrdup(file->pool, text_checksum) : NULL;
 
   /* If we are not in "send all" mode, and this file is not a new
      addition or didn't otherwise have changed text, tell the client

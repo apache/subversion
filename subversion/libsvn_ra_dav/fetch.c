@@ -836,7 +836,7 @@ svn_error_t *svn_ra_dav__get_file(svn_ra_session_t *session,
       if (fwc.do_checksum)
         {
           apr_md5_final(digest, &(fwc.md5_context));
-          hex_digest = svn_md5_digest_to_cstring(digest, pool);
+          hex_digest = svn_md5_digest_to_cstring_display(digest, pool);
 
           if (strcmp (hex_digest, expected_checksum->data) != 0)
             return svn_error_createf

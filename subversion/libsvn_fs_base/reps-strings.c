@@ -790,8 +790,8 @@ svn_fs_base__rep_contents (svn_string_t *str,
          _("Checksum mismatch on rep '%s':\n"
            "   expected:  %s\n"
            "     actual:  %s\n"), rep_key,
-         svn_md5_digest_to_cstring (rep->checksum, pool),
-         svn_md5_digest_to_cstring (checksum, pool));
+         svn_md5_digest_to_cstring_display (rep->checksum, pool),
+         svn_md5_digest_to_cstring_display (checksum, pool));
   }
 
   return SVN_NO_ERROR;
@@ -876,8 +876,9 @@ txn_body_read_rep (void *baton, trail_t *trail)
                    _("Checksum mismatch on rep '%s':\n"
                      "   expected:  %s\n"
                      "     actual:  %s\n"), args->rb->rep_key,
-                   svn_md5_digest_to_cstring (rep->checksum, trail->pool),
-                   svn_md5_digest_to_cstring (checksum, trail->pool));
+                   svn_md5_digest_to_cstring_display (rep->checksum,
+                                                      trail->pool),
+                   svn_md5_digest_to_cstring_display (checksum, trail->pool));
             }
         }
     }

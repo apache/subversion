@@ -1323,7 +1323,7 @@ svn_fs_base__dag_finalize_edits (dag_node_t *file,
       SVN_ERR (svn_fs_base__rep_contents_checksum
                (digest, fs, noderev->edit_key, trail, pool));
 
-      hex = svn_md5_digest_to_cstring (digest, pool);
+      hex = svn_md5_digest_to_cstring_display (digest, pool);
       if (strcmp (checksum, hex) != 0)
         return svn_error_createf
           (SVN_ERR_CHECKSUM_MISMATCH,

@@ -947,7 +947,7 @@ svn_fs_fs__dag_finalize_edits (dag_node_t *file,
     {
       SVN_ERR (svn_fs_fs__dag_file_checksum (digest, file, pool));
       hex = svn_md5_digest_to_cstring (digest, pool);
-      if (strcmp (checksum, hex) != 0)
+      if (hex && strcmp (checksum, hex) != 0)
         return svn_error_createf (SVN_ERR_CHECKSUM_MISMATCH, NULL,
                                   _("Checksum mismatch, file '%s':\n"
                                     "   expected:  %s\n"

@@ -808,7 +808,7 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Fetch the properties and a stream for the contents. */
   SVN_CMD_ERR(svn_fs_revision_root(&root, b->fs, rev, pool));
   SVN_CMD_ERR(svn_fs_file_md5_checksum(digest, root, full_path, pool));
-  hex_digest = svn_md5_digest_to_cstring(digest, pool);
+  hex_digest = svn_md5_digest_to_cstring_display(digest, pool);
   if (want_props)
     SVN_CMD_ERR(get_props(&props, root, full_path, pool));
   if (want_contents)

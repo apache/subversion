@@ -344,7 +344,7 @@ compare_and_verify (svn_boolean_t *modified_p,
       {
         const char *checksum;
         apr_md5_final (digest, &context);
-        checksum = svn_md5_digest_to_cstring (digest, pool);
+        checksum = svn_md5_digest_to_cstring_display (digest, pool);
         if (strcmp (checksum, entry->checksum) != 0)
           {
             return svn_error_createf

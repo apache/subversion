@@ -68,7 +68,7 @@ make_digest (const char *str,
   unsigned char digest[APR_MD5_DIGESTSIZE];
 
   apr_md5 (digest, str, strlen(str));
-  return svn_md5_digest_to_cstring (digest, pool);
+  return svn_md5_digest_to_cstring_display (digest, pool);
 }
 
 
