@@ -134,7 +134,9 @@ translate_keyword_subst (char *buf,
   buf_ptr = buf + 1 + keyword_len;
 
   /* Check for unexpanded keyword. */
-  if (buf_ptr[0] == '$')
+  if ((buf_ptr[0] == '$')          /* "$keyword$" */
+      || ((buf_ptr[0] == ':') 
+          && (buf_ptr[1] == '$'))) /* "$keyword:$" */
     {
       /* unexpanded... */
       if (value)
