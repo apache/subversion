@@ -1,4 +1,4 @@
-Version 0.17.0 (released ? Jan 2003, revision ????)
+Version 0.17.0 (released 20 Jan 2003, branches/0.17 @ revision 4468)
 
  User-visible changes:
  * 'svn add' is now recursive by default, -N to disable (#1073)
