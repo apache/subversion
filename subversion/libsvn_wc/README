@@ -77,8 +77,8 @@ Structure of the Working Copy
 Working copy meta-information is stored in SVN/ subdirectories,
 analogous to CVS/ subdirs:
 
-  .svn/README                   /* No, it's not this file.  Details below. */
-       format                   /* Contains wc adm format version. */
+  .svn/format                   /* Contains wc adm format version. */
+       README                   /* Just explains this is a working copy. */
        repository               /* Where this stuff came from. */
        entries                  /* Various adm info for each directory entry */
        dir-props                /* Working properties for this directory */
@@ -109,10 +109,10 @@ analogous to CVS/ subdirs:
             prop-base/             /* tmp area for base props */
             props/                 /* tmp area for props */
 
-`README'
+`format'
 
-   If someone doesn't know what a Subversion working copy is, this
-   will tell them how to find out more about Subversion.
+   Says what version of the working copy adm format this is (so future
+   clients can be backwards compatible easily).
 
    Also, the presence of this file means that the entire process of
    creating the adm area was completed, because this is always the
@@ -120,10 +120,10 @@ analogous to CVS/ subdirs:
    didn't muck things up afterwards, but it's good enough for
    existence-checking.
 
-`format'
+`README'
 
-   Says what version of the working copy adm format this is (so future
-   clients can be backwards compatible easily).
+   If someone doesn't know what a Subversion working copy is, this
+   will tell them how to find out more about Subversion.
 
 `repository'
 

@@ -142,7 +142,7 @@ assemble_status (svn_wc_status_t **status,
   if (entry->kind == svn_node_dir
       && path_kind == svn_node_dir)
     {
-      svn_boolean_t is_wc;
+      int is_wc;
 
       SVN_ERR (svn_wc_check_wc (path, &is_wc, pool));
       if (! is_wc)
@@ -488,7 +488,7 @@ svn_wc_statuses (apr_hash_t *statushash,
     {
       apr_hash_t *entries;
       apr_hash_index_t *hi;
-      svn_boolean_t is_wc;
+      int is_wc;
 
       /* Sanity check to make sure that we're being called on a working copy.
          This isn't strictly necessary, since svn_wc_entries_read will fail 
