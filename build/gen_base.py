@@ -195,7 +195,7 @@ class DependencyGraph:
     else:
       self.deps[type][target] = [ source ]
 
-  def get(self, type, target):
+  def get_sources(self, type, target):
     return self.deps[type].get(target, [ ])
 
   def get_targets(self, type):
