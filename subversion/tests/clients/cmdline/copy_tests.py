@@ -33,6 +33,18 @@ Item = svntest.wc.StateItem
 # Utilities
 #
 
+def get_repos_rev(sbox):
+  wc_dir = sbox.wc_dir;
+
+  out, err = svntest.actions.run_and_verify_svn("Getting Repository Revision",
+                                                None, [], "up", wc_dir)
+
+  mo=re.match("(?:At|Updated to) revision (\\d+)\\.", out[-1])
+  if mo:
+    return int(mo.group(1))
+  else:
+    raise svntest.Failure
+
 ######################################################################
 # Tests
 #
@@ -1310,6 +1322,36 @@ def repos_to_wc_1634(sbox):
     })
   svntest.actions.run_and_verify_status (wc_dir, expected_status)
 
+#----------------------------------------------------------------------
+#  Regression test for issue 1814
+
+def double_uri_escaping_1814(sbox):
+  "check for double URI escaping in svn ls -R"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  base_url = svntest.main.current_repo_url + '/base'
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'mybase',
+                                     base_url)
+
+  orig_url = base_url + '/foo%20bar'
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'r1',
+                                     orig_url)
+
+  orig_rev = get_repos_rev(sbox);
+
+  new_url = base_url + '/foo_bar'
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', '-m', 'r2',
+                                     orig_url, new_url)
+
+  # This had failed with ra_dav because "foo bar" would be double-encoded
+  # "foo bar" ==> "foo%20bar" ==> "foo%2520bar"
+  svntest.actions.run_and_verify_svn(None, None, [], 'ls', ('-r'+str(orig_rev)),
+                                     '-R', base_url)
 
 
 ########################################################################
@@ -1340,6 +1382,7 @@ test_list = [ None,
               revision_kinds_local_source,
               copy_over_missing_file,
               repos_to_wc_1634,
+              double_uri_escaping_1814,
              ]
 
 if __name__ == '__main__':
