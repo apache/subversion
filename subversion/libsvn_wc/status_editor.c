@@ -123,7 +123,8 @@ tweak_statushash (void *edit_baton,
       if (repos_text_status == svn_wc_status_added)
         adm_access = NULL;
       else if (is_dir)
-        SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, path, pool));
+        SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
+                                      path, pool));
       else
         SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
                                       svn_path_dirname (path, pool),
