@@ -256,24 +256,9 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
   c.use_copy_history = use_copy_history;
   c.ignore_ancestry = ignore_ancestry;
 
-  /* Set the global target revision if one can be determined. */
-  if (svn_fs_is_revision_root (tgt_root))
-    {
-      SVN_ERR (editor->set_target_revision 
-               (edit_baton, svn_fs_revision_root_revision (tgt_root), pool));
-    }
-  else if (svn_fs_is_txn_root (tgt_root))
-    {
-      svn_fs_t *fs = svn_fs_root_fs (tgt_root);
-      const char *txn_name = svn_fs_txn_root_name (tgt_root, pool);
-      svn_fs_txn_t *txn;
-
-      SVN_ERR (svn_fs_open_txn (&txn, fs, txn_name, pool));
-      SVN_ERR (editor->set_target_revision (edit_baton, 
-                                            svn_fs_txn_base_revision (txn),
-                                            pool));
-      SVN_ERR (svn_fs_close_txn (txn));
-    }
+  /* Set the global target revision. */
+  SVN_ERR (editor->set_target_revision 
+           (edit_baton, svn_fs_root_revision (tgt_root), pool));
 
   /* Get our editor root's revision. */
   rootrev = get_path_revision (src_root, src_parent_dir, pool);
@@ -395,7 +380,7 @@ get_path_revision (svn_fs_root_t *root,
   /* Easy out -- if ROOT is a revision root, we can use the revision
      that it's a root of. */
   if (svn_fs_is_revision_root (root))
-    return svn_fs_revision_root_revision (root);
+    return svn_fs_root_revision (root);
 
   /* Else, this must be a transaction root, so ask the filesystem in
      what revision this path was created. */
