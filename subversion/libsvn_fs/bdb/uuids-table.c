@@ -39,14 +39,26 @@ svn_fs__bdb_open_uuids_table (DB **uuids_p,
   const u_int32_t open_flags = (create ? (DB_CREATE | DB_EXCL) : 0);
   char buffer[APR_UUID_FORMATTED_LENGTH+1];
   DB *uuids;
+  int error;
 
   BDB_ERR (svn_fs__bdb_check_version());
   BDB_ERR (db_create (&uuids, env, 0));
   BDB_ERR (uuids->set_re_len (uuids, sizeof(buffer)));
-  BDB_ERR (uuids->open (SVN_BDB_OPEN_PARAMS(uuids, NULL),
-                        "uuids", 0, DB_RECNO,
-                        open_flags | SVN_BDB_AUTO_COMMIT,
-                        0666));
+
+  error = uuids->open (SVN_BDB_OPEN_PARAMS(uuids, NULL),
+                       "uuids", 0, DB_RECNO,
+                       open_flags | SVN_BDB_AUTO_COMMIT,
+                       0666);
+
+  /* This is a temporary compatibility check; it creates the
+     UUIDs table if one does not already exist. */
+  if (error == ENOENT && create == 0)
+  {
+    BDB_ERR (uuids->close (uuids, 0));
+    return svn_fs__bdb_open_uuids_table (uuids_p, env, 1);
+  }
+
+  BDB_ERR (error);    
 
   if (create)
   {
