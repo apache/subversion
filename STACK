@@ -17,6 +17,15 @@ Ben todo:
      printing `C' for either textual or property conflicts.  fix this.
 
    - stupid `M' bug only shows up in certain status commands!!!
+        
+   - redo syntax of client, especially for property commands.  stop
+     using --target-dir for anything but update or checkout.  use new
+     apr longopts.
+
+   - look at all calls to svn_wc__get_local_propchanges.  Notice how
+     it's always the same code preceding the call?  Perhaps we should
+     therefore put this code *inside* get_local_propchanges, and
+     change the interface to said func.
 
    - use karl's forthcoming "magic" adm/entryname routine whereever
      possible, once it exists.
