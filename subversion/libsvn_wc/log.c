@@ -228,166 +228,6 @@ signal_error (struct log_runner *loggy, svn_error_t *err)
 }
 
 
-static svn_error_t *
-recursive_rc_remove (svn_string_t *dir,
-                     apr_pool_t *pool)
-{
-  apr_pool_t *subpool = svn_pool_create (pool);
-  apr_hash_t *entries;
-  apr_hash_index_t *hi;
-  svn_string_t *fullpath = svn_string_dup (dir, pool);
-
-  SVN_ERR (svn_wc_entries_read (&entries, dir, pool));
-
-  /* Run through each entry in the entries file. */
-  for (hi = apr_hash_first (entries); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      apr_size_t klen;
-      void *val;
-      svn_string_t *basename;
-      svn_wc_entry_t *entry; 
-  
-      /* Get the next entry */
-      apr_hash_this (hi, &key, &klen, &val);
-      entry = (svn_wc_entry_t *) val;
-      basename = svn_string_create ((const char *) key, subpool);
-
-      if (entry->kind == svn_node_dir)
-        {
-          if (strcmp (basename->data, SVN_WC_ENTRY_THIS_DIR) != 0)
-            {
-              svn_path_add_component (fullpath, basename, 
-                                      svn_path_local_style);
-              SVN_ERR (recursive_rc_remove (fullpath, subpool));
-            }
-        }
-      /* Reset the fullpath variable. */
-      svn_string_set (fullpath, dir->data);
-
-      /* Clear our per-iteration pool. */
-      svn_pool_clear (subpool);
-    }
-  
-  /* Once all the subdirs of this dir have been removed from revision
-     control, we can wipe this one's administrative directory. */
-  SVN_ERR (svn_wc__adm_destroy (fullpath, subpool));
-
-  /* Destroy our per-iteration pool. */
-  svn_pool_destroy (subpool);
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-remove_from_revision_control (struct log_runner *loggy, 
-                              svn_string_t *name,
-                              svn_boolean_t keep_wf)
-{
-  svn_error_t *err;
-  apr_hash_t *entries = NULL;
-  svn_string_t *full_path = svn_string_dup (loggy->path, loggy->pool);
-  svn_boolean_t is_this_dir;
-
-  /* `name' is either a file's basename, or SVN_WC_ENTRY_THIS_DIR. */
-  is_this_dir = (strcmp (name->data, 
-                         SVN_WC_ENTRY_THIS_DIR)) ? FALSE : TRUE;
-      
-  /* Determine the actual full path of the affected item so we can
-     easily read its entry and check its state. */
-  if (is_this_dir)
-    {
-      svn_string_t *parent_dir, *basename;
-
-      svn_path_split (full_path, &parent_dir, &basename,
-                      svn_path_local_style, loggy->pool);
-
-      /* Remove this entry (which is a directory) from its parent's
-         entries file, not the "this dir" entry from its own entries
-         file. */
-      SVN_ERR (svn_wc_entries_read (&entries, parent_dir, loggy->pool));
-      svn_wc__entry_remove (entries, basename);
-      SVN_ERR (svn_wc__entries_write (entries, parent_dir, loggy->pool));
-    }
-  else
-    {
-      svn_path_add_component (full_path, name, svn_path_local_style);
-
-      /* Remove this entry from its parent's entries file. */
-      SVN_ERR (svn_wc_entries_read (&entries, loggy->path, loggy->pool));
-      svn_wc__entry_remove (entries, name);
-      SVN_ERR (svn_wc__entries_write (entries, loggy->path, loggy->pool));
-    }
-  
-  
-  if (is_this_dir)
-    {
-      /* This should be simple (I hope).  We just need to destroy
-         the administrative directory associated with this
-         directory entry and those of any subdirs beneath it. */
-      SVN_ERR (recursive_rc_remove (full_path, loggy->pool));
-    }
-  else
-    {
-      /* Remove its text-base copy, if any, and conditionally remove
-         working file too. */
-      svn_string_t *text_base_path;
-      enum svn_node_kind kind;
-    
-      text_base_path
-        = svn_wc__text_base_path (full_path, 0, loggy->pool);
-      err = svn_io_check_path (text_base_path, &kind, loggy->pool);
-      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-        return SVN_NO_ERROR;
-      else if (err)
-        return err;
-    
-    /* Else we have a text-base copy, so use it. */
-
-      if (kind == svn_node_file)
-        {
-          apr_status_t apr_err;
-          svn_boolean_t same;
-        
-          if (! keep_wf)
-            {
-              /* Aha!  There is a text-base file still around.  Use it to
-                 check if the working file is modified; if wf is not
-                 modified, and we haven't been asked to keep the wf
-                 around, we should remove it too. */
-              err = svn_wc__files_contents_same_p (&same,
-                                                   full_path,
-                                                   text_base_path,
-                                                   loggy->pool);
-              if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
-                return err;
-              else if (! err)
-                {
-                  apr_err = apr_file_remove (full_path->data,
-                                             loggy->pool);
-                  if (apr_err)
-                    return svn_error_createf
-                      (apr_err, 0, NULL,
-                       loggy->pool,
-                       "log.c:start_handler() (SVN_WC__LOG_DELETE_ENTRY): "
-                       "error removing file %s",
-                       full_path->data);
-                }
-            }
-        
-          apr_err = apr_file_remove (text_base_path->data, loggy->pool);
-          if (apr_err)
-            return svn_error_createf
-              (apr_err, 0, NULL,
-               loggy->pool,
-               "log.c:start_handler() (SVN_WC__LOG_DELETE_ENTRY): "
-               "error removing file %s",
-               text_base_path->data);
-        }
-    }
-  return SVN_NO_ERROR;
-}
 
 
 
@@ -770,15 +610,27 @@ log_do_modify_entry (struct log_runner *loggy,
 }
 
 
+/* Ben sez:  this log command is (at the moment) only executed by the
+   update editor.  It attempts to forcefully remove working data. */
 static svn_error_t *
 log_do_delete_entry (struct log_runner *loggy, const char *name)
 {
   svn_error_t *err;
   svn_string_t *sname = svn_string_create (name, loggy->pool);
+
+  /* Remove the object from revision control -- whether it's a
+     single file or recursive directory removal.  Attempt
+     attempt to destroy working files too. */
+  err = svn_wc_remove_from_revision_control (loggy->path, sname,
+                                             TRUE, loggy->pool);
   
-  err = remove_from_revision_control (loggy, sname, FALSE);
-  if (err)
+  /* It's possible that locally modified files were left behind during
+     the removal.  That's okay;  just check for this special case. */
+  if (err && (err->apr_err != SVN_ERR_WC_LEFT_LOCAL_MOD))
     return err;
+
+  /* (## Perhaps someday have the client print a warning that "locally
+     modified files were not deleted" ??) */    
 
   return SVN_NO_ERROR;
 }
@@ -960,9 +812,15 @@ log_do_committed (struct log_runner *loggy,
 
       if (entry && (entry->state & SVN_WC_ENTRY_DELETE))
         {
-          err = remove_from_revision_control (loggy, sname, TRUE);
-          if (err)
-            return err;
+          if (entry->kind == svn_node_file)
+            SVN_ERR (svn_wc_remove_from_revision_control (loggy->path, sname,
+                                                          FALSE, loggy->pool));
+          else if (entry->kind == svn_node_dir)
+            /* Drop a 'killme' file into the adminstrative dir;
+               this signals the svn_wc__run_log() to blow away SVN/
+               after its done with the logfile.  */
+            SVN_ERR (svn_wc__make_adm_thing (loggy->path, SVN_WC__ADM_KILLME,
+                                             svn_node_file, 0, loggy->pool));
         }
       else   /* entry not being deleted, so mark commited-to-date */
         {
@@ -1218,9 +1076,7 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
   
   /* Expat wants everything wrapped in a top-level form, so start with
      a ghost open tag. */
-  err = svn_xml_parse (parser, log_start, strlen (log_start), 0);
-  if (err)
-    return err;
+  SVN_ERR (svn_xml_parse (parser, log_start, strlen (log_start), 0));
 
   /* Parse the log file's contents. */
   err = svn_wc__open_adm_file (&f, path, SVN_WC__ADM_LOG, APR_READ, pool);
@@ -1255,15 +1111,25 @@ svn_wc__run_log (svn_string_t *path, apr_pool_t *pool)
   } while (apr_err == APR_SUCCESS);
 
   /* Pacify Expat with a pointless closing element tag. */
-  err = svn_xml_parse (parser, log_end, strlen (log_end), 1);
-  if (err)
-    return err;
+  SVN_ERR (svn_xml_parse (parser, log_end, strlen (log_end), 1));
 
   svn_xml_free_parser (parser);
 
-  err = svn_wc__remove_adm_file (path, pool, SVN_WC__ADM_LOG, NULL);
+  /* Remove the logfile;  its commands have been executed. */
+  SVN_ERR (svn_wc__remove_adm_file (path, pool, SVN_WC__ADM_LOG, NULL));
 
-  return err;
+  /* Check for a 'killme' file in the administrative area. */
+  if (svn_wc__adm_path_exists (path, 0, pool, SVN_WC__ADM_KILLME, NULL))
+    {
+      /* Blow away the entire administrative dir, and all those below
+         it too.  Don't remove any working files, though. */
+      svn_string_t *this_dir = 
+        svn_string_create (SVN_WC_ENTRY_THIS_DIR, pool);
+      SVN_ERR (svn_wc_remove_from_revision_control (path, this_dir,
+                                                    FALSE, pool));
+    }
+  
+  return SVN_NO_ERROR;
 }
 
 

@@ -513,6 +513,152 @@ svn_wc_get_pristine_copy_path (svn_string_t *path,
 }
 
 
+
+svn_error_t *
+svn_wc_remove_from_revision_control (svn_string_t *path, 
+                                     svn_string_t *name,
+                                     svn_boolean_t destroy_wf,
+                                     apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+  svn_error_t *err;
+  svn_boolean_t is_file;
+  svn_boolean_t left_a_file = FALSE;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_hash_t *entries = NULL;
+  svn_string_t *full_path = svn_string_dup (path, pool);
+
+  /* NAME is either a file's basename or SVN_WC_ENTRY_THIS_DIR. */
+  is_file = (strcmp (name->data, SVN_WC_ENTRY_THIS_DIR)) ? TRUE : FALSE;
+      
+  if (is_file)
+    {
+      /* ### sanity check: check for DELETED flag?? */
+
+      /* Remove NAME from PATH's entries file: */
+      svn_path_add_component (full_path, name, svn_path_local_style);
+      SVN_ERR (svn_wc_entries_read (&entries, path, pool));
+      svn_wc__entry_remove (entries, name);
+      SVN_ERR (svn_wc__entries_write (entries, path, pool));
+
+      if (destroy_wf)
+        {
+          /* Check for local mods. */
+          svn_boolean_t text_modified_p;
+          SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path,
+                                           subpool));
+          if (text_modified_p)  /* don't kill local mods */
+            return svn_error_create (SVN_ERR_WC_LEFT_LOCAL_MOD, 0, NULL,
+                                     subpool, "");
+          else
+            {
+              /* Remove the actual working file. */
+              apr_err = apr_file_remove (full_path->data, subpool);
+              if (apr_err)
+                return svn_error_createf (apr_err, 0, NULL, subpool,
+                                          "Unable to remove file '%s'",
+                                          full_path->data);
+            }
+        }
+
+      /* Remove text-base/NAME, prop/NAME, prop-base/NAME, wcprops/NAME */
+      {
+        /* ### if they exist, remove them. */
+      }
+
+    }  /* done with file case */
+
+  else /* looking at THIS_DIR */
+    {
+      svn_string_t *parent_dir, *basename;
+      apr_hash_index_t *hi;
+      /* ### sanity check:  check 2 places for DELETED flag? */
+
+      /* Remove self from parent's entries file */
+      svn_path_split (full_path, &parent_dir, &basename,
+                      svn_path_local_style, pool);
+      SVN_ERR (svn_wc_entries_read (&entries, parent_dir, pool));
+      svn_wc__entry_remove (entries, basename);
+      SVN_ERR (svn_wc__entries_write (entries, parent_dir, pool));      
+      
+      /* Recurse on each file and dir entry. */
+      SVN_ERR (svn_wc_entries_read (&entries, path, subpool));
+      
+      for (hi = apr_hash_first (entries); hi;
+           hi = apr_hash_next (hi))
+        {
+          const void *key;
+          apr_size_t klen;
+          void *val;
+          svn_string_t *current_entry_name;
+          svn_wc_entry_t *current_entry; 
+          
+          apr_hash_this (hi, &key, &klen, &val);
+          current_entry = (svn_wc_entry_t *) val;
+          if (! strcmp ((const char *)key, SVN_WC_ENTRY_THIS_DIR))
+            current_entry_name = NULL;
+          else
+            current_entry_name = svn_string_create((const char *)key, subpool);
+
+          if (current_entry->kind == svn_node_file)
+            {
+              err = svn_wc_remove_from_revision_control (path,
+                                                         current_entry_name,
+                                                         destroy_wf, subpool);
+              if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
+                left_a_file = TRUE;
+              else if (err)
+                return err;
+            }
+          else if (current_entry_name && (current_entry->kind == svn_node_dir))
+            {
+              svn_string_t *this_dir = svn_string_create
+                (SVN_WC_ENTRY_THIS_DIR, subpool);
+              svn_string_t *entrypath = svn_string_dup (path, subpool);
+              svn_path_add_component (entrypath, current_entry_name,
+                                      svn_path_local_style);
+              err = svn_wc_remove_from_revision_control (entrypath, this_dir,
+                                                         destroy_wf, subpool);
+              if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
+                left_a_file = TRUE;
+              else if (err)
+                return err;
+            }
+        }
+
+      /* At this point, every directory below this one has been
+         removed from revision control. */
+
+      /* Remove the entire administrative SVN area, thereby removing
+         _this_ dir from revision control too. */
+      SVN_ERR (svn_wc__adm_destroy (path, subpool));
+      
+      /* If caller wants us to recursively nuke everything on disk, go
+         ahead, provided that there are no dangling local-mod files
+         below */
+      if (destroy_wf && (! left_a_file))
+        {
+          apr_err = apr_dir_remove_recursively (path->data, subpool);
+          if (apr_err)
+            return svn_error_createf (apr_err, 0, NULL, subpool,
+                                      "Can't recursively remove dir '%s'",
+                                      path->data);
+        }
+    }  /* end of directory case */
+
+  svn_pool_destroy (subpool);
+
+  if (left_a_file)
+    return svn_error_create (SVN_ERR_WC_LEFT_LOCAL_MOD, 0, NULL, pool, "");
+
+  else
+    return SVN_NO_ERROR;
+}
+
+
+
+
+
 
 /* 
  * local variables:

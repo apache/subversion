@@ -321,6 +321,29 @@ svn_error_t *svn_wc_undelete (svn_string_t *path,
                               apr_pool_t *pool);
 
 
+/* Remove entry NAME in PATH from revision control.  NAME must be
+   either a file or SVN_WC_ENTRY_THIS_DIR.
+
+   If NAME is a file, all its info will be removed from PATH's
+   administrative directory.  If NAME is SVN_WC_ENTRY_THIS_DIR, then
+   PATH's entrire administrative area will be deleted, along with
+   *all* the administrative areas anywhere in the tree below PATH.
+
+   Normally, only adminstrative data is removed.  However, if
+   DESTROY_WF is set, then all working file(s) and dirs are deleted
+   from disk as well.  When called with DESTROY_WF, any locally
+   modified files will *not* be deleted, and the special error
+   SVN_WC_LEFT_LOCAL_MOD might be returned.  (Callers only need to
+   check for this special return value if DESTROY_WF is set.)
+
+   WARNING:  This routine is exported for careful, measured use by
+   libsvn_client.  Do *not* call this routine unless you really
+   understand what the heck you're doing.  */
+svn_error_t *svn_wc_remove_from_revision_control (svn_string_t *path, 
+                                                  svn_string_t *name,
+                                                  svn_boolean_t destroy_wf,
+                                                  apr_pool_t *pool);
+
 
 /*** Commits. ***/
 
