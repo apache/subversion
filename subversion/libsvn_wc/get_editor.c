@@ -155,7 +155,7 @@ make_dir_baton (svn_string_t *name,
                 apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create (pool, NULL);
-  struct dir_baton *d = apr_palloc (subpool, sizeof (*d));
+  struct dir_baton *d = apr_pcalloc (subpool, sizeof (*d));
   svn_string_t *parent_path
     = parent_baton ? parent_baton->path : edit_baton->dest_dir;
   svn_string_t *path = svn_string_dup (parent_path, subpool);
