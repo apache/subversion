@@ -214,14 +214,20 @@ svn_error_t * svn_client__can_delete (const char *path,
 
 /*** Export ***/
 
-/* ### Note:  someday svn_client_export() won't just do a checkout and
-   call this function.  Instead, we'll probably write a really
-   lightweight 'export editor' which dumps data to disk without doing
-   any administrative accounting or logging. */
-
 /* Recursively walk over working copy DIR, removing all administrative
    areas.  Use CTX for cancellation checks. */
 svn_error_t * svn_client__remove_admin_dirs (const char *dir,
+                                             svn_client_ctx_t *ctx,
+                                             apr_pool_t *pool);
+
+
+/* Set *EDITOR and *EDIT_BATON to an editor (allocated in POOL) that
+   simply dumps data to disk, with no working copy administrative dirs
+   or bookkeeping.  Create the directory ROOT_PATH, and dump the
+   entire tree within.  Use CTX (if non-NULL) for sending feedback. */
+svn_error_t * svn_client__get_export_editor (const svn_delta_editor_t **editor,
+                                             void **edit_baton,
+                                             const char *root_path,
                                              svn_client_ctx_t *ctx,
                                              apr_pool_t *pool);
 
