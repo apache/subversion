@@ -7,18 +7,23 @@ HOW-TO:  svn repository upgrade procedure
 PROBLEM:
 
 In revision 2093 [June 5, 2002], the underlying schema for subversion
-repositories (libsvn_fs) was changed.  This means you can potentially
-see two different errors when accessing a repository:
+repositories (libsvn_fs) was changed.  The schema was changed again in
+revision 2491.  This means you can see many different errors when
+accessing a repository:
 
-  1. if your client or server is r2093 or newer, you'll see this error
-     when trying to open an "old" repository:
+  1. if your client is newer that the repository, you might see:
 
          Berkeley DB error while opening `copies' table
+         
+            or
 
-  2. if your client or server is r2092 or younger, you'll see this
-     error when trying to open a "new" repository:
+         Berkeley DB error while opening `changes' table
+
+
+  2. if your client is older than the repository, you might see:
 
          Malformed revision skeleton
+
 
 
 SOLUTION:
@@ -34,18 +39,26 @@ repository export/import later on.  If you plan to do this, we labeled
 relevant steps below as [OPTIONAL].
 
 
-1. Obtain a working copy of r2092.  We made branch of this revision
-   that contains with useful fixes to help with repository dumping:
+1. Depending on how old your repository is, obtain a working copy of
+   either the r2092 or r2490 branches.  These branches exist so that
+   you can compile a static binary of 'svnadmin' using the latest
+   dumping/loading code, but with old fs schemas.
 
      svn co http://svn.collab.net/repos/svn/branches/fs-convert-2092
 
-   Or, if you prefer, there should be a tarball of this branch
-   available on the website (at http://subversion.tigris.org)
+       or
 
-2. Build the branch statically (pass --disable-shared to ./configure), and
-   then copy the large svnadmin-r2092 binary to a safe place.
+     svn co http://svn.collab.net/repos/svn/branches/fs-convert-2490
 
-3. [OPTIONAL] Run 'svnadmin-r2092 undeltify' on every Nth revision in
+   (If your repository is using libsvn_fs older than r2092, then use
+   r2092.  If your libsvn_fs is between 2093 and 2490, then use the
+   2490 branch.)
+
+2. Build the branch statically (pass --disable-shared to ./configure),
+   and then copy the large 'svnadmin' binary to a safe place.  Rename
+   it to 'svnadmin-old'.
+
+3. [OPTIONAL] Run 'svnadmin-old undeltify' on every Nth revision in
    your repository.  A perl script at the bottom of this document can
    help with that.
 
@@ -58,7 +71,7 @@ relevant steps below as [OPTIONAL].
 6. Create a 'dump' of your repository using the *older* svnadmin binary
    like so:
 
-       svnadmin-r2092 dump oldrepos > dumpfile
+       svnadmin-old dump oldrepos > dumpfile
 
    Then load the dumpfile into the new repository with the new
    svnadmin binary.  This effectively replays all of your commits:
@@ -67,12 +80,13 @@ relevant steps below as [OPTIONAL].
 
    OR, if you're feeling saucy, you can do it all at once:
 
-       svnadmin-r2092 dump oldrepos | svnadmin load newrepos
+       svnadmin-old dump oldrepos | svnadmin load newrepos
 
 
 Congratulations, you now have a newly upgraded repository.  For
 starters, 'svn log' actually traces back through copy/rename history
-now.  :-)
+now, and 'svn log -v' will quickly show you the changed paths in each
+revision.
 
 
 ----------------------------------------------------------------------
