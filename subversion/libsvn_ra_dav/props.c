@@ -132,7 +132,7 @@ static const elem_defn *defn_from_id(ne_xml_elmid id)
 static void *create_private(void *userdata, const char *url)
 {
   prop_ctx_t *pc = userdata;
-  struct uri parsed_url;
+  ne_uri parsed_url;
   char *url_path;
   svn_ra_dav_resource_t *r = apr_pcalloc(pc->pool, sizeof(*r));
   apr_size_t len;
@@ -145,9 +145,9 @@ static void *create_private(void *userdata, const char *url)
      Note: mod_dav does not (currently) use an absolute URL, but simply a
      server-relative path (i.e. this uri_parse is effectively a no-op).
   */
-  (void) uri_parse(decoded_url, &parsed_url, NULL);
+  (void) ne_uri_parse(decoded_url, &parsed_url);
   url_path = apr_pstrdup(pc->pool, parsed_url.path);
-  uri_free(&parsed_url);
+  ne_uri_free(&parsed_url);
 
   /* clean up trailing slashes from the URL */
   len = strlen(url_path);
@@ -457,7 +457,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
 {
   svn_ra_dav_resource_t *rsrc;
   const char *vcc;
-  struct uri parsed_url;
+  ne_uri parsed_url;
   const char *my_bc_url, *my_bc_relative;
   const char *lopped_path = "";
 
@@ -486,7 +486,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
 
   /* Split the url into it's component pieces (schema, host, path,
      etc).  We want the path part. */
-  uri_parse (url, &parsed_url, NULL);
+  ne_uri_parse (url, &parsed_url);
 
   /* ### do we want to optimize the props we fetch, based on what the
      ### user has requested? i.e. omit resourcetype when is_dir is NULL
@@ -499,7 +499,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
        starting_props from parent directories. */
     svn_error_t *err;
     svn_stringbuf_t *path_s = svn_stringbuf_create (parsed_url.path, pool);
-    uri_free(&parsed_url);
+    ne_uri_free(&parsed_url);
 
     while (! svn_path_is_empty (path_s))
       {
