@@ -14,7 +14,7 @@ This is a summary of the current state of the locking implementation.
   - Rev svn_wc_notify_func_t (!)
   - WC stuff (lundblad)
   - Client changes
-* client test cases (fitz)
+* client test cases (fitz) [broad cases done]
 * Fix svn_fs_access_t handling in svnserve
 * Fix svn_ra_unlcok force==true for ra_dav.
 * libsvn_fs_fs writelock handling bugs
