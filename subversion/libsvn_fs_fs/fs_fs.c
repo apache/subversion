@@ -972,7 +972,7 @@ svn_fs_fs__put_node_revision (svn_fs_t *fs,
 
 /* This structure is used to hold the information associated with a
    REP line. */
-struct rep_args_t
+struct rep_args
 {
   svn_boolean_t is_delta;
   svn_boolean_t is_delta_vs_empty;
@@ -986,13 +986,13 @@ struct rep_args_t
    representation entry.  Return the parsed entry in REP_ARGS_P.
    Perform all allocations in POOL. */
 static svn_error_t *
-read_rep_line (struct rep_args_t **rep_args_p,
+read_rep_line (struct rep_args **rep_args_p,
                apr_file_t *file,
                apr_pool_t *pool)
 {
   char buffer[160];
   apr_size_t limit;
-  struct rep_args_t *rep_args;
+  struct rep_args *rep_args;
   char *str, *last_str;
   
   limit = sizeof (buffer);
@@ -1255,7 +1255,7 @@ build_rep_list (apr_array_header_t **list,
 {
   representation_t rep;
   struct rep_state *rs;
-  struct rep_args_t *rep_args;
+  struct rep_args *rep_args;
   apr_file_t *file;
   unsigned char buf[4];
 
@@ -1551,21 +1551,19 @@ rep_read_contents (void *baton,
 }
 
 /* Return a stream in *CONTENTS_P that will read the contents of a
-   text representation stored in filesystem FS, revision REV, at
-   offset OFFSET.  The size in the revision file should be exactly
-   SIZE, and if this is a delta representation it should undeltify to
-   a representation of EXPANDED_SIZE bytes.  If it is a plaintext
-   representation, SIZE == EXPANDED_SIZE.
+   text representation stored at the location given by REP, for the
+   node-revision with identity ID.  (The ID will be used if the
+   representation is stored within a transaction directory.)
 
    If REP is NULL, the representation is assumed to be empty, and the
    empty stream is returned.
 */
 static svn_error_t *
-get_representation_at_offset (svn_stream_t **contents_p,
-                              svn_fs_t *fs,
-                              const svn_fs_id_t *id,
-                              representation_t *rep,
-                              apr_pool_t *pool)
+read_representation (svn_stream_t **contents_p,
+                     svn_fs_t *fs,
+                     const svn_fs_id_t *id,
+                     representation_t *rep,
+                     apr_pool_t *pool)
 {
   struct rep_read_baton *rb;
 
@@ -1590,8 +1588,8 @@ svn_fs_fs__get_contents (svn_stream_t **contents_p,
                          node_revision_t *noderev,
                          apr_pool_t *pool)
 {
-  SVN_ERR (get_representation_at_offset (contents_p, fs, noderev->id,
-                                         noderev->data_rep, pool));
+  SVN_ERR (read_representation (contents_p, fs, noderev->id, noderev->data_rep,
+                                pool));
   
   return SVN_NO_ERROR;
 }
@@ -1672,8 +1670,8 @@ svn_fs_fs__get_proplist (apr_hash_t **proplist_p,
 
   proplist = apr_hash_make (pool);
 
-  SVN_ERR (get_representation_at_offset (&stream, fs, noderev->id,
-                                         noderev->prop_rep, pool));
+  SVN_ERR (read_representation (&stream, fs, noderev->id, noderev->prop_rep,
+                                pool));
   
   SVN_ERR (hash_read (proplist, stream, pool));
 
@@ -2911,8 +2909,7 @@ rep_write_get_baton (struct rep_write_baton **wb_p,
 
       /* Get the base for this delta. */
       SVN_ERR (choose_delta_base (&base_rep, fs, noderev, b->pool));
-      SVN_ERR (get_representation_at_offset (&source, fs, NULL, base_rep,
-                                             b->pool));
+      SVN_ERR (read_representation (&source, fs, NULL, base_rep, b->pool));
 
       /* Write out the rep header. */
       if (base_rep)

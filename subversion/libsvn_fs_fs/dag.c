@@ -117,8 +117,6 @@ copy_node_revision (node_revision_t *noderev,
   nr->data_rep = svn_fs_fs__rep_copy (noderev->data_rep, pool);
   nr->prop_rep = svn_fs_fs__rep_copy (noderev->prop_rep, pool);
   
-  if (noderev->edit_key)
-    nr->edit_key = apr_pstrdup (pool, noderev->edit_key);
   if (noderev->created_path)
     nr->created_path = apr_pstrdup (pool, noderev->created_path);
   return nr;
