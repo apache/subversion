@@ -104,6 +104,20 @@ svn_error_t *svn_error_createf (apr_status_t apr_err,
 #define svn_error_createf \
   (svn_error__locate(__FILE__,__LINE__), (svn_error_createf))
 
+/** Wrap a status from an APR function.  If @a fmt is NULL, this is
+ * equivalent to @c svn_error_create(status, NULL, NULL).  Otherwise,
+ * the error message is constructed by formatting @a fmt and the
+ * following arguments according to @c apr_psprintf, and then
+ * appending ": " and the error message corresponding to @a status.
+ * (If UTF-8 translation of the APR error message fails, the ": " and
+ * APR error are not appended to the error message.)
+ */
+svn_error_t *svn_error_wrap_apr (apr_status_t status, const char *fmt, ...);
+
+/** Wrapper macro to collect file and line information */
+#define svn_error_wrap_apr \
+  (svn_error__locate(__FILE__,__LINE__), (svn_error_wrap_apr))
+
 /** A quick n' easy way to create a wrappered exception with your own
  * message, before throwing it up the stack.  (It uses all of the
  * child's fields.)

@@ -121,9 +121,8 @@ load_ra_module (svn_ra_init_func_t *func,
     status = apr_dso_sym (&symbol, dso, funcname);
     if (status)
       {
-        return svn_error_createf (status, NULL,
-                                  "\"%s\" does not define \"%s()\"",
-                                  libname, funcname);
+        return svn_error_wrap_apr (status, "\"%s\" does not define \"%s()\"",
+                                   libname, funcname);
       }
 
     *func = (svn_ra_init_func_t) symbol;

@@ -116,8 +116,8 @@ svn_client_cat (svn_stream_t *out,
       /* rewind our stream. */
       apr_err = apr_file_seek (tmp_file, APR_SET, &off);
       if (apr_err)
-        return svn_error_createf (apr_err, NULL, "Seek failed on '%s'.",
-                                  tmp_filename);
+        return svn_error_wrap_apr (apr_err, "Can't seek in '%s'",
+                                   tmp_filename);
 
       if (eol_style)
         svn_subst_eol_style_from_value (&style, &eol, eol_style->data);

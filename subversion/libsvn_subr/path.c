@@ -1046,17 +1046,15 @@ get_path_encoding (svn_boolean_t *path_is_utf8, apr_pool_t *pool)
   int encoding_style;
 
   apr_err = apr_filepath_encoding (&encoding_style, pool);
-  if (!apr_err)
-    {
-      /* ### What to do about APR_FILEPATH_ENCODING_UNKNOWN?
-         Well, for now we'll just punt to the svn_utf_ functions;
-         those will at least do the ASCII-subset check. */
-      *path_is_utf8 = (encoding_style == APR_FILEPATH_ENCODING_UTF8);
-      return SVN_NO_ERROR;
-    }
-  else
-    return svn_error_create (apr_err, NULL,
-                             "Can't determine the native path encoding");
+  if (apr_err)
+    return svn_error_wrap_apr (apr_err,
+                               "Can't determine the native path encoding");
+
+  /* ### What to do about APR_FILEPATH_ENCODING_UNKNOWN?
+     Well, for now we'll just punt to the svn_utf_ functions;
+     those will at least do the ASCII-subset check. */
+  *path_is_utf8 = (encoding_style == APR_FILEPATH_ENCODING_UTF8);
+  return SVN_NO_ERROR;
 }
 
 

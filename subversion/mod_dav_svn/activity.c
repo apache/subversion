@@ -174,9 +174,7 @@ dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
                         APR_OS_DEFAULT, repos->pool);
   if (status != APR_SUCCESS)
     {
-      svn_error_t *serr = 
-        svn_error_create(status, NULL,
-                         "failed to open activity db;  check repos perms.");
+      svn_error_t *serr = svn_error_wrap_apr(status, "Can't open activity db");
 
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "could not open dbm files.");
@@ -190,9 +188,8 @@ dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
   apr_dbm_close(dbm);
   if (status != APR_SUCCESS)
     {
-      svn_error_t *serr = 
-        svn_error_create(status, NULL,
-                         "failed to close activity db; check repos perms.");
+      svn_error_t *serr =
+        svn_error_wrap_apr(status, "Can't close activity db");
 
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "could not close dbm files.");

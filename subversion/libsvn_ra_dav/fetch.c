@@ -2160,7 +2160,6 @@ static svn_error_t * reporter_set_path(void *report_baton,
                                        apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
-  apr_status_t status;
   const char *entry;
   svn_stringbuf_t *qpath = NULL;
 
@@ -2178,16 +2177,7 @@ static svn_error_t * reporter_set_path(void *report_baton,
                          "\">%s</S:entry>" DEBUG_CR,
                          revision, qpath->data);
 
-  status = apr_file_write_full(rb->tmpfile, entry, strlen(entry), NULL);
-  if (status)
-    {
-      (void) apr_file_close(rb->tmpfile);
-      return svn_error_create(status, NULL,
-                              "Could not write an entry to the temporary "
-                              "report file.");
-    }
-
-  return SVN_NO_ERROR;
+  return svn_io_file_write_full(rb->tmpfile, entry, strlen(entry), NULL, pool);
 }
 
 
@@ -2199,7 +2189,6 @@ static svn_error_t * reporter_link_path(void *report_baton,
                                         apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
-  apr_status_t status;
   const char *entry;
   svn_stringbuf_t *qpath = NULL, *qlinkpath = NULL;
   svn_string_t bc_relative;
@@ -2226,17 +2215,8 @@ static svn_error_t * reporter_link_path(void *report_baton,
                          "<S:entry rev=\"%" SVN_REVNUM_T_FMT
                          "\" linkpath=\"/%s\">%s</S:entry>" DEBUG_CR,
                          revision, qlinkpath->data, qpath->data);
-    
-  status = apr_file_write_full(rb->tmpfile, entry, strlen(entry), NULL);
-  if (status)
-    {
-      (void) apr_file_close(rb->tmpfile);
-      return svn_error_create(status, NULL,
-                              "Could not write an entry to the temporary "
-                              "report file.");
-    }
 
-  return SVN_NO_ERROR;
+  return svn_io_file_write_full(rb->tmpfile, entry, strlen(entry), NULL, pool);
 }
 
 
@@ -2245,7 +2225,6 @@ static svn_error_t * reporter_delete_path(void *report_baton,
                                           apr_pool_t *pool)
 {
   report_baton_t *rb = report_baton;
-  apr_status_t status;
   const char *s;
   svn_stringbuf_t *qpath = NULL;
 
@@ -2254,16 +2233,7 @@ static svn_error_t * reporter_delete_path(void *report_baton,
                    "<S:missing>%s</S:missing>" DEBUG_CR,
                    qpath->data);
 
-  status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
-  if (status)
-    {
-      (void) apr_file_close(rb->tmpfile);
-      return svn_error_create(status, NULL,
-                              "Could not write a missing entry to the "
-                              "temporary report file.");
-    }
-
-  return SVN_NO_ERROR;
+  return svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool);
 }
 
 
@@ -2280,21 +2250,14 @@ static svn_error_t * reporter_abort_report(void *report_baton)
 static svn_error_t * reporter_finish_report(void *report_baton)
 {
   report_baton_t *rb = report_baton;
-  apr_status_t status;
   svn_error_t *err;
   const char *vcc;
   int http_status;
 
   /* write the final closing gunk to our request body. */
-  status = apr_file_write_full(rb->tmpfile,
-                               report_tail, sizeof(report_tail) - 1, NULL);
-  if (status)
-    {
-      (void) apr_file_close(rb->tmpfile);
-      return svn_error_create(status, NULL,
-                              "Could not write the trailer for the temporary "
-                              "report file.");
-    }
+  SVN_ERR( svn_io_file_write_full(rb->tmpfile,
+                                  report_tail, sizeof(report_tail) - 1,
+                                  NULL, rb->ras->pool) );
 
   /* get the editor process prepped */
   rb->dirs = apr_array_make(rb->ras->pool, 5, sizeof(dir_item_t));
@@ -2373,9 +2336,7 @@ make_reporter (void *session_baton,
 {
   svn_ra_session_t *ras = session_baton;
   report_baton_t *rb;
-  apr_status_t status;
   const char *s;
-  const char *msg;
 
   /* ### create a subpool for this operation? */
 
@@ -2413,25 +2374,15 @@ make_reporter (void *session_baton,
      ### with an error. */
 
   /* prep the file */
-  status = apr_file_write_full(rb->tmpfile,
-                               report_head, sizeof(report_head) - 1, NULL);
-  if (status)
-    {
-      msg = "Could not write the header for the temporary report file.";
-      goto error;
-    }
+  SVN_ERR( svn_io_file_write_full(rb->tmpfile, report_head,
+                                  sizeof(report_head) - 1, NULL, pool) );
 
   /* always write the original source path.  this is part of the "new
      style" update-report syntax.  if the tmpfile is used in an "old
      style' update-report request, older servers will just ignore this
      unknown xml element. */
   s = apr_psprintf(pool, "<S:src-path>%s</S:src-path>", ras->url);
-  status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
-  if (status)
-    {
-      msg = "Failed writing the src-path to the report tempfile.";
-      goto error;
-    }
+  SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
 
   /* an invalid revnum means "latest". we can just omit the target-revision
      element in that case. */
@@ -2440,12 +2391,7 @@ make_reporter (void *session_baton,
       s = apr_psprintf(pool, 
                        "<S:target-revision>%" SVN_REVNUM_T_FMT
                        "</S:target-revision>", revision);
-      status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
-      if (status)
-        {
-          msg = "Failed writing the target revision to the report tempfile.";
-          goto error;
-        }
+      SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }
 
   /* A NULL target is no problem.  */
@@ -2454,12 +2400,7 @@ make_reporter (void *session_baton,
       s = apr_psprintf(pool, 
                        "<S:update-target>%s</S:update-target>",
                        target);
-      status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
-      if (status)
-        {
-          msg = "Failed writing the target to the report tempfile.";
-          goto error;
-        }
+      SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }
 
 
@@ -2474,58 +2415,36 @@ make_reporter (void *session_baton,
 
       s = apr_psprintf(pool, "<S:dst-path>%s</S:dst-path>",
                        dst_path_str->data);
-      status = apr_file_write_full(rb->tmpfile, s, strlen(s), NULL);
-      if (status)
-        {
-          msg = "Failed writing the dst-path to the report tempfile.";
-          goto error;
-        }
+      SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }
 
   /* mod_dav_svn will assume recursive, unless it finds this element. */
   if (!recurse)
     {
       const char * data = "<S:recursive>no</S:recursive>";
-      status = apr_file_write_full(rb->tmpfile, data, strlen(data), NULL);
-      if (status)
-        {
-          msg = "Failed writing the recurse flag to the report tempfile.";
-          goto error;
-        }
+      SVN_ERR( svn_io_file_write_full(rb->tmpfile, data, strlen(data),
+                                      NULL, pool) );
     }
 
   /* mod_dav_svn will use ancestry in diffs unless it finds this element. */
   if (ignore_ancestry)
     {
       const char * data = "<S:ignore-ancestry>yes</S:ignore-ancestry>";
-      status = apr_file_write_full(rb->tmpfile, data, strlen(data), NULL);
-      if (status)
-        {
-          msg = "Failed writing the ignore_ancestry flag to the "
-                "report tempfile.";
-          goto error;
-        }
+      SVN_ERR( svn_io_file_write_full(rb->tmpfile, data, strlen(data),
+                                      NULL, pool) );
     }
   /* If we want a resource walk to occur, note that now. */
   if (resource_walk)
     {
       const char * data = "<S:resource-walk>yes</S:resource-walk>";
-      status = apr_file_write_full(rb->tmpfile, data, strlen(data), NULL);
-      if (status)
-        {
-          msg = "Failed writing the resource-walk flag to the report tempfile.";
-          goto error;
-        }
+      SVN_ERR( svn_io_file_write_full(rb->tmpfile, data, strlen(data),
+                                      NULL, pool) );
     }
 
   *reporter = &ra_dav_reporter;
   *report_baton = rb;
 
   return SVN_NO_ERROR;
-
- error:
-  (void) apr_file_close(rb->tmpfile);
-  return svn_error_create(status, NULL, msg);
 }                      
 
 

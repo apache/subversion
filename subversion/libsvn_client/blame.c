@@ -434,8 +434,7 @@ svn_client_blame (const char *target,
           SVN_ERR (svn_diff_output (diff, &db, &output_fns));
           apr_err = apr_file_remove (last, iterpool);
           if (apr_err != APR_SUCCESS)
-            return svn_error_createf (apr_err, NULL, "Error removing '%s'", 
-                                      last);
+            return svn_error_wrap_apr (apr_err, "Can't remove '%s'", last);
         }
       else
         db.blame = blame_create (&db, rev, 0);
@@ -445,7 +444,7 @@ svn_client_blame (const char *target,
 
   apr_err = apr_file_open (&file, last, APR_READ, APR_OS_DEFAULT, pool);
   if (apr_err != APR_SUCCESS)
-    return svn_error_createf (apr_err, NULL, "Error opening '%s'", last);
+    return svn_error_wrap_apr (apr_err, "Can't open '%s'", last);
 
   stream = svn_stream_from_aprfile (file, pool);
   for (walk = db.blame; walk; walk = walk->next)
@@ -472,7 +471,7 @@ svn_client_blame (const char *target,
 
   apr_err = apr_file_remove (last, pool);
   if (apr_err != APR_SUCCESS)
-    return svn_error_createf (apr_err, NULL, "Error removing '%s'", last);
+    return svn_error_wrap_apr (apr_err, "Can't remove '%s'", last);
 
   apr_pool_destroy (iterpool);
   return SVN_NO_ERROR;

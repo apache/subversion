@@ -56,9 +56,9 @@ svn_cl__diff (apr_getopt_t *os,
   /* Get an apr_file_t representing stdout and stderr, which is where
      we'll have the external 'diff' program print to. */
   if ((status = apr_file_open_stdout (&outfile, pool)))
-    return svn_error_create (status, NULL, "can't open stdout");
+    return svn_error_wrap_apr (status, "Can't open stdout");
   if ((status = apr_file_open_stderr (&errfile, pool)))
-    return svn_error_create (status, NULL, "can't open stderr");
+    return svn_error_wrap_apr (status, "Can't open stderr");
 
   if (! opt_state->old_target && ! opt_state->new_target
       && opt_state->start_revision.kind != svn_opt_revision_unspecified

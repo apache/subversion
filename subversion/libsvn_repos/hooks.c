@@ -59,15 +59,15 @@ run_hook_cmd (const char *name,
   /* Create a pipe to access stderr of the child. */
   apr_err = apr_file_pipe_create(&read_errhandle, &write_errhandle, pool);
   if (apr_err)
-    return svn_error_createf
-      (apr_err, NULL, "can't create pipe for '%s' hook", cmd);
+    return svn_error_wrap_apr
+      (apr_err, "Can't create pipe for hook '%s'", cmd);
 
   /* Redirect stdout to the null device */
   apr_err = apr_file_open (&null_handle, SVN_NULL_DEVICE_NAME, APR_WRITE,
                            APR_OS_DEFAULT, pool);
   if (apr_err)
-    return svn_error_createf
-      (apr_err, NULL, "can't create null stdout for '%s' hook", cmd);
+    return svn_error_wrap_apr
+      (apr_err, "Can't create null stdout for hook '%s'", cmd);
 
   err = svn_io_run_cmd (".", cmd, args, &exitcode, &exitwhy, FALSE,
                         NULL, null_handle, write_errhandle, pool);
@@ -78,8 +78,8 @@ run_hook_cmd (const char *name,
      pipe so we don't hang on the read end later, if we need to read it. */
   apr_err = apr_file_close (write_errhandle);
   if (!err && apr_err)
-    return svn_error_create
-      (apr_err, NULL, "can't close write end of stderr pipe");
+    return svn_error_wrap_apr
+      (apr_err, "Error closing write end of stderr pipe");
 
   /* Function failed. */
   if (err)
@@ -110,13 +110,12 @@ run_hook_cmd (const char *name,
      and null file */
   apr_err = apr_file_close (read_errhandle);
   if (!err && apr_err)
-    return svn_error_create
-      (apr_err, NULL, "can't close read end of stderr pipe");
+    return svn_error_wrap_apr
+      (apr_err, "Error closing read end of stderr pipe");
 
   apr_err = apr_file_close (null_handle);
   if (!err && apr_err)
-    return svn_error_create
-      (apr_err, NULL, "can't close null file");
+    return svn_error_wrap_apr (apr_err, "Error closing null file");
 
   return err;
 }

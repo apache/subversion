@@ -483,8 +483,7 @@ open_writable_binary_file (apr_file_t **fh,
   /* If the file path has no parent, then we've already tried to open
      it as best as we care to try above. */
   if (svn_path_is_empty (dir))
-    return svn_error_createf (err->apr_err, err,
-                              "Error opening writable file '%s'", path);
+    return err;
 
   path_pieces = svn_path_decompose (dir, pool);
   if (! path_pieces->nelts)
@@ -505,23 +504,18 @@ open_writable_binary_file (apr_file_t **fh,
         }
       else if (kind != svn_node_dir)
         {
-          if (err)
-            return svn_error_createf (err->apr_err, err,
-                                      "Error creating dir '%s' (path exists)", 
-                                      full_path);
+          return svn_error_createf (err->apr_err, err,
+                                    "Error creating dir '%s' (path exists)", 
+                                    full_path);
         }
     }
 
   /* Now that we are ensured that the parent path for this file
      exists, try once more to open it. */
-  err = svn_io_file_open (fh, path, 
-                          APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BINARY,
-                          APR_OS_DEFAULT, pool);
-  if (err)
-    return svn_error_createf (err->apr_err, err,
-                              "Error opening writable file '%s'", path);
-    
-  return SVN_NO_ERROR;
+  svn_error_clear (err);
+  return svn_io_file_open (fh, path, 
+                           APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BINARY,
+                           APR_OS_DEFAULT, pool);
 }
 
 
@@ -547,9 +541,9 @@ dump_contents (apr_file_t *fh,
       len2 = len;
       apr_err = apr_file_write (fh, buffer, &len2);
       if ((apr_err) || (len2 != len))
-        return svn_error_createf 
-          (apr_err ? apr_err : SVN_ERR_INCOMPLETE_DATA, NULL,
-           "Error writing contents of '%s'", path);
+        return svn_error_wrap_apr 
+          (apr_err ? apr_err : SVN_ERR_INCOMPLETE_DATA,
+           "Can't write contents of '%s'", path);
       if (len != sizeof (buffer))
         break;
     }
@@ -883,9 +877,7 @@ print_diff_tree (svn_fs_root_t *root,
                      we'll have the diff program print to. */
                   apr_err = apr_file_open_stdout (&outhandle, pool);
                   if (apr_err)
-                    return svn_error_create 
-                      (apr_err, NULL,
-                       "print_diff_tree: can't open handle to stdout");
+                    return svn_error_wrap_apr (apr_err, "Can't open stdout");
                   
                   SVN_ERR (generate_label (&orig_label, base_root, 
                                            base_path, pool));

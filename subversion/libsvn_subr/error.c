@@ -42,6 +42,7 @@ static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
 #undef svn_error_create
 #undef svn_error_createf
 #undef svn_error_quick_wrap
+#undef svn_error_wrap_apr
 
 
 /* XXX FIXME: These should be protected by a thread mutex.
@@ -135,7 +136,6 @@ svn_error_createf (apr_status_t apr_err,
                    ...)
 {
   svn_error_t *err;
-
   va_list ap;
 
   err = make_error_internal (apr_err, child);
@@ -143,6 +143,40 @@ svn_error_createf (apr_status_t apr_err,
   va_start (ap, fmt);
   err->message = apr_pvsprintf (err->pool, fmt, ap);
   va_end (ap);
+
+  return err;
+}
+
+
+svn_error_t *
+svn_error_wrap_apr (apr_status_t status,
+                    const char *fmt,
+                    ...)
+{
+  svn_error_t *err, *utf8_err;
+  va_list ap;
+  char errbuf[255];
+  const char *msg_apr, *msg;
+
+  err = make_error_internal (status, NULL);
+
+  if (fmt)
+    {
+      /* Grab the APR error message. */
+      apr_strerror (status, errbuf, sizeof (errbuf));
+      utf8_err = svn_utf_cstring_to_utf8 (&msg_apr, errbuf, err->pool);
+      if (utf8_err)
+        msg_apr = NULL;
+      svn_error_clear (utf8_err);
+
+      /* Append it to the formatted message. */
+      va_start (ap, fmt);
+      msg = apr_pvsprintf (err->pool, fmt, ap);
+      va_end (ap);
+      err->message = apr_psprintf (err->pool, "%s%s%s", msg,
+                                   (msg_apr) ? ": " : "",
+                                   (msg_apr) ? msg_apr : "");
+    }
 
   return err;
 }

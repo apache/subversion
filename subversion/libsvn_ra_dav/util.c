@@ -443,8 +443,7 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
          size for buffered files. */
   status = apr_file_info_get(&finfo, APR_FINFO_SIZE, body_file);
   if (status)
-    return svn_error_create(status, NULL,
-                            "Could not calculate the request body size");
+    return svn_error_wrap_apr(status, "Can't calculate the request body size");
 
   ne_set_request_body_provider(req, (size_t) finfo.size,
                                ra_dav_body_provider, body_file);

@@ -143,12 +143,11 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   status = apr_socket_create(sock, APR_INET, SOCK_STREAM, APR_PROTO_TCP, pool);
 #endif
   if (status)
-    return svn_error_create(status, NULL, "Can't create socket");
+    return svn_error_wrap_apr(status, "Can't create socket");
 
   status = apr_socket_connect(*sock, sa);
   if (status)
-    return svn_error_createf(status, NULL, "Can't connect to host '%s'",
-                             hostname);
+    return svn_error_wrap_apr(status, "Can't connect to host '%s'", hostname);
 
   return SVN_NO_ERROR;
 }
@@ -455,7 +454,7 @@ static svn_error_t *find_tunnel_agent(const char *tunnel, const char *user,
   /* Tokenize the command into a list of arguments. */
   status = apr_tokenize_to_argv(cmd, &cmd_argv, pool);
   if (status != APR_SUCCESS)
-    return svn_error_createf(status, NULL, "Can't tokenize command %s", cmd);
+    return svn_error_wrap_apr(status, "Can't tokenize command '%s'", cmd);
 
   /* Append the fixed arguments to the result. */
   for (n = 0; cmd_argv[n] != NULL; n++)
@@ -484,7 +483,7 @@ static void handle_child_process_error(apr_pool_t *pool, apr_status_t status,
   apr_file_open_stdin(&in_file, pool);
   apr_file_open_stdout(&out_file, pool);
   conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
-  err = svn_error_create(status, NULL, desc);
+  err = svn_error_wrap_apr(status, NULL, "Error in child process: %s", desc);
   svn_error_clear(svn_ra_svn_write_cmd_failure(conn, pool, err));
   svn_error_clear(svn_ra_svn_flush(conn, pool));
 }
@@ -507,7 +506,7 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   if (status == APR_SUCCESS)
     status = apr_proc_create(proc, *args, args, NULL, attr, pool);
   if (status != APR_SUCCESS)
-    return svn_error_create(status, NULL, "Could not create tunnel.");
+    return svn_error_wrap_apr(status, NULL, "Can't create tunnel");
 
   /* Arrange for the tunnel agent to get a SIGKILL on pool
    * cleanup.  This is a little extreme, but the alternatives

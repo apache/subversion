@@ -977,8 +977,7 @@ static svn_error_t * commit_stream_write(void *baton,
   /* drop the data into our temp file */
   status = apr_file_write_full(pb->tmpfile, data, *len, NULL);
   if (status)
-    return svn_error_create(status, NULL,
-                            "Could not write svndiff to temp file.");
+    return svn_error_wrap_apr(status, "Could not write svndiff to temp file");
 
   return SVN_NO_ERROR;
 }

@@ -227,10 +227,9 @@ read_handler_apr (void *baton, char *buffer, apr_size_t *len)
 
   status = apr_file_read_full (btn->file, buffer, *len, len);
   if (status && ! APR_STATUS_IS_EOF(status))
-    return svn_error_create (status, NULL,
-                             "read_handler_apr: error reading file");
-  else
-    return SVN_NO_ERROR;
+    return svn_error_wrap_apr (status, NULL, "Can't read file");
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -238,14 +237,8 @@ static svn_error_t *
 write_handler_apr (void *baton, const char *data, apr_size_t *len)
 {
   struct baton_apr *btn = baton;
-  apr_status_t status;
 
-  status = apr_file_write_full (btn->file, data, *len, len);
-  if (status)
-    return svn_error_create (status, NULL,
-                             "write_handler_apr: error writing file");
-  else
-    return SVN_NO_ERROR;
+  return svn_io_file_write_full (btn->file, data, *len, len, btn->pool);
 }
 
 
@@ -612,8 +605,7 @@ svn_stream_for_stdout (svn_stream_t **out, apr_pool_t *pool)
 
   apr_err = apr_file_open_stdout (&stdout_file, pool);
   if (apr_err)
-    return svn_error_create
-      (apr_err, NULL, "Unable to open stdout for writing.");
+    return svn_error_wrap_apr (apr_err, "Can't open stdout");
 
   *out = svn_stream_from_aprfile (stdout_file, pool);
 

@@ -58,7 +58,7 @@ prompt (const char **result,
 
   status = apr_file_open_stdin (&fp, pool);
   if (status)
-    return svn_error_create (status, NULL, "couldn't open stdin");
+    return svn_error_wrap_apr (status, "Can't open stdin");
 
   SVN_ERR (svn_cmdline_cstring_from_utf8 (&prompt_stdout, prompt_msg, pool));
 
@@ -72,7 +72,7 @@ prompt (const char **result,
         {
           status = apr_file_getc (&c, fp);
           if (status && ! APR_STATUS_IS_EOF(status))
-            return svn_error_create (status, NULL, "error reading stdin");
+            return svn_error_wrap_apr (status, "Can't read stdin");
 
           if (saw_first_half_of_eol)
             {
@@ -106,7 +106,7 @@ prompt (const char **result,
 
       status = apr_password_get (prompt_stdout, strbuf->data, &bufsize);
       if (status)
-        return svn_error_create (status, NULL, "error from apr_password_get");
+        return svn_error_wrap_apr (status, "Can't get password");
     }
 
   SVN_ERR (svn_cmdline_cstring_to_utf8 (result, strbuf->data, pool));
