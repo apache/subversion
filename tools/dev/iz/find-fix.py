@@ -1,17 +1,83 @@
 #!/usr/bin/env python
-#
-# find-fix.py: produce a find/fix report for Subversion's IZ database
+# -*- Python -*-
+"""find-fix.py: produce a find/fix report for Subversion's IZ database
+
+For simple text summary:
+       find-fix.py query-set-1.tsv YYYY-MM-DD YYYY-MM-DD
+Statistics will be printed for bugs found or fixed within the 
+time frame.
+
+For gnuplot presentation:
+       find-fix.py query-set-1.tsv outfile
+Gnuplot provides its own way to select date ranges.
+
+Either way, get query-set-1.tsv from 
+http://subversion.tigris.org/iz-data/query-set-1.tsv
+which is updated periodically.
+
+For more usage info:
+        find-fix.py --help
+"""
+
+_version = "$Revision:"
+
 #
 # This can be run over the data file found at:
 #   http://subversion.tigris.org/iz-data/query-set-1.tsv
 #
-# also, see:
-#   http://subversion.tigris.org/iz-data/README
-#
 
-import string
-import time
+import getopt
 import operator
+import os
+import os.path
+import pydoc
+import re
+import string
+import sys
+import time
+
+me = os.path.basename(sys.argv[0])
+
+# Long options and their usage strings; "=" means it takes an argument.
+# To get a list suitable for getopt.getopt(), just do
+#
+#   [x[0] for x in long_opts]
+#
+# Make sure to sacrifice a lamb to Guido for each element of the list.
+long_opts = [
+  ["milestones=",      """Optional, milestones NOT to report on
+        (one or more of Beta, 1.0, Post-1.0, cvs2svn-1.0, cvs2svn-opt,
+        inapplicable)"""],
+  ["update",          """Optional, update the statistics first."""],
+  ["doc",             """Optional, print pydocs."""],
+  ["help",            """Optional, print usage (this text)."""],
+  ["verbose",         """Optional, print more progress messages."""],
+  ]
+
+help    = 0
+verbose = 0
+update  = 0
+
+DATA_FILE = "http://subversion.tigris.org/iz-data/query-set-1.tsv"
+ONE_WEEK = 7 * 24 * 60 * 60
+
+_types = []
+_milestone_filter = []
+
+noncore_milestone_filter = [
+  'Post-1.0',
+  'cvs2svn-1.0',
+  'cvs2svn-opt',
+  'inapplicable',
+  ]
+
+one_point_oh_milestone_filter = [
+  'Post-1.0',
+  'cvs2svn-opt',
+  'inapplicable',
+  ]
+
+beta_milestone_filter = one_point_oh_milestone_filter + ['1.0']
 
 
 _types = [
@@ -22,44 +88,150 @@ _types = [
   'PATCH',
   ]
 
-ONE_WEEK = 7 * 24 * 60 * 60
 
-_milestone_filter = [
-  'Post-1.0',
-  'cvs2svn-1.0',
-  'cvs2svn-opt',
-  'inapplicable',
-  ]
+def main():
+  """Report bug find/fix rate statistics for Subversion."""
+
+  global verbose
+  global update
+  global _types
+  global _milestone_filter
+  global noncore_milestone_filter
+
+  try:
+      opts, args = getopt.getopt(sys.argv[1:], "", [x[0] for x in long_opts])
+  except getopt.GetoptError, e:
+      sys.stderr.write("Error: %s\n" % e.msg)
+      shortusage()
+      sys.stderr.write("%s --help for options.\n" % me)
+      sys.exit(1)
+
+  for opt, arg in opts:
+    if opt == "--help":
+      usage()
+      sys.exit(0)
+    elif opt == "--verbose":
+      verbose = 1
+    elif opt == "--milestones":
+      for mstone in string.split(arg, ","):
+        if mstone == "noncore":
+          _milestone_filter = noncore_milestone_filter
+        elif mstone == "beta":
+          _milestone_filter = beta_milestone_filter
+        elif mstone == "one":
+          _milestone_filter = one_point_oh_milestone_filter
+        elif mstone[0] == '-':
+          if mstone[1:] in _milestone_filter:
+            spot = _milestone_filter.index(mstone[1:])
+            _milestone_filter = _milestone_filter[:spot] \
+                                + _milestone_filter[(spot+1):]
+        else:
+          _milestone_filter += [mstone]
+
+    elif opt == "--update":
+      update = 1
+    elif opt == "--doc":
+      pydoc.doc(pydoc.importfile(sys.argv[0]))
+      sys.exit(0)
+
+  if len(_milestone_filter) == 0:
+    _milestone_filter = noncore_milestone_filter
+
+  if verbose:
+    sys.stderr.write("%s: Filtering out milestones %s.\n"
+                     % (me, string.join(_milestone_filter, ", ")))
+
+  if len(args) == 2:
+    if verbose:
+      sys.stderr.write("%s: Generating gnuplot data.\n" % me)
+    if update:
+      if verbose:
+        sys.stderr.write("%s: Updating %s from %s.\n" % (me, args[0], DATA_FILE))
+      if os.system("curl " + DATA_FILE + "> " + args[0]):
+        os.system("wget " + DATA_FILE)
+    plot(args[0], args[1])
+
+  elif len(args) == 3:
+    if verbose:
+      sys.stderr.write("%s: Generating summary from %s to %s.\n"
+                       % (me, args[1], args[2]))
+    if update:
+      if verbose:
+        sys.stderr.write("%s: Updating %s from %s.\n" % (me, args[0], DATA_FILE))
+      if os.system("curl " + DATA_FILE + "> " + args[0]):
+        os.system("wget " + DATA_FILE)
+
+    try:
+      t_start = parse_time(args[1] + " 00:00:00")
+    except ValueError:
+      sys.stderr.write('%s: ERROR: bad time value: %s\n' % (me, args[1]))
+      sys.exit(1)
+
+    try:
+      t_end = parse_time(args[2] + " 00:00:00")
+    except ValueError:
+      sys.stderr.write('%s: ERROR: bad time value: %s\n' % (me, args[2]))
+      sys.exit(1)
+
+    summary(args[0], t_start, t_end)
+  else:
+    usage()
+
+  sys.exit(0)
 
 
 def summary(datafile, d_start, d_end):
   "Prints a summary of activity within a specified date range."
 
+  global _types
+  global _milestone_filter
+
   data = load_data(datafile)
 
+  # activity during the requested period
   found, fixed, inval, dup, other = extract(data, 1, d_start, d_end)
 
-  t_found = t_fixed = t_inval = t_dup = t_other = t_rem = 0
+  # activity from the beginning of time to the end of the request
+  # used to compute remaining
+  # XXX It would be faster to change extract to collect this in one
+  # pass.  But we don't presently have enough data, nor use this
+  # enough, to justify that rework.
+  fromzerofound, fromzerofixed, fromzeroinval, fromzerodup, fromzeroother \
+              = extract(data, 1, 0, d_end)
+
+  alltypes_found = alltypes_fixed = alltypes_inval = alltypes_dup \
+                   = alltypes_other = alltypes_rem = 0
   for t in _types:
     print '%12s: found=%3d  fixed=%3d  inval=%3d  dup=%3d  ' \
           'other=%3d  remain=%3d' \
           % (t, found[t], fixed[t], inval[t], dup[t], other[t],
-             found[t] - (fixed[t] + inval[t] + dup[t] + other[t]))
-    t_found = t_found + found[t]
-    t_fixed = t_fixed + fixed[t]
-    t_inval = t_inval + inval[t]
-    t_dup   = t_dup   + dup[t]
-    t_other = t_other + other[t]
-    t_rem = t_rem + found[t] - (fixed[t] + inval[t] + dup[t] + other[t])
+             fromzerofound[t]
+             - (fromzerofixed[t] + fromzeroinval[t] + fromzerodup[t] 
+                + fromzeroother[t]))
+    alltypes_found = alltypes_found + found[t]
+    alltypes_fixed = alltypes_fixed + fixed[t]
+    alltypes_inval = alltypes_inval + inval[t]
+    alltypes_dup   = alltypes_dup   + dup[t]
+    alltypes_other = alltypes_other + other[t]
+    alltypes_rem = alltypes_rem \
+            + fromzerofound[t] \
+            - (fromzerofixed[t] + fromzeroinval[t] + fromzerodup[t]
+               + fromzeroother[t])
 
   print '-' * 77
   print '%12s: found=%3d  fixed=%3d  inval=%3d  dup=%3d  ' \
         'other=%3d  remain=%3d' \
-        % ('totals', t_found, t_fixed, t_inval, t_dup, t_other, t_rem)
+        % ('totals', alltypes_found, alltypes_fixed, alltypes_inval,
+           alltypes_dup, alltypes_other, alltypes_rem)
+  # print '%12s  find/fix ratio: %g%%' \
+  #      % (" "*12, (alltypes_found*100.0/(alltypes_fixed
+  #         + alltypes_inval + alltypes_dup + alltypes_other)))
 
 
 def plot(datafile, outbase):
   "Generates data files intended for use by gnuplot."
+
+  global _types
 
   data = load_data(datafile)
 
@@ -101,7 +273,6 @@ def plot(datafile, outbase):
     write_file(week_data, outbase, t, 'avg', 4)
     write_file(week_data, outbase, t, 'open', 5)
 
-
 def write_file(week_data, base, type, tag, idx):
   f = open('%s.%s.%s' % (base, tag, type), 'w')
   for info in week_data:
@@ -139,16 +310,20 @@ def extract(data, details, d_start, d_end):
   the resolution into 'FIXED', 'INVALID', 'DUPLICATE', and a grab-bag
   category for 'WORKSFORME', 'LATER', 'REMIND', and 'WONTFIX'."""
 
+  global _types
+  global _milestone_filter
+
   found = { }
   fixed = { }
   invalid = { }
   duplicate = { }
   other = { }  # "WORKSFORME", "LATER", "REMIND", and "WONTFIX"
+
   for t in _types:
     found[t] = fixed[t] = invalid[t] = duplicate[t] = other[t] = 0
 
   for issue in data:
-    # filter out post-1.0 issues
+    # filter out disrespected milestones
     if issue.milestone in _milestone_filter:
       continue
 
@@ -206,25 +381,53 @@ class Issue:
     self.summary = row[8]
 
 
+parse_time_re = re.compile('([0-9]{4})-([0-9]{2})-([0-9]{2}) '
+                           '([0-9]{2}):([0-9]{2}):([0-9]{2})')
+
 def parse_time(t):
   "Convert an exported MySQL timestamp into seconds since the epoch."
+
+  global parse_time_re
 
   if t == 'NULL':
     return None
   try:
-    return time.mktime(time.strptime(t, '%Y-%m-%d %H:%M:%S'))
+    matches = parse_time_re.match(t)
+    return time.mktime((int(matches.group(1)),
+                        int(matches.group(2)),
+                        int(matches.group(3)),
+                        int(matches.group(4)),
+                        int(matches.group(5)),
+                        int(matches.group(6)),
+                        0, 0, -1))
   except ValueError:
-    print 'ERROR: bad time value:', t
-    raise
+    sys.stderr.write('ERROR: bad time value: %s\n'% t)
+    sys.exit(1)
 
+def shortusage():
+  print pydoc.synopsis(sys.argv[0])
+  print """
+For simple text summary:
+       find-fix.py [options] query-set-1.tsv YYYY-MM-DD YYYY-MM-DD
+
+For gnuplot presentation:
+       find-fix.py [options] query-set-1.tsv outfile
+"""
+  
+def usage():
+  shortusage()
+  for x in long_opts:
+      padding_limit = 18
+      if x[0][-1:] == '=':
+          print "   --" + x[0][:-1],
+          padding_limit = 19
+      else:
+          print "   --" + x[0],
+      print (' ' * (padding_limit - len(x[0]))), x[1]
+  print '''
+Option keywords may be abbreviated to any unique prefix.
+Most options require "=xxx" arguments.
+Option order is not important.'''
 
 if __name__ == '__main__':
-  import sys
-
-  if len(sys.argv) == 3:
-    plot(sys.argv[1], sys.argv[2])
-  else:
-    summary(sys.argv[1],
-            time.mktime(time.strptime(sys.argv[2], '%Y-%m-%d')),
-            time.mktime(time.strptime(sys.argv[3], '%Y-%m-%d')),
-            )
+  main()
