@@ -847,11 +847,11 @@ log_do_committed (struct log_runner *loggy,
                                   "error checking existence: %s", name);
       if (kind == svn_node_file)
         {
-          svn_boolean_t same;
+          svn_boolean_t modified;
           const char *chosen;
 
           /* Verify that the working file is the same as the tmpf file. */
-          if ((err = svn_wc__versioned_file_modcheck (&same, wf,
+          if ((err = svn_wc__versioned_file_modcheck (&modified, wf,
                                                       loggy->adm_access,
                                                       tmpf, pool)))
             return svn_error_createf (SVN_ERR_WC_BAD_ADM_LOG, 0, err, pool,
@@ -860,7 +860,7 @@ log_do_committed (struct log_runner *loggy,
 
           /* If they are the same, use the working file's timestamp,
              else use the tmpf file's timestamp. */
-          chosen = same ? wf : tmpf;
+          chosen = modified ? tmpf : wf;
 
           /* Get the timestamp from our chosen file. */
           if ((err = svn_io_file_affected_time (&text_time, chosen, pool)))
