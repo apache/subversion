@@ -179,9 +179,16 @@ client_ssl_keypw_callback(void *userdata, char *pwbuf, size_t len)
   return (pw_creds == NULL);
 }
 
+#ifndef SVN_RA_DAV__NEED_NEON_SHIM /* Neon 0.23.9 */
 static void
 client_ssl_callback(void *userdata, ne_session *sess,
                     const ne_ssl_dname *server)
+#else
+static void
+client_ssl_callback(void *userdata, ne_session *sess,
+                    const ne_ssl_dname *const *dnames,
+                    int dncount)
+#endif
 {
   svn_ra_session_t *ras = userdata;
   void *creds;
@@ -214,7 +221,24 @@ client_ssl_callback(void *userdata, ne_session *sess,
             {
               ne_ssl_load_pkcs12(sess, client_creds->cert_file);
             }
-#else /* Neon 0.24, FIXME: Neon SSL API change */
+#else
+          if (client_creds->cert_type == svn_auth_ssl_pem_cert_type)
+            {
+              // FIXME
+              return; // no PEM support in neon 0.24
+            }
+          ne_ssl_client_cert *clicert =
+            ne_ssl_clicert_read(client_creds->cert_file);
+          if (ne_ssl_clicert_encrypted(clicert))
+            {
+              char pw[128];
+              if (client_ssl_keypw_callback(userdata, pw, 128))
+                {
+                  return; // no password given
+                }
+              ne_ssl_clicert_decrypt(clicert, pw);
+              ne_ssl_set_clicert(sess, clicert);
+            }
 #endif
         }
     }
@@ -466,15 +490,6 @@ svn_ra_dav__open (void **session_baton,
                                   "SSL is not supported");
         }
     }
-#if 0
-  else
-    {
-      /* accept server-requested TLS upgrades... useless feature
-       * currently since there is no server support yet. */
-      (void) ne_set_accept_secure_upgrade(sess, 1);
-    }
-#endif
-
   if (uri.port == 0)
     {
       uri.port = ne_uri_defaultport(uri.scheme);
@@ -548,12 +563,6 @@ svn_ra_dav__open (void **session_baton,
       }
   }
 
-#if 0
-  /* Turn off persistent connections. */
-  ne_set_persist(sess, 0);
-  ne_set_persist(sess2, 0);
-#endif
-
   /* make sure we will eventually destroy the session */
   apr_pool_cleanup_register(pool, sess, cleanup_session,
                             apr_pool_cleanup_null);
@@ -605,13 +614,13 @@ svn_ra_dav__open (void **session_baton,
 
   if (is_ssl_session)
     {
-#ifndef SVN_RA_DAV__NEED_NEON_SHIM /* Neon 0.23.9 */
       const char *authorities_file;
       authorities_file = svn_config_get_server_setting(
             cfg, server_group,
             SVN_CONFIG_OPTION_SSL_AUTHORITIES_FILE,
             NULL);
       
+#ifndef SVN_RA_DAV__NEED_NEON_SHIM /* Neon 0.23.9 */
       if (authorities_file != NULL)
         {
           ne_ssl_load_ca(sess, authorities_file);
@@ -631,7 +640,31 @@ svn_ra_dav__open (void **session_baton,
          a password is needed for the key. */
       ne_ssl_keypw_prompt(sess, client_ssl_keypw_callback, ras);
       ne_ssl_keypw_prompt(sess2, client_ssl_keypw_callback, ras);
-#else /* Neon 0.24, FIXME: Neon SSL API change */
+#else
+      // FIXME: the server and client certificates need to be saved,
+      // and later unloaded.
+
+      if (authorities_file != NULL)
+        {
+          ne_ssl_certificate *ca_cert = ne_ssl_cert_read(authorities_file);
+          if (ca_cert == NULL)
+            {
+              return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                                      "unable to load certificate file");
+            }
+          ne_ssl_trust_cert(sess, ca_cert);
+          ne_ssl_trust_cert(sess2, ca_cert);
+        }
+      /* When the CA certificate or server certificate has
+         verification problems, neon will call our verify function before
+         outright rejection of the connection.*/
+      ne_ssl_set_verify(sess, server_ssl_callback, ras);
+      ne_ssl_set_verify(sess2, server_ssl_callback, ras);
+      /* For client connections, we register a callback for if the server
+         wants to authenticate the client via client certificate. */
+
+      ne_ssl_provide_clicert(sess, client_ssl_callback, ras);
+      ne_ssl_provide_clicert(sess2, client_ssl_callback, ras);
 #endif
     }
 
