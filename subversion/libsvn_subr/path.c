@@ -784,7 +784,7 @@ svn_path_is_url (const char *path)
       alphanum | mark | ":" | "@" | "&" | "=" | "+" | "$" | "," 
 */
 static svn_boolean_t
-char_is_uri_safe (char c)
+char_is_uri_safe (int c)
 {
   /* Is this an alphanumeric character? */
   if (((c >= 'A') && (c <='Z'))
@@ -807,7 +807,7 @@ svn_path_is_uri_safe (const char *path)
   apr_size_t i;
 
   for (i = 0; path[i]; i++)
-    if (! char_is_uri_safe (path[i]))
+    if (! char_is_uri_safe ((unsigned char)path[i]))
       return FALSE;
 
   return TRUE;
@@ -819,7 +819,7 @@ svn_path_uri_encode (const char *path, apr_pool_t *pool)
 {
   svn_stringbuf_t *retstr;
   apr_size_t i, copied = 0;
-  char c;
+  int c;
 
   if (! path)
     return NULL;
@@ -827,7 +827,7 @@ svn_path_uri_encode (const char *path, apr_pool_t *pool)
   retstr = svn_stringbuf_create ("", pool);
   for (i = 0; path[i]; i++)
     {
-      c = path[i];
+      c = (unsigned char)path[i];
       if (char_is_uri_safe (c))
         continue;
 
