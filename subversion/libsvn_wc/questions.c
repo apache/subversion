@@ -135,7 +135,7 @@ timestamps_equal_p (svn_boolean_t *equal_p,
   /* Get the timestamp from the working file */
   err = svn_wc__file_affected_time (&wfile_time, filename, pool);
 
-  if ((! entry->timestamp) || err)
+  if (entry == NULL || (! entry->timestamp) || err)
     {
       /* TODO: If either timestamp is inaccessible, the test cannot
          return an answer.  Assume that the timestamps are
