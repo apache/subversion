@@ -339,6 +339,24 @@ txn_body_dag_init_fs (void *fs_baton, trail_t *trail)
                                 fs->env_path);
   }
 
+  /* Set a date on revision 0. */
+  {
+    svn_string_t propname, date;
+    svn_stringbuf_t *date_buf;
+
+    propname.data = SVN_PROP_REVISION_DATE;
+    propname.len  = strlen (SVN_PROP_REVISION_DATE);
+
+    /* ### kff todo: hmmm.  This is rather annoying.  Perhaps the
+       svn_time_* functions should just use svn_string_t, instead of
+       stringbuf?  Or even... gasp... const char *?  */
+    date_buf = svn_time_to_string (apr_time_now(), trail->pool);
+    date.data = date_buf->data;
+    date.len = date_buf->len;
+
+    SVN_ERR (svn_fs__set_rev_prop (fs, 0, &propname, &date, trail));
+  }
+
   return SVN_NO_ERROR;
 }
 

@@ -47,6 +47,7 @@ typedef enum {
 typedef struct svn_cl__opt_state_t
 {
   svn_revnum_t revision;
+  apr_time_t date;
   svn_stringbuf_t *message;
   svn_stringbuf_t *xml_file;
   svn_stringbuf_t *target;
@@ -55,7 +56,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t recursive;
   svn_boolean_t version;
   apr_array_header_t *args;
-  /* TODO fixme. This still doesn't handly binary data from a file! */
+  /* TODO fixme. This still doesn't handle binary data from a file! */
   svn_stringbuf_t *filedata;
   svn_boolean_t help;
 } svn_cl__opt_state_t;

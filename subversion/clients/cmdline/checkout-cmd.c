@@ -110,6 +110,7 @@ svn_cl__checkout (apr_getopt_t *os,
                                  repos_url,
                                  local_dir,
                                  opt_state->revision,
+                                 opt_state->date,
                                  opt_state->xml_file,
                                  pool);
       if (err)

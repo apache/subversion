@@ -297,6 +297,9 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_CL_ARG_PARSING_ERROR,
               "Client error in parsing arguments")
 
+  SVN_ERRDEF (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS,
+              "Mutually exclusive arguments specified.")                   
+
   SVN_ERRDEF (SVN_ERR_CL_ADM_DIR_RESERVED,
               "Attempted command in administrative dir")
 

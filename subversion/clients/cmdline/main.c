@@ -33,6 +33,7 @@
 #include "svn_delta.h"
 #include "svn_error.h"
 #include "svn_io.h"
+#include "svn_time.h"
 #include "cl.h"
 
 
@@ -161,6 +162,7 @@ main (int argc, const char * const *argv)
     {"message",       'm', 1},
     {"recursive",     svn_cl__recursive_opt, 0},
     {"revision",      'r', 1},
+    {"date",          'D', 1},
     {"version",       'v', 0},
     {"filedata",      'F', 1},
     {"xml-file",      svn_cl__xml_file_opt, 1},
@@ -203,6 +205,10 @@ main (int argc, const char * const *argv)
         break;
       case 'r':
         opt_state.revision = (svn_revnum_t) atoi (opt_arg);
+        break;
+      case 'D':
+        apr_ansi_time_to_apr_time (&opt_state.date,
+                                   svn_parse_date (opt_arg, NULL));
         break;
       case 'v':
         opt_state.version = TRUE;

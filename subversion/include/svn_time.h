@@ -23,6 +23,7 @@ extern "C" {
 
 #include <apr_pools.h>
 #include <apr_tables.h>
+#include <apr_time.h>
 #include "svn_string.h"
 #include "svn_error.h"
 
@@ -36,6 +37,17 @@ svn_stringbuf_t *svn_time_to_string (apr_time_t when, apr_pool_t *pool);
    returned by svn_wc__time_to_string(). */
 apr_time_t svn_time_from_string (svn_stringbuf_t *timestr);
 
+
+/* Needed by getdate.y parser */
+struct getdate_time {
+  time_t time;
+  short timezone;
+};
+
+/* The one interface in our getdate.y parser;  convert human-readable
+   date TEXT into a standard C time_t.  The 2nd argument is unused;
+   we always pass NULL. */
+time_t svn_parse_date (char *text, struct getdate_time *now);
 
 #endif /* SVN_TIME_H */
 

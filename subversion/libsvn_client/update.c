@@ -38,7 +38,9 @@
    If XML_SRC is NULL, then the update will come from the repository
    that PATH was originally checked-out from.  An invalid REVISION
    will cause the PATH to be updated to the "latest" revision, while a
-   valid REVISION will update to a specific tree.
+   valid REVISION will update to a specific tree.  Alternatively, a
+   time TM can be used to implicitly select a revision.  TM cannot be
+   used at the same time as REVISION.
 
    If XML_SRC is non-NULL, it is an xml file to update from.  An
    invalid REVISION implies that the revision *must* be present in the
@@ -55,6 +57,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    svn_stringbuf_t *path,
                    svn_stringbuf_t *xml_src,
                    svn_revnum_t revision,
+                   apr_time_t tm,
                    apr_pool_t *pool)
 {
   const svn_delta_edit_fns_t *update_editor;
@@ -111,6 +114,19 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
 
       /* Open an RA session to URL */
       SVN_ERR (ra_lib->open (&session, URL, pool));
+
+      /* Decide which revision to update to: */
+
+      /* If both REVISION and TM are specified, this is an error.
+         They mostly likely contradict one another. */
+      if ((revision != SVN_INVALID_REVNUM) && tm)
+        return
+          svn_error_create(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, 0, NULL, pool,
+                           "Cannot specify _both_ revision and time.");
+
+      /* If only TM is given, convert the time into a revision number. */
+      else if (tm)
+        SVN_ERR (ra_lib->get_dated_revision (session, &revision, tm));
       
       /* Tell RA to do a update of PATH to REVISION; if we pass an
          invalid revnum, that means RA will use the latest revision.  */

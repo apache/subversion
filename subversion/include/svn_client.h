@@ -69,7 +69,8 @@ extern "C" {
    If XML_SRC is NULL, then the checkout will come from the repository
    and subdir specified by URL.  An invalid REVISION will cause the
    "latest" tree to be fetched, while a valid REVISION will fetch a
-   specific tree.
+   specific tree.  Alternatively, a time TM can be used to implicitly
+   select a revision.  TM cannot be used at the same time as REVISION.
 
    If XML_SRC is non-NULL, it is an xml file to check out from; in
    this case, the working copy will record the URL as artificial
@@ -87,6 +88,7 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
                      svn_stringbuf_t *URL,
                      svn_stringbuf_t *path,
                      svn_revnum_t revision,
+                     apr_time_t tm,
                      svn_stringbuf_t *xml_src,
                      apr_pool_t *pool);
 
@@ -98,7 +100,9 @@ svn_client_checkout (const svn_delta_edit_fns_t *before_editor,
    If XML_SRC is NULL, then the update will come from the repository
    that PATH was originally checked-out from.  An invalid REVISION
    will cause the PATH to be updated to the "latest" revision, while a
-   valid REVISION will update to a specific tree.
+   valid REVISION will update to a specific tree.  Alternatively, a
+   time TM can be used to implicitly select a revision.  TM cannot be
+   used at the same time as REVISION.
 
    If XML_SRC is non-NULL, it is an xml file to update from.  An
    invalid REVISION implies that the revision *must* be present in the
@@ -115,6 +119,7 @@ svn_client_update (const svn_delta_edit_fns_t *before_editor,
                    svn_stringbuf_t *path,
                    svn_stringbuf_t *xml_src,
                    svn_revnum_t revision,
+                   apr_time_t tm,
                    apr_pool_t *pool);
 
 

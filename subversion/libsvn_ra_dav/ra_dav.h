@@ -47,6 +47,10 @@ typedef struct {
 svn_error_t *svn_ra_dav__get_latest_revnum(void *session_baton,
                                            svn_revnum_t *latest_revnum);
 
+svn_error_t *svn_ra_dav__get_dated_revision (void *session_baton,
+                                             svn_revnum_t *revision,
+                                             apr_time_t time);
+
 svn_error_t * svn_ra_dav__get_commit_editor(
   void *session_baton,
   const svn_delta_edit_fns_t **editor,
