@@ -678,10 +678,11 @@ You should read this.
 
           <tip>
             <para>If your working copy is out of date (or you have
-            local modifications) and you want to see the HEAD
-            revision of a file in your working copy, <command>svn
-            cat</command> will automatically fetch the HEAD revision
-            when you give it a path:</para>
+            local modifications) and you want to see the
+            <literal>HEAD</literal> revision of a file in your working
+            copy, <command>svn cat</command> will automatically fetch
+            the <literal>HEAD</literal> revision when you give it a
+            path:</para>
           </tip>
 
           <screen>
@@ -1170,9 +1171,10 @@ Committed revision 9.
 </screen>
 
           <tip>
-            <para>This is the easiest way to <quote>tag</quote> a revision in
-              your repository&mdash;just <command>svn copy</command>
-              that revision (usually HEAD) into your tags directory.</para>
+            <para>This is the easiest way to <quote>tag</quote> a
+              revision in your repository&mdash;just <command>svn
+              copy</command> that revision (usually
+              <literal>HEAD</literal>) into your tags directory.</para>
           </tip>
 
           <screen>
@@ -1360,8 +1362,8 @@ D         over-there
             <replaceable>N</replaceable> and
             <replaceable>M</replaceable> respectively.  If either
             <replaceable>N</replaceable> or
-            <replaceable>M</replaceable> are omitted, a value of HEAD
-            is assumed.</para>
+            <replaceable>M</replaceable> are omitted, a value of
+            <literal>HEAD</literal> is assumed.</para>
 
           <para>By default, <command>svn diff</command> ignores the
             ancestry of files and merely compares the contents of the
@@ -1386,8 +1388,8 @@ D         over-there
 
         <refsect1>
           <title>Accesses Repository</title>
-          <para>For obtaining differences against anything but BASE
-            revision in your working copy</para>
+          <para>For obtaining differences against anything but
+            <literal>BASE</literal> revision in your working copy</para>
         </refsect1>
 
         <refsect1>
@@ -1413,8 +1415,9 @@ D         over-there
         <refsect1>
           <title>Examples</title>
 
-          <para>Compare BASE and your working copy (one of the most
-            popular uses of <command>svn diff</command>):</para>
+          <para>Compare <literal>BASE</literal> and your working copy
+            (one of the most popular uses of <command>svn
+            diff</command>):</para>
 
           <screen>
 $ svn diff COMMITTERS 
@@ -1502,11 +1505,12 @@ Index: COMMITTERS
           <title>Description</title>
 
           <para>The first form exports a clean directory tree from the
-            repository specified by URL, at revision REV if it is
-            given, otherwise at HEAD, into
+            repository specified by URL, at revision
+            <replaceable>REV</replaceable> if it is given, otherwise
+            at <literal>HEAD</literal>, into
             <replaceable>PATH</replaceable>. If
             <replaceable>PATH</replaceable> is omitted, the last
-            component of the URL is used for the local directory
+            component of the <replaceURL is used for the local directory
             name.</para>
 
           <para>The second form exports a clean directory tree from
@@ -2161,8 +2165,8 @@ Made a change.
           <para>In the first form, the source URLs are specified at
             revisions <replaceable>N</replaceable> and
             <replaceable>M</replaceable>.  These are the two sources
-            to be compared.  The revisions default to HEAD if
-            omitted.</para>
+            to be compared.  The revisions default to
+            <literal>HEAD</literal> if omitted.</para>
 
           <para>In the second form, <replaceable>SOURCE</replaceable>
             can be a URL or working copy item, in which case the
@@ -3512,11 +3516,11 @@ At revision 3.
         <refsect1>
           <title>Description</title>
 
-          <para><command>svn update</command> brings changes from
-            the repository into your working copy.  If no revision
-            given, it brings your working copy up-to-date with the
-            HEAD revision.  Otherwise, it synchronizes the working
-            copy to the revision given by the
+          <para><command>svn update</command> brings changes from the
+            repository into your working copy.  If no revision given,
+            it brings your working copy up-to-date with the
+            <literal>HEAD</literal> revision.  Otherwise, it
+            synchronizes the working copy to the revision given by the
             <option>--revision</option> switch.</para>
 
           <para>For each updated item a line will start with a
@@ -4827,8 +4831,8 @@ Rearrange lunch.
           <title>Examples</title>
 
           <para>This shows the value of the file
-            <filename>/trunk/sandwich</filename> in the HEAD
-            revision:</para>
+            <filename>/trunk/sandwich</filename> in the
+            <literal>HEAD</literal> revision:</para>
 
           <screen>
 $ svnlook pg /usr/local/svn/repos seasonings /trunk/sandwich
@@ -4876,7 +4880,8 @@ mustard
           <title>Examples</title>
 
           <para>This shows the names of properties set on the file
-            <filename>/trunk/README</filename> in the HEAD revision:</para>
+            <filename>/trunk/README</filename> in the
+            <literal>HEAD</literal> revision:</para>
 
           <screen>
 $ svnlook proplist /usr/local/svn/repos /trunk/README
