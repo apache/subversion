@@ -30,17 +30,6 @@ synchronized between the trunk and 1.0 lines, before we roll a 1.0 tarball:
 
 Candidate changes:
 
-  * r8066, r8376, r8515 and r8516
-    Update this branch to use the current Windows installer setup.
-    Justification: Current Windows install broken without these revisions
-    Notes: Thse revisions were what the 0.37.0 version of the Windows
-           installer used.  The 0.37.0 version is also the only one so
-           far without any bugreports or complains. 
-    Votes:
-      +1: josander
-      +0: dlr
-
-
   * r8561
     Clarify help text for 'svn switch'.
     Justification:  Multiple people were recently confused by '--relocate';

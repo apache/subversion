@@ -147,5 +147,4 @@ Filename: {app}\helpers\svnpath.exe; Parameters: "add ""{app}\bin"""
 Filename: {app}\helpers\svnpath.exe; Parameters: "remove ""{app}\bin"""
 
 [Code]
-#include "isx_main.pas"
-
+#include "is_main.pas"

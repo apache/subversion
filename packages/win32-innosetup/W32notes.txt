@@ -29,7 +29,7 @@ Some Known Issues:
     - Make sure that your entries in httpd.conf are correct and remember that
       mod_dav_svn.so and mod_authz_svn.so should be loaded after the other
       mod_dav*.so modules.
-    - Copy the libdb40.dll in the Subversion folder to your Apache\bin or
+    - Copy the libdb42.dll in the Subversion folder to your Apache\bin or
       Apache\modules folder.
     - Uninstall the Apache service manually by typing:
         apache -k uninstall

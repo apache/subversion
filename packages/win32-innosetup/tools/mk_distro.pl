@@ -97,20 +97,20 @@ sub Main
 sub MakeSetup
 {
     my $SetupOut=&PathSetupOut;
-    my $PathIsxExe=&PathIsxExe;
+    my $PathISExe=&PathISExe;
     my $DirOrig=getcwd;
     my $RetVal=0;
 
     #chdir $SetupOut;
     #system 
     chdir '..';
-    #system ("$PathIsxExe svn.iss");
+    #system ("$PathISExe svn.iss");
     if (! $g_AutoRun)
       {
         print "Compiling the setup...\n";
       }
     
-    $RetVal=`$PathIsxExe svn.iss`;
+    $RetVal=`$PathISExe svn.iss`;
 
     chdir $SetupOut;
     if ($RetVal == 0)
@@ -131,20 +131,20 @@ sub MakeSetup
 }
 
 #-------------------------------------------------------------------------------
-# FUNCTION PathSetupOut
+# FUNCTION PathISExe
 # DOES     Finding and returning the current svn.exe path as of
 #          ..\svn_iss_dyn.iss
-sub PathIsxExe
+sub PathISExe
 {
-    my $PathIsxExe = &cmn_ValuePathfile('path_isx');
+    my $PathISExe = &cmn_ValuePathfile('path_is');
   
-    if ( ! -e "$PathIsxExe/ISCC.exe")
+    if ( ! -e "$PathISExe/ISCC.exe")
       {
         die "ERROR: Could not find path to ISCC.exe in paths_inno_src.iss\n";
       }
     
-    $PathIsxExe = "$PathIsxExe\\ISCC.exe";
-    return $PathIsxExe;
+    $PathISExe = "$PathISExe\\ISCC.exe";
+    return $PathISExe;
 }
 
 #-------------------------------------------------------------------------------

@@ -114,7 +114,7 @@ main (int argc, char *argv[])
 
     if (iCmdArgError)
       {
-        /* It's still hope to run a command when another program (IS or ISX) has
+        /* It's still hope to run a command when another program (IS) has
          * started svnpath, so we will try to resolve it. */
 
         lstrcpy ( cMsg, "Argument Error: Wrong arguments\n\n");
