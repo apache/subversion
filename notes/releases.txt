@@ -63,44 +63,30 @@
 
 6. It's release time, so cd to the release branch's working copy.
 
-   a) Make sure your release branch wc has the following packages
-      extracted into the root of the wc tree:
+   Make sure your release branch wc has the following packages
+   extracted into the root of the wc tree:
 
-      apr           (see INSTALL, section I)
-      apr-util      (see INSTALL, section I)
-      neon          (see INSTALL, section I)
+   apr           (see INSTALL, section I)
+   apr-util      (see INSTALL, section I)
+   neon          (see INSTALL, section I)
 
-      To install apr/apr-util, see INSTALL, section I.1.
+   To install apr/apr-util, see INSTALL, section I.1.
 
-      To install neon, see INSTALL, section I.5.
+   To install neon, see INSTALL, section I.5.
 
-      To configure/install Apache (httpd-2.X.YY), see INSTALL,
-      section I.7 and section III.  If you maintain a separate
-      build/release area, and don't want to over-write an
-      existing/working installation of Apache, you may want to use
-      --prefix=/usr/local/apache2 to install a parallel instance of
-      Apache.
+   To configure/install Apache (httpd-2.X.YY), see INSTALL,
+   section I.7 and section III.  If you maintain a separate
+   build/release area, and don't want to over-write an
+   existing/working installation of Apache, you may want to use
+   --prefix=/usr/local/apache2 to install a parallel instance of
+   Apache.
 
-      To make sure httpd.conf is properly set up for DAV access, see
-      subversion/tests/clients/cmdline/README.
+   To make sure httpd.conf is properly set up for DAV access, see
+   subversion/tests/clients/cmdline/README.
 
-      Also, see sections 'Building the Latest Source under Unix' and
-      'BUILDING A SUBVERSION SERVER' in the INSTALL file. for more
-      detailed build information.
-
-   b) Run './autogen.sh && ./configure' so the design docs can get
-      built in the branch tree (in step 4, dist.sh will move the built
-      design docs into the release sandbox).
-
-   c) Grab the latest prebuilt book from http://svnbook.red-bean.com/
-
-      cd doc/book/book
-      wget http://svnbook.red-bean.com/book.pdf
-      wget http://svnbook.red-bean.com/book.html
-      cd ../../..
-
-      (The book maintainers keep those files up to date, so the
-      release manager doesn't have to rebuild the book.)
+   Also, see sections 'Building the Latest Source under Unix' and
+   'BUILDING A SUBVERSION SERVER' in the INSTALL file. for more
+   detailed build information.
 
 7. Merge CHANGES into the release branch. Do it the same way as described in
    section 4 in this document when merging fixes to the release branch.
@@ -111,7 +97,7 @@
    it's done, you'll have 'subversion-X.Y.Z.tar.gz' and 
    'subversion-X.Y.Z.tar.bz2' in the cwd.
 
-9. Test the tarball:
+9. Test one or both of the tarballs:
      a) tar zxvf subversion-X.Y.Z.tar.gz;  cd subversion-X.Y.Z
      b) ./configure
 
@@ -165,32 +151,37 @@
 
    [Details to be filled in later].
 
-11. Upload the tarball to /usr/www/docroot/tarballs/ on svn.collab.net,
-    then link to it from subversion.tigris.org.  
+11. Upload the tarballs to http://subversion.tigris.org/tarballs/.
 
-   The ability to upload a public, automatically approved tarball
-   requires the "Project Document - Approve" permission, which is a
-   standard part of the "Download Manager" or "Content Developer"
-   roles.  If you don't have this access, make sure you 'Request a New
-   Role' from the tigris web site.
+    Currently, the ability to upload a tarball requires login access
+    to subversion.tigris.org.  One of the collab.net developers can do
+    this.  We'd like to make possible for the Release Manager to do by
+    themselves, of course, but as tigris.org has its own security
+    policies, this will require some negotiation.  For now, just grab
+    a collab.net person on IRC, or plan for them to be available.
+    Sorry for the inconvenience.
 
-   Once Download Manager status has been granted:
+12. Link to the tarballs from the Downloads page:
 
-    a. Log into http://subversion.tigris.org
-    b. Click on the 'Downloads link (left frame at the top)
-    c. Click on the 'Source tarballs' link (main frame)
-    d. Click on the 'Add a file' link (top, main frame, under 'File Sharing')
-    e. Fill in the following fields:
+      http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=260
 
-      Name: subversion-X.Y.Z.tar.gz (replace X.Y.Z with the release number)
-      Status: Stable
-      Description: Subversion release X.Y.Z (MD5: <md5sum of tarball>)
-      Contents: (Link, then enter
-          http://subversion.tigris.org/tarballs/subversion-X.Y.Z.tar.gz)
+    Here's how:
+
+     a. Log into http://subversion.tigris.org/
+     b. Click on the 'Downloads link (left frame at the top)
+     c. Click on the 'Source tarballs' link (main frame)
+     d. Click on the 'Add a file' link (top, main frame, under 'File Sharing')
+     e. Fill in the following fields:
+
+       Name: subversion-X.Y.Z.tar.gz (replace X.Y.Z with the release number)
+       Status: Stable
+       Description: Subversion release X.Y.Z (MD5: <md5sum of tarball>)
+       Contents: (choose 'Link', then enter
+           http://subversion.tigris.org/tarballs/subversion-X.Y.Z.tar.gz)
 
     f. Click Submit
 
-12. Copy branch into the tags directory in the repository.
+12. Copy the branch into the tags directory in the repository.
 
       svn cp -m "Make tag for release X.Y.Z."     \
           http://svn.collab.net/repos/svn/branches/X.Y.x   \
@@ -203,7 +194,7 @@
 14. Copy svn_version.h.dist (that dist.sh made in the top level of your wc)
     to subversion/includes/svn_version.h and commit.
 
-      cp svn_version.h subversion/include/svn_version.h
+      cp svn_version.h.dist subversion/include/svn_version.h
       svn commit -m "Update svn_version.h to match tarball." \
           subversion/include/svn_version.h
 
@@ -216,7 +207,7 @@
 
     a) Switch your working copy back to the branch.
 
-         svn switch http://svn.collab.net/repos/svn/branch/X.Y.x
+         svn switch http://svn.collab.net/repos/svn/branches/X.Y.x
 
     b) Modify subversion/include/svn_version.h
        If you just did 1.0.2 then svn_version.h should have the proper
@@ -245,6 +236,5 @@
     and send an announcement to dev@, users@, and announce@ lists.
     Remember to include the URL and MD5 checksum in the announcement.
 
-18. Someone with administrative access upgrade svn.collab.net to head.
-    (This is not usually the release manager.)
-
+18. Someone with administrative access should upgrade svn.collab.net
+    to head.  (This is not usually the release manager.)
