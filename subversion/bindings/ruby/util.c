@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <apr_general.h>
 
-#include "svn.ruby.h"
+#include "svn_ruby.h"
 #include "util.h"
 
 #define SVN_RUBY_REFCOUNT "svn-ruby-pool-refcount"
