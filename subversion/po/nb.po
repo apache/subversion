@@ -1,4 +1,4 @@
-# Norwegian Bokmål translations for subversion package
+# Norwegian Bokmål translations for the subversion package
 # Copyright (C) 2004 Collab Net.
 # This file is distributed under the same license as the subversion package.
 #
@@ -31,7 +31,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-08-20 13:49+0200\n"
+"POT-Creation-Date: 2004-08-23 13:56+0200\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -283,7 +283,8 @@ msgid "force validity of log message source"
 msgstr "godkjenn angitt kilde for loggmelding"
 
 #: clients/cmdline/main.c:67 clients/cmdline/main.c:68 svnadmin/main.c:199
-#: svnadmin/main.c:202 svnlook/main.c:89 svnlook/main.c:92
+#: svnadmin/main.c:202 svndumpfilter/main.c:699 svndumpfilter/main.c:702
+#: svnlook/main.c:89 svnlook/main.c:92
 msgid "show help on a subcommand"
 msgstr "vis hjelp for en delkommando"
 
@@ -319,14 +320,14 @@ msgid ""
 msgstr ""
 "ARG (noen kommadoer tar også \"ARG1:ARG2\"-områder)\n"
 "                             Et revisjonsargument kan være en av:\n"
-"                                NUMBER         revisjonsnummer\n"
-"                                \"{\" DATE \"}\" revisjonen som begynner på "
-"angitt dag\n"
+"                                NUMMER       revisjonsnummer\n"
+"                                \"{\" DATE \"}\" revisjonen som begynner på\n"
+"                                             angitt dag\n"
 "                                \"HEAD\"       seneste revisjon i depotet\n"
-"                                \"BASE\"       baserevisjon for objektets "
-"arbeidskopi\n"
-"                                \"COMMITTED\"  siste arkivering ved eller "
-"før BASE\n"
+"                                \"BASE\"       baserevisjon for objektets\n"
+"                                             arbeidskopi\n"
+"                                \"COMMITTED\"  siste arkivering ved eller\n"
+"                                             før BASE\n"
 "                                \"PREV\"       revisjonen rett før COMMITTED"
 
 #: clients/cmdline/main.c:88
@@ -383,7 +384,8 @@ msgstr "følg ikke kopieringer under historiegjennomgang"
 
 #: clients/cmdline/main.c:108
 msgid "disregard default and svn:ignore property ignores"
-msgstr "forbigå det som skal oversees i svn:ignore og standard-ignoreringer"
+msgstr "forbigå det som skal oversees i svn:ignore\n"
+"                             og standard-ignoreringer"
 
 #: clients/cmdline/main.c:110
 msgid "do not cache authentication tokens"
@@ -391,7 +393,7 @@ msgstr "ikke mellomlagre autentiserings-informasjon"
 
 #: clients/cmdline/main.c:112
 msgid "do no interactive prompting"
-msgstr "still ingen interaktive spørsmål "
+msgstr "still ingen interaktive spørsmål"
 
 #: clients/cmdline/main.c:114
 msgid "try operation but make no changes"
@@ -407,7 +409,8 @@ msgstr "ta hensyn til opprinnelse når fletninger beregnes"
 
 #: clients/cmdline/main.c:120
 msgid "ignore ancestry when calculating merges"
-msgstr "ikke ta hensyn til opprinnelse når fletninger beregnes"
+msgstr "ikke ta hensyn til opprinnelse når fletninger\n"
+"                             beregnes"
 
 #: clients/cmdline/main.c:122
 msgid "use ARG as diff command"
@@ -466,9 +469,8 @@ msgid ""
 "them for addition to repository.  They will be added in next commit.\n"
 "usage: add PATH...\n"
 msgstr ""
-"Legg filer og kataloger under versjonskontroll og forbered dem på å bli "
-"lagt \n"
-"til i depotet. De blir lagt til ved neste innsending.\n"
+"Legg filer og kataloger under versjonskontroll og forbered dem på å\n"
+"bli lagt til i depotet. De blir lagt til ved neste innsending.\n"
 "bruk: add STI...\n"
 
 #: clients/cmdline/main.c:178
@@ -477,8 +479,8 @@ msgid ""
 "URLs with revision and author information in-line.\n"
 "usage: blame TARGET...\n"
 msgstr ""
-"Vis innholdet i angitte filer eller nettadresser sammen med\n"
-"revisjons- og forfatterinformasjon i filen.\n"
+"Vis innholdet i angitte filer eller\n"
+"nettadresser sammen med revisjons- og forfatterinformasjon i filen.\n"
 "bruk: blame MÅL...\n"
 
 #: clients/cmdline/main.c:184
@@ -515,8 +517,8 @@ msgid ""
 "unfinished operations, etc.\n"
 "usage: cleanup [PATH...]\n"
 msgstr ""
-"Rydd opp i arbeidskopien og alle underkatalogene rekursivt. Låser tas\n"
-"bort, avbrutte operasjoner gjenopptas, etc.\n"
+"Rydd opp i arbeidskopien og alle underkatalogene rekursivt.\n"
+"Låser tas bort, avbrutte operasjoner gjenopptas, etc.\n"
 "bruk: cleanup [STI...]\n"
 
 #: clients/cmdline/main.c:205
@@ -544,7 +546,8 @@ msgid ""
 "    URL -> WC:   check out URL into WC, schedule for addition\n"
 "    URL -> URL:  complete server-side copy;  used to branch & tag\n"
 msgstr ""
-"Dupliser noe i arbeidskopien eller arkivdatabasen med full historikk.\n"
+"Dupliser noe i arbeidskopien eller arkivdatabasen med full\n"
+"historikk.\n"
 "bruk: copy KILDE MÅL\n"
 "\n"
 "  KILDE og MÅL kan hver for seg enten være filsti for arbeidskopi (WC)\n"
@@ -884,7 +887,8 @@ msgid ""
 "    WC  -> WC:   move and schedule for addition (with history)\n"
 "    URL -> URL:  complete server-side rename.\n"
 msgstr ""
-"Flytt og/eller bytt navn på noe i arbeidskopien eller depotet.\n"
+"Flytt og/eller bytt navn på noe i arbeidskopien\n"
+"eller depotet.\n"
 "bruk: move KILDE MÅL\n"
 "\n"
 "  Merk: Dette er det samme som å bruke delkommandoene 'copy' etterfulgt\n"
@@ -920,7 +924,8 @@ msgid ""
 "  1. Edits versioned props in working copy.\n"
 "  2. Edits unversioned remote prop on repos revision.\n"
 msgstr ""
-"Rediger egenskapen EGENSKAPSNAVN med en ekstern redigerer på angitte mål.\n"
+"Rediger egenskapen EGENSKAPSNAVN med en ekstern\n"
+"redigerer på angitte mål.\n"
 "bruk: 1. propedit EGENSKAPSNAVN STI...\n"
 "      2. propedit EGENSKAPSNAVN --revprop -r REV [URL]\n"
 "\n"
@@ -943,7 +948,8 @@ msgid ""
 "  the --strict option to disable these beautifications (useful,\n"
 "  for example, when redirecting binary property values to a file).\n"
 msgstr ""
-"Vis verdien til EGENSKAPSNAVN på filer, kataloger eller revisjoner.\n"
+"Vis verdien til EGENSKAPSNAVN på filer, kataloger\n"
+"eller revisjoner.\n"
 "bruk: 1. propget EGENSKAPSNAVN [STI...]\n"
 "      2. propget EGENSKAPSNAVN --revprop -r REV [URL]\n"
 "\n"
@@ -965,7 +971,8 @@ msgid ""
 "  1. Lists versioned props in working copy.\n"
 "  2. Lists unversioned remote props on repos revision.\n"
 msgstr ""
-"Vis alle egenskaper på filer, kataloger eller revisjoner.\n"
+"Vis alle egenskaper på filer, kataloger eller\n"
+"revisjoner.\n"
 "bruk: 1. proplist [STI...]\n"
 "      2. proplist --revprop -r REV [URL]\n"
 "\n"
@@ -1008,10 +1015,11 @@ msgid ""
 "        foo             http://example.com/repos/zig\n"
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
 msgstr ""
-"Sett EGENSKAPSNAVN til EGENSKAPSVERDI på filer, kataloger eller revisjoner.\n"
+"Sett EGENSKAPSNAVN til EGENSKAPSVERDI på filer,\n"
+"kataloger eller revisjoner.\n"
 "bruk: 1. propset EGENSKAPSNAVN [EGENSKAPSVERDI | -F VERDIFIL] STI...\n"
-"      2. propset EGENSKAPSNAVN --revprop -r REV [EGENSKAPSVERDI | -F "
-"VERDIFIL] [URL]\n"
+"      2. propset EGENSKAPSNAVN --revprop -r REV \\\n"
+"                 [EGENSKAPSVERDI | -F VERDIFIL] [URL]\n"
 "\n"
 "  1. Lager en lokal versjonert egenskap i arbeidskopien.\n"
 "  2. Lager en ikke-versjonert egenskap på en revisjon i depotet.\n"
@@ -1162,8 +1170,8 @@ msgstr ""
 "      'X' Er ikke versjonert, men brukes av en \"externals\"-definisjon\n"
 "      '?' Er ikke under versjonskontroll\n"
 "      '!' Savnet (fjernet av en ikke-svn-kommando) eller ufullstendig\n"
-"      '~' Dette versjonhånterte objektet er blokkert av en annet type "
-"objekt\n"
+"      '~' Dette versjonshåndterte objektet er blokkert av et objekt av\n"
+"          en annen type\n"
 "    Kolonne to: Endringer av en fils eller katalogs egenskaper.\n"
 "      ' ' Ingen endringer\n"
 "      'C' I konflikt\n"
@@ -1178,8 +1186,8 @@ msgstr ""
 "      ' ' Normal\n"
 "      'S' Forandret\n"
 "\n"
-"  Hvis -v er angitt, vises det i kolonne åtte om objektet er gått ut på "
-"dato:\n"
+"  Hvis -v er angitt, vises det i kolonne åtte om objektet er gått ut på\n"
+"  dato:\n"
 "      '*' En nyere versjon ligger i depotet\n"
 "      ' ' Arbeidskopien er oppdatert\n"
 "\n"
@@ -4707,7 +4715,7 @@ msgstr "'%s' mangler informasjon om opprinnelse"
 msgid "Unable to make any directories"
 msgstr "Kan ikke lage kataloger"
 
-#: svnadmin/main.c:72
+#: svnadmin/main.c:72 svndumpfilter/main.c:62
 msgid "Can't open stdio file"
 msgstr "Kan ikke åpne standard-innfil"
 
@@ -4720,13 +4728,15 @@ msgstr "Argument kreves for depot"
 msgid "'%s' is an URL when it should be a path"
 msgstr "'%s' er en nettadresse men skulle vært en filsti"
 
-#: svnadmin/main.c:205 svnlook/main.c:95 svnversion/main.c:201
+#: svnadmin/main.c:205 svndumpfilter/main.c:705 svnlook/main.c:95
+#: svnversion/main.c:201
 msgid "show version information"
 msgstr "vis versjonsinformasjon"
 
 #: svnadmin/main.c:208
 msgid "specify revision number ARG (or X:Y range)"
-msgstr "angi argument for revisjonsnummer (eller 'X:Y'-område)"
+msgstr "angi argument for revisjonsnummer (eller\n"
+"                             'X:Y'-område)"
 
 #: svnadmin/main.c:211
 msgid "dump incrementally"
@@ -4750,7 +4760,8 @@ msgstr "overse alle depot-UUIDer i strømmen"
 
 #: svnadmin/main.c:226
 msgid "set repos UUID to that found in stream, if any"
-msgstr "sett depot-UUID til det som eventuelt blir funnet i strømmen"
+msgstr "sett depot-UUID til det som eventuelt blir\n"
+"                             funnet i strømmen"
 
 #: svnadmin/main.c:229
 msgid "type of repository: 'bdb' or 'fsfs'"
@@ -4762,11 +4773,13 @@ msgstr "last til angitt katalog i depotet"
 
 #: svnadmin/main.c:235
 msgid "disable fsync at transaction commit [Berkeley DB]"
-msgstr "slå av fsync ved innsending av transaksjonene [Berkeley DB]"
+msgstr "slå av fsync ved innsending av transaksjonene\n"
+"                             [Berkeley DB]"
 
 #: svnadmin/main.c:238
 msgid "disable automatic log file removal [Berkeley DB]"
-msgstr "slå av automatisk fjerning av loggfiler [Berkeley DB]"
+msgstr "slå av automatisk fjerning av loggfiler\n"
+"                             [Berkeley DB]"
 
 #: svnadmin/main.c:244
 msgid "remove redundant log files from source repository"
@@ -4815,11 +4828,11 @@ msgstr ""
 "\n"
 "Dumper innholdet i filsystemet til standardutdata i et portabelt \"dumpfil"
 "\"-\n"
-"format og sender tilbakemelding til standardfeil. Revisjonene fra LAV til "
-"HØY dumpes. Hvis ingen revisjoner angis, dumpes alle revisjonstrærne. Hvis "
-"bare LAV angis, dumpes bare det treet.\n"
-"Hvis --incremental brukes, dumpes kun forskjeller mot den foregående "
-"revisjonen i stedet for den vanlige fullteksten.\n"
+"format og sender tilbakemelding til standardfeil. Revisjonene fra LAV til\n"
+"HØY dumpes. Hvis ingen revisjoner angis, dumpes alle revisjonstrærne.\n"
+"Hvis bare LAV angis, dumpes bare det treet. Hvis --incremental brukes,\n"
+"dumpes kun forskjeller mot den foregående revisjonen i stedet for den\n"
+"vanlige fullteksten.\n"
 
 #: svnadmin/main.c:282
 msgid ""
@@ -5025,7 +5038,7 @@ msgstr "Kun én revisjon er tillatt"
 msgid "Exactly one file argument required"
 msgstr "Kun ett filargument behøves"
 
-#: svnadmin/main.c:1065 svnlook/main.c:1939
+#: svnadmin/main.c:1065 svndumpfilter/main.c:1103 svnlook/main.c:1939
 msgid "subcommand argument required\n"
 msgstr "Delkommandoen må ha et argument\n"
 
@@ -5038,6 +5051,19 @@ msgstr ""
 "delkommandoen '%s' tar ikke argumentet '%s'\n"
 "Skriv 'svnadmin help %s' for bruk.\n"
 
+#: svndumpfilter/main.c:363
+#, c-format
+msgid "Invalid copy source path '%s'"
+msgstr "Ugyldig kildesti '%s' for kopi"
+
+#: svndumpfilter/main.c:414
+msgid "Node with dropped parent sneaked in"
+msgstr "Node med droppet forelder sneket inn"
+
+#: svndumpfilter/main.c:586
+msgid "This is an empty revision for padding."
+msgstr "Dette er en tom revisjon brukt som fyll."
+
 #: svndumpfilter/main.c:641
 #, c-format
 msgid "Revision %ld committed as %ld.\n"
@@ -5048,7 +5074,74 @@ msgstr "Revisjon %ld innsendt som %ld.\n"
 msgid "Revision %ld skipped.\n"
 msgstr "Hoppet over revisjon %ld.\n"
 
-#: svndumpfilter/main.c:883
+#: svndumpfilter/main.c:707
+msgid "Do not display filtering statistics."
+msgstr "Ikke vis filtreringsstatistikk."
+
+#: svndumpfilter/main.c:709
+msgid "Remove revisions emptied by filtering."
+msgstr "Fjern revisjoner som tømmes ved filtrering."
+
+#: svndumpfilter/main.c:711
+msgid "Renumber revisions left after filtering."
+msgstr "Renummerer revisjoner som er til overs etter\n"
+"                             filtrering."
+
+#: svndumpfilter/main.c:713
+msgid "Don't filter revision properties."
+msgstr "Ikke filtrer revisjonsegenskaper."
+
+#: svndumpfilter/main.c:724
+msgid ""
+"Filter out nodes with given prefixes from dumpstream.\n"
+"usage: svndumpfilter exclude PATH_PREFIX...\n"
+msgstr "Filtrer bort noder med angitte prefikser fra dumpstrømmen.\n"
+"bruk: svndumpfilter exclude STIPREFIKS...\n"
+
+#: svndumpfilter/main.c:730
+msgid ""
+"Filter out nodes without given prefixes from dumpstream.\n"
+"usage: svndumpfilter include PATH_PREFIX...\n"
+msgstr "Filtrer bort noder uten angitte prefikser fra dumpstrømmen.\n"
+"bruk: svndumpfilter include STIPREFIKS...\n"
+
+#: svndumpfilter/main.c:736
+msgid ""
+"Describe the usage of this program or its subcommands.\n"
+"usage: svndumpfilter help [SUBCOMMAND...]\n"
+msgstr ""
+"Bruksanvisning for dette programmet eller dets delkommandoer.\n"
+"bruk: svndumpfilter help [DELKOMMANDO...]\n"
+
+#: svndumpfilter/main.c:799
+msgid ""
+"general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
+"Type \"svndumpfilter help <subcommand>\" for help on a specific subcommand.\n"
+"\n"
+"Available subcommands:\n"
+msgstr ""
+"generell bruk: svndumpfilter DELKOMMANDO [ARGUMENTER & VALG ...]\n"
+"Skriv \"svndumpfilter help <delkommando>\" for hjelp til en spesifikk\ndelkommando.\n"
+"\n"
+"Tilgjengelige delkommandoer:\n"
+
+#: svndumpfilter/main.c:854
+msgid "Excluding (and dropping empty revisions for) prefixes:\n"
+msgstr "Ekskluderer (og dropper tomme revisjoner for) prefikser:\n"
+
+#: svndumpfilter/main.c:856
+msgid "Excluding prefixes:\n"
+msgstr "Ekskluderer prefikser:\n"
+
+#: svndumpfilter/main.c:858
+msgid "Including (and dropping empty revisions for) prefixes:\n"
+msgstr "Inkluderer (og dropper tomme revisjoner for) prefikser:\n"
+
+#: svndumpfilter/main.c:860
+msgid "Including prefixes:\n"
+msgstr "Inkluderer prefikser:\n"
+
+#: svndumpfilter/main.c:887
 #, c-format
 msgid ""
 "Dropped %d revision(s).\n"
@@ -5057,26 +5150,31 @@ msgstr ""
 "Droppet %d revisjon(er).\n"
 "\n"
 
-#: svndumpfilter/main.c:889
+#: svndumpfilter/main.c:893
 msgid "Revisions renumbered as follows:\n"
 msgstr "Revisjoner renummerert slik:\n"
 
-#: svndumpfilter/main.c:917
+#: svndumpfilter/main.c:921
 #, c-format
 msgid "   %ld => (dropped)\n"
 msgstr "   %ld => (droppet)\n"
 
-#: svndumpfilter/main.c:921
+#: svndumpfilter/main.c:925
 #, c-format
 msgid "   %ld => %ld\n"
 msgstr "   %ld => %ld\n"
 
-#: svndumpfilter/main.c:932
+#: svndumpfilter/main.c:936
 #, c-format
 msgid "Dropped %d node(s):\n"
 msgstr "Droppet %d node(r):\n"
 
-#: svndumpfilter/main.c:1140
+#: svndumpfilter/main.c:1125
+#, c-format
+msgid "unknown command: '%s'\n"
+msgstr "ukjent kommando: '%s'\n"
+
+#: svndumpfilter/main.c:1144
 msgid ""
 "\n"
 "Error: no prefixes supplied.\n"
@@ -5084,7 +5182,7 @@ msgstr ""
 "\n"
 "Feil: Ingen prefikser oppgitt.\n"
 
-#: svndumpfilter/main.c:1183
+#: svndumpfilter/main.c:1187
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
