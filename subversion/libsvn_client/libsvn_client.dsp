@@ -113,6 +113,10 @@ SOURCE=.\status.c
 
 SOURCE=.\update.c
 # End Source File
+# Begin Source File
+
+SOURCE=.\ra_loader.c
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
