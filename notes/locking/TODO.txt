@@ -10,7 +10,7 @@ This is a summary of the current state of the locking implementation.
 
 * libsvn_client and libsvn_ra take lists to lock/unlock:
   - fix ra_dav shim (sussman)
-  - fix svnserve shim (fitz?)
+  - fix svnserve shim (fitz)
 
 * rev svn_wc_notify_func_t (on trunk) (lundblad)
 
