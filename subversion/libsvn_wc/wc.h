@@ -189,7 +189,7 @@ svn_error_t *svn_wc__make_adm_thing (svn_string_t *path,
 
 /* Open `PATH/<adminstrative_subdir>/FNAME'. */
 svn_error_t *svn_wc__open_adm_file (apr_file_t **handle,
-                                    const svn_string_t *path,
+                                    svn_string_t *path,
                                     const char *fname,
                                     apr_int32_t flags,
                                     apr_pool_t *pool);
@@ -197,7 +197,7 @@ svn_error_t *svn_wc__open_adm_file (apr_file_t **handle,
 
 /* Close `PATH/<adminstrative_subdir>/FNAME'. */
 svn_error_t *svn_wc__close_adm_file (apr_file_t *fp,
-                                     const svn_string_t *path,
+                                     svn_string_t *path,
                                      const char *fname,
                                      int sync,
                                      apr_pool_t *pool);
@@ -364,7 +364,10 @@ svn_error_t *svn_wc__ensure_adm (svn_string_t *path,
 #define SVN_WC__LOG_ATTR_ARG_6          "arg6"
 #define SVN_WC__LOG_ATTR_ARG_7          "arg7"
 #define SVN_WC__LOG_ATTR_ARG_8          "arg8"
-#define SVN_WC__LOG_ATTR_ARG_9          "arg9"
+#define SVN_WC__LOG_ATTR_ARG_9          "arg9"  /* SEE NOTE BELOW! */
+/* If you ever add SVN_WC__LOG_ATTR_ARG_10, be sure to find whatever
+   `sort' function applies to them and make sure it still works.
+   Getting 1-9 right is easy, but 10's a doozy.  -kff */
 
 
 /* Starting at PATH, write out log entries indicating that a commit
