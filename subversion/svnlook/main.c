@@ -1461,11 +1461,11 @@ do_pget (svnlook_ctxt_t *c,
        if (path == NULL)
          return svn_error_createf
            (SVN_ERR_PROPERTY_NOT_FOUND, NULL,
-            _("Property '%s' not found on revision %d"), propname, c->rev_id);
+            _("Property '%s' not found on revision %ld"), propname, c->rev_id);
        else
          return svn_error_createf
            (SVN_ERR_PROPERTY_NOT_FOUND, NULL,
-            _("Property '%s' not found on path '%s' in revision %d"),
+            _("Property '%s' not found on path '%s' in revision %ld"),
             propname, path, c->rev_id);
     }
 
