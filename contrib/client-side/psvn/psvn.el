@@ -58,6 +58,9 @@
 ;; $     - svn-status-toggle-elide
 ;; DEL   - svn-status-unset-user-mark-backwards
 ;; * !   - svn-status-unset-all-usermarks
+;; * ?   - svn-status-mark-unknown
+;; * A   - svn-status-mark-added
+;; * M   - svn-status-mark-modified
 ;; .     - svn-status-goto-root-or-return
 ;; f     - svn-status-find-file
 ;; o     - svn-status-find-file-other-window
@@ -89,7 +92,6 @@
 ;; * when editing the command line - offer help from the svn client
 ;; * finish svn-status-property-set
 ;; * eventually use the customize interface
-;; * add support for svn rename, svn delete
 ;; * interactive svn-status should complete existing directories only;
 ;;   unfortunately `read-directory-name' doesn't exist in Emacs 21.3
 
@@ -592,6 +594,9 @@ A and B must be line-info's"
   (setq svn-status-mode-mark-map (make-sparse-keymap))
   (define-key svn-status-mode-map "*" svn-status-mode-mark-map)
   (define-key svn-status-mode-mark-map "!" 'svn-status-unset-all-usermarks)
+  (define-key svn-status-mode-mark-map "?" 'svn-status-mark-unknown)
+  (define-key svn-status-mode-mark-map "A" 'svn-status-mark-added)
+  (define-key svn-status-mode-mark-map "M" 'svn-status-mark-modified)
   (define-key svn-status-mode-mark-map "u" 'svn-status-show-svn-diff-for-marked-files))
 (when (not svn-status-mode-property-map)
   (setq svn-status-mode-property-map (make-sparse-keymap))
@@ -648,7 +653,12 @@ A and B must be line-info's"
     ["Work Directory History..." svn-status-use-history t]
     ["Mark" svn-status-set-user-mark t]
     ["Unmark" svn-status-unset-user-mark t]
-    ["Unmark all" svn-status-unset-all-usermarks t]
+    ("Mark / Unmark"
+     ["Unmark all" svn-status-unset-all-usermarks t]
+     ["Mark/Unmark unknown" svn-status-mark-unknown t]
+     ["Mark/Unmark added" svn-status-mark-added t]
+     ["Mark/Unmark modified" svn-status-mark-modified t]
+     )
     ["Hide Unknown" svn-status-toggle-hide-unknown
      :style toggle :selected svn-status-hide-unknown]
     ["Hide Unmodified" svn-status-toggle-hide-unmodified
@@ -692,6 +702,9 @@ A and B must be line-info's"
   $     - svn-status-toggle-elide
   DEL   - svn-status-unset-user-mark-backwards
   * !   - svn-status-unset-all-usermarks
+  * ?   - svn-status-mark-unknown
+  * A   - svn-status-mark-added
+  * M   - svn-status-mark-modified
   .     - svn-status-goto-root-or-return
   f     - svn-status-find-file
   o     - svn-status-find-file-other-window
@@ -1144,13 +1157,46 @@ Then move to that line."
     ;;(svn-status-update-buffer)
     (svn-status-goto-file-name newcursorpos-fname)))
 
-(defun svn-status-unset-all-usermarks ()
-  (interactive)
+(defun svn-status-apply-usermark-checked (check-function set-mark)
+  "Mark or unmark files, whether a given function returns t.
+The function is called with the line information. Therefore the svnstatus-line-info->* functions can be
+used in the check."
   (let ((st-info svn-status-info))
     (while st-info
-      (setcar (svn-status-line-info->ui-status (car st-info)) nil)
+      (when (apply check-function (list (car st-info)))
+        (if set-mark
+            (when (not (svn-status-line-info->has-usermark (car st-info)))
+              (message "marking: %s" (svn-status-line-info->filename (car st-info))))
+          (when (svn-status-line-info->has-usermark (car st-info))
+            (message "unmarking: %s" (svn-status-line-info->filename (car st-info)))))
+        (setcar (svn-status-line-info->ui-status (car st-info)) set-mark))
       (setq st-info (cdr st-info)))
     (svn-status-update-buffer)))
+
+(defun svn-status-mark-unknown (arg)
+  "Mark all unknown files.
+These are the files marked with '?' in the *svn-status* buffer.
+If the function is called with a prefix arg, unmark all these files."
+  (interactive "P")
+  (svn-status-apply-usermark-checked '(lambda (info) (eq (svn-status-line-info->filemark info) ??)) (not arg)))
+
+(defun svn-status-mark-added (arg)
+  "Mark all added files.
+These are the files marked with 'A' in the *svn-status* buffer.
+If the function is called with a prefix arg, unmark all these files."
+  (interactive "P")
+  (svn-status-apply-usermark-checked '(lambda (info) (eq (svn-status-line-info->filemark info) ?A)) (not arg)))
+
+(defun svn-status-mark-modified (arg)
+  "Mark all modified files.
+These are the files marked with 'M' in the *svn-status* buffer.
+If the function is called with a prefix arg, unmark all these files."
+  (interactive "P")
+  (svn-status-apply-usermark-checked '(lambda (info) (eq (svn-status-line-info->filemark info) ?M)) (not arg)))
+
+(defun svn-status-unset-all-usermarks ()
+  (interactive)
+  (svn-status-apply-usermark-checked '(lambda (info) t) nil))
 
 (defun svn-status-toggle-hide-unknown ()
   (interactive)
