@@ -130,7 +130,7 @@ class CollectData(rcsparse.Sink):
 
   def set_revision_info(self, revision, log, text):
     timestamp, author, op, old_ts = self.rev_data[revision]
-    digest = sha.new(log + author).hexdigest()
+    digest = sha.new(log + '\0' + author).hexdigest()
     if old_ts:
       # the timestamp on this revision was changed. log it for later
       # resynchronization of other files's revisions that occurred
@@ -617,16 +617,18 @@ def convert(pool, cvsroot,
     print ' total:', int(times[len(_passes)] - times[start_pass-1]), 'seconds'
 
 def usage():
-  print 'USAGE: %s [-v] [-p pass] repository-path' % sys.argv[0]
+  print 'USAGE: %s [-v] [-s svn-repos-path] [-p pass] repository-path' \
+        % sys.argv[0]
   sys.exit(1)
 
 def main():
-  opts, args = getopt.getopt(sys.argv[1:], 'p:v')
+  opts, args = getopt.getopt(sys.argv[1:], 'p:s:v')
   if len(args) != 1:
     usage()
 
   verbose = 0
   start_pass = 1
+  target = SVNROOT
 
   for opt, value in opts:
     if opt == '-p':
@@ -637,8 +639,11 @@ def main():
         sys.exit(1)
     elif opt == '-v':
       verbose = 1
+    elif opt == '-s':
+      target = value
 
-  util.run_app(convert, args[0], start_pass=start_pass, verbose=verbose)
+  util.run_app(convert, args[0],
+               start_pass=start_pass, verbose=verbose, target=target)
 
 if __name__ == '__main__':
   main()
