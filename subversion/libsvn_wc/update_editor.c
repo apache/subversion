@@ -589,6 +589,12 @@ delete_entry (const char *path,
   SVN_ERR (svn_wc__run_log (pb->path, pool));
   SVN_ERR (svn_wc_unlock (pb->path, pool));
 
+  /* The passed-in `path' is relative to the anchor of the edit, so if
+   * the operation was invoked on something other than ".", then
+   * `path' will be wrong for purposes of notification.  However, we
+   * can always count on the pb->path being the parent of base_name,
+   * so we just join them together to get a good notification path.
+   */
   if (pb->edit_baton->notify_func)
     (*pb->edit_baton->notify_func) (pb->edit_baton->notify_baton,
                                     svn_path_join (pb->path, base_name, pool),
