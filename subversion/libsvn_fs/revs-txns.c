@@ -29,6 +29,34 @@
 
 /*** Revisions ***/
 
+/* Return the committed transaction record *TXN_P and its ID *TXN_ID
+   (as long as those parameters aren't NULL) for the revision REV in
+   FS as part of TRAIL.  */
+static svn_error_t *
+get_rev_txn (svn_fs__transaction_t **txn_p,
+             const char **txn_id,
+             svn_fs_t *fs,
+             svn_revnum_t rev,
+             trail_t *trail)
+{
+  svn_fs__revision_t *revision;
+  svn_fs__transaction_t *txn;
+  
+  SVN_ERR (svn_fs__get_rev (&revision, fs, rev, trail));
+  if (revision->txn_id == NULL)
+    return svn_fs__err_corrupt_fs_revision (fs, rev);
+
+  SVN_ERR (svn_fs__get_txn (&txn, fs, revision->txn_id, trail));
+  if (txn->revision != rev)
+    return svn_fs__err_corrupt_txn (fs, revision->txn_id);
+
+  if (txn_p)
+    *txn_p = txn;
+  if (txn_id)
+    *txn_id = revision->txn_id;
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_fs__rev_get_root (const svn_fs_id_t **root_id_p,
@@ -36,15 +64,13 @@ svn_fs__rev_get_root (const svn_fs_id_t **root_id_p,
                       svn_revnum_t rev,
                       trail_t *trail)
 {
-  svn_fs__revision_t *revision;
+  svn_fs__transaction_t *txn;
+  
+  SVN_ERR (get_rev_txn (&txn, NULL, fs, rev, trail));
+  if (txn->root_id == NULL)
+    return svn_fs__err_corrupt_fs_revision (fs, rev);
 
-  SVN_ERR (svn_fs__get_rev (&revision, fs, rev, trail));
-
-  /* The skel validator doesn't check the ID format. */
-  if (revision->id == NULL)
-    return svn_fs__err_corrupt_fs_revision (fs, -1);
-
-  *root_id_p = revision->id;
+  *root_id_p = txn->root_id;
   return SVN_NO_ERROR;
 }
 
@@ -58,12 +84,10 @@ svn_fs__rev_get_txn_id (const char **txn_id_p,
   svn_fs__revision_t *revision;
 
   SVN_ERR (svn_fs__get_rev (&revision, fs, rev, trail));
+  if (revision->txn_id == NULL)
+    return svn_fs__err_corrupt_fs_revision (fs, rev);
 
-  /* The skel validator doesn't check the ID format. */
-  if (revision->id == NULL)
-    return svn_fs__err_corrupt_fs_revision (fs, -1);
-
-  *txn_id_p = revision->txn;
+  *txn_id_p = revision->txn_id;
   return SVN_NO_ERROR;
 }
 
@@ -118,12 +142,12 @@ txn_body_revision_prop (void *baton,
                         trail_t *trail)
 {
   struct revision_prop_args *args = baton;
-  svn_fs__revision_t *revision;
+  svn_fs__transaction_t *txn;
 
-  SVN_ERR (svn_fs__get_rev (&revision, args->fs, args->rev, trail));
+  SVN_ERR (get_rev_txn (&txn, NULL, args->fs, args->rev, trail));
   *(args->value_p) = NULL;
-  if (revision->proplist)
-    *(args->value_p) = apr_hash_get (revision->proplist, args->propname,
+  if (txn->proplist)
+    *(args->value_p) = apr_hash_get (txn->proplist, args->propname,
                                      APR_HASH_KEY_STRING);
   return SVN_NO_ERROR;
 }
@@ -163,11 +187,11 @@ static svn_error_t *
 txn_body_revision_proplist (void *baton, trail_t *trail)
 {
   struct revision_proplist_args *args = baton;
-  svn_fs__revision_t *revision;
+  svn_fs__transaction_t *txn;
+  apr_pool_t *pool = trail->pool;
 
-  SVN_ERR (svn_fs__get_rev (&revision, args->fs, args->rev, trail));
-  *(args->table_p) = revision->proplist 
-                     ? revision->proplist : apr_hash_make (trail->pool);
+  SVN_ERR (get_rev_txn (&txn, NULL, args->fs, args->rev, trail));
+  *(args->table_p) = txn->proplist ? txn->proplist : apr_hash_make (pool);
   return SVN_NO_ERROR;
 }
 
@@ -200,24 +224,24 @@ svn_fs__set_rev_prop (svn_fs_t *fs,
                       const svn_string_t *value,
                       trail_t *trail)
 {
-  svn_fs__revision_t *revision;
-  svn_revnum_t rev_copy = rev;
+  svn_fs__transaction_t *txn;
+  const char *txn_id;
 
-  SVN_ERR (svn_fs__get_rev (&revision, fs, rev, trail));
+  SVN_ERR (get_rev_txn (&txn, &txn_id, fs, rev, trail));
 
   /* If there's no proplist, but we're just deleting a property, exit now. */
-  if ((! revision->proplist) && (! value))
+  if ((! txn->proplist) && (! value))
     return SVN_NO_ERROR;
 
   /* Now, if there's no proplist, we know we need to make one. */
-  if (! revision->proplist)
-    revision->proplist = apr_hash_make (trail->pool);
+  if (! txn->proplist)
+    txn->proplist = apr_hash_make (trail->pool);
 
   /* Set the property. */
-  apr_hash_set (revision->proplist, name, APR_HASH_KEY_STRING, value);
+  apr_hash_set (txn->proplist, name, APR_HASH_KEY_STRING, value);
 
   /* Overwrite the revision. */
-  return svn_fs__put_rev (&rev_copy, fs, revision, trail);
+  return svn_fs__put_txn (fs, txn, txn_id, trail);
 }
 
 
@@ -273,10 +297,10 @@ is_committed (svn_fs__transaction_t *txn)
 
 
 svn_error_t *
-svn_fs__commit_txn (svn_fs_t *fs,
-                    const char *txn_name,
-                    svn_revnum_t revision,
-                    trail_t *trail)
+svn_fs__txn_make_committed (svn_fs_t *fs,
+                            const char *txn_name,
+                            svn_revnum_t revision,
+                            trail_t *trail)
 {
   svn_fs__transaction_t *txn;
 

@@ -46,7 +46,13 @@ struct svn_fs_t
   DB_ENV *env;
 
   /* The filesystem's various tables.  See `structure' for details.  */
-  DB *nodes, *revisions, *transactions, *representations, *strings, *copies;
+  DB *changes;
+  DB *copies;
+  DB *nodes;
+  DB *representations;
+  DB *revisions;
+  DB *strings;
+  DB *transactions;
 
   /* A callback function for printing warning messages, and a baton to
      pass through to it.  */
@@ -93,16 +99,9 @@ svn_fs__canonicalize_abspath (const char *path, apr_pool_t *pool);
 /*** Filesystem Revision ***/
 typedef struct
 {
-  /* node revision id of the root node. */
-  const svn_fs_id_t *id;
-
   /* id of the transaction that was committed to create this
      revision. */
-  const char *txn;
-
-  /* property list (const char * name, svn_string_t * value) 
-     may be NULL if there are no properies.  */
-  apr_hash_t *proplist; 
+  const char *txn_id;
 
 } svn_fs__revision_t;
 
@@ -115,19 +114,19 @@ typedef struct
      still unfinished. */
   svn_revnum_t revision;
 
-  /* node revision id of the root node.  (unfinished only) */
+  /* property list (const char * name, svn_string_t * value).
+     may be NULL if there are no properties.  */
+  apr_hash_t *proplist;
+
+  /* node revision id of the root node.  */
   const svn_fs_id_t *root_id;
 
   /* node revision id of the node which is the root of the revision
      upon which this txn is base.  (unfinished only) */
   const svn_fs_id_t *base_id;
 
-  /* property list (const char * name, svn_string_t * value).
-     may be NULL if there are no properties.  (unfinished only) */
-  apr_hash_t *proplist;
-
   /* copies list (const char * copy_ids), or NULL if there have been
-     no copies in this transaction.  (unfinished only) */
+     no copies in this transaction.  */
   apr_array_header_t *copies;
 
 } svn_fs__transaction_t;
@@ -171,6 +170,10 @@ typedef enum
 /*** "Delta" Offset/Window Chunk ***/
 typedef struct 
 {
+  /* diff format version number ### at this point, "svndiff" is the
+     only format used. */
+  apr_byte_t version;
+
   /* starting offset of the data represented by this chunk */
   apr_size_t offset;
 
@@ -240,6 +243,24 @@ typedef struct
 
 } svn_fs__copy_t;
 
+
+/*** Change ***/
+typedef struct
+{
+  /* Path of the change. */
+  const char *path;
+
+  /* Node revision ID of the change. */
+  const svn_fs_id_t *noderev_id;
+
+  /* The kind of change. */
+  svn_fs_path_change_kind_t kind;
+
+  /* Text or property mods? */
+  int text_mod;
+  int prop_mod;
+
+} svn_fs__change_t;
 
 
 #ifdef __cplusplus

@@ -86,6 +86,12 @@ svn_fs__parse_entries_skel (apr_hash_t **entries_p,
                             skel_t *skel,
                             apr_pool_t *pool);
 
+/* Parse a `CHANGE' SKEL into *CHANGE_P.  Use POOL for all allocations. */
+svn_error_t *
+svn_fs__parse_change_skel (svn_fs__change_t **change_p,
+                           skel_t *skel,
+                           apr_pool_t *pool);
+
 
 /*** Unparsing (conversion from native FS type to skeleton) ***/
 
@@ -142,8 +148,14 @@ svn_fs__unparse_entries_skel (skel_t **skel_p,
                               apr_hash_t *entries,
                               apr_pool_t *pool);
 
-
+/* Unparse CHANGE into a `CHANGE' skel *SKEL_P.  Use POOL for all
+   allocations.  */
+svn_error_t *
+svn_fs__unparse_change_skel (skel_t **skel_p,
+                             const svn_fs__change_t *change,
+                             apr_pool_t *pool);
 
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

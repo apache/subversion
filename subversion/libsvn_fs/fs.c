@@ -38,6 +38,7 @@
 #include "bdb/rev-table.h"
 #include "bdb/txn-table.h"
 #include "bdb/copies-table.h"
+#include "bdb/changes-table.h"
 #include "bdb/reps-table.h"
 #include "bdb/strings-table.h"
 
@@ -132,6 +133,7 @@ cleanup_fs (svn_fs_t *fs)
   SVN_ERR (cleanup_fs_db (fs, &fs->revisions, "revisions"));
   SVN_ERR (cleanup_fs_db (fs, &fs->transactions, "transactions"));
   SVN_ERR (cleanup_fs_db (fs, &fs->copies, "copies"));
+  SVN_ERR (cleanup_fs_db (fs, &fs->changes, "changes"));
   SVN_ERR (cleanup_fs_db (fs, &fs->representations, "representations"));
   SVN_ERR (cleanup_fs_db (fs, &fs->strings, "strings"));
 
@@ -474,6 +476,10 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
                      svn_fs__open_copies_table (&fs->copies,
                                                 fs->env, 1));
   if (svn_err) goto error;
+  svn_err = DB_WRAP (fs, "creating `changes' table",
+                     svn_fs__open_changes_table (&fs->changes,
+                                                 fs->env, 1));
+  if (svn_err) goto error;
   svn_err = DB_WRAP (fs, "creating `representations' table",
                      svn_fs__open_reps_table (&fs->representations,
                                               fs->env, 1));
@@ -538,6 +544,10 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   svn_err = DB_WRAP (fs, "opening `copies' table",
                      svn_fs__open_copies_table (&fs->copies,
                                                 fs->env, 0));
+  if (svn_err) goto error;
+  svn_err = DB_WRAP (fs, "opening `changes' table",
+                     svn_fs__open_changes_table (&fs->changes,
+                                                 fs->env, 0));
   if (svn_err) goto error;
   svn_err = DB_WRAP (fs, "creating `representations' table",
                      svn_fs__open_reps_table (&fs->representations,
