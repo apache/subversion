@@ -104,7 +104,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   { "add", svn_cl__add, {0},
     "Put files and directories under revision control, scheduling\n"
     "them for addition to repository.  They will be added in next commit.\n"
-    "usage: svn add [TARGETS]\n", 
+    "usage: svn add TARGETS\n", 
     {svn_cl__targets_opt, 'R', 'q'} },
 
   { "checkout", svn_cl__checkout, {"co"},
