@@ -1486,10 +1486,8 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
 /** Lock @a path in @a fs, and set @a *lock to a lock
  * representing the new lock, allocated in @a pool.
  *
- * @warning You may prefer to use @a svn_repos_fs_lock instead.  It
- * wraps this function but also runs hooks and conditionally bumps the
- * repository format number.  See that function's doc string for
- * details of why this might be important.
+ * @warning You may prefer to use @a svn_repos_fs_lock instead,
+ * which see.
  *
  * @a fs must have a username associated with it (see @c
  * svn_fs_access_t), else return @c SVN_ERR_FS_NO_USER.  Set the

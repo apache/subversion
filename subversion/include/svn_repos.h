@@ -956,13 +956,6 @@ svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
  * hook, return the original error wrapped with
  * SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED.  If the caller sees this
  * error, it knows that the lock succeeded anyway.
- *
- * Calling this may also silently bump the repository's format number,
- * if this is first time a lock is being set in a repository that was
- * created by pre-1.2 Subversion.  (For maximum compatibility,
- * Subversion tries to avoid bumping the format number of legacy
- * repositories until it becomes necessary; in this case, it becomes
- * necessary the first time the locking features are used.)
  */
 svn_error_t *svn_repos_fs_lock (svn_lock_t **lock,
                                 svn_repos_t *repos,
@@ -986,9 +979,6 @@ svn_error_t *svn_repos_fs_lock (svn_lock_t **lock,
  * post-lock hook, return the original error wrapped with
  * SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED.  If the caller sees this
  * error, it knows that the lock succeeded anyway.
- *
- * Calling this may also silently bump the repository's format number,
- * in the same manner as @a svn_repos_fs_lock, which see.
  */
 svn_error_t *svn_repos_fs_attach_lock (svn_lock_t *lock,
                                        svn_repos_t *repos,
@@ -1009,10 +999,6 @@ svn_error_t *svn_repos_fs_attach_lock (svn_lock_t *lock,
  * hook, return the original error wrapped with
  * SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED.  If the caller sees this
  * error, it knows that the unlock succeeded anyway.
- *
- * If the lock is successfully removed, but @a repos somehow still has
- * a pre-1.2 format number, then bump its format number now.  See
- * @a svn_repos_fs_lock for more.
  */
 svn_error_t *svn_repos_fs_unlock (svn_repos_t *repos,
                                   const char *path,
@@ -1029,10 +1015,6 @@ svn_error_t *svn_repos_fs_unlock (svn_repos_t *repos,
  * authz_read_baton to "screen" all returned locks.  That is: do not
  * return any locks on any paths that are unreadable in HEAD, just
  * silently omit them.
- *
- * If any locks are retrieved into @a *locks, but @a repos somehow
- * still has a pre-1.2 format number, then bump its format number
- * now.  See @a svn_repos_fs_lock for more.
  */
 svn_error_t *svn_repos_fs_get_locks (apr_hash_t **locks,
                                      svn_repos_t *repos,

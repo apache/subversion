@@ -408,30 +408,6 @@ svn_repos_fs_revision_proplist (apr_hash_t **table_p,
   return SVN_NO_ERROR;
 }
 
-
-/* If repository REPOS's format number is 3, bump it to 4.
- * Use POOL for temporary allocation only.
- *
- * The specification of actual numbers here is deliberate.  As of this
- * writing, the repos code knows how to do a soft upgrade from 3 to 4
- * on the fly, but we can't make promises about future soft upgrades.
- * If we were to upgrade to SVN_REPOS__VERSION here, that would be a
- * ticking time bomb that could go off any time after
- * SVN_REPOS__VERSION becomes 5 or higher. 
- */
-static svn_error_t *
-maybe_bump_format_number (svn_repos_t *repos, apr_pool_t *pool)
-{
-  if (repos->format == 3)
-    {
-      SVN_ERR (svn_io_write_version_file
-               (svn_path_join (repos->path, SVN_REPOS__FORMAT, pool), 4, pool));
-      repos->format = 4;
-    }
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_repos_fs_lock (svn_lock_t **lock,
                    svn_repos_t *repos,
@@ -458,10 +434,6 @@ svn_repos_fs_lock (svn_lock_t **lock,
   /* Run pre-lock hook.  This could throw error, preventing
      svn_fs_lock() from happening. */
   SVN_ERR (svn_repos__hooks_pre_lock (repos, path, username, pool));
-
-  /* Bootstrap moment: This might be the first time a lock has ever
-     been set in this repository. */
-  SVN_ERR (maybe_bump_format_number (repos, pool));
 
   /* Lock. */
   SVN_ERR (svn_fs_lock (lock, repos->fs, path, comment, force,
@@ -490,10 +462,6 @@ svn_repos_fs_attach_lock (svn_lock_t *lock,
   /* Run pre-lock hook.  This could throw error, preventing
      svn_fs_lock() from happening. */
   SVN_ERR (svn_repos__hooks_pre_lock (repos, lock->path, lock->owner, pool));
-
-  /* Bootstrap moment: This might be the first time a lock has ever
-     been set in this repository. */
-  SVN_ERR (maybe_bump_format_number (repos, pool));
 
   /* Lock. */
   SVN_ERR (svn_fs_attach_lock (lock, repos->fs, force, current_rev, pool));
@@ -537,15 +505,6 @@ svn_repos_fs_unlock (svn_repos_t *repos,
 
   /* Unlock. */
   SVN_ERR (svn_fs_unlock (repos->fs, path, token, force, pool));
-
-  /* Technically, the repository should already be at a high enough
-     format level to support locking -- after all, if we just
-     successfully unlocked, that means a lock was set earlier.
-     However, the lock might have been set in a format 3 repository
-     using, e.g., svn_fs_lock(), in which case libsvn_repos would
-     never have had a chance to bump the format number to 4.  So we
-     take this second chance to upgrade the format number. */
-  SVN_ERR (maybe_bump_format_number (repos, pool));
 
   /* Run post-unlock hook. */
   if ((err = svn_repos__hooks_post_unlock (repos, path, username, pool)))
@@ -604,16 +563,6 @@ svn_repos_fs_get_locks (apr_hash_t **locks,
     }
 
   svn_pool_destroy (subpool);
-
-  /* Technically, the repository should already be at a high enough
-     format level to support locking -- after all, if we got some
-     locks here, that means locks were set earlier.  However, the
-     locks might have been set in a format 3 repository using, e.g.,
-     svn_fs_lock(), in which case libsvn_repos would never have had a
-     chance to bump the format number to 4.  So we take this second
-     chance to upgrade the format number. */
-  if (apr_hash_count (all_locks) > 0)
-    SVN_ERR (maybe_bump_format_number (repos, pool));
 
   *locks = all_locks;
 
