@@ -1217,7 +1217,7 @@ merge (const char **conflict_p,
                                (tnode, t_entry->name, s_entry->id, trail));
                     }
                   /* or if target entry is different from both, then... */
-                  else if (! svn_fs_id_eq (s_entry->id, t_entry->id))
+                  else if (! svn_fs_id_is_ancestor (s_entry->id, t_entry->id))
                     {
                       dag_node_t *s_ent_node, *t_ent_node, *a_ent_node;
                       
