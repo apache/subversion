@@ -95,6 +95,10 @@ SOURCE=.\default_editor.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\diff.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\svndiff.c
 # End Source File
 # Begin Source File
