@@ -96,7 +96,7 @@ This manual is a general guide to the Subversion revision control system.
 
 @menu
 * Getting Started::           History, installation and overview of Subversion.
-@c * Client Cookbook::           How to use the Subversion client.
+* Client Cookbook::           How to use the Subversion client.
 * Repository Administration:: Managing a repository.
 @c * Appendices::                Other useful documents and pointers.
 
@@ -106,6 +106,7 @@ This manual is a general guide to the Subversion revision control system.
 
 @include getting_started.texi
 @include repos_admin.texi
+@include client.texi
 @include license.texi
 
 @bye

@@ -7,9 +7,9 @@ In this section, we'll mainly focus on how to use the
 @command{svnadmin} and @command{svnlook} programs to work with repositories.
 
 @menu
-* Creating a repository::
-* Examining a repository::
-* Repository hooks::
+* Creating a repository::       
+* Examining a repository::      
+* Repository hooks::            
 @end menu
 @c * Repository maintenance::
 @c * Tweaking a repository::
@@ -108,6 +108,10 @@ deleted or promoted to revisions.
 The point is:  if you're administering a Subversion repository, you're
 going to have to examine revisions and transactions.  It's part of
 monitoring the health of the repository.
+
+@menu
+* svnlook::                     
+@end menu
 
 @node svnlook
 @subsection svnlook
@@ -282,7 +286,7 @@ able to access the repository.
 
 The pre-commit and post-commit hooks need to know things about the
 change about to be committed (or that has just been committed).  The
-solution is a standalone program, @command{svnlook} (@xref{svnlook}),
+solution is a standalone program, @command{svnlook} (@xref{svnlook},)
 which was installed in the same place as the @command{svn} binary.  Have
 the script use @command{svnlook} to examine a transaction or revision
 tree.  It produces output that is both human- and machine-readable, so
