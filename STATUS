@@ -41,16 +41,6 @@ Candidate changes:
     Votes:
       +1: breser, jerenkrantz, clkao
 
-  * r12144, r12485
-    Adds type caching to the perl bindings.  Otherwise mostly
-    adds a code cleanup.
-    Branch: 1.1.x-r12144
-    Justificaton:
-      Makes the perl bindings build with r12397 which we merged
-      already.
-    Votes:
-      +1: breser, clkao
-
   * r12576
     Fix JavaHL run-time link error by properly depending on libsvn_repos.
     Justification: 
