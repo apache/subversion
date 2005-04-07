@@ -37,8 +37,8 @@ Candidate changes:
       +1: david
 
   * r13858
-    When I finally got to test my change I discovered a typo which prevents
-    the Redhat 8 and 9 RPMs from being built.
+    When I finally got to test the r13822 change I discovered a typo which
+    prevents the Redhat 8 and 9 RPMs from being built.
     Votes:
       +1: david
 
