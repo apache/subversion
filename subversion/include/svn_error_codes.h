@@ -45,6 +45,8 @@
 #include <apr.h>
 #include <apr_errno.h>     /* APR's error system */
 
+#include "svn_props.h"     /* For SVN_PROP_EXTERNALS. */
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
