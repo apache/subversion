@@ -1509,7 +1509,7 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  * @a comment is optional: it's either an xml-escapable UTF8 string
  * which describes the lock, or it is @c NULL.
  *
- * If path is already locked, then return @c SVN_ERR_FS_PATH_LOCKED,
+ * If path is already locked, then return @c SVN_ERR_FS_PATH_ALREADY_LOCKED,
  * unless @a steal_lock is true, in which case "steal" the existing
  * lock, even if the FS access-context's username does not match the
  * current lock's owner: delete the existing lock on @a path, and
