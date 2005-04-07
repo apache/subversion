@@ -52,14 +52,12 @@ open SVN, "-|", @command, @ARGV
 while (<SVN>) {
     if (/^[\?ID]/) {
         my $file = (split)[-1];
+        next unless -e $file;
         if ($print) {
             print "$file\n";
         }
         else {
             rmtree( $file, !$quiet, !$force );
-            if ( -e $file ) {
-                warn "Could not remove $file: $!\n";
-            }
         }
     }
 }
