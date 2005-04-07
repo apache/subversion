@@ -39,12 +39,11 @@
       replicated here.
     </p>
 
-    <center>
-      <table width="70%" border="0" bgcolor="#ff0000" cellspacing="0"
-	     cellpadding="10">
+    <div align="center">
+      <table width="70%" border="0" cellspacing="0" cellpadding="10"
+      style="background-color: #ff0000; color: white">
 	<tr>
 	  <td>
-	    <font color="white">
 	      <strong>NOTE:</strong> Subversion uses DeltaV for its
 	      communication, but the Subversion client is
 	      <strong>not</strong> a general-purpose DeltaV client. In
@@ -56,31 +55,26 @@
 	      well be able to interoperate with it, but only if that
 	      client operates within the narrow confines of those
 	      features the server has implemented.
-	    </font>
 	  </td>
 	</tr>
 	<tr>
 	  <td>
-	    <font color="white">
 	      Version 2.0 of Subversion will address WebDAV
 	      interoperability (Class 1, Class 2, and DeltaV
 	      features). Each of the custom features expected by the
 	      client actually has an alternate mechanism available in
 	      DeltaV, but in a much less efficient form.
-	    </font>
 	  </td>
 	</tr>
 	<tr>
 	  <td>
-	    <font color="white">
 	      It is expected that Version 1.0 will support read-only,
 	      Class 1 WebDAV clients. Any "low-hanging fruit" to
 	      increase DeltaV interoperability will be considered.
-	    </font>
 	  </td>
 	</tr>
       </table>
-    </center>
+    </div>
 
     <p></p>
 
@@ -279,17 +273,16 @@ property for each
     <dl>
       <dt>At checkout time:</dt>
       <dd>
-	Request: <span class="method">OPTIONS</span> for
-	<span class="prop">DAV:activity-collection-set</span>
-	<br/>
-	Response: <span class="url">http://www.example.com/repos/foo/$svn/act/</span>
-      </dd>
+	<div>Request: <span class="method">OPTIONS</span> for
+	<span class="prop">DAV:activity-collection-set</span></div>
+        <div>Response: <span
+        class="url">http://www.example.com/repos/foo/$svn/act/</span></div>
+        </dd>
       <dt>At commit time:</dt>
       <dd>
-	Request: <span class="method">MKACTIVITY</span>
-	<span class="url">http://www.example.com/repos/foo/$svn/act/01234567-89ab-cdef-0123-456789abcdef</span>
-	<br/>
-	Response: 201 (Created)
+	<div>Request: <span class="method">MKACTIVITY</span>
+	<span class="url">http://www.example.com/repos/foo/$svn/act/01234567-89ab-cdef-0123-456789abcdef</span></div>
+	<div>Response: 201 (Created)</div>
       </dd>
     </dl>
     <p>
@@ -541,8 +534,10 @@ property for each
 	</p>
       </li>
       <li>
-	<code>CHECKOUT&nbsp;/dir1/dir3/</code><br/>
-	<i>(returns a working resource URL for the directory)</i>
+        <p>
+          <code>CHECKOUT&nbsp;/dir1/dir3/</code><br/>
+          <i>(returns a working resource URL for the directory)</i>
+        </p>
 	<p>
 	  <code>DELETE&nbsp;/$svn/wrk/.../</code>
 	</p>
@@ -1012,14 +1007,13 @@ property for each
       <li><span class="prop">DAV:checked-out</span></li>
       <li>
 	<span class="prop">DAV:predecessor-set</span>
-	<br/>
-	<i>
+        <div><i>
 	  Note: the Subversion design document is not clear on the
 	  mechanics of how multiple predecessors are merged to create
 	  a single, new revision. When this clarifies, then
 	  <code>DAV:predecessor-set</code> may end up containing more
 	  than zero or one predecessor URLs
-	</i>
+	</i></div>
       </li>
 
       <!-- version resource properties -->
@@ -1092,8 +1086,7 @@ property for each
 	<span class="prop">DAV:activity-version-set</span> -
 	activities are only used for working resources, so versions
 	cannot be part of an activity.
-	<br/>
-	<i>maybe this should be defined as the empty set?</i>
+	<div><i>maybe this should be defined as the empty set?</i></div>
       </li>
       <li>
 	<span class="prop">DAV:activity-checkout-set</span>
@@ -1104,8 +1097,7 @@ property for each
 	<span class="prop">DAV:activity-set</span> -
 	activities are only used for working resources, so versions
 	cannot be part of an activity.
-	<br/>
-	<i>maybe this should be defined as the empty set?</i>
+	<div><i>maybe this should be defined as the empty set?</i></div>
       </li>
       <li>
 	<span class="prop">DAV:version-controlled-binding-set</span> -
