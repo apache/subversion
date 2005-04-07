@@ -1013,6 +1013,7 @@ svn_error_t *svn_utf_cstring_from_netccsid (const char **dest,
   const char *src_utf8_encoded;
   char *src_ebcdic_encoded;  
   svn_stringbuf_t *new_src_utf8 = svn_stringbuf_create ("", pool);
+  svn_stringbuf_t *dest_buf = svn_stringbuf_create ("", pool);
   apr_size_t i, copied = 0;
   xlate_handle_node_t *node;
   int n,d;
@@ -1023,10 +1024,6 @@ svn_error_t *svn_utf_cstring_from_netccsid (const char **dest,
       return SVN_NO_ERROR;
     }
     
-  /* If the string is already escaped we can convert normally. */
-  if ( strchr (src, (int)SVN_UTF8_PERCENT) != NULL )
-    return svn_utf_cstring_from_utf8(dest, src, pool);
-
   SVN_ERR (get_nettofs_xlate_handle_node (&node, pool));
     
   src_utf8 = apr_pstrdup(pool, src);
@@ -1034,50 +1031,51 @@ svn_error_t *svn_utf_cstring_from_netccsid (const char **dest,
   for (i = 0; src_utf8[i]; i++)
     {
       char ebcdic_char[2] = {'\0', '\0'};
-      char ebcdic_char_escaped[4] = { SVN_UTF8_PERCENT, '\0', '\0', '\0' };
+      char ebcdic_char_escaped[4] = { SVN_UTF8_PERCENT, '0', '0', '\0' };
       char *escaped_char;
       char ebcdic_char_2;
       char *str;
 
-      /* If this is an ascii char do nothing */
+      /* If this is an ascii char keep looking. */
       if (src_utf8[i] < 128)
         continue;
       
-      /* Found a non-ascii char, copy what's been tested so far. */  
+      /* Found a non-ascii char, convert any ascii characters found so far. */  
       if (i - copied)
-        svn_stringbuf_appendbytes (new_src_utf8, src_utf8 + copied, i - copied);
-      
+        {
+          svn_stringbuf_set (new_src_utf8, "");
+          svn_stringbuf_appendbytes (new_src_utf8, src_utf8 + copied,
+                                     i - copied);
+          
+          /* Now we have a strictly ascii encoded string, convert it to ebcdic. */
+          SVN_ERR (svn_utf_cstring_from_utf8 (&src_ebcdic_encoded,
+                                              new_src_utf8->data, pool));
+                                              
+          svn_stringbuf_appendcstr (dest_buf, src_ebcdic_encoded);
+          copied = i + 1;                                              
+        }
+                  
       /* Convert this single char */   
       ebcdic_char[0] = apr_xlate_conv_byte(node->handle, src_utf8[i]);
-      
-      /* Get the char's escape sequence string */
-      escaped_char = apr_psprintf(pool, "%%%02X", ebcdic_char[0]);
-
-      /* Convert the ebcdic encoded escape string to ascii */
-      ebcdic_char_escaped[1] = (ebcdic_char[0] >> 4) > 9 ?
-                               (ebcdic_char[0] >> 4) + 55 :
-                               (ebcdic_char[0] >> 4) + 48;
-      
-      ebcdic_char_escaped[2] = (ebcdic_char[0] & 15) > 9 ?
-                               (ebcdic_char[0] & 15) + 55 :
-                               (ebcdic_char[0] & 15) + 48;      
-
-      /* Append the ascii encoded escape string for the char. */
-      svn_stringbuf_appendbytes (new_src_utf8, ebcdic_char_escaped, 3);    
-      copied = i + 1;
+     
+      svn_stringbuf_appendcstr (dest_buf, ebcdic_char);
+      copied = i + 1; 
     }
   
-  /* Copy anything still left. */
-  if (i - copied)
-    svn_stringbuf_appendbytes (new_src_utf8, src_utf8 + copied, i - copied);
+    /* Convert any ascii bytes still left. */
+      {
+        svn_stringbuf_set (new_src_utf8, "");
+        svn_stringbuf_appendbytes (new_src_utf8, src_utf8 + copied, 
+                                   i - copied);
+          
+        /* Now we have a strictly ascii encoded string, convert it to ebcdic. */
+        SVN_ERR (svn_utf_cstring_from_utf8 (&src_ebcdic_encoded,
+                                            new_src_utf8->data, pool));
+                                              
+        svn_stringbuf_appendcstr (dest_buf, src_ebcdic_encoded);                                              
+      }
 
-  /* Now we have a strictly ascii encoded string, convert it to ebcdic. */
-  SVN_ERR (svn_utf_cstring_from_utf8 (&src_ebcdic_encoded, new_src_utf8->data,
-                                      pool));
-  /* Unescape the resulting ebcdic string. */
-  n = ap_unescape_url(src_ebcdic_encoded);
-  *dest = src_ebcdic_encoded;
-  
+  *dest = dest_buf->data;
   put_xlate_handle_node (node, SVN_UTF_NETTOFS_XLATE_HANDLE, pool);
   return SVN_NO_ERROR;
 }  
