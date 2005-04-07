@@ -9,13 +9,6 @@ Status of 1.2.0:
 
 Candidate changes:
 
-  * r13961, r13981
-    Make Ruby bindings install to the correct location.
-    Justification:
-      Broken otherwise. (and _still_ broken with only r13961).
-    Votes:
-      +1: maxb, epg
-
   * r13978
     Make copy_tests 25 pass over DAV.
     Justification:
