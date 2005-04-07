@@ -33,6 +33,16 @@ Candidate changes:
     Votes:
       +1: dlr
 
+  * r14024
+    Allow automated tests for the javahl bindings to be run before the
+    bindings have been installed.
+    Justification:
+      Encourages hacking on the bindings, and improves user confidence.
+    Votes:
+      +1: dlr
+
+Approved changes (further review is welcome, but not required):
+
   * r14011
     Rename a locking error code for clarity (LOCKED -> ALREADY_LOCKED).
     Justification:
@@ -41,7 +51,4 @@ Candidate changes:
       but it had me confused for quite a while. - JAF)
       If we don't do back-port it now while it's new, we can't at all.
     Votes:
-      +1: julianfoad, lundblad, fitz
-
-Approved changes (further review is welcome, but not required):
-
+      +1: julianfoad, lundblad, fitz, dlr
