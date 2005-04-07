@@ -1064,7 +1064,7 @@ typedef struct svn_ra_plugin_t
                         apr_hash_t *config,
                         apr_pool_t *pool);
 
-  /** Call @c svn_ra_get_lastest_revnum with the session associated with
+  /** Call @c svn_ra_get_latest_revnum with the session associated with
    * @a session_baton and all other arguments.
    */
   svn_error_t *(*get_latest_revnum) (void *session_baton,

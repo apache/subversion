@@ -137,7 +137,7 @@ void svn_path_add_component (svn_stringbuf_t *path,
 void svn_path_remove_component (svn_stringbuf_t *path);
 
 /** Remove @a n components off the end of the canonizalized @a path.
- * Equivalent to calling @c svn_remove_component @a n times. */
+ * Equivalent to calling @c svn_path_remove_component @a n times. */
 void svn_path_remove_components (svn_stringbuf_t *path, apr_size_t n);
 
 /** Divide the canonicalized @a path into @a *dirpath and @a

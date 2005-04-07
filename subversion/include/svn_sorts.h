@@ -115,7 +115,7 @@ int svn_sort_compare_paths (const void *a, const void *b);
  *
  * NOTE: Private. For use by Subversion's own code only. See issue #1644.
  *
- * NOTE: This function and the @a svn_sort__item_t should go over to APR.
+ * NOTE: This function and the @c svn_sort__item_t should go over to APR.
  */
 apr_array_header_t *
 svn_sort__hash (apr_hash_t *ht,

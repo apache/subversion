@@ -110,7 +110,7 @@ typedef struct svn_auth_provider_t
    * Set @a *credentials to another set of valid credentials, (using
    * @a iter_baton as the context from previous call to first_credentials
    * or next_credentials).  If no more credentials are available, set
-   * @a **credentials to NULL.  If the provider only has one set of
+   * @a *credentials to NULL.  If the provider only has one set of
    * credentials, this function pointer should simply be NULL. @a
    * provider_baton is general context for the vtable, @a parameters
    * contains any run-time data that the provider may need, and @a
