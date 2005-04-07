@@ -248,7 +248,7 @@ void svn_handle_warning (FILE *stream, svn_error_t *error);
  * that can be thrown when attempting to lock an item.
  */
 #define SVN_ERR_IS_LOCK_ERROR(err)                          \
-  (err->apr_err == SVN_ERR_FS_PATH_LOCKED ||                \
+  (err->apr_err == SVN_ERR_FS_PATH_ALREADY_LOCKED ||        \
    err->apr_err == SVN_ERR_FS_OUT_OF_DATE)                  \
 
 /**
