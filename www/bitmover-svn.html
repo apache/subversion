@@ -48,10 +48,10 @@ black text.</p>
 <h3>The Response</h3>
 
    <blockquote>
-   <p><font color="red"><i>Subversion is a new system
+   <p style="color: red"><i>Subversion is a new system
    which is supposed to replace CVS. Unfortunately, Subversion shares
    many of CVS' problems and introduced some of its own
-   problems:</i></font></p>
+   problems:</i></p>
    </blockquote>
 
 <!-- Commenting out this minor complaint for now:
@@ -66,10 +66,10 @@ it's worded in a very misleading way.</p>
 -->
 
    <blockquote>
-   <p><font color="red"><i>Subversion uses a binary file format for
+   <p style="color: red"><i>Subversion uses a binary file format for
    your revision control data and metadata and if that format gets
    corrupted you are out of luck, your whole team comes to a
-   halt.</i></font></p>
+   halt.</i></p>
    </blockquote>
 
 <p>That bit about the binary format is classic <a
@@ -98,10 +98,10 @@ it's likely that BitMover simply hadn't heard about it yet when they
 wrote their page.)</p>
 
    <blockquote>
-   <p><font color="green"><i>Subversion has a single repository model,
+   <p style="color: green"><i>Subversion has a single repository model,
    i.e., client/server. Each work area is clear text only which means
    no revision control in the work area during
-   development.</i></font></p>
+   development.</i></p>
    </blockquote>
 
 <p>This is basically true, though note that this way seems to work
@@ -112,13 +112,13 @@ changes, revert them, or save them and then revert, all without a
 network connection.</p>
 
    <blockquote>
-   <p><font color="red"><i>No staging areas to protect the main source
+   <p style="color: red"><i>No staging areas to protect the main source
    tree. With Subversion, everyone checks into the same place and if
    someone breaks the tree, it's broken for everyone. With BitKeeper,
    you can put a staging area between each group of developers and the
    main integration tree, thereby protecting the main tree from bad
    checkins. Anyone who has lived through a change that broke the
-   build can see the value of staging areas.</i></font></p>
+   build can see the value of staging areas.</i></p>
    </blockquote>
 
 <p>False and FUD.</p>
@@ -140,12 +140,12 @@ either thought they were saying something different here, or they're
 making the same claim twice, for the sake of inflating their page.</p>
 
    <blockquote>
-   <p><font color="green"><i>Subversion loses information every time
+   <p style="color: green"><i>Subversion loses information every time
    there is parallel development because you are forced to merge
    before you check in if someone else checked in first. The state of
    your workspace before the merge is lost forever. Another way to say
    this is that if there is N-way parallel development, Subversion
-   loses N-1 events.</i></font></p>
+   loses N-1 events.</i></p>
    </blockquote>
 
 <p>As worded, this is not quite true.  But probably what they meant to
@@ -169,8 +169,8 @@ href="http://web.mit.edu/ghudson/thoughts/bitkeeper.whynot" >Greg
 Hudson's explanation</a> why not.</p>
 
    <blockquote>
-   <p><font color="green"><i>Merging in Subversion is no better than
-   CVS, i.e., primitive at best.</i></font></p>
+   <p style="color: green"><i>Merging in Subversion is no better than
+   CVS, i.e., primitive at best.</i></p>
    </blockquote>
 
 <p>This is basically true.  Subversion's merging <i>interface</i> is
@@ -179,8 +179,8 @@ result as in CVS.  Better merge support is on Subversion's long-term
 todo list.</p>
 
    <blockquote>
-   <p><font color="red"><i>Branch management in Subversion is a
-   nightmare.</i></font></p>
+   <p style="color: red"><i>Branch management in Subversion is a
+   nightmare.</i></p>
    </blockquote>
 
 <p>This is false, at least insofar as it means anything at all.
@@ -197,9 +197,9 @@ make the merging complaint elsewhere, so this item must presumably be
 about something else.</p>
 
    <blockquote>
-   <p><font color="red"><i>Subversion has no integrity checker which
+   <p style="color: red"><i>Subversion has no integrity checker which
    means files can be silently corrupted and you will never know until
-   you try and roll backwards.</i></font></p>
+   you try and roll backwards.</i></p>
    </blockquote>
 
 <p>False.  Subversion ships with an integrity checker
@@ -212,9 +212,9 @@ abovementioned command.  So we really don't know what they're trying
 to say here.</p>
 
    <blockquote>
-   <p><font color="red"><i>Subversion has only weak rename support,
+   <p style="color: red"><i>Subversion has only weak rename support,
    that's something that is inherent in all centralized
-   systems.</i></font></p>
+   systems.</i></p>
    </blockquote>
 
 <p>It's true that Subversion has weak rename support (work is under
