@@ -78,10 +78,10 @@ the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
     * 'svnadmin recover' now creates default svnserve passwd file (r11589)
     * increase default BDB cache size in DB_CONFIG (r13030)
     * new switches added:
-       - 'svnlook diff --no-diffs-deleted'     - suppress deleted diffs (#2180)
+       - 'svnlook diff --no-diff-added'        - suppress added files (#2180)
+       - 'svnlook propget/proplist --revprop'  - show revision props (#2181)
        - 'svnadmin load --use-pre-commit-hook'  
          'svnadmin load --use-post-commit-hook'- invoke hooks when loading
-       - 'svnlook propget/proplist --revprop'  - show revision props (#2181)
     * fixed: change FSFS revprops atomically and safely (issue #2193)
     * fixed: FSFS should verify checksums (issue #2253)
     * fixed: 'svnadmin create' should clean up when it fails (r13200)
