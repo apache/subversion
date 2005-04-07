@@ -115,7 +115,7 @@ class Generator(gen_base.GeneratorBase):
 
       target = target_ob.name
       if isinstance(target_ob, gen_base.TargetJava):
-        path = target_ob.classes
+        path = target_ob.output_dir
       else:
         path = target_ob.path
 
@@ -167,6 +167,9 @@ class Generator(gen_base.GeneratorBase):
       targ_varname = string.replace(target, '-', '_')
       objnames = string.join(build_path_strip(path, objects))
 
+      # Output value of path variable
+      self.ofile.write('%s_PATH = %s\n' % (targ_varname, path))
+      
       # Add additional install dependencies if necessary
       if target_ob.add_install_deps:
         self.ofile.write('install-%s: %s\n'

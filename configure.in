@@ -667,15 +667,24 @@ AC_ARG_ENABLE(javahl,
     fi
   ])
 
+JAVAHL_OBJDIR=""
 INSTALL_EXTRA_JAVAHL_LIB=""
+FIX_JAVAHL_LIB=""
 JAVAHL_TESTS_TARGET=""
 LT_CXX_LIBADD=""
 if test "$do_javahl_build" = "yes"; then
   AC_PROG_CXX
+  
+  dnl The temporary directory where libtool compiles libsvnjavahl.
+  dnl N.B. objdir is "the name of the directory that contains temporary
+  dnl libtool files" and it is set by libtool.m4
+  JAVAHL_OBJDIR='$(libsvnjavahl_PATH)'/$objdir
+  
   os_arch=`uname`
   if test "$os_arch" = "Darwin"; then
     dnl On Darwin, JNI libs must be installed as .jnilib
     INSTALL_EXTRA_JAVAHL_LIB='ln -sf $(libdir)/libsvnjavahl-1.dylib $(libdir)/libsvnjavahl-1.jnilib'
+    FIX_JAVAHL_LIB="ln -sf libsvnjavahl-1.dylib $JAVAHL_OBJDIR/libsvnjavahl-1.jnilib"
   fi
   # This segment (and the rest of r10800) is very likely unnecessary
   # with libtool 1.5, which automatically adds libstdc++ as a
@@ -691,6 +700,8 @@ if test "$do_javahl_build" = "yes"; then
   fi
 fi
 AC_SUBST(INSTALL_EXTRA_JAVAHL_LIB)
+AC_SUBST(JAVAHL_OBJDIR)
+AC_SUBST(FIX_JAVAHL_LIB)
 AC_SUBST(LT_CXX_LIBADD)
 
 AC_ARG_WITH(junit,
