@@ -25,7 +25,6 @@
 #include "svn_test.h"
 #include "svn_fs.h"
 #include "svn_md5.h"
-#include "svn_props.h"
 
 #include "../fs-helpers.h"
 
