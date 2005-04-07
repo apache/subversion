@@ -138,10 +138,10 @@ void svn_client_get_simple_provider (svn_auth_provider_object_t **provider,
  * ~/.subversion configuration directory.  Allocate @a *provider in
  * @a pool.
  *
- * This is like svn_client_get_simmple_provider, except that, when
+ * This is like svn_client_get_simple_provider, except that, when
  * running on Window 2000 or newer (or any other Windows version that
  * includes the CryptoAPI), the provider encrypts the password before
- * storing it to disk. On earler versions of Windows, the provider
+ * storing it to disk. On earlier versions of Windows, the provider
  * does nothing.
  *
  * @note An administrative password reset may invalidate the account's
@@ -466,7 +466,7 @@ svn_client_create_context (svn_client_ctx_t **ctx,
  *
  * @a revision must be of kind @c svn_opt_revision_number,
  * @c svn_opt_revision_head, or @c svn_opt_revision_date.  If
- * @c revision does not meet these requirements, return the error
+ * @a revision does not meet these requirements, return the error
  * @c SVN_ERR_CLIENT_BAD_REVISION.
  *
  * If @a ignore_externals is set, don't process externals definitions
@@ -1233,7 +1233,7 @@ svn_client_relocate (const char *dir,
  *
  * If an item specified for reversion is not under version control,
  * then do not error, just invoke @a ctx->notify_func with @a
- * ctx->notify_baton, using notification code @a svn_wc_notify_skip.
+ * ctx->notify_baton, using notification code @c svn_wc_notify_skip.
  */
 svn_error_t *
 svn_client_revert (const apr_array_header_t *paths,
@@ -1855,7 +1855,7 @@ svn_client_lock (const apr_array_header_t *targets,
  * target.  If the target was successfully unlocked, @c
  * svn_wc_notify_unlocked will be used.  Else, if the error is
  * directly related to unlocking the path (see @c
- * svn_error_is_unlock_error), @c svn_wc_notify_failed_unlock will be
+ * SVN_ERR_IS_UNLOCK_ERROR), @c svn_wc_notify_failed_unlock will be
  * used and the error will be passed in the notification structure.
 
  * Use @a pool for temporary allocations.

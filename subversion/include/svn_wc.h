@@ -360,7 +360,7 @@ svn_wc_traversal_info_t *svn_wc_init_traversal_info (apr_pool_t *pool);
  * @a traversal_info is obtained from @c svn_wc_init_traversal_info, but is
  * only useful after it has been passed through another function, such
  * as @c svn_wc_crawl_revisions, @c svn_wc_get_update_editor,
- * @c svn_wc_get_checkout_editor, @c svn_wc_get_switch_editor, etc.
+ * @c svn_wc_get_switch_editor, etc.
  *
  * Each hash maps <tt>const char *</tt> directory names onto 
  * <tt>const char *</tt> values of the externals property for that directory.  
@@ -405,7 +405,7 @@ typedef struct svn_wc_external_item_t
  * @since New in 1.1.
  *
  * If @a externals_p is non-null, set @a *externals_p to an array of
- * @a svn_wc_external_item_t * objects based on @a desc.
+ * @c svn_wc_external_item_t * objects based on @a desc.
  *
  * If the format of @a desc is invalid, don't touch @a *externals_p and
  * return @c SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION.  Thus, if
@@ -2599,7 +2599,7 @@ typedef enum svn_wc_merge_outcome_t
  * changes, then translated back again.
  *
  * If @a merge_target is absent, or present but not under version
- * control, then set @a *merge_outcome to svn_wc_merge_no_merge and
+ * control, then set @a *merge_outcome to @c svn_wc_merge_no_merge and
  * return success without merging anything.  (The reasoning is that if
  * the file is not versioned, then it is probably unrelated to the
  * changes being considered, so they should not be merged into it.)

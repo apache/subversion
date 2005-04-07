@@ -99,7 +99,7 @@ enum svn_delta_action {
      * If you start at @a offset, and append @a len bytes one at a time,
      * it'll work out --- you're adding new bytes to the end at the
      * same rate you're reading them from the middle.  Thus, if your
-     * current target text is "abcdefgh", and you get an @c svn_delta_target
+     * current target text is "abcdefgh", and you get an @c svn_txdelta_target
      * instruction whose @a offset is @a 6 and whose @a len is @a 7, 
      * the resulting string is "abcdefghghghghg".  This trick is actually 
      * useful in encoding long runs of consecutive characters, long runs 
@@ -170,7 +170,7 @@ typedef struct svn_txdelta_window_t
   /** The instructions for this window.  */
   const svn_txdelta_op_t *ops;
 
-  /** New data, for use by any `svn_delta_new' instructions.  */
+  /** New data, for use by any `svn_txdelta_new' instructions.  */
   const svn_string_t *new_data;
 
 } svn_txdelta_window_t;

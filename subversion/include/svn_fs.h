@@ -150,7 +150,7 @@ svn_error_t *svn_fs_open (svn_fs_t **fs_p, const char *path,
  *
  * Return the path to @a fs's repository, allocated in @a pool.
  * Note: this is just what was passed to @c svn_fs_create() or
- * @a svn_fs_open() -- might be absolute, might not.
+ * @c svn_fs_open() -- might be absolute, might not.
  */
 const char *svn_fs_path (svn_fs_t *fs, apr_pool_t *pool);
 
@@ -1499,7 +1499,7 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
 /** Lock @a path in @a fs, and set @a *lock to a lock
  * representing the new lock, allocated in @a pool.
  *
- * @warning You may prefer to use @a svn_repos_fs_lock instead,
+ * @warning You may prefer to use @c svn_repos_fs_lock instead,
  * which see.
  *
  * @a fs must have a username associated with it (see @c
