@@ -23,7 +23,7 @@ Candidate changes:
     Notes:
       The problem was in the test, not in Subversion itself.
     Votes:
-      +1: kfogel
+      +1: kfogel, fitz
 
   * r13983
     Correct valid warnings and bogus compilation errors specific to
@@ -41,7 +41,7 @@ Candidate changes:
       but it had me confused for quite a while. - JAF)
       If we don't do back-port it now while it's new, we can't at all.
     Votes:
-      +1: julianfoad, lundblad
+      +1: julianfoad, lundblad, fitz
 
 Approved changes (further review is welcome, but not required):
 
