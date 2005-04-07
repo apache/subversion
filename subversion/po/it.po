@@ -75,7 +75,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-03-06 10:12+0100\n"
-"PO-Revision-Date: 2005-04-01 17:46+0200\n"
+"PO-Revision-Date: 2005-04-06 21:09+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1075,7 +1075,6 @@ msgstr ""
 "  2. Elenca le proprietà non sotto controllo di versione della revisione del repository.\n"
 
 #: clients/cmdline/main.c:524
-#, fuzzy
 msgid ""
 "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME [PROPVAL | -F VALFILE] PATH...\n"
@@ -1116,11 +1115,13 @@ msgstr ""
 "uso: 1. propset PROPRIETÀ [VALORE | -F FILE] PATH...\n"
 "     2. propset PROPRIETÀ --revprop -r REV [VALORE | -F FILE] [URL]\n"
 "\n"
-"  1. Modifica una proprietà sotto controllo di versione della copia locale.\n"
-"  2. Modifica una proprietà non sotto controllo di versione della copia remota.\n"
+"  1. Crea una proprietà, sotto controllo di versione, nella copia \n"
+"  di lavoro locale.\n"
+"  2. Crea una proprietà, non sotto controllo di versione, nella \n"
+"  copia di lavoro remota.\n"
 "\n"
-"  Nota: svn riconosce le seguenti proprietà speciali sotto controllo di versione\n"
-"  ma manterrà qualunque proprietà arbitraria:\n"
+"  Nota: svn riconosce le seguenti speciali proprietà sotto controllo di\n"
+"  versione, ma manterrà qualunque proprietà arbitraria:\n"
 "    svn:ignore     - Una lista di pattern di file da ignorare, uno per riga.\n"
 "    svn:keywords   - Parole chiave da espandere.  Parole chiave valide sono:\n"
 "      URL, HeadURL             - L'URL della revisione HEAD dell'oggetto.\n"
@@ -1136,8 +1137,8 @@ msgstr ""
 "    svn:mime-type  - Il mimetype del file. È usato per determinare\n"
 "      se effettuare la fusione del file e come servirlo da Apache.\n"
 "      Un mimetype che inizia con 'text/' (o un mimetype vuoto) è\n"
-"      trattato come testo. Tutto il resto è considerato birario.\n"
-"    svn:externals  - Un elenco di module, uno per riga, ognuno dei quali\n"
+"      trattato come testo. Tutto il resto è considerato binario.\n"
+"    svn:externals  - Un elenco di moduli, uno per riga, ognuno dei quali\n"
 "      consiste in un percorso relativo, flag di revisione opzionali e\n"
 "      una URL. Ad esempio:\n"
 "        pippo                http://esempio.com/repos/a\n"
@@ -4773,9 +4774,8 @@ msgid "Creating post-revprop-change hook"
 msgstr ""
 
 #: libsvn_repos/repos.c:826
-#, fuzzy
 msgid "Creating conf directory"
-msgstr "Non riesco a rilevare la directory di lavoro"
+msgstr "Sto creando la directory per le configurazioni"
 
 #: libsvn_repos/repos.c:878
 msgid "Creating svnserve.conf file"
@@ -4786,9 +4786,8 @@ msgid "Creating passwd file"
 msgstr ""
 
 #: libsvn_repos/repos.c:929
-#, fuzzy
 msgid "Could not create top-level directory"
-msgstr "Non riesco a creare la directory temporanea"
+msgstr "Non riesco a creare la directory al primo livello"
 
 #: libsvn_repos/repos.c:933
 msgid "Creating DAV sandbox dir"
@@ -4799,9 +4798,8 @@ msgid "Creating readme file"
 msgstr ""
 
 #: libsvn_repos/repos.c:1008
-#, fuzzy
 msgid "Repository creation failed"
-msgstr "Un hook del repository è fallito"
+msgstr "La creazione del repository è fallito"
 
 #: libsvn_repos/repos.c:1078
 #, c-format
@@ -4882,7 +4880,6 @@ msgid "Can't calculate requested date"
 msgstr "Non posso calcolare la data della richiesta"
 
 #: libsvn_subr/date.c:277
-#, fuzzy
 msgid "Can't expand time"
 msgstr "Non riesco ad espandere la proprietà time"
 
@@ -4998,7 +4995,7 @@ msgid "Can't get exclusive lock on file '%s'"
 msgstr ""
 
 #: libsvn_subr/io.c:1236
-#, fuzzy, c-format
+#, c-format
 msgid "Can't flush file '%s'"
 msgstr "Non riesco a scaricare il file '%s'"
 
@@ -5024,7 +5021,7 @@ msgid "Can't remove file '%s'"
 msgstr "Non riesco a rimuovere il file '%s'"
 
 #: libsvn_subr/io.c:1405
-#, fuzzy, c-format
+#, c-format
 msgid "Can't rewind directory '%s'"
 msgstr "Non riesco ad effettuare il rewind della directory '%s'"
 
@@ -6507,9 +6504,9 @@ msgid "Revision %ld skipped.\n"
 msgstr "Revisione %ld saltata.\n"
 
 #: svndumpfilter/main.c:488
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid copy source path '%s'"
-msgstr "Sintassi di percorso del filesystem non valida"
+msgstr "Percorso di origine della copia non valido '%s'"
 
 #: svndumpfilter/main.c:531
 msgid "Node with dropped parent sneaked in"
@@ -6548,25 +6545,22 @@ msgid ""
 msgstr ""
 
 #: svndumpfilter/main.c:792
-#, fuzzy
 msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: svndumpfilter help [SUBCOMMAND...]\n"
 msgstr ""
 "Descrive l'uso di questo programma o di un suo comando.\n"
-"uso: help [COMANDO...]\n"
+"uso: svndumpfilter help [COMANDO...]\n"
 
 #: svndumpfilter/main.c:862
-#, fuzzy
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"uso generale: svnadmin COMANDO PERC_REPO  [ARG & OPZIONI ...]\n"
-"Digita \"svnadmin help <comando>\" per informazioni su uno specifico "
-"comando.\n"
+"uso generale: svndumpfilter COMANDO  [ARG & OPZIONI ...]\n"
+"Digita \"svndumpfilter help <comando>\" per informazioni su uno specifico comando.\n"
 "\n"
 "Commandi disponibili:\n"
 
@@ -6618,12 +6612,12 @@ msgstr ""
 "Errore: nessun prefisso fornito.\n"
 
 #: svndumpfilter/main.c:1250
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
 "Type 'svndumpfilter help %s' for usage.\n"
 msgstr ""
-"il comando '%s' non accetta l'opzione '%s'\n"
+"Il comando '%s' non accetta l'opzione '%s'\n"
 "Digita 'svndumpfilter help %s' per ulteriori informazioni.\n"
 
 #: svnlook/main.c:98
@@ -6643,9 +6637,8 @@ msgid "show node revision ids for each path"
 msgstr "mostra gli id della revisione del nodo per ogni percorso"
 
 #: svnlook/main.c:113
-#, fuzzy
 msgid "do not print differences for added files"
-msgstr "non stampare le differenze per i file cancellati"
+msgstr "non stampare le differenze per i file aggiunti"
 
 #: svnlook/main.c:128
 msgid ""
@@ -6753,19 +6746,18 @@ msgstr ""
 "Mostra il messaggio di log.\n"
 
 #: svnlook/main.c:181
-#, fuzzy
 msgid ""
 "usage: svnlook propget REPOS_PATH PROPNAME [PATH_IN_REPOS]\n"
 "\n"
 "Print the raw value of a property on a path in the repository.\n"
 "With --revprop, prints the raw value of a revision property.\n"
 msgstr ""
-"uso: svnlook propget PERC_REPO NOME_PROP PERC_NEL_REPO\n"
+"uso: svnlook propget PERC_REPO NOME_PROP [PERC_NEL_REPO]\n"
 "\n"
-"Mostra il valore grezzo della proprietà su un percorso nel repository.\n"
+"Mostra il valore crudo della proprietà in un percorso nel repository.\n"
+"Con --revprop, riporta il valore della proprietà di una revisione.\n"
 
 #: svnlook/main.c:187
-#, fuzzy
 msgid ""
 "usage: svnlook proplist REPOS_PATH [PATH_IN_REPOS]\n"
 "\n"
@@ -6773,9 +6765,10 @@ msgid ""
 "with the --revprop option, revision properties.\n"
 "With -v, show the property values too.\n"
 msgstr ""
-"uso: svnlook proplist PERC_REPO PERC_NEL_REPO\n"
+"uso: svnlook proplist PERC_REPO [PERC_NEL_REPO]\n"
 "\n"
-"Elenca le proprietà di un percorso nel repository.\n"
+"Elenca le proprietà di un percorso nel repository o,\n"
+"con --revprop, le proprietà delle revisioni.\n"
 "Con -v mostra anche i valori delle proprietà.\n"
 
 #: svnlook/main.c:194
@@ -6876,21 +6869,20 @@ msgstr ""
 "---------  --------\n"
 
 #: svnlook/main.c:1464
-#, fuzzy, c-format
+#, c-format
 msgid "Property '%s' not found on revision %ld"
-msgstr "Percorso '%s' non trovato nella revisione %ld"
+msgstr "Percorso '%s' non trovato alla revisione %ld"
 
 #: svnlook/main.c:1468
-#, fuzzy, c-format
+#, c-format
 msgid "Property '%s' not found on path '%s' in revision %ld"
-msgstr "Proprietà '%s' non trovata nel percorso '%s'"
+msgstr "Proprietà '%s' non trovata nel percorso '%s' alla revisione %ld"
 
 #: svnlook/main.c:1633 svnlook/main.c:1790
 msgid "Missing repository path argument"
 msgstr "Argomento di percorso del repository mancante"
 
 #: svnlook/main.c:1694
-#, fuzzy
 msgid ""
 "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
 "Note: any subcommand which takes the '--revision' and '--transaction'\n"
@@ -6909,9 +6901,8 @@ msgstr ""
 "Comandi disponibili:\n"
 
 #: svnlook/main.c:1764
-#, fuzzy
 msgid "Missing propname argument"
-msgstr "Argomento di percorso del repository mancante"
+msgstr "Argomento di nome della proprietà mancante"
 
 #: svnlook/main.c:1765
 msgid "Missing propname and repository path arguments"
@@ -6932,9 +6923,8 @@ msgstr ""
 "Gli argomenti '--transaction' (-t) e '--revision' (-r) non possono coesistere"
 
 #: svnlook/main.c:2049
-#, fuzzy
 msgid "Repository argument required\n"
-msgstr "È richiesto un repository come argomento"
+msgstr "È richiesto un repository come argomento\n"
 
 #: svnlook/main.c:2058
 #, c-format
@@ -6942,7 +6932,7 @@ msgid "'%s' is a URL when it should be a path\n"
 msgstr "'%s' è una URL mentre dovrebbe essere un percorso\n"
 
 #: svnlook/main.c:2106
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
 "Type 'svnlook help %s' for usage.\n"
@@ -6975,9 +6965,8 @@ msgid "inetd mode"
 msgstr ""
 
 #: svnserve/main.c:113
-#, fuzzy
 msgid "root of directory to serve"
-msgstr "non ho potuto connettermi al server"
+msgstr "directory di root da servire"
 
 #: svnserve/main.c:114
 msgid "deprecated; use repository config file"
@@ -7000,9 +6989,9 @@ msgid "listen once (useful for debugging)"
 msgstr ""
 
 #: svnserve/main.c:140
-#, fuzzy, c-format
+#, c-format
 msgid "Type '%s --help' for usage.\n"
-msgstr "Digita '%s help' per informazioni.\n"
+msgstr "Digita '%s --help' per informazioni.\n"
 
 #: svnserve/main.c:150
 msgid ""
@@ -7024,12 +7013,10 @@ msgid "Finished"
 msgstr ""
 
 #: svnversion/main.c:123
-#, fuzzy
 msgid "Type 'svnversion --help' for usage.\n"
-msgstr "Digita '%s help' per informazioni.\n"
+msgstr "Digita '%s --help' per informazioni.\n"
 
 #: svnversion/main.c:134
-#, fuzzy
 msgid ""
 "usage: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n"
 "\n"
@@ -7059,9 +7046,9 @@ msgid ""
 msgstr ""
 "uso: svnversion [OPZIONI] PERCORSO_CL [CODA_URL]\n"
 "\n"
-"  Produce un \"numero di versione\" compatto per il percorso nella\n"
+"  Produce un 'numero di versione' compatto per il percorso nella\n"
 "  copia locale PERCORSO_CL.  CODA_URL è la parte finale dell'URL\n"
-"  usata per determinare se nel PERCORSO_CL stesso vi sono scambi\n"
+"  usata per determinare se nel PERCORSO_CL stesso vi siano scambi\n"
 "  (il rilevamento degli scambi all'interno di PERCORSO_CL non si affida\n"
 "  a CODA_URL). Il numero di versione è inviato allo standard output.\n"
 "  Ad esempio:\n"
@@ -7080,7 +7067,7 @@ msgstr ""
 "   4123:4168MS   copia locale con più revisioni, modificata e con scambi\n"
 "\n"
 "  Se invocato su una directory che non è una copia locale,\n"
-"  ad esempio una directory esportata, il programma stamperà \"esportato\".\n"
+"  ad esempio una directory esportata, il programma stamperà 'esportato'.\n"
 
 #: svnversion/main.c:209
 msgid "do not output the trailing newline"
@@ -7091,9 +7078,9 @@ msgid "last changed rather than current revisions"
 msgstr "ultimo cambiamento anziché la revisione corrente"
 
 #: svnversion/main.c:301
-#, fuzzy, c-format
+#, c-format
 msgid "exported%s"
-msgstr "esportato\n"
+msgstr "esportato%s"
 
 #: svnversion/main.c:310
 #, c-format
