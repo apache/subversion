@@ -504,12 +504,12 @@ case "$1" in
         BRANCH_DIR="."
         ;;
     avail)
-        FLAGS="svldr:H:"
+        FLAGS="svldr:S:"
         BRANCH_DIR="."
         AVAIL_DISPLAY="revisions"
         ;;
     merge)
-        FLAGS="svnr:f:H:"
+        FLAGS="svnr:f:S:"
         BRANCH_DIR="."
         ;;
     help)
