@@ -63,7 +63,7 @@ Candidate changes:
     Justification:
       Test failure bad.
     Votes:
-      +1: maxb
+      +1: maxb, fitz
 
   * r14031, r14052
     Tweak help text for svn propset to include svn:needs-lock.
