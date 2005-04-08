@@ -120,10 +120,10 @@
       handled with the WebDAV <span class="method">COPY</span>.
     </p>
     <blockquote class="comment">
-      need to talk about copies somewhere. need to discuss how copy
+      <p>need to talk about copies somewhere. need to discuss how copy
       history is retained (svn does it automatically, but interop with
       other servers may require us to set a custom property on those
-      servers.
+      servers.</p>
     </blockquote>
 
     <h3>DeltaV Concepts Used by Subversion</h3>
@@ -362,12 +362,12 @@ property for each
 	  property referring to the ancestor's version resource.
 	</p>
 	<blockquote>
-	  <strong>Note:</strong> it appears that we will use
+	  <p><strong>Note:</strong> it appears that we will use
 	  <code>COPY</code> to copy the appropriate resource into the
 	  working collection. This will create a new version history
 	  which is then placed into the working collection. The
 	  version history will use the <code>DAV:precursor-set</code>
-	  property to specify the version resource of the ancestor.
+	  property to specify the version resource of the ancestor.</p>
 
 	  <p>
 	    Because a version resource does not specify the revision,
@@ -606,9 +606,9 @@ property for each
 	  resource.
 	</p>
 	<blockquote>
-	  Note: actually, we may want to allow a <code>PROPFIND</code> 
+	  <p>Note: actually, we may want to allow a <code>PROPFIND</code> 
 	  with a <code>Depth:&nbsp;1</code> header to allow clients to 
-	  enumerate the current activities.
+	  enumerate the current activities.</p>
 	</blockquote>
 	<p>
 	  Only a subset of methods are allowed on the activities
@@ -644,7 +644,7 @@ property for each
 	  following form:
 	</p>
 	<blockquote class="url">
-	  $svn/his/<var>node-id</var>
+	  <p>$svn/his/<var>node-id</var></p>
 	</blockquote>
 	<p>
 	  The <var>node-id</var> is an internal value
@@ -659,12 +659,12 @@ property for each
 	  collection is <span class="prop">DAV:version-history</span>.
 	</p>
 	<blockquote class="comment">
-	  <strong>Note:</strong> the above information is probably not 
+	  <p><strong>Note:</strong> the above information is probably not 
 	  quite correct. The issue of linking one version history to
 	  another is still open. Further, I think that node 73 and
 	  node 73.4.1 are each version histories (where the latter is
 	  linked to the former). 73.x and 73.4.1.x are the versions
-	  within the version history.
+	  within the version history.</p>
 	</blockquote>
       </dd>
 
@@ -683,7 +683,7 @@ property for each
 	  implementation), it is laid out as:
 	</p>
 	<blockquote class="url">
-	  $svn/ver/<var>node-id</var>/<var>path</var>
+	  <p>$svn/ver/<var>node-id</var>/<var>path</var></p>
 	</blockquote>
 	<p>
 	  Only read-only methods are allowed against these resources
@@ -715,7 +715,7 @@ property for each
 	  constructed as:
 	</p>
 	<blockquote class="url">
-	  $svn/wrk/<var>activity</var>/<var>path</var>
+	  <p>$svn/wrk/<var>activity</var>/<var>path</var></p>
 	</blockquote>
 	<p>
 	  Any method is allowed on the working resources, but no
@@ -823,11 +823,11 @@ property for each
       straight-forward, and driven by the client design over time.
     </p>
     <blockquote>
-      Note: if we do this, however, then we'd end up tying the client
+      <p>Note: if we do this, however, then we'd end up tying the client
       to the server. Of course, if the client were run against another 
       DeltaV server which didn't report these properties, then we'd
       simply not display them in the UI. (e.g. graceful degradation of 
-      functionality)
+      functionality)</p>
     </blockquote>
 
     <h3>Fetching Status and Updates</h3>
@@ -870,15 +870,15 @@ property for each
       current revision number.
     </p>
     <blockquote class="comment">
-      The XML DTDs for the request and response are TBD.
+      <p>The XML DTDs for the request and response are TBD.</p>
     </blockquote>
     <blockquote>
-      <small>
+      <p><small>
 	The custom report will tie the client to only those servers
 	which support the report, but a future version of the software
 	will contain a fallback codepath, a graceful degradation, to
 	support other DeltaV servers.
-      </small>
+      </small></p>
     </blockquote>
     <p>
       When an updated is performed, the client will fetch each of the
@@ -1158,73 +1158,73 @@ property for each
     </p>
 
     <blockquote>
-      <small>
+      <p><small>
 	While this list could certainly be expanded with more reasons
 	(and to be fair, with a list of reasons why WebDAV was a poor
 	choice), it certainly demonstrates the basic reasons for our
 	choice.
-      </small>
+      </small></p>
     </blockquote>
 
     <blockquote>
-      <small>
+      <p><small>
 	Note: this list came from an email note, so the tone and point
 	of view might be a bit off. Further word-smithing is
 	welcome...
-      </small>
+      </small></p>
     </blockquote>
 
     <h3>Builtin web browsing of the repository</h3>
     <blockquote>
-      For example, take a
+      <p>For example, take a
       look at:
       <a href="http://svn.collab.net/repos/svn/trunk/HACKING">http://svn.collab.net/repos/svn/trunk/HACKING</a>
       (that's the HEAD right there; we also have URLs for every
-      previous revision of every file)
+      previous revision of every file)</p>
     </blockquote>
 
     <h3>DAV-based browsing</h3>
     <blockquote>
-      Use Web Folders or WebDrive or somesuch on
+      <p>Use Web Folders or WebDrive or somesuch on
       your Windows box (or Windows XP's native DAV mounts) to browse
       the SVN repository with Windows Explorer. Mac OS X has builtin
       DAV server mounting. Nautilus has DAV capabilities. Then you
-      have your Open Source tools such as cadaver, Goliath, etc.
+      have your Open Source tools such as cadaver, Goliath, etc.</p>
     </blockquote>
 
     <h3>People can use existing libraries</h3>
     <blockquote>
-      I couldn't even begin to count the number of HTTP tools and
+      <p>I couldn't even begin to count the number of HTTP tools and
       libraries available. If we had designed our own protocol, then
       we would have /none/ of those benefits. Heck, two HTTP library
       implementors (Joe Orton of Neon, and Daniel Stenberg of CURL)
       are regulars here. we wouldn't get that benefit. I've used
       Python's httplib (and a davlib of my own) to do a lot of testing
-      of our server. No need to go and roll new protocol libraries.
+      of our server. No need to go and roll new protocol libraries.</p>
     </blockquote>
 
     <h3>Existing tools</h3>
     <blockquote>
-      One word: Ethereal :-) When we capture network traces, Ethereal
+      <p>One word: Ethereal :-) When we capture network traces, Ethereal
       already knows about HTTP. It's quite nice, but I know there are
       even better ones out there. But we also have other tools like
-      squid and other (caching) proxies (see the next item).
+      squid and other (caching) proxies (see the next item).</p>
     </blockquote>
 
     <h3>Caching proxies</h3>
     <blockquote>
-      Subversion will work great with caching proxies. There is no
+      <p>Subversion will work great with caching proxies. There is no
       longer a need for specialized tools like "cvsup". Just drop in a
       caching proxy, and you've already got your distributed read-only
       repository. That European dev team can just drop in the cache
       between them and the US server and their checkouts/updates will
       get cached for the benefit of the other team members. Commits
-      will flow through, back to the US-based server.
+      will flow through, back to the US-based server.</p>
     </blockquote>
 
     <h3>Sophisticated and broad-choice authentication</h3>
     <blockquote>
-      We don't have to reimplement an authentication scheme for a new
+      <p>We don't have to reimplement an authentication scheme for a new
       protocol. We can use all of the various schemes that have been
       defined for HTTP. Ever look at the CVS protocol? Ever see the "I
       Love You" or "I Hate You" lines? :-) That is all part of
@@ -1232,36 +1232,36 @@ property for each
       certificate-based auth if we want. Kerberos. NTLM. or even just
       simple Basic or Digest. And our users can come from text files,
       database, LDAP, or PAM. We don't have to reinvent the wheel cuz
-      it is all available for Apache already.
+      it is all available for Apache already.</p>
     </blockquote>
 
     <h3>Awesome network server</h3>
     <blockquote>
-      We don't have to worry about how to portably set TCP_CORK for
+      <p>We don't have to worry about how to portably set TCP_CORK for
       optimal network packets. We don't have to worry about when
       sendfile() makes sense, or if it is available. We don't have to
       worry about dropped client connections, how to best use threads
       and processes to scale, request management, monitoring, logging,
       etc. Apache gives us all of that and a ton more. I *really*
       would not want to do that through xinetd. I mean... setting
-      TCP_CORK on stdout? freaky :-)
+      TCP_CORK on stdout? freaky :-)</p>
     </blockquote>
 
     <h3>Well-defined on-wire compression</h3>
     <blockquote>
-      We already have on-wire compression, similar to CVS's "-z#"
+      <p>We already have on-wire compression, similar to CVS's "-z#"
       switch. And we didn't do anything. The client library and server
       that we use just support it automatically for us, according to
-      RFC 2616.
+      RFC 2616.</p>
     </blockquote>
 
     <h3>Future interoperability</h3>
     <blockquote>
-      In the future, we'll be able to interoperate with a multitude of
+      <p>In the future, we'll be able to interoperate with a multitude of
       IDEs and other WebDAV/DeltaV clients. As DeltaV becomes more
       prevalent, IDEs could very well use it for source code
       management, and we'll be right there without needing to write
-      some MS/SCC library to interface to the tool.
+      some MS/SCC library to interface to the tool.</p>
     </blockquote>
 
     <hr/>
