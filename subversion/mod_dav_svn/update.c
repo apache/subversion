@@ -998,6 +998,40 @@ static svn_error_t * upd_close_edit(void *edit_baton,
 }
 
 
+static svn_stringbuf_t *
+string_from_cdata_pieces(apr_xml_elem *element,
+                         apr_pool_t *pool)
+{
+  svn_stringbuf_t *buf;
+  struct apr_text *this_elem;
+
+  /* No CDATA?  That's badness. */
+  if (! element->first_cdata.first)
+    return NULL;
+
+  buf = svn_stringbuf_create(element->first_cdata.first->text, pool);
+  this_elem = element->first_cdata.first->next;
+  while (this_elem)
+    {
+      svn_stringbuf_appendcstr(buf, this_elem->text);
+      this_elem = this_elem->next;
+    }
+  return buf;
+}
+
+
+static dav_error *
+empty_cdata_error(const char *tagname,
+                  apr_pool_t *pool)
+{
+  const char *errstr = apr_pstrcat(pool, "The request's '", tagname, 
+                                   "' element contains empty cdata; there "
+                                   "is a problem with the client.", NULL);
+  return dav_new_error_tag(pool, HTTP_BAD_REQUEST, 0, errstr,
+                           SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+}
+
+
 dav_error * dav_svn__update_report(const dav_resource *resource,
                                    const apr_xml_doc *doc,
                                    ap_filter_t *output)
@@ -1069,175 +1103,85 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
          Thus, the check for non-empty cdata in each of these cases
          cannot be moved to the top of the loop, because then it would
          wrongly catch other elements that do allow empty cdata. */ 
-
+      svn_stringbuf_t *cdata;
+      
       if (child->ns == ns && strcmp(child->name, "target-revision") == 0)
         {
-          if (! child->first_cdata.first)
-            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-              "The request's 'target-revision' element contains empty cdata; "
-              "there is a problem with the client.",
-              SVN_DAV_ERROR_NAMESPACE,
-              SVN_DAV_ERROR_TAG);
-
-          /* ### assume no white space, no child elems, etc */
-          revnum = SVN_STR_TO_REV(child->first_cdata.first->text);
+          if (! ((cdata = string_from_cdata_pieces(child, resource->pool))))
+            return empty_cdata_error(child->name, resource->pool);
+          revnum = SVN_STR_TO_REV(cdata->data);
         }
-
       if (child->ns == ns && strcmp(child->name, "src-path") == 0)
         {
-          /* ### assume no white space, no child elems, etc */
           dav_svn_uri_info this_info;
-
-          if (! child->first_cdata.first)
-            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-              "The request's 'src-path' element contains empty cdata; "
-              "there is a problem with the client.",
-              SVN_DAV_ERROR_NAMESPACE,
-              SVN_DAV_ERROR_TAG);
-
-          /* split up the 1st public URL. */
-          if ((derr = dav_svn__test_canonical
-               (child->first_cdata.first->text, resource->pool)))
+          if (! ((cdata = string_from_cdata_pieces(child, resource->pool))))
+            return empty_cdata_error(child->name, resource->pool);
+          if ((derr = dav_svn__test_canonical(cdata->data, 
+                                              resource->pool)))
             return derr;
-          serr = dav_svn_simple_parse_uri(&this_info, resource,
-                                          child->first_cdata.first->text,
-                                          resource->pool);
-          if (serr != NULL)
-            {
-              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Could not parse src-path URL.",
-                                         resource->pool);
-            }
+          if ((serr = dav_svn_simple_parse_uri(&this_info, resource,
+                                               cdata->data, 
+                                               resource->pool)))
+            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                       "Could not parse 'src-path' URL.",
+                                       resource->pool);
           src_path = this_info.repos_path;
         }
-
       if (child->ns == ns && strcmp(child->name, "dst-path") == 0)
         {
-          /* ### assume no white space, no child elems, etc */
           dav_svn_uri_info this_info;
-
-          if (! child->first_cdata.first)
-            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-              "The request's 'dst-path' element contains empty cdata; "
-              "there is a problem with the client.  See "
-              "http://subversion.tigris.org/issues/show_bug.cgi?id=1055",
-              SVN_DAV_ERROR_NAMESPACE,
-              SVN_DAV_ERROR_TAG);
-
-          /* split up the 2nd public URL. */
-          if ((derr = dav_svn__test_canonical
-               (child->first_cdata.first->text, resource->pool)))
+          if (! ((cdata = string_from_cdata_pieces(child, resource->pool))))
+            return empty_cdata_error(child->name, resource->pool);
+          if ((derr = dav_svn__test_canonical(cdata->data,
+                                              resource->pool)))
             return derr;
-          serr = dav_svn_simple_parse_uri(&this_info, resource,
-                                          child->first_cdata.first->text,
-                                          resource->pool);
-          if (serr != NULL)
-            {
-              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Could not parse dst-path URL.",
-                                         resource->pool);
-            }
+          if ((serr = dav_svn_simple_parse_uri(&this_info, resource,
+                                               cdata->data, 
+                                               resource->pool)))
+            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                       "Could not parse 'dst-path' URL.",
+                                       resource->pool);
           dst_path = this_info.repos_path;
         }
-
       if (child->ns == ns && strcmp(child->name, "update-target") == 0)
         {
-          if (! child->first_cdata.first)
-            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-              "The request's 'update-target' element contains empty cdata; "
-              "there is a problem with the client.",
-              SVN_DAV_ERROR_NAMESPACE,
-              SVN_DAV_ERROR_TAG);
-
-          /* ### assume no white space, no child elems, etc */
-          if ((derr = dav_svn__test_canonical
-               (child->first_cdata.first->text, resource->pool)))
+          if (! ((cdata = string_from_cdata_pieces(child, resource->pool))))
+            return empty_cdata_error(child->name, resource->pool);
+          if ((derr = dav_svn__test_canonical(cdata->data, 
+                                              resource->pool)))
             return derr;
-          target = child->first_cdata.first->text;
+          target = cdata->data;
         }
       if (child->ns == ns && strcmp(child->name, "recursive") == 0)
         {
-          if (! child->first_cdata.first)
-            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-              "The request's 'recursive' element contains empty cdata; "
-              "there is a problem with the client.",
-              SVN_DAV_ERROR_NAMESPACE,
-              SVN_DAV_ERROR_TAG);
-
-          /* ### assume no white space, no child elems, etc */
-          if (strcmp(child->first_cdata.first->text, "no") == 0)
+          if (! ((cdata = string_from_cdata_pieces(child, resource->pool))))
+            return empty_cdata_error(child->name, resource->pool);
+          if (strcmp(cdata->data, "no") == 0)
             recurse = FALSE;
         }
       if (child->ns == ns && strcmp(child->name, "ignore-ancestry") == 0)
         {
-          if (! child->first_cdata.first)
-            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-              "The request's 'ignore-ancestry' element contains empty cdata; "
-              "there is a problem with the client.",
-              SVN_DAV_ERROR_NAMESPACE,
-              SVN_DAV_ERROR_TAG);
-
-          /* ### assume no white space, no child elems, etc */
-          if (strcmp(child->first_cdata.first->text, "no") != 0)
+          if (! ((cdata = string_from_cdata_pieces(child, resource->pool))))
+            return empty_cdata_error(child->name, resource->pool);
+          if (strcmp(cdata->data, "no") != 0)
             ignore_ancestry = TRUE;
         }
       if (child->ns == ns && strcmp(child->name, "resource-walk") == 0)
         {
-          if (! child->first_cdata.first)
-            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-              "The request's 'resource-walk' element contains empty cdata; "
-              "there is a problem with the client.",
-              SVN_DAV_ERROR_NAMESPACE,
-              SVN_DAV_ERROR_TAG);
-
-          /* ### assume no white space, no child elems, etc */
-          if (strcmp(child->first_cdata.first->text, "no") != 0)
+          if (! ((cdata = string_from_cdata_pieces(child, resource->pool))))
+            return empty_cdata_error(child->name, resource->pool);
+          if (strcmp(cdata->data, "no") != 0)
             resource_walk = TRUE;
         }
       if (child->ns == ns && strcmp(child->name, "text-deltas") == 0)
         {
-          if (! child->first_cdata.first)
-            return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-              "The request's 'text-deltas' element contains empty cdata; "
-              "there is a problem with the client.",
-              SVN_DAV_ERROR_NAMESPACE,
-              SVN_DAV_ERROR_TAG);
-
-          /* ### assume no white space, no child elems, etc */
-          if (strcmp(child->first_cdata.first->text, "no") == 0)
+          if (! ((cdata = string_from_cdata_pieces(child, resource->pool))))
+            return empty_cdata_error(child->name, resource->pool);
+          if (strcmp(cdata->data, "no") == 0)
             text_deltas = FALSE;
         }
     }
-
-  if (revnum == SVN_INVALID_REVNUM)
-    {
-      serr = svn_fs_youngest_rev(&revnum, repos->fs, resource->pool);
-      if (serr != NULL)
-        {
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Could not determine the youngest "
-                                     "revision for the update process.",
-                                     resource->pool);
-        }
-    }
-
-  editor = svn_delta_default_editor(resource->pool);
-  editor->set_target_revision = upd_set_target_revision;
-  editor->open_root = upd_open_root;
-  editor->delete_entry = upd_delete_entry;
-  editor->add_directory = upd_add_directory;
-  editor->open_directory = upd_open_directory;
-  editor->change_dir_prop = upd_change_xxx_prop;
-  editor->close_directory = upd_close_directory;
-  editor->absent_directory = upd_absent_directory;
-  editor->add_file = upd_add_file;
-  editor->open_file = upd_open_file;
-  editor->apply_textdelta = upd_apply_textdelta;
-  editor->change_file_prop = upd_change_xxx_prop;
-  editor->close_file = upd_close_file;
-  editor->absent_file = upd_absent_file;
-  editor->close_edit = upd_close_edit;
-
+          
   /* If the client never sent a <src-path> element, it's old and
      sending a style of report that we no longer allow. */
   if (! src_path)
@@ -1248,6 +1192,17 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
          "This may indicate that your client is too old.",
          SVN_DAV_ERROR_NAMESPACE,
          SVN_DAV_ERROR_TAG);
+    }
+
+  /* If a revision for this operation was not dictated to us, this
+     means "update to whatever the current HEAD is now". */
+  if (revnum == SVN_INVALID_REVNUM)
+    {
+      if ((serr = svn_fs_youngest_rev(&revnum, repos->fs, resource->pool)))
+        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   "Could not determine the youngest "
+                                   "revision for the update process.",
+                                   resource->pool);
     }
 
   uc.resource = resource;
@@ -1300,6 +1255,22 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
      dir_delta() between REPOS_PATH/TARGET and TARGET_PATH.  In the
      case of an update or status, these paths should be identical.  In
      the case of a switch, they should be different. */
+  editor = svn_delta_default_editor(resource->pool);
+  editor->set_target_revision = upd_set_target_revision;
+  editor->open_root = upd_open_root;
+  editor->delete_entry = upd_delete_entry;
+  editor->add_directory = upd_add_directory;
+  editor->open_directory = upd_open_directory;
+  editor->change_dir_prop = upd_change_xxx_prop;
+  editor->close_directory = upd_close_directory;
+  editor->absent_directory = upd_absent_directory;
+  editor->add_file = upd_add_file;
+  editor->open_file = upd_open_file;
+  editor->apply_textdelta = upd_apply_textdelta;
+  editor->change_file_prop = upd_change_xxx_prop;
+  editor->close_file = upd_close_file;
+  editor->absent_file = upd_absent_file;
+  editor->close_edit = upd_close_edit;
   if ((serr = svn_repos_begin_report(&rbaton, revnum, repos->username, 
                                      repos->repos, 
                                      src_path, target,

@@ -2889,6 +2889,7 @@ make_reporter (svn_ra_session_t *session,
   svn_ra_dav__session_t *ras = session->priv;
   report_baton_t *rb;
   const char *s;
+  svn_stringbuf_t *xml_s;
 
   /* ### create a subpool for this operation? */
 
@@ -2937,7 +2938,9 @@ make_reporter (svn_ra_session_t *session,
      style" update-report syntax.  if the tmpfile is used in an "old
      style' update-report request, older servers will just ignore this
      unknown xml element. */
-  s = apr_psprintf(pool, "<S:src-path>%s</S:src-path>" DEBUG_CR, ras->url);
+  xml_s = NULL;
+  svn_xml_escape_cdata_cstring(&xml_s, ras->url, pool);
+  s = apr_psprintf(pool, "<S:src-path>%s</S:src-path>" DEBUG_CR, xml_s->data);
   SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
 
   /* an invalid revnum means "latest". we can just omit the target-revision
@@ -2953,12 +2956,10 @@ make_reporter (svn_ra_session_t *session,
   /* Pre-0.36 servers don't like to see an empty target string.  */
   if (*target)
     {
-      svn_stringbuf_t *escaped_target = NULL;
-      svn_xml_escape_cdata_cstring(&escaped_target, target, pool);
-
-      s = apr_psprintf(pool,
-                       "<S:update-target>%s</S:update-target>" DEBUG_CR,
-                       escaped_target->data);
+      xml_s = NULL;
+      svn_xml_escape_cdata_cstring(&xml_s, target, pool);
+      s = apr_psprintf(pool, "<S:update-target>%s</S:update-target>" DEBUG_CR,
+                       xml_s->data);
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }
 
@@ -2969,11 +2970,10 @@ make_reporter (svn_ra_session_t *session,
      identical paths. */
   if (dst_path)
     {
-      svn_stringbuf_t *dst_path_str = NULL;
-      svn_xml_escape_cdata_cstring (&dst_path_str, dst_path, pool);
-
+      xml_s = NULL;
+      svn_xml_escape_cdata_cstring(&xml_s, dst_path, pool);
       s = apr_psprintf(pool, "<S:dst-path>%s</S:dst-path>" DEBUG_CR,
-                       dst_path_str->data);
+                       xml_s->data);
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }
 
