@@ -12,9 +12,14 @@ Usage: python win-tests.py [option] [test-path]
                            default is '-d,-r,<test-path-root>'
 """
 
-import os, sys, string, shutil, traceback
-import getopt
+import os, sys, shutil, traceback
 import ConfigParser
+
+import getopt
+try:
+    my_getopt = getopt.gnu_getopt
+except AttributeError:
+    my_getopt = getopt.getopt
 
 sys.path.insert(0, os.path.join('build', 'generator'))
 sys.path.insert(1, 'build')
@@ -27,50 +32,47 @@ all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
 client_tests = filter(lambda x: x.startswith('subversion/tests/clients/'),
                       all_tests)
 
-opts, args = getopt.getopt(sys.argv[1:], 'rdvcu:f:sS:',
-                           ['release', 'debug', 'verbose', 'cleanup', 'url=',
-                            'svnserve-args=', 'fs-type='])
+opts, args = my_getopt(sys.argv[1:], 'rdvcu:f:',
+                       ['release', 'debug', 'verbose', 'cleanup', 'url=',
+                        'svnserve-args=', 'fs-type='])
 if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
 # Interpret the options and set parameters
+base_url, fs_type, verbose, cleanup = None, None, None, None
 repo_loc = 'local repository.'
-base_url = None
-verbose = 0
-cleanup = None
 objdir = 'Debug'
 log = 'tests.log'
 run_svnserve = None
 svnserve_args = None
-fs_type = None
 
-for opt,arg in opts:
-  if opt in ['-r', '--release']:
-    objdir = 'Release'
-  elif opt in ['-d', '--debug']:
-    objdir = 'Debug'
-  elif opt in ['-v', '--verbose']:
-    verbose = 1
-  elif opt in ['-c', '--cleanup']:
-    cleanup = 1
-  elif opt in ['-u', '--url']:
+for opt, val in opts:
+  if opt in ('-u', '--url'):
     all_tests = client_tests
-    repo_loc = 'remote repository ' + arg + '.'
-    base_url = arg
-    if arg[:4] == 'http':
+    repo_loc = 'remote repository ' + val + '.'
+    base_url = val
+    if val[:4] == 'http':
       log = 'dav-tests.log'
-    elif arg[:3] == 'svn':
+    elif val[:3] == 'svn':
       log = 'svn-tests.log'
       run_svnserve = 1
     else:
       # Don't know this scheme, but who're we to judge whether it's
       # correct or not?
       log = 'url-tests.log'
+  elif opt in ('-f', '--fs-type'):
+    fs_type = val
+  elif opt in ('-v', '--verbose'):
+    verbose = 1
+  elif opt in ('-c', '--cleanup'):
+    cleanup = 1
+  elif opt in ['-r', '--release']:
+    objdir = 'Release'
+  elif opt in ['-d', '--debug']:
+    objdir = 'Debug'
   elif opt == '--svnserve-args':
-    svnserve_args = string.split(arg, ',')
+    svnserve_args = val.split(',')
     run_svnserve = 1
-  elif opt in ['-f', '--fs-type']:
-    fs_type = arg
 
 
 # Calculate the source and test directory names
@@ -94,8 +96,8 @@ def create_target_dir(dirname):
         print "mkdir:", tgt_dir
       os.makedirs(tgt_dir)
 
-def copy_execs(dummy, dirname, names):
-  global copied_execs
+def copy_execs(baton, dirname, names):
+  copied_execs = baton
   for name in names:
     if os.path.splitext(name)[1] != ".exe":
       continue
@@ -161,7 +163,8 @@ if create_dirs:
   old_cwd = os.getcwd()
   try:
     os.chdir(abs_objdir)
-    os.path.walk('subversion', copy_execs, None)
+    baton = copied_execs
+    os.path.walk('subversion', copy_execs, baton)
     create_target_dir('subversion/tests/clients/cmdline')
   except:
     os.chdir(old_cwd)
@@ -203,8 +206,5 @@ for tgt in copied_execs:
     pass
 
 
-# Print final status
 if failed:
-  print
-  print 'FAIL:', sys.argv[0]
   sys.exit(1)
