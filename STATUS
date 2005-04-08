@@ -72,5 +72,12 @@ Candidate changes:
     Votes:
       +1: lundblad
 
+  * r14057
+    Fix a crash in ra_dav when a NULL lock comment is passed to svn_ra_lock.
+    Justification:
+      Crashes are bad.
+    Votes:
+      +1: lundblad
+
 Approved changes (further review is welcome, but not required):
 
