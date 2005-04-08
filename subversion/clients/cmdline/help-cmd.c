@@ -33,15 +33,14 @@
 
 /*** Code. ***/
 
-/* Print help or version information. If PRINT_VERSION, print version
-   info rather than help. Be less verbose if QUIET. OS is the
-   command-line options context, do any allocations from POOL. */
-static svn_error_t *
-print_help (apr_getopt_t *os,
-            svn_boolean_t print_version,
-            svn_boolean_t quiet,
-            apr_pool_t *pool)
+/* This implements the `svn_opt_subcommand_t' interface. */
+svn_error_t *
+svn_cl__help (apr_getopt_t *os,
+              void *baton,
+              apr_pool_t *pool)
 {
+  svn_cl__opt_state_t *opt_state;
+
   /* xgettext: the %s is for SVN_VER_NUMBER. */
   char help_header_template[] =
   N_("usage: svn <subcommand> [options] [args]\n"
@@ -69,6 +68,11 @@ print_help (apr_getopt_t *os,
 
   svn_stringbuf_t *version_footer;
 
+  if (baton)
+    opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  else
+    opt_state = NULL;
+
   version_footer = svn_stringbuf_create (ra_desc_start, pool);
   SVN_ERR (svn_ra_print_modules (version_footer, pool));
   svn_stringbuf_appendcstr (version_footer, "\n");
@@ -77,49 +81,12 @@ print_help (apr_getopt_t *os,
 
   return svn_opt_print_help (os,
                              "svn",   /* ### erm, derive somehow? */
-                             print_version,
-                             quiet,
+                             opt_state ? opt_state->version : FALSE,
+                             opt_state ? opt_state->quiet : FALSE,
                              version_footer->data,
                              help_header,   /* already gettext()'d */
                              svn_cl__cmd_table,
                              svn_cl__options,
                              gettext (help_footer),
                              pool);
-}
-
-/* This implements the `svn_opt_subcommand_t' interface. */
-svn_error_t *
-svn_cl__help (apr_getopt_t *os,
-              void *baton,
-              apr_pool_t *pool)
-{
-  svn_cl__opt_state_t *opt_state;
-
-  if (baton)
-    opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
-  else
-    opt_state = NULL;
-
-  return print_help (os,
-                     opt_state ? opt_state->version : FALSE,
-                     opt_state ? opt_state->quiet : FALSE,
-                     pool);
-}
-
-/* This implements the `svn_opt_subcommand_t' interface. */
-svn_error_t *
-svn_cl__version (apr_getopt_t *os,
-                 void *baton,
-                 apr_pool_t *pool)
-{
-  svn_boolean_t quiet = FALSE;
-
-  if (baton)
-    {
-      const svn_cl__opt_state_t *const opt_state =
-        ((svn_cl__cmd_baton_t *) baton)->opt_state;
-      quiet = opt_state->quiet;
-    }
-
-  return print_help (os, TRUE, quiet, pool);
 }

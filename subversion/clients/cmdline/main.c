@@ -732,10 +732,6 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {'r', 'N', 'q', svn_cl__merge_cmd_opt, SVN_CL__AUTH_OPTIONS, 
      svn_cl__config_dir_opt, svn_cl__ignore_externals_opt} },
 
-  { "version", svn_cl__version, {"ver"},
-    N_("Print client version info\n"),
-    {'q', svn_cl__config_dir_opt} },
-
   { NULL, NULL, {0}, NULL, {0} }
 };
 

@@ -155,7 +155,6 @@ typedef struct
 svn_opt_subcommand_t
   svn_cl__add,
   svn_cl__blame,
-  svn_cl__cat,
   svn_cl__checkout,
   svn_cl__cleanup,
   svn_cl__commit,
@@ -183,7 +182,7 @@ svn_opt_subcommand_t
   svn_cl__switch,
   svn_cl__unlock,
   svn_cl__update,
-  svn_cl__version;
+  svn_cl__cat;
 
 
 /* See definition in main.c for documentation. */
