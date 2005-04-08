@@ -125,17 +125,17 @@ new features and fixes many smaller bugs.</p>
     and directories.</p>
 
 
-<h4>Commandline auto-escaping of URI and IRIs (<em>new client
+<h4>Command line auto-escaping of URI and IRIs (<em>new client
 feature</em>)</h4>
 
-<p>In the 1.0 commandline client, users had to escape URLs manually.
+<p>In the 1.0 command line client, users had to escape URLs manually.
     The client only accepted "legally correct" URLs, such as</p>
 <pre>
   svn checkout http://host/path%20with%20space/project/espa%C3%B1a
 </pre>
-<p>The 1.1 commandline client now knows how to do what web-browsers
+<p>The 1.1 command line client now knows how to do what web-browsers
     have been doing for long time: it auto-escapes characters like
-    spaces and other upper-ascii i18n characters.</p>
+    spaces and other upper-ASCII i18n characters.</p>
 <pre>
   svn checkout "http://host/path with space/project/espa&ntilde;a"
 </pre>
@@ -242,7 +242,7 @@ href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
 <p>A number of new 1.1 functions have been introduced, with the "2"
 suffix, and the older versions are now marked deprecated (and will be
 removed in Subversion 2.0).  For example, a new svn_wc_diff2()
-function has superceded svn_wc_diff().  See the <a
+function has superseded svn_wc_diff().  See the <a
 href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
 for details.</p>
 

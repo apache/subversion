@@ -184,7 +184,7 @@ href="http://greenbytes.de/tech/webdav/#draft-ietf-webdav-rfc2518bis">RFC2518bis
 specification.</p>
 
 <p>In informal tests, we've had success reading and writing to
-Subversion repositories via Windows Webfolders, OS X Finder, Gnome
+Subversion repositories via Windows Web Folders, OS X Finder, Gnome
 Nautilus, KDE Konqueror, and other DAV clients.</p>
 
 <p>To activate autoversioning, simply set <tt>SVNAutoversioning
@@ -220,7 +220,7 @@ checkout</tt>, <tt>svn update</tt>, <tt>svn diff</tt>, <tt>svn
 merge</tt>, and so on.  Even dumping the repository will be
 faster.</p>
 
-<p><strong>Note:</strong> There's a small tradeoff between speed and
+<p><strong>Note:</strong> There's a small trade off between speed and
 disk space.  If you choose to re-deltify your whole repository using
 xdelta, its size will grow by roughly 10 to 15 percent.</p>
 
@@ -232,12 +232,12 @@ release, we've changed the <tt>svnadmin create</tt> command to
 create FSFS repositories by default.  Everyone agrees that this will
 provide a much friendlier "out of box" experience for new users.</p>
 
-<p><strong>Please note</strong>: BerkeleyDB repositories are
+<p><strong>Please note</strong>: Berkeley DB repositories are
 <strong>not</strong> being phased out or deprecated in any way.  The
-reliability problems we've seen lie not in BerkeleyDB itself, but in
-the unique way Subversion uses BerkeleyDB.  Cooperative work is
+reliability problems we've seen lie not in Berkeley DB itself, but in
+the unique way Subversion uses Berkeley DB.  Cooperative work is
 currently underway (with Sleepycat engineers) to address these issues.
-BerkeleyDB repositories are still older and better-tested than FSFS
+Berkeley DB repositories are still older and better-tested than FSFS
 repositories in terms of scalability; the project still recommends you
 <a
 href="http://svnbook.red-bean.com/en/1.1/ch05.html#svn-ch-5-sect-1.3">read
@@ -258,7 +258,7 @@ Cryptography services to encrypt and decrypt the password. Among other
 things, this means that the encryption key is managed by Windows and
 can only be accessed by the user account that owns it. If an
 administrator forcibly resets the account password, the encryption key
-(and consequently the cached passwords) will no longer be accesible
+(and consequently the cached passwords) will no longer be accessible
 (by the way, the same holds for the contents of NTFS-encrypted
 files). The Subversion client will detect this and proceed as if the
 password were not known; that is, it will prompt the user for the
@@ -331,9 +331,8 @@ href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
 for details.  The full list of new 1.2 APIs is <a
 href="http://svn.haxx.se/dev/archive-2005-04/0319.shtml">here</a>.</p>
 
-<p>There has been extensive work on the python, perl, and java
-bindings.  We also now have a preliminary set of ruby bindings.  -->
-Yada yada, give details.</p>
+<p>There has been extensive work on the Python, Perl, and JavaHL
+bindings.  We also now have a preliminary set of Ruby bindings.</p>
 
 <h3>Testimonials and Roadmap</h3>
 
