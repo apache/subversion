@@ -1583,6 +1583,48 @@ def nested_in_read_only(sbox):
   finally:
     os.chmod(os.path.join(wc_dir, 'A', svntest.main.get_admin_name()), 0777)
 
+#----------------------------------------------------------------------
+
+def update_xml_unsafe_dir(sbox):
+  "update dir with xml-unsafe name"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  # Make a couple of local mods to files
+  test_path = os.path.join(wc_dir, 'foo & bar')
+  svntest.main.run_svn(None, 'mkdir', test_path)  
+
+  # Created expected output tree for 'svn ci'
+  expected_output = wc.State(wc_dir, {
+    'foo & bar' : Item(verb='Adding'),
+    })
+
+  # Create expected status tree; all local revisions should be at 1,
+  # but 'foo & bar' should be at revision 2.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'foo & bar' : Item(status='  ', wc_rev=2),
+    })
+
+  # Commit.
+  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                         expected_status, None,
+                                         None, None, None, None, wc_dir)
+
+  # chdir into the funky path, and update from there.
+  was_cwd = os.getcwd()
+  os.chdir(test_path)
+  try:
+    svntest.actions.run_and_verify_svn("Update failed", None, [], 'up')
+  finally:
+    os.chdir(was_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -1614,6 +1656,7 @@ test_list = [ None,
               update_to_future_add,
               nested_in_read_only,
               obstructed_update_alters_wc_props,
+              update_xml_unsafe_dir,
              ]
 
 if __name__ == '__main__':
