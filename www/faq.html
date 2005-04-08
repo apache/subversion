@@ -1510,16 +1510,14 @@ out how to modify their <tt>PATH</tt> so that they can run <tt>svnserve</tt>.</a
         beginning of the line before the word <tt>ssh-rsa</tt> or
         <tt>ssh-dss</tt>, like this:</p>
 
-      <table>
+      <table border="1" cellspacing="2" cellpadding="2">
         <tr><th>before</th></tr>
-        <tr><td><pre>
-ssh-dss AAAAB3Nblahblahblahblah
-      </pre></td></tr>
+        <tr><td><tt>ssh-dss&nbsp;AAAAB3Nblahblahblahblah</tt></td></tr>
         <tr><th>after</th></tr>
-        <tr><td><pre>
-command="/opt/subversion/bin/svnserve -t" ssh-dss AAAAB3Nblahblahblahblah
-      </pre></td></tr>
-</table>
+        <tr><td><tt>
+        command="/opt/subversion/bin/svnserve&nbsp;-t"&nbsp;ssh-dss&nbsp;AAAAB3Nblahblahblahblah
+        </tt></td></tr>
+      </table>
 
       <p>Obviously, replace <tt>/opt/subversion/bin/svnserve</tt> with
       whatever is appropriate for your system.  You also might want to
@@ -1534,12 +1532,11 @@ command="/opt/subversion/bin/svnserve -t" ssh-dss AAAAB3Nblahblahblahblah
       <p>Now when your users run the subversion client, make sure they
       have an <tt>SVN_SSH</tt> environment variable that "points to"
       the private half of their keypair, by doing something like this
-      (for the Bourne Again shell):
+      (for the Bourne Again shell):</p>
 <pre>
 SVN_SSH="ssh -i $HOME/.ssh/id_dsa.subversion"
 export SVN_SSH
 </pre>
-      </p>
       
       
 
@@ -1609,7 +1606,7 @@ the file as a BDB logfile.  The second number is the log format version
 - match it to a BDB program version
 using the table below:</p>
 
-<table>
+<table border="1" cellspacing="2" cellpadding="2">
   <tr><th>Log format version</th><th>BDB program version</th></tr>
   <tr><td>5 (0x00000005)</td><td>4.0</td></tr>
   <tr><td>7 (0x00000007)</td><td>4.1</td></tr>
@@ -1780,9 +1777,9 @@ for the lockfile to disappear.  To awaken your repository, you need to
 ask Berkeley DB to either finish the work, or rewind the database to a
 previous state that is known to be consistent.</p>
 
-<p><b><font color="red">WARNING:</font> you can seriously corrupt your
-repository if you run recover and another process accesses the repository.
-</b></p>
+<p><b><span style="color: red">WARNING:</span> you can seriously corrupt
+your repository if you run recover and another process accesses the
+repository.</b></p>
 
 <p>Make absolutely sure you disable all access to the repository before
 doing this (by shutting down Apache, removing executable permissions from
@@ -2473,29 +2470,29 @@ dependencies.</p>
 <a name="hook-environment"></a> <!-- for yet more compatibility with old question -->
 <h3><a name="hook-debugging" title="#hook-debugging"
     >Why aren't my repository hooks working?</a></h3>
-          <ul>
-            <li>
-    They're supposed to invoke external programs, but the invocations
-    never seem to happen.
+
+<p>They're supposed to invoke external programs, but the invocations
+never seem to happen.</p>
 
 <p>Before Subversion calls a hook script, it removes <em>all</em>
             variables -- including $PATH on Unix, and %PATH% on Windows
             -- from the environment.  Therefore, your script can only
             run another program if you
 spell out that program's absolute name.</p>
-</li>
-      <li>Debugging tips</li>
+
+<p><b>Debugging tips:</b></p>
 <p>
 If you're using Linux or Unix, try running the script "by hand", by
-          following these steps:
+following these steps:</p>
           <ol>
-            <li>Use "su", "sudo", or something similar, to become the user who normally
-              would run the script.  This might be <tt>httpd</tt> or
+            <li>Use "su", "sudo", or something similar, to become the user who
+              normally would run the script.  This might be <tt>httpd</tt> or
               <tt>www-data</tt>, for example, if you're using Apache;
               it might be a user like <tt>svn</tt> if you're running
-              svnserve and a special Subversion user exists.</li>  This
+              svnserve and a special Subversion user exists.  This
               will make clear any permissions problems that the script
               might have.
+            </li>
             <li>
               Invoke the script with an empty environment by using the
               the "env" program.  Here's an
@@ -2510,8 +2507,6 @@ If you're using Linux or Unix, try running the script "by hand", by
               Check your console for errors.
             </li>
           </ol>
-</p>
-</ul>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -2592,7 +2587,7 @@ contact the Subversion Users <a
   <li>Ensure that no other processes will attempt to access your
   repository.</li>
   <li>Now, <b>back up your repository</b> to a tar or zip file or
-  similar.
+  similar.</li>
   <li>Change to the <tt>db</tt> subdirectory of your repository.</li>
   <li><tt>rm __db.* log.*</tt></li>
   <li><tt>db_dump -p -r copies &gt; copies.dump</tt></li>
@@ -2630,7 +2625,7 @@ on all platforms, but works on Linux.
 <p>Assume you run '<tt>svn&nbsp;checkout</tt>' on a repository and
 receive a working copy at revision 7 (aka, r7) with one file in it
 called <tt>foo.c</tt>.  You modify the file and commit it
-successfully.  Two things happen:
+successfully.  Two things happen:</p>
 
 <ul>
 <li>The repository moves to r8 on the server.</li>
@@ -2638,7 +2633,7 @@ successfully.  Two things happen:
     The rest of your working copy remains at r7.</li>
 </ul>
 
-You now have what is known as a <i>mixed revision working copy</i>.
+<p>You now have what is known as a <i>mixed revision working copy</i>.
 One file is at r8, but all other files remain at r7 until they too are
 committed, or until '<tt>svn&nbsp;update</tt>' is run.</p>
 
@@ -2652,7 +2647,7 @@ arguments, it prints the log information for the current directory
 (named '<tt>.</tt>' in the above listing).  Since the directory itself
 is still at r7, you do not see the log information for r8.</p>
 
-<p>To see the latest logs, do one of the following:
+<p>To see the latest logs, do one of the following:</p>
 
 <ol>
 <li>Run '<tt>svn&nbsp;log&nbsp;-rHEAD</tt>'.</li>
