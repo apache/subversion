@@ -1,3 +1,5 @@
+<!DOCTYPE html PUBLIC "-//Tigris//DTD XHTML 1.0 Transitional//EN" 
+"http://style.tigris.org/tigris_transitional.dtd">
 <html>
 <head>
 <title>Subversion 1.1 Release Notes</title>
@@ -14,10 +16,10 @@
 <body>
 <div class="app">
 
-<center>
+<div align="center">
 <h1>Subversion 1.1 Release Notes</h1>
 <h2>(and State of the Project)</h2>
-</center>
+</div>
 
 <p>The <a href="http://svnbook.red-bean.com">Subversion book site</a>
 has now been forked, and a separate <a
@@ -67,8 +69,6 @@ new features and fixes many smaller bugs.</p>
 <h3>New Major Features</h3>
 
 <h4>Non-database repositories  (<em>new server feature</em>)</h4>
-
-<p>
 
 <p>It's now possible to create repositories that don't use a
    BerkeleyDB database.  Instead, these new repositories store data in
@@ -165,47 +165,32 @@ feature</em>)</h4>
 
 <h3>Other Improvements</h3>
 
-<dl>
+<h4>Speed optimizations: (<em>requires both new client and server</em>)</h4>
+<p>Faster <tt>checkout</tt>, <tt>update</tt>, <tt>status</tt>, and
+      <tt>blame</tt> commands.</p>
 
-<dt><h4>Speed optimizations: (<em>requires both new client and
-server</em>)</h4></dt>
-<dd>Faster <tt>checkout</tt>, <tt>update</tt>, <tt>status</tt>, and
-      <tt>blame</tt> commands.</dd>
+<h4>Shareable working copies:  (<em>client fix</em>)</h4>
 
-<p>
-
-<dt><h4>Shareable working copies:  (<em>client fix</em>)</h4></dt>
-
-<dd>There have been historical problems with permissions when multiple
+<p>There have been historical problems with permissions when multiple
 users share a working copy.  We believe these problems to be fixed
 now, see <a
 href="http://subversion.tigris.org/issues/show_bug.cgi?id=1509">issue
-#1509</a>.</dd>
+#1509</a>.</p>
 
-<p>
+<h4>New 'store-passwords' runtime variable:  (<em>new client feature</em>)</h4>
 
-
-<dt><h4>New 'store-passwords' runtime variable:  (<em>new client feature</em>)</h4></dt>
-
-<dd>The previous <tt>store-auth-creds</tt> runtime variable still
+<p>The previous <tt>store-auth-creds</tt> runtime variable still
 works, but many users were unhappy with it.  It disables <b>all</b>
 credentials caching on local disk: passwords, usernames, server certs.
 This new runtime variable only disables password caching, so that
-server certificates can still be remembered.</dd>
+server certificates can still be remembered.</p>
 
-<p>
-
-
-
-<dt><h4>Bugfixes:</h4></dt>
-<dd>More than 40 "small" bugs fixed.  See the <a
+<h4>Bugfixes:</h4>
+<p>More than 40 "small" bugs fixed.  See the <a
 href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
-      for details.</dd>
+      for details.</p>
 
-<p>
-
-<dt><h4>New subcommand switches:</h4></dt>
-<dd>
+<h4>New subcommand switches:</h4>
    <dl>
       <dt><tt>svn blame --verbose</tt></dt>
       <dd>show extra annotation information</dd>
@@ -250,8 +235,6 @@ href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
       <dd>display version of program.</dd>
 
    </dl>
-</dl>
-
 
 
 <h3>Developer Changes</h3>
@@ -276,7 +259,9 @@ looks like.</p>
 
 <p>If you're looking for testimonials on Subversion, see our new <a
 href="http://subversion.tigris.org/testimonials.html">testimonials
-page</a>.</p> And as usual, you can find links to other
+page</a>.</p>
+
+<p>As usual, you can find links to other
 Subversion-related sites, projects, and essays on our <a
 href="http://subversion.tigris.org/project_links.html">links
 page</a>.</p>

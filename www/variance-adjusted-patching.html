@@ -1,3 +1,5 @@
+<!DOCTYPE html PUBLIC "-//Tigris//DTD XHTML 1.0 Transitional//EN" 
+"http://style.tigris.org/tigris_transitional.dtd">
 <html>
 <head>
 <title>Variance-Adjusted Patching for Divergent Texts</title> 
@@ -17,11 +19,11 @@
 <h2>Variance-Adjusted Patching for Divergent Texts</h2>
 <p>Karl&nbsp;Fogel&nbsp;<tt>&lt;kfogel@collab.net&gt;</tt></p>
 
-<p>$LastChangedDate$<br>
-Original Date: 22 May, 2001<br>
+<p>$LastChangedDate$<br />
+Original Date: 22 May, 2001<br />
 Canonical URL: <a href="http://svn.collab.net/repos/svn/trunk/www/variance-adjusted-patching.html">http://svn.collab.net/repos/svn/trunk/www/variance-adjusted-patching.html</a></p>
 
-<hr>  <!-- ====================================================== -->
+<hr />  <!-- ====================================================== -->
 
 <p>
 Version control systems that use traditional context diff / unidiff
@@ -69,18 +71,16 @@ ignoring floating due to out-of-bounds insertion and deletion:
 </p>
 
    <ol type="a">
-      <li><b>The line exists unchanged in both source and target</b>
-      <br>
-      If the line is still present in target and source, that means it
+      <li><p><b>The line exists unchanged in both source and target</b></p>
+      <p>If the line is still present in target and source, that means it
       has not been removed from either since the common ancestor, or
       if it was removed, it has been restored.  Nothing need be done
-      to the diff.
+      to the diff.</p>
       </li>
-      <li><b>The line has been changed in source but not in target</b>
-      <br>
-      In the diff hunk, the line should be changed to reflect the
+      <li><p><b>The line has been changed in source but not in target</b></p>
+      <p>In the diff hunk, the line should be changed to reflect the
       target's version of the line, so that the diff will be
-      applicable to the target.
+      applicable to the target.</p>
       <p>
       <i>When we say that the line "has been changed", it just means
       that a different line appears where this line once appeared.
@@ -90,33 +90,29 @@ ignoring floating due to out-of-bounds insertion and deletion:
       of the line still appears somewhere nearby in target.)  The
       important thing is that new text appears where the hunk is
       expecting old text, and that we have a way to change the hunk to
-      expect the new text instead.</i>
+      expect the new text instead.</i></p>
       </li>
-      <li><b>The line has been changed in target but not in source</b>
-      <br>
-      Same as above: in the diff hunk, the line should be changed to
+      <li><p><b>The line has been changed in target but not in source</b></p>
+      <p>Same as above: in the diff hunk, the line should be changed to
       reflect the target's version of the line, so that the diff will
       be applicable to the target.  If this seems counterintuitive,
-      drink the Kool-Aid and read again.
+      drink the Kool-Aid and read again.</p>
       </li>
-      <li><b>The line does not exist in target</b>
-      <br>
-      This could be for one of two reasons:
-      <br>
+      <li><p><b>The line does not exist in target</b></p>
+      <p>This could be for one of two reasons:</p>
            <ol>
            <li>the line is new in source, having been added after
                target branched, or</li>
            <li>the line was removed from target after the branch
                happened</li>
            </ol>
-      <br>
-      Either way, the line needs to be changed to the "corresponding"
+      <p>Either way, the line needs to be changed to the "corresponding"
       line in the target text -- that is, the line that, in target,
       now occupies the place of the obsolete expected line.  The
       version control system has enough information to determine 
       which of the two cases above applies, and can use that to
       decide which of the lines currently in target is the best
-      candidate to substitute for the missing line.
+      candidate to substitute for the missing line.</p>
       </li>
    </ol>
 
@@ -160,21 +156,17 @@ should be obvious where to attach the selectivity knobs if desired.
 Some terminology:
 </p>
 
-<p>
    <dl>
-      <dt><i>insertion</i></dt><br>
+      <dt><i>insertion</i></dt>
       <dd>A new line, one that has been added in either source or
       target since the common ancestor.</dd>
-      <p>
-      <dt><i>deletion</i></dt><br>
+      <dt><i>deletion</i></dt>
       <dd>A line that has been deleted from either source or target
       since the common ancestor.</dd>
-      <p>
-      <dt><i>edit</i></dt><br>
+      <dt><i>edit</i></dt>
       <dd>A line that has been changed in either source or target
       since the common ancestor.</dd>
-      <p>
-      <dt><i>out-range</i></dt><br>
+      <dt><i>out-range</i></dt>
       <dd>An event that happened to either source or target since the
       common ancestor, but to a line that is not covered in any of 
       the diff hunks in the patch undergoing variance adjustment.  For
@@ -182,28 +174,23 @@ Some terminology:
       some region not directly touched by any of the hunks in the
       patch; an <i>out-range deletion</i> means a line was deleted
       from some region not in any hunk.</dd>
-      <p>
-      <dt><i>in-range</i></dt><br>
+      <dt><i>in-range</i></dt>
       <dd>An event that happened to either source or target since the
       common ancestor, to a line covered in one of the diff hunks in
       the patch undergoing variance adjustment.  For example, an
       <i>in-range insertion</i> means a line was added in a region
       affected by one of the hunks; an <i>in-range deletion</i> means
       a line that was deleted from some region affected by a hunk.</dd>
-      <p>
-      <dt><i>context</i></dt><br>
+      <dt><i>context</i></dt>
       <dd>A line included in a hunk for context only -- such lines are
       not affected by the patch.</dd> 
-      <p>
-      <dt><i>destination line, affected line</i></dt><br>
+      <dt><i>destination line, affected line</i></dt>
       <dd>(Used interchangeably).  A line that is actually affected by
       a patch.  For lines being edited or deleted, the line is already
       present in the target text; for lines being added, the line will
       only be present after the patch is applied.  In all cases it is
       present in a hunk in the patch.</dd>
-      <p>
    </dl>
-</p>
 
 <p>
 Description of the scenario:
@@ -229,17 +216,15 @@ algorithm holds for every file involved in the merge.)
 <p>
 There are two problems that prevent the direct application of the
 unadjusted P to B:15.  P, being based on source text T:19,
+</p>
 
    <ol>
    <li>contains certain changes not present in B:15, namely, changes T:9
    through T:19.
    </li> 
-   <p>
    <li>does not contain certain changes present in B:15, namely,
    changes B:2 through B:15.</li>
-   <p>
    </ol>
-</p>
 
 <p>
 To adjust P, we first walk over the diff T:8-T:19, adjusting hunks as
@@ -251,26 +236,22 @@ categories:
    <li><i>Out-range added line</i>: decrement the line numbers in
        every hunk in P that comes after the addition.  This undoes the
        effect of the add, since the add never happened in B.</li>
-   <p>
    <li><i>Out-range deleted line</i>: increment the line numbers in
        every hunk in P that comes after the deletion.  This undoes the
        effect of the deletion, since the deletion never happened in
        B.</li> 
-   <p>
    <li><i>Out-range edited line</i>: do nothing.  Out-range edits
        are irrelevant to P.</li> 
-   <p>
    <li><i>Added line in context range in P</i>: remove the
        corresponding line from the context, optionally replacing it
        with new context <i>based on that region in B:15</i>, and
        adjust line numbers and mappings appropriately.</li>
-   <p>
    <li><i>Added line in affected text range in P</i>: this is a
        dependency problem -- part of the change T:18-T:19 depends on
        changes introduced to T after B branched.  There are several
        possible behaviors, depending on what the user wants.  One is
        to generate an informative error, stating that T:18-T:19
-       depends on some other change (T:N-T:M, where N>=8, M<=18, and
+       depends on some other change (T:N-T:M, where N&gt;=8, M&lt;=18, and
        M-N&nbsp;==&nbsp;1); the exact revisions can be discovered
        automatically using the same process as "cvs annotate", though
        it may take some time to do so.  Another option is to include
@@ -281,17 +262,13 @@ categories:
        is to include it as an insertion, but with metadata (such as
        CVS-style conflict markers) indicating that the line attempting
        to be patched does not exist in B.</li>
-   <p>
    <li><i>Deleted line that is in-range in P</i>: request another
        universe -- this situation can't happen in ours.</li>
-   <p>
    <li><i>In-range edited line</i>: reverse that edit in the "before"
        version of the corresponding line in the appropriate hunk in
        P, to obtain the version of the line that will be found in
        B when P is applied.</li> 
-   <p>
    </ol>
-</p>
 
 <p>
 Now walk over the diff B:1-B:15, further adjusting P:
@@ -300,28 +277,21 @@ Now walk over the diff B:1-B:15, further adjusting P:
    <ol>
    <li><i>Out-range added line</i>: increment the line numbers in
        every hunk in P that comes after the addition.</li>
-   <p>
    <li><i>Out-range deleted line</i>: decrement the line numbers in
        every hunk in P that comes after the deletion.</li>
-   <p>
    <li><i>Out-range edited line</i>: do nothing.  Out-range edits
        are irrelevant to P.</li> 
-   <p>
    <li><i>Added line in context range in P</i>: add that line to both
        sides of the context in the appropriate hunk, adjust line
        numbers in that hunk and all following hunks.</li>
-   <p>
    <li><i>Added line in affected text range in P</i>: add that line to
        the context in P and adjust numbers appropriately.</li>
-   <p>
    <li><i>Deleted line in-range in P</i>: dependency problem; see
        "<i>Added line in affected text range in P</i>" in the first
        pass above.</li>
-   <p>
    <li><i>In-range edited line</i>: apply that edit to the "before"
        version of the corresponding line in the appropriate hunk in
        P.</li> 
-   <p>
    </ol>
 
 <p>
@@ -356,8 +326,6 @@ Here's a simple case, arising from an attempt to port an individual
 change from trunk to branch.  On trunk T, revision 1 looks like this:
 </p>
 
-<ul>
-<example>
 <pre>
 int main (int argc, char **argv)
 {
@@ -374,8 +342,6 @@ int main (int argc, char **argv)
   /* line plus-five of context */
 }
 </pre>
-</example>
-</ul>
 
 <p>
 A branch B also exists, rooted in the trunk at revision T:1.  On
@@ -383,8 +349,6 @@ branch B, we commit a change to the context (we replace the words with
 numbers), so that B:2 looks like this:
 </p>
 
-<ul>
-<example>
 <pre>
 int main (int argc, char **argv)
 {
@@ -401,16 +365,12 @@ int main (int argc, char **argv)
   /* line +5 of context */
 }
 </pre>
-</example>
-</ul>
 
 <p>
 Meanwhile on the trunk, we change only the middle line, so that T:2 is
 committed as:
 </p>
 
-<ul>
-<example>
 <pre>
 int main (int argc, char **argv)
 {
@@ -427,8 +387,6 @@ int main (int argc, char **argv)
   /* line plus-five of context */
 }
 </pre>
-</example>
-</ul>
 
 <p>
 Using a traditional context-based approach, an attempt to patch B:2
@@ -437,8 +395,6 @@ vanilla `<tt>patch</tt>' was used, or with conflict markers if
 `<tt>rcsmerge</tt>' was used:
 </p>
 
-<ul>
-<example>
 <pre>
 $ cvs up -j 1.1 -j 1.2 foo.c
 ### Purists will note that -j HEAD would have been sufficient; however, ###
@@ -478,8 +434,6 @@ int main (int argc, char **argv)
 &gt;&gt;&gt;&gt;&gt;&gt;&gt; 1.2
 }
 </pre>
-</example>
-</ul>
 
 <p>
 Because the context has changed, the change to the middle line cannot
@@ -487,8 +441,6 @@ be found.  If we adjust the patch T:1-&gt;T:2, it would look like
 this:
 </p>
 
-<ul>
-<example>
 <pre>
 *** foo.c	2001/05/18 08:15:28	1.1
 --- foo.c	2001/05/18 08:20:59	1.2
@@ -510,8 +462,6 @@ this:
     /* line +2 of context */
     /* line +3 of context */
 </pre>
-</example>
-</ul>
 
 <p>
 and would now apply perfectly to B:2, even though this diff never
@@ -523,8 +473,6 @@ Let's try a slightly more complex case, starting with the same T:1 and
 B:1:
 </p>
 
-<ul>
-<example>
 <pre>
 int main (int argc, char **argv)
 {
@@ -541,15 +489,11 @@ int main (int argc, char **argv)
   /* line plus-five of context */
 }
 </pre>
-</example>
-</ul>
 
 <p>
 T:2 has some inserted lines near the top:
 </p>
 
-<ul>
-<example>
 <pre>
 #include &lt;stdio.h&gt;
 
@@ -568,16 +512,12 @@ int main (int argc, char **argv)
   /* line plus-five of context */
 }
 </pre>
-</example>
-</ul>
 
 <p>
 And then another change was committed on the trunk, editing the middle
 line, so that T:3 looks like this:
 </p>
 
-<ul>
-<example>
 <pre>
 #include &lt;stdio.h&gt;
 
@@ -596,16 +536,12 @@ int main (int argc, char **argv)
   /* line plus-five of context */
 }
 </pre>
-</example>
-</ul>
 
 <p>
 Meanwhile, one complex change has been committed on the branch, so B:2
 looks like this:
 </p>
 
-<ul>
-<example>
 <pre>
 int main (int argc, char **argv)
 {
@@ -622,8 +558,6 @@ int main (int argc, char **argv)
   /* line plus-five of context */
 }
 </pre>
-</example>
-</ul>
 
 <p>
 Line minus-two of context was removed, line minus-one was changed to
@@ -632,8 +566,6 @@ branch developer wants to merge in the change T:2-T:3.  Unadjusted,
 the patch looks like this:
 </p>
 
-<ul>
-<example>
 <pre>
 Index: foo.c
 ===================================================================
@@ -661,15 +593,11 @@ diff -c -r1.2 -r1.3
     /* line plus-two of context */
     /* line plus-three of context */
 </pre>
-</example>
-</ul>
 
 <p>
 Following the adjustment algorithm, it looks like this:
 </p>
 
-<ul>
-<example>
 <pre>
 Index: foo.c
 ===================================================================
@@ -697,8 +625,6 @@ diff -c -r1.2 -r1.3
     /* line plus-one of context */
     /* line plus-two of context */
 </pre>
-</example>
-</ul>
 
 <p>
 Note how the line numbers have been adjusted to compensate for the
