@@ -144,10 +144,10 @@ svn_error_t *svn_config_read (svn_config_t **cfgp,
                               svn_boolean_t must_exist,
                               apr_pool_t *pool);
 
-/** Like @c svn_config_read, but merges the configuration data from @a file 
+/** Like svn_config_read(), but merges the configuration data from @a file
  * (a file or registry path) into @a *cfg, which was previously returned
- * from @c svn_config_read.  This function invalidates all value
- * expansions in @a cfg, so that the next @c svn_option_get takes the
+ * from svn_config_read().  This function invalidates all value
+ * expansions in @a cfg, so that the next svn_config_get() takes the
  * modifications into account.
  */
 svn_error_t *svn_config_merge (svn_config_t *cfg,
@@ -162,7 +162,7 @@ svn_error_t *svn_config_merge (svn_config_t *cfg,
  * the value does not exist, expand and return @a default_value.
  *
  * The returned value will be valid at least until the next call to
- * @c svn_config_get, or for the lifetime of @a default_value. It is
+ * svn_config_get(), or for the lifetime of @a default_value. It is
  * safest to consume the returned value immediately.
  *
  * This function may change @a cfg by expanding option values.
@@ -180,7 +180,7 @@ void svn_config_set (svn_config_t *cfg,
                      const char *section, const char *option,
                      const char *value);
 
-/** Like @c svn_config_get, but for boolean values.
+/** Like svn_config_get(), but for boolean values.
  *
  * Parses the option as a boolean value. The recognized representations
  * are 'true'/'false', 'yes'/'no', 'on'/'off', '1'/'0'; case does not
@@ -190,7 +190,7 @@ svn_error_t *svn_config_get_bool (svn_config_t *cfg, svn_boolean_t *valuep,
                                   const char *section, const char *option,
                                   svn_boolean_t default_value);
 
-/** Like @c svn_config_set, but for boolean values.
+/** Like svn_config_set(), but for boolean values.
  *
  * Sets the option to 'true'/'false', depending on @a value.
  */
@@ -200,7 +200,7 @@ void svn_config_set_bool (svn_config_t *cfg,
 
 /** A callback function used in enumerating config sections.
  *
- * See @c svn_config_enumerate_sections for the details of this type.
+ * See svn_config_enumerate_sections() for the details of this type.
  */
 typedef svn_boolean_t (*svn_config_section_enumerator_t)
        (const char *name, void *baton);
@@ -209,7 +209,7 @@ typedef svn_boolean_t (*svn_config_section_enumerator_t)
  * @a callback.  Continue the enumeration if @a callback returns @c TRUE.
  * Return the number of times @a callback was called.
  *
- * ### See kff's comment to @c svn_config_enumerate.  It applies to this
+ * ### See kff's comment to svn_config_enumerate().  It applies to this
  * function, too. ###
  *
  * @a callback's @a name and @a name parameters are only valid for the
@@ -221,7 +221,7 @@ int svn_config_enumerate_sections (svn_config_t *cfg,
 
 /** A callback function used in enumerating config options.
  *
- * See @c svn_config_enumerate for the details of this type.
+ * See svn_config_enumerate() for the details of this type.
  */
 typedef svn_boolean_t (*svn_config_enumerator_t)
        (const char *name, const char *value, void *baton);
@@ -234,8 +234,8 @@ typedef svn_boolean_t (*svn_config_enumerator_t)
  * ### kff asks: A more usual interface is to continue enumerating
  *     while @a callback does not return error, and if @a callback does
  *     return error, to return the same error (or a wrapping of it)
- *     from @c svn_config_enumerate.  What's the use case for
- *     @c svn_config_enumerate?  Is it more likely to need to break out
+ *     from svn_config_enumerate().  What's the use case for
+ *     svn_config_enumerate()?  Is it more likely to need to break out
  *     of an enumeration early, with no error, than an invocation of
  *     @a callback is likely to need to return an error? ###
  *

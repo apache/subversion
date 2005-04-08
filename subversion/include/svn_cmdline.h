@@ -55,7 +55,7 @@ svn_error_t *svn_cmdline_cstring_from_utf8 (const char **dest,
                                             const char *src,
                                             apr_pool_t *pool);
 
-/** Like svn_utf_cstring_from_utf8_fuzzy, but converts to an
+/** Like svn_utf_cstring_from_utf8_fuzzy(), but converts to an
     output-encoded C string. */
 const char *svn_cmdline_cstring_from_utf8_fuzzy (const char *src,
                                                  apr_pool_t *pool);
@@ -75,7 +75,7 @@ svn_error_t *svn_cmdline_path_local_style_from_utf8 (const char **dest,
                                                      apr_pool_t *pool);
 
 /** Write to stdout, using a printf-like format string @a fmt, passed
- * through @c apr_pvsprintf.  All string arguments are in UTF-8; the output
+ * through apr_pvsprintf().  All string arguments are in UTF-8; the output
  * is converted to the output encoding.  Use @a pool for temporary
  * allocation.
  */
@@ -86,7 +86,7 @@ svn_error_t *svn_cmdline_printf (apr_pool_t *pool,
        __attribute__((format(printf, 2, 3)));
 
 /** Write to the stdio @a stream, using a printf-like format string @a fmt,
- * passed through @c apr_pvsprintf.  All string arguments are in UTF-8;
+ * passed through apr_pvsprintf().  All string arguments are in UTF-8;
  * the output is converted to the output encoding.  Use @a pool for
  * temporary allocation.
  */

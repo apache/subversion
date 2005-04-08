@@ -95,8 +95,8 @@ typedef struct svn_auth_provider_t
    * next_credentials, in case the first credentials fail to
    * authenticate.  @a provider_baton is general context for the
    * vtable, @a parameters contains any run-time data that the
-   * provider may need, and @a realmstring comes from the @c
-   * svn_auth_first_credentials call.
+   * provider may need, and @a realmstring comes from the
+   * svn_auth_first_credentials() call.
    */
   svn_error_t * (*first_credentials) (void **credentials,
                                       void **iter_baton,
@@ -114,7 +114,7 @@ typedef struct svn_auth_provider_t
    * credentials, this function pointer should simply be NULL. @a
    * provider_baton is general context for the vtable, @a parameters
    * contains any run-time data that the provider may need, and @a
-   * realmstring comes from the @c svn_auth_first_credentials call.
+   * realmstring comes from the svn_auth_first_credentials() call.
    */
   svn_error_t * (*next_credentials) (void **credentials,
                                      void *iter_baton,
@@ -132,7 +132,7 @@ typedef struct svn_auth_provider_t
    * to save; if it refuses or is unable to save for non-fatal
    * reasons, return false.  If the provider never saves data, then
    * this function pointer should simply be NULL. @a realmstring comes
-   * from the @c svn_auth_first_credentials call.
+   * from the svn_auth_first_credentials() call.
    */
   svn_error_t * (*save_credentials) (svn_boolean_t *saved,
                                      void *credentials,
@@ -145,7 +145,7 @@ typedef struct svn_auth_provider_t
 
 
 /** A provider object, ready to be put into an array and given to
-    @c svn_auth_open. */
+    svn_auth_open(). */
 typedef struct svn_auth_provider_object_t
 {
   const svn_auth_provider_t *vtable;
@@ -545,8 +545,8 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
  * Ask @a auth_baton to set @a *credentials to a set of credentials
  * defined by @a cred_kind and valid within @a realmstring, or NULL if
  * no credentials are available.  Otherwise, return an iteration state
- * in @a *state, so that the caller can call @c
- * svn_auth_next_credentials, in case the first set of credentials
+ * in @a *state, so that the caller can call
+ * svn_auth_next_credentials(), in case the first set of credentials
  * fails to authenticate.
  *
  * Use @a pool to allocate @a *state, and for temporary allocation.
@@ -563,8 +563,8 @@ svn_error_t * svn_auth_first_credentials(void **credentials,
  * authenticate.
  *
  * Use @a state to fetch a different set of @a *credentials, as a
- * follow-up to @c svn_auth_first_credentials or @c
- * svn_auth_next_credentials.  If no more credentials are available,
+ * follow-up to svn_auth_first_credentials() or
+ * svn_auth_next_credentials().  If no more credentials are available,
  * set @a *credentials to NULL.
  *
  * Note that @a *credentials will be allocated in @c auth_baton's pool.

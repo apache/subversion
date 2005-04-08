@@ -90,7 +90,7 @@ extern struct svn_test_descriptor_t test_funcs[];
 /** Return a pseudo-random number based on @a seed, and modify @a seed.
  *
  * This is a "good" pseudo-random number generator, intended to replace 
- * all those "bad" @c rand() implementations out there.
+ * all those "bad" rand() implementations out there.
  */
 apr_uint32_t svn_test_rand (apr_uint32_t *seed);
 

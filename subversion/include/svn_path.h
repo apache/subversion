@@ -25,8 +25,8 @@
  * path is a file or directory, because we always canonicalize() it.
  *
  * All paths passed to the @c svn_path_xxx functions, with the exceptions of
- * the @c svn_path_canonicalize and @c svn_path_internal_style functions, must
- * be in canonical form.
+ * the svn_path_canonicalize() and svn_path_internal_style() functions,
+ * must be in canonical form.
  */
 
 #ifndef SVN_PATH_H
@@ -87,7 +87,7 @@ char *svn_path_join (const char *base,
  * If any component is an absolute path, then it resets the base and
  * further components will be appended to it.
  *
- * See @c svn_path_join() for further notes about joining paths.
+ * See svn_path_join() for further notes about joining paths.
  */
 char *svn_path_join_many (apr_pool_t *pool, const char *base, ...);
 
@@ -137,7 +137,7 @@ void svn_path_add_component (svn_stringbuf_t *path,
 void svn_path_remove_component (svn_stringbuf_t *path);
 
 /** Remove @a n components off the end of the canonizalized @a path.
- * Equivalent to calling @c svn_path_remove_component @a n times. */
+ * Equivalent to calling svn_path_remove_component() @a n times. */
 void svn_path_remove_components (svn_stringbuf_t *path, apr_size_t n);
 
 /** Divide the canonicalized @a path into @a *dirpath and @a
@@ -272,7 +272,7 @@ svn_path_condense_targets (const char **pcommon,
  * of targets in the original list is preserved in the condensed list
  * of targets.  Use @a pool for any allocations.
  *
- * How does this differ in functionality from @c svn_path_condense_targets?
+ * How does this differ in functionality from svn_path_condense_targets()?
  *
  * Here's the short version:
  * 
@@ -293,9 +293,9 @@ svn_path_condense_targets (const char **pcommon,
  *     would NOT screw with my input paths so that I could tell the
  *     difference between someone being in A/D and saying 'svn up G' and
  *     being in A/D/G and saying 'svn up .' -- believe it or not, these
- *     two things don't mean the same thing.  @c svn_path_condense_targets
+ *     two things don't mean the same thing.  svn_path_condense_targets()
  *     plays with absolute paths (which is fine, so does
- *     @c svn_path_remove_redundancies), but the difference is that it
+ *     svn_path_remove_redundancies()), but the difference is that it
  *     actually tweaks those targets to be relative to the "grandfather
  *     path" common to all the targets.  Updates don't require a
  *     "grandfather path" at all, and even if it did, the whole

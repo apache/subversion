@@ -68,7 +68,7 @@ typedef struct svn_fs_t svn_fs_t;
 
 
 /** The type of a warning callback function.  @a baton is the value specified
- * in the call to @c svn_fs_set_warning_func; the filesystem passes it through
+ * in the call to svn_fs_set_warning_func(); the filesystem passes it through
  * to the callback.  @a err contains the warning message.
  *
  * The callback function should not clear the error that is passed to it;
@@ -140,7 +140,7 @@ svn_error_t *svn_fs_create (svn_fs_t **fs_p, const char *path,
  * they open separate filesystem objects.
  *
  * NOTE: you probably don't want to use this directly.  Take a look at
- * @c svn_repos_open() instead.
+ * svn_repos_open() instead.
  */
 svn_error_t *svn_fs_open (svn_fs_t **fs_p, const char *path,
                           apr_hash_t *config, apr_pool_t *pool);
@@ -149,8 +149,8 @@ svn_error_t *svn_fs_open (svn_fs_t **fs_p, const char *path,
  * @since New in 1.1.
  *
  * Return the path to @a fs's repository, allocated in @a pool.
- * Note: this is just what was passed to @c svn_fs_create() or
- * @c svn_fs_open() -- might be absolute, might not.
+ * Note: this is just what was passed to svn_fs_create() or
+ * svn_fs_open() -- might be absolute, might not.
  */
 const char *svn_fs_path (svn_fs_t *fs, apr_pool_t *pool);
 
@@ -415,10 +415,10 @@ svn_string_t *svn_fs_unparse_id (const svn_fs_id_t *id,
 /** Filesystem Transactions.
  *
  * To make a change to a Subversion filesystem:
- * - Create a transaction object, using @c svn_fs_begin_txn.
- * - Call @c svn_fs_txn_root, to get the transaction's root directory.
+ * - Create a transaction object, using svn_fs_begin_txn().
+ * - Call svn_fs_txn_root(), to get the transaction's root directory.
  * - Make whatever changes you like in that tree.
- * - Commit the transaction, using @c svn_fs_commit_txn.
+ * - Commit the transaction, using svn_fs_commit_txn().
  *
  * The filesystem implementation guarantees that your commit will
  * either:
@@ -433,7 +433,7 @@ svn_string_t *svn_fs_unparse_id (const svn_fs_id_t *id,
  * If you begin a transaction, and then decide you don't want to make
  * the change after all (say, because your net connection with the
  * client disappeared before the change was complete), you can call
- * @c svn_fs_abort_txn, to cancel the entire transaction; this
+ * svn_fs_abort_txn(), to cancel the entire transaction; this
  * leaves the filesystem unchanged.
  *
  * The only way to change the contents of files or directories, or
@@ -523,7 +523,7 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
  *
  * @note If you're building a txn for committing, you probably
  * don't want to call this directly.  Instead, call
- * @c svn_repos_fs_begin_txn_for_commit(), which honors the
+ * svn_repos_fs_begin_txn_for_commit(), which honors the
  * repository's hook configurations.
  */
 svn_error_t *svn_fs_begin_txn2 (svn_fs_txn_t **txn_p,
@@ -548,7 +548,7 @@ svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
 /** Commit @a txn.
  *
  * @note You usually don't want to call this directly.
- * Instead, call @c svn_repos_fs_commit_txn(), which honors the
+ * Instead, call svn_repos_fs_commit_txn(), which honors the
  * repository's hook configurations.
  *
  * If the transaction conflicts with other changes committed to the
@@ -565,7 +565,7 @@ svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
  * If the commit succeeds, @a txn is invalid.
  *
  * If the commit fails, @a txn is still valid; you can make more
- * operations to resolve the conflict, or call @c svn_fs_abort_txn to
+ * operations to resolve the conflict, or call svn_fs_abort_txn() to
  * abort the transaction.
  *
  * NOTE:  Success or failure of the commit of @a txn is determined by
@@ -588,7 +588,7 @@ svn_error_t *svn_fs_commit_txn (const char **conflict_p,
  * then attempts to purge it and any related data from the filesystem.
  * If some part of the cleanup process fails, @a txn and some portion
  * of its data may remain in the database after this function returns.
- * Use @c svn_fs_purge_txn() to retry the transaction cleanup.
+ * Use svn_fs_purge_txn() to retry the transaction cleanup.
  */
 svn_error_t *svn_fs_abort_txn (svn_fs_txn_t *txn,
                                apr_pool_t *pool);
@@ -1012,13 +1012,13 @@ svn_error_t *svn_fs_props_changed (svn_boolean_t *changed_p,
  * Notes:
  *    - Copy ancestry does not descend.  After copying directory D to
  *      E, E will have copy ancestry referring to D, but E's children
- *      may not.  See also @c svn_fs_copy().
+ *      may not.  See also svn_fs_copy().
  *
  *    - Copy ancestry *under* a copy is preserved.  That is, if you
  *      copy /A/D/G/pi to /A/D/G/pi2, and then copy /A/D/G to /G, then
  *      /G/pi2 will still have copy ancestry pointing to /A/D/G/pi.
  *      We don't know if this is a feature or a bug yet; if it turns
- *      out to be a bug, then the fix is to make @c svn_fs_copied_from()
+ *      out to be a bug, then the fix is to make svn_fs_copied_from()
  *      observe the following logic, which currently callers may
  *      choose to follow themselves: if node X has copy history, but
  *      its ancestor A also has copy history, then you may ignore X's
@@ -1130,7 +1130,7 @@ svn_error_t *svn_fs_make_dir (svn_fs_root_t *root,
  * temporary allocation.
  *
  * This function may be more efficient than making the equivalent
- * series of calls to @c svn_fs_delete, because it takes advantage of the
+ * series of calls to svn_fs_delete(), because it takes advantage of the
  * fact that, to delete an immutable subtree, shared with some
  * committed revision, you need only remove the directory entry.  The
  * dumb algorithm would recurse into the subtree and end up cloning
@@ -1152,7 +1152,7 @@ svn_error_t *svn_fs_delete (svn_fs_root_t *root,
  * @a to_root.  If @a from_path in @a from_root is a directory, copy the 
  * tree it refers to recursively.
  *
- * The copy will remember its source; use @c svn_fs_copied_from() to
+ * The copy will remember its source; use svn_fs_copied_from() to
  * access this information.
  *
  * @a to_root must be the root of a transaction; @a from_path must be the
@@ -1165,7 +1165,7 @@ svn_error_t *svn_fs_delete (svn_fs_root_t *root,
  * from_root must represent the same filesystem.
  *
  * Note: to do a copy without preserving copy history, use
- * @c svn_fs_revision_link().
+ * svn_fs_revision_link().
  *
  * Do any necessary temporary allocation in @a pool.
  */
@@ -1176,13 +1176,13 @@ svn_error_t *svn_fs_copy (svn_fs_root_t *from_root,
                           apr_pool_t *pool);
 
 
-/** Like @c svn_fs_copy(), but doesn't record copy history, and preserves
- * the PATH.  You cannot use @c svn_fs_copied_from() later to find out
+/** Like svn_fs_copy(), but doesn't record copy history, and preserves
+ * the PATH.  You cannot use svn_fs_copied_from() later to find out
  * where this copy came from.
  *
- * Use @c svn_fs_revision_link() in situations where you don't care
+ * Use svn_fs_revision_link() in situations where you don't care
  * about the copy history, and where @a to_path and @a from_path are
- * the same, because it is cheaper than @c svn_fs_copy().
+ * the same, because it is cheaper than svn_fs_copy().
  */
 svn_error_t *svn_fs_revision_link (svn_fs_root_t *from_root,
                                    svn_fs_root_t *to_root,
@@ -1245,7 +1245,7 @@ svn_error_t *svn_fs_file_md5_checksum (unsigned char digest[],
  *
  * If @a root is the root of a transaction, it is possible that the
  * contents of the file @a path will change between calls to
- * @c svn_fs_file_contents().  In that case, the result of reading from
+ * svn_fs_file_contents().  In that case, the result of reading from
  * @a *contents is undefined.  
  *
  * ### kff todo: I am worried about lifetime issues with this pool vs
@@ -1278,14 +1278,14 @@ svn_error_t *svn_fs_make_file (svn_fs_root_t *root,
  * @a *contents_p.
  *
  * If @a path does not exist in @a root, return an error.  (You cannot use
- * this routine to create new files;  use @c svn_fs_make_file to create
+ * this routine to create new files;  use svn_fs_make_file() to create
  * an empty file first.)
  *
  * @a base_checksum is the hex MD5 digest for the base text against
  * which the delta is to be applied; it is ignored if null, and may be
  * ignored even if not null.  If it is not ignored, it must match the
  * checksum of the base text against which svndiff data is being
- * applied; if not, svn_fs_apply_textdelta or the @a *contents_p call
+ * applied; if not, svn_fs_apply_textdelta() or the @a *contents_p call
  * which detects the mismatch will return the error
  * @c SVN_ERR_CHECKSUM_MISMATCH (if there is no base text, there may
  * still be an error if @a base_checksum is neither null nor the
@@ -1316,7 +1316,7 @@ svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
  * contents of the file.
  *
  * If @a path does not exist in @a root, return an error.  (You cannot use
- * this routine to create new files;  use @c svn_fs_make_file to create
+ * this routine to create new files;  use svn_fs_make_file() to create
  * an empty file first.)
  *
  * @a result_checksum is the hex MD5 digest for the final fulltext
@@ -1327,7 +1327,7 @@ svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
  *
  * Do any necessary temporary allocation in @a pool.
  *
- * ### This is like svn_fs_apply_textdelta, but takes the text
+ * ### This is like svn_fs_apply_textdelta(), but takes the text
  * straight.  It is currently used only by the loader, see
  * libsvn_repos/load.c.  It should accept a checksum, of course, which
  * would come from an (optional) header in the dump file.  See
@@ -1499,7 +1499,7 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
 /** Lock @a path in @a fs, and set @a *lock to a lock
  * representing the new lock, allocated in @a pool.
  *
- * @warning You may prefer to use @c svn_repos_fs_lock instead,
+ * @warning You may prefer to use svn_repos_fs_lock() instead,
  * which see.
  *
  * @a fs must have a username associated with it (see @c
@@ -1515,8 +1515,8 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  * current lock's owner: delete the existing lock on @a path, and
  * create a new one.
  *
- * @a token is a lock token such as can be generated using @c
- * svn_fs_generate_lock_token (indicating that the caller wants to
+ * @a token is a lock token such as can be generated using
+ * svn_fs_generate_lock_token() (indicating that the caller wants to
  * dictate the lock token used), or it is @c NULL (indicating that the
  * caller wishes to have a new token generated by this function).  If
  * @a token is not @c NULL, and represents an existing lock, then @a
@@ -1546,7 +1546,7 @@ svn_error_t *svn_fs_lock (svn_lock_t **lock,
 /** Generate a unique lock-token using @a fs. Return in @a *token,
  * allocated in @a pool.
  *
- * This can be used in to populate lock->token before calling @c
+ * This can be used in to populate lock->token before calling
  * svn_fs_attach_lock().
  */
 svn_error_t *svn_fs_generate_lock_token (const char **token,
@@ -1588,7 +1588,7 @@ svn_error_t *svn_fs_get_lock (svn_lock_t **lock,
 
 
 /** The type of a lock discovery callback function.  @a baton is the
- * value specified in the call to @c svn_fs_get_locks; the filesystem
+ * value specified in the call to svn_fs_get_locks(); the filesystem
  * passes it through to the callback.  @a lock is a lock structure.
  * @a pool is a temporary subpool for use by the callback
  * implementation -- it is cleared after invocation of the callback.
