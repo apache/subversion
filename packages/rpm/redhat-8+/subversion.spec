@@ -400,7 +400,7 @@ echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
 ./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline/
-make svncheck CLEANUP
+make svncheck CLEANUP=true
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 %endif
