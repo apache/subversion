@@ -836,9 +836,10 @@ servers claim that they explicitly support use of BDB on NFS-mounted
 partitions, but we've only ever seen BDB databases get corrupted when
 living on an NFS or SMB network drive.</p>
 
-<p>If you are using the <a href="http://web.mit.edu/ghudson/info/fsfs"
->FSFS</a> repository back end, then storing the repository on a modern
-NFS server (i.e., one that supports locking) should be fine.</p>
+<p>If you are using the <a
+href="http://svn.collab.net/repos/svn/trunk/notes/fsfs">FSFS</a>
+repository back end, then storing the repository on a modern NFS
+server (i.e., one that supports locking) should be fine.</p>
 
 <p>Working copies can be stored on NFS (one common scenario is when
 your home directory is on a NFS server).  On Linux NFS servers, due to
