@@ -644,8 +644,19 @@ is prompted for give extra arguments, which are appended to ARGLIST."
 (defun svn-process-filter (process str)
   (save-window-excursion
     (set-buffer "*svn-process*")
-    (message "svn-process-filter: %s" str)
-    (insert str)))
+    ;;(message "svn-process-filter: %s" str)
+    (goto-char (point-max))
+    (insert str)
+    (save-excursion
+      (goto-char (line-beginning-position))
+      (when (looking-at "Password for '\\(.+\\)': ")
+        ;(svn-status-show-process-buffer)
+        (let ((passwd (read-passwd
+                       (format "Enter svn password for %s: " (match-string 1)))))
+          (svn-process-send-string (concat passwd "\n") t)))
+      (when (looking-at "Username: ")
+        (let ((user-name (read-string "Username for svn operation: ")))
+          (svn-process-send-string (concat user-name "\n")))))))
 
 (defun svn-parse-rev-num (str)
   (if (and str (stringp str)
@@ -2406,15 +2417,16 @@ If ARG then prompt for revision to diff against."
         (delete-process process)
       (message "No running svn process"))))
 
-(defun svn-process-send-string (string)
+(defun svn-process-send-string (string &optional send-passwd)
   "Send a string to the running svn process.
 This is useful, if the running svn process asks the user a question.
 Note: use C-q C-j to send a line termination character."
   (interactive "sSend string to svn process: ")
   (save-excursion
     (set-buffer "*svn-process*")
+    (goto-char (point-max))
     (let ((buffer-read-only nil))
-      (insert string))
+      (insert (if send-passwd (make-string (length string) ?.) string)))
     (set-marker (process-mark (get-process "svn")) (point)))
   (process-send-string "svn" string))
 
