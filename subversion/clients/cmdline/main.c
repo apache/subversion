@@ -575,7 +575,10 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "      each of which consists of a relative directory path, optional\n"
        "      revision flags, and an URL.  For example\n"
        "        foo             http://example.com/repos/zig\n"
-       "        foo/bar -r 1234 http://example.com/repos/zag\n"),
+       "        foo/bar -r 1234 http://example.com/repos/zag\n"
+       "    svn:needs-lock - If present, indicates that the file should be\n"
+       "      locked before it is modified.  Makes the file read-only in the\n"
+       "      working copy when it is not locked."),
     {'F', svn_cl__encoding_opt, 'q', 'r', svn_cl__targets_opt, 'R',
      svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS, svn_cl__force_opt,
      svn_cl__config_dir_opt} },
