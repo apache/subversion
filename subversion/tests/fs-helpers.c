@@ -96,7 +96,7 @@ svn_test__create_fs (svn_fs_t **fs_p,
   if (apr_stat (&finfo, name, APR_FINFO_TYPE, pool) == APR_SUCCESS)
     {
       if (finfo.filetype == APR_DIR)
-        SVN_ERR (svn_fs_delete_berkeley (name, pool));
+        SVN_ERR (svn_fs_delete_fs (name, pool));
       else
         return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
                                   "there is already a file named '%s'", name);
