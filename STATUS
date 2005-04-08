@@ -43,6 +43,12 @@ Candidate changes:
     Votes:
       +1: dlr
 
+  * r14041.
+    Fix issue #2268 (svn update of xml-unsafe dir (from within) http error)
+    Justification:
+      Yet Another Path Escaping Bug
+    Votes:
+      +1: cmpilato
 
 Approved changes (further review is welcome, but not required):
 
