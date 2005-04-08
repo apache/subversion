@@ -75,7 +75,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-03-06 10:12+0100\n"
-"PO-Revision-Date: 2005-04-06 21:09+0200\n"
+"PO-Revision-Date: 2005-04-08 16:24+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -321,19 +321,19 @@ msgstr " (da %s:%ld)"
 
 #: clients/cmdline/log-cmd.c:478
 msgid "When specifying working copy paths, only one target may be given"
-msgstr ""
+msgstr "Nello specificare i percorsi della copia di lavoro, si può dare un solo target"
 
 #: clients/cmdline/log-cmd.c:490
 msgid "Only relative paths can be specified after a URL"
-msgstr ""
+msgstr "Dopo un URL possono essere specificati solo dei percorsi relativi"
 
 #: clients/cmdline/ls-cmd.c:294
 msgid "'verbose' option invalid in XML mode"
-msgstr ""
+msgstr "L'opzione 'verbose' non è valida nella modalità XML"
 
 #: clients/cmdline/ls-cmd.c:306
 msgid "'incremental' option only valid in XML mode"
-msgstr ""
+msgstr "L'opzione 'incremental' è valida solo nella modalità XML"
 
 #: clients/cmdline/main.c:62
 msgid "force operation to run"
@@ -426,7 +426,7 @@ msgstr "specifica una password ARG"
 
 #: clients/cmdline/main.c:98
 msgid "pass ARG to --diff-cmd as options (default: '-u')"
-msgstr ""
+msgstr "passa ARG a --diff-cmd come opzioni (il default è: '-u')"
 
 #: clients/cmdline/main.c:100
 msgid "pass contents of file ARG as additional args"
@@ -476,7 +476,7 @@ msgstr "ignora l'ascendenza quando si calcolano le fusioni"
 
 #: clients/cmdline/main.c:120
 msgid "ignore externals definitions"
-msgstr ""
+msgstr "ignora le definizioni esterne"
 
 #: clients/cmdline/main.c:122
 msgid "use ARG as diff command"
@@ -533,7 +533,7 @@ msgstr ""
 
 #: clients/cmdline/main.c:148
 msgid "maximum number of log entries"
-msgstr ""
+msgstr "numero massimo di voci del log"
 
 #: clients/cmdline/main.c:179
 msgid ""
@@ -2049,7 +2049,7 @@ msgstr "Tentativo di bloccare una directory già bloccata"
 
 #: include/svn_error_codes.h:300
 msgid "Working copy not locked; this is probably a bug, please report"
-msgstr ""
+msgstr "La copia di lavoro non è bloccata. Probabilmente è un bug, segnalalo per favore"
 
 #: include/svn_error_codes.h:305
 msgid "Invalid lock"
@@ -2413,7 +2413,7 @@ msgstr "L'elemento è illeggibile"
 
 #: include/svn_error_codes.h:691
 msgid "Item is partially readable."
-msgstr ""
+msgstr "L'elemento è parzialmente leggibile"
 
 #: include/svn_error_codes.h:698
 msgid "Svndiff data has invalid header"
@@ -3105,7 +3105,7 @@ msgstr "L'URL '%s' non-esistente a quella revisione"
 #: libsvn_client/prop_commands.c:104
 #, c-format
 msgid "'%s' is a wcprop, thus not accessible to clients"
-msgstr ""
+msgstr "'%s' è una proprietà della copia di lavoro, per cui non è accessibile ai client"
 
 #: libsvn_client/prop_commands.c:183
 #, c-format
@@ -3186,41 +3186,41 @@ msgstr "Tipo di revisione non riconosciuto per '%s'"
 #: libsvn_delta/svndiff.c:350
 #, c-format
 msgid "Invalid diff stream: insn %d cannot be decoded"
-msgstr ""
+msgstr "Flusso di diff non valido: insn %d non può essere decodificato"
 
 #: libsvn_delta/svndiff.c:354
 #, c-format
 msgid "Invalid diff stream: insn %d has non-positive length"
-msgstr ""
+msgstr "Flusso di diff non valido: insn %d ha una lunghezza non positiva"
 
 #: libsvn_delta/svndiff.c:358
 #, c-format
 msgid "Invalid diff stream: insn %d overflows the target view"
-msgstr ""
+msgstr "Flusso di diff non valido: insn %d supera la vista di destinazione"
 
 #: libsvn_delta/svndiff.c:367
 #, c-format
 msgid "Invalid diff stream: [src] insn %d overflows the source view"
-msgstr ""
+msgstr "Flusso di diff non valido: [orig] insn %d supera la vista di origine"
 
 #: libsvn_delta/svndiff.c:374
 #, c-format
 msgid ""
 "Invalid diff stream: [tgt] insn %d starts beyond the target view position"
-msgstr ""
+msgstr "Flusso di diff non valido: [obi] insn %d inizia oltre la posizione nella vista di destinazione"
 
 #: libsvn_delta/svndiff.c:381
 #, c-format
 msgid "Invalid diff stream: [new] insn %d overflows the new data section"
-msgstr ""
+msgstr "Flusso di diff non valido: [nuovo] insn %d i dati della nuova sezione"
 
 #: libsvn_delta/svndiff.c:391
 msgid "Delta does not fill the target window"
-msgstr ""
+msgstr "Il delta non riempie la finestra di destinazione"
 
 #: libsvn_delta/svndiff.c:394
 msgid "Delta does not contain enough new data"
-msgstr ""
+msgstr "Il delta non contiene abbastanza nuovi dati"
 
 #: libsvn_delta/svndiff.c:471
 msgid "Svndiff has invalid header"
@@ -3243,7 +3243,7 @@ msgstr "Fine inaspettata dell'input per svndiff"
 #: libsvn_diff/diff_file.c:1169
 #, c-format
 msgid "Failed to delete mmap '%s'"
-msgstr ""
+msgstr "Cancellazione di mmap '%s' fallita"
 
 #: libsvn_fs/fs-loader.c:99 libsvn_ra/ra_loader.c:156
 #: libsvn_ra/ra_loader.c:169
@@ -3286,7 +3286,7 @@ msgstr "Tentativo di creare una voce in un genitore che non è una directory"
 #: libsvn_fs_base/dag.c:625 libsvn_fs_fs/dag.c:379
 #, c-format
 msgid "Attempted to create a node with an illegal name '%s'"
-msgstr ""
+msgstr "Tentativo di creazione di un nodo con un nome illegale '%s'"
 
 #: libsvn_fs_base/dag.c:637 libsvn_fs_base/dag.c:870 libsvn_fs_fs/dag.c:391
 msgid "Attempted to clone child of non-mutable node"
@@ -3307,12 +3307,12 @@ msgstr "Tentativo di scrivere una voce in un nodo immutable"
 #: libsvn_fs_base/dag.c:765
 #, c-format
 msgid "Can't set proplist on *immutable* node-revision %s"
-msgstr ""
+msgstr "Non posso impostare la lista delle proprietà su un nodo di revisione %s *immutabile*"
 
 #: libsvn_fs_base/dag.c:876
 #, c-format
 msgid "Attempted to make a child clone with an illegal name '%s'"
-msgstr ""
+msgstr "Tentativo di clonare un nodo figlio con un nome illegale '%s'"
 
 #: libsvn_fs_base/dag.c:1000
 #, c-format
@@ -3327,7 +3327,7 @@ msgstr "Tentativo di cancellare la voce '%s' da un nodo di directory immutabile"
 #: libsvn_fs_base/dag.c:1013
 #, c-format
 msgid "Attempted to delete a node with an illegal name '%s'"
-msgstr ""
+msgstr "Tentativo di cancellazione di un nodo con un nome illegale '%s'"
 
 #: libsvn_fs_base/dag.c:1027 libsvn_fs_base/dag.c:1062
 #, c-format
@@ -3340,15 +3340,15 @@ msgstr "Tentativo di rimuovere un nodo immutabile"
 
 #: libsvn_fs_base/dag.c:1231
 msgid "Attempted to get textual contents of a *non*-file node"
-msgstr ""
+msgstr "Tentativo di leggere il contenuto testuale di un nodo che *non* è di tipo file"
 
 #: libsvn_fs_base/dag.c:1265
 msgid "Attempted to get length of a *non*-file node"
-msgstr ""
+msgstr "Tentativo di ottenere la lunghezza di un nodo che *non* è di tipo file"
 
 #: libsvn_fs_base/dag.c:1290
 msgid "Attempted to get checksum of a *non*-file node"
-msgstr ""
+msgstr "Tentativo di calcolare il checksum di un nodo che *non* è di tipo file"
 
 #: libsvn_fs_base/dag.c:1320 libsvn_fs_base/dag.c:1373
 msgid "Attempted to set textual contents of a *non*-file node"
@@ -3372,12 +3372,12 @@ msgstr ""
 #: libsvn_fs_base/dag.c:1460
 #, c-format
 msgid "Attempted to open non-existent child node '%s'"
-msgstr ""
+msgstr "Tentativo di aprire un nodo figlio inesistente '%s'"
 
 #: libsvn_fs_base/dag.c:1466
 #, c-format
 msgid "Attempted to open node with an illegal name '%s'"
-msgstr ""
+msgstr "Tentativo di aprire un nodo con un nome illegale '%s'"
 
 #: libsvn_fs_base/err.c:37 libsvn_fs_fs/err.c:39
 msgid "Filesystem object has not been opened yet"
@@ -3462,12 +3462,12 @@ msgstr "'%s' non è una directory nel filesystem '%s'"
 #: libsvn_fs_base/fs.c:76
 #, c-format
 msgid "Bad database version: got %d.%d.%d, should be at least %d.%d.%d"
-msgstr ""
+msgstr "Versione inadeguata del database: %d.%d.%d, mentre dovrebbe essere almeno %d.%d.%d"
 
 #: libsvn_fs_base/fs.c:87
 #, c-format
 msgid "Bad database version: compiled with %d.%d.%d, running against %d.%d.%d"
-msgstr ""
+msgstr "Versione inadeguata del database: compilato con %d.%d.%d, ma eseguito con %d.%d.%d"
 
 #: libsvn_fs_base/fs.c:105 libsvn_fs_fs/fs.c:49
 msgid "Filesystem object already open"
@@ -3533,12 +3533,12 @@ msgstr "La rappresentazione non è di tipo 'delta'"
 #: libsvn_fs_base/reps-strings.c:495
 #, c-format
 msgid "Diff version inconsistencies in representation '%s'"
-msgstr ""
+msgstr "Inconsistenze nella rappresentazione '%s' della versione di diff"
 
 #: libsvn_fs_base/reps-strings.c:758
 #, c-format
 msgid "Rep contents are too large: got %s, limit is %s"
-msgstr ""
+msgstr "I contenuti sono troppo grossi: ricevuto %s, ma il limite è %s"
 
 #: libsvn_fs_base/reps-strings.c:774
 #, c-format
