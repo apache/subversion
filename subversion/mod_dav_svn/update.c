@@ -1027,8 +1027,8 @@ empty_cdata_error(const char *tagname,
   const char *errstr = apr_pstrcat(pool, "The request's '", tagname, 
                                    "' element contains empty cdata; there "
                                    "is a problem with the client.", NULL);
-  return dav_new_error_tag(pool, HTTP_BAD_REQUEST, 0, errstr,
-                           SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+  return dav_svn__new_error_tag(pool, HTTP_BAD_REQUEST, 0, errstr,
+                                SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
 }
 
 
@@ -1062,22 +1062,23 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
 
   if (resource->info->restype != DAV_SVN_RESTYPE_VCC)
     {
-      return dav_new_error_tag(resource->pool, HTTP_CONFLICT, 0,
-                               "This report can only be run against a VCC.",
-                               SVN_DAV_ERROR_NAMESPACE,
-                               SVN_DAV_ERROR_TAG);
+      return dav_svn__new_error_tag(resource->pool, HTTP_CONFLICT, 0,
+                                    "This report can only be run against "
+                                    "a VCC.",
+                                    SVN_DAV_ERROR_NAMESPACE,
+                                    SVN_DAV_ERROR_TAG);
     }
 
   ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-                               "The request does not contain the 'svn:' "
-                               "namespace, so it is not going to have an "
-                               "svn:target-revision element. That element "
-                               "is required.",
-                               SVN_DAV_ERROR_NAMESPACE,
-                               SVN_DAV_ERROR_TAG);
+      return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+                                    "The request does not contain the 'svn:' "
+                                    "namespace, so it is not going to have an "
+                                    "svn:target-revision element. That element "
+                                    "is required.",
+                                    SVN_DAV_ERROR_NAMESPACE,
+                                    SVN_DAV_ERROR_TAG);
     }
   
   /* Look to see if client wants a report with props and textdeltas
@@ -1186,7 +1187,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
      sending a style of report that we no longer allow. */
   if (! src_path)
     {
-      return dav_new_error_tag
+      return dav_svn__new_error_tag
         (resource->pool, HTTP_BAD_REQUEST, 0,
          "The request did not contain the '<src-path>' element.\n"
          "This may indicate that your client is too old.",

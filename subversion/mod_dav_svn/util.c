@@ -27,6 +27,21 @@
 
 #include "dav_svn.h"
 
+dav_error * dav_svn__new_error_tag(apr_pool_t *pool,
+                                   int status,
+                                   int error_id,
+                                   const char *desc,
+                                   const char *namespace,
+                                   const char *tagname)
+{
+  /* dav_new_error_tag will record errno but Subversion makes no attempt
+     to ensure that it is valid.  We reset it to avoid putting incorrect
+     information into the error log, at the expense of possibly removing
+     valid information. */
+  errno = 0;
+
+  return dav_new_error_tag(pool, status, error_id, desc, namespace, tagname);
+}
 
 dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
                                 const char *message, apr_pool_t *pool)
@@ -52,16 +67,10 @@ dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
         /* add other mappings here */
       }
 
-    /* dav_new_error_tag will record errno but Subversion makes no attempt
-       to ensure that it is valid.  We reset it to avoid putting incorrect
-       information into the error log, at the expense of possibly removing
-       valid information. */
-    errno = 0;
-
-    derr = dav_new_error_tag(pool, status,
-                             serr->apr_err, apr_pstrdup(pool, serr->message),
-                             SVN_DAV_ERROR_NAMESPACE,
-                             SVN_DAV_ERROR_TAG);
+    derr = dav_svn__new_error_tag(pool, status, serr->apr_err,
+                                  apr_pstrdup(pool, serr->message),
+                                  SVN_DAV_ERROR_NAMESPACE,
+                                  SVN_DAV_ERROR_TAG);
     if (message != NULL)
         derr = dav_push_error(pool, status, serr->apr_err,
                               message, derr);
@@ -373,7 +382,7 @@ dav_error * dav_svn__test_canonical(const char *path, apr_pool_t *pool)
     return NULL;
 
   /* Otherwise, generate a generic HTTP_BAD_REQUEST error. */
-  return dav_new_error_tag
+  return dav_svn__new_error_tag
     (pool, HTTP_BAD_REQUEST, 0, 
      apr_psprintf(pool, 
                   "Path '%s' is not canonicalized; "

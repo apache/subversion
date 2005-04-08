@@ -223,12 +223,12 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-                               "The request does not contain the 'svn:' "
-                               "namespace, so it is not going to have certain "
-                               "required elements.",
-                               SVN_DAV_ERROR_NAMESPACE,
-                               SVN_DAV_ERROR_TAG);
+      return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+                                    "The request does not contain the 'svn:' "
+                                    "namespace, so it is not going to have "
+                                    "certain required elements.",
+                                    SVN_DAV_ERROR_NAMESPACE,
+                                    SVN_DAV_ERROR_TAG);
     }
   
   /* ### todo: okay, now go fill in svn_ra_dav__get_log() based on the
