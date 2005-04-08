@@ -32,13 +32,6 @@
 /** Helper routines. **/
 
 
-/* Generic Berkeley DB error handler function. */
-static void
-berkeley_error_handler (const char *errpfx, char *msg)
-{
-  fprintf (stderr, "%s%s\n", errpfx ? errpfx : "", msg);
-}
-
 static void
 fs_warning_handler (void *baton, svn_error_t *err)
 {
@@ -110,10 +103,6 @@ svn_test__create_fs (svn_fs_t **fs_p,
   /* Provide a warning function that just dumps the message to stderr.  */
   svn_fs_set_warning_func (*fs_p, fs_warning_handler, NULL);
   
-  /* Provide a handler for Berkeley DB error messages.  */
-  if (strcmp (SVN_FS_TYPE_BDB, fs_type) == 0)
-    SVN_ERR (svn_fs_set_berkeley_errcall (*fs_p, berkeley_error_handler));
-
   /* Register this fs for cleanup. */
   svn_test_add_dir_cleanup (name);
 
@@ -146,11 +135,6 @@ svn_test__create_repos (svn_repos_t **repos_p,
 
   SVN_ERR (svn_repos_create (repos_p, name, NULL, NULL, NULL,
                              fs_config, pool));
-
-  /* Provide a handler for Berkeley DB error messages if we're using bdb.  */
-  if (strcmp (SVN_FS_TYPE_BDB, fs_type) == 0)
-    SVN_ERR (svn_fs_set_berkeley_errcall (svn_repos_fs (*repos_p), 
-                                          berkeley_error_handler));
 
   /* Register this repo for cleanup. */
   svn_test_add_dir_cleanup (name);
