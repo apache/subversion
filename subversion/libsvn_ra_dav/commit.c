@@ -805,7 +805,7 @@ static svn_error_t * commit_delete_entry(const char *path,
   if (serr && ((serr->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)
                || (serr->apr_err == SVN_ERR_FS_NO_LOCK_TOKEN)
                || (serr->apr_err == SVN_ERR_FS_LOCK_OWNER_MISMATCH)
-               || (serr->apr_err == SVN_ERR_FS_PATH_LOCKED)))
+               || (serr->apr_err == SVN_ERR_FS_PATH_ALREADY_LOCKED)))
     {
       /* Re-attempt the DELETE request as if the path were a directory.
          Discover all lock-tokens within the directory, and send them in

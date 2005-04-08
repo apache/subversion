@@ -524,9 +524,9 @@ SVN_ERROR_START
               "No user associated with filesystem")
 
   /* @since New in 1.2. */
-  SVN_ERRDEF (SVN_ERR_FS_PATH_LOCKED,
+  SVN_ERRDEF (SVN_ERR_FS_PATH_ALREADY_LOCKED,
               SVN_ERR_FS_CATEGORY_START + 35,
-              "Path is locked")
+              "Path is already locked")
 
   /* @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_PATH_NOT_LOCKED,
