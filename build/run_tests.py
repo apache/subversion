@@ -1,9 +1,14 @@
 #
-# run-tests.py - run the tests in the regression test suite.
+# run_tests.py - run the tests in the regression test suite.
 #
 
 import os, sys
+
 import getopt
+try:
+  my_getopt = getopt.gnu_getopt
+except AttributeError:
+  my_getopt = getopt.getopt
 
 class TestHarness:
   '''Test harness for Subversion tests.
@@ -161,8 +166,8 @@ def main():
   '''
 
   try:
-    opts, args = getopt.getopt(sys.argv[1:], '',
-                               ['url=', 'fs-type=', 'verbose', 'cleanup'])
+    opts, args = my_getopt(sys.argv[1:], 'u:f:vc',
+                           ['url=', 'fs-type=', 'verbose', 'cleanup'])
   except getopt.GetoptError:
     args = []
 
@@ -172,13 +177,13 @@ def main():
 
   base_url, fs_type, verbose, cleanup = None, None, None, None
   for opt, val in opts:
-    if opt == '--url':
+    if opt in ('-u', '--url'):
       base_url = val
-    elif opt == '--fs-type':
+    elif opt in ('-f', '--fs-type'):
       fs_type = val
-    elif opt == '--verbose':
+    elif opt in ('-v', '--verbose'):
       verbose = 1
-    elif opt == '--cleanup':
+    elif opt in ('-c', '--cleanup'):
       cleanup = 1
     else:
       raise getopt.GetoptError
