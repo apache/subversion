@@ -1008,7 +1008,8 @@ shim_svn_ra_dav__lock(svn_ra_session_t *session,
 
   /* Make a neon lock structure. */
   nlock = ne_lock_create();
-  nlock->owner = ne_strdup(apr_xml_quote_string(pool, comment, 1));
+  nlock->owner = comment ? ne_strdup(apr_xml_quote_string(pool, comment, 1))
+                         : NULL;
 
   if ((rv = ne_uri_parse(url, &(nlock->uri))))
     {
