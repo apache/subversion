@@ -166,7 +166,8 @@ txn_body_lock (void *baton, trail_t *trail)
       if (! args->steal_lock)
         {
           /* Sorry, the path is already locked. */
-          return svn_fs_base__err_path_locked (trail->fs, existing_lock);
+          return svn_fs_base__err_path_already_locked (trail->fs,
+                                                       existing_lock);
         }
       else
         {

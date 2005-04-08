@@ -119,8 +119,9 @@ svn_error_t *svn_fs_base__err_no_lock_token (svn_fs_t *fs, const char *path);
 svn_error_t *svn_fs_base__err_corrupt_lock (svn_fs_t *fs,
                                             const char *lock_token);
 
-/* SVN_ERR_FS_PATH_LOCKED: a path is locked.  */
-svn_error_t *svn_fs_base__err_path_locked (svn_fs_t *fs, svn_lock_t *lock);
+/* SVN_ERR_FS_PATH_ALREADY_LOCKED: a path is already locked.  */
+svn_error_t *svn_fs_base__err_path_already_locked (svn_fs_t *fs,
+                                                   svn_lock_t *lock);
 
 /* SVN_ERR_FS_NO_SUCH_LOCK: there is no lock on PATH in FS.  */
 svn_error_t *svn_fs_base__err_no_such_lock (svn_fs_t *fs, const char *path);

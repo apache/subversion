@@ -791,7 +791,7 @@ lock_body (void *baton, apr_pool_t *pool)
       if (! lb->steal_lock)
         {
           /* Sorry, the path is already locked. */
-          return svn_fs_fs__err_path_locked (lb->fs, existing_lock);
+          return svn_fs_fs__err_path_already_locked (lb->fs, existing_lock);
         }
       else
         {
