@@ -65,13 +65,13 @@ const svn_version_t *svn_delta_version (void);
  *
  * To compute a new text delta:
  *
- * - We call @c svn_txdelta on the streams we want to compare.  That
+ * - We call svn_txdelta() on the streams we want to compare.  That
  *   returns us an @c svn_txdelta_stream_t object.
  *
- * - We then call @c svn_txdelta_next_window on the stream object
+ * - We then call svn_txdelta_next_window() on the stream object
  *   repeatedly.  Each call returns a new @c svn_txdelta_window_t
  *   object, which describes the next portion of the target string.
- *   When @c svn_txdelta_next_window returns zero, we are done building
+ *   When svn_txdelta_next_window() returns zero, we are done building
  *   the target string.
  *
  * @defgroup svn_delta_txt_delta text deltas
@@ -112,7 +112,7 @@ enum svn_delta_action {
      *
      * It must be the case that @a 0 <= @a offset < @a offset +
      * @a len <= length of @a new.  Windows MUST use new data in ascending
-     * order with no overlap at the moment; @c svn_txdelta_to_svndiff
+     * order with no overlap at the moment; svn_txdelta_to_svndiff()
      * depends on this.
      */
     svn_txdelta_new
@@ -216,7 +216,7 @@ const unsigned char *svn_txdelta_md5_digest (svn_txdelta_stream_t *stream);
  * string from @a source into the byte stream from @a target.
  *
  * @a source and @a target are both readable generic streams.  When we call
- * @c svn_txdelta_next_window on @a *stream, it will read from @a source and
+ * svn_txdelta_next_window() on @a *stream, it will read from @a source and
  * @a target to gather as much data as it needs.
  *
  * Do any necessary allocation in a sub-pool of @a pool.

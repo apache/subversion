@@ -154,7 +154,7 @@ svn_opt_format_option (const char **string,
  * Obtain option usage from @a options_table.  Use @a pool for temporary
  * allocation.  @a subcommand may be a canonical command name or an
  * alias.  (### todo: why does this only print to @c stdout, whereas
- * @c svn_opt_print_generic_help gives us a choice?)
+ * svn_opt_print_generic_help() gives us a choice?)
  */
 void
 svn_opt_subcommand_help (const char *subcommand, 
@@ -224,7 +224,7 @@ typedef struct svn_opt_revision_t
  *      to represent N and M respectively. 
  * 
  * N and/or M may be one of the special revision descriptors
- * recognized by @c revision_from_word(), or a date in curly braces.
+ * recognized by revision_from_word(), or a date in curly braces.
  *
  * If @a arg is invalid, return -1; else return 0.
  * It is invalid to omit a revision (as in, ":", "N:" or ":M").
@@ -270,7 +270,7 @@ svn_opt_args_to_target_array2 (apr_array_header_t **targets_p,
 /**
  * @deprecated Provided for backward compatibility with the 1.1 API.
  *
- * The same as @c svn_opt_args_to_target_array2 except that, in
+ * The same as svn_opt_args_to_target_array2() except that, in
  * addition, if @a extract_revisions is set, then look for trailing
  * "@rev" syntax on the first two paths.  If the first target in @a
  * *targets_p ends in "@rev", replace it with a canonicalized version of
@@ -279,7 +279,7 @@ svn_opt_args_to_target_array2 (apr_array_header_t **targets_p,
  * replace it with a canonicalized version of the part before "@rev"
  * and replace @a *end_revision with the value of "rev".  Ignore
  * revision specifiers on any further paths.  "rev" can be any form of
- * single revision specifier, as accepted by @c svn_opt_parse_revision.
+ * single revision specifier, as accepted by svn_opt_parse_revision().
  */
 svn_error_t *
 svn_opt_args_to_target_array (apr_array_header_t **targets_p,
@@ -377,7 +377,7 @@ svn_opt_parse_path (svn_opt_revision_t *rev,
  *      information.
  *
  *    - Else if @a print_version is not true, then print generic help,
- *      via @c svn_opt_print_generic_help with the @a header, @a cmd_table,
+ *      via svn_opt_print_generic_help() with the @a header, @a cmd_table,
  *      @a option_table, and @a footer arguments.
  *
  * Use @a pool for temporary allocations.

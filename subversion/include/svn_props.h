@@ -91,7 +91,7 @@ svn_boolean_t svn_prop_is_svn_prop (const char *prop_name);
  * repository, then return @c TRUE.  Else return @c FALSE.  This is for
  * users of libsvn_client or libsvn_fs, since it their responsibility
  * to do this translation in both directions.  (See
- * @c svn_subst_translate_string/@c svn_subst_detranslate_string for 
+ * svn_subst_translate_string()/svn_subst_detranslate_string() for
  * help with this task.)
  */
 svn_boolean_t svn_prop_needs_translation (const char *propname);
@@ -155,9 +155,9 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
  *
  * NOTE: the values of these properties are always UTF8-encoded with
  * LF line-endings.  It is the burden of svn library users to enforce
- * this.  Use @c svn_prop_needs_translation() to discover if a
+ * this.  Use svn_prop_needs_translation() to discover if a
  * certain property needs translation, and you can use
- * @c svn_subst_translate_string()/@c svn_subst_detranslate_string() 
+ * svn_subst_translate_string()/svn_subst_detranslate_string() 
  * to do the translation.
  *
  * @defgroup svn_prop_visible_props Visible properties
@@ -265,7 +265,7 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
 /**
  * These are reserved properties attached to a "revision" object in
  * the repository filesystem.  They can be queried by using
- * @c svn_fs_revision_prop().  They are invisible to svn clients.
+ * svn_fs_revision_prop().  They are invisible to svn clients.
  *
  * @defgroup svn_props_revision_props Revision properties
  * @{

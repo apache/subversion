@@ -48,7 +48,7 @@ extern "C" {
 #define SVN_RA_SVN_UNSPECIFIED_NUMBER ~((apr_uint64_t) 0)
 
 /** A specialized form of @c SVN_ERR to deal with errors which occur in an
- * @c svn_ra_svn_command_handler.
+ * svn_ra_svn_command_handler().
  *
  * An error returned with this macro will be passed back to the other side 
  * of the connection.  Use this macro when performing the requested operation; 
@@ -65,13 +65,13 @@ extern "C" {
 /** an ra_svn connection. */
 typedef struct svn_ra_svn_conn_st svn_ra_svn_conn_t;
 
-/** Command handler, used by @c svn_ra_svn_handle_commands. */
+/** Command handler, used by svn_ra_svn_handle_commands(). */
 typedef svn_error_t *(*svn_ra_svn_command_handler)(svn_ra_svn_conn_t *conn,
                                                    apr_pool_t *pool,
                                                    apr_array_header_t *params,
                                                    void *baton);
 
-/** Command table, used by @c svn_ra_svn_handle_commands.
+/** Command table, used by svn_ra_svn_handle_commands().
  *
  * If @c terminate is set, command-handling will cease after command is
  * processed.
@@ -255,13 +255,13 @@ svn_error_t *svn_ra_svn_parse_tuple(apr_array_header_t *list,
                                     const char *fmt, ...);
 
 /** Read a tuple from the network and parse it as a tuple, using the
- * format string notation from @c svn_ra_svn_parse_tuple.
+ * format string notation from svn_ra_svn_parse_tuple().
  */
 svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    const char *fmt, ...);
 
 /** Read a command response from the network and parse it as a tuple, using 
- * the format string notation from @c svn_ra_svn_parse_tuple.
+ * the format string notation from svn_ra_svn_parse_tuple().
  */
 svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
                                           apr_pool_t *pool,
@@ -284,13 +284,13 @@ svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
                                         void *baton);
 
 /** Write a command over the network, using the same format string notation 
- * as svn_ra_svn_write_tuple.
+ * as svn_ra_svn_write_tuple().
  */
 svn_error_t *svn_ra_svn_write_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   const char *cmdname, const char *fmt, ...);
 
 /** Write a successful command response over the network, using the
- * same format string notation as svn_ra_svn_write_tuple.  Do not use
+ * same format string notation as svn_ra_svn_write_tuple().  Do not use
  * partial tuples with this function; if you need to use partial
  * tuples, just write out the "success" and argument tuple by hand.
  */

@@ -93,7 +93,7 @@ svn_error_t *svn_io_check_resolved_path (const char *path,
  *
  * then successive calls to
  *
- *    @c svn_io_open_unique_file(&f, &unique_name, @a path, ".tmp", pool) 
+ *    svn_io_open_unique_file(&f, &unique_name, @a path, ".tmp", pool) 
  *
  * will open
  *
@@ -118,8 +118,8 @@ svn_error_t *svn_io_check_resolved_path (const char *path,
  * Claim of Historical Inevitability: this function was written
  * because 
  *
- *    - @c tmpnam() is not thread-safe.
- *    - @c tempname() tries standard system tmp areas first.
+ *    - tmpnam() is not thread-safe.
+ *    - tempname() tries standard system tmp areas first.
  */
 svn_error_t *svn_io_open_unique_file (apr_file_t **f,
                                       const char **unique_name_p,
@@ -131,7 +131,7 @@ svn_error_t *svn_io_open_unique_file (apr_file_t **f,
 /**
  * @since New in 1.1.
  *
- * Like svn_io_open_unique_file, except that instead of creating a
+ * Like svn_io_open_unique_file(), except that instead of creating a
  * file, a symlink is generated that references the path @a dest.
  */
 svn_error_t *svn_io_create_unique_link (const char **unique_name_p,
@@ -183,7 +183,7 @@ svn_error_t *svn_io_copy_link (const char *src,
 
 /** Recursively copy directory @a src into @a dst_parent, as a new entry named
  * @a dst_basename.  If @a dst_basename already exists in @a dst_parent, 
- * return error.  @a copy_perms will be passed through to @c svn_io_copy_file 
+ * return error.  @a copy_perms will be passed through to svn_io_copy_file()
  * when any files are copied.  @a src, @a dst_parent, and @a dst_basename are 
  * all utf8-encoded.
  *
@@ -205,7 +205,7 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
  * directories as required, like <tt>mkdir -p</tt>.  Report no error if @a 
  * path already exists.  @a path is utf8-encoded.
  *
- * This is essentially a wrapper for @c apr_dir_make_recursive(), passing
+ * This is essentially a wrapper for apr_dir_make_recursive(), passing
  * @c APR_OS_DEFAULT as the permissions.
  */
 svn_error_t *svn_io_make_dir_recursively (const char *path, apr_pool_t *pool);
@@ -498,9 +498,9 @@ svn_stream_t *svn_stream_empty (apr_pool_t *pool);
 
 
 /** Convenience function for creating streams which operate on APR
- * files.  For convenience, if @a file is NULL then @c svn_stream_empty(pool) 
+ * files.  For convenience, if @a file is NULL then svn_stream_empty(pool) 
  * is returned.  Note that the stream returned by these operations is not 
- * considered to "own" the underlying file, meaning that @c svn_stream_close() 
+ * considered to "own" the underlying file, meaning that svn_stream_close() 
  * on the stream will not close the file.
  */
 svn_stream_t *svn_stream_from_aprfile (apr_file_t *file, apr_pool_t *pool);
@@ -520,9 +520,9 @@ svn_stream_t *svn_stream_from_stringbuf (svn_stringbuf_t *str,
 /** Return a stream that decompresses all data read and compresses all
  * data written. The stream @a stream is used to read and write all
  * compressed data. All compression data structures are allocated on
- * @a pool. If compression support is not compiled in then @c
+ * @a pool. If compression support is not compiled in then
  * svn_stream_compressed() returns @a stream unmodified. Make sure you
- * call @c svn_stream_close() on the stream returned by this function,
+ * call svn_stream_close() on the stream returned by this function,
  * so that all data are flushed and cleaned up.
  */
 svn_stream_t *svn_stream_compressed (svn_stream_t *stream, 
@@ -541,7 +541,7 @@ svn_error_t *svn_stream_close (svn_stream_t *stream);
 
 
 /** Write to @a stream using a printf-style @a fmt specifier, passed through
- * @c apr_psprintf using memory from @a pool.
+ * apr_psprintf() using memory from @a pool.
  */
 svn_error_t *svn_stream_printf (svn_stream_t *stream,
                                 apr_pool_t *pool,
@@ -599,7 +599,7 @@ svn_error_t *svn_stringbuf_from_aprfile (svn_stringbuf_t **result,
                                          apr_file_t *file,
                                          apr_pool_t *pool);
 
-/** Remove file @a path, a utf8-encoded path.  This wraps @c apr_file_remove(), 
+/** Remove file @a path, a utf8-encoded path.  This wraps apr_file_remove(), 
  * converting any error to a Subversion error.
  */
 svn_error_t *svn_io_remove_file (const char *path, apr_pool_t *pool);
@@ -613,14 +613,14 @@ svn_error_t *svn_io_remove_dir (const char *path, apr_pool_t *pool);
  * enumerated dirent filetypes (@c svn_node_kind_t *).
  *
  * Note:  the `.' and `..' directories normally returned by
- * @c apr_dir_read are NOT returned in the hash.
+ * apr_dir_read() are NOT returned in the hash.
  */
 svn_error_t *svn_io_get_dirents (apr_hash_t **dirents,
                                  const char *path,
                                  apr_pool_t *pool);
 
 
-/** Callback function type for @c svn_io_dir_walk  */
+/** Callback function type for svn_io_dir_walk() */
 typedef svn_error_t * (*svn_io_walk_func_t) (void *baton,
                                              const char *path,
                                              const apr_finfo_t *finfo,
@@ -687,8 +687,8 @@ svn_error_t *svn_io_wait_for_cmd (apr_proc_t *cmd_proc,
                                   apr_exit_why_e *exitwhy,
                                   apr_pool_t *pool);
 
-/** Run a command to completion, by first calling @c svn_io_start_cmd and
- * then calling @c svn_io_wait_for_cmd.
+/** Run a command to completion, by first calling svn_io_start_cmd() and
+ * then calling svn_io_wait_for_cmd().
  */
 svn_error_t *svn_io_run_cmd (const char *path,
                              const char *cmd,
@@ -785,68 +785,68 @@ svn_error_t *svn_io_detect_mimetype (const char **mimetype,
                                      apr_pool_t *pool);
                                       
 
-/** Wrapper for @c apr_file_open(), which see.  @a fname is utf8-encoded. */
+/** Wrapper for apr_file_open(), which see.  @a fname is utf8-encoded. */
 svn_error_t *
 svn_io_file_open (apr_file_t **new_file, const char *fname,
                   apr_int32_t flag, apr_fileperms_t perm,
                   apr_pool_t *pool);
 
 
-/** Wrapper for @c apr_file_close(), which see. */
+/** Wrapper for apr_file_close(), which see. */
 svn_error_t *
 svn_io_file_close (apr_file_t *file, apr_pool_t *pool);
 
 
-/** Wrapper for @c apr_file_getc(), which see. */
+/** Wrapper for apr_file_getc(), which see. */
 svn_error_t *
 svn_io_file_getc (char *ch, apr_file_t *file, apr_pool_t *pool);
 
 
-/** Wrapper for @c apr_file_info_get(), which see. */
+/** Wrapper for apr_file_info_get(), which see. */
 svn_error_t *
 svn_io_file_info_get (apr_finfo_t *finfo, apr_int32_t wanted, 
                       apr_file_t *file, apr_pool_t *pool);
 
 
-/** Wrapper for @c apr_file_read(), which see. */
+/** Wrapper for apr_file_read(), which see. */
 svn_error_t *
 svn_io_file_read (apr_file_t *file, void *buf, 
                   apr_size_t *nbytes, apr_pool_t *pool);
 
 
-/** Wrapper for @c apr_file_read_full(), which see. */
+/** Wrapper for apr_file_read_full(), which see. */
 svn_error_t *
 svn_io_file_read_full (apr_file_t *file, void *buf, 
                        apr_size_t nbytes, apr_size_t *bytes_read,
                        apr_pool_t *pool);
 
 
-/** Wrapper for @c apr_file_seek(), which see. */
+/** Wrapper for apr_file_seek(), which see. */
 svn_error_t *
 svn_io_file_seek (apr_file_t *file, apr_seek_where_t where, 
                   apr_off_t *offset, apr_pool_t *pool);
 
 
-/** Wrapper for @c apr_file_write(), which see. */
+/** Wrapper for apr_file_write(), which see. */
 svn_error_t *
 svn_io_file_write (apr_file_t *file, const void *buf, 
                    apr_size_t *nbytes, apr_pool_t *pool);
 
 
-/** Wrapper for @c apr_file_write_full(), which see. */
+/** Wrapper for apr_file_write_full(), which see. */
 svn_error_t *
 svn_io_file_write_full (apr_file_t *file, const void *buf, 
                         apr_size_t nbytes, apr_size_t *bytes_written,
                         apr_pool_t *pool);
 
 
-/** Wrapper for @c apr_stat(), which see.  @a fname is utf8-encoded. */
+/** Wrapper for apr_stat(), which see.  @a fname is utf8-encoded. */
 svn_error_t *
 svn_io_stat (apr_finfo_t *finfo, const char *fname,
              apr_int32_t wanted, apr_pool_t *pool);
 
 
-/** Wrapper for @c apr_file_rename(), which see.  @a from_path and @a to_path
+/** Wrapper for apr_file_rename(), which see.  @a from_path and @a to_path
  * are utf8-encoded.
  */
 svn_error_t *
@@ -854,11 +854,11 @@ svn_io_file_rename (const char *from_path, const char *to_path,
                     apr_pool_t *pool);
 
 
-/** Wrapper for @c apr_dir_make(), which see.  @a path is utf8-encoded. */
+/** Wrapper for apr_dir_make(), which see.  @a path is utf8-encoded. */
 svn_error_t *
 svn_io_dir_make (const char *path, apr_fileperms_t perm, apr_pool_t *pool);
 
-/** Same as svn_io_dir_make, but sets the hidden attribute on the
+/** Same as svn_io_dir_make(), but sets the hidden attribute on the
     directory on systems that support it. */
 svn_error_t *
 svn_io_dir_make_hidden (const char *path, apr_fileperms_t perm,
@@ -867,7 +867,7 @@ svn_io_dir_make_hidden (const char *path, apr_fileperms_t perm,
 /**
  * @since New in 1.1.
  *
- * Same as svn_io_dir_make, but attempts to set the sgid on the
+ * Same as svn_io_dir_make(), but attempts to set the sgid on the
  * directory on systems that support it.  Does not return an error if
  * the attempt to set the sgid bit fails.  On Unix filesystems,
  * setting the sgid bit on a directory ensures that files and
@@ -877,20 +877,20 @@ svn_error_t *
 svn_io_dir_make_sgid (const char *path, apr_fileperms_t perm,
                       apr_pool_t *pool);
 
-/** Wrapper for @c apr_dir_open(), which see.  @a dirname is utf8-encoded. */
+/** Wrapper for apr_dir_open(), which see.  @a dirname is utf8-encoded. */
 svn_error_t *
 svn_io_dir_open (apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool);
 
 
-/** Wrapper for @c apr_dir_remove(), which see.  @a dirname is utf8-encoded.
+/** Wrapper for apr_dir_remove(), which see.  @a dirname is utf8-encoded.
  * Note: this function has this name to avoid confusion with
- * @c svn_io_remove_dir, which is recursive.
+ * svn_io_remove_dir(), which is recursive.
  */
 svn_error_t *
 svn_io_dir_remove_nonrecursive (const char *dirname, apr_pool_t *pool);
 
 
-/** Wrapper for @c apr_dir_read, which see.  Ensures that @a finfo->name is
+/** Wrapper for apr_dir_read(), which see.  Ensures that @a finfo->name is
  * utf8-encoded, which means allocating @a finfo->name in @a pool, which may
  * or may not be the same as @a finfo's pool.  Use @a pool for error allocation
  * as well.

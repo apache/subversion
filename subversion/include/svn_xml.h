@@ -38,7 +38,7 @@ extern "C" {
 /** The namespace all Subversion XML uses. */
 #define SVN_XML_NAMESPACE "svn:"
 
-/** Used as style argument to @c svn_xml_make_open_tag() and friends. */
+/** Used as style argument to svn_xml_make_open_tag() and friends. */
 enum svn_xml_open_tag_style {
   /** <tag ...> */
   svn_xml_normal = 1,
@@ -78,14 +78,14 @@ void svn_xml_escape_cdata_stringbuf (svn_stringbuf_t **outstr,
                                      const svn_stringbuf_t *string,
                                      apr_pool_t *pool);
 
-/** Same as @c svn_xml_escape_cdata_stringbuf, but @a string is an
+/** Same as svn_xml_escape_cdata_stringbuf(), but @a string is an
  * @c svn_string_t.
  */
 void svn_xml_escape_cdata_string (svn_stringbuf_t **outstr,
                                   const svn_string_t *string,
                                   apr_pool_t *pool);
 
-/** Same as @c svn_xml_escape_cdata_stringbuf, but @a string is a
+/** Same as svn_xml_escape_cdata_stringbuf(), but @a string is a
  * null-terminated C string.
  */
 void svn_xml_escape_cdata_cstring (svn_stringbuf_t **outstr,
@@ -103,14 +103,14 @@ void svn_xml_escape_attr_stringbuf (svn_stringbuf_t **outstr,
                                     const svn_stringbuf_t *string,
                                     apr_pool_t *pool);
 
-/** Same as @c svn_xml_escape_attr_stringbuf, but @a string is an
+/** Same as svn_xml_escape_attr_stringbuf(), but @a string is an
  * @c svn_string_t.
  */
 void svn_xml_escape_attr_string (svn_stringbuf_t **outstr,
                                  const svn_string_t *string,
                                  apr_pool_t *pool);
 
-/** Same as @c svn_xml_escape_attr_stringbuf, but @a string is a
+/** Same as svn_xml_escape_attr_stringbuf(), but @a string is a
  * null-terminated C string.
  */
 void svn_xml_escape_attr_cstring (svn_stringbuf_t **outstr,
@@ -177,10 +177,10 @@ void svn_xml_free_parser (svn_xml_parser_t *svn_parser);
  *
  * An error will be returned if there was a syntax problem in the XML,
  * or if any of the callbacks set an error using
- * @c svn_xml_signal_bailout().  
+ * svn_xml_signal_bailout().  
  *
  * If an error is returned, the @c svn_xml_parser_t will have been freed
- * automatically, so the caller should not call @c svn_xml_free_parser().
+ * automatically, so the caller should not call svn_xml_free_parser().
  */ 
 svn_error_t *svn_xml_parse (svn_xml_parser_t *parser,
                             const char *buf,
@@ -237,14 +237,14 @@ apr_hash_t *svn_xml_ap_to_hash (va_list ap, apr_pool_t *pool);
 apr_hash_t *svn_xml_make_att_hash (const char **atts, apr_pool_t *pool);
 
 
-/** Like @c svn_xml_make_att_hash(), but takes a hash and preserves any
+/** Like svn_xml_make_att_hash(), but takes a hash and preserves any
  * key/value pairs already in it.
  */
 void svn_xml_hash_atts_preserving (const char **atts,
                                    apr_hash_t *ht,
                                    apr_pool_t *pool);
 
-/** Like @c svn_xml_make_att_hash(), but takes a hash and overwrites
+/** Like svn_xml_make_att_hash(), but takes a hash and overwrites
  * key/value pairs already in it that also appear in @a atts.
  */
 void svn_xml_hash_atts_overlaying (const char **atts,
@@ -286,7 +286,7 @@ void svn_xml_make_open_tag (svn_stringbuf_t **str,
                             ...);
 
 
-/** Like @c svn_xml_make_open_tag, but takes a @c va_list instead of being
+/** Like svn_xml_make_open_tag(), but takes a @c va_list instead of being
  * variadic.
  */
 void svn_xml_make_open_tag_v (svn_stringbuf_t **str,
@@ -296,10 +296,10 @@ void svn_xml_make_open_tag_v (svn_stringbuf_t **str,
                               va_list ap);
 
 
-/** Like @c svn_xml_make_open_tag, but takes a hash table of attributes 
+/** Like svn_xml_make_open_tag(), but takes a hash table of attributes
  * (<tt>char *</tt> keys mapping to <tt>char *</tt> values).
  *
- * You might ask, why not just provide @c svn_xml_make_tag_atts()?
+ * You might ask, why not just provide svn_xml_make_tag_atts()?
  *
  * The reason is that a hash table is the most natural interface to an
  * attribute list; the fact that Expat uses <tt>char **</tt> atts instead is
@@ -310,8 +310,8 @@ void svn_xml_make_open_tag_v (svn_stringbuf_t **str,
  * needed.  Someday it might even be nice to change expat-lite to work
  * with apr hashes.
  *
- * See conversion functions @c svn_xml_make_att_hash() and
- * @c svn_xml_make_att_hash_overlaying().  Callers should use those to
+ * See conversion functions svn_xml_make_att_hash() and
+ * svn_xml_make_att_hash_overlaying().  Callers should use those to
  * convert Expat attr lists into hashes when necessary.
  */
 void svn_xml_make_open_tag_hash (svn_stringbuf_t **str,

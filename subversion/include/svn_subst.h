@@ -155,7 +155,7 @@ svn_subst_keywords_differ (const svn_subst_keywords_t *a,
  *
  * Notes: 
  *
- * See @c svn_wc__get_keywords() and @c svn_wc__get_eol_style() for a
+ * See svn_wc__get_keywords() and svn_wc__get_eol_style() for a
  * convenient way to get @a eol_str and @a keywords if in libsvn_wc.
  */
 svn_error_t *
@@ -170,7 +170,7 @@ svn_subst_translate_stream (svn_stream_t *src,
 /**
  * @deprecated Provided for backward compatibility with the 1.0 API.
  *
- * Similar to svn_subst_copy_and_translate2 except that @a special is
+ * Similar to svn_subst_copy_and_translate2() except that @a special is
  * always set to @c FALSE.
  */
 svn_error_t *
@@ -185,7 +185,7 @@ svn_subst_copy_and_translate (const char *src,
 /**
  * @since New in 1.1.
  *
- * Convenience routine: a variant of @c svn_subst_translate_stream
+ * Convenience routine: a variant of svn_subst_translate_stream()
  * which operates on files.  (See previous docstring for details.)  In
  * addition, it will create/detranslate a special file if @a special
  * is @c TRUE.
@@ -210,7 +210,7 @@ svn_subst_copy_and_translate2 (const char *src,
                                svn_boolean_t special,
                                apr_pool_t *pool);
 
-/** Convenience routine: a variant of @c svn_subst_translate_stream which
+/** Convenience routine: a variant of svn_subst_translate_stream() which
  * operates on cstrings.  (See previous docstring for details.)
  *
  * Return a new string in @a *dst, allocated in @a pool, by copying the
