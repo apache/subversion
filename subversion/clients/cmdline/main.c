@@ -652,7 +652,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      "      'T' locked in repository, lock token present but sTolen\n"
      "      'B' not locked in repository, lock token present but Broken\n"
      "\n"
-     "  The out-of-date information appears in the ninth column (with -u):\n"
+     "  The out-of-date information appears in the eighth column (with -u):\n"
      "      '*' a newer revision exists on the server\n"
      "      ' ' the working copy is up to date\n"
      "\n"
