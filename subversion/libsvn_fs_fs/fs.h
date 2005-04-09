@@ -44,7 +44,9 @@ typedef struct
 
   /* The format number of this FS. */
   int format;
-  
+
+  /* The uuid of this FS. */
+  const char *uuid;
 } fs_fs_data_t;
 
 
