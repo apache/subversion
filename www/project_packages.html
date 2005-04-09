@@ -2,7 +2,7 @@
 "http://style.tigris.org/tigris_transitional.dtd">
 <html>
 <head>
-<title>Subversion Distributions</title>
+<title>Subversion Packages</title>
 <link rel="stylesheet" type="text/css" 
       href="http://subversion.tigris.org/branding/css/tigris.css" />
 <link rel="stylesheet" type="text/css" 
@@ -112,9 +112,9 @@ instructions</a> within the source code itself.</p>
 Binary Packages
 </h1>
 <p>
-The Subversion project does not <b>officially endorse or maintain</b> any
-binary packages of the Subversion software.  However, volunteers have created
-binary packages for different distributions and platforms, and as a
+The Subversion project <b>does <i>not</i> officially endorse or maintain</b>
+any binary packages of the Subversion software.  However, volunteers have
+created binary packages for different distributions and platforms, and as a
 convenience, we maintain a list of links to them here.  If there are any
 problems with or questions about the different binary packages please send
 email to the Subversion developers mailing list.
@@ -122,22 +122,34 @@ email to the Subversion developers mailing list.
 <hr />
 
 <h2><img alt="" src="images/redhat.png" width="32" height="32"
-/> RedHat Linux and Fedora Core</h2>
+/> Red Hat Linux and Fedora Core</h2>
 
-<p><em>Maintainer: <a href="mailto:david@summersoft.fay.ar.us">David Summers</a></em></p>
+<ul>
+<li><p><b>Red Hat 7.x, 8.0, 9, Whitebox Enterprise Linux 3</b></p>
+<p><em>Maintainer: <a href="mailto:david@summersoft.fay.ar.us">David
+Summers</a></em></p>
 
-<p>RPMs for Intel (i386) Redhat 7.X, 8.0, 9.0, Fedora Core 1, Whitebox Enterprise
-Linux 3 / Redhat Enterprise Linux 3 : <a href=
-"http://summersoft.fay.ar.us/pub/subversion/latest/">http://summersoft.fay.ar.us/pub/subversion/latest/</a>
+<p><a href="http://summersoft.fay.ar.us/pub/subversion/latest/"
+           >http://summersoft.fay.ar.us/pub/subversion/latest/</a>
 (<a href="http://the.earth.li/pub/subversion/summersoft.fay.ar.us/pub/subversion/latest/"><em>UK Mirror</em></a>)
 </p>
+</li>
 
-<p>
-Binary RPM packages for Fedora Core 2 and Fedora Core 3 are already available
-in those distributions.  If you do not already have them installed then you
-may install them from the installation CD/DVD or use "yum install subversion"
-to install them from the internet distribution mirrors.
-</p>
+<li><p><b>Fedora Core 1, 2, Red Hat Enterprise Linux 3, 4</b></p>
+<p><em>Maintainer: Dag Wieers</em></p>
+<p><a href="http://dag.wieers.com/packages/subversion/"
+           >http://dag.wieers.com/packages/subversion/</a></p>
+</li>
+
+<li><p><b>Fedora Core 3</b></p>
+<p>Binary RPM packages of Subversion 1.1.x are already available in this
+distribution.  If you do not already have them installed then you may install
+them from the installation CD/DVD or use "yum install subversion" to install
+them from the internet distribution mirrors.  Alternatively, the Dag repository
+linked to above also has packages for this distribution, and is more likely
+to update to Subversion 1.2.x when it is officially released.</p>
+</li>
+</ul>
 
 <hr />
 
@@ -147,15 +159,13 @@ to install them from the internet distribution mirrors.
 <p><em>Maintainer: <a href="mailto:dwhedon@debian.org">David Kimdon</a>
 </em></p>
 
-<p>Information on the latest .deb packages for Debian Unstable ('sid')
+<p>If you are running Debian testing ('sarge') or unstable ('sid') just run
+'apt-get install subversion'.  Information on the latest official packages
 can be found here: <a
 href="http://packages.debian.org/subversion">http://packages.debian.org/subversion</a>.</p>
 
-<p>If you are running Debian unstable, just run 'apt-get
-install subversion'.</p>
-
-<p>Backported .deb packages for Debian Stable ('woody') can be found
-here: <a
+<p>Backported packages for Debian stable ('woody') can be found
+here, but are of Subversion 1.0.x only: <a
 href="http://people.debian.org/~adconrad/">http://people.debian.org/~adconrad/</a>.</p>
 
 <hr />
@@ -165,11 +175,11 @@ href="http://people.debian.org/~adconrad/">http://people.debian.org/~adconrad/</
 
 <p><em>Maintainer: <a href="mailto:olh@suse.de">Olaf Hering</a></em></p>
 
-<p>RPM packages for various older SuSE Linux versions: <a
-href="ftp://ftp.suse.com/pub/people/poeml/">ftp://ftp.suse.com/pub/people/poeml/</a></p>
-
-<p>A list of available mirror sites can be found here: <a
-href="http://www.suse.de/en/private/download/ftp/int_mirrors.html">http://www.suse.de/en/private/download/ftp/int_mirrors.html</a></p>
+<p>SuSE Linux 9.2 and earlier do not ship with any (up to date) version of
+Subversion.  However, <b>unofficial</b> packages exist in the
+<tt>projects/apache/subversion</tt> directory of <a
+href="http://www.novell.com/products/linuxprofessional/downloads/ftp/int_mirrors.html"
+>SuSE mirrors</a>.</p>
 
 <hr />
 
