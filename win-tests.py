@@ -180,7 +180,7 @@ if run_svnserve:
 print 'Testing', objdir, 'configuration on', repo_loc
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 import run_tests
-th = run_tests.TestHarness(abs_srcdir, abs_builddir, sys.executable, None,
+th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                            os.path.join(abs_builddir, log),
                            base_url, fs_type, 1, cleanup)
 old_cwd = os.getcwd()
