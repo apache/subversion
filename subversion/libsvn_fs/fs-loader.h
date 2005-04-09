@@ -116,6 +116,15 @@ svn_error_t *svn_fs_fs__init (const svn_version_t *loader_version,
 
 typedef struct fs_vtable_t
 {
+  /* The FS loader library invokes serialized_init after a create or
+     open call, with the new FS object as its first parameter.  Calls
+     to serialized_init are globally serialized, so the FS module
+     function has exclusive access to common_pool.  The same
+     common_pool will be passed for every FS object created during the
+     lifetime of the pool passed to svn_fs_initialize(), or during the
+     lifetime of the process if svn_fs_initialize() is not invoked. */
+  svn_error_t *(*serialized_init) (svn_fs_t *fs, apr_pool_t *common_pool);
+
   svn_error_t *(*youngest_rev) (svn_revnum_t *youngest_p, svn_fs_t *fs,
                                 apr_pool_t *pool);
   svn_error_t *(*revision_prop) (svn_string_t **value_p, svn_fs_t *fs,

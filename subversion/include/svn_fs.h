@@ -67,6 +67,23 @@ typedef struct svn_fs_t svn_fs_t;
 /** @} */
 
 
+/** @since New in 1.2.
+ * 
+ * Callers should invoke this function to initialize global state in
+ * the FS library before creating FS objects.  If this function is
+ * invoked, no FS objects may be created in another thread at the same
+ * time as this invocation, and the provided @a pool must last longer
+ * than any FS object created subsequently.
+ *
+ * If this function is not called, the FS library will make a best
+ * effort to bootstrap a mutex for protecting data common to FS
+ * objects; however, there is a small window of failure.  Also, a
+ * small amount of data will be leaked if the Subversion FS library is
+ * dynamically unloaded.
+ */
+svn_error_t *svn_fs_initialize (apr_pool_t *pool);
+
+
 /** The type of a warning callback function.  @a baton is the value specified
  * in the call to svn_fs_set_warning_func(); the filesystem passes it through
  * to the callback.  @a err contains the warning message.
