@@ -14,21 +14,17 @@ class TestHarness:
   '''Test harness for Subversion tests.
   '''
 
-  def __init__(self, abs_srcdir, abs_builddir, python, shell, logfile,
+  def __init__(self, abs_srcdir, abs_builddir, logfile,
                base_url=None, fs_type=None, verbose=None, cleanup=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
-    PYTHON is the name of the python interpreter.
-    SHELL is the name of the shell.
     LOGFILE is the name of the log file.
     BASE_URL is the base url for DAV tests.
     FS_TYPE is the FS type for repository creation.
     '''
     self.srcdir = abs_srcdir
     self.builddir = abs_builddir
-    self.python = python
-    self.shell = shell
     self.logfile = logfile
     self.base_url = base_url
     self.fs_type = fs_type
@@ -81,7 +77,7 @@ class TestHarness:
     print >> self.log, 'START: ' + progbase
 
     if progbase[-3:] == '.py':
-      progname = self.python
+      progname = sys.executable
       cmdline = [quote(progname),
                  quote(os.path.join(self.srcdir, prog))]
       if self.verbose is not None:
@@ -92,12 +88,6 @@ class TestHarness:
         cmdline.append(quote('--url=' + self.base_url))
       if self.fs_type is not None:
         cmdline.append(quote('--fs-type=' + self.fs_type))
-    elif progbase[-3:] == '.sh':
-      progname = self.shell
-      cmdline = [quote(progname),
-                 quote(os.path.join(self.srcdir, prog)),
-                 quote(os.path.join(self.builddir, progdir)),
-                 quote(os.path.join(self.srcdir, progdir))]
     elif os.access(prog, os.X_OK):
       progname = './' + progbase
       cmdline = [quote(progname),
@@ -157,7 +147,7 @@ class TestHarness:
 def main():
   '''Usage: run_tests.py [--url=<base-url>] [--fs-type=<fs-type>]
                       [--verbose] [--cleanup]
-                      <abs_srcdir> <abs_builddir> <python> <shell>
+                      <abs_srcdir> <abs_builddir>
                       <prog ...>
 
   The optional base-url, fs-type, verbose, and cleanup options, and
@@ -171,7 +161,7 @@ def main():
   except getopt.GetoptError:
     args = []
 
-  if len(args) < 5:
+  if len(args) < 3:
     print __doc__
     sys.exit(2)
 
@@ -188,7 +178,7 @@ def main():
     else:
       raise getopt.GetoptError
 
-  th = TestHarness(args[0], args[1], args[2], args[3],
+  th = TestHarness(args[0], args[1],
                    os.path.abspath('tests.log'),
                    base_url, fs_type, verbose, cleanup)
 
