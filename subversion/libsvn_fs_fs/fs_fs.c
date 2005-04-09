@@ -258,9 +258,12 @@ check_format (svn_fs_t *fs)
 svn_error_t *
 svn_fs_fs__open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
-  apr_file_t *current_file;
+  fs_fs_data_t *ffd = fs->fsap_data;
+  apr_file_t *current_file, *uuid_file;
   svn_error_t *err;
   int format;
+  char buf[APR_UUID_FORMATTED_LENGTH + 2];
+  apr_size_t limit;
 
   fs->path = apr_pstrdup (fs->pool, path);
 
@@ -286,8 +289,17 @@ svn_fs_fs__open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
     return err;
   
   /* Now we've got a format number no matter what. */
-  ((fs_fs_data_t *) fs->fsap_data)->format = format;
+  ffd->format = format;
   SVN_ERR (check_format (fs));
+
+  SVN_ERR (svn_io_file_open (&uuid_file, path_uuid (fs, pool),
+                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+
+  limit = sizeof (buf);
+  SVN_ERR (svn_io_read_length_line (uuid_file, buf, &limit, pool));
+  ffd->uuid = apr_pstrdup (fs->pool, buf);
+  
+  SVN_ERR (svn_io_file_close (uuid_file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -3949,19 +3961,9 @@ svn_fs_fs__get_uuid (svn_fs_t *fs,
                      const char **uuid_p,
                      apr_pool_t *pool)
 {
-  apr_file_t *uuid_file;
-  char buf [APR_UUID_FORMATTED_LENGTH + 2];
-  apr_size_t limit;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
-  SVN_ERR (svn_io_file_open (&uuid_file, path_uuid (fs, pool),
-                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
-
-  limit = sizeof (buf);
-  SVN_ERR (svn_io_read_length_line (uuid_file, buf, &limit, pool));
-  *uuid_p = apr_pstrdup (pool, buf);
-  
-  SVN_ERR (svn_io_file_close (uuid_file, pool));
-
+  *uuid_p = apr_pstrdup (pool, ffd->uuid);
   return SVN_NO_ERROR;
 }
 
@@ -3971,6 +3973,7 @@ svn_fs_fs__set_uuid (svn_fs_t *fs,
                      apr_pool_t *pool)
 {
   apr_file_t *uuid_file;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
   SVN_ERR (svn_io_file_open (&uuid_file, path_uuid (fs, pool),
                              APR_WRITE | APR_CREATE | APR_TRUNCATE
@@ -3979,6 +3982,8 @@ svn_fs_fs__set_uuid (svn_fs_t *fs,
   SVN_ERR (svn_io_file_write_full (uuid_file, uuid, strlen (uuid), NULL,
                                    pool));
   SVN_ERR (svn_io_file_write_full (uuid_file, "\n", 1, NULL, pool));
+
+  ffd->uuid = apr_pstrdup (fs->pool, uuid);
 
   SVN_ERR (svn_io_file_close (uuid_file, pool));
   
