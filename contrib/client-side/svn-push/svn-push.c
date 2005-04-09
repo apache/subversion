@@ -22,6 +22,7 @@
 #include <svn_delta.h>
 #include <svn_config.h>
 #include <svn_cmdline.h>
+#include <svn_fs.h>
 
 static svn_error_t *
 my_commit_callback (svn_revnum_t new_revision,
@@ -180,6 +181,14 @@ main (int argc, char *argv[])
 
   /* Check library versions */
   error = check_lib_versions ();
+  if (error)
+    {
+      svn_handle_error2 (error, stderr, FALSE, "svn-push");
+      return EXIT_FAILURE;
+    }
+
+  /* Initialize the FS library. */
+  error = svn_fs_initialize (top_pool);
   if (error)
     {
       svn_handle_error2 (error, stderr, FALSE, "svn-push");

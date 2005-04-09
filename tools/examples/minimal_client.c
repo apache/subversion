@@ -38,6 +38,7 @@
 #include "svn_client.h"
 #include "svn_pools.h"
 #include "svn_config.h"
+#include "svn_fs.h"
 
 
 /* Display a prompt and read a one-line response into the provided buffer,
@@ -146,13 +147,21 @@ main (int argc, const char **argv)
      understand how to properly use/free subpools. */
   pool = svn_pool_create (NULL);
 
-  /* Make sure the ~/.subversion run-time config files exist */  
-  err = svn_config_ensure (NULL, pool);
+  /* Initialize the FS library. */
+  err = svn_fs_initialize (pool);
   if (err)
     {
       /* For functions deeper in the stack, we usually use the
          SVN_ERR() exception-throwing macro (see svn_error.h).  At the
          top level, we catch & print the error with svn_handle_error2(). */
+      svn_handle_error2 (err, stderr, FALSE, "minimal_client: ");
+      return EXIT_FAILURE;
+    }
+
+  /* Make sure the ~/.subversion run-time config files exist */  
+  err = svn_config_ensure (NULL, pool);
+  if (err)
+    {
       svn_handle_error2 (err, stderr, FALSE, "minimal_client: ");
       return EXIT_FAILURE;
     }

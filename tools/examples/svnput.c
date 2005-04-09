@@ -41,6 +41,7 @@
 #include "svn_client.h"
 #include "svn_pools.h"
 #include "svn_config.h"
+#include "svn_fs.h"
 
 
 /* Display a prompt and read a one-line response into the provided buffer,
@@ -171,6 +172,10 @@ main (int argc, const char **argv)
   /* Create top-level memory pool. Be sure to read the HACKING file to
      understand how to properly use/free subpools. */
   pool = svn_pool_create (NULL);
+
+  /* Initialize the FS library. */
+  err = svn_fs_initialize (pool);
+  if (err) goto hit_error;
 
   /* Make sure the ~/.subversion run-time config files exist, and load. */  
   err = svn_config_ensure (NULL, pool);
