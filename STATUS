@@ -79,5 +79,13 @@ Candidate changes:
     Votes:
       +1: lundblad
 
+  * r14061
+    Kill uninitialized struct member in libsvn_fs.
+    Justification:
+      Crash.
+    Votes:
+      +1: lundblad
+
+
 Approved changes (further review is welcome, but not required):
 
