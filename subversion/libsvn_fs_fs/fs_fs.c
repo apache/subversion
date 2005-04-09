@@ -3691,9 +3691,10 @@ svn_fs_fs__with_write_lock (svn_fs_t *fs,
     return svn_error_wrap_apr (status, "Can't grab FSFS repository mutex");
 #endif
 
-  SVN_ERR (get_write_lock (fs, subpool));
+  err = get_write_lock (fs, subpool);
 
-  err = body (baton, subpool);
+  if (!err)
+    err = body (baton, subpool);
 
   svn_pool_destroy (subpool);
 
