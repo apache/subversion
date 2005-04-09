@@ -1171,6 +1171,16 @@ main (int argc, const char * const *argv)
       return EXIT_FAILURE;
     }
 
+  /* Initialize the FS library. */
+  err = svn_fs_initialize (pool);
+  if (err)
+    {
+      svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
+      svn_error_clear (err);
+      svn_pool_destroy (pool);
+      return EXIT_FAILURE;
+    }
+
   if (argc <= 1)
     {
       subcommand_help (NULL, NULL, pool);

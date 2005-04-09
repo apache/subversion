@@ -20,6 +20,7 @@
 #include "svn_utf.h"
 #include "svn_path.h"
 #include "svn_opt.h"
+#include "svn_fs.h"
 
 #include "svn_private_config.h"
 
@@ -230,6 +231,16 @@ main(int argc, const char *argv[])
 
   /* Check library versions */
   err = check_lib_versions ();
+  if (err)
+    {
+      svn_handle_error2 (err, stderr, FALSE, "svnversion: ");
+      svn_error_clear (err);
+      svn_pool_destroy (pool);
+      return EXIT_FAILURE;
+    }
+
+  /* Initialize the FS library. */
+  err = svn_fs_initialize (pool);
   if (err)
     {
       svn_handle_error2 (err, stderr, FALSE, "svnversion: ");
