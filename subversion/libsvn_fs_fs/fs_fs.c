@@ -27,6 +27,7 @@
 #include <apr_file_io.h>
 #include <apr_uuid.h>
 #include <apr_md5.h>
+#include <apr_thread_mutex.h>
 
 #include "svn_pools.h"
 #include "svn_fs.h"
@@ -3679,11 +3680,28 @@ svn_fs_fs__with_write_lock (svn_fs_t *fs,
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_error_t *err;
 
+#if APR_HAS_THREADS
+  fs_fs_data_t *ffd = fs->fsap_data;
+  apr_status_t status;
+
+  /* POSIX fcntl locks are per-process, so we need to serialize locks
+     within the process. */
+  status = apr_thread_mutex_lock (ffd->lock);
+  if (status)
+    return svn_error_wrap_apr (status, "Can't grab FSFS repository mutex");
+#endif
+
   SVN_ERR (get_write_lock (fs, subpool));
 
   err = body (baton, subpool);
 
   svn_pool_destroy (subpool);
+
+#if APR_HAS_THREADS
+  status = apr_thread_mutex_unlock (ffd->lock);
+  if (status && !err)
+    return svn_error_wrap_apr (status, "Can't ungrab FSFS repository mutex");
+#endif
 
   return err;
 }
