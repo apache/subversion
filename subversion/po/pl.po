@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-04-02 14:28+0200\n"
-"PO-Revision-Date: 2005-04-06 00:07+0200\n"
+"PO-Revision-Date: 2005-04-10 23:28+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3829,9 +3829,9 @@ msgid "'%s' is not a directory in filesystem '%s'"
 msgstr "'%s' nie jest katalogiem w systemie plików '%s'"
 
 #: libsvn_fs_base/err.c:231 libsvn_fs_fs/err.c:288
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a file in filesystem '%s'"
-msgstr "'%s' nie jest katalogiem w systemie plików '%s'"
+msgstr "'%s' nie jest plikiem w systemie plików '%s'"
 
 #: libsvn_fs_base/err.c:242 libsvn_fs_fs/err.c:277
 #, fuzzy, c-format
@@ -3839,9 +3839,9 @@ msgid "Token '%s' does not point to any existing lock in filesystem '%s'"
 msgstr "'%s' nie jest katalogiem w systemie plików '%s'"
 
 #: libsvn_fs_base/err.c:252
-#, fuzzy, c-format
+#, c-format
 msgid "No token given for path '%s' in filesystem '%s'"
-msgstr "Brak kopii o id '%s' w systemie plików '%s'"
+msgstr "Brak żetonu dla ścieżki '%s' w systemie plików '%s'"
 
 #: libsvn_fs_base/err.c:261
 #, fuzzy, c-format
@@ -3854,9 +3854,9 @@ msgid "No lock on path '%s' in filesystem '%s'"
 msgstr "Brak kopii o id '%s' w systemie plików '%s'"
 
 #: libsvn_fs_base/err.c:282 libsvn_fs_fs/err.c:179
-#, fuzzy, c-format
+#, c-format
 msgid "Lock has expired:  lock-token '%s' in filesystem '%s'"
-msgstr "Brak kopii o id '%s' w systemie plików '%s'"
+msgstr "Blokada wygasła: żeton blokady '%s' w systemie plików '%s'"
 
 #: libsvn_fs_base/err.c:293 libsvn_fs_fs/err.c:255
 #, fuzzy, c-format
@@ -3869,9 +3869,9 @@ msgid "User '%s' is trying to use a lock owned by '%s' in filesystem '%s'"
 msgstr "'%s' nie jest katalogiem w systemie plików '%s'"
 
 #: libsvn_fs_base/err.c:317 libsvn_fs_fs/err.c:299
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is locked by user '%s' in filesystem '%s'"
-msgstr "'%s' nie jest katalogiem w systemie plików '%s'"
+msgstr "Ścieżka '%s' została zablokowana przez użytkownika '%s' w systemie plików '%s'"
 
 #: libsvn_fs_base/fs.c:79
 #, c-format
@@ -3893,14 +3893,14 @@ msgid "Expected FS format '%d'; found format '%d'"
 msgstr "Oczekiwany format systemu plików '%d'; znaleziony format '%d'"
 
 #: libsvn_fs_base/fs.c:1054
-#, fuzzy, c-format
+#, c-format
 msgid "Can't open file '%s' for reading"
-msgstr "Nie można otworzyć pliku '%s'"
+msgstr "Nie można otworzyć do czytania pliku '%s'"
 
 #: libsvn_fs_base/fs.c:1063
-#, fuzzy, c-format
+#, c-format
 msgid "Can't open file '%s' for writing"
-msgstr "Nie można otworzyć pliku '%s'"
+msgstr "Nie można otworzyć do zapisu pliku '%s'"
 
 #: libsvn_fs_base/fs.c:1083
 #, c-format
