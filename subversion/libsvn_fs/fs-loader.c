@@ -242,7 +242,7 @@ svn_fs_initialize (apr_pool_t *pool)
 }
 
 static svn_error_t *
-serialized_init (svn_fs_t *fs)
+serialized_init (svn_fs_t *fs, apr_pool_t *pool)
 {
   svn_error_t *err;
   apr_status_t status;
@@ -264,7 +264,7 @@ serialized_init (svn_fs_t *fs)
   if (status)
     return svn_error_wrap_apr (status, "Can't grab FS mutex");
 #endif
-  err = fs->vtable->serialized_init (fs, common_pool);
+  err = fs->vtable->serialized_init (fs, common_pool, pool);
 #if APR_HAS_THREADS
   status = apr_thread_mutex_unlock (common_pool_lock);
   if (status && !err)
@@ -329,7 +329,7 @@ svn_fs_create (svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   /* Perform the actual creation. */
   *fs_p = svn_fs_new (fs_config, pool);
   SVN_ERR (vtable->create (*fs_p, path, pool));
-  return serialized_init (*fs_p);
+  return serialized_init (*fs_p, pool);
 }
 
 svn_error_t *
@@ -341,7 +341,7 @@ svn_fs_open (svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   SVN_ERR (fs_library_vtable (&vtable, path, pool));
   *fs_p = svn_fs_new (fs_config, pool);
   SVN_ERR (vtable->open (*fs_p, path, pool));
-  return serialized_init (*fs_p);
+  return serialized_init (*fs_p, pool);
 }
 
 const char *
@@ -396,7 +396,7 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
 
   /* Perform the actual creation. */
   SVN_ERR (vtable->create (fs, path, fs->pool));
-  return serialized_init (fs);
+  return serialized_init (fs, fs->pool);
 }
 
 svn_error_t *
@@ -406,7 +406,7 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 
   SVN_ERR (get_library_vtable (&vtable, SVN_FS_TYPE_BDB, fs->pool));
   SVN_ERR (vtable->open (fs, path, fs->pool));
-  return serialized_init (fs);
+  return serialized_init (fs, fs->pool);
 }
 
 const char *

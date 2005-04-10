@@ -62,7 +62,7 @@ check_already_open (svn_fs_t *fs)
 
 
 static svn_error_t *
-fs_serialized_init (svn_fs_t *fs, apr_pool_t *common_pool)
+fs_serialized_init (svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
 {
 #if APR_HAS_THREADS
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -91,8 +91,8 @@ fs_serialized_init (svn_fs_t *fs, apr_pool_t *common_pool)
      know of a better way of associating a mutex with the
      repository. */
 
-  key = apr_pstrcat (common_pool, SVN_FSFS_LOCK_USERDATA_PREFIX,
-                     ffd->uuid, (char *) NULL);
+  key = apr_pstrcat (pool, SVN_FSFS_LOCK_USERDATA_PREFIX, ffd->uuid,
+                     (char *) NULL);
   status = apr_pool_userdata_get (&val, key, common_pool);
   if (status)
     return svn_error_wrap_apr (status, "Can't fetch FSFS mutex");
@@ -103,6 +103,7 @@ fs_serialized_init (svn_fs_t *fs, apr_pool_t *common_pool)
                                         common_pool);
       if (status)
         return svn_error_wrap_apr (status, "Can't create FSFS mutex");
+      key = apr_pstrdup (common_pool, key);
       status = apr_pool_userdata_set (lock, key, NULL, common_pool);
       if (status)
         return svn_error_wrap_apr (status, "Can't store FSFS mutex");
