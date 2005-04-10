@@ -32,7 +32,7 @@ Candidate changes:
       See http://svn.haxx.se/dev/archive-2005-04/0567.shtml
       If we don't do back-port it now while it's new, we can't at all.
     Votes:
-      +1: julianfoad
+      +1: julianfoad, lundblad
 
   * r14041.
     Fix issue #2268 (svn update of xml-unsafe dir (from within) http error)
