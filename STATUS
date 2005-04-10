@@ -16,15 +16,6 @@ Candidate changes:
     Votes:
       +1: maxb, epg
 
-  * r13978
-    Make copy_tests 25 pass over DAV.
-    Justification:
-      A failing test looks bad, even more so in a release.
-    Notes:
-      The problem was in the test, not in Subversion itself.
-    Votes:
-      +1: kfogel, fitz
-
   * r13983
     Correct valid warnings and bogus compilation errors specific to
     Jikes.
@@ -77,21 +68,21 @@ Candidate changes:
     Justification:
       Crashes are bad.
     Votes:
-      +1: lundblad
+      +1: lundblad, philip
 
   * r14061
     Kill uninitialized struct member in libsvn_fs.
     Justification:
       Crash.
     Votes:
-      +1: lundblad
+      +1: lundblad, philip
 
   * r14064
     Fix svn status help text - "*" appears in column 8, not 9.
     Notes:
       Bite-sized - no, nibble-sized - change.
     Votes:
-      +1: maxb
+      +1: maxb, philip
 
   * r14074
     Make mailer.py backward compatible.
@@ -107,6 +98,22 @@ Candidate changes:
    Votes:
      +1: jszakmeister
 
+  * r14076
+    Make update_test 25 work with Python 2.1
+    Justification:
+      A failing test looks bad, even more so in a release.
+    Votes:
+     +1: philip
+
 
 Approved changes (further review is welcome, but not required):
+
+  * r13978
+    Make copy_tests 25 pass over DAV.
+    Justification:
+      A failing test looks bad, even more so in a release.
+    Notes:
+      The problem was in the test, not in Subversion itself.
+    Votes:
+      +1: kfogel, fitz, philip
 
