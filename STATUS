@@ -9,13 +9,6 @@ Status of 1.2.0:
 
 Candidate changes:
 
-  * r13961, r13981
-    Make Ruby bindings install to the correct location.
-    Justification:
-      Broken otherwise. (and _still_ broken with only r13961).
-    Votes:
-      +1: maxb, epg
-
   * r13983
     Correct valid warnings and bogus compilation errors specific to
     Jikes.
@@ -48,41 +41,12 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
-  * r14048
-    Avoid spurious test failures when using FSFS and test repositories remain
-    on disk from a previous test run.
-    Justification:
-      Test failure bad.
-    Votes:
-      +1: maxb, fitz
-
   * r14031, r14052
     Tweak help text for svn propset to include svn:needs-lock.
     Justification:
       Help text completeness.
     Votes:
-      +1: lundblad
-
-  * r14057
-    Fix a crash in ra_dav when a NULL lock comment is passed to svn_ra_lock.
-    Justification:
-      Crashes are bad.
-    Votes:
-      +1: lundblad, philip
-
-  * r14061
-    Kill uninitialized struct member in libsvn_fs.
-    Justification:
-      Crash.
-    Votes:
-      +1: lundblad, philip
-
-  * r14064
-    Fix svn status help text - "*" appears in column 8, not 9.
-    Notes:
-      Bite-sized - no, nibble-sized - change.
-    Votes:
-      +1: maxb, philip
+      +1: lundblad, ringstrom
 
   * r14074
     Make mailer.py backward compatible.
@@ -103,7 +67,7 @@ Candidate changes:
     Justification:
       A failing test looks bad, even more so in a release.
     Votes:
-     +1: philip
+     +1: philip, ringstrom
 
 
 Approved changes (further review is welcome, but not required):
@@ -116,4 +80,40 @@ Approved changes (further review is welcome, but not required):
       The problem was in the test, not in Subversion itself.
     Votes:
       +1: kfogel, fitz, philip
+
+  * r13961, r13981
+    Make Ruby bindings install to the correct location.
+    Justification:
+      Broken otherwise. (and _still_ broken with only r13961).
+    Votes:
+      +1: maxb, epg, ringstrom
+
+  * r14048
+    Avoid spurious test failures when using FSFS and test repositories remain
+    on disk from a previous test run.
+    Justification:
+      Test failure bad.
+    Votes:
+      +1: maxb, fitz, ringstrom
+
+  * r14057
+    Fix a crash in ra_dav when a NULL lock comment is passed to svn_ra_lock.
+    Justification:
+      Crashes are bad.
+    Votes:
+      +1: lundblad, philip, ringstrom
+
+  * r14061
+    Kill uninitialized struct member in libsvn_fs.
+    Justification:
+      Crash.
+    Votes:
+      +1: lundblad, philip, ringstrom
+
+  * r14064
+    Fix svn status help text - "*" appears in column 8, not 9.
+    Notes:
+      Bite-sized - no, nibble-sized - change.
+    Votes:
+      +1: maxb, philip, ringstrom
 
