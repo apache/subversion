@@ -527,7 +527,7 @@ bdb_write_config  (svn_fs_t *fs)
 
 
 static svn_error_t *
-base_serialized_init (svn_fs_t *fs, apr_pool_t *common_pool)
+base_serialized_init (svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
 {
   /* Nothing to do here. */
   return SVN_NO_ERROR;
