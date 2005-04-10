@@ -22,7 +22,7 @@ _svn()
               list ls lock log merge mkdir move mv rename \
               propdel pdel propedit pedit propget pget \
               proplist plist propset pset resolved revert \
-              status switch unlock update version --version'
+              status switch unlock update --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
@@ -159,9 +159,6 @@ _svn()
 	update|up)
 		cmdOpts="$rOpts $nOpts $qOpts $pOpts --diff3-cmd \
                          --ignore-externals"
-		;;
-	version)
-		cmdOpts="$qOpts"
 		;;
 	*)
 		;;
