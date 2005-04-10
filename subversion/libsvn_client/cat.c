@@ -37,6 +37,106 @@
 
 /*** Code. ***/
 
+static svn_error_t *
+cat_local_file (const char *path,
+                svn_stream_t *output,
+                svn_wc_adm_access_t *adm_access,
+                const svn_opt_revision_t *revision,
+                apr_pool_t *pool)
+{
+  const svn_wc_entry_t *entry;
+  svn_subst_keywords_t kw = { 0 };
+  svn_subst_eol_style_t style;
+  apr_hash_t *props;
+  const char *base;
+  svn_string_t *eol_style, *keywords, *special;
+  const char *eol = NULL;
+  svn_boolean_t local_mod = FALSE;
+  apr_time_t tm;
+  apr_file_t *input_file;
+  svn_stream_t *input;
+
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+
+  if (entry->kind != svn_node_file)
+    return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
+                             _("'%s' refers to a directory"), path);
+
+  if (revision->kind != svn_opt_revision_working)
+    {
+      SVN_ERR (svn_wc_get_pristine_copy_path (path, &base, pool));
+      SVN_ERR (svn_wc_get_prop_diffs (NULL, &props, path, adm_access, pool));
+    }
+  else
+    {
+      svn_wc_status2_t *status;
+      
+      base = path;
+      SVN_ERR (svn_wc_prop_list (&props, path, adm_access, pool));
+      SVN_ERR (svn_wc_status2 (&status, path, adm_access, pool));
+      if (status->text_status != svn_wc_status_normal)
+        local_mod = TRUE;
+    }
+
+  eol_style = apr_hash_get (props, SVN_PROP_EOL_STYLE,
+                            APR_HASH_KEY_STRING);
+  keywords = apr_hash_get (props, SVN_PROP_KEYWORDS,
+                           APR_HASH_KEY_STRING);
+  special = apr_hash_get (props, SVN_PROP_SPECIAL,
+                          APR_HASH_KEY_STRING);
+  
+  if (eol_style)
+    svn_subst_eol_style_from_value (&style, &eol, eol_style->data);
+  
+  if (local_mod && (! special))
+    {
+      /* Use the modified time from the working copy if
+         the file */
+      SVN_ERR (svn_io_file_affected_time (&tm, path, pool));
+    }
+  else
+    {
+      tm = entry->cmt_date;
+    }
+
+  if (keywords)
+    {
+      const char *fmt;
+      const char *author;
+
+      if (local_mod)
+        {
+          /* For locally modified files, we'll append an 'M'
+             to the revision number, and set the author to
+             "(local)" since we can't always determine the
+             current user's username */
+          fmt = "%ldM";
+          author = _("(local)");
+        }
+      else
+        {
+          fmt = "%ld";
+          author = entry->cmt_author;
+        }
+      
+      SVN_ERR (svn_subst_build_keywords 
+               (&kw, keywords->data, 
+                apr_psprintf (pool, fmt, entry->cmt_rev),
+                entry->url, tm, author, pool));
+    }
+
+  SVN_ERR (svn_io_file_open (&input_file, base,
+                             APR_READ, APR_OS_DEFAULT, pool));
+  input = svn_stream_from_aprfile (input_file, pool);
+
+  SVN_ERR (svn_subst_translate_stream (input, output, eol, FALSE, &kw, TRUE));
+
+  SVN_ERR (svn_stream_close (input));
+  SVN_ERR (svn_io_file_close (input_file, pool));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_cat2 (svn_stream_t *out,
                  const char *path_or_url,
@@ -52,6 +152,27 @@ svn_client_cat2 (svn_stream_t *out,
   svn_string_t *keywords;
   apr_hash_t *props;
   const char *url;
+
+  if (! svn_path_is_url (path_or_url)
+      && (peg_revision->kind == svn_opt_revision_base
+          || peg_revision->kind == svn_opt_revision_committed
+          || peg_revision->kind == svn_opt_revision_unspecified)
+      && (revision->kind == svn_opt_revision_base
+          || revision->kind == svn_opt_revision_committed
+          || revision->kind == svn_opt_revision_unspecified))
+    {
+      svn_wc_adm_access_t *adm_access;
+    
+      SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, path_or_url, FALSE,
+                                       0, ctx->cancel_func, ctx->cancel_baton,
+                                       pool));
+
+      SVN_ERR (cat_local_file (path_or_url, out, adm_access, revision, pool));
+
+      SVN_ERR (svn_wc_adm_close (adm_access));
+
+      return SVN_NO_ERROR;
+    }
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR (svn_client__ra_session_from_path (&ra_session, &rev,
