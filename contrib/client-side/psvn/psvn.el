@@ -241,8 +241,9 @@ Otherwise: Don't display a header line")
   "*Remove any trailing ^M from the *svn-process* buffer.")
 
 ;;; experimental features
-(defvar svn-status-use-process-filter nil "Use the svn process filter for
-asynchronous calls to svn.")
+(defvar svn-status-track-user-input nil "Track user/password queries.
+This feature is implemented via a process filter.
+It is an experimental feature.")
 
 ;;; Customize group
 (defgroup psvn nil
@@ -527,7 +528,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
                   ;;(message "running asynchron: %s %S" svn-exe arglist)
                   (setq svn-proc (apply 'start-process "svn" proc-buf svn-exe arglist))
                   (set-process-sentinel svn-proc 'svn-process-sentinel)
-                  (when svn-status-use-process-filter
+                  (when svn-status-track-user-input
                     (set-process-filter svn-proc 'svn-process-filter)))
               ;;(message "running synchron: %s %S" svn-exe arglist)
               (apply 'call-process svn-exe nil proc-buf nil arglist)
