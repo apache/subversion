@@ -14,6 +14,7 @@ if [ "$1" = "all" ]; then
         WARNLINES="`cat \"$WARNFILE\" | wc -l`"
         RESULT='\033[31;1mINVALID ('"$WARNLINES"')\033[0m'
       fi
+      cat "$WARNFILE"
     fi
     echo -e "$f: $RESULT"
   done
