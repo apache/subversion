@@ -45,13 +45,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r13961, r13981
-    Make Ruby bindings install to the correct location.
-    Justification:
-      Broken otherwise. (and _still_ broken with only r13961).
-    Votes:
-      +1: maxb, epg, ringstrom
-
   * r14076
     Make update_test 25 work with Python 2.1
     Justification:
