@@ -37,6 +37,8 @@
 
 /*** Code. ***/
 
+/* Helper function to handle copying a potentially translated verison of BASE
+   or WORKING revision of a file to an output stream. */
 static svn_error_t *
 cat_local_file (const char *path,
                 svn_stream_t *output,
@@ -57,6 +59,12 @@ cat_local_file (const char *path,
   svn_stream_t *input;
 
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+
+  if (! entry)
+    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                              _("'%s' is not under version control "
+                                "or doesn't exist"),
+                              svn_path_local_style (path, pool));
 
   if (entry->kind != svn_node_file)
     return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
@@ -163,9 +171,10 @@ svn_client_cat2 (svn_stream_t *out,
     {
       svn_wc_adm_access_t *adm_access;
     
-      SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, path_or_url, FALSE,
-                                       0, ctx->cancel_func, ctx->cancel_baton,
-                                       pool));
+      SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL,
+                                 svn_path_dirname (path_or_url, pool), FALSE,
+                                 0, ctx->cancel_func, ctx->cancel_baton,
+                                 pool));
 
       SVN_ERR (cat_local_file (path_or_url, out, adm_access, revision, pool));
 
