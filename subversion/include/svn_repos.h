@@ -791,26 +791,16 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
  *
  * If @a paths is non-null and has one or more elements, then only show
  * revisions in which at least one of @a paths was changed (i.e., if
- * file, text or props changed; if dir, props changed or an entry was
- * added or deleted).  Each path is a <tt>const char *</tt> representing
+ * file, text or props changed; if dir, props or entries changed or any node
+ * changed below it).  Each path is a <tt>const char *</tt> representing
  * an absolute path in the repository.
- *
- * ### todo: need to consider whether the above directory behavior is
- * most useful, or if we should actually treat _any_ node change in a
- * directory as a visible change for purposes of log... i.e., show
- * bubble-up.  The reason this might be useful is so that running log
- * on a directory would give a msg for every change under that dir,
- * no matter how far down.  See the thread started on the dev list by
- * Lars Kellogg-Stedman <lars@larsshack.org> with the subject
- * "Single repository, multiple projects?" for more.  We may simple
- * need to offer a few different semantics for @a paths.
  *
  * If @a limit is non-zero then only invoke @a receiver on the first
  * @a limit logs.
  *
  * If @a discover_changed_paths, then each call to @a receiver passes a
- * <tt>const apr_hash_t *</tt> for the receiver's @a changed_paths 
- * argument; the hash's keys are all the paths committed in that revision.
+ * hash mapping paths committed in that revision to information about them
+ * as the receiver's @a changed_paths argument.
  * Otherwise, each call to @a receiver passes null for @a changed_paths.
  *
  * If @a strict_node_history is set, copy history (if any exists) will
