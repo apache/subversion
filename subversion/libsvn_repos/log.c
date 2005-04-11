@@ -37,9 +37,8 @@
  * properties of the node were changed, or that the node was added or
  * deleted.
  *
- * The CHANGED hash set and the key are allocated in POOL;
- * the value is (void *) 'U', 'A', 'D', or 'R', for modified, added,
- * deleted, or replaced, respectively.
+ * The CHANGED hash set and its keys and values are allocated in POOL;
+ * keys are const char * paths and values are svn_log_changed_path_t.
  * 
  * If optional AUTHZ_READ_FUNC is non-NULL, then use it (with
  * AUTHZ_READ_BATON and FS) to check whether each changed-path (and
@@ -367,11 +366,8 @@ svn_repos_get_logs3 (svn_repos_t *repos,
       message = apr_hash_get (r_props, SVN_PROP_REVISION_LOG,
                               APR_HASH_KEY_STRING);
 
-      /* ### Below, we discover changed paths if the user requested
-         them (i.e., "svn log -v" means `discover_changed_paths' will
-         be non-zero here).  */
-
-
+      /* Discover changed paths if the user requested them
+         or if we need to check that they are readable. */
       if ((this_rev > 0)        
           && (authz_read_func || discover_changed_paths))
         {
@@ -449,7 +445,6 @@ svn_repos_get_logs2 (svn_repos_t *repos,
 }
 
 
-/* The 1.0 version of the function.  ### Remove in 2.0. */
 svn_error_t *
 svn_repos_get_logs (svn_repos_t *repos,
                     const apr_array_header_t *paths,
