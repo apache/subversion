@@ -718,10 +718,13 @@ svn_wc_crawl_revisions (const char *path,
                         apr_pool_t *pool)
 {
   struct wrap_report_baton wrb;
-  svn_wc__compat_notify_baton_t nb = { notify_func, notify_baton };
-
+  svn_wc__compat_notify_baton_t nb;
+  
   wrb.reporter = reporter;
   wrb.baton = report_baton;
+
+  nb.func = notify_func;
+  nb.baton = notify_baton;
 
   return svn_wc_crawl_revisions2 (path, adm_access, &wrap_reporter, &wrb,
                                   restore_files, recurse, use_commit_times,

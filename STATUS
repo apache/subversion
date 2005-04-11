@@ -52,13 +52,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: ringstrom, dionisos
 
-  * r14097
-    Fix further GCCisms.
-    Justification:
-      There are compilers other than GCC!
-    Votes:
-      +1: maxb, lundblad, ringstrom
-
   * r14088
     Update bash_completion in respect of reversion of "svn version".
     Votes:

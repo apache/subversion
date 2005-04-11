@@ -558,7 +558,10 @@ svn_wc_copy (const char *src_path,
              void *notify_baton,
              apr_pool_t *pool)
 {
-  svn_wc__compat_notify_baton_t nb = { notify_func, notify_baton };
+  svn_wc__compat_notify_baton_t nb;
+  
+  nb.func = notify_func;
+  nb.baton = notify_baton;
 
   return svn_wc_copy2 (src_path, dst_parent, dst_basename, cancel_func,
                        cancel_baton, svn_wc__compat_call_notify_func,
