@@ -28,7 +28,7 @@ Candidate changes:
   * r14088
     Update bash_completion in respect of reversion of "svn version".
     Votes:
-      +1: maxb
+      +1: maxb, lundblad
 
   * r14041.
     Fix issue #2268 (svn update of xml-unsafe dir (from within) http error)
@@ -61,7 +61,7 @@ Candidate changes:
     Justification:
       There are compilers other than GCC!
     Votes:
-      +1: maxb
+      +1: maxb, lundblad
 
 
 Approved changes (further review is welcome, but not required):
