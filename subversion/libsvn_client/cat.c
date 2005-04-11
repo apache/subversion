@@ -37,7 +37,7 @@
 
 /*** Code. ***/
 
-/* Helper function to handle copying a potentially translated verison of BASE
+/* Helper function to handle copying a potentially translated version of BASE
    or WORKING revision of a file to an output stream. */
 static svn_error_t *
 cat_local_file (const char *path,
