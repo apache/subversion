@@ -42,6 +42,15 @@ Candidate changes:
     Votes:
       +1: jszakmeister, dionisos
 
+  * r14118
+    De-doxygenate svn_test.h.
+    Justification:
+      There is nothing remotely public about that file, time to stop
+      saying otherwise.  We have never installed any binaries that in any
+      way use that header.
+    Votes:
+      +1: maxb
+
 
 Approved changes (further review is welcome, but not required):
 
