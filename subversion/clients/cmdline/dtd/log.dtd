@@ -10,7 +10,10 @@
 <!ATTLIST logentry revision CDATA #REQUIRED>  <!-- revision number: integer -->
 <!ELEMENT paths (path*)>
 <!ELEMENT path (#PCDATA)>  <!-- path within repository -->
-<!ATTLIST path action CDATA #REQUIRED  <!-- action code: one character -->
-               copyfrom-path CDATA #IMPLIED  <!-- path within repository -->
-               copyfrom-rev CDATA #IMPLIED>  <!-- revision number: integer -->
+<!-- "action code": one character                   -->
+<!-- "copyfrom-path": the path within repository    -->
+<!-- "copyfrom-rev" : the revision number (integer) -->
+<!ATTLIST path action CDATA #REQUIRED
+               copyfrom-path CDATA #IMPLIED
+               copyfrom-rev CDATA #IMPLIED>
 <!ELEMENT msg (#PCDATA)>  <!-- log message -->
