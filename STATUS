@@ -37,13 +37,6 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
-  * r14074
-    Make mailer.py backward compatible.
-    Justification:
-      Provide for easy upgrades.
-    Votes:
-      +1: ringstrom, dionisos
-
   * r14081, r14098
     Fix Issue 1361: 'svn cat file -r BASE' contacts repository
     Justification:
@@ -55,13 +48,6 @@ Candidate changes:
       +1: jszakmeister
     Votes for r14081 only:
       +1: dionisos
-
-  * r14097
-    Fix further GCCisms.
-    Justification:
-      There are compilers other than GCC!
-    Votes:
-      +1: maxb, lundblad
 
 
 Approved changes (further review is welcome, but not required):
@@ -79,3 +65,17 @@ Approved changes (further review is welcome, but not required):
       A failing test looks bad, even more so in a release.
     Votes:
      +1: philip, ringstrom, dionisos
+
+  * r14074
+    Make mailer.py backward compatible.
+    Justification:
+      Provide for easy upgrades.
+    Votes:
+      +1: ringstrom, dionisos
+
+  * r14097
+    Fix further GCCisms.
+    Justification:
+      There are compilers other than GCC!
+    Votes:
+      +1: maxb, lundblad, ringstrom
