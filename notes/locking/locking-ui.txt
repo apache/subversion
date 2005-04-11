@@ -1,7 +1,7 @@
 A UI Specification for "Locking"
 
 This document describes a user interface of a new locking system for
-Subversion.  It implements the set of features desccribed in the
+Subversion.  It implements the set of features described in the
 associated functional spec.
 
 I. Introduction
@@ -32,15 +32,15 @@ I. Introduction
             - manager being forced to use VC
 
          - ITCH: VC system should be effortless, transparent, and
-                 idiotproof.  VC system should prevent people from
-                 wasting editing time, destroying each other's
+                 idiot proof.  VC system should prevent people from
+                 wasting editing time, destroying each others
                  changes, all while avoiding concurrency concepts such
                  as "merging" and "out of dateness".
 
 
    B. The "Hijack" Scenario
 
-       This is specific use-case which is particulary important to
+       This is specific use-case which is particularly important to
        making version control usable by the second type of user
        described above.
 
@@ -72,7 +72,7 @@ I. Introduction
          - Clearcase copy-based views
  
              In the hijack scenario, the user attempts to commit and
-             the client repsonds by attempting an interactive
+             the client responds by attempting an interactive
              contextual merge.  If not possible, the whole commit
              fails and a guru is phoned to fix the situation.
 
@@ -83,7 +83,7 @@ I. Introduction
              server version or local version of the file.  Somebody's
              edits are lost.
 
-       It is the recommendation of this document that the commandline
+       It is the recommendation of this document that the command line
        client produce normal conflicts when 'svn up' is run on a
        hijacked file;  but that for a GUI such as TortoiseSVN, a more
        friendly (or interactive) procedure is followed -- perhaps one
@@ -134,7 +134,7 @@ II. New Client Behaviors
       1. Lock Tokens
 
          When a user successfully locks a path, the working copy
-         recieves a "lock token" from the server.  This token is an
+         receives a "lock token" from the server.  This token is an
          object that connects your exclusive right to commit to a path
          with your working copy.
 
@@ -285,7 +285,7 @@ II. New Client Behaviors
 
             1. seeing lock tokens in a working copy
 
-               'svn status' conisders a lock token "interesting", and
+               'svn status' considers a lock token "interesting", and
                displays it using some new symbol, in a new column:
 
                    $ svn status

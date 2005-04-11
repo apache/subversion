@@ -46,7 +46,7 @@ ways.
 Trick #1: Specify a full path to the svnserve binary
 ----------------------------------------------------
 
-For this trick, specify specify a command like:
+For this trick, specify a command like:
 
   command="/full/path/to/svnserve -t" TYPE KEY COMMENT
 
