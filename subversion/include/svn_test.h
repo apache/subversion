@@ -31,8 +31,9 @@ extern "C" {
 
 
 /* Baton for any arguments that need to be passed from main() to svn
- * test functions  */
-  typedef struct svn_test_opts_t
+ * test functions.
+ */
+typedef struct svn_test_opts_t
 {
   /* Description of the fs backend that should be used for testing. */
   const char *fs_type;
@@ -54,7 +55,8 @@ enum svn_test_mode_t
   };
 
 /* Each test gets a test descriptor, holding the function and other
- * associated data. */
+ * associated data.
+ */
 struct svn_test_descriptor_t
 {
   /* A pointer to the test driver function. */
@@ -64,8 +66,8 @@ struct svn_test_descriptor_t
   enum svn_test_mode_t mode;
 };
 
-/* All Subversion test programs include an array of @c svn_test_descriptor_t's
- * (all of our sub-tests) that begins and ends with a @c SVN_TEST_NULL entry.
+/* All Subversion test programs include an array of svn_test_descriptor_t's
+ * (all of our sub-tests) that begins and ends with a SVN_TEST_NULL entry.
  */
 extern struct svn_test_descriptor_t test_funcs[];
 
@@ -82,7 +84,7 @@ extern struct svn_test_descriptor_t test_funcs[];
 #define SVN_TEST_SKIP(func, p) {func, ((p) ? svn_test_skip : svn_test_pass)}
 
 
-/* Return a pseudo-random number based on @a seed, and modify @a seed.
+/* Return a pseudo-random number based on SEED, and modify SEED.
  *
  * This is a "good" pseudo-random number generator, intended to replace 
  * all those "bad" rand() implementations out there.
@@ -90,14 +92,14 @@ extern struct svn_test_descriptor_t test_funcs[];
 apr_uint32_t svn_test_rand (apr_uint32_t *seed);
 
 
-/* Add @a path to the test cleanup list.  */
+/* Add PATH to the test cleanup list.  */
 void svn_test_add_dir_cleanup (const char *path);
 
 
 
 /* Set *EDITOR and *EDIT_BATON to an editor that prints its 
  * arguments to OUT_STREAM.  The edit starts at PATH, that is, 
- * @a path will be prepended to the appropriate paths in the output.
+ * PATH will be prepended to the appropriate paths in the output.
  * Allocate the editor in POOL.
  *
  * EDITOR_NAME is a name for the editor, a string that will be
@@ -152,7 +154,7 @@ void svn_test_add_dir_cleanup (const char *path);
  *    [COMMIT-TEST] close_file (wc/zeta)
  * [COMMIT-TEST] close_edit
  *  
- * The same example as above, but with verbose = @c FALSE
+ * The same example as above, but with verbose = FALSE
  *
  * [COMMIT-TEST] open_root (wc)
  *    [COMMIT-TEST] open_directory (wc/A)
