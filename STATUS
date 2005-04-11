@@ -73,15 +73,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: maxb, epg, ringstrom
 
-  * r14037
-    Revert the addition of the "svn version" subcommand (r10430).
-    Justification:
-      There are strong objections to it in its present form.
-      See http://svn.haxx.se/dev/archive-2005-04/0567.shtml
-      If we don't do back-port it now while it's new, we can't at all.
-    Votes:
-      +1: julianfoad, lundblad, dionisos
-
   * r14076
     Make update_test 25 work with Python 2.1
     Justification:
