@@ -868,7 +868,10 @@ svn_wc_delete (const char *path,
                void *notify_baton,
                apr_pool_t *pool)
 {
-  svn_wc__compat_notify_baton_t nb = { notify_func, notify_baton };
+  svn_wc__compat_notify_baton_t nb;
+  
+  nb.func = notify_func;
+  nb.baton = notify_baton;
 
   return svn_wc_delete2 (path, adm_access, cancel_func, cancel_baton,
                          svn_wc__compat_call_notify_func, &nb, pool);
@@ -1135,7 +1138,10 @@ svn_wc_add (const char *path,
             void *notify_baton,
             apr_pool_t *pool)
 {
-  svn_wc__compat_notify_baton_t nb = { notify_func, notify_baton };
+  svn_wc__compat_notify_baton_t nb;
+  
+  nb.func = notify_func;
+  nb.baton = notify_baton;
 
   return svn_wc_add2 (path, parent_access, copyfrom_url, copyfrom_rev,
                       cancel_func, cancel_baton,
@@ -1710,7 +1716,10 @@ svn_wc_revert (const char *path,
                void *notify_baton,
                apr_pool_t *pool)
 {
-  svn_wc__compat_notify_baton_t nb = { notify_func, notify_baton };
+  svn_wc__compat_notify_baton_t nb;
+  
+  nb.func = notify_func;
+  nb.baton = notify_baton;
 
   return svn_wc_revert2 (path, parent_access, recursive, use_commit_times,
                          cancel_func, cancel_baton,
@@ -2149,7 +2158,11 @@ svn_wc_resolved_conflict (const char *path,
                           void *notify_baton,                         
                           apr_pool_t *pool)
 {
-  svn_wc__compat_notify_baton_t nb = { notify_func, notify_baton };
+  svn_wc__compat_notify_baton_t nb;
+  
+  nb.func = notify_func;
+  nb.baton = notify_baton;
+
   return svn_wc_resolved_conflict2 (path, adm_access,
                                     resolve_text, resolve_props, recurse,
                                     svn_wc__compat_call_notify_func, &nb,
