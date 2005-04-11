@@ -559,11 +559,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "      Id                       - A compressed summary of the "
        "previous\n"
        "                                   4 keywords.\n"
-       "    svn:executable - If present, make the file executable. This\n"
-       "      property cannot be set on a directory.  A non-recursive "
-       "attempt\n"
-       "      will fail, and a recursive attempt will set the property only\n"
-       "      on the file children of the directory.\n"
+       "    svn:executable - If present, make the file executable.\n"
        "    svn:eol-style  - One of 'native', 'LF', 'CR', 'CRLF'.\n"
        "    svn:mime-type  - The mimetype of the file.  Used to determine\n"
        "      whether to merge the file, and how to serve it from Apache.\n"
@@ -573,7 +569,17 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "      each of which consists of a relative directory path, optional\n"
        "      revision flags, and an URL.  For example\n"
        "        foo             http://example.com/repos/zig\n"
-       "        foo/bar -r 1234 http://example.com/repos/zag\n"),
+       "        foo/bar -r 1234 http://example.com/repos/zag\n"
+       "    svn:needs-lock - If present, indicates that the file should be "
+       "locked\n"
+       "      before it is modified.  Makes the working copy file read-only\n"
+       "      when it is not locked.\n"
+       "  The svn:keywords, svn:executable, svn:eol-style, svn:mime-type "
+       "and\n"
+       "  svn:needs-lock properties cannot be set on a directory.  A "
+       "non-recursive\n"
+       "  attempt will fail, and a recursive attempt will set the property\n"
+       "  only on the file children of the directory.\n"),
     {'F', svn_cl__encoding_opt, 'q', 'r', svn_cl__targets_opt, 'R',
      svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS, svn_cl__force_opt,
      svn_cl__config_dir_opt} },

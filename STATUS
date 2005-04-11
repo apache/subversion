@@ -88,11 +88,3 @@ Approved changes (further review is welcome, but not required):
       A failing test looks bad, even more so in a release.
     Votes:
      +1: philip, ringstrom, dionisos
-
-  * r14031, r14052
-    Tweak help text for svn propset to include svn:needs-lock.
-    Justification:
-      Help text completeness.
-    Votes:
-      +1: lundblad, ringstrom, maxb
-
