@@ -234,6 +234,7 @@ svn_fs_new (apr_hash_t *fs_config, apr_pool_t *pool)
   fs->warning = default_warning_func;
   fs->warning_baton = NULL;
   fs->config = fs_config;
+  fs->access_ctx = NULL;
   fs->vtable = NULL;
   fs->fsap_data = NULL;
   return fs;

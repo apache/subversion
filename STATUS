@@ -97,13 +97,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: maxb, fitz, ringstrom
 
-  * r14061
-    Kill uninitialized struct member in libsvn_fs.
-    Justification:
-      Crash.
-    Votes:
-      +1: lundblad, philip, ringstrom
-
   * r14064
     Fix svn status help text - "*" appears in column 8, not 9.
     Notes:
