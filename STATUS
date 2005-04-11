@@ -73,15 +73,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r13978
-    Make copy_tests 25 pass over DAV.
-    Justification:
-      A failing test looks bad, even more so in a release.
-    Notes:
-      The problem was in the test, not in Subversion itself.
-    Votes:
-      +1: kfogel, fitz, philip
-
   * r13961, r13981
     Make Ruby bindings install to the correct location.
     Justification:
