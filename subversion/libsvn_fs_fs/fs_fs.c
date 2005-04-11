@@ -279,15 +279,20 @@ svn_fs_fs__open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   err = svn_io_read_version_file (&format, path_format (fs, pool), pool);
   if (err && APR_STATUS_IS_ENOENT (err->apr_err))
     {
-      /* Pre-1.2 filesystems did not have a format file (you could say
-         they were format "0"), so they get upgraded on the fly. */
-      svn_error_clear (err), err = NULL;
-      format = SVN_FS_FS__FORMAT_NUMBER;
-      SVN_ERR (svn_io_write_version_file
-               (path_format (fs, pool), format, pool));
+      /* Treat an absent format file as format 1.  Do not try to
+         create the format file on the fly, because the repository
+         might be read-only for us, or we might have a umask such
+         that even if we did create the format file, subsequent
+         users would not be able to read it.  See thread starting at
+         http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=97600
+         for more. */
+      svn_error_clear (err);
+      format = 1;
     }
   else if (err)
-    return err;
+    {
+      return err;
+    }
   
   /* Now we've got a format number no matter what. */
   ffd->format = format;
