@@ -103,31 +103,21 @@ II. New Client Behaviors
    B. The "svn:needs-lock" property
 
       Create a new "svn:needs-lock" property to indicate that a file
-      must be locked before committing.  Just like "svn:executable",
+      should be locked before committing.  Just like "svn:executable",
       the value of the property is irrelevant and the property can be
       created (or deleted) by any user or administrator.
 
-      1. Property as enforcement system
+      Note that this property doesn't enforce locking.
 
-         The presence of the "svn:needs-lock" property on a file means
-         that concurrency is disabled for the file and a user *must*
-         obtain a lock on that file before committing changes to it.
-         The server rejects any commit which modifies this file unless
-         the user has a lock on the file.  Note: a user can delete a
-         file with this property, providing that the file is not
-         locked.
-
-      2. Property as communication system
-
-         When the Subversion client encounters the "svn:needs-lock"
-         property on a path (on checkout or update), it sets the
-         working-copy path to a read-only state by default.  This
-         serves as a reminder to the user that she should lock this
-         path before editing it.  When a user locks the path, the
-         Subversion client makes the working-copy path read-write.
-         When the user releases the lock, or if the lock is found to
-         be defunct (see next section), the Subversion client makes
-         the path read-only again.
+      When the Subversion client encounters the "svn:needs-lock"
+      property on a path (on checkout or update), it sets the
+      working-copy path to a read-only state by default.  This
+      serves as a reminder to the user that she should lock this
+      path before editing it.  When a user locks the path, the
+      Subversion client makes the working-copy path read-write.
+      When the user releases the lock, or if the lock is found to
+      be defunct (see next section), the Subversion client makes
+      the path read-only again.
 
    C. Lock manipulation via client
 
@@ -172,20 +162,18 @@ II. New Client Behaviors
               username: harry
               password: XXXXX
               [...]
-              'foo.c' has been locked by user 'harry'.
+              'foo.c' locked by user 'harry'.
         
             In order for this command to work,
 
-               - you *must* provide a username to the server.
+               - You *must* provide a username to the server.
                  'anonymous' locks are not allowed.
                - The path must not already be locked.
                - The path must not be out-of-date.  
-               - a comment must be provided, so that others can
-                 see why the object was locked.
 
-            This means that similar to a commit action, 'svn lock'
-            will launch $EDITOR, or accept -m or -F switches to
-            accept a lock comment.
+            The lock command accepts -m or -F to add a lock comment, so
+            others can see why the file was locked.  The lock ocmment
+            is optional.
 
          b. Using a lock
 
@@ -273,11 +261,9 @@ II. New Client Behaviors
               $ svn lock foo.c --force
               username:  sally
               password:  XXXX
-              'foo.c' has been locked by user 'sally'.
+              'foo.c' locked by user 'sally'.
 
-              Remember that 'svn lock' requires a lock comment, so -m,
-              -F, or launching of $EDITOR is required.  And remember
-              that the 'svn lock' command still requires that the
+              Remember that the 'svn lock' command still requires that the
               target be up-to-date to succeed.
 
 
