@@ -44,12 +44,17 @@ Candidate changes:
     Votes:
       +1: ringstrom, dionisos
 
-  * r14081
+  * r14081, r14098
     Fix Issue 1361: 'svn cat file -r BASE' contacts repository
     Justification:
-      Simple fix for a bug that's existed for nearly 2 years.
+      Fix for a bug that's existed for nearly 2 years.
+    Notes:
+      r14098 fixes a segfault case for cat'ing a nonexistant file, as well
+      as adding a new test component for cat. -jszakmeister
     Votes:
-      +1: jszakmeister, dionisos
+      +1: jszakmeister
+    Votes for r14081 only:
+      +1: dionisos
 
   * r14097
     Fix further GCCisms.
