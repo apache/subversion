@@ -670,7 +670,26 @@ def broken_lock_status (sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
+# Invalid input test - lock non-existent file
+def lock_non_existent_file (sbox):
+  "verify error on locking non-existent file"
 
+  sbox.build()
+  fname = 'A/foo'
+  file_path = os.path.join(sbox.wc_dir, fname)
+
+  output, error = svntest.main.run_svn(1, 'lock',
+                                       '--username', svntest.main.wc_author,
+                                       '--password', svntest.main.wc_passwd,
+                                       '-m', '', file_path)
+
+  error_msg = "'foo' is not under version control"
+  for line in error:
+    if line.find(error_msg) != -1:
+      break
+  else:
+    print "Error:", error_msg, ": not found in:", error
+    raise svntest.Failure
 
 ########################################################################
 # Run the tests
@@ -691,6 +710,7 @@ test_list = [ None,
               lock_status,
               stolen_lock_status,
               broken_lock_status,
+              lock_non_existent_file,
              ]
 
 if __name__ == '__main__':
