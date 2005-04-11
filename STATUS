@@ -40,9 +40,7 @@ Candidate changes:
       r14098 fixes a segfault case for cat'ing a nonexistant file, as well
       as adding a new test component for cat. -jszakmeister
     Votes:
-      +1: jszakmeister
-    Votes for r14081 only:
-      +1: dionisos
+      +1: jszakmeister, dionisos
 
 
 Approved changes (further review is welcome, but not required):
