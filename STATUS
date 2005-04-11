@@ -50,6 +50,15 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
+  * r14063, r14066, r14068, r14079, r14121 (with some changes)
+    Branch: 1.1.x-r14063
+    Justification:
+      Issue #2265 can cause data loss.
+    Notes:
+      The new svn_fs_initialize API isn't included in this
+      backport; we always initialize the mutex on a best-effort basis,
+      which should be just fine for practical purposes.
+
 Approved changes (further review is welcome, but not required):
 
   
