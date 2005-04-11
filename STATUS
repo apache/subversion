@@ -51,6 +51,14 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r14126
+    Tweaks to the lock comment handling, including getting rid of the
+    editor invocation.
+    Justification:
+      The was concensus to remove the editor invocation.  It is easier
+      to add back than to remove later.  Also, consistency.
+    Votes:
+      +1: lundblad
 
 Approved changes (further review is welcome, but not required):
 
