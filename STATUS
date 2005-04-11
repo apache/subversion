@@ -80,10 +80,3 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: maxb, epg, ringstrom
 
-  * r14048
-    Avoid spurious test failures when using FSFS and test repositories remain
-    on disk from a previous test run.
-    Justification:
-      Test failure bad.
-    Votes:
-      +1: maxb, fitz, ringstrom
