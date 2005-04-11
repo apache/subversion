@@ -96,11 +96,3 @@ Approved changes (further review is welcome, but not required):
       Test failure bad.
     Votes:
       +1: maxb, fitz, ringstrom
-
-  * r14064
-    Fix svn status help text - "*" appears in column 8, not 9.
-    Notes:
-      Bite-sized - no, nibble-sized - change.
-    Votes:
-      +1: maxb, philip, ringstrom
-
