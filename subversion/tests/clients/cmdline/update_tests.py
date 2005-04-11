@@ -784,7 +784,7 @@ def obstructed_update_alters_wc_props(sbox):
   #print "Creating obstruction"
   obstruction_parent_path = os.path.join(wc_dir, 'A')
   obstruction_path = os.path.join(obstruction_parent_path, 'foo')
-  file(obstruction_path, 'w')
+  svntest.main.file_append(obstruction_path, 'an obstruction')
 
   # Update the WC to that newer rev to trigger the obstruction.
   #print "Updating WC"

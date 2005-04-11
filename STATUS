@@ -45,13 +45,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14076
-    Make update_test 25 work with Python 2.1
-    Justification:
-      A failing test looks bad, even more so in a release.
-    Votes:
-     +1: philip, ringstrom, dionisos
-
   * r14074
     Make mailer.py backward compatible.
     Justification:
