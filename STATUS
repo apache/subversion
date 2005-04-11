@@ -15,7 +15,7 @@ Candidate changes:
     Justification:
       Avoid warnings (and hard errors!), improve compile times.
     Votes:
-      +1: dlr
+      +1: dlr, kfogel
 
   * r14024
     Allow automated tests for the javahl bindings to be run before the
@@ -30,7 +30,7 @@ Candidate changes:
     Justification:
       Yet Another Path Escaping Bug
     Votes:
-      +1: cmpilato
+      +1: cmpilato, kfogel
 
   * r14081, r14098
     Fix Issue 1361: 'svn cat file -r BASE' contacts repository
@@ -58,7 +58,7 @@ Candidate changes:
       The was concensus to remove the editor invocation.  It is easier
       to add back than to remove later.  Also, consistency.
     Votes:
-      +1: lundblad
+      +1: lundblad, kfogel
 
   * r14131
     In FSFS, don't auto-upgrade FS format number of legacy repositories.
