@@ -230,12 +230,16 @@ svn_fs_initialize (apr_pool_t *pool)
 {
   apr_status_t status;
 
+  /* Protect against multiple calls. */
+  if (common_pool)
+    return SVN_NO_ERROR;
+
   common_pool = svn_pool_create (pool);
 #if APR_HAS_THREADS
   status = apr_thread_mutex_create (&common_pool_lock,
                                     APR_THREAD_MUTEX_DEFAULT, common_pool);
   if (status)
-    return svn_error_wrap_apr (status, "Can't allocate FS mutex");
+    return svn_error_wrap_apr (status, _("Can't allocate FS mutex"));
 #endif
   apr_pool_cleanup_register (common_pool, NULL, uninit, apr_pool_cleanup_null);
   return SVN_NO_ERROR;
@@ -262,13 +266,13 @@ serialized_init (svn_fs_t *fs, apr_pool_t *pool)
 #if APR_HAS_THREADS
   status = apr_thread_mutex_lock (common_pool_lock);
   if (status)
-    return svn_error_wrap_apr (status, "Can't grab FS mutex");
+    return svn_error_wrap_apr (status, _("Can't grab FS mutex"));
 #endif
   err = fs->vtable->serialized_init (fs, common_pool, pool);
 #if APR_HAS_THREADS
   status = apr_thread_mutex_unlock (common_pool_lock);
   if (status && !err)
-    return svn_error_wrap_apr (status, "Can't ungrab FS mutex");
+    return svn_error_wrap_apr (status, _("Can't ungrab FS mutex"));
 #endif
   return err;
 }

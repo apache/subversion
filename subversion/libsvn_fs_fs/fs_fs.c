@@ -3689,7 +3689,7 @@ svn_fs_fs__with_write_lock (svn_fs_t *fs,
      within the process. */
   status = apr_thread_mutex_lock (ffd->lock);
   if (status)
-    return svn_error_wrap_apr (status, "Can't grab FSFS repository mutex");
+    return svn_error_wrap_apr (status, _("Can't grab FSFS repository mutex"));
 #endif
 
   err = get_write_lock (fs, subpool);
@@ -3702,7 +3702,8 @@ svn_fs_fs__with_write_lock (svn_fs_t *fs,
 #if APR_HAS_THREADS
   status = apr_thread_mutex_unlock (ffd->lock);
   if (status && !err)
-    return svn_error_wrap_apr (status, "Can't ungrab FSFS repository mutex");
+    return svn_error_wrap_apr (status,
+                               _("Can't ungrab FSFS repository mutex"));
 #endif
 
   return err;
