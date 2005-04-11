@@ -1477,7 +1477,10 @@ def url_to_non_existent_url_path(sbox):
 
   dirURL1 = svntest.main.current_repo_url + "/A/B/E"
   dirURL2 = svntest.main.current_repo_url + "/G/C/E/I"
-  msg = ".*: Path 'G' not present"
+
+  # Look for both possible versions of the error message, as the DAV
+  # error is worded differently from that of other RA layers.
+  msg = ".*: (Path 'G' not present|.*G' path not found)"
 
   # Expect failure on 'svn cp SRC DST' where one or more ancestor
   # directories of DST do not exist
