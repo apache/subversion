@@ -42,7 +42,7 @@ Candidate changes:
     Votes:
       +1: jszakmeister, dionisos
 
-  * r14118
+  * r14118, r14137
     De-doxygenate svn_test.h.
     Justification:
       There is nothing remotely public about that file, time to stop
