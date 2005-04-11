@@ -7,11 +7,17 @@
 # $LastChangedBy$
 # $LastChangedRevision$
 #
-# USAGE: mailer.py commit     REPOS REVISION [CONFIG-FILE]
-#        mailer.py propchange REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
+# USAGE: mailer.py commit      REPOS REVISION [CONFIG-FILE]
+#        mailer.py propchange  REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
+#        mailer.py propchange2 REPOS REVISION AUTHOR PROPNAME ACTION \
+#                              [CONFIG-FILE]
 #
 #   Using CONFIG-FILE, deliver an email describing the changes between
 #   REV and REV-1 for the repository REPOS.
+#
+#   ACTION was added as a fifth argument to the post-revprop-change hook
+#   in Subversion 1.2.0.  Its value is one of 'A', 'M' or 'D' to indicate
+#   if the property was added, modified or deleted, respectively.
 #
 #   This version of mailer.py requires the python bindings from
 #   subversion 1.2.0 or later.
@@ -37,13 +43,13 @@ import svn.core
 SEPARATOR = '=' * 78
 
 
-def main(pool, cmd, config_fp, repos_dir, rev, author, propname, action):
+def main(pool, cmd, config_fp, repos_dir, rev, author, propname, action='A'):
   repos = Repository(repos_dir, rev, pool)
 
   if cmd == 'commit':
     cfg = Config(config_fp, repos, { 'author' : repos.author })
     messenger = Commit(pool, cfg, repos)
-  elif cmd == 'propchange':
+  elif cmd == 'propchange' or cmd == 'propchange2':
     # Override the repos revision author with the author of the propchange
     repos.author = author
     cfg = Config(config_fp, repos, { 'author' : author })
@@ -412,11 +418,11 @@ class PropChange(Messenger):
                         '\n'
                         % (self.author, self.repos.rev, self.propname,
                            actions.get(action, 'Unknown (\'%s\')' % action)))
-      if action == 'A':
+      if action == 'A' or not actions.has_key(action):
         self.output.write('Property value:\n')
         propvalue = self.repos.get_rev_prop(self.propname)
         self.output.write(propvalue)
-      elif action != 'D':
+      elif action == 'M':
         self.output.write('Property diff:\n')
         tempfile1 = NamedTemporaryFile()
         tempfile1.write(sys.stdin.read())
@@ -864,6 +870,8 @@ class Config:
     # be compatible with old format config files
     if hasattr(self.general, 'diff') and not hasattr(self.defaults, 'diff'):
       self.defaults.diff = self.general.diff
+    if not hasattr(self, 'maps'):
+      self.maps = _sub_section()
 
     # these params are always available, although they may be overridden
     self._global_params = global_params.copy()
@@ -1041,17 +1049,23 @@ except NameError:
 if __name__ == '__main__':
   def usage():
     sys.stderr.write(
-"""USAGE: %s commit     REPOS REVISION [CONFIG-FILE]
-       %s propchange REPOS REVISION AUTHOR PROPNAME ACTION [CONFIG-FILE]
+"""USAGE: %s commit      REPOS REVISION [CONFIG-FILE]
+       %s propchange  REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
+       %s propchange2 REPOS REVISION AUTHOR PROPNAME ACTION
+       %s             [CONFIG-FILE]
 
 If no CONFIG-FILE is provided, the script will first search for a mailer.conf
 file in REPOS/conf/.  Failing that, it will search the directory in which
 the script itself resides.
 
+ACTION was added as a fifth argument to the post-revprop-change hook
+in Subversion 1.2.0.  Its value is one of 'A', 'M' or 'D' to indicate
+if the property was added, modified or deleted, respectively.
+
 Additionally, CONFIG-FILE may be '-' to indicate that configuration options
 will be provided via standard input.
 
-""" % (sys.argv[0], sys.argv[0]))
+""" % (sys.argv[0], sys.argv[0], sys.argv[0], ' ' * len(sys.argv[0])))
     sys.exit(1)
 
   if len(sys.argv) < 4:
@@ -1076,7 +1090,15 @@ will be provided via standard input.
     if len(sys.argv) > 4:
       config_fname = sys.argv[4]
   elif cmd == 'propchange':
-    if len(sys.argv) < 6 or len(sys.argv) > 8:
+    if len(sys.argv) < 6 or len(sys.argv) > 7:
+      usage()
+    author = sys.argv[4]
+    propname = sys.argv[5]
+    action = 'A'
+    if len(sys.argv) > 6:
+      config_fname = sys.argv[6]
+  elif cmd == 'propchange2':
+    if len(sys.argv) < 7 or len(sys.argv) > 8:
       usage()
     author = sys.argv[4]
     propname = sys.argv[5]
