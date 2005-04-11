@@ -80,6 +80,10 @@ typedef struct svn_fs_t svn_fs_t;
  * objects; however, there is a small window of failure.  Also, a
  * small amount of data will be leaked if the Subversion FS library is
  * dynamically unloaded.
+ *
+ * If this function is called multiple times before the pool passed to
+ * the first call is destroyed or cleared, the later calls will have
+ * no effect.
  */
 svn_error_t *svn_fs_initialize (apr_pool_t *pool);
 
