@@ -26,6 +26,7 @@
 #include <apr_file_io.h>
 #include <apr_uuid.h>
 #include <apr_md5.h>
+#include <apr_thread_mutex.h>
 
 #include "svn_pools.h"
 #include "svn_fs.h"
@@ -229,7 +230,10 @@ get_file_offset (apr_off_t *offset_p, apr_file_t *file, apr_pool_t *pool)
 svn_error_t *
 svn_fs_fs__open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
-  apr_file_t *current_file;
+  fs_fs_data_t *ffd = fs->fsap_data;
+  apr_file_t *current_file, *uuid_file;
+  char buf[APR_UUID_FORMATTED_LENGTH + 2];
+  apr_size_t limit;
 
   /* Attempt to open the 'current' file of this repository.  There
      isn't much need for specific state associated with an open fs_fs
@@ -237,11 +241,21 @@ svn_fs_fs__open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
   fs->path = apr_pstrdup (pool, path);
 
+  /* Read in and cache the repository uuid. */
   SVN_ERR (svn_io_file_open (&current_file, path_current (fs, pool),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
 
   SVN_ERR (svn_io_file_close (current_file, pool));
   
+  SVN_ERR (svn_io_file_open (&uuid_file, path_uuid (fs, pool),
+                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
+
+  limit = sizeof (buf);
+  SVN_ERR (svn_io_read_length_line (uuid_file, buf, &limit, pool));
+  ffd->uuid = apr_pstrdup (fs->pool, buf);
+  
+  SVN_ERR (svn_io_file_close (uuid_file, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -3468,84 +3482,82 @@ get_write_lock (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_fs__commit (svn_revnum_t *new_rev_p,
-                   svn_fs_t *fs,
-                   svn_fs_txn_t *txn,
-                   apr_pool_t *pool)
+/* The work-horse for svn_fs_fs__commit, called with the FS write
+   lock. */
+static svn_error_t *
+commit_body (svn_revnum_t *new_rev_p,
+             svn_fs_t *fs,
+             svn_fs_txn_t *txn,
+             apr_pool_t *pool)
 {
   const char *old_rev_filename, *rev_filename, *proto_filename;
   const char *revprop_filename, *final_revprop;
   const svn_fs_id_t *root_id, *new_root_id;
   const char *start_node_id, *start_copy_id;
   svn_revnum_t old_rev, new_rev;
-  apr_pool_t *subpool = svn_pool_create (pool);
   apr_file_t *proto_file;
   apr_off_t changed_path_offset, offset;
   char *buf;
 
-  /* First grab a write lock. */
-  SVN_ERR (get_write_lock (fs, subpool));
-
   /* Get the current youngest revision. */
-  SVN_ERR (svn_fs_fs__youngest_rev (&old_rev, fs, subpool));
+  SVN_ERR (svn_fs_fs__youngest_rev (&old_rev, fs, pool));
 
   /* Check to make sure this transaction is based off the most recent
      revision. */
   if (txn->base_rev != old_rev)
     {
-      svn_pool_destroy (subpool);
+      svn_pool_destroy (pool);
       return svn_error_create (SVN_ERR_FS_TXN_OUT_OF_DATE, NULL,
                                _("Transaction out of date"));
     }
 
   /* Get the next node_id and copy_id to use. */
   SVN_ERR (get_next_revision_ids (&start_node_id, &start_copy_id, fs,
-                                  subpool));
+                                  pool));
 
   /* We are going to be one better than this puny old revision. */
   new_rev = old_rev + 1;
 
   /* Get a write handle on the proto revision file. */
-  proto_filename = path_txn_proto_rev (fs, txn->id, subpool);
+  proto_filename = path_txn_proto_rev (fs, txn->id, pool);
   SVN_ERR (svn_io_file_open (&proto_file, proto_filename,
                              APR_WRITE | APR_APPEND,
-                             APR_OS_DEFAULT, subpool));
+                             APR_OS_DEFAULT, pool));
 
   offset = 0;
   SVN_ERR (svn_io_file_seek (proto_file, APR_END, &offset, pool));
 
   /* Write out all the node-revisions and directory contents. */
-  root_id = svn_fs_fs__id_txn_create ("0", "0", txn->id, subpool);
+  root_id = svn_fs_fs__id_txn_create ("0", "0", txn->id, pool);
   SVN_ERR (write_final_rev (&new_root_id, proto_file, new_rev, fs, root_id,
-                            start_node_id, start_copy_id, subpool));
+                            start_node_id, start_copy_id, pool));
 
   /* Write the changed-path information. */
   SVN_ERR (write_final_changed_path_info (&changed_path_offset, proto_file, fs,
-                                          txn->id, subpool));
+                                          txn->id, pool));
 
   /* Write the final line. */
-  buf = apr_psprintf(subpool, "\n%" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
+  buf = apr_psprintf(pool, "\n%" APR_OFF_T_FMT " %" APR_OFF_T_FMT "\n",
                      svn_fs_fs__id_offset (new_root_id),
                      changed_path_offset);
   SVN_ERR (svn_io_file_write_full (proto_file, buf, strlen (buf), NULL,
-                                   subpool));
+                                   pool));
 
-  SVN_ERR (svn_io_file_flush_to_disk (proto_file, subpool));
+  SVN_ERR (svn_io_file_flush_to_disk (proto_file, pool));
   
-  SVN_ERR (svn_io_file_close (proto_file, subpool));
+  SVN_ERR (svn_io_file_close (proto_file, pool));
 
   /* Move the finished rev file into place. */
-  old_rev_filename = path_rev (fs, old_rev, subpool);
-  rev_filename = path_rev (fs, new_rev, subpool);
+  old_rev_filename = path_rev (fs, old_rev, pool);
+  rev_filename = path_rev (fs, new_rev, pool);
   SVN_ERR (move_into_place (proto_filename, rev_filename, old_rev_filename,
-                            subpool));
+                            pool));
 
   /* Move the revprops file into place. */
-  revprop_filename = path_txn_props (fs, txn->id, subpool);
-  final_revprop = path_revprops (fs, new_rev, subpool);
+  revprop_filename = path_txn_props (fs, txn->id, pool);
+  final_revprop = path_revprops (fs, new_rev, pool);
   SVN_ERR (move_into_place (revprop_filename, final_revprop, old_rev_filename,
-                            subpool));
+                            pool));
   
   /* Update the 'current' file. */
   SVN_ERR (write_final_current (fs, txn->id, new_rev, start_node_id,
@@ -3554,12 +3566,44 @@ svn_fs_fs__commit (svn_revnum_t *new_rev_p,
   /* Remove this transaction directory. */
   SVN_ERR (svn_fs_fs__purge_txn (fs, txn->id, pool));
   
-  /* Destroy our subpool and release the lock. */
-  svn_pool_destroy (subpool);
-
   *new_rev_p = new_rev;
   
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__commit (svn_revnum_t *new_rev_p,
+                   svn_fs_t *fs,
+                   svn_fs_txn_t *txn,
+                   apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create (pool);
+  svn_error_t *err;
+
+#if APR_HAS_THREADS
+  fs_fs_data_t *ffd = fs->fsap_data;
+  apr_status_t status;
+
+  /* POSIX fcntl locks are per-process, so we need to serialize locks
+     within the process. */
+  status = apr_thread_mutex_lock (ffd->lock);
+  if (status)
+    return svn_error_wrap_apr (status, "Can't grab FSFS repository mutex");
+#endif
+
+  err = get_write_lock (fs, subpool);
+  if (!err)
+    err = commit_body (new_rev_p, fs, txn, subpool);
+
+  svn_pool_destroy (subpool);
+
+#if APR_HAS_THREADS
+  status = apr_thread_mutex_unlock (ffd->lock);
+  if (status && !err)
+    return svn_error_wrap_apr (status, "Can't ungrab FSFS repository mutex");
+#endif
+
+  return err;
 }
 
 svn_error_t *
@@ -3623,19 +3667,9 @@ svn_fs_fs__get_uuid (svn_fs_t *fs,
                      const char **uuid_p,
                      apr_pool_t *pool)
 {
-  apr_file_t *uuid_file;
-  char buf [APR_UUID_FORMATTED_LENGTH + 2];
-  apr_size_t limit;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
-  SVN_ERR (svn_io_file_open (&uuid_file, path_uuid (fs, pool),
-                             APR_READ | APR_BUFFERED, APR_OS_DEFAULT, pool));
-
-  limit = sizeof (buf);
-  SVN_ERR (svn_io_read_length_line (uuid_file, buf, &limit, pool));
-  *uuid_p = apr_pstrdup (pool, buf);
-  
-  SVN_ERR (svn_io_file_close (uuid_file, pool));
-
+  *uuid_p = apr_pstrdup (pool, ffd->uuid);
   return SVN_NO_ERROR;
 }
 
@@ -3645,6 +3679,7 @@ svn_fs_fs__set_uuid (svn_fs_t *fs,
                      apr_pool_t *pool)
 {
   apr_file_t *uuid_file;
+  fs_fs_data_t *ffd = fs->fsap_data;
 
   SVN_ERR (svn_io_file_open (&uuid_file, path_uuid (fs, pool),
                              APR_WRITE | APR_CREATE | APR_TRUNCATE,
@@ -3653,6 +3688,8 @@ svn_fs_fs__set_uuid (svn_fs_t *fs,
   SVN_ERR (svn_io_file_write_full (uuid_file, uuid, strlen (uuid), NULL,
                                    pool));
   SVN_ERR (svn_io_file_write_full (uuid_file, "\n", 1, NULL, pool));
+
+  ffd->uuid = apr_pstrdup (fs->pool, uuid);
 
   SVN_ERR (svn_io_file_close (uuid_file, pool));
   
