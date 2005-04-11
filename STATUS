@@ -60,5 +60,12 @@ Candidate changes:
     Votes:
       +1: lundblad
 
+  * r14131
+    In FSFS, don't auto-upgrade FS format number of legacy repositories.
+    Justification: Might not have write access, might have wrong umask.
+    Notes: http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=97600
+    Votes:
+      +1: kfogel
+
 Approved changes (further review is welcome, but not required):
 
