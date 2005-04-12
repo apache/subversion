@@ -998,34 +998,14 @@ static svn_error_t * upd_close_edit(void *edit_baton,
 }
 
 
-static svn_stringbuf_t *
-string_from_cdata_pieces(apr_xml_elem *element,
-                         apr_pool_t *pool)
-{
-  svn_stringbuf_t *buf;
-  struct apr_text *this_elem;
-
-  /* No CDATA?  That's badness. */
-  if (! element->first_cdata.first)
-    return NULL;
-
-  buf = svn_stringbuf_create(element->first_cdata.first->text, pool);
-  this_elem = element->first_cdata.first->next;
-  while (this_elem)
-    {
-      svn_stringbuf_appendcstr(buf, this_elem->text);
-      this_elem = this_elem->next;
-    }
-  return buf;
-}
-
-
+/* Return a specific error associated with the contents of TAGNAME
+   being malformed.  Use pool for allocations.  */
 static dav_error *
-empty_cdata_error(const char *tagname,
-                  apr_pool_t *pool)
+malformed_element_error(const char *tagname,
+                        apr_pool_t *pool)
 {
   const char *errstr = apr_pstrcat(pool, "The request's '", tagname, 
-                                   "' element contains empty cdata; there "
+                                   "' element is malformed; there "
                                    "is a problem with the client.", NULL);
   return dav_svn__new_error_tag(pool, HTTP_BAD_REQUEST, 0, errstr,
                                 SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
@@ -1104,24 +1084,26 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
          Thus, the check for non-empty cdata in each of these cases
          cannot be moved to the top of the loop, because then it would
          wrongly catch other elements that do allow empty cdata. */ 
-      svn_stringbuf_t *cdata;
+      const char *cdata;
       
       if (child->ns == ns && strcmp(child->name, "target-revision") == 0)
         {
-          if (! ((cdata = string_from_cdata_pieces(child, resource->pool))))
-            return empty_cdata_error(child->name, resource->pool);
-          revnum = SVN_STR_TO_REV(cdata->data);
+          cdata = dav_xml_get_cdata(child, resource->pool, 1);
+          if (! *cdata)
+            return malformed_element_error(child->name, resource->pool);
+          revnum = SVN_STR_TO_REV(cdata);
         }
       if (child->ns == ns && strcmp(child->name, "src-path") == 0)
         {
           dav_svn_uri_info this_info;
-          if (! ((cdata = string_from_cdata_pieces(child, resource->pool))))
-            return empty_cdata_error(child->name, resource->pool);
-          if ((derr = dav_svn__test_canonical(cdata->data, 
+          cdata = dav_xml_get_cdata(child, resource->pool, 1);
+          if (! *cdata)
+            return malformed_element_error(child->name, resource->pool);
+          if ((derr = dav_svn__test_canonical(cdata, 
                                               resource->pool)))
             return derr;
           if ((serr = dav_svn_simple_parse_uri(&this_info, resource,
-                                               cdata->data, 
+                                               cdata, 
                                                resource->pool)))
             return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                        "Could not parse 'src-path' URL.",
@@ -1131,13 +1113,14 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
       if (child->ns == ns && strcmp(child->name, "dst-path") == 0)
         {
           dav_svn_uri_info this_info;
-          if (! ((cdata = string_from_cdata_pieces(child, resource->pool))))
-            return empty_cdata_error(child->name, resource->pool);
-          if ((derr = dav_svn__test_canonical(cdata->data,
+          cdata = dav_xml_get_cdata(child, resource->pool, 1);
+          if (! *cdata)
+            return malformed_element_error(child->name, resource->pool);
+          if ((derr = dav_svn__test_canonical(cdata,
                                               resource->pool)))
             return derr;
           if ((serr = dav_svn_simple_parse_uri(&this_info, resource,
-                                               cdata->data, 
+                                               cdata, 
                                                resource->pool)))
             return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                        "Could not parse 'dst-path' URL.",
@@ -1146,39 +1129,44 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
         }
       if (child->ns == ns && strcmp(child->name, "update-target") == 0)
         {
-          if (! ((cdata = string_from_cdata_pieces(child, resource->pool))))
-            return empty_cdata_error(child->name, resource->pool);
-          if ((derr = dav_svn__test_canonical(cdata->data, 
+          cdata = dav_xml_get_cdata(child, resource->pool, 1);
+          if (! *cdata)
+            return malformed_element_error(child->name, resource->pool);
+          if ((derr = dav_svn__test_canonical(cdata, 
                                               resource->pool)))
             return derr;
-          target = cdata->data;
+          target = cdata;
         }
       if (child->ns == ns && strcmp(child->name, "recursive") == 0)
         {
-          if (! ((cdata = string_from_cdata_pieces(child, resource->pool))))
-            return empty_cdata_error(child->name, resource->pool);
-          if (strcmp(cdata->data, "no") == 0)
+          cdata = dav_xml_get_cdata(child, resource->pool, 1);
+          if (! *cdata)
+            return malformed_element_error(child->name, resource->pool);
+          if (strcmp(cdata, "no") == 0)
             recurse = FALSE;
         }
       if (child->ns == ns && strcmp(child->name, "ignore-ancestry") == 0)
         {
-          if (! ((cdata = string_from_cdata_pieces(child, resource->pool))))
-            return empty_cdata_error(child->name, resource->pool);
-          if (strcmp(cdata->data, "no") != 0)
+          cdata = dav_xml_get_cdata(child, resource->pool, 1);
+          if (! *cdata)
+            return malformed_element_error(child->name, resource->pool);
+          if (strcmp(cdata, "no") != 0)
             ignore_ancestry = TRUE;
         }
       if (child->ns == ns && strcmp(child->name, "resource-walk") == 0)
         {
-          if (! ((cdata = string_from_cdata_pieces(child, resource->pool))))
-            return empty_cdata_error(child->name, resource->pool);
-          if (strcmp(cdata->data, "no") != 0)
+          cdata = dav_xml_get_cdata(child, resource->pool, 1);
+          if (! *cdata)
+            return malformed_element_error(child->name, resource->pool);
+          if (strcmp(cdata, "no") != 0)
             resource_walk = TRUE;
         }
       if (child->ns == ns && strcmp(child->name, "text-deltas") == 0)
         {
-          if (! ((cdata = string_from_cdata_pieces(child, resource->pool))))
-            return empty_cdata_error(child->name, resource->pool);
-          if (strcmp(cdata->data, "no") == 0)
+          cdata = dav_xml_get_cdata(child, resource->pool, 1);
+          if (! *cdata)
+            return malformed_element_error(child->name, resource->pool);
+          if (strcmp(cdata, "no") == 0)
             text_deltas = FALSE;
         }
     }
