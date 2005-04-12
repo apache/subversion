@@ -11,6 +11,8 @@
 #        mailer.py propchange  REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
 #        mailer.py propchange2 REPOS REVISION AUTHOR PROPNAME ACTION \
 #                              [CONFIG-FILE]
+#        mailer.py lock        REPOS AUTHOR [CONFIG-FILE]
+#        mailer.py unlock      REPOS AUTHOR [CONFIG-FILE]
 #
 #   Using CONFIG-FILE, deliver an email describing the changes between
 #   REV and REV-1 for the repository REPOS.
@@ -55,6 +57,12 @@ def main(pool, cmd, config_fname, repos_dir, rev,
     repos.author = author
     cfg = Config(config_fname, repos, { 'author' : author })
     messenger = PropChange(pool, cfg, repos, author, propname, action)
+  elif cmd == 'lock':
+    cfg = Config(config_fname, repos, { 'author' : author })
+    messenger = Lock(pool, cfg, repos)
+  elif cmd == 'unlock':
+    cfg = Config(config_fname, repos, { 'author' : author })
+    messenger = Unlock(pool, cfg, repos)
   else:
     raise UnknownSubcommand(cmd)
 
@@ -438,6 +446,87 @@ class PropChange(Messenger):
           'to' : tempfile2.name,
           }))
       self.output.finish()
+
+
+class Lock(Messenger):
+  def __init__(self, pool, cfg, repos):
+    Messenger.__init__(self, pool, cfg, repos, 'lock_subject_prefix')
+
+    # read all the locked paths from STDIN
+
+    # save this list for the generate method.
+    self.dirlist = sys.stdin.readlines()
+
+    ### TODO this is ripped right out of Commit.__init__.  It would be
+    ### nice to make this a utility function or method somewhere.
+
+    # figure out the common portion of all the dirs. note that there is
+    # no "common" if only a single dir was changed, or the root was changed.
+    dirlist = self.dirlist
+    if len(self.dirlist) == 1 or self.dirlist.contains('/'):
+      commondir = ''
+    else:
+      common = string.split(dirlist.pop(), '/')
+      for d in dirlist:
+        parts = string.split(d, '/')
+        for i in range(len(common)):
+          if i == len(parts) or common[i] != parts[i]:
+            del common[i:]
+            break
+      commondir = string.join(common, '/')
+      if commondir:
+        # strip the common portion from each directory
+        l = len(commondir) + 1
+        dirlist = [ ]
+        for d in self.dirlist():
+          if d == commondir:
+            dirlist.append('.')
+          else:
+            dirlist.append(d[l:])
+      else:
+        # nothing in common, so reset the list of directories
+        dirlist = self.dirlist()
+
+
+    # compose the basic subject line. later, we can prefix it.
+    dirlist.sort()
+    dirlist = string.join(dirlist)
+    if commondir:
+      self.output.subject = '%s: %s' % (commondir, dirlist)
+    else:
+      self.output.subject = '%s' % ()
+
+  def generate(self):
+    self.output.start(group, params)
+    self.output.write('Author: %s\n'
+                      'Paths:\n' % self.author)
+
+    self.dirlist.sort()
+    for dir in self.dirlist:
+      self.output.write(' %s\n' % dir)
+
+    self.output.write('Comment:\n %s\n' % "TODO GET COMMENT")
+
+    self.output.finish()
+
+
+try:
+  from tempfile import NamedTemporaryFile
+except ImportError:
+  # NamedTemporaryFile was added in Python 2.3, so we need to emulate it
+  # for older Pythons.
+  class NamedTemporaryFile:
+    def __init__(self):
+      self.name = tempfile.mktemp()
+      self.file = open(self.name, 'w+b')
+    def __del__(self):
+      os.remove(self.name)
+    def write(self, data):
+      self.file.write(data)
+    def flush(self):
+      self.file.flush()
+
+
 
 
 class DiffSelections:
@@ -1054,6 +1143,8 @@ if __name__ == '__main__':
        %s propchange  REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
        %s propchange2 REPOS REVISION AUTHOR PROPNAME ACTION
        %s             [CONFIG-FILE]
+       %s lock        REPOS AUTHOR [CONFIG-FILE]
+       %s unlock      REPOS AUTHOR [CONFIG-FILE]
 
 If no CONFIG-FILE is provided, the script will first search for a mailer.conf
 file in REPOS/conf/.  Failing that, it will search the directory in which
@@ -1074,7 +1165,8 @@ if the property was added, modified or deleted, respectively.
   try:
     revision = int(sys.argv[3])
   except ValueError:
-    usage()
+    if not cmd == 'lock' or cmd == 'unlock':
+      usage()
   config_fname = None
 
   # Used for propchange only
@@ -1103,6 +1195,8 @@ if the property was added, modified or deleted, respectively.
     action = sys.argv[6]
     if len(sys.argv) > 7:
       config_fname = sys.argv[7]
+  elif cmd == 'lock' or cmd == 'unlock':
+    author = sys.argv[3]
   else:
     usage()
 
