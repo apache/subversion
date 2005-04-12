@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-04-11 22:44+0200\n"
-"PO-Revision-Date: 2005-04-12 15:15+0200\n"
+"PO-Revision-Date: 2005-04-12 16:26+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -5322,9 +5322,8 @@ msgid "Cannot replace a directory from within"
 msgstr "Nie można czytać kolejnego elementu katalogu '%s'"
 
 #: libsvn_repos/reporter.c:949
-#, fuzzy
 msgid "Invalid report for top level of working copy"
-msgstr "Niepoprawna operacja na katalogu bieżącym"
+msgstr "Niepoprawna operacja na katalogu głównym kopii roboczej"
 
 #: libsvn_repos/reporter.c:964
 msgid "Two top-level reports with no target"
@@ -5384,9 +5383,8 @@ msgid "Creating passwd file"
 msgstr "Tworzenie pliku passwd"
 
 #: libsvn_repos/repos.c:1463
-#, fuzzy
 msgid "Could not create top-level directory"
-msgstr "Nie można stworzyć katalogu tymczasowego"
+msgstr "Nie można stworzyć katalogu głównego"
 
 #: libsvn_repos/repos.c:1467
 msgid "Creating DAV sandbox dir"
@@ -5401,9 +5399,9 @@ msgid "Repository creation failed"
 msgstr "Tworzenie repozytorium nie powiodło się"
 
 #: libsvn_repos/repos.c:1614
-#, fuzzy, c-format
+#, c-format
 msgid "Expected format '%d' of repository; found format '%d'"
-msgstr "Oczekiwana wersji repozytorium to '%d', ale znaleziono wersję '%d'"
+msgstr "Oczekiwana wersja repozytorium to '%d', ale znaleziono wersję '%d'"
 
 #: libsvn_repos/repos.c:1662
 msgid "Error opening db lockfile"
@@ -5425,7 +5423,6 @@ msgid "Invalid end revision %ld"
 msgstr "Nieprawidłowa końcowa wersja %ld"
 
 #: libsvn_repos/rev_hunt.c:314
-#, fuzzy
 msgid "Unreadable path encountered; access denied"
 msgstr "Nie można odczytać ścieżki; dostęp zabroniony"
 
@@ -6821,9 +6818,8 @@ msgid "set repos UUID to that found in stream, if any"
 msgstr "ustal UUID repozytorium na obecne w pliku dump i ile tylko jest zadane"
 
 #: svnadmin/main.c:257
-#, fuzzy
 msgid "type of repository: 'fsfs' (default) or 'bdb'"
-msgstr "rodzaj repozytorium: 'bdb' lub 'fsfs'"
+msgstr "rodzaj repozytorium: 'fsfs' (domyślny) lub 'bdb'"
 
 #: svnadmin/main.c:260
 msgid "load at specified directory in repository"
