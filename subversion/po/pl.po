@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-04-11 22:44+0200\n"
-"PO-Revision-Date: 2005-04-12 16:26+0200\n"
+"PO-Revision-Date: 2005-04-12 23:28+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -284,6 +284,8 @@ msgid ""
 "Lock Comment (%i lines):\n"
 "%s\n"
 msgstr ""
+"Opis blokady (%i linii):\n"
+"%s\n"
 
 #: clients/cmdline/info-cmd.c:207
 #, c-format
@@ -291,6 +293,8 @@ msgid ""
 "Lock Comment (%i line):\n"
 "%s\n"
 msgstr ""
+"Opis blokady (%i linia):\n"
+"%s\n"
 
 #: clients/cmdline/info-cmd.c:280
 #, c-format
@@ -558,7 +562,7 @@ msgstr "maksymalna liczba wspisów log"
 
 #: clients/cmdline/main.c:152
 msgid "don't unlock the targets"
-msgstr ""
+msgstr "nie usuwaj blokad dla obiektów"
 
 #: clients/cmdline/main.c:183
 msgid ""
@@ -897,6 +901,7 @@ msgstr ""
 "  oraz o rozmiarze pliku (w bajtach).\n"
 
 #: clients/cmdline/main.c:389
+#, fuzzy
 msgid ""
 "Lock working copy paths or URLs in the repository, so that\n"
 "no other user can commit changes to them.\n"
@@ -904,6 +909,11 @@ msgid ""
 "\n"
 "  Use --force to steal the lock from another user or working copy.\n"
 msgstr ""
+"Zablokuj ścieżki kopii roboczej lub URLe w repozytorium, w ten sposób,\n"
+"że żaden inny użytkownik nie może dokonywać na nich zatwierdzeń zmian.\n"
+"Użycie: lock ŚCIEŻKA...\n"
+"\n"
+"Użyj opcji --force aby odebrać blokadę innemu użytkownikowi.\n"
 
 #: clients/cmdline/main.c:397
 msgid ""
@@ -1476,6 +1486,10 @@ msgid ""
 "\n"
 "  Use --force to break the lock.\n"
 msgstr ""
+"Zdejmij blokadę założoną na ścieżkach kopii roboczej lub na URLach.\n"
+"Użycie: unlock ŚCIEŻKA...\n"
+"\n"
+"Użyj opcji --force aby zerwać blokadę.\n"
 
 #: clients/cmdline/main.c:716
 msgid ""
@@ -1885,7 +1899,7 @@ msgstr "Nieprawidłowe kodowanie: wartość atrybutu nie jest w UTF8"
 #: clients/cmdline/propedit-cmd.c:126
 #, c-format
 msgid "Set new value for property '%s' on revision %ld\n"
-msgstr "Ustaw nową wartość dla atrybutu '%s' w wersji %ld\n"
+msgstr "Ustawiono nową wartość dla atrybutu '%s' w wersji %ld\n"
 
 #: clients/cmdline/propedit-cmd.c:132
 #, c-format
@@ -2695,7 +2709,7 @@ msgstr "Podane zasoby nie są ze sobą związane"
 
 #: include/svn_error_codes.h:888
 msgid "Path has no lock token"
-msgstr ""
+msgstr "Ścieżka nie zawiera żetonu blokady"
 
 #: include/svn_error_codes.h:894
 msgid "A problem occurred; see later errors for details"
@@ -3266,18 +3280,18 @@ msgid "Cannot read entry for '%s'"
 msgstr "Nie można znaleźć elementu dla '%s'"
 
 #: libsvn_client/info.c:320 libsvn_client/info.c:345 libsvn_client/info.c:355
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' non-existent in revision '%ld'"
-msgstr "URL '%s' nie istnieje w tej wersji"
+msgstr "URL '%s' nie istnieje w wersji '%ld'"
 
 #: libsvn_client/locking_commands.c:185
 msgid "No common parent found, unable to operate on disjoint arguments"
 msgstr ""
 
 #: libsvn_client/locking_commands.c:267
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not locked in this working copy"
-msgstr "'%s' nie jest kopią roboczą"
+msgstr "'%s' nie jest zablokowane w danej kopii roboczej"
 
 #: libsvn_client/locking_commands.c:312
 #, c-format
@@ -3287,7 +3301,7 @@ msgstr "'%s' nie jest zablokowane"
 #: libsvn_client/locking_commands.c:345 libsvn_fs/fs-loader.c:880
 #: libsvn_ra/ra_loader.c:506
 msgid "Lock comment has illegal characters"
-msgstr ""
+msgstr "Opis zakładanej blokady zawiera nieprawidłowe znaki"
 
 #: libsvn_client/log.c:72
 msgid "Missing required revision specification"
@@ -3483,11 +3497,11 @@ msgstr ""
 
 #: libsvn_fs_base/bdb/changes-table.c:88
 msgid "creating change"
-msgstr ""
+msgstr "tworzenie zmiany"
 
 #: libsvn_fs_base/bdb/changes-table.c:114
 msgid "deleting changes"
-msgstr ""
+msgstr "usuwanie zmian"
 
 #: libsvn_fs_base/bdb/changes-table.c:146 libsvn_fs_fs/fs_fs.c:1947
 msgid "Missing required node revision ID"
@@ -3508,7 +3522,7 @@ msgstr ""
 #: libsvn_fs_base/bdb/changes-table.c:257
 #: libsvn_fs_base/bdb/changes-table.c:381
 msgid "creating cursor for reading changes"
-msgstr ""
+msgstr "tworzenie kursora do czytania zmian"
 
 #: libsvn_fs_base/bdb/changes-table.c:283
 #: libsvn_fs_base/bdb/changes-table.c:402
@@ -3524,12 +3538,11 @@ msgstr "pobieranie zmian"
 #: libsvn_fs_base/bdb/changes-table.c:355
 #: libsvn_fs_base/bdb/changes-table.c:438
 msgid "closing changes cursor"
-msgstr ""
+msgstr "zamykanie kursora zmian"
 
 #: libsvn_fs_base/bdb/copies-table.c:87
-#, fuzzy
 msgid "storing copy record"
-msgstr "Uszkodzona kopia robocza"
+msgstr "zachowywanie rekordu kopiowania"
 
 #: libsvn_fs_base/bdb/copies-table.c:112
 msgid "allocating new copy ID (getting 'next-key')"
@@ -3563,23 +3576,21 @@ msgstr "Element już istnieje"
 
 #: libsvn_fs_base/bdb/nodes-table.c:180
 msgid "deleting entry from 'nodes' table"
-msgstr ""
+msgstr "usuwanie elementu z tablicy węzłów"
 
 #. Handle any other error conditions.
 #: libsvn_fs_base/bdb/nodes-table.c:220
-#, fuzzy
 msgid "reading node revision"
-msgstr "Element nie ma wersji."
+msgstr "Czytanie węzła wersji"
 
 #: libsvn_fs_base/bdb/nodes-table.c:252
-#, fuzzy
 msgid "storing node revision"
-msgstr "Brak wersji"
+msgstr "zapis węzła wersji"
 
 #: libsvn_fs_base/bdb/reps-table.c:95 libsvn_fs_base/bdb/reps-table.c:202
-#, fuzzy, c-format
+#, c-format
 msgid "No such representation '%s'"
-msgstr "Nie ma takiego obiektu: '%s'"
+msgstr "Brak reprezentacji dla: '%s'"
 
 #. Handle any other error conditions.
 #: libsvn_fs_base/bdb/reps-table.c:98
@@ -3615,7 +3626,7 @@ msgstr "Błędny numer wersji"
 
 #: libsvn_fs_base/bdb/strings-table.c:91
 msgid "creating cursor for reading a string"
-msgstr ""
+msgstr "tworzenie kursora do czytania łańcucha znaków"
 
 #: libsvn_fs_base/bdb/txn-table.c:94
 #, fuzzy
@@ -3651,12 +3662,12 @@ msgstr "Uszkodzona wersja obiektu '%s' w systemie plików '%s'"
 #: libsvn_fs_base/dag.c:378 libsvn_fs_base/dag.c:555 libsvn_fs_fs/dag.c:386
 #, fuzzy
 msgid "Attempted to create entry in non-directory parent"
-msgstr "Próba zapisu node-rev o stałym ID"
+msgstr "Próba stworzenia elementu, którego rodzicem nie jest katalog"
 
 #: libsvn_fs_base/dag.c:549 libsvn_fs_fs/dag.c:380
 #, c-format
 msgid "Attempted to create a node with an illegal name '%s'"
-msgstr ""
+msgstr "Próba stworzenia węzła o nieprawidłowej nazwie '%s'"
 
 #: libsvn_fs_base/dag.c:561 libsvn_fs_base/dag.c:795 libsvn_fs_fs/dag.c:392
 #, fuzzy
@@ -3701,7 +3712,7 @@ msgstr "Próba zmiany węzła nie mogącego ulegać zmianom"
 #: libsvn_fs_base/dag.c:939
 #, c-format
 msgid "Attempted to delete a node with an illegal name '%s'"
-msgstr ""
+msgstr "Próba usunięcia węzła o nieprawidłowej nazwie '%s'"
 
 #: libsvn_fs_base/dag.c:954 libsvn_fs_base/dag.c:987
 #, fuzzy, c-format
@@ -3747,14 +3758,14 @@ msgstr ""
 "    wyliczono:     %s\n"
 
 #: libsvn_fs_base/dag.c:1386
-#, c-format
+#, c-format, fuzzy
 msgid "Attempted to open non-existent child node '%s'"
-msgstr ""
+msgstr "Próba otwarcia nieistniejącego węzła '%s'"
 
 #: libsvn_fs_base/dag.c:1392
 #, c-format
 msgid "Attempted to open node with an illegal name '%s'"
-msgstr ""
+msgstr "Próba otwarcia węzła o nieprawidłowej nazwie '%s'"
 
 #: libsvn_fs_base/err.c:37 libsvn_fs_fs/err.c:39
 msgid "Filesystem object has not been opened yet"
@@ -3962,7 +3973,7 @@ msgstr "Nieobsługiwana wersja loadera systemu plików (%d) dla bdb"
 #: libsvn_fs_base/lock.c:450 libsvn_fs_fs/lock.c:647
 #, c-format
 msgid "Cannot verify lock on path '%s'; no username available"
-msgstr ""
+msgstr "Nie można zweryfikować blokady założonej na ścieżce '%s'; brak nazwy użytkownika"
 
 #: libsvn_fs_base/lock.c:456 libsvn_fs_fs/lock.c:653
 #, c-format
@@ -3975,9 +3986,8 @@ msgid "Cannot verify lock on path '%s'; no matching lock-token available"
 msgstr ""
 
 #: libsvn_fs_base/reps-strings.c:103
-#, fuzzy
 msgid "Representation is not of type 'delta'"
-msgstr "Transakcja jest nieaktualna"
+msgstr "Reprezentacja nie jest typu 'delta'"
 
 #: libsvn_fs_base/reps-strings.c:495
 #, c-format
@@ -4021,7 +4031,7 @@ msgstr ""
 
 #: libsvn_fs_base/reps-strings.c:1318
 msgid "Failed to get new string key"
-msgstr ""
+msgstr "Błąd pobierania nowego klucza"
 
 #: libsvn_fs_base/reps-strings.c:1393
 #, c-format
@@ -4029,19 +4039,19 @@ msgid "Attempt to deltify '%s' against itself"
 msgstr ""
 
 #: libsvn_fs_base/reps-strings.c:1459
-#, fuzzy, c-format
+#, c-format
 msgid "Failed to calculate MD5 digest for '%s'"
-msgstr "Nie znaleziono etykiety '%s' w obiekcie o URL '%s'"
+msgstr "Błąd obliczania sumy kontrolnej MD5 dla '%s'"
 
 #: libsvn_fs_base/revs-txns.c:65 libsvn_fs_fs/revs-txns.c:58
-#, fuzzy, c-format
+#, c-format
 msgid "Transaction is not dead: '%s'"
-msgstr "Transakcja nie jest zniszczona"
+msgstr "Transakcja nie jest zniszczona: '%s'"
 
 #: libsvn_fs_base/revs-txns.c:68 libsvn_fs_fs/revs-txns.c:61
-#, fuzzy, c-format
+#, c-format
 msgid "Transaction is dead: '%s'"
-msgstr "Transakcja jest zniszczona"
+msgstr "Transakcja jest zniszczona: '%s'"
 
 #: libsvn_fs_base/revs-txns.c:981
 #, fuzzy
@@ -4082,8 +4092,9 @@ msgid "Asking props changed in two different filesystems"
 msgstr ""
 
 #: libsvn_fs_base/tree.c:1741
+#, fuzzy
 msgid "Corrupt DB: faulty predecessor count"
-msgstr ""
+msgstr "Uszkodzona baza danych: błędny poprzednik"
 
 #: libsvn_fs_base/tree.c:1817 libsvn_fs_base/tree.c:2206
 #: libsvn_fs_base/tree.c:2301 libsvn_fs_base/tree.c:2397
@@ -4363,7 +4374,7 @@ msgstr "ścieżka '%s' nie istnieje w wersji %ld"
 #: libsvn_fs_fs/lock.c:769
 #, c-format
 msgid "Lock failed: newer version of '%s' exists"
-msgstr ""
+msgstr "Nie udało się założyć blokady: istnieje nowsza wersja '%s'"
 
 #: libsvn_fs_fs/revs-txns.c:214
 #, fuzzy
