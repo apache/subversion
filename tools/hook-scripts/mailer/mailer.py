@@ -43,16 +43,17 @@ import svn.core
 SEPARATOR = '=' * 78
 
 
-def main(pool, cmd, config_fp, repos_dir, rev, author, propname, action='A'):
+def main(pool, cmd, config_fname, repos_dir, rev,
+         author, propname, action='A'):
   repos = Repository(repos_dir, rev, pool)
 
   if cmd == 'commit':
-    cfg = Config(config_fp, repos, { 'author' : repos.author })
+    cfg = Config(config_fname, repos, { 'author' : repos.author })
     messenger = Commit(pool, cfg, repos)
   elif cmd == 'propchange' or cmd == 'propchange2':
     # Override the repos revision author with the author of the propchange
     repos.author = author
-    cfg = Config(config_fp, repos, { 'author' : author })
+    cfg = Config(config_fname, repos, { 'author' : author })
     messenger = PropChange(pool, cfg, repos, author, propname, action)
   else:
     raise UnknownSubcommand(cmd)
@@ -847,9 +848,9 @@ class Config:
   # set of groups.
   _predefined = ('general', 'defaults', 'maps')
 
-  def __init__(self, fp, repos, global_params):
+  def __init__(self, fname, repos, global_params):
     cp = ConfigParser.ConfigParser()
-    cp.readfp(fp)
+    cp.read(fname)
 
     # record the (non-default) groups that we find
     self._groups = [ ]
@@ -1062,9 +1063,6 @@ ACTION was added as a fifth argument to the post-revprop-change hook
 in Subversion 1.2.0.  Its value is one of 'A', 'M' or 'D' to indicate
 if the property was added, modified or deleted, respectively.
 
-Additionally, CONFIG-FILE may be '-' to indicate that configuration options
-will be provided via standard input.
-
 """ % (sys.argv[0], sys.argv[0], sys.argv[0], ' ' * len(sys.argv[0])))
     sys.exit(1)
 
@@ -1115,17 +1113,13 @@ will be provided via standard input.
       # okay. look for 'mailer.conf' as a sibling of this script
       config_fname = os.path.join(os.path.dirname(sys.argv[0]), 'mailer.conf')
 
-  # If we're supposed to read from stdin, do so.
-  if config_fname == '-':
-    config_fp = sys.stdin
-  else:
-    # Not reading stdin, so open up the real config file.
-    if not os.path.exists(config_fname):
-      raise MissingConfig(config_fname)
-    config_fp = open(config_fname)
+  # Not reading stdin, so open up the real config file.
+  if not os.path.exists(config_fname):
+    raise MissingConfig(config_fname)
+  config_fp = open(config_fname)
 
   ### run some validation on these params
-  svn.core.run_app(main, cmd, config_fp, repos_dir, revision,
+  svn.core.run_app(main, cmd, config_fname, repos_dir, revision,
                    author, propname, action)
 
 # ------------------------------------------------------------------------
