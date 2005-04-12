@@ -281,9 +281,9 @@ svn_fs_fs__open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
     {
       /* Treat an absent format file as format 1.  Do not try to
          create the format file on the fly, because the repository
-         might be read-only for us, or we might have a umask such
-         that even if we did create the format file, subsequent
-         users would not be able to read it.  See thread starting at
+         might be read-only for us, or this might be a read-only
+         operation, and the spirit of FSFS is to make no changes
+         whatseover in read-only operations.  See thread starting at
          http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=97600
          for more. */
       svn_error_clear (err);
