@@ -72,7 +72,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-30 09:48+0200\n"
-"PO-Revision-Date: 2005-04-12 21:52+0100\n"
+"PO-Revision-Date: 2005-04-12 22:27+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1140,7 +1140,6 @@ msgstr ""
 "  2. Listet nicht versionierte Eigenschaften im Projektarchiv.\n"
 
 #: clients/cmdline/main.c:542
-#, fuzzy
 msgid ""
 "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME [PROPVAL | -F VALFILE] PATH...\n"
@@ -1202,10 +1201,7 @@ msgstr ""
 "      Id                     - Eine komprimierte Zusammenfassung der vier\n"
 "                               genannten Schlüsselworte.\n"
 "\n"
-"    svn:executable - Falls vorhanden, mache die Datei ausführbar. Diese\n"
-"      Eigenschaft kann nicht für ein Verzeichnis gesetzt werden. Ein nicht-\n"
-"      rekursiver Versuch wird scheitern, und ein rekursiver Versuch wird nur\n"
-"      die Eigenschaften der Dateikinder des Verzeichnisses setzen.\n"
+"    svn:executable - Falls vorhanden, mache die Datei ausführbar.\n"
 "\n"
 "    svn:eol-style  - Einer von 'native', 'LF', 'CR', 'CRLF'.\n"
 "\n"
@@ -1219,6 +1215,13 @@ msgstr ""
 "      Revisionsmarkern und einer URL bestehen. Zum Beispiel:\n"
 "        foo             http://example.com/repos/zig\n"
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
+"    svn:needs-lock - If present, indicates that the file should be locked\n"
+"      before it is modified.  Makes the working copy file read-only\n"
+"      when it is not locked.\n"
+"  Die svn:keywords, svn:executable, svn:eol-style, svn:mime-type und\n"
+"  svn:needs-lock Eigenschaften können nicht auf Verzeichnisse gesetzt werden.\n"
+"  Ein nicht-rekursiver Versuch wird scheitern, und ein rekursiver Versuch wird\n"
+"   nur die Eigenschaft der Dateien in dem Verzeichnis setzen.\n"
 
 #: clients/cmdline/main.c:592
 msgid ""
@@ -1544,7 +1547,6 @@ msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr "Die Datei für die Log-Meldung ist versioniert; geben Sie '--force-log' an, um sie zu verwenden"
 
 #: clients/cmdline/main.c:1221
-#, fuzzy
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr "Die Datei für die Log-Meldung ist versioniert; geben Sie '--force-log' an, um sie zu verwenden"
 
@@ -1553,7 +1555,6 @@ msgid "The log message is a pathname (was -F intended?); use '--force-log' to ov
 msgstr "Die Log-Meldung ist ein Pfad (war -F gemeint?); geben Sie '--force-log' an, um sie zu verwenden"
 
 #: clients/cmdline/main.c:1245
-#, fuzzy
 msgid "The lock comment is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "Die Log-Meldung ist ein Pfad (war -F gemeint?); geben Sie '--force-log' an, um sie zu verwenden"
 
@@ -2382,9 +2383,8 @@ msgid "No user associated with filesystem"
 msgstr "Kein Benutzer mit dem Dateisystem verbunden"
 
 #: include/svn_error_codes.h:529
-#, fuzzy
 msgid "Path is already locked"
-msgstr "Pfad ist gesperrt"
+msgstr "Pfad ist bereits gesperrt"
 
 #: include/svn_error_codes.h:534
 #: include/svn_error_codes.h:661
@@ -2821,7 +2821,7 @@ msgstr "Startrevision muss vor der Endrevision liegen"
 #: libsvn_client/cat.c:195
 #, c-format
 msgid "URL '%s' refers to a directory"
-msgstr "URL '%s' bezieht sich auf ein Verzeichnis"
+msgstr "URL '%s' verweist auf auf ein Verzeichnis"
 
 #: libsvn_client/blame.c:732
 #, c-format
@@ -2835,9 +2835,9 @@ msgid "'%s' is not under version control or doesn't exist"
 msgstr "'%s' ist nicht unter Versionskontrolle oder existiert nicht"
 
 #: libsvn_client/cat.c:71
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' refers to a directory"
-msgstr "URL '%s' bezieht sich auf ein Verzeichnis"
+msgstr "URL '%s' verweist auf ein Verzeichnis"
 
 #: libsvn_client/cat.c:122
 #: libsvn_client/export.c:183
@@ -2857,7 +2857,7 @@ msgstr "Die URL '%s' existiert nicht"
 #: libsvn_client/checkout.c:92
 #, c-format
 msgid "URL '%s' refers to a file, not a directory"
-msgstr "Die URL '%s' bezieht sich auf eine Datei, nicht auf ein Verzeichnis"
+msgstr "Die URL '%s' verweist auf eine Datei, nicht auf ein Verzeichnis"
 
 #: libsvn_client/checkout.c:150
 #, c-format
@@ -3032,7 +3032,7 @@ msgstr "'%s' ist weder unter Versionskontrolle noch Teil einer Übertragung, den
 #: libsvn_client/commit_util.c:846
 #, c-format
 msgid "Cannot commit both '%s' and '%s' as they refer to the same URL"
-msgstr "Kann '%s' und '%s' nicht übertragen, da sich beide auf die selbe URL beziehen"
+msgstr "Kann '%s' und '%s' nicht übertragen, da beide auf dieselbe URL verweisen"
 
 #: libsvn_client/commit_util.c:991
 #, c-format
@@ -3482,14 +3482,12 @@ msgid "Unknown FS type '%s'"
 msgstr "Unkannter Dateisystemtyp '%s'"
 
 #: libsvn_fs/fs-loader.c:242
-#, fuzzy
 msgid "Can't allocate FS mutex"
-msgstr "Kann Tunnel nicht erzeugen"
+msgstr ""
 
 #: libsvn_fs/fs-loader.c:269
-#, fuzzy
 msgid "Can't grab FS mutex"
-msgstr "Kann nicht aus Datenstrom lesen"
+msgstr ""
 
 #: libsvn_fs/fs-loader.c:275
 msgid "Can't ungrab FS mutex"
@@ -3901,9 +3899,9 @@ msgstr "Benutzer '%s' versucht eine Sperre, die '%s' gehört, im Dateisystem '%s
 
 #: libsvn_fs_base/err.c:317
 #: libsvn_fs_fs/err.c:299
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is already locked by user '%s' in filesystem '%s'"
-msgstr "Pfad '%s' ist durch Benutzer '%s' im Dateisystem '%s' gesperrt"
+msgstr "Pfad '%s' ist bereits durch Benutzer '%s' im Dateisystem '%s' gesperrt"
 
 #: libsvn_fs_base/fs.c:79
 #, c-format
@@ -4232,9 +4230,8 @@ msgid "Can't fetch FSFS mutex"
 msgstr ""
 
 #: libsvn_fs_fs/fs.c:105
-#, fuzzy
 msgid "Can't create FSFS mutex"
-msgstr "Kann Tunnel nicht erzeugen"
+msgstr ""
 
 #: libsvn_fs_fs/fs.c:109
 msgid "Can't store FSFS mutex"
@@ -5191,9 +5188,9 @@ msgid "Error closing write end of stderr pipe"
 msgstr "Fehler beim Schließen des Schreib-Endes der Standardfehlerausgabe"
 
 #: libsvn_repos/hooks.c:90
-#, fuzzy, c-format
+#, c-format
 msgid "Failed to start '%s' hook"
-msgstr "Ausführen der '%s' Aktion schlug fehl"
+msgstr "Konnte '%s' Aktion nicht starten"
 
 #: libsvn_repos/hooks.c:108
 #, c-format
