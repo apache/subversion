@@ -51,17 +51,20 @@ Before filing a new issue, please:
 
   <li><p>Look through <a
       href="http://subversion.tigris.org/issues/buglist.cgi?component=subversion&amp;issue_status=UNCONFIRMED&amp;issue_status=NEW&amp;issue_status=STARTED&amp;issue_status=REOPENED"
-      >all existing issues</a>, or search their summaries:
+      >all existing issues</a>, or search their summaries:</p>
       <form method="get"
-action="http://subversion.tigris.org/issues/buglist.cgi?component=subversion">
+        action="http://subversion.tigris.org/issues/buglist.cgi">
       <input name="short_desc" />
+      <input type="submit" value="Search!" />
+      <input type="hidden" name="component" value="subversion" />
       <input type="hidden" name="issue_status" value="NEW" />
       <input type="hidden" name="issue_status" value="STARTED" />
       <input type="hidden" name="issue_status" value="REOPENED" />
       <input type="hidden" name="short_desc_type" value="substring" />
       <input type="hidden" name="cmdtype" value="doit" />
-      </form><span style="font-size: 75%; font-weight: normal">
-      to see if this bug has already been reported.</span></p></li>
+      </form>
+      <p style="font-size: 75%; font-weight: normal">
+      to see if this bug has already been reported.</p></li>
 
   <li><p>Report your problem to <a href="mailto:users@subversion.tigris.org"
       >users@subversion.tigris.org</a>,<br />
