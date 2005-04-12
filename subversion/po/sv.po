@@ -45,8 +45,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-04-11 22:56+0200\n"
-"PO-Revision-Date: 2005-04-11 22:56+0200\n"
+"POT-Creation-Date: 2005-04-12 23:58+0200\n"
+"PO-Revision-Date: 2005-04-12 23:56+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -1548,10 +1548,9 @@ msgstr ""
 "kringgå"
 
 #: clients/cmdline/main.c:1221
-#, fuzzy
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr ""
-"Filen med loggmeddelandet är versionshanterad; använd --force-log för att "
+"Filen med låskommentaren är versionshanterad; använd --force-log för att "
 "kringgå"
 
 #: clients/cmdline/main.c:1240
@@ -1562,12 +1561,11 @@ msgstr ""
 "Loggmeddelandet är en sökväg (avsågs -F?); använd --force-log för att kringgå"
 
 #: clients/cmdline/main.c:1245
-#, fuzzy
 msgid ""
 "The lock comment is a pathname (was -F intended?); use '--force-log' to "
 "override"
 msgstr ""
-"Loggmeddelandet är en sökväg (avsågs -F?); använd --force-log för att kringgå"
+"Låskommentaren är en sökväg (avsågs -F?); använd --force-log för att kringgå"
 
 #: clients/cmdline/main.c:1457
 msgid ""
@@ -1709,7 +1707,7 @@ msgid ""
 "Performing status on external item at '%s'\n"
 msgstr ""
 "\n"
-"Utför statuskontroll av externt objekt på \"%s\"\n"
+"Utför statuskontroll av extern katalog på \"%s\"\n"
 
 #: clients/cmdline/notify.c:293
 #, c-format
@@ -1719,7 +1717,7 @@ msgstr "Status gentemot revision: %6ld\n"
 #: clients/cmdline/notify.c:301
 #, c-format
 msgid "Sending        %s\n"
-msgstr "Skickar        %s\n"
+msgstr "Skickar             %s\n"
 
 #: clients/cmdline/notify.c:310
 #, c-format
@@ -1739,7 +1737,7 @@ msgstr "Raderar             %s\n"
 #: clients/cmdline/notify.c:331
 #, c-format
 msgid "Replacing      %s\n"
-msgstr "Ersätter       %s\n"
+msgstr "Ersätter            %s\n"
 
 #: clients/cmdline/notify.c:341
 msgid "Transmitting file data "
@@ -1856,7 +1854,7 @@ msgstr "En URL eller ett versionshanterat objekt krävs"
 #: clients/cmdline/propdel-cmd.c:93
 #, c-format
 msgid "property '%s' deleted from repository revision %ld\n"
-msgstr "egenskapen \"%s\" togs bort från revision %ld i databasen\n"
+msgstr "egenskapen \"%s\" raderades från revision %ld i arkivet\n"
 
 #: clients/cmdline/propdel-cmd.c:102
 #, c-format
@@ -1866,12 +1864,12 @@ msgstr "Revision kan ej anges vid radering av versionshanterad egenskap \"%s\""
 #: clients/cmdline/propdel-cmd.c:129
 #, c-format
 msgid "property '%s' deleted (recursively) from '%s'.\n"
-msgstr "egenskapen \"%s\" togs bort (rekursivt) från \"%s\".\n"
+msgstr "egenskapen \"%s\" raderades (rekursivt) från \"%s\".\n"
 
 #: clients/cmdline/propdel-cmd.c:130
 #, c-format
 msgid "property '%s' deleted from '%s'.\n"
-msgstr "egenskapen \"%s\" togs bort från \"%s\".\n"
+msgstr "egenskapen \"%s\" raderades från \"%s\".\n"
 
 #: clients/cmdline/propedit-cmd.c:117 clients/cmdline/propedit-cmd.c:241
 #: clients/cmdline/propset-cmd.c:85
@@ -1917,7 +1915,7 @@ msgstr "Satte nytt värde på egenskapen \"%s\" för \"%s\"\n"
 #: clients/cmdline/propedit-cmd.c:255
 #, c-format
 msgid "No changes to property '%s' on '%s'\n"
-msgstr "Inga ändringar av egenskapen \"%s\" för \"%s\"\n"
+msgstr "Egenskapen \"%s\" för \"%s\" ändrades ej\n"
 
 #: clients/cmdline/proplist-cmd.c:87
 #, c-format
@@ -1931,7 +1929,7 @@ msgstr "Revision måste anges vid arbete med revisionsegenskaper"
 #: clients/cmdline/propset-cmd.c:127
 #, c-format
 msgid "property '%s' set on repository revision %ld\n"
-msgstr "har satt egenskapen \"%s\" på revision %ld i databasen\n"
+msgstr "satt egenskapen \"%s\" på revision %ld i arkivet\n"
 
 #: clients/cmdline/propset-cmd.c:135
 #, c-format
@@ -1946,21 +1944,21 @@ msgstr "Mål måste anges (\"%s\" tolkas som egenskapsvärde)"
 #: clients/cmdline/propset-cmd.c:196
 #, c-format
 msgid "property '%s' set (recursively) on '%s'\n"
-msgstr "har satt egenskapen \"%s\" (rekursivt) på \"%s\"\n"
+msgstr "satt egenskapen \"%s\" (rekursivt) på \"%s\"\n"
 
 #: clients/cmdline/propset-cmd.c:197
 #, c-format
 msgid "property '%s' set on '%s'\n"
-msgstr "har satt egenskapen \"%s\" på \"%s\"\n"
+msgstr "satte egenskapen \"%s\" på \"%s\"\n"
 
 #: clients/cmdline/revert-cmd.c:61
 msgid "Try 'svn revert --recursive' instead?"
 msgstr "Försök med \"svn revert --recursive\" istället?"
 
 #: clients/cmdline/switch-cmd.c:58
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' to '%s' is not a valid relocation"
-msgstr "\"%s\" är ingen katalog"
+msgstr "\"%s\" till \"%s\" är ingen giltig omlokalisering"
 
 #: clients/cmdline/util.c:57
 #, c-format
@@ -1969,7 +1967,7 @@ msgid ""
 "Committed revision %ld.\n"
 msgstr ""
 "\n"
-"Checkade in revision %ld.\n"
+"Arkiverade revision %ld.\n"
 
 #: clients/cmdline/util.c:125
 msgid ""
@@ -1994,7 +1992,7 @@ msgid "Can't write to '%s'"
 msgstr "Kan inte skriva till \"%s\""
 
 #: clients/cmdline/util.c:204 clients/cmdline/util.c:228
-#: libsvn_fs_fs/fs_fs.c:1065 libsvn_fs_fs/fs_fs.c:3551 libsvn_subr/io.c:2327
+#: libsvn_fs_fs/fs_fs.c:1070 libsvn_fs_fs/fs_fs.c:3556 libsvn_subr/io.c:2327
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "Kan inte ta status på \"%s\""
@@ -2111,7 +2109,7 @@ msgstr "Kunde inte generera fler unika namn"
 
 #: include/svn_error_codes.h:220
 msgid "Framing error in pipe protocol"
-msgstr "Fönsterfel i rörprotokoll"
+msgstr "Ramfel i rörprotokoll"
 
 #: include/svn_error_codes.h:225
 msgid "Read error in pipe"
@@ -2143,15 +2141,15 @@ msgstr "Kan inte hitta post"
 
 #: include/svn_error_codes.h:265
 msgid "Entry already exists"
-msgstr "Post finns redan"
+msgstr "Posten finns redan"
 
 #: include/svn_error_codes.h:269
 msgid "Entry has no revision"
-msgstr "Post saknar revision"
+msgstr "Posten saknar revision"
 
 #: include/svn_error_codes.h:273
 msgid "Entry has no URL"
-msgstr "Post saknar URL"
+msgstr "Posten saknar URL"
 
 #: include/svn_error_codes.h:277
 msgid "Entry has an invalid attribute"
@@ -2188,7 +2186,7 @@ msgstr "Ogiltigt lås"
 
 #: include/svn_error_codes.h:315
 msgid "Path is not a working copy directory"
-msgstr "Sökvägen är ingen arbetskopia"
+msgstr "Sökvägen är ingen katalog i en arbetskopia"
 
 #: include/svn_error_codes.h:319
 msgid "Path is not a working copy file"
@@ -2204,7 +2202,7 @@ msgstr "Kan inte hitta sökväg till arbetskopia"
 
 #: include/svn_error_codes.h:331
 msgid "Working copy is not up-to-date"
-msgstr "Arbetskopia inaktuell"
+msgstr "Arbetskopian är inaktuell"
 
 #: include/svn_error_codes.h:335
 msgid "Left locally modified or unversioned files"
@@ -2220,7 +2218,7 @@ msgstr "Hittade sökväg till arbetskopia"
 
 #: include/svn_error_codes.h:347
 msgid "A conflict in the working copy obstructs the current operation"
-msgstr "Konflikt i arbetskopian blockerar operationen"
+msgstr "En konflikt i arbetskopian blockerar operationen"
 
 #: include/svn_error_codes.h:351
 msgid "Working copy is corrupt"
@@ -2244,7 +2242,7 @@ msgstr "Problem med första loggposten i arbetskopia"
 
 #: include/svn_error_codes.h:371
 msgid "Unsupported working copy format"
-msgstr "Format på arbetskopia stöds ej"
+msgstr "Formatet på arbetskopian stöds ej"
 
 #: include/svn_error_codes.h:375
 msgid "Path syntax not supported in this context"
@@ -2264,11 +2262,11 @@ msgstr "Fel vid stängning av filsystem"
 
 #: include/svn_error_codes.h:394
 msgid "Filesystem is already open"
-msgstr "Filsystem redan öppet"
+msgstr "Filsystemet är redan öppet"
 
 #: include/svn_error_codes.h:398
 msgid "Filesystem is not open"
-msgstr "Filsystem ej öppet"
+msgstr "Filsystemet är ej öppet"
 
 #: include/svn_error_codes.h:402
 msgid "Filesystem is corrupt"
@@ -2316,19 +2314,19 @@ msgstr "node-rev-id saknas i filsystem"
 
 #: include/svn_error_codes.h:446
 msgid "String does not represent a node or node-rev-id"
-msgstr "Sträng som ej representerar nod eller node-erv-id"
+msgstr "Strängen representerar ingen nod eller node-erv-id"
 
 #: include/svn_error_codes.h:450
 msgid "Name does not refer to a filesystem directory"
-msgstr "Namn refererar ej till katalog i filsystem"
+msgstr "Namnet refererar ej till en katalog i filsystemet"
 
 #: include/svn_error_codes.h:454
 msgid "Name does not refer to a filesystem file"
-msgstr "Namn som ej refererar till fil i filsystem"
+msgstr "Namnet refererar ej till en fil i filsystemet"
 
 #: include/svn_error_codes.h:458
 msgid "Name is not a single path component"
-msgstr "Namn är ej ensam sökvägskomponent"
+msgstr "Namnet är ej en ensam sökvägskomponent"
 
 #: include/svn_error_codes.h:462
 msgid "Attempt to change immutable filesystem node"
@@ -2336,23 +2334,23 @@ msgstr "Försök att ändra filsystemsnod som ej får ändras"
 
 #: include/svn_error_codes.h:466
 msgid "Item already exists in filesystem"
-msgstr "Objekt finns redan i filsystem"
+msgstr "Objektet finns redan i filsystemet"
 
 #: include/svn_error_codes.h:470
 msgid "Attempt to remove or recreate fs root dir"
-msgstr "Försök att ta bort eller omskapa filsystemsrot"
+msgstr "Försök att ta bort eller omskapa filsystemets rotkatalog"
 
 #: include/svn_error_codes.h:474
 msgid "Object is not a transaction root"
-msgstr "Objekt som ej är transaktionsrot"
+msgstr "Objektet är ingen transaktionsrot"
 
 #: include/svn_error_codes.h:478
 msgid "Object is not a revision root"
-msgstr "Objekt som ej är revisionsrot"
+msgstr "Objektet är ingen revisionsrot"
 
 #: include/svn_error_codes.h:482
 msgid "Merge conflict during commit"
-msgstr "Sammanslagningskonflikt vid incheckning"
+msgstr "Sammanslagningskonflikt vid arkivering"
 
 #: include/svn_error_codes.h:486
 msgid "A representation vanished or changed between reads"
@@ -2368,7 +2366,7 @@ msgstr "Felaktig skelettdata"
 
 #: include/svn_error_codes.h:498
 msgid "Transaction is out of date"
-msgstr "Transaktion inaktuell"
+msgstr "Transaktionen är inaktuell"
 
 #: include/svn_error_codes.h:502
 msgid "Berkeley DB error"
@@ -2376,15 +2374,15 @@ msgstr "Fel i Berkeley DB"
 
 #: include/svn_error_codes.h:506
 msgid "Berkeley DB deadlock error"
-msgstr "Deadlock i Berkeley DB"
+msgstr "\"Deadlock\" i Berkeley DB"
 
 #: include/svn_error_codes.h:510
 msgid "Transaction is dead"
-msgstr "Transaktion död"
+msgstr "Transaktionen är död"
 
 #: include/svn_error_codes.h:514
 msgid "Transaction is not dead"
-msgstr "Transaktion som ej är död"
+msgstr "Transaktionen är inte död"
 
 #: include/svn_error_codes.h:519
 msgid "Unknown FS type"
@@ -2395,9 +2393,8 @@ msgid "No user associated with filesystem"
 msgstr "Ingen användare kopplad till filsystemet"
 
 #: include/svn_error_codes.h:529
-#, fuzzy
 msgid "Path is already locked"
-msgstr "Sökvägen är låst"
+msgstr "Sökvägen är redan låst"
 
 #: include/svn_error_codes.h:534 include/svn_error_codes.h:661
 msgid "Path is not locked"
@@ -2405,20 +2402,19 @@ msgstr "Sökvägen är inte låst"
 
 #: include/svn_error_codes.h:539
 msgid "Lock token is incorrect"
-msgstr "Låsidentifieraren är fel"
+msgstr "Låsidentifieraren är felaktig"
 
 #: include/svn_error_codes.h:544
 msgid "No lock token provided"
-msgstr "Ingen låsidentifierare tillhandahållen"
+msgstr "Ingen låsidentifierare tillhandahölls"
 
 #: include/svn_error_codes.h:549
 msgid "Username does not match lock owner"
 msgstr "Användarnamnet matchar inte låsägaren"
 
 #: include/svn_error_codes.h:554
-#, fuzzy
 msgid "Filesystem has no such lock"
-msgstr "Filsystemet har inget sådant lås"
+msgstr "Låset saknas i filsystemet"
 
 #: include/svn_error_codes.h:559
 msgid "Lock has expired"
@@ -2429,17 +2425,16 @@ msgid "Item is out of date"
 msgstr "Objektet är inaktuellt"
 
 #: include/svn_error_codes.h:576
-#, fuzzy
 msgid "Unsupported FS format"
-msgstr "Format på arbetskopia stöds ej"
+msgstr "Formatet på filsystemet stöds ej"
 
 #: include/svn_error_codes.h:582
 msgid "The repository is locked, perhaps for db recovery"
-msgstr "Databasen är låst, kanske för återskapande"
+msgstr "Arkivet är låst, kanske för reparation"
 
 #: include/svn_error_codes.h:586
 msgid "A repository hook failed"
-msgstr "Databashookskript misslyckades"
+msgstr "Arkivhookskript misslyckades"
 
 #: include/svn_error_codes.h:590
 msgid "Incorrect arguments supplied"
@@ -2447,7 +2442,7 @@ msgstr "Felaktiga argument"
 
 #: include/svn_error_codes.h:594
 msgid "A report cannot be generated because no data was supplied"
-msgstr "Rapport kan ej generas, då data ej tillhandahölls"
+msgstr "Rapport kan ej skapas, då data ej tillhandahölls"
 
 #: include/svn_error_codes.h:598
 msgid "Bogus revision report"
@@ -2455,29 +2450,27 @@ msgstr "Felaktig revisionsrapport"
 
 #: include/svn_error_codes.h:607
 msgid "Unsupported repository version"
-msgstr "Databasversion stöds ej"
+msgstr "Arkivversionen stöds ej"
 
 #: include/svn_error_codes.h:611
 msgid "Disabled repository feature"
-msgstr "Avslagen databasfunktion"
+msgstr "Funktionen är avslagen i arkivet"
 
 #: include/svn_error_codes.h:615
 msgid "Error running post-commit hook"
 msgstr "Fel vid körning av post-commit-hookskript"
 
 #: include/svn_error_codes.h:620
-#, fuzzy
 msgid "Error running post-lock hook"
-msgstr "Fel vid körning av post-commit-hookskript"
+msgstr "Fel vid körning av post-lock-hookskript"
 
 #: include/svn_error_codes.h:625
-#, fuzzy
 msgid "Error running post-unlock hook"
-msgstr "Fel vid körning av post-commit-hookskript"
+msgstr "Fel vid körning av post-unlock-hookskript"
 
 #: include/svn_error_codes.h:632
 msgid "Bad URL passed to RA layer"
-msgstr "Felaktig URL skickad till RA-skikt"
+msgstr "Felaktig URL skickad till RA-skiktet"
 
 #: include/svn_error_codes.h:636
 msgid "Authorization failed"
@@ -2489,23 +2482,23 @@ msgstr "Okänd metod för behörighetskontroll"
 
 #: include/svn_error_codes.h:644
 msgid "Repository access method not implemented"
-msgstr "Metod för databasåtkomst ej implementerad"
+msgstr "Metod för arkivåtkomst ej implementerad"
 
 #: include/svn_error_codes.h:648
 msgid "Item is out-of-date"
-msgstr "Inaktuellt objekt"
+msgstr "Objektet är inaktuellt"
 
 #: include/svn_error_codes.h:652
 msgid "Repository has no UUID"
-msgstr "Databas saknar UUID"
+msgstr "Arkivet saknar unik identifierare (UUID)"
 
 #: include/svn_error_codes.h:656
 msgid "Unsupported RA plugin ABI version"
-msgstr "ABI-version för insticksmodul för databasåtkomst stöds ej"
+msgstr "ABI-versionen för insticksmodulen för arkivåtkomst stöds ej"
 
 #: include/svn_error_codes.h:668
 msgid "RA layer failed to init socket layer"
-msgstr "RA-skiktet kunde inte initiera uttagsskikt (socket layer)"
+msgstr "RA-skiktet kunde inte initiera uttagsskiktet (socket layer)"
 
 #: include/svn_error_codes.h:672
 msgid "RA layer failed to create HTTP request"
@@ -2536,7 +2529,6 @@ msgid "HTTP Path Not Found"
 msgstr "HTTP-sökväg finns inte"
 
 #: include/svn_error_codes.h:700
-#, fuzzy
 msgid "Failed to execute WebDAV PROPPATCH"
 msgstr "Misslyckades med att utföra WebDAV PROPPATCH"
 
@@ -3503,15 +3495,15 @@ msgstr "skapande av ändring"
 msgid "deleting changes"
 msgstr "radering av ändringar"
 
-#: libsvn_fs_base/bdb/changes-table.c:146 libsvn_fs_fs/fs_fs.c:1948
+#: libsvn_fs_base/bdb/changes-table.c:146 libsvn_fs_fs/fs_fs.c:1953
 msgid "Missing required node revision ID"
 msgstr "Nodrevisions-id saknas"
 
-#: libsvn_fs_base/bdb/changes-table.c:157 libsvn_fs_fs/fs_fs.c:1958
+#: libsvn_fs_base/bdb/changes-table.c:157 libsvn_fs_fs/fs_fs.c:1963
 msgid "Invalid change ordering: new node revision ID without delete"
 msgstr "Ogiltig ändringsordning: nytt nodrevisions-id utan radering"
 
-#: libsvn_fs_base/bdb/changes-table.c:167 libsvn_fs_fs/fs_fs.c:1969
+#: libsvn_fs_base/bdb/changes-table.c:167 libsvn_fs_fs/fs_fs.c:1974
 msgid "Invalid change ordering: non-add change on deleted path"
 msgstr "Ogiltig ändringsordning: ändring som inte är tillägg på raderad sökväg"
 
@@ -4218,93 +4210,93 @@ msgstr "Modul för att arbeta med ett arkiv bestående av vanliga filer (FSFS)."
 msgid "Unsupported FS loader version (%d) for fsfs"
 msgstr "Versionen för FS-laddaren (%d) stöds ej för fsfs"
 
-#: libsvn_fs_fs/fs_fs.c:438 libsvn_fs_fs/fs_fs.c:452
+#: libsvn_fs_fs/fs_fs.c:443 libsvn_fs_fs/fs_fs.c:457
 msgid "Found malformed header in revision file"
 msgstr "Hittade felaktigt huvud i revisionsfil"
 
-#: libsvn_fs_fs/fs_fs.c:554 libsvn_fs_fs/fs_fs.c:568 libsvn_fs_fs/fs_fs.c:575
-#: libsvn_fs_fs/fs_fs.c:582 libsvn_fs_fs/fs_fs.c:590 libsvn_fs_fs/fs_fs.c:598
+#: libsvn_fs_fs/fs_fs.c:559 libsvn_fs_fs/fs_fs.c:573 libsvn_fs_fs/fs_fs.c:580
+#: libsvn_fs_fs/fs_fs.c:587 libsvn_fs_fs/fs_fs.c:595 libsvn_fs_fs/fs_fs.c:603
 msgid "Malformed text rep offset line in node-rev"
 msgstr "Felaktig rad med textrep-position i node-rev"
 
-#: libsvn_fs_fs/fs_fs.c:667
+#: libsvn_fs_fs/fs_fs.c:672
 msgid "Missing kind field in node-rev"
 msgstr "Typfält saknas i node-rev"
 
-#: libsvn_fs_fs/fs_fs.c:698
+#: libsvn_fs_fs/fs_fs.c:703
 msgid "Missing cpath in node-rev"
 msgstr "cpath saknas i node-rev"
 
-#: libsvn_fs_fs/fs_fs.c:725 libsvn_fs_fs/fs_fs.c:731
+#: libsvn_fs_fs/fs_fs.c:730 libsvn_fs_fs/fs_fs.c:736
 msgid "Malformed copyroot line in node-rev"
 msgstr "Felaktig copyroot-rad i node-rev"
 
-#: libsvn_fs_fs/fs_fs.c:749 libsvn_fs_fs/fs_fs.c:755
+#: libsvn_fs_fs/fs_fs.c:754 libsvn_fs_fs/fs_fs.c:760
 msgid "Malformed copyfrom line in node-rev"
 msgstr "Felaktig copyfrom-rad i node-rev"
 
-#: libsvn_fs_fs/fs_fs.c:854 libsvn_fs_fs/fs_fs.c:3145
+#: libsvn_fs_fs/fs_fs.c:859 libsvn_fs_fs/fs_fs.c:3150
 msgid "Attempted to write to non-transaction"
 msgstr "Försök att skriva i något som inte är en transaktion"
 
-#: libsvn_fs_fs/fs_fs.c:938
+#: libsvn_fs_fs/fs_fs.c:943
 msgid "Malformed representation header"
 msgstr "Felaktigt representationshuvud"
 
-#: libsvn_fs_fs/fs_fs.c:962
+#: libsvn_fs_fs/fs_fs.c:967
 msgid "Missing node-id in node-rev"
 msgstr "node-id saknas i node-rev"
 
-#: libsvn_fs_fs/fs_fs.c:968
+#: libsvn_fs_fs/fs_fs.c:973
 msgid "Corrupt node-id in node-rev"
 msgstr "Förstörd node-id i node-rev"
 
-#: libsvn_fs_fs/fs_fs.c:1013
+#: libsvn_fs_fs/fs_fs.c:1018
 msgid "Revision file lacks trailing newline"
 msgstr "Avslutande radslut saknas i revisionsfil"
 
-#: libsvn_fs_fs/fs_fs.c:1025
+#: libsvn_fs_fs/fs_fs.c:1030
 msgid "Final line in revision file longer than 64 characters"
 msgstr "Den sista raden i en revisionsfil är längre än 64 tecken"
 
-#: libsvn_fs_fs/fs_fs.c:1038
+#: libsvn_fs_fs/fs_fs.c:1043
 msgid "Final line in revision file missing space"
 msgstr "Den sista raden i en revisionsfil saknar mellanslag"
 
-#: libsvn_fs_fs/fs_fs.c:1068 libsvn_fs_fs/fs_fs.c:3554
+#: libsvn_fs_fs/fs_fs.c:1073 libsvn_fs_fs/fs_fs.c:3559
 #, c-format
 msgid "Can't chmod '%s'"
 msgstr "Kan inte göra chmod på \"%s\""
 
-#: libsvn_fs_fs/fs_fs.c:1126 libsvn_fs_fs/fs_fs.c:1183 libsvn_repos/log.c:238
+#: libsvn_fs_fs/fs_fs.c:1131 libsvn_fs_fs/fs_fs.c:1188 libsvn_repos/log.c:238
 #: libsvn_repos/log.c:242
 #, c-format
 msgid "No such revision %ld"
 msgstr "Revisionen %ld finns inte"
 
-#: libsvn_fs_fs/fs_fs.c:1258
+#: libsvn_fs_fs/fs_fs.c:1263
 msgid "Malformed svndiff data in representation"
 msgstr "Felaktigt svndiff-data i representation"
 
-#: libsvn_fs_fs/fs_fs.c:1369 libsvn_fs_fs/fs_fs.c:1382
-#: libsvn_fs_fs/fs_fs.c:1413
+#: libsvn_fs_fs/fs_fs.c:1374 libsvn_fs_fs/fs_fs.c:1387
+#: libsvn_fs_fs/fs_fs.c:1418
 msgid "Reading one svndiff window read beyond the end of the representation"
 msgstr ""
 "Hamnade efter slutet på representationen vid läsning av ett svndiff-fönster"
 
-#: libsvn_fs_fs/fs_fs.c:1526
+#: libsvn_fs_fs/fs_fs.c:1531
 msgid "svndiff data requested non-existent source"
 msgstr "svndiff-data krävde icke existerande källdata"
 
-#: libsvn_fs_fs/fs_fs.c:1532
+#: libsvn_fs_fs/fs_fs.c:1537
 msgid "svndiff requested position beyond end of stream"
 msgstr "svndiff krävde data efter slutet av strömmen"
 
-#: libsvn_fs_fs/fs_fs.c:1555 libsvn_fs_fs/fs_fs.c:1572
+#: libsvn_fs_fs/fs_fs.c:1560 libsvn_fs_fs/fs_fs.c:1577
 msgid "svndiff window length is corrupt"
 msgstr "Fönsterlängd i svndiff är förstörd"
 
-#: libsvn_fs_fs/fs_fs.c:1620
+#: libsvn_fs_fs/fs_fs.c:1625
 #, fuzzy, c-format
 msgid ""
 "Checksum mismatch while reading representation:\n"
@@ -4315,69 +4307,69 @@ msgstr ""
 "   väntade:  %s\n"
 "      fick:  %s\n"
 
-#: libsvn_fs_fs/fs_fs.c:1756 libsvn_fs_fs/fs_fs.c:1769
-#: libsvn_fs_fs/fs_fs.c:1775
+#: libsvn_fs_fs/fs_fs.c:1761 libsvn_fs_fs/fs_fs.c:1774
+#: libsvn_fs_fs/fs_fs.c:1780
 msgid "Directory entry corrupt"
 msgstr "Katalogpost förstörd"
 
-#: libsvn_fs_fs/fs_fs.c:2114 libsvn_fs_fs/fs_fs.c:2122
-#: libsvn_fs_fs/fs_fs.c:2154 libsvn_fs_fs/fs_fs.c:2174
-#: libsvn_fs_fs/fs_fs.c:2208 libsvn_fs_fs/fs_fs.c:2213
+#: libsvn_fs_fs/fs_fs.c:2119 libsvn_fs_fs/fs_fs.c:2127
+#: libsvn_fs_fs/fs_fs.c:2159 libsvn_fs_fs/fs_fs.c:2179
+#: libsvn_fs_fs/fs_fs.c:2213 libsvn_fs_fs/fs_fs.c:2218
 msgid "Invalid changes line in rev-file"
 msgstr "Ogiltig changes-rad i rev-fil"
 
-#: libsvn_fs_fs/fs_fs.c:2147
+#: libsvn_fs_fs/fs_fs.c:2152
 msgid "Invalid change kind in rev file"
 msgstr "Ogiltig ändringstyp i rev-fil"
 
-#: libsvn_fs_fs/fs_fs.c:2167
+#: libsvn_fs_fs/fs_fs.c:2172
 msgid "Invalid text-mod flag in rev-file"
 msgstr "Ogiltig text-mod-flagga i rev-fil"
 
-#: libsvn_fs_fs/fs_fs.c:2187
+#: libsvn_fs_fs/fs_fs.c:2192
 msgid "Invalid prop-mod flag in rev-file"
 msgstr "Ogiltig prop-mod-flagga i rev-fil"
 
-#: libsvn_fs_fs/fs_fs.c:2370
+#: libsvn_fs_fs/fs_fs.c:2375
 msgid "Copying from transactions not allowed"
 msgstr "Det är inte tillåtet att kopiera från transaktioner"
 
-#: libsvn_fs_fs/fs_fs.c:2426
+#: libsvn_fs_fs/fs_fs.c:2431
 #, fuzzy, c-format
 msgid "Unable to create transaction directory in '%s' for revision %ld"
 msgstr "Kan inte hitta platsen i databasen för \"%s\" i revision %ld"
 
-#: libsvn_fs_fs/fs_fs.c:2615 libsvn_fs_fs/fs_fs.c:2622
+#: libsvn_fs_fs/fs_fs.c:2620 libsvn_fs_fs/fs_fs.c:2627
 msgid "next-id file corrupt"
 msgstr "next-id-filen är förstörd"
 
-#: libsvn_fs_fs/fs_fs.c:2848
+#: libsvn_fs_fs/fs_fs.c:2853
 msgid "Invalid change type"
 msgstr "Ogiltig ändringstyp"
 
-#: libsvn_fs_fs/fs_fs.c:3164
+#: libsvn_fs_fs/fs_fs.c:3169
 msgid "Can't set text contents of a directory"
 msgstr "Kan inte sätta textinnehåll i en katalog"
 
-#: libsvn_fs_fs/fs_fs.c:3254 libsvn_fs_fs/fs_fs.c:3259
-#: libsvn_fs_fs/fs_fs.c:3266
+#: libsvn_fs_fs/fs_fs.c:3259 libsvn_fs_fs/fs_fs.c:3264
+#: libsvn_fs_fs/fs_fs.c:3271
 msgid "Corrupt current file"
 msgstr "current-filen är förstörd"
 
-#: libsvn_fs_fs/fs_fs.c:3692
+#: libsvn_fs_fs/fs_fs.c:3697
 msgid "Can't grab FSFS repository mutex"
 msgstr "Kan inte hämta arkivlås för FSFS"
 
-#: libsvn_fs_fs/fs_fs.c:3706
+#: libsvn_fs_fs/fs_fs.c:3711
 #, fuzzy
 msgid "Can't ungrab FSFS repository mutex"
 msgstr "Kunde inte öppna databas"
 
-#: libsvn_fs_fs/fs_fs.c:3820
+#: libsvn_fs_fs/fs_fs.c:3825
 msgid "Transaction out of date"
 msgstr "Transaktionen är inaktuell"
 
-#: libsvn_fs_fs/fs_fs.c:4092
+#: libsvn_fs_fs/fs_fs.c:4097
 msgid "No such transaction"
 msgstr "Transaktionen finns inte"
 
@@ -7939,58 +7931,58 @@ msgstr "exporterad%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "\"%s\" är inte versionshanterad eller exporterad\n"
 
-#~ msgid "Print client version info\n"
-#~ msgstr "Skriv versionsinformation för klienten\n"
-
-#~ msgid "Your lock comment was left in a temporary file:"
-#~ msgstr "Din låskommentar lämnades kvar i en temporär fil:"
-
-#~ msgid "repository argument required\n"
-#~ msgstr "argument för databas saknas\n"
-
-#~ msgid "unknown command: '%s'\n"
-#~ msgstr "Okänt kommando: \"%s\"\n"
+#, fuzzy
+#~ msgid "'get-file-revs' request not implemented"
+#~ msgstr "get-file-revs ej implementerad"
 
 #, fuzzy
-#~ msgid "Can't recode string"
-#~ msgstr "Kan inte läsa från standard in"
+#~ msgid "'get-locations' request not implemented"
+#~ msgstr "get-locations ej implementerad"
 
-#~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
+#~ msgid "   %ld => %ld\n"
+#~ msgstr "   %ld => %ld\n"
+
+#~ msgid "Cannot cleanup '%s': not a directory"
+#~ msgstr "Kan inte städa i \"%s\": ingen katalog"
+
+#~ msgid "pass ARG as bundled options to GNU diff"
+#~ msgstr "skicka ARG som flaggor till GNU diff"
+
+#~ msgid "'svn info' only works on working copy paths, not URLs"
 #~ msgstr ""
-#~ "ABI-versionen för insticksmodulen för databasåtkomst (%d) för ra_svn "
-#~ "stöds ej"
+#~ "\"svn info\" fungerar endast för sökvägar i en arbetskopia, ej URL:er"
+
+#~ msgid "No commit for revision 0.\n"
+#~ msgstr "Ingen incheckning av revision 0.\n"
+
+#~ msgid "Working copy not locked"
+#~ msgstr "Arbetskopian ej låst"
+
+#~ msgid "No get_dir() available for URL schema"
+#~ msgstr "get_dir() ej tillgänglig för URL-schemat"
 
 #~ msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
 #~ msgstr ""
 #~ "ABI-versionen för insticksmodulen för databasåtkomst (%d) för ra_dav "
 #~ "stöds ej"
 
-#~ msgid "No get_dir() available for URL schema"
-#~ msgstr "get_dir() ej tillgänglig för URL-schemat"
-
-#~ msgid "Working copy not locked"
-#~ msgstr "Arbetskopian ej låst"
-
-#~ msgid "No commit for revision 0.\n"
-#~ msgstr "Ingen incheckning av revision 0.\n"
-
-#~ msgid "'svn info' only works on working copy paths, not URLs"
+#~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
 #~ msgstr ""
-#~ "\"svn info\" fungerar endast för sökvägar i en arbetskopia, ej URL:er"
-
-#~ msgid "pass ARG as bundled options to GNU diff"
-#~ msgstr "skicka ARG som flaggor till GNU diff"
-
-#~ msgid "Cannot cleanup '%s': not a directory"
-#~ msgstr "Kan inte städa i \"%s\": ingen katalog"
-
-#~ msgid "   %ld => %ld\n"
-#~ msgstr "   %ld => %ld\n"
+#~ "ABI-versionen för insticksmodulen för databasåtkomst (%d) för ra_svn "
+#~ "stöds ej"
 
 #, fuzzy
-#~ msgid "'get-locations' request not implemented"
-#~ msgstr "get-locations ej implementerad"
+#~ msgid "Can't recode string"
+#~ msgstr "Kan inte läsa från standard in"
 
-#, fuzzy
-#~ msgid "'get-file-revs' request not implemented"
-#~ msgstr "get-file-revs ej implementerad"
+#~ msgid "unknown command: '%s'\n"
+#~ msgstr "Okänt kommando: \"%s\"\n"
+
+#~ msgid "repository argument required\n"
+#~ msgstr "argument för databas saknas\n"
+
+#~ msgid "Your lock comment was left in a temporary file:"
+#~ msgstr "Din låskommentar lämnades kvar i en temporär fil:"
+
+#~ msgid "Print client version info\n"
+#~ msgstr "Skriv versionsinformation för klienten\n"
