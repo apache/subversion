@@ -128,6 +128,8 @@ happened?</a></li>
 <li><a href="#bdb-recovery">Every time I try to access
     my repository, the process just hangs.  Is my repository
     corrupt?</a></li>
+<li><a href="#bdb-cannot-allocate-memory">My repository keeps giving
+    errors saying "Cannot allocate memory".  What should I do?</a></li>
 <li><a href="#wedged-wc">Every time I try to run a svn
     command, it says my working copy is locked.  Is my working copy
     corrupt?</a></li>
@@ -1801,6 +1803,41 @@ svnadmin recover /path/to/repos
 
 <p>Once the command has completed, check the permissions in the
 <code>db</code> directory of the repository.</p>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="bdb-cannot-allocate-memory" title="#bdb-cannot-allocate-memory"
+    >My repository keeps giving errors saying "Cannot allocate memory".
+     What should I do?</a></h3>
+
+<p>If you're using http:// access, "<b>Cannot allocate memory</b>"
+errors show up in the httpd error log and look something like
+this:</p>
+
+<blockquote>
+<pre>
+[Wed Apr 07 04:26:10 2004] [error] [client 212.151.130.227] (20014)
+Error string not specified yet: Berkeley DB error while opening 
+'strings' table for filesystem /usr/local/svn/repositories/svn/db: 
+Cannot allocate memory
+[Wed Apr 07 04:26:10 2004] [error] [client 212.151.130.227] 
+Could not fetch resource information.  [500, #0]
+[Wed Apr 07 04:26:10 2004] [error] [client 212.151.130.227] 
+Could not open the requested SVN filesystem  [500, #160029]     
+[Wed Apr 07 04:26:10 2004] [error] [client 212.151.130.227] (17) 
+File exists: Could not open the requested SVN filesystem  [500, #160029]
+</pre>
+</blockquote>
+
+<p>It usually means that a Berkeley DB repository has run out of
+database locks (this does not happen with FSFS repositories).  It
+shouldn't happen in the course of normal operations, but if it does,
+the solution is to run database recovery as described <a
+href="#wedged-repos">here</a>.  If it happens often, you probably need
+to raise the default lock parameters (<tt>set_lk_max_locks</tt>,
+<tt>set_lk_max_lockers</tt>, and <tt>set_lk_max_objects</tt>) in the
+db/DB_CONFIG file.  When changing DB_CONFIG in an existing repository,
+remember to run recovery afterwards.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
