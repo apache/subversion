@@ -526,9 +526,19 @@ bdb_write_config  (svn_fs_t *fs)
 
 
 
+static svn_error_t *
+base_serialized_init (svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
+{
+  /* Nothing to do here. */
+  return SVN_NO_ERROR;
+}
+
+
+
 /* Creating a new filesystem */
 
 static fs_vtable_t fs_vtable = {
+  base_serialized_init,
   svn_fs_base__youngest_rev,
   svn_fs_base__revision_prop,
   svn_fs_base__revision_proplist,
