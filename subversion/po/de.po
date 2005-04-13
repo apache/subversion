@@ -72,7 +72,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-30 09:48+0200\n"
-"PO-Revision-Date: 2005-04-12 22:27+0100\n"
+"PO-Revision-Date: 2005-04-13 15:50+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -825,7 +825,6 @@ msgstr ""
 "Aufruf: help [UNTERBEFEHL...]\n"
 
 #: clients/cmdline/main.c:345
-#, fuzzy
 msgid ""
 "Commit an unversioned file or tree into the repository.\n"
 "usage: import [PATH] URL\n"
@@ -841,6 +840,8 @@ msgstr ""
 "  Überträgt rekursiv eine Kopie des PFADes zur URL.\n"
 "  Ohne Angabe wird '.' als PFAD angenommen. Übergeordnete Verzeichnisse\n"
 "  werden soweit erforderlich im Projektarchiv angelegt.\n"
+"  Wenn PFAD ein Verzeichnis ist, wird dessen Inhalt direkt unterhalb der URL\n"
+"  hinzugefügt.\n"
 
 #: clients/cmdline/main.c:357
 msgid ""
@@ -1258,7 +1259,6 @@ msgstr ""
 "  herstellen.\n"
 
 #: clients/cmdline/main.c:611
-#, fuzzy
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -1381,7 +1381,7 @@ msgstr ""
 "      'T' gesperrt, Sperrmarke vorhanden, aber gestohlen\n"
 "      'B' nicht gesperrt, Sperrmarke vorhanden aber beschädigt\n"
 "\n"
-"  Die 'veraltet'-Informationen erscheinen in der neunten Spalte (bei '-u'):\n"
+"  Die 'veraltet'-Informationen erscheinen in der achten Spalte (bei '-u'):\n"
 "      '*' eine neuere Revision existiert auf dem Server\n"
 "      ' ' die Arbeitskopie ist aktuell\n"
 "\n"
@@ -3279,7 +3279,7 @@ msgstr "URL '%s' existiert nicht in Revision '%ld'"
 
 #: libsvn_client/locking_commands.c:185
 msgid "No common parent found, unable to operate on disjoint arguments"
-msgstr ""
+msgstr "Kein gemeinsamer Vorgänger gefunden. Kann nicht mit disjunkten Pfaden arbeiten"
 
 #: libsvn_client/locking_commands.c:267
 #, c-format
@@ -7405,7 +7405,7 @@ msgstr "Keine Unterschiede für hinzugefügte Dateien ausgeben"
 
 #: svnlook/main.c:121
 msgid "show full paths instead of indenting them"
-msgstr ""
+msgstr "Zeige vollständige Pfade anstatt sie einzurücken"
 
 #: svnlook/main.c:134
 msgid ""
