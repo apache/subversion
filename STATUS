@@ -51,13 +51,6 @@ Candidate changes:
     Votes:
       +1: maxb, ghudson
 
-  * r14131
-    In FSFS, don't auto-upgrade FS format number of legacy repositories.
-    Justification: Might not have write access, might have wrong umask.
-    Notes: http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=97600
-    Votes:
-      +1: kfogel, ghudson
-
   * r14063, r14066, r14068, r14079, r14121, r14124
     Branch: 1.2.x-r14063
     Fix FSFS locking problem.
@@ -76,7 +69,7 @@ Candidate changes:
     Justification:
       Trivial bug making locking less usaful over ra_svn.
     Votes:
-      +1: lundblad
+      +1: lundblad, jszakmeister
 
 Approved changes (further review is welcome, but not required):
 
@@ -88,3 +81,10 @@ Approved changes (further review is welcome, but not required):
       to add back than to remove later.  Also, consistency.
     Votes:
       +1: lundblad, kfogel, ghudson
+
+  * r14131
+    In FSFS, don't auto-upgrade FS format number of legacy repositories.
+    Justification: Might not have write access, might have wrong umask.
+    Notes: http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=97600
+    Votes:
+      +1: kfogel, ghudson, jszakmeister
