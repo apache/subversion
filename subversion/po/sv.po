@@ -45,8 +45,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-04-12 23:58+0200\n"
-"PO-Revision-Date: 2005-04-12 23:56+0200\n"
+"POT-Creation-Date: 2005-04-13 23:04+0200\n"
+"PO-Revision-Date: 2005-04-13 23:04+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -1501,38 +1501,38 @@ msgstr ""
 msgid "Caught signal"
 msgstr "Fångade signal"
 
-#: clients/cmdline/main.c:897 svnadmin/main.c:1227
+#: clients/cmdline/main.c:902 svnadmin/main.c:1227
 msgid ""
 "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr ""
 "Flera revisionsargument påträffades; försök med \"-r M:N\" istället för \"-r "
 "M -r N\""
 
-#: clients/cmdline/main.c:909 svnadmin/main.c:1244
+#: clients/cmdline/main.c:914 svnadmin/main.c:1244
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Syntaxfel i revisionsargumentet \"%s\""
 
-#: clients/cmdline/main.c:1057 clients/cmdline/main.c:1067
+#: clients/cmdline/main.c:1062 clients/cmdline/main.c:1072
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props och --no-auto-props kan inte användas samtidigt"
 
-#: clients/cmdline/main.c:1083
+#: clients/cmdline/main.c:1088
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "Syntaxfel i native-eol-argumentet \"%s\""
 
-#: clients/cmdline/main.c:1129 svndumpfilter/main.c:1176 svnlook/main.c:2070
+#: clients/cmdline/main.c:1134 svndumpfilter/main.c:1176 svnlook/main.c:2070
 msgid "Subcommand argument required\n"
 msgstr "Argument för underkommando krävs\n"
 
-#: clients/cmdline/main.c:1147 svnadmin/main.c:1370 svndumpfilter/main.c:1198
+#: clients/cmdline/main.c:1152 svnadmin/main.c:1370 svndumpfilter/main.c:1198
 #: svnlook/main.c:2093
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Okänt kommando: \"%s\"\n"
 
-#: clients/cmdline/main.c:1180
+#: clients/cmdline/main.c:1185
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -1541,33 +1541,33 @@ msgstr ""
 "Underkommandot \"%s\" tillåter inte flaggan \"%s\"\n"
 "Skriv \"svn help %s\" för användning.\n"
 
-#: clients/cmdline/main.c:1216
+#: clients/cmdline/main.c:1222
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr ""
 "Filen med loggmeddelandet är versionshanterad; använd --force-log för att "
 "kringgå"
 
-#: clients/cmdline/main.c:1221
+#: clients/cmdline/main.c:1229
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr ""
 "Filen med låskommentaren är versionshanterad; använd --force-log för att "
 "kringgå"
 
-#: clients/cmdline/main.c:1240
+#: clients/cmdline/main.c:1250
 msgid ""
 "The log message is a pathname (was -F intended?); use '--force-log' to "
 "override"
 msgstr ""
 "Loggmeddelandet är en sökväg (avsågs -F?); använd --force-log för att kringgå"
 
-#: clients/cmdline/main.c:1245
+#: clients/cmdline/main.c:1257
 msgid ""
 "The lock comment is a pathname (was -F intended?); use '--force-log' to "
 "override"
 msgstr ""
 "Låskommentaren är en sökväg (avsågs -F?); använd --force-log för att kringgå"
 
-#: clients/cmdline/main.c:1457
+#: clients/cmdline/main.c:1470
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
@@ -2540,11 +2540,11 @@ msgstr "Felaktig nätverksdata"
 
 #: include/svn_error_codes.h:712 include/svn_error_codes.h:741
 msgid "Couldn't find a repository"
-msgstr "Kunde inte hitta någon databas"
+msgstr "Kunde inte hitta något arkiv"
 
 #: include/svn_error_codes.h:716
 msgid "Couldn't open a repository"
-msgstr "Kunde inte öppna databas"
+msgstr "Kunde inte öppna arkivet"
 
 #: include/svn_error_codes.h:721
 msgid "Special code for wrapping server errors to report to client"
@@ -2556,11 +2556,11 @@ msgstr "Okänt kommando i svn-protokollet"
 
 #: include/svn_error_codes.h:729
 msgid "Network connection closed unexpectedly"
-msgstr "Nätverksuppkoppling stängdes oväntat"
+msgstr "Nätverksanslutningen stängdes oväntat"
 
 #: include/svn_error_codes.h:733
 msgid "Network read/write error"
-msgstr "Läs/skrivfel till nätverk"
+msgstr "Läs/skrivfel till nätverket"
 
 #: include/svn_error_codes.h:745
 msgid "Client/server version mismatch"
@@ -2587,7 +2587,6 @@ msgid "Item is not readable"
 msgstr "Objektet är inte läsbart"
 
 #: include/svn_error_codes.h:781
-#, fuzzy
 msgid "Item is partially readable"
 msgstr "Objektet är delvis läsbart"
 
@@ -2621,7 +2620,7 @@ msgstr "Apache fick en felaktig URI"
 
 #: include/svn_error_codes.h:818
 msgid "Activity not found"
-msgstr "Aktivitet hittades ej"
+msgstr "Aktiviteten hittades ej"
 
 #: include/svn_error_codes.h:822
 msgid "Baseline incorrect"
@@ -2637,7 +2636,7 @@ msgstr "Operationen kräver en versionshanterad sökväg"
 
 #: include/svn_error_codes.h:836
 msgid "Repository access is needed for this operation"
-msgstr "Operationen kräver åtkomst till databasen"
+msgstr "Operationen kräver åtkomst till ett arkiv"
 
 #: include/svn_error_codes.h:840
 msgid "Bogus revision information given"
@@ -2645,7 +2644,7 @@ msgstr "Felaktig revisionsinformation angiven"
 
 #: include/svn_error_codes.h:844
 msgid "Attempting to commit to a URL more than once"
-msgstr "Försöker checka in till en URL mer än en gång"
+msgstr "Försöker arkivera till en URL mer än en gång"
 
 #: include/svn_error_codes.h:848
 msgid "Operation does not apply to binary file"
@@ -2661,7 +2660,7 @@ msgstr "Operationen tillåter ej att källan är modifierad"
 
 #: include/svn_error_codes.h:862
 msgid "Operation does not apply to directory"
-msgstr "Operationen kan ej utföras på katalog"
+msgstr "Operationen kan ej utföras på en katalog"
 
 #: include/svn_error_codes.h:866
 msgid "Revision range is not allowed"
@@ -2669,7 +2668,7 @@ msgstr "Revisionsområde otillåtet"
 
 #: include/svn_error_codes.h:870
 msgid "Inter-repository relocation not allowed"
-msgstr "Flytt mellan databaser otillåten"
+msgstr "Omlokalisering mellan databaser otillåten"
 
 #: include/svn_error_codes.h:874
 msgid "Author name cannot contain a newline"
@@ -2689,7 +2688,7 @@ msgstr "Sökvägen saknar låsidentifierare"
 
 #: include/svn_error_codes.h:894
 msgid "A problem occurred; see later errors for details"
-msgstr "Ett problem har inträffat; se vidare fel för mer detaljer"
+msgstr "Ett problem har inträffat; se vidare fel för mer information"
 
 #: include/svn_error_codes.h:898
 msgid "Failure loading plugin"
@@ -2759,7 +2758,7 @@ msgstr "Den angivna diff-flaggan stöds ej"
 
 #: include/svn_error_codes.h:962
 msgid "Property not found"
-msgstr "Egenskap finns ej"
+msgstr "Egenskapen finns ej"
 
 #: include/svn_error_codes.h:966
 msgid "No auth file path available"
@@ -2767,7 +2766,7 @@ msgstr "Sökväg för auth-fil ej tillgänglig"
 
 #: include/svn_error_codes.h:971
 msgid "Incompatible library version"
-msgstr "Biblioteksversion inte kompatible"
+msgstr "Biblioteksversioner inte kompatibla"
 
 #: include/svn_error_codes.h:977
 msgid "Client error in parsing arguments"
@@ -2783,11 +2782,11 @@ msgstr "De angivna argumenten kan inte användas samtidigt"
 
 #: include/svn_error_codes.h:989
 msgid "Attempted command in administrative dir"
-msgstr "Försök att utföra kommando i administrativ katalog"
+msgstr "Försökte utföra kommando i administrativ katalog"
 
 #: include/svn_error_codes.h:993
 msgid "The log message file is under version control"
-msgstr "Fil med loggmeddelande är versionshanterad"
+msgstr "Filen med loggmeddelandet är versionshanterad"
 
 #: include/svn_error_codes.h:997
 msgid "The log message is a pathname"
@@ -2795,7 +2794,7 @@ msgstr "Logmeddelandet är en sökväg"
 
 #: include/svn_error_codes.h:1001
 msgid "Committing in directory scheduled for addition"
-msgstr "Checkar in i katalog schemalagd att läggas till"
+msgstr "Arkiverar i katalog schemalagd att läggas till"
 
 #: include/svn_error_codes.h:1005
 msgid "No external editor available"
@@ -2818,7 +2817,7 @@ msgstr "Kan inte stänga katalogen \"%s\""
 #: libsvn_client/blame.c:382 libsvn_client/blame.c:774
 #, c-format
 msgid "Cannot calculate blame information for binary file '%s'"
-msgstr "Kan inte beräkna blame-information för binär fil \"%s\""
+msgstr "Kan inte beräkna blame-information för den binära fil \"%s\""
 
 #: libsvn_client/blame.c:543
 msgid "Start revision must precede end revision"
@@ -2835,14 +2834,14 @@ msgid "Revision action '%c' for revision %ld of '%s' lacks a prior revision"
 msgstr "Saknar tidigare revision för åtgärden \"%c\" i revision %ld av \"%s\""
 
 #: libsvn_client/cat.c:65 libsvn_client/export.c:241
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not under version control or doesn't exist"
-msgstr "\"%s\" är inte versionshanterad"
+msgstr "\"%s\" är inte versionshanterad eller finns inte"
 
 #: libsvn_client/cat.c:71
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' refers to a directory"
-msgstr "URL:en \"%s\" pekar på en katalog"
+msgstr "\"%s\" pekar på en katalog"
 
 #: libsvn_client/cat.c:122 libsvn_client/export.c:183
 msgid "(local)"
@@ -2871,7 +2870,7 @@ msgstr "\"%s\" är redan en arbetskopia för en annan URL"
 #: libsvn_client/checkout.c:154
 #, fuzzy
 msgid "; run 'svn update' to complete it"
-msgstr "; kör \"svn update\" för att slutföra."
+msgstr "; kör \"svn update\" för att slutföra"
 
 #: libsvn_client/checkout.c:163
 #, c-format
@@ -2881,7 +2880,7 @@ msgstr "\"%s\" är redan en fil/något annat"
 #: libsvn_client/commit.c:187
 #, c-format
 msgid "Unknown or unversionable type for '%s'"
-msgstr "\"%s\" är av en typ som är okänd eller ej kan versionshanterad"
+msgstr "\"%s\" är av en typ som är okänd eller ej kan versionshanteras"
 
 #: libsvn_client/commit.c:479
 msgid "New entry name required when importing a file"
@@ -3279,7 +3278,7 @@ msgid "'%s' is not locked"
 msgstr "Sökvägen \"%s\" är inte en fil"
 
 #: libsvn_client/locking_commands.c:345 libsvn_fs/fs-loader.c:884
-#: libsvn_ra/ra_loader.c:506
+#: libsvn_ra/ra_loader.c:512
 msgid "Lock comment has illegal characters"
 msgstr "Låskommentaren innehåller ogiltiga tecken"
 
@@ -4405,17 +4404,17 @@ msgstr ""
 "Versioner stämmer ej i insticksmodulen '%s' för RA: hittade %d.%d.%d%s, "
 "väntade %d.%d.%d%s"
 
-#: libsvn_ra/ra_loader.c:262
+#: libsvn_ra/ra_loader.c:268
 #, fuzzy, c-format
 msgid "Unrecognized URL scheme for '%s'"
 msgstr "Okänt URL-schema \"%s\""
 
-#: libsvn_ra/ra_loader.c:576
+#: libsvn_ra/ra_loader.c:582
 #, fuzzy, c-format
 msgid "  - handles '%s' scheme\n"
 msgstr "  - hanterar schemat \"%s\"\n"
 
-#: libsvn_ra/ra_loader.c:662
+#: libsvn_ra/ra_loader.c:668
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
 msgstr "Okänt URL-schema \"%s\""
@@ -4721,7 +4720,7 @@ msgstr "Förfrågan misslyckad i RA-skiktet"
 msgid "Failed to fetch lock information"
 msgstr "visa extrainformation"
 
-#: libsvn_ra_dav/session.c:1453
+#: libsvn_ra_dav/session.c:1454
 #, fuzzy, c-format
 msgid "Unsupported RA loader version (%d) for ra_dav"
 msgstr "Versionen för FS-laddaren (%d) stöds ej för bdb"
@@ -4795,7 +4794,7 @@ msgstr "Modul för åtkomst av databas på disk lokalt."
 msgid "Unable to open an ra_local session to URL"
 msgstr "Kunde inte öppna en ra_local-session till URL:en"
 
-#: libsvn_ra_local/ra_plugin.c:1281
+#: libsvn_ra_local/ra_plugin.c:1282
 #, fuzzy, c-format
 msgid "Unsupported RA loader version (%d) for ra_local"
 msgstr ""
@@ -4977,7 +4976,7 @@ msgstr "Servern stöder ej datumbaserade operationer"
 msgid "Lock element not a list"
 msgstr "Element med egenskapsskillnader är ingen lista"
 
-#: libsvn_ra_svn/client.c:1629
+#: libsvn_ra_svn/client.c:1630
 #, fuzzy, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Versionen för FS-laddaren (%d) stöds ej för fsfs"
@@ -6792,7 +6791,7 @@ msgid "'%s' is an URL when it should be a path"
 msgstr "\"%s\" är en URL när den skulle vara en sökväg"
 
 #: svnadmin/main.c:233 svndumpfilter/main.c:762 svnlook/main.c:97
-#: svnserve/main.c:111 svnversion/main.c:213
+#: svnserve/main.c:111 svnversion/main.c:214
 msgid "show version information"
 msgstr "visa versionsinformation"
 
@@ -7748,7 +7747,7 @@ msgstr ""
 msgid "run in foreground (useful for debugging)"
 msgstr ""
 
-#: svnserve/main.c:109 svnversion/main.c:212
+#: svnserve/main.c:109 svnversion/main.c:213
 msgid "display this help"
 msgstr ""
 
@@ -7847,16 +7846,16 @@ msgstr "Kan inte ta status på \"%s\""
 msgid "Can't create thread: %s\n"
 msgstr "Kan inte skapa uttag (socket)"
 
-#: svnversion/main.c:109
+#: svnversion/main.c:110
 msgid "Finished"
 msgstr ""
 
-#: svnversion/main.c:124
+#: svnversion/main.c:125
 #, fuzzy
 msgid "Type 'svnversion --help' for usage.\n"
 msgstr "Skriv \"%s help\" för användning.\n"
 
-#: svnversion/main.c:135
+#: svnversion/main.c:136
 #, fuzzy
 msgid ""
 "usage: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n"
@@ -7913,76 +7912,76 @@ msgstr ""
 "\n"
 "Flaggor:\n"
 
-#: svnversion/main.c:210
+#: svnversion/main.c:211
 msgid "do not output the trailing newline"
 msgstr "skriv inte ut det avslutande radslutet"
 
-#: svnversion/main.c:211
+#: svnversion/main.c:212
 msgid "last changed rather than current revisions"
 msgstr "senast ändrade istället för aktuella revisioner"
 
-#: svnversion/main.c:312
+#: svnversion/main.c:323
 #, c-format
 msgid "exported%s"
 msgstr "exporterad%s"
 
-#: svnversion/main.c:321
+#: svnversion/main.c:332
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "\"%s\" är inte versionshanterad eller exporterad\n"
 
-#, fuzzy
-#~ msgid "'get-file-revs' request not implemented"
-#~ msgstr "get-file-revs ej implementerad"
+#~ msgid "Print client version info\n"
+#~ msgstr "Skriv versionsinformation för klienten\n"
+
+#~ msgid "Your lock comment was left in a temporary file:"
+#~ msgstr "Din låskommentar lämnades kvar i en temporär fil:"
+
+#~ msgid "repository argument required\n"
+#~ msgstr "argument för databas saknas\n"
+
+#~ msgid "unknown command: '%s'\n"
+#~ msgstr "Okänt kommando: \"%s\"\n"
 
 #, fuzzy
-#~ msgid "'get-locations' request not implemented"
-#~ msgstr "get-locations ej implementerad"
-
-#~ msgid "   %ld => %ld\n"
-#~ msgstr "   %ld => %ld\n"
-
-#~ msgid "Cannot cleanup '%s': not a directory"
-#~ msgstr "Kan inte städa i \"%s\": ingen katalog"
-
-#~ msgid "pass ARG as bundled options to GNU diff"
-#~ msgstr "skicka ARG som flaggor till GNU diff"
-
-#~ msgid "'svn info' only works on working copy paths, not URLs"
-#~ msgstr ""
-#~ "\"svn info\" fungerar endast för sökvägar i en arbetskopia, ej URL:er"
-
-#~ msgid "No commit for revision 0.\n"
-#~ msgstr "Ingen incheckning av revision 0.\n"
-
-#~ msgid "Working copy not locked"
-#~ msgstr "Arbetskopian ej låst"
-
-#~ msgid "No get_dir() available for URL schema"
-#~ msgstr "get_dir() ej tillgänglig för URL-schemat"
-
-#~ msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
-#~ msgstr ""
-#~ "ABI-versionen för insticksmodulen för databasåtkomst (%d) för ra_dav "
-#~ "stöds ej"
+#~ msgid "Can't recode string"
+#~ msgstr "Kan inte läsa från standard in"
 
 #~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
 #~ msgstr ""
 #~ "ABI-versionen för insticksmodulen för databasåtkomst (%d) för ra_svn "
 #~ "stöds ej"
 
+#~ msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
+#~ msgstr ""
+#~ "ABI-versionen för insticksmodulen för databasåtkomst (%d) för ra_dav "
+#~ "stöds ej"
+
+#~ msgid "No get_dir() available for URL schema"
+#~ msgstr "get_dir() ej tillgänglig för URL-schemat"
+
+#~ msgid "Working copy not locked"
+#~ msgstr "Arbetskopian ej låst"
+
+#~ msgid "No commit for revision 0.\n"
+#~ msgstr "Ingen incheckning av revision 0.\n"
+
+#~ msgid "'svn info' only works on working copy paths, not URLs"
+#~ msgstr ""
+#~ "\"svn info\" fungerar endast för sökvägar i en arbetskopia, ej URL:er"
+
+#~ msgid "pass ARG as bundled options to GNU diff"
+#~ msgstr "skicka ARG som flaggor till GNU diff"
+
+#~ msgid "Cannot cleanup '%s': not a directory"
+#~ msgstr "Kan inte städa i \"%s\": ingen katalog"
+
+#~ msgid "   %ld => %ld\n"
+#~ msgstr "   %ld => %ld\n"
+
 #, fuzzy
-#~ msgid "Can't recode string"
-#~ msgstr "Kan inte läsa från standard in"
+#~ msgid "'get-locations' request not implemented"
+#~ msgstr "get-locations ej implementerad"
 
-#~ msgid "unknown command: '%s'\n"
-#~ msgstr "Okänt kommando: \"%s\"\n"
-
-#~ msgid "repository argument required\n"
-#~ msgstr "argument för databas saknas\n"
-
-#~ msgid "Your lock comment was left in a temporary file:"
-#~ msgstr "Din låskommentar lämnades kvar i en temporär fil:"
-
-#~ msgid "Print client version info\n"
-#~ msgstr "Skriv versionsinformation för klienten\n"
+#, fuzzy
+#~ msgid "'get-file-revs' request not implemented"
+#~ msgstr "get-file-revs ej implementerad"
