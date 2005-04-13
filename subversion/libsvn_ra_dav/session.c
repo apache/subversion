@@ -979,12 +979,12 @@ setup_neon_request_hook(svn_ra_dav__session_t *ras,
 /* ### TODO for 1.3: Send all locks to the server at once. */
 static svn_error_t *
 shim_svn_ra_dav__lock(svn_ra_session_t *session,
-                 svn_lock_t **lock,
-                 const char *path,
-                 const char *comment,
-                 svn_boolean_t force,
-                 svn_revnum_t current_rev,
-                 apr_pool_t *pool)
+                      svn_lock_t **lock,
+                      const char *path,
+                      const char *comment,
+                      svn_boolean_t force,
+                      svn_revnum_t current_rev,
+                      apr_pool_t *pool)
 {
   svn_ra_dav__session_t *ras = session->priv;
   int rv;
@@ -1082,7 +1082,7 @@ svn_ra_dav__lock(svn_ra_session_t *session,
   setup_neon_request_hook(session->priv, pool);
 
   /* ### TODO for 1.3: Send all the locks over the wire at once.  This
-        loop is just a temporary shim. */
+     loop is just a temporary shim. */
   for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
     {
       svn_lock_t *lock;
