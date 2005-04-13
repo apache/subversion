@@ -105,8 +105,8 @@ public class SVNClient implements SVNClientInterface
      * @param getAll    get status for uninteristing files (unchanged).
      * @return Array of Status entries.
      */
-    public Status[]status(String path, boolean descend, boolean onServer,
-                          boolean getAll) throws ClientException
+    public Status[] status(String path, boolean descend, boolean onServer,
+                           boolean getAll) throws ClientException
     {
         return status(path, descend, onServer, getAll, false);
     }
@@ -152,7 +152,7 @@ public class SVNClient implements SVNClientInterface
      * @param recurse   recurse into subdirectories
      * @return  Array of DirEntry objects.
      */
-    public DirEntry[]list(String url, Revision revision, boolean recurse)
+    public DirEntry[] list(String url, Revision revision, boolean recurse)
             throws ClientException
     {
         return list(url, revision, revision, recurse);
