@@ -6,14 +6,14 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: subversion        1.1.1\n"
-"Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2004-12-20 22:42+0800\n"
+"POT-Creation-Date: 2005-04-13 11:23+0800\n"
 "PO-Revision-Date: 2004-10-14 08:51+0800\n"
 "Last-Translator:  Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 
 #: clients/cmdline/blame-cmd.c:162
 #, c-format
@@ -1662,7 +1662,7 @@ msgid "Can't write to '%s'"
 msgstr "无法写入至“%s”"
 
 #: clients/cmdline/util.c:207 clients/cmdline/util.c:231
-#: libsvn_fs_fs/fs_fs.c:3344
+#: libsvn_fs_fs/fs_fs.c:3360
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "不能取得“%s”状态"
@@ -2525,30 +2525,30 @@ msgstr "无法以非递归提交目录删除"
 msgid "Unknown entry kind for '%s'"
 msgstr "未知的项目类型“%s”"
 
-#: libsvn_client/commit_util.c:237
+#: libsvn_client/commit_util.c:239
 #, c-format
 msgid "Entry '%s' has unexpectedly changed special status"
 msgstr "项目“%s”意想不到地变换特殊状态"
 
-#: libsvn_client/commit_util.c:287
+#: libsvn_client/commit_util.c:289
 #, c-format
 msgid "Aborting commit: '%s' remains in conflict"
 msgstr "中止提交：“%s”仍处于冲突状态"
 
-#: libsvn_client/commit_util.c:343
+#: libsvn_client/commit_util.c:345
 #, c-format
 msgid "Did not expect '%s' to be a working copy root"
 msgstr "并未预期“%s”是工作拷贝的根目录"
 
-#: libsvn_client/commit_util.c:360
+#: libsvn_client/commit_util.c:362
 #, c-format
 msgid "Commit item '%s' has copy flag but no copyfrom URL\n"
 msgstr "提交项目“%s”有复制标志，但是没有复制的地址(copyfrom URL)\n"
 
-#: libsvn_client/commit_util.c:607 libsvn_client/commit_util.c:732
+#: libsvn_client/commit_util.c:609 libsvn_client/commit_util.c:734
 #: libsvn_client/copy.c:1079 libsvn_client/delete.c:66
-#: libsvn_client/diff.c:1255 libsvn_client/diff.c:1897
-#: libsvn_client/diff.c:2332 libsvn_client/diff.c:2437
+#: libsvn_client/diff.c:1254 libsvn_client/diff.c:1896
+#: libsvn_client/diff.c:2331 libsvn_client/diff.c:2436
 #: libsvn_client/prop_commands.c:171 libsvn_client/prop_commands.c:387
 #: libsvn_client/prop_commands.c:538 libsvn_client/prop_commands.c:881
 #: libsvn_client/ra.c:179 libsvn_client/revisions.c:92
@@ -2560,17 +2560,17 @@ msgstr "提交项目“%s”有复制标志，但是没有复制的地址(copyfr
 msgid "'%s' is not under version control"
 msgstr "“%s”尚未纳入版本控制"
 
-#: libsvn_client/commit_util.c:610
+#: libsvn_client/commit_util.c:612
 #, c-format
 msgid "Entry for '%s' has no URL"
 msgstr "“%s”的项目没有地址(URL)"
 
-#: libsvn_client/commit_util.c:641
+#: libsvn_client/commit_util.c:643
 #, c-format
 msgid "'%s' is scheduled for addition within unversioned parent"
 msgstr "“%s”于未纳入版本控制的父路径中被加入新增调度"
 
-#: libsvn_client/commit_util.c:661
+#: libsvn_client/commit_util.c:663
 #, c-format
 msgid ""
 "Entry for '%s' is marked as 'copied' but is not itself scheduled\n"
@@ -2580,7 +2580,7 @@ msgstr ""
 "“%s”项目被标记为“已复制”，但是本身尚未加入新增调度。也许您提交的\n"
 "目标是位于未纳入版本控制 (或尚未纳入) 的目录中？"
 
-#: libsvn_client/commit_util.c:701
+#: libsvn_client/commit_util.c:703
 #, c-format
 msgid ""
 "'%s' is not under version control and is not part of the commit, yet its "
@@ -2588,17 +2588,17 @@ msgid ""
 msgstr ""
 "“%s”尚未纳入版本控制，也不是提交的一部份，但是它的子路径“%s”是提交的一部份"
 
-#: libsvn_client/commit_util.c:781
+#: libsvn_client/commit_util.c:783
 #, c-format
 msgid "Cannot commit both '%s' and '%s' as they refer to the same URL"
 msgstr "无法提交“%s”与“%s”，因为它们都指向同一个地址(URL)"
 
-#: libsvn_client/commit_util.c:925
+#: libsvn_client/commit_util.c:927
 #, c-format
 msgid "Commit item '%s' has copy flag but no copyfrom URL"
 msgstr "提交项目“%s”有复制标志，但是没有复制地址地址(copyfrom URL)"
 
-#: libsvn_client/commit_util.c:929
+#: libsvn_client/commit_util.c:931
 #, c-format
 msgid "Commit item '%s' has copy flag but an invalid revision"
 msgstr "提交项目“%s”有复制标志，但是修订版无效"
@@ -2758,37 +2758,37 @@ msgstr ".merge-left.r%ld"
 msgid ".merge-right.r%ld"
 msgstr ".merge-right.r%ld"
 
-#: libsvn_client/diff.c:1311 libsvn_client/diff.c:2004
-#: libsvn_client/diff.c:2084
+#: libsvn_client/diff.c:1310 libsvn_client/diff.c:2003
+#: libsvn_client/diff.c:2083
 msgid "Not all required revisions are specified"
 msgstr "并未提供全部所需的修订版"
 
-#: libsvn_client/diff.c:1592
+#: libsvn_client/diff.c:1591
 msgid "Sorry, svn_client_diff was called in a way that is not yet supported"
 msgstr "抱歉，svn_client_diff 以不支持的方式被调用"
 
-#: libsvn_client/diff.c:1632
+#: libsvn_client/diff.c:1631
 msgid ""
 "Only diffs between a path's text-base and its working files are supported at "
 "this time"
 msgstr "目前只支持路径的文件参考基础与其工作文件之间的文件差异"
 
-#: libsvn_client/diff.c:1764 libsvn_client/diff.c:1769
+#: libsvn_client/diff.c:1763 libsvn_client/diff.c:1768
 #, c-format
 msgid "'%s' was not found in the repository at revision %ld"
 msgstr "在档案库的修订版 %2$ld 中找不到“%1$s”"
 
-#: libsvn_client/diff.c:1900 libsvn_client/switch.c:117
+#: libsvn_client/diff.c:1899 libsvn_client/switch.c:117
 #, c-format
 msgid "Directory '%s' has no URL"
 msgstr "目录“%s”没有地址(URL)"
 
-#: libsvn_client/diff.c:2095
+#: libsvn_client/diff.c:2094
 msgid "At least one revision must be non-local for a pegged diff"
 msgstr "对于 peg 差异，必须至少有一个非本地端的修订版"
 
-#: libsvn_client/diff.c:2309 libsvn_client/diff.c:2314
-#: libsvn_client/diff.c:2425 libsvn_client/export.c:739 libsvn_client/ra.c:705
+#: libsvn_client/diff.c:2308 libsvn_client/diff.c:2313
+#: libsvn_client/diff.c:2424 libsvn_client/export.c:739 libsvn_client/ra.c:705
 #: libsvn_client/ra.c:825
 #, c-format
 msgid "'%s' has no URL"
@@ -3060,152 +3060,152 @@ msgstr "“%s”不是文件系统“%s”的目录"
 msgid "Unsupported FS loader version (%d) for fsfs"
 msgstr "不支持的 fsfs 的 FS 载入器版本 (%d)"
 
-#: libsvn_fs_fs/fs_fs.c:364 libsvn_fs_fs/fs_fs.c:378
+#: libsvn_fs_fs/fs_fs.c:374 libsvn_fs_fs/fs_fs.c:388
 msgid "Found malformed header in revision file"
 msgstr "在修订版文件中找到有缺陷的文件头"
 
-#: libsvn_fs_fs/fs_fs.c:480 libsvn_fs_fs/fs_fs.c:494 libsvn_fs_fs/fs_fs.c:501
-#: libsvn_fs_fs/fs_fs.c:508 libsvn_fs_fs/fs_fs.c:516 libsvn_fs_fs/fs_fs.c:524
+#: libsvn_fs_fs/fs_fs.c:490 libsvn_fs_fs/fs_fs.c:504 libsvn_fs_fs/fs_fs.c:511
+#: libsvn_fs_fs/fs_fs.c:518 libsvn_fs_fs/fs_fs.c:526 libsvn_fs_fs/fs_fs.c:534
 msgid "Malformed text rep offset line in node-rev"
 msgstr "node-rev 中没有 text rep offset 列"
 
-#: libsvn_fs_fs/fs_fs.c:593
+#: libsvn_fs_fs/fs_fs.c:603
 msgid "Missing kind field in node-rev"
 msgstr "node-rev 中没有 kind 栏位"
 
-#: libsvn_fs_fs/fs_fs.c:624
+#: libsvn_fs_fs/fs_fs.c:634
 msgid "Missing cpath in node-rev"
 msgstr "node-rev 中没有 cpath"
 
-#: libsvn_fs_fs/fs_fs.c:651 libsvn_fs_fs/fs_fs.c:657
+#: libsvn_fs_fs/fs_fs.c:661 libsvn_fs_fs/fs_fs.c:667
 msgid "Malformed copyroot line in node-rev"
 msgstr "node-rev 中的 copyroot 列有缺陷"
 
-#: libsvn_fs_fs/fs_fs.c:675 libsvn_fs_fs/fs_fs.c:681
+#: libsvn_fs_fs/fs_fs.c:685 libsvn_fs_fs/fs_fs.c:691
 msgid "Malformed copyfrom line in node-rev"
 msgstr "node-rev 中的 copyfrom 列有缺陷"
 
-#: libsvn_fs_fs/fs_fs.c:779 libsvn_fs_fs/fs_fs.c:2933
+#: libsvn_fs_fs/fs_fs.c:789 libsvn_fs_fs/fs_fs.c:2949
 msgid "Attempted to write to non-transaction"
 msgstr "企图写至非事务"
 
-#: libsvn_fs_fs/fs_fs.c:863
+#: libsvn_fs_fs/fs_fs.c:873
 msgid "Malformed representation header"
 msgstr "有缺陷的表现文件头"
 
-#: libsvn_fs_fs/fs_fs.c:887
+#: libsvn_fs_fs/fs_fs.c:897
 msgid "Missing node-id in node-rev"
 msgstr "node-rev 中没有 node-id"
 
-#: libsvn_fs_fs/fs_fs.c:893
+#: libsvn_fs_fs/fs_fs.c:903
 msgid "Corrupt node-id in node-rev"
 msgstr "node-rev 中的 node-id 损坏"
 
-#: libsvn_fs_fs/fs_fs.c:938
+#: libsvn_fs_fs/fs_fs.c:948
 msgid "Revision file lacks trailing newline"
 msgstr "修订版文件缺少结尾换行符"
 
-#: libsvn_fs_fs/fs_fs.c:950
+#: libsvn_fs_fs/fs_fs.c:960
 msgid "Final line in revision file longer than 64 characters"
 msgstr "修订版文件的最后一列大于 64 个字符长"
 
-#: libsvn_fs_fs/fs_fs.c:963
+#: libsvn_fs_fs/fs_fs.c:973
 msgid "Final line in revision file missing space"
 msgstr "修订版文件的最后一列少掉空白字符"
 
-#: libsvn_fs_fs/fs_fs.c:990 libsvn_fs_fs/fs_fs.c:1042 libsvn_repos/log.c:237
+#: libsvn_fs_fs/fs_fs.c:1000 libsvn_fs_fs/fs_fs.c:1052 libsvn_repos/log.c:237
 #: libsvn_repos/log.c:241
 #, c-format
 msgid "No such revision %ld"
 msgstr "没有这个修订版 %ld"
 
-#: libsvn_fs_fs/fs_fs.c:1117
+#: libsvn_fs_fs/fs_fs.c:1127
 msgid "Malformed svndiff data in representation"
 msgstr "svndiff 数据的表现有缺陷"
 
-#: libsvn_fs_fs/fs_fs.c:1233 libsvn_fs_fs/fs_fs.c:1253
-#: libsvn_fs_fs/fs_fs.c:1266
+#: libsvn_fs_fs/fs_fs.c:1243 libsvn_fs_fs/fs_fs.c:1263
+#: libsvn_fs_fs/fs_fs.c:1276
 msgid "Reading one svndiff window read beyond the end of the representation"
 msgstr "正在读取一个 svndiff 窗口读取表现的最末"
 
-#: libsvn_fs_fs/fs_fs.c:1355
+#: libsvn_fs_fs/fs_fs.c:1365
 msgid "svndiff data requested non-existent source"
 msgstr "svndiff 数据请求不存在的来源"
 
-#: libsvn_fs_fs/fs_fs.c:1361
+#: libsvn_fs_fs/fs_fs.c:1371
 msgid "svndiff requested position beyond end of stream"
 msgstr "svndiff 请求的位置超出了流的结尾"
 
-#: libsvn_fs_fs/fs_fs.c:1383
+#: libsvn_fs_fs/fs_fs.c:1393
 msgid "svndiff window length is corrupt"
 msgstr "svndiff 的窗格长度已毁损"
 
-#: libsvn_fs_fs/fs_fs.c:1558 libsvn_fs_fs/fs_fs.c:1571
-#: libsvn_fs_fs/fs_fs.c:1577
+#: libsvn_fs_fs/fs_fs.c:1568 libsvn_fs_fs/fs_fs.c:1581
+#: libsvn_fs_fs/fs_fs.c:1587
 msgid "Directory entry corrupt"
 msgstr "目录项目损坏"
 
-#: libsvn_fs_fs/fs_fs.c:1744
+#: libsvn_fs_fs/fs_fs.c:1760
 msgid "Missing required node revision ID"
 msgstr "未提供必须的节点修订版 ID"
 
-#: libsvn_fs_fs/fs_fs.c:1754
+#: libsvn_fs_fs/fs_fs.c:1770
 msgid "Invalid change ordering: new node revision ID without delete"
 msgstr "无效的改变顺序：有新的节点修订版 ID 而没删除"
 
-#: libsvn_fs_fs/fs_fs.c:1765
+#: libsvn_fs_fs/fs_fs.c:1781
 msgid "Invalid change ordering: non-add change on deleted path"
 msgstr "无效的改变顺序：对删除路径进行非新增的改变"
 
-#: libsvn_fs_fs/fs_fs.c:1910 libsvn_fs_fs/fs_fs.c:1918
-#: libsvn_fs_fs/fs_fs.c:1950 libsvn_fs_fs/fs_fs.c:1970
-#: libsvn_fs_fs/fs_fs.c:2004 libsvn_fs_fs/fs_fs.c:2009
+#: libsvn_fs_fs/fs_fs.c:1926 libsvn_fs_fs/fs_fs.c:1934
+#: libsvn_fs_fs/fs_fs.c:1966 libsvn_fs_fs/fs_fs.c:1986
+#: libsvn_fs_fs/fs_fs.c:2020 libsvn_fs_fs/fs_fs.c:2025
 msgid "Invalid changes line in rev-file"
 msgstr "rev-file 中有无效的改变列"
 
-#: libsvn_fs_fs/fs_fs.c:1943
+#: libsvn_fs_fs/fs_fs.c:1959
 msgid "Invalid change kind in rev file"
 msgstr "rev 文件中有无效的改变种类"
 
-#: libsvn_fs_fs/fs_fs.c:1963
+#: libsvn_fs_fs/fs_fs.c:1979
 msgid "Invalid text-mod flag in rev-file"
 msgstr "rev-file 中有无效的 text-mod 标志"
 
-#: libsvn_fs_fs/fs_fs.c:1983
+#: libsvn_fs_fs/fs_fs.c:1999
 msgid "Invalid prop-mod flag in rev-file"
 msgstr "rev-file 中有无效的 prop-mod 标志"
 
-#: libsvn_fs_fs/fs_fs.c:2166
+#: libsvn_fs_fs/fs_fs.c:2182
 msgid "Copying from transactions not allowed"
 msgstr "自事务进行复制是不被允许的"
 
-#: libsvn_fs_fs/fs_fs.c:2408 libsvn_fs_fs/fs_fs.c:2415
+#: libsvn_fs_fs/fs_fs.c:2424 libsvn_fs_fs/fs_fs.c:2431
 msgid "next-id file corrupt"
 msgstr "next-id 文件损坏"
 
-#: libsvn_fs_fs/fs_fs.c:2641
+#: libsvn_fs_fs/fs_fs.c:2657
 msgid "Invalid change type"
 msgstr "无效的改变类型"
 
-#: libsvn_fs_fs/fs_fs.c:2952
+#: libsvn_fs_fs/fs_fs.c:2968
 msgid "Can't set text contents of a directory"
 msgstr "无法设定目录的文字内容"
 
-#: libsvn_fs_fs/fs_fs.c:3042 libsvn_fs_fs/fs_fs.c:3047
-#: libsvn_fs_fs/fs_fs.c:3054
+#: libsvn_fs_fs/fs_fs.c:3058 libsvn_fs_fs/fs_fs.c:3063
+#: libsvn_fs_fs/fs_fs.c:3070
 msgid "Corrupt current file"
 msgstr "目前文件损坏"
 
-#: libsvn_fs_fs/fs_fs.c:3347
+#: libsvn_fs_fs/fs_fs.c:3363
 #, c-format
 msgid "Can't chmod '%s'"
 msgstr "无法 chmod“%s”"
 
-#: libsvn_fs_fs/fs_fs.c:3483
+#: libsvn_fs_fs/fs_fs.c:3499
 msgid "Transaction out of date"
 msgstr "事务过时"
 
-#: libsvn_fs_fs/fs_fs.c:3723
+#: libsvn_fs_fs/fs_fs.c:3739
 msgid "No such transaction"
 msgstr "无此事务"
 
@@ -3755,16 +3755,16 @@ msgid ""
 "The entry '%s' is no longer a directory; remove the entry before updating"
 msgstr "项目“%s”已不再是目录了；更新前请移除本项目"
 
-#: libsvn_wc/adm_crawler.c:615
+#: libsvn_wc/adm_crawler.c:616
 msgid "Error aborting report"
 msgstr "取消报告时发生错误"
 
-#: libsvn_wc/adm_crawler.c:712
+#: libsvn_wc/adm_crawler.c:713
 #, c-format
 msgid "Checksum mismatch for '%s'; expected '%s', actual: '%s'"
 msgstr "“%s”的总和检查值不一致：预期“%s”，实际：“%s”"
 
-#: libsvn_wc/adm_crawler.c:737
+#: libsvn_wc/adm_crawler.c:738
 msgid "Error opening local file"
 msgstr "打开本地文件时发生错误"
 
@@ -3803,12 +3803,12 @@ msgstr "“%s”不是目录"
 msgid "No entry for '%s'"
 msgstr "没有“%s”的项目"
 
-#: libsvn_wc/adm_files.c:905
+#: libsvn_wc/adm_files.c:904
 #, c-format
 msgid "Revision %ld doesn't match existing revision %ld in '%s'"
 msgstr "修订版 %ld 不符合现有的修订版 %ld 于“%s”中"
 
-#: libsvn_wc/adm_files.c:913
+#: libsvn_wc/adm_files.c:912
 #, c-format
 msgid "URL '%s' doesn't match existing URL '%s' in '%s'"
 msgstr "地址(URL)“%s”不符合现有的地址(URL)“%s”于“%s”中"
@@ -4078,8 +4078,8 @@ msgid "Path '%s' ends in '%s', which is unsupported for this operation"
 msgstr "路径“%s”以“%s”结束，本操作不支持"
 
 #: libsvn_wc/lock.c:647
-#, c-format
-msgid "Working copy '%s' not locked"
+#, fuzzy, c-format
+msgid "Working copy '%s' is missing or not locked"
 msgstr "工作拷贝“%s”并未锁定"
 
 #: libsvn_wc/lock.c:841
@@ -4196,16 +4196,16 @@ msgstr "无法确认的日志文件元素“%s”于“%s”中"
 msgid "Error processing command '%s' in '%s'"
 msgstr "在“%2$s”中处理命令“%1$s”时发生错误"
 
-#: libsvn_wc/log.c:1357
+#: libsvn_wc/log.c:1361
 msgid "Couldn't open log"
 msgstr "无法打开日志文件"
 
-#: libsvn_wc/log.c:1368
+#: libsvn_wc/log.c:1372
 #, c-format
 msgid "Error reading administrative log file in '%s'"
 msgstr "于“%s”中读取管理日志文件时发生错误"
 
-#: libsvn_wc/log.c:1448
+#: libsvn_wc/log.c:1452
 #, c-format
 msgid "'%s' is not a working copy directory"
 msgstr "“%s”并不是工作拷贝目录"
@@ -4752,17 +4752,26 @@ msgstr ""
 "子命令“%s”不接受选项“%s”\n"
 "请使用“svnadmin help %s”以了解用法。\n"
 
-#: svndumpfilter/main.c:641
+#: svndumpfilter/main.c:378
 #, c-format
 msgid "Revision %ld committed as %ld.\n"
 msgstr "修订版 %ld 提交为 %ld。\n"
 
-#: svndumpfilter/main.c:649
+#: svndumpfilter/main.c:386
 #, c-format
 msgid "Revision %ld skipped.\n"
 msgstr "跳过修订版 %ld。\n"
 
-#: svndumpfilter/main.c:890
+#: svndumpfilter/main.c:489
+#, fuzzy, c-format
+msgid "Invalid copy source path '%s'"
+msgstr "复制的原始路径“%s”无效"
+
+#: svndumpfilter/main.c:638
+msgid "Delta property block detected - not supported by svndumpfilter"
+msgstr "检测到Delta属性块 - svndumpfilter 不支持"
+
+#: svndumpfilter/main.c:947
 #, c-format
 msgid ""
 "Dropped %d revision(s).\n"
@@ -4771,26 +4780,26 @@ msgstr ""
 "丢弃 %d 修订版。\n"
 "\n"
 
-#: svndumpfilter/main.c:896
+#: svndumpfilter/main.c:953
 msgid "Revisions renumbered as follows:\n"
 msgstr "修订版被重新编号，如下：\n"
 
-#: svndumpfilter/main.c:924
+#: svndumpfilter/main.c:981
 #, c-format
 msgid "   %ld => (dropped)\n"
 msgstr ""
 
-#: svndumpfilter/main.c:928
+#: svndumpfilter/main.c:985
 #, c-format
 msgid "   %ld => %ld\n"
 msgstr "   %ld => %ld\n"
 
-#: svndumpfilter/main.c:939
+#: svndumpfilter/main.c:996
 #, c-format
 msgid "Dropped %d node(s):\n"
 msgstr "丢弃 %d 节点：\n"
 
-#: svndumpfilter/main.c:1147
+#: svndumpfilter/main.c:1204
 msgid ""
 "\n"
 "Error: no prefixes supplied.\n"
@@ -4798,7 +4807,7 @@ msgstr ""
 "\n"
 "错误：没有提供前置字首，\n"
 
-#: svndumpfilter/main.c:1190
+#: svndumpfilter/main.c:1247
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
