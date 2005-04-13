@@ -1211,15 +1211,19 @@ main (int argc, const char * const *argv)
           if ((err == SVN_NO_ERROR) && e)
             {
               if (subcommand->cmd_func != svn_cl__lock)
-                err = svn_error_create 
-                  (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE, NULL,
-                   _("Log message file is a versioned file; "
-                     "use '--force-log' to override"));
+                {
+                  err = svn_error_create 
+                    (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE, NULL,
+                     _("Log message file is a versioned file; "
+                       "use '--force-log' to override"));
+                }
               else
-                err = svn_error_create 
-                  (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE, NULL,
-                   _("Lock comment file is a versioned file; "
-                     "use '--force-log' to override"));
+                {
+                  err = svn_error_create 
+                    (SVN_ERR_CL_LOG_MESSAGE_IS_VERSIONED_FILE, NULL,
+                     _("Lock comment file is a versioned file; "
+                       "use '--force-log' to override"));
+                }
               return error_exit (err, stderr, FALSE, pool);
             }
           if (err)
@@ -1235,16 +1239,20 @@ main (int argc, const char * const *argv)
                         APR_FINFO_MIN, pool) == APR_SUCCESS)
             {
               if (subcommand->cmd_func != svn_cl__lock)
-                err = svn_error_create 
-                  (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
-                   _("The log message is a pathname "
-                     "(was -F intended?); use '--force-log' to override"));
+                {
+                  err = svn_error_create 
+                    (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
+                     _("The log message is a pathname "
+                       "(was -F intended?); use '--force-log' to override"));
+                }
               else
-                err = svn_error_create 
-                  (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
-                   _("The lock comment is a pathname "
-                     "(was -F intended?); use '--force-log' to override"));
-              return error_exit (err, stderr, FALSE, pool);
+                {
+                  err = svn_error_create 
+                    (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
+                     _("The lock comment is a pathname "
+                       "(was -F intended?); use '--force-log' to override"));
+                  return error_exit (err, stderr, FALSE, pool);
+                }
             }
         }
     }
