@@ -67,5 +67,18 @@ Candidate changes:
     Votes:
       +1: kfogel
 
+  * r14063, r14066, r14068, r14079, r14121, r14124
+    Branch: 1.2.x-r14063
+    Fix FSFS locking problem.
+    Justification:
+      Issue #2265 can cause data loss.
+    Notes:
+      The backport branch removes the svn_fs_initialize() API, since
+      that was contributing some disruption on trunk related to
+      --enable-dso.  For practical purposes, the best-effort
+      initialization of the common pool and mutex should be fine.
+    Votes:
+      +1: ghudson
+
 Approved changes (further review is welcome, but not required):
 
