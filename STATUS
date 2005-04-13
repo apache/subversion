@@ -71,6 +71,13 @@ Candidate changes:
     Votes:
       +1: ghudson
 
+  * r14169
+    Make locking an out-of-date file fail over ra_svn.
+    Justification:
+      Trivial bug making locking less usaful over ra_svn.
+    Votes:
+      +1: lundblad
+
 Approved changes (further review is welcome, but not required):
 
   * r14126
