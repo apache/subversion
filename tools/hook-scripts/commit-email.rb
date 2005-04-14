@@ -194,8 +194,8 @@ def changed_dirs_info(info, uri)
   rev = info.revision
   (info.added_dirs.collect do |dir|
      "  Added: #{dir}\n"
-   end + info.copied_dirs.collect do |dir, from_dir|
-     "  Copied: #{dir} (from #{from_dir})\n"
+   end + info.copied_dirs.collect do |dir, from_dir, from_rev|
+     "  Copied: #{dir} (from rev #{from_rev}, #{from_dir})\n"
    end + info.deleted_dirs.collect do |dir|
      <<-INFO
   Deleted: #{dir}
