@@ -183,7 +183,7 @@ sub CheckForProgs
           }
           
           $Msg=$Msg . "\nPlease, check that everything are installed properly as described in\n";
-          $Msg=$Msg . "the documentation in packages\\win32-innosetup\\tools\\readme.txt\n";
+          $Msg=$Msg . "the documentation in packages\\windows-innosetup\\tools\\readme.txt\n";
           Win32::MsgBox($Msg, 0+MB_ICONSTOP, 'ERROR: Missing required programs.');
           exit 1;
       }
