@@ -25,12 +25,14 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r14041, r14186, r14194
+  * r14041, r14149, r14186, r14194
     Fix issue #2268 (svn update of xml-unsafe dir (from within) http error)
     and similar problems regarding paths with leading or trailing spaces.
     Justification:
       Yet Another Path Escaping Bug
     Votes:
+      +1: lundblad
+    Votes without r14149:
       +1: cmpilato
 
   * r14063, r14066, r14068, r14079, r14121, r14124
@@ -55,7 +57,7 @@ Candidate changes:
       represent a moment in time or a span of time?" question.  Only affects
       APIs new to 1.2, so this is a chance to avoid some future baggage.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, lundblad
 
   * r14177
     Add svn_ra_initialize() API.
