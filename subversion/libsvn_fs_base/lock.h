@@ -35,7 +35,7 @@ svn_error_t *svn_fs_base__lock (svn_lock_t **lock,
                                 const char *path,
                                 const char *token,
                                 const char *comment,
-                                int timeout,
+                                apr_time_t expiration_date,
                                 svn_revnum_t current_rev,
                                 svn_boolean_t steal_lock,
                                 apr_pool_t *pool);

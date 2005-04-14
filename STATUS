@@ -69,13 +69,3 @@ Candidate changes:
       +1: fitz, dlr
 
 Approved changes (further review is welcome, but not required):
-
-  * r14180
-    Make the public locking API semantics for lock expiry match the internal
-    storage and known concerned caller's semantics.
-    Justification:
-      Removes needless double-conversions, and solves the, "Does apr_time_t
-      represent a moment in time or a span of time?" question.  Only affects
-      APIs new to 1.2, so this is a chance to avoid some future baggage.
-    Votes:
-      +1: cmpilato, lundblad, dlr

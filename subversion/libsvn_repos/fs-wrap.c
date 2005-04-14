@@ -414,7 +414,7 @@ svn_repos_fs_lock (svn_lock_t **lock,
                    const char *path,
                    const char *token,
                    const char *comment,
-                   int timeout,
+                   apr_time_t expiration_date,
                    svn_revnum_t current_rev,
                    svn_boolean_t steal_lock,
                    apr_pool_t *pool)
@@ -422,10 +422,12 @@ svn_repos_fs_lock (svn_lock_t **lock,
   svn_error_t *err;
   svn_fs_access_t *access_ctx = NULL;
   const char *username = NULL;
+  apr_array_header_t *paths;
+
   /* Setup an array of paths in anticipation of the ra layers handling
      multiple locks in one request (1.3 most likely).  This is only
      used by svn_repos__hooks_post_lock. */
-  apr_array_header_t *paths = apr_array_make (pool, 1, sizeof(const char *));
+  paths = apr_array_make (pool, 1, sizeof(const char *));
   APR_ARRAY_PUSH(paths, const char *) = path;
 
   SVN_ERR (svn_fs_get_access (&access_ctx, repos->fs));
@@ -442,8 +444,8 @@ svn_repos_fs_lock (svn_lock_t **lock,
   SVN_ERR (svn_repos__hooks_pre_lock (repos, path, username, pool));
 
   /* Lock. */
-  SVN_ERR (svn_fs_lock (lock, repos->fs, path, token, comment, timeout, 
-                        current_rev, steal_lock, pool));
+  SVN_ERR (svn_fs_lock (lock, repos->fs, path, token, comment, 
+                        expiration_date, current_rev, steal_lock, pool));
 
   /* Run post-lock hook. */
   if ((err = svn_repos__hooks_post_lock (repos, paths, username, pool)))

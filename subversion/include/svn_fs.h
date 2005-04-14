@@ -1488,11 +1488,10 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  * by people who don't "own" the lock.  (Though admins can tailor a
  * custom break/steal policy via libsvn_repos pre-lock hook script.)
  *
- * Locks can be created with an optional 'timeout', meaning that they
- * expire after a certain amount of time.  If a lock has an expiration
- * date, then the act of fetching/reading it might cause it to
- * automatically expire, returning either nothing or an expiration
- * error (depending on the API).
+ * Locks can be created with an optional expiration date.  If a lock
+ * has an expiration date, then the act of fetching/reading it might
+ * cause it to automatically expire, returning either nothing or an
+ * expiration error (depending on the API).
  */
 
 
@@ -1522,8 +1521,8 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  * @a token is not @c NULL, and represents an existing lock, then @a
  * path must match the path associated with that existing lock.
  *
- * If @a timeout is zero, then create a non-expiring lock.  Else, the
- * lock will expire in @a timeout seconds after creation.
+ * If @a expiration_date is zero, then create a non-expiring lock.
+ * Else, the lock will expire at @a expiration_date.
  *
  * If @a current_rev is a valid revnum, then do an out-of-dateness
  * check.  If the revnum is less than the last-changed-revision of @a
@@ -1537,7 +1536,7 @@ svn_error_t *svn_fs_lock (svn_lock_t **lock,
                           const char *path,
                           const char *token,
                           const char *comment,
-                          int timeout,
+                          apr_time_t expiration_date,
                           svn_revnum_t current_rev,
                           svn_boolean_t steal_lock,
                           apr_pool_t *pool);
