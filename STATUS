@@ -73,11 +73,10 @@ Candidate changes:
 Approved changes (further review is welcome, but not required):
 
   * r14169
-    Make locking an out-of-date file fail over ra_svn.
     Justification:
       Trivial bug making locking less usaful over ra_svn.
     Votes:
-      +1: lundblad, jszakmeister, cmpilato
+
 
   * r14081, r14098
     Fix Issue 1361: 'svn cat file -r BASE' contacts repository
