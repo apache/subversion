@@ -672,6 +672,35 @@ def broken_lock_status (sbox):
 #----------------------------------------------------------------------
 
 
+#----------------------------------------------------------------------
+# Check that locking an out-of-date file fails.
+def out_of_date(sbox):
+  "lock an out-of-date file and ensure failure"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a second copy of the working copy
+  wc_b = sbox.add_wc_path('_b')
+  svntest.actions.duplicate_dir(wc_dir, wc_b)
+
+  fname = 'iota'
+  file_path = os.path.join(sbox.wc_dir, fname)
+  file_path_b = os.path.join(wc_b, fname)
+
+  # Make a new revision of the file in the first WC.
+  svntest.main.file_append(file_path, "This represents a binary file\n")
+  svntest.main.run_svn(None, 'commit',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', '', file_path)
+
+  # --- Meanwhile, in our other working copy... ---
+  svntest.actions.run_and_verify_svn(None, None, svntest.SVNAnyOutput, 'lock',
+                                     '--username', svntest.main.wc_author2,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', file_path_b)
+
 ########################################################################
 # Run the tests
 
@@ -691,6 +720,7 @@ test_list = [ None,
               lock_status,
               stolen_lock_status,
               broken_lock_status,
+              out_of_date
              ]
 
 if __name__ == '__main__':
