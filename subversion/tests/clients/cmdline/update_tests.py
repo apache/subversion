@@ -1596,12 +1596,12 @@ def update_xml_unsafe_dir(sbox):
   svntest.actions.duplicate_dir(wc_dir, wc_backup)
 
   # Make a couple of local mods to files
-  test_path = os.path.join(wc_dir, 'foo & bar')
+  test_path = os.path.join(wc_dir, ' foo & bar ')
   svntest.main.run_svn(None, 'mkdir', test_path)  
 
   # Created expected output tree for 'svn ci'
   expected_output = wc.State(wc_dir, {
-    'foo & bar' : Item(verb='Adding'),
+    ' foo & bar ' : Item(verb='Adding'),
     })
 
   # Create expected status tree; all local revisions should be at 1,
@@ -1609,7 +1609,7 @@ def update_xml_unsafe_dir(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'foo & bar' : Item(status='  ', wc_rev=2),
+    ' foo & bar ' : Item(status='  ', wc_rev=2),
     })
 
   # Commit.
@@ -1656,7 +1656,7 @@ test_list = [ None,
               update_to_future_add,
               nested_in_read_only,
               obstructed_update_alters_wc_props,
-              update_xml_unsafe_dir,
+              XFail(update_xml_unsafe_dir),
              ]
 
 if __name__ == '__main__':
