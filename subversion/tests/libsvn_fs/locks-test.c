@@ -223,7 +223,7 @@ attach_lock (const char **msg,
   SVN_ERR (svn_fs_generate_lock_token (&token, fs, pool));
   SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", token,
                         "This is a comment.  Yay comment!",
-                        apr_time_from_sec(3),
+                        apr_time_now() + apr_time_from_sec(3),
                         SVN_INVALID_REVNUM, FALSE, pool));
 
   /* Can we look up the lock by path? */
@@ -833,7 +833,8 @@ lock_expiration (const char **msg,
   SVN_ERR (svn_fs_set_access (fs, access));
 
   /* Lock /A/D/G/rho, with an expiration 3 seconds from now. */
-  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", NULL, "", 3,
+  SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", NULL, "", 
+                        apr_time_now() + apr_time_from_sec(3),
                         SVN_INVALID_REVNUM, FALSE, pool));
 
   /* Become nobody. */
@@ -914,7 +915,7 @@ lock_break_steal_refresh (const char **msg,
   SVN_ERR (svn_fs_create_access (&access, "bubba", pool));
   SVN_ERR (svn_fs_set_access (fs, access));
   SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", NULL, "",
-                        300 /* expire in 5 minutes */,
+                        apr_time_now() + apr_time_from_sec(300), /* 5 min. */
                         SVN_INVALID_REVNUM, 
                         TRUE /* FORCE STEAL */,
                         pool));
@@ -999,7 +1000,7 @@ lock_out_of_date (const char **msg,
   /* 'Refresh' the lock, claiming to have r1... should fail. */
   err = svn_fs_lock (&mylock, fs, mylock->path, 
                      mylock->token, mylock->comment,
-                     50 * APR_USEC_PER_SEC,
+                     apr_time_now() + apr_time_from_sec(50),
                      1,
                      TRUE /* FORCE STEAL */,
                      pool);

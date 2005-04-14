@@ -209,10 +209,10 @@ dav_lock_to_svn_lock(svn_lock_t **slock,
         }
     }
 
-  if (dlock->timeout)
-    lock->expiration_date = (apr_time_t)dlock->timeout * APR_USEC_PER_SEC;
-  else
+  if (dlock->timeout == DAV_TIMEOUT_INFINITE)
     lock->expiration_date = 0; /* never expires */
+  else
+    lock->expiration_date = (apr_time_t)dlock->timeout * APR_USEC_PER_SEC;
 
   *slock = lock;
   return 0;
@@ -802,7 +802,7 @@ dav_svn_append_locks(dav_lockdb *lockdb,
                            slock->path,
                            slock->token,
                            slock->comment,
-                           lock->timeout * APR_USEC_PER_SEC,
+                           slock->expiration_date,
                            info->working_revnum,
                            info->lock_steal,
                            resource->pool);
@@ -977,7 +977,8 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
                            slock->path,
                            slock->token,
                            slock->comment,
-                           (apr_time_t)new_time * APR_USEC_PER_SEC,
+                           (new_time == DAV_TIMEOUT_INFINITE)
+                             ? 0 : (apr_time_t)new_time * APR_USEC_PER_SEC,
                            SVN_INVALID_REVNUM,
                            TRUE, /* forcibly steal existing lock */
                            resource->pool);

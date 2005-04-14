@@ -706,7 +706,7 @@ struct lock_baton {
   const char *path;
   const char *token;
   const char *comment;
-  int timeout;
+  apr_time_t expiration_date;
   svn_revnum_t current_rev;
   svn_boolean_t steal_lock;
   apr_pool_t *pool;
@@ -813,10 +813,7 @@ lock_body (void *baton, apr_pool_t *pool)
   lock->owner = apr_pstrdup (lb->pool, lb->fs->access_ctx->username);
   lock->comment = apr_pstrdup (lb->pool, lb->comment);
   lock->creation_date = apr_time_now();
-  if (lb->timeout)
-    lock->expiration_date = lock->creation_date
-      + apr_time_from_sec (lb->timeout);
-
+  lock->expiration_date = lb->expiration_date;
   SVN_ERR (set_lock (lb->fs, lock, pool));
   *lb->lock_p = lock;
 
@@ -875,7 +872,7 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
                  const char *path,
                  const char *token,
                  const char *comment,
-                 int timeout,
+                 apr_time_t expiration_date,
                  svn_revnum_t current_rev,
                  svn_boolean_t steal_lock,
                  apr_pool_t *pool)
@@ -890,7 +887,7 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
   lb.path = path;
   lb.token = token;
   lb.comment = comment;
-  lb.timeout = timeout;
+  lb.expiration_date = expiration_date;
   lb.current_rev = current_rev;
   lb.steal_lock = steal_lock;
   lb.pool = pool;
