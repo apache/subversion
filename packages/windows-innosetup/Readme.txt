@@ -20,7 +20,7 @@ CONTENTS:
 Introduction
 ============
 
-  This document describes the packages\win32-innosetup directory of the
+  This document describes the packages\windows-innosetup directory of the
   Subversion repository and tells you how you can roll out your own Windows
   installer for Subversion.
 
@@ -96,13 +96,13 @@ Dynamic build data
   All this data are maintained by the file svn_dynamics.iss which has a lot
   variables that is processed by Inno Setup Pre Processor (ISPP) during the
   compiling of the setup.
-  A template can be found in the packages\win32-innosetup\templates directory.
-  Copy this file to the packages\win32-innosetup directory and edit it
-  according to the documentation inside it. This file is not under version
-  control (the template is) since the contents will vary depending on the
-  system they are in.
+  A template can be found in the packages\windows-innosetup\templates
+  directory. Copy this file to the packages\windows-innosetup directory and
+  edit it according to the documentation inside it. This file is not under
+  version control (the template is) since the contents will vary depending on
+  the system they are in.
 
-  The Inno setup file lives under the packages\win32-innosetup directory
+  The Inno setup file lives under the packages\windows-innosetup directory
   of the Subversion repository and are using folders which are both visible
   and "hidden". The hidden folders have the svn property svn:ignore and only
   exists on your machine.
@@ -120,7 +120,7 @@ Dynamic build data
 
   Static paths (in the Subversion repository):
   -------------  
-  [ ] win32-innosetup                     (svn.iss, main folder for Inno Setup)
+  [ ] windows-innosetup                   (svn.iss, main folder for Inno Setup)
    +->[ ] images                             (Various images used by the setup)
    +->[h] in    (you can set your path_setup_in here if you want to, see below)
    +->[h] out  (you can set your path_setup_out here if you want to, see below)
@@ -193,18 +193,18 @@ Programs used for the Subversion Windows installer
   This C program is used for updating the user's path to include/exclude the
   Subversion path after installing/un-installing Subversion.
   You can find the sources for this program in the Subversion source tree under
-  packages\win32-innosetup\tools\svnpath.
+  packages\windows-innosetup\tools\svnpath.
   Have a look in the file main.c for info on how to compile the program.
 
   If you don't want to compile it then download it from:
     http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=2728
   
   Unzip the file and put the svnpath.exe in the directory
-    packages\win32-innosetup\tools\svnpath
+    packages\windows-innosetup\tools\svnpath
 
   UninsHs
   -------
-  Unpack the zipfile and place UninsHs.exe in packages\win32-innosetup
+  Unpack the zipfile and place UninsHs.exe in packages\windows-innosetup
 
   libxml, libxslt and iconv
   -------------------------
@@ -241,7 +241,7 @@ Programs used for the Subversion Windows installer
 Making a distro
 ===============
 
-  The programs/scripts in the packages\win32-innosetup\tools folder will take
+  The programs/scripts in the packages\windows-innosetup\tools folder will take
   care of making the Subversion documentation (a Windows HTML help file) from
   the sources in the doc directory of the subversion repository and setting
   version info on the setup. Just follow the steps below and you're set:
@@ -250,11 +250,12 @@ Making a distro
      earlier in this file.
 
   2. If you haven't done it already: Copy the file "svn_dynamics.iss" from
-     the packages\win32-innosetup\templates folder to packages\win32-innosetup
-     in your WC and edit it according to the documentation inside it.
+     the packages\windows-innosetup\templates folder to
+     packages\windows-innosetup in your WC and edit it according to the
+     documentation inside it.
 
-  3. Copy the file svn_version.iss from packages\win32-innosetup\templates to
-     packages\win32-innosetup and edit it according to the documentation
+  3. Copy the file svn_version.iss from packages\windows-innosetup\templates to
+     packages\windows-innosetup and edit it according to the documentation
 	   inside it.
 
   4. Make sure that all the files to include in the setup are where they are
@@ -262,14 +263,14 @@ Making a distro
 
   5. Now, you have two different ways of making the documentation and the
      setup:
-     A. Change directory (cd) to the packages\win32-innosetup\tools folder on
+     A. Change directory (cd) to the packages\windows-innosetup\tools folder on
         your working Subversion repository and run the following command and
         follow the instructions:
             mk_distro
 
      B. You may want to make an automatic setup (nightly build, anything else),
-        just run the packages\win32-innosetup\tools\mk_distro file:
-            path\to\packages\win32-innosetup\tools\mk_distro -a
+        just run the packages\windows-innosetup\tools\mk_distro file:
+            path\to\packages\windows-innosetup\tools\mk_distro -a
 
   A shiny new svn-x.xx.x-setup.exe should now be in your path_setup_out
   folder if you have done everything right.
