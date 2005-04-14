@@ -46,7 +46,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-04-13 23:04+0200\n"
-"PO-Revision-Date: 2005-04-13 23:04+0200\n"
+"PO-Revision-Date: 2005-04-14 21:46+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -1189,43 +1189,34 @@ msgstr ""
 "Sätt egenskapen PROPNAME till PROPVAL på filer, kataloger\n"
 "eller revisioner.\n"
 "användning: 1. propset PROPNAME [PROPVAL | -F VALFILE] PATH...\n"
-"            2. propset PROPNAME --revprop -r REV [PROPVAL | -F VALFILE] "
-"[URL]\n"
+"            2. propset PROPNAME --revprop -r REV [PROPVAL | -F VALFILE] [URL]\n"
 "\n"
 "  1. Gör en lokal ändring av en versionshanterad egenskap i en arbetskopia.\n"
 "  2. Gör en ändring av en icke versionshanterad revisionsegenskap på en\n"
-"     revision i databasen.\n"
+"     revision i arkivet.\n"
 "\n"
-"  Anmärkning: svn känner igen följande särskilda versionshanterade "
-"egenskaper,\n"
+"  Anmärkning: svn känner igen följande särskilda versionshanterade egenskaper,\n"
 "  men lagrar godtyckliga egenskaper:\n"
 "    svn:ignore     - En lista med filmönster att ignorera, avskilda med\n"
 "                     radslut.\n"
 "    svn:keywords   - Nyckelord som ska expanderas. Giltiga nyckelord är:\n"
 "      URL, HeadURL             - URL:en till objektets senaste revision.\n"
-"      Author, LastChangedBy    - Den person som gjorde den senaste "
-"ändringen.\n"
+"      Author, LastChangedBy    - Den person som gjorde den senaste ändringen.\n"
 "      Date, LastChangedDate    - Datum/tid för den senaste ändringen.\n"
-"      Rev, Revision            - Den senaste revisionen där objektet "
-"ändrades.\n"
+"      Rev, Revision            - Den senaste revisionen där objektet ändrades.\n"
 "      LastChangedRevision\n"
-"      Id                       - Ett sammandrag av de 4 föregående "
-"nyckelorden.\n"
-"    svn:executable - Om den finns, görs filen exekverbar. Den här "
-"egenskapen\n"
+"      Id                       - Ett sammandrag av de 4 föregående nyckelorden.\n"
+"    svn:executable - Om den finns, görs filen exekverbar. Den här egenskapen\n"
 "      kan inte sättas på en katalog. Ett icke-rekursivt försök kommer att\n"
-"      misslyckas, men om den sätts rekursivt sätts egenskapen för "
-"katalogens\n"
+"      misslyckas, men om den sätts rekursivt sätts egenskapen för katalogens\n"
 "      barn.\n"
 "    svn:eol-style  - Något av \"native\", \"CR\", \"LF\" eller \"CRLF\".\n"
 "    svn:mime-type  - Filens mime-typ. Används för att avgöra om merge\n"
 "      ska göras på filen och hur den skickas via Apache. En mime-typ som\n"
 "      inleds med \"text/\" eller som saknas behandlas som text. Allt annat\n"
 "      behandlas som binärdata.\n"
-"    svn:externals  - En lista, avskild med radslut, med "
-"modulspecifikationer,\n"
-"      vilka består av en relativ sökväg, valbara revisionsflaggor samt en "
-"URL.\n"
+"    svn:externals  - En lista, avskild med radslut, med modulspecifikationer,\n"
+"      vilka består av en relativ sökväg, valbara revisionsflaggor samt en URL.\n"
 "      Exempel:\n"
 "        foo             http://example.com/repos/zig\n"
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
@@ -2668,7 +2659,7 @@ msgstr "Revisionsområde otillåtet"
 
 #: include/svn_error_codes.h:870
 msgid "Inter-repository relocation not allowed"
-msgstr "Omlokalisering mellan databaser otillåten"
+msgstr "Omlokalisering mellan arkiv otillåten"
 
 #: include/svn_error_codes.h:874
 msgid "Author name cannot contain a newline"
@@ -2909,11 +2900,11 @@ msgstr "\"%s\" är ett reserverat namn och kan inte importeras"
 
 #: libsvn_client/commit.c:782 libsvn_client/copy.c:545
 msgid "Commit failed (details follow):"
-msgstr "Incheckningen misslyckades (mer information följer):"
+msgstr "Arkiveringen misslyckades (mer information följer):"
 
 #: libsvn_client/commit.c:790 libsvn_client/copy.c:553
 msgid "Commit succeeded, but other errors follow:"
-msgstr "Incheckningen lyckades, men andra fel följer:"
+msgstr "Arkiveringen lyckades, men andra fel följer:"
 
 #: libsvn_client/commit.c:797 libsvn_client/copy.c:560
 msgid "Error unlocking locked dirs (details follow):"
@@ -2921,18 +2912,16 @@ msgstr "Fel vid upplåsning av låsta kataloger (mer information följer):"
 
 #: libsvn_client/commit.c:808
 msgid "Error bumping revisions post-commit (details follow):"
-msgstr ""
-"Fel vid höjning av revisionsnummer efter incheckning (mer information "
-"följer):"
+msgstr "Fel vid höjning av revisionsnummer efter arkivering (mer information följer):"
 
 #: libsvn_client/commit.c:819 libsvn_client/copy.c:571
 msgid "Error in post-commit clean-up (details follow):"
-msgstr "Fel vid städning efter incheckning (mer information följer):"
+msgstr "Fel vid städning efter arkivering (mer information följer):"
 
 #: libsvn_client/commit.c:1121
 #, c-format
 msgid "'%s' is a URL, but URLs cannot be commit targets"
-msgstr "\"%s\" är en URL, men URL:er kan inte vara mål vid incheckning"
+msgstr "\"%s\" är en URL, men URL:er kan inte vara mål vid arkivering"
 
 #: libsvn_client/commit.c:1313
 msgid "Are all the targets part of the same working copy?"
@@ -2940,8 +2929,7 @@ msgstr "Ingår samtliga mål i samma arbetskopia?"
 
 #: libsvn_client/commit.c:1328
 msgid "Cannot non-recursively commit a directory deletion"
-msgstr ""
-"Kan inte checka in en radering av en katalog utan att det görs rekursivt"
+msgstr "Kan inte arkivera en radering av en katalog utan att det görs rekursivt"
 
 #: libsvn_client/commit_util.c:242 libsvn_client/commit_util.c:253
 #, c-format
@@ -2956,7 +2944,7 @@ msgstr "På posten \"%s\" har specialstatus ändrats oväntat"
 #: libsvn_client/commit_util.c:321
 #, c-format
 msgid "Aborting commit: '%s' remains in conflict"
-msgstr "Avbryter incheckning: \"%s\" är fortfarande i konflikt"
+msgstr "Arkiveringen avbryts: \"%s\" är fortfarande i konflikt"
 
 #: libsvn_client/commit_util.c:377
 #, c-format
@@ -2966,8 +2954,7 @@ msgstr "Väntade inte att \"%s\" skulle vara en rot till en arbetskopia"
 #: libsvn_client/commit_util.c:395
 #, c-format
 msgid "Commit item '%s' has copy flag but no copyfrom URL\n"
-msgstr ""
-"Incheckningsobjektet \"%s\" har kopieringsflagga men saknar copyfrom-URL\n"
+msgstr "Arkiveringsobjektet \"%s\" har kopieringsflagga men saknar copyfrom-URL\n"
 
 #: libsvn_client/commit_util.c:667 libsvn_client/commit_util.c:797
 #: libsvn_client/copy.c:1072 libsvn_client/delete.c:67
@@ -3004,37 +2991,29 @@ msgid ""
 "Entry for '%s' is marked as 'copied' but is not itself scheduled\n"
 "for addition.  Perhaps you're committing a target that is\n"
 "inside an unversioned (or not-yet-versioned) directory?"
-msgstr ""
-"Posten för \"%s\" är märkt som \"kopierad\", men är inte själv schemalagd "
-"att läggas till. Försöker du checka in något som är inuti en icke (eller "
-"inte ännu) versionshanterad katalog?"
+msgstr "Posten för \"%s\" är märkt som \"kopierad\", men är inte själv schemalagd att läggas till. Försöker du arkivera något som är inuti en icke (eller inte ännu) versionshanterad katalog?"
 
 #: libsvn_client/commit_util.c:763
 #, c-format
 msgid ""
 "'%s' is not under version control and is not part of the commit, yet its "
 "child '%s' is part of the commit"
-msgstr ""
-"\"%s\" är inte versionshanterad och är ej heller delaktig i incheckningen, "
-"men trots det är dess barn \"%s\" en del av incheckningen"
+msgstr "\"%s\" är inte versionshanterad och är ej heller delaktig i arkiveringen, men trots det är dess barn \"%s\" en del av arkiveringen"
 
 #: libsvn_client/commit_util.c:846
 #, c-format
 msgid "Cannot commit both '%s' and '%s' as they refer to the same URL"
-msgstr ""
-"Kan inte checka in både \"%s\" och \"%s\" eftersom de hänvisar till samma URL"
+msgstr "Kan inte arkivera både \"%s\" och \"%s\" eftersom de hänvisar till samma URL"
 
 #: libsvn_client/commit_util.c:991
 #, c-format
 msgid "Commit item '%s' has copy flag but no copyfrom URL"
-msgstr ""
-"Objektet \"%s\" som skulle checkas in har kopieringsflaggan satt, men saknar "
-"\"copyfrom\"-URL"
+msgstr "Arkiveringsobjektet \"%s\" har kopieringsflaggan satt, men saknar \"copyfrom\"-URL"
 
 #: libsvn_client/commit_util.c:996
 #, c-format
 msgid "Commit item '%s' has copy flag but an invalid revision"
-msgstr "Incheckningsobjektet \"%s\" har kopieringsflagga men ogiltig revision"
+msgstr "Arkiveringsobjektet \"%s\" har kopieringsflagga men ogiltig revision"
 
 #: libsvn_client/copy.c:101 libsvn_client/copy.c:646 libsvn_client/copy.c:831
 #: libsvn_ra_dav/commit.c:1133
@@ -3056,9 +3035,7 @@ msgstr "Kan inte flytta URL:en \"%s\" till sig själv"
 msgid ""
 "Source and dest appear not to be in the same repository (src: '%s'; dst: '%"
 "s')"
-msgstr ""
-"Källan och destinationen verkar inte vara i samma databas (källa: \"%s\"; "
-"destination: \"%s\")"
+msgstr "Källan och destinationen verkar inte vara i samma arkiv (källa: \"%s\"; destination: \"%s\")"
 
 #: libsvn_client/copy.c:386
 #, c-format
@@ -3093,9 +3070,7 @@ msgstr "Posten för \"%s\" finns (fast arbetsfilen saknas)"
 #: libsvn_client/copy.c:948
 #, c-format
 msgid "Source URL '%s' is from foreign repository; leaving it as a disjoint WC"
-msgstr ""
-"Käll-RUL:en \"%s\" är från en annan databas, låter den vara en separat "
-"arbetskopia"
+msgstr "Käll-RUL:en \"%s\" är från ett annat arkiv, låter den vara en separat arbetskopia"
 
 #: libsvn_client/copy.c:1027
 #, c-format
@@ -3109,7 +3084,7 @@ msgstr "Kan inte flytta sökvägen \"%s\" till sig själv"
 
 #: libsvn_client/copy.c:1046
 msgid "No support for repos <--> working copy moves"
-msgstr "Flytt mellan arbetskipia och databas stöds ej"
+msgstr "Flytt mellan arbetskipia och arkiv stöds ej"
 
 #: libsvn_client/copy.c:1078
 #, c-format
@@ -3137,17 +3112,17 @@ msgid "Name: %s%s"
 msgstr "Namn: %s%s"
 
 #: libsvn_client/diff.c:198
-#, fuzzy, c-format
+#, c-format
 msgid "URLs have no scheme ('%s' and '%s')"
 msgstr "URL:erna har inget schema (\"%s\" och \"%s\")"
 
 #: libsvn_client/diff.c:204 libsvn_client/diff.c:210
-#, fuzzy, c-format
+#, c-format
 msgid "URL has no scheme: '%s'"
 msgstr "URL:en har inget schema: \"%s\""
 
 #: libsvn_client/diff.c:217
-#, fuzzy, c-format
+#, c-format
 msgid "Access scheme mixtures not yet supported ('%s' and '%s')"
 msgstr "Blandning av åtkomstscheman stöds inte ännu (\"%s\" och \"%s\")"
 
@@ -3207,7 +3182,7 @@ msgstr ""
 #: libsvn_client/diff.c:1867 libsvn_client/diff.c:1872
 #, c-format
 msgid "'%s' was not found in the repository at revision %ld"
-msgstr "\"%s\" fanns inte i revision %ld i databasen"
+msgstr "\"%s\" fanns inte i revision %ld i arkivet"
 
 #: libsvn_client/diff.c:1988 libsvn_client/switch.c:108
 #, c-format
@@ -3254,28 +3229,28 @@ msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "Felaktig kontrollsumma för \"%s\"; väntade \"%s\", fick \"%s\""
 
 #: libsvn_client/info.c:233
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot read entry for '%s'"
-msgstr "Kan inte hitta post för \"%s\""
+msgstr "Kan inte läsa post för \"%s\""
 
 #: libsvn_client/info.c:320 libsvn_client/info.c:345 libsvn_client/info.c:355
-#, fuzzy, c-format
+#, c-format
 msgid "URL '%s' non-existent in revision '%ld'"
-msgstr "URL:en \"%s\" finns inte i den revisionen"
+msgstr "URL:en \"%s\" finns inte i revision %ld"
 
 #: libsvn_client/locking_commands.c:185
 msgid "No common parent found, unable to operate on disjoint arguments"
 msgstr "Ingen gemensam förälder finns; kan inte arbeta med disjunkta argument"
 
 #: libsvn_client/locking_commands.c:267
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not locked in this working copy"
-msgstr "\"%s\" är ingen arbetskopia"
+msgstr "\"%s\" är inte låst i den här arbetskopian"
 
 #: libsvn_client/locking_commands.c:312
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not locked"
-msgstr "Sökvägen \"%s\" är inte en fil"
+msgstr "\"%s\" är inte låst"
 
 #: libsvn_client/locking_commands.c:345 libsvn_fs/fs-loader.c:884
 #: libsvn_ra/ra_loader.c:512
@@ -3293,9 +3268,8 @@ msgid "Entry '%s' has no URL"
 msgstr "Posten \"%s\" saknar URL"
 
 #: libsvn_client/log.c:321
-#, fuzzy
 msgid "No commits in repository"
-msgstr "Databasen innehåller inga incheckningar."
+msgstr "Intenting har arkiverats i arkivet"
 
 #: libsvn_client/ls.c:128 libsvn_client/ls.c:135
 #, c-format
@@ -3313,7 +3287,7 @@ msgid "Revision property '%s' not allowed in this context"
 msgstr "Revisionsegenskapen \"%s\" är inte tillåten här"
 
 #: libsvn_client/prop_commands.c:199
-#, fuzzy, c-format
+#, c-format
 msgid "Setting property on non-local target '%s' is not supported"
 msgstr "Att sätta egenskap på målet \"%s\" som inte är lokalt stöds inte ännu"
 
@@ -3334,9 +3308,7 @@ msgstr "Okänd nodtyp för \"%s\""
 #: libsvn_client/ra.c:131
 #, c-format
 msgid "Attempt to set wc property '%s' on '%s' in a non-commit operation"
-msgstr ""
-"Försök att sätta arbetskopieegenskapen \"%s\" på \"%s\" under en operation "
-"som ej är incheckning"
+msgstr "Försök att sätta wcporp \"%s\" på \"%s\" under en operation som ej är arkivering"
 
 #: libsvn_client/ra.c:336
 #, c-format
@@ -3356,7 +3328,7 @@ msgstr "Sökvägen \"%s\" finns inte i revision %ld"
 #: libsvn_client/ra.c:641 libsvn_client/ra.c:777
 #, c-format
 msgid "Unable to find repository location for '%s' in revision %ld"
-msgstr "Kan inte hitta platsen i databasen för \"%s\" i revision %ld"
+msgstr "Kan inte hitta platsen i arkivet för \"%s\" i revision %ld"
 
 #: libsvn_client/ra.c:652
 #, c-format
@@ -3368,14 +3340,12 @@ msgstr "\"%s\" i revision %ld är ett orelaterat objekt"
 msgid ""
 "The location for '%s' for revision %ld does not exist in the repository or "
 "refers to an unrelated object"
-msgstr ""
-"Plats för \"%s\" i revision %ld finns inte i databasen eller är ett "
-"orelaterat objekt"
+msgstr "Platsen för \"%s\" i revision %ld finns inte i arkivet eller är ett orelaterat objekt"
 
 #: libsvn_client/relocate.c:53
 #, c-format
 msgid "The repository at '%s' has uuid '%s', but the WC has '%s'"
-msgstr "Databasen på \"%s\" har uuid \"%s\", men arbetskopian har \"%s\""
+msgstr "Arkivet på \"%s\" har uuid \"%s\", men arbetskopian har \"%s\""
 
 #: libsvn_client/revisions.c:105
 #, c-format
@@ -3385,33 +3355,33 @@ msgstr "Okänd revisionstyp begärd för \"%s\""
 #: libsvn_delta/svndiff.c:350
 #, c-format
 msgid "Invalid diff stream: insn %d cannot be decoded"
-msgstr ""
+msgstr "Ogiltig diff-ström: instruktionen %d kan inte avkodas"
 
 #: libsvn_delta/svndiff.c:354
 #, c-format
 msgid "Invalid diff stream: insn %d has non-positive length"
-msgstr "Ogiltig diffström: instruktionen %d har ogiltig längd"
+msgstr "Ogiltig diff-ström: instruktionen %d har ogiltig längd"
 
 #: libsvn_delta/svndiff.c:358
 #, c-format
 msgid "Invalid diff stream: insn %d overflows the target view"
-msgstr "Ogiltig diffström: instruktionen %d går utanför målet"
+msgstr "Ogiltig diff-ström: instruktionen %d går utanför målet"
 
 #: libsvn_delta/svndiff.c:367
 #, c-format
 msgid "Invalid diff stream: [src] insn %d overflows the source view"
-msgstr ""
+msgstr "Ogiltig diff-ström: [src] instruktion %d går utanför källan"
 
 #: libsvn_delta/svndiff.c:374
 #, c-format
 msgid ""
 "Invalid diff stream: [tgt] insn %d starts beyond the target view position"
-msgstr ""
+msgstr "Ogiltig diff-ström: [tgt] instruktionen %d börjar efter målet"
 
 #: libsvn_delta/svndiff.c:381
 #, c-format
 msgid "Invalid diff stream: [new] insn %d overflows the new data section"
-msgstr ""
+msgstr "Ogiltig diff-ström: [new] instruktionen %d går utanför ny data"
 
 #: libsvn_delta/svndiff.c:391
 msgid "Delta does not fill the target window"
@@ -3450,9 +3420,9 @@ msgid "'%s' does not define '%s()'"
 msgstr "\"%s\" definierar inte \"%s()\""
 
 #: libsvn_fs/fs-loader.c:131
-#, fuzzy, c-format
+#, c-format
 msgid "Failed to load module for FS type '%s'"
-msgstr "Kunde inte hitta etiketten \"%s\" till URL:en \"%s\""
+msgstr "Kunde inte ladda modulen för filsystemstypen \"%s\""
 
 #: libsvn_fs/fs-loader.c:138
 #, c-format
@@ -3473,9 +3443,8 @@ msgid "Can't allocate FS mutex"
 msgstr "Kan inte skapa tunnel"
 
 #: libsvn_fs/fs-loader.c:269
-#, fuzzy
 msgid "Can't grab FS mutex"
-msgstr "Kan inte läsa från ström"
+msgstr "Kan inte allokera mutex för filsystemsbiblioteket"
 
 #: libsvn_fs/fs-loader.c:275
 msgid "Can't ungrab FS mutex"
@@ -3509,13 +3478,13 @@ msgstr "Ogiltig ändringsordning: ändring som inte är tillägg på raderad sö
 #: libsvn_fs_base/bdb/changes-table.c:257
 #: libsvn_fs_base/bdb/changes-table.c:381
 msgid "creating cursor for reading changes"
-msgstr "skapande av markör läsning av ändringar"
+msgstr "skapande av markör för läsning av ändringar"
 
 #: libsvn_fs_base/bdb/changes-table.c:283
 #: libsvn_fs_base/bdb/changes-table.c:402
-#, fuzzy, c-format
+#, c-format
 msgid "Error reading changes for key '%s'"
-msgstr "Kunde inte ta reda på skiftläge för \"%s\""
+msgstr "Fel vid läsning av ändringar för nyckeln \"%s\""
 
 #: libsvn_fs_base/bdb/changes-table.c:342
 #: libsvn_fs_base/bdb/changes-table.c:425
@@ -3528,9 +3497,8 @@ msgid "closing changes cursor"
 msgstr "strängning av markör för ändringar"
 
 #: libsvn_fs_base/bdb/copies-table.c:87
-#, fuzzy
 msgid "storing copy record"
-msgstr "Förstörd arbetskopia"
+msgstr "lagring av kopieringspost"
 
 #: libsvn_fs_base/bdb/copies-table.c:112
 msgid "allocating new copy ID (getting 'next-key')"
@@ -3538,16 +3506,15 @@ msgstr "allokering av ny copy-id (hämtar 'next-key')"
 
 #: libsvn_fs_base/bdb/copies-table.c:130
 msgid "bumping next copy key"
-msgstr "öökande av nästa copy-nyckel"
+msgstr "ökande av nästa copy-nyckel"
 
 #: libsvn_fs_base/bdb/copies-table.c:169
 msgid "deleting entry from 'copies' table"
 msgstr "radering av post ur 'copies'-tabellen"
 
 #: libsvn_fs_base/bdb/copies-table.c:197
-#, fuzzy
 msgid "reading copy"
-msgstr "%s\t(arbetskopia)"
+msgstr "läsning av kopiering"
 
 #: libsvn_fs_base/bdb/nodes-table.c:99
 msgid "allocating new node ID (getting 'next-key')"
@@ -3560,7 +3527,7 @@ msgstr "ökande av nästa node-ID-nyckel"
 #: libsvn_fs_base/bdb/nodes-table.c:154
 #, fuzzy, c-format
 msgid "Successor id '%s' (for '%s') already exists in filesystem '%s'"
-msgstr "Objekt finns redan i filsystem"
+msgstr "Efterföljar-id \"%s\" (för \"%s\") finns redan i filsystemet \"%s\""
 
 #: libsvn_fs_base/bdb/nodes-table.c:180
 msgid "deleting entry from 'nodes' table"
@@ -3568,91 +3535,79 @@ msgstr "radering av post från 'nodes'-tabellen"
 
 #. Handle any other error conditions.
 #: libsvn_fs_base/bdb/nodes-table.c:220
-#, fuzzy
 msgid "reading node revision"
-msgstr "Post saknar revision"
+msgstr "läsning av nodrevision"
 
 #: libsvn_fs_base/bdb/nodes-table.c:252
-#, fuzzy
 msgid "storing node revision"
-msgstr "Revision saknas"
+msgstr "lagring av nodrevision"
 
 #: libsvn_fs_base/bdb/reps-table.c:95 libsvn_fs_base/bdb/reps-table.c:202
-#, fuzzy, c-format
+#, c-format
 msgid "No such representation '%s'"
-msgstr "Ingen post med namnet: \"%s\""
+msgstr "Ingen representation \"%s\""
 
 #. Handle any other error conditions.
 #: libsvn_fs_base/bdb/reps-table.c:98
-#, fuzzy
 msgid "reading representation"
-msgstr "Felaktigt representationshuvud"
+msgstr "läsning av representation"
 
 #: libsvn_fs_base/bdb/reps-table.c:126
-#, fuzzy
 msgid "storing representation"
-msgstr "Felaktigt representationshuvud"
+msgstr "lagring av representation"
 
 #: libsvn_fs_base/bdb/reps-table.c:156
 msgid "allocating new representation (getting next-key)"
-msgstr ""
+msgstr "allokering av ny representation (erhåller next-key)"
 
 #: libsvn_fs_base/bdb/reps-table.c:177
-#, fuzzy
 msgid "bumping next representation key"
-msgstr "Felaktigt representationshuvud"
+msgstr "ökning av nästa representationsnyckel"
 
 #. Handle any other error conditions.
 #: libsvn_fs_base/bdb/reps-table.c:205
-#, fuzzy
 msgid "deleting representation"
-msgstr "Felaktigt svndiff-data i representation"
+msgstr "radering av representation"
 
 #. Handle any other error conditions.
 #: libsvn_fs_base/bdb/rev-table.c:88
-#, fuzzy
 msgid "reading filesystem revision"
-msgstr "Ogiltigt revisionsnummer för filsystem"
+msgstr "läsning av filsystemsrevision"
 
 #: libsvn_fs_base/bdb/strings-table.c:91
 msgid "creating cursor for reading a string"
-msgstr ""
+msgstr "skapande av markör för att läsa en sträng"
 
 #: libsvn_fs_base/bdb/txn-table.c:94
-#, fuzzy
 msgid "storing transaction record"
-msgstr "Objekt som ej är transaktionsrot"
+msgstr "lagring av transaktionspost"
 
 #: libsvn_fs_base/bdb/uuids-table.c:112
-#, fuzzy
 msgid "get repository uuid"
-msgstr "Databashookskript misslyckades"
+msgstr "erhållande av arkivets uuid"
 
 #: libsvn_fs_base/bdb/uuids-table.c:140
-#, fuzzy
 msgid "set repository uuid"
-msgstr "Avslagen databasfunktion"
+msgstr "sättande av arkivets uuid"
 
 #: libsvn_fs_base/dag.c:313
-#, fuzzy, c-format
+#, c-format
 msgid "Corrupt DB: initial transaction id not '0' in filesystem '%s'"
-msgstr ""
-"Förstörd post i tabellen \"transactions\" för \"%s\" i filsystemet \"%s\""
+msgstr "Trasig databas: första transaktions-idt är ej \"0\" i filsystemet \"%s\""
 
 #: libsvn_fs_base/dag.c:321
-#, fuzzy, c-format
+#, c-format
 msgid "Corrupt DB: initial copy id not '0' in filesystem '%s'"
-msgstr "Förstörd post i tabellen \"copies\" för \"%s\" i filsystemet \"%s\""
+msgstr "Trasig databas: första id för kopiering ej \"0\" i filsystemet \"%s\""
 
 #: libsvn_fs_base/dag.c:330
-#, fuzzy, c-format
+#, c-format
 msgid "Corrupt DB: initial revision number is not '0' in filesystem '%s'"
-msgstr "Förstörd nodrevision för noden \"%s\" i filsystemet \"%s\""
+msgstr "Trasig databas: första revisionsnumret ej \"0\" i filsystemet \"%s\""
 
 #: libsvn_fs_base/dag.c:378 libsvn_fs_base/dag.c:555 libsvn_fs_fs/dag.c:386
-#, fuzzy
 msgid "Attempted to create entry in non-directory parent"
-msgstr "Försök att skriva i något som inte är en transaktion"
+msgstr "Försök att skapa en post i en förälder som inte är en katalog"
 
 #: libsvn_fs_base/dag.c:549 libsvn_fs_fs/dag.c:380
 #, c-format
@@ -3660,24 +3615,20 @@ msgid "Attempted to create a node with an illegal name '%s'"
 msgstr "Försök att skapa en nod med ogiltigt namn '%s'"
 
 #: libsvn_fs_base/dag.c:561 libsvn_fs_base/dag.c:795 libsvn_fs_fs/dag.c:392
-#, fuzzy
 msgid "Attempted to clone child of non-mutable node"
-msgstr "Försök att ändra filsystemsnod som ej får ändras"
+msgstr "Försök att stänga barn till nod som ej får ändras"
 
 #: libsvn_fs_base/dag.c:568
-#, fuzzy
 msgid "Attempted to create entry that already exists"
-msgstr "Försök att låsa en katalog som redan var låst"
+msgstr "Försök att skapa en post som redan existerar"
 
 #: libsvn_fs_base/dag.c:619 libsvn_fs_fs/dag.c:454
-#, fuzzy
 msgid "Attempted to set entry in non-directory node"
-msgstr "Försök att skriva i något som inte är en transaktion"
+msgstr "Försök att sätta post i nod som ej är katalog"
 
 #: libsvn_fs_base/dag.c:625 libsvn_fs_fs/dag.c:460
-#, fuzzy
 msgid "Attempted to set entry in immutable node"
-msgstr "Försök att ändra filsystemsnod som ej får ändras"
+msgstr "Försök att sätta post i nod som ej får ändras"
 
 #: libsvn_fs_base/dag.c:689
 #, c-format
@@ -3688,7 +3639,7 @@ msgstr ""
 #: libsvn_fs_base/dag.c:801
 #, c-format
 msgid "Attempted to make a child clone with an illegal name '%s'"
-msgstr ""
+msgstr "Försök att skapa en klon av ett barn med ogiltigt namn \"%s\""
 
 #: libsvn_fs_base/dag.c:926
 #, fuzzy, c-format
