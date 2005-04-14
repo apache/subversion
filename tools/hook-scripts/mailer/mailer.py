@@ -460,8 +460,6 @@ def get_commondir(dirlist):
 
 class Lock(Messenger):
   def __init__(self, pool, cfg, repos, author, do_lock):
-    self.pool = pool
-    self.repos = repos
     self.author = author
     self.do_lock = do_lock
 
