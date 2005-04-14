@@ -1427,7 +1427,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
 
       SVN_ERR(svn_ra_svn_write_cmd(conn, iterpool, "lock", "c(?c)b(?r)", 
                                    path, comment,
-                                   force, revnum));
+                                   force, *revnum));
 
       /* Servers before 1.2 doesn't support locking.  Check this here. */
       SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
