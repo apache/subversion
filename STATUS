@@ -60,7 +60,14 @@ Candidate changes:
       Small javahl binding only fix to prevent crash of javavm.
     Votes:
       +1: pmayweg
-    
+
+  * r14205
+    Add lock/unlock support to mailer.py.
+    Justification:
+      Necessary feature... besides, who doesn't want more email?
+    Votes:
+      +1: fitz
+
 Approved changes (further review is welcome, but not required):
 
   * r14180
