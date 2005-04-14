@@ -1096,11 +1096,10 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
       if (child->ns == ns && strcmp(child->name, "src-path") == 0)
         {
           dav_svn_uri_info this_info;
-          cdata = dav_xml_get_cdata(child, resource->pool, 1);
+          cdata = dav_xml_get_cdata(child, resource->pool, 0);
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);
-          if ((derr = dav_svn__test_canonical(cdata, 
-                                              resource->pool)))
+          if ((derr = dav_svn__test_canonical(cdata, resource->pool)))
             return derr;
           if ((serr = dav_svn_simple_parse_uri(&this_info, resource,
                                                cdata, 
@@ -1113,11 +1112,10 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
       if (child->ns == ns && strcmp(child->name, "dst-path") == 0)
         {
           dav_svn_uri_info this_info;
-          cdata = dav_xml_get_cdata(child, resource->pool, 1);
+          cdata = dav_xml_get_cdata(child, resource->pool, 0);
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);
-          if ((derr = dav_svn__test_canonical(cdata,
-                                              resource->pool)))
+          if ((derr = dav_svn__test_canonical(cdata, resource->pool)))
             return derr;
           if ((serr = dav_svn_simple_parse_uri(&this_info, resource,
                                                cdata, 
@@ -1129,11 +1127,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
         }
       if (child->ns == ns && strcmp(child->name, "update-target") == 0)
         {
-          cdata = dav_xml_get_cdata(child, resource->pool, 1);
-          if (! *cdata)
-            return malformed_element_error(child->name, resource->pool);
-          if ((derr = dav_svn__test_canonical(cdata, 
-                                              resource->pool)))
+          cdata = dav_xml_get_cdata(child, resource->pool, 0);
+          if ((derr = dav_svn__test_canonical(cdata, resource->pool)))
             return derr;
           target = cdata;
         }
@@ -1322,7 +1317,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
               }
 
             /* get cdata, stripping whitespace */
-            path = dav_xml_get_cdata(child, subpool, 1);
+            path = dav_xml_get_cdata(child, subpool, 0);
             
             if (! linkpath)
               serr = svn_repos_set_path2(rbaton, path, rev,
@@ -1355,7 +1350,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
         else if (strcmp(child->name, "missing") == 0)
           {
             /* get cdata, stripping whitespace */
-            const char *path = dav_xml_get_cdata(child, subpool, 1);
+            const char *path = dav_xml_get_cdata(child, subpool, 0);
             serr = svn_repos_delete_path(rbaton, path, subpool);
             if (serr != NULL)
               {

@@ -1656,7 +1656,7 @@ test_list = [ None,
               update_to_future_add,
               nested_in_read_only,
               obstructed_update_alters_wc_props,
-              XFail(update_xml_unsafe_dir),
+              update_xml_unsafe_dir,
              ]
 
 if __name__ == '__main__':

@@ -242,19 +242,11 @@ dav_svn__file_revs_report(const dav_resource *resource,
         end = SVN_STR_TO_REV(dav_xml_get_cdata(child, resource->pool, 1));
       else if (strcmp(child->name, "path") == 0)
         {
-          /* Convert this relative path to an absolute path in the
-             repository. */
-          path = apr_pstrdup(resource->pool, resource->info->repos_path);
-
-          if (child->first_cdata.first)
-            {
-              if ((derr = dav_svn__test_canonical 
-                   (child->first_cdata.first->text, resource->pool)))
-                return derr;
-              path = svn_path_join(path, 
-                                   child->first_cdata.first->text,
-                                   resource->pool);
-            }
+          const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
+          if ((derr = dav_svn__test_canonical (rel_path, resource->pool)))
+            return derr;
+          path = svn_path_join(resource->info->repos_path, rel_path, 
+                               resource->pool);
         }
       /* else unknown element; skip it */
     }

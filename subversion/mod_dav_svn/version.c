@@ -1287,8 +1287,8 @@ dav_error *dav_svn__get_locations_report(const dav_resource *resource,
                                     SVN_DAV_ERROR_TAG);       
     }
 
-  /* Append the relative paths to the base FS path to get an
-     absolute repository path. */
+  /* Append the relative path to the base FS path to get an absolute
+     repository path. */
   abs_path = svn_path_join(resource->info->repos_path, relative_path,
                            resource->pool);
 
@@ -1486,53 +1486,38 @@ dav_error *dav_svn__build_lock_hash(apr_hash_t **locks,
   for (lockchild = child->first_child; lockchild != NULL;
        lockchild = lockchild->next)
     {
-      if (strcmp(lockchild->name, "lock") == 0)
-        {
-          const char *lockpath = NULL, *locktoken = NULL;
-          apr_xml_elem *lfchild;
-          
-          for (lfchild = lockchild->first_child; lfchild != NULL;
-               lfchild = lfchild->next)
-            {
-              if (strcmp(lfchild->name, "lock-path") == 0)
-                {
-                  if (lfchild->first_cdata.first)
-                    {
-                      if ((derr = dav_svn__test_canonical
-                           (lfchild->first_cdata.first->text, pool)))
-                        return derr;
+      const char *lockpath = NULL, *locktoken = NULL;
+      apr_xml_elem *lfchild;
 
-                      /* Create an absolute fs-path */
-                      lockpath = 
-                        svn_path_join(path_prefix,
-                                      lfchild->first_cdata.first->text,
-                                      pool);
-                      
-                      if (lockpath && locktoken)
-                        {
-                          apr_hash_set(hash, lockpath,
-                                       APR_HASH_KEY_STRING, locktoken);
-                          lockpath = NULL;
-                          locktoken = NULL;
-                        }
-                    }
-                }
-              else if (strcmp(lfchild->name, "lock-token") == 0)
+      if (strcmp(lockchild->name, "lock") != 0)
+        continue;
+
+      for (lfchild = lockchild->first_child; lfchild != NULL;
+           lfchild = lfchild->next)
+        {
+          if (strcmp(lfchild->name, "lock-path") == 0)
+            {
+              const char *cdata = dav_xml_get_cdata(lfchild, pool, 0);
+              if ((derr = dav_svn__test_canonical(cdata, pool)))
+                return derr;
+                  
+              /* Create an absolute fs-path */
+              lockpath = svn_path_join(path_prefix, cdata, pool);
+              if (lockpath && locktoken)
                 {
-                  if (lfchild->first_cdata.first)
-                    {
-                      locktoken = 
-                        apr_pstrdup(pool,
-                                    lfchild->first_cdata.first->text);
-                      
-                      if (lockpath && locktoken)
-                        {
-                          apr_hash_set(hash, lockpath,
-                                       APR_HASH_KEY_STRING, locktoken);
-                          lockpath = NULL;
-                          locktoken = NULL;
-                        }
-                    }
+                  apr_hash_set(hash, lockpath, APR_HASH_KEY_STRING, locktoken);
+                  lockpath = NULL;
+                  locktoken = NULL;
+                }
+            }
+          else if (strcmp(lfchild->name, "lock-token") == 0)
+            {
+              locktoken = dav_xml_get_cdata(lfchild, pool, 1);
+              if (lockpath && *locktoken)
+                {
+                  apr_hash_set(hash, lockpath, APR_HASH_KEY_STRING, locktoken);
+                  lockpath = NULL;
+                  locktoken = NULL;
                 }
             }
         }
