@@ -44,7 +44,7 @@ Candidate changes:
       threaded, and adding svn_fs_initialize calls to clients runs
       afoul of --enable-dso.
     Votes:
-      +1: ghudson
+      +1: ghudson, lundblad
 
   * r14183
     Fix crash in the javahl bindings from use of the Notify2 interface.
