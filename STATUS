@@ -51,7 +51,7 @@ Candidate changes:
     Justification:
       Small javahl binding-only fix to prevent crash of Java VM.
     Votes:
-      +1: pmayweg
+      +1: pmayweg, dlr
 
   * r14205, 14208
     Add lock/unlock support to mailer.py.
