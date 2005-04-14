@@ -73,22 +73,6 @@ Candidate changes:
     
 Approved changes (further review is welcome, but not required):
 
-  * r14169
-    Justification:
-      Trivial bug making locking less usaful over ra_svn.
-    Votes:
-
-
-  * r14081, r14098
-    Fix Issue 1361: 'svn cat file -r BASE' contacts repository
-    Justification:
-      Fix for a bug that's existed for nearly 2 years.
-    Notes:
-      r14098 fixes a segfault case for cat'ing a nonexistant file, as well
-      as adding a new test component for cat. -jszakmeister
-    Votes:
-      +1: jszakmeister, dionisos, cmpilato
-
   * r14118, r14137
     De-doxygenate svn_test.h.
     Justification:
