@@ -140,6 +140,7 @@ module Svn
       def initialize(root, base_root)
         @root = root
         @base_root = base_root
+        @in_copied_dir = []
         @copied_files = []
         @copied_dirs = []
         @added_files = []
@@ -165,10 +166,14 @@ module Svn
       def add_directory(path, parent_baton,
                         copyfrom_path, copyfrom_revision, dir_pool)
         copyfrom_rev, copyfrom_path = @root.copied_from(path)
-        if Util.copy?(copyfrom_path, copyfrom_rev)
+        if in_copied_dir?
+          @in_copied_dir.push(true)
+        elsif Util.copy?(copyfrom_path, copyfrom_rev)
           @copied_dirs << ["#{path}/", "#{copyfrom_path.sub(/^\//, '')}/", copyfrom_rev]
+          @in_copied_dir.push(true)
         else
           @added_dirs << "#{path}/"
+          @in_copied_dir.push(false)
         end
         [false, path]
       end
@@ -182,12 +187,21 @@ module Svn
           @updated_dirs << "#{dir_baton[1]}/"
           dir_baton[0] = false
         end
+        dir_baton
       end
       
+      def close_directory(dir_baton)
+        unless dir_baton[0]
+          @in_copied_dir.pop
+        end
+      end
+
       def add_file(path, parent_baton,
                    copyfrom_path, copyfrom_revision, file_pool)
         copyfrom_rev, copyfrom_path = @root.copied_from(path)
-        if Util.copy?(copyfrom_path, copyfrom_rev)
+        if in_copied_dir?
+          # do nothing
+        elsif Util.copy?(copyfrom_path, copyfrom_rev)
           @copied_files << [path, copyfrom_path.sub(/^\//, ''), copyfrom_rev]
         else
           @added_files << path
@@ -225,6 +239,11 @@ module Svn
         @deleted_dirs.sort!
         @updated_files.sort!
         @updated_dirs.sort!
+      end
+
+      private
+      def in_copied_dir?
+        @in_copied_dir.last
       end
     end
     

@@ -197,6 +197,81 @@ class SvnDeltaTest < Test::Unit::TestCase
     assert_equal(["", dir_svn_path].collect{|path| "#{path}/"}.sort,
                  editor.changed_dirs)
   end
+
+  def test_deep_copy
+    dir1 = "dir1"
+    dir2 = "dir2"
+    dir1_path = File.join(@wc_path, dir1)
+    dir2_path = File.join(dir1_path, dir2)
+    dir1_svn_path = dir1
+    dir2_svn_path = [dir1, dir2].join("/")
+
+    log = "added 2 dirs\nanded 3 files"
+    ctx = make_context(log)
+
+    ctx.mkdir([dir1_path, dir2_path])
+    
+    file1 = "file1.txt"
+    file2 = "file2.txt"
+    file3 = "file3.txt"
+    file1_path = File.join(@wc_path, file1)
+    file2_path = File.join(dir1_path, file2)
+    file3_path = File.join(dir2_path, file3)
+    file1_svn_path = file1
+    file2_svn_path = [dir1_svn_path, file2].join("/")
+    file3_svn_path = [dir2_svn_path, file3].join("/")
+    FileUtils.touch(file1_path)
+    FileUtils.touch(file2_path)
+    FileUtils.touch(file3_path)
+    ctx.add(file1_path)
+    ctx.add(file2_path)
+    ctx.add(file3_path)
+
+    commit_info = ctx.commit(@wc_path)
+    first_rev = commit_info.revision
+
+    editor = traverse(Svn::Delta::ChangedEditor, commit_info.revision, true)
+    assert_equal([
+                   file1_svn_path, file2_svn_path,
+                   file3_svn_path,
+                 ].sort,
+                 editor.added_files)
+    assert_equal([].sort, editor.updated_files)
+    assert_equal([].sort, editor.deleted_files)
+    assert_equal([].sort, editor.updated_dirs)
+    assert_equal([].sort, editor.deleted_dirs)
+    assert_equal([
+                   "#{dir1_svn_path}/",
+                   "#{dir2_svn_path}/",
+                 ].sort,
+                 editor.added_dirs)
+
+    
+    log = "copied top dir"
+    ctx = make_context(log)
+
+    dir3 = "dir3"
+    dir3_path = File.join(@wc_path, dir3)
+    dir3_svn_path = dir3
+    
+    ctx.cp(dir1_path, dir3_path)
+
+    commit_info = ctx.commit(@wc_path)
+    second_rev = commit_info.revision
+    
+    editor = traverse(Svn::Delta::ChangedEditor, commit_info.revision, true)
+    assert_equal([].sort, editor.updated_files)
+    assert_equal([].sort, editor.deleted_files)
+    assert_equal([].sort, editor.added_files)
+    assert_equal([].sort, editor.updated_dirs)
+    assert_equal([].sort, editor.copied_files)
+    assert_equal([
+                   ["#{dir3_svn_path}/", "#{dir1_svn_path}/", first_rev]
+                 ].sort_by{|x| x[0]},
+                 editor.copied_dirs)
+    assert_equal([].sort, editor.deleted_dirs)
+    assert_equal([].sort, editor.added_dirs)
+  end
   
   private
   def traverse(editor_class, rev, pass_root=false)
