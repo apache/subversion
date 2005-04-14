@@ -23,12 +23,15 @@
 #include <httpd.h>
 #include <http_config.h>
 #include <http_request.h>
+#include <http_log.h>
 #include <mod_dav.h>
 #include <ap_provider.h>
 
 #include <apr_strings.h>
 
 #include "svn_version.h"
+#include "svn_fs.h"
+#include "svn_utf.h"
 
 #include "dav_svn.h"
 
@@ -73,7 +76,21 @@ extern module AP_MODULE_DECLARE_DATA dav_svn_module;
 static int dav_svn_init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp,
                         server_rec *s)
 {
+    svn_error_t *serr;
     ap_add_version_component(p, "SVN/" SVN_VER_NUMBER);
+
+    serr = svn_fs_initialize(p);
+    if (serr)
+      {
+        ap_log_perror(APLOG_MARK, APLOG_ERR, serr->apr_err, p,
+                      "dav_svn_init: error calling svn_fs_initialize: '%s'",
+                      serr->message ? serr->message : "(no more info)");
+        return HTTP_INTERNAL_SERVER_ERROR;
+      }
+
+    /* This returns void, so we can't check for error. */
+    svn_utf_initialize(p);
+
     return OK;
 }
 
