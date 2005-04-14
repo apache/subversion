@@ -31,9 +31,7 @@ Candidate changes:
     Justification:
       Yet Another Path Escaping Bug
     Votes:
-      +1: lundblad
-    Votes without r14149:
-      +1: cmpilato
+      +1: lundblad, cmpilato
 
   * r14063, r14066, r14068, r14079, r14121, r14124
     Branch: 1.2.x-r14063
