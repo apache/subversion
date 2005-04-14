@@ -183,7 +183,8 @@ class MailedOutput(OutputBase):
     self.reply_to = self.cfg.get('reply_to', group, params)
 
   def mail_headers(self, group, params):
-    subject = self.make_subject(group, params)
+    from email.Header import Header
+    subject = Header(self.make_subject(group, params), 'utf-8').encode()
     hdrs = 'From: %s\n'    \
            'To: %s\n'      \
            'Subject: %s\n' \
