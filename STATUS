@@ -25,12 +25,13 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r14041
+  * r14041, r14186, r14194
     Fix issue #2268 (svn update of xml-unsafe dir (from within) http error)
+    and similar problems regarding paths with leading or trailing spaces.
     Justification:
       Yet Another Path Escaping Bug
     Votes:
-      +1: cmpilato, kfogel
+      +1: cmpilato
 
   * r14063, r14066, r14068, r14079, r14121, r14124
     Branch: 1.2.x-r14063
