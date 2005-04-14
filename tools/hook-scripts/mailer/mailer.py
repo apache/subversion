@@ -11,6 +11,8 @@
 #        mailer.py propchange  REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
 #        mailer.py propchange2 REPOS REVISION AUTHOR PROPNAME ACTION \
 #                              [CONFIG-FILE]
+#        mailer.py lock        REPOS AUTHOR [CONFIG-FILE]
+#        mailer.py unlock      REPOS AUTHOR [CONFIG-FILE]
 #
 #   Using CONFIG-FILE, deliver an email describing the changes between
 #   REV and REV-1 for the repository REPOS.
@@ -55,6 +57,12 @@ def main(pool, cmd, config_fname, repos_dir, rev,
     repos.author = author
     cfg = Config(config_fname, repos, { 'author' : author })
     messenger = PropChange(pool, cfg, repos, author, propname, action)
+  elif cmd == 'lock':
+    cfg = Config(config_fname, repos, { 'author' : author })
+    messenger = Lock(pool, cfg, repos, author, 1)
+  elif cmd == 'unlock':
+    cfg = Config(config_fname, repos, { 'author' : author })
+    messenger = Lock(pool, cfg, repos, author, 0)
   else:
     raise UnknownSubcommand(cmd)
 
@@ -313,31 +321,7 @@ class Commit(Messenger):
 
     dirlist = dirs.keys()
 
-    # figure out the common portion of all the dirs. note that there is
-    # no "common" if only a single dir was changed, or the root was changed.
-    if len(dirs) == 1 or dirs.has_key(''):
-      commondir = ''
-    else:
-      common = string.split(dirlist.pop(), '/')
-      for d in dirlist:
-        parts = string.split(d, '/')
-        for i in range(len(common)):
-          if i == len(parts) or common[i] != parts[i]:
-            del common[i:]
-            break
-      commondir = string.join(common, '/')
-      if commondir:
-        # strip the common portion from each directory
-        l = len(commondir) + 1
-        dirlist = [ ]
-        for d in dirs.keys():
-          if d == commondir:
-            dirlist.append('.')
-          else:
-            dirlist.append(d[l:])
-      else:
-        # nothing in common, so reset the list of directories
-        dirlist = dirs.keys()
+    commondir, dirlist = get_commondir(dirlist)
 
     # compose the basic subject line. later, we can prefix it.
     dirlist.sort()
@@ -437,6 +421,104 @@ class PropChange(Messenger):
           'from' : tempfile1.name,
           'to' : tempfile2.name,
           }))
+      self.output.finish()
+
+
+def get_commondir(dirlist):
+  """Figure out the common portion/parent (commondir) of all the paths
+  in DIRLIST and return a tuple consisting of commondir, dirlist.  If
+  a commondir is found, the dirlist returned is rooted in that
+  commondir.  If no commondir is found, dirlist is returned unchanged,
+  and commondir is the empty string."""
+  if len(dirlist) == 1 or '/' in dirlist:
+    commondir = ''
+    newdirs = dirlist
+  else:
+    common = string.split(dirlist.pop(), '/')
+    for d in dirlist:
+      parts = string.split(d, '/')
+      for i in range(len(common)):
+        if i == len(parts) or common[i] != parts[i]:
+          del common[i:]
+          break
+    commondir = string.join(common, '/')
+    if commondir:
+      # strip the common portion from each directory
+      l = len(commondir) + 1
+      newdirs = [ ]
+      for d in dirlist:
+        if d == commondir:
+          newdirs.append('.')
+        else:
+          newdirs.append(d[l:])
+    else:
+      # nothing in common, so reset the list of directories
+      newdirs = dirlist
+
+  return commondir, newdirs
+
+
+class Lock(Messenger):
+  def __init__(self, pool, cfg, repos, author, do_lock):
+    self.pool = pool
+    self.repos = repos
+    self.author = author
+    self.do_lock = do_lock
+
+    Messenger.__init__(self, pool, cfg, repos,
+                       (do_lock and 'lock_subject_prefix'
+                        or 'unlock_subject_prefix'))
+
+    # read all the locked paths from STDIN and strip off the trailing newlines
+    self.dirlist = map(lambda x: x.rstrip(), sys.stdin.readlines())
+
+    # collect the set of groups and the unique sets of params for the options
+    self.groups = { }
+    for path in self.dirlist:
+      for (group, params) in self.cfg.which_groups(path):
+        # turn the params into a hashable object and stash it away
+        param_list = params.items()
+        param_list.sort()
+        # collect the set of paths belonging to this group
+        if self.groups.has_key( (group, tuple(param_list)) ):
+          old_param, paths = self.groups[group, tuple(param_list)]
+        else:
+          paths = { }
+        paths[path] = None
+        self.groups[group, tuple(param_list)] = (params, paths)
+
+    commondir, dirlist = get_commondir(self.dirlist)
+
+    # compose the basic subject line. later, we can prefix it.
+    dirlist.sort()
+    dirlist = string.join(dirlist)
+    if commondir:
+      self.output.subject = '%s: %s' % (commondir, dirlist)
+    else:
+      self.output.subject = '%s' % (dirlist)
+
+    # The comment is the same for all paths, so we can just pull the
+    # comment for the first path in the dirlist and cache it.
+    path = dirlist[0]
+
+    self.lock = svn.fs.svn_fs_get_lock(self.repos.fs_ptr,
+                                       path, self.pool)
+
+  def generate(self):
+    for (group, param_tuple), (params, paths) in self.groups.items():
+      self.output.start(group, params)
+
+      self.output.write('Author: %s\n'
+                        '%s paths:\n' %
+                        (self.author, self.do_lock and 'Locked' or 'Unlocked'))
+
+      self.dirlist.sort()
+      for dir in self.dirlist:
+        self.output.write(' %s\n' % dir)
+
+      if self.do_lock:
+        self.output.write('Comment:\n%s\n' % self.lock.comment)
+
       self.output.finish()
 
 
@@ -1054,6 +1136,8 @@ if __name__ == '__main__':
        %s propchange  REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
        %s propchange2 REPOS REVISION AUTHOR PROPNAME ACTION
        %s             [CONFIG-FILE]
+       %s lock        REPOS AUTHOR [CONFIG-FILE]
+       %s unlock      REPOS AUTHOR [CONFIG-FILE]
 
 If no CONFIG-FILE is provided, the script will first search for a mailer.conf
 file in REPOS/conf/.  Failing that, it will search the directory in which
@@ -1063,7 +1147,8 @@ ACTION was added as a fifth argument to the post-revprop-change hook
 in Subversion 1.2.0.  Its value is one of 'A', 'M' or 'D' to indicate
 if the property was added, modified or deleted, respectively.
 
-""" % (sys.argv[0], sys.argv[0], sys.argv[0], ' ' * len(sys.argv[0])))
+""" % (sys.argv[0], sys.argv[0], sys.argv[0], ' ' * len(sys.argv[0]),
+       sys.argv[0], sys.argv[0]))
     sys.exit(1)
 
   if len(sys.argv) < 4:
@@ -1074,7 +1159,8 @@ if the property was added, modified or deleted, respectively.
   try:
     revision = int(sys.argv[3])
   except ValueError:
-    usage()
+    if not (cmd == 'lock' or cmd == 'unlock'):
+      usage()
   config_fname = None
 
   # Used for propchange only
@@ -1103,6 +1189,10 @@ if the property was added, modified or deleted, respectively.
     action = sys.argv[6]
     if len(sys.argv) > 7:
       config_fname = sys.argv[7]
+  elif cmd == 'lock' or cmd == 'unlock':
+    author = sys.argv[3]
+    config_fname = sys.argv[4]
+    revision = 0 # Just to get a repos setup
   else:
     usage()
 
