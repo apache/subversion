@@ -33,19 +33,18 @@ Candidate changes:
     Votes:
       +1: lundblad, cmpilato
 
-  * r14063, r14066, r14068, r14079, r14121, r14124
+  * r14063, r14066, r14067 (partial), r14068, r14079, r14121, r14124, r14156
     Branch: 1.2.x-r14063
     Fix FSFS locking problem.
     Justification:
       Issue #2265 can cause data loss.
     Notes:
-      The backport branch removes the svn_fs_initialize() API, since
-      that was contributing some disruption on trunk related to
-      --enable-dso.  For practical purposes, the best-effort
-      initialization of the common pool and mutex should be fine.
+      Only the svnserve.c part of r14067 (add calls to
+      svn_fs_initialize) is merged, since only that program can be
+      threaded, and adding svn_fs_initialize calls to clients runs
+      afoul of --enable-dso.
     Votes:
       +1: ghudson
-      +0: lundblad
 
   * r14177
     Add svn_ra_initialize() API.
