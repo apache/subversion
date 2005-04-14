@@ -81,6 +81,12 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
+  * r14183
+    Fix crash in the javahl binding, when using the Notify2 interface.
+    Justification:
+      Small javahl binding only fix to prevent crash of javavm.
+    Votes:
+      +1: pmayweg
     
 Approved changes (further review is welcome, but not required):
 
