@@ -1609,7 +1609,8 @@ static const svn_ra__vtable_t ra_svn_vtable = {
 
 svn_error_t *
 svn_ra_svn__init (const svn_version_t *loader_version,
-                    const svn_ra__vtable_t **vtable)
+                  const svn_ra__vtable_t **vtable,
+                  apr_pool_t *pool)
 {
   static const svn_version_checklist_t checklist[] =
     {

@@ -843,6 +843,11 @@ main (int argc, const char * const *argv)
   if (err)
     return error_exit (err, stderr, FALSE, pool);
 
+  /* Initialize the RA library. */
+  err = svn_ra_initialize (pool);
+  if (err)
+    return error_exit (err, stderr, FALSE, pool);
+
   /* Begin processing arguments. */
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
