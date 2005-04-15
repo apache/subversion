@@ -36,6 +36,7 @@ import smtplib
 import re
 import tempfile
 import types
+import urllib
 
 import svn.fs
 import svn.delta
@@ -558,6 +559,14 @@ class DiffSelections:
         self.add = False
 
 
+class DiffURLSelections:
+  def __init__(self, cfg, group):
+    self.add = cfg.get('diff_add_url', group, None)
+    self.copy = cfg.get('diff_copy_url', group, None)
+    self.delete = cfg.get('diff_delete_url', group, None)
+    self.modify = cfg.get('diff_modify_url', group, None)
+
+
 def generate_content(renderer, cfg, repos, changelist, group, params, paths,
                      pool):
 
@@ -566,6 +575,7 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
   date = time.ctime(svn.core.secs_from_timestr(svndate, pool))
 
   diffsels = DiffSelections(cfg, group, params)
+  diffurls = DiffURLSelections(cfg, group)
 
   show_nonmatching_paths = cfg.get('show_nonmatching_paths', group, params) \
       or 'yes'
@@ -579,7 +589,7 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
 
   if len(paths) != len(changelist) and show_nonmatching_paths == 'yes':
     other_diffs = DiffGenerator(changelist, paths, False, cfg, repos, date,
-                                group, params, diffsels, pool),
+                                group, params, diffsels, diffurls, pool),
   else:
     other_diffs = [ ]
 
@@ -595,7 +605,7 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
     other_removed_data=other_removed_data,
     other_modified_data=other_modified_data,
     diffs=DiffGenerator(changelist, paths, True, cfg, repos, date, group,
-                        params, diffsels, pool),
+                        params, diffsels, diffurls, pool),
     other_diffs=other_diffs,
     )
   renderer.render(data)
@@ -630,7 +640,7 @@ class DiffGenerator:
   "This is a generator-like object returning DiffContent objects."
 
   def __init__(self, changelist, paths, in_paths, cfg, repos, date, group,
-               params, diffsels, pool):
+               params, diffsels, diffurls, pool):
     self.changelist = changelist
     self.paths = paths
     self.in_paths = in_paths
@@ -640,6 +650,7 @@ class DiffGenerator:
     self.group = group
     self.params = params
     self.diffsels = diffsels
+    self.diffurls = diffurls
     self.pool = pool
 
     self.idx = 0
@@ -648,6 +659,17 @@ class DiffGenerator:
     # we always have some items
     return True
 
+  def _gen_url(self, urlstr, repos_rev, change):
+    if not len(urlstr):
+      return None
+    args = {
+      'path' : change.path and urllib.quote(change.path) or None,
+      'base_path' : change.base_path and urllib.quote(change.base_path) or None,
+      'rev' : repos_rev,
+      'base_rev' : change.base_rev,
+      }
+    return urlstr % args
+    
   def __getitem__(self, idx):
     while 1:
       if self.idx == len(self.changelist):
@@ -656,6 +678,16 @@ class DiffGenerator:
       path, change = self.changelist[self.idx]
       self.idx = self.idx + 1
 
+      diff = diff_url = None
+      kind = None
+      label1 = None
+      label2 = None
+      src_fname = None
+      dst_fname = None
+      binary = None
+      singular = None
+      content = None
+      
       # just skip directories. they have no diffs.
       if change.item_kind == svn.core.svn_node_dir:
         continue
@@ -667,24 +699,76 @@ class DiffGenerator:
       # figure out if/how to generate a diff
 
       if not change.path:
-        # it was deleted. should we show deletion diffs?
-        if not self.diffsels.delete:
-          continue
+        # it was delete.
+        kind = 'D'
 
-        kind = 'R'
-        diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
-                               change.base_path, None, None, self.pool)
+        # show the diff url?
+        if self.diffurls.delete:
+          diff_url = self._gen_url(self.diffurls.delete,
+                                   self.repos.rev, change)
 
-        label1 = '%s\t%s' % (change.base_path, self.date)
-        label2 = '(empty file)'
-        singular = True
+        # show the diff?
+        if self.diffsels.delete:
+          diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
+                                 change.base_path, None, None, self.pool)
+
+          label1 = '%s\t%s' % (change.base_path, self.date)
+          label2 = '(empty file)'
+          singular = True
+          
       elif change.added:
         if change.base_path and (change.base_rev != -1):
-          # this file was copied. any diff to show? should we?
-          if not change.text_changed or not self.diffsels.copy:
-            continue
-
+          # this file was copied.
           kind = 'C'
+
+          # any diff of interest?
+          if change.text_changed:
+
+            # show the diff url?
+            if self.diffurls.copy:
+              diff_url = self._gen_url(self.diffurls.copy,
+                                       self.repos.rev, change)
+
+            # show the diff?
+            if self.diffsels.copy:
+              diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
+                                     change.base_path,
+                                     self.repos.root_this, change.path,
+                                     self.pool)
+              label1 = change.base_path + '\t(original)'
+              label2 = '%s\t%s' % (change.path, self.date)
+              singular = False
+        else:
+          # the file was added.
+          kind = 'A'
+
+          # show the diff url?
+          if self.diffurls.add:
+            diff_url = self._gen_url(self.diffurls.add,
+                                     self.repos.rev, change)
+
+          # show the diff?
+          if self.diffsels.add:
+            diff = svn.fs.FileDiff(None, None, self.repos.root_this,
+                                   change.path, self.pool)
+            label1 = '(empty file)'
+            label2 = '%s\t%s' % (change.path, self.date)
+            singular = True
+
+      elif not change.text_changed:
+        # the text didn't change, so nothing to show.
+        continue
+      else:
+        # a simple modification.
+        kind = 'M'
+
+        # show the diff url?
+        if self.diffurls.modify:
+          diff_url = self._gen_url(self.diffurls.modify,
+                                   self.repos.rev, change)
+
+        # show the diff?
+        if self.diffsels.modify:
           diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
                                  change.base_path,
                                  self.repos.root_this, change.path,
@@ -692,53 +776,28 @@ class DiffGenerator:
           label1 = change.base_path + '\t(original)'
           label2 = '%s\t%s' % (change.path, self.date)
           singular = False
+
+      if diff:
+        binary = diff.either_binary()
+        if binary:
+          content = src_fname = dst_fname = None
         else:
-          # the file was added. should we show it?
-          if not self.diffsels.add:
-            continue
-
-          kind = 'A'
-          diff = svn.fs.FileDiff(None, None, self.repos.root_this,
-                                 change.path, self.pool)
-          label1 = '(empty file)'
-          label2 = '%s\t%s' % (change.path, self.date)
-          singular = True
-
-      elif not change.text_changed:
-        # the text didn't change, so nothing to show.
-        continue
-      else:
-        # a simple modification. show the diff?
-        if not self.diffsels.modify:
-          continue
-
-        kind = 'M'
-        diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
-                               change.base_path,
-                               self.repos.root_this, change.path,
-                               self.pool)
-        label1 = change.base_path + '\t(original)'
-        label2 = '%s\t%s' % (change.path, self.date)
-        singular = False
-
-      binary = diff.either_binary()
-      if binary:
-        content = src_fname = dst_fname = None
-      else:
-        src_fname, dst_fname = diff.get_files()
-        content = DiffContent(self.cfg.get_diff_cmd(self.group, {
-          'label_from' : label1,
-          'label_to' : label2,
-          'from' : src_fname,
-          'to' : dst_fname,
-          }))
+          src_fname, dst_fname = diff.get_files()
+          content = DiffContent(self.cfg.get_diff_cmd(self.group, {
+            'label_from' : label1,
+            'label_to' : label2,
+            'from' : src_fname,
+            'to' : dst_fname,
+            }))
 
       # return a data item for this diff
       return _data(
-        kind=kind,
         path=change.path,
         base_path=change.base_path,
         base_rev=change.base_rev,
+        diff=diff,
+        diff_url=diff_url,
+        kind=kind,
         label_from=label1,
         label_to=label2,
         from_fname=src_fname,
@@ -746,7 +805,6 @@ class DiffGenerator:
         binary=binary,
         singular=singular,
         content=content,
-        diff=diff,
         )
 
 
@@ -870,17 +928,30 @@ class TextCommitRenderer:
     w = self.output.write
 
     for diff in diffs:
+      if not diff.diff and not diff.diff_url:
+        continue
       if diff.kind == 'D':
         w('\nDeleted: %s\n' % diff.base_path)
+        if diff.diff_url:
+          w('Url: %s\n' % diff.diff_url)
       elif diff.kind == 'C':
         w('\nCopied: %s (from r%d, %s)\n'
           % (diff.path, diff.base_rev, diff.base_path))
+        if diff.diff_url:
+          w('Url: %s\n' % diff.diff_url)
       elif diff.kind == 'A':
         w('\nAdded: %s\n' % diff.path)
+        if diff.diff_url:
+          w('Url: %s\n' % diff.diff_url)
       else:
         # kind == 'M'
         w('\nModified: %s\n' % diff.path)
+        if diff.diff_url:
+          w('Url: %s\n' % diff.diff_url)
 
+      if not diff.diff:
+        continue
+      
       w(SEPARATOR + '\n')
 
       if diff.binary:
