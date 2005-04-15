@@ -15,22 +15,19 @@ class SvnDeltaTest < Test::Unit::TestCase
   
   def test_changed
     dir = "changed_dir"
-    tmp_dir1 = "changed_tmp_dir1"
-    tmp_dir2 = "changed_tmp_dir2"
-    tmp_dir3 = "changed_tmp_dir3"
+    dir1 = "changed_dir1"
+    dir2 = "changed_dir2"
     dir_path = File.join(@wc_path, dir)
-    tmp_dir1_path = File.join(@wc_path, tmp_dir1)
-    tmp_dir2_path = File.join(@wc_path, tmp_dir2)
-    tmp_dir3_path = File.join(dir_path, tmp_dir3)
+    dir1_path = File.join(@wc_path, dir1)
+    dir2_path = File.join(@wc_path, dir2)
     dir_svn_path = dir
-    tmp_dir1_svn_path = tmp_dir1
-    tmp_dir2_svn_path = tmp_dir2
-    tmp_dir3_svn_path = [dir_svn_path, tmp_dir3].join("/")
+    dir1_svn_path = dir1
+    dir2_svn_path = dir2
 
     log = "added 3 dirs\nanded 5 files"
     ctx = make_context(log)
 
-    ctx.mkdir([dir_path, tmp_dir1_path, tmp_dir2_path])
+    ctx.mkdir([dir_path, dir1_path, dir2_path])
 
     file1 = "changed1.txt"
     file2 = "changed2.txt"
@@ -74,8 +71,8 @@ class SvnDeltaTest < Test::Unit::TestCase
     assert_equal([].sort, editor.deleted_dirs)
     assert_equal([
                    "#{dir_svn_path}/",
-                   "#{tmp_dir1_svn_path}/",
-                   "#{tmp_dir2_svn_path}/"
+                   "#{dir1_svn_path}/",
+                   "#{dir2_svn_path}/"
                  ].sort,
                  editor.added_dirs)
 
@@ -83,18 +80,28 @@ class SvnDeltaTest < Test::Unit::TestCase
     log = "deleted 2 dirs\nchanged 3 files\ndeleted 2 files\nadded 3 files"
     ctx = make_context(log)
     
+    dir3 = "changed_dir3"
+    dir4 = "changed_dir4"
+    dir3_path = File.join(dir_path, dir3)
+    dir4_path = File.join(@wc_path, dir4)
+    dir3_svn_path = [dir_svn_path, dir3].join("/")
+    dir4_svn_path = dir4
+    
     file6 = "changed6.txt"
     file7 = "changed7.txt"
     file8 = "changed8.txt"
     file9 = "changed9.txt"
+    file10 = "changed10.txt"
     file6_path = File.join(dir_path, file6)
     file7_path = File.join(@wc_path, file7)
     file8_path = File.join(dir_path, file8)
     file9_path = File.join(dir_path, file9)
+    file10_path = File.join(dir_path, file10)
     file6_svn_path = [dir_svn_path, file6].join("/")
     file7_svn_path = file7
     file8_svn_path = [dir_svn_path, file8].join("/")
     file9_svn_path = [dir_svn_path, file9].join("/")
+    file10_svn_path = [dir_svn_path, file10].join("/")
     
     File.open(file1_path, "w") {|f| f.puts "changed"}
     File.open(file2_path, "w") {|f| f.puts "changed"}
@@ -107,8 +114,10 @@ class SvnDeltaTest < Test::Unit::TestCase
     ctx.add(file7_path)
     ctx.add(file8_path)
     ctx.cp(file1_path, file9_path)
-    ctx.rm(tmp_dir1_path)
-    ctx.mv(tmp_dir2_path, tmp_dir3_path)
+    ctx.cp(file2_path, file10_path)
+    ctx.rm(dir1_path)
+    ctx.mv(dir2_path, dir3_path)
+    ctx.cp(dir1_path, dir4_path)
 
     commit_info = ctx.commit(@wc_path)
     second_rev = commit_info.revision
@@ -122,14 +131,16 @@ class SvnDeltaTest < Test::Unit::TestCase
                  editor.added_files)
     assert_equal([].sort, editor.updated_dirs)
     assert_equal([
-                   [file9_svn_path, file1_svn_path, first_rev]
+                   [file9_svn_path, file1_svn_path, first_rev],
+                   [file10_svn_path, file2_svn_path, first_rev],
                  ].sort_by{|x| x[0]},
                  editor.copied_files)
     assert_equal([
-                   ["#{tmp_dir3_svn_path}/", "#{tmp_dir2_svn_path}/", first_rev]
+                   ["#{dir3_svn_path}/", "#{dir2_svn_path}/", first_rev],
+                   ["#{dir4_svn_path}/", "#{dir1_svn_path}/", first_rev],
                  ].sort_by{|x| x[0]},
                  editor.copied_dirs)
-    assert_equal(["#{tmp_dir1_svn_path}/", "#{tmp_dir2_svn_path}/"].sort,
+    assert_equal(["#{dir1_svn_path}/", "#{dir2_svn_path}/"].sort,
                  editor.deleted_dirs)
     assert_equal([].sort, editor.added_dirs)
   end
