@@ -46,13 +46,6 @@ Candidate changes:
     Votes:
       +1: ghudson, lundblad
 
-  * r14183
-    Fix crash in the javahl bindings from use of the Notify2 interface.
-    Justification:
-      Small javahl binding-only fix to prevent crash of Java VM.
-    Votes:
-      +1: pmayweg, dlr
-
   * r14205, 14208
     Add lock/unlock support to mailer.py.
     Justification:
