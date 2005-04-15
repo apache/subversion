@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -596,11 +596,11 @@ public class SVNTests extends TestCase
                 throws Exception
         {
             // build a clean working directory
-            String url = makeReposUrl(repos);
+            String uri = makeReposUrl(repos);
             workingCopy = new File(workingCopies, testName);
             removeDirectoryWithContent(workingCopy);
             // checkout the repository
-            client.checkout(url, workingCopy.getAbsolutePath(), null, true);
+            client.checkout(uri, workingCopy.getAbsolutePath(), null, true);
             // sanity check the working with its expected status
             checkStatus();
             return workingCopy;
