@@ -2844,6 +2844,7 @@ svn_io_file_set_file_owner_group_mode (const char *path,
 
   if (owner || group)
     {
+      uid=gid=-1;
       if (owner && owner->data)
         if (svn_io_file_owner_id(&uid, (svn_string_t*)owner, pool) != SVN_NO_ERROR)
           uid=-1;

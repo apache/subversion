@@ -698,8 +698,34 @@ change_dir_prop (void *dir_baton,
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
 
-  if (value && (strcmp (name, SVN_PROP_EXTERNALS) == 0))
-    add_externals (eb->externals, db->path, value);
+  if (value)
+    {
+      if (strcmp (name, SVN_PROP_EXTERNALS) == 0)
+        add_externals (eb->externals, db->path, value);
+
+      /* TODO: is using pool correct? do we need per-directory pools? */
+      /* save owner, group and unix-mode */
+      /* saving the values for later use is not good, as there's 
+       * no close_dir */
+      else if (strcmp (name, SVN_PROP_OWNER) == 0)
+        SVN_ERR (svn_io_file_set_file_owner_group_mode (db->path,
+                                                        value,
+                                                        NULL,
+                                                        NULL,
+                                                        pool) );
+      else if (strcmp (name, SVN_PROP_GROUP) == 0)
+        SVN_ERR (svn_io_file_set_file_owner_group_mode (db->path,
+                                                        NULL,
+                                                        value,
+                                                        NULL,
+                                                        pool) );
+      else if (strcmp (name, SVN_PROP_UNIX_MODE) == 0)
+        SVN_ERR (svn_io_file_set_file_owner_group_mode (db->path,
+                                                        NULL,
+                                                        NULL,
+                                                        value,
+                                                        pool) );
+    }
 
   return SVN_NO_ERROR;
 }

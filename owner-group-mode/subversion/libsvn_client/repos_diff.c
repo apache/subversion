@@ -84,6 +84,10 @@ struct edit_baton {
 /* Directory level baton.
  */
 struct dir_baton {
+  /* a cache for the file's meta-information.
+   * see populate_finfo() !*/
+  apr_finfo_t *file_info;
+
   /* Gets set if the directory is added rather than replaced/unchanged. */
   svn_boolean_t added;
 
@@ -114,6 +118,10 @@ struct dir_baton {
 /* File level baton.
  */
 struct file_baton {
+  /* a cache for the file's meta-information
+   * see populate_finfo() !*/
+  apr_finfo_t *file_info;
+
   /* Gets set if the file is added rather than replaced. */
   svn_boolean_t added;
 
@@ -146,9 +154,6 @@ struct file_baton {
 
   /* A cache of any property changes (svn_prop_t) received for this file. */
   apr_array_header_t *propchanges;
-
-  /* a cache for the file's meta-information */
-  apr_finfo_t *file_info;
 
   /* The pool passed in by add_file or open_file.
      Also, the pool this file_baton is allocated in. */
@@ -898,11 +903,17 @@ close_directory (void *dir_baton,
   return SVN_NO_ERROR;
 }
 
+/* populate_finfo accepts either a file_baton or a dir_baton.
+ * so the to-be-filled field ->file_info has to be on the same
+ * offset in both structs.
+ * We achieve that be having it the first member. */
 static svn_error_t *
-populate_finfo (struct file_baton *fb,
+populate_finfo ( void *baton,
                   const char *name,
                   apr_pool_t *pool)
 {
+  struct file_baton *fb=baton;
+
   if (!fb->file_info)
     {
       fb->file_info=apr_palloc(pool, sizeof(*fb->file_info));
@@ -971,7 +982,27 @@ change_dir_prop (void *dir_baton,
 
   propchange = apr_array_push (db->propchanges);
   propchange->name = apr_pstrdup (db->pool, name);
-  propchange->value = value ? svn_string_dup (value, db->pool) : NULL;
+
+  /* use the current values for meta-data-properties */
+  if (strcmp (name, SVN_PROP_OWNER) == 0)
+    {
+      SVN_ERR (populate_finfo(db, name, pool));
+      propchange->value=svn_io_file_owner_string( db->file_info->user, db->pool);
+    }
+  else if (strcmp (name, SVN_PROP_GROUP) == 0)
+    {
+      SVN_ERR (populate_finfo(db, name, pool));
+      propchange->value=svn_io_file_group_string( db->file_info->group, db->pool);
+    }
+  else if (strcmp (name, SVN_PROP_UNIX_MODE) == 0)
+    {
+      SVN_ERR (populate_finfo(db, name, pool));
+      propchange->value=svn_io_file_mode_string( db->file_info->protection, pool);
+    }
+  else
+    {
+      propchange->value = value ? svn_string_dup (value, db->pool) : NULL;
+    }
 
   return SVN_NO_ERROR;
 }

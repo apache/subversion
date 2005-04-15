@@ -1,8 +1,9 @@
 About this directory.
 
 
-This branch has some subdirectories.
-Two are copies of /trunk:13253.
+This subdirectory has two branches.
+They are copies of /trunk:13253 and are merged from trunk from time 
+to time.
 - text-time
   This branch is dedicated for the versioning of the text-time
   attribute for files. See below for details.

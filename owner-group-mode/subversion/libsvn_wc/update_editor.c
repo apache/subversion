@@ -136,6 +136,9 @@ struct dir_baton
      changes to be applied to this directory. */
   apr_array_header_t *propchanges;
 
+  /* The directories' owner, group, and unix-mode. */
+  svn_string_t *owner, *group, *unix_mode;
+
   /* The bump information for this directory. */
   struct bump_dir_info *bump_info;
 
@@ -1162,7 +1165,23 @@ change_dir_prop (void *dir_baton,
 
   propchange = apr_array_push (db->propchanges);
   propchange->name = apr_pstrdup (db->pool, name);
-  propchange->value = value ? svn_string_dup (value, db->pool) : NULL;
+
+  if ( (strcmp (name, SVN_PROP_OWNER) == 0) )
+    {
+      db->owner = svn_string_dup (value, db->pool);
+    }
+  else if ( (strcmp (name, SVN_PROP_GROUP) == 0) )
+    {
+      db->group = svn_string_dup (value, db->pool);
+    }
+  else if ( (strcmp (name, SVN_PROP_UNIX_MODE) == 0) )
+    {
+      db->unix_mode = svn_string_dup (value, db->pool);
+    }
+  else
+    {
+      propchange->value = value ? svn_string_dup (value, db->pool) : NULL;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1321,6 +1340,11 @@ close_directory (void *dir_baton,
                                        TRUE, /* sync */
                                        db->pool));
 
+     SVN_ERR (svn_io_file_set_file_owner_group_mode(db->path,
+                                                    db->owner,
+                                                    db->group,
+                                                    db->unix_mode,
+                                                    db->pool) );
     }
 
   /* Run the log. */
