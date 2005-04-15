@@ -54,7 +54,7 @@ Candidate changes:
     Justification:
       Makes building with --enable-dso work again.
     Votes:
-      +1: lundblad
+      +1: lundblad, fitz
 
 Approved changes (further review is welcome, but not required):
 
