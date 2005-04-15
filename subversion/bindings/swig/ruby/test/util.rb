@@ -14,7 +14,9 @@ module SvnTestUtil
     @full_repos_path = File.expand_path(@repos_path)
     @repos_uri = "file://#{@full_repos_path}"
     @svnserve_host = "127.0.0.1"
-    @repos_svnserve_uri = "svn://#{@svnserve_host}#{@full_repos_path}"
+    @svnserve_port = "19191"
+    @repos_svnserve_uri =
+      "svn://#{@svnserve_host}:#{@svnserve_port}#{@full_repos_path}"
     @wc_path = File.join("test", "wc")
     setup_repository(@repos_path)
     @repos = Svn::Repos.open(@repos_path, @pool)
@@ -46,7 +48,10 @@ module SvnTestUtil
 
   def setup_svnserve
     @svnserve_pid = fork {
-      exec("svnserve", "--listen-host", @svnserve_host,  "-d", "--foreground")
+      exec("svnserve",
+           "--listen-host", @svnserve_host,
+           "--listen-port", @svnserve_port,
+           "-d", "--foreground")
     }
   end
 
