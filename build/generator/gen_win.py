@@ -471,8 +471,12 @@ class WinGeneratorBase(GeneratorBase):
 
     depends.extend(self.get_win_depends(target, FILTER_PROJECTS))
 
+    # Make the default target generate the .mo files, too
+    if self.enable_nls and name == '__ALL__':
+      depends.extend(self.sections['locale'].get_targets())
+
     return depends
-    
+
   def get_win_depends(self, target, mode):
     """Return the list of dependencies for target"""
 
