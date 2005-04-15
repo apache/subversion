@@ -233,6 +233,8 @@ module Svn
       end
 
       def close_edit(baton)
+        @copied_files.sort! {|a, b| a[0] <=> b[0]}
+        @copied_dirs.sort! {|a, b| a[0] <=> b[0]}
         @added_files.sort!
         @added_dirs.sort!
         @deleted_files.sort!
