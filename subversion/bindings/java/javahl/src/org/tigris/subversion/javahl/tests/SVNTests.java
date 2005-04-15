@@ -208,6 +208,7 @@ public class SVNTests extends TestCase
         // create and configure the needed subversion objects
         admin = new SVNAdmin();
         client = new SVNClient();
+        client.notification2(new MyNotifier());
         client.commitMessageHandler(new MyCommitMessage());
         client.username("jrandom");
         client.password("rayjandom");
@@ -709,6 +710,21 @@ public class SVNTests extends TestCase
             assertEquals("commit item url", ci.getUrl(), myUrl);
             // after the test, remove the item from the expected map
             expectedCommitItems.remove(key);
+        }
+    }
+
+    class MyNotifier implements Notify2
+    {
+
+        /**
+         * Handler for Subversion notifications.
+         * <p/>
+         * Override this function to allow Subversion to send notifications
+         *
+         * @param info everything to know about this event
+         */
+        public void onNotify(NotifyInformation info)
+        {
         }
     }
 }
