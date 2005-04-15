@@ -22,8 +22,12 @@ Candidate changes:
     and similar problems regarding paths with leading or trailing spaces.
     Justification:
       Yet Another Path Escaping Bug
+    Concerns:
+      Breaks tests on Windows; there is a simple fix to the tests that needs to
+      be done. --lundblad
     Votes:
-      +1: lundblad, cmpilato
+      +1: cmpilato
+      -1: lundblad
 
   * r14063, r14066, r14067 (partial), r14068, r14079, r14121, r14124, r14156
     Branch: 1.2.x-r14063
