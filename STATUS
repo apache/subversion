@@ -61,7 +61,7 @@ Candidate changes:
     Justification
       Confusing docstring and undefined behaviour.
     Votes:
-      +1: lundblad
+      +1: lundblad, dlr
 
 Approved changes (further review is welcome, but not required):
 
