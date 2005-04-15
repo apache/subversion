@@ -15,7 +15,7 @@ Candidate changes:
     Justification:
       Encourages hacking on the bindings, and improves user confidence.
     Votes:
-      +1: dlr
+      +1: dlr, fitz (concept)
 
   * r14041, r14149, r14186, r14194
     Fix issue #2268 (svn update of xml-unsafe dir (from within) http error)
@@ -43,12 +43,6 @@ Candidate changes:
     Votes:
       +1: lundblad, fitz
 
-  * r14241
-    svn_ra_lock_callback API docs and caller fix.
-    Justification
-      Confusing docstring and undefined behaviour.
-    Votes:
-      +1: lundblad, dlr
 
 Approved changes (further review is welcome, but not required):
 
@@ -65,3 +59,9 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: ghudson, lundblad, fitz
 
+  * r14241
+    svn_ra_lock_callback API docs and caller fix.
+    Justification
+      Confusing docstring and undefined behaviour.
+    Votes:
+      +1: lundblad, dlr, fitz
