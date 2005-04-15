@@ -9,14 +9,6 @@ Status of 1.2.0:
 
 Candidate changes:
 
-  * r13983
-    Correct valid warnings and bogus compilation errors specific to
-    Jikes.
-    Justification:
-      Avoid warnings (and hard errors!), improve compile times.
-    Votes:
-      +1: dlr, kfogel
-
   * r14024
     Allow automated tests for the javahl bindings to be run before the
     bindings have been installed.
@@ -56,8 +48,17 @@ Candidate changes:
   * r14223
     Drop listing of FS modules from "svn --version" output.
     Justification:
-      Makes buidling with --enable-dso work again.
+      Makes building with --enable-dso work again.
     Votes:
       +1: lundblad
 
 Approved changes (further review is welcome, but not required):
+
+  * r13983
+    Correct valid warnings and bogus compilation errors specific to
+    Jikes.
+    Justification:
+      Avoid warnings (and hard errors!), improve compile times.
+    Votes:
+      +1: dlr, kfogel
+      +0: lundblad
