@@ -150,12 +150,12 @@ typedef svn_error_t *(*svn_ra_file_rev_handler_t)
  * @a do_lock is TRUE when locking @a path, and FALSE
  * otherwise.
  * 
- * @a lock is a lock for @a path.
+ * @a lock is a lock for @a path or null if @a do_lock is false or @a ra_err is
+ * non-null.
  *
  * @a ra_err is NULL unless the ra layer encounters a locking related
- * error which it passes back for notification purposes (although the
- * callback can also re-throw the error).  The caller is responsible
- * for clearing @a ra_err after the callback is run.
+ * error which it passes back for notification purposes.  The caller
+ * is responsible for clearing @a ra_err after the callback is run.
  *
  * @a baton is a closure object; it should be provided by the
  * implementation, and passed by the caller.  @a pool may be used for
