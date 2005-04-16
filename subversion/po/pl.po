@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-04-16 11:05+0200\n"
-"PO-Revision-Date: 2005-04-16 11:03+0200\n"
+"PO-Revision-Date: 2005-04-16 14:39+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3413,23 +3413,23 @@ msgstr "Niewłaściwy strumień diff: instrukcja %d ma niedodatnią długość"
 #: libsvn_delta/svndiff.c:358
 #, c-format
 msgid "Invalid diff stream: insn %d overflows the target view"
-msgstr ""
+msgstr "Niewłaściwy strumień diff: instrukcja %d przepełniła okno obiektu docelowego"
 
 #: libsvn_delta/svndiff.c:367
 #, c-format
 msgid "Invalid diff stream: [src] insn %d overflows the source view"
-msgstr ""
+msgstr "Niewłaściwy strumień diff: instrukcja %d przepełniła okno obiektu źródłowego"
 
 #: libsvn_delta/svndiff.c:374
 #, c-format
 msgid ""
 "Invalid diff stream: [tgt] insn %d starts beyond the target view position"
-msgstr ""
+msgstr "Niewłaściwy strumień diff: instrukcja %d zaczyna się poza pozycją okna obiektu docelowego"
 
 #: libsvn_delta/svndiff.c:381
 #, c-format
 msgid "Invalid diff stream: [new] insn %d overflows the new data section"
-msgstr ""
+msgstr "Niewłaściwy strumień diff: instrukcja %d przepełniła nową sekcję danych"
 
 #: libsvn_delta/svndiff.c:391
 msgid "Delta does not fill the target window"
@@ -4033,7 +4033,7 @@ msgstr ""
 
 #: libsvn_fs_base/reps-strings.c:890
 msgid "Null rep, but offset past zero already"
-msgstr ""
+msgstr "Pusta reprezentacja, ale offset jest już za zerem"
 
 #: libsvn_fs_base/reps-strings.c:1003 libsvn_fs_base/reps-strings.c:1199
 #, fuzzy, c-format
@@ -4134,24 +4134,29 @@ msgstr "Konflikt z '%s'"
 #: libsvn_fs_fs/tree.c:1261 libsvn_fs_fs/tree.c:1750
 msgid "Bad merge; ancestor, source, and target not all in same fs"
 msgstr ""
+"Źłe łączenie; przodek, źródłowy albo docelowy obiekt nie mają tego samego \n"
+"typu systemu plików"
 
 #: libsvn_fs_base/tree.c:1952 libsvn_fs_fs/tree.c:1277
 #, c-format
 msgid "Bad merge; target '%s' has id '%s', same as ancestor"
 msgstr ""
+"Źłe łączenie: obiekt docelowy '%s' ma identyfikator '%s' \n"
+"identyczny ze swoim przodkiem"
 
 #: libsvn_fs_base/tree.c:2654
 #, fuzzy, c-format
 msgid "Transaction '%s' out of date with respect to revision '%s'"
-msgstr "Transakcja '%s' nie jest oparta na wersji; dziwne"
+msgstr "Transakcja '%s' jest nieaktualna względem wersji '%s'"
 
 #: libsvn_fs_base/tree.c:3030 libsvn_fs_fs/tree.c:1888
 msgid "The root directory cannot be deleted"
 msgstr "Katalog główny nie może zostać usunięty"
 
 #: libsvn_fs_base/tree.c:3189 libsvn_fs_fs/tree.c:1934
+#, fuzzy
 msgid "Copy from mutable tree not currently supported"
-msgstr ""
+msgstr "Kopiowanie z zmiennego drzewa nie jest jeszcze wspierane"
 
 #: libsvn_fs_base/tree.c:3684 libsvn_fs_fs/tree.c:2353
 #, c-format
@@ -4215,8 +4220,9 @@ msgid "Can't create FSFS mutex"
 msgstr "Nie udało utworzyć się semafora dla FSFS"
 
 #: libsvn_fs_fs/fs.c:109
+#, fuzzy
 msgid "Can't store FSFS mutex"
-msgstr ""
+msgstr "Nie można zachować semafora FSFS"
 
 #: libsvn_fs_fs/fs.c:334
 msgid "Module for working with a plain file (FSFS) repository."
@@ -5162,7 +5168,7 @@ msgstr "Zapis zabroniony: nieautoryzowana próba odczytu wersji %ld."
 #: libsvn_repos/fs-wrap.c:483
 #, c-format
 msgid "Cannot unlock path '%s', no authenticated username available"
-msgstr ""
+msgstr "Nie można zdjąć blokady ścieżki '%s', brak zautoryzowanego użytkownika"
 
 #: libsvn_repos/fs-wrap.c:497
 msgid "Unlock succeeded, but post-unlock hook failed"
@@ -5282,22 +5288,22 @@ msgstr "Uszkodzony zrzut: wersja 0 nie może zawierać węzła rekordów"
 #: libsvn_repos/load.c:995
 #, c-format
 msgid "     * editing path : %s ..."
-msgstr ""
+msgstr "    * edytowanie ścieżki : %s ..."
 
 #: libsvn_repos/load.c:1002
 #, c-format
 msgid "     * deleting path : %s ..."
-msgstr ""
+msgstr "    * usuwanie ścieżki : %s ..."
 
 #: libsvn_repos/load.c:1010
 #, c-format
 msgid "     * adding path : %s ..."
-msgstr ""
+msgstr "    * dodawanie ścieżki : %s ..."
 
 #: libsvn_repos/load.c:1019
 #, c-format
 msgid "     * replacing path : %s ..."
-msgstr ""
+msgstr "    zastępowanie ścieżki : %s ..."
 
 #: libsvn_repos/load.c:1029
 #, c-format
@@ -5350,9 +5356,8 @@ msgid "Not authorized to open root of edit operation"
 msgstr ""
 
 #: libsvn_repos/reporter.c:906
-#, fuzzy
 msgid "Cannot replace a directory from within"
-msgstr "Nie można czytać kolejnego elementu katalogu '%s'"
+msgstr "Nie można zastąpić katalogu będąc w tym katalogu"
 
 #: libsvn_repos/reporter.c:949
 msgid "Invalid report for top level of working copy"
@@ -5360,7 +5365,7 @@ msgstr "Niepoprawna operacja na katalogu głównym kopii roboczej"
 
 #: libsvn_repos/reporter.c:964
 msgid "Two top-level reports with no target"
-msgstr ""
+msgstr "Dwa główne raporty bez obiektu docelowego"
 
 #: libsvn_repos/repos.c:176
 #, c-format
@@ -5510,9 +5515,8 @@ msgid "Can't calculate requested date"
 msgstr "Nie można ustalić rozmiaru żądania"
 
 #: libsvn_subr/date.c:277
-#, fuzzy
 msgid "Can't expand time"
-msgstr "Błąd odczytu standardowego wejścia"
+msgstr "Nie można rozpakować parametru czas"
 
 #: libsvn_subr/error.c:326
 msgid "Can't recode error string from APR"
@@ -5809,14 +5813,13 @@ msgid "Can't write to stream"
 msgstr "Nie można pisać do strumienia '%s'"
 
 #: libsvn_subr/io.c:2304
-#, fuzzy, c-format
+#, c-format
 msgid "Can't read length line in file '%s'"
-msgstr "Nie można czytać z pliku '%s'"
+msgstr "Nie można odczytać długości linii z pliku '%s'"
 
 #: libsvn_subr/io.c:2308
-#, fuzzy
 msgid "Can't read length line in stream"
-msgstr "Nie można czytać z strumienia"
+msgstr "Nie można odczytać długości linii z strumienia"
 
 #: libsvn_subr/io.c:2349
 #, c-format
@@ -5967,9 +5970,9 @@ msgid "Can't determine the native path encoding"
 msgstr "Nie można ustalić natywnego kodowania dla ścieżki"
 
 #: libsvn_subr/path.c:1264
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid control character '0x%02x' in path '%s'"
-msgstr "Błędna składnia ścieżki '%s'"
+msgstr "Błędny znak kontrolny '0x%02x' w ścieżce '%s'"
 
 #: libsvn_subr/subst.c:982 libsvn_wc/props.c:981
 #, c-format
@@ -5985,9 +5988,9 @@ msgid "Can't unlock charset translation mutex"
 msgstr "Nie można odblokować tablicy znaków tłumaczeń"
 
 #: libsvn_subr/utf.c:242
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create a character converter from native encoding to '%s'"
-msgstr "Nie można stworzyć konwertera z '%s' do '%s'"
+msgstr "Nie można stworzyć konwertera z natywnego kodowania do '%s'"
 
 #: libsvn_subr/utf.c:246
 #, c-format
@@ -6034,7 +6037,7 @@ msgstr ""
 "UTF-8"
 
 #: libsvn_subr/utf.c:543
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Valid UTF-8 data\n"
 "(hex:%s)\n"
@@ -6042,9 +6045,9 @@ msgid ""
 "(hex:%s)"
 msgstr ""
 "Właściwe dane UTF-8\n"
-"(hex: %s)\n"
+"(hex:%s)\n"
 "z poniższą niewłaściwą sekwencją znaków UTF-8\n"
-"(hex: %s)"
+"(hex:%s)"
 
 #: libsvn_subr/validate.c:48
 #, c-format
