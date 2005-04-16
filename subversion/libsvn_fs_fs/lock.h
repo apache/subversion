@@ -79,10 +79,14 @@ svn_error_t *svn_fs_fs__get_locks (svn_fs_t *fs,
          SVN_ERR_FS_BAD_LOCK_TOKEN.
 
    If all three conditions are met, return SVN_NO_ERROR.
+
+   If the caller (directly or indirectly) has the FS write lock,
+   HAVE_WRITE_LOCK should be true.
 */
 svn_error_t *svn_fs_fs__allow_locked_operation (const char *path,
                                                 svn_fs_t *fs,
                                                 svn_boolean_t recurse,
+                                                svn_boolean_t have_write_lock,
                                                 apr_pool_t *pool);
 
 #ifdef __cplusplus

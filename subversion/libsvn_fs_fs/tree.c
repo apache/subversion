@@ -1101,7 +1101,8 @@ fs_change_node_prop (svn_fs_root_t *root,
   /* Check (non-recursively) to see if path is locked; if so, check
      that we can use it. */
   if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
-    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, FALSE, pool));
+    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, FALSE, FALSE,
+                                                pool));
 
   SVN_ERR (make_path_mutable (root, parent_path, path, pool));
   SVN_ERR (svn_fs_fs__dag_get_proplist (&proplist, parent_path->node, pool));
@@ -1838,7 +1839,8 @@ fs_make_dir (svn_fs_root_t *root,
      that location, or even some child-path; if so, check that we can
      use it. */
   if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
-    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, TRUE, pool));
+    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, TRUE, FALSE,
+                                                pool));
 
   /* If there's already a sub-directory by that name, complain.  This
      also catches the case of trying to make a subdirectory named `/'.  */
@@ -1890,7 +1892,8 @@ fs_delete_node (svn_fs_root_t *root,
   /* Check to see if path (or any child thereof) is locked; if so,
      check that we can use the existing lock(s). */
   if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
-    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, TRUE, pool));
+    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, TRUE, FALSE,
+                                                pool));
 
   /* Make the parent directory mutable, and do the deletion.  */
   SVN_ERR (make_path_mutable (root, parent_path->parent, path, pool));
@@ -1946,7 +1949,7 @@ copy_helper (svn_fs_root_t *from_root,
      check that we can use the existing lock(s). */
   if (to_root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     SVN_ERR (svn_fs_fs__allow_locked_operation (to_path, to_root->fs, 
-                                                TRUE, pool));
+                                                TRUE, FALSE, pool));
   
   /* If the destination node already exists as the same node as the
      source (in other words, this operation would result in nothing
@@ -2120,7 +2123,8 @@ fs_make_file (svn_fs_root_t *root,
   /* Check (non-recursively) to see if path is locked;  if so, check
      that we can use it. */
   if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
-    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, FALSE, pool));
+    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, FALSE, FALSE,
+                                                pool));
 
   /* Create the file.  */
   SVN_ERR (make_path_mutable (root, parent_path->parent, path, pool));
@@ -2331,7 +2335,7 @@ apply_textdelta (void *baton, apr_pool_t *pool)
      that we can use it. */
   if (tb->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     SVN_ERR (svn_fs_fs__allow_locked_operation (tb->path, tb->root->fs, 
-                                                FALSE, pool));
+                                                FALSE, FALSE, pool));
 
   /* Now, make sure this path is mutable. */
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, pool));
@@ -2514,7 +2518,7 @@ apply_text (void *baton, apr_pool_t *pool)
      that we can use it. */
   if (tb->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     SVN_ERR (svn_fs_fs__allow_locked_operation (tb->path, tb->root->fs,
-                                                FALSE, pool));
+                                                FALSE, FALSE, pool));
 
   /* Now, make sure this path is mutable. */
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, pool));
