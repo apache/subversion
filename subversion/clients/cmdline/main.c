@@ -44,7 +44,6 @@
 #include "svn_opt.h"
 #include "svn_utf.h"
 #include "svn_auth.h"
-#include "svn_fs.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -835,11 +834,6 @@ main (int argc, const char * const *argv)
 
   /* Check library versions */
   err = check_lib_versions ();
-  if (err)
-    return error_exit (err, stderr, FALSE, pool);
-
-  /* Initialize the FS library. */
-  err = svn_fs_initialize (pool);
   if (err)
     return error_exit (err, stderr, FALSE, pool);
 

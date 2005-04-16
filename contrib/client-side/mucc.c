@@ -17,7 +17,6 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_ra.h"
-#include "svn_fs.h"
 #include "apr_lib.h"
 #include <stdio.h>
 #include <string.h>
@@ -57,11 +56,6 @@ init(const char *application)
   apr_allocator_max_free_set(allocator, SVN_ALLOCATOR_RECOMMENDED_MAX_FREE);
   pool = svn_pool_create_ex(NULL, allocator);
   apr_allocator_owner_set(allocator, pool);
-
-  /* Initialize the FS library. */
-  err = svn_fs_initialize(pool);
-  if (err)
-    handle_error(err, NULL);
 
   return pool;
 }
