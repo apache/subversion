@@ -21,6 +21,7 @@
 #include <apr.h>
 #include <apr_hash.h>
 #include <apr_dso.h>
+#include <apr_thread_mutex.h>
 
 #include "svn_types.h"
 #include "svn_version.h"
@@ -41,11 +42,13 @@
 
 #define FS_TYPE_FILENAME "fs-type"
 
-/* The implementation of this library is deliberately not separated
-   into multiple files, to avoid circular dependency problems with
-   Unix static linking.  We want FS back ends to be able to use our
-   functions without forcing applications to link against this library
-   twice. */
+/* A pool common to all FS objects.  See the documentation on the
+   serialized_init function in fs-loader.h and for
+   svn_fs_initialize(). */
+static apr_pool_t *common_pool;
+#if APR_HAS_THREADS
+static apr_thread_mutex_t *common_pool_lock;
+#endif
 
 
 /* --- Utility functions for the loader --- */
@@ -213,6 +216,67 @@ write_fs_type (const char *path, const char *fs_type, apr_pool_t *pool)
 
 /* --- Functions for operating on filesystems by pathname --- */
 
+static apr_status_t uninit (void *data)
+{
+  common_pool = NULL;
+#if APR_HAS_THREADS
+  common_pool_lock = NULL;
+#endif
+  return APR_SUCCESS;
+}
+
+svn_error_t *
+svn_fs_initialize (apr_pool_t *pool)
+{
+  apr_status_t status;
+
+  /* Protect against multiple calls. */
+  if (common_pool)
+    return SVN_NO_ERROR;
+
+  common_pool = svn_pool_create (pool);
+#if APR_HAS_THREADS
+  status = apr_thread_mutex_create (&common_pool_lock,
+                                    APR_THREAD_MUTEX_DEFAULT, common_pool);
+  if (status)
+    return svn_error_wrap_apr (status, _("Can't allocate FS mutex"));
+#endif
+  apr_pool_cleanup_register (common_pool, NULL, uninit, apr_pool_cleanup_null);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+serialized_init (svn_fs_t *fs, apr_pool_t *pool)
+{
+  svn_error_t *err;
+  apr_status_t status;
+
+  /* Per our API compatibility rules, we cannot ensure that
+     svn_fs_initialize is called by the application.  If not, we
+     cannot create the common pool and lock in a thread-safe fashion,
+     nor can we clean up the common pool if libsvn_fs is dynamically
+     unloaded.  This function makes a best effort by creating the
+     common pool as a child of the global pool; the window of failure
+     due to thread collision is small. */
+  if (!common_pool)
+    SVN_ERR (svn_fs_initialize (NULL));
+
+  /* Invoke the FS module's serialized_init function with the common
+     pool protected by a lock. */
+#if APR_HAS_THREADS
+  status = apr_thread_mutex_lock (common_pool_lock);
+  if (status)
+    return svn_error_wrap_apr (status, _("Can't grab FS mutex"));
+#endif
+  err = fs->vtable->serialized_init (fs, common_pool, pool);
+#if APR_HAS_THREADS
+  status = apr_thread_mutex_unlock (common_pool_lock);
+  if (status && !err)
+    return svn_error_wrap_apr (status, _("Can't ungrab FS mutex"));
+#endif
+  return err;
+}
+
 /* A default warning handling function.  */
 static void
 default_warning_func (void *baton, svn_error_t *err)
@@ -268,7 +332,8 @@ svn_fs_create (svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
 
   /* Perform the actual creation. */
   *fs_p = svn_fs_new (fs_config, pool);
-  return vtable->create (*fs_p, path, pool);
+  SVN_ERR (vtable->create (*fs_p, path, pool));
+  return serialized_init (*fs_p, pool);
 }
 
 svn_error_t *
@@ -279,7 +344,8 @@ svn_fs_open (svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
 
   SVN_ERR (fs_library_vtable (&vtable, path, pool));
   *fs_p = svn_fs_new (fs_config, pool);
-  return vtable->open (*fs_p, path, pool);
+  SVN_ERR (vtable->open (*fs_p, path, pool));
+  return serialized_init (*fs_p, pool);
 }
 
 const char *
@@ -333,7 +399,8 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   SVN_ERR (write_fs_type (path, SVN_FS_TYPE_BDB, fs->pool));
 
   /* Perform the actual creation. */
-  return vtable->create (fs, path, fs->pool);
+  SVN_ERR (vtable->create (fs, path, fs->pool));
+  return serialized_init (fs, fs->pool);
 }
 
 svn_error_t *
@@ -342,7 +409,8 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
   fs_library_vtable_t *vtable;
 
   SVN_ERR (get_library_vtable (&vtable, SVN_FS_TYPE_BDB, fs->pool));
-  return vtable->open (fs, path, fs->pool);
+  SVN_ERR (vtable->open (fs, path, fs->pool));
+  return serialized_init (fs, fs->pool);
 }
 
 const char *

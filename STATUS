@@ -55,16 +55,3 @@ Candidate changes:
 
 
 Approved changes (further review is welcome, but not required):
-
-  * r14063, r14066, r14067 (partial), r14068, r14079, r14121, r14124, r14156
-    Branch: 1.2.x-r14063
-    Fix FSFS locking problem.
-    Justification:
-      Issue #2265 can cause data loss.
-    Notes:
-      Only the svnserve.c part of r14067 (add calls to
-      svn_fs_initialize) is merged, since only that program can be
-      threaded, and adding svn_fs_initialize calls to clients runs
-      afoul of --enable-dso.
-    Votes:
-      +1: ghudson, lundblad, fitz

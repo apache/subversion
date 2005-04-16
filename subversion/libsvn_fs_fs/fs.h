@@ -21,6 +21,7 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_md5.h>
+#include <apr_thread_mutex.h>
 #include "svn_fs.h"
 
 #ifdef __cplusplus
@@ -44,7 +45,16 @@ typedef struct
 
   /* The format number of this FS. */
   int format;
-  
+
+  /* The uuid of this FS. */
+  const char *uuid;
+
+#if APR_HAS_THREADS
+  /* A lock for intra-process synchronization when grabbing the
+     repository write lock.  Common to all repositories with the same
+     uuid; discovered using the serialized_init function. */
+  apr_thread_mutex_t *lock;
+#endif
 } fs_fs_data_t;
 
 
