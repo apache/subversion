@@ -68,10 +68,3 @@ Approved changes (further review is welcome, but not required):
       afoul of --enable-dso.
     Votes:
       +1: ghudson, lundblad, fitz
-
-  * r14241
-    svn_ra_lock_callback API docs and caller fix.
-    Justification
-      Confusing docstring and undefined behaviour.
-    Votes:
-      +1: lundblad, dlr, fitz
