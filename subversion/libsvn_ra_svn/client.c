@@ -1443,7 +1443,8 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
         return err;
 
       if (lock_func)
-        callback_err = lock_func(lock_baton, path, TRUE, lock, err, iterpool);
+        callback_err = lock_func(lock_baton, path, TRUE, err ? NULL : lock,
+                                 err, iterpool);
 
       svn_error_clear (err);
 
