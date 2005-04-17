@@ -61,4 +61,15 @@ Candidate changes:
     Votes:
       +1: lundblad
 
+  * r14262
+    Fix #2049, make autoversioning cooperate with mod_mime.
+    Justification:
+      svn 1.2 brags about autoversioning being 'finished', but it's
+      really unfriendly when (for example) a Word file is dragged to a
+      share, but doesn't get re-fetched as a Word file.  Without that,
+      autoversioning is a non-starter for many.
+    Votes:
+      +1: sussman
+
+
 Approved changes (further review is welcome, but not required):
