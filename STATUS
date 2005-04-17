@@ -71,5 +71,11 @@ Candidate changes:
     Votes:
       +1: sussman
 
+  * r14274
+    Enable lock_tests.py No. 8 (defunct_lock) on Windows.
+    Justification:
+      It works just fine, more tests are better.
+    Votes:
+      +1: brane
 
 Approved changes (further review is welcome, but not required):
