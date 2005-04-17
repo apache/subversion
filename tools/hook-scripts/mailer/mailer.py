@@ -1205,11 +1205,11 @@ except NameError:
 
 if __name__ == '__main__':
   def usage():
+    scriptname = os.path.basename(sys.argv[0])
     sys.stderr.write(
 """USAGE: %s commit      REPOS REVISION [CONFIG-FILE]
        %s propchange  REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
-       %s propchange2 REPOS REVISION AUTHOR PROPNAME ACTION
-       %s             [CONFIG-FILE]
+       %s propchange2 REPOS REVISION AUTHOR PROPNAME ACTION [CONFIG-FILE]
        %s lock        REPOS AUTHOR [CONFIG-FILE]
        %s unlock      REPOS AUTHOR [CONFIG-FILE]
 
@@ -1221,8 +1221,7 @@ ACTION was added as a fifth argument to the post-revprop-change hook
 in Subversion 1.2.0.  Its value is one of 'A', 'M' or 'D' to indicate
 if the property was added, modified or deleted, respectively.
 
-""" % (sys.argv[0], sys.argv[0], sys.argv[0], ' ' * len(sys.argv[0]),
-       sys.argv[0], sys.argv[0]))
+""" % (scriptname, scriptname, scriptname, scriptname, scriptname))
     sys.exit(1)
 
   if len(sys.argv) < 4:
