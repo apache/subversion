@@ -1878,6 +1878,28 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
                                   resource->pool);
     }
 
+  /* if the working-resource was auto-checked-out (i.e. came into
+     existence through the autoversioning feature), then possibly set
+     the svn:mime-type property based on whatever value mod_mime has
+     chosen. */
+  if (resource->info->auto_checked_out
+      && resource->info->r->content_type)
+    {
+      serr = svn_fs_change_node_prop(resource->info->root.root,
+                                     resource->info->repos_path,
+                                     SVN_PROP_MIME_TYPE,
+                                     svn_string_create
+                                         (resource->info->r->content_type,
+                                          resource->pool),
+                                     resource->pool);
+      if (serr != NULL)
+        {
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Could not set mime-type property.",
+                                     resource->pool);
+        }
+    }
+
   return NULL;
 }
 
@@ -2087,7 +2109,13 @@ static dav_error * dav_svn_set_headers(request_rec *r,
                                    "could not fetch the resource's MIME type",
                                    resource->pool);
 
-      mimetype = value ? value->data : "text/plain";
+      if (value)
+        mimetype = value->data;
+      else if ((! resource->info->repos->is_svn_client)
+               && r->content_type)
+        mimetype = r->content_type;
+      else
+        mimetype = "text/plain";
 
       serr = svn_mime_type_validate(mimetype, resource->pool);
       if (serr)
