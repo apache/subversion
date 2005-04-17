@@ -55,7 +55,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-04-17 10:06+0200\n"
+"POT-Creation-Date: 2005-04-17 10:58+0200\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -136,7 +136,6 @@ msgstr ""
 
 #: clients/cmdline/help-cmd.c:67 svnadmin/main.c:640 svnlook/main.c:1709
 #: svnserve/main.c:158
-#, fuzzy
 msgid ""
 "The following repository back-end (FS) modules are available:\n"
 "\n"
@@ -1135,7 +1134,6 @@ msgstr ""
 "  2. Viser ikke-versjonerte revisjonsegenskaper for en revisjon i depotet.\n"
 
 #: clients/cmdline/main.c:539
-#, fuzzy
 msgid ""
 "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME [PROPVAL | -F VALFILE] PATH...\n"
@@ -1198,10 +1196,7 @@ msgstr ""
 "      LastChangedRevision\n"
 "      Id                       - Sammendrag av de fire foregående\n"
 "                                 nøkkelordene.\n"
-"    svn:executable - Gjør en fil kjørbar hvis den er til stede. Denne\n"
-"      egenskapen kan ikke settes på kataloger. Et ikke-rekursivt forsøk\n"
-"      mot en katalog vil feile, mens et rekursivt vil sette egenskapen på\n"
-"      katalogens barn.\n"
+"    svn:executable - Gjør en fil kjørbar hvis den er til stede.\n"
 "    svn:eol-style  - Enten «native», «LF», «CR» eller «CRLF».\n"
 "    svn:mime-type  - En fils MIME-type. Brukes for å bestemme om filen skal\n"
 "      flettes og hvordan filen sendes via Apache. En MIME-type som begynner\n"
@@ -1212,6 +1207,13 @@ msgstr ""
 "      og en URL. Eksempler:\n"
 "        foo             http://example.com/repos/zig\n"
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
+"    svn:needs-lock - Hvis den er til stede, indikerer dette at filen bør\n"
+"      låses før den blir modifisert. Skrivebeskytter filen i arbeidskopien\n"
+"      når den ikke er låst.\n"
+"  Egenskapene svn:keywords, svn:executable, svn:eol-style, svn:mime-type og\n"
+"  svn:needs-lock kan ikke settes på en katalog. Et ikke-rekursivt forsøk\n"
+"  vil feile, og et rekursivt forsøk vil sette egenskapene bare på filene\n"
+"  som ligger under katalogen.\n"
 
 #: clients/cmdline/main.c:589
 msgid ""
@@ -1245,7 +1247,6 @@ msgstr ""
 "kataloger.\n"
 
 #: clients/cmdline/main.c:608
-#, fuzzy
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -1368,7 +1369,7 @@ msgstr ""
 "      «T» låst i depotet, låsnøkkel tilstede, men sTjålet\n"
 "      «B» ikke låst i depotet, låsnøkkel til stede, men Brutt\n"
 "\n"
-"  Utdateringsinformasjonen kommer til syne i den niende kolonnen (med -u):\n"
+"  Utdateringsinformasjonen kommer til syne i den åttende kolonnen (med -u):\n"
 "      «*» En nyere versjon ligger i depotet\n"
 "      « » Arbeidskopien er oppdatert\n"
 "\n"
@@ -1387,14 +1388,14 @@ msgstr ""
 "     M           965    wc/bar.c\n"
 "           *     965    wc/foo.c\n"
 "    A  +         965    wc/qax.c\n"
-"    Head revision:   981\n"
+"    Status mot revisjon:   981\n"
 "\n"
 "    svn status --show-updates --verbose wc\n"
 "     M           965       938 kfogel       wc/bar.c\n"
 "           *     965       922 sussman      wc/foo.c\n"
 "    A  +         965       687 joe          wc/qax.c\n"
 "                 965       687 joe          wc/zig.c\n"
-"    Head revision:   981\n"
+"    Status mot revisjon:   981\n"
 
 #: clients/cmdline/main.c:685
 msgid ""
@@ -1525,11 +1526,9 @@ msgstr ""
 "overstyre"
 
 #: clients/cmdline/main.c:1213
-#, fuzzy
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr ""
-"Loggmeldingsfilen er under versjonskontroll. Bruk «--force-log» for å "
-"overstyre"
+"Låsekommentarfilen er en versjonert fil; bruk «--force-log» for å overstyre"
 
 #: clients/cmdline/main.c:1232
 msgid ""
@@ -1540,13 +1539,12 @@ msgstr ""
 "overstyre"
 
 #: clients/cmdline/main.c:1237
-#, fuzzy
 msgid ""
 "The lock comment is a pathname (was -F intended?); use '--force-log' to "
 "override"
 msgstr ""
-"Loggmeldingen er en filsti (ville du bruke -F?). Bruk «--force-log» for å\n"
-"overstyre"
+"Låsekommentaren er en filsti (ble -F brukt med vilje?). Bruk «--force-log»\n"
+"for å overstyre"
 
 #: clients/cmdline/main.c:1449
 msgid ""
@@ -2371,9 +2369,8 @@ msgid "No user associated with filesystem"
 msgstr "Ingen bruker assosiert med filsystem"
 
 #: include/svn_error_codes.h:529
-#, fuzzy
 msgid "Path is already locked"
-msgstr "Stien er låst"
+msgstr "Stien er allerede låst"
 
 #: include/svn_error_codes.h:534 include/svn_error_codes.h:661
 msgid "Path is not locked"
@@ -2508,7 +2505,6 @@ msgid "HTTP Path Not Found"
 msgstr "Finner ikke HTTP-sti"
 
 #: include/svn_error_codes.h:700
-#, fuzzy
 msgid "Failed to execute WebDAV PROPPATCH"
 msgstr "Kunne ikke kjøre WebDAV PROPPATCH"
 
@@ -2820,9 +2816,9 @@ msgid "'%s' is not under version control or doesn't exist"
 msgstr "«%s» er ikke under versjonskontroll eller finnes ikke"
 
 #: libsvn_client/cat.c:71
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' refers to a directory"
-msgstr "URL-en «%s» refererer til en katalog"
+msgstr "«%s» refererer til en katalog"
 
 #: libsvn_client/cat.c:122 libsvn_client/export.c:183
 msgid "(local)"
@@ -3442,18 +3438,16 @@ msgid "Unknown FS type '%s'"
 msgstr "Filsystem-typen «%s» er ukjent"
 
 #: libsvn_fs/fs-loader.c:242
-#, fuzzy
 msgid "Can't allocate FS mutex"
-msgstr "Kan ikke opprette tunnel"
+msgstr "Kan ikke reservere filsystem-mutex"
 
 #: libsvn_fs/fs-loader.c:269
-#, fuzzy
 msgid "Can't grab FS mutex"
-msgstr "Kan ikke lese strøm"
+msgstr "Kan ikke overta filsystem-mutex"
 
 #: libsvn_fs/fs-loader.c:275
 msgid "Can't ungrab FS mutex"
-msgstr ""
+msgstr "Kan ikke slippe filsystem-mutex"
 
 #: libsvn_fs_base/bdb/bdb-err.c:97
 #, c-format
@@ -3828,9 +3822,9 @@ msgid "User '%s' is trying to use a lock owned by '%s' in filesystem '%s'"
 msgstr "Brukeren «%s» prøver å bruke en lås som eies av «%s» i filsystem «%s»"
 
 #: libsvn_fs_base/err.c:317 libsvn_fs_fs/err.c:299
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is already locked by user '%s' in filesystem '%s'"
-msgstr "Stien «%s» er låst av bruker «%s» i filsystem «%s»"
+msgstr "Stien «%s» er allerede låst av bruker «%s» i filsystem «%s»"
 
 #: libsvn_fs_base/fs.c:79
 #, c-format
@@ -4131,16 +4125,15 @@ msgstr "Ødelagt låsefil for stien «%s» i filsystem «%s»"
 
 #: libsvn_fs_fs/fs.c:98
 msgid "Can't fetch FSFS mutex"
-msgstr ""
+msgstr "Kan ikke hente FSFS-mutex"
 
 #: libsvn_fs_fs/fs.c:105
-#, fuzzy
 msgid "Can't create FSFS mutex"
-msgstr "Kan ikke opprette tunnel"
+msgstr "Kan ikke opprette FSFS-mutex"
 
 #: libsvn_fs_fs/fs.c:109
 msgid "Can't store FSFS mutex"
-msgstr ""
+msgstr "Kan ikke lagre FSFS-mutex"
 
 #: libsvn_fs_fs/fs.c:334
 msgid "Module for working with a plain file (FSFS) repository."
@@ -4299,12 +4292,11 @@ msgstr "Gjeldende fil er korrupt"
 
 #: libsvn_fs_fs/fs_fs.c:3697
 msgid "Can't grab FSFS repository mutex"
-msgstr ""
+msgstr "Kan ikke overta FSFS depot-mutex"
 
 #: libsvn_fs_fs/fs_fs.c:3711
-#, fuzzy
 msgid "Can't ungrab FSFS repository mutex"
-msgstr "Kunne ikke åpne depotet"
+msgstr "Kan ikke slippe FSFS depot-mutex"
 
 #: libsvn_fs_fs/fs_fs.c:3825
 msgid "Transaction out of date"
@@ -4325,14 +4317,14 @@ msgid "Can't parse lock/entries hashfile '%s'"
 msgstr "Kan ikke tolke lås/post-hashfil «%s»"
 
 #: libsvn_fs_fs/lock.c:743 libsvn_fs_fs/lock.c:764
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' doesn't exist in HEAD revision"
-msgstr "Filstien «%s» finnes ikke i revisjon %ld"
+msgstr "Stien «%s» finnes ikke i HEAD-revisjonen"
 
 #: libsvn_fs_fs/lock.c:769
 #, c-format
 msgid "Lock failed: newer version of '%s' exists"
-msgstr ""
+msgstr "Låsing feilet: En nyere versjon av «%s» finnes"
 
 #: libsvn_fs_fs/revs-txns.c:214
 msgid "Transaction cleanup failed"
@@ -5426,7 +5418,7 @@ msgstr "Kan ikke gjenkode feilmelding fra APR"
 #: libsvn_subr/error.c:414
 #, c-format
 msgid "%swarning: %s\n"
-msgstr ""
+msgstr "%sadvarsel: %s\n"
 
 #: libsvn_subr/io.c:129
 #, c-format
@@ -5794,7 +5786,7 @@ msgstr ""
 
 #: libsvn_subr/opt.c:237
 msgid " arg"
-msgstr ""
+msgstr " arg"
 
 #: libsvn_subr/opt.c:261
 #, c-format
@@ -6746,9 +6738,8 @@ msgstr ""
 "                             funnet i strømmen"
 
 #: svnadmin/main.c:257
-#, fuzzy
 msgid "type of repository: 'fsfs' (default) or 'bdb'"
-msgstr "depottype: «bdb» eller «fsfs»"
+msgstr "depottype: «fsfs» (standard) eller «bdb»"
 
 #: svnadmin/main.c:260
 msgid "load at specified directory in repository"
