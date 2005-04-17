@@ -345,7 +345,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "usage: import [PATH] URL\n"
        "\n"
        "  Recursively commit a copy of PATH to URL.\n"
-       "  If PATH is omitted '.' is assumed."
+       "  If PATH is omitted '.' is assumed.\n"
        "  Parent directories are created as necessary in the repository.\n"
        "  If PATH is a directory, the contents of the directory are added\n"
        "  directly under URL.\n"),
