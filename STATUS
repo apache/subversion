@@ -89,4 +89,13 @@ Candidate changes:
      Votes:
        +1: david
 
+  * r14216
+    Perl bindings: Don't leak editor objects on failed editor calls.
+    Justification:
+      Failed editor calls for editor driver would cause the whole editor
+      object to leak, by holding unnecessary refcnt.  Those objects are
+      usually quite large in svk.
+    Votes:
+     +1: clkao
+
 Approved changes (further review is welcome, but not required):
