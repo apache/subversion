@@ -262,7 +262,7 @@ I.    BUILD REQUIREMENTS
 
           http://www.masm32.org/
 
-      You only need ML.EXE and ML.ERR from this distributeion.
+      You only need ML.EXE and ML.ERR from this distribution.
 
       The VS.NET installation already contains MASM (but note, that
       version if MASM is not compatible with MSVC 6).
@@ -323,7 +323,7 @@ I.    BUILD REQUIREMENTS
 
           http://www.gzip.org/zlib/
 
-      Windows users sould get the source for ZLib version 1.2 or later:
+      Windows users should get the source for ZLib version 1.2 or later:
 
           http://www.gzip.org/zlib/zlib122.zip
 
@@ -531,7 +531,7 @@ II.   INSTALLATION
              same working copy.
 
       The last reason above is possibly the most useful.  For instance
-      you can have separate debug and optimised builds each using the
+      you can have separate debug and optimized builds each using the
       same working copy. Or you may want a client-only build and a
       client-server build. Using multiple build directories you can
       rebuild any or all configurations after an edit without the need
@@ -613,7 +613,7 @@ II.   INSTALLATION
         for displaying localized messages. Available in
         http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=2627
       * GNU gettext for generating message catalog (.mo) files from
-        message tramslations. Get the latest binaries from
+        message translations. Get the latest binaries from
         http://gnuwin32.sourceforge.net/. You'll need the binaries
         (gettext-0.14.1-bin.zip) and dependencies (gettext-0.14.1-dep.zip).
       * Either a Subversion client binary from http://subversion.tigris.org/ to
