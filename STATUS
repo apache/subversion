@@ -98,4 +98,13 @@ Candidate changes:
     Votes:
      +1: clkao
 
+  * r14280
+    Build ZLib from sources on Windows.
+    Justification:
+      Cures major PITA for Windows developers, improves debugging support.
+    Concerns:
+      Not exactly a showstopper for 1.2.0.
+    Votes:
+      +0.9: brane (+1 for 1.2.1)
+
 Approved changes (further review is welcome, but not required):
