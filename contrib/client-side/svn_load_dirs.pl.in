@@ -654,7 +654,7 @@ while (defined (my $load_dir = &get_next_load_dir))
                     $print_rename_message = 0;
                     print "\n",
                       "The following table lists files and directories that\n",
-                      "exist in either the Subversion repository and the\n",
+                      "exist in either the Subversion repository or the\n",
                       "directory to be imported but not both.  You now have\n",
                       "the opportunity to match them up as renames instead\n",
                       "of deletes and adds.  This is a Good Thing as it'll\n",
