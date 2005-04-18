@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-04-11 10:57+0200\n"
-"PO-Revision-Date: 2005-04-11 11:20+0200\n"
+"PO-Revision-Date: 2005-04-18 10:10+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: French <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -34,9 +34,9 @@ msgstr ""
 # L'accentuation des majuscules fait partie de l'orthographe de la langue
 # française, et n'est donc pas négociable, même si personne ne le sait !
 #
-# La typographie en usage impose un espace insécable avant ':', ';', '?'
-# et '!', mais pas avant '.', ',', ')'. Il n'y a pas d'espace après '(',
-# mais il y en a après toutes les ponctuations.
+# La typographie en usage impose une espace insécable avant ':', ';', '?',
+# '!', '»' et une après '«', mais aucune avant '.', ',', ')', 
+# Il n'y a pas d'espace après '(', mais après toutes les autres ponctuations.
 #
 # Voir éventuellement pour références les pointeurs suivants :
 #  - WebDAV:  http://www.ics.uci.edu/~ejw/authoring/protocol/rfc2518.fr.html
@@ -67,6 +67,8 @@ msgstr ""
 # a target: une cible (destination ? objectif ? argument ?)
 # a token: une marque, un signe, un jeton, un nom, un identifiant ???
 # a lock-token: une marque de verrou ? un nom de verrou ?? 
+# a repository back-end (FS - file system) : "stockage de dépôt" ?
+# a repository access (RA) module : module d'accès au dépôt
 #
 # version control: gestion(naire) de version ?
 # text-base: copie de référence, texte/copie de base/pristine ?
@@ -185,7 +187,7 @@ msgid ""
 "The following repository back-end (FS) modules are available:\n"
 "\n"
 msgstr ""
-"Les types de gestion physique de dépôt (FS) suivants sont disponibles :\n"
+"Les types de stockage de dépôt (FS) suivants sont disponibles :\n"
 "\n"
 
 #: clients/cmdline/import-cmd.c:82
@@ -2352,7 +2354,7 @@ msgstr "Transaction vivante"
 
 #: include/svn_error_codes.h:519
 msgid "Unknown FS type"
-msgstr "Système de fichier inconnu"
+msgstr "Type de stockage de dépôt (FS) inconnu"
 
 #: include/svn_error_codes.h:524
 msgid "No user associated with filesystem"
@@ -2392,7 +2394,7 @@ msgstr "Élément obsolète"
 
 #: include/svn_error_codes.h:576
 msgid "Unsupported FS format"
-msgstr "Format de système de fichier non supporté"
+msgstr "Format de stockage de dépôt (FS) non supporté"
 
 #: include/svn_error_codes.h:582
 msgid "The repository is locked, perhaps for db recovery"
@@ -3400,7 +3402,7 @@ msgstr ""
 #: libsvn_fs/fs-loader.c:131
 #, c-format
 msgid "Failed to load module for FS type '%s'"
-msgstr "Échec au chargement du module pour le type de fichier (FS) '%s'"
+msgstr "Échec au chargement du module de stockage (FS) '%s'"
 
 #: libsvn_fs/fs-loader.c:138
 #, c-format
@@ -3411,7 +3413,7 @@ msgstr ""
 #: libsvn_fs/fs-loader.c:163
 #, c-format
 msgid "Unknown FS type '%s'"
-msgstr ""
+msgstr "Type de stockage de dépôt inconnu : '%s'"
 
 #: libsvn_fs_base/bdb/bdb-err.c:97
 #, c-format
@@ -3805,7 +3807,7 @@ msgstr ""
 #: libsvn_fs_base/fs.c:675 libsvn_fs_fs/fs_fs.c:251
 #, c-format
 msgid "Expected FS format '%d'; found format '%d'"
-msgstr ""
+msgstr "Format de stockage attendu '%d' ; format trouvé '%d'"
 
 #: libsvn_fs_base/fs.c:1064
 #, c-format
@@ -4082,7 +4084,7 @@ msgstr "Fichier de verrou corrompu pour '%s' dans le système de fichier '%s'"
 
 #: libsvn_fs_fs/fs.c:334
 msgid "Module for working with a plain file (FSFS) repository."
-msgstr ""
+msgstr "Module de stockage de dépôt à base de fichiers simples (FSFS)."
 
 #: libsvn_fs_fs/fs.c:368
 #, c-format
