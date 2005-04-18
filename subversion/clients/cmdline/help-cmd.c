@@ -25,7 +25,6 @@
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_version.h"
-#include "svn_fs.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -63,9 +62,6 @@ svn_cl__help (apr_getopt_t *os,
   const char *ra_desc_start
     = _("The following repository access (RA) modules are available:\n\n");
 
-  const char *fs_desc_start
-    = _("The following repository back-end (FS) modules are available:\n\n");
-
   svn_stringbuf_t *version_footer;
 
   if (baton)
@@ -75,9 +71,6 @@ svn_cl__help (apr_getopt_t *os,
 
   version_footer = svn_stringbuf_create (ra_desc_start, pool);
   SVN_ERR (svn_ra_print_modules (version_footer, pool));
-  svn_stringbuf_appendcstr (version_footer, "\n");
-  svn_stringbuf_appendcstr (version_footer, fs_desc_start);
-  SVN_ERR (svn_fs_print_modules (version_footer, pool));
 
   return svn_opt_print_help (os,
                              "svn",   /* ### erm, derive somehow? */
