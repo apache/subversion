@@ -220,6 +220,13 @@ I.    BUILD REQUIREMENTS
       is a whole section at the end of this document that describes how it
       is done: See section III for details.
 
+      6.1 Apache Web Server 2.0.54 or newer (Windows only)
+          (http://httpd.apache.org/download.cgi)
+
+      If you are on Windows, you will need at least version 2.0.54 of
+      the Apache Web server. Earlier versions don't support file locking,
+      which was introduced in Subversion 1.2.
+
 
       7.  Python 2.0 (http://www.python.org/)
 
@@ -245,7 +252,23 @@ I.    BUILD REQUIREMENTS
       script.
 
 
-      10. Libraries for our libraries
+      10. MASM 6 or newer (Windows only, optional)
+
+      The Windows build scripts for Subversion can use the Microsoft
+      Macro Assembler (MASM) to build an optimized version of the ZLib
+      library. Make sure that the version of MASM you use is compatible
+      with the C compiler. If you're using MSVC 6, and don't have MASM 6,
+      a free MASM-compatible assembler is available here:
+
+          http://www.masm32.org/
+
+      You only need ML.EXE and ML.ERR from this distributeion.
+
+      The VS.NET installation already contains MASM (but note, that
+      version if MASM is not compatible with MSVC 6).
+
+
+      11. Libraries for our libraries
 
       Some of the libraries that Subversion depends on themselves have
       optional dependencies that can add features to what Subversion
@@ -300,12 +323,11 @@ I.    BUILD REQUIREMENTS
 
           http://www.gzip.org/zlib/
 
-      Windows users should just get the pre-built package:
+      Windows users sould get the source for ZLib version 1.2 or later:
 
-          http://www.gzip.org/zlib/contrib/zlib113-win32.zip
+          http://www.gzip.org/zlib/zlib122.zip
 
-      The neon build scripts on Windows are set up to use those
-      libraries.
+      The Windows build scripts will compile the ZLib sources.
 
 
       11. Building The Documentation
@@ -570,12 +592,12 @@ II.   INSTALLATION
         for building the client components.  Neon is included in the zip file
         distribution.
       * Berkeley DB is required for support for local server components,
-        version 4.2.52 is available from
+        version 4.3.27 is available from
         http://subversion.tigris.org/servlets/ProjectDocumentList as
-        db-4.2.52-win32.zip. For more information see Section I.5.
+        db-4.3.27-win32.zip. For more information see Section I.5.
       * Apache 2 source, downloaded from
         http://httpd.apache.org/download.cgi, these instructions assume
-        version 2.0.50.  Only needed for building the server dso modules.
+        version 2.0.54.  Only needed for building the server dso modules.
       * Apache 2 msi install file, also from
         http://httpd.apache.org/download.cgi (required for running the
         tests).  Only needed for testing the server dso modules.
@@ -584,43 +606,38 @@ II.   INSTALLATION
         tarball.  If you are building from a Subversion checkout and have
         not downloaded Apache 2, then get these 3 libraries from
         http://www.apache.org/dist/apr/
-      * ZLib 1.1.4 or higher (version 1.1.x) binaries
-        http://www.winimage.com/zLibDll/zlib114dll.zip.
-      * Openssl 0.9.7d or higher obtained from
-        http://www.openssl.org/source/openssl-0.9.7d.tar.gz
-      * An assembler, e.g., nasm which is available from
-        http://www.kernel.org/pub/software/devel/nasm/binaries/win32/
-      * For localization gnu gettext is needed.  Get
-        gettext-runtime-0.13.bin.woe32.zip,
-        gettext-tools-0.13.bin.woe32.zip, and
-        libiconv-1.9.1.bin.woe32.zip from
-        http://mirrors.kernel.org/gnu/gettext/ and
-        http://mirrors.kernel.org/gnu/libiconv/.
+      * ZLib 1.2 or higher sources from http://www.zlib.org/
+      * Openssl 0.9.7f or higher obtained from
+        http://www.openssl.org/source/openssl-0.9.7f.tar.gz
+      * A modified version of GNU libintl, called svn-win32-libintl.zip,
+        for displaying localized messages. Available in
+        http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=2627
+      * GNU gettext for generating message catalog (.mo) files from
+        message tramslations. Get the latest binaries from
+        http://gnuwin32.sourceforge.net/. You'll need the binaries
+        (gettext-0.14.1-bin.zip) and dependencies (gettext-0.14.1-dep.zip).
       * Either a Subversion client binary from http://subversion.tigris.org/ to
         do the initial checkout of the Subversion source or the zip file
         source distribution. See the section "Bootstrapping from a Zip or
         Installer File under Windows" above for more.
-      * A means of unpacking the files.  The Subversion tar.gz file uses the
-        POSIX.1 standard for file names which exceed 100 characters.  This
-        format is not understood by all programs which claim to be able to
-        unpack .tar.gz files.  Notable examples of this are WinZip and the
-        utilities which can be found at http://unxutils.sourceforge.net/.  The
-        version of tar at http://gnuwin32.sourceforge.net/ is derived from GNU
-        tar, so it can handle POSIX.1. However, it is *not* able to unpack
-        gzip files, although it is able to read a pipe from gzip.  Cygwin can
-        unpack this file, however cygwin is a large package to install such
-        just to unpack the tarball on Windows.  To avoid these problems use
-        the Subversion zip file source distribution.  The other required
-        package which is packaged as a tar file (openssl) can be unpacked with
-        any of the utilities mentioned.
+      * A means of unpacking the files, e.g., WinZIP or similar.
+      * [Optional] An assembler, e.g., MASM32 from http://www.mas32.com/
+        or nasm which is available from
+        http://www.kernel.org/pub/software/devel/nasm/binaries/win32/
 
    E.2 Notes
 
-      The neon library supports secure connections with OpenSSL and
+      The Neon library supports secure connections with OpenSSL and
       on-the-wire compression with zlib. If you want to use those
       features, you should pass the options "--with-zlib" and
-      "--with-openssl" to the gen-make.py script. See Section I.10 for
+      "--with-openssl" to the gen-make.py script. See Section I.11 for
       more details.
+
+      Versions of Neon up to and including 0.24.7 fail to define the
+      HAVE_SETSOCKOPT symbol. Make sure that the file config.hw at the
+      root of the Neon sources contains the line
+
+          #define HAVE_SETSOCKOPT
 
       If you are installing under Win9x or NT4 (and do not have Internet
       Explorer 5 or later) and svn.exe doesn't run, try installing
@@ -686,7 +703,7 @@ II.   INSTALLATION
         SVN\src-trunk\db4-win32\lib. Again, the DLLs should be somewhere in
         your path.
 
-      * Extract Apache source into SVN\http-2.0.50 if you wish to build the
+      * Extract Apache source into SVN\http-2.0.54 if you wish to build the
         server dso modules.
       * If you are building from a checkout of Subversion, and you are NOT
         building Apache, then you will need the APR libraries.  Depending
@@ -697,24 +714,23 @@ II.   INSTALLATION
           - Extract the apr, apr-util and apr-iconv directories from the
             srclib folder in the Apache httpd source into SVN\apr,
             SVN\apr-util, and SVN\apr-iconv respectively.
-      * Extract the pre-built zlib into SVN\zlib and copy
-        SVN\zlib\static32\zlibstat.lib into SVN\zlib
-      * Extract openssl into SVN\openssl-0.9.7d
-      * Extract nasm into SVN\nasm and put it in your path
-      * Make a directory SVN\gettext and unpack
-        gettext-runtime-0.13.bin.woe32.zip,
-        gettext-tools-0.13.bin.woe32.zip, and
-        libiconv-1.9.1.bin.woe32.zip into it.  Add SVN\gettext\bin to your
-        path, SVN\gettext\include to your INCLUDE path and
-        SVN\gettext\lib to your LIB path environment variables.  You can
-        add these on the command line as shown below.
+      * Extract the ZLib sources into SVN\zlib.
+      * Extract openssl into SVN\openssl-0.9.7f
+      * Extract svn-win32-libintl.zip into SVN\svn-win32-libintl.
+        Add SVN\svn-win32-libintl\inc to your INCLUDE path and
+        SVN\svn-win32-libintl\lib to your LIB path environment variables.
+        You can add these on the command line as shown below.
+      * Extract gettext-0.14.1-bin.zip and gettext-0.14.1-dep.zip into
+        SVN\gettext-0.14.1-bin. Add SVN\gettext-0.14.1-bin\bin to your path.
+      * [Optional] Extract MASM32 (only the ML.EXE and ML.ERR files) into
+        SVN\asm (or extract nasm into SVN\asm) and put it in your path.
 
    E.4 Building the Binaries
 
     To build the binaries either follow the instructions here or use
     build\win32\vc6-build.bat.in after editing it's default paths to match
     yours and saving it as vc6-build.bat.  The vc6-build.bat does a full build
-    so it requires Apache 2 source and if the tests are to be run the 
+    so it requires Apache 2 source and if the tests are to be run the
     Apache 2 install.
 
     Start in the SVN directory you created.
@@ -726,26 +742,29 @@ II.   INSTALLATION
     C:>set DRIVE=C
     C:>set PYTHONDIR=C:\Python22
     C:>set AWKDIR=C:\SVN\Awk
-    C:>set NASMDIR=C:\SVN\nasm
+    C:>set ASMDIR=C:\SVN\asm
     C:>set SDKINC=C:\Program Files\Microsoft SDK\include
     C:>set SDKLIB=C:\Program Files\Microsoft SDK\lib
-    C:>set GETTEXTINC=C:\SVN\gettext\include
-    C:>set GETTEXTLIB=C:\SVN\gettext\lib
-    C:>set GETTEXTBIN=C:\SVN\gettext\bin
-    C:>PATH=%PATH%;%DRIVE%:\SVN\src-%DIR%\db4-win32;%NASMDIR%;
+    C:>set LIBINTLINC=C:\SVN\svn-win32-libintl\inc
+    C:>set LIBINTLLIB=C:\SVN\svn-win32-libintl\lib
+    C:>set GETTEXTBIN=C:\SVN\gettext-0.14.1-bin\bin
+    C:>PATH=%PATH%;%DRIVE%:\SVN\src-%DIR%\db4-win32;%ASMDIR%;
             %PYTHONDIR%;%AWKDIR%;%GETTEXTBIN%
-    C:>set INCLUDE=%SDKINC%;%INCLUDE%;%GETTEXTINC%
-    C:>set LIB=%SDKLIB%;%LIB%;%GETTEXTLIB%
+    C:>set INCLUDE=%SDKINC%;%INCLUDE%;%LIBINTLINC%
+    C:>set LIB=%SDKLIB%;%LIB%;%LIBINTLLIB%
 
     OpenSSL
 
-    C:>cd openssl-0.9.7d
+    C:>cd openssl-0.9.7f
     C:>perl Configure VC-WIN32
-    C:>call ms\do_nasm
+[*] C:>call ms\do_masm
     C:>nmake -f ms\ntdll.mak
     C:>cd out32dll
     C:>call ..\ms\test
     C:>cd ..\..
+
+    *Note: Use "call ms\do_nasm" of you have nasm instead of MASM, or
+           "call ms\do_ms" if you don't have an assembler.
 
     Apache 2
 
@@ -755,12 +774,12 @@ II.   INSTALLATION
     Apache and Subversion will be running incompatible versions of apr.
 
     C:>cd src-%DIR%
-    C:>python gen-make.py -t dsp --with-httpd=..\httpd-2.0.50
-       --with-berkeley-db=db4-win32 --with-openssl=..\openssl-0.9.7d
+    C:>python gen-make.py -t dsp --with-httpd=..\httpd-2.0.54
+       --with-berkeley-db=db4-win32 --with-openssl=..\openssl-0.9.7f
        --with-zlib=..\zlib --enable-nls --enable-bdb-in-apr-util
     C:>cd ..
     C:>set APACHEDIR=C:\Program Files\Apache Group\Apache2
-    C:>msdev httpd-2.0.50\apache.dsw /MAKE "BuildBin - Win32 Release"
+    C:>msdev httpd-2.0.54\apache.dsw /MAKE "BuildBin - Win32 Release"
 
     Subversion
 
@@ -772,6 +791,9 @@ II.   INSTALLATION
         apr files yourself you will have to tell the generator where to find
         the APR libraries; the options are --with-apr, --with-apr-util and
         --with-apr-iconv.
+      * You can skip setting the LIBINTLINC and LIBINTLLIB variables, and
+        add "--with-libintl=..\svn-win32-libintl" to the gen-make.py command
+        line instead.
       * If you would like a debug build substitute Debug for Release in
         the msdev commands.
       * There have been rumors that Subversion on Win32 can be built
@@ -799,8 +821,8 @@ II.   INSTALLATION
     file, Apache 2 has not been built so gen-make.py must be run:
 
     C:>python gen-make.py -t dsp --with-berkeley-db=db4-win32
-        --with-openssl=..\openssl-0.9.7d --with-zlib=..\zlib --enable-nls
-        --enable-bdb-in-apr-util
+        --with-openssl=..\openssl-0.9.7f --with-zlib=..\zlib
+        --enable-bdb-in-apr-util --with-libintl=..\svn-win32-libintl
 
     Then build subversion:
 
@@ -819,51 +841,17 @@ II.   INSTALLATION
 
     You now need to copy the binaries ready to make the release zip
     file. You also need to do this to run the tests as the new binaries
-    need to be in your path.
+    need to be in your path. You can use the build/win32/make_dist.py
+    script in the Subversion source directory to do that.
 
-    From within the SVN directory copy these files:
+    [TBD: Describe how to do this. Note dependencies on zip, jar, doxygen.]
 
-    C:>mkdir svn-win32-%VER%
-    C:>mkdir svn-win32-%VER%\bin
-    C:>mkdir svn-win32-%VER%\httpd
-    C:>mkdir svn-win32-%VER%\iconv
-    C:>copy src-%DIR%\db4-win32\bin\libdb42.dll svn-win32-%VER%\bin
-    C:>copy openssl-0.9.7d\out32dll\libeay32.dll svn-win32-%VER%\bin
-    C:>copy openssl-0.9.7d\out32dll\ssleay32.dll svn-win32-%VER%\bin
-    C:>copy gettext\bin\intl.dll svn-win32-%VER%\bin
-    C:>copy gettext\bin\iconv.dll svn-win32-%VER%\bin
-    C:>copy src-%DIR%\Release\subversion\clients\cmdline\svn.exe
-       svn-win32-%VER%\bin
-    C:>copy src-%DIR%\Release\subversion\svnadmin\svnadmin.exe
-       svn-win32-%VER%\bin
-    C:>copy src-%DIR%\Release\subversion\svndumpfilter\svndumpfilter.exe
-       svn-win32-%VER%\bin
-    C:>copy src-%DIR%\Release\subversion\svnlook\svnlook.exe
-       svn-win32-%VER%\bin
-    C:>copy src-%DIR%\Release\subversion\svnserve\svnserve.exe
-       svn-win32-%VER%\bin
-    C:>copy src-%DIR%\Release\subversion\svnversion\svnversion.exe
-       svn-win32-%VER%\bin
-
-    If Apache 2 and the server modules were built:
-
-    C:>copy httpd-2.0.50\srclib\apr\Release\libapr.dll svn-win32-%VER%\bin
-    C:>copy httpd-2.0.50\srclib\apr-iconv\Release\libapriconv.dll
-       svn-win32-%VER%\bin
-    C:>copy httpd-2.0.50\srclib\apr-util\Release\libaprutil.dll
-       svn-win32-%VER%\bin
-    C:>copy httpd-2.0.50\srclib\apr-iconv\Release\iconv\*.so
-       svn-win32-%VER%\iconv
-
-    If the source is from the zip file, Apache 2 has not been built and the
-    server modules are not required:
-
-    C:>copy src-%DIR%\apr\Release\libapr.dll svn-win32-%VER%\bin
-    C:>copy src-%DIR%\apr-iconv\Release\libapriconv.dll svn-win32-%VER%\bin
-    C:>copy src-%DIR%\apr-util\Release\libaprutil.dll svn-win32-%VER%\bin
-    C:>copy src-%DIR%\apr-iconv\Release\iconv\*.so svn-win32-%VER%\iconv
 
    E.6 Testing the Binaries
+    [TBD: It's been a long, long while since it was necessary to move
+          binaries around for testing. win-tests.py does that automagically.
+          Fix this section accordingly, and probably reorder, putting
+          the packaging at the end.]
 
     The build process creates the binary test programs but it does not
     copy the client tests into the release test area.
