@@ -36,14 +36,6 @@ Candidate changes:
     Votes:
       +1: fitz, dlr
 
-  * r14223
-    Drop listing of FS modules from "svn --version" output.
-    Justification:
-      Makes building with --enable-dso work again.
-    Votes:
-      +1: lundblad, fitz
-
-
   * r14247
     Build .mo files automatially on Windows if NLS is enabled.
     Justification
@@ -126,4 +118,18 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
+  * r14295
+    Fix memory problem with neon lock hook.
+    Justification:
+      This problem can cause the client to crash in libsvn_ra_dav.
+    Votes:
+      +1: philip
+
 Approved changes (further review is welcome, but not required):
+
+  * r14223
+    Drop listing of FS modules from "svn --version" output.
+    Justification:
+      Makes building with --enable-dso work again.
+    Votes:
+      +1: lundblad, fitz, philip
