@@ -244,7 +244,7 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
       else if (strcmp(child->name, "end-revision") == 0)
         end = SVN_STR_TO_REV(dav_xml_get_cdata(child, resource->pool, 1));
       else if (strcmp(child->name, "limit") == 0)
-        limit = atoi(child->first_cdata.first->text);
+        limit = atoi(dav_xml_get_cdata(child, resource->pool, 1));
       else if (strcmp(child->name, "discover-changed-paths") == 0)
         discover_changed_paths = 1; /* presence indicates positivity */
       else if (strcmp(child->name, "strict-node-history") == 0)
