@@ -129,6 +129,10 @@ class WinGeneratorBase(GeneratorBase):
     # Find the installed SWIG version to adjust swig options
     self._find_swig()
 
+    # Look for ML
+    if self.zlib_path:
+      self._find_ml()
+
     # Run apr-util's w32locatedb.pl script
     self._configure_apr_util()
 
@@ -146,6 +150,13 @@ class WinGeneratorBase(GeneratorBase):
       if self.write_file_if_changed(svnissdeb, buf.replace("@CONFIG@", "Debug")):
         print 'Wrote %s' % svnissdeb
 
+    # Generate the build_zlib.bat file
+    if self.zlib_path:
+      data = {'zlib_path': os.path.abspath(self.zlib_path),
+              'use_ml': self.have_ml and 1 or None}
+      bat = os.path.join('build', 'win32', 'build_zlib.bat')
+      self.write_with_template(bat, 'build_zlib.ezt', data)
+
     # Generate the build_neon.bat file
     data = {'neon_path': os.path.abspath(self.neon_path),
             'expat_path': os.path.join(os.path.abspath(self.apr_util_path),
@@ -154,8 +165,8 @@ class WinGeneratorBase(GeneratorBase):
                          and os.path.abspath(self.zlib_path),
             'openssl_path': self.openssl_path
                             and os.path.abspath(self.openssl_path)}
-    self.write_with_template(os.path.join('build', 'win32', 'build_neon.bat'),
-                             'build_neon.ezt', data)
+    bat = os.path.join('build', 'win32', 'build_neon.bat')
+    self.write_with_template(bat, 'build_neon.ezt', data)
 
     # Generate the build_locale.bat file
     pofiles = []
@@ -475,6 +486,10 @@ class WinGeneratorBase(GeneratorBase):
     if self.enable_nls and name == '__ALL__':
       depends.extend(self.sections['locale'].get_targets())
 
+    # Build ZLib as a dependency of Neon if we have it
+    if  self.zlib_path and name == 'neon':
+      depends.extend(self.sections['zlib'].get_targets())
+
     return depends
 
   def get_win_depends(self, target, mode):
@@ -735,8 +750,23 @@ class WinGeneratorBase(GeneratorBase):
     template = ezt.Template(compress_whitespace = 0)
     template.parse_file(os.path.join('build', 'generator', tname))
     template.generate(fout, data)
-
     self.write_file_if_changed(fname, fout.getvalue())
+
+  def write_zlib_project_file(self, name):
+    if not self.zlib_path:
+      return
+    zlib_path = os.path.abspath(self.zlib_path)
+    self.move_proj_file(os.path.join('build', 'win32'), name,
+                        (('zlib_path', zlib_path),
+                         ('zlib_sources',
+                          glob.glob(os.path.join(zlib_path, '*.c'))
+                          + glob.glob(os.path.join(zlib_path,
+                                                   'contrib/masmx86/*.c'))
+                          + glob.glob(os.path.join(zlib_path,
+                                                   'contrib/masmx86/*.asm'))),
+                         ('zlib_headers',
+                          glob.glob(os.path.join(zlib_path, '*.h'))),
+                        ))
 
   def write_neon_project_file(self, name):
     neon_path = os.path.abspath(self.neon_path)
@@ -750,7 +780,7 @@ class WinGeneratorBase(GeneratorBase):
 
   def move_proj_file(self, path, name, params=()):
     ### Move our slightly templatized pre-built project files into place --
-    ### these projects include apr, neon, locale, config, etc.
+    ### these projects include apr, zlib, neon, locale, config, etc.
 
     dest_file = os.path.join(path, name)
     source_template = name + '.ezt'
@@ -847,6 +877,21 @@ class WinGeneratorBase(GeneratorBase):
     finally:
       fp.close()
     return ''
+
+  def _find_ml(self):
+    "Check if the ML assembler is in the path"
+    fp = os.popen('ml /help', 'r')
+    try:
+      line = fp.readline()
+      if line:
+        msg = 'Found ML, ZLib build will use ASM sources'
+        self.have_ml = 1
+      else:
+        msg = 'Could not find ML, ZLib build will not use ASM sources'
+        self.have_ml = 0
+      sys.stderr.write('%s\n' % (msg,))
+    finally:
+      fp.close()
 
   def _configure_apr_util(self):
     if not self.configure_apr_util:
