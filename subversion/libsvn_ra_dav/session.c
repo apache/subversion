@@ -959,21 +959,23 @@ pre_send_hook(ne_request *req,
 
 
 static void
-setup_neon_request_hook(svn_ra_dav__session_t *ras,
-                        apr_pool_t *pool)
+setup_neon_request_hook(svn_ra_dav__session_t *ras)
 {
   /* We need to set up the lock callback once and only once per neon
      session creation. */
 
-  struct lock_request_baton *lrb;
-  /* Build context for neon callbacks and then register them. */
-  lrb = apr_pcalloc(pool, sizeof(*lrb));
+  if (! ras->lrb)
+    {
+      struct lock_request_baton *lrb;
+      /* Build context for neon callbacks and then register them. */
+      lrb = apr_pcalloc(ras->pool, sizeof(*lrb));
 
-  ne_hook_create_request(ras->sess, create_request_hook, lrb);
-  ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
+      ne_hook_create_request(ras->sess, create_request_hook, lrb);
+      ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
 
-  lrb->pool = pool;
-  ras->lrb = lrb;
+      lrb->pool = ras->pool;
+      ras->lrb = lrb;
+    }
 }
 
 /* ### TODO for 1.3: Send all locks to the server at once. */
@@ -999,7 +1001,7 @@ shim_svn_ra_dav__lock(svn_ra_session_t *session,
                                         url, SVN_INVALID_REVNUM, pool));
 
   /* Clear out the lrb... */
-  memset((ras->lrb), 0, sizeof(ras->lrb));
+  memset((ras->lrb), 0, sizeof(*ras->lrb));
 
   /* ...and load it up again. */
   ras->lrb->pool = pool;
@@ -1079,7 +1081,7 @@ svn_ra_dav__lock(svn_ra_session_t *session,
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create (pool);
 
-  setup_neon_request_hook(session->priv, pool);
+  setup_neon_request_hook(session->priv);
 
   /* ### TODO for 1.3: Send all the locks over the wire at once.  This
      loop is just a temporary shim. */
@@ -1166,7 +1168,7 @@ shim_svn_ra_dav__unlock(svn_ra_session_t *session,
     }
 
   /* Clear out the lrb... */
-  memset((ras->lrb), 0, sizeof(ras->lrb));
+  memset((ras->lrb), 0, sizeof(*ras->lrb));
 
   /* ...and load it up again. */
   ras->lrb->pool = pool;
@@ -1215,7 +1217,7 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create (pool);
 
-  setup_neon_request_hook(session->priv, pool);
+  setup_neon_request_hook(session->priv);
 
   /* ### TODO for 1.3: Send all the lock tokens over the wire at once.
         This loop is just a temporary shim. */
@@ -1328,7 +1330,6 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
   svn_ra_dav__session_t *ras = session->priv;
   int rv;
   const char *url;
-  struct lock_request_baton *lrb;
   struct receiver_baton *rb;
   svn_string_t fs_path;
 
@@ -1338,16 +1339,15 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
                                         url, SVN_INVALID_REVNUM, pool));
 
   /* Build context for neon callbacks and then register them. */
-  lrb = apr_pcalloc(pool, sizeof(*lrb));
-  lrb->pool = pool;
-  ne_hook_create_request(ras->sess, create_request_hook, lrb);
-  ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
+  setup_neon_request_hook(ras);
+  memset((ras->lrb), 0, sizeof(*ras->lrb));
+  ras->lrb->pool = pool;
 
   /* Build context for the lock_receiver() callback. */
   rb = apr_pcalloc(pool, sizeof(*rb));
   rb->pool = pool;
   rb->ras = ras;
-  rb->lrb = lrb;
+  rb->lrb = ras->lrb;
   rb->fs_path = fs_path.data;
 
   /* Ask neon to "discover" the lock (presumably by doing a PROPFIND
@@ -1355,39 +1355,39 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
   rv = ne_lock_discover(ras->sess, url, lock_receiver, rb);
 
   /* Did we get a <D:error> response? */
-  if (lrb->err)
+  if (ras->lrb->err)
     {
-      if (lrb->error_parser)
-        ne_xml_destroy(lrb->error_parser);
-      return lrb->err;
+      if (ras->lrb->error_parser)
+        ne_xml_destroy(ras->lrb->error_parser);
+      return ras->lrb->err;
     }
 
   /* Did lock_receiver() generate an error? */
   if (rb->err)
     {
-      if (lrb->error_parser)
-        ne_xml_destroy(lrb->error_parser);
+      if (ras->lrb->error_parser)
+        ne_xml_destroy(ras->lrb->error_parser);
       return rb->err;
     }
 
   /* Did we get some other sort of neon error? */
   if (rv)
     {
-      if (lrb->error_parser)
-        ne_xml_destroy(lrb->error_parser);
+      if (ras->lrb->error_parser)
+        ne_xml_destroy(ras->lrb->error_parser);
       return svn_ra_dav__convert_error(ras->sess,
                                        _("Failed to fetch lock information"),
                                        rv, pool);
     }  
 
   /* Free neon things. */
-  if (lrb->error_parser)
-    ne_xml_destroy(lrb->error_parser);
+  if (ras->lrb->error_parser)
+    ne_xml_destroy(ras->lrb->error_parser);
 
   /* Check to see if the server sent a custom 'creationdate' header in
      the PROPFIND response.  If so, use it. */
-  if (lrb->creation_date)
-    rb->lock->creation_date = lrb->creation_date;
+  if (ras->lrb->creation_date)
+    rb->lock->creation_date = ras->lrb->creation_date;
   
   *lock = rb->lock;
   return SVN_NO_ERROR;
