@@ -119,4 +119,11 @@ Candidate changes:
           subversion/tests/clients/cmdline and put it into
           tools/test-scripts, where it belongs.
 
+  * r14293
+    Make 'svn import' not create empty revisions.
+    Justification:
+      It makes 'svn import' not create empty revisions.
+    Votes:
+      +1: cmpilato
+
 Approved changes (further review is welcome, but not required):
