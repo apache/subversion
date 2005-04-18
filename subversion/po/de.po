@@ -72,7 +72,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-30 09:48+0200\n"
-"PO-Revision-Date: 2005-04-01 16:22+0100\n"
+"PO-Revision-Date: 2005-04-18 11:23+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -317,6 +317,8 @@ msgid ""
 "Lock Comment (%i %s):\n"
 "%s\n"
 msgstr ""
+"Sperrkommentar (%i %s):\n"
+"%s\n"
 
 #: clients/cmdline/info-cmd.c:279
 #, c-format
@@ -2362,7 +2364,7 @@ msgstr "Kein Benutzer mit dem Dateisystem verbunden"
 
 #: include/svn_error_codes.h:527
 msgid "Path is locked"
-msgstr ""
+msgstr "Pfad ist gesperrt"
 
 #: include/svn_error_codes.h:532
 #: include/svn_error_codes.h:659
@@ -7128,6 +7130,9 @@ msgid ""
 "%s\n"
 "\n"
 msgstr ""
+"Kommentar (%i %s):\n"
+"%s\n"
+"\n"
 
 #: svnadmin/main.c:1100
 #, c-format
@@ -7596,6 +7601,8 @@ msgid ""
 "Comment (%i %s):\n"
 "%s\n"
 msgstr ""
+"Kommentar (%i %s):\n"
+"%s\n"
 
 #: svnlook/main.c:1825
 msgid "Missing propname argument"
@@ -7843,3 +7850,4 @@ msgstr "exportiert %s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' nicht versioniert und nicht exportiert\n"
+
