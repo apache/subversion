@@ -112,13 +112,13 @@ Candidate changes:
     Justification:
       It makes 'svn import' not create empty revisions.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, brane
 
   * r14295
     Fix memory problem with neon lock hook.
     Justification:
       This problem can cause the client to crash in libsvn_ra_dav.
     Votes:
-      +1: philip
+      +1: philip, brane
 
 Approved changes (further review is welcome, but not required):
