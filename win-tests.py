@@ -12,7 +12,10 @@ Usage: python win-tests.py [option] [test-path]
                            default is '-d,-r,<test-path-root>'
 """
 
-import os, sys, shutil, traceback
+import os, sys
+import filecmp
+import shutil
+import traceback
 import ConfigParser
 
 import getopt
@@ -96,6 +99,23 @@ def create_target_dir(dirname):
         print "mkdir:", tgt_dir
       os.makedirs(tgt_dir)
 
+def copy_changed_file(src, tgt):
+  assert os.path.isfile(src)
+  if os.path.isdir(tgt):
+    tgt = os.path.join(tgt, os.path.basename(src))
+  if os.path.exists(tgt):
+    assert os.path.isfile(tgt)
+    if filecmp.cmp(src, tgt):
+      if verbose:
+        print "same:", src
+        print " and:", tgt
+      return 0
+  if verbose:
+    print "copy:", src
+    print "  to:", tgt
+  shutil.copy(src, tgt)
+  return 1
+
 def copy_execs(baton, dirname, names):
   copied_execs = baton
   for name in names:
@@ -104,15 +124,8 @@ def copy_execs(baton, dirname, names):
     src = os.path.join(dirname, name)
     tgt = os.path.join(abs_builddir, dirname, name)
     create_target_dir(dirname)
-    try:
-      if verbose:
-        print "copy:", src
-        print "  to:", tgt
-      shutil.copy(src, tgt)
+    if copy_changed_file(src, tgt):
       copied_execs.append(tgt)
-    except:
-      traceback.print_exc(file=sys.stdout)
-      pass
 
 def locate_libs():
   "Move DLLs to a known location and set env vars"
@@ -132,13 +145,14 @@ def locate_libs():
   apriconv_dll_path = os.path.join(apriconv_path, objdir, 'libapriconv.dll')
   apriconv_so_path = os.path.join(apriconv_path, objdir, 'iconv')
 
-  shutil.copy(apr_dll_path, abs_objdir)
-  shutil.copy(aprutil_dll_path, abs_objdir)
-  shutil.copy(apriconv_dll_path, abs_objdir)
+  copy_changed_file(apr_dll_path, abs_objdir)
+  copy_changed_file(aprutil_dll_path, abs_objdir)
+  copy_changed_file(apriconv_dll_path, abs_objdir)
 
   libintl_path = get(cp, 'options', '--with-libintl', None)
   if libintl_path is not None:
-    shutil.copy(os.path.join(libintl_path, 'bin', 'intl3_svn.dll'), abs_objdir)
+    libintl_dll_path = os.path.join(libintl_path, 'bin', 'intl3_svn.dll')
+    copy_changed_file(libintl_dll_path, abs_objdir)
 
   os.environ['APR_ICONV_PATH'] = apriconv_so_path
   os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
