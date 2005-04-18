@@ -106,15 +106,6 @@ Candidate changes:
       Makes it easier to test over DAV; not a core code change.
     Votes:
       +1: lundblad
-      [[ -1: brane
-          Throw this non-portable shell script out of
-          subversion/tests/clients/cmdline and put it into
-          tools/test-scripts, where it belongs.
-
-          I do not think that an objection to the location of a script has
-          any relevance to improvements to its logic.  Thus, it seems to me
-          that this veto is not justified, and so is invalid. --maxb
-      ]]
 
   * r14293
     Make 'svn import' not create empty revisions.
