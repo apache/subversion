@@ -44,6 +44,9 @@ B.  Make 'hunks' of contextually-merged text sensitive to ancestry.
 
 C.  'svn merge' needs to track renames better.  
 
+     (Actually, Subversion in general needs to track renames better.
+     See http://subversion.tigris.org/issues/show_bug.cgi?id=898.)
+
      Edit foo.c on branchA.  Rename foo.c to bar.c on branchB.
 
      1. Try merging the branchA edit into a working copy of branchB:
