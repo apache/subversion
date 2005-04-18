@@ -122,10 +122,3 @@ Candidate changes:
       +1: philip
 
 Approved changes (further review is welcome, but not required):
-
-  * r14223
-    Drop listing of FS modules from "svn --version" output.
-    Justification:
-      Makes building with --enable-dso work again.
-    Votes:
-      +1: lundblad, fitz, philip
