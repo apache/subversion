@@ -36,15 +36,6 @@ Candidate changes:
     Votes:
       +1: fitz, dlr
 
-  * r14247
-    Build .mo files automatially on Windows if NLS is enabled.
-    Justification
-      Makes building binary packages on Windows a bit easier,
-      very low impact.
-    Votes:
-      +1: brane, dionisos, sussman
-      +0: dlr
-
   * r14259
     Fix #2262, including making lock expiration work in FSFS on recursive
     operations.
@@ -134,3 +125,12 @@ Approved changes (further review is welcome, but not required):
       It makes 'svn import' not create empty revisions.
     Votes:
       +1: cmpilato, brane, lundblad
+
+  * r14247
+    Build .mo files automatially on Windows if NLS is enabled.
+    Justification
+      Makes building binary packages on Windows a bit easier,
+      very low impact.
+    Votes:
+      +1: brane, dionisos, sussman
+      +0: dlr
