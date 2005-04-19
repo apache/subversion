@@ -26,8 +26,7 @@ Candidate changes:
       Breaks tests on Windows; there is a simple fix to the tests that needs to
       be done. --lundblad
     Votes:
-      +1: cmpilato (not r14238, r14273)
-      +1: lundblad
+      +1: lundblad, cmpilato (and could this get drawn out ANY longer?)
 
   * r14205, 14208
     Add lock/unlock support to mailer.py.
