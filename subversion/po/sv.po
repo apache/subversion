@@ -45,8 +45,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-04-18 22:54+0200\n"
-"PO-Revision-Date: 2005-04-18 22:54+0200\n"
+"POT-Creation-Date: 2005-04-19 23:04+0200\n"
+"PO-Revision-Date: 2005-04-19 23:03+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -5512,7 +5512,7 @@ msgid "Can't read directory '%s'"
 msgstr "Kan inte läsa katalogen \"%s\""
 
 #: libsvn_subr/io.c:735 libsvn_subr/io.c:1622 libsvn_subr/io.c:1691
-#: libsvn_subr/io.c:2624
+#: libsvn_subr/io.c:2663
 #, c-format
 msgid "Error closing directory '%s'"
 msgstr "Fel vid stängning av katalogen \"%s\""
@@ -5603,7 +5603,7 @@ msgstr "Kan inte radera filen \"%s\""
 msgid "Can't rewind directory '%s'"
 msgstr "Kan inte återspola katalogen \"%s\""
 
-#: libsvn_subr/io.c:1567 libsvn_subr/io.c:2473 libsvn_subr/io.c:2561
+#: libsvn_subr/io.c:1567 libsvn_subr/io.c:2512 libsvn_subr/io.c:2600
 #, c-format
 msgid "Can't open directory '%s'"
 msgstr "Kan inte öppna katalogen \"%s\""
@@ -5631,17 +5631,17 @@ msgstr "Kan inte sätta katalog för processen \"%s\""
 #: libsvn_subr/io.c:1750
 #, c-format
 msgid "Can't set process '%s' child input"
-msgstr ""
+msgstr "Kan inte sätta standard in för processen \"%s\""
 
 #: libsvn_subr/io.c:1757
 #, c-format
 msgid "Can't set process '%s' child outfile"
-msgstr ""
+msgstr "Kan inte sätta standard ut för processen \"%s\""
 
 #: libsvn_subr/io.c:1764
 #, c-format
 msgid "Can't set process '%s' child errfile"
-msgstr ""
+msgstr "Kan inte sätta standard fel för processen \"%s\""
 
 #: libsvn_subr/io.c:1788
 #, c-format
@@ -5677,6 +5677,11 @@ msgid ""
 "%s\n"
 "%s"
 msgstr ""
+"Fel vid körning av '%s':  slutstatus är %d, argument:\n"
+"i katalogen '%s', basnamn:\n"
+"%s\n"
+"%s\n"
+"%s"
 
 #: libsvn_subr/io.c:2075
 #, c-format
@@ -5702,9 +5707,9 @@ msgid "Can't read stream"
 msgstr "Kan inte läsa från ström"
 
 #: libsvn_subr/io.c:2201
-#, fuzzy, c-format
+#, c-format
 msgid "Can't get attribute information from file '%s'"
-msgstr "Kan inte beräkna blame-information för binär fil \"%s\""
+msgstr "Kan inte erhålla attributinformation från filen \"%s\""
 
 #: libsvn_subr/io.c:2202
 msgid "Can't get attribute information from stream"
@@ -5737,61 +5742,61 @@ msgstr "Kan inte läsa längdrad i filen \"%s\""
 msgid "Can't read length line in stream"
 msgstr "Kan inte läsa längdrad i ström"
 
-#: libsvn_subr/io.c:2349
+#: libsvn_subr/io.c:2383
 #, c-format
 msgid "Can't move '%s' to '%s'"
 msgstr "Kan inte flytta \"%s\" till \"%s\""
 
-#: libsvn_subr/io.c:2389
+#: libsvn_subr/io.c:2428
 #, c-format
 msgid "Can't create directory '%s'"
 msgstr "Kan inte skapa katalogen \"%s\""
 
-#: libsvn_subr/io.c:2400 libsvn_wc/copy.c:303
+#: libsvn_subr/io.c:2439 libsvn_wc/copy.c:303
 #, c-format
 msgid "Can't hide directory '%s'"
 msgstr "Kan inte dölja katalogen \"%s\""
 
-#: libsvn_subr/io.c:2413
+#: libsvn_subr/io.c:2452
 #, c-format
 msgid "Can't stat directory '%s'"
 msgstr "Kan inte ta status på katalogen \"%s\""
 
-#: libsvn_subr/io.c:2429
+#: libsvn_subr/io.c:2468
 #, c-format
 msgid "Can't stat new directory '%s'"
 msgstr "Kan inte ta status på den nya katalogen \"%s\""
 
-#: libsvn_subr/io.c:2491
+#: libsvn_subr/io.c:2530
 #, c-format
 msgid "Can't remove directory '%s'"
 msgstr "Kan inte radera katalogen \"%s\""
 
-#: libsvn_subr/io.c:2509
+#: libsvn_subr/io.c:2548
 msgid "Can't read directory"
 msgstr "Kan inte läsa katalog"
 
-#: libsvn_subr/io.c:2580
+#: libsvn_subr/io.c:2619
 #, c-format
 msgid "Can't read directory entry in '%s'"
 msgstr "Kan inte läsa katalogpost i \"%s\""
 
-#: libsvn_subr/io.c:2705
+#: libsvn_subr/io.c:2744
 #, c-format
 msgid "Can't check directory '%s'"
 msgstr "Kan inte kontrollera katalogen \"%s\""
 
-#: libsvn_subr/io.c:2727
+#: libsvn_subr/io.c:2766
 #, c-format
 msgid "Version %d is not non-negative"
-msgstr "Versionsnumret %d är inte icke-negativt"
+msgstr "Versionsnumret %d är negativt"
 
-#: libsvn_subr/io.c:2774
+#: libsvn_subr/io.c:2813
 #, c-format
 msgid "Reading '%s'"
 msgstr "Läser \"%s\""
 
-#: libsvn_subr/io.c:2790
+#: libsvn_subr/io.c:2829
 #, c-format
 msgid "First line of '%s' contains non-digit"
 msgstr "Första raden i \"%s\" innehåller något som inte är en siffra"
@@ -5881,7 +5886,7 @@ msgstr "\"%s\" är varken ett fil- eller katalognamn"
 
 #: libsvn_subr/path.c:1210
 msgid "Can't determine the native path encoding"
-msgstr "Kan inte hitta systemets kodning av sökvägar"
+msgstr "Kan inte hitta den teckenkodning som ditt system använder för sökvägar"
 
 #: libsvn_subr/path.c:1264
 #, c-format
@@ -5937,12 +5942,16 @@ msgid ""
 "Safe data '%s' was followed by non-ASCII byte %d: unable to convert to/from "
 "UTF-8"
 msgstr ""
+"Giltig data '%s' följdes av icke-ASCII-byte %d: kan inte konvertera till/"
+"från UTF-8"
 
 #: libsvn_subr/utf.c:501
 #, c-format
 msgid ""
 "Non-ASCII character (code %d) detected, and unable to convert to/from UTF-8"
 msgstr ""
+"Tecken som ej tillhör ASCII (kod %d) hittades; kan inte konvertera till/från "
+"UTF-8"
 
 #: libsvn_subr/utf.c:543
 #, c-format
@@ -5952,6 +5961,10 @@ msgid ""
 "followed by invalid UTF-8 sequence\n"
 "(hex:%s)"
 msgstr ""
+"Giltig UTF-8\n"
+"(hex:%s)\n"
+"följd av ogiltig UTF-8-sekvens\n"
+"(hex:%s)"
 
 #: libsvn_subr/validate.c:48
 #, c-format
@@ -6011,8 +6024,8 @@ msgid ""
 "Your .svn/tmp directory may be missing or corrupt; run 'svn cleanup' and try "
 "again"
 msgstr ""
-"Din katalog .svn/tmp saknas eller är förstörd; kör \"svn cleanup\" och "
-"försök igen"
+"Din katalog .svn/tmp saknas eller är trasig; kör \"svn cleanup\" och försök "
+"igen"
 
 #: libsvn_wc/adm_files.c:622 libsvn_wc/adm_files.c:698 libsvn_wc/lock.c:377
 #: libsvn_wc/lock.c:630
@@ -6150,8 +6163,8 @@ msgstr "\"%s\" finns redan och är i vägen"
 msgid ""
 "'%s' is scheduled for deletion; it must be committed before being overwritten"
 msgstr ""
-"\"%s\" är schemalagd för radering; den måste checkas in innan den kan "
-"skrivas över"
+"\"%s\" är schemalagd för radering; den måste arkiveras innan den kan skrivas "
+"över"
 
 #: libsvn_wc/copy.c:165
 #, c-format
@@ -6169,8 +6182,8 @@ msgid ""
 "Cannot copy or move '%s': it's not in the repository yet; try committing "
 "first"
 msgstr ""
-"Kan inte kopiera eller flytta \"%s\": den är inte i databasen ännu; checka "
-"in den först"
+"Kan inte kopiera eller flytta \"%s\": den är inte i arkivet ännu; arkivera "
+"den först"
 
 #: libsvn_wc/copy.c:455
 #, c-format
@@ -6178,8 +6191,8 @@ msgid ""
 "Cannot copy or move '%s': it is not in the repository yet; try committing "
 "first"
 msgstr ""
-"Kan inte kopiera eller flytta \"%s\": den är inte i databasen ännu; checka "
-"in den först"
+"Kan inte kopiera eller flytta \"%s\": den är inte i arkivet ännu; arkivera "
+"den först"
 
 #: libsvn_wc/copy.c:525
 #, c-format
@@ -6325,7 +6338,7 @@ msgstr "\"%s\" har okänd nodtyp"
 #, c-format
 msgid "Unexpectedly found '%s': path is marked 'missing'"
 msgstr ""
-"Hiddade \"%s\", vilket var oväntat: sökvägen är markerad som \"saknad\""
+"Hittade \"%s\", vilket var oväntat: sökvägen är markerad som \"saknad\""
 
 #: libsvn_wc/lock.c:158 libsvn_wc/lock.c:359
 #, c-format
@@ -6405,7 +6418,7 @@ msgstr "Fel vid ändring av posten för \"%s\""
 #: libsvn_wc/log.c:623
 #, c-format
 msgid "Error removing lock from entry for '%s'"
-msgstr "Fel vid borttagning av lås fråpn posten för \"%s\""
+msgstr "Fel vid borttagning av lås från posten för \"%s\""
 
 #: libsvn_wc/log.c:754
 #, c-format
@@ -6485,19 +6498,21 @@ msgstr "Kan inte radera temporär fil"
 #: libsvn_wc/props.c:100
 #, c-format
 msgid "Property '%s' locally changed to '%s', but update deletes it\n"
-msgstr "Egenskapen \"%s\" ändrad lokalt till \"%s\", men update raderar den\n"
+msgstr ""
+"Egenskapen \"%s\" ändrad lokalt till \"%s\", men uppdatering raderar den\n"
 
 #: libsvn_wc/props.c:109
 #, c-format
 msgid "Property '%s' locally deleted, but update sets it to '%s'\n"
-msgstr "Egenskapen \"%s\" raderad lokalt, men update sätter den till \"%s\"\n"
+msgstr ""
+"Egenskapen \"%s\" raderad lokalt, men uppdatering sätter den till \"%s\"\n"
 
 #: libsvn_wc/props.c:125
 #, c-format
 msgid "Property '%s' locally changed to '%s', but update sets it to '%s'\n"
 msgstr ""
-"Egenskapen \"%s\" lokalt ändrad till \"%s\", men update sätter den till \"%s"
-"\"\n"
+"Egenskapen \"%s\" lokalt ändrad till \"%s\", men uppdatering sätter den till "
+"\"%s\"\n"
 
 #: libsvn_wc/props.c:168
 #, c-format
@@ -6610,7 +6625,7 @@ msgstr "\"%s\" har okänt värde för egenskapen svn:eol-style"
 #: libsvn_wc/update_editor.c:383
 #, c-format
 msgid "No '.' entry in: '%s'"
-msgstr "Inget post för \".\" i: \"%s\""
+msgstr "Ingen post för \".\" i: \"%s\""
 
 #: libsvn_wc/update_editor.c:856
 #, c-format
@@ -6704,7 +6719,7 @@ msgstr "Kan inte öppna stdio-fil"
 
 #: svnadmin/main.c:123
 msgid "Repository argument required"
-msgstr "Argument för databas krävs"
+msgstr "Argument för arkiv krävs"
 
 #: svnadmin/main.c:128
 #, c-format
@@ -6730,7 +6745,7 @@ msgstr "använd deltan i utskrift av dump"
 
 #: svnadmin/main.c:245
 msgid "bypass the repository hook system"
-msgstr "kringgå databasens hook-system"
+msgstr "kringgå arkivets hookskript-system"
 
 #: svnadmin/main.c:248
 msgid "no progress (only errors) to stderr"
@@ -6740,12 +6755,12 @@ msgstr ""
 
 #: svnadmin/main.c:251
 msgid "ignore any repos UUID found in the stream"
-msgstr "bortse från samtliga databas-UUID:n i strömmen"
+msgstr "bortse från samtliga arkiv-UUID:n i strömmen"
 
 #: svnadmin/main.c:254
 msgid "set repos UUID to that found in stream, if any"
 msgstr ""
-"sätt UUID för databasen till den som eventuellt\n"
+"sätt UUID för arkivet till den som eventuellt\n"
 "                             återfinns i strömmen"
 
 #: svnadmin/main.c:257
@@ -6754,7 +6769,7 @@ msgstr "typ av arkiv: \"fsfs\" (standard) eller \"bdb\""
 
 #: svnadmin/main.c:260
 msgid "load at specified directory in repository"
-msgstr "läs in till angiven katalog i databasen"
+msgstr "läs in till angiven katalog i arkivet"
 
 #: svnadmin/main.c:263
 msgid "disable fsync at transaction commit [Berkeley DB]"
@@ -6785,7 +6800,7 @@ msgid ""
 "wait instead of exit if the repository is in\n"
 "                             use by another process"
 msgstr ""
-"vänta istället för att avsluta om databasen\n"
+"vänta istället för att avsluta om arkivet\n"
 "                             används av någon annan process"
 
 #: svnadmin/main.c:294
@@ -6794,9 +6809,9 @@ msgid ""
 "\n"
 "Create a new, empty repository at REPOS_PATH.\n"
 msgstr ""
-"användning: svnadmin create REPOS_PATH\n"
+"användning: svnadmin create ARKIV_SÖKVÄG\n"
 "\n"
-"Skapa en ny tom databas under sökvägen REPOS_PATH.\n"
+"Skapa ett nytt tomt arkiv under sökvägen ARKIV_SÖKVÄG.\n"
 "\n"
 
 #: svnadmin/main.c:300
@@ -6809,11 +6824,11 @@ msgid ""
 "delta from the preceding revision.  If no revisions are specified,\n"
 "this will simply deltify the HEAD revision.\n"
 msgstr ""
-"användning: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n"
+"användning: svnadmin deltify [-r BÖRJAN[:SLUT]] ARKIV_SÖKVÄG\n"
 "\n"
 "Gå igenom det angivna revisionsområdet och utför föregångardeltifiering av\n"
 "de sökvägar som ändrats i dessa revisioner. I stora drag komprimerar\n"
-"deltifieringen databasen genom att endast lagra skillnader eller deltan\n"
+"deltifieringen arkivet genom att endast lagra skillnader eller deltan\n"
 "jämfört med föregående revision. Om inga revisioner anges, deltifieras\n"
 "huvudrevisionen.\n"
 
@@ -6828,12 +6843,12 @@ msgid ""
 "If --incremental is passed, then the first revision dumped will be\n"
 "a diff against the previous revision, instead of the usual fulltext.\n"
 msgstr ""
-"användning: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n"
+"användning: svnadmin dump ARKIV_SÖKVÄG [-r BÖRJAN[:SLUT]] [--incremental]\n"
 "\n"
 "Skriv innehållet i filsystemet till standard ut i ett portabelt\n"
-"\"dumpfile\"-format med återkoppling till standard fel. Revisionerna LOWER\n"
-"till och med UPPER skrivs ut. Om inga revisioner anges, skrivs samtliga\n"
-"revisionsträd. Om endast LOWER anges, skrivs det revisionsträdet. Flaggan\n"
+"\"dumpfile\"-format med återkoppling till standard fel. Revisionerna BÖRJAN\n"
+"till och med SLUT skrivs ut. Om inga revisioner anges, skrivs samtliga\n"
+"revisionsträd. Om endast BÖRJAN anges, skrivs det revisionsträdet. Flaggan\n"
 "--incremental gör att den första skrivna revisionen är en diff gentemot\n"
 "föregående revision istället för fulltext, vilket annars är fallet.\n"
 
@@ -6843,7 +6858,7 @@ msgid ""
 "\n"
 "Describe the usage of this program or its subcommands.\n"
 msgstr ""
-"användning: svnadmin help [SUBCOMMAND...]\n"
+"användning: svnadmin help [UNDERKOMMANDO...]\n"
 "\n"
 "Beskriver hur det här programmet och dess underkommandon används.\n"
 
@@ -6853,9 +6868,9 @@ msgid ""
 "\n"
 "Makes a hot copy of a repository.\n"
 msgstr ""
-"användning: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n"
+"användning: svnadmin hotcopy ARKIV_SÖKVÄG NY_ARKIV_SÖKVÄG\n"
 "\n"
-"Gör en \"hot copy\" (kopia samtidigt som databasen används) av en databas.\n"
+"Gör en \"hot copy\" (kopia samtidigt som arkivet används) av ett arkiv.\n"
 
 #: svnadmin/main.c:330
 msgid ""
@@ -6866,7 +6881,7 @@ msgid ""
 "WARNING: Modifying or deleting logfiles which are still in use\n"
 "will cause your repository to be corrupted.\n"
 msgstr ""
-"användning: svnadmin list-dblogs REPOS_PATH\n"
+"användning: svnadmin list-dblogs ARKIV_SÖKVÄG\n"
 "\n"
 "Ger en lista av alla Berkeley DB-loggfiler.\n"
 "\n"
@@ -6880,7 +6895,7 @@ msgid ""
 "List unused Berkeley DB log files.\n"
 "\n"
 msgstr ""
-"användning: svnadmin list-unused-dblogs REPOS_PATH\n"
+"användning: svnadmin list-unused-dblogs ARKIV_SÖKVÄG\n"
 "\n"
 "Ger en lista av Berkeley DB-loggfiler som inte används.\n"
 "\n"
@@ -6894,25 +6909,24 @@ msgid ""
 "was previously empty, its UUID will, by default, be changed to the\n"
 "one specified in the stream.  Progress feedback is sent to stdout.\n"
 msgstr ""
-"användning: svnadmin load REPOS_PATH\n"
+"användning: svnadmin load ARKIV_SÖKVÄG\n"
 "\n"
 "Läser in en fil i \"dumpfile\"-format från standard in och inför nya "
 "revisioner\n"
-"i databasens filsystem. Om databasen var tom från början, kommer\n"
+"i arkivets filsystem. Om arkivet var tomt från början, kommer\n"
 "normalt dess UUID att sättas till UUID:n i filen. Förloppet visas på "
 "standard\n"
 "ut.\n"
 
 #: svnadmin/main.c:353
-#, fuzzy
 msgid ""
 "usage: svnadmin lslocks REPOS_PATH\n"
 "\n"
 "Print descriptions of all locks.\n"
 msgstr ""
-"användning: svnadmin lstxns REPOS_PATH\n"
+"användning: svnadmin lslocks ARKIV_SÖKVÄG\n"
 "\n"
-"Visa namnen på alla transaktioner som inte är införda.\n"
+"Visa beskrivningar av samtliga lås.\n"
 
 #: svnadmin/main.c:358
 msgid ""
@@ -6920,7 +6934,7 @@ msgid ""
 "\n"
 "Print the names of all uncommitted transactions.\n"
 msgstr ""
-"användning: svnadmin lstxns REPOS_PATH\n"
+"användning: svnadmin lstxns ARKIV_SÖKVÄG\n"
 "\n"
 "Visa namnen på alla transaktioner som inte är införda.\n"
 
@@ -6933,7 +6947,7 @@ msgid ""
 "ought to be run.  Recovery requires exclusive access and will\n"
 "exit if the repository is in use by another process.\n"
 msgstr ""
-"användning: svnadmin recover REPOS_PATH\n"
+"användning: svnadmin recover ARKIV_SÖKVÄG\n"
 "\n"
 "Utför Berkeley DB:s rutin för att återskapa databasen. Gör detta om du har\n"
 "fått felmeddelanden som talar om att det behövs. Återskapandet kräver "
@@ -6947,6 +6961,9 @@ msgid ""
 "\n"
 "Unconditionally remove lock from each LOCKED_PATH.\n"
 msgstr ""
+"användning: svnadmin rmlocks ARKIV_SÖKVÄG LÅST_SÖKVÄG...\n"
+"\n"
+"Ta ovillkorligen bort lås från varje LÅST_SÖKVÄG.\n"
 
 #: svnadmin/main.c:376
 msgid ""
@@ -6954,7 +6971,7 @@ msgid ""
 "\n"
 "Delete the named transaction(s).\n"
 msgstr ""
-"användning: svnadmin rmtxns REPOS_PATH TXN_NAME...\n"
+"användning: svnadmin rmtxns ARKIV_SÖKVÄG TXN_NAMN...\n"
 "\n"
 "Ta bort namngivna transaktion(er).\n"
 
@@ -6972,9 +6989,9 @@ msgid ""
 "NOTE: revision properties are not historied, so this command\n"
 "will permanently overwrite the previous log message.\n"
 msgstr ""
-"användning: svnadmin setlog REPOS_PATH -r REVISION FILE\n"
+"användning: svnadmin setlog ARKIV_SÖKVÄG -r REVISION FIL\n"
 "\n"
-"Sätt loggmeddelandet för revisionen REVISION till innehållet i filen FILE.\n"
+"Sätt loggmeddelandet för revisionen REVISION till innehållet i filen FIL.\n"
 "Använd --bypass-hooks för att revisionsegenskapsrelaterade hookskript inte\n"
 "ska aktiveras (om du till exempel vill undvika att e-post skickas från\n"
 "ditt post-revprop-change-hookskript, eller om ändring av "
@@ -6990,9 +7007,9 @@ msgid ""
 "\n"
 "Verifies the data stored in the repository.\n"
 msgstr ""
-"användning: svnadmin verify REPOS_PATH\n"
+"användning: svnadmin verify ARKIV_SÖKVÄG\n"
 "\n"
-"Kontrollerar den data som är lagrad i databasen.\n"
+"Kontrollerar den data som är lagrad i arkivet.\n"
 
 #: svnadmin/main.c:448
 msgid "Invalid revision specifier"
@@ -7017,15 +7034,15 @@ msgid "done.\n"
 msgstr "klart.\n"
 
 #: svnadmin/main.c:633
-#, fuzzy
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
 "Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"allmän användning: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
-"Skriv \"svnadmin help <SUBCOMMAND>\" för att få hjälp om ett specifikt\n"
+"allmän användning: svnadmin UNDERKOMMANDO ARKIV_SÖKVÄG\n"
+"                   [ ARGUMENT & FLAGGOR ...]\n"
+"Skriv \"svnadmin help <UNDERKOMMANDO>\" för att få hjälp om ett specifikt\n"
 "underkommando.\n"
 "\n"
 "Tillgängliga underkommandon:\n"
@@ -7043,21 +7060,21 @@ msgid ""
 "Repository lock acquired.\n"
 "Please wait; recovering the repository may take some time...\n"
 msgstr ""
-"Databaslåset har erhållits.\n"
-"Vänta; det kan ta tid att återskapa databasen...\n"
+"Arkivlåset har erhållits.\n"
+"Vänta; det kan ta tid att återskapa arkivet...\n"
 
 #: svnadmin/main.c:758
 msgid ""
 "Failed to get exclusive repository access; perhaps another process\n"
 "such as httpd, svnserve or svn has it open?"
 msgstr ""
-"Kunde inte erhålla enskild åtkomst till databasen; kanske någon annan "
+"Kunde inte erhålla enskild åtkomst till arkivet; kanske någon annan "
 "process,\n"
-"såsom httpd, svnserve eller svn har den öppen?"
+"såsom httpd, svnserve eller svn har det öppet?"
 
 #: svnadmin/main.c:763
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
-msgstr "Väntar på databaslås; kanske någon anna process har databasen öppen?\n"
+msgstr "Väntar på arkivlås; kanske någon anna process har arkivet öppen?\n"
 
 #: svnadmin/main.c:770
 msgid ""
@@ -7070,7 +7087,7 @@ msgstr ""
 #: svnadmin/main.c:777
 #, c-format
 msgid "The latest repos revision is %ld.\n"
-msgstr "Den senaste revisionen i databasen är %ld.\n"
+msgstr "Den senaste revisionen i arkivet är %ld.\n"
 
 #: svnadmin/main.c:887
 #, c-format
@@ -7100,44 +7117,46 @@ msgid "Owner: %s\n"
 msgstr "Ägare: %s\n"
 
 #: svnadmin/main.c:1030 svnlook/main.c:1776
-#, fuzzy, c-format
+#, c-format
 msgid "Created: %s\n"
-msgstr "Namn: %s\n"
+msgstr "Skapat: %s\n"
 
 #: svnadmin/main.c:1031 svnlook/main.c:1777
 #, c-format
 msgid "Expires: %s\n"
-msgstr "'Går ut: %s\n"
+msgstr "Går ut: %s\n"
 
 #: svnadmin/main.c:1033
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Comment (%i lines):\n"
 "%s\n"
 "\n"
 msgstr ""
-"Låskommentar (%i %s):\n"
+"Kommentar (%i rader):\n"
 "%s\n"
+"\n"
 
 #: svnadmin/main.c:1034
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Comment (%i line):\n"
 "%s\n"
 "\n"
 msgstr ""
-"Låskommentar (%i %s):\n"
+"Kommentar (%i rad):\n"
 "%s\n"
+"\n"
 
 #: svnadmin/main.c:1101
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' isn't locked.\n"
-msgstr "Sökvägen \"%s\" är inte en fil"
+msgstr "Sökvägen \"%s\" är inte låst.\n"
 
 #: svnadmin/main.c:1113
-#, fuzzy, c-format
+#, c-format
 msgid "Removed lock on '%s'.\n"
-msgstr "Återskapade \"%s\"\n"
+msgstr "Tog bort lås på \"%s\".\n"
 
 #: svnadmin/main.c:1348
 msgid "subcommand argument required\n"
@@ -7177,7 +7196,7 @@ msgstr "Nod med borttagen förälder har slunkit in"
 
 #: svndumpfilter/main.c:638
 msgid "Delta property block detected - not supported by svndumpfilter"
-msgstr ""
+msgstr "Egenskapsblock som delta påträffades - stöds ej av svndumpfilter"
 
 #: svndumpfilter/main.c:764
 msgid "Do not display filtering statistics."
@@ -7201,7 +7220,7 @@ msgid ""
 "usage: svndumpfilter exclude PATH_PREFIX...\n"
 msgstr ""
 "Filtrera bort noder med angivna prefix från dumpströmmen.\n"
-"användning: svndumpfilter exclude PATH_PREFIX...\n"
+"användning: svndumpfilter exclude SÖKVÄGS_PREFIX...\n"
 
 #: svndumpfilter/main.c:787
 msgid ""
@@ -7209,7 +7228,7 @@ msgid ""
 "usage: svndumpfilter include PATH_PREFIX...\n"
 msgstr ""
 "Filtrera bort noder utan angivna prefix från dumpströmmen.\n"
-"användning: svndumpfilter include PATH_PREFIX...\n"
+"användning: svndumpfilter include SÖKVÄGS_PREFIX...\n"
 
 #: svndumpfilter/main.c:793
 msgid ""
@@ -7220,15 +7239,15 @@ msgstr ""
 "användning: svndumpfilter help [SUBCOMMAND...]\n"
 
 #: svndumpfilter/main.c:863
-#, fuzzy
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"allmän användning: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
-"Skriv \"svndumpfilter help <SUBCOMMAND>\" för att få hjälp om ett specifikt\n"
+"allmän användning: svndumpfilter UNDERKOMMANDO [ARGUMENT & FLAGGOR ...]\n"
+"Skriv \"svndumpfilter help <UNDERKOMMANDO>\" för att få hjälp om ett "
+"specifikt\n"
 "underkommando.\n"
 "\n"
 "Tillgängliga underkommandon:\n"
@@ -7281,12 +7300,12 @@ msgstr ""
 "Fel: inga prefix angivna.\n"
 
 #: svndumpfilter/main.c:1260
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
 "Type 'svndumpfilter help %s' for usage.\n"
 msgstr ""
-"underkommandot \"%s\" tillåter inte flaggan \"%s\"\n"
+"Underkommandot \"%s\" tillåter inte flaggan \"%s\"\n"
 "Skriv \"svndumpfilter help %s\" för användning.\n"
 
 #: svnlook/main.c:100
@@ -7306,13 +7325,12 @@ msgid "show node revision ids for each path"
 msgstr "visa nodrevisions-ID:n för varje sökväg"
 
 #: svnlook/main.c:115
-#, fuzzy
 msgid "do not print differences for added files"
-msgstr "visa inte skillnader för raderade filer"
+msgstr "visa inte skillnader för tillagda filer"
 
 #: svnlook/main.c:121
 msgid "show full paths instead of indenting them"
-msgstr "Visa fullständiga sökvägar istället för indrag"
+msgstr "visa fullständiga sökvägar istället för indrag"
 
 #: svnlook/main.c:134
 msgid ""
@@ -7320,7 +7338,7 @@ msgid ""
 "\n"
 "Print the author.\n"
 msgstr ""
-"användning: svnlook author REPOS_PATH\n"
+"användning: svnlook author ARKIV_SÖKVÄG\n"
 "\n"
 "Visa författaren.\n"
 
@@ -7330,9 +7348,9 @@ msgid ""
 "\n"
 "Print the contents of a file.  Leading '/' on FILE_PATH is optional.\n"
 msgstr ""
-"användning: svnlook cat REPOS_PATH FILE_PATH\n"
+"användning: svnlook cat ARKIV_SÖKVÄG FIL_SÖKVÄG\n"
 "\n"
-"Visa innehållet i en fil. Inledande \"/\" är valfritt för FILE_PATH.\n"
+"Visa innehållet i en fil. Inledande \"/\" är valfritt för FIL_SÖKVÄG.\n"
 
 #: svnlook/main.c:145
 msgid ""
@@ -7340,7 +7358,7 @@ msgid ""
 "\n"
 "Print the paths that were changed.\n"
 msgstr ""
-"användning: svnlook changed REPOS_PATH\n"
+"användning: svnlook changed ARKIV_SÖKVÄG\n"
 "\n"
 "Visa vilka sökvägar som har ändrats.\n"
 
@@ -7350,7 +7368,7 @@ msgid ""
 "\n"
 "Print the datestamp.\n"
 msgstr ""
-"användning: svnlook date REPOS_PATH\n"
+"användning: svnlook date ARKIV_SÖKVÄG\n"
 "\n"
 "Visa datumstämpel.\n"
 
@@ -7360,7 +7378,7 @@ msgid ""
 "\n"
 "Print GNU-style diffs of changed files and properties.\n"
 msgstr ""
-"användning: svnlook diff REPOS_PATH\n"
+"användning: svnlook diff ARKIV_SÖKVÄG\n"
 "\n"
 "Visa diffar i GNU-stil för ändrade filer och egenskaper.\n"
 
@@ -7371,7 +7389,7 @@ msgid ""
 "Print the directories that were themselves changed (property edits)\n"
 "or whose file children were changed.\n"
 msgstr ""
-"användning: svnlook dirs-changed REPOS_PATH\n"
+"användning: svnlook dirs-changed ARKIV_SÖKVÄG\n"
 "\n"
 "Visa kataloger som själva har ändrats (egenskapsändringar) eller vars\n"
 "barnfiler har ändrats.\n"
@@ -7382,7 +7400,7 @@ msgid ""
 "\n"
 "Describe the usage of this program or its subcommands.\n"
 msgstr ""
-"användning: svnlook help [SUBCOMMAND...]\n"
+"användning: svnlook help [UNDERKOMMANDO...]\n"
 "\n"
 "Beskriv användningen av detta program eller dess underkommandon.\n"
 
@@ -7393,10 +7411,9 @@ msgid ""
 "Print information about the history of a path in the repository (or\n"
 "the root directory if no path is supplied).\n"
 msgstr ""
-"användning: svnlook history REPOS_PATH [PATH_IN_REPOS]\n"
+"användning: svnlook history ARKIV_SÖKVÄG [SÖKVÄG_I_ARKIV]\n"
 "\n"
-"Visa information om historiken för en sökväg i databasen (eller "
-"rotkatalogen\n"
+"Visa information om historiken för en sökväg i arkivet (eller rotkatalogen\n"
 "om ingen sökväg anges).\n"
 
 #: svnlook/main.c:177
@@ -7405,23 +7422,20 @@ msgid ""
 "\n"
 "Print the author, datestamp, log message size, and log message.\n"
 msgstr ""
-"användning: svnlook info REPOS_PATH\n"
+"användning: svnlook info ARKIV_SÖKVÄG\n"
 "\n"
 "Visa författaren, datumstämpeln, loggmeddelandets storlek samt\n"
 "själva loggmeddelandet.\n"
 
 #: svnlook/main.c:182
-#, fuzzy
 msgid ""
 "usage: svnlook lock REPOS_PATH PATH_IN_REPOS\n"
 "\n"
 "If a lock exists on a path in the repository, describe it.\n"
 msgstr ""
-"användning: svnlook history REPOS_PATH [PATH_IN_REPOS]\n"
+"användning: svnlook lock ARKIV_SÖKVÄG SÖKVÄG_I_ARKIV\n"
 "\n"
-"Visa information om historiken för en sökväg i databasen (eller "
-"rotkatalogen\n"
-"om ingen sökväg anges).\n"
+"Om ett lås finns på en sökväg i arkivet, visa information om det.\n"
 
 #: svnlook/main.c:187
 msgid ""
@@ -7429,25 +7443,24 @@ msgid ""
 "\n"
 "Print the log message.\n"
 msgstr ""
-"användning: svnlook log REPOS_PATH\n"
+"användning: svnlook log ARKIV_SÖKVÄG\n"
 "\n"
 "Visa loggmeddelandet.\n"
 
 #: svnlook/main.c:192
-#, fuzzy
 msgid ""
 "usage: svnlook propget REPOS_PATH PROPNAME [PATH_IN_REPOS]\n"
 "\n"
 "Print the raw value of a property on a path in the repository.\n"
 "With --revprop, prints the raw value of a revision property.\n"
 msgstr ""
-"användning: svnlook propget REPOS_PATH PROPNAME\n"
-"                                PATH_IN_REPOS\n"
+"användning: svnlook propget ARKIV_SÖKVÄG EGENSKAPSNAMN\n"
+"                                [SÖKVÄG_I_ARKIV]\n"
 "\n"
-"Skriv ut det råa värdet för en egenskap på en sökväg i databasen.\n"
+"Skriv ut det råa värdet för en egenskap på en sökväg i arkivet.\n"
+"Om --revprop används, skriv ut det råa värdet på en revisionsegenskap.\n"
 
 #: svnlook/main.c:198
-#, fuzzy
 msgid ""
 "usage: svnlook proplist REPOS_PATH [PATH_IN_REPOS]\n"
 "\n"
@@ -7455,10 +7468,10 @@ msgid ""
 "with the --revprop option, revision properties.\n"
 "With -v, show the property values too.\n"
 msgstr ""
-"användning: svnlook proplist REPOS_PATH PATH_IN_REPOS\n"
+"användning: svnlook proplist ARKIV_SÖKVÄG [SÖKVÄG_I_ARKIV]\n"
 "\n"
-"Lista egenskaperna för en sökväg i databasen.\n"
-"-v visar även egenskapernas värden.\n"
+"Lista egenskaperna för en sökväg i arkivet eller, om --revprop anges,\n"
+"visa revisionsegenskaper.  -v visar även egenskapernas värden.\n"
 
 #: svnlook/main.c:205
 msgid ""
@@ -7467,9 +7480,9 @@ msgid ""
 "Print the tree, starting at PATH_IN_REPOS (if supplied, at the root\n"
 "of the tree otherwise), optionally showing node revision ids.\n"
 msgstr ""
-"användning: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n"
+"användning: svnlook tree ARKIV_SÖKVÄG [SÖKVÄG_I_ARKIV]\n"
 "\n"
-"Visa trädet, med början i PATH_IN_REPOS (om den anges, annars används "
+"Visa trädet, med början i SÖKVÄG_I_ARKIV (om den anges, annars används "
 "trädets\n"
 "rot). Visa även nodrevisions-ID:n om så önskas.\n"
 
@@ -7479,9 +7492,9 @@ msgid ""
 "\n"
 "Print the repository's UUID.\n"
 msgstr ""
-"användning: svnlook uuid REPOS_PATH\n"
+"användning: svnlook uuid ARKIV_SÖKVÄG\n"
 "\n"
-"Visa databasens UUID.\n"
+"Visa arkivets UUID.\n"
 
 #: svnlook/main.c:216
 msgid ""
@@ -7489,14 +7502,14 @@ msgid ""
 "\n"
 "Print the youngest revision number.\n"
 msgstr ""
-"användning: svnlook youngest REPOS_PATH\n"
+"användning: svnlook youngest ARKIV_SÖKVÄG\n"
 "\n"
 "Visa det yngsta revisionsnumret.\n"
 
 #: svnlook/main.c:579
-#, fuzzy, c-format
+#, c-format
 msgid "Error creating dir '%s' (path exists)"
-msgstr "Fel då \"%s\" och \"%s\" jämfördes"
+msgstr "Fel då katalogen \"%s\" skulle skapas (katalogen finns)"
 
 #: svnlook/main.c:840
 #, c-format
@@ -7563,21 +7576,20 @@ msgstr ""
 "--------   ------\n"
 
 #: svnlook/main.c:1468
-#, fuzzy, c-format
+#, c-format
 msgid "Property '%s' not found on revision %ld"
-msgstr "Sökvägen \"%s\" finns inte i revision %ld"
+msgstr "Egenskapen \"%s\" finns inte för revision %ld"
 
 #: svnlook/main.c:1472
-#, fuzzy, c-format
+#, c-format
 msgid "Property '%s' not found on path '%s' in revision %ld"
-msgstr "Egenskapen \"%s\" finns inte på sökvägen \"%s\""
+msgstr "Egenskapen \"%s\" finns inte på sökvägen \"%s\" i revision %ld"
 
 #: svnlook/main.c:1639 svnlook/main.c:1853
 msgid "Missing repository path argument"
-msgstr "Databasargument saknas"
+msgstr "Arkivargument saknas"
 
 #: svnlook/main.c:1700
-#, fuzzy
 msgid ""
 "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
 "Note: any subcommand which takes the '--revision' and '--transaction'\n"
@@ -7587,48 +7599,48 @@ msgid ""
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"allmän användning: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
+"allmän användning: svnlook UNDERKOMMANDO ARKIV_SÖKVÄG [ARGUMENT & "
+"FLAGGOR ...]\n"
 "Anmärkning: De kommandon som tar --revision- och --transaction-flaggor\n"
-"använder databasens yngsta revision om ingen av dessa anges.\n"
-"Skriv \"svnlook help <subcommand>\" för att få hjälp om ett underkommando.\n"
+"använder arkivets yngsta revision om ingen av dessa anges.\n"
+"Skriv \"svnlook help <subcommand>\" för att få hjälp om ett specifikt\n"
+"underkommando.\n"
 "\n"
 "Tillgängliga underkommandon:\n"
 
 #: svnlook/main.c:1755
-#, fuzzy
 msgid "Missing path argument"
-msgstr "Databasargument saknas"
+msgstr "Sökvägsargument saknas"
 
 #: svnlook/main.c:1780
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Comment (%i lines):\n"
 "%s\n"
 msgstr ""
-"Låskommentar (%i %s):\n"
+"Kommentarommentar (%i rader):\n"
 "%s\n"
 
 #: svnlook/main.c:1781
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Comment (%i line):\n"
 "%s\n"
 msgstr ""
-"Låskommentar (%i %s):\n"
+"Kommentar (%i rad):\n"
 "%s\n"
 
 #: svnlook/main.c:1827
-#, fuzzy
 msgid "Missing propname argument"
-msgstr "Databasargument saknas"
+msgstr "Egenskapsargument saknas"
 
 #: svnlook/main.c:1828
 msgid "Missing propname and repository path arguments"
-msgstr "Egenskapsnamns- och databassökvägsargument saknas"
+msgstr "Egenskapsnamns- och arkivsökvägsargument saknas"
 
 #: svnlook/main.c:1834
 msgid "Missing propname or repository path argument"
-msgstr "Egenskapsnamns- eller databassökvägsargument saknas"
+msgstr "Egenskapsnamns- eller arkivsökvägsargument saknas"
 
 #: svnlook/main.c:1998
 msgid "Invalid revision number supplied"
@@ -7640,9 +7652,8 @@ msgid ""
 msgstr "Flaggorna --transaction och --revision kan inte anges samtidigt"
 
 #: svnlook/main.c:2126
-#, fuzzy
 msgid "Repository argument required\n"
-msgstr "Argument för databas krävs"
+msgstr "Arkivargument krävs\n"
 
 #: svnlook/main.c:2135
 #, c-format
@@ -7650,12 +7661,12 @@ msgid "'%s' is a URL when it should be a path\n"
 msgstr "\"%s\" är en URL när den skulle vara en sökväg\n"
 
 #: svnlook/main.c:2183
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
 "Type 'svnlook help %s' for usage.\n"
 msgstr ""
-"underkommandot \"%s\" tillåter inte flaggan \"%s\"\n"
+"Underkommandot \"%s\" tillåter inte flaggan \"%s\"\n"
 "Skriv \"svnlook help %s\" för användning.\n"
 
 #: svnserve/main.c:102
@@ -7668,7 +7679,7 @@ msgstr "lyssningsport (för daemon-läge)"
 
 #: svnserve/main.c:106
 msgid "listen hostname or IP address (for daemon mode)"
-msgstr ""
+msgstr "värdnamn eller IP-address att lyssna på (daemon-läge)"
 
 #: svnserve/main.c:108
 msgid "run in foreground (useful for debugging)"
@@ -7683,13 +7694,12 @@ msgid "inetd mode"
 msgstr "inetd-läge"
 
 #: svnserve/main.c:113
-#, fuzzy
 msgid "root of directory to serve"
-msgstr "kunde inte koppla upp mot server"
+msgstr "serverns rotkatalog"
 
 #: svnserve/main.c:114
 msgid "deprecated; use repository config file"
-msgstr ""
+msgstr "utfasad; använd arkivets konfigurationsfil"
 
 #: svnserve/main.c:115
 msgid "tunnel mode"
@@ -7697,7 +7707,7 @@ msgstr "tunnel-läge"
 
 #: svnserve/main.c:117
 msgid "tunnel username (default is current uid's name)"
-msgstr ""
+msgstr "användarnamn för tunnel (standard är aktuell användares namn)"
 
 #: svnserve/main.c:119
 msgid "use threads instead of fork"
@@ -7708,9 +7718,9 @@ msgid "listen once (useful for debugging)"
 msgstr "lyssna en gång (användbart för felsökning)"
 
 #: svnserve/main.c:132
-#, fuzzy, c-format
+#, c-format
 msgid "Type '%s --help' for usage.\n"
-msgstr "Skriv \"%s help\" för användning.\n"
+msgstr "Skriv \"%s --help\" för användning.\n"
 
 #: svnserve/main.c:141
 msgid ""
@@ -7718,6 +7728,9 @@ msgid ""
 "\n"
 "Valid options:\n"
 msgstr ""
+"Användning: svnserve [flaggor]\n"
+"\n"
+"Giltiga flaggor:\n"
 
 #: svnserve/main.c:359
 msgid ""
@@ -7729,6 +7742,13 @@ msgid ""
 "  auth-access = read|write|none (default write)\n"
 "Forcing all access to read-only for now\n"
 msgstr ""
+"Varning: -R är utfasad.\n"
+"Anonym åtkomst är endast för läsning som standard.\n"
+"För att ändra detta, använda conf/svnserve.conf i arkivet:\n"
+"  [general]\n"
+"  anon-access = read|write|none (standard är read)\n"
+"  auth-access = read|write|none (standard är write)\n"
+"All åtkomst är skrivskoddad\n"
 
 #: svnserve/main.c:381
 msgid "Option --tunnel-user is only valid in tunnel mode.\n"
@@ -7744,46 +7764,44 @@ msgid "Can't get address info: %s\n"
 msgstr "Kan inte erhålla adressinfo: %s\n"
 
 #: svnserve/main.c:446
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create server socket: %s\n"
-msgstr "Kan inte skapa uttag (socket)"
+msgstr "Kan inte skapa uttag (socket) för servern: %s\n"
 
 #: svnserve/main.c:460
-#, fuzzy, c-format
+#, c-format
 msgid "Can't bind server socket: %s\n"
-msgstr "Kan inte hitta post för \"%s\""
+msgstr "Kan inte knyta adress till serveruttaget (socket): %s\n"
 
 #: svnserve/main.c:503
-#, fuzzy, c-format
+#, c-format
 msgid "Can't accept client connection: %s\n"
-msgstr "Kan inte skriva till nätverksanslutningen"
+msgstr "Kan inte acceptera anslutning från klient: %s\n"
 
 #: svnserve/main.c:558
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create threadattr: %s\n"
-msgstr "Kan inte skapa katalogen \"%s\""
+msgstr "Kan inte skapa trådattribut: %s\n"
 
 #: svnserve/main.c:567
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set detached state: %s\n"
-msgstr "Kan inte ta status på \"%s\""
+msgstr "Kan inte koppla låss tråd: %s\n"
 
 #: svnserve/main.c:581
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create thread: %s\n"
-msgstr "Kan inte skapa uttag (socket)"
+msgstr "Kan inte skapa tråd: %s\n"
 
 #: svnversion/main.c:109
 msgid "Finished"
 msgstr "Klar"
 
 #: svnversion/main.c:124
-#, fuzzy
 msgid "Type 'svnversion --help' for usage.\n"
-msgstr "Skriv \"%s help\" för användning.\n"
+msgstr "Skriv \"svnversion --help\" för användning.\n"
 
 #: svnversion/main.c:135
-#, fuzzy
 msgid ""
 "usage: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n"
 "\n"
@@ -7811,13 +7829,13 @@ msgid ""
 "\n"
 "Valid options:\n"
 msgstr ""
-"användning: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n"
+"användning: svnversion [FLAGGOR] AK_SÖKVÄG URL_AVSL]\n"
 "\n"
-"  Generera ett kompakt \"versionsnummer\" för sökvägen WC_PATH i en\n"
-"  arbetskopia. TRAIL_URL är den avslutande delen av URL:en som används för "
+"  Generera ett kompakt \"versionsnummer\" för sökvägen AK_SÖKVÄG i en\n"
+"  arbetskopia. URL_AVSL är den avslutande delen av URL:en som används för "
 "att\n"
-"  avgöra om switch har gjorts på WC_PATH (TRAIL_URL behövs inte för att\n"
-"  upptäcka \"switchningar\" under WC_PATH). Versionsnumret skrivs till\n"
+"  avgöra om switch har gjorts på AK_SÖKVÄG (URL_AVSL behövs inte för att\n"
+"  upptäcka \"switchningar\" under AK_SÖKVÄG). Versionsnumret skrivs till\n"
 "  standard ut. Exempel:\n"
 "\n"
 "    $ svnversion . /repos/svn/trunk\n"
@@ -7837,7 +7855,7 @@ msgstr ""
 "  Om programmet körs på en katalog som inte är en arbetskopia, till exempel\n"
 "  en exporterad katalog, skrivs \"exporterad\" ut.\n"
 "\n"
-"Flaggor:\n"
+"Giltiga flaggor:\n"
 
 #: svnversion/main.c:210
 msgid "do not output the trailing newline"
