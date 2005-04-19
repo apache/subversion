@@ -51,7 +51,7 @@ Candidate changes:
     Justification:
       Expired locks shouldn't be visible any more.
     Votes:
-      +1: lundblad
+      +1: lundblad, fitz
 
   * r14262
     Fix #2049, make autoversioning cooperate with mod_mime.
