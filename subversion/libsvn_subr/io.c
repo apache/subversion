@@ -2335,22 +2335,61 @@ svn_error_t *
 svn_io_file_rename (const char *from_path, const char *to_path,
                     apr_pool_t *pool)
 {
-  apr_status_t status;
+  apr_status_t status = APR_SUCCESS;
   const char *from_path_apr, *to_path_apr;
+
+#ifdef WIN32
+  /* Set the file writable but only on Windows, because Windows will
+     not allow us to rename files that are read-only. But preserve the
+     state of the read-only flag on the destination. */
+  svn_boolean_t was_read_only;
+  apr_finfo_t finfo;
+
+  SVN_ERR (svn_io_set_file_read_write (from_path, FALSE, pool));
+#endif /* WIN32 */
 
   SVN_ERR (svn_path_cstring_from_utf8 (&from_path_apr, from_path, pool));
   SVN_ERR (svn_path_cstring_from_utf8 (&to_path_apr, to_path, pool));
 
-  status = apr_file_rename (from_path_apr, to_path_apr, pool);
-  WIN32_RETRY_LOOP (status,
-                    apr_file_rename (from_path_apr, to_path_apr, pool));
+#ifdef WIN32
+  status = apr_stat (&finfo, to_path_apr, APR_FINFO_PROT, pool);
+  if (APR_STATUS_IS_ENOENT (status))
+    {
+      was_read_only = FALSE;
+      status = APR_SUCCESS;
+    }
+  else if (!status)
+    {
+      /* Note: apr_stat doesn't look at the just the read-only
+         bit. It's coneievable that we get a positive result here
+         because of file permissions. But that shouldn't happen in a
+         Subverion working copy, and ther set_read_write will fail, so
+         the end result is the same. */
+      was_read_only = !(finfo.protection
+                        & (APR_UWRITE | APR_GWRITE | APR_WWRITE));
+      if (was_read_only)
+        SVN_ERR (svn_io_set_file_read_write (to_path, FALSE, pool));
+    }
+#endif /* WIN32 */
+
+  if (!status)
+    {
+      status = apr_file_rename (from_path_apr, to_path_apr, pool);
+      WIN32_RETRY_LOOP (status,
+                        apr_file_rename (from_path_apr, to_path_apr, pool));
+    }
 
   if (status)
     return svn_error_wrap_apr (status, _("Can't move '%s' to '%s'"),
                                svn_path_local_style (from_path, pool),
                                svn_path_local_style (to_path, pool));
 
-  return SVN_NO_ERROR;  
+#ifdef WIN32
+  if (was_read_only)
+    SVN_ERR (svn_io_set_file_read_only (to_path, FALSE, pool));
+#endif /* WIN32 */
+
+  return SVN_NO_ERROR;
 }
 
 

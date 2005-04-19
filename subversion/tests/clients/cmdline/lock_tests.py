@@ -395,6 +395,36 @@ def enforce_lock(sbox):
       raise svntest.Failure
 
 #----------------------------------------------------------------------
+# Test that updating a file with the "svn:needs-lock" property works,
+# especially on Windows, where renaming A to B fails if B already
+# exists and has its read-only bit set.  See also issue #2278.
+def update_while_needing_lock(sbox):
+  "update handles svn:needs-lock correctly"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  svntest.main.run_svn(None, 'propset', 'svn:needs-lock', '*', iota_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'log msg', iota_path)
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # Lock, modify, commit, unlock, to create r3.
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', iota_path)
+  svntest.main.file_append(iota_path, "This line added in r2.\n")
+  svntest.main.run_svn(None, 'commit', '-m', '', iota_path) # auto-unlocks
+
+  # Backdate to r2.
+  svntest.main.run_svn(None, 'update', '-r2', iota_path)
+
+  # Try updating forward to r3 again.  This is where the bug happened.
+  svntest.main.run_svn(None, 'update', '-r3', iota_path)
+
+
+#----------------------------------------------------------------------
 # Tests update / checkout with changing props
 def defunct_lock(sbox):
   "verify svn:needs-lock behavior with defunct lock"
@@ -740,7 +770,8 @@ test_list = [ None,
               stolen_lock_status,
               broken_lock_status,
               lock_non_existent_file,
-              out_of_date
+              out_of_date,
+              update_while_needing_lock,
              ]
 
 if __name__ == '__main__':
