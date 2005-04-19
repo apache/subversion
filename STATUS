@@ -119,13 +119,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14293
-    Make 'svn import' not create empty revisions.
-    Justification:
-      It makes 'svn import' not create empty revisions.
-    Votes:
-      +1: cmpilato, brane, lundblad
-
   * r14247
     Build .mo files automatially on Windows if NLS is enabled.
     Justification
