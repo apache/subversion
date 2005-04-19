@@ -2360,11 +2360,11 @@ svn_io_file_rename (const char *from_path, const char *to_path,
     }
   else if (!status)
     {
-      /* Note: apr_stat doesn't look at the just the read-only
-         bit. It's coneievable that we get a positive result here
-         because of file permissions. But that shouldn't happen in a
-         Subverion working copy, and ther set_read_write will fail, so
-         the end result is the same. */
+      /* Note: apr_stat doesn't look at just the read-only bit. It's
+         concievable that we get a positive result here because of
+         file permissions. But that shouldn't happen in a Subversion
+         working copy, and then set_read_write will fail, so the end
+         result is the same. */
       was_read_only = !(finfo.protection
                         & (APR_UWRITE | APR_GWRITE | APR_WWRITE));
       if (was_read_only)
