@@ -17,7 +17,7 @@ Candidate changes:
     Votes:
       +1: dlr, fitz (concept)
 
-  * r14041, r14149, r14186, r14194
+  * r14041, r14149, r14186, r14194, r14238, r14273
     Fix issue #2268 (svn update of xml-unsafe dir (from within) http error)
     and similar problems regarding paths with leading or trailing spaces.
     Justification:
@@ -26,8 +26,8 @@ Candidate changes:
       Breaks tests on Windows; there is a simple fix to the tests that needs to
       be done. --lundblad
     Votes:
-      +1: cmpilato
-      -1: lundblad
+      +1: cmpilato (not r14238, r14273)
+      +1: lundblad
 
   * r14205, 14208
     Add lock/unlock support to mailer.py.
@@ -107,13 +107,6 @@ Candidate changes:
     Votes:
       +1: lundblad
 
-  * r14293
-    Make 'svn import' not create empty revisions.
-    Justification:
-      It makes 'svn import' not create empty revisions.
-    Votes:
-      +1: cmpilato, brane
-
   * r14295
     Fix memory problem with neon lock hook.
     Justification:
@@ -134,3 +127,10 @@ Candidate changes:
       +0: kfogel
 
 Approved changes (further review is welcome, but not required):
+
+  * r14293
+    Make 'svn import' not create empty revisions.
+    Justification:
+      It makes 'svn import' not create empty revisions.
+    Votes:
+      +1: cmpilato, brane, lundblad
