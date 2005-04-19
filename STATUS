@@ -119,11 +119,3 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14247
-    Build .mo files automatially on Windows if NLS is enabled.
-    Justification
-      Makes building binary packages on Windows a bit easier,
-      very low impact.
-    Votes:
-      +1: brane, dionisos, sussman
-      +0: dlr
