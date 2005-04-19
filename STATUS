@@ -59,7 +59,7 @@ Candidate changes:
     Justification:
       It works just fine, more tests are better.
     Votes:
-      +1: brane, sussman
+      +1: brane, sussman, dlr (concept)
 
    * r14277
      Make Subversion easier to build "out-of-the-box" on WBEL3/RHEL3 by
