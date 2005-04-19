@@ -46,6 +46,27 @@
 
 #include "svn_private_config.h"
 
+/* Import context baton.
+
+   ### TODO:  Add the following items to this baton:
+      /` import editor/baton. `/
+      const svn_delta_editor_t *editor;
+      void *edit_baton;
+
+      /` Client context baton `/
+      svn_client_ctx_t `ctx;
+
+      /` Paths (keys) excluded from the import (values ignored) `/
+      apr_hash_t *excludes;
+*/
+typedef struct import_ctx_t
+{
+  /* Whether any changes were made to the repository */
+  svn_boolean_t repos_changed; 
+
+} import_ctx_t;
+
+
 /* Apply PATH's contents (as a delta against the empty string) to
    FILE_BATON in EDITOR.  Use POOL for any temporary allocation.
    PROPERTIES is the set of node properties set on this file.
@@ -154,8 +175,8 @@ send_file_contents (const char *path,
  * Accumulate file paths and their batons in FILES, which must be
  * non-null.  (These are used to send postfix textdeltas later).
  *
- * If CTX->NOTIFY_FUNC is non-null, invoke it with CTX->NOTIFY_BATON for each
- * file.
+ * If CTX->NOTIFY_FUNC is non-null, invoke it with CTX->NOTIFY_BATON
+ * for each file.
  *
  * Use POOL for any temporary allocation.
  */
@@ -164,6 +185,7 @@ import_file (const svn_delta_editor_t *editor,
              void *dir_baton,
              const char *path,
              const char *edit_path,
+             import_ctx_t *import_ctx,
              svn_client_ctx_t *ctx,
              apr_pool_t *pool)
 {
@@ -191,6 +213,9 @@ import_file (const svn_delta_editor_t *editor,
   /* Add the file, using the pool from the FILES hash. */
   SVN_ERR (editor->add_file (edit_path, dir_baton, NULL, SVN_INVALID_REVNUM, 
                              pool, &file_baton));
+
+  /* Remember that the repository was modified */
+  import_ctx->repos_changed = TRUE;
 
   if (! is_special)
     {
@@ -272,6 +297,7 @@ import_dir (const svn_delta_editor_t *editor,
             const char *edit_path,
             svn_boolean_t nonrecursive,
             apr_hash_t *excludes,
+            import_ctx_t *import_ctx,
             svn_client_ctx_t *ctx,
             apr_pool_t *pool)
 {
@@ -353,6 +379,9 @@ import_dir (const svn_delta_editor_t *editor,
                                           NULL, SVN_INVALID_REVNUM, subpool,
                                           &this_dir_baton));
 
+          /* Remember that the repository was modified */
+          import_ctx->repos_changed = TRUE;
+
           /* By notifying before the recursive call below, we display
              a directory add before displaying adds underneath the
              directory.  To do it the other way around, just move this
@@ -372,7 +401,7 @@ import_dir (const svn_delta_editor_t *editor,
           /* Recurse. */
           SVN_ERR (import_dir (editor, this_dir_baton, 
                                this_path, this_edit_path, 
-                               FALSE, excludes, ctx, subpool));
+                               FALSE, excludes, import_ctx, ctx, subpool));
 
           /* Finally, close the sub-directory. */
           SVN_ERR (editor->close_directory (this_dir_baton, subpool));
@@ -380,8 +409,8 @@ import_dir (const svn_delta_editor_t *editor,
       else if (*filetype == svn_node_file)
         {
           /* Import a file. */
-          SVN_ERR (import_file (editor, dir_baton, 
-                                this_path, this_edit_path, ctx, subpool));
+          SVN_ERR (import_file (editor, dir_baton, this_path, 
+                                this_edit_path, import_ctx, ctx, subpool));
         }
       /* We're silently ignoring things that aren't files or
          directories.  If we stop doing that, here is the place to
@@ -437,6 +466,7 @@ import (const char *path,
   apr_array_header_t *ignores;
   apr_array_header_t *batons = NULL;
   const char *edit_path = "";
+  import_ctx_t *import_ctx = apr_pcalloc (pool, sizeof (*import_ctx));
 
   /* Get a root dir baton.  We pass an invalid revnum to open_root
      to mean "base this on the youngest revision".  Should we have an
@@ -470,6 +500,9 @@ import (const char *path,
                                           root_baton,
                                           NULL, SVN_INVALID_REVNUM,
                                           pool, &root_baton));
+
+          /* Remember that the repository was modified */
+          import_ctx->repos_changed = TRUE;
         }
     }
   else if (kind == svn_node_file)
@@ -492,12 +525,12 @@ import (const char *path,
       SVN_ERR (svn_wc_get_default_ignores (&ignores, ctx->config, pool));
       if (! svn_cstring_match_glob_list (path, ignores))
         SVN_ERR (import_file (editor, root_baton, path, edit_path,
-                              ctx, pool));
+                              import_ctx, ctx, pool));
     }
   else if (kind == svn_node_dir)
     {
       SVN_ERR (import_dir (editor, root_baton, path, edit_path,
-                           nonrecursive, excludes, ctx, pool));
+                           nonrecursive, excludes, import_ctx, ctx, pool));
 
     }
   else if (kind == svn_node_none)
@@ -518,7 +551,10 @@ import (const char *path,
         }
     }
 
-  SVN_ERR (editor->close_edit (edit_baton, pool));
+  if (import_ctx->repos_changed)
+    SVN_ERR (editor->close_edit (edit_baton, pool));
+  else
+    SVN_ERR (editor->abort_edit (edit_baton, pool));
 
   return SVN_NO_ERROR;
 }
