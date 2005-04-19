@@ -121,4 +121,12 @@ Candidate changes:
     Votes:
       +1: philip, brane
 
+  * r14304
+    Fix issue #2278: svn:needs-lock property interferes
+                     with update on Windows
+    Justification:
+      Makes locking actually useable on Windows. 1.2 showstopper.
+    Votes:
+      +1: brane
+
 Approved changes (further review is welcome, but not required):
