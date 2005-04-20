@@ -31,6 +31,7 @@ Candidate changes:
       Necessary feature... besides, who doesn't want more email?
     Votes:
       +1: fitz, dlr
+      -1: ringstrom [http://svn.haxx.se/dev/archive-2005-04/1310.shtml]
 
   * r14259
     Fix #2262, including making lock expiration work in FSFS on recursive
