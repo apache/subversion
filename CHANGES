@@ -9,7 +9,6 @@ the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
   - Client:
     * add peg-rev syntax to co/blame/cat/ls/pget/plist/export (issue #1093)
     * 'svn info' now works on URLs (r13123, 13144)
-    * new 'svn version' subcommand, essentially same as --version (r10430)
     * 'svn* --version' now shows available repository back-ends (r13761)
     * new fixed-length keywords (for placement in binary files) (issue #2095)
     * on Windows, disk-cached passwords are now encrypted (r13888)
@@ -42,6 +41,7 @@ the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
     * fixed: 'svn log' in r0 working copy shows r1 log msg (issue #1950) 
     * fixed: 'svn export' bugs on deleted dirs or nonexistents (#2226, r13226) 
     * fixed: 'svn export' on single file from working copy (issue #1708)
+    * fixed: 'svn import' creating an empty revision (r14293)
     * fixed: 'svn commit' ignores --encoding when editing externally (#2244)
     * fixed: 'svn commit' log message lost if utf8-conversion failure (r13230)
     * fixed: 'svn diff' output encoding bug (r11461)
@@ -55,6 +55,7 @@ the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
     * fixed: 'svn revert' should suggest --recursive (issue #2114)
     * fixed: 'svn add/import' better detects invalid paths (issue #1954)
     * fixed: 'svn cleanup' should repair timestamps (r12012)
+    * fixed: 'svn cat -rBASE' contacts repository (issue #1361)
     * fixed: fuzzily escape control-characters when sending over dav (#2147)
     * fixed: prevent client from manipulating svn:wc:* properties (r12523)
     * fixed: xml-escaping bugs over dav (r11090)
@@ -65,7 +66,6 @@ the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
     * fixed: entire error stack not being printed (issue #1822)
     * fixed: improper utf8 conversion of revision strings (issue #1999)
     * fixed: use-commit-times timestamp bug (r12906)
-    * fixed: canonicalize values of svn:keywords prop (issue #2219)
     * fixed: don't comment out section-names in default config file (r11771)
     * more support for user-cancellation (r13083-4, 13086)
     * improved error messages (r12920, 11392, 11599, 11913, #2154, #2214)
@@ -82,6 +82,7 @@ the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
        - 'svnlook propget/proplist --revprop'  - show revision props (#2181)
        - 'svnadmin load --use-pre-commit-hook'  
          'svnadmin load --use-post-commit-hook'- invoke hooks when loading
+    * fixed: FSFS race condition on posix platforms (issue #2265)
     * fixed: change FSFS revprops atomically and safely (issue #2193)
     * fixed: FSFS should verify checksums (issue #2253)
     * fixed: 'svnadmin create' should clean up when it fails (r13200)
