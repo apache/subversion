@@ -15,7 +15,7 @@ Candidate changes:
     Justification:
       Eliminate confusion with setting up post-(un)lock hooks.
     Votes:
-      +1: fitz
+      +1: fitz, cmpilato
 
   * r14024
     Allow automated tests for the javahl bindings to be run before the
