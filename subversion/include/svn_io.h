@@ -658,7 +658,6 @@ svn_error_t *svn_io_dir_walk (const char *dirname,
  *
  * @a inherit sets whether the invoked program shall inherit its environment or
  * run "clean".
- *
  */
 svn_error_t *svn_io_start_cmd (apr_proc_t *cmd_proc,
                                const char *path,
@@ -673,12 +672,13 @@ svn_error_t *svn_io_start_cmd (apr_proc_t *cmd_proc,
 /** @since New in 1.3.
  *
  * Wait for the process @a *cmd_proc to complete and optionally retrieve
- * it's exit code.  @a cmd is used only in error messages.
+ * its exit code.  @a cmd is used only in error messages.
  *
- * If set, @a exitcode will contain the exit code of the process upon return,
- * and @a exitwhy will indicate why the process terminated. If @a exitwhy is 
- * not set and the exit reason is not @c APR_PROC_CHECK_EXIT(), or if 
- * @a exitcode is not set and the exit code is non-zero, then an 
+ * If @a exitcode is not null, @a *exitcode will contain the exit code
+ * of the process upon return, and if @a exitwhy is not null, @a
+ * *exitwhy will indicate why the process terminated.  If @a exitwhy is 
+ * null, and the exit reason is not @c APR_PROC_CHECK_EXIT(), or if 
+ * @a exitcode is null and the exit code is non-zero, then an
  * @c SVN_ERR_EXTERNAL_PROGRAM error will be returned.
  */
 svn_error_t *svn_io_wait_for_cmd (apr_proc_t *cmd_proc,
@@ -688,7 +688,8 @@ svn_error_t *svn_io_wait_for_cmd (apr_proc_t *cmd_proc,
                                   apr_pool_t *pool);
 
 /** Run a command to completion, by first calling svn_io_start_cmd() and
- * then calling svn_io_wait_for_cmd().
+ * then calling svn_io_wait_for_cmd().  The parameters correspond to
+ * the the same-named parameters of those two functions.
  */
 svn_error_t *svn_io_run_cmd (const char *path,
                              const char *cmd,
