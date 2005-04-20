@@ -108,9 +108,3 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14295
-    Fix memory problem with neon lock hook.
-    Justification:
-      This problem can cause the client to crash in libsvn_ra_dav.
-    Votes:
-      +1: philip, brane, lundblad
