@@ -108,14 +108,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14324
-    Fix post-(un)lock hook templates to use mailer.py and stop messing
-    with STDIN.
-    Justification:
-      Eliminate confusion with setting up post-(un)lock hooks.
-    Votes:
-      +1: fitz, cmpilato, lundblad
-
   * r14295
     Fix memory problem with neon lock hook.
     Justification:
