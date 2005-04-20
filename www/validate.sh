@@ -14,15 +14,15 @@ ensure ()
   test ! -f "$LOCALFILE" && wget -O "$LOCALFILE" "$1"
 }
 
-ensure "http://style.tigris.org/tigris_transitional.dtd"
 ensure "http://www.w3.org/TR/xhtml1/DTD/xhtml-lat1.ent"
 ensure "http://www.w3.org/TR/xhtml1/DTD/xhtml-symbol.ent"
 ensure "http://www.w3.org/TR/xhtml1/DTD/xhtml-special.ent"
 
+ensure "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"
+
 # Do not need these, but the URLs are here for uncommenting if you like
 #ensure "http://www.w3.org/TR/xhtml1/DTD/xhtml1-frameset.dtd"
 #ensure "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"
-#ensure "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"
 
 # If you have ongmls installed, then you almost certainly have a SGML
 # declaration for XML installed already, but there is no cross-platform way of
@@ -31,24 +31,10 @@ ensure "http://www.w3.org/TR/xhtml1/DTD/xhtml-special.ent"
 ensure "http://www.w3.org/TR/xhtml1/DTD/xhtml.soc"
 ensure "http://www.w3.org/TR/xhtml1/DTD/xhtml1.dcl"
 
-# Tigris DTD uses a SGML feature not compatible with a standard XML processor.
-# Fortunately, it is not a major feature - so remove it:
-if test ! -f "$WWWDIR/tigris_transitionalxml.dtd"; then
-  sed -e 's/<!ELEMENT a %a.content; +(br)>/<!ELEMENT a %a.content;>/' \
-    < "$WWWDIR/tigris_transitional.dtd" > "$WWWDIR/tigris_transitionalxml.dtd"
-fi
-
-if test ! -f "$WWWDIR/tigris.soc"; then
-  echo '
-OVERRIDE YES
-PUBLIC "-//Tigris//DTD XHTML 1.0 Transitional//EN" "tigris_transitionalxml.dtd"
-' > "$WWWDIR/tigris.soc"
-fi
-
 export SP_CHARSET_FIXED=YES
 export SP_ENCODING=XML
 
-export SGML_CATALOG_FILES="$WWWDIR/xhtml.soc:$WWWDIR/tigris.soc"
+export SGML_CATALOG_FILES="$WWWDIR/xhtml.soc"
 
 if [ -z "$XML_VALIDATOR" ]; then
   if [ "`type -p onsgmls`" != "" ]; then
@@ -69,7 +55,7 @@ validate ()
 {
   case $XML_VALIDATOR in
     onsgmls)
-    onsgmls -wxml -wno-inclusion -ges "$1"
+    onsgmls -wxml -ges "$1"
     ;;
     xmllint)
     xmllint --nonet --noout --valid --catalogs "$1"
