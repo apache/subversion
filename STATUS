@@ -9,14 +9,6 @@ Status of 1.2.0:
 
 Candidate changes:
 
-  * r14324
-    Fix post-(un)lock hook templates to use mailer.py and stop messing
-    with STDIN.
-    Justification:
-      Eliminate confusion with setting up post-(un)lock hooks.
-    Votes:
-      +1: fitz, cmpilato
-
   * r14024
     Allow automated tests for the javahl bindings to be run before the
     bindings have been installed.
@@ -33,7 +25,7 @@ Candidate changes:
     Votes:
       +1: lundblad, cmpilato (and could this get drawn out ANY longer?)
 
-  * r14205, 14208
+  * r14205, r14208
     Add lock/unlock support to mailer.py.
     Justification:
       Necessary feature... besides, who doesn't want more email?
@@ -65,16 +57,16 @@ Candidate changes:
     Votes:
       +1: brane, sussman, dlr (concept)
 
-   * r14277
-     Make Subversion easier to build "out-of-the-box" on WBEL3/RHEL3 by
-       dropping support for BDB.
-     Justification:
-       Trying to integrate BDB 4.2.x in to WBEL3/RHEL3 was too problematic.
-       This makes things much easier.  Later I will try again to build a good
-       BDB 4.2.X build that doesn't conflict with the standard 4.1.25 that
-       comes with the distribution.
-     Votes:
-       +1: david
+  * r14277
+    Make Subversion easier to build "out-of-the-box" on WBEL3/RHEL3 by
+      dropping support for BDB.
+    Justification:
+      Trying to integrate BDB 4.2.x in to WBEL3/RHEL3 was too problematic.
+      This makes things much easier.  Later I will try again to build a good
+      BDB 4.2.X build that doesn't conflict with the standard 4.1.25 that
+      comes with the distribution.
+    Votes:
+      +1: david
 
   * r14216
     Perl bindings: Don't leak editor objects on failed editor calls.
@@ -123,3 +115,10 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
+  * r14324
+    Fix post-(un)lock hook templates to use mailer.py and stop messing
+    with STDIN.
+    Justification:
+      Eliminate confusion with setting up post-(un)lock hooks.
+    Votes:
+      +1: fitz, cmpilato, lundblad
