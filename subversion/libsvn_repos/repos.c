@@ -1122,12 +1122,10 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "USER=\"$2\""
       APR_EOL_STR
-      "read PATHS"
-      APR_EOL_STR
       APR_EOL_STR
       "# Send email to interested parties, let them know a lock was created:"
       APR_EOL_STR
-      "lock-email.py \"$REPOS\" \"$USER\" lock-watchers@example.org $PATHS"
+      "mailer.py lock \"$REPOS\" \"$USER\" /path/to/mailer.conf"
       APR_EOL_STR;
 
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
@@ -1226,12 +1224,10 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "USER=\"$2\""
       APR_EOL_STR
-      "read PATHS"
-      APR_EOL_STR
       APR_EOL_STR
       "# Send email to interested parties, let them know a lock was removed:"
       APR_EOL_STR
-      "unlock-email.py \"$REPOS\" \"$USER\" lock-watchers@example.org $PATHS"
+      "mailer.py unlock \"$REPOS\" \"$USER\" /path/to/mailer.conf"
       APR_EOL_STR;
 
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
