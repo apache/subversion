@@ -2011,9 +2011,7 @@ fold_change (apr_hash_t *changes,
           old_change->text_mod = change->text_mod;
           old_change->prop_mod = change->prop_mod;
           if (change->copyfrom_rev == SVN_INVALID_REVNUM)
-            {
-              copyfrom_string = apr_pstrdup (copyfrom_pool, "");
-            }
+            copyfrom_string = NULL;
           else
             {
               copyfrom_string = apr_psprintf (copyfrom_pool,
@@ -2052,21 +2050,20 @@ fold_change (apr_hash_t *changes,
                                           change->copyfrom_path);
         }
       else
-        {
-          copyfrom_string = apr_pstrdup (copyfrom_pool, "");
-        }
+        copyfrom_string = NULL;
       path = apr_pstrdup (pool, change->path);
     }
 
   /* Add (or update) this path. */
   apr_hash_set (changes, path, APR_HASH_KEY_STRING, new_change);
 
-  /* If we don't yet have a path string allocated in the copyfrom_hash
-     get something to use.  If we are adding an entry, allocate
-     something new, otherwise we just need a key and the one allocated
-     for the changes hash will work. */
+  /* If copyfrom_path is non-NULL, the key is already present in the
+     hash, so we don't need to duplicate it in the copyfrom pool. */
   if (! copyfrom_path)
     {
+      /* If copyfrom_string is NULL, the hash entry will be deleted,
+         so we don't need to duplicate the key in the copyfrom
+         pool. */
       copyfrom_path = copyfrom_string ? apr_pstrdup (copyfrom_pool, path)
         : path;
     }
@@ -2866,8 +2863,11 @@ write_change_entry (apr_file_t *file,
 
   SVN_ERR (svn_io_file_write_full (file, buf, strlen (buf), NULL, pool));
 
-  SVN_ERR (svn_io_file_write_full (file, copyfrom, strlen (copyfrom), NULL,
-                                   pool));
+  if (copyfrom)
+    {
+      SVN_ERR (svn_io_file_write_full (file, copyfrom, strlen (copyfrom),
+                                       NULL, pool));
+    }
 
   SVN_ERR (svn_io_file_write_full (file, "\n", 1, NULL, pool));
   
