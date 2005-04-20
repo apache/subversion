@@ -94,13 +94,6 @@ Candidate changes:
     Votes:
       +1: lundblad
 
-  * r14295
-    Fix memory problem with neon lock hook.
-    Justification:
-      This problem can cause the client to crash in libsvn_ra_dav.
-    Votes:
-      +1: philip, brane
-
   * r14304, 14306
     Fix issue #2278: svn:needs-lock property interferes
                      with update on Windows
@@ -122,3 +115,10 @@ Approved changes (further review is welcome, but not required):
       Eliminate confusion with setting up post-(un)lock hooks.
     Votes:
       +1: fitz, cmpilato, lundblad
+
+  * r14295
+    Fix memory problem with neon lock hook.
+    Justification:
+      This problem can cause the client to crash in libsvn_ra_dav.
+    Votes:
+      +1: philip, brane, lundblad
