@@ -9,6 +9,14 @@ Status of 1.2.0:
 
 Candidate changes:
 
+  * r14324
+    Fix post-(un)lock hook templates to use mailer.py and stop messing
+    with STDIN.
+    Justification:
+      Eliminate confusion with setting up post-(un)lock hooks.
+    Votes:
+      +1: fitz
+
   * r14024
     Allow automated tests for the javahl bindings to be run before the
     bindings have been installed.
