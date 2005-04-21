@@ -96,9 +96,9 @@ II. New Client Behaviors
 
       This section describes a user interface to accomplish "locking",
       as described in the functional spec.  A new property is used to
-      enforce locking and prevent people from wasting time;  lock
-      tokens are objects stored in the working that represent a lock;
-      and two new subcommands (lock/unlock) are described.
+      enforce locking and prevent people from wasting time; lock
+      tokens are objects, stored in the working copy, that represent a
+      lock; and two new subcommands (lock/unlock) are described.
 
    B. The "svn:needs-lock" property
 
@@ -172,7 +172,7 @@ II. New Client Behaviors
                - The path must not be out-of-date.  
 
             The lock command accepts -m or -F to add a lock comment, so
-            others can see why the file was locked.  The lock ocmment
+            others can see why the file was locked.  The lock comment
             is optional.
 
          b. Using a lock
@@ -227,7 +227,7 @@ II. New Client Behaviors
              $ svn unlock foo.c
              username:  sally
              password:  XXXX
-             svn:  error:  'foo.c' is locked by user 'hally'.
+             svn:  error:  'foo.c' is locked by user 'harry'.
 
              $ svn unlock foo.c --force
              username:  sally
@@ -256,7 +256,7 @@ II. New Client Behaviors
               $ svn lock foo.c
               username:  sally
               password:  XXXX
-              svn:  error:  'foo.c' is locked by user 'hally'.
+              svn:  error:  'foo.c' is locked by user 'harry'.
 
               $ svn lock foo.c --force
               username:  sally
