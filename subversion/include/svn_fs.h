@@ -1318,6 +1318,10 @@ svn_error_t *svn_fs_make_file (svn_fs_root_t *root,
  * then the @a *contents_p call which detects the mismatch will return
  * the error @c SVN_ERR_CHECKSUM_MISMATCH.
  *
+ * The caller must send all delta windows including the terminating
+ * NULL window to @a *contents_p before making further changes to the
+ * transaction.
+ *
  * Do temporary allocation in @a pool.
  */
 svn_error_t *svn_fs_apply_textdelta (svn_txdelta_window_handler_t *contents_p,
