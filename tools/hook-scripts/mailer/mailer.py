@@ -46,24 +46,29 @@ import svn.core
 SEPARATOR = '=' * 78
 
 
-def main(pool, cmd, config_fname, repos_dir, rev,
-         author, propname, action='A'):
-  repos = Repository(repos_dir, rev, pool)
-
+def main(pool, cmd, config_fname, repos_dir, cmd_args):
+  ### TODO:  Sanity check the incoming args
+  
   if cmd == 'commit':
+    revision = int(cmd_args[0])
+    repos = Repository(repos_dir, revision, pool)
     cfg = Config(config_fname, repos, { 'author' : repos.author })
     messenger = Commit(pool, cfg, repos)
   elif cmd == 'propchange' or cmd == 'propchange2':
+    revision = int(cmd_args[0])
+    author = cmd_args[1]
+    propname = cmd_args[2]
+    action = (cmd == 'propchange2' and cmd_args[3] or 'A')
+    repos = Repository(repos_dir, revision, pool)
     # Override the repos revision author with the author of the propchange
     repos.author = author
     cfg = Config(config_fname, repos, { 'author' : author })
     messenger = PropChange(pool, cfg, repos, author, propname, action)
-  elif cmd == 'lock':
+  elif cmd == 'lock' or cmd == 'unlock':
+    author = cmd_args[0]
+    repos = Repository(repos_dir, 0, pool) ### any old revision will do
     cfg = Config(config_fname, repos, { 'author' : author })
-    messenger = Lock(pool, cfg, repos, author, 1)
-  elif cmd == 'unlock':
-    cfg = Config(config_fname, repos, { 'author' : author })
-    messenger = Lock(pool, cfg, repos, author, 0)
+    messenger = Lock(pool, cfg, repos, author, cmd == 'lock')
   else:
     raise UnknownSubcommand(cmd)
 
@@ -408,12 +413,13 @@ class PropChange(Messenger):
                         'Action: %s\n'
                         '\n'
                         % (self.author, self.repos.rev, self.propname,
-                           actions.get(action, 'Unknown (\'%s\')' % action)))
-      if action == 'A' or not actions.has_key(action):
+                           actions.get(self.action, 'Unknown (\'%s\')' \
+                                       % self.action)))
+      if self.action == 'A' or not actions.has_key(self.action):
         self.output.write('Property value:\n')
         propvalue = self.repos.get_rev_prop(self.propname)
         self.output.write(propvalue)
-      elif action == 'M':
+      elif self.action == 'M':
         self.output.write('Property diff:\n')
         tempfile1 = NamedTemporaryFile()
         tempfile1.write(sys.stdin.read())
@@ -501,12 +507,10 @@ class Lock(Messenger):
     else:
       self.output.subject = '%s' % (dirlist)
 
-    # The comment is the same for all paths, so we can just pull the
-    # comment for the first path in the dirlist and cache it.
-    path = dirlist[0]
-
+    # The lock comment is the same for all paths, so we can just pull
+    # the comment for the first path in the dirlist and cache it.
     self.lock = svn.fs.svn_fs_get_lock(self.repos.fs_ptr,
-                                       path, self.pool)
+                                       self.dirlist[0], self.pool)
 
   def generate(self):
     for (group, param_tuple), (params, paths) in self.groups.items():
@@ -518,10 +522,10 @@ class Lock(Messenger):
 
       self.dirlist.sort()
       for dir in self.dirlist:
-        self.output.write(' %s\n' % dir)
+        self.output.write('   %s\n\n' % dir)
 
       if self.do_lock:
-        self.output.write('Comment:\n%s\n' % self.lock.comment)
+        self.output.write('Comment:\n%s\n' % (self.lock.comment or ''))
 
       self.output.finish()
 
@@ -1224,66 +1228,47 @@ if the property was added, modified or deleted, respectively.
 """ % (scriptname, scriptname, scriptname, scriptname, scriptname))
     sys.exit(1)
 
-  if len(sys.argv) < 4:
+  # Command list:  subcommand -> number of arguments expected (not including
+  #                              the repository directory and config-file)
+  cmd_list = {'commit'     : 1,
+              'propchange' : 3,
+              'propchange2': 4,
+              'lock'       : 1,
+              'unlock'     : 1,
+              }
+
+  config_fname = None
+  argc = len(sys.argv)
+  if argc < 3:
     usage()
 
   cmd = sys.argv[1]
   repos_dir = sys.argv[2]
   try:
-    revision = int(sys.argv[3])
-  except ValueError:
-    if not (cmd == 'lock' or cmd == 'unlock'):
-      usage()
-  config_fname = None
-
-  # Used for propchange only
-  author = None
-  propname = None
-  action = None
-
-  if cmd == 'commit':
-    if len(sys.argv) > 5:
-      usage()
-    if len(sys.argv) > 4:
-      config_fname = sys.argv[4]
-  elif cmd == 'propchange':
-    if len(sys.argv) < 6 or len(sys.argv) > 7:
-      usage()
-    author = sys.argv[4]
-    propname = sys.argv[5]
-    action = 'A'
-    if len(sys.argv) > 6:
-      config_fname = sys.argv[6]
-  elif cmd == 'propchange2':
-    if len(sys.argv) < 7 or len(sys.argv) > 8:
-      usage()
-    author = sys.argv[4]
-    propname = sys.argv[5]
-    action = sys.argv[6]
-    if len(sys.argv) > 7:
-      config_fname = sys.argv[7]
-  elif cmd == 'lock' or cmd == 'unlock':
-    author = sys.argv[3]
-    config_fname = sys.argv[4]
-    revision = 0 # Just to get a repos setup
-  else:
+    expected_args = cmd_list[cmd]
+  except KeyError:
     usage()
 
+  if argc < (expected_args + 3):
+    usage()
+  elif argc > expected_args + 4:
+    usage()
+  elif argc == (expected_args + 4):
+    config_fname = sys.argv[expected_args + 3]
+
+  # Settle on a config file location, and open it.
   if config_fname is None:
-    # default to REPOS-DIR/conf/mailer.conf
+    # Default to REPOS-DIR/conf/mailer.conf.
     config_fname = os.path.join(repos_dir, 'conf', 'mailer.conf')
     if not os.path.exists(config_fname):
-      # okay. look for 'mailer.conf' as a sibling of this script
+      # Okay.  Look for 'mailer.conf' as a sibling of this script.
       config_fname = os.path.join(os.path.dirname(sys.argv[0]), 'mailer.conf')
-
-  # Not reading stdin, so open up the real config file.
   if not os.path.exists(config_fname):
     raise MissingConfig(config_fname)
   config_fp = open(config_fname)
 
-  ### run some validation on these params
-  svn.core.run_app(main, cmd, config_fname, repos_dir, revision,
-                   author, propname, action)
+  svn.core.run_app(main, cmd, config_fname, repos_dir,
+                   sys.argv[3:3+expected_args])
 
 # ------------------------------------------------------------------------
 # TODO
