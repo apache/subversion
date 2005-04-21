@@ -41,6 +41,14 @@
 SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
 
+trap trap_cleanup SIGHUP SIGTERM SIGINT
+
+function trap_cleanup() {
+    [ -e  "$HTTPD_PID" ] \
+      && kill $(cat "$HTTPD_PID")
+    exit 1
+}
+
 function say() {
   echo "$SCRIPT: $*"
 }
@@ -88,7 +96,7 @@ function get_prog_name() {
   return 1
 }
 
-# Pick up value from Makefile or PATH (also try apxs2, which is used by Debian)
+# Pick up value from environment or PATH (also try apxs2 - for Debian)
 [ ${APXS:+set} ] \
  || APXS=$(which apxs) \
  || APXS=$(which apxs2) \
@@ -244,7 +252,8 @@ fi
 
 say "Finished testing..."
 
-kill $(cat "$HTTPD_PID")
+[ -e  "$HTTPD_PID" ] \
+  && kill $(cat "$HTTPD_PID")
 
 query 'Browse server error log' n \
   && less "$HTTPD_LOG"
