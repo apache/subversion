@@ -82,18 +82,3 @@ Candidate changes:
 
 
 Approved changes (further review is welcome, but not required):
-
-  * r14259
-    Fix #2262, including making lock expiration work in FSFS on recursive
-    operations.
-    Justification:
-      Expired locks shouldn't be visible any more.
-    Votes:
-      +1: lundblad, fitz, sussman
-
-  * r14150, r14205, r14208, r14345
-    Add lock/unlock support to mailer.py.
-    Justification:
-      Necessary feature... besides, who doesn't want more email?
-    Votes:
-      +1: cmpilato, ringstrom

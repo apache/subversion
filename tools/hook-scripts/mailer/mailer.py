@@ -11,6 +11,8 @@
 #        mailer.py propchange  REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
 #        mailer.py propchange2 REPOS REVISION AUTHOR PROPNAME ACTION \
 #                              [CONFIG-FILE]
+#        mailer.py lock        REPOS AUTHOR [CONFIG-FILE]
+#        mailer.py unlock      REPOS AUTHOR [CONFIG-FILE]
 #
 #   Using CONFIG-FILE, deliver an email describing the changes between
 #   REV and REV-1 for the repository REPOS.
@@ -43,17 +45,29 @@ import svn.core
 SEPARATOR = '=' * 78
 
 
-def main(pool, cmd, config_fp, repos_dir, rev, author, propname, action='A'):
-  repos = Repository(repos_dir, rev, pool)
-
+def main(pool, cmd, config_fname, repos_dir, cmd_args):
+  ### TODO:  Sanity check the incoming args
+  
   if cmd == 'commit':
-    cfg = Config(config_fp, repos, { 'author' : repos.author })
+    revision = int(cmd_args[0])
+    repos = Repository(repos_dir, revision, pool)
+    cfg = Config(config_fname, repos, { 'author' : repos.author })
     messenger = Commit(pool, cfg, repos)
   elif cmd == 'propchange' or cmd == 'propchange2':
+    revision = int(cmd_args[0])
+    author = cmd_args[1]
+    propname = cmd_args[2]
+    action = (cmd == 'propchange2' and cmd_args[3] or 'A')
+    repos = Repository(repos_dir, revision, pool)
     # Override the repos revision author with the author of the propchange
     repos.author = author
-    cfg = Config(config_fp, repos, { 'author' : author })
+    cfg = Config(config_fname, repos, { 'author' : author })
     messenger = PropChange(pool, cfg, repos, author, propname, action)
+  elif cmd == 'lock' or cmd == 'unlock':
+    author = cmd_args[0]
+    repos = Repository(repos_dir, 0, pool) ### any old revision will do
+    cfg = Config(config_fname, repos, { 'author' : author })
+    messenger = Lock(pool, cfg, repos, author, cmd == 'lock')
   else:
     raise UnknownSubcommand(cmd)
 
@@ -312,31 +326,7 @@ class Commit(Messenger):
 
     dirlist = dirs.keys()
 
-    # figure out the common portion of all the dirs. note that there is
-    # no "common" if only a single dir was changed, or the root was changed.
-    if len(dirs) == 1 or dirs.has_key(''):
-      commondir = ''
-    else:
-      common = string.split(dirlist.pop(), '/')
-      for d in dirlist:
-        parts = string.split(d, '/')
-        for i in range(len(common)):
-          if i == len(parts) or common[i] != parts[i]:
-            del common[i:]
-            break
-      commondir = string.join(common, '/')
-      if commondir:
-        # strip the common portion from each directory
-        l = len(commondir) + 1
-        dirlist = [ ]
-        for d in dirs.keys():
-          if d == commondir:
-            dirlist.append('.')
-          else:
-            dirlist.append(d[l:])
-      else:
-        # nothing in common, so reset the list of directories
-        dirlist = dirs.keys()
+    commondir, dirlist = get_commondir(dirlist)
 
     # compose the basic subject line. later, we can prefix it.
     dirlist.sort()
@@ -417,12 +407,13 @@ class PropChange(Messenger):
                         'Action: %s\n'
                         '\n'
                         % (self.author, self.repos.rev, self.propname,
-                           actions.get(action, 'Unknown (\'%s\')' % action)))
-      if action == 'A' or not actions.has_key(action):
+                           actions.get(self.action, 'Unknown (\'%s\')' \
+                                       % self.action)))
+      if self.action == 'A' or not actions.has_key(self.action):
         self.output.write('Property value:\n')
         propvalue = self.repos.get_rev_prop(self.propname)
         self.output.write(propvalue)
-      elif action == 'M':
+      elif self.action == 'M':
         self.output.write('Property diff:\n')
         tempfile1 = NamedTemporaryFile()
         tempfile1.write(sys.stdin.read())
@@ -436,6 +427,100 @@ class PropChange(Messenger):
           'from' : tempfile1.name,
           'to' : tempfile2.name,
           }))
+      self.output.finish()
+
+
+def get_commondir(dirlist):
+  """Figure out the common portion/parent (commondir) of all the paths
+  in DIRLIST and return a tuple consisting of commondir, dirlist.  If
+  a commondir is found, the dirlist returned is rooted in that
+  commondir.  If no commondir is found, dirlist is returned unchanged,
+  and commondir is the empty string."""
+  if len(dirlist) == 1 or '/' in dirlist:
+    commondir = ''
+    newdirs = dirlist
+  else:
+    common = string.split(dirlist.pop(), '/')
+    for d in dirlist:
+      parts = string.split(d, '/')
+      for i in range(len(common)):
+        if i == len(parts) or common[i] != parts[i]:
+          del common[i:]
+          break
+    commondir = string.join(common, '/')
+    if commondir:
+      # strip the common portion from each directory
+      l = len(commondir) + 1
+      newdirs = [ ]
+      for d in dirlist:
+        if d == commondir:
+          newdirs.append('.')
+        else:
+          newdirs.append(d[l:])
+    else:
+      # nothing in common, so reset the list of directories
+      newdirs = dirlist
+
+  return commondir, newdirs
+
+
+class Lock(Messenger):
+  def __init__(self, pool, cfg, repos, author, do_lock):
+    self.author = author
+    self.do_lock = do_lock
+
+    Messenger.__init__(self, pool, cfg, repos,
+                       (do_lock and 'lock_subject_prefix'
+                        or 'unlock_subject_prefix'))
+
+    # read all the locked paths from STDIN and strip off the trailing newlines
+    self.dirlist = map(lambda x: x.rstrip(), sys.stdin.readlines())
+
+    # collect the set of groups and the unique sets of params for the options
+    self.groups = { }
+    for path in self.dirlist:
+      for (group, params) in self.cfg.which_groups(path):
+        # turn the params into a hashable object and stash it away
+        param_list = params.items()
+        param_list.sort()
+        # collect the set of paths belonging to this group
+        if self.groups.has_key( (group, tuple(param_list)) ):
+          old_param, paths = self.groups[group, tuple(param_list)]
+        else:
+          paths = { }
+        paths[path] = None
+        self.groups[group, tuple(param_list)] = (params, paths)
+
+    commondir, dirlist = get_commondir(self.dirlist)
+
+    # compose the basic subject line. later, we can prefix it.
+    dirlist.sort()
+    dirlist = string.join(dirlist)
+    if commondir:
+      self.output.subject = '%s: %s' % (commondir, dirlist)
+    else:
+      self.output.subject = '%s' % (dirlist)
+
+    # The lock comment is the same for all paths, so we can just pull
+    # the comment for the first path in the dirlist and cache it.
+    self.lock = svn.fs.svn_fs_get_lock(self.repos.fs_ptr,
+                                       self.dirlist[0], self.pool)
+
+  def generate(self):
+    for (group, param_tuple), (params, paths) in self.groups.items():
+      self.output.start(group, params)
+
+      self.output.write('Author: %s\n'
+                        '%s paths:\n' %
+                        (self.author, self.do_lock and 'Locked' or 'Unlocked'))
+
+      self.dirlist.sort()
+      for dir in self.dirlist:
+        self.output.write('   %s\n\n' % dir)
+
+      if self.do_lock:
+        self.output.write('Comment:\n%s\n' % (self.lock.comment or ''))
+
       self.output.finish()
 
 
@@ -847,9 +932,9 @@ class Config:
   # set of groups.
   _predefined = ('general', 'defaults', 'maps')
 
-  def __init__(self, fp, repos, global_params):
+  def __init__(self, fname, repos, global_params):
     cp = ConfigParser.ConfigParser()
-    cp.readfp(fp)
+    cp.read(fname)
 
     # record the (non-default) groups that we find
     self._groups = [ ]
@@ -1053,6 +1138,8 @@ if __name__ == '__main__':
        %s propchange  REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
        %s propchange2 REPOS REVISION AUTHOR PROPNAME ACTION
        %s             [CONFIG-FILE]
+       %s lock        REPOS AUTHOR [CONFIG-FILE]
+       %s unlock      REPOS AUTHOR [CONFIG-FILE]
 
 If no CONFIG-FILE is provided, the script will first search for a mailer.conf
 file in REPOS/conf/.  Failing that, it will search the directory in which
@@ -1062,71 +1149,51 @@ ACTION was added as a fifth argument to the post-revprop-change hook
 in Subversion 1.2.0.  Its value is one of 'A', 'M' or 'D' to indicate
 if the property was added, modified or deleted, respectively.
 
-Additionally, CONFIG-FILE may be '-' to indicate that configuration options
-will be provided via standard input.
-
-""" % (sys.argv[0], sys.argv[0], sys.argv[0], ' ' * len(sys.argv[0])))
+""" % (sys.argv[0], sys.argv[0], sys.argv[0], ' ' * len(sys.argv[0]),
+       sys.argv[0], sys.argv[0]))
     sys.exit(1)
 
-  if len(sys.argv) < 4:
+  # Command list:  subcommand -> number of arguments expected (not including
+  #                              the repository directory and config-file)
+  cmd_list = {'commit'     : 1,
+              'propchange' : 3,
+              'propchange2': 4,
+              'lock'       : 1,
+              'unlock'     : 1,
+              }
+
+  config_fname = None
+  argc = len(sys.argv)
+  if argc < 3:
     usage()
 
   cmd = sys.argv[1]
   repos_dir = sys.argv[2]
   try:
-    revision = int(sys.argv[3])
-  except ValueError:
-    usage()
-  config_fname = None
-
-  # Used for propchange only
-  author = None
-  propname = None
-  action = None
-
-  if cmd == 'commit':
-    if len(sys.argv) > 5:
-      usage()
-    if len(sys.argv) > 4:
-      config_fname = sys.argv[4]
-  elif cmd == 'propchange':
-    if len(sys.argv) < 6 or len(sys.argv) > 7:
-      usage()
-    author = sys.argv[4]
-    propname = sys.argv[5]
-    action = 'A'
-    if len(sys.argv) > 6:
-      config_fname = sys.argv[6]
-  elif cmd == 'propchange2':
-    if len(sys.argv) < 7 or len(sys.argv) > 8:
-      usage()
-    author = sys.argv[4]
-    propname = sys.argv[5]
-    action = sys.argv[6]
-    if len(sys.argv) > 7:
-      config_fname = sys.argv[7]
-  else:
+    expected_args = cmd_list[cmd]
+  except KeyError:
     usage()
 
+  if argc < (expected_args + 3):
+    usage()
+  elif argc > expected_args + 4:
+    usage()
+  elif argc == (expected_args + 4):
+    config_fname = sys.argv[expected_args + 3]
+
+  # Settle on a config file location, and open it.
   if config_fname is None:
-    # default to REPOS-DIR/conf/mailer.conf
+    # Default to REPOS-DIR/conf/mailer.conf.
     config_fname = os.path.join(repos_dir, 'conf', 'mailer.conf')
     if not os.path.exists(config_fname):
-      # okay. look for 'mailer.conf' as a sibling of this script
+      # Okay.  Look for 'mailer.conf' as a sibling of this script.
       config_fname = os.path.join(os.path.dirname(sys.argv[0]), 'mailer.conf')
+  if not os.path.exists(config_fname):
+    raise MissingConfig(config_fname)
+  config_fp = open(config_fname)
 
-  # If we're supposed to read from stdin, do so.
-  if config_fname == '-':
-    config_fp = sys.stdin
-  else:
-    # Not reading stdin, so open up the real config file.
-    if not os.path.exists(config_fname):
-      raise MissingConfig(config_fname)
-    config_fp = open(config_fname)
-
-  ### run some validation on these params
-  svn.core.run_app(main, cmd, config_fp, repos_dir, revision,
-                   author, propname, action)
+  svn.core.run_app(main, cmd, config_fname, repos_dir,
+                   sys.argv[3:3+expected_args])
 
 # ------------------------------------------------------------------------
 # TODO
