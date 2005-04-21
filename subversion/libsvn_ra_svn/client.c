@@ -435,8 +435,9 @@ static void ra_svn_get_reporter(ra_svn_session_baton_t *sess_baton,
 
 /* --- RA LAYER IMPLEMENTATION --- */
 
-static svn_error_t *find_tunnel_agent(const char *tunnel, const char *user,
-                                      const char *host, const char ***argv,
+static svn_error_t *find_tunnel_agent(const char *tunnel, 
+                                      const char *hostinfo,
+                                      const char ***argv,
                                       apr_hash_t *config, apr_pool_t *pool)
 {
   svn_config_t *cfg;
@@ -492,7 +493,7 @@ static svn_error_t *find_tunnel_agent(const char *tunnel, const char *user,
     ;
   *argv = apr_palloc(pool, (n + 4) * sizeof(char *));
   memcpy(*argv, cmd_argv, n * sizeof(char *));
-  (*argv)[n++] = (user) ? apr_psprintf(pool, "%s@%s", user, host) : host;
+  (*argv)[n++] = hostinfo;
   (*argv)[n++] = "svnserve";
   (*argv)[n++] = "-t";
   (*argv)[n] = NULL;
@@ -592,7 +593,7 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
   ra_svn_session_baton_t *sess;
   svn_ra_svn_conn_t *conn;
   apr_socket_t *sock;
-  const char *hostname, *user, *tunnel, **args;
+  const char *hostname, *user, *tunnel, **args, *hostinfo;
   unsigned short port;
   apr_uint64_t minver, maxver;
   apr_array_header_t *mechlist, *caplist;
@@ -608,12 +609,13 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
   port = uri.port ? uri.port : SVN_RA_SVN_PORT;
   hostname = uri.hostname;
   user = uri.user;
+  hostinfo = uri.hostinfo;
   
   parse_tunnel (url, &tunnel, pool);
 
   if (tunnel)
     {
-      SVN_ERR(find_tunnel_agent(tunnel, user, hostname, &args, config, pool));
+      SVN_ERR(find_tunnel_agent(tunnel, hostinfo, &args, config, pool));
       SVN_ERR(make_tunnel(args, &conn, pool));
     }
   else
