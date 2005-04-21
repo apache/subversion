@@ -1,5 +1,4 @@
-%define apache_version 2.0.48-0.1
-%define apr_version 0.9.5
+%define apache_version 2.0.46
 %define neon_version 0.24.7
 %define swig_version 1.3.19-3
 %define apache_dir /usr
@@ -16,20 +15,16 @@ Group: Utilities/System
 URL: http://subversion.tigris.org
 SOURCE0: subversion-%{version}-%{release}.tar.gz
 SOURCE3: filter-requires.sh
+Patch0: wbel3.apr.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
-Requires: apr >= %{apr_version}
-Requires: apr-util >= %{apr_version}
-Requires: db42 >= 4.2.52
 Requires: neon >= %{neon_version}
 BuildPreReq: autoconf >= 2.53
-BuildPreReq: db42-devel >= 4.2.52
+BuildPreReq: db4-devel
 BuildPreReq: docbook-style-xsl >= 1.58.1
 BuildPreReq: doxygen
 BuildPreReq: expat-devel
 BuildPreReq: httpd >= %{apache_version}
-BuildPreReq: apr-devel >= %{apr_version}
-BuildPreReq: apr-util-devel >= %{apr_version}
 BuildPreReq: libtool >= 1.4.2
 BuildPreReq: libxslt >= 1.0.27
 BuildPreReq: neon-devel >= %{neon_version}
@@ -39,6 +34,8 @@ BuildPreReq: python
 BuildPreReq: python-devel
 BuildPreReq: swig >= %{swig_version}
 BuildPreReq: zlib-devel
+Conflicts: db42
+Obsoletes: subversion-server
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Prefix: /usr
 %description
@@ -65,15 +62,13 @@ Requires: subversion = %{version}-%{release}
 The subversion-devel package includes the static libraries and include files
 for developers interacting with the subversion package.
 
-%package server
+%package -n mod_dav_svn
 Group: Utilities/System
 Summary: Apache server module for Subversion server.
-Requires: apr >= %{apr_version}
-Requires: apr-util >= %{apr_version}
 Requires: subversion = %{version}-%{release}
 Requires: httpd >= %{apache_version}
 BuildPreReq: httpd-devel >= %{apache_version}
-%description server
+%description -n mod_dav_svn
 The subversion-server package adds the Subversion server Apache module to
 the Apache directories and configuration.
 
@@ -100,6 +95,25 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sun Apr 17 2005 David Summers <david@summersoft.fay.ar.us> r14276
+  *** WARNING: This version drops support for Berkeley BDB.
+
+  *** WARNING***: If you have previously used the Berkeley BDB back-end
+  you must do a svnadmin dump BEFORE installing this package and a svnadmin
+  load AFTER installing it.  I'm hoping this will be not be too much of a
+  hassle because to implement the new subversion 1.2 xdelta compression you
+  will need to do a dump/load anyway.
+
+  *** Note: This is not a requirement/problem of Subversion but of my previous
+  subversion packages where I tried to back-port/forward-port required packages
+  that came with the distribution.
+
+- Finally gave up trying to integrate manually with forward ported and
+  back ported packages.  There are just too many interdependencies between
+  APR, BDB, APACHE, PHP, etc.
+
+- Changed subversion-server package name to mod_dav_svn.
+
 * Thu Mar 31 2005 David Summers <david@summersoft.fay.ar.us> r13821
 - Greatly reduce disk usage by telling each test pass to cleanup after
   successful tests.
@@ -356,13 +370,15 @@ Tools for Subversion.
 %prep
 %setup -q
 
+# Patch for WBEL3 APR
+%patch0 -p0
+
 if [ -f /usr/bin/autoconf-2.53 ]; then
    AUTOCONF="autoconf-2.53"
    AUTOHEADER="autoheader-2.53"
    export AUTOCONF AUTOHEADER
 fi
 sh autogen.sh
-
 
 # Fix up mod_dav_svn installation.
 patch -p1 < packages/rpm/wbel-3/install.patch
@@ -389,6 +405,7 @@ rm -rf apr apr-util neon
 
 
 %configure \
+	--without-berkeley-db \
 	--with-swig=/usr/bin/swig-1.3.19 \
 	--with-python=/usr/bin/python2.2 \
 	--with-apxs=%{apache_dir}/sbin/apxs \
@@ -473,14 +490,14 @@ cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
 # Create doxygen documentation.
 doxygen doc/doxygen.conf
 
-%post server
+%post -n mod_dav_svn
 # Restart apache server if needed.
 source /etc/init.d/functions
 if [ "`pidof httpd`"x != "x" ]; then
    /etc/init.d/httpd restart || true
 fi
 
-%postun server
+%postun -n mod_dav_svn
 # Restart apache server if needed.
 source /etc/init.d/functions
 if [ "`pidof httpd`"x != "x" ]; then
@@ -520,7 +537,7 @@ rm -rf $RPM_BUILD_ROOT
 /usr/lib/libsvn*.la
 /usr/include/subversion-1
 
-%files server
+%files -n mod_dav_svn
 %defattr(-,root,root)
 %config(noreplace) /etc/httpd/conf.d/subversion.conf
 %{apache_dir}/lib/httpd/modules/mod_dav_svn.la
