@@ -1796,6 +1796,8 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
                                        dav_stream_mode mode,
                                        dav_stream **stream)
 {
+  svn_node_kind_t kind;
+  dav_error *derr;
   svn_error_t *serr;
 
   if (mode == DAV_MODE_WRITE_TRUNC || mode == DAV_MODE_WRITE_SEEKABLE)
@@ -1821,24 +1823,19 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
   *stream = apr_pcalloc(resource->pool, sizeof(**stream));
   (*stream)->res = resource;
 
-  /* note: when writing, we don't need to use DAV_SVN_REPOS_PATH since
-     we cannot write into an "id root". Partly because the FS may not
-     let us, but mostly that we have an id root only to deal with Version
-     Resources, and those are read only. */
-
-  serr = svn_fs_apply_textdelta(&(*stream)->delta_handler,
-                                &(*stream)->delta_baton,
+  derr = dav_svn__fs_check_path(&kind, 
                                 resource->info->root.root,
                                 resource->info->repos_path,
-                                resource->info->base_checksum,
-                                resource->info->result_checksum,
-                                resource->pool);
-  if (serr != NULL && serr->apr_err == SVN_ERR_FS_NOT_FOUND)
+                                resource->pool); 
+  if (derr != NULL)
+    return derr;
+
+  if (kind == svn_node_none) /* No existing file. */
     {
-      svn_error_clear(serr);
       serr = svn_fs_make_file(resource->info->root.root,
                               resource->info->repos_path,
                               resource->pool);
+      
       if (serr != NULL)
         {
           return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1846,14 +1843,56 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
                                      "repository.",
                                      resource->pool);
         }
-      serr = svn_fs_apply_textdelta(&(*stream)->delta_handler,
-                                    &(*stream)->delta_baton,
-                                    resource->info->root.root,
-                                    resource->info->repos_path,
-                                    resource->info->base_checksum,
-                                    resource->info->result_checksum,
-                                    resource->pool);
     }
+  
+  /* if the working-resource was auto-checked-out (i.e. came into
+     existence through the autoversioning feature), then possibly set
+     the svn:mime-type property based on whatever value mod_mime has
+     chosen.  If the path already has an svn:mime-type property
+     set, do nothing. */
+  if (resource->info->auto_checked_out
+      && resource->info->r->content_type)
+    {
+      svn_string_t *mime_type;
+
+      serr = svn_fs_txn_prop (&mime_type,
+                              resource->info->root.txn,
+                              SVN_PROP_MIME_TYPE,
+                              resource->pool);
+      
+      if (serr != NULL)
+        {
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "Error fetching mime-type property.",
+                                     resource->pool);
+        }
+
+      if (!mime_type)
+        {
+          serr = svn_fs_change_node_prop(resource->info->root.root,
+                                         resource->info->repos_path,
+                                         SVN_PROP_MIME_TYPE,
+                                         svn_string_create
+                                             (resource->info->r->content_type,
+                                              resource->pool),
+                                         resource->pool);
+          if (serr != NULL)
+            {
+              return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                         "Could not set mime-type property.",
+                                         resource->pool);
+            }
+        }
+    }
+  
+  serr = svn_fs_apply_textdelta(&(*stream)->delta_handler,
+                                &(*stream)->delta_baton,
+                                resource->info->root.root,
+                                resource->info->repos_path,
+                                resource->info->base_checksum,
+                                resource->info->result_checksum,
+                                resource->pool);
+
   if (serr != NULL)
     {
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -1876,28 +1915,6 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
                                   (*stream)->delta_baton,
                                   TRUE,
                                   resource->pool);
-    }
-
-  /* if the working-resource was auto-checked-out (i.e. came into
-     existence through the autoversioning feature), then possibly set
-     the svn:mime-type property based on whatever value mod_mime has
-     chosen. */
-  if (resource->info->auto_checked_out
-      && resource->info->r->content_type)
-    {
-      serr = svn_fs_change_node_prop(resource->info->root.root,
-                                     resource->info->repos_path,
-                                     SVN_PROP_MIME_TYPE,
-                                     svn_string_create
-                                         (resource->info->r->content_type,
-                                          resource->pool),
-                                     resource->pool);
-      if (serr != NULL)
-        {
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Could not set mime-type property.",
-                                     resource->pool);
-        }
     }
 
   return NULL;
