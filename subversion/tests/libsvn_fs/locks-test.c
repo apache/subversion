@@ -817,6 +817,7 @@ lock_expiration (const char **msg,
   svn_fs_access_t *access;
   svn_lock_t *mylock;
   svn_error_t *err;
+  struct get_locks_baton_t *get_locks_baton;
 
   *msg = "test that locks can expire";
 
@@ -860,9 +861,35 @@ lock_expiration (const char **msg,
        "Uhoh, able to commit a file that has a non-expired lock.");
   svn_error_clear (err);
 
+  /* Check that the lock is there, by getting it via the paths parent. */
+  {
+    static const char *expected_paths [] = {
+      "/A/D/G/rho"
+    };
+    apr_size_t num_expected_paths = (sizeof (expected_paths)
+                                     / sizeof (expected_paths[0]));
+    get_locks_baton = make_get_locks_baton (pool);
+    SVN_ERR (svn_fs_get_locks (fs, "/A/D/G", get_locks_callback,
+                               get_locks_baton, pool));
+    SVN_ERR (verify_matching_lock_paths (get_locks_baton, expected_paths,
+                                         num_expected_paths, pool));
+  }
+
   /* Sleep 5 seconds, so the lock auto-expires.  Anonymous commit
      should then succeed. */
   apr_sleep (apr_time_from_sec(5));
+
+  /* Verify that the lock auto-expired even in the recursive case. */
+  {
+    static const char *expected_paths [] = { 0 };
+    apr_size_t num_expected_paths = 0;
+    get_locks_baton = make_get_locks_baton (pool);
+    SVN_ERR (svn_fs_get_locks (fs, "/A/D/G", get_locks_callback,
+                               get_locks_baton, pool));
+    SVN_ERR (verify_matching_lock_paths (get_locks_baton, expected_paths,
+                                         num_expected_paths, pool));
+  }
+
   SVN_ERR (svn_fs_commit_txn (&conflict, &newrev, txn, pool));
 
   return SVN_NO_ERROR;

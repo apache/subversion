@@ -475,41 +475,6 @@ delete_lock (svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Baton used for expire_lock below. */
-struct expire_lock_baton {
-  svn_fs_t *fs;
-  const char *digest_path;
-  svn_lock_t *lock;
-};
-
-/* Remove the lock BATON->lock, stored in BATON->digest_path.
-   BATON is a 'struct expire_lock_baton *'.
-
-   This implements the svn_fs_fs__with_write_lock() 'body' callback
-   type, and assumes that the write lock is held.
-*/
-/* This is temporarily commented out (see get_lock below, and Issue
-   #2262 for the details). */
-# if 0
-static svn_error_t *
-expire_lock (void *baton, apr_pool_t *pool)
-{
-  struct expire_lock_baton *elb = baton;
-  svn_lock_t *lock;
-
-  /* Reread the lock to avoid a race. */
-  SVN_ERR (read_digest_file (NULL, &lock, elb->fs, elb->digest_path, pool));
-  /* If the lock was destroyed, or isn't the same as the lock we are
-     expiring, we don't need to do anything more. */
-  if (! lock || strcmp (elb->lock->token, lock->token) != 0)
-    return SVN_NO_ERROR;
-
-  SVN_ERR (delete_lock (elb->fs, lock, pool));
-  
-  return SVN_NO_ERROR;
-}
-#endif 
-
 /* Set *LOCK_P to the lock for PATH in FS.  HAVE_WRITE_LOCK should be
    TRUE if the caller (or one of its callers) has taken out the
    repository-wide write lock, FALSE otherwise.  Use POOL for
@@ -528,28 +493,13 @@ get_lock (svn_lock_t **lock_p,
   if (! lock)
     return svn_fs_fs__err_no_such_lock (fs, path);
 
-  /* Possibly auto-expire the lock. */
+  /* Don't return an expired lock. */
   if (lock->expiration_date && (apr_time_now() > lock->expiration_date))
     {
+      /* Only remove the lock if we have the write lock.
+         Read operations shouldn't change the filesystem. */
       if (have_write_lock)
         SVN_ERR (delete_lock (fs, lock, pool));
-      /* ### TODO Do not attempt to lock the fs and expire the lock if
-         our caller doesn't have the repository-wide write lock--in
-         certain cases (commit, I believe) have_write_lock is coming
-         through as FALSE, even though the repository is locked.
-         Having this code commented out means that if you're using
-         autoversioning with clients that set expiring locks, some
-         locks *may* take a little longer to expire.  Issue #2262 has
-         been filed to track this.
-      else
-        {
-          struct expire_lock_baton elb;
-          elb.fs = fs;
-          elb.digest_path = digest_path;
-          elb.lock = lock;
-          SVN_ERR (svn_fs_fs__with_write_lock (fs, expire_lock, &elb, pool));
-        }
-      */
       *lock_p = NULL;
       return svn_fs_fs__err_lock_expired (fs, lock->token); 
     }
@@ -593,12 +543,15 @@ get_lock_helper (svn_fs_t *fs,
 
 
 /* A recursive function that calls GET_LOCKS_FUNC/GET_LOCKS_BATON for
-   all locks in and under PATH in FS.  */
+   all locks in and under PATH in FS.
+   HAVE_WRITE_LOCK should be true if the caller (directly or indirectly)
+   has the FS write lock. */
 static svn_error_t *
 walk_digest_files (svn_fs_t *fs, 
                    const char *digest_path,
                    svn_fs_get_locks_callback_t get_locks_func,
                    void *get_locks_baton,
+                   svn_boolean_t have_write_lock,
                    apr_pool_t *pool)
 {
   apr_hash_t *children;
@@ -608,8 +561,23 @@ walk_digest_files (svn_fs_t *fs,
 
   /* First, send up any locks in the current digest file. */
   SVN_ERR (read_digest_file (&children, &lock, fs, digest_path, pool));
-  if (lock && get_locks_func)
-    SVN_ERR (get_locks_func (get_locks_baton, lock, pool));
+  if (lock)
+    {
+      /* Don't report an expired lock. */
+      if (lock->expiration_date == 0
+          || (apr_time_now() <= lock->expiration_date))
+        {
+          if (get_locks_func)
+            SVN_ERR (get_locks_func (get_locks_baton, lock, pool));
+        }
+      else
+        {
+          /* Only remove the lock if we have the write lock.
+             Read operations shouldn't change the filesystem. */
+          if (have_write_lock)
+            SVN_ERR (delete_lock (fs, lock, pool));
+        }
+    }
 
   /* Now, recurse on this thing's child entries (if any; bail otherwise). */
   if (! apr_hash_count (children))
@@ -622,7 +590,7 @@ walk_digest_files (svn_fs_t *fs,
       apr_hash_this(hi, &key, NULL, NULL);
       SVN_ERR (walk_digest_files 
                (fs, digest_path_from_digest (fs, key, subpool),
-                get_locks_func, get_locks_baton, subpool));
+                get_locks_func, get_locks_baton, have_write_lock, subpool));
     }
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
@@ -680,19 +648,22 @@ svn_error_t *
 svn_fs_fs__allow_locked_operation (const char *path,
                                    svn_fs_t *fs,
                                    svn_boolean_t recurse,
+                                   svn_boolean_t have_write_lock,
                                    apr_pool_t *pool)
 {
   path = svn_fs_fs__canonicalize_abspath (path, pool);
   if (recurse)
     {
       /* Discover all locks at or below the path. */
-      SVN_ERR (svn_fs_fs__get_locks (fs, path, get_locks_callback, fs, pool));
+      const char *digest_path = digest_path_from_path (fs, path, pool);
+      SVN_ERR (walk_digest_files (fs, digest_path, get_locks_callback,
+                                  fs, have_write_lock, pool));
     }
   else 
     {
       /* Discover and verify any lock attached to the path. */
       svn_lock_t *lock;
-      SVN_ERR (get_lock_helper (fs, &lock, path, FALSE, pool));
+      SVN_ERR (get_lock_helper (fs, &lock, path, have_write_lock, pool));
       if (lock)
         SVN_ERR (verify_lock (fs, lock, pool));
     }
@@ -970,5 +941,5 @@ svn_fs_fs__get_locks (svn_fs_t *fs,
   /* Get the top digest path in our tree of interest, and then walk it. */
   digest_path = digest_path_from_path (fs, path, pool);
   return walk_digest_files (fs, digest_path, get_locks_func, 
-                            get_locks_baton, pool);
+                            get_locks_baton, FALSE, pool);
 }

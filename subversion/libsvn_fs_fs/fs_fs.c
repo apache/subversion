@@ -3714,8 +3714,9 @@ svn_fs_fs__with_write_lock (svn_fs_t *fs,
   return err;
 }
 
-/* Verify that there registed with FS all the locks necessary to
-   permit all the changes associate with TXN_NAME. */
+/* Verify that the user registed with FS has all the locks necessary to
+   permit all the changes associate with TXN_NAME.
+   The FS write lock is assumed to be held by the caller. */
 static svn_error_t *
 verify_locks (svn_fs_t *fs,
               const char *txn_name,
@@ -3775,7 +3776,8 @@ verify_locks (svn_fs_t *fs,
          recursive check on deleted paths regardless of their kind.  */
       if (change->change_kind == svn_fs_path_change_modify)
         recurse = FALSE;
-      SVN_ERR (svn_fs_fs__allow_locked_operation (path, fs, recurse, subpool));
+      SVN_ERR (svn_fs_fs__allow_locked_operation (path, fs, recurse, TRUE,
+                                                  subpool));
 
       /* If we just did a recursive check, remember the path we
          checked (so children can be skipped).  */
