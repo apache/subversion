@@ -119,7 +119,7 @@ I.    BUILD REQUIREMENTS
 
       NOTE: On Windows you will also need apr-iconv.  Check it out next to
       the apr and apr-util directories:
-      
+
       $ svn co \
         http://svn.apache.org/repos/asf/apr/apr-iconv/branches/0.9.x apr-iconv
 
@@ -147,9 +147,9 @@ I.    BUILD REQUIREMENTS
       4.  Neon library 0.24.7 (http://www.webdav.org/neon/)
 
       The Neon library allows a Subversion client to interact with remote
-      repositories over the Internet via a WebDAV based protocol.  If you 
-      want to use Subversion to connect to a server over ra_dav (via a 
-      http:// or https:// url), you will require Neon.  
+      repositories over the Internet via a WebDAV based protocol.  If you
+      want to use Subversion to connect to a server over ra_dav (via a
+      http:// or https:// url), you will require Neon.
 
       The Neon library source code can be installed in "./neon" if you
       want Subversion to build it as part of the Subversion build process.
@@ -179,12 +179,11 @@ I.    BUILD REQUIREMENTS
       or if you are building a Subversion client that will only speak
       to remote (networked) repositories, you don't need it.
 
-      The current recommended version is 4.2.52. Version 4.3 has been
-      recently released, but APR-util 0.9.x has not been updated to support
-      it. We *strongly* recommend using 4.2 over 4.1 or 4.0.  Not only is
-      the fastest and most stable version we've seen, but it also enables
-      Subversion repositories to automatically clean up database journal
-      files to save disk space.
+      The current recommended version is 4.3.27. We *strongly* recommend
+      using 4.3 or 4.2 over 4.1 or 4.0.  Not only are these the fastest
+      and most stable we've seen, but they also enable Subversion
+      repositories to automatically clean up database journal files to
+      save disk space.
 
       You'll need Berkeley DB installed on your system.  You can
       get it from:
@@ -194,11 +193,13 @@ I.    BUILD REQUIREMENTS
       If you have Berkeley DB installed in a place not searched by default
       for includes and libraries, add something like this:
 
-          --with-berkeley-db=/usr/local/BerkeleyDB.4.2
+          --with-berkeley-db=/usr/local/BerkeleyDB.4.3
 
       to your `configure' switches, and the build process will use the
       Berkeley library in the named directory.  You may need to use a
-      different path, of course.
+      different path, of course.  Note that in order for the detection
+      to succeed, the dynamic linker must be able to find the libraries
+      at configure time.
 
       If you are on the Windows platform and want to build Subversion,
       a precompiled version of the Berkeley DB library is available for
@@ -376,7 +377,7 @@ II.   INSTALLATION
           $ make
           # make install
 
-      You can also run the full test suite by running 'make check'.      
+      You can also run the full test suite by running 'make check'.
 
 
       2.  Building from an RPM
@@ -392,8 +393,8 @@ II.   INSTALLATION
 
           subversion*.i386.rpm
           apache*.i386.rpm (Version 2.0.49 or greater)
-          db*.i386.rpm     (Version 4.0.14 or greater; version 4.2.52 is
-                            preferred however)
+          db*.i386.rpm     (Version 4.0.14 or greater; version 4.3.27 or
+                            4.2.52 is preferred however)
           expat            (Comes with RedHat)
           neon             (Version 0.24.7)
 
@@ -574,7 +575,7 @@ II.   INSTALLATION
 
       * Visual Studio 6 and service pack. It can be built with Visual Studio
         7 (aka Visual Studio.NET aka Visual Studio.NET 2002) but these
-        instructions assumes VS6.
+        instructions assume VS6.
       * A recent Windows SDK, the one provided with Visual Studio 6 is
         too old. You only need the 'Core SDK'. You can get it from MSDN
         if you have it or from
@@ -698,7 +699,7 @@ II.   INSTALLATION
             to the project mailing list.]
 
         If you build Berkeley DB from the source, you will have to copy
-        the file db-4.2.52\build_win32\db.h to
+        the file db-4.3.27\build_win32\db.h to
         SVN\src-trunk\db4-win32\include, and all the import libraries to
         SVN\src-trunk\db4-win32\lib. Again, the DLLs should be somewhere in
         your path.
@@ -937,9 +938,9 @@ III.  BUILDING A SUBVERSION SERVER
           http://httpd.apache.org/docs-2.0/install.html
 
       Place this module wherever you wish; it's an independent project.
-      
+
       $ svn co \
-        http://svn.apache.org/repos/asf/httpd/httpd/branches/2.0.x httpd-2.0 
+        http://svn.apache.org/repos/asf/httpd/httpd/branches/2.0.x httpd-2.0
 
       Checkout the "apr" and "apr-util" modules into the srclib/ directory:
 
@@ -1208,12 +1209,12 @@ IV.   PLATFORM-SPECIFIC ISSUES
 
   B.  Mac OS X
       --------
-      
+
       [TBD: Describe BDB 4.0.x problem]
 
 
 
 V.    SWIG SCRIPTING LANGUAGE BINDINGS (PYTHON, PERL)
       ===============================================
-      
+
       See the file ./subversion/bindings/swig/INSTALL.
