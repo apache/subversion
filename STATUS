@@ -63,12 +63,13 @@ Candidate changes:
     Votes:
       +1: lundblad, fitz
 
+Approved changes (further review is welcome, but not required):
+
   * r14333
     Fix remotely (meaning ra_dav/ra_svn) triggable crash in fsfs.
     Justification:
       Trivial denial of service attack.
     Votes:
-     +1: ringstrom, sussman
+     +1: ringstrom, sussman, lundblad
 
 
-Approved changes (further review is welcome, but not required):
