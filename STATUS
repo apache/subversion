@@ -49,6 +49,7 @@ Candidate changes:
       autoversioning is a non-starter for many.
     Votes:
       +1: sussman
+      -1: fitz (Doesn't work on fsfs.  See #2280 for the gory details)
 
   * r14274
     Enable lock_tests.py No. 8 (defunct_lock) on Windows.
