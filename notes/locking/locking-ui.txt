@@ -96,9 +96,9 @@ II. New Client Behaviors
 
       This section describes a user interface to accomplish "locking",
       as described in the functional spec.  A new property is used to
-      enforce locking and prevent people from wasting time;  lock
-      tokens are objects stored in the working that represent a lock;
-      and two new subcommands (lock/unlock) are described.
+      enforce locking and prevent people from wasting time; lock
+      tokens are objects, stored in the working copy, that represent a
+      lock; and two new subcommands (lock/unlock) are described.
 
    B. The "svn:needs-lock" property
 
