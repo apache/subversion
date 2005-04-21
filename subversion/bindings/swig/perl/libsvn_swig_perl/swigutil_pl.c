@@ -440,8 +440,6 @@ static item_baton * make_baton(apr_pool_t *pool,
 {
     item_baton *newb = apr_palloc(pool, sizeof(*newb));
 
-    SvREFCNT_inc(editor);
-
     newb->editor = editor;
     newb->baton = baton;
 
@@ -465,7 +463,6 @@ static svn_error_t * close_baton(void *baton, const char *method, apr_pool_t *po
                                              "OS", ib->editor, pool, POOLINFO));
     }
 
-    SvREFCNT_dec(ib->editor);
     return SVN_NO_ERROR;
 }
 
@@ -716,7 +713,6 @@ static svn_error_t * thunk_close_file(void *file_baton,
 				         ib->editor, ib->baton, text_checksum,
 				         pool, POOLINFO));
 
-    SvREFCNT_dec(ib->editor);
     SvREFCNT_dec(ib->baton);
 
     return SVN_NO_ERROR;
@@ -774,6 +770,7 @@ void svn_delta_make_editor(svn_delta_editor_t **editor,
 
     *editor = thunk_editor;
     *edit_baton = make_baton(pool, perl_editor, NULL);
+    svn_swig_pl_hold_ref_in_pool (pool, perl_editor);
 }
 
 svn_error_t *svn_swig_pl_thunk_log_receiver(void *baton,
