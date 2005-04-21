@@ -88,18 +88,6 @@ Candidate changes:
     Votes:
       +1: lundblad
 
-  * r14304, 14306
-    Fix issue #2278: svn:needs-lock property interferes
-                     with update on Windows
-    Justification:
-      Makes locking actually useable on Windows. 1.2 showstopper.
-    Notes: I will change my +0 to a +1 when I get into the office
-           Wednesday 2004/04/20 and can test this on a Windows box.
-           As far as the code change goes, I'm +1 now.  -kfogel
-    Votes:
-      +1: brane, lundblad
-      +0: kfogel
-
   * r14333
     Fix remotely (meaning ra_dav/ra_svn) triggable crash in fsfs.
     Justification:
@@ -115,3 +103,15 @@ Approved changes (further review is welcome, but not required):
       It works just fine, more tests are better.
     Votes:
       +1: brane, sussman, dlr (concept), lundblad
+
+  * r14304, 14306
+    Fix issue #2278: svn:needs-lock property interferes
+                     with update on Windows
+    Justification:
+      Makes locking actually useable on Windows. 1.2 showstopper.
+    Notes: I will change my +0 to a +1 when I get into the office
+           Wednesday 2004/04/20 and can test this on a Windows box.
+           As far as the code change goes, I'm +1 now.  -kfogel
+    Votes:
+      +1: brane, lundblad, sussman
+      +0: kfogel
