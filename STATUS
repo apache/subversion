@@ -27,18 +27,6 @@ Candidate changes:
     Votes:
       +1: fitz, sussman
 
-  * r14277
-    Make Subversion easier to build "out-of-the-box" on WBEL3/RHEL3 by
-      dropping support for BDB.
-    Justification:
-      Trying to integrate BDB 4.2.x in to WBEL3/RHEL3 was too problematic.
-      This makes things much easier.  Later I will try again to build a good
-      BDB 4.2.X build that doesn't conflict with the standard 4.1.25 that
-      comes with the distribution.
-    Votes:
-      +1: david
-      +0: breser
-
   * r14280
     Build ZLib from sources on Windows.
     Justification:
