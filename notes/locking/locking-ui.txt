@@ -1,7 +1,7 @@
 A UI Specification for "Locking"
 
 This document describes a user interface of a new locking system for
-Subversion.  It implements the set of features desccribed in the
+Subversion.  It implements the set of features described in the
 associated functional spec.
 
 I. Introduction
@@ -32,15 +32,15 @@ I. Introduction
             - manager being forced to use VC
 
          - ITCH: VC system should be effortless, transparent, and
-                 idiotproof.  VC system should prevent people from
-                 wasting editing time, destroying each other's
+                 idiot proof.  VC system should prevent people from
+                 wasting editing time, destroying each others
                  changes, all while avoiding concurrency concepts such
                  as "merging" and "out of dateness".
 
 
    B. The "Hijack" Scenario
 
-       This is specific use-case which is particulary important to
+       This is specific use-case which is particularly important to
        making version control usable by the second type of user
        described above.
 
@@ -72,7 +72,7 @@ I. Introduction
          - Clearcase copy-based views
  
              In the hijack scenario, the user attempts to commit and
-             the client repsonds by attempting an interactive
+             the client responds by attempting an interactive
              contextual merge.  If not possible, the whole commit
              fails and a guru is phoned to fix the situation.
 
@@ -83,7 +83,7 @@ I. Introduction
              server version or local version of the file.  Somebody's
              edits are lost.
 
-       It is the recommendation of this document that the commandline
+       It is the recommendation of this document that the command line
        client produce normal conflicts when 'svn up' is run on a
        hijacked file;  but that for a GUI such as TortoiseSVN, a more
        friendly (or interactive) procedure is followed -- perhaps one
@@ -96,45 +96,35 @@ II. New Client Behaviors
 
       This section describes a user interface to accomplish "locking",
       as described in the functional spec.  A new property is used to
-      enforce locking and prevent people from wasting time;  lock
-      tokens are objects stored in the working that represent a lock;
-      and two new subcommands (lock/unlock) are described.
+      enforce locking and prevent people from wasting time; lock
+      tokens are objects, stored in the working copy, that represent a
+      lock; and two new subcommands (lock/unlock) are described.
 
    B. The "svn:needs-lock" property
 
       Create a new "svn:needs-lock" property to indicate that a file
-      must be locked before committing.  Just like "svn:executable",
+      should be locked before committing.  Just like "svn:executable",
       the value of the property is irrelevant and the property can be
       created (or deleted) by any user or administrator.
 
-      1. Property as enforcement system
+      Note that this property doesn't enforce locking.
 
-         The presence of the "svn:needs-lock" property on a file means
-         that concurrency is disabled for the file and a user *must*
-         obtain a lock on that file before committing changes to it.
-         The server rejects any commit which modifies this file unless
-         the user has a lock on the file.  Note: a user can delete a
-         file with this property, providing that the file is not
-         locked.
-
-      2. Property as communication system
-
-         When the Subversion client encounters the "svn:needs-lock"
-         property on a path (on checkout or update), it sets the
-         working-copy path to a read-only state by default.  This
-         serves as a reminder to the user that she should lock this
-         path before editing it.  When a user locks the path, the
-         Subversion client makes the working-copy path read-write.
-         When the user releases the lock, or if the lock is found to
-         be defunct (see next section), the Subversion client makes
-         the path read-only again.
+      When the Subversion client encounters the "svn:needs-lock"
+      property on a path (on checkout or update), it sets the
+      working-copy path to a read-only state by default.  This
+      serves as a reminder to the user that she should lock this
+      path before editing it.  When a user locks the path, the
+      Subversion client makes the working-copy path read-write.
+      When the user releases the lock, or if the lock is found to
+      be defunct (see next section), the Subversion client makes
+      the path read-only again.
 
    C. Lock manipulation via client
 
       1. Lock Tokens
 
          When a user successfully locks a path, the working copy
-         recieves a "lock token" from the server.  This token is an
+         receives a "lock token" from the server.  This token is an
          object that connects your exclusive right to commit to a path
          with your working copy.
 
@@ -172,20 +162,18 @@ II. New Client Behaviors
               username: harry
               password: XXXXX
               [...]
-              'foo.c' has been locked by user 'harry'.
+              'foo.c' locked by user 'harry'.
         
             In order for this command to work,
 
-               - you *must* provide a username to the server.
+               - You *must* provide a username to the server.
                  'anonymous' locks are not allowed.
                - The path must not already be locked.
                - The path must not be out-of-date.  
-               - a comment must be provided, so that others can
-                 see why the object was locked.
 
-            This means that similar to a commit action, 'svn lock'
-            will launch $EDITOR, or accept -m or -F switches to
-            accept a lock comment.
+            The lock command accepts -m or -F to add a lock comment, so
+            others can see why the file was locked.  The lock comment
+            is optional.
 
          b. Using a lock
 
@@ -239,7 +227,7 @@ II. New Client Behaviors
              $ svn unlock foo.c
              username:  sally
              password:  XXXX
-             svn:  error:  'foo.c' is locked by user 'hally'.
+             svn:  error:  'foo.c' is locked by user 'harry'.
 
              $ svn unlock foo.c --force
              username:  sally
@@ -268,16 +256,14 @@ II. New Client Behaviors
               $ svn lock foo.c
               username:  sally
               password:  XXXX
-              svn:  error:  'foo.c' is locked by user 'hally'.
+              svn:  error:  'foo.c' is locked by user 'harry'.
 
               $ svn lock foo.c --force
               username:  sally
               password:  XXXX
-              'foo.c' has been locked by user 'sally'.
+              'foo.c' locked by user 'sally'.
 
-              Remember that 'svn lock' requires a lock comment, so -m,
-              -F, or launching of $EDITOR is required.  And remember
-              that the 'svn lock' command still requires that the
+              Remember that the 'svn lock' command still requires that the
               target be up-to-date to succeed.
 
 
@@ -285,7 +271,7 @@ II. New Client Behaviors
 
             1. seeing lock tokens in a working copy
 
-               'svn status' conisders a lock token "interesting", and
+               'svn status' considers a lock token "interesting", and
                displays it using some new symbol, in a new column:
 
                    $ svn status
