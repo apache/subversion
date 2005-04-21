@@ -25,7 +25,7 @@ Candidate changes:
     Votes:
       +1: lundblad, cmpilato (and could this get drawn out ANY longer?)
 
-  * r14262, r14359
+  * r14262, r14359, 14365
     Fix #2049, make autoversioning cooperate with mod_mime.
     Justification:
       svn 1.2 brags about autoversioning being 'finished', but it's
