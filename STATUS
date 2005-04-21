@@ -39,7 +39,7 @@ Candidate changes:
     Justification:
       Low impact; stripping port number seen as a bug by some.
     Votes:
-      +1: ghudson, breser
+      +1: ghudson, breser, dlr
 
 Approved changes (further review is welcome, but not required):
 
