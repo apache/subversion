@@ -25,13 +25,12 @@ Candidate changes:
     Votes:
       +1: lundblad, cmpilato (and could this get drawn out ANY longer?)
 
-  * r14205, r14208
+  * r14150, r14205, r14208, r14345
     Add lock/unlock support to mailer.py.
     Justification:
       Necessary feature... besides, who doesn't want more email?
     Votes:
-      +1: fitz, dlr
-      -1: ringstrom [http://svn.haxx.se/dev/archive-2005-04/1310.shtml]
+      +1: cmpilato
 
   * r14259
     Fix #2262, including making lock expiration work in FSFS on recursive
