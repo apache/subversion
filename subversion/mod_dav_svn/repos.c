@@ -1855,10 +1855,11 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
     {
       svn_string_t *mime_type;
 
-      serr = svn_fs_txn_prop (&mime_type,
-                              resource->info->root.txn,
-                              SVN_PROP_MIME_TYPE,
-                              resource->pool);
+      serr = svn_fs_node_prop (&mime_type,
+                               resource->info->root.root,
+                               resource->info->repos_path,
+                               SVN_PROP_MIME_TYPE,
+                               resource->pool);
       
       if (serr != NULL)
         {
