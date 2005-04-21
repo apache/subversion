@@ -17,14 +17,6 @@ Candidate changes:
     Votes:
       +1: dlr, fitz (concept)
 
-  * r14041, r14149, r14186, r14194, r14238, r14273
-    Fix issue #2268 (svn update of xml-unsafe dir (from within) http error)
-    and similar problems regarding paths with leading or trailing spaces.
-    Justification:
-      Yet Another Path Escaping Bug
-    Votes:
-      +1: lundblad, cmpilato, fitz
-
   * r14262, r14359, 14365
     Fix #2049, make autoversioning cooperate with mod_mime.
     Justification:
@@ -71,4 +63,12 @@ Candidate changes:
       +1: ghudson
 
 Approved changes (further review is welcome, but not required):
+
+  * r14041, r14149, r14186, r14194, r14238, r14273
+    Fix issue #2268 (svn update of xml-unsafe dir (from within) http error)
+    and similar problems regarding paths with leading or trailing spaces.
+    Justification:
+      Yet Another Path Escaping Bug
+    Votes:
+      +1: lundblad, cmpilato, fitz
 
