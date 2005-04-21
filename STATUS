@@ -37,6 +37,7 @@ Candidate changes:
       comes with the distribution.
     Votes:
       +1: david
+      +0: breser
 
   * r14280
     Build ZLib from sources on Windows.
