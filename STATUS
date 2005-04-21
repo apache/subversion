@@ -63,6 +63,13 @@ Candidate changes:
     Votes:
       +1: lundblad, fitz
 
+  * r14373
+    Pass all of URI hostinfo to ra_svn tunnel agent
+    Justification:
+      Low impact; stripping port number seen as a bug by some.
+    Votes:
+      +1: ghudson
+
 Approved changes (further review is welcome, but not required):
 
   * r14333
