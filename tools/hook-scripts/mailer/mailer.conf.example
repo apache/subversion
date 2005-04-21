@@ -148,6 +148,13 @@ commit_subject_prefix =
 # The default prefix for the Subject: header for propchanges
 propchange_subject_prefix =
 
+# The default prefix for the Subject: header for locks
+lock_subject_prefix =
+
+# The default prefix for the Subject: header for unlocks
+unlock_subject_prefix =
+
+
 # The default From: address for messages.  If the from_addr is not
 # specified or it is specified but there is no text after the `=',
 # then the revision's author is used as the from address.  If the
