@@ -83,18 +83,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14304, 14306
-    Fix issue #2278: svn:needs-lock property interferes
-                     with update on Windows
-    Justification:
-      Makes locking actually useable on Windows. 1.2 showstopper.
-    Notes: I will change my +0 to a +1 when I get into the office
-           Wednesday 2004/04/20 and can test this on a Windows box.
-           As far as the code change goes, I'm +1 now.  -kfogel
-    Votes:
-      +1: brane, lundblad, sussman
-      +0: kfogel
-
   * r14259
     Fix #2262, including making lock expiration work in FSFS on recursive
     operations.
