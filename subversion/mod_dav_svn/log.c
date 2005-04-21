@@ -244,40 +244,18 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
       else if (strcmp(child->name, "end-revision") == 0)
         end = SVN_STR_TO_REV(dav_xml_get_cdata(child, resource->pool, 1));
       else if (strcmp(child->name, "limit") == 0)
-        {
-          limit = atoi(child->first_cdata.first->text);
-        }
+        limit = atoi(child->first_cdata.first->text);
       else if (strcmp(child->name, "discover-changed-paths") == 0)
-        {
-          /* ### todo: value doesn't matter, presence alone is enough?
-             (I.e., is that a traditional way to do things here?) */
-          discover_changed_paths = 1;
-        }
+        discover_changed_paths = 1; /* presence indicates positivity */
       else if (strcmp(child->name, "strict-node-history") == 0)
-        {
-          /* ### todo: value doesn't matter, presence alone is enough?
-             (I.e., is that a traditional way to do things here?) */
-          strict_node_history = 1;
-        }
+        strict_node_history = 1; /* presence indicates positivity */
       else if (strcmp(child->name, "path") == 0)
         {
-          /* Convert these relative paths to absolute paths in the
-             repository. */
-          target = apr_pstrdup (resource->pool, resource->info->repos_path);
-
-          /* Don't add on an empty string, but do add the target to the
-             path.  This special case means that we have passed a single
-             directory to get the log of, and we need a path to call
-             svn_fs_revisions_changed on. */
-          if (child->first_cdata.first)
-            {
-              if ((derr = dav_svn__test_canonical
-                   (child->first_cdata.first->text, resource->pool)))
-                return derr;
-              target = svn_path_join(target, child->first_cdata.first->text,
-                                     resource->pool);
-            }
-
+          const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
+          if ((derr = dav_svn__test_canonical (rel_path, resource->pool)))
+            return derr;
+          target = svn_path_join(resource->info->repos_path, rel_path, 
+                                 resource->pool);
           (*((const char **)(apr_array_push (paths)))) = target;
         }
       /* else unknown element; skip it */
