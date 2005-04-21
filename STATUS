@@ -53,7 +53,7 @@ Candidate changes:
       object to leak, by holding unnecessary refcnt.  Those objects are
       usually quite large in svk.
     Votes:
-     +1: clkao
+     +1: clkao, breser
 
   * r14280
     Build ZLib from sources on Windows.
