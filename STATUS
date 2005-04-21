@@ -23,7 +23,7 @@ Candidate changes:
     Justification:
       Yet Another Path Escaping Bug
     Votes:
-      +1: lundblad, cmpilato (and could this get drawn out ANY longer?)
+      +1: lundblad, cmpilato, fitz
 
   * r14262, r14359, 14365
     Fix #2049, make autoversioning cooperate with mod_mime.
