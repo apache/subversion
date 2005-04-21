@@ -32,14 +32,6 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
-  * r14259
-    Fix #2262, including making lock expiration work in FSFS on recursive
-    operations.
-    Justification:
-      Expired locks shouldn't be visible any more.
-    Votes:
-      +1: lundblad, fitz
-
   * r14262
     Fix #2049, make autoversioning cooperate with mod_mime.
     Justification:
@@ -93,7 +85,8 @@ Candidate changes:
     Justification:
       Trivial denial of service attack.
     Votes:
-     +1: ringstrom
+     +1: ringstrom, sussman
+
 
 Approved changes (further review is welcome, but not required):
 
@@ -115,3 +108,11 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: brane, lundblad, sussman
       +0: kfogel
+
+  * r14259
+    Fix #2262, including making lock expiration work in FSFS on recursive
+    operations.
+    Justification:
+      Expired locks shouldn't be visible any more.
+    Votes:
+      +1: lundblad, fitz, sussman
