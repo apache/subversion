@@ -61,7 +61,7 @@ Candidate changes:
     Justification:
       Makes it easier to test over DAV; not a core code change.
     Votes:
-      +1: lundblad
+      +1: lundblad, fitz
 
   * r14333
     Fix remotely (meaning ra_dav/ra_svn) triggable crash in fsfs.
