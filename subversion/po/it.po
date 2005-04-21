@@ -76,7 +76,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-04-17 12:07+0200\n"
-"PO-Revision-Date: 2005-04-20 15:16+0200\n"
+"PO-Revision-Date: 2005-04-20 22:23+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1980,9 +1980,11 @@ msgstr "Codifica binaria dei dati non riconosciuta; non posso decodificare"
 msgid "XML data was not well-formed"
 msgstr "I dati XML non sono ben-formati"
 
+# Escaping?
 #: include/svn_error_codes.h:196
+#, fuzzy
 msgid "Data cannot be safely XML-escaped"
-msgstr ""
+msgstr "I dati non possono essere formattati in XML"
 
 #: include/svn_error_codes.h:202
 msgid "Inconsistent line ending style"
@@ -2300,7 +2302,7 @@ msgstr "Il percorso non è bloccato"
 
 #: include/svn_error_codes.h:539
 msgid "Lock token is incorrect"
-msgstr ""
+msgstr "Il gettone di blocco non è corretto"
 
 #: include/svn_error_codes.h:544
 msgid "No lock token provided"
@@ -2308,7 +2310,7 @@ msgstr "Non non è stato fornito nessun gettone di blocco"
 
 #: include/svn_error_codes.h:549
 msgid "Username does not match lock owner"
-msgstr ""
+msgstr "Il nome utente non corrisponde con il proprietario del blocco"
 
 #: include/svn_error_codes.h:554
 msgid "Filesystem has no such lock"
@@ -2316,7 +2318,7 @@ msgstr "Il filesystem non ha un simile blocco"
 
 #: include/svn_error_codes.h:559
 msgid "Lock has expired"
-msgstr ""
+msgstr "Il blocco è scaduto"
 
 #: include/svn_error_codes.h:564
 msgid "Item is out of date"
@@ -2587,7 +2589,7 @@ msgstr "Due risorse sotto controllo di versione non hanno rapporto fra loro"
 
 #: include/svn_error_codes.h:888
 msgid "Path has no lock token"
-msgstr ""
+msgstr "Il percorso non ha un gettone di lock"
 
 #: include/svn_error_codes.h:894
 msgid "A problem occurred; see later errors for details"
@@ -3175,7 +3177,7 @@ msgstr "L'URL '%s' non esiste nella revisione '%ld'"
 
 #: libsvn_client/locking_commands.c:185
 msgid "No common parent found, unable to operate on disjoint arguments"
-msgstr ""
+msgstr "Non è stato trovato un genitore comune, non è possibile operare su argomenti disgiunti"
 
 #: libsvn_client/locking_commands.c:267
 #, c-format
@@ -3190,7 +3192,7 @@ msgstr "'%s' non è bloccato"
 #: libsvn_client/locking_commands.c:345 libsvn_fs/fs-loader.c:885
 #: libsvn_ra/ra_loader.c:512
 msgid "Lock comment has illegal characters"
-msgstr ""
+msgstr "Il commento al blocco contiene dei caratteri illegali"
 
 #: libsvn_client/log.c:72
 msgid "Missing required revision specification"
@@ -3396,22 +3398,24 @@ msgstr "Non riesco ad allocare il mutex per il filesystem"
 msgid "Can't grab FS mutex"
 msgstr "Non riesco a prendere il mutex per il filesystem"
 
+# Traduzione di mutex (se esiste)
 #: libsvn_fs/fs-loader.c:275
+#, fuzzy
 msgid "Can't ungrab FS mutex"
-msgstr ""
+msgstr "Non posso abbandonare il mutex al filesystem"
 
 #: libsvn_fs_base/bdb/bdb-err.c:97
 #, c-format
 msgid "Berkeley DB error for filesystem %s while %s:\n"
-msgstr ""
+msgstr "Errore del DB Berkeley per il filesystem '%s' durante %s\n"
 
 #: libsvn_fs_base/bdb/changes-table.c:88
 msgid "creating change"
-msgstr ""
+msgstr "sto creando le modifiche"
 
 #: libsvn_fs_base/bdb/changes-table.c:114
 msgid "deleting changes"
-msgstr ""
+msgstr "sto cancellando le modifiche"
 
 #: libsvn_fs_base/bdb/changes-table.c:146 libsvn_fs_fs/fs_fs.c:1876
 msgid "Missing required node revision ID"
@@ -3432,7 +3436,7 @@ msgstr ""
 #: libsvn_fs_base/bdb/changes-table.c:257
 #: libsvn_fs_base/bdb/changes-table.c:381
 msgid "creating cursor for reading changes"
-msgstr ""
+msgstr "sto creando il cursore per leggere le modifiche"
 
 #: libsvn_fs_base/bdb/changes-table.c:283
 #: libsvn_fs_base/bdb/changes-table.c:402
@@ -3443,41 +3447,46 @@ msgstr "Errore nella lettura delle modifiche per la chiave '%s'"
 #: libsvn_fs_base/bdb/changes-table.c:342
 #: libsvn_fs_base/bdb/changes-table.c:425
 msgid "fetching changes"
-msgstr ""
+msgstr "sto ritrovando le modifiche"
 
 #: libsvn_fs_base/bdb/changes-table.c:355
 #: libsvn_fs_base/bdb/changes-table.c:438
 msgid "closing changes cursor"
-msgstr ""
+msgstr "sto chiudendo il cursore sulla modifiche"
 
 #: libsvn_fs_base/bdb/copies-table.c:87
 msgid "storing copy record"
 msgstr "archivio il record di copia"
 
+# traduzione un po' libera...
 #: libsvn_fs_base/bdb/copies-table.c:112
 msgid "allocating new copy ID (getting 'next-key')"
-msgstr ""
+msgstr "sto allocando un nuovo DI di copia (chiamando 'next-key')"
 
+# bumping?
 #: libsvn_fs_base/bdb/copies-table.c:130
+#, fuzzy
 msgid "bumping next copy key"
-msgstr ""
+msgstr "sto aggiornando la chiave della prossima copia"
 
 #: libsvn_fs_base/bdb/copies-table.c:169
 msgid "deleting entry from 'copies' table"
-msgstr ""
+msgstr "sto cancellando la voce dalla tabella 'copies'"
 
 #: libsvn_fs_base/bdb/copies-table.c:197
-#, fuzzy
 msgid "reading copy"
 msgstr "sto leggendo la copia"
 
+# getting 'next-key'
 #: libsvn_fs_base/bdb/nodes-table.c:99
 msgid "allocating new node ID (getting 'next-key')"
-msgstr ""
+msgstr "sto allocando l'ID per il nuovo node (chiamando 'next-key')"
 
+# bumping?
 #: libsvn_fs_base/bdb/nodes-table.c:117
+#, fuzzy
 msgid "bumping next node ID key"
-msgstr ""
+msgstr "sto aggiornando la chiave dell'ID del prossimo nodo"
 
 #: libsvn_fs_base/bdb/nodes-table.c:154
 #, c-format
@@ -3486,7 +3495,7 @@ msgstr "L'id '%s' successivo (per '%s') esiste già nel filesystem '%s'"
 
 #: libsvn_fs_base/bdb/nodes-table.c:180
 msgid "deleting entry from 'nodes' table"
-msgstr ""
+msgstr "sto cancellando la voce dalla tabella 'nodes'"
 
 #. Handle any other error conditions.
 #: libsvn_fs_base/bdb/nodes-table.c:220
@@ -3513,9 +3522,9 @@ msgstr "sto archiviando la rappresentazione"
 
 #: libsvn_fs_base/bdb/reps-table.c:156
 msgid "allocating new representation (getting next-key)"
-msgstr ""
+msgstr "sto allocando la nuova rappresentazione (chiamando next-key)"
 
-# bumping?
+# Come tradurre bumping?
 #: libsvn_fs_base/bdb/reps-table.c:177
 #, fuzzy
 msgid "bumping next representation key"
@@ -3533,7 +3542,7 @@ msgstr "sto leggendo la revisione del filesystem"
 
 #: libsvn_fs_base/bdb/strings-table.c:91
 msgid "creating cursor for reading a string"
-msgstr ""
+msgstr "sto creando il cursore per leggere una stringa"
 
 #: libsvn_fs_base/bdb/txn-table.c:94
 msgid "storing transaction record"
@@ -3775,24 +3784,24 @@ msgid "No lock on path '%s' in filesystem '%s'"
 msgstr "Nessun blocco al path '%s' nel filesystem '%s'"
 
 #: libsvn_fs_base/err.c:282
-#, fuzzy, c-format
+#, c-format
 msgid "Lock has expired:  lock-token '%s' in filesystem '%s'"
-msgstr "Nessuna copia con id '%s' nel filesystem '%s'"
+msgstr "Il blocco è scaduto: gettone di blocco '%s' nel filesystem '%s'"
 
 #: libsvn_fs_base/err.c:293
 #, c-format
 msgid "No username is currently associated with filesystem '%s'"
-msgstr ""
+msgstr "Nessun nome utente è attualmente associato al filesystem '%s'"
 
 #: libsvn_fs_base/err.c:305
-#, fuzzy, c-format
+#, c-format
 msgid "User '%s' is trying to use a lock owned by '%s' in filesystem '%s'"
-msgstr "'%s' non è una directory nel filesystem '%s'"
+msgstr "L'utente '%s' sta cercando to utilizzare un blocco di proprietà di '%s' nel filesystem '%s'"
 
 #: libsvn_fs_base/err.c:317
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is already locked by user '%s' in filesystem '%s'"
-msgstr "'%s' non è una directory nel filesystem '%s'"
+msgstr "Il percorso '%s' è già bloccato dall'utente '%s' nel filesystem '%s'"
 
 #: libsvn_fs_base/fs.c:79
 #, c-format
@@ -3815,7 +3824,7 @@ msgstr "L'oggetto del filesystem è già aperto"
 #: libsvn_fs_base/fs.c:675
 #, c-format
 msgid "Expected FS format '%d'; found format '%d'"
-msgstr ""
+msgstr "Il formato atteso per il filesystem era '%d'; il formato trovato è '%d'"
 
 #: libsvn_fs_base/fs.c:1064
 #, c-format
@@ -3867,7 +3876,7 @@ msgstr ""
 
 #: libsvn_fs_base/fs.c:1345
 msgid "Module for working with a Berkeley DB repository."
-msgstr ""
+msgstr "Modulo da usare con un repository che si appoggia ad un database Berkeley"
 
 #: libsvn_fs_base/fs.c:1379
 #, c-format
@@ -3877,17 +3886,19 @@ msgstr "Versione del lettore di filesystem (%d) per bdb non supportata"
 #: libsvn_fs_base/lock.c:447
 #, c-format
 msgid "Cannot verify lock on path '%s'; no username available"
-msgstr ""
+msgstr "Non posso verificare il blocco al percorso '%s'; nessun nome utente disponibile"
 
 #: libsvn_fs_base/lock.c:453
 #, c-format
 msgid "User %s does not own lock on path '%s' (currently locked by %s)"
-msgstr ""
+msgstr "L'utente %s non possiede il blocco sul path '%s' (attualmente bloccato da %s)"
 
 #: libsvn_fs_base/lock.c:460
 #, c-format
 msgid "Cannot verify lock on path '%s'; no matching lock-token available"
 msgstr ""
+"Non posso verificare il blocco sul percorso '%s';\n"
+"nessun gettone di blocco corrispondente"
 
 #: libsvn_fs_base/reps-strings.c:103
 msgid "Representation is not of type 'delta'"
@@ -4261,7 +4272,7 @@ msgid "Unrecognized URL scheme for '%s'"
 msgstr "Protocollo '%s' dell'URL non riconosciuto"
 
 #: libsvn_ra/ra_loader.c:582
-#, fuzzy, c-format
+#, c-format
 msgid "  - handles '%s' scheme\n"
 msgstr "  - gestisce il protocollo '%s'\n"
 
@@ -4689,7 +4700,7 @@ msgstr "URL illegale per un repository svn '%s'"
 msgid "Server requires minimum version %d"
 msgstr "Il server richiede una versione minima %d"
 
-# Il dubbio è sempre il from indichi provenienza o distanza
+# Il dubbio è se il from indichi provenienza o distanza
 #: libsvn_ra_svn/client.c:643
 #, fuzzy
 msgid "Impossibly long repository root from server"
@@ -5262,7 +5273,7 @@ msgstr "Non posso ricodificare la stringa di errore da APR"
 #: libsvn_subr/error.c:414
 #, c-format
 msgid "%swarning: %s\n"
-msgstr ""
+msgstr "%savviso: %s\n"
 
 #: libsvn_subr/io.c:129
 #, c-format
@@ -5355,17 +5366,17 @@ msgstr "Non riesco a mettere il file '%s' in lettura-scrittura"
 #: libsvn_subr/io.c:1015
 #, c-format
 msgid "Can't get default file perms for file at '%s' (file stat error)"
-msgstr ""
+msgstr "Non riesco ad avere i permessi di default per il file in '%s' (errore in file stat)"
 
 #: libsvn_subr/io.c:1021
 #, c-format
 msgid "Can't get default file perms for file at '%s' (file close error)"
-msgstr ""
+msgstr "Non riesco ad ottenere i permessi di default per il file in '%s' (errore in chiusura del file)"
 
 #: libsvn_subr/io.c:1053 libsvn_subr/io.c:1113
-#, fuzzy, c-format
+#, c-format
 msgid "Can't change read-write perms of file '%s'"
-msgstr "Non riesco a cambiare l'eseguibilità del file '%s'"
+msgstr "Non riesco a cambiare i privilegi di lettura-scrittura del file '%s'"
 
 #: libsvn_subr/io.c:1152 libsvn_subr/io.c:1196 libsvn_subr/io.c:1220
 #, c-format
@@ -5442,16 +5453,19 @@ msgstr "Non riesco ad impostare il cmdtype del processo '%s'"
 msgid "Can't set process '%s' directory"
 msgstr "Non riesco ad  impostare la directory del processo '%s'"
 
+# Il child input del processo??
 #: libsvn_subr/io.c:1750
 #, fuzzy, c-format
 msgid "Can't set process '%s' child input"
 msgstr "Non riesco ad impostare l'input per il processo '%s'"
 
+# Il child outfile del processo??
 #: libsvn_subr/io.c:1757
 #, fuzzy, c-format
 msgid "Can't set process '%s' child outfile"
 msgstr "Non riesco ad impostare il file di output per il processo '%s'"
 
+# Il child errfile del processo??
 #: libsvn_subr/io.c:1764
 #, fuzzy, c-format
 msgid "Can't set process '%s' child errfile"
@@ -5626,7 +5640,7 @@ msgstr ""
 
 #: libsvn_subr/opt.c:237
 msgid " arg"
-msgstr ""
+msgstr " argomento"
 
 #: libsvn_subr/opt.c:261
 #, c-format
@@ -5673,7 +5687,6 @@ msgstr ""
 "\n"
 
 #: libsvn_subr/opt.c:720
-#, fuzzy
 msgid ""
 "Copyright (C) 2000-2005 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
@@ -6247,9 +6260,9 @@ msgid "Error modifying entry for '%s'"
 msgstr "Errore nalla modifica della voce di '%s'"
 
 #: libsvn_wc/log.c:623
-#, fuzzy, c-format
+#, c-format
 msgid "Error removing lock from entry for '%s'"
-msgstr "Errore nella rimozione delle proprietà per '%s'"
+msgstr "Errore nella rimozione del blocco dalla voce per '%s'"
 
 #: libsvn_wc/log.c:754
 #, c-format
@@ -6595,9 +6608,8 @@ msgstr ""
 "imposta l'UUID del repository a quello trovato nel flusso di dati, se esiste"
 
 #: svnadmin/main.c:257
-#, fuzzy
 msgid "type of repository: 'fsfs' (default) or 'bdb'"
-msgstr "tipo di repository: 'bdb' o 'fsfs'"
+msgstr "tipo di repository: 'fsfs' (default) o 'bdb'"
 
 #: svnadmin/main.c:260
 msgid "load at specified directory in repository"
@@ -6750,16 +6762,14 @@ msgstr ""
 "sul progresso vengono mandate su stdout.\n"
 
 #: svnadmin/main.c:353
-#, fuzzy
 msgid ""
 "usage: svnadmin lslocks REPOS_PATH\n"
 "\n"
 "Print descriptions of all locks.\n"
 msgstr ""
-"uso: svnadmin lstxns PERC_REPO\n"
+"uso: svnadmin lslocks PERC_REPO\n"
 "\n"
-"Stampa i nomi di tutte le transazioni di cui non è stato eseguito il "
-"commit.\n"
+"Stampa le descrizioni di tutti i blocchi.\n"
 
 #: svnadmin/main.c:358
 msgid ""
@@ -6794,6 +6804,9 @@ msgid ""
 "\n"
 "Unconditionally remove lock from each LOCKED_PATH.\n"
 msgstr ""
+"utilizzo: svnadmin rmlocks PERC_REPO PERC_BLOCCATO...\n"
+"\n"
+"Forza la rimozione del blocc da PERC_BLOCCATO.\n"
 
 #: svnadmin/main.c:376
 msgid ""
@@ -6876,14 +6889,13 @@ msgstr ""
 "\n"
 "Commandi disponibili:\n"
 
+# FS per cosa sta? filesystem?
 #: svnadmin/main.c:640 svnlook/main.c:1709
 #, fuzzy
 msgid ""
 "The following repository back-end (FS) modules are available:\n"
 "\n"
-msgstr ""
-"Sono disponibili i seguenti moduli di accesso al repository:\n"
-"\n"
+msgstr "Sono disponibili i seguenti moduli di accesso al repository:\n\n"
 
 #: svnadmin/main.c:723
 msgid ""
@@ -6940,22 +6952,22 @@ msgstr "È richiesto esattamente un solo file come argomento"
 #: svnadmin/main.c:1028 svnlook/main.c:1774
 #, c-format
 msgid "UUID Token: %s\n"
-msgstr ""
+msgstr "UUID del gettone: %s\n"
 
 #: svnadmin/main.c:1029 svnlook/main.c:1775
-#, fuzzy, c-format
+#, c-format
 msgid "Owner: %s\n"
-msgstr "Nome: %s\n"
+msgstr "Proprietario: %s\n"
 
 #: svnadmin/main.c:1030 svnlook/main.c:1776
-#, fuzzy, c-format
+#, c-format
 msgid "Created: %s\n"
-msgstr "Percorso: %s\n"
+msgstr "Creato: %s\n"
 
 #: svnadmin/main.c:1031 svnlook/main.c:1777
 #, c-format
 msgid "Expires: %s\n"
-msgstr ""
+msgstr "Scade: %s\n"
 
 #: svnadmin/main.c:1033
 #, c-format
@@ -6964,6 +6976,9 @@ msgid ""
 "%s\n"
 "\n"
 msgstr ""
+"Commento (%i righe):\n"
+"%s\n"
+"\n"
 
 #: svnadmin/main.c:1034
 #, c-format
@@ -6972,16 +6987,19 @@ msgid ""
 "%s\n"
 "\n"
 msgstr ""
+"Commento (%i righe):\n"
+"%s\n"
+"\n"
 
 #: svnadmin/main.c:1101
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' isn't locked.\n"
-msgstr "Il percorso '%s' non è un file"
+msgstr "Il percorso '%s' non è bloccato\n"
 
 #: svnadmin/main.c:1113
-#, fuzzy, c-format
+#, c-format
 msgid "Removed lock on '%s'.\n"
-msgstr "Ripristinato '%s'\n"
+msgstr "Rimosso il blocco da '%s'\n"
 
 #: svnadmin/main.c:1348
 msgid "subcommand argument required\n"
@@ -7022,6 +7040,7 @@ msgstr "Percorso di origine della copia non valido '%s'"
 msgid "Node with dropped parent sneaked in"
 msgstr "Si è introdotto un nodo senza genitore"
 
+# Non so come tradurre decentemente 'Delta property block detected'
 #: svndumpfilter/main.c:637
 #, fuzzy
 msgid "Delta property block detected - not supported by svndumpfilter"
@@ -7160,7 +7179,7 @@ msgstr "non stampare le differenze per i file aggiunti"
 
 #: svnlook/main.c:121
 msgid "show full paths instead of indenting them"
-msgstr ""
+msgstr "mostra i percorsi completi invece di nidificarli"
 
 #: svnlook/main.c:134
 msgid ""
@@ -7258,16 +7277,14 @@ msgstr ""
 "suo contenuto.\n"
 
 #: svnlook/main.c:182
-#, fuzzy
 msgid ""
 "usage: svnlook lock REPOS_PATH PATH_IN_REPOS\n"
 "\n"
 "If a lock exists on a path in the repository, describe it.\n"
 msgstr ""
-"uso: svnlook history PERC_REPO [PERC_NEL_REPO]\n"
+"uso: svnlook lock PERC_REPO PERCC_NEL_REPO\n"
 "\n"
-"Mostra le informazioni sulla storia di un percorso nel repository (o\n"
-"della directory di root se non viene fornito nessun percorso).\n"
+"Se esiste un blocco su un percorso, ne riporta la descrizione\n"
 
 #: svnlook/main.c:187
 msgid ""
@@ -7339,9 +7356,9 @@ msgstr ""
 "Mostra il numero di revisione più recente.\n"
 
 #: svnlook/main.c:579
-#, fuzzy, c-format
+#, c-format
 msgid "Error creating dir '%s' (path exists)"
-msgstr "Errore leggendo il file '%s'"
+msgstr "Errore nella creazione della directory '%s' (esiste già)"
 
 #: svnlook/main.c:840
 #, c-format
@@ -7440,9 +7457,8 @@ msgstr ""
 "Comandi disponibili:\n"
 
 #: svnlook/main.c:1755
-#, fuzzy
 msgid "Missing path argument"
-msgstr "Argomento di nome della proprietà mancante"
+msgstr "Argomento di percorso mancante"
 
 #: svnlook/main.c:1780
 #, c-format
@@ -7450,6 +7466,9 @@ msgid ""
 "Comment (%i lines):\n"
 "%s\n"
 msgstr ""
+"Commento (%i righe):\n"
+"%s\n"
+"\n"
 
 #: svnlook/main.c:1781
 #, c-format
@@ -7457,6 +7476,8 @@ msgid ""
 "Comment (%i line):\n"
 "%s\n"
 msgstr ""
+"Commento (%i righe):\n"
+"%s\n"
 
 #: svnlook/main.c:1827
 msgid "Missing propname argument"
