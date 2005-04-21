@@ -33,7 +33,7 @@ Candidate changes:
       share, but doesn't get re-fetched as a Word file.  Without that,
       autoversioning is a non-starter for many.
     Votes:
-      +1: fitz
+      +1: fitz, sussman
 
   * r14277
     Make Subversion easier to build "out-of-the-box" on WBEL3/RHEL3 by
