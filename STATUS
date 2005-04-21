@@ -51,13 +51,6 @@ Candidate changes:
       +1: sussman
       -1: fitz (Doesn't work on fsfs.  See #2280 for the gory details)
 
-  * r14274
-    Enable lock_tests.py No. 8 (defunct_lock) on Windows.
-    Justification:
-      It works just fine, more tests are better.
-    Votes:
-      +1: brane, sussman, dlr (concept)
-
   * r14277
     Make Subversion easier to build "out-of-the-box" on WBEL3/RHEL3 by
       dropping support for BDB.
@@ -104,7 +97,7 @@ Candidate changes:
            Wednesday 2004/04/20 and can test this on a Windows box.
            As far as the code change goes, I'm +1 now.  -kfogel
     Votes:
-      +1: brane
+      +1: brane, lundblad
       +0: kfogel
 
   * r14333
@@ -116,3 +109,9 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
+  * r14274
+    Enable lock_tests.py No. 8 (defunct_lock) on Windows.
+    Justification:
+      It works just fine, more tests are better.
+    Votes:
+      +1: brane, sussman, dlr (concept), lundblad
