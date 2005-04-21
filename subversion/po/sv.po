@@ -46,7 +46,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-04-19 23:04+0200\n"
-"PO-Revision-Date: 2005-04-19 23:03+0200\n"
+"PO-Revision-Date: 2005-04-21 21:27+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -686,7 +686,7 @@ msgid ""
 "    via an immediate commit.\n"
 msgstr ""
 "Radera filer och kataloger från versionshantering.\n"
-"användning: 1. delete AÖKVÄG...\n"
+"användning: 1. delete SÖKVÄG...\n"
 "            2. delete URL...\n"
 "\n"
 "  1. Varje objekt som angivits med en sökväg schemaläggs för radering vid\n"
@@ -750,7 +750,7 @@ msgstr ""
 "     standardvädet för GAMMALREV till N och för NYREV till M.\n"
 "\n"
 "  3. Kortare sätt att skriva \"svn diff --old=GAMMAL-URL[@GAMMALREV]\n"
-"    --new=NY-URL[@NYREV]\".\n"
+"     --new=NY-URL[@NYREV]\".\n"
 "\n"
 "  Använd endast \"svn diff\" för att se lokala ändringar i en arbetskopia.\n"
 
@@ -7679,7 +7679,9 @@ msgstr "lyssningsport (för daemon-läge)"
 
 #: svnserve/main.c:106
 msgid "listen hostname or IP address (for daemon mode)"
-msgstr "värdnamn eller IP-address att lyssna på (daemon-läge)"
+msgstr ""
+"värdnamn eller IP-address att lyssna på\n"
+"                             (daemon-läge)"
 
 #: svnserve/main.c:108
 msgid "run in foreground (useful for debugging)"
@@ -7707,7 +7709,9 @@ msgstr "tunnel-läge"
 
 #: svnserve/main.c:117
 msgid "tunnel username (default is current uid's name)"
-msgstr "användarnamn för tunnel (standard är aktuell användares namn)"
+msgstr ""
+"användarnamn för tunnel (standard är aktuell\n"
+"                             användares namn)"
 
 #: svnserve/main.c:119
 msgid "use threads instead of fork"
