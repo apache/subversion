@@ -72,7 +72,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-30 09:48+0200\n"
-"PO-Revision-Date: 2005-04-18 11:10+0100\n"
+"PO-Revision-Date: 2005-04-22 08:43+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1212,7 +1212,7 @@ msgstr ""
 "  Die svn:keywords, svn:executable, svn:eol-style, svn:mime-type und\n"
 "  svn:needs-lock Eigenschaften können nicht auf Verzeichnisse gesetzt werden.\n"
 "  Ein nicht-rekursiver Versuch wird scheitern, und ein rekursiver Versuch wird\n"
-"   nur die Eigenschaft der Dateien in dem Verzeichnis setzen.\n"
+"  nur die Eigenschaft der Dateien in dem Verzeichnis setzen.\n"
 
 #: clients/cmdline/main.c:591
 msgid ""
@@ -1538,7 +1538,7 @@ msgstr "Die Datei für die Log-Meldung ist versioniert; geben Sie '--force-log' 
 
 #: clients/cmdline/main.c:1223
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
-msgstr "Die Datei für die Log-Meldung ist versioniert; geben Sie '--force-log' an, um sie zu verwenden"
+msgstr "Die Datei für den Sperrkommentar ist versioniert; geben Sie '--force-log' an, um sie zu verwenden"
 
 #: clients/cmdline/main.c:1244
 msgid "The log message is a pathname (was -F intended?); use '--force-log' to override"
@@ -1546,7 +1546,7 @@ msgstr "Die Log-Meldung ist ein Pfad (war -F gemeint?); geben Sie '--force-log' 
 
 #: clients/cmdline/main.c:1251
 msgid "The lock comment is a pathname (was -F intended?); use '--force-log' to override"
-msgstr "Die Log-Meldung ist ein Pfad (war -F gemeint?); geben Sie '--force-log' an, um sie zu verwenden"
+msgstr "Der Sperrkommentar ist ein Pfad (war -F gemeint?); geben Sie '--force-log' an, um ihn zu verwenden"
 
 #: clients/cmdline/main.c:1464
 msgid "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)\n"
@@ -2827,7 +2827,7 @@ msgstr "'%s' ist nicht unter Versionskontrolle oder existiert nicht"
 #: libsvn_client/cat.c:71
 #, c-format
 msgid "'%s' refers to a directory"
-msgstr "URL '%s' verweist auf ein Verzeichnis"
+msgstr "'%s' verweist auf ein Verzeichnis"
 
 #: libsvn_client/cat.c:122
 #: libsvn_client/export.c:183
@@ -2863,75 +2863,75 @@ msgstr "; vervollständigen Sie diese mit 'svn update'."
 msgid "'%s' is already a file/something else"
 msgstr "'%s' existiert bereits als Datei oder etwas anderes"
 
-#: libsvn_client/commit.c:187
+#: libsvn_client/commit.c:209
 #, c-format
 msgid "Unknown or unversionable type for '%s'"
 msgstr "Unbekannter oder unerwarteter Typ für '%s'"
 
-#: libsvn_client/commit.c:479
+#: libsvn_client/commit.c:512
 msgid "New entry name required when importing a file"
 msgstr "Neuer Eintragsname erforderlich, wenn eine Datei importiert wird"
 
-#: libsvn_client/commit.c:506
+#: libsvn_client/commit.c:539
 #: libsvn_wc/props.c:737
 #: libsvn_wc/questions.c:62
 #, c-format
 msgid "'%s' does not exist"
 msgstr "'%s' ist nicht vorhanden"
 
-#: libsvn_client/commit.c:563
+#: libsvn_client/commit.c:599
 #: libsvn_client/copy.c:81
 #: svnlook/main.c:1213
 #, c-format
 msgid "Path '%s' does not exist"
 msgstr "Pfad '%s' existiert nicht"
 
-#: libsvn_client/commit.c:693
+#: libsvn_client/commit.c:729
 #: libsvn_client/copy.c:399
 #: libsvn_client/copy.c:415
 #, c-format
 msgid "Path '%s' already exists"
 msgstr "Pfad '%s' existiert bereits"
 
-#: libsvn_client/commit.c:703
+#: libsvn_client/commit.c:739
 #, c-format
 msgid "'%s' is a reserved name and cannot be imported"
 msgstr "'%s' ist ein reservierter Name und kann nicht importiert werden "
 
-#: libsvn_client/commit.c:782
+#: libsvn_client/commit.c:818
 #: libsvn_client/copy.c:545
 msgid "Commit failed (details follow):"
 msgstr "Übertragen fehlgeschlagen (Details folgen):"
 
-#: libsvn_client/commit.c:790
+#: libsvn_client/commit.c:826
 #: libsvn_client/copy.c:553
 msgid "Commit succeeded, but other errors follow:"
 msgstr "Übertragen erfolgreich, aber andere Fehler folgen:"
 
-#: libsvn_client/commit.c:797
+#: libsvn_client/commit.c:833
 #: libsvn_client/copy.c:560
 msgid "Error unlocking locked dirs (details follow):"
 msgstr "Fehler beim Entsperren von Verzeichnissen (Details folgen):"
 
-#: libsvn_client/commit.c:808
+#: libsvn_client/commit.c:844
 msgid "Error bumping revisions post-commit (details follow):"
 msgstr "Fehler beim Weiterschalten der Revisionen nach der Übertragung (Details folgen):"
 
-#: libsvn_client/commit.c:819
+#: libsvn_client/commit.c:855
 #: libsvn_client/copy.c:571
 msgid "Error in post-commit clean-up (details follow):"
 msgstr "Fehler beim Aufräumen nach der Übertragung (Details folgen):"
 
-#: libsvn_client/commit.c:1121
+#: libsvn_client/commit.c:1157
 #, c-format
 msgid "'%s' is a URL, but URLs cannot be commit targets"
 msgstr "'%s' ist eine URL, aber URLs können nicht übertragen werden"
 
-#: libsvn_client/commit.c:1313
+#: libsvn_client/commit.c:1349
 msgid "Are all the targets part of the same working copy?"
 msgstr "Sind alle Ziele Teil derselben Arbeitskopie?"
 
-#: libsvn_client/commit.c:1328
+#: libsvn_client/commit.c:1364
 msgid "Cannot non-recursively commit a directory deletion"
 msgstr "Das Löschen eines Verzeichnis kann nur rekursiv übertragen werden"
 
@@ -3546,7 +3546,7 @@ msgstr ""
 
 #: libsvn_fs_base/bdb/copies-table.c:169
 msgid "deleting entry from 'copies' table"
-msgstr ""
+msgstr "Lösche Eintrag aus 'copies' Tabelle"
 
 #: libsvn_fs_base/bdb/copies-table.c:197
 msgid "reading copy"
@@ -3563,7 +3563,7 @@ msgstr ""
 #: libsvn_fs_base/bdb/nodes-table.c:154
 #, c-format
 msgid "Successor id '%s' (for '%s') already exists in filesystem '%s'"
-msgstr ""
+msgstr "Nachfolger ID '%s' (für '%s') existiert bereits in Dateisystem '%s'"
 
 #: libsvn_fs_base/bdb/nodes-table.c:180
 msgid "deleting entry from 'nodes' table"
@@ -3879,7 +3879,7 @@ msgstr "Sperre ist abgelaufen: Sperrmarke '%s' in Dateisystem '%s'"
 #: libsvn_fs_fs/err.c:255
 #, c-format
 msgid "No username is currently associated with filesystem '%s'"
-msgstr ""
+msgstr "Derzeit ist kein Benutzername mit dem Dateisystem '%s' verbunden"
 
 #: libsvn_fs_base/err.c:305
 #: libsvn_fs_fs/err.c:312
@@ -4351,42 +4351,42 @@ msgstr ""
 msgid "Directory entry corrupt"
 msgstr "Verzeichniseintrag beschädigt"
 
-#: libsvn_fs_fs/fs_fs.c:2119
-#: libsvn_fs_fs/fs_fs.c:2127
-#: libsvn_fs_fs/fs_fs.c:2159
-#: libsvn_fs_fs/fs_fs.c:2179
-#: libsvn_fs_fs/fs_fs.c:2213
-#: libsvn_fs_fs/fs_fs.c:2218
+#: libsvn_fs_fs/fs_fs.c:2116
+#: libsvn_fs_fs/fs_fs.c:2124
+#: libsvn_fs_fs/fs_fs.c:2156
+#: libsvn_fs_fs/fs_fs.c:2176
+#: libsvn_fs_fs/fs_fs.c:2210
+#: libsvn_fs_fs/fs_fs.c:2215
 msgid "Invalid changes line in rev-file"
 msgstr "Ungültige 'changes' Zeile in Rev Datei"
 
-#: libsvn_fs_fs/fs_fs.c:2152
+#: libsvn_fs_fs/fs_fs.c:2149
 msgid "Invalid change kind in rev file"
 msgstr "Ungültiger Änderungstyp in Rev Datei"
 
-#: libsvn_fs_fs/fs_fs.c:2172
+#: libsvn_fs_fs/fs_fs.c:2169
 msgid "Invalid text-mod flag in rev-file"
 msgstr "Ungültiges 'text-mod' Flag in Rev Datei"
 
-#: libsvn_fs_fs/fs_fs.c:2192
+#: libsvn_fs_fs/fs_fs.c:2189
 msgid "Invalid prop-mod flag in rev-file"
 msgstr "Ungültiges 'prop-mod' Flag in Rev Datei"
 
-#: libsvn_fs_fs/fs_fs.c:2375
+#: libsvn_fs_fs/fs_fs.c:2372
 msgid "Copying from transactions not allowed"
 msgstr "Kopieren aus Transaktionen ist nicht erlaubt."
 
-#: libsvn_fs_fs/fs_fs.c:2431
+#: libsvn_fs_fs/fs_fs.c:2428
 #, c-format
 msgid "Unable to create transaction directory in '%s' for revision %ld"
 msgstr "Kann Transaktionsverzeichnis in '%s' in Revision %ld nicht anlegen"
 
-#: libsvn_fs_fs/fs_fs.c:2620
-#: libsvn_fs_fs/fs_fs.c:2627
+#: libsvn_fs_fs/fs_fs.c:2617
+#: libsvn_fs_fs/fs_fs.c:2624
 msgid "next-id file corrupt"
 msgstr "'next-id' Datei beschädigt"
 
-#: libsvn_fs_fs/fs_fs.c:2853
+#: libsvn_fs_fs/fs_fs.c:2850
 msgid "Invalid change type"
 msgstr "Ungültiger Änderungstyp"
 
@@ -4710,21 +4710,21 @@ msgstr "Die UUID Eigenschaft wurde weder auf der Ressource noch ihren Eltern gef
 msgid "Please upgrade the server to 0.19 or later"
 msgstr "Bitte aktualisieren Sie den Server auf Version 0.19 oder neuer"
 
-#: libsvn_ra_dav/session.c:1017
-#: libsvn_ra_dav/session.c:1143
+#: libsvn_ra_dav/session.c:1019
+#: libsvn_ra_dav/session.c:1145
 msgid "Failed to parse URI"
 msgstr "Konnte URI nicht zerlegen"
 
-#: libsvn_ra_dav/session.c:1040
+#: libsvn_ra_dav/session.c:1042
 msgid "Lock request failed"
 msgstr "Sperranforderung gescheitert"
 
-#: libsvn_ra_dav/session.c:1158
+#: libsvn_ra_dav/session.c:1160
 #, c-format
 msgid "'%s' is not locked in the repository"
 msgstr "'%s' ist im Projektarchiv nicht gesperrt"
 
-#: libsvn_ra_dav/session.c:1195
+#: libsvn_ra_dav/session.c:1197
 msgid "Unlock request failed"
 msgstr "Sperrfreigabe gescheitert"
 
@@ -5390,44 +5390,44 @@ msgstr "Erzeuge 'pre-revprop-change' Aktion"
 msgid "Creating post-commit hook"
 msgstr "Erzeuge 'post-commit' Aktion"
 
-#: libsvn_repos/repos.c:1350
+#: libsvn_repos/repos.c:1346
 msgid "Creating post-revprop-change hook"
 msgstr "Erzeuge 'post-revprop-change' Aktion"
 
-#: libsvn_repos/repos.c:1360
+#: libsvn_repos/repos.c:1356
 msgid "Creating conf directory"
 msgstr "Erzeuge Konfigurationsverzeichnis"
 
-#: libsvn_repos/repos.c:1412
+#: libsvn_repos/repos.c:1408
 msgid "Creating svnserve.conf file"
 msgstr "Erzeuge 'svnserve.conf' Datei"
 
-#: libsvn_repos/repos.c:1437
+#: libsvn_repos/repos.c:1433
 msgid "Creating passwd file"
 msgstr "Erzeuge 'passwd' Datei"
 
-#: libsvn_repos/repos.c:1463
+#: libsvn_repos/repos.c:1459
 msgid "Could not create top-level directory"
 msgstr "Konnte oberstes Verzeichnis nicht erzeugen"
 
-#: libsvn_repos/repos.c:1467
+#: libsvn_repos/repos.c:1463
 msgid "Creating DAV sandbox dir"
 msgstr "Erzeuge Verzeichnis für DAV Sandkasten"
 
-#: libsvn_repos/repos.c:1510
+#: libsvn_repos/repos.c:1506
 msgid "Creating readme file"
 msgstr "Erzeuge 'readme' Datei"
 
-#: libsvn_repos/repos.c:1542
+#: libsvn_repos/repos.c:1538
 msgid "Repository creation failed"
 msgstr "Anlegen des Projektarchivs fehlgeschlagen"
 
-#: libsvn_repos/repos.c:1614
+#: libsvn_repos/repos.c:1610
 #, c-format
 msgid "Expected format '%d' of repository; found format '%d'"
 msgstr "Erwartete Format '%d' des Projekarchivs; Format '%d' gefunden"
 
-#: libsvn_repos/repos.c:1662
+#: libsvn_repos/repos.c:1658
 msgid "Error opening db lockfile"
 msgstr "Fehler beim Öffnen der Datenbank-Sperrdatei"
 
@@ -5587,7 +5587,7 @@ msgstr "Kann Verzeichnis '%s' nicht lesen"
 #: libsvn_subr/io.c:735
 #: libsvn_subr/io.c:1622
 #: libsvn_subr/io.c:1691
-#: libsvn_subr/io.c:2624
+#: libsvn_subr/io.c:2663
 #, c-format
 msgid "Error closing directory '%s'"
 msgstr "Fehler beim Schließen von Verzeichnis '%s'"
@@ -5682,8 +5682,8 @@ msgid "Can't rewind directory '%s'"
 msgstr "Kann Verzeichnis '%s' nicht zurückspulen"
 
 #: libsvn_subr/io.c:1567
-#: libsvn_subr/io.c:2473
-#: libsvn_subr/io.c:2561
+#: libsvn_subr/io.c:2512
+#: libsvn_subr/io.c:2600
 #, c-format
 msgid "Can't open directory '%s'"
 msgstr "Kann Verzeichnis '%s' nicht öffnen"
@@ -5829,62 +5829,62 @@ msgstr "Kann Längenzeile nicht aus Datei '%s' lesen"
 msgid "Can't read length line in stream"
 msgstr "Kann Längenzeile nicht aus Datenstrom lesen"
 
-#: libsvn_subr/io.c:2349
+#: libsvn_subr/io.c:2383
 #, c-format
 msgid "Can't move '%s' to '%s'"
 msgstr "Kann '%s' nicht nach '%s' verschieben"
 
-#: libsvn_subr/io.c:2389
+#: libsvn_subr/io.c:2428
 #, c-format
 msgid "Can't create directory '%s'"
 msgstr "Kann Verzeichnis '%s' nicht anlegen"
 
-#: libsvn_subr/io.c:2400
+#: libsvn_subr/io.c:2439
 #: libsvn_wc/copy.c:303
 #, c-format
 msgid "Can't hide directory '%s'"
 msgstr "Kann Verzeichnis '%s' nicht verstecken"
 
-#: libsvn_subr/io.c:2413
+#: libsvn_subr/io.c:2452
 #, c-format
 msgid "Can't stat directory '%s'"
 msgstr "Kann Status von Verzeichnis '%s' nicht ermitteln"
 
-#: libsvn_subr/io.c:2429
+#: libsvn_subr/io.c:2468
 #, c-format
 msgid "Can't stat new directory '%s'"
 msgstr "Kann Status des neuen Verzeichnises '%s' nicht ermitteln"
 
-#: libsvn_subr/io.c:2491
+#: libsvn_subr/io.c:2530
 #, c-format
 msgid "Can't remove directory '%s'"
 msgstr "Kann Verzeichnis '%s' nicht entfernen"
 
-#: libsvn_subr/io.c:2509
+#: libsvn_subr/io.c:2548
 msgid "Can't read directory"
 msgstr "Kann Verzeichnis nicht lesen"
 
-#: libsvn_subr/io.c:2580
+#: libsvn_subr/io.c:2619
 #, c-format
 msgid "Can't read directory entry in '%s'"
 msgstr "Kann Verzeichniseintrang in '%s' nicht lesen"
 
-#: libsvn_subr/io.c:2705
+#: libsvn_subr/io.c:2744
 #, c-format
 msgid "Can't check directory '%s'"
 msgstr "Kann Verzeichnis '%s' nicht prüfen"
 
-#: libsvn_subr/io.c:2727
+#: libsvn_subr/io.c:2766
 #, c-format
 msgid "Version %d is not non-negative"
 msgstr "Version %d ist nicht positiv"
 
-#: libsvn_subr/io.c:2774
+#: libsvn_subr/io.c:2813
 #, c-format
 msgid "Reading '%s'"
 msgstr "Lese '%s'"
 
-#: libsvn_subr/io.c:2790
+#: libsvn_subr/io.c:2829
 #, c-format
 msgid "First line of '%s' contains non-digit"
 msgstr "Die erste Zeile von '%s' enthält eine Nicht-Ziffer"
