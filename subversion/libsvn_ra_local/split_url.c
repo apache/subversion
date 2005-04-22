@@ -92,7 +92,11 @@ svn_ra_local__split_URL (svn_repos_t **repos,
     only) should also keep working.
     If we got a non-empty hostname other than localhost, we convert this
     into an UNC path.  In this case, we obviously don't strip the slash
-    even if the path looks like it starts with a drive letter. */
+    even if the path looks like it starts with a drive letter.
+    Another thing to remember is that the form file:///\machine/share
+    was the only way to access UNC paths in svn before 1.2.  We
+    need to support that for compatibility with old working copies.
+  */
   {
     static const char valid_drive_letters[] =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
