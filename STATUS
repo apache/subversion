@@ -34,5 +34,15 @@ Candidate changes:
     Votes:
       +1: lundblad, fitz
 
+  * r14046, r14070, r14301
+    Improvements in the testing framework
+    Justification:
+      Low impact; r14046 and r14070 should've been on the 1.2.x branch
+      from day one. r14301 speeds up testing on Windows, where three
+      tests run in parallel take hardly any more time than a single test.
+      Not a core code change.
+    Votes:
+      +1: brane
+
 Approved changes (further review is welcome, but not required):
 
