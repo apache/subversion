@@ -12,8 +12,13 @@
 <title>subversion.tigris.org</title>
 </head>
 
+<!-- The class h2 is included on the main div, because the HTML which the
+     server will wrap around the page includes a <div class="h2">.
+     Thus, we include one here so that the page looks right when previewed
+     locally, *but* we override the border which the CSS assigns to that
+     style, so that we do not get two borders on the live page. -->
 <body>
-<div class="h2 app">
+<div class="h2 app" style="border-left: 0px">
 
 <table border="0" cellpadding="2" cellspacing="2" width="98%"
   style="background-color: white">
