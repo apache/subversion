@@ -1,41 +1,32 @@
                       Documentation for Subversion
                       ============================
 
-Subversion's preferred documentation system is texinfo.  The online
-documentation for texinfo is at
-
-  http://www.gnu.org/manual/texinfo-4.0/html_chapter/texinfo_toc.html
-
-To build particular things, you'll need one or more of:
-
-  * the `makeinfo' program from the latest texinfo package in
-    ftp://ftp.gnu.org/pub/gnu/texinfo/
-  * the `texi2dvi' or `texi2html' programs
-  * the `dvipdf' script from Ghostscript (pipes dvi | ps | Ghostscript)
-
-
 A rough guide:
 
-  book/book                  Subversion: The Definitive Guide. This is
-                             the book that will be published by
-                             O'Reilly & Associates. For both newbies 
-                             and experts alike. Read book/README for 
-                             instructions on how to build html, PDF, 
-                             or postscript (the book is marked up in 
-                             Docbook-lite).
-
-  book/misc-docs             Holds material that either isn't yet
-                             ready to go into the Definitive Guide, 
-                             or which may never go into the Guide but
-                             instead into companion documents that 
-                             will also be available from the
-                             Subversion site.  Think of it as a 
+  http://svn.red-bean.com/svnbook/
+                             Subversion: The Definitive Guide. This is
+                             the book that has been published by
+                             O'Reilly & Associates. For both newbies and
+                             experts alike.  Written in DocBook Lite,
+                             and now maintained in a seperate repository
+                             of its own.
+                             
+  misc-docs                  Holds additional DocBook Lite material that
+                             either isn't yet ready to go into the
+                             Definitive Guide, or which may never go
+                             into the Guide but instead into companion
+                             documents that would be available from the
+                             Subversion site.  Think of it as a
                              temporary, but published, holding area.
+
+  HOWTO.DocBook              Instructions on how to build HTML, PDF, 
+                             or PostScript from DocBook Lite source.
 
   programmer/                Documents for Subversion programmers.
 
-  programmer/design/         Subversion's original design document.
-                             (WARNING!  Extremely old!  From June 2000.)
+  programmer/design/         Subversion's original design document
+                             (written in Texinfo).
+                             WARNING!  Extremely old!  From June 2000.
 
   programmer/WritingChangeLogs.txt
                              A longer version of the info in HACKING.
@@ -46,13 +37,29 @@ A rough guide:
 
   user/svn-ref.tex           LaTeX source for an svn quick-ref sheet.
 
+  user/*.html                Some documentation that should probably be
+                             migrated to DocBook Lite and misc-docs/.
+
   translations/french        A translation of the Subversion handbook
                              (which has been absorbed into the book).
  
 If you'd like to document a new feature, try to find a place for it
-somewhere in book/misc-docs.
+somewhere in misc-docs.
 
 -------------- NOTES on Texinfo usage -----------------------------
+
+Some of Subversion's documentation is in texinfo format.
+The online documentation for texinfo is at:
+
+  http://www.gnu.org/manual/texinfo-4.0/html_chapter/texinfo_toc.html
+
+To build particular things, you'll need one or more of:
+
+  * the 'makeinfo' program from the latest texinfo package in
+    ftp://ftp.gnu.org/pub/gnu/texinfo/
+  * the 'texi2dvi' or 'texi2html' programs
+  * the 'dvipdf' script from Ghostscript (pipes dvi | ps | Ghostscript)
+
 
 Use these rules for determining how to label something.  These rules
 were derived from
