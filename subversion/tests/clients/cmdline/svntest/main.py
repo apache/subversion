@@ -619,6 +619,8 @@ def run_tests(test_list):
   for opt, val in opts:
     if opt == "--url":
       test_area_url = val
+      if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
+        test_area_url = test_area_url[:-1]
 
     elif opt == "--fs-type":
       fs_type = val
