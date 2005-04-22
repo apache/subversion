@@ -10,7 +10,12 @@ WWWDIR="`dirname \"$0\"`"
 
 ensure ()
 {
-  LOCALFILE="$WWWDIR/`basename \"$1\"`"
+  BASENAME="`basename \"$1\"`"
+  if [ -n "$2" ]; then
+    LOCALFILE="$WWWDIR/$2/$BASENAME"
+  else
+    LOCALFILE="$WWWDIR/$BASENAME"
+  fi
   test ! -f "$LOCALFILE" && wget -O "$LOCALFILE" "$1"
 }
 
@@ -31,17 +36,36 @@ ensure "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"
 ensure "http://www.w3.org/TR/xhtml1/DTD/xhtml.soc"
 ensure "http://www.w3.org/TR/xhtml1/DTD/xhtml1.dcl"
 
-export SP_CHARSET_FIXED=YES
-export SP_ENCODING=XML
+# If you are doing any serious hacking on the web pages, you probably want
+# the CSS locally too.
+mkdir -p "$WWWDIR/tigris-branding"
+mkdir -p "$WWWDIR/tigris-branding/css"
+mkdir -p "$WWWDIR/tigris-branding/scripts"
+mkdir -p "$WWWDIR/tigris-branding/images"
+ensure "http://subversion.tigris.org/branding/css/tigris.css" \
+  "tigris-branding/css"
+ensure "http://subversion.tigris.org/branding/css/inst.css" \
+  "tigris-branding/css"
+ensure "http://subversion.tigris.org/branding/css/print.css" \
+  "tigris-branding/css"
+ensure "http://subversion.tigris.org/branding/scripts/tigris.js" \
+  "tigris-branding/scripts"
+
+for f in `sed -n 's,.*url(\.\./images/\([^)]*\).*,\1,;tp;be;:p;p;:e' \
+  $WWWDIR/tigris-branding/css/*.css`; do
+  ensure "http://subversion.tigris.org/branding/images/$f" \
+    "tigris-branding/images"
+done
+
 
 export SGML_CATALOG_FILES="$WWWDIR/xhtml.soc"
 
 if [ -z "$XML_VALIDATOR" ]; then
-  if [ "`type -p onsgmls`" != "" ]; then
-    export XML_VALIDATOR="onsgmls"
+  if [ "`type -p xmllint`" != "" ]; then
+    export XML_VALIDATOR="xmllint"
   else
-    if [ "`type -p xmllint`" != "" ]; then
-      export XML_VALIDATOR="xmllint"
+    if [ "`type -p onsgmls`" != "" ]; then
+      export XML_VALIDATOR="onsgmls"
     else
       echo "No XML validator found!" >&2
       exit 1
@@ -55,6 +79,7 @@ validate ()
 {
   case $XML_VALIDATOR in
     onsgmls)
+    SP_CHARSET_FIXED=YES SP_ENCODING=XML \
     onsgmls -wxml -ges "$1"
     ;;
     xmllint)
@@ -70,9 +95,11 @@ validate ()
 if [ "$1" = "all" ]; then
   WARNFILE=".validation-warnings.$$.tmp"
   for f in "$WWWDIR"/*.html; do
-    if ! grep -F -q '<!DOCTYPE' "$f"; then
-      RESULT='No <!DOCTYPE'
-    else
+    case $f in
+      */project_tools.html)
+      RESULT='Skipped'
+      ;;
+      *)
       validate "$f" 2>"$WARNFILE"
       if [ $? -eq 0 ]; then
         RESULT='\033[32mvalid\033[0m'
@@ -81,7 +108,8 @@ if [ "$1" = "all" ]; then
         RESULT='\033[31;1mINVALID ('"$WARNLINES"')\033[0m'
       fi
       cat "$WARNFILE"
-    fi
+      ;;
+    esac
     echo -e "$f: $RESULT"
   done
   rm -f "$WARNFILE"
