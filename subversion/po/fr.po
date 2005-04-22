@@ -726,13 +726,16 @@ msgid ""
 "  2. Each item specified by a URL is deleted from the repository\n"
 "    via an immediate commit.\n"
 msgstr ""
-"Efface fichiers et répertoires de le gestionnaire de version.\n"
+"Efface fichiers et répertoires du gestionnaire de version.\n"
 "usage : 1. delete CHEMIN...\n"
 "        2. delete URL...\n"
 "\n"
 "  1. Chaque objet est mis en attente (schedule) pour effacement lors de la\n"
 "     prochaine confirmation (commit). Les fichiers et les répertoires non\n"
 "     confirmés sont immédiatement effacés de la copie de travail.\n"
+"     Les CHEMINs qui sont, ou contiennent, des objets non versionnés\n"
+"     ou modifiés ne seront pas effacés sauf si l'option --force est\n"
+"     présente.\n"
 "  2. Chaque URL est effacée du dépôt via une confirmation immédiate.\n"
 
 #: clients/cmdline/main.c:266
@@ -851,7 +854,7 @@ msgstr ""
 "\n"
 "  Charge récursivement une copie de CHEMIN vers URL.\n"
 "  Si CHEMIN est omis, '.' est utilisé.\n"
-"  Les répertoires parents sont crées si nécessaire dans le dépôt.\n"
+"  Les répertoires parents sont créés si nécessaire dans le dépôt.\n"
 "  Si CHEMIN est un répertoire, son contenu est ajouté directement sous "
 "l'URL.\n"
 
@@ -1501,7 +1504,7 @@ msgstr "--auto-props et --no-auto-props sont mutuellement exclusives"
 #: clients/cmdline/main.c:1082
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
-msgstr "Erreur de syntaxe à l'argument de fin de ligne natif (native-eol) '%s'"
+msgstr "Erreur de syntaxe à l'argument de fin de ligne native (native-eol) '%s'"
 
 #: clients/cmdline/main.c:1128 svndumpfilter/main.c:1176 svnlook/main.c:2070
 msgid "Subcommand argument required\n"
@@ -1781,7 +1784,7 @@ msgstr " - Le certificat n'est pas encore valide.\n"
 
 #: clients/cmdline/prompt.c:271
 msgid " - The certificate has expired.\n"
-msgstr " - Le certificat est expiré.\n"
+msgstr " - Le certificat a expiré.\n"
 
 #: clients/cmdline/prompt.c:277
 msgid " - The certificate has an unknown error.\n"
@@ -2074,10 +2077,9 @@ msgstr "Style de fin de ligne inconsistant"
 msgid "Unrecognized line ending style"
 msgstr "Style de fin de ligne non reconnu"
 
-# ??? est-ce correct
 #: include/svn_error_codes.h:211
 msgid "Line endings other than expected"
-msgstr "Fins de lignes différentes de ce qu'attendu"
+msgstr "Fins de lignes différentes de ce qui est attendu"
 
 #: include/svn_error_codes.h:215
 msgid "Ran out of unique names"
@@ -2411,10 +2413,9 @@ msgstr "Dépôt verrouillé, peut-être un rétablissement (recovery) de base"
 msgid "A repository hook failed"
 msgstr "Échec d'une procédure automatique du dépôt"
 
-# ???
 #: include/svn_error_codes.h:590
 msgid "Incorrect arguments supplied"
-msgstr "Arguments incorrects fournis"
+msgstr "Arguments fournis incorrects"
 
 #: include/svn_error_codes.h:594
 msgid "A report cannot be generated because no data was supplied"
@@ -2560,11 +2561,11 @@ msgstr ""
 
 #: include/svn_error_codes.h:776
 msgid "Item is not readable"
-msgstr "Élément non accessible en lisible"
+msgstr "Éléments non accessibles en lecture"
 
 #: include/svn_error_codes.h:781
 msgid "Item is partially readable"
-msgstr "Élément partiellement accessible en lecture"
+msgstr "Certains éléments non accessibles en lecture"
 
 #: include/svn_error_codes.h:788
 msgid "Svndiff data has invalid header"
@@ -2624,7 +2625,7 @@ msgstr ""
 
 #: include/svn_error_codes.h:848
 msgid "Operation does not apply to binary file"
-msgstr "opération non applicable à un fichier binaire"
+msgstr "Opération non applicable à un fichier binaire"
 
 #: include/svn_error_codes.h:854
 msgid "Format of an svn:externals property was invalid"
@@ -2748,7 +2749,7 @@ msgstr ""
 
 #: include/svn_error_codes.h:981
 msgid "Not enough args provided"
-msgstr "Pas assez d'arguments"
+msgstr "Pas assez d'arguments fournis"
 
 #: include/svn_error_codes.h:985
 msgid "Mutually exclusive arguments specified"
@@ -2768,7 +2769,7 @@ msgstr "L'entrée du journal est un chemin de fichier"
 
 #: include/svn_error_codes.h:1001
 msgid "Committing in directory scheduled for addition"
-msgstr "Confirmation dans un répertoire ajouté"
+msgstr "Confirmation dans un répertoire en attente pour ajout"
 
 #: include/svn_error_codes.h:1005
 msgid "No external editor available"
@@ -2800,7 +2801,7 @@ msgstr "La révision de début doit précéder la révision de fin"
 #: libsvn_client/blame.c:659 libsvn_client/cat.c:195
 #, c-format
 msgid "URL '%s' refers to a directory"
-msgstr "l'URL '%s' référence un répertoire"
+msgstr "L'URL '%s' référence un répertoire"
 
 #: libsvn_client/blame.c:732
 #, c-format
@@ -2982,15 +2983,15 @@ msgid ""
 "'%s' is not under version control and is not part of the commit, yet its "
 "child '%s' is part of the commit"
 msgstr ""
-"'%s' n'est pas sous gestionnaire de version et ne fait pas parti de la "
-"confirmation (commit), alors que son enfant '%s' en fait parti"
+"'%s' n'est pas sous gestionnaire de version et ne fait pas partie de la "
+"confirmation (commit), alors que son enfant '%s' en fait partie"
 
 #: libsvn_client/commit_util.c:846
 #, c-format
 msgid "Cannot commit both '%s' and '%s' as they refer to the same URL"
 msgstr ""
 "'%s' et '%s' réfèrent à la même URL et ne peuvent être confirmés (commit) "
-"ensembles"
+"ensemble"
 
 #: libsvn_client/commit_util.c:991
 #, c-format
@@ -3022,7 +3023,7 @@ msgstr "L'URL '%s' ne peut être déplacée (move) dans elle-même"
 msgid ""
 "Source and dest appear not to be in the same repository (src: '%s'; dst: '%"
 "s')"
-msgstr "Source et dest ne sont pas dans le même dépôt (src = '%s', dst = '%s')"
+msgstr "Source et destination ne sont pas dans le même dépôt (src = '%s', dst = '%s')"
 
 #: libsvn_client/copy.c:386
 #, c-format
@@ -3073,7 +3074,7 @@ msgstr "Le chemin '%s' ne peut être déplacé dans lui-même"
 
 #: libsvn_client/copy.c:1046
 msgid "No support for repos <--> working copy moves"
-msgstr "Déplacement (move) entre dépôt et copie de travail non supportés"
+msgstr "Déplacements (move) entre dépôt et copie de travail non supportés"
 
 #: libsvn_client/copy.c:1078
 #, c-format
@@ -3166,7 +3167,7 @@ msgid ""
 "this time"
 msgstr ""
 "Seules les différences entre des copies de référence et leurs fichiers de "
-"travail sont supportés pour l'instant"
+"travail sont supportées pour l'instant"
 
 #: libsvn_client/diff.c:1867 libsvn_client/diff.c:1872
 #, c-format
@@ -3223,7 +3224,7 @@ msgstr ""
 #: libsvn_client/info.c:320 libsvn_client/info.c:345 libsvn_client/info.c:355
 #, c-format
 msgid "URL '%s' non-existent in revision '%ld'"
-msgstr "l'URL '%s' n'existe pas à la révision %ld"
+msgstr "L'URL '%s' n'existe pas à la révision %ld"
 
 #: libsvn_client/locking_commands.c:185
 msgid "No common parent found, unable to operate on disjoint arguments"
@@ -3243,6 +3244,7 @@ msgstr "'%s' n'est pas verrouillé"
 #: libsvn_ra/ra_loader.c:512
 msgid "Lock comment has illegal characters"
 msgstr ""
+"Le commentaire du verrou (lock) contient des caractères incorrects"
 
 #: libsvn_client/log.c:72
 msgid "Missing required revision specification"
@@ -3462,7 +3464,7 @@ msgstr ""
 #: libsvn_fs_base/bdb/changes-table.c:257
 #: libsvn_fs_base/bdb/changes-table.c:381
 msgid "creating cursor for reading changes"
-msgstr "création d'un curseur pour lire les modifications"
+msgstr "créant un curseur pour lire les modifications"
 
 #: libsvn_fs_base/bdb/changes-table.c:283
 #: libsvn_fs_base/bdb/changes-table.c:402
@@ -3675,7 +3677,7 @@ msgid ""
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Sommes de contrôle différentes, dépôt '%s' :\n"
+"Sommes de contrôle différentes, représentation '%s' :\n"
 "   attendu :  %s\n"
 "    obtenu :  %s\n"
 
@@ -3862,7 +3864,7 @@ msgid ""
 msgstr ""
 "Erreur en copiant le fichier du journal ; DB_LOG_AUTOREMOVE \n"
 "interfère peut-être avec la copie à chaud (hotcopy).\n"
-"Si le problème persiste, essayer de désactiver ça dans DB_CONFIG."
+"Si le problème persiste, essayer de désactiver cela dans DB_CONFIG."
 
 #: libsvn_fs_base/fs.c:1235
 msgid ""
@@ -3908,12 +3910,12 @@ msgstr ""
 #: libsvn_fs_base/reps-strings.c:758
 #, c-format
 msgid "Rep contents are too large: got %s, limit is %s"
-msgstr "Le contenu du dépôt est trop grand : %s, la limite est %s"
+msgstr "Le contenu de la représentation est trop grand : %s, la limite est %s"
 
 #: libsvn_fs_base/reps-strings.c:774
 #, c-format
 msgid "Failure reading rep '%s'"
-msgstr "Échec à la lecture du dépôt '%s'"
+msgstr "Échec à la lecture de la représentation '%s'"
 
 #: libsvn_fs_base/reps-strings.c:790 libsvn_fs_base/reps-strings.c:876
 #, c-format
@@ -3922,7 +3924,7 @@ msgid ""
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Sommes de contrôle différentes sur le dépôt '%s' :\n"
+"Sommes de contrôle différentes sur la représentation '%s' :\n"
 "   attendu :  %s\n"
 "    obtenu :  %s\n"
 
@@ -4056,7 +4058,7 @@ msgid ""
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Sommes de contrôle de base dufférentes sur '%s' :\n"
+"Sommes de contrôle de base différentes sur '%s' :\n"
 "   attendu :  %s\n"
 "    obtenu :  %s\n"
 
@@ -4214,7 +4216,7 @@ msgid ""
 "   expected:  %s\n"
 "     actual:  %s\n"
 msgstr ""
-"Sommes de contrôle differentes en lisant la représentation :\n"
+"Sommes de contrôle différentes en lisant la représentation :\n"
 "   attendu :  %s\n"
 "    obtenu :  %s\n"
 
@@ -4296,7 +4298,7 @@ msgstr ""
 #: libsvn_fs_fs/lock.c:714 libsvn_fs_fs/lock.c:735
 #, c-format
 msgid "Path '%s' doesn't exist in HEAD revision"
-msgstr "le chemin '%s' n'existe pas à la révision de tête (HEAD)"
+msgstr "Le chemin '%s' n'existe pas à la révision de tête (HEAD)"
 
 #: libsvn_fs_fs/lock.c:740
 #, c-format
@@ -4733,7 +4735,7 @@ msgstr ""
 #: libsvn_ra_svn/client.c:269 libsvn_ra_svn/client.c:323
 #, c-format
 msgid "Authentication error from server: %s"
-msgstr "Erreur d'authentication du serveur : %s"
+msgstr "Erreur d'authentification du serveur : %s"
 
 #: libsvn_ra_svn/client.c:272 libsvn_ra_svn/cram.c:194
 #: libsvn_ra_svn/cram.c:212
@@ -4777,6 +4779,7 @@ msgstr "Module pour accéder à un dépôt avec le protocole réseau propre de s
 msgid "Illegal svn repository URL '%s'"
 msgstr "URL de dépôt svn illégale '%s'"
 
+# ??? version minimale %d
 #: libsvn_ra_svn/client.c:631
 #, c-format
 msgid "Server requires minimum version %d"
@@ -4941,6 +4944,7 @@ msgstr "L'URL source '%s' concerne un dépôt différent"
 msgid "Path '%s' not present"
 msgstr "Le chemin '%s' n'existe pas"
 
+# ??? plein texte
 #: libsvn_repos/commit.c:512
 #, c-format
 msgid ""
@@ -4977,7 +4981,7 @@ msgid ""
 msgstr ""
 "ATTENTION : données référencées à la révision %ld, plus ancienne que la\n"
 "ATTENTION : plus ancienne révision déchargée (%ld). Charger cette \n"
-"ATTENTION : sauvegarde dans un dépôt vide echouera.\n"
+"ATTENTION : sauvegarde dans un dépôt vide échouera.\n"
 
 #: libsvn_repos/dump.c:934
 #, c-format
@@ -5011,8 +5015,8 @@ msgid ""
 "Storage of non-regular property '%s' is disallowed through the repository "
 "interface, and could indicate a bug in your client"
 msgstr ""
-"La sauvegarde de la propriété bizarre '%s' est désactivé dans ce dépôt et "
-"peut indiquer un bogue de votre client"
+"La sauvegarde de la propriété irrégulière '%s' est désactivé dans ce "
+"dépôt et peut indiquer un bogue de votre client"
 
 #: libsvn_repos/fs-wrap.c:296
 #, c-format
@@ -5128,7 +5132,7 @@ msgstr ""
 #: libsvn_repos/load.c:891
 #, c-format
 msgid "<<< Started new transaction, based on original revision %ld\n"
-msgstr "<<< Début d'une nouvelle transaction basé sur la révision %ld\n"
+msgstr "<<< Début d'une nouvelle transaction basée sur la révision %ld\n"
 
 #: libsvn_repos/load.c:936
 #, c-format
@@ -5187,7 +5191,7 @@ msgid ""
 "\n"
 msgstr ""
 "\n"
-"------- Nouvelle révision %ld confirmée (commit), basée sur rév %ld >>>\n"
+"------- Nouvelle révision %ld confirmée (commit), basée sur révision %ld >>>\n"
 "\n"
 
 #: libsvn_repos/node_tree.c:238
@@ -5872,7 +5876,7 @@ msgstr ""
 msgid ""
 "Non-ASCII character (code %d) detected, and unable to convert to/from UTF-8"
 msgstr ""
-"Caractères non ASCII détecté (code %d), conversion de/vers UTF-8 impossible"
+"Caractère non ASCII détecté (code %d), conversion de/vers UTF-8 impossible"
 
 #: libsvn_subr/utf.c:543
 #, c-format
@@ -6115,13 +6119,13 @@ msgid ""
 "Cannot copy or move '%s': it is not in the repository yet; try committing "
 "first"
 msgstr ""
-"Copie ou déplacement de '%s' impossible ; il n'est pas encore dans le dépôt ;"
+"Copie ou déplacement de '%s' impossible : il n'est pas encore dans le dépôt ;"
 "essayer de confirmer d'abord"
 
 #: libsvn_wc/copy.c:525
 #, c-format
 msgid "Cannot copy to '%s' as it is scheduled for deletion"
-msgstr "Copie de '%s' impossible car il en attente pour effacement"
+msgstr "Copie de '%s' impossible car il est en attente pour effacement"
 
 #: libsvn_wc/entries.c:119
 #, c-format
@@ -6418,13 +6422,13 @@ msgstr ""
 #, c-format
 msgid "Property '%s' locally deleted, but update sets it to '%s'\n"
 msgstr ""
-"Propriété '%s' localement effacée, mais la mise à jour la définie à '%s'\n"
+"Propriété '%s' localement effacée, mais la mise à jour la définit à '%s'\n"
 
 #: libsvn_wc/props.c:125
 #, c-format
 msgid "Property '%s' locally changed to '%s', but update sets it to '%s'\n"
 msgstr ""
-"Propriété '%s' localement modifiée en '%s', mais la mise à jour la définie à "
+"Propriété '%s' localement modifiée en '%s', mais la mise à jour la définit à "
 "'%s'\n"
 
 #: libsvn_wc/props.c:168
@@ -6470,7 +6474,7 @@ msgstr ""
 #: libsvn_wc/props.c:921
 #, c-format
 msgid "Cannot set '%s' on a directory ('%s')"
-msgstr "Définition de '%s' surn un répertoire ('%s') impossible"
+msgstr "Définition de '%s' sur un répertoire ('%s') impossible"
 
 #: libsvn_wc/props.c:929
 #, c-format
@@ -6563,7 +6567,7 @@ msgstr ""
 msgid "Failed to add directory '%s': copyfrom arguments not yet supported"
 msgstr ""
 "Échec à l'ajout du répertoire '%s' : copie en provenance (copyfrom) non "
-"encore supporté"
+"encore supportée"
 
 #: libsvn_wc/update_editor.c:1085
 #, c-format
@@ -6654,13 +6658,14 @@ msgstr "décharge incrémentale"
 msgid "use deltas in dump output"
 msgstr "décharge différentielle (deltas)"
 
+# ??? ancres
 #: svnadmin/main.c:245
 msgid "bypass the repository hook system"
 msgstr "contourne les ancres (hook) du dépôt"
 
 #: svnadmin/main.c:248
 msgid "no progress (only errors) to stderr"
-msgstr "Pas d'avancement mais seulement les erreurs vers stderr"
+msgstr "pas d'avancement mais seulement les erreurs vers stderr"
 
 #: svnadmin/main.c:251
 msgid "ignore any repos UUID found in the stream"
@@ -6672,7 +6677,7 @@ msgstr ""
 
 #: svnadmin/main.c:257
 msgid "type of repository: 'fsfs' (default) or 'bdb'"
-msgstr "Type de dépôt : 'fsfs' (défaut) ou 'bdb'"
+msgstr "type de dépôt : 'fsfs' (défaut) ou 'bdb'"
 
 #: svnadmin/main.c:260
 msgid "load at specified directory in repository"
@@ -6734,6 +6739,7 @@ msgstr ""
 "compresse le dépôt en ne stockant que les différences entre versions\n"
 "successives. Elle s'applique par défaut à la révision de tête seule.\n"
 
+# ??? plein texte
 #: svnadmin/main.c:309
 msgid ""
 "usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n"
@@ -6748,7 +6754,7 @@ msgstr ""
 "usage : svnadmin dump CHEMIN_DÉPÔT [-r BAS[:HAUT]] [--incremental]\n"
 "\n"
 "Décharge le contenu du système de fichier entre les révisions précisées\n"
-"vers stdout dans le format portable 'dumpfilé. L'avancement est envoyé\n"
+"vers stdout dans le format portable 'dumpfile'. L'avancement est envoyé\n"
 "vers stderr. Si aucune révision n'est précisée, décharge tout l'arbre.\n"
 "Si seule BAS est donnée, décharge cette révision. Avec --incremental,\n"
 "la première révision déchargée est la différence par rapport à la\n"
@@ -6886,7 +6892,7 @@ msgid ""
 msgstr ""
 "usage : svnadmin setlog CHEMIN_DÉPÔT -r RÉVISION FICHIER\n"
 "\n"
-"Définit l'entrée du journal au contenu du fichier pour cette révision.\n"
+"Définit l'entrée du journal au contenu du FICHIER pour cette RÉVISION.\n"
 "--bypass-hooks évite l'exécution des procédures automatiques liées à\n"
 "la modification des propriétés de révision (i.e. pour ne pas envoyer\n"
 "un message de notification ou si ces modifications ne sont pas activées\n"
@@ -7748,7 +7754,7 @@ msgstr "'%s' non versionné et non exporté\n"
 #~ msgstr "Affiche la version du client\n"
 
 #~ msgid "Lock comment has illegal characters."
-#~ msgstr "Le commentaire du verrou (lock) a des caractères incorrectes"
+#~ msgstr "Le commentaire du verrou (lock) contient des caractères incorrects"
 
 #~ msgid "Your lock comment was left in a temporary file:"
 #~ msgstr "Le commentaire du verrou a été laissé dans un fichier temporaire :"
