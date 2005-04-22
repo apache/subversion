@@ -58,6 +58,7 @@ the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
     * fixed: 'svn cat -rBASE' contacts repository (issue #1361)
     * fixed: fuzzily escape control-characters when sending over dav (#2147)
     * fixed: prevent client from manipulating svn:wc:* properties (r12523)
+    * fixed: allow portnumber in svn+ssh://user@host:port/ URLs (r14373)
     * fixed: xml-escaping bugs over dav (r11090)
     * fixed: store symlinks as utf8, always work in non-utf8 locale (r11358-9)
     * fixed: bug in special-file detranslation (r11441)
@@ -85,6 +86,7 @@ the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
     * fixed: FSFS race condition on posix platforms (issue #2265)
     * fixed: change FSFS revprops atomically and safely (issue #2193)
     * fixed: FSFS should verify checksums (issue #2253)
+    * fixed: FSFS crash bug (r14333)
     * fixed: 'svnadmin create' should clean up when it fails (r13200)
     * fixed: 'svnadmin load' compatibility on pre-0.14 dumpfiles (r12075)
     * fixed: 'svnadmin load' crashes on contentful rev 0 (issue #1674)
@@ -108,6 +110,7 @@ the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
     * speedups for 'svn blame' and other commands (see xdelta in release notes)
     * fixed: big 'svn diff/merge URL URL' ops cause httpd timeout (issue #2048)
     * fixed: make both svnserve and svn:// urls work with IPv6 (r13235-6)
+    * fixed: updating xml-unsafe dirname over http (issue #2268)
     * continued improvement of localized message translations:
         - German, Spanish, Polish, Brazilian Portuguese, Norwegian Bokmål,
           Swedish, Traditional Chinese, Simplified Chinese, Korean, Japanese
