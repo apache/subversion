@@ -712,6 +712,11 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
             }
           else if (this_entry.filetype == APR_DIR) /* recurse */
             {
+              /* Prevent infinite recursion by filtering off our
+                 newly created destination path. */
+              if (strcmp (this_entry.name, dst_basename) == 0)
+                 continue;
+
               SVN_ERR (svn_io_copy_dir_recursively 
                        (src_target,
                         dst_path,
