@@ -732,7 +732,10 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "  A character in the first column signifies an update to the actual "
        "file,\n"
        "  while updates to the file's properties are shown in the second "
-       "column.\n"),
+       "column.\n"
+       "  A 'B' in the third column signifies that the lock for the file has\n"
+       "  been broken or stolen.\n"
+       ),
     {'r', 'N', 'q', svn_cl__merge_cmd_opt, SVN_CL__AUTH_OPTIONS, 
      svn_cl__config_dir_opt, svn_cl__ignore_externals_opt} },
 
