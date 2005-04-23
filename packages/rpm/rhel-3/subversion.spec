@@ -381,7 +381,7 @@ fi
 sh autogen.sh
 
 # Fix up mod_dav_svn installation.
-patch -p1 < packages/rpm/wbel-3/install.patch
+patch -p1 < packages/rpm/rhel-3/install.patch
 
 # Figure out version and release number for command and documentation display.
 case "%{release}" in
@@ -447,7 +447,7 @@ echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
 killall httpd || true
 sleep 1
-sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/wbel-3/httpd.davcheck.conf > httpd.conf
+sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/rhel-3/httpd.davcheck.conf > httpd.conf
 cat > passwd <<EOF
 jrandom:xCGl35kV9oWCY
 jconstant:xCGl35kV9oWCY
@@ -466,7 +466,7 @@ make install DESTDIR="$RPM_BUILD_ROOT"
 
 # Add subversion.conf configuration file into httpd/conf.d directory.
 mkdir -p $RPM_BUILD_ROOT/etc/httpd/conf.d
-cp packages/rpm/wbel-3/subversion.conf $RPM_BUILD_ROOT/etc/httpd/conf.d
+cp packages/rpm/rhel-3/subversion.conf $RPM_BUILD_ROOT/etc/httpd/conf.d
 
 # Install Python SWIG bindings.
 make install-swig-py DESTDIR=$RPM_BUILD_ROOT DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT
