@@ -25,8 +25,9 @@
 #include "svn_repos.h"
 #include "svn_path.h"
 #include "svn_delta.h"
-#include "svn_test.h"
-#include "../fs-helpers.h"
+
+#include "../svn_test.h"
+#include "../svn_test_fs.h"
 
 #include "dir-delta-editor.h"
 
