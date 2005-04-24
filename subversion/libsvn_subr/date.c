@@ -223,6 +223,9 @@ svn_parse_date (svn_boolean_t *matched, apr_time_t *result, const char *text,
                          text)
       || template_match (&expt, &localtz, /* "svn log" format */
                          "YYYY-MM-DD hh:mm[:ss[.u[u[u[u[u[u][ +OO[oo]",
+                         text)
+      || template_match (&expt, &localtz, /* GNU date's iso-8601 */
+                         "YYYY-MM-DDThh:mm[:ss[.u[u[u[u[u[u]+OO[oo]",
                          text))
     {
       expt.tm_year -= 1900;
