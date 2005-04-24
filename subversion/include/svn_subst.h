@@ -168,21 +168,6 @@ svn_subst_translate_stream (svn_stream_t *src,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0 API.
- *
- * Similar to svn_subst_copy_and_translate2() except that @a special is
- * always set to @c FALSE.
- */
-svn_error_t *
-svn_subst_copy_and_translate (const char *src,
-                              const char *dst,
-                              const char *eol_str,
-                              svn_boolean_t repair,
-                              const svn_subst_keywords_t *keywords,
-                              svn_boolean_t expand,
-                              apr_pool_t *pool);
-
-/**
  * @since New in 1.1.
  *
  * Convenience routine: a variant of svn_subst_translate_stream()
@@ -209,6 +194,22 @@ svn_subst_copy_and_translate2 (const char *src,
                                svn_boolean_t expand,
                                svn_boolean_t special,
                                apr_pool_t *pool);
+
+/**
+ * @deprecated Provided for backward compatibility with the 1.0 API.
+ *
+ * Similar to svn_subst_copy_and_translate2() except that @a special is
+ * always set to @c FALSE.
+ */
+svn_error_t *
+svn_subst_copy_and_translate (const char *src,
+                              const char *dst,
+                              const char *eol_str,
+                              svn_boolean_t repair,
+                              const svn_subst_keywords_t *keywords,
+                              svn_boolean_t expand,
+                              apr_pool_t *pool);
+
 
 /** Convenience routine: a variant of svn_subst_translate_stream() which
  * operates on cstrings.  (See previous docstring for details.)
