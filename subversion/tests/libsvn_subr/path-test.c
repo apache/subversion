@@ -20,7 +20,8 @@
 #include <string.h>
 #include <svn_path.h>
 #include <apr_general.h>
-#include "svn_test.h"
+
+#include "../svn_test.h"
 
 /* Using a symbol, because I tried experimenting with different
    representations */

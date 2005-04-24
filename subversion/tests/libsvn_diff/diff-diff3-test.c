@@ -17,9 +17,10 @@
  */
 
 
-#include "svn_test.h"
 #include "svn_diff.h"
 #include "svn_pools.h"
+
+#include "../svn_test.h"
 
 /* Random number seed.  Yes, it's global, just pretend you can't see it. */
 static apr_uint32_t diff_diff3_seed;

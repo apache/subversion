@@ -30,7 +30,8 @@
 
 #include "svn_error.h"
 #include "svn_config.h"
-#include "svn_test.h"
+
+#include "../svn_test.h"
 
 
 /* Initialize parameters for the tests. */

@@ -22,11 +22,11 @@
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_string.h"
-#include "svn_test.h"
 #include "svn_fs.h"
 #include "svn_md5.h"
 
-#include "../fs-helpers.h"
+#include "../svn_test.h"
+#include "../svn_test_fs.h"
 
 #include "../../libsvn_fs_base/trail.h"
 

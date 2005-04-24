@@ -34,8 +34,9 @@
 #include "svn_delta.h"
 #include "svn_ra.h"
 #include "svn_client.h"
-#include "svn_test.h"
-#include "../fs-helpers.h"
+
+#include "../svn_test.h"
+#include "../svn_test_fs.h"
 #include "../../libsvn_ra_local/ra_local.h"
 
 /*-------------------------------------------------------------------*/

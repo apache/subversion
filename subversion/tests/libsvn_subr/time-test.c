@@ -20,7 +20,8 @@
 #include <string.h>
 #include <apr_general.h>
 #include "svn_time.h"
-#include "svn_test.h"
+
+#include "../svn_test.h"
 
 /* All these variables should refer to the same point in time. */
 apr_time_t test_timestamp = APR_TIME_C(1021316450966679);

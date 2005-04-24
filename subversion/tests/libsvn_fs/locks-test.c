@@ -22,7 +22,7 @@
 #include "svn_error.h"
 #include "svn_fs.h"
 
-#include "../fs-helpers.h"
+#include "../svn_test_fs.h"
 
 
 /*-----------------------------------------------------------------*/
