@@ -1265,7 +1265,6 @@ if the property was added, modified or deleted, respectively.
       config_fname = os.path.join(os.path.dirname(sys.argv[0]), 'mailer.conf')
   if not os.path.exists(config_fname):
     raise MissingConfig(config_fname)
-  config_fp = open(config_fname)
 
   svn.core.run_app(main, cmd, config_fname, repos_dir,
                    sys.argv[3:3+expected_args])
