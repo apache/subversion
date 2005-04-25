@@ -1282,9 +1282,7 @@ if the property was added, modified or deleted, respectively.
 #     o max size of entire commit message before truncation
 #   - per-repository configuration
 #     o extra config living in repos
-#     o how to construct a ViewCVS URL for the diff  [DONE (as patch)]
 #     o optional, non-mail log file
 #     o look up authors (username -> email; for the From: header) in a
 #       file(s) or DBM
-#   - if the subject line gets too long, then trim it. configurable?
 # * get rid of global functions that should properly be class methods
