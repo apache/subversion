@@ -252,8 +252,7 @@ fi
 
 say "Finished testing..."
 
-[ -e  "$HTTPD_PID" ] \
-  && kill $(cat "$HTTPD_PID")
+kill $(cat "$HTTPD_PID")
 
 query 'Browse server error log' n \
   && less "$HTTPD_LOG"
