@@ -45,8 +45,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-04-19 23:04+0200\n"
-"PO-Revision-Date: 2005-04-21 21:27+0200\n"
+"POT-Creation-Date: 2005-04-25 14:59+0200\n"
+"PO-Revision-Date: 2005-04-25 21:16+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -1465,12 +1465,13 @@ msgid ""
 "\n"
 "  A character in the first column signifies an update to the actual file,\n"
 "  while updates to the file's properties are shown in the second column.\n"
+"  A 'B' in the third column signifies that the lock for the file has\n"
+"  been broken or stolen.\n"
 msgstr ""
 "Inför ändringar från arkivet i arbetskopian.\n"
 "användning: update [SÖKVÄG...]\n"
 "\n"
-"  Om ingen revision anges, görs arbetskopian aktuell enligt "
-"huvudrevisionen.\n"
+"  Om ingen revision anges, görs arbetskopian aktuell enligt huvudrevisionen.\n"
 "  Annars synkroniseras arbetskopian med den revision som anges med -r.\n"
 "\n"
 "  För varje uppdaterat objekt visas en rad vars första tecken indikerar\n"
@@ -1484,43 +1485,44 @@ msgstr ""
 "\n"
 "  Ett tecken i den första kolumnen visar en uppdatering av filen,\n"
 "  medan uppdateringar av filens egenskaper visas i den andra kolumnen.\n"
+"  Ett \"B\" i tredje kolumnen visar att ett lås har blivit stulet eller brutet.\n"
 
-#: clients/cmdline/main.c:791 svnadmin/main.c:77 svnlook/main.c:277
+#: clients/cmdline/main.c:794 svnadmin/main.c:77 svnlook/main.c:277
 msgid "Caught signal"
 msgstr "Fångade signal"
 
-#: clients/cmdline/main.c:896 svnadmin/main.c:1227
+#: clients/cmdline/main.c:899 svnadmin/main.c:1227
 msgid ""
 "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr ""
 "Flera revisionsargument påträffades; försök med \"-r M:N\" istället för \"-r "
 "M -r N\""
 
-#: clients/cmdline/main.c:908 svnadmin/main.c:1244
+#: clients/cmdline/main.c:911 svnadmin/main.c:1244
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Syntaxfel i revisionsargumentet \"%s\""
 
-#: clients/cmdline/main.c:1056 clients/cmdline/main.c:1066
+#: clients/cmdline/main.c:1059 clients/cmdline/main.c:1069
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props och --no-auto-props kan inte användas samtidigt"
 
-#: clients/cmdline/main.c:1082
+#: clients/cmdline/main.c:1085
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "Syntaxfel i native-eol-argumentet \"%s\""
 
-#: clients/cmdline/main.c:1128 svndumpfilter/main.c:1176 svnlook/main.c:2070
+#: clients/cmdline/main.c:1131 svndumpfilter/main.c:1176 svnlook/main.c:2070
 msgid "Subcommand argument required\n"
 msgstr "Argument för underkommando krävs\n"
 
-#: clients/cmdline/main.c:1146 svnadmin/main.c:1370 svndumpfilter/main.c:1198
+#: clients/cmdline/main.c:1149 svnadmin/main.c:1370 svndumpfilter/main.c:1198
 #: svnlook/main.c:2093
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Okänt kommando: \"%s\"\n"
 
-#: clients/cmdline/main.c:1179
+#: clients/cmdline/main.c:1182
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -1529,33 +1531,33 @@ msgstr ""
 "Underkommandot \"%s\" tillåter inte flaggan \"%s\"\n"
 "Skriv \"svn help %s\" för användning.\n"
 
-#: clients/cmdline/main.c:1216
+#: clients/cmdline/main.c:1219
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr ""
 "Filen med loggmeddelandet är versionshanterad; använd --force-log för att "
 "kringgå"
 
-#: clients/cmdline/main.c:1223
+#: clients/cmdline/main.c:1226
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr ""
 "Filen med låskommentaren är versionshanterad; använd --force-log för att "
 "kringgå"
 
-#: clients/cmdline/main.c:1244
+#: clients/cmdline/main.c:1247
 msgid ""
 "The log message is a pathname (was -F intended?); use '--force-log' to "
 "override"
 msgstr ""
 "Loggmeddelandet är en sökväg (avsågs -F?); använd --force-log för att kringgå"
 
-#: clients/cmdline/main.c:1251
+#: clients/cmdline/main.c:1254
 msgid ""
 "The lock comment is a pathname (was -F intended?); use '--force-log' to "
 "override"
 msgstr ""
 "Låskommentaren är en sökväg (avsågs -F?); använd --force-log för att kringgå"
 
-#: clients/cmdline/main.c:1464
+#: clients/cmdline/main.c:1467
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
@@ -1980,7 +1982,7 @@ msgid "Can't write to '%s'"
 msgstr "Kan inte skriva till \"%s\""
 
 #: clients/cmdline/util.c:204 clients/cmdline/util.c:228
-#: libsvn_fs_fs/fs_fs.c:1070 libsvn_fs_fs/fs_fs.c:3556 libsvn_subr/io.c:2327
+#: libsvn_fs_fs/fs_fs.c:1070 libsvn_fs_fs/fs_fs.c:3556 libsvn_subr/io.c:2332
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "Kan inte ta status på \"%s\""
@@ -3887,7 +3889,7 @@ msgstr "Fel vid läsning från filen \"%s\""
 msgid "Error writing file '%s'"
 msgstr "Fel vid skrivning till filen \"%s\""
 
-#: libsvn_fs_base/fs.c:1112 libsvn_fs_base/fs.c:1116 libsvn_subr/io.c:2178
+#: libsvn_fs_base/fs.c:1112 libsvn_fs_base/fs.c:1116 libsvn_subr/io.c:2183
 #, c-format
 msgid "Can't close file '%s'"
 msgstr "Kan inte stänga filen \"%s\""
@@ -4274,38 +4276,38 @@ msgstr ""
 msgid "Directory entry corrupt"
 msgstr "Katalogpost trasig"
 
-#: libsvn_fs_fs/fs_fs.c:2119 libsvn_fs_fs/fs_fs.c:2127
-#: libsvn_fs_fs/fs_fs.c:2159 libsvn_fs_fs/fs_fs.c:2179
-#: libsvn_fs_fs/fs_fs.c:2213 libsvn_fs_fs/fs_fs.c:2218
+#: libsvn_fs_fs/fs_fs.c:2116 libsvn_fs_fs/fs_fs.c:2124
+#: libsvn_fs_fs/fs_fs.c:2156 libsvn_fs_fs/fs_fs.c:2176
+#: libsvn_fs_fs/fs_fs.c:2210 libsvn_fs_fs/fs_fs.c:2215
 msgid "Invalid changes line in rev-file"
 msgstr "Ogiltig changes-rad i rev-fil"
 
-#: libsvn_fs_fs/fs_fs.c:2152
+#: libsvn_fs_fs/fs_fs.c:2149
 msgid "Invalid change kind in rev file"
 msgstr "Ogiltig ändringstyp i rev-fil"
 
-#: libsvn_fs_fs/fs_fs.c:2172
+#: libsvn_fs_fs/fs_fs.c:2169
 msgid "Invalid text-mod flag in rev-file"
 msgstr "Ogiltig text-mod-flagga i rev-fil"
 
-#: libsvn_fs_fs/fs_fs.c:2192
+#: libsvn_fs_fs/fs_fs.c:2189
 msgid "Invalid prop-mod flag in rev-file"
 msgstr "Ogiltig prop-mod-flagga i rev-fil"
 
-#: libsvn_fs_fs/fs_fs.c:2375
+#: libsvn_fs_fs/fs_fs.c:2372
 msgid "Copying from transactions not allowed"
 msgstr "Det är inte tillåtet att kopiera från transaktioner"
 
-#: libsvn_fs_fs/fs_fs.c:2431
+#: libsvn_fs_fs/fs_fs.c:2428
 #, c-format
 msgid "Unable to create transaction directory in '%s' for revision %ld"
 msgstr "Kan inte skapa transaktionskatalog i \"%s\" för revision %ld"
 
-#: libsvn_fs_fs/fs_fs.c:2620 libsvn_fs_fs/fs_fs.c:2627
+#: libsvn_fs_fs/fs_fs.c:2617 libsvn_fs_fs/fs_fs.c:2624
 msgid "next-id file corrupt"
 msgstr "next-id-filen är trasig"
 
-#: libsvn_fs_fs/fs_fs.c:2853
+#: libsvn_fs_fs/fs_fs.c:2850
 msgid "Invalid change type"
 msgstr "Ogiltig ändringstyp"
 
@@ -4448,7 +4450,7 @@ msgstr "Kunde inte spara filen"
 msgid "Error writing to stream: unexpected EOF"
 msgstr "Fel vid skrivning till strömm: oväntat filslut"
 
-#: libsvn_ra_dav/fetch.c:844 libsvn_ra_svn/client.c:910
+#: libsvn_ra_dav/fetch.c:844 libsvn_ra_svn/client.c:912
 #, c-format
 msgid ""
 "Checksum mismatch for '%s':\n"
@@ -4771,7 +4773,7 @@ msgstr ""
 msgid "Local URL '%s' contains unsupported hostname"
 msgstr "Den lokala URL:en \"%s\" innehåller värdnamn som inte stöds"
 
-#: libsvn_ra_local/split_url.c:124 libsvn_ra_local/split_url.c:131
+#: libsvn_ra_local/split_url.c:128 libsvn_ra_local/split_url.c:135
 #, c-format
 msgid "Unable to open repository '%s'"
 msgstr "Kunde inte öppna arkivet \"%s\""
@@ -4817,113 +4819,113 @@ msgstr "Oväntat svar från servern på autentisiering"
 msgid "Cannot negotiate authentication mechanism"
 msgstr "Kan inte förhandla om autentiseringsmekanism"
 
-#: libsvn_ra_svn/client.c:460
+#: libsvn_ra_svn/client.c:461
 #, c-format
 msgid "Undefined tunnel scheme '%s'"
 msgstr "Odefinierat tunnelschema \"%s\""
 
-#: libsvn_ra_svn/client.c:477
+#: libsvn_ra_svn/client.c:478
 #, c-format
 msgid "Tunnel scheme %s requires environment variable %s to be defined"
 msgstr "Tunnelschemat %s kräver att miljövariabeln %s är definierad"
 
-#: libsvn_ra_svn/client.c:488
+#: libsvn_ra_svn/client.c:489
 #, c-format
 msgid "Can't tokenize command '%s'"
 msgstr "Kan inte dela upp kommandosträngen \"%s\""
 
-#: libsvn_ra_svn/client.c:517
+#: libsvn_ra_svn/client.c:518
 #, c-format
 msgid "Error in child process: %s"
 msgstr "Fel i barnprocess: %s"
 
-#: libsvn_ra_svn/client.c:540
+#: libsvn_ra_svn/client.c:541
 msgid "Can't create tunnel"
 msgstr "Kan inte skapa tunnel"
 
-#: libsvn_ra_svn/client.c:569
+#: libsvn_ra_svn/client.c:570
 msgid "Module for accessing a repository using the svn network protocol."
 msgstr "Modul för åtkomst av ett arkiv över nätverk via protokollet svn."
 
-#: libsvn_ra_svn/client.c:606
+#: libsvn_ra_svn/client.c:607
 #, c-format
 msgid "Illegal svn repository URL '%s'"
 msgstr "Ogiltig svn-arkiv-URL \"%s\""
 
-#: libsvn_ra_svn/client.c:631
+#: libsvn_ra_svn/client.c:633
 #, c-format
 msgid "Server requires minimum version %d"
 msgstr "Servern kräver minst version %d"
 
-#: libsvn_ra_svn/client.c:681
+#: libsvn_ra_svn/client.c:683
 msgid "Impossibly long repository root from server"
 msgstr "För lång arkivrot från servern"
 
-#: libsvn_ra_svn/client.c:748
+#: libsvn_ra_svn/client.c:750
 msgid "Server did not send repository root"
 msgstr "Servern skickade ingen arkivrot"
 
-#: libsvn_ra_svn/client.c:890
+#: libsvn_ra_svn/client.c:892
 msgid "Non-string as part of file contents"
 msgstr "Icke-sträng var del av filinnehåll"
 
-#: libsvn_ra_svn/client.c:958
+#: libsvn_ra_svn/client.c:960
 msgid "Dirlist element not a list"
 msgstr "Element med kataloglista är ingen lista"
 
-#: libsvn_ra_svn/client.c:1114
+#: libsvn_ra_svn/client.c:1116
 msgid "Log entry not a list"
 msgstr "Loggposten är ej en lista"
 
-#: libsvn_ra_svn/client.c:1127
+#: libsvn_ra_svn/client.c:1129
 msgid "Changed-path entry not a list"
 msgstr "Post med ändrade sökvägar är ingen lista"
 
-#: libsvn_ra_svn/client.c:1206
+#: libsvn_ra_svn/client.c:1208
 msgid "'stat' not implemented"
 msgstr "\"stat\" ej implementerat"
 
-#: libsvn_ra_svn/client.c:1263
+#: libsvn_ra_svn/client.c:1265
 msgid "'get-locations' not implemented"
 msgstr "\"get-locations\" ej implementerat"
 
-#: libsvn_ra_svn/client.c:1275
+#: libsvn_ra_svn/client.c:1277
 msgid "Location entry not a list"
 msgstr "Post med information om plats är ingen lista"
 
-#: libsvn_ra_svn/client.c:1325
+#: libsvn_ra_svn/client.c:1327
 msgid "'get-file-revs' not implemented"
 msgstr "\"get-file-revs\" ej implementerat"
 
-#: libsvn_ra_svn/client.c:1338
+#: libsvn_ra_svn/client.c:1340
 msgid "Revision entry not a list"
 msgstr "Revisionsposten är ej en lista"
 
-#: libsvn_ra_svn/client.c:1351 libsvn_ra_svn/client.c:1376
+#: libsvn_ra_svn/client.c:1353 libsvn_ra_svn/client.c:1378
 msgid "Text delta chunk not a string"
 msgstr "Textdeltadel är inte en sträng"
 
-#: libsvn_ra_svn/client.c:1388
+#: libsvn_ra_svn/client.c:1390
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "get-file-revs-kommandot returnerade inga revisioner"
 
-#: libsvn_ra_svn/client.c:1434
+#: libsvn_ra_svn/client.c:1436
 msgid "Server doesn't support the lock command"
 msgstr "Servern stöder ej lock-kommandot"
 
-#: libsvn_ra_svn/client.c:1496
+#: libsvn_ra_svn/client.c:1498
 msgid "Server doesn't support the unlock command"
 msgstr "Servern stöder ej unlock-kommandot"
 
-#: libsvn_ra_svn/client.c:1531 libsvn_ra_svn/client.c:1559
+#: libsvn_ra_svn/client.c:1533 libsvn_ra_svn/client.c:1561
 msgid "Server doesn't support the get-lock command"
 msgstr "Servern stöder ej get-lock-kommandot"
 
-#: libsvn_ra_svn/client.c:1572
+#: libsvn_ra_svn/client.c:1574
 msgid "Lock element not a list"
 msgstr "Element med lås är ingen lista"
 
-#: libsvn_ra_svn/client.c:1631
+#: libsvn_ra_svn/client.c:1633
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Versionen för RA-laddaren (%d) stöds ej för ra_svn"
@@ -5326,44 +5328,44 @@ msgstr "Skapar pre-revprop-change-hookskript"
 msgid "Creating post-commit hook"
 msgstr "Skapar post-commit-hookskript"
 
-#: libsvn_repos/repos.c:1350
+#: libsvn_repos/repos.c:1346
 msgid "Creating post-revprop-change hook"
 msgstr "Skapar post-revprop-change-hookskript"
 
-#: libsvn_repos/repos.c:1360
+#: libsvn_repos/repos.c:1356
 msgid "Creating conf directory"
 msgstr "Skapar conf-katalog"
 
-#: libsvn_repos/repos.c:1412
+#: libsvn_repos/repos.c:1408
 msgid "Creating svnserve.conf file"
 msgstr "Skapar filen svnserve.conf"
 
-#: libsvn_repos/repos.c:1437
+#: libsvn_repos/repos.c:1433
 msgid "Creating passwd file"
 msgstr "Skapar filen passwd"
 
-#: libsvn_repos/repos.c:1463
+#: libsvn_repos/repos.c:1459
 msgid "Could not create top-level directory"
 msgstr "Kunde inte skapa toppkatalog"
 
-#: libsvn_repos/repos.c:1467
+#: libsvn_repos/repos.c:1463
 msgid "Creating DAV sandbox dir"
 msgstr "Skapar katalog för DAV"
 
-#: libsvn_repos/repos.c:1510
+#: libsvn_repos/repos.c:1506
 msgid "Creating readme file"
 msgstr "Skapar filen readme"
 
-#: libsvn_repos/repos.c:1542
+#: libsvn_repos/repos.c:1538
 msgid "Repository creation failed"
 msgstr "Kunde inte skapa arkiv"
 
-#: libsvn_repos/repos.c:1614
+#: libsvn_repos/repos.c:1610
 #, c-format
 msgid "Expected format '%d' of repository; found format '%d'"
 msgstr "Väntade format \"%d\" av arkivet, fann \"%d\""
 
-#: libsvn_repos/repos.c:1662
+#: libsvn_repos/repos.c:1658
 msgid "Error opening db lockfile"
 msgstr "Fel då låsfil för db skulle öppnas"
 
@@ -5432,11 +5434,11 @@ msgstr "Kan inte hitta konfigurationsfilen \"%s\""
 msgid "Can't manipulate current date"
 msgstr "Kan inte manipulera aktuellt datum"
 
-#: libsvn_subr/date.c:274 libsvn_subr/date.c:282
+#: libsvn_subr/date.c:277 libsvn_subr/date.c:285
 msgid "Can't calculate requested date"
 msgstr "Kan inte beräkna begärt datum"
 
-#: libsvn_subr/date.c:277
+#: libsvn_subr/date.c:280
 msgid "Can't expand time"
 msgstr "Kan inte dela upp tid"
 
@@ -5506,169 +5508,169 @@ msgstr "Destinationen \"%s\" är ingen katalog"
 msgid "Destination '%s' already exists"
 msgstr "Destinationen \"%s\" finns redan"
 
-#: libsvn_subr/io.c:730 libsvn_subr/io.c:1617 libsvn_subr/io.c:1686
+#: libsvn_subr/io.c:735 libsvn_subr/io.c:1622 libsvn_subr/io.c:1691
 #, c-format
 msgid "Can't read directory '%s'"
 msgstr "Kan inte läsa katalogen \"%s\""
 
-#: libsvn_subr/io.c:735 libsvn_subr/io.c:1622 libsvn_subr/io.c:1691
-#: libsvn_subr/io.c:2663
+#: libsvn_subr/io.c:740 libsvn_subr/io.c:1627 libsvn_subr/io.c:1696
+#: libsvn_subr/io.c:2668
 #, c-format
 msgid "Error closing directory '%s'"
 msgstr "Fel vid stängning av katalogen \"%s\""
 
-#: libsvn_subr/io.c:761
+#: libsvn_subr/io.c:766
 #, c-format
 msgid "Can't make directory '%s'"
 msgstr "Kan inte skapa katalogen \"%s\""
 
-#: libsvn_subr/io.c:829
+#: libsvn_subr/io.c:834
 #, c-format
 msgid "Can't set access time of '%s'"
 msgstr "Kan inte sätta åtkomsttiden på \"%s\""
 
-#: libsvn_subr/io.c:944
+#: libsvn_subr/io.c:949
 #, c-format
 msgid "Can't set file '%s' read-only"
 msgstr "Kan inte göra \"%s\" skrivskyddad"
 
-#: libsvn_subr/io.c:969
+#: libsvn_subr/io.c:974
 #, c-format
 msgid "Can't set file '%s' read-write"
 msgstr "Kan inte ta bort skrivskyddet på \"%s\""
 
-#: libsvn_subr/io.c:1015
+#: libsvn_subr/io.c:1020
 #, c-format
 msgid "Can't get default file perms for file at '%s' (file stat error)"
 msgstr "Kan inte erhålla rättigheter för filen \"%s\" (fel vid stat)"
 
-#: libsvn_subr/io.c:1021
+#: libsvn_subr/io.c:1026
 #, c-format
 msgid "Can't get default file perms for file at '%s' (file close error)"
 msgstr "Kan inte erhålla rättigheter för \"%s\" (fel vid stängning)"
 
-#: libsvn_subr/io.c:1053 libsvn_subr/io.c:1113
+#: libsvn_subr/io.c:1058 libsvn_subr/io.c:1118
 #, c-format
 msgid "Can't change read-write perms of file '%s'"
 msgstr "Kan inte ändra skrivskyddet på filen \"%s\""
 
-#: libsvn_subr/io.c:1152 libsvn_subr/io.c:1196 libsvn_subr/io.c:1220
+#: libsvn_subr/io.c:1157 libsvn_subr/io.c:1201 libsvn_subr/io.c:1225
 #, c-format
 msgid "Can't change executability of file '%s'"
 msgstr "Kan inte ändra huruvida filen \"%s\" är exekverbar"
 
-#: libsvn_subr/io.c:1247
+#: libsvn_subr/io.c:1252
 msgid "Error getting UID of process"
 msgstr "Fel vid läsning av processens användarid"
 
-#: libsvn_subr/io.c:1328
+#: libsvn_subr/io.c:1333
 #, c-format
 msgid "Can't get shared lock on file '%s'"
 msgstr "Kan inte ta ut delat lås på filen \"%s\""
 
-#: libsvn_subr/io.c:1332
+#: libsvn_subr/io.c:1337
 #, c-format
 msgid "Can't get exclusive lock on file '%s'"
 msgstr "Kan inte ta ut exklusivt lås på filen \"%s\""
 
-#: libsvn_subr/io.c:1363
+#: libsvn_subr/io.c:1368
 #, c-format
 msgid "Can't flush file '%s'"
 msgstr "Kan inte tömma buffertar för filen \"%s\""
 
-#: libsvn_subr/io.c:1364
+#: libsvn_subr/io.c:1369
 msgid "Can't flush stream"
 msgstr "Kan inte tömma buffertar för ström"
 
-#: libsvn_subr/io.c:1376 libsvn_subr/io.c:1393
+#: libsvn_subr/io.c:1381 libsvn_subr/io.c:1398
 msgid "Can't flush file to disk"
 msgstr "Kan inte tömma filbuffertar till disk"
 
-#: libsvn_subr/io.c:1414
+#: libsvn_subr/io.c:1419
 msgid "Reading from stdin is currently broken, so disabled"
 msgstr ""
 "Att läsa från standard in fungerar inte för närvarande och är därför avslaget"
 
-#: libsvn_subr/io.c:1435
+#: libsvn_subr/io.c:1440
 msgid "Can't get file name"
 msgstr "Kan inte erhålla filnamn"
 
-#: libsvn_subr/io.c:1503
+#: libsvn_subr/io.c:1508
 #, c-format
 msgid "Can't remove file '%s'"
 msgstr "Kan inte radera filen \"%s\""
 
-#: libsvn_subr/io.c:1532
+#: libsvn_subr/io.c:1537
 #, c-format
 msgid "Can't rewind directory '%s'"
 msgstr "Kan inte återspola katalogen \"%s\""
 
-#: libsvn_subr/io.c:1567 libsvn_subr/io.c:2512 libsvn_subr/io.c:2600
+#: libsvn_subr/io.c:1572 libsvn_subr/io.c:2517 libsvn_subr/io.c:2605
 #, c-format
 msgid "Can't open directory '%s'"
 msgstr "Kan inte öppna katalogen \"%s\""
 
-#: libsvn_subr/io.c:1606 libsvn_subr/io.c:1628
+#: libsvn_subr/io.c:1611 libsvn_subr/io.c:1633
 #, c-format
 msgid "Can't remove '%s'"
 msgstr "Kan inte radera \"%s\""
 
-#: libsvn_subr/io.c:1719
+#: libsvn_subr/io.c:1724
 #, c-format
 msgid "Can't create process '%s' attributes"
 msgstr "Kan inte skapa attribut för processen \"%s\""
 
-#: libsvn_subr/io.c:1725
+#: libsvn_subr/io.c:1730
 #, c-format
 msgid "Can't set process '%s' cmdtype"
 msgstr "Kan inte sätta cmdtype för processen \"%s\""
 
-#: libsvn_subr/io.c:1737
+#: libsvn_subr/io.c:1742
 #, c-format
 msgid "Can't set process '%s' directory"
 msgstr "Kan inte sätta katalog för processen \"%s\""
 
-#: libsvn_subr/io.c:1750
+#: libsvn_subr/io.c:1755
 #, c-format
 msgid "Can't set process '%s' child input"
 msgstr "Kan inte sätta standard in för processen \"%s\""
 
-#: libsvn_subr/io.c:1757
+#: libsvn_subr/io.c:1762
 #, c-format
 msgid "Can't set process '%s' child outfile"
 msgstr "Kan inte sätta standard ut för processen \"%s\""
 
-#: libsvn_subr/io.c:1764
+#: libsvn_subr/io.c:1769
 #, c-format
 msgid "Can't set process '%s' child errfile"
 msgstr "Kan inte sätta standard fel för processen \"%s\""
 
-#: libsvn_subr/io.c:1788
+#: libsvn_subr/io.c:1793
 #, c-format
 msgid "Can't start process '%s'"
 msgstr "Kan inte starta processen \"%s\""
 
-#: libsvn_subr/io.c:1810
+#: libsvn_subr/io.c:1815
 #, c-format
 msgid "Error waiting for process '%s'"
 msgstr "Fel då processen \"%s\" inväntades"
 
-#: libsvn_subr/io.c:1818
+#: libsvn_subr/io.c:1823
 #, c-format
 msgid "Process '%s' failed (exitwhy %d)"
 msgstr "Processen '%s' misslyckades (orsak %d)"
 
-#: libsvn_subr/io.c:1825
+#: libsvn_subr/io.c:1830
 #, c-format
 msgid "Process '%s' returned error exitcode %d"
 msgstr "Processen \"%s\" returnerade felstatus %d"
 
-#: libsvn_subr/io.c:1936
+#: libsvn_subr/io.c:1941
 #, c-format
 msgid "'%s' returned %d"
 msgstr "\"%s\" returnerade %d"
 
-#: libsvn_subr/io.c:2039
+#: libsvn_subr/io.c:2044
 #, c-format
 msgid ""
 "Error running '%s':  exitcode was %d, args were:\n"
@@ -5683,120 +5685,120 @@ msgstr ""
 "%s\n"
 "%s"
 
-#: libsvn_subr/io.c:2075
+#: libsvn_subr/io.c:2080
 #, c-format
 msgid "Can't detect MIME type of non-file '%s'"
 msgstr "Kan inte känna av MIME-typ på \"%s\", som inte är en fil"
 
-#: libsvn_subr/io.c:2142
+#: libsvn_subr/io.c:2147
 #, c-format
 msgid "Can't open file '%s'"
 msgstr "Kan inte öppna filen \"%s\""
 
-#: libsvn_subr/io.c:2179
+#: libsvn_subr/io.c:2184
 msgid "Can't close stream"
 msgstr "Kan inte stänga ström"
 
-#: libsvn_subr/io.c:2189 libsvn_subr/io.c:2213 libsvn_subr/io.c:2226
+#: libsvn_subr/io.c:2194 libsvn_subr/io.c:2218 libsvn_subr/io.c:2231
 #, c-format
 msgid "Can't read file '%s'"
 msgstr "Kan inte läsa filen \"%s\""
 
-#: libsvn_subr/io.c:2190 libsvn_subr/io.c:2214 libsvn_subr/io.c:2227
+#: libsvn_subr/io.c:2195 libsvn_subr/io.c:2219 libsvn_subr/io.c:2232
 msgid "Can't read stream"
 msgstr "Kan inte läsa från ström"
 
-#: libsvn_subr/io.c:2201
+#: libsvn_subr/io.c:2206
 #, c-format
 msgid "Can't get attribute information from file '%s'"
 msgstr "Kan inte erhålla attributinformation från filen \"%s\""
 
-#: libsvn_subr/io.c:2202
+#: libsvn_subr/io.c:2207
 msgid "Can't get attribute information from stream"
 msgstr "Kan inte erhålla attributinformation från ström"
 
-#: libsvn_subr/io.c:2238
+#: libsvn_subr/io.c:2243
 #, c-format
 msgid "Can't set position pointer in file '%s'"
 msgstr "Kan inte sätta filpekaren i filen \"%s\""
 
-#: libsvn_subr/io.c:2239
+#: libsvn_subr/io.c:2244
 msgid "Can't set position pointer in stream"
 msgstr "Kan inte sätta filpekaren i ström"
 
-#: libsvn_subr/io.c:2250 libsvn_subr/io.c:2263
+#: libsvn_subr/io.c:2255 libsvn_subr/io.c:2268
 #, c-format
 msgid "Can't write to file '%s'"
 msgstr "Kan inte skriva till filen \"%s\""
 
-#: libsvn_subr/io.c:2251 libsvn_subr/io.c:2264
+#: libsvn_subr/io.c:2256 libsvn_subr/io.c:2269
 msgid "Can't write to stream"
 msgstr "Kan inte skriva till ström"
 
-#: libsvn_subr/io.c:2304
+#: libsvn_subr/io.c:2309
 #, c-format
 msgid "Can't read length line in file '%s'"
 msgstr "Kan inte läsa längdrad i filen \"%s\""
 
-#: libsvn_subr/io.c:2308
+#: libsvn_subr/io.c:2313
 msgid "Can't read length line in stream"
 msgstr "Kan inte läsa längdrad i ström"
 
-#: libsvn_subr/io.c:2383
+#: libsvn_subr/io.c:2388
 #, c-format
 msgid "Can't move '%s' to '%s'"
 msgstr "Kan inte flytta \"%s\" till \"%s\""
 
-#: libsvn_subr/io.c:2428
+#: libsvn_subr/io.c:2433
 #, c-format
 msgid "Can't create directory '%s'"
 msgstr "Kan inte skapa katalogen \"%s\""
 
-#: libsvn_subr/io.c:2439 libsvn_wc/copy.c:303
+#: libsvn_subr/io.c:2444 libsvn_wc/copy.c:303
 #, c-format
 msgid "Can't hide directory '%s'"
 msgstr "Kan inte dölja katalogen \"%s\""
 
-#: libsvn_subr/io.c:2452
+#: libsvn_subr/io.c:2457
 #, c-format
 msgid "Can't stat directory '%s'"
 msgstr "Kan inte ta status på katalogen \"%s\""
 
-#: libsvn_subr/io.c:2468
+#: libsvn_subr/io.c:2473
 #, c-format
 msgid "Can't stat new directory '%s'"
 msgstr "Kan inte ta status på den nya katalogen \"%s\""
 
-#: libsvn_subr/io.c:2530
+#: libsvn_subr/io.c:2535
 #, c-format
 msgid "Can't remove directory '%s'"
 msgstr "Kan inte radera katalogen \"%s\""
 
-#: libsvn_subr/io.c:2548
+#: libsvn_subr/io.c:2553
 msgid "Can't read directory"
 msgstr "Kan inte läsa katalog"
 
-#: libsvn_subr/io.c:2619
+#: libsvn_subr/io.c:2624
 #, c-format
 msgid "Can't read directory entry in '%s'"
 msgstr "Kan inte läsa katalogpost i \"%s\""
 
-#: libsvn_subr/io.c:2744
+#: libsvn_subr/io.c:2749
 #, c-format
 msgid "Can't check directory '%s'"
 msgstr "Kan inte kontrollera katalogen \"%s\""
 
-#: libsvn_subr/io.c:2766
+#: libsvn_subr/io.c:2771
 #, c-format
 msgid "Version %d is not non-negative"
 msgstr "Versionsnumret %d är negativt"
 
-#: libsvn_subr/io.c:2813
+#: libsvn_subr/io.c:2818
 #, c-format
 msgid "Reading '%s'"
 msgstr "Läser \"%s\""
 
-#: libsvn_subr/io.c:2829
+#: libsvn_subr/io.c:2834
 #, c-format
 msgid "First line of '%s' contains non-digit"
 msgstr "Första raden i \"%s\" innehåller något som inte är en siffra"
