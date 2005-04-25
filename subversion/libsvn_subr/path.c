@@ -711,40 +711,35 @@ static const char *
 skip_uri_scheme (const char *path)
 {
   apr_size_t j;
-  apr_size_t len = strlen (path);
 
-  /* ### Taking strlen() initially is inefficient.  It's a holdover
-     from svn_stringbuf_t days. */
+  assert (path);
 
-  /* Make sure we have enough characters to even compare. */
-  if (len < 4)
+  /* <scheme> has length > 0 and doesn't contain ':' or '/'.
+     (i.e. the first char is not ':' or '/')
+     path[1] and path[2] are tested to assert the precondition
+     of the following loop. */
+  if (path[0] == '\0' || path[0] == ':' || path[0] == '/'
+      || path[1] == '\0' || path[2] == '\0')
     return NULL;
 
-  /* Look for the sequence '://' */
-  for (j = 0; j < len - 3; j++)
+  for (j = 1; path[j + 2] != '\0'; ++j)
     {
-      /* We hit a '/' before finding the sequence. */
+      /* precondition:
+         path[j] != '\0' && path[j + 1] != '\0'. */
+
+      /* scheme doesn't contain a '/' */
       if (path[j] == '/')
         return NULL;
 
-      /* Skip stuff up to the first ':'. */
-      if (path[j] != ':')
-        continue;
-
-      /* Current character is a ':' now.  It better not be the first
-         character. */
-      if (j == 0)
-        return NULL;
-
-      /* Expecting the next two chars to be '/' */
-
-      if ((path[j + 1] == '/')
-          && (path[j + 2] == '/'))
-        return path + j + 3;
-      
-      return NULL;
+      if (path[j] == ':')
+        {
+          if (path[j + 1] == '/' && path[j + 2] == '/')
+            return path + j + 3;
+          else
+            return NULL;
+        }
     }
-     
+
   return NULL;
 }
 

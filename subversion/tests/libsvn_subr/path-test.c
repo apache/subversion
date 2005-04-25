@@ -158,6 +158,8 @@ test_is_url (const char **msg,
     "http://svn.collab.net/repos/svn",
     "scheme/with://slash/",
     "file:///path/to/repository",
+    "file://",
+    "file:/",
   };
 
   /* Expected results of the tests. */
@@ -166,14 +168,17 @@ test_is_url (const char **msg,
     FALSE,
     TRUE,
     FALSE,
-    TRUE };
+    TRUE,
+    TRUE,
+    FALSE,
+  };
 
   *msg = "test svn_path_is_url";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < 5; i++)
+  for (i = 0; i < sizeof (paths) / sizeof (paths[0]); i++)
     {
       svn_boolean_t retval;
 
