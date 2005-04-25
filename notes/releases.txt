@@ -206,7 +206,7 @@
     gpg -b --armor subversion-X.Y.Z.tar.bz2
     gpg -b --armor subversion-X.Y.Z.zip
 
-11. Upload the tarballs to http://subversion.tigris.org/tarballs/.
+11. Upload the tarballs to http://subversion.tigris.org/downloads/.
 
     The RM will be given details on how to do this via private channels.
 
@@ -226,7 +226,7 @@
        Status: Stable
        Description: Subversion release X.Y.Z (MD5: <md5sum of tarball>)
        Contents: (choose 'Link', then enter
-           http://subversion.tigris.org/tarballs/subversion-X.Y.Z.tar.gz)
+           http://subversion.tigris.org/downloads/subversion-X.Y.Z.tar.gz)
 
     f. Click Submit
 
