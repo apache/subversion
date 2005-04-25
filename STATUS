@@ -53,5 +53,12 @@ Candidate changes:
     Votes:
       +1: jszakmeister
 
+  * r14414 - r14417, r14429: Rename wbel-3 to rhel-3, add rhel-4, add detecion
+    of more platforms (now detects CentOS, RHEL, and WBEL), fix name of
+    patch file.
+    Justification: Builds "out-of-the-box" now on more platforms.
+    Votes:
+      +1: david
+
 Approved changes (further review is welcome, but not required):
 
