@@ -42,7 +42,7 @@ Candidate changes:
       tests run in parallel take hardly any more time than a single test.
       Not a core code change.
     Votes:
-      +1: brane
+      +1: brane, fitz (concept [no win32 setup])
 
   * r14401
     Fix Issue #2224: 'svn cp mydir mydir' in a wc recurses infinitely.
@@ -51,7 +51,7 @@ Candidate changes:
     Notes:
       Not a showstopper for 1.2.0.
     Votes:
-      +1: jszakmeister
+      +1: jszakmeister, fitz
 
   * r14405
     Fix svn help update to show info on broken and stolen locks.
