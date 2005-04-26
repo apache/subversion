@@ -2680,9 +2680,12 @@ svn_io_dir_walk (const char *dirname,
  * @param pool Used for temporary allocation.
  * @remark If path is not a directory, or some other error occurs,
  * then return the appropriate apr status code.
+ *
+ * (This function is documented in APR style, in anticipation of
+ * perhaps someday being moved to APR as 'apr_dir_is_empty'.)
  */                        
 static apr_status_t
-apr_dir_is_empty (const char *dir, apr_pool_t *pool)
+svn_apr_dir_is_empty (const char *dir, apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_dir_t *dir_handle;
@@ -2736,7 +2739,7 @@ svn_io_dir_empty (svn_boolean_t *is_empty_p,
 
   SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, path, pool));
 
-  status = apr_dir_is_empty (path_apr, pool);
+  status = svn_apr_dir_is_empty (path_apr, pool);
 
   if (!status)
     *is_empty_p = TRUE;
