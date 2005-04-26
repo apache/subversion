@@ -2696,9 +2696,6 @@ apr_dir_is_empty (const char *dir, apr_pool_t *pool)
   apr_err = apr_dir_open (&dir_handle, dir, pool);
   if (apr_err != APR_SUCCESS)
     return apr_err;
-      
-  /* ### What is the gospel on the APR_STATUS_IS_SUCCESS macro these
-     days? :-) */
 
   for (apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir_handle);
        apr_err == APR_SUCCESS;
