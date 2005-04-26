@@ -806,7 +806,6 @@ msgstr ""
 "bruk: help [DELKOMMANDO...]\n"
 
 #: clients/cmdline/main.c:344
-#, fuzzy
 msgid ""
 "Commit an unversioned file or tree into the repository.\n"
 "usage: import [PATH] URL\n"
@@ -821,8 +820,8 @@ msgstr ""
 "bruk: import [STI] URL\n"
 "\n"
 "  Sender inn en kopi av STI inn i URL rekursivt.\n"
-"  «.» brukes hvis STI er utelatt. Foreldrekataloger opprettes etter\n"
-"  behov i depotet.\n"
+"  «.» brukes hvis STI er utelatt.\n"
+"  Foreldrekataloger opprettes etter behov i depotet.\n"
 "  Hvis STI er en katalog, vil innholdet av katalogen legges til direkte\n"
 "  under URL.\n"
 
@@ -1435,7 +1434,6 @@ msgstr ""
 "  Bruk --force for å bryte låsen.\n"
 
 #: clients/cmdline/main.c:716
-#, fuzzy
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -1474,6 +1472,8 @@ msgstr ""
 "\n"
 "  Et tegn i den første kolonnen viser hva som er gjort med selve filen,\n"
 "  mens den andre viser oppdateringer i filens egenskaper.\n"
+"  En «B» i den tredje kolonnen indikerer at låsen for filen er blitt\n"
+"  brutt eller stjålet.\n"
 
 #: clients/cmdline/main.c:794 svnadmin/main.c:77 svnlook/main.c:277
 msgid "Caught signal"
