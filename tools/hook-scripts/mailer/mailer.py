@@ -192,7 +192,7 @@ class MailedOutput(OutputBase):
     subject = self.make_subject(group, params)
     try:
       subject.encode('ascii')
-    except UnicodeDecodeError:
+    except UnicodeError:
       from email.Header import Header
       subject = Header(subject, 'utf-8').encode()
     hdrs = 'From: %s\n'    \
