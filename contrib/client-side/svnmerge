@@ -139,7 +139,8 @@ check_branch_dir()
     report "checking status of \"${BRANCH_DIR}\""
     "${SVN_MERGE_SVN}" status -u "${BRANCH_DIR}" | grep -q '^.......\*' && \
         error "\"${BRANCH_DIR}\" is not up to date; please \"svn update\" first"
-    [ `"${SVN_MERGE_SVN}" stat -q "${BRANCH_DIR}" | wc -l` = "0" ] || \
+    [ `"${SVN_MERGE_SVN}" stat -q "${BRANCH_DIR}" \
+      | sed '/^$/,$d' | wc -l` = "0" ] || \
         error "\"${BRANCH_DIR}\" has local modifications; it must be clean"
 }
 
@@ -364,7 +365,7 @@ get_copyfrom()
     url_to_rlpath "${RETURN_VALUE}"
     TEMP=`"${SVN_MERGE_SVN}" log -v --xml --stop-on-copy "$1" | tr '\n' ' '`
     TEMP2=`echo "${TEMP}" | sed -e 's#^.*\(<path .*action="A".*>'"${RETURN_VALUE}"'</path>\).*$#\1#'`
-    if [ "${TEMP}" == "${TEMP2}" ]; then
+    if [ "${TEMP}" = "${TEMP2}" ]; then
         RETURN_VALUE=""
     else
         RETURN_VALUE=`echo "${TEMP2}" | sed -e 's/^.* copyfrom-path="\([^"]*\)".*$/\1/'`
@@ -651,7 +652,7 @@ fi
 
 # Calculate ${HEAD_URL} and ${HEAD_PATH}
 if [ -z "${HEAD}" ]; then
-    if [ "${ACTION}" == "init" ]; then
+    if [ "${ACTION}" = "init" ]; then
         get_copyfrom "${BRANCH_DIR}"
         [ -z "${RETURN_VALUE}" ] && \
             error no copyfrom info available.  Explicit \"src\" argument required.
