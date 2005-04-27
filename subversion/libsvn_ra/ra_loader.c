@@ -567,7 +567,7 @@ svn_ra_print_modules (svn_stringbuf_t *output,
 
       if (initfunc)
         {
-          SVN_ERR (initfunc (svn_ra_version(), &vtable, pool));
+          SVN_ERR (initfunc (svn_ra_version(), &vtable, iterpool));
 
           SVN_ERR (check_ra_version (vtable->get_version (), defn->ra_name));
 

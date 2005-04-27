@@ -1287,6 +1287,11 @@ svn_ra_local__init (const svn_version_t *loader_version,
 
   SVN_ERR (svn_ver_check_list (ra_local_version(), checklist));
 
+#ifndef SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
+  /* This assumes that POOL was the pool used to load the dso. */
+  SVN_ERR (svn_fs_initialize (pool));
+#endif
+
   *vtable = &ra_local_vtable;
 
   return SVN_NO_ERROR;

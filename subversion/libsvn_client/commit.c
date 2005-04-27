@@ -636,6 +636,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   const char *temp;
   const char *dir;
   apr_pool_t *subpool;
+  svn_client_commit_info_t *tmp_commit_info;
 
 
   /* Create a new commit item and add it to the array. */
@@ -744,11 +745,22 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   /* If an error occurred during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */
   if ((err = import (path, new_entries, editor, edit_baton, 
-                     nonrecursive, excludes, ctx, pool)))
+                     nonrecursive, excludes, ctx, subpool)))
     {
-      svn_error_clear (editor->abort_edit (edit_baton, pool));
+      svn_error_clear (editor->abort_edit (edit_baton, subpool));
       return err;
     }
+
+  /* Transfer *COMMIT_INFO from the subpool to the callers pool */
+  tmp_commit_info = apr_palloc(pool, sizeof(*tmp_commit_info));
+  *tmp_commit_info = **commit_info;
+  if (tmp_commit_info->date)
+    tmp_commit_info->date = apr_pstrdup (pool, tmp_commit_info->date);
+  if (tmp_commit_info->author)
+    tmp_commit_info->author = apr_pstrdup (pool, tmp_commit_info->author);
+  *commit_info = tmp_commit_info;
+
+  svn_pool_destroy (subpool);
 
   return SVN_NO_ERROR;
 }
