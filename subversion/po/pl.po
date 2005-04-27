@@ -34,8 +34,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-04-27 16:15+0200\n"
-"PO-Revision-Date: 2005-04-27 16:39+0200\n"
+"POT-Creation-Date: 2005-04-27 20:29+0200\n"
+"PO-Revision-Date: 2005-04-28 00:01+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2922,47 +2922,47 @@ msgstr "'%s' nie istnieje"
 msgid "Path '%s' does not exist"
 msgstr "Ścieżka '%s' nie istnieje"
 
-#: libsvn_client/commit.c:729 libsvn_client/copy.c:399
+#: libsvn_client/commit.c:730 libsvn_client/copy.c:399
 #: libsvn_client/copy.c:415
 #, c-format
 msgid "Path '%s' already exists"
 msgstr "Ścieżka '%s' już istnieje"
 
-#: libsvn_client/commit.c:739
+#: libsvn_client/commit.c:740
 #, c-format
 msgid "'%s' is a reserved name and cannot be imported"
 msgstr "'%s' to nazwa zastrzeżona i nie może zostać zaimportowana"
 
-#: libsvn_client/commit.c:818 libsvn_client/copy.c:545
+#: libsvn_client/commit.c:830 libsvn_client/copy.c:545
 msgid "Commit failed (details follow):"
 msgstr "Zatwierdzenie nie powiodło się (szczegóły poniżej):"
 
-#: libsvn_client/commit.c:826 libsvn_client/copy.c:553
+#: libsvn_client/commit.c:838 libsvn_client/copy.c:553
 msgid "Commit succeeded, but other errors follow:"
 msgstr "Zatwierdzenie powiodło się, lecz wystąpiły inne błędy:"
 
-#: libsvn_client/commit.c:833 libsvn_client/copy.c:560
+#: libsvn_client/commit.c:845 libsvn_client/copy.c:560
 msgid "Error unlocking locked dirs (details follow):"
 msgstr "Nie udało się odblokowanie katalogów (szczegóły poniżej):"
 
-#: libsvn_client/commit.c:844
+#: libsvn_client/commit.c:856
 msgid "Error bumping revisions post-commit (details follow):"
 msgstr "Błąd operacji post-commit (szczegóły poniżej):"
 
-#: libsvn_client/commit.c:855 libsvn_client/copy.c:571
+#: libsvn_client/commit.c:867 libsvn_client/copy.c:571
 msgid "Error in post-commit clean-up (details follow):"
 msgstr "Błąd oczyszczania post-commit (szczegóły poniżej):"
 
-#: libsvn_client/commit.c:1157
+#: libsvn_client/commit.c:1169
 #, c-format
 msgid "'%s' is a URL, but URLs cannot be commit targets"
 msgstr "'%s' to URL, a URL nie może być obiektem zatwierdzenia"
 
-#: libsvn_client/commit.c:1349
+#: libsvn_client/commit.c:1361
 msgid "Are all the targets part of the same working copy?"
 msgstr "Czy wszystkie obiekty docelowe należą do tej samej kopii roboczej?"
 
-#: libsvn_client/commit.c:1364
+#: libsvn_client/commit.c:1376
 msgid "Cannot non-recursively commit a directory deletion"
 msgstr "Zatwierdzenie usunięcia katalogu musi być wykonane rekursywnie"
 
@@ -3300,7 +3300,7 @@ msgstr "'%s' nie jest zablokowane w danej kopii roboczej"
 msgid "'%s' is not locked"
 msgstr "'%s' nie jest zablokowane"
 
-#: libsvn_client/locking_commands.c:345 libsvn_fs/fs-loader.c:885
+#: libsvn_client/locking_commands.c:345 libsvn_fs/fs-loader.c:892
 #: libsvn_ra/ra_loader.c:512
 msgid "Lock comment has illegal characters"
 msgstr "Opis zakładanej blokady zawiera nieprawidłowe znaki"
@@ -3500,12 +3500,12 @@ msgstr "Nieznany typ systemu plików: '%s'"
 msgid "Can't allocate FS mutex"
 msgstr "Nie udało się utworzyć tunelu"
 
-#: libsvn_fs/fs-loader.c:269
+#: libsvn_fs/fs-loader.c:276
 #, fuzzy
 msgid "Can't grab FS mutex"
 msgstr "Nie można czytać z strumienia"
 
-#: libsvn_fs/fs-loader.c:275
+#: libsvn_fs/fs-loader.c:282
 msgid "Can't ungrab FS mutex"
 msgstr "Nie można odblokować semafora FS"
 
@@ -3991,21 +3991,21 @@ msgstr "Moduł do współpracy z repozytorium działającym na bazie Berkeley DB
 msgid "Unsupported FS loader version (%d) for bdb"
 msgstr "Nieobsługiwana wersja loadera systemu plików (%d) dla bdb"
 
-#: libsvn_fs_base/lock.c:447 libsvn_fs_fs/lock.c:615
+#: libsvn_fs_base/lock.c:445 libsvn_fs_fs/lock.c:615
 #, c-format
 msgid "Cannot verify lock on path '%s'; no username available"
 msgstr ""
 "Nie można zweryfikować blokady założonej na ścieżce '%s'; brak nazwy "
 "użytkownika"
 
-#: libsvn_fs_base/lock.c:453 libsvn_fs_fs/lock.c:621
+#: libsvn_fs_base/lock.c:451 libsvn_fs_fs/lock.c:621
 #, c-format
 msgid "User %s does not own lock on path '%s' (currently locked by %s)"
 msgstr ""
 "Użytkownik %s nie jest właścicielem blokady ścieżki '%s' (aktualnie \n"
 "zablokowanej przez %s)"
 
-#: libsvn_fs_base/lock.c:460 libsvn_fs_fs/lock.c:628
+#: libsvn_fs_base/lock.c:458 libsvn_fs_fs/lock.c:628
 #, c-format
 msgid "Cannot verify lock on path '%s'; no matching lock-token available"
 msgstr ""
@@ -4116,9 +4116,9 @@ msgstr "Obiekt główny nie wskazuje na korzeń transakcji"
 msgid "Failure opening '%s'"
 msgstr "Nie mozna otworzyć '%s'"
 
-#: libsvn_fs_base/tree.c:1407 libsvn_fs_fs/tree.c:1153
-msgid "Asking props changed in two different filesystems"
-msgstr ""
+#: libsvn_fs_base/tree.c:1407
+msgid "Cannot compare property value between two different filesystems"
+msgstr "Nie można porównać wartości atrybutów w dwóch różnych systemach plików"
 
 #: libsvn_fs_base/tree.c:1741
 #, fuzzy
@@ -4194,9 +4194,8 @@ msgid "'%s' is not a file"
 msgstr "'%s' nie jest plikiem"
 
 #: libsvn_fs_fs/dag.c:436
-#, fuzzy
 msgid "Can't get entries of non-directory"
-msgstr "Nie można ustawić zawartości katalogu"
+msgstr "Nie można pobrać składowych obiektu nie będącego katalogiem"
 
 #: libsvn_fs_fs/dag.c:952
 #, c-format
@@ -4411,14 +4410,14 @@ msgid "No such transaction"
 msgstr "Brak takiej transakcji"
 
 #: libsvn_fs_fs/lock.c:230
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot write lock/entries hashfile '%s'"
-msgstr "Nie można zapisać atrybutów '%s'"
+msgstr "Nie można zapisać blokady/składowych pliku hash '%s'"
 
 #: libsvn_fs_fs/lock.c:286
-#, fuzzy, c-format
+#, c-format
 msgid "Can't parse lock/entries hashfile '%s'"
-msgstr "Nie można założyć dzielonej blokady dla pliku '%s'"
+msgstr "Nie można sparsować blokady/składowych pliku hash '%s'"
 
 #: libsvn_fs_fs/lock.c:714 libsvn_fs_fs/lock.c:735
 #, c-format
@@ -4434,6 +4433,10 @@ msgstr "Nie udało się założyć blokady: istnieje nowsza wersja '%s'"
 #, fuzzy
 msgid "Transaction cleanup failed"
 msgstr "Transakcja jest nieaktualna"
+
+#: libsvn_fs_fs/tree.c:1153
+msgid "Asking props changed in two different filesystems"
+msgstr ""
 
 #: libsvn_ra/ra_loader.c:212
 #, c-format
@@ -4468,7 +4471,8 @@ msgid ""
 "Could not fetch the Version Resource URL (needed during an import or when it "
 "is missing from the local, cached props)"
 msgstr ""
-"Nie można dostarczyć URLa zasobów (potrzebnego podczas importu lub ...)"
+"Nie można pobrać URLa zasobów (potrzebnego podczas importu lub\n"
+"gdy nie zawiera go lokalny cache atrybutów)\n"
 
 #: libsvn_ra_dav/commit.c:462
 #, c-format
@@ -4739,9 +4743,8 @@ msgid "Please upgrade the server to 0.19 or later"
 msgstr "Zaktualizuj serwer do wersji 0.19 lub nowszej."
 
 #: libsvn_ra_dav/session.c:1019 libsvn_ra_dav/session.c:1145
-#, fuzzy
 msgid "Failed to parse URI"
-msgstr "Nie powiodło się uruchomienie skryptu hook '%s'"
+msgstr "Nie udało się parsowanie URI"
 
 #: libsvn_ra_dav/session.c:1042
 msgid "Lock request failed"
@@ -4782,7 +4785,7 @@ msgid "Can't calculate the request body size"
 msgstr "Nie można ustalić rozmiaru żądania"
 
 #: libsvn_ra_dav/util.c:687
-#, fuzzy, c-format
+#, c-format
 msgid "Error spooling the %s request response to disk"
 msgstr "Błąd podczas gromadzenia danych żądania %s z dysku"
 
@@ -4799,9 +4802,9 @@ msgid "%s of '%s'"
 msgstr "%s z '%s'"
 
 #: libsvn_ra_dav/util.c:750
-#, fuzzy, c-format
+#, c-format
 msgid "Error reading spooled %s request response"
-msgstr "Błąd podczas czytania zgromadzonych danych %s żądania"
+msgstr "Błąd podczas czytania zgromadzonych danych żądania %s"
 
 #: libsvn_ra_dav/util.c:761
 #, c-format
@@ -4999,14 +5002,12 @@ msgid "Server doesn't support the unlock command"
 msgstr "Serwer nie obsługuje operacji zdejmowania blokady"
 
 #: libsvn_ra_svn/client.c:1533 libsvn_ra_svn/client.c:1561
-#, fuzzy
 msgid "Server doesn't support the get-lock command"
-msgstr "Serwer nie obsługuje operacji związanych z datami"
+msgstr "Serwer nie obsługuje polecenia get-lock"
 
 #: libsvn_ra_svn/client.c:1574
-#, fuzzy
 msgid "Lock element not a list"
-msgstr "Element proplist nie jest listą"
+msgstr "Element lock nie jest listą"
 
 #: libsvn_ra_svn/client.c:1633
 #, c-format
@@ -5095,7 +5096,7 @@ msgid "Source url '%s' is from different repository"
 msgstr "Źródłowy URL '%s' jest z innego repozytorium"
 
 #: libsvn_repos/commit.c:328
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' not present"
 msgstr "Ścieżka '%s' nie istnieje"
 
@@ -5112,9 +5113,8 @@ msgstr ""
 "    wyliczono:     %s\n"
 
 #: libsvn_repos/delta.c:179
-#, fuzzy
 msgid "Unable to open root of edit"
-msgstr "Nie zdołano otworzyć repozytorium '%s'"
+msgstr "Nie zdołano otworzyć katalogu głównego dla operacji edycji"
 
 #: libsvn_repos/delta.c:230
 msgid "Invalid target path"
@@ -5971,21 +5971,21 @@ msgstr ""
 msgid "Type '%s help' for usage.\n"
 msgstr "Użyj '%s help' by otrzymać podstawowe instrukcje.\n"
 
-#: libsvn_subr/path.c:1060
+#: libsvn_subr/path.c:1039
 #, c-format
 msgid "Couldn't determine absolute path of '%s'"
 msgstr "Nie można ustalić absolutnej ścieżki '%s'"
 
-#: libsvn_subr/path.c:1099
+#: libsvn_subr/path.c:1078
 #, c-format
 msgid "'%s' is neither a file nor a directory name"
 msgstr "'%s' nie jest ani nazwą pliku ani katalogu"
 
-#: libsvn_subr/path.c:1205
+#: libsvn_subr/path.c:1184
 msgid "Can't determine the native path encoding"
 msgstr "Nie można ustalić natywnego kodowania dla ścieżki"
 
-#: libsvn_subr/path.c:1259
+#: libsvn_subr/path.c:1238
 #, c-format
 msgid "Invalid control character '0x%02x' in path '%s'"
 msgstr "Błędny znak kontrolny '0x%02x' w ścieżce '%s'"
@@ -7718,9 +7718,8 @@ msgstr ""
 "Dostępne polecenia:\n"
 
 #: svnlook/main.c:1755
-#, fuzzy
 msgid "Missing path argument"
-msgstr "Brak parametru podającego nazwę atrybutu"
+msgstr "Brak parametru podającego ścieżkę"
 
 #: svnlook/main.c:1780
 #, c-format
@@ -7764,9 +7763,8 @@ msgstr ""
 "równocześnie"
 
 #: svnlook/main.c:2126
-#, fuzzy
 msgid "Repository argument required\n"
-msgstr "Parametr podający repozytorium jest wymagany"
+msgstr "Parametr podający repozytorium jest wymagany\n"
 
 #: svnlook/main.c:2135
 #, c-format
@@ -7871,9 +7869,8 @@ msgid "Option --tunnel-user is only valid in tunnel mode.\n"
 msgstr "Opcja --tunnel-user jest poprawna jedynie w trybie tunnel.\n"
 
 #: svnserve/main.c:388
-#, fuzzy
 msgid "You must specify exactly one of -d, -i, -t or -X.\n"
-msgstr "Musisz podać jedną z opcji -d, -i, -t lub -X.\n"
+msgstr "Musisz podać dokładnie jedną z opcji -d, -i, -t lub -X.\n"
 
 #: svnserve/main.c:429
 #, fuzzy, c-format
@@ -7993,9 +7990,9 @@ msgstr "wyeksportowano%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "%s' nie podlegające zarządzaniu wersjami i nie eksportowane\n"
 
-#~ msgid "Print client version info\n"
-#~ msgstr "Podaj wersję klienta\n"
-
 #, fuzzy
 #~ msgid "Your lock comment was left in a temporary file:"
 #~ msgstr "Opis zmian pozostawiono w pliku tymczasowym:"
+
+#~ msgid "Print client version info\n"
+#~ msgstr "Podaj wersję klienta\n"
