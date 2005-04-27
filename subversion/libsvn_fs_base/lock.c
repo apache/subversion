@@ -377,14 +377,12 @@ svn_fs_base__get_lock (svn_lock_t **lock,
                        apr_pool_t *pool)
 {
   struct lock_token_get_args args;
-  svn_error_t *err;
 
   SVN_ERR (svn_fs_base__check_fs (fs));
   
   args.path = svn_fs_base__canonicalize_abspath (path, pool);
   args.lock_p = lock;  
   return svn_fs_base__retry_txn (fs, txn_body_get_lock, &args, pool);
-  return err;
 }
 
 
