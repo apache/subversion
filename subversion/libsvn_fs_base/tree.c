@@ -1404,7 +1404,7 @@ base_props_changed (svn_boolean_t *changed_p,
   if (root1->fs != root2->fs)
     return svn_error_create
       (SVN_ERR_FS_GENERAL, NULL,
-       _("Asking props changed in two different filesystems"));
+       _("Cannot compare property value between two different filesystems"));
 
   args.root1      = root1;
   args.root2      = root2;
