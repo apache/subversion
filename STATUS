@@ -77,5 +77,14 @@ Candidate changes:
     Votes:
       +1: julianfoad
 
+  * r14454
+    JavaHL status not returning correct date for Lock Creation Date.
+    Justification:
+      A simple 1-line fix.
+    Notes:
+      Not a showstopper for 1.2.0.
+    Votes:
+      +1: pmayweg
+
 Approved changes (further review is welcome, but not required):
 
