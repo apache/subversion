@@ -419,9 +419,10 @@ harvest_committables (apr_hash_t *committables,
 
   /* Set text/prop modification flags accordingly. */
   if (text_mod)
-    {
-    state_flags |= SVN_CLIENT_COMMIT_ITEM_TEXT_MODS;
+      state_flags |= SVN_CLIENT_COMMIT_ITEM_TEXT_MODS;
 
+  if (text_mod && ! (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
+    {
       SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_TEXT_TIME, path, adm_access,
                                 pool));
       /* If the text has been modified AND the modification time
@@ -438,7 +439,6 @@ harvest_committables (apr_hash_t *committables,
                                     propval, path, adm_access, pool) );
           state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
         }
-
     }
 
   if (prop_mod)
