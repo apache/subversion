@@ -149,7 +149,7 @@ test_is_url (const char **msg,
              svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
-  int i;
+  apr_size_t i;
 
   /* Paths to test. */
   static const char * const paths[] = { 
