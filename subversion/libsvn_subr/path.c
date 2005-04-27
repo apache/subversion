@@ -712,33 +712,12 @@ skip_uri_scheme (const char *path)
 {
   apr_size_t j;
 
-  assert (path);
+  for(j = 0; path[j]; ++j)
+    if (path[j] == ':' || path[j] == '/')
+       break;
 
-  /* <scheme> has length > 0 and doesn't contain ':' or '/'.
-     (i.e. the first char is not ':' or '/')
-     path[1] and path[2] are tested to assert the precondition
-     of the following loop. */
-  if (path[0] == '\0' || path[0] == ':' || path[0] == '/'
-      || path[1] == '\0' || path[2] == '\0')
-    return NULL;
-
-  for (j = 1; path[j + 2] != '\0'; ++j)
-    {
-      /* precondition:
-         path[j] != '\0' && path[j + 1] != '\0'. */
-
-      /* scheme doesn't contain a '/' */
-      if (path[j] == '/')
-        return NULL;
-
-      if (path[j] == ':')
-        {
-          if (path[j + 1] == '/' && path[j + 2] == '/')
-            return path + j + 3;
-          else
-            return NULL;
-        }
-    }
+  if (j > 0 && path[j] == ':' && path[j+1] == '/' && path[j+2] == '/')
+    return path + j + 3;
 
   return NULL;
 }
