@@ -838,7 +838,7 @@ svn_client_commit (svn_client_commit_info_t **commit_info,
 svn_error_t *
 svn_client_status2 (svn_revnum_t *result_rev,
                     const char *path,
-                    svn_opt_revision_t *revision,
+                    const svn_opt_revision_t *revision,
                     svn_wc_status_func2_t status_func,
                     void *status_baton,
                     svn_boolean_t recurse,
@@ -855,7 +855,8 @@ svn_client_status2 (svn_revnum_t *result_rev,
  *
  * Similar to svn_client_status2(), but with the @a ignore_externals
  * parameter always set to @c FALSE, and taking a deprecated
- * svn_wc_status_func_t argument.
+ * svn_wc_status_func_t argument, and requiring @a *revision to be
+ * non-const even though it is treated as constant.
  */
 svn_error_t *
 svn_client_status (svn_revnum_t *result_rev,
