@@ -72,5 +72,10 @@ Candidate changes:
     Votes:
       +1: david, fitz (concept)
 
+  * r14465: Accept pointer-to-const revision arg in svn_client_status2().
+    Justification: Makes this new (newly revised) API cleaner.
+    Votes:
+      +1: julianfoad
+
 Approved changes (further review is welcome, but not required):
 
