@@ -1621,7 +1621,16 @@ def update_xml_unsafe_dir(sbox):
   was_cwd = os.getcwd()
   os.chdir(test_path)
   try:
-    svntest.actions.run_and_verify_svn("Update failed", None, [], 'up')
+    expected_output = wc.State('', {
+      })
+    expected_disk = wc.State('', {
+      })
+    expected_status = wc.State('', {
+      '' : Item(status='  ', wc_rev=2),
+      })
+    svntest.actions.run_and_verify_update('', expected_output, expected_disk,
+                                          expected_status)
+                                          
   finally:
     os.chdir(was_cwd)
 
