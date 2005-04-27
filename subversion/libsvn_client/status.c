@@ -192,7 +192,7 @@ static svn_ra_reporter2_t lock_fetch_reporter = {
 svn_error_t *
 svn_client_status2 (svn_revnum_t *result_rev,
                     const char *path,
-                    svn_opt_revision_t *revision,
+                    const svn_opt_revision_t *revision,
                     svn_wc_status_func2_t status_func,
                     void *status_baton,
                     svn_boolean_t recurse,
