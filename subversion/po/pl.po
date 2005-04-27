@@ -34,8 +34,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-04-25 22:44+0200\n"
-"PO-Revision-Date: 2005-04-25 23:41+0200\n"
+"POT-Creation-Date: 2005-04-27 16:15+0200\n"
+"PO-Revision-Date: 2005-04-27 16:39+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -839,10 +839,10 @@ msgstr ""
 #, fuzzy
 msgid ""
 "Display information about a local or remote item.\n"
-"usage: info [PATH...]\n"
+"usage: info [TARGET...]\n"
 "\n"
-"  Print information about each PATH (default: '.')\n"
-"  PATH may be either a working-copy path or URL.\n"
+"  Print information about each TARGET (default: '.')\n"
+"  TARGET may be either a working-copy path or URL.\n"
 msgstr ""
 "Przedstaw szczegółowe informacje o podanym pliku lub katalogu.\n"
 "Wykorzystanie: info [ŚCIEŻKA]\n"
@@ -891,7 +891,7 @@ msgstr ""
 msgid ""
 "Lock working copy paths or URLs in the repository, so that\n"
 "no other user can commit changes to them.\n"
-"usage: lock PATH...\n"
+"usage: lock TARGET...\n"
 "\n"
 "  Use --force to steal the lock from another user or working copy.\n"
 msgstr ""
@@ -1466,9 +1466,10 @@ msgstr ""
 "     robocza nadal odpowiada temu samemu katalogowi w repozytorium.\n"
 
 #: clients/cmdline/main.c:708
+#, fuzzy
 msgid ""
 "Unlock working copy paths or URLs.\n"
-"usage: unlock PATH...\n"
+"usage: unlock TARGET...\n"
 "\n"
 "  Use --force to break the lock.\n"
 msgstr ""
@@ -3707,9 +3708,10 @@ msgid "Attempted to set entry in immutable node"
 msgstr "Próba zmiany węzła nie mogącego ulegać zmianom"
 
 #: libsvn_fs_base/dag.c:689
-#, c-format, fuzzy
+#, fuzzy, c-format
 msgid "Can't set proplist on *immutable* node-revision %s"
-msgstr "Nie można ustawić atrybutu proplist na niemodyfikowalnym węźle wersji %s"
+msgstr ""
+"Nie można ustawić atrybutu proplist na niemodyfikowalnym węźle wersji %s"
 
 #: libsvn_fs_base/dag.c:801
 #, c-format
@@ -4023,7 +4025,8 @@ msgstr "Niezgodność w reprezentacji '%s'"
 #: libsvn_fs_base/reps-strings.c:758
 #, c-format
 msgid "Rep contents are too large: got %s, limit is %s"
-msgstr "Zawartość reprezentacji jest zbyt duża: pobrano %s, natomiast limit wynosi %s"
+msgstr ""
+"Zawartość reprezentacji jest zbyt duża: pobrano %s, natomiast limit wynosi %s"
 
 #: libsvn_fs_base/reps-strings.c:774
 #, fuzzy, c-format
@@ -4060,7 +4063,7 @@ msgid "Failed to get new string key"
 msgstr "Błąd pobierania nowego klucza"
 
 #: libsvn_fs_base/reps-strings.c:1393
-#, c-format, fuzzy
+#, fuzzy, c-format
 msgid "Attempt to deltify '%s' against itself"
 msgstr "Próba wyliczenia różnic obiektu '%s' z samym sobą"
 
@@ -4464,7 +4467,8 @@ msgstr "Nie udało się wygenerować żądania (%s '%s')"
 msgid ""
 "Could not fetch the Version Resource URL (needed during an import or when it "
 "is missing from the local, cached props)"
-msgstr "Nie można dostarczyć URLa zasobów (potrzebnego podczas importu lub ...)"
+msgstr ""
+"Nie można dostarczyć URLa zasobów (potrzebnego podczas importu lub ...)"
 
 #: libsvn_ra_dav/commit.c:462
 #, c-format
@@ -4753,9 +4757,8 @@ msgid "Unlock request failed"
 msgstr "Żądanie zdjęcia blokady nie powiodło się"
 
 #: libsvn_ra_dav/session.c:1379
-#, fuzzy
 msgid "Failed to fetch lock information"
-msgstr "podaj dodatkowe informacje"
+msgstr "Nieudało się pobrać informacji o blokadzie"
 
 #: libsvn_ra_dav/session.c:1455
 #, c-format
@@ -4779,7 +4782,7 @@ msgid "Can't calculate the request body size"
 msgstr "Nie można ustalić rozmiaru żądania"
 
 #: libsvn_ra_dav/util.c:687
-#, c-format, fuzzy
+#, fuzzy, c-format
 msgid "Error spooling the %s request response to disk"
 msgstr "Błąd podczas gromadzenia danych żądania %s z dysku"
 
@@ -4796,7 +4799,7 @@ msgid "%s of '%s'"
 msgstr "%s z '%s'"
 
 #: libsvn_ra_dav/util.c:750
-#, c-format, fuzzy
+#, fuzzy, c-format
 msgid "Error reading spooled %s request response"
 msgstr "Błąd podczas czytania zgromadzonych danych %s żądania"
 
@@ -5122,7 +5125,9 @@ msgstr "Ścieżka docelowa jest niewłaściwa"
 msgid ""
 "Invalid editor anchoring; at least one of the input paths is not a directory "
 "and there was no source entry"
-msgstr "Błąd edytora; conajmniej jedna z ścieżek wejściowych nie jest katalogiem tak więc brakuje obiektu źródłowego"
+msgstr ""
+"Błąd edytora; conajmniej jedna z ścieżek wejściowych nie jest katalogiem tak "
+"więc brakuje obiektu źródłowego"
 
 #: libsvn_repos/dump.c:416
 #, c-format
@@ -5364,7 +5369,7 @@ msgstr "Ścieżka kopii roboczej '%s' nie istnieje w repozytorium"
 
 #: libsvn_repos/reporter.c:885
 msgid "Not authorized to open root of edit operation"
-msgstr ""
+msgstr "Brak uprawnień do otwarcia katalogu głównego edycji"
 
 #: libsvn_repos/reporter.c:906
 msgid "Cannot replace a directory from within"
@@ -7988,9 +7993,9 @@ msgstr "wyeksportowano%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "%s' nie podlegające zarządzaniu wersjami i nie eksportowane\n"
 
+#~ msgid "Print client version info\n"
+#~ msgstr "Podaj wersję klienta\n"
+
 #, fuzzy
 #~ msgid "Your lock comment was left in a temporary file:"
 #~ msgstr "Opis zmian pozostawiono w pliku tymczasowym:"
-
-#~ msgid "Print client version info\n"
-#~ msgstr "Podaj wersję klienta\n"
