@@ -354,10 +354,10 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
  
   { "info", svn_cl__info, {0},
     N_("Display information about a local or remote item.\n"
-       "usage: info [PATH...]\n"
+       "usage: info [TARGET...]\n"
        "\n"
-       "  Print information about each PATH (default: '.')\n"
-       "  PATH may be either a working-copy path or URL.\n"),
+       "  Print information about each TARGET (default: '.')\n"
+       "  TARGET may be either a working-copy path or URL.\n"),
     {'r', 'R', svn_cl__targets_opt, svn_cl__config_dir_opt} },
  
   { "list", svn_cl__ls, {"ls"},
@@ -387,7 +387,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   { "lock", svn_cl__lock, {0},
     N_("Lock working copy paths or URLs in the repository, so that\n"
        "no other user can commit changes to them.\n"
-       "usage: lock PATH...\n"
+       "usage: lock TARGET...\n"
        "\n"
        "  Use --force to steal the lock from another user or working copy.\n"),
     { svn_cl__targets_opt, 'm', 'F', svn_cl__force_log_opt,
@@ -706,7 +706,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
  
   { "unlock", svn_cl__unlock, {0},
     N_("Unlock working copy paths or URLs.\n"
-       "usage: unlock PATH...\n"
+       "usage: unlock TARGET...\n"
        "\n"
        "  Use --force to break the lock.\n"),
     { svn_cl__targets_opt, SVN_CL__AUTH_OPTIONS,
