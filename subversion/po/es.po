@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-04-23 18:02-0300\n"
+"POT-Creation-Date: 2005-04-26 23:57-0300\n"
 "PO-Revision-Date: 2005-04-17 15:14-0300\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Spanish <dev@subversion.tigris.org>\n"
@@ -983,9 +983,8 @@ msgstr ""
 "\n"
 "  Crear directorios bajo control de versiones.\n"
 "\n"
-"  1. Cada directorio especificado por una RUTA de copia de trabajo es creado "
-"localmente\n"
-"     y agendado para su adición en el próximo commit.\n"
+"  1. Cada directorio especificado por una RUTA de copia de trabajo es creado\n"
+"     localmente y agendado para su adición en el próximo commit.\n"
 "\n"
 "  2. Cada directorio especificado por un URL es creado en el repositorio "
 "vía\n"
@@ -1045,8 +1044,8 @@ msgstr ""
 "     2. propedit NOMBREPROP --revprop -r REV [URL]\n"
 "\n"
 "  1. Edita propiedades versionadas en la copia de trabajo.\n"
-"  2. Edita propiedades no versionadas remotas en la revisión REV del "
-"repositorio.\n"
+"  2. Edita propiedades no versionadas remotas en la revisión REV\n"
+"     del repositorio.\n"
 
 #: clients/cmdline/main.c:512
 msgid ""
@@ -1154,10 +1153,10 @@ msgstr ""
 "  Nota: svn reconoce las siguientes propiedades versionadas\n"
 "  especiales, pero almacenará cualquier propiedad arbitraria\n"
 "  que se defina:\n"
-"    svn:ignore     - Una lista separada por finales de línea de patrones de "
-"archivo a ignorar.\n"
-"    svn:keywords   - Palabras clave a ser expandidas. Palabras clave válidas "
-"son:\n"
+"    svn:ignore     - Una lista separada por finales de línea de patrones de\n"
+"                     archivo a ignorar.\n"
+"    svn:keywords   - Palabras clave a ser expandidas. Palabras clave\n"
+"                     válidas son:\n"
 "      URL, HeadURL             - El URL de la ultima versión del objeto.\n"
 "      Author, LastChangedBy    - La última persona en modificar el archivo.\n"
 "      Date, LastChangedDate    - La fecha/hora en que se modificó el objeto "
@@ -1301,10 +1300,10 @@ msgstr ""
 "Muestra el estado de archivos y directorios en la copia de trabajo.\n"
 "uso: status [RUTA...]\n"
 "\n"
-"  Sin parámetros muestra solamente los ítems modificados localmente (sin "
-"acceso a red).\n"
+"  Sin parámetros muestra solamente los items modificados localmente (sin\n"
+"  acceder a la red).\n"
 "  Con -u agrega información de revisión de trabajo e información\n"
-"   del servidor para determinar si el archivo esta actualizado.\n"
+"  del servidor para determinar si el archivo esta actualizado.\n"
 "  Con -v muestra la información de revisión completa para cada ítem.\n"
 "\n"
 "  Las primeras seis columnas de la salida son de un carácter de ancho:\n"
@@ -1317,8 +1316,8 @@ msgstr ""
 "      'I' Ignorado\n"
 "      'M' Modificado\n"
 "      'R' Reemplazado\n"
-"      'X' Este ítem no está versionado, pero es usado por una definición de "
-"externals\n"
+"      'X' Este ítem no está versionado, pero es usado por una\n"
+"          definición de externals\n"
 "      '?' el ítem no está bajo control de versiones\n"
 "      '!' ítem faltante (removido por un comando ajeno a svn) o incompleto\n"
 "      '~' ítem versionado obstruido por algún otro ítem de un tipo "
@@ -1334,8 +1333,8 @@ msgstr ""
 "    Cuarta columna: El commit agendado contendrá adición-con-historial\n"
 "      ' ' no hay historial agendado con el commit\n"
 "      '+' historial agendado con el commit\n"
-"    Quinta columna: Indica si el ítem está conmutado (con switch) con "
-"respecto a su padre\n"
+"    Quinta columna: Indica si el ítem está conmutado (con switch) con\n"
+"    respecto a su padre\n"
 "      ' ' normal\n"
 "      'S' conmutado (con switch)\n"
 "    Sexta columna: token de bloqueo en el repositorio\n"
@@ -1445,7 +1444,8 @@ msgstr ""
 "Trae cambios desde el repositorio hacia la copia de trabajo.\n"
 "uso: update [RUTA...]\n"
 "\n"
-"  Si no se especifica una revisión, actualiza la copia respecto de la revisión\n"
+"  Si no se especifica una revisión, actualiza la copia respecto de la "
+"revisión\n"
 "  HEAD.  Si se especifica, se sincroniza la copia de trabajo a la\n"
 "  revisión dada por -r.\n"
 "\n"
@@ -1766,7 +1766,7 @@ msgstr " - El nombre de máquina del certificado no coincide.\n"
 
 #: clients/cmdline/prompt.c:265
 msgid " - The certificate is not yet valid.\n"
-msgstr " - El certificado no es válido aun.\n"
+msgstr " - El certificado no es válido aún.\n"
 
 #: clients/cmdline/prompt.c:271
 msgid " - The certificate has expired.\n"
@@ -1869,7 +1869,7 @@ msgstr "Se requiere un parámetro explícito con un objetivo"
 #, c-format
 msgid "Editing property on non-local target '%s' not yet supported"
 msgstr ""
-"No se soporta todavía editar la propiedad sobre el objetivo no local '%s'"
+"No se maneja todavía el editar propiedades sobre el objetivo no local '%s'"
 
 #: clients/cmdline/propedit-cmd.c:216 clients/cmdline/switch-cmd.c:138
 #, c-format
@@ -4751,7 +4751,7 @@ msgstr "No se puede calcular el tamaño del cuerpo del requerimiento"
 #: libsvn_ra_dav/util.c:687
 #, c-format
 msgid "Error spooling the %s request response to disk"
-msgstr ""
+msgstr "Error almacenando temporariamente en disco la respuesta del pedido %s"
 
 #: libsvn_ra_dav/util.c:727
 #, c-format
@@ -4768,7 +4768,7 @@ msgstr "%s de '%s'"
 #: libsvn_ra_dav/util.c:750
 #, c-format
 msgid "Error reading spooled %s request response"
-msgstr ""
+msgstr "Error leyendo la respuesta almacenada temporariamente al pedido %s"
 
 #: libsvn_ra_dav/util.c:761
 #, c-format
@@ -5356,7 +5356,7 @@ msgstr "'%s' existe y no está vacío"
 
 #: libsvn_repos/repos.c:200
 msgid "Creating db logs lock file"
-msgstr ""
+msgstr "Creando archivo de bloqueo de los logs de la bd"
 
 #: libsvn_repos/repos.c:225
 msgid "Creating db lock file"
@@ -5449,7 +5449,7 @@ msgstr "Se encontró una ruta ilegible, se niega el acceso"
 #: libsvn_subr/config.c:632
 #, c-format
 msgid "Config error: invalid boolean value '%s'"
-msgstr ""
+msgstr "Error de configuración: valor lógico inválido '%s'"
 
 #: libsvn_subr/config.c:807
 #, c-format
@@ -5492,11 +5492,11 @@ msgstr "No se pudo encontrar el archivo de configuración '%s'"
 msgid "Can't manipulate current date"
 msgstr "No se pudo manipular la fecha actual"
 
-#: libsvn_subr/date.c:274 libsvn_subr/date.c:282
+#: libsvn_subr/date.c:277 libsvn_subr/date.c:285
 msgid "Can't calculate requested date"
 msgstr "No se pudo calcular la fecha pedida"
 
-#: libsvn_subr/date.c:277
+#: libsvn_subr/date.c:280
 msgid "Can't expand time"
 msgstr "No se pudo expandir la fecha"
 
@@ -5693,17 +5693,17 @@ msgstr "No se pudo establecer el directorio del proceso '%s'"
 #: libsvn_subr/io.c:1755
 #, c-format
 msgid "Can't set process '%s' child input"
-msgstr ""
+msgstr "No se pudo establecer la entrada del proceso '%s'"
 
 #: libsvn_subr/io.c:1762
 #, c-format
 msgid "Can't set process '%s' child outfile"
-msgstr ""
+msgstr "No se pudo establecer el archivo de salida del proceso '%s'"
 
 #: libsvn_subr/io.c:1769
 #, c-format
 msgid "Can't set process '%s' child errfile"
-msgstr ""
+msgstr "No se pudo establecer el archivo de salida de error del proceso '%s'"
 
 #: libsvn_subr/io.c:1793
 #, c-format
@@ -5739,6 +5739,11 @@ msgid ""
 "%s\n"
 "%s"
 msgstr ""
+"Error ejecutando '%s':  el cód. de salida fue %d, y los parámetros fueron:\n"
+"en el directorio '%s', nombres base:\n"
+"%s\n"
+"%s\n"
+"%s"
 
 #: libsvn_subr/io.c:2080
 #, c-format
@@ -5933,21 +5938,21 @@ msgstr ""
 msgid "Type '%s help' for usage.\n"
 msgstr "Tipee '%s help' para ver el modo de uso.\n"
 
-#: libsvn_subr/path.c:1065
+#: libsvn_subr/path.c:1060
 #, c-format
 msgid "Couldn't determine absolute path of '%s'"
 msgstr "No se pudo determinar la ruta absoluta de '%s'"
 
-#: libsvn_subr/path.c:1104
+#: libsvn_subr/path.c:1099
 #, c-format
 msgid "'%s' is neither a file nor a directory name"
 msgstr "'%s' no es un nombre ni de archivo ni de directorio"
 
-#: libsvn_subr/path.c:1210
+#: libsvn_subr/path.c:1205
 msgid "Can't determine the native path encoding"
 msgstr "No se pudo determinar la codificación nativa usada en las rutas"
 
-#: libsvn_subr/path.c:1264
+#: libsvn_subr/path.c:1259
 #, c-format
 msgid "Invalid control character '0x%02x' in path '%s'"
 msgstr "Carácter de control '0x%02x' inválido en la ruta '%s'"
@@ -7951,88 +7956,44 @@ msgstr "exportado%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "%s no es un recurso versionado, no se exporta\n"
 
-#~ msgid "Print client version info\n"
-#~ msgstr "mostrar información de la versión del cliente\n"
+#~ msgid "Your lock comment was left in a temporary file:"
+#~ msgstr "Su mensaje de bloqueo fue dejado en un archivo temporario:"
 
-#~ msgid " | %d lines"
-#~ msgstr " | %d líneas"
+#~ msgid "Lock comment has illegal characters."
+#~ msgstr "El comentario del bloqueo tiene caracteres ilegales."
 
-#~ msgid " | %d line"
-#~ msgstr " | %d línea"
+#~ msgid "      Transmitting text...\n"
+#~ msgstr "      Transmitiendo texto...\n"
 
-#~ msgid "'get-file-revs' request not implemented"
-#~ msgstr "El requerimiento 'get-file-revs' no está implementado"
+#~ msgid "   Opening : %s\n"
+#~ msgstr "   Abriendo: %s\n"
 
-#~ msgid "'get-locations' request not implemented"
-#~ msgstr "Requerimiento 'get-locations' no implementado"
+#~ msgid " (copied from %s:%ld)"
+#~ msgstr " (copiado de %s:%ld)"
 
-#~ msgid "repository argument required\n"
-#~ msgstr "el subcomando requiere un parámetro que indique el repositorio\n"
+#~ msgid " (recursively)"
+#~ msgstr " (recursivamente)"
 
-#~ msgid "unknown command: '%s'\n"
-#~ msgstr "comando desconocido: '%s'\n"
+#~ msgid " (recursively) "
+#~ msgstr " (recursivamente) "
 
-#~ msgid ""
-#~ "Mismatched RA plugin version for '%s': found %d.%d.%d%s, expected %d.%d.%d"
-#~ "%s"
-#~ msgstr ""
-#~ "Conflicto de versiones en modulo de acceso a repositorio para '%s': se "
-#~ "encontró %d.%d.%d%s, se esperaba %d.%d.%d%s"
+#~ msgid "WARNING: error decoding UTF-8 for ?\n"
+#~ msgstr "AVISO: error decodificando UTF-8 para ?\n"
 
-#~ msgid "Working copy not locked"
-#~ msgstr "La copia de trabajo no tiene lock"
+#~ msgid "file"
+#~ msgstr "archivo"
 
-#~ msgid "'svn info' only works on working copy paths, not URLs"
-#~ msgstr "'svn info' sólo funciona en rutas de copia de trabajo, no en URLs"
+#~ msgid "directory"
+#~ msgstr "directorio"
 
-#~ msgid "   %ld => %ld\n"
-#~ msgstr "   %ld => %ld\n"
+#~ msgid "restoring text"
+#~ msgstr "restituyendo texto"
 
-#~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
-#~ msgstr ""
-#~ "Versión no soportada (%d) de la Interfaz Binaria de Aplicación (ABI) en "
-#~ "el módulo de acceso a repositorio para ra_svn."
+#~ msgid "removing props"
+#~ msgstr "eliminando propiedades"
 
-#~ msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
-#~ msgstr "Aplique RA binariamente incompatible (versión %d) para ra_dav"
-
-#~ msgid "No get_dir() available for URL schema"
-#~ msgstr "No hay get_dir() disponible para el protocolo de URL"
-
-#~ msgid "Cannot cleanup '%s': not a directory"
-#~ msgstr "No se puede limpiar '%s': no es un directorio"
-
-#~ msgid "pass ARG as bundled options to GNU diff"
-#~ msgstr "pasar PAR como opciones a GNU diff"
-
-#~ msgid "No commit for revision 0.\n"
-#~ msgstr "No hay commit para la revisión 0.\n"
-
-#~ msgid "Impossibly long relative URL"
-#~ msgstr "URL relativo imposiblemente largo"
-
-#~ msgid "Path '%s' already exists."
-#~ msgstr "La ruta '%s' ya existe."
-
-#~ msgid "Unknown revision kind"
-#~ msgstr "Tipo de revisión desconocido"
-
-#~ msgid "'%s' is a URL, but revision kind requires a working copy"
-#~ msgstr ""
-#~ "'%s' es un URL, pero el tipo de revisión requiere una copia de trabajo"
-
-#~ msgid "%s of %s"
-#~ msgstr "%s de %s"
-
-#~ msgid "'%s' is an url when it should be a path"
-#~ msgstr "'%s' es un URL cuando debería ser una ruta"
-
-#~ msgid ""
-#~ "Not allowed to copy or move '%s': it is not in the repository yet; try "
-#~ "committing first"
-#~ msgstr ""
-#~ "No se permite copiar o mover '%s': no está en el repositorio todavía; "
-#~ "intente primero hacer commit"
+#~ msgid "restoring props"
+#~ msgstr "restituyendo propiedades"
 
 #~ msgid ""
 #~ "The '%s' library is not compatible with this program; found version %d.%d."
@@ -8041,41 +8002,85 @@ msgstr "%s no es un recurso versionado, no se exporta\n"
 #~ "La biblioteca '%s' no es compatible con este programa; se encontró la "
 #~ "versión %d.%d.%d%s, cuando se esperaba la versión %s"
 
-#~ msgid "restoring props"
-#~ msgstr "restituyendo propiedades"
+#~ msgid ""
+#~ "Not allowed to copy or move '%s': it is not in the repository yet; try "
+#~ "committing first"
+#~ msgstr ""
+#~ "No se permite copiar o mover '%s': no está en el repositorio todavía; "
+#~ "intente primero hacer commit"
 
-#~ msgid "removing props"
-#~ msgstr "eliminando propiedades"
+#~ msgid "'%s' is an url when it should be a path"
+#~ msgstr "'%s' es un URL cuando debería ser una ruta"
 
-#~ msgid "restoring text"
-#~ msgstr "restituyendo texto"
+#~ msgid "%s of %s"
+#~ msgstr "%s de %s"
 
-#~ msgid "directory"
-#~ msgstr "directorio"
+#~ msgid "'%s' is a URL, but revision kind requires a working copy"
+#~ msgstr ""
+#~ "'%s' es un URL, pero el tipo de revisión requiere una copia de trabajo"
 
-#~ msgid "file"
-#~ msgstr "archivo"
+#~ msgid "Unknown revision kind"
+#~ msgstr "Tipo de revisión desconocido"
 
-#~ msgid "WARNING: error decoding UTF-8 for ?\n"
-#~ msgstr "AVISO: error decodificando UTF-8 para ?\n"
+#~ msgid "Path '%s' already exists."
+#~ msgstr "La ruta '%s' ya existe."
 
-#~ msgid " (recursively) "
-#~ msgstr " (recursivamente) "
+#~ msgid "Impossibly long relative URL"
+#~ msgstr "URL relativo imposiblemente largo"
 
-#~ msgid " (recursively)"
-#~ msgstr " (recursivamente)"
+#~ msgid "No commit for revision 0.\n"
+#~ msgstr "No hay commit para la revisión 0.\n"
 
-#~ msgid " (copied from %s:%ld)"
-#~ msgstr " (copiado de %s:%ld)"
+#~ msgid "pass ARG as bundled options to GNU diff"
+#~ msgstr "pasar PAR como opciones a GNU diff"
 
-#~ msgid "   Opening : %s\n"
-#~ msgstr "   Abriendo: %s\n"
+#~ msgid "Cannot cleanup '%s': not a directory"
+#~ msgstr "No se puede limpiar '%s': no es un directorio"
 
-#~ msgid "      Transmitting text...\n"
-#~ msgstr "      Transmitiendo texto...\n"
+#~ msgid "No get_dir() available for URL schema"
+#~ msgstr "No hay get_dir() disponible para el protocolo de URL"
 
-#~ msgid "Lock comment has illegal characters."
-#~ msgstr "El comentario del bloqueo tiene caracteres ilegales."
+#~ msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
+#~ msgstr "Aplique RA binariamente incompatible (versión %d) para ra_dav"
 
-#~ msgid "Your lock comment was left in a temporary file:"
-#~ msgstr "Su mensaje de bloqueo fue dejado en un archivo temporario:"
+#~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
+#~ msgstr ""
+#~ "Versión no soportada (%d) de la Interfaz Binaria de Aplicación (ABI) en "
+#~ "el módulo de acceso a repositorio para ra_svn."
+
+#~ msgid "   %ld => %ld\n"
+#~ msgstr "   %ld => %ld\n"
+
+#~ msgid "'svn info' only works on working copy paths, not URLs"
+#~ msgstr "'svn info' sólo funciona en rutas de copia de trabajo, no en URLs"
+
+#~ msgid "Working copy not locked"
+#~ msgstr "La copia de trabajo no tiene lock"
+
+#~ msgid ""
+#~ "Mismatched RA plugin version for '%s': found %d.%d.%d%s, expected %d.%d.%d"
+#~ "%s"
+#~ msgstr ""
+#~ "Conflicto de versiones en modulo de acceso a repositorio para '%s': se "
+#~ "encontró %d.%d.%d%s, se esperaba %d.%d.%d%s"
+
+#~ msgid "unknown command: '%s'\n"
+#~ msgstr "comando desconocido: '%s'\n"
+
+#~ msgid "repository argument required\n"
+#~ msgstr "el subcomando requiere un parámetro que indique el repositorio\n"
+
+#~ msgid "'get-locations' request not implemented"
+#~ msgstr "Requerimiento 'get-locations' no implementado"
+
+#~ msgid "'get-file-revs' request not implemented"
+#~ msgstr "El requerimiento 'get-file-revs' no está implementado"
+
+#~ msgid " | %d line"
+#~ msgstr " | %d línea"
+
+#~ msgid " | %d lines"
+#~ msgstr " | %d líneas"
+
+#~ msgid "Print client version info\n"
+#~ msgstr "mostrar información de la versión del cliente\n"
