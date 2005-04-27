@@ -892,6 +892,11 @@ svn_fs_lock (svn_lock_t **lock, svn_fs_t *fs, const char *path,
            _("Lock comment has illegal characters"));      
     }
 
+  if (expiration_date < 0)
+        return svn_error_create
+          (SVN_ERR_INCORRECT_PARAMS, NULL,
+           _("Negative expiration date passed to svn_fs_lock"));      
+
   return fs->vtable->lock (lock, fs, path, token, comment, expiration_date,
                            current_rev, steal_lock, pool);  
 }
