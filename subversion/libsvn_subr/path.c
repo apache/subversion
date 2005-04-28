@@ -712,7 +712,7 @@ skip_uri_scheme (const char *path)
 {
   apr_size_t j;
 
-  for(j = 0; path[j]; ++j)
+  for (j = 0; path[j]; ++j)
     if (path[j] == ':' || path[j] == '/')
        break;
 
