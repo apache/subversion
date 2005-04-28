@@ -50,7 +50,8 @@ public class Status
      */
     private long lastChangedRevision;
     /**
-     * the last date the item was changed before base
+     * the last date the item was changed before base (represented in
+     * microseconds since the epoch)
      */
     private long lastChangedDate;
     /**
@@ -126,7 +127,8 @@ public class Status
     private String lockComment;
     /**
      * @since 1.2
-     * date of the creation of the lock (null if not locked)
+     * date of the creation of the lock (represented in microseconds
+     * since the epoch)
      */
     private long lockCreationDate;
     /**
@@ -240,10 +242,7 @@ public class Status
      */
     public Date getLastChangedDate()
     {
-        if (lastChangedDate == 0)
-            return null;
-        else
-            return new Date(lastChangedDate / 1000);
+        return microsecondsToDate(lastChangedDate);
     }
 
     /**
@@ -535,10 +534,7 @@ public class Status
      */
     public Date getLockCreationDate()
     {
-        if (lockCreationDate == 0)
-            return null;
-        else
-            return new Date(lockCreationDate / 1000);
+        return microsecondsToDate(lockCreationDate);
     }
 
     /**
@@ -595,5 +591,17 @@ public class Status
                 return "unversioned";
             }
         }
+    }
+
+    /**
+     * Converts microseconds since the epoch to a Date object.
+     *
+     * @param micros Microseconds since the epoch.
+     * @return A Date object, or <code>null</code> if
+     * <code>micros</code> was zero.
+     */
+    private static Date microsecondsToDate(long micros)
+    {
+        return (micros == 0 ? null : new Date(micros / 1000));
     }
 }
