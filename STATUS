@@ -90,7 +90,7 @@ Candidate changes:
     Notes:
       Not a showstopper, but is a kind of silent data tainting.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, dlr
 
 
 Approved changes (further review is welcome, but not required):
