@@ -109,7 +109,7 @@ svn_lock_to_dav_lock(dav_lock **dlock,
   /* This is absurd.  apr_time.h has an apr_time_t->time_t func,
      but not the reverse?? */
   if (slock->expiration_date)
-    lock->timeout = (time_t)slock->expiration_date / APR_USEC_PER_SEC;
+    lock->timeout = (time_t) (slock->expiration_date / APR_USEC_PER_SEC);
   else
     lock->timeout = DAV_TIMEOUT_INFINITE;
 
@@ -212,7 +212,7 @@ dav_lock_to_svn_lock(svn_lock_t **slock,
   if (dlock->timeout == DAV_TIMEOUT_INFINITE)
     lock->expiration_date = 0; /* never expires */
   else
-    lock->expiration_date = (apr_time_t)dlock->timeout * APR_USEC_PER_SEC;
+    lock->expiration_date = ((apr_time_t)dlock->timeout) * APR_USEC_PER_SEC;
 
   *slock = lock;
   return 0;

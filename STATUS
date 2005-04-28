@@ -88,9 +88,3 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14482
-    mod_dav_svn locking bugfix:  don't let creation/expiration dates overflow.
-    Justification:  a negative date causes svn_time_from_cstring to error
-                    when reading back lock from filesystem.  Very simple fix.
-    Votes:
-      +1: sussman, dlr, cmpilato
