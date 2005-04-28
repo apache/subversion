@@ -1359,4 +1359,79 @@ public class BasicTests extends SVNTests
                              new Revision.Number(1), true);
         assertEquals("this should return 21 info objects", 21, infos.length);
     }
+
+    /**
+     * thest the basic SVNClient.merge functionality
+     * @throws Throwable
+     * @since 1.2
+     */
+    public void testBasicMerge() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        
+        // create branches directory in the repository
+        addExpectedCommitItem(null, thisTest.getUrl(), "branches", NodeKind.none,
+              CommitItemStateFlags.Add);
+        client.mkdir(new String[]{thisTest.getUrl() + "/branches"}, "log_msg");
+
+        // copy A to branches
+        addExpectedCommitItem(null, thisTest.getUrl(), "branches/A", NodeKind.none,
+                CommitItemStateFlags.Add);
+        client.copy(thisTest.getUrl() + "/A", thisTest.getUrl() + "/branches/A", "create A branch", Revision.HEAD);
+
+        // update the WC so that it has the branches folder
+        client.update(thisTest.getWCPath(), Revision.HEAD, true);
+
+        // modify file A/mu
+        File mu = new File(thisTest.getWorkingCopy(), "A/mu");
+        PrintWriter muPW = new PrintWriter(new FileOutputStream(mu, true));
+        muPW.print("appended mu text");
+        muPW.close();
+        thisTest.getWc().setItemWorkingCopyRevision("A/mu", 4);
+        thisTest.getWc().setItemContent("A/mu",
+                thisTest.getWc().getItemContent("A/mu") + "appended mu text");
+        addExpectedCommitItem(thisTest.getWCPath(),
+                thisTest.getUrl(), "A/mu",NodeKind.file,
+                CommitItemStateFlags.TextMods);
+
+        // modify file A/D/G/rho
+        File rho = new File(thisTest.getWorkingCopy(), "A/D/G/rho");
+        PrintWriter rhoPW = new PrintWriter(new FileOutputStream(rho, true));
+        rhoPW.print("new appended text for rho");
+        rhoPW.close();
+        thisTest.getWc().setItemWorkingCopyRevision("A/D/G/rho", 4);
+        thisTest.getWc().setItemContent("A/D/G/rho",
+                thisTest.getWc().getItemContent("A/D/G/rho")
+                + "new appended text for rho");
+        addExpectedCommitItem(thisTest.getWCPath(),
+                thisTest.getUrl(), "A/D/G/rho",NodeKind.file,
+                CommitItemStateFlags.TextMods);
+        // commit the changes
+        assertEquals("wrong revision number from commit",
+              client.commit(new String[]{thisTest.getWCPath()}, "log msg",
+                      true), 4);
+
+        // merge changes in A to branches/A
+        String branchPath = thisTest.getWCPath() + "/branches/A";
+        String modUrl = thisTest.getUrl() + "/A";
+        // test --dry-run
+        client.merge(modUrl, new Revision.Number(2), modUrl, Revision.HEAD, branchPath, false, true, false, true);
+
+        // now do the real merge
+        client.merge(modUrl, new Revision.Number(2), modUrl, Revision.HEAD, branchPath, false, true, false, false);
+        
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(),
+                thisTest.getUrl(), "branches/A/mu",NodeKind.file,
+                CommitItemStateFlags.TextMods);
+        addExpectedCommitItem(thisTest.getWCPath(),
+                thisTest.getUrl(), "branches/A/D/G/rho",NodeKind.file,
+                CommitItemStateFlags.TextMods);
+        assertEquals("wrong revision number from commit",
+              client.commit(new String[]{thisTest.getWCPath()}, "log msg",
+                      true), 5);
+ 
+    }
+
 }
