@@ -877,6 +877,22 @@ handle_creationdate_header(void *userdata,
 }
 
 
+/* A callback of type ne_header_handler, invoked when neon encounters
+   mod_dav_svn's custom 'lock owner' header in a LOCK response. */
+static void
+handle_lock_owner_header(void *userdata,
+                         const char *value)
+{
+  struct lock_request_baton *lrb = userdata;
+
+  if (! value)
+    return;
+
+  lrb->lock_owner = apr_pstrdup(lrb->pool, value);
+}
+
+
+
 
 /* A callback of type ne_create_request_fn;  called whenever neon
    creates a request. */
@@ -935,9 +951,12 @@ pre_send_hook(ne_request *req,
           ne_buffer_zappend(header, buf);
         }
 
-      /* Register a callback for custom 'creationdate' response header. */
+      /* Register callbacks to read any custom 'creationdate' and
+         'lock owner' response headers sent by mod_dav_svn. */
       ne_add_response_header_handler(req, SVN_DAV_CREATIONDATE_HEADER,
                                      handle_creationdate_header, lrb);
+      ne_add_response_header_handler(req, SVN_DAV_LOCK_OWNER_HEADER,
+                                     handle_lock_owner_header, lrb);
     }
 
   if (strcmp(lrb->method, "UNLOCK") == 0)
@@ -1048,8 +1067,8 @@ shim_svn_ra_dav__lock(svn_ra_session_t *session,
   slock->token = apr_pstrdup(pool, nlock->token);
   if (nlock->owner)
     slock->comment = apr_pstrdup(pool, nlock->owner);
-  if (ras->auth_username)
-    slock->owner = apr_pstrdup(pool, ras->auth_username);
+  if (ras->lrb->lock_owner)
+    slock->owner = apr_pstrdup(pool, ras->lrb->lock_owner);
   if (ras->lrb->creation_date)
     slock->creation_date = ras->lrb->creation_date;
 
@@ -1300,8 +1319,8 @@ lock_receiver(void *userdata,
       rb->lock->path = rb->fs_path;
       if (lock->owner)
         rb->lock->comment = apr_pstrdup(rb->pool, lock->owner);
-      if (rb->ras->auth_username)
-        rb->lock->owner = apr_pstrdup(rb->pool, rb->ras->auth_username);
+      if (rb->lrb->lock_owner)
+        rb->lock->owner = apr_pstrdup(rb->pool, rb->lrb->lock_owner);
       if (rb->lrb->creation_date)
         rb->lock->creation_date = rb->lrb->creation_date;
       if (lock->timeout == NE_TIMEOUT_INFINITE)
@@ -1383,11 +1402,6 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
   /* Free neon things. */
   if (ras->lrb->error_parser)
     ne_xml_destroy(ras->lrb->error_parser);
-
-  /* Check to see if the server sent a custom 'creationdate' header in
-     the PROPFIND response.  If so, use it. */
-  if (ras->lrb->creation_date)
-    rb->lock->creation_date = ras->lrb->creation_date;
   
   *lock = rb->lock;
   return SVN_NO_ERROR;
