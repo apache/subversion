@@ -85,6 +85,13 @@ Candidate changes:
     Votes:
       +1: sussman, dlr
 
+  * r14505
+    Make 'svn pget --revprop' honor the --strict flag.
+    Notes:
+      Not a showstopper, but is a kind of silent data tainting.
+    Votes:
+      +1: cmpilato
+
 
 Approved changes (further review is welcome, but not required):
 
