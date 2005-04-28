@@ -538,7 +538,7 @@ public class Status
         if (lockCreationDate == 0)
             return null;
         else
-            return new Date(lastChangedDate / 1000);
+            return new Date(lockCreationDate / 1000);
     }
 
     /**

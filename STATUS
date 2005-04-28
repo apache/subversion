@@ -58,15 +58,6 @@ Candidate changes:
     Votes:
       +1: david, fitz (concept), dlr (concept)
 
-  * r14454
-    JavaHL status not returning correct date for Lock Creation Date.
-    Justification:
-      A simple 1-line fix.
-    Notes:
-      Not a showstopper for 1.2.0.
-    Votes:
-      +1: pmayweg, dlr
-
   * r14177, r14474
     Fix pool usage with --enable-dso.
     Justification: fixes some command line client crashes over ra_local
