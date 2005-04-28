@@ -750,6 +750,38 @@ def out_of_date(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', file_path_b)
 
+
+
+#----------------------------------------------------------------------
+def examine_lock_via_url(sbox):
+  "examine the fields of a lock from a URL"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  fname = 'iota'
+  comment = 'This is a lock test.'
+  file_path = os.path.join(sbox.wc_dir, fname)
+  file_url = svntest.main.current_repo_url + '/' + fname
+
+  # lock a file as wc_author
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author2,
+                                     '--password', svntest.main.wc_passwd,
+                                     '--no-auth-cache',
+                                     '-m', comment, file_path)
+
+  output, err = svntest.actions.run_and_verify_svn(None, None, None, 'info',
+                                                   file_url)
+
+  match_line = 'Lock Owner: ' + svntest.main.wc_author2 + '\n'
+
+  if not match_line in output:
+    print "Error: expected output '%s' not found in output." % match_line
+    raise svntest.Failure
+
+
+
 ########################################################################
 # Run the tests
 
@@ -772,6 +804,7 @@ test_list = [ None,
               lock_non_existent_file,
               out_of_date,
               update_while_needing_lock,
+              examine_lock_via_url,
              ]
 
 if __name__ == '__main__':
