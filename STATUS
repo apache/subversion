@@ -67,13 +67,6 @@ Candidate changes:
     Votes:
       +1: pmayweg, dlr
 
-  * r14482
-    mod_dav_svn locking bugfix:  don't let creation/expiration dates overflow.
-    Justification:  a negative date causes svn_time_from_cstring to error
-                    when reading back lock from filesystem.  Very simple fix.
-    Votes:
-      +1: sussman, dlr
-
   * r14177, r14474
     Fix pool usage with --enable-dso.
     Justification: fixes some command line client crashes over ra_local
@@ -110,3 +103,10 @@ Approved changes (further review is welcome, but not required):
       Not a showstopper for 1.2.0.
     Votes:
       +1: jszakmeister, fitz, dlr
+
+  * r14482
+    mod_dav_svn locking bugfix:  don't let creation/expiration dates overflow.
+    Justification:  a negative date causes svn_time_from_cstring to error
+                    when reading back lock from filesystem.  Very simple fix.
+    Votes:
+      +1: sussman, dlr, cmpilato
