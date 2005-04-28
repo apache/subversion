@@ -1,4 +1,4 @@
-Better Encoding and Newline Dupport In The Diff Algorithms
+Better Encoding and Newline Support In The Diff Algorithms
 
 [NOTE: This is work-in-progress.]
 
@@ -28,23 +28,22 @@ Header Encoding
 
 Currently, most headers are written as UTF-8, which is normally not
 what's wanted.  If the encoding of the files is known (via
-svn:mime-type), the headers should probalby be written using that
-encoding.
+svn:mime-type, for example), the headers should probalby be written
+using that encoding.
+
+Note that this applies to property change information and property
+values in the svn: namespace as well.  For other properties, we can't
+do anything but treat them as opaque.
 
 A short term solution here is to write all headers in the
 locale/console encoding.  That makes sense since the user is probably
-using the same encoding as the files s/he is working on has.  One
-possibliity is to use the --encoding cmdline option to control the
-encoding used for headers.
+using the same encoding as the files s/he is working on has.
 
-Note that this applies to property change information and property
-values in the svn: namespace as well.
-
-This requires an encoding parameter added to
-svn_diff_output_uniffied and svn_client_diff_*.  The cmdline client
-will pass the console encoding here; callers that write to a file will
-pass NULL, meaning the locale encoding.  To allow this, we also need
-an svn_cmdline_output_encoding function to ge the name of the output
+This requires an encoding parameter added to svn_diff_output_uniffied
+and svn_client_diff_*.  The cmdline client will pass the console
+encoding here; callers that write to a file will pass NULL, meaning
+the locale encoding.  To allow this, we also need an
+svn_cmdline_output_encoding function to get the name of the output
 encoding, or NULL if that's the same as the locale dito.
 
 Newlines
@@ -54,21 +53,33 @@ According to the GNU diff documentation, on systems with newline
 separators other than just LF, the newlines are normalized to the
 system markers, except when --binary is used.
 
-I think it is reasonable to do the following:
-- When the modified file has svn:eol-style="native", accept all newline
-  markers we know of and normalize to APR_EOL_STR.
-- When the modified file haas svn:eol-style set to CR, LF or CRLF,
-  accept all newline markers and normalize to CR, LF or CRLF,
-  respectively.
-- When the modified file has svn:eol-style not set, output the markers
-  as they apeared in the old and modified files.  Still accept all kinds
-  of newline markers.  For headers and svn: properties, use APR_EOL_STR.
+Currently, our diff library understands nothing but LF as newline.
+Making it accept CRLF and CR as well is not hard.
+
+Since we know the newline marker used in the file via the
+svn:eol-style property, we can handle this quite well.  If
+svn:eol-style is not set, I suggest we output newlines as-is, and use
+APR_EOL_STR to output newlines in headers.  That's consistent with how
+GNU diff behaves with the --binary option.
+
+When svn:eol-style is set, we should use that style for the headers.
+The values might be different for the original and the new file; it
+seems logical to use the value from the modified file.  NOte that in
+this case, newlines will be inconsistent anyway.  Also, the
+libsvn_cient should make sure the files are translated into their
+newline style before comparin gthem (this is necessary since working
+files don't have their newlines normalized if svn:eol-style is changed
+in the working revision).  In the usual case, when svn:eol-style is
+not changed, this will give consistent newlines for the whole diff.
+If svn:eol-style is changed, the diff will contain every line in the
+file with eol marker changes.  This is what happens currently if you
+do a repos_to_repos diff with svn:eol-style changed.  If svn:eol-style
+is set to native, then APR_EOL_STR should be used, as usual.
 
 This requires that the svn_client_diff* functions read the
-svn:eol-style property of the modified file and passes that
-information to svn_diff_file_output_uniffied.
-svn_diff_file_output_uniffied needs an eolstr argument, giving the
-newline marker to use, with NULL meaning output newines as-is.
+svn:eol-style property of the modified file and pass that information
+to svn_diff_file_output_uniffied.  svn_diff_file_output_uniffied needs
+an eolstr argument, giving the newline marker to use for headers.
 
 Content Encoding
 ================
@@ -77,11 +88,10 @@ To support encodings that aren't ASCII-based (meaning that the first
 128 bytes always means the same as in ASCII), Subversion needs to know
 the encodings of the files being diffed.  We don't currently have a
 canonical way of detecting the encoding.  It has been suggested to use
-the charset parameter of svn:mime-type for this purpose.  Anyway, we
-need to cope with the fact that not all files have this information
-available.  In this case, we might assume the locale encoding and
-allow --encoding to override the default.  [Do we need separate
---encoding values for the different files being diffed?]
+the charset parameter of svn:mime-type for this purpose.  Whatever
+method we choose, we need to cope with the fact that not all files
+have this information available.  In this case, we might assume the
+locale/console encoding.
 
 When the encodings of the files are known, the diff tokenizer should
 use that to decide what newline separator it expects.  A simple
@@ -100,4 +110,24 @@ encodings of the original and modified files.
 Merge
 =====
 
-[TBD]
+Merging (i.e. diff3) can be handled in similar ways to diff.  The
+eol-style of the .mine file should be used for the conflict markers
+and the files should be translated to their newline styles if needed.
+
+The encoding part is a bit trickier.  If the encoding of all the three
+files is the same, then conflict markers should use that encoding as
+well.
+
+NOTE: For UTF16 and UTF32, the BOM might be problematic.  Ideally, we
+need to be careful to not add extra BOMs inside the file.  ONe idea is
+to strip the BOMs before merging and ensure that the resulting file
+has a BOM after the merge.  I'm not sure how much encoding specific
+code we want to add to our diff library.  Maybe UTF16 would be
+considered common enough to not handle it like "just another
+encoding".
+
+If the encodings are different for the three files, merging could
+easily lead to an inconsistent mess, unless the encodings share some
+subset (like when changing from US-ASCII to UTF-8).  I think we should
+leave those rare cases to the user, who can recode and merge by hand
+or using some other tool.
