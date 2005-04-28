@@ -83,7 +83,7 @@ Candidate changes:
                     were created by the user doing the query!
     Notes:  r14495 is the fix, r14493 is a new python test for the bug.
     Votes:
-      +1: sussman
+      +1: sussman, dlr
 
 
 Approved changes (further review is welcome, but not required):
