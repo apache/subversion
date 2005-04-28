@@ -58,7 +58,7 @@ Candidate changes:
     Votes:
       +1: david, fitz (concept), dlr (concept)
 
-  * r14177, r14474
+  * r14177, r14474, r14509
     Fix pool usage with --enable-dso.
     Justification: fixes some command line client crashes over ra_local
     Notes: r14177 is the svn_ra_initialize patch
