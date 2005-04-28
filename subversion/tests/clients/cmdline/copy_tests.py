@@ -1544,6 +1544,23 @@ def old_dir_url_to_url(sbox):
 
 
 
+#----------------------------------------------------------------------
+# Test fix for issue 2224 - copying wc dir to itself causes endless
+# recursion
+def wc_copy_dir_to_itself(sbox):
+  "copy wc dir to itself"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  dnames = ['A','A/B']
+
+  for dirname in dnames:
+    dir_path = os.path.join(sbox.wc_dir, dirname)
+
+    # try to copy dir to itself
+    svntest.actions.run_and_verify_svn(None, svntest.SVNAnyOutput, None,
+                                       'copy', dir_path, dir_path)
+
 ########################################################################
 # Run the tests
 
@@ -1577,6 +1594,7 @@ test_list = [ None,
               url_to_non_existent_url_path,
               non_existent_url_to_url,
               old_dir_url_to_url,
+              wc_copy_dir_to_itself,
              ]
 
 if __name__ == '__main__':
