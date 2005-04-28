@@ -76,13 +76,6 @@ Candidate changes:
     Votes:
       +1: pmayweg, dlr
 
-  * r14464
-    Fix the help text for commands that said "PATH" but can also operate on
-    a URL: say "TARGET" instead.
-    Justification: Trivial doc fix.
-    Votes:
-      +1: julianfoad, philip, dlr
-
   * r14482
     mod_dav_svn locking bugfix:  don't let creation/expiration dates overflow.
     Justification:  a negative date causes svn_time_from_cstring to error
