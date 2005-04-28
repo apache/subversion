@@ -88,13 +88,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14405
-    Fix svn help update to show info on broken and stolen locks.
-    Justification:
-      Simple cmdline help fix.
-    Votes:
-      +1: lundblad, fitz, philip, dlr
-
   * r14482
     mod_dav_svn locking bugfix:  don't let creation/expiration dates overflow.
     Justification:  a negative date causes svn_time_from_cstring to error
