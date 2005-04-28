@@ -44,15 +44,6 @@ Candidate changes:
     Votes:
       +1: brane, fitz (concept [no win32 setup])
 
-  * r14401
-    Fix Issue #2224: 'svn cp mydir mydir' in a wc recurses infinitely.
-    Justification:
-      A simple 2-line fix.
-    Notes:
-      Not a showstopper for 1.2.0.
-    Votes:
-      +1: jszakmeister, fitz
-
   * r14414 - r14417, r14429
     Rename wbel-3 to rhel-3, add rhel-4, add detecion
     of more platforms (now detects CentOS, RHEL, and WBEL), fix name of
@@ -109,4 +100,13 @@ Approved changes (further review is welcome, but not required):
     Justification:
       Simple cmdline help fix.
     Votes:
-      +1: lundblad, fitz, philip
+      +1: lundblad, fitz, philip, dlr
+
+  * r14401
+    Fix Issue #2224: 'svn cp mydir mydir' in a wc recurses infinitely.
+    Justification:
+      A simple 2-line fix.
+    Notes:
+      Not a showstopper for 1.2.0.
+    Votes:
+      +1: jszakmeister, fitz, dlr
