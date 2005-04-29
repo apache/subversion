@@ -124,7 +124,10 @@ to strip the BOMs before merging and ensure that the resulting file
 has a BOM after the merge.  I'm not sure how much encoding specific
 code we want to add to our diff library.  Maybe UTF16 would be
 considered common enough to not handle it like "just another
-encoding".
+encoding".  For UTF8, we may need to handle the BOM as well, since that's
+allowed.  We need to be careful not to add BOMs that aren't in the files,
+since that will break applications (and we don't want to silently change
+the contents of users' files!)
 
 If the encodings are different for the three files, merging could
 easily lead to an inconsistent mess, unless the encodings share some
