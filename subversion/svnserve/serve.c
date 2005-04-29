@@ -689,7 +689,7 @@ static svn_error_t *unlock_paths(apr_array_header_t *lock_tokens,
   for (i = 0; i < lock_tokens->nelts; ++i)
     {
       svn_ra_svn_item_t *item, *path_item, *token_item;
-      const char *path, *token;
+      const char *path, *token, *full_path;
       svn_pool_clear(iterpool);
 
       item = &APR_ARRAY_IDX(lock_tokens, i, svn_ra_svn_item_t);
@@ -699,13 +699,17 @@ static svn_error_t *unlock_paths(apr_array_header_t *lock_tokens,
       path = path_item->u.string->data;
       token = token_item->u.string->data;
 
-      /* The lock may have been defunct after the commit, so ignore such
+      full_path = svn_path_join(sb->fs_path,
+                                svn_path_canonicalize(path, iterpool),
+                                iterpool);
+
+      /* The lock may have become defunct after the commit, so ignore such
          errors.
 
          ### If we ever write a logging facility for svnserve, this
              would be a good place to log an error before clearing
              it. */
-      svn_error_clear(svn_repos_fs_unlock(sb->repos, path, token,
+      svn_error_clear(svn_repos_fs_unlock(sb->repos, full_path, token,
                                           FALSE, pool));
     }
                                        
