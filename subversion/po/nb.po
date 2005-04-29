@@ -822,7 +822,6 @@ msgstr ""
 "  behov i depotet.\n"
 
 #: clients/cmdline/main.c:354
-#, fuzzy
 msgid ""
 "Display information about a local or remote item.\n"
 "usage: info [TARGET...]\n"
@@ -831,9 +830,10 @@ msgid ""
 "  TARGET may be either a working-copy path or URL.\n"
 msgstr ""
 "Viser informasjon om et lokalt eller fjerntliggende element.\n"
-"bruk: info [STI...]\n"
+"bruk: info [MÅL...]\n"
 "\n"
-"  Viser informasjon om hver STI («.» er standard).\n"
+"  Viser informasjon om hvert MÅL («.» er standard).\n"
+"  MÅL kan enten være en sti i arbeidskopien eller en URL.\n"
 
 #: clients/cmdline/main.c:362
 msgid ""
@@ -874,7 +874,6 @@ msgstr ""
 "    Dato og tid for siste innsending\n"
 
 #: clients/cmdline/main.c:386
-#, fuzzy
 msgid ""
 "Lock working copy paths or URLs in the repository, so that\n"
 "no other user can commit changes to them.\n"
@@ -884,7 +883,7 @@ msgid ""
 msgstr ""
 "Lås arbeidskopistier eller URLer i depotet, så ingen andre brukere\n"
 "kan legge inn forandringer til dem.\n"
-"bruk: lock STI...\n"
+"bruk: lock MÅL...\n"
 "\n"
 "  Bruk --force for å stjele låsen fra en annen bruker eller arbeidskopi.\n"
 
@@ -1420,7 +1419,6 @@ msgstr ""
 "     fortsatt gjenspeiler samme katalog i det samme depotet.\n"
 
 #: clients/cmdline/main.c:706
-#, fuzzy
 msgid ""
 "Unlock working copy paths or URLs.\n"
 "usage: unlock TARGET...\n"
@@ -1428,12 +1426,11 @@ msgid ""
 "  Use --force to break the lock.\n"
 msgstr ""
 "Lås opp stier i arbeidskopien eller URLer.\n"
-"bruk: unlock STI...\n"
+"bruk: unlock MÅL...\n"
 "\n"
 "  Bruk --force for å bryte låsen.\n"
 
 #: clients/cmdline/main.c:714
-#, fuzzy
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -1472,6 +1469,8 @@ msgstr ""
 "\n"
 "  Et tegn i den første kolonnen viser hva som er gjort med selve filen,\n"
 "  mens den andre viser oppdateringer i filens egenskaper.\n"
+"  En «B» i den tredje kolonnen indikerer at låsen for filen er blitt\n"
+"  brutt eller stjålet.\n"
 
 #: clients/cmdline/main.c:792 svnadmin/main.c:77 svnlook/main.c:270
 msgid "Caught signal"
@@ -7834,9 +7833,3 @@ msgstr "eksportert%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "«%s» er verken versjonert eller eksportert\n"
-
-#~ msgid "Print client version info\n"
-#~ msgstr "Vis versjonsinformasjon for klienten\n"
-
-#~ msgid "Your lock comment was left in a temporary file:"
-#~ msgstr "Låsekommentaren er lagt i en midlertidig fil:"
