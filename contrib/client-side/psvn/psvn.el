@@ -29,7 +29,7 @@
 ;; psvn.el provides a similar interface for subversion as pcl-cvs for cvs.
 ;; At the moment the following commands are implemented:
 ;; M-x svn-status: run 'svn -status -v'
-;; and show the result in the *svn-status* buffer.
+;; and show the result in the svn-status-buffer-name buffer (normally: *svn-status*).
 ;; If svn-status-verbose is set to nil, only "svn status" without "-v"
 ;; is run. Currently you have to toggle this variable manually.
 ;; This buffer uses svn-status mode in which the following keys are defined:
@@ -167,10 +167,10 @@
 (defvar svn-status-verbose t "*Add '-v' to svn status call.")
 (defvar svn-log-edit-file-name "++svn-log++" "*Name of a saved log file.")
 (defvar svn-log-edit-insert-files-to-commit t "*Insert the filelist to commit in the *svn-log* buffer")
-(defvar svn-status-hide-unknown nil "*Hide unknown files in *svn-status* buffer.")
-(defvar svn-status-hide-unmodified nil "*Hide unmodified files in *svn-status* buffer.")
+(defvar svn-status-hide-unknown nil "*Hide unknown files in `svn-status-buffer-name' buffer.")
+(defvar svn-status-hide-unmodified nil "*Hide unmodified files in `svn-status-buffer-name' buffer.")
 (defvar svn-status-directory-history nil "*List of visited svn working directories.")
-(defvar svn-status-sort-status-buffer t "Sort the *svn-status* buffer.
+(defvar svn-status-sort-status-buffer t "Sort the `svn-status-buffer-name' buffer.
 Setting this variable to nil speeds up M-x svn-status.
 However, it is possible, that the sorting is wrong in this case.")
 
@@ -215,10 +215,12 @@ In either case the mark gets the face
 `svn-status-update-available-face', and will only be visible if
 `\\[svn-status-update]' is run with a prefix argument")
 
+(defvar svn-status-buffer-name "*svn-status*" "Name for the svn status buffer")
+
 (defvar svn-status-use-header-line t
   "*Whether a header line should be used.
 When t: Use the emacs header line
-When 'inline: Insert the header line in the *svn-status* buffer
+When 'inline: Insert the header line in the `svn-status-buffer-name' buffer
 Otherwise: Don't display a header line")
 
 ;;; default arguments to pass to svn commands
@@ -352,7 +354,7 @@ See `svn-status--line-info->directory-p' for what counts as a directory."
 (defface svn-status-locked-face
   '((t
      (:weight bold :foreground "Red")))
-  "Face for the phrase \"[ LOCKED ]\" *svn-status* buffers."
+  "Face for the phrase \"[ LOCKED ]\" `svn-status-buffer-name' buffers."
   :group 'psvn-faces)
 
 ;based on vhdl-font-lock-directive-face
@@ -447,12 +449,12 @@ If ARG then pass the -u argument to `svn status'."
         (svn-status-load-state t)))
     (setq svn-status-directory-history (delete dir svn-status-directory-history))
     (add-to-list 'svn-status-directory-history dir)
-    (if (string= (buffer-name) "*svn-status*")
+    (if (string= (buffer-name) svn-status-buffer-name)
         (setq svn-status-display-new-status-buffer nil)
       (setq svn-status-display-new-status-buffer t)
       ;;(message "psvn: Saving initial window configuration")
       (setq svn-status-initial-window-configuration (current-window-configuration)))
-    (let* ((status-buf (get-buffer-create "*svn-status*"))
+    (let* ((status-buf (get-buffer-create svn-status-buffer-name))
            (proc-buf (get-buffer-create "*svn-process*"))
            (status-option (if svn-status-verbose
                               (if arg "-uv" "-v")
@@ -567,7 +569,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
                     (setq svn-status-update-previous-process-output nil))
                   (when svn-status-display-new-status-buffer
                     (set-window-configuration svn-status-initial-window-configuration)
-                    (switch-to-buffer "*svn-status*")))
+                    (switch-to-buffer svn-status-buffer-name)))
                  ((eq svn-process-cmd 'log)
                   (svn-status-show-process-output 'log t)
                   (pop-to-buffer svn-status-last-output-buffer-name)
@@ -791,7 +793,7 @@ The results are used to build the `svn-status-info' variable."
 ;;(string-lessp "." "%") => nil
 ;(svn-status-sort-predicate '(t t t ".") '(t t t "%")) => t
 (defun svn-status-sort-predicate (a b)
-  "Return t if A should appear before B in the *svn-status* buffer.
+  "Return t if A should appear before B in the `svn-status-buffer-name' buffer.
 A and B must be line-info's."
   (string-lessp (concat (svn-status-line-info->full-path a) "/")
                 (concat (svn-status-line-info->full-path b) "/")))
@@ -1087,7 +1089,7 @@ The following keys are defined:
 (defun svn-status-bury-buffer (arg)
   "Bury the buffers used by psvn.el
 Currently this is:
-  *svn-status*
+  `svn-status-buffer-name'
   *svn-log-edit*
   *svn-property-edit*
   *svn-log*
@@ -1104,7 +1106,7 @@ in use before `svn-status' was called."
              (when (get-buffer (car bl))
                (bury-buffer (car bl)))
              (setq bl (cdr bl)))
-           (when (string= (buffer-name) "*svn-status*")
+           (when (string= (buffer-name) svn-status-buffer-name)
              (bury-buffer))))))
 
 (defun svn-status-find-files ()
@@ -1310,7 +1312,7 @@ When called with the prefix argument 0, use the full path name."
 
 (defun svn-status-update-with-command-list (cmd-list)
   (save-excursion
-    (set-buffer "*svn-status*")
+    (set-buffer svn-status-buffer-name)
     (let ((st-info)
           (found)
           (action))
@@ -1479,11 +1481,11 @@ Symbolic links to directories count as directories (see `file-directory-p')."
             "\n")))
 
 (defun svn-status-update-buffer ()
-  "Update the *svn-status* buffer, using `svn-status-info'."
+  "Update the `svn-status-buffer-name' buffer, using `svn-status-info'."
   (interactive)
   ;(message (format "buffer-name: %s" (buffer-name)))
-  (unless (string= (buffer-name) "*svn-status*")
-    (set-buffer "*svn-status*"))
+  (unless (string= (buffer-name) svn-status-buffer-name)
+    (set-buffer svn-status-buffer-name))
   (svn-status-mode)
   (let ((st-info svn-status-info)
         (buffer-read-only nil)
@@ -1560,7 +1562,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
 
 (defun svn-status-parse-info (arg)
   "Parse the svn info output for the base directory.
-Show the repository url after this call in the *svn-status* buffer.
+Show the repository url after this call in the `svn-status-buffer-name' buffer.
 When called with the prefix argument 0, reset the information to nil.
 This hides the repository information again.
 
@@ -1802,7 +1804,7 @@ svn-status-line-info->* functions can be used in the check."
 
 (defun svn-status-mark-unknown (arg)
   "Mark all unknown files.
-These are the files marked with '?' in the *svn-status* buffer.
+These are the files marked with '?' in the `svn-status-buffer-name' buffer.
 If the function is called with a prefix arg, unmark all these files."
   (interactive "P")
   (svn-status-apply-usermark-checked
@@ -1810,7 +1812,7 @@ If the function is called with a prefix arg, unmark all these files."
 
 (defun svn-status-mark-added (arg)
   "Mark all added files.
-These are the files marked with 'A' in the *svn-status* buffer.
+These are the files marked with 'A' in the `svn-status-buffer-name' buffer.
 If the function is called with a prefix ARG, unmark all these files."
   (interactive "P")
   (svn-status-apply-usermark-checked
@@ -1818,7 +1820,7 @@ If the function is called with a prefix ARG, unmark all these files."
 
 (defun svn-status-mark-modified (arg)
   "Mark all modified files.
-These are the files marked with 'M' in the *svn-status* buffer.
+These are the files marked with 'M' in the `svn-status-buffer-name' buffer.
 If the function is called with a prefix ARG, unmark all these files."
   (interactive "P")
   (svn-status-apply-usermark-checked
@@ -1829,7 +1831,7 @@ If the function is called with a prefix ARG, unmark all these files."
 
 (defun svn-status-mark-deleted (arg)
   "Mark all files scheduled for deletion.
-These are the files marked with 'D' in the *svn-status* buffer.
+These are the files marked with 'D' in the `svn-status-buffer-name' buffer.
 If the function is called with a prefix ARG, unmark all these files."
   (interactive "P")
   (svn-status-apply-usermark-checked
@@ -1942,7 +1944,7 @@ or (if no files were marked) the file under point."
     (insert postfix))))
 
 (defun svn-status-show-process-buffer-internal (&optional scroll-to-top)
-  (when (eq (current-buffer) "*svn-status*")
+  (when (eq (current-buffer) "`svn-status-buffer-name'")
     (delete-other-windows))
   (pop-to-buffer "*svn-process*")
   (when svn-status-wash-control-M-in-process-buffers
@@ -1966,7 +1968,7 @@ Consider svn-status-window-alist to choose the buffer name."
     (when svn-status-last-output-buffer-name
       (if window-mode
           (progn
-            (when (eq (current-buffer) "*svn-status*")
+            (when (eq (current-buffer) svn-status-buffer-name)
               (delete-other-windows))
             (pop-to-buffer "*svn-process*")
             (switch-to-buffer (get-buffer-create svn-status-last-output-buffer-name))
@@ -2277,12 +2279,12 @@ See `svn-status-marked-files' for what counts as selected."
     version))
 
 ;; --------------------------------------------------------------------------------
-;; Update the *svn-status* buffer, when a file is saved
+;; Update the `svn-status-buffer-name' buffer, when a file is saved
 ;; --------------------------------------------------------------------------------
 
 (defvar svn-status-file-modified-after-save-flag ?m
   "Flag shown whenever a file is modified and saved in Emacs.
-The flag is shown in the *svn-status* buffer.
+The flag is shown in the `svn-status-buffer-name' buffer.
 Recommended values are ?m or ?M.")
 (defun svn-status-after-save-hook ()
   "Set a modified indication, when a file is saved from a svn working copy."
@@ -2292,7 +2294,7 @@ Recommended values are ?m or ?M.")
          (svn-dir-len (length (or svn-dir "")))
          (file-dir-len (length file-dir))
          (file-name))
-    (when (and (get-buffer "*svn-status*")
+    (when (and (get-buffer svn-status-buffer-name)
                svn-dir
                (>= file-dir-len svn-dir-len)
                (string= (substring file-dir 0 svn-dir-len) svn-dir))
@@ -2308,7 +2310,7 @@ Recommended values are ?m or ?M.")
             (svn-status-line-info->set-filemark (car st-info)
                                                 svn-status-file-modified-after-save-flag)
             (save-window-excursion
-              (set-buffer "*svn-status*")
+              (set-buffer svn-status-buffer-name)
               (let ((buffer-read-only nil)
                     (pos (svn-status-get-file-name-buffer-position i-fname)))
                 (if pos
@@ -2317,7 +2319,7 @@ Recommended values are ?m or ?M.")
                       (delete-region (point-at-bol) (point-at-eol))
                       (svn-insert-line-in-status-buffer (car st-info))
                       (delete-char 1))
-                  (message "psvn: file %s not found, updating *svn-status* buffer content..."
+                  (message "psvn: file %s not found, updating `svn-status-buffer-name' buffer content..."
                            i-fname)
                   (svn-status-update-buffer)))))
           (setq st-info (cdr st-info))))))
@@ -2485,7 +2487,7 @@ When called with a prefix argument, it is possible to enter a new property."
                                   nil svn-status-property-edit-must-match-flag))
            (unless (string= prop-name "")
              (save-excursion
-               (set-buffer "*svn-status*")
+               (set-buffer svn-status-buffer-name)
                (svn-status-property-edit (list (svn-status-get-line-information))
                                          prop-name))))
           ((eq last-command 'svn-status-property-set)
@@ -2495,7 +2497,7 @@ When called with a prefix argument, it is possible to enter a new property."
            (setq prop-value (read-from-minibuffer "Property value: "))
            (unless (string= prop-name "")
              (save-excursion
-               (set-buffer "*svn-status*")
+               (set-buffer svn-status-buffer-name)
                (message "Setting property %s := %s for %S" prop-name prop-value
                         (svn-status-marked-file-names))
                (let ((file-names (svn-status-marked-file-names)))
@@ -2511,7 +2513,7 @@ When called with a prefix argument, it is possible to enter a new property."
                  (completing-read "Delete Property - Name: " (mapcar 'list pl) nil t))
            (unless (string= prop-name "")
              (save-excursion
-               (set-buffer "*svn-status*")
+               (set-buffer svn-status-buffer-name)
                (let ((file-names (svn-status-marked-file-names)))
                  (when file-names
                    (message "Going to delete prop %s for %s" prop-name file-names)
@@ -2735,17 +2737,17 @@ Commands:
 
 (defun svn-prop-edit-svn-diff (arg)
   (interactive "P")
-  (set-buffer "*svn-status*")
+  (set-buffer svn-status-buffer-name)
   (svn-status-show-svn-diff-for-marked-files arg))
 
 (defun svn-prop-edit-svn-log (arg)
   (interactive "P")
-  (set-buffer "*svn-status*")
+  (set-buffer svn-status-buffer-name)
   (svn-status-show-svn-log arg))
 
 (defun svn-prop-edit-svn-status ()
   (interactive)
-  (pop-to-buffer "*svn-status*")
+  (pop-to-buffer svn-status-buffer-name)
   (other-window 1))
 
 ;; --------------------------------------------------------------------------------
@@ -2831,17 +2833,17 @@ Commands:
   "Show the diff we are about to commit.
 If ARG then show diff between some other version of the selected files."
   (interactive "P")
-  (set-buffer "*svn-status*")
+  (set-buffer svn-status-buffer-name)
   (svn-status-show-svn-diff-for-marked-files arg))
 
 (defun svn-log-edit-svn-log (arg)
   (interactive "P")
-  (set-buffer "*svn-status*")
+  (set-buffer svn-status-buffer-name)
   (svn-status-show-svn-log arg))
 
 (defun svn-log-edit-svn-status ()
   (interactive)
-  (pop-to-buffer "*svn-status*")
+  (pop-to-buffer svn-status-buffer-name)
   (other-window 1))
 
 (defun svn-log-edit-show-files-to-commit ()
@@ -3017,7 +3019,7 @@ This function will be removed again, when a faster parsing and
 display routine for svn-status is available."
   (interactive)
   (setq svn-status-sort-status-buffer (not svn-status-sort-status-buffer))
-  (message (concat "The *svn-status* buffer will be"
+  (message (concat "The `svn-status-buffer-name' buffer will be"
                    (if svn-status-sort-status-buffer "" " not")
                    " sorted.")))
 
