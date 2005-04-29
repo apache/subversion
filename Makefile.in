@@ -329,6 +329,10 @@ install-static: @INSTALL_STATIC_RULES@
 javahl: javahl-java javahl-javah javahl-lib @JAVAHL_TESTS_TARGET@
 install-javahl: install-javahl-java install-javahl-javah install-javahl-lib
 check-javahl: javahl
+	@if [ -z "@JAVAHL_TESTS_TARGET@" ]; then \
+        echo "--with-junit flag must be passed to configure"; \
+        exit 1; \
+    fi
 	@FIX_JAVAHL_LIB@
 	$(JAVA) -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_tests_PATH):$(javahl_tests_CLASSPATH) org.tigris.subversion.javahl.tests.BasicTests
 
