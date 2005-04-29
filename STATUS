@@ -73,6 +73,12 @@ Candidate changes:
     Votes:
       +1: sussman, dlr
 
+  * r14521
+    Make commit unlock files in subdirectories in svnserve.
+    Justification:
+      Causes commit to not unlock files, but remove locks from WC.
+    Votes:
+      +1: lundblad
 
 Approved changes (further review is welcome, but not required):
 
