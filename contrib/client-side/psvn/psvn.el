@@ -167,6 +167,7 @@
 (defvar svn-status-verbose t "*Add '-v' to svn status call.")
 (defvar svn-log-edit-file-name "++svn-log++" "*Name of a saved log file.")
 (defvar svn-log-edit-insert-files-to-commit t "*Insert the filelist to commit in the *svn-log* buffer")
+(defvar svn-log-edit-use-log-edit-mode nil "*Use log-edit-mode as base for svn-log-edit-mode")
 (defvar svn-status-hide-unknown nil "*Hide unknown files in `svn-status-buffer-name' buffer.")
 (defvar svn-status-hide-unmodified nil "*Hide unmodified files in `svn-status-buffer-name' buffer.")
 (defvar svn-status-directory-history nil "*List of visited svn working directories.")
@@ -2756,6 +2757,25 @@ Commands:
 
 (defvar svn-log-edit-mode-map () "Keymap used in `svn-log-edit-mode' buffers.")
 
+(if svn-log-edit-use-log-edit-mode
+    (define-derived-mode svn-log-edit-mode log-edit-mode "svn-log-edit"
+      "Wrapper around `log-edit-mode' for psvn.el"
+      (easy-menu-add svn-log-edit-mode-menu)
+      (run-hooks 'svn-log-edit-mode-hook)
+      (setq svn-log-edit-update-log-entry nil))
+  (defun svn-log-edit-mode ()
+    "Major Mode to edit svn log messages.
+Commands:
+\\{svn-log-edit-mode-map}"
+    (interactive)
+    (kill-all-local-variables)
+    (use-local-map svn-log-edit-mode-map)
+    (easy-menu-add svn-log-edit-mode-menu)
+    (setq major-mode 'svn-log-edit-mode)
+    (setq mode-name "svn-log-edit")
+    (setq svn-log-edit-update-log-entry nil)
+    (run-hooks 'svn-log-edit-mode-hook)))
+
 (when (not svn-log-edit-mode-map)
   (setq svn-log-edit-mode-map (make-sparse-keymap))
   (define-key svn-log-edit-mode-map (kbd "C-c C-c") 'svn-log-edit-done)
@@ -2778,19 +2798,6 @@ Commands:
                     ["Show files to commit" svn-log-edit-show-files-to-commit t]
                     ["Erase buffer" svn-log-edit-erase-edit-buffer]
                     ["Abort" svn-log-edit-abort t]))
-
-(defun svn-log-edit-mode ()
-  "Major Mode to edit svn log messages.
-Commands:
-\\{svn-log-edit-mode-map}"
-  (interactive)
-  (kill-all-local-variables)
-  (use-local-map svn-log-edit-mode-map)
-  (easy-menu-add svn-log-edit-mode-menu)
-  (setq major-mode 'svn-log-edit-mode)
-  (setq mode-name "svn-log-edit")
-  (setq svn-log-edit-update-log-entry nil)
-  (run-hooks 'svn-log-edit-mode-hook))
 
 (defun svn-log-edit-abort ()
   (interactive)
