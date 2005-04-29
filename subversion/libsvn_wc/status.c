@@ -1038,11 +1038,17 @@ make_dir_baton (void **dir_baton,
     parent_status = apr_hash_get (pb->statii, d->path, APR_HASH_KEY_STRING);
   else
     parent_status = eb->anchor_status;
+
+  /* Order is important here.  We can't depend on parent_status->entry
+     being non-NULL until after we've checked all the conditions that
+     might indicate that the parent is unversioned ("unversioned" for
+     our purposes includes being an external). */
   if (parent_status
       && (parent_status->text_status != svn_wc_status_unversioned)
       && (parent_status->text_status != svn_wc_status_deleted)
       && (parent_status->text_status != svn_wc_status_missing)
       && (parent_status->text_status != svn_wc_status_obstructed)
+      && (parent_status->text_status != svn_wc_status_external)
       && (parent_status->entry->kind == svn_node_dir)
       && (eb->descend || (! pb)))
     {
