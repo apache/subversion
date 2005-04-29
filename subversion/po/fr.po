@@ -28,7 +28,7 @@ msgstr ""
 #
 # Pour certains termes techniques, donner aussi l'anglais est utile.
 # Par exemple que le terme est dans le nom même de la commande et est
-# donc forcément apparent à l'utilisateur : "confirmation (commit)".
+# donc forcément apparent à l'utilisateur : "propagation (commit)".
 # Il fera donc plus facilement le lien entre la notion et la commande.
 #
 # L'accentuation des majuscules fait partie de l'orthographe de la langue
@@ -50,7 +50,7 @@ msgstr ""
 # a repository, a repos: un dépôt
 # a schedule: mise en attente (prévision ? en cours ?)
 # a working copy: une copie de travail
-# a commit: une confirmation (commit) [commettre, propagation]
+# a commit: une propagation (commit)
 # a log: journal
 # a log message: une entrée du journal
 # a conflict state: un conflit
@@ -70,6 +70,7 @@ msgstr ""
 # a repository back-end (FS - file system) : "stockage de dépôt" ?
 # a repository access (RA) module : module d'accès au dépôt
 #
+# fulltext: texte complet
 # version control: gestion(naire) de version ?
 # text-base: copie de référence, texte/copie de base/pristine ?
 #
@@ -77,9 +78,10 @@ msgstr ""
 # VERBES
 #
 # to revert: réinitialiser, revenir à l'ancienne version
-# to commit: confirmer (commit), commettre--, propager ?)
+# to commit: propager (commit)
 # to skip: omettre
 # to update: actualiser, mettre à jour
+# to delete: supprimer
 # to dump: décharger (préféré à sauvegarder, qui implique d'écrire qqpart)
 # to store: sauvegarder
 # to switch: aiguiller, ré-aiguiller, permuter? changer?
@@ -108,6 +110,7 @@ msgstr ""
 # PROPVAL: VALPROP
 # REPOS: DÉPÔT
 # REPOS_PATH: CHEMIN_DÉPÔT
+# SUBCOMMAND: SOUS_COMMANDE
 #
 #: clients/cmdline/blame-cmd.c:168
 #, c-format
@@ -250,7 +253,7 @@ msgstr "En attente : ajout\n"
 
 #: clients/cmdline/info-cmd.c:112
 msgid "Schedule: delete\n"
-msgstr "En attente : effacement\n"
+msgstr "En attente : suppression\n"
 
 #: clients/cmdline/info-cmd.c:116
 msgid "Schedule: replace\n"
@@ -355,7 +358,7 @@ msgid ""
 "%s:  (Not a versioned resource)\n"
 "\n"
 msgstr ""
-"%s:  (ressource non versionnée)\n"
+"%s :  (ressource non versionnée)\n"
 "\n"
 
 #: clients/cmdline/info-cmd.c:288
@@ -364,7 +367,7 @@ msgid ""
 "%s:  (Not a valid URL)\n"
 "\n"
 msgstr ""
-"%s:  (URL non valide)\n"
+"%s :  (URL non valide)\n"
 "\n"
 
 #: clients/cmdline/lock-cmd.c:52
@@ -420,7 +423,7 @@ msgstr "affiche l'aide sur une sous-commande"
 
 #: clients/cmdline/main.c:68
 msgid "specify commit message ARG"
-msgstr "donne le message de confirmation ARG"
+msgstr "donne le message de propagation ARG"
 
 #: clients/cmdline/main.c:69
 msgid "print as little as possible"
@@ -454,7 +457,7 @@ msgstr ""
 "                       \"{\" DATE \"}\" révision disponible à cette date\n"
 "                       \"HEAD\"       dernière révision du dépôt\n"
 "                       \"BASE\"       rév. de base de la copie de travail\n"
-"                       \"COMMITTED\"  dernière confirmation à ou avant BASE\n"
+"                       \"COMMITTED\"  dernière propagation à ou avant BASE\n"
 "                       \"PREV\"       révision juste avant COMMITTED"
 
 #: clients/cmdline/main.c:87
@@ -505,7 +508,6 @@ msgstr "sortie XML"
 msgid "use strict semantics"
 msgstr "sémantique stricte"
 
-# ??? est-ce correct?
 #: clients/cmdline/main.c:105
 msgid "do not cross copies while traversing history"
 msgstr "arrête aux copies lors du parcours de l'historique"
@@ -528,7 +530,7 @@ msgstr "essaie l'opération sans l'exécuter réellement"
 
 #: clients/cmdline/main.c:115 svnlook/main.c:112
 msgid "do not print differences for deleted files"
-msgstr "n'affiche pas les différences pour les fichiers effacés"
+msgstr "n'affiche pas les différences pour les fichiers supprimés"
 
 #: clients/cmdline/main.c:117
 msgid "notice ancestry when calculating differences"
@@ -608,7 +610,7 @@ msgid ""
 "usage: add PATH...\n"
 msgstr ""
 "Place les fichiers et répertoires sous gestionnaire de version, en\n"
-"prévoyant leur ajout au dépôt lors de la prochaine confirmation (commit).\n"
+"prévoyant leur ajout au dépôt lors de la prochaine propagation (commit).\n"
 "usage : add CHEMIN...\n"
 
 #: clients/cmdline/main.c:189
@@ -687,7 +689,7 @@ msgstr ""
 "\n"
 "  Un message, éventuellement vide, doit être fourni pour le journal.\n"
 "  S'il n'est pas donné par --message ou --file, un éditeur est lancé.\n"
-"  Les éléments confirmés (commit) qui étaient verrouillés (locked) sont\n"
+"  Les éléments propagés (commit) qui étaient verrouillés (locked) sont\n"
 "  déverrouillés (unlock) en cas de réussite.\n"
 
 #: clients/cmdline/main.c:237
@@ -707,7 +709,7 @@ msgstr ""
 "\n"
 "  SRC et DST sont un chemin dans la copie de travail (CT) ou une URL :\n"
 "    CT  -> CT  : copie et mise en attente pour ajout (avec historique)\n"
-"    CT  -> URL : confirme immédiatement une copie de CT vers URL\n"
+"    CT  -> URL : propage immédiatement une copie de CT vers URL\n"
 "    URL -> CT  : extrait une URL dans CT, mise en attente pour ajout\n"
 "    URL -> URL : copie côté serveur ; utilisée pour les branches et marques\n"
 
@@ -726,17 +728,17 @@ msgid ""
 "  2. Each item specified by a URL is deleted from the repository\n"
 "    via an immediate commit.\n"
 msgstr ""
-"Efface fichiers et répertoires du gestionnaire de version.\n"
+"Supprime fichiers et répertoires du gestionnaire de version.\n"
 "usage : 1. delete CHEMIN...\n"
 "        2. delete URL...\n"
 "\n"
-"  1. Chaque objet est mis en attente (schedule) pour effacement lors de la\n"
-"     prochaine confirmation (commit). Les fichiers et les répertoires non\n"
-"     confirmés sont immédiatement effacés de la copie de travail.\n"
+"  1. Chaque objet est mis en attente (schedule) pour suppression lors de la\n"
+"     prochaine propagation (commit). Les fichiers et les répertoires non\n"
+"     propagés sont immédiatement supprimés de la copie de travail.\n"
 "     Les CHEMINs qui sont, ou contiennent, des objets non versionnés\n"
-"     ou modifiés ne seront pas effacés sauf si l'option --force est\n"
+"     ou modifiés ne seront pas supprimés sauf si l'option --force est\n"
 "     présente.\n"
-"  2. Chaque URL est effacée du dépôt via une confirmation immédiate.\n"
+"  2. Chaque URL est supprimée du dépôt via une propagation immédiate.\n"
 
 #: clients/cmdline/main.c:266
 msgid ""
@@ -836,7 +838,7 @@ msgid ""
 "usage: help [SUBCOMMAND...]\n"
 msgstr ""
 "Décrit l'usage de ce programme ou de ses sous-commandes.\n"
-"usage : help [SOUS-COMMANDE...]\n"
+"usage : help [SOUS_COMMANDE...]\n"
 
 #: clients/cmdline/main.c:344
 msgid ""
@@ -902,10 +904,10 @@ msgstr ""
 "\n"
 "  La cible par défaut est '.', i.e. l'URL du dépôt du répertoire local.\n"
 "  --verbose affiche les informations suivantes sur chaque cible :\n"
-"  Révision de la dernière confirmation (commit)\n"
-"  Auteur de la dernière confirmation\n"
+"  Révision de la dernière propagation (commit)\n"
+"  Auteur de la dernière propagation\n"
 "  Taille (en octets)\n"
-"  Date et heure de la dernière confirmation\n"
+"  Date et heure de la dernière propagation\n"
 
 #: clients/cmdline/main.c:388
 msgid ""
@@ -916,7 +918,7 @@ msgid ""
 "  Use --force to steal the lock from another user or working copy.\n"
 msgstr ""
 "Verrouille (lock) des chemin ou URLs dans le dépôt, afin qu'aucun autre\n"
-"utilisateur ne puisse confirmer (commit) des modifications sur eux.\n"
+"utilisateur ne puisse propager (commit) des modifications sur eux.\n"
 "usage : lock CHEMIN...\n"
 "  Utiliser --force pour voler le verrou d'un autre utilisateur ou d'une\n"
 "  autre copie de travail.\n"
@@ -1040,7 +1042,7 @@ msgstr ""
 "        2. mkdir URL...\n"
 "\n"
 "  1. Chaque répertoire est créé localement et mis en attente (schedule)\n"
-"     pour ajout à la prochaine confirmation (commit).\n"
+"     pour ajout à la prochaine propagation (commit).\n"
 "\n"
 "  2. Chaque répertoire précisé en URL est immédiatement créé dans le dépôt.\n"
 "\n"
@@ -1076,12 +1078,12 @@ msgid ""
 "  1. Removes versioned props in working copy.\n"
 "  2. Removes unversioned remote prop on repos revision.\n"
 msgstr ""
-"Efface PROPNOM des fichiers, répertoires ou révisions.\n"
+"Supprime PROPNOM des fichiers, répertoires ou révisions.\n"
 "usage : 1. propdel PROPNOM [CHEMIN...]\n"
 "        2. propdel PROPNOM --revprop -r REV [URL]\n"
 "\n"
-"  1. Efface une propriété versionnée de la copie de travail.\n"
-"  2. Efface une propriété non versionnée d'une révision du dépôt.\n"
+"  1. Supprime une propriété versionnée de la copie de travail.\n"
+"  2. Supprime une propriété non versionnée d'une révision du dépôt.\n"
 
 #: clients/cmdline/main.c:501
 msgid ""
@@ -1240,8 +1242,8 @@ msgstr ""
 "usage : resolved PATH...\n"
 "\n"
 "  Note : cette sous-commande ne résout pas le conflit sur le fond ; elle\n"
-"  efface simplement les fichiers relatifs au conflit pour permettre une\n"
-"  confirmation (commit) ultérieure.\n"
+"  supprime simplement les fichiers relatifs au conflit pour permettre une\n"
+"  propagation (commit) ultérieure.\n"
 
 #: clients/cmdline/main.c:600
 msgid ""
@@ -1255,7 +1257,7 @@ msgstr ""
 "usage : revert PATH...\n"
 "\n"
 "  Note : cette sous-commande n'a pas besoin d'accès réseau, et résout les\n"
-"  conflits. Elle ne restaure cependant pas les répertoires effacés.\n"
+"  conflits. Elle ne restaure cependant pas les répertoires supprimés.\n"
 
 #: clients/cmdline/main.c:610
 msgid ""
@@ -1340,18 +1342,18 @@ msgstr ""
 "  Avec -v, affiche l'information de révision complète de chaque objet.\n"
 "\n"
 "  Les six premières colonnes font un caractère :\n"
-"    1ère colonne : si l'objet est ajouté, effacé ou modifié\n"
+"    1ère colonne : si l'objet est ajouté, supprimé ou modifié\n"
 "      ' ' pas de modification\n"
 "      'A' ajouté\n"
 "      'C' en conflit\n"
-"      'D' effacé\n"
+"      'D' supprimé\n"
 "      'G' fusionné\n"
 "      'I' ignoré\n"
 "      'M' modifié\n"
 "      'R' remplacé\n"
 "      'X' non versionné, mais utilisé par une référence externe\n"
 "      '?' non versionné\n"
-"      '!' manquant (effacé par une autre commande) ou incomplet\n"
+"      '!' manquant (supprimé par une autre commande) ou incomplet\n"
 "      '~' objet versionné dissimulé par un objet différent\n"
 "    2ème colonne : modification d'une propriété\n"
 "      ' ' pas de modification\n"
@@ -1360,8 +1362,8 @@ msgstr ""
 "    3ème colonne : si le répertoire local est verrouillé\n"
 "      ' ' non verrouillé\n"
 "      'L' verrouillé (locked)\n"
-"    4ème colonne : si la prochaine confirmation (commit) en attente\n"
-"                   comporte un ajout avec reprise de l'historique\n"
+"    4ème colonne : si la prochaine propagation (commit) comportera\n"
+"                   un ajout avec reprise de l'historique\n"
 "      ' ' pas d'ajout avec reprise d'historique prévu\n"
 "      '+' ajout avec reprise d'historique prévu\n"
 "    5ème colonne : si l'élément a une référence différente de son parent\n"
@@ -1385,7 +1387,7 @@ msgstr ""
 "  Les autres colonnes, de taille variable, sont délimitées par des "
 "espaces :\n"
 "    La révision de travail (avec -u ou -v)\n"
-"    La dernière révision confirmée et son auteur (avec -v)\n"
+"    La dernière révision propagée et son auteur (avec -v)\n"
 "    Le chemin de l'objet est toujours dans le dernier champs et peut\n"
 "    inclure des espaces.\n"
 "\n"
@@ -1475,7 +1477,7 @@ msgstr ""
 "  précisée par l'option -r.\n"
 "  L'opération effectuée sur chaque objet est donnée par un caractère :\n"
 "    A  ajouté\n"
-"    D  effacé\n"
+"    D  supprimé\n"
 "    U  modifié\n"
 "    C  en conflit\n"
 "    G  fusionné\n"
@@ -1541,7 +1543,7 @@ msgid ""
 "The log message is a pathname (was -F intended?); use '--force-log' to "
 "override"
 msgstr ""
-"Le message de confirmation donné est un chemin (-F était voulu ?) ; forcer "
+"Le message de propagation donné est un chemin (-F était voulu ?) ; forcer "
 "avec '--force-log'"
 
 #: clients/cmdline/main.c:1251
@@ -1699,8 +1701,9 @@ msgstr "État par rapport à la révision %6ld\n"
 
 #: clients/cmdline/notify.c:301
 #, c-format
+# Align the %s's on this and the following 4 messages
 msgid "Sending        %s\n"
-msgstr "Envoi         %s\n"
+msgstr "Envoi          %s\n"
 
 #: clients/cmdline/notify.c:310
 #, c-format
@@ -1715,7 +1718,7 @@ msgstr "Ajout          %s\n"
 #: clients/cmdline/notify.c:324
 #, c-format
 msgid "Deleting       %s\n"
-msgstr "Effacement     %s\n"
+msgstr "Suppression    %s\n"
 
 #: clients/cmdline/notify.c:331
 #, c-format
@@ -1836,22 +1839,22 @@ msgstr "Une URL ou un objet versionné est requis"
 #: clients/cmdline/propdel-cmd.c:93
 #, c-format
 msgid "property '%s' deleted from repository revision %ld\n"
-msgstr "Propriété '%s' effacée de la révision %ld du dépôt\n"
+msgstr "Propriété '%s' supprimée de la révision %ld du dépôt\n"
 
 #: clients/cmdline/propdel-cmd.c:102
 #, c-format
 msgid "Cannot specify revision for deleting versioned property '%s'"
-msgstr "Ne pas préciser la révision pour effacer la propriété versionnée '%s'"
+msgstr "Ne pas préciser la révision pour supprimer la propriété versionnée '%s'"
 
 #: clients/cmdline/propdel-cmd.c:129
 #, c-format
 msgid "property '%s' deleted (recursively) from '%s'.\n"
-msgstr "Propriété '%s' effacée récursivement de '%s'.\n"
+msgstr "Propriété '%s' supprimée récursivement de '%s'.\n"
 
 #: clients/cmdline/propdel-cmd.c:130
 #, c-format
 msgid "property '%s' deleted from '%s'.\n"
-msgstr "Propriété '%s' effacée de '%s'.\n"
+msgstr "Propriété '%s' supprimée de '%s'.\n"
 
 #: clients/cmdline/propedit-cmd.c:117 clients/cmdline/propedit-cmd.c:241
 #: clients/cmdline/propset-cmd.c:85
@@ -1947,7 +1950,7 @@ msgid ""
 "Committed revision %ld.\n"
 msgstr ""
 "\n"
-"Révision %ld confirmée.\n"
+"Révision %ld propagée.\n"
 
 #: clients/cmdline/util.c:125
 msgid ""
@@ -1992,7 +1995,7 @@ msgstr "L'entrée du journal contient un octet 0"
 
 #: clients/cmdline/util.c:382
 msgid "Your commit message was left in a temporary file:"
-msgstr "Le message de confirmation a été laissé dans un fichier temporaire :"
+msgstr "Le message de propagation a été laissé dans un fichier temporaire :"
 
 #: clients/cmdline/util.c:434
 msgid "--This line, and those below, will be ignored--"
@@ -2232,11 +2235,11 @@ msgstr ""
 
 #: include/svn_error_codes.h:386
 msgid "General filesystem error"
-msgstr "Erreur générale du système de fichier"
+msgstr "Erreur générale du système de fichiers"
 
 #: include/svn_error_codes.h:390
 msgid "Error closing filesystem"
-msgstr "Erreur à la fermeture du système de fichier"
+msgstr "Erreur à la fermeture du système de fichiers"
 
 #: include/svn_error_codes.h:394
 msgid "Filesystem is already open"
@@ -2328,7 +2331,7 @@ msgstr ""
 
 #: include/svn_error_codes.h:482
 msgid "Merge conflict during commit"
-msgstr "Fusion conflictuelle lors d'une confirmation (commit)"
+msgstr "Fusion conflictuelle lors d'une propagation (commit)"
 
 #: include/svn_error_codes.h:486
 msgid "A representation vanished or changed between reads"
@@ -2360,7 +2363,7 @@ msgstr "Transaction morte"
 
 #: include/svn_error_codes.h:514
 msgid "Transaction is not dead"
-msgstr "Transaction vivante"
+msgstr "La transaction n'est pas morte"
 
 #: include/svn_error_codes.h:519
 msgid "Unknown FS type"
@@ -2392,7 +2395,7 @@ msgstr "Le nom d'utilisateur ne correspond pas au propriétaire du verrou"
 
 #: include/svn_error_codes.h:554
 msgid "Filesystem has no such lock"
-msgstr "Le système de fichier n'a pas ce verrou"
+msgstr "Le système de fichiers n'a pas ce verrou"
 
 #: include/svn_error_codes.h:559
 msgid "Lock has expired"
@@ -2436,7 +2439,7 @@ msgstr ""
 
 #: include/svn_error_codes.h:615
 msgid "Error running post-commit hook"
-msgstr "Erreur de la procédure d'après confirmation (post-commit hook)"
+msgstr "Erreur de la procédure d'après propagation (post-commit hook)"
 
 #: include/svn_error_codes.h:620
 msgid "Error running post-lock hook"
@@ -2770,7 +2773,7 @@ msgstr "L'entrée du journal est un chemin de fichier"
 
 #: include/svn_error_codes.h:1001
 msgid "Committing in directory scheduled for addition"
-msgstr "Confirmation dans un répertoire en attente pour ajout"
+msgstr "Propagation dans un répertoire en attente pour ajout"
 
 #: include/svn_error_codes.h:1005
 msgid "No external editor available"
@@ -2884,11 +2887,11 @@ msgstr "'%s' est un nom réservé et ne peut être importé"
 
 #: libsvn_client/commit.c:818 libsvn_client/copy.c:545
 msgid "Commit failed (details follow):"
-msgstr "Échec de la confirmation (commit), détails : "
+msgstr "Échec de la propagation (commit), détails : "
 
 #: libsvn_client/commit.c:826 libsvn_client/copy.c:553
 msgid "Commit succeeded, but other errors follow:"
-msgstr "Succès de la confirmation (commit), mais erreurs : "
+msgstr "Succès de la propagation (commit), mais erreurs : "
 
 #: libsvn_client/commit.c:833 libsvn_client/copy.c:560
 msgid "Error unlocking locked dirs (details follow):"
@@ -2905,7 +2908,7 @@ msgstr ""
 #: libsvn_client/commit.c:1157
 #, c-format
 msgid "'%s' is a URL, but URLs cannot be commit targets"
-msgstr "Une URL '%s' ne peut être la cible d'une confirmation (commit)"
+msgstr "Une URL '%s' ne peut être la cible d'une propagation (commit)"
 
 #: libsvn_client/commit.c:1349
 msgid "Are all the targets part of the same working copy?"
@@ -2913,7 +2916,7 @@ msgstr "Les cibles font-elles parties de la même copie de travail ?"
 
 #: libsvn_client/commit.c:1364
 msgid "Cannot non-recursively commit a directory deletion"
-msgstr "Confirmation non récursive de l'effacement d'un répertoire impossible"
+msgstr "Propagation non récursive de la suppression d'un répertoire impossible"
 
 #: libsvn_client/commit_util.c:242 libsvn_client/commit_util.c:253
 #, c-format
@@ -2975,7 +2978,7 @@ msgid ""
 "inside an unversioned (or not-yet-versioned) directory?"
 msgstr ""
 "L'entrée '%s' est notée comme copiée mais n'est pas elle-même en attente \n"
-"pour ajout. Peut-être confirmez-vous (commit) un objet qui est à \n"
+"pour ajout. Peut-être propagez-vous (commit) un objet qui est à \n"
 "l'intérieur d'un répertoire non (encore) versionné ?"
 
 #: libsvn_client/commit_util.c:763
@@ -2985,13 +2988,13 @@ msgid ""
 "child '%s' is part of the commit"
 msgstr ""
 "'%s' n'est pas sous gestionnaire de version et ne fait pas partie de la "
-"confirmation (commit), alors que son enfant '%s' en fait partie"
+"propagation (commit), alors que son enfant '%s' en fait partie"
 
 #: libsvn_client/commit_util.c:846
 #, c-format
 msgid "Cannot commit both '%s' and '%s' as they refer to the same URL"
 msgstr ""
-"'%s' et '%s' réfèrent à la même URL et ne peuvent être confirmés (commit) "
+"'%s' et '%s' réfèrent à la même URL et ne peuvent être propagés (commit) "
 "ensemble"
 
 #: libsvn_client/commit_util.c:991
@@ -3259,7 +3262,7 @@ msgstr "L'entrée '%s' n'a pas d'URL associée"
 
 #: libsvn_client/log.c:321
 msgid "No commits in repository"
-msgstr "Pas de confirmation dans le dépôt"
+msgstr "Pas de propagation dans le dépôt"
 
 #: libsvn_client/ls.c:128 libsvn_client/ls.c:135
 #, c-format
@@ -3440,7 +3443,7 @@ msgstr ""
 #: libsvn_fs_base/bdb/bdb-err.c:97
 #, c-format
 msgid "Berkeley DB error for filesystem %s while %s:\n"
-msgstr "Erreur de base Berkeley pour le système de fichier %s en %s :\n"
+msgstr "Erreur de base Berkeley pour le système de fichiers %s en %s :\n"
 
 #: libsvn_fs_base/bdb/changes-table.c:88
 msgid "creating change"
@@ -3559,7 +3562,7 @@ msgstr "effaçant la représentation"
 #. Handle any other error conditions.
 #: libsvn_fs_base/bdb/rev-table.c:88
 msgid "reading filesystem revision"
-msgstr "lisant la révision du système de fichier"
+msgstr "lisant la révision du système de fichiers"
 
 #: libsvn_fs_base/bdb/strings-table.c:91
 msgid "creating cursor for reading a string"
@@ -3769,17 +3772,17 @@ msgstr ""
 #: libsvn_fs_base/err.c:231 libsvn_fs_fs/err.c:288
 #, c-format
 msgid "'%s' is not a file in filesystem '%s'"
-msgstr "'%s' n'est pas un fichier dans le système de fichier '%s'"
+msgstr "'%s' n'est pas un fichier dans le système de fichiers '%s'"
 
 #: libsvn_fs_base/err.c:242 libsvn_fs_fs/err.c:277
 #, c-format
 msgid "Token '%s' does not point to any existing lock in filesystem '%s'"
-msgstr "Le nom '%s' ne correspond à aucun verrou du système de fichier '%s'"
+msgstr "Le nom '%s' ne correspond à aucun verrou du système de fichiers '%s'"
 
 #: libsvn_fs_base/err.c:252
 #, c-format
 msgid "No token given for path '%s' in filesystem '%s'"
-msgstr "Pas de nom pour '%s' dans le système de fichier '%s'"
+msgstr "Pas de nom pour '%s' dans le système de fichiers '%s'"
 
 #: libsvn_fs_base/err.c:261
 #, c-format
@@ -3789,18 +3792,18 @@ msgstr ""
 #: libsvn_fs_base/err.c:271 libsvn_fs_fs/err.c:244
 #, c-format
 msgid "No lock on path '%s' in filesystem '%s'"
-msgstr "Pas de verrou pour '%s' dans le système de fichier '%s'"
+msgstr "Pas de verrou pour '%s' dans le système de fichiers '%s'"
 
 #: libsvn_fs_base/err.c:282 libsvn_fs_fs/err.c:179
 #, c-format
 msgid "Lock has expired:  lock-token '%s' in filesystem '%s'"
-msgstr "Verrou expiré : nom '%s' dans le système de fichier '%s'"
+msgstr "Verrou expiré : nom '%s' dans le système de fichiers '%s'"
 
 #: libsvn_fs_base/err.c:293 libsvn_fs_fs/err.c:255
 #, c-format
 msgid "No username is currently associated with filesystem '%s'"
 msgstr ""
-"Aucun utilisateur n'est actuellement associé avec le système de fichier '%s'"
+"Aucun utilisateur n'est actuellement associé avec le système de fichiers '%s'"
 
 #: libsvn_fs_base/err.c:305 libsvn_fs_fs/err.c:312
 #, c-format
@@ -3810,7 +3813,7 @@ msgstr ""
 #: libsvn_fs_base/err.c:317 libsvn_fs_fs/err.c:299
 #, c-format
 msgid "Path '%s' is already locked by user '%s' in filesystem '%s'"
-msgstr "Chemin '%s' déjà verrouillé par '%s' dans le système de fichier '%s'"
+msgstr "Chemin '%s' déjà verrouillé par '%s' dans le système de fichiers '%s'"
 
 #: libsvn_fs_base/fs.c:79
 #, c-format
@@ -3960,7 +3963,7 @@ msgstr "Échec au calcul du résumé MD5 de '%s'"
 #: libsvn_fs_base/revs-txns.c:65 libsvn_fs_fs/revs-txns.c:58
 #, c-format
 msgid "Transaction is not dead: '%s'"
-msgstr "Transaction pas morte : '%s'"
+msgstr "La transaction n'est pas morte : '%s'"
 
 #: libsvn_fs_base/revs-txns.c:68 libsvn_fs_fs/revs-txns.c:61
 #, c-format
@@ -3985,13 +3988,13 @@ msgstr "Fichier non trouvé : révision %ld, chemin '%s'"
 #, c-format
 msgid "File already exists: filesystem '%s', transaction '%s', path '%s'"
 msgstr ""
-"Fichier existe déjà : système de fichier '%s', transaction '%s', chemin '%s'"
+"Le fichier existe déjà : système de fichiers '%s', transaction '%s', chemin '%s'"
 
 #: libsvn_fs_base/tree.c:418 libsvn_fs_fs/tree.c:336
 #, c-format
 msgid "File already exists: filesystem '%s', revision %ld, path '%s'"
 msgstr ""
-"Fichier existe déjà : système de fichier '%s', révision %ld, chemin '%s'"
+"Le fichier existe déjà : système de fichiers '%s', révision %ld, chemin '%s'"
 
 #: libsvn_fs_base/tree.c:428 libsvn_fs_fs/tree.c:346
 msgid "Root object must be a transaction root"
@@ -4022,7 +4025,7 @@ msgstr ""
 msgid ""
 "No deletion changes for path '%s' in transaction '%s' of filesystem '%s'"
 msgstr ""
-"Pas d'effacements pour '%s' à la transaction '%s' du système de fichier '%s'"
+"Pas de suppressions pour '%s' à la transaction '%s' du système de fichiers '%s'"
 
 #: libsvn_fs_base/tree.c:1887 libsvn_fs_fs/tree.c:1213
 #, c-format
@@ -4102,7 +4105,7 @@ msgstr ""
 #: libsvn_fs_fs/err.c:168
 #, c-format
 msgid "Corrupt lockfile for path '%s' in filesystem '%s'"
-msgstr "Fichier de verrou corrompu pour '%s' dans le système de fichier '%s'"
+msgstr "Fichier de verrou corrompu pour '%s' dans le système de fichiers '%s'"
 
 #: libsvn_fs_fs/fs.c:98
 msgid "Can't fetch FSFS mutex"
@@ -4780,11 +4783,10 @@ msgstr "Module pour accéder à un dépôt avec le protocole réseau propre de s
 msgid "Illegal svn repository URL '%s'"
 msgstr "URL de dépôt svn illégale '%s'"
 
-# ??? version minimale %d
 #: libsvn_ra_svn/client.c:633
 #, c-format
 msgid "Server requires minimum version %d"
-msgstr "Le serveur requiert la version minimale %d"
+msgstr "Le serveur requiert au minimum la version %d"
 
 #: libsvn_ra_svn/client.c:683
 msgid "Impossibly long repository root from server"
@@ -4945,7 +4947,6 @@ msgstr "L'URL source '%s' concerne un dépôt différent"
 msgid "Path '%s' not present"
 msgstr "Le chemin '%s' n'existe pas"
 
-# ??? plein texte
 #: libsvn_repos/commit.c:512
 #, c-format
 msgid ""
@@ -4954,7 +4955,7 @@ msgid ""
 "   expected checksum:  %s\n"
 "   actual checksum:    %s\n"
 msgstr ""
-"Sommes de contrôle différentes pour le plein texte\n"
+"Sommes de contrôle différentes pour le texte complet\n"
 "(%s) :\n"
 "   attendu :  %s\n"
 "    obtenu :  %s\n"
@@ -5007,8 +5008,8 @@ msgstr "* Révision %ld vérifiée.\n"
 #: libsvn_repos/fs-wrap.c:57 libsvn_repos/load.c:1218
 msgid "Commit succeeded, but post-commit hook failed"
 msgstr ""
-"Succès de la confirmation (commit), mais échec de la procédure d'après "
-"confirmation (post-commit hook)"
+"Succès de la propagation (commit), mais échec de la procédure d'après "
+"propagation (post-commit hook)"
 
 #: libsvn_repos/fs-wrap.c:157
 #, c-format
@@ -5152,7 +5153,7 @@ msgstr "     * édition de : %s ..."
 #: libsvn_repos/load.c:1002
 #, c-format
 msgid "     * deleting path : %s ..."
-msgstr "     * effacement de : %s ..."
+msgstr "     * suppression de : %s ..."
 
 #: libsvn_repos/load.c:1010
 #, c-format
@@ -5181,7 +5182,7 @@ msgid ""
 "\n"
 msgstr ""
 "\n"
-"------- Révision %ld confirmée (commit) >>>\n"
+"------- Révision %ld propagée (commit) >>>\n"
 "\n"
 
 #: libsvn_repos/load.c:1246
@@ -5192,7 +5193,7 @@ msgid ""
 "\n"
 msgstr ""
 "\n"
-"------- Nouvelle révision %ld confirmée (commit), basée sur révision %ld "
+"------- Nouvelle révision %ld propagée (commit), basée sur révision %ld "
 ">>>\n"
 "\n"
 
@@ -5923,7 +5924,7 @@ msgstr ""
 msgid ""
 "The entry '%s' is no longer a directory; remove the entry before updating"
 msgstr ""
-"L'entrée '%s' n'est plus un répertoire ; effacer l'entrée avant de mettre à "
+"L'entrée '%s' n'est plus un répertoire ; supprimer l'entrée avant de mettre à "
 "jour"
 
 #: libsvn_wc/adm_crawler.c:631
@@ -6018,8 +6019,8 @@ msgid ""
 "Can't replace '%s' with a node of a differing type; commit the deletion, "
 "update the parent, and then add '%s'"
 msgstr ""
-"'%s' ne peut être remplacé pas un noeud d'un type différent. Confirmer "
-"l'effacement, modifier le parent et ensuite ajouter '%s'"
+"'%s' ne peut être remplacé pas un noeud d'un type différent. Propager "
+"la suppression, modifier le parent et ensuite ajouter '%s'"
 
 #: libsvn_wc/adm_ops.c:988
 #, c-format
@@ -6030,7 +6031,7 @@ msgstr "Ne trouve pas l'entrée du répertoire parent lors de l'ajout de '%s'"
 #, c-format
 msgid "Can't add '%s' to a parent directory scheduled for deletion"
 msgstr ""
-"'%s' ne peut être ajouté à un répertoire parent en attente pour effacement"
+"'%s' ne peut être ajouté à un répertoire parent en attente pour suppression"
 
 #: libsvn_wc/adm_ops.c:1272 libsvn_wc/adm_ops.c:1277 libsvn_wc/adm_ops.c:1313
 #, c-format
@@ -6092,7 +6093,7 @@ msgstr ""
 #, c-format
 msgid ""
 "'%s' is scheduled for deletion; it must be committed before being overwritten"
-msgstr "'%s' est en attente pour effacement ; confirmer avant de l'écraser"
+msgstr "'%s' est en attente pour suppression ; propager avant de l'écraser"
 
 #: libsvn_wc/copy.c:165
 #, c-format
@@ -6113,7 +6114,7 @@ msgid ""
 "first"
 msgstr ""
 "Copie ou déplacement de '%s' impossible : il n'est pas encore dans le dépôt ;"
-"essayer de confirmer d'abord"
+"essayer de propager d'abord"
 
 #: libsvn_wc/copy.c:455
 #, c-format
@@ -6122,12 +6123,12 @@ msgid ""
 "first"
 msgstr ""
 "Copie ou déplacement de '%s' impossible : il n'est pas encore dans le dépôt ;"
-"essayer de confirmer d'abord"
+"essayer de propager d'abord"
 
 #: libsvn_wc/copy.c:525
 #, c-format
 msgid "Cannot copy to '%s' as it is scheduled for deletion"
-msgstr "Copie de '%s' impossible car il est en attente pour effacement"
+msgstr "Copie de '%s' impossible car il est en attente pour suppression"
 
 #: libsvn_wc/entries.c:119
 #, c-format
@@ -6214,7 +6215,7 @@ msgid ""
 "Can't add '%s' to deleted directory; try undeleting its parent directory "
 "first"
 msgstr ""
-"'%s' ne peut être ajouté à un répertoire effacé ; essayer d'abord de "
+"'%s' ne peut être ajouté à un répertoire supprimé ; essayer d'abord de "
 "rétablir le répertoire parent"
 
 #: libsvn_wc/entries.c:1488
@@ -6223,7 +6224,7 @@ msgid ""
 "Can't replace '%s' in deleted directory; try undeleting its parent directory "
 "first"
 msgstr ""
-"'%s' ne peut être remplacé dans un répertoire effacé ; essayer d'abord de "
+"'%s' ne peut être remplacé dans un répertoire supprimé ; essayer d'abord de "
 "rétablir le répertoire parent"
 
 #: libsvn_wc/entries.c:1497
@@ -6412,19 +6413,19 @@ msgstr "'%s' n'est pas un répertoire d'une copie de travail"
 #: libsvn_wc/merge.c:306 libsvn_wc/merge.c:308 libsvn_wc/merge.c:310
 #: libsvn_wc/merge.c:312
 msgid "Unable to delete temporary file"
-msgstr "Ne peut effacer un fichier temporaire"
+msgstr "Ne peut supprimer un fichier temporaire"
 
 #: libsvn_wc/props.c:100
 #, c-format
 msgid "Property '%s' locally changed to '%s', but update deletes it\n"
 msgstr ""
-"Propriété '%s' modifiée localement à '%s', mais effacée par la mise à jour\n"
+"Propriété '%s' modifiée localement à '%s', mais supprimée par la mise à jour\n"
 
 #: libsvn_wc/props.c:109
 #, c-format
 msgid "Property '%s' locally deleted, but update sets it to '%s'\n"
 msgstr ""
-"Propriété '%s' localement effacée, mais la mise à jour la définit à '%s'\n"
+"Propriété '%s' localement supprimée, mais la mise à jour la définit à '%s'\n"
 
 #: libsvn_wc/props.c:125
 #, c-format
@@ -6548,7 +6549,7 @@ msgstr "Pas d'entrée '.' dans : '%s'"
 #: libsvn_wc/update_editor.c:856
 #, c-format
 msgid "Won't delete locally modified directory '%s'"
-msgstr "Le répertoire localement modifié ne sera pas effacé : '%s'"
+msgstr "Le répertoire localement modifié ne sera pas supprimé : '%s'"
 
 #: libsvn_wc/update_editor.c:1042
 #, c-format
@@ -6687,16 +6688,16 @@ msgstr "charge dans le répertoire précisé du dépôt"
 
 #: svnadmin/main.c:263
 msgid "disable fsync at transaction commit [Berkeley DB]"
-msgstr "désactive fsync aux confirmations de transactions [Berkeley DB]"
+msgstr "désactive fsync aux propagations de transactions [Berkeley DB]"
 
 #: svnadmin/main.c:266
 msgid "disable automatic log file removal [Berkeley DB]"
 msgstr ""
-"désactive l'effacement automatique des fichiers du journal [Berkeley DB]"
+"désactive la suppression automatique des fichiers du journal [Berkeley DB]"
 
 #: svnadmin/main.c:272
 msgid "remove redundant log files from source repository"
-msgstr "efface les fichiers du journal redondants dans le dépôt source"
+msgstr "supprime les fichiers du journal redondants dans le dépôt source"
 
 #: svnadmin/main.c:275
 msgid "call pre-commit hook before committing revisions"
@@ -6741,7 +6742,6 @@ msgstr ""
 "compresse le dépôt en ne stockant que les différences entre versions\n"
 "successives. Elle s'applique par défaut à la révision de tête seule.\n"
 
-# ??? plein texte
 #: svnadmin/main.c:309
 msgid ""
 "usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n"
@@ -6755,12 +6755,12 @@ msgid ""
 msgstr ""
 "usage : svnadmin dump CHEMIN_DÉPÔT [-r BAS[:HAUT]] [--incremental]\n"
 "\n"
-"Décharge le contenu du système de fichier entre les révisions précisées\n"
+"Décharge le contenu du système de fichiers entre les révisions précisées\n"
 "vers stdout dans le format portable 'dumpfile'. L'avancement est envoyé\n"
 "vers stderr. Si aucune révision n'est précisée, décharge tout l'arbre.\n"
 "Si seule BAS est donnée, décharge cette révision. Avec --incremental,\n"
 "la première révision déchargée est la différence par rapport à la\n"
-"précédente au lieu du plein texte habituel.\n"
+"précédente au lieu du texte complet habituel.\n"
 
 #: svnadmin/main.c:320
 msgid ""
@@ -6768,7 +6768,7 @@ msgid ""
 "\n"
 "Describe the usage of this program or its subcommands.\n"
 msgstr ""
-"usage : svnadmin help [SOUS-COMMANDE...]\n"
+"usage : svnadmin help [SOUS_COMMANDE...]\n"
 "\n"
 "Décrit l'utilisation de ce programme ou de ses sous-commandes.\n"
 
@@ -6795,7 +6795,7 @@ msgstr ""
 "\n"
 "Liste tous les fichiers du journal de la base Berkeley.\n"
 "\n"
-"ATTENTION : Modifier ou effacer les fichiers du journal en cours\n"
+"ATTENTION : Modifier ou supprimer les fichiers du journal en cours\n"
 "d'utilisation corrompt le dépôt.\n"
 
 #: svnadmin/main.c:337
@@ -6821,7 +6821,7 @@ msgstr ""
 "usage : svnadmin load CHEMIN_DÉPÔT\n"
 "\n"
 "Charge un flux au format 'dumpfile' venant de l'entrée standard, en\n"
-"confirmant (commit) les nouvelles révisions dans le dépôt. Si le dépôt\n"
+"propageant (commit) les nouvelles révisions dans le dépôt. Si le dépôt\n"
 "est initialement vide, son UUID prend la valeur de celui du flux.\n"
 "L'avancement est envoyé sur stdout.\n"
 
@@ -6843,7 +6843,7 @@ msgid ""
 msgstr ""
 "usage : svnadmin lstxns CHEMIN_DÉPÔT\n"
 "\n"
-"Affiche les noms de toutes les transactions non confirmées.\n"
+"Affiche les noms de toutes les transactions non propagées.\n"
 
 #: svnadmin/main.c:363
 msgid ""
@@ -6876,7 +6876,7 @@ msgid ""
 msgstr ""
 "usage : svnadmin rmtxns CHEMIN_DÉPÔT NOM_TX...\n"
 "\n"
-"Efface les transactions désignées.\n"
+"Supprime les transactions spécifiées.\n"
 
 #: svnadmin/main.c:381
 msgid ""
@@ -6889,7 +6889,7 @@ msgid ""
 "revision properties has not been enabled in the pre-revprop-change\n"
 "hook).\n"
 "\n"
-"NOTE: revision properties are not historied, so this command\n"
+"NOTE : revision properties are not historied, so this command\n"
 "will permanently overwrite the previous log message.\n"
 msgstr ""
 "usage : svnadmin setlog CHEMIN_DÉPÔT -r RÉVISION FICHIER\n"
@@ -6939,7 +6939,7 @@ msgid ""
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"usage général : svnadmin SOUS-COMMANDE DÉPÔT [ ARGS & OPTIONS ...]\n"
+"usage général : svnadmin SOUS_COMMANDE DÉPÔT [ARGS & OPTIONS ...]\n"
 "Entrez 'svnadmin help <sous-commande>' pour une aide spécifique.\n"
 "\n"
 "Sous-commandes disponibles :\n"
@@ -6968,7 +6968,7 @@ msgstr ""
 
 #: svnadmin/main.c:763
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
-msgstr "Attende du verrou sur le dépôt ; un autre processus le tient-il ?\n"
+msgstr "Attente du verrou sur le dépôt ; un autre processus le tient-il ?\n"
 
 #: svnadmin/main.c:770
 msgid ""
@@ -6986,7 +6986,7 @@ msgstr "La dernière révision du dépôt est %ld\n"
 #: svnadmin/main.c:887
 #, c-format
 msgid "Transaction '%s' removed.\n"
-msgstr "Transaction '%s' effacée.\n"
+msgstr "Transaction '%s' supprimée.\n"
 
 #: svnadmin/main.c:911
 msgid "Missing revision"
@@ -7038,7 +7038,7 @@ msgid ""
 "%s\n"
 "\n"
 msgstr ""
-"Commentaire du verrou (%i ligne) :\n"
+"Commentaire (%i ligne) :\n"
 "%s\n"
 "\n"
 
@@ -7054,7 +7054,7 @@ msgstr "'%s' déverrouillé\n"
 
 #: svnadmin/main.c:1348
 msgid "subcommand argument required\n"
-msgstr "Sous-commande attendu\n"
+msgstr "Sous-commande attendue\n"
 
 #: svnadmin/main.c:1438
 #, c-format
@@ -7067,12 +7067,12 @@ msgstr ""
 
 #: svndumpfilter/main.c:325
 msgid "This is an empty revision for padding."
-msgstr "C'est une révision vide pour remplissage."
+msgstr "Ceci est une révision vide pour remplissage."
 
 #: svndumpfilter/main.c:378
 #, c-format
 msgid "Revision %ld committed as %ld.\n"
-msgstr "Révision %ld confirmée en %ld\n"
+msgstr "Révision %ld propagée en %ld\n"
 
 #: svndumpfilter/main.c:386
 #, c-format
@@ -7130,7 +7130,7 @@ msgid ""
 "usage: svndumpfilter help [SUBCOMMAND...]\n"
 msgstr ""
 "Affiche l'aide sur le programme ou ses sous-commandes.\n"
-"usage : svndumpfilter help [SOUS-COMMANDES...]\n"
+"usage : svndumpfilter help [SOUS_COMMANDES...]\n"
 
 #: svndumpfilter/main.c:863
 msgid ""
@@ -7139,7 +7139,7 @@ msgid ""
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"usage général : svndumpfilter SOUS-COMMANDE [ARGS & OPTIONS ...]\n"
+"usage général : svndumpfilter SOUS_COMMANDE [ARGS & OPTIONS ...]\n"
 "Entre 'svndumpfilter help <sous-commande>' pour l'aide spécifique.\n"
 "\n"
 "Sous-commandes disponibles :\n"
@@ -7176,7 +7176,7 @@ msgstr "Révisions renumérotées comme suit :\n"
 #: svndumpfilter/main.c:984
 #, c-format
 msgid "   %ld => (dropped)\n"
-msgstr "   %ld => (éliminées)\n"
+msgstr "   %ld => (éliminée)\n"
 
 #: svndumpfilter/main.c:999
 #, c-format
@@ -7189,7 +7189,7 @@ msgid ""
 "Error: no prefixes supplied.\n"
 msgstr ""
 "\n"
-"Erreur : aucun préfixe fournit.\n"
+"Erreur : aucun préfixe fourni.\n"
 
 #: svndumpfilter/main.c:1260
 #, c-format
@@ -7214,7 +7214,7 @@ msgstr "verbeux"
 
 #: svnlook/main.c:109
 msgid "show node revision ids for each path"
-msgstr "donne l'identifiant du noeu de révision pour chaque objet"
+msgstr "donne l'identifiant du noeud de révision pour chaque objet"
 
 #: svnlook/main.c:115
 msgid "do not print differences for added files"
@@ -7293,7 +7293,7 @@ msgid ""
 "\n"
 "Describe the usage of this program or its subcommands.\n"
 msgstr ""
-"usage : svnlook help [SOUS-COMMANDE]\n"
+"usage : svnlook help [SOUS_COMMANDE]\n"
 "\n"
 "Affiche l'aide sur ce programme ou ses sous-commandes.\n"
 
@@ -7317,7 +7317,8 @@ msgid ""
 msgstr ""
 "usage : svnlook info CHEMIN_DÉPÔT\n"
 "\n"
-"Affiche l'auteur, la date, la taille et contenu de l'entrée du journal.\n"
+"Affiche l'auteur, la date, la taille et le contenu de l'entrée du "
+"journal.\n"
 
 #: svnlook/main.c:182
 msgid ""
@@ -7327,7 +7328,7 @@ msgid ""
 msgstr ""
 "usage : svnlook lock CHEMIN_DÉPÔT CHEMIN_DANS_DÉPÔT\n"
 "\n"
-"Décrit le verrou sur le chemin dans le dépôt, si il existe.\n"
+"Décrit le verrou sur le chemin dans le dépôt, s'il existe.\n"
 
 #: svnlook/main.c:187
 msgid ""
@@ -7361,7 +7362,7 @@ msgid ""
 msgstr ""
 "usage : svnlook proplist CHEMIN_DÉPÔT [CHEMIN_DANS_DÉPÔT]\n"
 "\n"
-"liste les propriété d'un objet du dépôt, ou avec --revprop les propriétés\n"
+"Liste les propriétés d'un objet du dépôt, ou avec --revprop les propriétés\n"
 "de révision. -v donne en sus leurs valeurs.\n"
 
 #: svnlook/main.c:205
@@ -7394,7 +7395,7 @@ msgid ""
 msgstr ""
 "usage : svnlook youngest CHEMIN_DÉPÔT\n"
 "\n"
-"Affiche le numéro de la révision la plus réçente.\n"
+"Affiche le numéro de la révision la plus récente.\n"
 
 #: svnlook/main.c:579
 #, c-format
@@ -7404,7 +7405,7 @@ msgstr "Erreur à la création du répertoire '%s' (le chemin existe déjà)"
 #: svnlook/main.c:840
 #, c-format
 msgid "Copied: %s (from rev %ld, %s)\n"
-msgstr "Copié : %s (de rév %ld, %s)\n"
+msgstr "Copié : %s (de révision %ld, %s)\n"
 
 #: svnlook/main.c:904
 msgid "Added"
@@ -7412,7 +7413,7 @@ msgstr "Ajouté"
 
 #: svnlook/main.c:905
 msgid "Deleted"
-msgstr "Effacé"
+msgstr "Supprimé"
 
 #: svnlook/main.c:906
 msgid "Modified"
@@ -7489,7 +7490,7 @@ msgid ""
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"usage général : svnlook SOUS-COMMANDE CHEMIN-DÉPÔT [ARGS & OPTIONS...]\n"
+"usage général : svnlook SOUS_COMMANDE CHEMIN_DÉPÔT [ARGS & OPTIONS...]\n"
 "Note : Quand --revision ou --transaction ne sont pas précisées, les sous-\n"
 "       commandes qui en ont besoin utilisent la révision la plus réçente.\n"
 "Entrer 'svnlook help <sous-commande>' pour une aide spécifique.\n"
@@ -7524,7 +7525,7 @@ msgstr "Le nom de la propriété manque"
 
 #: svnlook/main.c:1828
 msgid "Missing propname and repository path arguments"
-msgstr "Le nom de la propriété et le chemin du dépôt manque"
+msgstr "Le nom de la propriété et le chemin du dépôt manquent"
 
 #: svnlook/main.c:1834
 msgid "Missing propname or repository path argument"
@@ -7559,7 +7560,7 @@ msgstr ""
 
 #: svnserve/main.c:102
 msgid "daemon mode"
-msgstr "Mode démon"
+msgstr "mode démon"
 
 #: svnserve/main.c:104
 msgid "listen port (for daemon mode)"
@@ -7567,7 +7568,7 @@ msgstr "port à écouter (en mode démon)"
 
 #: svnserve/main.c:106
 msgid "listen hostname or IP address (for daemon mode)"
-msgstr "nom ou numéro IP à écouter (en mode démon)"
+msgstr "nom ou adresse IP à écouter (en mode démon)"
 
 #: svnserve/main.c:108
 msgid "run in foreground (useful for debugging)"
@@ -7591,7 +7592,7 @@ msgstr "déconseillé; utiliser le fichier de configuration du dépôt"
 
 #: svnserve/main.c:115
 msgid "tunnel mode"
-msgstr "Mode tunnel"
+msgstr "mode tunnel"
 
 #: svnserve/main.c:117
 msgid "tunnel username (default is current uid's name)"
@@ -7603,7 +7604,7 @@ msgstr "Utilise des 'threads' au lieu de 'fork'"
 
 #: svnserve/main.c:121
 msgid "listen once (useful for debugging)"
-msgstr "Écoute une seule fois (utile pour le déboguage)"
+msgstr "écoute une seule fois (utile pour le déboguage)"
 
 #: svnserve/main.c:132
 #, c-format
@@ -7710,10 +7711,10 @@ msgid ""
 "\n"
 "Valid options:\n"
 msgstr ""
-"usage : svnversion [OPTIONS] CT_CHEMIN [FIN-URL]\n"
+"usage : svnversion [OPTIONS] CT_CHEMIN [FIN_URL]\n"
 "\n"
 "  Produit un 'numéro de version' compacte pour la copie de travail précisée\n"
-"  par CT_CHEMIN. FIN-URL est la partie finale de l'URL de référence pour\n"
+"  par CT_CHEMIN. FIN_URL est la partie finale de l'URL de référence pour\n"
 "  déterminer si CT_CHEMIN a été ré-aiguillée (switched).\n"
 "  Le numéro de version est envoyé sur la sortie standard. Exemple :\n"
 "\n"
@@ -7721,7 +7722,8 @@ msgstr ""
 "  4168\n"
 "\n"
 "  Le numéro de version est simple si la copie de travail ne concerne qu'une\n"
-"  révision, non modifiée, et dont l'URL de référence correspond à FIN-URL.\n"
+"  révision, non modifiée, non ré-aiguillée et dont l'URL de référence\n"
+"  correspond à FIN_URL.\n"
 "  Dans les autres cas, le numéro de version est plus compliqué :\n"
 "\n"
 "    4123:4168     copie mixte, composée de différentes révisions\n"
@@ -7740,7 +7742,7 @@ msgstr "pas de fin de ligne"
 
 #: svnversion/main.c:211
 msgid "last changed rather than current revisions"
-msgstr "dernière révision modifiée plutôt la courante"
+msgstr "dernière révision modifiée plutôt que la courante"
 
 #: svnversion/main.c:312
 #, c-format
