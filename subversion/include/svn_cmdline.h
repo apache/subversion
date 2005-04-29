@@ -56,7 +56,7 @@ svn_error_t *svn_cmdline_cstring_from_utf8 (const char **dest,
                                             apr_pool_t *pool);
 
 /** Like svn_utf_cstring_from_utf8_fuzzy(), but converts to an
-    output-encoded C string. */
+ * output-encoded C string. */
 const char *svn_cmdline_cstring_from_utf8_fuzzy (const char *src,
                                                  apr_pool_t *pool);
 
@@ -78,8 +78,9 @@ svn_error_t *svn_cmdline_path_local_style_from_utf8 (const char **dest,
  * through apr_pvsprintf().  All string arguments are in UTF-8; the output
  * is converted to the output encoding.  Use @a pool for temporary
  * allocation.
+ *
+ * @since New in 1.1.
  */
-
 svn_error_t *svn_cmdline_printf (apr_pool_t *pool,
                                  const char *fmt,
                                  ...)
@@ -89,8 +90,9 @@ svn_error_t *svn_cmdline_printf (apr_pool_t *pool,
  * passed through apr_pvsprintf().  All string arguments are in UTF-8;
  * the output is converted to the output encoding.  Use @a pool for
  * temporary allocation.
+ *
+ * @since New in 1.1.
  */
-
 svn_error_t *svn_cmdline_fprintf (FILE *stream,
                                   apr_pool_t *pool,
                                   const char *fmt,
@@ -99,16 +101,19 @@ svn_error_t *svn_cmdline_fprintf (FILE *stream,
 
 /** Output the @a string to the stdio @a stream, converting from UTF-8
  * to the output encoding.  Use @a pool for temporary allocation.
+ *
+ * @since New in 1.1.
  */
-
 svn_error_t *svn_cmdline_fputs (const char *string,
                                 FILE *stream,
                                 apr_pool_t *pool);
 
 /** Flush output buffers of the stdio @a stream, returning an error if that
- * fails.  This is just a wrapper for the standard fflush function for
- * consistent error handling. */
-
+ * fails.  This is just a wrapper for the standard fflush() function for
+ * consistent error handling. 
+ *
+ * @since New in 1.1.
+ */
 svn_error_t *svn_cmdline_fflush (FILE *stream);
 
 #ifdef __cplusplus
