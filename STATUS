@@ -67,12 +67,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14475
-    Clear some errors.
-    Justification: fixes leaks in libsvn_fs_base
-    Votes:
-      +1: philip, dlr, lundblad
-
   * r14505
     Make 'svn pget --revprop' honor the --strict flag.
     Notes:
