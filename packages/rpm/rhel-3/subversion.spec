@@ -15,7 +15,7 @@ Group: Utilities/System
 URL: http://subversion.tigris.org
 SOURCE0: subversion-%{version}-%{release}.tar.gz
 SOURCE3: filter-requires.sh
-Patch0: wbel3.apr.patch
+Patch0: apr.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: neon >= %{neon_version}
