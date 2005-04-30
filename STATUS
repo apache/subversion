@@ -68,12 +68,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14429
-    Fix name of patch file.
-    Justification: Name patch file correctly for what it does.
-    Votes:
-      +1: david, fitz (concept)
-
   * r14431
     Re-enable BDB portion of build for RHEL4 as it has good BDB 4.2.52.
     Justification: No problems supporting BDB on this platform.
