@@ -303,6 +303,15 @@ It is an experimental feature.")
 (defvar svn-status-commit-rev-number nil)
 (defvar svn-status-operated-on-dot nil)
 (defvar svn-status-elided-list nil)
+(defvar svn-status-custom-hide-function nil)
+
+;; That is an example for the svn-status-custom-hide-function:
+;; (setq svn-status-custom-hide-function 'svn-status-hide-pyc-files)
+;; (defun svn-status-hide-pyc-files (info)
+;;   "Hide all pyc files in the `svn-status-buffer-name' buffer."
+;;   (let* ((fname (svn-status-line-info->filename-nondirectory info))
+;;          (fname-len (length fname)))
+;;     (and (> fname-len 4) (string= (substring fname (- fname-len 4)) ".pyc"))))
 
 ;;; faces
 (defface svn-status-marked-face
@@ -1492,9 +1501,10 @@ Symbolic links to directories count as directories (see `file-directory-p')."
         (buffer-read-only nil)
         (start-pos)
         (overlay)
-        (unmodified-count 0)            ;how many unmodified files are hidden
-        (unknown-count 0)               ;how many unknown files are hidden
-        (marked-count 0)                ;how many files are elided
+        (unmodified-count 0)    ;how many unmodified files are hidden
+        (unknown-count 0)       ;how many unknown files are hidden
+        (custom-hide-count 0)   ;how many files are hidden via svn-status-custom-hide-function
+        (marked-count 0)        ;how many files are elided
         (user-elide-count 0)
         (fname (svn-status-line-info->filename (svn-status-get-line-information)))
         (fname-pos (point))
@@ -1510,6 +1520,9 @@ Symbolic links to directories count as directories (see `file-directory-p')."
              (svn-insert-line-in-status-buffer (car st-info)))
             ((svn-status-line-info->update-available (car st-info))
              (svn-insert-line-in-status-buffer (car st-info)))
+            ((and svn-status-custom-hide-function
+                  (apply svn-status-custom-hide-function (list (car st-info))))
+             (setq custom-hide-count (1+ custom-hide-count)))
             ((svn-status-line-info->hide-because-user-elide (car st-info))
              (setq user-elide-count (1+ user-elide-count)))
             ((svn-status-line-info->hide-because-unknown (car st-info))
@@ -1542,6 +1555,10 @@ Symbolic links to directories count as directories (see `file-directory-p')."
       (insert
        (format "%d Unmodified file(s) are hidden - press `_' to toggle hiding\n"
                unmodified-count)))
+    (when custom-hide-count
+      (insert
+       (format "%d file(s) are hidden via the svn-status-custom-hide-function\n"
+               custom-hide-count)))
     (when (> user-elide-count 0)
       (insert (format "%d file(s) elided\n" user-elide-count)))
     (insert (format "%d file(s) marked\n" marked-count))
