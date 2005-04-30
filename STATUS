@@ -67,13 +67,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14505
-    Make 'svn pget --revprop' honor the --strict flag.
-    Notes:
-      Not a showstopper, but is a kind of silent data tainting.
-    Votes:
-      +1: cmpilato, dlr, lundblad
-
   * r14479
     Update bash_completion script to remove --editor-cmd from lock
     Justification: script doesn't match code
