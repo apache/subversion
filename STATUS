@@ -68,12 +68,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14431
-    Re-enable BDB portion of build for RHEL4 as it has good BDB 4.2.52.
-    Justification: No problems supporting BDB on this platform.
-    Votes:
-      +1: david, fitz (concept), dlr (concept)
-
   * r14475
     Clear some errors.
     Justification: fixes leaks in libsvn_fs_base
