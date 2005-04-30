@@ -1,11 +1,11 @@
 %define apache_version 2.0.46
 %define neon_version 0.24.7
-%define swig_version 1.3.19-3
+%define swig_version 1.3.21
 %define apache_dir /usr
 # If you don't want to take time for the tests then set make_*_check to 0.
-%define make_ra_local_check 1
-%define make_ra_svn_check 1
-%define make_ra_dav_check 1
+%define make_ra_local_check 0
+%define make_ra_svn_check 0
+%define make_ra_dav_check 0
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -381,7 +381,7 @@ fi
 sh autogen.sh
 
 # Fix up mod_dav_svn installation.
-patch -p1 < packages/rpm/wbel-3/install.patch
+patch -p1 < packages/rpm/rhel-4/install.patch
 
 # Figure out version and release number for command and documentation display.
 case "%{release}" in
@@ -405,8 +405,7 @@ rm -rf apr apr-util neon
 
 
 %configure \
-	--without-berkeley-db \
-	--with-swig=/usr/bin/swig-1.3.19 \
+	--with-swig \
 	--with-python=/usr/bin/python2.2 \
 	--with-apxs=%{apache_dir}/sbin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-config \
@@ -447,7 +446,7 @@ echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
 killall httpd || true
 sleep 1
-sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/wbel-3/httpd.davcheck.conf > httpd.conf
+sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/rhel-4/httpd.davcheck.conf > httpd.conf
 cat > passwd <<EOF
 jrandom:xCGl35kV9oWCY
 jconstant:xCGl35kV9oWCY
@@ -466,7 +465,7 @@ make install DESTDIR="$RPM_BUILD_ROOT"
 
 # Add subversion.conf configuration file into httpd/conf.d directory.
 mkdir -p $RPM_BUILD_ROOT/etc/httpd/conf.d
-cp packages/rpm/wbel-3/subversion.conf $RPM_BUILD_ROOT/etc/httpd/conf.d
+cp packages/rpm/rhel-4/subversion.conf $RPM_BUILD_ROOT/etc/httpd/conf.d
 
 # Install Python SWIG bindings.
 make install-swig-py DESTDIR=$RPM_BUILD_ROOT DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT
