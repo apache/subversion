@@ -51,14 +51,6 @@ Candidate changes:
     Votes:
       +1: philip
 
-  * r14493, r14495
-    ra_dav/mod_dav_svn bugfix:  'svn info URL' should show correct lock owner.
-    Justification:  without this patch, it appears that all remote locks
-                    were created by the user doing the query!
-    Notes:  r14495 is the fix, r14493 is a new python test for the bug.
-    Votes:
-      +1: sussman, dlr
-
   * r14521
     Make commit unlock files in subdirectories in svnserve.
     Justification:
@@ -94,3 +86,10 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: philip, dlr, lundblad
 
+  * r14493, r14495
+    ra_dav/mod_dav_svn bugfix:  'svn info URL' should show correct lock owner.
+    Justification:  without this patch, it appears that all remote locks
+                    were created by the user doing the query!
+    Notes:  r14495 is the fix, r14493 is a new python test for the bug.
+    Votes:
+      +1: sussman, dlr, lundblad
