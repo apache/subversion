@@ -106,7 +106,7 @@ _svn()
                          --incremental --xml"
 		;;
 	lock)
-		cmdOpts="$mOpts --targets --editor-cmd --force $pOpts"
+		cmdOpts="$mOpts --targets --force $pOpts"
 		;;
 	log)
 		cmdOpts="$rOpts -v --verbose --targets $pOpts --stop-on-copy \

@@ -67,12 +67,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14479
-    Update bash_completion script to remove --editor-cmd from lock
-    Justification: script doesn't match code
-    Votes:
-      +1: philip, dlr, lundblad
-
   * r14493, r14495
     ra_dav/mod_dav_svn bugfix:  'svn info URL' should show correct lock owner.
     Justification:  without this patch, it appears that all remote locks
