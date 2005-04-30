@@ -4561,6 +4561,7 @@ svn_fs_base__get_path_kind (svn_node_kind_t *kind,
   err = get_dag (&path_node, root, path, trail, pool);
   if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
     {
+      svn_error_clear (err);
       *kind = svn_node_none;
       return SVN_NO_ERROR;
     }
@@ -4595,6 +4596,7 @@ svn_fs_base__get_path_created_rev (svn_revnum_t *rev,
   err = get_dag (&path_node, root, path, trail, pool);
   if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
     {
+      svn_error_clear (err);
       *rev = SVN_INVALID_REVNUM;
       return SVN_NO_ERROR;
     }
