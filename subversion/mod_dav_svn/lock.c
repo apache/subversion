@@ -539,6 +539,10 @@ dav_svn_get_locks(dav_lockdb *lockdb,
       apr_table_setn(info->r->headers_out, SVN_DAV_CREATIONDATE_HEADER,
                      svn_time_to_cstring (slock->creation_date,
                                           resource->pool));
+      
+      /* Let svn clients know who "owns" the slock. */
+      apr_table_setn(info->r->headers_out, SVN_DAV_LOCK_OWNER_HEADER,
+                     slock->owner);
     }
 
   *locks = lock;
@@ -609,6 +613,10 @@ dav_svn_find_lock(dav_lockdb *lockdb,
       apr_table_setn(info->r->headers_out, SVN_DAV_CREATIONDATE_HEADER,
                      svn_time_to_cstring (slock->creation_date,
                                           resource->pool));
+
+      /* Let svn clients know the 'owner' of the slock. */
+      apr_table_setn(info->r->headers_out, SVN_DAV_LOCK_OWNER_HEADER,
+                     slock->owner);
     }
 
   *lock = dlock;
@@ -823,6 +831,15 @@ dav_svn_append_locks(dav_lockdb *lockdb,
      client should just ignore the header. */
   apr_table_setn(info->r->headers_out, SVN_DAV_CREATIONDATE_HEADER,
                  svn_time_to_cstring (slock->creation_date, resource->pool));
+
+  /* A standard webdav LOCK response doesn't include any information
+     about the owner of the lock.  ('DAV:owner' has nothing to do with
+     authorization, it's just a comment that we map to
+     svn_lock_t->comment.)  We send the owner in a custom header, so
+     that svn clients can fill in svn_lock_t->owner.  A generic DAV
+     client should just ignore the header. */
+  apr_table_setn(info->r->headers_out, SVN_DAV_LOCK_OWNER_HEADER,
+                 slock->owner);
 
   return 0;
 }

@@ -67,10 +67,3 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14493, r14495
-    ra_dav/mod_dav_svn bugfix:  'svn info URL' should show correct lock owner.
-    Justification:  without this patch, it appears that all remote locks
-                    were created by the user doing the query!
-    Notes:  r14495 is the fix, r14493 is a new python test for the bug.
-    Votes:
-      +1: sussman, dlr, lundblad

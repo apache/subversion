@@ -134,6 +134,9 @@ struct lock_request_baton
   /* The creation-date returned for newly created lock. */
   apr_time_t creation_date;
 
+  /* The person who created the lock. */
+  const char *lock_owner;
+
   /* A parser for handling <D:error> responses from mod_dav_svn. */
   ne_xml_parser *error_parser;
 
