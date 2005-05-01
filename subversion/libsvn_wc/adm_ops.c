@@ -1231,7 +1231,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
 
       /* Get the full list of property changes and see if any magic
          properties were changed. */
-      SVN_ERR (svn_wc_get_prop_diffs (&propchanges, NULL, name ? name : "",
+      SVN_ERR (svn_wc_get_prop_diffs (&propchanges, NULL, fullpath,
                                       adm_access, pool));
       
       /* Determine if any of the propchanges are the "magic" ones that
