@@ -1246,7 +1246,8 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
             if ((! strcmp (propchange->name, SVN_PROP_EXECUTABLE))
                 || (! strcmp (propchange->name, SVN_PROP_KEYWORDS))
                 || (! strcmp (propchange->name, SVN_PROP_EOL_STYLE))
-                || (! strcmp (propchange->name, SVN_PROP_SPECIAL)))
+                || (! strcmp (propchange->name, SVN_PROP_SPECIAL))
+                || (! strcmp (propchange->name, SVN_PROP_NEEDS_LOCK)))
               magic_props_changed = TRUE;
           }
       }
@@ -1359,7 +1360,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
               (err, apr_psprintf (pool, _("Error restoring text for '%s'"),
                                   svn_path_local_style (fullpath, pool)));
 
-          /* If necessary, tweak the new working file's executable bit. */
+          SVN_ERR (svn_wc__maybe_set_read_only (NULL, fullpath, adm_access, pool));
           SVN_ERR (svn_wc__maybe_set_executable (NULL, fullpath, adm_access,
                                                  pool));
 
