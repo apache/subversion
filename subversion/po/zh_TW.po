@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-04-23 14:41+0800\n"
+"POT-Creation-Date: 2005-04-30 20:25+0800\n"
 "PO-Revision-Date: 2004-09-12 22:05+0800\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Traditional Chinese <dev@subversion.tigris.org>\n"
@@ -759,16 +759,16 @@ msgstr ""
 #: clients/cmdline/main.c:356
 msgid ""
 "Display information about a local or remote item.\n"
-"usage: info [PATH...]\n"
+"usage: info [TARGET...]\n"
 "\n"
-"  Print information about each PATH (default: '.')\n"
-"  PATH may be either a working-copy path or URL.\n"
+"  Print information about each TARGET (default: '.')\n"
+"  TARGET may be either a working-copy path or URL.\n"
 msgstr ""
-"顯示目錄或檔案的資訊.\n"
-"用法: info [PATH...]\n"
+"顯示本地或遠端項目的資訊.\n"
+"用法: info [TARGET...]\n"
 "\n"
-"  顯示每個 PATH 的資訊 (預設: '.').\n"
-"  PATH 可為工作複本或是 URL.\n"
+"  顯示每個 TARGET 的資訊 (預設: '.').\n"
+"  TARGET 可為工作複本路徑或是 URL.\n"
 
 #: clients/cmdline/main.c:364
 msgid ""
@@ -810,12 +810,13 @@ msgstr ""
 msgid ""
 "Lock working copy paths or URLs in the repository, so that\n"
 "no other user can commit changes to them.\n"
-"usage: lock PATH...\n"
+"usage: lock TARGET...\n"
 "\n"
 "  Use --force to steal the lock from another user or working copy.\n"
 msgstr ""
-"鎖定工作複本路徑或是檔案庫的 URL, 這樣就沒有人可以對它們送交任何更動.\n"
-"用法: lock PATH...\n"
+"鎖定工作複本路徑或是檔案庫的 URL, 這樣就沒有其它使用者可以對它們\n"
+"送交任何更動.\n"
+"用法: lock TARGET...\n"
 "\n"
 "  用 --force, 從其它使用者或工作複本偷走鎖定.\n"
 
@@ -1319,12 +1320,12 @@ msgstr ""
 #: clients/cmdline/main.c:708
 msgid ""
 "Unlock working copy paths or URLs.\n"
-"usage: unlock PATH...\n"
+"usage: unlock TARGET...\n"
 "\n"
 "  Use --force to break the lock.\n"
 msgstr ""
-"解除工作複本路徑 或 URL 的鎖定.\n"
-"用法: unlock PATH...\n"
+"解除工作複本路徑或 URL 的鎖定.\n"
+"用法: unlock TARGET...\n"
 "\n"
 "  使用 --force 以打破該鎖定.\n"
 
@@ -2766,47 +2767,47 @@ msgstr "'%s' 不存在"
 msgid "Path '%s' does not exist"
 msgstr "路徑 '%s' 不存在"
 
-#: libsvn_client/commit.c:729 libsvn_client/copy.c:399
+#: libsvn_client/commit.c:728 libsvn_client/copy.c:399
 #: libsvn_client/copy.c:415
 #, c-format
 msgid "Path '%s' already exists"
 msgstr "路徑 '%s' 已存在"
 
-#: libsvn_client/commit.c:739
+#: libsvn_client/commit.c:738
 #, c-format
 msgid "'%s' is a reserved name and cannot be imported"
 msgstr "'%s' 是一個保留的名稱, 無法被匯入"
 
-#: libsvn_client/commit.c:818 libsvn_client/copy.c:545
+#: libsvn_client/commit.c:833 libsvn_client/copy.c:545
 msgid "Commit failed (details follow):"
 msgstr "送交失敗 (細節隨附):"
 
-#: libsvn_client/commit.c:826 libsvn_client/copy.c:553
+#: libsvn_client/commit.c:841 libsvn_client/copy.c:553
 msgid "Commit succeeded, but other errors follow:"
 msgstr "送交成功, 但是發生了其它的錯誤, 如後:"
 
-#: libsvn_client/commit.c:833 libsvn_client/copy.c:560
+#: libsvn_client/commit.c:848 libsvn_client/copy.c:560
 msgid "Error unlocking locked dirs (details follow):"
 msgstr "解除鎖定目錄時發生錯誤 (細節隨附):"
 
-#: libsvn_client/commit.c:844
+#: libsvn_client/commit.c:859
 msgid "Error bumping revisions post-commit (details follow):"
 msgstr "post-commit 增加修訂版時發生錯誤 (細節隨附):"
 
-#: libsvn_client/commit.c:855 libsvn_client/copy.c:571
+#: libsvn_client/commit.c:870 libsvn_client/copy.c:571
 msgid "Error in post-commit clean-up (details follow):"
 msgstr "post-commit 清除時發生錯誤 (細節隨附):"
 
-#: libsvn_client/commit.c:1157
+#: libsvn_client/commit.c:1172
 #, c-format
 msgid "'%s' is a URL, but URLs cannot be commit targets"
 msgstr "'%s' 是 URL, 但是 URL 不可為送交的目標"
 
-#: libsvn_client/commit.c:1349
+#: libsvn_client/commit.c:1364
 msgid "Are all the targets part of the same working copy?"
 msgstr "是否所有的目標都是同一個工作複本的一部份?"
 
-#: libsvn_client/commit.c:1364
+#: libsvn_client/commit.c:1379
 msgid "Cannot non-recursively commit a directory deletion"
 msgstr "無法以非遞迴式送交目錄刪除"
 
@@ -3135,7 +3136,7 @@ msgstr "'%s' 未於這個工作複本中鎖定"
 msgid "'%s' is not locked"
 msgstr "'%s' 未被鎖定"
 
-#: libsvn_client/locking_commands.c:345 libsvn_fs/fs-loader.c:885
+#: libsvn_client/locking_commands.c:345 libsvn_fs/fs-loader.c:892
 #: libsvn_ra/ra_loader.c:512
 msgid "Lock comment has illegal characters"
 msgstr "鎖定註解含有不合法的字元"
@@ -3335,13 +3336,17 @@ msgstr "未知的 FS 類別 '%s'"
 msgid "Can't allocate FS mutex"
 msgstr "無法配置 FS mutex"
 
-#: libsvn_fs/fs-loader.c:269
+#: libsvn_fs/fs-loader.c:276
 msgid "Can't grab FS mutex"
 msgstr "無法取得 FS mutex"
 
-#: libsvn_fs/fs-loader.c:275
+#: libsvn_fs/fs-loader.c:282
 msgid "Can't ungrab FS mutex"
 msgstr "無法釋放 FS mutex"
+
+#: libsvn_fs/fs-loader.c:898
+msgid "Negative expiration date passed to svn_fs_lock"
+msgstr "負的過期日期傳遞至 svn_fs_lock"
 
 #: libsvn_fs_base/bdb/bdb-err.c:97
 #, c-format
@@ -3792,17 +3797,17 @@ msgstr "與 Berkeley DB 檔案庫使用的模組"
 msgid "Unsupported FS loader version (%d) for bdb"
 msgstr "不支援的 bdb 的 FS 載入器版本 (%d)"
 
-#: libsvn_fs_base/lock.c:447 libsvn_fs_fs/lock.c:615
+#: libsvn_fs_base/lock.c:445 libsvn_fs_fs/lock.c:615
 #, c-format
 msgid "Cannot verify lock on path '%s'; no username available"
 msgstr "無法驗證路徑 '%s' 的鎖定; 無法取得使用者名稱"
 
-#: libsvn_fs_base/lock.c:453 libsvn_fs_fs/lock.c:621
+#: libsvn_fs_base/lock.c:451 libsvn_fs_fs/lock.c:621
 #, c-format
 msgid "User %s does not own lock on path '%s' (currently locked by %s)"
 msgstr "使用者 %s 未擁有路徑 '%s' 的鎖定 (目前被 %s 鎖定)"
 
-#: libsvn_fs_base/lock.c:460 libsvn_fs_fs/lock.c:628
+#: libsvn_fs_base/lock.c:458 libsvn_fs_fs/lock.c:628
 #, c-format
 msgid "Cannot verify lock on path '%s'; no matching lock-token available"
 msgstr "無法驗証路徑 '%s' 的鎖定; 找不到符合的鎖定符記"
@@ -3908,9 +3913,9 @@ msgstr "根物件必須為異動的根"
 msgid "Failure opening '%s'"
 msgstr "無法開啟 '%s'"
 
-#: libsvn_fs_base/tree.c:1407 libsvn_fs_fs/tree.c:1153
-msgid "Asking props changed in two different filesystems"
-msgstr "要求兩個不同檔案系統中更動的性質"
+#: libsvn_fs_base/tree.c:1407
+msgid "Cannot compare property value between two different filesystems"
+msgstr "無法比較兩個不同檔案系統中的性質內容"
 
 #: libsvn_fs_base/tree.c:1741
 msgid "Corrupt DB: faulty predecessor count"
@@ -4216,6 +4221,10 @@ msgstr "鎖定失敗: 存在 '%s' 的新版本"
 msgid "Transaction cleanup failed"
 msgstr "異動清除失敗"
 
+#: libsvn_fs_fs/tree.c:1153
+msgid "Asking props changed in two different filesystems"
+msgstr "要求兩個不同檔案系統中更動的性質"
+
 #: libsvn_ra/ra_loader.c:212
 #, c-format
 msgid "Mismatched RA version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
@@ -4509,29 +4518,29 @@ msgstr "無法在本資源或任何其父項目中找到 UUID 性質"
 msgid "Please upgrade the server to 0.19 or later"
 msgstr "請將伺服器昇級至 0.19 或更新的版本"
 
-#: libsvn_ra_dav/session.c:1019 libsvn_ra_dav/session.c:1145
+#: libsvn_ra_dav/session.c:1038 libsvn_ra_dav/session.c:1164
 msgid "Failed to parse URI"
 msgstr "無法剖析 URI"
 
-#: libsvn_ra_dav/session.c:1042
+#: libsvn_ra_dav/session.c:1061
 msgid "Lock request failed"
 msgstr "鎖定要求失敗"
 
-#: libsvn_ra_dav/session.c:1160
+#: libsvn_ra_dav/session.c:1179
 #, c-format
 msgid "'%s' is not locked in the repository"
 msgstr "'%s' 未於檔案庫中鎖定"
 
-#: libsvn_ra_dav/session.c:1197
+#: libsvn_ra_dav/session.c:1216
 msgid "Unlock request failed"
 msgstr "解除鎖定要求失敗"
 
-#: libsvn_ra_dav/session.c:1379
+#: libsvn_ra_dav/session.c:1398
 msgid "Failed to fetch lock information"
 msgstr "無法取得鎖定資料"
 
 # as-is
-#: libsvn_ra_dav/session.c:1455
+#: libsvn_ra_dav/session.c:1469
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_dav"
 msgstr "Unsupported RA loader version (%d) for ra_dav"
@@ -5322,11 +5331,11 @@ msgstr "無法開啟設定檔案 '%s'"
 msgid "Can't manipulate current date"
 msgstr "無法處理目前的日期"
 
-#: libsvn_subr/date.c:274 libsvn_subr/date.c:282
+#: libsvn_subr/date.c:277 libsvn_subr/date.c:285
 msgid "Can't calculate requested date"
 msgstr "無法算出要求的日期"
 
-#: libsvn_subr/date.c:277
+#: libsvn_subr/date.c:280
 msgid "Can't expand time"
 msgstr "無法擴展時間"
 
@@ -5777,21 +5786,21 @@ msgstr ""
 msgid "Type '%s help' for usage.\n"
 msgstr "請使用 '%s help' 以了解用法.\n"
 
-#: libsvn_subr/path.c:1065
+#: libsvn_subr/path.c:1039
 #, c-format
 msgid "Couldn't determine absolute path of '%s'"
 msgstr "無法決定 '%s' 的絕對路徑"
 
-#: libsvn_subr/path.c:1104
+#: libsvn_subr/path.c:1078
 #, c-format
 msgid "'%s' is neither a file nor a directory name"
 msgstr "'%s' 不是檔案或目錄名稱"
 
-#: libsvn_subr/path.c:1210
+#: libsvn_subr/path.c:1184
 msgid "Can't determine the native path encoding"
 msgstr "無法決定原生的路徑編碼"
 
-#: libsvn_subr/path.c:1264
+#: libsvn_subr/path.c:1238
 #, c-format
 msgid "Invalid control character '0x%02x' in path '%s'"
 msgstr "無效的控制字元 '0x%02x' 出現在路徑 '%s'"
@@ -7694,14 +7703,14 @@ msgstr "已匯出%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' 未納入版本控制, 並未匯出\n"
 
+#~ msgid "unknown command: '%s'\n"
+#~ msgstr "未知的命令: '%s'\n"
+
 #~ msgid "'svn info' only works on working copy paths, not URLs"
 #~ msgstr "'svn info' 只處理工作複本路徑, 不處理 URL"
 
 #~ msgid "repository argument required\n"
 #~ msgstr "需有檔案庫引數\n"
-
-#~ msgid "unknown command: '%s'\n"
-#~ msgstr "未知的命令: '%s'\n"
 
 #~ msgid "Can't recode string"
 #~ msgstr "無法對字串進行解碼"
@@ -7728,12 +7737,12 @@ msgstr "'%s' 未納入版本控制, 並未匯出\n"
 #~ "%s"
 #~ msgstr "'%s' 的 RA 外掛版本不符合: 遇到 %d.%d.%d%s, 預期 %d.%d.%d%s"
 
-#~ msgid "Print client version info\n"
-#~ msgstr "輸出用戶端版本資料\n"
-
 #~ msgid "Working copy not locked"
 #~ msgstr "工作複本未鎖定"
 
 # as-is
 #~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
 #~ msgstr "Unsupported RA plugin ABI version (%d) for ra_svn."
+
+#~ msgid "Print client version info\n"
+#~ msgstr "輸出用戶端版本資料\n"
