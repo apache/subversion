@@ -45,8 +45,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-04-25 14:59+0200\n"
-"PO-Revision-Date: 2005-04-25 21:16+0200\n"
+"POT-Creation-Date: 2005-05-01 20:42+0200\n"
+"PO-Revision-Date: 2005-05-01 20:47+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -823,16 +823,16 @@ msgstr ""
 #: clients/cmdline/main.c:356
 msgid ""
 "Display information about a local or remote item.\n"
-"usage: info [PATH...]\n"
+"usage: info [TARGET...]\n"
 "\n"
-"  Print information about each PATH (default: '.')\n"
-"  PATH may be either a working-copy path or URL.\n"
+"  Print information about each TARGET (default: '.')\n"
+"  TARGET may be either a working-copy path or URL.\n"
 msgstr ""
 "Visa information om en fil eller katlog - lokal eller från ett arkiv.\n"
-"användning: info [SÖKVÄG...]\n"
+"användning: info [MÅL...]\n"
 "\n"
-"  Skriv ut information om varje angiven SÖKVÄG (\".\" om ingen anges).\n"
-"  SÖKVÄG kan antingen vara till en arbertskopia eller en URL.\n"
+"  Skriv ut information om varje angivet MÅL (\".\" om inget anges).\n"
+"  MÅL kan antingen vara till en arbertskopia eller en URL.\n"
 
 #: clients/cmdline/main.c:364
 msgid ""
@@ -875,16 +875,15 @@ msgstr ""
 msgid ""
 "Lock working copy paths or URLs in the repository, so that\n"
 "no other user can commit changes to them.\n"
-"usage: lock PATH...\n"
+"usage: lock TARGET...\n"
 "\n"
 "  Use --force to steal the lock from another user or working copy.\n"
 msgstr ""
 "Lås sökvägar till arbetskopior, eller URL:er, i arkivet så att ingen annan\n"
 "användare kan arkivera ändringar till dem.\n"
-"användning: lock SÖKVÄG...\n"
+"användning: lock MÅL...\n"
 "\n"
-"  Använd -force-flaggan för att stjäla ett lås från en annana användare "
-"eller\n"
+"  Använd -force-flaggan för att stjäla ett lås från en annana användare eller\n"
 "  arbetskopia.\n"
 
 #: clients/cmdline/main.c:397
@@ -1437,14 +1436,14 @@ msgstr ""
 #: clients/cmdline/main.c:708
 msgid ""
 "Unlock working copy paths or URLs.\n"
-"usage: unlock PATH...\n"
+"usage: unlock TARGET...\n"
 "\n"
 "  Use --force to break the lock.\n"
 msgstr ""
 "Lås upp sökvägar i en arbetskopia eller URL:er.\n"
-"användning: unlock SÖKVÄG...\n"
+"användning: unlock MÅL...\n"
 "\n"
-"Använd --force för att \"bryta upp\" ett lås.\n"
+"Använd --force för att \"bryta upp\" ett låset.\n"
 
 #: clients/cmdline/main.c:716
 msgid ""
@@ -1471,7 +1470,8 @@ msgstr ""
 "Inför ändringar från arkivet i arbetskopian.\n"
 "användning: update [SÖKVÄG...]\n"
 "\n"
-"  Om ingen revision anges, görs arbetskopian aktuell enligt huvudrevisionen.\n"
+"  Om ingen revision anges, görs arbetskopian aktuell enligt "
+"huvudrevisionen.\n"
 "  Annars synkroniseras arbetskopian med den revision som anges med -r.\n"
 "\n"
 "  För varje uppdaterat objekt visas en rad vars första tecken indikerar\n"
@@ -1485,7 +1485,8 @@ msgstr ""
 "\n"
 "  Ett tecken i den första kolumnen visar en uppdatering av filen,\n"
 "  medan uppdateringar av filens egenskaper visas i den andra kolumnen.\n"
-"  Ett \"B\" i tredje kolumnen visar att ett lås har blivit stulet eller brutet.\n"
+"  Ett \"B\" i tredje kolumnen visar att ett lås har blivit stulet eller "
+"brutet.\n"
 
 #: clients/cmdline/main.c:794 svnadmin/main.c:77 svnlook/main.c:277
 msgid "Caught signal"
@@ -2885,48 +2886,48 @@ msgstr "\"%s\" finns inte"
 msgid "Path '%s' does not exist"
 msgstr "Sökvägen \"%s\" finns inte"
 
-#: libsvn_client/commit.c:729 libsvn_client/copy.c:399
+#: libsvn_client/commit.c:728 libsvn_client/copy.c:399
 #: libsvn_client/copy.c:415
 #, c-format
 msgid "Path '%s' already exists"
 msgstr "Sökvägen \"%s\" finns redan"
 
-#: libsvn_client/commit.c:739
+#: libsvn_client/commit.c:738
 #, c-format
 msgid "'%s' is a reserved name and cannot be imported"
 msgstr "\"%s\" är ett reserverat namn och kan inte importeras"
 
-#: libsvn_client/commit.c:818 libsvn_client/copy.c:545
+#: libsvn_client/commit.c:833 libsvn_client/copy.c:545
 msgid "Commit failed (details follow):"
 msgstr "Arkiveringen misslyckades (mer information följer):"
 
-#: libsvn_client/commit.c:826 libsvn_client/copy.c:553
+#: libsvn_client/commit.c:841 libsvn_client/copy.c:553
 msgid "Commit succeeded, but other errors follow:"
 msgstr "Arkiveringen lyckades, men andra fel följer:"
 
-#: libsvn_client/commit.c:833 libsvn_client/copy.c:560
+#: libsvn_client/commit.c:848 libsvn_client/copy.c:560
 msgid "Error unlocking locked dirs (details follow):"
 msgstr "Fel vid upplåsning av låsta kataloger (mer information följer):"
 
-#: libsvn_client/commit.c:844
+#: libsvn_client/commit.c:859
 msgid "Error bumping revisions post-commit (details follow):"
 msgstr ""
 "Fel vid höjning av revisionsnummer efter arkivering (mer information följer):"
 
-#: libsvn_client/commit.c:855 libsvn_client/copy.c:571
+#: libsvn_client/commit.c:870 libsvn_client/copy.c:571
 msgid "Error in post-commit clean-up (details follow):"
 msgstr "Fel vid städning efter arkivering (mer information följer):"
 
-#: libsvn_client/commit.c:1157
+#: libsvn_client/commit.c:1172
 #, c-format
 msgid "'%s' is a URL, but URLs cannot be commit targets"
 msgstr "\"%s\" är en URL, men URL:er kan inte vara mål vid arkivering"
 
-#: libsvn_client/commit.c:1349
+#: libsvn_client/commit.c:1364
 msgid "Are all the targets part of the same working copy?"
 msgstr "Ingår samtliga mål i samma arbetskopia?"
 
-#: libsvn_client/commit.c:1364
+#: libsvn_client/commit.c:1379
 msgid "Cannot non-recursively commit a directory deletion"
 msgstr ""
 "Kan inte arkivera en radering av en katalog utan att det görs rekursivt"
@@ -2960,7 +2961,7 @@ msgstr ""
 #: libsvn_client/commit_util.c:667 libsvn_client/commit_util.c:797
 #: libsvn_client/copy.c:1072 libsvn_client/delete.c:67
 #: libsvn_client/diff.c:1386 libsvn_client/diff.c:1984
-#: libsvn_client/diff.c:2459 libsvn_client/diff.c:2568
+#: libsvn_client/diff.c:2460 libsvn_client/diff.c:2569
 #: libsvn_client/locking_commands.c:217 libsvn_client/locking_commands.c:243
 #: libsvn_client/log.c:129 libsvn_client/prop_commands.c:213
 #: libsvn_client/prop_commands.c:446 libsvn_client/prop_commands.c:602
@@ -3181,7 +3182,8 @@ msgid "Not all required revisions are specified"
 msgstr "Alla revisioner som krävs angavs inte"
 
 #: libsvn_client/diff.c:1713
-msgid "Sorry, svn_client_diff2 was called in a way that is not yet supported"
+#, fuzzy
+msgid "Sorry, svn_client_diff3 was called in a way that is not yet supported"
 msgstr "Tyvärr anropades svn_client_diff2 på ett sätt som inte stöds ännu"
 
 #: libsvn_client/diff.c:1752
@@ -3206,8 +3208,8 @@ msgstr "Katalogen \"%s\" saknar URL"
 msgid "At least one revision must be non-local for a pegged diff"
 msgstr "Åtminstone en revision måste vara icke-lokal för fixerad diff"
 
-#: libsvn_client/diff.c:2432 libsvn_client/diff.c:2438
-#: libsvn_client/diff.c:2553 libsvn_client/locking_commands.c:221
+#: libsvn_client/diff.c:2433 libsvn_client/diff.c:2439
+#: libsvn_client/diff.c:2554 libsvn_client/locking_commands.c:221
 #: libsvn_client/locking_commands.c:247 libsvn_client/ra.c:714
 #: libsvn_client/ra.c:837
 #, c-format
@@ -3265,7 +3267,7 @@ msgstr "\"%s\" är inte låst i den här arbetskopian"
 msgid "'%s' is not locked"
 msgstr "\"%s\" är inte låst"
 
-#: libsvn_client/locking_commands.c:345 libsvn_fs/fs-loader.c:885
+#: libsvn_client/locking_commands.c:345 libsvn_fs/fs-loader.c:892
 #: libsvn_ra/ra_loader.c:512
 msgid "Lock comment has illegal characters"
 msgstr "Låskommentaren innehåller ogiltiga tecken"
@@ -3425,7 +3427,12 @@ msgstr "Svndiff innehåller källvyer med förflyttningar baklänges"
 msgid "Unexpected end of svndiff input"
 msgstr "Oväntat slut på svndiff"
 
-#: libsvn_diff/diff_file.c:1169
+#: libsvn_diff/diff_file.c:702
+#, c-format
+msgid "%s\\ No newline at end of file%s"
+msgstr ""
+
+#: libsvn_diff/diff_file.c:1240
 #, c-format
 msgid "Failed to delete mmap '%s'"
 msgstr "Kunde inte ta bort minnesmappning '%s'"
@@ -3458,13 +3465,17 @@ msgstr "Okänd filsystemstyp \"%s\""
 msgid "Can't allocate FS mutex"
 msgstr "Kan inte allokera mutex för FS-biblioteket"
 
-#: libsvn_fs/fs-loader.c:269
+#: libsvn_fs/fs-loader.c:276
 msgid "Can't grab FS mutex"
 msgstr "Kan inte allokera mutex för filsystemsbiblioteket"
 
-#: libsvn_fs/fs-loader.c:275
+#: libsvn_fs/fs-loader.c:282
 msgid "Can't ungrab FS mutex"
 msgstr "Kan inte släppa lås för FS"
+
+#: libsvn_fs/fs-loader.c:898
+msgid "Negative expiration date passed to svn_fs_lock"
+msgstr "Negativt utgånsgdatum till svn_fs_lock"
 
 #: libsvn_fs_base/bdb/bdb-err.c:97
 #, c-format
@@ -3927,18 +3938,18 @@ msgstr "Modul för att arbeta med ett Berkeley DB-arkiv."
 msgid "Unsupported FS loader version (%d) for bdb"
 msgstr "Versionen för FS-laddaren (%d) stöds ej för bdb"
 
-#: libsvn_fs_base/lock.c:447 libsvn_fs_fs/lock.c:615
+#: libsvn_fs_base/lock.c:445 libsvn_fs_fs/lock.c:615
 #, c-format
 msgid "Cannot verify lock on path '%s'; no username available"
 msgstr "Kan inte kontrollera låset för sökvägen '%s'; användarnamn saknas"
 
-#: libsvn_fs_base/lock.c:453 libsvn_fs_fs/lock.c:621
+#: libsvn_fs_base/lock.c:451 libsvn_fs_fs/lock.c:621
 #, c-format
 msgid "User %s does not own lock on path '%s' (currently locked by %s)"
 msgstr ""
 "Användaren %s äger inget lås på sökvägen \"%s\" (för tillfället låst av %s)"
 
-#: libsvn_fs_base/lock.c:460 libsvn_fs_fs/lock.c:628
+#: libsvn_fs_base/lock.c:458 libsvn_fs_fs/lock.c:628
 #, c-format
 msgid "Cannot verify lock on path '%s'; no matching lock-token available"
 msgstr ""
@@ -4046,9 +4057,9 @@ msgstr "Rotobjektet måste vara en transaktionsrot"
 msgid "Failure opening '%s'"
 msgstr "Kan inte öppna \"%s\""
 
-#: libsvn_fs_base/tree.c:1407 libsvn_fs_fs/tree.c:1153
-msgid "Asking props changed in two different filesystems"
-msgstr "Frågar om egenskaper ändrats mellan två olika filsystem"
+#: libsvn_fs_base/tree.c:1407
+msgid "Cannot compare property value between two different filesystems"
+msgstr "Kan inte jämföra egenskapsvärde mellan två olika filsystem"
 
 #: libsvn_fs_base/tree.c:1741
 msgid "Corrupt DB: faulty predecessor count"
@@ -4360,6 +4371,10 @@ msgstr "Låsning misslyckades: nyare version av '%s' finns"
 msgid "Transaction cleanup failed"
 msgstr "Städning efter transaktion misslyckades"
 
+#: libsvn_fs_fs/tree.c:1153
+msgid "Asking props changed in two different filesystems"
+msgstr "Frågar om egenskaper ändrats mellan två olika filsystem"
+
 #: libsvn_ra/ra_loader.c:212
 #, c-format
 msgid "Mismatched RA version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
@@ -4657,28 +4672,28 @@ msgstr ""
 msgid "Please upgrade the server to 0.19 or later"
 msgstr "Var vänlig uppgradera servern till version 0.19 eller senare"
 
-#: libsvn_ra_dav/session.c:1019 libsvn_ra_dav/session.c:1145
+#: libsvn_ra_dav/session.c:1038 libsvn_ra_dav/session.c:1164
 msgid "Failed to parse URI"
 msgstr "Misslyckades med att analysera URI"
 
-#: libsvn_ra_dav/session.c:1042
+#: libsvn_ra_dav/session.c:1061
 msgid "Lock request failed"
 msgstr "Låsförfrågan misslyckades"
 
-#: libsvn_ra_dav/session.c:1160
+#: libsvn_ra_dav/session.c:1179
 #, c-format
 msgid "'%s' is not locked in the repository"
 msgstr "\"%s\" är inte låst i arkivet"
 
-#: libsvn_ra_dav/session.c:1197
+#: libsvn_ra_dav/session.c:1216
 msgid "Unlock request failed"
 msgstr "Upplåsningsförfrågan misslyckades"
 
-#: libsvn_ra_dav/session.c:1379
+#: libsvn_ra_dav/session.c:1398
 msgid "Failed to fetch lock information"
 msgstr "Kunde inte hämta låsinformation"
 
-#: libsvn_ra_dav/session.c:1455
+#: libsvn_ra_dav/session.c:1469
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_dav"
 msgstr "Versionen för RA-laddaren (%d) stöds ej för ra_dav"
@@ -5876,21 +5891,21 @@ msgstr ""
 msgid "Type '%s help' for usage.\n"
 msgstr "Skriv \"%s help\" för användning.\n"
 
-#: libsvn_subr/path.c:1065
+#: libsvn_subr/path.c:1039
 #, c-format
 msgid "Couldn't determine absolute path of '%s'"
 msgstr "Kunde inte ta reda på absolut sökväg för '%s'"
 
-#: libsvn_subr/path.c:1104
+#: libsvn_subr/path.c:1078
 #, c-format
 msgid "'%s' is neither a file nor a directory name"
 msgstr "\"%s\" är varken ett fil- eller katalognamn"
 
-#: libsvn_subr/path.c:1210
+#: libsvn_subr/path.c:1184
 msgid "Can't determine the native path encoding"
 msgstr "Kan inte hitta den teckenkodning som ditt system använder för sökvägar"
 
-#: libsvn_subr/path.c:1264
+#: libsvn_subr/path.c:1238
 #, c-format
 msgid "Invalid control character '0x%02x' in path '%s'"
 msgstr "Ogiltigt kontrolltecken \"0x%02x\" i sökvägen \"%s\""
