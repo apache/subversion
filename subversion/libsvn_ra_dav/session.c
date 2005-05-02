@@ -1061,16 +1061,18 @@ shim_svn_ra_dav__lock(svn_ra_session_t *session,
                                        _("Lock request failed"), rv, pool);
     }
 
+  if (!ras->lrb->lock_owner || !ras->lrb->creation_date)
+    return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                            _("Incomplete lock data returned"));
+
   /* Build an svn_lock_t based on the returned ne_lock. */
   slock = svn_lock_create(pool);
   slock->path = fs_path.data;
   slock->token = apr_pstrdup(pool, nlock->token);
   if (nlock->owner)
     slock->comment = apr_pstrdup(pool, nlock->owner);
-  if (ras->lrb->lock_owner)
-    slock->owner = apr_pstrdup(pool, ras->lrb->lock_owner);
-  if (ras->lrb->creation_date)
-    slock->creation_date = ras->lrb->creation_date;
+  slock->owner = apr_pstrdup(pool, ras->lrb->lock_owner);
+  slock->creation_date = ras->lrb->creation_date;
 
   if (nlock->timeout == NE_TIMEOUT_INFINITE)
     slock->expiration_date = 0;
@@ -1313,16 +1315,20 @@ lock_receiver(void *userdata,
 
   if (lock)
     {
+      if (!rb->lrb->lock_owner || !rb->lrb->creation_date)
+        {
+          rb->err = svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                     _("Incomplete lock data returned"));
+          return;
+        }
       /* Convert the ne_lock into an svn_lock_t. */
       rb->lock = svn_lock_create(rb->pool);
       rb->lock->token = apr_pstrdup(rb->pool, lock->token);
       rb->lock->path = rb->fs_path;
       if (lock->owner)
         rb->lock->comment = apr_pstrdup(rb->pool, lock->owner);
-      if (rb->lrb->lock_owner)
-        rb->lock->owner = apr_pstrdup(rb->pool, rb->lrb->lock_owner);
-      if (rb->lrb->creation_date)
-        rb->lock->creation_date = rb->lrb->creation_date;
+      rb->lock->owner = apr_pstrdup(rb->pool, rb->lrb->lock_owner);
+      rb->lock->creation_date = rb->lrb->creation_date;
       if (lock->timeout == NE_TIMEOUT_INFINITE)
         rb->lock->expiration_date = 0;
       else if (lock->timeout > 0)
