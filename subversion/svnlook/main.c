@@ -933,10 +933,10 @@ print_diff_tree (svn_fs_root_t *root,
                   SVN_ERR (generate_label (&orig_label, base_root, 
                                            base_path, pool));
                   SVN_ERR (generate_label (&new_label, root, path, pool));
-                  SVN_ERR (svn_diff_file_output_unified (ostream, diff, 
-                                                         orig_path, new_path,
-                                                         orig_label, new_label,
-                                                         pool));
+                  SVN_ERR (svn_diff_file_output_unified2
+                           (ostream, diff, orig_path, new_path,
+                            orig_label, new_label,
+                            svn_cmdline_output_encoding (pool), pool));
                   SVN_ERR (svn_stream_close (ostream));
                 }
             }

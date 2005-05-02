@@ -28,6 +28,7 @@
 #include "svn_path.h"
 #include "svn_error.h"
 #include "svn_types.h"
+#include "svn_cmdline.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -183,7 +184,7 @@ svn_cl__diff (apr_getopt_t *os,
           target1 = svn_path_join (old_target, path, subpool);
           target2 = svn_path_join (new_target, path, subpool);
           
-          SVN_ERR (svn_client_diff2 (options,
+          SVN_ERR (svn_client_diff3 (options,
                                      target1,
                                      &(opt_state->start_revision),
                                      target2,
@@ -192,6 +193,7 @@ svn_cl__diff (apr_getopt_t *os,
                                      opt_state->notice_ancestry ? FALSE : TRUE,
                                      opt_state->no_diff_deleted,
                                      opt_state->force,
+                                     svn_cmdline_output_encoding (pool),
                                      outfile,
                                      errfile,
                                      ((svn_cl__cmd_baton_t *)baton)->ctx,
@@ -210,7 +212,7 @@ svn_cl__diff (apr_getopt_t *os,
             peg_revision.kind = svn_path_is_url (path)
               ? svn_opt_revision_head : svn_opt_revision_working;
 
-          SVN_ERR (svn_client_diff_peg2 (options,
+          SVN_ERR (svn_client_diff_peg3 (options,
                                          truepath,
                                          &peg_revision,
                                          &opt_state->start_revision,
@@ -221,6 +223,7 @@ svn_cl__diff (apr_getopt_t *os,
                                          ? FALSE : TRUE,
                                          opt_state->no_diff_deleted,
                                          opt_state->force,
+                                         svn_cmdline_output_encoding(pool),
                                          outfile,
                                          errfile,
                                          ((svn_cl__cmd_baton_t *)baton)->ctx,
