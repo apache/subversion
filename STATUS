@@ -59,7 +59,7 @@ Candidate changes:
       +1: lundblad
 
   * r14536
-    Make backend tests explict and do them for both BDB and FSFS.
+    Make backend tests explicit and do them for both BDB and FSFS.
     Justification:
       Complete testing = good.
     Votes:
