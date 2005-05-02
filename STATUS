@@ -71,6 +71,13 @@ Candidate changes:
       Revert does not restore read-only when needed.
     Votes:
       +1: djh, lundblad
+  * r14559
+    Validate locks received from server in libsvn_ra_dav.
+    Justification:
+      Prevents API violation that could lead to crashing clients.
+      A bug in RC2 triggers this.
+    Votes:
+      +1: lundblad
 
 Approved changes (further review is welcome, but not required):
 
