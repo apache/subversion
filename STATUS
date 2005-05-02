@@ -49,7 +49,7 @@ Candidate changes:
     Justification: fixes some command line client crashes over ra_local
     Notes: r14177 is the svn_ra_initialize patch
     Votes:
-      +1: philip
+      +1: philip, lundblad
 
   * r14521
     Make commit unlock files in subdirectories in svnserve.
@@ -70,7 +70,7 @@ Candidate changes:
     Justification:
       Revert does not restore read-only when needed.
     Votes:
-      +1: djh
+      +1: djh, lundblad
 
 Approved changes (further review is welcome, but not required):
 
