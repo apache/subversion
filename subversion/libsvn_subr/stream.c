@@ -35,6 +35,7 @@
 #include "svn_io.h"
 #include "svn_error.h"
 #include "svn_string.h"
+#include "svn_utf.h"
 
 
 struct svn_stream_t {
@@ -129,8 +130,32 @@ svn_stream_printf (svn_stream_t *stream,
   message = apr_pvsprintf (pool, fmt, ap);
   va_end (ap);
   
-  len = strlen(message);
+  len = strlen (message);
   return svn_stream_write (stream, message, &len);
+}
+
+
+svn_error_t *
+svn_stream_printf_from_utf8 (svn_stream_t *stream,
+                             const char *encoding,
+                             apr_pool_t *pool,
+                             const char *fmt,
+                             ...)
+{
+  const char *message, *translated;
+  va_list ap;
+  apr_size_t len;
+
+  va_start (ap, fmt);
+  message = apr_pvsprintf (pool, fmt, ap);
+  va_end (ap);
+
+  SVN_ERR (svn_utf_cstring_from_utf8_ex (&translated, message, encoding,
+                                         NULL, pool));
+  
+  len = strlen (translated);
+
+  return svn_stream_write (stream, translated, &len);
 }
 
 

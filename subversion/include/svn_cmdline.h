@@ -116,6 +116,14 @@ svn_error_t *svn_cmdline_fputs (const char *string,
  */
 svn_error_t *svn_cmdline_fflush (FILE *stream);
 
+/** Return the name of the output encoding allocated in @a pool, or @c
+ * APR_LOCALE_CHARSET if the output encoding is the same as the locale
+ * encoding.
+ *
+ * @since New in 1.3.
+ */
+const char *svn_cmdline_output_encoding (apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -57,19 +57,20 @@ static const char under_string[] =
 
 /* Wrapper for @c apr_file_printf(), which see.  FORMAT is a utf8-encoded
    string after it is formatted, so this function can convert it to
-   native encoding before printing. */
+   ENCODING before printing. */
 static svn_error_t *
-file_printf_from_utf8 (apr_file_t *fptr, const char *format, ...)
+file_printf_from_utf8 (apr_file_t *fptr, const char *encoding,
+                       const char *format, ...)
 {
   va_list ap;
   const char *buf, *buf_apr;
 
   va_start (ap, format);
   buf = apr_pvsprintf (apr_file_pool_get (fptr), format, ap); 
-  va_end(ap);
+  va_end (ap);
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (&buf_apr, buf,
-                                       apr_file_pool_get (fptr)));
+  SVN_ERR (svn_utf_cstring_from_utf8_ex (&buf_apr, buf, encoding, NULL,
+                                         apr_file_pool_get (fptr)));
 
   return svn_io_file_write_full (fptr, buf_apr, strlen (buf_apr), 
                                  NULL, apr_file_pool_get (fptr));
@@ -78,27 +79,25 @@ file_printf_from_utf8 (apr_file_t *fptr, const char *format, ...)
 
 /* A helper func that writes out verbal descriptions of property diffs
    to FILE.   Of course, the apr_file_t will probably be the 'outfile'
-   passed to svn_client_diff2, which is probably stdout. */
+   passed to svn_client_diff3, which is probably stdout. */
 static svn_error_t *
 display_prop_diffs (const apr_array_header_t *propchanges,
                     apr_hash_t *original_props,
                     const char *path,
+                    const char *encoding,
                     apr_file_t *file,
                     apr_pool_t *pool)
 {
   int i;
 
-  SVN_ERR (file_printf_from_utf8 (file,
+  SVN_ERR (file_printf_from_utf8 (file, encoding,
                                   _("%sProperty changes on: %s%s"),
                                   APR_EOL_STR,
                                   svn_path_local_style (path, pool),
                                   APR_EOL_STR));
 
-  /* ### todo [issue #1533]: Use file_printf_from_utf8() to convert this
-     line of dashes to native encoding, at least conditionally?  Or is
-     it better to have under_string always output the same, so
-     programs can find it?  Also, what about checking for error? */
-  apr_file_printf (file, "%s" APR_EOL_STR, under_string);
+  SVN_ERR (file_printf_from_utf8 (file, encoding, "%s" APR_EOL_STR,
+                                  under_string));
 
   for (i = 0; i < propchanges->nelts; i++)
     {
@@ -120,7 +119,7 @@ display_prop_diffs (const apr_array_header_t *propchanges,
               && svn_string_compare (original_value, propchange->value)))
         continue;
       
-      SVN_ERR (file_printf_from_utf8 (file, _("Name: %s%s"),
+      SVN_ERR (file_printf_from_utf8 (file, encoding, _("Name: %s%s"),
                                       propchange->name, APR_EOL_STR));
 
       /* For now, we have a rather simple heuristic: if this is an
@@ -135,7 +134,8 @@ display_prop_diffs (const apr_array_header_t *propchanges,
             if (val_is_utf8)
               {
                 SVN_ERR (file_printf_from_utf8
-                         (file, "   - %s" APR_EOL_STR, original_value->data));
+                         (file, encoding,
+                          "   - %s" APR_EOL_STR, original_value->data));
               }
             else
               {
@@ -150,7 +150,7 @@ display_prop_diffs (const apr_array_header_t *propchanges,
             if (val_is_utf8)
               {
                 SVN_ERR (file_printf_from_utf8
-                         (file, "   + %s" APR_EOL_STR,
+                         (file, encoding, "   + %s" APR_EOL_STR,
                           propchange->value->data));
               }
             else
@@ -235,6 +235,8 @@ struct diff_cmd_baton {
   apr_file_t *outfile;
   apr_file_t *errfile;
 
+  const char *header_encoding;
+
   /* The original targets passed to the diff command.  We may need
      these to construct distinctive diff labels when comparing the
      same relative path in the same revision, under different anchors
@@ -243,7 +245,7 @@ struct diff_cmd_baton {
   const char *orig_path_2;
 
   /* These are the numeric representations of the revisions passed to
-     svn_client_diff2, either may be SVN_INVALID_REVNUM.  We need these
+     svn_client_diff3, either may be SVN_INVALID_REVNUM.  We need these
      because some of the svn_wc_diff_callbacks2_t don't get revision
      arguments.
 
@@ -302,6 +304,7 @@ diff_props_changed (svn_wc_adm_access_t *adm_access,
 
   if (props->nelts > 0)
     SVN_ERR (display_prop_diffs (props, original_props, path,
+                                 diff_cmd_baton->header_encoding,
                                  diff_cmd_baton->outfile, subpool));
 
   if (state)
@@ -416,33 +419,33 @@ diff_content_changed (const char *path,
   if (! diff_cmd_baton->force_binary && (mt1_binary || mt2_binary))
     {
       /* Print out the diff header. */
-      SVN_ERR (svn_stream_printf (os, subpool,
-                                  "Index: %s" APR_EOL_STR
-                                  "%s" APR_EOL_STR, path, equal_string));
+      SVN_ERR (svn_stream_printf_from_utf8
+               (os, diff_cmd_baton->header_encoding, subpool,
+                "Index: %s" APR_EOL_STR "%s" APR_EOL_STR, path, equal_string));
 
-      SVN_ERR (svn_stream_printf
-               (os, subpool,
+      SVN_ERR (svn_stream_printf_from_utf8
+               (os, diff_cmd_baton->header_encoding, subpool,
                 _("Cannot display: file marked as a binary type.%s"),
                 APR_EOL_STR));
       
       if (mt1_binary && !mt2_binary)
-        SVN_ERR (svn_stream_printf (os, subpool,
-                                    "svn:mime-type = %s" APR_EOL_STR,
-                                    mimetype1));
+        SVN_ERR (svn_stream_printf_from_utf8
+                 (os, diff_cmd_baton->header_encoding, subpool,
+                  "svn:mime-type = %s" APR_EOL_STR, mimetype1));
       else if (mt2_binary && !mt1_binary)
-        SVN_ERR (svn_stream_printf (os, subpool,
-                                    "svn:mime-type = %s" APR_EOL_STR,
-                                    mimetype2));
+        SVN_ERR (svn_stream_printf_from_utf8
+                 (os, diff_cmd_baton->header_encoding, subpool,
+                  "svn:mime-type = %s" APR_EOL_STR, mimetype2));
       else if (mt1_binary && mt2_binary)
         {
           if (strcmp (mimetype1, mimetype2) == 0)
-            SVN_ERR (svn_stream_printf
-                     (os, subpool,
+            SVN_ERR (svn_stream_printf_from_utf8
+                     (os, diff_cmd_baton->header_encoding, subpool,
                       "svn:mime-type = %s" APR_EOL_STR,
                       mimetype1));
           else
-            SVN_ERR (svn_stream_printf
-                     (os, subpool,
+            SVN_ERR (svn_stream_printf_from_utf8
+                     (os, diff_cmd_baton->header_encoding, subpool,
                       "svn:mime-type = (%s, %s)" APR_EOL_STR,
                       mimetype1, mimetype2));
         }
@@ -466,9 +469,9 @@ diff_content_changed (const char *path,
   if (diff_cmd)
     {
       /* Print out the diff header. */
-      SVN_ERR (svn_stream_printf (os, subpool,
-                                  "Index: %s" APR_EOL_STR
-                                  "%s" APR_EOL_STR, path, equal_string));
+      SVN_ERR (svn_stream_printf_from_utf8
+               (os, diff_cmd_baton->header_encoding, subpool,
+                "Index: %s" APR_EOL_STR "%s" APR_EOL_STR, path, equal_string));
       /* Close the stream (flush) */
       SVN_ERR (svn_stream_close (os));
 
@@ -504,15 +507,15 @@ diff_content_changed (const char *path,
       if (svn_diff_contains_diffs (diff) || diff_cmd_baton->force_empty)
         {
           /* Print out the diff header. */
-          SVN_ERR (svn_stream_printf (os, subpool,
-                                      "Index: %s" APR_EOL_STR
-                                      "%s" APR_EOL_STR, path, equal_string));
+          SVN_ERR (svn_stream_printf_from_utf8
+                   (os, diff_cmd_baton->header_encoding, subpool,
+                    "Index: %s" APR_EOL_STR "%s" APR_EOL_STR,
+                    path, equal_string));
 
           /* Output the actual diff */
-          SVN_ERR (svn_diff_file_output_unified (os, diff,
-                                                 tmpfile1, tmpfile2,
-                                                 label1, label2,
-                                                 subpool));
+          SVN_ERR (svn_diff_file_output_unified2
+                   (os, diff, tmpfile1, tmpfile2, label1, label2,
+                    diff_cmd_baton->header_encoding, subpool));
         }
     }
 
@@ -1676,7 +1679,7 @@ do_single_file_merge (const char *initial_URL1,
 
 /* A Theoretical Note From Ben, regarding do_diff().
 
-   This function is really svn_client_diff2().  If you read the public
+   This function is really svn_client_diff3().  If you read the public
    API description for svn_client_diff, it sounds quite Grand.  It
    sounds really generalized and abstract and beautiful: that it will
    diff any two paths, be they working-copy paths or URLs, at any two
@@ -1697,7 +1700,7 @@ do_single_file_merge (const char *initial_URL1,
    pigeonholed into one of these three use-cases, we currently bail
    with a friendly apology.
 
-   Perhaps someday a brave soul will truly make svn_client_diff2
+   Perhaps someday a brave soul will truly make svn_client_diff3
    perfectly general.  For now, we live with the 90% case.  Certainly,
    the commandline client only calls this function in legal ways.
    When there are other users of svn_client.h, maybe this will become
@@ -1710,7 +1713,7 @@ static svn_error_t *
 unsupported_diff_error (svn_error_t *child_err)
 {
   return svn_error_create (SVN_ERR_INCORRECT_PARAMS, child_err,
-                           _("Sorry, svn_client_diff2 was called in a way "
+                           _("Sorry, svn_client_diff3 was called in a way "
                            "that is not yet supported"));
 }
 
@@ -1720,7 +1723,7 @@ unsupported_diff_error (svn_error_t *child_err)
    PATH1 and PATH2 are both working copy paths.  REVISION1 and
    REVISION2 are their respective revisions.
 
-   All other options are the same as those passed to svn_client_diff2(). */
+   All other options are the same as those passed to svn_client_diff3(). */
 static svn_error_t *
 diff_wc_wc (const apr_array_header_t *options,
             const char *path1,
@@ -1777,7 +1780,7 @@ diff_wc_wc (const apr_array_header_t *options,
    and the actual two paths compared are determined by following copy
    history from PATH2.
 
-   All other options are the same as those passed to svn_client_diff2(). */
+   All other options are the same as those passed to svn_client_diff3(). */
 static svn_error_t *
 diff_repos_repos (const apr_array_header_t *options,
                   const char *path1,
@@ -1938,7 +1941,7 @@ diff_repos_repos (const apr_array_header_t *options,
    revision, and the actual repository path to be compared is
    determined by following copy history.
 
-   All other options are the same as those passed to svn_client_diff2(). */
+   All other options are the same as those passed to svn_client_diff3(). */
 static svn_error_t *
 diff_repos_wc (const apr_array_header_t *options,
                const char *path1,
@@ -2051,7 +2054,7 @@ diff_repos_wc (const apr_array_header_t *options,
 }
 
 
-/* This is basically just the guts of svn_client_diff2(). */
+/* This is basically just the guts of svn_client_diff3(). */
 static svn_error_t *
 do_diff (const apr_array_header_t *options,
          const char *path1,
@@ -2136,7 +2139,7 @@ do_diff (const apr_array_header_t *options,
   return SVN_NO_ERROR;
 }
 
-/* This is basically just the guts of svn_client_diff_peg2(). */
+/* This is basically just the guts of svn_client_diff_peg3(). */
 static svn_error_t *
 do_diff_peg (const apr_array_header_t *options,
              const char *path,
@@ -2248,17 +2251,17 @@ do_diff_peg (const apr_array_header_t *options,
       ------------++------------+------------+------------+
       * These cases require server communication.
 
-   Svn_client_diff2() is the single entry point for all of the diff
+   Svn_client_diff3() is the single entry point for all of the diff
    operations, and will be in charge of examining the inputs and
    making decisions about how to accurately report contextual diffs.
 
-   NOTE:  In the near future, svn_client_diff2() will likely only
+   NOTE:  In the near future, svn_client_diff3() will likely only
    continue to report textual differences in files.  Property diffs
    are important, too, and will need to be supported in some fashion
    so that this code can be re-used for svn_client_merge(). 
 */
 svn_error_t *
-svn_client_diff2 (const apr_array_header_t *options,
+svn_client_diff3 (const apr_array_header_t *options,
                   const char *path1,
                   const svn_opt_revision_t *revision1,
                   const char *path2,
@@ -2267,6 +2270,7 @@ svn_client_diff2 (const apr_array_header_t *options,
                   svn_boolean_t ignore_ancestry,
                   svn_boolean_t no_diff_deleted,
                   svn_boolean_t ignore_content_type,
+                  const char *header_encoding,
                   apr_file_t *outfile,
                   apr_file_t *errfile,
                   svn_client_ctx_t *ctx,
@@ -2290,6 +2294,7 @@ svn_client_diff2 (const apr_array_header_t *options,
   diff_cmd_baton.pool = pool;
   diff_cmd_baton.outfile = outfile;
   diff_cmd_baton.errfile = errfile;
+  diff_cmd_baton.header_encoding = header_encoding;
   diff_cmd_baton.revnum1 = SVN_INVALID_REVNUM;
   diff_cmd_baton.revnum2 = SVN_INVALID_REVNUM;
 
@@ -2305,6 +2310,27 @@ svn_client_diff2 (const apr_array_header_t *options,
                   &diff_callbacks, &diff_cmd_baton,
                   ctx,
                   pool);
+}
+
+svn_error_t *
+svn_client_diff2 (const apr_array_header_t *options,
+                  const char *path1,
+                  const svn_opt_revision_t *revision1,
+                  const char *path2,
+                  const svn_opt_revision_t *revision2,
+                  svn_boolean_t recurse,
+                  svn_boolean_t ignore_ancestry,
+                  svn_boolean_t no_diff_deleted,
+                  svn_boolean_t ignore_content_type,
+                  apr_file_t *outfile,
+                  apr_file_t *errfile,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  return svn_client_diff3 (options, path1, revision1, path2, revision2,
+                           recurse, ignore_ancestry, no_diff_deleted,
+                           ignore_content_type, APR_LOCALE_CHARSET,
+                           outfile, errfile, ctx, pool);
 }
 
 svn_error_t *
@@ -2327,7 +2353,7 @@ svn_client_diff (const apr_array_header_t *options,
 }
 
 svn_error_t *
-svn_client_diff_peg2 (const apr_array_header_t *options,
+svn_client_diff_peg3 (const apr_array_header_t *options,
                       const char *path,
                       const svn_opt_revision_t *peg_revision,
                       const svn_opt_revision_t *start_revision,
@@ -2336,6 +2362,7 @@ svn_client_diff_peg2 (const apr_array_header_t *options,
                       svn_boolean_t ignore_ancestry,
                       svn_boolean_t no_diff_deleted,
                       svn_boolean_t ignore_content_type,
+                      const char *header_encoding,
                       apr_file_t *outfile,
                       apr_file_t *errfile,
                       svn_client_ctx_t *ctx,
@@ -2359,6 +2386,7 @@ svn_client_diff_peg2 (const apr_array_header_t *options,
   diff_cmd_baton.pool = pool;
   diff_cmd_baton.outfile = outfile;
   diff_cmd_baton.errfile = errfile;
+  diff_cmd_baton.header_encoding = header_encoding;
   diff_cmd_baton.revnum1 = SVN_INVALID_REVNUM;
   diff_cmd_baton.revnum2 = SVN_INVALID_REVNUM;
 
@@ -2374,6 +2402,28 @@ svn_client_diff_peg2 (const apr_array_header_t *options,
                       &diff_callbacks, &diff_cmd_baton,
                       ctx,
                       pool);
+}
+
+svn_error_t *
+svn_client_diff_peg2 (const apr_array_header_t *options,
+                      const char *path,
+                      const svn_opt_revision_t *peg_revision,
+                      const svn_opt_revision_t *start_revision,
+                      const svn_opt_revision_t *end_revision,
+                      svn_boolean_t recurse,
+                      svn_boolean_t ignore_ancestry,
+                      svn_boolean_t no_diff_deleted,
+                      svn_boolean_t ignore_content_type,
+                      apr_file_t *outfile,
+                      apr_file_t *errfile,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool)
+{
+  return svn_client_diff_peg3 (options, path, peg_revision, start_revision,
+                               end_revision, recurse, ignore_ancestry,
+                               no_diff_deleted, ignore_content_type,
+                               APR_LOCALE_CHARSET, outfile, errfile,
+                               ctx, pool);
 }
 
 svn_error_t *

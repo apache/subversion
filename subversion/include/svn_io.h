@@ -549,6 +549,22 @@ svn_error_t *svn_stream_printf (svn_stream_t *stream,
                                 ...)
        __attribute__ ((format(printf, 3, 4)));
 
+/** Write to @a stream using a printf-style @a fmt specifier, passed through
+ * apr_psprintf() using memory from @a pool.  The resulting string
+ * will be translated to @a encoding before it is sent to @a stream.
+ *
+ * @note Use @c APR_LOCALE_CHARSET to translate to the encoding of the
+ * current locale.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *svn_stream_printf_from_utf8 (svn_stream_t *stream,
+                                          const char *encoding,
+                                          apr_pool_t *pool,
+                                          const char *fmt,
+                                          ...)
+       __attribute__ ((format(printf, 4, 5)));
+
 /** Allocate @a *stringbuf in @a pool, and read into it one line (terminated
  * by @a eol) from @a stream. The line-terminator is read from the stream,
  * but is not added to the end of the stringbuf.  Instead, the stringbuf
