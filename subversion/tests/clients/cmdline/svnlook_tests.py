@@ -252,6 +252,73 @@ def test_print_property_diffs(sbox):
 
   svntest.actions.compare_and_display_lines('', '', expected_output, output)
 
+#----------------------------------------------------------------------
+# Check that svnlook info repairs allows inconsistent line endings in logs.
+
+def info_bad_newlines(sbox):
+  "svnlook info must allow inconsistent newlines"
+
+  dump_str = """SVN-fs-dump-format-version: 2
+
+UUID: dc40867b-38f6-0310-9f5f-f81aa277e06e
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2005-05-03T19:09:41.129900Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 99
+Content-length: 99
+
+K 7
+svn:log
+V 3
+\n\r\n
+K 10
+svn:author
+V 2
+pl
+K 8
+svn:date
+V 27
+2005-05-03T19:10:19.975578Z
+PROPS-END
+
+Node-path: file
+Node-kind: file
+Node-action: add
+Prop-content-length: 10
+Text-content-length: 5
+Text-content-md5: e1cbb0c3879af8347246f12c559a86b5
+Content-length: 15
+
+PROPS-END
+text
+
+
+"""
+
+  # Create virgin repos and working copy
+  svntest.main.safe_rmtree(sbox.repo_dir, 1)
+  svntest.main.create_repos(sbox.repo_dir)
+  svntest.main.set_repos_paths(sbox.repo_dir)
+
+  # load dumpfile with inconsistent newlines into repos.
+  output, errput = \
+    svntest.main.run_command_stdin(
+    "%s load --quiet %s" % (svntest.main.svnadmin_binary, sbox.repo_dir),
+    None, 1, dump_str)
+
+  output, errput = svntest.main.run_svnlook("info", sbox.repo_dir, "-r1")
+  if errput:
+    raise svntest.Failure
+
 
 ########################################################################
 # Run the tests
@@ -262,6 +329,7 @@ test_list = [ None,
               test_misc,
               delete_file_in_moved_dir,
               test_print_property_diffs,
+              info_bad_newlines,
              ]
 
 if __name__ == '__main__':
