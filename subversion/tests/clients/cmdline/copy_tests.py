@@ -533,8 +533,7 @@ def copy_modify_commit(sbox):
   wc_dir = sbox.wc_dir
   
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                     wc_dir + '/A/B', wc_dir + '/A/B2',
-                                     '-m', 'fooogle')
+                                     wc_dir + '/A/B', wc_dir + '/A/B2')
   
   alpha_path = os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha')
   svntest.main.file_append(alpha_path, "modified alpha")
@@ -638,8 +637,7 @@ def copy_delete_commit(sbox):
 
   # copy a tree
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                     wc_dir + '/A/B', wc_dir + '/A/B2',
-                                     '-m', 'fooogle')
+                                     wc_dir + '/A/B', wc_dir + '/A/B2')
   
   # delete a file
   alpha_path = os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha')
@@ -660,8 +658,7 @@ def copy_delete_commit(sbox):
 
   # copy a tree
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                     wc_dir + '/A/B', wc_dir + '/A/B3',
-                                     '-m', 'fooogle')
+                                     wc_dir + '/A/B', wc_dir + '/A/B3')
   
   # delete a directory
   E_path = os.path.join(wc_dir, 'A', 'B3', 'E')
