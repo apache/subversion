@@ -817,17 +817,19 @@ static svn_error_t * commit_delete_entry(const char *path,
          the same reason we're not sending in MERGE's headers: httpd has
        limits on the amount of data it's willing to receive in headers. */
       
-      apr_hash_t *child_tokens;
+      apr_hash_t *child_tokens = NULL;
       ne_request *req;
       const char *body;
       const char *token;
       svn_stringbuf_t *locks_list;
       
-      child_tokens = get_child_tokens(parent->cc->tokens, path, pool);
+      if (parent->cc->tokens)
+        child_tokens = get_child_tokens(parent->cc->tokens, path, pool);
       
       /* No kiddos?  Return the original error.  Else, clear it so it
          doesn't get leaked.  */
-      if (! apr_hash_count(child_tokens))
+      if ((! child_tokens) 
+          || (apr_hash_count(child_tokens) == 0))
         return serr;
       else
         svn_error_clear(serr);
