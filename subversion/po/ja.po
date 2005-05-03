@@ -3,7 +3,23 @@
 # Copyright (C) 2004 Collab Net.
 # This file is distributed under the same license as the subversion package.
 #
-# Translation dictionary:
+# Note on formating help messages
+# ===============================
+#
+# * As a general rule, the width of the display area is that of 80 half-size
+#   characters.
+# * Area with three character width in the right side should not be occupied
+#   by characters, except for characters suspending previous ones such as
+#   "。" and "っ".
+# * Note that strings such as subcommand names can be inserted at the head of
+#   the help messages.
+# * Note that subcommand switch lists use area of 29 character width to
+#   display switch names, and that those lists put switch description on the
+#   right side of them.
+#
+#
+# Translation dictionary
+# ======================
 #
 # ancestor                祖先
 # ancestry                系統
@@ -40,6 +56,7 @@
 # for reading             読み込み用に
 # for writing             書き込み用に
 # FS loader               ファイルシステムローダ
+# force ...               強制的に〜します
 # fulltext                フルテキスト
 # grab                    奪う
 # HEAD                    HEAD
@@ -124,8 +141,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-05-03 19:20+0900\n"
-"PO-Revision-Date: 2005-05-03 19:14+0900\n"
+"POT-Creation-Date: 2005-05-04 02:27+0900\n"
+"PO-Revision-Date: 2005-05-04 01:48+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -162,6 +179,7 @@ msgstr ""
 "コピー先 (または移動先) のディレクトリは既に存在します。ディレクトリを削除す"
 "るか --force を用いて上書きしてください。"
 
+# * Description for svn.
 #: clients/cmdline/help-cmd.c:45
 #, c-format
 msgid ""
@@ -177,13 +195,15 @@ msgid ""
 msgstr ""
 "使用方法: svn <サブコマンド> [<オプション>] [<引数>]\n"
 "Subversion コマンドラインクライアント, バージョン %s.\n"
-"特定のサブコマンドに関するヘルプを読みたいときは 'svn help <サブコマンド>'\n"
-"と打ってください。\n"
+"特定のサブコマンドに関するヘルプを読みたいときは 'svn help <サブコマンド>' "
+"と\n"
+"打ってください。\n"
 "\n"
 "ほとんどのサブコマンドはファイルとディレクトリの一方または両方を引数にと"
 "り、\n"
-"ディレクトリでは再帰的な処理をします。このようなコマンドに引数が与えられ\n"
-"なかった場合、デフォルトでは、カレントディレクトリで再帰的な処理をします。\n"
+"ディレクトリでは再帰的な処理をします。このようなコマンドに引数が与えられな"
+"か\n"
+"った場合、デフォルトでは、カレントディレクトリで再帰的な処理をします。\n"
 "\n"
 "利用可能なサブコマンド:\n"
 
@@ -427,19 +447,21 @@ msgid "'incremental' option only valid in XML mode"
 msgstr "'incremental' オプションは XML モードでのみ有効です"
 
 # * Description for 'svn --force'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:63
 msgid "force operation to run"
-msgstr "処理の実行を強制します"
+msgstr "強制的に処理を実行します"
 
 # * Description for 'svn --force-log'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:65
 msgid "force validity of log message source"
-msgstr "ログメッセージを含むファイルの正当性を強制します"
+msgstr ""
+"ログメッセージを含むファイルを強制的に有効にしま\n"
+"                             す"
 
 # * Description for 'svn{,admin,dumpfilter,look} --help'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:66 clients/cmdline/main.c:67 svnadmin/main.c:227
 #: svnadmin/main.c:230 svndumpfilter/main.c:756 svndumpfilter/main.c:759
 #: svnlook/main.c:91 svnlook/main.c:94
@@ -447,31 +469,31 @@ msgid "show help on a subcommand"
 msgstr "サブコマンドに関するヘルプを表示します"
 
 # * Description for 'svn --message'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:68
 msgid "specify commit message ARG"
-msgstr "コミットメッセージを ARG と指定します"
+msgstr "コミットメッセージを <引数> と指定します"
 
 # * Description for 'svn --quiet'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:69
 msgid "print as little as possible"
 msgstr "最小限の情報だけを表示します"
 
 # * Description for 'svn --recursive'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:70
 msgid "descend recursively"
 msgstr "子ノードを再帰的に辿ります"
 
 # * Description for 'svn --non-recursive'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:71
 msgid "operate on single directory only"
 msgstr "単一のディレクトリのみに (非再帰的に) 作用します"
 
 # * Description for 'svn --revision'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:73
 msgid ""
 "ARG (some commands also take ARG1:ARG2 range)\n"
@@ -486,103 +508,111 @@ msgid ""
 "BASE\n"
 "                                \"PREV\"       revision just before COMMITTED"
 msgstr ""
-"ARG (一部のコマンドは ARG1:ARG2 の範囲も引数に\n"
-"                             とることができます)\n"
+"<引数> (一部のコマンドは <引数 1>:<引数 2> の範\n"
+"                             囲も引数にとることができます)\n"
 "                             リビジョン引数は次のいずれかを使って指定できま"
 "す:\n"
 "                                NUMBER       リビジョン番号\n"
 "                                \"{\" DATE \"}\" その日時が始まったときのリビ"
-"ジョン\n"
+"ジョ\n"
+"                                             ン\n"
 "                                \"HEAD\"       リポジトリで最新のもの\n"
-"                                \"BASE\"       項目の作業コピーのベースとな"
-"る\n"
-"                                             リビジョン\n"
+"                                \"BASE\"       項目の作業コピーのベースとなる"
+"リ\n"
+"                                             ビジョン\n"
 "                                \"COMMITTED\"  BASE またはそれ以前の最後のコ"
-"ミット\n"
+"ミ\n"
+"                                             ット\n"
 "                                \"PREV\"       COMMITTED の直前のリビジョン"
 
 # * Description for 'svn --file'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:87
 msgid "read data from file ARG"
-msgstr "ファイル ARG からデータを読み込みます"
+msgstr "ファイル <引数> からデータを読み込みます"
 
 # * Description for 'svn --incremental'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:89
 msgid "give output suitable for concatenation"
-msgstr "他の出力と連結するのに適した形式で出力を表示します"
+msgstr ""
+"他の出力と連結するのに適した形式で出力を表示しま\n"
+"                             す"
 
 # * Description for 'svn --encoding'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:91
 msgid "treat value as being in charset encoding ARG"
-msgstr "文字エンコーディングが ARG であるとして処理します"
+msgstr ""
+"文字エンコーディングが <引数> であるとして処理し\n"
+"                             ます"
 
 # * Description for 'svn --version'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:92
 msgid "print client version info"
 msgstr "クライアントのバージョン情報を表示します"
 
 # * Description for 'svn --verbose'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:93
 msgid "print extra information"
 msgstr "付加的な情報を表示します"
 
 # * Description for 'svn --show-updates'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:94
 msgid "display update information"
 msgstr "更新情報を表示します"
 
 # * Description for 'svn --username'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:96
 msgid "specify a username ARG"
-msgstr "ユーザ名を ARG と指定します"
+msgstr "ユーザ名を <引数> と指定します"
 
 # * Description for 'svn --password'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:98
 msgid "specify a password ARG"
-msgstr "パスワードを ARG と指定します"
+msgstr "パスワードを <引数> と指定します"
 
 # * Description for 'svn --extensions'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:99
 msgid "pass ARG to --diff-cmd as options (default: '-u')"
 msgstr ""
-"ARG をオプションとして --diff-cmd に渡します\n"
+"<引数> をオプションとして --diff-cmd に渡します\n"
 "                             (デフォルト: '-u')"
 
 # * Description for 'svn --targets'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:101
 msgid "pass contents of file ARG as additional args"
-msgstr "ファイル ARG の内容を引数に追加して渡します"
+msgstr ""
+"ファイル <引数> の内容をサブコマンドの引数に追加\n"
+"                             して渡します"
 
 # * Description for 'svn --xml'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:102
 msgid "output in XML"
 msgstr "XML で出力します"
 
 # * Description for 'svn --strict'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:103
 msgid "use strict semantics"
 msgstr "厳密なセマンティクスを用います"
 
 # * Description for 'svn --stop-on-copy'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:105
 msgid "do not cross copies while traversing history"
 msgstr "履歴を辿るときにコピー以前には遡りません"
 
 # * Description for 'svn --no-ignore'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:107
 msgid "disregard default and svn:ignore property ignores"
 msgstr ""
@@ -590,109 +620,111 @@ msgstr ""
 "                             を無視しません"
 
 # * Description for 'svn --no-auth-cache'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:109
 msgid "do not cache authentication tokens"
 msgstr "認証情報をキャッシュしません"
 
 # * Description for 'svn --non-interactive'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:111
 msgid "do no interactive prompting"
 msgstr "対話式の認証用プロンプト表示をしません"
 
 # * Description for 'svn --dry-run'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:113
 msgid "try operation but make no changes"
 msgstr "処理をしようとするだけで実際の変更はしません"
 
 # * Description for 'svn{,look} --no-diff-deleted'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:115 svnlook/main.c:112
 msgid "do not print differences for deleted files"
 msgstr "削除されたファイルに関しては差分を表示しません"
 
 # * Description for 'svn --notice-ancestry'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:117
 msgid "notice ancestry when calculating differences"
 msgstr "差分を計算するときに項目の系統情報を考慮します"
 
 # * Description for 'svn --ignore-ancestry'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:119
 msgid "ignore ancestry when calculating merges"
 msgstr "マージを計算するときに項目の系統情報を無視します"
 
 # * Description for 'svn --ignore-externals'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:121
 msgid "ignore externals definitions"
 msgstr "外部定義を無視します"
 
 # * Description for 'svn --diff-cmd'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:123
 msgid "use ARG as diff command"
-msgstr "diff コマンドとして ARG を用います"
+msgstr "diff コマンドとして <引数> を用います"
 
 # * Description for 'svn --diff3-cmd'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:125
 msgid "use ARG as merge command"
-msgstr "merge コマンドとして ARG を用います"
+msgstr "merge コマンドとして <引数> を用います"
 
 # * Description for 'svn --editor-cmd'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:127
 msgid "use ARG as external editor"
-msgstr "外部エディタとして ARG を用います"
+msgstr "外部エディタとして <引数> を用います"
 
 # * Description for 'svn --old'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:129
 msgid "use ARG as the older target"
-msgstr "二者のうち古い方として ARG を用います"
+msgstr "二者のうち古い方として <引数> を用います"
 
 # * Description for 'svn --new'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:131
 msgid "use ARG as the newer target"
-msgstr "二者のうち新しい方として ARG を用います"
+msgstr "二者のうち新しい方として <引数> を用います"
 
 # * Description for 'svn --revprop'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:133 svnlook/main.c:118
 msgid "operate on a revision property (use with -r)"
 msgstr "リビジョン属性に作用します (-r と共に用います)"
 
 # * Description for 'svn --relocate'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:135
 msgid "relocate via URL-rewriting"
 msgstr "URL を書き換え、参照するリポジトリを変更します"
 
 # * Description for 'svn --config-dir'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:137 svnadmin/main.c:269
 msgid "read user configuration files from directory ARG"
-msgstr "ディレクトリ ARG からユーザ設定ファイルを読みます"
+msgstr ""
+"ディレクトリ <引数> からユーザ設定ファイルを読み\n"
+"                             込みます"
 
 # * Description for 'svn --auto-props'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:139
 msgid "enable automatic properties"
 msgstr "自動的な属性設定を有効にします"
 
 # * Description for 'svn --no-auto-props'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:141
 msgid "disable automatic properties"
 msgstr "自動的な属性設定を無効にします"
 
 # * Description for 'svn --native-eol'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:143
 msgid ""
 "use a different EOL marker than the standard\n"
@@ -700,34 +732,38 @@ msgid ""
 "style\n"
 "                             property.  ARG may be one of 'LF', 'CR', 'CRLF'"
 msgstr ""
-"svn:eol-style 属性で元々設定されたファイルの標準\n"
-"                             システム記号とは、異なる改行 (EOL) 記号を用いま"
-"す。\n"
-"                             ARG は 'LF', 'CR', 'CRLF' のいずれかです。"
+"                             svn:eol-style 属性が native に設定されたファイ"
+"ル\n"
+"                             について、システムで標準的な記号とは異なる改行\n"
+"                             (EOL) 記号を用います。<引数> は 'LF', 'CR',\n"
+"                             'CRLF' のいずれかです。"
 
 # * Description for 'svn --limit'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:149
 msgid "maximum number of log entries"
 msgstr "表示するログエントリの数の最大値"
 
 # * Description for 'svn --no-unlock'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:151
 msgid "don't unlock the targets"
 msgstr "対象のロックを解除しません"
 
+# * Description for 'svn add'.
+# * "add: " is displayed at the head of the first line.
 #: clients/cmdline/main.c:182
 msgid ""
 "Put files and directories under version control, scheduling\n"
 "them for addition to repository.  They will be added in next commit.\n"
 "usage: add PATH...\n"
 msgstr ""
-"ファイルやディレクトリをバージョン管理下におき、それらをリポジトリに追加予"
-"定\n"
-"の状態とします。次回のコミットでそれらは追加されます。\n"
+"ファイルやディレクトリをバージョン管理下におき、それらをリポジトリに追加\n"
+"予定の状態とします。次回のコミットでそれらは追加されます。\n"
 "使用方法: add <パス>...\n"
 
+# * Description for 'svn blame'.
+# * "blame (praise, annotate, ann): " is displayed at the head of the first line.
 #: clients/cmdline/main.c:189
 msgid ""
 "Output the content of specified files or\n"
@@ -737,13 +773,14 @@ msgid ""
 "  If specified, REV determines in which revision the target is first\n"
 "  looked up.\n"
 msgstr ""
-"指定されたファイルや URL の内容を、リビジョンと変更者の情報を行内に含めて出"
-"力\n"
-"します。\n"
+"指定されたファイルや URL の内容を、リビジョンと変\n"
+"更者の情報を行内に含めて出力します。\n"
 "使用方法: blame <対象>[@<REV>]...\n"
 "\n"
 "  <REV> を指定すると、リビジョン <REV> での <対象> をまず探します。\n"
 
+# * Description for 'svn cat'.
+# * "cat: " is displayed at the head of the first line.
 #: clients/cmdline/main.c:198
 msgid ""
 "Output the content of specified files or URLs.\n"
@@ -757,6 +794,8 @@ msgstr ""
 "\n"
 "  <REV> を指定すると、リビジョン <REV> での <対象> をまず探します。\n"
 
+# * Description for 'svn checkout'.
+# * "checkout (co): " is displayed at the head of the first line.
 #: clients/cmdline/main.c:206
 msgid ""
 "Check out a working copy from a repository.\n"
@@ -775,19 +814,26 @@ msgstr ""
 "\n"
 "  <REV> を指定すると、リビジョン <REV> での <URL> をまず探します。\n"
 "\n"
-"  <パス> が省略された場合、<URL> のベース名がコピー先として用いられます。\n"
-"  複数の <URL> が与えられた場合、各 <URL> のベース名を名前にもつ\n"
-"  サブディレクトリを <パス> の下に作り、各々をそこにチェックアウトします。\n"
+"  <パス> が省略された場合、<URL> のベース名がコピー先として用いられます。複"
+"数\n"
+"  の <URL> が与えられた場合、各 <URL> のベース名を名前にもつサブディレクト"
+"リ\n"
+"  を <パス> の下に作り、各々をそこにチェックアウトします。\n"
 
+# * Description for 'svn cleanup'.
+# * "cleanup: " is displayed at the head of the first line.
 #: clients/cmdline/main.c:220
 msgid ""
 "Recursively clean up the working copy, removing locks, resuming\n"
 "unfinished operations, etc.\n"
 "usage: cleanup [PATH...]\n"
 msgstr ""
-"作業コピーの掃除・ロックの解除・未完了の操作の再開などを再帰的に行います。\n"
+"作業コピーの掃除・ロックの解除・未完了の操作の再開などを再帰的に行い\n"
+"ます。\n"
 "使用方法: cleanup [<パス>...]\n"
 
+# * Description for 'svn commit'.
+# * "commit (ci): " is displayed at the head of the first line.
 #: clients/cmdline/main.c:226
 msgid ""
 "Send changes from your working copy to the repository.\n"
@@ -801,13 +847,15 @@ msgstr ""
 "作業コピーからリポジトリに変更点を送信します。\n"
 "使用方法: commit [<パス>...]\n"
 "\n"
-"  ログメッセージが必須ですが、その中身は空でもかまいません。--message か --"
-"file\n"
-"  オプションによってログメッセージを与えない場合、エディタが起動します。\n"
-"  対象の中にロックされた項目がある場合、それらはコミットが成功した後にロック"
-"が\n"
-"  解除されます。\n"
+"  ログメッセージが必須ですが、その中身は空でもかまいません。--message か\n"
+"  --file オプションによってログメッセージを与えない場合、エディタが起動しま"
+"す。\n"
+"  対象の中にロックされた項目がある場合、それらはコミットが成功した後にロッ"
+"ク\n"
+"  が解除されます。\n"
 
+# * Description for 'svn copy'.
+# * "copy (cp): " is displayed at the head of the first line.
 #: clients/cmdline/main.c:237
 msgid ""
 "Duplicate something in working copy or repository, remembering history.\n"
@@ -822,14 +870,17 @@ msgstr ""
 "作業コピーまたはリポジトリ中の何かを、履歴をもたせたまま複製します。\n"
 "使用方法: copy <コピー元> <コピー先>\n"
 "\n"
-"  <コピー元> と <コピー先> は作業コピー (WC) のパスと URL のどちらかで指定\n"
-"  できます:\n"
+"  <コピー元> と <コピー先> は作業コピー (WC) のパスと URL のどちらかで指定"
+"で\n"
+"  きます:\n"
 "    WC  -> WC:   (履歴をもたせたまま) コピーして追加準備状態にします\n"
 "    WC  -> URL:  WC のコピーを直接 URL にコミットします\n"
 "    URL -> WC:   URL をチェックアウトして WC に入れ、追加準備状態にします\n"
 "    URL -> URL:  完全なサーバサイドのコピーです。ブランチとタグに用いられま"
 "す\n"
 
+# * Description for 'svn delete'.
+# * "delete (del, remove, rm): " is displayed at the head of the first line.
 #: clients/cmdline/main.c:250
 msgid ""
 "Remove files and directories from version control.\n"
@@ -858,10 +909,12 @@ msgstr ""
 "    バージョン管理下におかれていなかったものや修正を受けたものについては、\n"
 "    --force オプションが与えられない限り削除されません。\n"
 "\n"
-"  2. <URL> で指定された各項目は、直ちにコミットされることによりリポジトリか"
-"ら\n"
-"    削除されます。\n"
+"  2. <URL> で指定された場合、すぐにコミットが行われ各項目がリポジトリから削"
+"除\n"
+"    されます。\n"
 
+# * Description for 'svn diff'.
+# * "diff (di): " is displayed at the head of the first line.
 #: clients/cmdline/main.c:266
 msgid ""
 "Display the differences between two paths.\n"
@@ -901,33 +954,41 @@ msgstr ""
 "     差分を表示します。<対象> は、作業コピーのパスでも URL でもかまいませ"
 "ん。\n"
 "\n"
-"     <対象> がすべて作業コピーのパスである場合 <N> はデフォルトで BASE です\n"
-"     が、そうでない場合は指定されなければなりません。<対象> がすべて作業コ"
-"ピー\n"
-"     のパスである場合 <M> はデフォルトで現在作業中のリビジョンですが、そう"
-"で\n"
-"     ない場合デフォルトでは HEAD です。\n"
+"     <対象> がすべて作業コピーのパスである場合 <N> はデフォルトで BASE です"
+"が、\n"
+"     そうでない場合は指定されなければなりません。<対象> がすべて作業コピー"
+"の\n"
+"     パスである場合 <M> はデフォルトで現在作業中のリビジョンですが、そうで"
+"な\n"
+"     い場合デフォルトでは HEAD です。\n"
 "\n"
-"  2. リビジョン <古い REV> において <古い対象> にあった項目と、リビジョン\n"
-"     <新しい REV> において <新しい対象> にあった項目との差分を表示します。\n"
-"     <パス> に <古い対象> と <新しい対象> に対する相対パスを与え、それらの\n"
-"     パスに関する差分だけを出力するようにすることができます。<古い対象> と\n"
-"     <新しい対象> は作業コピーのパスでも URL[@<REV>] でもかまいません。\n"
-"     <新しい対象> は、明示的に指定されない場合はデフォルトで <古い対象> とな"
-"り\n"
-"     ます。-r <N> がある場合 <古い REV> はデフォルトで <N> となります。ま"
-"た、\n"
-"     -r <N>:<M> がある場合 <古い REV> はデフォルトで <N> となり、<新しい "
-"REV>\n"
-"     はデフォルトで <M> となります。\n"
+"  2. リビジョン <古い REV> において <古い対象> にあった項目と、リビジョン <"
+"新\n"
+"     しい REV> において <新しい対象> にあった項目との差分を表示します。<パス"
+">\n"
+"     に <古い対象> と <新しい対象> に対する相対パスを与え、それらのパスに関"
+"す\n"
+"     る差分だけを出力するようにすることができます。<古い対象> と <新しい対象"
+">\n"
+"     は作業コピーのパスでも URL[@<REV>] でもかまいません。<新しい対象> は、"
+"明\n"
+"     示的に指定されない場合はデフォルトで <古い対象> となります。-r <N> が"
+"あ\n"
+"     る場合 <古い REV> はデフォルトで <N> となります。また、-r <N>:<M> があ"
+"る\n"
+"     場合 <古い REV> はデフォルトで <N> となり、<新しい REV> はデフォルトで\n"
+"     <M> となります。\n"
 "\n"
 "  3. 'svn diff --old=<古い URL>[@<古い REV>] --new=<新しい URL>[@<新しい "
 "REV>]'\n"
 "     の短縮形です。\n"
 "\n"
-"  作業コピーにローカルで加えられた変更を見るには、単に 'svn diff' を使って\n"
-"  ください。\n"
+"  作業コピーにローカルで加えられた変更を見るには、単に 'svn diff' を使って"
+"く\n"
+"  ださい。\n"
 
+# * Description for 'svn export'.
+# * "export: " is displayed at the head of the first line.
 #: clients/cmdline/main.c:306
 msgid ""
 "Create an unversioned copy of a tree.\n"
@@ -955,26 +1016,32 @@ msgstr ""
 "\n"
 "  1. <URL> で指定されたリポジトリから、Subversion の管理用ファイルを含まな"
 "い\n"
-"     ディレクトリツリーを <パス> にエクスポートします。その際、<REV> を指定\n"
-"     していればリビジョン <REV> の、そうでないときは HEAD のツリーが\n"
-"     エクスポートされます。<パス> を省略した場合は、ローカルのディレクトリ"
-"名\n"
-"     として <URL> のベース名が使われます。\n"
+"     ディレクトリツリーを <パス> にエクスポートします。その際、<REV> を指定"
+"し\n"
+"     ていればリビジョン <REV> の、そうでないときは HEAD のツリーがエクス"
+"ポー\n"
+"     トされます。<パス> を省略した場合は、ローカルのディレクトリ名として "
+"<URL>\n"
+"     のベース名が使われます。\n"
 "\n"
-"  2. <パス 1> で指定された作業コピーから、Subversion の管理用ファイルを含まな"
-"い\n"
-"     ディレクトリツリーを <パス 2> にエクスポートします。その際、<REV> を指"
-"定\n"
-"     していればリビジョン <REV> の、そうでないときは作業中のツリーが\n"
-"     エクスポートされます。<パス 2> を省略した場合は、ローカルのディレクトリ"
-"名\n"
-"     として <パス 1> のベース名が使われます。<REV> を指定していない場合、\n"
-"     ローカルでの変更はすべて保存されますが、バージョン管理下にないファイル"
-"は\n"
-"     コピーされません。\n"
+"  2. <パス 1> で指定された作業コピーから、Subversion の管理用ファイルを含ま"
+"な\n"
+"     いディレクトリツリーを <パス 2> にエクスポートします。その際、<REV> を"
+"指\n"
+"     定していればリビジョン <REV> の、そうでないときは作業中のツリーがエク"
+"ス\n"
+"     ポートされます。<パス 2> を省略した場合は、ローカルのディレクトリ名と"
+"し\n"
+"     て <パス 1> のベース名が使われます。<REV> を指定していない場合、ローカ"
+"ル\n"
+"     での変更はすべて保存されますが、バージョン管理下にないファイルはコピー"
+"さ\n"
+"     れません。\n"
 "\n"
 "  <PEGREV> を指定すると、リビジョン <PEGREV> での <対象> をまず探します。\n"
 
+# * Description for 'svn help'.
+# * "help (?, h): " is displayed at the head of the first line.
 #: clients/cmdline/main.c:335
 msgid ""
 "Describe the usage of this program or its subcommands.\n"
@@ -983,6 +1050,8 @@ msgstr ""
 "このプログラムやそのサブコマンドの使用方法を説明します。\n"
 "使用方法: help [<サブコマンド>...]\n"
 
+# * Description for 'svn import'.
+# * "import: " is displayed at the head of the first line.
 #: clients/cmdline/main.c:344
 msgid ""
 "Commit an unversioned file or tree into the repository.\n"
@@ -994,17 +1063,20 @@ msgid ""
 "  If PATH is a directory, the contents of the directory are added\n"
 "  directly under URL.\n"
 msgstr ""
-"バージョン管理されていないファイルやツリーをリポジトリに入れてコミットしま"
-"す。\n"
+"import: バージョン管理されていないファイルやツリーをリポジトリに入れてコ"
+"ミッ\n"
+"トします。\n"
 "使用方法: import [<パス>] <URL>\n"
 "\n"
 "  <パス> のコピーを再帰的に <URL> にコミットします。\n"
 "  <パス> は、省略された場合は '.' だと仮定されます。\n"
 "  リポジトリには、必要に応じて親ディレクトリが作成されます。\n"
-"  <パス> がディレクトリの場合、そのディレクトリの内容が <URL> の下に直接追加"
-"され\n"
-"  ます。\n"
+"  <パス> がディレクトリの場合、そのディレクトリの内容が <URL> の下に直接追"
+"加\n"
+"  されます。\n"
 
+# * Description for 'svn info'.
+# * "info: " is displayed at the head of the first line.
 #: clients/cmdline/main.c:356
 msgid ""
 "Display information about a local or remote item.\n"
@@ -1019,6 +1091,8 @@ msgstr ""
 "  各 <対象> (デフォルト: '.') に関する情報を表示します。\n"
 "  <対象> は作業コピーのパスでも URL でもかまいません。\n"
 
+# * Description for 'svn list'.
+# * "list (ls): " is displayed at the head of the first line.
 #: clients/cmdline/main.c:364
 msgid ""
 "List directory entries in the repository.\n"
@@ -1044,8 +1118,9 @@ msgstr ""
 "\n"
 "  各 <対象> ファイルおよび各 <対象> ディレクトリの内容を、ディレクトリにあ"
 "る\n"
-"  とおり一覧表示します。<対象> が作業コピーのパスである場合は、対応する\n"
-"  リポジトリ URL が処理に用いられます。\n"
+"  とおり一覧表示します。<対象> が作業コピーのパスである場合は、対応するリポ"
+"ジ\n"
+"  トリ URL が処理に用いられます。\n"
 "\n"
 "  デフォルトの <対象> は '.'、つまり現在作業中のディレクトリのリポジトリ "
 "URL\n"
@@ -1058,6 +1133,8 @@ msgstr ""
 "    (バイト単位での) サイズ\n"
 "    最後のコミットの日時\n"
 
+# * Description for 'svn lock'.
+# * "lock: " is displayed at the head of the first line.
 #: clients/cmdline/main.c:388
 msgid ""
 "Lock working copy paths or URLs in the repository, so that\n"
@@ -1066,13 +1143,14 @@ msgid ""
 "\n"
 "  Use --force to steal the lock from another user or working copy.\n"
 msgstr ""
-"作業コピーのパスまたはリポジトリの URL をロックし、他のユーザがそれらに変更"
-"を\n"
-"コミットできないようにします。\n"
+"作業コピーのパスまたはリポジトリの URL をロックし、他のユーザがそれらに\n"
+"変更をコミットできないようにします。\n"
 "使用方法: lock <対象>...\n"
 "\n"
 "  他のユーザや作業コピーからロックを奪うには --force を用いてください。\n"
 
+# * Description for 'svn log'.
+# * "log: " is displayed at the head of the first line.
 #: clients/cmdline/main.c:397
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
@@ -1114,17 +1192,18 @@ msgstr ""
 "\n"
 "  -v をつけると、各ログメッセージと共に、影響を受けたパスもすべて表示されま"
 "す。\n"
-"  -q をつけるとログメッセージ自体は表示されません (これは -v と共存できること"
-"に\n"
-"  注意してください)。\n"
+"  -q をつけるとログメッセージ自体は表示されません (これは -v と共存できるこ"
+"と\n"
+"  に注意してください)。\n"
 "\n"
 "  特定のリビジョンで影響を受けた複数のパスを引数として明示的に指定しない限"
 "り、\n"
-"  そのリビジョンに関するログメッセージは一度だけしか表示されません。\n"
-"  デフォルトではログはコピーの履歴も追います。この動作を無効にするには\n"
-"  --stop-on-copy を用いてください。このオプションはブランチポイントを見つけ"
-"る\n"
-"  のに便利です。\n"
+"  そのリビジョンに関するログメッセージは一度だけしか表示されません。デフォ"
+"ル\n"
+"  トではログはコピーの履歴も追います。この動作を無効にするには --stop-on-"
+"copy\n"
+"  を用いてください。このオプションはブランチポイントを見つけるのに便利で"
+"す。\n"
 "\n"
 "  例:\n"
 "    svn log\n"
@@ -1132,6 +1211,8 @@ msgstr ""
 "    svn log http://www.example.com/repo/project/foo.c\n"
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
+# * Description for 'svn merge'.
+# * "merge: " is displayed at the head of the first line.
 #: clients/cmdline/main.c:429
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
@@ -1166,28 +1247,31 @@ msgstr ""
 "\n"
 "  1. 最初の形では、2 つの <マージ元 URL> は、それぞれリビジョンを <N> およ"
 "び\n"
-"     <M> に指定されています。これらは、比較される 2 つのマージ元です。省略\n"
-"     された場合のデフォルトは HEAD です。\n"
+"     <M> に指定されています。これらは、比較される 2 つのマージ元です。省略"
+"さ\n"
+"     れた場合のデフォルトは HEAD です。\n"
 "\n"
-"  2. 2 番目の形では、2 つの <マージ元作業コピーパス> に対応する URL が、\n"
-"     比較されるマージ元です。リビジョンは指定されなければなりません。\n"
+"  2. 2 番目の形では、2 つの <マージ元作業コピーパス> に対応する URL が、比"
+"較\n"
+"     されるマージ元です。リビジョンは指定されなければなりません。\n"
 "\n"
-"  3. 3 番目の形では、<マージ元> は URL または作業コピー内の項目で、後者の場合"
-"は\n"
-"     対応する URL が比較に利用されます。リビジョン <REV> でこの URL にあっ"
-"た\n"
-"     項目が、リビジョン <N> から <M> まで存在したとして比較されます。<REV> "
-"が\n"
-"     指定されない場合、HEAD であると見なされます。\n"
+"  3. 3 番目の形では、<マージ元> は URL または作業コピー内の項目で、後者の場"
+"合\n"
+"     は対応する URL が比較に利用されます。リビジョン <REV> でこの URL に"
+"あっ\n"
+"     た項目が、リビジョン <N> から <M> まで存在したとして比較されます。"
+"<REV>\n"
+"     が指定されない場合、HEAD であると見なされます。\n"
 "\n"
-"  <作業コピーパス> は、変更を受け取る作業コピーのパスです。<作業コピーパス> "
-"が\n"
-"  省かれた場合はデフォルトの値 '.' であると見なされます。ただし、2 つのマージ"
-"元\n"
-"  のベース名が同一でその名前のファイルが '.' に存在する場合、差分はそのファイ"
-"ル\n"
-"  に適用されます。\n"
+"  <作業コピーパス> は、変更を受け取る作業コピーのパスです。<作業コピーパス>\n"
+"  が省かれた場合はデフォルトの値 '.' であると見なされます。ただし、2 つの"
+"マー\n"
+"  ジ元のベース名が同一でその名前のファイルが '.' に存在する場合、差分はその"
+"ファ\n"
+"  イルに適用されます。\n"
 
+# * Description for 'svn mkdir'.
+# * "mkdir: " is displayed at the head of the first line.
 #: clients/cmdline/main.c:459
 msgid ""
 "Create a new directory under version control.\n"
@@ -1210,14 +1294,18 @@ msgstr ""
 "\n"
 "  バージョン管理されたディレクトリを作成します。\n"
 "\n"
-"  1. 作業コピーの <パス> で指定された各ディレクトリがローカルに作られ、\n"
-"    次回のコミット時に追加されるよう準備されます。\n"
+"  1. 作業コピーの <パス> で指定された各ディレクトリがローカルに作られ、次回"
+"の\n"
+"    コミット時に追加されるよう準備されます。\n"
 "\n"
-"  2. <URL> で指定された各ディレクトリが直接のコミットによってリポジトリ内に\n"
-"    作られます。\n"
+"  2. <URL> で指定された各ディレクトリが直接のコミットによってリポジトリ内に"
+"作\n"
+"    られます。\n"
 "\n"
 "  どちらの場合でも途中のディレクトリはすべて存在していなくてはなりません。\n"
 
+# * Description for 'svn move'.
+# * "move (mv, rename, ren): " is displayed at the head of the first line.
 #: clients/cmdline/main.c:479
 msgid ""
 "Move and/or rename something in working copy or repository.\n"
@@ -1229,16 +1317,20 @@ msgid ""
 "    WC  -> WC:   move and schedule for addition (with history)\n"
 "    URL -> URL:  complete server-side rename.\n"
 msgstr ""
-"作業コピー内やリポジトリ内の何かについて、移動や名前の変更を行います。\n"
+"作業コピー内やリポジトリ内の何かについて、移動や名前\n"
+"の変更を行います。\n"
 "使用方法: move <移動元> <移動先>\n"
 "\n"
 "  注意:  このサブコマンドは 'copy' してから 'delete' するのと同等です。\n"
 "\n"
-"  <移動元> と <移動先> の両方とも、作業コピー (WC) のパスと URL のうち一方で"
-"す:\n"
+"  <移動元> と <移動先> の両方とも、作業コピー (WC) のパスと URL のうち一方"
+"で\n"
+"  す:\n"
 "    WC  -> WC:   (履歴をもたせたまま) 移動して追加準備状態にします\n"
 "    URL -> URL:  完全なサーバサイドの名前変更です\n"
 
+# * Description for 'svn propdel'.
+# * "propdel (pdel, pd): " is displayed at the head of the first line.
 #: clients/cmdline/main.c:491
 msgid ""
 "Remove PROPNAME from files, dirs, or revisions.\n"
@@ -1248,14 +1340,18 @@ msgid ""
 "  1. Removes versioned props in working copy.\n"
 "  2. Removes unversioned remote prop on repos revision.\n"
 msgstr ""
-"ファイル・ディレクトリ・リビジョンから <属性名> を削除します。\n"
+"ファイル・ディレクトリ・リビジョンから <属性名> を削除し\n"
+"ます。\n"
 "使用方法: 1. propdel <属性名> [<パス>...]\n"
 "          2. propdel <属性名> --revprop -r <リビジョン> [<URL>]\n"
 "\n"
 "  1. 作業コピー内にあるバージョン管理下の属性を削除します。\n"
-"  2. リポジトリのリビジョンに関する、バージョン管理下にないリモートの属性を\n"
-"     削除します。\n"
+"  2. リポジトリのリビジョンに関する、バージョン管理下にないリモートの属性を"
+"削\n"
+"    除します。\n"
 
+# * Description for 'svn propedit'.
+# * "propedit (pedit, pe): " is displayed at the head of the first line.
 #: clients/cmdline/main.c:501
 msgid ""
 "Edit property PROPNAME with an external editor on targets.\n"
@@ -1270,9 +1366,12 @@ msgstr ""
 "          2. propedit <属性名> --revprop -r <リビジョン> [<URL>]\n"
 "\n"
 "  1. 作業コピー内にあるバージョン管理下の属性を編集します。\n"
-"  2. リポジトリのリビジョンに関する、バージョン管理下にないリモートの属性を\n"
-"     編集します。\n"
+"  2. リポジトリのリビジョンに関する、バージョン管理下にないリモートの属性を"
+"編\n"
+"    集します。\n"
 
+# * Description for 'svn propget'.
+# * "propget (pget, pg): " is displayed at the head of the first line.
 #: clients/cmdline/main.c:512
 msgid ""
 "Print value of PROPNAME on files, dirs, or revisions.\n"
@@ -1290,25 +1389,30 @@ msgid ""
 "  the --strict option to disable these beautifications (useful,\n"
 "  for example, when redirecting binary property values to a file).\n"
 msgstr ""
-"ファイル・ディレクトリ・リビジョンの属性 <属性名> の値を表示します。\n"
+"ファイル・ディレクトリ・リビジョンの属性 <属性名> の値を\n"
+"表示します。\n"
 "使用方法: 1. propget <属性名> [<パス>...]\n"
 "          2. propget <属性名> --revprop -r <REV> [<URL>]\n"
 "\n"
-"  1. 作業コピー内にあるバージョン管理下の属性を表示します。\n"
-"     <REV> を指定すると、リビジョン <REV> での <対象> をまず探します。\n"
+"  1. 作業コピー内にあるバージョン管理下の属性を表示します。<REV> を指定する"
+"と、\n"
+"     リビジョン <REV> での <対象> をまず探します。\n"
 "  2. リポジトリのリビジョン <REV> に関する、バージョン管理下にないリモート"
 "の\n"
 "     属性を表示します。\n"
 "\n"
 "  デフォルトではこのサブコマンドは、出力がきれいに見えるように属性値の末尾"
 "に\n"
-"  改行を余計に付け加えて表示します。また、複数のパスが指定されている場合は\n"
-"  常に、各属性値の前に関連するパスをつけて表示します。こういった見た目に関す"
+"  改行を余計に付け加えて表示します。また、複数のパスが指定されている場合は"
+"常\n"
+"  に、各属性値の前に関連するパスをつけて表示します。こういった見た目に関す"
 "る\n"
-"  処理を無効にするには --strict オプションを用いてください (例えば、バイナリ"
-"の\n"
-"  属性値をファイルにリダイレクトする際に便利です)。\n"
+"  処理を無効にするには --strict オプションを用いてください (例えば、バイナ"
+"リ\n"
+"  の属性値をファイルにリダイレクトする際に便利です)。\n"
 
+# * Description for 'svn proplist'.
+# * "proplist (plist, pl): " is displayed at the head of the first line.
 #: clients/cmdline/main.c:530
 msgid ""
 "List all properties on files, dirs, or revisions.\n"
@@ -1319,16 +1423,20 @@ msgid ""
 "     revision the target is first looked up.\n"
 "  2. Lists unversioned remote props on repos revision.\n"
 msgstr ""
-"ファイル・ディレクトリ・リビジョンの属性を一覧表示します。\n"
+"ファイル・ディレクトリ・リビジョンの属性を一覧表示しま\n"
+"す。\n"
 "使用方法: 1. proplist [対象[@<REV>]...]\n"
 "          2. proplist --revprop -r <REV> [<URL>]\n"
 "\n"
-"  1. 作業コピー内にあるバージョン管理下の属性を一覧表示します。\n"
-"     <REV> を指定すると、リビジョン <REV> での <対象> をまず探します。\n"
+"  1. 作業コピー内にあるバージョン管理下の属性を一覧表示します。<REV> を指定"
+"す\n"
+"     ると、リビジョン <REV> での <対象> をまず探します。\n"
 "  2. リポジトリのリビジョン <REV> に関する、バージョン管理下にないリモート"
 "の\n"
 "     属性を一覧表示します。\n"
 
+# * Description for 'svn propset'.
+# * "propset (pset, ps): " is displayed at the head of the first line.
 #: clients/cmdline/main.c:541
 msgid ""
 "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n"
@@ -1370,14 +1478,16 @@ msgid ""
 "  attempt will fail, and a recursive attempt will set the property\n"
 "  only on the file children of the directory.\n"
 msgstr ""
-"ファイル・ディレクトリ・リビジョンの <属性名> を <属性値> に設定します。\n"
+"ファイル・ディレクトリ・リビジョンの <属性名> を <属性値>\n"
+"に設定します。\n"
 "使用方法: 1. propset <属性名> [<属性値> | -F <値のファイル>] <パス>...\n"
 "          2. propset <属性名> --revprop -r <リビジョン> \\\n"
 "                     [<属性値> | -F <値のファイル>] [<URL>]\n"
 "\n"
 "  1. 作業コピー内にあるバージョン管理下の属性をローカルで変更します。\n"
-"  2. リポジトリのリビジョンに関する、バージョン管理下にないリモートの属性を\n"
-"     変更します。\n"
+"  2. リポジトリのリビジョンに関する、バージョン管理下にないリモートの属性を"
+"変\n"
+"     更します。\n"
 "\n"
 "  注意: svn は、バージョン管理された以下の特殊な属性を認識しますが、それ以"
 "外\n"
@@ -1393,32 +1503,37 @@ msgstr ""
 "      Id                       - 上の 4 つのキーワードをまとめた要約。\n"
 "    svn:executable - 設定されている場合、ファイルを実行可能にします。\n"
 "    svn:eol-style  - 'native', 'LF', 'CR', 'CRLF' のうちいずれか一つです。\n"
-"    svn:mime-type  - ファイルの MIME タイプです。ファイルをマージするべきか\n"
-"      するべきでないか、そして Apache のサービスでどのように扱うかを決めるの"
+"    svn:mime-type  - ファイルの MIME タイプです。ファイルをマージするべきか"
+"す\n"
+"      るべきでないか、そして Apache のサービスでどのように扱うかを決めるの"
 "に\n"
-"      用いられます。'text/' で始まる MIME タイプの場合 (あるいは MIME タイプ"
-"が\n"
-"      設定されていない場合) はテキストとして扱われます。それ以外はすべて\n"
-"      バイナリとして扱われます。\n"
-"    svn:externals  - 改行で区切られた、モジュール指示子のリストです。\n"
-"      各指示子には、ディレクトリの相対パス・リビジョンフラグ (オプショナ"
-"ル)・\n"
-"      URL を指定します。以下に例を示します。\n"
+"      用いられます。'text/' で始まる MIME タイプの場合 (あるいは MIME タイ"
+"プ\n"
+"      が設定されていない場合) はテキストとして扱われます。それ以外はすべて"
+"バ\n"
+"      イナリとして扱われます。\n"
+"    svn:externals  - 改行で区切られた、モジュール指示子のリストです。各指示"
+"子\n"
+"      には、ディレクトリの相対パス・リビジョンフラグ (オプショナル)・URL を"
+"指\n"
+"      定します。以下に例を示します。\n"
 "        foo             http://example.com/repos/zig\n"
 "        foo/bar -r 1234 http://example.com/repos/zag\n"
-"    svn:needs-lock - 存在する場合、そのファイルは変更前にロックをかけるべきで"
-"あ\n"
-"      ることを意味します。ロックされていない場合は作業コピーのファイルを読み"
-"込み\n"
-"      専用にします。\n"
-"  svn:keywords、svn:executable、svn:eol-style、svn:mime-type、svn:needs-lock "
-"の\n"
-"  各属性はディレクトリには設定できません。ディレクトリへの非再帰的な設定は、"
-"試み\n"
-"  ても失敗します。再帰的な設定をすると、ディレクトリの子ファイルに属性が設定"
-"され\n"
-"  ます。\n"
+"    svn:needs-lock - 存在する場合、そのファイルは変更前にロックをかけるべき"
+"で\n"
+"      あることを意味します。ロックされていない場合は作業コピーのファイルを"
+"読\n"
+"      み込み専用にします。\n"
+"  svn:keywords、svn:executable、svn:eol-style、svn:mime-type、svn:needs-"
+"lock\n"
+"  の各属性はディレクトリには設定できません。ディレクトリへの非再帰的な設定"
+"は、\n"
+"  試みても失敗します。再帰的な設定をすると、ディレクトリの子ファイルに属性"
+"が\n"
+"  設定されます。\n"
 
+# * Description for 'svn resolved'.
+# * "resolved: " is displayed at the head of the first line.
 #: clients/cmdline/main.c:591
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
@@ -1433,9 +1548,12 @@ msgstr ""
 "\n"
 "  注意:  このサブコマンドは、意味的に衝突を解消したり衝突の標識を取り除いた"
 "り\n"
-"  するわけではありません。単に、衝突に際して機械的に作り出されたファイルを\n"
-"  削除し、<パス> を再びコミットできるようにするだけです。\n"
+"  するわけではありません。単に、衝突に際して機械的に作り出されたファイルを"
+"削\n"
+"  除し、<パス> を再びコミットできるようにするだけです。\n"
 
+# * Description for 'svn revert'.
+# * "revert: " is displayed at the head of the first line.
 #: clients/cmdline/main.c:600
 msgid ""
 "Restore pristine working copy file (undo most local edits).\n"
@@ -1444,13 +1562,16 @@ msgid ""
 "  Note:  this subcommand does not require network access, and resolves\n"
 "  any conflicted states.  However, it does not restore removed directories.\n"
 msgstr ""
-"作業コピーのファイルを元に戻します (ローカルでの編集の大半を取り消します)。\n"
+"作業コピーのファイルを元に戻します (ローカルでの編集の大半を取り消し\n"
+"ます)。\n"
 "使用方法: revert <パス>...\n"
 "\n"
-"  注意:  このサブコマンドは、ネットワークへのアクセスを必要とすることなく\n"
-"  あらゆる衝突状態を解消します。しかし削除されたディレクトリの復旧はしませ"
-"ん。\n"
+"  注意:  このサブコマンドは、ネットワークへのアクセスを必要とすることなくあ"
+"ら\n"
+"  ゆる衝突状態を解消します。しかし削除されたディレクトリの復旧はしません。\n"
 
+# * Description for 'svn status'.
+# * "status (stat, st): " is displayed at the head of the first line.
 #: clients/cmdline/main.c:610
 msgid ""
 "Print the status of working copy files and directories.\n"
@@ -1548,14 +1669,15 @@ msgstr ""
 "      'I' 無視されています\n"
 "      'M' 修正されました\n"
 "      'R' 置換されました\n"
-"      'X' 項目はバージョン管理下におかれていませんが、外部定義で使われていま"
+"      'X' 項目はバージョン管理下におかれていませんが外部定義で使われていま"
 "す\n"
 "      '?' 項目はバージョン管理下におかれていません\n"
-"      '!' 項目は行方不明 (svn 以外のコマンドによって削除された) または不完全"
-"です\n"
-"      '~' 項目はバージョン管理されていますが、種類の異なる何らかの項目によっ"
-"て\n"
-"          妨害されています\n"
+"      '!' 項目は行方不明 (svn 以外のコマンドによって削除された) または不完"
+"全\n"
+"          です\n"
+"      '~' 項目はバージョン管理されていますが、種類の異なる何らかの項目に"
+"よっ\n"
+"          て妨害されています\n"
 "    2 列目: ファイルまたはディレクトリの属性の修正を示します\n"
 "      ' ' 修正はありません\n"
 "      'C' 衝突しています\n"
@@ -1563,13 +1685,14 @@ msgstr ""
 "    3 列目: 作業コピーのディレクトリがロックされているかいないかを示します\n"
 "      ' ' ロックされていません\n"
 "      'L' ロックされています\n"
-"    4 列目: 項目が、過去の履歴と共に追加されるよう準備されているかそうでない"
-"か\n"
-"    を示します\n"
+"    4 列目: 項目が、過去の履歴と共に追加されるよう準備されているかそうでな"
+"い\n"
+"    かを示します\n"
 "      ' ' 項目は、過去の履歴と共に追加されるよう準備されていません\n"
 "      '+' 項目は、過去の履歴と共に追加されるよう準備されています\n"
-"    5 列目: svn switch によって、参照する URL を項目の親に対して相対的に\n"
-"    切り替えられているかいないかを示します\n"
+"    5 列目: svn switch によって、参照する URL を項目の親に対して相対的に切"
+"り\n"
+"    替えられているかいないかを示します\n"
 "      ' ' 通常です\n"
 "      'S' 切り替えられています\n"
 "    6 列目: リポジトリロックトークンを示します\n"
@@ -1618,6 +1741,8 @@ msgstr ""
 "                 965       687 joe          wc/zig.c\n"
 "    状態の背景となるリビジョン: 981\n"
 
+# * Description for 'svn switch'.
+# * "switch (sw): " is displayed at the head of the first line.
 #: clients/cmdline/main.c:687
 msgid ""
 "Update the working copy to a different URL.\n"
@@ -1637,16 +1762,22 @@ msgstr ""
 "使用方法: 1. switch <URL> [<パス>]\n"
 "          2. switch --relocate <変更元> <変更先> [<パス>...]\n"
 "\n"
-"  1. 作業コピーを、リポジトリ内の新しい <URL> にミラーさせて更新します。\n"
-"     これは 'svn update' と似た動作をし、作業コピーを同じリポジトリ内の\n"
-"     ブランチやタグに移行させる方法として使えます。\n"
+"  1. 作業コピーを、リポジトリ内の新しい <URL> にミラーさせて更新します。こ"
+"れ\n"
+"     は 'svn update' と似た動作をし、作業コピーを同じリポジトリ内のブランチ"
+"や\n"
+"     タグに移行させる方法として使えます。\n"
 "\n"
-"  2. 作業コピーの URL メタデータを書き換え、URL シンタックスの変更のみを\n"
-"     反映させます。リポジトリのルート URL が変更した (スキームやホスト名など"
-"が\n"
-"     変更した) が、同じリポジトリ内の同じディレクトリを作業コピーに反映させ\n"
-"     続けたいときに、これを用います。\n"
+"  2. 作業コピーの URL メタデータを書き換え、URL シンタックスの変更のみを反"
+"映\n"
+"     させます。リポジトリのルート URL が変更した (スキームやホスト名などが"
+"変\n"
+"     更した) が、同じリポジトリ内の同じディレクトリを作業コピーに反映させ続"
+"け\n"
+"     たいときに、これを用います。\n"
 
+# * Description for 'svn unlock'.
+# * "unlock: " is displayed at the head of the first line.
 #: clients/cmdline/main.c:708
 msgid ""
 "Unlock working copy paths or URLs.\n"
@@ -1659,6 +1790,8 @@ msgstr ""
 "\n"
 "  ロックを破壊するには --force を用いてください。\n"
 
+# * Description for 'svn update'.
+# * "update (up): " is displayed at the head of the first line.
 #: clients/cmdline/main.c:716
 msgid ""
 "Bring changes from the repository into the working copy.\n"
@@ -1700,11 +1833,11 @@ msgstr ""
 "    C  衝突しています\n"
 "    G  マージされました\n"
 "\n"
-"  1 列目の文字は、実際のファイルに対する更新を意味します。\n"
-"  これに対し、ファイルの属性に対する更新は 2 列目で示されます。\n"
-"  3 列目に 'B' がある場合、それは、そのファイルに関するロックが破壊されたか奪"
-"わ\n"
-"  れたことを意味します。\n"
+"  1 列目の文字は、実際のファイルに対する更新を意味します。これに対し、ファ"
+"イ\n"
+"  ルの属性に対する更新は 2 列目で示されます。3 列目に 'B' がある場合、それ"
+"は、\n"
+"  そのファイルに関するロックが破壊されたか奪われたことを意味します。\n"
 
 #: clients/cmdline/main.c:794 svnadmin/main.c:77 svnlook/main.c:277
 msgid "Caught signal"
@@ -6143,7 +6276,7 @@ msgstr ""
 
 #: libsvn_subr/opt.c:237
 msgid " arg"
-msgstr " 引数"
+msgstr " <引数>"
 
 #: libsvn_subr/opt.c:261
 #, c-format
@@ -7073,91 +7206,101 @@ msgstr "リポジトリの引数が必要です"
 msgid "'%s' is an URL when it should be a path"
 msgstr "'%s' は URL です。そこはパスで指定するべきです"
 
-# * Description for 'svn{admin,dumpfilter,look,version} --revision'.
-# * 29 one-byte characters are displayed on the left.
+# * Description for 'svn{admin,dumpfilter,look,serve,version} --version'.
+# * 29 half-size characters are displayed on the left.
 #: svnadmin/main.c:233 svndumpfilter/main.c:762 svnlook/main.c:97
 #: svnserve/main.c:111 svnversion/main.c:213
 msgid "show version information"
 msgstr "バージョン情報を表示します"
 
 # * Description for 'svnadmin --revision'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnadmin/main.c:236
 msgid "specify revision number ARG (or X:Y range)"
-msgstr "リビジョン番号を ARG (または範囲 X:Y) と指定します"
+msgstr ""
+"リビジョン番号を <引数> (または範囲 X:Y) と指定\n"
+"                             します"
 
 # * Description for 'svnadmin --incremental'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnadmin/main.c:239
 msgid "dump incrementally"
 msgstr "増分のみをダンプします"
 
 # * Description for 'svnadmin --deltas'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnadmin/main.c:242
 msgid "use deltas in dump output"
 msgstr "ダンプの出力として差分を用います"
 
 # * Description for 'svnadmin --bypass-hooks'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnadmin/main.c:245
 msgid "bypass the repository hook system"
 msgstr "リポジトリフックシステムを回避します"
 
 # * Description for 'svnadmin --quiet'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnadmin/main.c:248
 msgid "no progress (only errors) to stderr"
-msgstr "エラー以外、標準エラー出力に進行状況を出力しません"
+msgstr ""
+"標準エラー出力に (エラー以外の) 進行状況を出力し\n"
+"                             ません"
 
 # * Description for 'svnadmin --ignore--uuid'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnadmin/main.c:251
 msgid "ignore any repos UUID found in the stream"
-msgstr "ストリーム中にリポジトリ UUID があっても無視します"
+msgstr ""
+"ストリーム中にリポジトリ UUID があっても無視しま\n"
+"                             す"
 
 # * Description for 'svnadmin --force--uuid'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnadmin/main.c:254
 msgid "set repos UUID to that found in stream, if any"
-msgstr "ストリーム中に UUID があればリポジトリに設定します"
+msgstr ""
+"ストリーム中に UUID があればリポジトリに設定しま\n"
+"                             す"
 
 # * Description for 'svnadmin --fs-type'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnadmin/main.c:257
 msgid "type of repository: 'fsfs' (default) or 'bdb'"
-msgstr ""
-"リポジトリの形式:\n"
-"                             'fsfs' (デフォルト) もしくは 'bdb'"
+msgstr "リポジトリ形式: 'fsfs' (デフォルト) または 'bdb'"
 
 # * Description for 'svnadmin --parent-dir'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnadmin/main.c:260
 msgid "load at specified directory in repository"
 msgstr "リポジトリ内の指定したディレクトリでロードします"
 
 # * Description for 'svnadmin --bdb-txn-nosync'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnadmin/main.c:263
 msgid "disable fsync at transaction commit [Berkeley DB]"
 msgstr ""
-"トランザクションコミット時の fsync を無効にします\n"
-"                             [Berkeley DB]"
+"トランザクションコミット時の fsync を無効にしま\n"
+"                             す [Berkeley DB]"
 
 # * Description for 'svnadmin --bdb-log-keep'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnadmin/main.c:266
 msgid "disable automatic log file removal [Berkeley DB]"
-msgstr "ログファイルの自動削除を無効にします [Berkeley DB]"
+msgstr ""
+"ログファイルの自動削除を無効にします [Berkeley\n"
+"                             DB]"
 
 # * Description for 'svnadmin --clean-logs'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnadmin/main.c:272
 msgid "remove redundant log files from source repository"
-msgstr "ソースリポジトリから不要なログファイルを削除します"
+msgstr ""
+"ソースリポジトリから不要なログファイルを削除しま\n"
+"                             す"
 
 # * Description for 'svnadmin --use-pre-commit-hook'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnadmin/main.c:275
 msgid "call pre-commit hook before committing revisions"
 msgstr ""
@@ -7165,7 +7308,7 @@ msgstr ""
 "                             呼び出します"
 
 # * Description for 'svnadmin --use-post-commit-hook'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnadmin/main.c:278
 msgid "call post-commit hook after committing revisions"
 msgstr ""
@@ -7173,7 +7316,7 @@ msgstr ""
 "                             呼び出します"
 
 # * Description for 'svnadmin --wait'
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnadmin/main.c:281
 msgid ""
 "wait instead of exit if the repository is in\n"
@@ -7182,6 +7325,8 @@ msgstr ""
 "リポジトリを他のプロセスが利用中の場合、終了する\n"
 "                             代わりに待ちます"
 
+# * Description for 'svnadmin create'.
+# * "create: " is displayed at the head of the first line.
 #: svnadmin/main.c:294
 msgid ""
 "usage: svnadmin create REPOS_PATH\n"
@@ -7192,6 +7337,8 @@ msgstr ""
 "\n"
 "空のリポジトリを <リポジトリパス> に新規に作成します。\n"
 
+# * Description for 'svnadmin deltify'.
+# * "deltify: " is displayed at the head of the first line.
 #: svnadmin/main.c:300
 msgid ""
 "usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n"
@@ -7206,11 +7353,14 @@ msgstr ""
 "\n"
 "指定されたリビジョン範囲をスキャンし、それらのリビジョンで変更のあったパス"
 "に\n"
-"関して、以前使われていた差分化をします。差分化は、前のリビジョンからの\n"
-"差分のみをリポジトリに格納して、リポジトリを本質的に圧縮します。リビジョン"
-"が\n"
-"指定されていない場合は、単に HEAD リビジョンを差分化します。\n"
+"関して、以前使われていた差分化をします。差分化は、前のリビジョンからの差分"
+"の\n"
+"みをリポジトリに格納して、リポジトリを本質的に圧縮します。リビジョンが指定"
+"さ\n"
+"れていない場合は、単に HEAD リビジョンを差分化します。\n"
 
+# * Description for 'svnadmin dump'.
+# * "dump: " is displayed at the head of the first line.
 #: svnadmin/main.c:309
 msgid ""
 "usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n"
@@ -7222,20 +7372,25 @@ msgid ""
 "If --incremental is passed, then the first revision dumped will be\n"
 "a diff against the previous revision, instead of the usual fulltext.\n"
 msgstr ""
-"使用方法: svnadmin dump <リポジトリパス> [-r <下限>[:<上限>]] [--"
-"incremental]\n"
+"使用方法: svnadmin dump <リポジトリパス> [-r <下限>[:<上限>]]\n"
+"                         [--incremental]\n"
 "\n"
-"ファイルシステムの内容を「ダンプファイル」可搬形式で標準出力にダンプし、\n"
-"その際フィードバックを標準エラー出力に送信します。ダンプは、リビジョン <下限"
-">\n"
-"からリビジョン <上限> まで行います。リビジョンの指定がないときは、リビジョ"
-"ン\n"
-"ツリーすべてをダンプします。<下限> のみが指定されれば、その一つのリビジョン\n"
-"ツリーをダンプします。--incremental が渡された場合にはダンプされる最初の\n"
-"リビジョンは、通常の場合のようなフルテキストとはならず、直前のリビジョンと"
+"ファイルシステムの内容を「ダンプファイル」可搬形式で標準出力にダンプし、そ"
 "の\n"
-"差分となります。\n"
+"際フィードバックを標準エラー出力に送信します。ダンプは、リビジョン <下限> "
+"か\n"
+"らリビジョン <上限> まで行います。リビジョンの指定がないときは、リビジョン"
+"ツ\n"
+"リーすべてをダンプします。<下限> のみが指定されれば、その一つのリビジョンツ"
+"リ\n"
+"ーをダンプします。--incremental が渡された場合にはダンプされる最初のリビ"
+"ジョ\n"
+"ンは、通常の場合のようなフルテキストとはならず、直前のリビジョンとの差分と"
+"な\n"
+"ります。\n"
 
+# * Description for 'svnadmin help'.
+# * "help: " is displayed at the head of the first line.
 #: svnadmin/main.c:320
 msgid ""
 "usage: svnadmin help [SUBCOMMAND...]\n"
@@ -7246,6 +7401,8 @@ msgstr ""
 "\n"
 "このプログラムやそのサブコマンドの使用方法を説明します。\n"
 
+# * Description for 'svnadmin hotcopy'.
+# * "hotcopy: " is displayed at the head of the first line.
 #: svnadmin/main.c:325
 msgid ""
 "usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n"
@@ -7256,6 +7413,8 @@ msgstr ""
 "\n"
 "リポジトリの優れたコピーを作成します\n"
 
+# * Description for 'svnadmin list-dblogs'.
+# * "list-dblogs: " is displayed at the head of the first line.
 #: svnadmin/main.c:330
 msgid ""
 "usage: svnadmin list-dblogs REPOS_PATH\n"
@@ -7269,9 +7428,12 @@ msgstr ""
 "\n"
 "Berkeley DB ログファイル全てを一覧表示します。\n"
 "\n"
-"警告: まだ使用されるログファイルの変更や削除は、リポジトリを壊す原因と\n"
-"なります。\n"
+"警告: まだ使用されているログファイルの変更や削除は、リポジトリを壊す原因と"
+"な\n"
+"ります。\n"
 
+# * Description for 'svnadmin list-unused-dblogs'.
+# * "list-unused-dblogs: " is displayed at the head of the first line.
 #: svnadmin/main.c:337
 msgid ""
 "usage: svnadmin list-unused-dblogs REPOS_PATH\n"
@@ -7283,6 +7445,8 @@ msgstr ""
 "\n"
 "使われていない Berkeley DB ログファイルの一覧を表示します。\n"
 
+# * Description for 'svnadmin load'.
+# * "load: " is displayed at the head of the first line.
 #: svnadmin/main.c:342
 msgid ""
 "usage: svnadmin load REPOS_PATH\n"
@@ -7294,13 +7458,16 @@ msgid ""
 msgstr ""
 "使用方法: svnadmin load <リポジトリパス>\n"
 "\n"
-"「ダンプファイル」形式のストリームを標準入力から読み、リポジトリのファイル\n"
-"システムに新しいリビジョンとしてコミットします。リポジトリがそれまで空だっ"
-"た\n"
-"場合、その UUID はデフォルトではストリーム中で指定されたものに変更されま"
-"す。\n"
-"進行状況のフィードバックは標準出力に送られます。\n"
+"「ダンプファイル」形式のストリームを標準入力から読み、リポジトリのファイル"
+"シ\n"
+"ステムに新しいリビジョンとしてコミットします。リポジトリがそれまで空だった"
+"場\n"
+"合、その UUID はデフォルトではストリーム中で指定されたものに変更されます。"
+"進\n"
+"行状況のフィードバックは標準出力に送られます。\n"
 
+# * Description for 'svnadmin lslocks'.
+# * "lslocks: " is displayed at the head of the first line.
 #: svnadmin/main.c:353
 msgid ""
 "usage: svnadmin lslocks REPOS_PATH\n"
@@ -7311,6 +7478,8 @@ msgstr ""
 "\n"
 "すべてのロックについての記述を表示します。\n"
 
+# * Description for 'svnadmin lstxns'.
+# * "lstxns: " is displayed at the head of the first line.
 #: svnadmin/main.c:358
 msgid ""
 "usage: svnadmin lstxns REPOS_PATH\n"
@@ -7321,6 +7490,8 @@ msgstr ""
 "\n"
 "コミットされていないトランザクションの名前をすべて表示します。\n"
 
+# * Description for 'svnadmin recover'.
+# * "recover: " is displayed at the head of the first line.
 #: svnadmin/main.c:363
 msgid ""
 "usage: svnadmin recover REPOS_PATH\n"
@@ -7332,12 +7503,14 @@ msgid ""
 msgstr ""
 "使用方法: svnadmin recover <リポジトリパス>\n"
 "\n"
-"Berkeley DB の復旧手続きをリポジトリ上で実行します。復旧実行の必要性を知らせ"
-"る\n"
-"エラーが見られたときにこれを実行してください。復旧には排他的なアクセスが必要"
-"な\n"
-"ので、リポジトリが他のプロセスで利用されている場合は終了します。\n"
+"Berkeley DB の復旧手続きをリポジトリ上で実行します。復旧実行の必要性を知ら"
+"せ\n"
+"るエラーが見られたときにこれを実行してください。復旧には排他的なアクセスが"
+"必\n"
+"要なので、リポジトリが他のプロセスで利用されている場合は終了します。\n"
 
+# * Description for 'svnadmin rmlocks'.
+# * "rmlocks: " is displayed at the head of the first line.
 #: svnadmin/main.c:371
 msgid ""
 "usage: svnadmin rmlocks REPOS_PATH LOCKED_PATH...\n"
@@ -7348,6 +7521,8 @@ msgstr ""
 "\n"
 "<ロックされたパス> それぞれのロックを無条件に解除します。\n"
 
+# * Description for 'svnadmin rmtxns'.
+# * "rmtxns: " is displayed at the head of the first line.
 #: svnadmin/main.c:376
 msgid ""
 "usage: svnadmin rmtxns REPOS_PATH TXN_NAME...\n"
@@ -7358,6 +7533,8 @@ msgstr ""
 "\n"
 "指定されたトランザクションを削除します。\n"
 
+# * Description for 'svnadmin setlog'.
+# * "setlog: " is displayed at the head of the first line.
 #: svnadmin/main.c:381
 msgid ""
 "usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n"
@@ -7374,17 +7551,22 @@ msgid ""
 msgstr ""
 "使用方法: svnadmin setlog <リポジトリパス> -r <リビジョン> <ファイル>\n"
 "\n"
-"<ファイル> の内容を、リビジョン <リビジョン> のログメッセージに設定します。\n"
-"リビジョン属性に関連したフックを動作させないためには、--bypass-hooks を用い"
-"て\n"
-"ください (例えば、post-revprop-change フックからのメールによる通知を必要と\n"
-"しない場合の話です。というのは、リビジョン属性の修正は post-revprop-change "
-"で\n"
-"有効とされていないからです)。\n"
+"<ファイル> の内容を、リビジョン <リビジョン> のログメッセージに設定します。"
+"リ\n"
+"ビジョン属性に関連したフックを動作させないためには、--bypass-hooks を用いて"
+"く\n"
+"ださい (例えば、post-revprop-change フックからのメールによる通知を必要とし"
+"な\n"
+"い場合の話です。というのは、リビジョン属性の修正は post-revprop-change で有"
+"効\n"
+"とされていないからです)。\n"
 "\n"
-"注意: リビジョン属性の履歴は管理されません。したがってこのコマンドを使うと\n"
-"以前のログメッセージを永久に上書きします。\n"
+"注意: リビジョン属性の履歴は管理されません。したがってこのコマンドを使うと"
+"以\n"
+"前のログメッセージを永久に上書きします。\n"
 
+# * Description for 'svnadmin verify'.
+# * "verify: " is displayed at the head of the first line.
 #: svnadmin/main.c:395
 msgid ""
 "usage: svnadmin verify REPOS_PATH\n"
@@ -7417,6 +7599,7 @@ msgstr "リビジョン %ld を差分化しています..."
 msgid "done.\n"
 msgstr "完了しました。\n"
 
+# * Description for svnadmin.
 #: svnadmin/main.c:633
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
@@ -7588,50 +7771,57 @@ msgstr ""
 "delta 属性ブロックが検出されました - svndumpfilter ではサポートされません"
 
 # * Description for 'svndumpfilter --quiet'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svndumpfilter/main.c:764
 msgid "Do not display filtering statistics."
 msgstr "フィルタリングを行うときに統計を表示しません。"
 
 # * Description for 'svndumpfilter --drop-empty-revs'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svndumpfilter/main.c:766
 msgid "Remove revisions emptied by filtering."
 msgstr ""
-"フィルタをかけたために空になったリビジョンを取り除\n"
-"                             きます。"
+"フィルタをかけたために空になったリビジョンを取り\n"
+"                             除きます。"
 
 # * Description for 'svndumpfilter --renumber-revs'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svndumpfilter/main.c:768
 msgid "Renumber revisions left after filtering."
 msgstr ""
-"フィルタをかけた後に残ったリビジョンに番号をふりな\n"
-"                             おします。"
+"フィルタをかけた後に残ったリビジョンに番号をふり\n"
+"                             なおします。"
 
 # * Description for 'svndumpfilter --preserve-revprops'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svndumpfilter/main.c:770
 msgid "Don't filter revision properties."
 msgstr "リビジョン属性にはフィルタをかけません。"
 
+# * Description for 'svndumpfilter exclude'.
+# * "exclude: " is displayed at the head of the first line.
 #: svndumpfilter/main.c:781
 msgid ""
 "Filter out nodes with given prefixes from dumpstream.\n"
 "usage: svndumpfilter exclude PATH_PREFIX...\n"
 msgstr ""
-"指定されたプレフィックスをもつノードをダンプストリームから取り除きます。\n"
+"指定されたプレフィックスをもつノードをダンプストリームから取り除きま\n"
+"す。\n"
 "使用方法: svndumpfilter exclude <パスのプレフィックス>...\n"
 
+# * Description for 'svndumpfilter include'.
+# * "include: " is displayed at the head of the first line.
 #: svndumpfilter/main.c:787
 msgid ""
 "Filter out nodes without given prefixes from dumpstream.\n"
 "usage: svndumpfilter include PATH_PREFIX...\n"
 msgstr ""
-"指定されたプレフィックスをもたないノードをダンプストリームから取り除きま"
-"す。\n"
+"指定されたプレフィックスをもたないノードをダンプストリームから取り除\n"
+"きます。\n"
 "使用方法: svndumpfilter include <パスのプレフィックス>...\n"
 
+# * Description for 'svndumpfilter help'.
+# * "help: " is displayed at the head of the first line.
 #: svndumpfilter/main.c:793
 msgid ""
 "Describe the usage of this program or its subcommands.\n"
@@ -7640,6 +7830,7 @@ msgstr ""
 "このプログラムやそのサブコマンドの使用方法を説明します。\n"
 "使用方法: svndumpfilter help [<サブコマンド>...]\n"
 
+# * Description for svndumpfilter.
 #: svndumpfilter/main.c:863
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
@@ -7714,43 +7905,45 @@ msgstr ""
 "使用方法を知りたいときは 'svndumpfilter help %s' と打ってください。\n"
 
 # * Description for 'svnlook --revision'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnlook/main.c:100
 msgid "specify revision number ARG"
-msgstr "リビジョン番号を ARG と指定します"
+msgstr "リビジョン番号を <引数> と指定します"
 
 # * Description for 'svnlook --transaction'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnlook/main.c:103
 msgid "specify transaction name ARG"
-msgstr "トランザクション名を ARG と指定します"
+msgstr "トランザクション名を <引数> と指定します"
 
 # * Description for 'svnlook --verbose'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnlook/main.c:106
 msgid "be verbose"
 msgstr "冗長モードになります"
 
 # * Description for 'svnlook --show-ids'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnlook/main.c:109
 msgid "show node revision ids for each path"
 msgstr "各パスについてノードのリビジョン ID を表示します"
 
 # * Description for 'svnlook --no-diff-added'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnlook/main.c:115
 msgid "do not print differences for added files"
 msgstr "追加されたファイルに関しては差分を表示しません"
 
 # * Description for 'svnlook --full-paths'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnlook/main.c:121
 msgid "show full paths instead of indenting them"
 msgstr ""
-"インデントを使った表現を用いずにフルパスを表示しま\n"
-"                             す"
+"インデントを使った表現を用いずにフルパスを表示し\n"
+"                             ます"
 
+# * Description for 'svnlook author'.
+# * "author: " is displayed at the head of the first line.
 #: svnlook/main.c:134
 msgid ""
 "usage: svnlook author REPOS_PATH\n"
@@ -7761,6 +7954,8 @@ msgstr ""
 "\n"
 "変更者を表示します。\n"
 
+# * Description for 'svnlook cat'.
+# * "cat: " is displayed at the head of the first line.
 #: svnlook/main.c:139
 msgid ""
 "usage: svnlook cat REPOS_PATH FILE_PATH\n"
@@ -7771,6 +7966,8 @@ msgstr ""
 "\n"
 "ファイルの内容を表示します。<ファイルパス> を '/' で始めるかは任意です。\n"
 
+# * Description for 'svnlook changed'.
+# * "changed: " is displayed at the head of the first line.
 #: svnlook/main.c:145
 msgid ""
 "usage: svnlook changed REPOS_PATH\n"
@@ -7781,6 +7978,8 @@ msgstr ""
 "\n"
 "変更のあったパスを表示します。\n"
 
+# * Description for 'svnlook date'.
+# * "date: " is displayed at the head of the first line.
 #: svnlook/main.c:150
 msgid ""
 "usage: svnlook date REPOS_PATH\n"
@@ -7791,6 +7990,8 @@ msgstr ""
 "\n"
 "タイムスタンプを表示します。\n"
 
+# * Description for 'svnlook diff'.
+# * "diff: " is displayed at the head of the first line.
 #: svnlook/main.c:155
 msgid ""
 "usage: svnlook diff REPOS_PATH\n"
@@ -7801,6 +8002,8 @@ msgstr ""
 "\n"
 "変更されたファイルや属性について、GNU スタイルの差分を表示します。\n"
 
+# * Description for 'svnlook dirs-changed'.
+# * "dirs-changed: " is displayed at the head of the first line.
 #: svnlook/main.c:160
 msgid ""
 "usage: svnlook dirs-changed REPOS_PATH\n"
@@ -7814,6 +8017,8 @@ msgstr ""
 "た\n"
 "ディレクトリを表示します。\n"
 
+# * Description for 'svnlook help'.
+# * "help: " is displayed at the head of the first line.
 #: svnlook/main.c:166
 msgid ""
 "usage: svnlook help [SUBCOMMAND...]\n"
@@ -7824,6 +8029,8 @@ msgstr ""
 "\n"
 "このプログラムやそのサブコマンドの使用方法を説明します。\n"
 
+# * Description for 'svnlook history'.
+# * "history: " is displayed at the head of the first line.
 #: svnlook/main.c:171
 msgid ""
 "usage: svnlook history REPOS_PATH [PATH_IN_REPOS]\n"
@@ -7837,6 +8044,8 @@ msgstr ""
 "リ)\n"
 "の履歴に関する情報を表示します。\n"
 
+# * Description for 'svnlook info'.
+# * "info: " is displayed at the head of the first line.
 #: svnlook/main.c:177
 msgid ""
 "usage: svnlook info REPOS_PATH\n"
@@ -7847,6 +8056,8 @@ msgstr ""
 "\n"
 "変更者・タイムスタンプ・ログメッセージの長さ・ログメッセージを表示します。\n"
 
+# * Description for 'svnlook lock'.
+# * "lock: " is displayed at the head of the first line.
 #: svnlook/main.c:182
 msgid ""
 "usage: svnlook lock REPOS_PATH PATH_IN_REPOS\n"
@@ -7857,6 +8068,8 @@ msgstr ""
 "\n"
 "<リポジトリ内パス> にロックが存在していれば、それに関する記述を表示します。\n"
 
+# * Description for 'svnlook log'.
+# * "log: " is displayed at the head of the first line.
 #: svnlook/main.c:187
 msgid ""
 "usage: svnlook log REPOS_PATH\n"
@@ -7867,6 +8080,8 @@ msgstr ""
 "\n"
 "ログメッセージを表示します。\n"
 
+# * Description for 'svnlook propget'.
+# * "propget: " is displayed at the head of the first line.
 #: svnlook/main.c:192
 msgid ""
 "usage: svnlook propget REPOS_PATH PROPNAME [PATH_IN_REPOS]\n"
@@ -7874,11 +8089,15 @@ msgid ""
 "Print the raw value of a property on a path in the repository.\n"
 "With --revprop, prints the raw value of a revision property.\n"
 msgstr ""
-"使用方法: svnlook propget <リポジトリパス> <属性名> [<リポジトリ内パス>]\n"
+"使用方法: svnlook propget <リポジトリパス> <属性名>\n"
+"                           [<リポジトリ内パス>]\n"
 "\n"
-"<リポジトリ内パス> に設定された属性の生の値を表示します。\n"
-"--revprop をつけると、リビジョン属性の生の値を表示します。\n"
+"<リポジトリ内パス> に設定された属性の生の値を表示します。--revprop をつける"
+"と、\n"
+"リビジョン属性の生の値を表示します。\n"
 
+# * Description for 'svnlook proplist'.
+# * "proplist: " is displayed at the head of the first line.
 #: svnlook/main.c:198
 msgid ""
 "usage: svnlook proplist REPOS_PATH [PATH_IN_REPOS]\n"
@@ -7889,9 +8108,12 @@ msgid ""
 msgstr ""
 "使用方法: svnlook proplist <リポジトリパス> [<リポジトリ内パス>]\n"
 "\n"
-"<リポジトリ内パス> の属性、あるいは --revprop オプションをつけた場合には\n"
-"リビジョン属性を、一覧表示します。-v をつけると属性値も一緒に表示します。\n"
+"<リポジトリ内パス> の属性、あるいは --revprop オプションをつけた場合にはリ"
+"ビ\n"
+"ジョン属性を、一覧表示します。-v をつけると属性値も一緒に表示します。\n"
 
+# * Description for 'svnlook tree'.
+# * "tree: " is displayed at the head of the first line.
 #: svnlook/main.c:205
 msgid ""
 "usage: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n"
@@ -7903,9 +8125,12 @@ msgstr ""
 "\n"
 "<リポジトリ内パス> が与えられればそこから、そうでないときはツリーのルートか"
 "ら\n"
-"始めてツリーを表示します。オプションを使うとノードのリビジョン ID も表示\n"
-"できます。\n"
+"始めてツリーを表示します。オプションを使うとノードのリビジョン ID も表示で"
+"き\n"
+"ます。\n"
 
+# * Description for 'svnlook uuid'.
+# * "uuid: " is displayed at the head of the first line.
 #: svnlook/main.c:211
 msgid ""
 "usage: svnlook uuid REPOS_PATH\n"
@@ -7916,6 +8141,8 @@ msgstr ""
 "\n"
 "リポジトリの UUID を表示します。\n"
 
+# * Description for 'svnlook youngest'.
+# * "youngest: " is displayed at the head of the first line.
 #: svnlook/main.c:216
 msgid ""
 "usage: svnlook youngest REPOS_PATH\n"
@@ -8019,6 +8246,7 @@ msgstr "属性 '%s' がパス '%s' に見つかりません (リビジョン: %l
 msgid "Missing repository path argument"
 msgstr "リポジトリパスの引数が指定されていません"
 
+# * Description for svnlook.
 #: svnlook/main.c:1700
 msgid ""
 "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
@@ -8104,81 +8332,81 @@ msgstr ""
 "使用方法を知りたいときは 'svnlook help %s' と打ってください。\n"
 
 # * Description for 'svnserve --daemon'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnserve/main.c:102
 msgid "daemon mode"
 msgstr "デーモンモード"
 
 # * Description for 'svnserve --listen-port'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnserve/main.c:104
 msgid "listen port (for daemon mode)"
 msgstr ""
-"指定されたポート番号で待ち受けます\n"
-"                             (デーモンモード用)"
+"指定されたポート番号で待ち受けます (デーモンモー\n"
+"                             ド用)"
 
 # * Description for 'svnserve --listen-host'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnserve/main.c:106
 msgid "listen hostname or IP address (for daemon mode)"
 msgstr ""
-"指定されたホスト名または IP アドレスで待ち受けます\n"
-"                             (デーモンモード用)"
+"指定されたホスト名または IP アドレスで待ち受けま\n"
+"                             す (デーモンモード用)"
 
 # * Description for 'svnserve --foreground'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnserve/main.c:108
 msgid "run in foreground (useful for debugging)"
 msgstr "フォアグラウンドで実行します (デバッグに便利です)"
 
 # * Description for 'svn{serve,version} --help'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnserve/main.c:109 svnversion/main.c:212
 msgid "display this help"
 msgstr "このヘルプを表示します"
 
 # * Description for 'svnserve --inetd'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnserve/main.c:112
 msgid "inetd mode"
 msgstr "inetd モード"
 
 # * Description for 'svnserve --root'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnserve/main.c:113
 msgid "root of directory to serve"
 msgstr "サービスを提供するディレクトリのルート"
 
 # * Description for 'svnserve --read-only'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnserve/main.c:114
 msgid "deprecated; use repository config file"
 msgstr ""
-"推奨されません。リポジトリ内の設定ファイルを\n"
-"                             利用してください"
+"推奨されません。リポジトリ内の設定ファイルを利用\n"
+"                             してください"
 
 # * Description for 'svnserve --tunnel'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnserve/main.c:115
 msgid "tunnel mode"
 msgstr "トンネルモード"
 
 # * Description for 'svnserve --tunnel-user'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnserve/main.c:117
 msgid "tunnel username (default is current uid's name)"
 msgstr ""
-"トンネルモードでのユーザ名 (デフォルトは現在の uid\n"
-"                             の名前です)"
+"トンネルモードでのユーザ名 (デフォルトは現在の\n"
+"                             uid の名前です)"
 
 # * Description for 'svnserve --threads'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnserve/main.c:119
 msgid "use threads instead of fork"
 msgstr "fork の代わりにスレッドを用います"
 
 # * Description for 'svnserve --listen-once'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnserve/main.c:121
 msgid "listen once (useful for debugging)"
 msgstr "一度だけ待ち受けます (デバッグに便利です)"
@@ -8188,6 +8416,7 @@ msgstr "一度だけ待ち受けます (デバッグに便利です)"
 msgid "Type '%s --help' for usage.\n"
 msgstr "使用方法を知りたいときは '%s --help' と打ってください。\n"
 
+# * Description for svnserve.
 #: svnserve/main.c:141
 msgid ""
 "Usage: svnserve [options]\n"
@@ -8267,6 +8496,7 @@ msgstr "終了しました"
 msgid "Type 'svnversion --help' for usage.\n"
 msgstr "使用方法を知りたいときは 'svnversion --help' と打ってください。\n"
 
+# * Description for svnversion.
 #: svnversion/main.c:135
 msgid ""
 "usage: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n"
@@ -8298,19 +8528,24 @@ msgstr ""
 "使用方法: svnversion [<オプション>] <作業コピーパス> [<TRAIL_URL>]\n"
 "\n"
 "  <作業コピーパス> にある作業コピーの簡潔な「バージョン番号」を生成します。\n"
-"  <TRAIL_URL> は、<作業コピーパス> 自体が switch で切り替えられたかどうかを\n"
-"  決めるのに用いられる、URL の末尾の部分です (<作業コピーパス> 内の一部が\n"
-"  切り替えられている場合、その切り替えは <TRAIL_URL> に依存せず検出できま"
-"す)。\n"
-"  バージョン番号は標準出力に書き込まれます。以下に例を示します:\n"
+"  <TRAIL_URL> は、<作業コピーパス> 自体が switch で切り替えられたかどうかを"
+"決\n"
+"  めるのに用いられる、URL の末尾の部分です (<作業コピーパス> 内の一部が切り"
+"替\n"
+"  えられている場合、その切り替えは <TRAIL_URL> に依存せず検出できます)。"
+"バー\n"
+"  ジョン番号は標準出力に書き込まれます。以下に例を示します:\n"
 "\n"
 "    $ svnversion . /repos/svn/trunk \n"
 "    4168\n"
 "\n"
-"  作業コピーが単一のリビジョンをもち、変更を受けていなく、switch による\n"
-"  切り替えもされていなく、引数 <TRAIL_URL> にマッチする URL であった場合、\n"
-"  バージョン番号は単一の数字となります。\n"
-"  そうでない場合は、バージョン番号は以下のようにより複雑になります:\n"
+"  作業コピーが単一のリビジョンをもち、変更を受けていなく、switch による切り"
+"替\n"
+"  えもされていなく、引数 <TRAIL_URL> にマッチする URL であった場合、バー"
+"ジョ\n"
+"  ン番号は単一の数字となります。そうでない場合は、バージョン番号は以下のよ"
+"う\n"
+"  により複雑になります:\n"
 "\n"
 "   4123:4168     複数のリビジョンが混在している作業コピー\n"
 "   4168M         変更が加えられた作業コピー\n"
@@ -8318,26 +8553,26 @@ msgstr ""
 "   4123:4168MS   複数のリビジョンが混在しており、変更が加えられている、\n"
 "                 switch を使って切り替えられている作業コピー\n"
 "\n"
-"  例えばエクスポートされたディレクトリのような、作業コピー以外のディレクトリ"
-"に\n"
-"  対して実行すると、プログラムは「エクスポートされたものです」と出力しま"
+"  例えばエクスポートされたディレクトリのような、作業コピー以外のディレクト"
+"リ\n"
+"  に対して実行すると、プログラムは「エクスポートされたものです」と出力しま"
 "す。\n"
 "\n"
 "有効なオプション:\n"
 
 # * Description for 'svnversion -n'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #: svnversion/main.c:210
 msgid "do not output the trailing newline"
 msgstr "出力の末尾に改行をつけません"
 
 # * Description for 'svnversion -c'.
-# * 29 one-byte characters are displayed on the left
+# * 29 half-size characters are displayed on the left
 #: svnversion/main.c:211
 msgid "last changed rather than current revisions"
 msgstr ""
-"現在のリビジョンの代わりに、最後に変更が加えられた\n"
-"                             リビジョンを表示します"
+"現在のリビジョンの代わりに、最後に変更が加えられ\n"
+"                             たリビジョンを表示します"
 
 #: svnversion/main.c:312
 #, c-format
@@ -8506,7 +8741,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "す。\n"
 
 # * Description for 'svn --extensions'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #~ msgid "pass ARG as bundled options to diff (default: '-u')"
 #~ msgstr ""
 #~ "ARG をオプションとして diff に渡します\n"
@@ -9562,7 +9797,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgstr "'%s' フックの実行に失敗しました"
 
 # * Description for 'svnadmin --fs-type'.
-# * 29 one-byte characters are displayed on the left.
+# * 29 half-size characters are displayed on the left.
 #~ msgid "type of repository: 'bdb' or 'fsfs'"
 #~ msgstr "リポジトリの形式: 'bdb' もしくは 'fsfs'"
 
