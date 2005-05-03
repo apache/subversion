@@ -72,7 +72,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-30 09:48+0200\n"
-"PO-Revision-Date: 2005-05-03 09:44+0100\n"
+"PO-Revision-Date: 2005-05-03 09:54+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -834,7 +834,6 @@ msgstr ""
 "  hinzugefügt.\n"
 
 #: clients/cmdline/main.c:356
-#, fuzzy
 msgid ""
 "Display information about a local or remote item.\n"
 "usage: info [TARGET...]\n"
@@ -843,10 +842,10 @@ msgid ""
 "  TARGET may be either a working-copy path or URL.\n"
 msgstr ""
 "Zeigt Informationen über lokales oder auf dem Server befindliches Objekt an.\n"
-"Aufruf: info [PFAD...]\n"
+"Aufruf: info [ZIEL...]\n"
 "\n"
-"  Gib Informationen über jeden PFAD aus (Vorgabe: '.').\n"
-"  PFAD kann entweder einer Arbeitskopie oder eine URL sein.\n"
+"  Gib Informationen über jedes ZIEL aus (Vorgabe: '.').\n"
+"  ZIEL kann entweder ein Pfad einer Arbeitskopie oder eine URL sein.\n"
 
 #: clients/cmdline/main.c:364
 msgid ""
@@ -887,7 +886,6 @@ msgstr ""
 "    Datum und Zeit der letzten Übertragung\n"
 
 #: clients/cmdline/main.c:388
-#, fuzzy
 msgid ""
 "Lock working copy paths or URLs in the repository, so that\n"
 "no other user can commit changes to them.\n"
@@ -897,7 +895,7 @@ msgid ""
 msgstr ""
 "Sperre Pfade in Arbeitskopie oder URLs im Projektarchiv, so dass\n"
 "kein anderer Anwender Änderungen an ihnen übertragen kann.\n"
-"Aufruf: lock PFAD...\n"
+"Aufruf: lock ZIEL...\n"
 "\n"
 "  Benutze --force, um eine bereits vorhandene Sperre zu stehlen.\n"
 
@@ -1433,20 +1431,18 @@ msgstr ""
 "     Projektarchiv widerspiegelt.\n"
 
 #: clients/cmdline/main.c:708
-#, fuzzy
 msgid ""
 "Unlock working copy paths or URLs.\n"
 "usage: unlock TARGET...\n"
 "\n"
 "  Use --force to break the lock.\n"
 msgstr ""
-"Hebt Sperren von Pfaden in Arbeitskopie oder URLs auf\n"
-"Aufruf: unlock PFAD...\n"
+"Hebe Sperren von Pfade in Arbeitskopie oder URLs im Projektarchiv auf\n"
+"Aufruf: unlock ZIEL...\n"
 "\n"
 "  Benutze --force, um die Freigabe zu erzwingen.\n"
 
 #: clients/cmdline/main.c:716
-#, fuzzy
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -1485,8 +1481,10 @@ msgstr ""
 "    G  merGed   - Zusammengeführt\n"
 "\n"
 "  Ein Buchstabe in der ersten Spalte symbolisiert eine Aktualisierung der\n"
-"  Datei, während Aktualisierungen der Dateieigenschaften in der zweiten Spalte\n"
-"  angezeigt werden.\n"
+"  Datei, während Aktualisierungen der Dateieigenschaften in der zweiten\n"
+"  Spalte angezeigt werden.\n"
+"  Ein 'B' in der dritten Spalte zeigt an, dass die Dateisperre aufgebrochen\n"
+"  oder gestohlen wurde.\n"
 
 #: clients/cmdline/main.c:794
 #: svnadmin/main.c:77
@@ -3197,9 +3195,8 @@ msgid "Not all required revisions are specified"
 msgstr "Es sind nicht alle erforderlichen Revisionen angegeben"
 
 #: libsvn_client/diff.c:1716
-#, fuzzy
 msgid "Sorry, svn_client_diff3 was called in a way that is not yet supported"
-msgstr "svn_client_diff2 wurde in einer Art aufgerufen, die derzeit nicht unterstützt wird"
+msgstr "svn_client_diff3 wurde in einer Art aufgerufen, die derzeit nicht unterstützt wird"
 
 #: libsvn_client/diff.c:1755
 msgid "Only diffs between a path's text-base and its working files are supported at this time"
@@ -3454,7 +3451,7 @@ msgstr "Unerwartetes Ende der Svndiff Eingangsdaten"
 #: libsvn_diff/diff_file.c:666
 #, c-format
 msgid "%s\\ No newline at end of file%s"
-msgstr ""
+msgstr "%s\\ Kein Zeilenvorschub am Ende der Datei%s"
 
 #: libsvn_diff/diff_file.c:1212
 #, c-format
@@ -5636,12 +5633,12 @@ msgstr "Kann den Schreibschutz auf Datei '%s' nicht aufheben"
 #: libsvn_subr/io.c:1020
 #, c-format
 msgid "Can't get default file perms for file at '%s' (file stat error)"
-msgstr ""
+msgstr "Kann die Standardberechtigungen für Datei in '%s' nicht holen (Dateistatus)"
 
 #: libsvn_subr/io.c:1026
 #, c-format
 msgid "Can't get default file perms for file at '%s' (file close error)"
-msgstr ""
+msgstr "Kann die Standardberechtigungen für Datei in '%s' nicht holen (Datei schließen)"
 
 #: libsvn_subr/io.c:1058
 #: libsvn_subr/io.c:1118
