@@ -1092,7 +1092,10 @@ static svn_error_t *
 do_log (svnlook_ctxt_t *c, svn_boolean_t print_size, apr_pool_t *pool)
 {
   svn_string_t *prop_value;
-  svn_string_t *prop_value_native;
+  const char *prop_value_eol, *prop_value_native;
+  svn_stream_t *stream;
+  svn_error_t *err;
+  apr_size_t len;
 
   SVN_ERR (get_property (&prop_value, c, SVN_PROP_REVISION_LOG, pool));
   if (! (prop_value && prop_value->data))
@@ -1101,17 +1104,35 @@ do_log (svnlook_ctxt_t *c, svn_boolean_t print_size, apr_pool_t *pool)
       return SVN_NO_ERROR;
     }
   
-  if (print_size)
+  /* We immitate what svn_cmdline_printf does here, since we need the byte
+     size of what we are going to print. */
+
+  SVN_ERR (svn_subst_translate_cstring (prop_value->data, &prop_value_eol,
+                                        APR_EOL_STR, TRUE,
+                                        NULL, FALSE, pool));
+
+  err = svn_cmdline_cstring_from_utf8 (&prop_value_native, prop_value_eol,
+                                       pool);
+  if (err)
     {
-      /* svn_cmdline_printf will convert to the native locale and eol-style
-         for us, but we need the size of the converted message. */
-      SVN_ERR (svn_subst_detranslate_string (&prop_value_native, prop_value,
-                                             TRUE, pool));
-      SVN_ERR (svn_cmdline_printf (pool, "%" APR_SIZE_T_FMT "\n",
-                                   prop_value_native->len));
+      svn_error_clear (err);
+      prop_value_native = svn_cmdline_cstring_from_utf8_fuzzy (prop_value_eol,
+                                                               pool);
     }
 
-  SVN_ERR (svn_cmdline_printf (pool, "%s\n", prop_value->data));
+  len = strlen (prop_value_native);
+
+  if (print_size)
+    SVN_ERR (svn_cmdline_printf (pool, "%" APR_SIZE_T_FMT "\n", len));
+
+  /* Use a stream to bypass all stdio translations. */
+  SVN_ERR (svn_cmdline_fflush (stdout));
+  SVN_ERR (svn_stream_for_stdout (&stream, pool));
+  SVN_ERR (svn_stream_write (stream, prop_value_native, &len));
+  SVN_ERR (svn_stream_close (stream));
+
+  SVN_ERR (svn_cmdline_fputs ("\n", stdout, pool));
+
   return SVN_NO_ERROR;
 }
 
