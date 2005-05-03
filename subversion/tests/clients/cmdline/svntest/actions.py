@@ -169,23 +169,20 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
 
   out, err = main.run_svn(want_err, *varargs)
 
-  if type(expected_stdout) is type([]):
-    compare_and_display_lines(message, 'STDOUT', expected_stdout, out)
-  elif expected_stdout == SVNAnyOutput:
-    if len(out) == 0:
-      if message is not None: print message
-      raise SVNExpectedStdout
-  elif expected_stdout is not None:
-    raise SVNIncorrectDatatype("Unexpected specification for stdout data")
-  
-  if type(expected_stderr) is type([]):
-    compare_and_display_lines(message, 'STDERR', expected_stderr, err)
-  elif expected_stderr == SVNAnyOutput:
-    if len(err) == 0:
-      if message is not None: print message
-      raise SVNExpectedStderr
-  elif expected_stderr is not None:
-    raise SVNIncorrectDatatype("Unexpected specification for stderr data")
+  def handle_output(expected, actual, output_type, raisable):
+    if type(expected) is type([]):
+      compare_and_display_lines(message, output_type.upper(), expected, actual)
+    elif type(expected) is type(''):
+      match_or_fail(message, output_type.upper(), expected, actual)
+    elif expected == SVNAnyOutput:
+      if len(actual) == 0:
+        if message is not None: print message
+        raise raisable
+    elif expected is not None:
+      raise SVNIncorrectDatatype("Unexpected type for %s data" % output_type)
+
+  handle_output(expected_stdout, out, 'stdout', SVNExpectedStdout)
+  handle_output(expected_stderr, err, 'stderr', SVNExpectedStderr)
   return out, err
 
 
@@ -698,13 +695,20 @@ def display_trees(message, label, expected, actual):
     tree.dump_tree(actual)
 
 
-def display_lines(message, label, expected, actual):
-  'Print two sets of output lines, expected and actual.'
+def display_lines(message, label, expected, actual, expected_is_regexp=None):
+  """Print MESSAGE, unless it is None, then print EXPECTED (labeled
+  with LABEL) followed by ACTUAL (also labeled with LABEL).
+  Both EXPECTED and ACTUAL may be strings or lists of strings."""
   if message is not None:
     print message
   if expected is not None:
-    print 'EXPECTED', label + ':'
+    if expected_is_regexp:
+      print 'EXPECTED', label + ' (regexp):'
+    else:
+      print 'EXPECTED', label + ':'
     map(sys.stdout.write, expected)
+    if expected_is_regexp:
+      map(sys.stdout.write, '\n')
   if actual is not None:
     print 'ACTUAL', label + ':'
     map(sys.stdout.write, actual)
@@ -721,6 +725,17 @@ def compare_and_display_lines(message, label, expected, actual):
     display_lines(message, label, expected, actual)
     raise main.SVNLineUnequal
 
+def match_or_fail(message, label, expected, actual):
+  """Make sure that regexp EXPECTED matches at least one line in list ACTUAL.
+  If no match, then print MESSAGE (if it's not None), followed by
+  EXPECTED and ACTUAL, both labeled with LABEL, and raise SVNLineUnequal."""
+  matched = None
+  for line in actual:
+    if re.match(expected, line):
+      matched = 1
+  if not matched:
+    display_lines(message, label, expected, actual, 1)
+    raise main.SVNLineUnequal
 
 ######################################################################
 # Other general utilities
