@@ -1008,6 +1008,10 @@ SVN_ERROR_START
               SVN_ERR_CL_CATEGORY_START + 8,
               "Something is wrong with the log message's contents")
 
+  SVN_ERRDEF (SVN_ERR_CL_UNNECESSARY_LOG_MESSAGE,
+              SVN_ERR_CL_CATEGORY_START + 9,
+              "A log message was given where none was necessary")
+
 SVN_ERROR_END
 
 

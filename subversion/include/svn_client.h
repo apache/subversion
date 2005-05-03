@@ -395,7 +395,8 @@ typedef struct svn_client_ctx_t
       notification callback baton for notify_func() */
   void *notify_baton;
 
-  /** log message callback function */
+  /** Log message callback function.  NULL means that Subversion
+      should not attempt to fetch a log message. */ 
   svn_client_get_commit_log_t log_msg_func;
 
   /** log message callback baton */

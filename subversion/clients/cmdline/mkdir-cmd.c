@@ -25,6 +25,7 @@
 #include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_error.h"
+#include "svn_path.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -55,11 +56,27 @@ svn_cl__mkdir (apr_getopt_t *os,
     svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                           FALSE, FALSE, pool);
 
-  SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state,
-                                       NULL, ctx->config, subpool));
-  err = svn_cl__cleanup_log_msg
-    (ctx->log_msg_baton, svn_client_mkdir (&commit_info, targets, 
-                                           ctx, subpool));
+  if (! svn_path_is_url (APR_ARRAY_IDX (targets, 0, const char *)))
+    {
+      ctx->log_msg_func = NULL;
+      if (opt_state->message || opt_state->filedata)
+        {
+          return svn_error_create
+            (SVN_ERR_CL_UNNECESSARY_LOG_MESSAGE, NULL,
+             _("Local, non-commit operations do not take a log message"));
+        }
+    }
+  else
+    {
+      SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state,
+                                           NULL, ctx->config, subpool));
+    }
+
+  err = svn_client_mkdir (&commit_info, targets, ctx, subpool);
+
+  if (ctx->log_msg_func)
+    err = svn_cl__cleanup_log_msg (ctx->log_msg_baton, err);
+
   if (err)
     {
       if (err->apr_err == APR_EEXIST)

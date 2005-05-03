@@ -1902,6 +1902,58 @@ def tab_test(sbox):
                                             source_url, tab_url)
   match_bad_tab_path(tab_dir, errlines)
 
+#----------------------------------------------------------------------
+
+def local_mods_are_not_commits(sbox):
+  "local ops should not be treated like commits"
+
+  # For issue #2285.
+  #
+  # Some commands can run on either a URL or a local path.  These
+  # commands take a log message, intended for the URL case.
+  # Therefore, they should make sure that getting a log message for
+  # a local operation errors (because not committing).
+  #
+  # This is in commit_tests.py because the unifying theme is that
+  # commits are *not* happening.  And because there was no better
+  # place to put it :-).
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_error = '.*Local, non-commit operations do not take a log message.*'
+
+  # copy wc->wc
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'cp', '-m', 'log msg',
+                                     os.path.join(wc_dir, 'iota'),
+                                     os.path.join(wc_dir, 'iota2'))
+
+  # copy repos->wc
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'cp', '-m', 'log msg',
+                                     '--username',
+                                     svntest.main.wc_author,
+                                     '--password',
+                                     svntest.main.wc_passwd,
+                                     svntest.main.current_repo_url + "/iota",
+                                     os.path.join(wc_dir, 'iota2'))
+
+  # delete
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'rm', '-m', 'log msg',
+                                     os.path.join(wc_dir, 'A', 'D', 'gamma'))
+
+  # mkdir
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'mkdir', '-m', 'log msg',
+                                     os.path.join(wc_dir, 'newdir'))
+
+  # rename
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'cp', '-m', 'log msg',
+                                     os.path.join(wc_dir, 'A', 'mu'),
+                                     os.path.join(wc_dir, 'A', 'yu'))
+
 
 ########################################################################
 # Run the tests
@@ -1941,6 +1993,7 @@ test_list = [ None,
               from_wc_top_with_bad_editor,
               mods_in_schedule_delete,
               Skip(tab_test, (os.name != 'posix' or sys.platform == 'cygwin')),
+              local_mods_are_not_commits,
              ]
 
 if __name__ == '__main__':
