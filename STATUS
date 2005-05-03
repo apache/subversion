@@ -71,6 +71,7 @@ Candidate changes:
       Revert does not restore read-only when needed.
     Votes:
       +1: djh, lundblad
+
   * r14559
     Validate locks received from server in libsvn_ra_dav.
     Justification:
@@ -78,6 +79,15 @@ Candidate changes:
       A bug in RC2 triggers this.
     Votes:
       +1: lundblad
+
+  * r14569
+    Fix ra_dav segfault when trying to 'svn rm URL' containing locks.
+    Justification:
+      Trivial segfault fix; don't pass a NULL pointer to a function
+      expecting an apr_hash_t.
+    Votes:
+      +1: sussman
+
 
 Approved changes (further review is welcome, but not required):
 
