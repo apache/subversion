@@ -88,6 +88,14 @@ Candidate changes:
     Votes:
       +1: sussman
 
+  * r14580
+    Suppress GUI pop-ups from the Windows crypto provider when trying to
+    decrypt passwords with an invalid key.
+    Justification:
+      Trivial change, removes an annoying (and useless) pop-up window.
+    Votes:
+      +1: brane
+
 
 Approved changes (further review is welcome, but not required):
 
