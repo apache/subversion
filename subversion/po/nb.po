@@ -76,7 +76,7 @@ msgstr "«%s» ser ikke ut som en nettadresse"
 #: clients/cmdline/copy-cmd.c:106 clients/cmdline/delete-cmd.c:64
 #: clients/cmdline/mkdir-cmd.c:66
 msgid "Local, non-commit operations do not take a log message"
-msgstr ""
+msgstr "Lokale operasjoner som ikke involverer innlegging bruker ikke loggmelding"
 
 #: clients/cmdline/diff-cmd.c:65
 msgid "Can't open stdout"
@@ -2787,7 +2787,7 @@ msgstr "Noe er galt i loggmeldingens innhold"
 
 #: include/svn_error_codes.h:1013
 msgid "A log message was given where none was necessary"
-msgstr ""
+msgstr "En loggmelding ble gitt der ingen var nødvendig"
 
 #: libsvn_client/add.c:355
 #, c-format
@@ -3168,9 +3168,8 @@ msgid "Not all required revisions are specified"
 msgstr "Noen nødvendige revisjoner er ikke spesifisert"
 
 #: libsvn_client/diff.c:1716
-#, fuzzy
 msgid "Sorry, svn_client_diff3 was called in a way that is not yet supported"
-msgstr "svn_client_diff2 ble kalt på en måte som foreløpig ikke er støttet"
+msgstr "svn_client_diff3 ble kalt på en måte som foreløpig ikke er støttet"
 
 #: libsvn_client/diff.c:1755
 msgid ""
@@ -3421,7 +3420,7 @@ msgstr "Uventet slutt på svndiff-inndata"
 #: libsvn_diff/diff_file.c:666
 #, c-format
 msgid "%s\\ No newline at end of file%s"
-msgstr ""
+msgstr "%s\\ Ingen linjeslutt på slutten av filen%s"
 
 #: libsvn_diff/diff_file.c:1212
 #, c-format
@@ -3466,7 +3465,7 @@ msgstr "Kan ikke slippe filsystem-mutex"
 
 #: libsvn_fs/fs-loader.c:898
 msgid "Negative expiration date passed to svn_fs_lock"
-msgstr ""
+msgstr "Negativ utgått-dato gitt til svn_fs_lock"
 
 #: libsvn_fs_base/bdb/bdb-err.c:97
 #, c-format
