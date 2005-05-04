@@ -55,7 +55,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-04-29 19:34+0200\n"
+"POT-Creation-Date: 2005-05-04 10:11+0200\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -3447,7 +3447,7 @@ msgstr "Kan ikke slippe filsystem-mutex"
 
 #: libsvn_fs/fs-loader.c:891
 msgid "Negative expiration date passed to svn_fs_lock"
-msgstr ""
+msgstr "Negativ utgått-dato gitt til svn_fs_lock"
 
 #: libsvn_fs_base/bdb/bdb-err.c:97
 #, c-format
@@ -4627,28 +4627,28 @@ msgstr ""
 msgid "Please upgrade the server to 0.19 or later"
 msgstr "Oppgrader tjeneren til versjon 0.19 eller senere"
 
-#: libsvn_ra_dav/session.c:1019 libsvn_ra_dav/session.c:1145
+#: libsvn_ra_dav/session.c:1038 libsvn_ra_dav/session.c:1164
 msgid "Failed to parse URI"
 msgstr "Klarte ikke å tolke URI"
 
-#: libsvn_ra_dav/session.c:1042
+#: libsvn_ra_dav/session.c:1061
 msgid "Lock request failed"
 msgstr "Låseforespørsel feilet"
 
-#: libsvn_ra_dav/session.c:1160
+#: libsvn_ra_dav/session.c:1179
 #, c-format
 msgid "'%s' is not locked in the repository"
 msgstr "«%s» er ikke låst i depotet"
 
-#: libsvn_ra_dav/session.c:1197
+#: libsvn_ra_dav/session.c:1216
 msgid "Unlock request failed"
 msgstr "«Lås opp»-forespørsel feilet"
 
-#: libsvn_ra_dav/session.c:1379
+#: libsvn_ra_dav/session.c:1398
 msgid "Failed to fetch lock information"
 msgstr "Klarte ikke å hente låseinformasjon"
 
-#: libsvn_ra_dav/session.c:1454
+#: libsvn_ra_dav/session.c:1468
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_dav"
 msgstr "Ustøttet versjon av RA-laster (%d) for ra_dav"
