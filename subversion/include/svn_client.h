@@ -473,8 +473,8 @@ svn_client_create_context (svn_client_ctx_t **ctx,
  * If @a ignore_externals is set, don't process externals definitions
  * as part of this operation.
  *
- * If @a ctx->notify_func is non-null, invoke @a ctx->notify_func with 
- * @a ctx->notify_baton as the checkout progresses.
+ * If @a ctx->notify_func2 is non-null, invoke @a ctx->notify_func2 with
+ * @a ctx->notify_baton2 as the checkout progresses.
  *
  * If @a recurse is true, check out recursively.  Otherwise, check out
  * just the directory represented by @a URL and its immediate
@@ -543,8 +543,8 @@ svn_client_checkout (svn_revnum_t *result_rev,
  * update just their immediate entries, but not their child
  * directories (if any).
  *
- * If @a ctx->notify_func is non-null, invoke @a ctx->notify_func with
- * @a ctx->notify_baton for each item handled by the update, and also for
+ * If @a ctx->notify_func2 is non-null, invoke @a ctx->notify_func2 with
+ * @a ctx->notify_baton2 for each item handled by the update, and also for
  * files restored from text-base.  If @a ctx->cancel_func is non-null, invoke
  * it passing @a ctx->cancel_baton at various places during the update.
  *
@@ -593,7 +593,7 @@ svn_client_update (svn_revnum_t *result_rev,
  * recursively; otherwise, switch just @a path and its immediate
  * entries, but not its child directories (if any).
  *
- * If @a ctx->notify_func is non-null, invoke it with @a ctx->notify_baton 
+ * If @a ctx->notify_func2 is non-null, invoke it with @a ctx->notify_baton2
  * on paths affected by the switch.  Also invoke it for files may be restored
  * from the text-base because they were removed from the working copy.
  *
@@ -626,8 +626,8 @@ svn_client_switch (svn_revnum_t *result_rev,
  * effect of scheduling for addition unversioned files and directories
  * scattered deep within a versioned tree.
  *
- * If @a ctx->notify_func is non-null, then for each added item, call
- * @a ctx->notify_func with @a ctx->notify_baton and the path of the 
+ * If @a ctx->notify_func2 is non-null, then for each added item, call
+ * @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of the 
  * added item.
  *
  * Important:  this is a *scheduling* operation.  No changes will
@@ -668,9 +668,9 @@ svn_client_add (const char *path,
  * this function can use to query for a commit log message when one is
  * needed.
  *
- * If @a ctx->notify_func is non-null, when the directory has been created
- * (successfully) in the working copy, call @a ctx->notify_func with
- * @a ctx->notify_baton and the path of the new directory.  Note that this is
+ * If @a ctx->notify_func2 is non-null, when the directory has been created
+ * (successfully) in the working copy, call @a ctx->notify_func2 with
+ * @a ctx->notify_baton2 and the path of the new directory.  Note that this is
  * only called for items added to the working copy.  */
 svn_error_t *
 svn_client_mkdir (svn_client_commit_info_t **commit_info,
@@ -704,8 +704,8 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
  * this function can use to query for a commit log message when one is
  * needed.
  *
- * If @a ctx->notify_func is non-null, then for each item deleted, call
- * @a ctx->notify_func with @a ctx->notify_baton and the path of the deleted
+ * If @a ctx->notify_func2 is non-null, then for each item deleted, call
+ * @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of the deleted
  * item.  */
 svn_error_t *
 svn_client_delete (svn_client_commit_info_t **commit_info,
@@ -731,8 +731,8 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
  * receiving the import.  The basename of @a url is the filename in the
  * repository.  In this case if @a url already exists, return error.
  *
- * If @a ctx->notify_func is non-null, then call @a ctx->notify_func with 
- * @a ctx->notify_baton as the import progresses, with any of the following 
+ * If @a ctx->notify_func2 is non-null, then call @a ctx->notify_func2 with 
+ * @a ctx->notify_baton2 as the import progresses, with any of the following 
  * actions: @c svn_wc_notify_commit_added,
  * @c svn_wc_notify_commit_postfix_txdelta.
  *
@@ -771,8 +771,8 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
  * that.  If @a targets has zero elements, then do nothing and return
  * immediately without error.
  *
- * If @a ctx->notify_func is non-null, then call @a ctx->notify_func with 
- * @a ctx->notify_baton as the commit progresses, with any of the following 
+ * If @a ctx->notify_func2 is non-null, then call @a ctx->notify_func2 with 
+ * @a ctx->notify_baton2 as the commit progresses, with any of the following 
  * actions: @c svn_wc_notify_commit_modified, @c svn_wc_notify_commit_added,
  * @c svn_wc_notify_commit_deleted, @c svn_wc_notify_commit_replaced,
  * @c svn_wc_notify_commit_postfix_txdelta.
@@ -906,7 +906,7 @@ svn_client_status (svn_revnum_t *result_rev,
  * SVN_ERR_FS_NO_SUCH_REVISION error when invoked against an empty repository
  * (i.e. one not containing a revision 1).
  *
- * If @a ctx->notify_func is non-null, then call @a ctx->notify_func/baton
+ * If @a ctx->notify_func2 is non-null, then call @a ctx->notify_func2/baton2
  * with a 'skip' signal on any unversioned targets.
  */
 svn_error_t *
@@ -1193,8 +1193,8 @@ svn_error_t *svn_client_diff_peg (const apr_array_header_t *diff_options,
  * unversioned items the operation will fail.  If @a force is set such items
  * will be deleted.
  *
- * If @a ctx->notify_func is non-null, then call @a ctx->notify_func with @a 
- * ctx->notify_baton once for each merged target, passing the target's local 
+ * If @a ctx->notify_func2 is non-null, then call @a ctx->notify_func2 with @a 
+ * ctx->notify_baton2 once for each merged target, passing the target's local 
  * path.
  *
  * If @a dry_run is @a true the merge is carried out, and full notification
@@ -1280,13 +1280,13 @@ svn_client_relocate (const char *dir,
  * it is a directory, and @a recursive is @a true, this will be a
  * recursive operation.
  *
- * If @a ctx->notify_func is non-null, then for each item reverted,
- * call @a ctx->notify_func with @a ctx->notify_baton and the path of
+ * If @a ctx->notify_func2 is non-null, then for each item reverted,
+ * call @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of
  * the reverted item.
  *
  * If an item specified for reversion is not under version control,
- * then do not error, just invoke @a ctx->notify_func with @a
- * ctx->notify_baton, using notification code @c svn_wc_notify_skip.
+ * then do not error, just invoke @a ctx->notify_func2 with @a
+ * ctx->notify_baton2, using notification code @c svn_wc_notify_skip.
  */
 svn_error_t *
 svn_client_revert (const apr_array_header_t *paths,
@@ -1302,8 +1302,8 @@ svn_client_revert (const apr_array_header_t *paths,
  * to resolve.
  *
  * If @a path is not in a state of conflict to begin with, do nothing.
- * If @a path's conflict state is removed and @a ctx->notify_func is non-null,
- * call @a ctx->notify_func with @a ctx->notify_baton and @a path.
+ * If @a path's conflict state is removed and @a ctx->notify_func2 is non-null,
+ * call @a ctx->notify_func2 with @a ctx->notify_baton2 and @a path.
  */
 svn_error_t *
 svn_client_resolved (const char *path,
@@ -1335,7 +1335,7 @@ svn_client_resolved (const char *path,
  * this function can use to query for a commit log message when one is
  * needed.
  *
- * If @a ctx->notify_func is non-null, invoke it with @a ctx->notify_baton 
+ * If @a ctx->notify_func2 is non-null, invoke it with @a ctx->notify_baton2
  * for each item added at the new location, passing the new, relative path of
  * the added item.
  */
@@ -1386,8 +1386,8 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
  * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that
  * this function can use to query for a commit log message when one is needed.
  *
- * If @a ctx->notify_func is non-null, then for each item moved, call
- * @a ctx->notify_func with the @a ctx->notify_baton twice, once to indicate 
+ * If @a ctx->notify_func2 is non-null, then for each item moved, call
+ * @a ctx->notify_func2 with the @a ctx->notify_baton2 twice, once to indicate 
  * the deletion of the moved thing, and once to indicate the addition of
  * the new location of the thing.
  *
@@ -1684,9 +1684,9 @@ svn_client_revprop_list (apr_hash_t **props,
  * @a revision is the revision that should be exported, which is only used 
  * when exporting from a repository.
  *
- * @a ctx->notify_func and @a ctx->notify_baton are the notification functions
- * and baton which are passed to svn_client_checkout() when exporting from a
- * repository.
+ * @a ctx->notify_func2 and @a ctx->notify_baton2 are the notification
+ * functions and baton which are passed to svn_client_checkout() when
+ * exporting from a repository.
  *
  * @a ctx is a context used for authentication in the repository case.
  *
