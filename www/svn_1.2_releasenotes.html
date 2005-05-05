@@ -73,6 +73,28 @@ Here's a quick summary:</p>
 
 </ul>
 
+<p>Although the Subversion developers try hard to keep parseable output
+from the command line programs compatible between releases, new
+information sometimes has to be added.  This might break scripts
+relying on the exact formatting of the output.  In 1.2, the following
+changes have been made to the client output:</p>
+
+<ul>
+
+<li><p>For <tt>svn update</tt>, the paths have been shifted two
+       columns to the right, thus they start in column five.  Column
+       three contains a <tt>B</tt> when a lock was broken or
+       stolen.</p></li>
+
+<li><p><tt>svn status</tt> adds information about locks in the sixth
+       column.  Note that this column was previously unused, so the
+       old information is still in the same positions as
+       before.</p></li>
+
+<li><p>Several lines were added to the <tt>svn info</tt> output,
+       containing lock information.</p></li>
+
+</ul>
 
 <h3>New Features</h3>
 
