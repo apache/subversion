@@ -1524,7 +1524,8 @@ out how to modify their <tt>PATH</tt> so that they can run <tt>svnserve</tt>.</a
       <p>Obviously, replace <tt>/opt/subversion/bin/svnserve</tt> with
       whatever is appropriate for your system.  You also might want to
       specify the full path to the subversion repository in the
-      command, to save your users some typing.</p>
+      command (by using the <tt>-r</tt> option), to save your users
+      some typing.</p>
       
       <p>The <tt>command=</tt> magic causes sshd on the remote machine
         to invoke <tt>svnserve</tt>, even if your user tries to run
