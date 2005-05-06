@@ -26,14 +26,6 @@ Candidate changes:
     Votes:
       +0.9: brane (+1 for 1.2.1)
 
-  * r14286
-    Make "make davautocheck" work for locking and work out-of-the-box
-    on more systems.
-    Justification:
-      Makes it easier to test over DAV; not a core code change.
-    Votes:
-      +1: lundblad, fitz
-
   * r14046, r14070, r14301
     Improvements in the testing framework
     Justification:
@@ -59,14 +51,6 @@ Candidate changes:
     Votes:
       +1: lundblad, brane
 
-  * r14569
-    Fix ra_dav segfault when trying to 'svn rm URL' containing locks.
-    Justification:
-      Trivial segfault fix; don't pass a NULL pointer to a function
-      expecting an apr_hash_t.
-    Votes:
-      +1: sussman, brane
-
   * r14580
     Suppress GUI pop-ups from the Windows crypto provider when trying to
     decrypt passwords with an invalid key.
@@ -74,13 +58,6 @@ Candidate changes:
       Trivial change, removes an annoying (and useless) pop-up window.
     Votes:
       +1: brane
-
-  * r14583
-    Docstring fixes for the notification API revision.
-    Justification:
-      Just comment tweaks, fixing our API docs.
-    Votes:
-      +1: lundblad, brane
 
 Approved changes (further review is welcome, but not required):
 
@@ -104,3 +81,26 @@ Approved changes (further review is welcome, but not required):
       Revert does not restore read-only when needed.
     Votes:
       +1: djh, lundblad, brane
+
+  * r14286
+    Make "make davautocheck" work for locking and work out-of-the-box
+    on more systems.
+    Justification:
+      Makes it easier to test over DAV; not a core code change.
+    Votes:
+      +1: lundblad, fitz
+
+  * r14583
+    Docstring fixes for the notification API revision.
+    Justification:
+      Just comment tweaks, fixing our API docs.
+    Votes:
+      +1: lundblad, brane, kfogel
+
+  * r14569
+    Fix ra_dav segfault when trying to 'svn rm URL' containing locks.
+    Justification:
+      Trivial segfault fix; don't pass a NULL pointer to a function
+      expecting an apr_hash_t.
+    Votes:
+      +1: sussman, brane, kfogel
