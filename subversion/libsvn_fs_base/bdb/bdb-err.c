@@ -86,10 +86,14 @@ svn_fs_bdb__dberrf (bdb_errcall_baton_t *ec_baton,
 svn_error_t *
 svn_fs_bdb__wrap_db (svn_fs_t *fs, const char *operation, int db_err)
 {
-  base_fs_data_t *bfd;
+  base_fs_data_t *bfd = fs->fsap_data;
 
   if (! db_err)
-    return SVN_NO_ERROR;
+    {
+      svn_error_clear (bfd->errcall_baton->pending_errors);
+      bfd->errcall_baton->pending_errors = NULL;
+      return SVN_NO_ERROR;
+    }
 
   bfd = fs->fsap_data;
   return svn_fs_bdb__dberrf

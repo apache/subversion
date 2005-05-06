@@ -50,8 +50,15 @@ typedef struct
   char errpfx_string[sizeof(BDB_ERRCALL_BATON_ERRPFX_STRING)];
 
   /* We hold the extended info here until the Berkeley DB function returns.
-     It returns an error code, triggering the collection and wrapping of the
-     additional errors stored here.  */
+     It usually returns an error code, triggering the collection and
+     wrapping of the additional errors stored here.
+
+     Note: In some circumstances BDB will call the error function and not
+     go on to return an error code, so the caller must always check whether
+     pending_errors is non-NULL to avoid leaking errors.  This behaviour
+     has been seen when running recovery on a repository upgraded to 4.3
+     that still has old 4.2 log files present, a typical error string is
+     "Skipping log file db/log.0000000002: historic log version 8" */
   svn_error_t *pending_errors;
 
   /* We permitted clients of our library to install a Berkeley BDB errcall.  
