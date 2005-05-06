@@ -36,13 +36,6 @@ Candidate changes:
     Votes:
       +1: brane, fitz (concept [no win32 setup])
 
-  * r14592
-    Avoid leaking errors in an obscure BDB scenario.
-    Justification:
-      The scenario can occur after a BDB upgrade.
-    Votes:
-      +1: philip, fitz
-
 Approved changes (further review is welcome, but not required):
 
   * r14521
@@ -89,3 +82,10 @@ Approved changes (further review is welcome, but not required):
       +1: david
       +0: kfogel (haven't tested, but reviewed and it looks good), dlr (same),
           fitz (concept)
+
+  * r14592
+    Avoid leaking errors in an obscure BDB scenario.
+    Justification:
+      The scenario can occur after a BDB upgrade.
+    Votes:
+      +1: philip, fitz, brane
