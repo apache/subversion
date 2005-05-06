@@ -534,6 +534,8 @@ static const char windows_crypto_type[] = "wincrypt";
 static svn_boolean_t
 get_crypto_function (const char *name, HINSTANCE *pdll, FARPROC *pfn)
 {
+  /* In case anyone wonders why we use LoadLibraryA here: This will
+     always work on Win9x/Me, whilst LoadLibraryW may not. */
   HINSTANCE dll = LoadLibraryA ("Crypt32.dll");
   if (dll)
     {
@@ -576,7 +578,8 @@ windows_password_encrypter (const char **out, const char *in, apr_pool_t *pool)
 
   blobin.cbData = strlen (in);
   blobin.pbData = (BYTE*) in;
-  crypted = encrypt (&blobin, description, NULL, NULL, NULL, 0, &blobout);
+  crypted = encrypt (&blobin, description, NULL, NULL, NULL,
+                     CRYPTPROTECT_UI_FORBIDDEN, &blobout);
   if (crypted)
     {
       char *coded = apr_palloc (pool, apr_base64_encode_len (blobout.cbData));
@@ -618,7 +621,8 @@ windows_password_decrypter (const char **out, const char *in, apr_pool_t *pool)
   blobin.cbData = strlen (in);
   blobin.pbData = apr_palloc(pool, apr_base64_decode_len (in));
   apr_base64_decode(blobin.pbData, in);
-  decrypted = decrypt (&blobin, &descr, NULL, NULL, NULL, 0, &blobout);
+  decrypted = decrypt (&blobin, &descr, NULL, NULL, NULL,
+                       CRYPTPROTECT_UI_FORBIDDEN, &blobout);
   if (decrypted)
     {
       if (0 == lstrcmpW (descr, description))
