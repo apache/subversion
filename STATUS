@@ -56,7 +56,7 @@ Candidate changes:
     Justification:
       Causes commit to not unlock files, but remove locks from WC.
     Votes:
-      +1: lundblad
+      +1: lundblad, brane
 
   * r14536
     Make backend tests explicit and do them for both BDB and FSFS.
@@ -65,20 +65,13 @@ Candidate changes:
     Votes:
       +1: david
 
-  * r14552, r14553
-    Fix revert to deal with svn:needs-lock property and read-only-ness.
-    Justification:
-      Revert does not restore read-only when needed.
-    Votes:
-      +1: djh, lundblad
-
   * r14559
     Validate locks received from server in libsvn_ra_dav.
     Justification:
       Prevents API violation that could lead to crashing clients.
       A bug in RC2 triggers this.
     Votes:
-      +1: lundblad
+      +1: lundblad, brane
 
   * r14569
     Fix ra_dav segfault when trying to 'svn rm URL' containing locks.
@@ -86,7 +79,7 @@ Candidate changes:
       Trivial segfault fix; don't pass a NULL pointer to a function
       expecting an apr_hash_t.
     Votes:
-      +1: sussman
+      +1: sussman, brane
 
   * r14580
     Suppress GUI pop-ups from the Windows crypto provider when trying to
@@ -101,8 +94,13 @@ Candidate changes:
     Justification:
       Just comment tweaks, fixing our API docs.
     Votes:
-      +1: lundblad
+      +1: lundblad, brane
 
 Approved changes (further review is welcome, but not required):
 
-
+  * r14552, r14553
+    Fix revert to deal with svn:needs-lock property and read-only-ness.
+    Justification:
+      Revert does not restore read-only when needed.
+    Votes:
+      +1: djh, lundblad, brane
