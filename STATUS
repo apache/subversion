@@ -24,7 +24,7 @@ Candidate changes:
     Concerns:
       Not exactly a showstopper for 1.2.0.
     Votes:
-      +0.9: brane (+1 for 1.2.1)
+      +0.9: brane (+1 for 1.2.1), dlr (ditto for 1.2.1)
 
   * r14046, r14070, r14301
     Improvements in the testing framework
@@ -45,7 +45,7 @@ Candidate changes:
            set up to test this, because the change looks so simple and
            correct.  Y'all can flog me if it turns out to be buggy.  -kfogel
     Votes:
-      +1: brane, kfogel
+      +1: brane, dlr, kfogel
 
   * r14592
     Avoid leaking errors in an obscure BDB scenario.
@@ -106,7 +106,7 @@ Approved changes (further review is welcome, but not required):
       Complete testing = good.
     Votes:
       +1: david
-      +0: kfogel (haven't tested, but have reviewed and it looks good)
+      +0: kfogel (haven't tested, but reviewed and it looks good), dlr (same)
 
   * r14559
     Validate locks received from server in libsvn_ra_dav.
@@ -114,4 +114,4 @@ Approved changes (further review is welcome, but not required):
       Prevents API violation that could lead to crashing clients.
       A bug in RC2 triggers this.
     Votes:
-      +1: lundblad, brane, kfogel
+      +1: lundblad, brane, dlr, kfogel
