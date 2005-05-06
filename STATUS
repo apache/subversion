@@ -96,11 +96,3 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: david
       +0: kfogel (haven't tested, but reviewed and it looks good), dlr (same)
-
-  * r14559
-    Validate locks received from server in libsvn_ra_dav.
-    Justification:
-      Prevents API violation that could lead to crashing clients.
-      A bug in RC2 triggers this.
-    Votes:
-      +1: lundblad, brane, dlr, kfogel
