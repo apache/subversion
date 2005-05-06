@@ -47,6 +47,13 @@ Candidate changes:
     Votes:
       +1: brane, kfogel
 
+  * r14592
+    Avoid leaking errors in an obscure BDB scenario.
+    Justification:
+      The scenario can occur after a BDB upgrade.
+    Votes:
+      +1: philip
+
 Approved changes (further review is welcome, but not required):
 
   * r14521
