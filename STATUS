@@ -24,7 +24,7 @@ Candidate changes:
     Concerns:
       Not exactly a showstopper for 1.2.0.
     Votes:
-      +0.9: brane (+1 for 1.2.1), dlr (ditto for 1.2.1)
+      +0.9: brane (+1 for 1.2.1), dlr (ditto for 1.2.1), fitz (concept)
 
   * r14046, r14070, r14301
     Improvements in the testing framework
