@@ -1739,9 +1739,9 @@ toward the total, but they can be useful for tracking down people who
 are following the change and might be willing to spend more time on
 it.
 
-There is a somewhat looser voting system for the tools/, packages/,
-and bindings/ areas, because they are not core code, and because there
-are usually fewer experts available to review changes there.  A change
+There is a somewhat looser voting system for areas that are not core
+code, and that may have fewer experts available to review changes (for
+example, tools/, packages/, bindings/, test scripts, etc).  A change
 in these areas can go in with a +1 from a full committer or a partial
 committer for that area, at least one +0 or "concept +1" from any
 other committer, and no vetoes.  (If a change affects the build
