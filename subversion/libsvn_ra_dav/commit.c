@@ -657,7 +657,7 @@ add_valid_target (commit_ctx_t *cc,
 {
   apr_hash_t *hash = cc->valid_targets;
   svn_string_t *path_str = svn_string_create(path, apr_hash_pool_get(hash));
-  apr_hash_set (hash, path_str->data, path_str->len, &kind);
+  apr_hash_set (hash, path_str->data, path_str->len, (void*)kind);
 }
 
 
