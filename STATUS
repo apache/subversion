@@ -36,28 +36,16 @@ Candidate changes:
     Votes:
       +1: brane, fitz (concept [no win32 setup])
 
-  * r14536
-    Make backend tests explicit and do them for both BDB and FSFS.
-    Justification:
-      Complete testing = good.
-    Votes:
-      +1: david
-
-  * r14559
-    Validate locks received from server in libsvn_ra_dav.
-    Justification:
-      Prevents API violation that could lead to crashing clients.
-      A bug in RC2 triggers this.
-    Votes:
-      +1: lundblad, brane
-
   * r14580
     Suppress GUI pop-ups from the Windows crypto provider when trying to
     decrypt passwords with an invalid key.
     Justification:
       Trivial change, removes an annoying (and useless) pop-up window.
+    Notes: I'm going out on a limb and voting +1 even though I'm not
+           set up to test this, because the change looks so simple and
+           correct.  Y'all can flog me if it turns out to be buggy.  -kfogel
     Votes:
-      +1: brane
+      +1: brane, kfogel
 
 Approved changes (further review is welcome, but not required):
 
@@ -104,3 +92,19 @@ Approved changes (further review is welcome, but not required):
       expecting an apr_hash_t.
     Votes:
       +1: sussman, brane, kfogel
+
+  * r14536
+    Make backend tests explicit and do them for both BDB and FSFS.
+    Justification:
+      Complete testing = good.
+    Votes:
+      +1: david
+      +0: kfogel (haven't tested, but have reviewed and it looks good)
+
+  * r14559
+    Validate locks received from server in libsvn_ra_dav.
+    Justification:
+      Prevents API violation that could lead to crashing clients.
+      A bug in RC2 triggers this.
+    Votes:
+      +1: lundblad, brane, kfogel
