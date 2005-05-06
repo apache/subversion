@@ -44,13 +44,6 @@ Candidate changes:
     Votes:
       +1: brane, fitz (concept [no win32 setup])
 
-  * r14177, r14474, r14509
-    Fix pool usage with --enable-dso.
-    Justification: fixes some command line client crashes over ra_local
-    Notes: r14177 is the svn_ra_initialize patch
-    Votes:
-      +1: philip, lundblad
-
   * r14521
     Make commit unlock files in subdirectories in svnserve.
     Justification:
@@ -97,6 +90,13 @@ Candidate changes:
       +1: lundblad, brane
 
 Approved changes (further review is welcome, but not required):
+
+  * r14177, r14474, r14509
+    Fix pool usage with --enable-dso.
+    Justification: fixes some command line client crashes over ra_local
+    Notes: r14177 is the svn_ra_initialize patch
+    Votes:
+      +1: philip, lundblad, fitz
 
   * r14552, r14553
     Fix revert to deal with svn:needs-lock property and read-only-ness.
