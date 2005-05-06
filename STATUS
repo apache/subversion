@@ -79,7 +79,7 @@ Approved changes (further review is welcome, but not required):
     Justification:
       Just comment tweaks, fixing our API docs.
     Votes:
-      +1: lundblad, brane, kfogel
+      +1: lundblad, brane, kfogel, fitz
 
   * r14569
     Fix ra_dav segfault when trying to 'svn rm URL' containing locks.
@@ -87,7 +87,7 @@ Approved changes (further review is welcome, but not required):
       Trivial segfault fix; don't pass a NULL pointer to a function
       expecting an apr_hash_t.
     Votes:
-      +1: sussman, brane, kfogel
+      +1: sussman, brane, kfogel, fitz
 
   * r14536
     Make backend tests explicit and do them for both BDB and FSFS.
@@ -95,4 +95,5 @@ Approved changes (further review is welcome, but not required):
       Complete testing = good.
     Votes:
       +1: david
-      +0: kfogel (haven't tested, but reviewed and it looks good), dlr (same)
+      +0: kfogel (haven't tested, but reviewed and it looks good), dlr (same),
+          fitz (concept)
