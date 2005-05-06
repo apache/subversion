@@ -36,17 +36,6 @@ Candidate changes:
     Votes:
       +1: brane, fitz (concept [no win32 setup])
 
-  * r14580
-    Suppress GUI pop-ups from the Windows crypto provider when trying to
-    decrypt passwords with an invalid key.
-    Justification:
-      Trivial change, removes an annoying (and useless) pop-up window.
-    Notes: I'm going out on a limb and voting +1 even though I'm not
-           set up to test this, because the change looks so simple and
-           correct.  Y'all can flog me if it turns out to be buggy.  -kfogel
-    Votes:
-      +1: brane, dlr, kfogel
-
   * r14592
     Avoid leaking errors in an obscure BDB scenario.
     Justification:
