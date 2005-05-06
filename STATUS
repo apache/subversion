@@ -44,13 +44,6 @@ Candidate changes:
     Votes:
       +1: brane, fitz (concept [no win32 setup])
 
-  * r14521
-    Make commit unlock files in subdirectories in svnserve.
-    Justification:
-      Causes commit to not unlock files, but remove locks from WC.
-    Votes:
-      +1: lundblad, brane
-
   * r14536
     Make backend tests explicit and do them for both BDB and FSFS.
     Justification:
@@ -90,6 +83,13 @@ Candidate changes:
       +1: lundblad, brane
 
 Approved changes (further review is welcome, but not required):
+
+  * r14521
+    Make commit unlock files in subdirectories in svnserve.
+    Justification:
+      Causes commit to not unlock files, but remove locks from WC.
+    Votes:
+      +1: lundblad, brane, fitz
 
   * r14177, r14474, r14509
     Fix pool usage with --enable-dso.
