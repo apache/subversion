@@ -109,8 +109,8 @@ def lock_file(sbox):
 # II.C.2.b.[12]: Lock a file and commit using the lock.  Make sure the
 # lock is released.  Repeat, but request that the lock not be
 # released.  Make sure the lock is retained.
-def commit_file(sbox):
-  "commit a file and verify release behavior"
+def commit_file_keep_lock(sbox):
+  "commit a file and keep lock"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -137,19 +137,58 @@ def commit_file(sbox):
   # Make sure the file is still locked
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  # --- Part 2 ---
-  
+def commit_file_unlock(sbox):
+  "commit a file and release lock"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  fname = 'A/mu'
+  file_path = os.path.join(sbox.wc_dir, fname)
+
+  # lock fname as wc_author
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'some lock comment', file_path)
+
   # make a change and commit it, allowing lock to be released
   svntest.main.file_append(file_path, "Tweak!\n")
   svntest.main.run_svn(None, 'commit', '-m', '', file_path)
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
-  expected_status.tweak(fname, wc_rev=3)
+  expected_status.tweak(fname, wc_rev=2)
 
   # Make sure the file is unlocked
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+#----------------------------------------------------------------------
+def commit_propchange(sbox):
+  "commit a locked file with a prop change"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  fname = 'A/mu'
+  file_path = os.path.join(sbox.wc_dir, fname)
+
+  # lock fname as wc_author
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'some lock comment', file_path)
+
+  # make a property change and commit it, allowing lock to be released
+  svntest.main.run_svn(None, 'propset', 'blue', 'azul', file_path)
+  svntest.main.run_svn(None, 'commit', '-m', '', file_path)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak(fname, wc_rev=2)
+
+  # Make sure the file is unlocked
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
 # II.C.2.c: Lock a file in wc A as user FOO.  Attempt to unlock same
@@ -859,14 +898,15 @@ def examine_lock_via_url(sbox):
     print "Error: expected output '%s' not found in output." % match_line
     raise svntest.Failure
 
-
 ########################################################################
 # Run the tests
 
 # list all tests here, starting with None:
 test_list = [ None,
               lock_file,
-              commit_file,
+              commit_file_keep_lock,
+              commit_file_unlock,
+              commit_propchange,
               break_lock,
               steal_lock,
               examine_lock,
