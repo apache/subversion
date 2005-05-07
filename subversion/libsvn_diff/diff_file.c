@@ -695,8 +695,8 @@ svn_diff__file_output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
   /* Add trailing context to the hunk */
   while (baton->current_line[0] < target_line)
     {
-      SVN_ERR(svn_diff__file_output_unified_line(baton,
-                svn_diff__file_output_unified_context, 0));
+      SVN_ERR(svn_diff__file_output_unified_line
+              (baton, svn_diff__file_output_unified_context, 0));
     }
 
   /* If the file is non-empty, convert the line indexes from
@@ -787,23 +787,24 @@ svn_diff__file_output_unified_diff_modified(void *baton,
          display */
       while (output_baton->current_line[0] < target_line[0])
         {
-          SVN_ERR(svn_diff__file_output_unified_line(output_baton,
-                    svn_diff__file_output_unified_skip, 0));
+          SVN_ERR(svn_diff__file_output_unified_line
+                  (output_baton,
+                   svn_diff__file_output_unified_skip, 0));
         }
     }
 
   /* Skip lines until we are at the start of the changed range */
   while (output_baton->current_line[1] < target_line[1])
     {
-      SVN_ERR(svn_diff__file_output_unified_line(output_baton,
-                svn_diff__file_output_unified_skip, 1));
+      SVN_ERR(svn_diff__file_output_unified_line
+              (output_baton, svn_diff__file_output_unified_skip, 1));
     }
 
   /* Output the context preceding the changed range */
   while (output_baton->current_line[0] < original_start)
     {
-      SVN_ERR(svn_diff__file_output_unified_line(output_baton,
-                svn_diff__file_output_unified_context, 0));
+      SVN_ERR(svn_diff__file_output_unified_line
+              (output_baton, svn_diff__file_output_unified_context, 0));
     }
 
   target_line[0] = original_start + original_length;
@@ -814,9 +815,10 @@ svn_diff__file_output_unified_diff_modified(void *baton,
     {
       while (output_baton->current_line[i] < target_line[i])
         {
-          SVN_ERR(svn_diff__file_output_unified_line(output_baton, i == 0
-                    ? svn_diff__file_output_unified_delete
-                    : svn_diff__file_output_unified_insert, i));
+          SVN_ERR(svn_diff__file_output_unified_line
+                  (output_baton, i == 0
+                   ? svn_diff__file_output_unified_delete
+                   : svn_diff__file_output_unified_insert, i));
         }
     }
 
@@ -884,7 +886,7 @@ svn_diff_file_output_unified2(svn_stream_t *output_stream,
       for (i = 0; i < 2; i++)
         {
           SVN_ERR(svn_io_file_open(&baton.file[i], baton.path[i],
-                                   APR_READ, APR_OS_DEFAULT, pool) );
+                                   APR_READ, APR_OS_DEFAULT, pool));
         }
 
       if (original_header == NULL)
@@ -1018,7 +1020,7 @@ svn_diff3__file_output_hunk(void *baton,
   while (output_baton->current_line[idx] < target_line)
     {
       SVN_ERR(svn_diff3__file_output_line(output_baton,
-                svn_diff3__file_output_skip, idx));
+                                          svn_diff3__file_output_skip, idx));
     }
 
   target_line += target_length;
@@ -1026,7 +1028,7 @@ svn_diff3__file_output_hunk(void *baton,
   while (output_baton->current_line[idx] < target_line)
     {
       SVN_ERR(svn_diff3__file_output_line(output_baton,
-                svn_diff3__file_output_normal, idx));
+                                          svn_diff3__file_output_normal, idx));
     }
 
   return SVN_NO_ERROR;
@@ -1040,7 +1042,7 @@ svn_diff3__file_output_common(void *baton,
   apr_off_t latest_start, apr_off_t latest_length)
 {
   return svn_diff3__file_output_hunk(baton, 0,
-           original_start, original_length);
+                                     original_start, original_length);
 }
 
 static
@@ -1051,7 +1053,7 @@ svn_diff3__file_output_diff_modified(void *baton,
   apr_off_t latest_start, apr_off_t latest_length)
 {
   return svn_diff3__file_output_hunk(baton, 1,
-           modified_start, modified_length);
+                                     modified_start, modified_length);
 }
 
 static
@@ -1062,7 +1064,7 @@ svn_diff3__file_output_diff_latest(void *baton,
   apr_off_t latest_start, apr_off_t latest_length)
 {
   return svn_diff3__file_output_hunk(baton, 2,
-           latest_start, latest_length);
+                                     latest_start, latest_length);
 }
 
 static
@@ -1108,7 +1110,7 @@ svn_diff3__file_output_conflict(void *baton,
                            APR_EOL_STR, &len));
 
   SVN_ERR(svn_diff3__file_output_hunk(baton, 1,
-            modified_start, modified_length));
+                                      modified_start, modified_length));
 
   if (file_baton->display_original_in_conflict)
     {
@@ -1120,7 +1122,7 @@ svn_diff3__file_output_conflict(void *baton,
                                APR_EOL_STR, &len));
 
       SVN_ERR(svn_diff3__file_output_hunk(baton, 0,
-              original_start, original_length));
+                                          original_start, original_length));
     }
 
   len = strlen(file_baton->conflict_separator);
@@ -1131,7 +1133,7 @@ svn_diff3__file_output_conflict(void *baton,
                            APR_EOL_STR, &len));
 
   SVN_ERR(svn_diff3__file_output_hunk(baton, 2,
-            latest_start, latest_length));
+                                      latest_start, latest_length));
 
   len = strlen(file_baton->conflict_latest);
   SVN_ERR(svn_stream_write(file_baton->output_stream,
