@@ -787,9 +787,10 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 /* Running recovery on a Berkeley DB-based filesystem.  */
 
 
+/* Recover a database at PATH. Perform catastrophic recovery if FATAL
+   is TRUE. Use POOL for temporary allocation. */
 static svn_error_t *
-base_bdb_recover (const char *path,
-                  apr_pool_t *pool)
+bdb_recover (const char *path, svn_boolean_t fatal, apr_pool_t *pool)
 {
   DB_ENV *env;
   const char *path_native;
@@ -808,34 +809,17 @@ base_bdb_recover (const char *path,
      will simply join it instead, and will then be running with
      incorrectly sized (and probably terribly small) caches.  */
 
+  /* Note that since we're using a private environment, we shoudl
+     /not/ initialize locking. We want the environment files to go
+     away. */
+
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
   SVN_BDB_ERR (ec_baton, env->open (env, path_native,
-                                    (DB_RECOVER | DB_CREATE | DB_INIT_LOCK
-                                     | DB_INIT_LOG | DB_INIT_MPOOL
-                                     | DB_INIT_TXN | DB_PRIVATE),
-                          0666));
-  SVN_BDB_ERR (ec_baton, env->close (env, 0));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* This is the same as base_bdb_recover, but runs catastrophic
-   recovery instead of normal recovery. */
-static svn_error_t *
-bdb_catastrophic_recover (const char *path,
-                          apr_pool_t *pool)
-{
-  DB_ENV *env;
-  const char *path_native;
-  bdb_errcall_baton_t *ec_baton;
-
-  SVN_BDB_ERR (ec_baton, create_env (&env, &ec_baton, pool));
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-  SVN_BDB_ERR (ec_baton, env->open (env, path_native,
-                                    (DB_RECOVER_FATAL | DB_CREATE
-                                     | DB_INIT_LOCK | DB_INIT_LOG
-                                     | DB_INIT_MPOOL | DB_INIT_TXN
+                                    ((fatal ? DB_RECOVER_FATAL : DB_RECOVER)
+                                     | DB_CREATE
+                                     | DB_INIT_LOG
+                                     | DB_INIT_MPOOL
+                                     | DB_INIT_TXN
                                      | DB_PRIVATE),
                           0666));
   SVN_BDB_ERR (ec_baton, env->close (env, 0));
@@ -843,7 +827,12 @@ bdb_catastrophic_recover (const char *path,
   return SVN_NO_ERROR;
 }
 
-
+static svn_error_t *
+base_bdb_recover (const char *path,
+                  apr_pool_t *pool)
+{
+  return bdb_recover (path, FALSE, pool);
+}
 
 
 
@@ -1225,7 +1214,7 @@ base_hotcopy (const char *src_path,
   }
 
   /* Since this is a copy we will have exclusive access to the repository. */
-  err = bdb_catastrophic_recover (dest_path, pool);
+  err = bdb_recover (dest_path, TRUE, pool);
   if (err)
     {
       if (log_autoremove)
