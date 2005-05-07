@@ -49,9 +49,3 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14583
-    Docstring fixes for the notification API revision.
-    Justification:
-      Just comment tweaks, fixing our API docs.
-    Votes:
-      +1: lundblad, brane, kfogel, fitz
