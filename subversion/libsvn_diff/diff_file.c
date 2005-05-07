@@ -949,6 +949,7 @@ typedef struct svn_diff3__file_output_baton_t
   char       *endp[3];
   char       *curp[3];
 
+  /* The following four members are in the encoding used for the output. */
   const char *conflict_modified;
   const char *conflict_original;
   const char *conflict_separator;
@@ -1173,14 +1174,24 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
   baton.path[0] = original_path;
   baton.path[1] = modified_path;
   baton.path[2] = latest_path;
-  baton.conflict_modified = conflict_modified ? conflict_modified
-                            : apr_psprintf(pool, "<<<<<<< %s", modified_path);
-  baton.conflict_original = conflict_original ? conflict_original
-                            : apr_psprintf(pool, "||||||| %s", original_path);
-  baton.conflict_separator = conflict_separator ? conflict_separator
-                             : "=======";
-  baton.conflict_latest = conflict_latest ? conflict_latest
-                          : apr_psprintf(pool, ">>>>>>> %s", latest_path);
+  SVN_ERR(svn_utf_cstring_from_utf8(&baton.conflict_modified,
+                                    conflict_modified ? conflict_modified
+                                    : apr_psprintf(pool, "<<<<<<< %s",
+                                                   modified_path),
+                                    pool));
+  SVN_ERR(svn_utf_cstring_from_utf8(&baton.conflict_original,
+                                    conflict_original ? conflict_original
+                                    : apr_psprintf(pool, "||||||| %s",
+                                                   original_path),
+                                    pool));
+  SVN_ERR(svn_utf_cstring_from_utf8(&baton.conflict_separator,
+                                    conflict_separator ? conflict_separator
+                                    : "=======", pool));
+  SVN_ERR(svn_utf_cstring_from_utf8(&baton.conflict_latest,
+                                    conflict_latest ? conflict_latest
+                                    : apr_psprintf(pool, ">>>>>>> %s",
+                                                   latest_path),
+                                    pool));
 
   baton.display_original_in_conflict = display_original_in_conflict;
   baton.display_resolved_conflicts = display_resolved_conflicts &&
