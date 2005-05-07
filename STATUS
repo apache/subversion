@@ -52,14 +52,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: djh, lundblad, brane
 
-  * r14286
-    Make "make davautocheck" work for locking and work out-of-the-box
-    on more systems.
-    Justification:
-      Makes it easier to test over DAV; not a core code change.
-    Votes:
-      +1: lundblad, fitz
-
   * r14583
     Docstring fixes for the notification API revision.
     Justification:
