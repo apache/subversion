@@ -115,7 +115,7 @@ def commit_file(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  fname = 'iota'
+  fname = 'A/mu'
   file_path = os.path.join(sbox.wc_dir, fname)
 
   # lock fname as wc_author
