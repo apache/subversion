@@ -299,7 +299,11 @@ install_committed_file (svn_boolean_t *overwrote_working,
 
   SVN_ERR (svn_io_remove_file (tmp_wfile, pool));
 
-  SVN_ERR (svn_wc__maybe_set_read_only (NULL, filepath, adm_access, pool));
+  SVN_ERR (svn_wc__maybe_set_read_only (&did_set, filepath, adm_access, pool));
+  if (did_set)
+    /* the file may have been overwritten or its timestamp changed by
+       setting it read-only */
+    *overwrote_working = TRUE;
 
   /* Set the working file's execute bit if props dictate. */
   SVN_ERR (svn_wc__maybe_set_executable (&did_set, filepath, adm_access, pool));
