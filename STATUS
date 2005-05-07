@@ -74,15 +74,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: lundblad, brane, kfogel, fitz
 
-  * r14536
-    Make backend tests explicit and do them for both BDB and FSFS.
-    Justification:
-      Complete testing = good.
-    Votes:
-      +1: david
-      +0: kfogel (haven't tested, but reviewed and it looks good), dlr (same),
-          fitz (concept)
-
   * r14592
     Avoid leaking errors in an obscure BDB scenario.
     Justification:
