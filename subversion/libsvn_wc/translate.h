@@ -105,8 +105,9 @@ svn_wc__maybe_set_executable (svn_boolean_t *did_set,
                               svn_wc_adm_access_t *adm_access,
                               apr_pool_t *pool);
 
-/* If the SVN_PROP_NEEDS_LOCK property is present, set PATH to
-   read-write. If DID_SET is non-null, then set *DID_SET to TRUE if
+/* If the SVN_PROP_NEEDS_LOCK property is present and there is no
+   lock token for the file in the working copy, set PATH to
+   read-only. If DID_SET is non-null, then set *DID_SET to TRUE if
    did set PATH read-write, or to FALSE if not.  ADM_ACCESS is an
    access baton set that contains PATH. */
 svn_error_t * svn_wc__maybe_set_read_only (svn_boolean_t *did_set,

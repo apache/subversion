@@ -38,13 +38,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14552, r14553
-    Fix revert to deal with svn:needs-lock property and read-only-ness.
-    Justification:
-      Revert does not restore read-only when needed.
-    Votes:
-      +1: djh, lundblad, brane
-
   * r14583
     Docstring fixes for the notification API revision.
     Justification:
