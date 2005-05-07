@@ -44,10 +44,3 @@ Approved changes (further review is welcome, but not required):
       Just comment tweaks, fixing our API docs.
     Votes:
       +1: lundblad, brane, kfogel, fitz
-
-  * r14592
-    Avoid leaking errors in an obscure BDB scenario.
-    Justification:
-      The scenario can occur after a BDB upgrade.
-    Votes:
-      +1: philip, fitz, brane
