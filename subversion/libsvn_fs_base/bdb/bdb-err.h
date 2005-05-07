@@ -78,6 +78,8 @@ svn_error_t *svn_fs_bdb__wrap_db (svn_fs_t *fs,
     int db_err__temp = (expr);                                \
     if (db_err__temp)                                         \
       return svn_fs_bdb__dberr ((ec_baton), db_err__temp);    \
+    svn_error_clear ((ec_baton)->pending_errors);               \
+    (ec_baton)->pending_errors = NULL;                          \
   } while (0)
 
 
