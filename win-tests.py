@@ -12,9 +12,17 @@ Usage: python win-tests.py [option] [test-path]
                            default is '-d,-r,<test-path-root>'
 """
 
-import os, sys, string, shutil, traceback
-import getopt
+import os, sys
+import filecmp
+import shutil
+import traceback
 import ConfigParser
+
+import getopt
+try:
+    my_getopt = getopt.gnu_getopt
+except AttributeError:
+    my_getopt = getopt.getopt
 
 sys.path.insert(0, os.path.join('build', 'generator'))
 sys.path.insert(1, 'build')
@@ -27,50 +35,47 @@ all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
 client_tests = filter(lambda x: x.startswith('subversion/tests/clients/'),
                       all_tests)
 
-opts, args = getopt.getopt(sys.argv[1:], 'rdvcu:f:sS:',
-                           ['release', 'debug', 'verbose', 'cleanup', 'url=',
-                            'svnserve-args=', 'fs-type='])
+opts, args = my_getopt(sys.argv[1:], 'rdvcu:f:',
+                       ['release', 'debug', 'verbose', 'cleanup', 'url=',
+                        'svnserve-args=', 'fs-type='])
 if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
 # Interpret the options and set parameters
+base_url, fs_type, verbose, cleanup = None, None, None, None
 repo_loc = 'local repository.'
-base_url = None
-verbose = 0
-cleanup = None
 objdir = 'Debug'
 log = 'tests.log'
 run_svnserve = None
 svnserve_args = None
-fs_type = None
 
-for opt,arg in opts:
-  if opt in ['-r', '--release']:
-    objdir = 'Release'
-  elif opt in ['-d', '--debug']:
-    objdir = 'Debug'
-  elif opt in ['-v', '--verbose']:
-    verbose = 1
-  elif opt in ['-c', '--cleanup']:
-    cleanup = 1
-  elif opt in ['-u', '--url']:
+for opt, val in opts:
+  if opt in ('-u', '--url'):
     all_tests = client_tests
-    repo_loc = 'remote repository ' + arg + '.'
-    base_url = arg
-    if arg[:4] == 'http':
+    repo_loc = 'remote repository ' + val + '.'
+    base_url = val
+    if val[:4] == 'http':
       log = 'dav-tests.log'
-    elif arg[:3] == 'svn':
+    elif val[:3] == 'svn':
       log = 'svn-tests.log'
       run_svnserve = 1
     else:
       # Don't know this scheme, but who're we to judge whether it's
       # correct or not?
       log = 'url-tests.log'
+  elif opt in ('-f', '--fs-type'):
+    fs_type = val
+  elif opt in ('-v', '--verbose'):
+    verbose = 1
+  elif opt in ('-c', '--cleanup'):
+    cleanup = 1
+  elif opt in ['-r', '--release']:
+    objdir = 'Release'
+  elif opt in ['-d', '--debug']:
+    objdir = 'Debug'
   elif opt == '--svnserve-args':
-    svnserve_args = string.split(arg, ',')
+    svnserve_args = val.split(',')
     run_svnserve = 1
-  elif opt in ['-f', '--fs-type']:
-    fs_type = arg
 
 
 # Calculate the source and test directory names
@@ -94,23 +99,33 @@ def create_target_dir(dirname):
         print "mkdir:", tgt_dir
       os.makedirs(tgt_dir)
 
-def copy_execs(dummy, dirname, names):
-  global copied_execs
+def copy_changed_file(src, tgt):
+  assert os.path.isfile(src)
+  if os.path.isdir(tgt):
+    tgt = os.path.join(tgt, os.path.basename(src))
+  if os.path.exists(tgt):
+    assert os.path.isfile(tgt)
+    if filecmp.cmp(src, tgt):
+      if verbose:
+        print "same:", src
+        print " and:", tgt
+      return 0
+  if verbose:
+    print "copy:", src
+    print "  to:", tgt
+  shutil.copy(src, tgt)
+  return 1
+
+def copy_execs(baton, dirname, names):
+  copied_execs = baton
   for name in names:
     if os.path.splitext(name)[1] != ".exe":
       continue
     src = os.path.join(dirname, name)
     tgt = os.path.join(abs_builddir, dirname, name)
     create_target_dir(dirname)
-    try:
-      if verbose:
-        print "copy:", src
-        print "  to:", tgt
-      shutil.copy(src, tgt)
+    if copy_changed_file(src, tgt):
       copied_execs.append(tgt)
-    except:
-      traceback.print_exc(file=sys.stdout)
-      pass
 
 def locate_libs():
   "Move DLLs to a known location and set env vars"
@@ -130,13 +145,14 @@ def locate_libs():
   apriconv_dll_path = os.path.join(apriconv_path, objdir, 'libapriconv.dll')
   apriconv_so_path = os.path.join(apriconv_path, objdir, 'iconv')
 
-  shutil.copy(apr_dll_path, abs_objdir)
-  shutil.copy(aprutil_dll_path, abs_objdir)
-  shutil.copy(apriconv_dll_path, abs_objdir)
+  copy_changed_file(apr_dll_path, abs_objdir)
+  copy_changed_file(aprutil_dll_path, abs_objdir)
+  copy_changed_file(apriconv_dll_path, abs_objdir)
 
   libintl_path = get(cp, 'options', '--with-libintl', None)
   if libintl_path is not None:
-    shutil.copy(os.path.join(libintl_path, 'bin', 'intl3_svn.dll'), abs_objdir)
+    libintl_dll_path = os.path.join(libintl_path, 'bin', 'intl3_svn.dll')
+    copy_changed_file(libintl_dll_path, abs_objdir)
 
   os.environ['APR_ICONV_PATH'] = apriconv_so_path
   os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
@@ -161,7 +177,8 @@ if create_dirs:
   old_cwd = os.getcwd()
   try:
     os.chdir(abs_objdir)
-    os.path.walk('subversion', copy_execs, None)
+    baton = copied_execs
+    os.path.walk('subversion', copy_execs, baton)
     create_target_dir('subversion/tests/clients/cmdline')
   except:
     os.chdir(old_cwd)
@@ -177,7 +194,7 @@ if run_svnserve:
 print 'Testing', objdir, 'configuration on', repo_loc
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 import run_tests
-th = run_tests.TestHarness(abs_srcdir, abs_builddir, sys.executable, None,
+th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                            os.path.join(abs_builddir, log),
                            base_url, fs_type, 1, cleanup)
 old_cwd = os.getcwd()
@@ -203,8 +220,5 @@ for tgt in copied_execs:
     pass
 
 
-# Print final status
 if failed:
-  print
-  print 'FAIL:', sys.argv[0]
   sys.exit(1)

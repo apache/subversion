@@ -17,25 +17,6 @@ Candidate changes:
     Votes:
       +1: dlr, fitz (concept)
 
-  * r14280
-    Build ZLib from sources on Windows.
-    Justification:
-      Cures major PITA for Windows developers, improves debugging support.
-    Concerns:
-      Not exactly a showstopper for 1.2.0.
-    Votes:
-      +0.9: brane (+1 for 1.2.1), dlr (ditto for 1.2.1), fitz (concept)
-
-  * r14046, r14070, r14301
-    Improvements in the testing framework
-    Justification:
-      Low impact; r14046 and r14070 should've been on the 1.2.x branch
-      from day one. r14301 speeds up testing on Windows, where three
-      tests run in parallel take hardly any more time than a single test.
-      Not a core code change.
-    Votes:
-      +1: brane, fitz (concept [no win32 setup])
-
   * r14612, r14614
     ra_dav bugfix:  make 'svn commit' work on locked files with propchanges.
                     r14614 adds a test for this bug.
