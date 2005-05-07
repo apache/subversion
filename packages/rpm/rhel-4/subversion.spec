@@ -4,9 +4,12 @@
 %define swig_version 1.3.21
 %define apache_dir /usr
 # If you don't want to take time for the tests then set make_*_check to 0.
-%define make_ra_local_check 1
-%define make_ra_svn_check 1
-%define make_ra_dav_check 1
+%define make_ra_local_bdb_check 1
+%define make_ra_svn_bdb_check 1
+%define make_ra_dav_bdb_check 1
+%define make_ra_local_fsfs_check 1
+%define make_ra_svn_fsfs_check 1
+%define make_ra_dav_fsfs_check 1
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -102,6 +105,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Apr 30 2005 David Summers <david@summersoft.fay.ar.us> r14530
+- Make backend regression tests explicit and make sure we do them for both BDB
+  and FSFS backends.
+
 * Sun Apr 24 2005 David Summers <david@summersoft.fay.ar.us> r14429
 - Add build for RHEL4 for both BDB and FSFS back-ends.
 
@@ -419,23 +426,23 @@ make all
 make test
 cd ../../../../..
 
-%if %{make_ra_local_check}
+%if %{make_ra_local_bdb_check}
 echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
-make check CLEANUP=true
+make check CLEANUP=true FS_TYPE=bdb
 echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 %endif
 
-%if %{make_ra_svn_check}
+%if %{make_ra_svn_bdb_check}
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
 ./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline/
-make svncheck CLEANUP=true
+make svncheck CLEANUP=true FS_TYPE=bdb
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 %endif
 
-%if %{make_ra_dav_check}
+%if %{make_ra_dav_bdb_check}
 echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
 killall httpd || true
 sleep 1
@@ -446,7 +453,39 @@ jconstant:xCGl35kV9oWCY
 EOF
 /usr/sbin/httpd -f `pwd`/httpd.conf
 sleep 1
-make check CLEANUP=true BASE_URL='http://localhost:15835'
+make check CLEANUP=true BASE_URL='http://localhost:15835' FS_TYPE=bdb
+killall httpd
+echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
+%endif
+
+%if %{make_ra_local_fsfs_check}
+echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
+make check CLEANUP=true FS_TYPE=fsfs
+echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
+%endif
+
+%if %{make_ra_svn_fsfs_check}
+echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
+killall lt-svnserve || true
+sleep 1
+./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline/
+make svncheck CLEANUP=true FS_TYPE=fsfs
+killall lt-svnserve
+echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
+%endif
+
+%if %{make_ra_dav_fsfs_check}
+echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
+killall httpd || true
+sleep 1
+sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/rhel-4/httpd.davcheck.conf > httpd.conf
+cat > passwd <<EOF
+jrandom:xCGl35kV9oWCY
+jconstant:xCGl35kV9oWCY
+EOF
+/usr/sbin/httpd -f `pwd`/httpd.conf
+sleep 1
+make check CLEANUP=true BASE_URL='http://localhost:15835' FS_TYPE=fsfs
 killall httpd
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
