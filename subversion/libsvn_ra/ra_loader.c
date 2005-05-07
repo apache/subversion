@@ -224,6 +224,12 @@ check_ra_version (const svn_version_t *ra_version, const char *scheme)
 /* -------------------------------------------------------------- */
 
 /*** Public Interfaces ***/
+
+svn_error_t *svn_ra_initialize (apr_pool_t *pool)
+{
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
                           const char *repos_URL,
                           const svn_ra_callbacks_t *callbacks,
@@ -251,7 +257,7 @@ svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
             /* Library not found. */
             break;
 
-          SVN_ERR (initfunc (svn_ra_version (), &vtable));
+          SVN_ERR (initfunc (svn_ra_version (), &vtable, pool));
 
           SVN_ERR (check_ra_version (vtable->get_version (), scheme));
         }
@@ -561,7 +567,7 @@ svn_ra_print_modules (svn_stringbuf_t *output,
 
       if (initfunc)
         {
-          SVN_ERR (initfunc (svn_ra_version(), &vtable));
+          SVN_ERR (initfunc (svn_ra_version(), &vtable, iterpool));
 
           SVN_ERR (check_ra_version (vtable->get_version (), defn->ra_name));
 

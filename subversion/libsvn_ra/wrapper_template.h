@@ -404,7 +404,7 @@ COMPAT_INITFUNC (int abi_version,
   /* We call the new init function so it can check library dependencies or
      do other initialization things.  We fake the loader version, since we
      rely on the ABI version check instead. */
-  SVN_ERR (INITFUNC (VTBL.get_version(), &vtable));
+  SVN_ERR (INITFUNC (VTBL.get_version(), &vtable, pool));
 
   schemes = VTBL.get_schemes (pool);
 

@@ -1264,7 +1264,8 @@ static const svn_ra__vtable_t ra_local_vtable =
 
 svn_error_t *
 svn_ra_local__init (const svn_version_t *loader_version,
-                    const svn_ra__vtable_t **vtable)
+                    const svn_ra__vtable_t **vtable,
+                    apr_pool_t *pool)
 {
   static const svn_version_checklist_t checklist[] =
     {
@@ -1285,6 +1286,11 @@ svn_ra_local__init (const svn_version_t *loader_version,
                               loader_version->major);
 
   SVN_ERR (svn_ver_check_list (ra_local_version(), checklist));
+
+#ifndef SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
+  /* This assumes that POOL was the pool used to load the dso. */
+  SVN_ERR (svn_fs_initialize (pool));
+#endif
 
   *vtable = &ra_local_vtable;
 

@@ -217,19 +217,25 @@ struct svn_ra_session_t {
  * function must use the C calling convention on all platforms, so that
  * the init functions can safely read the version parameter.
  *
+ * POOL will be available as long as this module is being used.
+ *
  * ### need to force this to be __cdecl on Windows... how??
  */
 typedef svn_error_t
 *(*svn_ra__init_func_t)(const svn_version_t *loader_version,
-                        const svn_ra__vtable_t **vtable);
+                        const svn_ra__vtable_t **vtable,
+                        apr_pool_t *pool);
 
 /* Declarations of the init functions for the available RA libraries. */
 svn_error_t *svn_ra_local__init(const svn_version_t *loader_version,
-                                const svn_ra__vtable_t **vtable);
+                                const svn_ra__vtable_t **vtable,
+                                apr_pool_t *pool);
 svn_error_t *svn_ra_svn__init(const svn_version_t *loader_version,
-                                const svn_ra__vtable_t **vtable);
+                              const svn_ra__vtable_t **vtable,
+                              apr_pool_t *pool);
 svn_error_t *svn_ra_dav__init(const svn_version_t *loader_version,
-                                const svn_ra__vtable_t **vtable);
+                              const svn_ra__vtable_t **vtable,
+                              apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

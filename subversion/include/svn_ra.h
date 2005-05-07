@@ -349,6 +349,17 @@ typedef struct svn_ra_callbacks_t
 
 /* Public Interfaces. */
 
+/** @since New in 1.2.
+ *
+ * Initialize the RA library.  This function must be called before using
+ * any function in this header, except the deprecated APIs based on
+ * @c svn_ra_plugin_t, or svn_ra_version().  This function must not be called
+ * simultaneously in multiple threads.  @a pool must live
+ * longer than any open RA sessions.
+ */
+svn_error_t *
+svn_ra_initialize (apr_pool_t *pool);
+
 /**
  * @since New in 1.2.
  *

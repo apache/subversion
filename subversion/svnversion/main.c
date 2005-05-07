@@ -20,6 +20,7 @@
 #include "svn_utf.h"
 #include "svn_path.h"
 #include "svn_opt.h"
+#include "svn_ra.h"
 
 #include "svn_private_config.h"
 
@@ -230,6 +231,16 @@ main(int argc, const char *argv[])
 
   /* Check library versions */
   err = check_lib_versions ();
+  if (err)
+    {
+      svn_handle_error2 (err, stderr, FALSE, "svnversion: ");
+      svn_error_clear (err);
+      svn_pool_destroy (pool);
+      return EXIT_FAILURE;
+    }
+
+  /* Initialize the RA library. */
+  err = svn_ra_initialize (pool);
   if (err)
     {
       svn_handle_error2 (err, stderr, FALSE, "svnversion: ");
