@@ -36,6 +36,16 @@ Candidate changes:
     Votes:
       +1: brane, fitz (concept [no win32 setup])
 
+  * r14612
+    ra_dav bugfix:  make 'svn commit' work on locked files with propchanges.
+    Justification:
+      2 line change.  Stop trying to look up a property name in a hash mapping
+      paths->lock_tokens.  It's redundant, and guaranteed to overwrite the 
+      existing value with NULL.
+    Votes:
+      +1: sussman
+
+
 Approved changes (further review is welcome, but not required):
 
   * r14583
