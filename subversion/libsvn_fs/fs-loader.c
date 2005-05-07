@@ -241,6 +241,13 @@ svn_fs_initialize (apr_pool_t *pool)
   if (status)
     return svn_error_wrap_apr (status, _("Can't allocate FS mutex"));
 #endif
+
+  /* ### This won't work if POOL is NULL and libsvn_fs is loaded as a DSO
+     ### (via libsvn_ra_local say) since the global common_pool will live
+     ### longer than the DSO, which gets unloaded when the pool used to
+     ### load it is cleared, and so when the handler runs it will refer to
+     ### a function that no longer exists.  libsvn_ra_local attempts to
+     ### work around this by explicitly calling svn_fs_initialize. */
   apr_pool_cleanup_register (common_pool, NULL, uninit, apr_pool_cleanup_null);
   return SVN_NO_ERROR;
 }
