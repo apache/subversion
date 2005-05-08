@@ -2244,25 +2244,21 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
       "                  path    CDATA #IMPLIED\n"
       "                  rev     CDATA #IMPLIED>\n"
       "  <!ELEMENT updir EMPTY>\n"
-      "  <!ELEMENT file  (prop)*>\n"
+      "  <!ELEMENT file  EMPTY>\n"
       "  <!ATTLIST file  name    CDATA #REQUIRED\n"
       "                  href    CDATA #REQUIRED>\n"
-      "  <!ELEMENT dir   (prop)*>\n"
+      "  <!ELEMENT dir   EMPTY>\n"
       "  <!ATTLIST dir   name    CDATA #REQUIRED\n"
       "                  href    CDATA #REQUIRED>\n"
-      "  <!ELEMENT prop  (#PCDATA)>\n"
-      "  <!ATTLIST prop  name    CDATA #REQUIRED>\n"
       "]>\n";
 
-    /* <svn version="0.13.1 (dev-build)"
+    /* <svn version="1.3.0 (dev-build)"
             href="http://subversion.tigris.org">
          <index name="[info->repos->repo_name]"
                 path="[info->repos_path]"
                 rev="[info->root.rev]">
-           <file name="foo">
-             <prop name="mime-type">image/png</prop>
-           </file>
-           <dir name="bar"/>
+           <file name="foo" href="foo" />
+           <dir name="bar" href="bar/" />
          </index>
        </svn> */
 
@@ -2375,11 +2371,11 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         else
           {
             const char *const tag = (is_dir ? "dir" : "file");
-            
+
             /* ### This is where the we could search for props */
 
             ap_fprintf(output, bb,
-                       "    <%s name=\"%s\" href=\"%s\"></%s>\n",
+                       "    <%s name=\"%s\" href=\"%s\" />\n",
                        tag, name, href, tag);
           }
       }
