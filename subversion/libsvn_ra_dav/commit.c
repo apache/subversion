@@ -1330,9 +1330,6 @@ static svn_error_t * commit_change_file_prop(void *file_baton,
   /* ### we should put this into the file_baton's pool */
   record_prop_change(file->pool, file, name, value);
 
-  if (file->cc->tokens)
-    file->token = apr_hash_get(file->cc->tokens, name, APR_HASH_KEY_STRING);
-
   /* do the CHECKOUT sooner rather than later */
   SVN_ERR( checkout_resource(file->cc, file->rsrc, TRUE, file->token, pool) );
 
