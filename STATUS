@@ -32,8 +32,9 @@ Candidate changes:
     run_tests.py to be silently ignored.
     Notes:
       Do I really need votes for a one-character obvious change? :-)
+      Yes. >:->
     Votes:
-      +1: maxb
+      +1: maxb, brane, brane
 
 
 Approved changes (further review is welcome, but not required):
