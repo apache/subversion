@@ -689,7 +689,7 @@ fi
 # Get latest revision of head
 report checking latest revision of "${HEAD_URL}"
 HEAD_REVISION=`"${SVN_MERGE_SVN}" proplist --revprop -r HEAD "${HEAD_URL}" \
-  | head -1 | sed 's/.* \([0-9]\{1,\}\).*$/\1/g'`
+  | sed -e 's/.* \([0-9]\{1,\}\).*$/\1/g' -e 1q`
 if ! expr "${HEAD_REVISION}" : '[0-9]\{1,\}$' >/dev/null; then
     error "can't get head revision of \"${HEAD_URL}\" (got \"${REVISION}\")"
 fi
