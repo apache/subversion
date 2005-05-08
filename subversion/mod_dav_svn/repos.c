@@ -2376,7 +2376,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
 
             ap_fprintf(output, bb,
                        "    <%s name=\"%s\" href=\"%s\" />\n",
-                       tag, name, href, tag);
+                       tag, name, href);
           }
       }
 
