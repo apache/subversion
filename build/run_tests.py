@@ -182,7 +182,7 @@ def main():
                    os.path.abspath('tests.log'),
                    base_url, fs_type, verbose, cleanup)
 
-  failed = th.run(args[4:])
+  failed = th.run(args[2:])
   if failed:
     sys.exit(1)
 
