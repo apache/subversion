@@ -17,16 +17,6 @@ Candidate changes:
     Votes:
       +1: dlr, kfogel, fitz (concept)
 
-  * r14626
-    Fix testsuite bug which was causing the first two tests passed to
-    run_tests.py to be silently ignored.
-    Notes:
-      Do I really need votes for a one-character obvious change? :-)
-      Yes. >:->
-    Votes:
-      +1: maxb, brane, kfogel
-
-
 Approved changes (further review is welcome, but not required):
 
   * r14612, r14614
