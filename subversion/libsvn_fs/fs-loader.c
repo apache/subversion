@@ -228,7 +228,9 @@ static apr_status_t uninit (void *data)
 svn_error_t *
 svn_fs_initialize (apr_pool_t *pool)
 {
+#if APR_HAS_THREADS
   apr_status_t status;
+#endif
 
   /* Protect against multiple calls. */
   if (common_pool)
@@ -256,7 +258,9 @@ static svn_error_t *
 serialized_init (svn_fs_t *fs, apr_pool_t *pool)
 {
   svn_error_t *err;
+#if APR_HAS_THREADS
   apr_status_t status;
+#endif
 
   /* Per our API compatibility rules, we cannot ensure that
      svn_fs_initialize is called by the application.  If not, we
