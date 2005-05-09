@@ -974,8 +974,8 @@ validate_eol_prop_against_file (const char *path,
      here is whether or not the function fails on inconsistent line
      endings.  The function is "translating" to an empty stream.  This
      is sneeeeeeeeeeeaky. */
-  err = svn_subst_translate_stream (read_stream, write_stream, 
-                                    "", FALSE, NULL, FALSE);
+  err = svn_subst_translate_stream2 (read_stream, write_stream, 
+                                     "", FALSE, NULL, FALSE, pool);
   if (err && err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
     return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, err,
                               _("File '%s' has inconsistent newlines"),

@@ -126,8 +126,11 @@ svn_subst_keywords_differ (const svn_subst_keywords_t *a,
                            svn_boolean_t compare_values);
 
 
-/** Copy and translate the data in stream @a src into stream @a dst.  It is
+/** 
+ * Copy and translate the data in stream @a src into stream @a dst.  It is
  * assumed that @a src is a readable stream and @a dst is a writable stream.
+ *
+ * @since New in 1.2.
  *
  * If @a eol_str is non-@c NULL, replace whatever bytestring @a src uses to
  * denote line endings with @a eol_str in the output.  If @a src has an
@@ -159,6 +162,23 @@ svn_subst_keywords_differ (const svn_subst_keywords_t *a,
  * convenient way to get @a eol_str and @a keywords if in libsvn_wc.
  */
 svn_error_t *
+svn_subst_translate_stream2 (svn_stream_t *src,
+                             svn_stream_t *dst,
+                             const char *eol_str,
+                             svn_boolean_t repair,
+                             const svn_subst_keywords_t *keywords,
+                             svn_boolean_t expand,
+                             apr_pool_t *pool);
+
+
+/**
+ * Same as svn_subst_translate_stream2(), but does not take a @a pool
+ * argument, instead creates a temporary subpool of the global pool, and
+ * destroys it before returning.
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
+ */
+svn_error_t *
 svn_subst_translate_stream (svn_stream_t *src,
                             svn_stream_t *dst,
                             const char *eol_str,
@@ -168,24 +188,9 @@ svn_subst_translate_stream (svn_stream_t *src,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0 API.
- *
- * Similar to svn_subst_copy_and_translate2 except that @a special is
- * always set to @c FALSE.
- */
-svn_error_t *
-svn_subst_copy_and_translate (const char *src,
-                              const char *dst,
-                              const char *eol_str,
-                              svn_boolean_t repair,
-                              const svn_subst_keywords_t *keywords,
-                              svn_boolean_t expand,
-                              apr_pool_t *pool);
-
-/**
  * @since New in 1.1.
  *
- * Convenience routine: a variant of @c svn_subst_translate_stream
+ * Convenience routine: a variant of svn_subst_translate_stream2()
  * which operates on files.  (See previous docstring for details.)  In
  * addition, it will create/detranslate a special file if @a special
  * is @c TRUE.
@@ -210,7 +215,23 @@ svn_subst_copy_and_translate2 (const char *src,
                                svn_boolean_t special,
                                apr_pool_t *pool);
 
-/** Convenience routine: a variant of @c svn_subst_translate_stream which
+/**
+ * @deprecated Provided for backward compatibility with the 1.0 API.
+ *
+ * Similar to svn_subst_copy_and_translate2() except that @a special is
+ * always set to @c FALSE.
+ */
+svn_error_t *
+svn_subst_copy_and_translate (const char *src,
+                              const char *dst,
+                              const char *eol_str,
+                              svn_boolean_t repair,
+                              const svn_subst_keywords_t *keywords,
+                              svn_boolean_t expand,
+                              apr_pool_t *pool);
+
+
+/** Convenience routine: a variant of svn_subst_translate_stream2() which
  * operates on cstrings.  (See previous docstring for details.)
  *
  * Return a new string in @a *dst, allocated in @a pool, by copying the
