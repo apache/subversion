@@ -21,7 +21,7 @@ Candidate changes:
       merged.  Subclipse and TortoiseSVN both appear to work correctly
       and the JavaHL merge problem is now fixed.
     Votes:
-      +1: kfogel
+      +1: kfogel, lundblad
       +1 (non-binding): markphip
 
 Approved changes (further review is welcome, but not required):
