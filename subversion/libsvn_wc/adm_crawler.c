@@ -582,7 +582,11 @@ svn_wc_crawl_revisions2 (const char *path,
       /* Split PATH into parent PDIR and basename BNAME. */
       svn_path_split (path, &pdir, &bname, pool);
       if (! parent_entry)
-        SVN_ERR (svn_wc_entry (&parent_entry, pdir, adm_access, FALSE, pool));
+        {
+          err = svn_wc_entry (&parent_entry, pdir, adm_access, FALSE, pool);
+          if (err)
+            goto abort_report;
+        }
       
       if (parent_entry 
           && parent_entry->url 
@@ -596,13 +600,15 @@ svn_wc_crawl_revisions2 (const char *path,
              the report (not some file in a subdirectory of a target
              directory), and that target is a file, we need to pass an
              empty string to link_path. */
-          SVN_ERR (reporter->link_path (report_baton,
-                                        "",
-                                        entry->url,
-                                        entry->revision,
-                                        FALSE,
-                                        entry->lock_token,
-                                        pool));
+          err = reporter->link_path (report_baton,
+                                     "",
+                                     entry->url,
+                                     entry->revision,
+                                     FALSE,
+                                     entry->lock_token,
+                                     pool);
+          if (err)
+            goto abort_report;
         }
       else if (entry->revision != base_rev || entry->lock_token)
         {
@@ -619,7 +625,7 @@ svn_wc_crawl_revisions2 (const char *path,
     }
 
   /* Finish the report, which causes the update editor to be driven. */
-  SVN_ERR (reporter->finish_report (report_baton, pool));
+  err = reporter->finish_report (report_baton, pool);
 
  abort_report:
   if (err)

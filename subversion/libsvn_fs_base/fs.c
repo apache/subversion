@@ -586,7 +586,8 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   if (svn_err) goto error;
 
   /* Create the Berkeley DB environment.  */
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, fs->path, pool));
+  svn_err = svn_utf_cstring_from_utf8 (&path_native, fs->path, pool);
+  if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "creating environment",
                       bfd->env->open (bfd->env, path_native,
                                       (DB_CREATE
@@ -703,7 +704,8 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   if (svn_err) goto error;
 
   /* Open the Berkeley DB environment.  */
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, fs->path, fs->pool));
+  svn_err = svn_utf_cstring_from_utf8 (&path_native, fs->path, fs->pool);
+  if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "opening environment",
                       bfd->env->open (bfd->env, path_native,
                                       (DB_CREATE

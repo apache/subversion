@@ -1524,11 +1524,12 @@ svn_client_commit2 (svn_client_commit_info_t **commit_info,
                       /* It better be missing then.  Assuming it is,
                          mark as deleted in parent.  If not, then
                          something is way bogus. */
-                      SVN_ERR (svn_wc_mark_missing_deleted (item->path,
-                                                            base_dir_access,
-                                                            subpool));
                       svn_error_clear (bump_err);
-                      bump_err = SVN_NO_ERROR;
+                      bump_err = svn_wc_mark_missing_deleted (item->path,
+                                                              base_dir_access,
+                                                              subpool);
+                      if (bump_err)
+                        goto cleanup;
                       continue;                      
                     }                  
                 }
