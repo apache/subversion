@@ -358,7 +358,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "\n"
        "  Print information about each TARGET (default: '.')\n"
        "  TARGET may be either a working-copy path or URL.\n"),
-    {'r', 'R', svn_cl__targets_opt, svn_cl__config_dir_opt} },
+    {'r', 'R', svn_cl__targets_opt, SVN_CL__AUTH_OPTIONS, 
+     svn_cl__config_dir_opt} },
  
   { "list", svn_cl__ls, {"ls"},
     N_("List directory entries in the repository.\n"
