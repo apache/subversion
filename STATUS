@@ -19,6 +19,13 @@ Candidate changes:
     Votes:
       +1: kfogel
 
+  * r14652
+    Add auth-related options to 'svn info' (fixes issue #2296)
+    Justification:
+      Without this fix, 'svn info URL' may be less-than-usable.
+    Votes:
+      +1: cmpilato
+
 Approved changes (further review is welcome, but not required):
 
    (None)
