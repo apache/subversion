@@ -4,30 +4,6 @@ See "Stabilizing and maintaining releases" in trunk/HACKING for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.2.0:
-================
-
-Candidate changes:
-
-(none)
-
-Approved changes (further review is welcome, but not required):
-
-  * r14643, r14647, r14650
-    Use heap not stack for SVN_STREAM_CHUNK_SIZE buffers.
-    Justification:
-      Buffers simply too big to put on stack; also, API change.
-    Notes:
-      Use http://svn.collab.net/repos/svn/branches/1.2.x-r14643 for backport.
-      All revisions are on the branch.
-      markphip: 
-      Built and manually tested r14651 on Win32 with these three changes
-      merged.  Subclipse and TortoiseSVN both appear to work correctly
-      and the JavaHL merge problem is now fixed.
-    Votes:
-      +1: kfogel, lundblad, philip
-      +1 (non-binding): markphip
-
 Status of 1.2.1:
 ================
 
@@ -39,3 +15,7 @@ Candidate changes:
       See above about "segfault".
     Votes:
       +1: kfogel
+
+Approved changes (further review is welcome, but not required):
+
+(none)
