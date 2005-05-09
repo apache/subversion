@@ -137,7 +137,8 @@ cat_local_file (const char *path,
                              APR_READ, APR_OS_DEFAULT, pool));
   input = svn_stream_from_aprfile (input_file, pool);
 
-  SVN_ERR (svn_subst_translate_stream (input, output, eol, FALSE, &kw, TRUE));
+  SVN_ERR (svn_subst_translate_stream2 (input, output, eol, FALSE, &kw, TRUE, 
+                                        pool));
 
   SVN_ERR (svn_stream_close (input));
   SVN_ERR (svn_io_file_close (input_file, pool));
@@ -261,8 +262,8 @@ svn_client_cat2 (svn_stream_t *out,
                     pool));
         }
 
-      SVN_ERR (svn_subst_translate_stream (tmp_stream, out, eol, FALSE, &kw,
-                                           TRUE));
+      SVN_ERR (svn_subst_translate_stream2 (tmp_stream, out, eol, FALSE, &kw,
+                                            TRUE, pool));
 
       SVN_ERR (svn_stream_close (tmp_stream));
     }

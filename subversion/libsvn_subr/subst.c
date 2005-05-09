@@ -187,7 +187,7 @@ svn_subst_build_keywords (svn_subst_keywords_t *kw,
 }
 
 
-/*** Helpers for svn_subst_translate_stream ***/
+/*** Helpers for svn_subst_translate_stream2 ***/
 
 
 /* Write out LEN bytes of BUF into STREAM. */
@@ -586,14 +586,15 @@ svn_subst_keywords_differ (const svn_subst_keywords_t *a,
 
 
 svn_error_t *
-svn_subst_translate_stream (svn_stream_t *s, /* src stream */
-                            svn_stream_t *d, /* dst stream */
-                            const char *eol_str,
-                            svn_boolean_t repair,
-                            const svn_subst_keywords_t *keywords,
-                            svn_boolean_t expand)
+svn_subst_translate_stream2 (svn_stream_t *s, /* src stream */
+                             svn_stream_t *d, /* dst stream */
+                             const char *eol_str,
+                             svn_boolean_t repair,
+                             const svn_subst_keywords_t *keywords,
+                             svn_boolean_t expand,
+                             apr_pool_t *pool)
 {
-  char buf[SVN_STREAM_CHUNK_SIZE + 1];
+  char *buf;
   const char *p, *interesting;
   apr_size_t len, readlen;
   apr_size_t eol_str_len = eol_str ? strlen (eol_str) : 0;
@@ -603,15 +604,28 @@ svn_subst_translate_stream (svn_stream_t *s, /* src stream */
   apr_size_t keyword_off = 0;
   char       src_format[2] = { 0 };
   apr_size_t src_format_len = 0;
+  svn_boolean_t own_pool = FALSE;
+  svn_error_t *err = NULL;
+
+  if (pool == NULL)
+    {
+      pool = svn_pool_create (NULL);
+      own_pool = TRUE;
+    }
+
+  buf = apr_palloc (pool, SVN_STREAM_CHUNK_SIZE + 1);
 
   /* The docstring requires that *some* translation be requested. */
   assert (eol_str || keywords);
   interesting = (eol_str && keywords) ? "$\r\n" : eol_str ? "\r\n" : "$";
 
-  readlen = sizeof (buf) - 1;
-  while (readlen == sizeof (buf) - 1)
+  readlen = SVN_STREAM_CHUNK_SIZE;
+  while (readlen == SVN_STREAM_CHUNK_SIZE)
     {
-      SVN_ERR (svn_stream_read (s, buf, &readlen));
+      err = svn_stream_read (s, buf, &readlen);
+      if (err)
+        goto departure;
+
       buf[readlen] = '\0';
 
       /* At the beginning of this loop, assume that we might be in an
@@ -627,9 +641,13 @@ svn_subst_translate_stream (svn_stream_t *s, /* src stream */
             {
               if (*p == '\n')
                 newline_buf[newline_off++] = *p++;
-              SVN_ERR (translate_newline (eol_str, eol_str_len, src_format,
-                                          &src_format_len, newline_buf,
-                                          newline_off, d, repair));
+
+              err = translate_newline (eol_str, eol_str_len, src_format,
+                                       &src_format_len, newline_buf,
+                                       newline_off, d, repair);
+              if (err)
+                goto departure;
+
               newline_off = 0;
             }
           else if (keyword_off && *p == '$')
@@ -641,14 +659,21 @@ svn_subst_translate_stream (svn_stream_t *s, /* src stream */
                 p++;
               else
                 keyword_off--;
-              SVN_ERR (translate_write (d, keyword_buf, keyword_off));
+
+              err = translate_write (d, keyword_buf, keyword_off);
+              if (err)
+                goto departure;
+
               keyword_off = 0;
             }
           else if (keyword_off == SVN_KEYWORD_MAX_LEN - 1
                    || (keyword_off && (*p == '\r' || *p == '\n')))
             {
               /* No closing '$' found; flush the keyword buffer. */
-              SVN_ERR (translate_write (d, keyword_buf, keyword_off));
+              err = translate_write (d, keyword_buf, keyword_off);
+              if (err)
+                goto departure;
+              
               keyword_off = 0;
             }
           else if (keyword_off)
@@ -668,7 +693,12 @@ svn_subst_translate_stream (svn_stream_t *s, /* src stream */
               len++;
             }
           if (len)
-            SVN_ERR (translate_write (d, p, len));
+            {
+              err = translate_write (d, p, len);
+              if (err)
+                goto departure;
+            }
+          
           p += len;
 
           /* Set up state according to the interesting character, if any. */
@@ -682,9 +712,13 @@ svn_subst_translate_stream (svn_stream_t *s, /* src stream */
               break;
             case '\n':
               newline_buf[newline_off++] = *p++;
-              SVN_ERR (translate_newline (eol_str, eol_str_len, src_format,
-                                          &src_format_len, newline_buf,
-                                          newline_off, d, repair));
+
+              err = translate_newline (eol_str, eol_str_len, src_format,
+                                       &src_format_len, newline_buf,
+                                       newline_off, d, repair);
+              if (err)
+                goto departure;
+
               newline_off = 0;
               break;
             }
@@ -692,13 +726,39 @@ svn_subst_translate_stream (svn_stream_t *s, /* src stream */
     }
 
   if (newline_off)
-    SVN_ERR (translate_newline (eol_str, eol_str_len, src_format,
-                                &src_format_len, newline_buf, newline_off, d,
-                                repair));
-  if (keyword_off)
-    SVN_ERR (translate_write (d, keyword_buf, keyword_off));
+    {
+      err = translate_newline (eol_str, eol_str_len, src_format,
+                               &src_format_len, newline_buf, newline_off, d,
+                               repair);
+      if (err)
+        goto departure;
+    }
 
-  return SVN_NO_ERROR;
+  if (keyword_off)
+    {
+      err = translate_write (d, keyword_buf, keyword_off);
+      if (err)
+        goto departure;
+    }
+
+ departure:
+  if (own_pool)
+    svn_pool_destroy (pool);
+
+  return err;
+}
+
+
+svn_error_t *
+svn_subst_translate_stream (svn_stream_t *s, /* src stream */
+                            svn_stream_t *d, /* dst stream */
+                            const char *eol_str,
+                            svn_boolean_t repair,
+                            const svn_subst_keywords_t *keywords,
+                            svn_boolean_t expand)
+{
+  return svn_subst_translate_stream2 (s, d, eol_str, repair,
+                                      keywords, expand, NULL);
 }
 
 
@@ -730,8 +790,8 @@ svn_subst_translate_cstring (const char *src,
   dst_stream = svn_stream_from_stringbuf (dst_stringbuf, pool);
 
   /* Translate src stream into dst stream. */
-  err = svn_subst_translate_stream (src_stream, dst_stream,
-                                    eol_str, repair, keywords, expand);
+  err = svn_subst_translate_stream2 (src_stream, dst_stream,
+                                     eol_str, repair, keywords, expand, pool);
   if (err)
     {
       svn_error_clear (svn_stream_close (src_stream));
@@ -972,8 +1032,8 @@ svn_subst_copy_and_translate2 (const char *src,
   dst_stream = svn_stream_from_aprfile (d, subpool);
 
   /* Translate src stream into dst stream. */
-  err = svn_subst_translate_stream (src_stream, dst_stream,
-                                    eol_str, repair, keywords, expand);
+  err = svn_subst_translate_stream2 (src_stream, dst_stream, eol_str,
+                                     repair, keywords, expand, subpool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
