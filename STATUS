@@ -9,6 +9,10 @@ Status of 1.2.0:
 
 Candidate changes:
 
+(none)
+
+Approved changes (further review is welcome, but not required):
+
   * r14643, r14647, r14650
     Use heap not stack for SVN_STREAM_CHUNK_SIZE buffers.
     Justification:
@@ -21,12 +25,8 @@ Candidate changes:
       merged.  Subclipse and TortoiseSVN both appear to work correctly
       and the JavaHL merge problem is now fixed.
     Votes:
-      +1: kfogel, lundblad
+      +1: kfogel, lundblad, philip
       +1 (non-binding): markphip
-
-Approved changes (further review is welcome, but not required):
-
-(none)
 
 Status of 1.2.1:
 ================
