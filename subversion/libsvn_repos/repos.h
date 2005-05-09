@@ -217,6 +217,21 @@ svn_repos__hooks_post_unlock (svn_repos_t *repos,
                               const char *username,
                               apr_pool_t *pool);
 
+
+/*** Utility Functions ***/
+
+/* Set *CHANGED_P to TRUE if ROOT1/PATH1 and ROOT2/PATH2 have
+   different contents, FALSE if they have the same contents.
+   Use POOL for temporary allocation. */
+svn_error_t *
+svn_repos__compare_files (svn_boolean_t *changed_p,
+                          svn_fs_root_t *root1,
+                          const char *path1,
+                          svn_fs_root_t *root2,
+                          const char *path2,
+                          apr_pool_t *pool);
+
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

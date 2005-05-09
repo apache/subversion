@@ -438,72 +438,6 @@ delta_proplists (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   return SVN_NO_ERROR;
 }
 
-/* Set *CHANGED_P to TRUE if ROOT1/PATH1 and ROOT2/PATH2 have
-   different contents, FALSE if they have the same contents. */
-static svn_error_t *
-compare_files (svn_boolean_t *changed_p, svn_fs_root_t *root1,
-               const char *path1, svn_fs_root_t *root2, const char *path2,
-               apr_pool_t *pool)
-{
-  svn_filesize_t size1, size2;
-  unsigned char digest1[APR_MD5_DIGESTSIZE], digest2[APR_MD5_DIGESTSIZE];
-  svn_stream_t *stream1, *stream2;
-  char buf1[SVN_STREAM_CHUNK_SIZE], buf2[SVN_STREAM_CHUNK_SIZE];
-  apr_size_t len1, len2;
-
-  /* If the filesystem claims the things haven't changed, then they
-     haven't changed. */
-  SVN_ERR (svn_fs_contents_changed (changed_p, root1, path1,
-                                    root2, path2, pool));
-  if (!*changed_p)
-    return SVN_NO_ERROR;
-
-  /* From this point on, assume things haven't changed. */
-  *changed_p = FALSE;
-
-  /* So, things have changed.  But we need to know if the two sets of
-     file contents are actually different.  If they have differing
-     sizes, then we know they differ. */
-  SVN_ERR (svn_fs_file_length (&size1, root1, path1, pool));
-  SVN_ERR (svn_fs_file_length (&size2, root2, path2, pool));
-  if (size1 != size2)
-    {
-      *changed_p = TRUE;
-      return SVN_NO_ERROR;
-    }
-
-  /* Same sizes, huh?  Well, if their checksums differ, we know they
-     differ. */
-  SVN_ERR (svn_fs_file_md5_checksum (digest1, root1, path1, pool));
-  SVN_ERR (svn_fs_file_md5_checksum (digest2, root2, path2, pool));
-  if (!svn_md5_digests_match (digest1, digest2))
-    {
-      *changed_p = TRUE;
-      return SVN_NO_ERROR;
-    }
-
-  /* Same sizes, same checksums.  Chances are reallllly good that they
-     don't differ, but to be absolute sure, we need to compare bytes. */
-  SVN_ERR (svn_fs_file_contents (&stream1, root1, path1, pool));
-  SVN_ERR (svn_fs_file_contents (&stream2, root2, path2, pool));
-
-  do
-    {
-      len1 = len2 = SVN_STREAM_CHUNK_SIZE;
-      SVN_ERR (svn_stream_read (stream1, buf1, &len1));
-      SVN_ERR (svn_stream_read (stream2, buf2, &len2));
-      
-      if (len1 != len2 || memcmp (buf1, buf2, len1))
-        {
-          *changed_p = TRUE;
-          return SVN_NO_ERROR;
-        }
-    }
-  while (len1 > 0);
-
-  return SVN_NO_ERROR;
-}
-
 /* Make the appropriate edits on FILE_BATON to change its contents and
    properties from those in S_REV/S_PATH to those in B->t_root/T_PATH,
    possibly using LOCK_TOKEN to determine if the client's lock on the file
@@ -536,8 +470,8 @@ delta_files (report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
          as".  We'll do everything we can to avoid transmitting even
          an empty text-delta in that case.  */
       if (b->ignore_ancestry)
-        SVN_ERR (compare_files (&changed, b->t_root, t_path, s_root, s_path,
-                                pool));
+        SVN_ERR (svn_repos__compare_files (&changed, b->t_root, t_path,
+                                           s_root, s_path, pool));
       else
         SVN_ERR (svn_fs_contents_changed (&changed, b->t_root, t_path, s_root,
                                           s_path, pool));
