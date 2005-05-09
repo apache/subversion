@@ -127,10 +127,10 @@ svn_subst_keywords_differ (const svn_subst_keywords_t *a,
 
 
 /** 
- * @since New in 1.2.
- *
  * Copy and translate the data in stream @a src into stream @a dst.  It is
  * assumed that @a src is a readable stream and @a dst is a writable stream.
+ *
+ * @since New in 1.2.
  *
  * If @a eol_str is non-@c NULL, replace whatever bytestring @a src uses to
  * denote line endings with @a eol_str in the output.  If @a src has an
@@ -149,10 +149,6 @@ svn_subst_keywords_differ (const svn_subst_keywords_t *a,
  *
  * Detect only keywords that are no longer than @c SVN_IO_MAX_KEYWORD_LEN
  * bytes, including the delimiters and the keyword itself.
- *
- * Use @a pool for temporary allocation.  For compatibility, if @a pool
- * is @c NULL, then use a new subpool of the global pool for temporary
- * allocation, and destroy the subpool before returning.
  *
  * Note that a translation request is *required*:  one of @a eol_str or
  * @a keywords must be non-@c NULL.
@@ -176,9 +172,11 @@ svn_subst_translate_stream2 (svn_stream_t *src,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.1 API.
+ * Same as svn_subst_translate_stream2(), but does not take a @a pool
+ * argument, instead creates a temporary subpool of the global pool, and
+ * destroys it before returning.
  *
- * Same as svn_subst_translate_stream2() with @a pool always set to @c NULL.
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *
 svn_subst_translate_stream (svn_stream_t *src,
