@@ -16,8 +16,13 @@ Candidate changes:
     Notes:
       Use http://svn.collab.net/repos/svn/branches/1.2.x-r14643 for backport.
       All revisions are on the branch.
+      markphip: 
+      Built and manually tested r14651 on Win32 with these three changes
+      merged.  Subclipse and TortoiseSVN both appear to work correctly
+      and the JavaHL merge problem is now fixed.
     Votes:
       +1: kfogel
+      +1 (non-binding): markphip
 
 Approved changes (further review is welcome, but not required):
 
