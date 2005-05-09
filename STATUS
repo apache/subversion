@@ -9,8 +9,28 @@ Status of 1.2.0:
 
 Candidate changes:
 
-   (None)
+  * r14643
+    Use heap not stack for SVN_STREAM_CHUNK_SIZE buffers.
+    Justification:
+      Buffers simply too big to put on stack; also, API change.
+    Notes:
+      Use http://svn.collab.net/repos/svn/branches/1.2.x-r14643 for backport.
+    Votes:
+      +1: kfogel
 
 Approved changes (further review is welcome, but not required):
 
    (None)
+
+
+Status of 1.2.1:
+================
+
+Candidate changes:
+
+  * r14514
+    Fix segfault in status's handling of svn:externals directories.
+    Justification:
+      See above about "segfault".
+    Votes:
+      +1: kfogel
