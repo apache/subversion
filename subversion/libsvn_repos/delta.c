@@ -616,7 +616,7 @@ svn_repos__compare_files (svn_boolean_t *changed_p,
   svn_filesize_t size1, size2;
   unsigned char digest1[APR_MD5_DIGESTSIZE], digest2[APR_MD5_DIGESTSIZE];
   svn_stream_t *stream1, *stream2;
-  char buf1[SVN_STREAM_CHUNK_SIZE], buf2[SVN_STREAM_CHUNK_SIZE];
+  char *buf1, *buf2;
   apr_size_t len1, len2;
 
   /* If the filesystem claims the things haven't changed, then they
@@ -655,6 +655,8 @@ svn_repos__compare_files (svn_boolean_t *changed_p,
   SVN_ERR (svn_fs_file_contents (&stream1, root1, path1, pool));
   SVN_ERR (svn_fs_file_contents (&stream2, root2, path2, pool));
 
+  buf1 = apr_palloc (pool, SVN_STREAM_CHUNK_SIZE);
+  buf2 = apr_palloc (pool, SVN_STREAM_CHUNK_SIZE);
   do
     {
       len1 = len2 = SVN_STREAM_CHUNK_SIZE;
