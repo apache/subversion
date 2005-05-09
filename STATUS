@@ -17,7 +17,7 @@ Candidate changes:
       Use http://svn.collab.net/repos/svn/branches/1.2.x-r14643 for backport.
       Both revisions are on the branch.
     Votes:
-      +1: kfogel (r14643 only)
+      +1: kfogel
 
 Approved changes (further review is welcome, but not required):
 
