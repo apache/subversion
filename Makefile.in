@@ -591,8 +591,13 @@ check-swig-pl: swig-pl swig-pl-lib
 install-swig-pl: swig-pl install-swig-pl-lib
 	cd $(SWIG_PL_DIR)/native; $(MAKE) install
 
-clean-swig-pl: $(SWIG_PL_DIR)/native/Makefile
-	cd $(SWIG_PL_DIR)/native; $(MAKE) clean
+# Running Makefile.PL at this point *fails* (cannot find ..../.libs) so if the
+# Makefile does not exist, DO NOT try to make it. But, if it doesn't exist,
+# then the directory is probably clean anyway.
+clean-swig-pl:
+	if [ -f "$(SWIG_PL_DIR)/native/Makefile" ]; then \
+	  cd $(SWIG_PL_DIR)/native; $(MAKE) clean; \
+	fi
 
 check-swig-rb: swig-rb svnserve
 	cd $(SWIG_RB_DIR); $(RUBY) test/run-test.rb
