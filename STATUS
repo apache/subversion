@@ -9,14 +9,15 @@ Status of 1.2.0:
 
 Candidate changes:
 
-  * r14643
+  * r14643, r14647
     Use heap not stack for SVN_STREAM_CHUNK_SIZE buffers.
     Justification:
       Buffers simply too big to put on stack; also, API change.
     Notes:
       Use http://svn.collab.net/repos/svn/branches/1.2.x-r14643 for backport.
+      Both revisions are on the branch.
     Votes:
-      +1: kfogel
+      +1: kfogel (r14643 only)
 
 Approved changes (further review is welcome, but not required):
 
