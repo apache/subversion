@@ -24,7 +24,7 @@ Candidate changes:
     Justification:
       Without this fix, 'svn info URL' may be less-than-usable.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, kfogel
 
 Approved changes (further review is welcome, but not required):
 
