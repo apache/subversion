@@ -181,7 +181,7 @@ Possible values are: commit, revert.")
 
 (defvar svn-status-negate-meaning-of-arg-commands nil
   "*List of operations that sould use a negated meaning of the prefix argument.
-The only supported function is 'svn-status.")
+The supported functions are `svn-status' and `svn-status-set-user-mark'.")
 
 (defvar svn-status-svn-executable "svn" "*The name of the svn executable.")
 
@@ -1555,7 +1555,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
       (insert
        (format "%d Unmodified file(s) are hidden - press `_' to toggle hiding\n"
                unmodified-count)))
-    (when custom-hide-count
+    (when (> custom-hide-count 0)
       (insert
        (format "%d file(s) are hidden via the svn-status-custom-hide-function\n"
                custom-hide-count)))
@@ -1728,6 +1728,7 @@ If the cursor is on a directory all files in this directory are marked.
 If this function is called with a prefix argument, only the current line is
 marked, even if it is a directory."
   (interactive "P")
+  (setq arg (svn-status-possibly-negate-meaning-of-arg arg 'svn-status-set-user-mark))
   (let ((info (svn-status-get-line-information)))
     (if info
         (progn
@@ -1743,6 +1744,7 @@ If the cursor is on a directory, all files in this directory are unmarked.
 If this function is called with a prefix argument, only the current line is
 unmarked, even if is a directory."
   (interactive "P")
+  (setq arg (svn-status-possibly-negate-meaning-of-arg arg 'svn-status-set-user-mark))
   (let ((info (svn-status-get-line-information)))
     (if info
         (progn
