@@ -741,7 +741,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# If a lock exists and is owned by a different person, don't allow it"
       APR_EOL_STR
-      "# to be broken."
+      "# to be stolen (e.g., with 'svn lock --force ...')."
       APR_EOL_STR
       APR_EOL_STR
       "# (Maybe this script could send email to the to the lock owner?)"
