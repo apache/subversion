@@ -317,6 +317,34 @@ def hotcopy_dot(sbox):
   if origerr or backerr or origout != backout:
     raise svntest.Failure
 
+#----------------------------------------------------------------------
+
+def hotcopy_format(sbox):
+  "'svnadmin hotcopy' checking db/format file"
+  sbox.build()
+
+  backup_dir, backup_url = sbox.add_repo_path('backup')
+  output, errput = svntest.main.run_svnadmin("hotcopy", sbox.repo_dir,
+                                             backup_dir)
+  if errput:
+    print "Error: hotcopy failed"
+    raise svntest.Failure
+  
+  # verify that the db/format files are the same
+  fp = open(os.path.join(sbox.repo_dir, "db", "format"))
+  contents1 = fp.read()
+  fp.close()
+  
+  fp2 = open(os.path.join(backup_dir, "db", "format"))
+  contents2 = fp2.read()
+  fp2.close()
+  
+  if contents1 != contents2:
+    print "Error: db/format file contents do not match after hotcopy"
+    raise svntest.Failure
+  
+
+
 
 ########################################################################
 # Run the tests
@@ -331,6 +359,7 @@ test_list = [ None,
               dump_move_dir_modify_child,
               dump_quiet,
               hotcopy_dot,
+              hotcopy_format,
              ]
 
 if __name__ == '__main__':
