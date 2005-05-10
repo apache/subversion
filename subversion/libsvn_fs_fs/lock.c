@@ -49,7 +49,7 @@
 #define CREATION_DATE_KEY "creation_date"
 #define EXPIRATION_DATE_KEY "expiration_date"
 #define COMMENT_KEY "comment"
-#define IS_XML_COMMENT_KEY "is_xml_comment"
+#define IS_DAV_COMMENT_KEY "is_dav_comment"
 #define CHILDREN_KEY "children"
 
 /* Number of characters from the head of a digest file name used to
@@ -198,8 +198,8 @@ write_digest_file (apr_hash_t *children,
                   lock->owner, APR_HASH_KEY_STRING, pool); 
       hash_store (hash, COMMENT_KEY, sizeof(COMMENT_KEY)-1,
                   lock->comment, APR_HASH_KEY_STRING, pool); 
-      hash_store (hash, IS_XML_COMMENT_KEY, sizeof(IS_XML_COMMENT_KEY)-1,
-                  lock->xml_comment ? "1" : "0", 1, pool);
+      hash_store (hash, IS_DAV_COMMENT_KEY, sizeof(IS_DAV_COMMENT_KEY)-1,
+                  lock->is_dav_comment ? "1" : "0", 1, pool);
       hash_store (hash, CREATION_DATE_KEY, sizeof(CREATION_DATE_KEY)-1,
                   creation_date, APR_HASH_KEY_STRING, pool);
       hash_store (hash, EXPIRATION_DATE_KEY, sizeof(EXPIRATION_DATE_KEY)-1,
@@ -305,9 +305,9 @@ read_digest_file (apr_hash_t **children_p,
       if (! ((lock->owner = hash_fetch (hash, OWNER_KEY, pool))))
         return svn_fs_fs__err_corrupt_lockfile (fs, path);
 
-      if (! ((val = hash_fetch (hash, IS_XML_COMMENT_KEY, pool))))
+      if (! ((val = hash_fetch (hash, IS_DAV_COMMENT_KEY, pool))))
         return svn_fs_fs__err_corrupt_lockfile (fs, path);
-      lock->xml_comment = (val[0] == '1') ? TRUE : FALSE;
+      lock->is_dav_comment = (val[0] == '1') ? TRUE : FALSE;
 
       if (! ((val = hash_fetch (hash, CREATION_DATE_KEY, pool))))
         return svn_fs_fs__err_corrupt_lockfile (fs, path);
@@ -677,6 +677,7 @@ struct lock_baton {
   const char *path;
   const char *token;
   const char *comment;
+  svn_boolean_t is_dav_comment;
   apr_time_t expiration_date;
   svn_revnum_t current_rev;
   svn_boolean_t steal_lock;
@@ -783,6 +784,7 @@ lock_body (void *baton, apr_pool_t *pool)
   lock->path = apr_pstrdup (lb->pool, lb->path);
   lock->owner = apr_pstrdup (lb->pool, lb->fs->access_ctx->username);
   lock->comment = apr_pstrdup (lb->pool, lb->comment);
+  lock->is_dav_comment = lb->is_dav_comment;
   lock->creation_date = apr_time_now();
   lock->expiration_date = lb->expiration_date;
   SVN_ERR (set_lock (lb->fs, lock, pool));
@@ -843,6 +845,7 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
                  const char *path,
                  const char *token,
                  const char *comment,
+                 svn_boolean_t is_dav_comment,
                  apr_time_t expiration_date,
                  svn_revnum_t current_rev,
                  svn_boolean_t steal_lock,
@@ -858,6 +861,7 @@ svn_fs_fs__lock (svn_lock_t **lock_p,
   lb.path = path;
   lb.token = token;
   lb.comment = comment;
+  lb.is_dav_comment = is_dav_comment;
   lb.expiration_date = expiration_date;
   lb.current_rev = current_rev;
   lb.steal_lock = steal_lock;

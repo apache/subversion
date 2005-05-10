@@ -882,8 +882,8 @@ svn_fs_set_uuid (svn_fs_t *fs, const char *uuid, apr_pool_t *pool)
 
 svn_error_t *
 svn_fs_lock (svn_lock_t **lock, svn_fs_t *fs, const char *path, 
-             const char *token, const char *comment, 
-             apr_time_t expiration_date, 
+             const char *token, const char *comment,
+             svn_boolean_t is_dav_comment, apr_time_t expiration_date, 
              svn_revnum_t current_rev, svn_boolean_t steal_lock, 
              apr_pool_t *pool)
 {
@@ -901,8 +901,8 @@ svn_fs_lock (svn_lock_t **lock, svn_fs_t *fs, const char *path,
           (SVN_ERR_INCORRECT_PARAMS, NULL,
            _("Negative expiration date passed to svn_fs_lock"));      
 
-  return fs->vtable->lock (lock, fs, path, token, comment, expiration_date,
-                           current_rev, steal_lock, pool);  
+  return fs->vtable->lock (lock, fs, path, token, comment, is_dav_comment,
+                           expiration_date, current_rev, steal_lock, pool);  
 }
 
 svn_error_t *

@@ -417,7 +417,7 @@ typedef svn_error_t *(*svn_cancel_func_t) (void *cancel_baton);
  * Because a lock is immutable, a client is free to not only cache the
  * lock-token, but the lock's fields too, for convenience.
  *
- * Note that the 'xml_comment' field is wholly ignored by every
+ * Note that the 'is_dav_comment' field is wholly ignored by every
  * library except for mod_dav_svn.  The field isn't even marshalled
  * over the network to the client.  Assuming lock structures are
  * created with apr_pcalloc(), a default value of 0 is universally safe.
@@ -426,14 +426,14 @@ typedef svn_error_t *(*svn_cancel_func_t) (void *cancel_baton);
  */
 typedef struct svn_lock_t
 {
-  const char *path;           /**< the path this lock applies to */
-  const char *token;          /**< universally unique URI representing lock */
-  const char *owner;          /**< the username which owns the lock */
-  const char *comment;        /**< (optional) description of lock  */
-  svn_boolean_t xml_comment;  /**< whether comment is packaged in XML by DAV */
-  apr_time_t creation_date;   /**< when lock was made */
-  apr_time_t expiration_date; /**< (optional) when lock will expire;
-                                   If value is 0, lock will never expire. */
+  const char *path;              /**< the path this lock applies to */
+  const char *token;             /**< unique URI representing lock */
+  const char *owner;             /**< the username which owns the lock */
+  const char *comment;           /**< (optional) description of lock  */
+  svn_boolean_t is_dav_comment;  /**< was comment made by generic DAV client? */
+  apr_time_t creation_date;      /**< when lock was made */
+  apr_time_t expiration_date;    /**< (optional) when lock will expire;
+                                      If value is 0, lock will never expire. */
 } svn_lock_t;
 
 /** @since New in 1.2.
