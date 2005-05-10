@@ -15,7 +15,7 @@ Status of 1.2.0:
       Very tiny amount of code-churn.  Touches many files only because 
       it's a public API change. 
     Votes:
-      +1: sussman
+      +1: sussman, ringstrom
 
 
 Status of 1.2.1:
