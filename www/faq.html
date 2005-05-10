@@ -117,6 +117,8 @@ file?</a></li>
 <li><a href="#wc-change-detection">How do I detect adds, deletes,
 copies and renames in a working copy after they've already
 happened?</a></li>
+<li><a href="#svnserve-win-service">How do I run svnserve as a service
+on Windows?</a>
 </ul>
 
 <h4>Troubleshooting:</h4>
@@ -1714,6 +1716,20 @@ for transparency, try setting up an apache server and using the
 will allow users to mount the repository as a network disk, and any
 changes made to the volume cause automatic commits on the server.</p>
 
+<![CDATA[=========================================================]]>
+
+<h3><a name="svnserve-win-service">How do I run svnserve as a service
+on Windows?</a></h3>
+
+<p>The <tt>svnserve</tt> binary itself cannot be installed as a
+Windows service, but there are a number of &ldquo;service
+wrappers&rdquo; that can do the job; for example:</p>
+<ul>
+<li><a href="http://dark.clansoft.dk/~mbn/svnservice/">SVNService</a>
+is a free tool written by Magnus Norddahl</li>
+<li><a href="http://support.microsoft.com/kb/q137890/">SrvAny</a>
+is avaliable free of charge from Microsoft</li>
+</ul>
 
 <![CDATA[=========================================================]]>
 
