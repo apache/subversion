@@ -987,18 +987,18 @@ rmlocks (const char **msg,
   {
     const char *expected [] = { "A/mu", "A/D/gamma", NULL };
 
-    SVN_ERR (svn_fs_lock (&l1, fs, "/iota", NULL, NULL, 0, youngest_rev,
+    SVN_ERR (svn_fs_lock (&l1, fs, "/iota", NULL, NULL, 0, 0, youngest_rev,
                           FALSE, subpool));
-    SVN_ERR (svn_fs_lock (&l2, fs, "/A/mu", NULL, NULL, 0, youngest_rev,
+    SVN_ERR (svn_fs_lock (&l2, fs, "/A/mu", NULL, NULL, 0, 0, youngest_rev,
                           FALSE, subpool));
-    SVN_ERR (svn_fs_lock (&l3, fs, "/A/D/gamma", NULL, NULL, 0, youngest_rev,
+    SVN_ERR (svn_fs_lock (&l3, fs, "/A/D/gamma", NULL, NULL, 0, 0, youngest_rev,
                           FALSE, subpool));
 
     /* Break l2. */
     SVN_ERR (svn_fs_unlock (fs, "/A/mu", NULL, TRUE, subpool));
 
     /* Steal l3 from ourselves. */
-    SVN_ERR (svn_fs_lock (&l4, fs, "/A/D/gamma", NULL, NULL, 0, youngest_rev,
+    SVN_ERR (svn_fs_lock (&l4, fs, "/A/D/gamma", NULL, NULL, 0, 0, youngest_rev,
                           TRUE, subpool));
 
     /* Create the editor. */

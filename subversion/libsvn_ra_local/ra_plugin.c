@@ -1093,7 +1093,7 @@ svn_ra_local__lock (svn_ra_session_t *session,
       abs_path = svn_path_join (sess->fs_path, path, iterpool);
 
       /* This wrapper will call pre- and post-lock hooks. */
-      err = svn_repos_fs_lock (&lock, sess->repos, abs_path, NULL, comment, 
+      err = svn_repos_fs_lock (&lock, sess->repos, abs_path, NULL, comment, 0,
                                0 /* no expiration */, *revnum, force, 
                                iterpool);
 
