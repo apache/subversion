@@ -2372,7 +2372,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
           {
             const char *const tag = (is_dir ? "dir" : "file");
 
-            /* ### This is where the we could search for props */
+            /* This is where we could search for props */
 
             ap_fprintf(output, bb,
                        "    <%s name=\"%s\" href=\"%s\" />\n",
