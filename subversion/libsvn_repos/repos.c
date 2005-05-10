@@ -744,7 +744,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       "# to be stolen (e.g., with 'svn lock --force ...')."
       APR_EOL_STR
       APR_EOL_STR
-      "# (Maybe this script could send email to the to the lock owner?)"
+      "# (Maybe this script could send email to the lock owner?)"
       APR_EOL_STR
       "SVNLOOK=/usr/local/bin/svnlook"
       APR_EOL_STR
@@ -881,7 +881,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# If a lock is owned by a different person, don't allow it be broken."
       APR_EOL_STR
-      "# (Maybe this script could send email to the to the lock owner?)"
+      "# (Maybe this script could send email to the lock owner?)"
       APR_EOL_STR
       APR_EOL_STR
       "SVNLOOK=" SVN_BINDIR "/svnlook"
