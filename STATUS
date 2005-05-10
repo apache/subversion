@@ -4,6 +4,20 @@ See "Stabilizing and maintaining releases" in trunk/HACKING for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
+Status of 1.2.0:
+================
+
+  * r14675
+    Fix major autoversioning interoperabliity bug.
+    Justification:
+      Without this bugfix, many DAV clients won't work against mod_dav_svn.
+    Notes:
+      Very tiny amount of code-churn.  Touches many files only because 
+      it's a public API change. 
+    Votes:
+      +1: sussman
+
+
 Status of 1.2.1:
 ================
 
