@@ -7,7 +7,7 @@ delay a release, etc.
 Status of 1.2.0:
 ================
 
-  * r14678
+  * r14678, r14683
     Fix hotcopy to not fail on missing format files.
     Justification:
       Hotcopy will fail on old repos without this fix.
