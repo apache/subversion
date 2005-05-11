@@ -21,6 +21,13 @@ Status of 1.2.0:
     Votes:
       +1: lundblad, brane
 
+  * r14688
+    Fix "svn info" handling multiple targets.
+    Justification:
+      Regression.
+    Votes:
+      +1: julianfoad
+
 Status of 1.2.1:
 ================
 
