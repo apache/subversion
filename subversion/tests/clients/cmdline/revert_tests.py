@@ -212,7 +212,38 @@ def revert_replaced_file_without_props(sbox):
   expected_status.tweak('file1', status='  ', wc_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-
+#----------------------------------------------------------------------
+# Regression test for issue #876:
+# svn revert of an svn move'd file does not revert the file
+def revert_moved_file(sbox):
+    "revert a moved file"
+    
+    sbox.build()
+    wc_dir = sbox.wc_dir
+    iota_path = os.path.join(wc_dir, 'iota')
+    iota_path_moved = os.path.join(wc_dir, 'iota_moved')
+    
+    svntest.actions.run_and_verify_svn(None, None, [], 'mv', iota_path,
+                                        iota_path_moved)
+    expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
+    expected_output.tweak('iota', status='D ')
+    expected_output.add({
+      'iota_moved' : Item(status='A ', copied='+', wc_rev='-'),
+    })
+    svntest.actions.run_and_verify_status(wc_dir, expected_output)
+    
+    # now revert the file iota
+    svntest.actions.run_and_verify_svn(None, 
+      ["Reverted '" + iota_path + "'\n"], None, 'revert', iota_path)
+    
+    # at this point, svn status on iota_path_moved should return nothing
+    # since it should disappear on reverting the move, and since svn status
+    # on a non-existent file returns nothing.
+    
+    svntest.actions.run_and_verify_svn(None, [], [], 
+                                      'status', '-v', iota_path_moved)
+    
+       
 ########################################################################
 # Run the tests
 
@@ -222,6 +253,7 @@ test_list = [ None,
               XFail(revert_reexpand_keyword),
               Skip(revert_corrupted_text_base, 1),
               revert_replaced_file_without_props,
+              XFail(revert_moved_file),
              ]
 
 if __name__ == '__main__':
