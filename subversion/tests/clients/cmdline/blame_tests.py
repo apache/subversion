@@ -83,8 +83,8 @@ def blame_binary(sbox):
                        '--password', svntest.main.wc_passwd,
                        '-m', '', iota)
   
-  output, errput = svntest.main.run_svn(None, 'blame', iota)
-  if (len(output) != 1) or (output[0].find('Skipping') == -1):
+  output, errput = svntest.main.run_svn(2, 'blame', iota)
+  if (len(errput) != 1) or (errput[0].find('Skipping') == -1):
     raise svntest.Failure
     
   
@@ -118,7 +118,64 @@ def blame_directory(sbox):
   else:
     raise svntest.Failure ('Failed to find %s in %s' %
       (expected_error, str(errlines)))
-  
+
+
+
+# Basic test for svn blame --xml.
+#
+def blame_in_xml(sbox):
+  "blame output in XML format"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+  svntest.main.file_append(file_path, "Testing svn blame --xml\n")
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  # Retrieve last changed date from svn info
+  output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'log', file_path,
+                                                     '--xml', '-rHEAD')
+  info_msg = "<date>"
+  for line in output:
+    if line.find(info_msg) >= 0:
+      time_str = line[:len(line)]
+      break
+  else:
+    raise svntest.Failure
+
+  template = ["<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
+              "<blame>\n",
+              "<target\n",
+              "   path=\"%s\">\n" % (file_path),
+              "<entry\n",
+              "   line-number=\"1\">\n",
+              "<commit\n",
+              "   revision=\"2\">\n",
+              "<author>jrandom</author>\n",
+              "%s" % (time_str),
+              "</commit>\n",
+              "</entry>\n",
+              "</target>\n",
+              "</blame>\n",
+             ]
+
+  output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'blame', file_path,
+                                                     '--xml')
+
+  for i in range(0, len(output)):
+    if output[i] != template[i]:
+      raise svntest.Failure
+
+
 
 ########################################################################
 # Run the tests
@@ -129,6 +186,7 @@ test_list = [ None,
               blame_space_in_name,
               blame_binary,
               blame_directory,
+              blame_in_xml,
              ]
 
 if __name__ == '__main__':

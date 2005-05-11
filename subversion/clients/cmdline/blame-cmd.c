@@ -24,6 +24,7 @@
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_cmdline.h"
+#include "svn_xml.h"
 #include "svn_time.h"
 #include "cl.h"
 
@@ -33,10 +34,73 @@ typedef struct
 {
   svn_cl__opt_state_t *opt_state;
   svn_stream_t *out;
+  svn_stringbuf_t *sbuf;
 } blame_baton_t;
 
 
 /*** Code. ***/
+
+/* This implements the svn_clientblame_receiver_t interface, printing
+   XML to stdout. */
+static svn_error_t *
+blame_receiver_xml (void *baton,
+                    apr_int64_t line_no,
+                    svn_revnum_t revision,
+                    const char *author,
+                    const char *date,
+                    const char *line,
+                    apr_pool_t *pool)
+{
+  svn_stringbuf_t *sb = ((blame_baton_t *) baton)->sbuf;
+
+  /* "<entry ...>" */
+  /* line_no is 0-based, but the rest of the world is probably Pascal
+     programmers, so we make them happy and output 1-based line numbers. */
+  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "entry",
+                         "line-number",
+                         apr_psprintf (pool, "%lld", line_no + 1),
+                         NULL);
+
+  if (SVN_IS_VALID_REVNUM (revision))
+    {
+      /* "<commit ...>" */
+      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "commit",
+                             "revision",
+                             apr_psprintf (pool, "%ld", revision), NULL);
+
+      /* "<author>xx</author>" */
+      if (author)
+        {
+          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
+                                 "author", NULL);
+          svn_xml_escape_cdata_cstring (&sb, author, pool);
+          svn_xml_make_close_tag (&sb, pool, "author");
+        }
+
+      /* "<date>xx</date>" */
+      if (date)
+        {
+          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
+                                 "date", NULL);
+          svn_xml_escape_cdata_cstring (&sb, date, pool);
+          svn_xml_make_close_tag (&sb, pool, "date");
+        }
+
+      /* "</commit>" */
+      svn_xml_make_close_tag (&sb, pool, "commit");
+    }
+
+  /* "</entry>" */
+  svn_xml_make_close_tag (&sb, pool, "entry");
+
+  SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
+  svn_stringbuf_setempty (sb);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* This implements the svn_client_blame_receiver_t interface. */
 static svn_error_t *
 blame_receiver (void *baton,
                 apr_int64_t line_no,
@@ -82,6 +146,34 @@ blame_receiver (void *baton,
 }
  
 
+/* Prints XML header to standard out. */
+static svn_error_t *
+print_header_xml (apr_pool_t *pool)
+{
+  svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+
+  /* <?xml version="1.0" encoding="utf-8"?> */
+  svn_xml_make_header (&sb, pool);
+
+  /* "<blame>" */
+  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "blame", NULL);
+
+  return svn_cl__error_checked_fputs (sb->data, stdout);
+}
+
+
+/* Prints XML footer to standard out. */
+static svn_error_t *
+print_footer_xml (apr_pool_t *pool)
+{
+  svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+
+  /* "</blame>" */
+  svn_xml_make_close_tag (&sb, pool, "blame");
+  return svn_cl__error_checked_fputs (sb->data, stdout);
+}
+
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__blame (apr_getopt_t *os,
@@ -97,7 +189,7 @@ svn_cl__blame (apr_getopt_t *os,
   int i;
   svn_boolean_t is_head_or_base = FALSE;
 
-  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
+  SVN_ERR (svn_opt_args_to_target_array2 (&targets, os,
                                           opt_state->targets, pool));
 
   /* Blame needs a file on which to operate. */
@@ -124,12 +216,34 @@ svn_cl__blame (apr_getopt_t *os,
       opt_state->start_revision.kind = svn_opt_revision_number;
       opt_state->start_revision.value.number = 1;
     }
+  if (! opt_state->xml)
+    {
+      SVN_ERR (svn_stream_for_stdout (&out, pool));
+      bl.out = out;
+    }
+  else
+    bl.sbuf = svn_stringbuf_create ("", pool);
 
-  SVN_ERR (svn_stream_for_stdout (&out, pool));
   bl.opt_state = opt_state;
-  bl.out = out;
-  
+
   subpool = svn_pool_create (pool);
+
+  /* If output is not incremental, output the XML header and wrap
+     everything in a top-level element. This makes the output in
+     its entirety a well-formed XML document. */
+  if (opt_state->xml)
+    {
+      if (opt_state->verbose)
+        return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'verbose' option invalid in XML mode"));
+
+      if ( ! opt_state->incremental)
+        SVN_ERR (print_header_xml (pool));
+    }
+  else if (opt_state->incremental)
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("'incremental' option only valid in XML "
+                               "mode"));
 
   for (i = 0; i < targets->nelts; i++)
     {
@@ -137,7 +251,7 @@ svn_cl__blame (apr_getopt_t *os,
       const char *target = ((const char **) (targets->elts))[i];
       const char *truepath;
       svn_opt_revision_t peg_revision;
-      
+
       svn_pool_clear (subpool);
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
       if (is_head_or_base)
@@ -151,31 +265,59 @@ svn_cl__blame (apr_getopt_t *os,
       /* Check for a peg revision. */
       SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, target,
                                    subpool));
-               
-      err = svn_client_blame2 (truepath,
-                               &peg_revision,
-                               &opt_state->start_revision,
-                               &opt_state->end_revision,
-                               blame_receiver,
-                               &bl,
-                               ctx,
-                               subpool);
+      if (opt_state->xml)
+        {
+          /* "<target ...>" */
+          /* We don't output this tag immediately, which avoids creating
+             a target element if this path is skipped. */
+          svn_xml_make_open_tag (&bl.sbuf, pool, svn_xml_normal, "target",
+                                 "path", truepath, NULL);
+
+          err = svn_client_blame2 (truepath,
+                                   &peg_revision,
+                                   &opt_state->start_revision,
+                                   &opt_state->end_revision,
+                                   blame_receiver_xml,
+                                   &bl,
+                                   ctx,
+                                   subpool);
+        }
+      else
+        err = svn_client_blame2 (truepath,
+                                 &peg_revision,
+                                 &opt_state->start_revision,
+                                 &opt_state->end_revision,
+                                 blame_receiver,
+                                 &bl,
+                                 ctx,
+                                 subpool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_CLIENT_IS_BINARY_FILE)
             {
-              SVN_ERR (svn_cmdline_printf (subpool,
-                                           _("Skipping binary file: '%s'\n"),
-                                           target));
               svn_error_clear (err);
+              SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
+                                            _("Skipping binary file: '%s'\n"),
+                                            target));
             }
           else
             {
               return err;
             }
         }
+      else if (opt_state->xml)
+        {
+          /* "</target>" */
+          svn_xml_make_close_tag (&(bl.sbuf), pool, "target");
+          SVN_ERR (svn_cl__error_checked_fputs (bl.sbuf->data, stdout));
+        }
+
+      if (opt_state->xml)
+        svn_stringbuf_setempty (bl.sbuf);
     }
   svn_pool_destroy (subpool);
+  if (opt_state->xml && ! opt_state->incremental)
+    SVN_ERR (print_footer_xml (pool));
 
   return SVN_NO_ERROR;
 }
