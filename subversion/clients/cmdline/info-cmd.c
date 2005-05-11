@@ -289,7 +289,7 @@ svn_cl__info (apr_getopt_t *os,
                     svn_path_local_style (target, pool)));
           continue;
         }
-      else
+      else if (err)
         return err;
 
     }
