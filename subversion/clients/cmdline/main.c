@@ -884,7 +884,16 @@ main (int argc, const char * const *argv)
 
       switch (opt_id) {
       case svn_cl__limit_opt:
-        opt_state.limit = atoi (opt_arg);
+        {
+          char *end;
+          opt_state.limit = strtol (opt_arg, &end, 10);
+          if (end == opt_arg || *end != '\0')
+            {
+              err = svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                      _("Non-numeric limit argument given"));
+              return error_exit (err, stderr, FALSE, pool);
+            }
+        }
         break;
       case 'm':
         /* Note that there's no way here to detect if the log message
