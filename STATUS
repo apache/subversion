@@ -14,7 +14,12 @@ Status of 1.2.0:
     Votes:
       +1: djh
 
-
+  * r14629
+    const qualify a variable.
+    Justification:
+      Fixes broken build on Netware.
+    Votes:
+      +1: lundblad
 
 Status of 1.2.1:
 ================
