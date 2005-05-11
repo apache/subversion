@@ -414,6 +414,7 @@ svn_repos_fs_lock (svn_lock_t **lock,
                    const char *path,
                    const char *token,
                    const char *comment,
+                   svn_boolean_t is_dav_comment,
                    apr_time_t expiration_date,
                    svn_revnum_t current_rev,
                    svn_boolean_t steal_lock,
@@ -444,7 +445,7 @@ svn_repos_fs_lock (svn_lock_t **lock,
   SVN_ERR (svn_repos__hooks_pre_lock (repos, path, username, pool));
 
   /* Lock. */
-  SVN_ERR (svn_fs_lock (lock, repos->fs, path, token, comment, 
+  SVN_ERR (svn_fs_lock (lock, repos->fs, path, token, comment, is_dav_comment,
                         expiration_date, current_rev, steal_lock, pool));
 
   /* Run post-lock hook. */

@@ -68,6 +68,7 @@ struct lock_args
   const char *path;
   const char *token;
   const char *comment;
+  svn_boolean_t is_dav_comment;
   svn_boolean_t steal_lock;
   apr_time_t expiration_date;
   svn_revnum_t current_rev;
@@ -188,6 +189,7 @@ txn_body_lock (void *baton, trail_t *trail)
   lock->path = apr_pstrdup (trail->pool, args->path);
   lock->owner = apr_pstrdup (trail->pool, trail->fs->access_ctx->username);
   lock->comment = apr_pstrdup (trail->pool, args->comment);
+  lock->is_dav_comment = args->is_dav_comment;
   lock->creation_date = apr_time_now();
   lock->expiration_date = args->expiration_date;
   SVN_ERR (add_lock_and_token (lock, lock->token, args->path, trail));
@@ -204,6 +206,7 @@ svn_fs_base__lock (svn_lock_t **lock,
                    const char *path,
                    const char *token,
                    const char *comment,
+                   svn_boolean_t is_dav_comment,
                    apr_time_t expiration_date,
                    svn_revnum_t current_rev,
                    svn_boolean_t steal_lock,
@@ -217,6 +220,7 @@ svn_fs_base__lock (svn_lock_t **lock,
   args.path = svn_fs_base__canonicalize_abspath (path, pool);
   args.token = token;
   args.comment = comment;
+  args.is_dav_comment = is_dav_comment;
   args.steal_lock = steal_lock;
   args.expiration_date = expiration_date;
   args.current_rev = current_rev;
