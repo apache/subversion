@@ -31,6 +31,7 @@ the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
     * fixed: 'svn merge' file-not-found' error (issue #1673)
     * fixed: 'svn merge' of propchanges into deleted file (issue #2132)
     * fixed: 'svn merge' on implicit target with space (r13010)
+    * fixed: 'svn merge/diff URL URL' can cause httpd timeout (issue #2048)
     * fixed: 'svn switch/update' failure might corrupt wc (issue #1825)
     * fixed: 'svn up' should rm before add, helps case-insensitivity (r12616)
     * fixed: 'svn up -rX' causes file to be unrestorable (issue #2250)
@@ -110,7 +111,6 @@ the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
         - 'svn commit' sends locks, 'svn up' removes stale locks
         - new hook scripts: pre-lock, pre-unlock, post-lock, post-unlock
     * speedups for 'svn blame' and other commands (see xdelta in release notes)
-    * fixed: big 'svn diff/merge URL URL' ops cause httpd timeout (issue #2048)
     * fixed: make both svnserve and svn:// urls work with IPv6 (r13235-6)
     * fixed: updating xml-unsafe dirname over http (issue #2268)
     * continued improvement of localized message translations:
