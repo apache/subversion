@@ -18,8 +18,12 @@ Candidate changes:
     Fix segfault in status's handling of svn:externals directories.
     Justification:
       See above about "segfault".
+    Notes:
+      If this gets three +1's before 1.2.0-rc<final> comes out, then
+      let's please merge it then.  I only put it in 1.2.1 because I
+      didn't think this change should delay 1.2.0.  -kfogel
     Votes:
-      +1: kfogel
+      +1: kfogel, brane
 
 Approved changes (further review is welcome, but not required):
 
