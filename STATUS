@@ -12,21 +12,21 @@ Status of 1.2.0:
     Justification:
       Hotcopy will fail on old repos without this fix.
     Votes:
-      +1: djh
+      +1: djh, ghudson
 
   * r14629
     const qualify a variable.
     Justification:
       Fixes broken build on Netware.
     Votes:
-      +1: lundblad, brane
+      +1: lundblad, brane, ghudson
 
   * r14688
     Fix "svn info" handling multiple targets.
     Justification:
       Regression.
     Votes:
-      +1: julianfoad
+      +1: julianfoad, ghudson
 
 Status of 1.2.1:
 ================
