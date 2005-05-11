@@ -17,6 +17,14 @@ Status of 1.2.0:
     Votes:
       +1: sussman, ringstrom
 
+  * r14678
+    Fix hotcopy to not fail on missing format files.
+    Justification:
+      Hotcopy will fail on old repos without this fix.
+    Votes:
+      +1: djh
+
+
 
 Status of 1.2.1:
 ================
