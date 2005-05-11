@@ -12,7 +12,7 @@ Status of 1.2.0:
     Justification:
       Hotcopy will fail on old repos without this fix.
     Votes:
-      +1: djh, ghudson
+      +1: djh, ghudson, kfogel
 
   * r14629
     const qualify a variable.
