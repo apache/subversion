@@ -7,26 +7,7 @@ delay a release, etc.
 Status of 1.2.0:
 ================
 
-  * r14678, r14683
-    Fix hotcopy to not fail on missing format files.
-    Justification:
-      Hotcopy will fail on old repos without this fix.
-    Votes:
-      +1: djh, ghudson, kfogel
-
-  * r14629
-    const qualify a variable.
-    Justification:
-      Fixes broken build on Netware.
-    Votes:
-      +1: lundblad, brane, ghudson
-
-  * r14688
-    Fix "svn info" handling multiple targets.
-    Justification:
-      Regression.
-    Votes:
-      +1: julianfoad, ghudson, sussman
+   (no changes pending)
 
 Status of 1.2.1:
 ================
