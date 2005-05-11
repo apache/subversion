@@ -265,13 +265,13 @@ svn_wc__maybe_set_read_only (svn_boolean_t *did_set,
                              apr_pool_t *pool)
 {
   const svn_string_t *needs_lock;
-  svn_wc_entry_t* entry;
+  const svn_wc_entry_t* entry;
 
   if (did_set)
     *did_set = FALSE;
 
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
-  if ( entry && entry->lock_token )
+  if (entry && entry->lock_token)
     return SVN_NO_ERROR;
 
   SVN_ERR (svn_wc_prop_get (&needs_lock, SVN_PROP_NEEDS_LOCK, path, 

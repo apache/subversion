@@ -1476,6 +1476,38 @@ def basic_checkout_file(sbox):
     raise svntest.Failure
 
 #----------------------------------------------------------------------
+def basic_info(sbox):
+  "basic info command"
+
+  def check_paths(lines, expected_paths):
+    "check that paths found on input lines beginning 'Path: ' are as expected"
+    paths = []
+    for line in lines:
+      if line.startswith('Path: '):
+        paths.append(line[6:].rstrip())
+    if paths != expected_paths:
+      print "Reported paths:", paths
+      print "Expected paths:", expected_paths
+      raise svntest.Failure
+
+  sbox.build()
+
+  cwd = os.getcwd()
+  try:
+    os.chdir(sbox.wc_dir)
+
+    # Check that "info" works with 0, 1 and more than 1 explicit targets.
+    output, errput = svntest.main.run_svn(None, 'info')
+    check_paths(output, ['.'])
+    output, errput = svntest.main.run_svn(None, 'info', 'iota')
+    check_paths(output, ['iota'])
+    output, errput = svntest.main.run_svn(None, 'info', 'iota', '.')
+    check_paths(output, ['iota', '.'])
+
+  finally:
+    os.chdir(cwd)
+
+#----------------------------------------------------------------------
 ########################################################################
 # Run the tests
 
@@ -1504,6 +1536,7 @@ test_list = [ None,
               basic_add_ignores,
               uri_syntax,
               basic_checkout_file,
+              basic_info,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.

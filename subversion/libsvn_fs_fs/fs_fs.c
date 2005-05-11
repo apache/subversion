@@ -62,6 +62,7 @@
 #define PATH_REVS_DIR      "revs"          /* Directory of revisions */
 #define PATH_REVPROPS_DIR  "revprops"      /* Directory of revprops */
 #define PATH_TXNS_DIR      "transactions"  /* Directory of transactions */
+#define PATH_LOCKS_DIR     "locks"         /* Directory of locks */
 
 /* Names of special files and file extensions for transactions */
 #define PATH_CHANGES       "changes"       /* Records changes made so far */
@@ -343,12 +344,17 @@ svn_fs_fs__hotcopy (const char *src_path,
                     const char *dst_path,
                     apr_pool_t *pool)
 {
-  const char *src_subdir, *dst_subdir;
+  const char *src_subdir, *dst_subdir, *format_path;
   svn_revnum_t youngest, rev;
   apr_pool_t *iterpool;
+  svn_node_kind_t kind;
 
-  /* Copy the format file. */
-  SVN_ERR (svn_io_dir_file_copy (src_path, dst_path, PATH_FORMAT, pool));
+  /* Copy the format file if it exists -- it is assumed to be format 1
+     if it does not exist. */
+  format_path = svn_path_join (src_path, PATH_FORMAT, pool);
+  SVN_ERR (svn_io_check_path (format_path, &kind, pool));
+  if (kind == svn_node_file)
+    SVN_ERR (svn_io_dir_file_copy (src_path, dst_path, PATH_FORMAT, pool));
 
   /* Copy the current file. */
   SVN_ERR (svn_io_dir_file_copy (src_path, dst_path, PATH_CURRENT, pool));
@@ -396,9 +402,15 @@ svn_fs_fs__hotcopy (const char *src_path,
   dst_subdir = svn_path_join (dst_path, PATH_TXNS_DIR, pool);
   SVN_ERR (svn_io_make_dir_recursively (dst_subdir, pool));
 
+  /* Now copy the locks tree. */
+  src_subdir = svn_path_join (src_path, PATH_LOCKS_DIR, pool);
+  SVN_ERR (svn_io_check_path (src_subdir, &kind, pool));
+  if (kind == svn_node_dir)
+    SVN_ERR (svn_io_copy_dir_recursively (src_subdir, dst_path,
+                                          PATH_LOCKS_DIR, TRUE, NULL,
+                                          NULL, pool));
   return SVN_NO_ERROR;
 }
-
 
 svn_error_t *
 svn_fs_fs__youngest_rev (svn_revnum_t *youngest_p,
