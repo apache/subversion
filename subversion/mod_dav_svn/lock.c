@@ -75,7 +75,7 @@ svn_lock_to_dav_lock(dav_lock **dlock,
   /* the svn_lock_t 'comment' field maps to the 'DAV:owner' field. */
   if (slock->comment)
     {
-      if (! slock->xml_comment)
+      if (! slock->is_dav_comment)
         {
           /* This comment was originally given to us by an svn client,
              so, we need to wrap the naked comment with <DAV:owner>,
@@ -195,7 +195,7 @@ dav_lock_to_svn_lock(svn_lock_t **slock,
              the <D:owner> wrapper) when storing in the repository, so
              it looks reasonable to the rest of svn. */
           dav_error *derr;
-          lock->xml_comment = 0;  /* comment is NOT xml-wrapped. */
+          lock->is_dav_comment = 0;  /* comment is NOT xml-wrapped. */
           derr = unescape_xml(&(lock->comment), dlock->owner, pool);
           if (derr)
             return derr;
@@ -205,7 +205,7 @@ dav_lock_to_svn_lock(svn_lock_t **slock,
           /* The comment comes from a non-svn client;  don't touch
              this data at all. */
           lock->comment = apr_pstrdup(pool, dlock->owner);
-          lock->xml_comment = 1; /* comment IS xml-wrapped. */
+          lock->is_dav_comment = 1; /* comment IS xml-wrapped. */
         }
     }
 
@@ -810,6 +810,7 @@ dav_svn_append_locks(dav_lockdb *lockdb,
                            slock->path,
                            slock->token,
                            slock->comment,
+                           slock->is_dav_comment,
                            slock->expiration_date,
                            info->working_revnum,
                            info->lock_steal,
@@ -994,6 +995,7 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
                            slock->path,
                            slock->token,
                            slock->comment,
+                           slock->is_dav_comment,
                            (new_time == DAV_TIMEOUT_INFINITE)
                              ? 0 : (apr_time_t)new_time * APR_USEC_PER_SEC,
                            SVN_INVALID_REVNUM,
