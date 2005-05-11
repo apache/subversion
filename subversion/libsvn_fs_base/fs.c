@@ -1127,7 +1127,7 @@ base_hotcopy (const char *src_path,
   u_int32_t pagesize;
   svn_boolean_t log_autoremove = FALSE;
   svn_node_kind_t kind;
-  const char* format_path;
+  const char *format_path;
 
   /* If using DB 4.2 or later, note whether the DB_LOG_AUTOREMOVE
      feature is on.  If it is, we have a potential race condition:
@@ -1143,7 +1143,7 @@ base_hotcopy (const char *src_path,
      if it does not exist. */
   format_path = svn_path_join (src_path, FORMAT_FILE, pool);
   SVN_ERR (svn_io_check_path (format_path, &kind, pool));
-  if ( kind == svn_node_file )
+  if (kind == svn_node_file)
     SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, FORMAT_FILE, pool));
 
   /* Copy the DB_CONFIG file. */
