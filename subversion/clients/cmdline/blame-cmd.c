@@ -58,7 +58,8 @@ blame_receiver_xml (void *baton,
      programmers, so we make them happy and output 1-based line numbers. */
   svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "entry",
                          "line-number",
-                         apr_psprintf (pool, "%lld", line_no + 1),
+                         apr_psprintf (pool, "%" APR_INT64_T_FMT,
+                                       line_no + 1),
                          NULL);
 
   if (SVN_IS_VALID_REVNUM (revision))
