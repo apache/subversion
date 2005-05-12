@@ -1,26 +1,25 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html>
 <head>
-<title>Subversion 1.2 Release Notes</title>
-<link rel="stylesheet" type="text/css" 
-      href="http://subversion.tigris.org/branding/css/tigris.css"/>
-<link rel="stylesheet" type="text/css" 
-      href="http://subversion.tigris.org/branding/css/inst.css"/>
+<style type="text/css"> /* <![CDATA[ */
+  @import "tigris-branding/css/tigris.css";
+  @import "tigris-branding/css/inst.css";
+  /* ]]> */</style>
 <link rel="stylesheet" type="text/css" media="print"
-      href="http://subversion.tigris.org/branding/css/print.css"/>
-<script type="text/javascript"
-        src="http://subversion.tigris.org/branding/scripts/tigris.js"></script>
+  href="tigris-branding/css/print.css"/>
+<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+<title>Subversion 1.2 Release Notes</title>
 </head>
 
 <body>
 <div class="app">
 
-<center>
-<h1>Subversion 1.2 Release Notes</h1>
-</center>
+<h1 style="text-align: center">Subversion 1.2 Release Notes</h1>
 
 <p>These new features will ultimately be documented in a 1.2 version
 of the free Subversion book; check the <a
-href="http://svnbook.red-bean.com">svnbook.red-bean.com</a> site.
+href="http://svnbook.red-bean.com">svnbook.red-bean.com</a> site.</p>
 
 
 <h3>Overview</h3>
@@ -74,6 +73,28 @@ Here's a quick summary:</p>
 
 </ul>
 
+<p>Although the Subversion developers try hard to keep parseable output
+from the command line programs compatible between releases, new
+information sometimes has to be added.  This might break scripts
+relying on the exact formatting of the output.  In 1.2, the following
+changes have been made to the client output:</p>
+
+<ul>
+
+<li><p>For <tt>svn update</tt>, the paths have been shifted two
+       columns to the right, thus they start in column five.  Column
+       three contains a <tt>B</tt> when a lock was broken or
+       stolen.</p></li>
+
+<li><p><tt>svn status</tt> adds information about locks in the sixth
+       column.  Note that this column was previously unused, so the
+       old information is still in the same positions as
+       before.</p></li>
+
+<li><p>Several lines were added to the <tt>svn info</tt> output,
+       containing lock information.</p></li>
+
+</ul>
 
 <h3>New Features</h3>
 
@@ -144,11 +165,11 @@ specification</a> and <a
 href="http://svn.collab.net/repos/svn/trunk/notes/locking/locking-ui.txt">UI
 specification</a> documents.</p>
 
-<p><strong>Warning</strong>: if locks are in use in a repository, note
-than a pre-1.2 libsvn_fs library won't see or enforce them.  This is
+<p><strong>Warning</strong>: if locks are in use in a repository, 
+then a pre-1.2 libsvn_fs library won't see or enforce them.  This is
 really only relevant to teams of users all accessing the repository
 via <tt>file://</tt>.  For example, an svn 1.2 client might lock a
-file, but a statically linked svn 1.1 or 1.0 client (accessing via
+file, but a statically-linked svn 1.1 or 1.0 client (accessing via
 <tt>file://</tt>) will unknowingly ignore the lock.  The workaround,
 of course, is to set up a real server process &mdash; thereby
 guaranteeing that only libsvn_fs 1.2 ever accesses the
@@ -171,7 +192,7 @@ interoperability with generic DAV clients.  <a
 href="http://svnbook.red-bean.com/en/1.1/apc.html">Appendix C</a> in
 the Subversion 1.1 book documented the trials and tribulations of this
 exercise.  At most, one could use a DAV client to drag files into a
-mounted repository, but the files couldn't edited directly from the
+mounted repository, but the files couldn't be edited directly from the
 network share.  Some clients even refused to mount the Subversion
 repository.</p>
 
@@ -184,7 +205,7 @@ href="http://greenbytes.de/tech/webdav/#draft-ietf-webdav-rfc2518bis">RFC2518bis
 specification.</p>
 
 <p>In informal tests, we've had success reading and writing to
-Subversion repositories via Windows Webfolders, OS X Finder, Gnome
+Subversion repositories via Windows Web Folders, OS X Finder, Gnome
 Nautilus, KDE Konqueror, and other DAV clients.</p>
 
 <p>To activate autoversioning, simply set <tt>SVNAutoversioning
@@ -201,12 +222,8 @@ vary.</p>
 
 <h3>Other Improvements</h3>
 
-<dl>
-
-<dt><h4>Faster xdelta binary (de)compression (<em>new server
-feature</em>)</h4></dt>
-
-<dd>
+<h4>Faster xdelta binary (de)compression (<em>new server
+feature</em>)</h4>
 
 <p>The repository is now using the xdelta binary-differencing
 algorithm (instead of vdelta) to store compressed binary difference
@@ -224,42 +241,32 @@ checkout</tt>, <tt>svn update</tt>, <tt>svn diff</tt>, <tt>svn
 merge</tt>, and so on.  Even dumping the repository will be
 faster.</p>
 
-<p><strong>Note:</strong> There's a small tradeoff between speed and
+<p><strong>Note:</strong> There's a small trade off between speed and
 disk space.  If you choose to re-deltify your whole repository using
 xdelta, its size will grow by roughly 10 to 15 percent.</p>
 
-<p/>
-
-<dt><h4>FSFS repositories are now the default (<em>new server
-feature</em>)</h4></dt>
-
-<dd>
+<h4>FSFS repositories are now the default (<em>new server
+feature</em>)</h4>
 
 <p>After the tremendous success of FSFS repositories since the 1.1
-release, we've changed the <tt>svnadmin create</tt> command now to
+release, we've changed the <tt>svnadmin create</tt> command to
 create FSFS repositories by default.  Everyone agrees that this will
 provide a much friendlier "out of box" experience for new users.</p>
 
-<p><strong>Please note</strong>: BerkeleyDB repositories are
+<p><strong>Please note</strong>: Berkeley DB repositories are
 <strong>not</strong> being phased out or deprecated in any way.  The
-reliability problems we've seen lie not in BerkeleyDB itself, but in
-the unique way Subversion uses BerkeleyDB.  Cooperative work is
+reliability problems we've seen lie not in Berkeley DB itself, but in
+the unique way Subversion uses Berkeley DB.  Cooperative work is
 currently underway (with Sleepycat engineers) to address these issues.
-BerkeleyDB repositories are still older and better-tested than FSFS
+Berkeley DB repositories are still older and better-tested than FSFS
 repositories in terms of scalability; the project still recommends you
 <a
 href="http://svnbook.red-bean.com/en/1.1/ch05.html#svn-ch-5-sect-1.3">read
 about the two back-ends in the book</a> and make an informed
 choice.</p>
 
-</dd>
-
-<p/>
-
-<dt><h4>Cached passwords are encyrypted on Windows (<em>Windows client
-feature</em>)</h4></dt>
-
-<dd>
+<h4>Cached passwords are encrypted on Windows (<em>Windows client
+feature</em>)</h4>
 
 <p>On Windows 2000 and later, the command-line client encrypts the
 cached passwords used for authenticating to a remote Subversion server
@@ -272,7 +279,7 @@ Cryptography services to encrypt and decrypt the password. Among other
 things, this means that the encryption key is managed by Windows and
 can only be accessed by the user account that owns it. If an
 administrator forcibly resets the account password, the encryption key
-(and consequently the cached passwords) will no longer be accesible
+(and consequently the cached passwords) will no longer be accessible
 (by the way, the same holds for the contents of NTFS-encrypted
 files). The Subversion client will detect this and proceed as if the
 password were not known; that is, it will prompt the user for the
@@ -280,50 +287,73 @@ password when necessary.</p>
 
 <p><strong>Note:</strong> This feature does not extend to stored
 passphrases for client SSL certificates.</p>
-</dd>
 
-<p/>
-
-
-<dt><h4>Bugfixes:</h4></dt>
-<dd>More than N bugs fixed.  See the <a
+<h4>Bugfixes:</h4>
+<p>More than 50 new bugs fixed.  See the <a
 href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
-      for details.</dd>
+      for details.</p>
 
-<p>
-
-<dt><h4>New subcommand switches:</h4></dt>
-<dd>
+<h4>New subcommand switches:</h4>
    <dl>
       <dt><tt>svn log --limit N</tt></dt>
-      <dd>display only N revisions, then stop.  (<em>Note: a 1.2
+      <dd>Display only N revisions, then stop.  (<em>Note: a 1.2
       server isn't required for this, but strongly recommended.  A
       non-1.2 server will still attempt to deliver all revisions over
       the network, even though the 1.2 client isn't displaying them.</em>)</dd>
 
-   </dl>
-</dl>
+      <dt><tt>svn info --revision (-r)</tt></dt>
+      <dd>Show detailed info on older versions of items.</dd>
 
+      <dt><tt>svn list --xml</tt></dt>
+      <dd>Output listing in XML.</dd>
+
+      <dt><tt>svn propset --force</tt></dt>
+      <dd>Allow unusual propsets, such as svn:eol-style on a file with
+          a binary svn:mime-type..</dd>
+
+      <dt><tt>svn diff --force</tt></dt>
+      <dd>Show differences even on files with binary mime-types.</dd>
+
+      <dt><tt>svn checkout/update/status/switch --ignore-externals</tt></dt>
+      <dd>Don't process any svn:externals during operation.</dd>
+
+      <dt><tt>svn export --non-recursive (-N)</tt></dt>
+      <dd>Don't export subdirectories.</dd>
+
+      <dt><tt>svnversion --help</tt></dt>
+      <dd>Show help on <tt>svnversion</tt>.</dd>
+
+      <dt><tt>svnlook diff --no-diff-added</tt></dt>
+      <dd>Don't show added files in the diffs.  Companion to
+          <tt>--no-diff-deleted</tt>.</dd>
+
+      <dt><tt>svnlook propget/proplist --revprop</tt></dt>
+      <dd>Examine revision props, instead of normal versioned properties.</dd>
+
+      <dt><tt>svnadmin load --use-pre-commit-hook / --use-post-commit-hook</tt></dt>
+      <dd>Invoke <tt>pre-commit</tt> or <tt>post-commit</tt> hooks
+          when loading a dumpfile into a repository.</dd>
+   </dl>
 
 
 <h3>Developer Changes</h3>
 
 <p>The svn_ra.h API has now been "flattened", essentially imitating
 the same way the svn_fs.h API hides multiple implementations.  Instead
-of making calls into an RA vtable (<tt>ra->do_foo()</tt>), all RA
+of making calls into an RA vtable (<tt>ra-&gt;do_foo()</tt>), all RA
 functions are now usable directly in the form
 <tt>svn_ra_do_foo()</tt>. This also has the nice side-effect of
 making svn_ra.h available via SWIG. </p>
 
-<p>As with svn 1.1, a number of new 1.2 functions have been introduced
-with the "2" suffix, and the older versions are now marked deprecated
-(and will be removed in Subversion 2.0).  See the <a
+<p>As with svn 1.1, a number of new 1.2 functions have been
+introduced, and older versions are now marked deprecated (and will be
+removed in Subversion 2.0).  See the <a
 href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
-for details.</p>
+for details.  The full list of new 1.2 APIs is <a
+href="http://svn.haxx.se/dev/archive-2005-04/0319.shtml">here</a>.</p>
 
-<p>There has been extensive work on the python, perl, and java
-bindings.  We also now have a preliminary set of ruby bindings.  -->
-Yada yada, give details.</p>
+<p>There has been extensive work on the Python, Perl, and JavaHL
+bindings.  We also now have a preliminary set of Ruby bindings.</p>
 
 <h3>Testimonials and Roadmap</h3>
 
@@ -332,7 +362,9 @@ looks like.</p>
 
 <p>If you're looking for testimonials on Subversion, see our new <a
 href="http://subversion.tigris.org/testimonials.html">testimonials
-page</a>.</p> And as usual, you can find links to other
+page</a>.</p>
+
+<p>As usual, you can find links to other
 Subversion-related sites, projects, and essays on our <a
 href="http://subversion.tigris.org/project_links.html">links
 page</a>.</p>
