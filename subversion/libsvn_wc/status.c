@@ -1657,6 +1657,7 @@ close_edit (void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
   apr_array_header_t *ignores = eb->ignores;
+  svn_error_t *err = NULL;
 
   /* If we get here and the root was not opened as part of the edit,
      we need to transmit statuses for everything.  Otherwise, we
@@ -1672,48 +1673,58 @@ close_edit (void *edit_baton,
       svn_node_kind_t kind;
       const char *full_path = svn_path_join (eb->anchor, eb->target, pool);
 
-      SVN_ERR (svn_io_check_path (full_path, &kind, pool));
+      err = svn_io_check_path (full_path, &kind, pool);
+      if (err) goto cleanup;
+
       if (kind == svn_node_dir)
         {
           svn_wc_adm_access_t *tgt_access;
           const svn_wc_entry_t *tgt_entry;
 
-          SVN_ERR (svn_wc_entry (&tgt_entry, full_path, eb->adm_access, 
-                                 FALSE, pool));
+          err = svn_wc_entry (&tgt_entry, full_path, eb->adm_access,
+                              FALSE, pool);
+          if (err) goto cleanup;
+
           if (! tgt_entry)
             {
-              SVN_ERR (get_dir_status (eb, NULL, eb->adm_access, eb->target, 
-                                       ignores, FALSE, eb->get_all, TRUE,
-                                       TRUE, eb->status_func, eb->status_baton,
-                                       eb->cancel_func, eb->cancel_baton,
-                                       pool));
+              err = get_dir_status (eb, NULL, eb->adm_access, eb->target, 
+                                    ignores, FALSE, eb->get_all, TRUE,
+                                    TRUE, eb->status_func, eb->status_baton,
+                                    eb->cancel_func, eb->cancel_baton,
+                                    pool);
+              if (err) goto cleanup;
             }
           else
             {
-              SVN_ERR (svn_wc_adm_retrieve (&tgt_access, eb->adm_access,
-                                            full_path, pool));
-              SVN_ERR (get_dir_status (eb, NULL, tgt_access, NULL, ignores, 
-                                       eb->descend, eb->get_all, 
-                                       eb->no_ignore, FALSE, 
-                                       eb->status_func, eb->status_baton, 
-                                       eb->cancel_func, eb->cancel_baton,
-                                       pool));
+              err = svn_wc_adm_retrieve (&tgt_access, eb->adm_access,
+                                         full_path, pool);
+              if (err) goto cleanup;
+
+              err = get_dir_status (eb, NULL, tgt_access, NULL, ignores, 
+                                    eb->descend, eb->get_all, 
+                                    eb->no_ignore, FALSE, 
+                                    eb->status_func, eb->status_baton, 
+                                    eb->cancel_func, eb->cancel_baton,
+                                    pool);
+              if (err) goto cleanup;
             }
         }
       else
         {
-          SVN_ERR (get_dir_status (eb, NULL, eb->adm_access, eb->target, 
-                                   ignores, FALSE, eb->get_all, TRUE,
-                                   TRUE, eb->status_func, eb->status_baton,
-                                   eb->cancel_func, eb->cancel_baton, pool));
+          err = get_dir_status (eb, NULL, eb->adm_access, eb->target, 
+                                ignores, FALSE, eb->get_all, TRUE,
+                                TRUE, eb->status_func, eb->status_baton,
+                                eb->cancel_func, eb->cancel_baton, pool);
+          if (err) goto cleanup;
         }
     }
   else
     {
-      SVN_ERR (get_dir_status (eb, NULL, eb->adm_access, NULL, ignores, 
-                               eb->descend, eb->get_all, eb->no_ignore, 
-                               FALSE, eb->status_func, eb->status_baton, 
-                               eb->cancel_func, eb->cancel_baton, pool));
+      err = get_dir_status (eb, NULL, eb->adm_access, NULL, ignores, 
+                            eb->descend, eb->get_all, eb->no_ignore, 
+                            FALSE, eb->status_func, eb->status_baton, 
+                            eb->cancel_func, eb->cancel_baton, pool);
+      if (err) goto cleanup;
     }
 
  cleanup:
@@ -1727,7 +1738,7 @@ close_edit (void *edit_baton,
                     eb->anchor, APR_HASH_KEY_STRING, NULL);
     }
   
-  return SVN_NO_ERROR;
+  return err;
 }
 
 
