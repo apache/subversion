@@ -167,7 +167,7 @@
 (defvar svn-status-verbose t "*Add '-v' to svn status call.")
 (defvar svn-log-edit-file-name "++svn-log++" "*Name of a saved log file.")
 (defvar svn-log-edit-insert-files-to-commit t "*Insert the filelist to commit in the *svn-log* buffer")
-(defvar svn-log-edit-use-log-edit-mode (and (ignore-errors (require 'log-edit)) t) "*Use log-edit-mode as base for svn-log-edit-mode")
+(defvar svn-log-edit-use-log-edit-mode (and (condition-case nil (require 'log-edit) (error nil)) t) "*Use log-edit-mode as base for svn-log-edit-mode")
 (defvar svn-status-hide-unknown nil "*Hide unknown files in `svn-status-buffer-name' buffer.")
 (defvar svn-status-hide-unmodified nil "*Hide unmodified files in `svn-status-buffer-name' buffer.")
 (defvar svn-status-directory-history nil "*List of visited svn working directories.")
@@ -2375,15 +2375,25 @@ Otherwise get only the actual file."
       (add-to-list 'svn-status-get-specific-revision-file-info
                    (cons file-name file-name-with-revision))
       (save-excursion
-        (find-file file-name-with-revision)
-        (setq buffer-read-only nil)
-        (delete-region (point-min) (point-max))
-        (svn-run-svn nil t 'cat (append (list "cat" "-r" revision) (list file-name)))
-        ;;todo: error processing
-        ;;svn: Filesystem has no item
-        ;;svn: file not found: revision `15', path `/trunk/file.txt'
-        (insert-buffer-substring "*svn-process*")
-        (save-buffer))
+        (let ((content
+               (with-temp-buffer
+                 (if (string= revision "BASE")
+                     (insert-file-contents (concat (file-name-directory file-name)
+                                                   ".svn/text-base/"
+                                                   (file-name-nondirectory file-name)
+                                                   ".svn-base"))
+                   (progn
+                     (svn-run-svn nil t 'cat (append (list "cat" "-r" revision) (list file-name)))
+                     ;;todo: error processing
+                     ;;svn: Filesystem has no item
+                     ;;svn: file not found: revision `15', path `/trunk/file.txt'
+                     (insert-buffer-substring "*svn-process*")))
+                 (buffer-string))))
+          (find-file file-name-with-revision)
+          (setq buffer-read-only nil)
+          (delete-region (point-min) (point-max))
+          (insert content)
+          (save-buffer)))
       (setq file-names (cdr file-names)))
     (setq svn-status-get-specific-revision-file-info
       (nreverse svn-status-get-specific-revision-file-info))
@@ -2401,7 +2411,7 @@ If ARG then prompt for revision to diff against."
          (base-buff (find-file-noselect (cdar svn-status-get-specific-revision-file-info)))
          (svn-transient-buffers (list base-buff ))
          (startup-hook '(svn-ediff-startup-hook)))
-    (ediff-buffers my-buffer base-buff  startup-hook)))
+    (ediff-buffers base-buff my-buffer startup-hook)))
 
 (defun svn-ediff-startup-hook ()
   (add-hook 'ediff-after-quit-hook-internal
