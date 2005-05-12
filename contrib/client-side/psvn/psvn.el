@@ -167,7 +167,7 @@
 (defvar svn-status-verbose t "*Add '-v' to svn status call.")
 (defvar svn-log-edit-file-name "++svn-log++" "*Name of a saved log file.")
 (defvar svn-log-edit-insert-files-to-commit t "*Insert the filelist to commit in the *svn-log* buffer")
-(defvar svn-log-edit-use-log-edit-mode nil "*Use log-edit-mode as base for svn-log-edit-mode")
+(defvar svn-log-edit-use-log-edit-mode (and (ignore-errors (require 'log-edit)) t) "*Use log-edit-mode as base for svn-log-edit-mode")
 (defvar svn-status-hide-unknown nil "*Hide unknown files in `svn-status-buffer-name' buffer.")
 (defvar svn-status-hide-unmodified nil "*Hide unmodified files in `svn-status-buffer-name' buffer.")
 (defvar svn-status-directory-history nil "*List of visited svn working directories.")
@@ -2781,7 +2781,13 @@ Commands:
       "Wrapper around `log-edit-mode' for psvn.el"
       (easy-menu-add svn-log-edit-mode-menu)
       (run-hooks 'svn-log-edit-mode-hook)
-      (setq svn-log-edit-update-log-entry nil))
+      (setq svn-log-edit-update-log-entry nil)
+      (set (make-local-variable 'log-edit-callback) 'svn-log-edit-done)
+      (set (make-local-variable 'log-edit-listfun) 'svn-log-edit-files-to-commit)
+      (set (make-local-variable 'log-edit-initial-files) (log-edit-files))
+      (message (substitute-command-keys
+                "Press \\[log-edit-done] when you are done editing."))
+      )
   (defun svn-log-edit-mode ()
     "Major Mode to edit svn log messages.
 Commands:
@@ -2872,10 +2878,12 @@ If ARG then show diff between some other version of the selected files."
   (pop-to-buffer svn-status-buffer-name)
   (other-window 1))
 
+(defun svn-log-edit-files-to-commit ()
+  (mapcar 'svn-status-line-info->filename svn-status-files-to-commit))
+
 (defun svn-log-edit-show-files-to-commit ()
   (interactive)
-  (message "Files to commit: %S"
-           (mapcar 'svn-status-line-info->filename svn-status-files-to-commit)))
+  (message "Files to commit: %S" (svn-log-edit-files-to-commit)))
 
 (defun svn-log-edit-save-message ()
   "Save the current log message to the file `svn-log-edit-file-name'."
