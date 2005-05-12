@@ -7,7 +7,14 @@ delay a release, etc.
 Status of 1.2.0:
 ================
 
-   (no changes pending)
+  * r14699
+    Fix arg parsing so 'svn log --limit CHANGES' errors as it should.
+    Justification:
+       Much user time could otherwise be wasted by this; fix is trivial.
+    Notes:
+      Use http://svn.collab.net/repos/svn/branches/1.2.x-r14699 for merge.
+    Votes:
+      +1: kfogel
 
 Status of 1.2.1:
 ================
