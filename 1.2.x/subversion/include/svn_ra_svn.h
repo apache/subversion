@@ -40,7 +40,9 @@ extern "C" {
 #define SVN_RA_SVN_PORT 3690
 
 /** Currently-defined capabilities. */
-#define SVN_RA_SVN_CAP_EDIT_PIPELINE "edit-pipeline"
+#define SVN_RA_SVN_CAP_EDIT_PIPELINE "\x65\x64\x69\x74\x2d\x70\x69\x70\x65" \
+                                     "\x6c\x69\x6e\x65"
+                                     /* "edit-pipeline" */
 
 /** A value used to indicate an optional number element in a tuple that was
  * not received.

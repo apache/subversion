@@ -57,8 +57,48 @@
 #include "svn_utf.h"
 #include "svn_config.h"
 #include "svn_private_config.h"
+#include "svn_ebcdic.h"
 
 
+#define FILE_STR \
+        "\x66\x69\x6c\x65"
+        /* "file" */
+
+#define APPLICATION_OCTET_STREAM_STR \
+        "\x61\x70\x70\x6c\x69\x63\x61\x74\x69\x6f\x6e\x2f\x6f\x63\x74\x65\x74" \
+        "\x2d\x73\x74\x72\x65\x61\x6d"
+        /* "application/octet-stream" */
+
+#define STREAM_STR \
+        "\x73\x74\x72\x65\x61\x6d"
+        /* "stream" */
+
+#define CLOSE_STR \
+        "\x63\x6c\x6f\x73\x65"
+        /* "close" */
+
+#define GET_ATTR_INFO_STR \
+        "\x67\x65\x74\x20\x61\x74\x74\x72\x69\x62\x75\x74\x65\x20\x69\x6e" \
+        "\x66\x6f\x72\x6d\x61\x74\x69\x6f\x6e\x20\x66\x72\x6f\x6d"
+        /* "get attribute information from" */
+
+#define READ_STR \
+        "\x72\x65\x61\x64"
+        /* "read" */
+
+#define SET_POS_PTR_STR \
+        "\x73\x65\x74\x20\x70\x6f\x73\x69\x74\x69\x6f\x6e\x20\x70\x6f\x69" \
+        "\x6e\x74\x65\x72\x20\x69\x6e"
+        /* "set position pointer in" */
+
+#define TEMP_STR \
+        "\x74\x6d\x70"
+        /* "tmp" */
+
+#define WRITE_TO_STR \
+        "\x77\x72\x69\x74\x65\x20\x74\x6f"
+        /* "write to" */ 
+
 /*
   Windows is 'aided' by a number of types of applications that
   follow other applications around and open up files they have
@@ -192,6 +232,13 @@ svn_io_open_unique_file (apr_file_t **f,
       apr_status_t apr_err;
       apr_int32_t flag = (APR_READ | APR_WRITE | APR_CREATE | APR_EXCL
                           | APR_BUFFERED);
+#if APR_CHARSET_EBCDIC
+      /* Force apr_file_open to be binary so conversion of contents on read or
+       * write is disabled - see comment on similar treatment of flag in 
+       * svn_io_file_open for a full explanation.
+       */
+      flag |= APR_BINARY;
+#endif                          
 
       if (delete_on_close)
         flag |= APR_DELONCLOSE;
@@ -208,9 +255,9 @@ svn_io_open_unique_file (apr_file_t **f,
          got conflicts on their conflicts, we probably don't want to
          add to their confusion :-). */
       if (i == 1)
-        unique_name = apr_psprintf (pool, "%s%s", path, suffix);
+        unique_name = APR_PSPRINTF2 (pool, "%s%s", path, suffix);
       else
-        unique_name = apr_psprintf (pool, "%s.%u%s", path, i, suffix);
+        unique_name = APR_PSPRINTF2 (pool, "%s.%u%s", path, i, suffix);
 
       /* Hmmm.  Ideally, we would append to a native-encoding buf
          before starting iteration, then convert back to UTF-8 for
@@ -297,7 +344,7 @@ svn_io_create_unique_link (const char **unique_name_p,
       if (i == 1)
         unique_name = apr_psprintf (pool, "%s%s", path, suffix);
       else
-        unique_name = apr_psprintf (pool, "%s.%u%s", path, i, suffix);
+        unique_name = APR_PSPRINTF2 (pool, "%s.%u%s", path, i, suffix);   
 
       /* Hmmm.  Ideally, we would append to a native-encoding buf
          before starting iteration, then convert back to UTF-8 for
@@ -408,7 +455,7 @@ svn_io_copy_link (const char *src,
 
   /* Make a tmp-link pointing at the same thing. */
   SVN_ERR (svn_io_create_unique_link (&dst_tmp, dst, link_dest->data,
-                                      ".tmp", pool));
+                                      "\x2E\x74\x6D\x70", pool)); /* ".tmp" */
   
   /* Move the tmp-link to link. */
   return svn_io_file_rename (dst_tmp, dst, pool);
@@ -429,15 +476,28 @@ svn_io_copy_link (const char *src,
 static int test_tempdir(const char *temp_dir, apr_pool_t *p)
 {
     apr_file_t *dummy_file;
-    char *path = apr_pstrcat(p, temp_dir, "/apr-tmp.XXXXXX", NULL);
+    char *path;
+#if APR_CHARSET_EBCDIC
+    apr_size_t one_byte = 1;
+    /* ebcdic platforms require an ebcdic encoded path for apr_file_mktemp. */
+    const char* temp_dir_native;
+    if(!svn_utf_cstring_from_utf8(&temp_dir_native, temp_dir, p))
+        temp_dir = temp_dir_native;
+#endif    
+    path = apr_pstrcat(p, temp_dir, "/apr-tmp.XXXXXX", NULL);
 
-    if (apr_file_mktemp(&dummy_file, path, 0, p) == APR_SUCCESS) {
-        if (apr_file_putc('!', dummy_file) == APR_SUCCESS) {
-            if (apr_file_close(dummy_file) == APR_SUCCESS) {
+    if (apr_file_mktemp(&dummy_file, path, 0, p) == APR_SUCCESS)
+#if !APR_CHARSET_EBCDIC    
+        if (apr_file_putc(SVN_UTF8_EXCLAMATION, dummy_file) == APR_SUCCESS)
+#else
+        /* IBM's implmentation of apr_file_putc is broken and returns 1 even
+         * when apr_file_putc is successful.  Until this is fixed, the work
+         * around is to call apr_file_write for one byte. */
+        if (apr_file_write(dummy_file, SVN_UTF8_EXCLAMATION_STR, &one_byte) 
+            == APR_SUCCESS)        
+#endif
+            if (apr_file_close(dummy_file) == APR_SUCCESS)
                 return 1;
-            }
-        }
-    }
     return 0;
 }
 #endif
@@ -448,8 +508,15 @@ svn_io_temp_dir (const char **dir,
 {
 #if 1  /* TODO: Remove this code when APR 0.9.6 is released. */
   apr_status_t apr_err;
-  static const char *try_dirs[] = { "/tmp", "/usr/tmp", "/var/tmp" };
-  static const char *try_envs[] = { "TMP", "TEMP", "TMPDIR" };
+  
+  static const char *try_dirs[] = 
+    { "\x2f\x74\x6d\x70",                  /* "/tmp" */
+  	  "\x2f\x75\x73\x72\x2f\x74\x6d\x70",  /* "/usr/tmp" */
+  	  "\x2f\x76\x61\x72\x2f\x74\x6d\x70"   /* "/var/tmp" */ };
+  	  
+  static const char *try_envs[] = { "TMP",
+  	                                "TEMP",
+  	                                "TMPDIR" };
   const char *temp_dir;
   char *cwd;
   apr_size_t i;
@@ -555,17 +622,36 @@ svn_io_copy_file (const char *src,
   /* For atomicity, we translate to a tmp file and then rename the tmp
      file over the real destination. */
 
-  SVN_ERR (svn_io_open_unique_file (&d, &dst_tmp, dst, ".tmp", FALSE, pool));
+  SVN_ERR (svn_io_open_unique_file (&d, &dst_tmp, dst, "\x2E\x74\x6D\x70",
+                                    FALSE, pool)); /* ".tmp" */
   SVN_ERR (svn_path_cstring_from_utf8 (&dst_tmp_apr, dst_tmp, pool));
 
   SVN_ERR (svn_io_file_close (d, pool));
-
+  
+#if !AS400
   apr_err = apr_file_copy (src_apr, dst_tmp_apr, APR_OS_DEFAULT, pool);
+#else
+  /* This function prevents any attempted conversion of file contents based on
+   * CCSID by the OS by forcing a binary copy.
+   */
+   apr_err = svn_ebcdic_file_transfer_contents(src_apr, dst_tmp_apr,
+                                              APR_WRITE | APR_CREATE |
+                                              APR_TRUNCATE | APR_BINARY,
+                                              APR_OS_DEFAULT,
+                                              pool);
+#endif
+                                       
   if (apr_err)
     return svn_error_wrap_apr
       (apr_err, _("Can't copy '%s' to '%s'"),
        svn_path_local_style (src, pool),
        svn_path_local_style (dst_tmp, pool));
+
+#if AS400
+  /* Tag the destination file with CCSID 1208 to accurately reflect it's
+   * contents. */
+  SVN_ERR(svn_ebcdic_set_file_ccsid (dst_tmp, 1208, pool));
+#endif 
 
   /* If copying perms, set the perms on dst_tmp now, so they will be
      atomically inherited in the upcoming rename.  But note that we
@@ -775,11 +861,9 @@ svn_error_t *svn_io_file_create (const char *file,
 {
   apr_file_t *f;
   apr_size_t written;
-
   SVN_ERR (svn_io_file_open (&f, file,
                              (APR_WRITE | APR_CREATE | APR_EXCL),
-                             APR_OS_DEFAULT,
-                             pool));
+                             APR_OS_DEFAULT, pool));
   SVN_ERR (svn_io_file_write_full (f, contents, strlen (contents), 
                                    &written, pool));
   SVN_ERR (svn_io_file_close (f, pool));
@@ -990,8 +1074,13 @@ reown_file (const char *path_apr,
   const char *unique_name;
 
   SVN_ERR (svn_io_open_unique_file (&fp, &unique_name, path_apr,
-                                    ".tmp", FALSE, pool));
+                                    "\x2E\x74\x6D\x70", FALSE, 
+                                    pool)); /* ".tmp" */                                    
   SVN_ERR (svn_io_file_close (fp, pool));
+#if AS400
+  /* Tag the file with utf-8 CCSID to accurately reflect it's contents. */
+  SVN_ERR(svn_ebcdic_set_file_ccsid (unique_name, 1208, pool));
+#endif   
   SVN_ERR (svn_io_file_rename (path_apr, unique_name, pool));
   SVN_ERR (svn_io_copy_file (unique_name, path_apr, TRUE, pool));
   SVN_ERR (svn_io_remove_file (unique_name, pool));
@@ -1014,7 +1103,7 @@ get_default_file_perms (const char *path, apr_fileperms_t *perms,
 
   SVN_ERR (svn_path_cstring_from_utf8 (&apr_path, path, pool));
   SVN_ERR (svn_io_open_unique_file (&fd, &tmp_path, path, 
-                                    "tmp", TRUE, pool));
+                                    TEMP_STR, TRUE, pool));
   status = apr_stat (&finfo, tmp_path, APR_FINFO_PROT, pool);
   if (status)
     return svn_error_wrap_apr (status, _("Can't get default file perms "
@@ -1413,7 +1502,7 @@ svn_stringbuf_from_file (svn_stringbuf_t **result,
 {
   apr_file_t *f = NULL;
 
-  if (filename[0] == '-' && filename[1] == '\0')
+  if (filename[0] == SVN_UTF8_MINUS && filename[1] == '\0')
     return svn_error_create
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
          _("Reading from stdin is currently broken, so disabled"));
@@ -1559,7 +1648,7 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
 
   /* APR doesn't like "" directories */
   if (path[0] == '\0')
-    path = ".";
+    path = SVN_UTF8_DOT_STR;
 
   /* Convert path to native here and call apr_dir_open directly,
      instead of just using svn_io_dir_open, because we're going to
@@ -2028,7 +2117,7 @@ svn_io_detect_mimetype (const char **mimetype,
                         const char *file,
                         apr_pool_t *pool)
 {
-  static const char * const generic_binary = "application/octet-stream";
+  static const char * const generic_binary = APPLICATION_OCTET_STREAM_STR;
 
   svn_node_kind_t kind;
   apr_file_t *fh;
@@ -2107,7 +2196,60 @@ svn_io_file_open (apr_file_t **new_file, const char *fname,
   apr_status_t status;
 
   SVN_ERR (svn_path_cstring_from_utf8 (&fname_apr, fname, pool));
-  status = apr_file_open (new_file, fname_apr, flag, perm, pool);
+
+#if APR_CHARSET_EBCDIC
+  if( flag & APR_CREATE && !(flag & APR_BINARY) )
+    {
+      /* All the text files subversion creates have utf-8 content, but iSeries
+       * C creates text files as ccsid 37.  To make these files have the proper
+       * ccsid of 1208 we use open() to create an empty file first with CCSID
+       * 1208 then close it before performing apr_file_open().
+       */
+      int fd = -1;
+      int oflag = O_RDWR | O_CREAT | O_CCSID | O_EXCL;
+      mode_t mode = S_IRWXU | S_IRWXG | S_IRWXO;
+
+      /* Convert file name to native format for APR call */
+      SVN_ERR (svn_utf_cstring_from_utf8(&fname, fname, pool));
+  
+      /* Build our flag for open() */
+      if(flag & APR_EXCL)
+        oflag |= O_EXCL;
+
+      fd = open(fname, oflag, mode, 1208);
+      if(fd > -1)
+      {
+        close(fd);
+        /* Whether or not APR_EXCL is set or not, we want to unset
+         * it before the call to apr_file_open() since this flag
+         * was already handled in the above call to open().
+         */
+        flag &= ~APR_EXCL;
+      }
+    }
+        
+  /* On ebcdic platforms a file opened as text has it's contents converted from
+   * the CCSID tag of the file to the CCSID of the job (37 in our case) when the
+   * file is read.  Writing to the file causes the same behavior in reverse.
+   * This causes two problems:
+   * 
+   * 1) The conversion fails when opening files with mixed text and binary
+   *    data, e.g. revision files, as the OS attempts to convert binary data
+   *    to ebcdic.
+   * 
+   * 2) When the conversion works we end up with ebcdic, which is obviously a
+   *    problem when converting/comparing/analyzing/parsing file content and
+   *    expecting utf8.
+   * 
+   * To prevent this nasty conversion, all files are opened as binary.
+   * 
+   * Hmmmm, are there any problems with this approach?
+   * None that I'm aware of yet...   
+   */
+  flag |= APR_BINARY;
+#endif   
+
+  status = apr_file_open(new_file, fname_apr, flag, perm, pool);
 
   if (status)
     return svn_error_wrap_apr (status, _("Can't open file '%s'"),
@@ -2253,7 +2395,7 @@ svn_io_read_length_line (apr_file_t *file, char *buf, apr_size_t *limit,
        is totally fine.  The caller should be aware of
        this. */
 
-    if (c == '\n')
+    if (c == SVN_UTF8_NEWLINE)
       {
         buf[i] = '\0';
         *limit = i;
@@ -2427,7 +2569,7 @@ dir_make (const char *path, apr_fileperms_t perm,
        * don't support the sgid bit, and that's okay. */
       apr_file_perms_set (path_apr, finfo.protection | APR_GSETID);
     }
-#elif !defined (WIN32)
+#elif !defined (WIN32) && !defined (AS400)
   /* APR_GSETID appears in APR 0.9.5, so we need some fallback code
      until Subversion can require 0.9.5. */
   if (sgid)
@@ -2474,7 +2616,7 @@ svn_io_dir_open (apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool)
 
   /* APR doesn't like "" directories */
   if (dirname[0] == '\0')
-    dirname = ".";
+    dirname = SVN_UTF8_DOT_STR;
 
   SVN_ERR (svn_path_cstring_from_utf8 (&dirname_apr, dirname, pool));
 
@@ -2729,7 +2871,7 @@ svn_io_write_version_file (const char *path,
 {
   apr_file_t *format_file = NULL;
   const char *path_tmp;
-  const char *format_contents = apr_psprintf (pool, "%d\n", version);
+  const char *format_contents = APR_PSPRINTF2 (pool, "%d\n", version);
 
   /* We only promise to handle non-negative integers. */
   if (version < 0)
@@ -2737,8 +2879,9 @@ svn_io_write_version_file (const char *path,
                               _("Version %d is not non-negative"), version);
 
   /* Create a temporary file to write the data to */
-  SVN_ERR (svn_io_open_unique_file (&format_file, &path_tmp, path, ".tmp",
-                                    FALSE, pool));
+  SVN_ERR (svn_io_open_unique_file (&format_file, &path_tmp, path, 
+                                    "\x2E\x74\x6D\x70", FALSE, 
+                                    pool)); /* ".tmp" */
   		  
   /* ...dump out our version number string... */
   SVN_ERR (svn_io_file_write_full (format_file, format_contents,
@@ -2746,6 +2889,11 @@ svn_io_write_version_file (const char *path,
   
   /* ...and close the file. */
   SVN_ERR (svn_io_file_close (format_file, pool));
+
+#if AS400
+  /* Tag the file with utf-8 CCSID to accurately reflect it's contents. */
+  SVN_ERR(svn_ebcdic_set_file_ccsid (path_tmp, 1208, pool));
+#endif   
 
 #ifdef WIN32
   /* make the destination writable, but only on Windows, because
@@ -2771,6 +2919,9 @@ svn_io_read_version_file (int *version,
   apr_file_t *format_file;
   char buf[80];
   apr_size_t len;
+#if APR_CHARSET_EBCDIC
+  const char *buf_native, *buf_utf8;
+#endif    
 
   /* Read a chunk of data from PATH */
   SVN_ERR (svn_io_file_open (&format_file, path, APR_READ,
@@ -2792,9 +2943,9 @@ svn_io_read_version_file (int *version,
       {
         char c = buf[i];
 
-        if (i > 0 && (c == '\r' || c == '\n'))
+        if (i > 0 && (c == SVN_UTF8_CR || c == SVN_UTF8_NEWLINE))
           break;
-        if (! apr_isdigit (c))
+        if (! APR_IS_ASCII_DIGIT (c))  
           return svn_error_createf
             (SVN_ERR_BAD_VERSION_FILE_FORMAT, NULL,
              _("First line of '%s' contains non-digit"),
@@ -2803,7 +2954,18 @@ svn_io_read_version_file (int *version,
   }
 
   /* Convert to integer. */
+#if !APR_CHARSET_EBCDIC
   *version = atoi (buf);
+#else
+    /* Copy buf and append a null terminator.  Trying to treat buf[i] as a
+     * string and converting it fails since the buffer is not NULL terminated.
+     */
+    buf_utf8 = apr_pstrmemdup(pool, buf, len);
+    if(buf && svn_utf_cstring_from_utf8(&buf_native, buf_utf8, pool))
+       buf_native = buf_utf8;
+  *version = atoi (buf_native);  
+#endif     
+
 
   /* And finally, close the file. */
   SVN_ERR (svn_io_file_close (format_file, pool));

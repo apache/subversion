@@ -33,6 +33,7 @@
 #include "svn_path.h"
 #include "svn_dav.h"
 #include "svn_props.h"
+#include "svn_utf.h"
 
 #include "dav_svn.h"
 #include <http_request.h>
@@ -189,6 +190,14 @@ svn_error_t *dav_svn_authz_read(svn_boolean_t *allowed,
       revpath = path;
     }
 
+#if APR_CHARSET_EBCDIC
+  /* revpath is utf8 encoded when MOD_DAV_SVN module is recursively checking 
+   * authorization of a checkout. */
+  if (revpath && revpath[0] == SVN_UTF8_FSLASH)
+    {
+      SVN_ERR (svn_utf_cstring_from_netccsid(&revpath, revpath, pool));    
+    }
+#endif
   /* We have a (rev, path) pair to check authorization on. */
 
   /* Build a Version Resource uri representing (rev, path). */
@@ -218,7 +227,7 @@ static void add_to_path_map(apr_hash_t *hash,
                             const char *linkpath)
 {
   /* normalize 'root paths' to have a slash */
-  const char *norm_path = strcmp(path, "") ? path : "/";
+  const char *norm_path = strcmp(path, "") ? path : SVN_UTF8_FSLASH_STR;
 
   /* if there is an actual linkpath given, it is the repos path, else
      our path maps to itself. */
@@ -261,12 +270,12 @@ static const char *get_from_path_map(apr_hash_t *hash,
           /* we found a mapping ... but of one of PATH's parents.
              soooo, we get to re-append the chunks of PATH that we
              broke off to the REPOS_PATH we found. */
-          return apr_pstrcat(pool, repos_path, "/", 
+          return apr_pstrcat(pool, repos_path, SVN_UTF8_FSLASH_STR, 
                              path + my_path->len + 1, NULL);
         }
     }
   while (! svn_path_is_empty(my_path->data)
-         && strcmp (my_path->data, "/") != 0);
+         && strcmp (my_path->data, SVN_UTF8_FSLASH_STR) != 0);
   
   /* well, we simply never found anything worth mentioning the map.
      PATH is its own default finding, then. */
@@ -364,6 +373,9 @@ static svn_error_t * send_vsn_url(item_baton_t *baton, apr_pool_t *pool)
   path = get_real_fs_path(baton, pool);
   revision = dav_svn_get_safe_cr(baton->uc->rev_root, path, pool);
     
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_netccsid(&path, path, pool));   
+#endif     
   href = dav_svn_build_uri(baton->uc->resource->info->repos,
                            DAV_SVN_BUILD_URI_VERSION,
                            revision, path, 0 /* add_href */, pool);
@@ -382,10 +394,12 @@ static svn_error_t * absent_helper(svn_boolean_t is_dir,
 
   if (! uc->resource_walk)
     {
-      const char *elt = apr_psprintf(pool,
-                                     "<S:absent-%s name=\"%s\"/>" DEBUG_CR,
-                                     DIR_OR_FILE(is_dir),
-                                     svn_path_basename(path, pool));
+      const char *elt;
+#if APR_CHARSET_EBCDIC
+      SVN_ERR (svn_utf_cstring_from_netccsid(&path, path, pool));   
+#endif    	
+      elt = apr_psprintf(pool, "<S:absent-%s name=\"%s\"/>" DEBUG_CR,
+                         DIR_OR_FILE(is_dir), svn_path_basename(path, pool));
       SVN_ERR( dav_svn__send_xml(uc->bb, uc->output, "%s", elt) );
     }
 
@@ -432,10 +446,17 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
     }
   else
     {
-      const char *qname = apr_xml_quote_string(pool, child->name, 1);
       const char *elt;
       const char *real_path = get_real_fs_path(child, pool);
 
+#if !APR_CHARSET_EBCDIC
+      const char *qname = apr_xml_quote_string(pool, child->name, 1);
+#else
+      const char *qname;
+      SVN_ERR (svn_utf_cstring_from_netccsid(&qname, child->name, pool)); 
+      qname = apr_xml_quote_string(pool, qname, 1);
+#endif    
+      
       if (! is_dir)
         {
           /* files have checksums */
@@ -444,23 +465,41 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
                    (digest, uc->rev_root, real_path, pool));
           
           child->text_checksum = svn_md5_digest_to_cstring(digest, pool);
+#if APR_CHARSET_EBCDIC
+          SVN_ERR(svn_utf_cstring_from_utf8(&child->text_checksum,
+                  child->text_checksum, pool));  
+#endif             
         }
       else
         {
           /* we send baseline-collection urls when we add a directory */
           svn_revnum_t revision;
-          revision = dav_svn_get_safe_cr(child->uc->rev_root, real_path, pool);
+          const char *real_path_native = real_path;
+#if APR_CHARSET_EBCDIC          
+          SVN_ERR (svn_utf_cstring_from_netccsid(&real_path_native, real_path,
+                                                pool)); 
+#endif
+          revision = dav_svn_get_safe_cr(child->uc->rev_root, real_path, /*real_path_native,*/
+                                         pool);
           bc_url = dav_svn_build_uri(child->uc->resource->info->repos,
                                      DAV_SVN_BUILD_URI_BC,
-                                     revision, real_path,
+                                     revision, real_path_native,
                                      0 /* add_href */, pool);
 
           /* ugh, build_uri ignores the path and just builds the root
              of the baseline collection.  we have to tack the
              real_path on manually, ignoring its leading slash. */
           if (real_path && (! svn_path_is_empty(real_path)))
-            bc_url = svn_path_url_add_component(bc_url, real_path+1, pool);
-
+            {
+#if APR_CHARSET_EBCDIC
+              SVN_ERR(svn_utf_cstring_to_netccsid(&bc_url, bc_url, pool));
+#endif            	
+              bc_url = svn_path_url_add_component(bc_url, real_path+1,
+                                                  pool);
+#if APR_CHARSET_EBCDIC
+              SVN_ERR (svn_utf_cstring_from_netccsid(&bc_url, bc_url, pool)); 
+#endif                                                   
+            }
           /* make sure that the BC_URL is xml attribute safe. */
           bc_url = apr_xml_quote_string(pool, bc_url, 1);
         }
@@ -468,7 +507,7 @@ static svn_error_t * add_helper(svn_boolean_t is_dir,
 
       if (copyfrom_path == NULL)
         {
-          if (bc_url)            
+          if (bc_url)
             elt = apr_psprintf(pool, "<S:add-%s name=\"%s\" "
                                "bc-url=\"%s\">" DEBUG_CR,
                                DIR_OR_FILE(is_dir), qname, bc_url);
@@ -522,7 +561,12 @@ static svn_error_t * open_helper(svn_boolean_t is_dir,
                                  void **child_baton)
 {
   item_baton_t *child = make_child_baton(parent, path, pool);
-  const char *qname = apr_xml_quote_string(pool, child->name, 1);
+  const char *child_name = child->name;
+  const char *qname;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_netccsid (&child_name, child_name, pool));
+#endif  
+  qname = apr_xml_quote_string(pool, child_name, 1);
 
   SVN_ERR( dav_svn__send_xml(child->uc->bb, child->uc->output,
                              "<S:open-%s name=\"%s\""
@@ -567,9 +611,14 @@ static svn_error_t * close_helper(svn_boolean_t is_dir, item_baton_t *baton)
   /* Both modern and non-modern clients need the checksum... */
   if (baton->text_checksum)
     {
+      const char *checksum = baton->text_checksum; 	
+#if APR_CHARSET_EBCDIC
+      SVN_ERR( svn_utf_cstring_from_netccsid(&checksum, baton->text_checksum,
+                                             baton->pool));
+#endif
       SVN_ERR( dav_svn__send_xml(baton->uc->bb, baton->uc->output,
                                  "<V:md5-checksum>%s</V:md5-checksum>", 
-                                 baton->text_checksum) );
+                                 checksum) );
     }
 
   /* ...but only non-modern clients want the 3 CR-related properties
@@ -587,21 +636,44 @@ static svn_error_t * close_helper(svn_boolean_t is_dir, item_baton_t *baton)
       /* ### special knowledge: svn_repos_dir_delta will never send
        *removals* of the commit-info "entry props". */
       if (baton->committed_rev)
-        SVN_ERR( dav_svn__send_xml(baton->uc->bb, baton->uc->output,
-                                   "<D:version-name>%s</D:version-name>",
-                                   baton->committed_rev) );
-      
-      if (baton->committed_date)
-        SVN_ERR( dav_svn__send_xml(baton->uc->bb, baton->uc->output,
-                                   "<D:creationdate>%s</D:creationdate>",
-                                   baton->committed_date) );
-      
-      if (baton->last_author)
-        SVN_ERR( dav_svn__send_xml(baton->uc->bb, baton->uc->output,
-                                   "<D:creator-displayname>%s"
-                                   "</D:creator-displayname>",
-                                   baton->last_author) );
+        {
+          const char *committed_rev = baton->committed_rev;
+#if APR_CHARSET_EBCDIC
+          SVN_ERR( svn_utf_cstring_from_netccsid(&committed_rev,
+                                                 baton->committed_rev,
+                                                 baton->pool));
+#endif
+          SVN_ERR( dav_svn__send_xml(baton->uc->bb, baton->uc->output,
+                                     "<D:version-name>%s</D:version-name>",
+                                     committed_rev) );
+        }
 
+      if (baton->committed_date)
+        {
+          const char *committed_date = baton->committed_date;
+#if APR_CHARSET_EBCDIC
+          SVN_ERR( svn_utf_cstring_from_netccsid(&committed_date,
+                                                 baton->committed_date,
+                                                 baton->pool));
+#endif
+          SVN_ERR( dav_svn__send_xml(baton->uc->bb, baton->uc->output,
+                                     "<D:creationdate>%s</D:creationdate>",
+                                     committed_date) );
+        }
+
+      if (baton->last_author)
+        {
+          const char *last_author = baton->last_author;
+#if APR_CHARSET_EBCDIC
+          SVN_ERR( svn_utf_cstring_from_netccsid(&last_author,
+                                                 baton->last_author,
+                                                 baton->pool));
+#endif          
+          SVN_ERR( dav_svn__send_xml(baton->uc->bb, baton->uc->output,
+                                     "<D:creator-displayname>%s"
+                                     "</D:creator-displayname>",
+                                     last_author) );
+        }
     }
 
   /* Close unconditionally, because we sent checksum unconditionally. */
@@ -712,8 +784,12 @@ static svn_error_t * upd_delete_entry(const char *path,
                                       apr_pool_t *pool)
 {
   item_baton_t *parent = parent_baton;
-  const char *qname = apr_xml_quote_string(pool, 
-                                           svn_path_basename(path, pool), 1);
+  const char *qname;
+  const char *path_base = svn_path_basename(path, pool);
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_netccsid (&path_base, path_base, pool));
+#endif  
+  qname = apr_xml_quote_string(pool, path_base, 1);
   return dav_svn__send_xml(parent->uc->bb, parent->uc->output,
                            "<S:delete-entry name=\"%s\"/>" DEBUG_CR, qname);
 }
@@ -748,6 +824,13 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
 {
   item_baton_t *b = baton;
   const char *qname;
+#if APR_CHARSET_EBCDIC
+  const char *name_original = name;
+  const char *value_str;
+  const svn_string_t *value_original = value ?
+                                       svn_string_create (value->data, pool) :
+                                       NULL;                                                          
+#endif
 
   /* Resource walks say nothing about props. */
   if (b->uc->resource_walk)
@@ -756,7 +839,9 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
   /* Else this not a resource walk, so either send props or cache them
      to send later, depending on whether this is a modern report
      response or not. */
-
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_netccsid(&name, name, pool));
+#endif  
   qname = apr_xml_quote_string (b->pool, name, 1);
 
   /* apr_xml_quote_string doesn't realloc if there is nothing to
@@ -776,6 +861,9 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
               svn_stringbuf_t *tmp = NULL;
               svn_xml_escape_cdata_string(&tmp, value, pool);
               qval = tmp->data;
+#if APR_CHARSET_EBCDIC
+              SVN_ERR (svn_utf_cstring_from_netccsid(&qval, qval, pool));
+#endif
               SVN_ERR( dav_svn__send_xml(b->uc->bb, b->uc->output,
                                          "<S:set-prop name=\"%s\">", qname) );
             }
@@ -806,6 +894,10 @@ static svn_error_t * upd_change_xxx_prop(void *baton,
          away and we should just tunnel those props on through for the
          client to deal with. */
 #define NSLEN (sizeof(SVN_PROP_ENTRY_PREFIX) - 1)
+#if APR_CHARSET_EBCDIC
+        name = name_original;
+        value = value_original;
+#endif
       if (! strncmp(name, SVN_PROP_ENTRY_PREFIX, NSLEN))
         {
           if (! strcmp(name, SVN_PROP_ENTRY_COMMITTED_REV))
@@ -976,9 +1068,14 @@ static svn_error_t * upd_close_file(void *file_baton,
   if ((! file->uc->send_all) && (! file->added) && file->text_changed)
     {
       const char *elt;
+      const char *base_checksum = file->base_checksum;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_netccsid(&base_checksum, file->base_checksum,
+                                         pool));
+#endif       
       elt = apr_psprintf(pool, "<S:fetch-file%s%s%s/>" DEBUG_CR,
                          file->base_checksum ? " base-checksum=\"" : "",
-                         file->base_checksum ? file->base_checksum : "",
+                         file->base_checksum ? base_checksum : "",
                          file->base_checksum ? "\"" : "");
       SVN_ERR( dav_svn__send_xml(file->uc->bb, file->uc->output, elt) );
     }
@@ -1035,6 +1132,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   svn_boolean_t ignore_ancestry = FALSE;
   dav_svn_authz_read_baton arb;
   apr_pool_t *subpool = svn_pool_create(resource->pool);
+  const char *username_utf8;
 
   /* Construct the authz read check baton. */
   arb.r = resource->info->r;
@@ -1107,6 +1205,14 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                        "Could not parse 'src-path' URL.",
                                        resource->pool);
           src_path = this_info.repos_path;
+#if APR_CHARSET_EBCDIC
+          if (svn_utf_cstring_to_netccsid(&src_path, src_path, resource->pool))
+            return dav_new_error(resource->pool,
+                                 HTTP_INTERNAL_SERVER_ERROR, 0,
+                                 apr_psprintf(resource->pool,
+                                              "Error converting string '%s'",
+                                               src_path));
+#endif          
         }
       if (child->ns == ns && strcmp(child->name, "dst-path") == 0)
         {
@@ -1123,6 +1229,14 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                        "Could not parse 'dst-path' URL.",
                                        resource->pool);
           dst_path = this_info.repos_path;
+#if APR_CHARSET_EBCDIC
+          if (svn_utf_cstring_to_netccsid(&dst_path, dst_path, resource->pool))
+            return dav_new_error(resource->pool,
+                                 HTTP_INTERNAL_SERVER_ERROR, 0,
+                                 apr_psprintf(resource->pool,
+                                              "Error converting string '%s'",
+                                              dst_path));
+#endif             
         }
       if (child->ns == ns && strcmp(child->name, "update-target") == 0)
         {
@@ -1130,6 +1244,14 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           if ((derr = dav_svn__test_canonical(cdata, resource->pool)))
             return derr;
           target = cdata;
+#if APR_CHARSET_EBCDIC
+          if (svn_utf_cstring_to_netccsid(&target, target, resource->pool))
+            return dav_new_error(resource->pool,
+                                 HTTP_INTERNAL_SERVER_ERROR, 0,
+                                 apr_psprintf(resource->pool,
+                                              "Error converting string '%s'",
+                                              target));
+#endif           
         }
       if (child->ns == ns && strcmp(child->name, "recursive") == 0)
         {
@@ -1228,6 +1350,15 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                  resource->pool);
     }
 
+  username_utf8 = repos->username;
+#if APR_CHARSET_EBCDIC
+  src_path = svn_path_uri_decode (src_path, resource->pool);
+  if (svn_utf_cstring_to_netccsid(&username_utf8, repos->username, resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                      repos->username));  
+#endif   
   /* If the client did *not* request 'send-all' mode, then we will be
      sending only a "skelta" of the difference, which will not need to
      contain actual text deltas. */
@@ -1254,7 +1385,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   editor->close_file = upd_close_file;
   editor->absent_file = upd_absent_file;
   editor->close_edit = upd_close_edit;
-  if ((serr = svn_repos_begin_report(&rbaton, revnum, repos->username, 
+  if ((serr = svn_repos_begin_report(&rbaton, revnum, username_utf8, 
                                      repos->repos, 
                                      src_path, target,
                                      dst_path,
@@ -1293,7 +1424,19 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                 if (! strcmp(this_attr->name, "rev"))
                   rev = SVN_STR_TO_REV(this_attr->value);
                 else if (! strcmp(this_attr->name, "linkpath"))
-                  linkpath = this_attr->value;
+                  {
+                    linkpath = this_attr->value;
+#if APR_CHARSET_EBCDIC
+                    if (svn_utf_cstring_to_netccsid(&linkpath, linkpath,
+                                                    resource->pool))
+                      return dav_new_error(resource->pool,
+                                           HTTP_INTERNAL_SERVER_ERROR, 0,
+                                           apr_psprintf(resource->pool,
+                                                        "Error converting " \
+                                                        "string '%s'",
+                                                        repos->username)); 
+#endif                    
+                  }
                 else if (! strcmp(this_attr->name, "start-empty"))
                   start_empty = TRUE;
                 else if (! strcmp(this_attr->name, "lock-token"))
@@ -1317,7 +1460,22 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
 
             /* get cdata, stripping whitespace */
             path = dav_xml_get_cdata(child, subpool, 0);
-            
+#if APR_CHARSET_EBCDIC
+            if (svn_utf_cstring_to_netccsid(&path, path, resource->pool))
+              return dav_new_error(resource->pool,
+                                   HTTP_INTERNAL_SERVER_ERROR, 0,
+                                   apr_psprintf(resource->pool,
+                                                "Error converting string '%s'",
+                                                path));
+                                                
+            if (svn_utf_cstring_to_netccsid(&locktoken, locktoken,
+                                            resource->pool))
+              return dav_new_error(resource->pool,
+                                   HTTP_INTERNAL_SERVER_ERROR, 0,
+                                   apr_psprintf(resource->pool,
+                                                "Error converting string '%s'",
+                                                locktoken));                                                
+#endif            
             if (! linkpath)
               serr = svn_repos_set_path2(rbaton, path, rev,
                                          start_empty, locktoken, subpool);
@@ -1350,6 +1508,14 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           {
             /* get cdata, stripping whitespace */
             const char *path = dav_xml_get_cdata(child, subpool, 0);
+#if APR_CHARSET_EBCDIC
+            if (svn_utf_cstring_to_netccsid(&path, path, resource->pool))
+              return dav_new_error(resource->pool,
+                                   HTTP_INTERNAL_SERVER_ERROR, 0,
+                                   apr_psprintf(resource->pool,
+                                                "Error converting string '%s'",
+                                                path));
+#endif            
             serr = svn_repos_delete_path(rbaton, path, subpool);
             if (serr != NULL)
               {

@@ -26,6 +26,7 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
+#include "svn_utf.h"
 
 
 /*** Helper functions. ***/
@@ -106,13 +107,13 @@ count_components (const char *path)
   int count = 1;
   const char *instance = path;
 
-  if ((strlen (path) == 1) && (path[0] == '/'))
+  if ((strlen (path) == 1) && (path[0] == SVN_UTF8_FSLASH))
     return 0;
 
   do
     {
       instance++;
-      instance = strchr (instance, '/');
+      instance = strchr (instance, SVN_UTF8_FSLASH);
       if (instance)
         count++;
     }
@@ -216,7 +217,7 @@ svn_delta_path_driver (const svn_delta_editor_t *editor,
               const char *rel = pdir;
 
               /* Find the first separator. */
-              piece = strchr (piece, '/');
+              piece = strchr (piece, SVN_UTF8_FSLASH);
 
               /* Calculate REL as the portion of PDIR up to (but not
                  including) the location to which PIECE is pointing. */

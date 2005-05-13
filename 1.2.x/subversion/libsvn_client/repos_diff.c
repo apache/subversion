@@ -1,4 +1,4 @@
-/*
+	/*
  * repos_diff.c -- The diff editor for comparing two repository versions
  *
  * ====================================================================
@@ -35,6 +35,10 @@
 
 #include "client.h"
 
+#define TMP_STR \
+        "\x74\x6D\x70"
+        /* "tmp"
+         * 
 /* Overall crawler editor baton.  */
 struct edit_baton {
   /* TARGET is a working-copy directory which corresponds to the base
@@ -322,7 +326,7 @@ get_file_from_ra (struct file_baton *b)
 
   SVN_ERR (svn_io_temp_dir (&temp_dir, b->pool));
   SVN_ERR (svn_io_open_unique_file (&file, &(b->path_start_revision),
-                                    svn_path_join (temp_dir, "tmp", b->pool),
+                                    svn_path_join (temp_dir, TMP_STR, b->pool),
                                     "", FALSE, b->pool));
 
   /* Install a pool cleanup handler to delete the file */
@@ -369,13 +373,13 @@ create_empty_file (const char **empty_file,
 
   if (have_write_lock)
     {
-      temp_path = "tmp";
+      temp_path = TMP_STR;
     }
   else 
     {
       const char *temp_dir;
       SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
-      temp_path = svn_path_join (temp_dir, "tmp", pool);
+      temp_path = svn_path_join (temp_dir, TMP_STR, pool);
     }
 
   SVN_ERR (svn_io_open_unique_file (&file, empty_file, temp_path,

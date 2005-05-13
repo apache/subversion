@@ -27,9 +27,9 @@
 #include "svn_pools.h"
 #include "svn_fs.h"
 #include "svn_props.h"
+#include "svn_utf.h"
 
 #include "dav_svn.h"
-
 
 /* #################################################################
 
@@ -71,7 +71,9 @@ static svn_error_t *send_response(const dav_svn_repos *repos,
   const char *vsn_url;
   apr_status_t status;
   svn_revnum_t rev_to_use;
-
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_netccsid(&path, path, pool));
+#endif
   href = dav_svn_build_uri(repos, DAV_SVN_BUILD_URI_PUBLIC,
                            SVN_IGNORED_REVNUM, path, 0 /* add_href */, pool);
   rev_to_use = dav_svn_get_safe_cr(root, path, pool);
@@ -240,6 +242,14 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                                  "Could not get date of newest revision",
                                  repos->pool); 
     }
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_from_netccsid(&(creationdate->data), creationdate->data,
+                                    pool))
+    return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(pool, "Error converting string '%s'",
+                                      creationdate->data));                                     
+#endif 
+    
   serr = svn_fs_revision_prop(&creator_displayname, repos->fs, new_rev,
                               SVN_PROP_REVISION_AUTHOR, pool);
   if (serr != NULL)
@@ -248,7 +258,16 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                                  "Could not get author of newest revision",
                                  repos->pool); 
     }
-
+#if APR_CHARSET_EBCDIC
+  if (creator_displayname &&
+      svn_utf_string_from_netccsid(&creator_displayname, creator_displayname,
+                                   pool))
+    return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(pool, "Error converting string '%s'",
+                                      creator_displayname ?
+                                      creator_displayname->data :
+                                      ""));  
+#endif
 
   (void) ap_fputstrs(output, bb,
                      DAV_XML_HEADER DEBUG_CR

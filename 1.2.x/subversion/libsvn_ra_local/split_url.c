@@ -21,8 +21,24 @@
 #include <string.h>
 #include "svn_path.h"
 #include "svn_private_config.h"
+#include "svn_utf.h"
 
+#define DRIVE_LETTER_STR \
+        "\x41\x42\x43\x44\x45\x46\x47\x48\x49\x4a\x4b\x4c\x4d\x4e\x4f\x50" \
+        "\x51\x52\x53\x54\x55\x56\x57\x58\x59\x5a\x61\x62\x63\x64\x65\x66" \
+        "\x67\x68\x69\x6a\x6b\x6c\x6d\x6e\x6f\x70\x71\x72\x73\x74\x75\x76" \
+        "\x77\x78\x79\x7a"
+        /* "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" */
 
+#define FILE_PREFIX_STR \
+        "\x66\x69\x6c\x65\x3a\x2f\x2f"
+        /* "file://" */
+        
+#define LOCALHOST_STR \
+        "\x6c\x6f\x63\x61\x6c\x68\x6f\x73\x74"
+        /* "localhost" */        
+
+        
 svn_error_t *
 svn_ra_local__split_URL (svn_repos_t **repos,
                          const char **repos_url,
@@ -38,7 +54,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
   /* Verify that the URL is well-formed (loosely) */
 
   /* First, check for the "file://" prefix. */
-  if (strncmp (URL, "file://", 7) != 0)
+  if (strncmp (URL, FILE_PREFIX_STR, 7) != 0)
     return svn_error_createf 
       (SVN_ERR_RA_ILLEGAL_URL, NULL, 
        _("Local URL '%s' does not contain 'file://' prefix"), URL);
@@ -48,7 +64,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
      everything from that '/' until the end of the URL to be the
      absolute path portion of the URL. */
   hostname = URL + 7;
-  path = strchr (hostname, '/');
+  path = strchr (hostname, SVN_UTF8_FSLASH);
   if (! path)
     return svn_error_createf 
       (SVN_ERR_RA_ILLEGAL_URL, NULL, 
@@ -59,7 +75,7 @@ svn_ra_local__split_URL (svn_repos_t **repos,
     {
       hostname = svn_path_uri_decode (apr_pstrmemdup (pool, hostname,
                                                      path - hostname), pool);
-        if (strncmp (hostname, "localhost", 9) == 0)
+        if (strncmp (hostname, LOCALHOST_STR, 9) == 0)
 	  hostname = NULL;
     }
   else
@@ -94,19 +110,18 @@ svn_ra_local__split_URL (svn_repos_t **repos,
     into an UNC path.  In this case, we obviously don't strip the slash
     even if the path looks like it starts with a drive letter. */
   {
-    static const char valid_drive_letters[] =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+    static const char valid_drive_letters[] = DRIVE_LETTER_STR;
     char *dup_path = svn_path_uri_decode (path, pool);
     if (!hostname && dup_path[1] && strchr(valid_drive_letters, dup_path[1])
-        && (dup_path[2] == ':' || dup_path[2] == '|')
-        && dup_path[3] == '/')
+        && (dup_path[2] == SVN_UTF8_COLON || dup_path[2] == SVN_UTF8_PIPE)
+        && dup_path[3] == SVN_UTF8_FSLASH)
       {
         /* Skip the leading slash. */
         ++dup_path;
         /* We're using path below to calculate fs_path, so keep it in sync. */
         ++path;
-        if (dup_path[1] == '|')
-          dup_path[1] = ':';
+        if (dup_path[1] == SVN_UTF8_PIPE)
+          dup_path[1] = SVN_UTF8_COLON;
       }
     if (hostname)
       /* We still know that the path starts with a slash. */

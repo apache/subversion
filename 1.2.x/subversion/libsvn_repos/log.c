@@ -29,6 +29,7 @@
 #include "svn_sorts.h"
 #include "svn_props.h"
 #include "repos.h"
+#include "svn_utf.h"
 
 
 
@@ -116,27 +117,27 @@ detect_changed (apr_hash_t **changed,
           continue;
 
         case svn_fs_path_change_add:
-          action = 'A';
+          action = SVN_UTF8_A;
           break;
 
         case svn_fs_path_change_replace:
-          action = 'R';
+          action = SVN_UTF8_R;
           break;
 
         case svn_fs_path_change_delete:
-          action = 'D';
+          action = SVN_UTF8_D;
           break;
 
         case svn_fs_path_change_modify:
         default:
-          action = 'M';
+          action = SVN_UTF8_M;
           break;
         }
 
       item = apr_pcalloc (pool, sizeof (*item));
       item->action = action;
       item->copyfrom_rev = SVN_INVALID_REVNUM;
-      if ((action == 'A') || (action == 'R'))
+      if ((action == SVN_UTF8_A) || (action == SVN_UTF8_R))
         {
           const char *copyfrom_path;
           svn_revnum_t copyfrom_rev;

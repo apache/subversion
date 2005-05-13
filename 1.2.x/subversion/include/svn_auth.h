@@ -165,7 +165,9 @@ typedef struct svn_auth_provider_object_t
  * - @c SVN_AUTH_PARAM_DEFAULT_USERNAME (@c char*)
  * - @c SVN_AUTH_PARAM_DEFAULT_PASSWORD (@c char*)
  */
-#define SVN_AUTH_CRED_SIMPLE "svn.simple"
+#define SVN_AUTH_CRED_SIMPLE \
+        "\x73\x76\x6e\x2e\x73\x69\x6d\x70\x6c\x65"
+        /* "svn.simple" */
 
 /** @c SVN_AUTH_CRED_SIMPLE credentials. */
 typedef struct svn_auth_cred_simple_t
@@ -189,7 +191,9 @@ typedef struct svn_auth_cred_simple_t
  * - @c SVN_AUTH_PARAM_NO_AUTH_CACHE (@c void*)
  * - @c SVN_AUTH_PARAM_DEFAULT_USERNAME (@c char*)
  */
-#define SVN_AUTH_CRED_USERNAME "svn.username"
+#define SVN_AUTH_CRED_USERNAME \
+        "\x73\x76\x6e\x2e\x75\x73\x65\x72\x6e\x61\x6d\x65"
+        /* "svn.username" */
 
 /** @c SVN_AUTH_CRED_USERNAME credentials. */
 typedef struct svn_auth_cred_username_t
@@ -215,7 +219,10 @@ typedef struct svn_auth_cred_username_t
  *
  * - @c SVN_AUTH_PARAM_NO_AUTH_CACHE (@c void*)
  */
-#define SVN_AUTH_CRED_SSL_CLIENT_CERT "svn.ssl.client-cert"
+#define SVN_AUTH_CRED_SSL_CLIENT_CERT \
+        "\x73\x76\x6e\x2e\x73\x73\x6c\x2e\x63\x6c\x69\x65\x6e\x74\x2d\x63\x65" \
+        "\x72\x74"
+        /* "svn.ssl.client-cert" */
 
 /** @c SVN_AUTH_CRED_SSL_CLIENT_CERT credentials. */
 typedef struct svn_auth_cred_ssl_client_cert_t
@@ -244,7 +251,10 @@ typedef struct svn_auth_cred_ssl_client_cert_t
  *
  * - @c SVN_AUTH_PARAM_NO_AUTH_CACHE (@c void*)
  */
-#define SVN_AUTH_CRED_SSL_CLIENT_CERT_PW "svn.ssl.client-passphrase"
+#define SVN_AUTH_CRED_SSL_CLIENT_CERT_PW \
+        "\x73\x76\x6e\x2e\x73\x73\x6c\x2e\x63\x6c\x69\x65\x6e\x74\x2d\x70\x61" \
+        "\x73\x73\x70\x68\x72\x61\x73\x65"
+        /* "svn.ssl.client-passphrase" */
 
 /** @c SVN_AUTH_CRED_SSL_CLIENT_CERT_PW credentials. */
 typedef struct svn_auth_cred_ssl_client_cert_pw_t
@@ -273,7 +283,9 @@ typedef struct svn_auth_cred_ssl_client_cert_pw_t
  *
  * - @c SVN_AUTH_PARAM_NO_AUTH_CACHE (@c void*)
  */
-#define SVN_AUTH_CRED_SSL_SERVER_TRUST "svn.ssl.server"
+#define SVN_AUTH_CRED_SSL_SERVER_TRUST \
+        "\x73\x76\x6e\x2e\x73\x73\x6c\x2e\x73\x65\x72\x76\x65\x72"
+        /* "svn.ssl.server" */
 
 /** SSL server certificate information used by @c
  * SVN_AUTH_CRED_SSL_SERVER_TRUST providers.
@@ -492,52 +504,73 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
     hash. */
 
 /** The auth-hash prefix indicating that the parameter is global. */
-#define SVN_AUTH_PARAM_PREFIX "svn:auth:"
+#define SVN_AUTH_PARAM_PREFIX \
+        "\x73\x76\x6e\x3a\x61\x75\x74\x68\x3a"
+        /* "svn:auth:" */
 
 /** @{ */
 /** @brief Any 'default' credentials that came in through the application
  * itself, (e.g. --username and --password options).  Property values are
  * const char *.  */
-#define SVN_AUTH_PARAM_DEFAULT_USERNAME  SVN_AUTH_PARAM_PREFIX "username"
-#define SVN_AUTH_PARAM_DEFAULT_PASSWORD  SVN_AUTH_PARAM_PREFIX "password"
+#define SVN_AUTH_PARAM_DEFAULT_USERNAME  SVN_AUTH_PARAM_PREFIX \
+        "\x75\x73\x65\x72\x6e\x61\x6d\x65"
+        /* "username" */
 /** @} */
+
+#define SVN_AUTH_PARAM_DEFAULT_PASSWORD  SVN_AUTH_PARAM_PREFIX \
+        "\x70\x61\x73\x73\x77\x6f\x72\x64"
+        /* "password" */
 
 /** @brief The application doesn't want any providers to prompt
  * users. Property value is irrelevant; only property's existence
  * matters. */
-#define SVN_AUTH_PARAM_NON_INTERACTIVE  SVN_AUTH_PARAM_PREFIX "non-interactive"
+#define SVN_AUTH_PARAM_NON_INTERACTIVE  SVN_AUTH_PARAM_PREFIX \
+        "\x6e\x6f\x6e\x2d\x69\x6e\x74\x65\x72\x61\x63\x74\x69\x76\x65"
+        /* "non-interactive" */
 
 /** @brief The application doesn't want any providers to save passwords
  * to disk. Property value is irrelevant; only property's existence
  * matters. */
 #define SVN_AUTH_PARAM_DONT_STORE_PASSWORDS  SVN_AUTH_PARAM_PREFIX \
-                                                 "dont-store-passwords"
+        "\x64\x6f\x6e\x74\x2d\x73\x74\x6f\x72\x65\x2d\x70\x61\x73\x73\x77\x6f" \
+        "\x72\x64\x73"
+        /* "dont-store-passwords" */
 
 /** @brief The application doesn't want any providers to save credentials
  * to disk. Property value is irrelevant; only property's existence
  * matters. */
-#define SVN_AUTH_PARAM_NO_AUTH_CACHE  SVN_AUTH_PARAM_PREFIX "no-auth-cache"
+#define SVN_AUTH_PARAM_NO_AUTH_CACHE  SVN_AUTH_PARAM_PREFIX \
+        "\x6e\x6f\x2d\x61\x75\x74\x68\x2d\x63\x61\x63\x68\x65"
+        /* "no-auth-cache" */
 
 /** @brief The following property is for SSL server cert providers. This
  * provides a pointer to an @c apr_uint32_t containing the failures
  * detected by the certificate validator. */
 #define SVN_AUTH_PARAM_SSL_SERVER_FAILURES SVN_AUTH_PARAM_PREFIX \
-  "ssl:failures"
+        "\x73\x73\x6c\x3a\x66\x61\x69\x6c\x75\x72\x65\x73"
+        /* "ssl:failures" */
 
 /** @brief The following property is for SSL server cert providers. This
  * provides the cert info (svn_auth_ssl_server_cert_info_t). */
 #define SVN_AUTH_PARAM_SSL_SERVER_CERT_INFO SVN_AUTH_PARAM_PREFIX \
-  "ssl:cert-info"
+        "\x73\x73\x6c\x3a\x63\x65\x72\x74\x2d\x69\x6e\x66\x6f"
+        /* "ssl:cert-info" */
 
 /** Some providers need access to the @c svn_config_t configuration. */
-#define SVN_AUTH_PARAM_CONFIG SVN_AUTH_PARAM_PREFIX "config"
+#define SVN_AUTH_PARAM_CONFIG SVN_AUTH_PARAM_PREFIX \
+        "\x63\x6f\x6e\x66\x69\x67"
+        /* "config" */
 
 /** The current server group. */
-#define SVN_AUTH_PARAM_SERVER_GROUP SVN_AUTH_PARAM_PREFIX "server-group"
+#define SVN_AUTH_PARAM_SERVER_GROUP SVN_AUTH_PARAM_PREFIX \
+        "\x73\x65\x72\x76\x65\x72\x2d\x67\x72\x6f\x75\x70"
+        /* "server-group" */
 
 /** @brief A configuration directory that overrides the default
  * ~/.subversion. */
-#define SVN_AUTH_PARAM_CONFIG_DIR SVN_AUTH_PARAM_PREFIX "config-dir"
+#define SVN_AUTH_PARAM_CONFIG_DIR SVN_AUTH_PARAM_PREFIX \
+        "\x63\x6f\x6e\x66\x69\x67\x2d\x64\x69\x72"
+        /* "config-dir" */
 
 
 /** Get an initial set of credentials.

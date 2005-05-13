@@ -29,6 +29,10 @@
 #include <apr_strings.h>
 #include <apr_hash.h>
 
+#if APR_CHARSET_EBCDIC
+#include <ap_charset.h> /* For ap_change_response_body_xlate */
+#endif
+
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -38,6 +42,7 @@
 #include "svn_sorts.h"
 #include "svn_version.h"
 #include "svn_props.h"
+#include "svn_utf.h"
 
 #include "dav_svn.h"
 #include "mod_dav_svn.h"
@@ -97,7 +102,11 @@ dav_svn__fs_check_path(svn_node_kind_t *kind,
   svn_error_t *serr;
   svn_node_kind_t my_kind;
 
-  serr = svn_fs_check_path(&my_kind, root, path, pool);
+#if APR_CHARSET_EBCDIC
+  serr = svn_utf_cstring_to_netccsid(&path, path, pool);
+  if(!serr) 
+#endif
+    serr = svn_fs_check_path(&my_kind, root, path, pool);
 
   /* Possibly trap other fs-errors here someday -- errors which may
      simply indicate the path's nonexistence, rather than a critical
@@ -562,7 +571,8 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
   svn_error_t *serr;
   dav_error *derr;
   svn_node_kind_t kind;
-
+  const char *repos_path;
+  
   /* A REGULAR resource might have a specific revision already (e.g. if it
      is part of a baseline collection). However, if it doesn't, then we
      will assume that we need the youngest revision.
@@ -732,7 +742,7 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
   if (comb->priv.repos->username)
     {
       svn_string_t *current_author;
-      svn_string_t request_author;
+      svn_string_t *request_author;
 
       serr = svn_fs_txn_prop(&current_author, comb->priv.root.txn,
                SVN_PROP_REVISION_AUTHOR, pool);
@@ -744,12 +754,17 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
                    pool);
         }
 
-      request_author.data = comb->priv.repos->username;
-      request_author.len = strlen(request_author.data);
+      request_author = svn_string_create (comb->priv.repos->username, pool);
+#if APR_CHARSET_EBCDIC          
+      if (svn_utf_string_to_netccsid(&request_author, request_author, pool))
+        return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(pool, "Error converting string '%s'",
+                                          request_author->data));
+#endif        
       if (!current_author)
         {
           serr = svn_fs_change_txn_prop(comb->priv.root.txn,
-                   SVN_PROP_REVISION_AUTHOR, &request_author, pool);
+                   SVN_PROP_REVISION_AUTHOR, request_author, pool);
           if (serr != NULL)
             {
               return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -758,7 +773,7 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
                        pool);
             }
         }
-      else if (!svn_string_compare(current_author, &request_author))
+      else if (!svn_string_compare(current_author, request_author))
         {
           return dav_new_error(pool, HTTP_NOT_IMPLEMENTED, 0,
                    "Multi-author commits not supported.");
@@ -1228,9 +1243,15 @@ static dav_error * dav_svn_get_resource(request_rec *r,
     {      
       /* ...then the URL to the repository is actually one implicit
          component longer... */
+#if !APR_CHARSET_EBCDIC         
       root_path = svn_path_join(root_path, repos_name, r->pool);
       /* ...and we need to specify exactly what repository to open. */
       fs_path = svn_path_join(fs_parent_path, repos_name, r->pool);
+#else
+      root_path = svn_path_join_ebcdic(root_path, repos_name, r->pool);
+      /* ...and we need to specify exactly what repository to open. */
+      fs_path = svn_path_join_ebcdic(fs_parent_path, repos_name, r->pool);
+#endif      
     }
 
   /* Start building and filling a 'combination' object. */
@@ -1290,7 +1311,11 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   /* We are assuming the root_path will live at least as long as this
      resource. Considering that it typically comes from the per-dir
      config in mod_dav, this is valid for now. */
+#if !APR_CHARSET_EBCDIC     
   repos->root_path = svn_path_uri_encode(root_path, r->pool);
+#else
+  repos->root_path = svn_path_uri_encode_native_partial(root_path, r->pool);
+#endif
 
   /* where is the SVN FS for this resource? */
   repos->fs_path = fs_path;
@@ -1323,7 +1348,15 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   apr_pool_userdata_get((void **)&repos->repos, repos_key, r->connection->pool);
   if (repos->repos == NULL)
     {
-      serr = svn_repos_open(&(repos->repos), fs_path, r->connection->pool);
+      const char *fs_path_utf8 = fs_path;  
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_to_netccsid (&fs_path_utf8, fs_path, r->pool))
+        return dav_new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(r->pool, 
+                             "Error converting string '%s'",
+                             fs_path));
+#endif    	
+      serr = svn_repos_open(&(repos->repos), fs_path_utf8, r->connection->pool);
       if (serr != NULL)
         {
           /* The error returned by svn_repos_open might contain the
@@ -1361,6 +1394,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   if (r->user)
     {
       svn_fs_access_t *access_ctx;
+      const char *user = r->user;
 
       /* The fs is cached in connection->pool, but the fs access
          context lives in r->pool.  Because the username or token
@@ -1373,7 +1407,14 @@ static dav_error * dav_svn_get_resource(request_rec *r,
                                 apr_pool_cleanup_null);      
       
       /* Create an access context based on the authenticated username. */
-      serr = svn_fs_create_access (&access_ctx, r->user, r->pool);
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_to_netccsid (&user, r->user, r->pool))
+        return dav_new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(r->pool, 
+                             "Error converting string '%s'",
+                             r->user));
+#endif  
+      serr = svn_fs_create_access (&access_ctx, user, r->pool);
       if (serr)
         {
           const char *new_msg = "Could not create fs access context";
@@ -1440,8 +1481,17 @@ static dav_error * dav_svn_get_resource(request_rec *r,
         }
 
       do {
+      	const char *uuid_str = list->locktoken->uuid_str;
+#if APR_CHARSET_EBCDIC
+        if (svn_utf_cstring_to_netccsid (&uuid_str, list->locktoken->uuid_str,
+                                         r->pool))
+          return dav_new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                               apr_psprintf(r->pool, 
+                               "Error converting string '%s'",
+                               list->locktoken->uuid_str));
+#endif        	
         serr = svn_fs_access_add_lock_token (access_ctx,
-                                             list->locktoken->uuid_str);
+                                             uuid_str);
         if (serr)
           return dav_svn_convert_err (serr, HTTP_INTERNAL_SERVER_ERROR,
                                       "Error pushing token into filesystem.",
@@ -1524,9 +1574,12 @@ static const char *get_parent_path(const char *path,
     {
       /* Remove any trailing slash; else svn_path_split() asserts. */
       if (tmp[len-1] == '/')
-        tmp[len-1] = '\0';      
+        tmp[len-1] = '\0';
+#if !APR_CHARSET_EBCDIC      
       svn_path_split(tmp, &parentpath, &base_name, pool);
-
+#else
+      svn_path_split_ebcdic(tmp, &parentpath, &base_name, pool);
+#endif
       return parentpath;
     }  
 
@@ -1799,7 +1852,47 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
   svn_node_kind_t kind;
   dav_error *derr;
   svn_error_t *serr;
-
+  const char *repos_path = resource->info->repos_path;
+  const char *base_checksum = resource->info->base_checksum;
+  const char *result_checksum = resource->info->result_checksum;
+  const char *content_type = resource->info->r->content_type;
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_to_netccsid(&repos_path, 
+                                  resource->info->repos_path,
+                                  resource->pool))
+    return dav_new_error(resource->pool,
+                         HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                      resource->info->repos_path));
+  
+  if (svn_utf_cstring_to_netccsid(&base_checksum,
+                                  resource->info->base_checksum,
+                                  resource->pool))
+    return dav_new_error(resource->pool,
+                         HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                      resource->info->base_checksum));
+  
+  if (svn_utf_cstring_to_netccsid(&result_checksum,
+                                  resource->info->result_checksum,
+                                  resource->pool))
+    return dav_new_error(resource->pool,
+                         HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                      resource->info->result_checksum));
+  if (svn_utf_cstring_to_netccsid(&content_type,
+                                  resource->info->r->content_type,
+                                  resource->pool))
+    return dav_new_error(resource->pool,
+                         HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                      resource->info->r->content_type));
+#endif  
+  
   if (mode == DAV_MODE_WRITE_TRUNC || mode == DAV_MODE_WRITE_SEEKABLE)
     {
       if (resource->type != DAV_RESOURCE_TYPE_WORKING)
@@ -1833,7 +1926,7 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
   if (kind == svn_node_none) /* No existing file. */
     {
       serr = svn_fs_make_file(resource->info->root.root,
-                              resource->info->repos_path,
+                              repos_path,
                               resource->pool);
       
       if (serr != NULL)
@@ -1857,7 +1950,7 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
 
       serr = svn_fs_node_prop (&mime_type,
                                resource->info->root.root,
-                               resource->info->repos_path,
+                               repos_path,
                                SVN_PROP_MIME_TYPE,
                                resource->pool);
       
@@ -1871,10 +1964,10 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
       if (!mime_type)
         {
           serr = svn_fs_change_node_prop(resource->info->root.root,
-                                         resource->info->repos_path,
+                                         repos_path,
                                          SVN_PROP_MIME_TYPE,
                                          svn_string_create
-                                             (resource->info->r->content_type,
+                                             (content_type,
                                               resource->pool),
                                          resource->pool);
           if (serr != NULL)
@@ -1889,9 +1982,9 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
   serr = svn_fs_apply_textdelta(&(*stream)->delta_handler,
                                 &(*stream)->delta_baton,
                                 resource->info->root.root,
-                                resource->info->repos_path,
-                                resource->info->base_checksum,
-                                resource->info->result_checksum,
+                                repos_path,
+                                base_checksum,
+                                result_checksum,
                                 resource->pool);
 
   if (serr != NULL)
@@ -2015,6 +2108,7 @@ const char * dav_svn_getetag(const dav_resource *resource, apr_pool_t *pool)
 {
   svn_error_t *serr;
   svn_revnum_t created_rev;
+  const char *repos_path_utf8 = resource->info->repos_path;
 
   /* if the resource doesn't exist, isn't a simple REGULAR or VERSION
      resource, or it is a Baseline, then it has no etag. */
@@ -2027,8 +2121,12 @@ const char * dav_svn_getetag(const dav_resource *resource, apr_pool_t *pool)
 
   /* ### what kind of etag to return for collections, activities, etc? */
 
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_to_netccsid(&repos_path_utf8, repos_path_utf8, pool))
+    return "";
+#endif
   if ((serr = svn_fs_node_created_rev(&created_rev, resource->info->root.root,
-                                      resource->info->repos_path,
+                                      repos_path_utf8,
                                       pool)))
     {
       /* ### what to do? */
@@ -2091,7 +2189,12 @@ static dav_error * dav_svn_set_headers(request_rec *r,
       if (resource->info->repos->xslt_uri)
         mimetype = "text/xml";
       else
+        {
         mimetype = "text/html; charset=UTF-8";
+#if APR_CHARSET_EBCDIC        
+        ap_change_response_body_xlate(r, ap_get_request_from_ccsid(r), 0);
+#endif
+        }
     }
   else if (resource->info->delta_base != NULL)
     {
@@ -2116,10 +2219,20 @@ static dav_error * dav_svn_set_headers(request_rec *r,
       && (resource->info->repos_path != NULL))
     {
       svn_string_t *value;
+      const char *repos_path_utf8 = resource->info->repos_path;
+#if APR_CHARSET_EBCDIC
+      if(svn_utf_cstring_to_netccsid(&repos_path_utf8,
+                                     resource->info->repos_path,
+                                     resource->pool))
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(resource->pool,
+                                          "Error converting string '%s'",
+                                          resource->info->repos_path));
+#endif    
 
       serr = svn_fs_node_prop(&value,
                               resource->info->root.root,
-                              resource->info->repos_path,
+                              repos_path_utf8,
                               SVN_PROP_MIME_TYPE,
                               resource->pool);
       if (serr != NULL)
@@ -2128,10 +2241,21 @@ static dav_error * dav_svn_set_headers(request_rec *r,
                                    resource->pool);
 
       if (value)
-        mimetype = value->data;
+        {
+#if !APR_CHARSET_EBCDIC
+          mimetype = value->data;
+#else
+          if(svn_utf_cstring_from_netccsid(&mimetype, value->data,
+                                           resource->pool))
+            return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                                 apr_psprintf(resource->pool,
+                                              "Error converting string '%s'",
+                                              value->data));
+#endif          
+        }
       else if ((! resource->info->repos->is_svn_client)
                && r->content_type)
-        mimetype = r->content_type;
+          mimetype = r->content_type;
       else
         mimetype = "text/plain";
 
@@ -2147,11 +2271,15 @@ static dav_error * dav_svn_set_headers(request_rec *r,
           mimetype = "application/octet-stream";
         }
 
+#if APR_CHARSET_EBCDIC      	      
+        /* Don't let the server try to translate the body */
+        ap_change_response_body_xlate(r, 65535, 65535);
+#endif
       /* if we aren't sending a diff, then we know the length of the file,
          so set up the Content-Length header */
       serr = svn_fs_file_length(&length,
                                 resource->info->root.root,
-                                resource->info->repos_path,
+                                repos_path_utf8,
                                 resource->pool);
       if (serr != NULL)
         {
@@ -2214,6 +2342,15 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
   apr_bucket_brigade *bb;
   apr_bucket *bkt;
   apr_status_t status;
+  const char *repos_path_utf8 = resource->info->repos_path;
+#if APR_CHARSET_EBCDIC
+  if(svn_utf_cstring_to_netccsid(&repos_path_utf8, resource->info->repos_path,
+                                 resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                      resource->info->repos_path));
+#endif  
 
   /* Check resource type */
   if (resource->type != DAV_RESOURCE_TYPE_REGULAR
@@ -2267,7 +2404,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
        </svn> */
 
     serr = svn_fs_dir_entries(&entries, resource->info->root.root,
-                              resource->info->repos_path, resource->pool);
+                              repos_path_utf8, resource->pool);
     if (serr != NULL)
       return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                  "could not fetch directory entries",
@@ -2281,8 +2418,15 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         if (resource->info->repos_path == NULL)
           title = "unknown location";
         else
-          title = resource->info->repos_path;
-
+#if !APR_CHARSET_EBCDIC
+          title = repos_path_utf8;
+#else
+        if(svn_utf_cstring_from_netccsid(&title, repos_path_utf8, resource->pool))
+          return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                               apr_psprintf(resource->pool,
+                                            "Error converting string '%s'",
+                                            repos_path_utf8));  
+#endif
         if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
           title = apr_psprintf(resource->pool,
                                "Revision %ld: %s",
@@ -2348,7 +2492,19 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         svn_boolean_t is_dir = (entry->kind == svn_node_dir);
 
         svn_pool_clear(entry_pool);
+#if APR_CHARSET_EBCDIC
+        if (svn_utf_cstring_from_netccsid(&name, name, resource->pool))
+          return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                               apr_psprintf(resource->pool,
+                                            "Error converting string '%s'",
+                                            name));        
 
+        if (svn_utf_cstring_from_netccsid(&href, href, resource->pool))
+          return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                               apr_psprintf(resource->pool,
+                                            "Error converting string '%s'",
+                                            href));           
+#endif   
         /* append a trailing slash onto the name for directories. we NEED
            this for the href portion so that the relative reference will
            descend properly. for the visible portion, it is just nice. */
@@ -2358,7 +2514,24 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
           href = apr_pstrcat(entry_pool, href, "/", NULL);
 
         if (gen_html)
+#if !APR_CHARSET_EBCDIC        
           name = href;
+#else
+          /* On ebcdic platforms the href may have multibyte utf-8 preserving
+           * ebcdic sequences that haven't been escaped yet:  
+           * 
+           * e.g. href == "New Bj" "\x66" "\x62" "rn Folder/"
+           * 
+           * But name may be different if the utf-8 char(s) map(s) to a single
+           * byte on this ebcdic codepage:
+           * 
+           * e.g. name == "New Bj" "\xCC" "rn Folder" on CCSID 37
+           * 
+           * So we just append a "/" directly to name rather than setting it to
+           * href.
+           */
+          name = apr_pstrcat(entry_pool, name, "/", NULL);
+#endif          
 
 	/* We quote special characters in both XML and HTML. */
 	name = apr_xml_quote_string(entry_pool, name, !gen_html);
@@ -2453,7 +2626,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
           serr = svn_fs_get_file_delta_stream(&txd_stream,
                                               root, info.repos_path,
                                               resource->info->root.root,
-                                              resource->info->repos_path,
+                                              repos_path_utf8,
                                               resource->pool);
           if (serr != NULL)
             return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -2497,7 +2670,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
 
       serr = svn_fs_file_contents(&stream,
                                   resource->info->root.root,
-                                  resource->info->repos_path,
+                                  repos_path_utf8,
                                   resource->pool);
       if (serr != NULL)
         {
@@ -2515,8 +2688,7 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
 
         /* read from the FS ... */
         serr = svn_stream_read(stream, block, &bufsize);
-        if (serr != NULL)
-          {
+        if (serr != NULL) {
             return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                        "could not read the file contents",
                                        resource->pool);
@@ -2554,6 +2726,7 @@ static dav_error * dav_svn_create_collection(dav_resource *resource)
 {
   svn_error_t *serr;
   dav_error *err;
+  const char *repos_path_utf8;
 
   if (resource->type != DAV_RESOURCE_TYPE_WORKING
       && resource->type != DAV_RESOURCE_TYPE_REGULAR)
@@ -2585,8 +2758,18 @@ static dav_error * dav_svn_create_collection(dav_resource *resource)
         return err;
     }
 
+#if !APR_CHARSET_EBCDIC
+  repos_path_utf8 = resource->info->repos_path;
+#else
+  if (svn_utf_cstring_to_netccsid(&repos_path_utf8, resource->info->repos_path,
+                                  resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                      resource->info->repos_path));
+#endif
   if ((serr = svn_fs_make_dir(resource->info->root.root,
-                              resource->info->repos_path,
+                              repos_path_utf8,
                               resource->pool)) != NULL)
     {
       /* ### need a better error */
@@ -2669,16 +2852,37 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
 
   if (!serr)
     {
+      const char *src_path;
+      const char *dst_path;
+#if !APR_CHARSET_EBCDIC      
+      src_path = src->info->repos_path;
+      dst_path = dst->info->repos_path;
+#else
+      if (svn_utf_cstring_to_netccsid(&src_path, src->info->repos_path,
+                                      src->pool))
+        return dav_new_error(src->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(src->pool,
+                                          "Error converting string '%s'",
+                                          src->info->repos_path));
+
+      if (svn_utf_cstring_to_netccsid(&dst_path, dst->info->repos_path,
+                                      src->pool))
+        return dav_new_error(dst->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(dst->pool,
+                                          "Error converting string '%s'",
+                                          dst->info->repos_path));
+#endif            	
       if (strcmp(src_repos_path, dst_repos_path) != 0)
         return dav_new_error_tag
           (dst->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
            "Copy source and destination are in different repositories.",
            SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
-      serr = svn_fs_copy(src->info->root.root,  /* root object of src rev*/
-                         src->info->repos_path, /* relative path of src */
-                         dst->info->root.root,  /* root object of dst txn*/ 
-                         dst->info->repos_path, /* relative path of dst */
-                         src->pool);
+
+      serr = svn_fs_copy (src->info->root.root,  /* root object of src rev*/
+                          src_path,              /* relative path of src */
+                          dst->info->root.root,  /* root object of dst txn*/ 
+                          dst_path,              /* relative path of dst */
+                          src->pool);
     }
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -2704,6 +2908,7 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
   svn_error_t *serr;
   dav_error *err;
   apr_hash_t *locks;
+  const char *repos_path_utf8;
 
   /* Only activities, and working or regular resources can be deleted... */
   if (resource->type != DAV_RESOURCE_TYPE_WORKING
@@ -2748,6 +2953,17 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
         return err;
     }
 
+#if !APR_CHARSET_EBCDIC
+  repos_path_utf8 = resource->info->repos_path;
+#else
+  if (svn_utf_cstring_to_netccsid(&repos_path_utf8, resource->info->repos_path,
+                                  resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                      resource->info->repos_path));
+#endif  
+
   /* Sanity check: an svn client may have sent a custom request header
      containing the revision of the item it thinks it's deleting.  In
      this case, we enforce the svn-specific semantic that the item
@@ -2757,7 +2973,7 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
       svn_revnum_t created_rev;
       serr = svn_fs_node_created_rev(&created_rev,
                                      resource->info->root.root,
-                                     resource->info->repos_path,
+                                     repos_path_utf8,
                                      resource->pool);
       if (serr)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -2768,7 +2984,7 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
         {
           serr = svn_error_createf(SVN_ERR_RA_OUT_OF_DATE, NULL,
                                    "Item '%s' is out of date", 
-                                   resource->info->repos_path);
+                                   repos_path_utf8);
           return dav_svn_convert_err(serr, HTTP_CONFLICT,
                                      "Can't DELETE out-of-date resource",
                                      resource->pool);
@@ -2795,7 +3011,7 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
     }
 
   if ((serr = svn_fs_delete(resource->info->root.root,
-                            resource->info->repos_path,
+                            repos_path_utf8,
                             resource->pool)) != NULL)
     {
       /* ### need a better error */
@@ -2889,6 +3105,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   apr_size_t uri_len;
   apr_size_t repos_len;
   apr_hash_t *children;
+  const char *repos_path_utf8;  
 
   /* The current resource is a collection (possibly here thru recursion)
      and this is the invocation for the collection. Alternatively, this is
@@ -2942,8 +3159,17 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   repos_len = ctx->repos_path->len;
 
   /* fetch this collection's children */
+  repos_path_utf8 = ctx->info.repos_path;
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_to_netccsid(&repos_path_utf8, repos_path_utf8,
+                                  params->pool))
+    return dav_new_error(params->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(params->pool, 
+                                      "Error converting string '%s'",
+                                      repos_path_utf8));
+#endif
   serr = svn_fs_dir_entries(&children, ctx->info.root.root,
-                            ctx->info.repos_path, params->pool);
+                            repos_path_utf8, params->pool);
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not fetch collection members",
@@ -2952,7 +3178,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   /* iterate over the children in this collection */
   for (hi = apr_hash_first(params->pool, children); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
+      const void *key, * key_uri_encoded, *key_apr_escaped, *key_apr;
       apr_ssize_t klen;
       void *val;
       svn_fs_dirent_t *dirent;
@@ -2968,9 +3194,23 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
         }
 
       /* append this child to our buffers */
-      svn_stringbuf_appendbytes(ctx->info.uri_path, key, klen);
-      svn_stringbuf_appendbytes(ctx->uri, key, klen);
-      svn_stringbuf_appendbytes(ctx->repos_path, key, klen);
+#if !APR_CHARSET_EBCDIC
+      key_apr = key;
+#else
+      if(svn_utf_cstring_from_netccsid(&key_apr, (const char *)key,
+                                      params->pool))
+        return dav_new_error(params->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(params->pool,
+                                          "Error converting string '%s'",
+                                          (const char *)key));                                                   
+#endif
+                                   
+      /* klen may have changed during conversion so update it. */                             
+	  klen = strlen((char *)key_apr);	
+	                                      
+      svn_stringbuf_appendbytes(ctx->info.uri_path, key_apr, klen);
+      svn_stringbuf_appendbytes(ctx->uri, key_apr, klen);
+      svn_stringbuf_appendbytes(ctx->repos_path, key_apr, klen);
 
       /* reset the pointers since the above may have changed them */
       ctx->res.uri = ctx->uri->data;
@@ -3083,6 +3323,7 @@ dav_resource *dav_svn_create_working_resource(dav_resource *base,
                                               int tweak_in_place)
 {
   const char *path;
+  char *path_nc;
   dav_resource *res;
 
   if (base->baselined)
@@ -3094,7 +3335,11 @@ dav_resource *dav_svn_create_working_resource(dav_resource *base,
     path = apr_psprintf(base->pool, "/%s/wrk/%s%s",
                         base->info->repos->special_uri,
                         activity_id, base->info->repos_path);
+#if !APR_CHARSET_EBCDIC     
   path = svn_path_uri_encode(path, base->pool);
+#else
+  path = svn_path_uri_encode_native_partial_2(path, base->pool);
+#endif
 
   if (tweak_in_place)
     res = base;
@@ -3164,7 +3409,11 @@ dav_error * dav_svn_working_to_regular_resource(dav_resource *resource)
                                priv->root.rev, priv->repos_path,
                                0, resource->pool);
     }
+#if !APR_CHARSET_EBCDIC     
   path = svn_path_uri_encode(path, resource->pool);
+#else
+  path = svn_path_uri_encode_native_partial(path, resource->pool);
+#endif
   priv->uri_path = svn_stringbuf_create(path, resource->pool);
 
   /* change root.root back into a revision root. */

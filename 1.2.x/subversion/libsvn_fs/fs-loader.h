@@ -310,8 +310,13 @@ typedef struct id_vtable_t
 
 /* These are transaction properties that correspond to the bitfields
    in the 'flags' argument to svn_fs_lock().  */
-#define SVN_FS_PROP_TXN_CHECK_LOCKS            SVN_PROP_PREFIX "check-locks"
-#define SVN_FS_PROP_TXN_CHECK_OOD              SVN_PROP_PREFIX "check-ood"
+#define SVN_FS_PROP_TXN_CHECK_LOCKS SVN_PROP_PREFIX \
+        "\x63\x68\x65\x63\x6b\x2d\x6c\x6f\x63\x6b\x73"
+        /* "check-locks" */
+
+#define SVN_FS_PROP_TXN_CHECK_OOD SVN_PROP_PREFIX \
+        "\x63\x68\x65\x63\x6b\x2d\x6f\x6f\x64"
+        /* "check-ood" */
 
 
 

@@ -27,6 +27,7 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_private_config.h"
+#include "svn_utf.h"
 
 
 /*** Backstory ***/
@@ -273,7 +274,7 @@ svn_repos_replay (svn_fs_root_t *root,
       apr_hash_this (hi, &key, &keylen, &val);
       path = key;
       change = val;
-      if (path[0] == '/')
+      if (path[0] == SVN_UTF8_FSLASH)
         {
           path++;
           keylen--;

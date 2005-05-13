@@ -39,8 +39,10 @@
 /*  #define SVN_PATH_LOCAL_SEPARATOR '/'  */
 
 /* Name of system's null device */
-#define SVN_NULL_DEVICE_NAME "/dev/null"
-
+#define SVN_NULL_DEVICE_NAME \
+        "\x2f\x64\x65\x76\x2f\x6e\x75\x6c\x6c"
+        /* "/dev/null" */
+        
 /* Link fs base library into the fs library */
 //#define SVN_LIBSVN_FS_LINKS_FS_BASE
 
@@ -57,16 +59,20 @@
 #define SVN_LIBSVN_CLIENT_LINKS_RA_SVN
 
 /* Defined to be the path to the installed binaries */
-#define SVN_BINARY_DIR "\x2f\x53\x75\x62\x76\x65\x72\x73\x69\x6f\x6e\x2f" \
-                       "\x62\x69\x6e" /* "/Subversion/bin" */
+#define SVN_BINDIR \
+        "\x2f\x53\x75\x62\x76\x65\x72\x73\x69\x6f\x6e\x2f\x62\x69\x6e"
+        /* "/Subversion/bin" */
 
 /* Setup gettext macros */
 #define N_(x) (x)
 #define PACKAGE_NAME "subversion"
 
 #ifdef ENABLE_NLS
-#define SVN_LOCALE_RELATIVE_PATH "\x2e\x2e\x2f\x73\x68\x61\x72\x65\x2f\x6c" \
-                                 "\x6f\x63\x61\x6c\x65" /* "../share/locale" */
+
+#define SVN_LOCALE_RELATIVE_PATH \
+        "\x2e\x2e\x2f\x73\x68\x61\x72\x65\x2f\x6c\x6f\x63\x61\x6c\x65"
+        /* "../share/locale" */
+
 #include <locale.h>
 #include <libintl.h>
 #define _(x) dgettext(PACKAGE_NAME, x)

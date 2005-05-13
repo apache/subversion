@@ -29,6 +29,7 @@
 #include "svn_dav.h"
 #include "svn_time.h"
 #include "svn_pools.h"
+#include "svn_ebcdic.h"
 
 #include "dav_svn.h"
 
@@ -69,12 +70,22 @@ svn_lock_to_dav_lock(dav_lock **dlock,
   lock->depth = 0;
   lock->is_locknull = exists_p;
 
+#if !APR_CHARSET_EBCDIC
   token->uuid_str = apr_pstrdup(pool, slock->token);
+#else
+  if(svn_utf_cstring_from_netccsid(&token->uuid_str, slock->token, pool))
+    token->uuid_str = apr_pstrdup(pool, slock->token);
+#endif
   lock->locktoken = token;
 
   /* the svn_lock_t 'comment' field maps to the 'DAV:owner' field. */
   if (slock->comment)
     {
+      const char *comment = slock->comment;
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_from_netccsid(&comment, slock->comment, pool))
+        comment = slock->comment;
+#endif  
       if (! slock->is_dav_comment)
         {
           /* This comment was originally given to us by an svn client,
@@ -86,12 +97,12 @@ svn_lock_to_dav_lock(dav_lock **dlock,
           lock->owner = apr_pstrcat(pool,
                                     "<D:owner xmlns:D=\"DAV:\">",
                                     apr_xml_quote_string(pool,
-                                                         slock->comment, 1),
+                                                         comment, 1),
                                     "</D:owner>", NULL);
         }
       else
         {
-          lock->owner = apr_pstrdup(pool, slock->comment);
+          lock->owner = apr_pstrdup(pool, comment);
         }
     }
   else
@@ -104,8 +115,12 @@ svn_lock_to_dav_lock(dav_lock **dlock,
      return lock->auth_user.  Otherwise mod_dav will throw an error
      when lock->auth_user and r->user don't match.) */
   if (! hide_auth_user)
+#if !APR_CHARSET_EBCDIC
     lock->auth_user = apr_pstrdup(pool, slock->owner);
-
+#else
+    if (svn_utf_cstring_from_netccsid(&lock->auth_user, slock->owner, pool))
+      lock->auth_user = apr_pstrdup(pool, slock->owner);
+#endif 
   /* This is absurd.  apr_time.h has an apr_time_t->time_t func,
      but not the reverse?? */
   if (slock->expiration_date)
@@ -131,7 +146,12 @@ unescape_xml(const char **output,
   apr_status_t apr_err;
   const char *xml_input = apr_pstrcat 
     (pool, "<?xml version=\"1.0\" encoding=\"utf-8\"?>", input, NULL);
-
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_to_netccsid(&xml_input, xml_input, pool))
+    return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(pool, "Error converting string '%s'",
+                                      xml_input));
+#endif
   apr_err = apr_xml_parser_feed(xml_parser, xml_input, strlen(xml_input));
   if (!apr_err)
     apr_err = apr_xml_parser_done(xml_parser, &xml_doc);
@@ -174,14 +194,38 @@ dav_lock_to_svn_lock(svn_lock_t **slock,
                          "Only exclusive locks are supported.");
 
   lock = svn_lock_create (pool);
+
+#if !APR_CHARSET_EBCDIC
   lock->path = apr_pstrdup(pool, path);
+#else
+  if (svn_utf_cstring_to_netccsid(&lock->path, path, pool))
+    return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(pool, "Error converting string '%s'",
+                                      path));
+#endif  
+
+#if !APR_CHARSET_EBCDIC
   lock->token = apr_pstrdup(pool, dlock->locktoken->uuid_str);
+#else
+  if (svn_utf_cstring_to_netccsid(&(lock->token), dlock->locktoken->uuid_str,
+                                  pool))
+    return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(pool, "Error converting string '%s'",
+                                      dlock->locktoken->uuid_str));
+#endif
 
   /* DAV has no concept of lock creationdate, so assume 'now' */
   lock->creation_date = apr_time_now();
 
   if (dlock->auth_user)
+#if !APR_CHARSET_EBCDIC
     lock->owner = apr_pstrdup(pool, dlock->auth_user);
+#else
+    if (svn_utf_cstring_to_netccsid(&lock->owner, dlock->auth_user, pool))
+      return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                           apr_psprintf(pool, "Error converting string '%s'",
+                                        dlock->auth_user));
+#endif
   
   /* We need to be very careful about stripping the <D:owner> tag away
      from the cdata.  It's okay to do for svn clients, but not other
@@ -199,12 +243,29 @@ dav_lock_to_svn_lock(svn_lock_t **slock,
           derr = unescape_xml(&(lock->comment), dlock->owner, pool);
           if (derr)
             return derr;
+#if APR_CHARSET_EBCDIC
+          if (svn_utf_cstring_to_netccsid(&(lock->comment), lock->comment,
+                                          pool))
+            return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                                 apr_psprintf(pool,
+                                              "Error converting string '%s'",
+                                              dlock->owner));
+#endif            
         }
       else
         { 
           /* The comment comes from a non-svn client;  don't touch
              this data at all. */
+#if !APR_CHARSET_EBCDIC
           lock->comment = apr_pstrdup(pool, dlock->owner);
+#else
+          if (svn_utf_cstring_to_netccsid(&(lock->comment), dlock->owner,
+                                          pool))
+            return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                                 apr_psprintf(pool,
+                                              "Error converting string '%s'",
+                                              dlock->owner));
+#endif           
           lock->is_dav_comment = 1; /* comment IS xml-wrapped. */
         }
     }
@@ -311,8 +372,10 @@ static const char *
 dav_svn_format_locktoken(apr_pool_t *p,
                          const dav_locktoken *locktoken)
 {
+  const char *uuid_str;	
+  uuid_str = locktoken->uuid_str;
   /* libsvn_fs already produces a valid locktoken URI. */
-  return apr_pstrdup(p, locktoken->uuid_str);
+  return apr_pstrdup(p, uuid_str);
 }
 
 
@@ -448,6 +511,14 @@ dav_svn_create_lock(dav_lockdb *lockdb,
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "Failed to generate a lock token.",
                                resource->pool);
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_from_netccsid(&(token->uuid_str), token->uuid_str,
+                                    resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                       token->uuid_str));
+#endif
   dlock->locktoken = token;
 
   /* allowing mod_dav to fill in dlock->timeout, owner, auth_user. */
@@ -485,6 +556,7 @@ dav_svn_get_locks(dav_lockdb *lockdb,
   svn_lock_t *slock;
   svn_boolean_t readable = FALSE;
   dav_lock *lock = NULL;
+  const char *repos_path_utf8 = resource->info->repos_path;
 
   /* We only support exclusive locks, not shared ones.  So this
      function always returns a "list" of exactly one lock, or just a
@@ -521,9 +593,18 @@ dav_svn_get_locks(dav_lockdb *lockdb,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Path is not accessible.");
 
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_to_netccsid(&repos_path_utf8,
+                                  resource->info->repos_path,
+                                  resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                       resource->info->repos_path));
+#endif
   serr = svn_fs_get_lock(&slock,
                          resource->info->repos->fs,
-                         resource->info->repos_path,
+                         repos_path_utf8,
                          resource->pool);
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -532,17 +613,38 @@ dav_svn_get_locks(dav_lockdb *lockdb,
 
   if (slock != NULL)
     {
+      const char *creation_date;
+      const char *slock_owner = slock->owner;      
       svn_lock_to_dav_lock(&lock, slock, info->lock_break,
                            resource->exists, resource->pool);
 
+      creation_date = svn_time_to_cstring (slock->creation_date,
+                                           resource->pool);
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_from_netccsid(&creation_date,
+                                        creation_date,
+                                        resource->pool))
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(resource->pool,
+                                          "Error converting string '%s'",
+                                          creation_date));
+#endif
       /* Let svn clients know the creationdate of the slock. */
       apr_table_setn(info->r->headers_out, SVN_DAV_CREATIONDATE_HEADER,
-                     svn_time_to_cstring (slock->creation_date,
-                                          resource->pool));
+                     creation_date);
       
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_from_netccsid(&slock_owner,
+                                        slock_owner,
+                                        resource->pool))
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(resource->pool,
+                                          "Error converting string '%s'",
+                                          creation_date));
+#endif
       /* Let svn clients know who "owns" the slock. */
       apr_table_setn(info->r->headers_out, SVN_DAV_LOCK_OWNER_HEADER,
-                     slock->owner);
+                     slock_owner);
     }
 
   *locks = lock;
@@ -576,6 +678,7 @@ dav_svn_find_lock(dav_lockdb *lockdb,
   svn_lock_t *slock;
   dav_lock *dlock = NULL;
   svn_boolean_t readable = FALSE;
+  const char *repos_path_utf8 = resource->info->repos_path;
   
   /* If the resource's fs path is unreadable, we don't want to say
      anything about locks attached to it.*/
@@ -589,9 +692,18 @@ dav_svn_find_lock(dav_lockdb *lockdb,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Path is not accessible.");
 
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_to_netccsid(&repos_path_utf8,
+                                  resource->info->repos_path,
+                                  resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                       resource->info->repos_path));
+#endif
   serr = svn_fs_get_lock(&slock,
                          resource->info->repos->fs,
-                         resource->info->repos_path,
+                         repos_path_utf8,
                          resource->pool);
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -600,8 +712,20 @@ dav_svn_find_lock(dav_lockdb *lockdb,
 
   if (slock != NULL)
     {
+      const char *creation_date;
+      const char *slock_token_native = slock->token;
+      const char *slock_owner = slock->owner;
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_from_netccsid(&slock_token_native,
+                                        slock->token,
+                                        resource->pool))
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(resource->pool,
+                                          "Error converting string '%s'",
+                                          slock->token));
+#endif
       /* Sanity check. */
-      if (strcmp(locktoken->uuid_str, slock->token) != 0)
+      if (strcmp(locktoken->uuid_str, slock_token_native) != 0)
         return dav_svn_convert_err(serr, HTTP_BAD_REQUEST,
                                "Incoming token doesn't match existing lock.",
                                resource->pool);
@@ -609,14 +733,33 @@ dav_svn_find_lock(dav_lockdb *lockdb,
       svn_lock_to_dav_lock(&dlock, slock, FALSE,
                            resource->exists, resource->pool);
       
+      creation_date = svn_time_to_cstring (slock->creation_date,
+                                           resource->pool);
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_from_netccsid(&creation_date,
+                                        creation_date,
+                                        resource->pool))
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(resource->pool,
+                                          "Error converting string '%s'",
+                                          creation_date));
+#endif
       /* Let svn clients know the creationdate of the slock. */
       apr_table_setn(info->r->headers_out, SVN_DAV_CREATIONDATE_HEADER,
-                     svn_time_to_cstring (slock->creation_date,
-                                          resource->pool));
+                     creation_date);
 
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_from_netccsid(&slock_owner,
+                                        slock_owner,
+                                        resource->pool))
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(resource->pool,
+                                          "Error converting string '%s'",
+                                          slock_owner));
+#endif
       /* Let svn clients know the 'owner' of the slock. */
       apr_table_setn(info->r->headers_out, SVN_DAV_LOCK_OWNER_HEADER,
-                     slock->owner);
+                     slock_owner);
     }
 
   *lock = dlock;
@@ -644,6 +787,7 @@ dav_svn_has_locks(dav_lockdb *lockdb,
   dav_error *derr;
   svn_lock_t *slock;
   svn_boolean_t readable = FALSE;
+  const char *repos_path_utf8 = resource->info->repos_path;
 
   /* Sanity check:  if the resource has no associated path in the fs,
      then there's nothing to do.  */
@@ -675,9 +819,18 @@ dav_svn_has_locks(dav_lockdb *lockdb,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Path is not accessible.");
 
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_to_netccsid(&repos_path_utf8,
+                                  resource->info->repos_path,
+                                  resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                       resource->info->repos_path));
+#endif
   serr = svn_fs_get_lock(&slock,
                          resource->info->repos->fs,
-                         resource->info->repos_path,
+                         repos_path_utf8,
                          resource->pool);
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -712,6 +865,8 @@ dav_svn_append_locks(dav_lockdb *lockdb,
   svn_error_t *serr;
   dav_error *derr;
   svn_boolean_t readable = FALSE;
+  const char *creation_date;
+  const char *slock_owner;
 
   /* If the resource's fs path is unreadable, we don't allow a lock to
      be created on it. */
@@ -740,6 +895,16 @@ dav_svn_append_locks(dav_lockdb *lockdb,
       svn_fs_root_t *txn_root;
       const char *conflict_msg;
       dav_svn_repos *repos = resource->info->repos;
+      const char *repos_path_utf8 = resource->info->repos_path;
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_to_netccsid(&repos_path_utf8,
+                                      resource->info->repos_path,
+                                      resource->pool))
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(resource->pool,
+                                          "Error converting string '%s'",
+                                          resource->info->repos_path));
+#endif      
 
       if (resource->info->repos->is_svn_client)
         return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED,
@@ -772,7 +937,7 @@ dav_svn_append_locks(dav_lockdb *lockdb,
                                    "Could not begin a transaction", 
                                    resource->pool);
 
-      if ((serr = svn_fs_make_file(txn_root, resource->info->repos_path,
+      if ((serr = svn_fs_make_file(txn_root, repos_path_utf8,
                                    resource->pool)))
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                    "Could not create empty file.",
@@ -825,14 +990,33 @@ dav_svn_append_locks(dav_lockdb *lockdb,
                                "Failed to create new lock.",
                                resource->pool);
 
-
+  creation_date = svn_time_to_cstring (slock->creation_date, resource->pool);
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_from_netccsid(&creation_date,
+                                    creation_date,
+                                    resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                      creation_date));
+#endif
   /* A standard webdav LOCK response doesn't include any information
      about the creation date.  We send it in a custom header, so that
      svn clients can fill in svn_lock_t->creation_date.  A generic DAV
      client should just ignore the header. */
   apr_table_setn(info->r->headers_out, SVN_DAV_CREATIONDATE_HEADER,
-                 svn_time_to_cstring (slock->creation_date, resource->pool));
+                 creation_date);
 
+  slock_owner = slock->owner;
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_from_netccsid(&slock_owner,
+                                    slock_owner,
+                                    resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                      slock_owner));
+#endif
   /* A standard webdav LOCK response doesn't include any information
      about the owner of the lock.  ('DAV:owner' has nothing to do with
      authorization, it's just a comment that we map to
@@ -840,7 +1024,7 @@ dav_svn_append_locks(dav_lockdb *lockdb,
      that svn clients can fill in svn_lock_t->owner.  A generic DAV
      client should just ignore the header. */
   apr_table_setn(info->r->headers_out, SVN_DAV_LOCK_OWNER_HEADER,
-                 slock->owner);
+                 slock_owner);
 
   return 0;
 }
@@ -863,6 +1047,16 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
   svn_boolean_t readable = FALSE;
   svn_lock_t *slock;
   const char *token = NULL;
+  const char *repos_path_utf8 = resource->info->repos_path;
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_to_netccsid(&repos_path_utf8,
+                                  resource->info->repos_path,
+                                  resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                       resource->info->repos_path));
+#endif
 
   /* Sanity check:  if the resource has no associated path in the fs,
      then there's nothing to do.  */
@@ -893,7 +1087,7 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
       /* Need to manually discover any lock on the resource. */     
       serr = svn_fs_get_lock(&slock,
                              resource->info->repos->fs,
-                             resource->info->repos_path,
+                             repos_path_utf8,
                              resource->pool);
       if (serr)
         return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -904,7 +1098,17 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
     }
   else
     {
-      token = locktoken->uuid_str;
+      const char *uuid_str_utf8 = locktoken->uuid_str;
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_to_netccsid(&uuid_str_utf8,
+                                      locktoken->uuid_str,
+                                      resource->pool))
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(resource->pool,
+                                          "Error converting string '%s'",
+                                          locktoken->uuid_str));
+#endif    	
+      token = uuid_str_utf8;
     }
 
   if (token)
@@ -913,7 +1117,7 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
          'break' a lock, because info->lock_break will always be
          FALSE.  An svn client, however, can request a 'forced' break.*/
       serr = svn_repos_fs_unlock(resource->info->repos->repos,
-                                 resource->info->repos_path,
+                                 repos_path_utf8,
                                  token,
                                  info->lock_break,
                                  resource->pool);
@@ -958,6 +1162,17 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
   svn_lock_t *slock;
   dav_lock *dlock;
   svn_boolean_t readable = FALSE;
+  const char *slock_token_native;
+  const char *repos_path_utf8 = resource->info->repos_path;
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_to_netccsid(&repos_path_utf8,
+                                  resource->info->repos_path,
+                                  resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                       resource->info->repos_path));
+#endif
 
   /* If the resource's fs path is unreadable, we don't want to say
      anything about locks attached to it.*/
@@ -974,7 +1189,7 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
   /* Convert the path into an svn_lock_t. */
   serr = svn_fs_get_lock(&slock,
                          resource->info->repos->fs,
-                         resource->info->repos_path,
+                         repos_path_utf8,
                          resource->pool);
   if (serr)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -983,8 +1198,18 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
 
   /* Sanity check: does the incoming token actually represent the
      current lock on the incoming resource? */
+  slock_token_native = slock ? slock->token : "";
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_from_netccsid(&slock_token_native,
+                                    slock->token,
+                                    resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                      slock->token));
+#endif
   if ((! slock)
-      || (strcmp(token->uuid_str, slock->token) != 0))
+      || (strcmp(token->uuid_str, slock_token_native) != 0))
     return dav_new_error(resource->pool, HTTP_UNAUTHORIZED,
                          DAV_ERR_LOCK_SAVE_LOCK,
                          "Lock refresh request doesn't match existing lock.");

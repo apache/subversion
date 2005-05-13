@@ -26,6 +26,7 @@
 #include <apr_lib.h>
 #include "svn_error.h"
 #include "svn_pools.h"
+#include "svn_utf.h"
 #include "config_impl.h"
 
 #include "svn_private_config.h"
@@ -350,7 +351,7 @@ make_hash_key (char *key)
 {
   register char *p;
   for (p = key; *p != 0; ++p)
-    *p = apr_tolower (*p);
+    *p = TO_ASCII_LOWER(*p);
   return key;
 }
 

@@ -36,6 +36,7 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "utf_impl.h"
+#include "svn_ebcdic.h"
 
 #include "svn_private_config.h"
 
@@ -294,6 +295,21 @@ svn_cmdline_printf (apr_pool_t *pool, const char *fmt, ...)
   return svn_cmdline_fputs(message, stdout, pool);
 }
 
+#if APR_CHARSET_EBCDIC
+svn_error_t *
+svn_cmdline_printf_ebcdic (apr_pool_t *pool, const char *fmt, ...)
+{
+  const char *message;
+  va_list ap;
+ 
+  va_start (ap, fmt);
+  message = svn_ebcdic_pvsprintf2 (pool, fmt, ap);
+  va_end (ap);
+
+  return svn_cmdline_fputs(message, stdout, pool);
+}
+#endif
+
 svn_error_t *
 svn_cmdline_fprintf (FILE *stream, apr_pool_t *pool, const char *fmt, ...)
 {
@@ -309,13 +325,37 @@ svn_cmdline_fprintf (FILE *stream, apr_pool_t *pool, const char *fmt, ...)
   return svn_cmdline_fputs(message, stream, pool);
 }
 
+#if APR_CHARSET_EBCDIC
+svn_error_t *
+svn_cmdline_fprintf_ebcdic (FILE *stream, apr_pool_t *pool,
+                            const char *fmt, ...)
+{
+  const char *message;
+  va_list ap;
+  
+  va_start (ap, fmt);
+  message = svn_ebcdic_pvsprintf2 (pool, fmt, ap);
+  va_end (ap);
+
+  return svn_cmdline_fputs(message, stream, pool);
+}
+#endif
+
 svn_error_t *
 svn_cmdline_fputs (const char *string, FILE* stream, apr_pool_t *pool)
 {
   svn_error_t *err;
   const char *out;
 
+#if !APR_CHARSET_EBCDIC
   err = svn_cmdline_cstring_from_utf8 (&out, string, pool);
+#else
+  /* On ebcdic platforms we always output utf-8 since that execution character
+   * set does not have ASCII as a subset.
+   */
+  err = NULL;
+  out = string;  
+#endif
 
   if (err)
     {

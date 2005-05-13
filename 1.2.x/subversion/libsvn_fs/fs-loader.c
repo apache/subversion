@@ -30,17 +30,18 @@
 #include "svn_xml.h"
 #include "svn_pools.h"
 #include "svn_string.h"
+#include "svn_utf.h"
 #include "svn_private_config.h"
 
 #include "fs-loader.h"
 
 /* This is defined by configure on platforms which use configure, but
-   we need to define a fallback for Windows. */
+   we need to define a fallback for Windows and IBM iSeries. */
 #ifndef DEFAULT_FS_TYPE
-#define DEFAULT_FS_TYPE "fsfs"
+#define DEFAULT_FS_TYPE "\x66\x73\x66\x73" /* "fsfs" */
 #endif
 
-#define FS_TYPE_FILENAME "fs-type"
+#define FS_TYPE_FILENAME "\x66\x73\x2D\x74\x79\x70\x65" /* "fs-type" */
 
 /* A pool common to all FS objects.  See the documentation on the
    serialized_init function in fs-loader.h and for
@@ -59,14 +60,14 @@ static const struct fs_type_defn {
   fs_init_func_t initfunc;
 } fs_modules[] = {
   {
-    SVN_FS_TYPE_BDB, "base",
+    SVN_FS_TYPE_BDB, "\x62\x61\x73\x65", /* "base" */
 #ifdef SVN_LIBSVN_FS_LINKS_FS_BASE
     svn_fs_base__init
 #endif
   },
 
   {
-    SVN_FS_TYPE_FSFS, "fs",
+    SVN_FS_TYPE_FSFS, "\x66\x73", /* "fs" */
 #ifdef SVN_LIBSVN_FS_LINKS_FS_FS
     svn_fs_fs__init
 #endif
@@ -208,7 +209,7 @@ write_fs_type (const char *path, const char *fs_type, apr_pool_t *pool)
                              APR_OS_DEFAULT, pool));
   SVN_ERR (svn_io_file_write_full (file, fs_type, strlen(fs_type), NULL,
                                    pool));
-  SVN_ERR (svn_io_file_write_full (file, "\n", 1, NULL, pool));
+  SVN_ERR (svn_io_file_write_full (file, SVN_UTF8_NEWLINE_STR, 1, NULL, pool));
   SVN_ERR (svn_io_file_close (file, pool));
   return SVN_NO_ERROR;
 }
@@ -997,6 +998,7 @@ svn_fs_print_modules (svn_stringbuf_t *output,
   for (defn = fs_modules; defn->fs_type != NULL; ++defn)
     {
       char *line;
+      const char *fsap_name;
       svn_error_t *err;
 
       svn_pool_clear (iterpool);
@@ -1012,9 +1014,14 @@ svn_fs_print_modules (svn_stringbuf_t *output,
           else
             return err;
         }
-
+      
+#if !APR_CHARSET_EBCDIC
+      fsap_name = defn->fsap_name;
+#else
+      SVN_ERR(svn_utf_cstring_from_utf8(&fsap_name, defn->fsap_name, pool));
+#endif
       line = apr_psprintf (iterpool, "* fs_%s : %s\n",
-                           defn->fsap_name,
+                           fsap_name,
                            vtable->get_description());
       svn_stringbuf_appendcstr (output, line);
     }

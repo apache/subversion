@@ -37,7 +37,9 @@ const char *
 svn_md5_digest_to_cstring_display (const unsigned char digest[],
                                    apr_pool_t *pool)
 {
-  static const char *hex = "0123456789abcdef";
+  static const char *hex = "\x30\x31\x32\x33\x34\x35\x36\x37\x38\x39" \
+                           "\x61\x62\x63\x64\x65\x66"; 
+                           /* "0123456789abcdef" */
   char *str = apr_palloc (pool, (APR_MD5_DIGESTSIZE * 2) + 1);
   int i;
   

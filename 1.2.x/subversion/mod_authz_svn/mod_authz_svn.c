@@ -33,9 +33,13 @@
 #include "svn_path.h"
 #include "svn_config.h"
 #include "svn_string.h"
-
+#include "svn_utf.h" 
 
 extern module AP_MODULE_DECLARE_DATA authz_svn_module;
+
+#define GROUPS_STR \
+        "\x67\x72\x6f\x75\x70\x73"
+        /* "groups" */
 
 enum {
     AUTHZ_SVN_NONE = 0,
@@ -113,13 +117,20 @@ static int group_contains_user_internal(svn_config_t *cfg,
     apr_array_header_t *list;
     int i;
 
-    svn_config_get(cfg, &value, "groups", group, "");
-    list = svn_cstring_split(value, ",", TRUE, pool);
+#if APR_CHARSET_EBCDIC
+    if (svn_utf_cstring_to_netccsid(&group, group, pool))
+        return 0;
+    if (svn_utf_cstring_to_netccsid(&user, user, pool))
+        return 0;
+#endif  
+
+    svn_config_get(cfg, &value, GROUPS_STR, group, "");
+    list = svn_cstring_split(value, SVN_UTF8_COMMA_STR, TRUE, pool);
 
     for (i = 0; i < list->nelts; i++) {
        const char *group_user = APR_ARRAY_IDX(list, i, char *);
 
-       if (*group_user == '@') {
+       if (*group_user == SVN_UTF8_AT) {
            /* Guard against circular dependencies by checking group
             * name against hash.
             */
@@ -154,6 +165,16 @@ static svn_boolean_t parse_authz_line(const char *name, const char *value,
                                       void *baton)
 {
     struct parse_authz_baton *b = baton;
+
+#if APR_CHARSET_EBCDIC
+    if (svn_utf_cstring_from_netccsid(&name, name, b->pool)) {
+        return TRUE;
+    }
+    
+    if (svn_utf_cstring_from_netccsid(&value, value, b->pool)) {
+        return TRUE;
+    }
+#endif
 
     if (strcmp(name, "*")) {
         if (!b->user) {
@@ -209,6 +230,12 @@ static int parse_authz_lines(svn_config_t *cfg,
     /* First try repos specific */
     qualified_repos_path = apr_pstrcat(pool, repos_name, ":", repos_path,
                                        NULL);
+                                       
+#if APR_CHARSET_EBCDIC
+    if (svn_utf_cstring_to_netccsid(&qualified_repos_path, qualified_repos_path,
+                                    pool))
+        return FALSE;                                    
+#endif
     svn_config_enumerate(cfg, qualified_repos_path,
                          parse_authz_line, &baton);
     *granted_access = !(baton.deny & required_access)
@@ -218,6 +245,10 @@ static int parse_authz_lines(svn_config_t *cfg,
         || (baton.allow & required_access))
         return TRUE;
 
+#if APR_CHARSET_EBCDIC
+    if (svn_utf_cstring_to_netccsid(&repos_path, repos_path, pool))
+        return FALSE;                                    
+#endif
     svn_config_enumerate(cfg, repos_path,
                          parse_authz_line, &baton);
     *granted_access = !(baton.deny & required_access)
@@ -303,7 +334,11 @@ static int check_access(svn_config_t *cfg, const char *repos_name,
             return 0;
         }
 
+#if !APR_CHARSET_EBCDIC
         svn_path_split(repos_path, &repos_path, &base_name, pool);
+#else
+        svn_path_split_ebcdic(repos_path, &repos_path, &base_name, pool);
+#endif        
     }
 
     if (granted_access && (required_access & AUTHZ_SVN_RECURSIVE) != 0) {
@@ -341,7 +376,7 @@ static int req_check_access(request_rec *r,
     dav_error *dav_err;
     int authz_svn_type = 0;
     svn_config_t *access_conf = NULL;
-    svn_error_t *svn_err;
+    svn_error_t *svn_err = NULL;
     const char *cache_key;
     void *user_data;
 
@@ -408,8 +443,11 @@ static int req_check_access(request_rec *r,
     }
 
     if (repos_path)
+#if !APR_CHARSET_EBCDIC    
         repos_path = svn_path_join("/", repos_path, r->pool);
-
+#else
+        repos_path = svn_path_join_ebcdic("/", repos_path, r->pool);
+#endif
     *repos_path_ref = apr_pstrcat(r->pool, repos_name, ":", repos_path, NULL);
 
     if (r->method_number == M_MOVE || r->method_number == M_COPY) {
@@ -452,7 +490,12 @@ static int req_check_access(request_rec *r,
         }
 
         if (dest_repos_path)
+#if !APR_CHARSET_EBCDIC    
             dest_repos_path = svn_path_join("/", dest_repos_path, r->pool);
+#else
+            dest_repos_path = svn_path_join_ebcdic("/", dest_repos_path,
+                                                   r->pool);
+#endif            
 
         *dest_repos_path_ref = apr_pstrcat(r->pool, dest_repos_name, ":",
                                            dest_repos_path, NULL);
@@ -463,8 +506,14 @@ static int req_check_access(request_rec *r,
     apr_pool_userdata_get(&user_data, cache_key, r->connection->pool);
     access_conf = user_data;
     if (access_conf == NULL) {
-        svn_err = svn_config_read(&access_conf, conf->access_file, TRUE,
-                                  r->connection->pool);
+    	const char *access_file_utf8 = conf->access_file;
+#if APR_CHARSET_EBCDIC
+        svn_err = svn_utf_cstring_to_utf8(&access_file_utf8, access_file_utf8,
+                                          r->connection->pool);
+#endif    	
+        if (!svn_err)                                          
+            svn_err = svn_config_read(&access_conf, access_file_utf8, TRUE,
+                                      r->connection->pool);
         if (svn_err) {
             ap_log_rerror(APLOG_MARK, APLOG_ERR,
                           /* If it is an error code that APR can make sense

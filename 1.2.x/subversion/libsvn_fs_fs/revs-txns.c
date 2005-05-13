@@ -36,6 +36,10 @@
 
 #include "svn_private_config.h"
 
+#define TRUE_STR \
+        "\x74\x72\x75\x65"
+        /* "true" */
+
 
 /*** Helpers ***/
 
@@ -192,12 +196,12 @@ svn_fs_fs__begin_txn (svn_fs_txn_t **txn_p,
   if (flags & SVN_FS_TXN_CHECK_OOD)
     SVN_ERR (svn_fs_fs__change_txn_prop 
              (*txn_p, SVN_FS_PROP_TXN_CHECK_OOD,
-              svn_string_create ("true", pool), pool));
+              svn_string_create (TRUE_STR, pool), pool));
   
   if (flags & SVN_FS_TXN_CHECK_LOCKS)
     SVN_ERR (svn_fs_fs__change_txn_prop 
              (*txn_p, SVN_FS_PROP_TXN_CHECK_LOCKS,
-              svn_string_create ("true", pool), pool));
+              svn_string_create (TRUE_STR, pool), pool));
              
   return SVN_NO_ERROR;
 }
