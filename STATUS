@@ -10,6 +10,7 @@ Status of 1.2.0:
 Candidate changes:
 
   * r14716
+  Branch: innosetup-hsuninsfix-5x-1.2.x
   Fix of the Windows Installer's Add/Repair/Remove capabillities.
   Justification: This fixes problems people had when using Windows'
   add/remove item in the Control Panel.
