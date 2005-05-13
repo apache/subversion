@@ -19,6 +19,13 @@ Candidate changes:
     +1:
 	+0:
 
+  * r14722
+    Optimize 'svn log' performance.
+    Justification:
+      The new --limit option does not help speed as much without this.
+    Votes:
+      +1: djh
+
 
 Status of 1.2.1:
 ================
