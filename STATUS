@@ -10,14 +10,25 @@ Status of 1.2.0:
 Candidate changes:
 
   * r14716
-  Branch: innosetup-hsuninsfix-5x-1.2.x
-  Fix of the Windows Installer's Add/Repair/Remove capabillities.
-  Justification: This fixes problems people had when using Windows'
-  add/remove item in the Control Panel.
+    Fix of the Windows Installer's Add/Repair/Remove capabilities.
+    Branch: innosetup-hsuninsfix-5x-1.2.x
+    Justification:
+      This fixes problems people had when using Windows'
+      add/remove item in the Control Panel.
+    Votes:
+      +0: dlr (concept, no testing environment)
 
-  Votes:
-    +1:
-    +0: dlr (concept, no testing environment)
+
+  * r14732
+    Fix svn-push, which was segfaulting all the time, due to violating API
+    not-NULL requirements.
+    Justification:
+      Totally broken without it. Trivial fix to silly problem.
+    Notes:
+      Being solely "contrib/" code, this does not affect the soak.
+    Votes:
+      +1: maxb
+
 
 
 Status of 1.2.1:
