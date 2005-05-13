@@ -1,0 +1,38 @@
+This file tracks the status of releases in the 1.2.x line.
+
+See "Stabilizing and maintaining releases" in trunk/HACKING for
+details on how release lines and voting work, what kinds of bugs can
+delay a release, etc.
+
+Status of 1.2.0:
+================
+
+Candidate changes:
+
+  * r14716
+  Branch: innosetup-hsuninsfix-5x-1.2.x
+  Fix of the Windows Installer's Add/Repair/Remove capabillities.
+  Justification: This fixes problems people had when using Windows'
+  add/remove item in the Control Panel.
+
+  Votes:
+    +1:
+	+0:
+
+
+Status of 1.2.1:
+================
+
+Candidate changes:
+
+  * r14722
+    Optimize 'svn log' performance.
+    Justification:
+      The new --limit option does not help speed as much without this.
+    Votes:
+      +1: djh
+
+
+Approved changes (further review is welcome, but not required):
+
+(none)

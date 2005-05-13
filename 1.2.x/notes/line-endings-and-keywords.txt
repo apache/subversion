@@ -1,0 +1,266 @@
+   Oh Most Noble and Fragrant Emacs, please be in -*- outline -*- mode!
+
+             Newline Conversion and Keyword Substitution
+             ===========================================
+
+* Newline conversion
+
+We've finally settled on a proposal articulated by Greg Hudson,
+derived from Ben's original proposal plus much list discussion.
+
+Here's Greg's mail with the proposal, then a few clarifying selections
+from the followup discussion:
+
+   Alright, I'll make a proposal which is like yours but (in my
+   opinion) a little clearer.  First, let's look at the different use
+   cases:
+
+   1. The most common case--text files which want native line endings.
+      These should be stored in the repository using LF line endings,
+      and in the working dir using native line endings.
+
+   2. Binary files.  These files we don't want to touch at all.
+
+   3. Text files which, for one reason or another, want a specific
+      line ending format regardless of platform.  These should be
+      stored in the repository and in the working directory using the
+      specified line ending.  We probably don't have to worry so much
+      about data safety for these files since a particular, odd
+      behavior has been specified for them.
+
+   There are, of course, a hundred different ways we could arrange the
+   metadata.  I propose an "svn:newline-style" property with the
+   possible values "none", "native", "LF", "CR", and "CRLF".  The
+   values mean:
+
+   none: Use case 2.  don't do any newline translation
+
+   native: Use case 1.  Store with LF in repository, and with native
+   line endings in the working copy.
+
+   LF, CR, CRLF: Use case 3.  Store with specified format in the
+   repository and in the working copy.
+
+   On commit, we apply the following rules to transform the data
+   committed to the server:
+
+   If newline-style is none, do nothing.
+
+   If newline-stle is native, translate <native newline style> -> LF.
+   If we notice any CRs or LFs which aren't part of a native-style
+   newline, abort the commit.
+
+   If newline-style is LF, CR, or CRLF, translate <native newline
+   style> -> <requested newline style>.  If we notice any CRs or LFs
+   which aren't part of a native-style newline and aren't part of a
+   requested-style newline, abort the commit.  If the commit succeeds,
+   apply the <native newline style> -> <requested newline style>
+   translation to the working copy as well, so that it matches what we
+   would get from a checkout of the new rev.
+
+   On checkout, we translate LF -> <native newline style> if
+   newline-style is native; otherwise, we leave the file alone.
+
+   For now, let's say the default value of svn:newline-style is none.
+   In the future, we'll want to think about things like how to enable
+   newline-translation over the whole repository except for files
+   which don't appear to be text.
+
+   I think that's a complete proposal.  Some possible variations:
+
+   Variation 1: If newline-style is native, on commit, translate
+   <first newline style seen> -> LF.  If we see any CRs or LFs which
+   don't match the first newline style seen, abort the commit.
+
+   Variation 2: If newline-style is native, before commit, examine the
+   file to see if it uses only the native newline style.  If it
+   doesn't, set the newline-style property to "none" and commit with
+   no translation.
+
+   Variation 3: Combine variations 1 and 2; if newline-style is
+   native, then if before commit, examine the file to see if it uses a
+   single consistent newline style.  If it does, translate <that
+   newline style> -> LF; if not, commit with newline-style set to
+   "none" and no translation.
+
+   Variation 4: If newline-style is native, then on commit, we edit a
+   property "svn:newline-conversion" to something like "CRLF LF" to
+   show what conversion we did.  This enables mechanical reversal of
+   the translation if the file is later determined to be binary.
+   (Particularly useful with variations 1 or 3 where the transform
+   might not be obvious from the platform where the file was checked
+   in.)
+
+We decided to hold off on doing any of the "variations".  We'll just
+do the basic proposal first, then see how well things work out.
+
+Next, Greg responded to an observation by William Uther, in which
+William pointed out that the behavior is not reversible when
+svn:newline-style is LF or CRLF.  Greg agrees, but explains why that's
+okay:
+
+   On Fri, 2001-12-14 at 15:48, William Uther wrote:
+   > --On Friday, 14 December 2001 1:16 PM -0500 Greg Hudson
+   > <ghudson@MIT.EDU> wrote:
+
+   > >   If newline-style is LF, CR, or CRLF, translate <native
+   > > newline style> -> <requested newline style>.  If we notice any
+   > > CRs or LFs which aren't part of a native-style newline and
+   > > aren't part of a requested-style newline, abort the commit.  If
+   > > the commit succeeds, apply the <native newline style> ->
+   > > <requested newline style> translation to the working copy as
+   > > well, so that it matches what we would get from a checkout of
+   > > the new rev.
+   >
+   > I don't think this preserves reversability.  If a file contains
+   > BOTH <native-style newline> and <requested-style newline> then
+   > you neet to abort.  If you translate just <native-style newline>
+   > then you can't undo the transformation - you don't know which
+   > newlines need to be untransformed.
+
+   This particular transform (for files marked CRLF, CR, or LF) is not
+   reversible.  See where I said:
+
+   "We probably don't have to worry so much about data safety for
+    these files since a particular, odd behavior has been specified
+    for them."
+
+   However, let's add a possible variation to my proposal, for those
+   who are still uncomfortable with data-destroying transformations
+   applied to such flies:
+
+   Variation 5: If the file is marked CRLF, CR, or LF, we translate
+   <native-style newline> to <requested-style newline> during commit,
+   and abort the commit if we notice any kind of mixing of newline
+   styles.  (Can also combine with variation 1.)
+
+Colin Putney also followed up to William Uther's post, agreeing with
+Greg and explaining why in even more detail:
+
+   > I don't think this preserves reversability.  If a file contains
+   > BOTH <native-style newline> and <requested-style newline> then
+   > you neet to abort.  If you translate just <native-style newline>
+   > then you can't undo the transformation - you don't know which
+   > newlines need to be untransformed.
+
+   > Stated simply: You should only translate when the newline style
+   > is entirely consistent.  Anything else removes the inconsistency
+   > and hence loses information.
+
+   True, this scheme doesn't preserve reversibility. But in this case
+   that's OK, because the newline-style decrees what the newline style
+   must be. If there are native-style newlines mixed in with the
+   requested-style newlines, this is probably the result of corruption
+   by some native-newline-obsessive user tool. So the non-reversible
+   transform will actually undo the corruption.
+
+   For example, the file foo.dsp, which has newline-style of
+   CRLF. It's stored in the repository with CRLF newlines and on
+   checkout, no transformation is done. If Linus checks out the file
+   and edits it in an old version of emacs, any lines he adds will be
+   terminated with a bare LF. Since this is his native style of
+   newline, the transformation Greg described will undo this damage.
+
+   If the newline-style is set to a specific newline-style (ie. CR,
+   LF, or CRLF), then we know that (1) the file is text, not binary,
+   and (2), any other style of newline present is corruption.
+
+   A file should not be marked with a specific newline style unless
+   (1) user does so explicitly, or (2) it matches some heuristic when
+   it's added, *and* the file contents conform to that newline style.
+
+   So the only real possibility for corruption is if some user tool
+   creates a binary file that matches a heuristic for a specific
+   newline style. In our running example, William creates a vector
+   graphics file called foo.dsp and adds it. By chance, this file
+   happens to have CRLFs scattered though it, but no bare CRs, LFs,
+   '\0' characters or other harbingers of binary files. On the commit,
+   svn will notice the extension, set the newline-style to CRLF and
+   send it to the repository. William may get an error if he tries to
+   commit a change that introduces a bare CR or LF, but he won't
+   corrupt the file.
+
+   Linus can corrupt the file if he makes a change that introduces a
+   bare LF, which will get transformed into CRLF on
+   commit. Alternatively, Madeleine (was that her name?) Can introduce
+   a bare CR and commit, which will also corrupt the file.
+
+   That's a pretty long string of unlikely coincidences though, while
+   the opposite case, where this transformation *fixes* corruption, is
+   quite common.
+
+   Colin
+
+Finally, Greg followed up, confirming again what he meant by that
+portion of the proposal, but also saying that he could go the other
+way on the question too:
+
+   > +1 on Greg Hudson's latest proposal -- and I think we're now
+   > ready to Actually Do It. :-)
+
+   I hope so.  For a while I was afraid we had hit our first failure
+   to achieve livable consensus.  My apologies for not realizing the
+   reversability thing until two days and several thousand lines of
+   misguided debate had already gone by.
+
+   > My assumption is that "in the working copy" means both text-base
+   > and working file, for the sake of an efficient is-modified-p
+   > test, and since the repository file is just an automatic
+   > transform off the text-base anyway.
+
+   Actually, I was assuming that text-base would be a verbatim copy of
+   the repository contents.  But that's kind of an implementation
+   detail; let's leave that up to Ben (assuming he's doing the
+   implementation).
+
+   > Otherwise, then the is-modified-p check has to be tweaked in a
+   > way that will make modifiedness checks a lot slower in some
+   > cases.
+
+   No... it just means that if the mod times force a contents check,
+   you have to translate the text-base contents as you compare them
+   against the normal contents.  That's "a teeny tiny bit slower,"
+   not, "a lot slower."
+
+   > The second sentence of the above paragraph isn't about allowing
+   > mixed-style files.  It's saying that if the entire file is native
+   > format, allow that (and transform when necessary), OR if the
+   > entire file is in the requested style, then allow that too.  The
+   > latter situation could happen if someone used a LF-style tool
+   > under Windows, for example, so that when an LF-style file got
+   > saved, the whole thing would be LF-style now, not native style.
+   > No reason to disallow this.
+   >
+   > Right?
+
+   See my last message, as well as Colin Putney's argument.  In
+   summary, that's not actually what I meant, but I don't really care
+   either way.
+
+We're implementing Greg's original meaning, since (as Colin Putney
+pointed out) the chance of "bad" data corruption is very small, and
+the chance that it would undo corruption is actually greater.
+
+
+* Keyword substitution
+
+Quick summary: there's one property, named "svn:keywords".  It's value
+is a whitespace-separated list of keywords to expand.  Since keywords
+have both long and short forms, both ways are allowed in the value of
+the svn:keywords property.  Here are all the keywords:
+
+   "LastChangedBy"       "Author"         ---> either one expands author
+   "LastChangedDate"     "Date"           ---> either one expands date
+   "LastChangedRevision" "Revision" "Rev" ---> any one expands rev
+   "HeadURL"             "URL"            ---> either one expands url
+
+Here are some example values of the property:
+
+   "Rev LastChangedDate HeadURL"
+
+   "Author\nDate  \n  LastChangedRevision       URL"
+
+Unrecognized words are ignored; absence of the property is the same as
+an empty value or a value with no valid keywords in it.
+
+Keywords (long and short forms) are case-sensitive, as in CVS.
