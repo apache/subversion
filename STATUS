@@ -7,7 +7,17 @@ delay a release, etc.
 Status of 1.2.0:
 ================
 
-(none)
+Candidate changes:
+
+  * r14716
+  Fix of the Windows Installer's Add/Repair/Remove capabillities.
+  Justification: This fixes problems people had when using Windows'
+  add/remove item in the Control Panel.
+
+  Votes:
+    +1:
+	+0:
+
 
 Status of 1.2.1:
 ================
