@@ -98,7 +98,7 @@ Source: {#= path_authzsvn}\mod_authz_svn.so; DestDir: {app}\httpd; Flags: ignore
 
 ;Helpers ---------------------------------------------------------------------
 Source: {#= path_svnpath}\svnpath.exe; DestDir: {app}\helpers; Flags: ignoreversion
-Source: UninsHs.exe; DestDir: {app}; Flags: ignoreversion onlyifdoesntexist
+Source: UninsHs.exe; DestDir: {app}; Flags: ignoreversion restartreplace
 
 ; Debug symbols;
 #ifdef inc_dbgsyms
@@ -123,7 +123,9 @@ Filename: {app}\svn.url; Section: InternetShortcut; Key: URL; String: http://sub
 
 ; Reinstall, repair and uninstall with UninsHS
 FileName: {app}\UninsHs.dat; Section: Common; Key: Software; String: Subversion
-FileName: {app}\UninsHs.dat; Section: Common; Key: Install; String: svn-{#= svn_version}-setup.exe
+;FileName: {app}\UninsHs.dat; Section: Common; Key: Install; String: {src}\svn-{#= svn_version}-setup.exe
+;or
+FileName: {app}\UninsHs.dat; Section: Common; Key: Install; String: {srcexe}
 FileName: {app}\UninsHs.dat; Section: Common; Key: Language; String: {language}
 FileName: {app}\UninsHs.dat; Section: Common; Key: Remove; String: {uninstallexe}
 FileName: {app}\UninsHs.dat; Section: Common; Key: Group; String: {groupname}
