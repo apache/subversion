@@ -19,6 +19,12 @@ Candidate changes:
     +1:
 	+0:
 
+
+Status of 1.2.1:
+================
+
+Candidate changes:
+
   * r14722
     Optimize 'svn log' performance.
     Justification:
@@ -26,13 +32,6 @@ Candidate changes:
     Votes:
       +1: djh
 
-
-Status of 1.2.1:
-================
-
-Candidate changes:
-
-(none)
 
 Approved changes (further review is welcome, but not required):
 
