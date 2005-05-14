@@ -898,6 +898,38 @@ def examine_lock_via_url(sbox):
     print "Error: expected output '%s' not found in output." % match_line
     raise svntest.Failure
 
+#----------------------------------------------------------------------
+def lock_several_files(sbox):
+  "lock/unlock several files in one go"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Deliberately have no direct child of A as a target
+  iota_path = os.path.join(sbox.wc_dir, 'iota')
+  lambda_path = os.path.join(sbox.wc_dir, 'A', 'B', 'lambda')
+  alpha_path = os.path.join(sbox.wc_dir, 'A', 'B', 'E', 'alpha')
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author2,
+                                     '--password', svntest.main.wc_passwd,
+                                     '--no-auth-cache',
+                                     '-m', 'lock several',
+                                     iota_path, lambda_path, alpha_path)
+  
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', 'A/B/lambda', 'A/B/E/alpha', writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'unlock',
+                                     '--username', svntest.main.wc_author2,
+                                     '--password', svntest.main.wc_passwd,
+                                     '--no-auth-cache',
+                                     iota_path, lambda_path, alpha_path)
+
+  expected_status.tweak('iota', 'A/B/lambda', 'A/B/E/alpha', writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -924,6 +956,7 @@ test_list = [ None,
               update_while_needing_lock,
               revert_lock,
               examine_lock_via_url,
+              lock_several_files,
              ]
 
 if __name__ == '__main__':

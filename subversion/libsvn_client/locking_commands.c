@@ -206,7 +206,7 @@ organize_lock_targets (const char **common_parent,
       /* Open the common parent. */
       SVN_ERR (svn_wc_adm_probe_open3 (parent_adm_access_p, NULL,
                                        *common_parent, 
-                                       TRUE, 0, ctx->cancel_func, 
+                                       TRUE, -1, ctx->cancel_func, 
                                        ctx->cancel_baton, pool));  
 
       SVN_ERR (svn_wc_entry (parent_entry_p, *common_parent, 
@@ -224,7 +224,6 @@ organize_lock_targets (const char **common_parent,
       /* Verify all paths. */
       for (i = 0; i < rel_targets->nelts; i++)
         {
-          svn_wc_adm_access_t *adm_access;
           const svn_wc_entry_t *entry;
           const char *target = ((const char **) (rel_targets->elts))[i];
           const char *abs_path;
@@ -232,11 +231,8 @@ organize_lock_targets (const char **common_parent,
           abs_path = svn_path_join
             (svn_wc_adm_access_path (*parent_adm_access_p), target, pool);
           
-          SVN_ERR (svn_wc_adm_probe_try3 (&adm_access, *parent_adm_access_p,
-                                          abs_path, TRUE, 0, ctx->cancel_func,
-                                          ctx->cancel_baton, pool));
-          
-          SVN_ERR (svn_wc_entry (&entry, abs_path, adm_access, FALSE, pool));
+          SVN_ERR (svn_wc_entry (&entry, abs_path, *parent_adm_access_p, FALSE,
+                                 pool));
           
           if (! entry)
             return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
