@@ -72,9 +72,14 @@ AC_ARG_WITH(apxs,
 ])
 
 if test "$BINNAME" = "" -a "$APXS" = ""; then
-  for i in /usr/sbin /usr/local/apache/bin /usr/local/apache2/bin ; do
+  for i in /usr/sbin /usr/local/apache/bin /usr/local/apache2/bin /usr/bin ; do
+    if test -f "$i/apxs2"; then
+      APXS="$i/apxs2"
+      break
+    fi
     if test -f "$i/apxs"; then
       APXS="$i/apxs"
+      break
     fi
   done
 fi
