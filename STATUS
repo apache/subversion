@@ -27,8 +27,7 @@ Candidate changes:
     Notes:
       Being solely "contrib/" code, this does not affect the soak.
     Votes:
-      +1: maxb
-
+      +1: maxb, philip
 
 
 Status of 1.2.1:
@@ -43,6 +42,12 @@ Candidate changes:
     Votes:
       +1: djh
 
+  * r14736
+    Open access baton for entire tree affected by lock/unlock targets.
+    Justification:
+      Fixes an assert when the targets have "gaps".
+    Votes:
+      +1: philip
 
 Approved changes (further review is welcome, but not required):
 
