@@ -157,19 +157,57 @@ def locate_libs():
   os.environ['APR_ICONV_PATH'] = apriconv_so_path
   os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
 
-def start_svnserve():
+class Svnserve:
   "Run svnserve for ra_svn tests"
-  global svnserve_args
-  svnserve_name = 'svnserve.exe'
-  svnserve_path = os.path.join(abs_objdir,
-                               'subversion', 'svnserve', svnserve_name)
-  svnserve_root = os.path.join(abs_builddir,
-                               'subversion', 'tests', 'clients', 'cmdline')
-  if not svnserve_args:
-    svnserve_args = [svnserve_name, '-d', '-r', svnserve_root]
-  else:
-    svnserve_args = [svnserve_name] + svnserve_args
-  os.spawnv(os.P_NOWAIT, svnserve_path, svnserve_args)
+  def __init__(self, svnserve_args, objdir, abs_objdir, abs_builddir):
+    self.args = svnserve_args
+    self.name = 'svnserve.exe'
+    self.kind = objdir
+    self.path = os.path.join(abs_objdir,
+                             'subversion', 'svnserve', self.name)
+    self.root = os.path.join(abs_builddir,
+                             'subversion', 'tests', 'clients', 'cmdline')
+    self.proc_handle = None
+
+  def __del__(self):
+    "Stop svnserve when the object is deleted"
+    self.stop()
+
+  def _quote(self, arg):
+    if ' ' in arg:
+      return '"' + arg + '"'
+    else:
+      return arg
+
+  def start(self):
+    if not self.args:
+      args = [self.name, '-d', '-r', self.root]
+    else:
+      args = [self.name] + self.args
+    print 'Starting', self.kind, self.name
+    try:
+      import win32process
+      import win32con
+      args = ' '.join(map(lambda x: self._quote(x), args))
+      print self._quote(self.path), args
+      self.proc_handle = (
+        win32process.CreateProcess(self._quote(self.path), args,
+                                   None, None, 0,
+                                   win32con.CREATE_NEW_CONSOLE,
+                                   None, None, win32process.STARTUPINFO()))[0]
+    except ImportError:
+      os.spawnv(os.P_NOWAIT, self.path, args)
+
+  def stop(self):
+    if self.proc_handle is not None:
+      try:
+        import win32process
+        print 'Stopping', self.name
+        win32process.TerminateProcess(self.proc_handle, 0)
+        return
+      except ImportError:
+        pass
+    print 'Svnserve.stop not implemented'
 
 # Move the binaries to the test directory
 locate_libs()
@@ -189,8 +227,8 @@ if create_dirs:
 
 # Run the tests
 if run_svnserve:
-  print 'Starting', objdir, 'svnserve'
-  start_svnserve()
+  svnserve = Svnserve(svnserve_args, objdir, abs_objdir, abs_builddir)
+  svnserve.start()
 print 'Testing', objdir, 'configuration on', repo_loc
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 import run_tests
