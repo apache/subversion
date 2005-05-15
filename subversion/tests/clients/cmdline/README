@@ -76,7 +76,7 @@ set the User and Group directives in httpd.conf, something like this:
 
 You need to run the tests over ra_dav with authentication enabled, so
 just drop the following 2-line snippet into the
-/usr/local/apache2/conf/users file:
+/usr/local/apache2/conf/users file [1]:
 
 ----------------------------
 jrandom:xCGl35kV9oWCY
@@ -107,6 +107,18 @@ BASE_URL=URL can also be used when running individual tests:
 
    $ ./basic_tests.py BASE_URL=http://localhost
    $ ./basic_tests.py BASE_URL=http://localhost 3
+
+
+Note [1]: It would be quite too much to expect those password entries
+          to work on Windows... Apache httpd on Windows doesn't
+          understand crypted passwords, but it does understand
+          MD5-hashed passwords.  The correct password entries for
+          Windows are:
+
+          ----------------------------
+          jrandom:$apr1$3p1.....$FQW6RceW5QhJ2blWDQgKn0
+          jconstant:$apr1$jp1.....$Usrqji1c9H6AbOxOGAzzb0
+          ----------------------------
 
 
 Running over ra_svn
