@@ -34,8 +34,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-05-13 23:18+0200\n"
-"PO-Revision-Date: 2005-05-13 23:16+0200\n"
+"POT-Creation-Date: 2005-05-15 22:58+0200\n"
+"PO-Revision-Date: 2005-05-15 22:54+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -52,7 +52,7 @@ msgstr "Opcja 'verbose' nie jest prawidłową opcją dla trybu XML"
 msgid "'incremental' option only valid in XML mode"
 msgstr "Opcja 'incremental' jest prawidłowa tylko w trybie XML"
 
-#: clients/cmdline/blame-cmd.c:301
+#: clients/cmdline/blame-cmd.c:304
 #, c-format
 msgid "Skipping binary file: '%s'\n"
 msgstr "Pomijanie binarnego pliku: '%s'\n"
@@ -2994,37 +2994,37 @@ msgstr "Czy wszystkie obiekty docelowe należą do tej samej kopii roboczej?"
 msgid "Cannot non-recursively commit a directory deletion"
 msgstr "Zatwierdzenie usunięcia katalogu musi być wykonane rekursywnie"
 
-#: libsvn_client/commit_util.c:242 libsvn_client/commit_util.c:253
+#: libsvn_client/commit_util.c:243 libsvn_client/commit_util.c:254
 #, c-format
 msgid "Unknown entry kind for '%s'"
 msgstr "Nieznany rodzaj obiektu dla '%s'"
 
-#: libsvn_client/commit_util.c:270
+#: libsvn_client/commit_util.c:271
 #, c-format
 msgid "Entry '%s' has unexpectedly changed special status"
 msgstr "Obiekt '%s' został zastąpiony plikiem specjalnym"
 
-#: libsvn_client/commit_util.c:321
+#: libsvn_client/commit_util.c:322
 #, c-format
 msgid "Aborting commit: '%s' remains in conflict"
 msgstr "Zatwierdzanie przerwane: konflikt obiektu '%s'"
 
-#: libsvn_client/commit_util.c:377
+#: libsvn_client/commit_util.c:388
 #, c-format
 msgid "Did not expect '%s' to be a working copy root"
 msgstr "Niespodziewanie '%s' okazał się głównym katalogiem kopii roboczej"
 
-#: libsvn_client/commit_util.c:395
+#: libsvn_client/commit_util.c:406
 #, c-format
 msgid "Commit item '%s' has copy flag but no copyfrom URL\n"
 msgstr ""
 "Obiekt '%s' jest zaznaczony do skopiowania, lecz nie podano źródłowego URL\n"
 
-#: libsvn_client/commit_util.c:667 libsvn_client/commit_util.c:797
+#: libsvn_client/commit_util.c:678 libsvn_client/commit_util.c:808
 #: libsvn_client/copy.c:1072 libsvn_client/delete.c:67
 #: libsvn_client/diff.c:1389 libsvn_client/diff.c:1987
 #: libsvn_client/diff.c:2509 libsvn_client/diff.c:2618
-#: libsvn_client/locking_commands.c:217 libsvn_client/locking_commands.c:243
+#: libsvn_client/locking_commands.c:217 libsvn_client/locking_commands.c:239
 #: libsvn_client/log.c:129 libsvn_client/prop_commands.c:213
 #: libsvn_client/prop_commands.c:446 libsvn_client/prop_commands.c:602
 #: libsvn_client/prop_commands.c:951 libsvn_client/ra.c:180
@@ -3037,18 +3037,18 @@ msgstr ""
 msgid "'%s' is not under version control"
 msgstr "'%s' nie podlega zarządzaniu wersjami"
 
-#: libsvn_client/commit_util.c:670
+#: libsvn_client/commit_util.c:681
 #, c-format
 msgid "Entry for '%s' has no URL"
 msgstr "Element '%s' nie ma URL"
 
-#: libsvn_client/commit_util.c:703
+#: libsvn_client/commit_util.c:714
 #, c-format
 msgid "'%s' is scheduled for addition within unversioned parent"
 msgstr ""
 "'%s' przeznaczony do dodania w katalogu nie podlegającym kontroli wersji"
 
-#: libsvn_client/commit_util.c:723
+#: libsvn_client/commit_util.c:734
 #, c-format
 msgid ""
 "Entry for '%s' is marked as 'copied' but is not itself scheduled\n"
@@ -3059,7 +3059,7 @@ msgstr ""
 "do dodania.  Czy próbujesz zatwierdzić obiekt, który jest w katalogu\n"
 "nie podlegającym zarządzaniu wersjami?"
 
-#: libsvn_client/commit_util.c:763
+#: libsvn_client/commit_util.c:774
 #, c-format
 msgid ""
 "'%s' is not under version control and is not part of the commit, yet its "
@@ -3068,18 +3068,18 @@ msgstr ""
 "'%s' nie podlega zarządzaniu wersjami i nie podlega zatwierdzaniu, jednak "
 "podrzędny obiekt '%s' ma zostać zatwierdzony"
 
-#: libsvn_client/commit_util.c:846
+#: libsvn_client/commit_util.c:857
 #, c-format
 msgid "Cannot commit both '%s' and '%s' as they refer to the same URL"
 msgstr ""
 "Nie można zatwierdzić '%s' i '%s' ponieważ odnoszą się do tego samego URL"
 
-#: libsvn_client/commit_util.c:991
+#: libsvn_client/commit_util.c:1002
 #, c-format
 msgid "Commit item '%s' has copy flag but no copyfrom URL"
 msgstr "Element '%s' zaznaczony do skopiowania, lecz nie podano źródłowego URL"
 
-#: libsvn_client/commit_util.c:996
+#: libsvn_client/commit_util.c:1007
 #, c-format
 msgid "Commit item '%s' has copy flag but an invalid revision"
 msgstr "Element '%s' zaznaczony do skopiowania, lecz wersja jest niewłaściwa"
@@ -3270,7 +3270,7 @@ msgstr "Przynajmniej jedna wersja musi być zdalna aby wykonać pegged diff"
 
 #: libsvn_client/diff.c:2482 libsvn_client/diff.c:2488
 #: libsvn_client/diff.c:2603 libsvn_client/locking_commands.c:221
-#: libsvn_client/locking_commands.c:247 libsvn_client/ra.c:714
+#: libsvn_client/locking_commands.c:243 libsvn_client/ra.c:714
 #: libsvn_client/ra.c:837
 #, c-format
 msgid "'%s' has no URL"
@@ -3318,17 +3318,17 @@ msgid "No common parent found, unable to operate on disjoint arguments"
 msgstr ""
 "Nie znaleziono wspólnego rodzica, nie można użyć rozłącznych argumentów"
 
-#: libsvn_client/locking_commands.c:267
+#: libsvn_client/locking_commands.c:263
 #, c-format
 msgid "'%s' is not locked in this working copy"
 msgstr "'%s' nie jest zablokowane w danej kopii roboczej"
 
-#: libsvn_client/locking_commands.c:312
+#: libsvn_client/locking_commands.c:308
 #, c-format
 msgid "'%s' is not locked"
 msgstr "'%s' nie jest zablokowane"
 
-#: libsvn_client/locking_commands.c:345 libsvn_fs/fs-loader.c:896
+#: libsvn_client/locking_commands.c:341 libsvn_fs/fs-loader.c:896
 #: libsvn_ra/ra_loader.c:512
 msgid "Lock comment has illegal characters"
 msgstr "Opis zakładanej blokady zawiera nieprawidłowe znaki"
@@ -3735,10 +3735,9 @@ msgid "Attempted to set entry in immutable node"
 msgstr "Próba ustawienia elementu w węźle nie mogącym ulegać zmianom"
 
 #: libsvn_fs_base/dag.c:689
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set proplist on *immutable* node-revision %s"
-msgstr ""
-"Nie można ustawić atrybutu proplist na niemodyfikowalnym węźle wersji %s"
+msgstr "Nie można ustawić atrybutu proplist na stałym węźle wersji %s"
 
 #: libsvn_fs_base/dag.c:801
 #, c-format
@@ -4487,13 +4486,12 @@ msgid "Could not create a request (%s '%s')"
 msgstr "Nie udało się wygenerować żądania (%s '%s')"
 
 #: libsvn_ra_dav/commit.c:291
-#, fuzzy
 msgid ""
 "Could not fetch the Version Resource URL (needed during an import or when it "
 "is missing from the local, cached props)"
 msgstr ""
 "Nie można pobrać URLa zasobów (potrzebnego podczas importu lub\n"
-"gdy nie zawiera go lokalny cache atrybutów)\n"
+"gdy nie zawiera go lokalny cache atrybutów)"
 
 #: libsvn_ra_dav/commit.c:462
 #, c-format
@@ -5143,13 +5141,12 @@ msgid "Invalid target path"
 msgstr "Ścieżka docelowa jest niewłaściwa"
 
 #: libsvn_repos/delta.c:257
-#, fuzzy
 msgid ""
 "Invalid editor anchoring; at least one of the input paths is not a directory "
 "and there was no source entry"
 msgstr ""
-"Błąd edytora; conajmniej jedna z ścieżek wejściowych nie jest katalogiem tak "
-"więc brakuje obiektu źródłowego"
+"Błąd edytora; co najmniej jedna z ścieżek wejściowych nie jest katalogiem "
+"tak więc brakuje obiektu źródłowego"
 
 #: libsvn_repos/dump.c:416
 #, c-format
@@ -6056,15 +6053,13 @@ msgid "Can't convert string from '%s' to '%s':"
 msgstr "Nie można dokonać konwersji z '%s' do '%s'"
 
 #: libsvn_subr/utf.c:493
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Safe data '%s' was followed by non-ASCII byte %d: unable to convert to/from "
 "UTF-8"
 msgstr ""
-"Bezpieczne dane:\n"
-"\"%s\"\n"
-"... następują po znaku nie ASCII %d.\n"
-"Wykryto znak nie ASCII i nie mozna go skonwertować do/z UTF-8"
+"Bezpieczne dane '%s' następują po znaku nie ASCII %d: nie można go "
+"skonwertować do/z UTF-8"
 
 #: libsvn_subr/utf.c:501
 #, c-format
@@ -7553,16 +7548,15 @@ msgstr ""
 "Wypisuje autora, datę/czas, rozmiar opisu zmiany oraz opis zmiany.\n"
 
 #: svnlook/main.c:182
-#, fuzzy
 msgid ""
 "usage: svnlook lock REPOS_PATH PATH_IN_REPOS\n"
 "\n"
 "If a lock exists on a path in the repository, describe it.\n"
 msgstr ""
-"wykorzystanie: svnlook history KATALOG_REP [ŚCIEŻKA_W_REP]\n"
+"Użycie: svnlook lock KATALOG_REP ŚCIEŻKA_W_REP\n"
 "\n"
-"Podaje informacje o historii obiektu o podanej ścieżce w repozytorium\n"
-"(przy braku parametru głównego katalogu repozytorium).\n"
+"Jeżeli blokada jest założona, podaje informacje o blokadzie \n"
+"obiektu o podanej ścieżce w repozytorium.\n"
 
 #: svnlook/main.c:187
 msgid ""
@@ -7575,20 +7569,19 @@ msgstr ""
 "Wypisuje opis zmiany.\n"
 
 #: svnlook/main.c:192
-#, fuzzy
 msgid ""
 "usage: svnlook propget REPOS_PATH PROPNAME [PATH_IN_REPOS]\n"
 "\n"
 "Print the raw value of a property on a path in the repository.\n"
 "With --revprop, prints the raw value of a revision property.\n"
 msgstr ""
-"wykorzystanie: svnlook propget KATALOG_REP ATRYBUT ŚCIEŻKA_W_REP\n"
+"Użycie: svnlook propget KATALOG_REP ATRYBUT [ŚCIEŻKA_W_REP]\n"
 "\n"
 "Wypisuje wartość podanego atrybutu obiektu o podanej ścieżce w "
 "repozytorium.\n"
+"Jeśli podano opcję --revprop wyświetla wartość wersjonowanego atrybutu.\n"
 
 #: svnlook/main.c:198
-#, fuzzy
 msgid ""
 "usage: svnlook proplist REPOS_PATH [PATH_IN_REPOS]\n"
 "\n"
@@ -7596,9 +7589,10 @@ msgid ""
 "with the --revprop option, revision properties.\n"
 "With -v, show the property values too.\n"
 msgstr ""
-"wykorzystanie: svnlook proplist KATALOG_REP ŚCIEŻKA_W_REP\n"
+"Użycie: svnlook proplist KATALOG_REP [ŚCIEŻKA_W_REP]\n"
 "\n"
-"Wypisuje listę atrybutów obiektu o podanej ścieżce w repozytorium.\n"
+"Wypisuje listę atrybutów obiektu o podanej ścieżce w repozytorium,\n"
+"jeśli podano opcję --revprop, wyświetla wersjonowane atrybuty.\n"
 "Gdy podano opcję -v, wypisuje także wartości atrybutów.\n"
 
 #: svnlook/main.c:205
