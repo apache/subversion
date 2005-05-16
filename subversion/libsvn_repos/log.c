@@ -187,8 +187,11 @@ detect_changed (apr_hash_t **changed,
   return SVN_NO_ERROR;
 }
 
-/* This is used by svn_repos_get_logs3 to get a revision
-   root for a path. */
+/* Save a fs revision root into *ROOT for a given PATH/REV in FS.
+ *
+ * If optional AUTHZ_READ_FUNC is non-NULL, then use it (with
+ * AUTHZ_READ_BATON and FS) to check whether the PATH is readable.
+ */
 static svn_error_t *
 path_history_root (svn_fs_root_t **root,
                    svn_fs_t *fs,
@@ -213,7 +216,11 @@ path_history_root (svn_fs_root_t **root,
 }
 
 /* This is used by svn_repos_get_logs3 to keep track of multiple
-   path history information while working through history. */
+ * path history information while working through history.
+ *
+ * The two pools are swapped after each iteration through history because
+ * to get the next history requires the previous one.
+ */
 struct path_info
 {
   svn_fs_root_t *root;
@@ -224,19 +231,31 @@ struct path_info
   svn_revnum_t history_rev;
 };
 
-/* This helper to svn_repos_get_logs3 is used to get the path's
-   history. */
+/* Set INFO->HIST to the next history for the path.
+ *
+ * If no more history is available or the history revision is less
+ * than (earlier) than START, or the history is not available due
+ * to authorization, then INFO->HIST is set to NULL.
+ *
+ * A STRICT value of FALSE will indicate to follow history across copied
+ * paths.
+ *
+ * If optional AUTHZ_READ_FUNC is non-NULL, then use it (with
+ * AUTHZ_READ_BATON and FS) to check whether INFO->PATH is still readable if
+ * we do indeed find more history for the path.
+ */
 static svn_error_t *
 get_history (struct path_info *info,
              svn_fs_t *fs,
-             svn_boolean_t cross_copies,
+             svn_boolean_t strict,
              svn_repos_authz_func_t authz_read_func,
              void *authz_read_baton,
              svn_revnum_t start)
 {
   apr_pool_t *temppool;
 
-  SVN_ERR (svn_fs_history_prev (&info->hist, info->hist, cross_copies,
+  SVN_ERR (svn_fs_history_prev (&info->hist, info->hist,
+                                strict ? FALSE : TRUE,
                                 info->newpool));
   if (! info->hist)
     return SVN_NO_ERROR;
@@ -244,6 +263,14 @@ get_history (struct path_info *info,
   /* Fetch the location information for this history step. */
   SVN_ERR (svn_fs_history_location (&info->path, &info->history_rev,
                                     info->hist, info->newpool));
+
+  /* If this history item predates our START revision then
+     don't fetch any more for this path. */
+  if (info->history_rev < start)
+    {
+      info->hist = NULL;
+      return SVN_NO_ERROR;
+    }
   
   /* Is the history item readable?  If not, done with path. */
   if (authz_read_func)
@@ -267,23 +294,24 @@ get_history (struct path_info *info,
   svn_pool_clear (temppool);
   info->newpool = temppool;
 
-  /* If this history item predates our START revision then
-     don't fetch any more for this path. */
-  if (info->history_rev < start)
-    info->hist = NULL;
   return SVN_NO_ERROR;
 }
 
-/* This helper to svn_repos_get_logs3 is used to advance the path's
-   history to the next one *if* the revision it is at is equal to
-   or greater than CURRENT. The CHANGED flag is only touched if
-   this path has history in the CURRENT rev. */
+/* Set INFO->HIST to the next history for the path *if* there is history
+ * available and INFO->HISTORY_REV is equal to or greater than CURRENT.
+ *
+ * *CHANGED is set to TRUE if the path has history in the CURRENT revision,
+ * otherwise it is not touched.
+ *
+ * If we do need to get the next history revision for the path, call
+ * get_history to do it -- see it for details.
+ */
 static svn_error_t *
 check_history (svn_boolean_t *changed,
                struct path_info *info,
                svn_fs_t *fs,
                svn_revnum_t current,
-               svn_boolean_t cross_copies,
+               svn_boolean_t strict,
                svn_repos_authz_func_t authz_read_func,
                void *authz_read_baton,
                svn_revnum_t start)
@@ -304,16 +332,16 @@ check_history (svn_boolean_t *changed,
      then set *CHANGED to true and get the next history
      rev where this path was changed. */
   *changed = TRUE;
-  SVN_ERR (get_history (info, fs, cross_copies, authz_read_func,
+  SVN_ERR (get_history (info, fs, strict, authz_read_func,
                         authz_read_baton, start));
   return SVN_NO_ERROR;
 }
 
-/* Helper to find the next interesting history revision. */
+/* Return the next interesting revision in our list of HISTORIES. */
 static svn_revnum_t
 next_history_rev (apr_array_header_t *histories)
 {
-  svn_revnum_t next_rev = -1;
+  svn_revnum_t next_rev = SVN_INVALID_REVNUM;
   int i;
 
   for (i = 0; i < histories->nelts; ++i)
@@ -329,8 +357,14 @@ next_history_rev (apr_array_header_t *histories)
   return next_rev;
 }
 
-/* Helper function used by svn_repos_get_logs3 to send history
-   info to the caller's callback. */
+/* Pass history information about REV to RECEIVER with its RECEIVER_BATON.
+ *
+ * FS is used with REV to fetch the interesting history information,
+ * such as author, date, etc.
+ *
+ * The detect_changed function is used if either AUTHZ_READ_FUNC is
+ * not NULL, or if DISCOVER_CHANGED_PATHS is TRUE.  See it for details.
+ */
 static svn_error_t *
 send_change_rev (svn_revnum_t rev,
                  svn_fs_t *fs,
@@ -421,11 +455,14 @@ svn_repos_get_logs3 (svn_repos_t *repos,
 {
   svn_revnum_t head = SVN_INVALID_REVNUM;
   apr_pool_t *subpool = svn_pool_create (pool);
-  apr_pool_t *sendpool = svn_pool_create (pool);
   svn_fs_t *fs = repos->fs;
   apr_array_header_t *revs = NULL;
   svn_revnum_t hist_end = end;
   svn_revnum_t hist_start = start;
+  svn_revnum_t current;
+  apr_array_header_t *histories;
+  svn_boolean_t any_histories_left = TRUE;
+  int send_count = 0;
   int i;
 
   SVN_ERR (svn_fs_youngest_rev (&head, fs, pool));
@@ -465,142 +502,133 @@ svn_repos_get_logs3 (svn_repos_t *repos,
      only about answering that question, and we already know the
      answer ... well, you get the picture.
   */
-  if (paths 
-      && (((paths->nelts == 1) 
-           && (! svn_path_is_empty (APR_ARRAY_IDX (paths, 0, const char *))))
-          || (paths->nelts > 1)))
-    {
-      svn_revnum_t current;
-      apr_array_header_t *histories;
-      svn_boolean_t any_histories_left = TRUE;
-      int sent_count = 0;
-
-      histories = apr_array_make (subpool, paths->nelts,
-                                  sizeof (struct path_info *));
-      /* Create a history object for each path so we can walk through
-         them all at the same time until we have all changes or LIMIT
-         is reached.
-
-         There is some pool fun going on due to the fact that we have
-         to hold on to the old pool with the history before we can
-         get the next history. */
-      for (i = 0; i < paths->nelts; i++)
-        {
-          const char *this_path = APR_ARRAY_IDX (paths, i, const char *);
-          svn_fs_root_t *root;
-          struct path_info *info = apr_palloc (subpool,
-                                               sizeof (struct path_info));
-
-          SVN_ERR (path_history_root (&root, fs, this_path, hist_end,
-                                      authz_read_func, authz_read_baton,
-                                      subpool));
-          info->root = root;
-          info->path = this_path;
-          info->oldpool = svn_pool_create (subpool);
-          info->newpool = svn_pool_create (subpool);
-          SVN_ERR (svn_fs_node_history (&info->hist, info->root, info->path,
-                                        info->oldpool));
-          SVN_ERR (get_history (info, fs,
-                                strict_node_history ? FALSE : TRUE,
-                                authz_read_func, authz_read_baton,
-                                hist_start));
-          *((struct path_info **) apr_array_push (histories)) = info;
-        }
-
-      /* Loop through all the revisions in the range and add any
-         where a path was changed to the array, or if they wanted
-         history in reverse order just send it to them right away. */
-      for (current = hist_end;
-           current >= hist_start && any_histories_left;
-           current = next_history_rev (histories))
-        {
-          svn_boolean_t changed = FALSE;
-          svn_pool_clear (sendpool);
-          any_histories_left = FALSE;
-          for (i = 0; i < histories->nelts; i++)
-            {
-              struct path_info *info = APR_ARRAY_IDX (histories, i,
-                                                      struct path_info *);
-
-              /* Check history for this path in current rev. */
-              SVN_ERR (check_history (&changed, info, fs, current,
-                                      strict_node_history ? FALSE : TRUE,
-                                      authz_read_func, authz_read_baton,
-                                      hist_start));
-              if (info->hist != NULL)
-                any_histories_left = TRUE;
-            }
-
-          /* If any of the paths changed in this rev then add or send it. */
-          if (changed)
-            {
-              /* If they wanted it in reverse order we can send it completely
-                 streamily right now. */
-              if (start > end)
-                {
-                  SVN_ERR (send_change_rev (current, fs,
-                                            discover_changed_paths,
-                                            authz_read_func, authz_read_baton,
-                                            receiver, receiver_baton,
-                                            sendpool));
-                  if (limit && ++sent_count > limit)
-                    break;
-                }
-              else
-                {
-                  /* This array must be allocated in pool -- it will be used
-                     in the processing loop later. */
-                  if (! revs)
-                    revs = apr_array_make (pool, 64, sizeof (svn_revnum_t));
-
-                  /* They wanted it in forward order, so we have to buffer up
-                     a list of revs and process it later. */
-                  *(svn_revnum_t*) apr_array_push (revs) = current;
-                }
-            }
-        }
-    }
-  else
+  if (! paths ||
+      (paths->nelts == 1 &&
+       svn_path_is_empty (APR_ARRAY_IDX (paths, 0, const char *))))
     {
       /* They want history for the root path, so every rev has a change. */
-      int count = hist_end - hist_start + 1;
-      if (limit && count > limit)
-        count = limit;
-      for (i = 0; i < count; ++i)
+      send_count = hist_end - hist_start + 1;
+      if (limit && send_count > limit)
+        send_count = limit;
+      for (i = 0; i < send_count; ++i)
         {
-          svn_pool_clear (sendpool);
+          svn_revnum_t rev = hist_start + i;
+
+          svn_pool_clear (subpool);
           if (start > end)
-            SVN_ERR (send_change_rev (hist_end - i, fs,
-                                      discover_changed_paths,
-                                      authz_read_func, authz_read_baton,
-                                      receiver, receiver_baton, sendpool));
+            rev = hist_end - i;
+          SVN_ERR (send_change_rev (rev, fs,
+                                    discover_changed_paths,
+                                    authz_read_func, authz_read_baton,
+                                    receiver, receiver_baton, subpool));
+        }
+      svn_pool_destroy (subpool);
+      return SVN_NO_ERROR;
+    }
+
+  /* Create a history object for each path so we can walk through
+     them all at the same time until we have all changes or LIMIT
+     is reached.
+
+     There is some pool fun going on due to the fact that we have
+     to hold on to the old pool with the history before we can
+     get the next history.
+  */
+  histories = apr_array_make (pool, paths->nelts,
+                              sizeof (struct path_info *));
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *this_path = APR_ARRAY_IDX (paths, i, const char *);
+      svn_fs_root_t *root;
+      struct path_info *info = apr_palloc (pool,
+                                           sizeof (struct path_info));
+
+      SVN_ERR (path_history_root (&root, fs, this_path, hist_end,
+                                  authz_read_func, authz_read_baton,
+                                  pool));
+      info->root = root;
+      info->path = this_path;
+      info->oldpool = svn_pool_create (pool);
+      info->newpool = svn_pool_create (pool);
+      SVN_ERR (svn_fs_node_history (&info->hist, info->root, info->path,
+                                    info->oldpool));
+      SVN_ERR (get_history (info, fs,
+                            strict_node_history,
+                            authz_read_func, authz_read_baton,
+                            hist_start));
+      *((struct path_info **) apr_array_push (histories)) = info;
+    }
+
+  /* Loop through all the revisions in the range and add any
+     where a path was changed to the array, or if they wanted
+     history in reverse order just send it to them right away.
+  */
+  for (current = hist_end;
+       current >= hist_start && any_histories_left;
+       current = next_history_rev (histories))
+    {
+      svn_boolean_t changed = FALSE;
+      any_histories_left = FALSE;
+
+      svn_pool_clear (subpool);
+      for (i = 0; i < histories->nelts; i++)
+        {
+          struct path_info *info = APR_ARRAY_IDX (histories, i,
+                                                  struct path_info *);
+
+          /* Check history for this path in current rev. */
+          SVN_ERR (check_history (&changed, info, fs, current,
+                                  strict_node_history,
+                                  authz_read_func, authz_read_baton,
+                                  hist_start));
+          if (info->hist != NULL)
+            any_histories_left = TRUE;
+        }
+
+      /* If any of the paths changed in this rev then add or send it. */
+      if (changed)
+        {
+          /* If they wanted it in reverse order we can send it completely
+             streamily right now. */
+          if (start > end)
+            {
+              SVN_ERR (send_change_rev (current, fs,
+                                        discover_changed_paths,
+                                        authz_read_func, authz_read_baton,
+                                        receiver, receiver_baton,
+                                        subpool));
+              if (limit && ++send_count > limit)
+                break;
+            }
           else
-            SVN_ERR (send_change_rev (hist_start + i, fs,
-                                      discover_changed_paths,
-                                      authz_read_func, authz_read_baton,
-                                      receiver, receiver_baton, sendpool));
+            {
+              /* They wanted it in forward order, so we have to buffer up
+                 a list of revs and process it later. */
+              if (! revs)
+                revs = apr_array_make (pool, 64, sizeof (svn_revnum_t));
+              *(svn_revnum_t*) apr_array_push (revs) = current;
+            }
         }
     }
 
-  svn_pool_destroy (subpool);
   if (revs)
     {
       /* Work loop for processing the revisions we found since they wanted
          history in forward order. */
       for (i = 0; i < revs->nelts; ++i)
         {
-          svn_pool_clear (sendpool);
+          svn_pool_clear (subpool);
           SVN_ERR (send_change_rev (APR_ARRAY_IDX (revs, revs->nelts - i - 1,
                                                    svn_revnum_t),
                                     fs, discover_changed_paths,
                                     authz_read_func, authz_read_baton,
-                                    receiver, receiver_baton, sendpool));
+                                    receiver, receiver_baton, subpool));
           if (limit && i >= limit)
             break;
         }
     }
 
-  svn_pool_destroy (sendpool);
+  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
 }
 
