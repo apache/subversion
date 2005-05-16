@@ -585,12 +585,16 @@ svn_ra_print_modules (svn_stringbuf_t *output,
 
       if (initfunc)
         {
+          const char *ra_name = defn->ra_name;
+#if APR_CHARSET_EBCDIC
+          SVN_ERR(svn_utf_cstring_from_utf8(&ra_name, defn->ra_name, pool));
+#endif          
           SVN_ERR (initfunc (svn_ra_version(), &vtable, iterpool));
 
           SVN_ERR (check_ra_version (vtable->get_version (), defn->ra_name));
 
           line = apr_psprintf (iterpool, "* ra_%s : %s\n",
-                               defn->ra_name,
+                               ra_name,
                                vtable->get_description());
           svn_stringbuf_appendcstr (output, line);
 

@@ -257,7 +257,7 @@ svn_ra_local__get_description (void)
 static const char * const *
 svn_ra_local__get_schemes (apr_pool_t *pool)
 {
-  static const char *schemes[] = { "file", NULL };
+  static const char *schemes[] = { FILE_STR, NULL };
 
   return schemes;
 }
