@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-05-15 22:58+0200\n"
-"PO-Revision-Date: 2005-05-15 22:54+0200\n"
+"PO-Revision-Date: 2005-05-16 22:33+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3532,9 +3532,8 @@ msgid "Can't allocate FS mutex"
 msgstr "Nie udało się utworzyć semefora FS"
 
 #: libsvn_fs/fs-loader.c:280
-#, fuzzy
 msgid "Can't grab FS mutex"
-msgstr "Nie można czytać z strumienia"
+msgstr "Nie można zablokować semafora FS"
 
 #: libsvn_fs/fs-loader.c:286
 msgid "Can't ungrab FS mutex"
@@ -4156,10 +4155,10 @@ msgid "Unexpected immutable node at '%s'"
 msgstr "Nieoczekiwany węzeł nie podlegający dla '%s'"
 
 #: libsvn_fs_base/tree.c:1868
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "No deletion changes for path '%s' in transaction '%s' of filesystem '%s'"
-msgstr "Uszkodzony zapis kopii '%s' w transakcji '%s' w systemie plików '%s'"
+msgstr "Brak zmian typu usunięcie dla ścieżki '%s' w transakcji '%s' w systemie plików '%s'"
 
 #: libsvn_fs_base/tree.c:1887 libsvn_fs_fs/tree.c:1213
 #, c-format
@@ -7896,9 +7895,9 @@ msgid "Can't create server socket: %s\n"
 msgstr "Nie udało się utworzyć gniazda: %s\n"
 
 #: svnserve/main.c:460
-#, fuzzy, c-format
+#, c-format
 msgid "Can't bind server socket: %s\n"
-msgstr "Nie można otworzyć gniazda serwera: %s\n"
+msgstr "Nie można zbindować gniazda serwera: %s\n"
 
 #: svnserve/main.c:503
 #, c-format
