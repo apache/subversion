@@ -49,6 +49,14 @@ Candidate changes:
     Votes:
       +1: philip
 
+  * r14755
+    Don't initialize libsvn_ra in svnversion:
+    Justification:
+      svnversion doesn't use the RA layer, and it only depends on it
+      indirectly.
+    Votes:
+      +1: lundblad
+
 Approved changes (further review is welcome, but not required):
 
 (none)
