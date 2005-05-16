@@ -204,6 +204,9 @@ a <tt>file:</tt> URL?</a></li>
     fails on files larger than 2Gb!</a></li>
 <li><a href="#hidden-log">I cannot see the log entry for the file
     I just committed.  Why?</a></li>
+<li><a href="#bdb43-upgrade">After upgrading to Berkeley DB
+    4.3, I'm seeing repository errors.</a></li>
+
 </ul>
 
 <h4>Developer questions:</h4>
@@ -2711,6 +2714,51 @@ is still at r7, you do not see the log information for r8.</p>
 <li>Update your working copy so it's all at r8, then run
     '<tt>svn&nbsp;log</tt>'.</li>
 </ol>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<h3><a name="bdb43-upgrade">After upgrading to Berkeley DB
+    4.3, I'm seeing repository errors.</a></h3>
+
+<p>Normally one can simply run <tt>svnadmin recover</tt> to upgrade a
+  Berkeley DB repository in-place.  However, due to a bug in the way
+  this command invokes the <tt>db_recover()</tt> API, this won't work
+  correctly when upgrading from BDB 4.0/4.1/4.2 to BDB 4.3.</p>
+
+<p>Use this procedure to upgrade your repository in-place to BDB 4.3:</p>
+
+<ul>
+
+<li>Make sure no process is accessing the repository (stop
+Apache, svnserve, restrict access via file://, svnlook, svnadmin,
+etc.)</li>
+
+<li>Using an <i>older</i> <tt>svnadmin</tt> binary (that is, linked to
+  an older BerkeleyDB):</li>
+
+  <ol>
+
+  <li>Recover the
+    repository: '<tt>svnadmin&nbsp;recover&nbsp;/path/to/repository</tt>'</li>
+
+  <li>Make a backup of the repository.</li>
+
+  <li>Delete all unused log files.  You can see them by running
+    '<tt>svnadmin&nbsp;list-unused-dblogs&nbsp;/path/to/repeository</tt>'</li>
+
+  <li>Delete the shared-memory files.  These are files in the
+      repository's <tt>db/</tt> directory, of the form <tt>__db.00*</tt></li>
+
+  </ol>
+
+</ul>
+
+
+<p>The repository is now usable by Berkeley DB 4.3.</p>
+
+</ol>
+
+
 
 <![CDATA[=========================================================]]>
 
