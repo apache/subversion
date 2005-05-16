@@ -185,7 +185,6 @@ svn_cl__blame (apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_pool_t *subpool;
   apr_array_header_t *targets;
-  svn_stream_t *out;
   blame_baton_t bl;
   int i;
   svn_boolean_t is_head_or_base = FALSE;
@@ -217,11 +216,24 @@ svn_cl__blame (apr_getopt_t *os,
       opt_state->start_revision.kind = svn_opt_revision_number;
       opt_state->start_revision.value.number = 1;
     }
+
+  /* A comment abou the use of svn_stream_t for column-based output,
+     and stdio for XML output:
+
+     stdio does newline translations for us.  Since our XML routines
+     from svn_xml.h produce text separated with \n, we want that
+     translation to happen, making the XML more readable on some
+     platforms.
+
+     For the column-based output, we output contents from the file, so
+     we don't want stdio to mess with the newlines.  We finish lines
+     by \n, but the file might contain \r characters at the end of
+     lines, since svn_client_blame() spit lines at \n characters.
+     That would lead to CRCRLF line endings on platforms with CRLF
+     line endings. */
+
   if (! opt_state->xml)
-    {
-      SVN_ERR (svn_stream_for_stdout (&out, pool));
-      bl.out = out;
-    }
+    SVN_ERR (svn_stream_for_stdout (&bl.out, pool));
   else
     bl.sbuf = svn_stringbuf_create ("", pool);
 
@@ -229,22 +241,25 @@ svn_cl__blame (apr_getopt_t *os,
 
   subpool = svn_pool_create (pool);
 
-  /* If output is not incremental, output the XML header and wrap
-     everything in a top-level element. This makes the output in
-     its entirety a well-formed XML document. */
   if (opt_state->xml)
     {
       if (opt_state->verbose)
         return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                  _("'verbose' option invalid in XML mode"));
 
-      if ( ! opt_state->incremental)
+      /* If output is not incremental, output the XML header and wrap
+         everything in a top-level element.  This makes the output in
+         its entirety a well-formed XML document. */
+      if (! opt_state->incremental)
         SVN_ERR (print_header_xml (pool));
     }
-  else if (opt_state->incremental)
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("'incremental' option only valid in XML "
-                               "mode"));
+  else
+    {
+      if (opt_state->incremental)
+        return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'incremental' option only valid in XML "
+                                   "mode"));
+    }
 
   for (i = 0; i < targets->nelts; i++)
     {
