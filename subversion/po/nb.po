@@ -1491,7 +1491,7 @@ msgstr "Fanget signal"
 
 #: clients/cmdline/main.c:893
 msgid "Non-numeric limit argument given"
-msgstr ""
+msgstr "Ikke-numerisk begrensningsargument angitt"
 
 #: clients/cmdline/main.c:910 svnadmin/main.c:1227
 msgid ""
