@@ -216,6 +216,11 @@ In either case the mark gets the face
 `svn-status-update-available-face', and will only be visible if
 `\\[svn-status-update]' is run with a prefix argument")
 
+(defvar svn-status-debug-level 0 "The psvn.el debugging verbosity level.
+The higher the number, the more debug messages are shown.
+
+See `svn-status-message' for the meaning of values for that variable.")
+
 (defvar svn-status-buffer-name "*svn-status*" "Name for the svn status buffer")
 
 (defvar svn-status-use-header-line t
@@ -436,6 +441,16 @@ Otherwise, return \"\"."
     nil ;; great
   (defsubst match-string-no-properties (match)
     (buffer-substring-no-properties (match-beginning match) (match-end match))))
+
+(defun svn-status-message (level &rest args)
+  "If LEVEL is lower than `svn-status-debug-level' print ARGS using `message'.
+
+Guideline for numbers:
+1 - error messages, 3 - non-serious error messages, 5 - messages for things
+that take a long time, 7 - not very important messages on stuff, 9 - messages
+inside loops."
+  (if (<= level svn-status-debug-level)
+      (apply 'message args)))
 
 (defvar svn-status-display-new-status-buffer nil)
 ;;;###autoload
@@ -1913,7 +1928,7 @@ If the file is not found, return nil."
   (let ((pos (svn-status-get-file-name-buffer-position name)))
     (if pos
         (goto-char pos)
-      (message "Warning: svn-status-goto-file-name: %s not found" name))))
+      (svn-status-message 7 "Note: svn-status-goto-file-name: %s not found" name))))
 
 (defun svn-status-find-info-for-file-name (name)
   (let* ((st-info svn-status-info)
