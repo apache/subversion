@@ -292,10 +292,11 @@ It is an experimental feature.")
 (defvar svn-status-edit-svn-command nil)
 (defvar svn-status-update-previous-process-output nil)
 (defvar svn-status-temp-dir
-  (or
-   (when (boundp 'temporary-file-directory) temporary-file-directory) ;emacs
-   (when (boundp 'temp-directory) temp-directory)                     ;xemacs
-   "/tmp/"))
+  (expand-file-name
+   (or
+    (when (boundp 'temporary-file-directory) temporary-file-directory) ;emacs
+    (when (boundp 'temp-directory) temp-directory)                     ;xemacs
+    "/tmp/")))
 (defvar svn-temp-suffix (make-temp-name "."))
 (defvar svn-status-temp-file-to-remove nil)
 (defvar svn-status-temp-arg-file (concat svn-status-temp-dir "svn.arg" svn-temp-suffix))
@@ -2813,7 +2814,8 @@ Commands:
 
 (when (not svn-log-edit-mode-map)
   (setq svn-log-edit-mode-map (make-sparse-keymap))
-  (define-key svn-log-edit-mode-map (kbd "C-c C-c") 'svn-log-edit-done)
+  (unless svn-log-edit-use-log-edit-mode
+    (define-key svn-log-edit-mode-map (kbd "C-c C-c") 'svn-log-edit-done))
   (define-key svn-log-edit-mode-map (kbd "C-c C-d") 'svn-log-edit-svn-diff)
   (define-key svn-log-edit-mode-map (kbd "C-c C-s") 'svn-log-edit-save-message)
   (define-key svn-log-edit-mode-map (kbd "C-c C-i") 'svn-log-edit-svn-status)
