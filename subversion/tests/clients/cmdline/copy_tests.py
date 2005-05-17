@@ -1558,6 +1558,52 @@ def wc_copy_dir_to_itself(sbox):
     svntest.actions.run_and_verify_svn(None, svntest.SVNAnyOutput, None,
                                        'copy', dir_path, dir_path)
 
+
+#----------------------------------------------------------------------
+
+def mixed_wc_to_url(sbox):
+  "copy a complex mixed-rev wc"
+
+  # Copy a mixed-revision wc (that also has some uncommitted local
+  # mods) to a URL.  Make sure the copy gets the uncommitted mods.
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  url = svntest.main.current_repo_url
+  G_url = svntest.main.current_repo_url + '/A/D/G'
+  Z_url = svntest.main.current_repo_url + '/A/D/Z'
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+
+  # Make a modification to A/D/G/rho, then commit that modification.
+  svntest.main.file_append(rho_path, "\nFirst modification to rho.\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', "Modify rho.", wc_dir)
+
+  # Make another modification to A/D/G/rho, but don't commit it.
+  svntest.main.file_append(rho_path, "Second modification to rho.\n")
+
+  # Now copy local A/D/G to create new directory A/D/Z the repository.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', '-m', "Make a copy.",
+                                     G_path, Z_url)
+
+  # Check out A/D/Z.  If its rho does not have the second local mod,
+  # that's a bug.
+  svntest.main.safe_rmtree(wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'co', Z_url, wc_dir)
+  
+  fp = open(os.path.join(wc_dir, 'rho'), 'r')
+  found_it = 0
+  for line in fp.readlines():
+    if re.match("^Second modification to rho.", line):
+      found_it = 1
+  if not found_it:
+    raise svntest.Failure
+
+
 ########################################################################
 # Run the tests
 
@@ -1592,6 +1638,7 @@ test_list = [ None,
               non_existent_url_to_url,
               old_dir_url_to_url,
               wc_copy_dir_to_itself,
+              mixed_wc_to_url,
              ]
 
 if __name__ == '__main__':

@@ -1988,6 +1988,10 @@ copy_helper (svn_fs_root_t *from_root,
                                     from_canonpath,
                                     txn_id, pool));
 
+      if (kind == svn_fs_path_change_replace)
+        dag_node_cache_invalidate (to_root, parent_path_path (to_parent_path,
+                                                              pool));
+
       /* Make a record of this modification in the changes table. */
       SVN_ERR (get_dag (&new_node, to_root, to_path, pool));
       SVN_ERR (add_change (to_root->fs, txn_id, to_path,
