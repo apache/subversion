@@ -142,7 +142,7 @@ parallel.
 
 * Less mature code base
 
-FSFS was introduced in the Subversion 1.1 release, where as BDB has
+FSFS was introduced in the Subversion 1.1 release, whereas BDB has
 been around since the inception of the Subversion project.
 
 * Big directories full of revision files
