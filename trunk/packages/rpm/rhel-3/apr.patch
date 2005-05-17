@@ -1,0 +1,16 @@
+Index: configure.in
+===================================================================
+--- configure.in	(revision 13716)
++++ configure.in	(working copy)
+@@ -84,9 +84,9 @@
+ 
+ dnl verify apr version and set apr flags
+ dnl These regular expressions should not contain "\(" and "\)".
+-APR_VER_REGEX=["0\.9\.[5-9]"]
++APR_VER_REGEX=["0\.9\.[4-9]"]
+ APR_VER_REGEX_TOO="1\."
+-APU_VER_REGEX=["0\.9\.[5-9]"]
++APU_VER_REGEX=["0\.9\.[4-9]"]
+ APU_VER_REGEX_TOO="1\."
+ 
+ SVN_LIB_APR($APR_VER_REGEX, $APR_VER_REGEX_TOO)

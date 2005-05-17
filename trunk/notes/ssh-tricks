@@ -1,0 +1,97 @@
+This file describes how to use the sshd "command" directive to set up
+svn+ssh with any or all of the following properties:
+
+  (1) Specify a full path to the svnserve binary
+  (2) Specify a repository root as one can with the svnserve daemon
+  (3) Avoid giving full shell access to an svn user
+  (4) Use a single Unix account for multiple svn users
+
+This file will assume that the server is using openssh on a Unix-like
+host.  The same tricks may work for other server setups, but changes
+may need to be made to the details.
+
+These tricks require that you use public-key authentication; they will
+not work with password authentication.  These tricks also assume that
+the client's key-pair is used only for access to svnserve; if you want
+to retain general shell access to the host, create a second, dedicated
+key-pair for Subversion access and (assuming a Unix client) set the
+environment variable SVN_SSH to "ssh -i /path/to/private/key/file".
+
+The basic idea
+--------------
+
+To set up public key authentication on the server, you create a file
+$HOME/.ssh/authorized_keys, where $HOME is the home directory of the
+Unix account being used for svnserve on the server.  Each line of the
+file is typically copied from a client's public key file, and looks
+something like:
+
+  ssh-rsa AAAABlotsmoregookhere= address@example.com
+
+The first field specifies the type of the key, the second is the key
+itself in uuencoded format, and the third is a comment which humans
+can use to identify what the key is.  In the future, we'll write these
+three fields as "TYPE KEY COMMENT"
+
+The basic trick, then, is to add a directive to this line telling sshd
+to ignore the client's specified command and run a different command
+instead.  The line in the authorized_keys file will then look like:
+
+  command="COMMAND" TYPE KEY COMMENT
+
+For svn+ssh access, the client generally specifies the command
+"svnserve -t"; the following tricks will modify the command in various
+ways.
+
+Trick #1: Specify a full path to the svnserve binary
+----------------------------------------------------
+
+For this trick, specify a command like:
+
+  command="/full/path/to/svnserve -t" TYPE KEY COMMENT
+
+Trick #2: Specify a repository root
+-----------------------------------
+
+For this trick, add a -r option to the svnserve command:
+
+  command="svnserve -t -r /repository/root" TYPE KEY COMMENT
+
+Trick #3: Avoid giving full shell access to an svn user
+-------------------------------------------------------
+
+For this trick, it isn't necessary to modify the command at all.  We
+just need to make sure that the client doesn't run any other commands.
+However, you should also use the "no-port-forwarding" option to
+prevent the client from tunneling to other ports:
+
+  command="svnserve -t",no-port-forwarding TYPE KEY COMMENT
+
+You may also wish to specify the options "no-pty",
+"no-agent-forwarding", and "no-X11-forwarding", just to give the
+client less wiggle room.
+
+Trick #4: Use a single Unix account for multiple svn users
+----------------------------------------------------------
+
+For this trick, establish a distinct key pair for each of the svn
+users, list all of the public keys in the authorized_users file, and
+specify the "--tunnel-user" directive in the command for each entry:
+
+  command="svnserve -t --tunnel-user=alice" TYPE1 KEY1 COMMENT1
+  command="svnserve -t --tunnel-user=bob" TYPE2 KEY2 COMMENT2
+
+As with trick #3, it may be wise to specify "no-port-forwarding" and
+perhaps the other restriction options to prevent the users from
+obtaining other kinds of access.
+
+The --tunnel-user option is new in svn 1.1.0, so this trick will not
+work if the server has svn 1.0.x.
+
+Combining the tricks
+--------------------
+
+Here's an example of how you might combine all four tricks:
+
+  command="/path/to/svnserve -t -r /repository/root --tunnel-user=alice",no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty TYPE1 KEY1 COMMENT1
+  command="/path/to/svnserve -t -r /repository/root --tunnel-user=bob",no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty TYPE2 KEY2 COMMENT2

@@ -1,0 +1,55 @@
+Subversion versions up to and including 1.0.4 have a potential
+Denial of Service and Heap Overflow issue related to the parsing of
+strings in the 'svn://' family of access protocols.
+
+This affects only sites running svnserve.  It does not affect
+'http://' access -- repositories served only by Apache/mod_dav_svn
+do not have this vulnerability.
+
+Details:
+========
+
+The svn protocol sends strings as a length followed by the string.  The
+parser would trust that the sender was providing an accurate length of
+the string and would allocate sufficent memory to store the entire
+string.  This would allow the sender of a string to Denial of Service
+the other side by suggesting that the string is very large.
+Additionally, if the size given is large enough it may cause the integer
+holding the size to wrap, thus allocating less memory than the string
+length and resulting in a heap overflow.
+
+The parsing code with the flaw is shared by both the svnserve server and
+clients using the svn://, svn+ssh:// and other tunneled svn+*://
+methods.
+
+Severity:
+=========
+
+Severity ranges from "Denial of Service" to, potentially, "Arbitrary
+Code Execution", depending upon how skilled the attacker is and the
+ABI specifics of your platform.
+
+Since the error is in the parsing of the protocol, including the parsing
+of authentication, the server vulnerabilities can be triggered without
+read or write access to the repository.  So any svnserve process that an
+attacker can connect to is vulnerable even if they do not have read or
+write access.
+
+The Denial of Service attack is reasonably easy to carry out, while
+exploiting the heap overflow is more difficult.  There are no known
+exploits in the wild at the time of this advisory.
+
+Workarounds:
+============
+
+Disable svnserve and use DAV (http://) instead.
+
+Recommendations:
+================
+
+We recommend all users upgrade to 1.0.5.
+
+References:
+===========
+
+CAN-2004-0413: Subversion svn:// protocol string parsing error.
