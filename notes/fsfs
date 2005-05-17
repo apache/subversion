@@ -140,10 +140,10 @@ stack up behind each other waiting for the write lock, whereas in a
 BDB repository they would be able to do more of their work in
 parallel.
 
-* Immature code
+* Less mature code base
 
-FSFS was only recently implemented.  It is new in the Subversion 1.1
-release, and has received only a moderate amount of field testing.
+FSFS was introduced in the Subversion 1.1 release, where as BDB has
+been around since the inception of the Subversion project.
 
 * Big directories full of revision files
 
