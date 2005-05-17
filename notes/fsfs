@@ -155,8 +155,8 @@ directories containing many files (even if they require a linear
 search for files within a directory, they may do well on repeated
 accesses using an in-memory hash of the directory), some do not.
 
-Subversion 1.2 may address this issue by optionally organizing
-revision files into subdirectories.
+A future release of Subversion may address this issue by optionally
+organizing revision files into subdirectories.
 
 * (Developers) More difficult to index
 
@@ -247,7 +247,7 @@ manually removed.  "svnadmin hotcopy" does not copy in-progress
 transactions from an FSFS repository, although that might need to
 change if Subversion starts making use of long-lived transactions.
 
-So, if you are using standard backup tools to make backups of an FSFS
+So, if you are using standard backup tools to make backups of a FSFS
 repository, configure the software to copy the "current" file before
 the numbered revision files, if possible, and configure it not to copy
 the "transactions" directory.  If you can't do those things, use
