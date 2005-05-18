@@ -187,8 +187,9 @@ static svn_wc_entry_callbacks_t add_tokens_callbacks = {
    non-NULL.  JUST_LOCKED indicates whether to treat non-modified items with
    lock tokens as commit candidates.
 
-   If in COPY_MODE, the entry is treated as if it is destined to be
-   added with history as URL.
+   If in COPY_MODE, treat the entry as if it is destined to be added
+   with history as URL, and add 'deleted' entries to COMMITTABLES as
+   items to delete in the copy destination.
 
    If CTX->CANCEL_FUNC is non-null, call it with CTX->CANCEL_BATON to see 
    if the user has cancelled the operation.  */
@@ -280,7 +281,7 @@ harvest_committables (apr_hash_t *committables,
          recurse anyway, so... ) */
       svn_error_t *err;
       const svn_wc_entry_t *e = NULL;
-      err = svn_wc_entries_read (&entries, adm_access, FALSE, pool);
+      err = svn_wc_entries_read (&entries, adm_access, copy_mode, pool);
 
       /* If we failed to get an entries hash for the directory, no
          sweat.  Cleanup and move along.  */
@@ -327,11 +328,20 @@ harvest_committables (apr_hash_t *committables,
   if ((entry->url) && (! copy_mode))
     url = entry->url;
 
-  /* Check for the deletion case.  Deletes can occur only when we are
-     not in "adds-only mode".  They can be either explicit
-     (schedule == delete) or implicit (schedule == replace ::= delete+add).  */
+  /* Check for the deletion case.  Deletes occur only when not in
+     "adds-only mode".  We use the SVN_CLIENT_COMMIT_ITEM_DELETE flag
+     to represent two slightly different conditions:
+
+     - The entry is marked as 'deleted'.  When copying a mixed-rev wc,
+       we still need to send a delete for that entry, otherwise the
+       object will wrongly exist in the repository copy.
+
+     - The entry is scheduled for deletion or replacement, which case
+       we need to send a delete either way.
+  */
   if ((! adds_only)
-      && ((entry->schedule == svn_wc_schedule_delete)
+      && ((entry->deleted && entry->schedule == svn_wc_schedule_normal)
+          || (entry->schedule == svn_wc_schedule_delete)
           || (entry->schedule == svn_wc_schedule_replace)))
     {
       state_flags |= SVN_CLIENT_COMMIT_ITEM_DELETE;
@@ -358,6 +368,7 @@ harvest_committables (apr_hash_t *committables,
 
   /* Check for the copied-subtree addition case.  */
   if ((entry->copied || copy_mode) 
+      && (! entry->deleted)
       && (entry->schedule == svn_wc_schedule_normal))
     {
       svn_revnum_t p_rev = entry->revision - 1; /* arbitrary non-equal value */
