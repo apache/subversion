@@ -930,6 +930,46 @@ def lock_several_files(sbox):
   expected_status.tweak('iota', 'A/B/lambda', 'A/B/E/alpha', writelocked=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+#----------------------------------------------------------------------
+def lock_switched_files(sbox):
+  "lock/unlock switched files"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  iota_URL = svntest.main.current_repo_url + '/iota'
+  alpha_URL = svntest.main.current_repo_url + '/A/B/E/alpha'
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'switch',
+                                     iota_URL, gamma_path)
+  svntest.actions.run_and_verify_svn(None, None, None, 'switch',
+                                     alpha_URL, lambda_path)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/gamma', 'A/B/lambda', switched='S')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '--no-auth-cache',
+                                     '-m', 'lock several',
+                                     gamma_path, lambda_path)
+
+  expected_status.tweak('A/D/gamma', 'A/B/lambda', writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'unlock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '--no-auth-cache',
+                                     gamma_path, lambda_path)
+
+  expected_status.tweak('A/D/gamma', 'A/B/lambda', writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -957,6 +997,7 @@ test_list = [ None,
               revert_lock,
               examine_lock_via_url,
               lock_several_files,
+              XFail(lock_switched_files),
              ]
 
 if __name__ == '__main__':
