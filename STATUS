@@ -42,12 +42,13 @@ Candidate changes:
     Votes:
       +1: djh
 
-  * r14736
-    Open access baton for entire tree affected by lock/unlock targets.
+  * r14736, r14775
+    Open access baton to required depth for lock/unlock targets.
     Justification:
       Fixes an assert when the targets have "gaps".
     Votes:
-      +1: philip
+      +1 (r14736): philip
+      +1: lundblad
 
   * r14755
     Don't initialize libsvn_ra in svnversion:
