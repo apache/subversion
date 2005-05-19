@@ -103,10 +103,18 @@ Using the svntest scripts                                 -*- Text -*-
     <Location /repositories>
         DAV svn
         SVNParentPath /home/brane/svn/obj-sh/subversion/tests/clients/cmdline/repositories
+        AuthType Basic
+        AuthName "SVN repos"
+        AuthUserFile /usr/local/apache2/conf/passwd
+        Require valid-user
     </Location>
     <Location /local_tmp/repos>
         DAV svn
         SVNPath      /home/brane/svn/obj-sh/subversion/tests/clients/cmdline/local_tmp/repos
+        AuthType Basic
+        AuthName "SVN repos"
+        AuthUserFile /usr/local/apache2/conf/passwd
+        Require valid-user
     </Location>
     
    Don't ever touch config files under $INST_DIR/$HTTPD_NAME/conf, they will be overwritten by
@@ -117,8 +125,8 @@ Using the svntest scripts                                 -*- Text -*-
 
 6) If you like run test against ramdisk (subversion test data will be held on ramdisk)
    then you should have something like that in your /etc/fstab (in Linux system):
-   tmpfs           /home/brane/svn/obj-sh/subversion/tests tmpfs defaults,user,noauto,exec,size=600m
-   tmpfs           /home/brane/svn/obj-st/subversion/tests tmpfs defaults,user,noauto,exec,size=600m
+   tmpfs           /home/brane/svn/obj-sh/subversion/tests tmpfs defaults,user,noauto,exec,size=700m
+   tmpfs           /home/brane/svn/obj-st/subversion/tests tmpfs defaults,user,noauto,exec,size=700m
 
    The minimum required size for ramdisk is appr. 570 MB at the moment.  
    You should also set RAMDISK=yes, and check mount_ramdisk and umount_ramdisk 
