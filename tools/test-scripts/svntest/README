@@ -1,5 +1,13 @@
-Using the svntest scripts                                 -*- Text -*-
-=========================
+svntest scripts                                           -*- Text -*-
+===============
+
+This set of scripts is designed to wrap execution of all of
+Subversion's Makefile test targets (e.g. "check", "davcheck",
+"svncheck", etc.).
+
+
+Usage
+=====
 
 1) Read the INSTALL (http://svn.collab.net/repos/svn/trunk/INSTALL)
    file, especially the sections about bootstrapping from a tarball
@@ -123,16 +131,23 @@ Using the svntest scripts                                 -*- Text -*-
 5) Make sure your environment (e.g., LD_LIBRARY_PATH) is set correctly
    to find Berkeley DB, etc.
 
-6) If you like run test against ramdisk (subversion test data will be held on ramdisk)
-   then you should have something like that in your /etc/fstab (in Linux system):
-   tmpfs           /home/brane/svn/obj-sh/subversion/tests tmpfs defaults,user,noauto,exec,size=700m
-   tmpfs           /home/brane/svn/obj-st/subversion/tests tmpfs defaults,user,noauto,exec,size=700m
+6) Test execution can be dramatically sped up by keeping Subversion
+   test data on a RAM disk.  On a Linux system, add lines like the
+   following in your /etc/fstab file:
 
-   The minimum required size for ramdisk is appr. 570 MB at the moment.  
-   You should also set RAMDISK=yes, and check mount_ramdisk and umount_ramdisk 
-   in the svntest-config.sh file if your system is not GNU/Linux.
-   See http://subversion.tigris.org/project_faq.html#ramdisk-tests for 
-   further information.
+   tmpfs  /home/brane/svn/obj-sh/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m
+   tmpfs  /home/brane/svn/obj-st/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m
+
+   The minimum required size for testing RAM disk is actually many
+   times greater than shown above.  However, svntest will
+   automatically flag your test targets for cleanup when using a
+   ramdisk, which dramatically reduces the space requirement.
+
+   To enable RAM disk usage by svntest, set RAMDISK=yes, and check
+   mount_ramdisk and umount_ramdisk in the svntest-config.sh file if
+   your system is not GNU/Linux.  See
+   http://subversion.tigris.org/faq.html#ramdisk-tests for further
+   information.
    
 7) Run svntest.sh to get the latest versions of ARP, APR-UTIL, HTTPPD and
    Subversion, build and test all the configurations. 

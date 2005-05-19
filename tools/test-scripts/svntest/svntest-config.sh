@@ -33,8 +33,16 @@ HTTPD_REPO=${HTTPD_REPO:="$TEST_ROOT/$HTTPD_NAME"}
 
 MAKE_OPTS=
 
-# RAMDISK=<yes|no>
+#
+# Whether a RAM disk is used to store test data, RAMDISK=<yes|no>
+#
 RAMDISK=no
+
+#
+# Whether to pass CLEANUP=true to Makefile test targets,
+# INTERMEDIATE_CLEANUP=<yes|no>
+#
+INTERMEDIATE_CLEANUP=${RAMDISK:="no"}
 
 #
 # Whether to test the BDB backend, TEST_FSFS=<yes|no>
