@@ -1,7 +1,5 @@
 
-
 Issues (and their resolutions) when using gettext for message translation
-
 
 Contents
 ========
@@ -25,7 +23,7 @@ This resolves several issues:
  - No automatic charset conversion (guaranteed UTF-8 strings returned by
    gettext() calls without performance penalties)
 
-more in the paragraphs below...
+More in the paragraphs below...
 
 
 Automatic characterset conversion
@@ -81,25 +79,65 @@ the Subversion domain.
 Windows doesn't define LC_MESSAGES.  Instead GNU gettext uses the environ-
 ment variables LANGUAGE, LC_ALL, LC_MESSAGES and LANG (in that order) to
 find out what language to translate to.  If none of these are defined, the
-system and user default locales are queried.
+system and user default locales are queried.  Though setting one of
+the aforementioned variables before starting the server will avoid
+localization by Subversion to the default locale, messages generated
+by the system itself are likely to still be in its default locale
+(they are on Windows).
 
 While systems which have the LC_MESSAGES flag (or setenv() - of which
 Windows has neither) allow languages to be switched at run time, this cannot
 be done portably.
 
-Any attempt to use setlocale() in an Apache environment will conflict with
-settings other modules expect to be setup.  On the svnserve side having no
-portable way to change languages dynamically, means that the environment
-has to be set up correctly from the start.
+Any attempt to use setlocale() in an Apache environment may conflict
+with settings other modules expect to be setup (even when using a
+prefork MPM).  On the svnserve side, having no portable way to change
+languages dynamically means that the environment has to be set up
+correctly from the start.  Given that, the svnserve protocol doesn't
+yet support content negotiation
 
-In other words, there is no way - programmatically - to ensure that messages
-are served in any specific language.
+In other words, there is no way -- programmatically -- to ensure that
+messages are served in any specific language using a traditional
+gettext implementation.  Current consensus is that gettext must be
+replaced on the server side with a more flexible implementation.
 
-Note: Original consensus indicated that translation of messages at the
-server side should stay untranslated for transmission to the client. Client
-side translation is not an option, because by then the parameter values
-have been inserted into the string meaning that it can't be looked up in the
-messages catalogue anymore.
+Server requirement(s):
+ - language negotiation on a per-client session basis
+ - avoid contamination of environment used by other code
+
+I18N requirement(s):
+ - Cross-platform.
+ - Interoperable with gettext() tools.
+ - Thread-local storage of locale.
+
+I18N nice-to-have(s):
+ - gettext()-like API.
+
+Possible implementation:
+ - Based around a new gettext-like module with per-struct or
+   per-thread locale mutator functions and storage for name/value
+   pairs (a glorified apr_hash_t).
+ - Language used by httpd/mod_dav_svn derived from the Accept-Language
+   HTTP header, and setup by mod_negotiation.
+ - Language used by svnserve derived from additions to the protocol
+   which allow for HTTP-style content negotiation on a per-session
+   basis.
+
+Investigation?: A brief canvasing of developers (on IRC) indicated that
+no thorough investigation of existing solutions which might meet the
+above requirements has been done.  This incomplete canvasing may not
+paint an accurate picture, however.
+
+Historical note: Original consensus indicated that messages from the
+server side should stay untranslated for transmission to the client.
+However, client side localization is not an option, because by then
+the parameter values have been inserted into the string, meaning that
+it can't be looked up in the messages catalogue anymore.  So any
+localization must occur on the server, or significantly increase the
+complexity of marshalling messages from the server as
+unlocalized/unformatted data structures and localizing them on the
+client side using some additional wrapper APIs to handle the
+unmarshalling and message formatting.
 
 
 
