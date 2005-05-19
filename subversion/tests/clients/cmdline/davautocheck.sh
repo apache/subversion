@@ -96,6 +96,9 @@ function get_prog_name() {
   return 1
 }
 
+# dont assume sbin is in the PATH
+PATH="/usr/sbin:/usr/local/sbin:$PATH"
+
 # Pick up value from environment or PATH (also try apxs2 - for Debian)
 [ ${APXS:+set} ] \
  || APXS=$(which apxs) \
@@ -150,6 +153,20 @@ LOAD_MOD_DAV=$(get_loadmodule_config mod_dav) \
 LOAD_MOD_LOG_CONFIG=$(get_loadmodule_config mod_log_config) \
   || fail "log_config module not found"
 
+# needed for TypesConfig
+LOAD_MOD_MIME=$(get_loadmodule_config mod_mime) \
+  || fail "MIME module not found"
+
+# needed for Auth*
+LOAD_MOD_AUTH=$(get_loadmodule_config mod_auth) \
+  || {
+say "Auth module not found. Assuming we run against Apache 2.1+"
+LOAD_MOD_AUTH="$(get_loadmodule_config mod_auth_basic)" \
+    || fail "Auth_Basic module not found."
+LOAD_MOD_AUTHN="$(get_loadmodule_config mod_authn_file)" \
+    || fail "Authn_File module not found."
+}
+
 HTTPD_PORT=$(($RANDOM+1024))
 HTTPD_ROOT="$ABS_BUILDDIR/subversion/tests/clients/cmdline/httpd-$(date '+%Y%m%d-%H%M%S')"
 HTTPD_CFG="$HTTPD_ROOT/cfg"
@@ -171,8 +188,14 @@ $HTPASSWD -b  $HTTPD_USERS jconstant rayjandom
 touch $HTTPD_MIME_TYPES
 
 cat > "$HTTPD_CFG" <<__EOF__
+$LOAD_MOD_DAV
+LoadModule          dav_svn_module "$MOD_DAV_SVN"
+$LOAD_MOD_LOG_CONFIG
+$LOAD_MOD_MIME
+$LOAD_MOD_AUTH
+$LOAD_MOD_AUTHN
 User                $(whoami)
-Group               $(whoami)
+Group               $(groups | awk '{print $1}')
 Listen              localhost:$HTTPD_PORT
 ServerName          localhost
 PidFile             "$HTTPD_PID"
@@ -190,9 +213,6 @@ MaxRequestsPerChild 0
 </IfModule>
 MaxClients          16
 HostNameLookups     Off
-$LOAD_MOD_DAV
-LoadModule          dav_svn_module "$MOD_DAV_SVN"
-$LOAD_MOD_LOG_CONFIG
 LogFormat           "%h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-Agent}i\"" format
 CustomLog           "$HTTPD_ROOT/req" format
 
