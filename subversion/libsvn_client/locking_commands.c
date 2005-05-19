@@ -203,10 +203,23 @@ organize_lock_targets (const char **common_parent,
     }
   else  /* common parent is a local path */
     {
+      int max_depth = 0;
+
+      /* Calculate the maximum number of components in the rel_targets, which
+         is the depth to which we need to lock the WC. */
+      for (i = 0; i < rel_targets->nelts; ++i)
+        {
+          const char *target = ((const char **) (rel_targets->elts))[i];
+          int n = svn_path_component_count (target);
+
+          if (n > max_depth)
+            max_depth = n;
+        }
+
       /* Open the common parent. */
       SVN_ERR (svn_wc_adm_probe_open3 (parent_adm_access_p, NULL,
                                        *common_parent, 
-                                       TRUE, -1, ctx->cancel_func, 
+                                       TRUE, max_depth, ctx->cancel_func, 
                                        ctx->cancel_baton, pool));  
 
       SVN_ERR (svn_wc_entry (parent_entry_p, *common_parent, 
