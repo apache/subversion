@@ -47,8 +47,7 @@ Candidate changes:
     Justification:
       Fixes an assert when the targets have "gaps".
     Votes:
-      +1 (r14736): philip
-      +1: lundblad
+      +1: lundblad, philip
 
   * r14755
     Don't initialize libsvn_ra in svnversion:
