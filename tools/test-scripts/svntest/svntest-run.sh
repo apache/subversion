@@ -76,6 +76,13 @@ then
     reinitialize_ramdisk
 fi
 
+if test "xyes" = "x$INTERMEDIATE_CLEANUP";
+then
+    # Flag the tests to cleanup after themselves to avoid requiring
+    # hundreds of MBs of storage at once for test data.
+    CHECK_ARGS="$CHECK_ARGS CLEANUP=1"
+fi
+
 # Prepare the server
 case $CHECK_TARGET in
     check)
