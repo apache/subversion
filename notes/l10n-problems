@@ -102,13 +102,12 @@ gettext implementation.  Current consensus is that gettext must be
 replaced on the server side with a more flexible implementation.
 
 Server requirement(s):
- - language negotiation on a per-client session basis
- - avoid contamination of environment used by other code
+ - Language negotiation on a per-client session basis.
+ - Avoid contamination of environment used by other code.
 
 I18N requirement(s):
  - Cross-platform.
  - Interoperable with gettext() tools.
- - Thread-local storage of locale.
 
 I18N nice-to-have(s):
  - gettext()-like API.
