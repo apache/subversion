@@ -104,6 +104,7 @@ replaced on the server side with a more flexible implementation.
 Server requirement(s):
  - Language negotiation on a per-client session basis.
  - Avoid contamination of environment used by other code.
+ - Allow for propogation of locale to hook scripts.
  - Continue to inter-op with generic HTTP/DAV clients, and stay
    compatible with SVN clients of various versions.
 
