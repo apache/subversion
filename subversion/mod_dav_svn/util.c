@@ -53,9 +53,10 @@ dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
        svn_error_t's are marshalled to the client via the single
        generic <svn:error/> tag nestled within a <D:error> block. */
 
-    /* Even though the caller passed in some HTTP status code, we
-       should look at the actual subversion error code and use the
-       -best- HTTP mapping we can. */
+    /* Examine the Subverion error code, and select the most
+       appropriate HTTP status code.  If no more appropriate HTTP
+       status code maps to the Subversion error code, use the one
+       suggested status provided by the caller. */
     switch (serr->apr_err)
       {
       case SVN_ERR_FS_NOT_FOUND:
@@ -72,8 +73,7 @@ dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
                                   SVN_DAV_ERROR_NAMESPACE,
                                   SVN_DAV_ERROR_TAG);
     if (message != NULL)
-        derr = dav_push_error(pool, status, serr->apr_err,
-                              message, derr);
+      derr = dav_push_error(pool, status, serr->apr_err, message, derr);
 
     /* Now, destroy the Subversion error. */
     svn_error_clear(serr);
@@ -388,4 +388,24 @@ dav_error * dav_svn__test_canonical(const char *path, apr_pool_t *pool)
                   "Path '%s' is not canonicalized; "
                   "there is a problem with the client.", path),
      SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+}
+
+dav_error * dav_svn__sanitize_error(svn_error_t *serr,
+                                    const char *new_msg,
+                                    int http_status,
+                                    request_rec *r)
+{
+    svn_error_t *safe_err = serr;
+    if (new_msg != NULL)
+      {
+        /* Sanitization is necessary.  Create a new, safe error and
+           log the original error. */
+        safe_err = svn_error_create(serr->apr_err, NULL, new_msg);
+        ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
+                      "%s", serr->message);
+        svn_error_clear(serr);
+      }
+    return dav_svn_convert_err(safe_err, http_status,
+                               apr_psprintf(r->pool, safe_err->message),
+                               r->pool);
 }

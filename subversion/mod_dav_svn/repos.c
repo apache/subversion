@@ -1175,7 +1175,7 @@ static apr_status_t cleanup_fs_access(void *data)
   if (serr)
     {
       ap_log_perror(APLOG_MARK, APLOG_ERR, serr->apr_err, baton->pool,
-                    "cleanup_fs_access: error clearing fs access context.");
+                    "cleanup_fs_access: error clearing fs access context");
       svn_error_clear(serr);
     }
 
@@ -1331,19 +1331,9 @@ static dav_error * dav_svn_get_resource(request_rec *r,
              leak that path back to the client, because that would be
              a security risk, but we do want to log the real error on
              the server side. */
-          const char *new_msg = "Could not open the requested SVN filesystem";
-          svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
-                                                          NULL, new_msg);
-
-          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
-                        "%s", serr->message);
-
-          /* Return a slightly less informative error to dav. */
-          svn_error_clear(serr);
-          return dav_svn_convert_err(sanitized_error,
-                                     HTTP_INTERNAL_SERVER_ERROR,
-                                     apr_psprintf(r->pool, new_msg),
-                                     r->pool);
+          return dav_svn__sanitize_error(serr, "Could not open the requested "
+                                         "SVN filesystem",
+                                         HTTP_INTERNAL_SERVER_ERROR, r);
         }
 
       /* Cache the open repos for the next request on this connection */
@@ -1376,32 +1366,18 @@ static dav_error * dav_svn_get_resource(request_rec *r,
       serr = svn_fs_create_access (&access_ctx, r->user, r->pool);
       if (serr)
         {
-          const char *new_msg = "Could not create fs access context";
-          svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
-                                                          NULL, new_msg);
-          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
-                        "%s", serr->message);
-          svn_error_clear(serr);
-          return dav_svn_convert_err (sanitized_error,
-                                      HTTP_INTERNAL_SERVER_ERROR,
-                                      apr_psprintf(r->pool, new_msg),
-                                      r->pool);
+          return dav_svn__sanitize_error(serr,
+                                         "Could not create fs access context",
+                                         HTTP_INTERNAL_SERVER_ERROR, r);
         }
 
       /* Attach the access context to the fs. */
       serr = svn_fs_set_access (repos->fs, access_ctx);
       if (serr)
         {
-          const char *new_msg = "Could not attach access context to fs";
-          svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
-                                                          NULL, new_msg);
-          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
-                        "%s", serr->message);
-          svn_error_clear(serr);
-          return dav_svn_convert_err (sanitized_error,
-                                      HTTP_INTERNAL_SERVER_ERROR,
-                                      apr_psprintf(r->pool, new_msg),
-                                      r->pool);
+          return dav_svn__sanitize_error(serr, "Could not attach access "
+                                         "context to fs",
+                                         HTTP_INTERNAL_SERVER_ERROR, r);
         }
     }
 
@@ -1427,16 +1403,9 @@ static dav_error * dav_svn_get_resource(request_rec *r,
       serr = svn_fs_get_access (&access_ctx, repos->fs);
       if (serr)
         {
-          const char *new_msg = "Lock token is in request, but no username.";
-          svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
-                                                          NULL, new_msg);
-          ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
-                        "%s", serr->message);
-          svn_error_clear(serr);
-          return dav_svn_convert_err (sanitized_error,
-                                      HTTP_BAD_REQUEST,
-                                      apr_psprintf(r->pool, new_msg),
-                                      r->pool);
+          return dav_svn__sanitize_error(serr, "Lock token is in request, "
+                                         "but no user name",
+                                         HTTP_BAD_REQUEST, r);
         }
 
       do {
@@ -2008,7 +1977,7 @@ static dav_error * dav_svn_seek_stream(dav_stream *stream,
 
   return dav_new_error(stream->res->pool, HTTP_NOT_IMPLEMENTED, 0,
                        "Resource body read/write cannot use ranges "
-                       "[at this time].");
+                       "(at this time)");
 }
 
 const char * dav_svn_getetag(const dav_resource *resource, apr_pool_t *pool)
