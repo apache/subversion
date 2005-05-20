@@ -623,10 +623,11 @@ dav_error *dav_svn__push_locks(dav_resource *resource,
 
 
 /* Converts a svn_error_t into a dav_error and replaces the existing
-   error message with a @a new_msg (if provided).  If the message was
-   replaced, assumes that sanitization was necessary, and logs the
-   unsanitized error message to httpd's log.  Destroys the passed in
-   @a serr (similarly to the dav_svn_convert_err function).
+   error message with a @a new_msg (if non-NULL).  If the message was
+   replaced, assumes that sanitization -- as defined below -- was
+   necessary, and writes the unsanitized error message to httpd's log.
+   Destroys the passed in @a serr (similarly to the
+   dav_svn_convert_err function).
  
    The error message produced by various APIs -- usually direct
    invocation of svn_fs, or indirect via svn_repos -- can contain
