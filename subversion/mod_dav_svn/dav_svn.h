@@ -622,20 +622,21 @@ dav_error *dav_svn__push_locks(dav_resource *resource,
                                apr_pool_t *pool);
 
 
-/* Converts a svn_error_t into a dav_error and replaces the existing
-   error message with a @a new_msg (if non-NULL).  If the message was
-   replaced, assumes that sanitization -- as defined below -- was
-   necessary, and writes the unsanitized error message to httpd's log.
-   Destroys the passed in @a serr (similarly to the
-   dav_svn_convert_err function).
- 
-   The error message produced by various APIs -- usually direct
-   invocation of svn_fs, or indirect via svn_repos -- can contain
-   security-sensitive data which must be sanitized before handing it
-   to clients over network access (e.g. the actual server file
-   system's path to the repository).  Though we don't want to leak
-   that information back to the client (a security risk), we do want
-   to log the real error on the server side.
+/* Convert @a serr into a dav_error.  If @a new_msg is non-NULL, use
+   @a new_msg in the returned error, and write the original
+   @a serr->message to httpd's log.  Destroy the passed-in @a serr,
+   similarly to dav_svn_convert_err().
+
+   @a new_msg is usually a "sanitized" version of @a serr->message.
+   That is, if @a serr->message contains security-sensitive data,
+   @a new_msg does not.
+
+   The purpose of sanitization is to prevent security-sensitive data
+   from being transmitted over the network to the client.  The error
+   messages produced by various APIs (e.g., svn_fs, svn_repos) may
+   contain security-sensitive data such as the actual server file
+   system's path to the repository.  We don't want to send that to the
+   client, but we do want to log the real error on the server side.
  */
 dav_error *
 dav_svn__sanitize_error(svn_error_t *serr,
