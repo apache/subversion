@@ -357,16 +357,16 @@ sign_file()
 echo ""
 echo "Done:"
 if [ -z "$ZIP" ]; then
-  ls -l "$DISTNAME.tar.gz" "$DISTNAME.tar.bz2"
+  ls -l "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
   sign_file $DISTNAME.tar.gz $DISTNAME.tar.bz2
   echo ""
   echo "md5sums:"
-  md5sum "$DISTNAME.tar.gz" "$DISTNAME.tar.bz2"
+  md5sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
   type sha1sum > /dev/null 2>&1
   if [ $? -eq 0 ]; then
     echo ""
     echo "sha1sums:"
-    sha1sum "$DISTNAME.tar.gz" "$DISTNAME.tar.bz2"
+    sha1sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
   fi
 else
   ls -l "$DISTNAME.zip"
