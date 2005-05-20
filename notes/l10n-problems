@@ -115,7 +115,9 @@ I18N nice-to-have(s):
 Possible implementation:
  - Based around a new gettext-like module with per-struct or
    per-thread locale mutator functions and storage for name/value
-   pairs (a glorified apr_hash_t).
+   pairs (a glorified apr_hash_t).  Nicolás Lichtmaier wrote something
+   along these lines already
+   <http://svn.haxx.se/dev/archive-2004-04/0788.shtml>.
  - Language used by httpd/mod_dav_svn derived from the Accept-Language
    HTTP header, and setup by mod_negotiation.
  - Language used by svnserve derived from additions to the protocol
