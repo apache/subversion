@@ -1540,17 +1540,12 @@ dav_error *dav_svn__push_locks(dav_resource *resource,
   serr = svn_fs_get_access (&fsaccess, resource->info->repos->fs);
   if (serr)
     {
-      /* If an authenticated username was attached to the request,
+      /* If an authenticated user name was attached to the request,
          then dav_svn_get_resource() should have already noticed and
          created an fs_access_t in the filesystem.  */
-      const char *new_msg = "Lock token(s) in request, but no username.";
-      svn_error_t *sanitized_error = svn_error_create(serr->apr_err,
-                                                      NULL, new_msg);
-      ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, resource->info->r,
-                    "%s", serr->message);
-      svn_error_clear(serr);
-      return dav_svn_convert_err (sanitized_error, HTTP_BAD_REQUEST,
-                                  apr_psprintf(pool, new_msg), pool);
+      return dav_svn__sanitize_error(serr, "Lock token(s) in request, but "
+                                     "missing an user name", HTTP_BAD_REQUEST,
+                                     resource->info->r);
     }
   
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))

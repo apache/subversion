@@ -21,6 +21,7 @@
 #define DAV_SVN_H
 
 #include <httpd.h>
+#include <http_log.h>
 #include <apr_tables.h>
 #include <apr_xml.h>
 #include <mod_dav.h>
@@ -620,6 +621,26 @@ dav_error *dav_svn__push_locks(dav_resource *resource,
                                apr_hash_t *locks,
                                apr_pool_t *pool);
 
+
+/* Converts a svn_error_t into a dav_error and replaces the existing
+   error message with a @a new_msg (if provided).  If the message was
+   replaced, assumes that sanitization was necessary, and logs the
+   unsanitized error message to httpd's log.  Destroys the passed in
+   @a serr (similarly to the dav_svn_convert_err function).
+ 
+   The error message produced by various APIs -- usually direct
+   invocation of svn_fs, or indirect via svn_repos -- can contain
+   security-sensitive data which must be sanitized before handing it
+   to clients over network access (e.g. the actual server file
+   system's path to the repository).  Though we don't want to leak
+   that information back to the client (a security risk), we do want
+   to log the real error on the server side.
+ */
+dav_error *
+dav_svn__sanitize_error(svn_error_t *serr,
+                        const char *new_msg,
+                        int http_status,
+                        request_rec *r);
 
 #ifdef __cplusplus
 }
