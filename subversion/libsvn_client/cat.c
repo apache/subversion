@@ -22,6 +22,7 @@
 
 /*** Includes. ***/
 
+#include <assert.h>
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -37,8 +38,10 @@
 
 /*** Code. ***/
 
-/* Helper function to handle copying a potentially translated version of BASE
-   or WORKING revision of a file to an output stream. */
+/* Helper function to handle copying a potentially translated version of
+   local file PATH to OUTPUT.  REVISION must be one of the following: BASE,
+   COMMITTED, WORKING, or UNSPECIFIED.  If the revision is UNSPECIFIED, it
+   will default to BASE.  Uses POOL for temporary allocations. */
 static svn_error_t *
 cat_local_file (const char *path,
                 svn_stream_t *output,
@@ -57,6 +60,11 @@ cat_local_file (const char *path,
   apr_time_t tm;
   apr_file_t *input_file;
   svn_stream_t *input;
+
+  assert (revision->kind == svn_opt_revision_working ||
+          revision->kind == svn_opt_revision_base ||
+          revision->kind == svn_opt_revision_committed ||
+          revision->kind == svn_opt_revision_unspecified);
 
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
 
