@@ -365,6 +365,28 @@ href="http://svn.haxx.se/dev/archive-2005-04/0319.shtml">here</a>.</p>
 <p>There has been extensive work on the Python, Perl, and JavaHL
 bindings.  We also now have a preliminary set of Ruby bindings.</p>
 
+
+<h3>Known Bugs</h3>
+
+<p>There are a few minor known bugs related to the new 1.2 features,
+  which we expect to fix in subversion 1.2.1:</p>
+
+<ul>
+<li>'svn lock path1 path2' can sometimes cause an assertion</li>
+
+<li>'svn switch' doesn't remove read-only attribute when removing 
+     svn:needs-lock property.  (issue #2306)</li>
+
+<li>'svn lock' may lock incorrect repository object if file is
+'switched'. (issue #2307)</li>
+
+<li>pending speed optimization for new 'svn log --limit'</li>
+  
+<li>'svnversion' might error trying to load libsvn_ra libraries</li>
+</ul>
+
+
+
 <h3>Testimonials and Roadmap</h3>
 
 <p>See our <a href="roadmap.html">roadmap</a> for what the future
