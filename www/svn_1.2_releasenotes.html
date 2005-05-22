@@ -86,9 +86,9 @@ made to the output:</p>
 may affect you if you upgrade to 1.2 via a package distribution
 system.</p>
 
-<p>A lot of operating systems now ship Berkeley DB 4.3.  Sometimes
-Berkeley DB can be unintentionally upgraded to 4.3 as part of some
-other change pulled down via an OS package delivery
+<p>A lot of operating systems now ship Berkeley DB 4.3.  Sometimes the
+system Berkeley DB libraries can be unintentionally upgraded to 4.3 as
+part of some other change pulled down via an OS package delivery
 mechanism&nbsp;&mdash;&nbsp;for example, upgrading one's Subversion
 package.  If this happens to you, you will need
 to <a href="faq.html#bdb43-upgrade">upgrade existing BerkeleyDB-based
@@ -113,10 +113,11 @@ fixes for these in Subversion 1.2.1:</p>
      (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2306"
       >Issue&nbsp;#2306</a>)</li>
 
-<li>'svn lock' may lock incorrect repository object if file is
-    'switched'.
-     (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2307"
-      >Issue&nbsp;#2307</a>)</li>
+<li>'svn status -u' incorrectly believes that all locks on "switched"
+    files are broken.
+    (<a
+    href="http://subversion.tigris.org/issues/show_bug.cgi?id=2307"
+    >Issue&nbsp;#2307</a>)</li>
 
 <li>pending speed optimizations for new 'svn log --limit'</li>
   
