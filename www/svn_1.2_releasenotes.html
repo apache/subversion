@@ -17,7 +17,7 @@
 
 <h1 style="text-align: center">Subversion 1.2 Release Notes</h1>
 
-<div class="h2">
+<div class="h2" id="news" title="news">
 <h2>What's New in Subversion 1.2</h2>
 
 <ul>
@@ -38,7 +38,7 @@ book, see
 
 </div>
 
-<div class="h2">
+<div class="h2" id="compatibility" title="compatibility">
 <h2>Compatibility Concerns</h2>
 
 <p>Older clients and servers interoperate transparently with 1.2
@@ -55,7 +55,7 @@ or 1.1 API can both compile and run using 1.2 libraries.  However, a
 program written for 1.2 cannot necessarily compile or run against
 older libraries.</p>
 
-<div class="h3">
+<div class="h3" id="output-changes" title="output-changes">
 <h3>Command Line Output Changes</h3>
 
 <p>Although the Subversion developers try hard to keep output from the
@@ -79,7 +79,7 @@ made to the output:</p>
 
 </div>
 
-<div class="h3">
+<div class="h3" id="bdb-upgrade" title="bdb-upgrade">
 <h3>Unexpected Berkeley DB Upgrades</h3>
 
 <p>This is not actually related to the Subversion 1.2 release, but it
@@ -98,7 +98,7 @@ repositories to 4.3.</a></p>
 
 </div>
 
-<div class="h2">
+<div class="h2" id="known-bugs" title="known-bugs">
 <h2>Known Bugs</h2>
 
 <p>There are a few minor bugs related to the new 1.2 features. Expect
@@ -125,10 +125,10 @@ fixes for these in Subversion 1.2.1:</p>
 
 </div>
 
-<div class="h2">
-<h2>New Feature</h2>
+<div class="h2" id="new-features" title="new-features">
+<h2>New Features</h2>
 
-<div class="h3">
+<div class="h3" id="locking" title="locking">
 <h3>File Locking (<em>requires new client and server</em>)</h3>
 
 <p>"Locking" is a long-requested feature, often known in other systems
@@ -208,7 +208,7 @@ repository.</p>
 
 </div>
 
-<div class="h3">
+<div class="h3" id="autoversioning" title="autoversioning">
 <h3>Full DAV autoversioning (<em>mod_dav_svn feature</em>)</h3>
 
 <p>Autoversioning is a feature whereby generic WebDAV clients can
@@ -250,7 +250,7 @@ vary.</p>
 
 </div>
 
-<div class="h3">
+<div class="h3" id="new-switches" title="new-switches">
 <h3>New subcommand switches:</h3>
    <dl>
       <dt><tt>svn log --limit N</tt></dt>
@@ -297,10 +297,10 @@ vary.</p>
 
 </div>
 
-<div class="h2">
+<div class="h2" id="enhancements" title="enhancements">
 <h2>Enhancements and Bugfixes</h2>
 
-<div class="h3">
+<div class="h3" id="xdelta" title="xdelta">
 <h3>Faster access to old revisions due to xdelta compression
 (<em>server</em>)</h3>
 
@@ -325,7 +325,7 @@ xdelta, its size will grow by roughly 10 to 15 percent.</p>
 
 </div>
 
-<div class="h3">
+<div class="h3" id="fsfs" title="fsfs">
 <h3>FSFS repositories are now the default (<em>server</em>)</h3>
 
 <p>After the tremendous success of FSFS repositories since the 1.1
@@ -347,7 +347,8 @@ choice.</p>
 
 </div>
 
-<div class="h3">
+<div class="h3" id="win32-password-encryption"
+                title="win32-password-encryption">
 <h3>Cached passwords are encrypted on Windows (<em>Windows client</em>)</h3>
 
 <p>On Windows 2000 and later, the command-line client encrypts the
@@ -372,7 +373,7 @@ password when necessary.</p>
 
 </div>
 
-<div class="h3">
+<div class="h3" id="bugfixes" title="bugfixes">
 <h3>Bugfixes:</h3>
 <p>More than 50 new bugs fixed.  See the <a
 href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
@@ -382,7 +383,7 @@ href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a> file
 
 </div>
 
-<div class="h2">
+<div class="h2" id="developer-changes" title="developer-changes">
 <h2>Developer Changes</h2>
 
 <p>The svn_ra.h API has now been "flattened", essentially imitating
@@ -404,7 +405,7 @@ bindings.  We also now have a preliminary set of Ruby bindings.</p>
 
 </div>
 
-<div class="h2">
+<div class="h2" id="1.0-deprecation" title="1.0-deprecation">
 <h2>Deprecation of 1.0.x Series</h2>
 
 <p>The Subversion 1.0.x line is no longer supported.  This doesn't
