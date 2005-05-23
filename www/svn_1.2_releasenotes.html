@@ -105,24 +105,39 @@ repositories to 4.3.</a></p>
 fixes for these in Subversion 1.2.1:</p>
 
 <ul>
-<li>'svn lock path1 path2' can cause an assertion failure under
-    certain circumstances.</li>
 
-<li>'svn switch' doesn't remove read-only attribute when removing
-     svn:needs-lock property.
-     (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2306"
-      >Issue&nbsp;#2306</a>)</li>
+<li><p>'svn lock path1 path2' can cause an assertion failure under
+    certain circumstances.<br />
+    Fixed in 
+    <a href="http://svn.collab.net/viewcvs/svn?rev=14736&view=rev"
+    >r14736</a>+<a
+    href="http://svn.collab.net/viewcvs/svn?rev=14775&view=rev">r14775</a>,
+    and proposed for backport to the 1.2.1 line.</p></li>
 
-<li>'svn lock' on a switched file is broken&nbsp;&mdash;&nbsp;it will
-    lock the wrong repository object.
-    (<a
+<li><p>'svn switch' doesn't remove read-only attribute when removing
+     svn:needs-lock property.<br />
+     See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2306"
+      >Issue&nbsp;#2306</a>.</p></li>
+
+<li><p>'svn lock' on a switched file is broken&nbsp;&mdash;&nbsp;it will
+    lock the wrong repository object.<br />
+    See <a
     href="http://subversion.tigris.org/issues/show_bug.cgi?id=2307"
-    >Issue&nbsp;#2307</a>)</li>
+    >Issue&nbsp;#2307</a>.</p></li>
 
-<li>speed optimization is needed for new 'svn log --limit'</li>
-  
-<li>'svnversion' might error trying to link to libsvn_ra
-     libraries</li>
+<li><p>Speed improvements for new 'svn log --limit' feature.<br />
+    Completed in 
+    <a href="http://svn.collab.net/viewcvs/svn?rev=14116&view=rev"
+    >r14116</a>+<a
+    href="http://svn.collab.net/viewcvs/svn?rev=14722&view=rev"
+    >r14722</a>+<a
+    href="http://svn.collab.net/viewcvs/svn?rev=14759&view=rev">r14759</a>,
+    and proposed for backport to the 1.2.1 line.</p></li>
+
+<li><p>'svnversion' might error trying to link to libsvn_ra libraries<br />
+     Fixed in
+     <a href="http://svn.collab.net/viewcvs/svn?rev=14755&view=rev">r14755</a>
+     and proposed for backport to the 1.2.1 line.</p></li>
 </ul>
 
 </div>
