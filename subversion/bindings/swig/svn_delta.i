@@ -31,7 +31,7 @@
 %import svn_string.i
 
 /* -----------------------------------------------------------------------
-   For these types, "type **" is always an OUT param.
+   %apply-ing of typemaps defined elsewhere
 */
 %apply SWIGTYPE **OUTPARAM {
     svn_txdelta_stream_t **,
@@ -40,6 +40,10 @@
     const svn_delta_editor_t **,
     svn_txdelta_window_handler_t *
 };
+
+#ifdef SWIGPYTHON
+%apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
+#endif
 
 /* -----------------------------------------------------------------------
    mark window.new_data as readonly since we would need a pool to set it
