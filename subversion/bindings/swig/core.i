@@ -171,6 +171,7 @@
 /* Scripts can do the printf, then write to a stream.
  * We can't really handle the variadic, so ignore it. */
 %ignore svn_stream_printf;
+%ignore svn_stream_printf_from_utf8;
 
 // svn_stream_readline
 // svn_stream_copy
@@ -181,6 +182,8 @@
 %ignore svn_io_remove_dir;
 %ignore svn_io_get_dirents;
 %ignore svn_io_dir_walk;
+%ignore svn_io_start_cmd;
+%ignore svn_io_wait_for_cmd;
 %ignore svn_io_run_cmd;
 %ignore svn_io_run_diff;
 %ignore svn_io_run_diff3;
