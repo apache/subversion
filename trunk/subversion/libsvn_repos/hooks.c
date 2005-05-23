@@ -26,6 +26,8 @@
 #include "svn_path.h"
 #include "svn_repos.h"
 #include "repos.h"
+#include "svn_utf.h"
+#include "svn_ebcdic.h"
 #include "svn_private_config.h"
 
 /* In the code below, "hook" is sometimes used indiscriminately to
@@ -33,6 +35,10 @@
 
 
 
+#define HOOK_INPUT_STR \
+        "\x68\x6f\x6f\x6b\x2d\x69\x6e\x70\x75\x74"
+        /* "hook-input" */
+
 /*** Hook drivers. ***/
 
 /* NAME, CMD and ARGS are the name, path to and arguments for the hook
@@ -58,6 +64,7 @@ run_hook_cmd (const char *name,
   int exitcode;
   apr_exit_why_e exitwhy;
   apr_proc_t cmd_proc;
+  const char *null_device = SVN_NULL_DEVICE_NAME;
 
   /* Create a pipe to access stderr of the child. */
   apr_err = apr_file_pipe_create(&read_errhandle, &write_errhandle, pool);
@@ -66,14 +73,22 @@ run_hook_cmd (const char *name,
       (apr_err, _("Can't create pipe for hook '%s'"), cmd);
 
   /* Redirect stdout to the null device */
-  apr_err = apr_file_open (&null_handle, SVN_NULL_DEVICE_NAME, APR_WRITE,
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(&null_device, null_device, pool));
+#endif  
+  apr_err = apr_file_open (&null_handle, null_device, APR_WRITE,
                            APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_wrap_apr
       (apr_err, _("Can't create null stdout for hook '%s'"), cmd);
 
+#if !AS400
   err = svn_io_start_cmd (&cmd_proc, ".", cmd, args, FALSE,
                           stdin_handle, null_handle, write_errhandle, pool);
+#else
+  err = svn_ebcdic_run_unix_type_script (".", cmd, args, &exitcode, &exitwhy,
+                                         read_errstream, pool);
+#endif /* AS400 */
 
   /* This seems to be done automatically if we pass the third parameter of
      apr_procattr_child_in/out_set(), but svn_io_run_cmd()'s interface does
@@ -95,8 +110,17 @@ run_hook_cmd (const char *name,
       svn_error_t *err2;
 
       err2 = svn_stringbuf_from_aprfile (&error, read_errhandle, pool);
-
+#if !AS400
       err = svn_io_wait_for_cmd(&cmd_proc, cmd, &exitcode, &exitwhy, pool);
+#else
+      /* IBM's iSeries implementation of apr_proc_wait (cmd_proc,
+       * &exitcode_val, &exitwhy_val, APR_WAIT) called in svn_io_wait_for_cmd
+       * sets exitcode_val to 0 regardless of what the command returns.
+       * So the hooks always appear to succeed.  Using
+       * svn_ebcdic_run_unix_type_script in place of the svn_io_start_cmd,
+       * svn_io_wait_for_cmd sequence works around this problem. */
+      err = NULL;
+#endif
       if (! err)
         {
           if (! APR_PROC_CHECK_EXIT (exitwhy) || exitcode != 0)
@@ -152,7 +176,7 @@ create_temp_file (apr_file_t **f, const svn_string_t *value, apr_pool_t *pool)
 
   SVN_ERR (svn_io_temp_dir (&dir, pool));
   SVN_ERR (svn_io_open_unique_file (f, &fname,
-                                    svn_path_join (dir, "hook-input", pool),
+                                    svn_path_join (dir, HOOK_INPUT_STR, pool),
                                     "", TRUE /* delete on close */, pool));
   SVN_ERR (svn_io_file_write_full (*f, value->data, value->len, NULL, pool));
   SVN_ERR (svn_io_file_seek (*f, APR_SET, &offset, pool));
@@ -294,7 +318,7 @@ svn_repos__hooks_post_commit (svn_repos_t *repos,
 
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
-      args[2] = apr_psprintf (pool, "%ld", rev);
+      args[2] = APR_PSPRINTF2 (pool, "%ld", rev);
       args[3] = NULL;
 
       SVN_ERR (run_hook_cmd ("post-commit", hook, args, FALSE, NULL, pool));
@@ -338,7 +362,7 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
 
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
-      args[2] = apr_psprintf (pool, "%ld", rev);
+      args[2] = APR_PSPRINTF2 (pool, "%ld", rev);
       args[3] = author ? author : "";
       args[4] = name;
       args[5] = action_string;
@@ -400,7 +424,7 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
 
       args[0] = hook;
       args[1] = svn_repos_path (repos, pool);
-      args[2] = apr_psprintf (pool, "%ld", rev);
+      args[2] = APR_PSPRINTF2 (pool, "%ld", rev);
       args[3] = author ? author : "";
       args[4] = name;
       args[5] = action_string;

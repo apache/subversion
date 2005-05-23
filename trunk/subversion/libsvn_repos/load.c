@@ -23,6 +23,7 @@
 #include "svn_repos.h"
 #include "svn_string.h"
 #include "svn_path.h"
+#include "svn_utf.h"
 #include "svn_props.h"
 #include "repos.h"
 #include "svn_private_config.h"
@@ -32,6 +33,39 @@
 
 /*----------------------------------------------------------------------*/
 
+#define ADD_STR \
+        "\x61\x64\x64"
+        /* "add" */
+
+#define CHANGE_STR \
+        "\x63\x68\x61\x6e\x67\x65"
+        /* "change" */
+
+#define DELETE_STR \
+        "\x64\x65\x6c\x65\x74\x65"
+        /* "delete" */
+
+#define DIR_STR \
+        "\x64\x69\x72"
+        /* "dir" */
+
+#define FILE_STR \
+        "\x66\x69\x6c\x65"
+        /* "file" */
+
+#define PROPS_END_STR \
+        "\x50\x52\x4f\x50\x53\x2d\x45\x4e\x44" 
+        /* "PROPS-END" */
+
+#define REPLACE_STR \
+        "\x72\x65\x70\x6c\x61\x63\x65"
+        /* "replace" */
+
+#define TRUE_STR \
+        "\x74\x72\x75\x65"
+        /* "true" */
+
+
 /** Batons used herein **/
 
 struct parse_baton
@@ -144,13 +178,14 @@ read_header_block (svn_stream_t *stream,
 
       else
         /* Read the next line into a stringbuf. */
-        SVN_ERR (svn_stream_readline (stream, &header_str, "\n", &eof, pool));
+        SVN_ERR (svn_stream_readline (stream, &header_str, SVN_UTF8_NEWLINE_STR,
+                                      &eof, pool));
       
       if (eof || svn_stringbuf_isempty(header_str))
         break;    /* end of header block */
 
       /* Find the next colon in the stringbuf. */
-      while (header_str->data[i] != ':')
+      while (header_str->data[i] != SVN_UTF8_COLON)
         {
           if (header_str->data[i] == '\0')
             return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
@@ -221,7 +256,8 @@ parse_property_block (svn_stream_t *stream,
       svn_boolean_t eof;
 
       /* Read a key length line.  (Actually, it might be PROPS_END). */
-      SVN_ERR (svn_stream_readline (stream, &strbuf, "\n", &eof, pool));
+      SVN_ERR (svn_stream_readline (stream, &strbuf, SVN_UTF8_NEWLINE_STR,
+                                    &eof, pool));
 
       if (eof)
         {
@@ -235,17 +271,21 @@ parse_property_block (svn_stream_t *stream,
       *actual_length += (strbuf->len + 1); /* +1 because we read a \n too. */
       buf = strbuf->data;
 
-      if (! strcmp (buf, "PROPS-END"))
+      if (! strcmp (buf, PROPS_END_STR))
         break; /* no more properties. */
 
-      else if ((buf[0] == 'K') && (buf[1] == ' '))
+      else if ((buf[0] == SVN_UTF8_K) && (buf[1] == SVN_UTF8_SPACE))
         {
           apr_size_t numread;
           char *keybuf;
           char c;
+          apr_size_t keylen;
           
           /* Get the length of the key */
-          apr_size_t keylen = (apr_size_t) atoi (buf + 2);
+#if APR_CHARSET_EBCDIC
+          SVN_ERR (svn_utf_cstring_from_utf8 (&buf, buf, pool));
+#endif
+          keylen = (apr_size_t) atoi (buf + 2);
 
           /* Now read that much into a buffer, + 1 byte for null terminator */
           keybuf = apr_pcalloc (pool, keylen + 1);
@@ -262,23 +302,29 @@ parse_property_block (svn_stream_t *stream,
           *actual_length += numread;
           if (numread != 1)
             return stream_ran_dry ();
-          if (c != '\n') 
+          if (c != SVN_UTF8_NEWLINE) 
             return stream_malformed ();
 
           /* Read a val length line */
-          SVN_ERR (svn_stream_readline (stream, &strbuf, "\n", &eof, pool));
+          SVN_ERR (svn_stream_readline (stream, &strbuf, SVN_UTF8_NEWLINE_STR,
+                                        &eof, pool));
           *actual_length += (strbuf->len + 1); /* +1 because we read \n too */
           buf = strbuf->data;
 
-          if ((buf[0] == 'V') && (buf[1] == ' '))
+          if ((buf[0] == SVN_UTF8_V) && (buf[1] == SVN_UTF8_SPACE))
             {
               svn_string_t propstring;
-
+              apr_size_t vallen;
+              char *valbuf;
+              
               /* Get the length of the value */
-              apr_size_t vallen = atoi (buf + 2);
+#if APR_CHARSET_EBCDIC
+              SVN_ERR (svn_utf_cstring_from_utf8 (&buf, buf, pool));
+#endif
+              vallen = atoi (buf + 2);
 
               /* Again, 1 extra byte for the null termination. */
-              char *valbuf = apr_palloc (pool, vallen + 1);
+              valbuf = apr_palloc (pool, vallen + 1);
               numread = vallen;
               SVN_ERR (svn_stream_read (stream, valbuf, &numread));
               *actual_length += numread;
@@ -292,7 +338,7 @@ parse_property_block (svn_stream_t *stream,
               *actual_length += numread;
               if (numread != 1)
                 return stream_ran_dry ();
-              if (c != '\n') 
+              if (c != SVN_UTF8_NEWLINE) 
                 return stream_malformed ();
 
               /* Create final value string */
@@ -312,14 +358,18 @@ parse_property_block (svn_stream_t *stream,
           else
             return stream_malformed (); /* didn't find expected 'V' line */
         }
-      else if ((buf[0] == 'D') && (buf[1] == ' '))
+      else if ((buf[0] == SVN_UTF8_D) && (buf[1] == SVN_UTF8_SPACE))
         {
           apr_size_t numread;
           char *keybuf;
           char c;
+          apr_size_t keylen;
           
           /* Get the length of the key */
-          apr_size_t keylen = (apr_size_t) atoi (buf + 2);
+#if APR_CHARSET_EBCDIC
+          SVN_ERR (svn_utf_cstring_from_utf8(&buf, buf, pool));
+#endif
+          keylen = (apr_size_t) atoi (buf + 2);
 
           /* Now read that much into a buffer, + 1 byte for null terminator */
           keybuf = apr_pcalloc (pool, keylen + 1);
@@ -336,7 +386,7 @@ parse_property_block (svn_stream_t *stream,
           *actual_length += numread;
           if (numread != 1)
             return stream_ran_dry ();
-          if (c != '\n') 
+          if (c != SVN_UTF8_NEWLINE) 
             return stream_malformed ();
 
           /* We don't expect these in revision properties, and if we see
@@ -442,8 +492,11 @@ parse_format_version (const char *versionstring, int *version)
   /* parse string and verify that we support the dumpfile format
      version number, setting *version appropriately. */
   static const int magic_len = sizeof(SVN_REPOS_DUMPFILE_MAGIC_HEADER) - 1;
-  const char *p = strchr(versionstring, ':');
+  const char *p = strchr(versionstring, SVN_UTF8_COLON);
   int value;
+#if APR_CHARSET_EBCDIC
+  apr_pool_t *temp_subpool = svn_pool_create_ex(NULL, NULL);
+#endif
 
   if (p == NULL
       || p != (versionstring + magic_len)
@@ -452,8 +505,13 @@ parse_format_version (const char *versionstring, int *version)
                   magic_len))
     return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
                              _("Malformed dumpfile header"));
-
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(&p, p, temp_subpool));
+#endif
   value = atoi (p+1);
+#if APR_CHARSET_EBCDIC
+  svn_pool_destroy(temp_subpool);
+#endif
 
   if (value > SVN_REPOS_DUMPFILE_FORMAT_VERSION)
     return svn_error_createf (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
@@ -485,7 +543,8 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
   apr_pool_t *nodepool = svn_pool_create (pool);
   int version;
 
-  SVN_ERR (svn_stream_readline (stream, &linebuf, "\n", &eof, linepool));
+  SVN_ERR (svn_stream_readline (stream, &linebuf, SVN_UTF8_NEWLINE_STR,
+                                &eof, linepool));
   if (eof)
     return stream_ran_dry ();
     
@@ -526,6 +585,7 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
       const char *text_cl;
       const char *value;
       svn_filesize_t actual_prop_length;
+      const char *valstr_native, *valstr_native2, *valstr_native3;
 
       /* Clear our per-line pool. */
       svn_pool_clear (linepool);
@@ -536,12 +596,13 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
 
       /* Keep reading blank lines until we discover a new record, or until
          the stream runs out. */
-      SVN_ERR (svn_stream_readline (stream, &linebuf, "\n", &eof, linepool));
+      SVN_ERR (svn_stream_readline (stream, &linebuf, SVN_UTF8_NEWLINE_STR,
+                                    &eof, linepool));
       
       if (eof)
         break;   /* end of stream, go home. */
 
-      if ((linebuf->len == 0) || (apr_isspace (linebuf->data[0])))
+      if ((linebuf->len == 0) || (APR_IS_ASCII_SPACE (linebuf->data[0])))
         continue; /* empty line ... loop */
 
       /*** Found the beginning of a new record. ***/ 
@@ -590,6 +651,9 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
                                       APR_HASH_KEY_STRING)))
         {
           /* ### someday, switch modes of operation here. */
+#if APR_CHARSET_EBCDIC
+          SVN_ERR (svn_utf_cstring_from_utf8(&value, value, pool));
+#endif
           version = atoi (value);
         }
       /* Or is this bogosity?! */
@@ -624,16 +688,23 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
           const char *delta = apr_hash_get (headers,
                                             SVN_REPOS_DUMPFILE_PROP_DELTA,
                                             APR_HASH_KEY_STRING);
-          svn_boolean_t is_delta = (delta && strcmp (delta, "true") == 0);
+          svn_boolean_t is_delta = (delta && 
+                                    strcmp (delta, TRUE_STR) == 0);
 
           /* First, remove all node properties, unless this is a delta
              property block. */
           if (found_node && !is_delta)
             SVN_ERR (parse_fns->remove_node_props (node_baton));
 
+          valstr_native = prop_cl ? prop_cl : content_length;
+#if APR_CHARSET_EBCDIC
+          SVN_ERR (svn_utf_cstring_from_utf8(&valstr_native,
+                                             valstr_native,
+                                             pool));
+#endif
           SVN_ERR (parse_property_block
                    (stream,
-                    svn__atoui64 (prop_cl ? prop_cl : content_length),
+                    svn__atoui64 (valstr_native),
                     parse_fns,
                     found_node ? node_baton : rev_baton,
                     found_node,
@@ -647,10 +718,15 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
           const char *delta = apr_hash_get (headers,
                                             SVN_REPOS_DUMPFILE_TEXT_DELTA,
                                             APR_HASH_KEY_STRING);
-          svn_boolean_t is_delta = (delta && strcmp (delta, "true") == 0);
+          svn_boolean_t is_delta = (delta && 
+                                    strcmp (delta, TRUE_STR) == 0);
+          valstr_native = text_cl;
+#if APR_CHARSET_EBCDIC
+          SVN_ERR (svn_utf_cstring_from_utf8(&valstr_native, valstr_native, pool));
+#endif
 
           SVN_ERR (parse_text_block (stream,
-                                     svn__atoui64 (text_cl),
+                                     svn__atoui64 (valstr_native),
                                      is_delta,
                                      parse_fns,
                                      found_node ? node_baton : rev_baton,
@@ -675,14 +751,20 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
                and so has an absent text block.
           */
           const char *node_kind;
-          svn_filesize_t cl_value = svn__atoui64 (content_length)
-                                    - actual_prop_length;
+          svn_filesize_t cl_value;
+#if !APR_CHARSET_EBCDIC
+          valstr_native = content_length;
+#else
+          SVN_ERR (svn_utf_cstring_from_utf8(&valstr_native, content_length,
+                                             pool));
+#endif
+          cl_value = svn__atoui64 (valstr_native) - actual_prop_length;
 
           if (cl_value || 
               ((node_kind = apr_hash_get (headers,
                                           SVN_REPOS_DUMPFILE_NODE_KIND,
                                           APR_HASH_KEY_STRING))
-               && strcmp (node_kind, "file") == 0)
+               && strcmp (node_kind, FILE_STR) == 0)
              )
             SVN_ERR (parse_text_block (stream,
                                        cl_value,
@@ -701,10 +783,26 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
       if (content_length && ! old_v1_with_cl)
         {
           apr_size_t rlen, num_to_read;
-          svn_filesize_t remaining =
-            svn__atoui64 (content_length) -
-            (prop_cl ? svn__atoui64 (prop_cl) : 0) -
-            (text_cl ? svn__atoui64 (text_cl) : 0);
+          svn_filesize_t remaining;
+          valstr_native = content_length;
+          valstr_native2 = prop_cl ? prop_cl : NULL;
+          valstr_native3 = text_cl ? text_cl : NULL;
+#if APR_CHARSET_EBCDIC
+          SVN_ERR (svn_utf_cstring_from_utf8(&valstr_native, valstr_native,
+                                             pool));
+          if (valstr_native2)
+            SVN_ERR (svn_utf_cstring_from_utf8(&valstr_native2,
+                                               valstr_native2,
+                                               pool));
+          if (valstr_native3)
+            SVN_ERR (svn_utf_cstring_from_utf8(&valstr_native3,
+                                               valstr_native3,
+                                               pool));
+#endif
+          remaining =
+            svn__atoui64 (valstr_native) -
+            (valstr_native2 ? svn__atoui64 (valstr_native2) : 0) -
+            (valstr_native3 ? svn__atoui64 (valstr_native3) : 0);
 
 
           if (remaining < 0)
@@ -796,28 +894,31 @@ make_node_baton (apr_hash_t *headers,
   if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_KIND,
                            APR_HASH_KEY_STRING)))
     {
-      if (! strcmp (val, "file"))
+      if (! strcmp (val, FILE_STR))
         nb->kind = svn_node_file;
-      else if (! strcmp (val, "dir"))
+      else if (! strcmp (val, DIR_STR))
         nb->kind = svn_node_dir;
     }
 
   if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_ACTION,
                            APR_HASH_KEY_STRING)))
     {
-      if (! strcmp (val, "change"))
+      if (! strcmp (val, CHANGE_STR))
         nb->action = svn_node_action_change;
-      else if (! strcmp (val, "add"))
+      else if (! strcmp (val, ADD_STR))
         nb->action = svn_node_action_add;
-      else if (! strcmp (val, "delete"))
+      else if (! strcmp (val, DELETE_STR))
         nb->action = svn_node_action_delete;
-      else if (! strcmp (val, "replace"))
+      else if (! strcmp (val, REPLACE_STR))
         nb->action = svn_node_action_replace;
     }
 
   if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
                            APR_HASH_KEY_STRING)))
     {
+#if APR_CHARSET_EBCDIC
+      svn_utf_cstring_from_utf8(&val, val, pool);
+#endif
       nb->copyfrom_rev = (svn_revnum_t) atoi (val);
     }
   if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
@@ -825,7 +926,8 @@ make_node_baton (apr_hash_t *headers,
     {
       if (rb->pb->parent_dir)
         nb->copyfrom_path = svn_path_join (rb->pb->parent_dir,
-                                           (*val == '/' ? val + 1 : val), pool);
+                                           (*val == SVN_UTF8_FSLASH ? 
+                                            val + 1 : val), pool);
       else
         nb->copyfrom_path = apr_pstrdup (pool, val);
     }
@@ -849,6 +951,9 @@ make_revision_baton (apr_hash_t *headers,
 {
   struct revision_baton *rb = apr_pcalloc (pool, sizeof(*rb));
   const char *val;
+#if APR_CHARSET_EBCDIC
+  const char *val_native;
+#endif
 
   rb->pb = pb;
   rb->pool = pool;
@@ -856,8 +961,13 @@ make_revision_baton (apr_hash_t *headers,
 
   if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
                            APR_HASH_KEY_STRING)))
+  {                           
+#if APR_CHARSET_EBCDIC
+    if(val && !svn_utf_cstring_from_utf8(&val_native, val, pool))
+      val = val_native;
+#endif
     rb->rev = SVN_STR_TO_REV(val);
-
+  }
   return rb;
 }
 
@@ -979,6 +1089,8 @@ new_node_record (void **node_baton,
   struct revision_baton *rb = revision_baton;
   struct parse_baton *pb = rb->pb;
   struct node_baton *nb;
+  const char *nb_path_native;
+
   
   if (rb->rev == 0)
     return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
@@ -987,20 +1099,27 @@ new_node_record (void **node_baton,
 
   nb = make_node_baton (headers, rb, pool);
 
+#if APR_CHARSET_EBCDIC
+  /* Feedback to stdout during a load on ebcdic
+   * platforms is encoded in ebcdic. */
+  if(nb->path)
+    SVN_ERR (svn_utf_cstring_from_utf8(&nb_path_native, nb->path, pool));
+#endif
+
   switch (nb->action)
     {
     case svn_node_action_change:
       {
         SVN_ERR (svn_stream_printf (pb->outstream, pool,
                                     _("     * editing path : %s ..."),
-                                    nb->path));
+                                    nb_path_native));
         break;
       }
     case svn_node_action_delete:
       {
         SVN_ERR (svn_stream_printf (pb->outstream, pool,
                                     _("     * deleting path : %s ..."),
-                                    nb->path));
+                                    nb_path_native));
         SVN_ERR (svn_fs_delete (rb->txn_root, nb->path, pool));
         break;
       }
@@ -1008,7 +1127,7 @@ new_node_record (void **node_baton,
       {
         SVN_ERR (svn_stream_printf (pb->outstream, pool,
                                     _("     * adding path : %s ..."),
-                                    nb->path));
+                                    nb_path_native));
 
         SVN_ERR (maybe_add_with_history (nb, rb, pool));
         break;
@@ -1017,7 +1136,7 @@ new_node_record (void **node_baton,
       {
         SVN_ERR (svn_stream_printf (pb->outstream, pool,
                                     _("     * replacing path : %s ..."),
-                                    nb->path));
+                                    nb_path_native));
 
         SVN_ERR (svn_fs_delete (rb->txn_root, nb->path, pool));
 
@@ -1204,7 +1323,13 @@ close_revision (void *baton)
     {
       svn_error_clear (svn_fs_abort_txn (rb->txn, rb->pool));
       if (conflict_msg)
+      {
+#if APR_CHARSET_EBCDIC
+        SVN_ERR (svn_utf_cstring_from_utf8 (&conflict_msg, conflict_msg,
+                                            rb->pool));
+#endif
         return svn_error_quick_wrap (err, conflict_msg);
+      }
       else
         return err;
     }

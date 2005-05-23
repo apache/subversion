@@ -28,6 +28,10 @@
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_private_config.h" /* for SVN_TEMPLATE_ROOT_DIR */
+#include "svn_utf.h"
+#if APR_CHARSET_EBCDIC
+#include "svn_ebcdic.h"
+#endif
 
 #include "repos.h"
 
@@ -187,7 +191,10 @@ create_db_logs_lock (svn_repos_t *repos, apr_pool_t *pool) {
   const char *lockfile_path;
 
   lockfile_path = svn_repos_db_logs_lockfile (repos, pool);
-  contents = 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
+    contents = 
     "DB logs lock file, representing locks on the versioned filesystem logs.\n"
     "\n"
     "All log manipulators of the repository's\n"
@@ -195,6 +202,9 @@ create_db_logs_lock (svn_repos_t *repos, apr_pool_t *pool) {
     "to ensure that only one accessor manupulates the logs at the time.\n"
     "\n"
     "You should never have to edit or remove this file.\n";
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
   SVN_ERR_W (svn_io_file_create (lockfile_path, contents, pool),
              _("Creating db logs lock file"));
@@ -209,6 +219,9 @@ create_db_lock (svn_repos_t *repos, apr_pool_t *pool) {
     const char *lockfile_path;
 
     lockfile_path = svn_repos_db_lockfile (repos, pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
     contents = 
       "DB lock file, representing locks on the versioned filesystem.\n"
       "\n"
@@ -220,6 +233,9 @@ create_db_lock (svn_repos_t *repos, apr_pool_t *pool) {
       "using the DB during the recovery.\n"
       "\n"
       "You should never have to edit or remove this file.\n";
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
     
   SVN_ERR_W (svn_io_file_create (lockfile_path, contents, pool),
              _("Creating db lock file"));
@@ -241,6 +257,9 @@ create_locks (svn_repos_t *repos, apr_pool_t *pool)
 }
 
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 #define HOOKS_ENVIRONMENT_TEXT                                          \
   "# The hook program typically does not inherit the environment of"    \
   APR_EOL_STR                                                           \
@@ -263,8 +282,10 @@ create_locks (svn_repos_t *repos, apr_pool_t *pool)
   "# http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/ and"     \
   APR_EOL_STR                                                           \
   "# http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/"       \
-  APR_EOL_STR                                                           \
-
+  APR_EOL_STR
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
 static svn_error_t *
 create_hooks (svn_repos_t *repos, apr_pool_t *pool)
@@ -283,6 +304,9 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
                               svn_repos_start_commit_hook (repos, pool),
                               SVN_REPOS__HOOK_DESC_EXT);
     
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
     contents = 
       "#!/bin/sh"
       APR_EOL_STR
@@ -377,9 +401,15 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "exit 0"
       APR_EOL_STR;
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
                _("Creating start-commit hook"));
+#if APR_CHARSET_EBCDIC
+    SVN_ERR (svn_ebcdic_set_file_ccsid (this_path, 1208, pool));
+#endif
   }  /* end start-commit hook */
 
   /* Pre-commit hook. */
@@ -388,6 +418,9 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
                               svn_repos_pre_commit_hook (repos, pool),
                               SVN_REPOS__HOOK_DESC_EXT);
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
     contents =
       "#!/bin/sh"
       APR_EOL_STR
@@ -514,9 +547,15 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "exit 0"
       APR_EOL_STR;
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
     
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
                _("Creating pre-commit hook"));
+#if APR_CHARSET_EBCDIC
+    SVN_ERR (svn_ebcdic_set_file_ccsid (this_path, 1208, pool));
+#endif
   }  /* end pre-commit hook */
 
 
@@ -526,6 +565,9 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
                               svn_repos_pre_revprop_change_hook (repos, pool),
                               SVN_REPOS__HOOK_DESC_EXT);
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
     contents =
       "#!/bin/sh"
       APR_EOL_STR
@@ -646,9 +688,15 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "exit 1"
       APR_EOL_STR;
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
     
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
                _("Creating pre-revprop-change hook"));
+#if APR_CHARSET_EBCDIC
+    SVN_ERR (svn_ebcdic_set_file_ccsid (this_path, 1208, pool));
+#endif
   }  /* end pre-revprop-change hook */
 
 
@@ -658,6 +706,9 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
                               svn_repos_pre_lock_hook (repos, pool),
                               SVN_REPOS__HOOK_DESC_EXT);
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
     contents =
       "#!/bin/sh"
       APR_EOL_STR
@@ -789,6 +840,9 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
     
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
                "Creating pre-lock hook");
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   }  /* end pre-lock hook */
 
 
@@ -798,6 +852,9 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
                               svn_repos_pre_unlock_hook (repos, pool),
                               SVN_REPOS__HOOK_DESC_EXT);
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
     contents =
       "#!/bin/sh"
       APR_EOL_STR
@@ -919,6 +976,9 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "exit 1"
       APR_EOL_STR;
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
     
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
                "Creating pre-unlock hook");
@@ -932,6 +992,9 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
                               svn_repos_post_commit_hook (repos, pool),
                               SVN_REPOS__HOOK_DESC_EXT);
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
     contents =
       "#!/bin/sh"
       APR_EOL_STR
@@ -1021,9 +1084,15 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "log-commit.py --repository \"$REPOS\" --revision \"$REV\""
       APR_EOL_STR;
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
                _("Creating post-commit hook"));
+#if APR_CHARSET_EBCDIC
+    SVN_ERR (svn_ebcdic_set_file_ccsid (this_path, 1208, pool));
+#endif
   } /* end post-commit hook */
 
 
@@ -1033,6 +1102,9 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
                               svn_repos_post_lock_hook (repos, pool),
                               SVN_REPOS__HOOK_DESC_EXT);
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
     contents =
       "#!/bin/sh"
       APR_EOL_STR
@@ -1127,6 +1199,9 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "mailer.py lock \"$REPOS\" \"$USER\" /path/to/mailer.conf"
       APR_EOL_STR;
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
                "Creating post-lock hook");
@@ -1139,6 +1214,9 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
                               svn_repos_post_unlock_hook (repos, pool),
                               SVN_REPOS__HOOK_DESC_EXT);
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
     contents =
       "#!/bin/sh"
       APR_EOL_STR
@@ -1229,6 +1307,9 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "mailer.py unlock \"$REPOS\" \"$USER\" /path/to/mailer.conf"
       APR_EOL_STR;
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
                "Creating post-unlock hook");
@@ -1241,6 +1322,9 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
                               svn_repos_post_revprop_change_hook (repos, pool),
                               SVN_REPOS__HOOK_DESC_EXT);
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
     contents =
       "#!/bin/sh"
       APR_EOL_STR
@@ -1341,9 +1425,15 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       "propchange-email.pl \"$REPOS\" \"$REV\" \"$USER\" \"$PROPNAME\" "
       "watchers@example.org"
       APR_EOL_STR;
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
     SVN_ERR_W (svn_io_file_create (this_path, contents, pool),
                _("Creating post-revprop-change hook"));
+#if APR_CHARSET_EBCDIC
+    SVN_ERR (svn_ebcdic_set_file_ccsid (this_path, 1208, pool));
+#endif
   } /* end post-revprop-change hook */
 
   return SVN_NO_ERROR;
@@ -1357,6 +1447,9 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
 
   /* Write a default template for svnserve.conf. */
   {
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
     static const char * const svnserve_conf_contents =
       "### This file controls the configuration of the svnserve daemon, if you"
       APR_EOL_STR
@@ -1402,6 +1495,9 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# realm = My First Repository"
       APR_EOL_STR;
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
     SVN_ERR_W (svn_io_file_create (svn_repos_svnserve_conf (repos, pool),
                                    svnserve_conf_contents, pool),
@@ -1409,6 +1505,9 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
   }
 
   {
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
     static const char * const passwd_contents =
       "### This file is an example password file for svnserve."
       APR_EOL_STR
@@ -1425,6 +1524,9 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# sally = sallyssecret"
       APR_EOL_STR;
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
     SVN_ERR_W (svn_io_file_create (svn_path_join (repos->conf_path,
                                                   SVN_REPOS__CONF_PASSWD,
@@ -1475,6 +1577,9 @@ create_repos_structure (svn_repos_t *repos,
   {
     const char *readme_file_name 
       = svn_path_join (path, SVN_REPOS__README, pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
     static const char * const readme_contents =
       "This is a Subversion repository; use the 'svnadmin' tool to examine"
       APR_EOL_STR
@@ -1501,6 +1606,9 @@ create_repos_structure (svn_repos_t *repos,
       APR_EOL_STR
       "Visit http://subversion.tigris.org/ for more information."
       APR_EOL_STR;
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
     SVN_ERR_W (svn_io_file_create (readme_file_name, readme_contents, pool),
                _("Creating readme file"));
@@ -1685,7 +1793,7 @@ svn_repos_find_root_path (const char *path,
       if (!err && check_repos_path (candidate, pool))
         break;
       svn_error_clear (err);
-      if (candidate[0] == '\0' || strcmp(candidate, "/") == 0)
+      if (candidate[0] == '\0' || strcmp(candidate, SVN_UTF8_FSLASH_STR) == 0)
         return NULL;
       candidate = svn_path_dirname (candidate, pool);
     }

@@ -26,6 +26,9 @@
 #include <http_log.h>
 #include <mod_dav.h>
 #include <ap_provider.h>
+#if APR_CHARSET_EBCDIC
+#include <util_charset.h>
+#endif
 
 #include <apr_strings.h>
 
@@ -445,8 +448,32 @@ static apr_status_t merge_xml_in_filter(ap_filter_t *f,
         rv = apr_xml_parser_done(ctx->parser, &pdoc);
         if (rv == APR_SUCCESS) {
 #if APR_CHARSET_EBCDIC
+#if !AS400
           apr_xml_parser_convert_doc(r->pool, pdoc, ap_hdrs_from_ascii);
-#endif
+#else
+          /* IBM didn't provide apr_xml_parser_convert_doc in it's APR
+           * port to the iSeries.
+           * 
+           * From util_charset.h:
+           * 
+           *   On EBCDIC machine this is a translation handle used to
+           *   translate the headers from the local machine format to ASCII
+           *   for network transmission.  On an ASCII machine this is NULL
+           *     extern apr_xlate_t *ap_hdrs_to_ascii;
+           *
+           *   On EBCDIC machine this is a translation handle used to
+           *   translate the headers from ASCII to the local machine format
+           *   after network transmission.  On an ASCII machine this is NULL
+           *     extern apr_xlate_t *ap_hdrs_from_ascii; 
+           * 
+           * There are no comments of substance in the open source apr_xml.h
+           * for apr_xml_parser_convert_doc.
+           *
+           * Hmmm....what to do then?  For now nothing; still waiting for it
+           * to cause a problem!
+           */
+#endif /* AS400 */
+#endif /* APR_CHARSET_EBCDIC */
           /* stash the doc away for mod_dav_svn's later use. */
           rv = apr_pool_userdata_set(pdoc, "svn-request-body",
                                      NULL, r->pool);

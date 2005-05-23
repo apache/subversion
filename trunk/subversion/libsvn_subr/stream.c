@@ -36,6 +36,7 @@
 #include "svn_error.h"
 #include "svn_string.h"
 #include "svn_utf.h"
+#include "svn_ebcdic.h"
 
 
 struct svn_stream_t {
@@ -147,11 +148,16 @@ svn_stream_printf_from_utf8 (svn_stream_t *stream,
   apr_size_t len;
 
   va_start (ap, fmt);
-  message = apr_pvsprintf (pool, fmt, ap);
+  message = APR_PVSPRINTF2 (pool, fmt, ap);
   va_end (ap);
 
+#if !APR_CHARSET_EBCDIC
   SVN_ERR (svn_utf_cstring_from_utf8_ex (&translated, message, encoding,
                                          NULL, pool));
+#else
+  /* On ebcdic platforms we (almost) always output utf-8 */
+  translated = message;
+#endif
   
   len = strlen (translated);
 

@@ -1271,28 +1271,74 @@ svn_repos_node_t *svn_repos_node_from_baton (void *edit_baton);
  */
 
 /* The RFC822-style headers in our dumpfile format. */
-#define SVN_REPOS_DUMPFILE_MAGIC_HEADER            "SVN-fs-dump-format-version"
+#define SVN_REPOS_DUMPFILE_MAGIC_HEADER \
+        "\x53\x56\x4e\x2d\x66\x73\x2d\x64\x75\x6d\x70\x2d\x66\x6f\x72\x6d" \
+        "\x61\x74\x2d\x76\x65\x72\x73\x69\x6f\x6e"
+        /* "SVN-fs-dump-format-version" */
+
 #define SVN_REPOS_DUMPFILE_FORMAT_VERSION           3
-#define SVN_REPOS_DUMPFILE_UUID                      "UUID"
-#define SVN_REPOS_DUMPFILE_CONTENT_LENGTH            "Content-length"
 
-#define SVN_REPOS_DUMPFILE_REVISION_NUMBER           "Revision-number"
+#define SVN_REPOS_DUMPFILE_UUID \
+        "\x55\x55\x49\x44"
+        /* "UUID" */
 
-#define SVN_REPOS_DUMPFILE_NODE_PATH                 "Node-path"
-#define SVN_REPOS_DUMPFILE_NODE_KIND                 "Node-kind"
-#define SVN_REPOS_DUMPFILE_NODE_ACTION               "Node-action"
-#define SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH        "Node-copyfrom-path"
-#define SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV         "Node-copyfrom-rev"
-#define SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_CHECKSUM "Text-copy-source-md5"
-#define SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM     "Text-content-md5"
+#define SVN_REPOS_DUMPFILE_CONTENT_LENGTH \
+        "\x43\x6f\x6e\x74\x65\x6e\x74\x2d\x6c\x65\x6e\x67\x74\x68"
+        /* "Content-length" */
 
-#define SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH       "Prop-content-length"
-#define SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH       "Text-content-length"
+#define SVN_REPOS_DUMPFILE_REVISION_NUMBER \
+        "\x52\x65\x76\x69\x73\x69\x6f\x6e\x2d\x6e\x75\x6d\x62\x65\x72"
+        /* "Revision-number" */
+
+#define SVN_REPOS_DUMPFILE_NODE_PATH \
+        "\x4e\x6f\x64\x65\x2d\x70\x61\x74\x68"
+        /* "Node-path" */
+
+#define SVN_REPOS_DUMPFILE_NODE_KIND \
+        "\x4e\x6f\x64\x65\x2d\x6b\x69\x6e\x64"
+        /* "Node-kind" */
+
+#define SVN_REPOS_DUMPFILE_NODE_ACTION \
+        "\x4e\x6f\x64\x65\x2d\x61\x63\x74\x69\x6f\x6e"
+        /* "Node-action" */
+
+#define SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH \
+        "\x4e\x6f\x64\x65\x2d\x63\x6f\x70\x79\x66\x72\x6f\x6d\x2d\x70\x61" \
+        "\x74\x68"
+        /* "Node-copyfrom-path" */
+
+#define SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV \
+        "\x4e\x6f\x64\x65\x2d\x63\x6f\x70\x79\x66\x72\x6f\x6d\x2d\x72\x65\x76"
+        /* "Node-copyfrom-rev" */
+
+#define SVN_REPOS_DUMPFILE_TEXT_COPY_SOURCE_CHECKSUM \
+        "\x54\x65\x78\x74\x2d\x63\x6f\x70\x79\x2d\x73\x6f\x75\x72\x63\x65" \
+        "\x2d\x6d\x64\x35"
+        /* "Text-copy-source-md5" */
+
+#define SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM \
+        "\x54\x65\x78\x74\x2d\x63\x6f\x6e\x74\x65\x6e\x74\x2d\x6d\x64\x35"
+        /* "Text-content-md5" */
+
+#define SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH \
+        "\x50\x72\x6f\x70\x2d\x63\x6f\x6e\x74\x65\x6e\x74\x2d\x6c\x65\x6e" \
+        "\x67\x74\x68"
+        /* "Prop-content-length" */
+
+#define SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH \
+        "\x54\x65\x78\x74\x2d\x63\x6f\x6e\x74\x65\x6e\x74\x2d\x6c\x65\x6e" \
+        "\x67\x74\x68"
+        /* "Text-content-length" */
 
 /* @since New in 1.1. */
-#define SVN_REPOS_DUMPFILE_PROP_DELTA                "Prop-delta"
+#define SVN_REPOS_DUMPFILE_PROP_DELTA \
+        "\x50\x72\x6f\x70\x2d\x64\x65\x6c\x74\x61"
+        /* "Prop-delta" */
+
 /* @since New in 1.1. */
-#define SVN_REPOS_DUMPFILE_TEXT_DELTA                "Text-delta"
+#define SVN_REPOS_DUMPFILE_TEXT_DELTA \
+        "\x54\x65\x78\x74\x2d\x64\x65\x6c\x74\x61"
+        /* "Text-delta" */
 
 /** The different "actions" attached to nodes in the dumpfile. */
 enum svn_node_action

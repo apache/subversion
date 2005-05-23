@@ -34,11 +34,56 @@
 #include "svn_xml.h"
 #include "svn_time.h"
 #include "svn_cmdline.h"
+#include "svn_ebcdic.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
 
 
+#define ACTION_STR \
+        "\x61\x63\x74\x69\x6f\x6e"
+        /* "action" */
+
+#define AUTHOR_STR \
+        "\x61\x75\x74\x68\x6f\x72"
+        /* "author" */
+
+#define COPYFROM_PATH_STR \
+        "\x63\x6f\x70\x79\x66\x72\x6f\x6d\x2d\x70\x61\x74\x68"
+        /* "copyfrom-path" */
+
+#define COPYFROM_REV_STR \
+        "\x63\x6f\x70\x79\x66\x72\x6f\x6d\x2d\x72\x65\x76"
+        /* "copyfrom-rev" */
+
+#define DATE_STR \
+        "\x64\x61\x74\x65"
+        /* "date" */
+
+#define LOG_STR \
+        "\x6c\x6f\x67"
+        /* "logentry" */
+        
+#define LOGENTRY_STR \
+        "\x6c\x6f\x67\x65\x6e\x74\x72\x79"
+        /* "logentry" */
+
+#define MSG_STR \
+        "\x6d\x73\x67"
+        /* "msg" */
+
+#define PATH_STR \
+        "\x70\x61\x74\x68"
+        /* "path" */
+
+#define PATHS_STR \
+        "\x70\x61\x74\x68\x73"
+        /* "paths" */
+
+#define REVISION_STR \
+        "\x72\x65\x76\x69\x73\x69\x6f\x6e"
+        /* "revision" */
+
 /*** Code. ***/
 
 /* Baton for log_message_receiver() and log_message_receiver_xml(). */
@@ -160,6 +205,10 @@ log_message_receiver (void *baton,
 
   if (author == NULL)
     author = _("(no author)");
+#if APR_CHARSET_EBCDIC
+  else
+    SVN_ERR (svn_utf_cstring_from_utf8 (&author, author, pool));
+#endif
 
   if (date && date[0])
     {
@@ -168,6 +217,9 @@ log_message_receiver (void *baton,
       
       SVN_ERR (svn_time_from_cstring (&time_temp, date, pool));
       date = svn_time_to_human_cstring(time_temp, pool);
+#if APR_CHARSET_EBCDIC
+      SVN_ERR (svn_utf_cstring_from_utf8 (&date, date, pool));
+#endif
     }
   else
     date = _("(no date)");
@@ -214,12 +266,12 @@ log_message_receiver (void *baton,
               && SVN_IS_VALID_REVNUM (log_item->copyfrom_rev))
             {
               copy_data 
-                = apr_psprintf (pool, 
-                                _(" (from %s:%ld)"),
-                                log_item->copyfrom_path,
-                                log_item->copyfrom_rev);
+                = APR_PSPRINTF2 (pool, 
+                                 _(" (from %s:%ld)"),
+                                 log_item->copyfrom_path,
+                                 log_item->copyfrom_rev);
             }
-          SVN_ERR (svn_cmdline_printf (pool, "   %c %s%s\n",
+          SVN_ERR (SVN_CMDLINE_PRINTF (pool, "   %c %s%s\n",
                                        log_item->action, path,
                                        copy_data));
         }
@@ -291,28 +343,28 @@ log_message_receiver_xml (void *baton,
   if (rev == 0 && msg == NULL)
     return SVN_NO_ERROR;
 
-  revstr = apr_psprintf (pool, "%ld", rev);
+  revstr = APR_PSPRINTF2 (pool, "%ld", rev);
   /* <logentry revision="xxx"> */
-  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "logentry",
-                         "revision", revstr, NULL);
+  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, LOGENTRY_STR,
+                         REVISION_STR, revstr, NULL);
 
   if (author)
     {
       /* <author>xxx</author> */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "author",
+      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, AUTHOR_STR,
                              NULL);
       svn_xml_escape_cdata_cstring (&sb, author, pool);
-      svn_xml_make_close_tag (&sb, pool, "author");
+      svn_xml_make_close_tag (&sb, pool, AUTHOR_STR);
     }
 
   if (date)
     {
       /* Print the full, uncut, date.  This is machine output. */
       /* <date>xxx</date> */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "date",
+      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, DATE_STR,
                              NULL);
       svn_xml_escape_cdata_cstring (&sb, date, pool);
-      svn_xml_make_close_tag (&sb, pool, "date");
+      svn_xml_make_close_tag (&sb, pool, DATE_STR);
     }
 
   if (changed_paths)
@@ -321,7 +373,7 @@ log_message_receiver_xml (void *baton,
       char *path;
 
       /* <paths> */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "paths",
+      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, PATHS_STR,
                              NULL);
       
       for (hi = apr_hash_first (pool, changed_paths);
@@ -344,26 +396,26 @@ log_message_receiver_xml (void *baton,
               svn_stringbuf_t *escpath = svn_stringbuf_create ("", pool);
               svn_xml_escape_attr_cstring (&escpath,
                                            log_item->copyfrom_path, pool);
-              revstr = apr_psprintf (pool, "%ld", 
-                                     log_item->copyfrom_rev);
-              svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "path",
-                                     "action", action,
-                                     "copyfrom-path", escpath->data,
-                                     "copyfrom-rev", revstr, NULL);
+              revstr = APR_PSPRINTF2 (pool, "%ld", 
+                                      log_item->copyfrom_rev);
+              svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
+                                     PATH_STR, ACTION_STR, action,
+                                     COPYFROM_PATH_STR, escpath->data,
+                                     COPYFROM_REV_STR, revstr, NULL);
             }
           else
             {
               /* <path action="X"> */
-              svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "path",
-                                     "action", action, NULL);
+              svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
+                                     PATH_STR, ACTION_STR, action, NULL);
             }
           /* xxx</path> */
           svn_xml_escape_cdata_cstring (&sb, path, pool);
-          svn_xml_make_close_tag (&sb, pool, "path");
+          svn_xml_make_close_tag (&sb, pool, PATH_STR);
         }
 
       /* </paths> */
-      svn_xml_make_close_tag (&sb, pool, "paths");
+      svn_xml_make_close_tag (&sb, pool, PATHS_STR);
     }
 
   if (! lb->omit_log_message)
@@ -372,13 +424,13 @@ log_message_receiver_xml (void *baton,
         msg = "";
 
       /* <msg>xxx</msg> */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "msg", NULL);
+      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, MSG_STR, NULL);
       svn_xml_escape_cdata_cstring (&sb, msg, pool);
-      svn_xml_make_close_tag (&sb, pool, "msg");
+      svn_xml_make_close_tag (&sb, pool, MSG_STR);
     }
 
   /* </logentry> */
-  svn_xml_make_close_tag (&sb, pool, "logentry");
+  svn_xml_make_close_tag (&sb, pool, LOGENTRY_STR);
 
   SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
 
@@ -481,7 +533,7 @@ svn_cl__log (apr_getopt_t *os,
           svn_xml_make_header (&sb, pool);
           
           /* "<log>" */
-          svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "log", NULL);
+          svn_xml_make_open_tag (&sb, pool, svn_xml_normal, LOG_STR, NULL);
 
           SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
         }
@@ -502,7 +554,7 @@ svn_cl__log (apr_getopt_t *os,
           svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
 
           /* "</log>" */
-          svn_xml_make_close_tag (&sb, pool, "log");
+          svn_xml_make_close_tag (&sb, pool, LOG_STR);
 
           SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
         }

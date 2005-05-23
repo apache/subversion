@@ -39,18 +39,51 @@
 
 #include "svn_private_config.h"
 
+#define DOT_TEMP_STR \
+        "\x2e\x74\x6d\x70"
+        /* ".tmp" */
+
+#define OPAQUE_LOCK_TOKEN_STR \
+        "\x6f\x70\x61\x71\x75\x65\x6c\x6f\x63\x6b\x74\x6f\x6b\x65\x6e\x3a"
+        /* "opaquelocktoken:" */
+
 /* Names of special lock directories in the fs_fs filesystem. */
-#define LOCK_ROOT_DIR "locks"
+#define LOCK_ROOT_DIR \
+        "\x6c\x6f\x63\x6b\x73"
+        /* "locks" */
 
 /* Names of hash keys used to store a lock for writing to disk. */
-#define PATH_KEY "path"
-#define TOKEN_KEY "token"
-#define OWNER_KEY "owner"
-#define CREATION_DATE_KEY "creation_date"
-#define EXPIRATION_DATE_KEY "expiration_date"
-#define COMMENT_KEY "comment"
-#define IS_DAV_COMMENT_KEY "is_dav_comment"
-#define CHILDREN_KEY "children"
+#define PATH_KEY \
+        "\x70\x61\x74\x68"
+        /* "path" */
+
+#define TOKEN_KEY \
+        "\x74\x6f\x6b\x65\x6e"
+        /* "token" */
+
+#define OWNER_KEY \
+        "\x6f\x77\x6e\x65\x72"
+        /* "owner" */
+
+#define CREATION_DATE_KEY \
+        "\x63\x72\x65\x61\x74\x69\x6f\x6e\x5f\x64\x61\x74\x65"
+        /* "creation_date" */
+
+#define EXPIRATION_DATE_KEY \
+        "\x65\x78\x70\x69\x72\x61\x74\x69\x6f\x6e\x5f\x64\x61\x74\x65"
+        /* "expiration_date" */
+
+#define COMMENT_KEY \
+        "\x63\x6f\x6d\x6d\x65\x6e\x74"
+        /* "comment" */
+
+#define IS_DAV_COMMENT_KEY \
+        "\x69\x73\x5f\x64\x61\x76\x5f\x63\x6f\x6d\x6d\x65\x6e\x74"
+        /* "is_dav_comment" */
+
+#define CHILDREN_KEY \
+        "\x63\x68\x69\x6c\x64\x72\x65\x6e"
+        /* "children" */
 
 /* Number of characters from the head of a digest file name used to
    calculate a subdirectory in which to drop that file. */
@@ -181,7 +214,7 @@ write_digest_file (apr_hash_t *children,
                               fs, pool));
   SVN_ERR (ensure_dir_exists (svn_path_dirname (digest_path, pool), fs, pool));
   SVN_ERR (svn_io_open_unique_file 
-           (&fd, &tmp_path, digest_path, ".tmp", FALSE, pool));
+           (&fd, &tmp_path, digest_path, DOT_TEMP_STR, FALSE, pool));
 
   if (lock)
     {
@@ -199,7 +232,7 @@ write_digest_file (apr_hash_t *children,
       hash_store (hash, COMMENT_KEY, sizeof(COMMENT_KEY)-1,
                   lock->comment, APR_HASH_KEY_STRING, pool); 
       hash_store (hash, IS_DAV_COMMENT_KEY, sizeof(IS_DAV_COMMENT_KEY)-1,
-                  lock->is_dav_comment ? "1" : "0", 1, pool);
+                  lock->is_dav_comment ? SVN_UTF8_1_STR : SVN_UTF8_0_STR, 1, pool);
       hash_store (hash, CREATION_DATE_KEY, sizeof(CREATION_DATE_KEY)-1,
                   creation_date, APR_HASH_KEY_STRING, pool);
       hash_store (hash, EXPIRATION_DATE_KEY, sizeof(EXPIRATION_DATE_KEY)-1,
@@ -214,7 +247,7 @@ write_digest_file (apr_hash_t *children,
           apr_ssize_t klen;
           apr_hash_this (hi, &key, &klen, NULL);
           svn_stringbuf_appendbytes (children_list, key, klen);
-          svn_stringbuf_appendbytes (children_list, "\n", 1);
+          svn_stringbuf_appendbytes (children_list, SVN_UTF8_NEWLINE_STR, 1);
         }
       hash_store (hash, CHILDREN_KEY, sizeof(CHILDREN_KEY)-1,
                   children_list->data, children_list->len, pool);
@@ -307,7 +340,7 @@ read_digest_file (apr_hash_t **children_p,
 
       if (! ((val = hash_fetch (hash, IS_DAV_COMMENT_KEY, pool))))
         return svn_fs_fs__err_corrupt_lockfile (fs, path);
-      lock->is_dav_comment = (val[0] == '1') ? TRUE : FALSE;
+      lock->is_dav_comment = (val[0] == SVN_UTF8_1) ? TRUE : FALSE;
 
       if (! ((val = hash_fetch (hash, CREATION_DATE_KEY, pool))))
         return svn_fs_fs__err_corrupt_lockfile (fs, path);
@@ -325,7 +358,9 @@ read_digest_file (apr_hash_t **children_p,
   val = hash_fetch (hash, CHILDREN_KEY, pool);
   if (val && children_p)
     {
-      apr_array_header_t *kiddos = svn_cstring_split (val, "\n", FALSE, pool);
+      apr_array_header_t *kiddos = svn_cstring_split (val,
+                                                      SVN_UTF8_NEWLINE_STR,
+                                                      FALSE, pool);
       int i;
 
       for (i = 0; i < kiddos->nelts; i++)
@@ -395,7 +430,7 @@ set_lock (svn_fs_t *fs,
                                   digest_path, subpool));
 
       /* Prep for next iteration, or bail if we're done. */
-      if ((this_path->len == 1) && (this_path->data[0] == '/'))
+      if ((this_path->len == 1) && (this_path->data[0] == SVN_UTF8_FSLASH))
         break;
       svn_stringbuf_set (this_path, 
                          svn_path_dirname (this_path->data, subpool));
@@ -465,7 +500,7 @@ delete_lock (svn_fs_t *fs,
         }
 
       /* Prep for next iteration, or bail if we're done. */
-      if ((this_path->len == 1) && (this_path->data[0] == '/'))
+      if ((this_path->len == 1) && (this_path->data[0] == SVN_UTF8_FSLASH))
         break;
       svn_stringbuf_set (this_path, 
                          svn_path_dirname (this_path->data, subpool));
@@ -890,7 +925,10 @@ svn_fs_fs__generate_lock_token (const char **token,
 
   /* For now, we generate a URI that matches the DAV RFC.  We could
      change this to some other URI scheme someday, if we wish. */
-  *token = apr_pstrcat (pool, "opaquelocktoken:", uuid_str, NULL);
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_to_utf8(&uuid_str, uuid_str, pool));
+#endif
+  *token = apr_pstrcat (pool, OPAQUE_LOCK_TOKEN_STR, uuid_str, NULL);
   return SVN_NO_ERROR;
 }
 

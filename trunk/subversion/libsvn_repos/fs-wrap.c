@@ -25,6 +25,7 @@
 #include "svn_path.h"
 #include "svn_props.h"
 #include "svn_repos.h"
+#include "svn_utf.h"
 #include "repos.h"
 #include "svn_private_config.h"
 
@@ -278,11 +279,11 @@ svn_repos_fs_change_rev_prop2 (svn_repos_t *repos,
       SVN_ERR (validate_prop (name, pool));
       SVN_ERR (svn_fs_revision_prop (&old_value, repos->fs, rev, name, pool));
       if (! new_value)
-        action = 'D';
+        action = SVN_UTF8_D;
       else if (! old_value)
-        action = 'A';
+        action = SVN_UTF8_A;
       else
-        action = 'M';
+        action = SVN_UTF8_M;
       SVN_ERR (svn_repos__hooks_pre_revprop_change (repos, rev, author, name, 
                                                     new_value, action, pool));
       SVN_ERR (svn_fs_change_rev_prop (repos->fs, rev, name, new_value, pool));

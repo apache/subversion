@@ -26,6 +26,7 @@
 #include "svn_path.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
+#include "svn_utf.h"
 
 #include "dav_svn.h"
 
@@ -42,7 +43,11 @@ const char *dav_svn_get_txn(const dav_svn_repos *repos,
   apr_datum_t value;
   const char *txn_name = NULL;
 
+#if !APR_CHARSET_EBCDIC
   pathname = svn_path_join(repos->fs_path, ACTIVITY_DB, repos->pool);
+#else
+  pathname = svn_path_join_ebcdic(repos->fs_path, ACTIVITY_DB, repos->pool);
+#endif
   status = apr_dbm_open(&dbm, pathname, APR_DBM_READONLY, 
                         APR_OS_DEFAULT, repos->pool);
   if (status != APR_SUCCESS)
@@ -91,7 +96,11 @@ dav_error *dav_svn_delete_activity(const dav_svn_repos *repos,
      204.  For all other failures, return a 500. */
 
   /* Open the activities database. */
+#if !APR_CHARSET_EBCDIC
   pathname = svn_path_join(repos->fs_path, ACTIVITY_DB, repos->pool);
+#else
+  pathname = svn_path_join_ebcdic(repos->fs_path, ACTIVITY_DB, repos->pool);
+#endif
   status = apr_dbm_open(&dbm, pathname, APR_DBM_READWRITE, 
                         APR_OS_DEFAULT, repos->pool);
   if (status != APR_SUCCESS)
@@ -175,7 +184,11 @@ dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
   apr_datum_t key;
   apr_datum_t value;
 
+#if !APR_CHARSET_EBCDIC
   pathname = svn_path_join(repos->fs_path, ACTIVITY_DB, repos->pool);
+#else
+  pathname = svn_path_join_ebcdic(repos->fs_path, ACTIVITY_DB, repos->pool);
+#endif
   status = apr_dbm_open(&dbm, pathname, APR_DBM_RWCREATE, 
                         APR_OS_DEFAULT, repos->pool);
   if (status != APR_SUCCESS)
@@ -213,6 +226,7 @@ dav_error *dav_svn_create_activity(const dav_svn_repos *repos,
   svn_revnum_t rev;
   svn_fs_txn_t *txn;
   svn_error_t *serr;
+  const char *username_utf8 = repos->username;
 
   serr = svn_fs_youngest_rev(&rev, repos->fs, pool);
   if (serr != NULL)
@@ -221,9 +235,16 @@ dav_error *dav_svn_create_activity(const dav_svn_repos *repos,
                                  "could not determine youngest revision", 
                                  repos->pool);
     }
-
+#if APR_CHARSET_EBCDIC
+  if (repos  &&
+      svn_utf_cstring_to_netccsid(&username_utf8, repos->username, repos->pool))
+    return dav_new_error(repos->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(repos->pool,
+                                      "Error converting string '%s'",
+                                      repos->username));
+#endif
   serr = svn_repos_fs_begin_txn_for_commit(&txn, repos->repos, rev,
-                                           repos->username, NULL, 
+                                           username_utf8, NULL,
                                            repos->pool);
   if (serr != NULL)
     {

@@ -53,7 +53,7 @@ extern "C" {
  * @since New in 1.1.
  *
  * The conventional terminator for hash dumps. */
-#define SVN_HASH_TERMINATOR "END"
+#define SVN_HASH_TERMINATOR "\x45\x4E\x44" /* "END" */
 
 /**
  * @since New in 1.1.

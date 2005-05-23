@@ -31,6 +31,7 @@
 #include "svn_dav.h"
 #include "svn_md5.h"
 #include "svn_props.h"
+#include "svn_utf.h"
 
 
 /*
@@ -172,6 +173,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
 {
   const char *value = NULL;
   const char *s;
+  const char *repos_path_utf8;
   apr_pool_t *response_pool = resource->pool;
   apr_pool_t *p = resource->info->pool;
   const dav_liveprop_spec *info;
@@ -266,9 +268,14 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
           {
             /* Get the CR field out of the node's skel.  Notice that the
                root object might be an ID root -or- a revision root. */
+            repos_path_utf8 = resource->info->repos_path;
+#if APR_CHARSET_EBCDIC
+            if(svn_utf_cstring_to_netccsid(&repos_path_utf8, repos_path_utf8, p))
+              repos_path_utf8 = resource->info->repos_path;
+#endif
             serr = svn_fs_node_created_rev(&committed_rev,
                                            resource->info->root.root,
-                                           resource->info->repos_path, p);
+                                           repos_path_utf8, p);
             if (serr != NULL)
               {
                 /* ### what to do? */
@@ -287,6 +294,15 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
                                         committed_rev,
                                         SVN_PROP_REVISION_AUTHOR,
                                         p);
+#if APR_CHARSET_EBCDIC
+        if (last_author)
+          {
+            const char *author_str;
+            if( !svn_utf_cstring_from_netccsid(&author_str, last_author->data,
+                                              p))
+              last_author->data = author_str;
+          }
+#endif
         if (serr)
           {
             /* ### what to do? */
@@ -315,8 +331,13 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
         if (resource->collection || resource->baselined)
           return DAV_PROP_INSERT_NOTSUPP;
 
+        repos_path_utf8 = resource->info->repos_path;
+#if APR_CHARSET_EBCDIC
+          if(svn_utf_cstring_to_netccsid(&repos_path_utf8, repos_path_utf8, p))
+            repos_path_utf8 = resource->info->repos_path;
+#endif
         serr = svn_fs_file_length(&len, resource->info->root.root,
-                                  resource->info->repos_path, p);
+                                  repos_path_utf8, p);
         if (serr != NULL)
           {
             svn_error_clear(serr);
@@ -345,6 +366,11 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
             return DAV_PROP_INSERT_NOTSUPP;
           }
 
+        repos_path_utf8 = resource->info->repos_path;
+#if APR_CHARSET_EBCDIC
+        if(svn_utf_cstring_to_netccsid(&repos_path_utf8, repos_path_utf8, p))
+          repos_path_utf8 = resource->info->repos_path;
+#endif
         if (resource->collection) /* defaults for directories */
           {
             if (resource->info->repos->xslt_uri)
@@ -490,12 +516,16 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
       else
         {
           svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
-          
+          repos_path_utf8 = resource->info->repos_path;
+#if APR_CHARSET_EBCDIC
+          if(svn_utf_cstring_to_netccsid(&repos_path_utf8, repos_path_utf8, p))
+            repos_path_utf8 = resource->info->repos_path;
+#endif
           /* Get the CR field out of the node's skel.  Notice that the
              root object might be an ID root -or- a revision root. */
           serr = svn_fs_node_created_rev(&committed_rev,
                                          resource->info->root.root,
-                                         resource->info->repos_path, p);
+                                         repos_path_utf8, p);
           if (serr != NULL)
             {
               /* ### what to do? */
@@ -530,10 +560,17 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
               || resource->type == DAV_RESOURCE_TYPE_VERSION))
         {
           unsigned char digest[APR_MD5_DIGESTSIZE];
-
+#if APR_CHARSET_EBCDIC
+          const char *value_native;
+#endif
+          repos_path_utf8 = resource->info->repos_path;
+#if APR_CHARSET_EBCDIC
+          if(svn_utf_cstring_to_netccsid(&repos_path_utf8, repos_path_utf8, p))
+            repos_path_utf8 = resource->info->repos_path;
+#endif
           serr = svn_fs_file_md5_checksum(digest,
                                           resource->info->root.root,
-                                          resource->info->repos_path, p);
+                                          repos_path_utf8, p);
           if (serr != NULL)
             {
               /* ### what to do? */
@@ -543,7 +580,10 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
             }
 
           value = svn_md5_digest_to_cstring (digest, p);
-
+#if APR_CHARSET_EBCDIC
+          if(!svn_utf_cstring_from_utf8(&value_native, value, p))
+            value = value_native;
+#endif
           if (! value)
             return DAV_PROP_INSERT_NOTSUPP;
         }
@@ -554,6 +594,10 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
 
     case SVN_PROPID_repository_uuid:
       serr = svn_fs_get_uuid(resource->info->repos->fs, &value, p);
+#if APR_CHARSET_EBCDIC
+      if (!serr)
+        serr = svn_utf_cstring_from_utf8(&value, value, p);
+#endif
       if (serr != NULL)
         {
           /* ### what to do? */
@@ -662,6 +706,35 @@ void dav_svn_gather_propsets(apr_array_header_t *uris)
 #endif
 }
 
+int dav_do_find_liveprop2(const char *ns_uri, const char *name,
+                          const dav_liveprop_group *group,
+                          const dav_hooks_liveprop **hooks)
+{
+    const char * const *uris = group->namespace_uris;
+    const dav_liveprop_spec *scan;
+    int ns;
+
+    /* first: locate the namespace in the namespace table */
+    for (ns = 0; uris[ns] != NULL; ++ns)
+        if (strcmp(ns_uri, uris[ns]) == 0)
+            break;
+    if (uris[ns] == NULL) {
+    /* not our property (the namespace matched none of ours) */
+    return 0;
+    }
+
+    /* second: look for the property in the liveprop specs */
+    for (scan = group->specs; scan->name != NULL; ++scan)
+        if (ns == scan->ns && strcmp(name, scan->name) == 0) {
+            *hooks = group->hooks;
+            return scan->propid;
+        }
+
+    /* not our property (same namespace, but no matching prop name) */
+    return 0;
+}
+
+
 int dav_svn_find_liveprop(const dav_resource *resource,
                           const char *ns_uri, const char *name,
                           const dav_hooks_liveprop **hooks)
@@ -740,9 +813,14 @@ int dav_svn_get_last_modified_time (const char **datestring,
            || resource->type == DAV_RESOURCE_TYPE_WORKING
            || resource->type == DAV_RESOURCE_TYPE_VERSION)
     {
-      serr = svn_fs_node_created_rev(&committed_rev,
-                                     resource->info->root.root,
-                                     resource->info->repos_path, pool);
+      const char *repos_path_utf8 = resource->info->repos_path;  
+#if APR_CHARSET_EBCDIC
+      serr = svn_utf_cstring_to_netccsid(&repos_path_utf8, repos_path_utf8, pool);
+      if (!serr)
+#endif
+        serr = svn_fs_node_created_rev(&committed_rev,
+                                       resource->info->root.root,
+                                       repos_path_utf8, pool);
       if (serr != NULL)
         {
           svn_error_clear(serr);
@@ -786,6 +864,10 @@ int dav_svn_get_last_modified_time (const char **datestring,
   if (format == dav_svn_time_format_iso8601)
     {
       *datestring = committed_date->data;
+#if APR_CHARSET_EBCDIC
+      if( svn_utf_cstring_from_netccsid(datestring, committed_date->data, pool))
+        *datestring = committed_date->data;
+#endif
     }
   else if (format == dav_svn_time_format_rfc1123)
     {

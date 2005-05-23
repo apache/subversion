@@ -26,6 +26,9 @@
 
 #include "svn_cmdline.h"
 #include "svn_error.h"
+#if APR_CHARSET_EBCDIC
+#include "svn_ebcdic.h"
+#endif
 
 #ifdef SVN_DEBUG
 /* file_line for the non-debug case. */
@@ -138,7 +141,13 @@ svn_error_createf (apr_status_t apr_err,
   err = make_error_internal (apr_err, child);
 
   va_start (ap, fmt);
+#if !APR_CHARSET_EBCDIC
   err->message = apr_pvsprintf (err->pool, fmt, ap);
+#else
+  /* On ebcdic platforms we assume only %s and %c variable args are utf8
+   * encoded. */
+  err->message = svn_ebcdic_pvsprintf(err->pool, fmt, ap);
+#endif
   va_end (ap);
 
   return err;
@@ -161,14 +170,26 @@ svn_error_wrap_apr (apr_status_t status,
     {
       /* Grab the APR error message. */
       apr_strerror (status, errbuf, sizeof (errbuf));
+#if !APR_CHARSET_EBCDIC
       utf8_err = svn_utf_cstring_to_utf8 (&msg_apr, errbuf, err->pool);
+#else
+      utf8_err = NULL;
+      msg_apr = apr_pstrdup(err->pool, errbuf);
+#endif
       if (utf8_err)
         msg_apr = NULL;
       svn_error_clear (utf8_err);
 
       /* Append it to the formatted message. */
       va_start (ap, fmt);
+#if !APR_CHARSET_EBCDIC
       msg = apr_pvsprintf (err->pool, fmt, ap);
+#else
+     /* On ebcdic platforms we assume only %s and %c variable args are utf8
+      * encoded, svn_ebcdic_pvsprintf handles these and returns an ebcdic
+      * string. */
+     msg = svn_ebcdic_pvsprintf(err->pool, fmt, ap);
+#endif
       va_end (ap);
       err->message = apr_psprintf (err->pool, "%s%s%s", msg,
                                    (msg_apr) ? ": " : "",

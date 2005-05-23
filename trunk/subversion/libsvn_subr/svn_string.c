@@ -24,6 +24,7 @@
 #include <apr_lib.h>     /* for apr_isspace() */
 #include <apr_md5.h>
 #include <apr_fnmatch.h>
+#include "svn_utf.h"
 #include "svn_string.h"  /* loads "svn_types.h" and <apr_pools.h> */
 
 
@@ -79,7 +80,7 @@ string_first_non_whitespace (const char *str, apr_size_t len)
 
   for (i = 0; i < len; i++)
     {
-      if (! apr_isspace (str[i]))
+      if (! APR_IS_ASCII_SPACE (str[i]))
         return i;
     }
 
@@ -442,7 +443,7 @@ svn_stringbuf_strip_whitespace (svn_stringbuf_t *str)
   str->blocksize -= offset;
 
   /* Now that we've trimmed the front, trim the end, wasting more RAM. */
-  while ((str->len > 0) && apr_isspace (str->data[str->len - 1]))
+  while ((str->len > 0) && APR_IS_ASCII_SPACE (str->data[str->len - 1]))
     str->len--;
   str->data[str->len] = '\0';
 }
@@ -484,12 +485,12 @@ svn_cstring_split_append (apr_array_header_t *array,
     {
       if (chop_whitespace)
         {
-          while (apr_isspace (*p))
+          while (APR_IS_ASCII_SPACE (*p))
             p++;
           
           {
             char *e = p + (strlen (p) - 1);
-            while ((e >= p) && (apr_isspace (*e)))
+            while ((e >= p) && (APR_IS_ASCII_SPACE (*e)))
               e--;
             *(++e) = '\0';
           }
@@ -540,16 +541,16 @@ int svn_cstring_count_newlines (const char *msg)
 
   for (p = msg; *p; p++)
     {
-      if (*p == '\n')
+      if (*p == SVN_UTF8_NEWLINE)
         {
           count++;
-          if (*(p + 1) == '\r')
+          if (*(p + 1) == SVN_UTF8_CR)
             p++;
         }
-      else if (*p == '\r')
+      else if (*p == SVN_UTF8_CR)
         {
           count++;
-          if (*(p + 1) == '\n')
+          if (*(p + 1) == SVN_UTF8_NEWLINE)
             p++;
         }
     }

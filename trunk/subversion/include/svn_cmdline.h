@@ -86,6 +86,18 @@ svn_error_t *svn_cmdline_printf (apr_pool_t *pool,
                                  ...)
        __attribute__((format(printf, 2, 3)));
 
+#if APR_CHARSET_EBCDIC
+/** Write to stdout, using a printf-like format string @a fmt, passed
+ * through svn_ebcdic_pvsprintf2().  All string arguments are in UTF-8; Unlike
+ * svn_cmdline_printf the output is not converted to the output encoding but
+ * left in utf-8.  Use @a pool for temporary allocation.
+ */
+svn_error_t *svn_cmdline_printf_ebcdic (apr_pool_t *pool,
+                                        const char *fmt,
+                                        ...)
+       __attribute__((format(printf, 2, 3)));
+#endif
+
 /** Write to the stdio @a stream, using a printf-like format string @a fmt,
  * passed through apr_pvsprintf().  All string arguments are in UTF-8;
  * the output is converted to the output encoding.  Use @a pool for
@@ -98,6 +110,20 @@ svn_error_t *svn_cmdline_fprintf (FILE *stream,
                                   const char *fmt,
                                   ...)
        __attribute__((format(printf, 3, 4)));
+
+/** Write to the stdio @a stream, using a printf-like format string @a fmt,
+ * passed through svn_ebcdic_pvsprintf2().  All string arguments are in UTF-8;
+ * Unlike svn_cmdline_fprintf the output is not converted to the output
+ * encoding but left in utf-8.  Use @a pool for temporary allocation.
+ */
+
+#if APR_CHARSET_EBCDIC
+svn_error_t *svn_cmdline_fprintf_ebcdic (FILE *stream,
+                                         apr_pool_t *pool,
+                                         const char *fmt,
+                                         ...)
+       __attribute__((format(printf, 3, 4)));
+#endif
 
 /** Output the @a string to the stdio @a stream, converting from UTF-8
  * to the output encoding.  Use @a pool for temporary allocation.

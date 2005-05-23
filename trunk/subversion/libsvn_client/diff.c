@@ -39,16 +39,23 @@
 #include "svn_props.h"
 #include "client.h"
 #include <assert.h>
+#include "svn_ebcdic.h"
 
 #include "svn_private_config.h"
 
 /*
  * Constant separator strings
  */
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 static const char equal_string[] = 
   "===================================================================";
 static const char under_string[] =
   "___________________________________________________________________";
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
 
 /*-----------------------------------------------------------------*/
@@ -66,11 +73,17 @@ file_printf_from_utf8 (apr_file_t *fptr, const char *encoding,
   const char *buf, *buf_apr;
 
   va_start (ap, format);
-  buf = apr_pvsprintf (apr_file_pool_get (fptr), format, ap); 
+  buf = APR_PVSPRINTF2 (apr_file_pool_get (fptr), format, ap);
   va_end (ap);
 
+#if !APR_CHARSET_EBCDIC
+  /* On ebcdic platforms we want utf-8 output so no conversion is
+   * performed */
   SVN_ERR (svn_utf_cstring_from_utf8_ex (&buf_apr, buf, encoding, NULL,
                                          apr_file_pool_get (fptr)));
+#else
+  buf_apr = buf;
+#endif
 
   return svn_io_file_write_full (fptr, buf_apr, strlen (buf_apr), 
                                  NULL, apr_file_pool_get (fptr));
@@ -279,9 +292,9 @@ diff_label (const char *path,
 {
   const char *label;
   if (revnum != SVN_INVALID_REVNUM)
-    label = apr_psprintf (pool, _("%s\t(revision %ld)"), path, revnum);
+    label = APR_PSPRINTF2 (pool, _("%s\t(revision %ld)"), path, revnum);
   else
-    label = apr_psprintf (pool, _("%s\t(working copy)"), path);
+    label = APR_PSPRINTF2 (pool, _("%s\t(working copy)"), path);
 
   return label;
 }
@@ -419,9 +432,11 @@ diff_content_changed (const char *path,
   if (! diff_cmd_baton->force_binary && (mt1_binary || mt2_binary))
     {
       /* Print out the diff header. */
+      char *out = APR_PSPRINTF2(subpool, "Index: %s" APR_EOL_STR "%s"
+                                APR_EOL_STR, path, equal_string);
+
       SVN_ERR (svn_stream_printf_from_utf8
-               (os, diff_cmd_baton->header_encoding, subpool,
-                "Index: %s" APR_EOL_STR "%s" APR_EOL_STR, path, equal_string));
+               (os, diff_cmd_baton->header_encoding, subpool, out));
 
       SVN_ERR (svn_stream_printf_from_utf8
                (os, diff_cmd_baton->header_encoding, subpool,
@@ -469,9 +484,12 @@ diff_content_changed (const char *path,
   if (diff_cmd)
     {
       /* Print out the diff header. */
+      char *out = APR_PSPRINTF2(subpool, "Index: %s" APR_EOL_STR "%s"
+                                APR_EOL_STR, path, equal_string);
+
       SVN_ERR (svn_stream_printf_from_utf8
-               (os, diff_cmd_baton->header_encoding, subpool,
-                "Index: %s" APR_EOL_STR "%s" APR_EOL_STR, path, equal_string));
+               (os, diff_cmd_baton->header_encoding, subpool, out));
+
       /* Close the stream (flush) */
       SVN_ERR (svn_stream_close (os));
 
@@ -507,10 +525,11 @@ diff_content_changed (const char *path,
       if (svn_diff_contains_diffs (diff) || diff_cmd_baton->force_empty)
         {
           /* Print out the diff header. */
+          char *out = APR_PSPRINTF2(subpool, "Index: %s" APR_EOL_STR "%s"
+                                    APR_EOL_STR, path, equal_string);
+
           SVN_ERR (svn_stream_printf_from_utf8
-                   (os, diff_cmd_baton->header_encoding, subpool,
-                    "Index: %s" APR_EOL_STR "%s" APR_EOL_STR,
-                    path, equal_string));
+                   (os, diff_cmd_baton->header_encoding, subpool, out));
 
           /* Output the actual diff */
           SVN_ERR (svn_diff_file_output_unified2
@@ -2329,7 +2348,13 @@ svn_client_diff2 (const apr_array_header_t *options,
 {
   return svn_client_diff3 (options, path1, revision1, path2, revision2,
                            recurse, ignore_ancestry, no_diff_deleted,
-                           ignore_content_type, APR_LOCALE_CHARSET,
+                           ignore_content_type,
+#if !AS400
+                           APR_LOCALE_CHARSET,
+#else
+                           /* APR_LOCALE_CHARSET is an int on iSeries */
+                           APR_PSPRINTF2 (pool, "%i", APR_LOCALE_CHARSET),
+#endif
                            outfile, errfile, ctx, pool);
 }
 
@@ -2422,7 +2447,13 @@ svn_client_diff_peg2 (const apr_array_header_t *options,
   return svn_client_diff_peg3 (options, path, peg_revision, start_revision,
                                end_revision, recurse, ignore_ancestry,
                                no_diff_deleted, ignore_content_type,
-                               APR_LOCALE_CHARSET, outfile, errfile,
+#if !AS400
+                               APR_LOCALE_CHARSET,
+#else
+                               /* APR_LOCALE_CHARSET is an int on iSeries */
+                               APR_PSPRINTF2 (pool, "%i", APR_LOCALE_CHARSET),
+#endif
+                               outfile, errfile,
                                ctx, pool);
 }
 

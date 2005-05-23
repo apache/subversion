@@ -34,6 +34,7 @@
 #include "svn_utf.h"
 #include "svn_pools.h"
 #include "diff.h"
+#include "svn_ebcdic.h"
 #include "svn_private_config.h"
 
 
@@ -284,7 +285,7 @@ svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
       /* XXX: '\n' doesn't really cut it.  We need to be able to detect
        * XXX: '\n', '\r' and '\r\n'.
        */
-      eol = memchr(curp, '\n', endp - curp);
+      eol = memchr(curp, SVN_UTF8_NEWLINE, endp - curp);
       if (eol)
         {
           eol++;
@@ -611,7 +612,7 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
           /* XXX: '\n' doesn't really cut it.  We need to be able to detect
            * XXX: '\n', '\r' and '\r\n'.
            */
-          eol = memchr(curp, '\n', length);
+          eol = memchr(curp, SVN_UTF8_NEWLINE, length);
 
           if (eol != NULL)
             {
@@ -660,12 +661,19 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
       if (bytes_processed && (type != svn_diff__file_output_unified_skip))
         {
           const char *out_str;
+#if !APR_CHARSET_EBCDIC
           SVN_ERR(svn_utf_cstring_from_utf8_ex
                   (&out_str,
                    apr_psprintf (baton->pool,
                                  _("%s\\ No newline at end of file%s"),
                                  APR_EOL_STR, APR_EOL_STR),
                    baton->header_encoding, NULL, baton->pool));
+#else
+           /* On ebcdic platforms we (almost) always output utf-8 */
+          out_str = APR_PSPRINTF2 (baton->pool,
+                                   _("%s\\ No newline at end of file%s"),
+                                   SVN_UTF8_NEWLINE_STR, SVN_UTF8_NEWLINE_STR);
+#endif
           svn_stringbuf_appendcstr(baton->hunk, out_str);
         }
 
@@ -876,12 +884,20 @@ svn_diff_file_output_unified2(svn_stream_t *output_stream,
       baton.path[1] = modified_path;
       baton.hunk = svn_stringbuf_create("", pool);
 
-      SVN_ERR(svn_utf_cstring_from_utf8_ex(&baton.context_str, " ",
+#if !APR_CHARSET_EBCDIC
+      SVN_ERR(svn_utf_cstring_from_utf8_ex(&baton.context_str,
+                                           SVN_UTF8_SPACE_STR,
                                            header_encoding, NULL, pool));
       SVN_ERR(svn_utf_cstring_from_utf8_ex(&baton.delete_str, "-",
                                            header_encoding, NULL, pool));
       SVN_ERR(svn_utf_cstring_from_utf8_ex(&baton.insert_str, "+",
                                            header_encoding, NULL, pool));
+#else
+      /* On ebcdic platforms we output in utf-8. */
+      baton.context_str = SVN_UTF8_SPACE_STR;
+      baton.delete_str = SVN_UTF8_MINUS_STR;
+      baton.insert_str = SVN_UTF8_PLUS_STR;
+#endif
       
       for (i = 0; i < 2; i++)
         {
@@ -931,7 +947,15 @@ svn_diff_file_output_unified(svn_stream_t *output_stream,
   return svn_diff_file_output_unified2(output_stream, diff,
                                        original_path, modified_path,
                                        original_header, modified_header,
-                                       APR_LOCALE_CHARSET, pool);
+#if !AS400
+                                       APR_LOCALE_CHARSET,
+#else
+                                       /* APR_LOCALE_CHARSET is an
+                                        * int on iSeries */
+                                       APR_PSPRINTF2 (pool, "%i", 
+                                                      APR_LOCALE_CHARSET),
+#endif
+                                       pool);
 }
 
 
@@ -992,7 +1016,7 @@ svn_diff3__file_output_line(svn_diff3__file_output_baton_t *baton,
   /* XXX: '\n' doesn't really cut it.  We need to be able to detect
    * XXX: '\n', '\r' and '\r\n'.
    */
-  eol = memchr(curp, '\n', endp - curp);
+  eol = memchr(curp, SVN_UTF8_NEWLINE, endp - curp);
   if (!eol)
     eol = endp;
   else

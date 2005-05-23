@@ -85,6 +85,9 @@ const char *
 svn_time_to_cstring (apr_time_t when, apr_pool_t *pool)
 {
   const char *t_cstr;
+#if APR_CHARSET_EBCDIC
+  const char *t_cstr_utf8;
+#endif
   apr_time_exp_t exploded_time;
 
   /* We toss apr_status_t return value here -- for one thing, caller
@@ -129,6 +132,11 @@ svn_time_to_cstring (apr_time_t when, apr_pool_t *pool)
                          exploded_time.tm_gmtoff);
   */
 
+#if APR_CHARSET_EBCDIC
+  /* On ebcdic systems the time string must be converted to utf8 */
+  if (!svn_utf_cstring_to_utf8 (&t_cstr_utf8, t_cstr, pool))
+    t_cstr = t_cstr_utf8;
+#endif
   return t_cstr;
 }
 
@@ -153,6 +161,9 @@ svn_time_from_cstring (apr_time_t *when, const char *data, apr_pool_t *pool)
   apr_status_t apr_err;
   char wday[4], month[4];
   char *c;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8 (&data, data, pool));
+#endif
 
   /* Open-code parsing of the new timestamp format, as this
      is a hot path for reading the entries file.  This format looks
@@ -229,6 +240,9 @@ svn_time_to_human_cstring (apr_time_t when, apr_pool_t *pool)
   apr_size_t len, retlen;
   apr_status_t ret;
   char *datestr, *curptr, human_datestr[SVN_TIME__MAX_LENGTH];
+#if APR_CHARSET_EBCDIC
+  char *datestr_utf8;
+#endif
 
   /* Get the time into parts */
   apr_time_exp_lt (&exploded_time, when);
@@ -248,6 +262,11 @@ svn_time_to_human_cstring (apr_time_t when, apr_pool_t *pool)
                       exploded_time.tm_sec,
                       exploded_time.tm_gmtoff / (60 * 60),
                       (abs (exploded_time.tm_gmtoff) / 60) % 60);
+#if APR_CHARSET_EBCDIC
+  /* On ebcdic systems the time string must be converted to utf8 */
+  if (!svn_utf_cstring_to_utf8 (&datestr_utf8, datestr, pool))
+    datestr = datestr_utf8;
+#endif
 
   /* If we overfilled the buffer, just return what we got. */
   if (len >= SVN_TIME__MAX_LENGTH)

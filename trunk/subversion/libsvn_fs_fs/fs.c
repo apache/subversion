@@ -28,6 +28,7 @@
 #include "svn_fs.h"
 #include "svn_delta.h"
 #include "svn_version.h"
+#include "svn_utf.h"
 #include "fs.h"
 #include "err.h"
 #include "dag.h"
@@ -278,7 +279,7 @@ svn_fs_fs__canonicalize_abspath (const char *path, apr_pool_t *pool)
   
   /* Empty PATH?  That's just "/". */
   if (! *path)
-    return apr_pstrdup (pool, "/");
+    return apr_pstrdup (pool, SVN_UTF8_FSLASH_STR);
 
   /* Now, the fun begins.  Alloc enough room to hold PATH with an
      added leading '/'. */
@@ -286,14 +287,14 @@ svn_fs_fs__canonicalize_abspath (const char *path, apr_pool_t *pool)
   newpath = apr_pcalloc (pool, path_len + 2);
 
   /* No leading slash?  Fix that. */
-  if (*path != '/')
+  if (*path != SVN_UTF8_FSLASH)
     {
-      newpath[newpath_i++] = '/';
+      newpath[newpath_i++] = SVN_UTF8_FSLASH;
     }
   
   for (path_i = 0; path_i < path_len; path_i++)
     {
-      if (path[path_i] == '/')
+      if (path[path_i] == SVN_UTF8_FSLASH)
         {
           /* The current character is a '/'.  If we are eating up
              extra '/' characters, skip this character.  Else, note
@@ -316,7 +317,7 @@ svn_fs_fs__canonicalize_abspath (const char *path, apr_pool_t *pool)
   
   /* Did we leave a '/' attached to the end of NEWPATH (other than in
      the root directory case)? */
-  if ((newpath[newpath_i - 1] == '/') && (newpath_i > 1))
+  if ((newpath[newpath_i - 1] == SVN_UTF8_FSLASH) && (newpath_i > 1))
     newpath[newpath_i - 1] = '\0';
 
   return newpath;

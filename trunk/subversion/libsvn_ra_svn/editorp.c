@@ -34,6 +34,8 @@
 #include "svn_ra_svn.h"
 #include "svn_pools.h"
 #include "svn_private_config.h"
+#include "svn_utf.h"
+#include "svn_ebcdic.h"
 
 #include "ra_svn.h"
 
@@ -90,12 +92,76 @@ typedef struct {
   apr_pool_t *pool;
 } ra_svn_token_entry_t;
 
+#define ABORT_EDIT_STR \
+       "\x61\x62\x6f\x72\x74\x2d\x65\x64\x69\x74"
+       /* "abort-edit" */
+
+#define ADD_DIR_STR \
+        "\x61\x64\x64\x2d\x64\x69\x72"
+        /* "add-dir" */
+
+#define ADD_FILE_STR \
+        "\x61\x64\x64\x2d\x66\x69\x6c\x65"
+        /* "add-file" */
+
+#define APPLY_TEXTDELTA_STR \
+        "\x61\x70\x70\x6c\x79\x2d\x74\x65\x78\x74\x64\x65\x6c\x74\x61"
+        /* "apply-textdelta" */
+
+#define CHANGE_DIR_PROP_STR \
+        "\x63\x68\x61\x6e\x67\x65\x2d\x64\x69\x72\x2d\x70\x72\x6f\x70"
+        /* "change-dir-prop" */
+
+#define CHANGE_FILE_PROP_STR \
+        "\x63\x68\x61\x6e\x67\x65\x2d\x66\x69\x6c\x65\x2d\x70\x72\x6f\x70"
+        /* "change-file-prop" */
+
+#define CLOSE_DIR_STR \
+        "\x63\x6c\x6f\x73\x65\x2d\x64\x69\x72"
+        /* "close-dir" */
+
+#define CLOSE_EDIT_STR \
+        "\x63\x6c\x6f\x73\x65\x2d\x65\x64\x69\x74"
+        /* "close-edit" */
+
+#define CLOSE_FILE_STR \
+        "\x63\x6c\x6f\x73\x65\x2d\x66\x69\x6c\x65"
+        /* "close-file" */
+
+#define DEL_ENTRY_STR \
+        "\x64\x65\x6c\x65\x74\x65\x2d\x65\x6e\x74\x72\x79"
+        /* "delete-entry" */
+
+#define OPEN_DIR_STR \
+        "\x6f\x70\x65\x6e\x2d\x64\x69\x72"
+        /* "open-dir" */
+
+#define OPEN_FILE_STR \
+        "\x6f\x70\x65\x6e\x2d\x66\x69\x6c\x65"
+        /* "open-file" */
+
+#define OPEN_ROOT_STR \
+        "\x6f\x70\x65\x6e\x2d\x72\x6f\x6f\x74"
+        /* "open-root" */
+
+#define TARGET_REV_STR \
+        "\x74\x61\x72\x67\x65\x74\x2d\x72\x65\x76"
+        /* "target-rev" */
+
+#define TEXTDELTA_CNUNK_STR \
+        "\x74\x65\x78\x74\x64\x65\x6c\x74\x61\x2d\x63\x68\x75\x6e\x6b"
+        /* "textdelta-chunk" */
+
+#define TEXTDELTA_END_STR \
+        "\x74\x65\x78\x74\x64\x65\x6c\x74\x61\x2d\x65\x6e\x64"
+        /* "textdelta-end" */
+
 /* --- CONSUMING AN EDITOR BY PASSING EDIT OPERATIONS OVER THE NET --- */
 
 static const char *make_token(char type, ra_svn_edit_baton_t *eb,
                               apr_pool_t *pool)
 {
-  return apr_psprintf(pool, "%c%d", type, eb->next_token++);
+  return APR_PSPRINTF2(pool, "%c%d", type, eb->next_token++);
 }
 
 static ra_svn_baton_t *ra_svn_make_baton(svn_ra_svn_conn_t *conn,
@@ -121,7 +187,7 @@ static svn_error_t *check_for_error(ra_svn_edit_baton_t *eb, apr_pool_t *pool)
   if (svn_ra_svn__input_waiting(eb->conn, pool))
     {
       eb->got_status = TRUE;
-      SVN_ERR(svn_ra_svn_write_cmd(eb->conn, pool, "abort-edit", ""));
+      SVN_ERR(svn_ra_svn_write_cmd(eb->conn, pool, ABORT_EDIT_STR, ""));
       SVN_ERR(svn_ra_svn_read_cmd_response(eb->conn, pool, ""));
       /* We shouldn't get here if the consumer is doing its job. */
       return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -136,7 +202,7 @@ static svn_error_t *ra_svn_target_rev(void *edit_baton, svn_revnum_t rev,
   ra_svn_edit_baton_t *eb = edit_baton;
 
   SVN_ERR(check_for_error(eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd(eb->conn, pool, "target-rev", "r", rev));
+  SVN_ERR(svn_ra_svn_write_cmd(eb->conn, pool, TARGET_REV_STR, "r", rev));
   return SVN_NO_ERROR;
 }
 
@@ -144,10 +210,10 @@ static svn_error_t *ra_svn_open_root(void *edit_baton, svn_revnum_t rev,
                                      apr_pool_t *pool, void **root_baton)
 {
   ra_svn_edit_baton_t *eb = edit_baton;
-  const char *token = make_token('d', eb, pool);
+  const char *token = make_token(SVN_UTF8_d, eb, pool);
 
   SVN_ERR(check_for_error(eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd(eb->conn, pool, "open-root", "(?r)c", rev,
+  SVN_ERR(svn_ra_svn_write_cmd(eb->conn, pool, OPEN_ROOT_STR, "(?r)c", rev,
                                token));
   *root_baton = ra_svn_make_baton(eb->conn, pool, eb, token);
   return SVN_NO_ERROR;
@@ -159,7 +225,7 @@ static svn_error_t *ra_svn_delete_entry(const char *path, svn_revnum_t rev,
   ra_svn_baton_t *b = parent_baton;
 
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "delete-entry", "c(?r)c",
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, DEL_ENTRY_STR, "c(?r)c",
                                path, rev, b->token));
   return SVN_NO_ERROR;
 }
@@ -170,12 +236,12 @@ static svn_error_t *ra_svn_add_dir(const char *path, void *parent_baton,
                                    apr_pool_t *pool, void **child_baton)
 {
   ra_svn_baton_t *b = parent_baton;
-  const char *token = make_token('d', b->eb, pool);
+  const char *token = make_token(SVN_UTF8_d, b->eb, pool);
 
   assert((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
          || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "add-dir", "ccc(?cr)", path,
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, ADD_DIR_STR, "ccc(?cr)", path,
                                b->token, token, copy_path, copy_rev));
   *child_baton = ra_svn_make_baton(b->conn, pool, b->eb, token);
   return SVN_NO_ERROR;
@@ -186,10 +252,10 @@ static svn_error_t *ra_svn_open_dir(const char *path, void *parent_baton,
                                     void **child_baton)
 {
   ra_svn_baton_t *b = parent_baton;
-  const char *token = make_token('d', b->eb, pool);
+  const char *token = make_token(SVN_UTF8_d, b->eb, pool);
 
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "open-dir", "ccc(?r)",
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, OPEN_DIR_STR, "ccc(?r)",
                                path, b->token, token, rev));
   *child_baton = ra_svn_make_baton(b->conn, pool, b->eb, token);
   return SVN_NO_ERROR;
@@ -202,7 +268,7 @@ static svn_error_t *ra_svn_change_dir_prop(void *dir_baton, const char *name,
   ra_svn_baton_t *b = dir_baton;
 
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "change-dir-prop", "cc(?s)",
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, CHANGE_DIR_PROP_STR, "cc(?s)",
                                b->token, name, value));
   return SVN_NO_ERROR;
 }
@@ -212,7 +278,7 @@ static svn_error_t *ra_svn_close_dir(void *dir_baton, apr_pool_t *pool)
   ra_svn_baton_t *b = dir_baton;
 
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "close-dir", "c", b->token));
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, CLOSE_DIR_STR, "c", b->token));
   return SVN_NO_ERROR;
 }
 
@@ -224,12 +290,12 @@ static svn_error_t *ra_svn_add_file(const char *path,
                                     void **file_baton)
 {
   ra_svn_baton_t *b = parent_baton;
-  const char *token = make_token('c', b->eb, pool);
+  const char *token = make_token(SVN_UTF8_c, b->eb, pool);
 
   assert((copy_path && SVN_IS_VALID_REVNUM(copy_rev))
          || (!copy_path && !SVN_IS_VALID_REVNUM(copy_rev)));
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "add-file", "ccc(?cr)", path,
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, ADD_FILE_STR, "ccc(?cr)", path,
                                b->token, token, copy_path, copy_rev));
   *file_baton = ra_svn_make_baton(b->conn, pool, b->eb, token);
   return SVN_NO_ERROR;
@@ -242,10 +308,10 @@ static svn_error_t *ra_svn_open_file(const char *path,
                                      void **file_baton)
 {
   ra_svn_baton_t *b = parent_baton;
-  const char *token = make_token('c', b->eb, pool);
+  const char *token = make_token(SVN_UTF8_c, b->eb, pool);
 
   SVN_ERR(check_for_error(b->eb, b->pool));
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "open-file", "ccc(?r)",
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, OPEN_FILE_STR, "ccc(?r)",
                                path, b->token, token, rev));
   *file_baton = ra_svn_make_baton(b->conn, pool, b->eb, token);
   return SVN_NO_ERROR;
@@ -260,7 +326,7 @@ static svn_error_t *ra_svn_svndiff_handler(void *baton, const char *data,
   SVN_ERR(check_for_error(b->eb, b->pool));
   str.data = data;
   str.len = *len;
-  return svn_ra_svn_write_cmd(b->conn, b->pool, "textdelta-chunk", "cs",
+  return svn_ra_svn_write_cmd(b->conn, b->pool, TEXTDELTA_CNUNK_STR, "cs",
                               b->token, &str);
 }
 
@@ -269,7 +335,7 @@ static svn_error_t *ra_svn_svndiff_close_handler(void *baton)
   ra_svn_baton_t *b = baton;
 
   SVN_ERR(check_for_error(b->eb, b->pool));
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, b->pool, "textdelta-end", "c",
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, b->pool, TEXTDELTA_END_STR, "c",
                                b->token));
   return SVN_NO_ERROR;
 }
@@ -285,7 +351,7 @@ static svn_error_t *ra_svn_apply_textdelta(void *file_baton,
 
   /* Tell the other side we're starting a text delta. */
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "apply-textdelta", "c(?c)",
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, APPLY_TEXTDELTA_STR, "c(?c)",
                                b->token, base_checksum));
 
   /* Transform the window stream to an svndiff stream.  Reuse the
@@ -306,7 +372,7 @@ static svn_error_t *ra_svn_change_file_prop(void *file_baton,
   ra_svn_baton_t *b = file_baton;
 
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "change-file-prop", "cc(?s)",
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, CHANGE_FILE_PROP_STR, "cc(?s)",
                                b->token, name, value));
   return SVN_NO_ERROR;
 }
@@ -318,7 +384,7 @@ static svn_error_t *ra_svn_close_file(void *file_baton,
   ra_svn_baton_t *b = file_baton;
 
   SVN_ERR(check_for_error(b->eb, pool));
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "close-file", "c(?c)",
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, CLOSE_FILE_STR, "c(?c)",
                                b->token, text_checksum));
   return SVN_NO_ERROR;
 }
@@ -330,11 +396,11 @@ static svn_error_t *ra_svn_close_edit(void *edit_baton, apr_pool_t *pool)
 
   assert(!eb->got_status);
   eb->got_status = TRUE;
-  SVN_ERR(svn_ra_svn_write_cmd(eb->conn, pool, "close-edit", ""));
+  SVN_ERR(svn_ra_svn_write_cmd(eb->conn, pool, CLOSE_EDIT_STR, ""));
   err = svn_ra_svn_read_cmd_response(eb->conn, pool, "");
   if (err)
     {
-      svn_error_clear(svn_ra_svn_write_cmd(eb->conn, pool, "abort-edit", ""));
+      svn_error_clear(svn_ra_svn_write_cmd(eb->conn, pool, ABORT_EDIT_STR, ""));
       return err;
     }
   if (eb->callback)
@@ -348,7 +414,7 @@ static svn_error_t *ra_svn_abort_edit(void *edit_baton, apr_pool_t *pool)
 
   if (eb->got_status)
     return SVN_NO_ERROR;
-  SVN_ERR(svn_ra_svn_write_cmd(eb->conn, pool, "abort-edit", ""));
+  SVN_ERR(svn_ra_svn_write_cmd(eb->conn, pool, ABORT_EDIT_STR, ""));
   SVN_ERR(svn_ra_svn_read_cmd_response(eb->conn, pool, ""));
   return SVN_NO_ERROR;
 }
@@ -721,6 +787,9 @@ static const struct {
                           apr_array_header_t *params,
                           ra_svn_driver_state_t *ds);
 } ra_svn_edit_cmds[] = {
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   { "target-rev",       ra_svn_handle_target_rev },
   { "open-root",        ra_svn_handle_open_root },
   { "delete-entry",     ra_svn_handle_delete_entry },
@@ -738,6 +807,9 @@ static const struct {
   { "close-edit",       ra_svn_handle_close_edit },
   { "abort-edit",       ra_svn_handle_abort_edit },
   { NULL }
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 };
 
 static svn_error_t *blocked_write(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -750,7 +822,7 @@ static svn_error_t *blocked_write(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* We blocked trying to send an error.  Read and discard an editing
    * command in order to avoid deadlock. */
   SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "wl", &cmd, &params));
-  if (strcmp(cmd, "abort-edit") == 0)
+  if (strcmp(cmd, ABORT_EDIT_STR) == 0)
     {
       ds->done = TRUE;
       svn_ra_svn__set_block_handler(conn, NULL, NULL);
@@ -824,7 +896,7 @@ svn_error_t *svn_ra_svn__drive_editorp(svn_ra_svn_conn_t *conn,
     {
       apr_pool_clear(subpool);
       SVN_ERR(svn_ra_svn_read_tuple(conn, subpool, "wl", &cmd, &params));
-      state.done = (strcmp(cmd, "abort-edit") == 0);
+      state.done = (strcmp(cmd, ABORT_EDIT_STR) == 0);
     }
 
   apr_pool_destroy(subpool);

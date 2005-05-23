@@ -28,6 +28,7 @@
 #include "svn_xml.h"
 #include "svn_path.h"
 #include "svn_dav.h"
+#include "svn_utf.h"
 
 #include "dav_svn.h"
 
@@ -83,29 +84,45 @@ static svn_error_t * log_receiver(void *baton,
                              "</D:version-name>" DEBUG_CR, rev) );
 
   if (author)
-    SVN_ERR( dav_svn__send_xml(lrb->bb, lrb->output,
-                               "<D:creator-displayname>%s"
-                               "</D:creator-displayname>" DEBUG_CR,
-                               apr_xml_quote_string(pool, author, 0)) );
+    {
+#if APR_CHARSET_EBCDIC
+      SVN_ERR (svn_utf_cstring_from_netccsid(&author, author, pool));
+#endif
+      SVN_ERR( dav_svn__send_xml(lrb->bb, lrb->output,
+                                 "<D:creator-displayname>%s"
+                                 "</D:creator-displayname>" DEBUG_CR,
+                                 apr_xml_quote_string(pool, author, 0)) );
+    }
 
   /* ### this should be DAV:creation-date, but we need to format
      ### that date a bit differently */
   if (date)
-    SVN_ERR( dav_svn__send_xml(lrb->bb, lrb->output,
-                               "<S:date>%s</S:date>" DEBUG_CR,
-                               apr_xml_quote_string(pool, date, 0)) );
+    {
+#if APR_CHARSET_EBCDIC
+      SVN_ERR (svn_utf_cstring_from_netccsid(&date, date, pool));
+#endif
+      SVN_ERR( dav_svn__send_xml(lrb->bb, lrb->output,
+                                 "<S:date>%s</S:date>" DEBUG_CR,
+                                 apr_xml_quote_string(pool, date, 0)) );
+    }
 
   if (msg)
-    SVN_ERR( dav_svn__send_xml(lrb->bb, lrb->output,
-                               "<D:comment>%s</D:comment>" DEBUG_CR,
-                               apr_xml_quote_string
-                               (pool, svn_xml_fuzzy_escape (msg, pool), 0)) );
-
+    {
+      const char *fuzzy_msg = svn_xml_fuzzy_escape (msg, pool);
+#if APR_CHARSET_EBCDIC
+      SVN_ERR (svn_utf_cstring_from_netccsid(&fuzzy_msg, fuzzy_msg, pool));
+#endif
+      SVN_ERR( dav_svn__send_xml(lrb->bb, lrb->output,
+                                 "<D:comment>%s</D:comment>" DEBUG_CR,
+                                 apr_xml_quote_string
+                                 (pool, fuzzy_msg,
+                                  0)) );
+    }
 
   if (changed_paths)
     {
       apr_hash_index_t *hi;
-      char *path;
+      const char *path;
 
       for (hi = apr_hash_first(pool, changed_paths);
            hi != NULL;
@@ -116,12 +133,17 @@ static svn_error_t * log_receiver(void *baton,
           
           apr_hash_this(hi, (void *) &path, NULL, &val);
           log_item = val;
-
+#if APR_CHARSET_EBCDIC
+          SVN_ERR (svn_utf_cstring_from_netccsid(&path, path, pool));
+          SVN_ERR (svn_utf_cstring_from_netccsid(&(log_item->copyfrom_path),
+                                                log_item->copyfrom_path,
+                                                pool));
+#endif
           /* ### todo: is there a D: namespace equivalent for
              `changed-path'?  Should use it if so. */
           switch (log_item->action)
             {
-            case 'A':
+            case SVN_UTF8_A:
               if (log_item->copyfrom_path 
                   && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
                 SVN_ERR( dav_svn__send_xml(lrb->bb, lrb->output, 
@@ -144,7 +166,7 @@ static svn_error_t * log_receiver(void *baton,
                                                                 0)) );
               break;
 
-            case 'R':
+            case SVN_UTF8_R:
               if (log_item->copyfrom_path 
                   && SVN_IS_VALID_REVNUM(log_item->copyfrom_rev))
                 SVN_ERR( dav_svn__send_xml(lrb->bb, lrb->output,
@@ -167,7 +189,7 @@ static svn_error_t * log_receiver(void *baton,
                                                                 0)) );
               break;
 
-            case 'D':
+            case SVN_UTF8_D:
               SVN_ERR( dav_svn__send_xml(lrb->bb, lrb->output,
                                          "<S:deleted-path>%s</S:deleted-path>" 
                                          DEBUG_CR,
@@ -175,7 +197,7 @@ static svn_error_t * log_receiver(void *baton,
                                                               0)) );
               break;
 
-            case 'M':
+            case SVN_UTF8_M:
               SVN_ERR( dav_svn__send_xml(lrb->bb, lrb->output,
                                          "<S:modified-path>%s"
                                          "</S:modified-path>" DEBUG_CR,
@@ -254,8 +276,18 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
           if ((derr = dav_svn__test_canonical (rel_path, resource->pool)))
             return derr;
+#if !APR_CHARSET_EBCDIC
           target = svn_path_join(resource->info->repos_path, rel_path, 
                                  resource->pool);
+#else
+          target = svn_path_join_ebcdic(resource->info->repos_path, rel_path, 
+                                        resource->pool);
+          if (svn_utf_cstring_to_netccsid(&target, target, resource->pool))
+            return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                                 apr_psprintf(resource->pool,
+                                              "Error converting string '%s'",
+                                              target));
+#endif
           (*((const char **)(apr_array_push (paths)))) = target;
         }
       /* else unknown element; skip it */

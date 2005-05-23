@@ -64,7 +64,7 @@ skip_whitespace (FILE* fd, int *pcount)
 {
   int ch = getc (fd);
   int count = 0;
-  while (ch != EOF && ch != '\n' && apr_isspace (ch))
+  while (ch != EOF && ch != SVN_UTF8_NEWLINE && APR_IS_ASCII_SPACE(ch))
     {
       ++count;
       ch = getc (fd);
@@ -80,7 +80,7 @@ static APR_INLINE int
 skip_to_eoln (FILE *fd)
 {
   int ch = getc (fd);
-  while (ch != EOF && ch != '\n')
+  while (ch != EOF && ch != SVN_UTF8_NEWLINE)
     ch = getc (fd);
   return ch;
 }
@@ -96,7 +96,7 @@ parse_value (int *pch, parse_context_t *ctx)
   /* Read the first line of the value */
   svn_stringbuf_setempty (ctx->value);
   for (ch = getc (ctx->fd); /* last ch seen was ':' or '=' in parse_option. */
-       ch != EOF && ch != '\n';
+       ch != EOF && ch != SVN_UTF8_NEWLINE;
        ch = getc (ctx->fd))
     {
       const char char_from_int = ch;
@@ -127,7 +127,7 @@ parse_value (int *pch, parse_context_t *ctx)
 
           switch (ch)
             {
-            case '\n':
+            case SVN_UTF8_NEWLINE:
               /* The next line was empty. Ergo, it can't be a
                  continuation line. */
               ++ctx->line;
@@ -152,10 +152,10 @@ parse_value (int *pch, parse_context_t *ctx)
               else
                 {
                   /* This is a continuation line. Read it. */
-                  svn_stringbuf_appendbytes (ctx->value, " ", 1);
+                  svn_stringbuf_appendbytes (ctx->value, SVN_UTF8_SPACE_STR, 1);
 
                   for (;
-                       ch != EOF && ch != '\n';
+                       ch != EOF && ch != SVN_UTF8_NEWLINE;
                        ch = getc (ctx->fd))
                     {
                       const char char_from_int = ch;
@@ -183,14 +183,17 @@ parse_option (int *pch, parse_context_t *ctx)
 
   svn_stringbuf_setempty (ctx->option);
   for (ch = *pch;               /* Yes, the first char is relevant. */
-       ch != EOF && ch != ':' && ch != '=' && ch != '\n';
+       ch != EOF && 
+       ch != SVN_UTF8_COLON && 
+       ch != SVN_UTF8_EQUALS && 
+       ch != SVN_UTF8_NEWLINE;
        ch = getc (ctx->fd))
     {
       const char char_from_int = ch;
       svn_stringbuf_appendbytes (ctx->option, &char_from_int, 1);
     }
 
-  if (ch != ':' && ch != '=')
+  if (ch != SVN_UTF8_COLON && ch != SVN_UTF8_EQUALS)
     {
       ch = EOF;
       err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
@@ -227,14 +230,14 @@ parse_section_name (int *pch, parse_context_t *ctx)
 
   svn_stringbuf_setempty (ctx->section);
   for (ch = getc (ctx->fd);
-       ch != EOF && ch != ']' && ch != '\n';
+       ch != EOF && ch != SVN_UTF8_RBRACKET && ch != SVN_UTF8_NEWLINE;
        ch = getc (ctx->fd))
     {
       const char char_from_int = ch;
       svn_stringbuf_appendbytes (ctx->section, &char_from_int, 1);
     }
 
-  if (ch != ']')
+  if (ch != SVN_UTF8_RBRACKET)
     {
       ch = EOF;
       err = svn_error_createf (SVN_ERR_MALFORMED_FILE, NULL,
@@ -385,7 +388,13 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
      translation in files.  The only portable way I know to get
      translated text files is to use the standard stdio library. */
 
-  SVN_ERR (svn_config__open_file (&fd, file, "rt", pool));
+#if !AS400
+  SVN_ERR (svn_config__open_file (&fd, file, "rt", pool));  
+#else
+  /* On ebcdic system open the file in binary mode otherwise the 1208 tag
+   * on the config files causes conversion of the file contents to ebcdic. */
+  SVN_ERR (svn_config__open_file (&fd, file, "rb", pool));
+#endif
   if (fd == NULL)
     {
       if (errno != ENOENT)
@@ -414,7 +423,7 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
       ch = skip_whitespace (fd, &count);
       switch (ch)
         {
-        case '[':               /* Start of section header */
+        case SVN_UTF8_LBRACKET:      /* Start of section header */
           if (count == 0)
             err = parse_section_name (&ch, &ctx);
           else
@@ -428,7 +437,7 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
             }
           break;
 
-        case '#':               /* Comment */
+        case SVN_UTF8_POUND:               /* Comment */
           if (count == 0)
             {
               ch = skip_to_eoln(fd);
@@ -445,7 +454,7 @@ svn_config__parse_file (svn_config_t *cfg, const char *file,
             }
           break;
 
-        case '\n':              /* Empty line */
+        case SVN_UTF8_NEWLINE:              /* Empty line */
           ++ctx.line;
           break;
 

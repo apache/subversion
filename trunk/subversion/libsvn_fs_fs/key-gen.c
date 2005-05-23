@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <apr.h>
 #include "key-gen.h"
+#include "svn_utf.h"
 
 
 /* Converting text to numbers.  */
@@ -52,9 +53,9 @@ svn_fs_fs__getsize (const char *data, apr_size_t len,
   apr_size_t i;
   apr_size_t value = 0;
 
-  for (i = 0; i < len && '0' <= data[i] && data[i] <= '9'; i++)
+  for (i = 0; i < len && SVN_UTF8_0 <= data[i] && data[i] <= SVN_UTF8_9; i++)
     {
-      apr_size_t digit = data[i] - '0';
+      apr_size_t digit = data[i] - SVN_UTF8_0;
 
       /* Check for overflow.  */
       if (value > max_prefix
@@ -95,7 +96,7 @@ svn_fs_fs__putsize (char *data, apr_size_t len, apr_size_t value)
       if (i >= len)
         return 0;
 
-      data[i] = (value % 10) + '0';
+      data[i] = (value % 10) + SVN_UTF8_0;
       value /= 10;
       i++;
     }
@@ -134,15 +135,17 @@ svn_fs_fs__add_keys (const char *key1, const char *key2, char *result)
     {
       val = carry;
       if (i1>=0)
-        val += (key1[i1] <= '9') ? (key1[i1] - '0') : (key1[i1] - 'a' + 10);
+        val += (key1[i1] <= SVN_UTF8_9) ? (key1[i1] - SVN_UTF8_0) :
+               (key1[i1] - SVN_UTF8_a + 10);
 
       if (i2>=0)
-        val += (key2[i2] <= '9') ? (key2[i2] - '0') : (key2[i2] - 'a' + 10);
+        val += (key2[i2] <= SVN_UTF8_9) ? (key2[i2] - SVN_UTF8_0) : 
+               (key2[i2] - SVN_UTF8_a + 10);
 
       carry = val / 36;
       val = val % 36;
       
-      buf[i3++] = (val <= 9) ? (val + '0') : (val - 10 + 'a');
+      buf[i3++] = (val <= 9) ? (val + SVN_UTF8_0) : (val - 10 + SVN_UTF8_a);
 
       if (i1>=0)
         i1--;
@@ -158,7 +161,7 @@ svn_fs_fs__add_keys (const char *key1, const char *key2, char *result)
 }
       
 
-const char NEXT_KEY_KEY[] = "next-key";
+const char NEXT_KEY_KEY[] = "\x6e\x65\x78\x74\x2d\x6b\x65\x79"; /* "next-key" */
 
 
 void
@@ -172,7 +175,7 @@ svn_fs_fs__next_key (const char *this, apr_size_t *len, char *next)
                                  incrementing the number, after all. */
   
   /* Leading zeros are not allowed, except for the string "0". */
-  if ((*len > 1) && (this[0] == '0'))
+  if ((*len > 1) && (this[0] == SVN_UTF8_0))
     {
       *len = 0;
       return;
@@ -183,7 +186,8 @@ svn_fs_fs__next_key (const char *this, apr_size_t *len, char *next)
       c = this[i];
 
       /* Validate as we go. */
-      if (! (((c >= '0') && (c <= '9')) || ((c >= 'a') && (c <= 'z'))))
+      if (! (((c >= SVN_UTF8_0) && (c <= SVN_UTF8_9)) ||
+             ((c >= SVN_UTF8_a) && (c <= SVN_UTF8_z))))
         {
           *len = 0;
           return;
@@ -191,14 +195,14 @@ svn_fs_fs__next_key (const char *this, apr_size_t *len, char *next)
 
       if (carry)
         {
-          if (c == 'z')
-            next[i] = '0';
+          if (c == SVN_UTF8_z)
+            next[i] = SVN_UTF8_0;
           else
             {
               carry = FALSE;
               
-              if (c == '9')
-                next[i] = 'a';
+              if (c == SVN_UTF8_9)
+                next[i] = SVN_UTF8_a;
               else
                 next[i] = c + 1;
             }
@@ -223,7 +227,7 @@ svn_fs_fs__next_key (const char *this, apr_size_t *len, char *next)
   if (carry)
     {
       memmove (next+1, next, olen);
-      next[0] = '1';
+      next[0] = SVN_UTF8_1;
     }
 }
 

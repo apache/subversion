@@ -27,6 +27,8 @@
 #include "svn_error.h"
 #include "svn_ctype.h"
 #include "utf_impl.h"
+#include "svn_utf.h"
+#include "svn_ebcdic.h"
 
 #ifdef SVN_HAVE_OLD_EXPAT
 #include "xmlparse.h"
@@ -37,6 +39,44 @@
 #ifdef XML_UNICODE
 #error Expat is unusable -- it has been compiled for wide characters
 #endif
+
+#define XML_AMP_STR \
+        "\x26\x61\x6D\x70\x3B"
+        /* "&amp;" */
+
+#define XML_APOS_STR \
+        "\x26\x61\x70\x6f\x73\x3b"
+        /* "&apos;" */
+
+#define XML_CR_STR \
+        "\x26\x23\x31\x33\x3b"
+        /* "&#13;" */
+
+#define XML_GT_STR \
+        "\x26\x67\x74\x3B"
+        /* "&gt;" */
+
+#define XML_LT_STR \
+        "\x26\x6C\x74\x3B"
+        /* "&lt;" */
+
+#define XML_NEWLINE_STR \
+        "\x26\x23\x31\x30\x3b"
+        /* "&#10;" */
+
+#define XML_QUOTE_STR \
+        "\x26\x71\x75\x6f\x74\x3b"
+        /* "&quot;" */
+
+#define XML_TAB_STR \
+        "\x26\x23\x39\x3b"
+        /* "&#9;" */
+
+#define XML_VER_ENCODE_STR \
+        "\x3c\x3f\x78\x6d\x6c\x20\x76\x65\x72\x73\x69\x6f\x6e\x3d\x22\x31" \
+        "\x2e\x30\x22\x20\x65\x6e\x63\x6f\x64\x69\x6e\x67\x3d\x22\x75\x74" \
+        "\x66\x2d\x38\x22\x3f\x3e\xa"
+        /* "<?xml version="1.0" encoding="utf-8"?>" */
 
 /* The private internals for a parser object. */
 struct svn_xml_parser_t
@@ -119,7 +159,11 @@ xml_escape_cdata (svn_stringbuf_t **outstr,
          golly, if we say we want to escape a '\r', we want to make
          sure it remains a '\r'!  */
       q = p;
-      while (q < end && *q != '&' && *q != '<' && *q != '>' && *q != '\r')
+      while (q < end &&
+             *q != SVN_UTF8_AMP &&
+             *q != SVN_UTF8_LT &&
+             *q != SVN_UTF8_GT &&
+             *q != SVN_UTF8_CR)
         q++;
       svn_stringbuf_appendbytes (*outstr, p, q - p);
 
@@ -128,14 +172,14 @@ xml_escape_cdata (svn_stringbuf_t **outstr,
         break;
 
       /* Append the entity reference for the character.  */
-      if (*q == '&')
-        svn_stringbuf_appendcstr (*outstr, "&amp;");
-      else if (*q == '<')
-        svn_stringbuf_appendcstr (*outstr, "&lt;");
-      else if (*q == '>')
-        svn_stringbuf_appendcstr (*outstr, "&gt;");
-      else if (*q == '\r')
-        svn_stringbuf_appendcstr (*outstr, "&#13;");
+      if (*q == SVN_UTF8_AMP)
+        svn_stringbuf_appendcstr (*outstr, XML_AMP_STR);
+      else if (*q == SVN_UTF8_LT)
+        svn_stringbuf_appendcstr (*outstr, XML_LT_STR);
+      else if (*q == SVN_UTF8_GT)
+        svn_stringbuf_appendcstr (*outstr, XML_GT_STR);
+      else if (*q == SVN_UTF8_CR)
+        svn_stringbuf_appendcstr (*outstr, XML_CR_STR);
 
       p = q + 1;
     }
@@ -160,9 +204,15 @@ xml_escape_attr (svn_stringbuf_t **outstr,
       /* Find a character which needs to be quoted and append bytes up
          to that point. */
       q = p;
-      while (q < end && *q != '&' && *q != '<' && *q != '>'
-             && *q != '"' && *q != '\'' && *q != '\r'
-             && *q != '\n' && *q != '\t')
+      while (q < end &&
+             *q != SVN_UTF8_AMP &&
+             *q != SVN_UTF8_LT &&
+             *q != SVN_UTF8_GT &&
+             *q != SVN_UTF8_DQUOTE &&
+             *q != SVN_UTF8_SQUOTE &&
+             *q != SVN_UTF8_CR &&
+             *q != SVN_UTF8_NEWLINE &&
+             *q != SVN_UTF8_TAB)
         q++;
       svn_stringbuf_appendbytes (*outstr, p, q - p);
 
@@ -171,22 +221,22 @@ xml_escape_attr (svn_stringbuf_t **outstr,
         break;
 
       /* Append the entity reference for the character.  */
-      if (*q == '&')
-        svn_stringbuf_appendcstr (*outstr, "&amp;");
-      else if (*q == '<')
-        svn_stringbuf_appendcstr (*outstr, "&lt;");
-      else if (*q == '>')
-        svn_stringbuf_appendcstr (*outstr, "&gt;");
-      else if (*q == '"')
-        svn_stringbuf_appendcstr (*outstr, "&quot;");
-      else if (*q == '\'')
-        svn_stringbuf_appendcstr (*outstr, "&apos;");
-      else if (*q == '\r')
-        svn_stringbuf_appendcstr (*outstr, "&#13;");
-      else if (*q == '\n')
-        svn_stringbuf_appendcstr (*outstr, "&#10;");
-      else if (*q == '\t')
-        svn_stringbuf_appendcstr (*outstr, "&#9;");
+      if (*q == SVN_UTF8_AMP)
+        svn_stringbuf_appendcstr (*outstr, XML_AMP_STR);
+      else if (*q == SVN_UTF8_LT)
+        svn_stringbuf_appendcstr (*outstr, XML_LT_STR);
+      else if (*q == SVN_UTF8_GT)
+        svn_stringbuf_appendcstr (*outstr, XML_GT_STR);
+      else if (*q == SVN_UTF8_DQUOTE)
+        svn_stringbuf_appendcstr (*outstr, XML_QUOTE_STR);
+      else if (*q == SVN_UTF8_SQUOTE)
+        svn_stringbuf_appendcstr (*outstr, XML_APOS_STR);
+      else if (*q == SVN_UTF8_CR)
+        svn_stringbuf_appendcstr (*outstr, XML_CR_STR);
+      else if (*q == SVN_UTF8_NEWLINE)
+        svn_stringbuf_appendcstr (*outstr, XML_NEWLINE_STR);
+      else if (*q == SVN_UTF8_TAB)
+        svn_stringbuf_appendcstr (*outstr, XML_TAB_STR);
 
       p = q + 1;
     }
@@ -253,12 +303,19 @@ svn_xml_fuzzy_escape (const char *string, apr_pool_t *pool)
   const char *end = string + strlen (string);
   const char *p = string, *q;
   svn_stringbuf_t *outstr;
+#if !APR_CHARSET_EBCDIC
   char escaped_char[6];   /* ? \ u u u \0 */
+#else
+  const char *escaped_str;
+#endif
+
 
   for (q = p; q < end; q++)
     {
       if (svn_ctype_iscntrl (*q)
-          && ! ((*q == '\n') || (*q == '\r') || (*q == '\t')))
+          && ! ((*q == SVN_UTF8_NEWLINE) 
+                || (*q == SVN_UTF8_CR)
+                || (*q == SVN_UTF8_TAB)))
         break;
     }
 
@@ -274,7 +331,9 @@ svn_xml_fuzzy_escape (const char *string, apr_pool_t *pool)
       /* Traverse till either unsafe character or eos. */
       while ((q < end)
              && ((! svn_ctype_iscntrl (*q))
-                 || (*q == '\n') || (*q == '\r') || (*q == '\t')))
+                 || (*q == SVN_UTF8_NEWLINE)
+                 || (*q == SVN_UTF8_CR)
+                 || (*q == SVN_UTF8_TAB)))
         q++;
 
       /* copy chunk before marker */
@@ -290,8 +349,13 @@ svn_xml_fuzzy_escape (const char *string, apr_pool_t *pool)
          ### should probably share code, even though they escape
          ### different characters.
       */
+#if !APR_CHARSET_EBCDIC
       sprintf (escaped_char, "?\\%03u", (unsigned char) *q);
       svn_stringbuf_appendcstr (outstr, escaped_char);
+#else
+      escaped_str = APR_PSPRINTF2 (pool, "?\\%03u", (unsigned char) *q);
+      svn_stringbuf_appendcstr (outstr, escaped_str);
+#endif
 
       p = q + 1;
     }
@@ -465,7 +529,7 @@ svn_xml_make_header (svn_stringbuf_t **str, apr_pool_t *pool)
   if (*str == NULL)
     *str = svn_stringbuf_create ("", pool);
   svn_stringbuf_appendcstr (*str,
-                            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
+                            XML_VER_ENCODE_STR);
 }
 
 
@@ -562,7 +626,7 @@ svn_xml_make_open_tag_hash (svn_stringbuf_t **str,
   if (*str == NULL)
     *str = svn_stringbuf_create ("", pool);
 
-  svn_stringbuf_appendcstr (*str, "<");
+  svn_stringbuf_appendcstr (*str, SVN_UTF8_LT_STR);
   svn_stringbuf_appendcstr (*str, tagname);
 
   for (hi = apr_hash_first (pool, attributes); hi; hi = apr_hash_next (hi))
@@ -573,18 +637,19 @@ svn_xml_make_open_tag_hash (svn_stringbuf_t **str,
       apr_hash_this (hi, &key, NULL, &val);
       assert (val != NULL);
 
-      svn_stringbuf_appendcstr (*str, "\n   ");
+      svn_stringbuf_appendcstr (*str, SVN_UTF8_NEWLINE_STR SVN_UTF8_SPACE_STR
+                                SVN_UTF8_SPACE_STR SVN_UTF8_SPACE_STR);
       svn_stringbuf_appendcstr (*str, key);
-      svn_stringbuf_appendcstr (*str, "=\"");
+      svn_stringbuf_appendcstr (*str, SVN_UTF8_EQUALS_STR SVN_UTF8_DQUOTE_STR);
       svn_xml_escape_attr_cstring (str, val, pool);
-      svn_stringbuf_appendcstr (*str, "\"");
+      svn_stringbuf_appendcstr (*str, SVN_UTF8_DQUOTE_STR);
     }
 
   if (style == svn_xml_self_closing)
-    svn_stringbuf_appendcstr (*str, "/");
-  svn_stringbuf_appendcstr (*str, ">");
+    svn_stringbuf_appendcstr (*str, SVN_UTF8_FSLASH_STR);
+  svn_stringbuf_appendcstr (*str, SVN_UTF8_GT_STR);
   if (style != svn_xml_protect_pcdata)
-    svn_stringbuf_appendcstr (*str, "\n");
+    svn_stringbuf_appendcstr (*str, SVN_UTF8_NEWLINE_STR);
 }
 
 
@@ -626,7 +691,7 @@ void svn_xml_make_close_tag (svn_stringbuf_t **str,
   if (*str == NULL)
     *str = svn_stringbuf_create ("", pool);
 
-  svn_stringbuf_appendcstr (*str, "</");
+  svn_stringbuf_appendcstr (*str, SVN_UTF8_LT_STR SVN_UTF8_FSLASH_STR);
   svn_stringbuf_appendcstr (*str, tagname);
-  svn_stringbuf_appendcstr (*str, ">\n");
+  svn_stringbuf_appendcstr (*str, SVN_UTF8_GT_STR SVN_UTF8_NEWLINE_STR);
 }

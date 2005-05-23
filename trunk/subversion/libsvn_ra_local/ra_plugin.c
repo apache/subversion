@@ -25,6 +25,7 @@
 #include "svn_time.h"
 #include "svn_props.h"
 #include "svn_path.h"
+#include "svn_utf.h"
 #include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
 
@@ -35,6 +36,9 @@
 
 /*----------------------------------------------------------------*/
 
+#define FILE_STR \
+        "\x66\x69\x6C\x65"
+        /* "file" */
 
 /* The reporter vtable needed by do_update() */
 typedef struct reporter_baton_t
@@ -253,7 +257,7 @@ svn_ra_local__get_description (void)
 static const char * const *
 svn_ra_local__get_schemes (apr_pool_t *pool)
 {
-  static const char *schemes[] = { "file", NULL };
+  static const char *schemes[] = { FILE_STR, NULL };
 
   return schemes;
 }
@@ -780,7 +784,7 @@ svn_ra_local__do_check_path (svn_ra_session_t *session,
      it is totally bogus.  See issue #559, though it may be only
      tangentially related. */
   if (abs_path[0] == '\0')
-    abs_path = "/";
+    abs_path = SVN_UTF8_FSLASH_STR;
 
   /* If we were given a relative path to append, append it. */
   if (path)
@@ -832,7 +836,7 @@ get_node_props (apr_hash_t **props,
                 apr_pool_t *pool)
 {
   svn_revnum_t cmt_rev;
-  const char *cmt_date, *cmt_author;
+  const char *cmt_date, *cmt_author, *rev_str;
 
   /* Create a hash with props attached to the fs node. */
   SVN_ERR (svn_fs_node_proplist (props, root, path, pool));
@@ -843,10 +847,14 @@ get_node_props (apr_hash_t **props,
   SVN_ERR (svn_repos_get_committed_info (&cmt_rev, &cmt_date,
                                          &cmt_author, root, path, pool));
 
+  rev_str = apr_psprintf(pool, "%ld", cmt_rev);
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_to_utf8 (&rev_str, rev_str, pool));
+#endif
   apr_hash_set (*props, 
                 SVN_PROP_ENTRY_COMMITTED_REV, 
                 APR_HASH_KEY_STRING, 
-                svn_string_createf (pool, "%ld", cmt_rev));
+                svn_string_createf (pool, "%s", rev_str));
   apr_hash_set (*props, 
                 SVN_PROP_ENTRY_COMMITTED_DATE, 
                 APR_HASH_KEY_STRING, 
@@ -889,7 +897,7 @@ svn_ra_local__get_file (svn_ra_session_t *session,
      it is totally bogus.  See issue #559, though it may be only
      tangentially related. */
   if (abs_path[0] == '\0')
-    abs_path = "/";
+    abs_path = SVN_UTF8_FSLASH_STR;
 
   /* If we were given a relative path to append, append it. */
   if (path)
@@ -956,7 +964,7 @@ svn_ra_local__get_dir (svn_ra_session_t *session,
      it is totally bogus.  See issue #559, though it may be only
      tangentially related. */
   if (abs_path[0] == '\0')
-    abs_path = "/";
+    abs_path = SVN_UTF8_FSLASH_STR;
 
   /* If we were given a relative path to append, append it. */
   if (path)

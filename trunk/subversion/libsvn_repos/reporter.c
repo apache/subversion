@@ -22,10 +22,16 @@
 #include "svn_pools.h"
 #include "svn_md5.h"
 #include "svn_props.h"
+#include "svn_utf.h"
+#include "svn_ebcdic.h"
 #include "repos.h"
 #include "svn_private_config.h"
 
 #define NUM_CACHED_SOURCE_ROOTS 4
+
+#define DOT_TMP_STR \
+        "\x2e\x74\x6d\x70"
+        /* ".tmp" */
 
 /* Theory of operation: we write report operations out to a temporary
    file as we receive them.  When the report is finished, we read the
@@ -125,9 +131,9 @@ read_number (apr_uint64_t *num, apr_file_t *temp, apr_pool_t *pool)
   while (1)
     {
       SVN_ERR (svn_io_file_getc (&c, temp, pool));
-      if (c == ':')
+      if (c == SVN_UTF8_COLON)
         break;
-      *num = *num * 10 + (c - '0');
+      *num = *num * 10 + (c - SVN_UTF8_0);
     }
   return SVN_NO_ERROR;
 }
@@ -153,7 +159,7 @@ read_rev (svn_revnum_t *rev, apr_file_t *temp, apr_pool_t *pool)
   apr_uint64_t num;
 
   SVN_ERR (svn_io_file_getc (&c, temp, pool));
-  if (c == '+')
+  if (c == SVN_UTF8_PLUS)
     {
       SVN_ERR (read_number (&num, temp, pool));
       *rev = num;
@@ -171,7 +177,7 @@ read_path_info (path_info_t **pi, apr_file_t *temp, apr_pool_t *pool)
   char c;
 
   SVN_ERR (svn_io_file_getc (&c, temp, pool));
-  if (c == '-')
+  if (c == SVN_UTF8_MINUS)
     {
       *pi = NULL;
       return SVN_NO_ERROR;
@@ -180,15 +186,15 @@ read_path_info (path_info_t **pi, apr_file_t *temp, apr_pool_t *pool)
   *pi = apr_palloc (pool, sizeof (**pi));
   SVN_ERR (read_string (&(*pi)->path, temp, pool));
   SVN_ERR (svn_io_file_getc (&c, temp, pool));
-  if (c == '+')
+  if (c == SVN_UTF8_PLUS)
     SVN_ERR (read_string (&(*pi)->link_path, temp, pool));
   else
     (*pi)->link_path = NULL;
   SVN_ERR (read_rev (&(*pi)->rev, temp, pool));
   SVN_ERR (svn_io_file_getc (&c, temp, pool));
-  (*pi)->start_empty = (c == '+');
+  (*pi)->start_empty = (c == SVN_UTF8_PLUS);
   SVN_ERR (svn_io_file_getc (&c, temp, pool));
-  if (c == '+')
+  if (c == SVN_UTF8_PLUS)
     SVN_ERR (read_string (&(*pi)->lock_token, temp, pool));
   else
     (*pi)->lock_token = NULL;
@@ -201,7 +207,7 @@ static svn_boolean_t
 relevant (path_info_t *pi, const char *prefix, apr_size_t plen)
 {
   return (pi && strncmp (pi->path, prefix, plen) == 0 &&
-          (!*prefix || pi->path[plen] == '/'));
+          (!*prefix || pi->path[plen] == SVN_UTF8_FSLASH));
 }
 
 /* Fetch the next pathinfo from B->tempfile for a descendent of
@@ -238,7 +244,7 @@ fetch_path_info (report_baton_t *b, const char **entry, path_info_t **info,
     {
       /* Take a look at the prefix-relative part of the path. */
       relpath = b->lookahead->path + (*prefix ? plen + 1 : 0);
-      sep = strchr (relpath, '/');
+      sep = strchr (relpath, SVN_UTF8_FSLASH);
       if (sep)
         {
           /* Return the immediate child part; do not advance. */
@@ -371,6 +377,9 @@ delta_proplists (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
     {
       /* Transmit the committed-rev. */
       cr_str = svn_string_createf (pool, "%ld", crev);
+#if APR_CHARSET_EBCDIC
+      SVN_ERR (svn_utf_string_to_utf8(&cr_str, cr_str, pool));
+#endif
       SVN_ERR (change_fn (b, object,
                           SVN_PROP_ENTRY_COMMITTED_REV, cr_str, pool));
 
@@ -870,7 +879,7 @@ finish_report (report_baton_t *b, apr_pool_t *pool)
   b->pool = pool;
 
   /* Add an end marker and rewind the temporary file. */
-  SVN_ERR (svn_io_file_write_full (b->tempfile, "-", 1, NULL, pool));
+  SVN_ERR (svn_io_file_write_full (b->tempfile, SVN_UTF8_MINUS_STR, 1, NULL, pool));
   offset = 0;
   SVN_ERR (svn_io_file_seek (b->tempfile, APR_SET, &offset, pool));
 
@@ -916,21 +925,23 @@ write_path_info (report_baton_t *b, const char *path, const char *lpath,
                  svn_revnum_t rev, svn_boolean_t start_empty,
                  const char *lock_token, apr_pool_t *pool)
 {
-  const char *lrep, *rrep, *ltrep, *rep;
+  const char *lrep, *rrep, *ltrep, *rep, *lpath_strlen, *path_strlen;
 
   /* Munge the path to be anchor-relative, so that we can use edit paths
      as report paths. */
   path = svn_path_join (b->s_operand, path, pool);
-
-  lrep = lpath ? apr_psprintf (pool, "+%" APR_SIZE_T_FMT ":%s",
-                               strlen(lpath), lpath) : "-";
+  
+  lrep = lpath ? APR_PSPRINTF2 (pool, "+%" APR_SIZE_T_FMT ":%s",
+                                strlen(lpath), lpath) : SVN_UTF8_MINUS_STR;
   rrep = (SVN_IS_VALID_REVNUM (rev)) ?
-    apr_psprintf (pool, "+%ld:", rev) : "-";
-  ltrep = lock_token ? apr_psprintf (pool, "+%" APR_SIZE_T_FMT ":%s",
-                                     strlen(lock_token), lock_token) : "-";
-  rep = apr_psprintf (pool, "+%" APR_SIZE_T_FMT ":%s%s%s%c%s",
-                      strlen(path), path, lrep, rrep, start_empty ? '+' : '-',
-                      ltrep);
+    APR_PSPRINTF2 (pool, "+%ld:", rev) : SVN_UTF8_MINUS_STR;
+  ltrep = lock_token ? APR_PSPRINTF2 (pool, "+%" APR_SIZE_T_FMT ":%s",
+                                      strlen(lock_token), lock_token) 
+                     : SVN_UTF8_MINUS_STR;
+  rep = APR_PSPRINTF2 (pool, "+%" APR_SIZE_T_FMT ":%s%s%s%c%s",
+                       strlen(path), path, lrep, rrep,
+                       start_empty ? SVN_UTF8_PLUS : SVN_UTF8_MINUS,
+                       ltrep);
   return svn_io_file_write_full (b->tempfile, rep, strlen(rep), NULL, pool);
 }
 
@@ -1037,9 +1048,10 @@ svn_repos_begin_report (void **report_baton,
   b->authz_read_baton = authz_read_baton;
 
   SVN_ERR (svn_io_temp_dir (&tempdir, pool));
-  SVN_ERR (svn_io_open_unique_file (&b->tempfile, &dummy,
-                                    apr_psprintf (pool, "%s/report", tempdir),
-                                    ".tmp", TRUE, pool));
+  SVN_ERR (svn_io_open_unique_file (&b->tempfile, &dummy, 
+                                    APR_PSPRINTF2 (pool, "%s/report",
+                                                   tempdir),
+                  DOT_TMP_STR, TRUE, pool));
 
   /* Hand reporter back to client. */
   *report_baton = b;

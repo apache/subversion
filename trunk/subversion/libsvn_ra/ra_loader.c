@@ -33,8 +33,21 @@
 #include "svn_ra.h"
 #include "svn_xml.h"
 #include "ra_loader.h"
+#include "svn_utf.h"
+#include "svn_ebcdic.h"
 #include "svn_private_config.h"
 
+#define DAV_STR \
+        "\x64\x61\x76"
+        /* "dav" */
+
+#define SVN_STR \
+        "\x73\x76\x6e"
+        /* "svn" */
+
+#define LOCAL_STR \
+        "\x6c\x6f\x63\x61\x6c"
+        /* "local" */
 
 /* ### this file maps URL schemes to particular RA libraries. This is not
    ### entirely correct, as a single scheme could potentially be served
@@ -47,9 +60,15 @@
  * This can't be determine until the library is loaded.
  * (Currently, this applies to the https scheme of ra_dav, which is only
  * available if SSL is supported.) */
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 static const char * const dav_schemes[] = { "http", "https", NULL };
 static const char * const svn_schemes[] = { "svn", NULL };
 static const char * const local_schemes[] = { "file", NULL };
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
 static const struct ra_lib_defn {
   /* the name of this RA library (e.g. "dav" or "local") */
@@ -61,7 +80,7 @@ static const struct ra_lib_defn {
   svn_ra_init_func_t compat_initfunc;
 } ra_libraries[] = {
   {
-    "dav",
+    DAV_STR,
     dav_schemes,
 #ifdef SVN_LIBSVN_CLIENT_LINKS_RA_DAV
     svn_ra_dav__init,
@@ -70,7 +89,7 @@ static const struct ra_lib_defn {
   },
 
   {
-    "svn",
+    SVN_STR,
     svn_schemes,
 #ifdef SVN_LIBSVN_CLIENT_LINKS_RA_SVN
     svn_ra_svn__init,
@@ -79,7 +98,7 @@ static const struct ra_lib_defn {
   },
 
   {
-    "local",
+    LOCAL_STR,
     local_schemes,
 #ifdef SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
     svn_ra_local__init,
@@ -126,10 +145,10 @@ load_ra_module (svn_ra__init_func_t *func,
     const char *compat_funcname;
     apr_status_t status;
 
-    libname = apr_psprintf (pool, "libsvn_ra_%s-%d.so.0",
+    libname = APR_PSPRINTF (pool, "libsvn_ra_%s-%d.so.0",
                             ra_name, SVN_VER_MAJOR);
     funcname = apr_psprintf (pool, "svn_ra_%s__init", ra_name);
-    compat_funcname = apr_psprintf (pool, "svn_ra_%s_init", ra_name);
+    compat_funcname = APR_PSPRINTF (pool, "svn_ra_%s_init", ra_name);
 
     /* find/load the specified library */
     status = apr_dso_load (&dso, libname, pool);
@@ -194,7 +213,7 @@ has_scheme_of (const struct ra_lib_defn *defn, const char *url)
          URL to contain a trailing "+foo" section in the scheme, since
          that's how we specify tunnel schemes in ra_svn. */
       if (strncasecmp (scheme, url, len) == 0 &&
-          (url[len] == ':' || url[len] == '+'))
+          (url[len] == SVN_UTF8_COLON || url[len] == SVN_UTF8_PLUS))
         return scheme;
     }
 
@@ -567,19 +586,23 @@ svn_ra_print_modules (svn_stringbuf_t *output,
 
       if (initfunc)
         {
+          const char *ra_name = defn->ra_name;
+#if APR_CHARSET_EBCDIC
+          SVN_ERR(svn_utf_cstring_from_utf8(&ra_name, defn->ra_name, pool));
+#endif
           SVN_ERR (initfunc (svn_ra_version(), &vtable, iterpool));
 
           SVN_ERR (check_ra_version (vtable->get_version (), defn->ra_name));
 
           line = apr_psprintf (iterpool, "* ra_%s : %s\n",
-                               defn->ra_name,
+                               ra_name,
                                vtable->get_description());
           svn_stringbuf_appendcstr (output, line);
 
           for (schemes = vtable->get_schemes(iterpool); *schemes != NULL;
                ++schemes)
             {
-              line = apr_psprintf (iterpool, _("  - handles '%s' scheme\n"),
+              line = APR_PSPRINTF (iterpool, _("  - handles '%s' scheme\n"),
                                    *schemes);
               svn_stringbuf_appendcstr (output, line);
             }

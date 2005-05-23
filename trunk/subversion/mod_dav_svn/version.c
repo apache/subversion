@@ -33,6 +33,8 @@
 #include "svn_props.h"
 #include "svn_dav.h"
 #include "svn_base64.h"
+#include "svn_utf.h"
+#include "svn_ebcdic.h"
 
 #include "dav_svn.h"
 
@@ -64,6 +66,10 @@ svn_error_t *dav_svn_attach_auto_revprops(svn_fs_txn_t *txn,
   logmsg = apr_psprintf(pool,  
                         "Autoversioning commit:  a non-deltaV client made "
                         "a change to\n%s", fs_path);
+
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_to_netccsid(&logmsg, logmsg, pool));
+#endif
 
   logval = svn_string_create(logmsg, pool);
   if ((serr = svn_repos_fs_change_txn_prop(txn, SVN_PROP_REVISION_LOG, logval,
@@ -245,6 +251,16 @@ dav_error *dav_svn_checkout(dav_resource *resource,
   apr_status_t apr_err;
   dav_error *derr;
   dav_svn_uri_info parse;
+  const char *repos_path_utf8 = resource->info->repos_path;
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_to_netccsid(&repos_path_utf8,
+                                  resource->info->repos_path,
+                                  resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                       resource->info->repos_path));
+#endif
 
   /* Auto-Versioning Stuff */
   if (auto_checkout)
@@ -514,7 +530,7 @@ dav_error *dav_svn_checkout(dav_resource *resource,
          in the txn against the created-rev of the version resource
          being changed. */
       serr = svn_fs_node_created_rev(&txn_created_rev,
-                                     txn_root, resource->info->repos_path,
+                                     txn_root, repos_path_utf8,
                                      resource->pool);
       if (serr != NULL)
         {
@@ -579,7 +595,7 @@ dav_error *dav_svn_checkout(dav_resource *resource,
               const svn_fs_id_t *url_noderev_id, *txn_noderev_id;
 
               if ((serr = svn_fs_node_id(&txn_noderev_id, txn_root, 
-                                         resource->info->repos_path,
+                                         repos_path_utf8,
                                          resource->pool)))
                 {
                   err = dav_svn__new_error_tag
@@ -593,7 +609,7 @@ dav_error *dav_svn_checkout(dav_resource *resource,
                 }
               if ((serr = svn_fs_node_id(&url_noderev_id,
                                          resource->info->root.root,
-                                         resource->info->repos_path,
+                                         repos_path_utf8,
                                          resource->pool)))
                 {
                   err = dav_svn__new_error_tag
@@ -852,7 +868,7 @@ dav_error *dav_svn_checkin(dav_resource *resource,
           
           if (serr->apr_err == SVN_ERR_FS_CONFLICT)
             {
-              msg = apr_psprintf(resource->pool,
+              msg = APR_PSPRINTF(resource->pool,
                                  "A conflict occurred during the CHECKIN "
                                  "processing. The problem occurred with  "
                                  "the \"%s\" resource.",
@@ -1017,6 +1033,7 @@ static dav_error * dav_svn__get_locks_report(const dav_resource *resource,
   dav_svn_authz_read_baton arb;
   apr_hash_index_t *hi;
   apr_pool_t *subpool;
+  const char *repos_path_utf8 = resource->info->repos_path;
 
   /* The request URI should be a public one representing an fs path. */
   if ((! resource->info->repos_path)
@@ -1029,9 +1046,18 @@ static dav_error * dav_svn__get_locks_report(const dav_resource *resource,
   arb.repos = resource->info->repos;
 
   /* Fetch the locks, but allow authz_read checks to happen on each. */
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_to_netccsid(&repos_path_utf8,
+                                  resource->info->repos_path,
+                                  resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                       resource->info->repos_path));
+#endif
   if ((err = svn_repos_fs_get_locks(&locks,
                                     resource->info->repos->repos,
-                                    resource->info->repos_path,
+                                    repos_path_utf8,
                                     dav_svn_authz_read, &arb,
                                     resource->pool)) != SVN_NO_ERROR)
     return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
@@ -1058,6 +1084,7 @@ static dav_error * dav_svn__get_locks_report(const dav_resource *resource,
       void *val;
       const svn_lock_t *lock;
       const char *path_quoted, *token_quoted;
+      const char *path_native, *token_native;
       const char *creation_str, *expiration_str;
       const char *owner_to_send, *comment_to_send;
       svn_boolean_t owner_base64 = FALSE, comment_base64 = FALSE;
@@ -1065,11 +1092,39 @@ static dav_error * dav_svn__get_locks_report(const dav_resource *resource,
       svn_pool_clear(subpool);
       apr_hash_this(hi, &key, NULL, &val);
       lock = val;
-      
-      path_quoted = apr_xml_quote_string(subpool, lock->path, 1);
-      token_quoted = apr_xml_quote_string(subpool, lock->token, 1);
+
+      path_native = lock->path;
+      token_native = lock->token;
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_from_netccsid(&path_native,
+                                        lock->path,
+                                        resource->pool))
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(resource->pool,
+                                          "Error converting string '%s'",
+                                           lock->path));
+
+      if (svn_utf_cstring_from_netccsid(&token_native,
+                                        lock->token,
+                                        resource->pool))
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(resource->pool,
+                                          "Error converting string '%s'",
+                                           lock->token));
+#endif
+      path_quoted = apr_xml_quote_string(subpool, path_native, 1);
+      token_quoted = apr_xml_quote_string(subpool, token_native, 1);
       creation_str = svn_time_to_cstring(lock->creation_date, subpool);
 
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_from_netccsid(&creation_str,
+                                        creation_str,
+                                        resource->pool))
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(resource->pool,
+                                          "Error converting string '%s'",
+                                           creation_str));
+#endif
       apr_err = ap_fprintf(output, bb,
                            "<S:lock>" DEBUG_CR
                            "<S:path>%s</S:path>" DEBUG_CR
@@ -1085,6 +1140,15 @@ static dav_error * dav_svn__get_locks_report(const dav_resource *resource,
       if (lock->expiration_date)
         {
           expiration_str = svn_time_to_cstring(lock->expiration_date, subpool);
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_from_netccsid(&expiration_str,
+                                        expiration_str,
+                                        resource->pool))
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(resource->pool,
+                                          "Error converting string '%s'",
+                                           expiration_str));
+#endif
           apr_err = ap_fprintf(output, bb,
                                "<S:expirationdate>%s</S:expirationdate>"
                                DEBUG_CR, expiration_str);
@@ -1097,7 +1161,18 @@ static dav_error * dav_svn__get_locks_report(const dav_resource *resource,
 
       if (svn_xml_is_xml_safe(lock->owner, strlen(lock->owner)))
         {
-          owner_to_send = apr_xml_quote_string(subpool, lock->owner, 1);
+          const char *lock_owner_native = lock->owner;
+#if APR_CHARSET_EBCDIC
+          if (svn_utf_cstring_from_netccsid(&lock_owner_native,
+                                            lock_owner_native,
+                                            resource->pool))
+            return dav_new_error(resource->pool,
+                                 HTTP_INTERNAL_SERVER_ERROR, 0,
+                                 apr_psprintf(resource->pool,
+                                              "Error converting string '%s'",
+                                               lock->owner));
+#endif
+          owner_to_send = apr_xml_quote_string(subpool, lock_owner_native, 1);
         }
       else
         {
@@ -1125,8 +1200,20 @@ static dav_error * dav_svn__get_locks_report(const dav_resource *resource,
         {
           if (svn_xml_is_xml_safe(lock->comment, strlen(lock->comment)))
             {
+              const char *lock_comment_native = lock->comment;
+#if APR_CHARSET_EBCDIC
+              if (svn_utf_cstring_from_netccsid(&lock_comment_native,
+                                                lock_comment_native,
+                                                resource->pool))
+                return dav_new_error(resource->pool,
+                                     HTTP_INTERNAL_SERVER_ERROR, 0,
+                                     apr_psprintf(resource->pool,
+                                                  "Error converting" 
+                                                  " string '%s'",
+                                                  lock->comment));
+#endif
               comment_to_send = apr_xml_quote_string(subpool,
-                                                     lock->comment, 1);
+                                                     lock_comment_native, 1);
             }
           else
             {
@@ -1206,6 +1293,12 @@ static apr_status_t send_get_locations_report(ap_filter_t *output,
       const char *path_quoted;
 
       apr_hash_this(hi, &key, NULL, &value);
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_from_netccsid((const char **)(&value),
+                                        (const char *)value, 
+                                        pool))
+        return APR_EGENERAL;
+#endif
       path_quoted = apr_xml_quote_string(pool, value, 1);
       apr_err = ap_fprintf(output, bb, "<S:location "
                            "rev=\"%ld\" path=\"%s\"/>" DEBUG_CR,
@@ -1225,6 +1318,7 @@ dav_error *dav_svn__get_locations_report(const dav_resource *resource,
   apr_status_t apr_err;
   apr_bucket_brigade *bb;
   dav_svn_authz_read_baton arb;
+  const char *repos_path_utf8 = resource->info->repos_path;
 
   /* The parameters to do the operation on. */
   const char *relative_path = NULL;
@@ -1287,10 +1381,24 @@ dav_error *dav_svn__get_locations_report(const dav_resource *resource,
                                     SVN_DAV_ERROR_TAG);       
     }
 
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_to_netccsid(&repos_path_utf8,
+                                  resource->info->repos_path,
+                                  resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                       resource->info->repos_path));
+  if (svn_utf_cstring_to_netccsid(&relative_path, relative_path, 
+                                  resource->pool))
+    return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(resource->pool,
+                                      "Error converting string '%s'",
+                                       relative_path));
+#endif
   /* Append the relative path to the base FS path to get an absolute
      repository path. */
-  abs_path = svn_path_join(resource->info->repos_path, relative_path,
-                           resource->pool);
+  abs_path = svn_path_join(repos_path_utf8, relative_path, resource->pool);
 
   /* Build an authz read baton */
   arb.r = resource->info->r;
@@ -1502,7 +1610,17 @@ dav_error *dav_svn__build_lock_hash(apr_hash_t **locks,
                 return derr;
                   
               /* Create an absolute fs-path */
+#if !APR_CHARSET_EBCDIC
               lockpath = svn_path_join(path_prefix, cdata, pool);
+#else
+              lockpath = svn_path_join_ebcdic(path_prefix, cdata, pool);
+              if (svn_utf_cstring_to_netccsid(&lockpath, lockpath, pool))
+                return dav_new_error(pool,
+                                     HTTP_INTERNAL_SERVER_ERROR, 0,
+                                     apr_psprintf(pool,
+                                     "Error converting string '%s'",
+                                     lockpath));
+#endif
               if (lockpath && locktoken)
                 {
                   apr_hash_set(hash, lockpath, APR_HASH_KEY_STRING, locktoken);
@@ -1515,6 +1633,14 @@ dav_error *dav_svn__build_lock_hash(apr_hash_t **locks,
               locktoken = dav_xml_get_cdata(lfchild, pool, 1);
               if (lockpath && *locktoken)
                 {
+#if APR_CHARSET_EBCDIC
+                  if (svn_utf_cstring_to_netccsid(&locktoken, locktoken, pool))
+                    return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                                         apr_psprintf(pool,
+                                                      "Error converting string"
+                                                      " '%s'",
+                                                      locktoken));
+#endif
                   apr_hash_set(hash, lockpath, APR_HASH_KEY_STRING, locktoken);
                   lockpath = NULL;
                   locktoken = NULL;

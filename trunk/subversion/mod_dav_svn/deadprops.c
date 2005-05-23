@@ -30,6 +30,7 @@
 #include "svn_dav.h"
 #include "svn_base64.h"
 #include "svn_props.h"
+#include "svn_utf.h"
 
 
 struct dav_db {
@@ -68,7 +69,12 @@ static void get_repos_propname(dav_db *db, const dav_prop_name *name,
   if (strcmp(name->ns, SVN_DAV_PROP_NS_SVN) == 0)
     {
       /* recombine the namespace ("svn:") and the name. */
-      svn_stringbuf_set(db->work, SVN_PROP_PREFIX);
+      const char *prefix = SVN_PROP_PREFIX;
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_from_netccsid(&prefix, prefix, db->resource->pool))
+        prefix = SVN_PROP_PREFIX;
+#endif
+      svn_stringbuf_set(db->work, prefix);
       svn_stringbuf_appendcstr(db->work, name->name);
       *repos_propname = db->work->data;
     }
@@ -91,7 +97,14 @@ static dav_error *get_value(dav_db *db, const dav_prop_name *name,
 
   /* get the repos-local name */
   get_repos_propname(db, name, &propname);
-
+#if APR_CHARSET_EBCDIC
+  if (svn_utf_cstring_to_netccsid(&propname, propname,
+                                  db->resource->pool))
+    return dav_new_error(db->resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(db->resource->pool,
+                                      "Error converting string '%s'",
+                                      propname));
+#endif
   if (propname == NULL)
     {
       /* we know these are not present. */
@@ -113,9 +126,19 @@ static dav_error *get_value(dav_db *db, const dav_prop_name *name,
                                         db->authz_read_func,
                                         db->authz_read_baton, db->p);
   else
-    serr = svn_fs_node_prop(pvalue, db->resource->info->root.root,
-                            get_repos_path(db->resource->info),
-                            propname, db->p);
+    {
+      const char *repos_path = get_repos_path(db->resource->info);	
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_to_netccsid(&repos_path, repos_path,
+                                      db->resource->pool))
+        return dav_new_error(db->resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(db->resource->pool,
+                                          "Error converting string '%s'",
+                                          repos_path));
+#endif
+      serr = svn_fs_node_prop(pvalue, db->resource->info->root.root, repos_path,
+                              propname, db->p);
+    }
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not fetch a property",
@@ -144,28 +167,66 @@ static dav_error *save_value(dav_db *db, const dav_prop_name *name,
                              SVN_DAV_PROP_NS_SVN " and " SVN_DAV_PROP_NS_CUSTOM
                              " namespaces.");
     }
-
+#if APR_CHARSET_EBCDIC    
+  if (value &&
+      svn_utf_string_to_netccsid(&value, value,
+                                 db->resource->pool))
+    return dav_new_error(db->resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(db->resource->pool,
+                                      "Error converting string '%s'",
+                                      value->data));
+  if (svn_utf_cstring_to_netccsid(&propname, propname,
+                                  db->resource->pool))
+    return dav_new_error(db->resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(db->resource->pool,
+                                      "Error converting string '%s'",
+                                      propname));
+#endif
   /* Working Baseline or Working (Version) Resource */
   if (db->resource->baselined)
-    if (db->resource->working)
-      serr = svn_repos_fs_change_txn_prop(db->resource->info->root.txn,
-                                          propname, value, db->resource->pool);
-    else
-      /* ### VIOLATING deltaV: you can't proppatch a baseline, it's
-         not a working resource!  But this is how we currently
-         (hackily) allow the svn client to change unversioned rev
-         props.  See issue #916. */
-      serr = svn_repos_fs_change_rev_prop2(db->resource->info->repos->repos,
-                                           db->resource->info->root.rev,
-                                           db->resource->info->repos->username,
-                                           propname, value,
-                                           db->authz_read_func,
-                                           db->authz_read_baton,
-                                           db->resource->pool);
+    {
+      if (db->resource->working)
+        serr = svn_repos_fs_change_txn_prop(db->resource->info->root.txn,
+                                            propname, value, db->resource->pool);
+      else
+        {
+          const char *username_utf8 = db->resource->info->repos->username;	
+#if APR_CHARSET_EBCDIC
+          if (svn_utf_cstring_to_netccsid(&username_utf8,
+                                          db->resource->info->repos->username,
+                                          db->p))
+            return dav_new_error(db->p, HTTP_INTERNAL_SERVER_ERROR, 0,
+                     apr_psprintf(db->p, "Error converting string '%s'",
+                                  db->resource->info->repos->username));
+#endif
+          /* ### VIOLATING deltaV: you can't proppatch a baseline, it's
+             not a working resource!  But this is how we currently
+             (hackily) allow the svn client to change unversioned rev
+             props.  See issue #916. */
+          serr = svn_repos_fs_change_rev_prop2(db->resource->info->repos->repos,
+                                               db->resource->info->root.rev,
+                                               username_utf8,
+                                               propname, value,
+                                               db->authz_read_func,
+                                               db->authz_read_baton,
+                                               db->resource->pool);
+        }
+    }
   else
+    {
+      const char *repos_path = get_repos_path(db->resource->info);	
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_to_netccsid(&repos_path, repos_path,
+                                      db->resource->pool))
+        return dav_new_error(db->resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(db->resource->pool,
+                                          "Error converting string '%s'",
+                                          repos_path));
+#endif
     serr = svn_repos_fs_change_node_prop(db->resource->info->root.root,
-                                         get_repos_path(db->resource->info),
-                                         propname, value, db->resource->pool);
+                                         repos_path, propname, value,
+                                         db->resource->pool);
+    }
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                NULL,
@@ -273,8 +334,8 @@ static dav_error *dav_svn_db_output_value(dav_db *db,
   if (propval->len == 0)
     {
       /* empty value. add an empty elem. */
-      s = apr_psprintf(pool, "<%s%s/>" DEBUG_CR, prefix, name->name);
-      apr_text_append(pool, phdr, s);
+      s = apr_psprintf(pool, "<%s%s/>\n", prefix, name->name);
+      apr_text_append(pool, phdr, s); 
     }
   else
     {
@@ -296,16 +357,21 @@ static dav_error *dav_svn_db_output_value(dav_db *db,
           svn_stringbuf_t *xmlval = NULL;
           svn_xml_escape_cdata_string(&xmlval, propval, pool);
           xml_safe = xmlval->data;
+#if APR_CHARSET_EBCDIC
+          if(svn_utf_cstring_from_netccsid(&xml_safe, xml_safe, pool))
+            return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                                 apr_psprintf(pool,
+                                              "Error converting string '%s'",
+                                              xml_safe));
+#endif
         }
-
-      s = apr_psprintf(pool, "<%s%s%s>", prefix, name->name, encoding);
+      s = apr_psprintf(pool, "<%s%s%s>", prefix, name->name, encoding); 
       apr_text_append(pool, phdr, s);
 
       /* the value is in our pool which means it has the right lifetime. */
       /* ### at least, per the current mod_dav architecture/API */
       apr_text_append(pool, phdr, xml_safe);
-      
-      s = apr_psprintf(pool, "</%s%s>" DEBUG_CR, prefix, name->name);
+      s = apr_psprintf(pool, "</%s%s>\n", prefix, name->name);
       apr_text_append(pool, phdr, s);
     }
 
@@ -348,7 +414,17 @@ static dav_error *dav_svn_db_store(dav_db *db, const dav_prop_name *name,
 
           /* Handle known encodings here. */
           if (enc_type && (strcmp (enc_type, "base64") == 0))
-            propval = svn_base64_decode_string(propval, pool);
+            {
+              propval = svn_base64_decode_string(propval, pool);
+#if APR_CHARSET_EBCDIC
+              if(propval &&
+                 svn_utf_string_from_netccsid(&propval, propval, pool))
+                return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                                     apr_psprintf(pool,
+                                                  "Error converting string '%s'",
+                                                  propval->data));
+#endif
+            }
           else
             return dav_new_error (pool, HTTP_INTERNAL_SERVER_ERROR, 0,
                                   "Unknown property encoding");
@@ -372,6 +448,13 @@ static dav_error *dav_svn_db_remove(dav_db *db, const dav_prop_name *name)
   /* ### non-svn props aren't in our repos, so punt for now */
   if (propname == NULL)
     return NULL;
+#if APR_CHARSET_EBCDIC
+  else if(svn_utf_cstring_to_netccsid(&propname, propname, db->resource->pool))
+    return dav_new_error(db->resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         apr_psprintf(db->resource->pool,
+                                      "Error converting string '%s'",
+                                      propname));
+#endif
 
   /* Working Baseline or Working (Version) Resource */
   if (db->resource->baselined)
@@ -379,21 +462,45 @@ static dav_error *dav_svn_db_remove(dav_db *db, const dav_prop_name *name)
       serr = svn_repos_fs_change_txn_prop(db->resource->info->root.txn,
                                           propname, NULL, db->resource->pool);
     else
-      /* ### VIOLATING deltaV: you can't proppatch a baseline, it's
-         not a working resource!  But this is how we currently
-         (hackily) allow the svn client to change unversioned rev
-         props.  See issue #916. */
-      serr = svn_repos_fs_change_rev_prop2(db->resource->info->repos->repos,
-                                           db->resource->info->root.rev,
-                                           db->resource->info->repos->username,
-                                           propname, NULL,
-                                           db->authz_read_func,
-                                           db->authz_read_baton,
-                                           db->resource->pool);
+      { 
+        const char *username_utf8 = db->resource->info->repos->username;    
+#if APR_CHARSET_EBCDIC
+        if (svn_utf_cstring_to_netccsid(&username_utf8,
+                                        db->resource->info->repos->username,
+                                        db->p))
+          return dav_new_error(db->p, HTTP_INTERNAL_SERVER_ERROR, 0,
+                               apr_psprintf(db->p,
+                                            "Error converting string '%s'",
+                                            db->resource->info->repos->username));
+#endif
+        /* ### VIOLATING deltaV: you can't proppatch a baseline, it's
+           not a working resource!  But this is how we currently
+           (hackily) allow the svn client to change unversioned rev
+           props.  See issue #916. */
+        serr = svn_repos_fs_change_rev_prop2(db->resource->info->repos->repos,
+                                             db->resource->info->root.rev,
+                                             username_utf8,
+                                             propname, NULL,
+                                             db->authz_read_func,
+                                             db->authz_read_baton,
+                                             db->resource->pool);
+      }
   else
-    serr = svn_repos_fs_change_node_prop(db->resource->info->root.root,
-                                         get_repos_path(db->resource->info),
-                                         propname, NULL, db->resource->pool);
+    {
+      const char *repos_path = get_repos_path(db->resource->info);
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_to_netccsid(&repos_path,
+                                      repos_path,
+                                      db->p))
+        return dav_new_error(db->p, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             apr_psprintf(db->p,
+                                          "Error converting string '%s'",
+                                           repos_path));
+#endif
+      serr = svn_repos_fs_change_node_prop(db->resource->info->root.root,
+                                           repos_path,
+                                           propname, NULL, db->resource->pool);
+    }
   if (serr != NULL)
     return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                "could not remove a property",
@@ -418,7 +525,11 @@ static int dav_svn_db_exists(dav_db *db, const dav_prop_name *name)
   /* ### non-svn props aren't in our repos */
   if (propname == NULL)
     return 0;
-
+#if APR_CHARSET_EBCDIC
+  else if(svn_utf_cstring_to_netccsid(&propname, propname, db->resource->pool))
+    return 0; /* Return 0...ugly, what is better way to handle conversion
+               * error ?*/
+#endif
   /* Working Baseline, Baseline, or (Working) Version resource */
   if (db->resource->baselined)
     if (db->resource->type == DAV_RESOURCE_TYPE_WORKING)
@@ -432,10 +543,16 @@ static int dav_svn_db_exists(dav_db *db, const dav_prop_name *name)
                                         db->authz_read_func,
                                         db->authz_read_baton, db->p);
   else
-    serr = svn_fs_node_prop(&propval, db->resource->info->root.root,
-                            get_repos_path(db->resource->info),
-                            propname, db->p);
-
+    {
+      const char *repos_path = get_repos_path(db->resource->info);
+#if APR_CHARSET_EBCDIC          
+      if (svn_utf_cstring_to_netccsid(&repos_path, repos_path, db->p))
+        repos_path = "";
+#endif
+      serr = svn_fs_node_prop(&propval, db->resource->info->root.root,
+                              repos_path,
+                              propname, db->p);
+    }
   /* ### try and dispose of the value? */
 
   retval = (serr == NULL && propval != NULL);
@@ -460,12 +577,27 @@ static void get_name(dav_db *db, dav_prop_name *pname)
 #undef PREFIX_LEN
         {
           pname->ns = SVN_DAV_PROP_NS_SVN;
+#if !APR_CHARSET_EBCDIC
           pname->name = (const char *)name + 4;
+#else
+          if (svn_utf_cstring_from_netccsid(&(pname->name),
+                                            (const char *)name + 4,
+                                            db->p))
+            /* How to best handle a conversion error here? */
+            pname->name = (const char *)name + 4;
+#endif
         }
       else
         {
           pname->ns = SVN_DAV_PROP_NS_CUSTOM;
+#if !APR_CHARSET_EBCDIC
           pname->name = name;
+#else
+          if (svn_utf_cstring_from_netccsid(&(pname->name), (const char *)name,
+                                            db->p))
+            /* How to best handle a conversion error here? */
+            pname->name = name;
+#endif
         }
     }
 }
@@ -495,9 +627,20 @@ static dav_error *dav_svn_db_first_name(dav_db *db, dav_prop_name *pname)
         }
       else
         {
+          const char *repos_path_utf8 = get_repos_path(db->resource->info);
+#if APR_CHARSET_EBCDIC
+          if (svn_utf_cstring_to_netccsid(&repos_path_utf8, repos_path_utf8,
+                                          db->p))
+            {
+              return dav_new_error(db->p, HTTP_INTERNAL_SERVER_ERROR, 0,
+                                   apr_psprintf(db->p,
+                                                "Error converting string '%s'",
+                                                repos_path_utf8));
+            }
+#endif
           serr = svn_fs_node_proplist(&db->props, 
                                       db->resource->info->root.root,
-                                      get_repos_path(db->resource->info), 
+                                      repos_path_utf8,
                                       db->p);
         }
       if (serr != NULL)

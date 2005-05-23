@@ -33,10 +33,15 @@
 #include "svn_version.h"
 #include "svn_props.h"
 #include "svn_time.h"
+#include "svn_ebcdic.h"
 
 #include "svn_private_config.h"
 
 
+#define ADMINISTRATOR_STR \
+        "\x61\x64\x6d\x69\x6e\x69\x73\x74\x72\x61\x74\x6f\x72"
+        /* "administrator" */
+
 /*** Code. ***/
 
 /* A flag to see if we've been cancelled by the client or not. */
@@ -468,11 +473,11 @@ subcommand_create (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
                 APR_HASH_KEY_STRING,
-                (opt_state->bdb_txn_nosync ? "1" : "0"));
+                (opt_state->bdb_txn_nosync ? SVN_UTF8_1_STR : SVN_UTF8_0_STR));
 
   apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE,
                 APR_HASH_KEY_STRING,
-                (opt_state->bdb_log_keep ? "0" : "1"));
+                (opt_state->bdb_log_keep ? SVN_UTF8_0_STR : SVN_UTF8_1_STR));
 
   if (opt_state->fs_type)
     apr_hash_set (fs_config, SVN_FS_CONFIG_FS_TYPE,
@@ -697,6 +702,7 @@ subcommand_lstxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_fs_t *fs;
   apr_array_header_t *txns;
   int i;
+  const char *txn_name;
   
   SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
   fs = svn_repos_fs (repos);
@@ -705,8 +711,11 @@ subcommand_lstxns (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Loop, printing revisions. */
   for (i = 0; i < txns->nelts; i++)
     {
-      SVN_ERR (svn_cmdline_printf (pool, "%s\n",
-                                   APR_ARRAY_IDX (txns, i, const char *)));
+      txn_name = APR_ARRAY_IDX (txns, i, const char *);	
+#if APR_CHARSET_EBCDIC
+      SVN_ERR (svn_utf_cstring_from_utf8 (&txn_name, txn_name, pool));
+#endif
+      SVN_ERR (svn_cmdline_printf (pool, "%s\n", txn_name));
     }
   
   return SVN_NO_ERROR;
@@ -922,14 +931,35 @@ subcommand_setlog (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR (svn_utf_cstring_to_utf8 (&filename_utf8,
                                     APR_ARRAY_IDX (args, 0, const char *),
                                     pool));
+
   filename_utf8 = svn_path_internal_style (filename_utf8, pool);
   SVN_ERR (svn_stringbuf_from_file (&file_contents, filename_utf8, pool)); 
 
   log_contents->data = file_contents->data;
   log_contents->len = file_contents->len;
 
-  SVN_ERR (svn_subst_translate_string (&log_contents, log_contents,
-                                       NULL, pool));
+#if !APR_CHARSET_EBCDIC
+  /* svn_subst_translate_string(&log_contents, log_contents, NULL, pool)
+   * assumes log_contents is natively encoded, but on ebcdic platforms this
+   * isn't a safe bet since the port's rule of thumb is to use utf-8 encoded
+   * files for *everything* and force svn_utf_io_file_open to open files as
+   * binary so the OS doesn't do any auto-conversions of the contents while
+   * reading/writing them.  One of the few cases where possible violations to
+   * this rule creep in are when FILE arguments are passed to commands like
+   * svnadmin setlog.  We don't have any control over the encoding of the file;
+   * ascii, ebcdic, and utf-8 are all likely.  So we test the contents of the
+   * file and if they are not utf-8 the setlog fails and an appropriate error
+   * is returned.
+   */
+  SVN_ERR (svn_subst_translate_string (&log_contents, log_contents, NULL,
+                                       pool));
+#else
+  if (!svn_utf_is_valid_utf(log_contents->data, log_contents->len))
+    return svn_error_createf (APR_EGENERAL, NULL,
+                              "File '%s' must be utf-8 encoded",
+                              filename_utf8);
+
+#endif
 
   /* Open the filesystem  */
   SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
@@ -1002,7 +1032,8 @@ subcommand_lslocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   fs = svn_repos_fs (repos);
 
   /* Fetch all locks on or below the root directory. */
-  SVN_ERR (svn_repos_fs_get_locks (&locks, repos, "/", NULL, NULL, pool));
+  SVN_ERR (svn_repos_fs_get_locks (&locks, repos, SVN_UTF8_FSLASH_STR,
+                                   NULL, NULL, pool));
 
   for (hi = apr_hash_first (pool, locks); hi; hi = apr_hash_next (hi))
     {
@@ -1024,12 +1055,12 @@ subcommand_lslocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       if (lock->comment)
         comment_lines = svn_cstring_count_newlines (lock->comment) + 1; 
       
-      SVN_ERR (svn_cmdline_printf (pool, _("Path: %s\n"), path));
-      SVN_ERR (svn_cmdline_printf (pool, _("UUID Token: %s\n"), lock->token));
-      SVN_ERR (svn_cmdline_printf (pool, _("Owner: %s\n"), lock->owner));
-      SVN_ERR (svn_cmdline_printf (pool, _("Created: %s\n"), cr_date));
-      SVN_ERR (svn_cmdline_printf (pool, _("Expires: %s\n"), exp_date));
-      SVN_ERR (svn_cmdline_printf (pool, (comment_lines != 1)
+      SVN_ERR (SVN_CMDLINE_PRINTF (pool, _("Path: %s\n"), path));
+      SVN_ERR (SVN_CMDLINE_PRINTF (pool, _("UUID Token: %s\n"), lock->token));
+      SVN_ERR (SVN_CMDLINE_PRINTF (pool, _("Owner: %s\n"), lock->owner));
+      SVN_ERR (SVN_CMDLINE_PRINTF (pool, _("Created: %s\n"), cr_date));
+      SVN_ERR (SVN_CMDLINE_PRINTF (pool, _("Expires: %s\n"), exp_date));
+      SVN_ERR (SVN_CMDLINE_PRINTF (pool, (comment_lines != 1)
                                    ? _("Comment (%i lines):\n%s\n\n")
                                    : _("Comment (%i line):\n%s\n\n"),
                                    comment_lines, 
@@ -1069,7 +1100,7 @@ subcommand_rmlocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
         err = svn_utf_cstring_to_utf8 (&username, un, pool);
         svn_error_clear (err);
         if (err)
-          username = "administrator";
+          username = ADMINISTRATOR_STR;
         }
   }
 
@@ -1097,7 +1128,7 @@ subcommand_rmlocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
         goto move_on;
       if (! lock)
         {
-          SVN_ERR (svn_cmdline_printf (subpool,
+          SVN_ERR (SVN_CMDLINE_PRINTF (subpool,
                                        _("Path '%s' isn't locked.\n"),
                                        lock_path));
           continue;
@@ -1109,7 +1140,7 @@ subcommand_rmlocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
       if (err)
         goto move_on;
       
-      SVN_ERR (svn_cmdline_printf (subpool,
+      SVN_ERR (SVN_CMDLINE_PRINTF (subpool,
                                    _("Removed lock on '%s'.\n"), lock->path));
       
     move_on:      
