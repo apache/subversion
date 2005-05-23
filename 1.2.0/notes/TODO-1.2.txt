@@ -1,0 +1,32 @@
+
+TO-DO list for svn 1.2
+=======================
+
+
+CODING TASKS:
+
+   - get win32 build working and passing tests. (sussman)
+
+
+BUGS:
+
+   - new ra_dav bug from philip?  investigate. (sussman)
+
+
+QUESTIONS:
+
+
+DOC:
+
+   - write 1.1.4 and 1.2 CHANGES entries  (sussman, in progress)
+
+   - finish the 1.2 releasenotes (sussman)
+
+   - INSTALL:  explain how to build mod_dav_svn on win32 w/patch
+
+
+TESTS:
+
+   - we need MORE lock_tests.py test. more, more, more.
+   - continue testing various DAV clients against autoversioning.
+
