@@ -1,0 +1,60 @@
+Here are two general schemes for solving the repeated merge problem:
+
+The Most Recent Common Ancestor approach (MRCA)
+-----------------------------------------------
+
+In this scheme, you record an optional set of merge sources in each
+node-revision.  When asked to do a merge with only one source (that
+is, just "svn merge URL", with no second argument), you compute the
+most recent ancestor and do a three-way merge between the common
+ancestor, the given URL, and the WC.
+
+To compute the most recent ancestor, you chain off the immediate
+predecessors of each node-revision.  The immediate predecessors are
+the direct predecessor (the most recent node-revision within the node)
+and the merge sources.  An interleaved breadth-first search should
+find the most recent common ancestor.
+
+The Ancestry Set approach (AS)
+------------------------------
+
+(For a longer description of this approach, see
+http://svn.collab.net/repos/svn/trunk/doc/programmer/design/model.texi
+under "Merging and Ancestry".)
+
+In this scheme, you record the full ancestry set for each
+node-revision--that is, the set of all changes which are accounted for
+in that node-revision.  (How you store this ancestry set is
+unimportant; the point is, you need a reasonably efficient way of
+determining it when asked.)  If you are asked to "svn merge URL", you
+apply the changes present in URL's ancestry but absent in WC's
+ancestry.  Note that this is not a single three-way merge; you may
+have to apply a large number of disjoint changes to the WC.
+
+Comparisons and arguments
+-------------------------
+
+AS allows you to merge changes from a branch out of order, without
+doing any bookkeeping.  MRCA requires you to merge changes from a
+branch in order.
+
+Consistency with other modern version controls systems is desirable.
+
+MRCA may be simpler to implement, since it results in a single
+three-way merge.
+
+MRCA may be easier for users to understand, even though AS is probably
+simpler to a mathematician.
+
+MRCA may break down faster if the merging topology is not
+hierarchical.
+
+An Open Question (applying to both schemes)
+----------------
+
+If a user asks to merge a directory, should we apply MRCA or AS to
+each subdirectory and file to determine what ancestor(s) to use?  Or
+should we apply MRCA or AS just once, to the directory itself?  The
+latter approach seems simpler and more efficient, but will break down
+quickly if the user wants to merge subdirectories of a branch in
+advance of merging in the whole thing.
