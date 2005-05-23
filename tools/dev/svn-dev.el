@@ -134,6 +134,13 @@ Inhibit backup files unless `vc-make-backup-files' is non-nil."
   (interactive "nSubversion issue number: ")
   (insert (format "http://subversion.tigris.org/issues/show_bug.cgi?id=%d" n)))
 
+;; Helper for referring to revisions in a browser-friendly way.
+(defun svn-rev-url (rev)
+  "Insert the url for Subversion revision REV.  Interactively, prompt for REV."
+  (interactive "sSubversion revision number: ")
+  (if (string-match "^r[0-9]+" rev)
+      (setq rev (substring rev 1)))
+  (insert (format "http://svn.collab.net/viewcvs/svn?rev=%s&view=rev" rev)))
 
 
 ;;; Subversion C conventions
