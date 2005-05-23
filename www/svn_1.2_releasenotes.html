@@ -113,8 +113,8 @@ fixes for these in Subversion 1.2.1:</p>
      (<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2306"
       >Issue&nbsp;#2306</a>)</li>
 
-<li>'svn status -u' incorrectly believes that all locks on "switched"
-    files are broken.
+<li>'svn lock' on a switched file is broken&nbsp;&mdash;&nbsp;it will
+    lock the wrong repository object.
     (<a
     href="http://subversion.tigris.org/issues/show_bug.cgi?id=2307"
     >Issue&nbsp;#2307</a>)</li>
