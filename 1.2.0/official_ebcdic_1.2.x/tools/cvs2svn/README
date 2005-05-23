@@ -1,0 +1,14 @@
+cvs2svn has been moved to its own repository.  To check it out, do:
+
+   $ svn co http://svn.collab.net/repos/cvs2svn/trunk cvs2svn
+
+The tigris.org project is
+
+   http://cvs2svn.tigris.org/
+
+Don't forget to subscribe to the new mailing lists there, if you
+follow cvs2svn development.
+
+If you were able to commit to cvs2svn before, you should still be able
+to now.  Please email cmpilato@collab.net or kfogel@collab.net if you
+have any problems.

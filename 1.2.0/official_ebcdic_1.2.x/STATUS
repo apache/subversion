@@ -1,0 +1,62 @@
+This file tracks the status of releases in the 1.2.x line.
+
+See "Stabilizing and maintaining releases" in trunk/HACKING for
+details on how release lines and voting work, what kinds of bugs can
+delay a release, etc.
+
+Status of 1.2.0:
+================
+
+Candidate changes:
+
+  * r14716
+    Fix of the Windows Installer's Add/Repair/Remove capabilities.
+    Branch: innosetup-hsuninsfix-5x-1.2.x
+    Justification:
+      This fixes problems people had when using Windows'
+      add/remove item in the Control Panel.
+    Votes:
+      +0: dlr (concept, no testing environment)
+
+
+  * r14732
+    Fix svn-push, which was segfaulting all the time, due to violating API
+    not-NULL requirements.
+    Justification:
+      Totally broken without it. Trivial fix to silly problem.
+    Notes:
+      Being solely "contrib/" code, this does not affect the soak.
+    Votes:
+      +1: maxb, philip
+
+
+Status of 1.2.1:
+================
+
+Candidate changes:
+
+  * r14722, r14759
+    Optimize 'svn log' performance.
+    Justification:
+      The new --limit option does not help speed as much without this.
+    Votes:
+      +1: djh
+
+  * r14736, r14775
+    Open access baton to required depth for lock/unlock targets.
+    Justification:
+      Fixes an assert when the targets have "gaps".
+    Votes:
+      +1: lundblad, philip
+
+  * r14755
+    Don't initialize libsvn_ra in svnversion:
+    Justification:
+      svnversion doesn't use the RA layer, and it only depends on it
+      indirectly.
+    Votes:
+      +1: lundblad
+
+Approved changes (further review is welcome, but not required):
+
+(none)

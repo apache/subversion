@@ -1,0 +1,61 @@
+[[This is a light weight implementation specification for the
+"svn:needs-lock" feature on the locking branch.  Its purpose is
+primarily to help me iterate through the development of the feature,
+and secondarily to allow any reviewers to get better idea of my game
+plan.  -Fitz ]]
+
+svn:needs-lock behaviors:
+=========================
+
+Checkout:
+- If svn:needs-lock is set on a file when the file is checked out, set
+  the file to read-only.
+
+Update:
+
+- If svn:needs-lock is unset in wc, but update sets it: 
+  - If the file has local mods, print a warning and do nothing???
+  - Else, set file to read-only.
+- If svn:needs-lock is set in wc, but update unsets it: Set file to
+  read-write.
+- If svn:needs-lock is set or unset in both places: Do nothing.
+- If svn:needs-lock is set and the lock is removed by update (i.e.,
+  the lock in the wc was defunct):
+  - If the file has local mods, print a warning and do nothing???
+  - Else, set the file to read-only. 
+
+Propset:
+
+- Setting the svn:needs-lock property does nothing WRT a file's
+  permissions.  The file will be set to read-only at commit time.  See
+  "Commit" below.  (Propset does, however, canonicalizes the value to '*')
+  
+Propdel:
+- Removing svn:needs-lock sets the file to read-write.
+
+Propedit:
+- If the property is changed via propedit, we need to canonicalize it
+  to '*'.
+
+Lock:
+- If svn:needs-lock is set, the file is set to read-write.
+
+Unlock:
+- If svn:needs-lock is set, the file is set to read-only.
+
+Copy:
+
+- repos-to-wc or wc-to-wc copy: Ensure that the copy is read-write
+   even if svn:needs-lock is set as this is another schedule add case.
+
+Commit: 
+- If a file has the svn:needs-lock property set and is not locked:
+  - Unconditionally set the file to read-only.
+- Else, do nothing.
+
+
+
+Caveats:
+
+- 'svn update' doesn't currently work on Windows if the working files
+  are read-only, you will need to add some permission changing code.
