@@ -105,8 +105,8 @@ repositories to 4.3.</a></p>
 fixes for these in Subversion 1.2.1:</p>
 
 <ul>
-<li>'svn lock path1 path2' can cause an assertion under certain
-    circumstances.</li>
+<li>'svn lock path1 path2' can cause an assertion failure under
+    certain circumstances.</li>
 
 <li>'svn switch' doesn't remove read-only attribute when removing
      svn:needs-lock property.
@@ -119,9 +119,10 @@ fixes for these in Subversion 1.2.1:</p>
     href="http://subversion.tigris.org/issues/show_bug.cgi?id=2307"
     >Issue&nbsp;#2307</a>)</li>
 
-<li>pending speed optimizations for new 'svn log --limit'</li>
+<li>speed optimization is needed for new 'svn log --limit'</li>
   
-<li>'svnversion' might error trying to load libsvn_ra libraries</li>
+<li>'svnversion' might error trying to link to libsvn_ra
+     libraries</li>
 </ul>
 
 </div>
