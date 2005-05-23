@@ -35,12 +35,15 @@ Status of 1.2.1:
 
 Candidate changes:
 
-  * r14722, r14759
+  * r14116, r14722, r14759
     Optimize 'svn log' performance.
     Justification:
       The new --limit option does not help speed as much without this.
+    Notes:
+      r14722 depends on r14116, which is just comment fixes.
     Votes:
-      +1: djh
+      +1 (not r14116): djh
+      +1: lundblad
 
   * r14736, r14775
     Open access baton to required depth for lock/unlock targets.
