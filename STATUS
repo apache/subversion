@@ -16,7 +16,7 @@ Candidate changes:
       This fixes problems people had when using Windows'
       add/remove item in the Control Panel.
     Votes:
-      +0: dlr (concept, no testing environment)
+      +0: dlr (concept, no testing environment), dlr (concept)
 
   * r14732
     Fix svn-push, which was segfaulting all the time, due to violating API
