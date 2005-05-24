@@ -42,10 +42,3 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14736, r14775
-    Open access baton to required depth for lock/unlock targets.
-    Justification:
-      Fixes an assert when the targets have "gaps".
-    Votes:
-      +1: lundblad, philip, fitz
-
