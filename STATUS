@@ -7,25 +7,6 @@ delay a release, etc.
 Status of 1.1.5:
 ================
 
-Candidate changes that seem to have become stalled
-due to persistent lack of votes:
-
-  * r12075, r12448
-    Add pre-0.14 dumpfile compatability.
-    Justification: Some very old clients were recently spotted in
-    the wild.  And: Dumpfile compatibility is always good.
-    Notes: These look good to me, but are complex enough that I'm not
-      comfortable +1'ing without testing on an old dumpfile, and I
-      haven't done that yet.  -kfogel
-    Votes:
-      +1: maxb, dionisos
-      -0: ringstrom (because the patch is non-trivial and there is only a
-                     single known pre-0.14 user)
-      -0: ghudson (not really comfortable having this code in the trunk,
-                   much less 1.1; dumpfile compatibility in general
-                   good, pre-0.14 compatibility not so important)
-      +0: kfogel
-
 Candidate changes:
 
   * r12694
