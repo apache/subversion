@@ -9,12 +9,16 @@ Status of 1.2.1:
 
 Candidate changes:
 
-  * r14716
+  * r14830
     Fix of the Windows Installer's Add/Repair/Remove capabilities.
-    Branch: innosetup-hsuninsfix-5x-1.2.x
+    Branch:
+      innosetup-hsuninsfix-5x-1.2.x (-r14715:14716)
     Justification:
       This fixes problems people had when using Windows'
       add/remove item in the Control Panel.
+    Notes:
+      Use backport branch because tree-reorganization defeats a simple
+      merge from trunk.
     Votes:
       +0: dlr (concept, no testing environment), fitz (concept)
 
