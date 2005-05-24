@@ -135,7 +135,7 @@ do_job (apr_pool_t * pool, const char *src_url, const char *dest_url,
 			    &reporter,
 			    &report_baton,
 			    end_rev,
-			    NULL,
+			    "",
 			    1, 1, src_url, &my_delta_editor, edit_baton, pool));
 
   SVN_ERR (reporter->set_path (report_baton, "", start_rev, 0, pool));

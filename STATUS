@@ -42,14 +42,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14732 
-    Fix svn-push, which was segfaulting all the time, due to violating API
-    not-NULL requirements.
-    Justification:
-      Totally broken without it. Trivial fix to silly problem.
-    Votes:
-      +1: maxb, philip, fitz
-
   * r14736, r14775
     Open access baton to required depth for lock/unlock targets.
     Justification:
