@@ -38,7 +38,7 @@ Candidate changes:
       svnversion doesn't use the RA layer, and it only depends on it
       indirectly.
     Votes:
-      +1: lundblad
+      +1: lundblad, fitz
 
 Approved changes (further review is welcome, but not required):
 
