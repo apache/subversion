@@ -26,7 +26,7 @@ Candidate changes:
       r14722 depends on r14116, which is just comment fixes.
     Votes:
       +1 (not r14116): djh
-      +1: lundblad
+      +1: lundblad, fitz
 
   * r14736, r14775
     Open access baton to required depth for lock/unlock targets.
