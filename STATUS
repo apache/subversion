@@ -28,13 +28,6 @@ Candidate changes:
       +1 (not r14116): djh
       +1: lundblad, fitz
 
-  * r14736, r14775
-    Open access baton to required depth for lock/unlock targets.
-    Justification:
-      Fixes an assert when the targets have "gaps".
-    Votes:
-      +1: lundblad, philip
-
   * r14755
     Don't initialize libsvn_ra in svnversion:
     Justification:
@@ -52,3 +45,11 @@ Approved changes (further review is welcome, but not required):
       Totally broken without it. Trivial fix to silly problem.
     Votes:
       +1: maxb, philip, fitz
+
+  * r14736, r14775
+    Open access baton to required depth for lock/unlock targets.
+    Justification:
+      Fixes an assert when the targets have "gaps".
+    Votes:
+      +1: lundblad, philip, fitz
+
