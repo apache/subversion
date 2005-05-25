@@ -446,8 +446,9 @@ def get_commondir(dirlist):
     commondir = ''
     newdirs = dirlist
   else:
-    common = string.split(dirlist.pop(), '/')
-    for d in dirlist:
+    common = string.split(dirlist[0], '/')
+    for j in range(1, len(dirlist)):
+      d = dirlist[j]
       parts = string.split(d, '/')
       for i in range(len(common)):
         if i == len(parts) or common[i] != parts[i]:
