@@ -361,7 +361,7 @@ notify (void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_failed_lock:
     case svn_wc_notify_failed_unlock:
-      svn_handle_error (n->err, stderr, FALSE);
+      svn_handle_warning (stderr, n->err);
       break;
 
     default:
