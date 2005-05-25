@@ -43,6 +43,8 @@
  * used string and char literals */
  
 /* Whitespace */
+#define SVN_UTF8_BS              '\x08' /* '\b' */
+#define SVN_UTF8_BS_STR          "\x08" /* "\b" */
 #define SVN_UTF8_CR              '\x0D' /* '\r' */
 #define SVN_UTF8_CR_STR          "\x0D" /* "\r" */
 #define SVN_UTF8_FF              '\x0C' /* '\f' */
@@ -66,6 +68,8 @@
 #define SVN_UTF8_COMMA_STR       "\x2C" /* "," */
 #define SVN_UTF8_COLON           '\x3A' /* ':' */
 #define SVN_UTF8_COLON_STR       "\x3A" /* ":" */
+#define SVN_UTF8_DOLLAR          '\x24' /* '$' */
+#define SVN_UTF8_DOLLAR_STR      "\x24" /* "$" */
 #define SVN_UTF8_DOT             '\x2E' /* '.' */
 #define SVN_UTF8_DOT_STR         "\x2E" /* "." */
 #define SVN_UTF8_DQUOTE          '\x22' /* '"' */
@@ -93,11 +97,14 @@
 #define SVN_UTF8_PLUS_STR        "\x2B" /* "+" */
 #define SVN_UTF8_POUND           '\x23' /* '#' */
 #define SVN_UTF8_QUESTION        '\x3F' /* '?' */
+#define SVN_UTF8_QUESTION_STR    "\x3F" /* "?" */
 #define SVN_UTF8_RBRACKET        '\x5D' /* ']' */
 #define SVN_UTF8_RPAREN          '\x29' /* ')' */
 #define SVN_UTF8_RPAREN_STR      "\x29" /* ")" */
 #define SVN_UTF8_SQUOTE          '\x27' /* '\'' */
 #define SVN_UTF8_SQUOTE_STR      "\x27" /* "\'" */
+#define SVN_UTF8_TILDE           '\x7E' /* '~' */
+#define SVN_UTF8_TILDE_STR       "\x7E" /* "~" */
 #define SVN_UTF8_UNDERSCORE      '\x5F' /* '_' */
 #define SVN_UTF8_UNDERSCORE_STR  "\x5F" /* "_" */
 /* Alphas */

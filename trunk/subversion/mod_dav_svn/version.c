@@ -38,6 +38,13 @@
 
 #include "dav_svn.h"
 
+#if APR_CHARSET_EBCDIC
+       /* MOD_DAV_SVN needs this symbolic constant in ebcdic */
+#ifdef SVN_XML_NAMESPACE
+#undef SVN_XML_NAMESPACE
+#define SVN_XML_NAMESPACE "svn:"
+#endif
+#endif
 
 /* ### should move these report names to a public header to share with
    ### the client (and third parties). */

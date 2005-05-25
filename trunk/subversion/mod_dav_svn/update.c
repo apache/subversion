@@ -39,6 +39,13 @@
 #include <http_request.h>
 #include <http_log.h>
 
+#if APR_CHARSET_EBCDIC
+       /* MOD_DAV_SVN needs this symbolic constant in ebcdic */
+#ifdef SVN_XML_NAMESPACE
+#undef SVN_XML_NAMESPACE
+#define SVN_XML_NAMESPACE "svn:"
+#endif
+#endif
 
 typedef struct {
   const dav_resource *resource;

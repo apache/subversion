@@ -32,6 +32,13 @@
 
 #include "dav_svn.h"
 
+#if APR_CHARSET_EBCDIC
+       /* MOD_DAV_SVN needs this symbolic constant in ebcdic */
+#ifdef SVN_XML_NAMESPACE
+#undef SVN_XML_NAMESPACE
+#define SVN_XML_NAMESPACE "svn:"
+#endif
+#endif
 
 struct log_receiver_baton
 {

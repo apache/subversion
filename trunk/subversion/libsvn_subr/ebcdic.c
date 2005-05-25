@@ -471,7 +471,7 @@ svn_ebcdic_set_file_ccsid (const char *path,
   const char *cmd, *path_native;
   int exit_code;
   SVN_ERR (svn_utf_cstring_from_utf8(&path_native, path, pool));
-  cmd = apr_psprintf(pool, "setccsid %d %s", ccsid, path_native);
+  cmd = apr_psprintf(pool, "setccsid %d '%s'", ccsid, path_native);
   exit_code = QzshSystem(cmd);
   if(exit_code)
     return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,

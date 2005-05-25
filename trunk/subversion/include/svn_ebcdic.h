@@ -58,19 +58,21 @@ extern "C" {
 #if !APR_CHARSET_EBCDIC
   /* Substitution macros which facilitate handling of printf-style format
    * strings on an ebcdic platform. */
-  #define APR_PVSPRINTF       apr_pvsprintf
-  #define APR_PSPRINTF        apr_psprintf
-  #define APR_PVSPRINTF2      apr_pvsprintf
-  #define APR_PSPRINTF2       apr_psprintf
-  #define SVN_CMDLINE_FPRINTF svn_cmdline_fprintf
-  #define SVN_CMDLINE_PRINTF  svn_cmdline_printf
+  #define APR_PVSPRINTF        apr_pvsprintf
+  #define APR_PSPRINTF         apr_psprintf
+  #define APR_PVSPRINTF2       apr_pvsprintf
+  #define APR_PSPRINTF2        apr_psprintf
+  #define SVN_CMDLINE_FPRINTF  svn_cmdline_fprintf
+  #define SVN_CMDLINE_PRINTF   svn_cmdline_printf
+  #define SVN_CMDLINE_PRINTF2  svn_cmdline_printf
 #else
-  #define APR_PVSPRINTF       svn_ebcdic_pvsprintf
-  #define APR_PSPRINTF        svn_ebcdic_psprintf
-  #define APR_PVSPRINTF2      svn_ebcdic_pvsprintf2
-  #define APR_PSPRINTF2       svn_ebcdic_psprintf2
-  #define SVN_CMDLINE_FPRINTF svn_cmdline_fprintf_ebcdic
-  #define SVN_CMDLINE_PRINTF  svn_cmdline_printf_ebcdic
+  #define APR_PVSPRINTF        svn_ebcdic_pvsprintf
+  #define APR_PSPRINTF         svn_ebcdic_psprintf
+  #define APR_PVSPRINTF2       svn_ebcdic_pvsprintf2
+  #define APR_PSPRINTF2        svn_ebcdic_psprintf2
+  #define SVN_CMDLINE_FPRINTF  svn_cmdline_fprintf_ebcdic
+  #define SVN_CMDLINE_PRINTF   svn_cmdline_printf_ebcdic
+  #define SVN_CMDLINE_PRINTF2  svn_cmdline_printf_ebcdic2
 
 /**
  * printf-style style printing routine similar to apr_pvsprintf except that

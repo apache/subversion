@@ -36,7 +36,7 @@ extern "C" {
 #endif /* __cplusplus */
   
 /** The namespace all Subversion XML uses. */
-#define SVN_XML_NAMESPACE "svn:"
+#define SVN_XML_NAMESPACE "\x73\x76\x6e\x3a" /* "svn:" */
 
 /** Used as style argument to svn_xml_make_open_tag() and friends. */
 enum svn_xml_open_tag_style {
