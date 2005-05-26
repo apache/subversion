@@ -25,6 +25,7 @@
 #include "svn_wc.h"
 #include "svn_path.h"
 #include "svn_utf.h"
+#include "svn_ebcdic.h"
 #include "cl.h"
 
 
@@ -70,17 +71,19 @@ print_status (const char *path,
       if (! status->entry)
         working_rev = "";
       else if (! SVN_IS_VALID_REVNUM (status->entry->revision))
-        working_rev = " ? ";
+        working_rev = SVN_UTF8_SPACE_STR \
+                      SVN_UTF8_QUESTION_STR \
+                      SVN_UTF8_SPACE_STR;
       else if (status->copied)
-        working_rev = "-";
+        working_rev = SVN_UTF8_MINUS_STR;
       else
-        working_rev = apr_psprintf (pool, "%ld", status->entry->revision);
+        working_rev = APR_PSPRINTF2 (pool, "%ld", status->entry->revision);
 
       if (status->repos_text_status != svn_wc_status_none
           || status->repos_prop_status != svn_wc_status_none)
-        ood_status = '*';
+        ood_status = SVN_UTF8_ASTERISK;
       else
-        ood_status = ' ';
+        ood_status = SVN_UTF8_SPACE;
 
       if (repos_locks)
         {
@@ -90,20 +93,21 @@ print_status (const char *path,
                 {
                   if (strcmp (status->repos_lock->token, status->entry->lock_token)
                       == 0)
-                    lock_status = 'K';
+                    lock_status = SVN_UTF8_K;
                   else
-                    lock_status = 'T';
+                    lock_status = SVN_UTF8_T;
                 }
               else
-                lock_status = 'O';
+                lock_status = SVN_UTF8_O;
             }
           else if (status->entry && status->entry->lock_token)
-            lock_status = 'B';
+            lock_status = SVN_UTF8_B;
           else
-            lock_status = ' ';
+            lock_status = SVN_UTF8_SPACE;
         }
       else
-        lock_status = (status->entry && status->entry->lock_token) ? 'K' : ' ';
+        lock_status = (status->entry && status->entry->lock_token)
+                      ? SVN_UTF8_K : SVN_UTF8_SPACE;
 
       if (show_last_committed)
         {
@@ -111,58 +115,62 @@ print_status (const char *path,
           const char *commit_author;
 
           if (status->entry && SVN_IS_VALID_REVNUM (status->entry->cmt_rev))
-            commit_rev = apr_psprintf(pool, "%ld", status->entry->cmt_rev);
+            commit_rev = APR_PSPRINTF2(pool, "%ld", status->entry->cmt_rev);
           else if (status->entry)
-            commit_rev = " ? ";
+            commit_rev = SVN_UTF8_SPACE_STR \
+                         SVN_UTF8_QUESTION_STR \
+                         SVN_UTF8_SPACE_STR;
           else
             commit_rev = "";
 
           if (status->entry && status->entry->cmt_author)
             commit_author = status->entry->cmt_author;
           else if (status->entry)
-            commit_author = " ? ";
+            commit_author = SVN_UTF8_SPACE_STR \
+                            SVN_UTF8_QUESTION_STR \
+                            SVN_UTF8_SPACE_STR;
           else
             commit_author = "";
 
           SVN_ERR
-            (svn_cmdline_printf (pool,
-                                 "%c%c%c%c%c%c %c   %6s   %6s %-12s %s\n",
-                                 generate_status_code(status->text_status),
-                                 generate_status_code (status->prop_status),
-                                 status->locked ? 'L' : ' ',
-                                 status->copied ? '+' : ' ',
-                                 status->switched ? 'S' : ' ',
-                                 lock_status,
-                                 ood_status,
-                                 working_rev,
-                                 commit_rev,
-                                 commit_author,
-                                 path));
+            (SVN_CMDLINE_PRINTF2 (pool,
+                                  "%c%c%c%c%c%c %c   %6s   %6s %-12s %s\n",
+                                  generate_status_code(status->text_status),
+                                  generate_status_code (status->prop_status),
+                                  status->locked ? SVN_UTF8_L : SVN_UTF8_SPACE,
+                                  status->copied ? SVN_UTF8_PLUS : SVN_UTF8_SPACE,
+                                  status->switched ? SVN_UTF8_S : SVN_UTF8_SPACE,
+                                  lock_status,
+                                  ood_status,
+                                  working_rev,
+                                  commit_rev,
+                                  commit_author,
+                                  path));
         }
       else
         SVN_ERR
-          (svn_cmdline_printf (pool, "%c%c%c%c%c%c %c   %6s   %s\n",
-                               generate_status_code (status->text_status),
-                               generate_status_code (status->prop_status),
-                               status->locked ? 'L' : ' ',
-                               status->copied ? '+' : ' ',
-                               status->switched ? 'S' : ' ',
-                               lock_status,
-                               ood_status,
-                               working_rev,
-                               path));
+          (SVN_CMDLINE_PRINTF2 (pool, "%c%c%c%c%c%c %c   %6s   %s\n",
+                                generate_status_code (status->text_status),
+                                generate_status_code (status->prop_status),
+                                status->locked ? SVN_UTF8_L : SVN_UTF8_SPACE,
+                                status->copied ? SVN_UTF8_PLUS : SVN_UTF8_SPACE,
+                                status->switched ? SVN_UTF8_S : SVN_UTF8_SPACE,
+                                lock_status,
+                                ood_status,
+                                working_rev,
+                                path));
     }
   else
     SVN_ERR
-      (svn_cmdline_printf (pool, "%c%c%c%c%c%c %s\n",
-                           generate_status_code (status->text_status),
-                           generate_status_code (status->prop_status),
-                           status->locked ? 'L' : ' ',
-                           status->copied ? '+' : ' ',
-                           status->switched ? 'S' : ' ',
-                           ((status->entry && status->entry->lock_token)
-                            ? 'K' : ' '),
-                           path));
+      (SVN_CMDLINE_PRINTF2 (pool, "%c%c%c%c%c%c %s\n",
+                            generate_status_code (status->text_status),
+                            generate_status_code (status->prop_status),
+                            status->locked ? SVN_UTF8_L : SVN_UTF8_SPACE,
+                            status->copied ? SVN_UTF8_PLUS : SVN_UTF8_SPACE,
+                            status->switched ? SVN_UTF8_S : SVN_UTF8_SPACE,
+                            ((status->entry && status->entry->lock_token)
+                             ? SVN_UTF8_K : SVN_UTF8_SPACE),
+                            path));
 
   return SVN_NO_ERROR;
 }
