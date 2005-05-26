@@ -39,6 +39,13 @@
 
 #include "svn_private_config.h"
 
+#define TEMPFILE_STR \
+        "\x74\x65\x6d\x70\x66\x69\x6c\x65"
+        /* "tempfile" */
+
+#define DOT_TMP_STR \
+        "\x2e\x74\x6d\x70"
+        /* ".tmp" */
 
 /*** File names in the adm area. ***/
 
@@ -1131,11 +1138,11 @@ svn_wc_create_tmp_file (apr_file_t **fp,
   const char *ignored_filename;
 
   /* Use a self-explanatory name for the file :-) . */
-  path = svn_wc__adm_path (path, TRUE, pool, "tempfile", NULL);
+  path = svn_wc__adm_path (path, TRUE, pool, TEMPFILE_STR, NULL);
 
   /* Open a unique file;  use APR_DELONCLOSE. */  
   SVN_ERR (svn_io_open_unique_file (fp, &ignored_filename,
-                                    path, ".tmp", delete_on_close, pool));
+                                    path, DOT_TMP_STR, delete_on_close, pool));
 
   return SVN_NO_ERROR;
 }

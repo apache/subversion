@@ -366,7 +366,7 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
   const char *reject_tmp_path = NULL;
 
   /* Empty path and paths ending in / don't need an extra slash removed */
-  if (access_len == 0 || access_path[access_len - 1] == '/')
+  if (access_len == 0 || access_path[access_len - 1] == SVN_UTF8_FSLASH)
     slash = 0;
   else
     slash = 1;
@@ -1039,10 +1039,10 @@ svn_wc_prop_set2 (const char *name,
                || strcmp (name, SVN_PROP_EXTERNALS) == 0)
         {
           /* Make sure that the last line ends in a newline */
-          if (value->data[value->len - 1] != '\n')
+          if (value->data[value->len - 1] != SVN_UTF8_NEWLINE)
             {
               new_value = svn_stringbuf_create_from_string (value, pool);
-              svn_stringbuf_appendbytes (new_value, "\n", 1);
+              svn_stringbuf_appendbytes (new_value, SVN_UTF8_NEWLINE_STR, 1);
             }
 
           /* Make sure this is a valid externals property.  Do not
@@ -1491,7 +1491,10 @@ svn_wc_parse_externals_description2 (apr_array_header_t **externals_p,
                                      const char *desc,
                                      apr_pool_t *pool)
 {
-  apr_array_header_t *lines = svn_cstring_split (desc, "\n\r", TRUE, pool);
+  apr_array_header_t *lines = svn_cstring_split (desc,
+                                                 SVN_UTF8_NEWLINE_STR \
+                                                 SVN_UTF8_CR_STR,
+                                                 TRUE, pool);
   int i;
   
   if (externals_p)
@@ -1503,12 +1506,14 @@ svn_wc_parse_externals_description2 (apr_array_header_t **externals_p,
       apr_array_header_t *line_parts;
       svn_wc_external_item_t *item;
 
-      if ((! line) || (line[0] == '#'))
+      if ((! line) || (line[0] == SVN_UTF8_POUND))
         continue;
 
       /* else proceed */
 
-      line_parts = svn_cstring_split (line, " \t", TRUE, pool);
+      line_parts = svn_cstring_split (line,
+                                      SVN_UTF8_SPACE_STR SVN_UTF8_TAB_STR,
+                                      TRUE, pool);
 
       item = apr_palloc (pool, sizeof (*item));
 
@@ -1549,7 +1554,8 @@ svn_wc_parse_externals_description2 (apr_array_header_t **externals_p,
               item->url = APR_ARRAY_IDX (line_parts, 3, const char *);
             }
 
-          if ((! r_part_1) || (r_part_1[0] != '-') || (r_part_1[1] != 'r'))
+          if ((! r_part_1) || 
+              (r_part_1[0] != SVN_UTF8_MINUS) || (r_part_1[1] != SVN_UTF8_r))
             goto parse_error;
 
           if (! r_part_2)  /* "-rN" */
@@ -1557,14 +1563,34 @@ svn_wc_parse_externals_description2 (apr_array_header_t **externals_p,
               if (strlen (r_part_1) < 3)
                 goto parse_error;
               else
-                item->revision.value.number = SVN_STR_TO_REV (r_part_1 + 2);
+                {
+#if !APR_CHARSET_EBCDIC
+                  item->revision.value.number = SVN_STR_TO_REV (r_part_1 + 2);
+#else
+                  const char *native_str;
+                  SVN_ERR (svn_utf_cstring_from_utf8 (&native_str,
+                                                      r_part_1 + 2,
+                                                      pool));
+                  item->revision.value.number = SVN_STR_TO_REV (native_str);
+#endif
+                }
             }
           else             /* "-r N" */
             {
               if (strlen (r_part_2) < 1)
                 goto parse_error;
               else
-                item->revision.value.number = SVN_STR_TO_REV (r_part_2);
+                {
+#if !APR_CHARSET_EBCDIC
+                  item->revision.value.number = SVN_STR_TO_REV (r_part_2);
+#else
+                  const char *native_str;
+                  SVN_ERR (svn_utf_cstring_from_utf8 (&native_str,
+                                                      r_part_2,
+                                                      pool));
+                  item->revision.value.number = SVN_STR_TO_REV (native_str);
+#endif
+                }
             }
         }
       else    /* too many items on line */
@@ -1584,7 +1610,8 @@ svn_wc_parse_externals_description2 (apr_array_header_t **externals_p,
       item->target_dir = svn_path_canonicalize
         (svn_path_internal_style (item->target_dir, pool), pool);
       {
-        if (item->target_dir[0] == '\0' || item->target_dir[0] == '/'
+        if (item->target_dir[0] == '\0'
+            || item->target_dir[0] == SVN_UTF8_FSLASH
             || svn_path_is_backpath_present (item->target_dir))
           return svn_error_createf
             (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,

@@ -55,6 +55,9 @@
 #include "props.h"
 #include "adm_files.h"
 
+#define UNIMPORTANT_STR \
+        "\x75\x6e\x69\x6d\x70\x6f\x72\x74\x61\x6e\x74"
+        /* "unimportant" */
 
 /*-------------------------------------------------------------------------*/
 /* A little helper function.
@@ -328,7 +331,7 @@ make_file_baton (const char *path,
       while (wc_dir_baton->added)
         wc_dir_baton = wc_dir_baton->dir_baton;
 
-      file_baton->wc_path = svn_path_join (wc_dir_baton->path, "unimportant",
+      file_baton->wc_path = svn_path_join (wc_dir_baton->path, UNIMPORTANT_STR,
                                            file_baton->pool);
     }
   else

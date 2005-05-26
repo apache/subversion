@@ -24,6 +24,7 @@
 #include "svn_cmdline.h"
 #include "svn_wc.h"
 #include "svn_path.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 
@@ -33,21 +34,21 @@ generate_status_code (enum svn_wc_status_kind status)
 {
   switch (status)
     {
-    case svn_wc_status_none:        return ' ';
-    case svn_wc_status_normal:      return ' ';
-    case svn_wc_status_added:       return 'A';
-    case svn_wc_status_missing:     return '!';
-    case svn_wc_status_incomplete:  return '!';
-    case svn_wc_status_deleted:     return 'D';
-    case svn_wc_status_replaced:    return 'R';
-    case svn_wc_status_modified:    return 'M';
-    case svn_wc_status_merged:      return 'G';
-    case svn_wc_status_conflicted:  return 'C';
-    case svn_wc_status_obstructed:  return '~';
-    case svn_wc_status_ignored:     return 'I';
-    case svn_wc_status_external:    return 'X';
-    case svn_wc_status_unversioned: return '?';
-    default:                        return '?';
+    case svn_wc_status_none:        return SVN_UTF8_SPACE;
+    case svn_wc_status_normal:      return SVN_UTF8_SPACE;
+    case svn_wc_status_added:       return SVN_UTF8_A;
+    case svn_wc_status_missing:     return SVN_UTF8_EXCLAMATION;
+    case svn_wc_status_incomplete:  return SVN_UTF8_EXCLAMATION;
+    case svn_wc_status_deleted:     return SVN_UTF8_D;
+    case svn_wc_status_replaced:    return SVN_UTF8_R;
+    case svn_wc_status_modified:    return SVN_UTF8_M;
+    case svn_wc_status_merged:      return SVN_UTF8_G;
+    case svn_wc_status_conflicted:  return SVN_UTF8_C;
+    case svn_wc_status_obstructed:  return SVN_UTF8_TILDE;
+    case svn_wc_status_ignored:     return SVN_UTF8_I;
+    case svn_wc_status_external:    return SVN_UTF8_X;
+    case svn_wc_status_unversioned: return SVN_UTF8_QUESTION;
+    default:                        return SVN_UTF8_QUESTION;
     }
 }
 

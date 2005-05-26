@@ -33,12 +33,18 @@
 #include "svn_io.h"
 #include "svn_props.h"
 #include "svn_wc.h"
+#include "svn_utf.h"
+#include "svn_ebcdic.h"
 
 #include "wc.h"
 #include "adm_files.h"
 #include "translate.h"
 
 #include "svn_private_config.h"
+
+#define LF_STR     "\x4c\x46"                 /* "LF"     */
+#define CR_STR     "\x43\x52"                 /* "CR"     */
+#define CRLF_STR   "\x43\x52\x4c\x46"         /* "CRLF"   */
 
 svn_error_t *
 svn_wc_translated_file (const char **xlated_p,
@@ -157,12 +163,12 @@ svn_wc__eol_value_from_string (const char **value, const char *eol)
 {
   if (eol == NULL)
     *value = NULL;
-  else if (! strcmp ("\n", eol))
-    *value = "LF";
-  else if (! strcmp ("\r", eol))
-    *value = "CR";
-  else if (! strcmp ("\r\n", eol))
-    *value = "CRLF";
+  else if (! strcmp (SVN_UTF8_NEWLINE_STR, eol))
+    *value = LF_STR;
+  else if (! strcmp (SVN_UTF8_CR_STR, eol))
+    *value = CR_STR;
+  else if (! strcmp (SVN_UTF8_CR_STR SVN_UTF8_NEWLINE_STR, eol))
+    *value = CRLF_STR;
   else
     *value = NULL;
 }
@@ -204,8 +210,8 @@ svn_wc__get_keywords (svn_subst_keywords_t **keywords,
 
   SVN_ERR (svn_subst_build_keywords (&tmp_keywords,
                                      list,
-                                     apr_psprintf (pool, "%ld",
-                                                   entry->cmt_rev),
+                                     APR_PSPRINTF2 (pool, "%ld",
+                                                    entry->cmt_rev),
                                      entry->url,
                                      entry->cmt_date,
                                      entry->cmt_author,

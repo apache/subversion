@@ -31,6 +31,8 @@
 #include "svn_io.h"
 #include "svn_path.h"
 #include "svn_time.h"
+#include "svn_utf.h"
+#include "svn_ebcdic.h"
 
 #include "wc.h"
 #include "log.h"
@@ -42,6 +44,10 @@
 
 #include "svn_private_config.h"
 
+#define WC_LOG_STR \
+        "\x77\x63\x2d\x6c\x6f\x67"
+        /* "wc-log" */
+        
 
 /*** Userdata for the callbacks. ***/
 struct log_runner
@@ -160,7 +166,8 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
            no style indicated, don't touch line endings at all. */
         return svn_subst_copy_and_translate2 (full_from_path,
                                               full_dest_path,
-                                              (eol_str ? "\n" : NULL),
+                                              (eol_str
+                                               ? SVN_UTF8_NEWLINE_STR : NULL),
                                               (eol_str ? TRUE : FALSE),  
                                               keywords,
                                               FALSE, /* contract keywords */
@@ -742,6 +749,7 @@ log_do_committed (struct log_runner *loggy,
   apr_time_t prop_time = 0; /* By default, don't override old stamp. */
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
+  const char *native_rev_str;
 
   /* Determine the actual full path of the affected item. */
   if (! is_this_dir)
@@ -780,7 +788,13 @@ log_do_committed (struct log_runner *loggy,
      we are finished handling this item.  */
   if (entry->schedule == svn_wc_schedule_delete)
     {
-      svn_revnum_t new_rev = SVN_STR_TO_REV(rev);
+#if !APR_CHARSET_EBCDIC
+        svn_revnum_t new_rev = SVN_STR_TO_REV(rev);
+#else
+        svn_revnum_t new_rev;
+        SVN_ERR (svn_utf_cstring_from_utf8 (&native_rev_str, rev, pool));
+        new_rev = SVN_STR_TO_REV(native_rev_str);
+#endif
 
       /* If we are suppose to delete "this dir", drop a 'killme' file
          into my own administrative dir as a signal for svn_wc__run_log() 
@@ -1123,7 +1137,12 @@ log_do_committed (struct log_runner *loggy,
     
   /* Files have been moved, and timestamps have been found.  It is now
      fime for The Big Entry Modification. */
+#if !APR_CHARSET_EBCDIC
   entry->revision = SVN_STR_TO_REV (rev);
+#else
+  SVN_ERR (svn_utf_cstring_from_utf8 (&native_rev_str, rev, pool));
+  entry->revision = SVN_STR_TO_REV (native_rev_str);
+#endif
   entry->kind = is_this_dir ? svn_node_dir : svn_node_file;
   entry->schedule = svn_wc_schedule_normal;
   entry->copied = FALSE;
@@ -1258,7 +1277,7 @@ start_handler (void *userData, const char *eltname, const char **atts)
   /* Clear the per-log-item pool. */
   svn_pool_clear (loggy->pool);
 
-  if (strcmp (eltname, "wc-log") == 0)   /* ignore expat pacifier */
+  if (strcmp (eltname, WC_LOG_STR) == 0)   /* ignore expat pacifier */
     return;
   else if (! name)
     {
@@ -1407,7 +1426,7 @@ svn_wc__logfile_path (int log_number,
 {
   return apr_psprintf (pool, SVN_WC__ADM_LOG "%s",
                        (log_number == 0) ? ""
-                       : apr_psprintf (pool, ".%d", log_number));
+                       : APR_PSPRINTF2 (pool, ".%d", log_number));
 }
 
 /* Run a sequence of log files. */
@@ -1426,11 +1445,17 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
   int log_number;
   apr_pool_t *iterpool = svn_pool_create (pool);
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   /* kff todo: use the tag-making functions here, now. */
   const char *log_start
     = "<wc-log xmlns=\"http://subversion.tigris.org/xmlns\">\n";
   const char *log_end
     = "</wc-log>\n";
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
   parser = svn_xml_make_parser (loggy, start_handler, NULL, NULL, pool);
   loggy->adm_access = adm_access;

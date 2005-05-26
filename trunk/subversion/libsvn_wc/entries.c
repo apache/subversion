@@ -28,6 +28,8 @@
 #include "svn_time.h"
 #include "svn_pools.h"
 #include "svn_path.h"
+#include "svn_utf.h"
+#include "svn_ebcdic.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -35,6 +37,22 @@
 #include "entries.h"
 
 #include "svn_private_config.h"
+
+#define XMLNS_STR \
+        "\x78\x6d\x6c\x6e\x73"
+        /* "xmlns" */
+
+#define TRUE_STR \
+        "\x74\x72\x75\x65"
+        /* "true" */
+
+#define FALSE_STR \
+        "\x66\x61\x6c\x73\x65"
+        /* "false" */
+
+#define SVN_THIS_DIR_STR \
+        "\x73\x76\x6e\x3a\x74\x68\x69\x73\x5f\x64\x69\x72"
+        /* "svn:this_dir" */
 
 
 /** Overview **/
@@ -62,8 +80,8 @@ svn_wc__entries_init (const char *path,
   apr_file_t *f = NULL;
   svn_stringbuf_t *accum = NULL;
   apr_hash_t *atts = apr_hash_make (pool);
-  char *initial_revstr =  apr_psprintf (pool, "%ld",
-                                        initial_rev);
+  char *initial_revstr =  APR_PSPRINTF2 (pool, "%ld",
+                                         initial_rev);
 
   /* Create the entries file, which must not exist prior to this. */
   SVN_ERR (svn_wc__open_adm_file (&f, path, SVN_WC__ADM_ENTRIES,
@@ -77,7 +95,7 @@ svn_wc__entries_init (const char *path,
                          pool,
                          svn_xml_normal,
                          SVN_WC__ENTRIES_TOPLEVEL,
-                         "xmlns",
+                         XMLNS_STR,
                          SVN_XML_NAMESPACE,
                          NULL);
 
@@ -104,7 +122,7 @@ svn_wc__entries_init (const char *path,
   if (initial_rev > 0)
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_INCOMPLETE,
                   sizeof (SVN_WC__ENTRY_ATTR_INCOMPLETE) - 1,
-                  "true");
+                  TRUE_STR);
   
   svn_xml_make_open_tag_hash (&accum, pool, svn_xml_self_closing,
                               SVN_WC__ENTRIES_ENTRY, atts);
@@ -175,7 +193,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
   /* XXX Replace the obsolete "svn:this_dir".
      XXX This code should go away by 1.0 */
   {
-    if (name && strcmp (name, "svn:this_dir") == 0)
+    if (name && strcmp (name, SVN_THIS_DIR_STR) == 0)
       name = SVN_WC_ENTRY_THIS_DIR;
   }
   entry->name = name ? name : SVN_WC_ENTRY_THIS_DIR;
@@ -187,7 +205,13 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
     if (revision_str)
       {
+#if !APR_CHARSET_EBCDIC
         entry->revision = SVN_STR_TO_REV (revision_str);
+#else
+        const char *native_str;
+        SVN_ERR (svn_utf_cstring_from_utf8 (&native_str, revision_str, pool));
+        entry->revision = SVN_STR_TO_REV (native_str);
+#endif
         *modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
       }
     else
@@ -284,9 +308,9 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
     entry->copied = FALSE;
     if (copiedstr)
       {
-        if (! strcmp (copiedstr, "true"))
+        if (! strcmp (copiedstr, TRUE_STR))
           entry->copied = TRUE;
-        else if (! strcmp (copiedstr, "false"))
+        else if (! strcmp (copiedstr, FALSE_STR))
           entry->copied = FALSE;
         else if (! strcmp (copiedstr, ""))
           entry->copied = FALSE;
@@ -309,7 +333,13 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                            APR_HASH_KEY_STRING);
     if (revstr)
       {
+#if !APR_CHARSET_EBCDIC
         entry->copyfrom_rev = SVN_STR_TO_REV (revstr);
+#else
+        const char *native_str;
+        SVN_ERR (svn_utf_cstring_from_utf8 (&native_str, revstr, pool));
+        entry->copyfrom_rev = SVN_STR_TO_REV (native_str);
+#endif
         *modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
       }
   }
@@ -324,9 +354,9 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
     entry->deleted = FALSE;
     if (deletedstr)
       {
-        if (! strcmp (deletedstr, "true"))
+        if (! strcmp (deletedstr, TRUE_STR))
           entry->deleted = TRUE;
-        else if (! strcmp (deletedstr, "false"))
+        else if (! strcmp (deletedstr, FALSE_STR))
           entry->deleted = FALSE;
         else if (! strcmp (deletedstr, ""))
           entry->deleted = FALSE;
@@ -351,9 +381,9 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
     entry->absent = FALSE;
     if (absentstr)
       {
-        if (! strcmp (absentstr, "true"))
+        if (! strcmp (absentstr, TRUE_STR))
           entry->absent = TRUE;
-        else if (! strcmp (absentstr, "false"))
+        else if (! strcmp (absentstr, FALSE_STR))
           entry->absent = FALSE;
         else if (! strcmp (absentstr, ""))
           entry->absent = FALSE;
@@ -378,9 +408,9 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
     entry->incomplete = FALSE;
     if (incompletestr)
       {
-        if (! strcmp (incompletestr, "true"))
+        if (! strcmp (incompletestr, TRUE_STR))
           entry->incomplete = TRUE;
-        else if (! strcmp (incompletestr, "false"))
+        else if (! strcmp (incompletestr, FALSE_STR))
           entry->incomplete = FALSE;
         else if (! strcmp (incompletestr, ""))
           entry->incomplete = FALSE;
@@ -471,7 +501,13 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                                APR_HASH_KEY_STRING);
     if (cmt_revstr)
       {
+#if !APR_CHARSET_EBCDIC
         entry->cmt_rev = SVN_STR_TO_REV (cmt_revstr);
+#else
+        const char *native_str;
+        SVN_ERR (svn_utf_cstring_from_utf8 (&native_str, cmt_revstr, pool));
+        entry->cmt_rev = SVN_STR_TO_REV (native_str);
+#endif
         *modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_REV;
       }
     else
@@ -917,7 +953,7 @@ write_entry (svn_stringbuf_t **output,
   /* Revision */
   if (SVN_IS_VALID_REVNUM (entry->revision))
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING,
-                  apr_psprintf (pool, "%ld", entry->revision));
+                  APR_PSPRINTF2 (pool, "%ld", entry->revision));
   
   /* URL */
   if (entry->url)
@@ -985,12 +1021,12 @@ write_entry (svn_stringbuf_t **output,
 
   /* Copy-related Stuff */
   apr_hash_set (atts, SVN_WC__ENTRY_ATTR_COPIED, APR_HASH_KEY_STRING,
-                (entry->copied ? "true" : NULL));
+                (entry->copied ? TRUE_STR : NULL));
 
   if (SVN_IS_VALID_REVNUM (entry->copyfrom_rev))
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_COPYFROM_REV, APR_HASH_KEY_STRING,
-                  apr_psprintf (pool, "%ld",
-                                entry->copyfrom_rev));
+                  APR_PSPRINTF2 (pool, "%ld",
+                                 entry->copyfrom_rev));
 
   if (entry->copyfrom_url)
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_COPYFROM_URL, APR_HASH_KEY_STRING,
@@ -998,15 +1034,15 @@ write_entry (svn_stringbuf_t **output,
 
   /* Deleted state */
   apr_hash_set (atts, SVN_WC__ENTRY_ATTR_DELETED, APR_HASH_KEY_STRING,
-                (entry->deleted ? "true" : NULL));
+                (entry->deleted ? TRUE_STR : NULL));
 
   /* Absent state */
   apr_hash_set (atts, SVN_WC__ENTRY_ATTR_ABSENT, APR_HASH_KEY_STRING,
-                (entry->absent ? "true" : NULL));
+                (entry->absent ? TRUE_STR : NULL));
 
   /* Incomplete state */
   apr_hash_set (atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, APR_HASH_KEY_STRING,
-                (entry->incomplete ? "true" : NULL));
+                (entry->incomplete ? TRUE_STR : NULL));
 
   /* Timestamps */
   if (entry->text_time)
@@ -1028,7 +1064,7 @@ write_entry (svn_stringbuf_t **output,
   /* Last-commit Stuff */
   if (SVN_IS_VALID_REVNUM (entry->cmt_rev))
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CMT_REV, APR_HASH_KEY_STRING,
-                  apr_psprintf (pool, "%ld", entry->cmt_rev));
+                  APR_PSPRINTF2 (pool, "%ld", entry->cmt_rev));
 
   if (entry->cmt_author)
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_CMT_AUTHOR, APR_HASH_KEY_STRING,
@@ -1079,7 +1115,7 @@ write_entry (svn_stringbuf_t **output,
   if (strcmp (name, SVN_WC_ENTRY_THIS_DIR))
     {
       /* This is NOT the "this dir" entry */
-      if (! strcmp (name, "."))
+      if (! strcmp (name, SVN_UTF8_DOT_STR))
         {
           /* By golly, if this isn't recognized as the "this dir"
              entry, and it looks like '.', we're just asking for an
@@ -1183,7 +1219,7 @@ svn_wc__entries_write (apr_hash_t *entries,
   svn_xml_make_header (&bigstr, pool);
   svn_xml_make_open_tag (&bigstr, pool, svn_xml_normal,
                          SVN_WC__ENTRIES_TOPLEVEL,
-                         "xmlns",
+                         XMLNS_STR,
                          SVN_XML_NAMESPACE,
                          NULL);
 

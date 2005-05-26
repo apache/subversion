@@ -46,45 +46,70 @@ extern "C" {
 
 /* Set some attributes on SVN_WC__LOG_ATTR_NAME's entry.  Unmentioned
    attributes are unaffected. */
-#define SVN_WC__LOG_MODIFY_ENTRY        "modify-entry"
+#define SVN_WC__LOG_MODIFY_ENTRY \
+        "\x6d\x6f\x64\x69\x66\x79\x2d\x65\x6e\x74\x72\x79"
+        /* "modify-entry" */
 
 /* Delete lock related fields from the entry SVN_WC__LOG_ATTR_NAME. */
-#define SVN_WC__LOG_DELETE_LOCK         "delete-lock"
+#define SVN_WC__LOG_DELETE_LOCK \
+        "\x64\x65\x6c\x65\x74\x65\x2d\x6c\x6f\x63\x6b"
+        /* "delete-lock" */
 
 /* Delete the entry SVN_WC__LOG_ATTR_NAME. */
-#define SVN_WC__LOG_DELETE_ENTRY        "delete-entry"
+#define SVN_WC__LOG_DELETE_ENTRY \
+        "\x64\x65\x6c\x65\x74\x65\x2d\x65\x6e\x74\x72\x79"
+        /* "delete-entry" */
 
 /* Move file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
-#define SVN_WC__LOG_MV                  "mv"
+#define SVN_WC__LOG_MV \
+        "\x6d\x76"
+        /* "mv" */
 
 /* Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
-#define SVN_WC__LOG_CP                  "cp"
+#define SVN_WC__LOG_CP \
+        "\x63\x70"
+        /* "cp" */
 
 /* Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST, but
    expand any keywords and use any eol-style defined by properties of
    the DEST. */
-#define SVN_WC__LOG_CP_AND_TRANSLATE    "cp-and-translate"
+#define SVN_WC__LOG_CP_AND_TRANSLATE \
+        "\x63\x70\x2d\x61\x6e\x64\x2d\x74\x72\x61\x6e\x73\x6c\x61\x74\x65"
+        /* "cp-and-translate" */
 
 /* Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST, but
    contract any keywords and convert to LF eol, according to
    properties of NAME. */
-#define SVN_WC__LOG_CP_AND_DETRANSLATE    "cp-and-detranslate"
+#define SVN_WC__LOG_CP_AND_DETRANSLATE \
+        "\x63\x70\x2d\x61\x6e\x64\x2d\x64\x65\x74\x72\x61\x6e\x73\x6c\x61" \
+        "\x74\x65"
+        /* "cp-and-detranslate" */
 
 /* Remove file SVN_WC__LOG_ATTR_NAME. */
-#define SVN_WC__LOG_RM                  "rm"
+#define SVN_WC__LOG_RM \
+        "\x72\x6d"
+        /* "rm" */
 
 /* Append file from SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
-#define SVN_WC__LOG_APPEND              "append"
+#define SVN_WC__LOG_APPEND \
+        "\x61\x70\x70\x65\x6e\x64"
+        /* "append" */
 
 /* Make file SVN_WC__LOG_ATTR_NAME readonly */
-#define SVN_WC__LOG_READONLY            "readonly"
+#define SVN_WC__LOG_READONLY \
+        "\x72\x65\x61\x64\x6f\x6e\x6c\x79"
+        /* "readonly" */
 
 /* Make file SVN_WC__LOG_ATTR_NAME readonly if needs-lock property is set
    and there is no lock token for the file in the working copy. */
-#define SVN_WC__LOG_MAYBE_READONLY "maybe-readonly"
+#define SVN_WC__LOG_MAYBE_READONLY \
+        "\x6d\x61\x79\x62\x65\x2d\x72\x65\x61\x64\x6f\x6e\x6c\x79"
+        /* "maybe-readonly" */
 
 /* Set SVN_WC__LOG_ATTR_NAME to have timestamp SVN_WC__LOG_ATTR_TIMESTAMP. */
-#define SVN_WC__LOG_SET_TIMESTAMP       "set-timestamp"
+#define SVN_WC__LOG_SET_TIMESTAMP \
+        "\x73\x65\x74\x2d\x74\x69\x6d\x65\x73\x74\x61\x6d\x70"
+        /* "set-timestamp" */
 
 
 /* Handle closure after a commit completes successfully:  
@@ -95,12 +120,16 @@ extern "C" {
  *         else use SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME's timestamp
  *      set SVN_WC__LOG_ATTR_NAME's revision to N
  */
-#define SVN_WC__LOG_COMMITTED           "committed"
+#define SVN_WC__LOG_COMMITTED \
+        "\x63\x6f\x6d\x6d\x69\x74\x74\x65\x64"
+        /* "committed" */
 
 /* On target SVN_WC__LOG_ATTR_NAME, set wc property
    SVN_WC__LOG_ATTR_PROPNAME to value SVN_WC__LOG_ATTR_PROPVAL.  If
    SVN_WC__LOG_ATTR_PROPVAL is absent, then remove the property. */
-#define SVN_WC__LOG_MODIFY_WCPROP        "modify-wcprop"
+#define SVN_WC__LOG_MODIFY_WCPROP \
+        "\x6d\x6f\x64\x69\x66\x79\x2d\x77\x63\x70\x72\x6f\x70"
+        /* "modify-wcprop" */
 
 
 /* A log command which runs svn_wc_merge().
@@ -119,25 +148,65 @@ extern "C" {
    which the log is running, as with all other log commands.  (Usually
    they're just basenames within loggy->path.)
  */
-#define SVN_WC__LOG_MERGE        "merge"
+#define SVN_WC__LOG_MERGE \
+        "\x6d\x65\x72\x67\x65"
+        /* "merge" */
 
 
 /** Log attributes.  See the documentation above for log actions for
     how these are used. **/
-#define SVN_WC__LOG_ATTR_NAME           "name"
-#define SVN_WC__LOG_ATTR_DEST           "dest"
-#define SVN_WC__LOG_ATTR_PROPNAME       "propname"
-#define SVN_WC__LOG_ATTR_PROPVAL        "propval"
-#define SVN_WC__LOG_ATTR_REVISION       "revision"
-#define SVN_WC__LOG_ATTR_TEXT_REJFILE   "text-rejfile"
-#define SVN_WC__LOG_ATTR_PROP_REJFILE   "prop-rejfile"
-#define SVN_WC__LOG_ATTR_TIMESTAMP      "timestamp"
+#define SVN_WC__LOG_ATTR_NAME \
+        "\x6e\x61\x6d\x65"
+        /* "name" */
+
+#define SVN_WC__LOG_ATTR_DEST \
+        "\x64\x65\x73\x74"
+        /* "dest" */
+
+#define SVN_WC__LOG_ATTR_PROPNAME \
+        "\x70\x72\x6f\x70\x6e\x61\x6d\x65"
+        /* "propname" */
+
+#define SVN_WC__LOG_ATTR_PROPVAL \
+        "\x70\x72\x6f\x70\x76\x61\x6c"
+        /* "propval" */
+
+#define SVN_WC__LOG_ATTR_REVISION \
+        "\x72\x65\x76\x69\x73\x69\x6f\x6e"
+        /* "revision" */
+
+#define SVN_WC__LOG_ATTR_TEXT_REJFILE \
+        "\x74\x65\x78\x74\x2d\x72\x65\x6a\x66\x69\x6c\x65"
+        /* "text-rejfile" */
+
+#define SVN_WC__LOG_ATTR_PROP_REJFILE \
+        "\x70\x72\x6f\x70\x2d\x72\x65\x6a\x66\x69\x6c\x65"
+        /* "prop-rejfile" */
+
+#define SVN_WC__LOG_ATTR_TIMESTAMP \
+        "\x74\x69\x6d\x65\x73\x74\x61\x6d\x70"
+        /* "timestamp" */
+
 /* The rest are for SVN_WC__LOG_MERGE.  Extend as necessary. */
-#define SVN_WC__LOG_ATTR_ARG_1          "arg1"
-#define SVN_WC__LOG_ATTR_ARG_2          "arg2"
-#define SVN_WC__LOG_ATTR_ARG_3          "arg3"
-#define SVN_WC__LOG_ATTR_ARG_4          "arg4"
-#define SVN_WC__LOG_ATTR_ARG_5          "arg5"
+#define SVN_WC__LOG_ATTR_ARG_1 \
+        "\x61\x72\x67\x31"
+        /* "arg1" */
+
+#define SVN_WC__LOG_ATTR_ARG_2 \
+        "\x61\x72\x67\x32"
+        /* "arg2" */
+
+#define SVN_WC__LOG_ATTR_ARG_3 \
+        "\x61\x72\x67\x33"
+        /* "arg3" */
+
+#define SVN_WC__LOG_ATTR_ARG_4 \
+        "\x61\x72\x67\x34"
+        /* "arg4" */
+
+#define SVN_WC__LOG_ATTR_ARG_5 \
+        "\x61\x72\x67\x35"
+        /* "arg5" */
 
 /* Return the path to use for logfile number LOG_NUMBER.  The returned
    string will be allocated from POOL.

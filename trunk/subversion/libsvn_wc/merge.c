@@ -21,6 +21,8 @@
 #include "svn_wc.h"
 #include "svn_diff.h"
 #include "svn_path.h"
+#include "svn_utf.h"
+#include "svn_ebcdic.h"
 
 #include "wc.h"
 #include "entries.h"
@@ -28,6 +30,22 @@
 #include "questions.h"
 
 #include "svn_private_config.h"
+
+#define TARGET_MARKER_STR \
+        "\x3c\x3c\x3c\x3c\x3c\x3c\x3c\x20\x2e\x77\x6f\x72\x6b\x69\x6e\x67"
+        /* "<<<<<<< .working" */
+
+#define LEFT_MARKER_STR \
+        "\x7c\x7c\x7c\x7c\x7c\x7c\x7c\x20\x2e\x6f\x6c\x64"
+        /* "||||||| .old" */
+
+#define RIGHT_MARKER_STR \
+        "\x3e\x3e\x3e\x3e\x3e\x3e\x3e\x20\x2e\x6e\x65\x77"
+        /* ">>>>>>> .new" */
+
+#define SEPERATOR_STR \
+        "\x3d\x3d\x3d\x3d\x3d\x3d\x3d"
+        /* "=======" */
 
 
 
@@ -115,7 +133,7 @@ svn_wc_merge (const char *left,
         {
           int exit_code;
 
-          SVN_ERR (svn_io_run_diff3 (".",
+          SVN_ERR (svn_io_run_diff3 (SVN_UTF8_DOT_STR,
                                      tmp_target, tmp_left, tmp_right,
                                      target_label, left_label, right_label,
                                      result_f, &exit_code, diff3_cmd, pool));
@@ -138,26 +156,26 @@ svn_wc_merge (const char *left,
 
           /* Labels fall back to sensible defaults if not specified. */
           if (target_label)
-            target_marker = apr_psprintf (pool, "<<<<<<< %s", target_label);
+            target_marker = APR_PSPRINTF2 (pool, "<<<<<<< %s", target_label);
           else
-            target_marker = "<<<<<<< .working";
+            target_marker = TARGET_MARKER_STR;
 
           if (left_label)
-            left_marker = apr_psprintf (pool, "||||||| %s", left_label);
+            left_marker = APR_PSPRINTF2 (pool, "||||||| %s", left_label);
           else
-            left_marker = "||||||| .old";
+            left_marker = LEFT_MARKER_STR;
 
           if (right_label)
-            right_marker = apr_psprintf (pool, ">>>>>>> %s", right_label);
+            right_marker = APR_PSPRINTF2 (pool, ">>>>>>> %s", right_label);
           else
-            right_marker = ">>>>>>> .new";
+            right_marker = RIGHT_MARKER_STR;
 
           SVN_ERR (svn_diff_file_output_merge (ostream, diff,
                                                tmp_left, tmp_target, tmp_right,
                                                left_marker,
                                                target_marker,
                                                right_marker,
-                                               "=======", /* seperator */
+                                               SEPERATOR_STR, /* seperator */
                                                FALSE, /* display original */
                                                FALSE, /* resolve conflicts */
                                                pool));

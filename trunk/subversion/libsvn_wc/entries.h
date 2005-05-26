@@ -28,49 +28,145 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-#define SVN_WC__ENTRIES_TOPLEVEL       "wc-entries"
-#define SVN_WC__ENTRIES_ENTRY          "entry"
+#define SVN_WC__ENTRIES_TOPLEVEL \
+        "\x77\x63\x2d\x65\x6e\x74\x72\x69\x65\x73"
+        /* "wc-entries" */
+
+#define SVN_WC__ENTRIES_ENTRY \
+        "\x65\x6e\x74\x72\x79"
+        /* "entry" */
 
 /* String representations for svn_node_kind.  This maybe should be
    abstracted farther out? */
-#define SVN_WC__ENTRIES_ATTR_FILE_STR   "file"
-#define SVN_WC__ENTRIES_ATTR_DIR_STR    "dir"
+#define SVN_WC__ENTRIES_ATTR_FILE_STR \
+        "\x66\x69\x6c\x65"
+        /* "file" */
+
+#define SVN_WC__ENTRIES_ATTR_DIR_STR \
+        "\x64\x69\x72"
+        /* "dir" */
 
 
 /* The names of the XML attributes for storing entries' information.
    ### If you add or remove items here, you probably want to make sure
    to do the same for the SVN_WC__ENTRY_MODIFY_* #defines as well. */
-#define SVN_WC__ENTRY_ATTR_NAME          "name"
-#define SVN_WC__ENTRY_ATTR_REVISION      "revision"
-#define SVN_WC__ENTRY_ATTR_URL           "url"
-#define SVN_WC__ENTRY_ATTR_KIND          "kind"
-#define SVN_WC__ENTRY_ATTR_TEXT_TIME     "text-time"
-#define SVN_WC__ENTRY_ATTR_PROP_TIME     "prop-time"
-#define SVN_WC__ENTRY_ATTR_CHECKSUM      "checksum"
-#define SVN_WC__ENTRY_ATTR_SCHEDULE      "schedule"
-#define SVN_WC__ENTRY_ATTR_COPIED        "copied"
-#define SVN_WC__ENTRY_ATTR_DELETED       "deleted"
-#define SVN_WC__ENTRY_ATTR_ABSENT        "absent"
-#define SVN_WC__ENTRY_ATTR_COPYFROM_URL  "copyfrom-url"
-#define SVN_WC__ENTRY_ATTR_COPYFROM_REV  "copyfrom-rev"
-#define SVN_WC__ENTRY_ATTR_CONFLICT_OLD  "conflict-old" /* saved old file */
-#define SVN_WC__ENTRY_ATTR_CONFLICT_NEW  "conflict-new" /* saved new file */
-#define SVN_WC__ENTRY_ATTR_CONFLICT_WRK  "conflict-wrk" /* saved wrk file */
-#define SVN_WC__ENTRY_ATTR_PREJFILE      "prop-reject-file"
-#define SVN_WC__ENTRY_ATTR_CMT_REV       "committed-rev"
-#define SVN_WC__ENTRY_ATTR_CMT_DATE      "committed-date"
-#define SVN_WC__ENTRY_ATTR_CMT_AUTHOR    "last-author"
-#define SVN_WC__ENTRY_ATTR_UUID          "uuid"
-#define SVN_WC__ENTRY_ATTR_INCOMPLETE    "incomplete"
-#define SVN_WC__ENTRY_ATTR_LOCK_TOKEN    "lock-token"
-#define SVN_WC__ENTRY_ATTR_LOCK_OWNER    "lock-owner"
-#define SVN_WC__ENTRY_ATTR_LOCK_COMMENT  "lock-comment"
-#define SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE "lock-creation-date"
+#define SVN_WC__ENTRY_ATTR_NAME \
+        "\x6e\x61\x6d\x65"
+        /* "name" */
+
+#define SVN_WC__ENTRY_ATTR_REVISION \
+        "\x72\x65\x76\x69\x73\x69\x6f\x6e"
+        /* "revision" */
+
+#define SVN_WC__ENTRY_ATTR_URL \
+        "\x75\x72\x6c"
+        /* "url" */
+
+#define SVN_WC__ENTRY_ATTR_KIND \
+        "\x6b\x69\x6e\x64"
+        /* "kind" */
+
+#define SVN_WC__ENTRY_ATTR_TEXT_TIME \
+        "\x74\x65\x78\x74\x2d\x74\x69\x6d\x65"
+        /* "text-time" */
+
+#define SVN_WC__ENTRY_ATTR_PROP_TIME \
+        "\x70\x72\x6f\x70\x2d\x74\x69\x6d\x65"
+        /* "prop-time" */
+
+#define SVN_WC__ENTRY_ATTR_CHECKSUM \
+        "\x63\x68\x65\x63\x6b\x73\x75\x6d"
+        /* "checksum" */
+
+#define SVN_WC__ENTRY_ATTR_SCHEDULE \
+        "\x73\x63\x68\x65\x64\x75\x6c\x65"
+        /* "schedule" */
+
+#define SVN_WC__ENTRY_ATTR_COPIED \
+        "\x63\x6f\x70\x69\x65\x64"
+        /* "copied" */
+
+#define SVN_WC__ENTRY_ATTR_DELETED \
+        "\x64\x65\x6c\x65\x74\x65\x64"
+        /* "deleted" */
+
+#define SVN_WC__ENTRY_ATTR_ABSENT \
+        "\x61\x62\x73\x65\x6e\x74"
+        /* "absent" */
+
+#define SVN_WC__ENTRY_ATTR_COPYFROM_URL \
+        "\x63\x6f\x70\x79\x66\x72\x6f\x6d\x2d\x75\x72\x6c"
+        /* "copyfrom-url" */
+
+#define SVN_WC__ENTRY_ATTR_COPYFROM_REV \
+        "\x63\x6f\x70\x79\x66\x72\x6f\x6d\x2d\x72\x65\x76"
+        /* "copyfrom-rev" */
+
+#define SVN_WC__ENTRY_ATTR_CONFLICT_OLD \
+        "\x63\x6f\x6e\x66\x6c\x69\x63\x74\x2d\x6f\x6c\x64"
+        /* "conflict-old" - saved old file */
+
+#define SVN_WC__ENTRY_ATTR_CONFLICT_NEW \
+        "\x63\x6f\x6e\x66\x6c\x69\x63\x74\x2d\x6e\x65\x77"
+        /* "conflict-new" - saved new file */
+
+#define SVN_WC__ENTRY_ATTR_CONFLICT_WRK \
+        "\x63\x6f\x6e\x66\x6c\x69\x63\x74\x2d\x77\x72\x6b"
+        /* "conflict-wrk" - saved wrk file */
+
+#define SVN_WC__ENTRY_ATTR_PREJFILE \
+        "\x70\x72\x6f\x70\x2d\x72\x65\x6a\x65\x63\x74\x2d\x66\x69\x6c\x65"
+        /* "prop-reject-file" */
+
+#define SVN_WC__ENTRY_ATTR_CMT_REV \
+        "\x63\x6f\x6d\x6d\x69\x74\x74\x65\x64\x2d\x72\x65\x76"
+        /* "committed-rev" */
+
+#define SVN_WC__ENTRY_ATTR_CMT_DATE \
+        "\x63\x6f\x6d\x6d\x69\x74\x74\x65\x64\x2d\x64\x61\x74\x65"
+        /* "committed-date" */
+
+#define SVN_WC__ENTRY_ATTR_CMT_AUTHOR \
+        "\x6c\x61\x73\x74\x2d\x61\x75\x74\x68\x6f\x72"
+        /* "last-author" */
+
+#define SVN_WC__ENTRY_ATTR_UUID \
+        "\x75\x75\x69\x64"
+        /* "uuid" */
+
+#define SVN_WC__ENTRY_ATTR_INCOMPLETE \
+        "\x69\x6e\x63\x6f\x6d\x70\x6c\x65\x74\x65"
+        /* "incomplete" */
+
+#define SVN_WC__ENTRY_ATTR_LOCK_TOKEN \
+        "\x6c\x6f\x63\x6b\x2d\x74\x6f\x6b\x65\x6e"
+        /* "lock-token" */
+
+#define SVN_WC__ENTRY_ATTR_LOCK_OWNER \
+        "\x6c\x6f\x63\x6b\x2d\x6f\x77\x6e\x65\x72"
+        /* "lock-owner" */
+
+#define SVN_WC__ENTRY_ATTR_LOCK_COMMENT \
+        "\x6c\x6f\x63\x6b\x2d\x63\x6f\x6d\x6d\x65\x6e\x74"
+        /* "lock-comment" */
+
+#define SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE \
+        "\x6c\x6f\x63\x6b\x2d\x63\x72\x65\x61\x74\x69\x6f\x6e\x2d\x64\x61" \
+        "\x74\x65"
+        /* "lock-creation-date" */
 
 /* Attribute values for 'schedule' */
-#define SVN_WC__ENTRY_VALUE_ADD        "add"
-#define SVN_WC__ENTRY_VALUE_DELETE     "delete"
-#define SVN_WC__ENTRY_VALUE_REPLACE    "replace"
+#define SVN_WC__ENTRY_VALUE_ADD \
+        "\x61\x64\x64"
+        /* "add" */
+
+#define SVN_WC__ENTRY_VALUE_DELETE \
+        "\x64\x65\x6c\x65\x74\x65"
+        /* "delete" */
+
+#define SVN_WC__ENTRY_VALUE_REPLACE \
+        "\x72\x65\x70\x6c\x61\x63\x65"
+        /* "replace" */
 
 
 

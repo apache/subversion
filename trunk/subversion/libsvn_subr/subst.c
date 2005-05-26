@@ -37,6 +37,7 @@
 #include "svn_io.h"
 #include "svn_subst.h"
 #include "svn_pools.h"
+#include "svn_ebcdic.h"
 
 #include "svn_private_config.h"
 
@@ -45,7 +46,13 @@
  * strings must appear as the first element of any special file as it
  * exists in the repository or the text base.
  */
-#define SVN_SUBST__SPECIAL_LINK_STR "link"
+#define SVN_SUBST__SPECIAL_LINK_STR "\x6c\x69\x6e\x6b"         /* "link"   */
+#define CR_STR                      "\x43\x52"                 /* "CR"     */
+#define CRLF_STR                    "\x43\x52\x4c\x46"         /* "CRLF"   */
+#define DOT_TMP_STR                 "\x2E\x74\x6D\x70"         /* ".tmp"   */
+#define LINK_SPACE_STR              "\x6c\x69\x6e\x6b\x20"     /* "link "  */
+#define LF_STR                      "\x4c\x46"                 /* "LF"     */
+#define NATIVE_STR                  "\x6e\x61\x74\x69\x76\x65" /* "native" */
 
 void 
 svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
@@ -59,27 +66,37 @@ svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
       if (style)
         *style = svn_subst_eol_style_none;
     }
-  else if (! strcmp ("native", value))
+  else if (! strcmp (NATIVE_STR, value))
     {
+#if !APR_CHARSET_EBCDIC
       *eol = APR_EOL_STR;       /* whee, a portability library! */
+#else
+      /* Assume "native" eol-style is applied only to ascii text files, which 
+       * is the most likely case, and set eol as an ASCII CR. 
+       * 
+       * TODO: Handle ebcdic encoded text files; perhaps another possible
+       * value for svn:eol-style: "ebcdic".  This might also pave the way to
+       * meaningful diffs of ebcdic text files... */
+      *eol = SVN_UTF8_NEWLINE_STR;
+#endif
       if (style)
         *style = svn_subst_eol_style_native;
     }
-  else if (! strcmp ("LF", value))
+  else if (! strcmp (LF_STR, value))
     {
-      *eol = "\n";
+      *eol = SVN_UTF8_NEWLINE_STR;
       if (style)
         *style = svn_subst_eol_style_fixed;
     }
-  else if (! strcmp ("CR", value))
+  else if (! strcmp (CR_STR, value))
     {
-      *eol = "\r";
+      *eol = SVN_UTF8_CR_STR;
       if (style)
         *style = svn_subst_eol_style_fixed;
     }
-  else if (! strcmp ("CRLF", value))
+  else if (! strcmp (CRLF_STR, value))
     {
-      *eol = "\r\n";
+      *eol = SVN_UTF8_CR_STR SVN_UTF8_NEWLINE_STR;
       if (style)
         *style = svn_subst_eol_style_fixed;
     }
@@ -106,13 +123,13 @@ date_prop_to_human (const char **human, svn_boolean_t long_p, apr_time_t when,
 
       apr_time_exp_gmt (&exploded_time, when);
 
-      *human = apr_psprintf (pool, "%04d-%02d-%02d %02d:%02d:%02dZ",
-                             exploded_time.tm_year + 1900,
-                             exploded_time.tm_mon + 1,
-                             exploded_time.tm_mday,
-                             exploded_time.tm_hour,
-                             exploded_time.tm_min,
-                             exploded_time.tm_sec);
+      *human = APR_PSPRINTF2 (pool, "%04d-%02d-%02d %02d:%02d:%02dZ",
+                              exploded_time.tm_year + 1900,
+                              exploded_time.tm_mon + 1,
+                              exploded_time.tm_mday,
+                              exploded_time.tm_hour,
+                              exploded_time.tm_min,
+                              exploded_time.tm_sec);
     }
 
   return SVN_NO_ERROR;
@@ -130,7 +147,13 @@ svn_subst_build_keywords (svn_subst_keywords_t *kw,
   apr_array_header_t *keyword_tokens;
   int i;
 
-  keyword_tokens = svn_cstring_split (keywords_val, " \t\v\n\b\r\f",
+  keyword_tokens = svn_cstring_split (keywords_val,
+                                      SVN_UTF8_TAB_STR \
+                                      SVN_UTF8_VTAB_STR \
+                                      SVN_UTF8_NEWLINE_STR \
+                                      SVN_UTF8_BS_STR \
+                                      SVN_UTF8_CR_STR \
+                                      SVN_UTF8_FF_STR,
                                       TRUE /* chop */, pool);
 
   for (i = 0; i < keyword_tokens->nelts; ++i)
@@ -221,7 +244,7 @@ translate_keyword_subst (char *buf,
 
   /* Make sure we gotz good stuffs. */
   assert (*len <= SVN_KEYWORD_MAX_LEN);
-  assert ((buf[0] == '$') && (buf[*len - 1] == '$'));
+  assert ((buf[0] == SVN_UTF8_DOLLAR) && (buf[*len - 1] == SVN_UTF8_DOLLAR));
 
   /* Need at least a keyword and two $'s. */
   if (*len < keyword_len + 2)
@@ -240,11 +263,13 @@ translate_keyword_subst (char *buf,
    * Expanded kw with filling:   "$keyword:: value   $"
    * Truncated keyword:          "$keyword:: longval#$"
    */
-  if ((buf_ptr[0] == ':') /* first char after keyword is ':' */
-      && (buf_ptr[1] == ':') /* second char after keyword is ':' */
-      && (buf_ptr[2] == ' ') /* third char after keyword is ' ' */
-      && ((buf[*len - 2] == ' ')  /* has ' ' for next to last character */
-          || (buf[*len - 2] == '#')) /* .. or has '#' for next to last character */
+  if ((buf_ptr[0] == SVN_UTF8_COLON) /* first char after keyword is ':' */
+      && (buf_ptr[1] == SVN_UTF8_COLON) /* second char after keyword is ':' */
+      && (buf_ptr[2] == SVN_UTF8_SPACE) /* third char after keyword is ' ' */
+      && ((buf[*len - 2] == SVN_UTF8_SPACE)
+          /* has ' ' for next to last character */
+          || (buf[*len - 2] == SVN_UTF8_POUND))
+             /* .. or has '#' for next to last character */
       && ((6 + keyword_len) < *len))  /* holds "$kw:: x $" at least */
     {
       /* This is fixed length keyword, so *len remains unchanged */
@@ -254,8 +279,8 @@ translate_keyword_subst (char *buf,
         {
             /* no value, so unexpand */
             buf_ptr += 2;
-            while (*buf_ptr != '$')
-                *(buf_ptr++) = ' ';
+            while (*buf_ptr != SVN_UTF8_DOLLAR)
+                *(buf_ptr++) = SVN_UTF8_SPACE;
         }
       else 
         {
@@ -263,31 +288,31 @@ translate_keyword_subst (char *buf,
             { /* replacement not as long as template, pad with spaces */
               strncpy (buf_ptr + 3, value->data, value->len);
               buf_ptr += 3 + value->len;
-              while (*buf_ptr != '$')
-                *(buf_ptr++) = ' ';
+              while (*buf_ptr != SVN_UTF8_DOLLAR)
+                *(buf_ptr++) = SVN_UTF8_SPACE;
             }
           else
             {
               /* replacement needs truncating */
               strncpy (buf_ptr + 3, value->data, max_value_len);
-              buf[*len - 2] = '#';
-              buf[*len - 1] = '$';
+              buf[*len - 2] = SVN_UTF8_POUND;
+              buf[*len - 1] = SVN_UTF8_DOLLAR;
             }
         }
       return TRUE;
     }
 
   /* Check for unexpanded keyword. */
-  else if ((buf_ptr[0] == '$')          /* "$keyword$" */
-           || ((buf_ptr[0] == ':') 
-               && (buf_ptr[1] == '$'))) /* "$keyword:$" */
+  else if ((buf_ptr[0] == SVN_UTF8_DOLLAR)          /* "$keyword$" */
+           || ((buf_ptr[0] == SVN_UTF8_COLON) 
+               && (buf_ptr[1] == SVN_UTF8_DOLLAR))) /* "$keyword:$" */
     {
       /* unexpanded... */
       if (value)
         {
           /* ...so expand. */
-          buf_ptr[0] = ':';
-          buf_ptr[1] = ' ';
+          buf_ptr[0] = SVN_UTF8_COLON;
+          buf_ptr[1] = SVN_UTF8_SPACE;
           if (value->len)
             {
               apr_size_t vallen = value->len;
@@ -296,14 +321,14 @@ translate_keyword_subst (char *buf,
               if (vallen > (SVN_KEYWORD_MAX_LEN - 5))
                 vallen = SVN_KEYWORD_MAX_LEN - 5;
               strncpy (buf_ptr + 2, value->data, vallen);
-              buf_ptr[2 + vallen] = ' ';
-              buf_ptr[2 + vallen + 1] = '$';
+              buf_ptr[2 + vallen] = SVN_UTF8_SPACE;
+              buf_ptr[2 + vallen + 1] = SVN_UTF8_DOLLAR;
               *len = 5 + keyword_len + vallen;
             }
           else
             {
               /* "$keyword: $"  */
-              buf_ptr[2] = '$';
+              buf_ptr[2] = SVN_UTF8_DOLLAR;
               *len = 4 + keyword_len;
             }
         }
@@ -316,22 +341,25 @@ translate_keyword_subst (char *buf,
 
   /* Check for expanded keyword. */
   else if ((*len >= 4 + keyword_len ) /* holds at least "$keyword: $" */
-           && (buf_ptr[0] == ':')     /* first char after keyword is ':' */
-           && (buf_ptr[1] == ' ')     /* second char after keyword is ' ' */
-           && (buf[*len - 2] == ' ')) /* has ' ' for next to last character */
+           && (buf_ptr[0] == SVN_UTF8_COLON)
+              /* first char after keyword is ':' */
+           && (buf_ptr[1] == SVN_UTF8_SPACE)
+              /* second char after keyword is ' ' */
+           && (buf[*len - 2] == SVN_UTF8_SPACE))
+              /* has ' ' for next to last character */
     {
       /* expanded... */
       if (! value)
         {
           /* ...so unexpand. */
-          buf_ptr[0] = '$';
+          buf_ptr[0] = SVN_UTF8_DOLLAR;
           *len = 2 + keyword_len;
         }
       else
         {
           /* ...so re-expand. */
-          buf_ptr[0] = ':';
-          buf_ptr[1] = ' ';
+          buf_ptr[0] = SVN_UTF8_COLON;
+          buf_ptr[1] = SVN_UTF8_SPACE;
           if (value->len)
             {
               apr_size_t vallen = value->len;
@@ -340,14 +368,14 @@ translate_keyword_subst (char *buf,
               if (vallen > (SVN_KEYWORD_MAX_LEN - 5))
                 vallen = SVN_KEYWORD_MAX_LEN - 5;
               strncpy (buf_ptr + 2, value->data, vallen);
-              buf_ptr[2 + vallen] = ' ';
-              buf_ptr[2 + vallen + 1] = '$';
+              buf_ptr[2 + vallen] = SVN_UTF8_SPACE;
+              buf_ptr[2 + vallen + 1] = SVN_UTF8_DOLLAR;
               *len = 5 + keyword_len + vallen;
             }
           else
             {
               /* "$keyword: $"  */
-              buf_ptr[2] = '$';
+              buf_ptr[2] = SVN_UTF8_DOLLAR;
               *len = 4 + keyword_len;
             }
         }
@@ -381,7 +409,7 @@ translate_keyword (char *buf,
 {
   /* Make sure we gotz good stuffs. */
   assert (*len <= SVN_KEYWORD_MAX_LEN);
-  assert ((buf[0] == '$') && (buf[*len - 1] == '$'));
+  assert ((buf[0] == SVN_UTF8_DOLLAR) && (buf[*len - 1] == SVN_UTF8_DOLLAR));
 
   /* Early return for ignored keywords */
   if (! keywords)
@@ -609,7 +637,11 @@ svn_subst_translate_stream2 (svn_stream_t *s, /* src stream */
 
   /* The docstring requires that *some* translation be requested. */
   assert (eol_str || keywords);
-  interesting = (eol_str && keywords) ? "$\r\n" : eol_str ? "\r\n" : "$";
+  interesting = (eol_str && keywords)
+                ? SVN_UTF8_DOLLAR_STR SVN_UTF8_CR_STR SVN_UTF8_NEWLINE_STR
+                : eol_str
+                ? SVN_UTF8_CR_STR SVN_UTF8_NEWLINE_STR
+                : SVN_UTF8_DOLLAR_STR;
 
   readlen = SVN_STREAM_CHUNK_SIZE;
   while (readlen == SVN_STREAM_CHUNK_SIZE)
@@ -629,7 +661,7 @@ svn_subst_translate_stream2 (svn_stream_t *s, /* src stream */
           /* Try to get to the boring state, if necessary. */
           if (newline_off)
             {
-              if (*p == '\n')
+              if (*p == SVN_UTF8_NEWLINE)
                 newline_buf[newline_off++] = *p++;
 
               SVN_ERR (translate_newline (eol_str, eol_str_len, src_format,
@@ -638,10 +670,10 @@ svn_subst_translate_stream2 (svn_stream_t *s, /* src stream */
 
               newline_off = 0;
             }
-          else if (keyword_off && *p == '$')
+          else if (keyword_off && *p == SVN_UTF8_DOLLAR)
             {
               /* If translation fails, treat this '$' as a starting '$'. */
-              keyword_buf[keyword_off++] = '$';
+              keyword_buf[keyword_off++] = SVN_UTF8_DOLLAR;
               if (translate_keyword (keyword_buf, &keyword_off, expand,
                                      keywords))
                 p++;
@@ -653,7 +685,8 @@ svn_subst_translate_stream2 (svn_stream_t *s, /* src stream */
               keyword_off = 0;
             }
           else if (keyword_off == SVN_KEYWORD_MAX_LEN - 1
-                   || (keyword_off && (*p == '\r' || *p == '\n')))
+                   || (keyword_off 
+                       && (*p == SVN_UTF8_CR || *p == SVN_UTF8_NEWLINE)))
             {
               /* No closing '$' found; flush the keyword buffer. */
               SVN_ERR (translate_write (d, keyword_buf, keyword_off));
@@ -684,13 +717,13 @@ svn_subst_translate_stream2 (svn_stream_t *s, /* src stream */
           /* Set up state according to the interesting character, if any. */
           switch (*p)
             {
-            case '$':
+            case SVN_UTF8_DOLLAR:
               keyword_buf[keyword_off++] = *p++;
               break;
-            case '\r':
+            case SVN_UTF8_CR:
               newline_buf[newline_off++] = *p++;
               break;
-            case '\n':
+            case SVN_UTF8_NEWLINE:
               newline_buf[newline_off++] = *p++;
 
               SVN_ERR (translate_newline (eol_str, eol_str_len, src_format,
@@ -812,7 +845,7 @@ detranslate_special_file (const char *src,
   /* Open a temporary destination that we will eventually atomically
      rename into place. */
   SVN_ERR (svn_io_open_unique_file (&d, &dst_tmp, dst,
-                                    ".tmp", FALSE, pool));
+                                    DOT_TMP_STR, FALSE, pool));
 
   dst_stream = svn_stream_from_aprfile (d, pool);
   
@@ -830,8 +863,8 @@ detranslate_special_file (const char *src,
     /* Determine the destination of the link. */
     SVN_ERR (svn_io_read_link (&buf, src, pool));
 
-    SVN_ERR (svn_stream_printf (dst_stream, pool, "link %s",
-                                buf->data));
+    SVN_ERR (svn_stream_printf (dst_stream, pool, "%s%s",
+                                LINK_SPACE_STR, buf->data));
     break;
   default:
     abort ();
@@ -870,7 +903,7 @@ create_special_file (const char *src,
     {
       apr_file_t *fp;
       
-      SVN_ERR (svn_io_open_unique_file (&fp, &src_tmp, dst, ".tmp", FALSE,
+      SVN_ERR (svn_io_open_unique_file (&fp, &src_tmp, dst, DOT_TMP_STR, FALSE,
                                         pool));
       SVN_ERR (svn_io_file_close (fp, pool));
       SVN_ERR (detranslate_special_file (src, src_tmp, pool));
@@ -890,7 +923,7 @@ create_special_file (const char *src,
   identifier = contents->data;
   for (remainder = identifier; *remainder; remainder++)
     {
-      if (*remainder == ' ')
+      if (*remainder == SVN_UTF8_SPACE)
         {
           *remainder = '\0';
           remainder++;
@@ -903,7 +936,7 @@ create_special_file (const char *src,
       /* For symlinks, the type specific data is just a filesystem
          path that the symlink should reference. */
       err = svn_io_create_unique_link (&dst_tmp, dst, remainder,
-                                       ".tmp", pool);
+                                       DOT_TMP_STR, pool);
     }
   else
     {
@@ -923,8 +956,8 @@ create_special_file (const char *src,
           
           svn_error_clear (err);
           /* Fall back to just copying the text-base. */
-          SVN_ERR (svn_io_open_unique_file (&fp, &dst_tmp, dst, ".tmp", FALSE,
-                                            pool));
+          SVN_ERR (svn_io_open_unique_file (&fp, &dst_tmp, dst, DOT_TMP_STR,
+                                            FALSE, pool));
           SVN_ERR (svn_io_file_close (fp, pool));
           SVN_ERR (svn_io_copy_file (src, dst_tmp, TRUE, pool));
         }
@@ -987,7 +1020,7 @@ svn_subst_copy_and_translate2 (const char *src,
      then rename the tmp file over the real destination. */
 
   err = svn_io_open_unique_file (&d, &dst_tmp, dst,
-                                 ".tmp", FALSE, subpool);
+                                 DOT_TMP_STR, FALSE, subpool);
 
   /* Move the file name to a more permanent pool. */
   if (dst_tmp)
@@ -1074,7 +1107,8 @@ svn_subst_translate_string (svn_string_t **new_value,
 
   SVN_ERR (svn_subst_translate_cstring (val_utf8,
                                         &val_utf8_lf,
-                                        "\n",  /* translate to LF */
+                                        SVN_UTF8_NEWLINE_STR,
+                                        /* translate to LF */
                                         FALSE, /* no repair */
                                         NULL,  /* no keywords */
                                         FALSE, /* no expansion */

@@ -40,6 +40,7 @@
 #include "svn_io.h"
 #include "svn_md5.h"
 #include "svn_xml.h"
+#include "svn_ebcdic.h"
 
 #include "wc.h"
 #include "log.h"
@@ -237,7 +238,7 @@ svn_wc_process_committed2 (const char *path,
   const char *base_name;
   svn_stringbuf_t *logtags;
   apr_file_t *log_fp = NULL;
-  char *revstr = apr_psprintf (pool, "%ld", new_revnum);
+  char *revstr = APR_PSPRINTF2 (pool, "%ld", new_revnum);
   const char *hex_digest = NULL;
 
   SVN_ERR (svn_wc__adm_write_check (adm_access));

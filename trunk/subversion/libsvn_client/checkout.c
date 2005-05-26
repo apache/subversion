@@ -32,6 +32,7 @@
 #include "svn_io.h"
 #include "svn_opt.h"
 #include "svn_time.h"
+#include "svn_ebcdic.h"
 #include "client.h"
 
 #include "svn_private_config.h"
@@ -145,7 +146,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
           else
             {
               const char *errmsg;
-              errmsg = apr_psprintf 
+              errmsg = APR_PSPRINTF 
                 (pool,
                  _("'%s' is already a working copy for a different URL"),
                  svn_path_local_style (path, pool));

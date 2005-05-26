@@ -23,6 +23,7 @@
 
 #include "svn_pools.h"
 #include "svn_path.h"
+#include "svn_utf.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -271,8 +272,8 @@ probe (const char **dir,
          caller, as making the larger API change would be very
          destabilizing right now (just before 1.0).  See issue #1617. */
       const char *base_name = svn_path_basename (path, pool);
-      if ((strcmp (base_name, "..") == 0)
-          || (strcmp (base_name, ".") == 0))
+      if ((strcmp (base_name, SVN_UTF8_DOT_STR SVN_UTF8_DOT_STR) == 0)
+          || (strcmp (base_name, SVN_UTF8_DOT_STR) == 0))
         {
           return svn_error_createf
             (SVN_ERR_WC_BAD_PATH, NULL,
@@ -813,7 +814,8 @@ svn_wc_adm_open_anchor (svn_wc_adm_access_t **anchor_access,
   const char *base_name = svn_path_basename (path, pool);
 
   if (svn_path_is_empty (path)
-      || ! strcmp (path, "/") || ! strcmp (base_name, ".."))
+      || ! strcmp (path, SVN_UTF8_FSLASH_STR)
+      || ! strcmp (base_name, SVN_UTF8_DOT_STR SVN_UTF8_DOT_STR))
     {
       SVN_ERR (do_open (anchor_access, NULL, path, write_lock, depth, FALSE,
                         cancel_func, cancel_baton, pool));

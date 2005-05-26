@@ -42,6 +42,7 @@
 #include "svn_wc.h"
 #include "svn_private_config.h"
 #include "svn_time.h"
+#include "svn_ebcdic.h"
 
 #include "wc.h"
 #include "log.h"
@@ -50,6 +51,18 @@
 #include "entries.h"
 #include "props.h"
 
+#define FALSE_STR \
+        "\x66\x61\x6c\x73\x65"
+        /* "false" */
+        
+#define TRUE_STR \
+        "\x74\x72\x75\x65"
+        /* "true" */
+        
+#define DOT_MINE_STR \
+        "\x2e\x6d\x69\x6e\x65"
+        /* ".mine" */
+        
 
 /*** batons ***/
 
@@ -913,8 +926,8 @@ do_entry_deletion (struct edit_baton *eb,
      accurate reports about itself in the future. */
   if (strcmp (path, eb->target) == 0)
     {
-      tgt_rev_str = apr_psprintf (pool, "%ld",
-                                  *(eb->target_revision));
+      tgt_rev_str = APR_PSPRINTF2 (pool, "%ld",
+                                   *(eb->target_revision));
 
       svn_xml_make_open_tag (&log_item, pool, svn_xml_self_closing,
                              SVN_WC__LOG_MODIFY_ENTRY,
@@ -927,7 +940,7 @@ do_entry_deletion (struct edit_baton *eb,
                              SVN_WC__ENTRY_ATTR_REVISION,
                              tgt_rev_str,
                              SVN_WC__ENTRY_ATTR_DELETED,
-                             "true",
+                             TRUE_STR,
                              NULL);
 
       eb->target_deleted = TRUE;
@@ -1889,7 +1902,7 @@ install_file (svn_wc_notify_state_t *content_state,
       if (copyfrom_url)
         {
           assert (SVN_IS_VALID_REVNUM (copyfrom_rev));
-          rev_str = apr_psprintf (pool, "%ld", copyfrom_rev);
+          rev_str = APR_PSPRINTF2 (pool, "%ld", copyfrom_rev);
         }
 
       svn_xml_make_open_tag
@@ -1906,7 +1919,7 @@ install_file (svn_wc_notify_state_t *content_state,
          SVN_WC__ENTRY_ATTR_COPYFROM_REV,
          rev_str,
          SVN_WC__ENTRY_ATTR_COPIED,
-         "true",
+         TRUE_STR,
          NULL);
     }
   else
@@ -2067,7 +2080,7 @@ install_file (svn_wc_notify_state_t *content_state,
   /* Write log entry which will bump the revision number.  Also, just
      in case we're overwriting an existing phantom 'deleted' or
      'absent' entry, be sure to remove the hiddenness. */
-  revision_str = apr_psprintf (pool, "%ld", new_revision);
+  revision_str = APR_PSPRINTF2 (pool, "%ld", new_revision);
   svn_xml_make_open_tag (&log_accum,
                          pool,
                          svn_xml_self_closing,
@@ -2079,9 +2092,9 @@ install_file (svn_wc_notify_state_t *content_state,
                          SVN_WC__ENTRY_ATTR_REVISION,
                          revision_str,
                          SVN_WC__ENTRY_ATTR_DELETED,
-                         "false",
+                         FALSE_STR,
                          SVN_WC__ENTRY_ATTR_ABSENT,
-                         "false",
+                         FALSE_STR,
                          NULL);
 
 
@@ -2163,10 +2176,10 @@ install_file (svn_wc_notify_state_t *content_state,
                  old and new text-bases. */
               SVN_ERR (svn_wc_entry (&e, file_path, adm_access, FALSE, pool));
               assert (e != NULL);
-              oldrev_str = apr_psprintf (pool, ".r%ld",
+              oldrev_str = APR_PSPRINTF2 (pool, ".r%ld",
                                          e->revision);
-              newrev_str = apr_psprintf (pool, ".r%ld",
-                                         new_revision);
+              newrev_str = APR_PSPRINTF2 (pool, ".r%ld",
+                                          new_revision);
               
               /* Merge the changes from the old-textbase (TXTB) to
                  new-textbase (TMP_TXTB) into the file we're
@@ -2185,7 +2198,7 @@ install_file (svn_wc_notify_state_t *content_state,
                                      SVN_WC__LOG_ATTR_ARG_2, tmp_txtb,
                                      SVN_WC__LOG_ATTR_ARG_3, oldrev_str,
                                      SVN_WC__LOG_ATTR_ARG_4, newrev_str,
-                                     SVN_WC__LOG_ATTR_ARG_5, ".mine",
+                                     SVN_WC__LOG_ATTR_ARG_5, DOT_MINE_STR,
                                      NULL);
               
               /* Run a dry-run of the merge to see if a conflict will
@@ -2197,7 +2210,7 @@ install_file (svn_wc_notify_state_t *content_state,
                                      svn_path_join (base, tmp_txtb, pool),
                                      svn_path_join (base, base_name, pool),
                                      adm_access,
-                                     oldrev_str, newrev_str, ".mine",
+                                     oldrev_str, newrev_str, DOT_MINE_STR,
                                      TRUE, &merge_outcome, NULL,
                                      pool));
               

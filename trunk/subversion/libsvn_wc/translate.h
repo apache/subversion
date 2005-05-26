@@ -23,6 +23,7 @@
 #include <apr_pools.h>
 #include "svn_types.h"
 #include "svn_subst.h"
+#include "svn_utf.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,7 +34,7 @@ extern "C" {
 
 /* The text-base eol style for files using svn_subst_eol_style_native
    style.  */
-#define SVN_WC__DEFAULT_EOL_MARKER "\n"
+#define SVN_WC__DEFAULT_EOL_MARKER SVN_UTF8_NEWLINE_STR
 
 
 /* Query the SVN_PROP_EOL_STYLE property on file PATH.  If STYLE is

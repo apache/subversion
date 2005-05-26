@@ -21,6 +21,7 @@
 #include "svn_wc.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_ebcdic.h"
 
 #include "wc.h"
 #include "entries.h"
@@ -51,8 +52,8 @@ relocate_entry (svn_wc_adm_access_t *adm_access,
 
   if (entry->url && ! strncmp (entry->url, from, from_len))
     {
-      entry2.url = apr_psprintf (svn_wc_adm_access_pool (adm_access),
-                                 "%s%s", to, entry->url + from_len);
+      entry2.url = APR_PSPRINTF2 (svn_wc_adm_access_pool (adm_access),
+                                  "%s%s", to, entry->url + from_len);
       if (entry->uuid)
         SVN_ERR (validator (validator_baton, entry->uuid, entry2.url));
       flags |= SVN_WC__ENTRY_MODIFY_URL;
@@ -60,9 +61,9 @@ relocate_entry (svn_wc_adm_access_t *adm_access,
 
   if (entry->copyfrom_url && ! strncmp (entry->copyfrom_url, from, from_len))
     {
-      entry2.copyfrom_url = apr_psprintf (svn_wc_adm_access_pool (adm_access),
-                                          "%s%s", to,
-                                          entry->copyfrom_url + from_len);
+      entry2.copyfrom_url = APR_PSPRINTF2 (svn_wc_adm_access_pool (adm_access),
+                                           "%s%s", to,
+                                           entry->copyfrom_url + from_len);
       if (entry->uuid)
         SVN_ERR (validator (validator_baton, entry->uuid, entry2.copyfrom_url));
       flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
