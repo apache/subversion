@@ -9,7 +9,7 @@ Status of 1.2.1:
 
 Candidate changes:
 
-  * r14774, 14849
+  * r14774, r14849, r14851
     Fix locking bug when working on a switched file in the wc.
     Justification:
       Old behavior caused the wrong file to be locked.
