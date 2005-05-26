@@ -959,6 +959,7 @@ def lock_switched_files(sbox):
                                      gamma_path, lambda_path)
 
   expected_status.tweak('A/D/gamma', 'A/B/lambda', writelocked='K')
+  expected_status.tweak('A/B/E/alpha', 'iota', writelocked='O')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   svntest.actions.run_and_verify_svn(None, None, None, 'unlock',
@@ -968,6 +969,7 @@ def lock_switched_files(sbox):
                                      gamma_path, lambda_path)
 
   expected_status.tweak('A/D/gamma', 'A/B/lambda', writelocked=None)
+  expected_status.tweak('A/B/E/alpha', 'iota', writelocked=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 ########################################################################
@@ -997,7 +999,7 @@ test_list = [ None,
               revert_lock,
               examine_lock_via_url,
               lock_several_files,
-              XFail(lock_switched_files),
+              lock_switched_files,
              ]
 
 if __name__ == '__main__':
