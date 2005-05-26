@@ -41,6 +41,42 @@ void add_ch_to_sbuf(char c, svn_stringbuf_t *sb)
   svn_stringbuf_appendcstr(sb, ch);
 }
 
+/* Helper function for svn_ebcdic_pvsprintf processing of format
+ * specifications with a WIDTH specified for strings and chars,
+ * 
+ *   e.g. 
+ *     svn_ebcdic_pvsprintf(pool, "%[WIDTH]s", someasciistring);
+ *     svn_ebcdic_pvsprintf(pool, "%[WIDTH]c", someasciichar);
+ *
+ * Problem is svn_ebcdic_pvsprintf calls apr_psprintf with an ascii encoded
+ * variable string arg to create a temporary string.  This results in ebcdic
+ * encoded leading/trailing spaces in the temp string if the string
+ * variable arg is shorter than the minimum width.  These ebcdic spaces must
+ * be converted to ascii.
+ * 
+ * If sub_string is shorter than string then the
+ * (strlen(string) - strlen(sub_string)) leading or trailing characters are
+ * replaced with ascii encoded spaces.
+ */
+void
+fix_padding(const char *sub_string, char *string, apr_pool_t *pool)
+{
+  int i, sslen = strlen(sub_string), slen = strlen(string);
+  
+  if(sub_string[0] == string[0])
+  {
+    /* Left justified */
+    for(i = sslen; i < slen; i++)
+      string[i] = SVN_UTF8_SPACE;
+  }
+  else
+  {
+    /* Right justified */
+    for(i = 0; i < slen - sslen; i++)
+      string[i] = SVN_UTF8_SPACE;
+  }
+}
+
 /* Test chars for various valid printf-style formats */
 #define svn_ebcdic_valid_flag(c)         (!(c^'-') | !(c^'+') | !(c^' ') | \
                                           !(c^'#') | !(c^'0') )
@@ -78,6 +114,7 @@ svn_ebcdic_pvsprintf(apr_pool_t *pool, const char *fmt, va_list arg_ptr)
   svn_stringbuf_t *temp_fmt = svn_stringbuf_create("", pool);
   char *s = apr_pstrdup(subpool_temp, fmt);
   char *temp_result = NULL;
+  char char_str[2] = { '\0', '\0'};
   int test = -1;
   signed int             temp_si;
   signed long int        temp_sli;
@@ -115,6 +152,7 @@ svn_ebcdic_pvsprintf(apr_pool_t *pool, const char *fmt, va_list arg_ptr)
         add_ch_to_sbuf(s++[0], temp_fmt);
       else if(apr_isdigit(*s))
       {
+        /* Gather any width digits. */
         add_ch_to_sbuf(s++[0], temp_fmt);
         while(apr_isdigit(*s))
           add_ch_to_sbuf(s++[0], temp_fmt);
@@ -360,9 +398,10 @@ svn_ebcdic_pvsprintf(apr_pool_t *pool, const char *fmt, va_list arg_ptr)
             /* va_arg() won't accept char as a 2nd arg, so int it must be */
             temp_ch = va_arg(arg_ptr, int);
             temp_result = apr_psprintf(subpool_temp, temp_fmt->data, temp_ch);
-            if(temp_result)
-              svn_utf_cstring_from_netccsid(&temp_result, temp_result,
-                                            subpool_temp);            
+            char_str[0] = temp_ch;
+            fix_padding(char_str, temp_result, subpool_temp);
+            svn_utf_cstring_from_netccsid(&temp_result, temp_result,
+                                          subpool_temp);
             svn_stringbuf_appendcstr(result, temp_result ? temp_result : "");
             break;
           case 'f' :
@@ -379,11 +418,15 @@ svn_ebcdic_pvsprintf(apr_pool_t *pool, const char *fmt, va_list arg_ptr)
             svn_stringbuf_appendcstr(result, temp_result ? temp_result : "");
             break;
           case 's' :
+            /* SUCCESS string
+             * %s */
+            add_ch_to_sbuf(s++[0], temp_fmt);
             temp_str = va_arg(arg_ptr, char*);
-            if(temp_str) 
-              svn_utf_cstring_from_netccsid(&temp_str, temp_str, subpool_temp);
-            svn_stringbuf_appendcstr(result, temp_str ? temp_str : "");
-            s++;
+            temp_result = apr_psprintf(subpool_temp, temp_fmt->data, temp_str);
+            fix_padding(temp_str, temp_result, subpool_temp);
+            svn_utf_cstring_from_netccsid(&temp_result, temp_result,
+                                          subpool_temp);
+            svn_stringbuf_appendcstr(result, temp_result ? temp_result : "");
             break;
           case 'C' :
           case 'S' :
