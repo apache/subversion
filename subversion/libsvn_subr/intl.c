@@ -39,19 +39,18 @@ static apr_thread_mutex_t *cache_lock;
 #error This needs mmap support
 #endif
 
-struct message_table_key
+typedef struct
 {
   char domain[32];
   char locale[16];
-};
+} message_table_key_t;
 
-/* ### Should this take a pool? */
 apr_status_t
-svn_gettext_initialize (void)
+svn_intl_initialize (apr_pool_t *parent_pool)
 {
   apr_status_t st;
 
-  st = apr_pool_create (&private_pool, NULL);
+  st = apr_pool_create (&private_pool, parent_pool);
   if (st)
     return st;
   cache = apr_hash_make (private_pool);
@@ -72,28 +71,28 @@ svn_gettext_initialize (void)
    ### hook which is called on SVN or APR termination? */
 
 apr_status_t
-svn_gettext_terminate (void)
+svn_intl_terminate (void)
 {
   apr_pool_destroy (private_pool);
   return 0;
 }
 
-struct message_entry
+typedef struct
 {
   apr_uint32_t len;
   apr_uint32_t offset;
-};
+} message_entry_t;
 
-struct message_table
+typedef struct
 {
   apr_mmap_t *map;
   apr_uint32_t num_strings;
-  struct message_entry *original;
-  struct message_entry *translated;
-};
+  message_entry_t *original;
+  message_entry_t *translated;
+} message_table_t;
 
 static apr_status_t
-message_table_open (struct message_table **mt, const char *domain,
+message_table_open (message_table_t **mt, const char *domain,
                     const char *locale, apr_pool_t * pool)
 {
   char fn[200];
@@ -108,7 +107,7 @@ message_table_open (struct message_table **mt, const char *domain,
   apr_snprintf (fn, sizeof (fn),
                 SVN_LOCALE_DIR "/%s/LC_MESSAGES/%s.mo",
                 locale, domain);
-  *mt = (struct message_table *) apr_palloc (pool, sizeof (**mt));
+  *mt = (message_table_t *) apr_palloc (pool, sizeof (**mt));
 #if 0
   printf("Looking for localization bundle '%s'...\n", fn);
 #endif
@@ -153,7 +152,7 @@ message_table_open (struct message_table **mt, const char *domain,
 }
 
 static const char *
-message_table_gettext (struct message_table *mt, const char *msgid)
+message_table_gettext (message_table_t *mt, const char *msgid)
 {
   apr_uint32_t a = 0;
   apr_uint32_t b = mt->num_strings - 1;
@@ -190,10 +189,10 @@ message_table_gettext (struct message_table *mt, const char *msgid)
 
 
 const char *
-svn_dlgettext (const char *domain, const char *locale, const char *msgid)
+svn_intl_dlgettext (const char *domain, const char *locale, const char *msgid)
 {
-  struct message_table *msg_tbl;
-  struct message_table_key key;
+  message_table_t *msg_tbl;
+  message_table_key_t key;
   apr_status_t st;
 
   memset (&key, 0, sizeof (key));
@@ -204,7 +203,7 @@ svn_dlgettext (const char *domain, const char *locale, const char *msgid)
   if (st != APR_SUCCESS)
     return msgid;
 #endif
-  msg_tbl = (struct message_table *) apr_hash_get (cache, &key, sizeof (key));
+  msg_tbl = (message_table_t *) apr_hash_get (cache, &key, sizeof (key));
   if (!msg_tbl)
     {
       st = message_table_open (&msg_tbl, domain, locale, private_pool);

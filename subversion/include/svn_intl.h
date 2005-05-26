@@ -30,18 +30,22 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Initialize the library. */
+/* Initialize the library, using @a parent_pool to acquire a sub-pool
+   for storage of localization bundle data.  A NULL @a parent_pool
+   indicates that the global pool should be used. */
 apr_status_t
-svn_gettext_initialize (void);
+svn_intl_initialize (apr_pool_t *parent_pool);
 
-/* De-initialize the library. */
+/* De-initialize the library, releasing localization bundle storage.
+   External management of parent pool currently renders it unnecessary
+   to call this function. */
 apr_status_t
-svn_gettext_terminate (void);
+svn_intl_terminate (void);
 
 /* Retrieve the text identified by @a msgid for the text bundle
    corresponding to @a domain and @a locale. */
 const char *
-svn_dlgettext (const char *domain, const char *locale, const char *msgid);
+svn_intl_dlgettext (const char *domain, const char *locale, const char *msgid);
 
 
 #ifdef __cplusplus

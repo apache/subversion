@@ -97,13 +97,18 @@ test1 (const char **msg,
        apr_pool_t *pool)
 {
   int i;
+  apr_status_t st;
 
-  *msg = "test svn_intl";
+  *msg = "test init, l10n, and shutdown of svn_intl";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  svn_gettext_initialize();
+  st = svn_intl_initialize(pool);
+  if (st != APR_SUCCESS)
+    {
+      return fail(pool, "svn_intl_initialize failed with status of '%d'", st);
+    }
 
   /* Test values retrieved from our IntlParser instance against
      values retrieved using svn_intl. */
@@ -111,9 +116,10 @@ test1 (const char **msg,
     {
       const char *key = intl_keys[i];
       const char *expected_val = intl_values[i];
-      /* ### Account for a not-yet-installed resource bundle. */
-      const char *intl_val = svn_dlgettext(PACKAGE_NAME, "es", key);
-#if 1
+      /* ### Account for a not-yet-installed resource bundle by using
+         ### srcdir instead of SVN_LOCALE_DIR to remove XFAIL. */
+      const char *intl_val = svn_intl_dlgettext(PACKAGE_NAME, "es", key);
+#if 0
       printf("Testing expected value '%s' against '%s' for "
              "option '%s'\n", expected_val, intl_val, key);
 #endif
@@ -124,7 +130,7 @@ test1 (const char **msg,
         return fail(pool, "Expected value '%s' not equal to '%s' for "
                     "text '%s'", expected_val, intl_val, key);
     }
-  svn_gettext_terminate();
+  svn_intl_terminate();
 
   return SVN_NO_ERROR;
 }
