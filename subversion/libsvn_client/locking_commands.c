@@ -64,7 +64,7 @@ store_locks_callback (void *baton,
   svn_wc_adm_access_t *adm_access;
   const char *abs_path;
   svn_wc_notify_t *notify;
-  char *path = apr_hash_get(lb->urls_to_paths, rel_url, APR_HASH_KEY_STRING);
+  char *path = apr_hash_get (lb->urls_to_paths, rel_url, APR_HASH_KEY_STRING);
 
   /* Create the notify struct first, so we can tweak it below. */
   notify = svn_wc_create_notify (rel_url,
@@ -175,6 +175,9 @@ organize_lock_targets (const char **common_parent,
   apr_array_header_t *rel_targets = apr_array_make(pool, 1,
                                                    sizeof(const char *));
   apr_hash_t *rel_targets_ret = apr_hash_make(pool);
+
+  *rel_urls_p = NULL;
+
   /* Get the common parent and all relative paths */
   SVN_ERR (svn_path_condense_targets (common_parent, &rel_targets, targets, 
                                       FALSE, pool));
@@ -210,14 +213,13 @@ organize_lock_targets (const char **common_parent,
                         do_lock ? (const void *) invalid_revnum
                                 : (const void *) "");
         }
-      *rel_urls_p = NULL;
     }
   else  /* common parent is a local path */
     {
       int max_depth = 0;
       apr_array_header_t *rel_urls;
-      apr_array_header_t *urls = apr_array_make(pool, 1, sizeof(const char *));
-      apr_hash_t *urls_hash = apr_hash_make(pool);
+      apr_array_header_t *urls = apr_array_make (pool, 1, sizeof(const char *));
+      apr_hash_t *urls_hash = apr_hash_make (pool);
       const char *common_url;
 
       /* Calculate the maximum number of components in the rel_targets, which
@@ -295,15 +297,10 @@ organize_lock_targets (const char **common_parent,
           (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
            _("Unable to lock/unlock across multiple repositories"));
 
-      if (rel_urls->nelts != rel_targets->nelts)
-        return svn_error_create
-          (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-           _("Error condensing Lock/unlock targets."));
-
       for (i = 0; i < rel_urls->nelts; i++)
         {
-          const char *target = ((const char **) (rel_targets->elts))[i];
-          const char *rel_url = ((const char **) (rel_urls->elts))[i];
+          const char *target = APR_ARRAY_IDX(rel_targets, i, const char *);
+          const char *rel_url = APR_ARRAY_IDX(rel_urls, i, const char *);
 
           apr_hash_set (urls_hash, apr_pstrdup (pool, rel_url),
                         APR_HASH_KEY_STRING, 
@@ -317,8 +314,8 @@ organize_lock_targets (const char **common_parent,
       for (i = 0; i < rel_targets->nelts; i++)
         {
           const svn_wc_entry_t *entry;
-          const char *target = ((const char **) (rel_targets->elts))[i];
-          const char *url = ((const char **) (rel_urls->elts))[i];
+          const char *target = APR_ARRAY_IDX(rel_targets, i, const char *);
+          const char *url = APR_ARRAY_IDX(rel_urls, i, const char *);
           const char *abs_path;
 
           abs_path = svn_path_join
