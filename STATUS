@@ -9,6 +9,15 @@ Status of 1.2.1:
 
 Candidate changes:
 
+  * r14774, 14849
+    Fix locking bug when working on a switched file in the wc.
+    Justification:
+      Old behavior caused the wrong file to be locked.
+    Notes: 
+      14774 is the commit of the test, 14849 is the fix.
+    Votes:
+      +1: fitz
+
   * r14830
     Fix of the Windows Installer's Add/Repair/Remove capabilities.
     Branch:
