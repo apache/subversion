@@ -175,8 +175,7 @@ organize_lock_targets (const char **common_parent,
   apr_array_header_t *rel_targets = apr_array_make(pool, 1,
                                                    sizeof(const char *));
   apr_hash_t *rel_targets_ret = apr_hash_make(pool);
-
-  *rel_urls_p = NULL;
+  apr_pool_t *subpool = svn_pool_create (pool); 
 
   /* Get the common parent and all relative paths */
   SVN_ERR (svn_path_condense_targets (common_parent, &rel_targets, targets, 
@@ -213,6 +212,7 @@ organize_lock_targets (const char **common_parent,
                         do_lock ? (const void *) invalid_revnum
                                 : (const void *) "");
         }
+      *rel_urls_p = NULL;
     }
   else  /* common parent is a local path */
     {
@@ -258,10 +258,10 @@ organize_lock_targets (const char **common_parent,
           const char *abs_path;
 
           abs_path = svn_path_join
-            (svn_wc_adm_access_path (*parent_adm_access_p), target, pool);
+            (svn_wc_adm_access_path (*parent_adm_access_p), target, subpool);
 
           SVN_ERR (svn_wc_entry (&entry, abs_path, *parent_adm_access_p, FALSE,
-                                 pool));
+                                 subpool));
 
           if (! entry)
             return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
@@ -274,7 +274,7 @@ organize_lock_targets (const char **common_parent,
 
           (*((const char **)(apr_array_push (urls)))) = apr_pstrdup 
             (pool, entry->url);
-
+          svn_pool_clear (subpool);
 
         }
 
@@ -319,10 +319,10 @@ organize_lock_targets (const char **common_parent,
           const char *abs_path;
 
           abs_path = svn_path_join
-            (svn_wc_adm_access_path (*parent_adm_access_p), target, pool);
+            (svn_wc_adm_access_path (*parent_adm_access_p), target, subpool);
 
           SVN_ERR (svn_wc_entry (&entry, abs_path, *parent_adm_access_p, FALSE,
-                                 pool));
+                                 subpool));
 
           if (do_lock) /* Lock. */
             {
@@ -354,13 +354,12 @@ organize_lock_targets (const char **common_parent,
                                 APR_HASH_KEY_STRING, "");
                 }
             }
-          
-          
+          svn_pool_clear (subpool); 
         }
     }
   
   *rel_targets_p = rel_targets_ret;
-  
+  svn_pool_destroy (subpool);  
   return SVN_NO_ERROR;
 }
 
