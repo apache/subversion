@@ -633,9 +633,14 @@ svn_config_get_bool (svn_config_t *cfg, svn_boolean_t *valuep,
            || 0 == strcmp (tmp_value, "0"))
     *valuep = FALSE;
   else
-    return svn_error_createf (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                              _("Config error: invalid boolean value '%s'"),
-                              tmp_value);
+    {
+#if APR_CHARSET_EBCDIC
+      SVN_ERR (svn_utf_cstring_to_utf8(&tmp_value, tmp_value, cfg->pool));
+#endif
+      return svn_error_createf (SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                                _("Config error: invalid boolean value '%s'"),
+                                tmp_value);
+    }
 
   return SVN_NO_ERROR;
 }

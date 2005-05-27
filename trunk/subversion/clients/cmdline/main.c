@@ -738,7 +738,11 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "  A 'B' in the third column signifies that the lock for the file has\n"
        "  been broken or stolen.\n"
        ),
+#if !AS400
     {'r', 'N', 'q', svn_cl__merge_cmd_opt, SVN_CL__AUTH_OPTIONS, 
+#else
+    {'r', 'N', 'q', SVN_CL__AUTH_OPTIONS, 
+#endif
      svn_cl__config_dir_opt, svn_cl__ignore_externals_opt} },
 
   { NULL, NULL, {0}, NULL, {0} }
@@ -1158,7 +1162,12 @@ main (int argc, const char * const *argv)
               svn_error_clear
                 (svn_cmdline_fprintf (stderr, pool,
                                       _("Unknown command: '%s'\n"),
+#if !APR_CHARSET_EBCDIC
                                       first_arg_utf8));
+#else
+              /* Can't send utf-8 to an ebcdic console. */
+                                      first_arg));
+#endif
               svn_cl__help (NULL, NULL, pool);
               svn_pool_destroy (pool);
               return EXIT_FAILURE;
@@ -1192,7 +1201,12 @@ main (int argc, const char * const *argv)
             (svn_cmdline_fprintf
              (stderr, pool, _("Subcommand '%s' doesn't accept option '%s'\n"
                               "Type 'svn help %s' for usage.\n"),
+#if !APR_CHARSET_EBCDIC
               cmdname_utf8, optstr_utf8, cmdname_utf8));
+#else
+              /* Can't send utf-8 to an ebcdic console. */
+              subcommand->name, optstr, subcommand->name));
+#endif
           svn_pool_destroy (pool);
           return EXIT_FAILURE;
         }
