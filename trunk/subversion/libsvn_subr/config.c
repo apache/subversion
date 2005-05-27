@@ -616,14 +616,18 @@ svn_config_get_bool (svn_config_t *cfg, svn_boolean_t *valuep,
   const char *tmp_value;
 
   svn_config_get (cfg, &tmp_value, section, option, NULL);
+#if APR_CHARSET_EBCDIC
+  if (tmp_value)
+    SVN_ERR (svn_utf_cstring_from_utf8(&tmp_value, tmp_value, cfg->pool));
+#endif
   if (tmp_value == NULL)
     *valuep = default_value;
-  else if (0 == strcasecmp (tmp_value, SVN_CONFIG_TRUE)
+  else if (0 == strcasecmp (tmp_value, "true")
            || 0 == strcasecmp (tmp_value, "yes")
            || 0 == strcasecmp (tmp_value, "on")
            || 0 == strcmp (tmp_value, "1"))
     *valuep = TRUE;
-  else if (0 == strcasecmp (tmp_value, SVN_CONFIG_FALSE)
+  else if (0 == strcasecmp (tmp_value, "false")
            || 0 == strcasecmp (tmp_value, "no")
            || 0 == strcasecmp (tmp_value, "off")
            || 0 == strcmp (tmp_value, "0"))
@@ -739,7 +743,7 @@ static svn_boolean_t search_groups (const char *name,
   struct search_groups_baton *b = baton;
   apr_array_header_t *list;
 
-  list = svn_cstring_split (value, ",", TRUE, b->pool);
+  list = svn_cstring_split (value, SVN_UTF8_COMMA_STR, TRUE, b->pool);
   if (svn_cstring_match_glob_list (b->key, list))
     {
       /* Fill in the match and return false, to stop enumerating. */

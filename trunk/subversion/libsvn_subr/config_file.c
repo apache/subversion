@@ -618,6 +618,9 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
   if (kind == svn_node_none)
     {
       apr_file_t *f;
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
       const char *contents =
    "This directory holds run-time configuration information for Subversion"
    APR_EOL_STR
@@ -835,6 +838,9 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
    "    REGISTRY:HKCU\\Software\\Tigris.org\\Subversion\\Hairstyles"
    APR_EOL_STR
    APR_EOL_STR;
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
       err = svn_io_file_open (&f, path,
                               (APR_WRITE | APR_CREATE | APR_EXCL),
@@ -865,6 +871,9 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
   if (kind == svn_node_none)
     {
       apr_file_t *f;
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
       const char *contents =
         "### This file specifies server-specific protocol parameters,"
         APR_EOL_STR
@@ -1014,7 +1023,9 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem"
         APR_EOL_STR;
-
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
       err = svn_io_file_open (&f, path,
                               (APR_WRITE | APR_CREATE | APR_EXCL),
                               APR_OS_DEFAULT,
@@ -1044,6 +1055,9 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
   if (kind == svn_node_none)
     {
       apr_file_t *f;
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
       const char *contents =
         "### This file configures various client-side behaviors."
         APR_EOL_STR
@@ -1243,7 +1257,10 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "# Makefile = svn:eol-style=native"
         APR_EOL_STR
         APR_EOL_STR;
-        
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
+
       err = svn_io_file_open (&f, path,
                               (APR_WRITE | APR_CREATE | APR_EXCL),
                               APR_OS_DEFAULT,
