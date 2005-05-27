@@ -539,9 +539,9 @@ print_changed_tree (svn_repos_node_t *node,
 }
 
 
-/* Open PATH as an empty writable binary file, creating it if it doesn't exist.
-   Create ancestor directories if necessary.
-   Use POOL for temporary allocations. */
+/* Set *FH to a file handle for a writable binary file at PATH.
+   Create the file if it doesn't exist, truncate it if it does.
+   Create ancestor directories if necessary.  Allocate *FH in POOL. */
 static svn_error_t *
 open_writable_binary_file (apr_file_t **fh, 
                            const char *path /* UTF-8! */, 
