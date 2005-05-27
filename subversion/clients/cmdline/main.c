@@ -623,7 +623,6 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      "      'A' Added\n"
      "      'C' Conflicted\n"
      "      'D' Deleted\n"
-     "      'G' Merged\n"
      "      'I' Ignored\n"
      "      'M' Modified\n"
      "      'R' Replaced\n"
