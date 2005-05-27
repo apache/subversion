@@ -539,6 +539,9 @@ print_changed_tree (svn_repos_node_t *node,
 }
 
 
+/* Open PATH as an empty writable binary file, creating it if it doesn't exist.
+   Create ancestor directories if necessary.
+   Use POOL for temporary allocations. */
 static svn_error_t *
 open_writable_binary_file (apr_file_t **fh, 
                            const char *path /* UTF-8! */, 
@@ -558,14 +561,12 @@ open_writable_binary_file (apr_file_t **fh,
 
   svn_path_split (path, &dir, NULL, pool);
 
+  path_pieces = svn_path_decompose (dir, pool);
+
   /* If the file path has no parent, then we've already tried to open
      it as best as we care to try above. */
-  if (svn_path_is_empty (dir))
-    return err;
-
-  path_pieces = svn_path_decompose (dir, pool);
   if (! path_pieces->nelts)
-    goto cleanup;
+    return err;
 
   full_path = "";
   for (i = 0; i < path_pieces->nelts; i++)
