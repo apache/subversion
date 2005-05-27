@@ -61,8 +61,15 @@ void add_ch_to_sbuf(char c, svn_stringbuf_t *sb)
 void
 fix_padding(const char *sub_string, char *string, apr_pool_t *pool)
 {
-  int i, sslen = strlen(sub_string), slen = strlen(string);
+  int i, sslen, slen;
+
+  if (!sub_string || !string)
+    /* If either string is NULL abandon ship! */
+    return;
   
+  sslen = strlen(sub_string);
+  slen = strlen(string);
+
   if(sub_string[0] == string[0])
   {
     /* Left justified */
