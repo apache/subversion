@@ -17,12 +17,13 @@ Candidate changes:
     Votes:
       +1: fitz
 
-  * r14774, r14849, r14851
+  * r14774, r14849, r14851, r14862
     Fix locking bug when working on a switched file in the wc.
     Justification:
       Old behavior caused the wrong file to be locked.
     Notes: 
-      14774 is the commit of the test, 14849 is the fix.
+      14774 is the commit of the test, 14849 is the fix, the rest are 
+      refinements.
     Votes:
       +1: fitz
 
