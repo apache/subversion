@@ -126,7 +126,7 @@ print_status (const char *path,
           SVN_ERR
             (svn_cmdline_printf (pool,
                                  "%c%c%c%c%c%c %c   %6s   %6s %-12s %s\n",
-                                 generate_status_code(status->text_status),
+                                 generate_status_code (status->text_status),
                                  generate_status_code (status->prop_status),
                                  status->locked ? 'L' : ' ',
                                  status->copied ? '+' : ' ',
