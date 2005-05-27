@@ -999,9 +999,12 @@ reown_file (const char *path_apr,
   return SVN_NO_ERROR;
 }
 
-/* Set PERMS to the default file permissions for PATH based on the
-   permissions of PATH and a newly created file.  Make temporary
-   allocations in POOL.  */
+/* Determine what the read-write PERMS for PATH should be by ORing
+   together the permissions of PATH and the permissions of a temporary
+   file that we create.  Unfortunately, this is the only way to
+   determine which combination of write bits (User/Group/World) should
+   be set to restore a file from read-only to read-write.  Make
+   temporary allocations in POOL.  */
 static svn_error_t *
 get_default_file_perms (const char *path, apr_fileperms_t *perms,
                         apr_pool_t *pool)
@@ -1015,7 +1018,7 @@ get_default_file_perms (const char *path, apr_fileperms_t *perms,
   /* Get the perms for a newly created file to find out what write
    * bits should be set. */
   SVN_ERR (svn_io_open_unique_file (&fd, &tmp_path, path, 
-                                    "tmp", TRUE, pool));
+                                    ".tmp", TRUE, pool));
   status = apr_stat (&tmp_finfo, tmp_path, APR_FINFO_PROT, pool);
   if (status)
     return svn_error_wrap_apr (status, _("Can't get default file perms "
