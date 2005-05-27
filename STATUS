@@ -9,6 +9,14 @@ Status of 1.2.1:
 
 Candidate changes:
 
+  * r14859
+    Fix bug where an unlocked file loses its executable bits when
+    svn:executable is set.
+    Justification:
+      Buggy interaction between locking and svn:executable.
+    Votes:
+      +1: fitz
+
   * r14774, r14849, r14851
     Fix locking bug when working on a switched file in the wc.
     Justification:
