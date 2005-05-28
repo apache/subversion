@@ -45,7 +45,7 @@ of full blown client applications</a>.</p>
 
 <dl>
   <dt>Status</dt>
-  <dd>Mostly complete and maintained</dd>
+  <dd>Mostly complete and maintained.</dd>
 
   <dt>Type</dt>
   <dd>SWIG-based, no Python-friendly veneer</dd>
@@ -62,10 +62,10 @@ of full blown client applications</a>.</p>
 
 <dl>
   <dt>Status</dt>
-  <dd>Complete, not up to date with latest version of SVN</dd>
+  <dd>Complete and up to date.</dd>
 
   <dt>Type</dt>
-  <dd>Hand-coded JNI in C++, Java-friendly veneer</dd>
+  <dd>Hand-coded JNI in C++, Java-friendly veneer.</dd>
 
   <dt>Notes</dt>
   <dd>Auto-loads native libraries.  Originally from the <a
@@ -76,30 +76,32 @@ of full blown client applications</a>.</p>
   <dd>http://svn.collab.net/repos/svn/trunk/subversion/bindings/java/javahl/</dd>
 </dl>
 
-<h4>Subversion SWIG-Java bindings</h4>
+<h4>JavaSVN</h4>
 
 <dl>
   <dt>Status</dt>
-  <dd>Incomplete</dd>
+  <dd>Complete and up to date.</dd>
 
   <dt>Type</dt>
-  <dd>SWIG-based, Java-friendly veneer</dd>
+  <dd>Pure Java re-implementation of a Subversion client library.</dd>
 
   <dt>Notes</dt>
-  <dd>Auto-loads native libraries.</dd>
+  <dd>Only known pure Java implementation!  Does not require
+    Subversion to be installed on the client.</dd>
 
   <dt>Location</dt>
-  <dd>http://svn.collab.net/repos/svn/trunk/subversion/bindings/swig/perl/</dd>
+  <dd>http://tmate.org/svn/</dd>
 </dl>
+
 
 <h4>Alternate Computing jsvn bindings</h4>
 
 <dl>
   <dt>Status</dt>
-  <dd>Mostly complete and up to date</dd>
+  <dd>Mostly complete and up to date.</dd>
 
   <dt>Type</dt>
-  <dd>Command-line binary wrapper</dd>
+  <dd>Command-line binary wrapper.</dd>
 
   <dt>Notes</dt>
   <dd>Includes GUI and Ant tasks.  Requires installation of the native
@@ -109,13 +111,34 @@ of full blown client applications</a>.</p>
   <dd>http://jsvn.alternatecomputing.com/</dd>
 </dl>
 
+<!-- TODO: Add Subclipse bindings -->
+
+<h4>Subversion SWIG-Java bindings</h4>
+
+<dl>
+  <dt>Status</dt>
+  <dd>Removed</dd>
+
+  <dt>Type</dt>
+  <dd>SWIG-based, Java-friendly veneer.</dd>
+
+  <dt>Notes</dt>
+  <dd>Removed due to lack of maintenance.  Auto-loads native libraries.</dd>
+
+  <dt>Location</dt>
+  <!-- TODO: Link to last rev where they were present -->
+  <dd>http://svn.collab.net/repos/svn/trunk/subversion/bindings/swig/java/</dd>
+</dl>
+
 
 <a name="perl"></a>
 <h3>Perl</h3>
 
 <dl>
   <dt>Status</dt>
-  <dd>Mostly complete?</dd>
+  <dd>Mostly complete.  The <a href="http://svk.elixus.org/">svk</a>
+  decentralized VC system -- which is based on Subversion -- is
+  written on top of these bindings.</dd>
 
   <dt>Type</dt>
   <dd>SWIG-based</dd>
@@ -133,13 +156,14 @@ of full blown client applications</a>.</p>
   <dd>Removed</dd>
 
   <dt>Type</dt>
-  <dd>Hand coded</dd>
+  <dd>SWIG-based <!-- Ruby-friendly veener? --></dd>
 
    <dt>Notes</dt>
-   <dd>Due to age, would require significant effort to resurrect.</dd>
+   <dd>The latest bindings are SWIG-based, but previously, a
+     hand-coded implementation had been started, then removed.</dd>
 
   <dt>Location</dt>
-  <dd>http://svn.collab.net/repos/svn/trunk/subversion/bindings/ruby/</dd>
+  <dd>http://svn.collab.net/repos/svn/trunk/subversion/bindings/swig/ruby/</dd>
 </dl>
 
 
