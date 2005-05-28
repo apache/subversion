@@ -118,9 +118,9 @@ svn_client_switch (svn_revnum_t *result_rev,
     revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
 
   /* Open an RA session to 'source' URL */
-  SVN_ERR (svn_client__open_ra_session (&ra_session, URL, anchor, 
-                                        adm_access, NULL, TRUE, FALSE, 
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, URL, anchor, 
+                                                 adm_access, NULL, TRUE, FALSE,
+                                                 ctx, pool));
   SVN_ERR (svn_client__get_revision_number
            (&revnum, ra_session, revision, path, pool));
 

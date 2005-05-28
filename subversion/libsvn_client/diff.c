@@ -1476,9 +1476,9 @@ do_merge (const char *initial_URL1,
     }
   
   /* Establish first RA session to URL1. */
-  SVN_ERR (svn_client__open_ra_session (&ra_session, URL1, NULL,
-                                        NULL, NULL, FALSE, TRUE, 
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, URL1, NULL,
+                                                 NULL, NULL, FALSE, TRUE, 
+                                                 ctx, pool));
   /* Resolve the revision numbers. */
   SVN_ERR (svn_client__get_revision_number
            (&start_revnum, ra_session, revision1, path1, pool));
@@ -1491,9 +1491,9 @@ do_merge (const char *initial_URL1,
      the diff, is still being processed the first session cannot be
      reused. This applies to ra_dav, ra_local does not appears to have
      this limitation. */
-  SVN_ERR (svn_client__open_ra_session (&ra_session2, URL1, NULL,
-                                        NULL, NULL, FALSE, TRUE,
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session2, URL1, NULL,
+                                                 NULL, NULL, FALSE, TRUE,
+                                                 ctx, pool));
  
   SVN_ERR (svn_client__get_diff_editor (target_wcpath,
                                         adm_access,
@@ -1547,9 +1547,9 @@ single_file_merge_get_file (const char **filename,
   svn_ra_session_t *ra_session;
   apr_file_t *fp;
 
-  SVN_ERR (svn_client__open_ra_session (&ra_session, url, NULL,
-                                        NULL, NULL, FALSE, TRUE, 
-                                        merge_b->ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, url, NULL,
+                                                 NULL, NULL, FALSE, TRUE, 
+                                                 merge_b->ctx, pool));
   SVN_ERR (svn_client__get_revision_number (rev, ra_session, revision,
                                             path, pool));
   SVN_ERR (svn_io_open_unique_file (&fp, filename, 
@@ -1839,12 +1839,12 @@ diff_repos_repos (const apr_array_header_t *options,
     }
   
   /* Open temporary RA sessions to each URL. */
-  SVN_ERR (svn_client__open_ra_session (&ra_session1, url1, NULL,
-                                        NULL, NULL, FALSE, TRUE, 
-                                        ctx, temppool));
-  SVN_ERR (svn_client__open_ra_session (&ra_session2, url2, NULL,
-                                        NULL, NULL, FALSE, TRUE, 
-                                        ctx, temppool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session1, url1, NULL,
+                                                 NULL, NULL, FALSE, TRUE, 
+                                                 ctx, temppool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session2, url2, NULL,
+                                                 NULL, NULL, FALSE, TRUE, 
+                                                 ctx, temppool));
 
   /* Resolve named revisions to real numbers. */
   SVN_ERR (svn_client__get_revision_number
@@ -1889,12 +1889,12 @@ diff_repos_repos (const apr_array_header_t *options,
 
   /* Now, we reopen two RA session to the correct anchor/target
      locations for our URLs. */
-  SVN_ERR (svn_client__open_ra_session (&ra_session1, anchor1,
-                                        NULL, NULL, NULL, FALSE, TRUE, 
-                                        ctx, pool));
-  SVN_ERR (svn_client__open_ra_session (&ra_session2, anchor1,
-                                        NULL, NULL, NULL, FALSE, TRUE,
-                                        ctx, pool));      
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session1, anchor1,
+                                                 NULL, NULL, NULL, FALSE, TRUE,
+                                                 ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session2, anchor1,
+                                                 NULL, NULL, NULL, FALSE, TRUE,
+                                                 ctx, pool));
 
   /* Set up the repos_diff editor on BASE_PATH, if available.
      Otherwise, we just use "". */
@@ -2013,9 +2013,9 @@ diff_repos_wc (const apr_array_header_t *options,
     }
   
   /* Establish RA session to path2's anchor */
-  SVN_ERR (svn_client__open_ra_session (&ra_session, anchor_url,
-                                        NULL, NULL, NULL, FALSE, TRUE,
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, anchor_url,
+                                                 NULL, NULL, NULL, FALSE, TRUE,
+                                                 ctx, pool));
       
   SVN_ERR (svn_wc_get_diff_editor3 (adm_access, target,
                                     callbacks, callback_baton,

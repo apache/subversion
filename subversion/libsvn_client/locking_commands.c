@@ -435,7 +435,7 @@ svn_client_lock (const apr_array_header_t *targets,
     url = entry->url;
 
   /* Open an RA session to the common parent of TARGETS. */
-  SVN_ERR (svn_client__open_ra_session
+  SVN_ERR (svn_client__open_ra_session_internal
            (&ra_session, url, is_url ? NULL : common_parent,
             adm_access, NULL, FALSE, FALSE, ctx, pool));
 
@@ -482,7 +482,7 @@ svn_client_unlock (const apr_array_header_t *targets,
     url = entry->url;
 
   /* Open an RA session. */
-  SVN_ERR (svn_client__open_ra_session
+  SVN_ERR (svn_client__open_ra_session_internal
            (&ra_session, url,
             svn_path_is_url (common_parent) ? NULL : common_parent,
             adm_access, NULL, FALSE, FALSE, ctx, pool));

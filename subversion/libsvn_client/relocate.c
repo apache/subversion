@@ -97,9 +97,9 @@ validator_func (void *baton,
      repository at the new URL so we can force the RA session to close
      by destroying the subpool. */
   subpool = svn_pool_create (pool); 
-  SVN_ERR (svn_client__open_ra_session (&ra_session, url, NULL,
-                                        NULL, NULL, FALSE, TRUE,
-                                        b->ctx, subpool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, url, NULL,
+                                                 NULL, NULL, FALSE, TRUE,
+                                                 b->ctx, subpool));
   SVN_ERR (svn_ra_get_uuid (ra_session, &ra_uuid, subpool));
   ra_uuid = apr_pstrdup (pool, ra_uuid);
   svn_pool_destroy (subpool);

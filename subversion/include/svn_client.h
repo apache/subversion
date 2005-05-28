@@ -2091,6 +2091,22 @@ svn_client_uuid_from_path (const char **uuid,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool);
 
+
+/* Opening RA sessions. */
+
+/** Open an RA session rooted at @a url, and return it in @a *session.
+ *
+ * Use the authentication baton stored in @a ctx for authentication.
+ * @a *session is allocated in @a pool.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_client_open_ra_session (svn_ra_session_t **session,
+                            const char *url,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

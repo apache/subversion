@@ -111,10 +111,10 @@ svn_client_ls2 (apr_hash_t **dirents,
          to use it as a plain file name. Therefore, we must URI-decode
          it. */
       base_name = svn_path_uri_decode(base_name, pool);
-      SVN_ERR (svn_client__open_ra_session (&ra_session, parent_url,
-                                            NULL,
-                                            NULL, NULL, FALSE, TRUE, 
-                                            ctx, pool));
+      SVN_ERR (svn_client__open_ra_session_internal (&ra_session, parent_url,
+                                                     NULL,
+                                                     NULL, NULL, FALSE, TRUE, 
+                                                     ctx, pool));
 
       /* Get all parent's entries, no props. */
       SVN_ERR (svn_ra_get_dir (ra_session, "", rev, &parent_ents, 

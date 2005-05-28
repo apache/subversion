@@ -580,11 +580,11 @@ get_ra_editor (svn_ra_session_t **ra_session,
   void *commit_baton;
 
   /* Open an RA session to URL. */
-  SVN_ERR (svn_client__open_ra_session (ra_session,
-                                        base_url, base_dir, base_access,
-                                        commit_items,
-                                        is_commit, !is_commit,
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (ra_session,
+                                                 base_url, base_dir,
+                                                 base_access, commit_items,
+                                                 is_commit, !is_commit,
+                                                 ctx, pool));
 
   /* If this is an import (aka, not a commit), we need to verify that
      our repository URL exists. */
