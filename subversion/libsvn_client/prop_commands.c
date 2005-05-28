@@ -281,9 +281,9 @@ svn_client_revprop_set (const char *propname,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR (svn_client__open_ra_session (&ra_session, URL, NULL,
-                                        NULL, NULL, FALSE, TRUE,
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, URL, NULL,
+                                                 NULL, NULL, FALSE, TRUE,
+                                                 ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
@@ -668,9 +668,9 @@ svn_client_revprop_get (const char *propname,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR (svn_client__open_ra_session (&ra_session, URL, NULL,
-                                        NULL, NULL, FALSE, TRUE,
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, URL, NULL,
+                                                 NULL, NULL, FALSE, TRUE,
+                                                 ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */
@@ -1016,9 +1016,9 @@ svn_client_revprop_list (apr_hash_t **props,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR (svn_client__open_ra_session (&ra_session, URL, NULL,
-                                        NULL, NULL, FALSE, TRUE,
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, URL, NULL,
+                                                 NULL, NULL, FALSE, TRUE,
+                                                 ctx, pool));
 
   /* Resolve the revision into something real, and return that to the
      caller as well. */

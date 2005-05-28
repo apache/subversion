@@ -686,9 +686,9 @@ old_blame (const char *target, const char *url,
                            &lmb,
                            pool));
 
-  SVN_ERR (svn_client__open_ra_session (&ra_session, reposURL, NULL,
-                                        NULL, NULL, FALSE, FALSE,
-                                        frb->ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, reposURL, NULL,
+                                                 NULL, NULL, FALSE, FALSE,
+                                                 frb->ctx, pool));
 
   /* Inspect the first revision's change metadata; if there are any
      prior revisions, compute a new starting revision/path.  If no

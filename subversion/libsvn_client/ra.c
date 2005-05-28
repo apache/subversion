@@ -259,15 +259,15 @@ invalidate_wc_props (void *baton,
 
 
 svn_error_t * 
-svn_client__open_ra_session (svn_ra_session_t **ra_session,
-                             const char *base_url,
-                             const char *base_dir,
-                             svn_wc_adm_access_t *base_access,
-                             apr_array_header_t *commit_items,
-                             svn_boolean_t use_admin,
-                             svn_boolean_t read_only_wc,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *pool)
+svn_client__open_ra_session_internal (svn_ra_session_t **ra_session,
+                                      const char *base_url,
+                                      const char *base_dir,
+                                      svn_wc_adm_access_t *base_access,
+                                      apr_array_header_t *commit_items,
+                                      svn_boolean_t use_admin,
+                                      svn_boolean_t read_only_wc,
+                                      svn_client_ctx_t *ctx,
+                                      apr_pool_t *pool)
 {
   svn_ra_callbacks_t *cbtable = apr_pcalloc (pool, sizeof(*cbtable));
   svn_client__callback_baton_t *cb = apr_pcalloc (pool, sizeof(*cb));
@@ -290,6 +290,15 @@ svn_client__open_ra_session (svn_ra_session_t **ra_session,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_client_open_ra_session (svn_ra_session_t **session,
+                            const char *url,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *pool)
+{
+  return svn_client__open_ra_session_internal (session, url, NULL, NULL, NULL,
+                                               FALSE, TRUE, ctx, pool);
+}
 
 
 svn_error_t *
@@ -302,10 +311,10 @@ svn_client_uuid_from_url (const char **uuid,
   apr_pool_t *subpool = svn_pool_create (pool);
 
   /* use subpool to create a temporary RA session */
-  SVN_ERR (svn_client__open_ra_session (&ra_session, url,
-                                        NULL, /* no base dir */
-                                        NULL, NULL, FALSE, TRUE, 
-                                        ctx, subpool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, url,
+                                                 NULL, /* no base dir */
+                                                 NULL, NULL, FALSE, TRUE, 
+                                                 ctx, subpool));
 
   SVN_ERR (svn_ra_get_uuid (ra_session, uuid, subpool));
 
@@ -725,9 +734,9 @@ svn_client__repos_locations (const char **start_url,
      don't need to do anything more here in that case. */
 
   /* Open a RA session to this URL. */
-  SVN_ERR (svn_client__open_ra_session (&ra_session, url, NULL,
-                                        NULL, NULL, FALSE, TRUE,
-                                        ctx, subpool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, url, NULL,
+                                                 NULL, NULL, FALSE, TRUE,
+                                                 ctx, subpool));
 
   /* Resolve the opt_revision_ts. */
   if (peg_revnum == SVN_INVALID_REVNUM)
@@ -884,9 +893,9 @@ svn_client__ra_session_from_path (svn_ra_session_t **ra_session_p,
                                         ctx, pool));
   good_rev = new_rev;
 
-  SVN_ERR (svn_client__open_ra_session (&ra_session, url,
-                                        NULL, NULL, NULL, FALSE, FALSE,
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, url,
+                                                 NULL, NULL, NULL,
+                                                 FALSE, FALSE, ctx, pool));
 
   /* Resolve good_rev into a real revnum. */
   SVN_ERR (svn_client__get_revision_number (&rev, ra_session,
