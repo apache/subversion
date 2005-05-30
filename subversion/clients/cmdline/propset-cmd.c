@@ -186,7 +186,7 @@ svn_cl__propset (apr_getopt_t *os,
                                             opt_state->recursive,
                                             opt_state->force,
                                             ctx, subpool),
-                       success);
+                       success, opt_state->quiet);
 
           if (success && (! opt_state->quiet))
             {
