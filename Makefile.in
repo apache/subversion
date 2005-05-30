@@ -390,9 +390,7 @@ fsfscheck:
 	@$(MAKE) check FS_TYPE=fsfs
 
 check-clean:
-	rm -rf subversion/tests/clients/cmdline/repositories   \
-               subversion/tests/clients/cmdline/working_copies \
-               subversion/tests/clients/cmdline/local_tmp      \
+	rm -rf subversion/tests/clients/cmdline/svn-test-work  \
                subversion/tests/libsvn_fs_base/test-repo-*     \
                subversion/tests/libsvn_repos/test-repo-*       \
                subversion/tests/libsvn_subr/z                  \

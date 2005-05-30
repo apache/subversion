@@ -895,16 +895,16 @@ II.   INSTALLATION
     test repositories. Change the paths to the SVN directory you created
     (paths should be on one line even if wrapped here):
 
-      <Location /repositories>
+      <Location /svn-test-work/repositories>
        DAV svn
        SVNParentPath C:/SVN/src-trunk/Release/subversion/tests/clients/cmdline/
-                     repositories
+                     svn-test-work/repositories
       </Location>
 
-      <Location /local_tmp/repos>
+      <Location /svn-test-work/local_tmp/repos>
        DAV svn
        SVNPath c:/SVN/src-trunk/Release/subversion/tests/clients/cmdline/
-               local_tmp/repos
+               svn-test-work/local_tmp/repos
       </Location>
 
     Then restart Apache and run the tests:
