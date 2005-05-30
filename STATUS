@@ -58,5 +58,12 @@ Candidate changes:
     Votes:
       +1: lundblad, fitz
 
+  * r14885
+    Python bindings, fix for functions returning MD5 digests.
+    Justification:
+      Small change, potentially useful, 1.3 is quite some way off.
+    Votes:
+      +1: maxb
+      
 Approved changes (further review is welcome, but not required):
 
