@@ -192,24 +192,32 @@ extern const svn_opt_subcommand_desc_t svn_cl__cmd_table[];
 extern const apr_getopt_option_t svn_cl__options[];
 
 
-/* Evaluate EXPR.  If it yields an SVN_ERR_UNVERSIONED_RESOURCE error,
- * handle the error as a warning, clear the error, and set SUCCESS to
- * FALSE.  If it yields any other error, don't touch SUCCESS, just
- * return that error from the current function.  Otherwise, set
- * SUCCESS to TRUE and continue.
+/* Evaluate EXPR, and:
+ *
+ *   - If it returns no error, set SUCCESS to TRUE and continue.
+ *
+ *   - If it returns an SVN_ERR_UNVERSIONED_RESOURCE or
+ *     SVN_ERR_ENTRY_NOT_FOUND error, handle the error as a warning
+ *     (unless QUIET is true), clear the error, and set SUCCESS to
+ *     FALSE.
+ *
+ *   - If it returns any other error, don't touch SUCCESS, just
+ *     return that error from the current function.
  *
  * This macro is a helper for the many subcommands that merely warn
- * when invoked on an unversioned resource.  It is modeled on the
- * SVN_ERR() macro, see there for details.
+ * when invoked on an unversioned or nonexistent resource.  It is
+ * modeled on the SVN_ERR() macro, see there for details.
  */
-#define SVN_CL__TRY(expr, success)                                       \
+#define SVN_CL__TRY(expr, success, quiet)                                \
   do {                                                                   \
     svn_error_t *svn_cl__try__temp = (expr);                             \
     if (svn_cl__try__temp)                                               \
       {                                                                  \
-        if (svn_cl__try__temp->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)  \
+        if ((svn_cl__try__temp->apr_err == SVN_ERR_UNVERSIONED_RESOURCE) \
+            || (svn_cl__try__temp->apr_err == SVN_ERR_ENTRY_NOT_FOUND))  \
           {                                                              \
-            svn_handle_warning (stderr, svn_cl__try__temp);              \
+            if (! (quiet))                                               \
+              svn_handle_warning (stderr, svn_cl__try__temp);            \
             svn_error_clear (svn_cl__try__temp);                         \
             (success) = FALSE;                                           \
           }                                                              \

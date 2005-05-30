@@ -120,7 +120,7 @@ svn_cl__propdel (apr_getopt_t *os,
           SVN_CL__TRY (svn_client_propset2 (pname_utf8, NULL, target,
                                             opt_state->recursive,
                                             FALSE, ctx, subpool),
-                       success);
+                       success, opt_state->quiet);
           
           if (success && (! opt_state->quiet))
             {
