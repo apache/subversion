@@ -404,7 +404,42 @@ def add_with_history(sbox):
                                         None, None,
                                         wc_dir)
 
-  expected_output = wc.State(C_path, {
+  ### "The Merge Kluge"
+  ###
+  ###      *****************************************************
+  ###      ***                                               ***
+  ###      ***   Before erasing this comment, please check   ***
+  ###      ***      for references to "The Merge Kluge"      ***
+  ###      ***           elsewhere in this file.             ***
+  ###      ***                                               ***
+  ###      *****************************************************
+  ###
+  ### The shortening of C_path and the chdir() below are a kluge to
+  ### work around
+  ###
+  ###   http://subversion.tigris.org/issues/show_bug.cgi?id=767#desc16
+  ### 
+  ### Note that the problem isn't simply that 'svn merge' sometimes
+  ### puts temp files in cwd.  That's bad enough, but even if svn
+  ### were to choose /tmp or some other static place blessed by
+  ### apr_get_temp_dir(), we'd still experience the error
+  ###
+  ###   svn: Move failed
+  ###   svn: Can't move 'tmp.2' to '.../.svn/tmp/text-base/file1.svn-base':
+  ###        Invalid cross-device link
+  ###
+  ### when running the tests on a ramdisk.  After all, there's no
+  ### reason why apr_get_temp_dir() would return a path inside
+  ### svn-test-work/, which is the mount point for the ramdisk.
+  ###
+  ### http://subversion.tigris.org/issues/show_bug.cgi?id=767#desc20
+  ### starts a discussion on how to solve this in Subversion itself.
+  ### However, until that's settled, we still want to be able to run
+  ### the tests in a ramdisk, hence this kluge.
+
+  shorten_by = len(svntest.main.work_dir) + len(os.path.sep)
+  short_C_path = C_path[shorten_by:]
+  expected_output = wc.State(short_C_path, {
     'Q'      : Item(status='A '),
     'Q/bar'  : Item(status='A '),
     'foo'    : Item(status='A '),
@@ -414,18 +449,24 @@ def add_with_history(sbox):
     'Q/bar'  : Item("bar"),
     'foo'    : Item("foo"),
     })
-  expected_status = wc.State(C_path, {
+  expected_status = wc.State(short_C_path, {
     ''       : Item(status='  ', wc_rev=1),
     'Q'      : Item(status='A ', wc_rev='-', copied='+'),
     'Q/bar'  : Item(status='A ', wc_rev='-', copied='+'),
     'foo'    : Item(status='A ', wc_rev='-', copied='+'),
     })
-  expected_skip = wc.State(C_path, { })
-  svntest.actions.run_and_verify_merge(C_path, '1', '2', F_url,
-                                       expected_output,
-                                       expected_disk,
-                                       expected_status,
-                                       expected_skip)
+  expected_skip = wc.State(short_C_path, { })
+
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_C_path, '1', '2', F_url,
+                                         expected_output,
+                                         expected_disk,
+                                         expected_status,
+                                         expected_skip)
+  finally:
+    os.chdir(saved_cwd)
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/C/Q'     : Item(verb='Adding'),
@@ -949,11 +990,22 @@ def merge_similar_unrelated_trees(sbox):
     'A/B/zeta' : Item(status='A '),
     'A/B/beta' : Item(status='D '),
     })
-  # run_and_verify_merge doesn't support 'svn merge URL URL path'
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'merge',
-                                     '--ignore-ancestry',
-                                     base1_url, base2_url, apply_path)
+
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  shorten_by = len(svntest.main.work_dir) + len(os.path.sep)
+  short_apply_path = apply_path[shorten_by:]
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    # run_and_verify_merge doesn't support 'svn merge URL URL path'
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'merge',
+                                       '--ignore-ancestry',
+                                       base1_url, base2_url,
+                                       short_apply_path)
+  finally:
+    os.chdir(saved_cwd)
 
   expected_status = wc.State(apply_path, {
     ''            : Item(status='  '),
@@ -1263,10 +1315,15 @@ def merge_binary_file (sbox):
                                         expected_status, None,
                                         None, None, None, None, wc_dir)
 
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  shorten_by = len(svntest.main.work_dir) + len(os.path.sep)
+  short_other_wc = other_wc[shorten_by:]
+
   # In second working copy, attempt to 'svn merge -r 2:3'.
   # We should *not* see a conflict during the update, but a 'U'.
   # And after the merge, the status should be 'M'.
-  expected_output = wc.State(other_wc, {
+  expected_output = wc.State(short_other_wc, {
     'A/theta' : Item(status='U '),
     })
   expected_disk = svntest.main.greek_state.copy()
@@ -1274,20 +1331,26 @@ def merge_binary_file (sbox):
     'A/theta' : Item(theta_contents + "some extra junk",
                      props={'svn:mime-type' : 'application/octet-stream'}),
     })
-  expected_status = svntest.actions.get_virginal_state(other_wc, 3)
+  expected_status = svntest.actions.get_virginal_state(short_other_wc, 3)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
     'A/theta' : Item(status='M ', wc_rev=2),
     })
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_merge(other_wc, '2', '3',
-                                       svntest.main.current_repo_url,
-                                       expected_output,
-                                       expected_disk,
-                                       expected_status,
-                                       expected_skip,
-                                       None, None, None, None, None,
-                                       1)
+
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_other_wc, '2', '3',
+                                         svntest.main.current_repo_url,
+                                         expected_output,
+                                         expected_disk,
+                                         expected_status,
+                                         expected_skip,
+                                         None, None, None, None, None,
+                                         1)
+  finally:
+    os.chdir(saved_cwd)
 
 #----------------------------------------------------------------------
 # Regression test for Issue #1297:
@@ -1321,9 +1384,14 @@ def merge_in_new_file_and_diff(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
                                      "Changing the trunk.", wc_dir)
 
-  # Merge our addition into the branch.
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
   branch_path = os.path.join(wc_dir, "branch")
-  expected_output = svntest.wc.State(branch_path, {
+  shorten_by = len(svntest.main.work_dir) + len(os.path.sep)
+  short_branch_path = branch_path[shorten_by:]
+
+  # Merge our addition into the branch.
+  expected_output = svntest.wc.State(short_branch_path, {
     'newfile' : Item(status='A '),
     })
   expected_disk = wc.State('', {
@@ -1331,18 +1399,25 @@ def merge_in_new_file_and_diff(sbox):
     'beta'    : Item("This is the file 'beta'."),
     'newfile' : Item("newfile"),
     })
-  expected_status = wc.State(branch_path, {
+  expected_status = wc.State(short_branch_path, {
     ''        : Item(status='  ', wc_rev=2),
     'alpha'   : Item(status='  ', wc_rev=2),
     'beta'    : Item(status='  ', wc_rev=2),
     'newfile' : Item(status='A ', wc_rev='-', copied='+')
     })
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_merge(branch_path, '1', 'HEAD', trunk_url,
-                                       expected_output,
-                                       expected_disk,
-                                       expected_status,
-                                       expected_skip)
+
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_branch_path,
+                                         '1', 'HEAD', trunk_url,
+                                         expected_output,
+                                         expected_disk,
+                                         expected_status,
+                                         expected_skip)
+  finally:
+    os.chdir(saved_cwd)
 
   # Finally, run diff.  This diff produces no output!
   svntest.actions.run_and_verify_svn(None, [], [], 'diff', branch_path)
@@ -1398,7 +1473,12 @@ def merge_skips_obstructions(sbox):
   # unversioned 'foo' within C, and make sure 'svn merge' doesn't
   # error when the addition of foo is obstructed.
 
-  expected_output = wc.State(C_path, {
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  shorten_by = len(svntest.main.work_dir) + len(os.path.sep)
+  short_C_path = C_path[shorten_by:]
+
+  expected_output = wc.State(short_C_path, {
     'Q'      : Item(status='A '),
     'Q/bar'  : Item(status='A '),
     })
@@ -1407,23 +1487,29 @@ def merge_skips_obstructions(sbox):
     'Q/bar'  : Item("bar"),
     'foo'    : Item("foo"),
     })
-  expected_status = wc.State(C_path, {
+  expected_status = wc.State(short_C_path, {
     ''       : Item(status='  ', wc_rev=1),
     'Q'      : Item(status='A ', wc_rev='-', copied='+'),
     'Q/bar'  : Item(status='A ', wc_rev='-', copied='+'),
     })
-  expected_skip = wc.State(C_path, {
+  expected_skip = wc.State(short_C_path, {
     'foo' : Item(),
     })
-  svntest.main.file_append(os.path.join(C_path, "foo"), "foo") # unversioned
+  # Unversioned:
+  svntest.main.file_append(os.path.join(C_path, "foo"), "foo")
 
-  svntest.actions.run_and_verify_merge(C_path, '1', '2', F_url,
-                                       expected_output,
-                                       expected_disk,
-                                       expected_status,
-                                       expected_skip,
-                                       None, None, None, None, None,
-                                       0, 0)
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_C_path, '1', '2', F_url,
+                                         expected_output,
+                                         expected_disk,
+                                         expected_status,
+                                         expected_skip,
+                                         None, None, None, None, None,
+                                         0, 0)
+  finally:
+    os.chdir(saved_cwd)
 
   # Revert the local mods, and this time make "Q" obstructed.  An
   # unversioned file called "Q" will obstruct the adding of the
@@ -1436,28 +1522,36 @@ def merge_skips_obstructions(sbox):
   svntest.main.file_append(os.path.join(C_path, "Q"), "foo") # unversioned
   svntest.actions.run_and_verify_status(wc_dir, pre_merge_status)
 
-  expected_output = wc.State(C_path, {
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we use short_C_path and chdir() below.
+  expected_output = wc.State(short_C_path, {
     'foo'  : Item(status='A '),
     })
   expected_disk = wc.State('', {
     'Q'      : Item("foo"),
     'foo'    : Item("foo"),
     })
-  expected_status = wc.State(C_path, {
+  expected_status = wc.State(short_C_path, {
     ''     : Item(status='  ', wc_rev=1),
     'foo'  : Item(status='A ', wc_rev='-', copied='+'),
     })
-  expected_skip = wc.State(C_path, {
+  expected_skip = wc.State(short_C_path, {
     'Q'     : Item(),
     'Q/bar' : Item(),
     })
-  svntest.actions.run_and_verify_merge(C_path, '1', '2', F_url,
-                                       expected_output,
-                                       expected_disk,
-                                       expected_status,
-                                       expected_skip,
-                                       None, None, None, None, None,
-                                       0, 0)
+
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_C_path, '1', '2', F_url,
+                                         expected_output,
+                                         expected_disk,
+                                         expected_status,
+                                         expected_skip,
+                                         None, None, None, None, None,
+                                         0, 0)
+  finally:
+    os.chdir(saved_cwd)
 
   # Revert the local mods, and commit the deletion of iota and A/D/G. (r3)
   os.unlink(os.path.join(C_path, "foo"))
@@ -1484,10 +1578,14 @@ def merge_skips_obstructions(sbox):
   # The merge process should skip over these targets, since they're
   # unversioned.
   
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  short_wc_dir = wc_dir[shorten_by:]
+
   svntest.main.file_append(iota_path, "foo") # unversioned
   os.mkdir(G_path) # unversioned
 
-  expected_output = wc.State(wc_dir, { })
+  expected_output = wc.State(short_wc_dir, { })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
   expected_disk.add({
@@ -1497,16 +1595,22 @@ def merge_skips_obstructions(sbox):
     'iota'         : Item("foo"),
     'A/C/Q'        : Item("foo"),
     })
-  expected_skip = wc.State(wc_dir, {
+  expected_skip = wc.State(short_wc_dir, {
     'A/D/G'  : Item(),
     'iota'   : Item(),
     })
-  svntest.actions.run_and_verify_merge(wc_dir, '2', '3', 
-                                       svntest.main.current_repo_url,
-                                       expected_output,
-                                       expected_disk,
-                                       expected_status,
-                                       expected_skip)
+
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_wc_dir, '2', '3', 
+                                         svntest.main.current_repo_url,
+                                         expected_output,
+                                         expected_disk,
+                                         expected_status.copy(short_wc_dir),
+                                         expected_skip)
+  finally:
+    os.chdir(saved_cwd)
   
   # Revert the local mods, and commit a change to A/B/lambda (r4), and then
   # commit the deletion of the same file. (r5)
@@ -1545,20 +1649,28 @@ def merge_skips_obstructions(sbox):
 
   svntest.main.file_append(lambda_path, "foo") # unversioned
 
-  expected_output = wc.State(wc_dir, { })
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  expected_output = wc.State(short_wc_dir, { })
   expected_disk.add({
     'A/B/lambda'      : Item("foo"),
     })
   expected_disk.remove('A/D/G', 'iota')
-  expected_skip = wc.State(wc_dir, {
+  expected_skip = wc.State(short_wc_dir, {
     'A/B/lambda'  : Item(),
     })
-  svntest.actions.run_and_verify_merge(wc_dir, '3', '4',
-                                       svntest.main.current_repo_url,
-                                       expected_output,
-                                       expected_disk,
-                                       expected_status,
-                                       expected_skip)
+
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_wc_dir, '3', '4',
+                                         svntest.main.current_repo_url,
+                                         expected_output,
+                                         expected_disk,
+                                         expected_status.copy(short_wc_dir),
+                                         expected_skip)
+  finally:
+    os.chdir(saved_cwd)
 
   # OK, so let's commit the new lambda (r6), and then delete the
   # working file.  Then re-run the -r3:4 merge, and see how svn deals
@@ -1580,16 +1692,22 @@ def merge_skips_obstructions(sbox):
 
   os.unlink(lambda_path)
 
-  expected_output = wc.State(wc_dir, { })
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  expected_output = wc.State(short_wc_dir, { })
   expected_disk.remove('A/B/lambda')
   expected_status.tweak('A/B/lambda', status='! ')
-  svntest.actions.run_and_verify_merge(wc_dir, '3', '4',
-                                       svntest.main.current_repo_url,
-                                       expected_output,
-                                       expected_disk,
-                                       expected_status,
-                                       expected_skip)
-
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_wc_dir, '3', '4',
+                                         svntest.main.current_repo_url,
+                                         expected_output,
+                                         expected_disk,
+                                         expected_status.copy(short_wc_dir),
+                                         expected_skip)
+  finally:
+    os.chdir(saved_cwd)
 
 #----------------------------------------------------------------------
 # At one stage a merge that added items with the same name as missing
@@ -1739,7 +1857,12 @@ def dry_run_adds_file_with_prop(sbox):
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
   E_url = svntest.main.current_repo_url + '/A/B/E'
 
-  expected_output = wc.State(F_path, {
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  shorten_by = len(svntest.main.work_dir) + len(os.path.sep)
+  short_F_path = F_path[shorten_by:]
+
+  expected_output = wc.State(short_F_path, {
     'zig'  : Item(status='A '),
     })
   expected_disk = wc.State('', {
@@ -1748,14 +1871,19 @@ def dry_run_adds_file_with_prop(sbox):
   expected_skip = wc.State('', { })
   expected_status = None  # status is optional
   
-  svntest.actions.run_and_verify_merge(F_path, '1', '2', E_url,
-                                       expected_output,
-                                       expected_disk,
-                                       expected_status,
-                                       expected_skip,
-                                       None, None, None, None, None,
-                                       1, # please check props
-                                       1) # and do a dry-run also)
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_F_path, '1', '2', E_url,
+                                         expected_output,
+                                         expected_disk,
+                                         expected_status,
+                                         expected_skip,
+                                         None, None, None, None, None,
+                                         1, # please check props
+                                         1) # and do a dry-run also)
+  finally:
+    os.chdir(saved_cwd)
 
 #----------------------------------------------------------------------
 
@@ -2017,20 +2145,30 @@ def merge_funny_chars_on_path(sbox):
         expected_disk_dic[key] = Item('%s/%s' % (target[1], target[2]), {})
 
 
-  expected_output = wc.State(F_path, expected_output_dic)
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  shorten_by = len(svntest.main.work_dir) + len(os.path.sep)
+  short_F_path = F_path[shorten_by:]
+
+  expected_output = wc.State(short_F_path, expected_output_dic)
 
   expected_disk = wc.State('', expected_disk_dic)
   expected_skip = wc.State('', { })
   expected_status = None  # status is optional
 
-  svntest.actions.run_and_verify_merge(F_path, '1', '2', E_url,
-                                       expected_output,
-                                       expected_disk,
-                                       expected_status,
-                                       expected_skip,
-                                       None, None, None, None, None,
-                                       0, # don't check props
-                                       1) # but do a dry-run
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_F_path, '1', '2', E_url,
+                                         expected_output,
+                                         expected_disk,
+                                         expected_status,
+                                         expected_skip,
+                                         None, None, None, None, None,
+                                         0, # don't check props
+                                         1) # but do a dry-run
+  finally:
+    os.chdir(saved_cwd)
 
   expected_output_dic = {}
   
@@ -2101,23 +2239,35 @@ def merge_keyword_expansions(sbox):
   svntest.actions.run_and_verify_status(wcpath, expected_status)
 
   # Do the merge.
-  expected_output = wc.State(bpath, {
+
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  shorten_by = len(svntest.main.work_dir) + len(os.path.sep)
+  short_bpath = bpath[shorten_by:]
+
+  expected_output = wc.State(short_bpath, {
     'f'  : Item(status='A '),
     })
   expected_disk = wc.State('', {
     'f'      : Item("$Revision: 4 $"),
     })
-  expected_status = wc.State(bpath, {
+  expected_status = wc.State(short_bpath, {
     ''       : Item(status='  ', wc_rev=4),
     'f'      : Item(status='A ', wc_rev='-', copied='+'),
     })
-  expected_skip = wc.State(bpath, { })
-  svntest.actions.run_and_verify_merge(bpath, '2', 'HEAD',
-                                       svntest.main.current_repo_url + '/t',
-                                       expected_output,
-                                       expected_disk,
-                                       expected_status,
-                                       expected_skip)
+  expected_skip = wc.State(short_bpath, { })
+
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_bpath, '2', 'HEAD',
+                                         svntest.main.current_repo_url + '/t',
+                                         expected_output,
+                                         expected_disk,
+                                         expected_status,
+                                         expected_skip)
+  finally:
+    os.chdir(saved_cwd)
 
 #----------------------------------------------------------------------
 def merge_prop_change_to_deleted_target(sbox):
