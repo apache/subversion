@@ -2100,6 +2100,9 @@ svn_client_uuid_from_path (const char **uuid,
  * @a *session is allocated in @a pool.
  *
  * @since New in 1.3.
+ *
+ * @note This function is similar to svn_ra_open(), but the caller avoids
+ * having to providing its own callback functions.
  */
 svn_error_t *
 svn_client_open_ra_session (svn_ra_session_t **session,
