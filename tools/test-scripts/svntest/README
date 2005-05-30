@@ -27,7 +27,7 @@ Usage
    Also notice that this test script will wipe out following paths
    during rebuilding:
    $INST_DIR/<proj_name>, ie. with present configuration the paths are: 
-   /home/brane/svn/inst/{apr-0.9,apr-util-0.9,httpd-2.0,svn}
+   /home/YOUR_USERNAME/svn/inst/{apr-0.9,apr-util-0.9,httpd-2.0,svn}
 
 3) Create one or more scripts that configure Subversion in different
    ways (e.g., configure.shared, configure.static). Here's the script
@@ -37,7 +37,7 @@ Usage
     #!/bin/sh
 
     "../apr-0.9/configure" \
-    "--prefix=/home/brane/svn/inst/apr-0.9" \
+    "--prefix=/home/YOUR_USERNAME/svn/inst/apr-0.9" \
     "--with-pic" \
     "$@"
 
@@ -46,8 +46,8 @@ Usage
     #!/bin/sh
 
     "../apr-util-0.9/configure" \
-    "--prefix=/home/brane/svn/inst/apr-util-0.9" \
-    "--with-apr=/home/brane/svn/inst/apr-0.9" \
+    "--prefix=/home/YOUR_USERNAME/svn/inst/apr-util-0.9" \
+    "--with-apr=/home/YOUR_USERNAME/svn/inst/apr-0.9" \
     "--with-pic" \
     "--with-dbm=db4" \
     "--with-berkeley-db" \
@@ -62,15 +62,15 @@ Usage
     cd ../httpd-2.0
 
     "./buildconf" \
-    "--with-apr=/home/brane/svn/apr-0.9" \
-    "--with-apr-util=/home/brane/svn/apr-util-0.9"
+    "--with-apr=/home/YOUR_USERNAME/svn/apr-0.9" \
+    "--with-apr-util=/home/YOUR_USERNAME/svn/apr-util-0.9"
 
     cd "$CURR_WD"
 
     "../httpd-2.0/configure" \
-    "--prefix=/home/brane/svn/inst/httpd-2.0" \
-    "--with-apr=/home/brane/svn/inst/apr-0.9/bin/apr-config" \
-    "--with-apr-util=/home/brane/svn/inst/apr-util-0.9/bin/apu-config" \
+    "--prefix=/home/YOUR_USERNAME/svn/inst/httpd-2.0" \
+    "--with-apr=/home/YOUR_USERNAME/svn/inst/apr-0.9/bin/apr-config" \
+    "--with-apr-util=/home/YOUR_USERNAME/svn/inst/apr-util-0.9/bin/apu-config" \
     "--enable-dav" \
     "$@"
     
@@ -79,11 +79,11 @@ Usage
     #!/bin/sh
     env CC='gcc' \
        "../svn/configure" \
-       "--prefix=/home/brane/svn/inst" \
-       "--with-berkeley-db=/home/brane/svn/db4" \
-       "--with-apr=/home/brane/svn/inst/apr-0.9/bin/apr-config" \
-       "--with-apr-util=/home/brane/svn/inst/apr-util-0.9/bin/apu-config" \
-       "--with-apxs=/home/brane/svn/inst/httpd-2.0/bin/apxs" \
+       "--prefix=/home/YOUR_USERNAME/svn/inst" \
+       "--with-berkeley-db=/home/YOUR_USERNAME/svn/db4" \
+       "--with-apr=/home/YOUR_USERNAME/svn/inst/apr-0.9/bin/apr-config" \
+       "--with-apr-util=/home/YOUR_USERNAME/svn/inst/apr-util-0.9/bin/apu-config" \
+       "--with-apxs=/home/YOUR_USERNAME/svn/inst/httpd-2.0/bin/apxs" \
        "--disable-shared" \
        "$@"
 
@@ -97,8 +97,8 @@ Usage
    edit it). Things to change are probably: 
    i)   Listen 127.0.0.1:42024
    ii)  LoadModule dav_svn_module     modules/mod_dav_svn.so
-   iii) User brane
-        Group brane
+   iii) User YOUR_USERNAME
+        Group YOUR_GROUPNAME
    v)   ServerName localhost:42024
    
    vi)  Add mod_dav_svn block:
@@ -110,7 +110,7 @@ Usage
    vii) mod_dav_svn_shared.conf for shared builds:
     <Location /svn-test-work/repositories>
         DAV svn
-        SVNParentPath /home/brane/svn/obj-sh/subversion/tests/clients/cmdline/svn-test-work/repositories
+        SVNParentPath /home/YOUR_USERNAME/svn/obj-sh/subversion/tests/clients/cmdline/svn-test-work/repositories
         AuthType Basic
         AuthName "SVN repos"
         AuthUserFile /usr/local/apache2/conf/passwd
@@ -118,7 +118,7 @@ Usage
     </Location>
     <Location /svn-test-work/local_tmp/repos>
         DAV svn
-        SVNPath      /home/brane/svn/obj-sh/subversion/tests/clients/cmdline/svn-test-work/local_tmp/repos
+        SVNPath      /home/YOUR_USERNAME/svn/obj-sh/subversion/tests/clients/cmdline/svn-test-work/local_tmp/repos
         AuthType Basic
         AuthName "SVN repos"
         AuthUserFile /usr/local/apache2/conf/passwd
@@ -135,8 +135,8 @@ Usage
    test data on a RAM disk.  On a Linux system, add lines like the
    following in your /etc/fstab file:
 
-   tmpfs  /home/brane/svn/obj-sh/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m
-   tmpfs  /home/brane/svn/obj-st/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m
+   tmpfs  /home/YOUR_USERNAME/svn/obj-sh/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m
+   tmpfs  /home/YOUR_USERNAME/svn/obj-st/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m
 
    The minimum required size for testing RAM disk is actually many
    times greater than shown above.  However, svntest will
