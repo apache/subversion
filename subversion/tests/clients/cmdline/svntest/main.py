@@ -121,10 +121,14 @@ if windows == 1:
 # Global variable indicating the FS type for repository creations.
 fs_type = None
 
+# All temporary repositories and working copies are created underneath
+# this dir, so there's one point at which to mount, e.g., a ramdisk.
+work_dir = "svn-test-work"
+
 # Where we want all the repositories and working copies to live.
 # Each test will have its own!
-general_repo_dir = "repositories"
-general_wc_dir = "working_copies"
+general_repo_dir = os.path.join(work_dir, "repositories")
+general_wc_dir = os.path.join(work_dir, "working_copies")
 
 # A relative path that will always point to latest repository
 current_repo_dir = None
@@ -133,7 +137,7 @@ current_repo_url = None
 # temp directory in which we will create our 'pristine' local
 # repository and other scratch data.  This should be removed when we
 # quit and when we startup.
-temp_dir = 'local_tmp'
+temp_dir = os.path.join(work_dir, 'local_tmp')
 
 # (derivatives of the tmp dir.)
 pristine_dir = os.path.join(temp_dir, "repos")
