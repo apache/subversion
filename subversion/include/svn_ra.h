@@ -383,6 +383,8 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  *
  * All RA requests require a session; they will continue to
  * use @a pool for memory allocation.
+ *
+ * @see svn_client_open_ra_session().
  */
 svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
                           const char *repos_URL,
