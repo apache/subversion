@@ -437,7 +437,7 @@ def add_with_history(sbox):
   ### However, until that's settled, we still want to be able to run
   ### the tests in a ramdisk, hence this kluge.
 
-  shorten_by = len(svntest.main.work_dir) + len(os.path.sep)
+  shorten_by = len(svntest.main.work_dir) + len(os.sep)
   short_C_path = C_path[shorten_by:]
   expected_output = wc.State(short_C_path, {
     'Q'      : Item(status='A '),
@@ -993,7 +993,7 @@ def merge_similar_unrelated_trees(sbox):
 
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
-  shorten_by = len(svntest.main.work_dir) + len(os.path.sep)
+  shorten_by = len(svntest.main.work_dir) + len(os.sep)
   short_apply_path = apply_path[shorten_by:]
   saved_cwd = os.getcwd()
   try:
@@ -1317,7 +1317,7 @@ def merge_binary_file (sbox):
 
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
-  shorten_by = len(svntest.main.work_dir) + len(os.path.sep)
+  shorten_by = len(svntest.main.work_dir) + len(os.sep)
   short_other_wc = other_wc[shorten_by:]
 
   # In second working copy, attempt to 'svn merge -r 2:3'.
@@ -1387,7 +1387,7 @@ def merge_in_new_file_and_diff(sbox):
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
   branch_path = os.path.join(wc_dir, "branch")
-  shorten_by = len(svntest.main.work_dir) + len(os.path.sep)
+  shorten_by = len(svntest.main.work_dir) + len(os.sep)
   short_branch_path = branch_path[shorten_by:]
 
   # Merge our addition into the branch.
@@ -1475,7 +1475,7 @@ def merge_skips_obstructions(sbox):
 
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
-  shorten_by = len(svntest.main.work_dir) + len(os.path.sep)
+  shorten_by = len(svntest.main.work_dir) + len(os.sep)
   short_C_path = C_path[shorten_by:]
 
   expected_output = wc.State(short_C_path, {
@@ -1859,7 +1859,7 @@ def dry_run_adds_file_with_prop(sbox):
 
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
-  shorten_by = len(svntest.main.work_dir) + len(os.path.sep)
+  shorten_by = len(svntest.main.work_dir) + len(os.sep)
   short_F_path = F_path[shorten_by:]
 
   expected_output = wc.State(short_F_path, {
@@ -2147,7 +2147,7 @@ def merge_funny_chars_on_path(sbox):
 
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
-  shorten_by = len(svntest.main.work_dir) + len(os.path.sep)
+  shorten_by = len(svntest.main.work_dir) + len(os.sep)
   short_F_path = F_path[shorten_by:]
 
   expected_output = wc.State(short_F_path, expected_output_dic)
@@ -2242,7 +2242,7 @@ def merge_keyword_expansions(sbox):
 
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
-  shorten_by = len(svntest.main.work_dir) + len(os.path.sep)
+  shorten_by = len(svntest.main.work_dir) + len(os.sep)
   short_bpath = bpath[shorten_by:]
 
   expected_output = wc.State(short_bpath, {
