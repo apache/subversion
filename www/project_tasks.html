@@ -9,60 +9,139 @@
 <link rel="stylesheet" type="text/css" media="print"
   href="tigris-branding/css/print.css"/>
 <script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
-<title>Project Tasks</title>
+<title>What Needs Doing?</title>
 </head>
 
 <body>
 <div class="app">
 
-<h2>Bite-Sized Tasks</h2>
+<h1 style="text-align: center;">What Needs Doing?</h1>
+
+<p>There are a lot of different things you can do to help Subversion.
+Not all involve coding; there are plenty of non-programming roles for
+eager volunteers.</p>
+
+<p>Below are some of the needs we've identified, but please don't take
+these as gospel!  New volunteers bring fresh viewpoints, and one of
+the most important things you can do is point out a need we hadn't
+recognized before&nbsp;&mdash;&nbsp;and then fill it.</p>
+
+
+<div class="h2" id="information-management" title="information-management">
+<h2>Information Management Tasks</h2>
+
+<div class="h3" id="issue-management" title="issue-management">
+<h3>Issue Management</h3>
+
+<p>Do we need an Issue Manager?  Maybe...</p>
+
+<p>The Subversion <a
+href="http://subversion.tigris.org/project_issues.html">bug
+database</a> has been managed in a rather ad hoc fashion thus far.
+Periodically we make sweeps over all outstanding issues and try to
+prioritize them, organize them into scheduled milestones, note
+dependencies between issues, etc.  These methods have been moderately
+successful up till now, but they are not scaling well as the number of
+issues grows.  Since issue growth is proportional to user base growth,
+the issue tracker is becoming a victim of Subversion's success.  We
+need to find new ways of managing our issues, ways that do not involve
+making O(N) sweeps over the entire list of open issues at regular
+intervals.</p>
+
+<p>While we have some semi-formalized management roles (patch manager,
+release manager, etc), we have never had an issue manager.  It might
+be time to get one, though.  It's not yet clear whether the problem is
+mainly one of attention, or of algorithm, or both, but having someone
+dedicated to managing the issues database couldn't hurt.  One thing
+such a person could do would be to go through the list of outstanding
+issues, figure out which ones are likely to be <a
+href="#bite-sized">bite-sized tasks</a>, and mark them as such, so
+that other volunteers have an easier time choosing things to work on.
+We've already marked various issues as bite-sized, but we haven't done
+so consistently as new issues come in.  This means there are a lot of
+potential entry points to the project going unnoticed.  Want to help
+us solve that?</p>
+
+<p>Creative ideas welcome!  If you'd like to help with this, please <a
+href="http://subversion.tigris.org/servlets/ProjectMailingListList"
+>subscribe</a> to the <a
+href="mailto:dev@subversion.tigris.org">dev@subversion.tigris.org</a>
+mailing list and post your thoughts.</p>
+
+</div>
+
+<div class="h3" id="faq-management" title="faq-management">
+<h3>FAQ Management</h3>
+
+<p>We need a FAQ manager.  A FAQ manager is someone who stays
+subscribed to the <a
+href="mailto:users@subversion.tigris.org">users@subversion.tigris.org</a>
+and <a href="mailto:dev@subversion.tigris.org"
+>dev@subversion.tigris.org</a> mailing lists, watches for common
+questions or addenda to existing questions, and slowly adjusts the
+Subversion <a href="faq.html">FAQ</a> in response to the problems
+users are having "in the wild".  This is also a great way to get
+familiar with Subversion usage patterns and common problems.  If you
+use or administrate Subversion anyway, helping to manage the FAQ is a
+great way to expand your troubleshooting skills.</p>
+
+<p>Again, creative ideas are most welcome.  Please post to the <a
+href="mailto:dev@subversion.tigris.org">dev@subversion.tigris.org</a>
+mailing list if you're interested in this.</p>
+
+</div>
+
+</div>
+
+<div class="h2" id="bite-sized" title="bite-sized">
+<h2>Bite-Sized Coding Tasks</h2>
 
 <!-- ============================================================= -->
 
-<p>
-The Subversion bug database contains many issues classified as
-"bite-sized" tasks -- tasks that are well-defined and self-contained,
-and thus suitable for a volunteer looking to get involved with the
-project.  You <i>don't</i> need broad or detailed knowledge of
-Subversion's design to take on one of these, just a pretty good idea
-of how things generally work, and familiarity with the coding
-guidelines in the
-<a href="http://svn.collab.net/repos/svn/trunk/HACKING"><tt>HACKING</tt></a>
-file.  Each task is something a volunteer
-could pick off in a spare evening or two.
-</p>
+<p>The Subversion bug database contains many issues classified as
+"bite-sized" tasks&nbsp;&mdash;&nbsp;tasks that are well-defined and
+self-contained, and thus suitable for a volunteer looking to get
+involved with the project.  You <i>don't</i> need broad or detailed
+knowledge of Subversion's design to take on one of these, just a
+pretty good idea of how things generally work, and familiarity with
+the coding guidelines in the <a
+href="http://svn.collab.net/repos/svn/trunk/HACKING"><tt>HACKING</tt></a>
+file.  Each task is something a volunteer could pick off in a spare
+week or two, and it's a great way to start learning your way around
+the Subversion code.</p>
 
-<p>
-If you start one of these, please notify the other developers by
-mailing <a
+<p> If you start one of these tasks, please notify the other
+developers by marking the issue as "STARTED" in the issue tracker,
+then mail <a
 href="mailto:dev@subversion.tigris.org">dev@subversion.tigris.org</a>
-(of course, you should be <a
+(<a
 href="http://subversion.tigris.org/servlets/ProjectMailingListList"
->subscribed</a> to that list).  If you have questions as you go, ask
-the dev list, and send the patch there when ready.
-</p>
+>subscribe</a> to that list too) with questions.  Don't be shy, it's a
+very civil mailing list.</p>
+
+<p>When you're ready to send in a patch, see the <a
+href="http://subversion.tigris.org/mailing-list-guidelines.html#patches"
+>patch posting guidelines</a>.  Don't be discouraged if your patch
+goes through several iterations of review by other developers; this is
+normal.</p>
 
 <ul>
 
-<li>
-Click here to see the <a
+<li><p>Click here to see the <a
 href="http://subversion.tigris.org/issues/buglist.cgi?component=subversion&amp;issue_status=UNCONFIRMED&amp;issue_status=NEW&amp;issue_status=STARTED&amp;issue_status=REOPENED&amp;keywords=bite-sized&amp;cmdtype=doit"
->bite-sized tasks</a>
-(issues with the "bite-sized" keyword).
+>bite-sized tasks</a> (issues with the "bite-sized" keyword).</p>
 </li>
 
-<li>
-Click here to see <a
-href="http://subversion.tigris.org/issues/buglist.cgi?component=subversion&amp;issue_status=UNCONFIRMED&amp;issue_status=NEW&amp;issue_status=STARTED&amp;issue_status=REOPENED&amp;order=issues.target_milestone%2C%20issues.priority%2C%20issues.issue_type" 
->a list of all open bugs</a>.
-
-<div>(A long list, but useful if you want an overall
+<li><p>Click here to see <a
+href="http://subversion.tigris.org/issues/buglist.cgi?component=subversion&amp;issue_status=UNCONFIRMED&amp;issue_status=NEW&amp;issue_status=STARTED&amp;issue_status=REOPENED&amp;order=issues.target_milestone%2C%20issues.priority%2C%20issues.issue_type"
+>a list of all open bugs</a>.<br />
+(A long list, but useful if you want an overall
 sense of the project's priorities, or if you're looking for something
-<i>really</i> big to take on.)</div>
-
-</li>
+<i>really</i> big to take on.)</p></li>
 
 </ul>
+
+</div>
 
 </div>
 </body>
