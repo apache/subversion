@@ -91,8 +91,11 @@ def guarantee_repos_and_wc(sbox):
   # is done for that.
 
   # Revision 2: edit iota
+  msg=""" Log message for revision 2 
+  but with multiple lines
+  to test the code"""
   svntest.main.file_append (iota_path, "2")
-  svntest.main.run_svn (None, 'ci', '-m', "Log message for revision 2")
+  svntest.main.run_svn (None, 'ci', '-m', msg)
   svntest.main.run_svn (None, 'up')
 
   # Revision 3: edit A/D/H/omega, A/D/G/pi, A/D/G/rho, and A/B/E/alpha
@@ -104,10 +107,13 @@ def guarantee_repos_and_wc(sbox):
   svntest.main.run_svn (None, 'up')
 
   # Revision 4: edit iota again, add A/C/epsilon
+  msg=""" Log message for revision 4 
+  but with multiple lines
+  to test the code"""
   svntest.main.file_append (iota_path, "4")
   svntest.main.file_append (epsilon_path, "4")
   svntest.main.run_svn (None, 'add', epsilon_path)
-  svntest.main.run_svn (None, 'ci', '-m', "Log message for revision 4")
+  svntest.main.run_svn (None, 'ci', '-m', msg)
   svntest.main.run_svn (None, 'up')
 
   # Revision 5: edit A/C/epsilon, delete A/D/G/rho
@@ -117,9 +123,12 @@ def guarantee_repos_and_wc(sbox):
   svntest.main.run_svn (None, 'up')
 
   # Revision 6: prop change on A/B, edit A/D/H/psi
+  msg=""" Log message for revision 6 
+  but with multiple lines
+  to test the code"""
   svntest.main.run_svn (None, 'ps', 'blue', 'azul', B_path)  
   svntest.main.file_append (psi_path, "6")
-  svntest.main.run_svn (None, 'ci', '-m', "Log message for revision 6")
+  svntest.main.run_svn (None, 'ci', '-m', msg)
   svntest.main.run_svn (None, 'up')
 
   # Revision 7: edit A/mu, prop change on A/mu
@@ -129,10 +138,13 @@ def guarantee_repos_and_wc(sbox):
   svntest.main.run_svn (None, 'up')
 
   # Revision 8: edit iota yet again, re-add A/D/G/rho
+  msg=""" Log message for revision 8 
+  but with multiple lines
+  to test the code"""
   svntest.main.file_append (iota_path, "8")
   svntest.main.file_append (rho_path, "8")
   svntest.main.run_svn (None, 'add', rho_path)
-  svntest.main.run_svn (None, 'ci', '-m', "Log message for revision 8")
+  svntest.main.run_svn (None, 'ci', '-m', msg)
   svntest.main.run_svn (None, 'up')
 
   # Revision 9: edit A/B/E/beta, delete A/B/E/alpha
@@ -183,7 +195,7 @@ def parse_log_output(log_lines):
      'author'   ===>  string
      'date'     ===>  string
      'msg'      ===>  string  (the log message itself)
-
+     'lines'    ===>  number  (so that it may be checked against rev)
   If LOG_LINES contains changed-path information, then the hash
   also contains
 
@@ -198,17 +210,21 @@ def parse_log_output(log_lines):
   # 
   # Log message for revision 5.
   # ------------------------------------------------------------------------
-  # r4 | kfogel | Tue 6 Nov 2001 17:18:18 | 1 line
+  # r4 | kfogel | Tue 6 Nov 2001 17:18:18 | 3 lines
   # 
-  # Log message for revision 4.
+  # Log message for revision 4
+  # but with multiple lines
+  # to test the code.
   # ------------------------------------------------------------------------
   # r3 | kfogel | Tue 6 Nov 2001 17:18:17 | 1 line
   # 
   # Log message for revision 3.
   # ------------------------------------------------------------------------
-  # r2 | kfogel | Tue 6 Nov 2001 17:18:16 | 1 line
+  # r2 | kfogel | Tue 6 Nov 2001 17:18:16 | 3 lines
   # 
-  # Log message for revision 2.
+  # Log message for revision 2 
+  # but with multiple lines
+  # to test the code.
   # ------------------------------------------------------------------------
   # r1 | foo | Tue 6 Nov 2001 15:27:57 | 1 line
   # 
@@ -237,6 +253,7 @@ def parse_log_output(log_lines):
       this_item['author']   = match.group(2)
       this_item['date']     = match.group(3)
       lines = string.atoi ((match.group (4)))
+      this_item['lines']    = lines
 
       # Eat the expected blank line.
       log_lines.pop (0)
@@ -267,13 +284,14 @@ def check_log_chain (chain, revlist):
   more about log chains.)
 
   Do nothing if the log chain's messages run from revision START to END
-  with no gaps, and that each log message is one line of the form
+  and each log message contains a line of the form
 
      'Log message for revision N'
 
-  where N is the revision number of that commit.  Also verify that
+  where N is the revision number of that commit.  Verify that
   author and date are present and look sane, but don't check them too
   carefully.
+  Also verify that even numbered commit messages have three lines.
 
   Raise if anything looks wrong.
   """
@@ -295,14 +313,17 @@ def check_log_chain (chain, revlist):
     if (not (author_re.search (author)
              or author == ''
              or author == '(no author)')): raise svntest.Failure
+
+    # Check for multiline log messages.
+    # If revision is an even number then it should have 
+    # a three line log message.
+    if (saw_rev % 2 == 0 and log_item['lines'] != 3):
+      raise svntest.Failure
+       
     # Check that the log message looks right:
     msg_re = re.compile ('Log message for revision ' + `saw_rev`)
     if (not msg_re.search (msg)): raise svntest.Failure
 
-  ### todo: need some multi-line log messages mixed in with the
-  ### one-liners.  Easy enough, just make the prime revisions use REV
-  ### lines, and the rest use 1 line, or something, so it's
-  ### predictable based on REV.
 
 
 ######################################################################
@@ -462,24 +483,36 @@ def log_through_copyfrom_history(sbox):
   mu2_path = os.path.join (wc_dir, 'A', 'mu2')
   mu_URL = svntest.main.current_repo_url + '/A/mu'
   mu2_URL = svntest.main.current_repo_url + '/A/mu2'
+   
+  msg2=""" Log message for revision 2 
+  but with multiple lines
+  to test the code"""
+  
+  msg4=""" Log message for revision 4
+  but with multiple lines
+  to test the code"""
+
+  msg6=""" Log message for revision 6 
+  but with multiple lines
+  to test the code"""
 
   svntest.main.file_append (mu_path, "2")
   svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
-                                      '-m', "Log message for revision 2")
+                                      '-m', msg2)
   svntest.main.file_append (mu2_path, "this is mu2")
   svntest.actions.run_and_verify_svn (None, None, [], 'add', mu2_path)
   svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
                                       '-m', "Log message for revision 3")
   svntest.actions.run_and_verify_svn (None, None, [], 'rm', mu2_path)
   svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
-                                      '-m', "Log message for revision 4")
+                                      '-m', msg4)
   svntest.main.file_append (mu_path, "5")
   svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
                                       '-m', "Log message for revision 5")
 
   svntest.actions.run_and_verify_svn (None, None, [],
                                       'cp', '-r', '5', mu_URL, mu2_URL,
-                                      '-m', "Log message for revision 6")
+                                      '-m', msg6)
   svntest.actions.run_and_verify_svn (None, None, [], 'up', wc_dir)
 
   # The full log for mu2 is relatively unsurprising
