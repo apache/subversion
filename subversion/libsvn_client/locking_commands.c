@@ -64,7 +64,6 @@ store_locks_callback (void *baton,
   svn_wc_adm_access_t *adm_access;
   const char *abs_path;
   svn_wc_notify_t *notify;
-  char *path = apr_hash_get (lb->urls_to_paths, rel_url, APR_HASH_KEY_STRING);
 
   /* Create the notify struct first, so we can tweak it below. */
   notify = svn_wc_create_notify (rel_url,
@@ -81,6 +80,8 @@ store_locks_callback (void *baton,
 
   if (lb->adm_access)
     {
+      char *path = apr_hash_get (lb->urls_to_paths, rel_url,
+                                 APR_HASH_KEY_STRING);
       abs_path = svn_path_join (svn_wc_adm_access_path (lb->adm_access), 
                                 path, lb->pool);
 
