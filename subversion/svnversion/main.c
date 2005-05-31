@@ -131,7 +131,7 @@ help(const apr_getopt_option_t *options, apr_pool_t *pool)
   svn_error_clear
     (svn_cmdline_fprintf
      (stdout, pool,
-      _("usage: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n\n"
+      _("usage: svnversion [OPTIONS] [WC_PATH [TRAIL_URL]]\n\n"
         "  Produce a compact 'version number' for the working copy path\n"
         "  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
         "  determine if WC_PATH itself is switched (detection of switches\n"
@@ -153,6 +153,9 @@ help(const apr_getopt_option_t *options, apr_pool_t *pool)
         "\n"
         "  If invoked on a directory that is not a working copy, an\n"
         "  exported directory say, the program will output 'exported'.\n"
+        "\n"
+        "  If invoked without arguments WC_PATH will be the current "
+        "directory.\n"
         "\n"
         "Valid options:\n")));
   while (options->description)
@@ -283,13 +286,15 @@ main(int argc, const char *argv[])
         }
     }
 
-  if (os->ind >= argc || os->ind < argc - 2)
+  if (os->ind > argc || os->ind < argc - 2)
     {
       usage(pool);
       return EXIT_FAILURE;
     }
 
-  SVN_INT_ERR (svn_utf_cstring_to_utf8 (&wc_path, os->argv[os->ind++], pool));
+  SVN_INT_ERR (svn_utf_cstring_to_utf8 (&wc_path, 
+			  (os->ind == argc) ? "." : os->argv[os->ind++], 
+			  pool));
   wc_path = svn_path_internal_style (wc_path, pool);
   SVN_INT_ERR (svn_wc_check_wc (wc_path, &wc_format, pool));
   if (! wc_format)
