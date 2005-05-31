@@ -30,6 +30,8 @@
 #include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_props.h"
+#include "svn_utf.h"
+#include "svn_ebcdic.h"
 
 #include <assert.h>
 #include <stdlib.h>  /* for qsort() */
@@ -1010,7 +1012,7 @@ do_item_commit (void **dir_baton,
           if (strcmp (notify_path_prefix, item->path))
             npath = svn_path_is_child (notify_path_prefix, item->path, pool);
           else
-            npath = ".";
+            npath = SVN_UTF8_DOT_STR;
         }
       if (! npath)
         npath = item->path; /* Otherwise just use full path */
@@ -1390,7 +1392,11 @@ open_root (void *edit_baton,
 {
   struct edit_baton *eb = edit_baton;
   struct item_baton *new_baton = make_baton (eb, NULL, eb->path, dir_pool);
-  fprintf (stderr, "TEST EDIT STARTED (base URL=%s)\n", eb->path);
+  const char *eb_path = eb->path;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(eb_path, eb->path, dir_pool));
+#endif
+  fprintf (stderr, "TEST EDIT STARTED (base URL=%s)\n", eb_path);
   *root_baton = new_baton;
   return (*eb->real_editor->open_root) (eb->real_eb,
                                         base_revision,
@@ -1409,12 +1415,16 @@ add_file (const char *path,
   struct item_baton *db = parent_baton;
   struct item_baton *new_baton = make_baton (db->eb, NULL, path, pool);
   const char *copystuffs = "";
+  const char *path_native = path;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(path_native, path, pool));
+#endif
   if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
-    copystuffs = apr_psprintf (pool, 
+    copystuffs = APR_PSPRINTF (pool, 
                                " (copied from %s:%ld)",
                                copyfrom_path,
                                copyfrom_revision);
-  fprintf (stderr, "   Adding  : %s%s\n", path, copystuffs);
+  fprintf (stderr, "   Adding  : %s%s\n", path_native, copystuffs);
   *baton = new_baton;
   return (*db->eb->real_editor->add_file) (path, db->real_baton,
                                            copyfrom_path, copyfrom_revision,
@@ -1428,7 +1438,11 @@ delete_entry (const char *path,
               apr_pool_t *pool)
 {
   struct item_baton *db = parent_baton;
-  fprintf (stderr, "   Deleting: %s\n", path);
+  const char *path_native = path;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(path_native, path, pool));
+#endif
+  fprintf (stderr, "   Deleting: %s\n", path_native);
   return (*db->eb->real_editor->delete_entry) (path, revision,
                                                db->real_baton, pool);
 }
@@ -1442,7 +1456,11 @@ open_file (const char *path,
 {
   struct item_baton *db = parent_baton;
   struct item_baton *new_baton = make_baton (db->eb, NULL, path, pool);
-  fprintf (stderr, "   Opening : %s\n", path);
+  const char *path_native = path;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(path_native, path, pool));
+#endif
+  fprintf (stderr, "   Opening : %s\n", path_native);
   *baton = new_baton;
   return (*db->eb->real_editor->open_file) (path, db->real_baton,
                                             base_revision, pool,
@@ -1453,7 +1471,11 @@ static svn_error_t *
 close_file (void *baton, const char *text_checksum, apr_pool_t *pool)
 {
   struct item_baton *fb = baton;
-  fprintf (stderr, "   Closing : %s\n", fb->path);
+  const char *fb_path = fb->path;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(fb_path, fb->path, pool));
+#endif
+  fprintf (stderr, "   Closing : %s\n", fb_path);
   return (*fb->eb->real_editor->close_file) (fb->real_baton,
                                              text_checksum, pool);
 }
@@ -1466,7 +1488,15 @@ change_file_prop (void *file_baton,
                   apr_pool_t *pool)
 {
   struct item_baton *fb = file_baton;
-  fprintf (stderr, "      PropSet (%s=%s)\n", name, value ? value->data : "");
+  const char *name_native = name;
+  const svn_string_t *value_native = svn_string_create (value
+                                                        ? value->data : "",
+                                                        pool);
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(path_native, path, pool));
+  SVN_ERR (svn_utf_string_from_utf8(value_native, value_native, pool));
+#endif
+  fprintf (stderr, "      PropSet (%s=%s)\n", name_native, value_native->data);
   return (*fb->eb->real_editor->change_file_prop) (fb->real_baton,
                                                    name, value, pool);
 }
@@ -1504,12 +1534,16 @@ add_directory (const char *path,
   struct item_baton *db = parent_baton;
   struct item_baton *new_baton = make_baton (db->eb, NULL, path, pool);
   const char *copystuffs = "";
+  const char *path_native = path;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(path_native, path, pool));
+#endif
   if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
-    copystuffs = apr_psprintf (pool, 
+    copystuffs = APR_PSPRINTF (pool, 
                                " (copied from %s:%ld)",
                                copyfrom_path,
                                copyfrom_revision);
-  fprintf (stderr, "   Adding  : %s%s\n", path, copystuffs);
+  fprintf (stderr, "   Adding  : %s%s\n", path_native, copystuffs);
   *baton = new_baton;
   return (*db->eb->real_editor->add_directory) (path,
                                                 db->real_baton,
@@ -1528,7 +1562,11 @@ open_directory (const char *path,
 {
   struct item_baton *db = parent_baton;
   struct item_baton *new_baton = make_baton (db->eb, NULL, path, pool);
-  fprintf (stderr, "   Opening : %s\n", path);
+  const char *path_native = path;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(path_native, path, pool));
+#endif
+  fprintf (stderr, "   Opening : %s\n", path_native);
   *baton = new_baton;
   return (*db->eb->real_editor->open_directory) (path, db->real_baton,
                                                  base_revision, pool,
@@ -1542,7 +1580,15 @@ change_dir_prop (void *dir_baton,
                  apr_pool_t *pool)
 {
   struct item_baton *db = dir_baton;
-  fprintf (stderr, "      PropSet (%s=%s)\n", name, value ? value->data : "");
+  const char *name_native = name;
+  const svn_string_t *value_native = svn_string_create (value
+                                                        ? value->data : "",
+                                                        pool);
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(path_native, path, pool));
+  SVN_ERR (svn_utf_string_from_utf8(value_native, value_native, pool));
+#endif
+  fprintf (stderr, "      PropSet (%s=%s)\n", name_native, value_native->data);
   return (*db->eb->real_editor->change_dir_prop) (db->real_baton,
                                                   name, value, pool);
 }
@@ -1551,7 +1597,11 @@ static svn_error_t *
 close_directory (void *baton, apr_pool_t *pool)
 {
   struct item_baton *db = baton;
-  fprintf (stderr, "   Closing : %s\n", db->path);
+  const char *db_path = db->path;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(db_path, db->path, pool));
+#endif
+  fprintf (stderr, "   Closing : %s\n", db_path);
   return (*db->eb->real_editor->close_directory) (db->real_baton, pool);
 }
 

@@ -171,10 +171,17 @@ const apr_getopt_option_t svn_cl__options[] =
                              svn_cl__no_auth_cache_opt, \
                              svn_cl__non_interactive_opt
 /* Options for giving a log message.  (Some of these also have other uses.) */
+#if !AS400
 #define SVN_CL__LOG_MSG_OPTIONS 'm', 'F', \
                                 svn_cl__force_log_opt, \
                                 svn_cl__editor_cmd_opt, \
                                 svn_cl__encoding_opt
+#else
+/* No --encoding: Specification of the log message encoding is not supported
+ * on the IBM iSeries. */
+#define SVN_CL__LOG_MSG_OPTIONS 'm', 'F', \
+                                svn_cl__force_log_opt
+#endif
  
 const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
 {
@@ -224,6 +231,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {svn_cl__merge_cmd_opt, svn_cl__config_dir_opt} },
   
   { "commit", svn_cl__commit, {"ci"},
+#if !AS400
     N_("Send changes from your working copy to the repository.\n"
        "usage: commit [PATH...]\n"
        "\n"
@@ -231,6 +239,16 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "  given by a --message or --file option, an editor will be started.\n"
        "  If any targets are (or contain) locked items, those will be\n"
        "  unlocked after a successful commit.\n"),
+#else
+    N_("Send changes from your working copy to the repository.\n"
+       "usage: commit [PATH...]\n"
+       "\n"
+       "  A log message must be provided, but it can be empty.\n"
+       "  The iSeries port does not support the starting of an editor,\n"
+       "  so --message or --file must be used. If any targets are\n"
+       "  (or contain) locked items, those will be unlocked after a\n"
+       "  successful commit.\n"),
+#endif
     {'q', 'N', svn_cl__targets_opt, svn_cl__no_unlock_opt,
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
   
@@ -965,11 +983,19 @@ main (int argc, const char * const *argv)
 
           if (! err)
             err = svn_stringbuf_from_file (&buffer, utf8_opt_arg, pool);
+#if !APR_CHARSET_EBCDIC
+          /* The ebcdic port assumes --targets file is already utf-8 encoded.
+           * So no need to convert it's contents. */
           if (! err)
             err = svn_utf_stringbuf_to_utf8 (&buffer_utf8, buffer, pool);
+#else
+          buffer_utf8 = svn_stringbuf_dup (buffer, pool);
+#endif
           if (err)
             return error_exit (err, stdout, FALSE, pool);
-          opt_state.targets = svn_cstring_split (buffer_utf8->data, "\n\r",
+          opt_state.targets = svn_cstring_split (buffer_utf8->data,
+                                                 SVN_UTF8_NEWLINE_STR \
+                                                 SVN_UTF8_CR_STR,
                                                  TRUE, pool);
         }
         break;
@@ -1230,7 +1256,13 @@ main (int argc, const char * const *argv)
         {
           svn_wc_adm_access_t *adm_access;
           const svn_wc_entry_t *e;
-          const char *fname_utf8 = svn_path_internal_style (dash_F_arg, pool);
+          const char *fname_utf8;
+#if APR_CHARSET_EBCDIC
+          err = svn_utf_cstring_to_utf8(&dash_F_arg, dash_F_arg, pool);
+          if (err)
+            return error_exit (err, stderr, FALSE, pool);
+#endif
+          fname_utf8 = svn_path_internal_style (dash_F_arg, pool);
           err = svn_wc_adm_probe_open3 (&adm_access, NULL, fname_utf8,
                                         FALSE, 0, NULL, NULL, pool);
           if (! err)

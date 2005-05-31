@@ -326,7 +326,13 @@ svn_cl__make_log_msg_baton (void **baton,
     }      
   else
     {
+#if !APR_CHARSET_EBCDIC
       lmb->message = opt_state->message;
+#else
+      /* On ebcdic platforms we assume strings are utf-8 whenever possible. */
+      SVN_ERR (svn_utf_cstring_to_utf8(&lmb->message, opt_state->message, 
+                                       pool));
+#endif
     }
 
   lmb->editor_cmd = opt_state->editor_cmd;
@@ -455,8 +461,11 @@ svn_cl__get_log_message (const char **log_msg,
     {
       svn_string_t *log_msg_string = svn_string_create (lmb->message, pool);
 
+#if !APR_CHARSET_EBCDIC
+      /* On ebcdic platforms log_msg_string is already utf-8. */
       SVN_ERR (svn_subst_translate_string (&log_msg_string, log_msg_string,
                                            lmb->message_encoding, pool));
+#endif
 
       *log_msg = log_msg_string->data;
 
@@ -482,6 +491,13 @@ svn_cl__get_log_message (const char **log_msg,
       svn_stringbuf_t *tmp_message = svn_stringbuf_dup (default_msg, pool);
       svn_error_t *err = SVN_NO_ERROR;
       svn_string_t *msg_string = svn_string_create ("", pool);
+
+#if AS400
+      return svn_error_create 
+        (SVN_ERR_CL_NO_EXTERNAL_EDITOR, NULL,
+         _("Use of an external editor is not supported on this platform.  Use "
+           "the --message (-m) or --file (-F) options"));
+#endif
 
       for (i = 0; i < commit_items->nelts; i++)
         {

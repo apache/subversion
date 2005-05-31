@@ -41,10 +41,19 @@
 #include "svn_time.h"
 #include "svn_sorts.h"
 #include "svn_props.h"
+#include "svn_utf.h"
 
 #include "client.h"
 
 #include "svn_private_config.h"
+
+#define SVN_IMPORT_STR \
+        "\x73\x76\x6e\x2d\x69\x6d\x70\x6f\x72\x74"
+        /* "svn-import" */
+
+#define DOT_TMP_STR \
+        "\x2e\x74\x6d\x70"
+        /* ".tmp" */
 
 /* Import context baton.
 
@@ -118,8 +127,8 @@ send_file_contents (const char *path,
       SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
       SVN_ERR (svn_io_open_unique_file 
                (&tmp_f, &tmpfile_path,
-                svn_path_join (temp_dir, "svn-import", pool),
-                ".tmp", FALSE, pool));
+                svn_path_join (temp_dir, SVN_IMPORT_STR, pool),
+                DOT_TMP_STR, FALSE, pool));
       SVN_ERR (svn_io_file_close (tmp_f, pool));
 
       /* Generate a keyword structure. */
@@ -129,7 +138,8 @@ send_file_contents (const char *path,
                                            "", 0, "", pool));
       
       if ((err = svn_subst_copy_and_translate2 (path, tmpfile_path,
-                                                eol_style_val ? "\n" : NULL,
+                                                eol_style_val
+                                                ? SVN_UTF8_NEWLINE_STR : NULL,
                                                 FALSE,
                                                 keywords_val ? &keywords : NULL,
                                                 FALSE,
@@ -1121,7 +1131,7 @@ collect_lock_tokens (apr_hash_t **result,
       token = val;
 
       if (strncmp (base_url, url, base_len) == 0
-          && (url[base_len] == '\0' || url[base_len] == '/'))
+          && (url[base_len] == '\0' || url[base_len] == SVN_UTF8_FSLASH))
         {
           if (url[base_len] == '\0')
             url = "";
@@ -1269,7 +1279,7 @@ svn_client_commit2 (svn_client_commit_info_t **commit_info,
           target = parent_dir;
           while (strcmp (target, base_dir))
             {
-              if (target[0] == '/' && target[1] == '\0')
+              if (target[0] == SVN_UTF8_FSLASH && target[1] == '\0')
                 abort();
 
               APR_ARRAY_PUSH (dirs_to_lock,
