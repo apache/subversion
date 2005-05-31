@@ -152,8 +152,8 @@ store_locks_callback (void *baton,
  * (allocated in POOL) for the path, else the value is the lock token
  * (or "" if no token found in the wc).
  *
- * If TARGETS is an array of urls, REL_URLS_P is set to NULL.
- * Otherwise each key in REL_URLS_P is a partial url (relative to
+ * If TARGETS is an array of urls, REL_FS_PATHS_P is set to NULL.
+ * Otherwise each key in REL_FS_PATHS_P is an repository path (relative to
  * COMMON_PARENT) mapped to the target path for TARGET (relative to
  * the PARENT_ENTRY_P). working copy targets that they "belong" to.
  *
@@ -165,7 +165,7 @@ organize_lock_targets (const char **common_parent,
                        const svn_wc_entry_t **parent_entry_p,
                        svn_wc_adm_access_t **parent_adm_access_p,
                        apr_hash_t **rel_targets_p,
-                       apr_hash_t **rel_urls_p,
+                       apr_hash_t **rel_fs_paths_p,
                        const apr_array_header_t *targets,
                        svn_boolean_t do_lock,
                        svn_boolean_t force,
@@ -175,7 +175,7 @@ organize_lock_targets (const char **common_parent,
   int i;
   apr_array_header_t *rel_targets = apr_array_make(pool, 1,
                                                    sizeof(const char *));
-  apr_hash_t *rel_targets_ret = apr_hash_make(pool);
+  apr_hash_t *rel_targets_ret = apr_hash_make (pool);
   apr_pool_t *subpool = svn_pool_create (pool); 
 
   /* Get the common parent and all relative paths */
@@ -189,7 +189,7 @@ organize_lock_targets (const char **common_parent,
       char *base_name = svn_path_basename (*common_parent, pool);
       *common_parent = svn_path_dirname (*common_parent, pool);
 
-      APR_ARRAY_PUSH(rel_targets, char *) = base_name;
+      APR_ARRAY_PUSH (rel_targets, char *) = base_name;
     }
 
   if (*common_parent == NULL || (*common_parent)[0] == '\0')
@@ -208,7 +208,7 @@ organize_lock_targets (const char **common_parent,
       for (i = 0; i < rel_targets->nelts; i++)
         {
           const char *target = ((const char **) (rel_targets->elts))[i];
-          apr_hash_set (rel_targets_ret, apr_pstrdup (pool, target),
+          apr_hash_set (rel_targets_ret, svn_path_uri_decode (target, pool),
                         APR_HASH_KEY_STRING,
                         do_lock ? (const void *) invalid_revnum
                                 : (const void *) "");
@@ -219,7 +219,8 @@ organize_lock_targets (const char **common_parent,
     {
       int max_depth = 0;
       apr_array_header_t *rel_urls;
-      apr_array_header_t *urls = apr_array_make (pool, 1, sizeof(const char *));
+      apr_array_header_t *urls = apr_array_make (pool, 1,
+                                                 sizeof (const char *));
       apr_hash_t *urls_hash = apr_hash_make (pool);
       const char *common_url;
 
@@ -258,6 +259,8 @@ organize_lock_targets (const char **common_parent,
           const char *target = ((const char **) (rel_targets->elts))[i];
           const char *abs_path;
 
+          svn_pool_clear (subpool);
+
           abs_path = svn_path_join
             (svn_wc_adm_access_path (*parent_adm_access_p), target, subpool);
 
@@ -275,8 +278,6 @@ organize_lock_targets (const char **common_parent,
 
           (*((const char **)(apr_array_push (urls)))) = apr_pstrdup 
             (pool, entry->url);
-          svn_pool_clear (subpool);
-
         }
 
       /* Condense our absolute urls and get the relative urls. */
@@ -298,26 +299,21 @@ organize_lock_targets (const char **common_parent,
           (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
            _("Unable to lock/unlock across multiple repositories"));
 
-      for (i = 0; i < rel_urls->nelts; i++)
-        {
-          const char *target = APR_ARRAY_IDX(rel_targets, i, const char *);
-          const char *rel_url = APR_ARRAY_IDX(rel_urls, i, const char *);
-
-          apr_hash_set (urls_hash, apr_pstrdup (pool, rel_url),
-                        APR_HASH_KEY_STRING, 
-                        apr_pstrdup (pool, target));
-        }
-
-      *rel_urls_p = urls_hash;
-      *common_parent = common_url;
-
-      /* Now that we've got the relative URLs, gather our targets. */
+      /* Now that we've got the relative URLs, gather our targets and
+         store the mapping between relative repository path and WC path. */
       for (i = 0; i < rel_targets->nelts; i++)
         {
           const svn_wc_entry_t *entry;
-          const char *target = APR_ARRAY_IDX(rel_targets, i, const char *);
-          const char *url = APR_ARRAY_IDX(rel_urls, i, const char *);
+          const char *target = APR_ARRAY_IDX (rel_targets, i, const char *);
+          const char *url = APR_ARRAY_IDX (rel_urls, i, const char *);
           const char *abs_path;
+          const char *decoded_url = svn_path_uri_decode (url, pool);
+
+          svn_pool_clear (subpool); 
+
+          apr_hash_set (urls_hash, decoded_url,
+                        APR_HASH_KEY_STRING, 
+                        apr_pstrdup (pool, target));
 
           abs_path = svn_path_join
             (svn_wc_adm_access_path (*parent_adm_access_p), target, subpool);
@@ -331,7 +327,7 @@ organize_lock_targets (const char **common_parent,
               revnum = apr_palloc (pool, sizeof (* revnum));
               *revnum = entry->revision;
               
-              apr_hash_set (rel_targets_ret, apr_pstrdup (pool, url),
+              apr_hash_set (rel_targets_ret, decoded_url,
                             APR_HASH_KEY_STRING, revnum);
             }
           else /* Unlock. */
@@ -344,19 +340,21 @@ organize_lock_targets (const char **common_parent,
                       (SVN_ERR_CLIENT_MISSING_LOCK_TOKEN, NULL,
                        _("'%s' is not locked in this working copy"), target);
                   
-                  apr_hash_set (rel_targets_ret, apr_pstrdup (pool, url),
+                  apr_hash_set (rel_targets_ret, decoded_url,
                                 APR_HASH_KEY_STRING, 
                                 apr_pstrdup (pool, entry->lock_token));
                 }
               else
                 {
                   /* If breaking a lock, we shouldn't pass any lock token. */
-                  apr_hash_set (rel_targets_ret, apr_pstrdup (pool, url),
+                  apr_hash_set (rel_targets_ret, decoded_url,
                                 APR_HASH_KEY_STRING, "");
                 }
             }
-          svn_pool_clear (subpool); 
         }
+
+      *rel_urls_p = urls_hash;
+      *common_parent = common_url;
     }
   
   *rel_targets_p = rel_targets_ret;

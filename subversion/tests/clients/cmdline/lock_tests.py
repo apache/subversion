@@ -984,6 +984,35 @@ def lock_switched_files(sbox):
   expected_status.tweak('A/B/E/alpha', 'iota', writelocked=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+def lock_uri_encoded(sbox):
+  "lock and unlock a file with an URI-unsafe name"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # lock a file as wc_author
+  fname = 'amazing space'
+  file_path = os.path.join(sbox.wc_dir, fname)
+
+  svntest.main.file_append(file_path, "This represents a binary file\n")
+  svntest.main.run_svn(None, "add", file_path)
+  svntest.main.run_svn(None, 'commit',
+                       '--username', svntest.main.wc_author,
+                       '--password', svntest.main.wc_passwd,
+                       '-m', '', file_path)
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', file_path)
+
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'unlock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     file_path)
+
+
+
 ########################################################################
 # Run the tests
 
@@ -1012,6 +1041,7 @@ test_list = [ None,
               examine_lock_via_url,
               lock_several_files,
               lock_switched_files,
+              lock_uri_encoded,
              ]
 
 if __name__ == '__main__':
