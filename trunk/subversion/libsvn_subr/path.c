@@ -1341,15 +1341,15 @@ svn_path_get_absolute(const char **pabsolute,
   apr_status_t apr_err;
   const char *path_apr;
 
-  SVN_ERR (svn_path_cstring_from_utf8
-           (&path_apr, svn_path_canonicalize (relative, pool), pool));
+  relative = svn_path_canonicalize (relative, pool);
 
-  if (svn_path_is_url (path_apr))
+  if (svn_path_is_url (relative))
     {
-      buffer = apr_pstrdup (pool, path_apr);
+      *pabsolute = apr_pstrdup (pool, relative);
     }
   else
     {
+      SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, relative, pool));
       apr_err = apr_filepath_merge(&buffer, NULL,
                                    path_apr,
                                    (APR_FILEPATH_NOTRELATIVE
@@ -1360,10 +1360,10 @@ svn_path_get_absolute(const char **pabsolute,
         return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                                  _("Couldn't determine absolute path of '%s'"), 
                                  svn_path_local_style (relative, pool));
+      SVN_ERR (svn_path_cstring_to_utf8 (pabsolute, buffer, pool));
+      *pabsolute = svn_path_canonicalize (*pabsolute, pool);
     }
 
-  SVN_ERR (svn_path_cstring_to_utf8 (pabsolute, buffer, pool));
-  *pabsolute = svn_path_canonicalize (*pabsolute, pool);
   return SVN_NO_ERROR;
 }
 

@@ -205,10 +205,6 @@ log_message_receiver (void *baton,
 
   if (author == NULL)
     author = _("(no author)");
-#if APR_CHARSET_EBCDIC
-  else
-    SVN_ERR (svn_utf_cstring_from_utf8 (&author, author, pool));
-#endif
 
   if (date && date[0])
     {
@@ -217,9 +213,6 @@ log_message_receiver (void *baton,
       
       SVN_ERR (svn_time_from_cstring (&time_temp, date, pool));
       date = svn_time_to_human_cstring(time_temp, pool);
-#if APR_CHARSET_EBCDIC
-      SVN_ERR (svn_utf_cstring_from_utf8 (&date, date, pool));
-#endif
     }
   else
     date = _("(no date)");
@@ -227,9 +220,9 @@ log_message_receiver (void *baton,
   if (! lb->omit_log_message && msg == NULL)
     msg = "";
 
-  SVN_ERR (svn_cmdline_printf (pool,
-                               SEP_STRING "r%ld | %s | %s",
-                               rev, author, date));
+  SVN_ERR (SVN_CMDLINE_PRINTF2 (pool,
+                                SEP_STRING "r%ld | %s | %s",
+                                rev, author, date));
 
   if (! lb->omit_log_message)
     {
@@ -271,16 +264,16 @@ log_message_receiver (void *baton,
                                  log_item->copyfrom_path,
                                  log_item->copyfrom_rev);
             }
-          SVN_ERR (SVN_CMDLINE_PRINTF (pool, "   %c %s%s\n",
-                                       log_item->action, path,
-                                       copy_data));
+          SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, "   %c %s%s\n",
+                                        log_item->action, path,
+                                        copy_data));
         }
     }
 
   if (! lb->omit_log_message)
     {
       /* A blank line always precedes the log message. */
-      SVN_ERR (svn_cmdline_printf (pool, "\n%s\n", msg));
+      SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, "\n%s\n", msg));
     }
 
   return SVN_NO_ERROR;
