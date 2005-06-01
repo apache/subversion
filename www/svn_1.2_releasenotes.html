@@ -273,7 +273,7 @@ vary.</p>
       <dt><tt>svn log --limit N</tt></dt>
       <dd>Display only N revisions, then stop.  (<em>Note: a 1.2
       server isn't required for this, but strongly recommended.  A
-      non-1.2 server will still attempt to deliver all revisions over
+      pre-1.2 server will still attempt to deliver all revisions over
       the network, even though the 1.2 client isn't displaying them.</em>)</dd>
 
       <dt><tt>svn info --revision (-r)</tt></dt>
@@ -289,7 +289,7 @@ vary.</p>
       <dt><tt>svn diff --force</tt></dt>
       <dd>Show differences even on files with binary mime-types.</dd>
 
-      <dt><tt>svn checkout/update/status/switch --ignore-externals</tt></dt>
+      <dt><tt>svn checkout/update/status/export --ignore-externals</tt></dt>
       <dd>Don't process any svn:externals during operation.</dd>
 
       <dt><tt>svn export --non-recursive (-N)</tt></dt>
