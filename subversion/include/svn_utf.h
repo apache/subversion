@@ -35,8 +35,6 @@ extern "C" {
 
 
 /**
- * @since New in 1.1.
- *
  * Initialize the UTF-8 encoding/decoding routines.
  * Allocate cached translation handles in a subpool of @a pool.
  *
@@ -44,6 +42,8 @@ extern "C" {
  * svn function may be in use in other threads during the call of this
  * function or when @a pool is cleared or destroyed.
  * Initializing the UTF-8 routines will improve performance.
+ *
+ * @since New in 1.1.
  */
 void svn_utf_initialize (apr_pool_t *pool);
 

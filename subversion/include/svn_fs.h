@@ -38,9 +38,9 @@ extern "C" {
 
 
 /**
- * @since New in 1.1.
- *
  * Get libsvn_fs version information.
+ *
+ * @since New in 1.1.
  */
 const svn_version_t *svn_fs_version (void);
 
@@ -67,8 +67,7 @@ typedef struct svn_fs_t svn_fs_t;
 /** @} */
 
 
-/** @since New in 1.2.
- * 
+/**
  * Callers should invoke this function to initialize global state in
  * the FS library before creating FS objects.  If this function is
  * invoked, no FS objects may be created in another thread at the same
@@ -84,6 +83,8 @@ typedef struct svn_fs_t svn_fs_t;
  * If this function is called multiple times before the pool passed to
  * the first call is destroyed or cleared, the later calls will have
  * no effect.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_fs_initialize (apr_pool_t *pool);
 
@@ -114,8 +115,6 @@ void svn_fs_set_warning_func (svn_fs_t *fs,
 
 
 /**
- * @since New in 1.1.
- *
  * Create a new, empty Subversion filesystem, stored in the directory
  * @a path, and return a pointer to it in @a *fs_p.  @a path must not
  * currently exist, but its parent must exist.  If @a fs_config is not
@@ -138,13 +137,13 @@ void svn_fs_set_warning_func (svn_fs_t *fs,
  * Otherwise, the BDB filesystem type is assumed.  Once the filesystem
  * is created, its type will be recorded so that other functions will
  * know how to operate on it.
+ *
+ * @since New in 1.1.
  */
 svn_error_t *svn_fs_create (svn_fs_t **fs_p, const char *path,
                             apr_hash_t *fs_config, apr_pool_t *pool);
 
-/** 
- * @since New in 1.1.
- *
+/**
  * Open a Subversion filesystem located in the directory @a path, and
  * return a pointer to it in @a *fs_p.  If @a fs_config is not @c
  * NULL, the options it contains modify the behavior of the
@@ -162,33 +161,36 @@ svn_error_t *svn_fs_create (svn_fs_t **fs_p, const char *path,
  *
  * NOTE: you probably don't want to use this directly.  Take a look at
  * svn_repos_open() instead.
+ * 
+ * @since New in 1.1.
  */
 svn_error_t *svn_fs_open (svn_fs_t **fs_p, const char *path,
                           apr_hash_t *config, apr_pool_t *pool);
 
-/** 
- * @since New in 1.1.
- *
+/**
  * Return the path to @a fs's repository, allocated in @a pool.
  * Note: this is just what was passed to svn_fs_create() or
  * svn_fs_open() -- might be absolute, might not.
+ * 
+ * @since New in 1.1.
  */
 const char *svn_fs_path (svn_fs_t *fs, apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
+ * Delete the filesystem at @a path.
  *
- * Delete the filesystem at @a path. */
+ * @since New in 1.1.
+ */
 svn_error_t *svn_fs_delete_fs (const char *path, apr_pool_t *pool);
 
-/** 
- * @since New in 1.1.
- *
+/**
  * Copy a possibly live Subversion filesystem from @a src_path to
  * @a dest_path.  If @a clean is @c TRUE, perform cleanup on the
  * source filesystem as part of the copy operation; currently, this
  * means deleting copied, unused logfiles for a Berkeley DB source
  * filesystem.
+ * 
+ * @since New in 1.1.
  */
 svn_error_t *svn_fs_hotcopy (const char *src_path, const char *dest_path,
                              svn_boolean_t clean, apr_pool_t *pool);
@@ -412,11 +414,11 @@ svn_boolean_t svn_fs_check_related (const svn_fs_id_t *id1,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0 API.
- *
  * NOTE: This function is not guaranteed to work with all filesystem
  * types.  There is currently no un-deprecated equivalent; contact the
  * Subversion developers if you have a need for it.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 svn_fs_id_t *svn_fs_parse_id (const char *data, 
                               apr_size_t len,
@@ -513,7 +515,7 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
 
 
 /** @defgroup svn_fs_begin_txn2_flags Bitmask flags for svn_fs_begin_txn2()
- * @since New in 1.2
+ * @since New in 1.2.
  * @{ */
 
 /** Do on-the-fly out-of-dateness checks.  That is, an fs routine may
@@ -530,8 +532,7 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
 #define SVN_FS_TXN_CHECK_LOCKS                   0x00002
 /** @} */
 
-/** @since New in 1.2
- *
+/**
  * Begin a new transaction on the filesystem @a fs, based on existing
  * revision @a rev.  Set @a *txn_p to a pointer to the new transaction.
  * When committed, this transaction will create a new revision.
@@ -546,6 +547,8 @@ typedef struct svn_fs_txn_t svn_fs_txn_t;
  * don't want to call this directly.  Instead, call
  * svn_repos_fs_begin_txn_for_commit(), which honors the
  * repository's hook configurations.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_fs_begin_txn2 (svn_fs_txn_t **txn_p,
                                 svn_fs_t *fs,
@@ -554,10 +557,10 @@ svn_error_t *svn_fs_begin_txn2 (svn_fs_txn_t **txn_p,
                                 apr_pool_t *pool);
 
 
-/** @deprecated Provided for backward compatibility with svn 1.1 API. 
- *
+/**
  * Same as svn_fs_begin_txn2(), but with @a flags set to 0.
  *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
                                svn_fs_t *fs,
@@ -1643,10 +1646,11 @@ svn_error_t *svn_fs_get_locks (svn_fs_t *fs,
 
 /** @} */
 
-/** @since New in 1.2.
- *
+/**
  * Append a textual list of all available FS modules to the stringbuf
  * @a output.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_fs_print_modules (svn_stringbuf_t *output,
                                    apr_pool_t *pool);

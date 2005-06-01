@@ -320,18 +320,21 @@ void svn_cstring_split_append (apr_array_header_t *array,
 svn_boolean_t svn_cstring_match_glob_list (const char *str,
                                            apr_array_header_t *list);
 
-/** @since New in 1.2.
- *
+/**
  * Return the number of line breaks in @a msg, allowing any kind of newline
  * termination (CR, LF, CRLF, or LFCR), even inconsistent.
+ *
+ * @since New in 1.2.
  */
 int svn_cstring_count_newlines (const char *msg);
 
-/** @since New in 1.2.
- *
+/**
  * Return a cstring which is the concatenation of @a strings (an array
  * of char *) each separated by @a separator.  The returned string is
- * allocated from @a pool. */
+ * allocated from @a pool.
+ *
+ * @since New in 1.2.
+ */
 char *
 svn_cstring_join (apr_array_header_t *strings,
                   const char *separator,

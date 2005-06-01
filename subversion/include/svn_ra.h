@@ -41,9 +41,9 @@ extern "C" {
 /* Misc. declarations */
 
 /**
- * @since New in 1.1.
- *
  * Get libsvn_ra version information.
+ *
+ * @since New in 1.1.
  */
 const svn_version_t *svn_ra_version (void);
 
@@ -118,8 +118,6 @@ typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)
         svn_revnum_t *latest_revnum);
 
 /**
- * @since New in 1.1.
- *
  * A callback function type for use in @c get_file_revs.
  * @a baton is provided by the caller, @a path is the pathname of the file
  * in revision @a rev and @a rev_props are the revision properties.
@@ -131,7 +129,10 @@ typedef svn_error_t *(*svn_ra_get_latest_revnum_func_t)
  * delta for this and the previous revision.
  * @a pool may be used for temporary allocations, but you can't rely
  * on objects allocated to live outside of this particular call and the
- * immediately following calls to @a *delta_handler, if any. */
+ * immediately following calls to @a *delta_handler, if any.
+ *
+ * @since New in 1.1.
+ */
 typedef svn_error_t *(*svn_ra_file_rev_handler_t)
        (void *baton,
         const char *path,
@@ -143,10 +144,10 @@ typedef svn_error_t *(*svn_ra_file_rev_handler_t)
         apr_pool_t *pool);
 
 /** 
- * @since New in 1.2.
- *
  * Callback function type for locking and unlocking actions.
  * 
+ * @since New in 1.2.
+ *
  * @a do_lock is TRUE when locking @a path, and FALSE
  * otherwise.
  * 
@@ -169,8 +170,7 @@ typedef svn_error_t *(*svn_ra_lock_callback_t) (void *baton,
                                                 apr_pool_t *pool);
 
 
-/** @since New in 1.2.
- *
+/**
  * The update Reporter.
  *
  * A vtable structure which allows a working copy to describe a subset
@@ -191,6 +191,8 @@ typedef svn_error_t *(*svn_ra_lock_callback_t) (void *baton,
  * a locally added file or directory (which previously did not exist),
  * it may be reported as having revision 0 or as having the parent
  * directory's revision.
+ *
+ * @since New in 1.2.
  */
 typedef struct svn_ra_reporter2_t
 {
@@ -257,9 +259,10 @@ typedef struct svn_ra_reporter2_t
 
 } svn_ra_reporter2_t;
 
-/** @deprecated Provided for backward compatibility with the 1.1 API.
- *
+/**
  * Similar to @c svn_ra_reporter2_t, but without support for lock tokens.
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 typedef struct svn_ra_reporter_t
 {
@@ -349,28 +352,27 @@ typedef struct svn_ra_callbacks_t
 
 /* Public Interfaces. */
 
-/** @since New in 1.2.
- *
+/**
  * Initialize the RA library.  This function must be called before using
  * any function in this header, except the deprecated APIs based on
  * @c svn_ra_plugin_t, or svn_ra_version().  This function must not be called
  * simultaneously in multiple threads.  @a pool must live
  * longer than any open RA sessions.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *
 svn_ra_initialize (apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * A repository access session.  This object is used to perform requests
  * to a repository, identified by an URL.
+ *
+ * @since New in 1.2.
  */
 typedef struct svn_ra_session_t svn_ra_session_t;
 
 /**
- * @since New in 1.2.
- *
  * Open a repository session to @a repos_URL.  Return an opaque object
  * representing this session in @a *session_p, allocated in @a pool.
  *
@@ -385,6 +387,8 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  * use @a pool for memory allocation.
  *
  * @see svn_client_open_ra_session().
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
                           const char *repos_URL,
@@ -394,23 +398,23 @@ svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
                           apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Get the latest revision number from the repository of @a session.
  *
  * Use @a pool for memory allocation.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_get_latest_revnum (svn_ra_session_t *session,
                                        svn_revnum_t *latest_revnum,
                                        apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Get the latest revision number at time @a tm in the repository of
  * @a session.
  *
  * Use @a pool for memory allocation.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_get_dated_revision (svn_ra_session_t *session,
                                         svn_revnum_t *revision,
@@ -418,8 +422,6 @@ svn_error_t *svn_ra_get_dated_revision (svn_ra_session_t *session,
                                         apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Set the property @a name to @a value on revision @a rev in the repository
  * of @a session.
  *
@@ -428,6 +430,8 @@ svn_error_t *svn_ra_get_dated_revision (svn_ra_session_t *session,
  * Please note that properties attached to revisions are @em unversioned.
  *
  * Use @a pool for memory allocation.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_change_rev_prop (svn_ra_session_t *session,
                                      svn_revnum_t rev,
@@ -436,13 +440,13 @@ svn_error_t *svn_ra_change_rev_prop (svn_ra_session_t *session,
                                      apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Set @a *props to the list of unversioned properties attached to revision
  * @a rev in the repository of @a session.  The hash maps
  * (<tt>const char *</tt>) names to (<tt>@c svn_string_t *</tt>) values.
  *
  * Use @a pool for memory allocation.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_rev_proplist (svn_ra_session_t *session,
                                   svn_revnum_t rev,
@@ -450,13 +454,13 @@ svn_error_t *svn_ra_rev_proplist (svn_ra_session_t *session,
                                   apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Set @a *value to the value of unversioned property @a name attached to
  * revision @a rev in the repository of @a session.  If @a rev has no
  * property by that name, set @a *value to @c NULL.
  *
  * Use @a pool for memory allocation.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_rev_prop (svn_ra_session_t *session,
                               svn_revnum_t rev,
@@ -465,8 +469,6 @@ svn_error_t *svn_ra_rev_prop (svn_ra_session_t *session,
                               apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Set @a *editor and @a *edit_baton to an editor for committing changes
  * to the repository of @a session, using @a log_msg as the log message.  The
  * revisions being committed against are passed to the editor
@@ -497,6 +499,8 @@ svn_error_t *svn_ra_rev_prop (svn_ra_session_t *session,
  * finishing the edit.
  * 
  * Use @a pool for memory allocation.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_get_commit_editor (svn_ra_session_t *session,
                                        const svn_delta_editor_t **editor,
@@ -509,8 +513,6 @@ svn_error_t *svn_ra_get_commit_editor (svn_ra_session_t *session,
                                        apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Fetch the contents and properties of file @a path at @a revision.
  * Interpret @a path relative to the URL in @a session.  Use
  * @a pool for all allocations.
@@ -532,6 +534,8 @@ svn_error_t *svn_ra_get_commit_editor (svn_ra_session_t *session,
  *
  * The stream handlers for @a stream may not perform any RA
  * operations using @a session.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_get_file (svn_ra_session_t *session,
                               const char *path,
@@ -542,8 +546,6 @@ svn_error_t *svn_ra_get_file (svn_ra_session_t *session,
                               apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * If @a dirents is non @c NULL, set @a *dirents to contain all the entries
  * of directory @a path at @a revision.  The keys of @a dirents will be 
  * entry names (<tt>const char *</tt>), and the values dirents 
@@ -562,6 +564,8 @@ svn_error_t *svn_ra_get_file (svn_ra_session_t *session,
  * generated by the SCM system itself (e.g. 'wcprops', 'entryprops',
  * etc.)  The keys are <tt>const char *</tt>, values are 
  * <tt>@c svn_string_t *</tt>.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_get_dir (svn_ra_session_t *session,
                              const char *path,
@@ -572,8 +576,6 @@ svn_error_t *svn_ra_get_dir (svn_ra_session_t *session,
                              apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Ask the RA layer to update a working copy.
  *
  * The client initially provides an @a update_editor/@a baton to the 
@@ -606,6 +608,8 @@ svn_error_t *svn_ra_get_dir (svn_ra_session_t *session,
  * @a session from within the editing operations of @a update_editor.
  *
  * Use @a pool for memory allocation.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_do_update (svn_ra_session_t *session,
                                const svn_ra_reporter2_t **reporter,
@@ -618,8 +622,6 @@ svn_error_t *svn_ra_do_update (svn_ra_session_t *session,
                                apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Ask the RA layer to 'switch' a working copy to a new
  * @a switch_url;  it's another form of svn_ra_do_update().
  *
@@ -654,6 +656,8 @@ svn_error_t *svn_ra_do_update (svn_ra_session_t *session,
  * operations of @a switch_editor.
  *
  * Use @a pool for memory allocation.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_do_switch (svn_ra_session_t *session,
                                const svn_ra_reporter2_t **reporter,
@@ -667,8 +671,6 @@ svn_error_t *svn_ra_do_switch (svn_ra_session_t *session,
                                apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Ask the RA layer to describe the status of a working copy with respect
  * to @a revision of the repository (or HEAD, if @a revision is invalid).
  *
@@ -699,6 +701,8 @@ svn_error_t *svn_ra_do_switch (svn_ra_session_t *session,
  * using @a session from within the editing operations of @a status_editor.
  *
  * Use @a pool for memory allocation.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_do_status (svn_ra_session_t *session,
                                const svn_ra_reporter2_t **reporter,
@@ -711,8 +715,6 @@ svn_error_t *svn_ra_do_status (svn_ra_session_t *session,
                                apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Ask the RA layer to 'diff' a working copy against @a versus_url;
  * it's another form of svn_ra_do_update().
  *
@@ -757,6 +759,8 @@ svn_error_t *svn_ra_do_status (svn_ra_session_t *session,
  * @a session from within the editing operations of @a diff_editor.
  *
  * Use @a pool for memory allocation.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_do_diff (svn_ra_session_t *session,
                              const svn_ra_reporter2_t **reporter,
@@ -771,8 +775,6 @@ svn_error_t *svn_ra_do_diff (svn_ra_session_t *session,
                              apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Invoke @a receiver with @a receiver_baton on each log message from
  * @a start to @a end.  @a start may be greater or less than @a end; 
  * this just controls whether the log messages are processed in descending 
@@ -809,6 +811,8 @@ svn_error_t *svn_ra_do_diff (svn_ra_session_t *session,
  * within @a receiver.
  *
  * Use @a pool for memory allocation.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_get_log (svn_ra_session_t *session,
                              const apr_array_header_t *paths,
@@ -822,13 +826,13 @@ svn_error_t *svn_ra_get_log (svn_ra_session_t *session,
                              apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Set @a *kind to the node kind associated with @a path at @a revision.  
  * If @a path does not exist under @a revision, set @a *kind to 
  * @c svn_node_none.  @a path is relative to the @a session's parent URL.
  *
  * Use @a pool for memory allocation.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_check_path (svn_ra_session_t *session,
                                 const char *path,
@@ -837,13 +841,13 @@ svn_error_t *svn_ra_check_path (svn_ra_session_t *session,
                                 apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Set @a *dirent to an @c svn_dirent_t associated with @a path at @a
  * revision.  @a path is relative to the @a session's parent's URL.
  * If @a path does not exist in @a revision, set @a *dirent to NULL.
  *
  * Use @a pool for memory allocation.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_stat (svn_ra_session_t *session,
                           const char *path,
@@ -852,21 +856,20 @@ svn_error_t *svn_ra_stat (svn_ra_session_t *session,
                           apr_pool_t *pool);
 
 
-/** @since New in 1.2.
- *
+/**
  * Set @a *uuid to the repository's UUID.
  *
  * NOTE: the UUID has the same lifetime as the @a session.
  *
  * Use @a pool for temporary memory allocation.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_get_uuid (svn_ra_session_t *session,
                               const char **uuid,
                               apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Set @a *url to the repository's root URL.  The value will not include
  * a trailing '/'.  The returned URL is guaranteed to be a prefix of the
  * @a session's URL.
@@ -874,14 +877,14 @@ svn_error_t *svn_ra_get_uuid (svn_ra_session_t *session,
  * NOTE: the URL has the same lifetime as the @a session.
  *
  * Use @a pool for temporary memory allocation.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_get_repos_root (svn_ra_session_t *session,
                                     const char **url,
                                     apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Set @a *locations to the locations (at the repository revisions
  * @a location_revisions) of the file identified by @a path in
  * @a peg_revision.  @a path is relative to the URL to which
@@ -895,6 +898,8 @@ svn_error_t *svn_ra_get_repos_root (svn_ra_session_t *session,
  * NOTE: This functionality is not available in pre-1.1 servers.  If the
  * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
  * returned.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_get_locations (svn_ra_session_t *session,
                                    apr_hash_t **locations,
@@ -904,8 +909,6 @@ svn_error_t *svn_ra_get_locations (svn_ra_session_t *session,
                                    apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Retrieve a subset of the interesting revisions of a file @a path
  * as seen in revision @a end (see svn_fs_history_prev() for a
  * definition of "interesting revisions").  Invoke @a handler with
@@ -927,6 +930,8 @@ svn_error_t *svn_ra_get_locations (svn_ra_session_t *session,
  * NOTE: This functionality is not available in pre-1.1 servers.  If the
  * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
  * returned.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_get_file_revs (svn_ra_session_t *session,
                                    const char *path,
@@ -937,8 +942,6 @@ svn_error_t *svn_ra_get_file_revs (svn_ra_session_t *session,
                                    apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Lock each path in @a path_revs, which is a hash whose keys are the
  * paths to be locked, and whose values are the corresponding bas
  * revisions for each path.
@@ -966,6 +969,8 @@ svn_error_t *svn_ra_get_file_revs (svn_ra_session_t *session,
  * @a lock_baton.
  *
  * Use @a pool for temporary allocations.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_lock (svn_ra_session_t *session,
                           apr_hash_t *path_revs,
@@ -976,8 +981,6 @@ svn_error_t *svn_ra_lock (svn_ra_session_t *session,
                           apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Remove the repository lock for each path in @a path_tokens.
  * @a path_tokens is a hash whose keys are the paths to be locked, and
  * whose values are the corresponding lock tokens for each path.  If
@@ -997,6 +1000,8 @@ svn_error_t *svn_ra_lock (svn_ra_session_t *session,
  * the @a lock_baton.
  *
  * Use @a pool for temporary allocations.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_unlock (svn_ra_session_t *session,
                             apr_hash_t *path_tokens,
@@ -1005,12 +1010,12 @@ svn_error_t *svn_ra_unlock (svn_ra_session_t *session,
                             void *lock_baton,
                             apr_pool_t *pool);
 
-/**
- * @since New in 1.2.
- *  
+/**  
  * If @a path is locked, set @a *lock to an svn_lock_t which
  * represents the lock, allocated in @a pool.  If @a path is not
  * locked, set @a *lock to NULL.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_get_lock (svn_ra_session_t *session,
                               svn_lock_t **lock,
@@ -1018,33 +1023,35 @@ svn_error_t *svn_ra_get_lock (svn_ra_session_t *session,
                               apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Set @a *locks to a hashtable which represents all locks on or
  * below @a path.
  *
  * The hashtable maps (const char *) absolute fs paths to (const
  * svn_lock_t *) structures.  The hashtable -- and all keys and
  * values -- are allocated in @a pool.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_get_locks (svn_ra_session_t *session,
                                apr_hash_t **locks,
                                const char *path,
                                apr_pool_t *pool);
 
-/** @since New in 1.2.
- *
+/**
  * Append a textual list of all available RA modules to the stringbuf
  * @a output.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_print_modules (svn_stringbuf_t *output,
                                    apr_pool_t *pool);
 
 
-/** @deprecated Provided for backwards compatibility with the 1.1 API.
- *
+/**
  * Similar to svn_ra_print_modules().
  * @a ra_baton is ignored.
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
                                         void *ra_baton,
@@ -1052,10 +1059,11 @@ svn_error_t *svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
 
 
 
-/** @deprecated Provided for backwards compatibility with the 1.1 API.
- *
+/**
  * Using this callback struct is similar to calling the newer public
  * interface that is based on @c svn_ra_session_t.
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 typedef struct svn_ra_plugin_t
 {
@@ -1243,10 +1251,11 @@ typedef struct svn_ra_plugin_t
                                   const char **url,
                                   apr_pool_t *pool);
 
-  /** @since New in 1.1.
-   *
+  /**
    * Call svn_ra_get_locations() with the session associated with
    * @a session_baton and all other arguments.
+   *
+   * @since New in 1.1.
    */
   svn_error_t *(*get_locations) (void *session_baton,
                                  apr_hash_t **locations,
@@ -1256,10 +1265,10 @@ typedef struct svn_ra_plugin_t
                                  apr_pool_t *pool);
 
   /**
-   * @since New in 1.1.
-   *
    * Call svn_ra_get_file_revs() with the session associated with
    * @a session_baton and all other arguments.
+   *
+   * @since New in 1.1.
    */
   svn_error_t *(*get_file_revs) (void *session_baton,
                                  const char *path,
@@ -1270,9 +1279,9 @@ typedef struct svn_ra_plugin_t
                                  apr_pool_t *pool);
 
   /**
-   * @since New in 1.1.
-   *
    * Return the plugin's version information.
+   *
+   * @since New in 1.1.
    */
   const svn_version_t *(*get_version) (void);
 
@@ -1280,8 +1289,6 @@ typedef struct svn_ra_plugin_t
 } svn_ra_plugin_t;
 
 /**
- * @deprecated Provided for backwards compatibility with the 1.1 API.
- *
  * All "ra_FOO" implementations *must* export a function named
  * svn_ra_FOO_init() of type @c svn_ra_init_func_t.
  *
@@ -1295,14 +1302,14 @@ typedef struct svn_ra_plugin_t
  * before accessing the other parameters.
  *
  * ### need to force this to be __cdecl on Windows... how??
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 typedef svn_error_t *(*svn_ra_init_func_t) (int abi_version,
                                             apr_pool_t *pool,
                                             apr_hash_t *hash);
 
-/** 
- * @deprecated Provided for backward compatibility with the 1.0 API.
- *
+/**
  * The current ABI (Application Binary Interface) version for the
  * RA plugin model. This version number will change when the ABI
  * between the SVN core (e.g. libsvn_client) and the RA plugin changes.
@@ -1324,47 +1331,51 @@ typedef svn_error_t *(*svn_ra_init_func_t) (int abi_version,
  *      2005-01-19  Rework the plugin interface and don't provide the vtable
  *                  to the client.  Separate ABI versions are no longer used.
  * </pre>
+ * 
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 #define SVN_RA_ABI_VERSION      2
 
 /* Public RA implementations. */
 
-/** @deprecated Provided for backwards compatibility with the 1.1 API.
+/** Initialize libsvn_ra_dav.
  *
- * Initialize libsvn_ra_dav. */
+ * @deprecated Provided for backward compatibility with the 1.1 API. */
 svn_error_t * svn_ra_dav_init (int abi_version,
                                apr_pool_t *pool,
                                apr_hash_t *hash);
 
-/** @deprecated Provided for backwards compatibility with the 1.1 API.
+/** Initialize libsvn_ra_local.
  *
- * Initialize libsvn_ra_local. */
+ * @deprecated Provided for backward compatibility with the 1.1 API. */
 svn_error_t * svn_ra_local_init (int abi_version,
                                  apr_pool_t *pool,
                                  apr_hash_t *hash);
 
-/** @deprecated Provided for backwards compatibility with the 1.1 API.
+/** Initialize libsvn_ra_svn.
  *
- * Initialize libsvn_ra_svn. */
+ * @deprecated Provided for backward compatibility with the 1.1 API. */
 svn_error_t * svn_ra_svn_init (int abi_version,
                                apr_pool_t *pool,
                                apr_hash_t *hash);
 
 
 
-/** @deprecated Provide for backwards compability with the 1.1 API.
- *
+/**
  * Initialize the compatibility wrapper, using @a pool for any allocations.
  * The caller must hold on to @a ra_baton as long as the RA library is used.
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *svn_ra_init_ra_libs (void **ra_baton, apr_pool_t *pool);
 
-/** @deprecated Provided for backwards compatibility with the 1.1 API.
- *
+/**
  * Return an RA vtable-@a library which can handle URL.  A number of
  * svn_client_* routines will call this internally, but client apps might
  * use it too.  $a ra_baton is a baton obtained by a call to
  * svn_ra_init_ra_libs().
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *svn_ra_get_ra_library (svn_ra_plugin_t **library,
                                     void *ra_baton,
@@ -1376,3 +1387,4 @@ svn_error_t *svn_ra_get_ra_library (svn_ra_plugin_t **library,
 #endif /* __cplusplus */
 
 #endif  /* SVN_RA_H */
+                           
