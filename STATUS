@@ -17,15 +17,19 @@ Candidate changes:
     Votes:
       +1: fitz
 
-  * r14774, r14849, r14851, r14862
-    Fix locking bug when working on a switched file in the wc.
+  * r14774, r14849, r14851, r14862, r14893, r14898, r14905
+    Fix locking bug when working on a switched file in the wc and
+    a bug when locking an URL with URL-encoded characters in the path.
     Justification:
       Old behavior caused the wrong file to be locked.
     Notes: 
       14774 is the commit of the test, 14849 is the fix, the rest are 
       refinements.
+      Without r14898, this introduces a regression on locking paths
+      with "funny" characters.
     Votes:
-      +1: fitz
+      +1: fitz (except r14898 and r14905 and r14893)
+      +1: lundblad
 
   * r14830
     Fix of the Windows Installer's Add/Repair/Remove capabilities.
