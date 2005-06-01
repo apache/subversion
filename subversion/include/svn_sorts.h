@@ -90,13 +90,13 @@ int svn_sort_compare_revisions (const void *a, const void *b);
 
 
 /**
- * @since New in 1.1.
- *
  * Compare two @c const char * paths, returning an integer greater
  * than, equal to, or less than 0, using the same comparison rules as
  * are used by svn_path_compare_paths().
  *
  * This function is compatible for use with qsort().
+ *
+ * @since New in 1.1.
  */
 int svn_sort_compare_paths (const void *a, const void *b);
 

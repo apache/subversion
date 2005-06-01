@@ -518,7 +518,7 @@ SVN_ERROR_START
               SVN_ERR_FS_CATEGORY_START + 33,
               "Unknown FS type")
 
-  /* @since New in 1.2 */
+  /* @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_NO_USER,
               SVN_ERR_FS_CATEGORY_START + 34,
               "No user associated with filesystem")
@@ -614,7 +614,7 @@ SVN_ERROR_START
               SVN_ERR_REPOS_CATEGORY_START + 7,
               "Error running post-commit hook")
 
-  /* @since New in 1.2 */
+  /* @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED,
               SVN_ERR_REPOS_CATEGORY_START + 8,
               "Error running post-lock hook")
@@ -699,7 +699,7 @@ SVN_ERROR_START
               SVN_ERR_RA_DAV_CATEGORY_START + 8,
               "Failed to execute WebDAV PROPPATCH")
 
-  /* @since New in 1.2 */
+  /* @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_RA_DAV_MALFORMED_DATA,
               SVN_ERR_RA_DAV_CATEGORY_START + 9,
               "Malformed network data")

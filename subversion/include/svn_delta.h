@@ -42,9 +42,9 @@ extern "C" {
 
 
 /**
- * @since New in 1.1.
- *
  * Get libsvn_delta version information.
+ *
+ * @since New in 1.1.
  */
 const svn_version_t *svn_delta_version (void);
 
@@ -227,15 +227,15 @@ void svn_txdelta (svn_txdelta_stream_t **stream,
                   apr_pool_t *pool);
 
 
-/** 
- * @since New in 1.1.
- *
+/**
  * Return a writable stream which, when fed target data, will send
  * delta windows to @a handler/@a handler_baton which transform the
  * data in @a source to the target data.  As usual, the window handler
  * will receive a NULL window to signify the end of the window stream.
  * The stream handler functions will read data from @a source as
  * necessary.
+ * 
+ * @since New in 1.1.
  */
 svn_stream_t *svn_txdelta_target_push (svn_txdelta_window_handler_t handler,
                                        void *handler_baton,
@@ -337,30 +337,32 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
                                          apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
- *
  * Read and parse one delta window in svndiff format from the
  * readable stream @a stream and place it in @a *window, allocating
  * the result in @a pool.  The caller must take responsibility for
  * stripping off the four-byte 'SVN@<ver@>' header at the beginning of
  * the svndiff document before reading the first window, and must
  * provide the version number (the value of the fourth byte) to each
- * invocation of this routine with the @a svndiff_version argument. */
+ * invocation of this routine with the @a svndiff_version argument.
+ *
+ * @since New in 1.1.
+ */
 svn_error_t *svn_txdelta_read_svndiff_window (svn_txdelta_window_t **window,
                                               svn_stream_t *stream,
                                               int svndiff_version,
                                               apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
- *
  * Skip one delta window in svndiff format in the file @a file.  and
  * place it in @a *window, allocating the result in @a pool.  The
  * caller must take responsibility for stripping off the four-byte
  * 'SVN@<ver@>' header at the beginning of the svndiff document before
  * reading or skipping the first window, and must provide the version
  * number (the value of the fourth byte) to each invocation of this
- * routine with the @a svndiff_version argument. */
+ * routine with the @a svndiff_version argument.
+ *
+ * @since New in 1.1.
+ */
 svn_error_t *svn_txdelta_skip_svndiff_window (apr_file_t *file,
                                               int svndiff_version,
                                               apr_pool_t *pool);

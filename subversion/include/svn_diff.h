@@ -59,9 +59,9 @@ extern "C" {
 
 
 /**
- * @since New in 1.1.
- *
  * Get libsvn_diff version information.
+ *
+ * @since New in 1.1.
  */
 const svn_version_t *svn_diff_version (void);
 
@@ -364,7 +364,7 @@ svn_diff_file_output_unified2(svn_stream_t *output_stream,
 /** Similar to svn_diff_file_output_unified2(), but with @a header_encoding
  * set to @c APR_LOCALE_CHARSET.
  *
- * @deprecated Provided for backwards compatibility with the 1.2 API.
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
 svn_diff_file_output_unified(svn_stream_t *output_stream,

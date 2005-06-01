@@ -259,7 +259,7 @@ typedef struct svn_dirent_t
 #define SVN_KEYWORD_REVISION_SHORT   "Rev"
 
 /** Medium version of LastChangedRevision, matching the one CVS uses.
- * @since New in 1.1.  */
+ * @since New in 1.1. */
 #define SVN_KEYWORD_REVISION_MEDIUM  "Revision"
 
 /** The most recent date (repository time) when this file was changed. */
@@ -407,8 +407,7 @@ typedef svn_error_t *(*svn_cancel_func_t) (void *cancel_baton);
 
 
 
-/** @since New in 1.2 
- *
+/**
  * A lock object, for client & server to share.
  *
  * A lock represents the exclusive right to add, delete, or modify a
@@ -424,6 +423,8 @@ typedef svn_error_t *(*svn_cancel_func_t) (void *cancel_baton);
  * created with apr_pcalloc(), a default value of 0 is universally safe.
  *
  * @note in the current implementation, only files are lockable.
+ *
+ * @since New in 1.2.
  */
 typedef struct svn_lock_t
 {
@@ -437,20 +438,22 @@ typedef struct svn_lock_t
                                       If value is 0, lock will never expire. */
 } svn_lock_t;
 
-/** @since New in 1.2.
- *
+/**
  * Returns an @c svn_lock_t, allocated in @a pool with all fields initialized
  * to null values.
  *
  * @note To allow for extending the @c svn_lock_t structure in the future
  * releases, this function should always be used to allocate the structure.
+ *
+ * @since New in 1.2.
  */
 svn_lock_t *
 svn_lock_create (apr_pool_t *pool);
 
-/** @since New in 1.2.
- *
+/**
  * Return a deep copy of @a lock, allocated in @a pool.
+ *
+ * @since New in 1.2.
  */
 svn_lock_t *
 svn_lock_dup (const svn_lock_t *lock, apr_pool_t *pool);

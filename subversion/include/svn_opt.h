@@ -246,8 +246,6 @@ int svn_opt_parse_revision (svn_opt_revision_t *start_revision,
 /* Parsing arguments. */
 
 /**
- * @since New in 1.2.
- *
  * Pull remaining target arguments from @a os into @a *targets_p,
  * converting them to UTF-8, followed by targets from @a known_targets
  * (which might come from, for example, the "--targets" command line
@@ -259,6 +257,8 @@ int svn_opt_parse_revision (svn_opt_revision_t *start_revision,
  * directory.
  *
  * Allocate @a *targets_p and its elements in @a pool.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *
 svn_opt_args_to_target_array2 (apr_array_header_t **targets_p,
@@ -268,8 +268,6 @@ svn_opt_args_to_target_array2 (apr_array_header_t **targets_p,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.1 API.
- *
  * The same as svn_opt_args_to_target_array2() except that, in
  * addition, if @a extract_revisions is set, then look for trailing
  * "@rev" syntax on the first two paths.  If the first target in @a
@@ -280,6 +278,8 @@ svn_opt_args_to_target_array2 (apr_array_header_t **targets_p,
  * and replace @a *end_revision with the value of "rev".  Ignore
  * revision specifiers on any further paths.  "rev" can be any form of
  * single revision specifier, as accepted by svn_opt_parse_revision().
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *
 svn_opt_args_to_target_array (apr_array_header_t **targets_p,
@@ -325,8 +325,6 @@ svn_opt_parse_all_args (apr_array_header_t **args_p,
                         apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
- *
  * Parse a working-copy or URL in @a path, extracting any trailing
  * revision specifier of the form "@rev" from the last component of
  * the path.
@@ -356,6 +354,8 @@ svn_opt_parse_all_args (apr_array_header_t **args_p,
  * specifier is invalid.  If no trailing revision specifier is found,
  * set @a *truepath to @a path and @a rev->kind to @c
  * svn_opt_revision_unspecified.
+ *
+ * @since New in 1.1.
  */
 svn_error_t *
 svn_opt_parse_path (svn_opt_revision_t *rev,

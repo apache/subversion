@@ -60,10 +60,10 @@ svn_error_t *svn_io_check_path (const char *path,
                                 apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
- *
  * Like svn_io_check_path(), but also set *is_special to @c TRUE if
  * the path is not a normal file.
+ *
+ * @since New in 1.1.
  */
 svn_error_t *svn_io_check_special_path (const char *path,
                                         svn_node_kind_t *kind,
@@ -129,10 +129,10 @@ svn_error_t *svn_io_open_unique_file (apr_file_t **f,
                                       apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
- *
  * Like svn_io_open_unique_file(), except that instead of creating a
  * file, a symlink is generated that references the path @a dest.
+ *
+ * @since New in 1.1.
  */
 svn_error_t *svn_io_create_unique_link (const char **unique_name_p,
                                         const char *path,
@@ -142,10 +142,10 @@ svn_error_t *svn_io_create_unique_link (const char **unique_name_p,
 
 
 /**
- * @since New in 1.1.
- *
  * Set @a *dest to the path that the symlink at @a path references.
  * Allocate the string from @a pool.
+ *
+ * @since New in 1.1.
  */
 svn_error_t *svn_io_read_link (svn_string_t **dest,
                                const char *path,
@@ -168,13 +168,13 @@ svn_error_t *svn_io_copy_file (const char *src,
                                svn_boolean_t copy_perms,
                                apr_pool_t *pool);
 
-/** 
- * @since New in 1.1.
- *
+/**
  * Copy symbolic link @a src to @a dst atomically.  Overwrite @a dst
  * if it exists, else create it.  Both @a src and @a dst are
  * utf8-encoded filenames.  After copying, the @a dst link will point
  * to the same thing @a src does.
+ * 
+ * @since New in 1.1.
  */
 svn_error_t *svn_io_copy_link (const char *src,
                                const char *dst,
@@ -385,20 +385,18 @@ svn_error_t *svn_io_file_create (const char *file,
                                  apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0 API.
- *
  * Lock file at @a lock_file. If @a exclusive is TRUE,
  * obtain exclusive lock, otherwise obtain shared lock.
  * Lock will be automatically released when @a pool is cleared or destroyed.
  * Use @a pool for memory allocations.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 svn_error_t *svn_io_file_lock (const char *lock_file,
                                svn_boolean_t exclusive,
                                apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
- *
  * Lock file at @a lock_file. If @a exclusive is TRUE,
  * obtain exclusive lock, otherwise obtain shared lock.
  *
@@ -407,16 +405,18 @@ svn_error_t *svn_io_file_lock (const char *lock_file,
  *
  * Lock will be automatically released when @a pool is cleared or destroyed.
  * Use @a pool for memory allocations.
+ *
+ * @since New in 1.1.
  */
 svn_error_t *svn_io_file_lock2 (const char *lock_file,
                                 svn_boolean_t exclusive,
                                 svn_boolean_t nonblocking,
                                 apr_pool_t *pool);
 /**
- * @since New in 1.1.
- *
  * Flush any unwritten data from @a file to disk.  Use @a pool for
  *  memory allocations.
+ *
+ * @since New in 1.1.
  */
 svn_error_t *svn_io_file_flush_to_disk (apr_file_t *file,
                                         apr_pool_t *pool);
@@ -581,10 +581,10 @@ svn_stream_readline (svn_stream_t *stream,
                      apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
- *
  * Read the contents of the readable stream @a from and write them to the
  * writable stream @a to.
+ *
+ * @since New in 1.1.
  */
 svn_error_t *svn_stream_copy (svn_stream_t *from, svn_stream_t *to,
                               apr_pool_t *pool);
@@ -661,8 +661,7 @@ svn_error_t *svn_io_dir_walk (const char *dirname,
                               void *walk_baton,
                               apr_pool_t *pool);
 
-/** @since New in 1.3.
- *
+/**
  * Start @a cmd with @a args, using utf8-encoded @a path as working 
  * directory.  Connect @a cmd's stdin, stdout, and stderr to @a infile, 
  * @a outfile, and @a errfile, except where they are null.  Return the
@@ -674,6 +673,8 @@ svn_error_t *svn_io_dir_walk (const char *dirname,
  *
  * @a inherit sets whether the invoked program shall inherit its environment or
  * run "clean".
+ *
+ * @since New in 1.3.
  */
 svn_error_t *svn_io_start_cmd (apr_proc_t *cmd_proc,
                                const char *path,
@@ -685,8 +686,7 @@ svn_error_t *svn_io_start_cmd (apr_proc_t *cmd_proc,
                                apr_file_t *errfile,
                                apr_pool_t *pool);
 
-/** @since New in 1.3.
- *
+/**
  * Wait for the process @a *cmd_proc to complete and optionally retrieve
  * its exit code.  @a cmd is used only in error messages.
  *
@@ -696,6 +696,8 @@ svn_error_t *svn_io_start_cmd (apr_proc_t *cmd_proc,
  * null, and the exit reason is not @c APR_PROC_CHECK_EXIT(), or if 
  * @a exitcode is null and the exit code is non-zero, then an
  * @c SVN_ERR_EXTERNAL_PROGRAM error will be returned.
+ *
+ * @since New in 1.3.
  */
 svn_error_t *svn_io_wait_for_cmd (apr_proc_t *cmd_proc,
                                   const char *cmd,
@@ -882,14 +884,15 @@ svn_io_dir_make_hidden (const char *path, apr_fileperms_t perm,
                         apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
- *
  * Same as svn_io_dir_make(), but attempts to set the sgid on the
  * directory on systems that support it.  Does not return an error if
  * the attempt to set the sgid bit fails.  On Unix filesystems,
  * setting the sgid bit on a directory ensures that files and
  * subdirectories created within inherit group ownership from the
- * parent instead of from the primary gid. */
+ * parent instead of from the primary gid.
+ *
+ * @since New in 1.1.
+ */
 svn_error_t *
 svn_io_dir_make_sgid (const char *path, apr_fileperms_t perm,
                       apr_pool_t *pool);
