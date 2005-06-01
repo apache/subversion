@@ -26,7 +26,12 @@
 #include "svn_client.h"
 #include "svn_error.h"
 #include "svn_pools.h"
+#include "svn_xml.h"
+#include "svn_path.h"
 #include "cl.h"
+
+#include "svn_private_config.h"
+
 
 
 /*** Code. ***/
@@ -43,7 +48,69 @@ struct status_baton
 
   svn_boolean_t had_print_error;  /* To avoid printing lots of errors if we get
                                      errors while printing to stdout */
+  svn_boolean_t xml_mode;
 };
+
+
+/* Prints XML target element with path attribute TARGET, using POOL for
+   temporary allocations. */
+static svn_error_t *
+print_start_target_xml (const char *target, apr_pool_t *pool)
+{
+  svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+
+  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "target",
+                         "path", target, NULL);
+
+  return svn_cl__error_checked_fputs (sb->data, stdout);
+}
+
+
+/* Prints XML header using POOL for temporary allocations. */
+static svn_error_t *
+print_header_xml (apr_pool_t *pool)
+{
+  svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+
+  svn_xml_make_header (&sb, pool);
+  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "status", NULL);
+
+  return svn_cl__error_checked_fputs (sb->data, stdout);
+}
+
+
+/* Prints XML footer using POOL for temporary allocations. */
+static svn_error_t *
+print_footer_xml (apr_pool_t *pool)
+{
+  svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+
+  svn_xml_make_close_tag (&sb, pool, "status");
+
+  return svn_cl__error_checked_fputs (sb->data, stdout);
+}
+
+/* Finish a target element by optionally printing an against element if
+ * REPOS_REV is a valid revision number, and then printing an target end tag.
+ * Use POOL for temporary allocations. */
+static svn_error_t *
+print_finish_target_xml (svn_revnum_t repos_rev,
+                         apr_pool_t *pool)
+{
+  svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+
+  if (SVN_IS_VALID_REVNUM (repos_rev))
+    {
+      const char *repos_rev_str;
+      repos_rev_str = apr_psprintf (pool, "%ld", repos_rev);
+      svn_xml_make_open_tag (&sb, pool, svn_xml_self_closing, "against",
+                             "revision", repos_rev_str, NULL);
+    }
+
+  svn_xml_make_close_tag (&sb, pool, "target");
+
+  return svn_cl__error_checked_fputs (sb->data, stdout);
+}
 
 
 /* A status callback function for printing STATUS for PATH. */
@@ -54,11 +121,15 @@ print_status (void *baton,
 {
   struct status_baton *sb = baton;
   svn_error_t *err;
-  
-  err = svn_cl__print_status (path, status, sb->detailed,
-                              sb->show_last_committed,
-                              sb->skip_unrecognized, sb->repos_locks,
-                              sb->pool);
+
+  if (sb->xml_mode)
+    err = svn_cl__print_status_xml (path, status, sb->pool);
+  else
+    err = svn_cl__print_status (path, status, sb->detailed,
+                                sb->show_last_committed,
+                                sb->skip_unrecognized,
+                                sb->repos_locks,
+                                sb->pool);
 
   if (err)
     {
@@ -86,6 +157,7 @@ svn_cl__status (apr_getopt_t *os,
   int i;
   svn_opt_revision_t rev;
   struct status_baton sb;
+  svn_revnum_t repos_rev = SVN_INVALID_REVNUM;
 
   SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
                                           opt_state->targets, pool));
@@ -93,9 +165,10 @@ svn_cl__status (apr_getopt_t *os,
   /* We want our -u statuses to be against HEAD. */
   rev.kind = svn_opt_revision_head;
 
-  /* The notification callback. */
-  svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE, FALSE, 
-                        FALSE, pool);
+  /* The notification callback, leave the notifier as NULL in XML mode */
+  if (! opt_state->xml)
+    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                          FALSE, FALSE, pool);
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
@@ -103,6 +176,22 @@ svn_cl__status (apr_getopt_t *os,
   subpool = svn_pool_create (pool);
 
   sb.had_print_error = FALSE;
+
+  if (opt_state->xml)
+    {
+      /* If output is not incremental, output the XML header and wrap
+         everything in a top-level element. This makes the output in
+         its entirety a well-formed XML document. */
+      if (! opt_state->incremental)
+        SVN_ERR (print_header_xml (pool));
+    }
+  else
+    {
+      if (opt_state->incremental)
+        return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'incremental' option only valid in XML "
+                                   "mode"));
+    }
 
   for (i = 0; i < targets->nelts; i++)
     {
@@ -119,17 +208,27 @@ svn_cl__status (apr_getopt_t *os,
       sb.show_last_committed = opt_state->verbose;
       sb.skip_unrecognized = opt_state->quiet;
       sb.repos_locks = opt_state->update;
+      sb.xml_mode = opt_state->xml;
       sb.pool = subpool;
-      SVN_ERR (svn_client_status2 (NULL, target, &rev, print_status, &sb,
+
+      if (opt_state->xml)
+        SVN_ERR (print_start_target_xml (svn_path_local_style (target, pool),
+                                         pool));
+
+      SVN_ERR (svn_client_status2 (&repos_rev, target, &rev, print_status, &sb,
                                    opt_state->nonrecursive ? FALSE : TRUE,
                                    opt_state->verbose,
                                    opt_state->update,
                                    opt_state->no_ignore,
                                    opt_state->ignore_externals,
                                    ctx, subpool));
+      if (opt_state->xml)
+        SVN_ERR (print_finish_target_xml (repos_rev, pool));
     }
 
   svn_pool_destroy (subpool);
-  
+  if (opt_state->xml && (! opt_state->incremental))
+    SVN_ERR (print_footer_xml (pool));
+
   return SVN_NO_ERROR;
 }

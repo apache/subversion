@@ -817,6 +817,42 @@ def missing_dir_in_anchor(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+def status_in_xml(sbox):
+  "status output in XML format"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_name = "iota"
+  file_path = os.path.join (wc_dir, file_name)
+  svntest.main.file_append(file_path, "This line added in iota to test svn st --xml\n")
+
+  template = ["<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
+              "<status>\n",
+              "<target\n",
+              "   path=\"%s\">\n" % (file_path),
+              "<entry\n",
+              "   path=\"%s\">\n" % (file_path),
+              "<wc-status\n",
+              "   props=\"none\"\n",
+              "   item=\"modified\">\n",
+              "</wc-status>\n",
+              "</entry>\n",
+              "<against\n",
+              "   revision=\"1\"/>\n",
+              "</target>\n",
+              "</status>\n",
+             ]
+
+  output, error = svntest.actions.run_and_verify_svn (None, None, [],
+                                                      'status', file_path,
+                                                      '--xml', '-u')
+
+  for i in range(0, len(output)):
+    if output[i] != template[i]:
+      print "ERROR: expected:", template[i], "actual:", output[i]
+      raise svntest.Failure
+
 #----------------------------------------------------------------------  
 
 
@@ -842,6 +878,7 @@ test_list = [ None,
               status_on_unversioned_dotdot,
               status_on_partially_nonrecursive_wc,
               missing_dir_in_anchor,
+              status_in_xml,
              ]
 
 if __name__ == '__main__':
