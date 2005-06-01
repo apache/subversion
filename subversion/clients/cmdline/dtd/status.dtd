@@ -1,0 +1,49 @@
+<!-- XML DTD for Subversion command-line client output. -->
+
+<!-- For "svn status" -->
+<!ENTITY % BOOL '(true | false) "false"'>
+
+<!ELEMENT status (target*)>
+
+<!ELEMENT target (entry*, against?)>
+<!-- target path -->
+<!ATTLIST target
+  path CDATA #REQUIRED>
+
+<!ELEMENT entry (wc-status, repos-status?)>
+<!ATTLIST entry
+  path CDATA #REQUIRED>
+
+<!ELEMENT wc-status (lock?)>
+<!-- Item/text status. -->
+<!-- Props status. -->
+<!-- WC dir locked? -->
+<!-- Add with history? -->
+<!-- Item switched? -->
+<!ATTLIST wc-status
+  item (added | conflicted | deleted | merged | ignored | modified |
+  replaced | external | unversioned | incomplete | obstructed |
+  normal | none) #REQUIRED
+  props (conflicted | modified | normal | none) #REQUIRED
+  wc-locked %BOOL;
+  copied %BOOL;
+  switched %BOOL;
+>
+
+<!ELEMENT repos-status (lock?)>
+<!ATTLIST repos-status
+  item (added | deleted | modified | replaced | none) #REQUIRED
+  props (modified | none) #REQUIRED
+>
+
+<!-- Lock info stored in WC or repos. -->
+<!ELEMENT lock (token, owner, comment?, created, expires?)>
+
+<!ELEMENT token (#PCDATA)> <!-- Lock token URI. -->
+<!ELEMENT owner (#PCDATA)> <!-- Lock owner. -->
+<!ELEMENT comment (#PCDATA)>  <!-- Lock Comment. -->
+<!ELEMENT created (#PCDATA)>  <!-- Creation date in ISO format. -->
+<!ELEMENT expires (#PCDATA)>  <!-- Expiration date in ISO format. -->
+
+<!ELEMENT against EMPTY>
+<!ATTLIST against revision CDATA #REQUIRED>

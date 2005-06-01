@@ -681,8 +681,9 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
      "    A  +         965       687 joe          wc/qax.c\n"
      "                 965       687 joe          wc/zig.c\n"
      "    Status against revision:   981\n"),
-    { 'u', 'v', 'N', 'q', svn_cl__no_ignore_opt, SVN_CL__AUTH_OPTIONS, 
-      svn_cl__config_dir_opt, svn_cl__ignore_externals_opt} },
+    { 'u', 'v', 'N', 'q', svn_cl__no_ignore_opt, svn_cl__incremental_opt,
+      svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
+      svn_cl__ignore_externals_opt} },
   
   { "switch", svn_cl__switch, {"sw"},
     N_("Update the working copy to a different URL.\n"

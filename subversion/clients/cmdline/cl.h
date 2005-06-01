@@ -247,6 +247,15 @@ svn_error_t *svn_cl__print_status (const char *path,
                                    svn_boolean_t repos_locks,
                                    apr_pool_t *pool);
 
+
+/* Print STATUS for PATH in XML to stdout.  Use POOL for temporary
+   allocations. */
+svn_error_t *
+svn_cl__print_status_xml (const char *path,
+                          svn_wc_status2_t *status,
+                          apr_pool_t *pool);
+
+
 /* Print a hash that maps property names (char *) to property values
    (svn_string_t *).  The names are assumed to be in UTF-8 format;
    the values are either in UTF-8 (the special Subversion props) or
