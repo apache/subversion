@@ -111,11 +111,15 @@ svn_cl__proplist (apr_getopt_t *os,
           SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, target,
                                        subpool));
           
-          SVN_CL__TRY (svn_client_proplist2 (&props, truepath, &peg_revision,
-                                             &(opt_state->start_revision),
-                                             opt_state->recursive,
-                                             ctx, subpool),
-                       ignored_success, opt_state->quiet);
+          SVN_ERR (svn_cl__try
+                   (svn_client_proplist2 (&props, truepath, &peg_revision,
+                                          &(opt_state->start_revision),
+                                          opt_state->recursive,
+                                          ctx, subpool),
+                    &ignored_success, opt_state->quiet,
+                    SVN_ERR_UNVERSIONED_RESOURCE,
+                    SVN_ERR_ENTRY_NOT_FOUND,
+                    NULL));
 
           for (j = 0; j < props->nelts; ++j)
             {
