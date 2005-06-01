@@ -100,7 +100,6 @@ svn_cl__proplist (apr_getopt_t *os,
           apr_array_header_t *props;
           int j;
           int ignored_success;
-          svn_error_t *err;
           svn_boolean_t is_url = svn_path_is_url (target);
           const char *truepath;
           svn_opt_revision_t peg_revision;
