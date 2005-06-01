@@ -663,3 +663,38 @@ svn_cl__error_checked_fputs (const char *string, FILE* stream)
 
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_cl__try (svn_error_t *err,
+             svn_boolean_t *success,
+             svn_boolean_t quiet,
+             ...)
+{
+  if (err)
+    {
+      apr_status_t apr_err;
+      va_list ap;
+
+      *success = FALSE;
+
+      va_start (ap, quiet);
+      while ((apr_err = va_arg (ap, apr_status_t)))
+        {
+          if (err->apr_err == apr_err)
+            {
+              if (! quiet)
+                svn_handle_warning (stderr, err);
+              svn_error_clear (err);
+              return SVN_NO_ERROR;
+            }
+        }
+      va_end (ap);
+    }
+  else
+    {
+      *success = TRUE;
+    }
+
+  return err;
+}
