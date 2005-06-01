@@ -198,13 +198,15 @@ extern const apr_getopt_option_t svn_cl__options[];
  * 
  * If ERR is null, set *SUCCESS to TRUE and return SVN_NO_ERROR.
  *
- * Else if ERR->apr_err is one of the error codes supplied in varargs
- * (typically, error codes like SVN_ERR_UNVERSIONED_RESOURCE,
- * SVN_ERR_ENTRY_NOT_FOUND, etc, are supplied), then handle ERR as a
- * warning (unless QUIET is true), clear ERR, set *SUCCESS to FALSE,
- * and return SVN_NO_ERROR.
+ * Else if ERR->apr_err is one of the error codes supplied in varargs,
+ * then handle ERR as a warning (unless QUIET is true), clear ERR, set
+ * *SUCCESS to FALSE, and return SVN_NO_ERROR.
  *
  * Else set SUCCESS to FALSE and return ERR.
+ *
+ * Typically, error codes like SVN_ERR_UNVERSIONED_RESOURCE,
+ * SVN_ERR_ENTRY_NOT_FOUND, etc, are supplied in varargs.  Don't
+ * forget to terminate the argument list with 0.
  */
 svn_error_t *
 svn_cl__try (svn_error_t *err,

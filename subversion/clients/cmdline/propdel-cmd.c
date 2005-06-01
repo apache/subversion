@@ -123,7 +123,7 @@ svn_cl__propdel (apr_getopt_t *os,
                                 &success, opt_state->quiet,
                                 SVN_ERR_UNVERSIONED_RESOURCE,
                                 SVN_ERR_ENTRY_NOT_FOUND,
-                                NULL));
+                                0));
           
           if (success && (! opt_state->quiet))
             {
