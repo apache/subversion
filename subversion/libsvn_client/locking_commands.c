@@ -213,7 +213,7 @@ organize_lock_targets (const char **common_parent,
                         do_lock ? (const void *) invalid_revnum
                                 : (const void *) "");
         }
-      *rel_urls_p = NULL;
+      *rel_fs_paths_p = NULL;
     }
   else  /* common parent is a local path */
     {
@@ -353,7 +353,7 @@ organize_lock_targets (const char **common_parent,
             }
         }
 
-      *rel_urls_p = urls_hash;
+      *rel_fs_paths_p = urls_hash;
       *common_parent = common_url;
     }
   
