@@ -360,7 +360,7 @@ typedef svn_error_t *
  *  
  * All allocations should be performed in @a pool.
  *
- * NOTE: If there is no blame information for this line, @a revision will be
+ * @note If there is no blame information for this line, @a revision will be
  * invalid and @a author and @a date will be NULL.
  */
 typedef svn_error_t *
@@ -2084,7 +2084,7 @@ svn_client_uuid_from_url (const char **uuid,
  * svn_client_uuid_from_url() to retrieve, using the entry's URL.  @a
  * ctx is required for possible repository authentication.
  *
- * NOTE:  the only reason this function falls back on
+ * @note The only reason this function falls back on
  * svn_client_uuid_from_url() is for compatibility purposes.  Old
  * working copies may not have uuids in the entries file.
  */

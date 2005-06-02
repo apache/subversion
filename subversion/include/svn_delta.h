@@ -298,7 +298,7 @@ svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,
  * since there's nothing else in the delta application's context to
  * supply a path for error messages.)
  *
- * Note: To avoid lifetime issues, @a error_info is copied into 
+ * @note To avoid lifetime issues, @a error_info is copied into 
  * @a pool or a subpool thereof.
  */
 void svn_txdelta_apply (svn_stream_t *source,

@@ -325,7 +325,7 @@ svn_io_read_length_line (apr_file_t *file, char *buf, apr_size_t *limit,
 /** Set @a *apr_time to the time of last modification of the contents of the
  * file @a path.  @a path is utf8-encoded.
  *
- * Note: this is the APR mtime which corresponds to the traditional mtime
+ * @note This is the APR mtime which corresponds to the traditional mtime
  * on Unix, and the last write time on Windows.
  */
 svn_error_t *svn_io_file_affected_time (apr_time_t *apr_time,
@@ -335,7 +335,7 @@ svn_error_t *svn_io_file_affected_time (apr_time_t *apr_time,
 /** Set the timestamp of file @a path to @a apr_time.  @a path is
  *  utf8-encoded.
  *
- * Note: this is the APR mtime which corresponds to the traditional mtime
+ * @note This is the APR mtime which corresponds to the traditional mtime
  * on Unix, and the last write time on Windows.
  */
 svn_error_t *svn_io_set_file_affected_time (apr_time_t apr_time,
@@ -628,7 +628,7 @@ svn_error_t *svn_io_remove_dir (const char *path, apr_pool_t *pool);
  * path.  Set @a *dirents to a hash mapping dirent names (<tt>char *</tt>) to
  * enumerated dirent filetypes (@c svn_node_kind_t *).
  *
- * Note:  the `.' and `..' directories normally returned by
+ * @note The `.' and `..' directories normally returned by
  * apr_dir_read() are NOT returned in the hash.
  */
 svn_error_t *svn_io_get_dirents (apr_hash_t **dirents,
@@ -903,7 +903,7 @@ svn_io_dir_open (apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool);
 
 
 /** Wrapper for apr_dir_remove(), which see.  @a dirname is utf8-encoded.
- * Note: this function has this name to avoid confusion with
+ * @note This function has this name to avoid confusion with
  * svn_io_remove_dir(), which is recursive.
  */
 svn_error_t *

@@ -21,7 +21,7 @@
  * This is an internalized library for performing contextual diffs
  * between sources of data.
  *
- * NOTE: this is different than Subversion's binary-diffing engine.
+ * @note This is different than Subversion's binary-diffing engine.
  * That API lives in @c svn_delta.h -- see the "text deltas" section.  A
  * "text delta" is way of representing precise binary diffs between
  * strings of data.  The Subversion client and server send text deltas
@@ -193,7 +193,7 @@ svn_diff_contains_diffs(svn_diff_t *diff);
  * Differences, similarities, and conflicts are described by lining up
  * "ranges" of data.
  *  
- * Note: these callbacks describe data ranges in units of "tokens".
+ * @note These callbacks describe data ranges in units of "tokens".
  * A "token" is whatever you've defined it to be in your datasource
  * @c svn_diff_fns_t vtable.
  */
