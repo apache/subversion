@@ -9,7 +9,7 @@ Status of 1.2.1:
 
 Candidate changes:
 
-  * r14859, r14923
+  * r14859, r14923, r14939
     Branch: 1.2.x-r14859 
     Fix bug where an unlocked file loses its executable bits when
     svn:executable is set.
