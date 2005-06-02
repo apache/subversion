@@ -119,7 +119,7 @@ file?</a></li>
 copies and renames in a working copy after they've already
 happened?</a></li>
 <li><a href="#svnserve-win-service">How do I run svnserve as a service
-on Windows?</a>
+on Windows?</a></li>
 </ul>
 
 <h4>Troubleshooting:</h4>
@@ -175,7 +175,7 @@ a <tt>file:</tt> URL?</a></li>
     errors on Windows.  They seem to happen at random.  Why?</a></li>
 <li><a href="#freebsd-hang">On FreeBSD, certain operations (especially
     svnadmin create) sometimes hang.  Why?</a></li>
-<li><a href="#301-error">I can see my repository in a web browser, but
+<li><a href="#http-301-error">I can see my repository in a web browser, but
     'svn checkout' gives me an error about "301 Moved Permanently".
     What's wrong?</a></li>
 <li><a href="#no-copy-history">I'm trying to look at an old version of my
@@ -874,9 +874,8 @@ equivalent to CVS modules:</p>
 	working copies, so you won't be able to use a URL in the first
 	repository to access modules imported from the second.  They
 	remain separate URLs.</p>
-
-</div>
 </blockquote>
+</div>
 
 
 <![CDATA[=========================================================]]>
@@ -1716,7 +1715,7 @@ using the table below:</p>
 
 <![CDATA[=========================================================]]>
 
-<div class="h3" id="single-file-checkout" title="single-file-checkout">
+<div class="h3" id="website-auto-update" title="website-auto-update">
 <h3>I'm managing a website in my
 repository.  How can I make the live site automatically update after
 every commit?</h3>
@@ -2042,11 +2041,9 @@ working copy is out of date?</h3>
     you're trying to commit a change to a file that has been changed
     by someone else since you last updated your copy of that file.
     Again, 'svn update' is the way to fix this.</p>
-
-</div>
 </li>
-
 </ol>
+</div>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -2186,7 +2183,8 @@ need to adjust the paths at each step accordingly.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<div class="h3" id="windows-msvc-build" title="windows-msvc-build">
+<div class="h3" id="windows-mod_dav_svn-build"
+  title="windows-mod_dav_svn-build">
 <h3>I'm getting errors trying to build
     Subversion 1.2 on Windows &mdash; mod_dav_svn won't build.</h3>
 
@@ -2281,9 +2279,9 @@ read project information".</p>
             >http://blog.steeleprice.net/archive/2003/11/09/134.aspx</a>"
     </i></p>
 
-</div>
 </li>
 </ul>
+</div>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -2525,7 +2523,7 @@ this change.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<div class="h3" id="301-error" title="301-error">
+<div class="h3" id="http-301-error" title="http-301-error">
 <h3>I can see my repository in a web browser, but
     'svn checkout' gives me an error about "301 Moved Permanently".
     What's wrong?</h3>
@@ -2876,8 +2874,6 @@ is still at r7, you do not see the log information for r8.</p>
 
 <p>To see the latest logs, do one of the following:</p>
 
-</div>
-
 <ol>
 <li>Run '<tt>svn&nbsp;log&nbsp;-rHEAD</tt>'.</li>
 <li>Run '<tt>svn&nbsp;log&nbsp;URL</tt>', where URL is the repository URL.</li>
@@ -2886,6 +2882,8 @@ is still at r7, you do not see the log information for r8.</p>
 <li>Update your working copy so it's all at r8, then run
     '<tt>svn&nbsp;log</tt>'.</li>
 </ol>
+
+</div>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -2907,7 +2905,7 @@ Apache, svnserve, restrict access via file://, svnlook, svnadmin,
 etc.)</li>
 
 <li>Using an <i>older</i> <tt>svnadmin</tt> binary (that is, linked to
-  an older BerkeleyDB):</li>
+  an older BerkeleyDB):
 
   <ol>
 
@@ -2923,6 +2921,7 @@ etc.)</li>
       repository's <tt>db/</tt> directory, of the form <tt>__db.00*</tt></li>
 
   </ol>
+</li>
 
 </ul>
 
@@ -2931,7 +2930,6 @@ etc.)</li>
 
 </div>
 
-</ol>
 
 
 
@@ -2949,24 +2947,22 @@ etc.)</li>
 
 <p>Test execution can be dramatically sped up by keeping Subversion
 test data on a RAM disk.  On a Linux system, add lines like the
-following in your /etc/fstab file:
+following in your /etc/fstab file:</p>
 
-<blockquote><code>
-<div>tmpfs  /home/brane/svn/obj-sh/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m</div>
-<div>tmpfs  /home/brane/svn/obj-st/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m</div>
-</code></blockquote>
+<blockquote>
+<div><code>tmpfs  /home/brane/svn/obj-sh/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m</code></div>
+<div><code>tmpfs  /home/brane/svn/obj-st/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m</code></div>
+</blockquote>
 
-The minimum required size for testing ramdisk is approximately 700MB.
+<p>The minimum required size for testing ramdisk is approximately 700MB.
 However, flagging your test targets for cleanup dramatically reduces
 the space requirements (as shown in the example configuration above),
 and thus your memory usage.  Cleanup means more I/O, but since test
-data is in-memory, there will be no performance degradation.  Example:
+data is in-memory, there will be no performance degradation.  Example:</p>
 
-<blockquote><code>
+<blockquote><div><code>
 make check CLEANUP=true
-</code></blockquote>
-
-</p>
+</code></div></blockquote>
 
 <p>See <a href="http://svn.haxx.se/dev/archive-2003-02/0068.shtml"
 >http://svn.haxx.se/dev/archive-2003-02/0068.shtml</a> for the
