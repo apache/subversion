@@ -119,7 +119,7 @@ svn_cl__proplist (apr_getopt_t *os,
                     &ignored_success, opt_state->quiet,
                     SVN_ERR_UNVERSIONED_RESOURCE,
                     SVN_ERR_ENTRY_NOT_FOUND,
-                    0));
+                    SVN_NO_ERROR));
 
           for (j = 0; j < props->nelts; ++j)
             {
