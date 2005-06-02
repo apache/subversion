@@ -452,7 +452,12 @@ external-extraclean:
 # DOCUMENTATION RULES
 
 # Every single document in every format.
-doc: doc-design doc-misc-docs
+doc: doc-design doc-misc-docs doc-api
+
+# Generate API documentation for the C libraries.
+### This could also generate JavaDoc for JavaHL, POD for swig-perl, etc.
+doc-api:
+	doxygen $(top_srcdir)/doc/doxygen.conf
 
 # Build all types of a certain doc.
 doc-misc-docs: doc-misc-docs-html doc-misc-docs-pdf doc-misc-docs-ps
