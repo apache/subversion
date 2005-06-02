@@ -995,7 +995,7 @@ def lock_and_exebit1(sbox):
 
 
 #----------------------------------------------------------------------
-# A variance of lock_and_exebit1: same test without unlock
+# A variant of lock_and_exebit1: same test without unlock
 def lock_and_exebit2(sbox):
   "svn:needs-lock and svn:executable, part II"
 
@@ -1087,8 +1087,8 @@ test_list = [ None,
               revert_lock,
               examine_lock_via_url,
               lock_several_files,
-              lock_and_exebit1,
-              lock_and_exebit2,
+              Skip(lock_and_exebit1, (os.name != 'posix')),
+              Skip(lock_and_exebit2, (os.name != 'posix')),
              ]
 
 if __name__ == '__main__':
