@@ -180,6 +180,7 @@ the Subversion project.  Python setup in other buffers will not be
 affected."
   (when (string-match "/subversion/" (buffer-file-name))
     (make-local-variable 'py-indent-offset)
+    (setq indent-tabs-mode nil)
     (setq py-indent-offset 2)
     (make-local-variable 'py-smart-indentation)
     (setq py-smart-indentation nil)))
