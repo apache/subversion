@@ -66,7 +66,6 @@ validator_func (void *baton,
 
   apr_hash_t *uuids = b->url_uuids;
   apr_pool_t *pool = b->pool;
-  apr_pool_t *subpool;
 
   if (apr_hash_count (uuids) != 0)
     {
@@ -96,13 +95,15 @@ validator_func (void *baton,
   /* We use an RA session in a subpool to get the UUID of the
      repository at the new URL so we can force the RA session to close
      by destroying the subpool. */
-  subpool = svn_pool_create (pool); 
-  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, url, NULL,
-                                                 NULL, NULL, FALSE, TRUE,
-                                                 b->ctx, subpool));
-  SVN_ERR (svn_ra_get_uuid (ra_session, &ra_uuid, subpool));
-  ra_uuid = apr_pstrdup (pool, ra_uuid);
-  svn_pool_destroy (subpool);
+  {
+    apr_pool_t *subpool = svn_pool_create (pool); 
+    SVN_ERR (svn_client__open_ra_session_internal (&ra_session, url, NULL,
+                                                   NULL, NULL, FALSE, TRUE,
+                                                   b->ctx, subpool));
+    SVN_ERR (svn_ra_get_uuid (ra_session, &ra_uuid, subpool));
+    ra_uuid = apr_pstrdup (pool, ra_uuid);
+    svn_pool_destroy (subpool);
+  }
 
   /* Make sure the UUIDs match. */
   if (strcmp (uuid, ra_uuid))
