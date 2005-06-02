@@ -527,16 +527,49 @@ principles:
       it at the start of each iteration, then destroy it after the loop 
       is done, like so:
 
-         subpool = svn_pool_create(pool);
+         apr_pool_t *subpool = svn_pool_create (pool);
 
          for (i = 0; i < n; ++i)
          {
-           svn_pool_clear(subpool);
-           do_operation(..., subpool);
+           svn_pool_clear (subpool);
+           do_operation (..., subpool);
          }
 
-         svn_pool_destroy(subpool);
+         svn_pool_destroy (subpool);
   
+By using a loop subpool for loop-bounded data, you ensure O(1) instead
+of O(N) memory leakage should the function return abruptly from within
+the loop (say, due to error).  That's why you shouldn't make a subpool
+for data which persists throughout a function, but instead should use
+the pool passed in by the caller.  That memory will be reclaimed when
+the caller's pool is cleared or destroyed.  If the caller is invoking
+the callee in a loop, then trust the caller to take care of clearing
+the pool on each iteration.  The same logic propagates all the way up
+the call stack.
+
+The pool you use also helps readers of the code understand object
+lifetimes.  Is a given object used only during one iteration of the
+loop, or will it need to last beyond the end of the loop?  For
+example, pool choices indicate a lot about what's going on in this
+code:
+
+      apr_hash_t *persistent_objects = apr_hash_make (pool);
+      apr_pool_t *subpool = svn_pool_create (pool);
+
+      for (i = 0; i < n; ++i)
+      {
+        const char *intermediate_result;
+        const char *key, *val;
+        
+        svn_pool_clear (subpool);
+        SVN_ERR (do_something (&intermediate_result, ..., subpool));
+        SVN_ERR (get_result (intermediate_result, &key, &val, ..., pool));
+        apr_hash_set (persistent_objects, key, APR_HASH_KEY_STRING, val);
+      }
+      svn_pool_destroy (subpool);
+
+      return persistent_objects;
+
 Except for some legacy code, which was written before these principles
 were fully understood, virtually all pool usage in Subversion follows
 the above guidelines.
