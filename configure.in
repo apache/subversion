@@ -673,6 +673,12 @@ FIX_JAVAHL_LIB=""
 JAVAHL_TESTS_TARGET=""
 LT_CXX_LIBADD=""
 if test "$do_javahl_build" = "yes"; then
+  dnl Check for suitable JDK
+  if test "$JDK_SUITABLE" = "no"; then
+    AC_MSG_ERROR([Cannot compile JavaHL without a suitable JDK. 
+                  Please specify a suitable JDK using the --with-jdk option.])
+  fi
+  
   AC_PROG_CXX
   
   dnl The temporary directory where libtool compiles libsvnjavahl.
