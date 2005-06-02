@@ -93,8 +93,8 @@ Any attempt to use setlocale() in an Apache environment may conflict
 with settings other modules expect to be setup (even when using a
 prefork MPM).  On the svnserve side, having no portable way to change
 languages dynamically means that the environment has to be set up
-correctly from the start.  Given that, the svnserve protocol doesn't
-yet support content negotiation
+correctly from the start.  Futhermore, the svnserve protocol doesn't
+yet support content negotiation.
 
 In other words, there is no way -- programmatically -- to ensure that
 messages are served in any specific language using a traditional
