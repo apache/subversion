@@ -73,7 +73,6 @@ def lock_file(sbox):
   # change the locked file
   svntest.main.file_append(file_path_b, "Covert tweak\n")
 
-
   # attempt (and fail) to commit as user Sally
   svntest.actions.run_and_verify_commit (wc_b, None, None, err_re,
                                          None, None, None, None,
@@ -992,24 +991,64 @@ def lock_uri_encoded(sbox):
 
   # lock a file as wc_author
   fname = 'amazing space'
-  file_path = os.path.join(sbox.wc_dir, fname)
+  file_path = os.path.join(wc_dir, fname)
 
   svntest.main.file_append(file_path, "This represents a binary file\n")
-  svntest.main.run_svn(None, "add", file_path)
-  svntest.main.run_svn(None, 'commit',
-                       '--username', svntest.main.wc_author,
-                       '--password', svntest.main.wc_passwd,
-                       '-m', '', file_path)
+  svntest.actions.run_and_verify_svn(None, None, None, "add", file_path)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    fname : Item(verb='Adding'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({ fname: Item(wc_rev=2, status='  ') })
+
+  # Commit the file.
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        file_path)
+
   svntest.actions.run_and_verify_svn(None, None, None, 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '', file_path)
 
+  # Make sure that the file was locked.
+  expected_status.tweak(fname, writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   svntest.actions.run_and_verify_svn(None, None, None, 'unlock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      file_path)
+
+  # Make sure it was successfully unlocked again.
+  expected_status.tweak(fname, writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # And now the URL case.
+  file_url = svntest.main.current_repo_url + '/' + fname
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', file_url)
+
+  # Make sure that the file was locked.
+  expected_status.tweak(fname, writelocked='O')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'unlock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     file_url)
+
+  # Make sure it was successfully unlocked again.
+  expected_status.tweak(fname, writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
 #----------------------------------------------------------------------
