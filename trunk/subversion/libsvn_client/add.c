@@ -34,6 +34,7 @@
 #include "svn_io.h"
 #include "svn_config.h"
 #include "svn_props.h"
+#include "svn_utf.h"
 #include "client.h"
 
 #include "svn_private_config.h"
@@ -91,24 +92,35 @@ auto_props_enumerator (const char *name,
   auto_props_baton_t *autoprops = baton;
   char *property;
   char *last_token;
+  const char *name_native, *auto_fname_native;
 
   /* nothing to do here without a value */
   if (strlen (value) == 0)
     return TRUE;
 
   /* check if filename matches and return if it doesn't */
-  if (apr_fnmatch (name, autoprops->filename, 0) == APR_FNM_NOMATCH)
-    return TRUE;
+#if !APR_CHARSET_EBCDIC
+  name_native = name;
+  auto_fname_native = autoprops->filename;
+#else
+  if (svn_utf_cstring_from_utf8(&name_native, name, autoprops->pool)
+      || svn_utf_cstring_from_utf8(&auto_fname_native, autoprops->filename,
+                                   autoprops->pool))
+      /* If there's a conversion error we can't continue. */
+      return TRUE;
+#endif
+  if (apr_fnmatch (name_native, auto_fname_native, 0) == APR_FNM_NOMATCH)
+      return TRUE;
   
   /* parse the value (we dup it first to effectively lose the
      'const', and to avoid messing up the original value) */
   property = apr_pstrdup (autoprops->pool, value);
-  property = apr_strtok (property, ";", &last_token);
+  property = apr_strtok (property, SVN_UTF8_SEMICOLON_STR, &last_token);
   while (property)
     {
       int len;
       const char *this_value;
-      char *equal_sign = strchr (property, '=');
+      char *equal_sign = strchr (property, SVN_UTF8_EQUALS);
 
       if (equal_sign)
         {
@@ -134,7 +146,7 @@ auto_props_enumerator (const char *name,
           else if (strcmp (property, SVN_PROP_EXECUTABLE) == 0)
             autoprops->have_executable = TRUE;
         }
-      property = apr_strtok (NULL, ";", &last_token);
+      property = apr_strtok (NULL, SVN_UTF8_SEMICOLON_STR, &last_token);
     }
   return TRUE;
 }
@@ -181,6 +193,8 @@ svn_client__get_auto_props (apr_hash_t **properties,
                       svn_string_create (autoprops.mimetype, pool));
     }
 
+/* */
+#if !AS400
   /* if executable has not been set check the file */
   if (! autoprops.have_executable)
     {
@@ -191,6 +205,7 @@ svn_client__get_auto_props (apr_hash_t **properties,
                       strlen (SVN_PROP_EXECUTABLE), 
                       svn_string_create ("", pool));
     }
+#endif
 
   *mimetype = autoprops.mimetype;
   return SVN_NO_ERROR;
@@ -317,9 +332,10 @@ add_dir_recursive (const char *dirname,
         continue;
 
       /* Skip entries for this dir and its parent.  */
-      if (this_entry.name[0] == '.'
+      if (this_entry.name[0] == SVN_UTF8_DOT
           && (this_entry.name[1] == '\0'
-              || (this_entry.name[1] == '.' && this_entry.name[2] == '\0')))
+              || (this_entry.name[1] == SVN_UTF8_DOT
+                  && this_entry.name[2] == '\0')))
         continue;
 
       if (svn_cstring_match_glob_list (this_entry.name, ignores))

@@ -103,6 +103,8 @@
 #define SVN_UTF8_RPAREN_STR      "\x29" /* ")" */
 #define SVN_UTF8_SQUOTE          '\x27' /* '\'' */
 #define SVN_UTF8_SQUOTE_STR      "\x27" /* "\'" */
+#define SVN_UTF8_SEMICOLON       '\x3B' /* ';' */
+#define SVN_UTF8_SEMICOLON_STR   "\x3B" /* ";" */
 #define SVN_UTF8_TILDE           '\x7E' /* '~' */
 #define SVN_UTF8_TILDE_STR       "\x7E" /* "~" */
 #define SVN_UTF8_UNDERSCORE      '\x5F' /* '_' */

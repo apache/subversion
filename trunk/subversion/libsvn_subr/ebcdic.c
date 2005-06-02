@@ -21,7 +21,6 @@
 #include <apr_lib.h>
 #if AS400
 #include <qshell.h> /* For QzshSystem */
-//#include <apr_file_io.h>
 #endif
 
 #include "svn_ebcdic.h"
