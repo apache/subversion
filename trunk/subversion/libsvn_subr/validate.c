@@ -27,6 +27,7 @@
 #include <apr_want.h>
 
 #include "svn_error.h"
+#include "svn_utf.h"
 #include "svn_private_config.h"
 
 
@@ -39,8 +40,9 @@ svn_mime_type_validate (const char *mime_type, apr_pool_t *pool)
   /* Since svn:mime-type can actually contain a full content type
      specification, e.g., "text/html; charset=UTF-8", make sure we're
      only looking at the media type here. */
-  const apr_size_t len = strcspn (mime_type, "; ");
-  const char *const slash_pos = strchr (mime_type, '/');
+  const apr_size_t len = strcspn (mime_type,
+                                  SVN_UTF8_SEMICOLON_STR SVN_UTF8_SPACE_STR);
+  const char *const slash_pos = strchr (mime_type, SVN_UTF8_FSLASH);
 
   if (len == 0)
     return svn_error_createf
@@ -52,7 +54,7 @@ svn_mime_type_validate (const char *mime_type, apr_pool_t *pool)
       (SVN_ERR_BAD_MIME_TYPE, NULL,
        _("MIME type '%s' does not contain '/'"), mime_type);
 
-  if (! apr_isalnum (mime_type[len - 1]))
+  if (! APR_IS_ASCII_ALNUM (mime_type[len - 1]))
     return svn_error_createf
       (SVN_ERR_BAD_MIME_TYPE, NULL,
        _("MIME type '%s' ends with non-alphanumeric character"), mime_type);
@@ -65,9 +67,16 @@ svn_boolean_t
 svn_mime_type_is_binary (const char *mime_type)
 {
   /* See comment in svn_mime_type_validate() above. */
-  const apr_size_t len = strcspn (mime_type, "; ");
+  const apr_size_t len = strcspn (mime_type,
+                                  SVN_UTF8_SEMICOLON_STR SVN_UTF8_SPACE_STR);
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   return ((strncmp (mime_type, "text/", 5) != 0)
           && (len != 15 || strncmp (mime_type, "image/x-xbitmap", len) != 0)
           && (len != 15 || strncmp (mime_type, "image/x-xpixmap", len) != 0)
           );
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 }

@@ -380,6 +380,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
           }
         else
           {
+            const char *mime_type_utf8;
             if ((serr = svn_fs_node_prop (&pval, resource->info->root.root,
                                           resource->info->repos_path,
                                           SVN_PROP_MIME_TYPE, p)))
@@ -395,8 +396,13 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
               mime_type = resource->info->r->content_type;
             else
               mime_type = "text/plain"; /* default for file */
-
-            if ((serr = svn_mime_type_validate (mime_type, p)))
+#if !APR_CHARSET_EBCDIC
+            mime_type_utf8 = mime_type;
+#else
+            if (svn_utf_cstring_to_netccsid(&mime_type_utf8, mime_type, p))
+              mime_type_utf8 = mime_type;
+#endif
+            if ((serr = svn_mime_type_validate (mime_type_utf8, p)))
               {
                 /* Probably serr->apr == SVN_ERR_BAD_MIME_TYPE, but
                    there's no point even checking.  No matter what the

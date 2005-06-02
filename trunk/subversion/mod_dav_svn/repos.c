@@ -2219,6 +2219,7 @@ static dav_error * dav_svn_set_headers(request_rec *r,
     {
       svn_string_t *value;
       const char *repos_path_utf8 = resource->info->repos_path;
+      const char *mime_type_utf8;
 #if APR_CHARSET_EBCDIC
       if(svn_utf_cstring_to_netccsid(&repos_path_utf8,
                                      resource->info->repos_path,
@@ -2257,8 +2258,17 @@ static dav_error * dav_svn_set_headers(request_rec *r,
           mimetype = r->content_type;
       else
         mimetype = "text/plain";
-
-      serr = svn_mime_type_validate(mimetype, resource->pool);
+#if !APR_CHARSET_EBCDIC
+          mime_type_utf8 = mimetype;
+#else
+          if(svn_utf_cstring_to_netccsid(&mime_type_utf8, mimetype,
+                                         resource->pool))
+            return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                                 apr_psprintf(resource->pool,
+                                              "Error converting string '%s'",
+                                              mimetype));
+#endif
+      serr = svn_mime_type_validate(mime_type_utf8, resource->pool);
       if (serr)
         {
           /* Probably serr->apr == SVN_ERR_BAD_MIME_TYPE, but
