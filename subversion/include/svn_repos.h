@@ -64,7 +64,7 @@ const svn_version_t *svn_repos_version (void);
  * 'authz_write_func', which although sharing this type, would be a
  * different implementation.
  *
- * Note: If someday we want more sophisticated authorization states
+ * @note If someday we want more sophisticated authorization states
  * than just yes/no, @a allowed can become an enum type.
  */
 typedef svn_error_t *(*svn_repos_authz_func_t) (svn_boolean_t *allowed,
@@ -546,7 +546,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
  * merely serve as indications that properties or textual contents
  * were changed. 
  *
- * NOTE: this editor driver passes SVN_INVALID_REVNUM for all
+ * @note This editor driver passes SVN_INVALID_REVNUM for all
  * revision parameters in the editor interface except the copyfrom
  * parameter of the add_file() and add_directory() editor functions.
  *

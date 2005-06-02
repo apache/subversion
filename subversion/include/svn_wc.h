@@ -1200,7 +1200,8 @@ svn_error_t *svn_wc_entry (const svn_wc_entry_t **entry,
  * scheduled for re-addition) are not returned in the hash, unless
  * @a show_hidden is true.
  *
- * Important note: the @a entries hash is the entries cache in @a adm_access 
+ * @par Important:
+ * The @a entries hash is the entries cache in @a adm_access 
  * and so usually the hash itself, the keys and the values should be treated 
  * as read-only.  If any of these are modified then it is the caller's
  * responsibility to ensure that the entries file on disk is updated.  Treat
@@ -1210,7 +1211,8 @@ svn_error_t *svn_wc_entry (const svn_wc_entry_t **entry,
  * access to the original schedule.  Use a duplicate entry to modify the
  * schedule.
  *
- * Important note: only the entry structures representing files and
+ * @par Important:
+ * Only the entry structures representing files and
  * @c SVN_WC_ENTRY_THIS_DIR contain complete information.  The entry
  * structures representing subdirs have only the `kind' and `state'
  * fields filled in.  If you want info on a subdir, you must use this
@@ -1289,7 +1291,7 @@ typedef struct svn_wc_entry_callbacks_t
  * When a new directory is entered, @c SVN_WC_ENTRY_THIS_DIR will always
  * be returned first.
  *
- * Note:  callers should be aware that each directory will be
+ * @note Callers should be aware that each directory will be
  * returned *twice*:  first as an entry within its parent, and
  * subsequently as the '.' entry within itself.  The two calls can be
  * distinguished by looking for @c SVN_WC_ENTRY_THIS_DIR in the 'name'
@@ -1382,7 +1384,7 @@ svn_error_t *svn_wc_ensure_adm (const char *path,
  * svn_wc_get_status_editor() for depths 1 and 2, since the latter
  * two involve multiple return values.
  *
- * NOTE:  The status structures may contain a @c NULL ->entry field.
+ * @note The status structures may contain a @c NULL ->entry field.
  * This indicates an item that is not versioned in the working copy.
  */
 
@@ -1739,7 +1741,8 @@ svn_wc_status_set_repos_locks (void *set_locks_baton,
  * with its path and the @a notify_baton.  @a notify_func may be @c NULL 
  * if you are not interested in this information.
  *
- * Important: this is a variant of svn_wc_add().  No changes will happen
+ * @par Important:
+ * This is a variant of svn_wc_add().  No changes will happen
  * to the repository until a commit occurs.  This scheduling can be
  * removed with svn_client_revert().
  *
@@ -2147,7 +2150,7 @@ svn_wc_crawl_revisions (const char *path,
  *
  * If @a path is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  *
- * NOTE: Due to the way in which "WC-root-ness" is calculated, passing
+ * @note Due to the way in which "WC-root-ness" is calculated, passing
  * a @a path of `.' to this function will always return @c TRUE.
  */
 svn_error_t *svn_wc_is_wc_root (svn_boolean_t *wc_root,
@@ -2933,7 +2936,7 @@ svn_error_t *svn_wc_translated_file (const char **xlated_p,
  * copy (and set @a *tempfile to null if appropriate), and return the
  * error @c SVN_ERR_WC_CORRUPT_TEXT_BASE.
  *
- * Note: this is intended for use with both infix and postfix
+ * @note This is intended for use with both infix and postfix
  * text-delta styled editor drivers.
  */
 svn_error_t *svn_wc_transmit_text_deltas (const char *path,

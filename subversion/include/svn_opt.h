@@ -169,7 +169,7 @@ svn_opt_subcommand_help (const char *subcommand,
 /**
  * Various ways of specifying revisions. 
  *
- * Note:
+ * @note
  * In contexts where local mods are relevant, the `working' kind
  * refers to the uncommitted "working" revision, which may be modified
  * with respect to its base revision.  In other contexts, `working'
@@ -229,9 +229,7 @@ typedef struct svn_opt_revision_t
  * If @a arg is invalid, return -1; else return 0.
  * It is invalid to omit a revision (as in, ":", "N:" or ":M").
  *
- * Note:
- *
- * It is typical, though not required, for @a *start_revision and
+ * @note It is typical, though not required, for @a *start_revision and
  * @a *end_revision to be @c svn_opt_revision_unspecified kind on entry.
  *
  * Use @a pool for temporary allocations.

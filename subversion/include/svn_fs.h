@@ -159,7 +159,7 @@ svn_error_t *svn_fs_create (svn_fs_t **fs_p, const char *path,
  * Two threads may access the same filesystem simultaneously only if
  * they open separate filesystem objects.
  *
- * NOTE: you probably don't want to use this directly.  Take a look at
+ * @note You probably don't want to use this directly.  Take a look at
  * svn_repos_open() instead.
  * 
  * @since New in 1.1.
@@ -169,7 +169,7 @@ svn_error_t *svn_fs_open (svn_fs_t **fs_p, const char *path,
 
 /**
  * Return the path to @a fs's repository, allocated in @a pool.
- * Note: this is just what was passed to svn_fs_create() or
+ * @note This is just what was passed to svn_fs_create() or
  * svn_fs_open() -- might be absolute, might not.
  * 
  * @since New in 1.1.
@@ -414,7 +414,7 @@ svn_boolean_t svn_fs_check_related (const svn_fs_id_t *id1,
 
 
 /**
- * NOTE: This function is not guaranteed to work with all filesystem
+ * @note This function is not guaranteed to work with all filesystem
  * types.  There is currently no un-deprecated equivalent; contact the
  * Subversion developers if you have a need for it.
  *
@@ -592,7 +592,7 @@ svn_error_t *svn_fs_begin_txn (svn_fs_txn_t **txn_p,
  * operations to resolve the conflict, or call svn_fs_abort_txn() to
  * abort the transaction.
  *
- * NOTE:  Success or failure of the commit of @a txn is determined by
+ * @note Success or failure of the commit of @a txn is determined by
  * examining the value of @a *new_rev upon this function's return.  If
  * the value is a valid revision number, the commit was successful,
  * even though a non-@c NULL function return value may indicate that
@@ -608,7 +608,7 @@ svn_error_t *svn_fs_commit_txn (const char **conflict_p,
  * discarded, and the filesystem is left unchanged.  Use @a pool for
  * any necessary allocations.
  *
- * NOTE: This function first sets the state of @a txn to "dead", and
+ * @note This function first sets the state of @a txn to "dead", and
  * then attempts to purge it and any related data from the filesystem.
  * If some part of the cleanup process fails, @a txn and some portion
  * of its data may remain in the database after this function returns.
@@ -876,7 +876,7 @@ svn_error_t *svn_fs_node_history (svn_fs_history_t **history_p,
  * FALSE, also return @c NULL if stepping backwards in history to @a
  * prev_history_t would cross a filesystem copy operation.  
  *
- * NOTE: If this is the first call to svn_fs_history_prev() for the @a
+ * @note If this is the first call to svn_fs_history_prev() for the @a
  * history object, it could return a history object whose location is
  * the same as the original.  This will happen if the original
  * location was an interesting one (where the node was modified, or
@@ -885,12 +885,12 @@ svn_error_t *svn_fs_node_history (svn_fs_history_t **history_p,
  * returned by svn_fs_node_history(), and instead go ahead and begin
  * calling svn_fs_history_prev().
  *
- * NOTE: This function uses node-id ancestry alone to determine
+ * @note This function uses node-id ancestry alone to determine
  * modifiedness, and therefore does NOT claim that in any of the
  * returned revisions file contents changed, properties changed,
  * directory entries lists changed, etc.  
  *
- * ALSO NOTE: The revisions returned for @a path will be older than or
+ * @note The revisions returned for @a path will be older than or
  * the same age as the revision of that path in @a root.  That is, if
  * @a root is a revision root based on revision X, and @a path was
  * modified in some revision(s) younger than X, those revisions
@@ -1188,7 +1188,7 @@ svn_error_t *svn_fs_delete (svn_fs_root_t *root,
  * mutable nodes --- it's just more code.)  Further, @a to_root and @a
  * from_root must represent the same filesystem.
  *
- * Note: to do a copy without preserving copy history, use
+ * @note To do a copy without preserving copy history, use
  * svn_fs_revision_link().
  *
  * Do any necessary temporary allocation in @a pool.
@@ -1400,7 +1400,7 @@ svn_error_t *svn_fs_youngest_rev (svn_revnum_t *youngest_p,
 /** Deltify predecessors of paths modified in @a revision in
  * filesystem @a fs.  Use @a pool for all allocations. 
  * 
- * NOTE:  This can be a time-consuming process, depending the breadth
+ * @note This can be a time-consuming process, depending the breadth
  * of the changes made in @a revision, and the depth of the history of
  * those changed paths. 
  */
@@ -1561,7 +1561,7 @@ svn_error_t *svn_fs_set_uuid (svn_fs_t *fs,
  * path (or if @a path doesn't exist in HEAD), return @c
  * SVN_ERR_FS_OUT_OF_DATE.
  *
- * Note:  at this time, only files can be locked.
+ * @note At this time, only files can be locked.
  */
 svn_error_t *svn_fs_lock (svn_lock_t **lock,
                           svn_fs_t *fs,

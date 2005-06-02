@@ -102,7 +102,7 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...);
  *
  * The returned basename will be allocated in @a pool.
  *
- * Note: if an empty string is passed, then an empty string will be returned.
+ * @note If an empty string is passed, then an empty string will be returned.
  */
 char *svn_path_basename (const char *path, apr_pool_t *pool);
 
@@ -262,7 +262,7 @@ svn_path_split_if_file(const char *path,
  * If there are no items in @a targets, set @a *pcommon and (if
  * applicable) @a *pcondensed_targets to @c NULL.
  *
- * NOTE: There is no guarantee that @a *pcommon is within a working
+ * @note There is no guarantee that @a *pcommon is within a working
  * copy.  */
 svn_error_t *
 svn_path_condense_targets (const char **pcommon,
@@ -423,7 +423,7 @@ const char *svn_path_uri_from_iri (const char *iri,
  * doesn't have any special meaning in @a uri at their positions.  If no
  * characters need escaping, just return @a uri.
  *
- * NOTE: Currently, this function escapes <, >, ", space, {, }, |, \, ^, and `.
+ * @note Currently, this function escapes <, >, ", space, {, }, |, \, ^, and `.
  * This may be extended in the future to do context-dependent escaping.
  *
  * @since New in 1.1.
