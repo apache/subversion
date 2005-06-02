@@ -51,7 +51,7 @@ ensure "http://subversion.tigris.org/branding/css/print.css" \
 ensure "http://subversion.tigris.org/branding/scripts/tigris.js" \
   "tigris-branding/scripts"
 
-for f in `sed -n 's,.*url(\.\./images/\([^)]*\).*,\1,;tp;be;:p;p;:e' \
+for f in `sed -n -e 's,.*url(\.\./images/\([^)]*\).*,\1,;tp' -etp -ed -e:p -ep \
   $WWWDIR/tigris-branding/css/*.css`; do
   ensure "http://subversion.tigris.org/branding/images/$f" \
     "tigris-branding/images"
