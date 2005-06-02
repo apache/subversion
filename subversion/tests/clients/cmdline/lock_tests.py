@@ -1012,6 +1012,155 @@ def lock_uri_encoded(sbox):
                                      file_path)
 
 
+#----------------------------------------------------------------------
+# A regression test for a bug when svn:needs-lock and svn:executable
+# interact badly. The bug was fixed in trunk @ r14859.
+def lock_and_exebit1(sbox):
+  "svn:needs-lock and svn:executable, part I"
+
+  mode_w = stat.S_IWUSR
+  mode_x = stat.S_IXUSR
+  mode_r = stat.S_IRUSR
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  
+  svntest.actions.run_and_verify_svn(None, None, None, 'ps',
+                                     'svn:needs-lock', ' ', gamma_path)
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'ps',
+                                     'svn:executable', ' ', gamma_path)
+  
+  # commit
+  svntest.actions.run_and_verify_svn(None, None, None, 'commit',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', gamma_path)
+  # mode should be +r, -w, +x
+  gamma_stat = os.stat (gamma_path)[0]
+  if (not gamma_stat & mode_r
+      or gamma_stat & mode_w
+      or not gamma_stat & mode_x):
+    print "Committing a file with 'svn:needs-lock, svn:executable'"
+    print "did not set the file to read-only, executable"
+    raise svntest.Failure
+
+  # lock
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', gamma_path)
+  # mode should be +r, +w, +x
+  gamma_stat = os.stat (gamma_path)[0]
+  if (not gamma_stat & mode_r 
+      or not gamma_stat & mode_w 
+      or not gamma_stat & mode_x):
+    print "Locking a file with 'svn:needs-lock, svn:executable'"
+    print "did not set the file to read-write, executable"
+    raise svntest.Failure
+
+  # modify
+  svntest.main.file_append(gamma_path, "check stat output after mod & unlock")
+  
+  # unlock
+  svntest.actions.run_and_verify_svn(None, None, None, 'unlock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     gamma_path)
+  
+  # Mode should be +r, -w, +x
+  gamma_stat = os.stat (gamma_path)[0]
+  if (not gamma_stat & mode_r 
+      or gamma_stat & mode_w 
+      or not gamma_stat & mode_x):
+    print "Unlocking a file with 'svn:needs-lock, svn:executable'"
+    print "did not set the file to read-only, executable"
+    raise svntest.Failure
+  
+  # ci
+  svntest.actions.run_and_verify_svn(None, None, None, 'commit',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', gamma_path)
+  
+  # Mode should be still +r, -w, +x
+  gamma_stat = os.stat (gamma_path)[0]
+  if (not gamma_stat & mode_r 
+      or gamma_stat & mode_w 
+      or not gamma_stat & mode_x):
+    print "Commiting a file with 'svn:needs-lock, svn:executable'"
+    print "after unlocking modified file's permissions"
+    raise svntest.Failure
+
+
+#----------------------------------------------------------------------
+# A variance of lock_and_exebit1: same test without unlock
+def lock_and_exebit2(sbox):
+  "svn:needs-lock and svn:executable, part II"
+
+  mode_w = stat.S_IWUSR
+  mode_x = stat.S_IXUSR
+  mode_r = stat.S_IRUSR
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+  
+  svntest.actions.run_and_verify_svn(None, None, None, 'ps',
+                                     'svn:needs-lock', ' ', gamma_path)
+
+  svntest.actions.run_and_verify_svn(None, None, None, 'ps',
+                                     'svn:executable', ' ', gamma_path)
+  
+  # commit
+  svntest.actions.run_and_verify_svn(None, None, None, 'commit',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', gamma_path)
+  # mode should be +r, -w, +x
+  gamma_stat = os.stat (gamma_path)[0]
+  if (not gamma_stat & mode_r
+      or gamma_stat & mode_w
+      or not gamma_stat & mode_x):
+    print "Committing a file with 'svn:needs-lock, svn:executable'"
+    print "did not set the file to read-only, executable"
+    raise svntest.Failure
+
+  # lock
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', gamma_path)
+  # mode should be +r, +w, +x
+  gamma_stat = os.stat (gamma_path)[0]
+  if (not gamma_stat & mode_r 
+      or not gamma_stat & mode_w 
+      or not gamma_stat & mode_x):
+    print "Locking a file with 'svn:needs-lock, svn:executable'"
+    print "did not set the file to read-write, executable"
+    raise svntest.Failure
+
+  # modify
+  svntest.main.file_append(gamma_path, "check stat output after mod & unlock")
+  
+  # commit
+  svntest.actions.run_and_verify_svn(None, None, None, 'commit',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', '', gamma_path)
+  
+  # Mode should be +r, -w, +x
+  gamma_stat = os.stat (gamma_path)[0]
+  if (not gamma_stat & mode_r 
+      or gamma_stat & mode_w 
+      or not gamma_stat & mode_x):
+    print "Commiting a file with 'svn:needs-lock, svn:executable'"
+    print "did not set the file to read-only, executable"
+    raise svntest.Failure
+
 
 ########################################################################
 # Run the tests
@@ -1042,7 +1191,9 @@ test_list = [ None,
               lock_several_files,
               lock_switched_files,
               lock_uri_encoded,
-             ]
+	      lock_and_exebit1,
+	      lock_and_exebit2,
+	      ]
 
 if __name__ == '__main__':
   svntest.main.run_tests(test_list)
