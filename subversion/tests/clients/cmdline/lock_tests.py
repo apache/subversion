@@ -1191,9 +1191,9 @@ test_list = [ None,
               lock_several_files,
               lock_switched_files,
               lock_uri_encoded,
-	      lock_and_exebit1,
-	      lock_and_exebit2,
-	      ]
+              lock_and_exebit1,
+              lock_and_exebit2,
+            ]
 
 if __name__ == '__main__':
   svntest.main.run_tests(test_list)
