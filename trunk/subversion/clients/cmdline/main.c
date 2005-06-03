@@ -721,8 +721,13 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "     or hostname change) but your working copy still reflects the "
        "same\n"
        "     directory within the same repository.\n"),
+#if !AS400
     { 'r', 'N', 'q', svn_cl__merge_cmd_opt, svn_cl__relocate_opt,
       SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+#else
+    { 'r', 'N', 'q', svn_cl__relocate_opt,
+      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+#endif
  
   { "unlock", svn_cl__unlock, {0},
     N_("Unlock working copy paths or URLs.\n"
