@@ -35,6 +35,8 @@
 
 #include "svn_private_config.h"
 
+#define DOT_TEMP_STR  "\x2e\x74\x6d\x70"  /* ".tmp" */
+        
 
 /*** Code. ***/
 
@@ -960,7 +962,7 @@ repos_to_wc_copy (const char *src_url,
       svn_error_t *err;
 
       SVN_ERR (svn_io_open_unique_file
-               (&fp, &new_text_path, dst_path, ".tmp", FALSE, pool));
+               (&fp, &new_text_path, dst_path, DOT_TEMP_STR, FALSE, pool));
 
       fstream = svn_stream_from_aprfile (fp, pool);
       SVN_ERR (svn_ra_get_file (ra_session, "", src_revnum, fstream, &real_rev,
