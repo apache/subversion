@@ -326,13 +326,14 @@ svn_cl__make_log_msg_baton (void **baton,
     }      
   else
     {
-#if !APR_CHARSET_EBCDIC
-      lmb->message = opt_state->message;
-#else
+#if APR_CHARSET_EBCDIC
       /* On ebcdic platforms we assume strings are utf-8 whenever possible. */
-      SVN_ERR (svn_utf_cstring_to_utf8(&lmb->message, opt_state->message, 
-                                       pool));
+      if (opt_state->message)
+        SVN_ERR (svn_utf_cstring_to_utf8(&lmb->message, opt_state->message, 
+                                         pool));
+      else
 #endif
+        lmb->message = opt_state->message;
     }
 
   lmb->editor_cmd = opt_state->editor_cmd;
