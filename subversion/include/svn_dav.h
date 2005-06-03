@@ -49,8 +49,11 @@ extern "C" {
  */
 #define SVN_DAV_OPTIONS_HEADER "X-SVN-Options"
 
-/** @{
- * Specific options that can appear in the options-header: */
+/**
+ * @name options-header defines
+ * Specific options that can appear in the options-header:
+ * @{
+ */
 #define SVN_DAV_OPTION_NO_MERGE_RESPONSE "no-merge-response"
 #define SVN_DAV_OPTION_LOCK_BREAK        "lock-break"
 #define SVN_DAV_OPTION_LOCK_STEAL        "lock-steal"
@@ -79,7 +82,9 @@ extern "C" {
 #define SVN_DAV_LOCK_OWNER_HEADER "X-SVN-Lock-Owner"
 
 
-/** @{
+/**
+ * @name Fulltext MD5 headers
+ *
  * These headers are for client and server to verify that the base
  * and the result of a change transmission are the same on both
  * sides, regardless of what transformations (svndiff deltification,
@@ -96,6 +101,7 @@ extern "C" {
  * corrupt, the error will be caught earlier if the base md5 is used.
  *
  * Normal WebDAV or DeltaV clients don't use these.
+ * @{
  */
 #define SVN_DAV_BASE_FULLTEXT_MD5_HEADER "X-SVN-Base-Fulltext-MD5"
 #define SVN_DAV_RESULT_FULLTEXT_MD5_HEADER "X-SVN-Result-Fulltext-MD5"

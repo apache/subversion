@@ -278,11 +278,12 @@ typedef struct svn_client_commit_info_t
 } svn_client_commit_info_t;
 
 
-/** @{
- * State flags for use with the @c svn_client_commit_item_t structure
- *
+/**
+ * @name Commit state flags
+ * @brief State flags for use with the @c svn_client_commit_item_t structure
  * (see the note about the namespace for that structure, which also
  * applies to these flags).
+ * @{
  */
 #define SVN_CLIENT_COMMIT_ITEM_ADD         0x01
 #define SVN_CLIENT_COMMIT_ITEM_DELETE      0x02
@@ -425,12 +426,15 @@ typedef struct svn_client_ctx_t
 } svn_client_ctx_t;
 
 
-/** @{
+/**
+ * @name Authentication information file names
+ *
  * Names of files that contain authentication information.
  *
  * These filenames are decided by libsvn_client, since this library
  * implements all the auth-protocols;  libsvn_wc does nothing but
  * blindly store and retrieve these files from protected areas.
+ * @{
  */
 #define SVN_CLIENT_AUTH_USERNAME            "username"
 #define SVN_CLIENT_AUTH_PASSWORD            "password"
@@ -1967,9 +1971,12 @@ typedef struct svn_info_t
   /** Whether or not to ignore the next 10 wc-specific fields. */
   svn_boolean_t has_wc_info;
 
-  /** @{ */
-  /** These things only apply to a working-copy path.
-   * See svn_wc_entry_t for explanations. */
+  /**
+   * @name Working-copy path fields
+   * These things only apply to a working-copy path.
+   * See svn_wc_entry_t for explanations.
+   * @{
+   */
   svn_wc_schedule_t schedule;
   const char *copyfrom_url;
   svn_revnum_t copyfrom_rev;

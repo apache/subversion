@@ -50,9 +50,11 @@ typedef struct svn_config_t svn_config_t;
 
 /*** Configuration Defines ***/
 
-/** @{
+/**
+ * @name Client configuration files strings
  * Strings for the names of files, sections, and options in the
  * client configuration files.
+ * @{
  */
 #define SVN_CONFIG_CATEGORY_SERVERS        "servers"
 #define SVN_CONFIG_SECTION_GROUPS               "groups"
@@ -90,9 +92,10 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_SECTION_AUTO_PROPS           "auto-props"
 /** @} */
 
-/** @{
+/** @name Repository conf directory configuration files strings
  * Strings for the names of sections and options in the
  * repository conf directory configuration files.
+ * @{
  */
 /* For repository svnserve.conf files */
 #define SVN_CONFIG_SECTION_GENERAL              "general"
