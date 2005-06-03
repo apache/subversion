@@ -15,9 +15,10 @@
 <!ATTLIST entry
   path CDATA #REQUIRED>
 
-<!ELEMENT wc-status (lock?)>
+<!ELEMENT wc-status (commit?, lock?)>
 <!-- item: item/text status -->
 <!-- props: properites status -->
+<!-- revision: base revision numer -->
 <!-- wc-locked: WC dir locked? -->
 <!-- copied: add with history? -->
 <!-- switched: item switched relative to its parent? -->
@@ -26,6 +27,7 @@
   replaced | external | unversioned | incomplete | obstructed |
   normal | none) #REQUIRED
   props (conflicted | modified | normal | none) #REQUIRED
+  revision CDATA #IMPLIED
   wc-locked %BOOL;
   copied %BOOL;
   switched %BOOL;
@@ -38,6 +40,12 @@
   item (added | deleted | modified | replaced | none) #REQUIRED
   props (modified | none) #REQUIRED
 >
+
+<!ELEMENT commit (author?, date?)>
+<!-- revision: last committed revision -->
+<!ATTLIST commit revision CDATA #REQUIRED>
+<!ELEMENT author (#PCDATA)>  <!-- author -->
+<!ELEMENT date (#PCDATA)>  <!-- date in ISO format -->
 
 <!-- Lock info stored in WC or repos. -->
 <!ELEMENT lock (token, owner, comment?, created, expires?)>
