@@ -671,12 +671,20 @@ parsed_request(ne_session *sess,
   /* Add the Accept-Language header to announce our language
      preferences, as per section 14.4 of RFC 2616
      <http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html>. */
-  /* ### l10n-problems says that Windows doesn't define LC_MESSAGES,
-     ### but Visual Studio 2005 appears to:
-     ### <http://msdn2.microsoft.com/library/x99tb11d(en-us,vs.80).aspx> */
-  locale = setlocale(LC_MESSAGES, NULL);
+#ifndef WIN32
+  /* ### As Windows doesn't define LC_MESSAGES, we'd use LC_ALL
+     ### instead for the first param to setlocale().  However, on
+     ### Windows, its return value does not produce an ISO-639
+     ### two-letter language abbreviation, let alone an ISO-3166
+     ### country code:
+     ### <http://msdn2.microsoft.com/library/x99tb11d(en-us,vs.80).aspx>
+     ### A mapping of aliases to ISO code is necessary. */
+  /* ### Urk!  We have this problem with aliases like "swedish" on
+     ### other OSes as well. */
   if (locale != NULL)
     {
+      locale = apr_pstrdup(pool, locale);
+
       /* Transform underscore to dash (expected per section 3.10). */
       char *delim = strchr(locale, '_');
       if (delim != NULL)
@@ -689,6 +697,7 @@ parsed_request(ne_session *sess,
         *delim = '\0';
     }
   ne_add_request_header(req, "Accept-Language", locale);
+#endif
 
   /* Register the "error" accepter and body-reader with the request --
      the one to use when HTTP status is *not* 2XX */
