@@ -221,8 +221,39 @@ svn_cl__print_status_xml (const char *path,
     apr_hash_set (att_hash, "copied", APR_HASH_KEY_STRING, "true");
   if (status->switched)
     apr_hash_set (att_hash, "switched", APR_HASH_KEY_STRING, "true");
+  if (status->entry && ! status->entry->copied)
+    apr_hash_set (att_hash, "revision", APR_HASH_KEY_STRING,
+                  apr_psprintf (pool, "%ld", status->entry->revision));
   svn_xml_make_open_tag_hash (&sb, pool, svn_xml_normal, "wc-status",
                               att_hash);
+
+  if (status->entry && SVN_IS_VALID_REVNUM (status->entry->cmt_rev))
+    {
+      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "commit",
+                             "revision",
+                             apr_psprintf (pool, "%ld",
+                                           status->entry->cmt_rev),
+                             NULL);
+
+      if (status->entry->cmt_author)
+        {
+          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "author",
+                                 NULL);
+          svn_xml_escape_cdata_cstring (&sb, status->entry->cmt_author, pool);
+          svn_xml_make_close_tag (&sb, pool, "author");
+        }
+
+      if (status->entry->cmt_date)
+        {
+          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "date",
+                                 NULL);
+          svn_xml_escape_cdata_cstring
+            (&sb, svn_time_to_cstring (status->entry->cmt_date, pool), pool);
+          svn_xml_make_close_tag (&sb, pool, "date");
+        }
+
+      svn_xml_make_close_tag (&sb, pool, "commit");
+    }
 
   if (status->entry && status->entry->lock_token)
     {

@@ -825,7 +825,19 @@ def status_in_xml(sbox):
 
   file_name = "iota"
   file_path = os.path.join (wc_dir, file_name)
-  svntest.main.file_append(file_path, "This line added in iota to test svn st --xml\n")
+  svntest.main.file_append(file_path, "test status --xml\n")
+
+  # Retrieve last changed date from svn log
+  output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'log', file_path,
+                                                     '--xml', '-rHEAD')
+  info_msg = "<date>"
+  for line in output:
+    if line.find(info_msg) >= 0:
+      time_str = line[:len(line)]
+      break
+  else:
+    raise svntest.Failure
 
   template = ["<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
               "<status>\n",
@@ -835,7 +847,13 @@ def status_in_xml(sbox):
               "   path=\"%s\">\n" % (file_path),
               "<wc-status\n",
               "   props=\"none\"\n",
-              "   item=\"modified\">\n",
+              "   item=\"modified\"\n",
+              "   revision=\"1\">\n",
+              "<commit\n",
+              "   revision=\"1\">\n",
+              "<author>%s</author>\n" % svntest.main.wc_author,
+              time_str,
+              "</commit>\n",
               "</wc-status>\n",
               "</entry>\n",
               "<against\n",
