@@ -16,6 +16,8 @@
  * ====================================================================
  */
 
+#include <locale.h>  /* for setlocale() and LC_MESSAGES */
+
 #include <apr_pools.h>
 
 #define APR_WANT_STRFUNC
@@ -664,6 +666,14 @@ parsed_request(ne_session *sess,
         ne_add_response_body_reader(req, ne_accept_2xx, 
                                     ne_xml_parse_v, success_parser);
     }
+
+  /* Add the Accept-Language header to announce our language
+     preferences, as per section 14.4 of RFC 2616
+     <http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html>. */
+  /* ### l10n-problems says that Windows doesn't define LC_MESSAGES,
+     ### but Visual Studio 2005 appears to:
+     ### <http://msdn2.microsoft.com/library/x99tb11d(en-us,vs.80).aspx> */
+  ne_add_request_header(req, "Accept-Language", setlocale(LC_MESSAGES, NULL));
 
   /* Register the "error" accepter and body-reader with the request --
      the one to use when HTTP status is *not* 2XX */
