@@ -557,6 +557,7 @@ parsed_request(ne_session *sess,
   ne_decompress *decompress_err = NULL;
   ne_xml_parser *success_parser = NULL;
   ne_xml_parser *error_parser = NULL;
+  char *locale;
   int rv;
   int decompress_rv;
   int code;
@@ -673,7 +674,21 @@ parsed_request(ne_session *sess,
   /* ### l10n-problems says that Windows doesn't define LC_MESSAGES,
      ### but Visual Studio 2005 appears to:
      ### <http://msdn2.microsoft.com/library/x99tb11d(en-us,vs.80).aspx> */
-  ne_add_request_header(req, "Accept-Language", setlocale(LC_MESSAGES, NULL));
+  locale = setlocale(LC_MESSAGES, NULL);
+  if (locale != NULL)
+    {
+      /* Transform underscore to dash (expected per section 3.10). */
+      char *delim = strchr(locale, '_');
+      if (delim != NULL)
+        *delim = '-';
+
+      /* If a character set is present (e.g. en_US.UTF-8,
+         zh_CN.GB2312, etc.), strip it off to leave only a locale. */
+      delim = strchr(delim != NULL ? delim : locale, '.');
+      if (delim != NULL)
+        *delim = '\0';
+    }
+  ne_add_request_header(req, "Accept-Language", locale);
 
   /* Register the "error" accepter and body-reader with the request --
      the one to use when HTTP status is *not* 2XX */
