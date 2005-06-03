@@ -681,7 +681,9 @@ parsed_request(ne_session *sess,
      ### A mapping of aliases to ISO code is necessary. */
   /* ### Urk!  We have this problem with aliases like "swedish" on
      ### other OSes as well. */
-  if (locale != NULL)
+  locale = setlocale(LC_MESSAGES, NULL);
+  if (locale != NULL &&
+      apr_strnatcmp(locale, "C") != 0 && apr_strnatcmp(locale, "POSIX") != 0)
     {
       locale = apr_pstrdup(pool, locale);
 
