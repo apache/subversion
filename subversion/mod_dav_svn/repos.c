@@ -1208,6 +1208,15 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   dav_locktoken_list *ltl;
   struct cleanup_fs_access_baton *cleanup_baton;
 
+  serr = svn_dav__negotiate_lang_prefs(r);
+  if (serr)
+    {
+      ap_log_perror(APLOG_MARK, APLOG_ERR, serr->apr_err, r->pool,
+                    "svn_dav__negotiate_lang_prefs: error negotiating "
+                    "language preferences: %s", serr->message);
+      svn_error_clear(serr);
+    }
+
   repo_name = dav_svn_get_repo_name(r);
   xslt_uri = dav_svn_get_xslt_uri(r);
 

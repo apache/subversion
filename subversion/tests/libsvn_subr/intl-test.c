@@ -29,6 +29,7 @@
 #include <apr_pools.h>
 
 #include "svn_error.h"
+#include "svn_pools.h"
 #include "svn_intl.h"
 
 #include "../svn_test.h"
@@ -85,10 +86,20 @@ fail (apr_pool_t *pool, const char *fmt, ...)
   return svn_error_create (SVN_ERR_TEST_FAILED, 0, msg);
 }
 
+typedef struct
+{
+  const char *key;
+  const char *value;
+  const char *locale;
+} l10n_t;
 
-/* Localization test case taken from subversion/po/es.po. */
-static const char *intl_keys[] = { "Error writing to '%s'", NULL };
-static const char *intl_values[] = { "Error escribiendo en '%s'", NULL };
+static l10n_t l10n_list[] =
+  {
+    { "Skipping binary file: '%s'\n", "Omitiendo el archivo binario: '%s'\n",
+      "es" },
+    { "Error writing to '%s'", "Error escribiendo en '%s'", "es" },
+    { NULL, 0 }
+  };
 
 static svn_error_t *
 test1 (const char **msg, 
@@ -96,15 +107,17 @@ test1 (const char **msg,
        svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
-  int i;
+  l10n_t *l10n;
   apr_status_t st;
+  apr_pool_t *subpool;
 
   *msg = "test init, l10n, and shutdown of svn_intl";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  st = svn_intl_initialize(pool);
+  subpool = svn_pool_create(pool);
+  st = svn_intl_initialize(subpool);
   if (st != APR_SUCCESS)
     {
       return fail(pool, "svn_intl_initialize failed with status of '%d'", st);
@@ -112,29 +125,31 @@ test1 (const char **msg,
 
   /* Test values retrieved from our IntlParser instance against
      values retrieved using svn_intl. */
-  for (i = 0; intl_keys[i] != NULL; i++)
+  for (l10n = l10n_list; l10n->key != NULL; l10n++)
     {
-      const char *key = intl_keys[i];
-      const char *expected_val = intl_values[i];
       /* ### Account for a not-yet-installed resource bundle by using
          ### srcdir instead of SVN_LOCALE_DIR to remove XFAIL. */
-      const char *intl_val = svn_intl_dlgettext(PACKAGE_NAME, "es", key);
-#if 0
-      printf("Testing expected value '%s' against '%s' for "
-             "option '%s'\n", expected_val, intl_val, key);
-#endif
-      /* Fail iff one value is null, or the strings don't match. */
-      if ((expected_val == NULL) != (intl_val == NULL)
-          || (expected_val != NULL && intl_val != NULL
-              && apr_strnatcmp(expected_val, intl_val) != 0))
+
+      /* ### Test that svn_intl_dgettext(PACKAGE_NAME, l10n->key)
+         ### returns the key when in "en" locale, or lang not
+         ### available. */
+
+      const char *intl_value = svn_intl_dlgettext (PACKAGE_NAME, l10n->locale,
+                                                   l10n->key);
+      if ((l10n->value == NULL) != (intl_value == NULL)
+          || (l10n->value != NULL && intl_value != NULL
+              && apr_strnatcmp(l10n->value, intl_value) != 0))
         return fail(pool, "Expected value '%s' not equal to '%s' for "
-                    "text '%s'", expected_val, intl_val, key);
+                    "text '%s'", l10n->value, intl_value, l10n->key);
     }
-  svn_intl_terminate();
+
+  apr_pool_destroy(subpool);
+
+  /* ### Test re-initialization after pool passed to
+     ### svn_intl_initialize() is destroyed. */
 
   return SVN_NO_ERROR;
 }
-
 
 /*
    ====================================================================

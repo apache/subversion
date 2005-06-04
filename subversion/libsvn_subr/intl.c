@@ -19,10 +19,14 @@
 #include <apr_mmap.h>
 #include <apr_file_io.h>
 #include <apr_strings.h>
+#include <apr_thread_proc.h>
 #include <assert.h>
 #include <apr_hash.h>
 #include <ctype.h>
 #include <stdlib.h>
+
+#include <locale.h>  /* for dgettext */
+#include <libintl.h> /* for dgettext */
 
 #include "svn_intl.h"
 #include "svn_private_config.h" /* for SVN_LOCALE_DIR */
@@ -30,7 +34,7 @@
 
 
 static apr_hash_t *cache;
-static apr_pool_t *private_pool;
+static apr_pool_t *private_pool = NULL;
 #if APR_HAS_THREADS
 static apr_thread_mutex_t *cache_lock;
 #endif
@@ -45,36 +49,56 @@ typedef struct
   char locale[16];
 } message_table_key_t;
 
+/* Null out a few statics to allow for the possibility of graceful
+   re-initialization. */
+static apr_status_t
+svn_intl_terminate (void *ignored)
+{
+  cache = NULL;
+  /* ### Does an apr_thread_mutex_t need to be explicitly released? */
+  cache_lock = NULL;
+  private_pool = NULL;
+  return APR_SUCCESS;
+}
+
 apr_status_t
 svn_intl_initialize (apr_pool_t *parent_pool)
 {
   apr_status_t st;
 
-  st = apr_pool_create (&private_pool, parent_pool);
-  if (st)
-    return st;
-  cache = apr_hash_make (private_pool);
-#if APR_HAS_THREADS
-  st =
-    apr_thread_mutex_create (&cache_lock, APR_THREAD_MUTEX_DEFAULT,
-			     private_pool);
-  if (st)
+  /* ### Fix race condition in initialization of private_pool */
+  if (private_pool == NULL)
     {
-      apr_pool_destroy (private_pool);
-      return st;
-    }
+      st = apr_pool_create (&private_pool, parent_pool);
+      if (st == APR_SUCCESS)
+        {
+           apr_pool_cleanup_register(private_pool, NULL,
+                                     svn_intl_terminate, NULL);
+
+          cache = apr_hash_make (private_pool);
+#if APR_HAS_THREADS
+          st = apr_thread_mutex_create (&cache_lock, APR_THREAD_MUTEX_DEFAULT,
+                                        private_pool);
+          if (st != APR_SUCCESS)
+            apr_pool_destroy (private_pool);
 #endif
-  return 0;
+        }
+    }
+  return st;
 }
 
-/* ### Is there a way to register svn_gettext_terminate as a clean
-   ### hook which is called on SVN or APR termination? */
-
-apr_status_t
-svn_intl_terminate (void)
+void
+svn_intl_set_locale_prefs (void *context, char **locale_prefs)
 {
-  apr_pool_destroy (private_pool);
-  return 0;
+  /* ### TODO: Save locale information to thread-local storage. */
+
+
+  /* ### LATER: Should we save the locale information to the context
+     ### instead?  For instance, if context was an apr_pool_t, we
+     ### could use its userdata field.
+
+     ((apr_pool_t *) context)->userdata
+  */
 }
 
 typedef struct
@@ -102,6 +126,10 @@ message_table_open (message_table_t **mt, const char *domain,
   const void *mo;
   apr_uint32_t *mem;
   apr_status_t st;
+
+  /* ### The .mo format is not standard across gettext implementations
+     ### -- it's specific to GNU gettext.  A more portable
+     ### implementation is necessary! */
 
   /* Follows macro usage from libsvn_subr/cmdline.c:svn_cmdline_init() */
   apr_snprintf (fn, sizeof (fn),
@@ -183,10 +211,37 @@ message_table_gettext (message_table_t *mt, const char *msgid)
     }
 }
 
-/* ### Perhaps use a thread-local to avoid the need for specifying the
-   ### domain and locale, giving us a gettext(char *) API?
-   ### http://apr.apache.org/docs/apr/group__apr__thread__proc.html#ga23 */
+/* ### Especially with the looming possibility of httpd moving to a
+   ### model where a single HTTP request might one day be serviceable
+   ### by multiple threads, the black magic of thread-local storage is
+   ### frowned upon.  Instead, it's been suggested that a context
+   ### parameter (probably apr_pool_t.userdata) be used to indicate
+   ### language preferences, and its contents used to differentiate
+   ### between per-client session preferences (server-side) and global
+   ### user preferences (client-side). */
+const char *
+svn_intl_dgettext (const char *domain, const char *msgid)
+{
+  const char *locale;
+  /* See http://apr.apache.org/docs/apr/group__apr__thread__proc.html */
+  apr_threadkey_t *key;
+  /* ### use sub-pool? */
+  apr_threadkey_private_create (&key, NULL /* ### */, private_pool);
+  apr_threadkey_private_get (&locale, key);
+  apr_threadkey_private_delete (key);
 
+  if (locale == NULL)
+    {
+      /* ### A shortcut to avoid dealing with locale-related env vars,
+         ### GetThreadLocale(), etc.  Ideally, we'd used only one
+         ### gettext-like implementation which suites our purposes. */
+      return dgettext(domain, msgid);
+    }
+  else
+    {
+      return svn_intl_dlgettext(domain, locale, msgid);
+    }
+}
 
 const char *
 svn_intl_dlgettext (const char *domain, const char *locale, const char *msgid)

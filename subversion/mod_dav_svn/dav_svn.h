@@ -644,6 +644,13 @@ dav_svn__sanitize_error(svn_error_t *serr,
                         int http_status,
                         request_rec *r);
 
+
+/* Determine the language preferences based on the Accept-Language
+   header present in @a r.  Returns NULL if no such header is found,
+   or if the header did not contain meaningful input. */
+svn_error_t *
+svn_dav__negotiate_lang_prefs(request_rec *r);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

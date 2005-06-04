@@ -27,6 +27,7 @@
 #include <ne_uri.h>
 #include <ne_compress.h>
 
+#include "svn_intl.h"
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_string.h"
@@ -670,36 +671,18 @@ parsed_request(ne_session *sess,
 
   /* Add the Accept-Language header to announce our language
      preferences, as per section 14.4 of RFC 2616
-     <http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html>. */
-#ifndef WIN32
-  /* ### As Windows doesn't define LC_MESSAGES, we'd use LC_ALL
-     ### instead for the first param to setlocale().  However, on
-     ### Windows, its return value does not produce an ISO-639
-     ### two-letter language abbreviation, let alone an ISO-3166
-     ### country code:
-     ### <http://msdn2.microsoft.com/library/x99tb11d(en-us,vs.80).aspx>
-     ### A mapping of aliases to ISO code is necessary. */
-  /* ### Urk!  We have this problem with aliases like "swedish" on
-     ### other OSes as well. */
-  locale = setlocale(LC_MESSAGES, NULL);
-  if (locale != NULL &&
-      apr_strnatcmp(locale, "C") != 0 && apr_strnatcmp(locale, "POSIX") != 0)
-    {
-      locale = apr_pstrdup(pool, locale);
+     <http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html>.
 
-      /* Transform underscore to dash (expected per section 3.10). */
-      char *delim = strchr(locale, '_');
-      if (delim != NULL)
-        *delim = '-';
+     Since setlocale() doesn't always produce a section 3.10 compliant
+     value, we store the value for the Accept-Language header in each
+     L10N bundle (.po file) for ease of portability. */
 
-      /* If a character set is present (e.g. en_US.UTF-8,
-         zh_CN.GB2312, etc.), strip it off to leave only a locale. */
-      delim = strchr(delim != NULL ? delim : locale, '.');
-      if (delim != NULL)
-        *delim = '\0';
-    }
-  ne_add_request_header(req, "Accept-Language", locale);
-#endif
+  /* xgettext: Set this to the ISO-639 two-letter language code and --
+     optionally -- the ISO-3166 country code for this .po file
+     (e.g. en-US, sv-SE, etc.). */
+  locale = _(SVN_CLIENT_MESSAGE_LOCALE);
+  if (apr_strnatcmp(locale, SVN_CLIENT_MESSAGE_LOCALE) != 0)
+    ne_add_request_header(req, "Accept-Language", locale);
 
   /* Register the "error" accepter and body-reader with the request --
      the one to use when HTTP status is *not* 2XX */
