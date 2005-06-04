@@ -3,6 +3,12 @@
 # Yes, this script is aching to be rewritten in Python.
 # It was never supposed to grow this big!
 
+if [ $# -ne 1 ]; then
+  echo "Usage: 1.  ./validate.sh <filename>" >&2
+  echo "       2.  ./validate.sh all" >&2
+  exit 1
+fi
+
 WWWDIR="`dirname \"$0\"`"
 
 # Much of this script is concerned with setting up a local cache of the
