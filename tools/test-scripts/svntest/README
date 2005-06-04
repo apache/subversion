@@ -95,36 +95,36 @@ Usage
    your needs, (easiest way to get a template for http-2.0.conf is 
    install Apache httpd at once, and after that copy installed httpd.conf, and
    edit it). Things to change are probably: 
-   i)   Listen 127.0.0.1:42024
+
+   i)   Listen 127.0.0.1:52080
    ii)  LoadModule dav_svn_module     modules/mod_dav_svn.so
    iii) User YOUR_USERNAME
         Group YOUR_GROUPNAME
-   v)   ServerName localhost:42024
-   
-   vi)  Add mod_dav_svn block:
+   v)   ServerName localhost:52080
+   vi)  Add mod_dav_svn block to the $HTTPD_NAME.conf:
     
-    <IfModule mod_dav_svn.c>
-        Include conf/mod_dav_svn.conf
-    </IfModule>
-           
-   vii) mod_dav_svn_shared.conf for shared builds:
-    <Location /svn-test-work/repositories>
-        DAV svn
-        SVNParentPath /home/YOUR_USERNAME/svn/obj-sh/subversion/tests/clients/cmdline/svn-test-work/repositories
-        AuthType Basic
-        AuthName "SVN repos"
-        AuthUserFile /usr/local/apache2/conf/passwd
-        Require valid-user
-    </Location>
-    <Location /svn-test-work/local_tmp/repos>
-        DAV svn
-        SVNPath      /home/YOUR_USERNAME/svn/obj-sh/subversion/tests/clients/cmdline/svn-test-work/local_tmp/repos
-        AuthType Basic
-        AuthName "SVN repos"
-        AuthUserFile /usr/local/apache2/conf/passwd
-        Require valid-user
-    </Location>
-    
+        <IfModule mod_dav_svn.c>
+           Include conf/mod_dav_svn.conf
+        </IfModule>
+
+   vii) Check and fix the content of mod_dav_svn.conf
+
+        The actual name of the used mod_dav_svn conf file is
+        mod_dav_${SVN_NAME}.conf, which is mod_dav_svn.conf with
+        default settings.
+
+        If you like to run regression tests for 1.1.x or 1.2.x with
+        the same svntest setup, you have to change the name of
+        SVN_NAME variable, and you have to generate two additional
+        mod_dav_svn conf files:
+
+        sed 's!/svn-test-work!!' mod_dav_svn.conf > mod_dav_svn_1.2.x.conf
+        sed 's!/svn-test-work!!' mod_dav_svn.conf > mod_dav_svn_1.1.x.conf
+        
+        and set SVN_NAME=svn_1.2.x for 1.2.x, and SVN_NAME=svn_1.1.x
+        for 1.1.x.
+
+
    Don't ever touch config files under $INST_DIR/$HTTPD_NAME/conf, they will be overwritten by
    the script.
    
