@@ -62,7 +62,7 @@ _svn()
 		         $nOpts $qOpts"
 		;;
 	blame|annotate|ann|praise)
-		cmdOpts="$rOpts $pOpts -v --verbose"
+		cmdOpts="$rOpts $pOpts -v --verbose --incremental --xml"
 		;;
 	cat)
 		cmdOpts="$rOpts $pOpts"
@@ -99,7 +99,7 @@ _svn()
 		         --editor-cmd $pOpts"
 		;; 
 	info)
-		cmdOpts="$rOpts --targets -R --recursive"
+		cmdOpts="$pOpts $rOpts --targets -R --recursive"
 		;;
 	list|ls)
 		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts \
