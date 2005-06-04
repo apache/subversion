@@ -554,16 +554,12 @@ def lock_unlock(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  pi_base = os.path.join('A', 'D', 'G', 'pi')
-  rho_base = os.path.join('A', 'D', 'G', 'rho')
-  tau_base = os.path.join('A', 'D', 'G', 'tau')
-
-  pi_path = os.path.join(wc_dir, pi_base)
-  rho_path = os.path.join(wc_dir, rho_base)
-  tau_path = os.path.join(wc_dir, tau_base)
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  tau_path = os.path.join(wc_dir, 'A', 'D', 'G', 'tau')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(pi_base, rho_base, tau_base, writelocked='K')
+  expected_status.tweak('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', writelocked='K')
 
   svntest.actions.run_and_verify_svn(None, None, None, 'lock',
                                      '--username', svntest.main.wc_author,
@@ -572,7 +568,7 @@ def lock_unlock(sbox):
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  expected_status.tweak(pi_base, rho_base, tau_base, writelocked=None)
+  expected_status.tweak('A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', writelocked=None)
 
   svntest.actions.run_and_verify_svn(None, None, None, 'unlock',
                                      '--username', svntest.main.wc_author,
