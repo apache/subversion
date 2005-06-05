@@ -1348,7 +1348,13 @@ create_unique_tmpdir (const char **name, apr_pool_t *pool)
       svn_error_t *err;
 
       unique_name = apr_psprintf (pool, "%s.%u", base, i);
-      err = svn_io_dir_make (unique_name, APR_OS_DEFAULT, pool);
+      /* The directory has a predictable name so it is made writeable for
+         the owner only (without relying on the umask) to inhibit symlink
+         attacks on the filenames; the filenames are also, to a certain
+         extent, predictable. */
+      err = svn_io_dir_make (unique_name,
+                             APR_UREAD | APR_UWRITE | APR_UEXECUTE,
+                             pool);
 
       if (!err)
         {
