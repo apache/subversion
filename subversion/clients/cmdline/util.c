@@ -676,7 +676,8 @@ svn_cl__try (svn_error_t *err,
       apr_status_t apr_err;
       va_list ap;
 
-      *success = FALSE;
+      if (success)
+        *success = FALSE;
 
       va_start (ap, quiet);
       while ((apr_err = va_arg (ap, apr_status_t)) != SVN_NO_ERROR)
@@ -691,7 +692,7 @@ svn_cl__try (svn_error_t *err,
         }
       va_end (ap);
     }
-  else
+  else if (success)
     {
       *success = TRUE;
     }
