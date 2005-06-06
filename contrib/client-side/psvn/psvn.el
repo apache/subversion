@@ -270,6 +270,22 @@ It is an experimental feature.")
       (require 'overlay)
     (require 'overlay nil t)))
 
+
+(defcustom svn-status-prefix-key [(control x) (meta s)]
+  "Prefix key for the psvn commands in the global keymap."
+  :type '(choice (const [(control x) ?v ?S])
+                 (const [(super s)])
+                 (const [(hyper s)])
+                 (const [(control x) ?v])
+                 (const [(control x) ?V])
+                 (sexp))
+  :group 'psvn
+  :set  (lambda (var value)
+          (if (boundp var)
+              (global-unset-key (symbol-value var)))
+          (set var value)
+          (global-set-key (symbol-value var) svn-global-keymap)))
+
 ;; Use the normally used mode for files ending in .~HEAD~, .~BASE~, ...
 (add-to-list 'auto-mode-alist '("\\.~?\\(HEAD\\|BASE\\|PREV\\)~?\\'" ignore t))
 
@@ -441,6 +457,20 @@ Otherwise, return \"\"."
     nil ;; great
   (defsubst match-string-no-properties (match)
     (buffer-substring-no-properties (match-beginning match) (match-end match))))
+
+(defvar svn-global-keymap nil "Global keymap for psvn.el")
+
+(when (not svn-global-keymap)
+  (setq svn-global-keymap (make-sparse-keymap))
+  (define-key svn-global-keymap (kbd "s") 'svn-status)
+  (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log))
+  ;; TODO: make the following work
+  ;;(define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
+  ;;(define-key svn-global-keymap (kbd "c") 'svn-status-commit-file))
+
+(when svn-status-prefix-key
+  (global-set-key svn-status-prefix-key svn-global-keymap))
+
 
 (defun svn-status-message (level &rest args)
   "If LEVEL is lower than `svn-status-debug-level' print ARGS using `message'.
