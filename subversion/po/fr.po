@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-05-30 08:27+0200\n"
-"PO-Revision-Date: 2005-05-30 08:45+0200\n"
+"POT-Creation-Date: 2005-06-06 13:04+0200\n"
+"PO-Revision-Date: 2005-06-06 13:45+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: French <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -20,6 +20,7 @@ msgid "'verbose' option invalid in XML mode"
 msgstr "Option 'verbose' invalide en mode XML"
 
 #: clients/cmdline/blame-cmd.c:260 clients/cmdline/ls-cmd.c:306
+#: clients/cmdline/status-cmd.c:192
 msgid "'incremental' option only valid in XML mode"
 msgstr "Option 'incremental' valide seulement en mode XML"
 
@@ -1413,7 +1414,7 @@ msgstr ""
 "                 965       687 suzy         wc/zig.c\n"
 "    État par rapport à la révision   981\n"
 
-#: clients/cmdline/main.c:688
+#: clients/cmdline/main.c:689
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL [PATH]\n"
@@ -1442,7 +1443,7 @@ msgstr ""
 "     comme dans le cas d'un renommage de machine, mais la copie de travail\n"
 "     reflète toujours le même répertoire du même dépôt.\n"
 
-#: clients/cmdline/main.c:709
+#: clients/cmdline/main.c:710
 msgid ""
 "Unlock working copy paths or URLs.\n"
 "usage: unlock TARGET...\n"
@@ -1454,7 +1455,7 @@ msgstr ""
 "\n"
 "  Utiliser --force pour casser le verrou.\n"
 
-#: clients/cmdline/main.c:717
+#: clients/cmdline/main.c:718
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -1491,46 +1492,46 @@ msgstr ""
 "  La première colonne concerne l'objet, la seconde ses propriétés.\n"
 "  Un 'B' en troisième colonne indique qu'un verrou a été volé ou cassé.\n"
 
-#: clients/cmdline/main.c:795 svnadmin/main.c:77 svnlook/main.c:284
+#: clients/cmdline/main.c:796 svnadmin/main.c:77 svnlook/main.c:284
 msgid "Caught signal"
 msgstr "Signal reçu"
 
-#: clients/cmdline/main.c:892
+#: clients/cmdline/main.c:893
 msgid "Non-numeric limit argument given"
 msgstr ""
 
-#: clients/cmdline/main.c:909 svnadmin/main.c:1227
+#: clients/cmdline/main.c:910 svnadmin/main.c:1227
 msgid ""
 "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr ""
 "Option -r rencontrée plusieurs fois; essayer '-r M:N' au lieu de '-r M -r N'"
 
-#: clients/cmdline/main.c:921 svnadmin/main.c:1244
+#: clients/cmdline/main.c:922 svnadmin/main.c:1244
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Erreur de syntaxe à l'argument de révision '%s'"
 
-#: clients/cmdline/main.c:1069 clients/cmdline/main.c:1079
+#: clients/cmdline/main.c:1070 clients/cmdline/main.c:1080
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props et --no-auto-props sont mutuellement exclusives"
 
-#: clients/cmdline/main.c:1095
+#: clients/cmdline/main.c:1096
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr ""
 "Erreur de syntaxe à l'argument de fin de ligne native (native-eol) '%s'"
 
-#: clients/cmdline/main.c:1141 svndumpfilter/main.c:1176 svnlook/main.c:2124
+#: clients/cmdline/main.c:1142 svndumpfilter/main.c:1176 svnlook/main.c:2130
 msgid "Subcommand argument required\n"
 msgstr "Argument de la sous-commande attendu\n"
 
-#: clients/cmdline/main.c:1159 svnadmin/main.c:1370 svndumpfilter/main.c:1198
-#: svnlook/main.c:2147
+#: clients/cmdline/main.c:1160 svnadmin/main.c:1370 svndumpfilter/main.c:1198
+#: svnlook/main.c:2153
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Commande inconnue : '%s'\n"
 
-#: clients/cmdline/main.c:1192
+#: clients/cmdline/main.c:1193
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -1539,17 +1540,17 @@ msgstr ""
 "La sous-commande '%s' n'accepte pas l'option '%s'\n"
 "Entrer 'svn help %s' pour l'aide.\n"
 
-#: clients/cmdline/main.c:1229
+#: clients/cmdline/main.c:1230
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr ""
 "Le fichier de l'entrée du journal est versionné; forcer avec '--force-log'"
 
-#: clients/cmdline/main.c:1236
+#: clients/cmdline/main.c:1237
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr ""
 "Le fichier de commentaire du verrou est versionné ; forcer avec '--force-log'"
 
-#: clients/cmdline/main.c:1257
+#: clients/cmdline/main.c:1258
 msgid ""
 "The log message is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -1557,7 +1558,7 @@ msgstr ""
 "Le message de propagation donné est un chemin (-F était voulu ?) ; forcer "
 "avec '--force-log'"
 
-#: clients/cmdline/main.c:1264
+#: clients/cmdline/main.c:1265
 msgid ""
 "The lock comment is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -1565,7 +1566,7 @@ msgstr ""
 "Le commentaire du verrou est un chemin de fichier (-F était voulu ?) ; "
 "forcer avec '--force-log'"
 
-#: clients/cmdline/main.c:1477
+#: clients/cmdline/main.c:1478
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
@@ -1858,12 +1859,12 @@ msgid "Cannot specify revision for deleting versioned property '%s'"
 msgstr ""
 "Ne pas préciser la révision pour supprimer la propriété versionnée '%s'"
 
-#: clients/cmdline/propdel-cmd.c:129
+#: clients/cmdline/propdel-cmd.c:132
 #, c-format
 msgid "property '%s' deleted (recursively) from '%s'.\n"
 msgstr "Propriété '%s' supprimée récursivement de '%s'.\n"
 
-#: clients/cmdline/propdel-cmd.c:130
+#: clients/cmdline/propdel-cmd.c:133
 #, c-format
 msgid "property '%s' deleted from '%s'.\n"
 msgstr "Propriété '%s' supprimée de '%s'.\n"
@@ -1936,12 +1937,12 @@ msgstr "Ne pas préciser de révision pour définir la propriété versionnée '
 msgid "Explicit target required ('%s' interpreted as prop value)"
 msgstr "Cible explicite requise ('%s' interprété comme valeur de propriété)"
 
-#: clients/cmdline/propset-cmd.c:196
+#: clients/cmdline/propset-cmd.c:200
 #, c-format
 msgid "property '%s' set (recursively) on '%s'\n"
 msgstr "Propriété '%s' définie récursivement sur '%s'\n"
 
-#: clients/cmdline/propset-cmd.c:197
+#: clients/cmdline/propset-cmd.c:201
 #, c-format
 msgid "property '%s' set on '%s'\n"
 msgstr "Propriété '%s' définie sur '%s'\n"
@@ -1949,6 +1950,11 @@ msgstr "Propriété '%s' définie sur '%s'\n"
 #: clients/cmdline/revert-cmd.c:61
 msgid "Try 'svn revert --recursive' instead?"
 msgstr "Essayer plutôt 'svn revert --recursive' ?"
+
+#: clients/cmdline/status.c:278
+#, c-format
+msgid "'%s' has lock token, but no lock owner"
+msgstr ""
 
 #: clients/cmdline/switch-cmd.c:58
 #, c-format
@@ -2963,7 +2969,7 @@ msgstr ""
 #: libsvn_client/copy.c:1073 libsvn_client/delete.c:67
 #: libsvn_client/diff.c:1389 libsvn_client/diff.c:1987
 #: libsvn_client/diff.c:2509 libsvn_client/diff.c:2618
-#: libsvn_client/locking_commands.c:246 libsvn_client/locking_commands.c:268
+#: libsvn_client/locking_commands.c:248 libsvn_client/locking_commands.c:272
 #: libsvn_client/log.c:129 libsvn_client/prop_commands.c:213
 #: libsvn_client/prop_commands.c:446 libsvn_client/prop_commands.c:602
 #: libsvn_client/prop_commands.c:951 libsvn_client/ra.c:180
@@ -3205,8 +3211,8 @@ msgid "At least one revision must be non-local for a pegged diff"
 msgstr ""
 
 #: libsvn_client/diff.c:2482 libsvn_client/diff.c:2488
-#: libsvn_client/diff.c:2603 libsvn_client/locking_commands.c:250
-#: libsvn_client/locking_commands.c:272 libsvn_client/ra.c:723
+#: libsvn_client/diff.c:2603 libsvn_client/locking_commands.c:252
+#: libsvn_client/locking_commands.c:276 libsvn_client/ra.c:723
 #: libsvn_client/ra.c:846
 #, c-format
 msgid "'%s' has no URL"
@@ -3247,25 +3253,25 @@ msgstr ""
 msgid "URL '%s' non-existent in revision '%ld'"
 msgstr "L'URL '%s' n'existe pas à la révision %ld"
 
-#: libsvn_client/locking_commands.c:197
+#: libsvn_client/locking_commands.c:198
 msgid "No common parent found, unable to operate on disjoint arguments"
 msgstr ""
 
-#: libsvn_client/locking_commands.c:298
+#: libsvn_client/locking_commands.c:300
 msgid "Unable to lock/unlock across multiple repositories"
 msgstr "Impossible de verrouiller/déverrouiller sur plusieurs dépôts"
 
-#: libsvn_client/locking_commands.c:344
+#: libsvn_client/locking_commands.c:341
 #, c-format
 msgid "'%s' is not locked in this working copy"
 msgstr "'%s' n'est pas verrouillé dans cette copie de travail"
 
-#: libsvn_client/locking_commands.c:390
+#: libsvn_client/locking_commands.c:389
 #, c-format
 msgid "'%s' is not locked"
 msgstr "'%s' n'est pas verrouillé"
 
-#: libsvn_client/locking_commands.c:423 libsvn_fs/fs-loader.c:896
+#: libsvn_client/locking_commands.c:422 libsvn_fs/fs-loader.c:896
 #: libsvn_ra/ra_loader.c:512
 msgid "Lock comment has illegal characters"
 msgstr "Le commentaire du verrou (lock) contient des caractères incorrects"
@@ -6686,7 +6692,7 @@ msgid "'%s' is an URL when it should be a path"
 msgstr "'%s' est une URL, alors qu'un chemin est attendu"
 
 #: svnadmin/main.c:233 svndumpfilter/main.c:762 svnlook/main.c:98
-#: svnserve/main.c:111 svnversion/main.c:212
+#: svnserve/main.c:111 svnversion/main.c:215
 msgid "show version information"
 msgstr "affiche la version"
 
@@ -6988,7 +6994,7 @@ msgstr ""
 "\n"
 "Sous-commandes disponibles :\n"
 
-#: svnadmin/main.c:640 svnlook/main.c:1759 svnserve/main.c:158
+#: svnadmin/main.c:640 svnlook/main.c:1765 svnserve/main.c:158
 msgid ""
 "The following repository back-end (FS) modules are available:\n"
 "\n"
@@ -7044,22 +7050,22 @@ msgstr "Une seule révision permise"
 msgid "Exactly one file argument required"
 msgstr "Un seul argument fichier attendu"
 
-#: svnadmin/main.c:1028 svnlook/main.c:1824
+#: svnadmin/main.c:1028 svnlook/main.c:1830
 #, c-format
 msgid "UUID Token: %s\n"
 msgstr ""
 
-#: svnadmin/main.c:1029 svnlook/main.c:1825
+#: svnadmin/main.c:1029 svnlook/main.c:1831
 #, c-format
 msgid "Owner: %s\n"
 msgstr "Propriétaire : %s\n"
 
-#: svnadmin/main.c:1030 svnlook/main.c:1826
+#: svnadmin/main.c:1030 svnlook/main.c:1832
 #, c-format
 msgid "Created: %s\n"
 msgstr "Créé : %s\n"
 
-#: svnadmin/main.c:1031 svnlook/main.c:1827
+#: svnadmin/main.c:1031 svnlook/main.c:1833
 #, c-format
 msgid "Expires: %s\n"
 msgstr "Expire : %s\n"
@@ -7478,7 +7484,7 @@ msgstr "(les fichiers binaires diffèrent)\n"
 msgid "unknown"
 msgstr "inconnu"
 
-#: svnlook/main.c:1230 svnlook/main.c:1323 svnlook/main.c:1387
+#: svnlook/main.c:1230 svnlook/main.c:1323 svnlook/main.c:1393
 #, c-format
 msgid "Transaction '%s' is not based on a revision; how odd"
 msgstr "La transaction '%s' n'est pas basée sur une révision ; bizarre"
@@ -7493,11 +7499,11 @@ msgstr "'%s' est une URL, ce devrait plutôt être un chemin local"
 msgid "Path '%s' is not a file"
 msgstr "Le chemin '%s' n'est pas un fichier"
 
-#: svnlook/main.c:1367
+#: svnlook/main.c:1373
 msgid "Can't create temporary directory"
 msgstr "Création d'un répertoire temporaire impossible"
 
-#: svnlook/main.c:1467
+#: svnlook/main.c:1473
 msgid ""
 "REVISION   PATH <ID>\n"
 "--------   ---------\n"
@@ -7505,7 +7511,7 @@ msgstr ""
 "RÉVISION   CHEMIN <ID>\n"
 "--------   -----------\n"
 
-#: svnlook/main.c:1472
+#: svnlook/main.c:1478
 msgid ""
 "REVISION   PATH\n"
 "--------   ----\n"
@@ -7513,21 +7519,21 @@ msgstr ""
 "RÉVISION   CHEMIN\n"
 "--------   ------\n"
 
-#: svnlook/main.c:1517
+#: svnlook/main.c:1523
 #, c-format
 msgid "Property '%s' not found on revision %ld"
 msgstr "Propriété '%s' absente à la révision %ld"
 
-#: svnlook/main.c:1521
+#: svnlook/main.c:1527
 #, c-format
 msgid "Property '%s' not found on path '%s' in revision %ld"
 msgstr "Propriété '%s' absente du chemin '%s' à la révision %ld"
 
-#: svnlook/main.c:1689 svnlook/main.c:1903
+#: svnlook/main.c:1695 svnlook/main.c:1909
 msgid "Missing repository path argument"
 msgstr "Chemin du dépôt manquant"
 
-#: svnlook/main.c:1750
+#: svnlook/main.c:1756
 msgid ""
 "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
 "Note: any subcommand which takes the '--revision' and '--transaction'\n"
@@ -7544,11 +7550,11 @@ msgstr ""
 "\n"
 "Sous-commandes disponibles :\n"
 
-#: svnlook/main.c:1805
+#: svnlook/main.c:1811
 msgid "Missing path argument"
 msgstr ""
 
-#: svnlook/main.c:1830
+#: svnlook/main.c:1836
 #, c-format
 msgid ""
 "Comment (%i lines):\n"
@@ -7557,7 +7563,7 @@ msgstr ""
 "Commentaire (%i lignes) :\n"
 "%s\n"
 
-#: svnlook/main.c:1831
+#: svnlook/main.c:1837
 #, c-format
 msgid ""
 "Comment (%i line):\n"
@@ -7566,37 +7572,37 @@ msgstr ""
 "Commentaire (%i ligne) :\n"
 "%s\n"
 
-#: svnlook/main.c:1877
+#: svnlook/main.c:1883
 msgid "Missing propname argument"
 msgstr "Le nom de la propriété manque"
 
-#: svnlook/main.c:1878
+#: svnlook/main.c:1884
 msgid "Missing propname and repository path arguments"
 msgstr "Le nom de la propriété et le chemin du dépôt manquent"
 
-#: svnlook/main.c:1884
+#: svnlook/main.c:1890
 msgid "Missing propname or repository path argument"
 msgstr "Le nom de la propriété ou le chemin du dépôt manque"
 
-#: svnlook/main.c:2048
+#: svnlook/main.c:2054
 msgid "Invalid revision number supplied"
 msgstr "Numéro de révision invalide"
 
-#: svnlook/main.c:2106
+#: svnlook/main.c:2112
 msgid ""
 "The '--transaction' (-t) and '--revision' (-r) arguments can not co-exist"
 msgstr "'--transaction' (-t) et '--revision' (-r) sont mutuellement exclusifs"
 
-#: svnlook/main.c:2180
+#: svnlook/main.c:2186
 msgid "Repository argument required\n"
 msgstr "Un dépôt est requis en argument\n"
 
-#: svnlook/main.c:2189
+#: svnlook/main.c:2195
 #, c-format
 msgid "'%s' is a URL when it should be a path\n"
 msgstr "'%s' est une URL au lieu d'un chemin local\n"
 
-#: svnlook/main.c:2237
+#: svnlook/main.c:2243
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -7621,7 +7627,7 @@ msgstr "nom ou adresse IP à écouter (en mode démon)"
 msgid "run in foreground (useful for debugging)"
 msgstr "lancement en avant-plan (foreground, utile pour le déboguage)"
 
-#: svnserve/main.c:109 svnversion/main.c:211
+#: svnserve/main.c:109 svnversion/main.c:214
 msgid "display this help"
 msgstr "affiche cet aide"
 
@@ -7732,7 +7738,7 @@ msgstr "Entrer 'svnversion --help' pour l'aide.\n"
 
 #: svnversion/main.c:134
 msgid ""
-"usage: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n"
+"usage: svnversion [OPTIONS] [WC_PATH [TRAIL_URL]]\n"
 "\n"
 "  Produce a compact 'version number' for the working copy path\n"
 "  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
@@ -7756,9 +7762,11 @@ msgid ""
 "  If invoked on a directory that is not a working copy, an\n"
 "  exported directory say, the program will output 'exported'.\n"
 "\n"
+"  If invoked without arguments WC_PATH will be the current directory.\n"
+"\n"
 "Valid options:\n"
 msgstr ""
-"usage : svnversion [OPTIONS] CT_CHEMIN [FIN_URL]\n"
+"usage : svnversion [OPTIONS] [CT_CHEMIN [FIN_URL]]\n"
 "\n"
 "  Produit un 'numéro de version' compacte pour la copie de travail précisée\n"
 "  par CT_CHEMIN. FIN_URL est la partie finale de l'URL de référence pour\n"
@@ -7781,31 +7789,33 @@ msgstr ""
 "  Quand la commande est invoquée sur un répertoire qui n'est pas une copie\n"
 "  de travail, la sortie indique 'exporté'.\n"
 "\n"
+"  CT_CHEMIN est le répertoire courant pour une invocation sans arguments.\n"
+"\n"
 "Options disponibles :\n"
 
-#: svnversion/main.c:209
+#: svnversion/main.c:212
 msgid "do not output the trailing newline"
 msgstr "pas de fin de ligne"
 
-#: svnversion/main.c:210
+#: svnversion/main.c:213
 msgid "last changed rather than current revisions"
 msgstr "dernière révision modifiée plutôt que la courante"
 
-#: svnversion/main.c:301
+#: svnversion/main.c:306
 #, c-format
 msgid "exported%s"
 msgstr "exporté%s"
 
-#: svnversion/main.c:310
+#: svnversion/main.c:315
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' non versionné et non exporté\n"
 
-#~ msgid "Print client version info\n"
-#~ msgstr "Affiche la version du client\n"
+#~ msgid "Your lock comment was left in a temporary file:"
+#~ msgstr "Le commentaire du verrou a été laissé dans un fichier temporaire :"
 
 #~ msgid "Lock comment has illegal characters."
 #~ msgstr "Le commentaire du verrou (lock) contient des caractères incorrects"
 
-#~ msgid "Your lock comment was left in a temporary file:"
-#~ msgstr "Le commentaire du verrou a été laissé dans un fichier temporaire :"
+#~ msgid "Print client version info\n"
+#~ msgstr "Affiche la version du client\n"
