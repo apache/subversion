@@ -158,6 +158,23 @@ Step 3:  Install Specific Language Bindings
    5.  Run `make install'
 
 
+* Ruby
+  
+   1. Run `make swig-rb' from the top of the Subversion source tree,
+      to build the bindings.
+
+   2. Run `make check-swig-rb' from the top of the Subversion source
+      tree, to test the bindings.
+
+   3. To install, run `make install-swig-rb' from the top of the 
+      Subversion source tree.
+
+   You can specify the ruby binary by passing RUBY=/path/to/ruby as part 
+   of the configure command in the top level of the Subversion source 
+   tree. Make sure that the ruby version used is the same one that you 
+   configured SWIG to run against during the SWIG configure (see above). 
+   
+
 BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
 
 
@@ -300,3 +317,13 @@ TESTING AND USING SWIG BINDINGS
    The perl bindings are using the standard module testing facilities
    to do regression tests. Simply run make check-swig-pl as described in the
    install section.
+
+* Ruby
+
+   To test the Ruby bindings, simply run `make check-swig-rb' as described 
+   in the install section.
+   
+   For examples of how to use the ruby bindings, take a look at the .rb files
+   in the following directory:
+     subversion/bindings/swig/test
+
