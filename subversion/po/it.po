@@ -20,7 +20,7 @@
 # authentication: autenticazione
 # authorisation: autorizzazione
 # bogus: non valido, sbagliato
-# bump: aggiornare
+# bump: incrementare di 1
 # checkout: checkout
 # client: client
 # commit: commit
@@ -79,8 +79,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-06-04 10:13+0200\n"
-"PO-Revision-Date: 2005-06-04 11:45+0200\n"
+"POT-Creation-Date: 2005-06-06 08:49+0200\n"
+"PO-Revision-Date: 2005-06-06 09:01+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -172,7 +172,9 @@ msgstr ""
 msgid ""
 "The following repository access (RA) modules are available:\n"
 "\n"
-msgstr "Sono disponibili i seguenti moduli di accesso (RA) al repository:\n\n"
+msgstr ""
+"Sono disponibili i seguenti moduli di accesso (RA) al repository:\n"
+"\n"
 
 #: clients/cmdline/import-cmd.c:82
 msgid "Repository URL required when importing"
@@ -1555,12 +1557,12 @@ msgstr "--auto-props e --no-auto-props sono mutualmente esclusivi"
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "Errore di sintassi nell'argomento native-eol '%s'"
 
-#: clients/cmdline/main.c:1142 svndumpfilter/main.c:1176 svnlook/main.c:2124
+#: clients/cmdline/main.c:1142 svndumpfilter/main.c:1176 svnlook/main.c:2130
 msgid "Subcommand argument required\n"
 msgstr "È necessario specificare un argomento per il comando\n"
 
 #: clients/cmdline/main.c:1160 svnadmin/main.c:1370 svndumpfilter/main.c:1198
-#: svnlook/main.c:2147
+#: svnlook/main.c:2153
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Comando sconosciuto: '%s'\n"
@@ -2992,7 +2994,7 @@ msgstr "Errore nello sbloccare le directory bloccate (seguono dettagli):"
 
 #: libsvn_client/commit.c:859
 msgid "Error bumping revisions post-commit (details follow):"
-msgstr "Errore nell'aggiornare le revisioni dopo il commit (seguono dettagli):"
+msgstr "Errore nell'incrementare di 1 le revisioni dopo il commit (seguono dettagli):"
 
 #: libsvn_client/commit.c:870 libsvn_client/copy.c:570
 msgid "Error in post-commit clean-up (details follow):"
@@ -3638,7 +3640,7 @@ msgstr "sto allocando un nuovo DI di copia (chiamando 'next-key')"
 
 #: libsvn_fs_base/bdb/copies-table.c:130
 msgid "bumping next copy key"
-msgstr "sto aggiornando la chiave della prossima copia"
+msgstr "sto incrementando di 1 la chiave della prossima copia"
 
 #: libsvn_fs_base/bdb/copies-table.c:169
 msgid "deleting entry from 'copies' table"
@@ -3654,7 +3656,7 @@ msgstr "sto allocando l'ID per il nuovo nodo (ottenuto con 'next-key')"
 
 #: libsvn_fs_base/bdb/nodes-table.c:117
 msgid "bumping next node ID key"
-msgstr "sto aggiornando la chiave dell'ID del prossimo nodo"
+msgstr "sto incrementando di 1 la chiave dell'ID del prossimo nodo"
 
 #: libsvn_fs_base/bdb/nodes-table.c:154
 #, c-format
@@ -3694,7 +3696,7 @@ msgstr "sto allocando la nuova rappresentazione (chiamando next-key)"
 
 #: libsvn_fs_base/bdb/reps-table.c:177
 msgid "bumping next representation key"
-msgstr "sto aggiornando alla prossima chiave della rappresentazione"
+msgstr "sto incrementando di 1 la chiave della rappresentazione"
 
 #. Handle any other error conditions.
 #: libsvn_fs_base/bdb/reps-table.c:205
@@ -5251,7 +5253,9 @@ msgstr "Scrittura negata: non autorizzato a leggere tutta la revisione %ld"
 #: libsvn_repos/fs-wrap.c:484
 #, c-format
 msgid "Cannot unlock path '%s', no authenticated username available"
-msgstr "Non posso sbloccare il percorso '%s', nessun nome utente autenticato disponibile"
+msgstr ""
+"Non posso sbloccare il percorso '%s', nessun nome utente autenticato "
+"disponibile"
 
 #: libsvn_repos/fs-wrap.c:498
 msgid "Unlock succeeded, but post-unlock hook failed"
@@ -5716,7 +5720,8 @@ msgstr "Non riesco ad aprire il file in '%s'"
 #: libsvn_subr/io.c:1038
 #, c-format
 msgid "Can't get file perms for file at '%s' (file stat error)"
-msgstr "Non riesco ad ottenere i permessi per il file in '%s' (errore in file stat)"
+msgstr ""
+"Non riesco ad ottenere i permessi per il file in '%s' (errore in file stat)"
 
 #: libsvn_subr/io.c:1071 libsvn_subr/io.c:1131
 #, c-format
@@ -7230,11 +7235,13 @@ msgstr ""
 "\n"
 "Commandi disponibili:\n"
 
-#: svnadmin/main.c:640 svnlook/main.c:1759 svnserve/main.c:158
+#: svnadmin/main.c:640 svnlook/main.c:1765 svnserve/main.c:158
 msgid ""
 "The following repository back-end (FS) modules are available:\n"
 "\n"
-msgstr "Sono disponibili i seguenti moduli di accesso (FS) al repository:\n\n"
+msgstr ""
+"Sono disponibili i seguenti moduli di accesso (FS) al repository:\n"
+"\n"
 
 #: svnadmin/main.c:723
 msgid ""
@@ -7288,22 +7295,22 @@ msgstr "È permessa una sola revisione"
 msgid "Exactly one file argument required"
 msgstr "È richiesto esattamente un solo file come argomento"
 
-#: svnadmin/main.c:1028 svnlook/main.c:1824
+#: svnadmin/main.c:1028 svnlook/main.c:1830
 #, c-format
 msgid "UUID Token: %s\n"
 msgstr "UUID del gettone: %s\n"
 
-#: svnadmin/main.c:1029 svnlook/main.c:1825
+#: svnadmin/main.c:1029 svnlook/main.c:1831
 #, c-format
 msgid "Owner: %s\n"
 msgstr "Proprietario: %s\n"
 
-#: svnadmin/main.c:1030 svnlook/main.c:1826
+#: svnadmin/main.c:1030 svnlook/main.c:1832
 #, c-format
 msgid "Created: %s\n"
 msgstr "Creato: %s\n"
 
-#: svnadmin/main.c:1031 svnlook/main.c:1827
+#: svnadmin/main.c:1031 svnlook/main.c:1833
 #, c-format
 msgid "Expires: %s\n"
 msgstr "Scade: %s\n"
@@ -7731,7 +7738,7 @@ msgstr "(I file binari sono diversi)\n"
 msgid "unknown"
 msgstr "sconosciuto"
 
-#: svnlook/main.c:1230 svnlook/main.c:1323 svnlook/main.c:1387
+#: svnlook/main.c:1230 svnlook/main.c:1323 svnlook/main.c:1393
 #, c-format
 msgid "Transaction '%s' is not based on a revision; how odd"
 msgstr "Transazione '%s' non è basato su una revisione; che strano"
@@ -7746,11 +7753,11 @@ msgstr "'%s' è una URL, probabilmente dovrebbe essere un percorso"
 msgid "Path '%s' is not a file"
 msgstr "Il percorso '%s' non è un file"
 
-#: svnlook/main.c:1367
+#: svnlook/main.c:1373
 msgid "Can't create temporary directory"
 msgstr "Non riesco a creare la directory temporanea"
 
-#: svnlook/main.c:1467
+#: svnlook/main.c:1473
 msgid ""
 "REVISION   PATH <ID>\n"
 "--------   ---------\n"
@@ -7758,7 +7765,7 @@ msgstr ""
 "REVISIONE  PERCORSO <ID>\n"
 "---------  --------\n"
 
-#: svnlook/main.c:1472
+#: svnlook/main.c:1478
 msgid ""
 "REVISION   PATH\n"
 "--------   ----\n"
@@ -7766,21 +7773,21 @@ msgstr ""
 "REVISIONE  PERCORSO\n"
 "---------  --------\n"
 
-#: svnlook/main.c:1517
+#: svnlook/main.c:1523
 #, c-format
 msgid "Property '%s' not found on revision %ld"
 msgstr "Percorso '%s' non trovato alla revisione %ld"
 
-#: svnlook/main.c:1521
+#: svnlook/main.c:1527
 #, c-format
 msgid "Property '%s' not found on path '%s' in revision %ld"
 msgstr "Proprietà '%s' non trovata nel percorso '%s' alla revisione %ld"
 
-#: svnlook/main.c:1689 svnlook/main.c:1903
+#: svnlook/main.c:1695 svnlook/main.c:1909
 msgid "Missing repository path argument"
 msgstr "Argomento di percorso del repository mancante"
 
-#: svnlook/main.c:1750
+#: svnlook/main.c:1756
 msgid ""
 "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
 "Note: any subcommand which takes the '--revision' and '--transaction'\n"
@@ -7798,11 +7805,11 @@ msgstr ""
 "\n"
 "Comandi disponibili:\n"
 
-#: svnlook/main.c:1805
+#: svnlook/main.c:1811
 msgid "Missing path argument"
 msgstr "Argomento di percorso mancante"
 
-#: svnlook/main.c:1830
+#: svnlook/main.c:1836
 #, c-format
 msgid ""
 "Comment (%i lines):\n"
@@ -7812,7 +7819,7 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: svnlook/main.c:1831
+#: svnlook/main.c:1837
 #, c-format
 msgid ""
 "Comment (%i line):\n"
@@ -7821,38 +7828,38 @@ msgstr ""
 "Commento (%i righe):\n"
 "%s\n"
 
-#: svnlook/main.c:1877
+#: svnlook/main.c:1883
 msgid "Missing propname argument"
 msgstr "Argomento di nome della proprietà mancante"
 
-#: svnlook/main.c:1878
+#: svnlook/main.c:1884
 msgid "Missing propname and repository path arguments"
 msgstr "Argomenti percorso di repository e nome di proprietà mancanti"
 
-#: svnlook/main.c:1884
+#: svnlook/main.c:1890
 msgid "Missing propname or repository path argument"
 msgstr "Argomento percorso di repository o nome di proprietà mancante"
 
-#: svnlook/main.c:2048
+#: svnlook/main.c:2054
 msgid "Invalid revision number supplied"
 msgstr "Numero di revisione fornito non valido"
 
-#: svnlook/main.c:2106
+#: svnlook/main.c:2112
 msgid ""
 "The '--transaction' (-t) and '--revision' (-r) arguments can not co-exist"
 msgstr ""
 "Gli argomenti '--transaction' (-t) e '--revision' (-r) non possono coesistere"
 
-#: svnlook/main.c:2180
+#: svnlook/main.c:2186
 msgid "Repository argument required\n"
 msgstr "È richiesto un repository come argomento\n"
 
-#: svnlook/main.c:2189
+#: svnlook/main.c:2195
 #, c-format
 msgid "'%s' is a URL when it should be a path\n"
 msgstr "'%s' è una URL mentre dovrebbe essere un percorso\n"
 
-#: svnlook/main.c:2237
+#: svnlook/main.c:2243
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
