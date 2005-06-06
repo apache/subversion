@@ -75,6 +75,39 @@ extern "C" {
   #define SVN_CMDLINE_PRINTF2  svn_cmdline_printf_ebcdic2
 
 /**
+ * Write a string to a file using a printf format; similar to apr_file_printf
+ * except that any character or string variable arguments are assumed to be in
+ * utf-8.  The data is output to an ebcdic encoded string allocated from
+ * @a pool.
+ * @a fptr The file to write to.
+ * @a format The format string
+ * @a ... The values to substitute in the format string
+ * @return The number of bytes written
+ */
+int
+svn_ebcdic_file_printf(apr_pool_t *pool,
+                       apr_file_t *fptr,
+                       const char *format,
+                       ...);
+
+
+/**
+ * Write a string to a file using a printf format; similar to apr_file_printf
+ * except that any character or string variable arguments are assumed to be in
+ * utf-8.  The data is output to an utf-8 encoded string allocated from @a pool.
+ * @a fptr The file to write to.
+ * @a format The format string
+ * @a ... The values to substitute in the format string
+ * @return The number of bytes written
+ */
+int
+svn_ebcdic_file_printf2(apr_pool_t *pool,
+                        apr_file_t *fptr,
+                        const char *format,
+                        ...);
+
+
+/**
  * printf-style style printing routine similar to apr_pvsprintf except that
  * any character or string arguments in the va_list are assumed to be in utf-8.
  * The data is output to an ebcdic encoded string allocated from a pool

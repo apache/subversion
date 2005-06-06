@@ -57,6 +57,9 @@ static const char under_string[] =
 #pragma convert(37)
 #endif
 
+#define DOT_WORKING_STR \
+        "\x2e\x77\x6f\x72\x6b\x69\x6e\x67"
+        /* ".working" */
 
 /*-----------------------------------------------------------------*/
 
@@ -104,10 +107,10 @@ display_prop_diffs (const apr_array_header_t *propchanges,
   int i;
 
   SVN_ERR (file_printf_from_utf8 (file, encoding,
-                                  _("%sProperty changes on: %s%s"),
-                                  APR_EOL_STR,
-                                  svn_path_local_style (path, pool),
-                                  APR_EOL_STR));
+                                  _(APR_EOL_STR \
+                                    "Property changes on: %s" \
+                                    APR_EOL_STR),
+                                  svn_path_local_style (path, pool)));
 
   SVN_ERR (file_printf_from_utf8 (file, encoding, "%s" APR_EOL_STR,
                                   under_string));
@@ -132,8 +135,8 @@ display_prop_diffs (const apr_array_header_t *propchanges,
               && svn_string_compare (original_value, propchange->value)))
         continue;
       
-      SVN_ERR (file_printf_from_utf8 (file, encoding, _("Name: %s%s"),
-                                      propchange->name, APR_EOL_STR));
+      SVN_ERR (file_printf_from_utf8 (file, encoding, _("Name: %s" APR_EOL_STR),
+                                      propchange->name));
 
       /* For now, we have a rather simple heuristic: if this is an
          "svn:" property, then assume the value is UTF-8 and must
@@ -153,8 +156,13 @@ display_prop_diffs (const apr_array_header_t *propchanges,
             else
               {
                 /* ### todo: check for error? */
+#if APR_CHARSET_EBCDIC
                 apr_file_printf
                   (file, "   - %s" APR_EOL_STR, original_value->data);
+#else
+                svn_ebcdic_file_printf(pool, file, "   - %s" APR_EOL_STR,
+                                       original_value->data);
+#endif
               }
           }
         
@@ -169,8 +177,13 @@ display_prop_diffs (const apr_array_header_t *propchanges,
             else
               {
                 /* ### todo: check for error? */
+#if APR_CHARSET_EBCDIC
                 apr_file_printf (file, "   + %s" APR_EOL_STR,
                                  propchange->value->data);
+#else
+                svn_ebcdic_file_printf (file, "   + %s" APR_EOL_STR,
+                                        propchange->value->data);
+#endif
               }
           }
       }
@@ -180,7 +193,11 @@ display_prop_diffs (const apr_array_header_t *propchanges,
      to native encoding, at least conditionally?  Or is it better to
      have under_string always output the same eol, so programs can
      find it consistently?  Also, what about checking for error? */
+#if !APR_CHARSET_EBCDIC
   apr_file_printf (file, APR_EOL_STR);
+#else
+  apr_file_printf (file, SVN_UTF8_NEWLINE_STR);
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -201,8 +218,8 @@ check_scheme_match (svn_wc_adm_access_t *adm_access, const char *url)
   
   SVN_ERR (svn_wc_entry (&ent, path, adm_access, TRUE, pool));
   
-  idx1 = strchr (url, ':');
-  idx2 = strchr (ent->url, ':');
+  idx1 = strchr (url, SVN_UTF8_COLON);
+  idx2 = strchr (ent->url, SVN_UTF8_COLON);
 
   if ((idx1 == NULL) && (idx2 == NULL))
     {
@@ -405,18 +422,18 @@ diff_content_changed (const char *path,
      a particular style, so not calling svn_path_local_style() on the
      paths below.*/
   if (path1[0] == '\0')
-    path1 = apr_psprintf (subpool, "%s", path);
-  else if (path1[0] == '/')
-    path1 = apr_psprintf (subpool, "%s\t(...%s)", path, path1);
+    path1 = APR_PSPRINTF2 (subpool, "%s", path);
+  else if (path1[0] == SVN_UTF8_FSLASH)
+    path1 = APR_PSPRINTF2 (subpool, "%s\t(...%s)", path, path1);
   else
-    path1 = apr_psprintf (subpool, "%s\t(.../%s)", path, path1);
+    path1 = APR_PSPRINTF2 (subpool, "%s\t(.../%s)", path, path1);
   
   if (path2[0] == '\0')
-    path2 = apr_psprintf (subpool, "%s", path);
-  else if (path2[0] == '/')
-    path2 = apr_psprintf (subpool, "%s\t(...%s)", path, path2);
+    path2 = APR_PSPRINTF2 (subpool, "%s", path);
+  else if (path2[0] == SVN_UTF8_FSLASH)
+    path2 = APR_PSPRINTF2 (subpool, "%s\t(...%s)", path, path2);
   else
-    path2 = apr_psprintf (subpool, "%s\t(.../%s)", path, path2);
+    path2 = APR_PSPRINTF2 (subpool, "%s\t(.../%s)", path, path2);
   
   label1 = diff_label (path1, rev1, subpool);
   label2 = diff_label (path2, rev2, subpool);
@@ -786,13 +803,13 @@ merge_file_changed (svn_wc_adm_access_t *adm_access,
   apr_pool_t *subpool = svn_pool_create (merge_b->pool);
   /* xgettext: the '.working', '.merge-left.r%ld' and '.merge-right.r%ld'
      strings are used to tag onto a filename in case of a merge conflict */
-  const char *target_label = _(".working");
-  const char *left_label = apr_psprintf (subpool,
-                                         _(".merge-left.r%ld"),
-                                         older_rev);
-  const char *right_label = apr_psprintf (subpool,
-                                          _(".merge-right.r%ld"),
-                                          yours_rev);
+  const char *target_label = _(DOT_WORKING_STR);
+  const char *left_label = APR_PSPRINTF2 (subpool,
+                                          _(".merge-left.r%ld"),
+                                          older_rev);
+  const char *right_label = APR_PSPRINTF2 (subpool,
+                                           _(".merge-right.r%ld"),
+                                           yours_rev);
   svn_boolean_t has_local_mods;
   svn_boolean_t merge_required = TRUE;
   enum svn_wc_merge_outcome_t merge_outcome;

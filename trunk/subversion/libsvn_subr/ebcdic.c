@@ -470,6 +470,36 @@ svn_ebcdic_pvsprintf(apr_pool_t *pool, const char *fmt, va_list arg_ptr)
 }
 
 
+int
+svn_ebcdic_file_printf(apr_pool_t *pool,
+                       apr_file_t *fptr,
+                       const char *format,
+                       ...)
+{
+  char *out_str;
+  va_list ap;
+  va_start(ap, format);
+  out_str = svn_ebcdic_pvsprintf(pool, format, ap);
+  va_end(ap);
+  return apr_file_printf(fptr, "%s", out_str);
+}
+
+
+int
+svn_ebcdic_file_printf2(apr_pool_t *pool,
+                        apr_file_t *fptr,
+                        const char *format,
+                        ...)
+{
+  char *out_str;
+  va_list ap;
+  va_start(ap, format);
+  out_str = svn_ebcdic_pvsprintf2(pool, format, ap);
+  va_end(ap);
+  return apr_file_printf(fptr, "%s", out_str);
+}
+
+
 char *
 svn_ebcdic_pvsprintf2 (apr_pool_t *p,
                        const char *fmt,

@@ -82,6 +82,8 @@
 #define SVN_UTF8_FSLASH_STR      "\x2F" /* "/" */
 #define SVN_UTF8_GT              '\x3E' /* '>' */
 #define SVN_UTF8_GT_STR          "\x3E" /* ">" */
+#define SVN_UTF8_LBRACE          '\x7B' /* '{' */
+#define SVN_UTF8_LBRACE_STR      "\x7B" /* "{" */
 #define SVN_UTF8_LBRACKET        '\x5B' /* '[' */
 #define SVN_UTF8_LPAREN          '\x28' /* '(' */
 #define SVN_UTF8_LPAREN_STR      "\x28" /* "(" */
@@ -98,6 +100,8 @@
 #define SVN_UTF8_POUND           '\x23' /* '#' */
 #define SVN_UTF8_QUESTION        '\x3F' /* '?' */
 #define SVN_UTF8_QUESTION_STR    "\x3F" /* "?" */
+#define SVN_UTF8_RBRACE          '\x7D' /* '}' */
+#define SVN_UTF8_RBRACE_STR      "\x7D" /* "}" */
 #define SVN_UTF8_RBRACKET        '\x5D' /* ']' */
 #define SVN_UTF8_RPAREN          '\x29' /* ')' */
 #define SVN_UTF8_RPAREN_STR      "\x29" /* ")" */

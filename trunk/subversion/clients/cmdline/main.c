@@ -471,10 +471,16 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "  If WCPATH is omitted, a default value of '.' is assumed, unless\n"
        "  the sources have identical basenames that match a file within '.':\n"
        "  in which case, the differences will be applied to that file.\n"),
+#if !AS400
     {'r', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run_opt,
      svn_cl__merge_cmd_opt, svn_cl__ignore_ancestry_opt, 
      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
-  
+#else
+    {'r', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run_opt,
+     svn_cl__ignore_ancestry_opt, 
+     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+#endif
+
   { "mkdir", svn_cl__mkdir, {0},
     N_("Create a new directory under version control.\n"
        "usage: 1. mkdir PATH...\n"
@@ -938,11 +944,20 @@ main (int argc, const char * const *argv)
                  "try '-r M:N' instead of '-r M -r N'"));
             return error_exit (err, stderr, FALSE, pool);
           }
+#if APR_CHARSET_EBCDIC
+        err = svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool);
+        if (err)
+          return error_exit (err, stdout, FALSE, pool);
+#endif
         if (svn_opt_parse_revision (&(opt_state.start_revision),
                                     &(opt_state.end_revision),
                                     opt_arg, pool) != 0)
           {
+#if !APR_CHARSET_EBCDIC
             err = svn_utf_cstring_to_utf8 (&utf8_opt_arg, opt_arg, pool);
+#else
+            utf8_opt_arg = opt_arg;
+#endif
             if (! err)
               err = svn_error_createf
                 (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,

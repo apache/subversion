@@ -321,7 +321,7 @@ static char *parse_one_rev (svn_opt_revision_t *revision, char *str,
 {
   char *end, save;
 
-  if (*str == '{')
+  if (*str == SVN_UTF8_LBRACE)
     {
       svn_boolean_t matched;
       apr_time_t tm;
@@ -329,7 +329,7 @@ static char *parse_one_rev (svn_opt_revision_t *revision, char *str,
 
       /* Brackets denote a date. */
       str++;
-      end = strchr (str, '}');
+      end = strchr (str, SVN_UTF8_RBRACE);
       if (!end)
         return NULL;
       *end = '\0';
@@ -345,27 +345,41 @@ static char *parse_one_rev (svn_opt_revision_t *revision, char *str,
       revision->value.date = tm;
       return end + 1;
     }
-  else if (apr_isdigit (*str))
+  else if (APR_IS_ASCII_DIGIT (*str))
     {
+      const char *str_native = str;
       /* It's a number. */
       end = str + 1;
-      while (apr_isdigit (*end))
+      while (APR_IS_ASCII_DIGIT (*end))
         end++;
       save = *end;
       *end = '\0';
       revision->kind = svn_opt_revision_number;
-      revision->value.number = SVN_STR_TO_REV (str);
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_from_utf8 (&str_native, str, pool))
+        /* In the unlikely event of a conversion error is this the
+         * best we can do? */
+        return NULL;
+#endif
+      revision->value.number = SVN_STR_TO_REV (str_native);
       *end = save;
       return end;
     }
-  else if (apr_isalpha (*str))
+  else if (APR_IS_ASCII_ALPHA (*str))
     {
+      const char *str_native = str;
       end = str + 1;
-      while (apr_isalpha (*end))
+      while (APR_IS_ASCII_ALPHA (*end))
         end++;
       save = *end;
       *end = '\0';
-      if (revision_from_word (revision, str) != 0)
+#if APR_CHARSET_EBCDIC
+      if (svn_utf_cstring_from_utf8 (&str_native, str, pool))
+        /* In the unlikely event of a conversion error is this the
+         * best we can do? */
+        return NULL;
+#endif
+      if (revision_from_word (revision, str_native) != 0)
         return NULL;
       *end = save;
       return end;
@@ -387,7 +401,7 @@ svn_opt_parse_revision (svn_opt_revision_t *start_revision,
   left_rev = apr_pstrdup (pool, arg);
 
   right_rev = parse_one_rev (start_revision, left_rev, pool);
-  if (right_rev && *right_rev == ':')
+  if (right_rev && *right_rev == SVN_UTF8_COLON)
     {
       right_rev++;
       end = parse_one_rev (end_revision, right_rev, pool);
@@ -493,10 +507,10 @@ svn_opt_parse_path (svn_opt_revision_t *rev,
     {
       /* If we hit a path separator, stop looking. */
       /* This is OK only because our revision specifiers can't contain '/'. */
-      if (path[i] == '/')
+      if (path[i] == SVN_UTF8_FSLASH)
         break;
 
-      if (path[i] == '@')
+      if (path[i] == SVN_UTF8_AT)
         {
           svn_opt_revision_t start_revision, end_revision;
 
