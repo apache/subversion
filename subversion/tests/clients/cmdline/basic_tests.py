@@ -1451,18 +1451,12 @@ def basic_add_local_ignores(sbox):
   dir_path = os.path.join(wc_dir, 'dir')
   file_path = os.path.join(dir_path, 'app.lock')
 
-  os.mkdir(dir_path, 0755)
+  svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
+                                     'mkdir', dir_path)
+  svntest.main.run_svn(None, 'propset', 'svn:ignore', '*.lock', dir_path) 
   open(file_path, 'w')
-
-  svntest.main.run_svn(None, 'propset', 'svn:ignore', '*.lock', wc_dir) 
-  output, err = svntest.actions.run_and_verify_svn(
-    "No output where some expected", SVNAnyOutput, None,
-    'add', dir_path)
-
-  for line in output:
-    # If we see app.lock in the add output, fail the test.
-    if re.match(r'^A\s+.*.lock$', line):
-      raise svntest.actions.SVNUnexpectedOutput
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'add', '--force', dir_path)
 
 #----------------------------------------------------------------------
 def basic_add_no_ignores(sbox):
