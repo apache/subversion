@@ -270,7 +270,7 @@ It is an experimental feature.")
       (require 'overlay)
     (require 'overlay nil t)))
 
-
+(defvar svn-global-keymap nil "Global keymap for psvn.el")
 (defcustom svn-status-prefix-key [(control x) (meta s)]
   "Prefix key for the psvn commands in the global keymap."
   :type '(choice (const [(control x) ?v ?S])
@@ -458,11 +458,9 @@ Otherwise, return \"\"."
   (defsubst match-string-no-properties (match)
     (buffer-substring-no-properties (match-beginning match) (match-end match))))
 
-(defvar svn-global-keymap nil "Global keymap for psvn.el")
-
 (when (not svn-global-keymap)
   (setq svn-global-keymap (make-sparse-keymap))
-  (define-key svn-global-keymap (kbd "s") 'svn-status)
+  (define-key svn-global-keymap (kbd "s") 'svn-status-this-directory)
   (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log))
   ;; TODO: make the following work
   ;;(define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
@@ -522,6 +520,11 @@ If ARG then pass the -u argument to `svn status'."
         (setq default-directory dir
               svn-status-remote (when arg t))
         (svn-run-svn t t 'status "status" status-option)))))
+
+(defun svn-status-this-directory (arg)
+  "Run `svn-status' for the `default-directory'"
+  (interactive "P")
+  (svn-status default-directory arg))
 
 (defun svn-status-use-history ()
   (interactive)
