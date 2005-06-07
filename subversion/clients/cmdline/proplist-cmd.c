@@ -99,7 +99,6 @@ svn_cl__proplist (apr_getopt_t *os,
           const char *target = ((const char **) (targets->elts))[i];
           apr_array_header_t *props;
           int j;
-          int ignored_success;
           svn_boolean_t is_url = svn_path_is_url (target);
           const char *truepath;
           svn_opt_revision_t peg_revision;
@@ -116,7 +115,7 @@ svn_cl__proplist (apr_getopt_t *os,
                                           &(opt_state->start_revision),
                                           opt_state->recursive,
                                           ctx, subpool),
-                    &ignored_success, opt_state->quiet,
+                    NULL, opt_state->quiet,
                     SVN_ERR_UNVERSIONED_RESOURCE,
                     SVN_ERR_ENTRY_NOT_FOUND,
                     SVN_NO_ERROR));
