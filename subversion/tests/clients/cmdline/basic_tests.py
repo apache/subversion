@@ -1440,6 +1440,31 @@ def basic_add_ignores(sbox):
 
 
 #----------------------------------------------------------------------
+def basic_add_local_ignores(sbox):
+  'ignore files matching local ignores in added dirs'
+
+  #Issue #2243 
+  #svn add command not keying off svn:ignore value
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  dir_path = os.path.join(wc_dir, 'dir')
+  file_path = os.path.join(dir_path, 'app.lock')
+
+  os.mkdir(dir_path, 0755)
+  open(file_path, 'w')
+
+  svntest.main.run_svn(None, 'propset', 'svn:ignore', '*.lock', wc_dir) 
+  output, err = svntest.actions.run_and_verify_svn(
+    "No output where some expected", SVNAnyOutput, None,
+    'add', dir_path)
+
+  for line in output:
+    # If we see app.lock in the add output, fail the test.
+    if re.match(r'^A\s+.*.lock$', line):
+      raise svntest.actions.SVNUnexpectedOutput
+
+#----------------------------------------------------------------------
 def uri_syntax(sbox):
   'make sure URI syntaxes are parsed correctly'
 
@@ -1537,6 +1562,7 @@ test_list = [ None,
               uri_syntax,
               basic_checkout_file,
               basic_info,
+              basic_add_local_ignores,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.

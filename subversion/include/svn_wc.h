@@ -2974,6 +2974,18 @@ svn_error_t *svn_wc_get_default_ignores (apr_array_header_t **patterns,
                                          apr_hash_t *config,
                                          apr_pool_t *pool);
 
+/** Get the list of ignore patterns from the @c svn_config_t's in the 
+ * @a config hash and the local ignore patterns from the directory
+ * in @a adm_access, and store them in @a *patterns.
+ * Allocate @a *patterns and its contents in @a pool.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *svn_wc_get_ignores (apr_array_header_t **patterns,
+                                 apr_hash_t *config,
+                                 svn_wc_adm_access_t *adm_access,
+                                 apr_pool_t *pool);
+
 
 /** Add @a lock to the working copy for @a path.  @a adm_access must contain
  * a write lock for @a path.  If @a path is read-only, due to locking
