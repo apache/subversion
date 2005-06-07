@@ -4,9 +4,6 @@
 #
 # Translation dictionary:
 #
-# NOTE: This is a proposed list that isn't currenlty reflected in the
-# translations
-#
 # bogus        ogiltig
 # (to) branch  (skapa) förgrening
 # checkout     checka ut (hämta?)
@@ -43,10 +40,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: subversion 1.1.0\n"
+"Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-05-01 20:50+0200\n"
-"PO-Revision-Date: 2005-04-20 08:13+0200\n"
+"PO-Revision-Date: 2005-06-07 10:08+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
