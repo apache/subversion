@@ -4,13 +4,10 @@
 #
 # Translation dictionary:
 #
-# NOTE: This is a proposed list that isn't currenlty reflected in the
-# translations
-#
 # bogus        ogiltig
 # (to) branch  (skapa) förgrening
 # checkout     checka ut (hämta?)
-# commit       arkivera (var tidigare checka in)
+# commit       arkivera
 # diff         skillnad (ev. med diff inom parentes beroedne på sammanhang)
 # entry        post
 # item         objekt
@@ -43,10 +40,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: subversion 1.1.0\n"
+"Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-06-07 09:43+0200\n"
-"PO-Revision-Date: 2005-06-07 09:47+0200\n"
+"PO-Revision-Date: 2005-06-07 12:11+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -621,8 +618,7 @@ msgstr ""
 "\n"
 "  Om REV anges, bestämmer den i vilken revision URL:en först letas upp.\n"
 "\n"
-"  Om PATH inte anges, kommer basnamnet för URL att användas som "
-"destination.\n"
+"  Om PATH inte anges, kommer basnamnet för URL att användas som destination.\n"
 "  Om flera URL:er anges, kommer varje URL att checkas ut i en underkatalog\n"
 "  till PATH med basnamnet för URL:en som namn på underkatalogen.\n"
 
@@ -6133,9 +6129,7 @@ msgstr "\"%s\" är redan versionshanterad"
 msgid ""
 "Can't replace '%s' with a node of a differing type; commit the deletion, "
 "update the parent, and then add '%s'"
-msgstr ""
-"Kan inte ersätta \"%s\" med en nod av en annan typ; checka in raderingen, "
-"uppdatera föräldern och lägg sedan till \"%s\""
+msgstr "Kan inte ersätta \"%s\" med en nod av en annan typ; arkivera raderingen, uppdatera föräldern och lägg sedan till \"%s\""
 
 #: libsvn_wc/adm_ops.c:988
 #, c-format
@@ -7927,4 +7921,4 @@ msgstr "exporterad%s"
 #: svnversion/main.c:315
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
-msgstr "\"%s\" är inte versionshanterad eller exporterad\n"
+msgstr "\"%s\" är varken versionshanterad eller exporterad\n"
