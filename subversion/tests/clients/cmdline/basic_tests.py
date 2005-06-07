@@ -1465,6 +1465,36 @@ def basic_add_local_ignores(sbox):
       raise svntest.actions.SVNUnexpectedOutput
 
 #----------------------------------------------------------------------
+def basic_add_no_ignores(sbox):
+  'add ignored files in added dirs'
+
+  # add ignored files using the '--no-ignore' option
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  dir_path = os.path.join(wc_dir, 'dir')
+  foo_c_path = os.path.join(dir_path, 'foo.c')
+  # add a few files that match the default ignore patterns
+  foo_o_path = os.path.join(dir_path, 'foo.o')
+  foo_lo_path = os.path.join(dir_path, 'foo.lo')
+  foo_rej_path = os.path.join(dir_path, 'foo.rej')
+
+  os.mkdir(dir_path, 0755)
+  open(foo_c_path, 'w')
+  open(foo_o_path, 'w')
+  open(foo_lo_path, 'w')
+  open(foo_rej_path, 'w')
+
+  output, err = svntest.actions.run_and_verify_svn(
+    "No output where some expected", SVNAnyOutput, None,
+    'add', '--no-ignore', dir_path)
+
+  for line in output:
+    # If we don't see ignores in the add output, fail the test.
+    if not re.match(r'^A\s+.*(foo.(o|rej|lo|c)|dir)$', line):
+      raise svntest.actions.SVNUnexpectedOutput
+
+#----------------------------------------------------------------------
 def uri_syntax(sbox):
   'make sure URI syntaxes are parsed correctly'
 
@@ -1563,6 +1593,7 @@ test_list = [ None,
               basic_checkout_file,
               basic_info,
               basic_add_local_ignores,
+              basic_add_no_ignores,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.

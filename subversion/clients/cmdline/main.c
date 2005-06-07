@@ -183,7 +183,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "them for addition to repository.  They will be added in next commit.\n"
        "usage: add PATH...\n"),
     {svn_cl__targets_opt, 'N', 'q', svn_cl__config_dir_opt,
-     svn_cl__force_opt, svn_cl__autoprops_opt, svn_cl__no_autoprops_opt} },
+     svn_cl__force_opt, svn_cl__no_ignore_opt, svn_cl__autoprops_opt, 
+     svn_cl__no_autoprops_opt} },
 
   { "blame", svn_cl__blame, {"praise", "annotate", "ann"},
     N_("Output the content of specified files or\n"
@@ -351,7 +352,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "  If PATH is a directory, the contents of the directory are added\n"
        "  directly under URL.\n"),
     {'q', 'N', svn_cl__autoprops_opt, svn_cl__no_autoprops_opt,
-     SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+     SVN_CL__LOG_MSG_OPTIONS, svn_cl__no_ignore_opt, SVN_CL__AUTH_OPTIONS, 
+     svn_cl__config_dir_opt} },
  
   { "info", svn_cl__info, {0},
     N_("Display information about a local or remote item.\n"

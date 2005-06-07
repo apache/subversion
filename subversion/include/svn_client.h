@@ -630,11 +630,28 @@ svn_client_switch (svn_revnum_t *result_rev,
  * @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of the 
  * added item.
  *
+ * If @a no_ignore is FALSE, don't add files or directories that match
+ * ignore patterns.
+ *
  * Important:  this is a *scheduling* operation.  No changes will
  * happen to the repository until a commit occurs.  This scheduling
  * can be removed with svn_client_revert().
  *
- * @since New in 1.1.
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_client_add3 (const char *path,
+                 svn_boolean_t recursive,
+                 svn_boolean_t force,
+                 svn_boolean_t no_ignore,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_add3(), but with the @a no_ignore parameter
+ * always set to @c FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
 svn_client_add2 (const char *path,
@@ -746,12 +763,31 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
  * Use @a nonrecursive to indicate that imported directories should not
  * recurse into any subdirectories they may have.
  *
+ * If @a no_ignore is FALSE, don't add files or directories that match
+ * ignore patterns.
+ *
  * ### kff todo: This import is similar to cvs import, in that it does
  * not change the source tree into a working copy.  However, this
  * behavior confuses most people, and I think eventually svn _should_
  * turn the tree into a working copy, or at least should offer the
  * option. However, doing so is a bit involved, and we don't need it
- * right now.  
+ * right now.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *svn_client_import2 (svn_client_commit_info_t **commit_info,
+                                 const char *path,
+                                 const char *url,
+                                 svn_boolean_t nonrecursive,
+                                 svn_boolean_t no_ignore,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_import2(), but with the @a no_ignore parameter 
+ * always set to @c FALSE.
+ * 
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
                                 const char *path,

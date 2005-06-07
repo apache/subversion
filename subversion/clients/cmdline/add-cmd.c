@@ -63,8 +63,9 @@ svn_cl__add (apr_getopt_t *os,
 
       svn_pool_clear (subpool);
       SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
-      err = svn_client_add2 (target, (! opt_state->nonrecursive), 
-                             opt_state->force, ctx, subpool);
+      err = svn_client_add3 (target, (! opt_state->nonrecursive), 
+                             opt_state->force, opt_state->no_ignore,
+                             ctx, subpool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_ENTRY_EXISTS)
