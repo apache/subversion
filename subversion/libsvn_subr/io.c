@@ -1031,7 +1031,7 @@ get_default_file_perms (const char *path, apr_fileperms_t *perms,
   SVN_ERR (svn_path_cstring_from_utf8 (&apr_path, path, pool));
   status = apr_file_open (&fd, apr_path, APR_READ, APR_OS_DEFAULT, pool);
   if (status)
-    return svn_error_wrap_apr (status, _("Can't open file at '%s' "), path);
+    return svn_error_wrap_apr (status, _("Can't open file at '%s'"), path);
 
   status = apr_stat (&finfo, apr_path, APR_FINFO_PROT, pool);
   if (status)
