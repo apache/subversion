@@ -29,9 +29,62 @@
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_xml.h"
+#include "svn_ebcdic.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
+
+#define AUTHOR_STR \
+        "\x61\x75\x74\x68\x6f\x72"
+        /* "author" */
+
+#define ENTRY_STR \
+        "\x65\x6e\x74\x72\x79"
+        /* "entry" */
+
+#define COMMIT_STR \
+        "\x63\x6f\x6d\x6d\x69\x74"
+        /* "commit" */
+
+#define DATE_STR \
+        "\x64\x61\x74\x65"
+        /* "date" */
+
+#define DIR_STR \
+        "\x64\x69\x72"
+        /* "dir" */
+
+#define FILE_STR \
+        "\x66\x69\x6c\x65"
+        /* "file" */
+
+#define KIND_STR \
+        "\x6b\x69\x6e\x64"
+        /* "kind" */
+
+#define LIST_STR \
+        "\x6c\x69\x73\x74"
+        /* "list" */
+
+#define LISTS_STR \
+        "\x6c\x69\x73\x74\x73"
+        /* "lists" */
+
+#define NAME_STR \
+        "\x6e\x61\x6d\x65"
+        /* "name" */
+
+#define PATH_STR \
+        "\x70\x61\x74\x68"
+        /* "path" */
+
+#define REVISION_STR \
+        "\x72\x65\x76\x69\x73\x69\x6f\x6e"
+        /* "revision" */
+
+#define SIZE_STR \
+        "\x73\x69\x7a\x65"
 
 /*** Code. ***/
 
@@ -96,23 +149,26 @@ print_dirents (apr_hash_t *dirents,
           /* we need it in UTF-8. */
           SVN_ERR (svn_utf_cstring_to_utf8 (&utf8_timestr, timestr, subpool));
 
-          sizestr = apr_psprintf (subpool, "%" SVN_FILESIZE_T_FMT,
-                                  dirent->size);
+          sizestr = APR_PSPRINTF2 (subpool, "%" SVN_FILESIZE_T_FMT,
+                                   dirent->size);
 
-          SVN_ERR (svn_cmdline_printf
+          SVN_ERR (SVN_CMDLINE_PRINTF2
                    (subpool, "%7ld %-8.8s %10s %12s %s%s\n",
                     dirent->created_rev,
-                    dirent->last_author ? dirent->last_author : " ? ",
+                    dirent->last_author ? dirent->last_author
+                                        : SVN_UTF8_SPACE_STR \
+                                          SVN_UTF8_QUESTION_STR \
+                                          SVN_UTF8_SPACE_STR,
                     (dirent->kind == svn_node_file) ? sizestr : "",
                     utf8_timestr,
                     utf8_entryname,
-                    (dirent->kind == svn_node_dir) ? "/" : ""));
+                    (dirent->kind == svn_node_dir) ? SVN_UTF8_FSLASH_STR : ""));
         }
       else
         {
-          SVN_ERR (svn_cmdline_printf (subpool, "%s%s\n", utf8_entryname,
-                                       (dirent->kind == svn_node_dir)
-                                       ? "/" : ""));
+          SVN_ERR (SVN_CMDLINE_PRINTF2 (subpool, "%s%s\n", utf8_entryname,
+                                        (dirent->kind == svn_node_dir)
+                                        ? SVN_UTF8_FSLASH_STR : ""));
         }
     }
 
@@ -128,9 +184,9 @@ kind_str (svn_node_kind_t kind)
   switch (kind)
     {
     case svn_node_dir:
-      return "dir";
+      return DIR_STR;
     case svn_node_file:
-      return "file";
+      return FILE_STR;
     default:
       return "";
     }
@@ -146,7 +202,7 @@ print_header_xml (apr_pool_t *pool)
   svn_xml_make_header (&sb, pool);
   
   /* "<lists>" */
-  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "lists", NULL);
+  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, LISTS_STR, NULL);
   
   return svn_cl__error_checked_fputs (sb->data, stdout);
 }
@@ -167,8 +223,8 @@ print_dirents_xml (apr_hash_t *dirents,
   {
     /* "<list path=...>" */
     svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
-    svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "list",
-                           "path", path[0] == '\0' ? "." : path,
+    svn_xml_make_open_tag (&sb, pool, svn_xml_normal, LIST_STR,
+                           PATH_STR, path[0] == '\0' ? SVN_UTF8_DOT_STR : path,
                            NULL);
     SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
   }
@@ -194,52 +250,52 @@ print_dirents_xml (apr_hash_t *dirents,
       sb = svn_stringbuf_create ("", subpool);
 
       /* "<entry ...>" */
-      svn_xml_make_open_tag (&sb, subpool, svn_xml_normal, "entry",
-                             "kind", kind_str (dirent->kind),
+      svn_xml_make_open_tag (&sb, subpool, svn_xml_normal, ENTRY_STR,
+                             KIND_STR, kind_str (dirent->kind),
                              NULL);
 
       /* "<name>xxx</name> */
-      svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "name",
+      svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, NAME_STR,
                              NULL);
       svn_xml_escape_cdata_cstring (&sb, utf8_entryname, subpool);
-      svn_xml_make_close_tag (&sb, subpool, "name");
+      svn_xml_make_close_tag (&sb, subpool, NAME_STR);
 
       /* "<size>xxx</size>" */
       if (dirent->kind == svn_node_file)
         {
-          svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "size",
+          svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, SIZE_STR,
                                  NULL);
           svn_xml_escape_cdata_cstring
-            (&sb, apr_psprintf (subpool, "%" SVN_FILESIZE_T_FMT, dirent->size),
+            (&sb, APR_PSPRINTF2 (subpool, "%" SVN_FILESIZE_T_FMT, dirent->size),
              subpool);
-          svn_xml_make_close_tag (&sb, subpool, "size");
+          svn_xml_make_close_tag (&sb, subpool, SIZE_STR);
         }
 
       /* "<commit revision=...>" */
-      svn_xml_make_open_tag (&sb, subpool, svn_xml_normal, "commit",
-                             "revision",
-                             apr_psprintf (subpool, "%ld",
-                                           dirent->created_rev),
+      svn_xml_make_open_tag (&sb, subpool, svn_xml_normal, COMMIT_STR,
+                             REVISION_STR,
+                             APR_PSPRINTF2 (subpool, "%ld",
+                                            dirent->created_rev),
                              NULL);
       if (dirent->last_author)
         {
           /* "<author>xxx</author>" */
           svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata,
-                                 "author", NULL);
+                                 AUTHOR_STR, NULL);
           svn_xml_escape_cdata_cstring (&sb, dirent->last_author, subpool);
-          svn_xml_make_close_tag (&sb, subpool, "author");
+          svn_xml_make_close_tag (&sb, subpool, AUTHOR_STR);
         }
       /* "<date>xxx</date>" */
-      svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "date",
+      svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, DATE_STR,
                              NULL);
       svn_xml_escape_cdata_cstring
         (&sb, svn_time_to_cstring (dirent->time, subpool), subpool);
-      svn_xml_make_close_tag (&sb, subpool, "date");
+      svn_xml_make_close_tag (&sb, subpool, DATE_STR);
       /* "</commit>" */
-      svn_xml_make_close_tag (&sb, subpool, "commit");
+      svn_xml_make_close_tag (&sb, subpool, COMMIT_STR);
 
       /* "</entry>" */
-      svn_xml_make_close_tag (&sb, subpool, "entry");
+      svn_xml_make_close_tag (&sb, subpool, ENTRY_STR);
 
       SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
     }
@@ -249,7 +305,7 @@ print_dirents_xml (apr_hash_t *dirents,
   {
     /* "</list>" */
     svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
-    svn_xml_make_close_tag (&sb, pool, "list");
+    svn_xml_make_close_tag (&sb, pool, LIST_STR);
     SVN_ERR (svn_cl__error_checked_fputs (sb->data, stdout));
   }
 
@@ -262,7 +318,7 @@ print_footer_xml (apr_pool_t *pool)
 {
   /* "</lists>" */
   svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
-  svn_xml_make_close_tag (&sb, pool, "lists");
+  svn_xml_make_close_tag (&sb, pool, LISTS_STR);
   return svn_cl__error_checked_fputs (sb->data, stdout);
 }
 
