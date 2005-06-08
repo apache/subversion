@@ -127,7 +127,7 @@ test1 (const char **msg,
        svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
-  apr_status_t st;
+  svn_error_t *err;
   char **locale_prefs;
 
   *msg = "test locale preference retrieval of svn_intl";
@@ -138,14 +138,11 @@ test1 (const char **msg,
   if (!srcdir)
     SVN_ERR(init_params(pool));
 
-  /* ### Does this really belong here?  We need to assure that
-     ### bindtextdomain() is called.  TODO: Check return code. */
-  svn_cmdline_init(*msg, stderr);
-
-  st = svn_intl_initialize(pool);
-  if (st != APR_SUCCESS)
+  err = svn_intl_initialize(pool);
+  if (err)
     {
-      return fail(pool, "svn_intl_initialize failed with status of '%d'", st);
+      return svn_error_create (SVN_ERR_TEST_FAILED, err,
+                               "svn_intl_initialize failed");
     }
 
   locale_prefs = svn_intl_get_locale_prefs(NULL, pool);
@@ -155,11 +152,9 @@ test1 (const char **msg,
       return fail(pool, "svn_intl_get_locale_prefs should never "
                   "return NULL, but did");
     }
-  else if (*locale_prefs == NULL)
-    {
-      /* Locale not recorded in .po file. */
-    }
 #ifdef DEBUG
+  else if (*locale_prefs == NULL)
+    printf("Locale not recorded in .po file\n");
   else
     printf("System locale is '%s'\n", *locale_prefs);
 #endif
@@ -177,7 +172,7 @@ test2 (const char **msg,
        apr_pool_t *pool)
 {
   l10n_t *l10n;
-  apr_status_t st;
+  svn_error_t *err;
   apr_pool_t *subpool;
 
   *msg = "test l10n of svn_intl";
@@ -189,10 +184,11 @@ test2 (const char **msg,
     SVN_ERR(init_params(pool));
 
   subpool = svn_pool_create(pool);
-  st = svn_intl_initialize(subpool);
-  if (st != APR_SUCCESS)
+  err = svn_intl_initialize(subpool);
+  if (err)
     {
-      return fail(pool, "svn_intl_initialize failed with status of '%d'", st);
+      return svn_error_create (SVN_ERR_TEST_FAILED, err,
+                               "svn_intl_initialize failed");
     }
 
   /* Test values retrieved from our intl module instance against
