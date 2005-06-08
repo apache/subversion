@@ -29,9 +29,13 @@
 #include <libintl.h> /* for dgettext */
 
 #include "svn_intl.h"
+#include "svn_error.h"
 #include "svn_private_config.h" /* for SVN_LOCALE_DIR */
 
 
+
+/* gettext msgid used to request the current locale using gettext. */
+#define SVN_CLIENT_MESSAGE_LOCALE N_("Client requests untranslated messages")
 
 static apr_hash_t *cache;
 static apr_pool_t *private_pool = NULL;
@@ -61,15 +65,13 @@ svn_intl_terminate (void *ignored)
   return APR_SUCCESS;
 }
 
-apr_status_t
+svn_error_t *
 svn_intl_initialize (apr_pool_t *parent_pool)
 {
-  apr_status_t st;
-
   /* ### Fix race condition in initialization of private_pool */
   if (private_pool == NULL)
     {
-      st = apr_pool_create (&private_pool, parent_pool);
+      apr_status_t st = apr_pool_create (&private_pool, parent_pool);
       if (st == APR_SUCCESS)
         {
            apr_pool_cleanup_register(private_pool, NULL,
@@ -83,8 +85,76 @@ svn_intl_initialize (apr_pool_t *parent_pool)
             apr_pool_destroy (private_pool);
 #endif
         }
+      if (st != APR_SUCCESS)
+        {
+          return svn_error_create(st, NULL, "Failed to initialize "
+                                  "localiztion module");
+        }
+
+      /* C programs default to the "C" locale.  However, because SVN
+         is supposed to be I18N-aware, it inherits the default locale
+         of its environment. */
+      if (setlocale(LC_ALL, "") == NULL)
+        {
+          const char *env_vars[] = { "LC_ALL", "LC_CTYPE", "LANG", NULL };
+          const char **env_var = &env_vars[0], *env_val = NULL;
+          while (*env_var)
+            {
+              env_val = getenv(*env_var);
+              if (env_val && env_val[0])
+                break;
+              ++env_var;
+            }
+
+          if (!*env_var)
+            {
+              /* Unlikely. Can setlocale fail if no env vars are set? */
+              --env_var;
+              env_val = "not set";
+            }
+
+          /* ### Use more specific error code? */
+          return svn_error_createf(-1, NULL, "cannot set LC_ALL locale\n"
+                                   "environment variable '%s' is '%s'\n"
+                                   "please check that your locale name "
+                                   "is correct\n", *env_var, env_val);
+        }
     }
-  return st;
+
+  return SVN_NO_ERROR;
+}
+
+/* The value returned by svn_intl_get_locale_prefs() when no locale
+   preferences are found. */
+static const char *NO_LOCALE_PREFS[] = { NULL };
+
+char **
+svn_intl_get_locale_prefs (void *context, apr_pool_t *pool)
+{
+  char **prefs = NO_LOCALE_PREFS;
+  if (context != NULL)
+    {
+      /* Look for context-specific locale preferences. */
+      /* ### TODO */
+    }
+
+  /* With no contextual locale, fall back to the system locale. */
+  if (prefs == NO_LOCALE_PREFS)
+    {
+      /* xgettext: Set this to the ISO-639 two-letter language code
+         and -- optionally -- the ISO-3166 country code for this .po
+         file (e.g. en-US, sv-SE, etc.). */
+      const char *locale = dgettext(PACKAGE_NAME, SVN_CLIENT_MESSAGE_LOCALE);
+
+      /* The bundle could be missing the "translation", or we could be
+         missing a bundle for the locale. */
+      if (apr_strnatcmp(locale, SVN_CLIENT_MESSAGE_LOCALE) != 0)
+        {
+          prefs = apr_pcalloc(pool, 2 * sizeof(char *));
+          prefs[0] = locale;
+        }
+    }
+  return prefs;
 }
 
 void

@@ -26,6 +26,9 @@
 #include <string.h>
 
 #include <apr_getopt.h>
+#ifdef PO_BUNDLES_FROM_SRC_DIR_USABLE  /* Sadly, they don't seem to be. */
+#include <apr_file_info.h>
+#endif
 #include <apr_pools.h>
 
 #include "svn_error.h"
@@ -35,6 +38,8 @@
 #include "../svn_test.h"
 #include "svn_private_config.h" /* for PACKAGE_NAME */
 
+
+#define DEBUG 1
 
 /* Initialize parameters for the tests. */
 extern int test_argc;
@@ -53,6 +58,9 @@ static svn_error_t *init_params (apr_pool_t *pool)
   int optch;
   const char *opt_arg;
   apr_status_t status;
+#ifdef PO_BUNDLES_FROM_SRC_DIR_USABLE
+  char *gettext_path;
+#endif
 
   apr_getopt_init (&opt, pool, test_argc, test_argv);
   while (!(status = apr_getopt_long (opt, opt_def, &optch, &opt_arg)))
@@ -65,9 +73,22 @@ static svn_error_t *init_params (apr_pool_t *pool)
         }
     }
 
+#ifdef PO_BUNDLES_FROM_SRC_DIR_USABLE
   if (!srcdir)
     return svn_error_create(SVN_ERR_TEST_FAILED, 0,
                             "missing required parameter '--srcdir'");
+
+  /* Setup paths to our localization bundles from the source dir.
+     Ideally, we'd point this to the subversion/po/ dir, but
+     bindtextdomain expects a very specific directory structure. */
+  apr_filepath_merge(&gettext_path, install_dir, "share", 0, pool);
+  apr_filepath_merge(&gettext_path, gettext_path, "locale", 0, pool);
+  printf("Path used by gettext is '%s'\n", gettext_path);
+  if (bindtextdomain(PACKAGE_NAME, gettext_path) == NULL)
+    {
+      /* ### Handle error as in libsvn_subr/cmdline.c */
+    }
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -95,8 +116,7 @@ typedef struct
 
 static l10n_t l10n_list[] =
   {
-    { "Skipping binary file: '%s'\n", "Omitiendo el archivo binario: '%s'\n",
-      "es" },
+    { "Could not save file", "No se pudo grabar el archivo", "es" },
     { "Error writing to '%s'", "Error escribiendo en '%s'", "es" },
     { NULL, 0 }
   };
@@ -107,14 +127,66 @@ test1 (const char **msg,
        svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
+  apr_status_t st;
+  char **locale_prefs;
+
+  *msg = "test locale preference retrieval of svn_intl";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  if (!srcdir)
+    SVN_ERR(init_params(pool));
+
+  /* ### Does this really belong here?  We need to assure that
+     ### bindtextdomain() is called.  TODO: Check return code. */
+  svn_cmdline_init(*msg, stderr);
+
+  st = svn_intl_initialize(pool);
+  if (st != APR_SUCCESS)
+    {
+      return fail(pool, "svn_intl_initialize failed with status of '%d'", st);
+    }
+
+  locale_prefs = svn_intl_get_locale_prefs(NULL, pool);
+  if (locale_prefs == NULL)
+    {
+      /* This should never happen. */
+      return fail(pool, "svn_intl_get_locale_prefs should never "
+                  "return NULL, but did");
+    }
+  else if (*locale_prefs == NULL)
+    {
+      /* Locale not recorded in .po file. */
+    }
+#ifdef DEBUG
+  else
+    printf("System locale is '%s'\n", *locale_prefs);
+#endif
+
+  /* ### Set some contextual prefs and try again. */
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+test2 (const char **msg, 
+       svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
+       apr_pool_t *pool)
+{
   l10n_t *l10n;
   apr_status_t st;
   apr_pool_t *subpool;
 
-  *msg = "test init, l10n, and shutdown of svn_intl";
+  *msg = "test l10n of svn_intl";
 
   if (msg_only)
     return SVN_NO_ERROR;
+
+  if (!srcdir)
+    SVN_ERR(init_params(pool));
 
   subpool = svn_pool_create(pool);
   st = svn_intl_initialize(subpool);
@@ -123,7 +195,7 @@ test1 (const char **msg,
       return fail(pool, "svn_intl_initialize failed with status of '%d'", st);
     }
 
-  /* Test values retrieved from our IntlParser instance against
+  /* Test values retrieved from our intl module instance against
      values retrieved using svn_intl. */
   for (l10n = l10n_list; l10n->key != NULL; l10n++)
     {
@@ -145,11 +217,11 @@ test1 (const char **msg,
 
   apr_pool_destroy(subpool);
 
-  /* ### Test re-initialization after pool passed to
-     ### svn_intl_initialize() is destroyed. */
-
   return SVN_NO_ERROR;
 }
+
+/* ### Test re-initialization after sub-pool passed to
+   ### svn_intl_initialize() is destroyed. */
 
 /*
    ====================================================================
@@ -164,5 +236,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     /* ### XFAIL is a work-around for not-yet-installed bundles. */
     SVN_TEST_XFAIL (test1),
+    SVN_TEST_XFAIL (test2),
     SVN_TEST_NULL
   };

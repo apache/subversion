@@ -62,6 +62,7 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
 {
   apr_status_t status;
   apr_pool_t *pool;
+  svn_error_t *err;
 
 #ifndef WIN32
   {
@@ -99,39 +100,6 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
   }
 #endif /* WIN32 */
 
-  /* C programs default to the "C" locale. But because svn is supposed
-     to be i18n-aware, it should inherit the default locale of its
-     environment.  */
-  if (!setlocale(LC_ALL, ""))
-    {
-      if (error_stream)
-        {
-          const char *env_vars[] = { "LC_ALL", "LC_CTYPE", "LANG", NULL };
-          const char **env_var = &env_vars[0], *env_val = NULL;
-          while (*env_var)
-            {
-              env_val = getenv(*env_var);
-              if (env_val && env_val[0])
-                break;
-              ++env_var;
-            }
-
-          if (!*env_var)
-            {
-              /* Unlikely. Can setlocale fail if no env vars are set? */
-              --env_var;
-              env_val = "not set";
-            }
-
-          fprintf(error_stream,
-                  "%s: error: cannot set LC_ALL locale\n"
-                  "%s: error: environment variable %s is %s\n"
-                  "%s: error: please check that your locale name is correct\n",
-                  progname, progname, *env_var, env_val, progname);
-        }
-      return EXIT_FAILURE;
-    }
-
   /* Initialize the APR subsystem, and register an atexit() function
      to Uninitialize that subsystem at program exit. */
   status = apr_initialize();
@@ -161,6 +129,15 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
      up by APR at exit time. */
   pool = svn_pool_create (NULL);
   svn_utf_initialize (pool);
+
+  /* Initialize the internationalization and localization library. */
+  err = svn_intl_initialize (pool);
+  if (err)
+    {
+      if (error_stream)
+        svn_handle_error2(err, error_stream, FALSE, progname);
+      return EXIT_FAILURE;
+    }
 
 #ifdef ENABLE_NLS
 #ifdef WIN32

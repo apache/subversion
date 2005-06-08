@@ -16,6 +16,13 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#. xgettext: Set this to the ISO-639 two-letter language code
+#. and -- optionally -- the ISO-3166 country code for this .po
+#. file (e.g. en-US, sv-SE, etc.).
+#: libsvn_subr/intl.c:113
+msgid "Client requests untranslated messages"
+msgstr "es"
+
 #: clients/cmdline/blame-cmd.c:248 clients/cmdline/ls-cmd.c:294
 msgid "'verbose' option invalid in XML mode"
 msgstr "La opción 'verbose' no es válida en modo XML"
@@ -4527,7 +4534,7 @@ msgstr "No se pudo grabar el archivo"
 
 #: libsvn_ra_dav/fetch.c:659
 msgid "Error writing to stream: unexpected EOF"
-msgstr "Error escribiendo en '%s': fin de archivo inesperado"
+msgstr "DLR: Error escribiendo en '%s': fin de archivo inesperado"
 
 #: libsvn_ra_dav/fetch.c:844 libsvn_ra_svn/client.c:912
 #, c-format

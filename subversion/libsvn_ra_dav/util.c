@@ -558,7 +558,7 @@ parsed_request(ne_session *sess,
   ne_decompress *decompress_err = NULL;
   ne_xml_parser *success_parser = NULL;
   ne_xml_parser *error_parser = NULL;
-  char *locale;
+  char **locale;
   int rv;
   int decompress_rv;
   int code;
@@ -680,9 +680,9 @@ parsed_request(ne_session *sess,
   /* xgettext: Set this to the ISO-639 two-letter language code and --
      optionally -- the ISO-3166 country code for this .po file
      (e.g. en-US, sv-SE, etc.). */
-  locale = _(SVN_CLIENT_MESSAGE_LOCALE);
-  if (apr_strnatcmp(locale, SVN_CLIENT_MESSAGE_LOCALE) != 0)
-    ne_add_request_header(req, "Accept-Language", locale);
+  locale = svn_intl_get_locale_prefs(NULL, pool);
+  if (*locale != NULL)
+    ne_add_request_header(req, "Accept-Language", *locale);
 
   /* Register the "error" accepter and body-reader with the request --
      the one to use when HTTP status is *not* 2XX */

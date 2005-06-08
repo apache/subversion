@@ -26,23 +26,30 @@
 
 #include <apr_errno.h>
 
-/* gettext msgid used to request the current locale using gettext. */
-#define SVN_CLIENT_MESSAGE_LOCALE "Client requests untranslated messages"
+#include "svn_error.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
 /* Initialize the library, using @a parent_pool to acquire a sub-pool
-   for storage of localization bundle data.  A NULL @a parent_pool
+   for storage of localization bundle data.  A @c NULL @a parent_pool
    indicates that the global pool should be used.  The lifetime of the
    resources used by this module can be managed via @a parent_pool. */
-apr_status_t
+svn_error_t *
 svn_intl_initialize (apr_pool_t *parent_pool);
+
+/* Gets the locale preferences for @a context.  If @a context is @c
+   NULL, gets the system locale for the current process.  Returns a
+   list of locales ordered by preference.  Never returns @c NULL, but
+   may return an empty array (e.g. consisting only of a single @c NULL
+   value). */
+char **
+svn_intl_get_locale_prefs (void *context, apr_pool_t *pool);
 
 /* Sets the locale preferences for @a context.  @a locale_prefs are
    inspected in order for a matching resource bundle.  Not invoking
-   this API, or invoking it with a NULL locale, or finding no match
+   this API, or invoking it with a @c NULL locale, or finding no match
    against the preferences will result in the global locale being used
    instead. */
 void

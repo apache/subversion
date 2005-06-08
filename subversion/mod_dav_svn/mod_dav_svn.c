@@ -77,7 +77,6 @@ static int dav_svn_init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp,
                         server_rec *s)
 {
     svn_error_t *serr;
-    apr_status_t st;
     ap_add_version_component(p, "SVN/" SVN_VER_NUMBER);
 
     serr = svn_fs_initialize(p);
@@ -92,8 +91,8 @@ static int dav_svn_init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp,
     /* This returns void, so we can't check for error. */
     svn_utf_initialize(p);
 
-    st = svn_intl_initialize(p);
-    if (st != APR_SUCCESS)
+    serr = svn_intl_initialize(p);
+    if (serr)
       {
         ap_log_perror(APLOG_MARK, APLOG_ERR, serr->apr_err, p,
                       "dav_svn_init: error calling svn_intl_initialize");
