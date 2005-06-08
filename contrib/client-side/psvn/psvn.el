@@ -2354,12 +2354,15 @@ See `svn-status-marked-files' for what counts as selected."
         (insert-file svn-log-edit-file-name)))
     (svn-log-edit-mode)))
 
-(defun svn-status-cleanup ()
-  (interactive)
-  (let ((file-names (svn-status-marked-file-names)))
+(defun svn-status-cleanup (arg)
+  "Run `svn cleanup' on all selected files.
+See `svn-status-marked-files' for what counts as selected.
+When this function is called with a prefix argument, use the actual file instead."
+  (interactive "P")
+  (let ((file-names (svn-status-get-file-list-names (not arg))))
     (if file-names
         (progn
-          ;(message "svn-status-cleanup %S" file-names))
+          (message "svn-status-cleanup %S" file-names)
           (svn-run-svn t t 'cleanup (append (list "cleanup") file-names)))
       (message "No valid file selected - No status cleanup possible"))))
 
