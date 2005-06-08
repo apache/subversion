@@ -658,7 +658,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
                   (svn-status-update)
                   (message "svn update finished"))
                  ((eq svn-process-cmd 'add)
-                  (svn-status-update)
+                  (svn-status-update-with-command-list (svn-status-parse-ar-output))
                   (message "svn add finished"))
                  ((eq svn-process-cmd 'mkdir)
                   (svn-status-update)
@@ -675,7 +675,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
                   (svn-status-update)
                   (message "svn mv finished"))
                  ((eq svn-process-cmd 'rm)
-                  (svn-status-update)
+                  (svn-status-update-with-command-list (svn-status-parse-ar-output))
                   (message "svn rm finished"))
                  ((eq svn-process-cmd 'cleanup)
                   (message "svn cleanup finished"))
@@ -1374,7 +1374,10 @@ When called with the prefix argument 0, use the full path name."
     (set-buffer svn-status-buffer-name)
     (let ((st-info)
           (found)
-          (action))
+          (action)
+          (fname (svn-status-line-info->filename (svn-status-get-line-information)))
+          (fname-pos (point))
+          (column (current-column)))
       (setq cmd-list (sort cmd-list '(lambda (item1 item2) (string-lessp (car item1) (car item2)))))
       (while cmd-list
         (unless st-info (setq st-info svn-status-info))
@@ -1397,7 +1400,13 @@ When called with the prefix argument 0, use the full path name."
               ;;(message "found %s, action: %S" (caar cmd-list) action)
               (svn-status-annotate-status-buffer-entry action (car st-info)))
           (message "did not find %s" (caar cmd-list)))
-        (setq cmd-list (cdr cmd-list))))))
+        (setq cmd-list (cdr cmd-list)))
+      (if fname
+          (progn
+            (goto-char fname-pos)
+            (svn-status-goto-file-name fname)
+            (goto-char (+ column (point-at-bol))))
+        (goto-char (+ (next-overlay-change (point-min)) svn-status-default-column))))))
 
 (defun svn-status-annotate-status-buffer-entry (action line-info)
   (let ((tag-string))
@@ -1412,17 +1421,23 @@ When called with the prefix argument 0, use the full path name."
            (setq tag-string " <added>"))
           ((equal action 'deleted)
            (setq tag-string " <deleted>"))
+          ((equal action 'added-wc)
+           (svn-status-line-info->set-filemark line-info ?A)
+           (svn-status-line-info->set-localrev line-info 0))
+          ((equal action 'deleted-wc)
+           (svn-status-line-info->set-filemark line-info ?D))
           (t
-           (message "Unknown action '%s for %s" action (svn-status-line-info->filename line-info))))
+           (error "Unknown action '%s for %s" action (svn-status-line-info->filename line-info))))
     (when tag-string
       (svn-status-line-info->set-filemark line-info ? )
-      (svn-status-line-info->set-propmark line-info ? )
-      (let ((buffer-read-only nil))
-        (delete-region (point-at-bol) (point-at-eol))
-        (svn-insert-line-in-status-buffer line-info)
-        (backward-char 1)
-        (insert tag-string)
-        (delete-char 1)))))
+      (svn-status-line-info->set-propmark line-info ? ))
+    (let ((buffer-read-only nil))
+      (delete-region (point-at-bol) (point-at-eol))
+      (svn-insert-line-in-status-buffer line-info)
+      (backward-char 1)
+      (when tag-string
+        (insert tag-string))
+      (delete-char 1))))
 
 
 
@@ -1473,6 +1488,36 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
       result)))
 ;;(svn-status-parse-commit-output)
 ;;(svn-status-annotate-status-buffer-entry)
+
+(defun svn-status-parse-ar-output ()
+  "Parse the output of svn add|remove.
+Return a list that is suitable for `svn-status-update-with-command-list'"
+  (save-excursion
+    (set-buffer "*svn-process*")
+    (let ((action)
+          (name)
+          (skip)
+          (result))
+      (goto-char (point-min))
+      (while (< (point) (point-max))
+        (cond ((= (point-at-eol) (point-at-bol)) ;skip blank lines
+               (setq skip t))
+              ((looking-at "A")
+               (setq action 'added-wc))
+              ((looking-at "D")
+               (setq action 'deleted-wc))
+              (t ;; this should never be needed(?)
+               (setq action 'unknown)))
+        (unless skip ;found an interesting line
+          (forward-char 10)
+          (setq name (buffer-substring-no-properties (point) (point-at-eol)))
+          (setq result (cons (list name action)
+                             result))
+          (setq skip nil))
+        (forward-line 1))
+      result)))
+;;(svn-status-parse-ar-output)
+;; (svn-status-update-with-command-list (svn-status-parse-ar-output))
 
 (defun svn-status-line-info->directory-p (line-info)
   "Return t if LINE-INFO refers to a directory, nil otherwise.
