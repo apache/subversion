@@ -48,12 +48,15 @@ class State:
     for path in paths:
       del self.desc[path]
 
-  def copy(self):
-    "Make a deep copy of self."
+  def copy(self, new_root=None):
+    """Make a deep copy of self.  If NEW_ROOT is not None, then set the
+    copy's wc_dir NEW_ROOT instead of to self's wc_dir."""
     desc = { }
     for path, item in self.desc.items():
       desc[path] = item.copy()
-    return State(self.wc_dir, desc)
+    if new_root is None:
+      new_root = self.wc_dir
+    return State(new_root, desc)
 
   def tweak(self, *args, **kw):
     """Tweak the items' values, optional restricting based on a filter.

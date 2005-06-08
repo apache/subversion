@@ -35,7 +35,7 @@ extern "C" {
 
 
 /** This structure is used to hold a key/value from a hash table.
- * NOTE: Private. For use by Subversion's own code only. See issue #1644.
+ * @note Private. For use by Subversion's own code only. See issue #1644.
  */
 typedef struct svn_sort__item_t {
   /** pointer to the key */
@@ -90,13 +90,13 @@ int svn_sort_compare_revisions (const void *a, const void *b);
 
 
 /**
- * @since New in 1.1.
- *
  * Compare two @c const char * paths, returning an integer greater
  * than, equal to, or less than 0, using the same comparison rules as
  * are used by svn_path_compare_paths().
  *
  * This function is compatible for use with qsort().
+ *
+ * @since New in 1.1.
  */
 int svn_sort_compare_paths (const void *a, const void *b);
 
@@ -113,9 +113,9 @@ int svn_sort_compare_paths (const void *a, const void *b);
  * integer greater than, equal to, or less than 0, according as the first item
  * is greater than, equal to, or less than the second.
  *
- * NOTE: Private. For use by Subversion's own code only. See issue #1644.
+ * @note Private. For use by Subversion's own code only. See issue #1644.
  *
- * NOTE: This function and the @c svn_sort__item_t should go over to APR.
+ * @note This function and the @c svn_sort__item_t should go over to APR.
  */
 apr_array_header_t *
 svn_sort__hash (apr_hash_t *ht,

@@ -102,9 +102,10 @@ svn_client__update_internal (svn_revnum_t *result_rev,
                                 SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE));
 
   /* Open an RA session for the URL */
-  SVN_ERR (svn_client__open_ra_session (&ra_session, entry->url, anchor, 
-                                        adm_access, NULL, TRUE, TRUE, 
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, entry->url,
+                                                 anchor, adm_access,
+                                                 NULL, TRUE, TRUE, 
+                                                 ctx, pool));
 
   /* ### todo: shouldn't svn_client__get_revision_number be able
      to take a URL as easily as a local path?  */

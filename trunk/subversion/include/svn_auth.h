@@ -508,10 +508,12 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
         "\x73\x76\x6e\x3a\x61\x75\x74\x68\x3a"
         /* "svn:auth:" */
 
-/** @{ */
-/** @brief Any 'default' credentials that came in through the application
- * itself, (e.g. --username and --password options).  Property values are
- * const char *.  */
+/**
+ * @name Default credentials defines
+ * Any 'default' credentials that came in through the application itself,
+ * (e.g. --username and --password options). Property values are
+ * const char *.
+ * @{ */
 #define SVN_AUTH_PARAM_DEFAULT_USERNAME  SVN_AUTH_PARAM_PREFIX \
         "\x75\x73\x65\x72\x6e\x61\x6d\x65"
         /* "username" */

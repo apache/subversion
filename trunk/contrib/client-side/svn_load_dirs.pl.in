@@ -1413,7 +1413,6 @@ sub file_info
 }
 
 # Start a child process safely without using /bin/sh.
-my $openfork_available = "MSWin32" ne $OSNAME;
 sub safe_read_from_pipe
 {
   unless (@_)
@@ -1421,6 +1420,7 @@ sub safe_read_from_pipe
       croak "$0: safe_read_from_pipe $INCORRECT_NUMBER_OF_ARGS";
     }
 
+  my $openfork_available = "MSWin32" ne $OSNAME;
   if ($openfork_available)
     {
       print "Running @_\n";

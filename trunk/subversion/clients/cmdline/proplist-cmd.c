@@ -99,7 +99,6 @@ svn_cl__proplist (apr_getopt_t *os,
           const char *target = ((const char **) (targets->elts))[i];
           apr_array_header_t *props;
           int j;
-          svn_error_t *err;
           svn_boolean_t is_url = svn_path_is_url (target);
           const char *truepath;
           svn_opt_revision_t peg_revision;
@@ -111,23 +110,15 @@ svn_cl__proplist (apr_getopt_t *os,
           SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, target,
                                        subpool));
           
-          err = svn_client_proplist2 (&props, truepath, &peg_revision,
-                                      &(opt_state->start_revision),
-                                      opt_state->recursive, ctx, subpool);
-          if (err)
-            {
-              if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND)
-                {
-                  if (!opt_state->quiet)
-                    {
-                      svn_handle_warning (stderr, err);
-                    }
-                  svn_error_clear (err);
-                  continue;
-                }
-              else
-                return err;
-            }
+          SVN_ERR (svn_cl__try
+                   (svn_client_proplist2 (&props, truepath, &peg_revision,
+                                          &(opt_state->start_revision),
+                                          opt_state->recursive,
+                                          ctx, subpool),
+                    NULL, opt_state->quiet,
+                    SVN_ERR_UNVERSIONED_RESOURCE,
+                    SVN_ERR_ENTRY_NOT_FOUND,
+                    SVN_NO_ERROR));
 
           for (j = 0; j < props->nelts; ++j)
             {

@@ -3,6 +3,12 @@
 # Yes, this script is aching to be rewritten in Python.
 # It was never supposed to grow this big!
 
+if [ $# -ne 1 ]; then
+  echo "Usage: 1.  ./validate.sh <filename>" >&2
+  echo "       2.  ./validate.sh all" >&2
+  exit 1
+fi
+
 WWWDIR="`dirname \"$0\"`"
 
 # Much of this script is concerned with setting up a local cache of the
@@ -51,7 +57,7 @@ ensure "http://subversion.tigris.org/branding/css/print.css" \
 ensure "http://subversion.tigris.org/branding/scripts/tigris.js" \
   "tigris-branding/scripts"
 
-for f in `sed -n 's,.*url(\.\./images/\([^)]*\).*,\1,;tp;be;:p;p;:e' \
+for f in `sed -n -e 's,.*url(\.\./images/\([^)]*\).*,\1,;tp' -etp -ed -e:p -ep \
   $WWWDIR/tigris-branding/css/*.css`; do
   ensure "http://subversion.tigris.org/branding/images/$f" \
     "tigris-branding/images"

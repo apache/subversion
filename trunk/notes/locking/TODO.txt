@@ -2,25 +2,12 @@ TODO for locking
 ================
 
 
-(see notes/TODO-1.2.txt for the master list)
-
-
-
 NICE TO HAVE
 ------------
-
-* improve cmdline help messages
 
 * put quotes around user names as well as around lock names when we error.
 
 * support cancellation during lock/unlock.
-
-* possibly teach mailer.py to send lock/unlock mails (fitz)
-
-* remove ra_svn shim for multiple locks/unlocks (fitz)
-
-* subversion/clients/cmdline/lock-cmd.c:66
-    /* ### Should we do this in a loop like for the commit message? */ (lundblad)
 
 -----------------------------------------------
 

@@ -21,7 +21,7 @@
  * This is an internalized library for performing contextual diffs
  * between sources of data.
  *
- * NOTE: this is different than Subversion's binary-diffing engine.
+ * @note This is different than Subversion's binary-diffing engine.
  * That API lives in @c svn_delta.h -- see the "text deltas" section.  A
  * "text delta" is way of representing precise binary diffs between
  * strings of data.  The Subversion client and server send text deltas
@@ -59,9 +59,9 @@ extern "C" {
 
 
 /**
- * @since New in 1.1.
- *
  * Get libsvn_diff version information.
+ *
+ * @since New in 1.1.
  */
 const svn_version_t *svn_diff_version (void);
 
@@ -193,7 +193,7 @@ svn_diff_contains_diffs(svn_diff_t *diff);
  * Differences, similarities, and conflicts are described by lining up
  * "ranges" of data.
  *  
- * Note: these callbacks describe data ranges in units of "tokens".
+ * @note These callbacks describe data ranges in units of "tokens".
  * A "token" is whatever you've defined it to be in your datasource
  * @c svn_diff_fns_t vtable.
  */
@@ -364,7 +364,7 @@ svn_diff_file_output_unified2(svn_stream_t *output_stream,
 /** Similar to svn_diff_file_output_unified2(), but with @a header_encoding
  * set to @c APR_LOCALE_CHARSET.
  *
- * @deprecated Provided for backwards compatibility with the 1.2 API.
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
 svn_diff_file_output_unified(svn_stream_t *output_stream,

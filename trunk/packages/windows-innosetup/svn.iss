@@ -98,7 +98,7 @@ Source: {#= path_authzsvn}\mod_authz_svn.so; DestDir: {app}\bin; Flags: ignoreve
 
 ;Helpers ---------------------------------------------------------------------
 Source: {#= path_svnpath}\svnpath.exe; DestDir: {app}\helpers; Flags: ignoreversion
-Source: UninsHs.exe; DestDir: {app}; Flags: ignoreversion onlyifdoesntexist
+Source: UninsHs.exe; DestDir: {app}; Flags: restartreplace
 
 ; Debug symbols;
 #ifdef inc_dbgsyms
@@ -123,7 +123,8 @@ Filename: {app}\svn.url; Section: InternetShortcut; Key: URL; String: http://sub
 
 ; Reinstall, repair and uninstall with UninsHS
 FileName: {app}\UninsHs.dat; Section: Common; Key: Software; String: Subversion
-FileName: {app}\UninsHs.dat; Section: Common; Key: Install; String: svn-{#= svn_version}-setup.exe
+FileName: {app}\UninsHs.dat; Section: Common; Key: Install; String: {srcexe}
+
 FileName: {app}\UninsHs.dat; Section: Common; Key: Language; String: {language}
 FileName: {app}\UninsHs.dat; Section: Common; Key: Remove; String: {uninstallexe}
 FileName: {app}\UninsHs.dat; Section: Common; Key: Group; String: {groupname}
@@ -152,8 +153,39 @@ Name: full; Description: Full installation - Binaries and debugging symbols
 Name: custom; Description: Custom Installation; Flags: iscustom
 
 [Components]
-Name: main; Description: Subversion application files; Types: standard custom full
-Name: pdb; Description: Debug Symbol Files; Types: full custom
+Name: main; Description: Subversion application files; Types: standard custom full; flags: disablenouninstallwarning
+;or
+;Name: main; Description: Subversion application files; Types: standard custom full; flags: fixed
+
+Name: pdb; Description: Debug Symbol Files; Types: full custom flags: disablenouninstallwarning
+
+[InstallDelete]
+
+;If add "disablenouninstallwarning" flag to "main" in [Components], use these lines:
+Type: files; Name: {app}\Readme.txt
+Type: files; Name: {app}\W32notes.txt
+Type: files; Name: {app}\svn-proxy-template.reg
+Type: files; Name: {app}\Buildnotes.txt
+Type: files; Name: {app}\Buildnotes.txt
+Type: filesandordirs; Name: {app}\bin
+Type: filesandordirs; Name: {app}\iconv
+#ifdef inc_locale
+Type: filesandordirs; Name: {app}\share\locale
+#endif
+Type: files; Name: {app}\BerkeleyLicense.txt
+Type: filesandordirs; Name: {app}\doc
+Type: filesandordirs; Name: {app}\helpers
+Type: filesandordirs; Name: {app}\httpd
+
+;If add "fixed" flag to "main" in [Components], use these lines:
+;Type: files; Name: {app}\svn.pdb
+;Type: files; Name: {app}\svnadmin.pdb
+;Type: files; Name: {app}\svnserve.pdb
+;Type: files; Name: {app}\svnlook.pdb
+;Type: files; Name: {app}\svnversion.pdb
+;Type: files; Name: {app}\svndumpfilter.pdb
+;Type: filesandordirs; Name: {app}\httpd
+;Type: files; Name: {app}\iconv\*.pdb
 #endif
 
 [Registry]
@@ -171,7 +203,7 @@ Root: HKLM; Subkey: SYSTEM\CurrentControlSet\Control\Session Manager\Environment
 
 [Run]
 Filename: {app}\helpers\svnpath.exe; Parameters: "add ""{app}\bin"""; StatusMsg: Editing the path...
-Filename: {app}\UninsHs.exe; Parameters: /r; Flags: runminimized
+Filename: {app}\UninsHs.exe; Parameters: /r; Flags: runminimized runhidden nowait
 
 [UninstallRun]
 Filename: {app}\helpers\svnpath.exe; Parameters: "remove ""{app}\bin"""
@@ -181,4 +213,3 @@ Name: en; MessagesFile: compiler:Default.isl
 
 [Code]
 #include "is_main.pas"
-

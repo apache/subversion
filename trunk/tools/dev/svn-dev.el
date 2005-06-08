@@ -134,6 +134,26 @@ Inhibit backup files unless `vc-make-backup-files' is non-nil."
   (interactive "nSubversion issue number: ")
   (insert (format "http://subversion.tigris.org/issues/show_bug.cgi?id=%d" n)))
 
+;; Helper for referring to revisions in a browser-friendly way.
+(defun svn-rev-url (rev &optional transform)
+  "Insert the url for Subversion revision REV, or if TRANSFORM is not
+nil, then transform the revision at or around point into an HTML link.
+
+Interactively, if at or inside a revision number, transform it into
+full HTML link; otherwise, prompt for revision number and insert just
+the resulting URL."
+  (interactive (let ((thing (thing-at-point 'word)))
+                 (if (and thing (string-match "r[0-9]+" thing))
+                     (list thing t)
+                   (list (read-string "Subversion revision number: ") nil))))
+  (if (string-match "^r[0-9]+" rev)
+      (setq rev (substring rev 1)))
+  (if transform
+      (let* ((bounds (bounds-of-thing-at-point 'word))
+             (start (car bounds))
+             (end   (cdr bounds)))
+        (delete-region start end)))
+  (insert (format "http://svn.collab.net/viewcvs/svn?rev=%s&view=rev" rev)))
 
 
 ;;; Subversion C conventions
@@ -160,6 +180,7 @@ the Subversion project.  Python setup in other buffers will not be
 affected."
   (when (string-match "/subversion/" (buffer-file-name))
     (make-local-variable 'py-indent-offset)
+    (setq indent-tabs-mode nil)
     (setq py-indent-offset 2)
     (make-local-variable 'py-smart-indentation)
     (setq py-smart-indentation nil)))

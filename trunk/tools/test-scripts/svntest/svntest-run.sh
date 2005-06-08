@@ -76,6 +76,13 @@ then
     reinitialize_ramdisk
 fi
 
+if test "xyes" = "x$INTERMEDIATE_CLEANUP";
+then
+    # Flag the tests to cleanup after themselves to avoid requiring
+    # hundreds of MBs of storage at once for test data.
+    CHECK_ARGS="$CHECK_ARGS CLEANUP=1"
+fi
+
 # Prepare the server
 case $CHECK_TARGET in
     check)
@@ -101,7 +108,7 @@ case $CHECK_TARGET in
         $CP_F "$TEST_ROOT/$HTTPD_NAME.conf" \
             "$INST_DIR/$HTTPD_NAME/conf/httpd.conf" || FAIL
 
-        $CP_F "$TEST_ROOT/mod_dav_svn_$BUILD_TYPE.conf" \
+        $CP_F "$TEST_ROOT/mod_dav_${SVN_NAME}.conf" \
             "$INST_DIR/$HTTPD_NAME/conf/mod_dav_svn.conf" || FAIL
 
         "$INST_DIR/$HTTPD_NAME/bin/apachectl" start \

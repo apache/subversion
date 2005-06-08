@@ -216,6 +216,11 @@ In either case the mark gets the face
 `svn-status-update-available-face', and will only be visible if
 `\\[svn-status-update]' is run with a prefix argument")
 
+(defvar svn-status-debug-level 0 "The psvn.el debugging verbosity level.
+The higher the number, the more debug messages are shown.
+
+See `svn-status-message' for the meaning of values for that variable.")
+
 (defvar svn-status-buffer-name "*svn-status*" "Name for the svn status buffer")
 
 (defvar svn-status-use-header-line t
@@ -265,6 +270,22 @@ It is an experimental feature.")
       (require 'overlay)
     (require 'overlay nil t)))
 
+
+(defcustom svn-status-prefix-key [(control x) (meta s)]
+  "Prefix key for the psvn commands in the global keymap."
+  :type '(choice (const [(control x) ?v ?S])
+                 (const [(super s)])
+                 (const [(hyper s)])
+                 (const [(control x) ?v])
+                 (const [(control x) ?V])
+                 (sexp))
+  :group 'psvn
+  :set  (lambda (var value)
+          (if (boundp var)
+              (global-unset-key (symbol-value var)))
+          (set var value)
+          (global-set-key (symbol-value var) svn-global-keymap)))
+
 ;; Use the normally used mode for files ending in .~HEAD~, .~BASE~, ...
 (add-to-list 'auto-mode-alist '("\\.~?\\(HEAD\\|BASE\\|PREV\\)~?\\'" ignore t))
 
@@ -292,10 +313,11 @@ It is an experimental feature.")
 (defvar svn-status-edit-svn-command nil)
 (defvar svn-status-update-previous-process-output nil)
 (defvar svn-status-temp-dir
-  (or
-   (when (boundp 'temporary-file-directory) temporary-file-directory) ;emacs
-   (when (boundp 'temp-directory) temp-directory)                     ;xemacs
-   "/tmp/"))
+  (expand-file-name
+   (or
+    (when (boundp 'temporary-file-directory) temporary-file-directory) ;emacs
+    (when (boundp 'temp-directory) temp-directory)                     ;xemacs
+    "/tmp/")))
 (defvar svn-temp-suffix (make-temp-name "."))
 (defvar svn-status-temp-file-to-remove nil)
 (defvar svn-status-temp-arg-file (concat svn-status-temp-dir "svn.arg" svn-temp-suffix))
@@ -435,6 +457,30 @@ Otherwise, return \"\"."
     nil ;; great
   (defsubst match-string-no-properties (match)
     (buffer-substring-no-properties (match-beginning match) (match-end match))))
+
+(defvar svn-global-keymap nil "Global keymap for psvn.el")
+
+(when (not svn-global-keymap)
+  (setq svn-global-keymap (make-sparse-keymap))
+  (define-key svn-global-keymap (kbd "s") 'svn-status)
+  (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log))
+  ;; TODO: make the following work
+  ;;(define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
+  ;;(define-key svn-global-keymap (kbd "c") 'svn-status-commit-file))
+
+(when svn-status-prefix-key
+  (global-set-key svn-status-prefix-key svn-global-keymap))
+
+
+(defun svn-status-message (level &rest args)
+  "If LEVEL is lower than `svn-status-debug-level' print ARGS using `message'.
+
+Guideline for numbers:
+1 - error messages, 3 - non-serious error messages, 5 - messages for things
+that take a long time, 7 - not very important messages on stuff, 9 - messages
+inside loops."
+  (if (<= level svn-status-debug-level)
+      (apply 'message args)))
 
 (defvar svn-status-display-new-status-buffer nil)
 ;;;###autoload
@@ -1912,7 +1958,7 @@ If the file is not found, return nil."
   (let ((pos (svn-status-get-file-name-buffer-position name)))
     (if pos
         (goto-char pos)
-      (message "Warning: svn-status-goto-file-name: %s not found" name))))
+      (svn-status-message 7 "Note: svn-status-goto-file-name: %s not found" name))))
 
 (defun svn-status-find-info-for-file-name (name)
   (let* ((st-info svn-status-info)
@@ -2813,7 +2859,8 @@ Commands:
 
 (when (not svn-log-edit-mode-map)
   (setq svn-log-edit-mode-map (make-sparse-keymap))
-  (define-key svn-log-edit-mode-map (kbd "C-c C-c") 'svn-log-edit-done)
+  (unless svn-log-edit-use-log-edit-mode
+    (define-key svn-log-edit-mode-map (kbd "C-c C-c") 'svn-log-edit-done))
   (define-key svn-log-edit-mode-map (kbd "C-c C-d") 'svn-log-edit-svn-diff)
   (define-key svn-log-edit-mode-map (kbd "C-c C-s") 'svn-log-edit-save-message)
   (define-key svn-log-edit-mode-map (kbd "C-c C-i") 'svn-log-edit-svn-status)
