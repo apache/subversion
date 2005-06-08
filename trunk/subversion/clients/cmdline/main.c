@@ -316,10 +316,17 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "\n"
        "  Use just 'svn diff' to display local modifications in "
        "a working copy.\n"),
+#if !AS400
     {'r', svn_cl__old_cmd_opt, svn_cl__new_cmd_opt, 'N',
      svn_cl__diff_cmd_opt, 'x', svn_cl__no_diff_deleted,
      svn_cl__notice_ancestry_opt, svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
+#else
+    {'r', svn_cl__old_cmd_opt, svn_cl__new_cmd_opt, 'N',
+     svn_cl__no_diff_deleted,
+     svn_cl__notice_ancestry_opt, svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
+     svn_cl__config_dir_opt} },
+#endif
 
   { "export", svn_cl__export, {0},
     N_("Create an unversioned copy of a tree.\n"
@@ -1104,10 +1111,20 @@ main (int argc, const char * const *argv)
         opt_state.editor_cmd = apr_pstrdup (pool, opt_arg);
         break;
       case svn_cl__old_cmd_opt:
+#if !APR_CHARSET_EBCDIC
         opt_state.old_target = apr_pstrdup (pool, opt_arg);
+#else
+        SVN_INT_ERR (svn_utf_cstring_to_utf8(&opt_state.old_target, opt_arg,
+                                             pool));
+#endif
         break;
       case svn_cl__new_cmd_opt:
+#if !APR_CHARSET_EBCDIC
         opt_state.new_target = apr_pstrdup (pool, opt_arg);
+#else
+        SVN_INT_ERR (svn_utf_cstring_to_utf8(&opt_state.new_target, opt_arg,
+                                             pool));
+#endif
         break;
       case svn_cl__config_dir_opt:
         err = svn_utf_cstring_to_utf8 (&path_utf8, opt_arg, pool);

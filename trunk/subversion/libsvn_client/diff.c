@@ -156,7 +156,7 @@ display_prop_diffs (const apr_array_header_t *propchanges,
             else
               {
                 /* ### todo: check for error? */
-#if APR_CHARSET_EBCDIC
+#if !APR_CHARSET_EBCDIC
                 apr_file_printf
                   (file, "   - %s" APR_EOL_STR, original_value->data);
 #else
@@ -177,11 +177,11 @@ display_prop_diffs (const apr_array_header_t *propchanges,
             else
               {
                 /* ### todo: check for error? */
-#if APR_CHARSET_EBCDIC
+#if !APR_CHARSET_EBCDIC
                 apr_file_printf (file, "   + %s" APR_EOL_STR,
                                  propchange->value->data);
 #else
-                svn_ebcdic_file_printf (file, "   + %s" APR_EOL_STR,
+                svn_ebcdic_file_printf (pool, file, "   + %s" APR_EOL_STR,
                                         propchange->value->data);
 #endif
               }
