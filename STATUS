@@ -58,14 +58,6 @@ Candidate changes:
       +1 (not r14116): djh
       +1: lundblad, fitz
 
-  * r14755
-    Don't initialize libsvn_ra in svnversion:
-    Justification:
-      svnversion doesn't use the RA layer, and it only depends on it
-      indirectly.
-    Votes:
-      +1: lundblad, fitz
-
   * r14885
     Python bindings, fix for functions returning MD5 digests.
     Justification:
