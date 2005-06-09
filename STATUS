@@ -73,5 +73,13 @@ Candidate changes:
     Votes:
       +1: maxb
       
+  * r15016
+    Fix partly broken caching of copyfrom information in fsfs.
+    Justification:
+      Performance regression with svn log -v for revisions with many paths
+      added without history (i.e. an initial import).
+    Votes:
+      +1: lundblad
+
 Approved changes (further review is welcome, but not required):
 
