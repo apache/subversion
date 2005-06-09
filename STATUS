@@ -48,16 +48,6 @@ Candidate changes:
     Votes:
       +0: dlr (concept, no testing environment), fitz (concept)
 
-  * r14116, r14722, r14759
-    Optimize 'svn log' performance.
-    Justification:
-      The new --limit option does not help speed as much without this.
-    Notes:
-      r14722 depends on r14116, which is just comment fixes.
-    Votes:
-      +1 (not r14116): djh
-      +1: lundblad, fitz
-
   * r14885
     Python bindings, fix for functions returning MD5 digests.
     Justification:
