@@ -360,6 +360,14 @@ const char *svn_path_is_child (const char *path1,
                                const char *path2,
                                apr_pool_t *pool);
 
+/* Return true if @a path1 is an ancestor of @a path2 or the paths are equal
+ * and false otherwise.
+ *
+ * @since New in 1.3.
+ */
+svn_boolean_t
+svn_path_is_ancestor (const char *path1, const char *path2);
+
 /**
  * Check whether @a path is a valid Subversion path.
  *

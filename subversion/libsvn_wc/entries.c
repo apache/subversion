@@ -56,6 +56,7 @@ svn_error_t *
 svn_wc__entries_init (const char *path,
                       const char *uuid,
                       const char *url,
+                      const char *repos,
                       svn_revnum_t initial_rev,
                       apr_pool_t *pool)
 {
@@ -65,11 +66,14 @@ svn_wc__entries_init (const char *path,
   char *initial_revstr =  apr_psprintf (pool, "%ld",
                                         initial_rev);
 
+  /* Sanity check. */
+  assert (! repos || svn_path_is_ancestor (repos, url));
+
   /* Create the entries file, which must not exist prior to this. */
   SVN_ERR (svn_wc__open_adm_file (&f, path, SVN_WC__ADM_ENTRIES,
                                   (APR_WRITE | APR_CREATE | APR_EXCL), pool));
 
-  /* Make a the XML standard header, to satisfy bureacracy. */
+  /* Make the XML standard header, to satisfy bureacracy. */
   svn_xml_make_header (&accum, pool);
 
   /* Open the file's top-level form. */
@@ -101,6 +105,9 @@ svn_wc__entries_init (const char *path,
                   sizeof (SVN_WC__ENTRY_ATTR_UUID) - 1,
                   uuid);
     
+  apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REPOS,
+                sizeof (SVN_WC__ENTRY_ATTR_REPOS) - 1, repos);
+
   if (initial_rev > 0)
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_INCOMPLETE,
                   sizeof (SVN_WC__ENTRY_ATTR_INCOMPLETE) - 1,
@@ -201,6 +208,21 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
     if (entry->url)
       *modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
+  }
+
+  /* Set up repository root.  Make sure it is a prefix of url. */
+  {
+    entry->repos = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_REPOS,
+                                 APR_HASH_KEY_STRING);
+    if (entry->repos)
+      {
+        if (entry->url && ! svn_path_is_ancestor (entry->repos, entry->url))
+          return svn_error_createf (SVN_ERR_WC_CORRUPT, NULL,
+                                    _("Entry for '%s' has invalid repository "
+                                      "root"),
+                                    name ? name : SVN_WC_ENTRY_THIS_DIR);
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_REPOS;
+      }
   }
 
   /* Set up kind. */
@@ -575,6 +597,9 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
   if (! dst->url) 
     dst->url = svn_path_url_add_component (src->url, dst->name, pool);
 
+  if (! dst->repos)
+    dst->repos = src->repos;
+
   if ((! dst->uuid) 
       && (! ((dst->schedule == svn_wc_schedule_add)
              || (dst->schedule == svn_wc_schedule_replace))))
@@ -924,6 +949,11 @@ write_entry (svn_stringbuf_t **output,
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_URL, APR_HASH_KEY_STRING,
                   entry->url);
   
+  /* Repository root */
+  if (entry->repos)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REPOS, APR_HASH_KEY_STRING,
+                  entry->repos);
+
   /* Kind */
   switch (entry->kind)
     {
@@ -1089,11 +1119,13 @@ write_entry (svn_stringbuf_t **output,
 
       if (entry->kind == svn_node_dir)
         {
-          /* We don't write url, revision, or uuid for subdir
+          /* We don't write url, revision, repository root or uuid for subdir
              entries. */
           apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING,
                         NULL);
           apr_hash_set (atts, SVN_WC__ENTRY_ATTR_URL, APR_HASH_KEY_STRING,
+                        NULL);
+          apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REPOS, APR_HASH_KEY_STRING,
                         NULL);
           apr_hash_set (atts, SVN_WC__ENTRY_ATTR_UUID, APR_HASH_KEY_STRING,
                         NULL);
@@ -1128,6 +1160,12 @@ write_entry (svn_stringbuf_t **output,
                 apr_hash_set (atts, SVN_WC__ENTRY_ATTR_URL,
                               APR_HASH_KEY_STRING, NULL);
             }
+
+          /* Avoid writing repository root if that's the same as this_dir. */
+          if (entry->repos && this_dir->repos
+              && strcmp (entry->repos, this_dir->repos) == 0)
+            apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REPOS, APR_HASH_KEY_STRING,
+                          NULL);
         }
     }
 
@@ -1267,6 +1305,10 @@ fold_entry (apr_hash_t *entries,
   /* Ancestral URL in repository */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_URL)
     cur_entry->url = entry->url ? apr_pstrdup (pool, entry->url) : NULL;
+
+  /* Repository root */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_REPOS)
+    cur_entry->repos = entry->repos ? apr_pstrdup (pool, entry->repos) : NULL;
 
   /* Kind */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_KIND)
@@ -1745,6 +1787,7 @@ svn_error_t *
 svn_wc__tweak_entry (apr_hash_t *entries,
                      const char *name,
                      const char *new_url,
+                     const char *repos,
                      svn_revnum_t new_rev,
                      svn_boolean_t allow_removal,
                      svn_boolean_t *write_required,
@@ -1762,6 +1805,45 @@ svn_wc__tweak_entry (apr_hash_t *entries,
     {
       *write_required = TRUE;
       entry->url = apr_pstrdup (pool, new_url);
+    }
+
+  if (repos != NULL
+      && (! entry->repos || strcmp (repos, entry->repos))
+      && entry->url
+      && svn_path_is_ancestor (repos, entry->url))
+    {
+      svn_boolean_t set_repos = TRUE;
+
+      /* Setting the repository root on THIS_DIR will make files in this
+         directory inherit that property.  So to not make the WC corrupt,
+         we have to make sure that the repos root is valid for such entries as
+         well.  Note that this shouldn't happen in normal circumstances. */
+      if (strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
+        {
+          apr_hash_index_t *hi;
+          for (hi = apr_hash_first (pool, entries); hi;
+               hi = apr_hash_next (hi))
+            {
+              void *value;
+              const svn_wc_entry_t *child_entry;
+
+              apr_hash_this (hi, NULL, NULL, &value);
+              child_entry = value;
+
+              if (! child_entry->repos && child_entry->url
+                  && ! svn_path_is_ancestor (repos, child_entry->url))
+                {
+                  set_repos = FALSE;
+                  break;
+                }
+            }
+        }
+
+      if (set_repos)
+        {
+          *write_required = TRUE;
+          entry->repos = apr_pstrdup (pool, repos);
+        }
     }
 
   if ((SVN_IS_VALID_REVNUM (new_rev))

@@ -1335,7 +1335,9 @@ svn_error_t *svn_wc_mark_missing_deleted (const char *path,
 
 /** Ensure that an administrative area exists for @a path, so that @a
  * path is a working copy subdir based on @a url at @a revision, and
- * with repository UUID @a uuid.  @a uuid may be @c NULL.
+ * with repository UUID @a uuid and repository root URL @a repos.
+ * @a uuid and @a repos may be @c NULL.  If non-@c NULL, @a repos must be a
+ * prefix of @a url.
  *
  * If the administrative area does not exist, then create it and
  * initialize it to an unlocked state.
@@ -1348,6 +1350,20 @@ svn_error_t *svn_wc_mark_missing_deleted (const char *path,
  *
  * Do not ensure existence of @a path itself; if @a path does not
  * exist, return error.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *svn_wc_ensure_adm2 (const char *path,
+                                 const char *uuid,
+                                 const char *url,
+                                 const char *repos,
+                                 svn_revnum_t revision,
+                                 apr_pool_t *pool);
+
+
+/** Similar to svn_wc_ensure_adm2(), but with @a repos set to @c NULL.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.2 API.
  */
 svn_error_t *svn_wc_ensure_adm (const char *path,
                                 const char *uuid,
@@ -1355,6 +1371,27 @@ svn_error_t *svn_wc_ensure_adm (const char *path,
                                 svn_revnum_t revision,
                                 apr_pool_t *pool);
 
+
+/** Set the repository root URL of @a path to @a repos, if possible.
+ *
+ * @a adm_access must contain @a path and be write-locked, if @a path
+ * is versioned.  Return no error if path is missing or unversioned.
+ * Use @a pool for temporary allocations.
+ *
+ * @note In some circumstances, the repository root can't be set
+ * without making the working copy corrupt.  In such cases, this
+ * function just returns no error, without modifying the @a path entry.
+ *
+ * @note This function exists to make it possible to try to set the repository
+ * root in old working copies; new working copies normally get this set at
+ * creation time.
+ * 
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_wc_maybe_set_repos_root (svn_wc_adm_access_t *adm_access,
+                             const char *path, const char *repos,
+                             apr_pool_t *pool);
 
 
 /** 
@@ -1953,7 +1990,7 @@ svn_error_t *svn_wc_add_repos_file (const char *dst_path,
  * SVN_ERR_WC_LEFT_LOCAL_MOD the instant a locally modified file is
  * encountered.  Otherwise, leave locally modified files in place and
  * return the error only after all the recursion is complete.
-
+ *
  * If @a cancel_func is non-null, call it with @a cancel_baton at
  * various points during the removal.  If it returns an error
  * (typically @c SVN_ERR_CANCELLED), return that error immediately.

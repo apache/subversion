@@ -989,6 +989,7 @@ static svn_error_t *
 init_adm (const char *path,
           const char *uuid,
           const char *url,
+          const char *repos,
           svn_revnum_t initial_rev,
           apr_pool_t *pool)
 {
@@ -1036,7 +1037,7 @@ init_adm (const char *path,
   /** Initialize each administrative file. */
 
   /* SVN_WC__ADM_ENTRIES */
-  SVN_ERR (svn_wc__entries_init (path, uuid, url, initial_rev, pool));
+  SVN_ERR (svn_wc__entries_init (path, uuid, url, repos, initial_rev, pool));
 
   /* SVN_WC__ADM_EMPTY_FILE exists because sometimes an readable, empty
      file is required (in the repository diff for example). Creating such a
@@ -1068,19 +1069,29 @@ init_adm (const char *path,
 
 
 svn_error_t *
+svn_wc_ensure_adm2 (const char *path,
+                    const char *uuid,
+                    const char *url,
+                    const char *repos,
+                    svn_revnum_t revision,
+                    apr_pool_t *pool)
+{
+  svn_boolean_t exists_already;
+
+  SVN_ERR (check_adm_exists (&exists_already, path, url, revision, pool));
+  return (exists_already ? SVN_NO_ERROR :
+          init_adm (path, uuid, url, repos, revision, pool));
+}
+
+svn_error_t *
 svn_wc_ensure_adm (const char *path,
                    const char *uuid,
                    const char *url,
                    svn_revnum_t revision,
                    apr_pool_t *pool)
 {
-  svn_boolean_t exists_already;
-
-  SVN_ERR (check_adm_exists (&exists_already, path, url, revision, pool));
-  return (exists_already ? SVN_NO_ERROR :
-          init_adm (path, uuid, url, revision, pool));
+  return svn_wc_ensure_adm2 (path, uuid, url, NULL, revision, pool);
 }
-
 
 svn_error_t *
 svn_wc__adm_destroy (svn_wc_adm_access_t *adm_access, 

@@ -2524,6 +2524,7 @@ def merge_dir_branches(sbox):
   # Run info to check the copied rev to make sure it's right
   expected_output = ["Path: " + foo_path + "\n",
                      "URL: " + svntest.main.current_repo_url + "/foo\n",
+                     "Repository Root: " + svntest.main.current_repo_url + "\n",
                      "Revision: 2\n",
                      "Node Kind: directory\n",
                      "Schedule: add\n",
