@@ -28,6 +28,8 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_time.h"
+#include "svn_ebcdic.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -43,7 +45,13 @@ svn_cl__info_print_time (apr_time_t atime,
   const char *time_utf8;
 
   time_utf8 = svn_time_to_human_cstring (atime, pool);
-  SVN_ERR (svn_cmdline_printf (pool, "%s: %s\n", desc, time_utf8));
+#if APR_CHARSET_EBCDIC
+  /* A variation from the ebcdic port's normal approach that string args are
+   * utf-8: Allow ebcdic encoded desc rather than resorting to ascii
+   * hex-escaped symbolic constants. */
+  SVN_ERR (svn_utf_cstring_to_utf8(&desc, desc, pool));
+#endif
+  SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, "%s: %s\n", desc, time_utf8));
   return SVN_NO_ERROR;
 }
 
@@ -53,46 +61,46 @@ print_info (const char *target,
             const svn_info_t *info,
             apr_pool_t *pool)
 {
-  SVN_ERR (svn_cmdline_printf (pool, _("Path: %s\n"),
-                               svn_path_local_style (target, pool)));
+  SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Path: %s\n"),
+                                svn_path_local_style (target, pool)));
 
   /* ### remove this someday:  it's only here for cmdline output
      compatibility with svn 1.1 and older.  */
   if (info->kind != svn_node_dir)
-    SVN_ERR (svn_cmdline_printf (pool, _("Name: %s\n"),
-                                 svn_path_basename(target, pool)));
+    SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Name: %s\n"),
+                                  svn_path_basename(target, pool)));
  
   if (info->URL) 
-    SVN_ERR (svn_cmdline_printf (pool, _("URL: %s\n"), info->URL));
+    SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("URL: %s\n"), info->URL));
            
   if (info->repos_root_URL) 
-    SVN_ERR (svn_cmdline_printf (pool, _("Repository Root: %s\n"),
-                                 info->repos_root_URL));
+    SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Repository Root: %s\n"),
+                                  info->repos_root_URL));
  
   if (info->repos_UUID) 
-    SVN_ERR (svn_cmdline_printf (pool, _("Repository UUID: %s\n"),
-                                 info->repos_UUID));
+    SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Repository UUID: %s\n"),
+                                  info->repos_UUID));
  
   if (SVN_IS_VALID_REVNUM (info->rev))
-    SVN_ERR (svn_cmdline_printf (pool, _("Revision: %ld\n"), info->rev));
+    SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Revision: %ld\n"), info->rev));
 
   switch (info->kind) 
     {
     case svn_node_file:
-      SVN_ERR (svn_cmdline_printf (pool, _("Node Kind: file\n")));
+      SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Node Kind: file\n")));
       break;
           
     case svn_node_dir:
-      SVN_ERR (svn_cmdline_printf (pool, _("Node Kind: directory\n")));
+      SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Node Kind: directory\n")));
       break;
           
     case svn_node_none:
-      SVN_ERR (svn_cmdline_printf (pool, _("Node Kind: none\n")));
+      SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Node Kind: none\n")));
       break;
           
     case svn_node_unknown:
     default:
-      SVN_ERR (svn_cmdline_printf (pool, _("Node Kind: unknown\n")));
+      SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Node Kind: unknown\n")));
       break;
     }
 
@@ -101,19 +109,19 @@ print_info (const char *target,
       switch (info->schedule) 
         {
         case svn_wc_schedule_normal:
-          SVN_ERR (svn_cmdline_printf (pool, _("Schedule: normal\n")));
+          SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Schedule: normal\n")));
           break;
           
         case svn_wc_schedule_add:
-          SVN_ERR (svn_cmdline_printf (pool, _("Schedule: add\n")));
+          SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Schedule: add\n")));
           break;
           
         case svn_wc_schedule_delete:
-          SVN_ERR (svn_cmdline_printf (pool, _("Schedule: delete\n")));
+          SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Schedule: delete\n")));
           break;
           
         case svn_wc_schedule_replace:
-          SVN_ERR (svn_cmdline_printf (pool, _("Schedule: replace\n")));
+          SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Schedule: replace\n")));
           break;
           
         default:
@@ -121,21 +129,21 @@ print_info (const char *target,
         }
       
       if (info->copyfrom_url) 
-        SVN_ERR (svn_cmdline_printf (pool, _("Copied From URL: %s\n"),
-                                     info->copyfrom_url));
+        SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Copied From URL: %s\n"),
+                                      info->copyfrom_url));
       
       if (SVN_IS_VALID_REVNUM (info->copyfrom_rev))
-        SVN_ERR (svn_cmdline_printf (pool, _("Copied From Rev: %ld\n"),
-                                     info->copyfrom_rev));
+        SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Copied From Rev: %ld\n"),
+                                      info->copyfrom_rev));
     }
       
   if (info->last_changed_author) 
-    SVN_ERR (svn_cmdline_printf (pool, _("Last Changed Author: %s\n"),
-                                 info->last_changed_author));
+    SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Last Changed Author: %s\n"),
+                                  info->last_changed_author));
   
   if (SVN_IS_VALID_REVNUM (info->last_changed_rev))
-    SVN_ERR (svn_cmdline_printf (pool, _("Last Changed Rev: %ld\n"),
-                                 info->last_changed_rev));
+    SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Last Changed Rev: %ld\n"),
+                                  info->last_changed_rev));
   
   if (info->last_changed_date)
     SVN_ERR (svn_cl__info_print_time (info->last_changed_date, 
@@ -152,41 +160,41 @@ print_info (const char *target,
                                           _("Properties Last Updated"), pool));
       
       if (info->checksum) 
-        SVN_ERR (svn_cmdline_printf (pool, _("Checksum: %s\n"),
-                                     info->checksum));
+        SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Checksum: %s\n"),
+                                      info->checksum));
       
       if (info->conflict_old) 
-        SVN_ERR (svn_cmdline_printf (pool,
-                                     _("Conflict Previous Base File: %s\n"),
-                                     svn_path_local_style (info->conflict_old,
-                                                           pool)));
+        SVN_ERR (SVN_CMDLINE_PRINTF2 (pool,
+                                      _("Conflict Previous Base File: %s\n"),
+                                      svn_path_local_style (info->conflict_old,
+                                                            pool)));
  
       if (info->conflict_wrk) 
-        SVN_ERR (svn_cmdline_printf
+        SVN_ERR (SVN_CMDLINE_PRINTF2
                  (pool, _("Conflict Previous Working File: %s\n"),
                   svn_path_local_style (info->conflict_wrk, pool)));
       
       if (info->conflict_new) 
-        SVN_ERR (svn_cmdline_printf (pool,
-                                     _("Conflict Current Base File: %s\n"),
-                                     svn_path_local_style (info->conflict_new,
-                                                           pool)));
+        SVN_ERR (SVN_CMDLINE_PRINTF2 (pool,
+                                      _("Conflict Current Base File: %s\n"),
+                                      svn_path_local_style (info->conflict_new,
+                                                            pool)));
  
       if (info->prejfile) 
-        SVN_ERR (svn_cmdline_printf (pool, _("Conflict Properties File: %s\n"),
-                                     svn_path_local_style (info->prejfile,
-                                                           pool)));
+        SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Conflict Properties File: %s\n"),
+                                      svn_path_local_style (info->prejfile,
+                                                            pool)));
     }      
 
   if (info->lock)
     {
       if (info->lock->token)
-        SVN_ERR (svn_cmdline_printf (pool, _("Lock Token: %s\n"),
-                                     info->lock->token));
+        SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Lock Token: %s\n"),
+                                      info->lock->token));
 
       if (info->lock->owner)
-        SVN_ERR (svn_cmdline_printf (pool, _("Lock Owner: %s\n"),
-                                     info->lock->owner));
+        SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, _("Lock Owner: %s\n"),
+                                      info->lock->owner));
 
       if (info->lock->creation_date)
         SVN_ERR (svn_cl__info_print_time (info->lock->creation_date,
@@ -201,17 +209,17 @@ print_info (const char *target,
           int comment_lines;
           /* NOTE: The stdio will handle newline translation. */
           comment_lines = svn_cstring_count_newlines (info->lock->comment) + 1;
-          SVN_ERR (svn_cmdline_printf (pool,
-                                       (comment_lines != 1)
-                                       ? _("Lock Comment (%i lines):\n%s\n")
-                                       : _("Lock Comment (%i line):\n%s\n"),
-                                       comment_lines, 
-                                       info->lock->comment));
+          SVN_ERR (SVN_CMDLINE_PRINTF2 (pool,
+                                        (comment_lines != 1)
+                                        ? _("Lock Comment (%i lines):\n%s\n")
+                                        : _("Lock Comment (%i line):\n%s\n"),
+                                        comment_lines, 
+                                        info->lock->comment));
         }
     }
 
   /* Print extra newline separator. */
-  SVN_ERR (svn_cmdline_printf (pool, "\n"));
+  SVN_ERR (SVN_CMDLINE_PRINTF2 (pool, "\n"));
 
   return SVN_NO_ERROR;
 }
@@ -276,7 +284,7 @@ svn_cl__info (apr_getopt_t *os,
       if (err && err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
         {
           svn_error_clear (err);
-          SVN_ERR (svn_cmdline_printf
+          SVN_ERR (SVN_CMDLINE_PRINTF2
                    (subpool, _("%s:  (Not a versioned resource)\n\n"),
                     svn_path_local_style (target, pool)));
           continue;
@@ -284,7 +292,7 @@ svn_cl__info (apr_getopt_t *os,
       else if (err && err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
         {
           svn_error_clear (err);
-          SVN_ERR (svn_cmdline_printf
+          SVN_ERR (SVN_CMDLINE_PRINTF2
                    (subpool, _("%s:  (Not a valid URL)\n\n"),
                     svn_path_local_style (target, pool)));
           continue;

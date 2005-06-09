@@ -26,6 +26,7 @@
 #include "svn_props.h"
 #include "svn_path.h"
 #include "svn_utf.h"
+#include "svn_ebcdic.h"
 #include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
 
@@ -811,7 +812,7 @@ svn_ra_local__stat (svn_ra_session_t *session,
   
   /* ### see note above in __do_check_path() */
   if (abs_path[0] == '\0')
-    abs_path = "/";
+    abs_path = SVN_UTF8_FSLASH_STR;
 
   if (path)
     abs_path = svn_path_join (abs_path, path, pool);
@@ -847,10 +848,7 @@ get_node_props (apr_hash_t **props,
   SVN_ERR (svn_repos_get_committed_info (&cmt_rev, &cmt_date,
                                          &cmt_author, root, path, pool));
 
-  rev_str = apr_psprintf(pool, "%ld", cmt_rev);
-#if APR_CHARSET_EBCDIC
-  SVN_ERR (svn_utf_cstring_to_utf8 (&rev_str, rev_str, pool));
-#endif
+  rev_str = APR_PSPRINTF2 (pool, "%ld", cmt_rev);
   apr_hash_set (*props, 
                 SVN_PROP_ENTRY_COMMITTED_REV, 
                 APR_HASH_KEY_STRING, 
