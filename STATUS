@@ -79,7 +79,7 @@ Candidate changes:
       Performance regression with svn log -v for revisions with many paths
       added without history (i.e. an initial import).
     Votes:
-      +1: lundblad
+      +1: lundblad, dlr
 
 Approved changes (further review is welcome, but not required):
 
