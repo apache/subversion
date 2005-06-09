@@ -72,6 +72,7 @@ build_info_from_entry (svn_info_t **info,
   tmpinfo->rev                  = entry->revision;
   tmpinfo->kind                 = entry->kind;
   tmpinfo->repos_UUID           = entry->uuid;
+  tmpinfo->repos_root_URL       = entry->repos;
   tmpinfo->last_changed_rev     = entry->cmt_rev;
   tmpinfo->last_changed_date    = entry->cmt_date;
   tmpinfo->last_changed_author  = entry->cmt_author;

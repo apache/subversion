@@ -41,6 +41,13 @@ extern "C" {
    NEW_REVISION in invalid, the working revision field is untouched.
    The modifications are mutually exclusive.
 
+   If REPOS is non-NULL, set the repository root of the entry to REPOS, but
+   only if REPOS is an ancestor of the entries URL (after possibly modifying
+   it).  IN addition to that requirement, if the PATH refers to a directory,
+   the repository root is only set if REPOS is an ancestor of the URLs all
+   file entries which don't already have a repository root set.  This prevents
+   the entries file from being corrupted by this operation.
+
    If PATH is a directory and RECURSIVE is set, then recursively walk
    over all entries files below PATH.  While doing this, if
    NEW_REVISION is valid, then tweak every entry to have this new
@@ -56,6 +63,7 @@ svn_error_t *svn_wc__do_update_cleanup (const char *path,
                                         svn_wc_adm_access_t *adm_access,
                                         svn_boolean_t recursive,
                                         const char *base_url,
+                                        const char *repos,
                                         svn_revnum_t new_revision,
                                         svn_wc_notify_func2_t notify_func,
                                         void *notify_baton,

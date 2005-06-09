@@ -1556,6 +1556,32 @@ def basic_info(sbox):
   finally:
     os.chdir(cwd)
 
+def repos_root(sbox):
+  "check that repos root gets set on checkout"
+
+  def check_repos_root(lines):
+    for line in lines:
+      if line == "Repository Root: " + svntest.main.current_repo_url + "\n":
+        break
+    else:
+      print "Bad or missing repository root"
+      raise svntest.Failure
+
+  sbox.build()
+
+  output, errput = svntest.main.run_svn (None, "info",
+                                         sbox.wc_dir)
+  check_repos_root(output)
+
+  output, errput = svntest.main.run_svn (None, "info",
+                                         os.path.join(sbox.wc_dir, "A"))
+  check_repos_root(output)
+
+  output, errput = svntest.main.run_svn (None, "info",
+                                         os.path.join(sbox.wc_dir, "A", "B", 
+                                                      "lambda"))
+  check_repos_root(output)
+
 #----------------------------------------------------------------------
 ########################################################################
 # Run the tests
@@ -1588,6 +1614,7 @@ test_list = [ None,
               basic_info,
               basic_add_local_ignores,
               basic_add_no_ignores,
+              repos_root,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.
