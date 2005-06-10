@@ -192,6 +192,8 @@ That is done via the env program.
 
 You could set it for example to '(\"LANG=C\")")
 
+(defvar svn-browse-url-function browse-url-browser-function "Browser function, used for `svn-browse-url'.")
+
 (defvar svn-status-window-alist
   '((diff "*svn-diff*") (log "*svn-log*") (info t) (blame t) (proplist t) (update t))
   "An alist to specify which windows should be used for svn command outputs.
@@ -466,6 +468,15 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
   ;; TODO: make the following work
   ;;(define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
   ;;(define-key svn-global-keymap (kbd "c") 'svn-status-commit-file))
+
+(defvar svn-global-trac-map ()
+  "Subkeymap used in `svn-global-keymap' for trac issue tracker commands.")
+(when (not svn-global-trac-map)
+  (setq svn-global-trac-map (make-sparse-keymap))
+  (define-key svn-global-trac-map (kbd "t") 'svn-trac-browse-timeline)
+  (define-key svn-global-trac-map (kbd "i") 'svn-trac-browse-ticket)
+  (define-key svn-global-trac-map (kbd "c") 'svn-trac-browse-changeset)
+  (define-key svn-global-keymap (kbd "t") svn-global-trac-map))
 
 ;; The setter of `svn-status-prefix-key' makes a binding in the global
 ;; map refer to the `svn-global-keymap' symbol, rather than directly
@@ -3190,6 +3201,11 @@ display routine for svn-status is available."
   (when (yes-or-no-p "Save the new setting for svn-status-module-name to disk? ")
     (svn-status-save-state)))
 
+(defun svn-browse-url (url)
+  "Call `browse-url', using `svn-browse-url-function'."
+  (let ((browse-url-browser-function svn-browse-url-function))
+    (browse-url url)))
+
 ;; --------------------------------------------------------------------------------
 ;; svn status trac integration
 ;; --------------------------------------------------------------------------------
@@ -3198,8 +3214,21 @@ display routine for svn-status is available."
   (interactive)
   (unless svn-trac-project-root
     (svn-status-set-trac-project-root))
-  (browse-url (concat svn-trac-project-root "timeline")))
+  (svn-browse-url (concat svn-trac-project-root "timeline")))
 
+(defun svn-trac-browse-changeset (changeset-nr)
+  "Show a changeset in the trac issue tracker."
+  (interactive (list (read-number "Browse changeset number: " (number-at-point))))
+  (unless svn-trac-project-root
+    (svn-status-set-trac-project-root))
+  (svn-browse-url (concat svn-trac-project-root "changeset/" (number-to-string changeset-nr))))
+
+(defun svn-trac-browse-ticket (ticket-nr)
+  "Show a ticket in the trac issue tracker."
+  (interactive (list (read-number "Browse ticket number: " (number-at-point))))
+  (unless svn-trac-project-root
+    (svn-status-set-trac-project-root))
+  (svn-browse-url (concat svn-trac-project-root "ticket/" (number-to-string ticket-nr))))
 
 ;;;------------------------------------------------------------
 ;;; resolve conflicts using ediff
