@@ -301,9 +301,10 @@ class Generator(gen_base.GeneratorBase):
         for apmod in inst_targets:
           for source in self.graph.get_sources(gen_base.DT_LINK, apmod.name,
                                                gen_base.Target):
-            bt = source.filename
-            if bt[-3:] == '.la':
-              la_tweaked[bt + '-a'] = None
+            if not source.external_lib:
+              bt = source.filename
+              if bt[-3:] == '.la':
+                la_tweaked[bt + '-a'] = None
         la_tweaked = la_tweaked.keys()
         la_tweaked.sort()
 
