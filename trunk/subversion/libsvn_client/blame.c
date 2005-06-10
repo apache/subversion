@@ -27,10 +27,14 @@
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_props.h"
+#include "svn_utf.h"
 
 #include "svn_private_config.h"
 
 #include <assert.h>
+
+#define DOT_TMP_STR  "\x2e\x74\x6d\x70"  /* ".tmp" */
+#define TMP_STR      "\x74\x6d\x70"      /* "tmp"  */
 
 /* The metadata associated with a particular revision. */
 struct rev
@@ -443,9 +447,9 @@ file_rev_handler (void *baton, const char *path, svn_revnum_t revnum,
 
   SVN_ERR (svn_io_temp_dir (&temp_dir, frb->currpool));
   SVN_ERR (svn_io_open_unique_file (&delta_baton->file, &delta_baton->filename,
-                                    svn_path_join (temp_dir, "tmp",
+                                    svn_path_join (temp_dir, TMP_STR,
                                                    frb->currpool),
-                                    ".tmp", FALSE, frb->currpool));
+                                    DOT_TMP_STR, FALSE, frb->currpool));
   apr_pool_cleanup_register (frb->currpool, delta_baton->file,
                              cleanup_tempfile, apr_pool_cleanup_null);
   cur_stream = svn_stream_from_aprfile (delta_baton->file, frb->currpool);
@@ -599,7 +603,8 @@ svn_client_blame2 (const char *target,
           svn_boolean_t eof;
           svn_stringbuf_t *sb;
           apr_pool_clear (iterpool);
-          SVN_ERR (svn_stream_readline (stream, &sb, "\n", &eof, iterpool));
+          SVN_ERR (svn_stream_readline (stream, &sb, SVN_UTF8_NEWLINE_STR,
+                                        &eof, iterpool));
           if (ctx->cancel_func)
             SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
           if (!eof || sb->len)
@@ -707,7 +712,7 @@ old_blame (const char *target, const char *url,
       rev->date = NULL;
       frb->blame = blame_create (frb, rev, 0);
     }
-  else if (lmb.action == 'M' || SVN_IS_VALID_REVNUM (lmb.copyrev))
+  else if (lmb.action == SVN_UTF8_M || SVN_IS_VALID_REVNUM (lmb.copyrev))
     {
       rev = apr_palloc (pool, sizeof (*rev));
       if (SVN_IS_VALID_REVNUM (lmb.copyrev))
@@ -723,7 +728,7 @@ old_blame (const char *target, const char *url,
       rev->date = NULL;
       frb->blame = blame_create (frb, rev, 0);
     }
-  else if (lmb.action == 'A')
+  else if (lmb.action == SVN_UTF8_A)
     {
       frb->blame = blame_create (frb, lmb.eldest, 0);
     }
@@ -751,7 +756,7 @@ old_blame (const char *target, const char *url,
       apr_pool_clear (frb->currpool);
       SVN_ERR (svn_io_temp_dir (&temp_dir, frb->currpool));
       SVN_ERR (svn_io_open_unique_file (&file, &tmp,
-                 svn_path_join (temp_dir, "tmp", frb->currpool), ".tmp",
+                 svn_path_join (temp_dir, TMP_STR, frb->currpool), DOT_TMP_STR,
                                         FALSE, frb->currpool));
 
       apr_pool_cleanup_register (frb->currpool, file, cleanup_tempfile,

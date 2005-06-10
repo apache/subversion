@@ -549,6 +549,17 @@ svn_error_t *svn_stream_printf (svn_stream_t *stream,
                                 ...)
        __attribute__ ((format(printf, 3, 4)));
 
+#if APR_CHARSET_EBCDIC
+/** Write to @a stream using a printf-style @a fmt specifier, passed through
+ * svn_ebcdic_pvsprintf2() using memory from @a pool.
+ */
+svn_error_t *
+svn_stream_printf_ebcdic (svn_stream_t *stream,
+                          apr_pool_t *pool,
+                          const char *fmt,
+                          ...);
+#endif
+                          
 /** Write to @a stream using a printf-style @a fmt specifier, passed through
  * apr_psprintf() using memory from @a pool.  The resulting string
  * will be translated to @a encoding before it is sent to @a stream.

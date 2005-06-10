@@ -37,6 +37,7 @@
 #include "svn_string.h"
 #include "svn_utf.h"
 #include "svn_ebcdic.h"
+#include "svn_ebcdic.h"
 
 
 struct svn_stream_t {
@@ -134,6 +135,27 @@ svn_stream_printf (svn_stream_t *stream,
   len = strlen (message);
   return svn_stream_write (stream, message, &len);
 }
+
+
+#if APR_CHARSET_EBCDIC
+svn_error_t *
+svn_stream_printf_ebcdic (svn_stream_t *stream,
+                          apr_pool_t *pool,
+                          const char *fmt,
+                          ...)
+{
+  const char *message;
+  va_list ap;
+  apr_size_t len;
+
+  va_start (ap, fmt);
+  message = svn_ebcdic_pvsprintf2 (pool, fmt, ap);
+  va_end (ap);
+  
+  len = strlen (message);
+  return svn_stream_write (stream, message, &len);
+}
+#endif
 
 
 svn_error_t *

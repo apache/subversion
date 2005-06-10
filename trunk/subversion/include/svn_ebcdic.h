@@ -65,6 +65,7 @@ extern "C" {
   #define SVN_CMDLINE_FPRINTF  svn_cmdline_fprintf
   #define SVN_CMDLINE_PRINTF   svn_cmdline_printf
   #define SVN_CMDLINE_PRINTF2  svn_cmdline_printf
+  #define SVN_STREAM_PRINTF    svn_stream_printf
 #else
   #define APR_PVSPRINTF        svn_ebcdic_pvsprintf
   #define APR_PSPRINTF         svn_ebcdic_psprintf
@@ -73,6 +74,7 @@ extern "C" {
   #define SVN_CMDLINE_FPRINTF  svn_cmdline_fprintf_ebcdic
   #define SVN_CMDLINE_PRINTF   svn_cmdline_printf_ebcdic
   #define SVN_CMDLINE_PRINTF2  svn_cmdline_printf_ebcdic2
+  #define SVN_STREAM_PRINTF    svn_stream_printf_ebcdic
 
 /**
  * Write a string to a file using a printf format; similar to apr_file_printf
