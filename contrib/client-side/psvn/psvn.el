@@ -270,7 +270,6 @@ It is an experimental feature.")
       (require 'overlay)
     (require 'overlay nil t)))
 
-(defvar svn-global-keymap nil "Global keymap for psvn.el")
 (defcustom svn-status-prefix-key [(control x) (meta s)]
   "Prefix key for the psvn commands in the global keymap."
   :type '(choice (const [(control x) ?v ?S])
@@ -284,7 +283,7 @@ It is an experimental feature.")
           (if (boundp var)
               (global-unset-key (symbol-value var)))
           (set var value)
-          (global-set-key (symbol-value var) svn-global-keymap)))
+          (global-set-key (symbol-value var) 'svn-global-keymap)))
 
 ;; Use the normally used mode for files ending in .~HEAD~, .~BASE~, ...
 (add-to-list 'auto-mode-alist '("\\.~?\\(HEAD\\|BASE\\|PREV\\)~?\\'" ignore t))
@@ -458,6 +457,8 @@ Otherwise, return \"\"."
   (defsubst match-string-no-properties (match)
     (buffer-substring-no-properties (match-beginning match) (match-end match))))
 
+(defvar svn-global-keymap nil "Global keymap for psvn.el.
+To bind this to a different key, customize `svn-status-prefix-key'.")
 (when (not svn-global-keymap)
   (setq svn-global-keymap (make-sparse-keymap))
   (define-key svn-global-keymap (kbd "s") 'svn-status-this-directory)
@@ -466,8 +467,15 @@ Otherwise, return \"\"."
   ;;(define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
   ;;(define-key svn-global-keymap (kbd "c") 'svn-status-commit-file))
 
-(when svn-status-prefix-key
-  (global-set-key svn-status-prefix-key svn-global-keymap))
+;; The setter of `svn-status-prefix-key' makes a binding in the global
+;; map refer to the `svn-global-keymap' symbol, rather than directly
+;; to the keymap.  Emacs then implicitly uses the symbol-function.
+;; This has the advantage that `describe-bindings' (C-h b) can show
+;; the name of the keymap and link to its documentation.
+(defalias 'svn-global-keymap svn-global-keymap)
+;; `defalias' of GNU Emacs 21.4 doesn't allow a docstring argument.
+(put 'svn-global-keymap 'function-documentation
+     '(documentation-property 'svn-global-keymap 'variable-documentation t))
 
 
 (defun svn-status-message (level &rest args)
