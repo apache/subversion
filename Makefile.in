@@ -608,7 +608,7 @@ clean-swig-pl:
 check-swig-rb: swig-rb svnserve
 	cd $(SWIG_RB_DIR); \
 	  $(RUBY) -I $(SWIG_RB_SRC_DIR) \
-            $(SWIG_RB_SRC_DIR)/test/run-test.rb
+	    $(SWIG_RB_SRC_DIR)/test/run-test.rb
 
 clean-swig-rb:
 	for d in $(SWIG_RB_DIR) $(SWIG_RB_DIR)/libsvn_swig_ruby; \
