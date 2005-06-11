@@ -217,6 +217,9 @@ INSTALL_EXTRA_SWIG_PY=\
 SWIG_PL_DIR = $(abs_builddir)/subversion/bindings/swig/perl
 SWIG_RB_DIR = $(abs_builddir)/subversion/bindings/swig/ruby
 
+# The path to the source files for the Ruby SWIG
+SWIG_RB_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig/ruby
+
 ### Automate JAR creation using Makefile generator's javahl-java.jar
 ### property.  Enhance generator to support JAR installation.
 INSTALL_EXTRA_JAVAHL_JAVA=\
@@ -603,7 +606,9 @@ clean-swig-pl:
 	fi
 
 check-swig-rb: swig-rb svnserve
-	cd $(SWIG_RB_DIR); $(RUBY) test/run-test.rb
+	cd $(SWIG_RB_DIR); \
+	  $(RUBY) -I $(SWIG_RB_SRC_DIR) \
+            $(SWIG_RB_SRC_DIR)/test/run-test.rb
 
 clean-swig-rb:
 	for d in $(SWIG_RB_DIR) $(SWIG_RB_DIR)/libsvn_swig_ruby; \
