@@ -38,7 +38,7 @@ msgstr "'%s' 은 URL 같아 보이지 않습니다."
 #: clients/cmdline/copy-cmd.c:106 clients/cmdline/delete-cmd.c:64
 #: clients/cmdline/mkdir-cmd.c:66
 msgid "Local, non-commit operations do not take a log message"
-msgstr ""
+msgstr "사본에서만 작업하고, 커밋하지 않는 명령은 로그메시지를 받지 않습니다."
 
 #: clients/cmdline/diff-cmd.c:65
 msgid "Can't open stdout"
@@ -235,20 +235,20 @@ msgstr "충돌한 속성 파일: %s\n"
 #: clients/cmdline/info-cmd.c:184
 #, c-format
 msgid "Lock Token: %s\n"
-msgstr ""
+msgstr "잠금 토큰: %s\n"
 
 #: clients/cmdline/info-cmd.c:188
 #, c-format
 msgid "Lock Owner: %s\n"
-msgstr ""
+msgstr "잠금 생성자: %s\n"
 
 #: clients/cmdline/info-cmd.c:193
 msgid "Lock Created"
-msgstr ""
+msgstr "잠금 생성일: "
 
 #: clients/cmdline/info-cmd.c:197
 msgid "Lock Expires"
-msgstr ""
+msgstr "잠금 만료일: "
 
 #: clients/cmdline/info-cmd.c:206
 #, c-format
@@ -256,6 +256,8 @@ msgid ""
 "Lock Comment (%i lines):\n"
 "%s\n"
 msgstr ""
+"잠금 이유 (%i 행):\n"
+"%s\n"
 
 #: clients/cmdline/info-cmd.c:207
 #, c-format
@@ -263,6 +265,8 @@ msgid ""
 "Lock Comment (%i line):\n"
 "%s\n"
 msgstr ""
+"잠금 이유 (%i 행):\n"
+"%s\n"
 
 #: clients/cmdline/info-cmd.c:280
 #, c-format
@@ -507,7 +511,7 @@ msgstr "로그 개수의 최대값"
 
 #: clients/cmdline/main.c:151
 msgid "don't unlock the targets"
-msgstr ""
+msgstr "대상의 잠금을 해제하지 않고 진행합니다."
 
 #: clients/cmdline/main.c:182
 msgid ""
@@ -530,7 +534,7 @@ msgid ""
 msgstr ""
 "지정한 파일이나 URL의 내용의 수정내역을\n"
 "각 라인별로 리비전과 작성자를 보여줍니다.\n"
-"사용법: blame TARGET...\n"
+"사용법: blame TARGET[@REV]...\n"
 "\n"
 "  REV가 지정되면, 어떤 것을 찾아야할지 결정하게 됩니다.\n"
 "  \n"
@@ -544,7 +548,7 @@ msgid ""
 "  looked up.\n"
 msgstr ""
 "지정한 파일이나 URL의 내용을 출력합니다.\n"
-"사용법: cat TARGET...\n"
+"사용법: cat TARGET[@REV]...\n"
 "\n"
 "  REV가 지정되면, 어떤 것을 찾아야할지 결정하게 됩니다.\n"
 "  \n"
@@ -563,7 +567,7 @@ msgid ""
 "  being the basename of the URL.\n"
 msgstr ""
 "작업사본을 저장소로부터 꺼냅니다.\n"
-"usage: checkout URL... [PATH]\n"
+"usage: checkout URL[@REV]... [PATH]\n"
 "\n"
 "  REV가 지정되면, 어떤 것을 찾아야할지 결정하게 됩니다.\n"
 "  \n"
@@ -812,7 +816,7 @@ msgid ""
 "    Date and time of the last commit\n"
 msgstr ""
 "저장소에 있는 항목들을 나열해줍니다.\n"
-"사용법: list [TARGET...]\n"
+"사용법: list [TARGET[@REV]...]\n"
 "\n"
 "  TARGET 파일과 TARGET 디렉토리의 내용을 저장소에 있는 내용대로\n"
 "  출력해 줍니다. TARGET이 만일 작업 사본의 경로에 있는 것이라면\n"
@@ -836,6 +840,11 @@ msgid ""
 "\n"
 "  Use --force to steal the lock from another user or working copy.\n"
 msgstr ""
+"작업 사본이나 저장소의 URL을 잠굽니다. 다른 사용자가 변경하여\n"
+"커밋할 수 없습니다.\n"
+"사용법: lock TARGET...\n"
+"\n"
+"  --force 를 사용하면 다른 사람이나 다른 사본에서 잠궜을지라도 빼앗아옵니다.\n"
 
 #: clients/cmdline/main.c:399
 msgid ""
@@ -1373,6 +1382,10 @@ msgid ""
 "\n"
 "  Use --force to break the lock.\n"
 msgstr ""
+"작업사본이나 저장소 URL의 잠금을 해제합니다.\n"
+"사용법: unlock TARGET...\n"
+"\n"
+"  --force 를 사용하면 강제로 해제합니다.\n"
 
 #: clients/cmdline/main.c:718
 msgid ""
@@ -1422,7 +1435,7 @@ msgstr "시그널 수신"
 
 #: clients/cmdline/main.c:893
 msgid "Non-numeric limit argument given"
-msgstr ""
+msgstr "숫자를 입력해야 합니다."
 
 #: clients/cmdline/main.c:910 svnadmin/main.c:1227
 msgid ""
@@ -1555,7 +1568,7 @@ msgid ""
 "Fetching external item into '%s'\n"
 msgstr ""
 "\n"
-"외부 개체를 가져옴 '%s'\n"
+"외부 경로 업데이트 중 '%s'\n"
 
 #: clients/cmdline/notify.c:210
 #, c-format
@@ -1590,7 +1603,7 @@ msgstr "업데이트 된 리비전 %ld.\n"
 #: clients/cmdline/notify.c:239
 #, c-format
 msgid "External at revision %ld.\n"
-msgstr "리비전 %ld.\n"
+msgstr "외부 경로 리비전 %ld.\n"
 
 #: clients/cmdline/notify.c:240
 #, c-format
@@ -1667,12 +1680,12 @@ msgstr "파일 데이터 전송중"
 #: clients/cmdline/notify.c:351
 #, c-format
 msgid "'%s' locked by user '%s'.\n"
-msgstr ""
+msgstr "'%s' 는 '%s' 이/가 잠궜습니다.\n"
 
 #: clients/cmdline/notify.c:357
 #, c-format
 msgid "'%s' unlocked.\n"
-msgstr ""
+msgstr "'%s' 는 잠금이 해제 되었습니다.\n"
 
 #: clients/cmdline/prompt.c:94
 msgid "Can't open stdin"
@@ -2007,7 +2020,7 @@ msgstr "XML 데이터는 제대로 된 형식(well-formed)이 아닙니다."
 
 #: include/svn_error_codes.h:196
 msgid "Data cannot be safely XML-escaped"
-msgstr ""
+msgstr "데이터를 XML 문서로 표현할 수 없습니다."
 
 #: include/svn_error_codes.h:202
 msgid "Inconsistent line ending style"
@@ -2095,7 +2108,7 @@ msgstr "이미 잠긴 디렉토리를 다시 잠그려함"
 
 #: include/svn_error_codes.h:306
 msgid "Working copy not locked; this is probably a bug, please report"
-msgstr ""
+msgstr "작업 사본을 잠글 수 없습니다. 버그라 추정되며, 보고해주십시오."
 
 #: include/svn_error_codes.h:311
 msgid "Invalid lock"
@@ -2319,7 +2332,7 @@ msgstr "경로는 잠기지 않았습니다."
 
 #: include/svn_error_codes.h:539
 msgid "Lock token is incorrect"
-msgstr ""
+msgstr "잠금 토큰이 잘못되었습니다."
 
 #: include/svn_error_codes.h:544
 msgid "No lock token provided"
@@ -2601,7 +2614,7 @@ msgstr "두개의 버전관리 대상이 연관성이 없습니다."
 
 #: include/svn_error_codes.h:888
 msgid "Path has no lock token"
-msgstr ""
+msgstr "지정한 경로에 잠금 토큰이 없습니다."
 
 #: include/svn_error_codes.h:894
 msgid "A problem occurred; see later errors for details"
@@ -2721,7 +2734,7 @@ msgstr "로그 메시지 내용이 이상합니다."
 
 #: include/svn_error_codes.h:1013
 msgid "A log message was given where none was necessary"
-msgstr ""
+msgstr "로그메시지가 필요없는 곳에 지정되었습니다."
 
 #: libsvn_client/add.c:355
 #, c-format
@@ -3170,7 +3183,7 @@ msgstr "URL '%s'은(는) 리비전('%ld')에 존재하지 않습니다."
 
 #: libsvn_client/locking_commands.c:185
 msgid "No common parent found, unable to operate on disjoint arguments"
-msgstr ""
+msgstr "공유하는 상위 디렉토리가 존재하지 없습니다. 분리된 경로들이 지정되었습니다."
 
 #: libsvn_client/locking_commands.c:276
 #, c-format
@@ -3185,7 +3198,7 @@ msgstr "'%s'는 잠기지 않았습니다."
 #: libsvn_client/locking_commands.c:354 libsvn_fs/fs-loader.c:896
 #: libsvn_ra/ra_loader.c:512
 msgid "Lock comment has illegal characters"
-msgstr ""
+msgstr "잠금 설명에 잘못된 문자가 있습니다."
 
 #: libsvn_client/log.c:72
 msgid "Missing required revision specification"
@@ -3344,7 +3357,7 @@ msgstr "svndiff의 입력이 알 수 없는 이유로 중단되었습니다."
 #: libsvn_diff/diff_file.c:666
 #, c-format
 msgid "%s\\ No newline at end of file%s"
-msgstr ""
+msgstr "%s\\ 파일 끝에 줄바꿈이 없습니다.%s"
 
 #: libsvn_diff/diff_file.c:1225
 #, c-format
@@ -3383,24 +3396,24 @@ msgstr "FS 뮤텍스를 얻을 수 없습니다."
 
 #: libsvn_fs/fs-loader.c:286
 msgid "Can't ungrab FS mutex"
-msgstr ""
+msgstr "파일시스템 뮤텍스를 얻을 수 없습니다."
 
 #: libsvn_fs/fs-loader.c:902
 msgid "Negative expiration date passed to svn_fs_lock"
-msgstr ""
+msgstr "만료기간이 음수로 지정되었습니다."
 
 #: libsvn_fs_base/bdb/bdb-err.c:101
 #, c-format
 msgid "Berkeley DB error for filesystem %s while %s:\n"
-msgstr ""
+msgstr "Berkeley DB 오류입니다. 파일시스템 %s, %s:\n"
 
 #: libsvn_fs_base/bdb/changes-table.c:88
 msgid "creating change"
-msgstr ""
+msgstr "변경 내용 생성중"
 
 #: libsvn_fs_base/bdb/changes-table.c:114
 msgid "deleting changes"
-msgstr ""
+msgstr "변경 내용 삭제중"
 
 #: libsvn_fs_base/bdb/changes-table.c:146 libsvn_fs_fs/fs_fs.c:1965
 msgid "Missing required node revision ID"
@@ -3417,7 +3430,7 @@ msgstr "변경 순서 오류: 삭제된 경로상에는 추가할 수 없습니�
 #: libsvn_fs_base/bdb/changes-table.c:257
 #: libsvn_fs_base/bdb/changes-table.c:381
 msgid "creating cursor for reading changes"
-msgstr ""
+msgstr "변경 내용을 읽기위한 커서 생성중"
 
 #: libsvn_fs_base/bdb/changes-table.c:283
 #: libsvn_fs_base/bdb/changes-table.c:402
@@ -3756,7 +3769,7 @@ msgstr "잠금이 만료되었습니다: 잠금 토큰 '%s'. 파일시스템 '%s
 #: libsvn_fs_base/err.c:293 libsvn_fs_fs/err.c:255
 #, c-format
 msgid "No username is currently associated with filesystem '%s'"
-msgstr ""
+msgstr "사용자가 파일시스템에 할당되어 있지 않습니다. '%s'"
 
 #: libsvn_fs_base/err.c:305 libsvn_fs_fs/err.c:312
 #, c-format
@@ -3788,7 +3801,7 @@ msgstr "파일 시스템 객체는 이미 열려있습니다."
 #: libsvn_fs_base/fs.c:676 libsvn_fs_fs/fs_fs.c:252
 #, c-format
 msgid "Expected FS format '%d'; found format '%d'"
-msgstr ""
+msgstr "예상되는 파일시스템 포맷 '%d', 발견된 포맷 '%d'"
 
 #: libsvn_fs_base/fs.c:1055
 #, c-format
@@ -3841,7 +3854,7 @@ msgstr ""
 
 #: libsvn_fs_base/fs.c:1345
 msgid "Module for working with a Berkeley DB repository."
-msgstr ""
+msgstr "Berkeley DB로 된 저장소에 접근하기 위한 모듈"
 
 #: libsvn_fs_base/fs.c:1379
 #, c-format
@@ -3851,17 +3864,17 @@ msgstr "BDB의 지원하지 않는 FS 로더 버전 (%d)"
 #: libsvn_fs_base/lock.c:449 libsvn_fs_fs/lock.c:615
 #, c-format
 msgid "Cannot verify lock on path '%s'; no username available"
-msgstr ""
+msgstr "'%s' 경로에 대한 잠금을 확인할 수 없습니다; 사용자가 지정되지 않았습니다."
 
 #: libsvn_fs_base/lock.c:455 libsvn_fs_fs/lock.c:621
 #, c-format
 msgid "User %s does not own lock on path '%s' (currently locked by %s)"
-msgstr ""
+msgstr "사용자 %s 은/는 '%s'를 잠그지 않았습니다. (현재 %s에 의해 잠겼습니다)"
 
 #: libsvn_fs_base/lock.c:462 libsvn_fs_fs/lock.c:628
 #, c-format
 msgid "Cannot verify lock on path '%s'; no matching lock-token available"
-msgstr ""
+msgstr "'%s' 경로에 대한 잠금을 확인할 수 없습니다; 잠금 토큰을 발견할 수 없습니다."
 
 #: libsvn_fs_base/reps-strings.c:103
 msgid "Representation is not of type 'delta'"
@@ -3895,7 +3908,7 @@ msgstr ""
 
 #: libsvn_fs_base/reps-strings.c:890
 msgid "Null rep, but offset past zero already"
-msgstr ""
+msgstr "비어있는 rep입니다만, 내용이 있는 것처럼 접근합니다."
 
 #: libsvn_fs_base/reps-strings.c:1003 libsvn_fs_base/reps-strings.c:1199
 #, c-format
@@ -3994,12 +4007,12 @@ msgstr "충돌 발생: '%s'"
 #: libsvn_fs_base/tree.c:1936 libsvn_fs_base/tree.c:2847
 #: libsvn_fs_fs/tree.c:1262 libsvn_fs_fs/tree.c:1751
 msgid "Bad merge; ancestor, source, and target not all in same fs"
-msgstr ""
+msgstr "병합 실패; diff 원본, 대상 그리고 차이를 반영할 대상이 모두 같은 파일시스템이어야 합니다."
 
 #: libsvn_fs_base/tree.c:1952 libsvn_fs_fs/tree.c:1278
 #, c-format
 msgid "Bad merge; target '%s' has id '%s', same as ancestor"
-msgstr ""
+msgstr "병합 실패; 차이를 반영할 대상 '%s'은 '%s' id를 가지고 있으며, 이는 diff 원본과 같습니다."
 
 #: libsvn_fs_base/tree.c:2654
 #, c-format
@@ -4012,7 +4025,7 @@ msgstr "루트 디렉토리는 제거될 수 없습니다."
 
 #: libsvn_fs_base/tree.c:3189 libsvn_fs_fs/tree.c:1937
 msgid "Copy from mutable tree not currently supported"
-msgstr ""
+msgstr "뮤터블 트리에서의 복사는 지원하지 않습니다."
 
 #: libsvn_fs_base/tree.c:3684 libsvn_fs_fs/tree.c:2361
 #, c-format
@@ -4068,19 +4081,19 @@ msgstr "손상된 잠금 파일 리비전 '%s' (파일시스템 '%s')"
 
 #: libsvn_fs_fs/fs.c:98
 msgid "Can't fetch FSFS mutex"
-msgstr ""
+msgstr "FSFS 뮤텍스를 얻을 수 없습니다."
 
 #: libsvn_fs_fs/fs.c:105
 msgid "Can't create FSFS mutex"
-msgstr "FSFS 뮤텍스 생성 불가능"
+msgstr "FSFS 뮤텍스를 생성할 수 없습니다."
 
 #: libsvn_fs_fs/fs.c:109
 msgid "Can't store FSFS mutex"
-msgstr ""
+msgstr "FSFS  뮤텍스를 저장할 수 없습니다."
 
 #: libsvn_fs_fs/fs.c:334
 msgid "Module for working with a plain file (FSFS) repository."
-msgstr ""
+msgstr "일반 파일 기반 저장소를 접근하기 위한 모듈"
 
 #: libsvn_fs_fs/fs.c:368
 #, c-format
@@ -4234,11 +4247,11 @@ msgstr "현재파일 손상됨"
 
 #: libsvn_fs_fs/fs_fs.c:3709
 msgid "Can't grab FSFS repository mutex"
-msgstr ""
+msgstr "FSFS 저장소 뮤텍스를 얻을 수 없습니다."
 
 #: libsvn_fs_fs/fs_fs.c:3723
 msgid "Can't ungrab FSFS repository mutex"
-msgstr ""
+msgstr "FSFS 저장소 뮤텍스를 반환할 수 없습니다."
 
 #: libsvn_fs_fs/fs_fs.c:3839
 msgid "Transaction out of date"
@@ -4266,7 +4279,7 @@ msgstr "경로 '%s'는 HEAD 리비전에 존재하지 않습니다."
 #: libsvn_fs_fs/lock.c:741
 #, c-format
 msgid "Lock failed: newer version of '%s' exists"
-msgstr ""
+msgstr "잠금 실패: 새로운 버전의 '%s'가 존재합니다"
 
 #: libsvn_fs_fs/revs-txns.c:214
 msgid "Transaction cleanup failed"
@@ -4307,6 +4320,8 @@ msgid ""
 "Could not fetch the Version Resource URL (needed during an import or when it "
 "is missing from the local, cached props)"
 msgstr ""
+"리소스의 URL을 얻을 수 없습니다. (이 값은 임포트에 사용되었고,"
+"작업사본에 없을 경우 캐시된 속성에서 얻습니다.)"
 
 #: libsvn_ra_dav/commit.c:462
 #, c-format
@@ -4320,7 +4335,7 @@ msgstr "파일 또는 디렉토리 '%s'는 만료된 것입니다."
 
 #: libsvn_ra_dav/commit.c:550
 msgid "The CHECKOUT response did not contain a 'Location:' header"
-msgstr ""
+msgstr "CHECKOUT 응답에 'Location:' 헤더가 없습니다."
 
 #: libsvn_ra_dav/commit.c:849
 #, c-format
@@ -4615,7 +4630,7 @@ msgstr "요청 내용의 크기를 계산할 수 없습니다."
 #: libsvn_ra_dav/util.c:689
 #, c-format
 msgid "Error spooling the %s request response to disk"
-msgstr ""
+msgstr "%s 요청을 디스크에 스풀링하다 오류가 발생하였습니다."
 
 #: libsvn_ra_dav/util.c:729
 #, c-format
@@ -4632,7 +4647,7 @@ msgstr "%s of '%s'"
 #: libsvn_ra_dav/util.c:752
 #, c-format
 msgid "Error reading spooled %s request response"
-msgstr ""
+msgstr "스풀링된 %s 요청에 대한 응답을 읽는데 오류가 발생하였습니다."
 
 #: libsvn_ra_dav/util.c:763
 #, c-format
@@ -4889,7 +4904,7 @@ msgstr "문자열 길이가 최대값을 넘었습니다."
 
 #: libsvn_ra_svn/marshal.c:534
 msgid "Too many nested items"
-msgstr ""
+msgstr "경로의 깊이가 너무 깊습니다."
 
 #: libsvn_ra_svn/marshal.c:553
 msgid "Number is larger than maximum"
@@ -5010,7 +5025,7 @@ msgstr "쓰기 금지됨: 리비전 %ld에 대해서 전체를 읽을 수 있는
 #: libsvn_repos/fs-wrap.c:484
 #, c-format
 msgid "Cannot unlock path '%s', no authenticated username available"
-msgstr ""
+msgstr "'%s' 경로의 잠금을 풀수 없습니다. 인증된 사용자가 아닙니다."
 
 #: libsvn_repos/fs-wrap.c:498
 msgid "Unlock succeeded, but post-unlock hook failed"
@@ -5363,7 +5378,7 @@ msgstr "APR로부터 문자열을 재조합할 수 없습니다."
 #: libsvn_subr/error.c:414
 #, c-format
 msgid "%swarning: %s\n"
-msgstr ""
+msgstr "%s경고: %s\n"
 
 #: libsvn_subr/io.c:129
 #, c-format
@@ -5456,12 +5471,12 @@ msgstr "파일 '%s'에 읽기/쓰기 속성을 설정할 수 없습니다."
 #: libsvn_subr/io.c:1020
 #, c-format
 msgid "Can't get default file perms for file at '%s' (file stat error)"
-msgstr ""
+msgstr "파일 권한을 얻을 수 없습니다. '%s' (파일 상태얻기(stat) 오류)"
 
 #: libsvn_subr/io.c:1026
 #, c-format
 msgid "Can't get default file perms for file at '%s' (file close error)"
-msgstr ""
+msgstr "파일 권한을 얻을 수 없습니다. '%s' (파일 닫기 오류)"
 
 #: libsvn_subr/io.c:1058 libsvn_subr/io.c:1118
 #, c-format
@@ -5726,7 +5741,7 @@ msgstr ""
 
 #: libsvn_subr/opt.c:237
 msgid " arg"
-msgstr ""
+msgstr " 인자"
 
 #: libsvn_subr/opt.c:261
 #, c-format
@@ -6849,6 +6864,9 @@ msgid ""
 "\n"
 "Unconditionally remove lock from each LOCKED_PATH.\n"
 msgstr ""
+"사용법: svnadmin rmlocks REPOS_PATH LOCKED_PATH...\n"
+"\n"
+"LOCKED_PATH 에 걸려있는 잠금을 강제로 제거합니다.\n"
 
 #: svnadmin/main.c:376
 msgid ""
@@ -6994,7 +7012,7 @@ msgstr "정확하게 하나의 파일 인자만 필요합니다"
 #: svnadmin/main.c:1028 svnlook/main.c:1795
 #, c-format
 msgid "UUID Token: %s\n"
-msgstr ""
+msgstr "UUID 토큰: %s\n"
 
 #: svnadmin/main.c:1029 svnlook/main.c:1796
 #, c-format
@@ -7004,12 +7022,12 @@ msgstr "소유자: %s\n"
 #: svnadmin/main.c:1030 svnlook/main.c:1797
 #, c-format
 msgid "Created: %s\n"
-msgstr "생성됨: %s\n"
+msgstr "생성일: %s\n"
 
 #: svnadmin/main.c:1031 svnlook/main.c:1798
 #, c-format
 msgid "Expires: %s\n"
-msgstr ""
+msgstr "만료일: %s\n"
 
 #: svnadmin/main.c:1033
 #, c-format
@@ -7018,6 +7036,9 @@ msgid ""
 "%s\n"
 "\n"
 msgstr ""
+"설명 (%i 행):\n"
+"%s\n"
+"\n"
 
 #: svnadmin/main.c:1034
 #, c-format
@@ -7026,6 +7047,9 @@ msgid ""
 "%s\n"
 "\n"
 msgstr ""
+"설명 (%i 행):\n"
+"%s\n"
+"\n"
 
 #: svnadmin/main.c:1101
 #, c-format
@@ -7208,7 +7232,7 @@ msgstr "추가된 파일에 대해서는 차이를 출력하지 않음"
 
 #: svnlook/main.c:121
 msgid "show full paths instead of indenting them"
-msgstr ""
+msgstr "생략형태의 경로대신 전체 경로를 보여줍니다."
 
 #: svnlook/main.c:134
 msgid ""
@@ -7494,6 +7518,8 @@ msgid ""
 "Comment (%i lines):\n"
 "%s\n"
 msgstr ""
+"설명 (%i 행):\n"
+"%s\n"
 
 #: svnlook/main.c:1802
 #, c-format
@@ -7501,6 +7527,8 @@ msgid ""
 "Comment (%i line):\n"
 "%s\n"
 msgstr ""
+"설명 (%i 행):\n"
+"%s\n"
 
 #: svnlook/main.c:1848
 msgid "Missing propname argument"
