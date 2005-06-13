@@ -35,20 +35,6 @@ Candidate changes:
       +1: fitz (except r14893, r14898, r14905 and r14947)
       +1: lundblad
 
-  * r14830
-    Fix of the Windows Installer's Add/Repair/Remove capabilities.
-    Branch:
-      innosetup-hsuninsfix-5x-1.2.x (-r14715:14716)
-    Justification:
-      This fixes problems people had when using Windows'
-      add/remove item in the Control Panel.
-    Notes:
-      Use backport branch because tree-reorganization defeats a simple
-      merge from trunk.
-    Votes:
-      +1: brane
-      +0: dlr (concept, no testing environment), fitz (concept)
-
   * r14885
     Python bindings, fix for functions returning MD5 digests.
     Justification:
