@@ -16,7 +16,7 @@ Candidate changes:
     Justification:
       Buggy interaction between locking and svn:executable.
     Votes:
-      +1: lundblad
+      +1: lundblad, dlr
       +1: fitz (for original r14859 @ trunk)
 
   * r14774, r14849, r14851, r14862, r14893, r14898, r14905, r14947
