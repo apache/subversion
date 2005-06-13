@@ -192,34 +192,29 @@ extern const svn_opt_subcommand_desc_t svn_cl__cmd_table[];
 extern const apr_getopt_option_t svn_cl__options[];
 
 
-/* Evaluate EXPR.  If it yields an SVN_ERR_UNVERSIONED_RESOURCE error,
- * handle the error as a warning, clear the error, and set SUCCESS to
- * FALSE.  If it yields any other error, don't touch SUCCESS, just
- * return that error from the current function.  Otherwise, set
- * SUCCESS to TRUE and continue.
+/* A helper for the many subcommands that wish to merely warn when
+ * invoked on an unversioned, nonexistent, or otherwise innocuously
+ * errorful resource.  Meant to be wrapped with SVN_ERR().
+ * 
+ * If ERR is null, return SVN_NO_ERROR, setting *SUCCESS to TRUE
+ * if SUCCESS is not NULL.
  *
- * This macro is a helper for the many subcommands that merely warn
- * when invoked on an unversioned resource.  It is modeled on the
- * SVN_ERR() macro, see there for details.
+ * Else if ERR->apr_err is one of the error codes supplied in varargs,
+ * then handle ERR as a warning (unless QUIET is true), clear ERR, and
+ * return SVN_NO_ERROR, setting *SUCCESS to FALSE if SUCCESS is not
+ * NULL.
+ *
+ * Else return ERR, setting *SUCCESS to FALSE if SUCCESS is not NULL.
+ *
+ * Typically, error codes like SVN_ERR_UNVERSIONED_RESOURCE,
+ * SVN_ERR_ENTRY_NOT_FOUND, etc, are supplied in varargs.  Don't
+ * forget to terminate the argument list with SVN_NO_ERROR.
  */
-#define SVN_CL__TRY(expr, success)                                       \
-  do {                                                                   \
-    svn_error_t *svn_cl__try__temp = (expr);                             \
-    if (svn_cl__try__temp)                                               \
-      {                                                                  \
-        if (svn_cl__try__temp->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)  \
-          {                                                              \
-            svn_handle_warning (stderr, svn_cl__try__temp);              \
-            svn_error_clear (svn_cl__try__temp);                         \
-            (success) = FALSE;                                           \
-          }                                                              \
-        else                                                             \
-          return svn_cl__try__temp;                                      \
-      }                                                                  \
-    else                                                                 \
-        (success) = TRUE;                                                \
-  } while (0)
-
+svn_error_t *
+svn_cl__try (svn_error_t *err,
+             svn_boolean_t *success,
+             svn_boolean_t quiet,
+             ...);
 
 
 /* Our cancellation callback. */
@@ -253,6 +248,15 @@ svn_error_t *svn_cl__print_status (const char *path,
                                    svn_boolean_t skip_unrecognized,
                                    svn_boolean_t repos_locks,
                                    apr_pool_t *pool);
+
+
+/* Print STATUS for PATH in XML to stdout.  Use POOL for temporary
+   allocations. */
+svn_error_t *
+svn_cl__print_status_xml (const char *path,
+                          svn_wc_status2_t *status,
+                          apr_pool_t *pool);
+
 
 /* Print a hash that maps property names (char *) to property values
    (svn_string_t *).  The names are assumed to be in UTF-8 format;

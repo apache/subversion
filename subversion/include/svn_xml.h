@@ -118,8 +118,6 @@ void svn_xml_escape_attr_cstring (svn_stringbuf_t **outstr,
                                   apr_pool_t *pool);
 
 /**
- * @since New in 1.2.
- *
  * Return UTF-8 string @a string if it contains no characters that are
  * unrepresentable in XML.  Else, return a copy of @a string,
  * allocated in @a pool, with each unrepresentable character replaced
@@ -135,6 +133,8 @@ void svn_xml_escape_attr_cstring (svn_stringbuf_t **outstr,
  * may be other UTF-8 characters that are invalid in XML; see
  * http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=90591
  * and its thread for details.
+ *
+ * @since New in 1.2.
  */
 const char *svn_xml_fuzzy_escape (const char *string,
                                   apr_pool_t *pool);

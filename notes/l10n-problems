@@ -65,7 +65,7 @@ translation, either with _() or N_().
 Parameters are sprintf-ed straight into errorstrings at the time they are
 added to the error structure, so most strings are marked with _() and
 translated directly into the language for which the client was set up.
-[Note: The N_() macro markes strings for delayed translation.]
+[Note: The N_() macro marks strings for delayed translation.]
 
 
 
@@ -93,8 +93,8 @@ Any attempt to use setlocale() in an Apache environment may conflict
 with settings other modules expect to be setup (even when using a
 prefork MPM).  On the svnserve side, having no portable way to change
 languages dynamically means that the environment has to be set up
-correctly from the start.  Given that, the svnserve protocol doesn't
-yet support content negotiation
+correctly from the start.  Futhermore, the svnserve protocol doesn't
+yet support content negotiation.
 
 In other words, there is no way -- programmatically -- to ensure that
 messages are served in any specific language using a traditional
@@ -102,36 +102,73 @@ gettext implementation.  Current consensus is that gettext must be
 replaced on the server side with a more flexible implementation.
 
 Server requirement(s):
- - Language negotiation on a per-client session basis.
- - Avoid contamination of environment used by other code.
- - Allow for propogation of locale to hook scripts.
+ - Language negotiation on a per-client session basis.  For a
+   stateless protocol like HTTP, this means per-request.  For a
+   stateful protocol like the one used by svnserve, this means
+   per-connection.
+ - Avoid contamination of environment used by other code (e.g. other
+   Apache modules running in the same server as mod_dav_svn).
+ - Allow for propogation of the language to use to hook scripts.
  - Continue to inter-op with generic HTTP/DAV clients, and stay
-   compatible with SVN clients of various versions.
+   compatible with SVN clients of various versions (as per existing
+   compatibility rules).
 
 I18N module requirement(s):
  - Cross-platform.
- - Interoperable with gettext() tools.
+ - Interoperable with gettext tools (e.g. for .po files).
  - Non-viral license which allows for any necessary modifications.
+ - gettext-like API (needn't be an exact match).
 
-I18N module nice-to-have(s):
- - gettext()-like API.
-
-Possible implementation:
- - Based around a new gettext-like module with per-struct or
+Implementation guidelines:
+ - The L10N API will be uniform across all libraries, clients, and
+   servers.  Server-negotiated language will be recorded in either a
+   context baton (e.g. apr_pool_t.userdata), or in thread-local
+   storage (TLS).
+ - Implemented on top of a new gettext-like module with per-struct or
    per-thread locale mutator functions and storage for name/value
-   pairs (a glorified apr_hash_t).  Nicolás Lichtmaier wrote something
-   along these lines already
-   <http://svn.haxx.se/dev/archive-2004-04/0788.shtml>.
- - Language used by httpd/mod_dav_svn derived from the Accept-Language
-   HTTP header, and setup by mod_negotiation.
+   pairs (a glorified apr_hash_t).  (See implementation from Nicolás
+   Lichtmaier noted below.)
+ - Language chosen by the server will be negotiated based on a ranked
+   list of preferences provided by the client.
+ - Language used by httpd/mod_dav_svn will be derived from the
+   Accept-Language HTTP header, and setup by mod_negotiation (when
+   available), or by mod_dav_svn on a per-request basis.
  - Language used by svnserve derived from additions to the protocol
-   which allow for HTTP-style content negotiation on a per-session
-   basis.
+   which allow for HTTP-style content negotiation on a per-connection
+   basis.  The protocol extension would use the same sort of q-value
+   list found in the Accept-Language header to specify user language
+   preferences.
 
-Investigation?: A brief canvasing of developers (on IRC) indicated that
+Investigation: A brief canvasing of developers (on IRC) indicated that
 no thorough investigation of existing solutions which might meet the
 above requirements has been done.  This incomplete canvasing may not
 paint an accurate picture, however.
+
+A branch <https://svn.collab.net/repos/svn/branches/server-l10n> has
+been created to explore a solution to the above requirements.  While
+the L10N module is important, how that module is applied to both the
+server-side and client-side is possibly even more so; an
+implementation which meets the requirements should not dramatically
+impact the solution used across the code base for the general L10N
+API, nor the necessary server-side machinations.
+
+Nicolás Lichtmaier wrote something along the lines of the module
+referenced in the "Possible implementation" section
+<http://svn.haxx.se/dev/archive-2004-04/0788.shtml>, which has been
+committed to the server-l10n branch.  However, it depends upon the GNU
+gettext .mo format, and the GNU implementation may not be available on
+all platforms (unless re-implemented).  This module will need to be
+enhanced or replaced, ideally completely obviating the need for
+linkage against a platform's own gettext implementation.
+
+Whether to use TLS or a context baton for the L10N API is under
+discussion.  TLS can provide a more friendly API (albeit somewhat
+underhanded), while use of a context baton more resilient to change
+(e.g. if httpd someday allowed more than one thread to service a
+request).  Here's a sample:
+ - No localization:                          "A message to localize"
+ - Localization w/ TLS or gloabl preference: _("A message to localize")
+ - Localization w/ a context baton:          _("A message to localize", pool)
 
 Historical note: Original consensus indicated that messages from the
 server side should stay untranslated for transmission to the client.

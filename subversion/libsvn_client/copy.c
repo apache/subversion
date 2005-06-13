@@ -329,10 +329,9 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  err = svn_client__open_ra_session (&ra_session, top_url,
-                                     NULL,
-                                     NULL, NULL, FALSE, TRUE, 
-                                     ctx, pool);
+  err = svn_client__open_ra_session_internal (&ra_session, top_url,
+                                              NULL, NULL, NULL, FALSE, TRUE, 
+                                              ctx, pool);
 
   /* If the two URLs appear not to be in the same repository, then
      top_url will be empty and the call to svn_ra_open()
@@ -615,10 +614,11 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   svn_path_split (dst_url, &anchor, &target, pool);
 
   /* Open an RA session for the anchor URL. */
-  SVN_ERR (svn_client__open_ra_session (&ra_session, anchor,
-                                        svn_wc_adm_access_path (adm_access),
-                                        adm_access, NULL, TRUE, TRUE, 
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, anchor,
+                                                 svn_wc_adm_access_path
+                                                 (adm_access),
+                                                 adm_access, NULL, TRUE, TRUE, 
+                                                 ctx, pool));
 
   /* Figure out the basename that will result from this operation. */
   SVN_ERR (svn_ra_check_path (ra_session, svn_path_uri_decode (target, pool),
@@ -697,10 +697,11 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
     goto cleanup;
 
   /* Open an RA session to BASE_URL. */
-  if ((cmt_err = svn_client__open_ra_session (&ra_session, base_url,
-                                              NULL, NULL, commit_items,
-                                              FALSE, FALSE,
-                                              ctx, pool)))
+  if ((cmt_err = svn_client__open_ra_session_internal (&ra_session, base_url,
+                                                       NULL, NULL,
+                                                       commit_items,
+                                                       FALSE, FALSE,
+                                                       ctx, pool)))
     goto cleanup;
 
   /* Fetch RA commit editor. */
@@ -763,9 +764,9 @@ repos_to_wc_copy (const char *src_url,
   /* Open a repository session to the given URL. We do not (yet) have a
      working copy, so we don't have a corresponding path and tempfiles
      cannot go into the admin area. */
-  SVN_ERR (svn_client__open_ra_session (&ra_session, src_url, NULL,
-                                        NULL, NULL, FALSE, TRUE, 
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, src_url, NULL,
+                                                 NULL, NULL, FALSE, TRUE, 
+                                                 ctx, pool));
   
   /* Pass null for the path, to ensure error if trying to get a
      revision based on the working copy.  And additionally, we can't

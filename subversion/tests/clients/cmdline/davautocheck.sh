@@ -223,17 +223,17 @@ CustomLog           "$HTTPD_ROOT/req" format
   AllowOverride     none
 </Directory>
 
-<Location /repositories>
+<Location /svn-test-work/repositories>
   DAV               svn
-  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/clients/cmdline/repositories"
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/clients/cmdline/svn-test-work/repositories"
   AuthType          Basic
   AuthName          "Subversion Repository"
   AuthUserFile      $HTTPD_USERS
   Require           valid-user
 </Location>
-<Location /local_tmp/repos>
+<Location /svn-test-work/local_tmp/repos>
   DAV               svn
-  SVNPath           "$ABS_BUILDDIR/subversion/tests/clients/cmdline/local_tmp/repos"
+  SVNPath           "$ABS_BUILDDIR/subversion/tests/clients/cmdline/svn-test-work/local_tmp/repos"
   AuthType          Basic
   AuthName          "Subversion Repository"
   AuthUserFile      $HTTPD_USERS

@@ -1168,7 +1168,9 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "### Set global-ignores to a set of whitespace-delimited globs"
         APR_EOL_STR
-        "### which Subversion will ignore in its 'status' output."
+        "### which Subversion will ignore in its 'status' output, and"
+        APR_EOL_STR
+        "### while importing or adding files and directories."
         APR_EOL_STR
         "# global-ignores = " SVN_CONFIG_DEFAULT_GLOBAL_IGNORES ""
         APR_EOL_STR

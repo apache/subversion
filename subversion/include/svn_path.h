@@ -102,7 +102,7 @@ char *svn_path_join_many (apr_pool_t *pool, const char *base, ...);
  *
  * The returned basename will be allocated in @a pool.
  *
- * Note: if an empty string is passed, then an empty string will be returned.
+ * @note If an empty string is passed, then an empty string will be returned.
  */
 char *svn_path_basename (const char *path, apr_pool_t *pool);
 
@@ -262,7 +262,7 @@ svn_path_split_if_file(const char *path,
  * If there are no items in @a targets, set @a *pcommon and (if
  * applicable) @a *pcondensed_targets to @c NULL.
  *
- * NOTE: There is no guarantee that @a *pcommon is within a working
+ * @note There is no guarantee that @a *pcommon is within a working
  * copy.  */
 svn_error_t *
 svn_path_condense_targets (const char **pcommon,
@@ -333,11 +333,11 @@ svn_boolean_t svn_path_is_single_path_component (const char *name);
 
 
 /**
- * @since New in 1.1.
- *
  * Test to see if a backpath, i.e. '..', is present in @a path.
  * If not, return @c FALSE.
  * If so, return @c TRUE.
+ *
+ * @since New in 1.1.
  */
 svn_boolean_t svn_path_is_backpath_present (const char *path);
 
@@ -360,9 +360,15 @@ const char *svn_path_is_child (const char *path1,
                                const char *path2,
                                apr_pool_t *pool);
 
-/** 
- * @since New in 1.2.
+/* Return true if @a path1 is an ancestor of @a path2 or the paths are equal
+ * and false otherwise.
  *
+ * @since New in 1.3.
+ */
+svn_boolean_t
+svn_path_is_ancestor (const char *path1, const char *path2);
+
+/**
  * Check whether @a path is a valid Subversion path.
  *
  * A valid Subversion pathname is a UTF-8 string without control
@@ -375,6 +381,8 @@ const char *svn_path_is_child (const char *path1,
  *
  * Return @c SVN_NO_ERROR if valid and @c SVN_ERR_FS_PATH_SYNTAX if
  * invalid.
+ * 
+ * @since New in 1.2.
  */
 svn_error_t *svn_path_check_valid (const char *path, apr_pool_t *pool);
 
@@ -409,23 +417,24 @@ const char *svn_path_url_add_component (const char *url,
                                         apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
- *
  * Convert @a iri (Internationalized URI) to an URI.
  * The return value may be the same as @a iri if it was already
- * a URI.  Else, allocate the return value in @a pool. */
+ * a URI.  Else, allocate the return value in @a pool.
+ *
+ * @since New in 1.1.
+ */
 const char *svn_path_uri_from_iri (const char *iri,
                                    apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
- *
  * URI-encode certain characters in @a uri that are not valid in an URI, but
  * doesn't have any special meaning in @a uri at their positions.  If no
  * characters need escaping, just return @a uri.
  *
- * NOTE: Currently, this function escapes <, >, ", space, {, }, |, \, ^, and `.
+ * @note Currently, this function escapes <, >, ", space, {, }, |, \, ^, and `.
  * This may be extended in the future to do context-dependent escaping.
+ *
+ * @since New in 1.1.
  */
 const char *svn_path_uri_autoescape (const char *uri,
                                      apr_pool_t *pool);

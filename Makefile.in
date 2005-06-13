@@ -217,6 +217,9 @@ INSTALL_EXTRA_SWIG_PY=\
 SWIG_PL_DIR = $(abs_builddir)/subversion/bindings/swig/perl
 SWIG_RB_DIR = $(abs_builddir)/subversion/bindings/swig/ruby
 
+# The path to the source files for the Ruby SWIG
+SWIG_RB_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig/ruby
+
 ### Automate JAR creation using Makefile generator's javahl-java.jar
 ### property.  Enhance generator to support JAR installation.
 INSTALL_EXTRA_JAVAHL_JAVA=\
@@ -390,9 +393,7 @@ fsfscheck:
 	@$(MAKE) check FS_TYPE=fsfs
 
 check-clean:
-	rm -rf subversion/tests/clients/cmdline/repositories   \
-               subversion/tests/clients/cmdline/working_copies \
-               subversion/tests/clients/cmdline/local_tmp      \
+	rm -rf subversion/tests/clients/cmdline/svn-test-work  \
                subversion/tests/libsvn_fs_base/test-repo-*     \
                subversion/tests/libsvn_repos/test-repo-*       \
                subversion/tests/libsvn_subr/z                  \
@@ -454,7 +455,12 @@ external-extraclean:
 # DOCUMENTATION RULES
 
 # Every single document in every format.
-doc: doc-design doc-misc-docs
+doc: doc-design doc-misc-docs doc-api
+
+# Generate API documentation for the C libraries.
+### This could also generate JavaDoc for JavaHL, POD for swig-perl, etc.
+doc-api:
+	doxygen $(top_srcdir)/doc/doxygen.conf
 
 # Build all types of a certain doc.
 doc-misc-docs: doc-misc-docs-html doc-misc-docs-pdf doc-misc-docs-ps
@@ -600,7 +606,9 @@ clean-swig-pl:
 	fi
 
 check-swig-rb: swig-rb svnserve
-	cd $(SWIG_RB_DIR); $(RUBY) test/run-test.rb
+	cd $(SWIG_RB_DIR); \
+	  $(RUBY) -I $(SWIG_RB_SRC_DIR) \
+	    $(SWIG_RB_SRC_DIR)/test/run-test.rb
 
 clean-swig-rb:
 	for d in $(SWIG_RB_DIR) $(SWIG_RB_DIR)/libsvn_swig_ruby; \

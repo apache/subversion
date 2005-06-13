@@ -87,6 +87,9 @@ struct edit_baton
   /* Non-null if this is a 'switch' operation. */
   const char *switch_url;
 
+  /* The URL to the root of the repository, or NULL. */
+  const char *repos;
+
   /* External diff3 to use for merges (can be null, in which case
      internal merge code is used). */
   const char *diff3_cmd;
@@ -650,8 +653,9 @@ prep_directory (struct dir_baton *db,
 
   /* Make sure it's the right working copy, either by creating it so,
      or by checking that it is so already. */
-  SVN_ERR (svn_wc_ensure_adm (db->path, NULL,
-                              ancestor_url, ancestor_revision, pool));
+  SVN_ERR (svn_wc_ensure_adm2 (db->path, NULL,
+                               ancestor_url, db->edit_baton->repos,
+                               ancestor_revision, pool));
 
   if (! db->edit_baton->adm_access
       || strcmp (svn_wc_adm_access_path (db->edit_baton->adm_access),
@@ -801,6 +805,7 @@ open_root (void *edit_baton,
       /* Mark directory as being at target_revision, but incomplete. */  
       tmp_entry.revision = *(eb->target_revision);
       tmp_entry.url = d->new_URL;
+      tmp_entry.repos = eb->repos;
       tmp_entry.incomplete = TRUE;
       SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
                                     d->path, pool));
@@ -808,6 +813,7 @@ open_root (void *edit_baton,
                                      &tmp_entry,
                                      SVN_WC__ENTRY_MODIFY_REVISION |
                                      SVN_WC__ENTRY_MODIFY_URL |
+                                     SVN_WC__ENTRY_MODIFY_REPOS |
                                      SVN_WC__ENTRY_MODIFY_INCOMPLETE,
                                      TRUE /* immediate write */,
                                      pool));
@@ -1145,6 +1151,7 @@ open_directory (const char *path,
   /* Mark directory as being at target_revision and URL, but incomplete. */
   tmp_entry.revision = *(eb->target_revision);
   tmp_entry.url = db->new_URL;
+  tmp_entry.repos = eb->repos;
   tmp_entry.incomplete = TRUE;
 
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
@@ -1153,6 +1160,7 @@ open_directory (const char *path,
                                  &tmp_entry,
                                  SVN_WC__ENTRY_MODIFY_REVISION |
                                  SVN_WC__ENTRY_MODIFY_URL |
+                                 SVN_WC__ENTRY_MODIFY_REPOS |
                                  SVN_WC__ENTRY_MODIFY_INCOMPLETE,
                                  TRUE /* immediate write */,
                                  pool));
@@ -2481,6 +2489,7 @@ close_edit (void *edit_baton,
                                         eb->adm_access,
                                         eb->recurse,
                                         eb->switch_url,
+                                        eb->repos,
                                         *(eb->target_revision),
                                         eb->notify_func,
                                         eb->notify_baton,
@@ -2524,6 +2533,10 @@ make_editor (svn_revnum_t *target_revision,
   struct edit_baton *eb;
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_delta_editor_t *tree_editor = svn_delta_default_editor (subpool);
+  const svn_wc_entry_t *entry;
+
+  /* Get the anchor entry, so we can fetch the repository root. */
+  SVN_ERR (svn_wc_entry (&entry, anchor, adm_access, FALSE, pool));
 
   /* Construct an edit baton. */
   eb = apr_pcalloc (subpool, sizeof (*eb));
@@ -2531,6 +2544,7 @@ make_editor (svn_revnum_t *target_revision,
   eb->use_commit_times= use_commit_times;
   eb->target_revision = target_revision;
   eb->switch_url      = switch_url;
+  eb->repos           = entry ? entry->repos : NULL;
   eb->adm_access      = adm_access;
   eb->anchor          = anchor;
   eb->target          = target;
@@ -2926,7 +2940,8 @@ svn_wc_add_repos_file (const char *dst_path,
   apr_array_header_t *propchanges;
   int log_number = 0;
 
-  /* Fabricate the anticipated new URL of the target. */
+  /* Fabricate the anticipated new URL of the target and check the
+     copyfrom URL to be in the same repository. */
   {
     const svn_wc_entry_t *ent;
     const char *dir_name, *base_name;
@@ -2934,6 +2949,13 @@ svn_wc_add_repos_file (const char *dst_path,
     svn_path_split (dst_path, &dir_name, &base_name, pool);
     SVN_ERR (svn_wc_entry (&ent, dir_name, adm_access, FALSE, pool));
     new_URL = svn_path_url_add_component (ent->url, base_name, pool);
+
+    if (copyfrom_url && ent->repos &&
+        ! svn_path_is_ancestor (ent->repos, copyfrom_url))
+      return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                _("Copyfrom-url '%s' has different repository"
+                                  " root than '%s'"),
+                                copyfrom_url, ent->repos);
   }
   
   /* Construct the new properties.  Passing an empty hash for the

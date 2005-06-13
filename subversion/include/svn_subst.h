@@ -78,9 +78,12 @@ svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
 /** Values used in keyword expansion. */
 typedef struct svn_subst_keywords_t
 {
-  /** @{ */
-  /** String expansion of the like-named keyword, or NULL if the keyword
-   * was not selected in the svn:keywords property. */
+  /**
+   * @name svn_subst_keywords_t fields
+   * String expansion of the like-named keyword, or NULL if the keyword
+   * was not selected in the svn:keywords property.
+   * @{
+   */
   const svn_string_t *revision;
   const svn_string_t *date;
   const svn_string_t *author;
@@ -188,8 +191,6 @@ svn_subst_translate_stream (svn_stream_t *src,
 
 
 /**
- * @since New in 1.1.
- *
  * Convenience routine: a variant of svn_subst_translate_stream2()
  * which operates on files.  (See previous docstring for details.)  In
  * addition, it will create/detranslate a special file if @a special
@@ -204,6 +205,8 @@ svn_subst_translate_stream (svn_stream_t *src,
  *
  * If @a eol_str and @a keywords are @c NULL, behavior is just a byte-for-byte
  * copy.
+ *
+ * @since New in 1.1.
  */
 svn_error_t *
 svn_subst_copy_and_translate2 (const char *src,
@@ -216,10 +219,10 @@ svn_subst_copy_and_translate2 (const char *src,
                                apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0 API.
- *
  * Similar to svn_subst_copy_and_translate2() except that @a special is
  * always set to @c FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 svn_error_t *
 svn_subst_copy_and_translate (const char *src,

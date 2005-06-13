@@ -75,7 +75,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
     {
       svn_ra_session_t *ra_session;
       svn_node_kind_t kind;
-      const char *uuid;
+      const char *uuid, *repos;
 
       /* Get the RA connection. */
       SVN_ERR (svn_client__ra_session_from_path (&ra_session, &revnum,
@@ -91,8 +91,9 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
           (SVN_ERR_UNSUPPORTED_FEATURE , NULL,
            _("URL '%s' refers to a file, not a directory"), URL);
 
-      /* Get the repos UUID. */
+      /* Get the repos UUID and root URL. */
       SVN_ERR (svn_ra_get_uuid (ra_session, &uuid, pool));
+      SVN_ERR (svn_ra_get_repos_root (ra_session, &repos, pool));
 
       SVN_ERR (svn_io_check_path (path, &kind, pool));
 
@@ -102,7 +103,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
              entries file should only have an entry for THIS_DIR with a
              URL, revnum, and an 'incomplete' flag.  */
           SVN_ERR (svn_io_make_dir_recursively (path, pool));          
-          SVN_ERR (svn_wc_ensure_adm (path, uuid, URL, revnum, pool));
+          SVN_ERR (svn_wc_ensure_adm2 (path, uuid, URL, repos, revnum, pool));
           
           /* Have update fix the incompleteness. */
           err = svn_client__update_internal (result_rev, path, revision,
@@ -119,7 +120,8 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
           if (! wc_format)
             {
               /* Make the unversioned directory into a versioned one. */
-              SVN_ERR (svn_wc_ensure_adm (path, uuid, URL, revnum, pool));
+              SVN_ERR (svn_wc_ensure_adm2 (path, uuid, URL, repos, revnum,
+                                           pool));
               err = svn_client__update_internal (result_rev, path, revision,
                                                  recurse, ignore_externals,
                                                  use_sleep, ctx, pool);

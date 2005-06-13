@@ -192,6 +192,8 @@ That is done via the env program.
 
 You could set it for example to '(\"LANG=C\")")
 
+(defvar svn-browse-url-function browse-url-browser-function "Browser function, used for `svn-browse-url'.")
+
 (defvar svn-status-window-alist
   '((diff "*svn-diff*") (log "*svn-log*") (info t) (blame t) (proplist t) (update t))
   "An alist to specify which windows should be used for svn command outputs.
@@ -269,6 +271,21 @@ It is an experimental feature.")
   (if svn-xemacsp
       (require 'overlay)
     (require 'overlay nil t)))
+
+(defcustom svn-status-prefix-key [(control x) (meta s)]
+  "Prefix key for the psvn commands in the global keymap."
+  :type '(choice (const [(control x) ?v ?S])
+                 (const [(super s)])
+                 (const [(hyper s)])
+                 (const [(control x) ?v])
+                 (const [(control x) ?V])
+                 (sexp))
+  :group 'psvn
+  :set  (lambda (var value)
+          (if (boundp var)
+              (global-unset-key (symbol-value var)))
+          (set var value)
+          (global-set-key (symbol-value var) 'svn-global-keymap)))
 
 ;; Use the normally used mode for files ending in .~HEAD~, .~BASE~, ...
 (add-to-list 'auto-mode-alist '("\\.~?\\(HEAD\\|BASE\\|PREV\\)~?\\'" ignore t))
@@ -442,6 +459,36 @@ Otherwise, return \"\"."
   (defsubst match-string-no-properties (match)
     (buffer-substring-no-properties (match-beginning match) (match-end match))))
 
+(defvar svn-global-keymap nil "Global keymap for psvn.el.
+To bind this to a different key, customize `svn-status-prefix-key'.")
+(when (not svn-global-keymap)
+  (setq svn-global-keymap (make-sparse-keymap))
+  (define-key svn-global-keymap (kbd "s") 'svn-status-this-directory)
+  (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log))
+  ;; TODO: make the following work
+  ;;(define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
+  ;;(define-key svn-global-keymap (kbd "c") 'svn-status-commit-file))
+
+(defvar svn-global-trac-map ()
+  "Subkeymap used in `svn-global-keymap' for trac issue tracker commands.")
+(when (not svn-global-trac-map)
+  (setq svn-global-trac-map (make-sparse-keymap))
+  (define-key svn-global-trac-map (kbd "t") 'svn-trac-browse-timeline)
+  (define-key svn-global-trac-map (kbd "i") 'svn-trac-browse-ticket)
+  (define-key svn-global-trac-map (kbd "c") 'svn-trac-browse-changeset)
+  (define-key svn-global-keymap (kbd "t") svn-global-trac-map))
+
+;; The setter of `svn-status-prefix-key' makes a binding in the global
+;; map refer to the `svn-global-keymap' symbol, rather than directly
+;; to the keymap.  Emacs then implicitly uses the symbol-function.
+;; This has the advantage that `describe-bindings' (C-h b) can show
+;; the name of the keymap and link to its documentation.
+(defalias 'svn-global-keymap svn-global-keymap)
+;; `defalias' of GNU Emacs 21.4 doesn't allow a docstring argument.
+(put 'svn-global-keymap 'function-documentation
+     '(documentation-property 'svn-global-keymap 'variable-documentation t))
+
+
 (defun svn-status-message (level &rest args)
   "If LEVEL is lower than `svn-status-debug-level' print ARGS using `message'.
 
@@ -492,6 +539,11 @@ If ARG then pass the -u argument to `svn status'."
         (setq default-directory dir
               svn-status-remote (when arg t))
         (svn-run-svn t t 'status "status" status-option)))))
+
+(defun svn-status-this-directory (arg)
+  "Run `svn-status' for the `default-directory'"
+  (interactive "P")
+  (svn-status default-directory arg))
 
 (defun svn-status-use-history ()
   (interactive)
@@ -625,7 +677,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
                   (svn-status-update)
                   (message "svn update finished"))
                  ((eq svn-process-cmd 'add)
-                  (svn-status-update)
+                  (svn-status-update-with-command-list (svn-status-parse-ar-output))
                   (message "svn add finished"))
                  ((eq svn-process-cmd 'mkdir)
                   (svn-status-update)
@@ -642,7 +694,7 @@ is prompted for give extra arguments, which are appended to ARGLIST."
                   (svn-status-update)
                   (message "svn mv finished"))
                  ((eq svn-process-cmd 'rm)
-                  (svn-status-update)
+                  (svn-status-update-with-command-list (svn-status-parse-ar-output))
                   (message "svn rm finished"))
                  ((eq svn-process-cmd 'cleanup)
                   (message "svn cleanup finished"))
@@ -1341,7 +1393,10 @@ When called with the prefix argument 0, use the full path name."
     (set-buffer svn-status-buffer-name)
     (let ((st-info)
           (found)
-          (action))
+          (action)
+          (fname (svn-status-line-info->filename (svn-status-get-line-information)))
+          (fname-pos (point))
+          (column (current-column)))
       (setq cmd-list (sort cmd-list '(lambda (item1 item2) (string-lessp (car item1) (car item2)))))
       (while cmd-list
         (unless st-info (setq st-info svn-status-info))
@@ -1364,7 +1419,13 @@ When called with the prefix argument 0, use the full path name."
               ;;(message "found %s, action: %S" (caar cmd-list) action)
               (svn-status-annotate-status-buffer-entry action (car st-info)))
           (message "did not find %s" (caar cmd-list)))
-        (setq cmd-list (cdr cmd-list))))))
+        (setq cmd-list (cdr cmd-list)))
+      (if fname
+          (progn
+            (goto-char fname-pos)
+            (svn-status-goto-file-name fname)
+            (goto-char (+ column (point-at-bol))))
+        (goto-char (+ (next-overlay-change (point-min)) svn-status-default-column))))))
 
 (defun svn-status-annotate-status-buffer-entry (action line-info)
   (let ((tag-string))
@@ -1379,17 +1440,23 @@ When called with the prefix argument 0, use the full path name."
            (setq tag-string " <added>"))
           ((equal action 'deleted)
            (setq tag-string " <deleted>"))
+          ((equal action 'added-wc)
+           (svn-status-line-info->set-filemark line-info ?A)
+           (svn-status-line-info->set-localrev line-info 0))
+          ((equal action 'deleted-wc)
+           (svn-status-line-info->set-filemark line-info ?D))
           (t
-           (message "Unknown action '%s for %s" action (svn-status-line-info->filename line-info))))
+           (error "Unknown action '%s for %s" action (svn-status-line-info->filename line-info))))
     (when tag-string
       (svn-status-line-info->set-filemark line-info ? )
-      (svn-status-line-info->set-propmark line-info ? )
-      (let ((buffer-read-only nil))
-        (delete-region (point-at-bol) (point-at-eol))
-        (svn-insert-line-in-status-buffer line-info)
-        (backward-char 1)
-        (insert tag-string)
-        (delete-char 1)))))
+      (svn-status-line-info->set-propmark line-info ? ))
+    (let ((buffer-read-only nil))
+      (delete-region (point-at-bol) (point-at-eol))
+      (svn-insert-line-in-status-buffer line-info)
+      (backward-char 1)
+      (when tag-string
+        (insert tag-string))
+      (delete-char 1))))
 
 
 
@@ -1440,6 +1507,36 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
       result)))
 ;;(svn-status-parse-commit-output)
 ;;(svn-status-annotate-status-buffer-entry)
+
+(defun svn-status-parse-ar-output ()
+  "Parse the output of svn add|remove.
+Return a list that is suitable for `svn-status-update-with-command-list'"
+  (save-excursion
+    (set-buffer "*svn-process*")
+    (let ((action)
+          (name)
+          (skip)
+          (result))
+      (goto-char (point-min))
+      (while (< (point) (point-max))
+        (cond ((= (point-at-eol) (point-at-bol)) ;skip blank lines
+               (setq skip t))
+              ((looking-at "A")
+               (setq action 'added-wc))
+              ((looking-at "D")
+               (setq action 'deleted-wc))
+              (t ;; this should never be needed(?)
+               (setq action 'unknown)))
+        (unless skip ;found an interesting line
+          (forward-char 10)
+          (setq name (buffer-substring-no-properties (point) (point-at-eol)))
+          (setq result (cons (list name action)
+                             result))
+          (setq skip nil))
+        (forward-line 1))
+      result)))
+;;(svn-status-parse-ar-output)
+;; (svn-status-update-with-command-list (svn-status-parse-ar-output))
 
 (defun svn-status-line-info->directory-p (line-info)
   "Return t if LINE-INFO refers to a directory, nil otherwise.
@@ -2276,12 +2373,15 @@ See `svn-status-marked-files' for what counts as selected."
         (insert-file svn-log-edit-file-name)))
     (svn-log-edit-mode)))
 
-(defun svn-status-cleanup ()
-  (interactive)
-  (let ((file-names (svn-status-marked-file-names)))
+(defun svn-status-cleanup (arg)
+  "Run `svn cleanup' on all selected files.
+See `svn-status-marked-files' for what counts as selected.
+When this function is called with a prefix argument, use the actual file instead."
+  (interactive "P")
+  (let ((file-names (svn-status-get-file-list-names (not arg))))
     (if file-names
         (progn
-          ;(message "svn-status-cleanup %S" file-names))
+          (message "svn-status-cleanup %S" file-names)
           (svn-run-svn t t 'cleanup (append (list "cleanup") file-names)))
       (message "No valid file selected - No status cleanup possible"))))
 
@@ -3101,6 +3201,11 @@ display routine for svn-status is available."
   (when (yes-or-no-p "Save the new setting for svn-status-module-name to disk? ")
     (svn-status-save-state)))
 
+(defun svn-browse-url (url)
+  "Call `browse-url', using `svn-browse-url-function'."
+  (let ((browse-url-browser-function svn-browse-url-function))
+    (browse-url url)))
+
 ;; --------------------------------------------------------------------------------
 ;; svn status trac integration
 ;; --------------------------------------------------------------------------------
@@ -3109,8 +3214,21 @@ display routine for svn-status is available."
   (interactive)
   (unless svn-trac-project-root
     (svn-status-set-trac-project-root))
-  (browse-url (concat svn-trac-project-root "timeline")))
+  (svn-browse-url (concat svn-trac-project-root "timeline")))
 
+(defun svn-trac-browse-changeset (changeset-nr)
+  "Show a changeset in the trac issue tracker."
+  (interactive (list (read-number "Browse changeset number: " (number-at-point))))
+  (unless svn-trac-project-root
+    (svn-status-set-trac-project-root))
+  (svn-browse-url (concat svn-trac-project-root "changeset/" (number-to-string changeset-nr))))
+
+(defun svn-trac-browse-ticket (ticket-nr)
+  "Show a ticket in the trac issue tracker."
+  (interactive (list (read-number "Browse ticket number: " (number-at-point))))
+  (unless svn-trac-project-root
+    (svn-status-set-trac-project-root))
+  (svn-browse-url (concat svn-trac-project-root "ticket/" (number-to-string ticket-nr))))
 
 ;;;------------------------------------------------------------
 ;;; resolve conflicts using ediff

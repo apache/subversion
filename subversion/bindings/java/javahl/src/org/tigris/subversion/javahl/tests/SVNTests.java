@@ -69,8 +69,9 @@ public class SVNTests extends TestCase
      */
     protected WC greekWC;
     /**
-     * the directory "local_tmp" in the rootDir. This will be used for the
-     * sample repository and its dumpfile and for the config directory
+     * the directory "svn-test-work/local_tmp" in the rootDir. This
+     * will be used for the sample repository and its dumpfile and for
+     * the config directory
      */
     protected File localTmp;
     /**
@@ -198,6 +199,9 @@ public class SVNTests extends TestCase
 
         // create a clean directory for the config files and the sample
         // repository
+        //
+        // ### The path is now "svn-test-work/local_tmp", however, I'm
+        // ### not sure how to update this code for that.
         localTmp = new File(rootDir, "local_tmp");
         if(localTmp.exists())
             removeDirectoryWithContent(localTmp);
@@ -229,6 +233,10 @@ public class SVNTests extends TestCase
                 new IgnoreOutputer(), null, null, false);
 
         // create the directory for the repositories and the working copies
+        //
+        // ### The paths are now "svn-test-work/repositories" and
+        // ### "svn-test-work/repositories".  However, I'm not sure
+        // ### how to update this code for that. 
         repositories = new File(rootDir, "repositories");
         repositories.mkdirs();
         workingCopies = new File(rootDir, "working_copies");

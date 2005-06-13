@@ -38,6 +38,34 @@ book, see
 
 </div>
 
+<div class="h2" id="downloading" title="downloading">
+<h2>Downloading</h2>
+
+<p>Subversion 1.2 is available as source code in three formats:</p>
+
+<ul>
+<li><a href="http://subversion.tigris.org/downloads/subversion-1.2.0.tar.gz"
+    >subversion-1.2.0.tar.gz</a>
+<li><a href="http://subversion.tigris.org/downloads/subversion-1.2.0.tar.bz2"
+    >subversion-1.2.0.tar.bz2</a>
+<li><a href="http://subversion.tigris.org/downloads/subversion-1.2.0.zip"
+    >subversion-1.2.0.zip</a>&nbsp;(Windows)
+</ul>
+
+<p>For binary packages, please see <a
+href="project_packages.html#binary-packages">the binary package
+list</a>.  Note that binary packages usually come out about a week
+after the corresponding source release.  The package maintainers are
+volunteers, so please don't harass them&nbsp;&mdash;&nbsp;they know
+when a new source release has come out, and they work as fast as they
+can to make binaries available.</p>
+
+<p>For other Subversion releases, see <a
+href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=260&amp;expandFolder=74"
+>this folder</a>.</p>
+
+</div>
+
 <div class="h2" id="compatibility" title="compatibility">
 <h2>Compatibility Concerns</h2>
 
@@ -109,9 +137,9 @@ fixes for these in Subversion 1.2.1:</p>
 <li><p>'svn lock path1 path2' can cause an assertion failure under
     certain circumstances.<br />
     Fixed in 
-    <a href="http://svn.collab.net/viewcvs/svn?rev=14736&view=rev"
+    <a href="http://svn.collab.net/viewcvs/svn?rev=14736&amp;view=rev"
     >r14736</a>+<a
-    href="http://svn.collab.net/viewcvs/svn?rev=14775&view=rev">r14775</a>,
+    href="http://svn.collab.net/viewcvs/svn?rev=14775&amp;view=rev">r14775</a>,
     and proposed for backport to the 1.2.1 line.</p></li>
 
 <li><p>'svn switch' doesn't remove read-only attribute when removing
@@ -127,16 +155,16 @@ fixes for these in Subversion 1.2.1:</p>
 
 <li><p>Speed improvements for new 'svn log --limit' feature.<br />
     Completed in 
-    <a href="http://svn.collab.net/viewcvs/svn?rev=14116&view=rev"
+    <a href="http://svn.collab.net/viewcvs/svn?rev=14116&amp;view=rev"
     >r14116</a>+<a
-    href="http://svn.collab.net/viewcvs/svn?rev=14722&view=rev"
+    href="http://svn.collab.net/viewcvs/svn?rev=14722&amp;view=rev"
     >r14722</a>+<a
-    href="http://svn.collab.net/viewcvs/svn?rev=14759&view=rev">r14759</a>,
+    href="http://svn.collab.net/viewcvs/svn?rev=14759&amp;view=rev">r14759</a>,
     and proposed for backport to the 1.2.1 line.</p></li>
 
 <li><p>'svnversion' might error trying to link to libsvn_ra libraries<br />
-     Fixed in
-     <a href="http://svn.collab.net/viewcvs/svn?rev=14755&view=rev">r14755</a>
+     Fixed in <a
+     href="http://svn.collab.net/viewcvs/svn?rev=14755&amp;view=rev">r14755</a>
      and proposed for backport to the 1.2.1 line.</p></li>
 </ul>
 
@@ -273,7 +301,7 @@ vary.</p>
       <dt><tt>svn log --limit N</tt></dt>
       <dd>Display only N revisions, then stop.  (<em>Note: a 1.2
       server isn't required for this, but strongly recommended.  A
-      non-1.2 server will still attempt to deliver all revisions over
+      pre-1.2 server will still attempt to deliver all revisions over
       the network, even though the 1.2 client isn't displaying them.</em>)</dd>
 
       <dt><tt>svn info --revision (-r)</tt></dt>
@@ -289,7 +317,7 @@ vary.</p>
       <dt><tt>svn diff --force</tt></dt>
       <dd>Show differences even on files with binary mime-types.</dd>
 
-      <dt><tt>svn checkout/update/status/switch --ignore-externals</tt></dt>
+      <dt><tt>svn checkout/update/status/export --ignore-externals</tt></dt>
       <dd>Don't process any svn:externals during operation.</dd>
 
       <dt><tt>svn export --non-recursive (-N)</tt></dt>
@@ -422,7 +450,7 @@ bindings.  We also now have a preliminary set of Ruby bindings.</p>
 
 </div>
 
-<div class="h2" id="1.0-deprecation" title="1.0-deprecation">
+<div class="h2" id="svn-1.0-deprecation" title="svn-1.0-deprecation">
 <h2>Deprecation of 1.0.x Series</h2>
 
 <p>The Subversion 1.0.x line is no longer supported.  This doesn't

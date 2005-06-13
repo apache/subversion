@@ -520,7 +520,7 @@ send_status_structure (const char *path,
    None of the arguments may be NULL.
 */
 static svn_error_t *
-collect_ignore_patterns (apr_array_header_t *patterns,
+collect_ignore_patterns (apr_array_header_t **patterns,
                          apr_array_header_t *ignores,
                          svn_wc_adm_access_t *adm_access,
                          apr_pool_t *pool)
@@ -528,11 +528,13 @@ collect_ignore_patterns (apr_array_header_t *patterns,
   int i;
   const svn_string_t *value;
 
+  *patterns = apr_array_make (pool, 1, sizeof (const char *));
+
   /* Copy default ignores into the local PATTERNS array. */
   for (i = 0; i < ignores->nelts; i++)
     {
       const char *ignore = APR_ARRAY_IDX (ignores, i, const char *);
-      APR_ARRAY_PUSH (patterns, const char *) = ignore;
+      APR_ARRAY_PUSH (*patterns, const char *) = ignore;
     }
 
   /* Then add any svn:ignore globs to the PATTERNS array. */
@@ -540,7 +542,7 @@ collect_ignore_patterns (apr_array_header_t *patterns,
                             svn_wc_adm_access_path (adm_access), adm_access,
                             pool));
   if (value != NULL)
-    svn_cstring_split_append (patterns, value->data, "\n\r", FALSE, pool);
+    svn_cstring_split_append (*patterns, value->data, "\n\r", FALSE, pool);
 
   return SVN_NO_ERROR;   
 } 
@@ -768,11 +770,8 @@ get_dir_status (struct edit_baton *eb,
   /* Unless specified, add default ignore regular expressions and try
      to add any svn:ignore properties from the parent directory. */
   if (ignores)
-    {
-      patterns = apr_array_make (subpool, 1, sizeof (const char *));
-      SVN_ERR (collect_ignore_patterns (patterns, ignores, 
-                                        adm_access, subpool));
-    }
+    SVN_ERR (collect_ignore_patterns (&patterns, ignores, 
+                                      adm_access, subpool));
 
   /* If "this dir" has "svn:externals" property set on it, store its
      name and value in traversal_info.  Also, we want to track the
@@ -1987,4 +1986,19 @@ svn_wc_dup_status (svn_wc_status_t *orig_stat,
 
   /* Return the new hotness. */
   return new_stat;
+}
+
+svn_error_t *
+svn_wc_get_ignores (apr_array_header_t **patterns,
+                    apr_hash_t *config,
+                    svn_wc_adm_access_t *adm_access,
+                    apr_pool_t *pool)
+{
+  apr_array_header_t *default_ignores;
+
+  SVN_ERR (svn_wc_get_default_ignores (&default_ignores, config, pool));
+  SVN_ERR (collect_ignore_patterns (patterns, default_ignores, adm_access, 
+                                    pool));
+
+  return SVN_NO_ERROR;
 }

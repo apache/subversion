@@ -3,7 +3,7 @@
 #
 # Root of the test tree
 #
-TEST_ROOT="/home/brane/svn"
+TEST_ROOT="${HOME}/svn"
 
 # Installation path, everything under that is considered
 # to be temporary
@@ -80,9 +80,9 @@ OBJ_SHARED="obj-sh"
 #
 # E-mail addresses for reporting
 #
-FROM="brane@xbc.nu"
+FROM="YOUR_EMAIL_ADDRESS"
 TO="svn-breakage@subversion.tigris.org"
-ERROR_TO="brane@hermes.si"
+ERROR_TO="YOUR_EMAIL_ADDRESS"
 REPLY_TO="dev@subversion.tigris.org"
 
 #

@@ -153,7 +153,7 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
  * and dirs, and are visible (and tweakable) by svn client programs
  * and users.  Adding these properties causes specific effects.
  *
- * NOTE: the values of these properties are always UTF8-encoded with
+ * @note the values of these properties are always UTF8-encoded with
  * LF line-endings.  It is the burden of svn library users to enforce
  * this.  Use svn_prop_needs_translation() to discover if a
  * certain property needs translation, and you can use
@@ -251,8 +251,8 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
 /** The UUID of this entry's repository. */
 #define SVN_PROP_ENTRY_UUID       SVN_PROP_ENTRY_PREFIX "uuid"
 
-/** @since New in 1.2.
- * The lock token for this entry. */
+/** The lock token for this entry.
+ * @since New in 1.2. */
 #define SVN_PROP_ENTRY_LOCK_TOKEN SVN_PROP_ENTRY_PREFIX "lock-token"
 
 /** When custom, user-defined properties are passed over the wire, they will

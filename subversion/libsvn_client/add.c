@@ -262,10 +262,23 @@ add_file (const char *path,
   return SVN_NO_ERROR;
 }
 
+/* Schedule directory DIRNAME recursively for addition with access baton 
+ * ADM_ACCESS.
+ *
+ * If DIRNAME (or any item below directory DIRNAME) is already scheduled for
+ * addition, add will fail and return an error unless FORCE is TRUE.
+ *
+ * Files and directories that match ignore patterns will not be added unless 
+ * NO_IGNORE is TRUE.
+ *
+ * If CTX->CANCEL_FUNC is non-null, call it with CTX->CANCEL_BATON to allow 
+ * the user to cancel the operation
+ */
 static svn_error_t *
 add_dir_recursive (const char *dirname,
                    svn_wc_adm_access_t *adm_access,
                    svn_boolean_t force,
+                   svn_boolean_t no_ignore,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -293,7 +306,8 @@ add_dir_recursive (const char *dirname,
 
   SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, dirname, pool));
 
-  SVN_ERR (svn_wc_get_default_ignores (&ignores, ctx->config, pool));
+  if (!no_ignore)
+    SVN_ERR (svn_wc_get_ignores (&ignores, ctx->config, dir_access, pool));
 
   /* Create a subpool for iterative memory control. */
   subpool = svn_pool_create (pool);
@@ -322,7 +336,8 @@ add_dir_recursive (const char *dirname,
               || (this_entry.name[1] == '.' && this_entry.name[2] == '\0')))
         continue;
 
-      if (svn_cstring_match_glob_list (this_entry.name, ignores))
+      if ((!no_ignore) && svn_cstring_match_glob_list (this_entry.name,
+                                                       ignores)) 
         continue;
 
       /* Construct the full path of the entry. */
@@ -332,7 +347,7 @@ add_dir_recursive (const char *dirname,
       if (this_entry.filetype == APR_DIR)
         {
           SVN_ERR (add_dir_recursive (fullpath, dir_access, force,
-                                      ctx, subpool));
+                                      no_ignore, ctx, subpool));
         }
       else if (this_entry.filetype != APR_UNKFILE)
         {
@@ -384,6 +399,7 @@ static svn_error_t *
 add (const char *path, 
      svn_boolean_t recursive,
      svn_boolean_t force,
+     svn_boolean_t no_ignore,
      svn_wc_adm_access_t *adm_access,
      svn_client_ctx_t *ctx,
      apr_pool_t *pool)
@@ -393,7 +409,7 @@ add (const char *path,
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   if ((kind == svn_node_dir) && recursive)
-    err = add_dir_recursive (path, adm_access, force, ctx, pool);
+    err = add_dir_recursive (path, adm_access, force, no_ignore, ctx, pool);
   else if (kind == svn_node_file)
     err = add_file (path, ctx, adm_access, pool);
   else
@@ -413,10 +429,12 @@ add (const char *path,
 
 
 svn_error_t *
-svn_client_add (const char *path, 
-                svn_boolean_t recursive,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
+svn_client_add3 (const char *path, 
+                 svn_boolean_t recursive,
+                 svn_boolean_t force,
+                 svn_boolean_t no_ignore,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
 {
   svn_error_t *err, *err2;
   svn_wc_adm_access_t *adm_access;
@@ -426,7 +444,7 @@ svn_client_add (const char *path,
                              TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
                              pool));
 
-  err = add (path, recursive, FALSE, adm_access, ctx, pool);
+  err = add (path, recursive, force, no_ignore, adm_access, ctx, pool);
   
   err2 = svn_wc_adm_close (adm_access);
   if (err2)
@@ -442,32 +460,22 @@ svn_client_add (const char *path,
 
 
 svn_error_t *
-svn_client_add2 (const char *path, 
+svn_client_add2 (const char *path,
                  svn_boolean_t recursive,
                  svn_boolean_t force,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  svn_error_t *err, *err2;
-  svn_wc_adm_access_t *adm_access;
-  const char *parent_path = svn_path_dirname (path, pool);
+  return svn_client_add3 (path, recursive, force, FALSE, ctx, pool);
+}
 
-  SVN_ERR (svn_wc_adm_open3 (&adm_access, NULL, parent_path,
-                             TRUE, 0, ctx->cancel_func, ctx->cancel_baton,
-                             pool));
-
-  err = add (path, recursive, force, adm_access, ctx, pool);
-  
-  err2 = svn_wc_adm_close (adm_access);
-  if (err2)
-    {
-      if (err)
-        svn_error_clear (err2);
-      else
-        err = err2;
-    }
-
-  return err;
+svn_error_t *
+svn_client_add (const char *path, 
+                svn_boolean_t recursive,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  return svn_client_add3 (path, recursive, FALSE, FALSE, ctx, pool);
 }
 
 
@@ -564,9 +572,9 @@ mkdir_urls (svn_client_commit_info_t **commit_info,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  SVN_ERR (svn_client__open_ra_session (&ra_session, common, NULL,
-                                        NULL, NULL, FALSE, TRUE,
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, common, NULL,
+                                                 NULL, NULL, FALSE, TRUE,
+                                                 ctx, pool));
 
   /* URI-decode each target. */
   for (i = 0; i < targets->nelts; i++)
@@ -633,7 +641,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
             SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
 
           SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, subpool));
-          err = svn_client_add (path, FALSE, ctx, subpool);
+          err = svn_client_add3 (path, FALSE, FALSE, FALSE, ctx, subpool);
 
           /* We just created a new directory, but couldn't add it to
              version control. Don't leave unversioned directoies behind. */

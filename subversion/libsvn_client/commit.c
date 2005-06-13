@@ -283,12 +283,15 @@ import_file (const svn_delta_editor_t *editor,
  * Accumulate file paths and their batons in FILES, which must be
  * non-null.  (These are used to send postfix textdeltas later).
  *
- * If CTX->NOTIFY_FUNC is non-null, invoke it with CTX->NOTIFY_BATON for each
- * directory.
- *
  * EXCLUDES is a hash whose keys are absolute paths to exclude from
  * the import (values are unused).
  * 
+ * If NO_IGNORE is FALSE, don't import files or directories that match
+ * ignore patterns.
+ *
+ * If CTX->NOTIFY_FUNC is non-null, invoke it with CTX->NOTIFY_BATON for each
+ * directory.
+ *
  * Use POOL for any temporary allocation.  */
 static svn_error_t *
 import_dir (const svn_delta_editor_t *editor, 
@@ -297,6 +300,7 @@ import_dir (const svn_delta_editor_t *editor,
             const char *edit_path,
             svn_boolean_t nonrecursive,
             apr_hash_t *excludes,
+            svn_boolean_t no_ignore,
             import_ctx_t *import_ctx,
             svn_client_ctx_t *ctx,
             apr_pool_t *pool)
@@ -308,7 +312,8 @@ import_dir (const svn_delta_editor_t *editor,
 
   SVN_ERR (svn_path_check_valid (path, pool));
 
-  SVN_ERR (svn_wc_get_default_ignores (&ignores, ctx->config, pool));
+  if (!no_ignore)
+    SVN_ERR (svn_wc_get_default_ignores (&ignores, ctx->config, pool));
 
   SVN_ERR (svn_io_get_dirents (&dirents, path, pool));
 
@@ -364,7 +369,7 @@ import_dir (const svn_delta_editor_t *editor,
       if (apr_hash_get (excludes, abs_path, APR_HASH_KEY_STRING))
         continue;
 
-      if (svn_cstring_match_glob_list (filename, ignores))
+      if ((!no_ignore) && svn_cstring_match_glob_list (filename, ignores))
         continue;
 
       /* We only import subdirectories when we're doing a regular
@@ -399,9 +404,10 @@ import_dir (const svn_delta_editor_t *editor,
             }
 
           /* Recurse. */
-          SVN_ERR (import_dir (editor, this_dir_baton, 
-                               this_path, this_edit_path, 
-                               FALSE, excludes, import_ctx, ctx, subpool));
+          SVN_ERR (import_dir (editor, this_dir_baton, this_path, 
+                               this_edit_path, FALSE, excludes, 
+                               no_ignore, import_ctx, ctx, 
+                               subpool));
 
           /* Finally, close the sub-directory. */
           SVN_ERR (editor->close_directory (this_dir_baton, subpool));
@@ -438,12 +444,15 @@ import_dir (const svn_delta_editor_t *editor,
  * the names of intermediate directories that are created before the
  * real import begins.  NEW_ENTRIES may NOT be NULL.
  * 
+ * EXCLUDES is a hash whose keys are absolute paths to exclude from
+ * the import (values are unused).
+ *
+ * If NO_IGNORE is FALSE, don't import files or directories that match
+ * ignore patterns.
+ *
  * If CTX->NOTIFY_FUNC is non-null, invoke it with CTX->NOTIFY_BATON for 
  * each imported path, passing actions svn_wc_notify_commit_added.
  *
- * EXCLUDES is a hash whose keys are absolute paths to exclude from
- * the import (values are unused).
- * 
  * Use POOL for any temporary allocation.
  *
  * Note: the repository directory receiving the import was specified
@@ -458,6 +467,7 @@ import (const char *path,
         void *edit_baton,
         svn_boolean_t nonrecursive,
         apr_hash_t *excludes,
+        svn_boolean_t no_ignore,
         svn_client_ctx_t *ctx,
         apr_pool_t *pool)
 {
@@ -522,15 +532,22 @@ import (const char *path,
 
   if (kind == svn_node_file)
     {
-      SVN_ERR (svn_wc_get_default_ignores (&ignores, ctx->config, pool));
-      if (! svn_cstring_match_glob_list (path, ignores))
+      svn_boolean_t ignores_match = FALSE;
+
+      if (!no_ignore)
+        {
+          SVN_ERR (svn_wc_get_default_ignores (&ignores, ctx->config, pool));
+          ignores_match = svn_cstring_match_glob_list (path, ignores);
+        }
+      if (!ignores_match) 
         SVN_ERR (import_file (editor, root_baton, path, edit_path,
                               import_ctx, ctx, pool));
     }
   else if (kind == svn_node_dir)
     {
       SVN_ERR (import_dir (editor, root_baton, path, edit_path,
-                           nonrecursive, excludes, import_ctx, ctx, pool));
+                           nonrecursive, excludes, no_ignore, import_ctx, 
+                           ctx, pool));
 
     }
   else if (kind == svn_node_none)
@@ -580,11 +597,11 @@ get_ra_editor (svn_ra_session_t **ra_session,
   void *commit_baton;
 
   /* Open an RA session to URL. */
-  SVN_ERR (svn_client__open_ra_session (ra_session,
-                                        base_url, base_dir, base_access,
-                                        commit_items,
-                                        is_commit, !is_commit,
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (ra_session,
+                                                 base_url, base_dir,
+                                                 base_access, commit_items,
+                                                 is_commit, !is_commit,
+                                                 ctx, pool));
 
   /* If this is an import (aka, not a commit), we need to verify that
      our repository URL exists. */
@@ -616,12 +633,13 @@ get_ra_editor (svn_ra_session_t **ra_session,
 /*** Public Interfaces. ***/
 
 svn_error_t *
-svn_client_import (svn_client_commit_info_t **commit_info,
-                   const char *path,
-                   const char *url,
-                   svn_boolean_t nonrecursive,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
+svn_client_import2 (svn_client_commit_info_t **commit_info,
+                    const char *path,
+                    const char *url,
+                    svn_boolean_t nonrecursive,
+                    svn_boolean_t no_ignore,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   const char *log_msg = "";
@@ -743,7 +761,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   /* If an error occurred during the commit, abort the edit and return
      the error.  We don't even care if the abort itself fails.  */
   if ((err = import (path, new_entries, editor, edit_baton, 
-                     nonrecursive, excludes, ctx, subpool)))
+                     nonrecursive, excludes, no_ignore, ctx, subpool)))
     {
       svn_error_clear (editor->abort_edit (edit_baton, subpool));
       return err;
@@ -768,6 +786,17 @@ svn_client_import (svn_client_commit_info_t **commit_info,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_client_import (svn_client_commit_info_t **commit_info,
+                    const char *path,
+                    const char *url,
+                    svn_boolean_t nonrecursive,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool)
+{
+  return svn_client_import2 (commit_info, path, url, nonrecursive,
+                             FALSE, ctx, pool);
+}
 
 static svn_error_t *
 remove_tmpfiles (apr_hash_t *tempfiles,

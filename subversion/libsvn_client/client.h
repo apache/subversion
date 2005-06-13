@@ -226,16 +226,20 @@ typedef struct
    BASE_ACCESS should be null).
 
    The calling application's authentication baton is provided in CTX,
-   and allocations related to this session are performed in POOL.  */
-svn_error_t * svn_client__open_ra_session (svn_ra_session_t **ra_session,
-                                           const char *base_url,
-                                           const char *base_dir,
-                                           svn_wc_adm_access_t *base_access,
-                                           apr_array_header_t *commit_items,
-                                           svn_boolean_t use_admin,
-                                           svn_boolean_t read_only_wc,
-                                           svn_client_ctx_t *ctx,
-                                           apr_pool_t *pool);
+   and allocations related to this session are performed in POOL.
+
+   NOTE: The reason for the _internal suffix of this function's name is to
+   avoid confusion with the public API svn_client_open_ra_session(). */
+svn_error_t *
+svn_client__open_ra_session_internal (svn_ra_session_t **ra_session,
+                                      const char *base_url,
+                                      const char *base_dir,
+                                      svn_wc_adm_access_t *base_access,
+                                      apr_array_header_t *commit_items,
+                                      svn_boolean_t use_admin,
+                                      svn_boolean_t read_only_wc,
+                                      svn_client_ctx_t *ctx,
+                                      apr_pool_t *pool);
 
 
 

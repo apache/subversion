@@ -141,6 +141,7 @@
 {
   if ($1) {
     svn_error_t *error = $1;
+    apr_status_t error_code = error->apr_err;
     VALUE message;
 
     message = rb_str_new2(error->message ? error->message : "");
@@ -154,7 +155,7 @@
     }
     svn_error_clear(error);
     
-    rb_exc_raise(svn_swig_rb_svn_error_new(INT2NUM(error->apr_err),
+    rb_exc_raise(svn_swig_rb_svn_error_new(INT2NUM(error_code),
                                            message));
   }
   $result = Qnil;
@@ -344,17 +345,25 @@
 /* -----------------------------------------------------------------------
    Wrap the digest output for functions populating digests.
 */
-%typemap(perl5, in, numinputs=0) unsigned char digest[ANY] ($*1_type temp[33]) {
+
+%typemap(in, numinputs=0) unsigned char digest[ANY]
+    ($*1_type temp[APR_MD5_DIGESTSIZE]) {
     $1 = ($1_ltype)temp;
 }
+
+%typemap(python, argout, fragment="t_output_helper") unsigned char digest[ANY]
+{
+    $result = t_output_helper($result,
+        PyString_FromString(svn_md5_digest_to_cstring ($1, _global_pool)));
+}
+
 %typemap(perl5, argout) unsigned char digest[ANY] {
     ST(argvi) = sv_newmortal();
     sv_setpv((SV*)ST(argvi++), svn_md5_digest_to_cstring ($1,_global_pool));
 }
 
-#ifdef SWIGPERL
+/* svn_txdelta_send_stream() uses *digest not digest[] . */
 %apply unsigned char digest[ANY] { unsigned char *digest };
-#endif
 
 /* -----------------------------------------------------------------------
   useful convertors for svn_opt_revision_t

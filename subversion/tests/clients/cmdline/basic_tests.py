@@ -1440,6 +1440,55 @@ def basic_add_ignores(sbox):
 
 
 #----------------------------------------------------------------------
+def basic_add_local_ignores(sbox):
+  'ignore files matching local ignores in added dirs'
+
+  #Issue #2243 
+  #svn add command not keying off svn:ignore value
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  dir_path = os.path.join(wc_dir, 'dir')
+  file_path = os.path.join(dir_path, 'app.lock')
+
+  svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
+                                     'mkdir', dir_path)
+  svntest.main.run_svn(None, 'propset', 'svn:ignore', '*.lock', dir_path) 
+  open(file_path, 'w')
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'add', '--force', dir_path)
+
+#----------------------------------------------------------------------
+def basic_add_no_ignores(sbox):
+  'add ignored files in added dirs'
+
+  # add ignored files using the '--no-ignore' option
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  dir_path = os.path.join(wc_dir, 'dir')
+  foo_c_path = os.path.join(dir_path, 'foo.c')
+  # add a few files that match the default ignore patterns
+  foo_o_path = os.path.join(dir_path, 'foo.o')
+  foo_lo_path = os.path.join(dir_path, 'foo.lo')
+  foo_rej_path = os.path.join(dir_path, 'foo.rej')
+
+  os.mkdir(dir_path, 0755)
+  open(foo_c_path, 'w')
+  open(foo_o_path, 'w')
+  open(foo_lo_path, 'w')
+  open(foo_rej_path, 'w')
+
+  output, err = svntest.actions.run_and_verify_svn(
+    "No output where some expected", SVNAnyOutput, None,
+    'add', '--no-ignore', dir_path)
+
+  for line in output:
+    # If we don't see ignores in the add output, fail the test.
+    if not re.match(r'^A\s+.*(foo.(o|rej|lo|c)|dir)$', line):
+      raise svntest.actions.SVNUnexpectedOutput
+
+#----------------------------------------------------------------------
 def uri_syntax(sbox):
   'make sure URI syntaxes are parsed correctly'
 
@@ -1507,6 +1556,32 @@ def basic_info(sbox):
   finally:
     os.chdir(cwd)
 
+def repos_root(sbox):
+  "check that repos root gets set on checkout"
+
+  def check_repos_root(lines):
+    for line in lines:
+      if line == "Repository Root: " + svntest.main.current_repo_url + "\n":
+        break
+    else:
+      print "Bad or missing repository root"
+      raise svntest.Failure
+
+  sbox.build()
+
+  output, errput = svntest.main.run_svn (None, "info",
+                                         sbox.wc_dir)
+  check_repos_root(output)
+
+  output, errput = svntest.main.run_svn (None, "info",
+                                         os.path.join(sbox.wc_dir, "A"))
+  check_repos_root(output)
+
+  output, errput = svntest.main.run_svn (None, "info",
+                                         os.path.join(sbox.wc_dir, "A", "B", 
+                                                      "lambda"))
+  check_repos_root(output)
+
 #----------------------------------------------------------------------
 ########################################################################
 # Run the tests
@@ -1537,6 +1612,9 @@ test_list = [ None,
               uri_syntax,
               basic_checkout_file,
               basic_info,
+              basic_add_local_ignores,
+              basic_add_no_ignores,
+              repos_root,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.

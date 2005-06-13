@@ -189,6 +189,82 @@ def import_ignores(sbox):
                                         None, None, 1)
 
 #----------------------------------------------------------------------
+def import_no_ignores(sbox):
+  'import ignored files in imported dirs'
+
+  # import ignored files using the "--no-ignore" option
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  dir_path = os.path.join(wc_dir, 'dir')
+  foo_c_path = os.path.join(dir_path, 'foo.c')
+  foo_o_path = os.path.join(dir_path, 'foo.o')
+  foo_lo_path = os.path.join(dir_path, 'foo.lo')
+  foo_rej_path = os.path.join(dir_path, 'foo.rej')
+
+  os.mkdir(dir_path, 0755)
+  open(foo_c_path, 'w')
+  open(foo_o_path, 'w')
+  open(foo_lo_path, 'w')
+  open(foo_rej_path, 'w')
+
+  # import new dir into repository
+  url = svntest.main.current_repo_url + '/dir'
+
+  output, errput = svntest.actions.run_and_verify_svn(
+    None, None, [], 'import',
+    '--username', svntest.main.wc_author,
+    '--password', svntest.main.wc_passwd,
+    '-m', 'Log message for new import', '--no-ignore', 
+    dir_path, url)
+
+  lastline = string.strip(output.pop())
+  cm = re.compile ("(Committed|Imported) revision [0-9]+.")
+  match = cm.search (lastline)
+  if not match:
+    raise svntest.Failure
+
+  # remove (uncontrolled) local dir
+  svntest.main.safe_rmtree(dir_path)
+
+  # Create expected disk tree for the update (disregarding props)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'dir/foo.c' : Item(''),
+    'dir/foo.o' : Item(''),
+    'dir/foo.lo' : Item(''),
+    'dir/foo.rej' : Item(''),
+    })
+
+  # Create expected status tree for the update (disregarding props).
+  # Newly imported file should be at revision 2.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'dir' : Item(status='  ', wc_rev=2),
+    'dir/foo.c' : Item(status='  ', wc_rev=2),
+    'dir/foo.o' : Item(status='  ', wc_rev=2),
+    'dir/foo.lo' : Item(status='  ', wc_rev=2),
+    'dir/foo.rej' : Item(status='  ', wc_rev=2),
+    })
+
+  # Create expected output tree for the update.
+  expected_output = svntest.wc.State(wc_dir, {
+    'dir' : Item(status='A '),
+    'dir/foo.c' : Item(status='A '),
+    'dir/foo.o' : Item(status='A '),
+    'dir/foo.lo' : Item(status='A '),
+    'dir/foo.rej' : Item(status='A '),
+    })
+
+  # do update and check three ways
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None,
+                                        None, None, 1)
+#----------------------------------------------------------------------
 def import_avoid_empty_revision(sbox):
   "avoid creating empty revisions with import"
   
@@ -225,6 +301,7 @@ test_list = [ None,
               Skip(import_executable, (os.name != 'posix')),
               import_ignores,
               import_avoid_empty_revision,
+              import_no_ignores,
              ]
 
 if __name__ == '__main__':
