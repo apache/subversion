@@ -46,6 +46,7 @@ Candidate changes:
       Use backport branch because tree-reorganization defeats a simple
       merge from trunk.
     Votes:
+      +1: brane
       +0: dlr (concept, no testing environment), fitz (concept)
 
   * r14885
