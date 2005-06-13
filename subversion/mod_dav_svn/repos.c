@@ -1208,6 +1208,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   dav_locktoken_list *ltl;
   struct cleanup_fs_access_baton *cleanup_baton;
 
+  /* ### Look for EDIT_PIPELINE in svnserve to add something similar. */
   serr = svn_dav__negotiate_lang_prefs(r);
   if (serr)
     {
