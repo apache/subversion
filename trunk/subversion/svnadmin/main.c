@@ -1397,9 +1397,9 @@ main (int argc, const char * const *argv)
                   return EXIT_FAILURE;
                 }
               svn_error_clear
-                (svn_cmdline_fprintf (stderr, pool,
-                                      _("Unknown command: '%s'\n"),
-                                      first_arg_utf8));
+                (SVN_CMDLINE_FPRINTF2 (stderr, pool,
+                                       _("Unknown command: '%s'\n"),
+                                       first_arg_utf8));
               subcommand_help (NULL, NULL, pool);
               svn_pool_destroy (pool);
               return EXIT_FAILURE;

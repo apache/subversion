@@ -522,10 +522,20 @@ svn_boolean_t svn_cstring_match_glob_list (const char *str,
                                            apr_array_header_t *list)
 {
   int i;
+#if APR_CHARSET_EBCDIC
+  /* Need to send ebcdic args to apr_fnmatch. */
+  if (svn_utf_cstring_from_utf8(&str, str, list->pool))
+    return FALSE;
+#endif
 
   for (i = 0; i < list->nelts; i++)
     {
       const char *this_pattern = APR_ARRAY_IDX (list, i, char *);
+#if APR_CHARSET_EBCDIC
+      /* Need to send ebcdic args to apr_fnmatch. */
+      if (svn_utf_cstring_from_utf8(&this_pattern, this_pattern, list->pool))
+        return FALSE;
+#endif
 
       if (apr_fnmatch (this_pattern, str, 0) == APR_SUCCESS)
         return TRUE;

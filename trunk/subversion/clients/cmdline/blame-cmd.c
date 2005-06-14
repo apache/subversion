@@ -398,9 +398,9 @@ svn_cl__blame (apr_getopt_t *os,
           if (err->apr_err == SVN_ERR_CLIENT_IS_BINARY_FILE)
             {
               svn_error_clear (err);
-              SVN_ERR (SVN_CMDLINE_FPRINTF (stderr, subpool,
-                                            _("Skipping binary file: '%s'\n"),
-                                            target));
+              SVN_ERR (SVN_CMDLINE_FPRINTF2 (stderr, subpool,
+                                             _("Skipping binary file: '%s'\n"),
+                                             target));
             }
           else
             {

@@ -122,17 +122,27 @@ svn_error_t *svn_cmdline_fprintf (FILE *stream,
                                   ...)
        __attribute__((format(printf, 3, 4)));
 
+#if APR_CHARSET_EBCDIC
 /** Write to the stdio @a stream, using a printf-like format string @a fmt,
  * passed through svn_ebcdic_pvsprintf2().  All string arguments are in UTF-8;
  * Unlike svn_cmdline_fprintf the output is not converted to the output
  * encoding but left in utf-8.  Use @a pool for temporary allocation.
  */
-
-#if APR_CHARSET_EBCDIC
 svn_error_t *svn_cmdline_fprintf_ebcdic (FILE *stream,
                                          apr_pool_t *pool,
                                          const char *fmt,
                                          ...)
+       __attribute__((format(printf, 3, 4)));
+
+/** Write to the stdio @a stream, using a printf-like format string @a fmt,
+ * passed through svn_ebcdic_pvsprintf2().  All string arguments are in UTF-8;
+ * Like svn_cmdline_fprintf the output is converted to the output encoding.
+ * Use @a pool for temporary allocation.
+ */
+svn_error_t *svn_cmdline_fprintf_ebcdic2 (FILE *stream,
+                                          apr_pool_t *pool,
+                                          const char *fmt,
+                                          ...)
        __attribute__((format(printf, 3, 4)));
 #endif
 

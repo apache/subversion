@@ -148,6 +148,7 @@ svn_subst_build_keywords (svn_subst_keywords_t *kw,
   int i;
 
   keyword_tokens = svn_cstring_split (keywords_val,
+                                      SVN_UTF8_SPACE_STR \
                                       SVN_UTF8_TAB_STR \
                                       SVN_UTF8_VTAB_STR \
                                       SVN_UTF8_NEWLINE_STR \
@@ -1138,7 +1139,7 @@ svn_subst_detranslate_string (svn_string_t **new_value,
 
   SVN_ERR (svn_subst_translate_cstring (value->data,
                                         &val_neol,
-                                        APR_EOL_STR,  /* 'native' eol */
+                                        SVN_UTF8_NEWLINE_STR,
                                         FALSE, /* no repair */
                                         NULL,  /* no keywords */
                                         FALSE, /* no expansion */

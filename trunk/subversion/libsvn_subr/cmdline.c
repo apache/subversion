@@ -352,6 +352,20 @@ svn_cmdline_fprintf_ebcdic (FILE *stream, apr_pool_t *pool,
 
   return svn_cmdline_fputs(message, stream, pool);
 }
+
+svn_error_t *
+svn_cmdline_fprintf_ebcdic2 (FILE *stream, apr_pool_t *pool,
+                             const char *fmt, ...)
+{
+  const char *message;
+  va_list ap;
+  
+  va_start (ap, fmt);
+  message = svn_ebcdic_pvsprintf (pool, fmt, ap);
+  va_end (ap);
+
+  return svn_cmdline_fputs(message, stream, pool);
+}
 #endif
 
 svn_error_t *
