@@ -122,6 +122,7 @@ happened?</a></li>
 on Windows?</a></li>
 <li><a href="#bdb-fsfs-convert">How do I convert my repository from using BDB
 to FSFS or from FSF to BDB?</a></li>
+<li><a href="#binary-files">How does Subversion handle binary files?</a></li>
 </ul>
 
 <h4>Troubleshooting:</h4>
@@ -1887,6 +1888,56 @@ create</tt> command to specify BDB.</p>
 
 </div>
  
+<div class="h3" id="binary-files" title="binary-files">
+<h3>How does Subversion handle binary files?</h3>
+
+<p>When you first add or import a file into Subversion, the file is
+examined to determine if it is a binary file.  Currently, Subversion
+just looks at the first 1024 bytes of the file; if any of the bytes
+are zero, or if more than 15% are not ASCII printing characters, then
+Subversion calls the file binary.  This heuristic might be improved in
+the future, however.</p>
+
+<p>If Subversion determines that the file is binary, the file receives
+an svn:mime-type property set to "application/octet-stream".  (You can
+always override this by using the <a
+href="http://svnbook.red-bean.com/svnbook-1.1/ch07s02.html#svn-ch-7-sect-2.4"
+>auto-props feature</a> or by setting the property manually with
+<tt>svn propset</tt>.)</p>
+
+<p>Subversion treats the following files as text:</p>
+
+<ul>
+  <li>Files with no svn:mime-type</li>
+  <li>Files with a svn:mime-type starting "text/"</li>
+  <li>Files with a svn:mime-type equal to "image/x-xbitmap"</li>
+  <li>Files with a svn:mime-type equal to "image/x-xpixmap"</li>
+</ul>
+
+<p>All other files are treated as binary, meaning that Subversion will:</p>
+
+<ul>
+  <li>Not attempt to automatically merge received changes with local
+      changes during <tt>svn update</tt> or <tt>svn merge</tt></li>
+  <li>Not show the differences as part of <tt>svn diff</tt></li>
+  <li>Not show line-by-line attribution for <tt>svn blame</tt></li>
+</ul>
+
+<p>In all other respects, Subversion treats binary files the same as
+text files, e.g. if you set the svn:keywords or svn:eol-style
+properties, Subversion will perform keyword substitution or newline
+conversion on binary files.
+
+<p>Note that whether or not a file is binary does not affect the
+amount of repository space used to store changes to that file, nor
+does it affect the amount of traffic between client and server.  For
+storage and transmission purposes, Subversion uses a diffing method
+that works equally well on binary and text files; this is completely
+unrelated to the diffing method used by the 'svn&nbsp;diff'
+command.</p>
+
+</div>
+
 <![CDATA[=========================================================]]>
 
 </div>
