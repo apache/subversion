@@ -151,25 +151,28 @@ svn_wc__load_prop_file (const char *propfile_path,
                         apr_hash_t *hash,
                         apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
+  svn_error_t *err;
 
-  SVN_ERR (svn_io_check_path (propfile_path, &kind, pool));
+  apr_file_t *propfile = NULL;
 
-  if (kind == svn_node_file)
+  err = svn_io_file_open (&propfile, propfile_path,
+                          APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                          pool);
+
+  if (err && (APR_STATUS_IS_ENOENT (err->apr_err)
+              || APR_STATUS_IS_ENOTDIR (err->apr_err)))
     {
-      /* Ah, this file already has on-disk properties.  Load 'em. */
-      apr_file_t *propfile = NULL;
-
-      SVN_ERR (svn_io_file_open (&propfile, propfile_path,
-                                 APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
-                                 pool));
-
-      SVN_ERR_W (svn_hash_read (hash, propfile, pool),
-                 apr_psprintf (pool, _("Can't parse '%s'"),
-                               svn_path_local_style (propfile_path, pool)));
-
-      SVN_ERR (svn_io_file_close (propfile, pool));
+      svn_error_clear (err);
+      return SVN_NO_ERROR;
     }
+
+  SVN_ERR (err);
+
+  SVN_ERR_W (svn_hash_read (hash, propfile, pool),
+             apr_psprintf (pool, _("Can't parse '%s'"),
+                           svn_path_local_style (propfile_path, pool)));
+
+  SVN_ERR (svn_io_file_close (propfile, pool));
 
   return SVN_NO_ERROR;
 }
