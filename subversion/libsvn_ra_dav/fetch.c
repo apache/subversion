@@ -522,10 +522,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
     }
 #endif /* ! SVN_NEON_0_25_0 */
 
-  if (err)
-    return err;
-
-  return SVN_NO_ERROR;
+  return err;
 }
 
 /* This implements the ne_block_reader() callback interface. */
@@ -1633,7 +1630,12 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
                                    FALSE,
                                    pool);
   if (baton.err)
-    return baton.err;
+    {
+      if (err)
+        svn_error_clear(err);
+      
+      return baton.err;
+    }
 
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.0.x servers and older don't support this report. */
@@ -1651,7 +1653,7 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
   svn_pool_destroy(baton.scratchpool);
 
   *locks = baton.lock_hash;
-  return err;
+  return SVN_NO_ERROR;
 }
 
 /* ------------------------------------------------------------------------- */
