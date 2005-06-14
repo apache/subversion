@@ -209,14 +209,12 @@ static svn_error_t * simple_request(svn_ra_dav__session_t *ras,
     }
 
   /* run the request and get the resulting status code (and svn_error_t) */
-  SVN_ERR( svn_ra_dav__request_dispatch(code, req, ras->sess,
-                                        method, url, okay_1, okay_2,
+  return svn_ra_dav__request_dispatch(code, req, ras->sess,
+                                      method, url, okay_1, okay_2,
 #if SVN_NEON_0_25_0
-                                        NULL, NULL,
+                                      NULL, NULL,
 #endif /* SVN_NEON_0_25_0 */
-                                        pool) );
-
-  return SVN_NO_ERROR;
+                                      pool);
 }
 
 
@@ -886,14 +884,17 @@ static svn_error_t * commit_delete_entry(const char *path,
                           locks_list->data);
       ne_set_request_body_buffer(req, body, strlen(body));
       
-      SVN_ERR (svn_ra_dav__request_dispatch(&code, req, parent->cc->ras->sess,
-                                            "DELETE", child,
-                                            204 /* Created */,
-                                            404 /* Not Found */,
+      /* Don't use SVN_ERR() here because some preprocessors can't
+         handle a compile-time conditional inside a macro call. */
+      serr = svn_ra_dav__request_dispatch(&code, req, parent->cc->ras->sess,
+                                          "DELETE", child,
+                                          204 /* Created */,
+                                          404 /* Not Found */,
 #if SVN_NEON_0_25_0
-                                            NULL, NULL,
+                                          NULL, NULL,
 #endif /* SVN_NEON_0_25_0 */
-                                            pool));
+                                          pool);
+      SVN_ERR(serr);
     }
   else if (serr)
     return serr;
