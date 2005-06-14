@@ -8,7 +8,7 @@ A rough guide:
                              the book that has been published by
                              O'Reilly & Associates. For both newbies and
                              experts alike.  Written in DocBook Lite,
-                             and now maintained in a seperate repository
+                             and now maintained in a separate repository
                              of its own.
                              
   misc-docs                  Holds additional DocBook Lite material that
