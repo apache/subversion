@@ -529,7 +529,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "  2. Removes unversioned remote prop on repos revision.\n"),
     {'q', 'R', 'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
-  
+
+#if !AS400  
   { "propedit", svn_cl__propedit, {"pedit", "pe"},
     N_("Edit property PROPNAME with an external editor on targets.\n"
        "usage: 1. propedit PROPNAME PATH...\n"
@@ -540,7 +541,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     {'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__encoding_opt, svn_cl__editor_cmd_opt, svn_cl__force_opt,
      svn_cl__config_dir_opt} },
-  
+#endif
+
   { "propget", svn_cl__propget, {"pget", "pg"},
     N_("Print value of PROPNAME on files, dirs, or revisions.\n"
        "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
@@ -616,7 +618,11 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "non-recursive\n"
        "  attempt will fail, and a recursive attempt will set the property\n"
        "  only on the file children of the directory.\n"),
+#if !AS400
     {'F', svn_cl__encoding_opt, 'q', 'r', svn_cl__targets_opt, 'R',
+#else
+    {'F', 'q', 'r', svn_cl__targets_opt, 'R',
+#endif
      svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS, svn_cl__force_opt,
      svn_cl__config_dir_opt} },
   

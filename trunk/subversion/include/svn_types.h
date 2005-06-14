@@ -253,35 +253,56 @@ typedef struct svn_dirent_t
 #define SVN_KEYWORD_MAX_LEN    255
 
 /** The most recent revision in which this file was changed. */
-#define SVN_KEYWORD_REVISION_LONG    "LastChangedRevision"
+#define SVN_KEYWORD_REVISION_LONG \
+        "\x4c\x61\x73\x74\x43\x68\x61\x6e\x67\x65\x64\x52\x65\x76\x69\x73\x69" \
+        "\x6f\x6e"
+        /* "LastChangedRevision" */
 
 /** Short version of LastChangedRevision */
-#define SVN_KEYWORD_REVISION_SHORT   "Rev"
+#define SVN_KEYWORD_REVISION_SHORT \
+        "\x52\x65\x76"
+        /* "Rev" */
 
 /** Medium version of LastChangedRevision, matching the one CVS uses.
  * @since New in 1.1. */
-#define SVN_KEYWORD_REVISION_MEDIUM  "Revision"
+#define SVN_KEYWORD_REVISION_MEDIUM \
+        "\x52\x65\x76\x69\x73\x69\x6f\x6e"
+        /* "Revision" */
 
 /** The most recent date (repository time) when this file was changed. */
-#define SVN_KEYWORD_DATE_LONG        "LastChangedDate"
+#define SVN_KEYWORD_DATE_LONG \
+        "\x4c\x61\x73\x74\x43\x68\x61\x6e\x67\x65\x64\x44\x61\x74\x65"
+        /* "LastChangedDate" */
 
 /** Short version of LastChangedDate */
-#define SVN_KEYWORD_DATE_SHORT       "Date"
+#define SVN_KEYWORD_DATE_SHORT \
+        "\x44\x61\x74\x65"
+        /* "Date" */
 
 /** Who most recently committed to this file. */
-#define SVN_KEYWORD_AUTHOR_LONG      "LastChangedBy"
+#define SVN_KEYWORD_AUTHOR_LONG \
+        "\x4c\x61\x73\x74\x43\x68\x61\x6e\x67\x65\x64\x42\x79"
+        /* "LastChangedBy" */
 
 /** Short version of LastChangedBy */
-#define SVN_KEYWORD_AUTHOR_SHORT     "Author"
+#define SVN_KEYWORD_AUTHOR_SHORT \
+        "\x41\x75\x74\x68\x6f\x72"
+        /* "Author" */
 
 /** The URL for the head revision of this file. */
-#define SVN_KEYWORD_URL_LONG         "HeadURL"
+#define SVN_KEYWORD_URL_LONG \
+        "\x48\x65\x61\x64\x55\x52\x4c"
+        /* "HeadURL" */
 
 /** Short version of HeadURL */
-#define SVN_KEYWORD_URL_SHORT        "URL"
+#define SVN_KEYWORD_URL_SHORT \
+        "\x55\x52\x4c"
+        /* "URL" */
 
 /** A compressed combination of the other four keywords. */
-#define SVN_KEYWORD_ID               "Id"
+#define SVN_KEYWORD_ID \
+        "\x49\x64"
+        /* "Id" */
 
 /** @} */
 
