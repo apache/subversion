@@ -143,6 +143,9 @@ struct lock_request_baton
   /* If <D:error> is returned, here's where the parsed result goes. */
   svn_error_t *err;
 
+  /* The neon request being executed */
+  ne_request *request;
+
   /* A place for allocating fields in this structure. */
   apr_pool_t *pool;
 };
@@ -743,6 +746,17 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
                                        apr_pool_t *pool);
 
 
+/* Callback to get data from a Neon request after it has been sent.
+
+   REQUEST is the request, DISPATCH_RETURN_VAL is the value that
+   ne_request_dispatch(REQUEST) returned to the caller.
+
+   USERDATA is a closure baton. */
+typedef svn_error_t *
+svn_ra_dav__request_interrogator(ne_request *request,
+                                 int dispatch_return_val,
+                                 void *userdata);
+
 /* Given a neon REQUEST and SESSION, run the request; if CODE_P is
    non-null, return the http status code in *CODE_P.  Return any
    resulting error (from neon, a <D:error> body response, or any
@@ -756,6 +770,16 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
    than one of these will generate an error. OKAY_1 should always be
    specified (e.g. as 200); use 0 for OKAY_2 if a second result code is
    not allowed.
+
+   #if SVN_NEON_0_25_0
+
+      If INTERROGATOR is non-NULL, invoke it with the Neon request,
+      the dispatch result, and INTERROGATOR_BATON.  This is done
+      regardless of whether the request appears successful or not.  If
+      the interrogator has an error result, return that error
+      immediately, after freeing the request.
+
+   #endif // SVN_NEON_0_25_0
 
    ### not super sure on this "okay" stuff, but it means that the request
    ### dispatching code can generate much better errors than the callers
@@ -771,6 +795,10 @@ svn_ra_dav__request_dispatch(int *code_p,
                              const char *url,
                              int okay_1,
                              int okay_2,
+#if SVN_NEON_0_25_0
+                             svn_ra_dav__request_interrogator interrogator,
+                             void *interrogator_baton,
+#endif /* SVN_NEON_0_25_0 */
                              apr_pool_t *pool);
 
 

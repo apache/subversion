@@ -704,6 +704,10 @@ SVN_ERROR_START
               SVN_ERR_RA_DAV_CATEGORY_START + 9,
               "Malformed network data")
 
+  /* @since New in 1.3 */
+  SVN_ERRDEF (SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS,
+              SVN_ERR_RA_DAV_CATEGORY_START + 10,
+              "Unable to extract data from response header")
 
   /* ra_local errors */
   
