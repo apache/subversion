@@ -67,6 +67,7 @@ extern "C" {
   #define SVN_CMDLINE_PRINTF   svn_cmdline_printf
   #define SVN_CMDLINE_PRINTF2  svn_cmdline_printf
   #define SVN_STREAM_PRINTF    svn_stream_printf
+  #define APR_FILE_MTIME_SET   apr_file_mtime_set
 #else
   #define APR_PVSPRINTF        svn_ebcdic_pvsprintf
   #define APR_PSPRINTF         svn_ebcdic_psprintf
@@ -77,7 +78,7 @@ extern "C" {
   #define SVN_CMDLINE_PRINTF   svn_cmdline_printf_ebcdic
   #define SVN_CMDLINE_PRINTF2  svn_cmdline_printf_ebcdic2
   #define SVN_STREAM_PRINTF    svn_stream_printf_ebcdic
-
+  #define APR_FILE_MTIME_SET   svn_ebcdic_set_file_mtime
 /**
  * Write a string to a file using a printf format; similar to apr_file_printf
  * except that any character or string variable arguments are assumed to be in
@@ -182,6 +183,19 @@ svn_error_t *
 svn_ebcdic_set_file_ccsid (const char *path,
                            int ccsid,
                            apr_pool_t *pool);
+
+
+/**
+ * Set the mtime of the specified file.  Replacement for apr_file_mtime_set
+ * which is not implmeneted in IBM's port of APR.
+ * @a fname The full path to the file (using / on all systems)
+ * @a mtime The mtime to apply to the file.
+ * @a pool The pool to use.
+ */
+apr_status_t
+svn_ebcdic_set_file_mtime(const char *fname,
+                          apr_time_t mtime,
+                          apr_pool_t *pool);  
 
 
 /** Handles unix-type qsh(ell) scripts on the iSeries.  

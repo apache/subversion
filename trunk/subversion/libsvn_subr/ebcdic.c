@@ -561,6 +561,34 @@ svn_ebcdic_set_file_ccsid (const char *path,
 }
                            
 
+apr_status_t
+svn_ebcdic_set_file_mtime(const char *fname,
+                          apr_time_t mtime,
+                          apr_pool_t *pool)
+{
+  const char *cmd;
+  apr_status_t status;
+  apr_time_exp_t *timex = apr_palloc(pool, sizeof(apr_time_exp_t)); 
+  
+  status = apr_time_exp_lt(timex, mtime);
+  if (status)
+    return status; 
+
+  cmd = apr_psprintf(pool,
+                     "touch -acfm -t %4i%02i%02i%02i%02i.%02i \"%s\"",
+                     /*              YYYYMMDDHHMM.SS */
+                     timex->tm_year + 1900,
+                     timex->tm_mon,
+                     timex->tm_mday,
+                     timex->tm_hour,
+                     timex->tm_min,
+                     timex->tm_sec,
+                     fname);
+
+  return QzshSystem(cmd);
+}  
+
+
 svn_error_t *
 svn_ebcdic_run_unix_type_script (const char *path,
                                  const char *cmd,

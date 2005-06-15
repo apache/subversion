@@ -913,7 +913,7 @@ svn_io_set_file_affected_time (apr_time_t apr_time,
 
   SVN_ERR (svn_path_cstring_from_utf8 (&native_path, path, pool));
 
-  status = apr_file_mtime_set (native_path, apr_time, pool);
+  status = APR_FILE_MTIME_SET (native_path, apr_time, pool);
   if (status)
     return svn_error_wrap_apr
       (status, _("Can't set access time of '%s'"),

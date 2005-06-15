@@ -39,6 +39,9 @@
 
 #include "svn_private_config.h"
 
+#define DOT_TMP_STR \
+        "\x2e\x74\x6d\x70"
+        /* ".tmp" */
 
 /*** Code. ***/
 
@@ -589,7 +592,7 @@ apply_textdelta (void *file_baton,
   struct handler_baton *hb = apr_palloc (pool, sizeof (*hb));
 
   SVN_ERR (svn_io_open_unique_file (&fb->tmp_file, &(fb->tmppath),
-                                    fb->path, ".tmp", FALSE, fb->pool));
+                                    fb->path, DOT_TMP_STR, FALSE, fb->pool));
 
   hb->pool = pool;
   hb->tmppath = fb->tmppath;
@@ -803,7 +806,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
           
           /* Copied from apply_textdelta(). */
           SVN_ERR (svn_io_open_unique_file (&fb->tmp_file, &(fb->tmppath),
-                                            fb->path, ".tmp", FALSE,
+                                            fb->path, DOT_TMP_STR, FALSE,
                                             fb->pool));
 
           /* Step outside the editor-likeness for a moment, to actually talk
