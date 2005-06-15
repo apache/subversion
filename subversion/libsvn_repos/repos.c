@@ -297,7 +297,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# by invoking a program (script, executable, binary, etc.) named"
       APR_EOL_STR
-      "# '" 
+      "# '"
       SVN_REPOS__HOOK_START_COMMIT
       "' (for which this file is a template)"
       APR_EOL_STR
@@ -746,7 +746,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# (Maybe this script could send email to the lock owner?)"
       APR_EOL_STR
-      "SVNLOOK=/usr/local/bin/svnlook"
+      "SVNLOOK=" SVN_BINDIR "/svnlook"
       APR_EOL_STR
       "GREP=/bin/grep"
       APR_EOL_STR
@@ -755,7 +755,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "LOCK_OWNER=`$SVNLOOK lock \"$REPOS\" \"$PATH\" | \\"
       APR_EOL_STR
-      "            $GREP '^Owner:' | $SED 's/Owner: //'`"
+      "            $GREP '^Owner: ' | $SED 's/Owner: //'`"
       APR_EOL_STR
       APR_EOL_STR
       "# If we get no result from svnlook, there's no lock, allow the lock to"
@@ -1059,7 +1059,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "#"
       APR_EOL_STR
-      "# The paths that were just locked are passed to the hook via STDIN (As"
+      "# The paths that were just locked are passed to the hook via STDIN (as"
       APR_EOL_STR
       "# of Subversion 1.2, only one path is passed per invocation, but the"
       APR_EOL_STR
@@ -1167,7 +1167,7 @@ create_hooks (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# The paths that were just unlocked are passed to the hook via STDIN"
       APR_EOL_STR
-      "# (As of Subversion 1.2, only one path is passed per invocation, but"
+      "# (as of Subversion 1.2, only one path is passed per invocation, but"
       APR_EOL_STR
       "# the plan is to pass all locked paths at once in Subversion 1.3 and"
       APR_EOL_STR
