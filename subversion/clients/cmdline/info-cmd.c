@@ -276,16 +276,18 @@ svn_cl__info (apr_getopt_t *os,
       if (err && err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
         {
           svn_error_clear (err);
-          SVN_ERR (svn_cmdline_printf
-                   (subpool, _("%s:  (Not a versioned resource)\n\n"),
+          SVN_ERR (svn_cmdline_fprintf
+                   (stderr, subpool,
+                    _("%s:  (Not a versioned resource)\n\n"),
                     svn_path_local_style (target, pool)));
           continue;
         }
       else if (err && err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
         {
           svn_error_clear (err);
-          SVN_ERR (svn_cmdline_printf
-                   (subpool, _("%s:  (Not a valid URL)\n\n"),
+          SVN_ERR (svn_cmdline_fprintf
+                   (stderr, subpool,
+                    _("%s:  (Not a valid URL)\n\n"),
                     svn_path_local_style (target, pool)));
           continue;
         }
