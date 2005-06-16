@@ -1722,11 +1722,7 @@ get_ctxt_baton (svnlook_ctxt_t **baton_p,
   baton->full_paths = opt_state->full_paths;
   baton->is_revision = opt_state->txn ? FALSE : TRUE;
   baton->rev_id = opt_state->rev;
-#if !APR_CHARSET_EBCDIC
   baton->txn_name = apr_pstrdup (pool, opt_state->txn);
-#else
-  SVN_ERR (svn_utf_cstring_to_utf8 (&baton->txn_name, opt_state->txn, pool));
-#endif
   if (baton->txn_name)
     SVN_ERR (svn_fs_open_txn (&(baton->txn), baton->fs, 
                               baton->txn_name, pool));
@@ -2127,7 +2123,11 @@ main (int argc, const char * const *argv)
           break;
 
         case 't':
+#if !APR_CHARSET_EBCDIC
           opt_state.txn = opt_arg;
+#else
+          SVN_INT_ERR (svn_utf_cstring_to_utf8 (&opt_state.txn, opt_arg, pool));
+#endif
           break;
 
         case 'v':
