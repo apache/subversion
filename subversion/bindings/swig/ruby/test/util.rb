@@ -14,9 +14,7 @@ module SvnTestUtil
     @full_repos_path = File.expand_path(@repos_path)
     @repos_uri = "file://#{@full_repos_path}"
     @svnserve_host = "127.0.0.1"
-    @svnserve_port = "19191"
-    @repos_svnserve_uri =
-      "svn://#{@svnserve_host}:#{@svnserve_port}#{@full_repos_path}"
+    @svnserve_ports = (19195..19282).collect{|x| x.to_s}
     @wc_path = File.join("test", "wc")
     setup_repository(@repos_path)
     @repos = Svn::Repos.open(@repos_path, @pool)
@@ -47,12 +45,31 @@ module SvnTestUtil
   end
 
   def setup_svnserve
-    @svnserve_pid = fork {
-      exec("svnserve",
-           "--listen-host", @svnserve_host,
-           "--listen-port", @svnserve_port,
-           "-d", "--foreground")
-    }
+    @svnserve_port = nil
+    @repos_svnserve_uri = nil
+    @svnserve_ports.each do |port|
+      @svnserve_pid = fork {
+        STDERR.close
+        exec("svnserve",
+             "--listen-host", @svnserve_host,
+             "--listen-port", port,
+             "-d", "--foreground")
+      }
+      pid, status = Process.waitpid2(@svnserve_pid, Process::WNOHANG)
+      if status and status.exited?
+        STDERR.puts "port #{port} couldn't be used for svnserve"
+      else
+        @svnserve_port = port
+        @repos_svnserve_uri =
+          "svn://#{@svnserve_host}:#{@svnserve_port}#{@full_repos_path}"
+        break
+      end
+    end
+    if @svnserve_port.nil?
+      msg = "Can't run svnserve because available port "
+      msg << "isn't exist in [#{@svnserve_ports.join(', ')}]"
+      raise msg
+    end
   end
 
   def teardown_svnserve
