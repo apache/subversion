@@ -35,7 +35,9 @@
 /*-----------------------------------------------------------------------*/
 
 /* The keys that will be stored on disk */
-#define SVN_CLIENT__AUTHFILE_USERNAME_KEY            "username"
+#define SVN_CLIENT__AUTHFILE_USERNAME_KEY \
+        "\x75\x73\x65\x72\x6e\x61\x6d\x65"
+        /* "username" */
 
 
 

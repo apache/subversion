@@ -418,7 +418,11 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "\n"
        "  Use --force to steal the lock from another user or working copy.\n"),
     { svn_cl__targets_opt, 'm', 'F', svn_cl__force_log_opt,
+#if !AS400
       svn_cl__encoding_opt, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
+#else
+      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
+#endif
       svn_cl__force_opt } },
   { "log", svn_cl__log, {0},
     N_("Show the log messages for a set of revision(s) and/or file(s).\n"

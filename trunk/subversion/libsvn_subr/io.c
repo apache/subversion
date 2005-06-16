@@ -1109,6 +1109,9 @@ get_default_file_perms (const char *path, apr_fileperms_t *perms,
    * bits should be set. */
   SVN_ERR (svn_io_open_unique_file (&fd, &tmp_path, path, 
                                     DOT_TEMP_STR, TRUE, pool));
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(&tmp_path, tmp_path, pool));
+#endif
   status = apr_stat (&tmp_finfo, tmp_path, APR_FINFO_PROT, pool);
   if (status)
     return svn_error_wrap_apr (status, _("Can't get default file perms "
