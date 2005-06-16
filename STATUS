@@ -40,7 +40,7 @@ Candidate changes:
     Justification:
       Small change, potentially useful, 1.3 is quite some way off.
     Votes:
-      +1: maxb
+      +1: maxb, dlr
       
   * r15016
     Fix partly broken caching of copyfrom information in fsfs.
