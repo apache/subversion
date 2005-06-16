@@ -1,5 +1,5 @@
 /*
- * feedback.c:  feedback handlers for cmdline client.
+ * notify.c:  feedback handlers for cmdline client.
  *
  * ====================================================================
  * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
