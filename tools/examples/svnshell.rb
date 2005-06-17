@@ -23,27 +23,20 @@ class SvnShell
   def initialize(pool, path)
     @pool = pool
     @repos_path = path
-    @in_rev_mode = true
-    Svn::Core::Pool.new(@pool) do |tmp_pool|
-      @rev = Svn::Repos.open(@repos_path, tmp_pool).fs.youngest_rev
-    end
-    @txn = nil
     @path = "/"
+    self.rev = youngest_rev
     @exited = false
   end
 
   def run
     while !@exited and buf = Readline.readline(prompt, true)
       cmd, *args = Shellwords.shellwords(buf)
-      next if /\A\s*\z/ =~ cmd
+      next if /\A\s*\z/ =~ cmd.to_s
       Svn::Core::Pool.new(@pool) do |pool|
         @fs = Svn::Repos.open(@repos_path, pool).fs
-        if @in_rev_mode
-          @root = @fs.root(@rev)
-        else
-          @root = @fs.open_txn(name).root
-        end
+        setup_root
         dispatch(cmd, *args)
+        @path = find_available_path
         @root.close
       end
     end
@@ -51,7 +44,7 @@ class SvnShell
 
   private
   def prompt
-    if @in_rev_mode
+    if rev_mode?
       mode = "rev"
       info = @rev
     else
@@ -68,57 +61,59 @@ class SvnShell
       rescue ArgumentError
         # puts $!.message
         # puts $@
-        puts("invalid argument for #{cmd}: #{args.join(' ')}")
+        puts("Invalid argument for #{cmd}: #{args.join(' ')}")
       end
     else
-      puts("unknown command: #{cmd}")
+      puts("Unknown command: #{cmd}")
+      puts("Try one of these commands: ", WORDS.sort.join(" "))
     end
   end
 
   def do_cat(path)
-    new_path = parse_path(path)
-    case @root.check_path(new_path)
+    normalized_path = normalize_path(path)
+    case @root.check_path(normalized_path)
     when Svn::Core::NODE_NONE
-      puts "Path '#{new_path}' does not exist."
+      puts "Path '#{normalized_path}' does not exist."
     when Svn::Core::NODE_DIR
-      puts "Path '#{new_path}' is not a file."
+      puts "Path '#{normalized_path}' is not a file."
     else
-      @root.file_contents(new_path) do |stream|
-        puts stream.read(@root.file_length(new_path))
+      @root.file_contents(normalized_path) do |stream|
+        puts stream.read(@root.file_length(normalized_path))
       end
     end
   end
 
   def do_cd(path="/")
-    new_path = parse_path(path)
-    if @root.check_path(new_path) == Svn::Core::NODE_DIR
-      @path = new_path
+    normalized_path = normalize_path(path)
+    if @root.check_path(normalized_path) == Svn::Core::NODE_DIR
+      @path = normalized_path
     else
-      puts "Path '#{new_path}' is not a valid filesystem directory."
+      puts "Path '#{normalized_path}' is not a valid filesystem directory."
     end
   end
   
   def do_ls(*paths)
     paths << @path if paths.empty?
     paths.each do |path|
-      new_path = parse_path(path)
-      case @root.check_path(new_path)
+      normalized_path = normalize_path(path)
+      case @root.check_path(normalized_path)
       when Svn::Core::NODE_DIR
-        parent = new_path
+        parent = normalized_path
         entries = @root.dir_entries(parent)
       when Svn::Core::NODE_FILE
-        parts = path_to_parts(new_path)
+        parts = path_to_parts(normalized_path)
         name = parts.pop
         parent = parts_to_path(parts)
         puts "#{parent}:#{name}"
-        tmp = @root.dir_entries(parent)
-        if tmp[name].nil?
-          return
+        parent_entries = @root.dir_entries(parent)
+        if parent_entries[name].nil?
+          puts "No directory entry found for '#{normalized_path}'"
+          next
         else
           entries = {name => tmp[name]}
         end
       else
-        puts "Path '#{new_path}' not found."
+        puts "Path '#{normalized_path}' not found."
         return
       end
 
@@ -127,8 +122,8 @@ class SvnShell
 
       entries.keys.sort.each do |entry|
         fullpath = parent + '/' + entry
-        size = ''
         if @root.dir?(fullpath)
+          size = ''
           name = entry + '/'
         else
           size = @root.file_length(fullpath).to_i.to_s
@@ -189,13 +184,10 @@ class SvnShell
       puts "Error setting the revision to '#{rev}': #{$!.message}"
       return
     end
-    @rev = Integer(rev)
-    @in_rev_mode = true
-    path_landing
+    self.rev = Integer(rev)
   end
   
   def do_settxn(name)
-    new_root = nil
     begin
       txn = @fs.open_txn(name)
       txn.root.close
@@ -203,9 +195,7 @@ class SvnShell
       puts "Error setting the transaction to '#{name}': #{$!.message}"
       return
     end
-    @txn = name
-    @in_rev_mode = false
-    path_landing
+    self.txn = name
   end
 
   def do_youngest
@@ -217,6 +207,42 @@ class SvnShell
     @exited = true
   end
 
+  def youngest_rev
+    Svn::Core::Pool.new(@pool) do |tmp_pool|
+      Svn::Repos.open(@repos_path, tmp_pool).fs.youngest_rev
+    end
+  end
+
+  def rev=(new_value)
+    @rev = new_value
+    @txn = nil
+    reset_root
+  end
+
+  def txn=(new_value)
+    @txn = new_value
+    reset_root
+  end
+
+  def rev_mode?
+    @txn.nil?
+  end
+  
+  def reset_root
+    if @root
+      @root.close
+      setup_root
+    end
+  end
+
+  def setup_root
+    if rev_mode?
+      @root = @fs.root(@rev)
+    else
+      @root = @fs.open_txn(name).root
+    end
+  end
+  
   def path_to_parts(path)
     path.split(/\/+/)
   end
@@ -226,7 +252,7 @@ class SvnShell
     "/#{normalized_parts.join('/')}"
   end
   
-  def parse_path(path)
+  def normalize_path(path)
     if path[0,1] != "/" and @path != "/"
       path = "#{@path}/#{path}"
     end
@@ -245,21 +271,17 @@ class SvnShell
     end
     parts_to_path(normalized_parts)
   end
+
+  def parent_dir(path)
+    normalize_path("#{path}/..")
+  end
   
-  def path_landing
-    found = false
-    new_path = @path
-    until found
-      case @root.check_path(new_path)
-      when Svn::Core::NODE_DIR
-        found = true
-      else
-        parts = path_to_parts(new_path)
-        parts.pop
-        new_path = parts_to_path(parts)
-      end
+  def find_available_path(path=@path)
+    if @root.check_path(path) == Svn::Core::NODE_DIR
+      path
+    else
+      find_available_path(parent_dir(path))
     end
-    @path = new_path
   end
 
   def format_date(date_str)
@@ -275,7 +297,7 @@ Readline.completion_proc = Proc.new do |word|
 end
 
 if ARGV.size != 1
-  puts "#{$0} REPOS_PATH"
+  puts "Usage: #{$0} REPOS_PATH"
   exit(1)
 end
 Svn::Core::Pool.new do |pool|
