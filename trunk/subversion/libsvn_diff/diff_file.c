@@ -38,6 +38,10 @@
 #include "svn_private_config.h"
 
 
+#define SEPERATOR_STR \
+        "\x3d\x3d\x3d\x3d\x3d\x3d\x3d"
+        /* "=======" */
+
 typedef struct svn_diff__file_token_t
 {
   struct svn_diff__file_token_t *next;
@@ -671,8 +675,9 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
 #else
            /* On ebcdic platforms we (almost) always output utf-8 */
           out_str = APR_PSPRINTF2 (baton->pool,
-                                   _("%s\\ No newline at end of file%s"),
-                                   SVN_UTF8_NEWLINE_STR, SVN_UTF8_NEWLINE_STR);
+                                   _(APR_EOL_STR \
+                                     "\\ No newline at end of file" \
+                                     APR_EOL_STR));
 #endif
           svn_stringbuf_appendcstr(baton->hunk, out_str);
         }
@@ -1109,6 +1114,10 @@ static const svn_diff_output_fns_t svn_diff3__file_output_vtable =
   svn_diff3__file_output_conflict
 };
 
+#if APR_CHARSET_EBCDIC
+/* APR_EOL_STRs must be in utf-8 */
+#pragma convert(1208)
+#endif
 static
 svn_error_t *
 svn_diff3__file_output_conflict(void *baton,
@@ -1169,6 +1178,9 @@ svn_diff3__file_output_conflict(void *baton,
 
   return SVN_NO_ERROR;
 }
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
 svn_error_t *
 svn_diff_file_output_merge(svn_stream_t *output_stream,
