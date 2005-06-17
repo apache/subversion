@@ -1163,7 +1163,7 @@ svn_ra_dav__lock(svn_ra_session_t *session,
                  apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  apr_pool_t *iterpool = svn_pool_create (pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   setup_neon_request_hook(session->priv);
 
@@ -1178,7 +1178,7 @@ svn_ra_dav__lock(svn_ra_session_t *session,
       svn_revnum_t *revnum;
       svn_error_t *err, *callback_err = NULL;
 
-      svn_pool_clear (iterpool);
+      svn_pool_clear(iterpool);
 
       apr_hash_this(hi, &key, NULL, &val);
       path = key;
@@ -1187,21 +1187,21 @@ svn_ra_dav__lock(svn_ra_session_t *session,
       err = shim_svn_ra_dav__lock(session, &lock, path, comment, 
                                   force, *revnum, iterpool);
 
-      if (err && !SVN_ERR_IS_LOCK_ERROR (err))
+      if (err && !SVN_ERR_IS_LOCK_ERROR(err))
         return err;
 
       if (lock_func)
         callback_err = lock_func(lock_baton, path, TRUE, err ? NULL : lock,
                                  err, iterpool);
 
-      svn_error_clear (err);
+      svn_error_clear(err);
 
       if (callback_err)
         return callback_err;
 
     }
 
-  svn_pool_destroy (iterpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -1222,7 +1222,7 @@ shim_svn_ra_dav__unlock(svn_ra_session_t *session,
 
   /* Make a neon lock structure containing token and full URL to unlock. */
   nlock = ne_lock_create();
-  url = svn_path_url_add_component (ras->url, path, pool);  
+  url = svn_path_url_add_component(ras->url, path, pool);  
   if ((rv = ne_uri_parse(url, &(nlock->uri))))
     {
       ne_lock_destroy(nlock);
@@ -1238,11 +1238,11 @@ shim_svn_ra_dav__unlock(svn_ra_session_t *session,
     {
       svn_lock_t *lock;
 
-      SVN_ERR (svn_ra_dav__get_lock(session, &lock, path, pool));
+      SVN_ERR( svn_ra_dav__get_lock(session, &lock, path, pool) );
       if (! lock)
-        return svn_error_createf (SVN_ERR_RA_NOT_LOCKED, NULL,
-                                  _("'%s' is not locked in the repository"),
-                                  path);
+        return svn_error_createf(SVN_ERR_RA_NOT_LOCKED, NULL,
+                                 _("'%s' is not locked in the repository"),
+                                 path);
       
       nlock->token = ne_strdup(lock->token);
     }
@@ -1299,7 +1299,7 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
                    apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  apr_pool_t *iterpool = svn_pool_create (pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   setup_neon_request_hook(session->priv);
 
@@ -1313,32 +1313,32 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
       const char *token;
       svn_error_t *err, *callback_err = NULL; 
 
-      svn_pool_clear (iterpool);
+      svn_pool_clear(iterpool);
 
       apr_hash_this(hi, &key, NULL, &val);
       path = key;
       /* Since we can't store NULL values in a hash, we turn "" to
          NULL here. */
-      if (strcmp (val, "") != 0)
+      if (strcmp(val, "") != 0)
         token = val;
       else
         token = NULL;
 
-      err = shim_svn_ra_dav__unlock (session, path, token, force, iterpool);
+      err = shim_svn_ra_dav__unlock(session, path, token, force, iterpool);
 
-      if (err && !SVN_ERR_IS_UNLOCK_ERROR (err))
+      if (err && !SVN_ERR_IS_UNLOCK_ERROR(err))
         return err;
 
       if (lock_func)
         callback_err = lock_func(lock_baton, path, FALSE, NULL, err, iterpool);
 
-      svn_error_clear (err);
+      svn_error_clear(err);
 
       if (callback_err)
         return callback_err;
     }
 
-  svn_pool_destroy (iterpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
