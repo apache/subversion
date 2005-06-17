@@ -1198,6 +1198,7 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
   baton.path[0] = original_path;
   baton.path[1] = modified_path;
   baton.path[2] = latest_path;
+#if !APR_CHARSET_EBCDIC
   SVN_ERR(svn_utf_cstring_from_utf8(&baton.conflict_modified,
                                     conflict_modified ? conflict_modified
                                     : apr_psprintf(pool, "<<<<<<< %s",
@@ -1216,6 +1217,16 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
                                     : apr_psprintf(pool, ">>>>>>> %s",
                                                    latest_path),
                                     pool));
+#else
+  baton.conflict_modified = conflict_modified ? conflict_modified
+                            : APR_PSPRINTF2(pool, "<<<<<<< %s", modified_path);
+  baton.conflict_original = conflict_original ? conflict_original
+                            : APR_PSPRINTF2(pool, "||||||| %s", original_path);
+  baton.conflict_separator = conflict_separator ? conflict_separator
+                             : SEPERATOR_STR;
+  baton.conflict_latest = conflict_latest ? conflict_latest
+                          : APR_PSPRINTF2(pool, ">>>>>>> %s", latest_path);
+#endif
 
   baton.display_original_in_conflict = display_original_in_conflict;
   baton.display_resolved_conflicts = display_resolved_conflicts &&
