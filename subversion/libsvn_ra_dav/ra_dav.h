@@ -737,6 +737,17 @@ svn_error_t *
 svn_ra_dav__maybe_store_auth_info (svn_ra_dav__session_t *ras);
 
 
+/* Like svn_ra_dav__maybe_store_auth_info(), but conditional on ERR.
+
+   Attempt to store auth info only if ERR is NULL or if ERR->apr_err
+   is not SVN_ERR_RA_NOT_AUTHORIZED.  If ERR is not null, return it no
+   matter what, otherwise return the result of the attempt (if any) to
+   store auth info, else return SVN_NO_ERROR. */
+svn_error_t *
+svn_ra_dav__maybe_store_auth_info_after_result(svn_error_t *err,
+                                               svn_ra_dav__session_t *ras);
+
+
 /* Create an error object for an error from neon in the given session,
    where the return code from neon was RETCODE, and CONTEXT describes
    what was being attempted.  Do temporary allocations in POOL. */
