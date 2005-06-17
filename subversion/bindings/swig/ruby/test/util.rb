@@ -14,7 +14,7 @@ module SvnTestUtil
     @full_repos_path = File.expand_path(@repos_path)
     @repos_uri = "file://#{@full_repos_path}"
     @svnserve_host = "127.0.0.1"
-    @svnserve_ports = (19195..19282).collect{|x| x.to_s}
+    @svnserve_ports = (64152..64282).collect{|x| x.to_s}
     @wc_path = File.join("test", "wc")
     setup_repository(@repos_path)
     @repos = Svn::Repos.open(@repos_path, @pool)
