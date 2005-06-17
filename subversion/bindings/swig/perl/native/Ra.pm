@@ -64,7 +64,7 @@ objects, with the session_baton and pool omitted.
 
 require SVN::Client;
 
-my $ralib = SVN::_Ra::svn_ra_init_ra_libs();
+my $ralib = SVN::_Ra::svn_ra_init_ra_libs($SVN::Core::gpool);
 
 # Ra methods that returns reporter
 my %reporter = map { $_ => 1 } qw(do_diff do_switch do_status do_update);
