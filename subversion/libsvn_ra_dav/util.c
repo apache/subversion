@@ -896,6 +896,25 @@ svn_ra_dav__maybe_store_auth_info(svn_ra_dav__session_t *ras)
 }
 
 
+svn_error_t *
+svn_ra_dav__maybe_store_auth_info_after_result(svn_error_t *err,
+                                               svn_ra_dav__session_t *ras)
+{
+  if (! err || (err->apr_err != SVN_ERR_RA_NOT_AUTHORIZED))
+    {
+      svn_error_t *err2 = svn_ra_dav__maybe_store_auth_info(ras);
+      if (err2 && ! err)
+        return err2;
+      else if (err)
+        {
+          svn_error_clear(err2);
+          return err;          
+        }
+    }
+
+  return err;
+}
+
 
 void
 svn_ra_dav__add_error_handler(ne_request *request,
