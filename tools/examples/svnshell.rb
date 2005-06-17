@@ -114,7 +114,7 @@ class SvnShell
         end
       else
         puts "Path '#{normalized_path}' not found."
-        return
+        next
       end
 
       puts "   REV   AUTHOR  NODE-REV-ID     SIZE              DATE NAME"
