@@ -83,12 +83,6 @@ dnl Configure neon --------------------------
           SVN_SUBDIR_CONFIG(neon, $args)
 
           if test -f "$abs_builddir/neon/neon-config" ; then
-            AC_MSG_CHECKING([for any extra libraries neon needs])
-            # this is not perfect since it will pick up extra -L flags too,
-            # but that shouldn't do any real damage.
-            NEON_LIBS_NEW=`$SHELL $abs_builddir/neon/neon-config --libs | sed -e"s/-lneon//g"`
-            AC_MSG_RESULT([$NEON_LIBS_NEW])
-            NEON_LIBS="$NEON_LIBS $NEON_LIBS_NEW"
             # Also find out which macros neon defines (but ignore extra include paths):
             # this will include -DNEON_SSL if neon was built with SSL support
             CFLAGS=["$CFLAGS `$SHELL $abs_builddir/neon/neon-config --cflags | sed -e 's/-I[^ ]*//g'`"]
