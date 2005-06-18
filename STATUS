@@ -23,7 +23,7 @@ Candidate changes:
       Use 1.2.x-r14774 branch.
     Votes:
       +1: fitz (except r14893, r14898, r14905 and r14947)
-      +1: lundblad
+      +1: lundblad, kfogel
 
   * r14885
     Python bindings, fix for functions returning MD5 digests.
