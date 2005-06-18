@@ -52,6 +52,7 @@ Commit access for specific areas:
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
            kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)
+        djames   David James <james@cs.toronto.edu>          (Swig-Ruby b.)
 
   Packages:
 
