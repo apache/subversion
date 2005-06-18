@@ -40,6 +40,21 @@ extern "C" {
 
 
 
+/** Represents the kind and special status of a directory entry.
+ *
+ * @since New in 1.3.
+ */
+typedef struct svn_io_dirent_t {
+  /** The kind of this entry. */
+  svn_node_kind_t kind;
+  /** If @c kind is @c svn_node_file, whether this entry is a special file;
+   * else false.
+   *
+   * @see svn_io_check_special_path().
+   */
+  svn_boolean_t special;
+} svn_io_dirent_t;
+
 /** Determine the @a kind of @a path.
  *
  * If utf8-encoded @a path exists, set @a *kind to the appropriate kind,
@@ -626,10 +641,21 @@ svn_error_t *svn_io_remove_dir (const char *path, apr_pool_t *pool);
 
 /** Read all of the disk entries in directory @a path, a utf8-encoded
  * path.  Set @a *dirents to a hash mapping dirent names (<tt>char *</tt>) to
- * enumerated dirent filetypes (@c svn_node_kind_t *).
+ * @c svn_io_dirent_t structures, allocated in @a pool.
  *
  * @note The `.' and `..' directories normally returned by
  * apr_dir_read() are NOT returned in the hash.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *svn_io_get_dirents2 (apr_hash_t **dirents,
+                                  const char *path,
+                                  apr_pool_t *pool);
+
+/** similar to svn_io_get_dirents2(), but *DIRENTS is a hash table
+ * with @c svn_node_kind_t values.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.2 API.
  */
 svn_error_t *svn_io_get_dirents (apr_hash_t **dirents,
                                  const char *path,
