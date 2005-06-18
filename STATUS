@@ -9,16 +9,6 @@ Status of 1.2.1:
 
 Candidate changes:
 
-  * r14859, r14923, r14939
-    Branch: 1.2.x-r14859
-    Fix bug where an unlocked file loses its executable bits when
-    svn:executable is set.
-    Justification:
-      Buggy interaction between locking and svn:executable.
-    Votes:
-      +1: lundblad, dlr, kfogel
-      +1: fitz (for original r14859 @ trunk)
-
   * r14774, r14849, r14851, r14862, r14893, r14898, r14905, r14947
     Fix locking bug when working on a switched file in the wc and
     a bug when locking an URL with URL-encoded characters in the path.
@@ -64,6 +54,16 @@ Candidate changes:
       +1: kfogel
 
 Approved changes (further review is welcome, but not required):
+
+  * r14859, r14923, r14939
+    Branch: 1.2.x-r14859
+    Fix bug where an unlocked file loses its executable bits when
+    svn:executable is set.
+    Justification:
+      Buggy interaction between locking and svn:executable.
+    Votes:
+      +1: lundblad, dlr, kfogel
+      +1: fitz (for original r14859 @ trunk)
 
   * r15016
     Fix partly broken caching of copyfrom information in fsfs.
