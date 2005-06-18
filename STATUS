@@ -38,7 +38,7 @@ Candidate changes:
       Corrects API violation, allowing the AddOutputFilterByType
       directive to function properly.
     Votes:
-      +1: dlr, kfogel
+      +1: dlr, kfogel, striker
 
   * r15088
     Make lock/unlock over ra_dav able to cache authentication data.
