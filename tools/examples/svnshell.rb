@@ -110,7 +110,7 @@ class SvnShell
           puts "No directory entry found for '#{normalized_path}'"
           next
         else
-          entries = {name => tmp[name]}
+          entries = {name => parent_entries[name]}
         end
       else
         puts "Path '#{normalized_path}' not found."
