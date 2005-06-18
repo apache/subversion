@@ -48,10 +48,5 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r15050
-    Fix release build of 1.2.X to build with RPMs for RH7, RH8, RH9.
-    Justfication: RPM build breakage is bad.  Especially when all that
-      changed between RC and release was the version number.  :-(
-    Votes:
-      +1: david, dlr
+ (None at the moment)
 
