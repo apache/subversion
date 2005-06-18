@@ -734,7 +734,7 @@ erase_from_wc (const char *path,
            good here. */
 
         /* First handle the versioned items, this is better (probably) than
-           simply using svn_io_get_dirents for everything as it avoids the
+           simply using svn_io_get_dirents2 for everything as it avoids the
            need to do svn_io_check_path on each versioned item */
         SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, path, pool));
         SVN_ERR (svn_wc_entries_read (&ver, dir_access, FALSE, pool));

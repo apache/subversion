@@ -1652,18 +1652,14 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_io_get_dirents (apr_hash_t **dirents,
-                    const char *path,
-                    apr_pool_t *pool)
+svn_io_get_dirents2 (apr_hash_t **dirents,
+                     const char *path,
+                     apr_pool_t *pool)
 {
   apr_status_t status; 
   apr_dir_t *this_dir;
   apr_finfo_t this_entry;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
-
-  /* These exist so we can use their addresses as hash values! */
-  static const svn_node_kind_t static_svn_node_file = svn_node_file;
-  static const svn_node_kind_t static_svn_node_dir = svn_node_dir;
 
   *dirents = apr_hash_make (pool);
   
@@ -1683,20 +1679,26 @@ svn_io_get_dirents (apr_hash_t **dirents,
       else
         {
           const char *name;
+          svn_io_dirent_t *dirent = apr_pcalloc (pool, sizeof (*dirent));
 
           SVN_ERR (svn_path_cstring_to_utf8 (&name, this_entry.name, pool));
           
           if (this_entry.filetype == APR_REG)
-            apr_hash_set (*dirents, name, APR_HASH_KEY_STRING,
-                          &static_svn_node_file);
+            dirent->kind = svn_node_file;
           else if (this_entry.filetype == APR_DIR)
-            apr_hash_set (*dirents, name, APR_HASH_KEY_STRING,
-                          &static_svn_node_dir);
+            dirent->kind = svn_node_dir;
+          else if (this_entry.filetype == APR_LNK)
+            {
+              dirent->kind = svn_node_file;
+              dirent->special = TRUE;
+            }
           else
-            /* ### symlinks, etc. will fall into this category for now.
-               someday subversion will recognize them. :)  */
-            apr_hash_set (*dirents, name, APR_HASH_KEY_STRING,
-                          &static_svn_node_file);
+            /* ### Currently, Subversion supports just symlinks; other
+             * entry types are reported as regular files. This is inconsistent
+             * with svn_io_check_path(). */
+            dirent->kind = svn_node_file;
+
+          apr_hash_set (*dirents, name, APR_HASH_KEY_STRING, dirent);
         }
     }
 
@@ -1710,6 +1712,17 @@ svn_io_get_dirents (apr_hash_t **dirents,
                                svn_path_local_style (path, pool));
   
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_io_get_dirents (apr_hash_t **dirents,
+                    const char *path,
+                    apr_pool_t *pool)
+{
+  /* Note that in C, padding is not allowed at the beginning of structs,
+     so this is actually portable, since the kind field of svn_io_dirent_t
+     is first in that struct. */
+  return svn_io_get_dirents2 (dirents, path, pool);
 }
 
 
