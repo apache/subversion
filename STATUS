@@ -40,13 +40,6 @@ Candidate changes:
     Votes:
       +1: dlr, kfogel
 
-  * r15050
-    Fix release build of 1.2.X to build with RPMs for RH7, RH8, RH9.
-    Justfication: RPM build breakage is bad.  Especially when all that
-      changed between RC and release was the version number.  :-(
-    Votes:
-      +1: david, dlr
-
   * r15088
     Make lock/unlock over ra_dav able to cache authentication data.
     Justfication: Users of locking over http:// will get very annoyed.
@@ -72,3 +65,11 @@ Approved changes (further review is welcome, but not required):
       added without history (i.e. an initial import).
     Votes:
       +1: lundblad, dlr, ringstrom
+
+  * r15050
+    Fix release build of 1.2.X to build with RPMs for RH7, RH8, RH9.
+    Justfication: RPM build breakage is bad.  Especially when all that
+      changed between RC and release was the version number.  :-(
+    Votes:
+      +1: david, dlr
+
