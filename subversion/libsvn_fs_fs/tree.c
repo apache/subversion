@@ -112,7 +112,9 @@ typedef struct
 
   /* Cache structure for mapping const char * PATH to const char
      *COPYFROM_STRING, so that paths_changed can remember all the
-     copyfrom information in the changes file. */
+     copyfrom information in the changes file.
+     COPYFROM_STRING has the format "REV PATH", or is the empty string if
+     the path was added without history. */
   apr_hash_t *copyfrom_cache;
   
 } fs_root_data_t;

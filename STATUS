@@ -48,14 +48,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r15016
-    Fix partly broken caching of copyfrom information in fsfs.
-    Justification:
-      Performance regression with svn log -v for revisions with many paths
-      added without history (i.e. an initial import).
-    Votes:
-      +1: lundblad, dlr, ringstrom
-
   * r15050
     Fix release build of 1.2.X to build with RPMs for RH7, RH8, RH9.
     Justfication: RPM build breakage is bad.  Especially when all that
