@@ -48,16 +48,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14859, r14923, r14939
-    Branch: 1.2.x-r14859
-    Fix bug where an unlocked file loses its executable bits when
-    svn:executable is set.
-    Justification:
-      Buggy interaction between locking and svn:executable.
-    Votes:
-      +1: lundblad, dlr, kfogel
-      +1: fitz (for original r14859 @ trunk)
-
   * r15016
     Fix partly broken caching of copyfrom information in fsfs.
     Justification:

@@ -999,35 +999,45 @@ reown_file (const char *path_apr,
   return SVN_NO_ERROR;
 }
 
-/* Create a temp file so that we can use the temp file's mask when
-   setting PATH (and any other file for the life of the process) to
-   read-write (on Unix).  */
+/* Set PERMS to the default file permissions for PATH based on the
+   permissions of PATH and a newly created file.  Make temporary
+   allocations in POOL.  */
 static svn_error_t *
 get_default_file_perms (const char *path, apr_fileperms_t *perms,
                         apr_pool_t *pool)
 {
   apr_status_t status;
-  apr_finfo_t finfo;
+  apr_finfo_t tmp_finfo, finfo;
   apr_file_t *fd;
   const char *tmp_path;
   const char *apr_path;
 
-  SVN_ERR (svn_path_cstring_from_utf8 (&apr_path, path, pool));
+  /* Get the perms for a newly created file to find out what write
+   * bits should be set. */
   SVN_ERR (svn_io_open_unique_file (&fd, &tmp_path, path, 
                                     "tmp", TRUE, pool));
-  status = apr_stat (&finfo, tmp_path, APR_FINFO_PROT, pool);
+  status = apr_stat (&tmp_finfo, tmp_path, APR_FINFO_PROT, pool);
   if (status)
     return svn_error_wrap_apr (status, _("Can't get default file perms "
                                          "for file at '%s' (file stat error)"),
                                path);
-
   apr_file_close(fd);
-  if (status)
-    return svn_error_wrap_apr (status, _("Can't get default file perms for "
-                                         "file at '%s' (file close error)"),
-                               path);
 
-  *perms = finfo.protection;
+  /* Get the perms for the original file so we'll have any other bits
+   * that were already set (like the execute bits, for example). */
+  SVN_ERR (svn_path_cstring_from_utf8 (&apr_path, path, pool));
+  status = apr_file_open (&fd, apr_path, APR_READ, APR_OS_DEFAULT, pool);
+  if (status)
+    return svn_error_wrap_apr (status, _("Can't open file at '%s' "), path);
+
+  status = apr_stat (&finfo, apr_path, APR_FINFO_PROT, pool);
+  if (status)
+    return svn_error_wrap_apr (status, _("Can't get file perms for file at "
+                                         "'%s' (file stat error)"), path);
+  apr_file_close(fd);
+
+  /* Glom the perms together. */
+  *perms = tmp_finfo.protection | finfo.protection;
   return SVN_NO_ERROR;
 }
 
