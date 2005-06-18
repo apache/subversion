@@ -48,7 +48,7 @@ Candidate changes:
       Corrects API violation, allowing the AddOutputFilterByType
       directive to function properly.
     Votes:
-      +1: dlr
+      +1: dlr, kfogel
 
   * r15050
     Fix release build of 1.2.X to build with RPMs for RH7, RH8, RH9.
