@@ -106,7 +106,7 @@ analogous to CVS/ subdirs:
             text-base/             /* tmp area for base files */
             prop-base/             /* tmp area for base props */
             props/                 /* tmp area for props */
-       empty-file               /* An empty file, for convenienct. */
+       empty-file               /* An empty file, for convenience. */
 
 `format'
 
@@ -224,7 +224,7 @@ analogous to CVS/ subdirs:
 
 `lock'
 
-   Present iff some client is using this .svn/ subdir for anything that
+   Present if some client is using this .svn/ subdir for anything that
    requires write access.
 
 `log'
