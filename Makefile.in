@@ -128,6 +128,7 @@ SWIG_RB_COMPILE = @SWIG_RB_COMPILE@
 SWIG_RB_LINK = @SWIG_RB_LINK@
 SWIG_RB_SITE_LIB_DIR = @SWIG_RB_SITE_LIB_DIR@
 SWIG_RB_SITE_ARCH_DIR = @SWIG_RB_SITE_ARCH_DIR@
+SWIG_RB_TEST_VERBOSE = @SWIG_RB_TEST_VERBOSE@
 LSWIGPL = @LSWIGPL@
 LSWIGPY = @LSWIGPY@
 
@@ -608,7 +609,8 @@ clean-swig-pl:
 check-swig-rb: swig-rb svnserve
 	cd $(SWIG_RB_DIR); \
 	  $(RUBY) -I $(SWIG_RB_SRC_DIR) \
-	    $(SWIG_RB_SRC_DIR)/test/run-test.rb
+	    $(SWIG_RB_SRC_DIR)/test/run-test.rb \
+	    --verbose=$(SWIG_RB_TEST_VERBOSE)
 
 clean-swig-rb:
 	for d in $(SWIG_RB_DIR) $(SWIG_RB_DIR)/libsvn_swig_ruby; \

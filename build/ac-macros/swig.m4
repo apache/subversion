@@ -243,6 +243,19 @@ AC_DEFUN(SVN_FIND_SWIG,
       ])
       SWIG_RB_SITE_ARCH_DIR="${svn_ruby_installdir}${svn_cv_ruby_sitedir_archsuffix}"
       AC_MSG_RESULT([$SWIG_RB_SITE_ARCH_DIR])
+
+      AC_MSG_CHECKING([how to use output level for Ruby bindings tests])
+      AC_CACHE_VAL([svn_cv_ruby_test_verbose],[
+        svn_cv_ruby_test_verbose="normal"
+      ])
+      AC_ARG_WITH([ruby-test-verbose],
+		  AC_HELP_STRING([--with-ruby-test-verbose=LEVEL],
+                                 [how to use output level for Ruby bindings tests
+                                  (default is normal)]),
+		  [svn_ruby_test_verbose="$withval"],
+		  [svn_ruby_test_verbose="$svn_cv_ruby_test_verbose"])
+      SWIG_RB_TEST_VERBOSE="$svn_ruby_test_verbose"
+      AC_MSG_RESULT([$SWIG_RB_TEST_VERBOSE])
     fi
 
   fi
@@ -258,6 +271,7 @@ AC_DEFUN(SVN_FIND_SWIG,
   AC_SUBST(SWIG_RB_COMPILE)
   AC_SUBST(SWIG_RB_SITE_LIB_DIR)
   AC_SUBST(SWIG_RB_SITE_ARCH_DIR)
+  AC_SUBST(SWIG_RB_TEST_VERBOSE)
   AC_SUBST(SWIG_LIBSWIG_DIR)
   AC_SUBST(LSWIGPL)
   AC_SUBST(LSWIGPY)
