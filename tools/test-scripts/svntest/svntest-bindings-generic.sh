@@ -17,6 +17,11 @@ LOG_FILE="$LOG_FILE_DIR/LOG_${BINDINGS_NAME}.$BUILD_TYPE"
 MY_LOG_FILE_PREF="$LOG_FILE_DIR/LOG_$BINDINGS_NAME"
 BUILD="`$GUESS` $BUILD_TYPE"
 
+# Remove interim log files from previous runs
+$RM_F "${MY_LOG_FILE_PREF}_build"
+$RM_F "${MY_LOG_FILE_PREF}_install"
+$RM_F "${MY_LOG_FILE_PREF}_check"
+
 # Initialize log files
 $RM_F "${LOG_FILE}.errors.gz"
 echo "$BINDINGS_NAME: $REVPREFIX$REVISION on $BUILD" > $LOG_FILE
