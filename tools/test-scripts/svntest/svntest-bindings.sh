@@ -40,6 +40,21 @@ test "$TEST_BINDINGS_SWIG_PERL" = "yes" && {
     fi
 }
 
+# With swig-rb run following targets:
+# build, check
+BINDING_NAME="swig-rb"
+test "$TEST_BINDINGS_SWIG_RUBY" = "yes" && {
+    $NICE $EXEC_PATH/svntest-bindings-generic.sh \
+       "$BUILD_TYPE" "$BINDING_NAME" \
+       "swig-rb" "" "check-swig-rb"
+    if test $? = 0
+    then
+        send_bindings_email "$BINDING_NAME" "PASS"
+    else
+        send_bindings_email "$BINDING_NAME" "FAIL"
+    fi
+}
+
 # With swig-py run following targets:
 # build, install
 BINDING_NAME="swig-py"
