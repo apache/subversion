@@ -24,6 +24,7 @@ Candidate changes:
     Votes:
       +1: fitz (except r14893, r14898, r14905 and r14947)
       +1: lundblad, kfogel
+      +1: dberlin
 
   * r14885
     Python bindings, fix for functions returning MD5 digests.
