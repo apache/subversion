@@ -89,7 +89,7 @@ def cat_skip_uncattable(sbox):
   sbox.build()
 
   wc_dir = sbox.wc_dir
-  dir_path = os.path.join(wc_dir, 'A/D')
+  dir_path = os.path.join(wc_dir, 'A', 'D')
   new_file_path = os.path.join(dir_path, 'new')
   open(new_file_path, 'w')
   item_list = os.listdir(dir_path)
