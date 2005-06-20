@@ -114,6 +114,7 @@ the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
     * speedups for 'svn blame' and other commands (see xdelta in release notes)
     * fixed: make both svnserve and svn:// urls work with IPv6 (r13235-6)
     * fixed: updating xml-unsafe dirname over http (issue #2268)
+    * new translation of localized messages: French
     * continued improvement of localized message translations:
         - German, Spanish, Polish, Brazilian Portuguese, Norwegian Bokmål,
           Swedish, Traditional Chinese, Simplified Chinese, Korean, Japanese
