@@ -111,6 +111,7 @@ the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
         - new hook scripts: pre-lock, pre-unlock, post-lock, post-unlock
     * speedups for 'svn blame' and other commands (see xdelta in release notes)
     * fixed: make both svnserve and svn:// urls work with IPv6 (r13235-6)
+    * new translation of localized messages: French
     * continued improvement of localized message translations:
         - German, Spanish, Polish, Brazilian Portuguese, Norwegian Bokmål,
           Swedish, Traditional Chinese, Simplified Chinese, Korean, Japanese
