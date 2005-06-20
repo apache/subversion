@@ -47,6 +47,24 @@ Candidate changes:
     Votes:
       +1: kfogel
 
+  * r15119
+    Fix an off-by-one error in svn_repos_get_logs3. (follow up to r14759)
+    Justification: API correctness
+    Votes:
+      +1: clkao
+
+  * r15082
+    Perl bindings, svn_lock_t related accessors.
+    Justifcation: Bindings completeness
+    Votes:
+      +1: clkao
+
+  * r15080, r15081, r15117
+    Perl bindings, call utf_initialize, adjust global pool usage
+    Justification: Performance issue for binding users in non-utf8 locale
+    Votes:
+      +1: clkao
+
 Approved changes (further review is welcome, but not required):
 
  (None at the moment)
