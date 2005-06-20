@@ -408,7 +408,7 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
          detecting when the file didn't exists.  But we have to be careful
          with what error codes we return.  If the file doesn't exist,
          we should return no error.  But, *if* it exists, but it is
-         unversioned, we have to return SVN_ERR_WC_ENTRY_NOT_FOUND. */
+         unversioned, we have to return SVN_ERR_ENTRY_NOT_FOUND. */
       if (! err && equal_timestamps)
         {
           *modified_p = FALSE;
