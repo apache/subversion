@@ -46,12 +46,12 @@ functions.
 
 =cut
 
-our $gpool;
 BEGIN {
     SVN::_Core::apr_initialize();
-    $gpool = SVN::Core::pool_create(undef);
-    SVN::Core::utf_initialize($gpool);
 }
+
+our $gpool = SVN::Pool->new_default;
+SVN::Core::utf_initialize($gpool);
 
 END {
     SVN::_Core::apr_terminate();
