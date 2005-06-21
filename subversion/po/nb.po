@@ -58,7 +58,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-06-20 16:47+0200\n"
-"PO-Revision-Date: 2004-07-13 11:59+0200\n"
+"PO-Revision-Date: 2005-06-21 09:06+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1253,7 +1253,6 @@ msgstr ""
 "kataloger.\n"
 
 #: clients/cmdline/main.c:614
-#, fuzzy
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -1342,7 +1341,6 @@ msgstr ""
 "      «A» lagt til («Added»)\n"
 "      «C» i konflikt («Conflict»)\n"
 "      «D» slettet («Deleted»)\n"
-"      «G» flettet («merGed»)\n"
 "      «I» Ignorert\n"
 "      «M» endret («Modified»)\n"
 "      «R» byttet («Replaced»)\n"
@@ -1947,7 +1945,7 @@ msgstr "Prøve «svn revert --recursive» i stedet?"
 #: clients/cmdline/status.c:278
 #, c-format
 msgid "'%s' has lock token, but no lock owner"
-msgstr ""
+msgstr "«%s» har en låsnøkkel, men ingen eier av låsen"
 
 #: clients/cmdline/switch-cmd.c:58
 #, c-format
@@ -2535,7 +2533,7 @@ msgstr "Feilaktig nettverksdata"
 
 #: include/svn_error_codes.h:710
 msgid "Unable to extract data from response header"
-msgstr ""
+msgstr "Klarte ikke å hente data fra responsheader"
 
 #: include/svn_error_codes.h:716 include/svn_error_codes.h:745
 msgid "Couldn't find a repository"
@@ -3261,9 +3259,8 @@ msgstr ""
 "argumenter"
 
 #: libsvn_client/locking_commands.c:300
-#, fuzzy
 msgid "Unable to lock/unlock across multiple repositories"
-msgstr "Kunne ikke åpne depotet «%s»"
+msgstr "Kan ikke låse/låse opp på tvers av flere depoter"
 
 #: libsvn_client/locking_commands.c:341
 #, c-format
@@ -4448,7 +4445,7 @@ msgstr "Kunne ikke lagre adressen på den versjonerte ressursen"
 
 #: libsvn_ra_dav/fetch.c:398
 msgid "Could not get content-type from response."
-msgstr ""
+msgstr "Klarte ikke å lese innholdstype (content-type) fra responsen."
 
 #: libsvn_ra_dav/fetch.c:443
 #, c-format
@@ -5562,15 +5559,15 @@ msgstr ""
 "feil)"
 
 #: libsvn_subr/io.c:1034
-#, fuzzy, c-format
+#, c-format
 msgid "Can't open file at '%s'"
-msgstr "Kan ikke åpne filen «%s»"
+msgstr "Kan ikke åpne filen i «%s»"
 
 #: libsvn_subr/io.c:1038
-#, fuzzy, c-format
+#, c-format
 msgid "Can't get file perms for file at '%s' (file stat error)"
 msgstr ""
-"Klarer ikke å få tak i standard filrettigheter for filen i «%s» («file stat»-"
+"Klarer ikke å lese filrettigheter for filen i «%s» («file stat»-"
 "feil)"
 
 #: libsvn_subr/io.c:1071 libsvn_subr/io.c:1131
@@ -6131,10 +6128,10 @@ msgid "Can't add '%s' to a parent directory scheduled for deletion"
 msgstr "Kan ikke legge til «%s» når foreldrekatalogen er klarert for sletting"
 
 #: libsvn_wc/adm_ops.c:1059
-#, fuzzy, c-format
+#, c-format
 msgid "The URL '%s' has different repository root than its parent"
 msgstr ""
-"Kilde-URL «%s» er fra et fremmed depot; beholder det som adskilt arbeidskopi"
+"URLen «%s» har en forskjellig depotrot enn sin forelder"
 
 #: libsvn_wc/adm_ops.c:1333 libsvn_wc/adm_ops.c:1338 libsvn_wc/adm_ops.c:1374
 #, c-format
@@ -6234,9 +6231,9 @@ msgid "Error writing entries file for '%s'"
 msgstr "Feil under skriving av postfil for «%s»"
 
 #: libsvn_wc/entries.c:221
-#, fuzzy, c-format
+#, c-format
 msgid "Entry for '%s' has invalid repository root"
-msgstr "Posten «%s» har ugyldig nodetype"
+msgstr "Posten «%s» har ugyldig depotrot"
 
 #: libsvn_wc/entries.c:243
 #, c-format
@@ -6748,9 +6745,9 @@ msgid "'%s' has no ancestry information"
 msgstr "«%s» mangler informasjon om opprinnelse"
 
 #: libsvn_wc/update_editor.c:2956
-#, fuzzy, c-format
+#, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
-msgstr "Kilde-URL «%s» er fra et forskjellig depot"
+msgstr "Kilde-URL «%s» har forskjellig depotrot enn «%s»"
 
 #: libsvn_wc/util.c:83
 msgid "Unable to make any directories"
@@ -7366,7 +7363,7 @@ msgstr "ikke vis forskjeller for filer som er lagt til"
 
 #: svnlook/main.c:119
 msgid "print differences against the copy source"
-msgstr ""
+msgstr "vis forskjeller mot kildekopien"
 
 #: svnlook/main.c:125
 msgid "show full paths instead of indenting them"
@@ -7840,7 +7837,6 @@ msgid "Type 'svnversion --help' for usage.\n"
 msgstr "Skriv «svnversion --help» for bruksanvisning.\n"
 
 #: svnversion/main.c:134
-#, fuzzy
 msgid ""
 "usage: svnversion [OPTIONS] [WC_PATH [TRAIL_URL]]\n"
 "\n"
@@ -7893,6 +7889,8 @@ msgstr ""
 "\n"
 "  Hvis programmet kjøres i en katalog som ikke er en arbeidskopi, f.eks. en\n"
 "  eksportert katalog, skrives «eksportert» ut.\n"
+"\n"
+"  Hvis programmet kjøres uten argumenter er AK_STI den nåværende katalogen.\n"
 "\n"
 "Valg:\n"
 
