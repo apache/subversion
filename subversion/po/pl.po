@@ -4135,7 +4135,9 @@ msgstr "Nieoczekiwany węzeł nie podlegający dla '%s'"
 #, c-format
 msgid ""
 "No deletion changes for path '%s' in transaction '%s' of filesystem '%s'"
-msgstr "Brak zmian typu usunięcie dla ścieżki '%s' w transakcji '%s' w systemie plików '%s'"
+msgstr ""
+"Brak zmian typu usunięcie dla ścieżki '%s' w transakcji '%s' w systemie "
+"plików '%s'"
 
 #: libsvn_fs_base/tree.c:1887 libsvn_fs_fs/tree.c:1213
 #, c-format
