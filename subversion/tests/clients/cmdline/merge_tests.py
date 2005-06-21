@@ -2532,6 +2532,143 @@ def merge_dir_branches(sbox):
                      "Copied From Rev: 2\n", "\n"]
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'info', foo_path)
+
+
+#----------------------------------------------------------------------
+
+# Part of issue 2035, whereby 'svn merge' would destroy local
+# prop-mods by overwriting them with different prop-mods.
+
+# Helper for safe_property_merge()  -- a custom singleton handler.
+def detect_conflict_files(node, extra_files):
+  """NODE has been discovered an extra file on disk.  Verify that it
+  matches one of the regular expressions in the EXTRA_FILES list.  If
+  it matches, remove the match from the list.  If it doesn't match,
+  raise an exception."""
+
+  for pattern in extra_files:
+    mo = re.match(pattern, node.name)
+    if mo:
+      extra_files.pop(extra_files.index(pattern)) # delete pattern from list
+      break
+  else:
+    print "Found unexpected disk object:", node.name
+    raise svntest.tree.SVNTreeUnequal
+
+
+def safe_property_merge(sbox):
+  "property merges don't overwrite existing prop-mods"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add a property to a file and a directory, commit as r2.
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'foo_val',
+                                     alpha_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'foo_val',
+                                     E_path)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'       : Item(verb='Sending'),
+    'A/B/E/alpha' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', wc_rev=2, status='  ')
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output, expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Copy B to B2 as rev 3  (making a branch)
+  B_url = svntest.main.current_repo_url + '/A/B'
+  B2_url = svntest.main.current_repo_url + '/A/B2'
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', '-m', 'fumble',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     B_url, B2_url)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Change the properties underneath B again, and commit as r4
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'foo_val2',
+                                     alpha_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'foo_val2',
+                                     E_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'       : Item(verb='Sending'),
+    'A/B/E/alpha' : Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output, None,
+                                         None, None, None, None, None,
+                                         wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Make local propchanges to E and alpha in the branch.
+  alpha_path2 = os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha')
+  E_path2 = os.path.join(wc_dir, 'A', 'B2', 'E')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'branchval',
+                                     alpha_path2)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'branchval',
+                                     E_path2)
+
+  # Now merge the recent B change to the branch.  Because we already
+  # have local propmods, we should get property conflicts.
+  B2_path = os.path.join(wc_dir, 'A', 'B2')
+
+  expected_output = wc.State(B2_path, {
+    'E'        : Item(status=' C'),
+    'E/alpha'  : Item(status=' C'),
+    })
+
+  expected_disk = wc.State('', {
+    'E'        : Item(),
+    'E/alpha'  : Item("This is the file 'alpha'."),
+    'E/beta'   : Item("This is the file 'beta'."),
+    'F'        : Item(),
+    'lambda'   : Item("This is the file 'lambda'."),
+    })
+  expected_disk.tweak('E', 'E/alpha', 
+                      props={'foo' : 'branchval'}) # local mods still present
+
+  expected_status = wc.State(B2_path, {
+    ''        : Item(status='  '),
+    'E'       : Item(status=' C'),
+    'E/alpha' : Item(status=' C'),
+    'E/beta'  : Item(status='  '),
+    'F'       : Item(status='  '),
+    'lambda'  : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=4)
+
+  expected_skip = wc.State('', { })
+
+  # should have 2 'prej' files left behind, describing prop conflicts:
+  extra_files = ['alpha.*\.prej', 'dir_conflicts.*\.prej']
+  
+  svntest.actions.run_and_verify_merge(B2_path, '3', '4', B_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected error string
+                                       detect_conflict_files, extra_files,
+                                       None, None, # no B singleton handler
+                                       1, # check props
+                                       0) # dry_run
+
   
 
 ########################################################################
@@ -2561,6 +2698,7 @@ test_list = [ None,
               merge_prop_change_to_deleted_target,
               merge_file_with_space_in_its_name,
               merge_dir_branches,
+              safe_property_merge,
               # property_merges_galore,  # Would be nice to have this.
               # tree_merges_galore,      # Would be nice to have this.
               # various_merges_galore,   # Would be nice to have this.
