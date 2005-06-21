@@ -59,11 +59,3 @@ Approved changes (further review is welcome, but not required):
       +1: lundblad, kfogel
       +1: dberlin
 
-  * r15046
-    Fix incorrect modification of request_rec->content_type.
-    Justification:
-      Corrects API violation, allowing the AddOutputFilterByType
-      directive to function properly.
-    Votes:
-      +1: dlr, kfogel, striker
-

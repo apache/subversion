@@ -2164,7 +2164,7 @@ static dav_error * dav_svn_set_headers(request_rec *r,
 
   /* set the discovered MIME type */
   /* ### it would be best to do this during the findct phase... */
-  r->content_type = mimetype;
+  ap_set_content_type(r, mimetype);
 
   return NULL;
 }
