@@ -642,6 +642,7 @@ diff_file_deleted_no_diff (svn_wc_adm_access_t *adm_access,
 
   SVN_ERR (file_printf_from_utf8
            (diff_cmd_baton->outfile,
+            diff_cmd_baton->header_encoding,
             "Index: %s (deleted)" APR_EOL_STR "%s" APR_EOL_STR, 
             path, equal_string));
 
