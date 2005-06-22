@@ -44,6 +44,7 @@ module Svn
       alias _initialize initialize
       def initialize(pool)
         @pool = pool
+        @prompts = []
         @providers = []
         update_auth_baton
       end
@@ -221,6 +222,7 @@ module Svn
           cred
         end
         pro = Client.__send__("get_#{name}_prompt_provider", real_prompt, *args)
+        @prompts << real_prompt
         @providers << pro
         update_auth_baton
       end
