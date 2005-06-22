@@ -258,7 +258,7 @@ the most important formatting guidelines:
            {
              arg1 = another_func (arg1);
            }
-           while (*arg1);
+         while (*arg1);
        }
    }
 
