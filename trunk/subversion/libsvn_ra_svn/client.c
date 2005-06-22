@@ -250,6 +250,10 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   apr_sockaddr_t *sa;
   apr_status_t status;
   int family = APR_INET;
+  const char *hostname_native = hostname;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR(svn_utf_cstring_from_utf8(&hostname_native, hostname, pool));
+#endif
   
   /* Make sure we have IPV6 support first before giving apr_sockaddr_info_get
      APR_UNSPEC, because it may give us back an IPV6 address even if we can't
@@ -270,7 +274,7 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
 #endif
 
   /* Resolve the hostname. */
-  status = apr_sockaddr_info_get(&sa, hostname, family, port, 0, pool);
+  status = apr_sockaddr_info_get(&sa, hostname_native, family, port, 0, pool);
   if (status)
     return svn_error_createf(status, NULL, _("Unknown hostname '%s'"),
                              hostname);
@@ -750,18 +754,31 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
   apr_array_header_t *mechlist, *caplist;
   apr_uri_t uri;
   apr_status_t err;
-  
-  err = apr_uri_parse (pool, url, &uri);
+  const char *url_native = url;
+
+#if APR_CHARSET_EBCDIC
+  SVN_ERR(svn_utf_cstring_from_utf8(&url_native, url, pool));
+#endif
+  err = apr_uri_parse (pool, url_native, &uri);
   
   if (err != 0)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                              _("Illegal svn repository URL '%s'"), url);
   
   port = uri.port ? uri.port : SVN_RA_SVN_PORT;
+#if !APR_CHARSET_EBCDIC
   hostname = uri.hostname;
   user = uri.user;
   hostinfo = uri.hostinfo;
-  
+#else
+  if (uri.hostname)
+    SVN_ERR(svn_utf_cstring_to_utf8(&hostname, uri.hostname, pool));
+  if (uri.user)
+    SVN_ERR(svn_utf_cstring_to_utf8(&user, uri.user, pool));
+  if (uri.hostinfo)
+    SVN_ERR(svn_utf_cstring_to_utf8(&hostinfo, uri.hostinfo, pool));
+#endif
+
   parse_tunnel (url, &tunnel, pool);
 
   if (tunnel)
