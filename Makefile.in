@@ -606,16 +606,14 @@ clean-swig-pl:
 	  cd $(SWIG_PL_DIR)/native; $(MAKE) clean; \
 	fi
 
-check-swig-rb: swig-rb svnserve clean-swig-rb-test
+check-swig-rb: swig-rb svnserve
 	cd $(SWIG_RB_DIR); \
 	  $(RUBY) -I $(SWIG_RB_SRC_DIR) \
 	    $(SWIG_RB_SRC_DIR)/test/run-test.rb \
 	    --verbose=$(SWIG_RB_TEST_VERBOSE)
 
-clean-swig-rb-test:
+clean-swig-rb:
 	rm -rf $(SWIG_RB_DIR)/test/repos $(SWIG_RB_DIR)/test/wc
-
-clean-swig-rb: clean-swig-rb-test
 	for d in $(SWIG_RB_DIR) $(SWIG_RB_DIR)/libsvn_swig_ruby; \
 	do \
 	  cd $$d; \

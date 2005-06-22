@@ -19,6 +19,7 @@ module SvnTestUtil
     setup_repository(@repos_path)
     @repos = Svn::Repos.open(@repos_path, @pool)
     @fs = @repos.fs
+    FileUtils.rm_rf(@wc_path)
     make_context("").checkout(@repos_uri, @wc_path)
     add_authentication
     setup_svnserve
@@ -32,6 +33,7 @@ module SvnTestUtil
   end
 
   def setup_repository(path, config={}, fs_config={})
+    FileUtils.rm_rf(path)
     FileUtils.mkdir_p(File.dirname(path))
     Svn::Core::Pool.new do |pool|
       Svn::Repos.create(path, config, fs_config, pool)
