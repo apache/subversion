@@ -9,6 +9,35 @@ aspects.
 This is NOT a design document.  It offers no solutions or proposals.
 It's just a place to enumerate potential problems that need solving.
 
+* Some thoughts about what "merge tracking" means.
+
+  - If you merge rN into some destination (e.g., into branch B), it
+    should be possible to query rN itself to ask what destinations it
+    has been merged to, and the answer set should contain B.
+
+  - If you merge rN into a branch B, and rN was committed by author A,
+    then 'svn blame' should show the changed lines in B as last
+    touched by A, even if the merge was committed by you and you are
+    not A.  (Hmm, this gets tough to implement when one merges a range
+    of revisions simultaneously!)
+
+  - It should be possible to query any path (file or directory) to
+    find out what changes (revisions) have been merged under it.  For
+    files, "under" just means "into".
+
+  - It should be easy to discover all the paths at which a particular
+    node revision (i.e., unique versioned file entity) exists,
+    especially in a given revision.  IOW, this is the "what branches
+    does this exact version of this file exist in" problem, often
+    requested by so-called enterprise-level users.
+
+  - Merge records should be transitive.  Often we merge a bunch of
+    changes to a backport branch, tweak them there, then later merge
+    the branch into a release line.  Later queries of the release line
+    should show that the original revisions are present, and queries
+    of the original revisions should show that they went to the
+    release line as well as the backport branch.
+
 * Repeated Merge
 
   Solve the "repeated merge" problem at the level of whole changesets.
