@@ -30,10 +30,15 @@
 #include "svn_string.h"
 #include "svn_auth.h"
 #include "svn_error.h"
+#include "svn_ebcdic.h"
+#include "svn_utf.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
 
+#define USERNAME_STR \
+        "\x55\x73\x65\x72\x6e\x61\x6d\x65"
+        /* "Username" */
 
 
 /* Wait for input on @a *f.  Doing all allocations
@@ -100,7 +105,7 @@ prompt (const char **result,
   if (! hide)
     {
       svn_boolean_t saw_first_half_of_eol = FALSE;
-      SVN_ERR (svn_cmdline_fputs (prompt_msg, stderr, pool));
+      SVN_ERR(SVN_CMDLINE_FPRINTF2(stderr, pool, "%s", prompt_msg));
       fflush (stderr);
 
       while (1)
@@ -155,6 +160,13 @@ prompt (const char **result,
       status = apr_password_get (prompt_stdout, strbuf->data, &bufsize);
       if (status)
         return svn_error_wrap_apr (status, _("Can't get password"));
+#if AS400
+      /* IBM's implmentation of apr_password_get is a bit buggy and appends
+       * an APR_EOL_STR to strbuf->data.  Possibly this is getting appended
+       * by the QSH environment.  Either way, this needs to go. */
+      if(strbuf->data[strlen(strbuf->data) - 1] == APR_EOL_STR[0])
+        strbuf->data[strlen(strbuf->data) - 1] = '\0';  
+#endif
     }
 
   SVN_ERR (svn_cmdline_cstring_to_utf8 (result, strbuf->data, pool));
@@ -175,8 +187,8 @@ maybe_print_realm (const char *realm, apr_pool_t *pool)
 {
   if (realm)
     {
-      SVN_ERR (svn_cmdline_fprintf (stderr, pool,
-                                    _("Authentication realm: %s\n"), realm));
+      SVN_ERR (SVN_CMDLINE_FPRINTF2 (stderr, pool,
+                                     _("Authentication realm: %s\n"), realm));
       fflush (stderr);
     }
 
@@ -202,9 +214,11 @@ svn_cl__auth_simple_prompt (svn_auth_cred_simple_t **cred_p,
   if (username)
     ret->username = apr_pstrdup (pool, username);
   else
-    SVN_ERR (prompt (&(ret->username), _("Username: "), FALSE, ctx, pool));
+    SVN_ERR (prompt (&(ret->username),
+                     _(USERNAME_STR SVN_UTF8_COLON_STR SVN_UTF8_SPACE_STR),
+                     FALSE, ctx, pool));
 
-  pass_prompt = apr_psprintf (pool, _("Password for '%s': "), ret->username);
+  pass_prompt = APR_PSPRINTF2 (pool, _("Password for '%s': "), ret->username);
   SVN_ERR (prompt (&(ret->password), pass_prompt, TRUE, ctx, pool));
   ret->may_save = may_save;
   *cred_p = ret;
@@ -225,7 +239,9 @@ svn_cl__auth_username_prompt (svn_auth_cred_username_t **cred_p,
 
   SVN_ERR (maybe_print_realm (realm, pool));
 
-  SVN_ERR (prompt (&(ret->username), _("Username: "), FALSE, ctx, pool));
+  SVN_ERR (prompt (&(ret->username),
+                   _(USERNAME_STR SVN_UTF8_COLON_STR SVN_UTF8_SPACE_STR),
+                   FALSE, ctx, pool));
   ret->may_save = may_save;
   *cred_p = ret;
   return SVN_NO_ERROR;
