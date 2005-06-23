@@ -316,7 +316,7 @@ class SvnInfoTest < Test::Unit::TestCase
   end
   
   def make_info(rev=nil)
-    Svn::Info.new(@repos_path, rev || @fs.youngest_rev, @pool)
+    Svn::Info.new(@repos_path, rev || @fs.youngest_rev)
   end
 
 end

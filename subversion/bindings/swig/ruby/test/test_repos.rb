@@ -6,7 +6,7 @@ require "svn/fs"
 require "svn/repos"
 require "svn/client"
 
-class TestSvnRepos < Test::Unit::TestCase
+class SvnReposTest < Test::Unit::TestCase
   include SvnTestUtil
   
   def setup
@@ -45,12 +45,12 @@ class TestSvnRepos < Test::Unit::TestCase
 
     
     search_path = @repos_path
-    assert_equal(@repos_path, Svn::Repos.find_root_path(search_path, @pool))
+    assert_equal(@repos_path, Svn::Repos.find_root_path(search_path))
     search_path = "#{@repos_path}/XXX"
-    assert_equal(@repos_path, Svn::Repos.find_root_path(search_path, @pool))
+    assert_equal(@repos_path, Svn::Repos.find_root_path(search_path))
 
     search_path = "not-found"
-    assert_equal(nil, Svn::Repos.find_root_path(search_path, @pool))
+    assert_equal(nil, Svn::Repos.find_root_path(search_path))
   end
 
   def test_transaction

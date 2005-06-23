@@ -30,35 +30,33 @@ module Svn
     attr_reader :path, :revision, :diffs
     attr_reader :sha256, :entire_sha256
 
-    def initialize(path, rev, pool)
-      setup(path, rev, Core::Pool.new(pool))
+    def initialize(path, rev)
+      setup(path, rev)
       get_info
       get_dirs_changed
       get_changed
       get_diff
       get_sha256
+      teardown
     end
 
     private
-    def setup(path, rev, pool)
+    def setup(path, rev)
       @path = path
       @revision = Integer(rev)
       @prev_rev = @revision - 1
-      @pool = pool
-      @repos = Repos.open(@path, @pool)
+      @repos = Repos.open(@path)
       @fs = @repos.fs
       @root = @fs.root(@revision)
     end
 
     def teardown
-      @root.close
-      @pool.destroy
       @repos = @root = @fs = nil
     end
     
     def get_info
       @author = force_to_utf8(prop(Core::PROP_REVISION_AUTHOR))
-      @date = Util.string_to_time(prop(Core::PROP_REVISION_DATE), @pool)
+      @date = Util.string_to_time(prop(Core::PROP_REVISION_DATE))
       @log = force_to_utf8(prop(Core::PROP_REVISION_LOG))
     end
 
@@ -139,9 +137,7 @@ module Svn
       else
         base_props = base_root.node_prop_list(base_path)
       end
-      prop_changes = Core.prop_diffs(local_props, base_props, @pool)
-      # a, b, props = Core.categorize_props(prop_changes, @pool)
-      # p [a, b, props]
+      prop_changes = Core.prop_diffs(local_props, base_props)
       prop_changes.each do |prop|
         entry = diff_entry(path, :property_changed)
         entry.body << "Name: #{force_to_utf8(prop.name)}\n"
@@ -153,13 +149,13 @@ module Svn
     
     def try_diff(node, base_root, path, base_path)
       if node.replace? and node.text_mod?
-        differ = Fs::FileDiff.new(base_root, base_path, @root, path, @pool)
+        differ = Fs::FileDiff.new(base_root, base_path, @root, path)
         do_diff(node, base_root, path, base_path, differ)
       elsif node.add? and node.text_mod?
-        differ = Fs::FileDiff.new(nil, base_path, @root, path, @pool)
+        differ = Fs::FileDiff.new(nil, base_path, @root, path)
         do_diff(node, base_root, path, base_path, differ)
       elsif node.delete?
-        differ = Fs::FileDiff.new(base_root, base_path, nil, path, @pool)
+        differ = Fs::FileDiff.new(base_root, base_path, nil, path)
         do_diff(node, base_root, path, base_path, differ)
       elsif node.copy?
         diff_entry(path, get_type(node))
@@ -273,7 +269,7 @@ module Svn
     end
 
     def format_date(str)
-      Util.string_to_time(str, @pool).strftime("%Y-%m-%d %H:%M:%S %Z")
+      Util.string_to_time(str).strftime("%Y-%m-%d %H:%M:%S %Z")
     end
     
     class DiffEntry

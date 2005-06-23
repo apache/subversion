@@ -48,6 +48,9 @@ svn_swig_rb_array_to_auth_provider_object_apr_array(VALUE array,
 apr_array_header_t * svn_swig_rb_array_to_apr_array_prop(VALUE array,
                                                          apr_pool_t *pool);
   
+void svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self, VALUE *rb_pool, apr_pool_t **pool);
+void svn_swig_rb_set_pool(VALUE target, VALUE pool);
+
 void svn_swig_rb_make_editor(const svn_delta_editor_t **editor,
                              void **edit_baton,
                              VALUE rb_editor,
@@ -113,7 +116,7 @@ svn_error_t *svn_swig_rb_auth_ssl_client_cert_pw_prompt_func(
     apr_pool_t *pool);
 
 apr_file_t *svn_swig_rb_make_file(VALUE file, apr_pool_t *pool);
-svn_stream_t *svn_swig_rb_make_stream(VALUE io, apr_pool_t *pool);
+svn_stream_t *svn_swig_rb_make_stream(VALUE io);
 
 void svn_swig_rb_set_revision(svn_opt_revision_t *rev, VALUE value);
 

@@ -22,7 +22,7 @@ class TestSvnFs < Test::Unit::TestCase
     ctx = make_context(log)
     ctx.checkout(@repos_uri, @wc_path)
     ctx.mkdir(["#{@wc_path}/new_dir"])
-    past_time = Time.new
+    past_time = Time.parse(Time.new.to_s)
     info = ctx.commit([@wc_path])
 
     assert_equal(@author, info.author)

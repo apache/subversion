@@ -51,10 +51,8 @@ class SvnShell
   
   # Constructor for SvnShell
   #
-  # pool: A Subversion memory pool for this object to use
   # path: The path to a Subversion repository
-  def initialize(pool, path)
-    @pool = pool
+  def initialize(path)
     @repos_path = path
     @path = "/"
     self.rev = youngest_rev
@@ -73,22 +71,19 @@ class SvnShell
       # Skip empty lines
       next if /\A\s*\z/ =~ cmd.to_s
 
-      Svn::Core::Pool.new(@pool) do |pool|
+      # Open a new connection to the repo
+      @fs = Svn::Repos.open(@repos_path).fs
+      setup_root
 
-        # Open a new connection to the repo
-        @fs = Svn::Repos.open(@repos_path, pool).fs
-        setup_root
+      # Execute the specified command
+      dispatch(cmd, *args)
 
-        # Execute the specified command
-        dispatch(cmd, *args)
+      # Find a path that exists in the current revision
+      @path = find_available_path
 
-        # Find a path that exists in the current revision
-        @path = find_available_path
+      # Close the connection to the repo
+      @root.close
 
-        # Close the connection to the repo
-        @root.close
-        
-      end
     end
   end
 
@@ -343,9 +338,7 @@ class SvnShell
 
   # Find the youngest revision
   def youngest_rev
-    Svn::Core::Pool.new(@pool) do |tmp_pool|
-      Svn::Repos.open(@repos_path, tmp_pool).fs.youngest_rev
-    end
+    Svn::Repos.open(@repos_path).fs.youngest_rev
   end
 
   # Set the current revision
@@ -441,7 +434,7 @@ class SvnShell
 
   # Format a date for output in a standard format
   def format_date(date_str)
-    date = Svn::Util.string_to_time(date_str, @taskpool)
+    date = Svn::Util.string_to_time(date_str)
     date.strftime("%b %d %H:%M(%Z)")
   end
   
@@ -460,6 +453,4 @@ if ARGV.size != 1
 end
 
 # Create a new SvnShell with the command-line arguments and run it
-Svn::Core::Pool.new do |pool|
-  SvnShell.new(pool, ARGV.shift).run
-end
+SvnShell.new(ARGV.shift).run

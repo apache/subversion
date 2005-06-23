@@ -250,20 +250,25 @@
 %typemap(perl5, default) apr_pool_t *pool(apr_pool_t *_global_pool) {
     _global_pool = $1 = svn_swig_pl_make_pool (ST(items-1));
 }
-%typemap(ruby, arginit) apr_pool_t *pool (apr_pool_t *_global_pool) {
-  if (argc == 0) {
-    /* wrong # of arguments: we need at least a pool. */
-  } else if (argc <= $argnum) {
-    if (NIL_P(argv[argc - 1])) {
-      rb_raise(rb_eArgError, "pool must be not nil");
-    }
-    /* Assume that the pool here is the last argument in the list */
-    SWIG_ConvertPtr(argv[argc - 1], (void **)&$1, $1_descriptor, 1);
-    _global_pool = $1;
-  }
+%typemap(ruby, in) apr_pool_t *pool "";
+%typemap(ruby, default) apr_pool_t *pool (VALUE _global_rb_pool, apr_pool_t *_global_pool) {
+  svn_swig_rb_get_pool(argc, argv, self, &_global_rb_pool, &$1);
+  _global_pool = $1;
+}
+
+%typemap(ruby, argout) apr_pool_t *pool {
+  svn_swig_rb_set_pool($result, _global_rb_pool);
 }
 
 #ifdef SWIGPERL
+%apply apr_pool_t *pool {
+    apr_pool_t *dir_pool,
+    apr_pool_t *file_pool,
+    apr_pool_t *node_pool
+};
+#endif
+
+#ifdef SWIGRUBY
 %apply apr_pool_t *pool {
     apr_pool_t *dir_pool,
     apr_pool_t *file_pool,
@@ -339,7 +344,7 @@
 }
 
 %typemap(ruby, in) svn_stream_t * {
-    $1 = svn_swig_rb_make_stream($input, _global_pool);
+  $1 = svn_swig_rb_make_stream($input);
 }
 
 /* -----------------------------------------------------------------------
