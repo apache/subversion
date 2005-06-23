@@ -6,7 +6,7 @@ require "svn/fs"
 require "svn/repos"
 require "svn/client"
 
-class TestSvnFs < Test::Unit::TestCase
+class SvnFsTest < Test::Unit::TestCase
   include SvnTestUtil
   
   def setup
