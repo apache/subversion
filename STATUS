@@ -20,7 +20,7 @@ Candidate changes:
     Make lock/unlock over ra_dav able to cache authentication data.
     Justfication: Users of locking over http:// will get very annoyed.
     Votes:
-      +1: kfogel
+      +1: kfogel, sussman
 
   * r15119
     Fix an off-by-one error in svn_repos_get_logs3.
