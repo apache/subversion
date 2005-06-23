@@ -17,10 +17,8 @@ module Svn
     AdmAccess = SWIG::TYPE_p_svn_wc_adm_access_t
     class AdmAccess
       class << self
-        def open(associated, path, write_lock, depth, pool)
-          adm = Util.set_pool(pool) do
-            Wc.adm_open2(associated, path, write_lock, depth, pool)
-          end
+        def open(associated, path, write_lock, depth)
+          adm = Wc.adm_open2(associated, path, write_lock, depth)
           
           if block_given?
             ret = yield adm
@@ -32,13 +30,12 @@ module Svn
         end
       end
 
-      attr_accessor :pool
       def close
         Wc.adm_close(self)
       end
       
       def status(path)
-        Wc.status(path, self, @pool)
+        Wc.status(path, self)
       end
     end
   end

@@ -9,7 +9,6 @@ module SvnTestUtil
     @author = ENV["USER"] || "sample-user"
     @password = "sample-password"
     @realm = "sample realm"
-    @pool = Svn::Core::Pool.new(nil)
     @repos_path = File.join("test", "repos")
     @full_repos_path = File.expand_path(@repos_path)
     @repos_uri = "file://#{@full_repos_path}"
@@ -17,7 +16,7 @@ module SvnTestUtil
     @svnserve_ports = (64152..64282).collect{|x| x.to_s}
     @wc_path = File.join("test", "wc")
     setup_repository(@repos_path)
-    @repos = Svn::Repos.open(@repos_path, @pool)
+    @repos = Svn::Repos.open(@repos_path)
     @fs = @repos.fs
     FileUtils.rm_rf(@wc_path)
     make_context("").checkout(@repos_uri, @wc_path)
@@ -26,7 +25,6 @@ module SvnTestUtil
   end
 
   def teardown_basic
-    @pool.destroy
     teardown_svnserve
     teardown_repository(@repos_path)
     FileUtils.rm_rf(@wc_path)
@@ -35,15 +33,11 @@ module SvnTestUtil
   def setup_repository(path, config={}, fs_config={})
     FileUtils.rm_rf(path)
     FileUtils.mkdir_p(File.dirname(path))
-    Svn::Core::Pool.new do |pool|
-      Svn::Repos.create(path, config, fs_config, pool)
-    end
+    Svn::Repos.create(path, config, fs_config)
   end
 
   def teardown_repository(path)
-    Svn::Core::Pool.new do |pool|
-      Svn::Repos.delete(path, pool)
-    end
+    Svn::Repos.delete(path)
   end
 
   def setup_svnserve
@@ -116,11 +110,11 @@ realm = #{@realm}
   end
 
   def make_context(log)
-    ctx = Svn::Client::Context.new(@pool)
+    ctx = Svn::Client::Context.new
     ctx.log_msg_func = Proc.new do |items|
       [true, log]
     end
-    ctx.add_username_prompt_provider(0) do |cred, realm, may_save, pool|
+    ctx.add_username_prompt_provider(0) do |cred, realm, may_save|
       cred.username = @author
       cred.may_save = false
     end

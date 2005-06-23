@@ -206,7 +206,7 @@ apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
 
 %typemap(ruby, argout, fragment="output_helper") apr_file_t ** {
     $result = output_helper($result,
-                            SWIG_NewPointerObj((void *)*$1, $*1_descriptor, 1));
+                            SWIG_NewPointerObj((void *)*$1, $*1_descriptor, 0));
 }
 
 /* ----------------------------------------------------------------------- */

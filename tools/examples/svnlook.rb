@@ -29,10 +29,9 @@ end
 class SvnLook
 
   # Initialize the SvnLook application
-  def initialize(pool, path, rev, txn)
-    # Initialize memory pools and open a repository
-    @pool = pool
-    @fs = Svn::Repos.open(path, @pool).fs
+  def initialize(path, rev, txn)
+    # Open a repository
+    @fs = Svn::Repos.open(path).fs
 
     # If a transaction was specified, open it
     if txn
@@ -196,7 +195,7 @@ class SvnLook
 
   # Convert a string to an SVN date/time object
   def str_to_time(str)
-    Svn::Util.string_to_time(str, @pool)
+    Svn::Util.string_to_time(str)
   end
   
   # Output the current tree for a specified revision 
@@ -211,15 +210,15 @@ class SvnLook
     end
     
     # Recurse through the root (and increase the indent level)
-    def open_root(base_revision, dir_pool)
-      puts "/#{id('/', dir_pool)}"
+    def open_root(base_revision)
+      puts "/#{id('/')}"
       @indent << ' '
     end
 
     # If a directory is added, output this and increase
     # the indent level
     def add_directory(path, *args)
-      puts "#{@indent}#{basename(path)}/#{id(path, args[-1])}"
+      puts "#{@indent}#{basename(path)}/#{id(path)}"
       @indent << ' '
     end
 
@@ -232,7 +231,7 @@ class SvnLook
 
     # If a file is added, output that it has been changed
     def add_file(path, *args)
-      puts "#{@indent}#{basename(path)}#{id(path, args[-1])}"
+      puts "#{@indent}#{basename(path)}#{id(path)}"
     end
     
     alias open_file add_file
@@ -241,10 +240,10 @@ class SvnLook
     private
 
     # Get the node id of a particular path
-    def id(path, pool)
+    def id(path)
       if @root
-        fs_id = @root.node_id(path, pool)
-        " <#{fs_id.unparse(pool)}>"
+        fs_id = @root.node_id(path)
+        " <#{fs_id.unparse}>"
       else
         ""
       end
@@ -256,45 +255,45 @@ class SvnLook
   class DirsChangedEditor < Svn::Delta::Editor
 
     # Recurse through the root node
-    def open_root(base_revision, dir_pool)
+    def open_root(base_revision)
       [true, '']
     end
 
     # If a file is deleted, output that its parent has
     # been changed
-    def delete_entry(path, revision, parent_baton, pool)
+    def delete_entry(path, revision, parent_baton)
       dir_changed(parent_baton)
     end
 
     # If a directory is added, output that its parent has been
     # changed and recurse through the child directory's contents
     def add_directory(path, parent_baton,
-                      copyfrom_path, copyfrom_revision, dir_pool)
+                      copyfrom_path, copyfrom_revision)
       dir_changed(parent_baton)
       [true, path]
     end
 
     # Recurse through directories
-    def open_directory(path, parent_baton, base_revision, dir_pool)
+    def open_directory(path, parent_baton, base_revision)
       [true, path]
     end
 
     # If the properties of this directory have been changed,
     # output that the directory has been changed
-    def change_dir_prop(dir_baton, name, value, pool)
+    def change_dir_prop(dir_baton, name, value)
       dir_changed(dir_baton)
     end
 
     # If a file is added to this directory,
     # output that the directory has been changed 
     def add_file(path, parent_baton,
-                 copyfrom_path, copyfrom_revision, file_pool)
+                 copyfrom_path, copyfrom_revision)
       dir_changed(parent_baton)
     end
 
     # If a file is opened in this directory,
     # output that the directory has been changed 
-    def open_file(path, parent_baton, base_revision, file_pool)
+    def open_file(path, parent_baton, base_revision)
       dir_changed(parent_baton)
     end
 
@@ -325,19 +324,19 @@ class SvnLook
     end
 
     # Look at the root node
-    def open_root(base_revision, dir_pool)
+    def open_root(base_revision)
       # Nothing has been printed out yet, so return 'true'.
       [true, '']
     end
 
     # Output deleted files
-    def delete_entry(path, revision, parent_baton, pool)
+    def delete_entry(path, revision, parent_baton)
       # Output deleted paths with a D in front of them        
       print "D   #{path}"
 
       # If we're deleting a directory,
       # indicate this with a trailing slash
-      if @base_root.dir?('/' + path, pool)
+      if @base_root.dir?('/' + path)
         puts "/"
       else
         puts
@@ -346,7 +345,7 @@ class SvnLook
 
     # Output that a directory has been added
     def add_directory(path, parent_baton,
-                      copyfrom_path, copyfrom_revision, dir_pool)
+                      copyfrom_path, copyfrom_revision)
       # Output 'A' to indicate that the directory was added.
       # Also put a trailing slash since it's a directory.
       puts "A   #{path}/"
@@ -356,12 +355,12 @@ class SvnLook
     end
 
     # Recurse inside directories
-    def open_directory(path, parent_baton, base_revision, dir_pool)
+    def open_directory(path, parent_baton, base_revision)
       # Nothing has been printed out yet, so return true.
       [true, path]
     end
 
-    def change_dir_prop(dir_baton, name, value, pool)
+    def change_dir_prop(dir_baton, name, value)
       # Has the directory been printed yet?
       if dir_baton[0]
         # Print the directory
@@ -373,7 +372,7 @@ class SvnLook
     end
 
     def add_file(path, parent_baton,
-                 copyfrom_path, copyfrom_revision, file_pool)
+                 copyfrom_path, copyfrom_revision)
       # Output that a directory has been added
       puts "A   #{path}"
 
@@ -383,18 +382,18 @@ class SvnLook
     end
 
     
-    def open_file(path, parent_baton, base_revision, file_pool)
+    def open_file(path, parent_baton, base_revision)
       # Changes have been made -- return '_' to indicate as such
       ['_', ' ', path]
     end
 
-    def apply_textdelta(file_baton, base_checksum, pool)
+    def apply_textdelta(file_baton, base_checksum)
       # The file has been changed -- we'll print that out later.
       file_baton[0] = 'U'
       nil
     end
 
-    def change_file_prop(file_baton, name, value, pool)
+    def change_file_prop(file_baton, name, value)
       # The file has been changed -- we'll print that out later.
       file_baton[1] = 'U'
     end
@@ -422,30 +421,30 @@ class SvnLook
     end
 
     # Handle deleted files and directories
-    def delete_entry(path, revision, parent_baton, pool)
+    def delete_entry(path, revision, parent_baton)
       # Print out diffs of deleted files, but not
       # deleted directories
-      unless @base_root.dir?('/' + path, pool)
-        do_diff(path, nil, pool)
+      unless @base_root.dir?('/' + path)
+        do_diff(path, nil)
       end
     end
 
     # Handle added files
     def add_file(path, parent_baton,
-                 copyfrom_path, copyfrom_revision, file_pool)
+                 copyfrom_path, copyfrom_revision)
       # If a file has been added, print out the diff.
-      do_diff(nil, path, file_pool)
+      do_diff(nil, path)
 
-      ['_', ' ', nil, file_pool]
+      ['_', ' ', nil]
     end
 
     # Handle files
-    def open_file(path, parent_baton, base_revision, file_pool)
-      ['_', ' ', path, file_pool]
+    def open_file(path, parent_baton, base_revision)
+      ['_', ' ', path]
     end
 
     # If a file is changed, print out the diff
-    def apply_textdelta(file_baton, base_checksum, pool)
+    def apply_textdelta(file_baton, base_checksum)
       if file_baton[2].nil?
         nil
       else
@@ -456,7 +455,7 @@ class SvnLook
     private
 
     # Print out a diff between two paths 
-    def do_diff(base_path, path, pool)
+    def do_diff(base_path, path)
       if base_path.nil?
         # If there's no base path, then the file
         # must have been added
@@ -479,7 +478,7 @@ class SvnLook
       
       # Output a unified diff between the two files
       puts "=" * 78
-      differ = Svn::Fs::FileDiff.new(@base_root, base_path, @root, path, pool)
+      differ = Svn::Fs::FileDiff.new(@base_root, base_path, @root, path)
       puts differ.unified(base_label, label)
       puts
     end
@@ -542,6 +541,4 @@ cmd ||= "default"
 cmd = cmd.gsub(/-/, '_')
 
 # Start SvnLook with the specified command 
-Svn::Core::Pool.new do |pool|
-  SvnLook.new(pool, path, rev, txn).run(cmd)
-end
+SvnLook.new(path, rev, txn).run(cmd)

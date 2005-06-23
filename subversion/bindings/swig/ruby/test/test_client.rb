@@ -4,7 +4,7 @@ require "util"
 require "svn/core"
 require "svn/client"
 
-class TestSvnClient < Test::Unit::TestCase
+class SvnClientTest < Test::Unit::TestCase
   include SvnTestUtil
 
   def setup
@@ -167,13 +167,13 @@ class TestSvnClient < Test::Unit::TestCase
     ctx.add(path)
     ctx.commit(@wc_path)
 
-    ctx = Svn::Client::Context.new(@pool)
+    ctx = Svn::Client::Context.new
     
     assert_raises(Svn::Error::AUTHN_NO_PROVIDER) do
       ctx.cat(svnserve_uri)
     end
     
-    ctx.add_simple_prompt_provider(0) do |cred, realm, may_save, pool|
+    ctx.add_simple_prompt_provider(0) do |cred, realm, may_save|
       cred.username = "wrong-#{@author}"
       cred.password = @password
       cred.may_save = false
@@ -182,7 +182,7 @@ class TestSvnClient < Test::Unit::TestCase
       ctx.cat(svnserve_uri)
     end
     
-    ctx.add_simple_prompt_provider(0) do |cred, realm, may_save, pool|
+    ctx.add_simple_prompt_provider(0) do |cred, realm, may_save|
       cred.username = @author
       cred.password = "wrong-#{@password}"
       cred.may_save = false
@@ -191,7 +191,7 @@ class TestSvnClient < Test::Unit::TestCase
       ctx.cat(svnserve_uri)
     end
     
-    ctx.add_simple_prompt_provider(0) do |cred, realm, may_save, pool|
+    ctx.add_simple_prompt_provider(0) do |cred, realm, may_save|
       cred.username = @author
       cred.password = @password
       cred.may_save = false

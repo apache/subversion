@@ -162,11 +162,6 @@
 // svn_stream_read
 // svn_stream_write
 // svn_stream_close
-#ifdef SWIGRUBY
-%ignore svn_stream_read;
-%ignore svn_stream_write;
-%ignore svn_stream_close;
-#endif
 
 /* Scripts can do the printf, then write to a stream.
  * We can't really handle the variadic, so ignore it. */
@@ -558,38 +553,23 @@ SubversionException = _core.SubversionException
 #endif
 
 #ifdef SWIGRUBY
+/* dummy declaration */
+struct apr_pool_t 
+{
+};
+
+%extend apr_pool_t
+{
+  apr_pool_t(apr_pool_t *parent=NULL, apr_allocator_t *allocator=NULL) {
+    return svn_pool_create_ex(parent, allocator);
+  }
+
+  ~apr_pool_t() {
+    apr_pool_destroy(self);
+  }
+};
+
 %include svn_diff.h
-%rename(svn_stream_read) svn_stream_read_;
-%rename(svn_stream_write) svn_stream_write_;
-%rename(svn_stream_close) svn_stream_close_;
-%inline %{
-svn_error_t *
-svn_stream_read_ (svn_stream_t *stream, char *buffer,
-                 apr_size_t *len, apr_pool_t *pool)
-{
-  if (NIL_P(pool)) {
-    rb_raise(rb_eArgError, "pool must be not nil");
-  }
-  return svn_stream_read(stream, buffer, len);
-}
-svn_error_t *
-svn_stream_write_ (svn_stream_t *stream, const char *data,
-                    apr_size_t *len, apr_pool_t *pool)
-{
-  if (NIL_P(pool)) {
-    rb_raise(rb_eArgError, "pool must be not nil");
-  }
-  return svn_stream_write(stream, data, len);
-}
-svn_error_t *
-svn_stream_close_ (svn_stream_t *stream, apr_pool_t *pool)
-{
-  if (NIL_P(pool)) {
-    rb_raise(rb_eArgError, "pool must be not nil");
-  }
-  return svn_stream_close(stream);
-}
-%}
 REMOVE_DESTRUCTOR(svn_error_t)
 REMOVE_DESTRUCTOR(svn_dirent_t)
 REMOVE_DESTRUCTOR(svn_prop_t)

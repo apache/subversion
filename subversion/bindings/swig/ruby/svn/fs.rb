@@ -18,38 +18,25 @@ module Svn
     class FileSystem
 
       class << self
-        def new(config, pool)
-          Util.set_pool(pool) do
-            Fs.new(config, pool)
-          end
+        def new(config)
+          Fs.new(config)
         end
 
-        def create(path, config, pool)
-          Util.set_pool(pool) do
-            Fs.create(path, config, pool)
-          end
+        def create(path, config)
+          Fs.create(path, config)
         end
 
-        def open(path, config, pool)
-          Util.set_pool(pool) do
-            Fs.open(path, config, pool)
-          end
+        def open(path, config)
+          Fs.open(path, config)
         end
       end
       
-      attr_accessor :pool
-      
       def open_txn(name)
-        Util.set_pool(@pool) do
-          Fs.open_txn(self, name, @pool)
-        end
+        Fs.open_txn(self, name)
       end
 
       def transaction(rev=nil)
-        txn = nil
-        Util.set_pool(@pool) do
-          txn = Fs.begin_txn(self, rev || youngest_rev, @pool)
-        end
+        txn = Fs.begin_txn(self, rev || youngest_rev)
         
         if block_given?
           yield(txn)
@@ -60,21 +47,19 @@ module Svn
       end
       
       def youngest_rev
-        Fs.youngest_rev(self, @pool)
+        Fs.youngest_rev(self)
       end
 
       def prop(name, rev=nil)
-        Fs.revision_prop(self, rev || youngest_rev, name, @pool)
+        Fs.revision_prop(self, rev || youngest_rev, name)
       end
 
       def transactions
-        Fs.list_transactions(self, @pool)
+        Fs.list_transactions(self)
       end
 
       def root(rev=nil)
-        Util.set_pool(@pool) do
-          Fs.revision_root(self, rev || youngest_rev, @pool)
-        end
+        Fs.revision_root(self, rev || youngest_rev)
       end
     end
 
@@ -82,14 +67,12 @@ module Svn
     Transaction = SWIG::TYPE_p_svn_fs_txn_t
     class Transaction
 
-      attr_accessor :pool
-
       def name
-        Fs.txn_name(self, @pool)
+        Fs.txn_name(self)
       end
       
       def prop(name)
-        Fs.txn_prop(self, name, @pool)
+        Fs.txn_prop(self, name)
       end
 
       def base_revision
@@ -97,21 +80,19 @@ module Svn
       end
 
       def root
-        Util.set_pool(@pool) do
-          Fs.txn_root(self, @pool)
-        end
+        Fs.txn_root(self)
       end
 
       def proplist
-        Fs.txn_proplist(self, @pool)
+        Fs.txn_proplist(self)
       end
 
       def abort
-        Fs.abort_txn(self, @pool)
+        Fs.abort_txn(self)
       end
 
       def commit
-        result = Fs.commit(self, @pool)
+        result = Fs.commit(self)
         if result.is_a?(Array)
           result
         else
@@ -123,7 +104,6 @@ module Svn
 
     Root = SWIG::TYPE_p_svn_fs_root_t
     class Root
-      attr_accessor :pool
       attr_reader :editor
 
       def revision
@@ -131,43 +111,40 @@ module Svn
       end
 
       def fs
-        Util.set_pool(@pool) do
-          Fs.root_fs(self)
-        end
+        Fs.root_fs(self)
       end
       
       def node_id(path)
-        Fs.node_id(self, path, @pool)
+        Fs.node_id(self, path)
       end
 
       def node_created_rev(path)
-        Fs.node_created_rev(self, path, @pool)
+        Fs.node_created_rev(self, path)
       end
 
       def node_prop(path, key)
-        Fs.node_prop(self, path, key, @pool)
+        Fs.node_prop(self, path, key)
       end
       
       def node_proplist(path)
-        Fs.node_proplist(self, path, @pool)
+        Fs.node_proplist(self, path)
       end
       alias node_prop_list node_proplist
 
       def dir?(path)
-        Fs.dir?(self, path, @pool)
+        Fs.dir?(self, path)
       end
 
       def check_path(path)
-        Fs.check_path(self, path, @pool)
+        Fs.check_path(self, path)
       end
 
       def file_length(path)
-        Fs.file_length(self, path, @pool)
+        Fs.file_length(self, path)
       end
 
       def file_contents(path)
-        stream = Fs.file_contents(self, path, @pool)
-        Util.set_pool(@pool){stream}
+        stream = Fs.file_contents(self, path)
         if block_given?
           begin
             yield stream
@@ -184,16 +161,16 @@ module Svn
       end
 
       def dir_entries(path)
-        tmp = {}
-        Fs.dir_entries(self, path, @pool).each do |name, entry|
-          tmp[name] = Util.set_pool(@pool) {entry}
+        entries = {}
+        Fs.dir_entries(self, path).each do |name, entry|
+          entries[name] = entry
         end
-        tmp
+        entries
       end
 
       def editor=(editor)
         @editor = editor
-        @svn_editor, @baton = Delta.make_editor(@editor, @pool)
+        @svn_editor, @baton = Delta.make_editor(@editor)
       end
 
       def dir_delta(src_path, src_entry, tgt_root, tgt_path,
@@ -205,49 +182,36 @@ module Svn
                         tgt_root, tgt_path,
                         @svn_editor, @baton, authz_read_func,
                         text_deltas, recurse, entry_props,
-                        ignore_ancestry, @pool)
+                        ignore_ancestry)
       end
 
-      def replay(editor, edit_baton, edit_pool)
-        Repos.replay(self, editor, edit_baton, edit_pool)
+      def replay(editor, edit_baton)
+        Repos.replay(self, editor, edit_baton)
       end
 
       def copied_from(path)
-        Fs.copied_from(self, path, @pool)
+        Fs.copied_from(self, path)
       end
     end
 
 
     DirectoryEntry = Dirent
-    class DirectoryEntry
-      attr_accessor :pool
-
-      alias _id id
-      def id
-        Util.set_pool(@pool) do
-          _id
-        end
-      end
-    end
-    
     
     Id = SWIG::TYPE_p_svn_fs_id_t
     class Id
-      attr_accessor :pool
-      
       def to_s
         unparse
       end
       
       def unparse
-        Fs.unparse_id(self, pool)
+        Fs.unparse_id(self)
       end
     end
 
     
     class FileDiff
 
-      def initialize(root1, path1, root2, path2, pool)
+      def initialize(root1, path1, root2, path2)
         @tempfile1 = nil
         @tempfile2 = nil
 
@@ -257,8 +221,6 @@ module Svn
         @path1 = path1
         @root2 = root2
         @path2 = path2
-
-        @pool = pool
       end
 
       def binary?
@@ -285,9 +247,7 @@ module Svn
 
       def diff
         files
-        @diff ||= Util.set_pool(@pool) do
-          Core::Diff.file_diff(@tempfile1.path, @tempfile2.path, @pool)
-        end
+        @diff ||= Core::Diff.file_diff(@tempfile1.path, @tempfile2.path)
       end
 
       def unified(label1, label2)
