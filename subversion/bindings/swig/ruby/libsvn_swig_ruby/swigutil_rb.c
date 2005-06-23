@@ -318,7 +318,10 @@ r2c_hash_i(VALUE key, VALUE value, hash_to_apr_hash_data_t *data)
 {
   if (key != Qundef) {
     void *val = data->func(value, data->ctx, data->pool);
-    apr_hash_set(data->apr_hash, StringValuePtr(key), APR_HASH_KEY_STRING, val);
+    apr_hash_set(data->apr_hash,
+                 apr_pstrdup(data->pool, StringValuePtr(key)),
+                 APR_HASH_KEY_STRING,
+                 val);
   }
   return ST_CONTINUE;
 }
