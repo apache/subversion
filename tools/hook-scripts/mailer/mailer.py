@@ -133,7 +133,7 @@ class OutputBase:
 
     try:
       truncate_subject = int(
-          self.cfg.get('truncate-subject', group, params))
+          self.cfg.get('truncate_subject', group, params))
     except ValueError:
       truncate_subject = 0
 
@@ -610,6 +610,7 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
     added_data=generate_list('A', changelist, paths, True),
     removed_data=generate_list('R', changelist, paths, True),
     modified_data=generate_list('M', changelist, paths, True),
+    show_nonmatching_paths=show_nonmatching_paths,
     other_added_data=other_added_data,
     other_removed_data=other_removed_data,
     other_modified_data=other_modified_data,
@@ -1074,7 +1075,7 @@ class Config:
     # apply any mapper
     mapper = getattr(self.maps, option, None)
     if mapper is not None:
-      value = mapper(value)
+      value = " ".join(map(mapper, value.split()))
 
     return value
 
@@ -1091,6 +1092,8 @@ class Config:
   def _prep_maps(self):
     "Rewrite the [maps] options into callables that look up values."
 
+    mapsections = []
+
     for optname, mapvalue in vars(self.maps).items():
       if mapvalue[:1] == '[':
         # a section is acting as a mapping
@@ -1104,8 +1107,9 @@ class Config:
                 lambda value,
                        sect=getattr(self, sectname): getattr(sect, value,
                                                              value))
-        # remove the mapping section from consideration as a group
-        self._groups.remove(sectname)
+        # mark for removal when all optnames are done
+        if sectname not in mapsections:
+          mapsections.append(sectname)
 
       # elif test for other mapper types. possible examples:
       #   dbm:filename.db
@@ -1115,6 +1119,11 @@ class Config:
 
       else:
         raise UnknownMappingSpec(mapvalue)
+
+    # remove each mapping section from consideration as a group
+    for sectname in mapsections:
+      self._groups.remove(sectname)
+
 
   def _prep_groups(self, repos):
     self._group_re = [ ]
