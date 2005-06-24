@@ -45,6 +45,6 @@ Candidate changes:
     Justifcation: Prevents a rather simple operation from completing if the
     source path contains the same name as the destination.
     Votes:
-      +1: jszakmeister
+      +1: jszakmeister, kfogel
 
 Approved changes (further review is welcome, but not required):
