@@ -127,8 +127,26 @@ The 'svn merge' 3-way property merging algorithm should look like:
 
                if (value of PROPNAME in target-baseprops) != FROM:
                   conflict:  "property has different base-value"
+                  ### SEE FOOTNOTE!
 
                else:  /* same value */
                   apply change, unless existing local-mod conflicts.
            
 
+### FOOTNOTE:
+
+    Our 'svn merge' diagram really suggests using a diff4 algorithm,
+    rather than diff3.  
+
+    What should we do in the case of a server-propset attempting to
+    change PROPNAME from A to B, while the user has locally changed
+    the same PROPNAME from C to B?
+
+    The algorithm above suggests that because the two starting values
+    (A and C) are unequal, we should flag a conflict.  But our current
+    diff3 algorithm on lines-of-text may actually not care about the
+    target base; it might produce a smooth merge because the *results*
+    are the same.
+
+    Need to discuss this more.  What does our textual diff3 actually
+    do?  And is it a good thing to imitate?
