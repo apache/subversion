@@ -121,6 +121,49 @@ def svnversion_test(sbox):
                                             repo_url, None, SVNAnyOutput)
 
 
+#----------------------------------------------------------------------
+
+def ignore_externals(sbox):
+  "test 'svnversion' with svn:eternals"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  # Setup an svn:external
+  C_path = os.path.join(wc_dir, "A", "C")
+  externals_desc = "ext -r 1 " + repo_url + "/A/D/G" + "\n"
+  tmp_f = os.tempnam(wc_dir, 'tmp')
+  svntest.main.file_append(tmp_f, externals_desc)
+  svntest.actions.run_and_verify_svn("", None, [],
+                                     'pset',
+                                     '-F', tmp_f, 'svn:externals', C_path)
+  os.remove(tmp_f)
+  expected_output = svntest.wc.State(wc_dir, {
+   'A/C' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/C', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                       wc_dir)
+
+  # Update to get it on disk
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  ext_path = os.path.join(C_path, 'ext')
+  out, err = svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
+                                                'info', ext_path)
+  for line in out:
+    if line.find('Revision: 1') != -1:
+      break
+  else:
+    raise svntest.Failure
+
+  svntest.actions.run_and_verify_svnversion("working copy with svn:externals",
+                                            wc_dir, repo_url,
+                                            [ "2\n" ], None)
+
 ########################################################################
 # Run the tests
 
@@ -128,6 +171,7 @@ def svnversion_test(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               svnversion_test,
+              ignore_externals,
              ]
 
 if __name__ == '__main__':
