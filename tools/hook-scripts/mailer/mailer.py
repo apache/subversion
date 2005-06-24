@@ -1075,7 +1075,7 @@ class Config:
     # apply any mapper
     mapper = getattr(self.maps, option, None)
     if mapper is not None:
-      value = " ".join(map(mapper, value.split()))
+      value = mapper(value)
 
     return value
 
