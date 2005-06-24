@@ -331,7 +331,7 @@ main(int argc, const char *argv[])
   ctx.cancel_baton = &sb;
 
   err = svn_client_status2 (NULL, wc_path, &rev, analyze_status, 
-                            &sb, TRUE, TRUE, FALSE, FALSE, FALSE, &ctx, pool);
+                            &sb, TRUE, TRUE, FALSE, FALSE, TRUE, &ctx, pool);
   if (err && (err->apr_err == SVN_ERR_CANCELLED))
     svn_error_clear (err);
   else
