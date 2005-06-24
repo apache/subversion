@@ -2699,9 +2699,6 @@ test_list = [ None,
               merge_file_with_space_in_its_name,
               merge_dir_branches,
               safe_property_merge,
-              # property_merges_galore,  # Would be nice to have this.
-              # tree_merges_galore,      # Would be nice to have this.
-              # various_merges_galore,   # Would be nice to have this.
              ]
 
 if __name__ == '__main__':
