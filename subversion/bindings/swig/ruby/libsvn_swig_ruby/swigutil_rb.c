@@ -332,6 +332,7 @@ svn_swig_rb_apr_hash_to_hash_swig_type(apr_hash_t *hash, const char *type_name)
 static int
 r2c_hash_i(VALUE key, VALUE value, hash_to_apr_hash_data_t *data)
 {
+  rb_p(rb_ary_new3(2, key, value));
   if (key != Qundef) {
     void *val = data->func(value, data->ctx, data->pool);
     apr_hash_set(data->apr_hash,
@@ -374,6 +375,7 @@ svn_swig_rb_hash_to_apr_hash_string(VALUE hash, apr_pool_t *pool)
 apr_hash_t *
 svn_swig_rb_hash_to_apr_hash_svn_string(VALUE hash, apr_pool_t *pool)
 {
+  rb_p(hash);
   return r2c_hash(hash, r2c_svn_string, NULL, pool);
 }
 
