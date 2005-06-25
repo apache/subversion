@@ -105,13 +105,13 @@ def cat_skip_uncattable(sbox):
       continue
     item_to_cat = os.path.join(dir_path, file)
     if item_to_cat == new_file_path:
-      expected_err = "svn: warning: '" + item_to_cat + "'" + \
-                     " is not under version control or doesn't exist\n"
+      expected_err = ["svn: warning: '" + item_to_cat + "'" + \
+                     " is not under version control or doesn't exist\n"]
       svntest.actions.run_and_verify_svn(None, None, expected_err,
                                          'cat', item_to_cat)
     elif os.path.isdir(item_to_cat):
-      expected_err = "svn: warning: '" + item_to_cat + "'" + \
-                     " refers to a directory\n"
+      expected_err = ["svn: warning: '" + item_to_cat + "'" + \
+                     " refers to a directory\n"]
       svntest.actions.run_and_verify_svn(None, None,
                                          expected_err, 'cat', item_to_cat)
     else:
