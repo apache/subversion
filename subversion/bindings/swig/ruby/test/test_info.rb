@@ -147,6 +147,7 @@ class SvnInfoTest < Test::Unit::TestCase
   end
 
   def test_diff
+    p "before make_context"
     log = "diff"
     ctx = make_context(log)
 
@@ -162,11 +163,14 @@ class SvnInfoTest < Test::Unit::TestCase
     File.open(file2_path, "w") {|f| f.puts "changed"}
     FileUtils.touch(file3_path)
 
+    p "before add"
     ctx.add(file1_path)
     ctx.add(file2_path)
     ctx.add(file3_path)
+    p "before propset"
     ctx.propset(file1_prop_key, file1_prop_value, file1_path)
 
+    p "before commit"
     ctx.commit(@wc_path)
 
     file4 = "diff4.txt"
@@ -178,13 +182,19 @@ class SvnInfoTest < Test::Unit::TestCase
     File.open(file1_path, "w") {|f| f.puts "changed"}
     File.open(file2_path, "w") {|f| f.puts "removed\nadded"}
     FileUtils.touch(file4_path)
+    p "before add"
     ctx.add(file4_path)
+    p "before propdel"
     ctx.propdel(file1_prop_key, file1_path)
+    p "before propset"
     ctx.propset(file4_prop_key, file4_prop_value, file4_path)
+    p "before cp"
     ctx.cp(file3_path, file5_path)
     
+    p "before commit"
     commit_info = ctx.commit(@wc_path)
     
+    p "before make_info"
     info = make_info(commit_info.revision)
     keys = info.diffs.keys.sort
     file5_key = keys.last

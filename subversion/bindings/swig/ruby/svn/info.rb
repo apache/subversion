@@ -31,11 +31,17 @@ module Svn
     attr_reader :sha256, :entire_sha256
 
     def initialize(path, rev)
+      p "before setup"
       setup(path, rev)
+      p "before get_info"
       get_info
+      p "before get_dirs_changed"
       get_dirs_changed
+      p "before get_changed"
       get_changed
+      p "before get_diff"
       get_diff
+      p "before get_sha256"
       get_sha256
       teardown
     end
@@ -137,7 +143,11 @@ module Svn
       else
         base_props = base_root.node_prop_list(base_path)
       end
+      p "before prop_diffs"
+      p "local_props: #{local_props.inspect}"
+      p "base_props: #{base_props.inspect}"
       prop_changes = Core.prop_diffs(local_props, base_props)
+      p "prop_changes: #{prop_changes.inspect}"
       prop_changes.each do |prop|
         entry = diff_entry(path, :property_changed)
         entry.body << "Name: #{force_to_utf8(prop.name)}\n"
