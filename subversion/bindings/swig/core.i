@@ -553,11 +553,12 @@ SubversionException = _core.SubversionException
 #endif
 
 #ifdef SWIGRUBY
-/* dummy declaration */
+/* Dummy declaration */
 struct apr_pool_t 
 {
 };
 
+/* Leave memory administration to ruby's GC */
 %extend apr_pool_t
 {
   apr_pool_t(apr_pool_t *parent=NULL, apr_allocator_t *allocator=NULL) {
