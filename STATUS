@@ -26,11 +26,11 @@ Candidate changes:
     Fix an off-by-one error in svn_repos_get_logs3.
     Justification: API correctness
     Votes:
-      +1: clkao (non-binding), kfogel
+      +1: clkao (non-binding), kfogel, lundblad
 
   * r15082
     Perl bindings, svn_lock_t related accessors.
-    Justifcation: Bindings completeness
+    Justification: Bindings completeness
     Votes:
       +1: clkao
 
