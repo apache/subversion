@@ -223,7 +223,8 @@ module Svn
       end
 
       def update_auth_baton
-        self.auth_baton = Core::AuthBaton.open(@providers)
+        @auth_baton = Core::AuthBaton.open(@providers)
+        self.auth_baton = @auth_baton
       end
 
       def normalize_path(paths)
