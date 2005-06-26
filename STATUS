@@ -40,11 +40,15 @@ Candidate changes:
     Votes:
       +1: clkao
 
-  * r15157
+  * r15157, r15175
     Fix Issue #2343: svn_io_copy_dir_recursively is broken
-    Justifcation: Prevents a rather simple operation from completing if the
-    source path contains the same name as the destination.
+    Justifcation:
+      Prevents a rather simple operation from completing if the
+      source path contains the same name as the destination.
+    Notes:
+      r15175 is a small formatting fix.
     Votes:
-      +1: jszakmeister, kfogel
+      +1: jszakmeister
+      +1: kfogel (r15157 only)
 
 Approved changes (further review is welcome, but not required):
