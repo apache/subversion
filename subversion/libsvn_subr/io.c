@@ -716,9 +716,7 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
                  newly created destination path. */
               if (strcmp (src, dst_parent) == 0
                   && strcmp (this_entry.name, dst_basename) == 0)
-                {
-                  continue;
-                }
+                continue;
 
               SVN_ERR (svn_io_copy_dir_recursively 
                        (src_target,
