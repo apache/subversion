@@ -92,17 +92,27 @@ can't blindly apply the server propsets to the workingprops, we need
 to carefully look at the server-propsets as *deltas*, noticing the
 "from" and "to" values.
 
-For example, a server-propset might "set foo=apple", where the
-original value (in old-baseprops) was "banana".  The workingprops may
-not contain any local mods at all, but nevertheless, if
-target-baseprops already contains "foo=grape", then we should flag a
-conflict!
-
-So I guess the upshot here is that while 'svn update' can *only*
-produce conflicts when local-mods are present, 'svn merge' can produce
+The upshot here is that while 'svn update' can *only* produce
+conflicts when local-mods are present, 'svn merge' can produce
 conflicts anytime, even in the absence of local-mods.
 
-The 'svn merge' 3-way property merging algorithm should look like:
+----------------
+  Debate:  should target-baseprops be noticed *at all*?
+
+  It seems that in the case of lines of text, our current diff3
+  ignores text-bases completely, possibly overwriting local mods.
+
+  If we implemented some sort of diff4 algorithm, then the
+  target-baseprops would be noticed:
+
+        For example, a server-propset might "set foo=apple", where the
+        original value (in old-baseprops) was "banana".  The
+        workingprops may not contain any local mods at all, but
+        nevertheless, if target-baseprops already contains
+        "foo=grape", then we should flag a conflict!
+
+  If we ignored target-baseprops completely, the algorithm would be:
+
 
 
       foreach propset in server-propsets:
@@ -112,41 +122,30 @@ The 'svn merge' 3-way property merging algorithm should look like:
 
          if FROM == NULL:  /* adding a new property */
 
-            if PROPNAME doesn't exist in target-baseprops:
-               apply change, unless existing local-mod conflicts.
+            if PROPNAME exists in workingprops:
+               if (value of PROPNAME in workingprops) == TO:
+                  do nothing, it's a 'clean merge'
+               else:
+                  conflict: "property already exists with different value" 
 
-            else:
-               conflict: "property already exists"
+            else:  /* PROPNAME doesn't exist in workingprops */
+               set property as a new local mod
+
 
          else: /* FROM != NULL -- changing or deleting a property */
 
-            if PROPNAME doesn't exist in target-baseprops:
-               conflict: "skipped property, it doesn't exist"
+            if PROPNAME doesn't exist in workingprops:
+               print "skipped: cannot change/delete non-existent property"
 
-            else:  /* PROPNAME exists in target-baseprops */
+            else:  /* PROPNAME exists in workingprops */
 
-               if (value of PROPNAME in target-baseprops) != FROM:
-                  conflict:  "property has different base-value"
-                  ### SEE FOOTNOTE!
+               if (value of PROPNAME in workingprops) == FROM:
+                  /* note: this may destroy existing local mods,
+                     because target-baseprops are being ignored.  */
+                  apply the propchange.
 
-               else:  /* same value */
-                  apply change, unless existing local-mod conflicts.
-           
+               else if (value of PROPNAME in workingprops) == TO:
+                  do nothing, it's a 'clean merge'  
 
-### FOOTNOTE:
-
-    Our 'svn merge' diagram really suggests using a diff4 algorithm,
-    rather than diff3.  
-
-    What should we do in the case of a server-propset attempting to
-    change PROPNAME from A to B, while the user has locally changed
-    the same PROPNAME from C to B?
-
-    The algorithm above suggests that because the two starting values
-    (A and C) are unequal, we should flag a conflict.  But our current
-    diff3 algorithm on lines-of-text may actually not care about the
-    target base; it might produce a smooth merge because the *results*
-    are the same.
-
-    Need to discuss this more.  What does our textual diff3 actually
-    do?  And is it a good thing to imitate?
+               else:  /* has some other  value */
+                  conflict:  "property has conflicting value"
