@@ -343,15 +343,15 @@ Win95/Win98/WinMe.</p>
 <h3>What's all this about a new filesystem?  Is
 it like ext2?</h3>
 
-<p>No.  The "Subversion Filesystem" is not a kernel-level filesystem that
-one would install in an operating system.  Instead, it refers to the
-design of Subversion's repository.  The repository is built on a
-database (currently <a href="http://www.sleepycat.com">Berkeley
-DB</a>) and exports a C API that <i>simulates</i> a filesystem -- a
-versioned filesystem.  Thus writing a program to access the repository
-is like writing against other filesystem APIs.  The main difference is
-that this particular filesystem doesn't lose data when written to; old
-versions of files and directories are saved.</p>
+<p>No.  The "Subversion Filesystem" is not a kernel-level filesystem
+that one would install in an operating system.  Instead, it is
+Subversion's repository interface, which is a "versioned filesystem"
+in the sense that it stores a directory tree whose state is remembered
+from revision to revision.  Writing programs to access the repository
+is similar to writing programs that use other filesystem APIs.  The
+main difference is that this particular filesystem doesn't lose data
+when written to; old tree states can be retrieved as easily the most
+recent state.</p>
 
 </div>
 
