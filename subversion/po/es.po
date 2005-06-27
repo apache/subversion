@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-06-19 14:17-0300\n"
-"PO-Revision-Date: 2005-06-19 14:18-0300\n"
+"POT-Creation-Date: 2005-06-27 12:11-0300\n"
+"PO-Revision-Date: 2005-06-27 12:11-0300\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Spanish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2955,7 +2955,7 @@ msgstr ""
 #: libsvn_client/copy.c:1072 libsvn_client/delete.c:67
 #: libsvn_client/diff.c:1386 libsvn_client/diff.c:1984
 #: libsvn_client/diff.c:2459 libsvn_client/diff.c:2568
-#: libsvn_client/locking_commands.c:229 libsvn_client/locking_commands.c:251
+#: libsvn_client/locking_commands.c:247 libsvn_client/locking_commands.c:271
 #: libsvn_client/log.c:129 libsvn_client/prop_commands.c:213
 #: libsvn_client/prop_commands.c:446 libsvn_client/prop_commands.c:602
 #: libsvn_client/prop_commands.c:951 libsvn_client/ra.c:180
@@ -3203,8 +3203,8 @@ msgstr ""
 "Al menos una revisión debe ser no-local para un diff de clavija (pegged)"
 
 #: libsvn_client/diff.c:2432 libsvn_client/diff.c:2438
-#: libsvn_client/diff.c:2553 libsvn_client/locking_commands.c:233
-#: libsvn_client/locking_commands.c:255 libsvn_client/ra.c:714
+#: libsvn_client/diff.c:2553 libsvn_client/locking_commands.c:251
+#: libsvn_client/locking_commands.c:275 libsvn_client/ra.c:714
 #: libsvn_client/ra.c:837
 #, c-format
 msgid "'%s' has no URL"
@@ -3249,22 +3249,26 @@ msgstr "No se pudo leer la entrada para '%s'"
 msgid "URL '%s' non-existent in revision '%ld'"
 msgstr "El URL '%s' no existe en la revisión '%ld'"
 
-#: libsvn_client/locking_commands.c:185
+#: libsvn_client/locking_commands.c:198
 msgid "No common parent found, unable to operate on disjoint arguments"
 msgstr ""
 "No se encontró un padre común, imposible operar en parámetros disjuntos"
 
-#: libsvn_client/locking_commands.c:275
+#: libsvn_client/locking_commands.c:299
+msgid "Unable to lock/unlock across multiple repositories"
+msgstr "No se puede establecer bloqueos a lo largo de múltiples repositorios"
+
+#: libsvn_client/locking_commands.c:340
 #, c-format
 msgid "'%s' is not locked in this working copy"
 msgstr "'%s' no está bloqueado en esta copia de trabajo"
 
-#: libsvn_client/locking_commands.c:320
+#: libsvn_client/locking_commands.c:388
 #, c-format
 msgid "'%s' is not locked"
 msgstr "'%s' no está bloqueado"
 
-#: libsvn_client/locking_commands.c:353 libsvn_fs/fs-loader.c:892
+#: libsvn_client/locking_commands.c:421 libsvn_fs/fs-loader.c:892
 #: libsvn_ra/ra_loader.c:512
 msgid "Lock comment has illegal characters"
 msgstr "El comentario de bloqueo tiene caracteres ilegales"
@@ -5609,9 +5613,9 @@ msgstr ""
 "'stat')"
 
 #: libsvn_subr/io.c:1031
-#, fuzzy, c-format
+#, c-format
 msgid "Can't open file at '%s' "
-msgstr "No se pudo abrir el archivo '%s'"
+msgstr "No se pudo abrir el archivo en '%s' "
 
 #: libsvn_subr/io.c:1035
 #, c-format
@@ -7964,111 +7968,26 @@ msgstr "exportado%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "%s no es un recurso versionado, no se exporta\n"
 
-#~ msgid "Can't get default file perms for file at '%s' (file close error)"
-#~ msgstr ""
-#~ "No se pudieron obtener los permisos por omisión del archivo en '%"
-#~ "s' (falló el cerrado)"
+#~ msgid "Your lock comment was left in a temporary file:"
+#~ msgstr "Su mensaje de bloqueo fue dejado en un archivo temporario:"
 
-#~ msgid "Print client version info\n"
-#~ msgstr "mostrar información de la versión del cliente\n"
+#~ msgid " | %d lines"
+#~ msgstr " | %d líneas"
 
-#~ msgid "Lock comment has illegal characters."
-#~ msgstr "El comentario del bloqueo tiene caracteres ilegales."
+#~ msgid " | %d line"
+#~ msgstr " | %d línea"
 
-#~ msgid "      Transmitting text...\n"
-#~ msgstr "      Transmitiendo texto...\n"
+#~ msgid "'get-file-revs' request not implemented"
+#~ msgstr "El requerimiento 'get-file-revs' no está implementado"
 
-#~ msgid "   Opening : %s\n"
-#~ msgstr "   Abriendo: %s\n"
+#~ msgid "'get-locations' request not implemented"
+#~ msgstr "Requerimiento 'get-locations' no implementado"
 
-#~ msgid " (copied from %s:%ld)"
-#~ msgstr " (copiado de %s:%ld)"
+#~ msgid "repository argument required\n"
+#~ msgstr "el subcomando requiere un parámetro que indique el repositorio\n"
 
-#~ msgid " (recursively)"
-#~ msgstr " (recursivamente)"
-
-#~ msgid " (recursively) "
-#~ msgstr " (recursivamente) "
-
-#~ msgid "WARNING: error decoding UTF-8 for ?\n"
-#~ msgstr "AVISO: error decodificando UTF-8 para ?\n"
-
-#~ msgid "file"
-#~ msgstr "archivo"
-
-#~ msgid "directory"
-#~ msgstr "directorio"
-
-#~ msgid "restoring text"
-#~ msgstr "restituyendo texto"
-
-#~ msgid "removing props"
-#~ msgstr "eliminando propiedades"
-
-#~ msgid "restoring props"
-#~ msgstr "restituyendo propiedades"
-
-#~ msgid ""
-#~ "The '%s' library is not compatible with this program; found version %d.%d."
-#~ "%d%s, expected version %s"
-#~ msgstr ""
-#~ "La biblioteca '%s' no es compatible con este programa; se encontró la "
-#~ "versión %d.%d.%d%s, cuando se esperaba la versión %s"
-
-#~ msgid ""
-#~ "Not allowed to copy or move '%s': it is not in the repository yet; try "
-#~ "committing first"
-#~ msgstr ""
-#~ "No se permite copiar o mover '%s': no está en el repositorio todavía; "
-#~ "intente primero hacer commit"
-
-#~ msgid "'%s' is an url when it should be a path"
-#~ msgstr "'%s' es un URL cuando debería ser una ruta"
-
-#~ msgid "%s of %s"
-#~ msgstr "%s de %s"
-
-#~ msgid "'%s' is a URL, but revision kind requires a working copy"
-#~ msgstr ""
-#~ "'%s' es un URL, pero el tipo de revisión requiere una copia de trabajo"
-
-#~ msgid "Unknown revision kind"
-#~ msgstr "Tipo de revisión desconocido"
-
-#~ msgid "Path '%s' already exists."
-#~ msgstr "La ruta '%s' ya existe."
-
-#~ msgid "Impossibly long relative URL"
-#~ msgstr "URL relativo imposiblemente largo"
-
-#~ msgid "No commit for revision 0.\n"
-#~ msgstr "No hay commit para la revisión 0.\n"
-
-#~ msgid "pass ARG as bundled options to GNU diff"
-#~ msgstr "pasar PAR como opciones a GNU diff"
-
-#~ msgid "Cannot cleanup '%s': not a directory"
-#~ msgstr "No se puede limpiar '%s': no es un directorio"
-
-#~ msgid "No get_dir() available for URL schema"
-#~ msgstr "No hay get_dir() disponible para el protocolo de URL"
-
-#~ msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
-#~ msgstr "Aplique RA binariamente incompatible (versión %d) para ra_dav"
-
-#~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
-#~ msgstr ""
-#~ "Versión no soportada (%d) de la Interfaz Binaria de Aplicación (ABI) en "
-#~ "el módulo de acceso a repositorio para ra_svn."
-
-#~ msgid "   %ld => %ld\n"
-#~ msgstr "   %ld => %ld\n"
-
-#~ msgid "'svn info' only works on working copy paths, not URLs"
-#~ msgstr "'svn info' sólo funciona en rutas de copia de trabajo, no en URLs"
-
-#~ msgid "Working copy not locked"
-#~ msgstr "La copia de trabajo no tiene lock"
+#~ msgid "unknown command: '%s'\n"
+#~ msgstr "comando desconocido: '%s'\n"
 
 #~ msgid ""
 #~ "Mismatched RA plugin version for '%s': found %d.%d.%d%s, expected %d.%d.%d"
@@ -8077,23 +7996,108 @@ msgstr "%s no es un recurso versionado, no se exporta\n"
 #~ "Conflicto de versiones en modulo de acceso a repositorio para '%s': se "
 #~ "encontró %d.%d.%d%s, se esperaba %d.%d.%d%s"
 
-#~ msgid "unknown command: '%s'\n"
-#~ msgstr "comando desconocido: '%s'\n"
+#~ msgid "Working copy not locked"
+#~ msgstr "La copia de trabajo no tiene lock"
 
-#~ msgid "repository argument required\n"
-#~ msgstr "el subcomando requiere un parámetro que indique el repositorio\n"
+#~ msgid "'svn info' only works on working copy paths, not URLs"
+#~ msgstr "'svn info' sólo funciona en rutas de copia de trabajo, no en URLs"
 
-#~ msgid "'get-locations' request not implemented"
-#~ msgstr "Requerimiento 'get-locations' no implementado"
+#~ msgid "   %ld => %ld\n"
+#~ msgstr "   %ld => %ld\n"
 
-#~ msgid "'get-file-revs' request not implemented"
-#~ msgstr "El requerimiento 'get-file-revs' no está implementado"
+#~ msgid "Unsupported RA plugin ABI version (%d) for ra_svn."
+#~ msgstr ""
+#~ "Versión no soportada (%d) de la Interfaz Binaria de Aplicación (ABI) en "
+#~ "el módulo de acceso a repositorio para ra_svn."
 
-#~ msgid " | %d line"
-#~ msgstr " | %d línea"
+#~ msgid "Unsupported RA plugin ABI version (%d) for ra_dav"
+#~ msgstr "Aplique RA binariamente incompatible (versión %d) para ra_dav"
 
-#~ msgid " | %d lines"
-#~ msgstr " | %d líneas"
+#~ msgid "No get_dir() available for URL schema"
+#~ msgstr "No hay get_dir() disponible para el protocolo de URL"
 
-#~ msgid "Your lock comment was left in a temporary file:"
-#~ msgstr "Su mensaje de bloqueo fue dejado en un archivo temporario:"
+#~ msgid "Cannot cleanup '%s': not a directory"
+#~ msgstr "No se puede limpiar '%s': no es un directorio"
+
+#~ msgid "pass ARG as bundled options to GNU diff"
+#~ msgstr "pasar PAR como opciones a GNU diff"
+
+#~ msgid "No commit for revision 0.\n"
+#~ msgstr "No hay commit para la revisión 0.\n"
+
+#~ msgid "Impossibly long relative URL"
+#~ msgstr "URL relativo imposiblemente largo"
+
+#~ msgid "Path '%s' already exists."
+#~ msgstr "La ruta '%s' ya existe."
+
+#~ msgid "Unknown revision kind"
+#~ msgstr "Tipo de revisión desconocido"
+
+#~ msgid "'%s' is a URL, but revision kind requires a working copy"
+#~ msgstr ""
+#~ "'%s' es un URL, pero el tipo de revisión requiere una copia de trabajo"
+
+#~ msgid "%s of %s"
+#~ msgstr "%s de %s"
+
+#~ msgid "'%s' is an url when it should be a path"
+#~ msgstr "'%s' es un URL cuando debería ser una ruta"
+
+#~ msgid ""
+#~ "Not allowed to copy or move '%s': it is not in the repository yet; try "
+#~ "committing first"
+#~ msgstr ""
+#~ "No se permite copiar o mover '%s': no está en el repositorio todavía; "
+#~ "intente primero hacer commit"
+
+#~ msgid ""
+#~ "The '%s' library is not compatible with this program; found version %d.%d."
+#~ "%d%s, expected version %s"
+#~ msgstr ""
+#~ "La biblioteca '%s' no es compatible con este programa; se encontró la "
+#~ "versión %d.%d.%d%s, cuando se esperaba la versión %s"
+
+#~ msgid "restoring props"
+#~ msgstr "restituyendo propiedades"
+
+#~ msgid "removing props"
+#~ msgstr "eliminando propiedades"
+
+#~ msgid "restoring text"
+#~ msgstr "restituyendo texto"
+
+#~ msgid "directory"
+#~ msgstr "directorio"
+
+#~ msgid "file"
+#~ msgstr "archivo"
+
+#~ msgid "WARNING: error decoding UTF-8 for ?\n"
+#~ msgstr "AVISO: error decodificando UTF-8 para ?\n"
+
+#~ msgid " (recursively) "
+#~ msgstr " (recursivamente) "
+
+#~ msgid " (recursively)"
+#~ msgstr " (recursivamente)"
+
+#~ msgid " (copied from %s:%ld)"
+#~ msgstr " (copiado de %s:%ld)"
+
+#~ msgid "   Opening : %s\n"
+#~ msgstr "   Abriendo: %s\n"
+
+#~ msgid "      Transmitting text...\n"
+#~ msgstr "      Transmitiendo texto...\n"
+
+#~ msgid "Lock comment has illegal characters."
+#~ msgstr "El comentario del bloqueo tiene caracteres ilegales."
+
+#~ msgid "Print client version info\n"
+#~ msgstr "mostrar información de la versión del cliente\n"
+
+#~ msgid "Can't get default file perms for file at '%s' (file close error)"
+#~ msgstr ""
+#~ "No se pudieron obtener los permisos por omisión del archivo en '%"
+#~ "s' (falló el cerrado)"
