@@ -84,8 +84,10 @@ module Svn
     end
 
     def get_diff
+      p "before delta_tree"
       tree = @repos.delta_tree(@root, @prev_rev)
       @diffs = {}
+      p "before get_diff_recurse"
       get_diff_recurse(tree, @fs.root(@prev_rev), "", "")
       @diffs.each do |key, values|
         values.each do |type, diff|
@@ -110,15 +112,18 @@ module Svn
     
     def get_diff_recurse(node, base_root, path, base_path)
       if node.copy?
+        p "node.copy?"
         base_path = node.copyfrom_path.sub(/\A\//, '')
         base_root = base_root.fs.root(node.copyfrom_rev)
       end
 
       if node.file?
+        p "before try_diff"
         try_diff(node, base_root, path, base_path)
       end
       
       if node.prop_mod? and !node.delete?
+        p "before get_prop_diff"
         get_prop_diff(node, base_root, path, base_path)
       end
 
@@ -159,20 +164,25 @@ module Svn
     
     def try_diff(node, base_root, path, base_path)
       if node.replace? and node.text_mod?
+        p "try_diff: case 1"
         differ = Fs::FileDiff.new(base_root, base_path, @root, path)
         do_diff(node, base_root, path, base_path, differ)
       elsif node.add? and node.text_mod?
+        p "try_diff: case 2"
         differ = Fs::FileDiff.new(nil, base_path, @root, path)
         do_diff(node, base_root, path, base_path, differ)
       elsif node.delete?
+        p "try_diff: case 3"
         differ = Fs::FileDiff.new(base_root, base_path, nil, path)
         do_diff(node, base_root, path, base_path, differ)
       elsif node.copy?
+        p "try_diff: case 4"
         diff_entry(path, get_type(node))
       end
     end
     
     def do_diff(node, base_root, path, base_path, differ)
+      p [path, base_path, differ]
       entry = diff_entry(path, get_type(node))
 
       if differ.binary?
@@ -188,6 +198,7 @@ module Svn
         stripped_path = path.sub(/\A\//, '')
         base_label = "#{stripped_base_path}\t#{base_date} (rev #{base_rev})"
         label = "#{stripped_path}\t#{date} (rev #{rev})"
+        p "before unified"
         entry.body = differ.unified(base_label, label)
         parse_diff_unified(entry)
       end
