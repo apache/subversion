@@ -2670,6 +2670,120 @@ def safe_property_merge(sbox):
                                        0) # dry_run
 
   
+#----------------------------------------------------------------------
+def cherry_pick_text_conflict(sbox):
+  "cherry-pick a dependent change, get conflict"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  
+  A_path = os.path.join(wc_dir, 'A')
+  A_url = svntest.main.current_repo_url + '/A'
+  mu_path = os.path.join(A_path, 'mu')
+  branch_A_url = svntest.main.current_repo_url + '/copy-of-A'
+  branch_mu_path = os.path.join(wc_dir, 'copy-of-A', 'mu')
+
+  # Create a branch of A.
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     A_url, branch_A_url,
+                                     '-m', "Creating copy-of-A")
+
+  # Update to get the branch.
+  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
+
+  # Change mu's text twice on the branch, producing r3 then r4.
+  svntest.main.file_append(branch_mu_path,
+                           "\nr3\nr3\nr3\nr3\nr3\nr3\nr3\nr3\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Add lines to mu.', wc_dir)
+  svntest.main.file_append(branch_mu_path,
+                           "r4\nr4\nr4\nr4\nr4\nr4\nr4\nr4\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'Add more lines to mu.', wc_dir)
+
+  # Try to merge just r4 into trunk, without r3.  It should fail.
+  expected_output = wc.State(A_path, {
+    'mu'       : Item(status='C '),
+    })
+  expected_disk = wc.State('', {
+    'mu'        : Item("<<<<<<< .working\n"
+                       + "This is the file 'mu'.=======\n"
+                       + "This is the file 'mu'.\n"
+                       + "r3\n"
+                       + "r3\n"
+                       + "r3\n"
+                       + "r3\n"
+                       + "r3\n"
+                       + "r3\n"
+                       + "r3\n"
+                       + "r3\n"
+                       + "r4\n"
+                       + "r4\n"
+                       + "r4\n"
+                       + "r4\n"
+                       + "r4\n"
+                       + "r4\n"
+                       + "r4\n"
+                       + "r4\n"
+                       + ">>>>>>> .merge-right.r4\n"
+                       ),
+    'B'         : Item(),
+    'B/lambda'  : Item("This is the file 'lambda'."),
+    'B/E'       : Item(),
+    'B/E/alpha' : Item("This is the file 'alpha'."),
+    'B/E/beta'  : Item("This is the file 'beta'."),
+    'B/F'       : Item(),
+    'C'         : Item(),
+    'D'         : Item(),
+    'D/gamma'   : Item("This is the file 'gamma'."),
+    'D/H'       : Item(),
+    'D/H/chi'   : Item("This is the file 'chi'."),
+    'D/H/psi'   : Item("This is the file 'psi'."),
+    'D/H/omega' : Item("This is the file 'omega'."),
+    'D/G'       : Item(),
+    'D/G/pi'    : Item("This is the file 'pi'."),
+    'D/G/rho'   : Item("This is the file 'rho'."),
+    'D/G/tau'   : Item("This is the file 'tau'."),
+    })
+  expected_status = wc.State(A_path, {
+    ''          : Item(status='  '),
+    'mu'        : Item(status='C '),
+    'B'         : Item(status='  '),
+    'B/lambda'  : Item(status='  '),
+    'B/E'       : Item(status='  '),
+    'B/E/alpha' : Item(status='  '),
+    'B/E/beta'  : Item(status='  '),
+    'B/F'       : Item(status='  '),
+    'C'         : Item(status='  '),
+    'D'         : Item(status='  '),
+    'D/gamma'   : Item(status='  '),
+    'D/H'       : Item(status='  '),
+    'D/H/chi'   : Item(status='  '),
+    'D/H/psi'   : Item(status='  '),
+    'D/H/omega' : Item(status='  '),
+    'D/G'       : Item(status='  '),
+    'D/G/pi'    : Item(status='  '),
+    'D/G/rho'   : Item(status='  '),
+    'D/G/tau'   : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=2)
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_merge(A_path, '3', '4', branch_A_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # no error expected
+                                       detect_conflict_files,
+                                       ["mu\.working",
+                                        "mu\.merge-right\.r4",
+                                        "mu\.merge-left\.r3"],
+                                       None, None, # no singleton handler
+                                       0, # don't check props
+                                       0) # not a dry_run
+  
+
+
 
 ########################################################################
 # Run the tests
@@ -2699,6 +2813,7 @@ test_list = [ None,
               merge_file_with_space_in_its_name,
               merge_dir_branches,
               safe_property_merge,
+              cherry_pick_text_conflict,
              ]
 
 if __name__ == '__main__':
