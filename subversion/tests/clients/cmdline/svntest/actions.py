@@ -635,20 +635,13 @@ def run_and_verify_status(wc_dir_name, output_tree,
   mytree = tree.build_tree_from_status (output)
 
   # Verify actual output against expected output.
-  if (singleton_handler_a or singleton_handler_b):
-    try:
-      tree.compare_trees (mytree, output_tree,
-                          singleton_handler_a, a_baton,
-                          singleton_handler_b, b_baton)
-    except tree.SVNTreeError:
-      display_trees(None, 'OUTPUT TREE', output_tree, mytree)
-      raise
-  else:
-    try:
-      tree.compare_trees (mytree, output_tree)
-    except tree.SVNTreeError:
-      display_trees(None, 'OUTPUT TREE', output_tree, mytree)
-      raise
+  try:
+    tree.compare_trees (mytree, output_tree,
+                        singleton_handler_a, a_baton,
+                        singleton_handler_b, b_baton)
+  except tree.SVNTreeError:
+    display_trees(None, 'STATUS OUTPUT TREE', output_tree, mytree)
+    raise
 
 
 # A variant of previous func, but doesn't pass '-q'.  This allows us
