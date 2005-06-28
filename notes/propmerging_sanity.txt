@@ -96,23 +96,12 @@ The upshot here is that while 'svn update' can *only* produce
 conflicts when local-mods are present, 'svn merge' can produce
 conflicts anytime, even in the absence of local-mods.
 
-----------------
-  Debate:  should target-baseprops be noticed *at all*?
-
-  It seems that in the case of lines of text, our current diff3
-  ignores text-bases completely, possibly overwriting local mods.
-
-  If we implemented some sort of diff4 algorithm, then the
-  target-baseprops would be noticed:
-
-        For example, a server-propset might "set foo=apple", where the
-        original value (in old-baseprops) was "banana".  The
-        workingprops may not contain any local mods at all, but
-        nevertheless, if target-baseprops already contains
-        "foo=grape", then we should flag a conflict!
-
-  If we ignored target-baseprops completely, the algorithm would be:
-
+After some discussion on the dev@ list, we've decided to implement the
+following algorithm.  It works correctly for 'svn merge', because it
+makes no assumption about a common ancestor.  The FROM variable
+represents the old-baseprops coming from the server.  The algorithm
+still works for 'svn up', of course;  in that case, the FROM variable
+simply represents the value of target-baseprops.
 
 
       foreach propset in server-propsets:
@@ -149,3 +138,6 @@ conflicts anytime, even in the absence of local-mods.
 
                else:  /* has some other  value */
                   conflict:  "property has conflicting value"
+
+
+
