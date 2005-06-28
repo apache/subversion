@@ -211,7 +211,9 @@ a <tt>file:</tt> URL?</a></li>
     I just committed.  Why?</a></li>
 <li><a href="#bdb43-upgrade">After upgrading to Berkeley DB
     4.3, I'm seeing repository errors.</a></li>
-
+<li><a href="#tiger-apr-0.9.6">Why do I get occasional, seemingly
+    inconsistent errors checking out over http:// from a repository
+    running on MacOS X 10.4 (Tiger)?</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -3034,7 +3036,67 @@ etc.)</li>
 
 </div>
 
+<![CDATA[-----------------------------------------------------------]]>
 
+<div class="h3" id="tiger-apr-0.9.6" title="tiger-apr-0.9.6">
+<h3>Why do I get occasional, seemingly inconsistent errors checking
+    out over http:// from a repository running on MacOS X 10.4 (Tiger)?</h3>
+
+<p>Note: this assumes the repository is being served by Apache 2.0.x.</p>
+
+<p>There is a bug in APR 0.9.6 that is present when it is running on
+Tiger, and shows up when you attempt to check out a file larger than
+64K.  The resulting checkout fails, often with unpredictable error
+messages.  Here are some examples of what you might see on the client
+side, the specific errors may differ for you:</p>
+
+<pre>
+   svn: Invalid diff stream: [tgt] insn 1 starts beyond the target view position
+</pre>
+
+<pre>
+   svn: Unexpected end of svndiff input
+</pre>
+
+<pre>
+   svn: REPORT request failed on '/path/to/repository'
+   svn: REPORT of '/path/to/repository/!svn/vcc/default': Chunk delimiter was invalid
+</pre>
+
+<p>There may also be errors in the Apache error_log, such as:</p>
+
+<pre>
+   [error] Provider encountered an error while streaming a REPORT response.  [500, #0]
+   [error] A failure occurred while driving the update report editor [500, #190004]
+</pre>
+
+<p>To confirm the presence of this bug &nbsp;&mdash;&nbsp; assuming
+you have access to the machine that the repository is being served
+from &nbsp;&mdash;&nbsp; try running a check out using a file:// URL,
+which will access the filesystem directly instead of going through
+Apache.  If the resulting check out completes successfully, then it is
+almost certain that this is the problem.</p>
+
+<p>Currently, the best solution is to rebuild Apache and Subversion
+from their respective sources, setting the following environment
+variable before running configure for Apache:</p>
+
+<pre>
+   setenv ac_cv_func_poll no
+</pre>
+
+<p>or in Bourne shell syntax, like this:</p>
+
+<pre>
+   ac_cv_func_poll=no; export ac_cv_func_poll
+</pre>
+
+<p>If you built APR / APRUTIL separately (i.e., you did not use the
+ones that come as part of the Apache tarball), you must set that
+environment variable before running configure for APR, as this is
+where the problem lies.</p>
+
+</div>
 
 
 <![CDATA[=========================================================]]>
