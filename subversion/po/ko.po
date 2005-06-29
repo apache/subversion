@@ -78,10 +78,10 @@ msgstr ""
 "Subversion 명령행 클라이언트 버전 %s.\n"
 "'svn help <subcommand>'를 사용하여 특정 명령에 대하여 도움말을 얻으십시오.\n"
 "\n"
-"대부분의 subcommand들은 재귀적으로 수행하면서 파일이나 디렉토리를 인자로 취합"
+"대부분의 하위 명령들은 재귀적으로 수행하면서 파일이나 디렉토리를 인자로 취합"
 "니다.\n"
-"명령들에 인자가 주어지지 않으면 현재 디렉토리를 포함하여\n"
-"재귀적으로 수행하게 됩니다.\n"
+"명령들에 인자가 주어지지 않으면 현재 디렉토리를 포함하여 재귀적으로 수행하게\n"
+"됩니다.\n"
 "\n"
 "가능한 명령:\n"
 
@@ -372,7 +372,7 @@ msgstr ""
 
 #: clients/cmdline/main.c:87
 msgid "read data from file ARG"
-msgstr "ARG 에서 데이터를 읽습니다."
+msgstr "arg에서 데이터를 읽습니다."
 
 #: clients/cmdline/main.c:89
 msgid "give output suitable for concatenation"
@@ -380,7 +380,7 @@ msgstr "덧붙이기 쉬운 형태로 출력합니다."
 
 #: clients/cmdline/main.c:91
 msgid "treat value as being in charset encoding ARG"
-msgstr "값을 ARG에 해당하는 문자코드로 취급합니다."
+msgstr "값을 arg에 해당하는 문자코드로 취급합니다."
 
 #: clients/cmdline/main.c:92
 msgid "print client version info"
@@ -408,7 +408,7 @@ msgstr "arg를 diff 로 넘길 인자들을 지정함 (생략값: '-u')"
 
 #: clients/cmdline/main.c:101
 msgid "pass contents of file ARG as additional args"
-msgstr "ARG로 주어진 파일 내용을 옵션으로 추가합니다."
+msgstr "arg로 주어진 파일 내용을 옵션으로 추가합니다."
 
 #: clients/cmdline/main.c:102
 msgid "output in XML"
@@ -537,7 +537,7 @@ msgstr ""
 "각 라인별로 리비전과 작성자를 보여줍니다.\n"
 "사용법: blame TARGET[@REV]...\n"
 "\n"
-"  REV가 지정되면, 어떤 것을 찾아야할지 결정하게 됩니다.\n"
+"  REV가 지정되면, 지정된 REV에서부터 찾아 보여줍니다.\n"
 "  \n"
 
 #: clients/cmdline/main.c:200
@@ -551,7 +551,7 @@ msgstr ""
 "지정한 파일이나 URL의 내용을 출력합니다.\n"
 "사용법: cat TARGET[@REV]...\n"
 "\n"
-"  REV가 지정되면, 어떤 것을 찾아야할지 결정하게 됩니다.\n"
+"  REV가 지정되면, 지정된 REV에서부터 찾아 출력합니다.\n"
 "  \n"
 
 #: clients/cmdline/main.c:208
@@ -570,7 +570,7 @@ msgstr ""
 "작업사본을 저장소로부터 꺼냅니다.\n"
 "usage: checkout URL[@REV]... [PATH]\n"
 "\n"
-"  REV가 지정되면, 어떤 것을 찾아야할지 결정하게 됩니다.\n"
+"  REV가 지정되면, 지정된 REV에서부터 찾아 체크아웃합니다.\n"
 "  \n"
 "  PATH가 생략되면, URL의 맨마지막 디렉토리명이 꺼내어 저장될\n"
 "  디렉토리 이름으로 사용됩니다. 만약, 여러개의 URL이 지정되면\n"
@@ -617,7 +617,7 @@ msgid ""
 "    URL -> WC:   check out URL into WC, schedule for addition\n"
 "    URL -> URL:  complete server-side copy;  used to branch & tag\n"
 msgstr ""
-"작업 사본(working copy;WC) 혹은 저장소의 내용을 이전 로그메시지와 함께 복제합"
+"작업 사본(working copy;WC) 혹은 저장소의 내용을 이전 로그메시지와 함께 복사합"
 "니다.\n"
 "사용법: copy SRC DST\n"
 "\n"
@@ -642,7 +642,7 @@ msgid ""
 "  2. Each item specified by a URL is deleted from the repository\n"
 "    via an immediate commit.\n"
 msgstr ""
-"파일과 디렉토리를 버전 관리 대상에서 제거함\n"
+"파일과 디렉토리를 버전 관리 대상에서 제거합니다.\n"
 "사용법: 1. delete PATH...\n"
 "        2. delete URL...\n"
 "\n"
@@ -695,7 +695,8 @@ msgstr ""
 "\n"
 "     TARGET 중에 작업사본내의 경로이면서 N이 생략되면 BASE가 사용되고,\n"
 "     경로가 아니면 N은 반드시 명시되어야합니다. 또한 작업사본내의 경로이면"
-"서,     M이 생략되면 작업중인 파일이 사용되고, URL의 경우 HEAD가 사용됩니"
+"서,\n"
+"     M이 생략되면 작업중인 파일이 사용되고, URL의 경우 HEAD가 사용됩니"
 "다.\n"
 "\n"
 "  2. OLDREV 리비전의 OLD-TGT와 NEWREV 리비전의  NEW-TGT의 차이를 보여줍니"
@@ -790,7 +791,7 @@ msgid ""
 "  Print information about each TARGET (default: '.')\n"
 "  TARGET may be either a working-copy path or URL.\n"
 msgstr ""
-"작업 사본이나 저장소의 파일, 디렉토리의 정보를 출력합니다\n"
+"작업 사본이나 저장소의 파일, 디렉토리의 정보를 출력합니다.\n"
 "사용법: info [TARGET...]\n"
 "\n"
 "  각 PATH에 해당하는 정보를 출력합니다. (기본값: '.').\n"
@@ -1579,22 +1580,22 @@ msgstr "외부 경로의 익스포트, 리비전 %ld.\n"
 #: clients/cmdline/notify.c:211
 #, c-format
 msgid "Exported revision %ld.\n"
-msgstr "외부 경로 체크아웃됨, 리비전 %ld.\n"
+msgstr "익스포트된 리비전 %ld.\n"
 
 #: clients/cmdline/notify.c:219
 #, c-format
 msgid "Checked out external at revision %ld.\n"
-msgstr "체크아웃됨. 리비전 %ld.\n"
+msgstr "외부 경로의 체크아웃, 리비전 %ld.\n"
 
 #: clients/cmdline/notify.c:220
 #, c-format
 msgid "Checked out revision %ld.\n"
-msgstr "외부 경로 업데이트 됨. 리비전 %ld.\n"
+msgstr "체크아웃된 리비전 %ld.\n"
 
 #: clients/cmdline/notify.c:230
 #, c-format
 msgid "Updated external to revision %ld.\n"
-msgstr "업데이트 됨. 리비전 %ld.\n"
+msgstr "외부 경로의 업데이트, 리비전 %ld.\n"
 
 #: clients/cmdline/notify.c:231
 #, c-format
@@ -5767,7 +5768,7 @@ msgstr ""
 
 #: libsvn_subr/opt.c:237
 msgid " arg"
-msgstr " 인자"
+msgstr " arg" 
 
 #: libsvn_subr/opt.c:261
 #, c-format
@@ -6807,7 +6808,7 @@ msgid ""
 msgstr ""
 "사용법: svnadmin help [SUBCOMMAND...]\n"
 "\n"
-"이 프로그램이나 그것의 subcommand 의 사용법을 보여줍니다.\n"
+"이 프로그램이나 그것의 하위 명령의 사용법을 보여줍니다.\n"
 
 #: svnadmin/main.c:325
 msgid ""
@@ -6985,7 +6986,7 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "일반적인 사용법: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
-"특정 subcommand 의 사용법을 위해서는 'svnadmin help <subcommand>' 를 참조하십"
+"특정 하위명령의 사용법을 위해서는 'svnadmin help <subcommand>' 를 참조하십"
 "시오.\n"
 "\n"
 "가능한 하위 명령 목록:\n"
@@ -7104,7 +7105,7 @@ msgstr "잠금 해제됨 '%s'\n"
 
 #: svnadmin/main.c:1348
 msgid "subcommand argument required\n"
-msgstr "subcommand 인자가 필요합니다\n"
+msgstr "하위명령 인자가 필요합니다\n"
 
 #: svnadmin/main.c:1438
 #, c-format
@@ -7112,7 +7113,7 @@ msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
 "Type 'svnadmin help %s' for usage.\n"
 msgstr ""
-"subcommand '%s' 는 옵션 '%s'를 허용할 수 없습니다\n"
+"하위명령 '%s' 는 옵션 '%s'를 허용할 수 없습니다\n"
 "사용법 'svnadmin help %s' 을 통해 얻을 수 있습니다.\n"
 
 #: svndumpfilter/main.c:325
@@ -7179,7 +7180,7 @@ msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: svndumpfilter help [SUBCOMMAND...]\n"
 msgstr ""
-"이 프로그램의 사용법 이나 그것의 subcommands 에 대해 설명합니다.\n"
+"이 프로그램의 사용법 이나 그것의 하위명령에 대해 설명합니다.\n"
 "사용법: svndumpfilter help [SUBCOMMAND...]\n"
 
 #: svndumpfilter/main.c:863
@@ -7190,7 +7191,7 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "일반적인 사용법: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
-"특정 subcommand 의 사용법을 위해서는 'svndumpfilter help <subcommand>'를 참조"
+"특정 하위명령의 사용법을 위해서는 'svndumpfilter help <subcommand>'를 참조"
 "하십시오.\n"
 "\n"
 "가능한 하위 명령 목록:\n"
@@ -7248,7 +7249,7 @@ msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
 "Type 'svndumpfilter help %s' for usage.\n"
 msgstr ""
-"subcommand '%s' 는 옵션 '%s'를 허용할 수 없습니다.\n"
+"하위명령 '%s' 는 옵션 '%s'를 허용할 수 없습니다.\n"
 "'svndumpfilter help %s' 을 통해 사용법을 확인하세요.\n"
 
 #: svnlook/main.c:101
