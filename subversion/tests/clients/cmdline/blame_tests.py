@@ -142,35 +142,46 @@ def blame_in_xml(sbox):
   # Retrieve last changed date from svn info
   output, error = svntest.actions.run_and_verify_svn(None, None, [],
                                                      'log', file_path,
-                                                     '--xml', '-rHEAD')
-  info_msg = "<date>"
+                                                     '--xml', '-r1:2')
+  date1 = None
+  date2 = None
   for line in output:
-    if line.find(info_msg) >= 0:
-      time_str = line[:len(line)]
-      break
+    if line.find("<date>") >= 0:
+      if date1 is None:
+        date1 = line
+        continue
+      elif date2 is None:
+        date2 = line
+        break
   else:
     raise svntest.Failure
 
-  template = ["<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
-              "<blame>\n",
-              "<target\n",
-              "   path=\"%s\">\n" % (file_path),
-              "<entry\n",
-              "   line-number=\"1\">\n",
-              "<commit\n",
-              "   revision=\"2\">\n",
-              "<author>jrandom</author>\n",
-              "%s" % (time_str),
-              "</commit>\n",
-              "</entry>\n",
-              "</target>\n",
-              "</blame>\n",
-             ]
+  template = ['<?xml version="1.0" encoding="utf-8"?>\n',
+              '<blame>\n',
+              '<target\n',
+              '   path="svn-test-work/working_copies/blame_tests-4/iota">\n',
+              '<entry\n',
+              '   line-number="1">\n',
+              '<commit\n',
+              '   revision="1">\n',
+              '<author>jrandom</author>\n',
+              '%s' % date1,
+              '</commit>\n',
+              '</entry>\n',
+              '<entry\n',
+              '   line-number="2">\n',
+              '<commit\n',
+              '   revision="2">\n',
+              '<author>jrandom</author>\n',
+              '%s' % date2,
+              '</commit>\n',
+              '</entry>\n',
+              '</target>\n',
+              '</blame>\n']
 
   output, error = svntest.actions.run_and_verify_svn(None, None, [],
                                                      'blame', file_path,
                                                      '--xml')
-
   for i in range(0, len(output)):
     if output[i] != template[i]:
       raise svntest.Failure
