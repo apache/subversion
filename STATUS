@@ -9,13 +9,6 @@ Status of 1.2.1:
 
 Candidate changes:
 
-  * r14885
-    Python bindings, fix for functions returning MD5 digests.
-    Justification:
-      Small change, potentially useful, 1.3 is quite some way off.
-    Votes:
-      +1: maxb, dlr
-      
   * r15088
     Make lock/unlock over ra_dav able to cache authentication data.
     Justfication: Users of locking over http:// will get very annoyed.
