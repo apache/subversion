@@ -142,10 +142,12 @@ module Svn
     end
 
     def get_prop_diff(node, base_root, path, base_path)
+      p "before @root.node_prop_list"
       local_props = @root.node_prop_list(path)
       if node.add?
         base_props = {}
       else
+        p "before base_root.node_prop_list"
         base_props = base_root.node_prop_list(base_path)
       end
       p "before prop_diffs"
