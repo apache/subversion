@@ -107,10 +107,8 @@ def textual_merges_galore(sbox):
   mu_text = ""
   rho_text = ""
   for x in range(2,11):
-    mu_text = mu_text + '\nThis is line ' + `x` + ' in mu'
-    rho_text = rho_text + '\nThis is line ' + `x` + ' in rho'
-  mu_text += "\n"
-  rho_text += "\n"
+    mu_text = mu_text + 'This is line ' + `x` + ' in mu\n'
+    rho_text = rho_text + 'This is line ' + `x` + ' in rho\n'
   svntest.main.file_append(mu_path, mu_text)
   svntest.main.file_append(rho_path, rho_text)  
 
@@ -148,15 +146,11 @@ def textual_merges_galore(sbox):
   tau_text = ""
   additional_rho_text = ""  # saving rho text changes from previous commit
   for x in range(2,11):
-    lambda_text = lambda_text + '\nThis is line ' + `x` + ' in lambda'
-    pi_text = pi_text + '\nThis is line ' + `x` + ' in pi'
-    tau_text = tau_text + '\nThis is line ' + `x` + ' in tau'
+    lambda_text = lambda_text + 'This is line ' + `x` + ' in lambda\n'
+    pi_text = pi_text + 'This is line ' + `x` + ' in pi\n'
+    tau_text = tau_text + 'This is line ' + `x` + ' in tau\n'
     additional_rho_text = additional_rho_text \
-                          + '\nThis is additional line ' + `x` + ' in rho'
-  lambda_text += "\n"
-  pi_text += "\n"
-  tau_text += "\n"
-  additional_rho_text += "\n"
+                          + 'This is additional line ' + `x` + ' in rho\n'
   svntest.main.file_append(lambda_path, lambda_text)
   svntest.main.file_append(pi_path, pi_text)
   svntest.main.file_append(tau_path, tau_text)
@@ -206,8 +200,7 @@ def textual_merges_galore(sbox):
   # ten lines appended in revision 3.
   other_tau_text = ""
   for x in range(2,11):
-    other_tau_text = other_tau_text + '\nConflicting line ' + `x` + ' in tau'
-  other_tau_text += "\n"
+    other_tau_text = other_tau_text + 'Conflicting line ' + `x` + ' in tau\n'
   svntest.main.file_append(other_tau_path, other_tau_text)
 
   # Do the first merge, revs 1:3.  This tests all the cases except
@@ -232,11 +225,10 @@ def textual_merges_galore(sbox):
                       contents=expected_disk.desc['A/D/G/pi'].contents
                       + pi_text)
   expected_disk.tweak('A/D/G/tau',
-                      contents="<<<<<<< .working\n"
-                      + expected_disk.desc['A/D/G/tau'].contents
+                      contents=expected_disk.desc['A/D/G/tau'].contents
+                      + "<<<<<<< .working\n"
                       + other_tau_text
                       + "=======\n"
-                      + expected_disk.desc['A/D/G/tau'].contents
                       + tau_text
                       + ">>>>>>> .merge-right.r3\n")
 
@@ -293,8 +285,7 @@ def textual_merges_galore(sbox):
   # clean.
   other_rho_text = ""
   for x in range(1,10):
-    other_rho_text = other_rho_text + '\nUnobtrusive line ' + `x` + ' in rho'
-  other_rho_text += "\n"
+    other_rho_text = other_rho_text + 'Unobtrusive line ' + `x` + ' in rho\n'
   fp = open(other_rho_path, "r")
   current_other_rho_text = fp.read()
   fp.close()
@@ -312,9 +303,9 @@ def textual_merges_galore(sbox):
                                })
   
   expected_disk = wc.State("", {
-    'pi'    : wc.StateItem("This is the file 'pi'."),
-    'rho'   : wc.StateItem("This is the file 'rho'."),
-    'tau'   : wc.StateItem("This is the file 'tau'."),
+    'pi'    : wc.StateItem("This is the file 'pi'.\n"),
+    'rho'   : wc.StateItem("This is the file 'rho'.\n"),
+    'tau'   : wc.StateItem("This is the file 'tau'.\n"),
     })
   expected_disk.tweak('rho', contents=other_rho_text
                       + expected_disk.desc['rho'].contents
@@ -325,16 +316,14 @@ def textual_merges_galore(sbox):
                       + pi_text)
   expected_disk.tweak('tau',
                       # Ouch, mom, I've got conflicts on my conflicts!
-                      contents="<<<<<<< .working\n"
+                      contents=expected_disk.desc['tau'].contents
                       + "<<<<<<< .working\n"
-                      + expected_disk.desc['tau'].contents
+                      + "<<<<<<< .working\n"
                       + other_tau_text
                       + "=======\n"
-                      + expected_disk.desc['tau'].contents
                       + tau_text
                       + ">>>>>>> .merge-right.r3\n"
                       + "=======\n"
-                      + expected_disk.desc['tau'].contents
                       + tau_text
                       + ">>>>>>> .merge-right.r3\n"
                       )
@@ -567,10 +556,10 @@ def delete_file_and_dir(sbox):
   expected_output = wc.State(B2_path, { })
   expected_disk = wc.State('', {
     'E'       : Item(),
-    'E/alpha' : Item("This is the file 'alpha'."),
-    'E/beta'  : Item("This is the file 'beta'."),
+    'E/alpha' : Item("This is the file 'alpha'.\n"),
+    'E/beta'  : Item("This is the file 'beta'.\n"),
     'F'       : Item(),
-    'lambda'  : Item("This is the file 'lambda'."),
+    'lambda'  : Item("This is the file 'lambda'.\n"),
     })
   expected_status = wc.State(B2_path, {
     ''        : Item(status='  '),
@@ -696,10 +685,10 @@ def simple_property_merges(sbox):
     })
   expected_disk = wc.State('', {
     'E'        : Item(),
-    'E/alpha'  : Item("This is the file 'alpha'."),
-    'E/beta'   : Item("This is the file 'beta'."),
+    'E/alpha'  : Item("This is the file 'alpha'.\n"),
+    'E/beta'   : Item("This is the file 'beta'.\n"),
     'F'        : Item(),
-    'lambda'   : Item("This is the file 'lambda'."),
+    'lambda'   : Item("This is the file 'lambda'.\n"),
     })
   expected_disk.tweak('E', 'E/alpha', 
                       props={'foo' : 'mod_foo', 'bar' : 'bar_val'})
@@ -860,9 +849,9 @@ def merge_catches_nonexistent_target(sbox):
       })
     expected_status.tweak(status='  ', wc_rev=1)
     expected_disk = wc.State('', {
-      'pi'   : Item("This is the file 'pi'."),
-      'rho'  : Item("This is the file 'rho'."),
-      'tau'  : Item("This is the file 'tau'."),
+      'pi'   : Item("This is the file 'pi'.\n"),
+      'rho'  : Item("This is the file 'rho'.\n"),
+      'tau'  : Item("This is the file 'tau'.\n"),
       })
     expected_skip = wc.State('', {
       'newfile' :Item(),
@@ -914,7 +903,7 @@ def merge_tree_deleted_in_target(sbox):
     })
   expected_disk = wc.State('', {
     'F'       : Item(),
-    'lambda'  : Item("This is the file 'lambda'.change lambda.\n"),
+    'lambda'  : Item("This is the file 'lambda'.\nchange lambda.\n"),
     })
   expected_status = wc.State(I_path, {
     ''        : Item(status='  '),
@@ -1034,7 +1023,7 @@ def merge_one_file(sbox):
   rho_url = svntest.main.current_repo_url + '/A/D/G/rho'
   
   # Change rho for revision 2
-  svntest.main.file_append(rho_path, '\nA new line in rho.\n')
+  svntest.main.file_append(rho_path, 'A new line in rho.\n')
 
   expected_output = wc.State(wc_dir, { rho_rel_path : Item(verb='Sending'), })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
@@ -1110,8 +1099,7 @@ def merge_with_implicit_target (sbox):
   orig_mu_text = svntest.tree.get_text(mu_path)
   added_mu_text = ""
   for x in range(2,11):
-    added_mu_text = added_mu_text + '\nThis is line ' + `x` + ' in mu'
-  added_mu_text += "\n"
+    added_mu_text = added_mu_text + 'This is line ' + `x` + ' in mu\n'
   svntest.main.file_append(mu_path, added_mu_text)
 
   # Create expected output tree for initial commit
@@ -1376,7 +1364,7 @@ def merge_in_new_file_and_diff(sbox):
   
   new_file_path = os.path.join(wc_dir, 'A', 'B', 'E', 'newfile')
   fp = open(new_file_path, 'w')
-  fp.write("newfile")
+  fp.write("newfile\n")
   fp.close()
 
   # Add the new file, and commit revision 3.
@@ -1395,9 +1383,9 @@ def merge_in_new_file_and_diff(sbox):
     'newfile' : Item(status='A '),
     })
   expected_disk = wc.State('', {
-    'alpha'   : Item("This is the file 'alpha'."),
-    'beta'    : Item("This is the file 'beta'."),
-    'newfile' : Item("newfile"),
+    'alpha'   : Item("This is the file 'alpha'.\n"),
+    'beta'    : Item("This is the file 'beta'.\n"),
+    'newfile' : Item("newfile\n"),
     })
   expected_status = wc.State(short_branch_path, {
     ''        : Item(status='  ', wc_rev=2),
@@ -2635,10 +2623,10 @@ def safe_property_merge(sbox):
 
   expected_disk = wc.State('', {
     'E'        : Item(),
-    'E/alpha'  : Item("This is the file 'alpha'."),
-    'E/beta'   : Item("This is the file 'beta'."),
+    'E/alpha'  : Item("This is the file 'alpha'.\n"),
+    'E/beta'   : Item("This is the file 'beta'.\n"),
     'F'        : Item(),
-    'lambda'   : Item("This is the file 'lambda'."),
+    'lambda'   : Item("This is the file 'lambda'.\n"),
     })
   expected_disk.tweak('E', 'E/alpha', 
                       props={'foo' : 'branchval'}) # local mods still present
@@ -2693,7 +2681,7 @@ def cherry_pick_text_conflict(sbox):
 
   # Change mu's text twice on the branch, producing r3 then r4.
   svntest.main.file_append(branch_mu_path,
-                           "\nr3\nr3\nr3\nr3\nr3\nr3\nr3\nr3\n")
+                           "r3\nr3\nr3\nr3\nr3\nr3\nr3\nr3\n")
   svntest.actions.run_and_verify_svn(None, None, [], 'ci',
                                      '-m', 'Add lines to mu.', wc_dir)
   svntest.main.file_append(branch_mu_path,
@@ -2706,9 +2694,9 @@ def cherry_pick_text_conflict(sbox):
     'mu'       : Item(status='C '),
     })
   expected_disk = wc.State('', {
-    'mu'        : Item("<<<<<<< .working\n"
-                       + "This is the file 'mu'.=======\n"
-                       + "This is the file 'mu'.\n"
+    'mu'        : Item("This is the file 'mu'.\n"
+                       + "<<<<<<< .working\n"
+                       + "=======\n"
                        + "r3\n"
                        + "r3\n"
                        + "r3\n"
@@ -2728,22 +2716,22 @@ def cherry_pick_text_conflict(sbox):
                        + ">>>>>>> .merge-right.r4\n"
                        ),
     'B'         : Item(),
-    'B/lambda'  : Item("This is the file 'lambda'."),
+    'B/lambda'  : Item("This is the file 'lambda'.\n"),
     'B/E'       : Item(),
-    'B/E/alpha' : Item("This is the file 'alpha'."),
-    'B/E/beta'  : Item("This is the file 'beta'."),
+    'B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'  : Item("This is the file 'beta'.\n"),
     'B/F'       : Item(),
     'C'         : Item(),
     'D'         : Item(),
-    'D/gamma'   : Item("This is the file 'gamma'."),
+    'D/gamma'   : Item("This is the file 'gamma'.\n"),
     'D/H'       : Item(),
-    'D/H/chi'   : Item("This is the file 'chi'."),
-    'D/H/psi'   : Item("This is the file 'psi'."),
-    'D/H/omega' : Item("This is the file 'omega'."),
+    'D/H/chi'   : Item("This is the file 'chi'.\n"),
+    'D/H/psi'   : Item("This is the file 'psi'.\n"),
+    'D/H/omega' : Item("This is the file 'omega'.\n"),
     'D/G'       : Item(),
-    'D/G/pi'    : Item("This is the file 'pi'."),
-    'D/G/rho'   : Item("This is the file 'rho'."),
-    'D/G/tau'   : Item("This is the file 'tau'."),
+    'D/G/pi'    : Item("This is the file 'pi'.\n"),
+    'D/G/rho'   : Item("This is the file 'rho'.\n"),
+    'D/G/tau'   : Item("This is the file 'tau'.\n"),
     })
   expected_status = wc.State(A_path, {
     ''          : Item(status='  '),

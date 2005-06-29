@@ -172,10 +172,9 @@ def export_eol_translation(sbox):
 
   wc_dir = sbox.wc_dir
 
-  # Append a '\n' to A/mu and set svn:eol-style to 'CR'
-  # to see if it's applied correctly in the export operation
+  # Set svn:eol-style to 'CR' to see if it's applied correctly in the
+  # export operation
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  svntest.main.file_append(mu_path, '\n')
   svntest.main.run_svn(None, 'ps', 'svn:eol-style', 
                        'CR', mu_path)
   svntest.main.run_svn(None, 'ci',
@@ -184,9 +183,8 @@ def export_eol_translation(sbox):
                        '-m', 'Added eol-style prop to mu', mu_path)
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/mu',
-                      contents=expected_disk.desc['A/mu'].contents + 
-                      '\r')
+  new_contents = expected_disk.desc['A/mu'].contents.replace("\n", "\r")
+  expected_disk.tweak('A/mu', contents=new_contents)
 
   export_target = sbox.add_wc_path('export')
 
@@ -234,14 +232,12 @@ def export_working_copy_with_property_mods(sbox):
 
   # Make a local property mod to A/mu
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  svntest.main.file_append(mu_path, '\n')
   svntest.main.run_svn(None, 'ps', 'svn:eol-style',
                        'CR', mu_path)
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/mu',
-                      contents=expected_disk.desc['A/mu'].contents +
-                      '\r')
+  new_contents = expected_disk.desc['A/mu'].contents.replace("\n", "\r")
+  expected_disk.tweak('A/mu', contents=new_contents)
 
   export_target = sbox.add_wc_path('export')
 
@@ -291,7 +287,6 @@ def export_native_eol_option(sbox):
   # Append a '\n' to A/mu and set svn:eol-style to 'native'
   # to see if it's applied correctly in the export operation
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  svntest.main.file_append(mu_path, '\n')
   svntest.main.run_svn(None, 'ps', 'svn:eol-style', 
                        'native', mu_path)
   svntest.main.run_svn(None, 'ci',
@@ -300,9 +295,8 @@ def export_native_eol_option(sbox):
                        '-m', 'Added eol-style prop to mu', mu_path)
 
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/mu',
-                      contents=expected_disk.desc['A/mu'].contents + 
-                      '\r')
+  new_contents = expected_disk.desc['A/mu'].contents.replace("\n", "\r")
+  expected_disk.tweak('A/mu', contents=new_contents)
 
   export_target = sbox.add_wc_path('export')
 

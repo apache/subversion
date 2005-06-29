@@ -455,7 +455,8 @@ def update_modified_with_translation(sbox):
 9
 10
 =======
-This is the file 'rho'.>>>>>>> .r1
+This is the file 'rho'.
+>>>>>>> .r1
 """)
 
   # Updating back to revision 1 should not error; the merge should
@@ -584,7 +585,7 @@ def cat_keyword_expansion(sbox):
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
 
   # Set up A/mu to do $Rev$ keyword expansion
-  svntest.main.file_append (mu_path , "\n$Rev$")
+  svntest.main.file_append (mu_path , "$Rev$")
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'svn:keywords', 'Rev', mu_path)
 
@@ -662,7 +663,7 @@ def propset_commit_checkout_nocrash(sbox):
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   # Put a keyword in A/mu, commit
-  svntest.main.file_append (mu_path, "\n$Rev$")
+  svntest.main.file_append (mu_path, "$Rev$")
   expected_output = wc.State(wc_dir, {
     'A/mu' : Item(verb='Sending'),
     })
