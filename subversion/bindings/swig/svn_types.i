@@ -141,7 +141,7 @@
 {
   if ($1) {
     svn_error_t *error = $1;
-    apr_status_t error_code = error->apr_err;
+    VALUE error_code = INT2NUM(error->apr_err);
     VALUE message;
 
     message = rb_str_new2(error->message ? error->message : "");
@@ -155,8 +155,7 @@
     }
     svn_error_clear(error);
     
-    rb_exc_raise(svn_swig_rb_svn_error_new(INT2NUM(error_code),
-                                           message));
+    rb_exc_raise(svn_swig_rb_svn_error_new(error_code, message));
   }
   $result = Qnil;
 }
