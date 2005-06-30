@@ -504,20 +504,6 @@
   }
 }
 
-/* -----------------------------------------------------------------------
-   remove destructor for apr_pool and Ruby's GC.
-*/
-#ifdef SWIGRUBY
-#define REMOVE_DESTRUCTOR(type)                 \
-%extend type                                    \
-{                                               \
-  ~type(type *obj)                              \
-    {                                           \
-      /* do nothing */                          \
-    }                                           \
-}
-#endif
-
 /* ----------------------------------------------------------------------- */
 
 %{
