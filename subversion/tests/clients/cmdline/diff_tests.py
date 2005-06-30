@@ -868,9 +868,9 @@ def diff_base_to_repos(sbox):
                                                         'diff',
                                                         '-r', '1', wc_dir)
 
-  def convert_lines(lines):
-    return [x.replace("/", os.path.sep).replace("\n", os.linesep)
-            for x in lines]
+  # Makes diff output look the same on all platforms.
+  def strip_eols(lines):
+    return [x.replace("\r", "").replace("\n", "") for x in lines]
 
   expected_output_lines = [
     "Index: svn-test-work/working_copies/diff_tests-14/iota\n",
@@ -881,9 +881,8 @@ def diff_base_to_repos(sbox):
     " This is the file 'iota'.\n",
     "+some rev2 iota text.\n",
     "+an iota local mod.\n"]
-  expected_output_lines = convert_lines(expected_output_lines)
 
-  if diff_output != expected_output_lines:
+  if strip_eols(diff_output) != strip_eols(expected_output_lines):
     raise svntest.Failure
 
   # If we run 'svn diff -r BASE:1', we should see diffs that only show
@@ -900,9 +899,8 @@ def diff_base_to_repos(sbox):
     "@@ -1,2 +1 @@\n",
     " This is the file 'iota'.\n",
     "-some rev2 iota text.\n"]
-  expected_output_lines = convert_lines(expected_output_lines)
 
-  if diff_output != expected_output_lines:
+  if strip_eols(diff_output) != strip_eols(expected_output_lines):
     raise svntest.Failure
 
   # But that's not all folks... no, no, we're just getting started
