@@ -726,11 +726,11 @@ def simple_property_merges(sbox):
   # Merge B 3:4 into B2 now causes a conflict
   expected_disk.add({
     'E/dir_conflicts.prej'
-    : Item("Property 'foo' locally deleted, "
-           + "but update sets it to 'mod_foo'\n"),
+    : Item("Trying to change property 'foo' from 'foo_val' to 'mod_foo',\n"
+           + "but the property does not exist."),    
     'E/alpha.prej'
-    : Item("Property 'foo' locally deleted, "
-           + "but update sets it to 'mod_foo'\n"),
+    : Item("Trying to change property 'foo' from 'foo_val' to 'mod_foo',\n"
+           + "but the property does not exist."),
     })
   expected_disk.tweak('E', 'E/alpha', props={'bar' : 'bar_val'})
   expected_status.tweak('E', 'E/alpha', status=' C')
@@ -765,7 +765,7 @@ def simple_property_merges(sbox):
 
   # Cannot use run_and_verify_merge with a file target
   svntest.actions.run_and_verify_svn(None,
-                                     [' U   ' + alpha_path + '\n'], [],
+                                     [' G   ' + alpha_path + '\n'], [],
                                      'merge',
                                      '-r', '3:4', alpha_url, alpha_path)
   
@@ -2524,10 +2524,8 @@ def merge_dir_branches(sbox):
 
 #----------------------------------------------------------------------
 
-# Part of issue 2035, whereby 'svn merge' would destroy local
-# prop-mods by overwriting them with different prop-mods.
-
-# Helper for safe_property_merge()  -- a custom singleton handler.
+# Helper for safe_property_merge() and property_merge_from_branch() --
+# a custom singleton handler.
 def detect_conflict_files(node, extra_files):
   """NODE has been discovered an extra file on disk.  Verify that it
   matches one of the regular expressions in the EXTRA_FILES list.  If
@@ -2656,6 +2654,208 @@ def safe_property_merge(sbox):
                                        None, None, # no B singleton handler
                                        1, # check props
                                        0) # dry_run
+
+#----------------------------------------------------------------------
+
+# Test for issue 2035, whereby 'svn merge' wouldn't always mark
+# property conflicts when it should.
+
+def property_merge_from_branch(sbox):
+  "property merge conflict even without local mods"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add a property to a file and a directory, commit as r2.
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'foo_val',
+                                     alpha_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'foo_val',
+                                     E_path)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'       : Item(verb='Sending'),
+    'A/B/E/alpha' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', wc_rev=2, status='  ')
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output, expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Copy B to B2 as rev 3  (making a branch)
+  B_url = svntest.main.current_repo_url + '/A/B'
+  B2_url = svntest.main.current_repo_url + '/A/B2'
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', '-m', 'fumble',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     B_url, B2_url)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Change the properties underneath B again, and commit as r4
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'foo_val2',
+                                     alpha_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'foo_val2',
+                                     E_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'       : Item(verb='Sending'),
+    'A/B/E/alpha' : Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output, None,
+                                         None, None, None, None, None,
+                                         wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Make different propchanges changes to the B2 branch and commit as r5.
+  alpha_path2 = os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha')
+  E_path2 = os.path.join(wc_dir, 'A', 'B2', 'E')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'branchval',
+                                     alpha_path2)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'branchval',
+                                     E_path2)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B2/E'       : Item(verb='Sending'),
+    'A/B2/E/alpha' : Item(verb='Sending'),
+    })
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output, None,
+                                         None, None, None, None, None,
+                                         wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Now merge the recent B change to the branch.  There are no local
+  # mods anywhere, but we should still get property conflicts anyway!  
+  B2_path = os.path.join(wc_dir, 'A', 'B2')
+
+  expected_output = wc.State(B2_path, {
+    'E'        : Item(status=' C'),
+    'E/alpha'  : Item(status=' C'),
+    })
+
+  expected_disk = wc.State('', {
+    'E'        : Item(),
+    'E/alpha'  : Item("This is the file 'alpha'.\n"),
+    'E/beta'   : Item("This is the file 'beta'.\n"),
+    'F'        : Item(),
+    'lambda'   : Item("This is the file 'lambda'.\n"),
+    })
+  expected_disk.tweak('E', 'E/alpha', 
+                      props={'foo' : 'branchval'})  
+
+  expected_status = wc.State(B2_path, {
+    ''        : Item(status='  '),
+    'E'       : Item(status=' C'),
+    'E/alpha' : Item(status=' C'),
+    'E/beta'  : Item(status='  '),
+    'F'       : Item(status='  '),
+    'lambda'  : Item(status='  '),
+    })
+  expected_status.tweak(wc_rev=5)
+
+  expected_skip = wc.State('', { })
+
+  # should have 2 'prej' files left behind, describing prop conflicts:
+  extra_files = ['alpha.*\.prej', 'dir_conflicts.*\.prej']
+  
+  svntest.actions.run_and_verify_merge(B2_path, '3', '4', B_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected error string
+                                       detect_conflict_files, extra_files,
+                                       None, None, # no B singleton handler
+                                       1, # check props
+                                       0) # dry_run
+
+#----------------------------------------------------------------------
+
+# Another test for issue 2035, whereby sometimes 'svn merge' marked
+# property conflicts when it shouldn't!
+
+def property_merge_undo_redo(sbox):
+  "undo, then redo a property merge"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add a property to a file, commit as r2.
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'foo_val',
+                                     alpha_path)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E/alpha', wc_rev=2, status='  ')
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output, expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  # Use 'svn merge' to undo the commit.  ('svn merge -r2:1')
+  # Result should be a single local-prop-mod.
+  expected_output = wc.State(wc_dir, {'A/B/E/alpha'  : Item(status=' U'), })
+
+  expected_disk = svntest.main.greek_state.copy()
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/B/E/alpha', status=' M')
+
+  expected_skip = wc.State('', { })
+  
+  svntest.actions.run_and_verify_merge(wc_dir, '2', '1',
+                                       svntest.main.current_repo_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected error string
+                                       None, None, # no A singleton handler
+                                       None, None, # no B singleton handler
+                                       1, # check props
+                                       0) # dry_run
+  
+  # Change mind, re-apply the change ('svn merge -r1:2').
+  # This should merge cleanly into existing prop-mod, status shows nothing.
+  expected_output = wc.State(wc_dir, {'A/B/E/alpha'  : Item(status=' U'), })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/B/E/alpha', props={'foo' : 'foo_val'})
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+
+  expected_skip = wc.State('', { })
+  
+  svntest.actions.run_and_verify_merge(wc_dir, '1', '2',
+                                       svntest.main.current_repo_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected error string
+                                       None, None, # no A singleton handler
+                                       None, None, # no B singleton handler
+                                       1, # check props
+                                       0) # dry_run
+
 
   
 #----------------------------------------------------------------------
@@ -2801,6 +3001,8 @@ test_list = [ None,
               merge_file_with_space_in_its_name,
               merge_dir_branches,
               safe_property_merge,
+              property_merge_from_branch,
+              property_merge_undo_redo,
               cherry_pick_text_conflict,
              ]
 
