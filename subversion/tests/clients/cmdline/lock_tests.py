@@ -1196,6 +1196,35 @@ def lock_and_exebit2(sbox):
     print "did not set the file to read-only, executable"
     raise svntest.Failure
 
+def commit_xml_unsafe_file_unlock(sbox):
+  "commit file with xml-unsafe name and release lock"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  fname = 'foo & bar'
+  file_path = os.path.join(sbox.wc_dir, fname)
+  svntest.main.file_append(file_path, "Initial data.\n")
+  svntest.main.run_svn(None, 'add', file_path)
+  svntest.main.run_svn(None, 'commit', '-m', '', file_path)
+
+  # lock fname as wc_author
+  svntest.actions.run_and_verify_svn(None, None, None, 'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'some lock comment', file_path)
+
+  # make a change and commit it, allowing lock to be released
+  svntest.main.file_append(file_path, "Followup data.\n")
+  svntest.main.run_svn(None, 'commit', '-m', '', file_path)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({ fname : Item(status='  ', wc_rev=3), })
+
+  # Make sure the file is unlocked
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -1228,6 +1257,7 @@ test_list = [ None,
               lock_uri_encoded,
               Skip(lock_and_exebit1, (os.name != 'posix')),
               Skip(lock_and_exebit2, (os.name != 'posix')),
+              commit_xml_unsafe_file_unlock,
             ]
 
 if __name__ == '__main__':
@@ -1236,5 +1266,3 @@ if __name__ == '__main__':
 
 
 ### End of file.
-
-
