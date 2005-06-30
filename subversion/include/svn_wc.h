@@ -2730,9 +2730,11 @@ svn_error_t *svn_wc_merge (const char *left,
                            apr_pool_t *pool);
 
 
-/** Given a @a path under version control, merge an array of @a propchanges
- * into the path's existing properties.  @a propchanges is an array of
- * @c svn_prop_t objects.  @a adm_access is an access baton for the directory
+/** Given a @a path under version control, merge an array of @a
+ * propchanges into the path's existing properties.  @a propchanges is
+ * an array of @c svn_prop_t objects, and @a baseprops is a hash
+ * representing the original set of properties that @a propchanges is
+ * working against.  @a adm_access is an access baton for the directory
  * containing @a path.
  *
  * If @a base_merge is @c FALSE only the working properties will be changed,
@@ -2749,6 +2751,28 @@ svn_error_t *svn_wc_merge (const char *left,
  *
  * If @a path is not under version control, return the error
  * SVN_ERR_UNVERSIONED_RESOURCE and don't touch anyone's properties.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_wc_merge_props (svn_wc_notify_state_t *state,
+                    const char *path,
+                    svn_wc_adm_access_t *adm_access,
+                    apr_hash_t *baseprops,
+                    const apr_array_header_t *propchanges,
+                    svn_boolean_t base_merge,
+                    svn_boolean_t dry_run,
+                    apr_pool_t *pool);
+
+
+/** 
+ * Similar to svn_wc_merge_props(), but no baseprops are given.
+ * Instead, it's assumed that the incoming propchanges are based
+ * against the working copy's own baseprops.  While this assumption is
+ * correct for 'svn update', it's incorrect for 'svn merge', and can
+ * cause flawed behavior.  (See issue #2035.)
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
 svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,

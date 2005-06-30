@@ -728,8 +728,8 @@ merge_props_changed (svn_wc_adm_access_t *adm_access,
      definition, 'svn merge' shouldn't touch any data within .svn/  */
   if (props->nelts)
     {
-      err = svn_wc_merge_prop_diffs (state, path, adm_access, props,
-                                     FALSE, merge_b->dry_run, subpool);
+      err = svn_wc_merge_props (state, path, adm_access, original_props, props,
+                                FALSE, merge_b->dry_run, subpool);
       if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
                   || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
         {

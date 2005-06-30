@@ -1292,13 +1292,27 @@ close_directory (void *dir_baton,
                 }
             }
 
-          /* Merge pending properties into temporary files (ignoring
-             conflicts). */
-          SVN_ERR_W (svn_wc__merge_prop_diffs (&prop_state,
-                                               adm_access, NULL,
-                                               regular_props, TRUE, FALSE,
-                                               db->pool, &entry_accum),
-                     _("Couldn't do property merge"));
+          {
+            apr_hash_t *old_pristine_props;
+            const char *pristine_prop_path;
+
+            /* Get the current pristine props. */
+            old_pristine_props = apr_hash_make (db->pool);      
+            SVN_ERR (svn_wc__prop_base_path (&pristine_prop_path,
+                                             db->path, adm_access, 
+                                             FALSE, db->pool));
+            SVN_ERR (svn_wc__load_prop_file (pristine_prop_path,
+                                             old_pristine_props, db->pool));
+
+            /* Merge pending properties into temporary files (ignoring
+               conflicts). */
+            SVN_ERR_W (svn_wc__merge_props (&prop_state,
+                                            adm_access, NULL,
+                                            old_pristine_props,
+                                            regular_props, TRUE, FALSE,
+                                            db->pool, &entry_accum),
+                       _("Couldn't do property merge"));
+          }
 
           /* Are the directory's props locally modified? */
           SVN_ERR (svn_wc_props_modified_p (&prop_modified,
@@ -1960,23 +1974,23 @@ install_file (svn_wc_notify_state_t *content_state,
     {
       apr_array_header_t *propchanges;
       apr_hash_t *old_pristine_props, *new_pristine_props;
+      const char *pristine_prop_path;
       int i;
+
+      /* Get the current pristine props. */
+      old_pristine_props = apr_hash_make (pool);      
+      SVN_ERR (svn_wc__prop_base_path (&pristine_prop_path,
+                                       file_path, adm_access, 
+                                       FALSE, pool));
+      SVN_ERR (svn_wc__load_prop_file (pristine_prop_path,
+                                       old_pristine_props, pool));
       
       if (is_full_proplist)
         {         
           /* If the caller passed a definitive list that represents all
              of the file's properties, we need to compare it to the
              current 'pristine' list and deduce the differences. */
-          const char *pristine_prop_path;
-          old_pristine_props = apr_hash_make (pool);
           new_pristine_props = apr_hash_make (pool);
-          
-          /* Get the current pristine props. */
-          SVN_ERR (svn_wc__prop_base_path (&pristine_prop_path,
-                                           file_path, adm_access, 
-                                           FALSE, pool));
-          SVN_ERR (svn_wc__load_prop_file (pristine_prop_path,
-                                           old_pristine_props, pool));
           
           /* Convert the given array into hash of 'new' pristine props. */
           for (i = 0; i < regular_props->nelts; i++)
@@ -2016,10 +2030,11 @@ install_file (svn_wc_notify_state_t *content_state,
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
          props.  */
-      SVN_ERR (svn_wc__merge_prop_diffs (prop_state,
-                                         adm_access, base_name,
-                                         propchanges, TRUE, FALSE, pool,
-                                         &log_accum));
+      SVN_ERR (svn_wc__merge_props (prop_state,
+                                    adm_access, base_name,
+                                    old_pristine_props,
+                                    propchanges, TRUE, FALSE, pool,
+                                    &log_accum));
     }
   
   /* If there are any ENTRY PROPS, make sure those get appended to the
