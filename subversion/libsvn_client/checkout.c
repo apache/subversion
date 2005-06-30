@@ -161,9 +161,10 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
         }
       else
         {
-          return svn_error_createf (SVN_ERR_WC_NODE_KIND_CHANGE, NULL,
-                                    _("'%s' is already a file/something else"),
-                                    svn_path_local_style (path, pool));
+          return svn_error_createf
+            (SVN_ERR_WC_NODE_KIND_CHANGE, NULL,
+             _("'%s' already exists and is not a directory"),
+             svn_path_local_style (path, pool));
         }
 
     done:
