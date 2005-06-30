@@ -119,7 +119,7 @@ static const apr_getopt_option_t options_table[] =
      N_("print differences against the copy source")},
 
     {"revprop", svnlook__revprop_opt, 0,
-     N_("operate on a revision property (use with -r)")},
+     N_("operate on a revision property (use with -r or -t)")},
 
     {"full-paths", svnlook__full_paths, 0,
      N_("show full paths instead of indenting them")},
@@ -1513,7 +1513,7 @@ do_pget (svnlook_ctxt_t *c,
       SVN_ERR (svn_fs_node_prop (&prop, root, path, propname, pool));
     }
   else
-      SVN_ERR (svn_fs_revision_prop (&prop, c->fs, c->rev_id, propname, pool));
+    SVN_ERR (get_property (&prop, c, propname, pool));
 
   if (prop == NULL)
     {
