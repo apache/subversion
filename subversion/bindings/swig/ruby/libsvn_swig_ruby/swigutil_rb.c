@@ -515,6 +515,15 @@ rb_set_pool_if_swig_type_object(VALUE target, VALUE pool)
 void
 svn_swig_rb_set_pool(VALUE target, VALUE pool)
 {
+  printf("svn_swig_rb_set_pool\n");
+
+  if (NIL_P(target)) {
+    return;
+  }
+    
+  rb_p(target);
+  rb_p(pool);
+  
   if (!RTEST(rb_obj_is_kind_of(target, rb_cArray))) {
     target = rb_ary_new3(1, target);
   }
