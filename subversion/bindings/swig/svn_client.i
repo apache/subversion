@@ -432,9 +432,3 @@
 %}
 
 %include svn_client.h
-
-#ifdef SWIGRUBY
-REMOVE_DESTRUCTOR(svn_client_commit_info_t)
-REMOVE_DESTRUCTOR(svn_client_commit_item_t)
-REMOVE_DESTRUCTOR(svn_client_proplist_item_t)
-#endif

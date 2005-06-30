@@ -571,22 +571,4 @@ struct apr_pool_t
 };
 
 %include svn_diff.h
-REMOVE_DESTRUCTOR(svn_error_t)
-REMOVE_DESTRUCTOR(svn_dirent_t)
-REMOVE_DESTRUCTOR(svn_prop_t)
-REMOVE_DESTRUCTOR(svn_log_changed_path_t)
-REMOVE_DESTRUCTOR(svn_version_checklist_t)
-REMOVE_DESTRUCTOR(svn_opt_subcommand_desc_t)
-REMOVE_DESTRUCTOR(svn_opt_revision_t)
-REMOVE_DESTRUCTOR(svn_opt_revision_t_value)
-REMOVE_DESTRUCTOR(svn_auth_provider_t)
-REMOVE_DESTRUCTOR(svn_auth_provider_object_t)
-REMOVE_DESTRUCTOR(svn_auth_cred_simple_t)
-REMOVE_DESTRUCTOR(svn_auth_cred_username_t)
-REMOVE_DESTRUCTOR(svn_auth_cred_ssl_client_cert_t)
-REMOVE_DESTRUCTOR(svn_auth_cred_ssl_client_cert_pw_t)
-REMOVE_DESTRUCTOR(svn_auth_ssl_server_cert_info_t)
-REMOVE_DESTRUCTOR(svn_auth_cred_ssl_server_trust_t)
-REMOVE_DESTRUCTOR(svn_diff_fns_t)
-REMOVE_DESTRUCTOR(svn_diff_output_fns_t)
 #endif
