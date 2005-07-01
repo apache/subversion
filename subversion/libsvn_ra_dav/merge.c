@@ -2,7 +2,7 @@
  * merge.c :  routines for performing a MERGE server requests
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -669,6 +669,7 @@ svn_error_t * svn_ra_dav__merge_activity(
   const char *body;
   apr_hash_t *extra_headers = NULL;
   svn_stringbuf_t *lockbuf = svn_stringbuf_create("", pool);
+  svn_error_t *err;
 
   mc.pool = pool;
   mc.scratchpool = svn_pool_create (pool);
@@ -722,15 +723,22 @@ svn_error_t * svn_ra_dav__merge_activity(
                       "</D:merge>",
                       activity_url, lockbuf->data);
 
-  SVN_ERR( svn_ra_dav__parsed_request_compat(ras->sess, "MERGE", repos_url,
-                                             body, 0, NULL, merge_elements,
-                                             validate_element, start_element,
-                                             end_element, &mc, extra_headers,
-                                             NULL, FALSE, pool) );
+  err = svn_ra_dav__parsed_request_compat(ras->sess, "MERGE", repos_url,
+                                          body, 0, NULL, merge_elements,
+                                          validate_element, start_element,
+                                          end_element, &mc, extra_headers,
+                                          NULL, FALSE, pool);
   
   /* is there an error stashed away in our context? */
-  if (mc.err != NULL)
-    return mc.err;
+  if (mc.err)
+    {
+      if (err)
+        svn_error_clear(err);
+
+      return mc.err;
+    }
+  else if (err)
+    return err;
 
   /* return some commit properties to the caller. */
   if (new_rev)
