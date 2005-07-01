@@ -1,3 +1,36 @@
+Version 1.2.1
+(? July 2005, from /branches/1.2.x)
+http://svn.collab.net/repos/svn/tags/1.2.1
+
+ User-visible-changes:
+  - Client:
+    * fixed: 'svn lock' on switched file locks wrong thing (issue #2307)
+    * fixed: 'svn (un)lock' errors on multiple targets (r14736, 14775)
+    * fixed: 'svn (un)lock' problems with URI-unsafe names (issue #2314)
+    * fixed: 'svn (un)lock' not caching authentication (r15088)
+    * fixed: 'svn unlock' loses executable bit (r14859, r14923, r14939)
+    * fixed: 'svn unlock URL' segfault (r14893)
+    * fixed: 'svn commit' failure on XML-unsafe locked paths (issue #2335)
+    * fixed:  recursive directory copy bug (issue #2343)
+    * fixed:  don't initialize RA library in 'svnversion' (r14755)
+    * fixed:  svn-push segfault (r14732)
+    * various translation updates for localized client messages
+
+  - Server:
+    * fixed: 'svn log' performance regression, general (r14116, 14772, 14759)
+    * fixed: 'svn log -v' performance regression, FSFS-specific (r15016)
+    * fixed: mod_dav_svn bug sets content-type incorrectly (r15046)
+
+ Developer-visible-changes:
+ * fixed:  win32 innosetup's add/repair/remove features (r14830)
+ * fixed:  OBOE with 'limit' parameter of svn_repos_get_logs3(). (r15119)
+ * redhat RPM fixes (r15050)
+ * perl bindings:  
+      - accessors for svn_lock_t (r15082)
+      - call utf_initialize, adjust global pool usage (r15076, r15080,
+                                                       r15081, r15117)
+
+
 Version 1.2.0
 (21 May 2005, from /branches/1.2.x)
 http://svn.collab.net/repos/svn/tags/1.2.0
