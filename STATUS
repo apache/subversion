@@ -16,7 +16,7 @@ Candidate changes:
       +1: clkao
       -1: breser (doesn't build when applied against 1.2.x)
 
-  * r15080, r15081, r15117
+  * r15076, r15080, r15081, r15117
     Perl bindings, call utf_initialize, adjust global pool usage
     Justification: Performance issue for binding users in non-utf8 locale
     Votes:
