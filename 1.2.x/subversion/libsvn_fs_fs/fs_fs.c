@@ -2175,7 +2175,7 @@ fold_change (apr_hash_t *changes,
           old_change->text_mod = change->text_mod;
           old_change->prop_mod = change->prop_mod;
           if (change->copyfrom_rev == SVN_INVALID_REVNUM)
-            copyfrom_string = NULL;
+            copyfrom_string = apr_pstrdup (copyfrom_pool, "");
           else
             {
               copyfrom_string = APR_PSPRINTF2 (copyfrom_pool,
@@ -2214,7 +2214,7 @@ fold_change (apr_hash_t *changes,
                                            change->copyfrom_path);
         }
       else
-        copyfrom_string = NULL;
+        copyfrom_string = apr_pstrdup (copyfrom_pool, "");
       path = apr_pstrdup (pool, change->path);
     }
 
