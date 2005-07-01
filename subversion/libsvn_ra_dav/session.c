@@ -1101,8 +1101,10 @@ svn_ra_dav__lock(svn_ra_session_t *session,
 {
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create (pool);
+  svn_ra_dav__session_t *ras = session->priv;
+  svn_error_t *ret_err = NULL;
 
-  setup_neon_request_hook(session->priv);
+  setup_neon_request_hook(ras);
 
   /* ### TODO for 1.3: Send all the locks over the wire at once.  This
         loop is just a temporary shim. */
@@ -1125,7 +1127,10 @@ svn_ra_dav__lock(svn_ra_session_t *session,
                                   force, *revnum, iterpool);
 
       if (err && !SVN_ERR_IS_LOCK_ERROR (err))
-        return err;
+        {
+          ret_err = err;
+          goto departure;
+        }
 
       if (lock_func)
         callback_err = lock_func(lock_baton, path, TRUE, err ? NULL : lock,
@@ -1134,13 +1139,17 @@ svn_ra_dav__lock(svn_ra_session_t *session,
       svn_error_clear (err);
 
       if (callback_err)
-        return callback_err;
+        {
+          ret_err = callback_err;
+          goto departure;
+        }
 
     }
 
   svn_pool_destroy (iterpool);
 
-  return SVN_NO_ERROR;
+ departure:
+  return svn_ra_dav__maybe_store_auth_info_after_result(ret_err, ras);
 }
 
 
@@ -1237,8 +1246,10 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
 {
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create (pool);
+  svn_ra_dav__session_t *ras = session->priv;
+  svn_error_t *ret_err = NULL;
 
-  setup_neon_request_hook(session->priv);
+  setup_neon_request_hook(ras);
 
   /* ### TODO for 1.3: Send all the lock tokens over the wire at once.
         This loop is just a temporary shim. */
@@ -1264,7 +1275,10 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
       err = shim_svn_ra_dav__unlock (session, path, token, force, iterpool);
 
       if (err && !SVN_ERR_IS_UNLOCK_ERROR (err))
-        return err;
+        {
+          ret_err = err;
+          goto departure;
+        }
 
       if (lock_func)
         callback_err = lock_func(lock_baton, path, FALSE, NULL, err, iterpool);
@@ -1272,12 +1286,16 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
       svn_error_clear (err);
 
       if (callback_err)
-        return callback_err;
+        {
+          ret_err = callback_err;
+          goto departure;
+        }
     }
 
   svn_pool_destroy (iterpool);
 
-  return SVN_NO_ERROR;
+ departure:
+  return svn_ra_dav__maybe_store_auth_info_after_result(ret_err, ras);
 }
 
 
@@ -1357,11 +1375,14 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
   const char *url;
   struct receiver_baton *rb;
   svn_string_t fs_path;
+  svn_error_t *err;
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
   url = svn_path_url_add_component (ras->url, path, pool);  
-  SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras->sess,
-                                        url, SVN_INVALID_REVNUM, pool));
+
+  err = svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras->sess,
+                                      url, SVN_INVALID_REVNUM, pool);
+  SVN_ERR( svn_ra_dav__maybe_store_auth_info_after_result(err, ras) );
 
   /* Build context for neon callbacks and then register them. */
   setup_neon_request_hook(ras);
