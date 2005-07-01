@@ -9,12 +9,6 @@ Status of 1.2.1:
 
 Candidate changes:
 
-  * r15088
-    Make lock/unlock over ra_dav able to cache authentication data.
-    Justfication: Users of locking over http:// will get very annoyed.
-    Votes:
-      +1: kfogel, sussman, dlr
-
   * r15082
     Perl bindings, svn_lock_t related accessors.
     Justification: Bindings completeness
