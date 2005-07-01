@@ -2025,11 +2025,68 @@ repository.</p>
 Simply run:</p>
 
 <pre>
-svnadmin recover /path/to/repos
+   svnadmin recover /path/to/repos
 </pre>
 
 <p>Once the command has completed, check the permissions in the
 <code>db</code> directory of the repository.</p>
+
+<p>Sometimes "svnadmin&nbsp;recover" doesn't work.  You may see it
+give errors like this:</p>
+
+<pre>
+  Repository lock acquired.
+  Please wait; recovering the repository may take some time...
+  svnadmin: DB_RUNRECOVERY: Fatal error, run database recovery
+  svnadmin: bdb: Recovery function for LSN 175 7066018 failed on backward pass
+  svnadmin: bdb: PANIC: No such file or directory
+  svnadmin: bdb: PANIC: fatal region error detected; run recovery
+</pre>
+
+<p>or like this:</p>
+
+<pre>
+  Repository lock acquired.
+  Please wait; recovering the repository may take some time...
+  svn: DB_RUNRECOVERY: Fatal error, run database recovery
+  svn: bdb: DB_ENV-&gt;log_flush: LSN of 115/802071 past current end-of-log
+  of 115/731460
+  svn: bdb: Database environment corrupt; the wrong log files may have
+  been removed or incompatible database files imported from another
+  environment
+  [...]
+  svn: bdb: changes: unable to flush page: 0
+  svn: bdb: txn_checkpoint: failed to flush the buffer cache Invalid argument
+  svn: bdb: PANIC: Invalid argument
+  svn: bdb: PANIC: fatal region error detected; run recovery
+  svn: bdb: PANIC: fatal region error detected; run recovery
+  [...]
+</pre>
+
+<p>In that case, try Berkeley DB's native <b>db_recover</b> utility
+(see <a href="http://www.sleepycat.com/docs/utility/db_recover.html"
+>http://www.sleepycat.com/docs/utility/db_recover.html</a>).  It
+usually lives in a "bin/" subdirectory of the Berkeley installation,
+for example if you installed Berkeley DB from source, it might be
+<tt>/usr/local/BerkeleyDB.4.2/bin/db_recover</tt>; or on systems where
+Berkeley comes prepackaged it might just be
+<tt>/usr/bin/db_recover</tt>.  If you have multiple versions of
+Berkeley DB installed, make sure that the version of db_recover you
+use matches the version of Berkeley DB with which your repository was
+created.</p>
+
+<p>Run db_recover with the "-c" ("catastrophic recovery") flag.  You
+can also add "-v" for verbosity, and "-h" with an argument telling it
+what db environment to recover (so you don't have to cd into that
+directory).  Thus:</p>
+
+<pre>
+   db_recover -c -v -h /path/to/repos/db
+</pre>
+
+<p>Run this command as the same user that owns the repository, and
+again, make absolutely sure that no other processes are accessing the
+repository while you do this (e.g., shut down svnserve or Apache).</p>
 
 </div>
 
