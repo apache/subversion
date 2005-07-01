@@ -13,14 +13,13 @@ Candidate changes:
     Perl bindings, svn_lock_t related accessors.
     Justification: Bindings completeness
     Votes:
-      +1: clkao
-      -1: breser (doesn't build when applied against 1.2.x)
+      +1: clkao, breser
 
   * r15076, r15080, r15081, r15117
     Perl bindings, call utf_initialize, adjust global pool usage
     Justification: Performance issue for binding users in non-utf8 locale
     Votes:
-      +1: clkao
+      +1: clkao, breser
 
   * r15205
     Fix for ra-dav commits failing when locked paths with
