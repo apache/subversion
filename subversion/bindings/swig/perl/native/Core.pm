@@ -923,6 +923,9 @@ do not handle yet.
 package SVN::Auth::SSL;
 use SVN::Base qw(Core SVN_AUTH_SSL_);
 
+package _p_svn_lock_t;
+use SVN::Base qw(Core svn_lock_t_);
+
 =head1 AUTHORS
 
 Chia-liang Kao E<lt>clkao@clkao.orgE<gt>
