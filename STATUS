@@ -41,7 +41,6 @@ Candidate changes:
     Notes:
       r15175 is a small formatting fix.
     Votes:
-      +1: jszakmeister, lundblad
-      +1: kfogel (r15157 only)
+      +1: jszakmeister, lundblad, kfogel
 
 Approved changes (further review is welcome, but not required):
