@@ -515,9 +515,10 @@ rb_set_pool_if_swig_type_object(VALUE target, VALUE pool)
 void
 svn_swig_rb_set_pool(VALUE target, VALUE pool)
 {
-  printf("svn_swig_rb_set_pool\n");
+  printf("svn_swig_rb_set_pool:target: %p\n", target);
 
   if (NIL_P(target)) {
+    printf("nil\n");
     return;
   }
     
