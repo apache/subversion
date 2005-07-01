@@ -575,7 +575,7 @@ svn_error_t * svn_ra_dav__assemble_locktoken_body(svn_stringbuf_t **body,
      want have the stringbuf do an auto-reallocation.  While here,
      we'll be copying our hash of paths -> tokens into a hash of
      xml-escaped-paths -> tokens.  */
-  for (hi = apr_hash_first(pool, lock_tokens); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(tmppool, lock_tokens); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       void *val;
@@ -611,7 +611,7 @@ svn_error_t * svn_ra_dav__assemble_locktoken_body(svn_stringbuf_t **body,
      because (1) there's no need to constantly re-alloc, and (2) the
      stringbuf already knows the end of the buffer, so there's no
      seek-time to the end of the string when appending. */
-  for (hi = apr_hash_first(pool, xml_locks); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(tmppool, xml_locks); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       apr_ssize_t klen;
