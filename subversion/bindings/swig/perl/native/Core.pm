@@ -48,8 +48,10 @@ functions.
 
 BEGIN {
     SVN::_Core::apr_initialize();
-
 }
+
+our $gpool = SVN::Pool->new_default;
+SVN::Core::utf_initialize($gpool);
 
 END {
     SVN::_Core::apr_terminate();
