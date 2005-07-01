@@ -15,12 +15,6 @@ Candidate changes:
     Votes:
       +1: kfogel, sussman
 
-  * r15119
-    Fix an off-by-one error in svn_repos_get_logs3.
-    Justification: API correctness
-    Votes:
-      +1: clkao (non-binding), kfogel, lundblad, sussman
-
   * r15082
     Perl bindings, svn_lock_t related accessors.
     Justification: Bindings completeness
