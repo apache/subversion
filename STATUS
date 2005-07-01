@@ -9,11 +9,5 @@ Status of 1.2.1:
 
 Candidate changes:
 
-  * r15205
-    Fix for ra-dav commits failing when locked paths with
-    XML-unsafe names are present (issue #2335).
-    Votes:
-      +1: cmpilato, kfogel
-      
 
 Approved changes (further review is welcome, but not required):
