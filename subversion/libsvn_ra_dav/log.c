@@ -2,7 +2,7 @@
  * log.c :  routines for requesting and parsing log reports
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -322,6 +322,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
   svn_string_t bc_url, bc_relative;
   const char *final_bc_url;
   svn_revnum_t use_rev;
+  svn_error_t *err;
 
   /* ### todo: I don't understand why the static, file-global
      variables shared by update and status are called `report_head'
@@ -423,26 +424,31 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
                                             ras->pool);
 
 
-  SVN_ERR( svn_ra_dav__parsed_request_compat(ras->sess,
-                                             "REPORT",
-                                             final_bc_url,
-                                             request_body->data,
-                                             0,  /* ignored */
-                                             NULL,
-                                             log_report_elements, 
-                                             log_validate,
-                                             log_start_element,
-                                             log_end_element,
-                                             &lb,
-                                             NULL, 
-                                             NULL,
-                                             FALSE,
-                                             ras->pool) );
-
+  err = svn_ra_dav__parsed_request_compat(ras->sess,
+                                          "REPORT",
+                                          final_bc_url,
+                                          request_body->data,
+                                          0,  /* ignored */
+                                          NULL,
+                                          log_report_elements, 
+                                          log_validate,
+                                          log_start_element,
+                                          log_end_element,
+                                          &lb,
+                                          NULL, 
+                                          NULL,
+                                          FALSE,
+                                          ras->pool);
+  
   if (lb.err)
-    return lb.err;
+    {
+      if (err)
+        svn_error_clear(err);
+
+      return lb.err;
+    }
 
   svn_pool_destroy (lb.subpool);
 
-  return SVN_NO_ERROR;
+  return err;
 }
