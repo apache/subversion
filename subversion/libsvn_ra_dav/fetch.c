@@ -1575,6 +1575,11 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
                                    &status_code,
                                    FALSE,
                                    pool);
+
+  /* ### Should svn_ra_dav__parsed_request() take care of storing auth
+     ### info itself? */
+  SVN_ERR( svn_ra_dav__maybe_store_auth_info_after_result(err, ras) );
+
   if (baton.err)
     return baton.err;
 
