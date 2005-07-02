@@ -959,10 +959,10 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
           }
         if (! merge_b->dry_run)
           {
-            child = svn_path_is_child(merge_b->target, mine, merge_b->pool);
+            child = svn_path_is_child(merge_b->target, mine, subpool);
             assert (child != NULL);
             copyfrom_url = svn_path_url_add_component (merge_b->url, child,
-                                                       merge_b->pool);
+                                                       subpool);
             SVN_ERR (check_scheme_match (adm_access, copyfrom_url));
 
             /* Since 'mine' doesn't exist, and this is
@@ -977,7 +977,7 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
                                             new_props,
                                             copyfrom_url,
                                             rev2,
-                                            merge_b->pool));
+                                            subpool));
           }
         if (content_state)
           *content_state = svn_wc_notify_state_changed;
@@ -1061,9 +1061,9 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
   switch (kind)
     {
     case svn_node_file:
-      svn_path_split (mine, &parent_path, NULL, merge_b->pool);
+      svn_path_split (mine, &parent_path, NULL, subpool);
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
-                                    merge_b->pool));
+                                    subpool));
       {
         /* Passing NULL for the notify_func and notify_baton because
          * repos_diff.c:delete_item will do it for us. */
@@ -1157,7 +1157,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
                                 merge_b->ctx->cancel_func,
                                 merge_b->ctx->cancel_baton,
                                 NULL, NULL, /* don't pass notification func! */
-                                merge_b->pool));
+                                subpool));
 
         }
       if (merge_b->dry_run)
@@ -1176,7 +1176,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
                                   merge_b->ctx->cancel_func,
                                   merge_b->ctx->cancel_baton,
                                   NULL, NULL, /* no notification func! */
-                                  merge_b->pool));
+                                  subpool));
           if (merge_b->dry_run)
             merge_b->added_path = apr_pstrdup (merge_b->pool, path);
           if (state)
@@ -1282,9 +1282,9 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
         mdb.ctx = merge_b->ctx;
         mdb.path_skip = path;
 
-        svn_path_split (path, &parent_path, NULL, merge_b->pool);
+        svn_path_split (path, &parent_path, NULL, subpool);
         SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
-                                      merge_b->pool));
+                                      subpool));
         err = svn_client__wc_delete (path, parent_access, merge_b->force,
                                      merge_b->dry_run,
                                      merge_delete_notify_func, &mdb,
