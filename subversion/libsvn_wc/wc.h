@@ -32,7 +32,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-#define SVN_WC__DIFF_EXT      ".diff"
 #define SVN_WC__TMP_EXT       ".tmp"
 #define SVN_WC__TEXT_REJ_EXT  ".rej"
 #define SVN_WC__PROP_REJ_EXT  ".prej"
@@ -93,7 +92,7 @@ struct svn_wc_traversal_info_t
    
    <modify-entry name="foo.c" revision="5" timestamp="working"/>
  */
-#define SVN_WC_TIMESTAMP_WC   "working"
+#define SVN_WC__TIMESTAMP_WC   "working"
 
 
 
@@ -118,7 +117,6 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_DIR_WCPROPS         "dir-wcprops"
 #define SVN_WC__ADM_LOG                 "log"
 #define SVN_WC__ADM_KILLME              "KILLME"
-#define SVN_WC__ADM_AUTH_DIR            "auth"
 #define SVN_WC__ADM_EMPTY_FILE          "empty-file"
 
 
