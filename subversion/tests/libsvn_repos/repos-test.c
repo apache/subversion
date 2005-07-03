@@ -1,7 +1,7 @@
 /* repos-test.c --- tests for the filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -25,6 +25,7 @@
 #include "svn_repos.h"
 #include "svn_path.h"
 #include "svn_delta.h"
+#include "svn_config.h"
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
@@ -1028,6 +1029,165 @@ rmlocks (const char **msg,
 
   return SVN_NO_ERROR;
 }
+
+
+/* Test that authz is giving out the right authorizations. */
+static svn_error_t *
+authz (const char **msg,
+       svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
+       apr_pool_t *pool)
+{
+  char *authz_file_tmpl;
+  apr_file_t *authz_file;
+  apr_status_t apr_err;
+  const char *authz_file_path;
+  const char *contents;
+  svn_config_t *cfg;
+  svn_boolean_t access_granted;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  int i;
+  /* Definition of the paths to test and expected replies for each. */
+  struct
+  {
+    const char *path;
+    const char *user;
+    const svn_repos_authz_access_t required;
+    const svn_boolean_t expected;
+  } test_set[] = {
+    /* Test that read rules are correctly used. */
+    { "/A", NULL, svn_authz_read, TRUE },
+    { "/iota", NULL, svn_authz_read, FALSE },
+    /* Test that write rules are correctly used. */
+    { "/A", "plato", svn_authz_write, TRUE },
+    { "/A", NULL, svn_authz_write, FALSE },
+    /* Test that pan-repository rules are found and used. */
+    { "/A/B/lambda", "plato", svn_authz_read, TRUE },
+    { "/A/B/lambda", NULL, svn_authz_read, FALSE },
+    /* Test that authz uses parent path ACLs if no rule for the path
+       exists. */
+    { "/A/C", NULL, svn_authz_read, TRUE },
+    /* Test that recursive access requests take into account the rules
+       of subpaths. */
+    { "/A/D", "plato", svn_authz_read | svn_authz_recursive, TRUE },
+    { "/A/D", NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    /* Sentinel */
+    { NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  *msg = "test authz access control";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* The test logic: We dump a test authz file to disk, then load it
+   * and perform various access tests on it.  Each test has a known
+   * outcome and tests different aspects of authz, such as inheriting
+   * parent-path authz, pan-repository rules or recursive access.
+   * 'plato' is our friendly neighborhood user with more access rights
+   * than other anonymous philosophers.
+   */
+
+  /* The authz rules for the test. */
+  contents =
+    "[greek:/A]"
+    APR_EOL_STR
+    "* = r"
+    APR_EOL_STR
+    "plato = w"
+    APR_EOL_STR
+    APR_EOL_STR
+    "[greek:/iota]"
+    APR_EOL_STR
+    "* ="
+    APR_EOL_STR
+    APR_EOL_STR
+    "[/A/B/lambda]"
+    APR_EOL_STR
+    "plato = r"
+    APR_EOL_STR
+    "* ="
+    APR_EOL_STR
+    APR_EOL_STR
+    "[greek:/A/D]"
+    APR_EOL_STR
+    "plato = r"
+    APR_EOL_STR
+    "* = r"
+    APR_EOL_STR
+    APR_EOL_STR
+    "[greek:/A/D/G]"
+    APR_EOL_STR
+    "plato = r"
+    APR_EOL_STR
+    "* ="
+    APR_EOL_STR
+    APR_EOL_STR
+    "[greek:/A/B/E/beta]"
+    APR_EOL_STR
+    "* ="
+    APR_EOL_STR
+    APR_EOL_STR;
+
+  /* Create a temporary file and retrieve its path. */
+  authz_file_tmpl = apr_pstrdup(subpool, "authz_test_XXXXXX");
+  apr_err = apr_file_mktemp (&authz_file, authz_file_tmpl,
+                             0, subpool);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_wrap_apr(apr_err, "Opening temporary file");
+
+  /* Write the authz ACLs to the file. */
+  apr_err = apr_file_write_full (authz_file, contents,
+                                 strlen(contents), NULL);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_wrap_apr(apr_err, "Writing test authz file");
+
+  /* Read the authz configuration back and start testing. */
+  apr_err = apr_file_name_get (&authz_file_path, authz_file);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_wrap_apr(apr_err, "Getting authz file path");
+
+  SVN_ERR_W (svn_config_read (&cfg, authz_file_path, TRUE, subpool),
+             "Opening test authz file");
+
+  /* Close the temporary descriptor, which'll delete the file. */
+  apr_err = apr_file_close (authz_file);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_wrap_apr(apr_err, "Removing test authz file");
+
+  /* Loop over the test array and test each case. */
+  for (i = 0; test_set[i].path != NULL; i++)
+    {
+      SVN_ERR (svn_repos_authz_check_access (cfg, "greek",
+                                             test_set[i].path,
+                                             test_set[i].user,
+                                             test_set[i].required,
+                                             &access_granted, subpool));
+
+      if (access_granted != test_set[i].expected)
+        {
+          return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
+                                    "Authz incorrectly %s %s%s access "
+                                    "to greek:%s for user %s",
+                                    access_granted ?
+                                    "grants" : "denies",
+                                    test_set[i].required
+                                    & svn_authz_recursive ?
+                                    "recursive " : "",
+                                    test_set[i].required
+                                    & svn_authz_read ?
+                                    "read" : "write",
+                                    test_set[i].path,
+                                    test_set[i].user ?
+                                    test_set[i].user : "-");
+        }
+    }
+
+  /* That's a wrap! */
+  svn_pool_destroy (subpool);
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -1039,5 +1199,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (revisions_changed),
     SVN_TEST_PASS (node_locations),
     SVN_TEST_PASS (rmlocks),
+    SVN_TEST_PASS (authz),
     SVN_TEST_NULL
   };
