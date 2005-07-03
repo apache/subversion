@@ -30,6 +30,7 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_version.h"
+#include "svn_config.h"
 
 
 #ifdef __cplusplus
@@ -1671,6 +1672,35 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser,
 
 
 /** @} */
+
+/** An enum defining the kinds of access authz looks up. */
+typedef enum
+{
+  /** No access. */
+  svn_authz_none = 0,
+
+  /** Path can be read. */
+  svn_authz_read = 1,
+
+  /** Path can be altered. */
+  svn_authz_write = 2,
+
+  /** The other access credentials are recursive. */
+  svn_authz_recursive = 4
+} svn_repos_authz_access_t;
+
+/**
+ * Check wether @a user can access @a path in the repository @a
+ * repos_name with the @a required_access.  @a cfg lists the ACLs to
+ * check against.  Set @a *access_granted to indicate if the requested
+ * access is granted.
+ */
+svn_error_t *
+svn_repos_authz_check_access (svn_config_t *cfg, const char *repos_name,
+			      const char *path, const char *user,
+			      svn_repos_authz_access_t required_access,
+			      svn_boolean_t *granted_access,
+			      apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
