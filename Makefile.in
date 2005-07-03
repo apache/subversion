@@ -585,6 +585,9 @@ install-info: doc-all-info
 install-swig-py: install-swig-py-lib
 install-swig-rb: install-swig-rb-lib
 
+$(SWIG_PL_DIR)/native/Makefile.PL: $(SWIG_SRC_DIR)/perl/native/Makefile.PL.in
+	./config.status subversion/bindings/swig/perl/native/Makefile.PL
+
 $(SWIG_PL_DIR)/native/Makefile: $(SWIG_PL_DIR)/native/Makefile.PL
 	cd $(SWIG_PL_DIR)/native; $(PERL) Makefile.PL
 
