@@ -1579,8 +1579,7 @@ svn_wc_status_t *svn_wc_dup_status (svn_wc_status_t *orig_stat,
 
 
 /**
- * Fill @a *status for @a path, allocating in @a pool, with the exception 
- * of the @c repos_rev field, which is normally filled in by the caller.
+ * Fill @a *status for @a path, allocating in @a pool.
  * @a adm_access must be an access baton for @a path.
  *
  * Here are some things to note about the returned structure.  A quick
@@ -1666,9 +1665,7 @@ typedef void (*svn_wc_status_func_t) (void *baton,
  *
  * If the editor driver calls @a editor's set_target_revision() vtable
  * function, then when the edit drive is completed, @a *edit_revision
- * will contain the revision delivered via that interface, and any
- * status items reported during the drive will have their @c repos_rev
- * field set to this same revision.
+ * will contain the revision delivered via that interface.
  *
  * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c
  * svn_config_t's.
