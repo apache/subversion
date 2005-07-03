@@ -1697,10 +1697,10 @@ typedef enum
  */
 svn_error_t *
 svn_repos_authz_check_access (svn_config_t *cfg, const char *repos_name,
-			      const char *path, const char *user,
-			      svn_repos_authz_access_t required_access,
-			      svn_boolean_t *granted_access,
-			      apr_pool_t *pool);
+                              const char *path, const char *user,
+                              svn_repos_authz_access_t required_access,
+                              svn_boolean_t *granted_access,
+                              apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
