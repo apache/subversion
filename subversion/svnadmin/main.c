@@ -1129,6 +1129,17 @@ subcommand_rmlocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
 
 
+/* Standard error handler */
+static int
+error_exit (svn_error_t *err, apr_pool_t *pool)
+{
+  svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
+  svn_error_clear (err);
+  svn_pool_destroy (pool);
+  return EXIT_FAILURE;
+}
+
+
 /** Main. **/
 
 int
@@ -1164,22 +1175,12 @@ main (int argc, const char * const *argv)
   /* Check library versions */
   err = check_lib_versions ();
   if (err)
-    {
-      svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
-      svn_error_clear (err);
-      svn_pool_destroy (pool);
-      return EXIT_FAILURE;
-    }
+    return error_exit (err, pool);
 
   /* Initialize the FS library. */
   err = svn_fs_initialize (pool);
   if (err)
-    {
-      svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
-      svn_error_clear (err);
-      svn_pool_destroy (pool);
-      return EXIT_FAILURE;
-    }
+    return error_exit (err, pool);
 
   if (argc <= 1)
     {
@@ -1226,10 +1227,7 @@ main (int argc, const char * const *argv)
                 (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                  _("Multiple revision arguments encountered; "
                    "try '-r M:N' instead of '-r M -r N'"));
-              svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
-              svn_error_clear (err);
-              svn_pool_destroy (pool);
-              return EXIT_FAILURE;
+              return error_exit (err, pool);
             }
           if (svn_opt_parse_revision (&(opt_state.start_revision),
                                       &(opt_state.end_revision),
@@ -1243,10 +1241,7 @@ main (int argc, const char * const *argv)
                   (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                    _("Syntax error in revision argument '%s'"),
                    utf8_opt_arg);
-              svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
-              svn_error_clear (err);
-              svn_pool_destroy (pool);
-              return EXIT_FAILURE;
+              return error_exit (err, pool);
             }
         }
         break;
@@ -1276,23 +1271,13 @@ main (int argc, const char * const *argv)
       case svnadmin__fs_type:
         err = svn_utf_cstring_to_utf8 (&opt_state.fs_type, opt_arg, pool);
         if (err)
-          {
-            svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
-            svn_error_clear (err);
-            svn_pool_destroy (pool);
-            return EXIT_FAILURE;
-          }
+          return error_exit (err, pool);
         break;
       case svnadmin__parent_dir:
         err = svn_utf_cstring_to_utf8 (&opt_state.parent_dir, opt_arg,
                                        pool);
         if (err)
-          {
-            svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
-            svn_error_clear (err);
-            svn_pool_destroy (pool);
-            return EXIT_FAILURE;
-          }
+          return error_exit (err, pool);
         opt_state.parent_dir 
           = svn_path_internal_style (opt_state.parent_dir, pool);
         break;
@@ -1359,12 +1344,7 @@ main (int argc, const char * const *argv)
               const char* first_arg_utf8;
               err = svn_utf_cstring_to_utf8 (&first_arg_utf8, first_arg, pool);
               if (err)
-                {
-                  svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
-                  svn_error_clear (err);
-                  svn_pool_destroy (pool);
-                  return EXIT_FAILURE;
-                }
+                return error_exit (err, pool);
               svn_error_clear
                 (svn_cmdline_fprintf (stderr, pool,
                                       _("Unknown command: '%s'\n"),
