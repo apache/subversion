@@ -320,6 +320,7 @@ svn_swig_rb_apr_hash_to_hash_svn_string(apr_hash_t *hash)
   VALUE result;
   printf("svn_swig_rb_apr_hash_to_hash_svn_string:hash: %p\n", hash);
   result = c2r_hash(hash, c2r_svn_string, NULL);
+  printf("svn_swig_rb_apr_hash_to_hash_svn_string:result: %p\n", result);
   rb_p(result);
   return result;
 }
