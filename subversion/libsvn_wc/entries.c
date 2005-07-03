@@ -426,7 +426,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                                  APR_HASH_KEY_STRING);
     if (text_timestr)
       {
-        if (! strcmp (text_timestr, SVN_WC_TIMESTAMP_WC))
+        if (! strcmp (text_timestr, SVN_WC__TIMESTAMP_WC))
           {
             /* Special case:  a magic string that means 'get this value
                from the working copy' -- we ignore it here, trusting
@@ -444,7 +444,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                                  APR_HASH_KEY_STRING);
     if (prop_timestr)
       {
-        if (! strcmp (prop_timestr, SVN_WC_TIMESTAMP_WC))
+        if (! strcmp (prop_timestr, SVN_WC__TIMESTAMP_WC))
           {
             /* Special case:  a magic string that means 'get this value
                from the working copy' -- we ignore it here, trusting

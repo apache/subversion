@@ -1330,7 +1330,7 @@ close_directory (void *dir_baton,
                                    SVN_WC_ENTRY_THIS_DIR,
                                    SVN_WC__ENTRY_ATTR_PROP_TIME,
                                    /* use wfile time */
-                                   SVN_WC_TIMESTAMP_WC,
+                                   SVN_WC__TIMESTAMP_WC,
                                    NULL);
         }
 
@@ -2259,7 +2259,7 @@ install_file (svn_wc_notify_state_t *content_state,
                                base_name,
                                SVN_WC__ENTRY_ATTR_PROP_TIME,
                                /* use wfile time */
-                               SVN_WC_TIMESTAMP_WC,
+                               SVN_WC__TIMESTAMP_WC,
                                NULL);
     }
 
@@ -2330,7 +2330,7 @@ install_file (svn_wc_notify_state_t *content_state,
                                SVN_WC__LOG_ATTR_NAME,
                                base_name,
                                SVN_WC__ENTRY_ATTR_TEXT_TIME,
-                               SVN_WC_TIMESTAMP_WC,
+                               SVN_WC__TIMESTAMP_WC,
                                NULL);
     }
 

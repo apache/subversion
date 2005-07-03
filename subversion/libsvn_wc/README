@@ -137,8 +137,8 @@ analogous to CVS/ subdirs:
       <wc-entries xmlns="svn:">
         <entry repos="http://svn.collab.net/repos/svn"
                url="http://svn.collab.net/repos/svn/path/to/here/in/repos"
-               uuid=""65390229-12b7-0310-b90b-f21a5aa7ec8e"
-               name="" kindr="dir"
+               uuid="65390229-12b7-0310-b90b-f21a5aa7ec8e"
+               name="" kind="dir"
                committed-rev="38"
                committed-date="2004-11-28T14:14:14.387535Z"
                last-author="someone"
@@ -190,11 +190,11 @@ analogous to CVS/ subdirs:
    When a file or dir is added, that is recorded here too, in the
    following manner:
 
-      1. Added files are recorded with the "schedule="add" attribute; if they
+      1. Added files are recorded with the 'schedule="add"' attribute; if they
          are truly new, their initial revision is 0, otherwise their
          ancestry is recorded (see files X and Y in the example).
 
-      2. Added dirs get the "schedule='add'" flag too, but they record
+      2. Added dirs get the 'schedule="add"' flag too, but they record
          their copy ancestry in both their parent and their own entries file.
 
    Child directories of the current directory are recorded here, but
