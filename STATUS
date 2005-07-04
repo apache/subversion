@@ -26,4 +26,11 @@ Candidate changes:
     Votes:
       +1: jszakmeister
 
+  * r15251
+    Prevent crash when more than 50 options passed to a command line program.
+    Justification:
+      Crashes bad!
+    Votes:
+      +1: maxb
+
 Approved changes (further review is welcome, but not required):
