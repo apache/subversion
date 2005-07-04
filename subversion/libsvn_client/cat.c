@@ -275,6 +275,7 @@ svn_client_cat2 (svn_stream_t *out,
                                             TRUE, pool));
 
       SVN_ERR (svn_stream_close (tmp_stream));
+      SVN_ERR (svn_io_file_close (tmp_file, pool));
     }
 
   return SVN_NO_ERROR;
