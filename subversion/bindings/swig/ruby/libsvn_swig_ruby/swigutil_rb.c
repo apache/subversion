@@ -59,6 +59,7 @@ DEFINE_ID(close_file, "close_file")
 DEFINE_ID(close_edit, "close_edit")
 DEFINE_ID(abort_edit, "abort_edit")
 DEFINE_ID(__pool__, "__pool__")
+DEFINE_ID(__pools__, "__pools__")
 DEFINE_ID(name, "name")
 DEFINE_ID(swig_type_regex, "swig_type_regex")
 
@@ -128,8 +129,15 @@ rb_svn_core_pool(void)
 {
   if (NIL_P(cSvnCorePool)) {
     cSvnCorePool = rb_const_get(rb_svn_core(), rb_intern("Pool"));
+    rb_ivar_set(cSvnCorePool, rb_id___pools__(), rb_hash_new());
   }
   return cSvnCorePool;
+}
+
+static VALUE
+rb_svn_pool_holder(void)
+{
+  return rb_ivar_get(rb_svn_core_pool(), rb_id___pools__());
 }
 
 VALUE
@@ -535,6 +543,17 @@ svn_swig_rb_set_pool(VALUE target, VALUE pool)
   rb_iterate(rb_each, target, rb_set_pool_if_swig_type_object, pool);
 }
 
+void
+svn_swig_rb_push_pool(VALUE pool)
+{
+  rb_hash_aset(rb_svn_pool_holder(), rb_obj_id(pool), pool);
+}
+
+void
+svn_swig_rb_pop_pool(VALUE pool)
+{
+  rb_hash_delete(rb_svn_pool_holder(), rb_obj_id(pool));
+}
 
 
 static VALUE
