@@ -880,6 +880,64 @@ def obstructed_switch(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+#----------------------------------------------------------------------
+# Issue 2353.
+def commit_mods_below_switch(sbox):
+  "commit with mods below switch" 
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  C_path = os.path.join(wc_dir, 'A', 'C')
+  B_url = svntest.main.current_repo_url + '/A/B'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C/E'       : Item(status='A '),
+    'A/C/E/alpha' : Item(status='A '),
+    'A/C/E/beta'  : Item(status='A '),
+    'A/C/F'       : Item(status='A '),
+    'A/C/lambda'  : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/C/E'       : Item(),
+    'A/C/E/alpha' : Item(contents="This is the file 'alpha'.\n"),
+    'A/C/E/beta'  : Item(contents="This is the file 'beta'.\n"),
+    'A/C/F'       : Item(),
+    'A/C/lambda'  : Item(contents="This is the file 'lambda'.\n"),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/C', switched='S')
+  expected_status.add({
+    'A/C/E'       : Item(status='  ', wc_rev=1),
+    'A/C/E/alpha' : Item(status='  ', wc_rev=1),
+    'A/C/E/beta'  : Item(status='  ', wc_rev=1),
+    'A/C/F'       : Item(status='  ', wc_rev=1),
+    'A/C/lambda'  : Item(status='  ', wc_rev=1),
+    })
+  svntest.actions.run_and_verify_switch(wc_dir, C_path, B_url,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'x', 'x', C_path, D_path)
+
+  expected_status.tweak('A/C', 'A/D', status=' M')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C' : Item(verb='Sending'),
+    'A/D' : Item(verb='Sending'),
+    })
+  expected_status.tweak('A/C', 'A/D', status='  ', wc_rev=2)
+
+  # A/C erroneously classified as a wc root caused the commit to fail
+  # with "'A/C/E' is missing or not locked"
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        C_path, D_path)
+
 ########################################################################
 # Run the tests
 
@@ -900,6 +958,7 @@ test_list = [ None,
               failed_anchor_is_target,
               bad_intermediate_urls,
               obstructed_switch,
+              XFail(commit_mods_below_switch),
              ]
 
 if __name__ == '__main__':
