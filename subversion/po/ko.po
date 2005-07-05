@@ -1923,11 +1923,11 @@ msgstr "로그 메시지의 길이가 0 입니다."
 
 #: clients/cmdline/util.c:382
 msgid "Your commit message was left in a temporary file:"
-msgstr "커밋 로그 메시지는 임시 파일안에 저장되었습니다:"
+msgstr "커밋 메시지는 다음 파일에 저장되어 있으며, -F로 재사용 할 수 있습니다. :"
 
 #: clients/cmdline/util.c:434
 msgid "--This line, and those below, will be ignored--"
-msgstr "--이 줄 이하는 자동 제거됩니다--"
+msgstr "--이 줄 이하는 자동으로 제거됩니다--"
 
 #: clients/cmdline/util.c:549
 msgid "Could not use external editor to fetch log message; consider setting the $SVN_EDITOR environment variable or using the --message (-m) or --file (-F) options"
@@ -2840,7 +2840,7 @@ msgstr "커밋이 실패하였습니다:"
 #: libsvn_client/commit.c:870
 #: libsvn_client/copy.c:552
 msgid "Commit succeeded, but other errors follow:"
-msgstr "커밋은 성공하였고, 오류도 있습니다:"
+msgstr "커밋이 성공하였지만, 오류가 있습니다:"
 
 #: libsvn_client/commit.c:877
 #: libsvn_client/copy.c:559
@@ -2849,7 +2849,7 @@ msgstr "잠긴 디렉토리를 해제하는데 실패함 (아래에 자세히):"
 
 #: libsvn_client/commit.c:888
 msgid "Error bumping revisions post-commit (details follow):"
-msgstr "Error bumping revisions post-commit (details follow):"
+msgstr "커밋 후 리비전들을 갱신하는 도중 오류가 발생하였습니다:"
 
 #: libsvn_client/commit.c:899
 #: libsvn_client/copy.c:570
@@ -6360,7 +6360,7 @@ msgstr "작업사본 '%s'은/는 없거나 잠겨있지 않습니다."
 #: libsvn_wc/lock.c:1078
 #, c-format
 msgid "Write-lock stolen in '%s'"
-msgstr "쓰기 잠근이 '%s'에 은닉되어 있습니다"
+msgstr "어떤 이유에서인지 '%s'의 쓰기 잠금이 제거 되었습니다."
 
 #: libsvn_wc/lock.c:1086
 #, c-format
