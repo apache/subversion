@@ -437,9 +437,9 @@ rb_set_pool(VALUE self, VALUE pool)
 }
 
 static VALUE
-rb_pool_new(void)
+rb_pool_new(VALUE parent)
 {
-  return rb_funcall(rb_svn_core_pool(), rb_id_new(), 0);
+  return rb_funcall(rb_svn_core_pool(), rb_id_new(), 1, parent);
 }
 
 static VALUE swig_type_re = Qnil;
@@ -489,13 +489,15 @@ svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
   }
   
   if (NIL_P(*rb_pool)) {
-    *rb_pool = rb_pool_new();
+    *rb_pool = rb_pool_new(Qnil);
     if (RTEST(rb_obj_is_kind_of(self, rb_cModule))) {
       VALUE target = find_swig_type_object(argc, argv);
       if (!NIL_P(target)) {
          rb_set_pool(target, *rb_pool);
       }
     }
+  } else {
+    *rb_pool = rb_pool_new(*rb_pool);
   }
   
   SWIG_ConvertPtr(*rb_pool, (void **)pool, SWIG_TypeQuery("apr_pool_t *"), 1);
@@ -1352,7 +1354,7 @@ svn_swig_rb_make_stream(VALUE io)
   if (RTEST(rb_funcall(rb_svn_core_stream(), rb_id_eqq(), 1, io))) {
     SWIG_ConvertPtr(io, (void **)&stream, SWIG_TypeQuery("svn_stream_t *"), 1);
   } else {
-    VALUE rb_pool = rb_pool_new();
+    VALUE rb_pool = rb_pool_new(Qnil);
     apr_pool_t *pool;
     
     rb_set_pool(io, rb_pool);
