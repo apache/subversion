@@ -39,6 +39,15 @@ module Svn
     
     Pool = Svn::Ext::Core::Apr_pool_t
 
+    class Pool
+      alias _initialize initialize
+      attr_accessor :parent
+      def initialize(parent=nil)
+        @parent = parent
+        _initialize(parent)
+      end
+    end
+    
     Stream = SWIG::TYPE_p_svn_stream_t
 
     class Stream
