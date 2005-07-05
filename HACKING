@@ -500,6 +500,10 @@ In addition to the GNU standards, Subversion uses these conventions:
       make changes.  People might be unnecessarily hesitant if someone
       appears to have staked a personal claim to the file.
 
+   *  Put two spaces between the end of one sentence and the start of
+      the next.  This helps readability, and allows people to use
+      their editors' sentence-motion and -manipulation commands.
+
    *  There are many other unspoken conventions maintained throughout
       the code, that are only noticed when someone unintentionally
       fails to follow them.  Just try to have a sensitive eye for the
