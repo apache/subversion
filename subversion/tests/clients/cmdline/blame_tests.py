@@ -159,7 +159,7 @@ def blame_in_xml(sbox):
   template = ['<?xml version="1.0" encoding="utf-8"?>\n',
               '<blame>\n',
               '<target\n',
-              '   path="svn-test-work/working_copies/blame_tests-4/iota">\n',
+              '   path="' + file_path + '">\n',
               '<entry\n',
               '   line-number="1">\n',
               '<commit\n',
