@@ -4,6 +4,8 @@ module Svn
   module Util
 
     MILLION = 1000000
+
+    @@wrapper_procs = []
     
     module_function
     def to_ruby_class_name(name)
@@ -73,6 +75,7 @@ module Svn
           target_proc = Proc.new{|*args| target_method.call(*args)}
           target_mod.__send__(:define_method, target_id, target_proc)
           target_mod.__send__(:module_function, target_id)
+          @@wrapper_procs << target_proc
         end
       end
     end
