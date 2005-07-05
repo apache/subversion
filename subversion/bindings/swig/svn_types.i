@@ -253,10 +253,12 @@
 %typemap(ruby, default) apr_pool_t *pool (VALUE _global_rb_pool, apr_pool_t *_global_pool) {
   svn_swig_rb_get_pool(argc, argv, self, &_global_rb_pool, &$1);
   _global_pool = $1;
+  svn_swig_rb_push_pool(_global_rb_pool);
 }
 
 %typemap(ruby, argout) apr_pool_t *pool {
   svn_swig_rb_set_pool($result, _global_rb_pool);
+  svn_swig_rb_pop_pool(_global_rb_pool);
 }
 
 #ifdef SWIGPERL

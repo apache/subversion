@@ -29,20 +29,29 @@ class SvnCoreTest < Test::Unit::TestCase
 
   def test_pool_GC
     GC.disable
+
+    made_number_of_pool = 200
+    pools = []
     
     gc
     before_number_of_pools = number_of_pools
-    pool = parent_used_child_pool
+    (made_number_of_pool / 2).times do
+      pools << parent_used_child_pool
+    end
+    STDERR.puts [pools.size, number_of_pools - before_number_of_pools].inspect
     gc
     current_number_of_pools = number_of_pools
-    assert_equal(2, current_number_of_pools - before_number_of_pools)
+    created_number_of_pools = current_number_of_pools - before_number_of_pools
+    STDERR.puts [pools.size, created_number_of_pools].inspect
+    assert_equal(made_number_of_pool, created_number_of_pools)
 
     gc
-    pool = nil
+    pools.clear
     before_number_of_pools = number_of_pools
     gc
     current_number_of_pools = number_of_pools
-    assert_equal(-2, current_number_of_pools - before_number_of_pools)
+    recycled_number_of_pools = before_number_of_pools - current_number_of_pools
+    assert_operator(made_number_of_pool * 0.8, :<=, recycled_number_of_pools)
   end
 
   def parent_used_child_pool
