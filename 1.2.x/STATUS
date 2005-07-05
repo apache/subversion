@@ -9,35 +9,5 @@ Status of 1.2.1:
 
 Candidate changes:
 
-  * r14885
-    Python bindings, fix for functions returning MD5 digests.
-    Justification:
-      Small change, potentially useful, 1.3 is quite some way off.
-    Votes:
-      +1: maxb, dlr
-      
-  * r15088
-    Make lock/unlock over ra_dav able to cache authentication data.
-    Justfication: Users of locking over http:// will get very annoyed.
-    Votes:
-      +1: kfogel
-
-  * r15119
-    Fix an off-by-one error in svn_repos_get_logs3.
-    Justification: API correctness
-    Votes:
-      +1: clkao (non-binding), kfogel
-
-  * r15082
-    Perl bindings, svn_lock_t related accessors.
-    Justifcation: Bindings completeness
-    Votes:
-      +1: clkao
-
-  * r15080, r15081, r15117
-    Perl bindings, call utf_initialize, adjust global pool usage
-    Justification: Performance issue for binding users in non-utf8 locale
-    Votes:
-      +1: clkao
 
 Approved changes (further review is welcome, but not required):

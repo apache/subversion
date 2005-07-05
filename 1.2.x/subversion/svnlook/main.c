@@ -1654,7 +1654,8 @@ get_ctxt_baton (svnlook_ctxt_t **baton_p,
 #if !APR_CHARSET_EBCDIC
   baton->txn_name = apr_pstrdup (pool, opt_state->txn);
 #else
-  SVN_ERR (svn_utf_cstring_to_utf8 (&baton->txn_name, opt_state->txn, pool));
+  if (opt_state->txn)
+    SVN_ERR (svn_utf_cstring_to_utf8 (&baton->txn_name, opt_state->txn, pool));
 #endif
   if (baton->txn_name)
     SVN_ERR (svn_fs_open_txn (&(baton->txn), baton->fs, 

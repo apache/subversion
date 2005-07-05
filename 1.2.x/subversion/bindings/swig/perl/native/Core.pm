@@ -48,8 +48,10 @@ functions.
 
 BEGIN {
     SVN::_Core::apr_initialize();
-
 }
+
+our $gpool = SVN::Pool->new_default;
+SVN::Core::utf_initialize($gpool);
 
 END {
     SVN::_Core::apr_terminate();
@@ -922,6 +924,9 @@ do not handle yet.
 
 package SVN::Auth::SSL;
 use SVN::Base qw(Core SVN_AUTH_SSL_);
+
+package _p_svn_lock_t;
+use SVN::Base qw(Core svn_lock_t_);
 
 =head1 AUTHORS
 

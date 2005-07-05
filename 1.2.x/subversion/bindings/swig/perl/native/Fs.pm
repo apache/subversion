@@ -22,7 +22,8 @@ package _p_svn_fs_t;
 
 our @methods = qw/youngest_rev revision_root revision_prop revision_proplist
 		  change_rev_prop list_transactions open_txn begin_txn
-		  get_uuid set_uuid/;
+		  get_uuid set_uuid set_access get_access
+                  lock unlock get_lock get_locks generate_lock_token/;
 
 for (@methods) {
     no strict 'refs';
@@ -56,6 +57,9 @@ use SVN::Base qw/Fs svn_fs_txn_/;
 *commit = *SVN::Fs::commit_txn;
 *abort = *SVN::Fs::abort_txn;
 *change_prop = *SVN::Fs::change_txn_prop;
+
+package _p_svn_fs_access_t;
+use SVN::Base qw(Fs svn_fs_access_);
 
 package _p_svn_fs_dirent_t;
 use SVN::Base qw(Fs svn_fs_dirent_t_);

@@ -528,6 +528,7 @@ PyObject *svn_swig_py_exception_type(void);
 %include svn_auth.h
 %include svn_config.h
 %include svn_version.h
+%include svn_utf.h
 
 
 /* SWIG won't follow through to APR's defining this to be empty, so we
