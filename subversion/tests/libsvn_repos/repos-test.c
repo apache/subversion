@@ -1132,7 +1132,7 @@ authz (const char **msg,
   /* Create a temporary file and retrieve its path. */
   authz_file_tmpl = apr_pstrdup(subpool, "authz_test_XXXXXX");
   apr_err = apr_file_mktemp (&authz_file, authz_file_tmpl,
-                             0, subpool);
+                             APR_CREATE | APR_READ | APR_WRITE, subpool);
   if (apr_err != APR_SUCCESS)
     return svn_error_wrap_apr(apr_err, "Opening temporary file");
 
@@ -1147,11 +1147,16 @@ authz (const char **msg,
   if (apr_err != APR_SUCCESS)
     return svn_error_wrap_apr(apr_err, "Getting authz file path");
 
+  /* Close the temporary descriptor. */
+  apr_err = apr_file_close (authz_file);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_wrap_apr(apr_err, "Closing test authz file");
+
   SVN_ERR_W (svn_config_read (&cfg, authz_file_path, TRUE, subpool),
              "Opening test authz file");
 
-  /* Close the temporary descriptor, which'll delete the file. */
-  apr_err = apr_file_close (authz_file);
+  /* Delete the file. */
+  apr_err = apr_file_remove (authz_file_path, subpool);
   if (apr_err != APR_SUCCESS)
     return svn_error_wrap_apr(apr_err, "Removing test authz file");
 

@@ -102,7 +102,7 @@ class State:
           os.makedirs(dirpath)
 
         # write out the file contents now
-        open(fullpath, 'w').write(item.contents)
+        open(fullpath, 'wb').write(item.contents)
 
   def old_tree(self):
     "Return an old-style tree (for compatibility purposes)."
