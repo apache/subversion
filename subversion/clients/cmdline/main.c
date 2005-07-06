@@ -170,7 +170,15 @@ const apr_getopt_option_t svn_cl__options[] =
                              svn_cl__auth_password_opt, \
                              svn_cl__no_auth_cache_opt, \
                              svn_cl__non_interactive_opt
-/* Options for giving a log message.  (Some of these also have other uses.) */
+/* Options for giving a log message.  (Some of these also have other uses.) 
+ *
+ * In theory, we should include svn_cl__non_interactive_opt here too,
+ * because all the log-message-taking commands have the potential to
+ * pop up an editor, and svn_cl__non_interactive_opt is the way to
+ * prevent that.  But so far, any command that includes these options
+ * also includes SVN_CL__AUTH_OPTIONS, which of course already
+ * contains svn_cl__non_interactive_opt, so we get it for free.
+ */
 #define SVN_CL__LOG_MSG_OPTIONS 'm', 'F', \
                                 svn_cl__force_log_opt, \
                                 svn_cl__editor_cmd_opt, \
