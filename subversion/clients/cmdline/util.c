@@ -296,6 +296,7 @@ struct log_msg_baton
   const char *message_encoding; /* the locale/encoding of the message. */
   const char *base_dir; /* the base directory for an external edit. UTF-8! */
   const char *tmpfile_left; /* the tmpfile left by an external edit. UTF-8! */
+  svn_boolean_t non_interactive; /* if true, don't pop up an editor */
   apr_hash_t *config; /* client configuration hash */
   svn_boolean_t keep_locks; /* Keep repository locks? */
   apr_pool_t *pool; /* a pool. */
@@ -348,6 +349,7 @@ svn_cl__make_log_msg_baton (void **baton,
   lmb->tmpfile_left = NULL;
   lmb->config = config;
   lmb->keep_locks = opt_state->no_unlock;
+  lmb->non_interactive = opt_state->non_interactive;
   lmb->pool = pool;
   *baton = lmb;
   return SVN_NO_ERROR;
@@ -531,11 +533,22 @@ svn_cl__get_log_message (const char **log_msg,
       msg_string->len = tmp_message->len;
 
       /* Use the external edit to get a log message. */
-      err = svn_cl__edit_externally (&msg_string, &lmb->tmpfile_left,
-                                     lmb->editor_cmd, lmb->base_dir,
-                                     msg_string, "svn-commit",
-                                     lmb->config, TRUE, lmb->message_encoding,
-                                     pool);
+      if (! lmb->non_interactive)
+        {
+          err = svn_cl__edit_externally (&msg_string, &lmb->tmpfile_left,
+                                         lmb->editor_cmd, lmb->base_dir,
+                                         msg_string, "svn-commit",
+                                         lmb->config, TRUE,
+                                         lmb->message_encoding,
+                                         pool);
+        }
+      else /* non_interactive flag says we can't pop up an editor, so error */
+        {
+          return svn_error_create
+            (SVN_ERR_CL_NO_EDITOR_WHEN_NONINTERACTIVE, NULL,
+             _("Not invoking editor to get log message, "
+               "because non-interactive"));
+        }
 
       /* Dup the tmpfile path into its baton's pool. */
       *tmp_file = lmb->tmpfile_left = apr_pstrdup (lmb->pool, 

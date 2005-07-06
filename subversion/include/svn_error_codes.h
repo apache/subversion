@@ -1016,6 +1016,10 @@ SVN_ERROR_START
               SVN_ERR_CL_CATEGORY_START + 9,
               "A log message was given where none was necessary")
 
+  SVN_ERRDEF (SVN_ERR_CL_NO_EDITOR_WHEN_NONINTERACTIVE,
+              SVN_ERR_CL_CATEGORY_START + 10,
+              "Cannot invoke editor when non-interactive behavior requested")
+
 SVN_ERROR_END
 
 
