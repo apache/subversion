@@ -546,8 +546,8 @@ svn_cl__get_log_message (const char **log_msg,
         {
           return svn_error_create
             (SVN_ERR_CL_NO_EDITOR_WHEN_NONINTERACTIVE, NULL,
-             _("Not invoking editor to get log message, "
-               "because non-interactive"));
+             _("Cannot invoke editor to get log message "
+               "when non-interactive"));
         }
 
       /* Dup the tmpfile path into its baton's pool. */
