@@ -955,25 +955,36 @@ go to it.  If not, here's another way:
 Writing log messages
 ====================
 
-Certain guidelines should be adhered to when writing log messages for
-code changes:
+Every commit needs a log message.  
 
-Make a log message for every change.  The value of the log becomes
-much less if developers cannot rely on its completeness.  Even if
-you've only changed comments, write a log that says "Doc fix." or
-something.
+The intended audience for a log message is a developer who is already
+familiar with Subversion, but not necessarily familiar with this
+particular commit.  Usually when someone goes back and reads a change,
+he no longer has in his head all the context around that change.  This
+is true even if he is the author of the change!  All the discussions
+and mailing list threads and everything else may be forgotten; the
+only clue to what the change is about comes from the log message and
+the diff itself.  People revisit changes with surprising frequency,
+too: for example, it might be months after the original commit and now
+the change is being ported to a maintenance branch.
 
-Start off the log message with one line indicating the general nature
-of the change.  This not only helps put developers in the right frame
-of mind for reading the rest of the log message, but also plays well
-with the "CIA" bot that echoes the first line of each commit to
-realtime forums like IRC.  (See http://cia.navi.cx/ for details.)
+The log message is the introduction to the change.  Start it off with
+one line indicating the general nature of the change, and follow that
+with a descriptive paragraph if necessary.  This not only helps put
+developers in the right frame of mind for reading the rest of the log
+message, but also plays well with the "CIA" bot that echoes the first
+line of each commit to realtime forums like IRC.  (For details, see
+http://cia.navi.cx/.)  However, if the commit is just one simple
+change to one file, then you can dispense with the general description
+and simply go straight to the detailed description, in the standard
+filename-then-symbol format shown below.
 
-Use full sentences, not sentence fragments.  Fragments are more often
-ambiguous, and it takes only a few more seconds to write out what you
-mean.  Fragments like "Doc fix", "New file", or "New function" are
-acceptable because they are standard idioms, and all further details
-should appear in the source code.
+Throughout the log message, use full sentences, not sentence
+fragments.  Fragments are more often ambiguous, and it takes only a
+few more seconds to write out what you mean.  Certain fragments like
+"Doc fix", "New file", or "New function" are acceptable because they
+are standard idioms, and all further details should appear in the
+source code.
 
 The log message should name every affected function, variable, macro,
 makefile target, grammar rule, etc, including the names of symbols
@@ -1033,14 +1044,22 @@ change entries:
      extremely low brain-to-body mass ratio.
 
 If your change is related to a specific issue in the issue tracker,
-then include a string like "issue #N" in the log message.  For
-example, if a patch resolves issue 1729, then the log message might
-be:
+then include a string like "issue #N" in the log message, but make
+sure you still summarize what the change is about.  For example, if a
+patch resolves issue #1729, then the log message might be:
 
    Fix issue #1729: Don't crash because of a missing file.
 
    * subversion/libsvn_ra_ansible/get_editor.c
      (frobnicate_file): Check that file exists before frobnicating.
+
+Try to put related changes together.  For example, if you create
+svn_ra_get_ansible2(), deprecating svn_ra_get_ansible(), then those
+two things should be near each other in the log message:
+
+   * subversion/include/svn_ra.h
+     (svn_ra_get_ansible2): New prototype, obsoletes svn_ra_get_ansible.
+     (svn_ra_get_ansible): Deprecate.
 
 For large changes or change groups, group the log entry into
 paragraphs separated by blank lines.  Each paragraph should be a set
@@ -1103,11 +1122,8 @@ guidelines.  The requirement to name every symbol obviously does not
 apply, and if the change is just one more increment in a continuous
 process such as translation, it's not even necessary to name every
 file.  Just briefly summarize the change, for example: "More work on
-Malagasy translation of the book."  When you finish a distinct stage
-of work, note it in the log message, for example: "Finish Chapter 3 of
-Malagasy book translation.".  Please write your log messages in
-English, so everybody involved in the project can understand the
-changes you made.
+Malagasy translation."  Please write your log messages in English, so
+everybody involved in the project can understand the changes you made.
 
 
 
