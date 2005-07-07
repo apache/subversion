@@ -1584,6 +1584,34 @@ def repos_root(sbox):
                                                       "lambda"))
   check_repos_root(output)
 
+def basic_peg_revision(sbox):
+  "checks peg revision on filename with @ sign"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repos_dir = sbox.repo_url
+  filename = 'abc@abc'
+
+  wc_file = wc_dir + '/' + filename
+  url = repos_dir + '/' + filename
+
+  svntest.main.file_append(wc_file, 'xyz\n')
+  svntest.main.run_svn(None, 'add', wc_file)
+  svntest.main.run_svn(None, 'ci', '-m', 'secret log msg', wc_file)
+
+  # Without the trailing "@", expect failure.
+  output, errlines = svntest.actions.run_and_verify_svn(\
+    None, None, ".*Syntax error parsing revision 'abc'", 'cat', wc_file)
+  output, errlines = svntest.actions.run_and_verify_svn(\
+    None, None, ".*Syntax error parsing revision 'abc'", 'cat', url)
+
+  # With the trailing "@", expect success.
+  output, errlines = svntest.actions.run_and_verify_svn(None, ["xyz\n"], None,
+                                                        'cat', wc_file+'@')
+  output, errlines = svntest.actions.run_and_verify_svn(None, ["xyz\n"], None,
+                                                        'cat', url+'@')
+
+
 #----------------------------------------------------------------------
 ########################################################################
 # Run the tests
@@ -1617,6 +1645,7 @@ test_list = [ None,
               basic_add_local_ignores,
               basic_add_no_ignores,
               repos_root,
+              basic_peg_revision,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.
