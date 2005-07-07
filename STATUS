@@ -15,7 +15,7 @@ Candidate changes:
       Distributions will start to update to the new version, and will
       require support to continue building subversion-perl packages.
     Votes:
-      +1: maxb
+      +1: maxb, clkao
 
   * r15233
     Reduce memory consumption by the client when performing merge
