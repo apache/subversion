@@ -33,4 +33,14 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r15290 
+    Hooks bugfix: if lock already exists and --force not passed, then
+    don't call 'pre-(un)lock'.
+    Justification:
+      'pre'-hooks shouldn't be called when we *know* the filesystem is
+      going to disallow the action.  This results in multiple hook
+      calls for no good reason as the user re-attempts the action.
+    Votes:
+      +1: sussman, cmpilato
+
 Approved changes (further review is welcome, but not required):
