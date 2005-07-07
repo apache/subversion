@@ -974,6 +974,11 @@ SVN_ERROR_START
               SVN_ERR_MISC_CATEGORY_START + 19,
               "Incompatible library version")
 
+  /* @since New in 1.3. */
+  SVN_ERRDEF (SVN_ERR_NONINTERACTIVE,
+              SVN_ERR_MISC_CATEGORY_START + 20,
+              "Interactive operation attempted while in non-interactive mode")
+
   /* command-line client errors */
 
   SVN_ERRDEF (SVN_ERR_CL_ARG_PARSING_ERROR,
@@ -1015,10 +1020,6 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_CL_UNNECESSARY_LOG_MESSAGE,
               SVN_ERR_CL_CATEGORY_START + 9,
               "A log message was given where none was necessary")
-
-  SVN_ERRDEF (SVN_ERR_CL_NO_EDITOR_WHEN_NONINTERACTIVE,
-              SVN_ERR_CL_CATEGORY_START + 10,
-              "Cannot invoke editor when non-interactive behavior requested")
 
 SVN_ERROR_END
 
