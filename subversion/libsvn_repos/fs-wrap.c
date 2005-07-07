@@ -440,6 +440,17 @@ svn_repos_fs_lock (svn_lock_t **lock,
       (SVN_ERR_FS_NO_USER, NULL,
        "Cannot lock path '%s', no authenticated username available.", path);
   
+  if (! steal_lock)
+    {
+      svn_lock_t *existing_lock;
+      SVN_ERR (svn_fs_get_lock (&existing_lock, repos->fs, path, pool));
+      if (existing_lock)
+        return svn_error_createf 
+          (SVN_ERR_FS_PATH_ALREADY_LOCKED, NULL,
+           _("Lock failed:  path '%s' is currently locked by user '%s'."),
+           path, existing_lock->owner);
+    }
+  
   /* Run pre-lock hook.  This could throw error, preventing
      svn_fs_lock() from happening. */
   SVN_ERR (svn_repos__hooks_pre_lock (repos, path, username, pool));
@@ -483,6 +494,17 @@ svn_repos_fs_unlock (svn_repos_t *repos,
       (SVN_ERR_FS_NO_USER, NULL,
        _("Cannot unlock path '%s', no authenticated username available"),
        path);
+
+  if (! break_lock)
+    {
+      svn_lock_t *existing_lock;
+      SVN_ERR (svn_fs_get_lock (&existing_lock, repos->fs, path, pool));
+      if (existing_lock)
+        return svn_error_createf 
+          (SVN_ERR_FS_PATH_ALREADY_LOCKED, NULL,
+           _("Unlock failed:  path '%s' is currently locked by user '%s'."),
+           path, existing_lock->owner);
+    }
 
   /* Run pre-unlock hook.  This could throw error, preventing
      svn_fs_unlock() from happening. */
