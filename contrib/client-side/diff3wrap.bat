@@ -3,15 +3,17 @@
 REM Configure your favorite diff3/merge program here.
 SET DIFF3="C:\Program Files\Funky Stuff\My Merge Tool.exe"
 
-REM We only have access to nine parameters at a time.  We use SHIFT to slide
-REM our nine-parameter window a little bit so we can get to what we need.
-SET MINE=%9
+REM Subversion provides the paths we need as the ninth, tenth, and eleventh 
+REM parameters.  But we only have access to nine parameters at a time, so we
+REM shift our nine-parameter window twice to let us get to what we need.
 SHIFT
-SET OLDER=%9
 SHIFT
+SET MINE=%7
+SET OLDER=%8
 SET YOURS=%9
 
-REM Call the merge command (change the following line to make sense)
+REM Call the merge command (change the following line to make sense for
+REM your merge program).
 %DIFF3% --older %OLDER% --mine %MINE% --yours %YOURS%
 
 REM After performing the merge, this script needs to print the contents
