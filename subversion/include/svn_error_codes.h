@@ -974,11 +974,6 @@ SVN_ERROR_START
               SVN_ERR_MISC_CATEGORY_START + 19,
               "Incompatible library version")
 
-  /* @since New in 1.3. */
-  SVN_ERRDEF (SVN_ERR_NONINTERACTIVE,
-              SVN_ERR_MISC_CATEGORY_START + 20,
-              "Interactive operation attempted while in non-interactive mode")
-
   /* command-line client errors */
 
   SVN_ERRDEF (SVN_ERR_CL_ARG_PARSING_ERROR,
