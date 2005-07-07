@@ -545,7 +545,7 @@ svn_cl__get_log_message (const char **log_msg,
       else /* non_interactive flag says we can't pop up an editor, so error */
         {
           return svn_error_create
-            (SVN_ERR_NONINTERACTIVE, NULL,
+            (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
              _("Cannot invoke editor to get log message "
                "when non-interactive"));
         }
