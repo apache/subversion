@@ -498,13 +498,36 @@ svn_opt_parse_path (svn_opt_revision_t *rev,
 
       if (path[i] == '@')
         {
+          svn_boolean_t is_url;
+          int ret;
           svn_opt_revision_t start_revision, end_revision;
 
           end_revision.kind = svn_opt_revision_unspecified;
-          if (svn_opt_parse_revision (&start_revision,
-                                      &end_revision,
-                                      path + i + 1, pool)
-              || end_revision.kind != svn_opt_revision_unspecified)
+
+          /* URLs get treated differently from wc paths. */
+          is_url = svn_path_is_url (path);
+
+          if (path[i + 1] == '\0')  /* looking at empty peg revision */
+            {
+              if (is_url)
+                {
+                  ret = svn_opt_parse_revision (&start_revision, &end_revision,
+                                                "head", pool);
+                }
+              else
+                {
+                  ret = svn_opt_parse_revision (&start_revision, &end_revision,
+                                                "base", pool);
+                }
+            }
+          else  /* looking at non-empty peg revision */
+            {
+              ret = svn_opt_parse_revision (&start_revision,
+                                            &end_revision,
+                                            path + i + 1, pool);
+            }
+
+          if (ret || end_revision.kind != svn_opt_revision_unspecified)
             return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                       _("Syntax error parsing revision '%s'"),
                                       path + i + 1);
