@@ -87,6 +87,13 @@ svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      const char *user, const char *password,
                                      const char **message);
 
+/* Return an error chain based on @a params (which contains a
+ * command response indicating failure).  The error chain will be
+ * in the same order as the errors indicated in @a params.  Use
+ * @a pool for temporary allocations. */
+svn_error_t *svn_ra_svn__handle_failure_status(apr_array_header_t *params,
+                                               apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
