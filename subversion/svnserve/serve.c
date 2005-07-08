@@ -1432,10 +1432,10 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Loop through the lock commands. */
   for (i = 0; i < locks->nelts; ++i)
     {
-      svn_pool_clear(subpool);
       struct lock_cmd *cmd = apr_pcalloc(pool, sizeof(struct lock_cmd));
-
       svn_ra_svn_item_t *item = &APR_ARRAY_IDX(locks, i, svn_ra_svn_item_t);
+
+      svn_pool_clear(subpool);
 
       if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -1470,9 +1470,9 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   for (i = 0; i < lock_cmds->nelts; i++)
     {
-      svn_pool_clear(subpool);
       struct lock_cmd *cmd = &APR_ARRAY_IDX(lock_cmds, i, struct lock_cmd);
 
+      svn_pool_clear(subpool);
       SVN_ERR(write_lock(conn, subpool, cmd->l));
     }
 
@@ -1529,10 +1529,11 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Loop through the unlock commands. */
   for (i = 0; i < unlock_tokens->nelts; i++)
     {
-      svn_pool_clear(subpool);
       struct unlock_cmd *cmd = apr_pcalloc(pool, sizeof(struct unlock_cmd));
       svn_ra_svn_item_t *item = &APR_ARRAY_IDX(unlock_tokens, i,
                                                svn_ra_svn_item_t);
+
+      svn_pool_clear(subpool);
 
       if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -1554,10 +1555,10 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Loop through each path to be unlocked. */
   for (i = 0; i < unlock_cmds->nelts; i++)
     {
-      svn_pool_clear(subpool);
       struct unlock_cmd *cmd = &APR_ARRAY_IDX(unlock_cmds, i,
                                               struct unlock_cmd);
 
+      svn_pool_clear(subpool);
       SVN_CMD_ERR(svn_repos_fs_unlock(b->repos, cmd->full_path,
                                       cmd->token, force, subpool));
     }
