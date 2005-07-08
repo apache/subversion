@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-07-04 15:49+0900\n"
-"PO-Revision-Date: 2005-07-04 16:43+0900\n"
+"POT-Creation-Date: 2005-07-08 10:49+0900\n"
+"PO-Revision-Date: 2005-07-08 11:27+0900\n"
 "Last-Translator: seolin <blueboh@gmail.com>\n"
 "Language-Team: Korean <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -516,7 +516,7 @@ msgstr "로그 개수의 최대값"
 msgid "don't unlock the targets"
 msgstr "대상의 잠금을 해제하지 않고 진행합니다."
 
-#: clients/cmdline/main.c:182
+#: clients/cmdline/main.c:190
 msgid ""
 "Put files and directories under version control, scheduling\n"
 "them for addition to repository.  They will be added in next commit.\n"
@@ -526,7 +526,7 @@ msgstr ""
 "추가하도록 스케쥴링 되며, 다음 커밋할 때, 추가됩니다.\n"
 "사용법: add PATH...\n"
 
-#: clients/cmdline/main.c:190
+#: clients/cmdline/main.c:198
 msgid ""
 "Output the content of specified files or\n"
 "URLs with revision and author information in-line.\n"
@@ -542,7 +542,7 @@ msgstr ""
 "  REV가 지정되면, 지정된 REV에서부터 찾아 보여줍니다.\n"
 "  \n"
 
-#: clients/cmdline/main.c:200
+#: clients/cmdline/main.c:208
 msgid ""
 "Output the content of specified files or URLs.\n"
 "usage: cat TARGET[@REV]...\n"
@@ -556,7 +556,7 @@ msgstr ""
 "  REV가 지정되면, 지정된 REV에서부터 찾아 출력합니다.\n"
 "  \n"
 
-#: clients/cmdline/main.c:208
+#: clients/cmdline/main.c:216
 msgid ""
 "Check out a working copy from a repository.\n"
 "usage: checkout URL[@REV]... [PATH]\n"
@@ -580,7 +580,7 @@ msgstr ""
 "  맨 마지막 디렉토리명이 하위 디렉토리 이름으로 사용됩니다.\n"
 "  \n"
 
-#: clients/cmdline/main.c:222
+#: clients/cmdline/main.c:230
 msgid ""
 "Recursively clean up the working copy, removing locks, resuming\n"
 "unfinished operations, etc.\n"
@@ -590,7 +590,7 @@ msgstr ""
 "중단된 명령을 재개합니다.\n"
 "사용법: cleanup [PATH...]\n"
 
-#: clients/cmdline/main.c:228
+#: clients/cmdline/main.c:236
 msgid ""
 "Send changes from your working copy to the repository.\n"
 "usage: commit [PATH...]\n"
@@ -608,7 +608,7 @@ msgstr ""
 "  잠긴 파일이 있거나, 잠긴 파일이 들어 있는 디렉토리는\n"
 "  성공적으로 커밋이 되면 잠금이 해제가 됩니다.\n"
 
-#: clients/cmdline/main.c:239
+#: clients/cmdline/main.c:247
 msgid ""
 "Duplicate something in working copy or repository, remembering history.\n"
 "usage: copy SRC DST\n"
@@ -628,7 +628,7 @@ msgstr ""
 "    URL -> WC:   URL로부터 체크아웃해서 현 작업 사본에 추가하도록 스케쥴\n"
 "    URL -> URL:  서버상에서 바로 복사함, 브랜치 & 태그를 만들 때 사용됨\n"
 
-#: clients/cmdline/main.c:252
+#: clients/cmdline/main.c:260
 msgid ""
 "Remove files and directories from version control.\n"
 "usage: 1. delete PATH...\n"
@@ -654,7 +654,7 @@ msgstr ""
 "  2. URL로 지정된 아이템들은 저장소에서 즉시 삭제됩니다.\n"
 "\n"
 
-#: clients/cmdline/main.c:268
+#: clients/cmdline/main.c:276
 msgid ""
 "Display the differences between two paths.\n"
 "usage: 1. diff [-r N[:M]] [TARGET[@REV]...]\n"
@@ -704,7 +704,7 @@ msgstr ""
 "\n"
 "  'svn diff' 을 사용하면 작업 중 수정된 내용을 볼 수 있습니다.\n"
 
-#: clients/cmdline/main.c:308
+#: clients/cmdline/main.c:316
 msgid ""
 "Create an unversioned copy of a tree.\n"
 "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -743,7 +743,7 @@ msgstr ""
 "  PEGREV가 지정되면, 어떤 것을 찾아야할지 결정하게 됩니다.\n"
 "  \n"
 
-#: clients/cmdline/main.c:337
+#: clients/cmdline/main.c:345
 msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: help [SUBCOMMAND...]\n"
@@ -751,7 +751,7 @@ msgstr ""
 "본 프로그램과 그 하위 명령들에 대한 사용법을 보여줍니다.\n"
 "usage: help [SUBCOMMAND...]\n"
 
-#: clients/cmdline/main.c:346
+#: clients/cmdline/main.c:354
 msgid ""
 "Commit an unversioned file or tree into the repository.\n"
 "usage: import [PATH] URL\n"
@@ -771,7 +771,7 @@ msgstr ""
 "  PATH가 디렉토리이면, 그 내용은 URL에 모두 추가 됩니다.\n"
 "  \n"
 
-#: clients/cmdline/main.c:359
+#: clients/cmdline/main.c:367
 msgid ""
 "Display information about a local or remote item.\n"
 "usage: info [TARGET...]\n"
@@ -785,7 +785,7 @@ msgstr ""
 "  각 PATH에 해당하는 정보를 출력합니다. (기본값: '.').\n"
 "  PATH는 작업 사본 경로 혹은 URL이 될 수 있습니다.\n"
 
-#: clients/cmdline/main.c:368
+#: clients/cmdline/main.c:376
 msgid ""
 "List directory entries in the repository.\n"
 "usage: list [TARGET[@REV]...]\n"
@@ -822,7 +822,7 @@ msgstr ""
 "    크기(바이트)\n"
 "    마지막 커밋한 날짜와 시각\n"
 
-#: clients/cmdline/main.c:392
+#: clients/cmdline/main.c:400
 msgid ""
 "Lock working copy paths or URLs in the repository, so that\n"
 "no other user can commit changes to them.\n"
@@ -836,7 +836,7 @@ msgstr ""
 "\n"
 "  --force 를 사용하면 다른 사람이나 다른 사본에서 잠궜을지라도 빼앗아옵니다.\n"
 
-#: clients/cmdline/main.c:401
+#: clients/cmdline/main.c:409
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
 "usage: 1. log [PATH]\n"
@@ -888,7 +888,7 @@ msgstr ""
 "    svn log http://www.example.com/repo/project/foo.c\n"
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
-#: clients/cmdline/main.c:433
+#: clients/cmdline/main.c:441
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -936,7 +936,7 @@ msgstr ""
 "  디렉토리안에 있다면 그 파일에 반영되며, 그렇지 않는 경우 '.'을 가정하게 됩니다.\n"
 "  \n"
 
-#: clients/cmdline/main.c:463
+#: clients/cmdline/main.c:471
 msgid ""
 "Create a new directory under version control.\n"
 "usage: 1. mkdir PATH...\n"
@@ -966,7 +966,7 @@ msgstr ""
 "\n"
 "  두 경우 생성될 디렉토리 상위의 디렉토리들은 존재해야만 합니다.\n"
 
-#: clients/cmdline/main.c:483
+#: clients/cmdline/main.c:491
 msgid ""
 "Move and/or rename something in working copy or repository.\n"
 "usage: move SRC DST\n"
@@ -986,7 +986,7 @@ msgstr ""
 "    WC  -> WC:   작업 사본내에서 바로 이동 후, 추가하도록 스케쥴링하며, 로그 메시지도 복사됩니다.\n"
 "    URL -> URL:  서버 상에서만 이름을 바꾸며, 바로 커밋됩니다.\n"
 
-#: clients/cmdline/main.c:495
+#: clients/cmdline/main.c:503
 msgid ""
 "Remove PROPNAME from files, dirs, or revisions.\n"
 "usage: 1. propdel PROPNAME [PATH...]\n"
@@ -1002,7 +1002,7 @@ msgstr ""
 "  1. 작업 사본내의 버전관리되는 속성을 제거합니다.\n"
 "  2. 원격지 REV 리비전의 버전관리되지 않는 속성을 제거합니다.\n"
 
-#: clients/cmdline/main.c:505
+#: clients/cmdline/main.c:513
 msgid ""
 "Edit property PROPNAME with an external editor on targets.\n"
 "usage: 1. propedit PROPNAME PATH...\n"
@@ -1018,7 +1018,7 @@ msgstr ""
 "  1. 작업사본내의 버전관리되는 속성을 편집합니다.\n"
 "  2. 원격지의 버전관리되지 않는 속성을 편집합니다.\n"
 
-#: clients/cmdline/main.c:516
+#: clients/cmdline/main.c:524
 msgid ""
 "Print value of PROPNAME on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
@@ -1049,7 +1049,7 @@ msgstr ""
 "  (이 옵션은 바이너리 속성 출력을 재지정하여 파일에\n"
 "  쓰로자 할 때 유용합니다.)\n"
 
-#: clients/cmdline/main.c:534
+#: clients/cmdline/main.c:542
 msgid ""
 "List all properties on files, dirs, or revisions.\n"
 "usage: 1. proplist [TARGET[@REV]...]\n"
@@ -1067,7 +1067,7 @@ msgstr ""
 "     대상을 먼저 찾습니다.\n"
 "  2. 원격지의 버전관리 대상이 아닌 속성을 출력.\n"
 
-#: clients/cmdline/main.c:545
+#: clients/cmdline/main.c:553
 msgid ""
 "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME [PROPVAL | -F VALFILE] PATH...\n"
@@ -1143,7 +1143,7 @@ msgstr ""
 "  아니라면, 디렉토리에 대해서는 실패하며, 재귀적일 경우 파일에 대해서만\n"
 "  설정됩니다.\n"
 
-#: clients/cmdline/main.c:595
+#: clients/cmdline/main.c:603
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -1159,7 +1159,7 @@ msgstr ""
 "  단지 충돌 표시만을 없앨 뿐입니다. 충돌 요소들과 관련된 파일만\n"
 "  삭제하며, 다시 커밋할 수 있는 상태로 만들어줍니다.\n"
 
-#: clients/cmdline/main.c:604
+#: clients/cmdline/main.c:612
 msgid ""
 "Restore pristine working copy file (undo most local edits).\n"
 "usage: revert PATH...\n"
@@ -1173,7 +1173,7 @@ msgstr ""
 "  주의: 본 명령은 네트워크 요청이 전혀 필요하지 않습니다. 또한 충돌한 상황을\n"
 "  해결하지 않습니다. 그리고, 삭제된 디렉토리에 대해서는 다시 되돌려놓지 않습니다.\n"
 
-#: clients/cmdline/main.c:614
+#: clients/cmdline/main.c:622
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -1319,7 +1319,7 @@ msgstr ""
 "                 965       687 joe          wc/zig.c\n"
 "    Status against revision:   981\n"
 
-#: clients/cmdline/main.c:691
+#: clients/cmdline/main.c:699
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL [PATH]\n"
@@ -1347,7 +1347,7 @@ msgstr ""
 "     즉, 접근하는 방식이(ssh, http등)나 호스트 이름이 바뀐 경우에만 되며,\n"
 "     작업사본의 구조는 그대로 유지합니다.\n"
 
-#: clients/cmdline/main.c:712
+#: clients/cmdline/main.c:720
 msgid ""
 "Unlock working copy paths or URLs.\n"
 "usage: unlock TARGET...\n"
@@ -1359,7 +1359,7 @@ msgstr ""
 "\n"
 "  --force 를 사용하면 강제로 해제합니다.\n"
 
-#: clients/cmdline/main.c:720
+#: clients/cmdline/main.c:728
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -1401,52 +1401,52 @@ msgstr ""
 "  세번째 컬럼에 'B'가 있으면, 잠금설정이 깨지거나 다른 사람에게 넘어 갔음을\n"
 "  의미합니다.\n"
 
-#: clients/cmdline/main.c:797
+#: clients/cmdline/main.c:805
 #: svnadmin/main.c:77
 #: svnlook/main.c:284
 msgid "Caught signal"
 msgstr "시그널 수신"
 
-#: clients/cmdline/main.c:894
+#: clients/cmdline/main.c:903
 msgid "Non-numeric limit argument given"
 msgstr "숫자를 입력해야 합니다."
 
-#: clients/cmdline/main.c:911
-#: svnadmin/main.c:1228
+#: clients/cmdline/main.c:920
+#: svnadmin/main.c:1229
 msgid "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr "복수의 리비전 인자를 받았습니다. -r M -r N 대신 -r M:N 을 사용하세요."
 
-#: clients/cmdline/main.c:923
-#: svnadmin/main.c:1242
+#: clients/cmdline/main.c:932
+#: svnadmin/main.c:1243
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "리비전 인자 '%s'안에 구문오류가 있습니다."
 
-#: clients/cmdline/main.c:1071
-#: clients/cmdline/main.c:1081
+#: clients/cmdline/main.c:1080
+#: clients/cmdline/main.c:1090
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props 와 --no-auto-props 는 동시에 올 수 없습니다."
 
-#: clients/cmdline/main.c:1097
+#: clients/cmdline/main.c:1106
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "native-eol 인자 '%s' 에 구문오류가 있습니다."
 
-#: clients/cmdline/main.c:1143
-#: svndumpfilter/main.c:1177
-#: svnlook/main.c:2131
+#: clients/cmdline/main.c:1152
+#: svndumpfilter/main.c:1178
+#: svnlook/main.c:2132
 msgid "Subcommand argument required\n"
 msgstr "인자가 필요한 명령입니다.\n"
 
-#: clients/cmdline/main.c:1161
-#: svnadmin/main.c:1350
-#: svndumpfilter/main.c:1194
-#: svnlook/main.c:2149
+#: clients/cmdline/main.c:1170
+#: svnadmin/main.c:1351
+#: svndumpfilter/main.c:1195
+#: svnlook/main.c:2150
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "알 수 없는 명령: '%s'\n"
 
-#: clients/cmdline/main.c:1194
+#: clients/cmdline/main.c:1203
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -1455,23 +1455,23 @@ msgstr ""
 "'%s' 명령은 '%s' 를 옵션으로 취하지 않습니다.\n"
 "'svn help %s' 로 사용법을 보십시오.\n"
 
-#: clients/cmdline/main.c:1231
+#: clients/cmdline/main.c:1240
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr "로그 메시지 파일은 버전관리 대상입니다. 강제로 지정하려면 '--force-log' 를 사용하세요."
 
-#: clients/cmdline/main.c:1238
+#: clients/cmdline/main.c:1247
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr "잠그는 이유에 대한 파일이 버전관리 대상입니다. 강제로 지정하려면 '--force-log' 를 사용하세요."
 
-#: clients/cmdline/main.c:1259
+#: clients/cmdline/main.c:1268
 msgid "The log message is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "로그 메시지가 경로명입니다. (-F 를 사용하려던 것인가요?) 강제로 사용하려면 '--force-log'를 사용하세요"
 
-#: clients/cmdline/main.c:1266
+#: clients/cmdline/main.c:1275
 msgid "The lock comment is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "잠그는 이유를 경로명으로 하였습니다. (-F 를 사용하려던 것인가요?) 강제로 사용하려면 '--force-log'를 사용하세요"
 
-#: clients/cmdline/main.c:1479
+#: clients/cmdline/main.c:1488
 msgid "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)\n"
 msgstr "svn: 'svn cleanup'은 잠금 파일을 제거합니다. ('svn help cleanup'은 자세한 설명을 보여줍니다)\n"
 
@@ -1917,23 +1917,27 @@ msgstr "system('%s') 가 %d 을/를 반환합니다."
 msgid "Can't restore working directory"
 msgstr "작업 사본 디렉토리를 재설치할 수 없습니다."
 
-#: clients/cmdline/util.c:323
+#: clients/cmdline/util.c:324
 msgid "Log message contains a zero byte"
 msgstr "로그 메시지의 길이가 0 입니다."
 
-#: clients/cmdline/util.c:382
+#: clients/cmdline/util.c:384
 msgid "Your commit message was left in a temporary file:"
 msgstr "커밋 메시지는 다음 파일에 저장되어 있으며, -F로 재사용 할 수 있습니다. :"
 
-#: clients/cmdline/util.c:434
+#: clients/cmdline/util.c:436
 msgid "--This line, and those below, will be ignored--"
 msgstr "--이 줄 이하는 자동으로 제거됩니다--"
 
 #: clients/cmdline/util.c:549
+msgid "Cannot invoke editor to get log message when non-interactive"
+msgstr "대화식이 아닐 때 로그 메세지를 얻기 위해 에디터를 실행 할 수 없습니다"
+
+#: clients/cmdline/util.c:562
 msgid "Could not use external editor to fetch log message; consider setting the $SVN_EDITOR environment variable or using the --message (-m) or --file (-F) options"
 msgstr "로그 메시지를 구하기 위해 외부 프로그램을 사용할 수 없습니다. SVN_EDITOR 환경변수를 설정하시거나 --message (-m) 또는 --file (-F) 옵션을 사용하세요."
 
-#: clients/cmdline/util.c:584
+#: clients/cmdline/util.c:597
 msgid ""
 "\n"
 "Log message unchanged or not specified\n"
@@ -1943,11 +1947,11 @@ msgstr ""
 "로그 메시지가 변경되지 않았거나 지정되지 않았습니다\n"
 "취소(A), 계속(C), 수정(E)\n"
 
-#: clients/cmdline/util.c:637
+#: clients/cmdline/util.c:650
 msgid "Use --force to override this restriction"
 msgstr "강제로 적용하려면 --force 옵션을 사용하세요."
 
-#: clients/cmdline/util.c:659
+#: clients/cmdline/util.c:672
 #: include/svn_error_codes.h:229
 #: libsvn_subr/cmdline.c:335
 #: libsvn_subr/cmdline.c:352
@@ -3150,8 +3154,9 @@ msgstr "고정된 리비전을 위한 diff에서 적어도 하나의 리비전�
 #: libsvn_client/diff.c:2604
 #: libsvn_client/locking_commands.c:252
 #: libsvn_client/locking_commands.c:276
-#: libsvn_client/ra.c:723
-#: libsvn_client/ra.c:846
+#: libsvn_client/ra.c:368
+#: libsvn_client/ra.c:740
+#: libsvn_client/ra.c:863
 #, c-format
 msgid "'%s' has no URL"
 msgstr "'%s'은(는) URL을 포함하지 않습니다."
@@ -3282,28 +3287,28 @@ msgstr "커밋 명령 없이 작업사본의 속성 '%s'를 '%s'에 설정하려
 msgid "Can't find entry for '%s'"
 msgstr "'%s'를 위한 등록정보를 찾을 수 없습니다."
 
-#: libsvn_client/ra.c:472
+#: libsvn_client/ra.c:489
 #, c-format
 msgid "Missing changed-path information for '%s' in revision %ld"
 msgstr "'%s'의 변경된 경로 정보가 누락됨, 리비전 %ld."
 
-#: libsvn_client/ra.c:589
+#: libsvn_client/ra.c:606
 #, c-format
 msgid "path '%s' doesn't exist in revision %ld"
 msgstr "경로 '%s'는 리비전 %ld에서 존재하지 않습니다."
 
-#: libsvn_client/ra.c:650
-#: libsvn_client/ra.c:786
+#: libsvn_client/ra.c:667
+#: libsvn_client/ra.c:803
 #, c-format
 msgid "Unable to find repository location for '%s' in revision %ld"
 msgstr "'%s'의 저장소 위치를 찾을 수 없습니다. 리비전 %ld."
 
-#: libsvn_client/ra.c:661
+#: libsvn_client/ra.c:678
 #, c-format
 msgid "'%s' in revision %ld is an unrelated object"
 msgstr "'%s' (리비전 %ld)는 연관이 없는 개체입니다."
 
-#: libsvn_client/ra.c:791
+#: libsvn_client/ra.c:808
 #, c-format
 msgid "The location for '%s' for revision %ld does not exist in the repository or refers to an unrelated object"
 msgstr "'%s'에 대한 위치(리비전 %ld)가 저장소내에 존재하지 않거나 연관되지 않는 개체를 참조하고 있습니다."
@@ -4752,7 +4757,7 @@ msgstr "로컬 디스크에 있는 저장소를 접근하기 위한 모듈"
 msgid "Unable to open an ra_local session to URL"
 msgstr "URL에 대해 ra_local 세션을 열수 없습니다."
 
-#: libsvn_ra_local/ra_plugin.c:1284
+#: libsvn_ra_local/ra_plugin.c:1285
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_local"
 msgstr "ra_local에 대한 지원하지 않는 RA 로더 버전(%d)입니다."
@@ -4912,24 +4917,29 @@ msgstr "문서의 차이 조각(text delta chunk)이 문자열이 아닙니다."
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "get-file-revs 명령이 어떠한 리비전도 반환하지 않았습니다."
 
-#: libsvn_ra_svn/client.c:1436
+#: libsvn_ra_svn/client.c:1438
 msgid "Server doesn't support the lock command"
 msgstr "서버가 lock 명령을 지원하지 않습니다."
 
-#: libsvn_ra_svn/client.c:1498
+#: libsvn_ra_svn/client.c:1502
 msgid "Server doesn't support the unlock command"
 msgstr "서버가 unlock 명령을 지원하지 않습니다."
 
-#: libsvn_ra_svn/client.c:1533
-#: libsvn_ra_svn/client.c:1561
-msgid "Server doesn't support the get-lock command"
-msgstr "서버가 get-lock 명령을 지원하지 않습니다."
-
-#: libsvn_ra_svn/client.c:1574
+#: libsvn_ra_svn/client.c:1602
+#: libsvn_ra_svn/client.c:1755
 msgid "Lock element not a list"
 msgstr "리스트가 아닌 개체를 잠급니다"
 
-#: libsvn_ra_svn/client.c:1633
+#: libsvn_ra_svn/client.c:1607
+msgid "Unable to parse lock data"
+msgstr "잠금 데이타를 분석할 수 없습니다"
+
+#: libsvn_ra_svn/client.c:1714
+#: libsvn_ra_svn/client.c:1742
+msgid "Server doesn't support the get-lock command"
+msgstr "서버가 get-lock 명령을 지원하지 않습니다."
+
+#: libsvn_ra_svn/client.c:1814
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "ra_svn에 대한 지원하지 않는 RA 로더 버전(%d)입니다."
@@ -4957,7 +4967,7 @@ msgid "Apply-textdelta not active"
 msgstr "Apply-textdelta 는 활성화 상태가 아닙니다."
 
 #: libsvn_ra_svn/editorp.c:797
-#: libsvn_ra_svn/marshal.c:820
+#: libsvn_ra_svn/marshal.c:833
 #, c-format
 msgid "Unknown command '%s'"
 msgstr "알 수 없는 명령 '%s'"
@@ -4990,15 +5000,15 @@ msgstr "경로의 깊이가 너무 깊습니다."
 msgid "Number is larger than maximum"
 msgstr "숫자가 최대값을 넘었습니다."
 
-#: libsvn_ra_svn/marshal.c:769
+#: libsvn_ra_svn/marshal.c:756
 msgid "Empty error list"
 msgstr "비어 있는 오류 리스트"
 
-#: libsvn_ra_svn/marshal.c:776
+#: libsvn_ra_svn/marshal.c:765
 msgid "Malformed error list"
 msgstr "잘못된 형식의 오류 리스트"
 
-#: libsvn_ra_svn/marshal.c:791
+#: libsvn_ra_svn/marshal.c:804
 #, c-format
 msgid "Unknown status '%s' in command response"
 msgstr "명령의 응답안에 알 수 없는 상태 값 '%s'"
@@ -5096,12 +5106,22 @@ msgstr "정상적인 속성 '%s'에 대한 저장공간이 저장소 인터페�
 msgid "Write denied:  not authorized to read all of revision %ld"
 msgstr "쓰기 금지됨: 리비전 %ld에 대해서 전체를 읽을 수 있는 권한이 없습니다."
 
-#: libsvn_repos/fs-wrap.c:484
+#: libsvn_repos/fs-wrap.c:450
+#, c-format
+msgid "Lock failed:  path '%s' is currently locked by user '%s'."
+msgstr "잠금 실패: 현재 경로 '%s'는 사용자 '%s'에 의해 잠겨 있습니다."
+
+#: libsvn_repos/fs-wrap.c:495
 #, c-format
 msgid "Cannot unlock path '%s', no authenticated username available"
 msgstr "'%s' 경로의 잠금을 풀수 없습니다. 인증된 사용자가 아닙니다."
 
-#: libsvn_repos/fs-wrap.c:498
+#: libsvn_repos/fs-wrap.c:505
+#, c-format
+msgid "Unlock failed:  path '%s' is currently locked by user '%s'."
+msgstr "잠금 해제 실패: 현재 경로 '%s'는 사용자 '%s'에 의해 잠겨 있습니다."
+
+#: libsvn_repos/fs-wrap.c:520
 msgid "Unlock succeeded, but post-unlock hook failed"
 msgstr "잠금 해제는 성공하였습니다만 post-commit 훅이 실패하였습니다."
 
@@ -5859,27 +5879,27 @@ msgstr ""
 msgid "Too few arguments"
 msgstr "인자의 개수가 부족합니다."
 
-#: libsvn_subr/opt.c:509
+#: libsvn_subr/opt.c:532
 #, c-format
 msgid "Syntax error parsing revision '%s'"
 msgstr "구문 오류 분석 리비젼 '%s'"
 
-#: libsvn_subr/opt.c:586
+#: libsvn_subr/opt.c:609
 #, c-format
 msgid "URL '%s' is not properly URI-encoded"
 msgstr "URL '%s'는 URI 인코딩에 적당하지 않습니다."
 
-#: libsvn_subr/opt.c:592
+#: libsvn_subr/opt.c:615
 #, c-format
 msgid "URL '%s' contains a '..' element"
 msgstr "URL '%s'는 '..' 요소를 포함합니다."
 
-#: libsvn_subr/opt.c:621
+#: libsvn_subr/opt.c:644
 #, c-format
 msgid "Error resolving case of '%s'"
 msgstr "'%s' 사항을 해결 중 에러 발생하였습니다."
 
-#: libsvn_subr/opt.c:717
+#: libsvn_subr/opt.c:740
 #, c-format
 msgid ""
 "%s, version %s\n"
@@ -5890,7 +5910,7 @@ msgstr ""
 "    %s, %s에 컴파일 됨\n"
 "\n"
 
-#: libsvn_subr/opt.c:720
+#: libsvn_subr/opt.c:743
 msgid ""
 "Copyright (C) 2000-2005 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
@@ -5902,7 +5922,7 @@ msgstr ""
 "이 제품은 CollabNet이 개발한 소프트웨어를 포함하고 있습니다.(http://www.Collab.Net/).\n"
 "\n"
 
-#: libsvn_subr/opt.c:773
+#: libsvn_subr/opt.c:796
 #, c-format
 msgid "Type '%s help' for usage.\n"
 msgstr "사용법은 '%s help'를 통해 볼 수 있습니다.\n"
@@ -7162,11 +7182,11 @@ msgstr "'%s' 는 잠궈지지 안않았습니다.\n"
 msgid "Removed lock on '%s'.\n"
 msgstr "잠금 해제됨 '%s'\n"
 
-#: svnadmin/main.c:1333
+#: svnadmin/main.c:1334
 msgid "subcommand argument required\n"
 msgstr "하위명령 인자가 필요합니다\n"
 
-#: svnadmin/main.c:1418
+#: svnadmin/main.c:1419
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -7293,7 +7313,7 @@ msgstr "   %ld => (없어졌습니다)\n"
 msgid "Dropped %d node(s):\n"
 msgstr "노드(s) %d 를 없앱니다: \n"
 
-#: svndumpfilter/main.c:1213
+#: svndumpfilter/main.c:1214
 msgid ""
 "\n"
 "Error: no prefixes supplied.\n"
@@ -7301,7 +7321,7 @@ msgstr ""
 "\n"
 "오류: prefixes 가 없습니다.\n"
 
-#: svndumpfilter/main.c:1256
+#: svndumpfilter/main.c:1257
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -7651,24 +7671,24 @@ msgstr "propname과 저장소 경로가 지정되지 않았습니다."
 msgid "Missing propname or repository path argument"
 msgstr "propname 또는 저장소 경로가 지정되지 않았습니다."
 
-#: svnlook/main.c:2055
+#: svnlook/main.c:2056
 msgid "Invalid revision number supplied"
 msgstr "잘못된 리비전 번호가 지정되었습니다."
 
-#: svnlook/main.c:2113
+#: svnlook/main.c:2114
 msgid "The '--transaction' (-t) and '--revision' (-r) arguments can not co-exist"
 msgstr "'--transaction' (-t) 과 '--revision' (-r) 인자는 동시에 사용 불가능합니다."
 
-#: svnlook/main.c:2182
+#: svnlook/main.c:2183
 msgid "Repository argument required\n"
 msgstr "저장소 인자가 팔요합니다\n"
 
-#: svnlook/main.c:2191
+#: svnlook/main.c:2192
 #, c-format
 msgid "'%s' is a URL when it should be a path\n"
 msgstr "'%s' 는 URL입니다. 경로를 넣어주세요.\n"
 
-#: svnlook/main.c:2239
+#: svnlook/main.c:2240
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
