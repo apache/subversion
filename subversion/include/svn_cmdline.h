@@ -128,4 +128,4 @@ const char *svn_cmdline_output_encoding (apr_pool_t *pool);
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_POOLS_H */
+#endif /* SVN_CMDLINE_H */
