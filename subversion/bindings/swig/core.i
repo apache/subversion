@@ -572,7 +572,8 @@ struct apr_pool_t
 %extend apr_pool_t
 {
   apr_pool_t(apr_pool_t *parent=NULL, apr_allocator_t *allocator=NULL) {
-    return svn_pool_create_ex(parent, allocator);
+    /* Disable parent pool. */
+    return svn_pool_create_ex(NULL, NULL);
   }
 
   ~apr_pool_t() {
