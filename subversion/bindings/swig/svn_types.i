@@ -250,9 +250,17 @@
     _global_pool = $1 = svn_swig_pl_make_pool (ST(items-1));
 }
 %typemap(ruby, in) apr_pool_t *pool "";
-%typemap(ruby, default) apr_pool_t *pool (VALUE _global_rb_pool, apr_pool_t *_global_pool) {
+%typemap(ruby, default) apr_pool_t *pool
+    (VALUE _global_rb_pool, apr_pool_t *_global_pool) {
   svn_swig_rb_get_pool(argc, argv, self, &_global_rb_pool, &$1);
   _global_pool = $1;
+  svn_swig_rb_push_pool(_global_rb_pool);
+}
+
+%typemap(ruby, default) (svn_client_ctx_t *ctx, apr_pool_t *pool)
+     (VALUE _global_rb_pool, apr_pool_t *_global_pool) {
+  svn_swig_rb_get_pool(2, argv + (argc - 2), self, &_global_rb_pool, &$2);
+  _global_pool = $2;
   svn_swig_rb_push_pool(_global_rb_pool);
 }
 

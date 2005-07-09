@@ -12,14 +12,19 @@ module Svn
     apr_initialize
     at_exit do
       if $DEBUG
-        print "number of pools before the first GC: "
-        p ObjectSpace.each_object(Svn::Core::Pool) {}
-        GC.start
-        print "number of pools after the first GC: "
-        p ObjectSpace.each_object(Svn::Core::Pool) {}
-        GC.start
-        print "number of pools after the second GC: "
-        p ObjectSpace.each_object(Svn::Core::Pool) {}
+        i = 0
+        loop do
+          i += 1
+          print "number of pools before GC(#{i}): "
+          before_pools = ObjectSpace.each_object(Svn::Core::Pool) {}
+          p before_pools
+          GC.start
+          after_pools = ObjectSpace.each_object(Svn::Core::Pool) {}
+          print "number of pools after GC(#{i}): "
+          p after_pools
+          break if before_pools == after_pools
+        end
+        puts "GC ran #{i} times"
       end
       
       # We don't need to call apr_termintae because pools
@@ -39,15 +44,6 @@ module Svn
     
     Pool = Svn::Ext::Core::Apr_pool_t
 
-    class Pool
-      alias _initialize initialize
-      attr_accessor :parent
-      def initialize(parent=nil)
-        @parent = parent
-        _initialize(parent)
-      end
-    end
-    
     Stream = SWIG::TYPE_p_svn_stream_t
 
     class Stream
