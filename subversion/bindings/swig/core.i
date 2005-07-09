@@ -563,6 +563,11 @@ SubversionException = _core.SubversionException
 #endif
 
 #ifdef SWIGRUBY
+%init
+{
+  svn_swig_rb_nls_initialize();
+}
+
 /* Dummy declaration */
 struct apr_pool_t 
 {
