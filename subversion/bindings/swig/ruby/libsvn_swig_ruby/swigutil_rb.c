@@ -15,12 +15,15 @@
 #endif
 
 #define POOL_P(obj) (RTEST(rb_obj_is_kind_of(obj, rb_svn_core_pool())))
+#define CONTEXT_P(obj) (RTEST(rb_obj_is_kind_of(obj, rb_svn_client_context())))
 
 static VALUE mSvn = Qnil;
 static VALUE mSvnCore = Qnil;
 static VALUE cSvnError = Qnil;
 static VALUE cSvnCoreStream = Qnil;
 static VALUE cSvnCorePool = Qnil;
+static VALUE mSvnClient = Qnil;
+static VALUE cSvnClientContext = Qnil;
 
 #define DEFINE_ID(key, name)                    \
 static ID id_ ## key = 0;                       \
@@ -146,6 +149,24 @@ svn_swig_rb_svn_error_new(VALUE code, VALUE message)
   return rb_funcall(rb_svn_error(),
                     rb_id_new_corresponding_error(),
                     2, code, message);
+}
+
+static VALUE
+rb_svn_client(void)
+{
+  if (NIL_P(mSvnClient)) {
+    mSvnClient = rb_const_get(rb_svn(), rb_intern("Client"));
+  }
+  return mSvnClient;
+}
+
+static VALUE
+rb_svn_client_context(void)
+{
+  if (NIL_P(cSvnClientContext)) {
+    cSvnClientContext = rb_const_get(rb_svn_client(), rb_intern("Context"));
+  }
+  return cSvnClientContext;
 }
 
 
@@ -1468,3 +1489,24 @@ svn_swig_rb_set_revision(svn_opt_revision_t *rev, VALUE value)
     break;
   }
 }
+
+void
+svn_swig_rb_adjust_arg_for_client_ctx_and_pool(int *argc, VALUE **argv)
+{
+  if (*argc > 1) {
+    VALUE last_arg = (*argv)[*argc - 1];
+    if (NIL_P(last_arg) || POOL_P(last_arg)) {
+      *argv += *argc - 2;
+      *argc = 2;
+    } else {
+      if (CONTEXT_P(last_arg)) {
+        *argv += *argc - 1;
+        *argc = 1;
+      } else {
+        *argv += *argc - 2;
+        *argc = 2;
+      }
+    }
+  }
+}
+

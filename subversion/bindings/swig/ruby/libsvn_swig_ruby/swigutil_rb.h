@@ -124,6 +124,8 @@ svn_stream_t *svn_swig_rb_make_stream(VALUE io);
 
 void svn_swig_rb_set_revision(svn_opt_revision_t *rev, VALUE value);
 
+void svn_swig_rb_adjust_arg_for_client_ctx_and_pool(int *argc, VALUE **argv);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

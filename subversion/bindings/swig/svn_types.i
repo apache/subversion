@@ -259,7 +259,11 @@
 
 %typemap(ruby, default) (svn_client_ctx_t *ctx, apr_pool_t *pool)
      (VALUE _global_rb_pool, apr_pool_t *_global_pool) {
-  svn_swig_rb_get_pool(2, argv + (argc - 2), self, &_global_rb_pool, &$2);
+  int adjusted_argc = argc;
+  VALUE *adjusted_argv = argv;
+
+  svn_swig_rb_adjust_arg_for_client_ctx_and_pool(&adjusted_argc, &adjusted_argv);
+  svn_swig_rb_get_pool(adjusted_argc, adjusted_argv, self, &_global_rb_pool, &$2);
   _global_pool = $2;
   svn_swig_rb_push_pool(_global_rb_pool);
 }
