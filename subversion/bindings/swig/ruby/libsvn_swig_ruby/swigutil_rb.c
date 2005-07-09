@@ -441,7 +441,18 @@ rb_get_pool(VALUE self)
 static void
 rb_set_pool(VALUE self, VALUE pool)
 {
-  rb_ivar_set(self, rb_id___pool__(), pool);
+  if (NIL_P(rb_ivar_get(self, rb_id___pool__()))) {
+    rb_ivar_set(self, rb_id___pool__(), pool);
+  } else {
+    VALUE pools = rb_ivar_get(self, rb_id___pools__());
+
+    if (NIL_P(pools)) {
+      pools = rb_hash_new();
+      rb_ivar_set(self, rb_id___pools__(), pools);
+    }
+  
+    rb_hash_aset(pools, rb_obj_id(pool), pool);
+  }
 }
 
 static VALUE
