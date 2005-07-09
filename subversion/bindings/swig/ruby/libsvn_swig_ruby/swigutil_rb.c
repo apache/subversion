@@ -438,20 +438,32 @@ rb_get_pool(VALUE self)
   return rb_ivar_get(self, rb_id___pool__());
 }
 
+static VALUE
+rb_pools(VALUE self)
+{
+  VALUE pools = rb_ivar_get(self, rb_id___pools__());
+
+  if (NIL_P(pools)) {
+    pools = rb_hash_new();
+    rb_ivar_set(self, rb_id___pools__(), pools);
+  }
+  
+  return pools;
+}
+
 static void
 rb_set_pool(VALUE self, VALUE pool)
 {
-  if (NIL_P(rb_ivar_get(self, rb_id___pool__()))) {
-    rb_ivar_set(self, rb_id___pool__(), pool);
+  if (NIL_P(pool)) {
+    VALUE old_pool = rb_ivar_get(self, rb_id___pool__());
+    rb_hash_aset(rb_pools(self), rb_obj_id(old_pool), old_pool);
+    rb_ivar_set(self, rb_id___pool__(), Qnil);
   } else {
-    VALUE pools = rb_ivar_get(self, rb_id___pools__());
-
-    if (NIL_P(pools)) {
-      pools = rb_hash_new();
-      rb_ivar_set(self, rb_id___pools__(), pools);
+    if (NIL_P(rb_ivar_get(self, rb_id___pool__()))) {
+      rb_ivar_set(self, rb_id___pool__(), pool);
+    } else {
+      rb_hash_aset(rb_pools(self), rb_obj_id(pool), pool);
     }
-  
-    rb_hash_aset(pools, rb_obj_id(pool), pool);
   }
 }
 
