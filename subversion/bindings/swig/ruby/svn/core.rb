@@ -141,5 +141,15 @@ module Svn
         Core.diff_contains_diffs(self)
       end
     end
+
+    class Version
+      def to_a
+        [major, minor, patch, tag]
+      end
+      
+      def to_s
+        "#{major}.#{minor}.#{patch}#{tag}"
+      end
+    end
   end
 end

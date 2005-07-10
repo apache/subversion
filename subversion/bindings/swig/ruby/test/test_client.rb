@@ -15,6 +15,12 @@ class SvnClientTest < Test::Unit::TestCase
     teardown_basic
   end
 
+  def test_version
+    ver = Svn::Client.version
+    assert_equal([ver.major, ver.minor, ver.patch, ver.tag], ver.to_a)
+    assert_equal("#{ver.major}.#{ver.minor}.#{ver.patch}#{ver.tag}", ver.to_s)
+  end
+  
   def test_commit
     log = "sample log"
     ctx = make_context(log)
