@@ -287,7 +287,7 @@ svn_wc_merge_props (svn_wc_notify_state_t *state,
                               svn_path_local_style (path, pool));
 
   /* Notice that we're not using svn_path_split_if_file(), because
-     that looks at the actual working file.  It's existence shouldn't
+     that looks at the actual working file.  Its existence shouldn't
      matter, so we're looking at entry->kind instead. */
   switch (entry->kind)
     {
@@ -1125,7 +1125,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
                               svn_path_local_style (path, pool));
 
   /* Notice that we're not using svn_path_split_if_file(), because
-     that looks at the actual working file.  It's existence shouldn't
+     that looks at the actual working file.  Its existence shouldn't
      matter, so we're looking at entry->kind instead. */
   switch (entry->kind)
     {
