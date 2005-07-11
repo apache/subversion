@@ -364,3 +364,15 @@ const char *svn_cmdline_output_encoding (apr_pool_t *pool)
   else
     return APR_LOCALE_CHARSET;
 }
+
+int
+svn_cmdline_handle_exit_error (svn_error_t *err,
+                               apr_pool_t *pool,
+                               const char *prefix)
+{
+  svn_handle_error2 (err, stderr, FALSE, prefix);
+  svn_error_clear (err);
+  if (pool)
+    svn_pool_destroy (pool);
+  return EXIT_FAILURE;
+}
