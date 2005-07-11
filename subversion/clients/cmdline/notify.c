@@ -377,7 +377,7 @@ notify (void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
   if (!nb->had_print_error)
     {
       nb->had_print_error = TRUE;
-      svn_handle_error (err, stderr, FALSE);
+      svn_handle_error2 (err, stderr, FALSE, "svn: ");
     }
   svn_error_clear (err);
 }

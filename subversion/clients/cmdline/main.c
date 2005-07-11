@@ -1105,7 +1105,7 @@ main (int argc, const char * const *argv)
                 (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                  _("Syntax error in native-eol argument '%s'"),
                  utf8_opt_arg);
-            svn_handle_error (err, stderr, FALSE);
+            svn_handle_error2 (err, stderr, FALSE, "svn: ");
             svn_error_clear (err);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
@@ -1427,7 +1427,7 @@ main (int argc, const char * const *argv)
                                     SVN_CONFIG_SECTION_AUTH,
                                     SVN_CONFIG_OPTION_STORE_PASSWORDS,
                                     TRUE)))
-      svn_handle_error (err, stderr, TRUE);
+      svn_handle_error2 (err, stderr, TRUE, "svn: ");
     if (! store_password_val)
       svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
 
@@ -1438,7 +1438,7 @@ main (int argc, const char * const *argv)
                                     SVN_CONFIG_SECTION_AUTH,
                                     SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
                                     TRUE)))
-      svn_handle_error (err, stderr, TRUE);
+      svn_handle_error2 (err, stderr, TRUE, "svn: ");
     if (opt_state.no_auth_cache || ! store_password_val)
       svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
   }
@@ -1477,7 +1477,7 @@ main (int argc, const char * const *argv)
         svn_opt_subcommand_help (subcommand->name, svn_cl__cmd_table,
                                  svn_cl__options, pool);
       else
-        svn_handle_error (err, stderr, FALSE);
+        svn_handle_error2 (err, stderr, FALSE, "svn: ");
 
       /* Tell the user about 'svn cleanup' if any error on the stack
          was about locked working copies. */

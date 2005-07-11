@@ -280,9 +280,9 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
   apr_err = apr_filepath_set (old_cwd, pool);
   if (apr_err)
     {
-      svn_handle_error (svn_error_wrap_apr
-                        (apr_err, _("Can't restore working directory")),
-                        stderr, TRUE /* fatal */);
+      svn_handle_error2 (svn_error_wrap_apr
+                         (apr_err, _("Can't restore working directory")),
+                         stderr, TRUE /* fatal */, "svn: ");
     }
 
   return err;
