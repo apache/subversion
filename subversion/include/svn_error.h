@@ -159,6 +159,10 @@ void svn_error_clear (svn_error_t *error);
  * iff the @a fatal flag is set.  Allocations are performed in the error's
  * pool.
  *
+ * If you're not sure what prefix to pass, just pass "svn: ".  That's
+ * what code that used to call svn_handle_error() and now calls
+ * svn_handle_error2() does.
+ *
  * @since New in 1.2.
  */
 void svn_handle_error2 (svn_error_t *error,
@@ -167,6 +171,8 @@ void svn_handle_error2 (svn_error_t *error,
                         const char *prefix);
 
 /** Like svn_handle_error2() but with @c prefix set to "svn: "
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 void svn_handle_error (svn_error_t *error,
                        FILE *stream,
@@ -230,13 +236,13 @@ void svn_handle_warning (FILE *stream, svn_error_t *error);
  * Evaluate @a expr. If it yields an error, handle that error and
  * return @c EXIT_FAILURE.
  */
-#define SVN_INT_ERR(expr)                                   \
-  do {                                                      \
-    svn_error_t *svn_err__temp = (expr);                    \
-    if (svn_err__temp) {                                    \
-      svn_handle_error (svn_err__temp, stderr, FALSE);      \
-      svn_error_clear (svn_err__temp);                      \
-      return EXIT_FAILURE; }                                \
+#define SVN_INT_ERR(expr)                                        \
+  do {                                                           \
+    svn_error_t *svn_err__temp = (expr);                         \
+    if (svn_err__temp) {                                         \
+      svn_handle_error2 (svn_err__temp, stderr, FALSE, "svn: "); \
+      svn_error_clear (svn_err__temp);                           \
+      return EXIT_FAILURE; }                                     \
   } while (0)
 
 /** @} */

@@ -207,7 +207,7 @@ svn_opt_print_generic_help (const char *header,
   return;
 
  print_error:
-  svn_handle_error (err, stderr, FALSE);
+  svn_handle_error2 (err, stderr, FALSE, "svn: ");
   svn_error_clear (err);
 }
 
@@ -261,7 +261,7 @@ svn_opt_subcommand_help (const char *subcommand,
                                _("\"%s\": unknown command.\n\n"), subcommand);
   
   if (err) {
-    svn_handle_error (err, stderr, FALSE);
+    svn_handle_error2 (err, stderr, FALSE, "svn: ");
     svn_error_clear (err);
   }
 }
