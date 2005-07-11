@@ -1955,17 +1955,6 @@ subcommand_uuid (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
 
 
-/* Standard error handler */
-static int
-error_exit (svn_error_t *err, apr_pool_t *pool)
-{
-  svn_handle_error2 (err, stderr, FALSE, "svnlook: ");
-  svn_error_clear (err);
-  svn_pool_destroy (pool);
-  return EXIT_FAILURE;
-}
-
-
 /*** Main. ***/
 
 int
@@ -2003,12 +1992,12 @@ main (int argc, const char * const *argv)
   /* Check library versions */
   err = check_lib_versions ();
   if (err)
-    return error_exit (err, pool);
+    return svn_cmdline_handle_exit_error (err, pool, "svnlook: ");
 
   /* Initialize the FS library. */
   err = svn_fs_initialize (pool);
   if (err)
-    return error_exit (err, pool);
+    return svn_cmdline_handle_exit_error (err, pool, "svnlook: ");
 
   if (argc <= 1)
     {
@@ -2144,7 +2133,7 @@ main (int argc, const char * const *argv)
               err = svn_utf_cstring_to_utf8 (&first_arg_utf8, first_arg,
                                              pool);
               if (err)
-                return error_exit (err, pool);
+                return svn_cmdline_handle_exit_error (err, pool, "svnlook: ");
               svn_error_clear
                 (svn_cmdline_fprintf (stderr, pool,
                                       _("Unknown command: '%s'\n"),
