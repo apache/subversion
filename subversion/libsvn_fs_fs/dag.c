@@ -1032,7 +1032,7 @@ svn_fs_fs__dag_copy (dag_node_t *to_node,
       /* Reserve a copy ID for this new copy. */
       SVN_ERR (svn_fs_fs__reserve_copy_id (&copy_id, fs, txn_id, pool));
 
-      /* Create a successor with it's predecessor pointing at the copy
+      /* Create a successor with its predecessor pointing at the copy
          source. */
       to_noderev->predecessor_id = svn_fs_fs__id_copy (src_id, pool);
       if (to_noderev->predecessor_count != -1)
