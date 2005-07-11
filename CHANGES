@@ -51,6 +51,7 @@ the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
        - 'svn revert -R' doing much less work (r13883)
        - utf8<->native conversions are faster now (issue #2016)
     * new switches added:
+       - 'svn commit --no-unlock           - retain lock in wc upon commit
        - 'svn log --limit N'               - show only first N log messages
        - 'svn info --revision'             - show info on older object (r13265)
        - 'svn list --xml'                  - output listing in XML
