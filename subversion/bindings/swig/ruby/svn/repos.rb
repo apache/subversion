@@ -105,10 +105,7 @@ module Svn
       end
 
       def add?
-        p "before add?"
-        result = action == "A"
-        p "after add?"
-        result
+        action == "A"
       end
 
       def delete?
