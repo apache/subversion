@@ -33,7 +33,7 @@ Candidate changes:
     Votes:
       +1: maxb
 
-  * r15290 
+  * r15290
     Hooks bugfix: if lock already exists and --force not passed, then
     don't call 'pre-(un)lock'.
     Justification:
@@ -49,6 +49,6 @@ Candidate changes:
       We can be pretty stupidly slow in many cases; can encourage
       people to stay at 1.0.x and 1.1.x clients instead of upgrading.
     Votes:
-      +1: ghudson
+      +1: ghudson, brane
 
 Approved changes (further review is welcome, but not required):
