@@ -27,6 +27,7 @@ void svn_swig_rb_nls_initialize(void);
 VALUE svn_swig_rb_svn_error_new(VALUE code, VALUE message);
 
 VALUE svn_swig_rb_apr_hash_to_hash_string(apr_hash_t *hash);
+VALUE svn_swig_rb_apr_hash_to_hash_svn_string(apr_hash_t *hash);
 VALUE svn_swig_rb_apr_hash_to_hash_swig_type(apr_hash_t *hash,
                                              const char *type_name);
 
