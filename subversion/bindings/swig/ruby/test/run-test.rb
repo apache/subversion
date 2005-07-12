@@ -13,6 +13,12 @@ at_exit {FileUtils.rm_rf(ext_dir)}
 $LOAD_PATH.unshift(ext_dir)
 $LOAD_PATH.unshift(Dir.pwd)
 
+begin
+  require "gettext"
+  Locale.setlocale(Locale::ALL, nil)
+rescue LoadError
+end
+
 if Test::Unit::AutoRunner.respond_to?(:standalone?)
   exit Test::Unit::AutoRunner.run($0, File.dirname($0))
 else
