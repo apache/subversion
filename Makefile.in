@@ -613,8 +613,7 @@ check-swig-rb: swig-rb svnserve
 	cd $(SWIG_RB_DIR); \
 	  $(RUBY) -I $(SWIG_RB_SRC_DIR) \
 	    $(SWIG_RB_SRC_DIR)/test/run-test.rb \
-	    --verbose=$(SWIG_RB_TEST_VERBOSE) \
-	    --name=test_diff
+	    --verbose=$(SWIG_RB_TEST_VERBOSE)
 
 clean-swig-rb:
 	rm -rf $(SWIG_RB_DIR)/test/repos $(SWIG_RB_DIR)/test/wc

@@ -346,12 +346,7 @@ svn_swig_rb_apr_hash_to_hash_string(apr_hash_t *hash)
 VALUE
 svn_swig_rb_apr_hash_to_hash_svn_string(apr_hash_t *hash)
 {
-  VALUE result;
-  printf("svn_swig_rb_apr_hash_to_hash_svn_string:hash: %p\n", hash);
-  result = c2r_hash(hash, c2r_svn_string, NULL);
-  printf("svn_swig_rb_apr_hash_to_hash_svn_string:result: %p\n", result);
-  rb_p(result);
-  return result;
+  return c2r_hash(hash, c2r_svn_string, NULL);
 }
 
 VALUE
@@ -366,7 +361,6 @@ svn_swig_rb_apr_hash_to_hash_swig_type(apr_hash_t *hash, const char *type_name)
 static int
 r2c_hash_i(VALUE key, VALUE value, hash_to_apr_hash_data_t *data)
 {
-  rb_p(rb_ary_new3(2, key, value));
   if (key != Qundef) {
     void *val = data->func(value, data->ctx, data->pool);
     apr_hash_set(data->apr_hash,
@@ -409,7 +403,6 @@ svn_swig_rb_hash_to_apr_hash_string(VALUE hash, apr_pool_t *pool)
 apr_hash_t *
 svn_swig_rb_hash_to_apr_hash_svn_string(VALUE hash, apr_pool_t *pool)
 {
-  rb_p(hash);
   return r2c_hash(hash, r2c_svn_string, NULL, pool);
 }
 
@@ -574,16 +567,10 @@ rb_set_pool_if_swig_type_object(VALUE target, VALUE pool)
 void
 svn_swig_rb_set_pool(VALUE target, VALUE pool)
 {
-  printf("svn_swig_rb_set_pool:target: %p\n", target);
-
   if (NIL_P(target)) {
-    printf("nil\n");
     return;
   }
     
-  rb_p(target);
-  rb_p(pool);
-  
   if (!RTEST(rb_obj_is_kind_of(target, rb_cArray))) {
     target = rb_ary_new3(1, target);
   }
