@@ -165,6 +165,12 @@ get_start_end()
     END=`echo "$1" | sed 's/^\([0-9]\{1,\}\)-\([0-9]\{1,\}\)$/\2/g'`
 }
 
+# Subroutine to get all integrated revisions for a given head
+get_all_integrated_revs()
+{
+    RETURN_VALUE=`"${SVN_MERGE_SVN}" propget "${SVN_MERGE_PROP}" "$1"`
+}
+
 # Subroutine to retrieve a target's integrated revisions for a given head
 get_integrated_revs()
 {
@@ -470,6 +476,10 @@ merge()
     beautify_list "${REVS}"
     BREVS="${RETURN_VALUE}"
 
+    # Save "svnmerge-integrated" property value from before the merge
+    get_all_integrated_revs
+    OLDREVS="${RETURN_VALUE}"
+
     # Show what we're doing
     beautify_list "${MERGED_REVS}"
     report "\"${BRANCH_DIR}\" already contains revisions ${RETURN_VALUE}"
@@ -482,6 +492,10 @@ merge()
         svn_command merge -r `expr ${START} - 1`:${END} \
           "${HEAD_URL}" "${BRANCH_DIR}"
     done
+
+    # Revert any merged-in changes to the "svnmerge-integrated" property.
+    # We only want updates to this property to happen via explicit action.
+    svn_command propset -q "${SVN_MERGE_PROP}" "${OLDREVS}" "${BRANCH_DIR}"
 
     # Write out commit message if desired
     if [ "${SVN_MERGE_COMMIT_FILE}" != "" ]; then
