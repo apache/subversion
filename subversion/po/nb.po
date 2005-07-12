@@ -58,7 +58,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-07-13 02:01+0200\n"
-"PO-Revision-Date: 2005-07-03 09:14+0200\n"
+"PO-Revision-Date: 2005-07-13 02:07+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2012,7 +2012,7 @@ msgstr "--Denne linjen og de som er under vil bli ignorert--"
 
 #: clients/cmdline/util.c:549
 msgid "Cannot invoke editor to get log message when non-interactive"
-msgstr ""
+msgstr "Kan ikke starte tekstbehandler for å hente loggmelding når ikke-interaktiv"
 
 #: clients/cmdline/util.c:562
 msgid ""
@@ -4938,9 +4938,8 @@ msgid "Lock element not a list"
 msgstr "Låseelement er ikke en liste"
 
 #: libsvn_ra_svn/client.c:1607
-#, fuzzy
 msgid "Unable to parse lock data"
-msgstr "Klarte ikke åpne rot for redigering"
+msgstr "Klarte ikke å tolke låsedata"
 
 #: libsvn_ra_svn/client.c:1714 libsvn_ra_svn/client.c:1742
 msgid "Server doesn't support the get-lock command"
