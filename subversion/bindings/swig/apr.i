@@ -32,14 +32,19 @@
 
 #if SVN_SWIG_VERSION <= 103024
 /* for SWIG bug */
-%typemap(ruby, argout, fragment="output_helper") long long *OUTPUT, long long &OUTPUT
-{
-  $result = output_helper($result, LL2NUM(*$1));
+%define OUTPUT_TYPEMAP(type, converter, convtype)
+%typemap(in,numinputs=0) type *OUTPUT($*1_ltype temp), type &OUTPUT($*1_ltype temp) "$1 = &temp;";
+%typemap(argout, fragment="output_helper") type *OUTPUT, type &OUTPUT {
+   VALUE o = converter(convtype (*$1));
+   $result = output_helper($result, o);
 }
-%typemap(ruby, argout, fragment="output_helper") unsigned long long *OUTPUT, unsigned long long &OUTPUT
-{
-  $result = output_helper($result, ULL2NUM(*$1));
-}
+%enddef
+
+OUTPUT_TYPEMAP(long, INT2NUM, (long));
+OUTPUT_TYPEMAP(unsigned long, UINT2NUM, (unsigned long));
+OUTPUT_TYPEMAP(unsigned long long, ULL2NUM, (unsigned long long));
+
+#undef OUTPUT_TYPEMAP
 #endif
 
 /* ----------------------------------------------------------------------- */
