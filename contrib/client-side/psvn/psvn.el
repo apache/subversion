@@ -464,7 +464,9 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
 (when (not svn-global-keymap)
   (setq svn-global-keymap (make-sparse-keymap))
   (define-key svn-global-keymap (kbd "s") 'svn-status-this-directory)
-  (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log))
+  (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log)
+  (define-key svn-global-keymap (kbd "u") 'svn-status-update-cmd)
+  )
   ;; TODO: make the following work
   ;;(define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
   ;;(define-key svn-global-keymap (kbd "c") 'svn-status-commit-file))
@@ -1712,7 +1714,8 @@ non-interactive use."
     (save-excursion
       (set-buffer "*svn-process*")
       (goto-char (point-min))
-      (search-forward "Url: ")
+      (let ((case-fold-search t))
+        (search-forward "url: "))
       (setq url (buffer-substring-no-properties (point) (point-at-eol))))
     (setq svn-status-base-info `((url ,url)))))
 
@@ -2345,7 +2348,9 @@ When called with a prefix argument add the command line switch --force."
         (svn-run-svn t t 'rm "rm" "--targets" svn-status-temp-arg-file)))))
 
 (defun svn-status-update-cmd ()
+  "Run svn update."
   (interactive)
+  (message "Running svn-update for %s" default-directory)
   ;TODO: use file names also
   (svn-run-svn t t 'update "update"))
 
