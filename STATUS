@@ -51,7 +51,7 @@ Candidate changes:
     Votes:
       +1: ghudson, brane
 
-  * r14008, r14458, r14587, r14632
+  * r14008, r14458, r14587, r14632, r15329
     Fixes to svnmerge.
     Justification:
       It would be good to have contrib code be the latest and fixed
