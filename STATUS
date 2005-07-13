@@ -31,7 +31,7 @@ Candidate changes:
     Justification:
       Crashes bad!
     Votes:
-      +1: maxb
+      +1: maxb, jszakmeister
 
   * r15290
     Hooks bugfix: if lock already exists and --force not passed, then
@@ -61,5 +61,14 @@ Candidate changes:
       it works great.
     Votes:
       +1: blair
+
+  * r15253
+    Fix Issue #2341: Perl bindings cat method fails when using a local file
+    repository.
+    Justification:
+      Repeatedly using the client context to cat files via ra_local from the
+      bindings eventually causes the interpreter to die without this fix.
+    Votes:
+      +1: jszakmeister
 
 Approved changes (further review is welcome, but not required):
