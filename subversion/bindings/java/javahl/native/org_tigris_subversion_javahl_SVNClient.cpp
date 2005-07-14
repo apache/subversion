@@ -1349,7 +1349,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_fileCon
   (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision, 
    jobject jpegRevision)
 {
-    JNIEntry(SVNClient, propertyCreate);
+    JNIEntry(SVNClient, fileContent);
     SVNClient *cl = SVNClient::getCppObject(jthis);
     if(cl == NULL)
     {
