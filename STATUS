@@ -71,4 +71,12 @@ Candidate changes:
     Votes:
       +1: jszakmeister
 
+  * r15337
+    Fix cut-n-paste problem with JNI stack name in javahl client
+    bindings.
+    Justification:
+      Produce correct diagnostics from JNI errors.
+    Votes:
+      +1: dlr
+
 Approved changes (further review is welcome, but not required):
