@@ -30,6 +30,7 @@
 
 %include typemaps.i
 
+#ifdef SWIGRUBY
 #if SVN_SWIG_VERSION <= 103024
 /* for SWIG bug */
 %define OUTPUT_TYPEMAP(type, converter, convtype)
@@ -46,6 +47,7 @@ OUTPUT_TYPEMAP(unsigned long, UINT2NUM, (unsigned long));
 OUTPUT_TYPEMAP(unsigned long long, ULL2NUM, (unsigned long long));
 
 #undef OUTPUT_TYPEMAP
+#endif
 #endif
 
 /* ----------------------------------------------------------------------- */
