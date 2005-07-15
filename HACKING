@@ -1139,13 +1139,26 @@ A patch submission should contain one logical change; please don't mix
 N unrelated changes in one submission -- send N separate emails
 instead.
 
-The email message should start off with a log message, as described in
-"Writing log messages" above.  The patch itself should be in unified
-diff format (e.g., with "svn diff").  Send the patch as an attachment,
-with a mime-type of text/x-diff, text/x-patch, or text/plain.  (Most
-people's mailreaders can display those inline, and having the patch as
-an attachment allows them to extract the patch from the message
-conveniently.)  
+You can put the patch's log message in the body of the email, or at
+the top of the patch attachment (see below).  Either way, it should
+follow the guidelines given in the section "Writing log messages", and
+be enclosed in triple square brackets, like so:
+
+   [[[
+   Fix issue #1729: Don't crash because of a missing file.
+
+   * subversion/libsvn_ra_ansible/get_editor.c
+     (frobnicate_file): Check that file exists before frobnicating.
+   ]]]
+
+The brackets are not actually part of the log message, they are just a
+way to clearly mark off the log message from its surrounding context.
+
+The patch itself should be in unified diff format (e.g., "svn diff" or
+"diff -u").  Send the patch as an attachment, with a mime-type of
+text/x-diff, text/x-patch, or text/plain.  (Most people's mailreaders
+can display those inline, and having the patch as an attachment allows
+them to extract the patch from the message conveniently.)
 
 If you can't attach the patch with one of these mime-types, or if the
 patch is very short, then just include it directly in the body of your
