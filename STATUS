@@ -43,7 +43,7 @@ Candidate changes:
     Votes:
       +1: sussman, cmpilato
 
-  * r15135
+  * r15315
     Resolve location-tracing performance issue against 1.0.x servers.
     Justification:
       We can be pretty stupidly slow in many cases; can encourage
