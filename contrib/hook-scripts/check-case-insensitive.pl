@@ -238,13 +238,19 @@ close SVNLOOK;
 
 my $failmsg;
 
+my %newtree;
 foreach my $newfile (@added) {
   print STDERR "Checking \$tree{lc($newfile)}\n" if ($debug > 1);
   # Without the following line it gets the lc() wrong.
   my $junk = "x$newfile";
-  if (exists($tree{lc($newfile)})) {
+  my $lcnewfile = lc($newfile);
+  if (exists($tree{$lcnewfile})) {
     $failmsg .= "\n  $newfile already exists as " . $tree{lc($newfile)};
   }
+  elsif (exists($newtree{$lcnewfile})) {
+    $failmsg .= "\n  $newfile also added as " . $newtree{lc($newfile)};
+  }
+  $newtree{$lcnewfile} = $newfile;
 }
 if (defined($failmsg)) {
   print STDERR "\nFile name case conflict found:\n" . $failmsg . "\n";
