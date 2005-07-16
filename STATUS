@@ -9,6 +9,13 @@ Status of 1.2.2:
 
 Candidate changes:
 
+  * r15351
+    Client bugfix:  make 'svn st -u' work against pre-1.2 mod_dav_svn.
+    Justification:
+      A serious backward-compatibility bug.  Trivial 2-line patch.
+    Votes:
+      +1: sussman
+
   * r15248
     Perl bindings: Make compatible with SWIG 1.3.25.
     Justification:
@@ -32,16 +39,6 @@ Candidate changes:
       Crashes bad!
     Votes:
       +1: maxb, jszakmeister
-
-  * r15290
-    Hooks bugfix: if lock already exists and --force not passed, then
-    don't call 'pre-(un)lock'.
-    Justification:
-      'pre'-hooks shouldn't be called when we *know* the filesystem is
-      going to disallow the action.  This results in multiple hook
-      calls for no good reason as the user re-attempts the action.
-    Votes:
-      +1: sussman, cmpilato
 
   * r15315
     Resolve location-tracing performance issue against 1.0.x servers.
