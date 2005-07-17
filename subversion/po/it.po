@@ -79,8 +79,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-07-14 09:37+0200\n"
-"PO-Revision-Date: 2005-07-14 21:29+0200\n"
+"POT-Creation-Date: 2005-07-17 07:00+0200\n"
+"PO-Revision-Date: 2005-07-17 12:04+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2075,7 +2075,8 @@ msgstr "--Questa linea, e quelle sotto di essa, saranno ignorate--"
 
 #: clients/cmdline/util.c:549
 msgid "Cannot invoke editor to get log message when non-interactive"
-msgstr "Non posso invocare l'editor per i messaggi di log in modalità non interattiva"
+msgstr ""
+"Non posso invocare l'editor per i messaggi di log in modalità non interattiva"
 
 #: clients/cmdline/util.c:562
 msgid ""
@@ -2102,7 +2103,7 @@ msgid "Use --force to override this restriction"
 msgstr "Usa --force per ignorare questa restrizione"
 
 #: clients/cmdline/util.c:672 include/svn_error_codes.h:229
-#: libsvn_subr/cmdline.c:335 libsvn_subr/cmdline.c:352
+#: libsvn_subr/cmdline.c:286 libsvn_subr/cmdline.c:303
 msgid "Write error"
 msgstr "Errore di scrittura"
 
@@ -3058,7 +3059,7 @@ msgstr ""
 #: libsvn_client/log.c:129 libsvn_client/prop_commands.c:213
 #: libsvn_client/prop_commands.c:446 libsvn_client/prop_commands.c:602
 #: libsvn_client/prop_commands.c:951 libsvn_client/ra.c:180
-#: libsvn_client/revisions.c:89 libsvn_client/status.c:249
+#: libsvn_client/revisions.c:89 libsvn_client/status.c:250
 #: libsvn_client/switch.c:104 libsvn_wc/adm_ops.c:2260
 #: libsvn_wc/adm_ops.c:2286 libsvn_wc/adm_ops.c:2323 libsvn_wc/copy.c:448
 #: libsvn_wc/entries.c:1497 libsvn_wc/entries.c:1989 libsvn_wc/props.c:286
@@ -3378,7 +3379,7 @@ msgstr "Il commento al blocco contiene dei caratteri illegali"
 msgid "Missing required revision specification"
 msgstr "Specificazione di una revisione richiesta mancante"
 
-#: libsvn_client/log.c:135 libsvn_client/status.c:254
+#: libsvn_client/log.c:135 libsvn_client/status.c:255
 #: libsvn_client/update.c:86
 #, c-format
 msgid "Entry '%s' has no URL"
@@ -5987,6 +5988,20 @@ msgstr "Sto leggendo '%s'"
 #, c-format
 msgid "First line of '%s' contains non-digit"
 msgstr "La prima riga di '%s' non contiene una cifra"
+
+#: libsvn_subr/nls.c:69
+#, c-format
+msgid "Can't convert string to UCS-2: '%s'"
+msgstr "Non riesco a convertire la stringa in UCS-2: '%s'"
+
+#: libsvn_subr/nls.c:76
+msgid "Can't get module file name"
+msgstr "Non riesco ad ottenere il nome del file del modulo"
+
+#: libsvn_subr/nls.c:91
+#, c-format
+msgid "Can't convert module path to UTF-8 from UCS-2: '%s'"
+msgstr "Non riesco a convertire il percorso del modulo a UTF-8 da UCS-2: '%s'"
 
 #: libsvn_subr/opt.c:147
 msgid ""
