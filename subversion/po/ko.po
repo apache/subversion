@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-07-08 10:49+0900\n"
-"PO-Revision-Date: 2005-07-08 11:27+0900\n"
+"POT-Creation-Date: 2005-07-18 14:59+0900\n"
+"PO-Revision-Date: 2005-07-18 15:41+0900\n"
 "Last-Translator: seolin <blueboh@gmail.com>\n"
 "Language-Team: Korean <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1401,52 +1401,52 @@ msgstr ""
 "  세번째 컬럼에 'B'가 있으면, 잠금설정이 깨지거나 다른 사람에게 넘어 갔음을\n"
 "  의미합니다.\n"
 
-#: clients/cmdline/main.c:805
+#: clients/cmdline/main.c:794
 #: svnadmin/main.c:77
 #: svnlook/main.c:284
 msgid "Caught signal"
 msgstr "시그널 수신"
 
-#: clients/cmdline/main.c:903
+#: clients/cmdline/main.c:892
 msgid "Non-numeric limit argument given"
 msgstr "숫자를 입력해야 합니다."
 
-#: clients/cmdline/main.c:920
-#: svnadmin/main.c:1229
+#: clients/cmdline/main.c:909
+#: svnadmin/main.c:1218
 msgid "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr "복수의 리비전 인자를 받았습니다. -r M -r N 대신 -r M:N 을 사용하세요."
 
-#: clients/cmdline/main.c:932
-#: svnadmin/main.c:1243
+#: clients/cmdline/main.c:921
+#: svnadmin/main.c:1232
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "리비전 인자 '%s'안에 구문오류가 있습니다."
 
-#: clients/cmdline/main.c:1080
-#: clients/cmdline/main.c:1090
+#: clients/cmdline/main.c:1069
+#: clients/cmdline/main.c:1079
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props 와 --no-auto-props 는 동시에 올 수 없습니다."
 
-#: clients/cmdline/main.c:1106
+#: clients/cmdline/main.c:1095
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "native-eol 인자 '%s' 에 구문오류가 있습니다."
 
-#: clients/cmdline/main.c:1152
-#: svndumpfilter/main.c:1178
-#: svnlook/main.c:2132
+#: clients/cmdline/main.c:1141
+#: svndumpfilter/main.c:1167
+#: svnlook/main.c:2121
 msgid "Subcommand argument required\n"
 msgstr "인자가 필요한 명령입니다.\n"
 
-#: clients/cmdline/main.c:1170
-#: svnadmin/main.c:1351
-#: svndumpfilter/main.c:1195
-#: svnlook/main.c:2150
+#: clients/cmdline/main.c:1159
+#: svnadmin/main.c:1340
+#: svndumpfilter/main.c:1185
+#: svnlook/main.c:2139
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "알 수 없는 명령: '%s'\n"
 
-#: clients/cmdline/main.c:1203
+#: clients/cmdline/main.c:1192
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -1455,23 +1455,23 @@ msgstr ""
 "'%s' 명령은 '%s' 를 옵션으로 취하지 않습니다.\n"
 "'svn help %s' 로 사용법을 보십시오.\n"
 
-#: clients/cmdline/main.c:1240
+#: clients/cmdline/main.c:1229
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr "로그 메시지 파일은 버전관리 대상입니다. 강제로 지정하려면 '--force-log' 를 사용하세요."
 
-#: clients/cmdline/main.c:1247
+#: clients/cmdline/main.c:1236
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr "잠그는 이유에 대한 파일이 버전관리 대상입니다. 강제로 지정하려면 '--force-log' 를 사용하세요."
 
-#: clients/cmdline/main.c:1268
+#: clients/cmdline/main.c:1257
 msgid "The log message is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "로그 메시지가 경로명입니다. (-F 를 사용하려던 것인가요?) 강제로 사용하려면 '--force-log'를 사용하세요"
 
-#: clients/cmdline/main.c:1275
+#: clients/cmdline/main.c:1264
 msgid "The lock comment is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "잠그는 이유를 경로명으로 하였습니다. (-F 를 사용하려던 것인가요?) 강제로 사용하려면 '--force-log'를 사용하세요"
 
-#: clients/cmdline/main.c:1488
+#: clients/cmdline/main.c:1477
 msgid "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)\n"
 msgstr "svn: 'svn cleanup'은 잠금 파일을 제거합니다. ('svn help cleanup'은 자세한 설명을 보여줍니다)\n"
 
@@ -1953,8 +1953,8 @@ msgstr "강제로 적용하려면 --force 옵션을 사용하세요."
 
 #: clients/cmdline/util.c:672
 #: include/svn_error_codes.h:229
-#: libsvn_subr/cmdline.c:335
-#: libsvn_subr/cmdline.c:352
+#: libsvn_subr/cmdline.c:286
+#: libsvn_subr/cmdline.c:303
 msgid "Write error"
 msgstr "쓰기 오류"
 
@@ -2916,7 +2916,7 @@ msgstr "커밋 아이템 '%s' 은(는) 복사표시가 되어있지만 원본 UR
 #: libsvn_client/prop_commands.c:951
 #: libsvn_client/ra.c:180
 #: libsvn_client/revisions.c:89
-#: libsvn_client/status.c:249
+#: libsvn_client/status.c:250
 #: libsvn_client/switch.c:104
 #: libsvn_wc/adm_ops.c:2260
 #: libsvn_wc/adm_ops.c:2286
@@ -3155,8 +3155,8 @@ msgstr "고정된 리비전을 위한 diff에서 적어도 하나의 리비전�
 #: libsvn_client/locking_commands.c:252
 #: libsvn_client/locking_commands.c:276
 #: libsvn_client/ra.c:368
-#: libsvn_client/ra.c:740
-#: libsvn_client/ra.c:863
+#: libsvn_client/ra.c:729
+#: libsvn_client/ra.c:865
 #, c-format
 msgid "'%s' has no URL"
 msgstr "'%s'은(는) URL을 포함하지 않습니다."
@@ -3230,7 +3230,7 @@ msgid "Missing required revision specification"
 msgstr "필요한 리비전 지정이 생략됨"
 
 #: libsvn_client/log.c:135
-#: libsvn_client/status.c:254
+#: libsvn_client/status.c:255
 #: libsvn_client/update.c:86
 #, c-format
 msgid "Entry '%s' has no URL"
@@ -3292,23 +3292,23 @@ msgstr "'%s'를 위한 등록정보를 찾을 수 없습니다."
 msgid "Missing changed-path information for '%s' in revision %ld"
 msgstr "'%s'의 변경된 경로 정보가 누락됨, 리비전 %ld."
 
-#: libsvn_client/ra.c:606
+#: libsvn_client/ra.c:609
 #, c-format
 msgid "path '%s' doesn't exist in revision %ld"
 msgstr "경로 '%s'는 리비전 %ld에서 존재하지 않습니다."
 
-#: libsvn_client/ra.c:667
-#: libsvn_client/ra.c:803
+#: libsvn_client/ra.c:656
+#: libsvn_client/ra.c:813
 #, c-format
 msgid "Unable to find repository location for '%s' in revision %ld"
 msgstr "'%s'의 저장소 위치를 찾을 수 없습니다. 리비전 %ld."
 
-#: libsvn_client/ra.c:678
+#: libsvn_client/ra.c:667
 #, c-format
 msgid "'%s' in revision %ld is an unrelated object"
 msgstr "'%s' (리비전 %ld)는 연관이 없는 개체입니다."
 
-#: libsvn_client/ra.c:808
+#: libsvn_client/ra.c:818
 #, c-format
 msgid "The location for '%s' for revision %ld does not exist in the repository or refers to an unrelated object"
 msgstr "'%s'에 대한 위치(리비전 %ld)가 저장소내에 존재하지 않거나 연관되지 않는 개체를 참조하고 있습니다."
@@ -4757,7 +4757,7 @@ msgstr "로컬 디스크에 있는 저장소를 접근하기 위한 모듈"
 msgid "Unable to open an ra_local session to URL"
 msgstr "URL에 대해 ra_local 세션을 열수 없습니다."
 
-#: libsvn_ra_local/ra_plugin.c:1285
+#: libsvn_ra_local/ra_plugin.c:1286
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_local"
 msgstr "ra_local에 대한 지원하지 않는 RA 로더 버전(%d)입니다."
@@ -5106,22 +5106,12 @@ msgstr "정상적인 속성 '%s'에 대한 저장공간이 저장소 인터페�
 msgid "Write denied:  not authorized to read all of revision %ld"
 msgstr "쓰기 금지됨: 리비전 %ld에 대해서 전체를 읽을 수 있는 권한이 없습니다."
 
-#: libsvn_repos/fs-wrap.c:450
-#, c-format
-msgid "Lock failed:  path '%s' is currently locked by user '%s'."
-msgstr "잠금 실패: 현재 경로 '%s'는 사용자 '%s'에 의해 잠겨 있습니다."
-
-#: libsvn_repos/fs-wrap.c:495
+#: libsvn_repos/fs-wrap.c:484
 #, c-format
 msgid "Cannot unlock path '%s', no authenticated username available"
 msgstr "'%s' 경로의 잠금을 풀수 없습니다. 인증된 사용자가 아닙니다."
 
-#: libsvn_repos/fs-wrap.c:505
-#, c-format
-msgid "Unlock failed:  path '%s' is currently locked by user '%s'."
-msgstr "잠금 해제 실패: 현재 경로 '%s'는 사용자 '%s'에 의해 잠겨 있습니다."
-
-#: libsvn_repos/fs-wrap.c:520
+#: libsvn_repos/fs-wrap.c:498
 msgid "Unlock succeeded, but post-unlock hook failed"
 msgstr "잠금 해제는 성공하였습니다만 post-commit 훅이 실패하였습니다."
 
@@ -5853,6 +5843,20 @@ msgstr "'%s'을/를 읽습니다"
 #, c-format
 msgid "First line of '%s' contains non-digit"
 msgstr "'%s'의 첫번째 줄은 숫자가 아닌 것을 포함하고 있습니다."
+
+#: libsvn_subr/nls.c:69
+#, c-format
+msgid "Can't convert string to UCS-2: '%s'"
+msgstr "문자열을 UCS-2로 변환할 수 없습니다: '%s'"
+
+#: libsvn_subr/nls.c:76
+msgid "Can't get module file name"
+msgstr "모듈 파일 이름을 얻을 수 없습니다"
+
+#: libsvn_subr/nls.c:91
+#, c-format
+msgid "Can't convert module path to UTF-8 from UCS-2: '%s'"
+msgstr "모듈 경로를 UCS-2에서 UTF-8로 변환할 수 없습니다: '%s'"
 
 #: libsvn_subr/opt.c:147
 msgid ""
@@ -7182,11 +7186,11 @@ msgstr "'%s' 는 잠궈지지 안않았습니다.\n"
 msgid "Removed lock on '%s'.\n"
 msgstr "잠금 해제됨 '%s'\n"
 
-#: svnadmin/main.c:1334
+#: svnadmin/main.c:1323
 msgid "subcommand argument required\n"
 msgstr "하위명령 인자가 필요합니다\n"
 
-#: svnadmin/main.c:1419
+#: svnadmin/main.c:1408
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -7313,7 +7317,7 @@ msgstr "   %ld => (없어졌습니다)\n"
 msgid "Dropped %d node(s):\n"
 msgstr "노드(s) %d 를 없앱니다: \n"
 
-#: svndumpfilter/main.c:1214
+#: svndumpfilter/main.c:1204
 msgid ""
 "\n"
 "Error: no prefixes supplied.\n"
@@ -7321,7 +7325,7 @@ msgstr ""
 "\n"
 "오류: prefixes 가 없습니다.\n"
 
-#: svndumpfilter/main.c:1257
+#: svndumpfilter/main.c:1247
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -7671,24 +7675,24 @@ msgstr "propname과 저장소 경로가 지정되지 않았습니다."
 msgid "Missing propname or repository path argument"
 msgstr "propname 또는 저장소 경로가 지정되지 않았습니다."
 
-#: svnlook/main.c:2056
+#: svnlook/main.c:2045
 msgid "Invalid revision number supplied"
 msgstr "잘못된 리비전 번호가 지정되었습니다."
 
-#: svnlook/main.c:2114
+#: svnlook/main.c:2103
 msgid "The '--transaction' (-t) and '--revision' (-r) arguments can not co-exist"
 msgstr "'--transaction' (-t) 과 '--revision' (-r) 인자는 동시에 사용 불가능합니다."
 
-#: svnlook/main.c:2183
+#: svnlook/main.c:2172
 msgid "Repository argument required\n"
 msgstr "저장소 인자가 팔요합니다\n"
 
-#: svnlook/main.c:2192
+#: svnlook/main.c:2181
 #, c-format
 msgid "'%s' is a URL when it should be a path\n"
 msgstr "'%s' 는 URL입니다. 경로를 넣어주세요.\n"
 
-#: svnlook/main.c:2240
+#: svnlook/main.c:2229
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
