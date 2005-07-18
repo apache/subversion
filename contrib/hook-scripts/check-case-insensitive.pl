@@ -13,6 +13,8 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 
+# This script is deprecated, please use check-case-insensitve.py instead.
+
 use strict;
 require 5.004; # This is when locale support was added.
 # This 'use encoding' and setting the LANG environment variable has the
