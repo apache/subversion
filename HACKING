@@ -1235,6 +1235,12 @@ copy will help:
 
 svn log | contrib/client-side/search-svnlog.pl "(Patch|Review|Suggested) by: "
 
+Note that the "Approved by: " field seen in some commits is totally
+unrelated to these crediting fields (and is rarely parsed by scripts).
+It is simply the standard syntax for indicating either who approved a
+partial committer's commit outside their usual area, or (in the case
+of merges to release branches) who voted for the change to be merged.
+
 
 
 Patch submission guidelines
