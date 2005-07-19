@@ -58,7 +58,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-07-13 02:01+0200\n"
-"PO-Revision-Date: 2005-07-13 02:07+0200\n"
+"PO-Revision-Date: 2005-07-14 23:16+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2359,7 +2359,7 @@ msgstr "Forsøkte å endre en uforanderlig representasjon"
 
 #: include/svn_error_codes.h:494
 msgid "Malformed skeleton data"
-msgstr "Ugyldige skjelettdata"
+msgstr "Misdannede skjelettdata"
 
 #: include/svn_error_codes.h:498
 msgid "Transaction is out of date"
@@ -2483,7 +2483,7 @@ msgstr "Depotet er ikke forberedt for denne tilgangsmetoden"
 
 #: include/svn_error_codes.h:648
 msgid "Item is out-of-date"
-msgstr "Objektet er uaktuelt"
+msgstr "Objektet er utdatert"
 
 #: include/svn_error_codes.h:652
 msgid "Repository has no UUID"
@@ -2615,7 +2615,7 @@ msgstr "Svndiff-data sluttet uventet"
 
 #: include/svn_error_codes.h:814
 msgid "Apache has no path to an SVN filesystem"
-msgstr "Apache har ingen sti til SVN-filsystemet"
+msgstr "Apache har ingen sti til et SVN-filsystem"
 
 #: include/svn_error_codes.h:818
 msgid "Apache got a malformed URI"
@@ -2719,7 +2719,7 @@ msgstr "Testen feilet"
 
 #: include/svn_error_codes.h:926
 msgid "Trying to use an unsupported feature"
-msgstr "Forsøker å bruke en funksjon som ikke støttes"
+msgstr "Forsøker å bruke en funksjonalitet som ikke støttes"
 
 #: include/svn_error_codes.h:930
 msgid "Unexpected or unknown property kind"
@@ -3336,7 +3336,7 @@ msgstr "Ukjent nodetype for «%s»"
 msgid "Attempt to set wc property '%s' on '%s' in a non-commit operation"
 msgstr ""
 "Forsøk på å sette arbeidskopi-egenskap «%s» på «%s» under en operasjon som "
-"ikke er innsending"
+"ikke er en innsending"
 
 #: libsvn_client/ra.c:345
 #, c-format
@@ -3369,7 +3369,7 @@ msgid ""
 "The location for '%s' for revision %ld does not exist in the repository or "
 "refers to an unrelated object"
 msgstr ""
-"Plasseringen for «%s» for revisjon %ld finnes ikke i depotet, eller "
+"Plasseringen for «%s» i revisjon %ld finnes ikke i depotet, eller "
 "refererer til et urelatert objekt"
 
 #: libsvn_client/relocate.c:53
@@ -3449,7 +3449,7 @@ msgstr "%s\\ Ingen linjeslutt på slutten av filen%s"
 #: libsvn_diff/diff_file.c:1225
 #, c-format
 msgid "Failed to delete mmap '%s'"
-msgstr "Klarte ikke slette mmap «%s»"
+msgstr "Klarte ikke å slette mmap «%s»"
 
 #: libsvn_fs/fs-loader.c:105 libsvn_ra/ra_loader.c:157
 #: libsvn_ra/ra_loader.c:170
@@ -3776,7 +3776,7 @@ msgstr "Referanse til ikke-eksisterende revisjon %ld i filsystem «%s»"
 #: libsvn_fs_base/err.c:122 libsvn_fs_fs/err.c:124
 #, c-format
 msgid "Malformed ID as key in 'nodes' table of filesystem '%s'"
-msgstr "Misformet identifikator som nøkkel i tabellen «nodes» i filsystem «%s»"
+msgstr "Misdannet identifikator som nøkkel i tabellen «nodes» i filsystem «%s»"
 
 #: libsvn_fs_base/err.c:132 libsvn_fs_fs/err.c:134
 #, c-format
@@ -3801,7 +3801,7 @@ msgstr "Uforanderlig fil: Filsystem «%s», revisjon %ld, sti «%s»"
 #: libsvn_fs_base/err.c:177 libsvn_fs_fs/err.c:201
 #, c-format
 msgid "Search for malformed path '%s' in filesystem '%s'"
-msgstr "Søk etter misformet sti «%s» i filsystem «%s»"
+msgstr "Søk etter misdannet sti «%s» i filsystem «%s»"
 
 #: libsvn_fs_base/err.c:188 libsvn_fs_fs/err.c:212
 #, c-format
@@ -4040,7 +4040,7 @@ msgstr "Fant ikke filen: Transaksjon «%s», sti «%s»"
 #: libsvn_fs_base/tree.c:397 libsvn_fs_fs/tree.c:317
 #, c-format
 msgid "File not found: revision %ld, path '%s'"
-msgstr "Fil ikke funnet: Revisjon %ld, filsti «%s»"
+msgstr "Filen ikke funnet: Revisjon %ld, filsti «%s»"
 
 #: libsvn_fs_base/tree.c:412 libsvn_fs_fs/tree.c:332
 #, c-format
@@ -4188,12 +4188,12 @@ msgstr "Versjonen av filsystemlaster (%d) for fsfs er ikke støttet"
 
 #: libsvn_fs_fs/fs_fs.c:455 libsvn_fs_fs/fs_fs.c:469
 msgid "Found malformed header in revision file"
-msgstr "Fant misformet hodefelt i revisjonsfil"
+msgstr "Fant misdannet hodefelt i revisjonsfil"
 
 #: libsvn_fs_fs/fs_fs.c:571 libsvn_fs_fs/fs_fs.c:585 libsvn_fs_fs/fs_fs.c:592
 #: libsvn_fs_fs/fs_fs.c:599 libsvn_fs_fs/fs_fs.c:607 libsvn_fs_fs/fs_fs.c:615
 msgid "Malformed text rep offset line in node-rev"
-msgstr "Misformet angivelse i node-rev av tekstrepresentasjonens forskyving"
+msgstr "Misdannet angivelse i node-rev av tekstrepresentasjonens forskyving"
 
 #: libsvn_fs_fs/fs_fs.c:684
 msgid "Missing kind field in node-rev"
@@ -4205,11 +4205,11 @@ msgstr "Mangler cpath i node-rev"
 
 #: libsvn_fs_fs/fs_fs.c:742 libsvn_fs_fs/fs_fs.c:748
 msgid "Malformed copyroot line in node-rev"
-msgstr "Misformet copyroot-linje i node-rev"
+msgstr "Misdannet copyroot-linje i node-rev"
 
 #: libsvn_fs_fs/fs_fs.c:766 libsvn_fs_fs/fs_fs.c:772
 msgid "Malformed copyfrom line in node-rev"
-msgstr "Misformet copyfrom-linje i node-rev"
+msgstr "Misdannet copyfrom-linje i node-rev"
 
 #: libsvn_fs_fs/fs_fs.c:871 libsvn_fs_fs/fs_fs.c:3162
 msgid "Attempted to write to non-transaction"
@@ -4229,11 +4229,11 @@ msgstr "Ødelagt node-id i node-rev"
 
 #: libsvn_fs_fs/fs_fs.c:1030
 msgid "Revision file lacks trailing newline"
-msgstr "Revisjonsfil mangler avsluttende linjeskift"
+msgstr "Revisjonsfilen mangler avsluttende linjeskift"
 
 #: libsvn_fs_fs/fs_fs.c:1042
 msgid "Final line in revision file longer than 64 characters"
-msgstr "Siste linje i revisjonsfil er lengre enn 64 tegn"
+msgstr "Siste linje i revisjonsfilen er lengre enn 64 tegn"
 
 #: libsvn_fs_fs/fs_fs.c:1055
 msgid "Final line in revision file missing space"
@@ -4252,7 +4252,7 @@ msgstr "Revisjon %ld ikke funnet"
 
 #: libsvn_fs_fs/fs_fs.c:1275
 msgid "Malformed svndiff data in representation"
-msgstr "Misformet svndiff-data i fremstillingen"
+msgstr "Misdannet svndiff-data i fremstillingen"
 
 #: libsvn_fs_fs/fs_fs.c:1386 libsvn_fs_fs/fs_fs.c:1399
 #: libsvn_fs_fs/fs_fs.c:1430
@@ -4554,7 +4554,7 @@ msgid ""
 "of the properties that we asked for (and need to complete the commit)"
 msgstr ""
 "Protokollfeil: MERGE-responsen for ressursen «%s» returnerte ikke alle "
-"egenskapene vi ba om (og behøves for å fullføre innsending)"
+"egenskapene vi ba om (og som vi trenger for å fullføre innsendingen)"
 
 #: libsvn_ra_dav/merge.c:260
 #, c-format
@@ -4571,7 +4571,7 @@ msgid ""
 "this often means that the URL is not WebDAV-enabled"
 msgstr ""
 "OPTIONS-responsen manglet den forespurte activity-collection-set. Dette "
-"betyr ofte at adressen ikke er koblet mot WebDAV"
+"betyr ofte at adressen ikke er klargjort for WebDAV"
 
 #: libsvn_ra_dav/props.c:585
 #, c-format
@@ -4595,7 +4595,7 @@ msgstr "Filstien var ikke en del av depotet"
 #: libsvn_ra_dav/props.c:693
 #, c-format
 msgid "No part of path '%s' was found in repository HEAD"
-msgstr "Ingen del av filstien «%s» ble funnet i depotets hovedrevisjon"
+msgstr "Ingen del av filstien «%s» ble funnet i depotets HEAD-revisjon"
 
 #: libsvn_ra_dav/props.c:727 libsvn_ra_dav/props.c:782
 msgid "The VCC property was not found on the resource"
@@ -6982,7 +6982,7 @@ msgid ""
 msgstr ""
 "bruk: svnadmin load DEPOTSTI\n"
 "\n"
-"Leser en «dumpfil»-formattert strøm fra standardinndata og sender inn\n"
+"Leser en «dumpfil»-formatert strøm fra standard inn og sender inn\n"
 "nye revisjoner til depotets filsystem. Depotets UUID brukes av\n"
 "det som er spesifisert av strømmen hvis depotet var tomt på\n"
 "forhånd. Tilbakemeldinger sendes til standardutdata.\n"
@@ -7375,19 +7375,19 @@ msgstr ""
 
 #: svnlook/main.c:101
 msgid "specify revision number ARG"
-msgstr "Angi revisjonsnummer ARG"
+msgstr "angi revisjonsnummer ARG"
 
 #: svnlook/main.c:104
 msgid "specify transaction name ARG"
-msgstr "Angi transaksjonsnummer ARG"
+msgstr "angi transaksjonsnummer ARG"
 
 #: svnlook/main.c:107
 msgid "be verbose"
-msgstr "Vær detaljert"
+msgstr "vær detaljert"
 
 #: svnlook/main.c:110
 msgid "show node revision ids for each path"
-msgstr "Vis noderevisjons-IDer for hver filsti"
+msgstr "vis noderevisjons-IDer for hver filsti"
 
 #: svnlook/main.c:116
 msgid "do not print differences for added files"
@@ -7528,7 +7528,7 @@ msgid ""
 msgstr ""
 "bruk: svnlook propget DEPOTSTI EGENSKAPSNAVN [STI_I_DEPOT]\n"
 "\n"
-"Skriv ut råverdien til en egenskap i en filsti i depotet.\n"
+"Skriv ut råverdien for en egenskap i en filsti i depotet.\n"
 "Med --revprop skrives råverdien av en revisjonsegenskap.\n"
 
 #: svnlook/main.c:203
@@ -7541,7 +7541,7 @@ msgid ""
 msgstr ""
 "bruk: svnlook proplist DEPOTSTI [STI_I_DEPOT]\n"
 "\n"
-"Viser egenskapene til en filsti i depotet, eller\n"
+"Viser egenskapene for en filsti i depotet, eller\n"
 "med «--revprop»-valget, revisjonsegenskaper.\n"
 "Hvis -v brukes, vises egenskapenes verdier også.\n"
 
@@ -7554,7 +7554,7 @@ msgid ""
 msgstr ""
 "bruk: svnlook tree DEPOTSTI [STI_I_DEPOT]\n"
 "\n"
-"Viser treet, begynnende med STI_I_DEPOT (hvis angitt, ellers begynner\n"
+"Viser treet som starter på STI_I_DEPOT (hvis angitt, ellers begynner\n"
 "man med roten til treet). Kan om ønskelig vise noderevisjons-ID også.\n"
 
 #: svnlook/main.c:216
@@ -7676,7 +7676,7 @@ msgstr ""
 "      valgene.\n"
 "Skriv «svnlook help <delkommando>» for hjelp om en delkommando.\n"
 "\n"
-"Tilgjengelige delkommandoer;\n"
+"Tilgjengelige delkommandoer:\n"
 
 #: svnlook/main.c:1811
 msgid "Missing path argument"
@@ -7766,7 +7766,7 @@ msgstr "inetd-modus"
 
 #: svnserve/main.c:113
 msgid "root of directory to serve"
-msgstr "rot til katalogen som deles ut"
+msgstr "roten til katalogen som deles ut"
 
 #: svnserve/main.c:114
 msgid "deprecated; use repository config file"
