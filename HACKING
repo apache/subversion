@@ -1067,6 +1067,9 @@ of changes that accomplishes a single goal, and each group should
 start with a sentence or two summarizing the change.  Truly
 independent changes should be made in separate commits, of course.
 
+See the section "Crediting", for how to give credit to someone else if
+you are committing their patch, or committing a change they suggested.
+
 One should never need the log entries to understand the current code.
 If you find yourself writing a significant explanation in the log, you
 should consider carefully whether your text doesn't actually belong in
@@ -1124,6 +1127,113 @@ process such as translation, it's not even necessary to name every
 file.  Just briefly summarize the change, for example: "More work on
 Malagasy translation."  Please write your log messages in English, so
 everybody involved in the project can understand the changes you made.
+
+
+
+Crediting
+=========
+
+It is very important to record code contributions in a consistent and
+parseable way.  This allows us to write scripts which help us figure
+out who has been actively contributing and how, so we can spot
+potential new committers quickly.  The Subversion project uses
+human-readable but machine-parseable fields in log messages for this,
+as described below.
+
+When committing a patch written by someone else, use "Patch by: " at
+the beginning of a line:
+
+   Fix issue #1729: Don't crash because of a missing file.
+
+   Patch by: J. Random <jrandom@example.com>
+
+   * subversion/libsvn_ra_ansible/get_editor.c
+     (frobnicate_file): Check that file exists before frobnicating.
+
+If multiple people wrote the patch, name them all, one person per
+line, making sure to start each continuation line with whitespace.  If
+you (the committer) were one of the people, list yourself as "me".
+Thus:
+
+   Fix issue #1729: Don't crash because of a missing file.
+
+   Patch by: J. Random <jrandom@example.com>
+             Enrico Caruso <codingtenor@codingtenor.com>
+             me
+
+   * subversion/libsvn_ra_ansible/get_editor.c
+     (frobnicate_file): Check that file exists before frobnicating.
+
+If someone pointed out a problem or suggested the fix, but didn't
+actually write the patch, use "Suggested by: ":
+
+   Fix issue #1729: Don't crash because of a missing file.
+
+   Suggested by: J. Random <jrandom@example.com>
+
+   * subversion/libsvn_ra_ansible/get_editor.c
+     (frobnicate_file): Check that file exists before frobnicating.
+
+If someone helped review the change, use "Review by:"
+
+   Fix issue #1729: Don't crash because of a missing file.
+
+   Review by: Eagle Eyes <eeyes@example.com>
+
+   * subversion/libsvn_ra_ansible/get_editor.c
+     (frobnicate_file): Check that file exists before frobnicating.
+
+(As with "Patch by: ", you can name multiple people in "Review by: "
+or "Suggested by: " via whitespace-prefixed continuation lines.)
+
+Multiple fields in the same log message are fine, for example:
+
+   Fix issue #1729: Don't crash because of a missing file.
+
+   Patch by: J. Random <jrandom@example.com>
+             Enrico Caruso <codingtenor@codingtenor.com>
+             me
+   Suggested by: J. Random <jrandom@example.com>
+   Review by: Eagle Eyes <eeyes@example.com>
+
+   * subversion/libsvn_ra_ansible/get_editor.c
+     (frobnicate_file): Check that file exists before frobnicating.
+
+To give further details about a contribution, use a parenthetical
+aside immediately after that field, for example:
+
+   Fix issue #1729: Don't crash because of a missing file.
+
+   Patch by: J. Random <jrandom@example.com>
+   (Tweaked by me.)
+
+   * subversion/libsvn_ra_ansible/get_editor.c
+     (frobnicate_file): Check that file exists before frobnicating.
+
+It is understood that a parenthetical aside immediately following a
+field applies to that field, and that "me" refers to the committer.
+
+These three fields
+
+   Patch by:
+   Suggested by:
+   Review by:
+
+are the only officially-supported crediting fields (where "supported"
+means scripts know to look for them), and they are widely used in
+Subversion log messages.  Future fields would probably also be of the
+form "VERB by: ", and from time to time someone will use a field that
+sounds official but really isn't -- there are a few instances of
+"Reported by: ", for example.  These are okay, but try to use an
+official field, or a parenthetical aside, in preference to making up
+your own field.  Also, don't use "Reported by: " when the reporter is
+already recorded in an issue; instead, just refer to the issue.
+
+Look over Subversion's existing log messages to see how to use these
+fields in practice.  This command from the top of your trunk working
+copy will help:
+
+svn log | contrib/client-side/search-svnlog.pl "(Patch|Review|Suggested) by: "
 
 
 
