@@ -143,6 +143,34 @@ module Svn
     end
 
     class Version
+
+      alias _initialize initialize
+      def initialize(major=nil, minor=nil, patch=nil, tag=nil)
+        _initialize
+        self.major = major if major
+        self.minor = minor if minor
+        self.patch = patch if patch
+        self.tag = tag || ""
+      end
+
+      def ==(other)
+        valid? and other.valid? and Core.ver_equal(self, other)
+      end
+
+      def compatible?(other)
+        valid? and other.valid? and Core.ver_compatible(self, other)
+      end
+
+      def valid?
+        (major and minor and patch and tag) ? true : false
+      end
+
+      alias _tag= tag=
+      def tag=(value)
+        @tag = value
+        self._tag = value
+      end
+
       def to_a
         [major, minor, patch, tag]
       end
