@@ -537,11 +537,15 @@ fake_dirent (const svn_fs_dirent_t **entry, svn_fs_root_t *root,
 
    S_REV and S_PATH specify the source entry.  S_ENTRY contains the
    already-looked-up information about the node-revision existing at
-   that location.
+   that location.  S_PATH and S_ENTRY may be NULL if the entry does
+   not exist in the source.  S_PATH may be non-NULL and S_ENTRY may be
+   NULL if the caller expects INFO to modify the source to an existing
+   location.
 
    B->t_root and T_PATH specify the target entry.  T_ENTRY contains
    the already-looked-up information about the node-revision existing
-   at that location.
+   at that location.  T_PATH and T_ENTRY may be NULL if the entry does
+   not exist in the target.
 
    DIR_BATON and E_PATH contain the parameters which should be passed
    to the editor calls--DIR_BATON for the parent directory baton and
@@ -549,9 +553,10 @@ fake_dirent (const svn_fs_dirent_t **entry, svn_fs_root_t *root,
    copy pathname, which may differ from the source and target
    pathnames if the report contains a link_path.)
 
-   INFO contains the report information for this working copy path.
-   This function will internally modify the source and target entries
-   as appropriate based on the report information.
+   INFO contains the report information for this working copy path, or
+   NULL if there is none.  This function will internally modify the
+   source and target entries as appropriate based on the report
+   information.
 
    If RECURSE is not set, avoid operating on directories.  (Normally
    RECURSE is simply taken from B->recurse, but drive() needs to force
