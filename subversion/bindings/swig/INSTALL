@@ -16,8 +16,7 @@ STATUS OF THE SWIG BINDINGS
 
   The Ruby bindings are a recent development, and are only partially
   implemented. The Ruby bindings API may change incompatibly as development
-  proceeds. They currently require SWIG 1.3.24 exactly - neither later nor
-  earlier will work.
+  proceeds. They require SWIG 1.3.24 or later.
 
 
 BUILDING SWIG BINDINGS FOR SVN ON UNIX
