@@ -29,6 +29,7 @@ TABLE OF CONTENTS
    * Debugging the server
    * Tracking down memory leaks
    * Writing log messages
+   * Crediting
    * Patch submission guidelines
    * Filing bugs / issues
    * Commit access
