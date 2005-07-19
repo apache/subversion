@@ -77,6 +77,24 @@ void svn_swig_py_release_py_lock(void);
 void svn_swig_py_acquire_py_lock(void);
 
 
+/*** Automatic Pool Management Functions ***/
+extern apr_pool_t *_global_pool;
+
+/* Set the application pool */
+void svn_swig_py_set_application_pool(apr_pool_t *pool);
+
+/* Clear the application pool */
+void svn_swig_py_clear_application_pool(void);
+
+/* Get the application pool */
+apr_pool_t *svn_swig_py_get_application_pool(void);
+
+/* Get a pool from the argument tuple.
+ * If no such pool is found, use the application pool.
+ */
+void svn_swig_py_convert_pool(PyObject *args, apr_pool_t **pool);
+
+
 /*** Functions to expose a custom SubversionException ***/
 
 /* register a new subversion exception class */

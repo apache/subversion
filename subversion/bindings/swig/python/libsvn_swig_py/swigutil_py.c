@@ -109,6 +109,61 @@ void svn_swig_py_acquire_py_lock(void)
 
 
 
+/*** Automatic Pool Management Functions ***/
+
+/* The application pool */
+apr_pool_t *_global_pool = NULL;
+static char *poolAttribute = (char *) "_pool";
+static char *assertValid = (char *) "assert_valid";
+static char *emptyTuple = (char *) "()";
+
+
+/* Set the application pool */
+void svn_swig_py_set_application_pool(apr_pool_t *pool)
+{
+  _global_pool = pool;
+}
+
+/* Clear the application pool */
+void svn_swig_py_clear_application_pool()
+{
+  _global_pool = NULL;
+}
+
+/* Get the application pool */
+apr_pool_t *svn_swig_py_get_application_pool()
+{
+  return _global_pool;
+}
+
+/* Get a pool from the argument tuple.
+ * If no such pool is found, use the application pool.
+ */
+void svn_swig_py_convert_pool(PyObject *input, apr_pool_t **pool)
+{
+  /* Look for pool */
+  if (PyObject_HasAttrString(input, assertValid))
+    {
+      /* Double check that the pool is valid */
+      PyObject *result = PyObject_CallMethod(input, assertValid, emptyTuple);
+      if (result == NULL)
+        {
+          return;
+        }
+      Py_DECREF(result);
+      /* Get the pool */
+      input = PyObject_GetAttrString(input, poolAttribute);
+    }
+
+  /* Convert Pointer */
+  SWIG_ConvertPtr(input, (void **)pool,
+                  SWIG_TypeQuery("apr_pool_t *"), 1);
+  if (*pool == NULL)
+    {
+      *pool = _global_pool;
+    }
+}
+
 /*** Custom SubversionException stuffs. ***/
 
 /* Global SubversionException class object. */

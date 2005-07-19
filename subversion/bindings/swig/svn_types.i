@@ -238,10 +238,15 @@
    Define a generic arginit mapping for pools.
 */
 
-%typemap(python, arginit) apr_pool_t *pool(apr_pool_t *_global_pool) {
-    /* Assume that the pool here is the last argument in the list */
-    SWIG_ConvertPtr(PyTuple_GET_ITEM(args, PyTuple_GET_SIZE(args) - 1),
-                    (void **)&$1, $1_descriptor, SWIG_POINTER_EXCEPTION | 0);
+%typemap(python, default) apr_pool_t *(apr_pool_t *_global_pool) {
+    _global_pool = $1 = svn_swig_py_get_application_pool();
+}
+
+%typemap(python, in) apr_pool_t * {
+    svn_swig_py_convert_pool($input, &$1);
+    if (PyErr_Occurred()) {
+        return NULL;
+    }
     _global_pool = $1;
 }
 
