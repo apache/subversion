@@ -27,6 +27,57 @@ class SvnCoreTest < Test::Unit::TestCase
     end
   end
 
+  def test_version_valid?
+    assert_true(Svn::Core::Version.new(1, 2, 3, "-devel").valid?)
+    assert_true(Svn::Core::Version.new(nil, nil, nil, "").valid?)
+    assert_true(Svn::Core::Version.new.valid?)
+  end
+  
+  def test_version_equal
+    major = 1
+    minor = 2
+    patch = 3
+    tag = ""
+    ver1 = Svn::Core::Version.new(major, minor, patch, tag)
+    ver2 = Svn::Core::Version.new(major, minor, patch, tag)
+    ver3 = Svn::Core::Version.new
+    assert_equal(ver1, ver2)
+    assert_not_equal(ver1, ver3)
+  end
+
+  def test_version_compatible?
+    major = 1
+    minor = 2
+    patch = 3
+
+    my_tag = "-devel"
+    lib_tag = "-devel"
+    ver1 = Svn::Core::Version.new(major, minor, patch, my_tag)
+    ver2 = Svn::Core::Version.new(major, minor, patch, lib_tag)
+    ver3 = Svn::Core::Version.new(major, minor, patch, lib_tag + "x")
+    assert_true(ver1.compatible?(ver2))
+    assert_false(ver1.compatible?(ver3))
+
+    my_tag = "-devel"
+    lib_tag = ""
+    ver1 = Svn::Core::Version.new(major, minor, patch, my_tag)
+    ver2 = Svn::Core::Version.new(major, minor, patch, lib_tag)
+    ver3 = Svn::Core::Version.new(major, minor, patch - 1, lib_tag)
+    assert_false(ver1.compatible?(ver2))
+    assert_true(ver1.compatible?(ver3))
+
+    tag = ""
+    ver1 = Svn::Core::Version.new(major, minor, patch, tag)
+    ver2 = Svn::Core::Version.new(major, minor, patch, tag)
+    ver3 = Svn::Core::Version.new(major, minor, patch - 1, tag)
+    ver4 = Svn::Core::Version.new(major, minor + 1, patch, tag)
+    ver5 = Svn::Core::Version.new(major, minor - 1, patch, tag)
+    assert_true(ver1.compatible?(ver2))
+    assert_true(ver1.compatible?(ver3))
+    assert_true(ver1.compatible?(ver4))
+    assert_false(ver1.compatible?(ver5))
+  end
+  
   def test_pool_GC
     GC.disable
 
