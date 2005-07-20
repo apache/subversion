@@ -18,6 +18,7 @@
 
 from libsvn.core import *
 import libsvn.core as _core
+import weakref
 
 def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
   for name, value in symbol_dict.items():
@@ -26,6 +27,10 @@ def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
 
 
 application_pool = None
+
+def _mark_weakpool_invalid(weakpool):
+  if weakpool():
+    weakpool()._mark_invalid()
 
 class Pool(object):
   """A Pythonic memory pool object"""
@@ -38,30 +43,24 @@ class Pool(object):
     # Create pool
     self._parent_pool = parent_pool or application_pool
     self._pool = _core.svn_pool_create(self._parent_pool)
-    self._clears = 0;
+    self._mark_valid()
 
     # Protect _core from GC
     self._core = _core
 
     # If we have a parent, write down its current status
-    if self._parent_pool:
-      self._parent_clears = self._parent_pool._clears
-    else:
+    if not self._parent_pool:
       # If we are an application-level pool,
       # then initialize APR and set this pool
       # to be the application-level pool
       _core.apr_initialize()
       svn_swig_py_set_application_pool(self)
-
       application_pool = self
 
   def valid(self):
     """Check whether this memory pool and its parents
     are still valid"""
-    return (hasattr(self,"_pool") and (
-            self._parent_pool is None or
-             (self._parent_clears == self._parent_pool._clears and
-              self._parent_pool.valid())))
+    return hasattr(self,"_is_valid")
 
   def assert_valid(self):
     """Assert that this memory_pool is still valid."""
@@ -70,7 +69,7 @@ class Pool(object):
   def clear(self):
     """Clear embedded memory pool. Invalidate all subpools."""
     self._core.apr_pool_clear(self)
-    self._clears = self._clears + 1;
+    self._mark_valid()
 
   def destroy(self):
     """Destroy embedded memory pool. If you do not destroy
@@ -83,7 +82,6 @@ class Pool(object):
 
     # Destroy pool
     self._core.apr_pool_destroy(self)
-    del self._pool
 
     # Clear application pool and terminate APR if necessary
     if not self._parent_pool:
@@ -91,14 +89,39 @@ class Pool(object):
       svn_swig_py_clear_application_pool()
       self._core.apr_terminate()
 
-    # Free up memory
-    del self._parent_pool
-    del self._core
+    self._mark_invalid()
 
   def __del__(self):
     """Automatically destroy memory pools, if necessary"""
     if self.valid():
       self.destroy()
+
+  def _mark_valid(self):
+    """Mark pool as valid"""
+    if self._parent_pool:
+      # Refer to self using a weakreference so that we don't
+      # create a reference cycle
+      weakself = weakref.ref(self)
+      
+      # Set up callbacks to mark pool as invalid when parents
+      # are destroyed
+      self._weakref = weakref.ref(self._parent_pool._is_valid,
+          lambda x: _mark_weakpool_invalid(weakself));
+
+    # Mark pool as valid
+    self._is_valid = lambda: 1
+
+  def _mark_invalid(self):
+    """Mark pool as invalid"""
+    if self.valid():
+      # Mark invalid
+      del self._is_valid
+
+      # Free up memory
+      del self._parent_pool
+      del self._core
+      if hasattr(self, "_weakref"):
+        del self._weakref
 
 # Initialize application-level pool
 Pool()
