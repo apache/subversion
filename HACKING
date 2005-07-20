@@ -1212,9 +1212,16 @@ aside immediately after that field, for example:
      (frobnicate_file): Check that file exists before frobnicating.
 
 It is understood that a parenthetical aside immediately following a
-field applies to that field, and that "me" refers to the committer.
+field applies to that field, and that "me" refers to person who
+committed this revision.  You don't have to write "me", you can use
+your name instead, if you're not tired of typing it.  Also, although
+the examples above use full name and email address, you can use a
+committer's username to refer to that committer from any field.  For
+example, "Philip Martin <philip@codematters.co.uk>" and "philip" would
+be equivalent.  See the leftmost column of the COMMITTERS file for
+canonical usernames.
 
-These three fields
+Currently, these three fields
 
    Patch by:
    Suggested by:
@@ -1223,7 +1230,7 @@ These three fields
 are the only officially-supported crediting fields (where "supported"
 means scripts know to look for them), and they are widely used in
 Subversion log messages.  Future fields would probably also be of the
-form "VERB by: ", and from time to time someone will use a field that
+form "VERB by: ", and from time to time someone may use a field that
 sounds official but really isn't -- there are a few instances of
 "Reported by: ", for example.  These are okay, but try to use an
 official field, or a parenthetical aside, in preference to making up
