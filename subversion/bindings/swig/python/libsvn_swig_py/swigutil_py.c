@@ -113,9 +113,9 @@ void svn_swig_py_acquire_py_lock(void)
 
 /* The application pool */
 apr_pool_t *_global_pool = NULL;
-static char *poolAttribute = (char *) "_pool";
-static char *assertValid = (char *) "assert_valid";
-static char *emptyTuple = (char *) "()";
+static char poolAttribute[] = "_pool";
+static char assertValid[] = "assert_valid";
+static char emptyTuple[] = "()";
 
 
 /* Set the application pool */
