@@ -89,5 +89,5 @@ obvious to someone else, so it's best to avoid a guessing game.
 
 Follow that with the environment description, and the reproduction
 recipe.  If you also want to include speculation as to the cause, and
-even a patch to fix the bug, that's great!  See the HACKING file for
-more information about writing patches.
+even a patch to fix the bug, that's great!  See www/hacking.html file
+for more information about writing patches.
