@@ -57,8 +57,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-07-13 02:01+0200\n"
-"PO-Revision-Date: 2005-07-14 23:16+0200\n"
+"POT-Creation-Date: 2005-07-21 23:36+0200\n"
+"PO-Revision-Date: 2005-07-21 23:45+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2012,7 +2012,8 @@ msgstr "--Denne linjen og de som er under vil bli ignorert--"
 
 #: clients/cmdline/util.c:549
 msgid "Cannot invoke editor to get log message when non-interactive"
-msgstr "Kan ikke starte tekstbehandler for å hente loggmelding når ikke-interaktiv"
+msgstr ""
+"Kan ikke starte tekstbehandler for å hente loggmelding når ikke-interaktiv"
 
 #: clients/cmdline/util.c:562
 msgid ""
@@ -2039,7 +2040,7 @@ msgid "Use --force to override this restriction"
 msgstr "Bruk --force for å komme rundt denne begrensningen"
 
 #: clients/cmdline/util.c:672 include/svn_error_codes.h:229
-#: libsvn_subr/cmdline.c:335 libsvn_subr/cmdline.c:352
+#: libsvn_subr/cmdline.c:278 libsvn_subr/cmdline.c:295
 msgid "Write error"
 msgstr "Feil ved skriving"
 
@@ -2978,7 +2979,7 @@ msgstr "Objekt «%s» for innsending har kopimerke, men ingen copyfrom-URL\n"
 #: libsvn_client/log.c:129 libsvn_client/prop_commands.c:213
 #: libsvn_client/prop_commands.c:446 libsvn_client/prop_commands.c:602
 #: libsvn_client/prop_commands.c:951 libsvn_client/ra.c:180
-#: libsvn_client/revisions.c:89 libsvn_client/status.c:249
+#: libsvn_client/revisions.c:89 libsvn_client/status.c:250
 #: libsvn_client/switch.c:104 libsvn_wc/adm_ops.c:2260
 #: libsvn_wc/adm_ops.c:2286 libsvn_wc/adm_ops.c:2323 libsvn_wc/copy.c:448
 #: libsvn_wc/entries.c:1497 libsvn_wc/entries.c:1989 libsvn_wc/props.c:286
@@ -3285,7 +3286,7 @@ msgstr "Låsekommentaren inneholder ulovlige tegn"
 msgid "Missing required revision specification"
 msgstr "Mangler påkrevet revisjonsspesifikasjon"
 
-#: libsvn_client/log.c:135 libsvn_client/status.c:254
+#: libsvn_client/log.c:135 libsvn_client/status.c:255
 #: libsvn_client/update.c:86
 #, c-format
 msgid "Entry '%s' has no URL"
@@ -3369,8 +3370,8 @@ msgid ""
 "The location for '%s' for revision %ld does not exist in the repository or "
 "refers to an unrelated object"
 msgstr ""
-"Plasseringen for «%s» i revisjon %ld finnes ikke i depotet, eller "
-"refererer til et urelatert objekt"
+"Plasseringen for «%s» i revisjon %ld finnes ikke i depotet, eller refererer "
+"til et urelatert objekt"
 
 #: libsvn_client/relocate.c:53
 #, c-format
@@ -5290,24 +5291,24 @@ msgstr "«%s» ikke funnet i filsystem"
 msgid "Filesystem path '%s' is neither a file nor a directory"
 msgstr "Filsystemstien «%s» er verken en fil eller katalog"
 
-#: libsvn_repos/reporter.c:598
+#: libsvn_repos/reporter.c:603
 #, c-format
 msgid "Working copy path '%s' does not exist in repository"
 msgstr "Arbeidskopistien «%s» finnes ikke i depotet"
 
-#: libsvn_repos/reporter.c:819
+#: libsvn_repos/reporter.c:824
 msgid "Not authorized to open root of edit operation"
 msgstr "Ikke autorisert til å åpne roten for redigeringsoperasjonen"
 
-#: libsvn_repos/reporter.c:840
+#: libsvn_repos/reporter.c:845
 msgid "Cannot replace a directory from within"
 msgstr "Kan ikke erstatte en katalog innenfra"
 
-#: libsvn_repos/reporter.c:883
+#: libsvn_repos/reporter.c:888
 msgid "Invalid report for top level of working copy"
 msgstr "Ugyldig toppnivårapport for arbeidskopi"
 
-#: libsvn_repos/reporter.c:898
+#: libsvn_repos/reporter.c:903
 msgid "Two top-level reports with no target"
 msgstr "To toppnivårapporter uten mål"
 
@@ -5830,6 +5831,20 @@ msgstr "Leser «%s»"
 msgid "First line of '%s' contains non-digit"
 msgstr "Første linje av «%s» inneholder ikke-siffer"
 
+#: libsvn_subr/nls.c:78
+#, c-format
+msgid "Can't convert string to UCS-2: '%s'"
+msgstr "Kan ikke konvertere strengen til UCS-2: «%s»"
+
+#: libsvn_subr/nls.c:85
+msgid "Can't get module file name"
+msgstr "Kan ikke få tak i modulfilnavn"
+
+#: libsvn_subr/nls.c:100
+#, c-format
+msgid "Can't convert module path to UTF-8 from UCS-2: '%s'"
+msgstr "Kan ikke konvertere modulfilsti til UTF-8 fra UCS-2: «%s»"
+
 #: libsvn_subr/opt.c:147
 msgid ""
 "\n"
@@ -5929,45 +5944,45 @@ msgstr "Ugyldig kontrolltegn «0x%02x» i sti «%s»"
 msgid "File '%s' has inconsistent newlines"
 msgstr "Filen «%s» har ikke ensartede linjeskift"
 
-#: libsvn_subr/utf.c:149
+#: libsvn_subr/utf.c:157
 msgid "Can't lock charset translation mutex"
 msgstr "Kan ikke låse mutex for tegnsettkonvertering"
 
-#: libsvn_subr/utf.c:167 libsvn_subr/utf.c:226
+#: libsvn_subr/utf.c:175 libsvn_subr/utf.c:263
 msgid "Can't unlock charset translation mutex"
 msgstr "Kan ikke låse opp mutex for tegnsettkonvertering"
 
-#: libsvn_subr/utf.c:242
+#: libsvn_subr/utf.c:218
 #, c-format
 msgid "Can't create a character converter from native encoding to '%s'"
 msgstr "Kan ikke opprette tegnkonvertering fra lokal koding til «%s»"
 
-#: libsvn_subr/utf.c:246
+#: libsvn_subr/utf.c:222
 #, c-format
 msgid "Can't create a character converter from '%s' to native encoding"
 msgstr "Kan ikke opprette tegnkonvertering fra «%s» til lokal koding"
 
-#: libsvn_subr/utf.c:250
+#: libsvn_subr/utf.c:226
 #, c-format
 msgid "Can't create a character converter from '%s' to '%s'"
 msgstr "Kan ikke opprette tegnkonvertering fra «%s» til «%s»"
 
-#: libsvn_subr/utf.c:441
+#: libsvn_subr/utf.c:454
 #, c-format
 msgid "Can't convert string from native encoding to '%s':"
 msgstr "Kan ikke konvertere streng fra lokal tegnsettkoding til «%s»:"
 
-#: libsvn_subr/utf.c:445
+#: libsvn_subr/utf.c:458
 #, c-format
 msgid "Can't convert string from '%s' to native encoding:"
 msgstr "Kan ikke konvertere streng fra «%s» til lokal tegnsettkoding:"
 
-#: libsvn_subr/utf.c:449
+#: libsvn_subr/utf.c:462
 #, c-format
 msgid "Can't convert string from '%s' to '%s':"
 msgstr "Kan ikke konvertere streng fra «%s» til «%s»:"
 
-#: libsvn_subr/utf.c:493
+#: libsvn_subr/utf.c:506
 #, c-format
 msgid ""
 "Safe data '%s' was followed by non-ASCII byte %d: unable to convert to/from "
@@ -5976,14 +5991,14 @@ msgstr ""
 "Trygge data «%s» ble etterfulgt av ikke-ASCII-byte %d: Klarer ikke å "
 "konvertere til/fra UTF-8"
 
-#: libsvn_subr/utf.c:501
+#: libsvn_subr/utf.c:514
 #, c-format
 msgid ""
 "Non-ASCII character (code %d) detected, and unable to convert to/from UTF-8"
 msgstr ""
 "Ikke-ASCII-tegn (kode %d) funnet, og klarer ikke å konvertere til/fra UTF-8"
 
-#: libsvn_subr/utf.c:543
+#: libsvn_subr/utf.c:556
 #, c-format
 msgid ""
 "Valid UTF-8 data\n"
@@ -7944,16 +7959,16 @@ msgstr "eksportert%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "«%s» er verken versjonert eller eksportert\n"
 
-#~ msgid "Finished"
-#~ msgstr "Ferdig"
-
-#~ msgid "'%s' is already a file/something else"
-#~ msgstr "«%s» er allerede en fil eller noe annet"
-
-#~ msgid "Error writing to stream: unexpected EOF"
-#~ msgstr "Feil under skriving til strøm, forventet EOF"
-
 #~ msgid "Can't get default file perms for file at '%s' (file close error)"
 #~ msgstr ""
 #~ "Klarer ikke å få tak i standard filrettigheter for filen i «%s» (feil "
 #~ "under lukking av fil)"
+
+#~ msgid "Error writing to stream: unexpected EOF"
+#~ msgstr "Feil under skriving til strøm, forventet EOF"
+
+#~ msgid "'%s' is already a file/something else"
+#~ msgstr "«%s» er allerede en fil eller noe annet"
+
+#~ msgid "Finished"
+#~ msgstr "Ferdig"
