@@ -29,24 +29,28 @@ extern "C" {
 #endif /* __cplusplus */
 
 /** Set up the NLS environment.
- * Return the error @c APR_EINVAL or APR_INCOMPLETE if an
+ * Return the error @c APR_EINVAL or @c APR_INCOMPLETE if an
  * error occurs.
  *
  * @note This function is for bindings. You should usually
- *       use @c svn_cmdline_init() instead of calling this
+ *       use svn_cmdline_init() instead of calling this
  *       function directly. This function should be called
  *       after initializing APR.
+ *
+ * @since New in 1.3.
  */
 svn_error_t *svn_nls_environment_init (void);
 
 /** Set up the NLS which includes NLS environment set up.
- * Return the error @c APR_EINVAL or APR_INCOMPLETE if an
+ * Return the error @c APR_EINVAL or @c APR_INCOMPLETE if an
  * error occurs.
  *
  * @note This function is for bindings. You should usually
- *       use @c svn_cmdline_init() instead of calling this
+ *       use svn_cmdline_init() instead of calling this
  *       function directly. This function should be called
  *       after initializing APR.
+ *
+ * @since New in 1.3.
  */
 svn_error_t *svn_nls_init (void);
 
