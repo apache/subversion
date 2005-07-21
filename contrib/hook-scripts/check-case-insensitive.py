@@ -13,6 +13,11 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
+
 # This script can be called from a pre-commit hook on either Windows or a Unix
 # like operating system.  It implements the checks required to ensure that the
 # repository acts in a way which is compatible with a case preserving but
