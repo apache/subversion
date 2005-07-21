@@ -124,7 +124,8 @@ class GeneratorBase:
   def compute_hdr_deps(self):
     all_includes = map(native_path, self.includes)
     for d in unique(self.target_dirs):
-      hdrs = glob.glob(os.path.join(native_path(d), '*.h'))
+      hdrs = (glob.glob(os.path.join(native_path(d), '*.h')) +
+              glob.glob(os.path.join(native_path(d), '*.i')))
       all_includes.extend(hdrs)
 
     include_deps = IncludeDependencyInfo(all_includes)
@@ -485,6 +486,9 @@ class TargetSWIG(TargetLib):
     self.link_cmd = '$(LINK_%s_WRAPPER)' % string.upper(lang_abbrev[lang])
 
   def add_dependencies(self):
+    # Look in source directory for dependencies
+    self.gen_obj.target_dirs.append(self.path)
+
     sources = _collect_paths(self.sources, self.path)
     assert len(sources) == 1  ### simple assertions for now
 
@@ -882,7 +886,7 @@ class IncludeDependencyInfo:
       hdrs.update(self._deps[h])
     return (len(keys) != len(hdrs))
 
-  _re_include = re.compile(r'^#\s*include\s*[<"]([^<"]+)[>"]')
+  _re_include = re.compile(r'^\s*[#%]\s*(?:include|import)\s*[<"]?([^<">\s]+)')
   def _scan_for_includes(self, fname):
     """Scan C source file FNAME and return the basenames of any headers
     which are directly included, and within the set defined when this
