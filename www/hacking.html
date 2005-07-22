@@ -40,8 +40,8 @@ $LastChangedDate$
              >Participating in the community</a></li>
 <li><a href="#docs"
              >Theory and documentation</a></li>
-<li><a href="#what-to-read"
-             >What to read</a></li>
+<li><a href="#code-to-read"
+             >Code to read</a></li>
 <li><a href="#directory-layout"
              >Directory layout</a></li>
 <li><a href="#coding-style"
@@ -180,15 +180,29 @@ in the description for the svn-breakage list.<p>
      <p>A design spec was written in June 2000, and is a bit out of
      date.  But it still gives a good theoretical introduction to the
      inner workings of the repository, and to Subversion's various
-     layers.  The Texinfo source is in 'doc/programmer/design/', or
-     look at one of the versions posted on the Subversion website.</p>
+     layers.  The Texinfo source is in
+     <a href="http://svn.collab.net/repos/svn/trunk/doc/programmer/design/"
+     >doc/programmer/design/</a> in the Subversion repository trunk,
+     or look at one of the generated versions posted on the Subversion
+     website in the <a
+ href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=259"
+     >Documentation Folder</a>.</p>
+</li>
 
-<li> <p>WebDAV</p>
+<li> <p>Network Protocols</p>
 
-     <p>Greg Stein has written an introduction to Subversion's network
-     protocol, which is an extended dialect of HTTP.  The document is
-     'www/webdav-usage.html', and is also posted on the website in the
-     "Documents &amp; files" section in "Documentation-&gt;Design".</p>
+     <p>The <a href="webdav-usage.html">WebDAV Usage</a> document is
+     an introduction to Subversion's ra_dav network protocol, which is
+     an extended dialect of HTTP and uses URLs beginning with
+     "http://" or "https://".</p>
+
+     <p>The <a
+href="http://svn.collab.net/repos/svn/trunk/subversion/libsvn_ra_svn/protocol"
+     >SVN Protocol</a> document contains a formal description of
+     Subversion ra_svn network protocol, which is a custom protocol
+     on port 3690 (by default), whose URLs begin with "svn://" or
+     "svn+ssh://".</p>
+</li>
 
 <li><p>User Manual</p>
 
@@ -201,12 +215,15 @@ in the description for the svn-breakage list.<p>
      translations to other languages are maintained in their own
      repository at <a href="http://svn.red-bean.com/svnbook"
      >http://svn.red-bean.com/svnbook</a></p>
+</li>
 
 <li><p>System notes</p>
 
      <p>A lot of the design ideas for particular aspects of the system
-     have been documented in individual files in the 'notes'
+     have been documented in individual files in the 
+     <a href="http://svn.collab.net/repos/svn/trunk/notes/">notes/</a>
      directory.</p>
+</li>
 
 </ol>
 </p>
@@ -215,8 +232,8 @@ in the description for the svn-breakage list.<p>
 
 <![CDATA[---------------------------------------------------------]]>
 
-<div class="h2" id="what-to-read" title="what-to-read">
-<h2>What to read</h2>
+<div class="h2" id="code-to-read" title="code-to-read">
+<h2>Code to read</h2>
 
 <p>Before you can contribute code, you'll need to familiarize yourself
 with the existing code base and interfaces.</p>
