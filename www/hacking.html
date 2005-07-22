@@ -982,41 +982,37 @@ return svn_error_create (SVN_ERR_FOO, NULL,
     the error. There is therefore no reason not to use the SVN_ERR()
     and SVN_ERR_W() macros.  Resources associated with pools are:</p>
 
-<p>
-<ul>
-
-<li><p>Memory</p></li>
-
-<li><p>Files</p>
-
-    <p>All files opened with apr_file_open are closed at pool
-    cleanup.  Subversion uses this function in its svn_io_file_*
-    api, which means that files opened with svn_io_file_* or
-    apr_file_open will be closed at pool cleanup.</p>
-
-    <p>Some files (lock files for example) need to be removed when
-    an operation is finished. APR has the APR_DELONCLOSE flag for
-    this purpose.  The following functions create files which are
-    removed on pool cleanup:</p>
-
     <p>
     <ul>
-    <li><p>apr_file_open and svn_io_file_open (when passed the 
-           APR_DELONCLOSE flag)</p></li>
-    <li><p>svn_io_open_unique_file (when passed TRUE in its
-           delete_on_close)</p></li>
+
+    <li><p>Memory</p></li>
+
+    <li><p>Files</p>
+
+        <p>All files opened with apr_file_open are closed at pool
+        cleanup.  Subversion uses this function in its svn_io_file_*
+        api, which means that files opened with svn_io_file_* or
+        apr_file_open will be closed at pool cleanup.</p>
+
+        <p>Some files (lock files for example) need to be removed when
+        an operation is finished. APR has the APR_DELONCLOSE flag for
+        this purpose.  The following functions create files which are
+        removed on pool cleanup:</p>
+
+        <p>
+        <ul>
+        <li><p>apr_file_open and svn_io_file_open (when passed the 
+               APR_DELONCLOSE flag)</p></li>
+        <li><p>svn_io_open_unique_file (when passed TRUE in its
+               delete_on_close)</p></li>
+        </ul>
+        </p>
+   
+        <p>Locked files are unlocked if they were locked using
+        svn_io_file_lock.</p>
+    </li>
     </ul>
     </p>
-   
-    <p>Locked files are unlocked if they were locked using
-    svn_io_file_lock.</p>
-</li>
-
-</ul>
-</p>
-
-
-
 
 </p>
 </li>
