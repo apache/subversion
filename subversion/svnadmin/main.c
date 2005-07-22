@@ -559,6 +559,7 @@ static svn_error_t *recode_write (void *baton,
                                   apr_size_t *len)
 {
   struct recode_write_baton *rwb = baton;
+  svn_pool_clear(rwb->pool);
   return svn_cmdline_fputs (data, rwb->out, rwb->pool);
 }
 
@@ -610,7 +611,7 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (! opt_state->quiet)
     {
       stderr_stream = svn_stream_create (&stderr_stream_rwb, pool);
-      stderr_stream_rwb.pool = pool;
+      stderr_stream_rwb.pool = svn_pool_create(pool);
       stderr_stream_rwb.out = stderr;
       svn_stream_set_write (stderr_stream, recode_write);
     }
@@ -673,7 +674,7 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (! opt_state->quiet)
     {
       stdout_stream = svn_stream_create (&stdout_stream_rwb, pool);
-      stdout_stream_rwb.pool = pool;
+      stdout_stream_rwb.pool = svn_pool_create(pool);
       stdout_stream_rwb.out = stdout;
       svn_stream_set_write (stdout_stream, recode_write);
     }
