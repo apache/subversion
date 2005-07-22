@@ -122,7 +122,7 @@ class SVNLook:
     # compute the delta, printing as we go
     def authz_cb(root, path, pool):
       return 1
-    repos.dir_delta(base_root, '', '', root, rootpath,
+    repos.dir_delta(base_root, '', '', root, rootpath.encode('utf-8'),
                     e_ptr, e_baton, authz_cb, 0, 1, 0, 0, self.pool)
     return editor
 
