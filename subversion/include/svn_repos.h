@@ -30,7 +30,6 @@
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_version.h"
-#include "svn_config.h"
 
 
 #ifdef __cplusplus
@@ -1689,14 +1688,30 @@ typedef enum
   svn_authz_recursive = 4
 } svn_repos_authz_access_t;
 
+/** A data type which stores the authz information. */
+typedef struct svn_authz_t svn_authz_t;
+
+/** Read authz configuration data from @a file (a file or registry
+ * path) into @a *authzp, allocated in @a pool.
+ *
+ * If the read file is not a valid authz rule file, then abort loading
+ * and return an error.
+ *
+ * If @a file does not exist, then if @a must_exist, return an error,
+ * otherwise return an empty @c svn_config_t.
+ */
+svn_error_t *
+svn_repos_authz_read (svn_authz_t **authzp, const char *file,
+                      svn_boolean_t must_exist, apr_pool_t *pool);
+
 /**
- * Check wether @a user can access @a path in the repository @a
- * repos_name with the @a required_access.  @a cfg lists the ACLs to
+ * Check whether @a user can access @a path in the repository @a
+ * repos_name with the @a required_access.  @a authz lists the ACLs to
  * check against.  Set @a *access_granted to indicate if the requested
  * access is granted.
  */
 svn_error_t *
-svn_repos_authz_check_access (svn_config_t *cfg, const char *repos_name,
+svn_repos_authz_check_access (svn_authz_t *authz, const char *repos_name,
                               const char *path, const char *user,
                               svn_repos_authz_access_t required_access,
                               svn_boolean_t *access_granted,

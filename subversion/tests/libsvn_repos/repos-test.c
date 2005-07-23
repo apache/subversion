@@ -1031,6 +1031,47 @@ rmlocks (const char **msg,
 }
 
 
+/* Helper for the authz test.  Return a svn_config_t handle containing
+   a parsed representation of the given authz_contents. */
+static svn_error_t *
+authz_get_handle (svn_authz_t **authzp, const char *authz_contents,
+                  apr_pool_t *pool)
+{
+  char *authz_file_tmpl;
+  apr_file_t *authz_file;
+  apr_status_t apr_err;
+  const char *authz_file_path;
+
+  /* Create a temporary file. */
+  authz_file_tmpl = apr_pstrdup (pool, "authz_test_XXXXXX");
+  apr_err = apr_file_mktemp (&authz_file, authz_file_tmpl, 0, pool);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_wrap_apr (apr_err, "Opening temporary file");
+
+  /* Write the authz ACLs to the file. */
+  apr_err = apr_file_write_full (authz_file, authz_contents,
+                                 strlen(authz_contents), NULL);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_wrap_apr (apr_err, "Writing test authz file");
+
+  /* Read the authz configuration back and start testing. */
+  apr_err = apr_file_name_get (&authz_file_path, authz_file);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_wrap_apr (apr_err, "Getting authz file path");
+
+  SVN_ERR_W (svn_repos_authz_read (authzp, authz_file_path, TRUE, pool),
+             "Opening test authz file");
+
+  /* Close the temporary descriptor, which'll delete the file. */
+  apr_err = apr_file_close (authz_file);
+  if (apr_err != APR_SUCCESS)
+    return svn_error_wrap_apr (apr_err, "Removing test authz file");
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* Test that authz is giving out the right authorizations. */
 static svn_error_t *
 authz (const char **msg,
@@ -1038,12 +1079,9 @@ authz (const char **msg,
        svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
-  char *authz_file_tmpl;
-  apr_file_t *authz_file;
-  apr_status_t apr_err;
-  const char *authz_file_path;
   const char *contents;
-  svn_config_t *cfg;
+  svn_authz_t *authz_cfg;
+  svn_error_t *err;
   svn_boolean_t access_granted;
   apr_pool_t *subpool = svn_pool_create (pool);
   int i;
@@ -1080,15 +1118,21 @@ authz (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  /* The test logic: We dump a test authz file to disk, then load it
-   * and perform various access tests on it.  Each test has a known
-   * outcome and tests different aspects of authz, such as inheriting
-   * parent-path authz, pan-repository rules or recursive access.
-   * 'plato' is our friendly neighborhood user with more access rights
-   * than other anonymous philosophers.
+  /* The test logic:
+   *
+   * 1. Perform various access tests on a set of authz rules.  Each
+   * test has a known outcome and tests different aspects of authz,
+   * such as inheriting parent-path authz, pan-repository rules or
+   * recursive access.  'plato' is our friendly neighborhood user with
+   * more access rights than other anonymous philosophers.
+   *
+   * 2. Load an authz file containing a cyclic dependency in groups
+   * and another containing a reference to an undefined group.  Verify
+   * that svn_repos_authz_read fails to load both and returns an
+   * "invalid configuration" error.
    */
 
-  /* The authz rules for the test. */
+  /* The authz rules for the phase 1 tests. */
   contents =
     "[greek:/A]"
     APR_EOL_STR
@@ -1129,41 +1173,13 @@ authz (const char **msg,
     APR_EOL_STR
     APR_EOL_STR;
 
-  /* Create a temporary file and retrieve its path. */
-  authz_file_tmpl = apr_pstrdup(subpool, "authz_test_XXXXXX");
-  apr_err = apr_file_mktemp (&authz_file, authz_file_tmpl,
-                             APR_CREATE | APR_READ | APR_WRITE, subpool);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr(apr_err, "Opening temporary file");
-
-  /* Write the authz ACLs to the file. */
-  apr_err = apr_file_write_full (authz_file, contents,
-                                 strlen(contents), NULL);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr(apr_err, "Writing test authz file");
-
-  /* Read the authz configuration back and start testing. */
-  apr_err = apr_file_name_get (&authz_file_path, authz_file);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr(apr_err, "Getting authz file path");
-
-  /* Close the temporary descriptor. */
-  apr_err = apr_file_close (authz_file);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr(apr_err, "Closing test authz file");
-
-  SVN_ERR_W (svn_config_read (&cfg, authz_file_path, TRUE, subpool),
-             "Opening test authz file");
-
-  /* Delete the file. */
-  apr_err = apr_file_remove (authz_file_path, subpool);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr(apr_err, "Removing test authz file");
+  /* Load the test authz rules. */
+  SVN_ERR (authz_get_handle(&authz_cfg, contents, subpool));
 
   /* Loop over the test array and test each case. */
   for (i = 0; test_set[i].path != NULL; i++)
     {
-      SVN_ERR (svn_repos_authz_check_access (cfg, "greek",
+      SVN_ERR (svn_repos_authz_check_access (authz_cfg, "greek",
                                              test_set[i].path,
                                              test_set[i].user,
                                              test_set[i].required,
@@ -1187,6 +1203,49 @@ authz (const char **msg,
                                     test_set[i].user : "-");
         }
     }
+
+
+  /* The authz rules for the phase 2 tests, first case (cyclic
+     dependency). */
+  contents =
+    "[groups]"
+    APR_EOL_STR
+    "slaves = cooks,scribes,@gladiators"
+    APR_EOL_STR
+    "gladiators = equites,thraces,@slaves"
+    APR_EOL_STR
+    APR_EOL_STR
+    "[greek:/A]"
+    APR_EOL_STR
+    "@slaves = r"
+    APR_EOL_STR;
+
+  /* Load the test authz rules and check that group cycles are
+     reported. */
+  err = authz_get_handle (&authz_cfg, contents, subpool);
+  if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+                              "Got %s error instead of expected "
+                              "SVN_ERR_AUTHZ_INVALID_CONFIG",
+                              err ? "unexpected" : "no");
+  svn_error_clear (err);
+
+  /* The authz rules for the phase 2 tests, second case (missing group
+     definition). */
+  contents =
+    "[greek:/A]"
+    APR_EOL_STR
+    "@senate = r"
+    APR_EOL_STR;
+
+  /* Check that references to undefined groups are reported. */
+  err = authz_get_handle (&authz_cfg, contents, subpool);
+  if (!err || err->apr_err != SVN_ERR_AUTHZ_INVALID_CONFIG)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+                              "Got %s error instead of expected "
+                              "SVN_ERR_AUTHZ_INVALID_CONFIG",
+                              err ? "unexpected" : "no");
+  svn_error_clear (err);
 
   /* That's a wrap! */
   svn_pool_destroy (subpool);
