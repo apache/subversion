@@ -1414,9 +1414,6 @@ def basic_add_ignores(sbox):
   #
   # where dir contains some items that match the ignore list and some
   # do not would add all items, ignored or not.
-  #
-  # This has been fixed, by testing each item with the new
-  # svn_wc_is_ignored function.
 
   sbox.build()
   wc_dir = sbox.wc_dir

@@ -437,7 +437,7 @@ def resurrect_deleted_dir(sbox):
 
 #----------------------------------------------------------------------
 
-# Test that we're enforcing proper' svn cp' overwrite behavior.  Note
+# Test that we're enforcing proper 'svn cp' overwrite behavior.  Note
 # that svn_fs_copy() will always overwrite its destination if an entry
 # by the same name already exists.  However, libsvn_client should be
 # doing existence checks to prevent directories from being
