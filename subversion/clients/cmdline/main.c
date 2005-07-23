@@ -141,10 +141,12 @@ const apr_getopt_option_t svn_cl__options[] =
                       N_("disable automatic properties")},
     {"native-eol",    svn_cl__native_eol_opt, 1,
                       N_("use a different EOL marker than the standard\n"
-                      "                             system marker for files "
-                      "with a native svn:eol-style\n"
-                      "                             property.  ARG may be one "
-                      "of 'LF', 'CR', 'CRLF'")},
+                         "                             "
+                         "system marker for files with the svn:eol-style\n"
+                         "                             "
+                         "property set to 'native'.\n"
+                         "                             "
+                         "ARG may be one of 'LF', 'CR', 'CRLF'")},
     {"limit",         svn_cl__limit_opt, 1,
                       N_("maximum number of log entries")},
     {"no-unlock",     svn_cl__no_unlock_opt, 0,
