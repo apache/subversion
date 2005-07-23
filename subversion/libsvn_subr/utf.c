@@ -203,6 +203,10 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
   assert (frompage != APR_DEFAULT_CHARSET && topage != APR_DEFAULT_CHARSET
           && (frompage != APR_LOCALE_CHARSET || topage != APR_LOCALE_CHARSET));
 
+  /* Use the correct pool for creating the handle. */
+  if (userdata_key && xlate_handle_hash)
+    pool = apr_hash_pool_get (xlate_handle_hash);
+
   /* Try to create a handle. */
   apr_err = apr_xlate_open (&handle, topage, frompage, pool);
 
@@ -228,10 +232,6 @@ get_xlate_handle_node (xlate_handle_node_t **ret,
       err = svn_error_create (apr_err, NULL, errstr);
       goto cleanup;
     }
-
-  /* Use the correct pool for creating the handle. */
-  if (userdata_key && xlate_handle_hash)
-    pool = apr_hash_pool_get (xlate_handle_hash);
 
   /* Allocate and initialize the node. */
   *ret = apr_palloc (pool, sizeof(xlate_handle_node_t));
