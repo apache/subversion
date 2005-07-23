@@ -2343,7 +2343,7 @@ svn_error_t *svn_wc_get_switch_editor2 (svn_revnum_t *target_revision,
  * Similar to svn_wc_get_switch_editor2(), but takes an
  * @c svn_wc_notify_func_t instead.
  *
- * @deprecated Provided for backward compatibility with the 1.2 API.
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *svn_wc_get_switch_editor (svn_revnum_t *target_revision,
                                        svn_wc_adm_access_t *anchor,
