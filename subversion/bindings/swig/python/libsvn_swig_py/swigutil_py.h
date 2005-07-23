@@ -92,7 +92,8 @@ apr_pool_t *svn_swig_py_get_application_pool(void);
 /* Get a pool from the argument tuple.
  * If no such pool is found, use the application pool.
  */
-void svn_swig_py_convert_pool(PyObject *args, apr_pool_t **pool);
+void svn_swig_py_convert_pool(PyObject *args, swig_type_info *type, 
+                              apr_pool_t **pool);
 
 
 /*** Functions to expose a custom SubversionException ***/

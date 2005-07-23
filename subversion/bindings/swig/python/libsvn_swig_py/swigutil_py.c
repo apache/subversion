@@ -139,7 +139,8 @@ apr_pool_t *svn_swig_py_get_application_pool()
 /* Get a pool from the argument tuple.
  * If no such pool is found, use the application pool.
  */
-void svn_swig_py_convert_pool(PyObject *input, apr_pool_t **pool)
+void svn_swig_py_convert_pool(PyObject *input, swig_type_info *type, 
+                              apr_pool_t **pool)
 {
   /* Look for pool */
   if (PyObject_HasAttrString(input, assertValid))
@@ -156,8 +157,7 @@ void svn_swig_py_convert_pool(PyObject *input, apr_pool_t **pool)
     }
 
   /* Convert Pointer */
-  SWIG_ConvertPtr(input, (void **)pool,
-                  SWIG_TypeQuery("apr_pool_t *"), 1);
+  SWIG_ConvertPtr(input, (void **)pool, type, 1);
   if (*pool == NULL)
     {
       *pool = _global_pool;

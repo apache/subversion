@@ -243,7 +243,7 @@
 }
 
 %typemap(python, in) apr_pool_t * {
-    svn_swig_py_convert_pool($input, &$1);
+    svn_swig_py_convert_pool($input, $1_descriptor, &$1);
     if (PyErr_Occurred()) {
         return NULL;
     }
