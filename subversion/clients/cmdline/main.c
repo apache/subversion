@@ -330,7 +330,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "PATH1 is used\n"
        "     for the local directory name. If REV is not specified,"
        " all local\n"
-       "     changes will be preserved, but files not under version "
+       "     changes will be preserved.  Files not under version "
        "control will\n"
        "     not be copied.\n"
        "\n"
