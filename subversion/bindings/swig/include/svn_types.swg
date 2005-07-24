@@ -1,5 +1,5 @@
 /*
- * svn_types.i :  SWIG interface file for svn_types.h
+ * svn_types.swg :  SWIG include file for svn_types.h
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
@@ -19,7 +19,7 @@
 /* This interface file only defines types and their related information.
    There is no module associated with this interface file. */
 
-%import apr.i
+%import apr.swg
 
 /* -----------------------------------------------------------------------
    Create a typemap to define "type **" as OUT parameters.

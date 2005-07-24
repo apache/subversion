@@ -1,5 +1,5 @@
 /*
- * svn_string.i :  SWIG interface file for svn_string.h
+ * svn_string.swg :  SWIG include file for svn_string.h
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
@@ -19,8 +19,8 @@
 /* This interface file does not include a %module line because it should
    only be imported by other modules. */
 
-%import apr.i
-%import svn_types.i
+%import apr.swg
+%import svn_types.swg
 
 typedef struct svn_stringbuf_t svn_stringbuf_t;
 typedef struct svn_string_t svn_string_t;

@@ -84,21 +84,21 @@
 %include svn_error_codes.h
 
 /* ----------------------------------------------------------------------- 
-   Include svn_types.i early. Other .i files will import svn_types.i which
+   Include svn_types.swg early. Other .i files will import svn_types.swg which
    then includes svn_types.h, making further includes get skipped. We want
    to actually generate wrappers for svn_types.h, so do an _include_ right
    now, before any _import_ has happened.
 */
 
-%include svn_types.i
+%include svn_types.swg
 
 
 /* ----------------------------------------------------------------------- 
    moving along...
 */
-%import apr.i
-%import svn_types.i
-%import svn_string.i
+%import apr.swg
+%import svn_types.swg
+%import svn_string.swg
 
 /* ----------------------------------------------------------------------- 
    completely ignore a number of functions. the presumption is that the

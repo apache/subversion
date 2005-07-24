@@ -1,5 +1,5 @@
 /*
- * apr.i :  SWIG interface file for selected APR types
+ * apr.swg :  SWIG include file for selected APR types
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
