@@ -124,9 +124,9 @@ class GeneratorBase:
   def compute_hdr_deps(self):
     all_includes = map(native_path, self.includes)
     for d in unique(self.target_dirs):
-      hdrs = (glob.glob(os.path.join(native_path(d), '*.h')) +
-              glob.glob(os.path.join(native_path(d), '*.i')))
-      all_includes.extend(hdrs)
+      for wildcard in "*.h","*.i","*.swg":
+        hdrs = glob.glob(os.path.join(native_path(d), wildcard));
+        all_includes.extend(hdrs)
 
     include_deps = IncludeDependencyInfo(all_includes)
 
