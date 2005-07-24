@@ -317,7 +317,7 @@
 */
 %typemap(perl5, in) apr_array_header_t *providers {
     $1 = (apr_array_header_t *) svn_swig_pl_objs_to_array($input,
-      svn_swigtype(p, svn_auth_provider_object_t), _global_pool);
+      svn_descriptor(svn_auth_provider_object_t *), _global_pool);
 }
 
 %typemap(python, in) apr_array_header_t *providers {
@@ -333,7 +333,7 @@
     while (targlen--) {
         svn_swig_ConvertPtr(PySequence_GetItem($input, targlen),
                             (void **)&provider, 
-                            svn_swigtype(p, svn_auth_provider_object_t));
+                            svn_descriptor(svn_auth_provider_object_t *));
         APR_ARRAY_IDX($1, targlen, svn_auth_provider_object_t *) = provider;
     }
 }
@@ -456,7 +456,7 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 
 %typemap(perl5,in,numinputs=0) apr_hash_t **cfg_hash = apr_hash_t **OUTPUT;
 %typemap(perl5,argout) apr_hash_t **cfg_hash {
-    ST(argvi++) = svn_swig_pl_convert_hash(*$1, svn_swigtype(p, svn_config_t));
+    ST(argvi++) = svn_swig_pl_convert_hash(*$1, svn_descriptor(svn_config_t *));
 }
 
 %typemap(perl5, in) (svn_config_enumerator_t callback, void *baton) {
@@ -473,7 +473,7 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %typemap(python,argout,fragment="t_output_helper") apr_hash_t **cfg_hash {
     $result = t_output_helper(
         $result,
-        SWIG_NewPointerObj(*$1, svn_swigtype(p, apr_hash_t), 0));
+        SWIG_NewPointerObj(*$1, svn_descriptor(apr_hash_t *), 0));
 }
 
 /* Allow None to be passed as config_dir argument */

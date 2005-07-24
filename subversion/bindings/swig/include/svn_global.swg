@@ -16,4 +16,4 @@
  * ====================================================================
  */
 
-#define svn_swigtype(ptr, type) SWIGTYPE_##ptr##_##type
+#define svn_descriptor(type) $descriptor(type)
