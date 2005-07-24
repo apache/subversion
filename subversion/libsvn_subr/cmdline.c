@@ -156,13 +156,13 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
   svn_utf_initialize (pool);
   
   {
-    svn_error_t *error = svn_nls_init();
-    if (error)
+    svn_error_t *err = svn_nls_init();
+    if (err)
       {
-        if (error_stream)
-          fprintf(error_stream, "%s", error->message);
+        if (error_stream && err->message)
+          fprintf (error_stream, "%s", err->message);
         
-        svn_error_clear(error);
+        svn_error_clear (err);
         return EXIT_FAILURE;
       }
   }

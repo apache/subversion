@@ -55,7 +55,7 @@ static const char under_string[] =
 
 /* Utilities */
 
-/* Wrapper for @c apr_file_printf(), which see.  FORMAT is a utf8-encoded
+/* Wrapper for apr_file_printf(), which see.  FORMAT is a utf8-encoded
    string after it is formatted, so this function can convert it to
    ENCODING before printing. */
 static svn_error_t *
@@ -176,7 +176,7 @@ display_prop_diffs (const apr_array_header_t *propchanges,
 /* Return SVN_ERR_UNSUPPORTED_FEATURE if URL's scheme does not
    match the scheme of the url for ADM_ACCESS's path; return
    SVN_ERR_BAD_URL if no scheme can be found for one or both urls;
-   otherwise return SVN_NO_ERROR.  Use @a ADM_ACCESS's pool for
+   otherwise return SVN_NO_ERROR.  Use ADM_ACCESS's pool for
    temporary allocation. */
 static svn_error_t *
 check_scheme_match (svn_wc_adm_access_t *adm_access, const char *url)
@@ -366,7 +366,7 @@ diff_content_changed (const char *path,
      What a nightmare.
      
      For now, to distinguish the two paths, we'll just put the
-     unique portions of the original targets in parentheses before
+     unique portions of the original targets in parentheses after
      the received path, with ellipses for handwaving.  This makes
      the labels a bit clumsy, but at least distinctive.  Better
      solutions are possible, they'll just take more thought. */

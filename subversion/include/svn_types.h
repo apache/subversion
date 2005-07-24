@@ -92,7 +92,7 @@ typedef enum
 /** About Special Files in Subversion
  *
  * Subversion denotes files that cannot be portably created or
- * modified as special files (svn_node_special).  It stores these
+ * modified as "special" files (svn_node_special).  It stores these
  * files in the repository as a plain text file with the svn:special
  * property set.  The file contents contain: a platform-specific type
  * string, a space character, then any information necessary to create

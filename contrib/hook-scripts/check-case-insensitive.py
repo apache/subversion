@@ -13,6 +13,11 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
+
 # This script can be called from a pre-commit hook on either Windows or a Unix
 # like operating system.  It implements the checks required to ensure that the
 # repository acts in a way which is compatible with a case preserving but
@@ -117,7 +122,7 @@ class SVNLook:
     # compute the delta, printing as we go
     def authz_cb(root, path, pool):
       return 1
-    repos.dir_delta(base_root, '', '', root, rootpath,
+    repos.dir_delta(base_root, '', '', root, rootpath.encode('utf-8'),
                     e_ptr, e_baton, authz_cb, 0, 1, 0, 0, self.pool)
     return editor
 

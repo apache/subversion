@@ -104,7 +104,7 @@ static int req_check_access(request_rec *r,
     dav_error *dav_err;
     svn_repos_authz_access_t authz_svn_type = svn_authz_none;
     svn_boolean_t authz_access_granted = FALSE;
-    svn_config_t *access_conf = NULL;
+    svn_authz_t *access_conf = NULL;
     svn_error_t *svn_err;
     const char *cache_key;
     void *user_data;
@@ -227,8 +227,8 @@ static int req_check_access(request_rec *r,
     apr_pool_userdata_get(&user_data, cache_key, r->connection->pool);
     access_conf = user_data;
     if (access_conf == NULL) {
-        svn_err = svn_config_read(&access_conf, conf->access_file, TRUE,
-                                  r->connection->pool);
+        svn_err = svn_repos_authz_read(&access_conf, conf->access_file,
+                                       TRUE, r->connection->pool);
         if (svn_err) {
             ap_log_rerror(APLOG_MARK, APLOG_ERR,
                           /* If it is an error code that APR can make sense

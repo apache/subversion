@@ -13,6 +13,11 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
+
 # This script is deprecated, please use check-case-insensitve.py instead.
 
 use strict;

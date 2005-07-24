@@ -27,6 +27,7 @@
 
 #include <apr_errno.h>
 
+#include "svn_nls.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_path.h"
@@ -45,7 +46,7 @@
 svn_error_t *
 svn_nls_environment_init (void)
 {
-  svn_error_t *error = SVN_NO_ERROR;
+  svn_error_t *err = SVN_NO_ERROR;
   
 #ifdef ENABLE_NLS
 #ifdef WIN32
@@ -60,7 +61,7 @@ svn_nls_environment_init (void)
     apr_pool_create (&pool, 0);
     /* get exe name - our locale info will be in '../share/locale' */
     inwords = GetModuleFileNameW (0, ucs2_path,
-                                  sizeof (ucs2_path) / sizeof(ucs2_path[0]));
+                                  sizeof (ucs2_path) / sizeof (ucs2_path[0]));
     if (! inwords)
       {
         /* We must be on a Win9x machine, so attempt to get an ANSI path,
@@ -73,20 +74,20 @@ svn_nls_environment_init (void)
               MultiByteToWideChar (CP_ACP, 0, ansi_path, -1, ucs2_path,
                                    sizeof (ucs2_path) / sizeof (ucs2_path[0]));
             if (! inwords) {
-              error =
-                svn_error_createf(APR_EINVAL, NULL,
-                                  _("Can't convert string to UCS-2: '%s'"),
-                                  ansi_path);
+              err =
+                svn_error_createf (APR_EINVAL, NULL,
+                                   _("Can't convert string to UCS-2: '%s'"),
+                                   ansi_path);
             }
           }
         else
           {
-            error = svn_error_create(APR_EINVAL, NULL,
-                                     _("Can't get module file name"));
+            err = svn_error_create (APR_EINVAL, NULL,
+                                    _("Can't get module file name"));
           }
       }
 
-    if (error == SVN_NO_ERROR)
+    if (! err)
       {
         outbytes = outlength = 3 * (inwords + 1);
         utf8_path = apr_palloc (pool, outlength);
@@ -96,7 +97,7 @@ svn_nls_environment_init (void)
           apr_err = APR_INCOMPLETE;
         if (apr_err)
           {
-            error = svn_error_create(apr_err, NULL,
+            err = svn_error_createf (apr_err, NULL,
                                      _("Can't convert module path "
                                        "to UTF-8 from UCS-2: '%s'"),
                                      ucs2_path);
@@ -116,22 +117,22 @@ svn_nls_environment_init (void)
     apr_pool_destroy (pool);
   }
 #else
-  bindtextdomain(PACKAGE_NAME, SVN_LOCALE_DIR);
+  bindtextdomain (PACKAGE_NAME, SVN_LOCALE_DIR);
 #ifdef HAVE_BIND_TEXTDOMAIN_CODESET
-  bind_textdomain_codeset(PACKAGE_NAME, "UTF-8");
+  bind_textdomain_codeset (PACKAGE_NAME, "UTF-8");
 #endif
 #endif
 #endif
 
-  return error;
+  return err;
 }
 
 svn_error_t *
 svn_nls_init (void)
 {
 #ifdef ENABLE_NLS
-  SVN_ERR(svn_nls_environment_init());
-  textdomain(PACKAGE_NAME);
+  SVN_ERR (svn_nls_environment_init ());
+  textdomain (PACKAGE_NAME);
 #endif
 
   return SVN_NO_ERROR;

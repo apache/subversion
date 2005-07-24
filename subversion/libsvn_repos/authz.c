@@ -24,9 +24,10 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_repos.h"
+#include "svn_config.h"
 
 
-struct authz_baton {
+struct authz_lookup_baton {
   apr_pool_t *pool;
   svn_config_t *config;
 
@@ -39,6 +40,21 @@ struct authz_baton {
   const char *qualified_repos_path;
 
   svn_boolean_t access;
+};
+
+struct authz_validate_baton {
+  apr_pool_t *pool;
+  svn_config_t *config;
+  svn_error_t *err;
+};
+
+
+/* The data type storing the internal representation of an authz
+ * configuration.  Currently this is just a wrapper around a
+ * svn_config_t. */
+struct svn_authz_t
+{
+  svn_config_t *cfg;
 };
 
 
@@ -89,17 +105,17 @@ authz_access_is_determined (svn_repos_authz_access_t allow,
 
 
 static svn_boolean_t
-authz_group_contains_user_internal (svn_config_t *cfg,
-                                    const char *group,
-                                    const char *user,
-                                    apr_hash_t *checked_groups,
-                                    apr_pool_t *pool)
+authz_group_contains_user (svn_config_t *cfg,
+                           const char *group,
+                           const char *user,
+                           apr_pool_t *pool)
 {
   const char *value;
   apr_array_header_t *list;
   int i;
 
-  svn_config_get (cfg, &value, "groups", group, "");
+  svn_config_get (cfg, &value, "groups", group, NULL);
+
   list = svn_cstring_split (value, ",", TRUE, pool);
 
   for (i = 0; i < list->nelts; i++)
@@ -109,23 +125,11 @@ authz_group_contains_user_internal (svn_config_t *cfg,
       /* If the 'user' is a subgroup, recurse into it. */
       if (*group_user == '@')
         {
-          /* Guard against circular dependencies by checking group
-             name against hash. */
-          /* XXX: Should this return an error? */
-          if (apr_hash_get (checked_groups, &group_user[1],
-                            APR_HASH_KEY_STRING))
-            continue;
-
-          /* Add group to hash of checked groups. */
-          apr_hash_set (checked_groups, &group_user[1],
-                        APR_HASH_KEY_STRING, "");
-
-          /* Recurse on that group. */
-          if (authz_group_contains_user_internal (cfg, &group_user[1],
-                                                  user, checked_groups,
-                                                  pool))
+          if (authz_group_contains_user (cfg, &group_user[1],
+                                         user, pool))
             return TRUE;
         }
+
       /* If the user matches, stop. */
       else if (strcmp (user, group_user) == 0)
         return TRUE;
@@ -136,24 +140,13 @@ authz_group_contains_user_internal (svn_config_t *cfg,
 
 
 
-static svn_boolean_t
-authz_group_contains_user(svn_config_t *cfg, const char *group,
-                          const char *user, apr_pool_t *pool)
-{
-  return authz_group_contains_user_internal (cfg, group, user,
-                                             apr_hash_make (pool),
-                                             pool);
-}
-
-
-
 /* Callback to parse one line of an authz file and update the
  * authz_baton accordingly.
  */
 static svn_boolean_t
 authz_parse_line (const char *name, const char *value, void *baton)
 {
-  struct authz_baton *b = baton;
+  struct authz_lookup_baton *b = baton;
 
   /* Work out whether this ACL line applies to the user. */
   if (strcmp (name, "*") != 0)
@@ -169,6 +162,7 @@ authz_parse_line (const char *name, const char *value, void *baton)
                                           b->user, b->pool))
             return TRUE;
         }
+
       /* User rule for wrong user.  Stop. */
       else if (strcmp (name, b->user) != 0)
         return TRUE;
@@ -196,7 +190,7 @@ authz_parse_line (const char *name, const char *value, void *baton)
 static svn_boolean_t
 authz_parse_section (const char *section_name, void *baton)
 {
-  struct authz_baton *b = baton;
+  struct authz_lookup_baton *b = baton;
   svn_boolean_t conclusive;
 
   /* Does the section apply to us? */
@@ -231,9 +225,9 @@ authz_parse_section (const char *section_name, void *baton)
  * to access a section specific to the given repository before falling
  * back to pan-repository rules.
  *
- * Return a boolean which tells the caller whether we were able to
- * determine the requested access rights.  Access status is in
- * *access_granted.
+ * Update *access_granted to inform the caller of the outcome of the
+ * lookup.  Return a boolean indicating whether the access rights were
+ * successfully determined.
  */
 static svn_boolean_t
 authz_get_path_access (svn_config_t *cfg, const char *repos_name,
@@ -243,7 +237,7 @@ authz_get_path_access (svn_config_t *cfg, const char *repos_name,
                        apr_pool_t *pool)
 {
   const char *qualified_path;
-  struct authz_baton baton = { 0 };
+  struct authz_lookup_baton baton = { 0 };
 
   baton.pool = pool;
   baton.config = cfg;
@@ -279,16 +273,15 @@ authz_get_path_access (svn_config_t *cfg, const char *repos_name,
  * requested access.
  *
  * As soon as one is found, or else when the whole ACL file has been
- * searched, return the updated authorization in access_granted.
+ * searched, return the updated authorization status.
  */
-static void
+static svn_boolean_t
 authz_get_tree_access (svn_config_t *cfg, const char *repos_name,
                        const char *path, const char *user,
                        svn_repos_authz_access_t required_access,
-                       svn_boolean_t *access_granted,
                        apr_pool_t *pool)
 {
-  struct authz_baton baton = { 0 };
+  struct authz_lookup_baton baton = { 0 };
 
   baton.pool = pool;
   baton.config = cfg;
@@ -302,13 +295,165 @@ authz_get_tree_access (svn_config_t *cfg, const char *repos_name,
 
   svn_config_enumerate_sections (cfg, authz_parse_section, &baton);
 
-  *access_granted = baton.access;
+  return baton.access;
+}
+
+
+
+/* Examine the entire definition of a group, checking for errors.  The
+ * errors detected are references to non-existent groups and circular
+ * dependencies between groups. */
+static svn_error_t *
+authz_group_walk (svn_config_t *cfg,
+                  const char *group,
+                  apr_hash_t *checked_groups,
+                  apr_pool_t *pool)
+{
+  const char *value;
+  apr_array_header_t *list;
+  int i;
+
+  svn_config_get (cfg, &value, "groups", group, NULL);
+  /* Having a non-existent group in the ACL configuration might be the
+     sign of a typo.  Refuse to perform authz on uncertain rules. */
+  if (!value)
+    return svn_error_createf (SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                              "An authz rule refers to group '%s', "
+                              "which is undefined",
+                              group);
+
+  list = svn_cstring_split (value, ",", TRUE, pool);
+
+  for (i = 0; i < list->nelts; i++)
+    {
+      const char *group_user = APR_ARRAY_IDX(list, i, char *);
+
+      /* If the 'user' is a subgroup, recurse into it. */
+      if (*group_user == '@')
+        {
+          /* A circular dependency between groups is a Bad Thing.  We
+             don't do authz with invalid ACL files. */
+          if (apr_hash_get (checked_groups, &group_user[1],
+                            APR_HASH_KEY_STRING))
+            return svn_error_createf (SVN_ERR_AUTHZ_INVALID_CONFIG,
+                                      NULL,
+                                      "Circular dependency between "
+                                      "groups '%s' and '%s'",
+                                      &group_user[1], group);
+
+          /* Add group to hash of checked groups. */
+          apr_hash_set (checked_groups, &group_user[1],
+                        APR_HASH_KEY_STRING, "");
+
+          /* Recurse on that group. */
+          SVN_ERR (authz_group_walk (cfg, &group_user[1],
+                                     checked_groups, pool));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/* Callback to check whether groups mentioned in the given authz rule
+   exist. */
+static svn_boolean_t authz_validate_rule (const char *name,
+                                          const char *value,
+                                          void *baton)
+{
+  const char *val;
+  struct authz_validate_baton *b = baton;
+
+  /* If the rule applies to a group, check its existence. */
+  if (*name == '@')
+    {
+      svn_config_get (b->config, &val, "groups",
+                      &name[1], NULL);
+      /* Having a non-existent group in the ACL configuration might be
+         the sign of a typo.  Refuse to perform authz on uncertain
+         rules. */
+      if (!val)
+        {
+          b->err = svn_error_createf (SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                                      "An authz rule refers to group "
+                                      "'%s', which is undefined",
+                                      name);
+          return FALSE;
+        }
+    }
+
+  return TRUE;
+}
+
+
+
+/* Callback to check whether groups defined don't cyclicly depend on
+   each other. */
+static svn_boolean_t authz_validate_group (const char *name,
+                                           const char *value,
+                                           void *baton)
+{
+  struct authz_validate_baton *b = baton;
+
+  b->err = authz_group_walk (b->config, name, apr_hash_make (b->pool),
+                             b->pool);
+  if (b->err)
+    return FALSE;
+
+  return TRUE;
+}
+
+
+
+/* Callback to validate a section of the authz ruleset. */
+static svn_boolean_t authz_validate_section (const char *name,
+                                             void *baton)
+{
+  struct authz_validate_baton *b = baton;
+
+  /* If the section is the groups definition, use the group checking
+     callback. Otherwise, use the rule checking callback. */
+  if (strncmp (name, "groups", 6) == 0)
+    svn_config_enumerate (b->config, name, authz_validate_group, baton);
+  else
+    svn_config_enumerate (b->config, name, authz_validate_rule, baton);
+
+  if (b->err)
+    return FALSE;
+
+  return TRUE;
 }
 
 
 
 svn_error_t *
-svn_repos_authz_check_access (svn_config_t *cfg, const char *repos_name,
+svn_repos_authz_read (svn_authz_t **authzp, const char *file,
+                      svn_boolean_t must_exist, apr_pool_t *pool)
+{
+  svn_authz_t *authz = apr_palloc (pool, sizeof(*authz));
+  struct authz_validate_baton baton = { 0 };
+
+  baton.pool = pool;
+  baton.err = SVN_NO_ERROR;
+
+  /* Load the rule file. */
+  SVN_ERR (svn_config_read (&authz->cfg, file, must_exist, pool));
+  baton.config = authz->cfg;
+
+  /* Step through the entire rule file, aborting on error. */
+  svn_config_enumerate_sections (authz->cfg, authz_validate_section,
+                                 &baton);
+  SVN_ERR (baton.err);
+
+  *authzp = authz;
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
+svn_repos_authz_check_access (svn_authz_t *authz, const char *repos_name,
                               const char *path, const char *user,
                               svn_repos_authz_access_t required_access,
                               svn_boolean_t *access_granted,
@@ -316,40 +461,33 @@ svn_repos_authz_check_access (svn_config_t *cfg, const char *repos_name,
 {
   const char *base_name = path;
   const char *current_path = path;
-  svn_boolean_t access_determined = FALSE;
 
   /* Determine the granted access for the requested path. */
-  do
+  while (!authz_get_path_access (authz->cfg, repos_name,
+                                 current_path, user,
+                                 required_access,
+                                 access_granted,
+                                 pool))
     {
-      access_determined = authz_get_path_access (cfg, repos_name,
-                                                 current_path, user,
-                                                 required_access,
-                                                 access_granted, pool);
-
-      if (!access_determined)
+      /* Stop if the loop hits the repository root with no
+         results. */
+      if (base_name[0] == '/' && base_name[1] == '\0')
         {
-          /* Stop if the loop hits the repository root with no
-             results. */
-          if (base_name[0] == '/' && base_name[1] == '\0')
-            {
-              /* Deny access by default. */
-              *access_granted = FALSE;
-              return SVN_NO_ERROR;
-            }
-
-          /* Work back to the parent path. */
-          svn_path_split (current_path, &current_path, &base_name, pool);
+          /* Deny access by default. */
+          *access_granted = FALSE;
+          return SVN_NO_ERROR;
         }
-    } while (!access_determined);
+
+      /* Work back to the parent path. */
+      svn_path_split (current_path, &current_path, &base_name, pool);
+    }
 
   /* If the caller requested recursive access, we need to walk through
      the entire authz config to see whether any child paths are denied
      to the requested user. */
-  if (*access_granted
-      && (required_access & svn_authz_recursive))
-    authz_get_tree_access (cfg, repos_name, path, user,
-                           required_access, access_granted,
-                           pool);
+  if (*access_granted && (required_access & svn_authz_recursive))
+    *access_granted = authz_get_tree_access (authz->cfg, repos_name, path,
+                                             user, required_access, pool);
 
   return SVN_NO_ERROR;
 }

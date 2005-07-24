@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -784,6 +784,9 @@ SVN_ERROR_START
               SVN_ERR_AUTHZ_CATEGORY_START + 2,
               "Item is partially readable")
 
+  SVN_ERRDEF (SVN_ERR_AUTHZ_INVALID_CONFIG,
+              SVN_ERR_AUTHZ_CATEGORY_START + 3,
+              "Invalid authz configuration")
 
   /* svndiff errors */
 

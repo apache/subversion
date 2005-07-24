@@ -340,7 +340,7 @@ log_message_receiver_xml (void *baton,
           if (log_item->copyfrom_path
               && SVN_IS_VALID_REVNUM (log_item->copyfrom_rev))
             {
-              /* <path action="X" copyfrom-path="aaa" copyfrom-rev="> */
+              /* <path action="X" copyfrom-path="xxx" copyfrom-rev="xxx"> */
               svn_stringbuf_t *escpath = svn_stringbuf_create ("", pool);
               svn_xml_escape_attr_cstring (&escpath,
                                            log_item->copyfrom_path, pool);

@@ -35,14 +35,14 @@ II.   DOCUMENTATION
       http://svnbook.red-bean.com.
 
       See COPYING for copyright information.
-      See HACKING for development information.
       See INSTALL for installation information.
+      See www/hacking.html for development information.
 
 
 
 III.  PARTICIPATING IN THE SUBVERSION COMMUNITY
 
-      First, read the HACKING file!  It describes Subversion coding and
+      First, read www/hacking.html!  It describes Subversion coding and
       log message standards, as well as how to join discussion lists.
 
       Talk on IRC with developers:  irc.freenode.net, channel #svn.

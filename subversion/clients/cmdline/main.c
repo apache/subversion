@@ -141,10 +141,12 @@ const apr_getopt_option_t svn_cl__options[] =
                       N_("disable automatic properties")},
     {"native-eol",    svn_cl__native_eol_opt, 1,
                       N_("use a different EOL marker than the standard\n"
-                      "                             system marker for files "
-                      "with a native svn:eol-style\n"
-                      "                             property.  ARG may be one "
-                      "of 'LF', 'CR', 'CRLF'")},
+                         "                             "
+                         "system marker for files with the svn:eol-style\n"
+                         "                             "
+                         "property set to 'native'.\n"
+                         "                             "
+                         "ARG may be one of 'LF', 'CR', 'CRLF'")},
     {"limit",         svn_cl__limit_opt, 1,
                       N_("maximum number of log entries")},
     {"no-unlock",     svn_cl__no_unlock_opt, 0,
@@ -330,7 +332,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "PATH1 is used\n"
        "     for the local directory name. If REV is not specified,"
        " all local\n"
-       "     changes will be preserved, but files not under version "
+       "     changes will be preserved.  Files not under version "
        "control will\n"
        "     not be copied.\n"
        "\n"
@@ -850,7 +852,8 @@ main (int argc, const char * const *argv)
   /* Begin processing arguments. */
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
- 
+  opt_state.auth_username = getenv ("SVN_USER");
+
   /* No args?  Show usage. */
   if (argc <= 1)
     {
