@@ -26,6 +26,7 @@
 
 %include typemaps.i
 
+%include svn_global.swg
 %import apr.i
 %import svn_types.i
 %import svn_string.i
@@ -65,7 +66,7 @@
 %typemap(python, argout, fragment="t_output_helper") apr_hash_t **entries {
     $result = t_output_helper(
         $result,
-        svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_wc_entry_t));
+        svn_swig_py_convert_hash(*$1, svn_swigtype(p, svn_wc_entry_t)));
 }
 
 /* -----------------------------------------------------------------------

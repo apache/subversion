@@ -26,6 +26,7 @@
 
 %include "typemaps.i"
 
+%include svn_global.swg
 %import apr.i
 %import svn_types.i
 %import svn_string.i
