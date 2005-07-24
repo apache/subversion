@@ -24,6 +24,8 @@
 #ifndef SVN_NLS_H
 #define SVN_NLS_H
 
+#include "svn_types.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
