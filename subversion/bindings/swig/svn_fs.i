@@ -119,7 +119,7 @@
 %typemap(perl5, in,numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
 %typemap(perl5, argout) apr_hash_t **changed_paths_p {
     ST(argvi++) = svn_swig_pl_convert_hash(*$1, 
-      svn_swigtype(p, svn_fs_path_change_t);
+      svn_swigtype(p, svn_fs_path_change_t));
 }
 
 /* -----------------------------------------------------------------------
