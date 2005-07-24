@@ -157,12 +157,42 @@ void svn_swig_py_convert_pool(PyObject *input, swig_type_info *type,
     }
 
   /* Convert Pointer */
-  SWIG_ConvertPtr(input, (void **)pool, type, 1);
+  svn_swig_ConvertPtr(input, (void **)pool, type);
   if (*pool == NULL)
     {
       *pool = _global_pool;
     }
 }
+
+/* Wrapper for SWIG_TypeQuery */
+#define svn_swig_TypeQuery(x) SWIG_TypeQuery(x)
+
+/** Wrapper for SWIG_NewPointerObj */
+PyObject *svn_swig_NewPointerObj(void *obj, swig_type_info *type)
+{
+  return SWIG_NewPointerObj(obj, type, 0);
+}
+
+/** svn_swig_NewPointerObj, except a string is used to describe the type */
+static PyObject *svn_swig_NewPointerObjString(void *ptr, const char *type) 
+{
+  /* ### cache the swig_type_info at some point? */
+  return svn_swig_NewPointerObj(ptr, svn_swig_TypeQuery(type));
+}
+
+/** Wrapper for SWIG_ConvertPtr */
+int svn_swig_ConvertPtr(PyObject *input, void **obj, swig_type_info *type)
+{
+  return SWIG_ConvertPtr(input, obj, type, SWIG_POINTER_EXCEPTION | 0);
+}
+
+/** svn_swig_ConvertPtr, except a string is used to describe the type */
+static int svn_swig_ConvertPtrString(PyObject *input,
+    void **obj, const char *type)
+{
+  return svn_swig_ConvertPtr(input, obj, svn_swig_TypeQuery(type));
+}
+  
 
 /*** Custom SubversionException stuffs. ***/
 
@@ -232,36 +262,31 @@ void svn_swig_py_svn_exception(svn_error_t *err)
 
 /*** Helper/Conversion Routines ***/
 
-static PyObject *make_pointer(const char *typename, void *ptr)
-{
-  /* ### cache the swig_type_info at some point? */
-  return SWIG_NewPointerObj(ptr, SWIG_TypeQuery(typename), 0);
-}
-
 /* Functions for use with the "O&" format specifier */
 static PyObject *make_ob_pool(void *ptr)
 {
-  return make_pointer("apr_pool_t *", ptr);
+  return svn_swig_NewPointerObjString(ptr, "apr_pool_t *");
 }
 static PyObject *make_ob_window(void *ptr)
 {
-  return make_pointer("svn_txdelta_window_t *", ptr);
+  return svn_swig_NewPointerObjString(ptr, "svn_txdelta_window_t *");
 }
 static PyObject *make_ob_status(void *ptr)
 {
-  return make_pointer("svn_wc_status_t *", ptr);
+  return svn_swig_NewPointerObjString(ptr, "svn_wc_status_t *");
 } 
 static PyObject *make_ob_lock(void *ptr)
 {
-  return make_pointer("svn_lock_t *", ptr);
+  return svn_swig_NewPointerObjString(ptr, "svn_lock_t *");
 } 
 static PyObject *make_ob_fs_root(void *ptr)
 {
-  return make_pointer("svn_fs_root_t *", ptr);
+  return svn_swig_NewPointerObjString(ptr, "svn_fs_root_t *");
 } 
 static PyObject *make_ob_server_cert_info(void *ptr)
 {
-  return make_pointer("svn_auth_ssl_server_cert_info_t *", ptr);
+  return svn_swig_NewPointerObjString(
+    ptr, "svn_auth_ssl_server_cert_info_t *");
 } 
 /***/
 
@@ -328,7 +353,7 @@ static PyObject *convert_hash(apr_hash_t *hash,
 static PyObject *convert_to_swigtype(void *value, void *ctx)
 {
   /* ctx is a 'swig_type_info *' */
-  return SWIG_NewPointerObj(value, ctx, 0);
+  return svn_swig_NewPointerObj(value, ctx);
 }
 
 static PyObject *convert_svn_string_t(void *value, void *ctx)
@@ -1658,7 +1683,7 @@ svn_error_t *svn_swig_py_log_receiver(void *baton,
 
   if (changed_paths)
     {
-      swig_type_info *tinfo = SWIG_TypeQuery("svn_log_changed_path_t *");
+      swig_type_info *tinfo = svn_swig_TypeQuery("svn_log_changed_path_t *");
       chpaths = svn_swig_py_convert_hash (changed_paths, tinfo);
     }
   else
@@ -1754,8 +1779,8 @@ svn_swig_py_auth_simple_prompt_func (svn_auth_cred_simple_t **cred,
       if (result != Py_None)
         {
           svn_auth_cred_simple_t *tmp_creds = NULL;
-          if (SWIG_ConvertPtr(result, (void **)&tmp_creds, 
-                              SWIG_TypeQuery("svn_auth_cred_simple_t *"), 0))
+          if (svn_swig_ConvertPtrString(result, (void **)&tmp_creds, 
+                "svn_auth_cred_simple_t *"))
             {
               err = type_conversion_error("svn_auth_cred_simple_t *");
             }
@@ -1805,8 +1830,8 @@ svn_swig_py_auth_username_prompt_func (svn_auth_cred_username_t **cred,
       if (result != Py_None)
         {
           svn_auth_cred_username_t *tmp_creds = NULL;
-          if (SWIG_ConvertPtr(result, (void **)&tmp_creds, 
-                              SWIG_TypeQuery("svn_auth_cred_username_t *"), 0))
+          if (svn_swig_ConvertPtrString(result, (void **)&tmp_creds, 
+                "svn_auth_cred_username_t *"))
             {
               err = type_conversion_error("svn_auth_cred_username_t *");
             }
@@ -1859,9 +1884,9 @@ svn_swig_py_auth_ssl_server_trust_prompt_func(
       if (result != Py_None)
         {
           svn_auth_cred_ssl_server_trust_t *tmp_creds = NULL;
-          if (SWIG_ConvertPtr
+          if (svn_swig_ConvertPtrString
               (result, (void **)&tmp_creds, 
-               SWIG_TypeQuery("svn_auth_cred_ssl_server_trust_t *"), 0))
+               "svn_auth_cred_ssl_server_trust_t *"))
             {
               err = type_conversion_error
                 ("svn_auth_cred_ssl_server_trust_t *");
@@ -1909,9 +1934,9 @@ svn_swig_py_auth_ssl_client_cert_prompt_func(
       if (result != Py_None)
         {
           svn_auth_cred_ssl_client_cert_t *tmp_creds = NULL;
-          if (SWIG_ConvertPtr
+          if (svn_swig_ConvertPtrString
               (result, (void **)&tmp_creds, 
-               SWIG_TypeQuery("svn_auth_cred_ssl_client_cert_t *"), 0))
+               "svn_auth_cred_ssl_client_cert_t *"))
             {
               err = type_conversion_error("svn_auth_cred_ssl_client_cert_t *");
             }
@@ -1960,9 +1985,9 @@ svn_swig_py_auth_ssl_client_cert_pw_prompt_func(
       if (result != Py_None)
         {
           svn_auth_cred_ssl_client_cert_pw_t *tmp_creds = NULL;
-          if (SWIG_ConvertPtr
+          if (svn_swig_ConvertPtrString
               (result, (void **)&tmp_creds, 
-               SWIG_TypeQuery("svn_auth_cred_ssl_client_cert_pw_t *"), 0))
+               "svn_auth_cred_ssl_client_cert_pw_t *"))
             {
               err = type_conversion_error
                 ("svn_auth_cred_ssl_client_cert_pw_t *");

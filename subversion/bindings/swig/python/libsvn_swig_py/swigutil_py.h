@@ -96,6 +96,15 @@ void svn_swig_py_convert_pool(PyObject *args, swig_type_info *type,
                               apr_pool_t **pool);
 
 
+/*** SWIG Wrappers ***/
+
+/* Wrapper for SWIG_NewPointerObj */
+PyObject *svn_swig_NewPointerObj(void *obj, swig_type_info *type);
+
+/* Wrapper for SWIG_ConvertPtr */
+int svn_swig_ConvertPtr(PyObject *input, void **obj, swig_type_info *type);
+
+
 /*** Functions to expose a custom SubversionException ***/
 
 /* register a new subversion exception class */
