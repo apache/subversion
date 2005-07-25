@@ -107,8 +107,8 @@
 }
 
 %typemap(perl5,argout) apr_array_header_t **props {
-    $result = svn_swig_pl_convert_array(*$1,SWIG_TypeQuery(
-                                              "svn_client_proplist_item_t *"));
+    $result = svn_swig_pl_convert_array(*$1,
+      $descriptor(svn_client_proplist_item_t *));
     argvi++;
 }
 
@@ -307,7 +307,8 @@
 }
 
 %typemap(perl5, out) apr_hash_t *config {
-  $result = svn_swig_pl_convert_hash($1, SWIG_TypeQuery("svn_config_t *"));
+  $result = svn_swig_pl_convert_hash($1, 
+    $descriptor(svn_config_t *));
   argvi++;
 }
 
@@ -379,7 +380,8 @@
  * converted back and forth from an array */
 
 %typemap(perl5, out) apr_array_header_t *wcprop_changes {
-    $result = svn_swig_pl_convert_array($1,SWIG_TypeQuery("svn_prop_t *"));
+    $result = svn_swig_pl_convert_array($1,
+      $descriptor(svn_prop_t *));
     argvi++;
 }
 

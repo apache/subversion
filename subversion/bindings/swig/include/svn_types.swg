@@ -457,13 +457,13 @@
 %typemap(python,argout,fragment="t_output_helper") apr_hash_t **dirents {
     $result = t_output_helper
 	($result,
-	 svn_swig_py_convert_hash(*$1, SWIG_TypeQuery("svn_dirent_t *")));
+	 svn_swig_py_convert_hash(*$1, $descriptor(svn_dirent_t *)));
 }
 
 %typemap(perl5,in,numinputs=0) apr_hash_t **dirents = apr_hash_t **OUTPUT;
 %typemap(perl5,argout) apr_hash_t **dirents {
     ST(argvi++) = svn_swig_pl_convert_hash
-	(*$1, SWIG_TypeQuery("svn_dirent_t *"));
+	(*$1, $descriptor(svn_dirent_t *));
 }
 
 /* -----------------------------------------------------------------------
