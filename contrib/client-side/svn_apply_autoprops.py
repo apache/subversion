@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# This script reads the auto-proprieties defined in the
+# This script reads the auto-properties defined in the
 # $HOME/.subversion/config file and applies them recursively to all
 # the files and directories in the current working copy.  It may
 # behave differently than the Subversion command line; where the
