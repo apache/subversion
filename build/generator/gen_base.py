@@ -121,14 +121,20 @@ class GeneratorBase:
             self.graph.bulk_add(dep_type, target.name,
                                 dep_section.get_dep_targets(target))
 
-  def compute_hdr_deps(self):
+  def compute_hdrs(self):
+    """Get a list of the header files"""
+    wildcards = ["*.h","*.i","*.swg"]    
     all_includes = map(native_path, self.includes)
     for d in unique(self.target_dirs):
-      for wildcard in "*.h","*.i","*.swg":
+      for wildcard in wildcards:
         hdrs = glob.glob(os.path.join(native_path(d), wildcard))
         all_includes.extend(hdrs)
+    return all_includes
+  
+  def compute_hdr_deps(self):
+    """Compute the dependencies of each header file"""
 
-    include_deps = IncludeDependencyInfo(all_includes)
+    include_deps = IncludeDependencyInfo(self.compute_hdrs())
 
     for objectfile, sources in self.graph.get_deps(DT_OBJECT):
       assert len(sources) == 1
