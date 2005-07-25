@@ -43,6 +43,7 @@
 #include "svn_md5.h"
 #include "svn_diff.h"
 #include "svn_error_codes.h"
+#include "svn_nls.h"
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
@@ -538,6 +539,7 @@ PyObject *svn_swig_py_exception_type(void);
 %include svn_config.h
 %include svn_version.h
 %include svn_utf.h
+%include svn_nls.h
 
 
 /* SWIG won't follow through to APR's defining this to be empty, so we
@@ -569,11 +571,6 @@ SubversionException = _core.SubversionException
 #endif
 
 #ifdef SWIGRUBY
-%init
-{
-  svn_swig_rb_nls_initialize();
-}
-
 /* Dummy declaration */
 struct apr_pool_t 
 {

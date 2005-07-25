@@ -44,7 +44,7 @@
 
 
 svn_error_t *
-svn_nls_environment_init (void)
+svn_nls_init (void)
 {
   svn_error_t *err = SVN_NO_ERROR;
   
@@ -125,15 +125,4 @@ svn_nls_environment_init (void)
 #endif
 
   return err;
-}
-
-svn_error_t *
-svn_nls_init (void)
-{
-#ifdef ENABLE_NLS
-  SVN_ERR (svn_nls_environment_init ());
-  textdomain (PACKAGE_NAME);
-#endif
-
-  return SVN_NO_ERROR;
 }

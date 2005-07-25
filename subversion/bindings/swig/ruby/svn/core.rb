@@ -31,6 +31,7 @@ module Svn
       # are destroyed by ruby's GC.
       # Svn::Core.apr_terminate
     end
+    nls_init
     
     class << self
       alias binary_mime_type? mime_type_is_binary
