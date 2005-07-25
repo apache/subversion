@@ -892,7 +892,7 @@ class IncludeDependencyInfo:
       hdrs.update(self._deps[h])
     return (len(keys) != len(hdrs))
 
-  _re_include = re.compile(r'^\s*[#%]\s*(?:include|import)\s*[<"]?([^<">\s]+)')
+  _re_include = re.compile(r'^\s*[#%]\s*(?:include|import)\s*[<"]?([^<">;\s]+)')
   def _scan_for_includes(self, fname):
     """Scan C source file FNAME and return the basenames of any headers
     which are directly included, and within the set defined when this
