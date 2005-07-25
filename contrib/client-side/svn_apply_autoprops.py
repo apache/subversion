@@ -10,9 +10,7 @@
 #
 # To do:
 # 1) Switch to using the Subversion Python bindings.
-# 2) Only delete files and directories if the --delete command line
-#    option is present.
-# 3) Use a command line option to specify the configuration file to
+# 2) Allow a command line option to specify the configuration file to
 #    load the auto-properties from.
 #
 # $Herders: http://www.orcaware.com/svn/repos/trunk/orca/orca/orca.pl.in $
