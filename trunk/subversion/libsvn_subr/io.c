@@ -152,7 +152,7 @@ io_check_path (const char *path,
   svn_boolean_t is_special = FALSE;
 
   if (path[0] == '\0')
-    path = ".";
+    path = SVN_UTF8_DOT_STR;
 
   /* Not using svn_io_stat() here because we want to check the
      apr_err return explicitly. */
