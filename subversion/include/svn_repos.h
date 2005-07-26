@@ -1672,7 +1672,10 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser,
 
 /** @} */
 
-/** An enum defining the kinds of access authz looks up. */
+/** An enum defining the kinds of access authz looks up.
+ *
+ * @since New in 1.3.
+ */
 typedef enum
 {
   /** No access. */
@@ -1688,7 +1691,10 @@ typedef enum
   svn_authz_recursive = 4
 } svn_repos_authz_access_t;
 
-/** A data type which stores the authz information. */
+/** A data type which stores the authz information. 
+ *
+ * @since New in 1.3.
+ */
 typedef struct svn_authz_t svn_authz_t;
 
 /** Read authz configuration data from @a file (a file or registry
@@ -1699,6 +1705,8 @@ typedef struct svn_authz_t svn_authz_t;
  *
  * If @a file does not exist, then if @a must_exist, return an error,
  * otherwise return an empty @c svn_config_t.
+ *
+ * @since New in 1.3.
  */
 svn_error_t *
 svn_repos_authz_read (svn_authz_t **authzp, const char *file,
@@ -1709,6 +1717,8 @@ svn_repos_authz_read (svn_authz_t **authzp, const char *file,
  * repos_name with the @a required_access.  @a authz lists the ACLs to
  * check against.  Set @a *access_granted to indicate if the requested
  * access is granted.
+ *
+ * @since New in 1.3.
  */
 svn_error_t *
 svn_repos_authz_check_access (svn_authz_t *authz, const char *repos_name,
