@@ -1024,6 +1024,12 @@ svn_error_t *svn_ra_get_lock (svn_ra_session_t *session,
  * The hashtable maps (const char *) absolute fs paths to (const
  * svn_lock_t *) structures.  The hashtable -- and all keys and
  * values -- are allocated in @a pool.
+ *
+ * @note This functionality is not available in pre-1.2 servers.  If the
+ * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
+ * returned.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *svn_ra_get_locks (svn_ra_session_t *session,
                                apr_hash_t **locks,
