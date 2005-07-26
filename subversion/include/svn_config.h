@@ -162,7 +162,8 @@ svn_error_t *svn_config_merge (svn_config_t *cfg,
  * *valuep to the value.
  *
  * If @a cfg is @c NULL, just sets @a *valuep to @a default_value. If
- * the value does not exist, expand and return @a default_value.
+ * the value does not exist, expand and return @a default_value. @a
+ * default_value can be NULL.
  *
  * The returned value will be valid at least until the next call to
  * svn_config_get(), or for the lifetime of @a default_value. It is

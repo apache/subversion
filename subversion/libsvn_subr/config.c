@@ -446,9 +446,9 @@ make_string_from_option (const char **valuep, svn_config_t *cfg,
 #define FMT_END_LEN   (sizeof (FMT_END) - 1)
 
 
-/* Expand OPT_VALUE in SECTION to *OPT_X_VALUE. If no variable
-   replacements are done, set OPT_X_VALUE to NULL. Allocate from
-   X_POOL */
+/* Expand OPT_VALUE (which may be NULL) in SECTION into *OPT_X_VALUEP.
+   If no variable replacements are done, set *OPT_X_VALUEP to
+   NULL. Allocate from X_POOL. */
 static void
 expand_option_value (svn_config_t *cfg, cfg_section_t *section,
                      const char *opt_value, const char **opt_x_valuep,
