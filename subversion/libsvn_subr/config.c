@@ -693,12 +693,13 @@ svn_config_enumerate (svn_config_t *cfg, const char *section,
   cfg_section_t *sec;
   apr_hash_index_t *opt_ndx;
   int count;
-  apr_pool_t *subpool = svn_pool_create (cfg->x_pool);
+  apr_pool_t *subpool;
 
   find_option (cfg, section, NULL, &sec);
   if (sec == NULL)
     return 0;
 
+  subpool = svn_pool_create (cfg->x_pool);
   count = 0;
   for (opt_ndx = apr_hash_first (subpool, sec->options);
        opt_ndx != NULL;
