@@ -84,10 +84,10 @@ struct node_baton
 
 /** A conversion function between the two vtable types. **/
 static
-svn_repos_parser_fns2_t *fns2_from_fns (const svn_repos_parser_fns_t *fns,
+svn_repos_parse_fns2_t *fns2_from_fns (const svn_repos_parser_fns_t *fns,
                                         apr_pool_t *pool)
 {
-  svn_repos_parser_fns2_t *fns2;
+  svn_repos_parse_fns2_t *fns2;
 
   fns2 = apr_palloc (pool, sizeof (*fns2));
   fns2->new_revision_record = fns->new_revision_record;
@@ -206,7 +206,7 @@ stream_malformed (void)
 static svn_error_t *
 parse_property_block (svn_stream_t *stream,
                       svn_filesize_t content_length,
-                      const svn_repos_parser_fns2_t *parse_fns,
+                      const svn_repos_parse_fns2_t *parse_fns,
                       void *record_baton,
                       svn_boolean_t is_node,
                       svn_filesize_t *actual_length,
@@ -365,7 +365,7 @@ static svn_error_t *
 parse_text_block (svn_stream_t *stream,
                   svn_filesize_t content_length,
                   svn_boolean_t is_delta,
-                  const svn_repos_parser_fns2_t *parse_fns,
+                  const svn_repos_parse_fns2_t *parse_fns,
                   void *record_baton,
                   char *buffer,
                   apr_size_t buflen,
@@ -469,7 +469,7 @@ parse_format_version (const char *versionstring, int *version)
 /* The Main Parser Logic */
 svn_error_t *
 svn_repos_parse_dumpstream2 (svn_stream_t *stream,
-                             const svn_repos_parser_fns2_t *parse_fns,
+                             const svn_repos_parse_fns2_t *parse_fns,
                              void *parse_baton,
                              svn_cancel_func_t cancel_func,
                              void *cancel_baton,
@@ -759,7 +759,7 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
                             void *cancel_baton,
                             apr_pool_t *pool)
 {
-  svn_repos_parser_fns2_t *fns2 = fns2_from_fns (parse_fns, pool);
+  svn_repos_parse_fns2_t *fns2 = fns2_from_fns (parse_fns, pool);
 
   return svn_repos_parse_dumpstream2 (stream, fns2, parse_baton,
                                       cancel_func, cancel_baton, pool);
@@ -1258,7 +1258,7 @@ close_revision (void *baton)
 
 
 svn_error_t *
-svn_repos_get_fs_build_parser2 (const svn_repos_parser_fns2_t **callbacks,
+svn_repos_get_fs_build_parser2 (const svn_repos_parse_fns2_t **callbacks,
                                 void **parse_baton,
                                 svn_repos_t *repos,
                                 svn_boolean_t use_history,
@@ -1268,7 +1268,7 @@ svn_repos_get_fs_build_parser2 (const svn_repos_parser_fns2_t **callbacks,
                                 apr_pool_t *pool)
 {
   const svn_repos_parser_fns_t *fns;
-  svn_repos_parser_fns2_t *parser;
+  svn_repos_parse_fns2_t *parser;
 
   /* Fetch the old-style vtable and baton, convert the vtable to a
    * new-style vtable, and set the new callbacks. */
@@ -1335,7 +1335,7 @@ svn_repos_load_fs2 (svn_repos_t *repos,
                     void *cancel_baton,
                     apr_pool_t *pool)
 {
-  const svn_repos_parser_fns2_t *parser;
+  const svn_repos_parse_fns2_t *parser;
   void *parse_baton;
   struct parse_baton *pb;
 

@@ -1527,8 +1527,10 @@ typedef struct svn_repos_parse_fns2_t
    */
   svn_error_t *(*close_revision) (void *revision_baton);
 
-} svn_repos_parser_fns2_t;
+} svn_repos_parse_fns2_t;
 
+/** @deprecated Provided for backward compatibility with the 1.2 API. */
+typedef svn_repos_parse_fns2_t svn_repos_parser_fns2_t;
 
 
 /**
@@ -1558,7 +1560,7 @@ typedef struct svn_repos_parse_fns2_t
  */
 svn_error_t *
 svn_repos_parse_dumpstream2 (svn_stream_t *stream,
-                             const svn_repos_parser_fns2_t *parse_fns,
+                             const svn_repos_parse_fns2_t *parse_fns,
                              void *parse_baton,
                              svn_cancel_func_t cancel_func,
                              void *cancel_baton,
@@ -1585,7 +1587,7 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
  * @since New in 1.1.
  */
 svn_error_t *
-svn_repos_get_fs_build_parser2 (const svn_repos_parser_fns2_t **parser,
+svn_repos_get_fs_build_parser2 (const svn_repos_parse_fns2_t **parser,
                                 void **parse_baton,
                                 svn_repos_t *repos,
                                 svn_boolean_t use_history,
@@ -1597,7 +1599,7 @@ svn_repos_get_fs_build_parser2 (const svn_repos_parser_fns2_t **parser,
 
 /**
  * A vtable that is driven by svn_repos_parse_dumpstream().
- * Similar to svn_repos_parser_fns2_t except that it lacks
+ * Similar to svn_repos_parse_fns2_t except that it lacks
  * the delete_node_property and apply_textdelta callbacks.
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
