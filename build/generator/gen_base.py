@@ -52,6 +52,8 @@ class GeneratorBase:
     # Read in the global options
     self.includes = \
         _collect_paths(parser.get('options', 'includes'))
+    self.swig_includes = \
+        _collect_paths(parser.get('options', 'swig-includes'))
     self.apache_files = \
         _collect_paths(parser.get('options', 'static-apache-files'))
     self.scripts = \
@@ -125,7 +127,7 @@ class GeneratorBase:
   def compute_hdrs(self):
     """Get a list of the header files"""
     wildcards = ["*.h","*.i","*.swg"]    
-    all_includes = map(native_path, self.includes)
+    all_includes = map(native_path, self.includes + self.swig_includes)
     for d in unique(self.target_dirs):
       for wildcard in wildcards:
         hdrs = glob.glob(os.path.join(native_path(d), wildcard))
