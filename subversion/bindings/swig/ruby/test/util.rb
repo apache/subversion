@@ -15,28 +15,30 @@ module SvnTestUtil
     @svnserve_host = "127.0.0.1"
     @svnserve_ports = (64152..64282).collect{|x| x.to_s}
     @wc_path = File.join("test", "wc")
-    setup_repository(@repos_path)
+    @config_path = File.join("test", "config")
+    setup_repository
     @repos = Svn::Repos.open(@repos_path)
     @fs = @repos.fs
-    FileUtils.rm_rf(@wc_path)
-    make_context("").checkout(@repos_uri, @wc_path)
-    add_authentication
     setup_svnserve
+    setup_config
+    setup_wc
+    add_authentication
   end
 
   def teardown_basic
     teardown_svnserve
-    teardown_repository(@repos_path)
-    FileUtils.rm_rf(@wc_path)
+    teardown_repository
+    teardown_wc
+    teardown_config
   end
 
-  def setup_repository(path, config={}, fs_config={})
+  def setup_repository(path=@repos_path, config={}, fs_config={})
     FileUtils.rm_rf(path)
     FileUtils.mkdir_p(File.dirname(path))
     Svn::Repos.create(path, config, fs_config)
   end
 
-  def teardown_repository(path)
+  def teardown_repository(path=@repos_path)
     Svn::Repos.delete(path)
   end
 
@@ -77,6 +79,24 @@ module SvnTestUtil
       end
     end
   end
+
+  def setup_wc
+    teardown_wc
+    make_context("").checkout(@repos_uri, @wc_path)
+  end
+
+  def teardown_wc
+    FileUtils.rm_rf(@wc_path)
+  end
+  
+  def setup_config
+    teardown_config
+    Svn::Core.config_ensure(@config_path)
+  end
+
+  def teardown_config
+    FileUtils.rm_rf(@config_path)
+  end
   
   def add_authentication
     passwd_file = "passwd"
@@ -114,10 +134,11 @@ realm = #{@realm}
     ctx.log_msg_func = Proc.new do |items|
       [true, log]
     end
-    ctx.add_username_prompt_provider(0) do |cred, realm, may_save|
+    ctx.add_username_prompt_provider(0) do |cred, realm, username, may_save|
       cred.username = @author
       cred.may_save = false
     end
+    ctx.auth_baton[Svn::Core::AUTH_PARAM_CONFIG_DIR] = @config_path
     ctx
   end
   

@@ -38,11 +38,15 @@ module Svn
           obj
         end
       end
+
+      alias _auth_baton auth_baton
+      attr_reader :auth_baton
       
       alias _initialize initialize
       def initialize
         @prompts = []
         @providers = []
+        @auth_baton = nil
         update_auth_baton
       end
       undef _initialize
@@ -178,6 +182,14 @@ module Svn
           messages
         end
       end
+
+      def add_simple_provider
+        add_provider(Client.get_simple_provider)
+      end
+      
+      def add_username_provider
+        add_provider(Client.get_username_provider)
+      end
       
       def add_simple_prompt_provider(retry_limit, prompt=Proc.new)
         args = [retry_limit]
@@ -218,12 +230,19 @@ module Svn
         end
         pro = Client.__send__("get_#{name}_prompt_provider", real_prompt, *args)
         @prompts << real_prompt
-        @providers << pro
+        add_provider(pro)
+      end
+
+      def add_provider(provider)
+        @providers << provider
         update_auth_baton
       end
 
       def update_auth_baton
+        parameters = {}
+        parameters = @auth_baton.parameters if @auth_baton
         @auth_baton = Core::AuthBaton.open(@providers)
+        @auth_baton.parameters = parameters
         self.auth_baton = @auth_baton
       end
 
