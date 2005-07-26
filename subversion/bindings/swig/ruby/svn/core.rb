@@ -95,7 +95,27 @@ module Svn
     class AuthBaton
       class << self
         def open(providers)
-          Core.auth_open(providers)
+          baton = Core.auth_open(providers)
+          baton.parameters = {}
+          baton
+        end
+      end
+
+      attr_reader :parameters
+
+      def [](name)
+        Core.auth_get_parameter(self, name)
+      end
+
+      def []=(name, value)
+        Core.auth_set_parameter(self, name, value)
+        @parameters[name] = value
+      end
+
+      def parameters=(params)
+        @parameters = {}
+        params.each do |key, value|
+          self[key] = value
         end
       end
     end
