@@ -61,6 +61,8 @@ class GeneratorBase:
     self.bdb_scripts = \
         _collect_paths(parser.get('options', 'bdb-test-scripts'))
 
+    self.include_wildcards = \
+      string.split(parser.get('options', 'include-wildcards'))
     self.swig_lang = string.split(parser.get('options', 'swig-languages'))
     self.swig_proxy_dir = parser.get('options', 'swig-proxy-dir')
     self.swig_dirs = string.split(parser.get('options', 'swig-dirs'))
@@ -126,10 +128,9 @@ class GeneratorBase:
 
   def compute_hdrs(self):
     """Get a list of the header files"""
-    wildcards = ["*.h","*.i","*.swg"]    
     all_includes = map(native_path, self.includes + self.swig_includes)
     for d in unique(self.target_dirs):
-      for wildcard in wildcards:
+      for wildcard in self.include_wildcards:
         hdrs = glob.glob(os.path.join(native_path(d), wildcard))
         all_includes.extend(hdrs)
     return all_includes
