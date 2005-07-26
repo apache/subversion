@@ -41,7 +41,7 @@
 ;; r     - svn-status-revert                run 'svn revert'
 ;; X v   - svn-status-resolved              run 'svn resolved'
 ;; U     - svn-status-update-cmd            run 'svn update'
-;; c     - svn-status-commit-file           run 'svn commit'
+;; c     - svn-status-commit                run 'svn commit'
 ;; a     - svn-status-add-file              run 'svn add --non-recursive'
 ;; A     - svn-status-add-file-recursively  run 'svn add'
 ;; +     - svn-status-make-directory        run 'svn mkdir'
@@ -466,10 +466,8 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
   (define-key svn-global-keymap (kbd "s") 'svn-status-this-directory)
   (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log)
   (define-key svn-global-keymap (kbd "u") 'svn-status-update-cmd)
-  )
-  ;; TODO: make the following work
-  ;;(define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
-  ;;(define-key svn-global-keymap (kbd "c") 'svn-status-commit-file))
+  (define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
+  (define-key svn-global-keymap (kbd "c") 'svn-status-commit))
 
 (defvar svn-global-trac-map ()
   "Subkeymap used in `svn-global-keymap' for trac issue tracker commands.")
@@ -963,7 +961,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "+") 'svn-status-make-directory)
   (define-key svn-status-mode-map (kbd "R") 'svn-status-mv)
   (define-key svn-status-mode-map (kbd "D") 'svn-status-rm)
-  (define-key svn-status-mode-map (kbd "c") 'svn-status-commit-file)
+  (define-key svn-status-mode-map (kbd "c") 'svn-status-commit)
   (define-key svn-status-mode-map (kbd "M-c") 'svn-status-cleanup)
   (define-key svn-status-mode-map (kbd "U") 'svn-status-update-cmd)
   (define-key svn-status-mode-map (kbd "r") 'svn-status-revert)
@@ -1034,7 +1032,7 @@ A and B must be line-info's."
   '("SVN"
     ["svn status" svn-status-update t]
     ["svn update" svn-status-update-cmd t]
-    ["svn commit" svn-status-commit-file t]
+    ["svn commit" svn-status-commit t]
     ["svn log" svn-status-show-svn-log t]
     ["svn info" svn-status-info t]
     ["svn blame" svn-status-blame t]
@@ -1112,7 +1110,7 @@ A and B must be line-info's."
       (easy-menu-define svn-status-actual-popup-menu nil nil
         (list name
                ["svn diff" svn-status-show-svn-diff t]
-               ["svn commit" svn-status-commit-file t]
+               ["svn commit" svn-status-commit t]
                ["svn log" svn-status-show-svn-log t]
                ["svn info" svn-status-info t]
                ["svn blame" svn-status-blame t]))
@@ -1784,11 +1782,15 @@ When called with a prefix argument run 'svn status -vu'."
 (defun svn-status-get-line-information ()
   "Find out about the file under point.
 The result may be parsed with the various `svn-status-line-info->...' functions."
-  (let ((svn-info nil))
-    (dolist (overlay (overlays-at (point)))
-      (setq svn-info (or svn-info
-                         (overlay-get overlay 'svn-info))))
-    svn-info))
+  (if (eq major-mode 'svn-status-mode)
+      (let ((svn-info nil))
+        (dolist (overlay (overlays-at (point)))
+          (setq svn-info (or svn-info
+                             (overlay-get overlay 'svn-info))))
+        svn-info)
+    ;; different mode, means called not from the *svn-status* buffer
+    '((nil nil) 32 nil "." 0 0 "" nil nil nil nil)))
+
 
 (defun svn-status-get-file-list (use-marked-files)
   "Get either the marked files or the files, where the cursor is on."
@@ -2354,7 +2356,7 @@ When called with a prefix argument add the command line switch --force."
   ;TODO: use file names also
   (svn-run-svn t t 'update "update"))
 
-(defun svn-status-commit-file ()
+(defun svn-status-commit ()
   "Commit selected files.
 See `svn-status-marked-files' for what counts as selected."
   (interactive)
