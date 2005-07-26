@@ -32,8 +32,21 @@ module Svn
     attr_reader :code, :message
     def initialize(code, message)
       @code = code
-      @message = message
+      @message = to_locale_encoding(message)
       super(message)
+    end
+
+    private
+    begin
+      require "gettext"
+      require "iconv"
+      def to_locale_encoding(str)
+        Iconv.iconv(Locale.charset, "UTF-8", str).join
+      end
+    rescue LoadError
+      def to_locale_encoding(str)
+        str
+      end
     end
   end
 end
