@@ -143,7 +143,7 @@ void svn_swig_py_convert_pool(PyObject *input, swig_type_info *type,
                               apr_pool_t **pool)
 {
   /* Look for pool */
-  if (PyObject_HasAttrString(input, assertValid))
+  if (PyObject_HasAttrString(input, poolAttribute))
     {
       /* Double check that the pool is valid */
       PyObject *result = PyObject_CallMethod(input, assertValid, emptyTuple);

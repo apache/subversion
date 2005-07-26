@@ -150,7 +150,6 @@
 
 %{
 #include "svn_md5.h"
-#include "svn_fs.h"
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
@@ -165,4 +164,4 @@
 #endif
 %}
 
-%include svn_fs.h
+%include svn_fs_h.swg

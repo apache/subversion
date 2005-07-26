@@ -60,6 +60,7 @@ class GeneratorBase:
         _collect_paths(parser.get('options', 'bdb-test-scripts'))
 
     self.swig_lang = string.split(parser.get('options', 'swig-languages'))
+    self.swig_proxy_dir = parser.get('options', 'swig-proxy-dir')
     self.swig_dirs = string.split(parser.get('options', 'swig-dirs'))
 
     # Visual C++ projects - contents are either TargetProject instances,

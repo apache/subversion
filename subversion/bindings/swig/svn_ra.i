@@ -92,8 +92,6 @@
 /* ----------------------------------------------------------------------- */
 
 %{
-#include "svn_ra.h"
-
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
 #endif
@@ -107,7 +105,7 @@
 #endif
 %}
 
-%include svn_ra.h
+%include svn_ra_h.swg
 
 #ifdef SWIGPERL
 %include ra_reporter.hi

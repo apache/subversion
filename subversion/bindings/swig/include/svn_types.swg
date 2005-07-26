@@ -19,7 +19,7 @@
 /* This interface file only defines types and their related information.
    There is no module associated with this interface file. */
 
-%import apr.swg
+%include apr.swg
 
 /* -----------------------------------------------------------------------
    Create a typemap to define "type **" as OUT parameters.
@@ -526,9 +526,6 @@
 /* ----------------------------------------------------------------------- */
 
 %{
-#include "svn_types.h"
-#include "svn_time.h"
-
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
 #endif
@@ -542,4 +539,5 @@
 #endif
 %}
 
-%include svn_types.h
+%include svn_time_h.swg
+%include svn_types_h.swg

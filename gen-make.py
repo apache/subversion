@@ -19,6 +19,7 @@ sys.path.insert(1, 'build')
 
 gen_modules = {
   'make' : ('gen_make', 'Makefiles for POSIX systems'),
+  'swig' : ('gen_swig', 'SWIG wrappers for header files'),
   'dsp' : ('gen_msvc_dsp', 'MSVC 6.x project files'),
   'vcproj' : ('gen_vcnet_vcproj', 'VC.Net project files'),
   }

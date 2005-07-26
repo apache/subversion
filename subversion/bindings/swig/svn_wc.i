@@ -31,6 +31,7 @@
 %import svn_types.swg
 %import svn_string.swg
 %import svn_delta.i
+%import svn_ra.i
 
 /* -----------------------------------------------------------------------
    ### these functions require a pool, which we don't have immediately
@@ -99,8 +100,6 @@
 /* ----------------------------------------------------------------------- */
 
 %{
-#include "svn_wc.h"
-
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
 #endif
@@ -114,4 +113,4 @@
 #endif
 %}
 
-%include svn_wc.h
+%include svn_wc_h.swg

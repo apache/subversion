@@ -112,6 +112,7 @@ SWIG_VERSION = @SWIG_VERSION@
 SWIG_LIBSWIG_DIR = @SWIG_LIBSWIG_DIR@
 SWIG_INCLUDES = -I$(SWIG_SRC_DIR) \
                 -I$(SWIG_SRC_DIR)/include \
+                -I$(SWIG_SRC_DIR)/proxy \
                 -I$(abs_srcdir)/subversion/include \
                 -I$(SWIG_LIBSWIG_DIR) \
                 -DSVN_SWIG_VERSION=$(SWIG_VERSION) \

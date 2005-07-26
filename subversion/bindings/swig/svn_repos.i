@@ -163,8 +163,6 @@
 /* ----------------------------------------------------------------------- */
 
 %{
-#include "svn_repos.h"
-
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
 #endif
@@ -178,4 +176,4 @@
 #endif
 %}
 
-%include svn_repos.h
+%include svn_repos_h.swg

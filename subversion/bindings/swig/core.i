@@ -31,19 +31,8 @@
 #include <apr.h>
 #include <apr_general.h>
 
-#include "svn_io.h"
-#include "svn_pools.h"
-#include "svn_version.h"
-#include "svn_time.h"
-#include "svn_props.h"
-#include "svn_opt.h"
-#include "svn_auth.h"
-#include "svn_config.h"
-#include "svn_version.h"
 #include "svn_md5.h"
 #include "svn_diff.h"
-#include "svn_error_codes.h"
-#include "svn_nls.h"
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
@@ -82,7 +71,7 @@
    before anything else does. 
 */
 
-%include svn_error_codes.h
+%include svn_error_codes_h.swg
 
 /* ----------------------------------------------------------------------- 
    Include svn_types.swg early. Other .i files will import svn_types.swg which
@@ -521,36 +510,36 @@ PyObject *svn_swig_py_exception_type(void);
 
 /* ----------------------------------------------------------------------- */
 
-%include svn_types.h
-%include svn_pools.h
-%include svn_version.h
-%include svn_time.h
+%include svn_types_h.swg
+%include svn_pools_h.swg
+%include svn_version_h.swg
+%include svn_time_h.swg
 #ifdef SWIGRUBY
 %immutable name;
 %immutable value;
 #endif
-%include svn_props.h
+%include svn_props_h.swg
 #ifdef SWIGRUBY
 %mutable name;
 %mutable value;
 #endif
-%include svn_opt.h
-%include svn_auth.h
-%include svn_config.h
-%include svn_version.h
-%include svn_utf.h
-%include svn_nls.h
+%include svn_opt_h.swg
+%include svn_auth_h.swg
+%include svn_config_h.swg
+%include svn_version_h.swg
+%include svn_utf_h.swg
+%include svn_nls_h.swg
 
 
 /* SWIG won't follow through to APR's defining this to be empty, so we
    need to do it manually, before SWIG sees this in svn_io.h. */
 #define __attribute__(x)
 
-%include svn_io.h
+%include svn_io_h.swg
 
 #ifdef SWIGPERL
-%include svn_diff.h
-%include svn_error.h
+%include svn_diff_h.swg
+%include svn_error_h.swg
 #endif
 
 #ifdef SWIGPYTHON
@@ -568,6 +557,10 @@ PyModule_AddObject(m, "SubversionException",
 %pythoncode %{
 SubversionException = _core.SubversionException
 %}
+
+/* Proxy classes for APR classes */
+%include proxy_apr.swg
+
 #endif
 
 #ifdef SWIGRUBY
@@ -589,5 +582,6 @@ struct apr_pool_t
   }
 };
 
-%include svn_diff.h
+%include svn_diff_h.swg
 #endif
+

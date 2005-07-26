@@ -78,7 +78,6 @@ void svn_swig_rb_make_editor(const svn_delta_editor_t **editor,
 
 %{
 #include "svn_md5.h"
-#include "svn_delta.h"
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
@@ -93,7 +92,7 @@ void svn_swig_rb_make_editor(const svn_delta_editor_t **editor,
 #endif
 %}
 
-%include svn_delta.h
+%include svn_delta_h.swg
 
 /* -----------------------------------------------------------------------
    editor callback invokers

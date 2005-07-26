@@ -73,6 +73,9 @@ if test "${OK}" != "OK" ; then
   exit 1
 fi
 
+echo "Creating SWIG headers..."
+python ./gen-make.py -t swig build.conf || gen_failed=1
+
 if test -n "$SKIP_DEPS"; then
   echo "Creating build-outputs.mk (no dependencies)..."
   python ./gen-make.py -s build.conf || gen_failed=1

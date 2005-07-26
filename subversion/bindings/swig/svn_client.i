@@ -418,9 +418,6 @@
 /* ----------------------------------------------------------------------- */
 
 %{
-#include "svn_client.h"
-#include "svn_time.h"
-
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
 #endif
@@ -434,4 +431,5 @@
 #endif
 %}
 
-%include svn_client.h
+%include svn_time_h.swg
+%include svn_client_h.swg

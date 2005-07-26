@@ -52,12 +52,12 @@ OUTPUT_TYPEMAP(unsigned long long, ULL2NUM, (unsigned long long));
 
 /* ----------------------------------------------------------------------- */
 
-%include apr.h
+%include apr_h.swg
 
 /* ### be nice to have all the error values and macros. there are some
    ### problems including this file, tho. SWIG isn't smart enough with some
    ### of the preprocessing and thinks there is a macro redefinition */
-//%include apr_errno.h
+//%include apr_errno_h.swg
 typedef int apr_status_t;
 
 /* -----------------------------------------------------------------------
