@@ -128,10 +128,10 @@ svn_utf_initialize (apr_pool_t *pool)
 /* Set *RET to a handle node for converting from FROMPAGE to TOPAGE,
    creating the handle node if it doesn't exist in USERDATA_KEY.
    If a node is not cached and apr_xlate_open() returns APR_EINVAL or
-   APR_ENOTIMPL, set (*ret)->handle to NULL.  If fail for any other
+   APR_ENOTIMPL, set (*RET)->handle to NULL.  If fail for any other
    reason, return the error.
 
-   Allocate *ret and the xlate handle in POOL if svn_utf_initialize()
+   Allocate *RET and its xlate handle in POOL if svn_utf_initialize()
    hasn't been called or USERDATA_KEY is NULL.  Else, allocate them
    in the pool of xlate_handle_hash. */
 static svn_error_t *
