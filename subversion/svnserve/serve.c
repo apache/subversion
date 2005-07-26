@@ -127,7 +127,7 @@ static svn_error_t *send_mechs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                server_baton_t *b, enum access_type required,
                                svn_boolean_t needs_username)
 {
-  if (get_access(b, UNAUTHENTICATED) >= required)
+  if (!needs_username && get_access(b, UNAUTHENTICATED) >= required)
     SVN_ERR(svn_ra_svn_write_word(conn, pool, "ANONYMOUS"));
   if (b->tunnel_user && get_access(b, AUTHENTICATED) >= required)
     SVN_ERR(svn_ra_svn_write_word(conn, pool, "EXTERNAL"));
