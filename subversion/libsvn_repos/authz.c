@@ -202,8 +202,8 @@ authz_parse_section (const char *section_name, void *baton)
 
   /* Work out what this section grants. */
   b->allow = b->deny = 0;
-  svn_config_enumerate (b->config, section_name,
-                        authz_parse_line, b);
+  svn_config_enumerate2 (b->config, section_name,
+                         authz_parse_line, b, b->pool);
 
   /* Has the section explicitely determined an access? */
   conclusive = authz_access_is_determined (b->allow, b->deny,
@@ -245,8 +245,8 @@ authz_get_path_access (svn_config_t *cfg, const char *repos_name,
 
   /* Try to locate a repository-specific block first. */
   qualified_path = apr_pstrcat (pool, repos_name, ":", path, NULL);
-  svn_config_enumerate (cfg, qualified_path,
-                        authz_parse_line, &baton);
+  svn_config_enumerate2 (cfg, qualified_path,
+                         authz_parse_line, &baton, pool);
 
   *access_granted = authz_access_is_granted (baton.allow, baton.deny,
                                              required_access);
@@ -257,7 +257,7 @@ authz_get_path_access (svn_config_t *cfg, const char *repos_name,
     return TRUE;
 
   /* No repository specific rule, try pan-repository rules. */
-  svn_config_enumerate (cfg, path, authz_parse_line, &baton);
+  svn_config_enumerate2 (cfg, path, authz_parse_line, &baton, pool);
 
   *access_granted = authz_access_is_granted (baton.allow, baton.deny,
                                              required_access);
@@ -293,7 +293,8 @@ authz_get_tree_access (svn_config_t *cfg, const char *repos_name,
   /* Default to access granted if no rules say otherwise. */
   baton.access = TRUE;
 
-  svn_config_enumerate_sections (cfg, authz_parse_section, &baton);
+  svn_config_enumerate_sections2 (cfg, authz_parse_section,
+                                  &baton, pool);
 
   return baton.access;
 }
@@ -415,9 +416,11 @@ static svn_boolean_t authz_validate_section (const char *name,
   /* If the section is the groups definition, use the group checking
      callback. Otherwise, use the rule checking callback. */
   if (strncmp (name, "groups", 6) == 0)
-    svn_config_enumerate (b->config, name, authz_validate_group, baton);
+    svn_config_enumerate2 (b->config, name, authz_validate_group,
+                           baton, b->pool);
   else
-    svn_config_enumerate (b->config, name, authz_validate_rule, baton);
+    svn_config_enumerate2 (b->config, name, authz_validate_rule,
+                           baton, b->pool);
 
   if (b->err)
     return FALSE;
@@ -442,8 +445,8 @@ svn_repos_authz_read (svn_authz_t **authzp, const char *file,
   baton.config = authz->cfg;
 
   /* Step through the entire rule file, aborting on error. */
-  svn_config_enumerate_sections (authz->cfg, authz_validate_section,
-                                 &baton);
+  svn_config_enumerate_sections2 (authz->cfg, authz_validate_section,
+                                  &baton, pool);
   SVN_ERR (baton.err);
 
   *authzp = authz;
