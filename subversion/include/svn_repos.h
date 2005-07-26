@@ -451,7 +451,8 @@ svn_error_t *svn_repos_delete_path (void *report_baton,
  * the editor, we do NOT abort the edit; that responsibility belongs
  * to the caller, if it happens at all.  The fs transaction will be
  * aborted even if the editor drive fails, so the caller does not need
- * to clean up.
+ * to clean up.  No other reporting functions, including
+ * svn_repos_abort_report, should be called after calling this function.
  */
 svn_error_t *svn_repos_finish_report (void *report_baton,
                                       apr_pool_t *pool);

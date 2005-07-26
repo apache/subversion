@@ -466,7 +466,7 @@ svn_wc_crawl_revisions2 (const char *path,
                          svn_wc_traversal_info_t *traversal_info,
                          apr_pool_t *pool)
 {
-  svn_error_t *err = SVN_NO_ERROR;
+  svn_error_t *fserr, *err = SVN_NO_ERROR;
   const svn_wc_entry_t *entry;
   svn_revnum_t base_rev = SVN_INVALID_REVNUM;
   svn_boolean_t missing = FALSE;
@@ -624,22 +624,16 @@ svn_wc_crawl_revisions2 (const char *path,
     }
 
   /* Finish the report, which causes the update editor to be driven. */
-  err = reporter->finish_report (report_baton, pool);
+  return reporter->finish_report (report_baton, pool);
 
  abort_report:
-  if (err)
+  /* Clean up the fs transaction. */
+  if ((fserr = reporter->abort_report (report_baton, pool)))
     {
-      /* Clean up the fs transaction. */
-      svn_error_t *fserr;
-      if ((fserr = reporter->abort_report (report_baton, pool)))
-        {
-          fserr = svn_error_quick_wrap (fserr, _("Error aborting report"));
-          svn_error_compose (err, fserr);
-        }
-      return err;
+      fserr = svn_error_quick_wrap (fserr, _("Error aborting report"));
+      svn_error_compose (err, fserr);
     }
-
-  return SVN_NO_ERROR;
+  return err;
 }
 
 /*** Compatibility wrapper: turns an svn_ra_reporter_t into an
