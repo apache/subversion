@@ -1080,9 +1080,10 @@ uri_escape (const char *path, const char table[], svn_boolean_t escape_ibm,
               else /* c == {A | B | C | D | E | F} */
               retstr->data[retstr->len + d] = (str[d] - 128);
             }
+          /* null-terminate the buffer */
+          retstr->data[retstr->len + 3] = '\0';
 #endif
           retstr->len += 3;
-          retstr->data[retstr->len + 3] = '\0';
         } 
 #if APR_CHARSET_EBCDIC
       else if(!use_ebcdic_escapes)
