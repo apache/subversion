@@ -64,7 +64,23 @@ Candidate changes:
    +1:
    +0: dlr (concept, no testing environment)
 
+  * r15253
+    Fix Issue #2341: Perl bindings cat method fails when using a local file
+    repository.
+    Justification:
+      Repeatedly using the client context to cat files via ra_local from the
+      bindings eventually causes the interpreter to die without this fix.
+    Votes:
+      +1: jszakmeister
 
-Approved changes (further review is welcome, but not required):
-
-  
+  * r15450
+    Allow SVN::Pool type to be used as a pool parameter in the Perl
+    bindings.
+    Justification:
+      The default allocator for client returns a SVN::Pool type,
+      but clients can't actually pass it to individual client
+      commands without this patch.
+    Votes:
+      +1: jszakmeister
+                                         
+Approved changes (further review is welcome, but not required):  
