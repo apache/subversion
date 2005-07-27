@@ -205,7 +205,7 @@ apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
 %typemap(python,argout,fragment="t_output_helper") apr_file_t **
     "$result = t_output_helper(
         $result,
-        SWIG_NewPointerObj(*$1, $*1_descriptor, 0));";
+        svn_swig_NewPointerObj(*$1, $*1_descriptor));";
 
 %typemap(perl5, argout) apr_file_t ** {
     ST(argvi) = sv_newmortal();

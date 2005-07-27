@@ -16,3 +16,13 @@
  * ====================================================================
  */
 
+#ifdef SWIGPYTHON
+/* Pointers, references, and arrays */
+%typemap (in) SWIGTYPE *, SWIGTYPE []
+  "svn_swig_ConvertPtr($input, (void**)&$1, $descriptor);
+   if (SWIG_arg_fail($argnum)) SWIG_fail;";
+
+/* Output arguments */
+%typemap (out) SWIGTYPE *, SWIGTYPE &
+    "$result = svn_swig_NewPointerObj((void*)($1), $descriptor);";
+#endif

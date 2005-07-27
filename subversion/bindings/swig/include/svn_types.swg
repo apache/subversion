@@ -40,7 +40,7 @@
 
 %typemap(python, argout, fragment="t_output_helper") SWIGTYPE **OUTPARAM {
     $result = t_output_helper($result,
-                              SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
+                              svn_swig_NewPointerObj(*$1, $*1_descriptor));
 }
 %typemap(perl5, argout) SWIGTYPE **OUTPARAM {
     ST(argvi) = sv_newmortal();
