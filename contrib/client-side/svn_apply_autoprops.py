@@ -13,7 +13,7 @@
 # 2) Allow a command line option to specify the configuration file to
 #    load the auto-properties from.
 #
-# $Herders: http://www.orcaware.com/svn/repos/trunk/orca/orca/orca.pl.in $
+# $HeadURL$
 # $LastChangedRevision$
 # $LastChangedDate$
 # $LastChangedBy$
@@ -30,10 +30,9 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 # General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
-# along with Orca in the COPYING-GPL file; if not, write to the Free
-# Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
-# 02111-1307 USA
+# A copy of the GNU General Public License can be obtained by writing
+# to the Free Software Foundation, Inc., 59 Temple Place, Suite 330,
+# Boston, MA 02111-1307 USA.
 
 import fnmatch
 import os
