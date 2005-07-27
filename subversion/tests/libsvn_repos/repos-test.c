@@ -1031,10 +1031,10 @@ rmlocks (const char **msg,
 }
 
 
-/* Helper for the authz test.  Return a svn_config_t handle containing
-   a parsed representation of the given authz_contents. */
+/* Helper for the authz test.  Set *AUTHZ_P to a representation of
+   AUTHZ_CONTENTS, using POOL for temporary allocation. */
 static svn_error_t *
-authz_get_handle (svn_authz_t **authzp, const char *authz_contents,
+authz_get_handle (svn_authz_t **authz_p, const char *authz_contents,
                   apr_pool_t *pool)
 {
   char *authz_file_tmpl;
@@ -1065,7 +1065,7 @@ authz_get_handle (svn_authz_t **authzp, const char *authz_contents,
   if (apr_err != APR_SUCCESS)
     return svn_error_wrap_apr (apr_err, "Closing test authz file");
 
-  SVN_ERR_W (svn_repos_authz_read (authzp, authz_file_path, TRUE, pool),
+  SVN_ERR_W (svn_repos_authz_read (authz_p, authz_file_path, TRUE, pool),
              "Opening test authz file");
 
   /* Delete the file. */

@@ -1701,18 +1701,17 @@ typedef enum
 typedef struct svn_authz_t svn_authz_t;
 
 /** Read authz configuration data from @a file (a file or registry
- * path) into @a *authzp, allocated in @a pool.
+ * path) into @a *authz_p, allocated in @a pool.
  *
- * If the read file is not a valid authz rule file, then abort loading
- * and return an error.
- *
- * If @a file does not exist, then if @a must_exist, return an error,
- * otherwise return an empty @c svn_config_t.
+ * If @a file is not a valid authz rule file, then return
+ * SVN_AUTHZ_INVALID_CONFIG.  The contents of @a *authz_p is then
+ * undefined.  If @a must_exist is TRUE, a missing authz file is also
+ * an error.
  *
  * @since New in 1.3.
  */
 svn_error_t *
-svn_repos_authz_read (svn_authz_t **authzp, const char *file,
+svn_repos_authz_read (svn_authz_t **authz_p, const char *file,
                       svn_boolean_t must_exist, apr_pool_t *pool);
 
 /**
