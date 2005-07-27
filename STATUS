@@ -86,4 +86,14 @@ Candidate changes:
     Votes:
       +1: lundblad
 
+  * r15450
+    Allow SVN::Pool type to be used as a pool parameter in the Perl
+    bindings.
+    Justification:
+      The default allocator for client returns a SVN::Pool type,
+      but clients can't actually pass it to individual client
+      commands without this patch.
+    Votes:
+      +1: jszakmeister
+
 Approved changes (further review is welcome, but not required):
