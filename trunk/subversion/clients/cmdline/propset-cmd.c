@@ -104,6 +104,12 @@ svn_cl__propset (apr_getopt_t *os,
 #endif
     SVN_ERR (svn_subst_translate_string (&propval, propval,
                                          opt_state->encoding, pool));
+#if APR_CHARSET_EBCDIC
+  else if(!opt_state->filedata)
+    /* On ebcdic platforms all other propvals are *not* taken
+     * literally; these too are converted to utf-8. */
+    SVN_ERR (svn_utf_string_to_utf8 (&propval, propval, pool));
+#endif
   else 
     if (opt_state->encoding)
       return svn_error_create 
