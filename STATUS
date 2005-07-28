@@ -27,7 +27,7 @@ Candidate changes:
       See the original bug report at 
       http://subversion.tigris.org/servlets/ReadMsg?listName=users&msgNo=35734
     Votes:
-      +1: sussman
+      +1: sussman, lundblad
 
   * r15248
     Perl bindings: Make compatible with SWIG 1.3.25.
@@ -44,7 +44,7 @@ Candidate changes:
       Consuming 2GB of memory while performing a merge on a large
       working copy is bad.
     Votes:
-      +1: jszakmeister
+      +1: jszakmeister, lundblad
 
   * r15315
     Resolve location-tracing performance issue against 1.0.x servers.
