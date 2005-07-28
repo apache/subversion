@@ -17,7 +17,7 @@ Candidate changes:
       The actual backported revisions are r15359, r15423... but the
       branch was required to fix a trivial conflict.
     Votes:
-      +1: sussman
+      +1: sussman, lundblad
 
   * /branches/1.2.x-authz  (merge r15465:HEAD)
     mod_authz_svn bugfix: bad path-matching in recursive logic.
@@ -45,13 +45,6 @@ Candidate changes:
       working copy is bad.
     Votes:
       +1: jszakmeister
-
-  * r15251
-    Prevent crash when more than 50 options passed to a command line program.
-    Justification:
-      Crashes bad!
-    Votes:
-      +1: maxb, jszakmeister
 
   * r15315
     Resolve location-tracing performance issue against 1.0.x servers.
@@ -107,3 +100,11 @@ Candidate changes:
       +1: jszakmeister
 
 Approved changes (further review is welcome, but not required):
+
+  * r15251
+    Prevent crash when more than 50 options passed to a command line program.
+    Justification:
+      Crashes bad!
+    Votes:
+      +1: maxb, jszakmeister, lundblad
+
