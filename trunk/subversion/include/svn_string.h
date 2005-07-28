@@ -135,6 +135,16 @@ svn_string_t *svn_string_createf (apr_pool_t *pool,
                                   ...)
        __attribute__ ((format (printf, 2, 3)));
 
+#if APR_CHARSET_EBCDIC
+/** Similar to svn_string_createf but assumes all char and string var args are
+ * utf-8 encoded.  The svn_string_t returned is utf-8 encoded.
+ */
+svn_string_t *svn_string_createf_ebcdic (apr_pool_t *pool,
+                                         const char *fmt,
+                                         ...)
+       __attribute__ ((format (printf, 2, 3)));
+#endif
+
 /** Create a new bytestring by formatting @a cstring (null-terminated)
  * from a @c va_list (see svn_stringbuf_createf()).
  */

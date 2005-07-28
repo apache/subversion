@@ -26,6 +26,7 @@
 #include <apr_fnmatch.h>
 #include "svn_utf.h"
 #include "svn_string.h"  /* loads "svn_types.h" and <apr_pools.h> */
+#include "svn_ebcdic.h"
 
 
 
@@ -176,6 +177,24 @@ svn_string_createf (apr_pool_t *pool, const char *fmt, ...)
 }
 
 
+#if APR_CHARSET_EBCDIC
+svn_string_t *
+svn_string_createf_ebcdic (apr_pool_t *pool, const char *fmt, ...)
+{
+  svn_string_t *str;
+  char *data;
+  
+  va_list ap;
+  va_start (ap, fmt);
+  data = svn_ebcdic_pvsprintf2 (pool, fmt, ap);
+  str = create_string (data, strlen (data), pool);
+  va_end (ap);
+
+  return str;
+}
+#endif
+
+
 svn_boolean_t
 svn_string_isempty (const svn_string_t *str)
 {
@@ -269,7 +288,7 @@ svn_stringbuf_create_from_string (const svn_string_t *str, apr_pool_t *pool)
 svn_stringbuf_t *
 svn_stringbuf_createv (apr_pool_t *pool, const char *fmt, va_list ap)
 {
-  char *data = apr_pvsprintf (pool, fmt, ap);
+  char *data = APR_PVSPRINTF2 (pool, fmt, ap);
 
   /* wrap an svn_stringbuf_t around the new data */
   return create_stringbuf (data, strlen (data), pool);

@@ -67,6 +67,7 @@ extern "C" {
   #define SVN_CMDLINE_PRINTF   svn_cmdline_printf
   #define SVN_CMDLINE_PRINTF2  svn_cmdline_printf
   #define SVN_STREAM_PRINTF    svn_stream_printf
+  #define SVN_STRING_CREATEF   svn_string_createf
   #define APR_FILE_MTIME_SET   apr_file_mtime_set
 #else
   #define APR_PVSPRINTF        svn_ebcdic_pvsprintf
@@ -78,6 +79,7 @@ extern "C" {
   #define SVN_CMDLINE_PRINTF   svn_cmdline_printf_ebcdic
   #define SVN_CMDLINE_PRINTF2  svn_cmdline_printf_ebcdic2
   #define SVN_STREAM_PRINTF    svn_stream_printf_ebcdic
+  #define SVN_STRING_CREATEF   svn_string_createf_ebcdic
   #define APR_FILE_MTIME_SET   svn_ebcdic_set_file_mtime
 /**
  * Write a string to a file using a printf format; similar to apr_file_printf
