@@ -227,16 +227,32 @@ static int parse_authz_lines(svn_config_t *cfg,
            || (baton.allow & required_access);
 }
 
+/*
+ * Utility function for authz_parse_section, to determine whether
+ * path2 is a child of path1 (or *is* path1).
+ */
+static svn_boolean_t
+authz_path_is_ancestor (const char *path1, const char *path2)
+{
+  apr_size_t path1_len = strlen (path1);
+
+  if (strncmp (path1, path2, path1_len) == 0)
+    return path1[path1_len - 1] == '/'
+      || (path2[path1_len] == '/' || path2[path1_len] == '\0');
+
+  return FALSE;
+}
+
 static svn_boolean_t parse_authz_section(const char *section_name,
                                          void *baton)
 {
   struct parse_authz_baton *b = baton;
   int conclusive;
 
-  if (strncmp(section_name, b->qualified_repos_path,
-              strlen(b->qualified_repos_path))
-      && strncmp(section_name, b->repos_path,
-                 strlen(b->repos_path))) {
+  if (authz_path_is_ancestor (b->qualified_repos_path,
+                              section_name) == FALSE
+      && authz_path_is_ancestor (b->repos_path,
+                                 section_name) == FALSE) {
       /* No match, move on to the next section. */
       return TRUE;
   }
