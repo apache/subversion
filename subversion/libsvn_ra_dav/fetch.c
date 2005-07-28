@@ -1634,23 +1634,33 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
      ### info itself? */
   err = svn_ra_dav__maybe_store_auth_info_after_result(err, ras);
 
+  /* At this point, 'err' might represent a local error (neon choked,
+     or maybe something went wrong storing auth creds).  But if
+     'baton.err' exists, that's an error coming right from the server,
+     marshalled over the network.  We give that top priority. */
   if (baton.err)
     {
       if (err)
         svn_error_clear(err);
       
+      /* mod_dav_svn is known to return "unsupported feature" on
+         unknown REPORT requests, but it's our svn_ra.h promise to
+         return a similar, specific error code.  */
+      if (baton.err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+        return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, baton.err,
+                                _("Server does not support locking features"));
       return baton.err;
     }
 
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.0.x servers and older don't support this report. */
   if (status_code == 501)
-    return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, err,
-                             _("Server does not support locking features"));
+    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
+                            _("Server does not support locking features"));
 
   if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
-    return svn_error_quick_wrap(err,
-                                _("Server does not support locking features"));
+    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
+                            _("Server does not support locking features"));
 
   else if (err)
     return err;

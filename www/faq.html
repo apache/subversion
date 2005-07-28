@@ -54,6 +54,9 @@
     where can I get it?</a></li>
 <li><a href="#more-information">I have other questions.  Where can I
     get more information?</a></li>  
+<li><a href="#moderation">Why isn't my post showing up on the mailing
+    list?</a></li>
+</ul>
 </ul>
 
 <h4>How-to:</h4>
@@ -558,10 +561,27 @@ Illustrator document</a> are available.</p>
 <div class="h3" id="more-information" title="more-information">
 <h3>I have other questions.  Where can I get more information?</h3>
 
-<p>Please send your questions or concerns to the Subversion Users <a
-href="mailto:users@subversion.tigris.org">mailing list</a>.  Alternatively,
-several Subversion users and developers can usually be contacted via IRC on
-channel #svn on irc.freenode.net.</p>
+<p>Please send your questions or concerns to the Subversion
+Users <a href="mailto:users@subversion.tigris.org">mailing list</a>.
+Note that the list is <a href="#moderated">moderated</a>, so there may
+be a delay before your post shows up.  Also, some Subversion users
+and developers can usually be contacted via IRC on channel #svn on
+irc.freenode.net.</p>
+
+</div>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<div class="h3" id="moderation" title="moderation">
+<h3>Why isn't my post showing up on the mailing list?</h3>
+
+<p>Our mailing lists are moderated to prevent spam from getting
+through, so your first post to any list may be delayed, until the
+moderator has a chance to let it through.  Once that post is allowed
+through, all subsequent posts from the same address are automatically
+approved, so you should experience no more delay.  Of course, if your
+sending address changes, then you'll have to go through moderation
+again.</p>
 
 </div>
 
@@ -926,7 +946,7 @@ in the repos/db/ subdirectory.  The environment contains a collection
 of tables and bunch of logfiles (log.*).  Berkeley DB journals all
 changes made to the tables, so that the tables can be recovered to a
 consistent state in case of interruptions (<a
-href="#wedged-repos">more info</a>).</p>
+href="#bdb-recovery">more info</a>).</p>
 
 <p>The logfiles will grow forever, eating up disk space, unless you,
 (as the repository administrator) do something about it.  At any given
@@ -1949,11 +1969,11 @@ command.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<div class="h3" id="permissions" title="permissions">
-<h3>
-    <a name="stuck-bdb-repos">My repository seems to get stuck all the
-time, giving me errors about needing recovery (DB_RUNRECOVERY).  What
-could be the cause?</a></h3>
+<div id="permissions"></div>
+<div class="h3" id="stuck-bdb-repos" title="stuck-bdb-repos">
+<h3>My repository seems to get stuck all the
+time, giving me errors about needing recovery (DB_RUNRECOVERY). What
+could be the cause?</h3>
 
 <p>The BerkeleyDB database in your repository is sensitive to
 interruptions.  If a process accessing the database exits without
@@ -1969,7 +1989,7 @@ inconsistent state.  Common causes of this include:</p>
 
 <p>For most of these cases, you should run "svnadmin recover", which
 rewinds the repository back to a consistent state; see <a
-href="#wedged-repos">this question</a> for details.  Note that running
+href="#bdb-recovery">this question</a> for details.  Note that running
 out of disk space, combined with frequent checkouts or updates, can
 cause the repository to crash in a way where recovery is not possible
 (so keep backups).</p>
@@ -1988,10 +2008,10 @@ for our recommendations.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<div class="h3" id="wedged-repos" title="wedged-repos">
-<h3>
-    <a name="bdb-recovery">Every time I try to access my repository, the
-process just hangs. Is my repository corrupt?</a></h3>
+<div id="wedged-repos"></div>
+<div class="h3" id="bdb-recovery" title="bdb-recovery">
+<h3>Every time I try to access my repository, the
+process just hangs. Is my repository corrupt?</h3>
 
 <p>
 Your repository is not corrupt, nor is your data lost. If your process
@@ -2118,7 +2138,7 @@ File exists: Could not open the requested SVN filesystem  [500, #160029]
 database locks (this does not happen with FSFS repositories).  It
 shouldn't happen in the course of normal operations, but if it does,
 the solution is to run database recovery as described <a
-href="#wedged-repos">here</a>.  If it happens often, you probably need
+href="#bdb-recovery">here</a>.  If it happens often, you probably need
 to raise the default lock parameters (<tt>set_lk_max_locks</tt>,
 <tt>set_lk_max_lockers</tt>, and <tt>set_lk_max_objects</tt>) in the
 db/DB_CONFIG file.  When changing DB_CONFIG in an existing repository,
@@ -2240,7 +2260,7 @@ variable.</p>
 <h3>I'm getting errors finding or opening a repository,
     but I know my repository URL is correct.  What's wrong?</h3> 
 
-<p>See <a href="#wedged-repos">this faq.</a></p>
+<p>See <a href="#bdb-recovery">this faq.</a></p>
 
 </div>
 

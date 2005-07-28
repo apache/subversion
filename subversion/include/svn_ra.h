@@ -246,13 +246,16 @@ typedef struct svn_ra_reporter2_t
 
   /** WC calls this when the state report is finished; any directories
    * or files not explicitly `set' are assumed to be at the
-   * baseline revision originally passed into do_update().
+   * baseline revision originally passed into do_update().  No other
+   * reporting functions, including abort_report, should be called after
+   * calling this function.
    */
   svn_error_t *(*finish_report) (void *report_baton,
                                  apr_pool_t *pool);
 
   /** If an error occurs during a report, this routine should cause the
-   * filesystem transaction to be aborted & cleaned up.
+   * filesystem transaction to be aborted & cleaned up.  No other reporting
+   * functions should be called after calling this function.
    */
   svn_error_t *(*abort_report) (void *report_baton,
                                 apr_pool_t *pool);
@@ -1029,6 +1032,10 @@ svn_error_t *svn_ra_get_lock (svn_ra_session_t *session,
  * The hashtable maps (const char *) absolute fs paths to (const
  * svn_lock_t *) structures.  The hashtable -- and all keys and
  * values -- are allocated in @a pool.
+ *
+ * @note This functionality is not available in pre-1.2 servers.  If the
+ * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
+ * returned.
  *
  * @since New in 1.2.
  */

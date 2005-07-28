@@ -162,7 +162,8 @@ svn_error_t *svn_config_merge (svn_config_t *cfg,
  * *valuep to the value.
  *
  * If @a cfg is @c NULL, just sets @a *valuep to @a default_value. If
- * the value does not exist, expand and return @a default_value.
+ * the value does not exist, expand and return @a default_value. @a
+ * default_value can be NULL.
  *
  * The returned value will be valid at least until the next call to
  * svn_config_get(), or for the lifetime of @a default_value. It is
@@ -208,19 +209,30 @@ void svn_config_set_bool (svn_config_t *cfg,
 typedef svn_boolean_t (*svn_config_section_enumerator_t)
        (const char *name, void *baton);
 
-/** Enumerate the sections, passing @a baton and the current section's name to
- * @a callback.  Continue the enumeration if @a callback returns @c TRUE.
- * Return the number of times @a callback was called.
+/** Similar to svn_config_enumerate_sections2(), but uses a memory pool of 
+ * @a cfg instead of one that is explicitely provided.
  *
- * ### See kff's comment to svn_config_enumerate().  It applies to this
- * function, too. ###
- *
- * @a callback's @a name and @a name parameters are only valid for the
- * duration of the call.
+ * @deprecated Provided for backwards compatibility with the 1.2 API. 
  */
 int svn_config_enumerate_sections (svn_config_t *cfg, 
                                    svn_config_section_enumerator_t callback,
                                    void *baton);
+
+/** Enumerate the sections, passing @a baton and the current section's name to
+ * @a callback.  Continue the enumeration if @a callback returns @c TRUE.
+ * Return the number of times @a callback was called.
+ *
+ * ### See kff's comment to svn_config_enumerate2().  It applies to this
+ * function, too. ###
+ *
+ * @a callback's @a name and @a name parameters are only valid for the
+ * duration of the call.
+ *
+ * @since New in 1.3.
+ */
+int svn_config_enumerate_sections2 (svn_config_t *cfg, 
+                                    svn_config_section_enumerator_t callback,
+                                    void *baton, apr_pool_t *pool);
 
 /** A callback function used in enumerating config options.
  *
@@ -228,6 +240,15 @@ int svn_config_enumerate_sections (svn_config_t *cfg,
  */
 typedef svn_boolean_t (*svn_config_enumerator_t)
        (const char *name, const char *value, void *baton);
+
+/** Similar to svn_config_enumerate2(), but uses a memory pool of 
+ * @a cfg instead of one that is explicitely provided.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.2 API. 
+ */
+int svn_config_enumerate (svn_config_t *cfg, const char *section,
+                          svn_config_enumerator_t callback, void *baton);
+
 
 /** Enumerate the options in @a section, passing @a baton and the current
  * option's name and value to @a callback.  Continue the enumeration if
@@ -244,9 +265,12 @@ typedef svn_boolean_t (*svn_config_enumerator_t)
  *
  * @a callback's @a name and @a value parameters are only valid for the
  * duration of the call.
+ *
+ * @since New in 1.3.
  */
-int svn_config_enumerate (svn_config_t *cfg, const char *section,
-                          svn_config_enumerator_t callback, void *baton);
+int svn_config_enumerate2 (svn_config_t *cfg, const char *section,
+                           svn_config_enumerator_t callback, void *baton,
+                           apr_pool_t *pool);
 
 
 /** Enumerate the group @a master_section in @a cfg.  Each variable

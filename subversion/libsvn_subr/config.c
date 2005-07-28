@@ -446,9 +446,9 @@ make_string_from_option (const char **valuep, svn_config_t *cfg,
 #define FMT_END_LEN   (sizeof (FMT_END) - 1)
 
 
-/* Expand OPT_VALUE in SECTION to *OPT_X_VALUE. If no variable
-   replacements are done, set OPT_X_VALUE to NULL. Allocate from
-   X_POOL */
+/* Expand OPT_VALUE (which may be NULL) in SECTION into *OPT_X_VALUEP.
+   If no variable replacements are done, set *OPT_X_VALUEP to
+   NULL. Allocate from X_POOL. */
 static void
 expand_option_value (svn_config_t *cfg, cfg_section_t *section,
                      const char *opt_value, const char **opt_x_valuep,
@@ -662,11 +662,23 @@ svn_config_enumerate_sections (svn_config_t *cfg,
                                svn_config_section_enumerator_t callback,
                                void *baton)
 {
+  apr_pool_t *tmp_pool = svn_pool_create (cfg->x_pool);
+  int retval = svn_config_enumerate_sections2 (cfg, callback, baton, tmp_pool);
+  svn_pool_destroy (tmp_pool);
+
+  return retval;
+}
+
+
+int
+svn_config_enumerate_sections2 (svn_config_t *cfg,
+                                svn_config_section_enumerator_t callback,
+                                void *baton, apr_pool_t *pool)
+{
   apr_hash_index_t *sec_ndx;
   int count = 0;
-  apr_pool_t *subpool = svn_pool_create (cfg->x_pool);
 
-  for (sec_ndx = apr_hash_first (subpool, cfg->sections);
+  for (sec_ndx = apr_hash_first (pool, cfg->sections);
        sec_ndx != NULL;
        sec_ndx = apr_hash_next (sec_ndx))
     {
@@ -680,27 +692,26 @@ svn_config_enumerate_sections (svn_config_t *cfg,
         break;
     }
 
-  svn_pool_destroy (subpool);
   return count;
 }
 
 
 
 int
-svn_config_enumerate (svn_config_t *cfg, const char *section,
-                      svn_config_enumerator_t callback, void *baton)
+svn_config_enumerate2 (svn_config_t *cfg, const char *section,
+                       svn_config_enumerator_t callback, void *baton,
+                       apr_pool_t *pool)
 {
   cfg_section_t *sec;
   apr_hash_index_t *opt_ndx;
   int count;
-  apr_pool_t *subpool = svn_pool_create (cfg->x_pool);
 
   find_option (cfg, section, NULL, &sec);
   if (sec == NULL)
     return 0;
 
   count = 0;
-  for (opt_ndx = apr_hash_first (subpool, sec->options);
+  for (opt_ndx = apr_hash_first (pool, sec->options);
        opt_ndx != NULL;
        opt_ndx = apr_hash_next (opt_ndx))
     {
@@ -717,8 +728,19 @@ svn_config_enumerate (svn_config_t *cfg, const char *section,
         break;
     }
 
-  svn_pool_destroy (subpool);
   return count;
+}
+
+
+int
+svn_config_enumerate (svn_config_t *cfg, const char *section,
+                      svn_config_enumerator_t callback, void *baton)
+{
+  apr_pool_t *tmp_pool = svn_pool_create (cfg->x_pool);
+  int retval = svn_config_enumerate2 (cfg, section, callback, baton, tmp_pool);
+  svn_pool_destroy (tmp_pool);
+
+  return retval;
 }
 
 
@@ -763,7 +785,7 @@ const char *svn_config_find_group (svn_config_t *cfg, const char *key,
   gb.key = key;
   gb.match = NULL;
   gb.pool = pool;
-  svn_config_enumerate (cfg, master_section, search_groups, &gb);
+  svn_config_enumerate2 (cfg, master_section, search_groups, &gb, pool);
   return gb.match;
 }
 

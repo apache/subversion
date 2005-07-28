@@ -852,8 +852,7 @@ main (int argc, const char * const *argv)
   /* Begin processing arguments. */
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
-  opt_state.auth_username = getenv ("SVN_USER");
-
+ 
   /* No args?  Show usage. */
   if (argc <= 1)
     {

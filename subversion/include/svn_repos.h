@@ -451,7 +451,8 @@ svn_error_t *svn_repos_delete_path (void *report_baton,
  * the editor, we do NOT abort the edit; that responsibility belongs
  * to the caller, if it happens at all.  The fs transaction will be
  * aborted even if the editor drive fails, so the caller does not need
- * to clean up.
+ * to clean up.  No other reporting functions, including
+ * svn_repos_abort_report, should be called after calling this function.
  */
 svn_error_t *svn_repos_finish_report (void *report_baton,
                                       apr_pool_t *pool);
@@ -1527,8 +1528,10 @@ typedef struct svn_repos_parse_fns2_t
    */
   svn_error_t *(*close_revision) (void *revision_baton);
 
-} svn_repos_parser_fns2_t;
+} svn_repos_parse_fns2_t;
 
+/** @deprecated Provided for backward compatibility with the 1.2 API. */
+typedef svn_repos_parse_fns2_t svn_repos_parser_fns2_t;
 
 
 /**
@@ -1558,7 +1561,7 @@ typedef struct svn_repos_parse_fns2_t
  */
 svn_error_t *
 svn_repos_parse_dumpstream2 (svn_stream_t *stream,
-                             const svn_repos_parser_fns2_t *parse_fns,
+                             const svn_repos_parse_fns2_t *parse_fns,
                              void *parse_baton,
                              svn_cancel_func_t cancel_func,
                              void *cancel_baton,
@@ -1585,7 +1588,7 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
  * @since New in 1.1.
  */
 svn_error_t *
-svn_repos_get_fs_build_parser2 (const svn_repos_parser_fns2_t **parser,
+svn_repos_get_fs_build_parser2 (const svn_repos_parse_fns2_t **parser,
                                 void **parse_baton,
                                 svn_repos_t *repos,
                                 svn_boolean_t use_history,
@@ -1597,7 +1600,7 @@ svn_repos_get_fs_build_parser2 (const svn_repos_parser_fns2_t **parser,
 
 /**
  * A vtable that is driven by svn_repos_parse_dumpstream().
- * Similar to svn_repos_parser_fns2_t except that it lacks
+ * Similar to svn_repos_parse_fns2_t except that it lacks
  * the delete_node_property and apply_textdelta callbacks.
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
@@ -1672,7 +1675,10 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser,
 
 /** @} */
 
-/** An enum defining the kinds of access authz looks up. */
+/** An enum defining the kinds of access authz looks up.
+ *
+ * @since New in 1.3.
+ */
 typedef enum
 {
   /** No access. */
@@ -1688,20 +1694,24 @@ typedef enum
   svn_authz_recursive = 4
 } svn_repos_authz_access_t;
 
-/** A data type which stores the authz information. */
+/** A data type which stores the authz information. 
+ *
+ * @since New in 1.3.
+ */
 typedef struct svn_authz_t svn_authz_t;
 
 /** Read authz configuration data from @a file (a file or registry
- * path) into @a *authzp, allocated in @a pool.
+ * path) into @a *authz_p, allocated in @a pool.
  *
- * If the read file is not a valid authz rule file, then abort loading
- * and return an error.
+ * If @a file is not a valid authz rule file, then return
+ * SVN_AUTHZ_INVALID_CONFIG.  The contents of @a *authz_p is then
+ * undefined.  If @a must_exist is TRUE, a missing authz file is also
+ * an error.
  *
- * If @a file does not exist, then if @a must_exist, return an error,
- * otherwise return an empty @c svn_config_t.
+ * @since New in 1.3.
  */
 svn_error_t *
-svn_repos_authz_read (svn_authz_t **authzp, const char *file,
+svn_repos_authz_read (svn_authz_t **authz_p, const char *file,
                       svn_boolean_t must_exist, apr_pool_t *pool);
 
 /**
@@ -1709,6 +1719,8 @@ svn_repos_authz_read (svn_authz_t **authzp, const char *file,
  * repos_name with the @a required_access.  @a authz lists the ACLs to
  * check against.  Set @a *access_granted to indicate if the requested
  * access is granted.
+ *
+ * @since New in 1.3.
  */
 svn_error_t *
 svn_repos_authz_check_access (svn_authz_t *authz, const char *repos_name,

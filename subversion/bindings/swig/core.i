@@ -338,6 +338,8 @@
 /* -----------------------------------------------------------------------
    auth parameter set/get
 */
+
+/* set */
 %typemap(python, in) const void *value {
     if (PyString_Check($input)) {
         $1 = (void *)PyString_AS_STRING($input);
@@ -354,7 +356,35 @@
     }
 }
 
+/*
+  - all values are converted to char*
+  - assume the first argument is Ruby object for svn_auth_baton_t*
+*/
+%typemap(ruby, in) const void *value
+{
+  VALUE _rb_pool;
+  apr_pool_t *_global_pool;
+  char *value = StringValuePtr($input);
+  
+  svn_swig_rb_get_pool(1, argv, Qnil, &_rb_pool, &_global_pool);
+  $1 = (void *)apr_pstrdup(_global_pool, value);
+}
+
+/* get */
+/* assume the value is char* */
+%typemap(ruby, out) const void *
+{
+  char *value = $1;
+  if (value) {
+    $result = rb_str_new2(value);
+  } else {
+    $result = Qnil;
+  }
+}
+
+#ifndef SWIGRUBY
 %ignore svn_auth_get_parameter;
+#endif
 
 /* -----------------------------------------------------------------------
    describe how to pass a FILE* as a parameter (svn_stream_from_stdio)
