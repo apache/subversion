@@ -19,7 +19,7 @@ Candidate changes:
     Votes:
       +1: sussman
 
-  * /branches/1.2.x-authz  (merge r:HEAD)
+  * /branches/1.2.x-authz  (merge r15465:HEAD)
     mod_authz_svn bugfix: bad path-matching in recursive logic.
     Justification:
       It's possible to get authz failures when they shouldn't exist.
