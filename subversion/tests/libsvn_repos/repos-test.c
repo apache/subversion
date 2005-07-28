@@ -1136,6 +1136,12 @@ authz (const char **msg,
    * and another containing a reference to an undefined group.  Verify
    * that svn_repos_authz_read fails to load both and returns an
    * "invalid configuration" error.
+   *
+   * 3. Regression test for a bug in how recursion is handled in
+   * authz.  The bug was that paths not under the parent path
+   * requested were being considered during the determination of
+   * access rights (eg. a rule for /dir2 matched during a lookup for
+   * /dir), due to incomplete tests on path relations.
    */
 
   /* The authz rules for the phase 1 tests. */
@@ -1252,6 +1258,33 @@ authz (const char **msg,
                               "SVN_ERR_AUTHZ_INVALID_CONFIG",
                               err ? "unexpected" : "no");
   svn_error_clear (err);
+
+  /* The authz rules for the phase 3 tests */
+  contents =
+    "[/]"
+    APR_EOL_STR
+    "* = rw"
+    APR_EOL_STR
+    APR_EOL_STR
+    "[greek:/dir2/secret]"
+    APR_EOL_STR
+    "* ="
+    APR_EOL_STR;
+
+  /* Load the test authz rules. */
+  SVN_ERR (authz_get_handle(&authz_cfg, contents, subpool));
+
+  /* Verify that the rule on /dir2/secret doesn't affect this
+     request */
+  SVN_ERR (svn_repos_authz_check_access (authz_cfg, "greek",
+                                         "/dir", NULL,
+                                         (svn_authz_read
+                                          | svn_authz_recursive),
+                                         &access_granted, subpool));
+  if (!access_granted)
+    return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
+                             "Regression: incomplete ancestry test "
+                             "for recursive access lookup.");
 
   /* That's a wrap! */
   svn_pool_destroy (subpool);
