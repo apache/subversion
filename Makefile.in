@@ -218,9 +218,11 @@ INSTALL_EXTRA_SWIG_PY=\
 # The path to generated and complementary source files for the SWIG
 # bindings.
 SWIG_PL_DIR = $(abs_builddir)/subversion/bindings/swig/perl
+SWIG_PY_DIR = $(abs_builddir)/subversion/bindings/swig/python
 SWIG_RB_DIR = $(abs_builddir)/subversion/bindings/swig/ruby
 
-# The path to the source files for the Ruby SWIG
+# The path to the source files for the SWIG bindings
+SWIG_PY_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig/python
 SWIG_RB_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig/ruby
 
 ### Automate JAR creation using Makefile generator's javahl-java.jar
@@ -610,6 +612,10 @@ clean-swig-pl:
 	if [ -f "$(SWIG_PL_DIR)/native/Makefile" ]; then \
 	  cd $(SWIG_PL_DIR)/native; $(MAKE) clean; \
 	fi
+
+check-swig-py: swig-py
+	cd $(SWIG_PY_DIR); \
+	  $(PYTHON) $(SWIG_PY_SRC_DIR)/tests/run_all.py
 
 check-swig-rb: swig-rb svnserve
 	cd $(SWIG_RB_DIR); \
