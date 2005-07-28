@@ -39,6 +39,7 @@
 #include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_utf.h"
+#include "svn_ebcdic.h"
 
 #include "wc.h"
 #include "log.h"
@@ -95,7 +96,7 @@ svn_wc__conflicting_propchanges_p (const svn_string_t **description,
   if ((local->value != NULL) && (update->value == NULL))
     {
       *description =
-        svn_string_createf
+        SVN_STRING_CREATEF
         (pool,
          _("Property '%s' locally changed to '%s', but update deletes it\n"),
          local->name, local->value->data);
@@ -104,7 +105,7 @@ svn_wc__conflicting_propchanges_p (const svn_string_t **description,
   if ((local->value == NULL) && (update->value != NULL))
     {
       *description =
-        svn_string_createf
+        SVN_STRING_CREATEF
         (pool,
          _("Property '%s' locally deleted, but update sets it to '%s'\n"),
          local->name, update->value->data);
@@ -121,7 +122,7 @@ svn_wc__conflicting_propchanges_p (const svn_string_t **description,
   else if (! svn_string_compare (local->value, update->value))
     {
       *description =
-        svn_string_createf
+        SVN_STRING_CREATEF
         (pool, _("Property '%s' locally changed to '%s', "
                  "but update sets it to '%s'\n"),
          local->name, local->value->data, update->value->data);
