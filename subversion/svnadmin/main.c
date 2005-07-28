@@ -1143,8 +1143,8 @@ main (int argc, const char * const *argv)
   struct svnadmin_opt_state opt_state;
   apr_getopt_t *os;  
   int opt_id;
-  int received_opts[SVN_OPT_MAX_OPTIONS];
-  int i, num_opts = 0;
+  apr_array_header_t *received_opts;
+  int i;
 
   /* Initialize the app. */
   if (svn_cmdline_init ("svnadmin", stderr) != EXIT_SUCCESS)
@@ -1160,6 +1160,8 @@ main (int argc, const char * const *argv)
 
   pool = svn_pool_create_ex (NULL, allocator);
   apr_allocator_owner_set (allocator, pool);
+
+  received_opts = apr_array_make (pool, SVN_OPT_MAX_OPTIONS, sizeof (int));
 
   /* Check library versions */
   err = check_lib_versions ();
@@ -1204,8 +1206,7 @@ main (int argc, const char * const *argv)
         }
 
       /* Stash the option code in an array before parsing it. */
-      received_opts[num_opts] = opt_id;
-      num_opts++;
+      APR_ARRAY_PUSH (received_opts, int) = opt_id;
 
       switch (opt_id) {
       case 'r':
@@ -1406,9 +1407,9 @@ main (int argc, const char * const *argv)
     }
 
   /* Check that the subcommand wasn't passed any inappropriate options. */
-  for (i = 0; i < num_opts; i++)
+  for (i = 0; i < received_opts->nelts; i++)
     {
-      opt_id = received_opts[i];
+      opt_id = APR_ARRAY_IDX (received_opts, i, int);
 
       /* All commands implicitly accept --help, so just skip over this
          when we see it. Note that we don't want to include this option
