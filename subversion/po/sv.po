@@ -43,7 +43,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-07-29 00:26+0200\n"
-"PO-Revision-Date: 2005-06-07 12:11+0200\n"
+"PO-Revision-Date: 2005-07-29 00:41+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -73,7 +73,7 @@ msgstr "\"%s\" verkar inte vara en URL"
 #: clients/cmdline/copy-cmd.c:106 clients/cmdline/delete-cmd.c:64
 #: clients/cmdline/mkdir-cmd.c:66
 msgid "Local, non-commit operations do not take a log message"
-msgstr ""
+msgstr "Lokala operationer, som ej medför arkivering, behöver inget loggmeddelande"
 
 #: clients/cmdline/diff-cmd.c:65
 msgid "Can't open stdout"
@@ -542,7 +542,6 @@ msgid "disable automatic properties"
 msgstr "deaktivera automatiska egenskaper"
 
 #: clients/cmdline/main.c:143
-#, fuzzy
 msgid ""
 "use a different EOL marker than the standard\n"
 "                             system marker for files with the svn:eol-style\n"
@@ -1498,7 +1497,7 @@ msgstr "Fångade signal"
 
 #: clients/cmdline/main.c:894
 msgid "Non-numeric limit argument given"
-msgstr ""
+msgstr "Argumentet till limit-flaggan är inget tal"
 
 #: clients/cmdline/main.c:911 svnadmin/main.c:1219
 msgid ""
@@ -1957,7 +1956,7 @@ msgstr "Försök med \"svn revert --recursive\" istället?"
 #: clients/cmdline/status.c:278
 #, c-format
 msgid "'%s' has lock token, but no lock owner"
-msgstr ""
+msgstr "\"%s\" har lås-token, men ingen låsägare"
 
 #: clients/cmdline/switch-cmd.c:58
 #, c-format
@@ -2024,7 +2023,7 @@ msgstr "--Denna och nedanstående rader kommer att tas bort--"
 
 #: clients/cmdline/util.c:549
 msgid "Cannot invoke editor to get log message when non-interactive"
-msgstr ""
+msgstr "Kan inte köra editorn för att erhålla loggmeddelande i icke-interaktivt läge"
 
 #: clients/cmdline/util.c:562
 msgid ""
@@ -2603,9 +2602,8 @@ msgid "Item is partially readable"
 msgstr "Objektet är delvis läsbart"
 
 #: include/svn_error_codes.h:789
-#, fuzzy
 msgid "Invalid authz configuration"
-msgstr "Ogiltigt konfigurationsvärde"
+msgstr "Ogiltig auktorisationskonfiguration"
 
 #: include/svn_error_codes.h:795
 msgid "Svndiff data has invalid header"
@@ -2823,7 +2821,7 @@ msgstr "Fel i loggmeddelandets innehåll"
 
 #: include/svn_error_codes.h:1020
 msgid "A log message was given where none was necessary"
-msgstr ""
+msgstr "Ett loggmeddelande angavs utan att det var nödvändigt"
 
 #: libsvn_client/add.c:370
 #, c-format
@@ -2893,9 +2891,9 @@ msgid "; run 'svn update' to complete it"
 msgstr "; kör \"svn update\" för att slutföra"
 
 #: libsvn_client/checkout.c:166
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' already exists and is not a directory"
-msgstr "\"%s\" finns och är ingen katalog"
+msgstr "\"%s\" finns redan och är ingen katalog"
 
 #: libsvn_client/commit.c:209
 #, c-format
@@ -3288,7 +3286,7 @@ msgstr "Ingen gemensam förälder finns; kan inte arbeta med disjunkta argument"
 
 #: libsvn_client/locking_commands.c:300
 msgid "Unable to lock/unlock across multiple repositories"
-msgstr ""
+msgstr "Kan inte låsa/låsa upp i flera arkiv samtidigt"
 
 #: libsvn_client/locking_commands.c:341
 #, c-format
@@ -4482,7 +4480,7 @@ msgstr "Kunde inte spara URL:en för versionsresursen"
 
 #: libsvn_ra_dav/fetch.c:398
 msgid "Could not get content-type from response."
-msgstr ""
+msgstr "Kunde inte erhålla fältet \"content-type\" från serverns respons"
 
 #: libsvn_ra_dav/fetch.c:443
 #, c-format
@@ -4972,9 +4970,8 @@ msgid "Lock element not a list"
 msgstr "Element med lås är ingen lista"
 
 #: libsvn_ra_svn/client.c:1607
-#, fuzzy
 msgid "Unable to parse lock data"
-msgstr "Kunde inte öppna rot för editering"
+msgstr "Kan inte tolka låsdata"
 
 #: libsvn_ra_svn/client.c:1714 libsvn_ra_svn/client.c:1742
 msgid "Server doesn't support the get-lock command"
@@ -5864,19 +5861,18 @@ msgid "First line of '%s' contains non-digit"
 msgstr "Första raden i \"%s\" innehåller något som inte är en siffra"
 
 #: libsvn_subr/nls.c:79
-#, fuzzy, c-format
+#, c-format
 msgid "Can't convert string to UCS-2: '%s'"
-msgstr "Kan inte konvertera sträng från \"%s\" till \"%s\""
+msgstr "Kan inte konvertera sträng från UCS-2: \"%s\""
 
 #: libsvn_subr/nls.c:86
-#, fuzzy
 msgid "Can't get module file name"
-msgstr "Kan inte erhålla filnamn"
+msgstr "Kan inte erhålla modulens filnamn"
 
 #: libsvn_subr/nls.c:101
 #, c-format
 msgid "Can't convert module path to UTF-8 from UCS-2: '%s'"
-msgstr ""
+msgstr "Kan inte konvertera modulens sökväg till UTF-8 från UCS-2: '%s'"
 
 #: libsvn_subr/opt.c:146
 msgid ""
@@ -6183,11 +6179,9 @@ msgstr ""
 "radering"
 
 #: libsvn_wc/adm_ops.c:1059
-#, fuzzy, c-format
+#, c-format
 msgid "The URL '%s' has different repository root than its parent"
-msgstr ""
-"Käll-RUL:en \"%s\" är från ett annat arkiv, låter den vara en separat "
-"arbetskopia"
+msgstr "URL:en \"%s\" har annan arkivrot än sin förälder"
 
 #: libsvn_wc/adm_ops.c:1333 libsvn_wc/adm_ops.c:1338 libsvn_wc/adm_ops.c:1374
 #, c-format
@@ -6289,9 +6283,9 @@ msgid "Error writing entries file for '%s'"
 msgstr "Fel när postfilen för \"%s\" skulle skrivas"
 
 #: libsvn_wc/entries.c:221
-#, fuzzy, c-format
+#, c-format
 msgid "Entry for '%s' has invalid repository root"
-msgstr "Posten \"%s\" har ogiltig nodtyp"
+msgstr "Posten för \"%s\" har ogiltig arkivrot"
 
 #: libsvn_wc/entries.c:243
 #, c-format
@@ -6629,6 +6623,8 @@ msgid ""
 "Trying to add new property '%s' with value '%s',\n"
 "but property already exists with value '%s'."
 msgstr ""
+"Försöker lägga till egenskapen '%s' med värdet '%s',\n"
+"men egenskapen finns redan med värdet '%s'."
 
 #: libsvn_wc/props.c:481
 #, c-format
@@ -6820,9 +6816,9 @@ msgid "'%s' has no ancestry information"
 msgstr "\"%s\" saknar information om ursprung"
 
 #: libsvn_wc/update_editor.c:2971
-#, fuzzy, c-format
+#, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
-msgstr "Käll-RUL:en \"%s\" är från ett annat arkiv"
+msgstr "Käll-RUL:en \"%s\" har annan arkivrot än \"%s\""
 
 #: libsvn_wc/util.c:83
 msgid "Unable to make any directories"
@@ -7448,9 +7444,8 @@ msgid "print differences against the copy source"
 msgstr "visa skillnad gentemot kopians ursprung"
 
 #: svnlook/main.c:122
-#, fuzzy
 msgid "operate on a revision property (use with -r or -t)"
-msgstr "arbeta med en revisionsegenskap (används med -r)"
+msgstr "arbeta med en revisionsegenskap (används med -r eller -t)"
 
 #: svnlook/main.c:125
 msgid "show full paths instead of indenting them"
