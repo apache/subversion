@@ -60,6 +60,9 @@ extern "C" {
 #ifndef SWIG_NewPointerObj
 #define SWIG_NewPointerObj SWIG_Python_NewPointerObj
 #endif
+#ifndef SWIG_MustGetPtr
+#define SWIG_MustGetPtr SWIG_Python_MustGetPtr
+#endif
 #endif
 
 typedef struct _unnamed swig_type_info;
@@ -104,6 +107,8 @@ PyObject *svn_swig_NewPointerObj(void *obj, swig_type_info *type);
 /* Wrapper for SWIG_ConvertPtr */
 int svn_swig_ConvertPtr(PyObject *input, void **obj, swig_type_info *type);
 
+/* Wrapper for SWIG_MustGetPtr */
+void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum);
 
 /*** Functions to expose a custom SubversionException ***/
 

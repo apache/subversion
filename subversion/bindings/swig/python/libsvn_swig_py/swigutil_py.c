@@ -192,6 +192,12 @@ static int svn_swig_ConvertPtrString(PyObject *input,
 {
   return svn_swig_ConvertPtr(input, obj, svn_swig_TypeQuery(type));
 }
+
+/** Wrapper for SWIG_MustGetPtr */
+void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum)
+{
+  return SWIG_MustGetPtr(input, type, SWIG_POINTER_EXCEPTION | 0, argnum);
+}
   
 
 /*** Custom SubversionException stuffs. ***/

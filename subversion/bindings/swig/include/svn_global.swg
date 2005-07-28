@@ -19,8 +19,11 @@
 #ifdef SWIGPYTHON
 /* Pointers, references, and arrays */
 %typemap (in) SWIGTYPE *, SWIGTYPE []
-  "svn_swig_ConvertPtr($input, (void**)&$1, $descriptor);
-   if (SWIG_arg_fail($argnum)) SWIG_fail;";
+  "$1 = ($1_ltype)svn_swig_MustGetPtr($input, $descriptor, $argnum);
+   if (PyErr_Occurred()) {
+     return NULL;
+   }
+  "
 
 /* Output arguments */
 %typemap (out) SWIGTYPE *, SWIGTYPE &

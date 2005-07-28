@@ -321,9 +321,11 @@
     $1 = apr_array_make(_global_pool, targlen, sizeof(provider));
     ($1)->nelts = targlen;
     while (targlen--) {
-        svn_swig_ConvertPtr(PySequence_GetItem($input, targlen),
-                            (void **)&provider, 
-                            $descriptor(svn_auth_provider_object_t *));
+        provider = svn_swig_MustGetPtr(PySequence_GetItem($input, targlen),
+          $descriptor(svn_auth_provider_object_t *), $argnum);
+        if (PyErr_Occurred()) {
+          return NULL;
+        }
         APR_ARRAY_IDX($1, targlen, svn_auth_provider_object_t *) = provider;
     }
 }
