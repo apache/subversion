@@ -204,13 +204,13 @@ svn_parse_date (svn_boolean_t *matched, apr_time_t *result, const char *text,
     return svn_error_wrap_apr (apr_err, _("Can't manipulate current date"));
 
   if (template_match (&expt, &localtz, /* ISO-8601 extended, date only */
-                      "YYYY-MM-DD",
+                      "YYYY-M[M]-D[D]",
                       text)
       || template_match (&expt, &localtz, /* ISO-8601 extended, UTC */
-                      "YYYY-MM-DDThh:mm[:ss[.u[u[u[u[u[u][Z]",
-                      text)
+                         "YYYY-M[M]-D[D]Th[h]:mm[:ss[.u[u[u[u[u[u][Z]",
+                         text)
       || template_match (&expt, &localtz, /* ISO-8601 extended, with offset */
-                         "YYYY-MM-DDThh:mm[:ss[.u[u[u[u[u[u]+OO[:oo]",
+                         "YYYY-M[M]-D[D]Th[h]:mm[:ss[.u[u[u[u[u[u]+OO[:oo]",
                          text)
       || template_match (&expt, &localtz, /* ISO-8601 basic, date only */
                          "YYYYMMDD",
@@ -222,17 +222,17 @@ svn_parse_date (svn_boolean_t *matched, apr_time_t *result, const char *text,
                          "YYYYMMDDThhmm[ss[.u[u[u[u[u[u]+OO[oo]",
                          text)
       || template_match (&expt, &localtz, /* "svn log" format */
-                         "YYYY-MM-DD hh:mm[:ss[.u[u[u[u[u[u][ +OO[oo]",
+                         "YYYY-M[M]-D[D] h[h]:mm[:ss[.u[u[u[u[u[u][ +OO[oo]",
                          text)
       || template_match (&expt, &localtz, /* GNU date's iso-8601 */
-                         "YYYY-MM-DDThh:mm[:ss[.u[u[u[u[u[u]+OO[oo]",
+                         "YYYY-M[M]-D[D]Th[h]:mm[:ss[.u[u[u[u[u[u]+OO[oo]",
                          text))
     {
       expt.tm_year -= 1900;
       expt.tm_mon -= 1;
     }
   else if (template_match (&expt, &localtz, /* Just a time */
-                           "hh:mm[:ss[.u[u[u[u[u[u]",
+                           "h[h]:mm[:ss[.u[u[u[u[u[u]",
                            text))
     {
       expt.tm_year = expnow.tm_year;
@@ -245,6 +245,7 @@ svn_parse_date (svn_boolean_t *matched, apr_time_t *result, const char *text,
   /* Range validation, allowing for leap seconds */
   if (expt.tm_mon < 0 || expt.tm_mon > 11
       || expt.tm_mday > valid_days_by_month[expt.tm_mon]
+      || expt.tm_mday < 1
       || expt.tm_hour > 23
       || expt.tm_min > 59
       || expt.tm_sec > 60)
