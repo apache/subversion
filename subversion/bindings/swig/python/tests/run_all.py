@@ -1,3 +1,7 @@
+import sys, os
+bindir = os.path.dirname(sys.argv[0])
+sys.path[0:0] = [ os.getcwd(), "%s/.libs" % os.getcwd(), \
+                  "%s/.." % bindir, "%s/../.libs" % bindir ]
 import unittest
 import pool
 
