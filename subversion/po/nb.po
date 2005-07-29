@@ -58,7 +58,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-07-29 17:40+0200\n"
-"PO-Revision-Date: 2005-07-21 23:45+0200\n"
+"PO-Revision-Date: 2005-07-29 18:12+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -551,7 +551,6 @@ msgid "disable automatic properties"
 msgstr "deaktiver automatiske egenskaper"
 
 #: clients/cmdline/main.c:143
-#, fuzzy
 msgid ""
 "use a different EOL marker than the standard\n"
 "                             system marker for files with the svn:eol-style\n"
@@ -559,8 +558,9 @@ msgid ""
 "                             ARG may be one of 'LF', 'CR', 'CRLF'"
 msgstr ""
 "Bruk andre linjeskift enn systemets markør\n"
-"                             for filer med en systemegen svn:eol-style-\n"
-"                             egenskap. ARG kan være «LF», «CR» eller «CRLF»"
+"                             for filer med «svn:eol-style»-egenskapen\n"
+"                             satt til «native».\n"
+"                             ARG kan være «LF», «CR» eller «CRLF»"
 
 #: clients/cmdline/main.c:151
 msgid "maximum number of log entries"
@@ -769,7 +769,6 @@ msgstr ""
 "  Bruk bare «svn diff» for å vise lokale endringer i en arbeidskopi.\n"
 
 #: clients/cmdline/main.c:318
-#, fuzzy
 msgid ""
 "Create an unversioned copy of a tree.\n"
 "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -803,7 +802,7 @@ msgstr ""
 "     (med revisjonen REV hvis angitt, ellers WORKING) i filstien STI2.\n"
 "     Hvis STI2 utelates, brukes den siste delen av STI1 som katalognavnet\n"
 "     til den den lokale katalogen. Hvis REV utelates, bevares alle lokale\n"
-"     endringer, men filer som ikke er under versjonskontroll kopieres ikke.\n"
+"     endringer. Filer som ikke er under versjonskontroll kopieres ikke.\n"
 "\n"
 "  Hvis PEGREV er spesifisert, angir det i hvilken revisjon målet først\n"
 "  blir lett opp.\n"
@@ -2597,9 +2596,8 @@ msgid "Item is partially readable"
 msgstr "Element er delvis lesbart"
 
 #: include/svn_error_codes.h:789
-#, fuzzy
 msgid "Invalid authz configuration"
-msgstr "Ugyldig verdi i innstilling"
+msgstr "Ugyldig authz-oppsett"
 
 #: include/svn_error_codes.h:795
 msgid "Svndiff data has invalid header"
