@@ -2735,8 +2735,8 @@ fs_node_history (svn_fs_history_t **history_p,
 }
 
 /* Find the youngest copyroot for path PARENT_PATH or its parents in
-   filesystem FS, and store the node-id for this copyroot in
-   *COPYROOT_P.  Perform all allocations in POOL. */
+   filesystem FS, and store the copyroot in *REV_P and *PATH_P.
+   Perform all allocations in POOL. */
 static svn_error_t *
 find_youngest_copyroot (svn_revnum_t *rev_p,
                         const char **path_p,
