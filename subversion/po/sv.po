@@ -43,7 +43,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-07-29 00:26+0200\n"
-"PO-Revision-Date: 2005-07-29 00:41+0200\n"
+"PO-Revision-Date: 2005-07-29 22:49+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -758,7 +758,6 @@ msgstr ""
 "  Använd endast \"svn diff\" för att se lokala ändringar i en arbetskopia.\n"
 
 #: clients/cmdline/main.c:318
-#, fuzzy
 msgid ""
 "Create an unversioned copy of a tree.\n"
 "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -784,11 +783,10 @@ msgstr ""
 "            2. export [-r REV] SÖKVÄG1[@FIXRREV] [SÖKVÄG2]\n"
 "\n"
 "  1. Exporterar ett rent katalogträd från arkivet som anges av URL, vid\n"
-"     revisionen REV, eller HEAD om REV inte anges, till SÖKGÄV. Om SÖKVÄG\n"
+"     revisionen REV, eller HEAD om REV inte anges, till SÖKVÄG. Om SÖKVÄG\n"
 "     utelämnas används den sista delen av URL som lokalt katalognamn.\n"
 "\n"
-"  2. Exporterar ett rent katalogträd från arbetskopian SÖKVÄG1, vid "
-"revision\n"
+"  2. Exporterar ett rent katalogträd från arbetskopian SÖKVÄG1, vid revision\n"
 "     REV, eller WORKING om REV inte anges, till SÖKVÄG2. Om PATH2 utelämnas\n"
 "     används den sista delen av PATH1 som lokalt katalognamn. Om REV inte\n"
 "     är angiven kommer lokala ändringar att bevaras, men filer som inte är\n"
@@ -2547,7 +2545,7 @@ msgstr "Felaktig nätverksdata"
 
 #: include/svn_error_codes.h:710
 msgid "Unable to extract data from response header"
-msgstr ""
+msgstr "Kunde inte läsa data från responshuvud"
 
 #: include/svn_error_codes.h:716 include/svn_error_codes.h:745
 msgid "Couldn't find a repository"
@@ -6632,6 +6630,8 @@ msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but the property does not exist."
 msgstr ""
+"Försöker ändra egenskapen '%s' från '%s' till '%s',\n"
+"men egenskapen finns inte."
 
 #: libsvn_wc/props.c:510
 #, c-format
@@ -6639,6 +6639,8 @@ msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but property already exists with value '%s'."
 msgstr ""
+"Försöker ändra egenskapen '%s' från '%s' till '%s',\n"
+"men egenskapen finns redan och har värdet '%s'."
 
 #: libsvn_wc/props.c:1202
 #, c-format
@@ -7995,12 +7997,3 @@ msgstr "exporterad%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "\"%s\" är varken versionshanterad eller exporterad\n"
-
-#~ msgid "'%s' is already a file/something else"
-#~ msgstr "\"%s\" är redan en fil/något annat"
-
-#~ msgid "Error writing to stream: unexpected EOF"
-#~ msgstr "Fel vid skrivning till strömm: oväntat filslut"
-
-#~ msgid "Finished"
-#~ msgstr "Klar"
