@@ -1080,9 +1080,9 @@ main (int argc, const char * const *argv)
   if (err)
     return svn_cmdline_handle_exit_error (err, pool, "svndumpfilter: ");
 
-  /* Initialize the FS library. */
   received_opts = apr_array_make (pool, SVN_OPT_MAX_OPTIONS, sizeof (int));
 
+  /* Initialize the FS library. */
   err = svn_fs_initialize (pool);
   if (err)
     return svn_cmdline_handle_exit_error (err, pool, "svndumpfilter: ");
