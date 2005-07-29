@@ -2482,7 +2482,7 @@ svn_io_stat (apr_finfo_t *finfo, const char *fname,
 
   /* APR doesn't like "" directories */
   if (fname[0] == '\0')
-    fname = ".";
+    fname = SVN_UTF8_DOT_STR;
 
   SVN_ERR (svn_path_cstring_from_utf8 (&fname_apr, fname, pool));
 
