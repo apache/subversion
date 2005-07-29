@@ -77,6 +77,19 @@ class SvnCoreTest < Test::Unit::TestCase
     assert_true(ver1.compatible?(ver4))
     assert_false(ver1.compatible?(ver5))
   end
+
+  def test_auth_parameter
+    key = "key"
+    value = "value"
+    auth = Svn::Core::AuthBaton.new
+    assert_nil(auth[key])
+    auth[key] = value
+    assert_equal(value, auth[key])
+
+    assert_raise(TypeError) do
+      auth[key] = 1
+    end
+  end
   
   def test_pool_GC
     GC.disable
@@ -103,6 +116,7 @@ class SvnCoreTest < Test::Unit::TestCase
     assert_operator(made_number_of_pool * 0.8, :<=, recycled_number_of_pools)
   end
 
+  private
   def used_pool
     pool = Svn::Core::Pool.new
     now = Time.now.gmtime
