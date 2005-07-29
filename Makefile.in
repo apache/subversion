@@ -617,6 +617,14 @@ check-swig-py: swig-py
 	cd $(SWIG_PY_DIR); \
 	  $(PYTHON) $(SWIG_PY_SRC_DIR)/tests/run_all.py
 
+clean-swig-py:
+	rm -f $(SWIG_PY_SRC_DIR)/svn/*.pyc $(SWIG_PY_SRC_DIR)/tests/*.pyc
+	for d in $(SWIG_PY_DIR) $(SWIG_PY_DIR)/libsvn_swig_py; \
+	do \
+	  cd $$d && rm -rf svn_*.c _*.c core.c *.lo *.la *.o *.pyc .libs \
+		  client.py core.py delta.py fs.py ra.py repos.py wc.py; \
+	done
+
 check-swig-rb: swig-rb svnserve
 	cd $(SWIG_RB_DIR); \
 	  $(RUBY) -I $(SWIG_RB_SRC_DIR) \

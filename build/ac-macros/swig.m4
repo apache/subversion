@@ -112,6 +112,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     SWIG_PY_LINK="none"
     if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes"; then
       AC_MSG_NOTICE([Configuring python swig binding])
+      SWIG_CLEAN_RULES="$SWIG_CLEAN_RULES clean-swig-py" 
       AC_CACHE_CHECK([if swig needs -L for its libraries],
         [ac_cv_swig_ldflags],[
         # The swig libraries are one directory above the
