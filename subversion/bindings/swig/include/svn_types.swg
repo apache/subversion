@@ -247,13 +247,13 @@
 
 %typemap(python, in) apr_pool_t * {
   if ($input != Py_None) {
-    $1 = svn_swig_MustGetPtr($input, $1_descriptor, $argnum, NULL);
+    _global_pool = svn_swig_MustGetPtr($input, $1_descriptor, $argnum, NULL);
     if (PyErr_Occurred()) {
         return NULL;
     }
-    _global_pool = $1;
     _global_svn_swig_py_pool = $input;
   }
+  $1 = _global_pool;
 }
 
 %typemap(perl5, in) apr_pool_t *pool "";
