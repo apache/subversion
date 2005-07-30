@@ -272,7 +272,7 @@ void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum,
   if (PyObject_HasAttrString(input, assertValid)) {
     PyObject *result = PyObject_CallMethod(input, assertValid, emptyTuple);
     if (result == NULL) {
-      return 1;
+      return NULL;
     }
     Py_DECREF(result);
   }
