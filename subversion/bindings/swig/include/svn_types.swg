@@ -242,6 +242,7 @@
   PyObject *_global_svn_swig_py_pool, int _global_svn_swig_py_is_local_pool)
 {
   svn_swig_get_application_pool(&_global_pool, &_global_svn_swig_py_pool);
+  $1 = _global_pool;
   _global_svn_swig_py_is_local_pool = 1;
 }
 
