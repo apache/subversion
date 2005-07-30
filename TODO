@@ -7,7 +7,8 @@ See <http://svn.haxx.se/dev/archive-2005-07/1380.shtml> for more information.
 
 * Keep track of whether props are modified or not in the entries file.
 
-* Make sure there is no props file if no props are modified.
+* Make sure there is no props file if no props are modified and no prop-base
+  if there are no props at all..
 
 * Use the above in the modification detection code for props.
 
@@ -16,3 +17,5 @@ See <http://svn.haxx.se/dev/archive-2005-07/1380.shtml> for more information.
 * Shortcut svn_wc_prop_get for the cached props.
 
 * Consider caching presence of other props.
+
+* Implement WC format upgrading for the new format.
