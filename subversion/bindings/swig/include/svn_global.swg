@@ -20,8 +20,15 @@
 %feature("autodoc",1);
 
 /* Pointers, references, and arrays */
+%typemap (arginit) SWIGTYPE * (PyObject *_global_svn_swig_py_pool, \
+      apr_pool_t *_global_pool)
+{
+  svn_swig_get_application_pool(&_global_pool, &_global_svn_swig_py_pool);
+}
+
 %typemap (in) SWIGTYPE *, SWIGTYPE []
-  "$1 = ($1_ltype)svn_swig_MustGetPtr($input, $descriptor, $argnum);
+  "$1 = ($1_ltype)svn_swig_MustGetPtr($input, $descriptor, $argnum,
+     _global_svn_swig_py_is_local_pool ? NULL : &_global_svn_swig_py_pool);
    if (PyErr_Occurred()) {
      return NULL;
    }

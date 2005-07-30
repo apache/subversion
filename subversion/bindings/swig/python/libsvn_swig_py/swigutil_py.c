@@ -114,7 +114,9 @@ void svn_swig_py_acquire_py_lock(void)
 /* The application pool */
 apr_pool_t *_global_pool = NULL;
 PyObject *_global_svn_swig_py_pool = NULL;
+int _global_svn_swig_py_is_local_pool = 0;
 static char assertValid[] = "assert_valid";
+static char parentPool[] = "_parent_pool";
 static char setParentPool[] = "set_parent_pool";
 static char emptyTuple[] = "()";
 static char objectTuple[] = "(O)";
@@ -264,7 +266,8 @@ static int svn_swig_ConvertPtrString(PyObject *input,
 }
 
 /** Wrapper for SWIG_MustGetPtr */
-void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum)
+void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum,
+                          PyObject **py_pool)
 {
   if (PyObject_HasAttrString(input, assertValid)) {
     PyObject *result = PyObject_CallMethod(input, assertValid, emptyTuple);
@@ -272,6 +275,13 @@ void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum)
       return 1;
     }
     Py_DECREF(result);
+  }
+  if (py_pool != NULL) {
+    if (PyObject_HasAttrString(input, parentPool)) {
+      *py_pool = PyObject_GetAttrString(input, parentPool);
+    } else {
+      *py_pool = _global_svn_swig_py_pool;
+    }
   }
   return SWIG_MustGetPtr(input, type, SWIG_POINTER_EXCEPTION | 0, argnum);
 }

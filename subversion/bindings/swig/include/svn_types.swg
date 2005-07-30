@@ -239,14 +239,15 @@
 */
 
 %typemap(python, default) apr_pool_t *(apr_pool_t *_global_pool,
-  PyObject *_global_svn_swig_py_pool) {
+  PyObject *_global_svn_swig_py_pool, int _global_svn_swig_py_is_local_pool)
+{
   svn_swig_get_application_pool(&_global_pool, &_global_svn_swig_py_pool);
-  $1 = _global_pool;
+  _global_svn_swig_py_is_local_pool = 1;
 }
 
 %typemap(python, in) apr_pool_t * {
   if ($input != Py_None) {
-    $1 = svn_swig_MustGetPtr($input, $1_descriptor, $argnum);
+    $1 = svn_swig_MustGetPtr($input, $1_descriptor, $argnum, NULL);
     if (PyErr_Occurred()) {
         return NULL;
     }

@@ -83,6 +83,7 @@ void svn_swig_py_acquire_py_lock(void);
 /*** Automatic Pool Management Functions ***/
 extern apr_pool_t *_global_pool;
 extern PyObject *_global_svn_swig_py_pool;
+extern int _global_svn_swig_py_is_local_pool;
 
 /* Set the application pool */
 void svn_swig_py_set_application_pool(apr_pool_t *pool, PyObject *py_pool);
@@ -107,7 +108,8 @@ PyObject *svn_swig_NewPointerObj(void *obj, swig_type_info *type,
 int svn_swig_ConvertPtr(PyObject *input, void **obj, swig_type_info *type);
 
 /* Wrapper for SWIG_MustGetPtr */
-void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum);
+void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum,
+                          PyObject **py_pool);
 
 /*** Functions to expose a custom SubversionException ***/
 
