@@ -23,14 +23,16 @@
 %pythoncode %{
   def set_parent_pool(self, parent_pool=None):
     """Create a new proxy object for TYPE"""
-    import libsvn.core
+    import libsvn.core, weakref
     self.__dict__["_parent_pool"] = \
       parent_pool or libsvn.core.application_pool;
+    self.__dict__["_is_valid"] = \
+      weakref.ref(self._parent_pool._is_valid)
 
   def assert_valid(self):
     """Assert that this object is using valid pool memory"""
-    if self.__dict__.has_key("_parent_pool"):
-      self.__dict__["_parent_pool"].assert_valid()
+    if self.__dict__.has_key("_is_valid"):
+      assert self._is_valid(), "Variable has already been deleted"
 
   def __getattr__(self, name):
     """Get an attribute from this object"""

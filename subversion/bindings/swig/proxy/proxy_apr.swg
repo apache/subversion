@@ -90,7 +90,7 @@ struct apr_pool_t {
           self._parent_pool.assert_valid();
   
         # Mark pool as valid
-        self._is_valid = 1
+        self._is_valid = lambda: 1
     %}
   }
 };
