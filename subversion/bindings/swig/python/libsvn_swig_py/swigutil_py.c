@@ -179,21 +179,10 @@ PyObject * svn_swig_py_register_cleanup(apr_pool_t *pool, PyObject *py_pool)
 }
 
 /* Get the application pool */
-apr_pool_t *svn_swig_py_get_application_pool()
+void svn_swig_get_application_pool(apr_pool_t **pool, PyObject **py_pool)
 {
-  return _global_pool;
-}
-
-/* Get a pool from the argument tuple.
- * If no such pool is found, use the application pool.
- */
-void *svn_swig_py_convert_pool(void *input, swig_type_info *type, int argnum)
-{
-  /* Convert Pointer */
-  apr_pool_t *pool = svn_swig_MustGetPtr(input, type, argnum);
-  if (pool == NULL)
-    pool = _global_pool;
-  return pool;
+  *pool = _global_pool;
+  *py_pool = _global_svn_swig_py_pool;
 }
 
 /* Set the parent pool of a proxy object */

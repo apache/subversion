@@ -579,7 +579,6 @@ PyObject *svn_swig_py_exception_type(void);
 
 void svn_swig_py_set_application_pool(apr_pool_t *pool, PyObject *py_pool);
 void svn_swig_py_clear_application_pool();
-apr_pool_t *svn_swig_py_get_application_pool();
 PyObject *svn_swig_py_register_cleanup(apr_pool_t *pool, PyObject *py_pool);
 
 %init %{

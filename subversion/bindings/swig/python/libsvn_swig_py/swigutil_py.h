@@ -91,12 +91,7 @@ void svn_swig_py_set_application_pool(apr_pool_t *pool, PyObject *py_pool);
 void svn_swig_py_clear_application_pool(void);
 
 /* Get the application pool */
-apr_pool_t *svn_swig_py_get_application_pool(void);
-
-/* Get a pool from the argument tuple.
- * If no such pool is found, use the application pool.
- */
-void *svn_swig_py_convert_pool(void *input, swig_type_info *type, int argnum);
+void svn_swig_get_application_pool(apr_pool_t **pool, PyObject **py_pool);
 
 /* Register cleanup function */
 PyObject * svn_swig_py_register_cleanup(apr_pool_t *pool, PyObject *py_pool);
