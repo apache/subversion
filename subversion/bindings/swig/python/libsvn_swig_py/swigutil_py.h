@@ -82,9 +82,10 @@ void svn_swig_py_acquire_py_lock(void);
 
 /*** Automatic Pool Management Functions ***/
 extern apr_pool_t *_global_pool;
+extern PyObject *_global_svn_swig_py_pool;
 
 /* Set the application pool */
-void svn_swig_py_set_application_pool(apr_pool_t *pool);
+void svn_swig_py_set_application_pool(apr_pool_t *pool, PyObject *py_pool);
 
 /* Clear the application pool */
 void svn_swig_py_clear_application_pool(void);
@@ -98,11 +99,15 @@ apr_pool_t *svn_swig_py_get_application_pool(void);
 void svn_swig_py_convert_pool(PyObject *args, swig_type_info *type, 
                               apr_pool_t **pool);
 
+/* Register cleanup function */
+PyObject * svn_swig_py_register_cleanup(apr_pool_t *pool, PyObject *py_pool);
+
 
 /*** SWIG Wrappers ***/
 
 /* Wrapper for SWIG_NewPointerObj */
-PyObject *svn_swig_NewPointerObj(void *obj, swig_type_info *type);
+PyObject *svn_swig_NewPointerObj(void *obj, swig_type_info *type, 
+                                 PyObject *pool);
 
 /* Wrapper for SWIG_ConvertPtr */
 int svn_swig_ConvertPtr(PyObject *input, void **obj, swig_type_info *type);
@@ -132,7 +137,8 @@ PyObject *svn_swig_py_prophash_to_dict(apr_hash_t *hash);
 PyObject *svn_swig_py_locationhash_to_dict(apr_hash_t *hash);
 
 /* convert a hash of 'const char *' -> TYPE into a Python dict */
-PyObject *svn_swig_py_convert_hash(apr_hash_t *hash, swig_type_info *type);
+PyObject *svn_swig_py_convert_hash(apr_hash_t *hash, swig_type_info *type, 
+                                   PyObject *py_pool);
 
 /* helper function to convert a 'char **' into a Python list of string
    objects */

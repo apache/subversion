@@ -3,6 +3,7 @@ import svn.core
 import libsvn.core
 import unittest
 import weakref
+from libsvn.core import application_pool
 
 # Test case for the new automatic pool management infrastructure
 
@@ -29,6 +30,8 @@ class PoolTestCase(unittest.TestCase):
     pool.clear()
     self.assertTrue(parent_pool_ref())
     del pool
+    self.assertTrue(parent_pool_ref())
+    del newpool
     self.assertFalse(parent_pool_ref())
 
     # Make sure anonymous pools are destroyed properly
@@ -79,10 +82,10 @@ class PoolTestCase(unittest.TestCase):
     apr_terminate()
 
     # Destroy the application pool
-    svn_pool_destroy(svn.core.application_pool)
+    svn_pool_destroy(libsvn.core.application_pool)
 
     # Double check that the application pool has been deleted
-    self.assertFalse(svn.core.application_pool)
+    self.assertFalse(libsvn.core.application_pool)
 
     # Try to allocate memory from the old application pool
     self.assertRaises(AssertionError, lambda: svn_pool_create(application_pool));
@@ -91,7 +94,7 @@ class PoolTestCase(unittest.TestCase):
     svn_pool_create()
 
     # Double check that the application pool has been created
-    self.assertTrue(svn.core.application_pool)
+    self.assertTrue(libsvn.core.application_pool)
 
     # We can still destroy and create pools at will
     svn_pool_destroy(svn_pool_create())

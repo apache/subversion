@@ -40,7 +40,7 @@
 
 %typemap(python, argout, fragment="t_output_helper") SWIGTYPE **OUTPARAM {
     $result = t_output_helper($result,
-                              svn_swig_NewPointerObj(*$1, $*1_descriptor));
+      svn_swig_NewPointerObj(*$1, $*1_descriptor, _global_svn_swig_py_pool));
 }
 %typemap(perl5, argout) SWIGTYPE **OUTPARAM {
     ST(argvi) = sv_newmortal();
@@ -238,8 +238,10 @@
    Define a generic arginit mapping for pools.
 */
 
-%typemap(python, default) apr_pool_t *(apr_pool_t *_global_pool) {
+%typemap(python, default) apr_pool_t *(apr_pool_t *_global_pool,
+  PyObject *_global_svn_swig_py_pool) {
     _global_pool = $1 = svn_swig_py_get_application_pool();
+    _global_svn_swig_py_pool = NULL;
 }
 
 %typemap(python, in) apr_pool_t * {
@@ -248,6 +250,7 @@
         return NULL;
     }
     _global_pool = $1;
+    _global_svn_swig_py_pool = $input;
 }
 
 %typemap(perl5, in) apr_pool_t *pool "";
@@ -455,9 +458,8 @@
 
 %typemap(python,in,numinputs=0) apr_hash_t **dirents = apr_hash_t **OUTPUT;
 %typemap(python,argout,fragment="t_output_helper") apr_hash_t **dirents {
-    $result = t_output_helper
-	($result,
-	 svn_swig_py_convert_hash(*$1, $descriptor(svn_dirent_t *)));
+  $result = t_output_helper($result, svn_swig_py_convert_hash(*$1, 
+    $descriptor(svn_dirent_t *), _global_svn_swig_py_pool));
 }
 
 %typemap(perl5,in,numinputs=0) apr_hash_t **dirents = apr_hash_t **OUTPUT;

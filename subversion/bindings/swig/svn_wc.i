@@ -67,7 +67,8 @@
 %typemap(python, argout, fragment="t_output_helper") apr_hash_t **entries {
     $result = t_output_helper(
         $result,
-        svn_swig_py_convert_hash(*$1, $descriptor(svn_wc_entry_t *)));
+        svn_swig_py_convert_hash(*$1, $descriptor(svn_wc_entry_t *),
+          _global_svn_swig_py_pool));
 }
 
 /* -----------------------------------------------------------------------

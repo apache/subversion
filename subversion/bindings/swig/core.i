@@ -495,7 +495,8 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %typemap(python,argout,fragment="t_output_helper") apr_hash_t **cfg_hash {
     $result = t_output_helper(
         $result,
-        SWIG_NewPointerObj(*$1, $descriptor(apr_hash_t *), 0));
+        svn_swig_NewPointerObj(*$1, $descriptor(apr_hash_t *),
+                               _global_svn_swig_py_pool));
 }
 
 /* Allow None to be passed as config_dir argument */
@@ -576,9 +577,10 @@ PyObject *svn_swig_py_exception_type(void);
 
 #ifdef SWIGPYTHON
 
-void svn_swig_py_set_application_pool(apr_pool_t *pool);
+void svn_swig_py_set_application_pool(apr_pool_t *pool, PyObject *py_pool);
 void svn_swig_py_clear_application_pool();
 apr_pool_t *svn_swig_py_get_application_pool();
+PyObject *svn_swig_py_register_cleanup(apr_pool_t *pool, PyObject *py_pool);
 
 %init %{
 /* This is a hack.  I dunno if we can count on SWIG calling the module "m" */

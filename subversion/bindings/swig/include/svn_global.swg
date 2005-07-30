@@ -27,5 +27,6 @@
 
 /* Output arguments */
 %typemap (out) SWIGTYPE *, SWIGTYPE &
-    "$result = svn_swig_NewPointerObj((void*)($1), $descriptor);";
+    "$result = svn_swig_NewPointerObj((void*)($1), $descriptor, 
+                                      _global_svn_swig_py_pool);";
 #endif

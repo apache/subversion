@@ -92,7 +92,8 @@
 %typemap(python,argout,fragment="t_output_helper") apr_hash_t **entries_p {
     $result = t_output_helper(
         $result,
-        svn_swig_py_convert_hash(*$1, $descriptor(svn_fs_dirent_t *)));
+        svn_swig_py_convert_hash(*$1, $descriptor(svn_fs_dirent_t *),
+          _global_svn_swig_py_pool));
 }
 %typemap(perl5,in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
 %typemap(perl5,argout) apr_hash_t **entries_p {
@@ -113,7 +114,8 @@
 %typemap(python, argout, fragment="t_output_helper") apr_hash_t **changed_paths_p {
     $result = t_output_helper(
         $result,
-        svn_swig_py_convert_hash(*$1, $descriptor(svn_fs_path_change_t *)));
+        svn_swig_py_convert_hash(*$1, $descriptor(svn_fs_path_change_t *),
+          _global_svn_swig_py_pool));
 }
 
 %typemap(perl5, in,numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;

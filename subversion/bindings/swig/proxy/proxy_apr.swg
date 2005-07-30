@@ -10,7 +10,88 @@
 %proxy(apr_array_header_t);
 %opaque_proxy(apr_file_t);
 %opaque_proxy(apr_hash_t);
-%opaque_proxy(apr_pool_t);
 
+%pythoncode %{
+application_pool = None
+%}
+
+struct apr_pool_t {
+  %extend {
+    %pythoncode %{
+      def set_parent_pool(self, parent_pool=None):
+        """Create a new memory pool"""
+        global application_pool
+  
+        self._parent_pool = parent_pool or application_pool
+        self._mark_valid()
+  
+        # Protect important functions from GC
+        self._apr_pool_destroy = apr_pool_destroy
+        self._apr_terminate = apr_terminate
+        self._svn_swig_py_clear_application_pool = \
+          svn_swig_py_clear_application_pool
+  
+        # If we are an application-level pool,
+        # then initialize APR and set this pool
+        # to be the application-level pool
+        if not self._parent_pool:
+          apr_initialize()
+          svn_swig_py_set_application_pool(self, self)
+          application_pool = self
+  
+        svn_swig_py_register_cleanup(self, self)
+  
+      def valid(self):
+        """Check whether this memory pool and its parents
+        are still valid"""
+        return hasattr(self,"_is_valid")
+  
+      def assert_valid(self):
+        """Assert that this memory_pool is still valid."""
+        assert self.valid(), "This pool has already been destroyed"
+  
+      def clear(self):
+        """Clear embedded memory pool. Invalidate all subpools."""
+        pool = self._parent_pool
+        apr_pool_clear(self)
+        self.set_parent_pool(pool)
+  
+      def destroy(self):
+        """Destroy embedded memory pool. If you do not destroy
+        the memory pool manually, Python will destroy it
+        automatically."""
+        global application_pool
+  
+        self.assert_valid()
+  
+        is_application_pool = not self._parent_pool
+  
+        # Destroy pool
+        self._apr_pool_destroy(self)
+  
+        # Clear application pool and terminate APR if necessary
+        if is_application_pool:
+          application_pool = None
+          self._svn_swig_py_clear_application_pool()
+          self._apr_terminate()
+  
+        del self._parent_pool
+  
+      def __del__(self):
+        """Automatically destroy memory pools, if necessary"""
+        if self.valid():
+          self.destroy()
+  
+      def _mark_valid(self):
+        """Mark pool as valid"""
+        if self._parent_pool:
+          # Make sure that the parent object is valid
+          self._parent_pool.assert_valid();
+  
+        # Mark pool as valid
+        self._is_valid = 1
+    %}
+  }
+};
 #endif
 
