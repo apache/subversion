@@ -17,6 +17,8 @@
  */
 
 #ifdef SWIGPYTHON
+%feature("autodoc",1);
+
 /* Pointers, references, and arrays */
 %typemap (in) SWIGTYPE *, SWIGTYPE []
   "$1 = ($1_ltype)svn_swig_MustGetPtr($input, $descriptor, $argnum);

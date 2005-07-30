@@ -26,10 +26,10 @@ struct apr_pool_t {
         self._mark_valid()
   
         # Protect important functions from GC
-        self._apr_pool_destroy = apr_pool_destroy
-        self._apr_terminate = apr_terminate
+        self._apr_pool_destroy = _core.apr_pool_destroy
+        self._apr_terminate = _core.apr_terminate
         self._svn_swig_py_clear_application_pool = \
-          svn_swig_py_clear_application_pool
+          _core.svn_swig_py_clear_application_pool
   
         # If we are an application-level pool,
         # then initialize APR and set this pool
