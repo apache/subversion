@@ -279,6 +279,13 @@ static int svn_swig_ConvertPtrString(PyObject *input,
 /** Wrapper for SWIG_MustGetPtr */
 void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum)
 {
+  if (PyObject_HasAttrString(input, assertValid)) {
+    PyObject *result = PyObject_CallMethod(input, assertValid, emptyTuple);
+    if (result == NULL) {
+      return 1;
+    }
+    Py_DECREF(result);
+  }
   return SWIG_MustGetPtr(input, type, SWIG_POINTER_EXCEPTION | 0, argnum);
 }
   
