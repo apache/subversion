@@ -176,14 +176,14 @@ svn_intl_initialize (apr_pool_t *parent_pool)
           apr_pool_destroy (pool);
         }
 #else
-        bindtextdomain(PACKAGE_NAME, SVN_LOCALE_DIR);
+      bindtextdomain(PACKAGE_NAME, SVN_LOCALE_DIR);
 #ifdef HAVE_BIND_TEXTDOMAIN_CODESET
-        bind_textdomain_codeset(PACKAGE_NAME, "UTF-8");
+      bind_textdomain_codeset(PACKAGE_NAME, "UTF-8");
 #endif
 #endif
-        textdomain(PACKAGE_NAME);
+      textdomain(PACKAGE_NAME);
 #endif
-      }
+    }
 
   return SVN_NO_ERROR;
 }
