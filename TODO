@@ -3,8 +3,6 @@ libsvn_wc performance for some operations.  Below are the items to be done
 during the lifetime of this branch.
 See <http://svn.haxx.se/dev/archive-2005-07/1380.shtml> for more information.
 
-* Bump WC format.
-
 * Keep track of whether props are modified or not in the entries file.
 
 * Make sure there is no props file if no props are modified and no prop-base
