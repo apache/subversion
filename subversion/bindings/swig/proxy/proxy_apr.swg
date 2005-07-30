@@ -3,11 +3,12 @@
 #ifdef SWIGPYTHON
 %include proxy.swg
 
+%nodefault apr_array_header_t;
 %nodefault apr_file_t;
 %nodefault apr_hash_t;
 %nodefault apr_pool_t;
 
-%proxy(apr_array_header_t);
+%opaque_proxy(apr_array_header_t);
 %opaque_proxy(apr_file_t);
 %opaque_proxy(apr_hash_t);
 
