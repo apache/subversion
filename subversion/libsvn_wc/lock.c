@@ -105,6 +105,11 @@ maybe_upgrade_format (svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
                                  adm_access->path,
                                  pool));
 
+  /* ### TODO: upgrade from format 4 to format 5. */
+  /* ### Upgrading currently disabled. */
+
+  return SVN_NO_ERROR;
+
   /* We can upgrade all formats that are accepted by
      svn_wc__check_format. */
   if (adm_access->wc_format != SVN_WC__VERSION)
