@@ -279,6 +279,7 @@ void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum,
   if (py_pool != NULL) {
     if (PyObject_HasAttrString(input, parentPool)) {
       *py_pool = PyObject_GetAttrString(input, parentPool);
+      Py_DECREF(*py_pool);
     } else {
       *py_pool = _global_svn_swig_py_pool;
     }
@@ -365,14 +366,14 @@ static PyObject *make_ob_pool(void *pool)
     return NULL;
   }
 
-  Py_INCREF(py_pool);
-  apr_pool_cleanup_register((apr_pool_t *)pool, py_pool, 
-    svn_swig_py_pool_decref, apr_pool_cleanup_null);
-  
   if (proxy_set_pool(py_pool, NULL)) {
     Py_DECREF(py_pool);
     return NULL;
   }
+  
+  Py_INCREF(py_pool);
+  apr_pool_cleanup_register((apr_pool_t *)pool, py_pool, 
+    svn_swig_py_pool_decref, apr_pool_cleanup_null); 
 
   return py_pool;
 }
