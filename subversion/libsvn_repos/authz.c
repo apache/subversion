@@ -214,10 +214,10 @@ authz_parse_section (const char *section_name, void *baton)
   svn_boolean_t conclusive;
 
   /* Does the section apply to us? */
-  if (strncmp (section_name, b->qualified_repos_path,
-               strlen (b->qualified_repos_path)) != 0
-      && strncmp (section_name, b->repos_path,
-                  strlen (b->repos_path)) != 0)
+  if (svn_path_is_ancestor (b->qualified_repos_path,
+                            section_name) == FALSE
+      && svn_path_is_ancestor (b->repos_path,
+                               section_name) == FALSE)
     return TRUE;
 
   /* Work out what this section grants. */
