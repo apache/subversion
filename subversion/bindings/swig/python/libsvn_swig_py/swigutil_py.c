@@ -366,14 +366,15 @@ static PyObject *make_ob_pool(void *pool)
     return NULL;
   }
 
+  apr_pool_cleanup_register((apr_pool_t *)pool, py_pool, 
+    svn_swig_py_pool_decref, apr_pool_cleanup_null); 
+  
   if (proxy_set_pool(py_pool, NULL)) {
     Py_DECREF(py_pool);
     return NULL;
   }
   
   Py_INCREF(py_pool);
-  apr_pool_cleanup_register((apr_pool_t *)pool, py_pool, 
-    svn_swig_py_pool_decref, apr_pool_cleanup_null); 
 
   return py_pool;
 }
