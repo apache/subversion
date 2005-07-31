@@ -46,8 +46,8 @@ module Svn
       def initialize
         @prompts = []
         @providers = []
-        @auth_baton = nil
-        update_auth_baton
+        @auth_baton = Svn::Core::AuthBaton.new
+        self.auth_baton = @auth_baton
       end
       undef _initialize
 
@@ -267,10 +267,7 @@ module Svn
       end
 
       def update_auth_baton
-        parameters = {}
-        parameters = @auth_baton.parameters if @auth_baton
-        @auth_baton = Core::AuthBaton.open(@providers)
-        @auth_baton.parameters = parameters
+        @auth_baton = Core::AuthBaton.new(@providers, @auth_baton.parameters)
         self.auth_baton = @auth_baton
       end
 

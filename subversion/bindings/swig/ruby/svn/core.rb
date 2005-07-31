@@ -94,16 +94,18 @@ module Svn
     AuthBaton = SWIG::TYPE_p_svn_auth_baton_t
     class AuthBaton
       class << self
-        def open(providers=[])
+        def new(providers=[], *rest)
           baton = Core.auth_open(providers)
-          baton.parameters = {}
+          baton.__send__("initialize", providers, *rest)
           baton
         end
-
-        alias new open
       end
 
       attr_reader :parameters
+      def initialize(providers, parameters={})
+        @providers = providers
+        self.parameters = parameters
+      end
 
       def [](name)
         Core.auth_get_parameter(self, name)
