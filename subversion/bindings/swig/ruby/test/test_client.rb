@@ -16,9 +16,7 @@ class SvnClientTest < Test::Unit::TestCase
   end
 
   def test_version
-    ver = Svn::Client.version
-    assert_equal([ver.major, ver.minor, ver.patch, ver.tag], ver.to_a)
-    assert_equal("#{ver.major}.#{ver.minor}.#{ver.patch}#{ver.tag}", ver.to_s)
+    assert_equal(Svn::Core.subr_version, Svn::Client.version)
   end
   
   def test_commit
