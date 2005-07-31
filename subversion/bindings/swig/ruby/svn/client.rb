@@ -183,6 +183,28 @@ module Svn
         end
       end
 
+      def revprop(name, uri, rev)
+        value, = revprop_get(name, uri, rev)
+        value
+      end
+      
+      def revprop_get(name, uri, rev)
+        result = Client.revprop_get(name, uri, rev, self)
+        if result.is_a?(Array)
+          result
+        else
+          [nil, result]
+        end
+      end
+      
+      def revprop_set(name, value, uri, rev, force=false)
+        Client.revprop_set(name, value, uri, rev, force, self)
+      end
+      
+      def revprop_del(name, uri, rev, force=false)
+        Client.revprop_set(name, nil, uri, rev, force, self)
+      end
+      
       def add_simple_provider
         add_provider(Client.get_simple_provider)
       end
