@@ -248,7 +248,8 @@
 
 %typemap(python, in) apr_pool_t * {
   if ($input != Py_None) {
-    _global_pool = svn_swig_MustGetPtr($input, $1_descriptor, $argnum, NULL);
+    _global_pool = svn_swig_MustGetPtr($input, $1_descriptor, $svn_argnum, 
+      NULL);
     if (PyErr_Occurred()) {
         return NULL;
     }

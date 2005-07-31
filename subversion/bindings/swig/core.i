@@ -322,7 +322,7 @@
     ($1)->nelts = targlen;
     while (targlen--) {
         provider = svn_swig_MustGetPtr(PySequence_GetItem($input, targlen),
-          $descriptor(svn_auth_provider_object_t *), $argnum, NULL);
+          $descriptor(svn_auth_provider_object_t *), $svn_argnum, NULL);
         if (PyErr_Occurred()) {
           return NULL;
         }
