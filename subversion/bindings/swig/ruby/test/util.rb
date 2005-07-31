@@ -163,9 +163,13 @@ exit 1
       cred.username = @author
       cred.may_save = false
     end
-    ctx.auth_baton[Svn::Core::AUTH_PARAM_CONFIG_DIR] = @config_path
-    ctx.auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = @author
+    setup_auth_baton(ctx.auth_baton)
     ctx
+  end
+
+  def setup_auth_baton(auth_baton)
+    auth_baton[Svn::Core::AUTH_PARAM_CONFIG_DIR] = @config_path
+    auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = @author
   end
   
 end

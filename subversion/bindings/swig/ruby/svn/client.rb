@@ -208,6 +208,12 @@ module Svn
       def add_simple_provider
         add_provider(Client.get_simple_provider)
       end
+
+      if Client.respond_to?(:get_windows_simple_provider)
+        def add_windows_simple_provider
+          add_provider(Client.get_windows_simple_provider)
+        end
+      end
       
       def add_username_provider
         add_provider(Client.get_username_provider)
