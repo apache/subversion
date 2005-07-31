@@ -112,8 +112,8 @@ void svn_swig_py_acquire_py_lock(void)
 /*** Automatic Pool Management Functions ***/
 
 /* The application pool */
-apr_pool_t *_global_pool = NULL;
-PyObject *_global_svn_swig_py_pool = NULL;
+static apr_pool_t *_global_pool = NULL;
+static PyObject *_global_svn_swig_py_pool = NULL;
 int _global_svn_swig_py_is_local_pool = 0;
 static char assertValid[] = "assert_valid";
 static char parentPool[] = "_parent_pool";

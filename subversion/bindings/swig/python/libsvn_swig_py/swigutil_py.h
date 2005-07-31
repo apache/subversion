@@ -81,8 +81,6 @@ void svn_swig_py_acquire_py_lock(void);
 
 
 /*** Automatic Pool Management Functions ***/
-extern apr_pool_t *_global_pool;
-extern PyObject *_global_svn_swig_py_pool;
 extern int _global_svn_swig_py_is_local_pool;
 
 /* Set the application pool */

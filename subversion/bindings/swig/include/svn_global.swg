@@ -22,6 +22,10 @@
 /* Don't generate default constructors */
 %nodefault;
 
+%{
+static PyObject * _global_svn_swig_py_pool = NULL;
+%}
+
 /* Pointers, references, and arrays */
 %typemap (arginit) SWIGTYPE * (PyObject *_global_svn_swig_py_pool, \
       apr_pool_t *_global_pool)
