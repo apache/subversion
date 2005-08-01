@@ -48,6 +48,7 @@ module Svn
         @providers = []
         @auth_baton = Svn::Core::AuthBaton.new
         self.auth_baton = @auth_baton
+        init_callbacks
       end
       undef _initialize
 
@@ -253,7 +254,46 @@ module Svn
         add_prompt_provider("ssl_client_cert_pw", args, prompt, klass)
       end
 
+      def set_log_msg_func(callback=Proc.new)
+        self.log_msg_func = nil
+        @log_msg_baton = callback
+        self.log_msg_baton = callback
+      end
+      
+      def set_notify_func(callback=Proc.new)
+        self.notify_func = nil
+        @notify_baton = callback
+        self.notify_baton = callback
+      end
+      
+      def set_notify_func2(callback=Proc.new)
+        self.notify_func2 = nil
+        @notify_baton2 = callback
+        self.notify_baton2 = callback
+      end
+      
+      def set_cancel_func(callback=Proc.new)
+        self.cancel_func = nil
+        @cancel_baton = callback
+        self.cancel_baton = callback
+      end
+      
       private
+      def init_callbacks
+        set_log_msg_func(nil)
+        set_notify_func(nil)
+        set_notify_func2(nil)
+        set_cancel_func(nil)
+      end
+      %w(log_msg notify cancel).each do |type|
+        private "#{type}_func", "#{type}_baton"
+        private "#{type}_func=", "#{type}_baton="
+      end
+      %w(notify).each do |type|
+        private "#{type}_func2", "#{type}_baton2"
+        private "#{type}_func2=", "#{type}_baton2="
+      end
+      
       def add_prompt_provider(name, args, prompt, cred_class)
         real_prompt = Proc.new do |*prompt_args|
           cred = cred_class.new

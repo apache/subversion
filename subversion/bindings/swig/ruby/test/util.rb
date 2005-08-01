@@ -156,7 +156,7 @@ exit 1
 
   def make_context(log)
     ctx = Svn::Client::Context.new
-    ctx.log_msg_func = Proc.new do |items|
+    ctx.set_log_msg_func do |items|
       [true, log]
     end
     ctx.add_username_prompt_provider(0) do |cred, realm, username, may_save|

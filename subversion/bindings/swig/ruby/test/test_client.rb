@@ -324,8 +324,30 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal(youngest_rev, ctx.switch(@wc_path, tag_repos_uri))
     assert_equal(tag_src, ctx.cat(path))
 
+
+    notify_info = []
+    ctx.set_notify_func2 do |notify|
+      notify_info << [notify.path, notify.action]
+    end
+    
     assert_equal(trunk_rev, ctx.switch(@wc_path, trunk_repos_uri, trunk_rev))
     assert_equal(trunk_src, ctx.cat(path))
+    assert_equal([
+                   [path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
+                   [@wc_path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
+                   [@wc_path, Svn::Wc::NOTIFY_UPDATE_COMPLETED],
+                 ],
+                 notify_info)
+
+    notify_info.clear
+    assert_equal(tag_rev, ctx.switch(@wc_path, tag_repos_uri, tag_rev))
+    assert_equal(tag_src, ctx.cat(path))
+    assert_equal([
+                   [path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
+                   [@wc_path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
+                   [@wc_path, Svn::Wc::NOTIFY_UPDATE_COMPLETED],
+                 ],
+                 notify_info)
   end
 
   def test_authentication

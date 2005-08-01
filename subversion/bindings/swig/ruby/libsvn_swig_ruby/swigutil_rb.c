@@ -1138,6 +1138,76 @@ svn_swig_rb_get_commit_log_func(const char **log_msg,
 }
 
 
+
+void
+svn_swig_rb_notify_func(void *baton,
+                        const char *path,
+                        svn_wc_notify_action_t action,
+                        svn_node_kind_t kind,
+                        const char *mime_type,
+                        svn_wc_notify_state_t content_state,
+                        svn_wc_notify_state_t prop_state,
+                        svn_revnum_t revision)
+{
+  VALUE proc = (VALUE)baton;
+  
+  if (!NIL_P(proc)) {
+    VALUE args;
+
+    args = rb_ary_new3(9,
+                       proc,
+                       rb_id_call(),
+                       rb_str_new2(path),
+                       INT2NUM(action),
+                       INT2NUM(kind),
+                       rb_str_new2(mime_type),
+                       INT2NUM(content_state),
+                       INT2NUM(prop_state),
+                       INT2NUM(revision));
+    callback(args);
+  }
+}
+
+void
+svn_swig_rb_notify_func2(void *baton,
+                         const svn_wc_notify_t *notify,
+                         apr_pool_t *pool)
+{
+  VALUE proc = (VALUE)baton;
+  
+  if (!NIL_P(proc)) {
+    VALUE args;
+
+    args = rb_ary_new3(3,
+                       proc,
+                       rb_id_call(),
+                       c2r_swig_type((void *)notify,
+                                     (void *)"svn_wc_notify_t *"));
+    callback(args);
+  }
+}
+
+svn_error_t *
+svn_swig_rb_cancel_func(void *cancel_baton)
+{
+  VALUE proc = (VALUE)cancel_baton;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if (!NIL_P(proc)) {
+    VALUE args;
+
+    args = rb_ary_new3(2,
+                       proc,
+                       rb_id_call());
+    rb_rescue2(callback, args,
+               callback_rescue, (VALUE)&err,
+               rb_svn_error(), (VALUE)0);
+  }
+  
+  return err;
+}
+
+
 
 /* auth provider callbacks */
 svn_error_t *
@@ -1496,4 +1566,3 @@ svn_swig_rb_adjust_arg_for_client_ctx_and_pool(int *argc, VALUE **argv)
     }
   }
 }
-
