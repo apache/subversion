@@ -69,8 +69,8 @@ module Svn
         Client.commit(targets, !recurse, self)
       end
 
-      def add(path, recurse=true)
-        Client.add(path, recurse, self)
+      def add(path, recurse=true, force=false, no_ignore=false)
+        Client.add3(path, recurse, force, no_ignore, self)
       end
 
       def delete(paths, force=false)

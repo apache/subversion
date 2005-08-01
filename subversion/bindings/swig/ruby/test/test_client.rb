@@ -18,6 +18,95 @@ class SvnClientTest < Test::Unit::TestCase
   def test_version
     assert_equal(Svn::Core.subr_version, Svn::Client.version)
   end
+
+  def test_add_not_recurse
+    log = "sample log"
+    file = "hello.txt"
+    src = "Hello"
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+    uri = "#{@repos_uri}/#{dir}/#{file}"
+
+    ctx = make_context(log)
+    FileUtils.mkdir(dir_path)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(dir_path, false)
+    ctx.commit(@wc_path)
+
+    assert_raise(Svn::Error::FS_NOT_FOUND) do
+      ctx.cat(uri)
+    end
+  end
+
+  def test_add_recurse
+    log = "sample log"
+    file = "hello.txt"
+    src = "Hello"
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+    uri = "#{@repos_uri}/#{dir}/#{file}"
+
+    ctx = make_context(log)
+    FileUtils.mkdir(dir_path)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(dir_path)
+    ctx.commit(@wc_path)
+
+    assert_equal(src, ctx.cat(uri))
+  end
+
+  def test_add_force
+    log = "sample log"
+    file = "hello.txt"
+    src = "Hello"
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+    uri = "#{@repos_uri}/#{dir}/#{file}"
+
+    ctx = make_context(log)
+    FileUtils.mkdir(dir_path)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(dir_path, false)
+    ctx.commit(@wc_path)
+
+    assert_raise(Svn::Error::ENTRY_EXISTS) do
+      ctx.add(dir_path, true, false)
+    end
+    
+    ctx.add(dir_path, true, true)
+    ctx.commit(@wc_path)
+    assert_equal(src, ctx.cat(uri))
+  end
+
+  def test_add_no_ignore
+    log = "sample log"
+    file = "hello.txt"
+    src = "Hello"
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+    uri = "#{@repos_uri}/#{dir}/#{file}"
+
+    ctx = make_context(log)
+    FileUtils.mkdir(dir_path)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(dir_path, false)
+    ctx.propset(Svn::Core::PROP_IGNORE, file, dir_path)
+    ctx.commit(@wc_path)
+
+    ctx.add(dir_path, true, true, false)
+    ctx.commit(@wc_path)
+    assert_raise(Svn::Error::FS_NOT_FOUND) do
+      ctx.cat(uri)
+    end
+    
+    ctx.add(dir_path, true, true, true)
+    ctx.commit(@wc_path)
+    assert_equal(src, ctx.cat(uri))
+  end
   
   def test_commit
     log = "sample log"
