@@ -272,6 +272,12 @@ It is an experimental feature.")
       (require 'overlay)
     (require 'overlay nil t)))
 
+(defcustom svn-status-display-full-path nil
+  "Specifies how the filenames look like in the listing.
+If t, their full path name will be displayed, else only the filename."
+  :type 'boolean
+  :group 'psvn)
+
 (defcustom svn-status-prefix-key [(control x) (meta s)]
   "Prefix key for the psvn commands in the global keymap."
   :type '(choice (const [(control x) ?v ?S])
@@ -1019,6 +1025,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-options-map (kbd "s") 'svn-status-save-state)
   (define-key svn-status-mode-options-map (kbd "l") 'svn-status-load-state)
   (define-key svn-status-mode-options-map (kbd "x") 'svn-status-toggle-sort-status-buffer)
+  (define-key svn-status-mode-options-map (kbd "f") 'svn-status-toggle-display-full-path)
   (define-key svn-status-mode-options-map (kbd "t") 'svn-status-set-trac-project-root)
   (define-key svn-status-mode-options-map (kbd "n") 'svn-status-set-module-name)
   (define-key svn-status-mode-map (kbd "O") svn-status-mode-options-map))
@@ -1075,6 +1082,8 @@ A and B must be line-info's."
      ["Set Short module name" svn-status-set-module-name t]
      ["Toggle sorting of *svn-status* buffer" svn-status-toggle-sort-status-buffer
       :style toggle :selected svn-status-sort-status-buffer]
+     ["Toggle display of full path names" svn-status-toggle-display-full-path
+      :style toggle :selected svn-status-display-full-path]
      )
     ("Trac"
      ["Browse timeline" svn-trac-browse-timeline t]
@@ -1568,10 +1577,17 @@ Symbolic links to directories count as directories (see `file-directory-p')."
                             (if svn-status-short-mod-flag-p "   " "")))
         (filename  ;; <indentation>file or /path/to/file
                      (concat
-                      (if svn-status-hide-unmodified
+                      (if (or svn-status-display-full-path
+                              svn-status-hide-unmodified)
                           (svn-add-face
-                           (file-name-as-directory
-                            (svn-status-line-info->directory-containing-line-info line-info nil))
+                           (let ((dir-name (file-name-as-directory
+                                            (svn-status-line-info->directory-containing-line-info
+                                             line-info nil))))
+                             (if (and (<= 2 (length dir-name))
+                                      (= ?. (aref dir-name 0))
+                                      (= ?/ (aref dir-name 1)))
+                                 (substring dir-name 2)
+                               dir-name))
                            'svn-status-directory-face)
                         ;; showing all files, so add indentation
                         (make-string (* 2 (svn-status-count-/
@@ -3190,6 +3206,15 @@ display routine for svn-status is available."
   (message (concat "The `svn-status-buffer-name' buffer will be"
                    (if svn-status-sort-status-buffer "" " not")
                    " sorted.")))
+
+(defun svn-status-toggle-display-full-path ()
+  "Toggle displaying the full path in the `svn-status-buffer-name' buffer"
+  (interactive)
+  (setq svn-status-display-full-path (not svn-status-display-full-path))
+  (message (concat "The `svn-status-buffer-name' buffer will"
+                   (if svn-status-display-full-path "" " not")
+                   " use full path names."))
+  (svn-status-update))
 
 (defun svn-status-set-trac-project-root ()
   (interactive)
