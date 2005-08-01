@@ -288,6 +288,46 @@ class SvnClientTest < Test::Unit::TestCase
                              @repos_uri, info.revision))
   end
   
+  def test_switch
+    log = "sample log"
+    trunk_src = "trunk source\n"
+    tag_src = "tag source\n"
+    file = "sample.txt"
+    file = "sample.txt"
+    trunk_dir = "trunk"
+    tag_dir = "tags"
+    tag_name = "0.0.1"
+    trunk_repos_uri = "#{@repos_uri}/#{trunk_dir}"
+    tag_repos_uri = "#{@repos_uri}/#{tag_dir}/#{tag_name}"
+    trunk_dir_path = File.join(@wc_path, trunk_dir)
+    tag_dir_path = File.join(@wc_path, tag_dir)
+    tag_name_dir_path = File.join(@wc_path, tag_dir, tag_name)
+    trunk_path = File.join(trunk_dir_path, file)
+    tag_path = File.join(tag_name_dir_path, file)
+    path = File.join(@wc_path, file)
+
+    ctx = make_context(log)
+
+    ctx.mkdir(trunk_dir_path)
+    File.open(trunk_path, "w") {|f| f.print(trunk_src)}
+    ctx.add(trunk_path)
+    trunk_rev = ctx.commit(@wc_path).revision
+    
+    ctx.mkdir(tag_dir_path, tag_name_dir_path)
+    File.open(tag_path, "w") {|f| f.print(tag_src)}
+    ctx.add(tag_path)
+    tag_rev = ctx.commit(@wc_path).revision
+
+    assert_equal(youngest_rev, ctx.switch(@wc_path, trunk_repos_uri))
+    assert_equal(trunk_src, ctx.cat(path))
+
+    assert_equal(youngest_rev, ctx.switch(@wc_path, tag_repos_uri))
+    assert_equal(tag_src, ctx.cat(path))
+
+    assert_equal(trunk_rev, ctx.switch(@wc_path, trunk_repos_uri, trunk_rev))
+    assert_equal(trunk_src, ctx.cat(path))
+  end
+
   def test_authentication
     log = "sample log"
     src = "source\n"

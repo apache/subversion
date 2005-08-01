@@ -205,6 +205,10 @@ module Svn
         Client.revprop_set(name, nil, uri, rev, force, self)
       end
       
+      def switch(path, uri, rev=nil, recurse=true)
+        Client.switch(path, uri, rev, recurse, self)
+      end
+      
       def add_simple_provider
         add_provider(Client.get_simple_provider)
       end
