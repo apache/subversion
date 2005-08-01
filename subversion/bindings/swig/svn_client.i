@@ -83,7 +83,7 @@
     int nelts = (*$1)->nelts;
     PyObject *list = PyList_New(nelts);
     if (list == NULL)
-        return NULL;
+        SWIG_fail;
     ppitem = (svn_client_proplist_item_t **)(*$1)->elts;
     for (i = 0; i < nelts; ++i, ++ppitem) {
         PyObject *item = PyTuple_New(2);
@@ -96,7 +96,7 @@
             Py_XDECREF(name);
             Py_XDECREF(hash);
             Py_DECREF(list);
-            return NULL;
+            SWIG_fail;
         }
         PyTuple_SET_ITEM(item, 0, name);
         PyTuple_SET_ITEM(item, 1, hash);

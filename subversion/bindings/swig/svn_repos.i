@@ -70,7 +70,7 @@
     $1 = (apr_array_header_t *) svn_swig_py_revnums_to_array($input,
                                                              _global_pool);
     if ($1 == NULL)
-        return NULL;
+        SWIG_fail;
 }
 
 /* -----------------------------------------------------------------------

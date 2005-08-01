@@ -50,7 +50,7 @@ static PyObject * _global_svn_swig_py_pool = NULL;
   $1 = ($1_ltype)svn_swig_MustGetPtr($input, $descriptor, $svn_argnum,
     _global_svn_swig_py_is_local_pool ? NULL : &_global_svn_swig_py_pool);
   if (PyErr_Occurred()) {
-    return NULL;
+    SWIG_fail;
   }
 }
 

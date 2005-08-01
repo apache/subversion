@@ -113,7 +113,7 @@
             svn_swig_py_svn_exception($1);
         else
             svn_error_clear($1);
-        return NULL;
+        SWIG_fail;
     }
     Py_INCREF(Py_None);
     $result = Py_None;
@@ -207,7 +207,7 @@
 %typemap(python, in) (const char *PTR, apr_size_t LEN) {
     if (!PyString_Check($input)) {
         PyErr_SetString(PyExc_TypeError, "expecting a string");
-        return NULL;
+        SWIG_fail;
     }
     $1 = PyString_AS_STRING($input);
     $2 = PyString_GET_SIZE($input);
@@ -269,7 +269,7 @@
     _global_pool = svn_swig_MustGetPtr($input, $1_descriptor, $svn_argnum, 
       NULL);
     if (PyErr_Occurred()) {
-        return NULL;
+        SWIG_fail;
     }
     _global_svn_swig_py_pool = $input;
   }

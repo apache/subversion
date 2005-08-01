@@ -224,13 +224,13 @@
     if (!PyInt_Check($input)) {
         PyErr_SetString(PyExc_TypeError,
                         "expecting an integer for the buffer size");
-        return NULL;
+        SWIG_fail;
     }
     temp = PyInt_AsLong($input);
     if (temp < 0) {
         PyErr_SetString(PyExc_ValueError,
                         "buffer size must be a positive integer");
-        return NULL;
+        SWIG_fail;
     }
     $1 = malloc(temp);
     $2 = ($2_ltype)&temp;
@@ -272,7 +272,7 @@
     if (!PyString_Check($input)) {
         PyErr_SetString(PyExc_TypeError,
                         "expecting a string for the buffer");
-        return NULL;
+        SWIG_fail;
     }
     $1 = PyString_AS_STRING($input);
     temp = PyString_GET_SIZE($input);
@@ -315,7 +315,7 @@
     int targlen;
     if (!PySequence_Check($input)) {
         PyErr_SetString(PyExc_TypeError, "not a sequence");
-        return NULL;
+        SWIG_fail;
     }
     targlen = PySequence_Length($input);
     $1 = apr_array_make(_global_pool, targlen, sizeof(provider));
@@ -324,7 +324,7 @@
         provider = svn_swig_MustGetPtr(PySequence_GetItem($input, targlen),
           $descriptor(svn_auth_provider_object_t *), $svn_argnum, NULL);
         if (PyErr_Occurred()) {
-          return NULL;
+          SWIG_fail;
         }
         APR_ARRAY_IDX($1, targlen, svn_auth_provider_object_t *) = provider;
     }
@@ -352,7 +352,7 @@
     }
     else {
         PyErr_SetString(PyExc_TypeError, "not a known type");
-        return NULL;
+        SWIG_fail;
     }
 }
 
@@ -393,7 +393,7 @@
     $1 = PyFile_AsFile($input);
     if ($1 == NULL) {
         PyErr_SetString(PyExc_ValueError, "Must pass in a valid file object");
-        return NULL;
+        SWIG_fail;
     }
 }
 %typemap(perl5, in) FILE * {
