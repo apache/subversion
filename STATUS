@@ -37,23 +37,6 @@ Candidate changes:
     Votes:
       +1: maxb, clkao
 
-  * r15233
-    Reduce memory consumption by the client when performing merge
-    operations.
-    Justification:
-      Consuming 2GB of memory while performing a merge on a large
-      working copy is bad.
-    Votes:
-      +1: jszakmeister, lundblad
-
-  * r15315
-    Resolve location-tracing performance issue against 1.0.x servers.
-    Justification:
-      We can be pretty stupidly slow in many cases; can encourage
-      people to stay at 1.0.x and 1.1.x clients instead of upgrading.
-    Votes:
-      +1: ghudson, brane
-
   * r14008, r14458, r14587, r14632, r15329, r15340
     Fixes to svnmerge.
     Justification:
@@ -104,7 +87,25 @@ Candidate changes:
     Justification:
       It's a crash.
     Votes:
-      +1: philip
+      +1: philip, sussman
+
 
 Approved changes (further review is welcome, but not required):
 
+
+  * r15233
+    Reduce memory consumption by the client when performing merge
+    operations.
+    Justification:
+      Consuming 2GB of memory while performing a merge on a large
+      working copy is bad.
+    Votes:
+      +1: jszakmeister, lundblad, sussman
+
+  * r15315
+    Resolve location-tracing performance issue against 1.0.x servers.
+    Justification:
+      We can be pretty stupidly slow in many cases; can encourage
+      people to stay at 1.0.x and 1.1.x clients instead of upgrading.
+    Votes:
+      +1: ghudson, brane, sussman
