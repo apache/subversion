@@ -945,8 +945,6 @@ fetch_youngest_rev (const char **msg,
   SVN_ERR (svn_fs_youngest_rev (&youngest_rev, fs, pool));
 
   /* Prepare a txn to receive the greek tree. */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-commit-txn",
-                                "bdb", pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
@@ -2268,7 +2266,7 @@ delete_mutables (const char **msg,
 
   /* Prepare a txn to receive the greek tree. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-del-from-dir",
-                                "bdb", pool));
+                                opts->fs_type, pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   
@@ -2424,7 +2422,7 @@ delete (const char **msg,
 
   /* Prepare a txn to receive the greek tree. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-del-tree",
-                                "bdb", pool));
+                                opts->fs_type, pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
