@@ -86,7 +86,8 @@ trim_string (char **pstr)
 static svn_boolean_t
 auto_props_enumerator (const char *name,
                        const char *value,
-                       void *baton)
+                       void *baton,
+                       apr_pool_t *pool)
 {
   auto_props_baton_t *autoprops = baton;
   char *property;
