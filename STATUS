@@ -99,5 +99,12 @@ Candidate changes:
     Votes:
       +1: jszakmeister
 
+  * r15516
+    A one line fix for an "svn export wc_path" client SEGV.
+    Justification:
+      It's a crash.
+    Votes:
+      +1: philip
+
 Approved changes (further review is welcome, but not required):
 
