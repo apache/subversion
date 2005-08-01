@@ -112,7 +112,7 @@ class SvnClientTest < Test::Unit::TestCase
     log = "sample log"
     ctx = make_context(log)
     assert_nil(ctx.commit(@wc_path))
-    ctx.mkdir(["#{@wc_path}/new_dir"])
+    ctx.mkdir("#{@wc_path}/new_dir")
     assert_equal(0, youngest_rev)
     ctx.commit(@wc_path)
     assert_equal(1, youngest_rev)
