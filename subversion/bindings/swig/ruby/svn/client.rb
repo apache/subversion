@@ -59,8 +59,8 @@ module Svn
         Client.checkout2(url, path, peg_revision, revision, recurse, self)
       end
 
-      def mkdir(paths)
-        paths = [paths] unless paths.is_a?(Array)
+      def mkdir(*paths)
+        paths = paths.first if paths.size == 1 and paths.first.is_a?(Array)
         Client.mkdir(normalize_path(paths), self)
       end
 
