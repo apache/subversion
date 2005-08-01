@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-07-26 13:40+0900\n"
-"PO-Revision-Date: 2005-07-26 15:09+0900\n"
+"POT-Creation-Date: 2005-08-01 10:14+0900\n"
+"PO-Revision-Date: 2005-08-01 11:16+0900\n"
 "Last-Translator: seolin <blueboh@gmail.com>\n"
 "Language-Team: Korean <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -4055,6 +4055,7 @@ msgid "Failure opening '%s'"
 msgstr "열 수 없습니다. '%s'"
 
 #: libsvn_fs_base/tree.c:1407
+#: libsvn_fs_fs/tree.c:1155
 msgid "Cannot compare property value between two different filesystems"
 msgstr "서로 다른 두개의 파일 시스템간 속성은 비교할 수 없습니다."
 
@@ -4124,8 +4125,8 @@ msgstr ""
 
 #: libsvn_fs_base/tree.c:3937
 #: libsvn_fs_fs/tree.c:2599
-msgid "Asking contents changed in two different filesystems"
-msgstr "서로 다른 두개의 파일 시스템에 대해 내용 변경사항을 요구하고 있습니다."
+msgid "Cannot compare file contents between two different filesystems"
+msgstr "서로 다른 두개의 파일 시스템간의 파일 내용은 비교할 수 없습니다"
 
 #: libsvn_fs_base/tree.c:3946
 #: libsvn_fs_base/tree.c:3951
@@ -4391,10 +4392,6 @@ msgstr "잠금 실패: 새로운 버전의 '%s'가 존재합니다"
 #: libsvn_fs_fs/revs-txns.c:214
 msgid "Transaction cleanup failed"
 msgstr "트랜잭션이 'cleanup' 오류"
-
-#: libsvn_fs_fs/tree.c:1155
-msgid "Asking props changed in two different filesystems"
-msgstr "서로 다른 두개의 파일 시스템간 속성 비교를 시도합니다."
 
 #: libsvn_ra/ra_loader.c:212
 #, c-format
@@ -5413,7 +5410,7 @@ msgstr "읽을 수 없는 경로 발생; 접근 거부되었습니다."
 msgid "Config error: invalid boolean value '%s'"
 msgstr "구성 오류: 잘못된 부울리안 값입니다. '%s'"
 
-#: libsvn_subr/config.c:811
+#: libsvn_subr/config.c:833
 #, c-format
 msgid "Config error: invalid integer value '%s'"
 msgstr "구성 오류: 잘못된 정수 값입니다. '%s'"
@@ -5454,12 +5451,12 @@ msgstr "구성파일 '%s' 를 열 수 없습니다."
 msgid "Can't manipulate current date"
 msgstr "현재 날짜를 조작할 수 없습니다."
 
-#: libsvn_subr/date.c:277
-#: libsvn_subr/date.c:285
+#: libsvn_subr/date.c:278
+#: libsvn_subr/date.c:286
 msgid "Can't calculate requested date"
 msgstr "요청 시간을 계산할 수 없습니다."
 
-#: libsvn_subr/date.c:280
+#: libsvn_subr/date.c:281
 msgid "Can't expand time"
 msgstr "시간을 확장할 수 없음"
 
@@ -6058,62 +6055,62 @@ msgstr "잘못된 XML: %s (줄 번호 %d)"
 msgid "The entry '%s' is no longer a directory; remove the entry before updating"
 msgstr "엔트리 '%s' 은 더 이상 디렉토리가 아닙니다; 업데이트 하기 전에 엔트리를 제거하십시오"
 
-#: libsvn_wc/adm_crawler.c:636
+#: libsvn_wc/adm_crawler.c:633
 msgid "Error aborting report"
 msgstr "보고 중지 실패"
 
-#: libsvn_wc/adm_crawler.c:829
+#: libsvn_wc/adm_crawler.c:823
 #, c-format
 msgid "Checksum mismatch for '%s'; expected '%s', actual: '%s'"
 msgstr "'%s'의 체크섬값이 일치하지 않습니다. 기대값:'%s', 실제값: '%s'"
 
-#: libsvn_wc/adm_crawler.c:855
+#: libsvn_wc/adm_crawler.c:849
 msgid "Error opening local file"
 msgstr "로컬 파일 열기 오류"
 
-#: libsvn_wc/adm_files.c:196
+#: libsvn_wc/adm_files.c:201
 msgid "Bad type indicator"
 msgstr "잘못된 타입 지시자"
 
-#: libsvn_wc/adm_files.c:404
+#: libsvn_wc/adm_files.c:409
 msgid "APR_APPEND not supported for adm files"
 msgstr "adm 파일에는 APR_APPEND 가 지원되지 않습니다"
 
-#: libsvn_wc/adm_files.c:447
+#: libsvn_wc/adm_files.c:452
 msgid "Your .svn/tmp directory may be missing or corrupt; run 'svn cleanup' and try again"
 msgstr "당신의 .svn/tmp 디릭토리가 누락되거나 손상되었습니다; 'svn cleanup' 명령을 실행한 뒤, 다시 시도하십시오"
 
-#: libsvn_wc/adm_files.c:622
-#: libsvn_wc/adm_files.c:698
+#: libsvn_wc/adm_files.c:627
+#: libsvn_wc/adm_files.c:703
 #: libsvn_wc/lock.c:377
 #: libsvn_wc/lock.c:630
 #, c-format
 msgid "'%s' is not a working copy"
 msgstr "'%s' 은 작업 사본이 아닙니다"
 
-#: libsvn_wc/adm_files.c:629
-#: libsvn_wc/adm_files.c:705
-#: libsvn_wc/adm_files.c:769
+#: libsvn_wc/adm_files.c:634
+#: libsvn_wc/adm_files.c:710
+#: libsvn_wc/adm_files.c:774
 msgid "No such thing as 'base' working copy properties!"
 msgstr "'base' 작업 사본 속성으로 그런 것은 없습니다.!"
 
-#: libsvn_wc/adm_files.c:838
+#: libsvn_wc/adm_files.c:843
 #: libsvn_wc/util.c:51
 #, c-format
 msgid "'%s' is not a directory"
 msgstr "'%s'은 디렉토리가 아닙니다"
 
-#: libsvn_wc/adm_files.c:892
+#: libsvn_wc/adm_files.c:897
 #, c-format
 msgid "No entry for '%s'"
 msgstr "'%s'에 대한 항목이 없습니다"
 
-#: libsvn_wc/adm_files.c:904
+#: libsvn_wc/adm_files.c:909
 #, c-format
 msgid "Revision %ld doesn't match existing revision %ld in '%s'"
 msgstr "리비젼 %ld은 존재하는 리비젼 %ld 과 '%s'에서 일치하지 않습니다"
 
-#: libsvn_wc/adm_files.c:913
+#: libsvn_wc/adm_files.c:918
 #, c-format
 msgid "URL '%s' doesn't match existing URL '%s' in '%s'"
 msgstr "URL '%s'은 '%s'에 존재하는 URL '%s'과 일치하지 않습니다"
