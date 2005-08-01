@@ -20,6 +20,7 @@
    There is no module associated with this interface file. */
 
 %include apr.swg
+%include exception.i
 
 /* -----------------------------------------------------------------------
    Create a typemap to define "type **" as OUT parameters.
@@ -238,6 +239,18 @@
    Define a generic arginit mapping for pools.
 */
 
+#ifdef SWIGPYTHON
+%define svn_swig_py_pool_check(pool)
+  if (pool != NULL && !PyObject_HasAttrString(pool, (char *)"_mark_valid"))
+  {
+    int argnum = PyTuple_GET_SIZE(args);
+    SWIG_Python_TypeError(SWIG_TypePrettyName($descriptor), pool);
+    SWIG_arg_fail(argnum);
+    SWIG_fail;
+  }
+%enddef
+#endif
+
 %typemap(python, default) apr_pool_t *(apr_pool_t *_global_pool,
   PyObject *_global_svn_swig_py_pool, int _global_svn_swig_py_is_local_pool)
 {
@@ -245,10 +258,9 @@
   _global_svn_swig_py_is_local_pool = 1;
   if (argnum >= 0) {
     PyObject *input = PyTuple_GET_ITEM(args, argnum);
-    void *tmp;
     if (input != Py_None &&
-        !SWIG_ConvertPtr(input, &tmp, $1_descriptor, 0)) {
-      _global_pool = svn_swig_MustGetPtr(input, $1_descriptor, argnum, NULL);
+        PyObject_HasAttrString(input, (char *)"_mark_valid")) {
+      _global_pool = svn_swig_MustGetPtr(input, $1_descriptor, argnum+1, NULL);
       if (PyErr_Occurred()) {
         SWIG_fail;
       }
@@ -262,18 +274,21 @@
   } else {
     svn_swig_get_application_pool(&_global_pool, &_global_svn_swig_py_pool);
   }
+  $1 = _global_pool;
+  svn_swig_py_pool_check(_global_svn_swig_py_pool)
 }
 
 %typemap(python, in) apr_pool_t * {
-  if ($input != Py_None) {
+  if ($input != Py_None && $input != _global_svn_swig_py_pool) {
+    svn_swig_py_pool_check($input)
     _global_pool = svn_swig_MustGetPtr($input, $1_descriptor, $svn_argnum, 
       NULL);
     if (PyErr_Occurred()) {
         SWIG_fail;
     }
     _global_svn_swig_py_pool = $input;
+    $1 = _global_pool;
   }
-  $1 = _global_pool;
 }
 
 %typemap(perl5, in) apr_pool_t *pool "";
