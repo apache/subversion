@@ -241,9 +241,27 @@
 %typemap(python, default) apr_pool_t *(apr_pool_t *_global_pool,
   PyObject *_global_svn_swig_py_pool, int _global_svn_swig_py_is_local_pool)
 {
-  svn_swig_get_application_pool(&_global_pool, &_global_svn_swig_py_pool);
-  $1 = _global_pool;
+  int argnum = PyTuple_GET_SIZE(args) - 1;
   _global_svn_swig_py_is_local_pool = 1;
+  if (argnum >= 0) {
+    PyObject *input = PyTuple_GET_ITEM(args, argnum);
+    void *tmp;
+    if (input != Py_None &&
+        !SWIG_ConvertPtr(input, &tmp, $1_descriptor, 0)) {
+      _global_pool = svn_swig_MustGetPtr(input, $1_descriptor, argnum, NULL);
+      if (PyErr_Occurred()) {
+        SWIG_fail;
+      }
+      _global_svn_swig_py_pool = input;
+    } else {
+      if (PyErr_Occurred()) {
+        PyErr_Clear();
+      }
+      svn_swig_get_application_pool(&_global_pool, &_global_svn_swig_py_pool);
+    }
+  } else {
+    svn_swig_get_application_pool(&_global_pool, &_global_svn_swig_py_pool);
+  }
 }
 
 %typemap(python, in) apr_pool_t * {
