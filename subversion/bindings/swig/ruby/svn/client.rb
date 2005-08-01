@@ -46,8 +46,8 @@ module Svn
       def initialize
         @prompts = []
         @providers = []
-        @auth_baton = nil
-        update_auth_baton
+        @auth_baton = Svn::Core::AuthBaton.new
+        self.auth_baton = @auth_baton
       end
       undef _initialize
 
@@ -183,8 +183,36 @@ module Svn
         end
       end
 
+      def revprop(name, uri, rev)
+        value, = revprop_get(name, uri, rev)
+        value
+      end
+      
+      def revprop_get(name, uri, rev)
+        result = Client.revprop_get(name, uri, rev, self)
+        if result.is_a?(Array)
+          result
+        else
+          [nil, result]
+        end
+      end
+      
+      def revprop_set(name, value, uri, rev, force=false)
+        Client.revprop_set(name, value, uri, rev, force, self)
+      end
+      
+      def revprop_del(name, uri, rev, force=false)
+        Client.revprop_set(name, nil, uri, rev, force, self)
+      end
+      
       def add_simple_provider
         add_provider(Client.get_simple_provider)
+      end
+
+      if Client.respond_to?(:get_windows_simple_provider)
+        def add_windows_simple_provider
+          add_provider(Client.get_windows_simple_provider)
+        end
       end
       
       def add_username_provider
@@ -239,10 +267,7 @@ module Svn
       end
 
       def update_auth_baton
-        parameters = {}
-        parameters = @auth_baton.parameters if @auth_baton
-        @auth_baton = Core::AuthBaton.open(@providers)
-        @auth_baton.parameters = parameters
+        @auth_baton = Core::AuthBaton.new(@providers, @auth_baton.parameters)
         self.auth_baton = @auth_baton
       end
 

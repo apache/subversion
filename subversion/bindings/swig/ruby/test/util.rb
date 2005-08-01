@@ -18,6 +18,7 @@ module SvnTestUtil
     @config_path = File.join("test", "config")
     setup_repository
     @repos = Svn::Repos.open(@repos_path)
+    add_hooks
     @fs = @repos.fs
     setup_svnserve
     setup_config
@@ -116,6 +117,30 @@ realm = #{@realm}
       PASSWD
     end
   end
+
+  def add_hooks
+    add_pre_revprop_change_hook
+  end
+
+  def add_pre_revprop_change_hook
+    File.open(@repos.pre_revprop_change_hook, "w") do |hook|
+      hook.print <<-HOOK
+#!/bin/sh
+REPOS="$1"
+REV="$2"
+USER="$3"
+PROPNAME="$4"
+
+if [ "$PROPNAME" = "#{Svn::Core::PROP_REVISION_LOG}" -a \
+     "$USER" = "#{@author}" ]; then
+  exit 0
+fi
+
+exit 1
+      HOOK
+    end
+    FileUtils.chmod(0755, @repos.pre_revprop_change_hook)
+  end
   
   def youngest_rev
     @fs.youngest_rev
@@ -138,8 +163,13 @@ realm = #{@realm}
       cred.username = @author
       cred.may_save = false
     end
-    ctx.auth_baton[Svn::Core::AUTH_PARAM_CONFIG_DIR] = @config_path
+    setup_auth_baton(ctx.auth_baton)
     ctx
+  end
+
+  def setup_auth_baton(auth_baton)
+    auth_baton[Svn::Core::AUTH_PARAM_CONFIG_DIR] = @config_path
+    auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = @author
   end
   
 end

@@ -274,7 +274,7 @@ copy_versioned_files (const char *from,
             svn_error_clear (err);
         }
 
-      SVN_ERR (svn_wc_entries_read (&entries, adm_access, TRUE, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
 
       iterpool = svn_pool_create (pool);
       for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))

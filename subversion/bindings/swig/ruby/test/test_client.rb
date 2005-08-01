@@ -16,9 +16,7 @@ class SvnClientTest < Test::Unit::TestCase
   end
 
   def test_version
-    ver = Svn::Client.version
-    assert_equal([ver.major, ver.minor, ver.patch, ver.tag], ver.to_a)
-    assert_equal("#{ver.major}.#{ver.minor}.#{ver.patch}#{ver.tag}", ver.to_s)
+    assert_equal(Svn::Core.subr_version, Svn::Client.version)
   end
   
   def test_commit
@@ -160,6 +158,47 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal(src2, ctx.cat(path))
   end
 
+  def test_revprop
+    log = "sample log"
+    new_log = "new sample log"
+    src = "source\n"
+    file = "sample.txt"
+    path = File.join(@wc_path, file)
+
+    File.open(path, "w") {|f| f.print(src)}
+
+    ctx = make_context(log)
+    ctx.add(path)
+    info = ctx.commit(@wc_path)
+
+    assert_equal([log, info.revision],
+                 ctx.revprop_get(Svn::Core::PROP_REVISION_LOG,
+                                 @repos_uri, info.revision))
+    assert_equal(log,
+                 ctx.revprop(Svn::Core::PROP_REVISION_LOG,
+                             @repos_uri, info.revision))
+
+    assert_equal(info.revision,
+                 ctx.revprop_set(Svn::Core::PROP_REVISION_LOG, new_log,
+                                 @repos_uri, info.revision))
+    assert_equal([new_log, info.revision],
+                 ctx.revprop_get(Svn::Core::PROP_REVISION_LOG,
+                                 @repos_uri, info.revision))
+    assert_equal(new_log,
+                 ctx.revprop(Svn::Core::PROP_REVISION_LOG,
+                             @repos_uri, info.revision))
+
+    assert_equal(info.revision,
+                 ctx.revprop_del(Svn::Core::PROP_REVISION_LOG,
+                                 @repos_uri, info.revision))
+    assert_equal([nil, info.revision],
+                 ctx.revprop_get(Svn::Core::PROP_REVISION_LOG,
+                                 @repos_uri, info.revision))
+    assert_equal(nil,
+                 ctx.revprop(Svn::Core::PROP_REVISION_LOG,
+                             @repos_uri, info.revision))
+  end
+  
   def test_authentication
     log = "sample log"
     src = "source\n"
@@ -211,55 +250,127 @@ class SvnClientTest < Test::Unit::TestCase
     file = "sample.txt"
     path = File.join(@wc_path, file)
     svnserve_uri = "#{@repos_svnserve_uri}/#{file}"
-    config_path = ""
     
-    teardown_wc
+    File.open(path, "w") {|f| f.print(src)}
+
+    ctx = make_context(log)
+    setup_auth_baton(ctx.auth_baton)
+    ctx.add(path)
+    ctx.commit(@wc_path)
 
     ctx = Svn::Client::Context.new
-    ctx.auth_baton[Svn::Core::AUTH_PARAM_CONFIG_DIR] = @config_path
+    setup_auth_baton(ctx.auth_baton)
+    ctx.add_simple_provider
+    assert_raises(Svn::Error::RA_NOT_AUTHORIZED) do
+      assert_equal(src, ctx.cat(svnserve_uri))
+    end
+
+    ctx = Svn::Client::Context.new
+    setup_auth_baton(ctx.auth_baton)
     ctx.add_simple_provider
     ctx.add_simple_prompt_provider(0) do |cred, realm, username, may_save|
       cred.username = @author
       cred.password = @password
       cred.may_save = true
     end
-    sleep 0.5
-    ctx.checkout(@repos_svnserve_uri, @wc_path)
-    
-    File.open(path, "w") {|f| f.print(src)}
+    assert_equal(src, ctx.cat(svnserve_uri))
 
     ctx = Svn::Client::Context.new
-    ctx.add(path)
-
-    assert_raises(Svn::Error::AUTHN_NO_PROVIDER) do
-      ctx.commit(@wc_path)
-    end
-    
+    setup_auth_baton(ctx.auth_baton)
     ctx.add_simple_provider
-    ctx.auth_baton[Svn::Core::AUTH_PARAM_CONFIG_DIR] = @config_path
-    assert_nothing_raised do
-      ctx.commit(@wc_path)
-    end
+    assert_equal(src, ctx.cat(svnserve_uri))
   end
-  
-  def test_username_provider
+
+  def test_windows_simple_provider
+    return unless Svn::Client.respond_to?(:add_windows_simple_provider)
+
     log = "sample log"
     src = "source\n"
     file = "sample.txt"
     path = File.join(@wc_path, file)
+    svnserve_uri = "#{@repos_svnserve_uri}/#{file}"
+    
+    File.open(path, "w") {|f| f.print(src)}
+
+    ctx = make_context(log)
+    setup_auth_baton(ctx.auth_baton)
+    ctx.add(path)
+    ctx.commit(@wc_path)
+
+    ctx = Svn::Client::Context.new
+    setup_auth_baton(ctx.auth_baton)
+    ctx.add_windows_simple_provider
+    assert_raises(Svn::Error::RA_NOT_AUTHORIZED) do
+      assert_equal(src, ctx.cat(svnserve_uri))
+    end
+
+    ctx = Svn::Client::Context.new
+    setup_auth_baton(ctx.auth_baton)
+    ctx.add_simple_provider
+    ctx.add_simple_prompt_provider(0) do |cred, realm, username, may_save|
+      cred.username = @author
+      cred.password = @password
+      cred.may_save = true
+    end
+    assert_equal(src, ctx.cat(svnserve_uri))
+
+    ctx = Svn::Client::Context.new
+    setup_auth_baton(ctx.auth_baton)
+    ctx.add_windows_simple_provider
+    assert_equal(src, ctx.cat(svnserve_uri))
+  end
+  
+  def test_username_provider
+    log = "sample log"
+    new_log = "sample new log"
+    src = "source\n"
+    file = "sample.txt"
+    path = File.join(@wc_path, file)
+    repos_uri = "#{@repos_uri}/#{file}"
 
     File.open(path, "w") {|f| f.print(src)}
 
-    ctx = Svn::Client::Context.new
+    ctx = make_context(log)
     ctx.add(path)
+    info = ctx.commit(@wc_path)
 
-    assert_raises(Svn::Error::AUTHN_NO_PROVIDER) do
-      ctx.commit(@wc_path)
-    end
-    
+    ctx = Svn::Client::Context.new
+    setup_auth_baton(ctx.auth_baton)
+    ctx.auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = @author
     ctx.add_username_provider
     assert_nothing_raised do
-      ctx.commit(@wc_path)
+      ctx.revprop_set(Svn::Core::PROP_REVISION_LOG, new_log,
+                      repos_uri, info.revision)
+    end
+
+    ctx = Svn::Client::Context.new
+    setup_auth_baton(ctx.auth_baton)
+    ctx.auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = "#{@author}-NG"
+    ctx.add_username_provider
+    assert_raise(Svn::Error::REPOS_HOOK_FAILURE) do
+      ctx.revprop_set(Svn::Core::PROP_REVISION_LOG, new_log,
+                      repos_uri, info.revision)
+    end
+
+    ctx = Svn::Client::Context.new
+    setup_auth_baton(ctx.auth_baton)
+    ctx.auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = nil
+    ctx.add_username_prompt_provider(0) do |cred, realm, may_save|
+    end
+    assert_raise(Svn::Error::REPOS_HOOK_FAILURE) do
+      ctx.revprop_set(Svn::Core::PROP_REVISION_LOG, new_log,
+                      repos_uri, info.revision)
+    end
+
+    ctx = Svn::Client::Context.new
+    setup_auth_baton(ctx.auth_baton)
+    ctx.auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = nil
+    ctx.add_username_prompt_provider(0) do |cred, realm, may_save|
+      cred.username = @author
+    end
+    assert_nothing_raised do
+      ctx.revprop_set(Svn::Core::PROP_REVISION_LOG, new_log,
+                      repos_uri, info.revision)
     end
   end
   

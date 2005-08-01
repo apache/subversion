@@ -362,12 +362,16 @@
 */
 %typemap(ruby, in) const void *value
 {
-  VALUE _rb_pool;
-  apr_pool_t *_global_pool;
-  char *value = StringValuePtr($input);
-  
-  svn_swig_rb_get_pool(1, argv, Qnil, &_rb_pool, &_global_pool);
-  $1 = (void *)apr_pstrdup(_global_pool, value);
+  if (NIL_P($input)) {
+    $1 = (void *)NULL;
+  } else {
+    VALUE _rb_pool;
+    apr_pool_t *_global_pool;
+    char *value = StringValuePtr($input);
+
+    svn_swig_rb_get_pool(1, argv, Qnil, &_rb_pool, &_global_pool);
+    $1 = (void *)apr_pstrdup(_global_pool, value);
+  }
 }
 
 /* get */
