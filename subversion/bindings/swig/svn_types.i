@@ -289,6 +289,17 @@
 };
 #endif
 
+
+/* -----------------------------------------------------------------------
+   CALLBACK_BATON: Do not convert to C object from Ruby object.
+*/
+
+%typemap(ruby, in) void *CALLBACK_BATON
+{
+  $1 = (void *)$input;
+}
+
+
 /* -----------------------------------------------------------------------
    Callback: svn_log_message_receiver_t
    svn_client_log()
@@ -332,6 +343,12 @@
 %typemap(python, in) (svn_cancel_func_t cancel_func, void *cancel_baton) {
   $1 = svn_swig_py_cancel_func;
   $2 = $input; /* our function is the baton. */
+}
+
+%typemap(ruby, in) (svn_cancel_func_t cancel_func, void *cancel_baton)
+{
+  $1 = svn_swig_rb_cancel_func;
+  $2 = (void *)$input;
 }
 
 /* -----------------------------------------------------------------------
