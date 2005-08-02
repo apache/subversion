@@ -458,6 +458,17 @@ svn_error_t *svn_cl__may_need_force (svn_error_t *err);
 svn_error_t *svn_cl__error_checked_fputs (const char *string,
                                           FILE* stream);
 
+/* If STRING is non-null, append it, wrapped in a simple XML CDATA element
+   named TAGNAME, to the string SB.  Use POOL for temporary allocations. */
+void svn_cl__xml_tagged_cdata (svn_stringbuf_t **sb,
+                               apr_pool_t *pool,
+                               const char *tagname,
+                               const char *string);
+
+/* Return a (non-localised) string representation of KIND, being "dir" or
+   "file" or, in any other case, the empty string. */
+const char *svn_cl__node_kind_str (svn_node_kind_t kind);
+
 
 #ifdef __cplusplus
 }
