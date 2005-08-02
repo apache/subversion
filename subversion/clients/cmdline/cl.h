@@ -270,10 +270,17 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash,
                          svn_boolean_t names_only,
                          apr_pool_t *pool);
 
-/* Return a SVN_ERR_CL_ARG_PARSING_ERROR error, with a message stating
-   that one must give an explicit revision when operating on a
-   revision property. */
-svn_error_t *svn_cl__revprop_no_rev_error (apr_pool_t *pool);
+/* Do the following things that are commonly required before accessing revision
+   properties.  Ensure that REVISION is specified explicitly and is not
+   relative to a working-copy item.  Ensure that exactly one target is
+   specified in TARGETS.  Set *URL to the URL of the target.  Return an
+   appropriate error if any of those checks or operations fail.
+ */
+svn_error_t *
+svn_cl__revprop_prepare (const svn_opt_revision_t *revision,
+                         apr_array_header_t *targets,
+                         const char **URL,
+                         apr_pool_t *pool);
 
 /* Search for a text editor command in standard environment variables,
    and invoke it to edit CONTENTS (using a temporary file created in
