@@ -28,6 +28,7 @@
 #include "svn_error.h"
 #include "svn_subst.h"
 #include "svn_props.h"
+#include "svn_opt.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -35,12 +36,37 @@
 
 
 svn_error_t *
-svn_cl__revprop_no_rev_error (apr_pool_t *pool)
+svn_cl__revprop_prepare (const svn_opt_revision_t *revision,
+                         apr_array_header_t *targets,
+                         const char **URL,
+                         apr_pool_t *pool)
 {
-  return svn_error_create
-    (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-     _("Must specify revision explicitly when operating on a "
-       "revision property"));
+  const char *target;
+  
+  if (revision->kind != svn_opt_revision_number
+      && revision->kind != svn_opt_revision_date
+      && revision->kind != svn_opt_revision_head)
+    return svn_error_create
+      (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+       _("Must specify the revision as a number, a date or 'HEAD' "
+         "when operating on a revision property"));
+
+  /* There must be exactly one target at this point.  If it was optional and
+     unspecified by the user, the caller has already added the implicit '.'. */
+  if (targets->nelts != 1)
+    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Wrong number of targets specified"));
+
+  /* (The docs say the target must be either a URL or implicit '.', but
+     explicit WC targets are also accepted.) */
+  target = ((const char **) (targets->elts))[0];
+  SVN_ERR (svn_client_url_from_path (URL, target, pool));  
+  if (*URL == NULL)
+    return svn_error_create
+      (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+       _("Either a URL or versioned item is required"));
+
+  return SVN_NO_ERROR;
 }
 
 
