@@ -37,6 +37,7 @@ Candidate changes:
       bindings eventually causes the interpreter to die without this fix.
     Votes:
       +1: jszakmeister
+      +0: djames
 
   * r15552
     Fix bug in loading of Subversion's JNI library by SVNClient.
