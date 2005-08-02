@@ -37,17 +37,6 @@ Candidate changes:
     Votes:
       +1: maxb, clkao
 
-  * r14008, r14458, r14587, r14632, r15329, r15340
-    Fixes to svnmerge.
-    Justification:
-      It would be good to have contrib code be the latest and fixed
-      version.  We don't guarantee that this code works, but it would
-      be good to have known fixes released.  This fixes four issues.
-      Blair has used the code in trunk in a production environment and
-      it works great.
-    Votes:
-      +1: blair
-
   * r15253
     Fix Issue #2341: Perl bindings cat method fails when using a local file
     repository.
@@ -92,6 +81,18 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
+
+  * r14008, r14458, r14587, r14632, r15329, r15340
+    Fixes to svnmerge.
+    Justification:
+      It would be good to have contrib code be the latest and fixed
+      version.  We don't guarantee that this code works, but it would
+      be good to have known fixes released.  This fixes four issues.
+      Blair has used the code in trunk in a production environment and
+      it works great.
+    Votes:
+      +1: blair
+      +0: djames
 
   * r15233
     Reduce memory consumption by the client when performing merge
