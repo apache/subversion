@@ -29,14 +29,6 @@ Candidate changes:
     Votes:
       +1: sussman, lundblad
 
-  * r15248
-    Perl bindings: Make compatible with SWIG 1.3.25.
-    Justification:
-      Distributions will start to update to the new version, and will
-      require support to continue building subversion-perl packages.
-    Votes:
-      +1: maxb, clkao
-
   * r15253
     Fix Issue #2341: Perl bindings cat method fails when using a local file
     repository.
@@ -111,6 +103,15 @@ Approved changes (further review is welcome, but not required):
       working copy is bad.
     Votes:
       +1: jszakmeister, lundblad, sussman
+
+  * r15248
+    Perl bindings: Make compatible with SWIG 1.3.25.
+    Justification:
+      Distributions will start to update to the new version, and will
+      require support to continue building subversion-perl packages.
+    Votes:
+      +1: maxb, clkao
+      +0: djames
 
   * r15315
     Resolve location-tracing performance issue against 1.0.x servers.
