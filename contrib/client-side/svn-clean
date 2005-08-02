@@ -50,9 +50,14 @@ if ($nonrecursive) {
 open SVN, "-|", @command, @ARGV
   or die "Can't call program \"svn\": $!\n";
 while (<SVN>) {
-    if (/^[\?ID]/) {
+    if (/^([\?ID])/) {
         my $file = (split)[-1];
-        next unless -e $file;
+        if ( $1 eq 'D' ) {
+            next unless -f $file;
+        }
+        else {
+            next unless -e $file;
+        }
         if ($print) {
             print "$file\n";
         }
