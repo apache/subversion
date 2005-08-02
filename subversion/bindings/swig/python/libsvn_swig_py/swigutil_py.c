@@ -123,7 +123,7 @@ static char objectTuple[] = "(O)";
 
 
 /* Set the application pool */
-void svn_swig_py_set_application_pool(apr_pool_t *pool, PyObject *py_pool)
+void svn_swig_py_set_application_pool(PyObject *py_pool, apr_pool_t *pool) 
 {
   _global_pool = pool;
   _global_svn_swig_py_pool = py_pool;
@@ -157,7 +157,7 @@ static apr_status_t svn_swig_py_pool_decref(void *ptr)
 }
 
 /* Register cleanup function */
-PyObject * svn_swig_py_register_cleanup(apr_pool_t *pool, PyObject *py_pool)
+PyObject * svn_swig_py_register_cleanup(PyObject *py_pool, apr_pool_t *pool) 
 {
   PyObject *result;
   
@@ -181,7 +181,7 @@ PyObject * svn_swig_py_register_cleanup(apr_pool_t *pool, PyObject *py_pool)
 }
 
 /* Get the application pool */
-void svn_swig_get_application_pool(apr_pool_t **pool, PyObject **py_pool)
+void svn_swig_get_application_pool(PyObject **py_pool, apr_pool_t **pool)
 {
   *pool = _global_pool;
   *py_pool = _global_svn_swig_py_pool;
@@ -241,8 +241,13 @@ PyObject *svn_swig_NewPointerObj(void *obj, swig_type_info *type,
 static PyObject *svn_swig_NewPointerObjString(void *ptr, const char *type, 
                                               PyObject *py_pool)
 {
+  swig_type_info *typeinfo = svn_swig_TypeQuery(type);
+  if (typeinfo == NULL) {
+    PyErr_SetString(PyExc_TypeError, "Cannot find required typeobject");
+    return NULL;
+  }
   /* ### cache the swig_type_info at some point? */
-  return svn_swig_NewPointerObj(ptr, svn_swig_TypeQuery(type), py_pool);
+  return svn_swig_NewPointerObj(ptr, typeinfo, py_pool);
 }
 
 /** Wrapper for SWIG_ConvertPtr */

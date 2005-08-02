@@ -40,40 +40,7 @@ extern "C" {
 
 
 
-#if SVN_SWIG_VERSION < 103024
-/* If this file is being included outside of a wrapper file, then need to
-   create stubs for some of the SWIG types. */
-
-/* if SWIGEXPORT is defined, then we're in a wrapper. otherwise, we need
-   the prototypes and type definitions. */
-#ifndef SWIGEXPORT
-#define SVN_NEED_SWIG_TYPES
-#endif
-
-#ifdef SVN_NEED_SWIG_TYPES
-
-#if SVN_SWIG_VERSION >= 103020
-#include "python/precommon.swg"
-#ifndef SWIG_ConvertPtr
-#define SWIG_ConvertPtr SWIG_Python_ConvertPtr
-#endif
-#ifndef SWIG_NewPointerObj
-#define SWIG_NewPointerObj SWIG_Python_NewPointerObj
-#endif
-#ifndef SWIG_MustGetPtr
-#define SWIG_MustGetPtr SWIG_Python_MustGetPtr
-#endif
-#endif
-
-typedef struct _unnamed swig_type_info;
-
-PyObject *SWIG_NewPointerObj(void *, swig_type_info *, int own);
-swig_type_info *SWIG_TypeQuery(const char *name);
-int SWIG_ConvertPtr(PyObject *, void **, swig_type_info *, int flags);
-
-#endif /* SVN_NEED_SWIG_TYPES */
-#endif /* SVN_SWIG_VERSION < 103024 */
-
+#include "svn_old_swig.h"
 
 /* Functions to manage python's global interpreter lock */
 void svn_swig_py_release_py_lock(void);
@@ -84,16 +51,16 @@ void svn_swig_py_acquire_py_lock(void);
 extern int _global_svn_swig_py_is_local_pool;
 
 /* Set the application pool */
-void svn_swig_py_set_application_pool(apr_pool_t *pool, PyObject *py_pool);
+void svn_swig_py_set_application_pool(PyObject *py_pool, apr_pool_t *pool);
 
 /* Clear the application pool */
 void svn_swig_py_clear_application_pool(void);
 
 /* Get the application pool */
-void svn_swig_get_application_pool(apr_pool_t **pool, PyObject **py_pool);
+void svn_swig_get_application_pool(PyObject **py_pool, apr_pool_t **pool);
 
 /* Register cleanup function */
-PyObject * svn_swig_py_register_cleanup(apr_pool_t *pool, PyObject *py_pool);
+PyObject * svn_swig_py_register_cleanup(PyObject *py_pool, apr_pool_t *pool);
 
 
 /*** SWIG Wrappers ***/

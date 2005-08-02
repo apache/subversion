@@ -269,10 +269,10 @@
       if (PyErr_Occurred()) {
         PyErr_Clear();
       }
-      svn_swig_get_application_pool(&_global_pool, &_global_svn_swig_py_pool);
+      svn_swig_get_application_pool(&_global_svn_swig_py_pool, &_global_pool); 
     }
   } else {
-    svn_swig_get_application_pool(&_global_pool, &_global_svn_swig_py_pool);
+    svn_swig_get_application_pool(&_global_svn_swig_py_pool, &_global_pool); 
   }
   $1 = _global_pool;
   svn_swig_py_pool_check(_global_svn_swig_py_pool)

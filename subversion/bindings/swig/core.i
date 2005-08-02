@@ -581,9 +581,9 @@ PyObject *svn_swig_py_exception_type(void);
 
 #ifdef SWIGPYTHON
 
-void svn_swig_py_set_application_pool(apr_pool_t *pool, PyObject *py_pool);
+void svn_swig_py_set_application_pool(PyObject *py_pool, apr_pool_t *pool);
 void svn_swig_py_clear_application_pool();
-PyObject *svn_swig_py_register_cleanup(apr_pool_t *pool, PyObject *py_pool);
+PyObject *svn_swig_py_register_cleanup(PyObject *py_pool, apr_pool_t *pool);
 
 %init %{
 /* This is a hack.  I dunno if we can count on SWIG calling the module "m" */
