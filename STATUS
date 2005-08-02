@@ -46,6 +46,15 @@ Candidate changes:
     Votes:
       +1: jszakmeister
 
+  * r15552
+    Fix bug in loading of Subversion's JNI library by SVNClient.
+    Justification:
+      Critical bug fix of any users who need to use their own copy of
+      the SVN libraries (e.g. rather than use the system installed
+      version).
+    Votes:
+      +1: dlr
+
   * r15337
     Fix cut-n-paste problem with JNI stack name in javahl client
     bindings.
