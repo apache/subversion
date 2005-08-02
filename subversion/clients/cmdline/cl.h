@@ -270,10 +270,17 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash,
                          svn_boolean_t names_only,
                          apr_pool_t *pool);
 
-/* Return a SVN_ERR_CL_ARG_PARSING_ERROR error, with a message stating
-   that one must give an explicit revision when operating on a
-   revision property. */
-svn_error_t *svn_cl__revprop_no_rev_error (apr_pool_t *pool);
+/* Do the following things that are commonly required before accessing revision
+   properties.  Ensure that REVISION is specified explicitly and is not
+   relative to a working-copy item.  Ensure that exactly one target is
+   specified in TARGETS.  Set *URL to the URL of the target.  Return an
+   appropriate error if any of those checks or operations fail.
+ */
+svn_error_t *
+svn_cl__revprop_prepare (const svn_opt_revision_t *revision,
+                         apr_array_header_t *targets,
+                         const char **URL,
+                         apr_pool_t *pool);
 
 /* Search for a text editor command in standard environment variables,
    and invoke it to edit CONTENTS (using a temporary file created in
@@ -450,6 +457,17 @@ svn_error_t *svn_cl__may_need_force (svn_error_t *err);
 /* Write the STRING to the stdio STREAM, returning an error if it fails. */
 svn_error_t *svn_cl__error_checked_fputs (const char *string,
                                           FILE* stream);
+
+/* If STRING is non-null, append it, wrapped in a simple XML CDATA element
+   named TAGNAME, to the string SB.  Use POOL for temporary allocations. */
+void svn_cl__xml_tagged_cdata (svn_stringbuf_t **sb,
+                               apr_pool_t *pool,
+                               const char *tagname,
+                               const char *string);
+
+/* Return a (non-localised) string representation of KIND, being "dir" or
+   "file" or, in any other case, the empty string. */
+const char *svn_cl__node_kind_str (svn_node_kind_t kind);
 
 
 #ifdef __cplusplus

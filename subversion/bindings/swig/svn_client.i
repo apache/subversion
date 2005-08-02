@@ -129,15 +129,41 @@
   $2 = $input; /* our function is the baton. */
 }
 
-%typemap(ruby,in) (svn_client_get_commit_log_t log_msg_func) 
+%typemap(ruby, in) svn_client_get_commit_log_t log_msg_func
 {
-  /* Assume that arg1 is svn_client_ctx_t. */
-  if (arg1) {
-    $1 = svn_swig_rb_get_commit_log_func;
-    arg1->log_msg_baton = (void *)$input;
-    rb_ivar_set(self, rb_intern("log_msg_baton"), $input);
-  }
+  $1 = svn_swig_rb_get_commit_log_func;
 }
+
+/* -----------------------------------------------------------------------
+   Callback: svn_cancel_func_t
+   svn_client_ctx_t
+*/
+
+%typemap(ruby, in) svn_cancel_func_t cancel_func
+{
+  $1 = svn_swig_rb_cancel_func;
+}
+
+/* -----------------------------------------------------------------------
+   Callback: svn_wc_notify_func_t
+   svn_client_ctx_t
+*/
+
+%typemap(ruby, in) svn_wc_notify_func_t notify_func
+{
+  $1 = svn_swig_rb_notify_func;
+}
+
+/* -----------------------------------------------------------------------
+   Callback: svn_wc_notify_func2_t
+   svn_client_ctx_t
+*/
+
+%typemap(ruby, in) svn_wc_notify_func2_t notify_func2
+{
+  $1 = svn_swig_rb_notify_func2;
+}
+
 
 /* -----------------------------------------------------------------------
    Callback: svn_client_blame_receiver_t
@@ -293,6 +319,16 @@
 }
 #endif
 
+#ifdef SWIGRUBY
+%apply void *CALLBACK_BATON
+{
+  void *notify_baton,
+  void *notify_baton2,
+  void *log_msg_baton,
+  void *cancel_baton
+}
+#endif
+
 /* ----------------------------------------------------------------------- 
  * Convert perl hashes back into apr_hash_t * for setting the config
  * member of the svn_client_ctx_t.   This is an ugly hack, it will
@@ -406,7 +442,8 @@
 }  
 
 /* svn_client_update2 */
-%typemap(ruby, in, numinputs=0) apr_array_header_t **result_revs (apr_array_header_t *temp) {
+%typemap(ruby, in, numinputs=0) apr_array_header_t **result_revs (apr_array_header_t *temp)
+{
   $1 = &temp;
 }
 

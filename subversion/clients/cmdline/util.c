@@ -42,6 +42,7 @@
 #include "svn_utf.h"
 #include "svn_subst.h"
 #include "svn_config.h"
+#include "svn_xml.h"
 #include "svn_private_config.h"
 #include "cl.h"
 
@@ -711,4 +712,35 @@ svn_cl__try (svn_error_t *err,
     }
 
   return err;
+}
+
+
+void
+svn_cl__xml_tagged_cdata (svn_stringbuf_t **sb,
+                          apr_pool_t *pool,
+                          const char *tagname,
+                          const char *string)
+{
+  if (string)
+    {
+      svn_xml_make_open_tag (sb, pool, svn_xml_protect_pcdata,
+                             tagname, NULL);
+      svn_xml_escape_cdata_cstring (sb, string, pool);
+      svn_xml_make_close_tag (sb, pool, tagname);
+    }
+}
+
+
+const char *
+svn_cl__node_kind_str (svn_node_kind_t kind)
+{
+  switch (kind)
+    {
+    case svn_node_dir:
+      return "dir";
+    case svn_node_file:
+      return "file";
+    default:
+      return "";
+    }
 }

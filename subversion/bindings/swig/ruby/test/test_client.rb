@@ -18,12 +18,101 @@ class SvnClientTest < Test::Unit::TestCase
   def test_version
     assert_equal(Svn::Core.subr_version, Svn::Client.version)
   end
+
+  def test_add_not_recurse
+    log = "sample log"
+    file = "hello.txt"
+    src = "Hello"
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+    uri = "#{@repos_uri}/#{dir}/#{file}"
+
+    ctx = make_context(log)
+    FileUtils.mkdir(dir_path)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(dir_path, false)
+    ctx.commit(@wc_path)
+
+    assert_raise(Svn::Error::FS_NOT_FOUND) do
+      ctx.cat(uri)
+    end
+  end
+
+  def test_add_recurse
+    log = "sample log"
+    file = "hello.txt"
+    src = "Hello"
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+    uri = "#{@repos_uri}/#{dir}/#{file}"
+
+    ctx = make_context(log)
+    FileUtils.mkdir(dir_path)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(dir_path)
+    ctx.commit(@wc_path)
+
+    assert_equal(src, ctx.cat(uri))
+  end
+
+  def test_add_force
+    log = "sample log"
+    file = "hello.txt"
+    src = "Hello"
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+    uri = "#{@repos_uri}/#{dir}/#{file}"
+
+    ctx = make_context(log)
+    FileUtils.mkdir(dir_path)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(dir_path, false)
+    ctx.commit(@wc_path)
+
+    assert_raise(Svn::Error::ENTRY_EXISTS) do
+      ctx.add(dir_path, true, false)
+    end
+    
+    ctx.add(dir_path, true, true)
+    ctx.commit(@wc_path)
+    assert_equal(src, ctx.cat(uri))
+  end
+
+  def test_add_no_ignore
+    log = "sample log"
+    file = "hello.txt"
+    src = "Hello"
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+    uri = "#{@repos_uri}/#{dir}/#{file}"
+
+    ctx = make_context(log)
+    FileUtils.mkdir(dir_path)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(dir_path, false)
+    ctx.propset(Svn::Core::PROP_IGNORE, file, dir_path)
+    ctx.commit(@wc_path)
+
+    ctx.add(dir_path, true, true, false)
+    ctx.commit(@wc_path)
+    assert_raise(Svn::Error::FS_NOT_FOUND) do
+      ctx.cat(uri)
+    end
+    
+    ctx.add(dir_path, true, true, true)
+    ctx.commit(@wc_path)
+    assert_equal(src, ctx.cat(uri))
+  end
   
   def test_commit
     log = "sample log"
     ctx = make_context(log)
     assert_nil(ctx.commit(@wc_path))
-    ctx.mkdir(["#{@wc_path}/new_dir"])
+    ctx.mkdir("#{@wc_path}/new_dir")
     assert_equal(0, youngest_rev)
     ctx.commit(@wc_path)
     assert_equal(1, youngest_rev)
@@ -199,6 +288,68 @@ class SvnClientTest < Test::Unit::TestCase
                              @repos_uri, info.revision))
   end
   
+  def test_switch
+    log = "sample log"
+    trunk_src = "trunk source\n"
+    tag_src = "tag source\n"
+    file = "sample.txt"
+    file = "sample.txt"
+    trunk_dir = "trunk"
+    tag_dir = "tags"
+    tag_name = "0.0.1"
+    trunk_repos_uri = "#{@repos_uri}/#{trunk_dir}"
+    tag_repos_uri = "#{@repos_uri}/#{tag_dir}/#{tag_name}"
+    trunk_dir_path = File.join(@wc_path, trunk_dir)
+    tag_dir_path = File.join(@wc_path, tag_dir)
+    tag_name_dir_path = File.join(@wc_path, tag_dir, tag_name)
+    trunk_path = File.join(trunk_dir_path, file)
+    tag_path = File.join(tag_name_dir_path, file)
+    path = File.join(@wc_path, file)
+
+    ctx = make_context(log)
+
+    ctx.mkdir(trunk_dir_path)
+    File.open(trunk_path, "w") {|f| f.print(trunk_src)}
+    ctx.add(trunk_path)
+    trunk_rev = ctx.commit(@wc_path).revision
+    
+    ctx.mkdir(tag_dir_path, tag_name_dir_path)
+    File.open(tag_path, "w") {|f| f.print(tag_src)}
+    ctx.add(tag_path)
+    tag_rev = ctx.commit(@wc_path).revision
+
+    assert_equal(youngest_rev, ctx.switch(@wc_path, trunk_repos_uri))
+    assert_equal(trunk_src, ctx.cat(path))
+
+    assert_equal(youngest_rev, ctx.switch(@wc_path, tag_repos_uri))
+    assert_equal(tag_src, ctx.cat(path))
+
+
+    notify_info = []
+    ctx.set_notify_func2 do |notify|
+      notify_info << [notify.path, notify.action]
+    end
+    
+    assert_equal(trunk_rev, ctx.switch(@wc_path, trunk_repos_uri, trunk_rev))
+    assert_equal(trunk_src, ctx.cat(path))
+    assert_equal([
+                   [path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
+                   [@wc_path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
+                   [@wc_path, Svn::Wc::NOTIFY_UPDATE_COMPLETED],
+                 ],
+                 notify_info)
+
+    notify_info.clear
+    assert_equal(tag_rev, ctx.switch(@wc_path, tag_repos_uri, tag_rev))
+    assert_equal(tag_src, ctx.cat(path))
+    assert_equal([
+                   [path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
+                   [@wc_path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
+                   [@wc_path, Svn::Wc::NOTIFY_UPDATE_COMPLETED],
+                 ],
+                 notify_info)
+  end
+
   def test_authentication
     log = "sample log"
     src = "source\n"

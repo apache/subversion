@@ -91,30 +91,14 @@ svn_cl__propset (apr_getopt_t *os,
   if (opt_state->revprop)  /* operate on a revprop */
     {
       svn_revnum_t rev;
-      const char *URL, *target;
-
-      /* All property commands insist on a specific revision when
-         operating on a revprop. */
-      if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
-        return svn_cl__revprop_no_rev_error (pool);
-
-      /* Else some revision was specified, so proceed. */
+      const char *URL;
 
       /* Implicit "." is okay for revision properties; it just helps
          us find the right repository. */
       svn_opt_push_implicit_dot_target (targets, pool);
 
-      /* Either we have a URL target, or an implicit wc-path ('.')
-         which needs to be converted to a URL. */
-      if (targets->nelts <= 0)
-        return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-                                _("No URL target available"));
-      target = ((const char **) (targets->elts))[0];
-      SVN_ERR (svn_client_url_from_path (&URL, target, pool));  
-      if (URL == NULL)
-        return svn_error_create (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                 _("Either a URL or versioned item is"
-                                   " required"));
+      SVN_ERR (svn_cl__revprop_prepare (&opt_state->start_revision, targets,
+                                        &URL, pool));
 
       /* Let libsvn_client do the real work. */
       SVN_ERR (svn_client_revprop_set (pname_utf8, propval,

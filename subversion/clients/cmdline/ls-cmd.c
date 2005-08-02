@@ -122,21 +122,6 @@ print_dirents (apr_hash_t *dirents,
 }
 
 
-static const char *
-kind_str (svn_node_kind_t kind)
-{
-  switch (kind)
-    {
-    case svn_node_dir:
-      return "dir";
-    case svn_node_file:
-      return "file";
-    default:
-      return "";
-    }
-}
-
-
 static svn_error_t *
 print_header_xml (apr_pool_t *pool)
 {
@@ -195,24 +180,18 @@ print_dirents_xml (apr_hash_t *dirents,
 
       /* "<entry ...>" */
       svn_xml_make_open_tag (&sb, subpool, svn_xml_normal, "entry",
-                             "kind", kind_str (dirent->kind),
+                             "kind", svn_cl__node_kind_str (dirent->kind),
                              NULL);
 
       /* "<name>xxx</name> */
-      svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "name",
-                             NULL);
-      svn_xml_escape_cdata_cstring (&sb, utf8_entryname, subpool);
-      svn_xml_make_close_tag (&sb, subpool, "name");
+      svn_cl__xml_tagged_cdata (&sb, subpool, "name", utf8_entryname);
 
       /* "<size>xxx</size>" */
       if (dirent->kind == svn_node_file)
         {
-          svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "size",
-                                 NULL);
-          svn_xml_escape_cdata_cstring
-            (&sb, apr_psprintf (subpool, "%" SVN_FILESIZE_T_FMT, dirent->size),
-             subpool);
-          svn_xml_make_close_tag (&sb, subpool, "size");
+          svn_cl__xml_tagged_cdata
+            (&sb, subpool, "size",
+             apr_psprintf (subpool, "%" SVN_FILESIZE_T_FMT, dirent->size));
         }
 
       /* "<commit revision=...>" */
@@ -221,20 +200,11 @@ print_dirents_xml (apr_hash_t *dirents,
                              apr_psprintf (subpool, "%ld",
                                            dirent->created_rev),
                              NULL);
-      if (dirent->last_author)
-        {
-          /* "<author>xxx</author>" */
-          svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata,
-                                 "author", NULL);
-          svn_xml_escape_cdata_cstring (&sb, dirent->last_author, subpool);
-          svn_xml_make_close_tag (&sb, subpool, "author");
-        }
+      /* "<author>xxx</author>" */
+      svn_cl__xml_tagged_cdata (&sb, subpool, "author", dirent->last_author);
       /* "<date>xxx</date>" */
-      svn_xml_make_open_tag (&sb, subpool, svn_xml_protect_pcdata, "date",
-                             NULL);
-      svn_xml_escape_cdata_cstring
-        (&sb, svn_time_to_cstring (dirent->time, subpool), subpool);
-      svn_xml_make_close_tag (&sb, subpool, "date");
+      svn_cl__xml_tagged_cdata (&sb, subpool, "date",
+                                svn_time_to_cstring (dirent->time, subpool));
       /* "</commit>" */
       svn_xml_make_close_tag (&sb, subpool, "commit");
 

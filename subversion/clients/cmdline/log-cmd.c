@@ -296,24 +296,12 @@ log_message_receiver_xml (void *baton,
   svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "logentry",
                          "revision", revstr, NULL);
 
-  if (author)
-    {
-      /* <author>xxx</author> */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "author",
-                             NULL);
-      svn_xml_escape_cdata_cstring (&sb, author, pool);
-      svn_xml_make_close_tag (&sb, pool, "author");
-    }
+  /* <author>xxx</author> */
+  svn_cl__xml_tagged_cdata (&sb, pool, "author", author);
 
-  if (date)
-    {
-      /* Print the full, uncut, date.  This is machine output. */
-      /* <date>xxx</date> */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "date",
-                             NULL);
-      svn_xml_escape_cdata_cstring (&sb, date, pool);
-      svn_xml_make_close_tag (&sb, pool, "date");
-    }
+  /* Print the full, uncut, date.  This is machine output. */
+  /* <date>xxx</date> */
+  svn_cl__xml_tagged_cdata (&sb, pool, "date", date);
 
   if (changed_paths)
     {
@@ -372,9 +360,7 @@ log_message_receiver_xml (void *baton,
         msg = "";
 
       /* <msg>xxx</msg> */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "msg", NULL);
-      svn_xml_escape_cdata_cstring (&sb, msg, pool);
-      svn_xml_make_close_tag (&sb, pool, "msg");
+      svn_cl__xml_tagged_cdata (&sb, pool, "msg", msg);
     }
 
   /* </logentry> */
