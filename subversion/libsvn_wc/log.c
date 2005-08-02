@@ -37,6 +37,7 @@
 #include "props.h"
 #include "adm_files.h"
 #include "entries.h"
+#include "lock.h"
 #include "translate.h"
 #include "questions.h"
 

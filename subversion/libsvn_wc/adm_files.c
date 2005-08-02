@@ -36,6 +36,7 @@
 #include "wc.h"
 #include "adm_files.h"
 #include "entries.h"
+#include "lock.h"
 
 #include "svn_private_config.h"
 

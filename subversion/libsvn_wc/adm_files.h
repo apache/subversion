@@ -232,6 +232,13 @@ svn_error_t *svn_wc__adm_destroy (svn_wc_adm_access_t *adm_access,
 svn_error_t *svn_wc__adm_cleanup_tmp_area (svn_wc_adm_access_t *adm_access,
                                            apr_pool_t *pool);
 
+/* Carries out platform specific operations needed before a file is
+ * replaced via a rename or copy.  Currently it only runs 
+ * svn_io_set_file_read_write() on Windows. */
+svn_error_t *svn_wc__prep_file_for_replacement (const char *path,
+                                                svn_boolean_t ignore_enoent,
+                                                apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }
