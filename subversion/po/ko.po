@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-08-01 10:14+0900\n"
-"PO-Revision-Date: 2005-08-01 11:16+0900\n"
+"POT-Creation-Date: 2005-08-02 13:56+0900\n"
+"PO-Revision-Date: 2005-08-02 14:58+0900\n"
 "Last-Translator: seolin <blueboh@gmail.com>\n"
 "Language-Team: Korean <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1745,117 +1745,111 @@ msgstr "클라이언트 인증서 파일:"
 msgid "Passphrase for '%s': "
 msgstr "패스프레이즈 '%s':"
 
-#: clients/cmdline/propdel-cmd.c:78
-#: clients/cmdline/propedit-cmd.c:85
-#: clients/cmdline/proplist-cmd.c:72
-#: clients/cmdline/propset-cmd.c:111
-msgid "No URL target available"
-msgstr "가능한 URL이 없습니다."
-
-#: clients/cmdline/propdel-cmd.c:84
-#: clients/cmdline/propedit-cmd.c:91
-#: clients/cmdline/proplist-cmd.c:78
-#: clients/cmdline/propset-cmd.c:116
-msgid "Either a URL or versioned item is required"
-msgstr "URL 혹은 버전 관리 파일이 필요합니다."
-
-#: clients/cmdline/propdel-cmd.c:93
+#: clients/cmdline/propdel-cmd.c:77
 #, c-format
 msgid "property '%s' deleted from repository revision %ld\n"
 msgstr "'%s' 속성이 저장소 리비전 %ld 에서 삭제되었습니다.\n"
 
-#: clients/cmdline/propdel-cmd.c:102
+#: clients/cmdline/propdel-cmd.c:86
 #, c-format
 msgid "Cannot specify revision for deleting versioned property '%s'"
 msgstr "버전관리 되는 '%s' 속성을 제거하기 위해 리비전을 지정할 수 없습니다."
 
-#: clients/cmdline/propdel-cmd.c:132
+#: clients/cmdline/propdel-cmd.c:116
 #, c-format
 msgid "property '%s' deleted (recursively) from '%s'.\n"
 msgstr "속성 '%s' 이 (재귀적으로) '%s'에서 삭제되었습니다.\n"
 
-#: clients/cmdline/propdel-cmd.c:133
+#: clients/cmdline/propdel-cmd.c:117
 #, c-format
 msgid "property '%s' deleted from '%s'.\n"
 msgstr "속성 '%s' 이 '%s'에서 삭제되었습니다.\n"
 
-#: clients/cmdline/propedit-cmd.c:117
-#: clients/cmdline/propedit-cmd.c:241
+#: clients/cmdline/propedit-cmd.c:101
+#: clients/cmdline/propedit-cmd.c:225
 #: clients/cmdline/propset-cmd.c:85
 msgid "Bad encoding option: prop value not stored as UTF8"
 msgstr "잘못된 인코딩 옵션: 속성 값이 UTF8으로 저장되어 있지 않습니다."
 
-#: clients/cmdline/propedit-cmd.c:126
+#: clients/cmdline/propedit-cmd.c:110
 #, c-format
 msgid "Set new value for property '%s' on revision %ld\n"
 msgstr "'%s' 속성의 새로운 값이 리비전 %ld에 설정되었습니다.\n"
 
-#: clients/cmdline/propedit-cmd.c:132
+#: clients/cmdline/propedit-cmd.c:116
 #, c-format
 msgid "No changes to property '%s' on revision %ld\n"
 msgstr "'%s' 속성이 변경되지 않았습니다. 리비전 %ld\n"
 
-#: clients/cmdline/propedit-cmd.c:140
+#: clients/cmdline/propedit-cmd.c:124
 #, c-format
 msgid "Cannot specify revision for editing versioned property '%s'"
 msgstr "버전관리 되는 '%s' 속성을 편집하기 위해 리비전을 지정할 수 없습니다."
 
-#: clients/cmdline/propedit-cmd.c:166
-#: clients/cmdline/propset-cmd.c:174
+#: clients/cmdline/propedit-cmd.c:150
+#: clients/cmdline/propset-cmd.c:158
 msgid "Explicit target argument required"
 msgstr "대상 인자를 명시적으로 넣어주세요."
 
-#: clients/cmdline/propedit-cmd.c:189
+#: clients/cmdline/propedit-cmd.c:173
 #, c-format
 msgid "Editing property on non-local target '%s' not yet supported"
 msgstr "원격 대상 '%s' 에 대하여 속성 변경이 아직 지원되지 않습니다."
 
-#: clients/cmdline/propedit-cmd.c:216
+#: clients/cmdline/propedit-cmd.c:200
 #: clients/cmdline/switch-cmd.c:138
 #, c-format
 msgid "'%s' does not appear to be a working copy path"
 msgstr "'%s' 은 작업 사본 경로로 보이지 않습니다."
 
-#: clients/cmdline/propedit-cmd.c:248
+#: clients/cmdline/propedit-cmd.c:232
 #, c-format
 msgid "Set new value for property '%s' on '%s'\n"
 msgstr "속성('%s'; '%s')을 새로이 설정합니다\n"
 
-#: clients/cmdline/propedit-cmd.c:255
+#: clients/cmdline/propedit-cmd.c:239
 #, c-format
 msgid "No changes to property '%s' on '%s'\n"
 msgstr "속성('%s'; '%s')에 변화가 없습니다.\n"
 
-#: clients/cmdline/proplist-cmd.c:87
+#: clients/cmdline/proplist-cmd.c:71
 #, c-format
 msgid "Unversioned properties on revision %ld:\n"
 msgstr "리비전 속성(%ld):\n"
 
-#: clients/cmdline/props.c:42
-msgid "Must specify revision explicitly when operating on a revision property"
-msgstr "리비전 속성에 대해 명령을 수행할 경우는 반드시 리비전을 명시해야 합니다."
+#: clients/cmdline/props.c:51
+msgid "Must specify the revision as a number, a date or 'HEAD' when operating on a revision property"
+msgstr "리비전 속성에 대해 명령을 수행할 경우는 반드시 숫자나 날짜 혹은 'HEAD'로 리비전 속성을 명시해야 합니다."
 
-#: clients/cmdline/propset-cmd.c:127
+#: clients/cmdline/props.c:58
+msgid "Wrong number of targets specified"
+msgstr "지정한 대상의 숫자가 잘못되었습니다."
+
+#: clients/cmdline/props.c:67
+msgid "Either a URL or versioned item is required"
+msgstr "URL 혹은 버전 관리 파일이 필요합니다."
+
+#: clients/cmdline/propset-cmd.c:111
 #, c-format
 msgid "property '%s' set on repository revision %ld\n"
 msgstr "속성 '%s'을/를 저장소 리비전 %ld에  설정하였습니다.\n"
 
-#: clients/cmdline/propset-cmd.c:135
+#: clients/cmdline/propset-cmd.c:119
 #, c-format
 msgid "Cannot specify revision for setting versioned property '%s'"
 msgstr "버전관리되는 속성 '%s'에는 리버전을 명시할 수 없습니다."
 
-#: clients/cmdline/propset-cmd.c:167
+#: clients/cmdline/propset-cmd.c:151
 #, c-format
 msgid "Explicit target required ('%s' interpreted as prop value)"
 msgstr "대상을 명시해야합니다. ('%s' 는 속성값으로 인식됩니다.)"
 
-#: clients/cmdline/propset-cmd.c:200
+#: clients/cmdline/propset-cmd.c:184
 #, c-format
 msgid "property '%s' set (recursively) on '%s'\n"
 msgstr "속성 '%s'을/를 (재귀적으로) '%s'에 설정하였습니다.\n"
 
-#: clients/cmdline/propset-cmd.c:201
+#: clients/cmdline/propset-cmd.c:185
 #, c-format
 msgid "property '%s' set on '%s'\n"
 msgstr "속성 '%s' 를 '%s'에 설정합니다.\n"
@@ -2731,12 +2725,12 @@ msgstr "로그 메시지 내용이 이상합니다."
 msgid "A log message was given where none was necessary"
 msgstr "로그메시지가 필요없는 곳에 지정되었습니다."
 
-#: libsvn_client/add.c:370
+#: libsvn_client/add.c:371
 #, c-format
 msgid "Error during recursive add of '%s'"
 msgstr "'%s'를 재귀적으로 추가하는 중에 오류 발생"
 
-#: libsvn_client/add.c:381
+#: libsvn_client/add.c:382
 #, c-format
 msgid "Can't close directory '%s'"
 msgstr "'%s' 디렉토리를 닫을 수 없습니다."
@@ -5410,7 +5404,7 @@ msgstr "읽을 수 없는 경로 발생; 접근 거부되었습니다."
 msgid "Config error: invalid boolean value '%s'"
 msgstr "구성 오류: 잘못된 부울리안 값입니다. '%s'"
 
-#: libsvn_subr/config.c:833
+#: libsvn_subr/config.c:882
 #, c-format
 msgid "Config error: invalid integer value '%s'"
 msgstr "구성 오류: 잘못된 정수 값입니다. '%s'"
