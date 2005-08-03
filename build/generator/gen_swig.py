@@ -68,14 +68,10 @@ class Generator(gen_make.Generator):
   """Regular expression for parsing structs from a C header file"""
   _re_structs = re.compile(r'\btypedef\s+struct\s+(svn_[a-z_0-9]+_t)\b\s*(\{?)')
 
-  def _write_swig_interface_file(self, fname):
+  def _write_swig_interface_file(self, base_fname, includes, structs):
     """Convert a header file into a SWIG header file"""
 
-    # Read the contents of the header file
-    contents = open(fname).read()
-
-    # Get the location of the output file
-    base_fname = os.path.basename(fname)
+    # Calculate output filename from base filename
     output_fname = os.path.join(self.swig_proxy_dir,
       self._proxy_filename(base_fname))
 
@@ -84,15 +80,11 @@ class Generator(gen_make.Generator):
     self.ofile.write('/* Proxy classes for %s\n' % base_fname)
     self.ofile.write(' * DO NOT EDIT -- AUTOMATICALLY GENERATED */\n')
 
-    # Get list of structs
-    structs = unique(self._re_structs.findall(contents))
-
     # Write list of structs for which we shouldn't define constructors
     # by default
     self._write_nodefault_calls(structs)
 
     # Write includes into the SWIG interface file
-    includes = unique(self._re_includes.findall(contents))
     self._write_includes(includes, base_fname)
 
     # Write proxy definitions into the SWIG interface file
@@ -101,10 +93,26 @@ class Generator(gen_make.Generator):
     # Close our output file
     self.ofile.close()
 
+  def _process_header_file(self, fname):
+
+    # Read the contents of the header file
+    contents = open(fname).read()
+
+    # Write includes into the SWIG interface file
+    includes = unique(self._re_includes.findall(contents))
+
+    # Get list of structs
+    structs = unique(self._re_structs.findall(contents))
+
+    # Get the location of the output file
+    base_fname = os.path.basename(fname)
+
+    self._write_swig_interface_file(base_fname, includes, structs)
+
   def write(self):
     """Generate SWIG interface files"""
     header_files = map(native_path, self.includes)
     self._include_basenames = map(os.path.basename, header_files)
     for fname in header_files:
       if fname[-2:] == ".h":
-        self._write_swig_interface_file(fname)
+        self._process_header_file(fname)
