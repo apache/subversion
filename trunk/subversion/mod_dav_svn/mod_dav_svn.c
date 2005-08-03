@@ -308,7 +308,11 @@ AP_MODULE_DECLARE(dav_error *) dav_svn_get_repos_path(request_rec *r,
 
     /* Construct the full path from the parent path base directory
        and the repository name. */
+#if !APR_CHARSET_EBCDIC
     *repos_path = svn_path_join(fs_parent_path, repos_name, r->pool);
+#else
+    *repos_path = svn_path_join_ebcdic(fs_parent_path, repos_name, r->pool);
+#endif
     return NULL;
 }
 
