@@ -107,7 +107,199 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.commit(@wc_path)
     assert_equal(src, ctx.cat(uri))
   end
-  
+
+  def test_mkdir
+    log = "sample log"
+    dir = "dir"
+    deep_dir = ["d", "e", "e", "p"]
+    dir2 = "dir2"
+    dir_uri = "#{@repos_uri}/#{dir}"
+    deep_dir_uri = "#{@repos_uri}/#{deep_dir.join('/')}"
+    dir2_uri = "#{@repos_uri}/#{dir2}"
+    dir_path = File.join(@wc_path, dir)
+    deep_dir_path = File.join(@wc_path, *deep_dir)
+    dir2_path = File.join(@wc_path, dir2)
+
+    ctx = make_context(log)
+
+    assert(!File.exist?(dir_path))
+    ctx.mkdir(dir_path)
+    assert(File.exist?(dir_path))
+    assert_raises(Svn::Error::ENTRY_EXISTS) do
+      ctx.add(dir_path)
+    end
+    old_rev = ctx.commit(@wc_path).revision
+
+    new_rev = ctx.mkdir(dir2_uri).revision
+    assert_equal(old_rev + 1, new_rev)
+    assert_raises(Svn::Error::FS_ALREADY_EXISTS) do
+      ctx.mkdir(dir2_uri)
+    end
+    assert(!File.exist?(dir2_path))
+    ctx.update(@wc_path)
+    assert(File.exist?(dir2_path))
+
+    assert_raises(Svn::Error) do
+      ctx.mkdir(deep_dir_path)
+    end
+  end
+
+  def test_mkdir_multiple
+    log = "sample log"
+    dir = "dir"
+    dir2 = "dir2"
+    dirs = [dir, dir2]
+    dirs_path = dirs.collect{|d| File.join(@wc_path, d)}
+    dirs_uri = dirs.collect{|d| "#{@repos_uri}/#{d}"}
+
+    ctx = make_context(log)
+
+    notify_info = []
+    ctx.set_notify_func2 do |notify|
+      notify_info << [notify.path, notify.action]
+    end
+    
+    dirs_path.each do |path|
+      assert(!File.exist?(path))
+    end
+    ctx.mkdir(dirs_path)
+    assert_equal(dirs_path.collect do |d|
+                   [d, Svn::Wc::NOTIFY_STATE_INAPPLICABLE]
+                 end,
+                 notify_info)
+    dirs_path.each do |path|
+      assert(File.exist?(path))
+    end
+
+    notify_info.clear
+    ctx.commit(@wc_path)
+    assert_equal(dirs_path.collect do |d|
+                   [d, Svn::Wc::NOTIFY_COMMIT_ADDED]
+                 end,
+                 notify_info)
+  end
+
+  def test_mkdir_multiple2
+    log = "sample log"
+    dir = "dir"
+    dir2 = "dir2"
+    dirs = [dir, dir2]
+    dirs_path = dirs.collect{|d| File.join(@wc_path, d)}
+    dirs_uri = dirs.collect{|d| "#{@repos_uri}/#{d}"}
+
+    ctx = make_context(log)
+
+    notify_info = []
+    ctx.set_notify_func2 do |notify|
+      notify_info << [notify.path, notify.action]
+    end
+    
+    dirs_path.each do |path|
+      assert(!File.exist?(path))
+    end
+    ctx.mkdir(*dirs_path)
+    assert_equal(dirs_path.collect do |d|
+                   [d, Svn::Wc::NOTIFY_STATE_INAPPLICABLE]
+                 end,
+                 notify_info)
+    dirs_path.each do |path|
+      assert(File.exist?(path))
+    end
+
+    notify_info.clear
+    ctx.commit(@wc_path)
+    assert_equal(dirs_path.collect do |d|
+                   [d, Svn::Wc::NOTIFY_COMMIT_ADDED]
+                 end,
+                 notify_info)
+  end
+
+  def test_delete
+    log = "sample log"
+    src = "sample source\n"
+    file = "file.txt"
+    dir = "dir"
+    path = File.join(@wc_path, file)
+    dir_path = File.join(@wc_path, dir)
+
+    ctx = make_context(log)
+
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(path)
+    ctx.mkdir(dir_path)
+    ctx.commit(@wc_path)
+
+    ctx.delete([path, dir_path])
+    ctx.commit(@wc_path)
+    assert(!File.exist?(path))
+    assert(!File.exist?(dir_path))
+
+    
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(path)
+    ctx.commit(@wc_path)
+
+    File.open(path, "w") {|f| f.print(src * 2)}
+    assert_raises(Svn::Error::CLIENT_MODIFIED) do
+      ctx.delete(path)
+    end
+    assert_raises(Svn::Error::WC_LOCKED) do
+      ctx.delete(path, true)
+    end
+    ctx.cleanup(@wc_path)
+    ctx.delete(path, true)
+    ctx.commit(@wc_path)
+    assert(!File.exist?(path))
+  end
+ 
+  def test_delete_alias
+    log = "sample log"
+    src = "sample source\n"
+    file = "file.txt"
+    dir = "dir"
+    path = File.join(@wc_path, file)
+    dir_path = File.join(@wc_path, dir)
+
+    ctx = make_context(log)
+
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(path)
+    ctx.mkdir(dir_path)
+    ctx.commit(@wc_path)
+
+    ctx.rm([path, dir_path])
+    ctx.commit(@wc_path)
+    assert(!File.exist?(path))
+    assert(!File.exist?(dir_path))
+
+    
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(path)
+    ctx.commit(@wc_path)
+
+    File.open(path, "w") {|f| f.print(src * 2)}
+    assert_raises(Svn::Error::CLIENT_MODIFIED) do
+      ctx.rm(path)
+    end
+    assert_raises(Svn::Error::WC_LOCKED) do
+      ctx.rm_f(path)
+    end
+    ctx.cleanup(@wc_path)
+    ctx.rm_f(path)
+    ctx.commit(@wc_path)
+    assert(!File.exist?(path))
+
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(path)
+    ctx.mkdir(dir_path)
+    ctx.commit(@wc_path)
+
+    ctx.rm_f(path, dir_path)
+    ctx.commit(@wc_path)
+    assert(!File.exist?(path))
+    assert(!File.exist?(dir_path))
+  end
+ 
   def test_commit
     log = "sample log"
     ctx = make_context(log)

@@ -1030,6 +1030,7 @@ rmlocks (const char **msg,
   return SVN_NO_ERROR;
 }
 
+
 
 /* Helper for the authz test.  Set *AUTHZ_P to a representation of
    AUTHZ_CONTENTS, using POOL for temporary allocation. */
@@ -1037,40 +1038,41 @@ static svn_error_t *
 authz_get_handle (svn_authz_t **authz_p, const char *authz_contents,
                   apr_pool_t *pool)
 {
-  char *authz_file_tmpl;
   apr_file_t *authz_file;
   apr_status_t apr_err;
   const char *authz_file_path;
+  svn_error_t *err;
 
-  /* Create a temporary file. */
-  authz_file_tmpl = apr_pstrdup (pool, "authz_test_XXXXXX");
-  apr_err = apr_file_mktemp (&authz_file, authz_file_tmpl,
-                             APR_CREATE | APR_READ | APR_WRITE, pool);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr (apr_err, "Opening temporary file");
+  /* Create a temporary file, and fetch its name. */
+  SVN_ERR_W (svn_io_open_unique_file (&authz_file, &authz_file_path,
+                                      "authz_file", "tmp", FALSE, pool),
+             "Opening temporary file");
 
   /* Write the authz ACLs to the file. */
-  apr_err = apr_file_write_full (authz_file, authz_contents,
-                                 strlen(authz_contents), NULL);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr (apr_err, "Writing test authz file");
-
-  /* Read the authz configuration back and start testing. */
-  apr_err = apr_file_name_get (&authz_file_path, authz_file);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr (apr_err, "Getting authz file path");
+  if ((apr_err = apr_file_write_full (authz_file, authz_contents,
+                                      strlen (authz_contents), NULL)))
+    {
+      (void) apr_file_close (authz_file);
+      (void) apr_file_remove (authz_file_path, pool);
+      return svn_error_wrap_apr (apr_err, "Writing test authz file");
+    }
 
   /* Close the temporary descriptor. */
-  apr_err = apr_file_close (authz_file);
-  if (apr_err != APR_SUCCESS)
-    return svn_error_wrap_apr (apr_err, "Closing test authz file");
+  if ((apr_err = apr_file_close (authz_file)))
+    {
+      (void) apr_file_remove (authz_file_path, pool);
+      return svn_error_wrap_apr (apr_err, "Closing test authz file");
+    }
 
-  SVN_ERR_W (svn_repos_authz_read (authz_p, authz_file_path, TRUE, pool),
-             "Opening test authz file");
+  /* Read the authz configuration back and start testing. */
+  if ((err = svn_repos_authz_read (authz_p, authz_file_path, TRUE, pool)))
+    {
+      (void) apr_file_remove (authz_file_path, pool);
+      return svn_error_quick_wrap (err, "Opening test authz file");
+    }
 
-  /* Delete the file. */
-  apr_err = apr_file_remove (authz_file_path, pool);
-  if (apr_err != APR_SUCCESS)
+  /* Delete the file, but ignore the error if we've a more important one. */
+  if ((apr_err = apr_file_remove (authz_file_path, pool)))
     return svn_error_wrap_apr (apr_err, "Removing test authz file");
 
   return SVN_NO_ERROR;
@@ -1186,7 +1188,7 @@ authz (const char **msg,
     APR_EOL_STR;
 
   /* Load the test authz rules. */
-  SVN_ERR (authz_get_handle(&authz_cfg, contents, subpool));
+  SVN_ERR (authz_get_handle (&authz_cfg, contents, subpool));
 
   /* Loop over the test array and test each case. */
   for (i = 0; test_set[i].path != NULL; i++)
@@ -1272,7 +1274,7 @@ authz (const char **msg,
     APR_EOL_STR;
 
   /* Load the test authz rules. */
-  SVN_ERR (authz_get_handle(&authz_cfg, contents, subpool));
+  SVN_ERR (authz_get_handle (&authz_cfg, contents, subpool));
 
   /* Verify that the rule on /dir2/secret doesn't affect this
      request */

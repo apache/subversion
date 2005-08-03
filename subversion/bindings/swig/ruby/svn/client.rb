@@ -81,7 +81,8 @@ module Svn
       alias remove delete
       alias rm remove
 
-      def rm_f(paths)
+      def rm_f(*paths)
+        paths = paths.first if paths.size == 1 and paths.first.is_a?(Array)
         rm(paths, true)
       end
 
