@@ -39,15 +39,6 @@ Candidate changes:
       +1: jszakmeister
       +0: djames
 
-  * r15552
-    Fix bug in loading of Subversion's JNI library by SVNClient.
-    Justification:
-      Critical bug fix of any users who need to use their own copy of
-      the SVN libraries (e.g. rather than use the system installed
-      version).
-    Votes:
-      +1: dlr
-
   * r15379, r15398
     Fix memleak in character translation handle caching.
     Justification:
@@ -120,6 +111,16 @@ Approved changes (further review is welcome, but not required):
     bindings.
     Justification:
       Produce correct diagnostics from JNI errors.
+    Votes:
+      +1: dlr
+      +0: djames
+
+  * r15552
+    Fix bug in loading of Subversion's JNI library by SVNClient.
+    Justification:
+      Critical bug fix of any users who need to use their own copy of
+      the SVN libraries (e.g. rather than use the system installed
+      version).
     Votes:
       +1: dlr
       +0: djames
