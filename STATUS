@@ -105,12 +105,3 @@ Approved changes (further review is welcome, but not required):
       It's a crash.
     Votes:
       +1: philip, sussman, dlr
-
-  * r15337
-    Fix cut-n-paste problem with JNI stack name in javahl client
-    bindings.
-    Justification:
-      Produce correct diagnostics from JNI errors.
-    Votes:
-      +1: dlr
-      +0: djames
