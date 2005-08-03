@@ -260,8 +260,13 @@ dav_svn__file_revs_report(const dav_resource *resource,
           const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
           if ((derr = dav_svn__test_canonical (rel_path, resource->pool)))
             return derr;
+#if !APR_CHARSET_EBCDIC
           path = svn_path_join(resource->info->repos_path, rel_path, 
                                resource->pool);
+#else
+          path = svn_path_join_ebcdic(resource->info->repos_path, rel_path, 
+                                      resource->pool);
+#endif
         }
       /* else unknown element; skip it */
     }
