@@ -82,7 +82,7 @@
 %typemap(ruby, in) (svn_wc_notify_func_t notify_func, void *notify_baton)
 {
   $1 = svn_swig_rb_notify_func;
-  $2 = $input;
+  $2 = (void *)$input;
 }
 
 /* -----------------------------------------------------------------------
@@ -94,7 +94,7 @@
 %typemap(ruby, in) (svn_wc_notify_func2_t notify_func2, void *notify_baton2)
 {
   $1 = svn_swig_rb_notify_func2;
-  $2 = $input;
+  $2 = (void *)$input;
 }
 
 /* -----------------------------------------------------------------------
