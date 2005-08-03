@@ -48,27 +48,12 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r15337
-    Fix cut-n-paste problem with JNI stack name in javahl client
-    bindings.
-    Justification:
-      Produce correct diagnostics from JNI errors.
-    Votes:
-      +1: dlr
-
   * r15379, r15398
     Fix memleak in character translation handle caching.
     Justification:
       Leaks are bad.
     Votes:
       +1: lundblad
-
-  * r15516
-    A one line fix for an "svn export wc_path" client SEGV.
-    Justification:
-      It's a crash.
-    Votes:
-      +1: philip, sussman
 
 
 Approved changes (further review is welcome, but not required):
@@ -123,3 +108,18 @@ Approved changes (further review is welcome, but not required):
       +1: jszakmeister
       +0: djames
 
+  * r15516
+    A one line fix for an "svn export wc_path" client SEGV.
+    Justification:
+      It's a crash.
+    Votes:
+      +1: philip, sussman, dlr
+
+  * r15337
+    Fix cut-n-paste problem with JNI stack name in javahl client
+    bindings.
+    Justification:
+      Produce correct diagnostics from JNI errors.
+    Votes:
+      +1: dlr
+      +0: djames
