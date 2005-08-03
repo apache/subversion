@@ -347,6 +347,35 @@ def export_unversioned_file(sbox):
                                      None, svntest.SVNAnyOutput,
                                      'export', kappa_path, export_target)
 
+def export_with_state_deleted(sbox):
+  "export with state deleted=true"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  # state deleted=true caused export to crash
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', alpha_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.remove('A/B/E/alpha')
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  export_target = sbox.add_wc_path('export')
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha')
+  svntest.actions.run_and_verify_export(sbox.wc_dir,
+                                        export_target,
+                                        expected_output,
+                                        expected_disk)
+
 ########################################################################
 # Run the tests
 
@@ -365,7 +394,8 @@ test_list = [ None,
               export_working_copy_at_base_revision,
               export_native_eol_option,
               export_nonexistant_file,
-              export_unversioned_file
+              export_unversioned_file,
+              export_with_state_deleted,
              ]
 
 if __name__ == '__main__':
