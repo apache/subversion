@@ -61,12 +61,3 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: blair
       +0: djames
-
-  * r15233
-    Reduce memory consumption by the client when performing merge
-    operations.
-    Justification:
-      Consuming 2GB of memory while performing a merge on a large
-      working copy is bad.
-    Votes:
-      +1: jszakmeister, lundblad, sussman
