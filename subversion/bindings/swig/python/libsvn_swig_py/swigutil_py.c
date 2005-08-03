@@ -117,6 +117,7 @@ static PyObject *_global_svn_swig_py_pool = NULL;
 int _global_svn_swig_py_is_local_pool = 0;
 static char assertValid[] = "assert_valid";
 static char parentPool[] = "_parent_pool";
+static char isValid[] = "_is_valid";
 static char setParentPool[] = "set_parent_pool";
 static char emptyTuple[] = "()";
 static char objectTuple[] = "(O)";
@@ -141,7 +142,7 @@ static apr_status_t svn_swig_py_pool_destroyed(void *ptr)
 {
   PyObject *pool = (PyObject *) ptr;
   svn_swig_py_acquire_py_lock();
-  PyObject_DelAttrString(pool,"_is_valid");
+  PyObject_DelAttrString(pool, isValid);
   svn_swig_py_release_py_lock();
   return APR_SUCCESS; 
 }
