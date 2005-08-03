@@ -394,7 +394,7 @@ svn_fs_fs__hotcopy (const char *src_path,
                                      iterpool));
     }
 
-  apr_pool_destroy (iterpool);
+  svn_pool_destroy (iterpool);
 
   /* Make an empty transactions directory for now.  Eventually some
      method of copying in progress transactions will need to be

@@ -1532,7 +1532,7 @@ merge (svn_stringbuf_t *conflict_p,
                (target, s_entry->name, s_entry->id, s_entry->kind,
                 txn_id, iterpool));
     }
-  apr_pool_destroy (iterpool);
+  svn_pool_destroy (iterpool);
 
   SVN_ERR (svn_fs_fs__dag_get_predecessor_count (&pred_count, source, pool));
   SVN_ERR (update_ancestry (fs, source_id, target_id, txn_id, target_path,
