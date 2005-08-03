@@ -9,6 +9,14 @@ from libsvn.core import application_pool
 
 class PoolTestCase(unittest.TestCase):
 
+  def assertNotNone(self, value):
+    """Assert that the specified value is not None"""
+    return self.assertNotEqual(value, None);
+  
+  def assertNone(self, value):
+    """Assert that the specified value is None"""
+    return self.assertEqual(value, None);
+  
   def test_pool(self):
     # Create pools
     parent_pool = Pool()
@@ -20,23 +28,23 @@ class PoolTestCase(unittest.TestCase):
     self.assertRaises(TypeError, lambda: Pool("abcd"));
 
     # Check that garbage collection is working OK
-    self.assertTrue(parent_pool_ref())
+    self.assertNotNone(parent_pool_ref())
     del parent_pool
-    self.assertTrue(parent_pool_ref())
+    self.assertNotNone(parent_pool_ref())
     pool.clear()
     newpool = libsvn.core.svn_pool_create(pool)
     libsvn.core.apr_pool_destroy(newpool)
-    self.assertTrue(newpool)
+    self.assertNotNone(newpool)
     pool.clear()
-    self.assertTrue(parent_pool_ref())
+    self.assertNotNone(parent_pool_ref())
     del pool
-    self.assertTrue(parent_pool_ref())
+    self.assertNotNone(parent_pool_ref())
     del newpool
-    self.assertFalse(parent_pool_ref())
+    self.assertNone(parent_pool_ref())
 
     # Make sure anonymous pools are destroyed properly
     anonymous_pool_ref = weakref.ref(Pool())
-    self.assertFalse(anonymous_pool_ref())
+    self.assertNone(anonymous_pool_ref())
 
   def test_compatibility_layer(self):
     # Create a new pool
@@ -50,11 +58,11 @@ class PoolTestCase(unittest.TestCase):
 
     # Test whether pools are destroyed properly
     pool = svn_pool_create(pool)
-    self.assertTrue(pool_ref())
-    self.assertTrue(parent_pool_ref())
+    self.assertNotNone(pool_ref())
+    self.assertNotNone(parent_pool_ref())
     del pool
-    self.assertFalse(pool_ref())
-    self.assertFalse(parent_pool_ref())
+    self.assertNone(pool_ref())
+    self.assertNone(parent_pool_ref())
 
     # Ensure that AssertionErrors are raised when a pool is deleted twice
     newpool = Pool()
@@ -73,7 +81,7 @@ class PoolTestCase(unittest.TestCase):
 
     # Make sure anonymous pools are destroyed properly
     anonymous_pool_ref = weakref.ref(svn_pool_create())
-    self.assertFalse(anonymous_pool_ref())
+    self.assertNone(anonymous_pool_ref())
 
     # Try to cause a segfault using apr_terminate
     apr_terminate()
@@ -85,7 +93,7 @@ class PoolTestCase(unittest.TestCase):
     svn_pool_destroy(libsvn.core.application_pool)
 
     # Double check that the application pool has been deleted
-    self.assertFalse(libsvn.core.application_pool)
+    self.assertNone(libsvn.core.application_pool)
 
     # Try to allocate memory from the old application pool
     self.assertRaises(AssertionError, lambda: svn_pool_create(application_pool));
@@ -94,7 +102,7 @@ class PoolTestCase(unittest.TestCase):
     svn_pool_create()
 
     # Double check that the application pool has been created
-    self.assertTrue(libsvn.core.application_pool)
+    self.assertNotNone(libsvn.core.application_pool)
 
     # We can still destroy and create pools at will
     svn_pool_destroy(svn_pool_create())
