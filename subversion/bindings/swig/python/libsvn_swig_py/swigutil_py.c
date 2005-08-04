@@ -482,11 +482,8 @@ static PyObject *convert_svn_string_t(void *value, void *ctx,
 
   const svn_string_t *s = value;
 
-  /* ### borrowing from value in the pool. or should we copy? note
-     ### that copying is "safest" */
-
   /* ### gotta cast this thing cuz Python doesn't use "const" */
-  return PyBuffer_FromMemory((void *)s->data, s->len);
+  return PyString_FromStringAndSize((void *)s->data, s->len);
 }
 
 static PyObject *convert_svn_client_commit_item_t(void *value, void *ctx)
