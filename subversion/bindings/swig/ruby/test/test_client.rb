@@ -299,7 +299,28 @@ class SvnClientTest < Test::Unit::TestCase
     assert(!File.exist?(path))
     assert(!File.exist?(dir_path))
   end
- 
+  
+  def test_import
+    src = "source\n"
+    log = "sample log"
+    deep_dir = File.join(%w(a b c d e))
+    file = "sample.txt"
+    deep_dir_path = File.join(@wc_path, deep_dir)
+    path = File.join(deep_dir_path, file)
+    tmp_deep_dir_path = File.join(@tmp_path, deep_dir)
+    tmp_path = File.join(tmp_deep_dir_path, file)
+
+    ctx = make_context(log)
+
+    FileUtils.mkdir_p(tmp_deep_dir_path)
+    File.open(tmp_path, "w") {|f| f.print(src)}
+
+    ctx.import(@tmp_path, @repos_uri)
+
+    ctx.up(@wc_path)
+    assert_equal(src, File.open(path){|f| f.read})
+  end
+  
   def test_commit
     log = "sample log"
     ctx = make_context(log)
