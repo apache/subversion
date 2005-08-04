@@ -1373,6 +1373,36 @@ JNIEXPORT jbyteArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_fileCon
     }
     return cl->fileContent(path, revision, pegRevision);
 }
+
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_streamFileContent
+  (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
+   jobject jpegRevision, jint bufSize, jobject jstream)
+{
+    JNIEntry(SVNClient, streamFileContent);
+    SVNClient *cl = SVNClient::getCppObject(jthis);
+    if (cl == NULL)
+    {
+        JNIUtil::throwError(_("bad c++ this"));
+        return;
+    }
+    JNIStringHolder path(jpath);
+    if (JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    Revision revision(jrevision);
+    if (JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    Revision pegRevision(jpegRevision);
+    if (JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    cl->streamFileContent(path, revision, pegRevision, jstream, bufSize);
+}
+
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    getVersionInfo

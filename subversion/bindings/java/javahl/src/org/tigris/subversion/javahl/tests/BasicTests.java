@@ -24,10 +24,12 @@ import org.tigris.subversion.javahl.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
+import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
+
 /**
- * this class tests the basic functionality of javahl binding. It was inspired
- * by the tests in subversion/tests/clients/cmdline/basic_tests.py
+ * Tests the basic functionality of javahl binding (inspired by the
+ * tests in subversion/tests/clients/cmdline/basic_tests.py).
  */
 public class BasicTests extends SVNTests
 {
@@ -1137,6 +1139,32 @@ public class BasicTests extends SVNTests
         pw.close();
         // get the content from the repository
         byte[] content = client.fileContent(thisTest.getWCPath()+"/A/mu", null);
+        byte[] testContent = thisTest.getWc().getItemContent("A/mu").getBytes();
+
+        // the content should be the same
+        assertTrue("content changed", Arrays.equals(content, testContent));
+    }
+
+    /**
+     * test the basic SVNClient.fileContent functionality
+     * @throws Throwable
+     */
+    public void testBasicCatStream() throws Throwable
+    {
+        // create the working copy
+        OneTest thisTest = new OneTest();
+
+        // modify A/mu
+        File mu = new File(thisTest.getWorkingCopy(), "A/mu");
+        PrintWriter pw = new PrintWriter(new FileOutputStream(mu, true));
+        pw.print("some text");
+        pw.close();
+        // get the content from the repository
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        client.streamFileContent(thisTest.getWCPath() + "/A/mu", null, null,
+                                 100, baos);
+        
+        byte[] content = baos.toByteArray();
         byte[] testContent = thisTest.getWc().getItemContent("A/mu").getBytes();
 
         // the content should be the same
