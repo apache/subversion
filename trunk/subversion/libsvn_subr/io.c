@@ -800,7 +800,12 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
             {
               /* Prevent infinite recursion by filtering off our
                  newly created destination path. */
-              if (strcmp (this_entry.name, dst_basename) == 0)
+              const char *dst_basename_native = dst_basename;
+#if APR_CHARSET_EBCDIC
+              SVN_ERR (svn_utf_cstring_from_utf8(&dst_basename_native,
+                                                 dst_basename, pool));
+#endif
+              if (strcmp (this_entry.name, dst_basename_native) == 0)
                  continue;
 
               SVN_ERR (svn_io_copy_dir_recursively 
