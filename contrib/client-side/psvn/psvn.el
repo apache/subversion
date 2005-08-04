@@ -168,9 +168,12 @@
 (defvar svn-log-edit-file-name "++svn-log++" "*Name of a saved log file.")
 (defvar svn-log-edit-insert-files-to-commit t "*Insert the filelist to commit in the *svn-log* buffer")
 (defvar svn-log-edit-use-log-edit-mode (and (condition-case nil (require 'log-edit) (error nil)) t) "*Use log-edit-mode as base for svn-log-edit-mode")
-(defvar svn-status-hide-unknown nil "*Hide unknown files in `svn-status-buffer-name' buffer.")
-(defvar svn-status-hide-unmodified nil "*Hide unmodified files in `svn-status-buffer-name' buffer.")
-(defvar svn-status-directory-history nil "*List of visited svn working directories.")
+(defvar svn-status-hide-unknown nil
+  "*Hide unknown files in `svn-status-buffer-name' buffer.
+This can be toggled with \[svn-status-toggle-hide-unknown].")
+(defvar svn-status-hide-unmodified nil
+  "*Hide unmodified files in `svn-status-buffer-name' buffer.
+This can be toggled with \[svn-status-toggle-hide-unmodified].")
 (defvar svn-status-sort-status-buffer t "Sort the `svn-status-buffer-name' buffer.
 Setting this variable to nil speeds up M-x svn-status.
 However, it is possible, that the sorting is wrong in this case.")
@@ -180,11 +183,13 @@ However, it is possible, that the sorting is wrong in this case.")
 Possible values are: commit, revert.")
 
 (defvar svn-status-negate-meaning-of-arg-commands nil
-  "*List of operations that sould use a negated meaning of the prefix argument.
+  "*List of operations that should use a negated meaning of the prefix argument.
 The supported functions are `svn-status' and `svn-status-set-user-mark'.")
 
 (defvar svn-status-svn-executable "svn" "*The name of the svn executable.")
 
+;; TODO: bind `process-environment' instead of running env?
+;; That would probably work more reliably in Windows.
 (defvar svn-status-svn-environment-var-list nil
   "*A list of environment variables that should be set for that svn process.
 If you set that variable, svn is called with that environment variables set.
@@ -205,7 +210,7 @@ Any non-nil value overrides that variable, with the same syntax.")
   '((diff "*svn-diff*") (log "*svn-log*") (info t) (blame t) (proplist t) (update t))
   "An alist to specify which windows should be used for svn command outputs.
 The following keys are supported: diff, log, info, blame, proplist, update.
-The follwing values can be given:
+The following values can be given:
 nil       ... show in *svn-process* buffer
 t         ... show in dedicated *svn-info* buffer
 invisible ... don't show the buffer (eventually useful for update)
@@ -218,7 +223,7 @@ If this variable is is t, and a file is out of date (i.e., there is a newer
 version in the repository than the working copy), then the file will
 be marked by \"**\"
 
-If this variale is nil, and the file is out of date then the longer phrase
+If this variable is nil, and the file is out of date then the longer phrase
 \"(Update Available)\" is used.
 
 In either case the mark gets the face
@@ -304,6 +309,7 @@ If t, their full path name will be displayed, else only the filename."
 (add-to-list 'auto-mode-alist '("\\.~?\\(HEAD\\|BASE\\|PREV\\)~?\\'" ignore t))
 
 ;;; internal variables
+(defvar svn-status-directory-history nil "List of visited svn working directories.")
 (defvar svn-process-cmd nil)
 (defvar svn-status-info nil)
 (defvar svn-status-base-info nil)
