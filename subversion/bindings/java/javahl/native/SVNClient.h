@@ -61,6 +61,9 @@ public:
                       bool recurse);
     jbyteArray fileContent(const char *path, Revision &revision,  
                            Revision &pegRevision);
+    void streamFileContent(const char *path, Revision &revision,
+                           Revision &pegRevision, jobject outputStream,
+                           size_t bufSize);
     void propertyCreate(const char *path, const char *name,
                             JNIByteArray &value, bool recurse, bool force);
     void propertyCreate(const char *path, const char *name,
@@ -151,6 +154,9 @@ private:
     jobject createJavaDirEntry(const char *path, svn_dirent_t *dirent);
     jobject createJavaInfo(const svn_wc_entry_t *entry);
     svn_client_ctx_t * getContext(const char *message);
+    svn_stream_t * createReadStream(apr_pool_t* pool, const char *path,
+                                    Revision &revision, Revision &pegRevision,
+                                    size_t& size);
     Notify *m_notify;
     Notify2 *m_notify2;
     Prompter *m_prompter;
