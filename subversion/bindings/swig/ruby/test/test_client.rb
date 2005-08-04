@@ -323,12 +323,19 @@ class SvnClientTest < Test::Unit::TestCase
   
   def test_commit
     log = "sample log"
+    dir1 = "dir1"
+    dir2 = "dir2"
+    dir1_path = File.join(@wc_path, dir1)
+    dir2_path = File.join(dir1_path, dir2)
+    
     ctx = make_context(log)
     assert_nil(ctx.commit(@wc_path))
-    ctx.mkdir("#{@wc_path}/new_dir")
+    ctx.mkdir(dir1_path)
     assert_equal(0, youngest_rev)
-    ctx.commit(@wc_path)
-    assert_equal(1, youngest_rev)
+    assert_equal(1, ctx.commit(@wc_path).revision)
+    ctx.mkdir(dir2_path)
+    assert_nil(ctx.commit(@wc_path, false))
+    assert_equal(2, ctx.ci(@wc_path).revision)
   end
   
   def test_update
