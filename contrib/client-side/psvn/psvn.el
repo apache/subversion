@@ -192,7 +192,14 @@ That is done via the env program.
 
 You could set it for example to '(\"LANG=C\")")
 
-(defvar svn-browse-url-function browse-url-browser-function "Browser function, used for `svn-browse-url'.")
+(defvar svn-browse-url-function nil
+  ;; If the user hasn't changed `svn-browse-url-function', then changing
+  ;; `browse-url-browser-function' should affect psvn even after it has
+  ;; been loaded.
+  "Function to display a Subversion related WWW page in a browser.
+So far, this is used only for \"trac\" issue tracker integration.
+By default, this is nil, which means use `browse-url-browser-function'.
+Any non-nil value overrides that variable, with the same syntax.")
 
 (defvar svn-status-window-alist
   '((diff "*svn-diff*") (log "*svn-log*") (info t) (blame t) (proplist t) (update t))
@@ -3235,7 +3242,8 @@ display routine for svn-status is available."
 
 (defun svn-browse-url (url)
   "Call `browse-url', using `svn-browse-url-function'."
-  (let ((browse-url-browser-function svn-browse-url-function))
+  (let ((browse-url-browser-function (or svn-browse-url-function
+                                         browse-url-browser-function)))
     (browse-url url)))
 
 ;; --------------------------------------------------------------------------------
