@@ -1068,6 +1068,12 @@ svn_subst_copy_and_translate2 (const char *src,
   err = svn_io_file_rename (dst_tmp, dst, subpool);
   if (err)
     goto error;
+#if AS400
+  /* On the iSeries svn_io_open_unique_file creates a file with a ccsid of 37.
+   * So once dst is in place tag it as 1208, which may not be
+   * entirely accurate, but is as far as /r and /n are concerned. */
+  SVN_ERR (svn_ebcdic_set_file_ccsid (dst, 1208, pool));
+#endif
 
   svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
