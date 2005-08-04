@@ -65,10 +65,11 @@ module Svn
         Client.mkdir(normalize_path(paths), self)
       end
 
-      def commit(targets, recurse=true)
+      def commit(targets, recurse=true, keep_locks=false)
         targets = [targets] unless targets.is_a?(Array)
-        Client.commit(targets, !recurse, self)
+        Client.commit2(targets, recurse, keep_locks, self)
       end
+      alias ci commit
 
       def add(path, recurse=true, force=false, no_ignore=false)
         Client.add3(path, recurse, force, no_ignore, self)
