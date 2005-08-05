@@ -34,7 +34,7 @@ Candidate changes:
     Justification:
       Leaks are bad.
     Votes:
-      +1: lundblad
+      +1: lundblad, kfogel
 
 
 Approved changes (further review is welcome, but not required):
