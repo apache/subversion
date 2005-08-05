@@ -31,9 +31,6 @@
 %ignore svn_opt_print_generic_help;
 #endif
 
-/* Don't generate default constructors */
-%nodefault;
-
 %{
 static PyObject * _global_svn_swig_py_pool = NULL;
 %}
