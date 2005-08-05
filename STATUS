@@ -9,7 +9,7 @@ Status of 1.2.2:
 
 Candidate changes:
 
-  * /branches/1.2.x-authz  (merge r15465:HEAD)
+  * /branches/1.2.x-authz  (merge r15467)
     mod_authz_svn bugfix: bad path-matching in recursive logic.
     Justification:
       It's possible to get authz failures when they shouldn't exist.
@@ -17,7 +17,7 @@ Candidate changes:
       See the original bug report at 
       http://subversion.tigris.org/servlets/ReadMsg?listName=users&msgNo=35734
     Votes:
-      +1: sussman, lundblad
+      +1: sussman, lundblad, kfogel
 
   * r15253
     Fix Issue #2341: Perl bindings cat method fails when using a local file
