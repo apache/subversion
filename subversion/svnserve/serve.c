@@ -752,11 +752,11 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   ccb.date = &date;
   ccb.author = &author;
   /* ### Note that svn_repos_get_commit_editor actually wants a decoded URL. */
-  SVN_CMD_ERR(svn_repos_get_commit_editor2
+  SVN_CMD_ERR(svn_repos_get_commit_editor3
               (&editor, &edit_baton, b->repos, NULL,
                svn_path_uri_decode(b->repos_url, pool),
                b->fs_path, b->user,
-               log_msg, commit_done, &ccb, pool));
+               log_msg, commit_done, &ccb, NULL, NULL, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   SVN_ERR(svn_ra_svn_drive_editor(conn, pool, editor, edit_baton, &aborted));
   if (!aborted)
