@@ -1293,6 +1293,271 @@ authz (const char **msg,
   return SVN_NO_ERROR;
 }
 
+
+
+/* Callback for the commit editor tests that relays requests to
+   authz. */
+svn_error_t *commit_authz_cb (svn_repos_authz_access_t required,
+                              svn_boolean_t *allowed,
+                              svn_fs_root_t *root,
+                              const char *path,
+                              void *baton,
+                              apr_pool_t *pool)
+{
+  svn_authz_t *authz_file = baton;
+
+  return svn_repos_authz_check_access (authz_file, "test", path,
+                                       "plato", required, allowed,
+                                       pool);
+}
+
+
+
+/* Test that the commit editor is taking authz into account
+   properly */
+svn_error_t *
+commit_editor_authz  (const char **msg,
+                      svn_boolean_t msg_only,
+                      svn_test_opts_t *opts,
+                      apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t youngest_rev;
+  void *edit_baton;
+  void *root_baton, *dir_baton, *dir2_baton, *file_baton;
+  svn_error_t *err;
+  const svn_delta_editor_t *editor;
+  svn_authz_t *authz_file;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  const char *authz_contents;
+
+  *msg = "test authz in the commit editor";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* The Test Plan
+   *
+   * We create a greek tree repository, then create a commit editor
+   * and try to perform various operations that will run into authz
+   * callbacks.  Check that all operations are properly
+   * authorized/denied when necessary.  We don't try to be exhaustive
+   * in the kinds of authz lookups.  We just make sure that the editor
+   * replies to the calls in a way that proves it is doing authz
+   * lookups.
+   *
+   * Note that this use of the commit editor is not kosher according
+   * to the generic editor API (we aren't allowed to continue editing
+   * after an error, nor are we allowed to assume that errors are
+   * returned by the operations which caused them).  But it should
+   * work fine with this particular editor implementation.
+   */
+
+  /* Create a filesystem and repository. */
+  SVN_ERR (svn_test__create_repos (&repos, "test-repo-commit-authz",
+                                   opts->fs_type, subpool));
+  fs = svn_repos_fs (repos);
+
+  /* Prepare a txn to receive the greek tree. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, subpool));
+  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn, subpool));
+
+  /* Load the authz rules for the greek tree. */
+  authz_contents =
+    APR_EOL_STR
+    APR_EOL_STR
+    "[/]"
+    APR_EOL_STR
+    "plato = r"
+    APR_EOL_STR
+    APR_EOL_STR
+    "[/A]"
+    APR_EOL_STR
+    "plato = rw"
+    APR_EOL_STR
+    APR_EOL_STR
+    "[/A/alpha]"
+    APR_EOL_STR
+    "plato = "
+    APR_EOL_STR
+    APR_EOL_STR
+    "[/A/C]"
+    APR_EOL_STR
+    APR_EOL_STR
+    "plato = "
+    APR_EOL_STR
+    APR_EOL_STR
+    "[/A/D]"
+    APR_EOL_STR
+    "plato = rw"
+    APR_EOL_STR
+    APR_EOL_STR
+    "[/A/D/G]"
+    APR_EOL_STR
+    "plato = r"
+    ;
+
+  SVN_ERR (authz_get_handle (&authz_file, authz_contents, subpool));
+
+  /* Create a new commit editor in which we're going to play with
+     authz */
+  SVN_ERR (svn_repos_get_commit_editor3 (&editor, &edit_baton, repos,
+                                         NULL, "file://test", "/",
+                                         "plato", "test commit", NULL,
+                                         NULL, commit_authz_cb, authz_file,
+                                         subpool));
+
+  /* Start fiddling.  First get the root, which is readonly.  All
+     write operations fail because of the root's permissions. */
+  SVN_ERR (editor->open_root (edit_baton, 1, subpool, &root_baton));
+
+  /* Test denied file deletion. */
+  err = editor->delete_entry ("/iota", SVN_INVALID_REVNUM, root_baton, subpool);
+  if (err == SVN_NO_ERROR || err->apr_err != SVN_ERR_AUTHZ_UNWRITABLE)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+                              "Got %s error instead of expected "
+                              "SVN_ERR_AUTHZ_UNWRITABLE",
+                              err ? "unexpected" : "no");
+  svn_error_clear (err);
+
+  /* Test authorized file open. */
+  SVN_ERR (editor->open_file ("/iota", root_baton, SVN_INVALID_REVNUM,
+                              subpool, &file_baton));
+
+  /* Test unauthorized file prop set. */
+  err = editor->change_file_prop (file_baton, "svn:test",
+                                  svn_string_create ("test", subpool),
+                                  subpool);
+  if (err == SVN_NO_ERROR || err->apr_err != SVN_ERR_AUTHZ_UNWRITABLE)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+                              "Got %s error instead of expected "
+                              "SVN_ERR_AUTHZ_UNWRITABLE",
+                              err ? "unexpected" : "no");
+  svn_error_clear (err);
+
+  /* Test denied file addition. */
+  err = editor->add_file ("/alpha", root_baton, NULL, SVN_INVALID_REVNUM,
+                          subpool, &file_baton);
+  if (err == SVN_NO_ERROR || err->apr_err != SVN_ERR_AUTHZ_UNWRITABLE)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+                              "Got %s error instead of expected "
+                              "SVN_ERR_AUTHZ_UNWRITABLE",
+                              err ? "unexpected" : "no");
+  svn_error_clear (err);
+
+  /* Test denied file copy. */
+  err = editor->add_file ("/alpha", root_baton, "file://test/A/B/lambda",
+                          youngest_rev, subpool, &file_baton);
+  if (err == SVN_NO_ERROR || err->apr_err != SVN_ERR_AUTHZ_UNWRITABLE)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+                              "Got %s error instead of expected "
+                              "SVN_ERR_AUTHZ_UNWRITABLE",
+                              err ? "unexpected" : "no");
+  svn_error_clear (err);
+
+  /* Test denied directory addition. */
+  err = editor->add_directory ("/I", root_baton, NULL,
+                               SVN_INVALID_REVNUM, subpool, &dir_baton);
+  if (err == SVN_NO_ERROR || err->apr_err != SVN_ERR_AUTHZ_UNWRITABLE)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+                              "Got %s error instead of expected "
+                              "SVN_ERR_AUTHZ_UNWRITABLE",
+                              err ? "unexpected" : "no");
+  svn_error_clear (err);
+
+  /* Test denied directory copy. */
+  err = editor->add_directory ("/J", root_baton, "file://test/A/D",
+                               youngest_rev, subpool, &dir_baton);
+  if (err == SVN_NO_ERROR || err->apr_err != SVN_ERR_AUTHZ_UNWRITABLE)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+                              "Got %s error instead of expected "
+                              "SVN_ERR_AUTHZ_UNWRITABLE",
+                              err ? "unexpected" : "no");
+  svn_error_clear (err);
+
+  /* Open directory /A, to which we have read/write access. */
+  SVN_ERR (editor->open_directory ("/A", root_baton,
+                                   SVN_INVALID_REVNUM,
+                                   pool, &dir_baton));
+
+  /* Test denied file addition.  Denied because of a conflicting rule
+     on the file path itself. */
+  err = editor->add_file ("/A/alpha", dir_baton, NULL,
+                          SVN_INVALID_REVNUM, subpool, &file_baton);
+  if (err == SVN_NO_ERROR || err->apr_err != SVN_ERR_AUTHZ_UNWRITABLE)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+                              "Got %s error instead of expected "
+                              "SVN_ERR_AUTHZ_UNWRITABLE",
+                              err ? "unexpected" : "no");
+  svn_error_clear (err);
+
+  /* Test authorized file addition. */
+  SVN_ERR (editor->add_file ("/A/B/theta", dir_baton, NULL,
+                             SVN_INVALID_REVNUM, subpool,
+                             &file_baton));
+
+  /* Test authorized file deletion. */
+  SVN_ERR (editor->delete_entry ("/A/mu", SVN_INVALID_REVNUM, dir_baton,
+                                 subpool));
+
+  /* Test authorized directory creation. */
+  SVN_ERR (editor->add_directory ("/A/E", dir_baton, NULL,
+                                  SVN_INVALID_REVNUM, subpool,
+                                  &dir2_baton));
+
+  /* Test authorized copy of a tree. */
+  SVN_ERR (editor->add_directory ("/A/J", dir_baton, "file://test/A/D",
+                                  youngest_rev, subpool,
+                                  &dir2_baton));
+
+  /* Test denied access to a directory. */
+  err = editor->open_directory ("/A/C", dir_baton, SVN_INVALID_REVNUM,
+                                subpool, &dir2_baton);
+  if (err == SVN_NO_ERROR || err->apr_err != SVN_ERR_AUTHZ_UNREADABLE)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+                              "Got %s error instead of expected "
+                              "SVN_ERR_AUTHZ_UNREADABLE",
+                              err ? "unexpected" : "no");
+  svn_error_clear (err);
+
+  /* Open /A/D.  This should be granted. */
+  SVN_ERR (editor->open_directory ("/A/D", dir_baton, SVN_INVALID_REVNUM,
+                                   subpool, &dir_baton));
+
+  /* Test denied recursive deletion. */
+  err = editor->delete_entry ("/A/D/G", SVN_INVALID_REVNUM, dir_baton,
+                              subpool);
+  if (err == SVN_NO_ERROR || err->apr_err != SVN_ERR_AUTHZ_UNWRITABLE)
+    return svn_error_createf (SVN_ERR_TEST_FAILED, err,
+                              "Got %s error instead of expected "
+                              "SVN_ERR_AUTHZ_UNWRITABLE",
+                              err ? "unexpected" : "no");
+  svn_error_clear (err);
+
+  /* Test authorized recursive deletion. */
+  SVN_ERR (editor->delete_entry ("/A/D/H", SVN_INVALID_REVNUM,
+                                 dir_baton, subpool));
+
+  /* Test authorized propset (open the file first). */
+  SVN_ERR (editor->open_file ("/A/D/gamma", dir_baton, SVN_INVALID_REVNUM,
+                              subpool, &file_baton));
+  SVN_ERR (editor->change_file_prop (file_baton, "svn:test",
+                                     svn_string_create("test", subpool),
+                                     subpool));
+
+  /* Done. */
+  editor->abort_edit (edit_baton, subpool);
+  svn_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /* The test table.  */
 
@@ -1305,5 +1570,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (node_locations),
     SVN_TEST_PASS (rmlocks),
     SVN_TEST_PASS (authz),
+    SVN_TEST_PASS (commit_editor_authz),
     SVN_TEST_NULL
   };

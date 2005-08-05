@@ -788,6 +788,11 @@ SVN_ERROR_START
               SVN_ERR_AUTHZ_CATEGORY_START + 3,
               "Invalid authz configuration")
 
+  /* @since New in 1.3 */
+  SVN_ERRDEF (SVN_ERR_AUTHZ_UNWRITABLE,
+              SVN_ERR_AUTHZ_CATEGORY_START + 4,
+              "Item is not writable")
+
   /* svndiff errors */
 
   SVN_ERRDEF (SVN_ERR_SVNDIFF_INVALID_HEADER,
