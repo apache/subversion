@@ -58,7 +58,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-08-05 05:32+0200\n"
-"PO-Revision-Date: 2005-07-29 18:12+0200\n"
+"PO-Revision-Date: 2005-08-05 05:40+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1901,16 +1901,14 @@ msgid "Unversioned properties on revision %ld:\n"
 msgstr "Ikke-versjonerte egenskaper på revisjon %ld:\n"
 
 #: clients/cmdline/props.c:51
-#, fuzzy
 msgid ""
 "Must specify the revision as a number, a date or 'HEAD' when operating on a "
 "revision property"
-msgstr "Revisjon må spesifiseres under arbeide med revisjonsegenskaper"
+msgstr "Revisjonen må spesifiseres som et nummer, en dato eller «HEAD» når det opereres på en revisjonsegenskap"
 
 #: clients/cmdline/props.c:58
-#, fuzzy
 msgid "Wrong number of targets specified"
-msgstr "Feil antall filstier angitt"
+msgstr "Feil antall mål angitt"
 
 #: clients/cmdline/props.c:67
 msgid "Either a URL or versioned item is required"
@@ -4124,9 +4122,8 @@ msgstr ""
 "     faktisk:  %s\n"
 
 #: libsvn_fs_base/tree.c:3660 libsvn_fs_fs/tree.c:2599
-#, fuzzy
 msgid "Cannot compare file contents between two different filesystems"
-msgstr "Kan ikke sammenligne egenskapsverdi mellom to forskjellige filsystemer"
+msgstr "Kan ikke sammenligne filinnhold mellom to forskjellige filsystemer"
 
 #: libsvn_fs_base/tree.c:3669 libsvn_fs_base/tree.c:3674
 #: libsvn_fs_fs/tree.c:2608 libsvn_fs_fs/tree.c:2613
