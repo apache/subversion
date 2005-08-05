@@ -290,7 +290,7 @@ void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum,
       *py_pool = _global_svn_swig_py_pool;
     }
   }
-  return SWIG_MustGetPtr(input, type, SWIG_POINTER_EXCEPTION | 0, argnum);
+  return SWIG_MustGetPtr(input, type, argnum, SWIG_POINTER_EXCEPTION | 0);
 }
   
 
@@ -482,11 +482,8 @@ static PyObject *convert_svn_string_t(void *value, void *ctx,
 
   const svn_string_t *s = value;
 
-  /* ### borrowing from value in the pool. or should we copy? note
-     ### that copying is "safest" */
-
   /* ### gotta cast this thing cuz Python doesn't use "const" */
-  return PyBuffer_FromMemory((void *)s->data, s->len);
+  return PyString_FromStringAndSize((void *)s->data, s->len);
 }
 
 static PyObject *convert_svn_client_commit_item_t(void *value, void *ctx)
