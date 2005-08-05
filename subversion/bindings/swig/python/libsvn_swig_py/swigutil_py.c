@@ -290,7 +290,7 @@ void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum,
       *py_pool = _global_svn_swig_py_pool;
     }
   }
-  return SWIG_MustGetPtr(input, type, SWIG_POINTER_EXCEPTION | 0, argnum);
+  return SWIG_MustGetPtr(input, type, argnum, SWIG_POINTER_EXCEPTION | 0);
 }
   
 
