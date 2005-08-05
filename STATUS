@@ -9,16 +9,6 @@ Status of 1.2.2:
 
 Candidate changes:
 
-  * /branches/1.2.x-get-locks  (merge r15424:HEAD)
-    Client bugfix:  make 'svn st -u' work against pre-1.2 mod_dav_svn.
-    Justification:
-      A serious backward-compatibility bug!  Very small codechange.
-    Notes:
-      The actual backported revisions are r15359, r15423... but the
-      branch was required to fix a trivial conflict.
-    Votes:
-      +1: sussman, lundblad
-
   * /branches/1.2.x-authz  (merge r15465:HEAD)
     mod_authz_svn bugfix: bad path-matching in recursive logic.
     Justification:
@@ -61,3 +51,13 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: blair
       +0: djames
+
+  * /branches/1.2.x-get-locks  (merge r15424:HEAD)
+    Client bugfix:  make 'svn st -u' work against pre-1.2 mod_dav_svn.
+    Justification:
+      A serious backward-compatibility bug!  Very small codechange.
+    Notes:
+      The actual backported revisions are r15359, r15423... but the
+      branch was required to fix a trivial conflict.
+    Votes:
+      +1: sussman, lundblad, philip
