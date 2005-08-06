@@ -36,6 +36,12 @@ Candidate changes:
     Votes:
       +1: lundblad, kfogel
 
+  * r15609
+    Make SVN::Delta::Editor friendlier for debugging.
+    Justification:
+      Bindings only.  Makes error handling simpler.
+    Votes:
+      +1: clkao
 
 Approved changes (further review is welcome, but not required):
 
