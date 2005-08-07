@@ -43,6 +43,14 @@ Candidate changes:
     Votes:
       +1: clkao
 
+  * r15616
+    Fix bug where python can't import subversion bindings on RHEL4.
+    RHEL4 uses python 2.3 instead of python 2.2.
+    Justification:
+      Can't use important python scripts such as mailer, etc., on server.
+    Votes:
+      +1: david
+
 Approved changes (further review is welcome, but not required):
 
 
