@@ -1566,3 +1566,26 @@ svn_swig_rb_adjust_arg_for_client_ctx_and_pool(int *argc, VALUE **argv)
     }
   }
 }
+
+void
+svn_swig_rb_wc_status_func(void *baton,
+                           const char *path,
+                           svn_wc_status2_t *status)
+{
+  VALUE proc = (VALUE)baton;
+
+  if (!NIL_P(proc)) {
+    VALUE args;
+
+    args = rb_ary_new3(4,
+                       proc,
+                       rb_id_call(),
+                       rb_str_new2(path),
+                       c2r_swig_type((void *)status,
+                                     (void *)"svn_wc_status2_t *"));
+    callback(args);
+  }
+}
+
+  
+

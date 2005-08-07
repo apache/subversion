@@ -113,6 +113,19 @@
   $2 = $input; /* our function is the baton. */
 }
 
+/* -----------------------------------------------------------------------
+   Callback: svn_wc_status_func2_t
+   svn_client_status2()
+   svn_wc_get_status_editor2()
+*/
+
+%typemap(ruby, in) (svn_wc_status_func2_t status_func,
+                    void *status_baton)
+{
+  $1 = svn_swig_rb_wc_status_func;
+  $2 = (void *)$input;
+}
+
 /* ----------------------------------------------------------------------- */
 
 %{
