@@ -181,13 +181,12 @@
   $2 = $input; /* our function is the baton. */
 }
 
-/*
 %typemap(ruby, in) (svn_client_blame_receiver_t receiver,
-                    void *receiver_baton) {
+                    void *receiver_baton)
+{
   $1 = svn_swig_rb_client_blame_receiver_func;
   $2 = (void *)$input;
 }
-*/
 
 /* -----------------------------------------------------------------------
    We use 'svn_wc_status_t *' in some custom code, but it isn't in the

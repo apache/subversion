@@ -1,4 +1,5 @@
 require "English"
+require 'uri'
 require "svn/error"
 require "svn/util"
 require "svn/core"
@@ -75,7 +76,7 @@ module Svn
                  update=true, no_ignore=false,
                  ignore_externals=false, &status_func)
         Client.status2(path, rev, status_func,
-                       recurse,  get_all, update, no_ignore,
+                       recurse, get_all, update, no_ignore,
                        ignore_externals, self)
       end
 
@@ -87,6 +88,7 @@ module Svn
         paths = [paths] unless paths.is_a?(Array)
         Client.delete(paths, force, self)
       end
+      alias del delete
       alias remove delete
       alias rm remove
 
@@ -120,10 +122,16 @@ module Svn
       def propset(name, value, target, recurse=true, force=false)
         Client.propset2(name, value, target, recurse, force, self)
       end
+      alias prop_set propset
+      alias pset propset
+      alias ps propset
       
       def propdel(name, target, recurse=true, force=false)
         Client.propset2(name, nil, target, recurse, force, self)
       end
+      alias prop_del propdel
+      alias pdel propdel
+      alias pd propdel
       
       def copy(src_path, dst_path, rev=nil)
         Client.copy(src_path, rev || "HEAD", dst_path, self)
@@ -199,6 +207,20 @@ module Svn
         end
       end
 
+      def blame(path_or_uri, start_rev=nil, end_rev=nil, peg_rev=nil)
+        start_rev ||= 1
+        end_rev ||= URI(path_or_uri).scheme ? "HEAD" : "BASE"
+        peg_rev ||= end_rev
+        receiver = Proc.new do |line_no, revision, author, date, line|
+          yield(line_no, revision, author, Util.string_to_time(date), line)
+        end
+        Client.blame2(path_or_uri, peg_rev, start_rev,
+                      end_rev, receiver, self)
+      end
+      alias praise blame
+      alias annotate blame
+      alias ann annotate
+      
       def revprop(name, uri, rev)
         value, = revprop_get(name, uri, rev)
         value
