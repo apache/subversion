@@ -432,6 +432,43 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal(log, ctx.log_message(path, rev))
   end
 
+  def test_blame
+    log = "sample log"
+    file = "hello.txt"
+    srcs = %w(first second third)
+    infos = []
+    path = File.join(@wc_path, file)
+
+    ctx = make_context(log)
+    
+    File.open(path, "w") {|f| f.puts(srcs[0])}
+    ctx.add(path)
+    commit_info = ctx.commit(@wc_path)
+    infos << [0, commit_info.revision, @author, commit_info.date, srcs[0]]
+    
+    File.open(path, "a") {|f| f.puts(srcs[1])}
+    commit_info = ctx.commit(@wc_path)
+    infos << [1, commit_info.revision, @author, commit_info.date, srcs[1]]
+
+    File.open(path, "a") {|f| f.puts(srcs[2])}
+    commit_info = ctx.commit(@wc_path)
+    infos << [2, commit_info.revision, @author, commit_info.date, srcs[2]]
+
+    result = []
+    ctx.blame(path) do |line_no, revision, author, date, line|
+      result << [line_no, revision, author, date, line]
+    end
+    assert_equal(infos, result)
+
+
+    ctx.prop_set(Svn::Core::PROP_MIME_TYPE, "image/DUMMY", path)
+    ctx.commit(@wc_path)
+    
+    assert_raise(Svn::Error::CLIENT_IS_BINARY_FILE) do
+      ctx.ann(path) {}
+    end
+  end
+
   def test_diff
     log = "sample log"
     before = "before\n"
