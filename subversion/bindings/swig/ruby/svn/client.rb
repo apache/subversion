@@ -146,11 +146,13 @@ module Svn
       def diff(options, path1, rev1, path2, rev2,
                out_file, err_file, recurse=true,
                ignore_ancestry=false,
-               no_diff_deleted=false, force=false)
-        Client.diff2(options, path1, rev1, path2, rev2,
+               no_diff_deleted=false, force=false,
+               header_encoding=nil)
+        header_encoding ||= Core::LOCALE_CHARSET
+        Client.diff3(options, path1, rev1, path2, rev2,
                      recurse, ignore_ancestry,
-                     no_diff_deleted, force, out_file,
-                     err_file, self)
+                     no_diff_deleted, force, header_encoding,
+                     out_file, err_file, self)
       end
 
       def cat(path, rev="HEAD", output=nil)
