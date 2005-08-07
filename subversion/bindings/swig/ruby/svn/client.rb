@@ -71,6 +71,14 @@ module Svn
       end
       alias ci commit
 
+      def status(path, rev=nil, recurse=true, get_all=false,
+                 update=true, no_ignore=false,
+                 ignore_externals=false, &status_func)
+        Client.status2(path, rev, status_func,
+                       recurse,  get_all, update, no_ignore,
+                       ignore_externals, self)
+      end
+
       def add(path, recurse=true, force=false, no_ignore=false)
         Client.add3(path, recurse, force, no_ignore, self)
       end

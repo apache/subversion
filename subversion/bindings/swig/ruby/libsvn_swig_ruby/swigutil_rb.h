@@ -144,6 +144,11 @@ void svn_swig_rb_set_revision(svn_opt_revision_t *rev, VALUE value);
 
 void svn_swig_rb_adjust_arg_for_client_ctx_and_pool(int *argc, VALUE **argv);
 
+
+void svn_swig_rb_wc_status_func(void *baton,
+                                const char *path,
+                                svn_wc_status2_t *status);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

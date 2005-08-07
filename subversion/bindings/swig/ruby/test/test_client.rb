@@ -337,6 +337,28 @@ class SvnClientTest < Test::Unit::TestCase
     assert_nil(ctx.commit(@wc_path, false))
     assert_equal(2, ctx.ci(@wc_path).revision)
   end
+
+  def test_status
+    log = "sample log"
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+    
+    ctx = make_context(log)
+
+    ctx.mkdir(dir_path)
+    infos = []
+    rev = ctx.status(@wc_path) do |path, status|
+      infos << [path, status]
+    end
+
+    assert_equal(0, rev)
+    assert_equal(1, infos.size)
+    result_path, status = infos.first
+    assert_equal(result_path, dir_path)
+    assert(status.text_added?)
+    assert(status.entry.dir?)
+    assert(status.entry.add?)
+  end
   
   def test_update
     log = "sample log"
