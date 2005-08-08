@@ -262,6 +262,7 @@ class Generator(gen_make.Generator):
       for dir in string.split(string.strip(dirs)):
         includes.append("-I%s" % dir)
     includes.append("-I%s" % self.apr_include_path)
+    includes.append("-Iapr-util/include")
     return string.join(includes)
   
   def _get_swig_deps(self):
