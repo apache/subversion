@@ -631,6 +631,8 @@ class WinGeneratorBase(GeneratorBase):
                       % (target.lang,
                          gen_base.lang_utillib_suffix[target.lang])
       fakeincludes = [ self.path("subversion/bindings/swig"),
+                       self.path("subversion/bindings/swig/proxy"),
+                       self.path("subversion/bindings/swig/include"),
                        self.path("subversion/include"),
                        self.path(util_includes),
                        self.apath(self.apr_path, "include"),
