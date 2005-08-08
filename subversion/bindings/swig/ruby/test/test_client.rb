@@ -528,6 +528,53 @@ class SvnClientTest < Test::Unit::TestCase
     out_file.open
     assert_match(/-#{before}\+#{after}\z/, out_file.read)
   end
+
+  def test_merge
+    log = "sample log"
+    file = "sample.txt"
+    src = "sample\n"
+    trunk = File.join(@wc_path, "trunk")
+    branch = File.join(@wc_path, "branch")
+    trunk_path = File.join(trunk, file)
+    branch_path = File.join(branch, file)
+
+    ctx = make_context(log)
+    ctx.mkdir(trunk, branch)
+    File.open(trunk_path, "w") {}
+    File.open(branch_path, "w") {}
+    ctx.add(trunk_path)
+    ctx.add(branch_path)
+    rev1 = ctx.commit(@wc_path).revision
+
+    File.open(branch_path, "w") {|f| f.print(src)}
+    rev2 = ctx.commit(@wc_path).revision
+
+    ctx.merge(branch, rev1, branch, rev2, trunk)
+    rev3 = ctx.commit(@wc_path).revision
+
+    assert_equal(src, ctx.cat(trunk_path, rev3))
+    
+    ctx.rm(branch_path)
+    rev4 = ctx.commit(@wc_path).revision
+
+    ctx.merge(branch, rev3, branch, rev4, trunk)
+    assert(!File.exist?(trunk_path))
+
+    ctx.revert(trunk_path)
+    File.open(trunk_path, "a") {|f| f.print(src)}
+    ctx.merge(branch, rev3, branch, rev4, trunk)
+    assert(File.exist?(trunk_path))
+    rev5 = ctx.commit(@wc_path).revision
+    
+    File.open(trunk_path, "a") {|f| f.print(src)}
+    ctx.merge(branch, rev3, branch, rev4, trunk, true, false, true, true)
+    assert(File.exist?(trunk_path))
+    
+    ctx.merge(branch, rev3, branch, rev4, trunk, true, false, true)
+    rev6 = ctx.commit(@wc_path).revision
+
+    assert(!File.exist?(trunk_path))
+  end
   
   def test_cat
     log = "sample log"

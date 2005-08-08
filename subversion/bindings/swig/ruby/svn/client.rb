@@ -168,6 +168,14 @@ module Svn
                          out_file, err_file, self)
       end
 
+      def merge(src1, rev1, src2, rev2, target_wcpath,
+                recurse=true, ignore_ancestry=false,
+                force=false, dry_run=false)
+        Client.merge(src1, rev1, src2, rev2, target_wcpath,
+                     recurse, ignore_ancestry, force,
+                     dry_run, self)
+      end
+      
       def cat(path, rev="HEAD", output=nil)
         used_string_io = output.nil?
         output ||= StringIO.new
