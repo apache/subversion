@@ -300,7 +300,7 @@ class Generator(gen_make.Generator):
       deps[objname.lang].append(native_path(str(objname)))
     return deps
  
-  def _write_swig_deps(self, langs):
+  def write_swig_deps(self):
     """Write SWIG dependencies to swig-outputs.mk"""
     
     # Gather data
@@ -309,8 +309,8 @@ class Generator(gen_make.Generator):
     deps = self._get_swig_deps()
    
     # Write swig-outputs.mk
-    ofile = open("swig-outputs.mk", 'w')
-    for lang in langs:
+    ofile = open("build-outputs.mk", 'a')
+    for lang in short.keys():
       ofile.write('RUN_SWIG_%s = %s -DSVN_SWIG_VERSION=%s %s %s -o $@\n'
         % (string.upper(short[lang]), self.swig_path, self.swig_version,
            self._build_opts(lang), includes))  
@@ -339,4 +339,3 @@ class Generator(gen_make.Generator):
     langs = ["perl", "python", "ruby"] 
     if self.swig_version >= 103024:
       self._write_external_runtime(langs)
-    self._write_swig_deps(langs)

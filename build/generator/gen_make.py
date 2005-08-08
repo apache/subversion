@@ -420,6 +420,9 @@ class Generator(gen_base.GeneratorBase):
           self.ofile.write('\t%s %s\n\n' % (cmd, sources[0]))
       else:
         self.ofile.write('\n')
+    
+    
+    self.ofile.close()
 
 
 class UnknownDependency(Exception):

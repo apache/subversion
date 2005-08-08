@@ -73,9 +73,6 @@ if test "${OK}" != "OK" ; then
   exit 1
 fi
 
-echo "Creating SWIG headers..."
-python ./gen-make.py -t swig build.conf || gen_failed=1
-
 if test -n "$SKIP_DEPS"; then
   echo "Creating build-outputs.mk (no dependencies)..."
   python ./gen-make.py -s build.conf || gen_failed=1
@@ -97,10 +94,6 @@ else
     python ./gen-make.py -t dsp -s build.conf || gen_failed=1
   fi
 fi
-
-# Add SWIG outputs to the end of build-outputs.mk
-cat swig-outputs.mk >> build-outputs.mk
-rm swig-outputs.mk
 
 # Compile SWIG headers into standalone C files if we are in release mode
 if test -n "$RELEASE_MODE"; then

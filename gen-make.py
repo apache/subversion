@@ -16,10 +16,10 @@ sys.path.insert(0, os.path.join('build', 'generator'))
 # for getversion
 sys.path.insert(1, 'build')
 
+import gen_swig
 
 gen_modules = {
   'make' : ('gen_make', 'Makefiles for POSIX systems'),
-  'swig' : ('gen_swig', 'SWIG wrappers for header files'),
   'dsp' : ('gen_msvc_dsp', 'MSVC 6.x project files'),
   'vcproj' : ('gen_vcnet_vcproj', 'VC.Net project files'),
   }
@@ -29,6 +29,13 @@ def main(fname, gentype, verfname=None,
   if verfname is None:
     verfname = os.path.join('subversion', 'include', 'svn_version.h')
 
+  swig_generator = gen_swig.Generator(fname, verfname, other_options)
+
+  if not skip_depends:
+    swig_generator.compute_hdr_deps()
+
+  swig_generator.write()
+  
   gen_module = __import__(gen_modules[gentype][0])
 
   generator = gen_module.Generator(fname, verfname, other_options)
@@ -37,6 +44,9 @@ def main(fname, gentype, verfname=None,
     generator.compute_hdr_deps()
 
   generator.write()
+  
+  if gentype == "make":
+    swig_generator.write_swig_deps()
 
   if other_options and ('--debug', '') in other_options:
     for dep_type, target_dict in generator.graph.deps.items():
