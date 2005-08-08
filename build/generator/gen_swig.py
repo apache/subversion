@@ -17,7 +17,8 @@ class Generator(gen_make.Generator):
   def __init__(self, fname, verfname, options=None):
     gen_base.GeneratorBase.__init__(self, fname, verfname, options)
     self.swig_path = self._find_executable("swig") or "swig"
-    self.apr_include_path = self._get_apr_include_path()
+    self.apr_include_path = self._get_apr_include_path() or \
+      os.path.join("apr","include")
     self.apr_util_include_path = os.path.join("apr-util","include")
     for key, value in options:
       if key == '--with-apr':
@@ -35,9 +36,6 @@ class Generator(gen_make.Generator):
           dirs = [ value, os.path.join(value, "bin") ]
           self.swig_path = self._find_executable("swig", dirs)
           
-    assert self.apr_include_path, "Cannot find APR include path"
-    assert os.path.isdir(self.apr_include_path), "Cannot find APR include path"
-
     self.swig_version = self._get_swig_version()
 
   def _is_executable(self, file):
@@ -289,6 +287,7 @@ class Generator(gen_make.Generator):
         includes.append("-I%s" % native_path(dir))
     includes.append("-I%s" % native_path(self.apr_include_path))
     includes.append("-I%s" % native_path(self.apr_util_include_path))
+    includes.append("$(SWIG_INCLUDES)")
     return string.join(includes)
   
   def _get_swig_deps(self):
