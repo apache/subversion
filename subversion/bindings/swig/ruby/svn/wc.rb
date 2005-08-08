@@ -38,5 +38,22 @@ module Svn
         Wc.status(path, self)
       end
     end
+
+    class Entry
+      def dir?
+        kind == Core::NODE_DIR
+      end
+
+      def add?
+        schedule == SCHEDULE_ADD
+      end
+    end
+    
+    class Status2
+      def text_added?
+        text_status == STATUS_ADDED
+      end
+    end
+    
   end
 end

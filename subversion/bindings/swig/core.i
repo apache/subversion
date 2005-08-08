@@ -43,6 +43,8 @@
 #endif
 
 #ifdef SWIGRUBY
+#include <apu.h>
+#include <apr_xlate.h>
 #include "swigutil_rb.h"
 #endif
 %}
@@ -620,5 +622,20 @@ struct apr_pool_t
 };
 
 %include svn_diff_h.swg
+
+%inline %{
+static VALUE
+svn_default_charset(void)
+{
+  return INT2NUM((int)APR_DEFAULT_CHARSET);
+}
+ 
+static VALUE
+svn_locale_charset(void)
+{
+  return INT2NUM((int)APR_LOCALE_CHARSET);
+}
+%}
+
 #endif
 

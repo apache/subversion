@@ -1556,3 +1556,58 @@ svn_swig_rb_adjust_arg_for_client_ctx_and_pool(int *argc, VALUE **argv)
     }
   }
 }
+
+void
+svn_swig_rb_wc_status_func(void *baton,
+                           const char *path,
+                           svn_wc_status2_t *status)
+{
+  VALUE proc = (VALUE)baton;
+
+  if (!NIL_P(proc)) {
+    VALUE args;
+
+    args = rb_ary_new3(4,
+                       proc,
+                       rb_id_call(),
+                       rb_str_new2(path),
+                       c2r_swig_type((void *)status,
+                                     (void *)"svn_wc_status2_t *"));
+    callback(args);
+  }
+}
+
+svn_error_t *
+svn_swig_rb_client_blame_receiver_func(void *baton,
+                                       apr_int64_t line_no,
+                                       svn_revnum_t revision,
+                                       const char *author,
+                                       const char *date,
+                                       const char *line,
+                                       apr_pool_t *pool)
+{
+  VALUE proc = (VALUE)baton;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if (!NIL_P(proc)) {
+    VALUE args;
+
+    args = rb_ary_new3(7,
+                       proc,
+                       rb_id_call(),
+                       sizeof(apr_int64_t) == sizeof(long long) ?
+                         LONG2NUM(line_no) :
+                         LL2NUM(line_no),
+                       INT2NUM(revision),
+                       rb_str_new2(author),
+                       rb_str_new2(date),
+                       rb_str_new2(line));
+    
+    rb_rescue2(callback, args,
+               callback_rescue, (VALUE)&err,
+               rb_svn_error(), (VALUE)0);
+  }
+  
+  return err;
+}
+

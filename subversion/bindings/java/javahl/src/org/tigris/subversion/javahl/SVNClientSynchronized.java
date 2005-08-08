@@ -16,6 +16,9 @@
  * @endcopyright
  */
 package org.tigris.subversion.javahl;
+
+import java.io.OutputStream;
+
 /**
  * This class provides a threadsafe wrapped for SVNClient
  */
@@ -1167,6 +1170,27 @@ public class SVNClientSynchronized implements SVNClientInterface
         synchronized(clazz)
         {
             return worker.fileContent(path, revision, pegRevision);
+        }
+    }
+
+    /**
+     * Write the file's content to the specified output stream.
+     *
+     * @param path        the path of the file
+     * @param revision    the revision to retrieve
+     * @param pegRevision the revision at which to interpret the path
+     * @param the stream to write the file's content to
+     * @throws ClientException
+     */
+    public void streamFileContent(String path, Revision revision,
+                                  Revision pegRevision, int bufferSize,
+                                  OutputStream stream) 
+        throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.streamFileContent(path, revision, pegRevision, bufferSize,
+                                     stream);
         }
     }
 

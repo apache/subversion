@@ -299,15 +299,65 @@ class SvnClientTest < Test::Unit::TestCase
     assert(!File.exist?(path))
     assert(!File.exist?(dir_path))
   end
- 
+  
+  def test_import
+    src = "source\n"
+    log = "sample log"
+    deep_dir = File.join(%w(a b c d e))
+    file = "sample.txt"
+    deep_dir_path = File.join(@wc_path, deep_dir)
+    path = File.join(deep_dir_path, file)
+    tmp_deep_dir_path = File.join(@tmp_path, deep_dir)
+    tmp_path = File.join(tmp_deep_dir_path, file)
+
+    ctx = make_context(log)
+
+    FileUtils.mkdir_p(tmp_deep_dir_path)
+    File.open(tmp_path, "w") {|f| f.print(src)}
+
+    ctx.import(@tmp_path, @repos_uri)
+
+    ctx.up(@wc_path)
+    assert_equal(src, File.open(path){|f| f.read})
+  end
+  
   def test_commit
     log = "sample log"
+    dir1 = "dir1"
+    dir2 = "dir2"
+    dir1_path = File.join(@wc_path, dir1)
+    dir2_path = File.join(dir1_path, dir2)
+    
     ctx = make_context(log)
     assert_nil(ctx.commit(@wc_path))
-    ctx.mkdir("#{@wc_path}/new_dir")
+    ctx.mkdir(dir1_path)
     assert_equal(0, youngest_rev)
-    ctx.commit(@wc_path)
-    assert_equal(1, youngest_rev)
+    assert_equal(1, ctx.commit(@wc_path).revision)
+    ctx.mkdir(dir2_path)
+    assert_nil(ctx.commit(@wc_path, false))
+    assert_equal(2, ctx.ci(@wc_path).revision)
+  end
+
+  def test_status
+    log = "sample log"
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+    
+    ctx = make_context(log)
+
+    ctx.mkdir(dir_path)
+    infos = []
+    rev = ctx.status(@wc_path) do |path, status|
+      infos << [path, status]
+    end
+
+    assert_equal(0, rev)
+    assert_equal(1, infos.size)
+    result_path, status = infos.first
+    assert_equal(result_path, dir_path)
+    assert(status.text_added?)
+    assert(status.entry.dir?)
+    assert(status.entry.add?)
   end
   
   def test_update
@@ -380,6 +430,43 @@ class SvnClientTest < Test::Unit::TestCase
     rev = commit_info.revision
 
     assert_equal(log, ctx.log_message(path, rev))
+  end
+
+  def test_blame
+    log = "sample log"
+    file = "hello.txt"
+    srcs = %w(first second third)
+    infos = []
+    path = File.join(@wc_path, file)
+
+    ctx = make_context(log)
+    
+    File.open(path, "w") {|f| f.puts(srcs[0])}
+    ctx.add(path)
+    commit_info = ctx.commit(@wc_path)
+    infos << [0, commit_info.revision, @author, commit_info.date, srcs[0]]
+    
+    File.open(path, "a") {|f| f.puts(srcs[1])}
+    commit_info = ctx.commit(@wc_path)
+    infos << [1, commit_info.revision, @author, commit_info.date, srcs[1]]
+
+    File.open(path, "a") {|f| f.puts(srcs[2])}
+    commit_info = ctx.commit(@wc_path)
+    infos << [2, commit_info.revision, @author, commit_info.date, srcs[2]]
+
+    result = []
+    ctx.blame(path) do |line_no, revision, author, date, line|
+      result << [line_no, revision, author, date, line]
+    end
+    assert_equal(infos, result)
+
+
+    ctx.prop_set(Svn::Core::PROP_MIME_TYPE, "image/DUMMY", path)
+    ctx.commit(@wc_path)
+    
+    assert_raise(Svn::Error::CLIENT_IS_BINARY_FILE) do
+      ctx.ann(path) {}
+    end
   end
 
   def test_diff

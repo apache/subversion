@@ -41,14 +41,14 @@ struct authz_lookup_baton {
   /* Explicitely denied rights. */
   svn_repos_authz_access_t deny;
 
- /* The rights required by the caller of the lookup. */
+  /* The rights required by the caller of the lookup. */
   svn_repos_authz_access_t required_access;
 
   /* The following are used exclusively in recursive lookups. */
 
   /* The path in the repository to authorize. */
   const char *repos_path;
- /* repos_path prefixed by the repository name. */
+  /* repos_path prefixed by the repository name. */
   const char *qualified_repos_path;
 
   /* Whether, at the end of a recursive lookup, access is granted. */

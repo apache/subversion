@@ -91,6 +91,30 @@
 }
 
 /* -----------------------------------------------------------------------
+   const char *header_encoding
+   svn_diff_file_output_unified2
+   svn_client_diff3
+*/
+%typemap(ruby, in) const char *header_encoding
+{
+  $1 = NULL;
+  
+  if (NIL_P($input)) {
+  } else if (TYPE($input) == T_FIXNUM) {
+    $1 = (char *)NUM2INT($input);
+    if (!($1 == APR_LOCALE_CHARSET || $1 == APR_DEFAULT_CHARSET)) {
+      $1 = NULL;
+    }
+  } else {
+    $1 = StringValuePtr($input);
+  }
+  
+  if (!$1) {
+    $1 = (char *)APR_LOCALE_CHARSET;
+  }
+}
+
+/* -----------------------------------------------------------------------
    Define a more refined 'memberin' typemap for 'const char *' members. This
    is used in place of the 'char *' handler defined automatically.
 
@@ -592,6 +616,8 @@
 #endif
 
 #ifdef SWIGRUBY
+#include <apu.h>
+#include <apr_xlate.h>
 #include "swigutil_rb.h"
 #endif
 %}

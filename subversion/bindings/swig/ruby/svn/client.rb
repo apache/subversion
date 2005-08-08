@@ -1,4 +1,5 @@
 require "English"
+require 'uri'
 require "svn/error"
 require "svn/util"
 require "svn/core"
@@ -65,9 +66,18 @@ module Svn
         Client.mkdir(normalize_path(paths), self)
       end
 
-      def commit(targets, recurse=true)
+      def commit(targets, recurse=true, keep_locks=false)
         targets = [targets] unless targets.is_a?(Array)
-        Client.commit(targets, !recurse, self)
+        Client.commit2(targets, recurse, keep_locks, self)
+      end
+      alias ci commit
+
+      def status(path, rev=nil, recurse=true, get_all=false,
+                 update=true, no_ignore=false,
+                 ignore_externals=false, &status_func)
+        Client.status2(path, rev, status_func,
+                       recurse, get_all, update, no_ignore,
+                       ignore_externals, self)
       end
 
       def add(path, recurse=true, force=false, no_ignore=false)
@@ -78,6 +88,7 @@ module Svn
         paths = [paths] unless paths.is_a?(Array)
         Client.delete(paths, force, self)
       end
+      alias del delete
       alias remove delete
       alias rm remove
 
@@ -93,7 +104,12 @@ module Svn
           Client.update(paths, rev, recurse, self)
         end
       end
+      alias up update
 
+      def import(path, uri, recurse=true, no_ignore=false)
+        Client.import2(path, uri, !recurse, no_ignore, self)
+      end
+      
       def cleanup(dir)
         Client.cleanup(dir, self)
       end
@@ -106,10 +122,16 @@ module Svn
       def propset(name, value, target, recurse=true, force=false)
         Client.propset2(name, value, target, recurse, force, self)
       end
+      alias prop_set propset
+      alias pset propset
+      alias ps propset
       
       def propdel(name, target, recurse=true, force=false)
         Client.propset2(name, nil, target, recurse, force, self)
       end
+      alias prop_del propdel
+      alias pdel propdel
+      alias pd propdel
       
       def copy(src_path, dst_path, rev=nil)
         Client.copy(src_path, rev || "HEAD", dst_path, self)
@@ -124,11 +146,13 @@ module Svn
       def diff(options, path1, rev1, path2, rev2,
                out_file, err_file, recurse=true,
                ignore_ancestry=false,
-               no_diff_deleted=false, force=false)
-        Client.diff2(options, path1, rev1, path2, rev2,
+               no_diff_deleted=false, force=false,
+               header_encoding=nil)
+        header_encoding ||= Core::LOCALE_CHARSET
+        Client.diff3(options, path1, rev1, path2, rev2,
                      recurse, ignore_ancestry,
-                     no_diff_deleted, force, out_file,
-                     err_file, self)
+                     no_diff_deleted, force, header_encoding,
+                     out_file, err_file, self)
       end
 
       def cat(path, rev="HEAD", output=nil)
@@ -185,6 +209,20 @@ module Svn
         end
       end
 
+      def blame(path_or_uri, start_rev=nil, end_rev=nil, peg_rev=nil)
+        start_rev ||= 1
+        end_rev ||= URI(path_or_uri).scheme ? "HEAD" : "BASE"
+        peg_rev ||= end_rev
+        receiver = Proc.new do |line_no, revision, author, date, line|
+          yield(line_no, revision, author, Util.string_to_time(date), line)
+        end
+        Client.blame2(path_or_uri, peg_rev, start_rev,
+                      end_rev, receiver, self)
+      end
+      alias praise blame
+      alias annotate blame
+      alias ann annotate
+      
       def revprop(name, uri, rev)
         value, = revprop_get(name, uri, rev)
         value

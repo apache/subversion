@@ -15,7 +15,9 @@ module SvnTestUtil
     @svnserve_host = "127.0.0.1"
     @svnserve_ports = (64152..64282).collect{|x| x.to_s}
     @wc_path = File.join("test", "wc")
+    @tmp_path = File.join("test", "tmp")
     @config_path = File.join("test", "config")
+    setup_tmp
     setup_repository
     @repos = Svn::Repos.open(@repos_path)
     add_hooks
@@ -31,8 +33,18 @@ module SvnTestUtil
     teardown_repository
     teardown_wc
     teardown_config
+    teardown_tmp
   end
 
+  def setup_tmp(path=@tmp_path)
+    FileUtils.rm_rf(path)
+    FileUtils.mkdir_p(path)
+  end
+
+  def teardown_tmp(path=@tmp_path)
+    FileUtils.rm_rf(path)
+  end
+  
   def setup_repository(path=@repos_path, config={}, fs_config={})
     FileUtils.rm_rf(path)
     FileUtils.mkdir_p(File.dirname(path))
