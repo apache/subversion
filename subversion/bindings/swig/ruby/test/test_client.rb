@@ -499,6 +499,36 @@ class SvnClientTest < Test::Unit::TestCase
     assert_match(/-#{before}\+#{after}\z/, out_file.read)
   end
 
+  def test_diff_peg
+    log = "sample log"
+    before = "before\n"
+    after = "after\n"
+    file = "hello.txt"
+    path = File.join(@wc_path, file)
+
+    File.open(path, "w") {|f| f.print(before)}
+
+    ctx = make_context(log)
+    ctx.add(path)
+    commit_info = ctx.commit(@wc_path)
+    rev1 = commit_info.revision
+
+    File.open(path, "w") {|f| f.print(after)}
+
+    out_file = Tempfile.new("svn")
+    err_file = Tempfile.new("svn")
+    ctx.diff_peg([], path, rev1, "WORKING", out_file.path, err_file.path)
+    out_file.open
+    assert_match(/-#{before}\+#{after}\z/, out_file.read)
+
+    commit_info = ctx.commit(@wc_path)
+    rev2 = commit_info.revision
+    out_file = Tempfile.new("svn")
+    ctx.diff_peg([], path, rev1, rev2, out_file.path, err_file.path)
+    out_file.open
+    assert_match(/-#{before}\+#{after}\z/, out_file.read)
+  end
+  
   def test_cat
     log = "sample log"
     src1 = "source1\n"
