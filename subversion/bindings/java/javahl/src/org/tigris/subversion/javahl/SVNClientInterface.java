@@ -713,13 +713,17 @@ public interface SVNClientInterface
     byte[] fileContent(String path, Revision revision, Revision pegRevision)
             throws ClientException;
     /**
-     * Stream file content to the given output stream
-     * @param path      the path of the file
-     * @param revision  the revision to retrieve
-     * @param pegRevision the revision to interpret path
-     * @param bufferSize the size of buffer to use during streaming
-     * @param  the stream to which content is written
+     * Write the file's content to the specified output stream.  If
+     * you need an InputStream, use a
+     * PipedInputStream/PipedOutputStream combination.
+     *
+     * @param path        the path of the file
+     * @param revision    the revision to retrieve
+     * @param pegRevision the revision at which to interpret the path
+     * @param the stream to write the file's content to
      * @throws ClientException
+     * @see <a href="http://java.sun.com/j2se/1.4.2/docs/api/java/io/PipedOutputStream.html">PipedOutputStream</a>
+     * @see <a href="http://java.sun.com/j2se/1.4.2/docs/api/java/io/PipedInputStream.html">PipedInputStream</a>
      */
     void streamFileContent(String path, Revision revision, Revision pegRevision,
                            int bufferSize, OutputStream stream) 
