@@ -16,7 +16,7 @@ class Generator(gen_make.Generator):
 
   def __init__(self, fname, verfname, options=None):
     gen_base.GeneratorBase.__init__(self, fname, verfname, options)
-    self.swig_path = self._find_executable("swig") or "swig"
+    self.swig_path = "swig"
     self.apr_include_path = self._get_apr_include_path() or \
       os.path.join("apr","include")
     self.apr_util_include_path = os.path.join("apr-util","include")
