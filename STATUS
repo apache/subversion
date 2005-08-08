@@ -28,16 +28,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * /branches/1.2.x-get-locks  (merge r15424:HEAD)
-    Client bugfix:  make 'svn st -u' work against pre-1.2 mod_dav_svn.
-    Justification:
-      A serious backward-compatibility bug!  Very small codechange.
-    Notes:
-      The actual backported revisions are r15359, r15423... but the
-      branch was required to fix a trivial conflict.
-    Votes:
-      +1: sussman, lundblad, philip
-  
   * r15609
     Make SVN::Delta::Editor friendlier for debugging.
     Justification:
