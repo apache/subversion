@@ -6,9 +6,9 @@
 
 <!-- For "svn log" -->
 <!ELEMENT log (logentry*)>
-<!ELEMENT logentry (author, date, paths?, msg?)>
+<!ELEMENT logentry (author?, date?, paths?, msg?)>
 <!ATTLIST logentry revision CDATA #REQUIRED>  <!-- revision number: integer -->
-<!ELEMENT paths (path*)>
+<!ELEMENT paths (path+)>
 <!ELEMENT path (#PCDATA)>  <!-- path within repository -->
 <!-- "action code": one character                   -->
 <!-- "copyfrom-path": the path within repository    -->

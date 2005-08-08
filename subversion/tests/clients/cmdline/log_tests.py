@@ -646,6 +646,38 @@ PROPS-END
     raise svntest.Failure ("log message not transmitted properly:" +
                            str(output) + "\n" + "error: " + str(errput))
 
+#----------------------------------------------------------------------
+def log_xml_empty_date(sbox):
+  "svn log --xml must not print empty date elements"
+  sbox.build()
+
+  # Create the revprop-change hook for this test
+  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+
+  date_re = re.compile('<date');
+
+  # Ensure that we get a date before we delete the property.
+  output, errput = svntest.actions.run_and_verify_svn("", None, [],
+                                                      'log', '--xml', '-r1',
+                                                      sbox.wc_dir)
+  matched = 0
+  for line in output:
+    if date_re.search(line):
+      matched = 1
+  if not matched:
+    raise svntest.Failure ("log contains no date element")
+
+  # Set the svn:date revprop to the empty string on revision 1.
+  svntest.actions.run_and_verify_svn("", None, [],
+                                     'pdel', '--revprop', '-r1', 'svn:date',
+                                     sbox.wc_dir)
+
+  output, errput = svntest.actions.run_and_verify_svn("", None, [],
+                                                      'log', '--xml', '-r1',
+                                                      sbox.wc_dir)
+  for line in output:  
+    if date_re.search(line):
+      raise svntest.Failure ("log contains date element when svn:date is empty")
 
 ########################################################################
 # Run the tests
@@ -662,6 +694,7 @@ test_list = [ None,
               url_missing_in_head,
               log_through_copyfrom_history,
               escape_control_chars,
+              log_xml_empty_date,
              ]
 
 if __name__ == '__main__':
