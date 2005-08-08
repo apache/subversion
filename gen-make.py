@@ -114,6 +114,9 @@ def _usage_exit():
   print "           tell neon to look for OpenSSL headers"
   print "           and libs in DIR"
   print
+  print "  --with-swig=PATH"
+  print "           look for SWIG in PATH"
+  print
   print "  --with-zlib=DIR"
   print "           tell neon to look for ZLib headers and"
   print "           libs in DIR"
@@ -169,6 +172,7 @@ if __name__ == '__main__':
                                 'with-httpd=',
                                 'with-libintl=',
                                 'with-openssl=',
+                                'with-swig=',
                                 'with-zlib=',
                                 'with-junit=',
                                 'enable-pool-debug',

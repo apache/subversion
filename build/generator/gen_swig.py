@@ -4,6 +4,7 @@
 
 import gen_base
 import gen_make
+import shutil
 import os, re, string
 from gen_base import unique, native_path
 
@@ -16,10 +17,28 @@ class Generator(gen_make.Generator):
   def __init__(self, fname, verfname, options=None):
     gen_base.GeneratorBase.__init__(self, fname, verfname, options)
     self.swig_path = self._find_executable("swig") or "swig"
-    self.swig_version = self._get_swig_version()
     self.apr_include_path = self._get_apr_include_path()
+    self.apr_util_include_path = os.path.join("apr-util","include")
+    for key, value in options:
+      if key == '--with-apr':
+        self.apr_include_path = os.path.join(value, "include")
+      elif key == '--with-apr-util':
+        self.apr_util_include_path = os.path.join(value, "include")
+        assert os.path.isdir(self.apr_util_include_path), \
+          "Cannot find apr-util include path"
+      elif key == '--with-swig':
+        if self._is_executable(value):
+          self.swig_path = value
+        elif self._is_executable("%s.exe" % value):
+          self.swig_path = "%s.exe" % value
+        else:
+          dirs = [ value, os.path.join(value, "bin") ]
+          self.swig_path = self._find_executable("swig", dirs)
+          
     assert self.apr_include_path, "Cannot find APR include path"
     assert os.path.isdir(self.apr_include_path), "Cannot find APR include path"
+
+    self.swig_version = self._get_swig_version()
 
   def _is_executable(self, file):
     """Is this an executable file?"""
@@ -34,12 +53,17 @@ class Generator(gen_make.Generator):
     for path in dirs:
       if self._is_executable(os.path.join(path, file)):
         return os.path.join(path, file)
+      elif self._is_executable(os.path.join(path, "%s.exe" % file)):
+        return os.path.join(path, "%s.exe" % file)
+
     return None
 
   def _get_swig_version(self):
     """Get the version number of SWIG"""
-    swig_version_cmd = "sh -c '%s -version 2>&1'" % self.swig_path
-    swig_version = os.popen(swig_version_cmd).read()
+    swig_version_cmd = "%s -version" % self.swig_path
+    stdin, stdout, stderr = os.popen3(swig_version_cmd)
+    swig_version = stdout.read() + stderr.read()    
+    stdin.close()
     m = re.search("Version (\d+).(\d+).(\d+)", swig_version)
     if m:
       return int(
@@ -55,7 +79,7 @@ class Generator(gen_make.Generator):
       # Search for APR using the "apr-config" executable
       apr_config_path = self._find_executable("apr-config")
       if apr_config_path:
-        apr_version_cmd = "sh -c '%s --includedir 2>&1'" % apr_config_path
+        apr_version_cmd = '%s --includedir' % apr_config_path
         return string.strip(os.popen(apr_version_cmd).read())
 
   def _proxy_filename(self, include_filename):
@@ -214,9 +238,10 @@ class Generator(gen_make.Generator):
   def _checkout(self, dir, file):
     """Checkout a specific header file from SWIG"""
     out = "%s/%s" % (self.swig_proxy_dir, file)
-    self._cmd("rm -f %s" % out)
+    if os.path.exists(out):
+      os.remove(out)
     if self.swig_version == 103024:
-      self._cmd("cp %s/%s/%s %s" % (self.swiglibdir, dir, file, out))
+      shutil.copy("%s/%s/%s" % (self.swiglibdir, dir, file), out)
     else:
       self._cmd("%s -o %s -co %s/%s" % (self.swig_path, out, dir, file))
   
@@ -245,13 +270,14 @@ class Generator(gen_make.Generator):
     for lang in langs:
       out = "%s/swig_%s_external_runtime.swg" % (self.swig_proxy_dir, lang)
       if self.swig_version == 103024:
-        self._cmd(
-          "cp -f %s/swigrun.swg %s && " % (self.swig_proxy_dir, out) +
-          "cat %s/common.swg >> %s && " % (self.swig_proxy_dir, out) +
-          "cat %s/%s >> %s" % (self.swig_proxy_dir, runtime_library[lang], out)
-        )
+        out_file = open(out, "w")
+        out_file.write(open("%s/swigrun.swg" % self.swig_proxy_dir).read())
+        out_file.write(open("%s/common.swg" % self.swig_proxy_dir).read())
+        out_file.write(
+          open("%s/%s" % (self.swig_proxy_dir, runtime_library[lang])).read())
         if lang != "ruby":
-          self._cmd("cat %s/runtime.swg >> %s" % (self.swig_proxy_dir, out))
+          out_file.write(open("%s/runtime.swg" % self.swig_proxy_dir).read())
+        out_file.close()
       else:
         self._cmd("%s -%s -external-runtime %s" % (self.swig_path, lang, out))
   
@@ -260,9 +286,9 @@ class Generator(gen_make.Generator):
     includes = []
     for dirs in self.include_dirs, self.swig_include_dirs:
       for dir in string.split(string.strip(dirs)):
-        includes.append("-I%s" % dir)
-    includes.append("-I%s" % self.apr_include_path)
-    includes.append("-Iapr-util/include")
+        includes.append("-I%s" % native_path(dir))
+    includes.append("-I%s" % native_path(self.apr_include_path))
+    includes.append("-I%s" % native_path(self.apr_util_include_path))
     return string.join(includes)
   
   def _get_swig_deps(self):
@@ -271,7 +297,7 @@ class Generator(gen_make.Generator):
     swig_c_deps = self.graph.get_deps(gen_base.DT_SWIG_C)
     swig_c_deps.sort(lambda (t1, s1), (t2, s2): cmp(t1.filename, t2.filename))
     for objname, sources in swig_c_deps:
-      deps[objname.lang].append(str(objname))
+      deps[objname.lang].append(native_path(str(objname)))
     return deps
  
   def _write_swig_deps(self, langs):
