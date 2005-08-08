@@ -72,7 +72,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-30 09:48+0200\n"
-"PO-Revision-Date: 2005-07-08 11:35+0100\n"
+"PO-Revision-Date: 2005-08-08 09:52+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1488,42 +1488,42 @@ msgstr ""
 msgid "Caught signal"
 msgstr "Abbruchsignal empfangen"
 
-#: clients/cmdline/main.c:911
-#: svnadmin/main.c:1217
+#: clients/cmdline/main.c:912
+#: svnadmin/main.c:1218
 msgid "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr "Mehrere Revisionsparameter gefunden; bitte '-r M:N' statt '-r M -r N' verwenden"
 
-#: clients/cmdline/main.c:923
-#: svnadmin/main.c:1234
+#: clients/cmdline/main.c:924
+#: svnadmin/main.c:1235
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Syntaxfehler in Revisionsparameter '%s'"
 
-#: clients/cmdline/main.c:1071
-#: clients/cmdline/main.c:1081
+#: clients/cmdline/main.c:1072
+#: clients/cmdline/main.c:1082
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props und --no-auto-props schließen sich gegenseitig aus"
 
-#: clients/cmdline/main.c:1097
+#: clients/cmdline/main.c:1098
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "Syntaxfehler im 'native-eol' Parameter '%s'"
 
-#: clients/cmdline/main.c:1143
-#: svndumpfilter/main.c:1165
-#: svnlook/main.c:2056
+#: clients/cmdline/main.c:1144
+#: svndumpfilter/main.c:1166
+#: svnlook/main.c:2057
 msgid "Subcommand argument required\n"
 msgstr "Unterbefehl benötigt einen Parameter\n"
 
-#: clients/cmdline/main.c:1161
-#: svnadmin/main.c:1360
-#: svndumpfilter/main.c:1187
-#: svnlook/main.c:2079
+#: clients/cmdline/main.c:1162
+#: svnadmin/main.c:1361
+#: svndumpfilter/main.c:1188
+#: svnlook/main.c:2080
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Unbekannter Befehl: '%s'\n"
 
-#: clients/cmdline/main.c:1194
+#: clients/cmdline/main.c:1195
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -1532,23 +1532,23 @@ msgstr ""
 "Unterbefehl '%s' akzeptiert die Option '%s' nicht\n"
 "Geben Sie 'svn help %s' für Hilfe ein.\n"
 
-#: clients/cmdline/main.c:1230
+#: clients/cmdline/main.c:1231
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr "Die Datei für die Log-Meldung ist versioniert; geben Sie '--force-log' an, um sie zu verwenden"
 
-#: clients/cmdline/main.c:1235
+#: clients/cmdline/main.c:1236
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr "Die Datei für den Sperrkommentar ist versioniert; geben Sie '--force-log' an, um sie zu verwenden"
 
-#: clients/cmdline/main.c:1254
+#: clients/cmdline/main.c:1255
 msgid "The log message is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "Die Log-Meldung ist ein Pfad (war -F gemeint?); geben Sie '--force-log' an, um sie zu verwenden"
 
-#: clients/cmdline/main.c:1259
+#: clients/cmdline/main.c:1260
 msgid "The lock comment is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "Der Sperrkommentar ist ein Pfad (war -F gemeint?); geben Sie '--force-log' an, um ihn zu verwenden"
 
-#: clients/cmdline/main.c:1471
+#: clients/cmdline/main.c:1472
 msgid "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)\n"
 msgstr "svn: Starten Sie 'svn cleanup', um die Sperren zu entfernen (Aufruf: 'svn help cleanup' für Details)\n"
 
@@ -3221,8 +3221,8 @@ msgstr "Wenn eine Basisrevision angegeben wurde, muss zumindest eine Revision au
 #: libsvn_client/diff.c:2553
 #: libsvn_client/locking_commands.c:251
 #: libsvn_client/locking_commands.c:275
-#: libsvn_client/ra.c:714
-#: libsvn_client/ra.c:837
+#: libsvn_client/ra.c:703
+#: libsvn_client/ra.c:839
 #, c-format
 msgid "'%s' has no URL"
 msgstr "'%s' hat keine URL"
@@ -3360,23 +3360,23 @@ msgstr "Kann Eintrag für '%s' nicht finden"
 msgid "Missing changed-path information for '%s' in revision %ld"
 msgstr "'%s' fehlt in der Liste der geänderten Pfade von Revision %ld"
 
-#: libsvn_client/ra.c:580
+#: libsvn_client/ra.c:583
 #, c-format
 msgid "path '%s' doesn't exist in revision %ld"
 msgstr "Pfad '%s' existiert nicht in Revision %ld"
 
-#: libsvn_client/ra.c:641
-#: libsvn_client/ra.c:777
+#: libsvn_client/ra.c:630
+#: libsvn_client/ra.c:787
 #, c-format
 msgid "Unable to find repository location for '%s' in revision %ld"
 msgstr "Kann '%s' in Revision %ld nicht im Projektarchiv finden"
 
-#: libsvn_client/ra.c:652
+#: libsvn_client/ra.c:641
 #, c-format
 msgid "'%s' in revision %ld is an unrelated object"
 msgstr "'%s' in Revision %ld hat keinen Bezug zur Arbeitskopie"
 
-#: libsvn_client/ra.c:782
+#: libsvn_client/ra.c:792
 #, c-format
 msgid "The location for '%s' for revision %ld does not exist in the repository or refers to an unrelated object"
 msgstr "'%s' für Revision %ld existiert nicht im Projektarchiv oder verweist auf ein nicht verwandtes Objekt"
@@ -4766,7 +4766,7 @@ msgstr "Kann die Größe der Anfrage nicht berechnen"
 #: libsvn_ra_dav/util.c:687
 #, c-format
 msgid "Error spooling the %s request response to disk"
-msgstr ""
+msgstr "Fehler beim Spulen der Antwort auf die %s Anfrage auf Festplatte"
 
 #: libsvn_ra_dav/util.c:727
 #, c-format
@@ -4786,7 +4786,7 @@ msgstr "%s von '%s'"
 #: libsvn_ra_dav/util.c:750
 #, c-format
 msgid "Error reading spooled %s request response"
-msgstr ""
+msgstr "Fehler beim Lesen der Antwort auf die %s Anfrage von Festplatte"
 
 #: libsvn_ra_dav/util.c:761
 #, c-format
@@ -7249,11 +7249,11 @@ msgstr "Pfad '%s' ist nicht gesperrt.\n"
 msgid "Removed lock on '%s'.\n"
 msgstr "Sperre für '%s' entfernt.\n"
 
-#: svnadmin/main.c:1338
+#: svnadmin/main.c:1339
 msgid "subcommand argument required\n"
 msgstr "Unterbefehl benötigt einen Parameter\n"
 
-#: svnadmin/main.c:1428
+#: svnadmin/main.c:1429
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -7381,7 +7381,7 @@ msgstr "   %ld => (verworfen)\n"
 msgid "Dropped %d node(s):\n"
 msgstr "%d Knoten verworfen:\n"
 
-#: svndumpfilter/main.c:1206
+#: svndumpfilter/main.c:1207
 msgid ""
 "\n"
 "Error: no prefixes supplied.\n"
@@ -7389,7 +7389,7 @@ msgstr ""
 "\n"
 "Fehler: keine Präfixe angegeben.\n"
 
-#: svndumpfilter/main.c:1249
+#: svndumpfilter/main.c:1250
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -7730,26 +7730,26 @@ msgstr "Eigenschaftsname und Pfad im Projektarchiv nicht angegeben"
 msgid "Missing propname or repository path argument"
 msgstr "Eigenschaftsname oder Pfad im Projektarchiv nicht angegeben"
 
-#: svnlook/main.c:1988
+#: svnlook/main.c:1989
 msgid "Invalid revision number supplied"
 msgstr "Ungültige Revisionsnummer angegeben"
 
-#: svnlook/main.c:2038
+#: svnlook/main.c:2039
 msgid "The '--transaction' (-t) and '--revision' (-r) arguments can not co-exist"
 msgstr ""
 "Die '--transaction' (-t) und '--revision' (-r) Parameter können nicht\n"
 "gleichzeitig angegeben werden"
 
-#: svnlook/main.c:2112
+#: svnlook/main.c:2113
 msgid "Repository argument required\n"
 msgstr "Projektarchiv Parameter erforderlich\n"
 
-#: svnlook/main.c:2121
+#: svnlook/main.c:2122
 #, c-format
 msgid "'%s' is a URL when it should be a path\n"
 msgstr "'%s' ist eine URL obwohl es ein Pfad sein sollte\n"
 
-#: svnlook/main.c:2169
+#: svnlook/main.c:2170
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
