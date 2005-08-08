@@ -28,19 +28,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-
-  * r14008, r14458, r14587, r14632, r15329, r15340
-    Fixes to svnmerge.
-    Justification:
-      It would be good to have contrib code be the latest and fixed
-      version.  We don't guarantee that this code works, but it would
-      be good to have known fixes released.  This fixes four issues.
-      Blair has used the code in trunk in a production environment and
-      it works great.
-    Votes:
-      +1: blair
-      +0: djames
-
   * /branches/1.2.x-get-locks  (merge r15424:HEAD)
     Client bugfix:  make 'svn st -u' work against pre-1.2 mod_dav_svn.
     Justification:
