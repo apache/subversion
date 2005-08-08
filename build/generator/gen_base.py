@@ -61,6 +61,11 @@ class GeneratorBase:
     self.bdb_scripts = \
         _collect_paths(parser.get('options', 'bdb-test-scripts'))
 
+    self.include_dirs = parser.get('options','include-dirs')
+    self.swig_include_dirs = parser.get('options','swig-include-dirs')
+    self.swig_python_opts = parser.get('options','swig-python-opts')
+    self.swig_perl_opts = parser.get('options','swig-perl-opts')
+    self.swig_ruby_opts = parser.get('options','swig-ruby-opts')
     self.include_wildcards = \
       string.split(parser.get('options', 'include-wildcards'))
     self.swig_lang = string.split(parser.get('options', 'swig-languages'))
@@ -523,6 +528,8 @@ class TargetSWIG(TargetLib):
 
     self.name = self.lang + '_' + module_name
     self.path = build_path_join(self.path, self.lang)
+    if self.lang == "perl":
+      self.path = build_path_join(self.path, "native")
     self.filename = build_path_join(self.path, lib_filename)
 
     ifile = SWIGSource(ipath)

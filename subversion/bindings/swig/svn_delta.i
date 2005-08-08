@@ -102,6 +102,3 @@ void svn_swig_rb_make_editor(const svn_delta_editor_t **editor,
    if editor. */
 %typemap(perl5, in) (const svn_delta_editor_t *editor, void *edit_baton);
 
-#ifdef SWIGPERL
-%include delta_editor.hi
-#endif

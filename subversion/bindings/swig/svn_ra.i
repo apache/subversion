@@ -107,6 +107,3 @@
 
 %include svn_ra_h.swg
 
-#ifdef SWIGPERL
-%include ra_reporter.hi
-#endif

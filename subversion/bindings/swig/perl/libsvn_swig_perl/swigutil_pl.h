@@ -50,39 +50,6 @@ extern "C" {
 
 
 
-#if SVN_SWIG_VERSION < 103024
-/* If this file is being included outside of a wrapper file, then need to
-   create stubs for some of the SWIG types. */
-
-/* if SWIGEXPORT is defined, then we're in a wrapper. otherwise, we need
-   the prototypes and type definitions. */
-#ifndef SWIGEXPORT
-#define SVN_NEED_SWIG_TYPES
-#endif
-
-#ifdef SVN_NEED_SWIG_TYPES
-
-#if SVN_SWIG_VERSION >= 103020
-#include "perl5/precommon.swg"
-/* The following two aren't handled by the precommon.swg.  */
-#ifndef SWIG_MakePtr
-#define SWIG_MakePtr SWIG_Perl_MakePtr
-#endif
-#ifndef SWIG_ConvertPtr
-#define SWIG_ConvertPtr SWIG_Perl_ConvertPtr
-#endif
-#endif
-
-typedef struct _unnamed swig_type_info;
-
-swig_type_info *SWIG_TypeQuery(const char *name);
-int SWIG_ConvertPtr(SV *, void **, swig_type_info *, int flags);
-void SWIG_MakePtr(SV *, void *, swig_type_info *, int flags);
-
-#endif /* SVN_NEED_SWIG_TYPES */
-#endif /* SVN_SWIG_VERSION < 103024 */
-
-
 apr_pool_t *svn_swig_pl_make_pool (SV *obj);
 
 typedef enum perl_func_invoker {

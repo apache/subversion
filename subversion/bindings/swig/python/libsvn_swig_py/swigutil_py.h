@@ -40,8 +40,6 @@ extern "C" {
 
 
 
-#include "svn_old_swig.h"
-
 /* Functions to manage python's global interpreter lock */
 void svn_swig_py_release_py_lock(void);
 void svn_swig_py_acquire_py_lock(void);
