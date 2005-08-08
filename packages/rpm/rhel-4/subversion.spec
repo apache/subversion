@@ -105,6 +105,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sun Aug 07 2005 David Summers <david@summersoft.fay.ar.us> r15615
+- Fix bug where RHEL4 version can't find Python bindings.
+  RHEL4 uses python 2.3 instead of python 2.2.
+
 * Sat Apr 30 2005 David Summers <david@summersoft.fay.ar.us> r14530
 - Make backend regression tests explicit and make sure we do them for both BDB
   and FSFS backends.
@@ -406,7 +410,7 @@ rm -rf apr apr-util neon
 %configure \
 	--with-swig \
 	--with-berkeley-db \
-	--with-python=/usr/bin/python2.2 \
+	--with-python=/usr/bin/python2.3 \
 	--with-apxs=%{apache_dir}/sbin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-config \
 	--with-apr-util=%{apache_dir}/bin/apu-config
@@ -501,8 +505,8 @@ cp packages/rpm/rhel-4/subversion.conf $RPM_BUILD_ROOT/etc/httpd/conf.d
 
 # Install Python SWIG bindings.
 make install-swig-py DESTDIR=$RPM_BUILD_ROOT DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
-mv $RPM_BUILD_ROOT/usr/lib/svn-python/* $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
+mkdir -p $RPM_BUILD_ROOT/usr/lib/python2.3/site-packages
+mv $RPM_BUILD_ROOT/usr/lib/svn-python/* $RPM_BUILD_ROOT/usr/lib/python2.3/site-packages
 rmdir $RPM_BUILD_ROOT/usr/lib/svn-python
 
 # Install PERL SWIG bindings.
@@ -585,8 +589,8 @@ rm -rf $RPM_BUILD_ROOT
 
 %files python
 %defattr(-,root,root)
-/usr/lib/python2.2/site-packages/svn
-/usr/lib/python2.2/site-packages/libsvn
+/usr/lib/python2.3/site-packages/svn
+/usr/lib/python2.3/site-packages/libsvn
 /usr/lib/libsvn_swig_py*so*
 
 %files tools

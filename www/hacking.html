@@ -1430,14 +1430,15 @@ made.</p>
 <h2>Crediting</h2>
 
 <p>It is very important to record code contributions in a consistent
-and parseable way.  This allows us to write scripts which help us
-figure out who has been actively contributing and how, so we can spot
-potential new committers quickly.  The Subversion project uses
-human-readable but machine-parseable fields in log messages for this,
-as described below.</p>
+and parseable way.  This allows us to write scripts to figure out who
+has been actively contributing&nbsp;&mdash;&nbsp;and what they have
+contributed&nbsp;&mdash;&nbsp;so we can spot potential new committers
+quickly.  The Subversion project uses human-readable but
+machine-parseable fields in log messages to accomplish this.</p>
 
 <p>When committing a patch written by someone else, use
-"Patch&nbsp;by:&nbsp;" at the beginning of a line:</p>
+"Patch&nbsp;by:&nbsp;" at the beginning of a line to indicate the
+author:</p>
 
 <pre>
    Fix issue #1729: Don't crash because of a missing file.
@@ -1448,24 +1449,29 @@ as described below.</p>
      (frobnicate_file): Check that file exists before frobnicating.
 </pre>
 
-<p>If multiple people wrote the patch, name them all, one person per
-line, making sure to start each continuation line with whitespace.  If
-you (the committer) were one of the people, list yourself as "me".
-Thus:</p>
+<p>If multiple individuals wrote the patch, list them each on a
+separate line&nbsp;&mdash;&nbsp;making sure to start each continuation
+line with whitespace.  Non-committers should be listed by name, if
+known, and e-mail.  Committers may be listed similarly, or by their
+canonical usernames from COMMITTERS (the leftmost column).
+Additionally, "me" is an acceptable shorthand for the person actually
+committing the change.</p>
 
 <pre>
    Fix issue #1729: Don't crash because of a missing file.
 
    Patch by: J. Random &lt;jrandom@example.com&gt;
              Enrico Caruso &lt;codingtenor@codingtenor.com&gt;
+             jcommitter
              me
 
    * subversion/libsvn_ra_ansible/get_editor.c
      (frobnicate_file): Check that file exists before frobnicating.
 </pre>
 
-<p>If someone pointed out a problem or suggested the fix, but didn't
-actually write the patch, use "Suggested&nbsp;by:&nbsp;":</p>
+<p>If someone pointed out a problem or suggested the fix, but did not
+actually write the patch, indicate the contribution with
+"Suggested&nbsp;by:&nbsp;":</p>
 
 <pre>
    Fix issue #1729: Don't crash because of a missing file.
@@ -1476,7 +1482,7 @@ actually write the patch, use "Suggested&nbsp;by:&nbsp;":</p>
      (frobnicate_file): Check that file exists before frobnicating.
 </pre>
 
-<p>If someone helped review the change, use "Review&nbsp;by:&nbsp;"</p>
+<p>If someone reviewed the change, use "Review&nbsp;by:&nbsp;":</p>
 
 <pre>
    Fix issue #1729: Don't crash because of a missing file.
@@ -1485,14 +1491,10 @@ actually write the patch, use "Suggested&nbsp;by:&nbsp;":</p>
 
    * subversion/libsvn_ra_ansible/get_editor.c
      (frobnicate_file): Check that file exists before frobnicating.
-
 </pre>
 
-<p>(As with "Patch&nbsp;by:&nbsp;", you can name multiple people in
-"Review&nbsp;by:&nbsp;" or "Suggested&nbsp;by:&nbsp;" via
-whitespace-prefixed continuation lines.)</p>
-
-<p>Multiple fields in the same log message are fine, for example:</p>
+<p>A field may have multiple lines, and a log message may contain any
+combination of fields:</p>
 
 <pre>
    Fix issue #1729: Don't crash because of a missing file.
@@ -1502,13 +1504,17 @@ whitespace-prefixed continuation lines.)</p>
              me
    Suggested by: J. Random &lt;jrandom@example.com&gt;
    Review by: Eagle Eyes &lt;eeyes@example.com&gt;
+              jcommitter
 
    * subversion/libsvn_ra_ansible/get_editor.c
      (frobnicate_file): Check that file exists before frobnicating.
 </pre>
 
-<p>To give further details about a contribution, use a parenthetical
-aside immediately after that field, for example:</p>
+<p>Further details about a contribution should be listed in a
+parenthetical aside immediately after the corresponding field.  Such
+an aside always applies to the field right above it; in the following
+example, the fields have been spaced out for readability, but note
+that the spacing is optional and not necessary for parseability:</p>
 
 <pre>
    Fix issue #1729: Don't crash because of a missing file.
@@ -1516,19 +1522,13 @@ aside immediately after that field, for example:</p>
    Patch by: J. Random &lt;jrandom@example.com&gt;
    (Tweaked by me.)
 
+   Review by: Eagle Eyes &lt;eeyes@example.com&gt;
+              jcommitter
+   (Eagle Eyes caught an off-by-one-error in the basename extraction.)
+
    * subversion/libsvn_ra_ansible/get_editor.c
      (frobnicate_file): Check that file exists before frobnicating.
 </pre>
-
-<p>It is understood that a parenthetical aside immediately following a
-field applies to that field, and that "me" refers to person who
-committed this revision.  You don't have to write "me", you can use
-your name instead, if you're not tired of typing it.  Also, although
-the examples above use full name and email address, you can use a
-committer's username to refer to that committer from any field.  For
-example, "Philip Martin &lt;philip@codematters.co.uk&gt;" and "philip"
-would be equivalent.  See the leftmost column of the COMMITTERS file
-for canonical usernames.</p>
 
 <p>Currently, these three fields</p>
 
@@ -1540,15 +1540,14 @@ for canonical usernames.</p>
 
 <p>are the only officially-supported crediting fields (where
 "supported" means scripts know to look for them), and they are widely
-used in Subversion log messages.  Future fields would probably also be
-of the form "VERB&nbsp;by:&nbsp;", and from time to time someone may
-use a field that sounds official but really
-isn't&nbsp;&mdash;&nbsp;there are a few instances of
-"Reported&nbsp;by:&nbsp;", for example.  These are okay, but try to
-use an official field, or a parenthetical aside, in preference to
-making up your own field.  Also, don't use "Reported&nbsp;by:&nbsp;"
-when the reporter is already recorded in an issue; instead, just refer
-to the issue.</p>
+used in Subversion log messages.  Future fields will probably be of
+the form "VERB&nbsp;by:&nbsp;", and from time to time someone may use
+a field that sounds official but really is not&nbsp;&mdash;&nbsp;for
+example, there are a few instances of "Reported&nbsp;by:&nbsp;".
+These are okay, but try to use an official field, or a parenthetical
+aside, in preference to creating your own.  Also, don't use
+"Reported&nbsp;by:&nbsp;" when the reporter is already recorded in an
+issue; instead, simply refer to the issue.</p>
 
 <p>Look over Subversion's existing log messages to see how to use
 these fields in practice.  This command from the top of your trunk
@@ -1558,12 +1557,12 @@ working copy will help:</p>
 svn log | contrib/client-side/search-svnlog.pl "(Patch|Review|Suggested) by: "
 </pre>
 
-<p>Note that the "Approved&nbsp;by:&nbsp;" field seen in some commits
-is totally unrelated to these crediting fields (and is rarely parsed
-by scripts).  It is simply the standard syntax for indicating either
-who approved a partial committer's commit outside their usual area, or
-(in the case of merges to release branches) who voted for the change
-to be merged.</p>
+<p><b>Note:</b> The "Approved&nbsp;by:&nbsp;" field seen in some
+commit messages is totally unrelated to these crediting fields, and is
+generally not parsed by scripts.  It is simply the standard syntax for
+indicating either who approved a partial committer's commit outside
+their usual area, or (in the case of merges to release branches) who
+voted for the change to be merged.</p>
 
 </div>
 

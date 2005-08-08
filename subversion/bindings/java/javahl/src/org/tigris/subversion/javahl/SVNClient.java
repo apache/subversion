@@ -17,6 +17,9 @@ package org.tigris.subversion.javahl;
  * ====================================================================
  * @endcopyright
  */
+
+import java.io.OutputStream;
+
 /**
  * This is the main interface class. All subversion commandline client svn &
  * svnversion operation are implemented in this class. This class is not
@@ -934,6 +937,20 @@ public class SVNClient implements SVNClientInterface
     public native byte[] fileContent(String path, Revision revision,
                                      Revision pegRevision)
             throws ClientException;
+
+    /**
+     * Write the file's content to the specified output stream.
+     *
+     * @param path        the path of the file
+     * @param revision    the revision to retrieve
+     * @param pegRevision the revision at which to interpret the path
+     * @param the stream to write the file's content to
+     * @throws ClientException
+     */
+    public native void streamFileContent(String path, Revision revision, 
+                            Revision pegRevision, int bufferSize, 
+                            OutputStream stream) 
+            throws ClientException;    
 
     /**
      * Rewrite the url's in the working copy

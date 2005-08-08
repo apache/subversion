@@ -38,6 +38,9 @@ module Svn
     end
 
 
+    DEFAULT_CHARSET = default_charset
+    LOCALE_CHARSET = locale_charset
+    
     AuthCredSSLClientCert = AuthCredSslClientCert
     AuthCredSSLClientCertPw = AuthCredSslClientCertPw
     AuthCredSSLServerTrust = AuthCredSslServerTrust

@@ -1,5 +1,4 @@
 package org.tigris.subversion.javahl;
-
 /**
  * @copyright
  * ====================================================================
@@ -17,6 +16,9 @@ package org.tigris.subversion.javahl;
  * ====================================================================
  * @endcopyright
  */
+
+import java.io.OutputStream;
+
 /**
  * This interface is the commom interface for all subversion
  * operations. It is implemented by SVNClient and SVNClientSynchronized
@@ -710,6 +712,19 @@ public interface SVNClientInterface
      */
     byte[] fileContent(String path, Revision revision, Revision pegRevision)
             throws ClientException;
+    /**
+     * Stream file content to the given output stream
+     * @param path      the path of the file
+     * @param revision  the revision to retrieve
+     * @param pegRevision the revision to interpret path
+     * @param bufferSize the size of buffer to use during streaming
+     * @param  the stream to which content is written
+     * @throws ClientException
+     */
+    void streamFileContent(String path, Revision revision, Revision pegRevision,
+                           int bufferSize, OutputStream stream) 
+        throws ClientException;
+
     /**
      * Rewrite the url's in the working copy
      * @param from      old url

@@ -2271,18 +2271,135 @@ jbyteArray SVNClient::fileContent(const char *path, Revision &revision,
         return NULL;
     }
 
-    svn_stream_t *read_stream = NULL;
     size_t size = 0;
-
-    if(revision.revision()->kind == svn_opt_revision_base)
-    // we want the base of the current working copy. Bad hack to avoid going to 
-    // the server
+    svn_stream_t *read_stream = createReadStream(requestPool.pool(),
+						 intPath.c_str(), revision,
+						 pegRevision, size);
+    if (read_stream == NULL)
     {
+        return NULL;
+    }
 
+    JNIEnv *env = JNIUtil::getEnv();
+    // size will be set to the number of bytes available.
+    jbyteArray ret = env->NewByteArray(size);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jbyte *retdata = env->GetByteArrayElements(ret, NULL);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    Err = svn_stream_read(read_stream, (char *)retdata, &size);
+    env->ReleaseByteArrayElements(ret, retdata, 0);
+    if (Err != NULL)
+    {
+        JNIUtil::handleSVNError(Err);
+        return NULL;
+    }
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    return ret;
+}
+
+void SVNClient::streamFileContent(const char *path, Revision &revision,
+				  Revision &pegRevision, jobject outputStream,
+				  size_t bufSize)
+{
+    Pool requestPool;
+    if (path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
+    Path intPath(path);
+    svn_error_t *Err = intPath.error_occured();
+    if (Err != NULL)
+    {
+        JNIUtil::handleSVNError(Err);
+        return;
+    }
+
+    JNIEnv *env = JNIUtil::getEnv();
+    jclass outputStreamClass = env->FindClass("java/io/OutputStream");
+    if (outputStreamClass == NULL)
+    {
+        return;
+    }
+    jmethodID writeMethod = env->GetMethodID(outputStreamClass, "write",
+					     "([BII)V");
+    if (writeMethod == NULL)
+    {
+        return;
+    }
+
+    // Create the buffer.
+    jbyteArray buffer = env->NewByteArray(bufSize);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return;
+    }
+    jbyte *bufData = env->GetByteArrayElements(buffer, NULL);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return;
+    }
+
+    size_t contentSize = 0;
+    svn_stream_t* read_stream = createReadStream(requestPool.pool(), path,
+						 revision, pegRevision,
+						 contentSize);
+    if (read_stream == NULL)
+    {
+        return;
+    }
+
+    while (contentSize > 0)
+    {
+        size_t readSize = bufSize > contentSize ? contentSize : bufSize;
+        Err = svn_stream_read(read_stream, (char *)bufData, &readSize);
+        if (Err != NULL)
+        {
+            env->ReleaseByteArrayElements(buffer, bufData, 0);
+            svn_stream_close(read_stream);
+            JNIUtil::handleSVNError(Err);
+            return;
+        }
+
+        env->ReleaseByteArrayElements(buffer, bufData, JNI_COMMIT);
+        env->CallVoidMethod(outputStream, writeMethod, buffer, 0, readSize);
+        if (JNIUtil::isJavaExceptionThrown())
+        {
+            env->ReleaseByteArrayElements(buffer, bufData, 0);
+            svn_stream_close(read_stream);
+            return;
+        }
+        contentSize -= readSize;
+    }
+
+    env->ReleaseByteArrayElements(buffer, bufData, 0);
+    return;
+}
+
+svn_stream_t* SVNClient::createReadStream(apr_pool_t* pool, const char *path,
+					  Revision& revision,
+					  Revision &pegRevision, size_t& size)
+{
+    svn_stream_t *read_stream = NULL;
+
+    if (revision.revision()->kind == svn_opt_revision_base)
+    {
+	// We want the base of the current working copy, while
+	// avoiding a round-trip to the server.
         const char *base_path;
-        svn_error_t *err = svn_wc_get_pristine_copy_path (intPath.c_str(),
-                               &base_path,
-                               requestPool.pool());
+        svn_error_t *err = svn_wc_get_pristine_copy_path(path, &base_path,
+							 pool);
         if(err != NULL)
         {
             JNIUtil::handleSVNError(err);
@@ -2291,44 +2408,42 @@ jbyteArray SVNClient::fileContent(const char *path, Revision &revision,
         apr_file_t *file = NULL;
         apr_finfo_t finfo;
         apr_status_t apr_err = apr_stat(&finfo, base_path,
-                                   APR_FINFO_MIN, requestPool.pool());
+                                   APR_FINFO_MIN, pool);
         if(apr_err)
         {
             JNIUtil::handleAPRError(apr_err, _("open file"));
             return NULL;
         }
-        apr_err = apr_file_open(&file, base_path, APR_READ, 0, 
-                                requestPool.pool());
+        apr_err = apr_file_open(&file, base_path, APR_READ, 0, pool);
         if(apr_err)
         {
             JNIUtil::handleAPRError(apr_err, _("open file"));
             return NULL;
         }
-        read_stream = svn_stream_from_aprfile(file, requestPool.pool());
+        read_stream = svn_stream_from_aprfile(file, pool);
         size = finfo.size;
     }
-    else if(revision.revision()->kind == svn_opt_revision_working)
-    // we want the working copy. Going back to the server returns base instead 
-    // (not good)
+    else if (revision.revision()->kind == svn_opt_revision_working)
     {
-
+	// We want the working copy. Going back to the server returns
+	// base instead (which is not what we want).
         apr_file_t *file = NULL;
         apr_finfo_t finfo;
-        apr_status_t apr_err = apr_stat(&finfo, intPath.c_str(),
-                                   APR_FINFO_MIN, requestPool.pool());
+        apr_status_t apr_err = apr_stat(&finfo, path,
+                                   APR_FINFO_MIN, pool);
         if(apr_err)
         {
             JNIUtil::handleAPRError(apr_err, _("open file"));
             return NULL;
         }
-        apr_err = apr_file_open(&file, intPath.c_str(), APR_READ, 0, 
-                                requestPool.pool());
+        apr_err = apr_file_open(&file, path, APR_READ, 0, 
+                                pool);
         if(apr_err)
         {
             JNIUtil::handleAPRError(apr_err, _("open file"));
             return NULL;
         }
-        read_stream = svn_stream_from_aprfile(file, requestPool.pool());
+        read_stream = svn_stream_from_aprfile(file, pool);
         size = finfo.size;
     }
     else
@@ -2338,11 +2453,10 @@ jbyteArray SVNClient::fileContent(const char *path, Revision &revision,
         {
             return NULL;
         }
-        svn_stringbuf_t *buf = svn_stringbuf_create("", requestPool.pool());
-        read_stream = svn_stream_from_stringbuf(buf, requestPool.pool());
+        svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
+        read_stream = svn_stream_from_stringbuf(buf, pool);
         svn_error_t *err = svn_client_cat2 (read_stream,
-                intPath.c_str(), pegRevision.revision(), revision.revision(), 
-                ctx, requestPool.pool());
+                path, pegRevision.revision(), revision.revision(), ctx, pool);
         if(err != NULL)
         {
             JNIUtil::handleSVNError(err);
@@ -2350,40 +2464,9 @@ jbyteArray SVNClient::fileContent(const char *path, Revision &revision,
         }
         size = buf->len;
     }
-    if(read_stream == NULL)
-    {
-        return NULL;
-    }
-
-    JNIEnv *env = JNIUtil::getEnv();
-    jbyteArray ret = env->NewByteArray(size);
-    if(JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    jbyte *retdata = env->GetByteArrayElements(ret, NULL);
-    if(JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    svn_error_t *err = svn_stream_read (read_stream, (char *)retdata,
-                              &size);
-
-    if(err != NULL)
-    {
-        env->ReleaseByteArrayElements(ret, retdata, 0);
-        JNIUtil::handleSVNError(err);
-        return NULL;
-    }
-    env->ReleaseByteArrayElements(ret, retdata, 0);
-    if(JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-
-
-    return ret;
+    return read_stream;
 }
+
 
 /**
  * create a DirEntry java object from svn_dirent_t structure
