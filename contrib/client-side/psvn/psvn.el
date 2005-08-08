@@ -312,6 +312,7 @@ If t, their full path name will be displayed, else only the filename."
 (defvar svn-status-directory-history nil "List of visited svn working directories.")
 (defvar svn-process-cmd nil)
 (defvar svn-status-info nil)
+(defvar svn-status-filename-to-buffer-position-cache (make-hash-table :test 'equal :weakness t))
 (defvar svn-status-base-info nil)
 (defvar svn-status-initial-window-configuration nil)
 (defvar svn-status-default-column 23)
@@ -1612,6 +1613,9 @@ Symbolic links to directories count as directories (see `file-directory-p')."
                        'svn-status-directory-face
                        'svn-status-filename-face)))
         (elide-hint (if (svn-status-line-info->show-user-elide-continuation line-info) " ..." "")))
+    (puthash (svn-status-line-info->filename line-info)
+             (point)
+             svn-status-filename-to-buffer-position-cache)
     (insert (svn-status-maybe-add-face
              (svn-status-line-info->has-usermark line-info)
              (concat usermark
@@ -2035,7 +2039,11 @@ If called with a prefix ARG, unmark all such files."
 (defun svn-status-get-file-name-buffer-position (name)
   "Find the buffer position for a file.
 If the file is not found, return nil."
-  (let ((start-pos (point))
+  (let ((start-pos (let ((cached-pos (gethash name
+                                              svn-status-filename-to-buffer-position-cache)))
+                     (when cached-pos
+                       (goto-char (previous-overlay-change cached-pos)))
+                     (point)))
         (found))
 	;; performance optimization: search from point to end of buffer
 	(while (and (not found) (< (point) (point-max)))
