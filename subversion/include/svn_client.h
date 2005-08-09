@@ -263,7 +263,33 @@ typedef struct svn_client_proplist_item_t
 } svn_client_proplist_item_t;
 
 
-/** Information about commits passed back to client from this module. */
+/** Information about commits passed back to clients from this module.
+ *
+ * @note Objects of this type should always be created using the
+ * svn_client_create_commit_info() function.
+ *
+ * @since New in 1.3.
+ */
+typedef struct svn_client_commit_info2_t
+{
+  /** just-committed revision. */
+  svn_revnum_t revision;
+
+  /** server-side date of the commit. */
+  const char *date;
+
+  /** author of the commit. */
+  const char *author;
+
+  /** error message from post-commit hook, or NULL. */
+  const char *post_commit_err;
+
+} svn_client_commit_info2_t;
+
+/** Information about commits passed back to client from this module.
+ *
+ * ### This struct is soon going to be deprecated.
+ */
 typedef struct svn_client_commit_info_t
 {
   /** just-committed revision. */
@@ -456,6 +482,23 @@ typedef struct svn_client_ctx_t
 svn_error_t *
 svn_client_create_context (svn_client_ctx_t **ctx,
                            apr_pool_t *pool);
+
+/**
+ * Allocate an object of type @c svn_client_commit_info2_t in @a pool and
+ * return it.
+ * 
+ * The @c revision field of the new struct is set to @c
+ * SVN_INVALID_REVNUM.  All other fields are initialized to @c NULL.
+ *
+ * @note Any object of the type @c svn_client_commit_info2_t should
+ * be created using this function.
+ * This is to provide for extending the svn_client_commit_info2_t in
+ * the future.
+ *
+ * @since New in 1.3.
+ */
+svn_client_commit_info2_t *
+svn_client_create_commit_info (apr_pool_t *pool);
 
 /**
  * Checkout a working copy of @a URL at @a revision, looked up at @a

@@ -1163,6 +1163,18 @@ collect_lock_tokens (apr_hash_t **result,
   return SVN_NO_ERROR;
 }
 
+svn_client_commit_info2_t *
+svn_client_create_commit_info (apr_pool_t *pool)
+{
+  svn_client_commit_info2_t *commit_info
+    = apr_pcalloc (pool, sizeof (svn_client_commit_info2_t));
+
+  commit_info->revision = SVN_INVALID_REVNUM;
+  /* All other fields were initialized to NULL above. */
+
+  return commit_info;
+}
+
 svn_error_t *
 svn_client_commit2 (svn_client_commit_info_t **commit_info,
                     const apr_array_header_t *targets,
