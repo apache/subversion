@@ -816,8 +816,9 @@ class WinGeneratorBase(GeneratorBase):
       fp.close()
 
   def _find_swig(self):
-    # Require (and assume) version 1.3.19
+    # Require 1.3.24. If not found, assume 1.3.25.
     default_version = '1.3.25'
+    minimum_version = '1.3.24'
     vernum = 103025
     minimum_vernum = 103024
     libdir = ''
@@ -841,12 +842,12 @@ class WinGeneratorBase(GeneratorBase):
         sys.stderr.write('Found installed SWIG version %d.%d.%d\n' % version)
         if vernum < minimum_vernum:
           sys.stderr.write('WARNING: Subversion requires version %s\n'
-                           % default_version)
+                           % minimum_version)
 
         libdir = self._find_swig_libdir()
       else:
         sys.stderr.write('Could not find installed SWIG,'
-                         ' assuming version %s\n' % base_version)
+                         ' assuming version %s\n' % default_version)
         self.swig_libdir = ''
     finally:
       outfp.close()
