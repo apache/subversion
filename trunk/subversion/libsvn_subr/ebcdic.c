@@ -555,8 +555,8 @@ svn_ebcdic_set_file_ccsid (const char *path,
   if(exit_code)
     return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
                              "Attempt to set ccsid of '%s' to '%d' failed " \
-                             "with exit code = '%d'",
-                             path, ccsid, exit_code);  
+                             "with exit code = '%d' errno = '%d'",
+                             path, ccsid, exit_code, errno);  
   return SVN_NO_ERROR;
 }
                            
