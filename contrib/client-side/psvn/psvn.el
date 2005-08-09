@@ -2491,17 +2491,18 @@ Recommended values are ?m or ?M.")
                                                 svn-status-file-modified-after-save-flag)
             (save-window-excursion
               (set-buffer svn-status-buffer-name)
-              (let ((buffer-read-only nil)
-                    (pos (svn-status-get-file-name-buffer-position i-fname)))
-                (if pos
-                    (progn
-                      (goto-char pos)
-                      (delete-region (point-at-bol) (point-at-eol))
-                      (svn-insert-line-in-status-buffer (car st-info))
-                      (delete-char 1))
-                  (message "psvn: file %s not found, updating `svn-status-buffer-name' buffer content..."
-                           i-fname)
-                  (svn-status-update-buffer)))))
+              (save-excursion
+                (let ((buffer-read-only nil)
+                      (pos (svn-status-get-file-name-buffer-position i-fname)))
+                  (if pos
+                      (progn
+                        (goto-char pos)
+                        (delete-region (point-at-bol) (point-at-eol))
+                        (svn-insert-line-in-status-buffer (car st-info))
+                        (delete-char 1))
+                    (message "psvn: file %s not found, updating `svn-status-buffer-name' buffer content..."
+                             i-fname)
+                    (svn-status-update-buffer))))))
           (setq st-info (cdr st-info))))))
   nil)
 
