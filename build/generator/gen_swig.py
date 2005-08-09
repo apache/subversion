@@ -243,6 +243,25 @@ class Generator(gen_make.Generator):
     else:
       self._cmd("%s -o %s -co %s/%s" % (self.swig_path, out, dir, file))
   
+  def _write_long_long_fix(self):
+    """Hide the SWIG implementation of 'long long' converters so that
+       Visual C++ won't get confused by it."""
+    
+    self._checkout("python","python.swg")
+    
+    python_swg_filename = "%s/python.swg" % self.swig_proxy_dir
+    python_swg = open(python_swg_filename).read()
+    file = open(python_swg_filename,"w")
+    file.write("""
+    %fragment("SWIG_AsVal_" {long long},"header") {
+    }
+    %fragment("SWIG_Check_" {long long},"header") {
+    }
+    %fragment("SWIG_From_" {long long},"header") {
+    }\n""")
+    file.write(python_swg)
+    file.close()
+  
   def _write_external_runtime(self, langs):
     """Generate external runtime header files for each SWIG language"""
     
@@ -338,3 +357,6 @@ class Generator(gen_make.Generator):
     langs = ["perl", "python", "ruby"] 
     if self.swig_version >= 103024:
       self._write_external_runtime(langs)
+    
+      # Fix SWIG's "long long" support on WIN32
+      self._write_long_long_fix()

@@ -82,8 +82,28 @@ static PyObject * _global_svn_swig_py_pool = NULL;
 %typemap (in, parse="I") unsigned int "";
 %typemap (in, parse="l") long, ssize_t "";
 %typemap (in, parse="k") unsigned long, size_t "";
-%typemap (in, parse="L") long long, __int64 "";
-%typemap (in, parse="K") unsigned long long, unsigned __int64 "";
+%typemap (in, parse="L") apr_time_t, apr_int64_t, long long, __int64 "";
+%typemap (in, parse="K") apr_uint64_t, unsigned long long, unsigned __int64 "";
+
+/* For compatibility with Python 2.2 */
+%{
+#if defined(LONG_LONG) && !defined(PY_LONG_LONG)
+#define PY_LONG_LONG LONG_LONG
+#endif
+%}
+
+/* These typemaps use PY_LONG_LONG so that they will work on Win32 and Unix */
+%typemap (out) apr_time_t, apr_int64_t, long long, __int64 
+  " $result = PyLong_FromLongLong((PY_LONG_LONG)($1)); ";
+
+%typemap (out) apr_uint64_t, unsigned long long, unsigned __int64
+  " $result = PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG)($1)); ";
+
+%typemap(argout) \
+  long long *OUTPUT, apr_int64_t *OUTPUT, __int64 *OUTPUT, apr_time_t *OUTPUT
+   "$result = t_output_helper($result, ((res$argnum == SWIG_NEWOBJ) ?
+       PyLong_FromLongLong((*$1)) :
+       SWIG_NewPointerObj((void*)($1), $1_descriptor, 0)));";
 
 /* We assume here that Subversion functions have no more than
    20 fixed parameters. If you want to wrap a function that has
