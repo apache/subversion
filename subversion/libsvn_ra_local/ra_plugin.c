@@ -920,6 +920,7 @@ svn_ra_local__get_file (svn_ra_session_t *session,
          a loop.  Truly, Nothing Can Go Wrong :-).  But RA layers that
          go over a network should confirm the checksum. */
       SVN_ERR (svn_stream_copy (contents, stream, pool));
+      SVN_ERR (svn_stream_close (contents));
     }
 
   /* Handle props if requested. */

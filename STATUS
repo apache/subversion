@@ -9,16 +9,6 @@ Status of 1.2.2:
 
 Candidate changes:
 
-  * r15253
-    Fix Issue #2341: Perl bindings cat method fails when using a local file
-    repository.
-    Justification:
-      Repeatedly using the client context to cat files via ra_local from the
-      bindings eventually causes the interpreter to die without this fix.
-    Votes:
-      +1: jszakmeister, sussman, lundblad
-      +0: djames
-
 Approved changes (further review is welcome, but not required):
 
   * r15609
