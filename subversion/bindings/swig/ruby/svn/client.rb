@@ -175,6 +175,16 @@ module Svn
                      recurse, ignore_ancestry, force,
                      dry_run, self)
       end
+
+      def merge_peg(src, rev1, rev2, target_wcpath,
+                    peg_rev=nil, recurse=true,
+                    ignore_ancestry=false, force=false,
+                    dry_run=false)
+        peg_rev ||= URI(src).scheme ? "HEAD" : "BASE"
+        Client.merge_peg(src, rev1, rev2, peg_rev,
+                         target_wcpath, recurse, ignore_ancestry,
+                         force, dry_run, self)
+      end
       
       def cat(path, rev="HEAD", output=nil)
         used_string_io = output.nil?
