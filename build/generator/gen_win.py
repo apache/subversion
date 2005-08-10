@@ -631,6 +631,7 @@ class WinGeneratorBase(GeneratorBase):
                        self.apath(self.apr_util_path, "xml/expat/lib"),
                        self.apath(self.neon_path, "src"),
                        self.apath(self.bdb_path, "include"),
+                       self.path("subversion/bindings/swig/proxy"),
                        self.path("subversion") ]
 
     if self.libintl_path:
