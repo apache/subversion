@@ -645,6 +645,46 @@ class SvnClientTest < Test::Unit::TestCase
 
     assert(!File.exist?(trunk_path))
   end
+
+  def test_cleanup
+    log = "sample log"
+    file = "sample.txt"
+    src = "sample\n"
+    path = File.join(@wc_path, file)
+
+    ctx = make_context(log)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(path)
+    rev = ctx.commit(@wc_path).revision
+
+    ctx.up(@wc_path, rev - 1)
+    File.open(path, "w") {|f| f.print(src)}
+    assert_raise(Svn::Error::WC_OBSTRUCTED_UPDATE) do
+      ctx.up(@wc_path, rev)
+    end
+
+    assert_raise(Svn::Error::WC_LOCKED) do
+      ctx.commit(@wc_path)
+    end
+
+    ctx.set_cancel_func do
+      raise Svn::Error::CANCELLED
+    end
+    assert_raise(Svn::Error::CANCELLED) do
+      ctx.cleanup(@wc_path)
+    end
+    assert_raise(Svn::Error::WC_LOCKED) do
+      ctx.commit(@wc_path)
+    end
+
+    ctx.set_cancel_func(nil)
+    assert_nothing_raised do
+      ctx.cleanup(@wc_path)
+    end
+    assert_nothing_raised do
+      ctx.commit(@wc_path)
+    end
+  end
   
   def test_cat
     log = "sample log"
