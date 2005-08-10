@@ -359,6 +359,29 @@ class SvnClientTest < Test::Unit::TestCase
     assert(status.entry.dir?)
     assert(status.entry.add?)
   end
+
+  def test_checkout
+    log = "sample log"
+    file = "hello.txt"
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+    content = "Hello"
+
+    ctx = make_context(log)
+    ctx.mkdir(dir_path)
+    File.open(path, "w"){|f| f.print(content)}
+    ctx.add(path)
+    ctx.commit(@wc_path)
+
+    FileUtils.rm_rf(@wc_path)
+    ctx.checkout(@repos_uri, @wc_path)
+    assert(File.exist?(path))
+
+    FileUtils.rm_rf(@wc_path)
+    ctx.co(@repos_uri, @wc_path, nil, nil, false)
+    assert(!File.exist?(path))
+  end
   
   def test_update
     log = "sample log"
@@ -499,6 +522,170 @@ class SvnClientTest < Test::Unit::TestCase
     assert_match(/-#{before}\+#{after}\z/, out_file.read)
   end
 
+  def test_diff_peg
+    log = "sample log"
+    before = "before\n"
+    after = "after\n"
+    file = "hello.txt"
+    path = File.join(@wc_path, file)
+
+    File.open(path, "w") {|f| f.print(before)}
+
+    ctx = make_context(log)
+    ctx.add(path)
+    commit_info = ctx.commit(@wc_path)
+    rev1 = commit_info.revision
+
+    File.open(path, "w") {|f| f.print(after)}
+
+    out_file = Tempfile.new("svn")
+    err_file = Tempfile.new("svn")
+    ctx.diff_peg([], path, rev1, "WORKING", out_file.path, err_file.path)
+    out_file.open
+    assert_match(/-#{before}\+#{after}\z/, out_file.read)
+
+    commit_info = ctx.commit(@wc_path)
+    rev2 = commit_info.revision
+    out_file = Tempfile.new("svn")
+    ctx.diff_peg([], path, rev1, rev2, out_file.path, err_file.path)
+    out_file.open
+    assert_match(/-#{before}\+#{after}\z/, out_file.read)
+  end
+
+  def test_merge
+    log = "sample log"
+    file = "sample.txt"
+    src = "sample\n"
+    trunk = File.join(@wc_path, "trunk")
+    branch = File.join(@wc_path, "branch")
+    trunk_path = File.join(trunk, file)
+    branch_path = File.join(branch, file)
+
+    ctx = make_context(log)
+    ctx.mkdir(trunk, branch)
+    File.open(trunk_path, "w") {}
+    File.open(branch_path, "w") {}
+    ctx.add(trunk_path)
+    ctx.add(branch_path)
+    rev1 = ctx.commit(@wc_path).revision
+
+    File.open(branch_path, "w") {|f| f.print(src)}
+    rev2 = ctx.commit(@wc_path).revision
+
+    ctx.merge(branch, rev1, branch, rev2, trunk)
+    rev3 = ctx.commit(@wc_path).revision
+
+    assert_equal(src, ctx.cat(trunk_path, rev3))
+    
+    ctx.rm(branch_path)
+    rev4 = ctx.commit(@wc_path).revision
+
+    ctx.merge(branch, rev3, branch, rev4, trunk)
+    assert(!File.exist?(trunk_path))
+
+    ctx.revert(trunk_path)
+    File.open(trunk_path, "a") {|f| f.print(src)}
+    ctx.merge(branch, rev3, branch, rev4, trunk)
+    assert(File.exist?(trunk_path))
+    rev5 = ctx.commit(@wc_path).revision
+    
+    File.open(trunk_path, "a") {|f| f.print(src)}
+    ctx.merge(branch, rev3, branch, rev4, trunk, true, false, true, true)
+    assert(File.exist?(trunk_path))
+    
+    ctx.merge(branch, rev3, branch, rev4, trunk, true, false, true)
+    rev6 = ctx.commit(@wc_path).revision
+
+    assert(!File.exist?(trunk_path))
+  end
+
+  def test_merge_peg
+    log = "sample log"
+    file = "sample.txt"
+    src = "sample\n"
+    trunk = File.join(@wc_path, "trunk")
+    branch = File.join(@wc_path, "branch")
+    trunk_path = File.join(trunk, file)
+    branch_path = File.join(branch, file)
+
+    ctx = make_context(log)
+    ctx.mkdir(trunk, branch)
+    File.open(trunk_path, "w") {}
+    File.open(branch_path, "w") {}
+    ctx.add(trunk_path)
+    ctx.add(branch_path)
+    rev1 = ctx.commit(@wc_path).revision
+
+    File.open(branch_path, "w") {|f| f.print(src)}
+    rev2 = ctx.commit(@wc_path).revision
+
+    ctx.merge_peg(branch, rev1, rev2, trunk)
+    rev3 = ctx.commit(@wc_path).revision
+
+    assert_equal(src, ctx.cat(trunk_path, rev3))
+    
+    ctx.rm(branch_path)
+    rev4 = ctx.commit(@wc_path).revision
+
+    ctx.merge_peg(branch, rev3, rev4, trunk)
+    assert(!File.exist?(trunk_path))
+
+    ctx.revert(trunk_path)
+    File.open(trunk_path, "a") {|f| f.print(src)}
+    ctx.merge_peg(branch, rev3, rev4, trunk)
+    assert(File.exist?(trunk_path))
+    rev5 = ctx.commit(@wc_path).revision
+    
+    File.open(trunk_path, "a") {|f| f.print(src)}
+    ctx.merge_peg(branch, rev3, rev4, trunk, nil, true, false, true, true)
+    assert(File.exist?(trunk_path))
+    
+    ctx.merge_peg(branch, rev3, rev4, trunk, nil, true, false, true)
+    rev6 = ctx.commit(@wc_path).revision
+
+    assert(!File.exist?(trunk_path))
+  end
+
+  def test_cleanup
+    log = "sample log"
+    file = "sample.txt"
+    src = "sample\n"
+    path = File.join(@wc_path, file)
+
+    ctx = make_context(log)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(path)
+    rev = ctx.commit(@wc_path).revision
+
+    ctx.up(@wc_path, rev - 1)
+    File.open(path, "w") {|f| f.print(src)}
+    assert_raise(Svn::Error::WC_OBSTRUCTED_UPDATE) do
+      ctx.up(@wc_path, rev)
+    end
+
+    assert_raise(Svn::Error::WC_LOCKED) do
+      ctx.commit(@wc_path)
+    end
+
+    ctx.set_cancel_func do
+      raise Svn::Error::CANCELLED
+    end
+    assert_raise(Svn::Error::CANCELLED) do
+      ctx.cleanup(@wc_path)
+    end
+    assert_raise(Svn::Error::WC_LOCKED) do
+      ctx.commit(@wc_path)
+    end
+
+    ctx.set_cancel_func(nil)
+    assert_nothing_raised do
+      ctx.cleanup(@wc_path)
+    end
+    assert_nothing_raised do
+      ctx.commit(@wc_path)
+    end
+  end
+  
   def test_cat
     log = "sample log"
     src1 = "source1\n"

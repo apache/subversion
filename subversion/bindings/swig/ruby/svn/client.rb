@@ -53,13 +53,13 @@ module Svn
       end
       undef _initialize
 
-      def checkout(url, path, revision="HEAD", recurse=true)
-        Client.checkout(url, path, revision, recurse, self)
+      def checkout(url, path, revision=nil, peg_rev=nil,
+                   recurse=true, ignore_externals=false)
+        revision ||= "HEAD"
+        Client.checkout2(url, path, peg_rev, revision,
+                         recurse, ignore_externals, self)
       end
-      
-      def checkout2(url, path, peg_revision=nil, revision="HEAD", recurse=true)
-        Client.checkout2(url, path, peg_revision, revision, recurse, self)
-      end
+      alias co checkout
 
       def mkdir(*paths)
         paths = paths.first if paths.size == 1 and paths.first.is_a?(Array)
@@ -155,6 +155,37 @@ module Svn
                      out_file, err_file, self)
       end
 
+      def diff_peg(options, path, start_rev, end_rev,
+                   out_file, err_file, peg_rev=nil,
+                   recurse=true, ignore_ancestry=false,
+                   no_diff_deleted=false, force=false,
+                   header_encoding=nil)
+        peg_rev ||= URI(path).scheme ? "HEAD" : "BASE"
+        header_encoding ||= Core::LOCALE_CHARSET
+        Client.diff_peg3(options, path, peg_rev, start_rev, end_rev,
+                         recurse, ignore_ancestry,
+                         no_diff_deleted, force, header_encoding,
+                         out_file, err_file, self)
+      end
+
+      def merge(src1, rev1, src2, rev2, target_wcpath,
+                recurse=true, ignore_ancestry=false,
+                force=false, dry_run=false)
+        Client.merge(src1, rev1, src2, rev2, target_wcpath,
+                     recurse, ignore_ancestry, force,
+                     dry_run, self)
+      end
+
+      def merge_peg(src, rev1, rev2, target_wcpath,
+                    peg_rev=nil, recurse=true,
+                    ignore_ancestry=false, force=false,
+                    dry_run=false)
+        peg_rev ||= URI(src).scheme ? "HEAD" : "BASE"
+        Client.merge_peg(src, rev1, rev2, peg_rev,
+                         target_wcpath, recurse, ignore_ancestry,
+                         force, dry_run, self)
+      end
+      
       def cat(path, rev="HEAD", output=nil)
         used_string_io = output.nil?
         output ||= StringIO.new

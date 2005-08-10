@@ -300,6 +300,11 @@ log_message_receiver_xml (void *baton,
   svn_cl__xml_tagged_cdata (&sb, pool, "author", author);
 
   /* Print the full, uncut, date.  This is machine output. */
+  /* According to the docs for svn_log_message_receiver_t, either
+     NULL or the empty string represents no date.  Avoid outputting an
+     empty date element. */
+  if (date && date[0] == '\0')
+    date = NULL;
   /* <date>xxx</date> */
   svn_cl__xml_tagged_cdata (&sb, pool, "date", date);
 
