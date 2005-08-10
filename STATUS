@@ -19,13 +19,6 @@ Candidate changes:
       +1: jszakmeister, sussman
       +0: djames
 
-  * r15379, r15398
-    Fix memleak in character translation handle caching.
-    Justification:
-      Leaks are bad.
-    Votes:
-      +1: lundblad, kfogel, jerenkrantz
-
 Approved changes (further review is welcome, but not required):
 
   * r15609
