@@ -16,7 +16,7 @@ Candidate changes:
       Repeatedly using the client context to cat files via ra_local from the
       bindings eventually causes the interpreter to die without this fix.
     Votes:
-      +1: jszakmeister
+      +1: jszakmeister, sussman
       +0: djames
 
   * r15379, r15398
