@@ -59,9 +59,18 @@ class Generator(gen_make.Generator):
   def _get_swig_version(self):
     """Get the version number of SWIG"""
     swig_version_cmd = "%s -version" % self.swig_path
-    stdin, stdout, stderr = os.popen3(swig_version_cmd)
-    swig_version = stdout.read() + stderr.read()    
-    stdin.close()
+    try:
+      stdin, stdout, stderr = os.popen3(swig_version_cmd)
+      swig_version = stdout.read() + stderr.read()    
+      stdin.close()
+      stdout.close()
+      stderr.close()
+    except AttributeError:
+      # Workaround for Python 1.x, which does not have popen3.
+      # This workaround only works on Unix.
+      stdout = os.popen('sh -c "%s 2>&1"' % swig_version_cmd)
+      swig_version = stdout.read()
+      stdout.close()
     m = re.search("Version (\d+).(\d+).(\d+)", swig_version)
     if m:
       return int(
