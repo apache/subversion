@@ -53,13 +53,13 @@ module Svn
       end
       undef _initialize
 
-      def checkout(url, path, revision="HEAD", recurse=true)
-        Client.checkout(url, path, revision, recurse, self)
+      def checkout(url, path, revision=nil, peg_rev=nil,
+                   recurse=true, ignore_externals=false)
+        revision ||= "HEAD"
+        Client.checkout2(url, path, peg_rev, revision,
+                         recurse, ignore_externals, self)
       end
-      
-      def checkout2(url, path, peg_revision=nil, revision="HEAD", recurse=true)
-        Client.checkout2(url, path, peg_revision, revision, recurse, self)
-      end
+      alias co checkout
 
       def mkdir(*paths)
         paths = paths.first if paths.size == 1 and paths.first.is_a?(Array)

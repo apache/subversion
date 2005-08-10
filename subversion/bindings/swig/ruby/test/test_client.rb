@@ -359,6 +359,29 @@ class SvnClientTest < Test::Unit::TestCase
     assert(status.entry.dir?)
     assert(status.entry.add?)
   end
+
+  def test_checkout
+    log = "sample log"
+    file = "hello.txt"
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+    content = "Hello"
+
+    ctx = make_context(log)
+    ctx.mkdir(dir_path)
+    File.open(path, "w"){|f| f.print(content)}
+    ctx.add(path)
+    ctx.commit(@wc_path)
+
+    FileUtils.rm_rf(@wc_path)
+    ctx.checkout(@repos_uri, @wc_path)
+    assert(File.exist?(path))
+
+    FileUtils.rm_rf(@wc_path)
+    ctx.co(@repos_uri, @wc_path, nil, nil, false)
+    assert(!File.exist?(path))
+  end
   
   def test_update
     log = "sample log"
