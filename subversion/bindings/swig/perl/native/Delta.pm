@@ -107,7 +107,6 @@ use SVN::Base qw(Delta svn_txdelta_window_t_);
 
 package SVN::Delta::Editor;
 use SVN::Base qw(Delta svn_delta_editor_);
-use Carp;
 
 *invoke_set_target_revision = *SVN::_Delta::svn_delta_editor_invoke_set_target_revision;
 
@@ -132,8 +131,6 @@ sub new {
 	    if $self->{_editor};
     }
 
-    warn "debug" if $self->{_debug};
-
     return $self;
 }
 
@@ -141,11 +138,11 @@ our $AUTOLOAD;
 
 sub AUTOLOAD {
     no warnings 'uninitialized';
-    warn "$AUTOLOAD: ".join(',',@_) if $_[0]->{_debug};
     return unless $_[0]->{_editor};
     my $class = ref($_[0]);
     my $func = $AUTOLOAD;
     $func =~ s/.*:://;
+    warn "$func: ".join(',',@_)."\n" if $_[0]->{_debug};
     return unless $func =~ m/[^A-Z]/;
 
     my %ebaton = ( set_target_revision => 1,
@@ -162,7 +159,7 @@ sub AUTOLOAD {
         eval { &{"invoke_$func"}($self->{_editor},
 				 $ebaton{$func} ? $self->{_baton} : (), @_) };
 
-    confess $@ if $@;
+    die $@ if $@;
 
     return @ret ? $#ret == 0 ? $ret[0] : [@ret] : undef;
 }
