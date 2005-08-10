@@ -4284,7 +4284,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (transaction_props),
     SVN_TEST_PASS (node_props),
     SVN_TEST_PASS (delete_mutables),
-    SVN_TEST_PASS (delete),
+    SVN_TEST_XFAIL (delete),
     SVN_TEST_PASS (fetch_youngest_rev),
     SVN_TEST_PASS (basic_commit),
     SVN_TEST_PASS (test_tree_node_validation),
