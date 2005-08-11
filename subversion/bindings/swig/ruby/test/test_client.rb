@@ -425,20 +425,72 @@ class SvnClientTest < Test::Unit::TestCase
 
   def test_revert
     log = "sample log"
-    file = "hello.txt"
-    path = File.join(@wc_path, file)
+    file1 = "hello1.txt"
+    file2 = "hello2.txt"
+    file3 = "hello3.txt"
+    dir = "dir"
+    dir_path = File.join(@wc_path, dir)
+    path1 = File.join(@wc_path, file1)
+    path2 = File.join(@wc_path, file2)
+    path3 = File.join(dir_path, file3)
     content = "Hello"
-    File.open(path, "w"){|f| f.print(content)}
 
     ctx = make_context(log)
-    ctx.add(path)
+    File.open(path1, "w"){|f| f.print(content)}
+    File.open(path2, "w"){|f| f.print(content)}
+    ctx.add(path1)
+    ctx.add(path2)
+    ctx.mkdir(dir_path)
+    File.open(path3, "w"){|f| f.print(content)}
+    ctx.add(path3)
     commit_info = ctx.commit(@wc_path)
 
-    assert_equal(content, File.read(path))
-    File.open(path, "w"){}
-    assert_equal("", File.read(path))
-    ctx.revert(path)
-    assert_equal(content, File.read(path))
+    File.open(path1, "w"){}
+    assert_equal("", File.open(path1){|f| f.read})
+
+    ctx.revert(path1)
+    assert_equal(content, File.open(path1){|f| f.read})
+
+    File.open(path1, "w"){}
+    File.open(path2, "w"){}
+    assert_equal("", File.open(path1){|f| f.read})
+    assert_equal("", File.open(path2){|f| f.read})
+    ctx.revert([path1, path2])
+    assert_equal(content, File.open(path1){|f| f.read})
+    assert_equal(content, File.open(path2){|f| f.read})
+
+    File.open(path1, "w"){}
+    File.open(path2, "w"){}
+    File.open(path3, "w"){}
+    assert_equal("", File.open(path1){|f| f.read})
+    assert_equal("", File.open(path2){|f| f.read})
+    assert_equal("", File.open(path3){|f| f.read})
+    ctx.revert(@wc_path)
+    assert_equal(content, File.open(path1){|f| f.read})
+    assert_equal(content, File.open(path2){|f| f.read})
+    assert_equal(content, File.open(path3){|f| f.read})
+    
+    File.open(path1, "w"){}
+    File.open(path2, "w"){}
+    File.open(path3, "w"){}
+    assert_equal("", File.open(path1){|f| f.read})
+    assert_equal("", File.open(path2){|f| f.read})
+    assert_equal("", File.open(path3){|f| f.read})
+    ctx.revert(@wc_path, false)
+    assert_equal("", File.open(path1){|f| f.read})
+    assert_equal("", File.open(path2){|f| f.read})
+    assert_equal("", File.open(path3){|f| f.read})
+
+    File.open(path1, "w"){}
+    File.open(path2, "w"){}
+    File.open(path3, "w"){}
+    assert_equal("", File.open(path1){|f| f.read})
+    assert_equal("", File.open(path2){|f| f.read})
+    assert_equal("", File.open(path3){|f| f.read})
+    ctx.revert(dir_path)
+    assert_equal("", File.open(path1){|f| f.read})
+    assert_equal("", File.open(path2){|f| f.read})
+    assert_equal(content, File.open(path3){|f| f.read})
   end
 
   def test_log
