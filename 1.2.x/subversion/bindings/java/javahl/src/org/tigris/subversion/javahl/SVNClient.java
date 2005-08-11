@@ -25,38 +25,51 @@ package org.tigris.subversion.javahl;
 public class SVNClient implements SVNClientInterface
 {
     /**
-     * load the needed native library
+     * Load the required native library.
      */
     static
     {
-        /*
-         * see if the user has specified the fully qualified path to the native
-         * library
-         */
+        loadNativeLibrary();
+    }
+
+    /**
+     * Called upon class initialization.
+     *
+     * @throws UnsatisfiedLinkError If the native library cannot be
+     * loaded.
+     */
+    private static void loadNativeLibrary()
+    {
+        // If the user specified the fully qualified path to the
+        // native library, try loading that first.
         try
         {
             String specifiedLibraryName =
-                    System.getProperty("subversion.native.library");
-            if(specifiedLibraryName != null)
+                System.getProperty("subversion.native.library");
+            if (specifiedLibraryName != null)
+            {
                 System.load(specifiedLibraryName);
+                return;
+            }
         }
-        catch(UnsatisfiedLinkError ex)
+        catch (UnsatisfiedLinkError ex)
         {
             // ignore that error to try again
         }
-        /*
-         * first try to load the library by the new name.
-         * if that fails, try to load the library by the old name.
-         */
+
+        // Try to load the library by its name.  Failing that, try to
+        // load it by its old name.
         try
         {
             System.loadLibrary("svnjavahl-1");
+            return;
         }
-        catch(UnsatisfiedLinkError ex)
+        catch (UnsatisfiedLinkError ex)
         {
             try
             {
                 System.loadLibrary("libsvnjavahl-1");
+                return;
             }
             catch (UnsatisfiedLinkError e)
             {
@@ -64,6 +77,7 @@ public class SVNClient implements SVNClientInterface
             }
         }
     }
+
 
     /**
      * Standard empty contructor, builds just the native peer.

@@ -830,7 +830,8 @@ foreach my $function (qw(checkout update switch add mkdir delete commit
             }
         }
 
-        if (ref($_[$#_]) eq '_p_apr_pool_t')
+        if (ref($_[$#_]) eq '_p_apr_pool_t' ||
+            ref($_[$#_]) eq 'SVN::Pool')
         {
             # if we got a pool passed to us we need to
             # leave it off until we add the ctx first
@@ -850,7 +851,8 @@ foreach my $function (qw(checkout update switch add mkdir delete commit
                 push @args,$ctx;
             }
             if (defined($self->{'pool'}) && 
-                ref($self->{'pool'}) eq '_p_apr_pool_t')
+                (ref($self->{'pool'}) eq '_p_apr_pool_t' ||
+                 ref($self->{'pool'}) eq 'SVN::Pool'))
             {
                 # allow the pool entry in the SVN::Client
                 # object to override the default pool.

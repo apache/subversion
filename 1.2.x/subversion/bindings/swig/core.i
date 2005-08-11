@@ -421,17 +421,27 @@ apr_status_t apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
 
 apr_pool_t *current_pool;
 
+#if SWIG_VERSION <= 0x10324
+%{
+#define SVN_SWIGEXPORT(t) SWIGEXPORT(t)
+%}
+#else
+%{
+#define SVN_SWIGEXPORT(t) SWIGEXPORT t
+%}
+#endif
+
 %{
 
 static apr_pool_t *current_pool = 0;
 
-SWIGEXPORT(apr_pool_t *)
+SVN_SWIGEXPORT(apr_pool_t *)
 svn_swig_pl_get_current_pool (void)
 {
   return current_pool;
 }
 
-SWIGEXPORT(void)
+SVN_SWIGEXPORT(void)
 svn_swig_pl_set_current_pool (apr_pool_t *pool)
 {
   current_pool = pool;
