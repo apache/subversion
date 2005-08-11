@@ -715,7 +715,7 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
               /* Prevent infinite recursion by filtering off our
                  newly created destination path. */
               if (strcmp (src, dst_parent) == 0
-                  && strcmp (this_entry.name, dst_basename) == 0)
+                  && strcmp (entryname_utf8, dst_basename) == 0)
                 continue;
 
               SVN_ERR (svn_io_copy_dir_recursively 
