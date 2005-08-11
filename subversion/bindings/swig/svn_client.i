@@ -144,16 +144,6 @@
 }
 
 /* -----------------------------------------------------------------------
-   Callback: svn_wc_notify_func_t
-   svn_client_ctx_t
-*/
-
-%typemap(ruby, in) svn_wc_notify_func_t notify_func
-{
-  $1 = svn_swig_rb_notify_func;
-}
-
-/* -----------------------------------------------------------------------
    Callback: svn_wc_notify_func2_t
    svn_client_ctx_t
 */
@@ -320,7 +310,6 @@
 #ifdef SWIGRUBY
 %apply void *CALLBACK_BATON
 {
-  void *notify_baton,
   void *notify_baton2,
   void *log_msg_baton,
   void *cancel_baton

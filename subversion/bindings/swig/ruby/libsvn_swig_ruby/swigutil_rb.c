@@ -1140,36 +1140,6 @@ svn_swig_rb_get_commit_log_func(const char **log_msg,
 }
 
 
-
-void
-svn_swig_rb_notify_func(void *baton,
-                        const char *path,
-                        svn_wc_notify_action_t action,
-                        svn_node_kind_t kind,
-                        const char *mime_type,
-                        svn_wc_notify_state_t content_state,
-                        svn_wc_notify_state_t prop_state,
-                        svn_revnum_t revision)
-{
-  VALUE proc = (VALUE)baton;
-  
-  if (!NIL_P(proc)) {
-    VALUE args;
-
-    args = rb_ary_new3(9,
-                       proc,
-                       rb_id_call(),
-                       rb_str_new2(path),
-                       INT2NUM(action),
-                       INT2NUM(kind),
-                       rb_str_new2(mime_type),
-                       INT2NUM(content_state),
-                       INT2NUM(prop_state),
-                       INT2NUM(revision));
-    callback(args);
-  }
-}
-
 void
 svn_swig_rb_notify_func2(void *baton,
                          const svn_wc_notify_t *notify,

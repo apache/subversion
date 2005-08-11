@@ -155,7 +155,7 @@ class SvnClientTest < Test::Unit::TestCase
     ctx = make_context(log)
 
     notify_info = []
-    ctx.set_notify_func2 do |notify|
+    ctx.set_notify_func do |notify|
       notify_info << [notify.path, notify.action]
     end
     
@@ -190,7 +190,7 @@ class SvnClientTest < Test::Unit::TestCase
     ctx = make_context(log)
 
     notify_info = []
-    ctx.set_notify_func2 do |notify|
+    ctx.set_notify_func do |notify|
       notify_info << [notify.path, notify.action]
     end
     
@@ -872,7 +872,7 @@ class SvnClientTest < Test::Unit::TestCase
 
 
     notify_info = []
-    ctx.set_notify_func2 do |notify|
+    ctx.set_notify_func do |notify|
       notify_info << [notify.path, notify.action]
     end
     

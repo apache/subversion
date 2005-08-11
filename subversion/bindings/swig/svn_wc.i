@@ -79,12 +79,6 @@
   $2 = $input; /* our function is the baton. */
 }
 
-%typemap(ruby, in) (svn_wc_notify_func_t notify_func, void *notify_baton)
-{
-  $1 = svn_swig_rb_notify_func;
-  $2 = (void *)$input;
-}
-
 /* -----------------------------------------------------------------------
    Callback: svn_wc_notify_func2_t
    svn_client_ctx_t
