@@ -76,7 +76,8 @@ cat_local_file (const char *path,
 
   if (entry->kind != svn_node_file)
     return svn_error_createf(SVN_ERR_CLIENT_IS_DIRECTORY, NULL,
-                             _("'%s' refers to a directory"), path);
+                             _("'%s' refers to a directory"),
+                             svn_path_local_style (path, pool));
 
   if (revision->kind != svn_opt_revision_working)
     {
@@ -274,6 +275,7 @@ svn_client_cat2 (svn_stream_t *out,
                                             TRUE, pool));
 
       SVN_ERR (svn_stream_close (tmp_stream));
+      SVN_ERR (svn_io_file_close (tmp_file, pool));
     }
 
   return SVN_NO_ERROR;

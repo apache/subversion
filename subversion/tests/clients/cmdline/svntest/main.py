@@ -155,26 +155,26 @@ default_config_dir = config_dir
 #
 _item = wc.StateItem
 greek_state = wc.State('', {
-  'iota'        : _item("This is the file 'iota'."),
+  'iota'        : _item("This is the file 'iota'.\n"),
   'A'           : _item(),
-  'A/mu'        : _item("This is the file 'mu'."),
+  'A/mu'        : _item("This is the file 'mu'.\n"),
   'A/B'         : _item(),
-  'A/B/lambda'  : _item("This is the file 'lambda'."),
+  'A/B/lambda'  : _item("This is the file 'lambda'.\n"),
   'A/B/E'       : _item(),
-  'A/B/E/alpha' : _item("This is the file 'alpha'."),
-  'A/B/E/beta'  : _item("This is the file 'beta'."),
+  'A/B/E/alpha' : _item("This is the file 'alpha'.\n"),
+  'A/B/E/beta'  : _item("This is the file 'beta'.\n"),
   'A/B/F'       : _item(),
   'A/C'         : _item(),
   'A/D'         : _item(),
-  'A/D/gamma'   : _item("This is the file 'gamma'."),
+  'A/D/gamma'   : _item("This is the file 'gamma'.\n"),
   'A/D/G'       : _item(),
-  'A/D/G/pi'    : _item("This is the file 'pi'."),
-  'A/D/G/rho'   : _item("This is the file 'rho'."),
-  'A/D/G/tau'   : _item("This is the file 'tau'."),
+  'A/D/G/pi'    : _item("This is the file 'pi'.\n"),
+  'A/D/G/rho'   : _item("This is the file 'rho'.\n"),
+  'A/D/G/tau'   : _item("This is the file 'tau'.\n"),
   'A/D/H'       : _item(),
-  'A/D/H/chi'   : _item("This is the file 'chi'."),
-  'A/D/H/psi'   : _item("This is the file 'psi'."),
-  'A/D/H/omega' : _item("This is the file 'omega'."),
+  'A/D/H/chi'   : _item("This is the file 'chi'.\n"),
+  'A/D/H/psi'   : _item("This is the file 'psi'.\n"),
+  'A/D/H/omega' : _item("This is the file 'omega'.\n"),
   })
 
 

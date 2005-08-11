@@ -50,14 +50,21 @@ struct edit_baton
   const char *log_msg;
 
   /* Callback to run when the commit is done. */
-  svn_commit_callback_t callback;
-  void *callback_baton;
+  svn_commit_callback_t commit_callback;
+  void *commit_callback_baton;
+
+  /* Callback to check authorizations on paths. */
+  svn_repos_authz_callback_t authz_callback;
+  void *authz_baton;
 
   /* The already-open svn repository to commit to. */
   svn_repos_t *repos;
 
   /* URL to the root of the open repository. */
   const char *repos_url;
+
+  /* The name of the repository (here for convenience). */
+  const char *repos_name;
 
   /* The filesystem associated with the REPOS above (here for
      convenience). */
@@ -124,6 +131,33 @@ out_of_date (const char *path, const char *txn_name)
 
 
 
+/* If EDITOR_BATON contains a valid authz callback, verify that the
+   REQUIRED access to PATH in ROOT is authorized.  Return an error
+   appropriate for throwing out of the commit editor with SVN_ERR.  If
+   no authz callback is present in EDITOR_BATON, then authorize all
+   paths.  Use POOL for temporary allocation only. */
+static svn_error_t *
+check_authz (struct edit_baton *editor_baton, const char *path,
+             svn_fs_root_t *root, svn_repos_authz_access_t required,
+             apr_pool_t *pool)
+{
+  if (editor_baton->authz_callback)
+    {
+      svn_boolean_t allowed;
+
+      editor_baton->authz_callback (required, &allowed, root, path,
+                                    editor_baton->authz_baton, pool);
+      if (!allowed)
+        return svn_error_create(required & svn_authz_write ?
+                                SVN_ERR_AUTHZ_UNWRITABLE :
+                                SVN_ERR_AUTHZ_UNREADABLE,
+                                NULL, "Access denied");
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /*** Editor functions ***/
 
 static svn_error_t *
@@ -173,7 +207,10 @@ open_root (void *edit_baton,
     }
   SVN_ERR (svn_fs_txn_name (&(eb->txn_name), eb->txn, eb->pool));
   SVN_ERR (svn_fs_txn_root (&(eb->txn_root), eb->txn, eb->pool));
-  
+
+  /* Check read access to root */
+  SVN_ERR(check_authz (eb, "/", eb->txn_root, svn_authz_read, pool));
+
   /* Create a root dir baton.  The `base_path' field is an -absolute-
      path in the filesystem, upon which all further editor paths are
      based. */
@@ -201,10 +238,20 @@ delete_entry (const char *path,
   struct edit_baton *eb = parent->edit_baton;
   svn_node_kind_t kind;
   svn_revnum_t cr_rev;
+  svn_repos_authz_access_t required = svn_authz_write;
   const char *full_path = svn_path_join (eb->base_path, path, pool);
 
   /* Check PATH in our transaction.  */
   SVN_ERR (svn_fs_check_path (&kind, eb->txn_root, full_path, pool));
+
+  /* Deletion requires a recursive write access, as well as write
+     access to the parent directory. */
+  if (kind == svn_node_dir)
+    required |= svn_authz_recursive;
+  SVN_ERR (check_authz (eb, full_path, eb->txn_root,
+                        required, pool));
+  SVN_ERR (check_authz (eb, parent->path, eb->txn_root,
+                        svn_authz_write, pool));
 
   /* If PATH doesn't exist in the txn, that's fine (merge
      allows this). */
@@ -254,6 +301,14 @@ add_directory (const char *path,
       svn_node_kind_t kind;
       int repos_url_len;
 
+      /* Copy requires recursive write access to the destination path
+         and write access to the parent path. */
+      SVN_ERR (check_authz (eb, full_path, eb->txn_root,
+                            svn_authz_write | svn_authz_recursive,
+                            subpool));
+      SVN_ERR (check_authz (eb, pb->path, eb->txn_root,
+                            svn_authz_write, subpool));
+
       /* Check PATH in our transaction.  Make sure it does not exist
          unless its parent directory was copied (in which case, the
          thing might have been copied in as well), else return an
@@ -277,6 +332,13 @@ add_directory (const char *path,
          repository to make the copy from. */      
       SVN_ERR (svn_fs_revision_root (&copy_root, eb->fs,
                                      copy_revision, subpool));
+
+      /* Copy also requires recursive read access to the source
+         path. */
+      SVN_ERR(check_authz (eb, fs_path, copy_root,
+                           svn_authz_read | svn_authz_recursive,
+                           subpool));
+
       SVN_ERR (svn_fs_copy (copy_root, fs_path,
                             eb->txn_root, full_path, subpool));
       was_copied = TRUE;
@@ -285,7 +347,13 @@ add_directory (const char *path,
     {
       /* No ancestry given, just make a new directory.  We don't
          bother with an out-of-dateness check here because
-         svn_fs_make_dir will error out if PATH already exists.  */      
+         svn_fs_make_dir will error out if PATH already exists.
+         Verify write access to the full path and the parent
+         directory. */
+      SVN_ERR (check_authz (eb, full_path, eb->txn_root,
+                            svn_authz_write, subpool));
+      SVN_ERR (check_authz (eb, pb->path, eb->txn_root,
+                            svn_authz_write, subpool));
       SVN_ERR (svn_fs_make_dir (eb->txn_root, full_path, subpool));
     }
 
@@ -320,6 +388,10 @@ open_directory (const char *path,
   svn_node_kind_t kind;
   const char *full_path = svn_path_join (eb->base_path, path, pool);
 
+  /* Check for read authorization. */
+  SVN_ERR (check_authz (eb, full_path, eb->txn_root,
+                        svn_authz_read, pool));
+
   /* Check PATH in our transaction.  If it does not exist,
      return a 'Path not present' error. */
   SVN_ERR (svn_fs_check_path (&kind, eb->txn_root, full_path, pool));
@@ -350,6 +422,12 @@ apply_textdelta (void *file_baton,
                  void **handler_baton)
 {
   struct file_baton *fb = file_baton;
+
+  /* Check for write authorization. */
+  SVN_ERR (check_authz (fb->edit_baton, fb->path,
+                        fb->edit_baton->txn_root,
+                        svn_authz_write, pool));
+
   return svn_fs_apply_textdelta (handler, handler_baton, 
                                  fb->edit_baton->txn_root, 
                                  fb->path,
@@ -388,6 +466,13 @@ add_file (const char *path,
       svn_node_kind_t kind;
       int repos_url_len;
 
+      /* Copy requires recursive write to the destination path and
+         parent path. */
+      SVN_ERR (check_authz (eb, full_path, eb->txn_root,
+                           svn_authz_write, subpool));
+      SVN_ERR (check_authz (eb, pb->path, eb->txn_root,
+                            svn_authz_write, subpool));
+
       /* Check PATH in our transaction.  Make sure it does not exist
          unless its parent directory was copied (in which case, the
          thing might have been copied in as well), else return an
@@ -411,6 +496,11 @@ add_file (const char *path,
          repository to make the copy from. */      
       SVN_ERR (svn_fs_revision_root (&copy_root, eb->fs,
                                      copy_revision, subpool));
+
+      /* Copy also requires read access to the source */
+      SVN_ERR(check_authz (eb, fs_path, copy_root,
+                           svn_authz_read, subpool));
+
       SVN_ERR (svn_fs_copy (copy_root, fs_path, 
                             eb->txn_root, full_path, subpool));
     }
@@ -419,7 +509,12 @@ add_file (const char *path,
       /* No ancestry given, just make a new, empty file.  Note that we
          don't perform an existence check here like the copy-from case
          does -- that's because svn_fs_make_file() already errors out
-         if the file already exists.  */
+         if the file already exists.  Verify write access to the full
+         path and to the parent. */
+      SVN_ERR (check_authz (eb, full_path, eb->txn_root, svn_authz_write,
+                            subpool));
+      SVN_ERR (check_authz (eb, pb->path, eb->txn_root, svn_authz_write,
+                            subpool));
       SVN_ERR (svn_fs_make_file (eb->txn_root, full_path, subpool));
     }
 
@@ -451,6 +546,10 @@ open_file (const char *path,
   svn_revnum_t cr_rev;
   apr_pool_t *subpool = svn_pool_create (pool);
   const char *full_path = svn_path_join (eb->base_path, path, pool);
+
+  /* Check for read authorization. */
+  SVN_ERR (check_authz (eb, full_path, eb->txn_root,
+                        svn_authz_read, subpool));
 
   /* Get this node's creation revision (doubles as an existence check). */
   SVN_ERR (svn_fs_node_created_rev (&cr_rev, eb->txn_root, full_path, 
@@ -484,6 +583,11 @@ change_file_prop (void *file_baton,
 {
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->edit_baton;
+
+  /* Check for write authorization. */
+  SVN_ERR (check_authz (eb, fb->path, eb->txn_root,
+                        svn_authz_write, pool));
+
   return svn_repos_fs_change_node_prop (eb->txn_root, fb->path, 
                                         name, value, pool);
 }
@@ -529,6 +633,10 @@ change_dir_prop (void *dir_baton,
 {
   struct dir_baton *db = dir_baton;
   struct edit_baton *eb = db->edit_baton;
+
+  /* Check for write authorization. */
+  SVN_ERR (check_authz (eb, db->path, eb->txn_root,
+                        svn_authz_write, pool));
 
   if (SVN_IS_VALID_REVNUM(db->base_rev))
     {
@@ -615,10 +723,10 @@ close_edit (void *edit_baton,
                                     eb->pool);
 
     if (! err2)
-      err2 = (*eb->callback) (new_revision, 
+      err2 = (*eb->commit_callback) (new_revision, 
                               date ? date->data : NULL, 
                               author ? author->data : NULL,
-                              eb->callback_baton);
+                              eb->commit_callback_baton);
     if (err2)
       {
         svn_error_clear (err);
@@ -647,7 +755,7 @@ abort_edit (void *edit_baton,
 /*** Public interfaces. ***/
 
 svn_error_t *
-svn_repos_get_commit_editor2 (const svn_delta_editor_t **editor,
+svn_repos_get_commit_editor3 (const svn_delta_editor_t **editor,
                               void **edit_baton,
                               svn_repos_t *repos,
                               svn_fs_txn_t *txn,
@@ -655,8 +763,10 @@ svn_repos_get_commit_editor2 (const svn_delta_editor_t **editor,
                               const char *base_path,
                               const char *user,
                               const char *log_msg,
-                              svn_commit_callback_t callback,
-                              void *callback_baton,
+                              svn_commit_callback_t commit_callback,
+                              void *commit_callback_baton,
+                              svn_repos_authz_callback_t authz_callback,
+                              void *authz_baton,
                               apr_pool_t *pool)
 {
   svn_delta_editor_t *e = svn_delta_default_editor (pool);
@@ -681,11 +791,15 @@ svn_repos_get_commit_editor2 (const svn_delta_editor_t **editor,
   eb->pool = subpool;
   eb->user = user ? apr_pstrdup (subpool, user) : NULL;
   eb->log_msg = apr_pstrdup (subpool, log_msg);
-  eb->callback = callback;
-  eb->callback_baton = callback_baton;
+  eb->commit_callback = commit_callback;
+  eb->commit_callback_baton = commit_callback_baton;
+  eb->authz_callback = authz_callback;
+  eb->authz_baton = authz_baton;
   eb->base_path = apr_pstrdup (subpool, base_path);
   eb->repos = repos;
   eb->repos_url = repos_url;
+  eb->repos_name = svn_path_basename (svn_repos_path (repos, subpool),
+                                      subpool);
   eb->fs = svn_repos_fs (repos);
   eb->txn = txn;
   eb->txn_owner = txn ? FALSE : TRUE;
@@ -694,6 +808,26 @@ svn_repos_get_commit_editor2 (const svn_delta_editor_t **editor,
   *editor = e;
   
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_repos_get_commit_editor2 (const svn_delta_editor_t **editor,
+                              void **edit_baton,
+                              svn_repos_t *repos,
+                              svn_fs_txn_t *txn,
+                              const char *repos_url,
+                              const char *base_path,
+                              const char *user,
+                              const char *log_msg,
+                              svn_commit_callback_t callback,
+                              void *callback_baton,
+                              apr_pool_t *pool)
+{
+  return svn_repos_get_commit_editor3 (editor, edit_baton, repos, txn,
+                                       repos_url, base_path, user,
+                                       log_msg, callback, callback_baton,
+                                       NULL, NULL, pool);
 }
 
 
@@ -709,7 +843,8 @@ svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
                              void *callback_baton,
                              apr_pool_t *pool)
 {
-  return svn_repos_get_commit_editor2 (editor, edit_baton, repos, NULL,
-                                       repos_url, base_path, user, log_msg, 
-                                       callback, callback_baton, pool);
+  return svn_repos_get_commit_editor3 (editor, edit_baton, repos, NULL,
+                                       repos_url, base_path, user,
+                                       log_msg,  callback, callback_baton,
+                                       NULL, NULL, pool);
 }

@@ -19,16 +19,17 @@ module Svn
     alias_method :_open, :open
     
     module_function
-    def open(path, pool)
-      Util.set_pool(pool) do
-        _open(path, pool)
+    def open(path)
+      repos = _open(path)
+      if block_given?
+        yield repos
+      else
+        repos
       end
     end
 
-    def create(path, config, fs_config, pool)
-      Util.set_pool(pool) do
-        _create(path, nil, nil, config, fs_config, pool)
-      end
+    def create(path, config, fs_config)
+      _create(path, nil, nil, config, fs_config)
     end
 
     ReposCore = SWIG::TYPE_p_svn_repos_t
@@ -38,26 +39,21 @@ module Svn
           ids.each do |id|
             module_eval(<<-EOC, __FILE__, __LINE__)
             def #{id.to_s}
-              Repos.#{id.to_s}(self, @pool)
+              Repos.#{id.to_s}(self)
             end
             EOC
           end
         end
       end
       
-      attr_accessor :pool
-
       def_simple_delegate :path, :db_env, :conf_dir
       def_simple_delegate :svnserve_conf, :lock_dir
       def_simple_delegate :start_commit_hook
       def_simple_delegate :pre_commit_hook, :post_commit_hook
       def_simple_delegate :pre_revprop_change_hook, :post_revprop_change_hook
       
-      
       def fs
-        @fs ||= Util.set_pool(@pool) do
-          Repos.fs(self)
-        end
+        @fs ||= Repos.fs(self)
       end
 
       def youngest_rev
@@ -65,15 +61,13 @@ module Svn
       end
 
       def dated_revision(date)
-        Repos.dated_revision(self, Util.to_apr_time(date), @pool)
+        Repos.dated_revision(self, Util.to_apr_time(date))
       end
 
       def transaction_for_commit(author, log, rev=nil)
         txn = nil
-        args = [self, rev || youngest_rev, author, log, @pool]
-        Util.set_pool(@pool) do
-          txn = Repos.fs_begin_txn_for_commit(*args)
-        end
+        args = [self, rev || youngest_rev, author, log]
+        txn = Repos.fs_begin_txn_for_commit(*args)
         
         if block_given?
           yield(txn)
@@ -84,23 +78,19 @@ module Svn
       end
 
       def commit(txn)
-        Repos.fs_commit_txn(self, txn, @pool)
+        Repos.fs_commit_txn(self, txn)
       end
 
-      def node_editor(base_root, root, edit_pool)
-        Repos.node_editor(self, base_root, root, @pool, edit_pool)
+      def node_editor(base_root, root)
+        editor, baton = Repos.node_editor(self, base_root, root)
+        [editor, baton]
       end
 
       def delta_tree(root, base_rev)
-        edit_pool = Core::Pool.new(@pool)
-        begin
-          base_root = fs.root(base_rev)
-          editor, edit_baton = node_editor(base_root, root, edit_pool)
-          root.replay(editor, edit_baton, edit_pool)
-          Repos.node_from_baton(edit_baton)
-        ensure
-          edit_pool.destroy
-        end
+        base_root = fs.root(base_rev)
+        editor, edit_baton = node_editor(base_root, root)
+        root.replay(editor, edit_baton)
+        Repos.node_from_baton(edit_baton)
       end
     end
 

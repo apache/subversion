@@ -2,6 +2,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html>
 <head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <style type="text/css"> /* <![CDATA[ */
   @import "tigris-branding/css/tigris.css";
   @import "tigris-branding/css/inst.css";
@@ -53,6 +54,9 @@
     where can I get it?</a></li>
 <li><a href="#more-information">I have other questions.  Where can I
     get more information?</a></li>  
+<li><a href="#moderation">Why isn't my post showing up on the mailing
+    list?</a></li>
+</ul>
 </ul>
 
 <h4>How-to:</h4>
@@ -78,8 +82,8 @@
     after it's been committed?</a></li>
 <li><a href="#patch">How do I submit a patch for Subversion?</a></li>
 <li><a href="#in-place-import">How can I do an in-place 'import'
-    (i.e. add a tree to subversion without moving or deleting the
-    original working copy)?</a></li> 
+    (i.e. add a tree to subversion such that the original data becomes
+    a working copy directly)?</a></li> 
 <li><a href="#dumpload">What is this "dump/load cycle" people
     sometimes talk about when upgrading a Subversion server?</a></li> 
 <li><a href="#sspi">How do I allow clients to authenticate against a
@@ -121,7 +125,8 @@ happened?</a></li>
 <li><a href="#svnserve-win-service">How do I run svnserve as a service
 on Windows?</a></li>
 <li><a href="#bdb-fsfs-convert">How do I convert my repository from using BDB
-to FSFS or from FSF to BDB?</a></li>
+to FSFS or from FSFS to BDB?</a></li>
+<li><a href="#binary-files">How does Subversion handle binary files?</a></li>
 </ul>
 
 <h4>Troubleshooting:</h4>
@@ -209,7 +214,9 @@ a <tt>file:</tt> URL?</a></li>
     I just committed.  Why?</a></li>
 <li><a href="#bdb43-upgrade">After upgrading to Berkeley DB
     4.3, I'm seeing repository errors.</a></li>
-
+<li><a href="#tiger-apr-0.9.6">Why do I get occasional, seemingly
+    inconsistent errors checking out over http:// from a repository
+    running on MacOS X 10.4 (Tiger)?</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -223,6 +230,7 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#http-methods">What are all the HTTP methods Subversion 
     uses?</a></li>
 <li><a href="#bikeshed">What's a 'bikeshed'?</a></li> 
+<li><a href="#pronounce">How do you pronounce "Subversion"?</a></li> 
 <li><a href="#baton">What's a 'baton'?</a></li> 
 <li><a href="#def-wedged-repository">What do you mean when you say that
     repository is 'wedged'?</a></li>
@@ -301,9 +309,8 @@ stuck to that same standard.</p>
  server versions don't match, certain features may not be available.</p>
 
 <p>See the client/server interoperability policy is documented in the
- "Compatibility" section of the <a
- href="http://svn.collab.net/repos/svn/trunk/HACKING">HACKING
- file</a>.</p>
+"Compatibility" section of the <a href="hacking.html">Hacker's Guide
+to Subversion</a>.</p>
 
 </div>
 
@@ -325,8 +332,7 @@ href="http://www.sleepycat.com">Berkeley DB</a> has
 shared-memory segment problems on Win9x.  FSFS repositories
 (introduced in version 1.1) do not have this restriction; however, due
 to a limitation in Win9x's file-locking support, they also don't work
-in Win9x.  That limitation will hopefully be worked around in
-1.1.2.</p>
+in Win9x.</p>
 
 <p>To reiterate, the Subversion client can be run on any platform
 where APR runs. The Subversion server can also be run on any
@@ -341,15 +347,15 @@ Win95/Win98/WinMe.</p>
 <h3>What's all this about a new filesystem?  Is
 it like ext2?</h3>
 
-<p>No.  The "Subversion Filesystem" is not a kernel-level filesystem that
-one would install in an operating system.  Instead, it refers to the
-design of Subversion's repository.  The repository is built on a
-database (currently <a href="http://www.sleepycat.com">Berkeley
-DB</a>) and exports a C API that <i>simulates</i> a filesystem -- a
-versioned filesystem.  Thus writing a program to access the repository
-is like writing against other filesystem APIs.  The main difference is
-that this particular filesystem doesn't lose data when written to; old
-versions of files and directories are saved.</p>
+<p>No.  The "Subversion Filesystem" is not a kernel-level filesystem
+that one would install in an operating system.  Instead, it is
+Subversion's repository interface, which is a "versioned filesystem"
+in the sense that it stores a directory tree whose state is remembered
+from revision to revision.  Writing programs to access the repository
+is similar to writing programs that use other filesystem APIs.  The
+main difference is that this particular filesystem doesn't lose data
+when written to; old tree states can be retrieved as easily the most
+recent state.</p>
 
 </div>
 
@@ -554,13 +560,29 @@ Illustrator document</a> are available.</p>
 <![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="more-information" title="more-information">
-<h3>I have other questions.  Where can I get more<a
-name="more-information"> information?</a></h3>
+<h3>I have other questions.  Where can I get more information?</h3>
 
-<p>Please send your questions or concerns to the Subversion Users <a
-href="mailto:users@subversion.tigris.org">mailing list</a>.  Alternatively,
-several Subversion users and developers can usually be contacted via IRC on
-channel #svn on irc.freenode.net.</p>
+<p>Please send your questions or concerns to the Subversion
+Users <a href="mailto:users@subversion.tigris.org">mailing list</a>.
+Note that the list is <a href="#moderated">moderated</a>, so there may
+be a delay before your post shows up.  Also, some Subversion users
+and developers can usually be contacted via IRC on channel #svn on
+irc.freenode.net.</p>
+
+</div>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<div class="h3" id="moderation" title="moderation">
+<h3>Why isn't my post showing up on the mailing list?</h3>
+
+<p>Our mailing lists are moderated to prevent spam from getting
+through, so your first post to any list may be delayed, until the
+moderator has a chance to let it through.  Once that post is allowed
+through, all subsequent posts from the same address are automatically
+approved, so you should experience no more delay.  Of course, if your
+sending address changes, then you'll have to go through moderation
+again.</p>
 
 </div>
 
@@ -612,7 +634,7 @@ at section IV, the "Quickstart Guide".</p>
 maintain a tool called cvs2svn.  You can find it at <a
 href="http://cvs2svn.tigris.org/">http://cvs2svn.tigris.org/</a>.  Be
 sure to read the <a
-href="http://svn.collab.net/repos/cvs2svn/trunk/README">README</a>.
+href="http://cvs2svn.tigris.org/cvs2svn.html">cvs2svn documentation</a>.
 </p>
 
 <p>If cvs2svn.py does not work for you, (e.g. your repository
@@ -925,7 +947,7 @@ in the repos/db/ subdirectory.  The environment contains a collection
 of tables and bunch of logfiles (log.*).  Berkeley DB journals all
 changes made to the tables, so that the tables can be recovered to a
 consistent state in case of interruptions (<a
-href="#wedged-repos">more info</a>).</p>
+href="#bdb-recovery">more info</a>).</p>
 
 <p>The logfiles will grow forever, eating up disk space, unless you,
 (as the repository administrator) do something about it.  At any given
@@ -1126,7 +1148,8 @@ systems that keep track of revision properties.</p>
 <div class="h3" id="patch" title="patch">
 <h3>How do I submit a patch for Subversion?</h3>
 
-<p>FIRST, read the <a href="http://svn.collab.net/repos/svn/trunk/HACKING">HACKING</a> document.</p>
+<p>FIRST, read the <a href="hacking.html">Hacker's Guide to
+Subversion</a>.</p> 
 
 <p>Once you've digested that, send a mail to the dev list with the
 word [PATCH] and a one-line description in the subject, and include
@@ -1150,16 +1173,16 @@ formatting or content changes necessary), and check it in.</p>
 
 Of course, the email you send should contain a nice long
 explanation about what the patch does, as per the
-<a href="http://svn.collab.net/repos/svn/trunk/HACKING">HACKING</a>
-document, but you already know that, since you read and completely
-understood it <em>before</em> actually hacking the code, right? :)
+<a href="hacking.html">Hacker's Guide to Subversion</a>, but you
+already know that, since you read and completely understood
+it <em>before</em> actually hacking the code, right? :)
 
 <![CDATA[=========================================================]]>
 
 <div class="h3" id="in-place-import" title="in-place-import">
 <h3>How can I do an in-place 'import'
-    (i.e. add a tree of unversioned files to subversion, and convert the
-    original tree into a working copy)?</h3> 
+    (i.e. add a tree to subversion such that the original data becomes
+    a working copy directly)?</h3> 
 
 <p>Suppose, for example, that you wanted to put some of /etc under
 version control inside your repository:</p>
@@ -1887,6 +1910,56 @@ create</tt> command to specify BDB.</p>
 
 </div>
  
+<div class="h3" id="binary-files" title="binary-files">
+<h3>How does Subversion handle binary files?</h3>
+
+<p>When you first add or import a file into Subversion, the file is
+examined to determine if it is a binary file.  Currently, Subversion
+just looks at the first 1024 bytes of the file; if any of the bytes
+are zero, or if more than 15% are not ASCII printing characters, then
+Subversion calls the file binary.  This heuristic might be improved in
+the future, however.</p>
+
+<p>If Subversion determines that the file is binary, the file receives
+an svn:mime-type property set to "application/octet-stream".  (You can
+always override this by using the <a
+href="http://svnbook.red-bean.com/svnbook-1.1/ch07s02.html#svn-ch-7-sect-2.4"
+>auto-props feature</a> or by setting the property manually with
+<tt>svn propset</tt>.)</p>
+
+<p>Subversion treats the following files as text:</p>
+
+<ul>
+  <li>Files with no svn:mime-type</li>
+  <li>Files with a svn:mime-type starting "text/"</li>
+  <li>Files with a svn:mime-type equal to "image/x-xbitmap"</li>
+  <li>Files with a svn:mime-type equal to "image/x-xpixmap"</li>
+</ul>
+
+<p>All other files are treated as binary, meaning that Subversion will:</p>
+
+<ul>
+  <li>Not attempt to automatically merge received changes with local
+      changes during <tt>svn update</tt> or <tt>svn merge</tt></li>
+  <li>Not show the differences as part of <tt>svn diff</tt></li>
+  <li>Not show line-by-line attribution for <tt>svn blame</tt></li>
+</ul>
+
+<p>In all other respects, Subversion treats binary files the same as
+text files, e.g. if you set the svn:keywords or svn:eol-style
+properties, Subversion will perform keyword substitution or newline
+conversion on binary files.</p>
+
+<p>Note that whether or not a file is binary does not affect the
+amount of repository space used to store changes to that file, nor
+does it affect the amount of traffic between client and server.  For
+storage and transmission purposes, Subversion uses a diffing method
+that works equally well on binary and text files; this is completely
+unrelated to the diffing method used by the 'svn&nbsp;diff'
+command.</p>
+
+</div>
+
 <![CDATA[=========================================================]]>
 
 </div>
@@ -1897,11 +1970,11 @@ create</tt> command to specify BDB.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<div class="h3" id="permissions" title="permissions">
-<h3>
-    <a name="stuck-bdb-repos">My repository seems to get stuck all the
-time, giving me errors about needing recovery (DB_RUNRECOVERY).  What
-could be the cause?</a></h3>
+<div id="permissions"></div>
+<div class="h3" id="stuck-bdb-repos" title="stuck-bdb-repos">
+<h3>My repository seems to get stuck all the
+time, giving me errors about needing recovery (DB_RUNRECOVERY). What
+could be the cause?</h3>
 
 <p>The BerkeleyDB database in your repository is sensitive to
 interruptions.  If a process accessing the database exits without
@@ -1917,7 +1990,7 @@ inconsistent state.  Common causes of this include:</p>
 
 <p>For most of these cases, you should run "svnadmin recover", which
 rewinds the repository back to a consistent state; see <a
-href="#wedged-repos">this question</a> for details.  Note that running
+href="#bdb-recovery">this question</a> for details.  Note that running
 out of disk space, combined with frequent checkouts or updates, can
 cause the repository to crash in a way where recovery is not possible
 (so keep backups).</p>
@@ -1936,10 +2009,10 @@ for our recommendations.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<div class="h3" id="wedged-repos" title="wedged-repos">
-<h3>
-    <a name="bdb-recovery">Every time I try to access my repository, the
-process just hangs. Is my repository corrupt?</a></h3>
+<div id="wedged-repos"></div>
+<div class="h3" id="bdb-recovery" title="bdb-recovery">
+<h3>Every time I try to access my repository, the
+process just hangs. Is my repository corrupt?</h3>
 
 <p>
 Your repository is not corrupt, nor is your data lost. If your process
@@ -1972,11 +2045,68 @@ repository.</p>
 Simply run:</p>
 
 <pre>
-svnadmin recover /path/to/repos
+   svnadmin recover /path/to/repos
 </pre>
 
 <p>Once the command has completed, check the permissions in the
 <code>db</code> directory of the repository.</p>
+
+<p>Sometimes "svnadmin&nbsp;recover" doesn't work.  You may see it
+give errors like this:</p>
+
+<pre>
+  Repository lock acquired.
+  Please wait; recovering the repository may take some time...
+  svnadmin: DB_RUNRECOVERY: Fatal error, run database recovery
+  svnadmin: bdb: Recovery function for LSN 175 7066018 failed on backward pass
+  svnadmin: bdb: PANIC: No such file or directory
+  svnadmin: bdb: PANIC: fatal region error detected; run recovery
+</pre>
+
+<p>or like this:</p>
+
+<pre>
+  Repository lock acquired.
+  Please wait; recovering the repository may take some time...
+  svn: DB_RUNRECOVERY: Fatal error, run database recovery
+  svn: bdb: DB_ENV-&gt;log_flush: LSN of 115/802071 past current end-of-log
+  of 115/731460
+  svn: bdb: Database environment corrupt; the wrong log files may have
+  been removed or incompatible database files imported from another
+  environment
+  [...]
+  svn: bdb: changes: unable to flush page: 0
+  svn: bdb: txn_checkpoint: failed to flush the buffer cache Invalid argument
+  svn: bdb: PANIC: Invalid argument
+  svn: bdb: PANIC: fatal region error detected; run recovery
+  svn: bdb: PANIC: fatal region error detected; run recovery
+  [...]
+</pre>
+
+<p>In that case, try Berkeley DB's native <b>db_recover</b> utility
+(see <a href="http://www.sleepycat.com/docs/utility/db_recover.html"
+>http://www.sleepycat.com/docs/utility/db_recover.html</a>).  It
+usually lives in a "bin/" subdirectory of the Berkeley installation,
+for example if you installed Berkeley DB from source, it might be
+<tt>/usr/local/BerkeleyDB.4.2/bin/db_recover</tt>; or on systems where
+Berkeley comes prepackaged it might just be
+<tt>/usr/bin/db_recover</tt>.  If you have multiple versions of
+Berkeley DB installed, make sure that the version of db_recover you
+use matches the version of Berkeley DB with which your repository was
+created.</p>
+
+<p>Run db_recover with the "-c" ("catastrophic recovery") flag.  You
+can also add "-v" for verbosity, and "-h" with an argument telling it
+what db environment to recover (so you don't have to cd into that
+directory).  Thus:</p>
+
+<pre>
+   db_recover -c -v -h /path/to/repos/db
+</pre>
+
+<p>Run this command as the same user that owns the repository, and
+again, make absolutely sure that no other processes are accessing the
+repository while you do this (e.g., shut down svnserve or Apache).</p>
 
 </div>
 
@@ -2009,7 +2139,7 @@ File exists: Could not open the requested SVN filesystem  [500, #160029]
 database locks (this does not happen with FSFS repositories).  It
 shouldn't happen in the course of normal operations, but if it does,
 the solution is to run database recovery as described <a
-href="#wedged-repos">here</a>.  If it happens often, you probably need
+href="#bdb-recovery">here</a>.  If it happens often, you probably need
 to raise the default lock parameters (<tt>set_lk_max_locks</tt>,
 <tt>set_lk_max_lockers</tt>, and <tt>set_lk_max_objects</tt>) in the
 db/DB_CONFIG file.  When changing DB_CONFIG in an existing repository,
@@ -2131,7 +2261,7 @@ variable.</p>
 <h3>I'm getting errors finding or opening a repository,
     but I know my repository URL is correct.  What's wrong?</h3> 
 
-<p>See <a href="#wedged-repos">this faq.</a></p>
+<p>See <a href="#bdb-recovery">this faq.</a></p>
 
 </div>
 
@@ -2983,7 +3113,67 @@ etc.)</li>
 
 </div>
 
+<![CDATA[-----------------------------------------------------------]]>
 
+<div class="h3" id="tiger-apr-0.9.6" title="tiger-apr-0.9.6">
+<h3>Why do I get occasional, seemingly inconsistent errors checking
+    out over http:// from a repository running on MacOS X 10.4 (Tiger)?</h3>
+
+<p>Note: this assumes the repository is being served by Apache 2.0.x.</p>
+
+<p>There is a bug in APR 0.9.6 that is present when it is running on
+Tiger, and shows up when you attempt to check out a file larger than
+64K.  The resulting checkout fails, often with unpredictable error
+messages.  Here are some examples of what you might see on the client
+side, the specific errors may differ for you:</p>
+
+<pre>
+   svn: Invalid diff stream: [tgt] insn 1 starts beyond the target view position
+</pre>
+
+<pre>
+   svn: Unexpected end of svndiff input
+</pre>
+
+<pre>
+   svn: REPORT request failed on '/path/to/repository'
+   svn: REPORT of '/path/to/repository/!svn/vcc/default': Chunk delimiter was invalid
+</pre>
+
+<p>There may also be errors in the Apache error_log, such as:</p>
+
+<pre>
+   [error] Provider encountered an error while streaming a REPORT response.  [500, #0]
+   [error] A failure occurred while driving the update report editor [500, #190004]
+</pre>
+
+<p>To confirm the presence of this bug &nbsp;&mdash;&nbsp; assuming
+you have access to the machine that the repository is being served
+from &nbsp;&mdash;&nbsp; try checking out using a file:// URL, which
+will access the filesystem directly instead of going through Apache.
+If the resulting checkout completes successfully, then it is almost
+certain that this is the problem.</p>
+
+<p>Currently, the best solution is to rebuild Apache and Subversion
+from their respective sources, setting the following environment
+variable before running configure for Apache:</p>
+
+<pre>
+   setenv ac_cv_func_poll no
+</pre>
+
+<p>or in Bourne shell syntax, like this:</p>
+
+<pre>
+   ac_cv_func_poll=no; export ac_cv_func_poll
+</pre>
+
+<p>If you built APR / APRUTIL separately (i.e., you did not use the
+ones that come as part of the Apache tarball), you must set that
+environment variable before running configure for APR, as this is
+where the problem lies.</p>
+
+</div>
 
 
 <![CDATA[=========================================================]]>
@@ -3094,6 +3284,17 @@ he can check the RFC's for further information.
 <h3>What's a 'bikeshed'?</h3>
 
 <p>See Poul-Henning Kamp's post to freebsd-hackers: <a href="http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq/misc.html#BIKESHED-PAINTING">http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq/misc.html#BIKESHED-PAINTING</a>.
+</p>
+
+</div>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<div class="h3" id="pronounce" title="pronounce">
+<h3>How do you pronounce "Subversion"?</h3>
+
+<p>Jim Blandy, who gave Subversion both its name and repository
+design, pronounces "Subversion" <a href="http://svn.collab.net/repos/svn-committers/trunk/sounds/pronunciation/index.html">"Subversion"</a>.
 </p>
 
 </div>

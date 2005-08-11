@@ -73,6 +73,63 @@ typedef svn_error_t *(*svn_repos_authz_func_t) (svn_boolean_t *allowed,
                                                 void *baton,
                                                 apr_pool_t *pool);
 
+
+/** An enum defining the kinds of access authz looks up.
+ *
+ * @since New in 1.3.
+ */
+typedef enum
+{
+  /** No access. */
+  svn_authz_none = 0,
+
+  /** Path can be read. */
+  svn_authz_read = 1,
+
+  /** Path can be altered. */
+  svn_authz_write = 2,
+
+  /** The other access credentials are recursive. */
+  svn_authz_recursive = 4
+} svn_repos_authz_access_t;
+
+
+/** Callback type for checking authorization on paths produced by
+ * the repository commit editor.
+ *
+ * Set @a *allowed to TRUE to indicate that the @a required_access on
+ * @a path in @a root is authorized, or set it to FALSE to indicate
+ * unauthorized (presumable according to state stored in @a baton).
+ *
+ * This callback is very similar to svn_repos_authz_func_t, with the
+ * exception of the addition of the @a required_access parameter.
+ * This is due to historical reasons: when authz was first implemented
+ * for svn_repos_dir_delta(), it seemed there would need only checks
+ * for read and write operations, hence the svn_repos_authz_func_t
+ * callback prototype and usage scenario.  But it was then realized
+ * that lookups due to copying needed to be recursive, and that
+ * brute-force recursive lookups didn't square with the O(1)
+ * performances a copy operation should have.
+ *
+ * So a special way to ask for a recursive lookup was introduced.  The
+ * commit editor needs this capability to retain acceptable
+ * performance.  Instead of revving the existing callback, causing
+ * unnecessary revving of functions that don't actually need the
+ * extended functionality, this second, more complete callback was
+ * introduced, for use by the commit editor.
+ *
+ * Some day, it would be nice to reunite these two callbacks and do
+ * the necessary revving anyway, but for the time being, this dual
+ * callback mechanism will do.
+ */
+typedef svn_error_t *(*svn_repos_authz_callback_t)
+  (svn_repos_authz_access_t required,
+   svn_boolean_t *allowed,
+   svn_fs_root_t *root,
+   const char *path,
+   void *baton,
+   apr_pool_t *pool);
+
 /**
  * A callback function type for use in svn_repos_get_file_revs().
  * @a baton is provided by the caller, @a path is the pathname of the file
@@ -451,7 +508,8 @@ svn_error_t *svn_repos_delete_path (void *report_baton,
  * the editor, we do NOT abort the edit; that responsibility belongs
  * to the caller, if it happens at all.  The fs transaction will be
  * aborted even if the editor drive fails, so the caller does not need
- * to clean up.
+ * to clean up.  No other reporting functions, including
+ * svn_repos_abort_report, should be called after calling this function.
  */
 svn_error_t *svn_repos_finish_report (void *report_baton,
                                       apr_pool_t *pool);
@@ -584,6 +642,11 @@ svn_repos_replay (svn_fs_root_t *root,
  * Iff @a log_msg is not @c NULL, store it as the log message
  * associated with the commit transaction.
  *
+ * Iff @a authz_callback is provided, check read/write authorizations
+ * on paths accessed by editor operations.  An operation which fails
+ * due to authz will return SVN_ERR_AUTHZ_UNREADABLE or
+ * SVN_ERR_AUTHZ_UNWRITABLE.
+ *
  * Calling @a (*editor)->close_edit completes the commit.  Before
  * @c close_edit returns, but after the commit has succeeded, it will
  * invoke @a callback with the new revision number, the commit date (as a
@@ -598,7 +661,28 @@ svn_repos_replay (svn_fs_root_t *root,
  * NULL).  Callers who supply their own transactions are responsible
  * for cleaning them up (either by committing them, or aborting them).
  *
- * @since New in 1.2.
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_repos_get_commit_editor3 (const svn_delta_editor_t **editor,
+                              void **edit_baton,
+                              svn_repos_t *repos,
+                              svn_fs_txn_t *txn,
+                              const char *repos_url,
+                              const char *base_path,
+                              const char *user,
+                              const char *log_msg,
+                              svn_commit_callback_t commit_callback,
+                              void *commit_callback_baton,
+                              svn_repos_authz_callback_t authz_callback,
+                              void *authz_baton,
+                              apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_get_commit_editor3(), but with @a
+ * authz_callback and @a authz_baton set to @c NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *svn_repos_get_commit_editor2 (const svn_delta_editor_t **editor,
                                            void **edit_baton,
@@ -1527,8 +1611,10 @@ typedef struct svn_repos_parse_fns2_t
    */
   svn_error_t *(*close_revision) (void *revision_baton);
 
-} svn_repos_parser_fns2_t;
+} svn_repos_parse_fns2_t;
 
+/** @deprecated Provided for backward compatibility with the 1.2 API. */
+typedef svn_repos_parse_fns2_t svn_repos_parser_fns2_t;
 
 
 /**
@@ -1558,7 +1644,7 @@ typedef struct svn_repos_parse_fns2_t
  */
 svn_error_t *
 svn_repos_parse_dumpstream2 (svn_stream_t *stream,
-                             const svn_repos_parser_fns2_t *parse_fns,
+                             const svn_repos_parse_fns2_t *parse_fns,
                              void *parse_baton,
                              svn_cancel_func_t cancel_func,
                              void *cancel_baton,
@@ -1585,7 +1671,7 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
  * @since New in 1.1.
  */
 svn_error_t *
-svn_repos_get_fs_build_parser2 (const svn_repos_parser_fns2_t **parser,
+svn_repos_get_fs_build_parser2 (const svn_repos_parse_fns2_t **parser,
                                 void **parse_baton,
                                 svn_repos_t *repos,
                                 svn_boolean_t use_history,
@@ -1597,7 +1683,7 @@ svn_repos_get_fs_build_parser2 (const svn_repos_parser_fns2_t **parser,
 
 /**
  * A vtable that is driven by svn_repos_parse_dumpstream().
- * Similar to svn_repos_parser_fns2_t except that it lacks
+ * Similar to svn_repos_parse_fns2_t except that it lacks
  * the delete_node_property and apply_textdelta callbacks.
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
@@ -1671,6 +1757,41 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser,
 
 
 /** @} */
+
+/** A data type which stores the authz information. 
+ *
+ * @since New in 1.3.
+ */
+typedef struct svn_authz_t svn_authz_t;
+
+/** Read authz configuration data from @a file (a file or registry
+ * path) into @a *authz_p, allocated in @a pool.
+ *
+ * If @a file is not a valid authz rule file, then return
+ * SVN_AUTHZ_INVALID_CONFIG.  The contents of @a *authz_p is then
+ * undefined.  If @a must_exist is TRUE, a missing authz file is also
+ * an error.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_repos_authz_read (svn_authz_t **authz_p, const char *file,
+                      svn_boolean_t must_exist, apr_pool_t *pool);
+
+/**
+ * Check whether @a user can access @a path in the repository @a
+ * repos_name with the @a required_access.  @a authz lists the ACLs to
+ * check against.  Set @a *access_granted to indicate if the requested
+ * access is granted.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_repos_authz_check_access (svn_authz_t *authz, const char *repos_name,
+                              const char *path, const char *user,
+                              svn_repos_authz_access_t required_access,
+                              svn_boolean_t *access_granted,
+                              apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

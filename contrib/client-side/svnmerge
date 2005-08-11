@@ -165,6 +165,12 @@ get_start_end()
     END=`echo "$1" | sed 's/^\([0-9]\{1,\}\)-\([0-9]\{1,\}\)$/\2/g'`
 }
 
+# Subroutine to get all integrated revisions for a given head
+get_all_integrated_revs()
+{
+    RETURN_VALUE=`"${SVN_MERGE_SVN}" propget "${SVN_MERGE_PROP}" "$1"`
+}
+
 # Subroutine to retrieve a target's integrated revisions for a given head
 get_integrated_revs()
 {
@@ -185,7 +191,13 @@ set_integrated_revs()
 # Subroutine to retrieve the default head of the given target
 get_default_head()
 {
-    RETURN_VALUE=`"${SVN_MERGE_SVN}" propget "${SVN_MERGE_PROP}" "$1" | cut -d: -f 1`
+    # To make bi-directional merges easier, find the target's
+    # repository local path so it can be removed from the list of
+    # possible integration sources.
+    target_to_url "$1"
+    url_to_rlpath "${RETURN_VALUE}"
+
+    RETURN_VALUE=`"${SVN_MERGE_SVN}" propget "${SVN_MERGE_PROP}" "$1" | cut -d: -f 1 | grep -v "^${RETURN_VALUE}$"`
     [ -z "${RETURN_VALUE}" ] && error no integration info available
     [ `echo "${RETURN_VALUE}" | wc -l` -gt 1 ] && \
         error explicit \"src\" argument required
@@ -470,6 +482,10 @@ merge()
     beautify_list "${REVS}"
     BREVS="${RETURN_VALUE}"
 
+    # Save "svnmerge-integrated" property value from before the merge
+    get_all_integrated_revs
+    OLDREVS="${RETURN_VALUE}"
+
     # Show what we're doing
     beautify_list "${MERGED_REVS}"
     report "\"${BRANCH_DIR}\" already contains revisions ${RETURN_VALUE}"
@@ -482,6 +498,10 @@ merge()
         svn_command merge -r `expr ${START} - 1`:${END} \
           "${HEAD_URL}" "${BRANCH_DIR}"
     done
+
+    # Revert any merged-in changes to the "svnmerge-integrated" property.
+    # We only want updates to this property to happen via explicit action.
+    svn_command propset -q "${SVN_MERGE_PROP}" "${OLDREVS}" "${BRANCH_DIR}"
 
     # Write out commit message if desired
     if [ "${SVN_MERGE_COMMIT_FILE}" != "" ]; then
@@ -650,6 +670,23 @@ if TEMP=`"${SVN_MERGE_SVN}" proplist "${BRANCH_DIR}" | grep -Ew "svnmerge-(.+-)?
     exit 1
 fi
 
+# Previous svnmerge versions allowed trailing /'s in the repository
+# local path.  Newer versions of svnmerge will trim trailing /'s
+# appearing in the command line, so if there are any properties with
+# trailing /'s, they will not be properly matched later on, so require
+# the user to change them now.
+if TEMP=`"${SVN_MERGE_SVN}" propget "${SVN_MERGE_PROP}" "${BRANCH_DIR}" | grep -E '/+:[-,0-9]+$'`; then
+    echo "${NAME}: old property values detected; an upgrade is required."
+    echo ''
+    echo 'Please execute and commit these changes to upgrade:'
+    echo ''
+    echo "svn propget ${SVN_MERGE_PROP} ${BRANCH_DIR} > svnmerge1.txt"
+    echo "sed -e 's/\/*\(:[-,0-9]*\)/\1/g' < svnmerge1.txt > svnmerge2.txt"
+    echo "svn propset ${SVN_MERGE_PROP} ${BRANCH_DIR} -F svnmerge2.txt"
+    echo "rm svnmerge1.txt svnmerge2.txt"
+    exit 1
+fi
+
 # Calculate ${HEAD_URL} and ${HEAD_PATH}
 if [ -z "${HEAD}" ]; then
     if [ "${ACTION}" = "init" ]; then
@@ -665,6 +702,13 @@ if [ -z "${HEAD}" ]; then
     get_repo_root "${BRANCH_DIR}"
     HEAD_URL="${RETURN_VALUE}/${HEAD_PATH}"
 else
+    # The source was given as a command line argument and is stored in
+    # HEAD.  Ensure that the specified source does not end in a /,
+    # otherwise it's easy to have the same source path listed more
+    # than once in the integrated version properties, with and without
+    # trailing /'s.
+    HEAD=`echo ${HEAD} | sed -e 's/\/*$//'`
+
     target_to_url "${HEAD}"
     HEAD_URL="${RETURN_VALUE}"
     url_to_rlpath "${HEAD_URL}"
@@ -697,4 +741,3 @@ report latest revision of "${HEAD_URL}" is "${HEAD_REVISION}"
 
 # Perform action
 ${ACTION}
-

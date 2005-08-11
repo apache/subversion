@@ -309,6 +309,7 @@ substitute_and_verify (const char *test_name,
       else
         {
           svn_error_clear (err);
+          SVN_ERR (remove_file (src_fname, pool));
           return SVN_NO_ERROR;
         }
 

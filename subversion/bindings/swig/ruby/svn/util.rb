@@ -4,6 +4,8 @@ module Svn
   module Util
 
     MILLION = 1000000
+
+    @@wrapper_procs = []
     
     module_function
     def to_ruby_class_name(name)
@@ -22,13 +24,9 @@ module Svn
       end
     end
 
-    def string_to_time(str, pool=nil)
-      if pool
-        sec, usec = Core.time_from_cstring(str, pool).divmod(MILLION)
-        Time.at(sec, usec)
-      else
-        Time.parse(str).localtime
-      end
+    def string_to_time(str)
+      sec, usec = Core.time_from_cstring(str).divmod(MILLION)
+      Time.at(sec, usec)
     end
 
     def valid_rev?(rev)
@@ -37,12 +35,6 @@ module Svn
 
     def copy?(copyfrom_path, copyfrom_rev)
       Util.valid_rev?(copyfrom_rev) && !copyfrom_path.nil?
-    end
-    
-    def set_pool(pool)
-      obj = yield
-      obj.pool = pool unless obj.nil?
-      obj
     end
     
     def set_constants(ext_mod, target_mod=self)
@@ -79,9 +71,11 @@ module Svn
         end
         unless target_name.nil?
           target_id = target_name.intern
-          target_proc = ext_mod.method(meth).to_proc
+          target_method = ext_mod.method(meth)
+          target_proc = Proc.new{|*args| target_method.call(*args)}
           target_mod.__send__(:define_method, target_id, target_proc)
           target_mod.__send__(:module_function, target_id)
+          @@wrapper_procs << target_proc
         end
       end
     end

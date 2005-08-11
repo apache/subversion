@@ -16,49 +16,49 @@ module Svn
     remove_const(:Editor)
     class Editor
       # open_root -> add_directory -> open_directory -> add_file -> open_file 
-      def set_target_revision(target_revision, pool)
+      def set_target_revision(target_revision)
       end
       
-      def open_root(base_revision, dir_pool)
+      def open_root(base_revision)
       end
         
-      def delete_entry(path, revision, parent_baton, pool)
+      def delete_entry(path, revision, parent_baton)
       end
 
       def add_directory(path, parent_baton,
-                        copyfrom_path, copyfrom_revision, dir_pool)
+                        copyfrom_path, copyfrom_revision)
       end
 
-      def open_directory(path, parent_baton, base_revision, dir_pool)
+      def open_directory(path, parent_baton, base_revision)
       end
 
-      def change_dir_prop(dir_baton, name, value, pool)
+      def change_dir_prop(dir_baton, name, value)
       end
 
       def close_directory(dir_baton)
       end
 
-      def absent_directory(path, parent_baton, pool)
+      def absent_directory(path, parent_baton)
       end
 
       def add_file(path, parent_baton,
-                   copyfrom_path, copyfrom_revision, file_pool)
+                   copyfrom_path, copyfrom_revision)
       end
 
-      def open_file(path, parent_baton, base_revision, file_pool)
+      def open_file(path, parent_baton, base_revision)
       end
 
       # return nil or object which has `call' method.
-      def apply_textdelta(file_baton, base_checksum, pool)
+      def apply_textdelta(file_baton, base_checksum)
       end
 
-      def change_file_prop(file_baton, name, value, pool)
+      def change_file_prop(file_baton, name, value)
       end
 
       def close_file(file_baton, text_checksum)
       end
 
-      def absent_file(path, parent_baton, pool)
+      def absent_file(path, parent_baton)
       end
 
       def close_edit(baton)
@@ -70,11 +70,11 @@ module Svn
 
     class CopyDetectableEditor < Editor
       def add_directory(path, parent_baton,
-                        copyfrom_path, copyfrom_revision, dir_pool)
+                        copyfrom_path, copyfrom_revision)
       end
 
       def add_file(path, parent_baton,
-                   copyfrom_path, copyfrom_revision, file_pool)
+                   copyfrom_path, copyfrom_revision)
       end
     end
     
@@ -85,34 +85,34 @@ module Svn
         @changed_dirs = []
       end
       
-      def open_root(base_revision, dir_pool)
+      def open_root(base_revision)
         [true, '']
       end
       
-      def delete_entry(path, revision, parent_baton, pool)
+      def delete_entry(path, revision, parent_baton)
         dir_changed(parent_baton)
       end
       
       def add_directory(path, parent_baton,
-                        copyfrom_path, copyfrom_revision, dir_pool)
+                        copyfrom_path, copyfrom_revision)
         dir_changed(parent_baton)
         [true, path]
       end
       
-      def open_directory(path, parent_baton, base_revision, dir_pool)
+      def open_directory(path, parent_baton, base_revision)
         [true, path]
       end
       
-      def change_dir_prop(dir_baton, name, value, pool)
+      def change_dir_prop(dir_baton, name, value)
         dir_changed(dir_baton)
       end
       
       def add_file(path, parent_baton,
-                   copyfrom_path, copyfrom_revision, file_pool)
+                   copyfrom_path, copyfrom_revision)
         dir_changed(parent_baton)
       end
       
-      def open_file(path, parent_baton, base_revision, file_pool)
+      def open_file(path, parent_baton, base_revision)
         dir_changed(parent_baton)
       end
       
@@ -151,11 +151,11 @@ module Svn
         @updated_dirs = []
       end
       
-      def open_root(base_revision, dir_pool)
+      def open_root(base_revision)
         [true, '']
       end
       
-      def delete_entry(path, revision, parent_baton, pool)
+      def delete_entry(path, revision, parent_baton)
         if @base_root.dir?("/#{path}")
           @deleted_dirs << "#{path}/"
         else
@@ -164,7 +164,7 @@ module Svn
       end
       
       def add_directory(path, parent_baton,
-                        copyfrom_path, copyfrom_revision, dir_pool)
+                        copyfrom_path, copyfrom_revision)
         copyfrom_rev, copyfrom_path = @root.copied_from(path)
         if in_copied_dir?
           @in_copied_dir.push(true)
@@ -178,11 +178,11 @@ module Svn
         [false, path]
       end
       
-      def open_directory(path, parent_baton, base_revision, dir_pool)
+      def open_directory(path, parent_baton, base_revision)
         [true, path]
       end
       
-      def change_dir_prop(dir_baton, name, value, pool)
+      def change_dir_prop(dir_baton, name, value)
         if dir_baton[0]
           @updated_dirs << "#{dir_baton[1]}/"
           dir_baton[0] = false
@@ -197,7 +197,7 @@ module Svn
       end
 
       def add_file(path, parent_baton,
-                   copyfrom_path, copyfrom_revision, file_pool)
+                   copyfrom_path, copyfrom_revision)
         copyfrom_rev, copyfrom_path = @root.copied_from(path)
         if in_copied_dir?
           # do nothing
@@ -209,16 +209,16 @@ module Svn
         [nil, nil, nil]
       end
       
-      def open_file(path, parent_baton, base_revision, file_pool)
+      def open_file(path, parent_baton, base_revision)
         [nil, nil, path]
       end
       
-      def apply_textdelta(file_baton, base_checksum, pool)
+      def apply_textdelta(file_baton, base_checksum)
         file_baton[0] = :update
         nil
       end
       
-      def change_file_prop(file_baton, name, value, pool)
+      def change_file_prop(file_baton, name, value)
         file_baton[1] = :update
       end
       

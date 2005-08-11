@@ -41,6 +41,7 @@ extern const char **test_argv;
 static const apr_getopt_option_t opt_def[] =
   {
     {"srcdir", 'S', 1, "the source directory for VPATH test runs"},
+    {"verbose", 'v', 0, "print extra information"},
     {0, 0, 0, 0}
   };
 static const char *srcdir = NULL;

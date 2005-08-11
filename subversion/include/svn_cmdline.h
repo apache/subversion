@@ -124,8 +124,20 @@ svn_error_t *svn_cmdline_fflush (FILE *stream);
  */
 const char *svn_cmdline_output_encoding (apr_pool_t *pool);
 
+/** Handle @a error in preparation for immediate exit from a
+ * command-line client.  Specifically:
+ *
+ * Call svn_handle_error2(@a error, stderr, FALSE, @a prefix), clear
+ * @a error, destroy @a pool iff it is non-NULL, and return EXIT_FAILURE.
+ *
+ * @since New in 1.3.
+ */
+int svn_cmdline_handle_exit_error (svn_error_t *error,
+                                   apr_pool_t *pool,
+                                   const char *prefix);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_POOLS_H */
+#endif /* SVN_CMDLINE_H */

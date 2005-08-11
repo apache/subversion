@@ -158,10 +158,17 @@ def run_and_verify_svnversion(message, wc_dir, repo_url,
 
 def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
   """Invokes main.run_svn with *VARARGS, return stdout and stderr as
-  lists of lines.  If EXPECTED_STDOUT or EXPECTED_STDERR is not
-  'None', invokes compare_and_display_lines with MESSAGE and the
-  expected output.  If the comparison fails, compare_and_display_lines
-  will raise."""
+  lists of lines.  For both EXPECTED_STDOUT and EXPECTED_STDERR, do this:
+
+     - If it is an array of strings, invoke compare_and_display_lines()
+       on MESSAGE, the expected output, and the actual output.
+
+     - If it is a single string, invoke match_or_fail() on MESSAGE,
+       the expected output, and the actual output.
+
+     - If it is None, do nothing with it.
+
+  If a comparison function fails, it will raise an error."""
   ### TODO catch and throw particular exceptions from above
   want_err = None
   if expected_stderr is not None and expected_stderr is not []:
@@ -635,20 +642,13 @@ def run_and_verify_status(wc_dir_name, output_tree,
   mytree = tree.build_tree_from_status (output)
 
   # Verify actual output against expected output.
-  if (singleton_handler_a or singleton_handler_b):
-    try:
-      tree.compare_trees (mytree, output_tree,
-                          singleton_handler_a, a_baton,
-                          singleton_handler_b, b_baton)
-    except tree.SVNTreeError:
-      display_trees(None, 'OUTPUT TREE', output_tree, mytree)
-      raise
-  else:
-    try:
-      tree.compare_trees (mytree, output_tree)
-    except tree.SVNTreeError:
-      display_trees(None, 'OUTPUT TREE', output_tree, mytree)
-      raise
+  try:
+    tree.compare_trees (mytree, output_tree,
+                        singleton_handler_a, a_baton,
+                        singleton_handler_b, b_baton)
+  except tree.SVNTreeError:
+    display_trees(None, 'STATUS OUTPUT TREE', output_tree, mytree)
+    raise
 
 
 # A variant of previous func, but doesn't pass '-q'.  This allows us
@@ -802,6 +802,20 @@ def lock_admin_dir(wc_dir):
 
   path = os.path.join(wc_dir, main.get_admin_name(), 'lock')
   main.file_append(path, "stop looking!")
+
+def enable_revprop_changes(repos_dir):
+  """Enable revprop changes in a repository REPOS_DIR by creating a
+pre-revprop-change hook script and (if appropriate) making it executable."""
+  if os.name == 'posix':
+    hook = os.path.join(repos_dir,
+                        'hooks', 'pre-revprop-change')
+    main.file_append(hook, "#!/bin/sh\n\nexit 0\n")
+    os.chmod(hook, 0755)
+  elif sys.platform == 'win32':
+    hook = os.path.join(repos_dir,
+                        'hooks', 'pre-revprop-change.bat')
+    main.file_append(hook, "@exit 0\n")
+
 
 
 ### End of file.

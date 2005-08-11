@@ -80,6 +80,18 @@
 }
 
 /* -----------------------------------------------------------------------
+   Callback: svn_wc_notify_func2_t
+   svn_client_ctx_t
+   svn_wc many
+*/
+
+%typemap(ruby, in) (svn_wc_notify_func2_t notify_func2, void *notify_baton2)
+{
+  $1 = svn_swig_rb_notify_func2;
+  $2 = (void *)$input;
+}
+
+/* -----------------------------------------------------------------------
    Callback: svn_wc_status_func_t
    svn_client_status()
    svn_wc_get_status_editor()
@@ -93,6 +105,19 @@
 %typemap(perl5,in) (svn_wc_status_func_t status_func, void *status_baton) {
   $1 = svn_swig_pl_status_func;
   $2 = $input; /* our function is the baton. */
+}
+
+/* -----------------------------------------------------------------------
+   Callback: svn_wc_status_func2_t
+   svn_client_status2()
+   svn_wc_get_status_editor2()
+*/
+
+%typemap(ruby, in) (svn_wc_status_func2_t status_func,
+                    void *status_baton)
+{
+  $1 = svn_swig_rb_wc_status_func;
+  $2 = (void *)$input;
 }
 
 /* ----------------------------------------------------------------------- */
@@ -114,12 +139,3 @@
 %}
 
 %include svn_wc.h
-
-#ifdef SWIGRUBY
-REMOVE_DESTRUCTOR(svn_wc_external_item_t)
-REMOVE_DESTRUCTOR(svn_wc_diff_callbacks2_t)
-REMOVE_DESTRUCTOR(svn_wc_diff_callbacks_t)
-REMOVE_DESTRUCTOR(svn_wc_entry_t)
-REMOVE_DESTRUCTOR(svn_wc_entry_callbacks_t)
-REMOVE_DESTRUCTOR(svn_wc_status_t)
-#endif

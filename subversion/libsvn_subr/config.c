@@ -446,9 +446,9 @@ make_string_from_option (const char **valuep, svn_config_t *cfg,
 #define FMT_END_LEN   (sizeof (FMT_END) - 1)
 
 
-/* Expand OPT_VALUE in SECTION to *OPT_X_VALUE. If no variable
-   replacements are done, set OPT_X_VALUE to NULL. Allocate from
-   X_POOL */
+/* Expand OPT_VALUE (which may be NULL) in SECTION into *OPT_X_VALUEP.
+   If no variable replacements are done, set *OPT_X_VALUEP to
+   NULL. Allocate from X_POOL. */
 static void
 expand_option_value (svn_config_t *cfg, cfg_section_t *section,
                      const char *opt_value, const char **opt_x_valuep,
@@ -664,8 +664,9 @@ svn_config_enumerate_sections (svn_config_t *cfg,
 {
   apr_hash_index_t *sec_ndx;
   int count = 0;
+  apr_pool_t *subpool = svn_pool_create (cfg->x_pool);
 
-  for (sec_ndx = apr_hash_first (cfg->x_pool, cfg->sections);
+  for (sec_ndx = apr_hash_first (subpool, cfg->sections);
        sec_ndx != NULL;
        sec_ndx = apr_hash_next (sec_ndx))
     {
@@ -679,6 +680,37 @@ svn_config_enumerate_sections (svn_config_t *cfg,
         break;
     }
 
+  svn_pool_destroy (subpool);
+  return count;
+}
+
+
+int
+svn_config_enumerate_sections2 (svn_config_t *cfg,
+                                svn_config_section_enumerator2_t callback,
+                                void *baton, apr_pool_t *pool)
+{
+  apr_hash_index_t *sec_ndx;
+  apr_pool_t *iteration_pool;
+  int count = 0;
+
+  iteration_pool = svn_pool_create (pool);
+  for (sec_ndx = apr_hash_first (pool, cfg->sections);
+       sec_ndx != NULL;
+       sec_ndx = apr_hash_next (sec_ndx))
+    {
+      void *sec_ptr;
+      cfg_section_t *sec;
+
+      apr_hash_this (sec_ndx, NULL, NULL, &sec_ptr);
+      sec = sec_ptr;
+      ++count;
+      svn_pool_clear (iteration_pool);
+      if (!callback (sec->name, baton, iteration_pool))
+        break;
+    }
+  svn_pool_destroy (iteration_pool);
+
   return count;
 }
 
@@ -691,13 +723,15 @@ svn_config_enumerate (svn_config_t *cfg, const char *section,
   cfg_section_t *sec;
   apr_hash_index_t *opt_ndx;
   int count;
+  apr_pool_t *subpool;
 
   find_option (cfg, section, NULL, &sec);
   if (sec == NULL)
     return 0;
 
+  subpool = svn_pool_create (cfg->x_pool);
   count = 0;
-  for (opt_ndx = apr_hash_first (cfg->x_pool, sec->options);
+  for (opt_ndx = apr_hash_first (subpool, sec->options);
        opt_ndx != NULL;
        opt_ndx = apr_hash_next (opt_ndx))
     {
@@ -713,6 +747,46 @@ svn_config_enumerate (svn_config_t *cfg, const char *section,
       if (!callback (opt->name, temp_value, baton))
         break;
     }
+
+  svn_pool_destroy (subpool);
+  return count;
+}
+
+
+int
+svn_config_enumerate2 (svn_config_t *cfg, const char *section,
+                       svn_config_enumerator2_t callback, void *baton,
+                       apr_pool_t *pool)
+{
+  cfg_section_t *sec;
+  apr_hash_index_t *opt_ndx;
+  apr_pool_t *iteration_pool;
+  int count;
+
+  find_option (cfg, section, NULL, &sec);
+  if (sec == NULL)
+    return 0;
+
+  iteration_pool = svn_pool_create (pool);
+  count = 0;
+  for (opt_ndx = apr_hash_first (pool, sec->options);
+       opt_ndx != NULL;
+       opt_ndx = apr_hash_next (opt_ndx))
+    {
+      void *opt_ptr;
+      cfg_option_t *opt;
+      const char *temp_value;
+
+      apr_hash_this (opt_ndx, NULL, NULL, &opt_ptr);
+      opt = opt_ptr;
+
+      ++count;
+      make_string_from_option (&temp_value, cfg, sec, opt, NULL);
+      svn_pool_clear (iteration_pool);
+      if (!callback (opt->name, temp_value, baton, iteration_pool))
+        break;
+    }
+  svn_pool_destroy (iteration_pool);
 
   return count;
 }
@@ -733,12 +807,13 @@ struct search_groups_baton
  */
 static svn_boolean_t search_groups (const char *name,
                                     const char *value,
-                                    void *baton)
+                                    void *baton,
+                                    apr_pool_t *pool)
 {
   struct search_groups_baton *b = baton;
   apr_array_header_t *list;
 
-  list = svn_cstring_split (value, ",", TRUE, b->pool);
+  list = svn_cstring_split (value, ",", TRUE, pool);
   if (svn_cstring_match_glob_list (b->key, list))
     {
       /* Fill in the match and return false, to stop enumerating. */
@@ -759,7 +834,7 @@ const char *svn_config_find_group (svn_config_t *cfg, const char *key,
   gb.key = key;
   gb.match = NULL;
   gb.pool = pool;
-  svn_config_enumerate (cfg, master_section, search_groups, &gb);
+  svn_config_enumerate2 (cfg, master_section, search_groups, &gb, pool);
   return gb.match;
 }
 

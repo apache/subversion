@@ -39,8 +39,6 @@
 #include "svn_private_config.h" /* for PACKAGE_NAME */
 
 
-#define DEBUG 1
-
 /* Initialize parameters for the tests. */
 extern int test_argc;
 extern const char **test_argv;
@@ -48,9 +46,11 @@ extern const char **test_argv;
 static const apr_getopt_option_t opt_def[] =
   {
     {"srcdir", 'S', 1, "the source directory for VPATH test runs"},
+    {"verbose", 'v', 0, "print extra information"},
     {0, 0, 0, 0}
   };
 static const char *srcdir = NULL;
+static const char *verbose_mode = FALSE;
 
 static svn_error_t *init_params (apr_pool_t *pool)
 {
@@ -69,6 +69,9 @@ static svn_error_t *init_params (apr_pool_t *pool)
         {
         case 'S':
           srcdir = opt_arg;
+          break;
+        case 'v':
+          verbose_mode = TRUE;
           break;
         }
     }
@@ -152,12 +155,13 @@ test1 (const char **msg,
       return fail(pool, "svn_intl_get_locale_prefs should never "
                   "return NULL, but did");
     }
-#ifdef DEBUG
-  else if (*locale_prefs == NULL)
-    printf("Locale not recorded in .po file\n");
-  else
-    printf("System locale is '%s'\n", *locale_prefs);
-#endif
+  else if (verbose_mode)
+    {
+      if (*locale_prefs == NULL)
+        printf("Locale not recorded in .po file\n");
+      else
+        printf("System locale is '%s'\n", *locale_prefs);
+    }
 
   /* ### Set some contextual prefs and try again. */
 

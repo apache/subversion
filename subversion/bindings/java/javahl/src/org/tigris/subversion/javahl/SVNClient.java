@@ -17,6 +17,9 @@ package org.tigris.subversion.javahl;
  * ====================================================================
  * @endcopyright
  */
+
+import java.io.OutputStream;
+
 /**
  * This is the main interface class. All subversion commandline client svn &
  * svnversion operation are implemented in this class. This class is not
@@ -25,38 +28,51 @@ package org.tigris.subversion.javahl;
 public class SVNClient implements SVNClientInterface
 {
     /**
-     * load the needed native library
+     * Load the required native library.
      */
     static
     {
-        /*
-         * see if the user has specified the fully qualified path to the native
-         * library
-         */
+        loadNativeLibrary();
+    }
+
+    /**
+     * Called upon class initialization.
+     *
+     * @throws UnsatisfiedLinkError If the native library cannot be
+     * loaded.
+     */
+    private static void loadNativeLibrary()
+    {
+        // If the user specified the fully qualified path to the
+        // native library, try loading that first.
         try
         {
             String specifiedLibraryName =
-                    System.getProperty("subversion.native.library");
-            if(specifiedLibraryName != null)
+                System.getProperty("subversion.native.library");
+            if (specifiedLibraryName != null)
+            {
                 System.load(specifiedLibraryName);
+                return;
+            }
         }
-        catch(UnsatisfiedLinkError ex)
+        catch (UnsatisfiedLinkError ex)
         {
             // ignore that error to try again
         }
-        /*
-         * first try to load the library by the new name.
-         * if that fails, try to load the library by the old name.
-         */
+
+        // Try to load the library by its name.  Failing that, try to
+        // load it by its old name.
         try
         {
             System.loadLibrary("svnjavahl-1");
+            return;
         }
-        catch(UnsatisfiedLinkError ex)
+        catch (UnsatisfiedLinkError ex)
         {
             try
             {
                 System.loadLibrary("libsvnjavahl-1");
+                return;
             }
             catch (UnsatisfiedLinkError e)
             {
@@ -64,6 +80,7 @@ public class SVNClient implements SVNClientInterface
             }
         }
     }
+
 
     /**
      * Standard empty contructor, builds just the native peer.
@@ -920,6 +937,24 @@ public class SVNClient implements SVNClientInterface
     public native byte[] fileContent(String path, Revision revision,
                                      Revision pegRevision)
             throws ClientException;
+
+    /**
+     * Write the file's content to the specified output stream.  If
+     * you need an InputStream, use a
+     * PipedInputStream/PipedOutputStream combination.
+     *
+     * @param path        the path of the file
+     * @param revision    the revision to retrieve
+     * @param pegRevision the revision at which to interpret the path
+     * @param the stream to write the file's content to
+     * @throws ClientException
+     * @see <a href="http://java.sun.com/j2se/1.4.2/docs/api/java/io/PipedOutputStream.html">PipedOutputStream</a>
+     * @see <a href="http://java.sun.com/j2se/1.4.2/docs/api/java/io/PipedInputStream.html">PipedInputStream</a>
+     */
+    public native void streamFileContent(String path, Revision revision, 
+                            Revision pegRevision, int bufferSize, 
+                            OutputStream stream) 
+            throws ClientException;    
 
     /**
      * Rewrite the url's in the working copy

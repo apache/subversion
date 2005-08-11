@@ -119,7 +119,7 @@ static const apr_getopt_option_t options_table[] =
      N_("print differences against the copy source")},
 
     {"revprop", svnlook__revprop_opt, 0,
-     N_("operate on a revision property (use with -r)")},
+     N_("operate on a revision property (use with -r or -t)")},
 
     {"full-paths", svnlook__full_paths, 0,
      N_("show full paths instead of indenting them")},
@@ -1513,7 +1513,7 @@ do_pget (svnlook_ctxt_t *c,
       SVN_ERR (svn_fs_node_prop (&prop, root, path, propname, pool));
     }
   else
-      SVN_ERR (svn_fs_revision_prop (&prop, c->fs, c->rev_id, propname, pool));
+    SVN_ERR (get_property (&prop, c, propname, pool));
 
   if (prop == NULL)
     {
@@ -1969,8 +1969,8 @@ main (int argc, const char * const *argv)
   struct svnlook_opt_state opt_state;
   apr_getopt_t *os;  
   int opt_id;
-  int received_opts[SVN_OPT_MAX_OPTIONS];
-  int i, num_opts = 0;
+  apr_array_header_t *received_opts;
+  int i;
 
   /* Initialize the app. */
   if (svn_cmdline_init ("svnlook", stderr) != EXIT_SUCCESS)
@@ -1987,25 +1987,17 @@ main (int argc, const char * const *argv)
   pool = svn_pool_create_ex (NULL, allocator);
   apr_allocator_owner_set (allocator, pool);
 
+  received_opts = apr_array_make (pool, SVN_OPT_MAX_OPTIONS, sizeof (int));
+
   /* Check library versions */
   err = check_lib_versions ();
   if (err)
-    {
-      svn_handle_error2 (err, stderr, FALSE, "svnlook: ");
-      svn_error_clear (err);
-      svn_pool_destroy (pool);
-      return EXIT_FAILURE;
-    }
+    return svn_cmdline_handle_exit_error (err, pool, "svnlook: ");
 
   /* Initialize the FS library. */
   err = svn_fs_initialize (pool);
   if (err)
-    {
-      svn_handle_error2 (err, stderr, FALSE, "svnlook: ");
-      svn_error_clear (err);
-      svn_pool_destroy (pool);
-      return EXIT_FAILURE;
-    }
+    return svn_cmdline_handle_exit_error (err, pool, "svnlook: ");
 
   if (argc <= 1)
     {
@@ -2037,8 +2029,7 @@ main (int argc, const char * const *argv)
         }
 
       /* Stash the option code in an array before parsing it. */
-      received_opts[num_opts] = opt_id;
-      num_opts++;
+      APR_ARRAY_PUSH (received_opts, int) = opt_id;
 
       switch (opt_id) 
         {
@@ -2142,12 +2133,7 @@ main (int argc, const char * const *argv)
               err = svn_utf_cstring_to_utf8 (&first_arg_utf8, first_arg,
                                              pool);
               if (err)
-                {
-                  svn_handle_error2 (err, stderr, FALSE, "svnlook: ");
-                  svn_pool_destroy (pool);
-                  svn_error_clear (err);
-                  return EXIT_FAILURE;
-                }
+                return svn_cmdline_handle_exit_error (err, pool, "svnlook: ");
               svn_error_clear
                 (svn_cmdline_fprintf (stderr, pool,
                                       _("Unknown command: '%s'\n"),
@@ -2220,9 +2206,9 @@ main (int argc, const char * const *argv)
     }
 
   /* Check that the subcommand wasn't passed any inappropriate options. */
-  for (i = 0; i < num_opts; i++)
+  for (i = 0; i < received_opts->nelts; i++)
     {
-      opt_id = received_opts[i];
+      opt_id = APR_ARRAY_IDX (received_opts, i, int);
 
       /* All commands implicitly accept --help, so just skip over this
          when we see it. Note that we don't want to include this option

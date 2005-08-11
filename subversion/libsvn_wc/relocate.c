@@ -24,6 +24,7 @@
 
 #include "wc.h"
 #include "entries.h"
+#include "lock.h"
 #include "props.h"
 
 #include "svn_private_config.h"
@@ -47,7 +48,7 @@ relocate_entry (svn_wc_adm_access_t *adm_access,
 {
   svn_wc_entry_t entry2;
   apr_uint32_t flags = 0;
-  int from_len = strlen (from);
+  apr_size_t from_len = strlen (from);
 
   if (entry->repos)
     {

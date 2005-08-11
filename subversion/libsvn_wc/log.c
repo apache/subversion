@@ -37,6 +37,7 @@
 #include "props.h"
 #include "adm_files.h"
 #include "entries.h"
+#include "lock.h"
 #include "translate.h"
 #include "questions.h"
 
@@ -538,7 +539,7 @@ log_do_modify_entry (struct log_runner *loggy,
                            APR_HASH_KEY_STRING);
 
   if ((modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)
-      && (! strcmp (valuestr, SVN_WC_TIMESTAMP_WC)))
+      && (! strcmp (valuestr, SVN_WC__TIMESTAMP_WC)))
     {
       svn_node_kind_t tfile_kind;
       apr_time_t text_time;
@@ -565,7 +566,7 @@ log_do_modify_entry (struct log_runner *loggy,
                            APR_HASH_KEY_STRING);
 
   if ((modify_flags & SVN_WC__ENTRY_MODIFY_PROP_TIME)
-      && (! strcmp (valuestr, SVN_WC_TIMESTAMP_WC)))
+      && (! strcmp (valuestr, SVN_WC__TIMESTAMP_WC)))
     {
       const char *pfile;
       svn_node_kind_t pfile_kind;

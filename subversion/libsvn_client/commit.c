@@ -315,12 +315,12 @@ import_dir (const svn_delta_editor_t *editor,
   if (!no_ignore)
     SVN_ERR (svn_wc_get_default_ignores (&ignores, ctx->config, pool));
 
-  SVN_ERR (svn_io_get_dirents (&dirents, path, pool));
+  SVN_ERR (svn_io_get_dirents2 (&dirents, path, pool));
 
   for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
     {
       const char *this_path, *this_edit_path, *abs_path;
-      const svn_node_kind_t *filetype;
+      const svn_io_dirent_t *dirent;
       const char *filename;
       const void *key;
       void *val;
@@ -330,7 +330,7 @@ import_dir (const svn_delta_editor_t *editor,
       apr_hash_this (hi, &key, NULL, &val);
 
       filename = key;
-      filetype = val;
+      dirent = val;
 
       if (ctx->cancel_func)
         SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
@@ -374,7 +374,7 @@ import_dir (const svn_delta_editor_t *editor,
 
       /* We only import subdirectories when we're doing a regular
          recursive import. */
-      if ((*filetype == svn_node_dir) && (! nonrecursive))
+      if ((dirent->kind == svn_node_dir) && (! nonrecursive))
         {
           void *this_dir_baton;
 
@@ -412,7 +412,7 @@ import_dir (const svn_delta_editor_t *editor,
           /* Finally, close the sub-directory. */
           SVN_ERR (editor->close_directory (this_dir_baton, subpool));
         }
-      else if (*filetype == svn_node_file)
+      else if (dirent->kind == svn_node_file)
         {
           /* Import a file. */
           SVN_ERR (import_file (editor, dir_baton, this_path, 
@@ -1161,6 +1161,18 @@ collect_lock_tokens (apr_hash_t **result,
     }
 
   return SVN_NO_ERROR;
+}
+
+svn_client_commit_info2_t *
+svn_client_create_commit_info (apr_pool_t *pool)
+{
+  svn_client_commit_info2_t *commit_info
+    = apr_pcalloc (pool, sizeof (svn_client_commit_info2_t));
+
+  commit_info->revision = SVN_INVALID_REVNUM;
+  /* All other fields were initialized to NULL above. */
+
+  return commit_info;
 }
 
 svn_error_t *

@@ -189,7 +189,6 @@ class Svnserve:
       import win32process
       import win32con
       args = ' '.join(map(lambda x: self._quote(x), args))
-      print self._quote(self.path), args
       self.proc_handle = (
         win32process.CreateProcess(self._quote(self.path), args,
                                    None, None, 0,

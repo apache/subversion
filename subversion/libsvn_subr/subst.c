@@ -169,7 +169,9 @@ svn_subst_build_keywords (svn_subst_keywords_t *kw,
         }
       else if ((! strcasecmp (keyword, SVN_KEYWORD_ID)))
         {
-          const char *base_name = url ? svn_path_basename (url, pool) : "";
+          const char *base_name = url
+            ? svn_path_uri_decode (svn_path_basename (url, pool), pool)
+            : "";
           const char *human_date = NULL;
 
           if (date)

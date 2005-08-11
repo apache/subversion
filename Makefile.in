@@ -128,6 +128,7 @@ SWIG_RB_COMPILE = @SWIG_RB_COMPILE@
 SWIG_RB_LINK = @SWIG_RB_LINK@
 SWIG_RB_SITE_LIB_DIR = @SWIG_RB_SITE_LIB_DIR@
 SWIG_RB_SITE_ARCH_DIR = @SWIG_RB_SITE_ARCH_DIR@
+SWIG_RB_TEST_VERBOSE = @SWIG_RB_TEST_VERBOSE@
 LSWIGPL = @LSWIGPL@
 LSWIGPY = @LSWIGPY@
 
@@ -140,8 +141,11 @@ SVN_APRUTIL_PREFIX = @SVN_APRUTIL_PREFIX@
 
 MKDIR = @MKDIR@
 
-# the EXTRA_ exist so that extra flags can be passed at 'make' time
+# The EXTRA_ parameters can be used to pass extra flags at 'make' time.
 CFLAGS = @CFLAGS@ $(EXTRA_CFLAGS)
+### A few of the CFLAGS (e.g. -Wmissing-prototypes, -Wstrict-prototypes,
+### -Wmissing-declarations) are not valid for C++, and should be somehow
+### suppressed (but they may come from httpd or APR).
 CPPFLAGS = @CPPFLAGS@ $(EXTRA_CPPFLAGS)
 LDFLAGS = @LDFLAGS@ $(EXTRA_LDFLAGS)
 
@@ -584,6 +588,9 @@ install-info: doc-all-info
 install-swig-py: install-swig-py-lib
 install-swig-rb: install-swig-rb-lib
 
+$(SWIG_PL_DIR)/native/Makefile.PL: $(SWIG_SRC_DIR)/perl/native/Makefile.PL.in
+	./config.status subversion/bindings/swig/perl/native/Makefile.PL
+
 $(SWIG_PL_DIR)/native/Makefile: $(SWIG_PL_DIR)/native/Makefile.PL
 	cd $(SWIG_PL_DIR)/native; $(PERL) Makefile.PL
 
@@ -608,9 +615,11 @@ clean-swig-pl:
 check-swig-rb: swig-rb svnserve
 	cd $(SWIG_RB_DIR); \
 	  $(RUBY) -I $(SWIG_RB_SRC_DIR) \
-	    $(SWIG_RB_SRC_DIR)/test/run-test.rb
+	    $(SWIG_RB_SRC_DIR)/test/run-test.rb \
+	    --verbose=$(SWIG_RB_TEST_VERBOSE)
 
 clean-swig-rb:
+	rm -rf $(SWIG_RB_DIR)/test/repos $(SWIG_RB_DIR)/test/wc
 	for d in $(SWIG_RB_DIR) $(SWIG_RB_DIR)/libsvn_swig_ruby; \
 	do \
 	  cd $$d; \

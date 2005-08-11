@@ -31,6 +31,7 @@
 #include <ne_auth.h>
 #include <ne_locks.h>
 #include <ne_alloc.h>
+#include <ne_utils.h>
 
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -553,7 +554,11 @@ ra_dav_get_schemes (apr_pool_t *pool)
   static const char *schemes_no_ssl[] = { "http", NULL };
   static const char *schemes_ssl[] = { "http", "https", NULL };
 
+#if SVN_NEON_0_25_0
+  return ne_has_support(NE_FEATURE_SSL) ? schemes_ssl : schemes_no_ssl;
+#else /* ! SVN_NEON_0_25_0 */
   return ne_supports_ssl() ? schemes_ssl : schemes_no_ssl;
+#endif /* if/else SVN_NEON_0_25_0 */
 }
 
 
@@ -602,7 +607,11 @@ svn_ra_dav__open (svn_ra_session_t *session,
   is_ssl_session = (strcasecmp(uri.scheme, "https") == 0);
   if (is_ssl_session)
     {
+#if SVN_NEON_0_25_0
+      if (ne_has_support(NE_FEATURE_SSL) == 0)
+#else /* ! SVN_NEON_0_25_0 */
       if (ne_supports_ssl() == 0)
+#endif /* if/else SVN_NEON_0_25_0 */
         {
           ne_uri_free(&uri);
           return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
@@ -856,6 +865,7 @@ static svn_error_t *svn_ra_dav__do_get_uuid(svn_ra_session_t *session,
 }
 
 
+#ifndef SVN_NEON_0_25_0
 /* A callback of type ne_header_handler, invoked when neon encounters
    mod_dav_svn's custom 'creationdate' header in a LOCK response. */
 static void
@@ -890,8 +900,7 @@ handle_lock_owner_header(void *userdata,
 
   lrb->lock_owner = apr_pstrdup(lrb->pool, value);
 }
-
-
+#endif /* ! SVN_NEON_0_25_0 */
 
 
 /* A callback of type ne_create_request_fn;  called whenever neon
@@ -909,7 +918,10 @@ create_request_hook(ne_request *req,
   if ((strcmp(method, "LOCK") == 0)
       || (strcmp(method, "UNLOCK") == 0)
       || (strcmp(method, "PROPFIND") == 0))  
-    lrb->method = apr_pstrdup(lrb->pool, method);
+    {
+      lrb->method = apr_pstrdup(lrb->pool, method);
+      lrb->request = req;
+    }
 }
 
 
@@ -951,12 +963,14 @@ pre_send_hook(ne_request *req,
           ne_buffer_zappend(header, buf);
         }
 
+#ifndef SVN_NEON_0_25_0
       /* Register callbacks to read any custom 'creationdate' and
          'lock owner' response headers sent by mod_dav_svn. */
       ne_add_response_header_handler(req, SVN_DAV_CREATIONDATE_HEADER,
                                      handle_creationdate_header, lrb);
       ne_add_response_header_handler(req, SVN_DAV_LOCK_OWNER_HEADER,
                                      handle_lock_owner_header, lrb);
+#endif /* ! SVN_NEON_0_25_0 */
     }
 
   if (strcmp(lrb->method, "UNLOCK") == 0)
@@ -976,6 +990,52 @@ pre_send_hook(ne_request *req,
                                 &(lrb->err), lrb->pool);
 }
 
+#if SVN_NEON_0_25_0
+/* A callback of type ne_post_send_fn;  called after neon has sent a
+   request and received a response header back. */
+static int
+post_send_hook(ne_request *req,
+               void *userdata,
+               const ne_status *status)
+{
+  struct lock_request_baton *lrb = userdata;
+
+  if (! lrb->method)
+    return NE_OK;
+
+  if ((strcmp(lrb->method, "LOCK") == 0)
+      || (strcmp(lrb->method, "PROPFIND") == 0))
+    {
+      const char *val;
+
+      val = ne_get_response_header(req, SVN_DAV_CREATIONDATE_HEADER);
+      if (val)
+        {
+          svn_error_t *err = svn_time_from_cstring(&(lrb->creation_date),
+                                                   val, lrb->pool);
+
+          NE_DEBUG(NE_DBG_HTTP, "got cdate %s for %s request...\n",
+                   val, lrb->method);
+
+          if (err)
+            {
+              svn_error_clear(err);
+              lrb->creation_date = 0;
+              /* ### Should we return NE_RETRY in this case?  And if
+                 ### we were to do that, would we also set *status
+                 ### and call ne_set_error? */
+            }
+        }
+
+      val = ne_get_response_header(req, SVN_DAV_LOCK_OWNER_HEADER);
+      if (val)
+        lrb->lock_owner = apr_pstrdup(lrb->pool, val);
+    }
+
+  return NE_OK;
+}
+#endif /* SVN_NEON_0_25_0 */
+
 
 static void
 setup_neon_request_hook(svn_ra_dav__session_t *ras)
@@ -991,6 +1051,9 @@ setup_neon_request_hook(svn_ra_dav__session_t *ras)
 
       ne_hook_create_request(ras->sess, create_request_hook, lrb);
       ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
+#if SVN_NEON_0_25_0
+      ne_hook_post_send(ras->sess, post_send_hook, lrb);
+#endif /* SVN_NEON_0_25_0 */
 
       lrb->pool = ras->pool;
       ras->lrb = lrb;
@@ -1100,9 +1163,11 @@ svn_ra_dav__lock(svn_ra_session_t *session,
                  apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  apr_pool_t *iterpool = svn_pool_create (pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_ra_dav__session_t *ras = session->priv;
+  svn_error_t *ret_err = NULL;
 
-  setup_neon_request_hook(session->priv);
+  setup_neon_request_hook(ras);
 
   /* ### TODO for 1.3: Send all the locks over the wire at once.  This
      loop is just a temporary shim. */
@@ -1115,7 +1180,7 @@ svn_ra_dav__lock(svn_ra_session_t *session,
       svn_revnum_t *revnum;
       svn_error_t *err, *callback_err = NULL;
 
-      svn_pool_clear (iterpool);
+      svn_pool_clear(iterpool);
 
       apr_hash_this(hi, &key, NULL, &val);
       path = key;
@@ -1124,23 +1189,30 @@ svn_ra_dav__lock(svn_ra_session_t *session,
       err = shim_svn_ra_dav__lock(session, &lock, path, comment, 
                                   force, *revnum, iterpool);
 
-      if (err && !SVN_ERR_IS_LOCK_ERROR (err))
-        return err;
+      if (err && !SVN_ERR_IS_LOCK_ERROR(err))
+        {
+          ret_err = err;
+          goto departure;
+        }
 
       if (lock_func)
         callback_err = lock_func(lock_baton, path, TRUE, err ? NULL : lock,
                                  err, iterpool);
 
-      svn_error_clear (err);
+      svn_error_clear(err);
 
       if (callback_err)
-        return callback_err;
+        {
+          ret_err = callback_err;
+          goto departure;
+        }
 
     }
 
-  svn_pool_destroy (iterpool);
+  svn_pool_destroy(iterpool);
 
-  return SVN_NO_ERROR;
+ departure:
+  return svn_ra_dav__maybe_store_auth_info_after_result(ret_err, ras);
 }
 
 
@@ -1159,7 +1231,7 @@ shim_svn_ra_dav__unlock(svn_ra_session_t *session,
 
   /* Make a neon lock structure containing token and full URL to unlock. */
   nlock = ne_lock_create();
-  url = svn_path_url_add_component (ras->url, path, pool);  
+  url = svn_path_url_add_component(ras->url, path, pool);  
   if ((rv = ne_uri_parse(url, &(nlock->uri))))
     {
       ne_lock_destroy(nlock);
@@ -1175,11 +1247,11 @@ shim_svn_ra_dav__unlock(svn_ra_session_t *session,
     {
       svn_lock_t *lock;
 
-      SVN_ERR (svn_ra_dav__get_lock(session, &lock, path, pool));
+      SVN_ERR( svn_ra_dav__get_lock(session, &lock, path, pool) );
       if (! lock)
-        return svn_error_createf (SVN_ERR_RA_NOT_LOCKED, NULL,
-                                  _("'%s' is not locked in the repository"),
-                                  path);
+        return svn_error_createf(SVN_ERR_RA_NOT_LOCKED, NULL,
+                                 _("'%s' is not locked in the repository"),
+                                 path);
       
       nlock->token = ne_strdup(lock->token);
     }
@@ -1236,9 +1308,11 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
                    apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  apr_pool_t *iterpool = svn_pool_create (pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_ra_dav__session_t *ras = session->priv;
+  svn_error_t *ret_err = NULL;
 
-  setup_neon_request_hook(session->priv);
+  setup_neon_request_hook(ras);
 
   /* ### TODO for 1.3: Send all the lock tokens over the wire at once.
         This loop is just a temporary shim. */
@@ -1250,34 +1324,41 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
       const char *token;
       svn_error_t *err, *callback_err = NULL; 
 
-      svn_pool_clear (iterpool);
+      svn_pool_clear(iterpool);
 
       apr_hash_this(hi, &key, NULL, &val);
       path = key;
       /* Since we can't store NULL values in a hash, we turn "" to
          NULL here. */
-      if (strcmp (val, "") != 0)
+      if (strcmp(val, "") != 0)
         token = val;
       else
         token = NULL;
 
-      err = shim_svn_ra_dav__unlock (session, path, token, force, iterpool);
+      err = shim_svn_ra_dav__unlock(session, path, token, force, iterpool);
 
-      if (err && !SVN_ERR_IS_UNLOCK_ERROR (err))
-        return err;
+      if (err && !SVN_ERR_IS_UNLOCK_ERROR(err))
+        {
+          ret_err = err;
+          goto departure;
+        }
 
       if (lock_func)
         callback_err = lock_func(lock_baton, path, FALSE, NULL, err, iterpool);
 
-      svn_error_clear (err);
+      svn_error_clear(err);
 
       if (callback_err)
-        return callback_err;
+        {
+          ret_err = callback_err;
+          goto departure;
+        }
     }
 
-  svn_pool_destroy (iterpool);
+  svn_pool_destroy(iterpool);
 
-  return SVN_NO_ERROR;
+ departure:
+  return svn_ra_dav__maybe_store_auth_info_after_result(ret_err, ras);
 }
 
 
@@ -1315,6 +1396,19 @@ lock_receiver(void *userdata,
 
   if (lock)
     {
+#if SVN_NEON_0_25_0
+      /* The post_send hook has not run at this stage; so grab the 
+         response headers early.  As Joe Orton explains in Issue
+         #2297: "post_send hooks run much later than the name might
+         suggest.  I've noted another API change for a future neon
+         release to make that easier." */
+      if (post_send_hook(rb->lrb->request, rb->lrb, 
+                         ne_get_status(rb->lrb->request)))
+        {
+          return;
+        }
+#endif /* SVN_NEON_0_25_0 */
+
       if (!rb->lrb->lock_owner || !rb->lrb->creation_date)
         {
           rb->err = svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
@@ -1357,11 +1451,14 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
   const char *url;
   struct receiver_baton *rb;
   svn_string_t fs_path;
+  svn_error_t *err;
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
   url = svn_path_url_add_component (ras->url, path, pool);  
-  SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras->sess,
-                                        url, SVN_INVALID_REVNUM, pool));
+
+  err = svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras->sess,
+                                      url, SVN_INVALID_REVNUM, pool);
+  SVN_ERR( svn_ra_dav__maybe_store_auth_info_after_result(err, ras) );
 
   /* Build context for neon callbacks and then register them. */
   setup_neon_request_hook(ras);

@@ -141,10 +141,12 @@ const apr_getopt_option_t svn_cl__options[] =
                       N_("disable automatic properties")},
     {"native-eol",    svn_cl__native_eol_opt, 1,
                       N_("use a different EOL marker than the standard\n"
-                      "                             system marker for files "
-                      "with a native svn:eol-style\n"
-                      "                             property.  ARG may be one "
-                      "of 'LF', 'CR', 'CRLF'")},
+                         "                             "
+                         "system marker for files with the svn:eol-style\n"
+                         "                             "
+                         "property set to 'native'.\n"
+                         "                             "
+                         "ARG may be one of 'LF', 'CR', 'CRLF'")},
     {"limit",         svn_cl__limit_opt, 1,
                       N_("maximum number of log entries")},
     {"no-unlock",     svn_cl__no_unlock_opt, 0,
@@ -170,7 +172,15 @@ const apr_getopt_option_t svn_cl__options[] =
                              svn_cl__auth_password_opt, \
                              svn_cl__no_auth_cache_opt, \
                              svn_cl__non_interactive_opt
-/* Options for giving a log message.  (Some of these also have other uses.) */
+/* Options for giving a log message.  (Some of these also have other uses.) 
+ *
+ * In theory, we should include svn_cl__non_interactive_opt here too,
+ * because all the log-message-taking commands have the potential to
+ * pop up an editor, and svn_cl__non_interactive_opt is the way to
+ * prevent that.  But so far, any command that includes these options
+ * also includes SVN_CL__AUTH_OPTIONS, which of course already
+ * contains svn_cl__non_interactive_opt, so we get it for free.
+ */
 #define SVN_CL__LOG_MSG_OPTIONS 'm', 'F', \
                                 svn_cl__force_log_opt, \
                                 svn_cl__editor_cmd_opt, \
@@ -193,7 +203,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "\n"
        "  If specified, REV determines in which revision the target is first\n"
        "  looked up.\n"),
-    {'r', 'v', svn_cl__xml_opt, svn_cl__incremental_opt, SVN_CL__AUTH_OPTIONS,
+    {'r', 'v', svn_cl__incremental_opt, svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
 
   { "cat", svn_cl__cat, {0},
@@ -322,7 +332,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "PATH1 is used\n"
        "     for the local directory name. If REV is not specified,"
        " all local\n"
-       "     changes will be preserved, but files not under version "
+       "     changes will be preserved.  Files not under version "
        "control will\n"
        "     not be copied.\n"
        "\n"
@@ -379,10 +389,11 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "current\n"
        "  working directory.\n"
        "\n"
-       "  With --verbose, the following fields show the status of the item:\n"
+       "  With --verbose, the following fields will be shown for each item:\n"
        "\n"
        "    Revision number of the last commit\n"
        "    Author of the last commit\n"
+       "    If locked, the owner of the lock\n"
        "    Size (in bytes)\n"
        "    Date and time of the last commit\n"),
     {'r', 'v', 'R', svn_cl__incremental_opt, svn_cl__xml_opt,
@@ -747,18 +758,6 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
 };
 
 
-/* Standard error handler */
-static int
-error_exit (svn_error_t *err, FILE *stream, svn_boolean_t fatal,
-            apr_pool_t *pool)
-{
-  svn_handle_error (err, stderr, fatal);
-  svn_error_clear (err);
-  svn_pool_destroy (pool);
-  return EXIT_FAILURE;
-}
-
-
 /* Version compatibility check */
 static svn_error_t *
 check_lib_versions (void)
@@ -814,8 +813,8 @@ main (int argc, const char * const *argv)
   apr_getopt_t *os;  
   svn_cl__opt_state_t opt_state = { { 0 } };
   svn_client_ctx_t *ctx;
-  int received_opts[SVN_OPT_MAX_OPTIONS];
-  int i, num_opts = 0;
+  apr_array_header_t *received_opts;
+  int i;
   const svn_opt_subcommand_desc_t *subcommand = NULL;
   const char *dash_m_arg = NULL, *dash_F_arg = NULL;
   const char *path_utf8;
@@ -839,15 +838,17 @@ main (int argc, const char * const *argv)
   pool = svn_pool_create_ex (NULL, allocator);
   apr_allocator_owner_set (allocator, pool);
 
+  received_opts = apr_array_make (pool, SVN_OPT_MAX_OPTIONS, sizeof (int));
+
   /* Check library versions */
   err = check_lib_versions ();
   if (err)
-    return error_exit (err, stderr, FALSE, pool);
+    return svn_cmdline_handle_exit_error (err, pool, "svn: ");
 
   /* Initialize the RA library. */
   err = svn_ra_initialize (pool);
   if (err)
-    return error_exit (err, stderr, FALSE, pool);
+    return svn_cmdline_handle_exit_error (err, pool, "svn: ");
 
   /* Begin processing arguments. */
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
@@ -881,8 +882,7 @@ main (int argc, const char * const *argv)
         }
 
       /* Stash the option code in an array before parsing it. */
-      received_opts[num_opts] = opt_id;
-      num_opts++;
+      APR_ARRAY_PUSH (received_opts, int) = opt_id;
 
       switch (opt_id) {
       case svn_cl__limit_opt:
@@ -893,7 +893,7 @@ main (int argc, const char * const *argv)
             {
               err = svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                       _("Non-numeric limit argument given"));
-              return error_exit (err, stderr, FALSE, pool);
+              return svn_cmdline_handle_exit_error (err, pool, "svn: ");
             }
         }
         break;
@@ -911,7 +911,7 @@ main (int argc, const char * const *argv)
               (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                _("Multiple revision arguments encountered; "
                  "try '-r M:N' instead of '-r M -r N'"));
-            return error_exit (err, stderr, FALSE, pool);
+            return svn_cmdline_handle_exit_error (err, pool, "svn: ");
           }
         if (svn_opt_parse_revision (&(opt_state.start_revision),
                                     &(opt_state.end_revision),
@@ -923,7 +923,7 @@ main (int argc, const char * const *argv)
                 (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                  _("Syntax error in revision argument '%s'"),
                  utf8_opt_arg);
-            return error_exit (err, stderr, FALSE, pool);
+            return svn_cmdline_handle_exit_error (err, pool, "svn: ");
           }
         break;
       case 'v':
@@ -948,7 +948,7 @@ main (int argc, const char * const *argv)
           err = svn_stringbuf_from_file (&(opt_state.filedata),
                                          utf8_opt_arg, pool);
         if (err)
-          return error_exit (err, stderr, FALSE, pool);
+          return svn_cmdline_handle_exit_error (err, pool, "svn: ");
         dash_F_arg = opt_arg;
         break;
       case svn_cl__targets_opt:
@@ -966,7 +966,7 @@ main (int argc, const char * const *argv)
           if (! err)
             err = svn_utf_stringbuf_to_utf8 (&buffer_utf8, buffer, pool);
           if (err)
-            return error_exit (err, stdout, FALSE, pool);
+            return svn_cmdline_handle_exit_error (err, pool, "svn: ");
           opt_state.targets = svn_cstring_split (buffer_utf8->data, "\n\r",
                                                  TRUE, pool);
         }
@@ -997,13 +997,13 @@ main (int argc, const char * const *argv)
         err = svn_utf_cstring_to_utf8 (&opt_state.auth_username,
                                        opt_arg, pool);
         if (err)
-          return error_exit (err, stdout, FALSE, pool);
+          return svn_cmdline_handle_exit_error (err, pool, "svn: ");
         break;
       case svn_cl__auth_password_opt:
         err = svn_utf_cstring_to_utf8 (&opt_state.auth_password,
                                        opt_arg, pool);
         if (err)
-          return error_exit (err, stdout, FALSE, pool);
+          return svn_cmdline_handle_exit_error (err, pool, "svn: ");
         break;
       case svn_cl__encoding_opt:
         opt_state.encoding = apr_pstrdup (pool, opt_arg);
@@ -1044,7 +1044,7 @@ main (int argc, const char * const *argv)
       case 'x':
         err = svn_utf_cstring_to_utf8 (&opt_state.extensions, opt_arg, pool);
         if (err)
-          return error_exit (err, stderr, FALSE, pool);
+          return svn_cmdline_handle_exit_error (err, pool, "svn: ");
         break;
       case svn_cl__diff_cmd_opt:
         opt_state.diff_cmd = apr_pstrdup (pool, opt_arg);
@@ -1071,7 +1071,7 @@ main (int argc, const char * const *argv)
             err = svn_error_create (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                                     _("--auto-props and --no-auto-props are "
                                       "mutually exclusive"));
-            return error_exit (err, stderr, FALSE, pool);
+            return svn_cmdline_handle_exit_error (err, pool, "svn: ");
           }
         opt_state.autoprops = TRUE;
         break;
@@ -1081,7 +1081,7 @@ main (int argc, const char * const *argv)
             err = svn_error_create (SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS, NULL,
                                     _("--auto-props and --no-auto-props are "
                                       "mutually exclusive"));
-            return error_exit (err, stderr, FALSE, pool);
+            return svn_cmdline_handle_exit_error (err, pool, "svn: ");
           }
         opt_state.no_autoprops = TRUE;
         break;
@@ -1097,7 +1097,7 @@ main (int argc, const char * const *argv)
                 (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                  _("Syntax error in native-eol argument '%s'"),
                  utf8_opt_arg);
-            svn_handle_error (err, stderr, FALSE);
+            svn_handle_error2 (err, stderr, FALSE, "svn: ");
             svn_error_clear (err);
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
@@ -1124,7 +1124,7 @@ main (int argc, const char * const *argv)
      init function anyway.  Thoughts?  */
   err = svn_config_ensure (opt_state.config_dir, pool);
   if (err)
-    return error_exit (err, stderr, FALSE, pool);
+    return svn_cmdline_handle_exit_error (err, pool, "svn: ");
 
   /* If the user asked for help, then the rest of the arguments are
      the names of subcommands to get help on (if any), or else they're
@@ -1156,7 +1156,7 @@ main (int argc, const char * const *argv)
               const char *first_arg_utf8;
               err = svn_utf_cstring_to_utf8 (&first_arg_utf8, first_arg, pool);
               if (err)
-                return error_exit (err, stderr, FALSE, pool);
+                return svn_cmdline_handle_exit_error (err, pool, "svn: ");
               svn_error_clear
                 (svn_cmdline_fprintf (stderr, pool,
                                       _("Unknown command: '%s'\n"),
@@ -1169,9 +1169,9 @@ main (int argc, const char * const *argv)
     }
 
   /* Check that the subcommand wasn't passed any inappropriate options. */
-  for (i = 0; i < num_opts; i++)
+  for (i = 0; i < received_opts->nelts; i++)
     {
-      opt_id = received_opts[i];
+      opt_id = APR_ARRAY_IDX (received_opts, i, int);
 
       /* All commands implicitly accept --help, so just skip over this
          when we see it. Note that we don't want to include this option
@@ -1189,7 +1189,7 @@ main (int argc, const char * const *argv)
           if ((err = svn_utf_cstring_to_utf8 (&optstr_utf8, optstr, pool))
               || (err = svn_utf_cstring_to_utf8 (&cmdname_utf8,
                                                  subcommand->name, pool)))
-            return error_exit (err, stderr, FALSE, pool);
+            return svn_cmdline_handle_exit_error (err, pool, "svn: ");
           svn_error_clear
             (svn_cmdline_fprintf
              (stderr, pool, _("Subcommand '%s' doesn't accept option '%s'\n"
@@ -1239,7 +1239,7 @@ main (int argc, const char * const *argv)
                      _("Lock comment file is a versioned file; "
                        "use '--force-log' to override"));
                 }
-              return error_exit (err, stderr, FALSE, pool);
+              return svn_cmdline_handle_exit_error (err, pool, "svn: ");
             }
           if (err)
             svn_error_clear (err);
@@ -1266,7 +1266,7 @@ main (int argc, const char * const *argv)
                     (SVN_ERR_CL_LOG_MESSAGE_IS_PATHNAME, NULL,
                      _("The lock comment is a pathname "
                        "(was -F intended?); use '--force-log' to override"));
-                  return error_exit (err, stderr, FALSE, pool);
+                  return svn_cmdline_handle_exit_error (err, pool, "svn: ");
                 }
             }
         }
@@ -1282,19 +1282,19 @@ main (int argc, const char * const *argv)
       if (opt_state.end_revision.kind != svn_opt_revision_unspecified)
         {
           err = svn_error_create (SVN_ERR_CLIENT_REVISION_RANGE, NULL, NULL);
-          return error_exit (err, stderr, FALSE, pool);
+          return svn_cmdline_handle_exit_error (err, pool, "svn: ");
         }
     }
 
   /* Create a client context object. */
   command_baton.opt_state = &opt_state;
   if ((err = svn_client_create_context (&ctx, pool)))
-    return error_exit (err, stderr, FALSE, pool);
+    return svn_cmdline_handle_exit_error (err, pool, "svn: ");
   command_baton.ctx = ctx;
 
   if ((err = svn_config_get_config (&(ctx->config),
                                     opt_state.config_dir, pool)))
-    return error_exit (err, stderr, FALSE, pool);
+    return svn_cmdline_handle_exit_error (err, pool, "svn: ");
 
   cfg = apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
                       APR_HASH_KEY_STRING);
@@ -1419,7 +1419,7 @@ main (int argc, const char * const *argv)
                                     SVN_CONFIG_SECTION_AUTH,
                                     SVN_CONFIG_OPTION_STORE_PASSWORDS,
                                     TRUE)))
-      svn_handle_error (err, stderr, TRUE);
+      svn_handle_error2 (err, stderr, TRUE, "svn: ");
     if (! store_password_val)
       svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
 
@@ -1430,7 +1430,7 @@ main (int argc, const char * const *argv)
                                     SVN_CONFIG_SECTION_AUTH,
                                     SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
                                     TRUE)))
-      svn_handle_error (err, stderr, TRUE);
+      svn_handle_error2 (err, stderr, TRUE, "svn: ");
     if (opt_state.no_auth_cache || ! store_password_val)
       svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
   }
@@ -1469,7 +1469,7 @@ main (int argc, const char * const *argv)
         svn_opt_subcommand_help (subcommand->name, svn_cl__cmd_table,
                                  svn_cl__options, pool);
       else
-        svn_handle_error (err, stderr, FALSE);
+        svn_handle_error2 (err, stderr, FALSE, "svn: ");
 
       /* Tell the user about 'svn cleanup' if any error on the stack
          was about locked working copies. */
@@ -1493,7 +1493,7 @@ main (int argc, const char * const *argv)
          This makes sure that output is not silently lost. */
       err = svn_cmdline_fflush (stdout);
       if (err)
-        return error_exit (err, stdout, FALSE, pool);
+        return svn_cmdline_handle_exit_error (err, pool, "svn: ");
 
       svn_pool_destroy (pool);
       return EXIT_SUCCESS;

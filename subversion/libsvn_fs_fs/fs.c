@@ -214,7 +214,7 @@ fs_set_errcall (svn_fs_t *fs,
 
 
 
-/* This function is included for Subversion 1.0.x compability.  It has
+/* This function is included for Subversion 1.0.x compatibility.  It has
    no effect for fsfs backed Subversion filesystems.  It conforms to
    the fs_library_vtable_t.bdb_recover() API. */
 static svn_error_t *

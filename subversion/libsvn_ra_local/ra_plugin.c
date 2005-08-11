@@ -525,12 +525,12 @@ svn_ra_local__get_commit_editor (svn_ra_session_t *session,
     }
               
   /* Get the repos commit-editor */     
-  SVN_ERR (svn_repos_get_commit_editor2
+  SVN_ERR (svn_repos_get_commit_editor3
            (editor, edit_baton, sess_baton->repos, NULL,
             svn_path_uri_decode (sess_baton->repos_url, pool),
             sess_baton->fs_path,
             sess_baton->username, log_msg,
-            deltify_etc, db, pool));
+            deltify_etc, db, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -920,6 +920,7 @@ svn_ra_local__get_file (svn_ra_session_t *session,
          a loop.  Truly, Nothing Can Go Wrong :-).  But RA layers that
          go over a network should confirm the checksum. */
       SVN_ERR (svn_stream_copy (contents, stream, pool));
+      SVN_ERR (svn_stream_close (contents));
     }
 
   /* Handle props if requested. */
@@ -1093,7 +1094,8 @@ svn_ra_local__lock (svn_ra_session_t *session,
       abs_path = svn_path_join (sess->fs_path, path, iterpool);
 
       /* This wrapper will call pre- and post-lock hooks. */
-      err = svn_repos_fs_lock (&lock, sess->repos, abs_path, NULL, comment, 0,
+      err = svn_repos_fs_lock (&lock, sess->repos, abs_path, NULL, comment,
+                               FALSE /* not DAV comment */,
                                0 /* no expiration */, *revnum, force, 
                                iterpool);
 

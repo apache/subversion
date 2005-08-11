@@ -162,6 +162,17 @@ implement, some of them may not work at all.
   * Combine removing incomplete="true", and revision bumping, with the
     last change due to the update.
 
+- Optimise wcprops handling
+  The wcprops code suffers from a lot of the historical problems
+  described in the earlier section.  Follow svn_wc__wcprop_get and see
+  repeated calls to svn_io_check_path, a call to svn_wc_check_wc, etc.
+  The svn_wc__wcprop_get function already has an access baton so it
+  should be able to determine whether the path is versioned and whether
+  it is a file or directory without doing any disk IO.  The function
+  svn_wc__wcprop_set has similar problems.   (Run 'svn update' over
+  ra_dav to trigger these.)  Perhaps wcprops could be stored in the
+  entries file?
+
 - The svn_wc_t context could work in conjunction with a more advanced
   svn_wc_crawl_revisions system.  This would provide a way of plugging
   multiple callbacks into a queue, probably with some sort of ordering

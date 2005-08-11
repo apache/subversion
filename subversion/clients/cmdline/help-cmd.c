@@ -57,7 +57,7 @@ svn_cl__help (apr_getopt_t *os,
      "For additional information, see http://subversion.tigris.org/\n");
 
   char *help_header =
-    apr_psprintf (pool, gettext (help_header_template), SVN_VER_NUMBER);
+    apr_psprintf (pool, _(help_header_template), SVN_VER_NUMBER);
 
   const char *ra_desc_start
     = _("The following repository access (RA) modules are available:\n\n");
@@ -80,6 +80,6 @@ svn_cl__help (apr_getopt_t *os,
                              help_header,   /* already gettext()'d */
                              svn_cl__cmd_table,
                              svn_cl__options,
-                             gettext (help_footer),
+                             _(help_footer),
                              pool);
 }

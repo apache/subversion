@@ -22,9 +22,12 @@ extern "C" {
 
 #include <rubyio.h>
 
+void svn_swig_rb_nls_initialize(void);
+
 VALUE svn_swig_rb_svn_error_new(VALUE code, VALUE message);
 
 VALUE svn_swig_rb_apr_hash_to_hash_string(apr_hash_t *hash);
+VALUE svn_swig_rb_apr_hash_to_hash_svn_string(apr_hash_t *hash);
 VALUE svn_swig_rb_apr_hash_to_hash_swig_type(apr_hash_t *hash,
                                              const char *type_name);
 
@@ -48,6 +51,11 @@ svn_swig_rb_array_to_auth_provider_object_apr_array(VALUE array,
 apr_array_header_t * svn_swig_rb_array_to_apr_array_prop(VALUE array,
                                                          apr_pool_t *pool);
   
+void svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self, VALUE *rb_pool, apr_pool_t **pool);
+void svn_swig_rb_set_pool(VALUE target, VALUE pool);
+void svn_swig_rb_push_pool(VALUE pool);
+void svn_swig_rb_pop_pool(VALUE pool);
+
 void svn_swig_rb_make_editor(const svn_delta_editor_t **editor,
                              void **edit_baton,
                              VALUE rb_editor,
@@ -72,7 +80,15 @@ svn_error_t *svn_swig_rb_get_commit_log_func(const char **log_msg,
                                              apr_array_header_t *commit_items,
                                              void *baton,
                                              apr_pool_t *pool);
-  
+
+
+void svn_swig_rb_notify_func2(void *baton,
+                              const svn_wc_notify_t *notify,
+                              apr_pool_t *pool);
+
+svn_error_t *svn_swig_rb_cancel_func(void *cancel_baton);
+
+
 /* auth provider callbacks */
 svn_error_t *svn_swig_rb_auth_simple_prompt_func(
     svn_auth_cred_simple_t **cred,
@@ -113,9 +129,24 @@ svn_error_t *svn_swig_rb_auth_ssl_client_cert_pw_prompt_func(
     apr_pool_t *pool);
 
 apr_file_t *svn_swig_rb_make_file(VALUE file, apr_pool_t *pool);
-svn_stream_t *svn_swig_rb_make_stream(VALUE io, apr_pool_t *pool);
+svn_stream_t *svn_swig_rb_make_stream(VALUE io);
 
 void svn_swig_rb_set_revision(svn_opt_revision_t *rev, VALUE value);
+
+void svn_swig_rb_adjust_arg_for_client_ctx_and_pool(int *argc, VALUE **argv);
+
+
+void svn_swig_rb_wc_status_func(void *baton,
+                                const char *path,
+                                svn_wc_status2_t *status);
+
+svn_error_t *svn_swig_rb_client_blame_receiver_func(void *baton,
+                                                    apr_int64_t line_no,
+                                                    svn_revnum_t revision,
+                                                    const char *author,
+                                                    const char *date,
+                                                    const char *line,
+                                                    apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

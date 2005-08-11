@@ -184,7 +184,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
                              dir_path, subpool);
   SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, full_path, subpool));
   SVN_ERR (svn_wc_entries_read (&entries, dir_access, TRUE, subpool));
-  SVN_ERR (svn_io_get_dirents (&dirents, full_path, subpool));
+  SVN_ERR (svn_io_get_dirents2 (&dirents, full_path, subpool));
   
   /*** Do the real reporting and recursing. ***/
   
@@ -220,7 +220,8 @@ report_revisions (svn_wc_adm_access_t *adm_access,
       apr_ssize_t klen;
       void *val;
       const svn_wc_entry_t *current_entry; 
-      svn_node_kind_t *dirent_kind;
+      svn_io_dirent_t *dirent;
+      svn_node_kind_t dirent_kind;
       svn_boolean_t missing = FALSE;
 
       /* Clear the iteration subpool here because the loop has a bunch
@@ -255,21 +256,19 @@ report_revisions (svn_wc_adm_access_t *adm_access,
         }
       
       /* Is the entry on disk?  Set a flag if not. */
-      dirent_kind = (svn_node_kind_t *) apr_hash_get (dirents, key, klen);
-      if (! dirent_kind)
+      dirent = apr_hash_get (dirents, key, klen);
+      if (! dirent)
         {
           /* It is possible on a case insensitive system that the
              entry is not really missing, so we call our trusty but
              expensive friend svn_io_check_path to be sure. */
-          dirent_kind = apr_palloc (iterpool, sizeof(*dirent_kind)); 
-          SVN_ERR (svn_io_check_path (this_full_path, dirent_kind,
+          SVN_ERR (svn_io_check_path (this_full_path, &dirent_kind,
                                       iterpool));
-          if (*dirent_kind == svn_node_none)
-            {
-              dirent_kind = NULL;
-              missing = TRUE;
-            }
+          if (dirent_kind == svn_node_none)
+            missing = TRUE;
         }
+      else
+        dirent_kind = dirent->kind;
       
       /* From here on out, ignore any entry scheduled for addition */
       if (current_entry->schedule == svn_wc_schedule_add)
@@ -281,8 +280,8 @@ report_revisions (svn_wc_adm_access_t *adm_access,
           /* If the dirent changed kind, report it as missing and
              move on to the next entry.  Later on, the update
              editor will return an 'obstructed update' error.  :) */
-          if (dirent_kind
-              && (*dirent_kind != svn_node_file)
+          if ((dirent_kind != svn_node_none)
+              && (dirent_kind != svn_node_file)
               && (! report_everything))
             {
               SVN_ERR (reporter->delete_path (report_baton, this_path, 
@@ -373,7 +372,7 @@ report_revisions (svn_wc_adm_access_t *adm_access,
              directory into something else, the working copy is hosed.
              It can't receive updates within this dir anymore.  Throw
              a real error. */
-          if (dirent_kind && (*dirent_kind != svn_node_dir))
+          if ((dirent_kind != svn_node_none) && (dirent_kind != svn_node_dir))
             {
               return svn_error_createf
                 (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
@@ -467,7 +466,7 @@ svn_wc_crawl_revisions2 (const char *path,
                          svn_wc_traversal_info_t *traversal_info,
                          apr_pool_t *pool)
 {
-  svn_error_t *err = SVN_NO_ERROR;
+  svn_error_t *fserr, *err = SVN_NO_ERROR;
   const svn_wc_entry_t *entry;
   svn_revnum_t base_rev = SVN_INVALID_REVNUM;
   svn_boolean_t missing = FALSE;
@@ -625,22 +624,16 @@ svn_wc_crawl_revisions2 (const char *path,
     }
 
   /* Finish the report, which causes the update editor to be driven. */
-  err = reporter->finish_report (report_baton, pool);
+  return reporter->finish_report (report_baton, pool);
 
  abort_report:
-  if (err)
+  /* Clean up the fs transaction. */
+  if ((fserr = reporter->abort_report (report_baton, pool)))
     {
-      /* Clean up the fs transaction. */
-      svn_error_t *fserr;
-      if ((fserr = reporter->abort_report (report_baton, pool)))
-        {
-          fserr = svn_error_quick_wrap (fserr, _("Error aborting report"));
-          svn_error_compose (err, fserr);
-        }
-      return err;
+      fserr = svn_error_quick_wrap (fserr, _("Error aborting report"));
+      svn_error_compose (err, fserr);
     }
-
-  return SVN_NO_ERROR;
+  return err;
 }
 
 /*** Compatibility wrapper: turns an svn_ra_reporter_t into an

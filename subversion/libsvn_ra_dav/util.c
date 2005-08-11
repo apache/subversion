@@ -26,6 +26,7 @@
 #include <ne_socket.h>
 #include <ne_uri.h>
 #include <ne_compress.h>
+#include <ne_basic.h>
 
 #include "svn_intl.h"
 #include "svn_pools.h"
@@ -309,8 +310,28 @@ static int ra_dav_error_accepter(void *userdata,
                                  ne_request *req,
                                  const ne_status *st)
 {
+  /* Before, this function was being run for *all* responses including
+     the 401 auth challenge.  In neon 0.24.x that was harmless.  But
+     in neon 0.25.0, trying to parse a 401 response as XML using
+     ne_xml_parse_v aborts the response; so the auth hooks never got a
+     chance. */
+#if SVN_NEON_0_25_0
+  ne_content_type ctype;
+
+  /* Only accept non-2xx responses with text/xml content-type */
+  if (st->klass != 2 && ne_get_content_type(req, &ctype) == 0)
+    {
+      int is_xml = 
+        (strcmp(ctype.type, "text") == 0 && strcmp(ctype.subtype, "xml") == 0);
+      ne_free(ctype.value);        
+      return is_xml;
+    }
+  else 
+    return 0;
+#else /* ! SVN_NEON_0_25_0 */
   /* Only accept the body-response if the HTTP status code is *not* 2XX. */
   return (st->klass != 2);
+#endif /* if/else SVN_NEON_0_25_0 */
 }
 
 
@@ -486,7 +507,12 @@ typedef struct spool_reader_baton_t
 } spool_reader_baton_t;
 
 
-static void 
+/* This implements the ne_block_reader() callback interface. */
+#if SVN_NEON_0_25_0
+static int
+#else /* ! SVN_NEON_0_25_0 */
+static void
+#endif /* if/else SVN_NEON_0_25_0 */
 spool_reader(void *userdata, 
              const char *buf, 
              size_t len)
@@ -495,6 +521,14 @@ spool_reader(void *userdata,
   if (! baton->error)
     baton->error = svn_io_file_write_full(baton->spool_file, buf, 
                                           len, NULL, baton->pool);
+
+#if SVN_NEON_0_25_0
+  if (baton->error)
+    /* ### Call ne_set_error(), as ne_block_reader doc implies? */
+    return 1;
+  else
+    return 0;
+#endif /* SVN_NEON_0_25_0 */
 }
 
 
@@ -560,7 +594,9 @@ parsed_request(ne_session *sess,
   ne_xml_parser *error_parser = NULL;
   char **locale;
   int rv;
+#ifndef SVN_NEON_0_25_0
   int decompress_rv;
+#endif /* ! SVN_NEON_0_25_0 */
   int code;
   int expected_code;
   const char *msg;
@@ -710,6 +746,13 @@ parsed_request(ne_session *sess,
         }
     }
 
+#if SVN_NEON_0_25_0
+  if (decompress_main)
+    ne_decompress_destroy(decompress_main);
+
+  if (decompress_err)
+    ne_decompress_destroy(decompress_err);
+#else  /* ! SVN_NEON_0_25_0 */
   if (decompress_main)
     {
       decompress_rv = ne_decompress_destroy(decompress_main);
@@ -727,6 +770,7 @@ parsed_request(ne_session *sess,
           rv = decompress_rv;
         }
     }
+#endif /* if/else SVN_NEON_0_25_0 */
   
   code = ne_get_status(req)->code;
   if (status_code)
@@ -871,6 +915,25 @@ svn_ra_dav__maybe_store_auth_info(svn_ra_dav__session_t *ras)
 }
 
 
+svn_error_t *
+svn_ra_dav__maybe_store_auth_info_after_result(svn_error_t *err,
+                                               svn_ra_dav__session_t *ras)
+{
+  if (! err || (err->apr_err != SVN_ERR_RA_NOT_AUTHORIZED))
+    {
+      svn_error_t *err2 = svn_ra_dav__maybe_store_auth_info(ras);
+      if (err2 && ! err)
+        return err2;
+      else if (err)
+        {
+          svn_error_clear(err2);
+          return err;          
+        }
+    }
+
+  return err;
+}
+
 
 void
 svn_ra_dav__add_error_handler(ne_request *request,
@@ -902,6 +965,10 @@ svn_ra_dav__request_dispatch(int *code_p,
                              const char *url,
                              int okay_1,
                              int okay_2,
+#if SVN_NEON_0_25_0
+                             svn_ra_dav__request_interrogator interrogator,
+                             void *interrogator_baton,
+#endif /* SVN_NEON_0_25_0 */
                              apr_pool_t *pool)
 {
   ne_xml_parser *error_parser;
@@ -911,6 +978,9 @@ svn_ra_dav__request_dispatch(int *code_p,
   int code;
   const char *msg;
   svn_error_t *err = SVN_NO_ERROR;
+#if SVN_NEON_0_25_0
+  svn_error_t *err2 = SVN_NO_ERROR;
+#endif /* SVN_NEON_0_25_0 */
 
   /* attach a standard <D:error> body parser to the request */
   error_parser = ne_xml_create();
@@ -929,8 +999,19 @@ svn_ra_dav__request_dispatch(int *code_p,
   if (code_p)
      *code_p = code;
 
+#if SVN_NEON_0_25_0
+  if (interrogator)
+    err2 = (*interrogator)(request, rv, interrogator_baton);
+#endif /* SVN_NEON_0_25_0 */
+
   ne_request_destroy(request);
   ne_xml_destroy(error_parser);
+
+#if SVN_NEON_0_25_0
+  /* If the request interrogator returned error, pass that along now. */
+  if (err2)
+    return err2;
+#endif /* SVN_NEON_0_25_0 */
 
   /* If the status code was one of the two that we expected, then go
      ahead and return now. IGNORE any marshalled error. */

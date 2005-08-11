@@ -373,9 +373,7 @@ def main
   options = parse(rest)
   
   require "svn/info"
-  info = Svn::Core::Pool.new do |pool|
-    Svn::Info.new(repos, revision, pool)
-  end
+  info = Svn::Info.new(repos, revision)
   from = options.from || info.author
   to = [to, *options.to]
   params = {

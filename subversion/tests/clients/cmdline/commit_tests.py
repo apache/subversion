@@ -836,13 +836,13 @@ def hudson_part_2_1(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
   expected_disk.add({
-    'A/D/G/chi' : Item("This is the file 'chi'."),
+    'A/D/G/chi' : Item("This is the file 'chi'.\n"),
     })
   expected_disk.add({
-    'A/D/G/omega' : Item("This is the file 'omega'."),
+    'A/D/G/omega' : Item("This is the file 'omega'.\n"),
     })
   expected_disk.add({
-    'A/D/G/psi' : Item("This is the file 'psi'."),
+    'A/D/G/psi' : Item("This is the file 'psi'.\n"),
     })
 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -946,9 +946,9 @@ def merge_mixed_revisions(sbox):
     'A/D/H/psi' : Item(status='  ', wc_rev=2),
     })
   expected_disk = svntest.wc.State('', {
-    'omega' : Item("This is the file 'omega'."),
-    'chi' : Item("This is the file 'chi'.moo"),
-    'psi' : Item("This is the file 'psi'."),
+    'omega' : Item("This is the file 'omega'.\n"),
+    'chi' : Item("This is the file 'chi'.\nmoo"),
+    'psi' : Item("This is the file 'psi'.\n"),
     })
   expected_output = svntest.wc.State(wc_dir, { })
   svntest.actions.run_and_verify_update (H_path,

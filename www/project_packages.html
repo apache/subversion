@@ -18,7 +18,7 @@
 <h1 style="text-align: center;">Subversion Packages</h1>
 
 <p>The best available version of Subversion is:&nbsp;<a
-   href="svn_1.2_releasenotes.html">1.2.0</a></p>
+   href="svn_1.2_releasenotes.html">1.2.1</a></p>
 
 <p>You can install Subversion by compiling its <a
 href="#source-release">source code release</a> directly, or you can
@@ -100,6 +100,17 @@ Summers</a></em></p>
            >http://summersoft.fay.ar.us/pub/subversion/latest/</a>
 (<a href="http://the.earth.li/pub/subversion/summersoft.fay.ar.us/pub/subversion/latest/"><em>UK Mirror</em></a>)
 </p>
+
+<div style="background-color: yellow; color: red;">
+<p><strong>WARNING:</strong> the RedHat Enterprise Linux 3 subversion 1.2 RPMs above (from David
+Summers) are <em>not</em> compiled with Berkeley DB support (All other versions are compiled with Berkeley BDB support).  If you
+need to access Berkeley DB repositories, these RPMS will not work for
+you.
+  (See <a
+          href="http://subversion.tigris.org/servlets/BrowseList?listName=dev&amp;from=317936&amp;to=317936&amp;count=21&amp;by=thread&amp;first=1&amp;windowSize=20&amp;selectedPage=1">this
+    thread</a> for details.) You may want to try different RPMS instead.</p>
+</div>
+
 </li>
 
 <li><p><b>Fedora Core 1, 2, Red Hat Enterprise Linux 3, 4</b></p>
@@ -178,8 +189,8 @@ href="http://www.freebsd.org/cgi/cvsweb.cgi/ports/devel/subversion/">http://www.
 href="http://www.openbsd.org/cgi-bin/cvsweb.cgi/ports/devel/subversion/"
 >http://www.openbsd.org/cgi-bin/cvsweb.cgi/ports/devel/subversion/</a></p>
 
-<p>Assuming your ports tree is up-to-date, just do:
-<pre>cd /usr/ports/devel/; subversion; make install</pre></p>
+<p>Assuming your ports tree is up-to-date, just do:</p>
+<pre>cd /usr/ports/devel/; subversion; make install</pre>
 
 </div>
 
@@ -255,6 +266,16 @@ href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91"
 >this directory</a> of the file-sharing area.  The packages are ".zip"
 files.</p>
 
+<div style="background-color: yellow; color: red;">
+<p><strong>WARNING:</strong> the latest subversion 1.2 win32 binaries
+use BerkeleyDB 4.3.  If you already have BDB 4.2 repositories running
+on Windows, then installing these particular binaries will force you
+to upgrade your repositories to BDB 4.3.  It's not difficult, just be
+ready to do so.  Read
+the <a
+href="http://subversion.tigris.org/faq.html#bdb43-upgrade">FAQ</a>.</p>
+</div>
+
 <p><em>Maintainer:
 <a href="mailto:jostein@josander.net">Jostein Andersen</a></em></p>
 
@@ -292,6 +313,5 @@ documentation for installing and configuring Subversion are available at:
 
 </div>
 
-</div>
 </body>
 </html>

@@ -42,6 +42,7 @@
 #include "svn_md5.h"
 #include "svn_diff.h"
 #include "svn_error_codes.h"
+#include "svn_nls.h"
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
@@ -52,6 +53,8 @@
 #endif
 
 #ifdef SWIGRUBY
+#include <apu.h>
+#include <apr_xlate.h>
 #include "swigutil_rb.h"
 #endif
 %}
@@ -162,11 +165,6 @@
 // svn_stream_read
 // svn_stream_write
 // svn_stream_close
-#ifdef SWIGRUBY
-%ignore svn_stream_read;
-%ignore svn_stream_write;
-%ignore svn_stream_close;
-#endif
 
 /* Scripts can do the printf, then write to a stream.
  * We can't really handle the variadic, so ignore it. */
@@ -350,6 +348,8 @@
 /* -----------------------------------------------------------------------
    auth parameter set/get
 */
+
+/* set */
 %typemap(python, in) const void *value {
     if (PyString_Check($input)) {
         $1 = (void *)PyString_AS_STRING($input);
@@ -366,7 +366,39 @@
     }
 }
 
+/*
+  - all values are converted to char*
+  - assume the first argument is Ruby object for svn_auth_baton_t*
+*/
+%typemap(ruby, in) const void *value
+{
+  if (NIL_P($input)) {
+    $1 = (void *)NULL;
+  } else {
+    VALUE _rb_pool;
+    apr_pool_t *_global_pool;
+    char *value = StringValuePtr($input);
+
+    svn_swig_rb_get_pool(1, argv, Qnil, &_rb_pool, &_global_pool);
+    $1 = (void *)apr_pstrdup(_global_pool, value);
+  }
+}
+
+/* get */
+/* assume the value is char* */
+%typemap(ruby, out) const void *
+{
+  char *value = $1;
+  if (value) {
+    $result = rb_str_new2(value);
+  } else {
+    $result = Qnil;
+  }
+}
+
+#ifndef SWIGRUBY
 %ignore svn_auth_get_parameter;
+#endif
 
 /* -----------------------------------------------------------------------
    describe how to pass a FILE* as a parameter (svn_stream_from_stdio)
@@ -424,17 +456,27 @@ apr_status_t apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
 
 apr_pool_t *current_pool;
 
+#if SWIG_VERSION <= 0x10324
+%{
+#define SVN_SWIGEXPORT(t) SWIGEXPORT(t)
+%}
+#else
+%{
+#define SVN_SWIGEXPORT(t) SWIGEXPORT t
+%}
+#endif
+
 %{
 
 static apr_pool_t *current_pool = 0;
 
-SWIGEXPORT(apr_pool_t *)
+SVN_SWIGEXPORT(apr_pool_t *)
 svn_swig_pl_get_current_pool (void)
 {
   return current_pool;
 }
 
-SWIGEXPORT(void)
+SVN_SWIGEXPORT(void)
 svn_swig_pl_set_current_pool (apr_pool_t *pool)
 {
   current_pool = pool;
@@ -531,6 +573,8 @@ PyObject *svn_swig_py_exception_type(void);
 %include svn_auth.h
 %include svn_config.h
 %include svn_version.h
+%include svn_utf.h
+%include svn_nls.h
 
 
 /* SWIG won't follow through to APR's defining this to be empty, so we
@@ -557,54 +601,38 @@ SubversionException = _core.SubversionException
 #endif
 
 #ifdef SWIGRUBY
+/* Dummy declaration */
+struct apr_pool_t 
+{
+};
+
+/* Leave memory administration to ruby's GC */
+%extend apr_pool_t
+{
+  apr_pool_t(apr_pool_t *parent=NULL, apr_allocator_t *allocator=NULL) {
+    /* Disable parent pool. */
+    return svn_pool_create_ex(NULL, NULL);
+  }
+
+  ~apr_pool_t() {
+    apr_pool_destroy(self);
+  }
+};
+
 %include svn_diff.h
-%rename(svn_stream_read) svn_stream_read_;
-%rename(svn_stream_write) svn_stream_write_;
-%rename(svn_stream_close) svn_stream_close_;
+
 %inline %{
-svn_error_t *
-svn_stream_read_ (svn_stream_t *stream, char *buffer,
-                 apr_size_t *len, apr_pool_t *pool)
+static VALUE
+svn_default_charset(void)
 {
-  if (NIL_P(pool)) {
-    rb_raise(rb_eArgError, "pool must be not nil");
-  }
-  return svn_stream_read(stream, buffer, len);
+  return INT2NUM((int)APR_DEFAULT_CHARSET);
 }
-svn_error_t *
-svn_stream_write_ (svn_stream_t *stream, const char *data,
-                    apr_size_t *len, apr_pool_t *pool)
+ 
+static VALUE
+svn_locale_charset(void)
 {
-  if (NIL_P(pool)) {
-    rb_raise(rb_eArgError, "pool must be not nil");
-  }
-  return svn_stream_write(stream, data, len);
-}
-svn_error_t *
-svn_stream_close_ (svn_stream_t *stream, apr_pool_t *pool)
-{
-  if (NIL_P(pool)) {
-    rb_raise(rb_eArgError, "pool must be not nil");
-  }
-  return svn_stream_close(stream);
+  return INT2NUM((int)APR_LOCALE_CHARSET);
 }
 %}
-REMOVE_DESTRUCTOR(svn_error_t)
-REMOVE_DESTRUCTOR(svn_dirent_t)
-REMOVE_DESTRUCTOR(svn_prop_t)
-REMOVE_DESTRUCTOR(svn_log_changed_path_t)
-REMOVE_DESTRUCTOR(svn_version_checklist_t)
-REMOVE_DESTRUCTOR(svn_opt_subcommand_desc_t)
-REMOVE_DESTRUCTOR(svn_opt_revision_t)
-REMOVE_DESTRUCTOR(svn_opt_revision_t_value)
-REMOVE_DESTRUCTOR(svn_auth_provider_t)
-REMOVE_DESTRUCTOR(svn_auth_provider_object_t)
-REMOVE_DESTRUCTOR(svn_auth_cred_simple_t)
-REMOVE_DESTRUCTOR(svn_auth_cred_username_t)
-REMOVE_DESTRUCTOR(svn_auth_cred_ssl_client_cert_t)
-REMOVE_DESTRUCTOR(svn_auth_cred_ssl_client_cert_pw_t)
-REMOVE_DESTRUCTOR(svn_auth_ssl_server_cert_info_t)
-REMOVE_DESTRUCTOR(svn_auth_cred_ssl_server_trust_t)
-REMOVE_DESTRUCTOR(svn_diff_fns_t)
-REMOVE_DESTRUCTOR(svn_diff_output_fns_t)
+
 #endif

@@ -107,6 +107,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Mon Jun 13 2005 David Summers <david@summersoft.fay.ar.us> r15049
+- Fix breakage that *only* occurs on release build (noticed on 1.2.0).
+
 * Sat Apr 30 2005 David Summers <david@summersoft.fay.ar.us> r14530
 - Make backend regression tests explicit and make sure we do them for both BDB
   and FSFS backends.
@@ -381,28 +384,6 @@ sh autogen.sh
 
 # Fix up mod_dav_svn installation.
 patch -p1 < packages/rpm/redhat-7.x/install.patch
-
-# Figure out version and release number for command and documentation display.
-case "%{release}" in
-   1)
-      # Build an official release
-      RELEASE_NAME="%{version}"
-      ;;
-   alpha*|beta*|gamma*)
-      # Build an alpha, beta, gamma release.
-      RELEASE_NAME="%{version} (%{release})"
-      ;;
-   *)
-      # Build a working copy release
-      RELEASE_NAME="%{version} (dev build, r%{release})"
-      ;;
-esac
-export RELEASE_NAME
-vsn_file="subversion/include/svn_version.h"
-sed -e \
- "/#define SVN_VERSION/s/SVN_VER_NUM.*$/\"${RELEASE_NAME}\"/" \
-  < "$vsn_file" > "${vsn_file}.tmp"
-mv "${vsn_file}.tmp" "$vsn_file"
 
 # Delete apr, apr-util, and neon from the tree as those packages should already
 # be installed.

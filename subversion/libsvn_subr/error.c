@@ -437,7 +437,7 @@ svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
   for (defn = error_table; defn->errdesc != NULL; ++defn)
     if (defn->errcode == (svn_errno_t)statcode)
       {
-        apr_cpystrn (buf, dgettext (PACKAGE_NAME, defn->errdesc), bufsize);
+        apr_cpystrn (buf, _(defn->errdesc), bufsize);
         return buf;
       }
 

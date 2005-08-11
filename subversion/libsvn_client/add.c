@@ -86,7 +86,8 @@ trim_string (char **pstr)
 static svn_boolean_t
 auto_props_enumerator (const char *name,
                        const char *value,
-                       void *baton)
+                       void *baton,
+                       apr_pool_t *pool)
 {
   auto_props_baton_t *autoprops = baton;
   char *property;
@@ -168,8 +169,8 @@ svn_client__get_auto_props (apr_hash_t **properties,
 
   /* search for auto props */
   if (use_autoprops)
-    svn_config_enumerate (cfg, SVN_CONFIG_SECTION_AUTO_PROPS,
-                          auto_props_enumerator, &autoprops);
+    svn_config_enumerate2 (cfg, SVN_CONFIG_SECTION_AUTO_PROPS,
+                           auto_props_enumerator, &autoprops, pool);
 
   /* if mimetype has not been set check the file */
   if (! autoprops.mimetype)

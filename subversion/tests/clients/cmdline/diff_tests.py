@@ -146,7 +146,8 @@ def diff_check_repo_subset(wc_dir, repo_subset, check_fn, do_diff_r):
 
 def update_a_file():
   "update a file"
-  svntest.main.file_append(os.path.join('A', 'B', 'E', 'alpha'), "new atext")
+  open(os.path.join('A', 'B', 'E', 'alpha'), 'w').write("new atext")
+  # svntest.main.file_append(, "new atext")
   return 0
 
 def check_update_a_file(diff_output):
@@ -268,9 +269,9 @@ def check_replace_a_file(diff_output):
 
 def update_three_files():
   "update three files"
-  svntest.main.file_append(os.path.join('A', 'D', 'gamma'), "new gamma")
-  svntest.main.file_append(os.path.join('A', 'D', 'G', 'tau'), "new tau")
-  svntest.main.file_append(os.path.join('A', 'D', 'H', 'psi'), "new psi")
+  open(os.path.join('A', 'D', 'gamma'), 'w').write("new gamma")
+  open(os.path.join('A', 'D', 'G', 'tau'), 'w').write("new tau")
+  open(os.path.join('A', 'D', 'H', 'psi'), 'w').write("new psi")
   return 0
 
 def check_update_three_files(diff_output):
@@ -834,7 +835,7 @@ def diff_base_to_repos(sbox):
   mu_path = os.path.join(sbox.wc_dir, 'A', 'mu')
 
   # Make changes to iota, commit r2, update to HEAD (r2).
-  svntest.main.file_append(iota_path, "some rev2 iota text.")
+  svntest.main.file_append(iota_path, "some rev2 iota text.\n")
 
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(verb='Sending'),
@@ -851,13 +852,14 @@ def diff_base_to_repos(sbox):
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak ('iota',
-                       contents="This is the file 'iota'.some rev2 iota text.")
+                       contents=\
+                       "This is the file 'iota'.\nsome rev2 iota text.\n")
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status)
   
   # Now make another local mod to iota.
-  svntest.main.file_append(iota_path, "an iota local mod.")
+  svntest.main.file_append(iota_path, "an iota local mod.\n")
 
   # If we run 'svn diff -r 1', we should see diffs that include *both*
   # the rev2 changes and local mods.  That's because the working files
@@ -865,12 +867,22 @@ def diff_base_to_repos(sbox):
   diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                         'diff',
                                                         '-r', '1', wc_dir)
-  line1 = "+This is the file 'iota'.some rev2 iota text.an iota local mod.\n"
 
-  for line in diff_output:
-    if (line == line1):
-      break
-  else:
+  # Makes diff output look the same on all platforms.
+  def strip_eols(lines):
+    return [x.replace("\r", "").replace("\n", "") for x in lines]
+
+  expected_output_lines = [
+    "Index: svn-test-work/working_copies/diff_tests-14/iota\n",
+    "===================================================================\n",
+    "--- svn-test-work/working_copies/diff_tests-14/iota\t(revision 1)\n",
+    "+++ svn-test-work/working_copies/diff_tests-14/iota\t(working copy)\n",
+    "@@ -1 +1,3 @@\n",
+    " This is the file 'iota'.\n",
+    "+some rev2 iota text.\n",
+    "+an iota local mod.\n"]
+
+  if strip_eols(diff_output) != strip_eols(expected_output_lines):
     raise svntest.Failure
 
   # If we run 'svn diff -r BASE:1', we should see diffs that only show
@@ -879,12 +891,16 @@ def diff_base_to_repos(sbox):
   diff_output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                         'diff', '-r', 'BASE:1',
                                                         wc_dir)
-  line1 = "-This is the file 'iota'.some rev2 iota text.\n"
+  expected_output_lines = [
+    "Index: svn-test-work/working_copies/diff_tests-14/iota\n",
+    "===================================================================\n",
+    "--- svn-test-work/working_copies/diff_tests-14/iota\t(working copy)\n",
+    "+++ svn-test-work/working_copies/diff_tests-14/iota\t(revision 1)\n",
+    "@@ -1,2 +1 @@\n",
+    " This is the file 'iota'.\n",
+    "-some rev2 iota text.\n"]
 
-  for line in diff_output:
-    if (line == line1):
-      break
-  else:
+  if strip_eols(diff_output) != strip_eols(expected_output_lines):
     raise svntest.Failure
 
   # But that's not all folks... no, no, we're just getting started
@@ -920,7 +936,7 @@ def diff_base_to_repos(sbox):
     raise svntest.Failure
 
   # Now we schedule an addition and a deletion.
-  svntest.main.file_append(newfile_path, "Contents of newfile")
+  svntest.main.file_append(newfile_path, "Contents of newfile\n")
   svntest.main.run_svn(None, 'add', newfile_path)
   svntest.main.run_svn(None, 'rm', mu_path)
 
@@ -983,8 +999,9 @@ def diff_base_to_repos(sbox):
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota',
-                      contents="This is the file 'iota'.some rev2 iota text.an iota local mod.")
-  expected_disk.add({'A/D/newfile' : Item("Contents of newfile")})
+                      contents="This is the file 'iota'.\n" + \
+                      "some rev2 iota text.\nan iota local mod.\n")
+  expected_disk.add({'A/D/newfile' : Item("Contents of newfile\n")})
   expected_disk.remove ('A/mu')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
@@ -1036,7 +1053,7 @@ def diff_deleted_in_head(sbox):
   mu_path = os.path.join(sbox.wc_dir, 'A', 'mu')
 
   # Make a change to mu, commit r2, update.
-  svntest.main.file_append(mu_path, "some rev2 mu text.")
+  svntest.main.file_append(mu_path, "some rev2 mu text.\n")
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu' : Item(verb='Sending'),
@@ -1052,7 +1069,7 @@ def diff_deleted_in_head(sbox):
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak ('A/mu',
-                       contents="This is the file 'mu'.some rev2 mu text.")
+                       contents="This is the file 'mu'.\nsome rev2 mu text.\n")
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status)
@@ -1461,7 +1478,7 @@ def diff_renamed_file(sbox):
   os.chdir(sbox.wc_dir)
 
   
-  svntest.main.file_append(os.path.join('A', 'D', 'G', 'pi'), "more pi")
+  open(os.path.join('A', 'D', 'G', 'pi'), 'w').write("new pi")
   
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg')
@@ -1541,7 +1558,7 @@ def diff_within_renamed_dir(sbox):
   svntest.main.run_svn(None, 'mv', os.path.join('A', 'D', 'G'),
                                    os.path.join('A', 'D', 'I'))
   # svntest.main.run_svn(None, 'ci', '-m', 'log_msg')
-  svntest.main.file_append(os.path.join('A', 'D', 'I', 'pi'), "new pi")
+  open(os.path.join('A', 'D', 'I', 'pi'), 'w').write("new pi")
 
   # Check a repos->wc diff
   diff_output, err_output = svntest.main.run_svn(None, 'diff',

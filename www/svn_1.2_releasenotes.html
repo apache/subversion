@@ -44,12 +44,12 @@ book, see
 <p>Subversion 1.2 is available as source code in three formats:</p>
 
 <ul>
-<li><a href="http://subversion.tigris.org/downloads/subversion-1.2.0.tar.gz"
-    >subversion-1.2.0.tar.gz</a>
-<li><a href="http://subversion.tigris.org/downloads/subversion-1.2.0.tar.bz2"
-    >subversion-1.2.0.tar.bz2</a>
-<li><a href="http://subversion.tigris.org/downloads/subversion-1.2.0.zip"
-    >subversion-1.2.0.zip</a>&nbsp;(Windows)
+<li><a href="http://subversion.tigris.org/downloads/subversion-1.2.1.tar.gz"
+    >subversion-1.2.1.tar.gz</a></li>
+<li><a href="http://subversion.tigris.org/downloads/subversion-1.2.1.tar.bz2"
+    >subversion-1.2.1.tar.bz2</a></li>
+<li><a href="http://subversion.tigris.org/downloads/subversion-1.2.1.zip"
+    >subversion-1.2.1.zip</a>&nbsp;(Windows)</li>
 </ul>
 
 <p>For binary packages, please see <a
@@ -75,7 +75,10 @@ be available unless both client and server are the latest version.
 There is <strong>no need</strong> to upgrade your repositories;
 Subversion 1.2 can read repositories created by earlier versions.  To
 upgrade an existing installation, just install the newest libraries
-and binaries on top of the older ones.</p>
+and binaries on top of the older ones. (<em>WARNING:</em> if you're
+using Berkeley DB repositories, installing a new binary distribution
+of Subversion may force you to upgrade Berkeley DB as well, see
+<a href="#bdb-upgrade">Unexpected Berkeley DB Upgrades</a> below.)</p>
 
 <p>Subversion 1.2 maintains API/ABI compatibility with earlier
 releases, by only adding new functions.  A program written to the 1.0
@@ -122,6 +125,12 @@ package.  If this happens to you, you will need
 to <a href="faq.html#bdb43-upgrade">upgrade existing BerkeleyDB-based
 repositories to 4.3.</a></p>
 
+<p>In particular,
+the <a
+href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91">latest
+Windows binary distributions</a> of svn 1.2 (from Branko Cibej) now
+use Berkeley DB 4.3.  Please be warned!</p>
+
 </div>
 
 </div>
@@ -129,44 +138,17 @@ repositories to 4.3.</a></p>
 <div class="h2" id="known-bugs" title="known-bugs">
 <h2>Known Bugs</h2>
 
-<p>There are a few minor bugs related to the new 1.2 features. Expect
-fixes for these in Subversion 1.2.1:</p>
+<p>Subversion 1.2.1 fixes several bugs in svn 1.2.0, see
+  the <a
+  href="http://subversion.tigris.org/servlets/NewsItemView?newsItemID=1202">
+  1.2.1 announcement</a> file for details.</p>
 
-<ul>
-
-<li><p>'svn lock path1 path2' can cause an assertion failure under
-    certain circumstances.<br />
-    Fixed in 
-    <a href="http://svn.collab.net/viewcvs/svn?rev=14736&amp;view=rev"
-    >r14736</a>+<a
-    href="http://svn.collab.net/viewcvs/svn?rev=14775&amp;view=rev">r14775</a>,
-    and proposed for backport to the 1.2.1 line.</p></li>
-
-<li><p>'svn switch' doesn't remove read-only attribute when removing
-     svn:needs-lock property.<br />
-     See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2306"
-      >Issue&nbsp;#2306</a>.</p></li>
-
-<li><p>'svn lock' on a switched file is broken&nbsp;&mdash;&nbsp;it will
-    lock the wrong repository object.<br />
-    See <a
-    href="http://subversion.tigris.org/issues/show_bug.cgi?id=2307"
-    >Issue&nbsp;#2307</a>.</p></li>
-
-<li><p>Speed improvements for new 'svn log --limit' feature.<br />
-    Completed in 
-    <a href="http://svn.collab.net/viewcvs/svn?rev=14116&amp;view=rev"
-    >r14116</a>+<a
-    href="http://svn.collab.net/viewcvs/svn?rev=14722&amp;view=rev"
-    >r14722</a>+<a
-    href="http://svn.collab.net/viewcvs/svn?rev=14759&amp;view=rev">r14759</a>,
-    and proposed for backport to the 1.2.1 line.</p></li>
-
-<li><p>'svnversion' might error trying to link to libsvn_ra libraries<br />
-     Fixed in <a
-     href="http://svn.collab.net/viewcvs/svn?rev=14755&amp;view=rev">r14755</a>
-     and proposed for backport to the 1.2.1 line.</p></li>
-</ul>
+<p>As bugs are fixed in /trunk (the future svn 1.3), they will
+  continue to be backported to the 1.2 line for future 1.2.x
+  releases.  Here is
+  the <a
+  href="http://subversion.tigris.org/issues/buglist.cgi?component=subversion&amp;issue_status=UNCONFIRMED&amp;issue_status=NEW&amp;issue_status=STARTED&amp;issue_status=REOPENED">list
+  of open issues</a>.</p>
 
 </div>
 
@@ -189,57 +171,12 @@ means to force serialized write-access to a file.  Second, provide a
 communication mechanism to prevent users from wasting time on
 unmergable changes.</p>
 
-<p>The first goal is accomplished by two new commands: <tt>svn
-lock</tt> and <tt>svn unlock</tt>.  When a user locks a file, no other
-user may commit a change to the file or delete it from the repository.
-The lock exists as a piece of metadata both managed and enforced by
-the repository.  The working copy caches a lock-token which represents
-the repository lock.  The lock-token is an authorization credential
-which (along with normal user authentication) gives the user an
-exclusive right to commit changes to the file.  By default, the
-<tt>svn commit</tt> command releases any locks it discovers in the
-working copy, although this behavior can be customized.</p>
-
-<p>Locks are discoverable and examinable.  <tt>svn status</tt> shows
-any lock-tokens cached in the working copy, and <tt>svn status -u</tt>
-shows information about other locks in the repository.  The <tt>svn
-info</tt> command now works on both working-copy paths and URLs, and
-shows the detailed fields of a lock: who made the lock, when it was
-made, and any associated comment.  On the server, scripts can examine
-a lock directly via <tt>svnlook lock</tt>.</p>
-
-<p>Locks can be stolen or broken by using the <tt>--force</tt> option
-with <tt>svn lock</tt> or <tt>svn unlock</tt>.  Using the new
-<tt>pre-lock</tt> and <tt>pre-unlock</tt> repository hooks,
-administrators are free to enforce custom policies regarding breaking
-and stealing locks.  (In fact, the entire locking feature can be
-completely disabled by making <tt>pre-lock</tt> always return
-failure.)  There are also new <tt>post-lock</tt> and
-<tt>post-unlock</tt> hooks which can be used to send announcement
-emails about locks.  Administrators can forcibly find and destroy
-locks with the new <tt>svnadmin lslocks</tt> and <tt>svnadmin
-rmlocks</tt> commands.  If a lock no longer exists in the repository,
-<tt>svn update</tt> will remove a corresponding "defunct" lock-token
-from the working copy.</p>
-
-<p>The second goal &mdash; preventing a user from wasting time on an
-unmergable change &mdash; is accomplished via a new property,
-<tt>svn:needs-lock</tt>.  Users (or administrators) are encouraged to
-set this property on any file that is unmergeable.  When present, this
-property causes the file to be read-only <em>unless</em> the working
-copy holds a lock-token for the file, in which case the file is
-read-write.  The theory is that the default read-only state will
-remind users to lock the file before attempting edits.  Note that
-while this system is effective, it can never be perfect; there's
-nothing Subversion can do to prevent a rogue application from forcibly
-"hijacking" the file and changing the permissions to read-write.</p>
-
-<p>Until the Subversion book documents this feature more carefully,
-you can see more details in the original <a
-href="http://svn.collab.net/repos/svn/trunk/notes/locking/locking-functional-spec.txt">functional
-specification</a> and <a
-href="http://svn.collab.net/repos/svn/trunk/notes/locking/locking-ui.txt">UI
-specification</a> documents.</p>
+<p>This feature is now documented in the nightly build of the svn 1.2
+book,
+available <a
+href="http://svnbook.red-bean.com/nightly/en/svn.advanced.locking.html">here</a>.
+(Note that this link is temporary; when the 1.2 book is finished, the
+URL may change.)</p>
 
 <p><strong>Warning</strong>: if locks are in use in a repository, 
 then a pre-1.2 libsvn_fs library won't see or enforce them.  This is
@@ -292,6 +229,14 @@ clients may result in lots of small commits.  A DAV client may seem to
 be saving a file, but is in fact performing several write operations
 under the hood, each resulting in a separate commit.  Experiences may
 vary.</p>
+
+<p>This feature is now documented in the nightly build of the svn 1.2
+book,
+available <a
+href="http://svnbook.red-bean.com/nightly/en/svn.webdav.html">here</a>.
+(Note that this link is temporary; when the 1.2 book is finished, the
+URL may change.)</p>
+
 
 </div>
 

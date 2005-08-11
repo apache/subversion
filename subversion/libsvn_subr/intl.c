@@ -29,6 +29,7 @@
 #include <libintl.h> /* for dgettext */
 
 #include "svn_intl.h"
+#include "svn_nls.h" /* for svn_nls_init */
 #include "svn_error.h"
 #include "svn_private_config.h" /* for SVN_LOCALE_DIR */
 
@@ -120,69 +121,11 @@ svn_intl_initialize (apr_pool_t *parent_pool)
                                    "is correct", *env_var, env_val);
         }
 
-#ifdef ENABLE_NLS
-#ifdef WIN32
-        {
-          WCHAR ucs2_path[MAX_PATH];
-          char* utf8_path;
-          const char* internal_path;
-          apr_pool_t* pool;
-          apr_status_t apr_err;
-          apr_size_t inwords, outbytes, outlength;
-
-          apr_pool_create (&pool, 0);
-          /* get exe name - our locale info will be in '../share/locale' */
-          inwords = GetModuleFileNameW (0, ucs2_path, sizeof (ucs2_path) /
-                                        sizeof (ucs2_path[0]));
-          if (! inwords)
-            {
-              /* We must be on a Win9x machine, so attempt to get an ANSI path,
-                 and convert it to Unicode. */
-              CHAR ansi_path[MAX_PATH];
-
-              if (! GetModuleFileNameA (0, ansi_path, sizeof (ansi_path)))
-                goto utf8_error;
-
-              inwords = 
-                MultiByteToWideChar (CP_ACP, 0, ansi_path, -1, ucs2_path,
-                                     sizeof (ucs2_path) /
-                                     sizeof (ucs2_path[0]));
-              if (! inwords)
-                goto utf8_error;
-            }
-
-          outbytes = outlength = 3 * (inwords + 1);
-          utf8_path = apr_palloc (pool, outlength);
-          apr_err = apr_conv_ucs2_to_utf8 (ucs2_path, &inwords,
-                                           utf8_path, &outbytes);
-          if (!apr_err && (inwords > 0 || outbytes == 0))
-            apr_err = APR_INCOMPLETE;
-          if (apr_err)
-            {
-            utf8_error:
-              if (error_stream)
-                fprintf (error_stream, "Can't convert module path to UTF-8");
-              return EXIT_FAILURE;
-            }
-
-          utf8_path[outlength - outbytes] = '\0';
-          internal_path = svn_path_internal_style (utf8_path, pool);
-          /* get base path name */
-          internal_path = svn_path_dirname (internal_path, pool);
-          internal_path = svn_path_join (internal_path,
-                                         SVN_LOCALE_RELATIVE_PATH,
-                                         pool);
-          bindtextdomain (PACKAGE_NAME, internal_path);    
-          apr_pool_destroy (pool);
-        }
-#else
-      bindtextdomain(PACKAGE_NAME, SVN_LOCALE_DIR);
-#ifdef HAVE_BIND_TEXTDOMAIN_CODESET
-      bind_textdomain_codeset(PACKAGE_NAME, "UTF-8");
-#endif
-#endif
-      textdomain(PACKAGE_NAME);
-#endif
+      /* ### We used to in-line the code which composes
+         ### svn_nls_init(), but it was modified while we were
+         ### branched off of the trunk.  For the time being, delegate.
+         ### Later, the nls and intl modules may need to merge. */
+      return svn_nls_init();
     }
 
   return SVN_NO_ERROR;

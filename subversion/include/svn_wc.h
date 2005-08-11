@@ -1579,8 +1579,7 @@ svn_wc_status_t *svn_wc_dup_status (svn_wc_status_t *orig_stat,
 
 
 /**
- * Fill @a *status for @a path, allocating in @a pool, with the exception 
- * of the @c repos_rev field, which is normally filled in by the caller.
+ * Fill @a *status for @a path, allocating in @a pool.
  * @a adm_access must be an access baton for @a path.
  *
  * Here are some things to note about the returned structure.  A quick
@@ -1666,9 +1665,7 @@ typedef void (*svn_wc_status_func_t) (void *baton,
  *
  * If the editor driver calls @a editor's set_target_revision() vtable
  * function, then when the edit drive is completed, @a *edit_revision
- * will contain the revision delivered via that interface, and any
- * status items reported during the drive will have their @c repos_rev
- * field set to this same revision.
+ * will contain the revision delivered via that interface.
  *
  * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c
  * svn_config_t's.
@@ -2346,7 +2343,7 @@ svn_error_t *svn_wc_get_switch_editor2 (svn_revnum_t *target_revision,
  * Similar to svn_wc_get_switch_editor2(), but takes an
  * @c svn_wc_notify_func_t instead.
  *
- * @deprecated Provided for backward compatibility with the 1.2 API.
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *svn_wc_get_switch_editor (svn_revnum_t *target_revision,
                                        svn_wc_adm_access_t *anchor,
@@ -2730,9 +2727,11 @@ svn_error_t *svn_wc_merge (const char *left,
                            apr_pool_t *pool);
 
 
-/** Given a @a path under version control, merge an array of @a propchanges
- * into the path's existing properties.  @a propchanges is an array of
- * @c svn_prop_t objects.  @a adm_access is an access baton for the directory
+/** Given a @a path under version control, merge an array of @a
+ * propchanges into the path's existing properties.  @a propchanges is
+ * an array of @c svn_prop_t objects, and @a baseprops is a hash
+ * representing the original set of properties that @a propchanges is
+ * working against.  @a adm_access is an access baton for the directory
  * containing @a path.
  *
  * If @a base_merge is @c FALSE only the working properties will be changed,
@@ -2749,6 +2748,28 @@ svn_error_t *svn_wc_merge (const char *left,
  *
  * If @a path is not under version control, return the error
  * SVN_ERR_UNVERSIONED_RESOURCE and don't touch anyone's properties.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_wc_merge_props (svn_wc_notify_state_t *state,
+                    const char *path,
+                    svn_wc_adm_access_t *adm_access,
+                    apr_hash_t *baseprops,
+                    const apr_array_header_t *propchanges,
+                    svn_boolean_t base_merge,
+                    svn_boolean_t dry_run,
+                    apr_pool_t *pool);
+
+
+/** 
+ * Similar to svn_wc_merge_props(), but no baseprops are given.
+ * Instead, it's assumed that the incoming propchanges are based
+ * against the working copy's own baseprops.  While this assumption is
+ * correct for 'svn update', it's incorrect for 'svn merge', and can
+ * cause flawed behavior.  (See issue #2035.)
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
 svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,

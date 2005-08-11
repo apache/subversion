@@ -127,7 +127,7 @@ static svn_error_t *send_mechs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                server_baton_t *b, enum access_type required,
                                svn_boolean_t needs_username)
 {
-  if (get_access(b, UNAUTHENTICATED) >= required)
+  if (!needs_username && get_access(b, UNAUTHENTICATED) >= required)
     SVN_ERR(svn_ra_svn_write_word(conn, pool, "ANONYMOUS"));
   if (b->tunnel_user && get_access(b, AUTHENTICATED) >= required)
     SVN_ERR(svn_ra_svn_write_word(conn, pool, "EXTERNAL"));
@@ -752,11 +752,11 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   ccb.date = &date;
   ccb.author = &author;
   /* ### Note that svn_repos_get_commit_editor actually wants a decoded URL. */
-  SVN_CMD_ERR(svn_repos_get_commit_editor2
+  SVN_CMD_ERR(svn_repos_get_commit_editor3
               (&editor, &edit_baton, b->repos, NULL,
                svn_path_uri_decode(b->repos_url, pool),
                b->fs_path, b->user,
-               log_msg, commit_done, &ccb, pool));
+               log_msg, commit_done, &ccb, NULL, NULL, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   SVN_ERR(svn_ra_svn_drive_editor(conn, pool, editor, edit_baton, &aborted));
   if (!aborted)
@@ -1407,6 +1407,82 @@ static svn_error_t *lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                              apr_array_header_t *params, void *baton)
+{
+  server_baton_t *b = baton;
+  apr_array_header_t *locks, *lock_cmds;
+  const char *comment;
+  svn_boolean_t force;
+  int i;
+  apr_pool_t *subpool;
+  struct lock_cmd {
+    const char *path;
+    const char *full_path;
+    svn_revnum_t current_rev;
+    svn_lock_t *l;
+  };
+
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?c)bl", &comment, &force,
+                                 &locks));
+
+  subpool = svn_pool_create(pool);
+  lock_cmds = apr_array_make(pool, locks->nelts, sizeof(struct lock_cmd));
+
+  /* Loop through the lock commands. */
+  for (i = 0; i < locks->nelts; ++i)
+    {
+      struct lock_cmd *cmd = apr_pcalloc(pool, sizeof(struct lock_cmd));
+      svn_ra_svn_item_t *item = &APR_ARRAY_IDX(locks, i, svn_ra_svn_item_t);
+
+      svn_pool_clear(subpool);
+
+      if (item->kind != SVN_RA_SVN_LIST)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                "Lock commands should be list of lists\n");
+
+      SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "c(?r)",
+                                     &cmd->path, &cmd->current_rev));
+
+      cmd->full_path = svn_path_join(b->fs_path,
+                                     svn_path_canonicalize(cmd->path, subpool),
+                                     pool);
+
+      APR_ARRAY_PUSH(lock_cmds, struct lock_cmd) = *cmd;
+    }
+
+  SVN_ERR(must_have_write_access(conn, pool, b, TRUE));
+
+  /* Loop through each path to be locked. */
+  for (i = 0; i < lock_cmds->nelts; i++)
+    {
+      struct lock_cmd *cmd = &APR_ARRAY_IDX(lock_cmds, i, struct lock_cmd);
+
+      SVN_CMD_ERR(svn_repos_fs_lock(&cmd->l, b->repos, cmd->full_path,
+                                    NULL, comment, 0,
+                                    0, /* No expiration time. */
+                                    cmd->current_rev,
+                                    force, pool));
+    }
+
+  /* (success( (ccc(?c)c(?c) ... )) */
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(!", "success"));
+
+  for (i = 0; i < lock_cmds->nelts; i++)
+    {
+      struct lock_cmd *cmd = &APR_ARRAY_IDX(lock_cmds, i, struct lock_cmd);
+
+      svn_pool_clear(subpool);
+      SVN_ERR(write_lock(conn, subpool, cmd->l));
+    }
+
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)"));
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *unlock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                            apr_array_header_t *params, void *baton)
 {
@@ -1426,6 +1502,70 @@ static svn_error_t *unlock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_CMD_ERR(svn_repos_fs_unlock(b->repos, full_path, token, force, pool));
 
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                apr_array_header_t *params, void *baton)
+{
+  server_baton_t *b = baton;
+  svn_boolean_t force;
+  apr_array_header_t *unlock_tokens, *unlock_cmds;
+  int i;
+  apr_pool_t *subpool;
+  struct unlock_cmd {
+    const char *path;
+    const char *full_path;
+    const char *token;
+  };
+
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "bl", &force, &unlock_tokens));
+
+  unlock_cmds =
+    apr_array_make(pool, unlock_tokens->nelts, sizeof(struct unlock_cmd));
+
+  subpool = svn_pool_create(pool);
+  /* Loop through the unlock commands. */
+  for (i = 0; i < unlock_tokens->nelts; i++)
+    {
+      struct unlock_cmd *cmd = apr_pcalloc(pool, sizeof(struct unlock_cmd));
+      svn_ra_svn_item_t *item = &APR_ARRAY_IDX(unlock_tokens, i,
+                                               svn_ra_svn_item_t);
+
+      svn_pool_clear(subpool);
+
+      if (item->kind != SVN_RA_SVN_LIST)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                "Unlock command should be a list of lists\n");
+
+      SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "c(?c)",
+                                     &cmd->path, &cmd->token));
+
+      cmd->full_path = svn_path_join(b->fs_path,
+                                     svn_path_canonicalize(cmd->path, subpool),
+                                     pool);
+
+      APR_ARRAY_PUSH(unlock_cmds, struct unlock_cmd) = *cmd;
+    }
+
+  /* Username required unless force was specified. */
+  SVN_ERR(must_have_write_access(conn, pool, b, ! force));
+
+  /* Loop through each path to be unlocked. */
+  for (i = 0; i < unlock_cmds->nelts; i++)
+    {
+      struct unlock_cmd *cmd = &APR_ARRAY_IDX(unlock_cmds, i,
+                                              struct unlock_cmd);
+
+      svn_pool_clear(subpool);
+      SVN_CMD_ERR(svn_repos_fs_unlock(b->repos, cmd->full_path,
+                                      cmd->token, force, subpool));
+    }
+
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
+
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
@@ -1509,7 +1649,9 @@ static const svn_ra_svn_cmd_entry_t main_commands[] = {
   { "get-locations",   get_locations },
   { "get-file-revs",   get_file_revs },
   { "lock",            lock },
+  { "lock-many",       lock_many },
   { "unlock",          unlock },
+  { "unlock-many",     unlock_many },
   { "get-lock",        get_lock },
   { "get-locks",       get_locks },
   { NULL }

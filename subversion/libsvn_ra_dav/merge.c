@@ -2,7 +2,7 @@
  * merge.c :  routines for performing a MERGE server requests
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -550,39 +550,51 @@ svn_error_t * svn_ra_dav__assemble_locktoken_body(svn_stringbuf_t **body,
   apr_size_t buf_size;
   const char *closing_tag = "</S:lock-token-list>";
   apr_size_t closing_tag_size = strlen(closing_tag);
-  svn_stringbuf_t *lockbuf = 
-    svn_stringbuf_create
-    ("<S:lock-token-list xmlns:S=\"" SVN_XML_NAMESPACE "\">", pool);
+  apr_pool_t *tmppool = svn_pool_create(pool);
+  apr_hash_t *xml_locks = apr_hash_make(tmppool);
+  svn_stringbuf_t *lockbuf = svn_stringbuf_create
+    ("<S:lock-token-list xmlns:S=\"" SVN_XML_NAMESPACE "\">" DEBUG_CR, pool);
 
   buf_size = lockbuf->len;
 
-#define SVN_LOCK "<S:lock>"
+#define SVN_LOCK "<S:lock>" DEBUG_CR
 #define SVN_LOCK_LEN sizeof(SVN_LOCK)-1
-#define SVN_LOCK_CLOSE "</S:lock>"
+#define SVN_LOCK_CLOSE "</S:lock>" DEBUG_CR
 #define SVN_LOCK_CLOSE_LEN sizeof(SVN_LOCK_CLOSE)-1
 #define SVN_LOCK_PATH "<S:lock-path>"
 #define SVN_LOCK_PATH_LEN sizeof(SVN_LOCK_PATH)-1
-#define SVN_LOCK_PATH_CLOSE "</S:lock-path>"
+#define SVN_LOCK_PATH_CLOSE "</S:lock-path>" DEBUG_CR
 #define SVN_LOCK_PATH_CLOSE_LEN sizeof(SVN_LOCK_CLOSE)-1
 #define SVN_LOCK_TOKEN "<S:lock-token>"
 #define SVN_LOCK_TOKEN_LEN sizeof(SVN_LOCK_TOKEN)-1
-#define SVN_LOCK_TOKEN_CLOSE "</S:lock-token>"
+#define SVN_LOCK_TOKEN_CLOSE "</S:lock-token>" DEBUG_CR
 #define SVN_LOCK_TOKEN_CLOSE_LEN sizeof(SVN_LOCK_TOKEN_CLOSE)-1
   
   /* First, figure out how much string data we're talking about,
      and allocate a stringbuf big enough to hold it all... we *never*
-     want have the stringbuf do an auto-reallocation.  */
-  for (hi = apr_hash_first(pool, lock_tokens); hi; hi = apr_hash_next(hi))
+     want have the stringbuf do an auto-reallocation.  While here,
+     we'll be copying our hash of paths -> tokens into a hash of
+     xml-escaped-paths -> tokens.  */
+  for (hi = apr_hash_first(tmppool, lock_tokens); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       void *val;
       apr_ssize_t klen;
-      
+      svn_string_t lock_path;
+      svn_stringbuf_t *lock_path_xml = NULL;
+
       apr_hash_this(hi, &key, &klen, &val);
+
+      /* XML-escape our key and store it in our temporary hash. */
+      lock_path.data = key;
+      lock_path.len = klen;
+      svn_xml_escape_cdata_string(&lock_path_xml, &lock_path, tmppool);
+      apr_hash_set(xml_locks, lock_path_xml->data, lock_path_xml->len, val);
       
+      /* Now, on with the stringbuf calculations. */
       buf_size += SVN_LOCK_LEN;
       buf_size += SVN_LOCK_PATH_LEN;
-      buf_size += klen;
+      buf_size += lock_path_xml->len;
       buf_size += SVN_LOCK_PATH_CLOSE_LEN;
       buf_size += SVN_LOCK_TOKEN_LEN;
       buf_size += strlen(val);
@@ -594,21 +606,22 @@ svn_error_t * svn_ra_dav__assemble_locktoken_body(svn_stringbuf_t **body,
   
   svn_stringbuf_ensure(lockbuf, buf_size + 1);
   
-  /* Now append all the hash's keys and values into the stringbuf.
-     This is better than doing apr_pstrcat() in a loop, because
-     (1) there's no need to constantly re-alloc, and (2) the
+  /* Now append all the temporary hash's keys and values into the
+     stringbuf.  This is better than doing apr_pstrcat() in a loop,
+     because (1) there's no need to constantly re-alloc, and (2) the
      stringbuf already knows the end of the buffer, so there's no
      seek-time to the end of the string when appending. */
-  for (hi = apr_hash_first(pool, lock_tokens); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(tmppool, xml_locks); hi; hi = apr_hash_next(hi))
     {
       const void *key;
+      apr_ssize_t klen;
       void *val;
       
-      apr_hash_this(hi, &key, NULL, &val);
+      apr_hash_this(hi, &key, &klen, &val);
       
       svn_stringbuf_appendcstr(lockbuf, SVN_LOCK);
       svn_stringbuf_appendcstr(lockbuf, SVN_LOCK_PATH);
-      svn_stringbuf_appendcstr(lockbuf, key);
+      svn_stringbuf_appendbytes(lockbuf, key, klen);
       svn_stringbuf_appendcstr(lockbuf, SVN_LOCK_PATH_CLOSE);
       svn_stringbuf_appendcstr(lockbuf, SVN_LOCK_TOKEN);
       svn_stringbuf_appendcstr(lockbuf, val);
@@ -632,6 +645,8 @@ svn_error_t * svn_ra_dav__assemble_locktoken_body(svn_stringbuf_t **body,
 #undef SVN_LOCK_TOKEN_CLOSE_LEN
 
   *body = lockbuf;
+
+  svn_pool_destroy(tmppool);
   return SVN_NO_ERROR;
 }
 
@@ -654,6 +669,7 @@ svn_error_t * svn_ra_dav__merge_activity(
   const char *body;
   apr_hash_t *extra_headers = NULL;
   svn_stringbuf_t *lockbuf = svn_stringbuf_create("", pool);
+  svn_error_t *err;
 
   mc.pool = pool;
   mc.scratchpool = svn_pool_create (pool);
@@ -707,15 +723,22 @@ svn_error_t * svn_ra_dav__merge_activity(
                       "</D:merge>",
                       activity_url, lockbuf->data);
 
-  SVN_ERR( svn_ra_dav__parsed_request_compat(ras->sess, "MERGE", repos_url,
-                                             body, 0, NULL, merge_elements,
-                                             validate_element, start_element,
-                                             end_element, &mc, extra_headers,
-                                             NULL, FALSE, pool) );
+  err = svn_ra_dav__parsed_request_compat(ras->sess, "MERGE", repos_url,
+                                          body, 0, NULL, merge_elements,
+                                          validate_element, start_element,
+                                          end_element, &mc, extra_headers,
+                                          NULL, FALSE, pool);
   
   /* is there an error stashed away in our context? */
-  if (mc.err != NULL)
-    return mc.err;
+  if (mc.err)
+    {
+      if (err)
+        svn_error_clear(err);
+
+      return mc.err;
+    }
+  else if (err)
+    return err;
 
   /* return some commit properties to the caller. */
   if (new_rev)

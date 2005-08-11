@@ -35,17 +35,10 @@
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_nls.h"
 #include "utf_impl.h"
 
 #include "svn_private_config.h"
-
-#ifdef WIN32
-/* FIXME: We're using an internal APR header here, which means we
-   have to build Subversion with APR sources. This being Win32-only,
-   that should be fine for now, but a better solution must be found in
-   combination with issue #850. */
-#include "arch/win32/apr_arch_utf8.h"
-#endif
 
 #define SVN_UTF_CONTOU_XLATE_HANDLE "svn-utf-contou-xlate-handle"
 #define SVN_UTF_UTOCON_XLATE_HANDLE "svn-utf-utocon-xlate-handle"
@@ -278,4 +271,16 @@ const char *svn_cmdline_output_encoding (apr_pool_t *pool)
     return apr_pstrdup (pool, output_encoding);
   else
     return APR_LOCALE_CHARSET;
+}
+
+int
+svn_cmdline_handle_exit_error (svn_error_t *err,
+                               apr_pool_t *pool,
+                               const char *prefix)
+{
+  svn_handle_error2 (err, stderr, FALSE, prefix);
+  svn_error_clear (err);
+  if (pool)
+    svn_pool_destroy (pool);
+  return EXIT_FAILURE;
 }

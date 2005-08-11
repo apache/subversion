@@ -88,9 +88,9 @@ svn_error_t *svn_wc__save_prop_file (const char *propfile_path,
                                      apr_pool_t *pool);
 
 
-/* Given ADM_ACCESS/NAME and an array of PROPCHANGES, merge the changes into
-   the working copy.  Necessary log entries will be appended to
-   ENTRY_ACCUM.
+/* Given ADM_ACCESS/NAME and an array of PROPCHANGES based on
+   SERVER_BASEPROPS, merge the changes into the working copy.
+   Necessary log entries will be appended to ENTRY_ACCUM.
 
    If we are attempting to merge changes to a directory, simply pass
    ADM_ACCESS and NULL for NAME.
@@ -106,14 +106,15 @@ svn_error_t *svn_wc__save_prop_file (const char *propfile_path,
 
    If STATE is non-null, set *STATE to the state of the local properties
    after the merge.  */
-svn_error_t *svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
-                                       svn_wc_adm_access_t *adm_access,
-                                       const char *name,
-                                       const apr_array_header_t *propchanges,
-                                       svn_boolean_t base_merge,
-                                       svn_boolean_t dry_run,
-                                       apr_pool_t *pool,
-                                       svn_stringbuf_t **entry_accum);
+svn_error_t *svn_wc__merge_props (svn_wc_notify_state_t *state,
+                                  svn_wc_adm_access_t *adm_access,
+                                  const char *name,
+                                  apr_hash_t *server_baseprops,
+                                  const apr_array_header_t *propchanges,
+                                  svn_boolean_t base_merge,
+                                  svn_boolean_t dry_run,
+                                  apr_pool_t *pool,
+                                  svn_stringbuf_t **entry_accum);
 
 
 /* Get a single 'wcprop' NAME for versioned object PATH, return in

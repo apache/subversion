@@ -90,6 +90,30 @@
 }
 
 /* -----------------------------------------------------------------------
+   const char *header_encoding
+   svn_diff_file_output_unified2
+   svn_client_diff3
+*/
+%typemap(ruby, in) const char *header_encoding
+{
+  $1 = NULL;
+  
+  if (NIL_P($input)) {
+  } else if (TYPE($input) == T_FIXNUM) {
+    $1 = (char *)NUM2INT($input);
+    if (!($1 == APR_LOCALE_CHARSET || $1 == APR_DEFAULT_CHARSET)) {
+      $1 = NULL;
+    }
+  } else {
+    $1 = StringValuePtr($input);
+  }
+  
+  if (!$1) {
+    $1 = (char *)APR_LOCALE_CHARSET;
+  }
+}
+
+/* -----------------------------------------------------------------------
    Define a more refined 'memberin' typemap for 'const char *' members. This
    is used in place of the 'char *' handler defined automatically.
 
@@ -141,7 +165,7 @@
 {
   if ($1) {
     svn_error_t *error = $1;
-    apr_status_t error_code = error->apr_err;
+    VALUE error_code = INT2NUM(error->apr_err);
     VALUE message;
 
     message = rb_str_new2(error->message ? error->message : "");
@@ -155,8 +179,7 @@
     }
     svn_error_clear(error);
     
-    rb_exc_raise(svn_swig_rb_svn_error_new(INT2NUM(error_code),
-                                           message));
+    rb_exc_raise(svn_swig_rb_svn_error_new(error_code, message));
   }
   $result = Qnil;
 }
@@ -250,17 +273,28 @@
 %typemap(perl5, default) apr_pool_t *pool(apr_pool_t *_global_pool) {
     _global_pool = $1 = svn_swig_pl_make_pool (ST(items-1));
 }
-%typemap(ruby, arginit) apr_pool_t *pool (apr_pool_t *_global_pool) {
-  if (argc == 0) {
-    /* wrong # of arguments: we need at least a pool. */
-  } else if (argc <= $argnum) {
-    if (NIL_P(argv[argc - 1])) {
-      rb_raise(rb_eArgError, "pool must be not nil");
-    }
-    /* Assume that the pool here is the last argument in the list */
-    SWIG_ConvertPtr(argv[argc - 1], (void **)&$1, $1_descriptor, 1);
-    _global_pool = $1;
-  }
+%typemap(ruby, in) apr_pool_t *pool "";
+%typemap(ruby, default) apr_pool_t *pool
+    (VALUE _global_rb_pool, apr_pool_t *_global_pool) {
+  svn_swig_rb_get_pool(argc, argv, self, &_global_rb_pool, &$1);
+  _global_pool = $1;
+  svn_swig_rb_push_pool(_global_rb_pool);
+}
+
+%typemap(ruby, default) (svn_client_ctx_t *ctx, apr_pool_t *pool)
+     (VALUE _global_rb_pool, apr_pool_t *_global_pool) {
+  int adjusted_argc = argc;
+  VALUE *adjusted_argv = argv;
+
+  svn_swig_rb_adjust_arg_for_client_ctx_and_pool(&adjusted_argc, &adjusted_argv);
+  svn_swig_rb_get_pool(adjusted_argc, adjusted_argv, self, &_global_rb_pool, &$2);
+  _global_pool = $2;
+  svn_swig_rb_push_pool(_global_rb_pool);
+}
+
+%typemap(ruby, argout) apr_pool_t *pool {
+  svn_swig_rb_set_pool($result, _global_rb_pool);
+  svn_swig_rb_pop_pool(_global_rb_pool);
 }
 
 #ifdef SWIGPERL
@@ -270,6 +304,25 @@
     apr_pool_t *node_pool
 };
 #endif
+
+#ifdef SWIGRUBY
+%apply apr_pool_t *pool {
+    apr_pool_t *dir_pool,
+    apr_pool_t *file_pool,
+    apr_pool_t *node_pool
+};
+#endif
+
+
+/* -----------------------------------------------------------------------
+   CALLBACK_BATON: Do not convert to C object from Ruby object.
+*/
+
+%typemap(ruby, in) void *CALLBACK_BATON
+{
+  $1 = (void *)$input;
+}
+
 
 /* -----------------------------------------------------------------------
    Callback: svn_log_message_receiver_t
@@ -316,6 +369,12 @@
   $2 = $input; /* our function is the baton. */
 }
 
+%typemap(ruby, in) (svn_cancel_func_t cancel_func, void *cancel_baton)
+{
+  $1 = svn_swig_rb_cancel_func;
+  $2 = (void *)$input;
+}
+
 /* -----------------------------------------------------------------------
    svn_stream_t interoperability with language native io handles
 */
@@ -339,7 +398,7 @@
 }
 
 %typemap(ruby, in) svn_stream_t * {
-    $1 = svn_swig_rb_make_stream($input, _global_pool);
+  $1 = svn_swig_rb_make_stream($input);
 }
 
 /* -----------------------------------------------------------------------
@@ -500,20 +559,6 @@
   }
 }
 
-/* -----------------------------------------------------------------------
-   remove destructor for apr_pool and Ruby's GC.
-*/
-#ifdef SWIGRUBY
-#define REMOVE_DESTRUCTOR(type)                 \
-%extend type                                    \
-{                                               \
-  ~type(type *obj)                              \
-    {                                           \
-      /* do nothing */                          \
-    }                                           \
-}
-#endif
-
 /* ----------------------------------------------------------------------- */
 
 %{
@@ -529,6 +574,8 @@
 #endif
 
 #ifdef SWIGRUBY
+#include <apu.h>
+#include <apr_xlate.h>
 #include "swigutil_rb.h"
 #endif
 %}

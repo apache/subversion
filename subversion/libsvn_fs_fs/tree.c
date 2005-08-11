@@ -1152,7 +1152,7 @@ fs_props_changed (svn_boolean_t *changed_p,
   if (root1->fs != root2->fs)
     return svn_error_create
       (SVN_ERR_FS_GENERAL, NULL,
-       _("Asking props changed in two different filesystems"));
+       _("Cannot compare property value between two different filesystems"));
   
   SVN_ERR (get_dag (&node1, root1, path1, pool));
   SVN_ERR (get_dag (&node2, root2, path2, pool));
@@ -1532,7 +1532,7 @@ merge (svn_stringbuf_t *conflict_p,
                (target, s_entry->name, s_entry->id, s_entry->kind,
                 txn_id, iterpool));
     }
-  apr_pool_destroy (iterpool);
+  svn_pool_destroy (iterpool);
 
   SVN_ERR (svn_fs_fs__dag_get_predecessor_count (&pred_count, source, pool));
   SVN_ERR (update_ancestry (fs, source_id, target_id, txn_id, target_path,
@@ -2596,7 +2596,7 @@ fs_contents_changed (svn_boolean_t *changed_p,
   if (root1->fs != root2->fs)
     return svn_error_create
       (SVN_ERR_FS_GENERAL, NULL,
-       _("Asking contents changed in two different filesystems"));
+       _("Cannot compare file contents between two different filesystems"));
   
   /* Check that both paths are files. */
   {
@@ -2735,8 +2735,8 @@ fs_node_history (svn_fs_history_t **history_p,
 }
 
 /* Find the youngest copyroot for path PARENT_PATH or its parents in
-   filesystem FS, and store the node-id for this copyroot in
-   *COPYROOT_P.  Perform all allocations in POOL. */
+   filesystem FS, and store the copyroot in *REV_P and *PATH_P.
+   Perform all allocations in POOL. */
 static svn_error_t *
 find_youngest_copyroot (svn_revnum_t *rev_p,
                         const char **path_p,

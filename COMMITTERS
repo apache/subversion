@@ -52,6 +52,7 @@ Commit access for specific areas:
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
            kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)
+        djames   David James <james@cs.toronto.edu>          (Swig-Ruby b.)
 
   Packages:
 
@@ -65,7 +66,7 @@ Commit access for specific areas:
       josander   Jostein Andersen <jostein@josander.net>     (various)
       niemeyer   Gustavo Niemeyer <niemeyer@conectiva.com>   (svnperms.py)
         zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
-        mprice   Michael Price <mprice@atl.lmco.com>         (releases)
+        mprice   Michael Price <ectospheno@gmail.com>        (releases)
            pll   Paul lussier <p.lussier@comcast.net>        (releases)
            kon   Kalle Olavi Niemitalo <kon@iki.fi>          (psvn.el)
     jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)

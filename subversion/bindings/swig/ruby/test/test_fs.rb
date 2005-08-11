@@ -1,12 +1,13 @@
 require "my-assertions"
 require "util"
+require "time"
 
 require "svn/core"
 require "svn/fs"
 require "svn/repos"
 require "svn/client"
 
-class TestSvnFs < Test::Unit::TestCase
+class SvnFsTest < Test::Unit::TestCase
   include SvnTestUtil
   
   def setup
@@ -22,7 +23,7 @@ class TestSvnFs < Test::Unit::TestCase
     ctx = make_context(log)
     ctx.checkout(@repos_uri, @wc_path)
     ctx.mkdir(["#{@wc_path}/new_dir"])
-    past_time = Time.new
+    past_time = Time.parse(Time.new.iso8601)
     info = ctx.commit([@wc_path])
 
     assert_equal(@author, info.author)

@@ -235,22 +235,13 @@ svn_cl__print_status_xml (const char *path,
                                            status->entry->cmt_rev),
                              NULL);
 
-      if (status->entry->cmt_author)
-        {
-          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "author",
-                                 NULL);
-          svn_xml_escape_cdata_cstring (&sb, status->entry->cmt_author, pool);
-          svn_xml_make_close_tag (&sb, pool, "author");
-        }
+      svn_cl__xml_tagged_cdata (&sb, pool, "author",
+                                status->entry->cmt_author);
 
       if (status->entry->cmt_date)
-        {
-          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "date",
-                                 NULL);
-          svn_xml_escape_cdata_cstring
-            (&sb, svn_time_to_cstring (status->entry->cmt_date, pool), pool);
-          svn_xml_make_close_tag (&sb, pool, "date");
-        }
+        svn_cl__xml_tagged_cdata (&sb, pool, "date",
+                                  svn_time_to_cstring
+                                    (status->entry->cmt_date, pool));
 
       svn_xml_make_close_tag (&sb, pool, "commit");
     }
@@ -259,40 +250,23 @@ svn_cl__print_status_xml (const char *path,
     {
       svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "lock", NULL);
 
-      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
-                             "token", NULL);
-      svn_xml_escape_cdata_cstring (&sb, status->entry->lock_token, pool);
-      svn_xml_make_close_tag (&sb, pool, "token");
+      svn_cl__xml_tagged_cdata (&sb, pool, "token", status->entry->lock_token);
 
       /* If lock_owner is NULL, assume WC is corrupt. */
       if (status->entry->lock_owner)
-        {
-          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
-                                 "owner", NULL);
-          svn_xml_escape_cdata_cstring (&sb, status->entry->lock_owner,
-                                        pool);
-          svn_xml_make_close_tag (&sb, pool, "owner");
-        }
+        svn_cl__xml_tagged_cdata (&sb, pool, "owner",
+                                  status->entry->lock_owner);
       else
         return svn_error_createf (SVN_ERR_WC_CORRUPT, NULL,
                                   _("'%s' has lock token, but no lock owner"),
                                   svn_path_local_style (path, pool));
 
-      if (status->entry->lock_comment)
-        {
-          svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "comment", NULL);
-          svn_xml_escape_cdata_cstring (&sb, status->entry->lock_comment,
-                                        pool);
-          svn_xml_make_close_tag (&sb, pool, "comment");
-        }
+      svn_cl__xml_tagged_cdata (&sb, pool, "comment",
+                                status->entry->lock_comment);
 
-      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "created",
-                             NULL);
-      svn_xml_escape_cdata_cstring (&sb,
-                                    svn_time_to_cstring
-                                     (status->entry->lock_creation_date, pool),
-                                    pool);
-      svn_xml_make_close_tag (&sb, pool, "created");
+      svn_cl__xml_tagged_cdata (&sb, pool, "created",
+                                svn_time_to_cstring
+                                  (status->entry->lock_creation_date, pool));
 
       svn_xml_make_close_tag (&sb, pool, "lock");
     }
@@ -313,41 +287,26 @@ svn_cl__print_status_xml (const char *path,
         {
           svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "lock", NULL);
 
-          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
-                                 "token", NULL);
-          svn_xml_escape_cdata_cstring (&sb, status->repos_lock->token, pool);
-          svn_xml_make_close_tag (&sb, pool, "token");
-          
-          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
-                                 "owner", NULL);
-          svn_xml_escape_cdata_cstring (&sb, status->repos_lock->owner, pool);
-          svn_xml_make_close_tag (&sb, pool, "owner");
+          svn_cl__xml_tagged_cdata (&sb, pool, "token",
+                                    status->repos_lock->token);
 
-          if (status->repos_lock->comment)
-            {
-              svn_xml_make_open_tag (&sb, pool, svn_xml_normal,
-                                     "comment", NULL);
-              svn_xml_escape_cdata_cstring (&sb, status->repos_lock->comment,
-                                            pool);
-              svn_xml_make_close_tag (&sb, pool, "comment");
-            }
+          svn_cl__xml_tagged_cdata (&sb, pool, "owner",
+                                    status->repos_lock->owner);
 
-          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
-                                 "created", NULL);
-          svn_xml_escape_cdata_cstring (&sb, svn_time_to_cstring
-                                        (status->repos_lock->creation_date,
-                                         pool),
-                                        pool);
-          svn_xml_make_close_tag (&sb, pool, "created");
+          svn_cl__xml_tagged_cdata (&sb, pool, "comment",
+                                    status->repos_lock->comment);
+
+          svn_cl__xml_tagged_cdata (&sb, pool, "created",
+                                    svn_time_to_cstring
+                                      (status->repos_lock->creation_date,
+                                       pool));
 
           if (status->repos_lock->expiration_date != 0)
             {
-              svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
-                                     "expires", NULL);
-              svn_xml_escape_cdata_cstring
-                (&sb, svn_time_to_cstring (status->repos_lock->expiration_date,
-                                           pool), pool);
-              svn_xml_make_close_tag (&sb, pool, "expires");
+              svn_cl__xml_tagged_cdata (&sb, pool, "expires",
+                                        svn_time_to_cstring
+                                          (status->repos_lock->expiration_date,
+                                           pool));
             }
 
           svn_xml_make_close_tag (&sb, pool, "lock");

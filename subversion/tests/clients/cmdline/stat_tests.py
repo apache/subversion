@@ -603,7 +603,7 @@ def text_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
   "text-time behaviour"
 
   # Pristine text and text-time
-  fp = open(wc_path, 'r')
+  fp = open(wc_path, 'rb')
   pre_text = fp.readlines()
   pre_text_time = get_text_timestamp(wc_path)
 
@@ -616,7 +616,7 @@ def text_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
     raise svntest.Failure
 
   # Manually reverting the text does not affect the text-time
-  fp = open(wc_path, 'w')
+  fp = open(wc_path, 'wb')
   fp.writelines(pre_text)
   fp.close()
   expected_status.tweak(status_path, status='  ')

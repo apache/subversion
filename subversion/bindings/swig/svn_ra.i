@@ -111,9 +111,3 @@
 #ifdef SWIGPERL
 %include ra_reporter.hi
 #endif
-
-#ifdef SWIGRUBY
-REMOVE_DESTRUCTOR(svn_ra_reporter_t)
-REMOVE_DESTRUCTOR(svn_ra_callbacks_t)
-REMOVE_DESTRUCTOR(svn_ra_plugin_t)
-#endif

@@ -28,11 +28,6 @@
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
 
-#include "../../libsvn_fs_base/trail.h"
-
-#include "../../libsvn_fs_base/bdb/txn-table.h"
-#include "../../libsvn_fs_base/bdb/nodes-table.h"
-
 #include "../../libsvn_delta/delta.h"
 
 #define SET_STR(ps, s) ((ps)->data = (s), (ps)->len = strlen(s))
@@ -41,36 +36,6 @@
 /*-----------------------------------------------------------------*/
 
 /** The actual fs-tests called by `make check` **/
-
-/* Create a filesystem.  */
-static svn_error_t *
-create_berkeley_filesystem (const char **msg,
-                            svn_boolean_t msg_only,
-                            svn_test_opts_t *opts,
-                            apr_pool_t *pool)
-{
-  svn_fs_t *fs;
-
-  *msg = "svn_fs_create_berkeley";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  /* Create and close a repository. */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-create-berkeley",
-                                "bdb", pool));
-  
-  return SVN_NO_ERROR;
-}
-
-
-/* Generic Berkeley DB error handler function. */
-static void
-berkeley_error_handler (const char *errpfx, char *msg)
-{
-  fprintf (stderr, "%s%s\n", errpfx ? errpfx : "", msg);
-}
-
 
 /* Helper:  commit TXN, expecting either success or failure:
  *
@@ -146,36 +111,6 @@ test_commit_txn (svn_revnum_t *new_rev,
 
 
 
-/* Open an existing filesystem.  */
-static svn_error_t *
-open_berkeley_filesystem (const char **msg,
-                          svn_boolean_t msg_only,
-                          svn_test_opts_t *opts,
-                          apr_pool_t *pool)
-{
-  svn_fs_t *fs, *fs2;
-
-  *msg = "open an existing Berkeley DB filesystem";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  /* Create and close a repository (using fs). */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-open-berkeley",
-                                "bdb", pool));
-
-  /* Create a different fs object, and use it to re-open the
-     repository again.  */
-  SVN_ERR (svn_test__fs_new (&fs2, pool));
-  SVN_ERR (svn_fs_open_berkeley (fs2, "test-repo-open-berkeley"));
-
-  /* Provide a handler for Berkeley DB error messages.  */
-  SVN_ERR (svn_fs_set_berkeley_errcall (fs2, berkeley_error_handler));
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Begin a txn, check its name, then close it */
 static svn_error_t *
 trivial_transaction (const char **msg,
@@ -193,7 +128,7 @@ trivial_transaction (const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-trivial-txn",
-                                "bdb", pool));
+                                opts->fs_type, pool));
 
   /* Begin a new transaction that is based on revision 0.  */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
@@ -228,7 +163,7 @@ reopen_trivial_transaction (const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-reopen-trivial-txn",
-                                "bdb", pool));
+                                opts->fs_type, pool));
 
   /* Begin a new transaction that is based on revision 0.  */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, subpool));
@@ -267,7 +202,7 @@ create_file_transaction (const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-create-file-txn",
-                                "bdb", pool));
+                                opts->fs_type, pool));
 
   /* Begin a new transaction that is based on revision 0.  */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
@@ -301,7 +236,7 @@ verify_txn_list (const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-verify-txn-list",
-                                "bdb", pool));
+                                opts->fs_type, pool));
 
   /* Begin a new transaction, get its name (in the top pool), close it.  */
   subpool = svn_pool_create (pool);
@@ -364,7 +299,7 @@ write_and_read_file (const char **msg,
 
   wstring = svn_stringbuf_create ("Wicki wild, wicki wicki wild.", pool);
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-read-and-write-file",
-                                "bdb", pool));
+                                opts->fs_type, pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   
@@ -406,7 +341,7 @@ create_mini_tree_transaction (const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-create-mini-tree-txn",
-                                "bdb", pool));
+                                opts->fs_type, pool));
 
   /* Begin a new transaction that is based on revision 0.  */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
@@ -445,7 +380,7 @@ create_greek_tree_transaction (const char **msg,
 
   /* Prepare a txn to receive the greek tree. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-create-greek-tree-txn",
-                                "bdb", pool));
+                                opts->fs_type, pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
@@ -510,7 +445,7 @@ list_directory (const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-list-dir",
-                                "bdb", pool));
+                                opts->fs_type, pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   
@@ -592,7 +527,7 @@ revision_props (const char **msg,
 
   /* Open the fs */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-rev-props",
-                                "bdb", pool));
+                                opts->fs_type, pool));
 
   /* Set some properties on the revision. */
   for (i = 0; i < 4; i++)
@@ -695,7 +630,7 @@ transaction_props (const char **msg,
 
   /* Open the fs */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-txn-props",
-                                "bdb", pool));
+                                opts->fs_type, pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
 
   /* Set some properties on the revision. */
@@ -848,7 +783,7 @@ node_props (const char **msg,
 
   /* Open the fs and transaction */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-node-props",
-                                "bdb", pool));
+                                opts->fs_type, pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
@@ -985,337 +920,6 @@ check_entry_absent (svn_fs_root_t *root, const char *path,
 }
 
 
-struct check_id_args
-{
-  svn_fs_t *fs;
-  const svn_fs_id_t *id;
-  svn_boolean_t present;
-};
-
-
-static svn_error_t *
-txn_body_check_id (void *baton, trail_t *trail)
-{
-  struct check_id_args *args = baton;
-  node_revision_t *noderev;
-  svn_error_t *err;
-
-  err = svn_fs_bdb__get_node_revision (&noderev, args->fs, args->id, 
-                                       trail, trail->pool);
-
-  if (err && (err->apr_err == SVN_ERR_FS_ID_NOT_FOUND))
-    args->present = FALSE;
-  else if (! err)
-    args->present = TRUE;
-  else
-    {
-      svn_string_t *id_str = svn_fs_unparse_id (args->id, trail->pool);
-      return svn_error_createf
-        (SVN_ERR_FS_GENERAL, err,
-         "error looking for node revision id \"%s\"", id_str->data);
-    }
-  svn_error_clear (err);
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Set *PRESENT to true if node revision ID is present in filesystem
-   FS, else set *PRESENT to false. */
-static svn_error_t *
-check_id (svn_fs_t *fs, const svn_fs_id_t *id, svn_boolean_t *present,
-          apr_pool_t *pool)
-{
-  struct check_id_args args;
-
-  args.id = id;
-  args.fs = fs;
-  SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_check_id, &args, pool));
-
-  if (args.present)
-    *present = TRUE;
-  else
-    *present = FALSE;
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Return error if node revision ID is not present in FS. */
-static svn_error_t *
-check_id_present (svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
-{
-  svn_boolean_t present;
-  SVN_ERR (check_id (fs, id, &present, pool));
-
-  if (! present)
-    {
-      svn_string_t *id_str = svn_fs_unparse_id (id, pool);
-      return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL,
-         "node revision id \"%s\" absent when should be present",
-         id_str->data);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Return error if node revision ID is present in FS. */
-static svn_error_t *
-check_id_absent (svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
-{
-  svn_boolean_t present;
-  SVN_ERR (check_id (fs, id, &present, pool));
-
-  if (present)
-    {
-      svn_string_t *id_str = svn_fs_unparse_id (id, pool);
-      return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL,
-         "node revision id \"%s\" present when should be absent",
-         id_str->data);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-/* Test that aborting a Subversion transaction works.
-
-   NOTE: This function tests internal filesystem interfaces, not just
-   the public filesystem interface.  */
-static svn_error_t *
-abort_txn (const char **msg,
-           svn_boolean_t msg_only,
-           svn_test_opts_t *opts,
-           apr_pool_t *pool)
-{
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn1, *txn2;
-  svn_fs_root_t *txn1_root, *txn2_root;
-  const char *txn1_name, *txn2_name;
-
-  *msg = "abort a transaction";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  /* Prepare two txns to receive the Greek tree. */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-abort-txn",
-                                "bdb", pool));
-  SVN_ERR (svn_fs_begin_txn (&txn1, fs, 0, pool));
-  SVN_ERR (svn_fs_begin_txn (&txn2, fs, 0, pool));
-  SVN_ERR (svn_fs_txn_root (&txn1_root, txn1, pool));
-  SVN_ERR (svn_fs_txn_root (&txn2_root, txn2, pool));
-
-  /* Save their names for later. */
-  SVN_ERR (svn_fs_txn_name (&txn1_name, txn1, pool));
-  SVN_ERR (svn_fs_txn_name (&txn2_name, txn2, pool));
-  
-  /* Create greek trees in them. */
-  SVN_ERR (svn_test__create_greek_tree (txn1_root, pool));
-  SVN_ERR (svn_test__create_greek_tree (txn2_root, pool));
-
-  /* The test is to abort txn2, while leaving txn1.
-   *
-   * After we abort txn2, we make sure that a) all of its nodes
-   * disappeared from the database, and b) none of txn1's nodes
-   * disappeared.
-   *
-   * Finally, we create a third txn, and check that the name it got is
-   * different from the names of txn1 and txn2.
-   */
-
-  {
-    /* Yes, I really am this paranoid. */
-
-    /* IDs for every file in the standard Greek Tree. */
-    const svn_fs_id_t
-      *t1_root_id,    *t2_root_id,
-      *t1_iota_id,    *t2_iota_id,
-      *t1_A_id,       *t2_A_id,
-      *t1_mu_id,      *t2_mu_id,
-      *t1_B_id,       *t2_B_id,
-      *t1_lambda_id,  *t2_lambda_id,
-      *t1_E_id,       *t2_E_id,
-      *t1_alpha_id,   *t2_alpha_id,
-      *t1_beta_id,    *t2_beta_id,
-      *t1_F_id,       *t2_F_id,
-      *t1_C_id,       *t2_C_id,
-      *t1_D_id,       *t2_D_id,
-      *t1_gamma_id,   *t2_gamma_id,
-      *t1_H_id,       *t2_H_id,
-      *t1_chi_id,     *t2_chi_id,
-      *t1_psi_id,     *t2_psi_id,
-      *t1_omega_id,   *t2_omega_id,
-      *t1_G_id,       *t2_G_id,
-      *t1_pi_id,      *t2_pi_id,
-      *t1_rho_id,     *t2_rho_id,
-      *t1_tau_id,     *t2_tau_id;
-    
-    SVN_ERR (svn_fs_node_id (&t1_root_id, txn1_root, "", pool));
-    SVN_ERR (svn_fs_node_id (&t2_root_id, txn2_root, "", pool));
-    SVN_ERR (svn_fs_node_id (&t1_iota_id, txn1_root, "iota", pool));
-    SVN_ERR (svn_fs_node_id (&t2_iota_id, txn2_root, "iota", pool));
-    SVN_ERR (svn_fs_node_id (&t1_A_id, txn1_root, "/A", pool));
-    SVN_ERR (svn_fs_node_id (&t2_A_id, txn2_root, "/A", pool));
-    SVN_ERR (svn_fs_node_id (&t1_mu_id, txn1_root, "/A/mu", pool));
-    SVN_ERR (svn_fs_node_id (&t2_mu_id, txn2_root, "/A/mu", pool));
-    SVN_ERR (svn_fs_node_id (&t1_B_id, txn1_root, "/A/B", pool));
-    SVN_ERR (svn_fs_node_id (&t2_B_id, txn2_root, "/A/B", pool));
-    SVN_ERR (svn_fs_node_id (&t1_lambda_id, txn1_root, "/A/B/lambda", pool));
-    SVN_ERR (svn_fs_node_id (&t2_lambda_id, txn2_root, "/A/B/lambda", pool));
-    SVN_ERR (svn_fs_node_id (&t1_E_id, txn1_root, "/A/B/E", pool));
-    SVN_ERR (svn_fs_node_id (&t2_E_id, txn2_root, "/A/B/E", pool));
-    SVN_ERR (svn_fs_node_id (&t1_alpha_id, txn1_root, "/A/B/E/alpha", pool));
-    SVN_ERR (svn_fs_node_id (&t2_alpha_id, txn2_root, "/A/B/E/alpha", pool));
-    SVN_ERR (svn_fs_node_id (&t1_beta_id, txn1_root, "/A/B/E/beta", pool));
-    SVN_ERR (svn_fs_node_id (&t2_beta_id, txn2_root, "/A/B/E/beta", pool));
-    SVN_ERR (svn_fs_node_id (&t1_F_id, txn1_root, "/A/B/F", pool));
-    SVN_ERR (svn_fs_node_id (&t2_F_id, txn2_root, "/A/B/F", pool));
-    SVN_ERR (svn_fs_node_id (&t1_C_id, txn1_root, "/A/C", pool));
-    SVN_ERR (svn_fs_node_id (&t2_C_id, txn2_root, "/A/C", pool));
-    SVN_ERR (svn_fs_node_id (&t1_D_id, txn1_root, "/A/D", pool));
-    SVN_ERR (svn_fs_node_id (&t2_D_id, txn2_root, "/A/D", pool));
-    SVN_ERR (svn_fs_node_id (&t1_gamma_id, txn1_root, "/A/D/gamma", pool));
-    SVN_ERR (svn_fs_node_id (&t2_gamma_id, txn2_root, "/A/D/gamma", pool));
-    SVN_ERR (svn_fs_node_id (&t1_H_id, txn1_root, "/A/D/H", pool));
-    SVN_ERR (svn_fs_node_id (&t2_H_id, txn2_root, "/A/D/H", pool));
-    SVN_ERR (svn_fs_node_id (&t1_chi_id, txn1_root, "/A/D/H/chi", pool));
-    SVN_ERR (svn_fs_node_id (&t2_chi_id, txn2_root, "/A/D/H/chi", pool));
-    SVN_ERR (svn_fs_node_id (&t1_psi_id, txn1_root, "/A/D/H/psi", pool));
-    SVN_ERR (svn_fs_node_id (&t2_psi_id, txn2_root, "/A/D/H/psi", pool));
-    SVN_ERR (svn_fs_node_id (&t1_omega_id, txn1_root, "/A/D/H/omega", pool));
-    SVN_ERR (svn_fs_node_id (&t2_omega_id, txn2_root, "/A/D/H/omega", pool));
-    SVN_ERR (svn_fs_node_id (&t1_G_id, txn1_root, "/A/D/G", pool));
-    SVN_ERR (svn_fs_node_id (&t2_G_id, txn2_root, "/A/D/G", pool));
-    SVN_ERR (svn_fs_node_id (&t1_pi_id, txn1_root, "/A/D/G/pi", pool));
-    SVN_ERR (svn_fs_node_id (&t2_pi_id, txn2_root, "/A/D/G/pi", pool));
-    SVN_ERR (svn_fs_node_id (&t1_rho_id, txn1_root, "/A/D/G/rho", pool));
-    SVN_ERR (svn_fs_node_id (&t2_rho_id, txn2_root, "/A/D/G/rho", pool));
-    SVN_ERR (svn_fs_node_id (&t1_tau_id, txn1_root, "/A/D/G/tau", pool));
-    SVN_ERR (svn_fs_node_id (&t2_tau_id, txn2_root, "/A/D/G/tau", pool));
-
-    /* Abort just txn2. */
-    SVN_ERR (svn_fs_abort_txn (txn2, pool));
-
-    /* Now test that all the nodes in txn2 at the time of the abort
-     * are gone, but all of the ones in txn1 are still there. 
-     */
-
-    /* Check that every node rev in t2 has vanished from the fs. */
-    SVN_ERR (check_id_absent (fs, t2_root_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_iota_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_A_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_mu_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_B_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_lambda_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_E_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_alpha_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_beta_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_F_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_C_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_D_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_gamma_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_H_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_chi_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_psi_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_omega_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_G_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_pi_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_rho_id, pool));
-    SVN_ERR (check_id_absent (fs, t2_tau_id, pool));
-    
-    /* Check that every node rev in t1 is still in the fs. */
-    SVN_ERR (check_id_present (fs, t1_root_id, pool));
-    SVN_ERR (check_id_present (fs, t1_iota_id, pool));
-    SVN_ERR (check_id_present (fs, t1_A_id, pool));
-    SVN_ERR (check_id_present (fs, t1_mu_id, pool));
-    SVN_ERR (check_id_present (fs, t1_B_id, pool));
-    SVN_ERR (check_id_present (fs, t1_lambda_id, pool));
-    SVN_ERR (check_id_present (fs, t1_E_id, pool));
-    SVN_ERR (check_id_present (fs, t1_alpha_id, pool));
-    SVN_ERR (check_id_present (fs, t1_beta_id, pool));
-    SVN_ERR (check_id_present (fs, t1_F_id, pool));
-    SVN_ERR (check_id_present (fs, t1_C_id, pool));
-    SVN_ERR (check_id_present (fs, t1_D_id, pool));
-    SVN_ERR (check_id_present (fs, t1_gamma_id, pool));
-    SVN_ERR (check_id_present (fs, t1_H_id, pool));
-    SVN_ERR (check_id_present (fs, t1_chi_id, pool));
-    SVN_ERR (check_id_present (fs, t1_psi_id, pool));
-    SVN_ERR (check_id_present (fs, t1_omega_id, pool));
-    SVN_ERR (check_id_present (fs, t1_G_id, pool));
-    SVN_ERR (check_id_present (fs, t1_pi_id, pool));
-    SVN_ERR (check_id_present (fs, t1_rho_id, pool));
-    SVN_ERR (check_id_present (fs, t1_tau_id, pool));
-  }
-
-  /* Test that txn2 itself is gone, by trying to open it. */
-  {
-    svn_fs_txn_t *txn2_again;
-    svn_error_t *err;
-
-    err = svn_fs_open_txn (&txn2_again, fs, txn2_name, pool);
-    if (err && (err->apr_err != SVN_ERR_FS_NO_SUCH_TRANSACTION))
-      {
-        return svn_error_create
-          (SVN_ERR_FS_GENERAL, NULL,
-           "opening non-existent txn got wrong error");
-      }
-    else if (! err)
-      {
-        return svn_error_create
-          (SVN_ERR_FS_GENERAL, NULL,
-           "opening non-existent txn failed to get error");
-      }
-    svn_error_clear (err);
-  }
-
-  /* Test that txn names are not recycled, by opening a new txn.  */
-  {
-    svn_fs_txn_t *txn3;
-    const char *txn3_name;
-
-    SVN_ERR (svn_fs_begin_txn (&txn3, fs, 0, pool));
-    SVN_ERR (svn_fs_txn_name (&txn3_name, txn3, pool));
-
-    if ((strcmp (txn3_name, txn2_name) == 0)
-        || (strcmp (txn3_name, txn1_name) == 0))
-      {
-        return svn_error_createf
-          (SVN_ERR_FS_GENERAL, NULL,
-           "txn name \"%s\" was recycled", txn3_name);
-      }
-  }
-
-  /* Test that aborting a txn that's already committed fails. */
-  {
-    svn_fs_txn_t *txn4;
-    const char *txn4_name;
-    svn_revnum_t new_rev;
-    const char *conflict;
-    svn_error_t *err;
-
-    SVN_ERR (svn_fs_begin_txn (&txn4, fs, 0, pool));
-    SVN_ERR (svn_fs_txn_name (&txn4_name, txn4, pool));
-    SVN_ERR (svn_fs_commit_txn (&conflict, &new_rev, txn4, pool));
-    err = svn_fs_abort_txn (txn4, pool);
-    if (! err)
-      return svn_error_create
-        (SVN_ERR_FS_GENERAL, NULL,
-         "expected error trying to abort a committed txn; got none");
-    else if (err->apr_err != SVN_ERR_FS_TRANSACTION_NOT_MUTABLE)
-      return svn_error_create
-        (SVN_ERR_FS_GENERAL, err,
-         "got an unexpected error trying to abort a committed txn");
-    else
-      svn_error_clear (err);
-  }
-  return SVN_NO_ERROR;
-}
-
-
 /* Fetch the youngest revision from a repos. */
 static svn_error_t *
 fetch_youngest_rev (const char **msg,
@@ -1335,14 +939,12 @@ fetch_youngest_rev (const char **msg,
     return SVN_NO_ERROR;
 
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-youngest-rev",
-                                "bdb", pool));
+                                opts->fs_type, pool));
 
   /* Get youngest revision of brand spankin' new filesystem. */
   SVN_ERR (svn_fs_youngest_rev (&youngest_rev, fs, pool));
 
   /* Prepare a txn to receive the greek tree. */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-commit-txn",
-                                "bdb", pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
@@ -1388,7 +990,7 @@ basic_commit (const char **msg,
 
   /* Prepare a filesystem. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-basic-commit",
-                                "bdb", pool));
+                                opts->fs_type, pool));
 
   /* Save the current youngest revision. */
   SVN_ERR (svn_fs_youngest_rev (&before_rev, fs, pool));
@@ -1447,7 +1049,7 @@ test_tree_node_validation (const char **msg,
 
   /* Prepare a filesystem. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-validate-tree-entries",
-                                "bdb", pool));
+                                opts->fs_type, pool));
 
   /* In a txn, create the greek tree. */
   subpool = svn_pool_create (pool);
@@ -1578,16 +1180,16 @@ merging_commit (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+  /* Prepare a filesystem. */
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-merging-commit",
+                                opts->fs_type, pool));
+
   /* Initialize our revision number stuffs. */
   for (i = 0;
        i < ((sizeof (revisions)) / (sizeof (svn_revnum_t)));
        i++)
     revisions[i] = SVN_INVALID_REVNUM;
   revision_count = 0;
-
-  /* Prepare a filesystem. */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-merging-commit",
-                                "bdb", pool));
   revisions[revision_count++] = 0; /* the brand spankin' new revision */
 
   /***********************************************************************/
@@ -2361,7 +1963,7 @@ copy_test (const char **msg,
 
   /* Prepare a filesystem. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-copy-test",
-                                "bdb", pool));
+                                opts->fs_type, pool));
 
   /* In first txn, create and commit the greek tree. */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
@@ -2638,169 +2240,6 @@ copy_test (const char **msg,
 }
 
 
-static svn_error_t *
-link_test (const char **msg,
-           svn_boolean_t msg_only,
-           svn_test_opts_t *opts,
-           apr_pool_t *pool)
-{
-  *msg = "linking, so no copy history";
-  if (msg_only)
-    return SVN_NO_ERROR;
-  return svn_error_create (SVN_ERR_TEST_FAILED, NULL, "XFAIL");
-
-#if 0 /* ### todo: svn_fs_link() as we knew it no longer exists.  This
-         test should be rewritten as a test of svn_fs_revision_link()
-         or discarded. */
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root, *rev_root;
-  svn_revnum_t after_rev;
-
-  *msg = "linking, so no copy history";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  /* Prepare a filesystem. */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-link-test",
-                                "bdb", pool));
-
-  /* In first txn, create and commit the greek tree. */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
-  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
-  SVN_ERR (svn_fs_close_txn (txn));
-
-  /* In second txn, link the file A/D/G/pi into the subtree A/D/G as
-     pi2.  Change that file's contents to state its new name.  Along
-     the way, test that no copy history was preserved, and the ids are
-     the same. */
-
-  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  SVN_ERR (svn_fs_link (rev_root, "A/D/G/pi", 
-                        txn_root, "A/D/G/pi2",
-                        pool));
-
-  /* Check that no copy history was generated. */
-  {
-    svn_revnum_t rev;
-    const char *path;
-    
-    SVN_ERR (svn_fs_copied_from (&rev, &path, txn_root, "A/D/G/pi2", pool));
-
-    if (SVN_IS_VALID_REVNUM (rev))
-      return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL,
-         "link_test: copy rev present when should be absent on '%s'",
-         "A/D/G/pi2");
-
-    if (path)
-      return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL,
-         "link_test: copy path present when should be absent on '%s'",
-         "A/D/G/pi2");
-  }
-
-  /* Test that the node id is the same on the two files in the txn. */
-  {
-    const svn_fs_id_t *orig_id, *link_id;
-
-    SVN_ERR (svn_fs_node_id (&orig_id, txn_root, "A/D/G/pi", pool));
-    SVN_ERR (svn_fs_node_id (&link_id, txn_root, "A/D/G/pi2", pool));
-
-    if (! svn_fs__id_eq (orig_id, link_id))
-      return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL,
-         "link_test: orig id not same as link id ('%s', '%s')",
-         "A/D/G/pi", "A/D/G/pi2");
-  }
-
-  /* Commit the file. */
-  SVN_ERR (svn_test__set_file_contents 
-           (txn_root, "A/D/G/pi2", "This is the file 'pi2'.\n", pool));
-  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
-  SVN_ERR (svn_fs_close_txn (txn));
-
-  /* Get a revision root on the head. */
-  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
-
-  /* Check that there's _still_ no copy history. */
-  {
-    svn_revnum_t rev;
-    const char *path;
-    
-    SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool));
-    SVN_ERR (svn_fs_copied_from (&rev, &path, rev_root, "A/D/G/pi2", pool));
-
-    if (SVN_IS_VALID_REVNUM (rev))
-      return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL,
-         "link_test: copy rev wrongly present on committed '%s'",
-         "A/D/G/pi2");
-
-    if (path)
-      return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL,
-         "link_test: copy path wrongly present on committed '%s'",
-         "A/D/G/pi2");
-  }
-
-  /* Test that the node id has changed now, since we changed the file. */
-  {
-    const svn_fs_id_t *orig_id, *link_id;
-
-    SVN_ERR (svn_fs_node_id (&orig_id, rev_root, "A/D/G/pi", pool));
-    SVN_ERR (svn_fs_node_id (&link_id, rev_root, "A/D/G/pi2", pool));
-
-    if (svn_fs__id_eq (orig_id, link_id))
-      return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL,
-         "link_test: orig id same as newly committed link id ('%s', '%s')",
-         "A/D/G/pi", "A/D/G/pi2");
-  }
-
-  /* Link the file A/D/G/pi2 to A/D/G/pi3 and commit, *without*
-     changing pi3.  */
-
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  SVN_ERR (svn_fs_link (rev_root, "A/D/G/pi2", 
-                        txn_root, "A/D/G/pi3",
-                        pool));
-  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
-  SVN_ERR (svn_fs_close_txn (txn));
-
-  /* Test that the node id has changed now, since we changed the file. */
-  {
-    /* The node id's will be the same.  BAD.  See below:
-       
-       ### todo: this is, of course, scary, because there's a hard link
-       in the filesystem.  svn_fs_link() is dangerous, and we will have
-       to modify it to protect against hard links.  See issue #419.
-       if this clause in the test starts failing, it probably means
-       the issue has been fixed, so the test needs to be changed, not
-       Subversion. 
-    */
-    const svn_fs_id_t *orig_id, *link_id;
-
-    SVN_ERR (svn_fs_node_id (&orig_id, rev_root, "A/D/G/pi", pool));
-    SVN_ERR (svn_fs_node_id (&link_id, rev_root, "A/D/G/pi2", pool));
-
-    if (svn_fs__id_eq (orig_id, link_id))
-      return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL,
-         "link_test: orig not same as unchanged committed link ('%s', '%s')",
-         "A/D/G/pi", "A/D/G/pi2");
-  }
-
-  return SVN_NO_ERROR;
-#endif /* 0 */
-}
-
 /* This tests deleting of mutable nodes.  We build a tree in a
  * transaction, then try to delete various items in the tree.  We
  * never commit the tree, so every entry being deleted points to a 
@@ -2827,7 +2266,7 @@ delete_mutables (const char **msg,
 
   /* Prepare a txn to receive the greek tree. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-del-from-dir",
-                                "bdb", pool));
+                                opts->fs_type, pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   
@@ -2864,14 +2303,9 @@ delete_mutables (const char **msg,
   {
     const svn_fs_id_t *gamma_id;
     SVN_ERR (svn_fs_node_id (&gamma_id, txn_root, "A/D/gamma", pool));
-
     SVN_ERR (check_entry_present (txn_root, "A/D", "gamma", pool));
-    SVN_ERR (check_id_present (fs, gamma_id, pool));
-
     SVN_ERR (svn_fs_delete (txn_root, "A/D/gamma", pool));
-
     SVN_ERR (check_entry_absent (txn_root, "A/D", "gamma", pool));
-    SVN_ERR (check_id_absent (fs, gamma_id, pool));
   }
 
   /* 2 */
@@ -2880,73 +2314,44 @@ delete_mutables (const char **msg,
     SVN_ERR (svn_fs_node_id (&pi_id, txn_root, "A/D/G/pi", pool));
     SVN_ERR (svn_fs_node_id (&rho_id, txn_root, "A/D/G/rho", pool));
     SVN_ERR (svn_fs_node_id (&tau_id, txn_root, "A/D/G/tau", pool));
-
     SVN_ERR (check_entry_present (txn_root, "A/D/G", "pi", pool));
     SVN_ERR (check_entry_present (txn_root, "A/D/G", "rho", pool));
     SVN_ERR (check_entry_present (txn_root, "A/D/G", "tau", pool));
-    SVN_ERR (check_id_present (fs, pi_id, pool));
-    SVN_ERR (check_id_present (fs, rho_id, pool));
-    SVN_ERR (check_id_present (fs, tau_id, pool));
-
     SVN_ERR (svn_fs_delete (txn_root, "A/D/G/pi", pool));
-
     SVN_ERR (check_entry_absent (txn_root, "A/D/G", "pi", pool));
     SVN_ERR (check_entry_present (txn_root, "A/D/G", "rho", pool));
     SVN_ERR (check_entry_present (txn_root, "A/D/G", "tau", pool));
-    SVN_ERR (check_id_absent (fs, pi_id, pool));
-    SVN_ERR (check_id_present (fs, rho_id, pool));
-    SVN_ERR (check_id_present (fs, tau_id, pool));
-
     SVN_ERR (svn_fs_delete (txn_root, "A/D/G/rho", pool));
-
     SVN_ERR (check_entry_absent (txn_root, "A/D/G", "pi", pool));
     SVN_ERR (check_entry_absent (txn_root, "A/D/G", "rho", pool));
     SVN_ERR (check_entry_present (txn_root, "A/D/G", "tau", pool));
-    SVN_ERR (check_id_absent (fs, pi_id, pool));
-    SVN_ERR (check_id_absent (fs, rho_id, pool));
-    SVN_ERR (check_id_present (fs, tau_id, pool));
   }
 
   /* 3 */
   {
     const svn_fs_id_t *tau_id;
     SVN_ERR (svn_fs_node_id (&tau_id, txn_root, "A/D/G/tau", pool));
-
     SVN_ERR (check_entry_present (txn_root, "A/D/G", "tau", pool));
-    SVN_ERR (check_id_present (fs, tau_id, pool));
-
     SVN_ERR (svn_fs_delete (txn_root, "A/D/G/tau", pool));
-
     SVN_ERR (check_entry_absent (txn_root, "A/D/G", "tau", pool));
-    SVN_ERR (check_id_absent (fs, tau_id, pool));
   }
 
   /* 4 */
   {
     const svn_fs_id_t *G_id;
     SVN_ERR (svn_fs_node_id (&G_id, txn_root, "A/D/G", pool));
-
     SVN_ERR (check_entry_present (txn_root, "A/D", "G", pool));
-    SVN_ERR (check_id_present (fs, G_id, pool));
-
     SVN_ERR (svn_fs_delete (txn_root, "A/D/G", pool));        /* succeed */
-
     SVN_ERR (check_entry_absent (txn_root, "A/D", "G", pool));
-    SVN_ERR (check_id_absent (fs, G_id, pool));
   }
 
   /* 5 */
   {
     const svn_fs_id_t *C_id;
     SVN_ERR (svn_fs_node_id (&C_id, txn_root, "A/C", pool));
-
     SVN_ERR (check_entry_present (txn_root, "A", "C", pool));
-    SVN_ERR (check_id_present (fs, C_id, pool));
-
     SVN_ERR (svn_fs_delete (txn_root, "A/C", pool));
-
     SVN_ERR (check_entry_absent (txn_root, "A", "C", pool));
-    SVN_ERR (check_id_absent (fs, C_id, pool));
   }
 
   /* 6 */
@@ -2970,21 +2375,15 @@ delete_mutables (const char **msg,
       }
     svn_error_clear (err);
 
-    SVN_ERR (check_id_present (fs, root_id, pool));
   }
 
   /* 7 */
   {
     const svn_fs_id_t *iota_id;
     SVN_ERR (svn_fs_node_id (&iota_id, txn_root, "iota", pool));
-
     SVN_ERR (check_entry_present (txn_root, "", "iota", pool));
-    SVN_ERR (check_id_present (fs, iota_id, pool));
-
     SVN_ERR (svn_fs_delete (txn_root, "iota", pool));
-
     SVN_ERR (check_entry_absent (txn_root, "", "iota", pool));
-    SVN_ERR (check_id_absent (fs, iota_id, pool));
   }
 
   return SVN_NO_ERROR;
@@ -3023,7 +2422,7 @@ delete (const char **msg,
 
   /* Prepare a txn to receive the greek tree. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-del-tree",
-                                "bdb", pool));
+                                opts->fs_type, pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
 
@@ -3060,16 +2459,12 @@ delete (const char **msg,
     SVN_ERR (svn_fs_node_id (&gamma_id, txn_root, "A/D/gamma", pool));
 
     SVN_ERR (check_entry_present (txn_root, "", "iota", pool));
-    SVN_ERR (check_id_present (fs, iota_id, pool));
-    SVN_ERR (check_id_present (fs, gamma_id, pool));
 
     /* Try deleting mutable files. */
     SVN_ERR (svn_fs_delete (txn_root, "iota", pool));
     SVN_ERR (svn_fs_delete (txn_root, "A/D/gamma", pool));
     SVN_ERR (check_entry_absent (txn_root, "", "iota", pool));
     SVN_ERR (check_entry_absent (txn_root, "A/D", "gamma", pool));
-    SVN_ERR (check_id_absent (fs, iota_id, pool));
-    SVN_ERR (check_id_absent (fs, gamma_id, pool));
 
     /* Validate the tree.  */
     SVN_ERR (svn_test__validate_tree (txn_root, expected_entries, 18, pool));
@@ -3136,29 +2531,10 @@ delete (const char **msg,
     SVN_ERR (svn_fs_delete (txn_root, "A/B/F", pool));
     SVN_ERR (check_entry_absent (txn_root, "A", "C", pool));
     SVN_ERR (check_entry_absent (txn_root, "A/B", "F", pool));
-    SVN_ERR (check_id_absent (fs, C_id, pool));
-    SVN_ERR (check_id_absent (fs, F_id, pool));
 
     /* Now delete a mutable non-empty dir. */
     SVN_ERR (svn_fs_delete (txn_root, "A", pool));
     SVN_ERR (check_entry_absent (txn_root, "", "A", pool));
-    SVN_ERR (check_id_absent (fs, A_id, pool));
-    SVN_ERR (check_id_absent (fs, mu_id, pool));
-    SVN_ERR (check_id_absent (fs, B_id, pool));
-    SVN_ERR (check_id_absent (fs, lambda_id, pool));
-    SVN_ERR (check_id_absent (fs, E_id, pool));
-    SVN_ERR (check_id_absent (fs, alpha_id, pool));
-    SVN_ERR (check_id_absent (fs, beta_id, pool));
-    SVN_ERR (check_id_absent (fs, D_id, pool));
-    SVN_ERR (check_id_absent (fs, gamma_id, pool));
-    SVN_ERR (check_id_absent (fs, H_id, pool));
-    SVN_ERR (check_id_absent (fs, chi_id, pool));
-    SVN_ERR (check_id_absent (fs, psi_id, pool));
-    SVN_ERR (check_id_absent (fs, omega_id, pool));
-    SVN_ERR (check_id_absent (fs, G_id, pool));
-    SVN_ERR (check_id_absent (fs, pi_id, pool));
-    SVN_ERR (check_id_absent (fs, rho_id, pool));
-    SVN_ERR (check_id_absent (fs, tau_id, pool));
 
     /* Validate the tree.  */
     {
@@ -3245,26 +2621,6 @@ delete (const char **msg,
     /* Delete "A" */
     SVN_ERR (svn_fs_delete (txn_root, "A", pool));
     SVN_ERR (check_entry_absent (txn_root, "", "A", pool));
-    SVN_ERR (check_id_absent (fs, A_id, pool));
-    SVN_ERR (check_id_present (fs, mu_id, pool));
-    SVN_ERR (check_id_present (fs, B_id, pool));
-    SVN_ERR (check_id_present (fs, lambda_id, pool));
-    SVN_ERR (check_id_present (fs, E_id, pool));
-    SVN_ERR (check_id_present (fs, alpha_id, pool));
-    SVN_ERR (check_id_present (fs, beta_id, pool));
-    SVN_ERR (check_id_present (fs, F_id, pool));
-    SVN_ERR (check_id_present (fs, C_id, pool));
-    SVN_ERR (check_id_absent (fs, D_id, pool));
-    SVN_ERR (check_id_present (fs, gamma_id, pool));
-    SVN_ERR (check_id_present (fs, H_id, pool));
-    SVN_ERR (check_id_present (fs, chi_id, pool));
-    SVN_ERR (check_id_present (fs, psi_id, pool));
-    SVN_ERR (check_id_present (fs, omega_id, pool));
-    SVN_ERR (check_id_absent (fs, G_id, pool));
-    SVN_ERR (check_id_present (fs, pi_id, pool));
-    SVN_ERR (check_id_present (fs, rho_id, pool));
-    SVN_ERR (check_id_present (fs, tau_id, pool));
-    SVN_ERR (check_id_absent (fs, sigma_id, pool));
 
     /* Validate the tree.  */
     {
@@ -3294,16 +2650,12 @@ delete (const char **msg,
     SVN_ERR (svn_fs_node_id (&gamma_id, txn_root, "A/D/gamma", pool));
     SVN_ERR (check_entry_present (txn_root, "", "iota", pool));
     SVN_ERR (check_entry_present (txn_root, "A/D", "gamma", pool));
-    SVN_ERR (check_id_present (fs, iota_id, pool));
-    SVN_ERR (check_id_present (fs, gamma_id, pool));
 
     /* Delete some files. */
     SVN_ERR (svn_fs_delete (txn_root, "iota", pool));
     SVN_ERR (svn_fs_delete (txn_root, "A/D/gamma", pool));
     SVN_ERR (check_entry_absent (txn_root, "", "iota", pool));
     SVN_ERR (check_entry_absent (txn_root, "A/D", "iota", pool));
-    SVN_ERR (check_id_present (fs, iota_id, pool));
-    SVN_ERR (check_id_present (fs, gamma_id, pool));
 
     /* Validate the tree.  */
     {
@@ -3389,25 +2741,6 @@ delete (const char **msg,
     /* Delete "A" */
     SVN_ERR (svn_fs_delete (txn_root, "A", pool));
     SVN_ERR (check_entry_absent (txn_root, "", "A", pool));
-    SVN_ERR (check_id_present (fs, A_id, pool));
-    SVN_ERR (check_id_present (fs, mu_id, pool));
-    SVN_ERR (check_id_present (fs, B_id, pool));
-    SVN_ERR (check_id_present (fs, lambda_id, pool));
-    SVN_ERR (check_id_present (fs, E_id, pool));
-    SVN_ERR (check_id_present (fs, alpha_id, pool));
-    SVN_ERR (check_id_present (fs, beta_id, pool));
-    SVN_ERR (check_id_present (fs, F_id, pool));
-    SVN_ERR (check_id_present (fs, C_id, pool));
-    SVN_ERR (check_id_present (fs, D_id, pool));
-    SVN_ERR (check_id_present (fs, gamma_id, pool));
-    SVN_ERR (check_id_present (fs, H_id, pool));
-    SVN_ERR (check_id_present (fs, chi_id, pool));
-    SVN_ERR (check_id_present (fs, psi_id, pool));
-    SVN_ERR (check_id_present (fs, omega_id, pool));
-    SVN_ERR (check_id_present (fs, G_id, pool));
-    SVN_ERR (check_id_present (fs, pi_id, pool));
-    SVN_ERR (check_id_present (fs, rho_id, pool));
-    SVN_ERR (check_id_present (fs, tau_id, pool));
 
     /* Validate the tree.  */
     {
@@ -3445,7 +2778,7 @@ commit_date (const char **msg,
 
   /* Prepare a filesystem. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-commit-date",
-                                "bdb", pool));
+                                opts->fs_type, pool));
 
   before_commit = apr_time_now ();
 
@@ -3501,7 +2834,7 @@ check_old_revisions (const char **msg,
 
   /* Prepare a filesystem. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-check-old-revisions",
-                                "bdb", pool));
+                                opts->fs_type, pool));
 
   /* Commit a greek tree. */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, subpool));
@@ -3867,7 +3200,7 @@ check_all_revisions (const char **msg,
 
   /* Create a filesystem and repository. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-check-all-revisions",
-                                "bdb", pool));
+                                opts->fs_type, pool));
 
   /***********************************************************************/
   /* REVISION 0 */
@@ -4185,6 +3518,7 @@ random_data_to_buffer (char *buf,
 
 static svn_error_t *
 file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
+                       const char *fs_type, const char *fs_name, 
                        apr_pool_t *pool)
 { 
   svn_fs_t *fs;
@@ -4201,8 +3535,7 @@ file_integrity_helper (apr_size_t filesize, apr_uint32_t *seed,
   svn_revnum_t j;
 
   /* Create a filesystem and repository. */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-large-file-integrity",
-                                "bdb", pool));
+  SVN_ERR (svn_test__create_fs (&fs, fs_name, fs_type, pool));
 
   /* Set up our file contents string buffer. */
   content_buffer = apr_palloc (pool, filesize);
@@ -4334,7 +3667,8 @@ medium_file_integrity (const char **msg,
 
   /* Being no larger than the standard delta window size affects
      deltification internally, so test that. */
-  return file_integrity_helper (SVN_DELTA_WINDOW_SIZE, &seed, pool);
+  return file_integrity_helper (SVN_DELTA_WINDOW_SIZE, &seed, opts->fs_type,
+                                "test-repo-medium-file-integrity", pool);
 }
 
 
@@ -4354,7 +3688,8 @@ large_file_integrity (const char **msg,
 
   /* Being larger than the standard delta window size affects
      deltification internally, so test that. */
-  return file_integrity_helper (SVN_DELTA_WINDOW_SIZE + 1, &seed, pool);
+  return file_integrity_helper (SVN_DELTA_WINDOW_SIZE + 1, &seed, opts->fs_type,
+                                "test-repo-large-file-integrity", pool);
 }
 
 
@@ -4378,7 +3713,7 @@ check_root_revision (const char **msg,
 
   /* Create a filesystem and repository. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-check-root-revision",
-                                "bdb", pool));
+                                opts->fs_type, pool));
 
   /* Create and commit the greek tree. */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, subpool));
@@ -4504,7 +3839,7 @@ test_node_created_rev (const char **msg,
 
   /* Create a filesystem and repository. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-node-created-rev",
-                                "bdb", pool));
+                                opts->fs_type, pool));
 
   /* Created the greek tree in revision 1. */
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
@@ -4615,7 +3950,7 @@ check_related (const char **msg,
 
   /* Create a filesystem and repository. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-check-related",
-                                "bdb", pool));
+                                opts->fs_type, pool));
 
   /*** Step I: Build up some state in our repository through a series
        of commits */
@@ -4807,66 +4142,6 @@ check_related (const char **msg,
 
 
 static svn_error_t *
-canonicalize_abspath (const char **msg,
-                      svn_boolean_t msg_only,
-                      svn_test_opts_t *opts,
-                      apr_pool_t *pool)
-{ 
-  apr_size_t i;
-  const char *paths[21][2] = 
-    /* in                      out */
-  { { NULL,                    NULL },
-    { "",                      "/" },
-    { "/",                     "/" },
-    { "//",                    "/" },
-    { "///",                   "/" },
-    { "foo",                   "/foo" },
-    { "foo/",                  "/foo" },
-    { "foo//",                 "/foo" },
-    { "/foo",                  "/foo" },
-    { "/foo/",                 "/foo" },
-    { "/foo//",                "/foo" },
-    { "//foo//",               "/foo" },
-    { "foo/bar",               "/foo/bar" },
-    { "foo/bar/",              "/foo/bar" },
-    { "foo/bar//",             "/foo/bar" },
-    { "foo//bar",              "/foo/bar" },
-    { "foo//bar/",             "/foo/bar" },
-    { "foo//bar//",            "/foo/bar" },
-    { "/foo//bar//",           "/foo/bar" },
-    { "//foo//bar//",          "/foo/bar" },
-    { "///foo///bar///baz///", "/foo/bar/baz" },
-  };
-
-  *msg = "test svn_fs_base__canonicalize_abspath";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  for (i = 0; i < (sizeof (paths) / 2 / sizeof (const char *)); i++)
-    {
-      const char *input = paths[i][0];
-      const char *output = paths[i][1];
-      const char *actual = svn_fs_base__canonicalize_abspath (input, pool);
-      
-      if ((! output) && (! actual))
-        continue;
-      if ((! output) && actual)
-        return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                                  "expected NULL path; got '%s'", actual);
-      if (output && (! actual))
-        return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                                  "expected '%s' path; got NULL", output);
-      if (strcmp (output, actual))
-        return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                                  "expected '%s' path; got '%s'",
-                                  output, actual);
-    }
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
 branch_test (const char **msg,
              svn_boolean_t msg_only,
              svn_test_opts_t *opts,
@@ -4885,7 +4160,7 @@ branch_test (const char **msg,
 
   /* Create a filesystem and repository. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-branch-test",
-                                "bdb", pool));
+                                opts->fs_type, pool));
 
   /*** Revision 1:  Create the greek tree in revision.  ***/
   SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
@@ -4971,7 +4246,7 @@ verify_checksum (const char **msg,
   apr_md5 (expected_digest, str->data, str->len);
 
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-verify-checksum",
-                                "bdb", pool));
+                                opts->fs_type, pool));
   SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   SVN_ERR (svn_fs_make_file (txn_root, "fact", pool));
@@ -4990,273 +4265,6 @@ verify_checksum (const char **msg,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-create_within_copy (const char **msg,
-                    svn_boolean_t msg_only,
-                    svn_test_opts_t *opts,
-                    apr_pool_t *pool)
-{ 
-  apr_pool_t *spool = svn_pool_create (pool);
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root, *rev_root;
-  svn_revnum_t youngest_rev = 0;
-  
-  *msg = "create new items within a copied directory";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  /* Create a filesystem and repository. */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-create-within-copy",
-                                "bdb", pool));
-
-  /*** Revision 1:  Create the greek tree in revision.  ***/
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
-  SVN_ERR (svn_test__create_greek_tree (txn_root, spool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, spool));
-  svn_pool_clear (spool);
-
-  /*** Revision 2:  Copy A/D to A/D3 ***/
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
-  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
-  SVN_ERR (svn_fs_copy (rev_root, "A/D", txn_root, "A/D3", spool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, spool));
-  svn_pool_clear (spool);
-
-  /*** Revision 3:  Copy A/D/G to A/D/G2 ***/
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
-  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
-  SVN_ERR (svn_fs_copy (rev_root, "A/D/G", txn_root, "A/D/G2", spool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, spool));
-  svn_pool_clear (spool);
-
-  /*** Revision 4: Copy A/D to A/D2 and create up and I in the existing
-   A/D/G2, in the new A/D2, and in the nested, new A/D2/G2 ***/
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
-  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
-  SVN_ERR (svn_fs_copy (rev_root, "A/D", txn_root, "A/D2", spool));
-  SVN_ERR (svn_fs_make_dir (txn_root, "A/D/G2/I", spool));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/D/G2/up", spool));
-  SVN_ERR (svn_fs_make_dir (txn_root, "A/D2/I", spool));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/D2/up", spool));
-  SVN_ERR (svn_fs_make_dir (txn_root, "A/D2/G2/I", spool));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/D2/G2/up", spool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, spool));
-  svn_pool_clear (spool);
-
-  /*** Revision 5:  Create A/D3/down and A/D3/J ***/
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, spool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
-  SVN_ERR (svn_fs_make_file (txn_root, "A/D3/down", spool));
-  SVN_ERR (svn_fs_make_dir (txn_root, "A/D3/J", spool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, spool));
-  svn_pool_clear (spool);
-
-  {
-    /* New items should have same CopyID as their parent */
-    struct {
-      const char *path;
-      const char *unparsed_id;
-    } new_nodes[] = {
-      { "A/D/G2",     "d.2.4" },
-      { "A/D/G2/I",   "l.2.4" },
-      { "A/D/G2/up",  "m.2.4" },
-      { "A/D2",       "b.3.4" },
-      { "A/D2/I",     "n.3.4" },
-      { "A/D2/up",    "o.3.4" },
-      { "A/D2/G2",    "d.4.4" },
-      { "A/D2/G2/I",  "p.4.4" },
-      { "A/D2/G2/up", "q.4.4" },
-      { "A/D3",       "b.1.5" },
-      { "A/D3/down",  "r.1.5" },
-      { "A/D3/J",     "s.1.5" },
-      { NULL, NULL }
-    }, *node = new_nodes; 
-
-    SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, spool));
-    while (node->path)
-      {
-        const svn_fs_id_t *id;
-        svn_string_t *s;
-        SVN_ERR (svn_fs_node_id (&id, rev_root, node->path, spool));
-        s = svn_fs_unparse_id (id, spool);
-        if (strcmp (s->data, node->unparsed_id) != 0)
-          return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                                    "'%s' id: expected '%s'; got '%s'",
-                                    node->path, node->unparsed_id, s->data);
-        ++node;
-      }
-    svn_pool_clear (spool);
-  }
-
-  svn_pool_destroy (spool);
-  return SVN_NO_ERROR;
-}
-
-
-/* Test the skip delta support by commiting so many changes to a file
- * that some of its older revisions become reachable by skip deltas,
- * then try retrieving those revisions.
- */
-static svn_error_t *
-skip_deltas (const char **msg,
-             svn_boolean_t msg_only,
-             svn_test_opts_t *opts,
-             apr_pool_t *pool)
-{ 
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root, *rev_root;
-  apr_pool_t *subpool = svn_pool_create (pool);
-  svn_revnum_t youngest_rev = 0;
-  const char *one_line = "This is a line in file 'f'.\n";
-  svn_stringbuf_t *f = svn_stringbuf_create (one_line, pool); 
-
-  *msg = "test skip deltas";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  /* Create a filesystem and repository. */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-skip-deltas",
-                                "bdb", pool));
-
-  /* Create the file. */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
-  SVN_ERR (svn_fs_make_file (txn_root, "f", subpool));
-  SVN_ERR (svn_test__set_file_contents (txn_root, "f", f->data, subpool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
-  SVN_ERR (svn_fs_deltify_revision (fs, youngest_rev, subpool));
-  svn_pool_clear (subpool);
-
-  /* Now, commit changes to the file 128 times. */
-  while (youngest_rev <= 128)
-    {
-      /* Append another line to the ever-growing file contents. */
-      svn_stringbuf_appendcstr (f, one_line); 
-
-      /* Commit the new contents. */
-      SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
-      SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
-      SVN_ERR (svn_test__set_file_contents (txn_root, "f", f->data, subpool));
-      SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, subpool));
-      SVN_ERR (svn_fs_deltify_revision (fs, youngest_rev, subpool));
-      svn_pool_clear (subpool);
-    }
-
-  /* Now go back and check revision 1. */
-  SVN_ERR (svn_fs_revision_root (&rev_root, fs, 1, pool));
-  SVN_ERR (svn_test__get_file_contents (rev_root, "f", &f, pool));
-  if (strcmp (one_line, f->data) != 0)
-    return svn_error_createf
-      (SVN_ERR_TEST_FAILED, NULL, 
-       "Wrong contents.  Expected:\n   '%s'\nGot:\n   '%s'\n", 
-       one_line, f->data);
-
-  svn_pool_destroy (subpool);
-  return SVN_NO_ERROR;
-}
-
-
-/* Trail-ish helpers for redundant_copy(). */
-struct get_txn_args
-{
-  transaction_t **txn;
-  const char *txn_name;
-  svn_fs_t *fs;
-};
-
-static svn_error_t *
-txn_body_get_txn (void *baton, trail_t *trail)
-{
-  struct get_txn_args *args = baton;
-  return svn_fs_bdb__get_txn (args->txn, args->fs, args->txn_name, 
-                              trail, trail->pool);
-}
-
-
-static svn_error_t *
-redundant_copy (const char **msg,
-                svn_boolean_t msg_only,
-                svn_test_opts_t *opts,
-                apr_pool_t *pool)
-{ 
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  const char *txn_name;
-  transaction_t *transaction;
-  svn_fs_root_t *txn_root, *rev_root;
-  const svn_fs_id_t *old_D_id, *new_D_id;
-  svn_revnum_t youngest_rev = 0;
-  struct get_txn_args args;
-  
-  *msg = "ensure no-op for redundant copies";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  /* Create a filesystem and repository. */
-  SVN_ERR (svn_test__create_fs (&fs, "test-repo-redundant-copy",
-                                "bdb", pool));
-
-  /* Create the greek tree in revision 1. */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
-  SVN_ERR (svn_fs_commit_txn (NULL, &youngest_rev, txn, pool));
-
-  /* In a transaction, copy A to Z. */
-  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, pool));
-  SVN_ERR (svn_fs_txn_name (&txn_name, txn, pool));
-  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
-  SVN_ERR (svn_fs_revision_root (&rev_root, fs, youngest_rev, pool));
-  SVN_ERR (svn_fs_copy (rev_root, "A", txn_root, "Z", pool));
-
-  /* Now, examine the transaction.  There should have been only one
-     copy there. */
-  args.fs = fs;
-  args.txn_name = txn_name;
-  args.txn = &transaction;
-  SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_get_txn, &args, pool));
-  if (transaction->copies->nelts != 1)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                              "Expected 1 copy; got %d",
-                              transaction->copies->nelts);
-
-  /* Get the node-rev-id for A/D (the reason will be clear a little later). */
-  SVN_ERR (svn_fs_node_id (&old_D_id, txn_root, "A/D", pool));
-
-  /* Now copy A/D/G Z/D/G. */
-  SVN_ERR (svn_fs_copy (rev_root, "A/D/G", txn_root, "Z/D/G", pool));
-
-  /* Now, examine the transaction.  There should still only have been
-     one copy operation that "took". */
-  SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_get_txn, &args, pool));
-  if (transaction->copies->nelts != 1)
-    return svn_error_createf (SVN_ERR_TEST_FAILED, NULL,
-                              "Expected only 1 copy; got %d",
-                              transaction->copies->nelts);
-
-  /* Finally, check the node-rev-id for "Z/D" -- it should never have
-     been made mutable (since the second copy should not have taken
-     place). */
-  SVN_ERR (svn_fs_node_id (&new_D_id, txn_root, "A/D", pool));
-  if (! svn_string_compare (svn_fs_unparse_id (old_D_id, pool),
-                            svn_fs_unparse_id (new_D_id, pool)))
-    return svn_error_create 
-      (SVN_ERR_TEST_FAILED, NULL,
-       "Expected equivalent node-rev-ids; got differing ones");
-
-  return SVN_NO_ERROR;
-}
-
-
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -5264,8 +4272,6 @@ redundant_copy (const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS (create_berkeley_filesystem),
-    SVN_TEST_PASS (open_berkeley_filesystem),
     SVN_TEST_PASS (trivial_transaction),
     SVN_TEST_PASS (reopen_trivial_transaction),
     SVN_TEST_PASS (create_file_transaction),
@@ -5278,15 +4284,13 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (transaction_props),
     SVN_TEST_PASS (node_props),
     SVN_TEST_PASS (delete_mutables),
-    SVN_TEST_PASS (delete),
-    SVN_TEST_PASS (abort_txn),
-    SVN_TEST_PASS (test_tree_node_validation),
+    SVN_TEST_XFAIL (delete),
     SVN_TEST_PASS (fetch_youngest_rev),
     SVN_TEST_PASS (basic_commit),
+    SVN_TEST_PASS (test_tree_node_validation),
+    SVN_TEST_XFAIL (merging_commit), /* Needs to be written to match new
+                                        merge() algorithm expectations */
     SVN_TEST_PASS (copy_test),
-    SVN_TEST_PASS (create_within_copy),
-    SVN_TEST_XFAIL (link_test),
-    SVN_TEST_PASS (merging_commit),
     SVN_TEST_PASS (commit_date),
     SVN_TEST_PASS (check_old_revisions),
     SVN_TEST_PASS (check_all_revisions),
@@ -5295,10 +4299,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (check_root_revision),
     SVN_TEST_PASS (test_node_created_rev),
     SVN_TEST_PASS (check_related),
-    SVN_TEST_PASS (canonicalize_abspath),
     SVN_TEST_PASS (branch_test),
     SVN_TEST_PASS (verify_checksum),
-    SVN_TEST_PASS (skip_deltas),
-    SVN_TEST_PASS (redundant_copy),
     SVN_TEST_NULL
   };

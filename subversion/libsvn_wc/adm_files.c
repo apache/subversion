@@ -36,6 +36,7 @@
 #include "wc.h"
 #include "adm_files.h"
 #include "entries.h"
+#include "lock.h"
 
 #include "svn_private_config.h"
 
@@ -138,7 +139,12 @@ svn_wc__adm_path_exists (const char *path,
 
   err = svn_io_check_path (path, &kind, pool);
   if (err)
-    svn_error_clear (err);
+    {
+      svn_error_clear (err);
+      /* Return early, since kind is undefined in this case. */
+      return FALSE;
+    }
+
   if (kind == svn_node_none)
     return FALSE;
   else

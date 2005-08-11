@@ -142,38 +142,87 @@ def blame_in_xml(sbox):
   # Retrieve last changed date from svn info
   output, error = svntest.actions.run_and_verify_svn(None, None, [],
                                                      'log', file_path,
-                                                     '--xml', '-rHEAD')
-  info_msg = "<date>"
+                                                     '--xml', '-r1:2')
+  date1 = None
+  date2 = None
   for line in output:
-    if line.find(info_msg) >= 0:
-      time_str = line[:len(line)]
-      break
+    if line.find("<date>") >= 0:
+      if date1 is None:
+        date1 = line
+        continue
+      elif date2 is None:
+        date2 = line
+        break
   else:
     raise svntest.Failure
 
-  template = ["<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
-              "<blame>\n",
-              "<target\n",
-              "   path=\"%s\">\n" % (file_path),
-              "<entry\n",
-              "   line-number=\"1\">\n",
-              "<commit\n",
-              "   revision=\"2\">\n",
-              "<author>jrandom</author>\n",
-              "%s" % (time_str),
-              "</commit>\n",
-              "</entry>\n",
-              "</target>\n",
-              "</blame>\n",
-             ]
+  template = ['<?xml version="1.0" encoding="utf-8"?>\n',
+              '<blame>\n',
+              '<target\n',
+              '   path="' + file_path + '">\n',
+              '<entry\n',
+              '   line-number="1">\n',
+              '<commit\n',
+              '   revision="1">\n',
+              '<author>jrandom</author>\n',
+              '%s' % date1,
+              '</commit>\n',
+              '</entry>\n',
+              '<entry\n',
+              '   line-number="2">\n',
+              '<commit\n',
+              '   revision="2">\n',
+              '<author>jrandom</author>\n',
+              '%s' % date2,
+              '</commit>\n',
+              '</entry>\n',
+              '</target>\n',
+              '</blame>\n']
 
   output, error = svntest.actions.run_and_verify_svn(None, None, [],
                                                      'blame', file_path,
                                                      '--xml')
-
   for i in range(0, len(output)):
     if output[i] != template[i]:
       raise svntest.Failure
+
+
+# For a line changed before the requested start revision, blame should not
+# print a revision number (as fixed in r8035) or crash (as it did with
+# "--verbose" before being fixed in r9890).
+#
+def blame_on_unknown_revision(sbox):
+  "blame lines from unknown revisions"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+
+  for i in range (1,3):
+    svntest.main.file_append(file_path, "\nExtra line %d" % (i))
+    expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+    svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                          None, None, None, None,
+                                          None, None, wc_dir)
+
+  output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'blame', file_path,
+                                                     '-rHEAD:HEAD')
+
+  if output[0].find(" - This is the file 'iota'.") == -1:
+    raise svntest.Failure
+
+  output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'blame', file_path,
+                                                     '--verbose',
+                                                     '-rHEAD:HEAD')
+
+  if output[0].find(" - This is the file 'iota'.") == -1:
+    raise svntest.Failure
 
 
 
@@ -187,6 +236,7 @@ test_list = [ None,
               blame_binary,
               blame_directory,
               blame_in_xml,
+              blame_on_unknown_revision,
              ]
 
 if __name__ == '__main__':

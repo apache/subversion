@@ -70,22 +70,10 @@ blame_receiver_xml (void *baton,
                              apr_psprintf (pool, "%ld", revision), NULL);
 
       /* "<author>xx</author>" */
-      if (author)
-        {
-          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
-                                 "author", NULL);
-          svn_xml_escape_cdata_cstring (&sb, author, pool);
-          svn_xml_make_close_tag (&sb, pool, "author");
-        }
+      svn_cl__xml_tagged_cdata (&sb, pool, "author", author);
 
       /* "<date>xx</date>" */
-      if (date)
-        {
-          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
-                                 "date", NULL);
-          svn_xml_escape_cdata_cstring (&sb, date, pool);
-          svn_xml_make_close_tag (&sb, pool, "date");
-        }
+      svn_cl__xml_tagged_cdata (&sb, pool, "date", date);
 
       /* "</commit>" */
       svn_xml_make_close_tag (&sb, pool, "commit");

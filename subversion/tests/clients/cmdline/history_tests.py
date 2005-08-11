@@ -70,7 +70,7 @@ def cat_traces_renames(sbox):
 
   # svn cat -r1 rho  --> should show pi's contents.
   svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'pi'."], None,
+                                      [ "This is the file 'pi'.\n"], None,
                                       'cat',  '-r', '1', rho_path)
   
   expected_output = svntest.wc.State(wc_dir, {
@@ -98,10 +98,10 @@ def cat_traces_renames(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/D/G/pi', 'A/D/G/rho')
   expected_disk.add({
-    'A/D/G/rho' : Item("This is the file 'pi'."),
+    'A/D/G/rho' : Item("This is the file 'pi'.\n"),
     })
   expected_disk.add({
-    'A/D/G/bloo' : Item("This is the file 'rho'."),
+    'A/D/G/bloo' : Item("This is the file 'rho'.\n"),
     })
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -110,17 +110,17 @@ def cat_traces_renames(sbox):
 
   # 'svn cat bloo' --> should show rho's contents.
   svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'rho'."], None,
+                                      [ "This is the file 'rho'.\n"], None,
                                       'cat',  bloo_path)
   
   # svn cat -r1 bloo --> should still show rho's contents.
   svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'rho'."], None,
+                                      [ "This is the file 'rho'.\n"], None,
                                       'cat',  '-r', '1', bloo_path)
 
   # svn cat -r1 rho  --> should show pi's contents.
   svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'pi'."], None,
+                                      [ "This is the file 'pi'.\n"], None,
                                       'cat',  '-r', '1', rho_path)
   
   # svn up -r1

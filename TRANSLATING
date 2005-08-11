@@ -31,8 +31,8 @@ to store translation information; the existing ones are kept in the
 subversion/po directory of the repository.
 [Note that the last paragraph deliberately does not say GNU gettext.]
 
-Please take some time to go through this document as well as the HACKING
-document also in this directory.
+Please take some time to go through this document as well as
+www/hacking.html.
 
 
 
@@ -71,9 +71,9 @@ After that, you should perform the following steps:
 Steps (2) and (3) generate a Makefile; step (4) generates
 subversion/po/subversion.pot
 
-The Subversion project has a policy not to put names in its files, so please
-apply the two changes described below.  (See HACKING for a description of
-this convention.)
+The Subversion project has a policy not to put names in its files, so
+please apply the two changes described below.  (See www/hacking.html
+for a description of this convention.)
 
 
 The header in the newly generated .po file looks like this:
@@ -245,20 +245,21 @@ teams have guidelines to stimulate consistency across packages.
 Single versus double quotes
 ===========================
 
-The project has standardised the use of quotes.  Some translation teams
-have done the same.  If there is no translation team for your locale or
-they did not standardise quoting, please follow the project guidelines per
-HACKING.  If they did: follow them :-)
+The project has standardised the use of quotes.  Some translation
+teams have done the same.  If there is no translation team for your
+locale or they did not standardise quoting, please follow the project
+guidelines per www/hacking.html.  If they did: follow them :-)
 
 
 
 Error message conventions
 =========================
 
-Since translators will generally see all error messages in the code, it's
-important to know that there is a special section in HACKING about this
-category of strings.  Here the same applies as does for the quotes: Adhere
-to them on all points for which there is no explicit policy set out by the
-translation team for your language.
+Since translators will generally see all error messages in the code,
+it's important to know that there is a special section in
+www/hacking.html about this category of strings.  Here the same
+applies as does for the quotes: Adhere to them on all points for which
+there is no explicit policy set out by the translation team for your
+language.
 
 vim: set tw=72 ts=2 sw=2 sts=2 et fo-=2w fo+=n js :

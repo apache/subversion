@@ -104,6 +104,7 @@ def setup_working_copy(wc_dir, value_len):
   global embd_author_rev_exp_path
   global embd_bogus_keywords_path
   global fixed_length_keywords_path
+  global id_with_space_path
 
   # NOTE: Only using author and revision keywords in tests for now,
   # since they return predictable substitutions.
@@ -121,6 +122,7 @@ def setup_working_copy(wc_dir, value_len):
   embd_author_rev_exp_path = os.path.join(wc_dir, 'embd_author_rev_exp')
   embd_bogus_keywords_path = os.path.join(wc_dir, 'embd_bogus_keywords')
   fixed_length_keywords_path = os.path.join(wc_dir, 'fixed_length_keywords')
+  id_with_space_path = os.path.join(wc_dir, 'id with space')
 
   svntest.main.file_append (author_rev_unexp_path, "$Author$\n$Rev$")
   svntest.main.file_append (author_rev_exp_path, "$Author: blah $\n$Rev: 0 $")
@@ -157,6 +159,7 @@ def setup_working_copy(wc_dir, value_len):
   for i in keyword_test_targets:
     svntest.main.file_append (fixed_length_keywords_path, i)
 
+  svntest.main.file_append (id_with_space_path, "$Id$")
 
 
 ### Helper functions for setting/removing properties
@@ -210,6 +213,7 @@ def keywords_from_birth(sbox):
     'embd_author_rev_exp' : Item(status='A ', wc_rev=0),
     'embd_bogus_keywords' : Item(status='A ', wc_rev=0),
     'fixed_length_keywords' : Item(status='A ', wc_rev=0),
+    'id with space' : Item(status='A ', wc_rev=0),
     })
 
   svntest.main.run_svn (None, 'add', author_rev_unexp_path)
@@ -223,6 +227,7 @@ def keywords_from_birth(sbox):
   svntest.main.run_svn (None, 'add', embd_author_rev_exp_path)
   svntest.main.run_svn (None, 'add', embd_bogus_keywords_path)
   svntest.main.run_svn (None, 'add', fixed_length_keywords_path)
+  svntest.main.run_svn (None, 'add', id_with_space_path)
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -234,6 +239,7 @@ def keywords_from_birth(sbox):
   keywords_on (id_exp_path)
   keywords_on (embd_author_rev_exp_path)
   keywords_on (fixed_length_keywords_path)
+  keywords_on (id_with_space_path)
 
   # Commit.
   expected_output = svntest.wc.State(wc_dir, {
@@ -248,6 +254,7 @@ def keywords_from_birth(sbox):
     'embd_author_rev_exp' : Item(verb='Adding'),
     'embd_bogus_keywords' : Item(verb='Adding'),
     'fixed_length_keywords' : Item(verb='Adding'),
+    'id with space' : Item(verb='Adding'),
     })
 
   svntest.actions.run_and_verify_commit (wc_dir, expected_output,
@@ -330,6 +337,15 @@ def keywords_from_birth(sbox):
   actual_textbase_kw = fp.readlines()
   fp.close()
   check_keywords(actual_textbase_kw, kw_textbase, "text base")
+  
+  # Check the Id keyword for filename with spaces.
+  fp = open(id_with_space_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 1)
+          and (re.match("\$Id: .*id with space", lines[0]))):
+    print "Id expansion failed for", id_with_space_path
+    raise svntest.Failure
+  fp.close()
   
 def enable_translation(sbox):
   "enable translation, check status, commit"
@@ -439,7 +455,8 @@ def update_modified_with_translation(sbox):
 9
 10
 =======
-This is the file 'rho'.>>>>>>> .r1
+This is the file 'rho'.
+>>>>>>> .r1
 """)
 
   # Updating back to revision 1 should not error; the merge should
@@ -568,7 +585,7 @@ def cat_keyword_expansion(sbox):
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
 
   # Set up A/mu to do $Rev$ keyword expansion
-  svntest.main.file_append (mu_path , "\n$Rev$")
+  svntest.main.file_append (mu_path , "$Rev$")
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'svn:keywords', 'Rev', mu_path)
 
@@ -646,7 +663,7 @@ def propset_commit_checkout_nocrash(sbox):
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   # Put a keyword in A/mu, commit
-  svntest.main.file_append (mu_path, "\n$Rev$")
+  svntest.main.file_append (mu_path, "$Rev$")
   expected_output = wc.State(wc_dir, {
     'A/mu' : Item(verb='Sending'),
     })

@@ -7,9 +7,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-06-11 14:52+0900\n"
-"PO-Revision-Date: 2004-10-28 16:10+0900\n"
-"Last-Translator: Subversion <dev@subversion.tigris.org>\n"
+"POT-Creation-Date: 2005-08-07 16:52+0900\n"
+"PO-Revision-Date: 2005-08-02 14:58+0900\n"
+"Last-Translator: seolin <blueboh@gmail.com>\n"
 "Language-Team: Korean <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
@@ -17,16 +17,16 @@ msgstr ""
 "X-Poedit-Language: Korean\n"
 "X-Poedit-Country: KOREA, REPUBLIC OF\n"
 
-#: clients/cmdline/blame-cmd.c:248 clients/cmdline/ls-cmd.c:294
+#: clients/cmdline/blame-cmd.c:236 clients/cmdline/ls-cmd.c:264
 msgid "'verbose' option invalid in XML mode"
 msgstr "'verbose' 옵션은 XML 모드에서는 불가능합니다."
 
-#: clients/cmdline/blame-cmd.c:260 clients/cmdline/ls-cmd.c:306
+#: clients/cmdline/blame-cmd.c:248 clients/cmdline/ls-cmd.c:276
 #: clients/cmdline/status-cmd.c:192
 msgid "'incremental' option only valid in XML mode"
 msgstr "'incremental' 옵션은 XML 모드에서만 가능합니다"
 
-#: clients/cmdline/blame-cmd.c:319
+#: clients/cmdline/blame-cmd.c:307
 #, c-format
 msgid "Skipping binary file: '%s'\n"
 msgstr "바이너리 파일을 무시합니다: '%s'\n"
@@ -78,10 +78,11 @@ msgstr ""
 "Subversion 명령행 클라이언트 버전 %s.\n"
 "'svn help <subcommand>'를 사용하여 특정 명령에 대하여 도움말을 얻으십시오.\n"
 "\n"
-"대부분의 subcommand들은 재귀적으로 수행하면서 파일이나 디렉토리를 인자로 취합"
+"대부분의 하위 명령들은 재귀적으로 수행하면서 파일이나 디렉토리를 인자로 취합"
 "니다.\n"
-"명령들에 인자가 주어지지 않으면 현재 디렉토리를 포함하여\n"
-"재귀적으로 수행하게 됩니다.\n"
+"명령들에 인자가 주어지지 않으면 현재 디렉토리를 포함하여 재귀적으로 수행하"
+"게\n"
+"됩니다.\n"
 "\n"
 "가능한 명령:\n"
 
@@ -114,7 +115,7 @@ msgstr "많은 인자가 import 명령에 주어졌습니다."
 msgid "Invalid URL '%s'"
 msgstr "잘못된 URL '%s'"
 
-#: clients/cmdline/info-cmd.c:56 svnadmin/main.c:1027
+#: clients/cmdline/info-cmd.c:56 svnadmin/main.c:1028
 #, c-format
 msgid "Path: %s\n"
 msgstr "경로: %s\n"
@@ -269,7 +270,7 @@ msgstr ""
 "잠금 이유 (%i 행):\n"
 "%s\n"
 
-#: clients/cmdline/info-cmd.c:280
+#: clients/cmdline/info-cmd.c:281
 #, c-format
 msgid ""
 "%s:  (Not a versioned resource)\n"
@@ -278,7 +279,7 @@ msgstr ""
 "%s: (버전 관리 대상이 아님)\n"
 "\n"
 
-#: clients/cmdline/info-cmd.c:288
+#: clients/cmdline/info-cmd.c:290
 #, c-format
 msgid ""
 "%s:  (Not a valid URL)\n"
@@ -308,11 +309,11 @@ msgstr "변경된 경로:\n"
 msgid " (from %s:%ld)"
 msgstr "(원본 %s:%ld)"
 
-#: clients/cmdline/log-cmd.c:446
+#: clients/cmdline/log-cmd.c:432
 msgid "When specifying working copy paths, only one target may be given"
 msgstr "작업 사본의 경로는 하나만 가능합니다."
 
-#: clients/cmdline/log-cmd.c:458
+#: clients/cmdline/log-cmd.c:444
 msgid "Only relative paths can be specified after a URL"
 msgstr "URL 뒤에 지정할 때는 상대 경로만 가능합니다."
 
@@ -372,7 +373,7 @@ msgstr ""
 
 #: clients/cmdline/main.c:87
 msgid "read data from file ARG"
-msgstr "ARG 에서 데이터를 읽습니다."
+msgstr "arg에서 데이터를 읽습니다."
 
 #: clients/cmdline/main.c:89
 msgid "give output suitable for concatenation"
@@ -380,7 +381,7 @@ msgstr "덧붙이기 쉬운 형태로 출력합니다."
 
 #: clients/cmdline/main.c:91
 msgid "treat value as being in charset encoding ARG"
-msgstr "값을 ARG에 해당하는 문자코드로 취급합니다."
+msgstr "값을 arg에 해당하는 문자코드로 취급합니다."
 
 #: clients/cmdline/main.c:92
 msgid "print client version info"
@@ -408,7 +409,7 @@ msgstr "arg를 diff 로 넘길 인자들을 지정함 (생략값: '-u')"
 
 #: clients/cmdline/main.c:101
 msgid "pass contents of file ARG as additional args"
-msgstr "ARG로 주어진 파일 내용을 옵션으로 추가합니다."
+msgstr "arg로 주어진 파일 내용을 옵션으로 추가합니다."
 
 #: clients/cmdline/main.c:102
 msgid "output in XML"
@@ -474,7 +475,7 @@ msgstr "arg를 오래된 파일로 사용합니다."
 msgid "use ARG as the newer target"
 msgstr "arg를 새 파일로 사용합니다."
 
-#: clients/cmdline/main.c:133 svnlook/main.c:122
+#: clients/cmdline/main.c:133
 msgid "operate on a revision property (use with -r)"
 msgstr "속성의 리비전 지정합니다. (-r 옵션과 같이 사용)"
 
@@ -497,24 +498,25 @@ msgstr "자동 속성기능을 비활성화합니다."
 #: clients/cmdline/main.c:143
 msgid ""
 "use a different EOL marker than the standard\n"
-"                             system marker for files with a native svn:eol-"
-"style\n"
-"                             property.  ARG may be one of 'LF', 'CR', 'CRLF'"
+"                             system marker for files with the svn:eol-style\n"
+"                             property set to 'native'.\n"
+"                             ARG may be one of 'LF', 'CR', 'CRLF'"
 msgstr ""
-"행종료문자를 표준이 아닌 다른 것을 사용합니다.\n"
-"                            arg는 'LF', 'CR', 'CRLF' 중의 하나가 될 수 있으"
-"며\n"
-"                            이는 원래 값인 svn:eol-style 을 대신 사용됩니다."
+"행종료문자를 표준 시스템 문자가 아닌\n"
+"                            파일의 svn:eol-style 속성을\n"
+"                            'native'로 두어 다른 것을 사용합니다.\n"
+"                            ARG는 'LF', 'CR', 'CRLF' 중의 하나가 될 수 있습니"
+"다."
 
-#: clients/cmdline/main.c:149
+#: clients/cmdline/main.c:151
 msgid "maximum number of log entries"
 msgstr "로그 개수의 최대값"
 
-#: clients/cmdline/main.c:151
+#: clients/cmdline/main.c:153
 msgid "don't unlock the targets"
 msgstr "대상의 잠금을 해제하지 않고 진행합니다."
 
-#: clients/cmdline/main.c:182
+#: clients/cmdline/main.c:192
 msgid ""
 "Put files and directories under version control, scheduling\n"
 "them for addition to repository.  They will be added in next commit.\n"
@@ -524,7 +526,7 @@ msgstr ""
 "추가하도록 스케쥴링 되며, 다음 커밋할 때, 추가됩니다.\n"
 "사용법: add PATH...\n"
 
-#: clients/cmdline/main.c:190
+#: clients/cmdline/main.c:200
 msgid ""
 "Output the content of specified files or\n"
 "URLs with revision and author information in-line.\n"
@@ -537,10 +539,10 @@ msgstr ""
 "각 라인별로 리비전과 작성자를 보여줍니다.\n"
 "사용법: blame TARGET[@REV]...\n"
 "\n"
-"  REV가 지정되면, 어떤 것을 찾아야할지 결정하게 됩니다.\n"
+"  REV가 지정되면, 지정된 REV에서부터 찾아 보여줍니다.\n"
 "  \n"
 
-#: clients/cmdline/main.c:200
+#: clients/cmdline/main.c:210
 msgid ""
 "Output the content of specified files or URLs.\n"
 "usage: cat TARGET[@REV]...\n"
@@ -551,10 +553,10 @@ msgstr ""
 "지정한 파일이나 URL의 내용을 출력합니다.\n"
 "사용법: cat TARGET[@REV]...\n"
 "\n"
-"  REV가 지정되면, 어떤 것을 찾아야할지 결정하게 됩니다.\n"
+"  REV가 지정되면, 지정된 REV에서부터 찾아 출력합니다.\n"
 "  \n"
 
-#: clients/cmdline/main.c:208
+#: clients/cmdline/main.c:218
 msgid ""
 "Check out a working copy from a repository.\n"
 "usage: checkout URL[@REV]... [PATH]\n"
@@ -570,7 +572,7 @@ msgstr ""
 "작업사본을 저장소로부터 꺼냅니다.\n"
 "usage: checkout URL[@REV]... [PATH]\n"
 "\n"
-"  REV가 지정되면, 어떤 것을 찾아야할지 결정하게 됩니다.\n"
+"  REV가 지정되면, 지정된 REV에서부터 찾아 체크아웃합니다.\n"
 "  \n"
 "  PATH가 생략되면, URL의 맨마지막 디렉토리명이 꺼내어 저장될\n"
 "  디렉토리 이름으로 사용됩니다. 만약, 여러개의 URL이 지정되면\n"
@@ -578,7 +580,7 @@ msgstr ""
 "  맨 마지막 디렉토리명이 하위 디렉토리 이름으로 사용됩니다.\n"
 "  \n"
 
-#: clients/cmdline/main.c:222
+#: clients/cmdline/main.c:232
 msgid ""
 "Recursively clean up the working copy, removing locks, resuming\n"
 "unfinished operations, etc.\n"
@@ -588,7 +590,7 @@ msgstr ""
 "중단된 명령을 재개합니다.\n"
 "사용법: cleanup [PATH...]\n"
 
-#: clients/cmdline/main.c:228
+#: clients/cmdline/main.c:238
 msgid ""
 "Send changes from your working copy to the repository.\n"
 "usage: commit [PATH...]\n"
@@ -606,7 +608,7 @@ msgstr ""
 "  잠긴 파일이 있거나, 잠긴 파일이 들어 있는 디렉토리는\n"
 "  성공적으로 커밋이 되면 잠금이 해제가 됩니다.\n"
 
-#: clients/cmdline/main.c:239
+#: clients/cmdline/main.c:249
 msgid ""
 "Duplicate something in working copy or repository, remembering history.\n"
 "usage: copy SRC DST\n"
@@ -617,7 +619,7 @@ msgid ""
 "    URL -> WC:   check out URL into WC, schedule for addition\n"
 "    URL -> URL:  complete server-side copy;  used to branch & tag\n"
 msgstr ""
-"작업 사본(working copy;WC) 혹은 저장소의 내용을 이전 로그메시지와 함께 복제합"
+"작업 사본(working copy;WC) 혹은 저장소의 내용을 이전 로그메시지와 함께 복사합"
 "니다.\n"
 "사용법: copy SRC DST\n"
 "\n"
@@ -627,7 +629,7 @@ msgstr ""
 "    URL -> WC:   URL로부터 체크아웃해서 현 작업 사본에 추가하도록 스케쥴\n"
 "    URL -> URL:  서버상에서 바로 복사함, 브랜치 & 태그를 만들 때 사용됨\n"
 
-#: clients/cmdline/main.c:252
+#: clients/cmdline/main.c:262
 msgid ""
 "Remove files and directories from version control.\n"
 "usage: 1. delete PATH...\n"
@@ -642,7 +644,7 @@ msgid ""
 "  2. Each item specified by a URL is deleted from the repository\n"
 "    via an immediate commit.\n"
 msgstr ""
-"파일과 디렉토리를 버전 관리 대상에서 제거함\n"
+"파일과 디렉토리를 버전 관리 대상에서 제거합니다.\n"
 "사용법: 1. delete PATH...\n"
 "        2. delete URL...\n"
 "\n"
@@ -654,7 +656,7 @@ msgstr ""
 "  2. URL로 지정된 아이템들은 저장소에서 즉시 삭제됩니다.\n"
 "\n"
 
-#: clients/cmdline/main.c:268
+#: clients/cmdline/main.c:278
 msgid ""
 "Display the differences between two paths.\n"
 "usage: 1. diff [-r N[:M]] [TARGET[@REV]...]\n"
@@ -695,8 +697,8 @@ msgstr ""
 "\n"
 "     TARGET 중에 작업사본내의 경로이면서 N이 생략되면 BASE가 사용되고,\n"
 "     경로가 아니면 N은 반드시 명시되어야합니다. 또한 작업사본내의 경로이면"
-"서,     M이 생략되면 작업중인 파일이 사용되고, URL의 경우 HEAD가 사용됩니"
-"다.\n"
+"서,\n"
+"     M이 생략되면 작업중인 파일이 사용되고, URL의 경우 HEAD가 사용됩니다.\n"
 "\n"
 "  2. OLDREV 리비전의 OLD-TGT와 NEWREV 리비전의  NEW-TGT의 차이를 보여줍니"
 "다.\n"
@@ -715,7 +717,7 @@ msgstr ""
 "\n"
 "  'svn diff' 을 사용하면 작업 중 수정된 내용을 볼 수 있습니다.\n"
 
-#: clients/cmdline/main.c:308
+#: clients/cmdline/main.c:318
 msgid ""
 "Create an unversioned copy of a tree.\n"
 "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -730,7 +732,7 @@ msgid ""
 "     PATH1, at revision REV if it is given, otherwise at WORKING, into\n"
 "     PATH2.  If PATH2 is omitted, the last component of the PATH1 is used\n"
 "     for the local directory name. If REV is not specified, all local\n"
-"     changes will be preserved, but files not under version control will\n"
+"     changes will be preserved.  Files not under version control will\n"
 "     not be copied.\n"
 "\n"
 "  If specified, PEGREV determines in which revision the target is first\n"
@@ -751,10 +753,10 @@ msgstr ""
 "     이름으로 사용합니다. REV가 생략될 경우 작업 중에 변경된 내용은 그대로\n"
 "     유지되며, 버전 관리 대상이 아닌 파일들은 복사되지 않습니다.\n"
 "     \n"
-"  PEGREV가 지정되면, 어떤 것을 찾아야할지 결정하게 됩니다.\n"
+"  PEGREV가 지정될 경우엔, 어떤 리비젼에서 대상을 먼저 찾을지 결정합니다.\n"
 "  \n"
 
-#: clients/cmdline/main.c:337
+#: clients/cmdline/main.c:347
 msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: help [SUBCOMMAND...]\n"
@@ -762,7 +764,7 @@ msgstr ""
 "본 프로그램과 그 하위 명령들에 대한 사용법을 보여줍니다.\n"
 "usage: help [SUBCOMMAND...]\n"
 
-#: clients/cmdline/main.c:346
+#: clients/cmdline/main.c:356
 msgid ""
 "Commit an unversioned file or tree into the repository.\n"
 "usage: import [PATH] URL\n"
@@ -782,7 +784,7 @@ msgstr ""
 "  PATH가 디렉토리이면, 그 내용은 URL에 모두 추가 됩니다.\n"
 "  \n"
 
-#: clients/cmdline/main.c:359
+#: clients/cmdline/main.c:369
 msgid ""
 "Display information about a local or remote item.\n"
 "usage: info [TARGET...]\n"
@@ -790,13 +792,13 @@ msgid ""
 "  Print information about each TARGET (default: '.')\n"
 "  TARGET may be either a working-copy path or URL.\n"
 msgstr ""
-"작업 사본이나 저장소의 파일, 디렉토리의 정보를 출력합니다\n"
+"작업 사본이나 저장소의 파일, 디렉토리의 정보를 출력합니다.\n"
 "사용법: info [TARGET...]\n"
 "\n"
 "  각 PATH에 해당하는 정보를 출력합니다. (기본값: '.').\n"
 "  PATH는 작업 사본 경로 혹은 URL이 될 수 있습니다.\n"
 
-#: clients/cmdline/main.c:368
+#: clients/cmdline/main.c:378
 msgid ""
 "List directory entries in the repository.\n"
 "usage: list [TARGET[@REV]...]\n"
@@ -833,7 +835,7 @@ msgstr ""
 "    크기(바이트)\n"
 "    마지막 커밋한 날짜와 시각\n"
 
-#: clients/cmdline/main.c:392
+#: clients/cmdline/main.c:402
 msgid ""
 "Lock working copy paths or URLs in the repository, so that\n"
 "no other user can commit changes to them.\n"
@@ -848,7 +850,7 @@ msgstr ""
 "  --force 를 사용하면 다른 사람이나 다른 사본에서 잠궜을지라도 빼앗아옵니"
 "다.\n"
 
-#: clients/cmdline/main.c:401
+#: clients/cmdline/main.c:411
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
 "usage: 1. log [PATH]\n"
@@ -900,7 +902,7 @@ msgstr ""
 "    svn log http://www.example.com/repo/project/foo.c\n"
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
-#: clients/cmdline/main.c:433
+#: clients/cmdline/main.c:443
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -951,7 +953,7 @@ msgstr ""
 "니다.\n"
 "  \n"
 
-#: clients/cmdline/main.c:463
+#: clients/cmdline/main.c:473
 msgid ""
 "Create a new directory under version control.\n"
 "usage: 1. mkdir PATH...\n"
@@ -981,7 +983,7 @@ msgstr ""
 "\n"
 "  두 경우 생성될 디렉토리 상위의 디렉토리들은 존재해야만 합니다.\n"
 
-#: clients/cmdline/main.c:483
+#: clients/cmdline/main.c:493
 msgid ""
 "Move and/or rename something in working copy or repository.\n"
 "usage: move SRC DST\n"
@@ -1003,7 +1005,7 @@ msgstr ""
 "메시지도 복사됩니다.\n"
 "    URL -> URL:  서버 상에서만 이름을 바꾸며, 바로 커밋됩니다.\n"
 
-#: clients/cmdline/main.c:495
+#: clients/cmdline/main.c:505
 msgid ""
 "Remove PROPNAME from files, dirs, or revisions.\n"
 "usage: 1. propdel PROPNAME [PATH...]\n"
@@ -1019,7 +1021,7 @@ msgstr ""
 "  1. 작업 사본내의 버전관리되는 속성을 제거합니다.\n"
 "  2. 원격지 REV 리비전의 버전관리되지 않는 속성을 제거합니다.\n"
 
-#: clients/cmdline/main.c:505
+#: clients/cmdline/main.c:515
 msgid ""
 "Edit property PROPNAME with an external editor on targets.\n"
 "usage: 1. propedit PROPNAME PATH...\n"
@@ -1035,7 +1037,7 @@ msgstr ""
 "  1. 작업사본내의 버전관리되는 속성을 편집합니다.\n"
 "  2. 원격지의 버전관리되지 않는 속성을 편집합니다.\n"
 
-#: clients/cmdline/main.c:516
+#: clients/cmdline/main.c:526
 msgid ""
 "Print value of PROPNAME on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
@@ -1066,7 +1068,7 @@ msgstr ""
 "  (이 옵션은 바이너리 속성 출력을 재지정하여 파일에\n"
 "  쓰로자 할 때 유용합니다.)\n"
 
-#: clients/cmdline/main.c:534
+#: clients/cmdline/main.c:544
 msgid ""
 "List all properties on files, dirs, or revisions.\n"
 "usage: 1. proplist [TARGET[@REV]...]\n"
@@ -1084,7 +1086,7 @@ msgstr ""
 "     대상을 먼저 찾습니다.\n"
 "  2. 원격지의 버전관리 대상이 아닌 속성을 출력.\n"
 
-#: clients/cmdline/main.c:545
+#: clients/cmdline/main.c:555
 msgid ""
 "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME [PROPVAL | -F VALFILE] PATH...\n"
@@ -1167,7 +1169,7 @@ msgstr ""
 "  아니라면, 디렉토리에 대해서는 실패하며, 재귀적일 경우 파일에 대해서만\n"
 "  설정됩니다.\n"
 
-#: clients/cmdline/main.c:595
+#: clients/cmdline/main.c:605
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -1183,7 +1185,7 @@ msgstr ""
 "  단지 충돌 표시만을 없앨 뿐입니다. 충돌 요소들과 관련된 파일만\n"
 "  삭제하며, 다시 커밋할 수 있는 상태로 만들어줍니다.\n"
 
-#: clients/cmdline/main.c:604
+#: clients/cmdline/main.c:614
 msgid ""
 "Restore pristine working copy file (undo most local edits).\n"
 "usage: revert PATH...\n"
@@ -1200,7 +1202,7 @@ msgstr ""
 "  해결하지 않습니다. 그리고, 삭제된 디렉토리에 대해서는 다시 되돌려놓지 않습"
 "니다.\n"
 
-#: clients/cmdline/main.c:614
+#: clients/cmdline/main.c:624
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -1347,7 +1349,7 @@ msgstr ""
 "                 965       687 joe          wc/zig.c\n"
 "    Status against revision:   981\n"
 
-#: clients/cmdline/main.c:691
+#: clients/cmdline/main.c:701
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL [PATH]\n"
@@ -1376,7 +1378,7 @@ msgstr ""
 "     즉, 접근하는 방식이(ssh, http등)나 호스트 이름이 바뀐 경우에만 되며,\n"
 "     작업사본의 구조는 그대로 유지합니다.\n"
 
-#: clients/cmdline/main.c:712
+#: clients/cmdline/main.c:722
 msgid ""
 "Unlock working copy paths or URLs.\n"
 "usage: unlock TARGET...\n"
@@ -1388,7 +1390,7 @@ msgstr ""
 "\n"
 "  --force 를 사용하면 강제로 해제합니다.\n"
 
-#: clients/cmdline/main.c:720
+#: clients/cmdline/main.c:730
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -1430,44 +1432,44 @@ msgstr ""
 "  세번째 컬럼에 'B'가 있으면, 잠금설정이 깨지거나 다른 사람에게 넘어 갔음을\n"
 "  의미합니다.\n"
 
-#: clients/cmdline/main.c:798 svnadmin/main.c:77 svnlook/main.c:284
+#: clients/cmdline/main.c:796 svnadmin/main.c:77 svnlook/main.c:284
 msgid "Caught signal"
 msgstr "시그널 수신"
 
-#: clients/cmdline/main.c:895
+#: clients/cmdline/main.c:894
 msgid "Non-numeric limit argument given"
 msgstr "숫자를 입력해야 합니다."
 
-#: clients/cmdline/main.c:912 svnadmin/main.c:1227
+#: clients/cmdline/main.c:911 svnadmin/main.c:1219
 msgid ""
 "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr "복수의 리비전 인자를 받았습니다. -r M -r N 대신 -r M:N 을 사용하세요."
 
-#: clients/cmdline/main.c:924 svnadmin/main.c:1244
+#: clients/cmdline/main.c:923 svnadmin/main.c:1233
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "리비전 인자 '%s'안에 구문오류가 있습니다."
 
-#: clients/cmdline/main.c:1072 clients/cmdline/main.c:1082
+#: clients/cmdline/main.c:1071 clients/cmdline/main.c:1081
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props 와 --no-auto-props 는 동시에 올 수 없습니다."
 
-#: clients/cmdline/main.c:1098
+#: clients/cmdline/main.c:1097
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "native-eol 인자 '%s' 에 구문오류가 있습니다."
 
-#: clients/cmdline/main.c:1144 svndumpfilter/main.c:1176 svnlook/main.c:2130
+#: clients/cmdline/main.c:1143 svndumpfilter/main.c:1167 svnlook/main.c:2121
 msgid "Subcommand argument required\n"
 msgstr "인자가 필요한 명령입니다.\n"
 
-#: clients/cmdline/main.c:1162 svnadmin/main.c:1370 svndumpfilter/main.c:1198
-#: svnlook/main.c:2153
+#: clients/cmdline/main.c:1161 svnadmin/main.c:1341 svndumpfilter/main.c:1185
+#: svnlook/main.c:2139
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "알 수 없는 명령: '%s'\n"
 
-#: clients/cmdline/main.c:1195
+#: clients/cmdline/main.c:1194
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -1476,19 +1478,19 @@ msgstr ""
 "'%s' 명령은 '%s' 를 옵션으로 취하지 않습니다.\n"
 "'svn help %s' 로 사용법을 보십시오.\n"
 
-#: clients/cmdline/main.c:1232
+#: clients/cmdline/main.c:1231
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr ""
 "로그 메시지 파일은 버전관리 대상입니다. 강제로 지정하려면 '--force-log' 를 사"
 "용하세요."
 
-#: clients/cmdline/main.c:1239
+#: clients/cmdline/main.c:1238
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr ""
 "잠그는 이유에 대한 파일이 버전관리 대상입니다. 강제로 지정하려면 '--force-"
 "log' 를 사용하세요."
 
-#: clients/cmdline/main.c:1260
+#: clients/cmdline/main.c:1259
 msgid ""
 "The log message is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -1496,7 +1498,7 @@ msgstr ""
 "로그 메시지가 경로명입니다. (-F 를 사용하려던 것인가요?) 강제로 사용하려면 "
 "'--force-log'를 사용하세요"
 
-#: clients/cmdline/main.c:1267
+#: clients/cmdline/main.c:1266
 msgid ""
 "The lock comment is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -1504,7 +1506,7 @@ msgstr ""
 "잠그는 이유를 경로명으로 하였습니다. (-F 를 사용하려던 것인가요?) 강제로 사용"
 "하려면 '--force-log'를 사용하세요"
 
-#: clients/cmdline/main.c:1480
+#: clients/cmdline/main.c:1479
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
@@ -1579,22 +1581,22 @@ msgstr "외부 경로의 익스포트, 리비전 %ld.\n"
 #: clients/cmdline/notify.c:211
 #, c-format
 msgid "Exported revision %ld.\n"
-msgstr "외부 경로 체크아웃됨, 리비전 %ld.\n"
+msgstr "익스포트된 리비전 %ld.\n"
 
 #: clients/cmdline/notify.c:219
 #, c-format
 msgid "Checked out external at revision %ld.\n"
-msgstr "체크아웃됨. 리비전 %ld.\n"
+msgstr "외부 경로의 체크아웃, 리비전 %ld.\n"
 
 #: clients/cmdline/notify.c:220
 #, c-format
 msgid "Checked out revision %ld.\n"
-msgstr "외부 경로 업데이트 됨. 리비전 %ld.\n"
+msgstr "체크아웃된 리비전 %ld.\n"
 
 #: clients/cmdline/notify.c:230
 #, c-format
 msgid "Updated external to revision %ld.\n"
-msgstr "업데이트 됨. 리비전 %ld.\n"
+msgstr "외부 경로의 업데이트, 리비전 %ld.\n"
 
 #: clients/cmdline/notify.c:231
 #, c-format
@@ -1775,111 +1777,112 @@ msgstr "클라이언트 인증서 파일:"
 msgid "Passphrase for '%s': "
 msgstr "패스프레이즈 '%s':"
 
-#: clients/cmdline/propdel-cmd.c:78 clients/cmdline/propedit-cmd.c:85
-#: clients/cmdline/proplist-cmd.c:72 clients/cmdline/propset-cmd.c:111
-msgid "No URL target available"
-msgstr "가능한 URL이 없습니다."
-
-#: clients/cmdline/propdel-cmd.c:84 clients/cmdline/propedit-cmd.c:91
-#: clients/cmdline/proplist-cmd.c:78 clients/cmdline/propset-cmd.c:116
-msgid "Either a URL or versioned item is required"
-msgstr "URL 혹은 버전 관리 파일이 필요합니다."
-
-#: clients/cmdline/propdel-cmd.c:93
+#: clients/cmdline/propdel-cmd.c:77
 #, c-format
 msgid "property '%s' deleted from repository revision %ld\n"
 msgstr "'%s' 속성이 저장소 리비전 %ld 에서 삭제되었습니다.\n"
 
-#: clients/cmdline/propdel-cmd.c:102
+#: clients/cmdline/propdel-cmd.c:86
 #, c-format
 msgid "Cannot specify revision for deleting versioned property '%s'"
 msgstr "버전관리 되는 '%s' 속성을 제거하기 위해 리비전을 지정할 수 없습니다."
 
-#: clients/cmdline/propdel-cmd.c:132
+#: clients/cmdline/propdel-cmd.c:116
 #, c-format
 msgid "property '%s' deleted (recursively) from '%s'.\n"
 msgstr "속성 '%s' 이 (재귀적으로) '%s'에서 삭제되었습니다.\n"
 
-#: clients/cmdline/propdel-cmd.c:133
+#: clients/cmdline/propdel-cmd.c:117
 #, c-format
 msgid "property '%s' deleted from '%s'.\n"
 msgstr "속성 '%s' 이 '%s'에서 삭제되었습니다.\n"
 
-#: clients/cmdline/propedit-cmd.c:117 clients/cmdline/propedit-cmd.c:241
+#: clients/cmdline/propedit-cmd.c:101 clients/cmdline/propedit-cmd.c:225
 #: clients/cmdline/propset-cmd.c:85
 msgid "Bad encoding option: prop value not stored as UTF8"
 msgstr "잘못된 인코딩 옵션: 속성 값이 UTF8으로 저장되어 있지 않습니다."
 
-#: clients/cmdline/propedit-cmd.c:126
+#: clients/cmdline/propedit-cmd.c:110
 #, c-format
 msgid "Set new value for property '%s' on revision %ld\n"
 msgstr "'%s' 속성의 새로운 값이 리비전 %ld에 설정되었습니다.\n"
 
-#: clients/cmdline/propedit-cmd.c:132
+#: clients/cmdline/propedit-cmd.c:116
 #, c-format
 msgid "No changes to property '%s' on revision %ld\n"
 msgstr "'%s' 속성이 변경되지 않았습니다. 리비전 %ld\n"
 
-#: clients/cmdline/propedit-cmd.c:140
+#: clients/cmdline/propedit-cmd.c:124
 #, c-format
 msgid "Cannot specify revision for editing versioned property '%s'"
 msgstr "버전관리 되는 '%s' 속성을 편집하기 위해 리비전을 지정할 수 없습니다."
 
-#: clients/cmdline/propedit-cmd.c:166 clients/cmdline/propset-cmd.c:174
+#: clients/cmdline/propedit-cmd.c:150 clients/cmdline/propset-cmd.c:158
 msgid "Explicit target argument required"
 msgstr "대상 인자를 명시적으로 넣어주세요."
 
-#: clients/cmdline/propedit-cmd.c:189
+#: clients/cmdline/propedit-cmd.c:173
 #, c-format
 msgid "Editing property on non-local target '%s' not yet supported"
 msgstr "원격 대상 '%s' 에 대하여 속성 변경이 아직 지원되지 않습니다."
 
-#: clients/cmdline/propedit-cmd.c:216 clients/cmdline/switch-cmd.c:138
+#: clients/cmdline/propedit-cmd.c:200 clients/cmdline/switch-cmd.c:138
 #, c-format
 msgid "'%s' does not appear to be a working copy path"
 msgstr "'%s' 은 작업 사본 경로로 보이지 않습니다."
 
-#: clients/cmdline/propedit-cmd.c:248
+#: clients/cmdline/propedit-cmd.c:232
 #, c-format
 msgid "Set new value for property '%s' on '%s'\n"
 msgstr "속성('%s'; '%s')을 새로이 설정합니다\n"
 
-#: clients/cmdline/propedit-cmd.c:255
+#: clients/cmdline/propedit-cmd.c:239
 #, c-format
 msgid "No changes to property '%s' on '%s'\n"
 msgstr "속성('%s'; '%s')에 변화가 없습니다.\n"
 
-#: clients/cmdline/proplist-cmd.c:87
+#: clients/cmdline/proplist-cmd.c:71
 #, c-format
 msgid "Unversioned properties on revision %ld:\n"
 msgstr "리비전 속성(%ld):\n"
 
-#: clients/cmdline/props.c:42
-msgid "Must specify revision explicitly when operating on a revision property"
+#: clients/cmdline/props.c:51
+msgid ""
+"Must specify the revision as a number, a date or 'HEAD' when operating on a "
+"revision property"
 msgstr ""
-"리비전 속성에 대해 명령을 수행할 경우는 반드시 리비전을 명시해야 합니다."
+"리비전 속성에 대해 명령을 수행할 경우는 반드시 숫자나 날짜 혹은 'HEAD'로 리비"
+"전 속성을 명시해야 합니다."
 
-#: clients/cmdline/propset-cmd.c:127
+#: clients/cmdline/props.c:58
+msgid "Wrong number of targets specified"
+msgstr "지정한 대상의 숫자가 잘못되었습니다."
+
+#: clients/cmdline/props.c:67
+msgid "Either a URL or versioned item is required"
+msgstr "URL 혹은 버전 관리 파일이 필요합니다."
+
+#: clients/cmdline/propset-cmd.c:111
 #, c-format
 msgid "property '%s' set on repository revision %ld\n"
 msgstr "속성 '%s'을/를 저장소 리비전 %ld에  설정하였습니다.\n"
 
-#: clients/cmdline/propset-cmd.c:135
+#: clients/cmdline/propset-cmd.c:119
 #, c-format
 msgid "Cannot specify revision for setting versioned property '%s'"
 msgstr "버전관리되는 속성 '%s'에는 리버전을 명시할 수 없습니다."
 
-#: clients/cmdline/propset-cmd.c:167
+#: clients/cmdline/propset-cmd.c:151
 #, c-format
 msgid "Explicit target required ('%s' interpreted as prop value)"
 msgstr "대상을 명시해야합니다. ('%s' 는 속성값으로 인식됩니다.)"
 
-#: clients/cmdline/propset-cmd.c:200
+#: clients/cmdline/propset-cmd.c:184
 #, c-format
 msgid "property '%s' set (recursively) on '%s'\n"
 msgstr "속성 '%s'을/를 (재귀적으로) '%s'에 설정하였습니다.\n"
 
-#: clients/cmdline/propset-cmd.c:201
+#: clients/cmdline/propset-cmd.c:185
 #, c-format
 msgid "property '%s' set on '%s'\n"
 msgstr "속성 '%s' 를 '%s'에 설정합니다.\n"
@@ -1888,7 +1891,7 @@ msgstr "속성 '%s' 를 '%s'에 설정합니다.\n"
 msgid "Try 'svn revert --recursive' instead?"
 msgstr "'svn revert --recursive' 를 사용하세요."
 
-#: clients/cmdline/status.c:278
+#: clients/cmdline/status.c:261
 #, c-format
 msgid "'%s' has lock token, but no lock owner"
 msgstr "'%s'은(는) 잠금 토큰을 가지고 있습니다만, 잠금 소유자가 없습니다."
@@ -1898,7 +1901,7 @@ msgstr "'%s'은(는) 잠금 토큰을 가지고 있습니다만, 잠금 소유�
 msgid "'%s' to '%s' is not a valid relocation"
 msgstr "'%s'에서 '%s'로 재배치 할 수 없습니다."
 
-#: clients/cmdline/util.c:57
+#: clients/cmdline/util.c:58
 #, c-format
 msgid ""
 "\n"
@@ -1907,7 +1910,7 @@ msgstr ""
 "\n"
 "커밋된 리비전 %ld.\n"
 
-#: clients/cmdline/util.c:125
+#: clients/cmdline/util.c:126
 msgid ""
 "None of the environment variables SVN_EDITOR, VISUAL or EDITOR is set, and "
 "no 'editor-cmd' run-time configuration option was found"
@@ -1915,48 +1918,53 @@ msgstr ""
 "환경변수 SVN_EDITOR, VISUAL, EDITOR 중 하나는 설정하거나, 'editor-cmd' 를 구"
 "성화일에 명시해야합니다."
 
-#: clients/cmdline/util.c:152
+#: clients/cmdline/util.c:153
 msgid "Can't get working directory"
 msgstr "작업 사본 디렉토리를 구할 수 없습니다."
 
-#: clients/cmdline/util.c:163
+#: clients/cmdline/util.c:164
 #, c-format
 msgid "Can't change working directory to '%s'"
 msgstr "작업 사본 디렉토리를 '%s'로 바꿀 수 없습니다."
 
-#: clients/cmdline/util.c:189
+#: clients/cmdline/util.c:190
 #, c-format
 msgid "Can't write to '%s'"
 msgstr "'%s' 에 쓸 수 없습니다."
 
-#: clients/cmdline/util.c:204 clients/cmdline/util.c:228
-#: libsvn_fs_fs/fs_fs.c:1082 libsvn_fs_fs/fs_fs.c:3568 libsvn_subr/io.c:2345
+#: clients/cmdline/util.c:205 clients/cmdline/util.c:229
+#: libsvn_fs_fs/fs_fs.c:1082 libsvn_fs_fs/fs_fs.c:3568 libsvn_subr/io.c:2359
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "'%s' 의 stat을 볼 수 없습니다."
 
-#: clients/cmdline/util.c:219
+#: clients/cmdline/util.c:220
 #, c-format
 msgid "system('%s') returned %d"
 msgstr "system('%s') 가 %d 을/를 반환합니다."
 
-#: clients/cmdline/util.c:284
+#: clients/cmdline/util.c:285
 msgid "Can't restore working directory"
 msgstr "작업 사본 디렉토리를 재설치할 수 없습니다."
 
-#: clients/cmdline/util.c:323
+#: clients/cmdline/util.c:325
 msgid "Log message contains a zero byte"
 msgstr "로그 메시지의 길이가 0 입니다."
 
-#: clients/cmdline/util.c:382
+#: clients/cmdline/util.c:385
 msgid "Your commit message was left in a temporary file:"
-msgstr "커밋 로그 메시지는 임시 파일안에 저장되었습니다:"
+msgstr ""
+"커밋 메시지는 다음 파일에 저장되어 있으며, -F로 재사용 할 수 있습니다. :"
 
-#: clients/cmdline/util.c:434
+#: clients/cmdline/util.c:437
 msgid "--This line, and those below, will be ignored--"
-msgstr "--이 줄 이하는 자동 제거됩니다--"
+msgstr "--이 줄 이하는 자동으로 제거됩니다--"
 
-#: clients/cmdline/util.c:549
+#: clients/cmdline/util.c:550
+msgid "Cannot invoke editor to get log message when non-interactive"
+msgstr "대화식이 아닐 때 로그 메세지를 얻기 위해 에디터를 실행 할 수 없습니다"
+
+#: clients/cmdline/util.c:563
 msgid ""
 "Could not use external editor to fetch log message; consider setting the "
 "$SVN_EDITOR environment variable or using the --message (-m) or --file (-F) "
@@ -1965,7 +1973,7 @@ msgstr ""
 "로그 메시지를 구하기 위해 외부 프로그램을 사용할 수 없습니다. SVN_EDITOR 환경"
 "변수를 설정하시거나 --message (-m) 또는 --file (-F) 옵션을 사용하세요."
 
-#: clients/cmdline/util.c:584
+#: clients/cmdline/util.c:598
 msgid ""
 "\n"
 "Log message unchanged or not specified\n"
@@ -1975,12 +1983,12 @@ msgstr ""
 "로그 메시지가 변경되지 않았거나 지정되지 않았습니다\n"
 "취소(A), 계속(C), 수정(E)\n"
 
-#: clients/cmdline/util.c:637
+#: clients/cmdline/util.c:651
 msgid "Use --force to override this restriction"
 msgstr "강제로 적용하려면 --force 옵션을 사용하세요."
 
-#: clients/cmdline/util.c:659 include/svn_error_codes.h:229
-#: libsvn_subr/cmdline.c:335 libsvn_subr/cmdline.c:352
+#: clients/cmdline/util.c:673 include/svn_error_codes.h:229
+#: libsvn_subr/cmdline.c:278 libsvn_subr/cmdline.c:295
 msgid "Write error"
 msgstr "쓰기 오류"
 
@@ -2468,286 +2476,298 @@ msgstr "HTTP 경로 발견되지 않음"
 msgid "Failed to execute WebDAV PROPPATCH"
 msgstr "WebDAV PROPPATCH 실행 실패"
 
-#: include/svn_error_codes.h:705 include/svn_error_codes.h:737
+#: include/svn_error_codes.h:705 include/svn_error_codes.h:741
 #: libsvn_ra_svn/marshal.c:600 libsvn_ra_svn/marshal.c:708
 #: libsvn_ra_svn/marshal.c:735
 msgid "Malformed network data"
 msgstr "잘못된 네트워크 데이터"
 
-#: include/svn_error_codes.h:712 include/svn_error_codes.h:741
+#: include/svn_error_codes.h:710
+msgid "Unable to extract data from response header"
+msgstr "응답헤더에서 데이터를 추출할 수 없습니다."
+
+#: include/svn_error_codes.h:716 include/svn_error_codes.h:745
 msgid "Couldn't find a repository"
 msgstr "저장소를 찾을 수 없음"
 
-#: include/svn_error_codes.h:716
+#: include/svn_error_codes.h:720
 msgid "Couldn't open a repository"
 msgstr "저장소를 열 수 없음"
 
-#: include/svn_error_codes.h:721
+#: include/svn_error_codes.h:725
 msgid "Special code for wrapping server errors to report to client"
 msgstr "클라이언트에 보고하기 위한 서버 에러 래핑 특수 코드"
 
-#: include/svn_error_codes.h:725
+#: include/svn_error_codes.h:729
 msgid "Unknown svn protocol command"
 msgstr "알 수 없는 svn 프로토콜 명령"
 
-#: include/svn_error_codes.h:729
+#: include/svn_error_codes.h:733
 msgid "Network connection closed unexpectedly"
 msgstr "네트워크 접속이 예기치 않게 종료되었습니다."
 
-#: include/svn_error_codes.h:733
+#: include/svn_error_codes.h:737
 msgid "Network read/write error"
 msgstr "네트워크 읽기/쓰기 오류"
 
-#: include/svn_error_codes.h:745
+#: include/svn_error_codes.h:749
 msgid "Client/server version mismatch"
 msgstr "클라이언트/서버 버전 불일치"
 
-#: include/svn_error_codes.h:753
+#: include/svn_error_codes.h:757
 msgid "Credential data unavailable"
 msgstr "인증 정보가 사용불가합니다."
 
-#: include/svn_error_codes.h:757
+#: include/svn_error_codes.h:761
 msgid "No authentication provider available"
 msgstr "인증 정보를 얻기 위한 장치가 없습니다."
 
-#: include/svn_error_codes.h:761 include/svn_error_codes.h:765
+#: include/svn_error_codes.h:765 include/svn_error_codes.h:769
 msgid "All authentication providers exhausted"
 msgstr "인증 정보를 얻기위한 장치를 모두 사용하였습니다."
 
-#: include/svn_error_codes.h:771
+#: include/svn_error_codes.h:775
 msgid "Read access denied for root of edit"
 msgstr "읽기 금지"
 
-#: include/svn_error_codes.h:776
+#: include/svn_error_codes.h:780
 msgid "Item is not readable"
 msgstr "아이템이 읽기 불가능합니다"
 
-#: include/svn_error_codes.h:781
+#: include/svn_error_codes.h:785
 msgid "Item is partially readable"
 msgstr "아이템이 부분적으로 읽기 가능합니다"
 
-#: include/svn_error_codes.h:788
+#: include/svn_error_codes.h:789
+msgid "Invalid authz configuration"
+msgstr "잘못된 authz 설정"
+
+#: include/svn_error_codes.h:794
+msgid "Item is not writable"
+msgstr "아이템이 쓰기가능하지 않습니다."
+
+#: include/svn_error_codes.h:800
 msgid "Svndiff data has invalid header"
 msgstr "Svndiff 데이터가 잘못된 헤더를 가지고 있습니다."
 
-#: include/svn_error_codes.h:792
+#: include/svn_error_codes.h:804
 msgid "Svndiff data contains corrupt window"
 msgstr "Svndiff 데이터가 손상된 윈도우를 포함하고 있습니다."
 
-#: include/svn_error_codes.h:796
+#: include/svn_error_codes.h:808
 msgid "Svndiff data contains backward-sliding source view"
 msgstr "Svndiff 데이터에 뒤로 진행하는 부분이 있습니다."
 
-#: include/svn_error_codes.h:800
+#: include/svn_error_codes.h:812
 msgid "Svndiff data contains invalid instruction"
 msgstr "Svndiff 데이터에 잘못된 명령이 포함되어있습니다."
 
-#: include/svn_error_codes.h:804
+#: include/svn_error_codes.h:816
 msgid "Svndiff data ends unexpectedly"
 msgstr "Svndiff 데이터가 예기치않게 끝났습니다."
 
-#: include/svn_error_codes.h:810
+#: include/svn_error_codes.h:822
 msgid "Apache has no path to an SVN filesystem"
 msgstr "Apache에 SVN 파일시스템에 대한 경로가 없습니다"
 
-#: include/svn_error_codes.h:814
+#: include/svn_error_codes.h:826
 msgid "Apache got a malformed URI"
 msgstr "Apache에 잘못된 URI 를 받았습니다."
 
-#: include/svn_error_codes.h:818
+#: include/svn_error_codes.h:830
 msgid "Activity not found"
 msgstr "명령이 발견되지 않았습니다."
 
-#: include/svn_error_codes.h:822
+#: include/svn_error_codes.h:834
 msgid "Baseline incorrect"
 msgstr "기준 리비전 불일치"
 
-#: include/svn_error_codes.h:826
+#: include/svn_error_codes.h:838
 msgid "Input/output error"
 msgstr "입출력 오류"
 
-#: include/svn_error_codes.h:832
+#: include/svn_error_codes.h:844
 msgid "A path under version control is needed for this operation"
 msgstr "버전 관리대상인 경로가 본 명령어에 필요합니다"
 
-#: include/svn_error_codes.h:836
+#: include/svn_error_codes.h:848
 msgid "Repository access is needed for this operation"
 msgstr "본 명령에는 저장소 접근이 필요합니다"
 
-#: include/svn_error_codes.h:840
+#: include/svn_error_codes.h:852
 msgid "Bogus revision information given"
 msgstr "이상한 리비전 정보가 주어졌습니다."
 
-#: include/svn_error_codes.h:844
+#: include/svn_error_codes.h:856
 msgid "Attempting to commit to a URL more than once"
 msgstr "URL에 대한 커밋이 한 번이상 시도됩니다."
 
-#: include/svn_error_codes.h:848
+#: include/svn_error_codes.h:860
 msgid "Operation does not apply to binary file"
 msgstr "명령은 바이너리 파일에 적용되지 않습니다"
 
-#: include/svn_error_codes.h:854
+#: include/svn_error_codes.h:866
 msgid "Format of an svn:externals property was invalid"
 msgstr "svn:externals 에 대한 형식이 올바르지 않습니다"
 
-#: include/svn_error_codes.h:858
+#: include/svn_error_codes.h:870
 msgid "Attempting restricted operation for modified resource"
 msgstr "수정된 자료에 대하여 제한된 명령을 수행합니다."
 
-#: include/svn_error_codes.h:862
+#: include/svn_error_codes.h:874
 msgid "Operation does not apply to directory"
 msgstr "디렉토리에는 적용할 수 없는 명령"
 
-#: include/svn_error_codes.h:866
+#: include/svn_error_codes.h:878
 msgid "Revision range is not allowed"
 msgstr "리비전 범위는 사용 불가능합니다."
 
-#: include/svn_error_codes.h:870
+#: include/svn_error_codes.h:882
 msgid "Inter-repository relocation not allowed"
 msgstr "저장소를 넘어서는 'URL 전환'은 불가능합니다."
 
-#: include/svn_error_codes.h:874
+#: include/svn_error_codes.h:886
 msgid "Author name cannot contain a newline"
 msgstr "작성자 이름은 개행 문자를 포함할 수 없습니다."
 
-#: include/svn_error_codes.h:878
+#: include/svn_error_codes.h:890
 msgid "Bad property name"
 msgstr "잘못된 속성 이름"
 
-#: include/svn_error_codes.h:883
+#: include/svn_error_codes.h:895
 msgid "Two versioned resources are unrelated"
 msgstr "두개의 버전관리 대상이 연관성이 없습니다."
 
-#: include/svn_error_codes.h:888
+#: include/svn_error_codes.h:900
 msgid "Path has no lock token"
 msgstr "지정한 경로에 잠금 토큰이 없습니다."
 
-#: include/svn_error_codes.h:894
+#: include/svn_error_codes.h:906
 msgid "A problem occurred; see later errors for details"
 msgstr "문제 발생함: 상세한 것은 다음 오류참고"
 
-#: include/svn_error_codes.h:898
+#: include/svn_error_codes.h:910
 msgid "Failure loading plugin"
 msgstr "플러긴 로딩 실패"
 
-#: include/svn_error_codes.h:902
+#: include/svn_error_codes.h:914
 msgid "Malformed file"
 msgstr "잘못된 파일"
 
-#: include/svn_error_codes.h:906
+#: include/svn_error_codes.h:918
 msgid "Incomplete data"
 msgstr "불완전한 데이터"
 
-#: include/svn_error_codes.h:910
+#: include/svn_error_codes.h:922
 msgid "Incorrect parameters given"
 msgstr "잘못된 인자가 넘겨짐"
 
-#: include/svn_error_codes.h:914
+#: include/svn_error_codes.h:926
 msgid "Tried a versioning operation on an unversioned resource"
 msgstr "버전관리 대상이 아닌 것에 버전관련 명령을 시도했습니다."
 
-#: include/svn_error_codes.h:918
+#: include/svn_error_codes.h:930
 msgid "Test failed"
 msgstr "테스트 실패"
 
-#: include/svn_error_codes.h:922
+#: include/svn_error_codes.h:934
 msgid "Trying to use an unsupported feature"
 msgstr "지원하지 않는 속성을 사용하는 중"
 
-#: include/svn_error_codes.h:926
+#: include/svn_error_codes.h:938
 msgid "Unexpected or unknown property kind"
 msgstr "예기치 않은 혹은 알려지지 않은 속성 종류"
 
-#: include/svn_error_codes.h:930
+#: include/svn_error_codes.h:942
 msgid "Illegal target for the requested operation"
 msgstr "요구된 명령에 대하여 잘못된 대상"
 
-#: include/svn_error_codes.h:934
+#: include/svn_error_codes.h:946
 msgid "MD5 checksum is missing"
 msgstr "MD5 체크섬 누락됨"
 
-#: include/svn_error_codes.h:938
+#: include/svn_error_codes.h:950
 msgid "Directory needs to be empty but is not"
 msgstr "디렉토리가 비어있어야만 합니다"
 
-#: include/svn_error_codes.h:942
+#: include/svn_error_codes.h:954
 msgid "Error calling external program"
 msgstr "외부 프로그램 실행 중 오류"
 
-#: include/svn_error_codes.h:946
+#: include/svn_error_codes.h:958
 msgid "Python exception has been set with the error"
 msgstr "오류에 파이썬 예외가 있습니다."
 
-#: include/svn_error_codes.h:950
+#: include/svn_error_codes.h:962
 msgid "A checksum mismatch occurred"
 msgstr "체크섬 불일치 오류가 발생하였습니다."
 
-#: include/svn_error_codes.h:954
+#: include/svn_error_codes.h:966
 msgid "The operation was interrupted"
 msgstr "명령 수행이 간섭으로 중단됩니다."
 
-#: include/svn_error_codes.h:958
+#: include/svn_error_codes.h:970
 msgid "The specified diff option is not supported"
 msgstr "지정한 diff 옵션은 지원되지 않는 것입니다."
 
-#: include/svn_error_codes.h:962
+#: include/svn_error_codes.h:974
 msgid "Property not found"
 msgstr "속성을 찾을 수 없습니다."
 
-#: include/svn_error_codes.h:966
+#: include/svn_error_codes.h:978
 msgid "No auth file path available"
 msgstr "인증 파일 경로가 유효하지 않습니다."
 
-#: include/svn_error_codes.h:971
+#: include/svn_error_codes.h:983
 msgid "Incompatible library version"
 msgstr "호환되지 않는 라이브러리 버전"
 
-#: include/svn_error_codes.h:977
+#: include/svn_error_codes.h:989
 msgid "Client error in parsing arguments"
 msgstr "인자를 분석 도중 클라이언트 오류 발생함"
 
-#: include/svn_error_codes.h:981
+#: include/svn_error_codes.h:993
 msgid "Not enough args provided"
 msgstr "인자가 충분히 주어지지 않았습니다."
 
-#: include/svn_error_codes.h:985
+#: include/svn_error_codes.h:997
 msgid "Mutually exclusive arguments specified"
 msgstr "동시에 존재할 수 없는 인자가 주어졌습니다."
 
-#: include/svn_error_codes.h:989
+#: include/svn_error_codes.h:1001
 msgid "Attempted command in administrative dir"
 msgstr "관리 디렉토리에 명령을 수행중입니다."
 
-#: include/svn_error_codes.h:993
+#: include/svn_error_codes.h:1005
 msgid "The log message file is under version control"
 msgstr "로그 메시지 파일은 버전 관리 대상입니다."
 
-#: include/svn_error_codes.h:997
+#: include/svn_error_codes.h:1009
 msgid "The log message is a pathname"
 msgstr "로그 메시지는 경로명입니다."
 
-#: include/svn_error_codes.h:1001
+#: include/svn_error_codes.h:1013
 msgid "Committing in directory scheduled for addition"
 msgstr "추가하기 위한 디렉토리를 커밋 중"
 
-#: include/svn_error_codes.h:1005
+#: include/svn_error_codes.h:1017
 msgid "No external editor available"
 msgstr "외부 편집기가 없습니다"
 
-#: include/svn_error_codes.h:1009
+#: include/svn_error_codes.h:1021
 msgid "Something is wrong with the log message's contents"
 msgstr "로그 메시지 내용이 이상합니다."
 
-#: include/svn_error_codes.h:1013
+#: include/svn_error_codes.h:1025
 msgid "A log message was given where none was necessary"
 msgstr "로그메시지가 필요없는 곳에 지정되었습니다."
 
-#: libsvn_client/add.c:370
+#: libsvn_client/add.c:371
 #, c-format
 msgid "Error during recursive add of '%s'"
 msgstr "'%s'를 재귀적으로 추가하는 중에 오류 발생"
 
-#: libsvn_client/add.c:381
+#: libsvn_client/add.c:382
 #, c-format
 msgid "Can't close directory '%s'"
 msgstr "'%s' 디렉토리를 닫을 수 없습니다."
@@ -2761,7 +2781,7 @@ msgstr "'%s' 바이너리 파일에 대하여 '수정한 사람 보기'를 수�
 msgid "Start revision must precede end revision"
 msgstr "시작 버전은 종료버전보다 앞서야 합니다."
 
-#: libsvn_client/blame.c:659 libsvn_client/cat.c:204
+#: libsvn_client/blame.c:659 libsvn_client/cat.c:205
 #, c-format
 msgid "URL '%s' refers to a directory"
 msgstr "URL '%s' 는 디렉토리입니다."
@@ -2781,11 +2801,11 @@ msgstr "'%s' 은(는) 버전 컨트롤 대상이 아니거나 존재하지 않�
 msgid "'%s' refers to a directory"
 msgstr "URL '%s' 는 디렉토리입니다."
 
-#: libsvn_client/cat.c:130 libsvn_client/export.c:183
+#: libsvn_client/cat.c:131 libsvn_client/export.c:183
 msgid "(local)"
 msgstr "(로컬)"
 
-#: libsvn_client/cat.c:244
+#: libsvn_client/cat.c:245
 #, c-format
 msgid "Can't seek in '%s'"
 msgstr "Can't seek in '%s'"
@@ -2809,10 +2829,10 @@ msgstr "'%s'는 이미 작업 사본에 있으며, 다른 URL 입니다."
 msgid "; run 'svn update' to complete it"
 msgstr "; 'svn update' 를 수행하여 완료하십시오."
 
-#: libsvn_client/checkout.c:165
+#: libsvn_client/checkout.c:166
 #, c-format
-msgid "'%s' is already a file/something else"
-msgstr "'%s'는 이미 존재합니다."
+msgid "'%s' already exists and is not a directory"
+msgstr "'%s'은(는) 존재하며, 디렉토리가 아닙니다"
 
 #: libsvn_client/commit.c:209
 #, c-format
@@ -2823,7 +2843,7 @@ msgstr "경로 '%s'은 알 수 없거나 버전관리 할 수 없는 것입니�
 msgid "New entry name required when importing a file"
 msgstr "파일을 임포트할 때 새 항목 이름이 필요합니다."
 
-#: libsvn_client/commit.c:556 libsvn_wc/props.c:737 libsvn_wc/questions.c:62
+#: libsvn_client/commit.c:556 libsvn_wc/props.c:1197 libsvn_wc/questions.c:62
 #, c-format
 msgid "'%s' does not exist"
 msgstr "'%s'는 존재하지 않습니다."
@@ -2850,7 +2870,7 @@ msgstr "커밋이 실패하였습니다:"
 
 #: libsvn_client/commit.c:870 libsvn_client/copy.c:552
 msgid "Commit succeeded, but other errors follow:"
-msgstr "커밋은 성공하였고, 오류도 있습니다:"
+msgstr "커밋이 성공하였지만, 오류가 있습니다:"
 
 #: libsvn_client/commit.c:877 libsvn_client/copy.c:559
 msgid "Error unlocking locked dirs (details follow):"
@@ -2858,7 +2878,7 @@ msgstr "잠긴 디렉토리를 해제하는데 실패함 (아래에 자세히):"
 
 #: libsvn_client/commit.c:888
 msgid "Error bumping revisions post-commit (details follow):"
-msgstr "Error bumping revisions post-commit (details follow):"
+msgstr "커밋 후 리비전들을 갱신하는 도중 오류가 발생하였습니다:"
 
 #: libsvn_client/commit.c:899 libsvn_client/copy.c:570
 msgid "Error in post-commit clean-up (details follow):"
@@ -2904,17 +2924,17 @@ msgstr "커밋 아이템 '%s' 은(는) 복사표시가 되어있지만 원본 UR
 
 #: libsvn_client/commit_util.c:678 libsvn_client/commit_util.c:808
 #: libsvn_client/copy.c:1073 libsvn_client/delete.c:67
-#: libsvn_client/diff.c:1389 libsvn_client/diff.c:1987
-#: libsvn_client/diff.c:2509 libsvn_client/diff.c:2618
+#: libsvn_client/diff.c:1390 libsvn_client/diff.c:1988
+#: libsvn_client/diff.c:2510 libsvn_client/diff.c:2619
 #: libsvn_client/locking_commands.c:248 libsvn_client/locking_commands.c:272
 #: libsvn_client/log.c:129 libsvn_client/prop_commands.c:213
 #: libsvn_client/prop_commands.c:446 libsvn_client/prop_commands.c:602
 #: libsvn_client/prop_commands.c:951 libsvn_client/ra.c:180
-#: libsvn_client/revisions.c:89 libsvn_client/status.c:249
-#: libsvn_client/switch.c:104 libsvn_wc/adm_ops.c:2260
-#: libsvn_wc/adm_ops.c:2286 libsvn_wc/adm_ops.c:2323 libsvn_wc/copy.c:448
-#: libsvn_wc/entries.c:1497 libsvn_wc/entries.c:1989 libsvn_wc/props.c:281
-#: libsvn_wc/questions.c:171
+#: libsvn_client/revisions.c:89 libsvn_client/status.c:256
+#: libsvn_client/switch.c:104 libsvn_wc/adm_ops.c:2261
+#: libsvn_wc/adm_ops.c:2287 libsvn_wc/adm_ops.c:2324 libsvn_wc/copy.c:448
+#: libsvn_wc/entries.c:1498 libsvn_wc/entries.c:1990 libsvn_wc/props.c:286
+#: libsvn_wc/props.c:1124 libsvn_wc/questions.c:171
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "'%s' 은(는) 버전 컨트롤 대상이 아닙니다."
@@ -2967,7 +2987,7 @@ msgstr ""
 "다."
 
 #: libsvn_client/copy.c:101 libsvn_client/copy.c:646 libsvn_client/copy.c:832
-#: libsvn_ra_dav/commit.c:1135
+#: libsvn_ra_dav/commit.c:1172
 #, c-format
 msgid "File '%s' already exists"
 msgstr "파일 '%s'은(는) 이미 존재합니다."
@@ -3100,54 +3120,54 @@ msgstr "아직 지원되지 않음: '%s'"
 
 #. xgettext: the '.working', '.merge-left.r%ld' and '.merge-right.r%ld'
 #. strings are used to tag onto a filename in case of a merge conflict
-#: libsvn_client/diff.c:770
+#: libsvn_client/diff.c:771
 msgid ".working"
 msgstr ".working"
 
-#: libsvn_client/diff.c:772
+#: libsvn_client/diff.c:773
 #, c-format
 msgid ".merge-left.r%ld"
 msgstr ".merge-left.r%ld"
 
-#: libsvn_client/diff.c:775
+#: libsvn_client/diff.c:776
 #, c-format
 msgid ".merge-right.r%ld"
 msgstr ".merge-right.r%ld"
 
-#: libsvn_client/diff.c:1445 libsvn_client/diff.c:2087
-#: libsvn_client/diff.c:2167
+#: libsvn_client/diff.c:1446 libsvn_client/diff.c:2088
+#: libsvn_client/diff.c:2168
 msgid "Not all required revisions are specified"
 msgstr "필요한 리비전이 빠져있습니다."
 
-#: libsvn_client/diff.c:1716
+#: libsvn_client/diff.c:1717
 msgid "Sorry, svn_client_diff3 was called in a way that is not yet supported"
 msgstr "죄송합니다. svn_client_diff3 가 지원하지 않는 방법으로 호출되었습니다."
 
-#: libsvn_client/diff.c:1755
+#: libsvn_client/diff.c:1756
 msgid ""
 "Only diffs between a path's text-base and its working files are supported at "
 "this time"
 msgstr ""
 "현재는 경로의 마지막 업데이트 내용과 작업된 내용의 차이만 생성할 수 있습니다."
 
-#: libsvn_client/diff.c:1870 libsvn_client/diff.c:1875
+#: libsvn_client/diff.c:1871 libsvn_client/diff.c:1876
 #, c-format
 msgid "'%s' was not found in the repository at revision %ld"
 msgstr "'%s'가 저장소의 리비전 %ld에서 발견되지 않았습니다."
 
-#: libsvn_client/diff.c:1991 libsvn_client/switch.c:108
+#: libsvn_client/diff.c:1992 libsvn_client/switch.c:108
 #, c-format
 msgid "Directory '%s' has no URL"
 msgstr "디렉토리 '%s'에 URL정보가 없습니다."
 
-#: libsvn_client/diff.c:2178
+#: libsvn_client/diff.c:2179
 msgid "At least one revision must be non-local for a pegged diff"
 msgstr "고정된 리비전을 위한 diff에서 적어도 하나의 리비전이 로컬이 아닙니다."
 
-#: libsvn_client/diff.c:2482 libsvn_client/diff.c:2488
-#: libsvn_client/diff.c:2603 libsvn_client/locking_commands.c:252
-#: libsvn_client/locking_commands.c:276 libsvn_client/ra.c:723
-#: libsvn_client/ra.c:846
+#: libsvn_client/diff.c:2483 libsvn_client/diff.c:2489
+#: libsvn_client/diff.c:2604 libsvn_client/locking_commands.c:252
+#: libsvn_client/locking_commands.c:276 libsvn_client/ra.c:368
+#: libsvn_client/ra.c:729 libsvn_client/ra.c:865
 #, c-format
 msgid "'%s' has no URL"
 msgstr "'%s'은(는) URL을 포함하지 않습니다."
@@ -3171,8 +3191,8 @@ msgstr "'%s'은(는) 존재하며, 디렉토리가 아닙니다."
 msgid "'%s' already exists"
 msgstr "'%s'은(는) 이미 존재합니다."
 
-#: libsvn_client/export.c:686 libsvn_wc/update_editor.c:1619
-#: libsvn_wc/update_editor.c:2391
+#: libsvn_client/export.c:686 libsvn_wc/update_editor.c:1634
+#: libsvn_wc/update_editor.c:2407
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "'%s'의 체크섬값이 일치하지 않습니다. 기대값:'%s', 실제값: '%s'"
@@ -3215,7 +3235,7 @@ msgstr "잠금 설명에 잘못된 문자가 있습니다."
 msgid "Missing required revision specification"
 msgstr "필요한 리비전 지정이 생략됨"
 
-#: libsvn_client/log.c:135 libsvn_client/status.c:254
+#: libsvn_client/log.c:135 libsvn_client/status.c:261
 #: libsvn_client/update.c:86
 #, c-format
 msgid "Entry '%s' has no URL"
@@ -3269,27 +3289,27 @@ msgstr "커밋 명령 없이 작업사본의 속성 '%s'를 '%s'에 설정하려
 msgid "Can't find entry for '%s'"
 msgstr "'%s'를 위한 등록정보를 찾을 수 없습니다."
 
-#: libsvn_client/ra.c:472
+#: libsvn_client/ra.c:489
 #, c-format
 msgid "Missing changed-path information for '%s' in revision %ld"
 msgstr "'%s'의 변경된 경로 정보가 누락됨, 리비전 %ld."
 
-#: libsvn_client/ra.c:589
+#: libsvn_client/ra.c:609
 #, c-format
 msgid "path '%s' doesn't exist in revision %ld"
 msgstr "경로 '%s'는 리비전 %ld에서 존재하지 않습니다."
 
-#: libsvn_client/ra.c:650 libsvn_client/ra.c:786
+#: libsvn_client/ra.c:656 libsvn_client/ra.c:813
 #, c-format
 msgid "Unable to find repository location for '%s' in revision %ld"
 msgstr "'%s'의 저장소 위치를 찾을 수 없습니다. 리비전 %ld."
 
-#: libsvn_client/ra.c:661
+#: libsvn_client/ra.c:667
 #, c-format
 msgid "'%s' in revision %ld is an unrelated object"
 msgstr "'%s' (리비전 %ld)는 연관이 없는 개체입니다."
 
-#: libsvn_client/ra.c:791
+#: libsvn_client/ra.c:818
 #, c-format
 msgid ""
 "The location for '%s' for revision %ld does not exist in the repository or "
@@ -3553,101 +3573,101 @@ msgstr "저장소 uuid 얻기"
 msgid "set repository uuid"
 msgstr "저장소 uuid 설정"
 
-#: libsvn_fs_base/dag.c:313
+#: libsvn_fs_base/dag.c:239
 #, c-format
 msgid "Corrupt DB: initial transaction id not '0' in filesystem '%s'"
 msgstr "손상된 DB: 파일시스템('%s')의 초기 트랜잭션 id가 '0'이 아닙니다."
 
-#: libsvn_fs_base/dag.c:321
+#: libsvn_fs_base/dag.c:247
 #, c-format
 msgid "Corrupt DB: initial copy id not '0' in filesystem '%s'"
 msgstr "손상된 DB: 파일 시스템('%s')의 초기 copy id가 '0'이 아닙니다."
 
-#: libsvn_fs_base/dag.c:330
+#: libsvn_fs_base/dag.c:256
 #, c-format
 msgid "Corrupt DB: initial revision number is not '0' in filesystem '%s'"
 msgstr "손상된 DB: 파일시스템('%s')의 초기 리비전 번호가 '0'이 아닙니다."
 
-#: libsvn_fs_base/dag.c:378 libsvn_fs_base/dag.c:555 libsvn_fs_fs/dag.c:386
+#: libsvn_fs_base/dag.c:304 libsvn_fs_base/dag.c:481 libsvn_fs_fs/dag.c:386
 msgid "Attempted to create entry in non-directory parent"
 msgstr "디렉토리가 아닌 상위 노드에 생성하려 하였습니다."
 
-#: libsvn_fs_base/dag.c:549 libsvn_fs_fs/dag.c:380
+#: libsvn_fs_base/dag.c:475 libsvn_fs_fs/dag.c:380
 #, c-format
 msgid "Attempted to create a node with an illegal name '%s'"
 msgstr " 잘못된 이름('%s')으로 노드를 생성하려 했습니다."
 
-#: libsvn_fs_base/dag.c:561 libsvn_fs_base/dag.c:795 libsvn_fs_fs/dag.c:392
+#: libsvn_fs_base/dag.c:487 libsvn_fs_base/dag.c:721 libsvn_fs_fs/dag.c:392
 msgid "Attempted to clone child of non-mutable node"
 msgstr "변경 불가능한 노드로 복제를 시도하였습니다."
 
-#: libsvn_fs_base/dag.c:568
+#: libsvn_fs_base/dag.c:494
 msgid "Attempted to create entry that already exists"
 msgstr "이미 존재하는 디렉토리를 다시 생성하려 하였습니다."
 
-#: libsvn_fs_base/dag.c:619 libsvn_fs_fs/dag.c:454
+#: libsvn_fs_base/dag.c:545 libsvn_fs_fs/dag.c:454
 msgid "Attempted to set entry in non-directory node"
 msgstr "디렉토리가 아닌 노드에 설정하려하였습니다."
 
-#: libsvn_fs_base/dag.c:625 libsvn_fs_fs/dag.c:460
+#: libsvn_fs_base/dag.c:551 libsvn_fs_fs/dag.c:460
 msgid "Attempted to set entry in immutable node"
 msgstr "변경할 수 없는 노드에 대해 설정하려 했습니다."
 
-#: libsvn_fs_base/dag.c:689
+#: libsvn_fs_base/dag.c:615
 #, c-format
 msgid "Can't set proplist on *immutable* node-revision %s"
 msgstr "되돌릴수 없는 노드(%s) 리비전에 대해 속성리스트를 설정할 수 없습니다."
 
-#: libsvn_fs_base/dag.c:801
+#: libsvn_fs_base/dag.c:727
 #, c-format
 msgid "Attempted to make a child clone with an illegal name '%s'"
 msgstr "잘못된 이름 '%s'으로 하위 노드를 생성하려합니다."
 
-#: libsvn_fs_base/dag.c:926
+#: libsvn_fs_base/dag.c:852
 #, c-format
 msgid "Attempted to delete entry '%s' from *non*-directory node"
 msgstr "디렉토리가 아닌 노드에서 '%s'를 삭제하려합니다."
 
-#: libsvn_fs_base/dag.c:932
+#: libsvn_fs_base/dag.c:858
 #, c-format
 msgid "Attempted to delete entry '%s' from immutable directory node"
 msgstr "변경할 수 없는 디렉토리에서 '%s'를 삭제하려합니다."
 
-#: libsvn_fs_base/dag.c:939
+#: libsvn_fs_base/dag.c:865
 #, c-format
 msgid "Attempted to delete a node with an illegal name '%s'"
 msgstr "잘못된 이름으로된 노드(%s)를 삭제하려합니다."
 
-#: libsvn_fs_base/dag.c:954 libsvn_fs_base/dag.c:987
+#: libsvn_fs_base/dag.c:880 libsvn_fs_base/dag.c:913
 #, c-format
 msgid "Delete failed: directory has no entry '%s'"
 msgstr "삭제 오류: 디렉토리에 그런 항목이 없습니다. : '%s'"
 
-#: libsvn_fs_base/dag.c:1036
+#: libsvn_fs_base/dag.c:962
 msgid "Attempted removal of immutable node"
 msgstr "변경할 수 없는 노드를 삭제하려합니다."
 
-#: libsvn_fs_base/dag.c:1156
+#: libsvn_fs_base/dag.c:1082
 msgid "Attempted to get textual contents of a *non*-file node"
 msgstr "파일이 아닌 노드로부터 텍스트를 얻으려 시도했습니다."
 
-#: libsvn_fs_base/dag.c:1191
+#: libsvn_fs_base/dag.c:1117
 msgid "Attempted to get length of a *non*-file node"
 msgstr "파일이 아닌 노드로부터 길이를 얻으려 시도했습니다."
 
-#: libsvn_fs_base/dag.c:1217
+#: libsvn_fs_base/dag.c:1143
 msgid "Attempted to get checksum of a *non*-file node"
 msgstr "파일이 아닌 노드로부터 체크섬 값을 얻으려 시도했습니다."
 
-#: libsvn_fs_base/dag.c:1248 libsvn_fs_base/dag.c:1302
+#: libsvn_fs_base/dag.c:1174 libsvn_fs_base/dag.c:1228
 msgid "Attempted to set textual contents of a *non*-file node"
 msgstr "파일이 아닌 노드에 텍스트 내용을 설정할 수 없음"
 
-#: libsvn_fs_base/dag.c:1254 libsvn_fs_base/dag.c:1308
+#: libsvn_fs_base/dag.c:1180 libsvn_fs_base/dag.c:1234
 msgid "Attempted to set textual contents of an immutable node"
 msgstr "변경할 수 없는 노드의 내용을 설정하려합니다."
 
-#: libsvn_fs_base/dag.c:1331
+#: libsvn_fs_base/dag.c:1257
 #, c-format
 msgid ""
 "Checksum mismatch, rep '%s':\n"
@@ -3658,12 +3678,12 @@ msgstr ""
 "  기대값 :  %s\n"
 "  실제값 :  %s\n"
 
-#: libsvn_fs_base/dag.c:1386
+#: libsvn_fs_base/dag.c:1312
 #, c-format
 msgid "Attempted to open non-existent child node '%s'"
 msgstr "존재하지 않는 하위 노드 '%s'를 열려고 합니다."
 
-#: libsvn_fs_base/dag.c:1392
+#: libsvn_fs_base/dag.c:1318
 #, c-format
 msgid "Attempted to open node with an illegal name '%s'"
 msgstr "잘못된 이름의 노드 '%s'를 열려고 합니다."
@@ -3834,7 +3854,7 @@ msgstr "'%s'에 대한 읽기 오류"
 msgid "Error writing file '%s'"
 msgstr "'%s'에 대한 쓰기 오류"
 
-#: libsvn_fs_base/fs.c:1103 libsvn_fs_base/fs.c:1107 libsvn_subr/io.c:2196
+#: libsvn_fs_base/fs.c:1103 libsvn_fs_base/fs.c:1107 libsvn_subr/io.c:2210
 #, c-format
 msgid "Can't close file '%s'"
 msgstr "파일 '%s'를 닫을 수 없습니다."
@@ -3990,7 +4010,7 @@ msgstr "루트 개체가 트랜잭션의 루트이어야 합니다."
 msgid "Failure opening '%s'"
 msgstr "열 수 없습니다. '%s'"
 
-#: libsvn_fs_base/tree.c:1407
+#: libsvn_fs_base/tree.c:1407 libsvn_fs_fs/tree.c:1155
 msgid "Cannot compare property value between two different filesystems"
 msgstr "서로 다른 두개의 파일 시스템간 속성은 비교할 수 없습니다."
 
@@ -3998,53 +4018,44 @@ msgstr "서로 다른 두개의 파일 시스템간 속성은 비교할 수 없�
 msgid "Corrupt DB: faulty predecessor count"
 msgstr "손상된 DB: 잘못된 predecessor count"
 
-#: libsvn_fs_base/tree.c:1817 libsvn_fs_base/tree.c:2206
-#: libsvn_fs_base/tree.c:2301 libsvn_fs_base/tree.c:2397
-#: libsvn_fs_fs/tree.c:1192
+#: libsvn_fs_base/tree.c:1796 libsvn_fs_fs/tree.c:1192
 #, c-format
 msgid "Unexpected immutable node at '%s'"
 msgstr "경로 '%s'에 기대하지 못한 변경 불가능한 노드를 발견하였습니다."
 
-#: libsvn_fs_base/tree.c:1868
-#, c-format
-msgid ""
-"No deletion changes for path '%s' in transaction '%s' of filesystem '%s'"
-msgstr ""
-"어떤 삭제도 변경되지 않았습니다. (경로 '%s', 트랜잭션 '%s', 파일 시스템 '%s')"
-
-#: libsvn_fs_base/tree.c:1887 libsvn_fs_fs/tree.c:1215
+#: libsvn_fs_base/tree.c:1817 libsvn_fs_fs/tree.c:1215
 #, c-format
 msgid "Conflict at '%s'"
 msgstr "충돌 발생: '%s'"
 
-#: libsvn_fs_base/tree.c:1936 libsvn_fs_base/tree.c:2847
+#: libsvn_fs_base/tree.c:1867 libsvn_fs_base/tree.c:2570
 #: libsvn_fs_fs/tree.c:1264 libsvn_fs_fs/tree.c:1753
 msgid "Bad merge; ancestor, source, and target not all in same fs"
 msgstr ""
 "병합 실패; diff 원본, 대상 그리고 차이를 반영할 대상이 모두 같은 파일시스템이"
 "어야 합니다."
 
-#: libsvn_fs_base/tree.c:1952 libsvn_fs_fs/tree.c:1280
+#: libsvn_fs_base/tree.c:1883 libsvn_fs_fs/tree.c:1280
 #, c-format
 msgid "Bad merge; target '%s' has id '%s', same as ancestor"
 msgstr ""
 "병합 실패; 차이를 반영할 대상 '%s'은 '%s' id를 가지고 있으며, 이는 diff 원본"
 "과 같습니다."
 
-#: libsvn_fs_base/tree.c:2654
+#: libsvn_fs_base/tree.c:2377
 #, c-format
 msgid "Transaction '%s' out of date with respect to revision '%s'"
 msgstr "트랜잭션 '%s' 는 리비전 '%s'의 관점에서 만료기간이 지났습니다."
 
-#: libsvn_fs_base/tree.c:3030 libsvn_fs_fs/tree.c:1892
+#: libsvn_fs_base/tree.c:2753 libsvn_fs_fs/tree.c:1892
 msgid "The root directory cannot be deleted"
 msgstr "루트 디렉토리는 제거될 수 없습니다."
 
-#: libsvn_fs_base/tree.c:3189 libsvn_fs_fs/tree.c:1939
+#: libsvn_fs_base/tree.c:2912 libsvn_fs_fs/tree.c:1939
 msgid "Copy from mutable tree not currently supported"
 msgstr "뮤터블 트리에서의 복사는 지원하지 않습니다."
 
-#: libsvn_fs_base/tree.c:3684 libsvn_fs_fs/tree.c:2363
+#: libsvn_fs_base/tree.c:3407 libsvn_fs_fs/tree.c:2363
 #, c-format
 msgid ""
 "Base checksum mismatch on '%s':\n"
@@ -4055,11 +4066,11 @@ msgstr ""
 "  기대값 :  %s\n"
 "  실제값 :  %s\n"
 
-#: libsvn_fs_base/tree.c:3937 libsvn_fs_fs/tree.c:2599
-msgid "Asking contents changed in two different filesystems"
-msgstr "서로 다른 두개의 파일 시스템에 대해 내용 변경사항을 요구하고 있습니다."
+#: libsvn_fs_base/tree.c:3660 libsvn_fs_fs/tree.c:2599
+msgid "Cannot compare file contents between two different filesystems"
+msgstr "서로 다른 두개의 파일 시스템간의 파일 내용은 비교할 수 없습니다"
 
-#: libsvn_fs_base/tree.c:3946 libsvn_fs_base/tree.c:3951
+#: libsvn_fs_base/tree.c:3669 libsvn_fs_base/tree.c:3674
 #: libsvn_fs_fs/tree.c:2608 libsvn_fs_fs/tree.c:2613
 #: libsvn_repos/rev_hunt.c:540
 #, c-format
@@ -4302,10 +4313,6 @@ msgstr "잠금 실패: 새로운 버전의 '%s'가 존재합니다"
 msgid "Transaction cleanup failed"
 msgstr "트랜잭션이 'cleanup' 오류"
 
-#: libsvn_fs_fs/tree.c:1155
-msgid "Asking props changed in two different filesystems"
-msgstr "서로 다른 두개의 파일 시스템간 속성 비교를 시도합니다."
-
 #: libsvn_ra/ra_loader.c:212
 #, c-format
 msgid "Mismatched RA version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
@@ -4332,7 +4339,7 @@ msgstr "알 수 없는 URL 스키마입니다. '%s'"
 msgid "Could not create a request (%s '%s')"
 msgstr "요청을 할 수 없습니다 (%s '%s')"
 
-#: libsvn_ra_dav/commit.c:291
+#: libsvn_ra_dav/commit.c:292
 msgid ""
 "Could not fetch the Version Resource URL (needed during an import or when it "
 "is missing from the local, cached props)"
@@ -4340,35 +4347,35 @@ msgstr ""
 "리소스의 URL을 얻을 수 없습니다. (이 값은 임포트에 사용되었고,작업사본에 없"
 "을 경우 캐시된 속성에서 얻습니다.)"
 
-#: libsvn_ra_dav/commit.c:462
+#: libsvn_ra_dav/commit.c:485
 #, c-format
 msgid "Could not create a CHECKOUT request (%s)"
 msgstr "CHECKOUT 요청을 할 수 없습니다. (%s)"
 
-#: libsvn_ra_dav/commit.c:542
+#: libsvn_ra_dav/commit.c:572
 #, c-format
 msgid "Your file or directory '%s' is probably out-of-date"
 msgstr "파일 또는 디렉토리 '%s'는 만료된 것입니다."
 
-#: libsvn_ra_dav/commit.c:550
+#: libsvn_ra_dav/commit.c:580
 msgid "The CHECKOUT response did not contain a 'Location:' header"
 msgstr "CHECKOUT 응답에 'Location:' 헤더가 없습니다."
 
-#: libsvn_ra_dav/commit.c:849
+#: libsvn_ra_dav/commit.c:879
 #, c-format
 msgid "Could not create a DELETE request (%s)"
 msgstr "DELETE 요청을 할 수 없습니다. (%s)"
 
-#: libsvn_ra_dav/commit.c:1273
+#: libsvn_ra_dav/commit.c:1310
 msgid "Could not write svndiff to temp file"
 msgstr "svndiff 를 임시 파일에 기록할 수 없습니다."
 
-#: libsvn_ra_dav/commit.c:1363
+#: libsvn_ra_dav/commit.c:1400
 #, c-format
 msgid "Could not create a PUT request (%s)"
 msgstr "PUT 요청을 할 수 없습니다. (%s)"
 
-#: libsvn_ra_dav/commit.c:1524
+#: libsvn_ra_dav/commit.c:1564
 #, c-format
 msgid "applying log message to %s"
 msgstr "로그 메시지를 %s에 적용할 수 없습니다."
@@ -4377,25 +4384,25 @@ msgstr "로그 메시지를 %s에 적용할 수 없습니다."
 msgid "Could not save the URL of the version resource"
 msgstr "버전 관리대상인 URL을 저장할 수 없습니다."
 
-#: libsvn_ra_dav/fetch.c:423
+#: libsvn_ra_dav/fetch.c:398
+msgid "Could not get content-type from response."
+msgstr "컨텐트 형식을 응답으로부터 얻을 수 없습니다."
+
+#: libsvn_ra_dav/fetch.c:443
 #, c-format
 msgid "Could not create a GET request for '%s'"
 msgstr "'%s'에 대한 GET 요청을 할 수 없습니다."
 
-#: libsvn_ra_dav/fetch.c:487
+#: libsvn_ra_dav/fetch.c:518
 #, c-format
 msgid "GET request failed for '%s'"
 msgstr "'%s'에 대한 GET 요청이 실패하였습니다."
 
-#: libsvn_ra_dav/fetch.c:610
+#: libsvn_ra_dav/fetch.c:657
 msgid "Could not save file"
 msgstr "파일을 저장할 수 없습니다."
 
-#: libsvn_ra_dav/fetch.c:659
-msgid "Error writing to stream: unexpected EOF"
-msgstr "스트림에 쓰기 오류: 예상치 않은 EOF"
-
-#: libsvn_ra_dav/fetch.c:844 libsvn_ra_svn/client.c:912
+#: libsvn_ra_dav/fetch.c:898 libsvn_ra_svn/client.c:912
 #, c-format
 msgid ""
 "Checksum mismatch for '%s':\n"
@@ -4406,28 +4413,29 @@ msgstr ""
 "  기대값 :  %s\n"
 "  실제값 :  %s\n"
 
-#: libsvn_ra_dav/fetch.c:1109
+#: libsvn_ra_dav/fetch.c:1163
 msgid "Server does not support date-based operations"
 msgstr "서버가 날짜 기반 명령을 지원하지 않습니다."
 
-#: libsvn_ra_dav/fetch.c:1116
+#: libsvn_ra_dav/fetch.c:1170
 msgid "Invalid server response to dated-rev request"
 msgstr "dated-rev 요청에 대한 서버의 응답이 올바르지 않습니다."
 
-#: libsvn_ra_dav/fetch.c:1255
+#: libsvn_ra_dav/fetch.c:1309
 msgid "'get-locations' REPORT not implemented"
 msgstr "get-locations REPORT 는 구현되지 않았습니다."
 
-#: libsvn_ra_dav/fetch.c:1428 libsvn_ra_dav/session.c:1066
-#: libsvn_ra_dav/session.c:1321
+#: libsvn_ra_dav/fetch.c:1482 libsvn_ra_dav/session.c:1129
+#: libsvn_ra_dav/session.c:1415
 msgid "Incomplete lock data returned"
 msgstr "불완전한 잠금 데이터를 돌려 받았습니다."
 
-#: libsvn_ra_dav/fetch.c:1585 libsvn_ra_dav/fetch.c:1589
+#: libsvn_ra_dav/fetch.c:1651 libsvn_ra_dav/fetch.c:1659
+#: libsvn_ra_dav/fetch.c:1663
 msgid "Server does not support locking features"
 msgstr "서버가 잠금 기능을 지원하지 않습니다."
 
-#: libsvn_ra_dav/fetch.c:1666
+#: libsvn_ra_dav/fetch.c:1740
 msgid ""
 "DAV request failed; it's possible that the repository's pre-revprop-change "
 "hook either failed or is non-existent"
@@ -4435,17 +4443,17 @@ msgstr ""
 "DAV 요청 실패: pre-revprop-change 훅이 실패하였거나 존재하지 않을 수 있습니"
 "다."
 
-#: libsvn_ra_dav/fetch.c:2400
+#: libsvn_ra_dav/fetch.c:2474
 #, c-format
 msgid "Error writing to '%s': unexpected EOF"
 msgstr "'%s'에 쓰기 오류: 예상치 못한 EOF"
 
-#: libsvn_ra_dav/fetch.c:2545
+#: libsvn_ra_dav/fetch.c:2619
 #, c-format
 msgid "Unknown XML encoding: '%s'"
 msgstr "알 수 없는 XML 인코딩: '%s'"
 
-#: libsvn_ra_dav/fetch.c:2820
+#: libsvn_ra_dav/fetch.c:2901
 msgid "REPORT response handling failed to complete the editor drive"
 msgstr "REPORT 응답 처리가 편집기 구동을 완료하는데 실패하였습니다."
 
@@ -4453,7 +4461,7 @@ msgstr "REPORT 응답 처리가 편집기 구동을 완료하는데 실패하였
 msgid "'get-file-revs' REPORT not implemented"
 msgstr "get-file-revs REPORT는 아직 구현되지 않았습니다."
 
-#: libsvn_ra_dav/file_revs.c:367
+#: libsvn_ra_dav/file_revs.c:376
 msgid "The file-revs report didn't contain any revisions"
 msgstr "file-revs 는 리비전정보를 가지고 있지 않습니다."
 
@@ -4547,131 +4555,131 @@ msgid "At least one property change failed; repository is unchanged"
 msgstr ""
 "적어도 하나의 속성이 변경에 실패하였습니다.: 저장소는 변경되지 않습니다."
 
-#: libsvn_ra_dav/session.c:441
+#: libsvn_ra_dav/session.c:442
 msgid "Invalid URL: illegal character in proxy port number"
 msgstr "잘못된 URL: 잘못된 문자가 프록시 포트 번호에 있습니다."
 
-#: libsvn_ra_dav/session.c:445
+#: libsvn_ra_dav/session.c:446
 msgid "Invalid URL: negative proxy port number"
 msgstr "잘못된 URL: 포트 번호가 음수입니다."
 
-#: libsvn_ra_dav/session.c:448
+#: libsvn_ra_dav/session.c:449
 msgid ""
 "Invalid URL: proxy port number greater than maximum TCP port number 65535"
 msgstr ""
 "잘못된 URL: 프록시 포트 번호가 TCP 포트번호의 최대값인 65536를 넘어섭니다."
 
-#: libsvn_ra_dav/session.c:462
+#: libsvn_ra_dav/session.c:463
 msgid "Invalid config: illegal character in timeout value"
 msgstr "잘못된 설정: 타임아웃 값에 잘못된 문자가 있습니다."
 
-#: libsvn_ra_dav/session.c:466
+#: libsvn_ra_dav/session.c:467
 msgid "Invalid config: negative timeout value"
 msgstr "잘못된 설정: 타임아웃 값이 음수입니다."
 
-#: libsvn_ra_dav/session.c:479
+#: libsvn_ra_dav/session.c:480
 msgid "Invalid config: illegal character in debug mask value"
 msgstr "잘못된 설정: 디버그 마스크 값에 잘못된 문자가 있습니다."
 
-#: libsvn_ra_dav/session.c:542
+#: libsvn_ra_dav/session.c:543
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
 msgstr "WebDAV (DeltaV) 프로토콜을 통해 저장소에 접근하는 모듈"
 
-#: libsvn_ra_dav/session.c:588
+#: libsvn_ra_dav/session.c:593
 msgid "Malformed URL for repository"
 msgstr "저장소에 대한 잘못된 URL"
 
-#: libsvn_ra_dav/session.c:596
+#: libsvn_ra_dav/session.c:601
 msgid "Network socket initialization failed"
 msgstr "네트워크 소켓 초기화 실패"
 
-#: libsvn_ra_dav/session.c:609
+#: libsvn_ra_dav/session.c:618
 msgid "SSL is not supported"
 msgstr "SSL은 지원되지 않습니다."
 
-#: libsvn_ra_dav/session.c:755
+#: libsvn_ra_dav/session.c:764
 #, c-format
 msgid "Invalid config: unable to load certificate file '%s'"
 msgstr "잘못된 설정: 인증서 파일 '%s' 를 읽을 수 없습니다."
 
-#: libsvn_ra_dav/session.c:843
+#: libsvn_ra_dav/session.c:852
 msgid "The UUID property was not found on the resource or any of its parents"
 msgstr "UUID 속성이 대상이나 대상의 어떤 상위에서도 발견되지 않았습니다"
 
-#: libsvn_ra_dav/session.c:851
+#: libsvn_ra_dav/session.c:860
 msgid "Please upgrade the server to 0.19 or later"
 msgstr "서버를 0.19 버전 이상으로 업그레이드 하세요."
 
-#: libsvn_ra_dav/session.c:1038 libsvn_ra_dav/session.c:1166
+#: libsvn_ra_dav/session.c:1101 libsvn_ra_dav/session.c:1238
 msgid "Failed to parse URI"
 msgstr "URI를 분석하는데 실패하였습니다."
 
-#: libsvn_ra_dav/session.c:1061
+#: libsvn_ra_dav/session.c:1124
 msgid "Lock request failed"
 msgstr "잠금 요청 실패"
 
-#: libsvn_ra_dav/session.c:1181
+#: libsvn_ra_dav/session.c:1253
 #, c-format
 msgid "'%s' is not locked in the repository"
 msgstr "'%s'는 저장소안에서 잠겨있지 않습니다."
 
-#: libsvn_ra_dav/session.c:1218
+#: libsvn_ra_dav/session.c:1290
 msgid "Unlock request failed"
 msgstr "잠금해제 요청 실패"
 
-#: libsvn_ra_dav/session.c:1404
+#: libsvn_ra_dav/session.c:1501
 msgid "Failed to fetch lock information"
 msgstr "잠금 정보 얻기 오류"
 
-#: libsvn_ra_dav/session.c:1475
+#: libsvn_ra_dav/session.c:1572
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_dav"
 msgstr "ra_dav의 지원하지 않는 RA 로더 버전 (%d)입니다."
 
-#: libsvn_ra_dav/util.c:274
+#: libsvn_ra_dav/util.c:275
 msgid "authorization failed"
 msgstr "인증에 실패하였습니다."
 
-#: libsvn_ra_dav/util.c:278
+#: libsvn_ra_dav/util.c:279
 msgid "could not connect to server"
 msgstr "서버에 접속할 수 없습니다."
 
-#: libsvn_ra_dav/util.c:282
+#: libsvn_ra_dav/util.c:283
 msgid "timed out waiting for server"
 msgstr "서버의 응답시간이 초과하였습니다."
 
-#: libsvn_ra_dav/util.c:468
+#: libsvn_ra_dav/util.c:489
 msgid "Can't calculate the request body size"
 msgstr "요청 내용의 크기를 계산할 수 없습니다."
 
-#: libsvn_ra_dav/util.c:689
+#: libsvn_ra_dav/util.c:725
 #, c-format
 msgid "Error spooling the %s request response to disk"
 msgstr "%s 요청을 디스크에 스풀링하다 오류가 발생하였습니다."
 
-#: libsvn_ra_dav/util.c:729
+#: libsvn_ra_dav/util.c:773
 #, c-format
 msgid "'%s' path not found"
 msgstr "'%s': 경로가 존재하지 않습니다."
 
 #. We either have a neon error, or some other error
 #. that we didn't expect.
-#: libsvn_ra_dav/util.c:734 libsvn_ra_dav/util.c:927
+#: libsvn_ra_dav/util.c:778 libsvn_ra_dav/util.c:1008
 #, c-format
 msgid "%s of '%s'"
 msgstr "%s of '%s'"
 
-#: libsvn_ra_dav/util.c:752
+#: libsvn_ra_dav/util.c:796
 #, c-format
 msgid "Error reading spooled %s request response"
 msgstr "스풀링된 %s 요청에 대한 응답을 읽는데 오류가 발생하였습니다."
 
-#: libsvn_ra_dav/util.c:763
+#: libsvn_ra_dav/util.c:807
 #, c-format
 msgid "The %s request returned invalid XML in the response: %s (%s)"
 msgstr "%s 요청의 응답으로 잘못된 XML을 반환하였습니다. : %s (%s)"
 
-#: libsvn_ra_dav/util.c:783
+#: libsvn_ra_dav/util.c:827
 #, c-format
 msgid "%s request failed on '%s'"
 msgstr "%s 요청이 '%s'에 대해 실패하였습니다."
@@ -4697,7 +4705,7 @@ msgstr "로컬 디스크에 있는 저장소를 접근하기 위한 모듈"
 msgid "Unable to open an ra_local session to URL"
 msgstr "URL에 대해 ra_local 세션을 열수 없습니다."
 
-#: libsvn_ra_local/ra_plugin.c:1284
+#: libsvn_ra_local/ra_plugin.c:1286
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_local"
 msgstr "ra_local에 대한 지원하지 않는 RA 로더 버전(%d)입니다."
@@ -4853,23 +4861,27 @@ msgstr "문서의 차이 조각(text delta chunk)이 문자열이 아닙니다."
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "get-file-revs 명령이 어떠한 리비전도 반환하지 않았습니다."
 
-#: libsvn_ra_svn/client.c:1436
+#: libsvn_ra_svn/client.c:1438
 msgid "Server doesn't support the lock command"
 msgstr "서버가 lock 명령을 지원하지 않습니다."
 
-#: libsvn_ra_svn/client.c:1498
+#: libsvn_ra_svn/client.c:1502
 msgid "Server doesn't support the unlock command"
 msgstr "서버가 unlock 명령을 지원하지 않습니다."
 
-#: libsvn_ra_svn/client.c:1533 libsvn_ra_svn/client.c:1561
-msgid "Server doesn't support the get-lock command"
-msgstr "서버가 get-lock 명령을 지원하지 않습니다."
-
-#: libsvn_ra_svn/client.c:1574
+#: libsvn_ra_svn/client.c:1602 libsvn_ra_svn/client.c:1755
 msgid "Lock element not a list"
 msgstr "리스트가 아닌 개체를 잠급니다"
 
-#: libsvn_ra_svn/client.c:1633
+#: libsvn_ra_svn/client.c:1607
+msgid "Unable to parse lock data"
+msgstr "잠금 데이타를 분석할 수 없습니다"
+
+#: libsvn_ra_svn/client.c:1714 libsvn_ra_svn/client.c:1742
+msgid "Server doesn't support the get-lock command"
+msgstr "서버가 get-lock 명령을 지원하지 않습니다."
+
+#: libsvn_ra_svn/client.c:1814
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "ra_svn에 대한 지원하지 않는 RA 로더 버전(%d)입니다."
@@ -4894,7 +4906,7 @@ msgstr "Apply-textdelta 는 이미 활성화 되어있습니다."
 msgid "Apply-textdelta not active"
 msgstr "Apply-textdelta 는 활성화 상태가 아닙니다."
 
-#: libsvn_ra_svn/editorp.c:797 libsvn_ra_svn/marshal.c:820
+#: libsvn_ra_svn/editorp.c:797 libsvn_ra_svn/marshal.c:833
 #, c-format
 msgid "Unknown command '%s'"
 msgstr "알 수 없는 명령 '%s'"
@@ -4927,40 +4939,40 @@ msgstr "경로의 깊이가 너무 깊습니다."
 msgid "Number is larger than maximum"
 msgstr "숫자가 최대값을 넘었습니다."
 
-#: libsvn_ra_svn/marshal.c:769
+#: libsvn_ra_svn/marshal.c:756
 msgid "Empty error list"
 msgstr "비어 있는 오류 리스트"
 
-#: libsvn_ra_svn/marshal.c:776
+#: libsvn_ra_svn/marshal.c:765
 msgid "Malformed error list"
 msgstr "잘못된 형식의 오류 리스트"
 
-#: libsvn_ra_svn/marshal.c:791
+#: libsvn_ra_svn/marshal.c:804
 #, c-format
 msgid "Unknown status '%s' in command response"
 msgstr "명령의 응답안에 알 수 없는 상태 값 '%s'"
 
-#: libsvn_repos/commit.c:121
+#: libsvn_repos/commit.c:128
 #, c-format
 msgid "Out of date: '%s' in transaction '%s'"
 msgstr "시간이 오래되었습니다.: '%s' (트랜잭션 '%s')"
 
-#: libsvn_repos/commit.c:248 libsvn_repos/commit.c:382
+#: libsvn_repos/commit.c:295 libsvn_repos/commit.c:460
 #, c-format
 msgid "Got source path but no source revision for '%s'"
 msgstr "소스 경로는 얻었으나 리비전을 얻을 수 없습니다. '%s'"
 
-#: libsvn_repos/commit.c:272 libsvn_repos/commit.c:406
+#: libsvn_repos/commit.c:327 libsvn_repos/commit.c:491
 #, c-format
 msgid "Source url '%s' is from different repository"
 msgstr "원본 URL '%s'은(는) 외부 저장소와 연결되어 있습니다."
 
-#: libsvn_repos/commit.c:328
+#: libsvn_repos/commit.c:400
 #, c-format
 msgid "Path '%s' not present"
 msgstr "경로 '%s'는 존재하지 않습니다."
 
-#: libsvn_repos/commit.c:512
+#: libsvn_repos/commit.c:616
 #, c-format
 msgid ""
 "Checksum mismatch for resulting fulltext\n"
@@ -5216,24 +5228,24 @@ msgstr "'%s'는 파일 시스템에 없습니다"
 msgid "Filesystem path '%s' is neither a file nor a directory"
 msgstr "파일 시스템내의 '%s'는 파일이나 디렉토리가 아닙니다"
 
-#: libsvn_repos/reporter.c:598
+#: libsvn_repos/reporter.c:603
 #, c-format
 msgid "Working copy path '%s' does not exist in repository"
 msgstr "경로 '%s'은(는) 저장소에 없습니다."
 
-#: libsvn_repos/reporter.c:819
+#: libsvn_repos/reporter.c:824
 msgid "Not authorized to open root of edit operation"
 msgstr "수정 명령의 루트를 열 수 있는 권한을 얻지 못하였습니다."
 
-#: libsvn_repos/reporter.c:840
+#: libsvn_repos/reporter.c:845
 msgid "Cannot replace a directory from within"
 msgstr "디렉토리를 치환할 수 없습니다."
 
-#: libsvn_repos/reporter.c:883
+#: libsvn_repos/reporter.c:888
 msgid "Invalid report for top level of working copy"
 msgstr "최상위 작업사본 경로에 대한 잘못된 명령입니다."
 
-#: libsvn_repos/reporter.c:898
+#: libsvn_repos/reporter.c:903
 msgid "Two top-level reports with no target"
 msgstr "대상이 없는 두 개의 최상의 보고서"
 
@@ -5339,7 +5351,7 @@ msgstr "읽을 수 없는 경로 발생; 접근 거부되었습니다."
 msgid "Config error: invalid boolean value '%s'"
 msgstr "구성 오류: 잘못된 부울리안 값입니다. '%s'"
 
-#: libsvn_subr/config.c:807
+#: libsvn_subr/config.c:882
 #, c-format
 msgid "Config error: invalid integer value '%s'"
 msgstr "구성 오류: 잘못된 정수 값입니다. '%s'"
@@ -5380,11 +5392,11 @@ msgstr "구성파일 '%s' 를 열 수 없습니다."
 msgid "Can't manipulate current date"
 msgstr "현재 날짜를 조작할 수 없습니다."
 
-#: libsvn_subr/date.c:277 libsvn_subr/date.c:285
+#: libsvn_subr/date.c:278 libsvn_subr/date.c:286
 msgid "Can't calculate requested date"
 msgstr "요청 시간을 계산할 수 없습니다."
 
-#: libsvn_subr/date.c:280
+#: libsvn_subr/date.c:281
 msgid "Can't expand time"
 msgstr "시간을 확장할 수 없음"
 
@@ -5454,173 +5466,173 @@ msgstr "대상 '%s'은 디렉토리가 아닙니다"
 msgid "Destination '%s' already exists"
 msgstr "대상 '%s' 는 이미 존재합니다."
 
-#: libsvn_subr/io.c:735 libsvn_subr/io.c:1635 libsvn_subr/io.c:1704
+#: libsvn_subr/io.c:736 libsvn_subr/io.c:1636 libsvn_subr/io.c:1707
 #, c-format
 msgid "Can't read directory '%s'"
 msgstr "디렉토리를 읽을 수 없습니다 '%s'"
 
-#: libsvn_subr/io.c:740 libsvn_subr/io.c:1640 libsvn_subr/io.c:1709
-#: libsvn_subr/io.c:2681
+#: libsvn_subr/io.c:741 libsvn_subr/io.c:1641 libsvn_subr/io.c:1712
+#: libsvn_subr/io.c:2695
 #, c-format
 msgid "Error closing directory '%s'"
 msgstr "디렉토리를 닫을 수 없습니다. '%s'"
 
-#: libsvn_subr/io.c:766
+#: libsvn_subr/io.c:767
 #, c-format
 msgid "Can't make directory '%s'"
 msgstr "디렉토리 '%s'을/를 생성할 수 없습니다."
 
-#: libsvn_subr/io.c:834
+#: libsvn_subr/io.c:835
 #, c-format
 msgid "Can't set access time of '%s'"
 msgstr "'%s' 에 접근 시각 설정을 할 수 없습니다."
 
-#: libsvn_subr/io.c:949
+#: libsvn_subr/io.c:950
 #, c-format
 msgid "Can't set file '%s' read-only"
 msgstr "파일 '%s'에 읽기 전용 속성을 설정할 수 없습니다."
 
-#: libsvn_subr/io.c:974
+#: libsvn_subr/io.c:975
 #, c-format
 msgid "Can't set file '%s' read-write"
 msgstr "파일 '%s'에 읽기/쓰기 속성을 설정할 수 없습니다."
 
-#: libsvn_subr/io.c:1024
+#: libsvn_subr/io.c:1025
 #, c-format
 msgid "Can't get default file perms for file at '%s' (file stat error)"
 msgstr "파일 권한을 얻을 수 없습니다. '%s' (파일 상태얻기(stat) 오류)"
 
-#: libsvn_subr/io.c:1034
+#: libsvn_subr/io.c:1035
 #, c-format
 msgid "Can't open file at '%s'"
 msgstr "파일 '%s' 을/를 열 수 없습니다."
 
-#: libsvn_subr/io.c:1038
+#: libsvn_subr/io.c:1039
 #, c-format
 msgid "Can't get file perms for file at '%s' (file stat error)"
 msgstr "파일 권한을 얻을 수 없습니다. '%s' (파일 상태얻기(stat) 오류)"
 
-#: libsvn_subr/io.c:1071 libsvn_subr/io.c:1131
+#: libsvn_subr/io.c:1072 libsvn_subr/io.c:1132
 #, c-format
 msgid "Can't change read-write perms of file '%s'"
 msgstr "파일 '%s'에 대해 읽기/쓰기 속성 변경을 할 수 없습니다"
 
-#: libsvn_subr/io.c:1170 libsvn_subr/io.c:1214 libsvn_subr/io.c:1238
+#: libsvn_subr/io.c:1171 libsvn_subr/io.c:1215 libsvn_subr/io.c:1239
 #, c-format
 msgid "Can't change executability of file '%s'"
 msgstr "파일 '%s'에 대해 실행 속성 변경을 할 수 없습니다"
 
-#: libsvn_subr/io.c:1265
+#: libsvn_subr/io.c:1266
 msgid "Error getting UID of process"
 msgstr "프로세스의 UID를 얻을 수 없습니다."
 
-#: libsvn_subr/io.c:1346
+#: libsvn_subr/io.c:1347
 #, c-format
 msgid "Can't get shared lock on file '%s'"
 msgstr "파일 '%s' 에 대한 공유 잠금기능을 걸 수 없습니다."
 
-#: libsvn_subr/io.c:1350
+#: libsvn_subr/io.c:1351
 #, c-format
 msgid "Can't get exclusive lock on file '%s'"
 msgstr "파일 '%s'에 대해 배타적 잠금기능을 걸 수 없습니다."
 
-#: libsvn_subr/io.c:1381
+#: libsvn_subr/io.c:1382
 #, c-format
 msgid "Can't flush file '%s'"
 msgstr "파일을 플러시할 수 없습니다. '%s'"
 
-#: libsvn_subr/io.c:1382
+#: libsvn_subr/io.c:1383
 msgid "Can't flush stream"
 msgstr "스트림을 플러시 할 수 없습니다."
 
-#: libsvn_subr/io.c:1394 libsvn_subr/io.c:1411
+#: libsvn_subr/io.c:1395 libsvn_subr/io.c:1412
 msgid "Can't flush file to disk"
 msgstr "디스크에 파일을 플러시할 수 없습니다."
 
-#: libsvn_subr/io.c:1432
+#: libsvn_subr/io.c:1433
 msgid "Reading from stdin is currently broken, so disabled"
 msgstr "표준 입력으로부터 읽는 것은 현재 지원하지 않습니다."
 
-#: libsvn_subr/io.c:1453
+#: libsvn_subr/io.c:1454
 msgid "Can't get file name"
 msgstr "파일 이름을 얻을 수 없습니다."
 
-#: libsvn_subr/io.c:1521
+#: libsvn_subr/io.c:1522
 #, c-format
 msgid "Can't remove file '%s'"
 msgstr "파일을 제거할 수 없습니다. '%s'"
 
-#: libsvn_subr/io.c:1550
+#: libsvn_subr/io.c:1551
 #, c-format
 msgid "Can't rewind directory '%s'"
 msgstr "디렉토리를 되감을 수 없습니다. '%s'"
 
-#: libsvn_subr/io.c:1585 libsvn_subr/io.c:2530 libsvn_subr/io.c:2618
+#: libsvn_subr/io.c:1586 libsvn_subr/io.c:2544 libsvn_subr/io.c:2632
 #, c-format
 msgid "Can't open directory '%s'"
 msgstr "디렉토리를 열 수 없습니다. '%s'"
 
-#: libsvn_subr/io.c:1624 libsvn_subr/io.c:1646
+#: libsvn_subr/io.c:1625 libsvn_subr/io.c:1647
 #, c-format
 msgid "Can't remove '%s'"
 msgstr "제거할 수 없습니다. '%s'"
 
-#: libsvn_subr/io.c:1737
+#: libsvn_subr/io.c:1751
 #, c-format
 msgid "Can't create process '%s' attributes"
 msgstr "프로세스 속성을 생성할 수 없습니다. %s'"
 
-#: libsvn_subr/io.c:1743
+#: libsvn_subr/io.c:1757
 #, c-format
 msgid "Can't set process '%s' cmdtype"
 msgstr "'%s' cmdtype을 처리할 수 없습니다."
 
-#: libsvn_subr/io.c:1755
+#: libsvn_subr/io.c:1769
 #, c-format
 msgid "Can't set process '%s' directory"
 msgstr "프로세스에 디렉토리를 설정할 수 없습니다. '%s'"
 
-#: libsvn_subr/io.c:1768
+#: libsvn_subr/io.c:1782
 #, c-format
 msgid "Can't set process '%s' child input"
 msgstr "자식 프로세스의 입력파일 경로를 설정할 수 없습니다. '%s'"
 
-#: libsvn_subr/io.c:1775
+#: libsvn_subr/io.c:1789
 #, c-format
 msgid "Can't set process '%s' child outfile"
 msgstr "자식 프로세스의 출력파일 경로를 설정할 수 없습니다. '%s'"
 
-#: libsvn_subr/io.c:1782
+#: libsvn_subr/io.c:1796
 #, c-format
 msgid "Can't set process '%s' child errfile"
 msgstr "자식 프로세스의 오류파일 경로를 설정할 수 없습니다. '%s'"
 
-#: libsvn_subr/io.c:1806
+#: libsvn_subr/io.c:1820
 #, c-format
 msgid "Can't start process '%s'"
 msgstr "프로세스 '%s'을/를 시작할 수 없습니다."
 
-#: libsvn_subr/io.c:1828
+#: libsvn_subr/io.c:1842
 #, c-format
 msgid "Error waiting for process '%s'"
 msgstr "프로세스 '%s'을/를 기다리던 중 에러 발생"
 
-#: libsvn_subr/io.c:1836
+#: libsvn_subr/io.c:1850
 #, c-format
 msgid "Process '%s' failed (exitwhy %d)"
 msgstr "프로세스 '%s' 실패함 (종료이유 %d)"
 
-#: libsvn_subr/io.c:1843
+#: libsvn_subr/io.c:1857
 #, c-format
 msgid "Process '%s' returned error exitcode %d"
 msgstr "프로세스 '%s' 오류 종료 코드 %d 반환함."
 
-#: libsvn_subr/io.c:1954
+#: libsvn_subr/io.c:1968
 #, c-format
 msgid "'%s' returned %d"
 msgstr "'%s' 가 %d 을/를 반환합니다."
 
-#: libsvn_subr/io.c:2057
+#: libsvn_subr/io.c:2071
 #, c-format
 msgid ""
 "Error running '%s':  exitcode was %d, args were:\n"
@@ -5635,125 +5647,139 @@ msgstr ""
 "%s\n"
 "%s"
 
-#: libsvn_subr/io.c:2093
+#: libsvn_subr/io.c:2107
 #, c-format
 msgid "Can't detect MIME type of non-file '%s'"
 msgstr "non-file '%s'의 MIME 타입을 탐지할 수 없습니다."
 
-#: libsvn_subr/io.c:2160
+#: libsvn_subr/io.c:2174
 #, c-format
 msgid "Can't open file '%s'"
 msgstr "file '%s' 를 열 수 없습니다."
 
-#: libsvn_subr/io.c:2197
+#: libsvn_subr/io.c:2211
 msgid "Can't close stream"
 msgstr "스트림을 닫을 수 없습니다."
 
-#: libsvn_subr/io.c:2207 libsvn_subr/io.c:2231 libsvn_subr/io.c:2244
+#: libsvn_subr/io.c:2221 libsvn_subr/io.c:2245 libsvn_subr/io.c:2258
 #, c-format
 msgid "Can't read file '%s'"
 msgstr "파일 '%s'를 읽을 수 없습니다."
 
-#: libsvn_subr/io.c:2208 libsvn_subr/io.c:2232 libsvn_subr/io.c:2245
+#: libsvn_subr/io.c:2222 libsvn_subr/io.c:2246 libsvn_subr/io.c:2259
 msgid "Can't read stream"
 msgstr "스트림을 읽을 수 없습니다."
 
-#: libsvn_subr/io.c:2219
+#: libsvn_subr/io.c:2233
 #, c-format
 msgid "Can't get attribute information from file '%s'"
 msgstr "파일 '%s' 로부터 속성 정보를 얻을 수 없습니다."
 
-#: libsvn_subr/io.c:2220
+#: libsvn_subr/io.c:2234
 msgid "Can't get attribute information from stream"
 msgstr "스트림으로부터 속성 정보를 얻을 수 없습니다."
 
-#: libsvn_subr/io.c:2256
+#: libsvn_subr/io.c:2270
 #, c-format
 msgid "Can't set position pointer in file '%s'"
 msgstr "파일 '%s'에 위치 포이터를 설정 할 수 없습니다."
 
-#: libsvn_subr/io.c:2257
+#: libsvn_subr/io.c:2271
 msgid "Can't set position pointer in stream"
 msgstr "스트림에 위치 포인터를 설정 할 수 없습니다."
 
-#: libsvn_subr/io.c:2268 libsvn_subr/io.c:2281
+#: libsvn_subr/io.c:2282 libsvn_subr/io.c:2295
 #, c-format
 msgid "Can't write to file '%s'"
 msgstr "파일 '%s'에 쓸 수 없습니다."
 
-#: libsvn_subr/io.c:2269 libsvn_subr/io.c:2282
+#: libsvn_subr/io.c:2283 libsvn_subr/io.c:2296
 msgid "Can't write to stream"
 msgstr "스트림에 쓸 수 없습니다."
 
-#: libsvn_subr/io.c:2322
+#: libsvn_subr/io.c:2336
 #, c-format
 msgid "Can't read length line in file '%s'"
 msgstr "파일 '%s'의 길이 행을 읽을 수 없습니다."
 
-#: libsvn_subr/io.c:2326
+#: libsvn_subr/io.c:2340
 msgid "Can't read length line in stream"
 msgstr "스트림에서 길이 행을 읽을 수 없습니다."
 
-#: libsvn_subr/io.c:2401
+#: libsvn_subr/io.c:2415
 #, c-format
 msgid "Can't move '%s' to '%s'"
 msgstr "'%s'을/를 '%s' 로 이동 할 수 없습니다."
 
-#: libsvn_subr/io.c:2446
+#: libsvn_subr/io.c:2460
 #, c-format
 msgid "Can't create directory '%s'"
 msgstr "디렉토리 '%s'을/를 생성할 수 없습니다."
 
-#: libsvn_subr/io.c:2457 libsvn_wc/copy.c:303
+#: libsvn_subr/io.c:2471 libsvn_wc/copy.c:303
 #, c-format
 msgid "Can't hide directory '%s'"
 msgstr "디렉토리 '%s'을/를 숨길 수 없습니다."
 
-#: libsvn_subr/io.c:2470
+#: libsvn_subr/io.c:2484
 #, c-format
 msgid "Can't stat directory '%s'"
 msgstr "디렉토리 '%s'의 상태를 알 수 없습니다."
 
-#: libsvn_subr/io.c:2486
+#: libsvn_subr/io.c:2500
 #, c-format
 msgid "Can't stat new directory '%s'"
 msgstr "새 디렉토리 '%s'의 상태를 알 수 없습니다."
 
-#: libsvn_subr/io.c:2548
+#: libsvn_subr/io.c:2562
 #, c-format
 msgid "Can't remove directory '%s'"
 msgstr "디렉토리 '%s'을/를 제거할 수 없습니다."
 
-#: libsvn_subr/io.c:2566
+#: libsvn_subr/io.c:2580
 msgid "Can't read directory"
 msgstr "디렉토리를 읽을 수 없습니다."
 
-#: libsvn_subr/io.c:2637
+#: libsvn_subr/io.c:2651
 #, c-format
 msgid "Can't read directory entry in '%s'"
 msgstr "'%s'에서 디렉토리 엔트리를 읽을 수 없습니다."
 
-#: libsvn_subr/io.c:2762
+#: libsvn_subr/io.c:2776
 #, c-format
 msgid "Can't check directory '%s'"
 msgstr "디렉토리 '%s'를 체크할 수 없습니다."
 
-#: libsvn_subr/io.c:2784
+#: libsvn_subr/io.c:2798
 #, c-format
 msgid "Version %d is not non-negative"
 msgstr "버젼 %d은/는 non-negative가 아닙니다."
 
-#: libsvn_subr/io.c:2831
+#: libsvn_subr/io.c:2845
 #, c-format
 msgid "Reading '%s'"
 msgstr "'%s'을/를 읽습니다"
 
-#: libsvn_subr/io.c:2847
+#: libsvn_subr/io.c:2861
 #, c-format
 msgid "First line of '%s' contains non-digit"
 msgstr "'%s'의 첫번째 줄은 숫자가 아닌 것을 포함하고 있습니다."
 
-#: libsvn_subr/opt.c:147
+#: libsvn_subr/nls.c:79
+#, c-format
+msgid "Can't convert string to UCS-2: '%s'"
+msgstr "문자열을 UCS-2로 변환할 수 없습니다: '%s'"
+
+#: libsvn_subr/nls.c:86
+msgid "Can't get module file name"
+msgstr "모듈 파일 이름을 얻을 수 없습니다"
+
+#: libsvn_subr/nls.c:101
+#, c-format
+msgid "Can't convert module path to UTF-8 from UCS-2: '%s'"
+msgstr "모듈 경로를 UCS-2에서 UTF-8로 변환할 수 없습니다: '%s'"
+
+#: libsvn_subr/opt.c:146
 msgid ""
 "\n"
 "Valid options:\n"
@@ -5761,11 +5787,11 @@ msgstr ""
 "\n"
 "옵션:\n"
 
-#: libsvn_subr/opt.c:237
+#: libsvn_subr/opt.c:236
 msgid " arg"
-msgstr " 인자"
+msgstr " arg"
 
-#: libsvn_subr/opt.c:261
+#: libsvn_subr/opt.c:259
 #, c-format
 msgid ""
 "\"%s\": unknown command.\n"
@@ -5774,31 +5800,31 @@ msgstr ""
 "\"%s\": 알 수 없는 명령입니다.\n"
 "\n"
 
-#: libsvn_subr/opt.c:451
+#: libsvn_subr/opt.c:449
 msgid "Too few arguments"
 msgstr "인자의 개수가 부족합니다."
 
-#: libsvn_subr/opt.c:509
+#: libsvn_subr/opt.c:530
 #, c-format
 msgid "Syntax error parsing revision '%s'"
 msgstr "구문 오류 분석 리비젼 '%s'"
 
-#: libsvn_subr/opt.c:586
+#: libsvn_subr/opt.c:607
 #, c-format
 msgid "URL '%s' is not properly URI-encoded"
 msgstr "URL '%s'는 URI 인코딩에 적당하지 않습니다."
 
-#: libsvn_subr/opt.c:592
+#: libsvn_subr/opt.c:613
 #, c-format
 msgid "URL '%s' contains a '..' element"
 msgstr "URL '%s'는 '..' 요소를 포함합니다."
 
-#: libsvn_subr/opt.c:621
+#: libsvn_subr/opt.c:642
 #, c-format
 msgid "Error resolving case of '%s'"
 msgstr "'%s' 사항을 해결 중 에러 발생하였습니다."
 
-#: libsvn_subr/opt.c:717
+#: libsvn_subr/opt.c:738
 #, c-format
 msgid ""
 "%s, version %s\n"
@@ -5809,7 +5835,7 @@ msgstr ""
 "    %s, %s에 컴파일 됨\n"
 "\n"
 
-#: libsvn_subr/opt.c:720
+#: libsvn_subr/opt.c:741
 msgid ""
 "Copyright (C) 2000-2005 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
@@ -5823,7 +5849,7 @@ msgstr ""
 "Collab.Net/).\n"
 "\n"
 
-#: libsvn_subr/opt.c:773
+#: libsvn_subr/opt.c:794
 #, c-format
 msgid "Type '%s help' for usage.\n"
 msgstr "사용법은 '%s help'를 통해 볼 수 있습니다.\n"
@@ -5847,50 +5873,50 @@ msgstr "경로에 대한 기본 인코딩을 결정할 수 없습니다."
 msgid "Invalid control character '0x%02x' in path '%s'"
 msgstr "잘못된 제어 문자 '0x%02x'가 경로 '%s'에 있습니다."
 
-#: libsvn_subr/subst.c:1011 libsvn_wc/props.c:981
+#: libsvn_subr/subst.c:1013 libsvn_wc/props.c:1441
 #, c-format
 msgid "File '%s' has inconsistent newlines"
 msgstr "파일 '%s' 은 일치하지 않는 개행문자를 포함하고 있습니다"
 
-#: libsvn_subr/utf.c:149
+#: libsvn_subr/utf.c:157
 msgid "Can't lock charset translation mutex"
 msgstr "문자변환용 뮤텍스를 잠글 수 없습니다."
 
-#: libsvn_subr/utf.c:167 libsvn_subr/utf.c:226
+#: libsvn_subr/utf.c:175 libsvn_subr/utf.c:263
 msgid "Can't unlock charset translation mutex"
 msgstr "문자변환용 뮤텍스를 해제할 수 없습니다."
 
-#: libsvn_subr/utf.c:242
+#: libsvn_subr/utf.c:222
 #, c-format
 msgid "Can't create a character converter from native encoding to '%s'"
 msgstr "기본 인코딩에서 '%s'(으)로 변환할 수 있는 컨버터를 만들 수 없습니다."
 
-#: libsvn_subr/utf.c:246
+#: libsvn_subr/utf.c:226
 #, c-format
 msgid "Can't create a character converter from '%s' to native encoding"
 msgstr "'%s'에서 기본 인코딩으로 변환할 수 있는 컨버터를 만들 수 없습니다."
 
-#: libsvn_subr/utf.c:250
+#: libsvn_subr/utf.c:230
 #, c-format
 msgid "Can't create a character converter from '%s' to '%s'"
 msgstr "'%s'을/를 '%s'(으)로 변환할 수 있는 컨버터를 만들 수 없습니다."
 
-#: libsvn_subr/utf.c:441
+#: libsvn_subr/utf.c:454
 #, c-format
 msgid "Can't convert string from native encoding to '%s':"
 msgstr "기본 인코딩에서 '%s'(으)로 문자열을 변환할 수 없습니다:"
 
-#: libsvn_subr/utf.c:445
+#: libsvn_subr/utf.c:458
 #, c-format
 msgid "Can't convert string from '%s' to native encoding:"
 msgstr "'%s'에서 기본 인코딩으로 문자열을 변환할 수 없습니다:"
 
-#: libsvn_subr/utf.c:449
+#: libsvn_subr/utf.c:462
 #, c-format
 msgid "Can't convert string from '%s' to '%s':"
 msgstr "'%s'에서 '%s'(으)로 문자열을 변환할 수 없습니다:"
 
-#: libsvn_subr/utf.c:493
+#: libsvn_subr/utf.c:506
 #, c-format
 msgid ""
 "Safe data '%s' was followed by non-ASCII byte %d: unable to convert to/from "
@@ -5900,14 +5926,14 @@ msgstr ""
 "\"%s\"\n"
 "아스키 아닌 값(%d)이 따라 왔습니다: UTF-8과 상호 변환이 불가능합니다."
 
-#: libsvn_subr/utf.c:501
+#: libsvn_subr/utf.c:514
 #, c-format
 msgid ""
 "Non-ASCII character (code %d) detected, and unable to convert to/from UTF-8"
 msgstr ""
 "ASCII가 아닌 (코드 %d) 문자가 발견되었으며, UTF-8과 상호 변환이 불가능합니다."
 
-#: libsvn_subr/utf.c:543
+#: libsvn_subr/utf.c:556
 #, c-format
 msgid ""
 "Valid UTF-8 data\n"
@@ -5946,7 +5972,7 @@ msgstr ""
 msgid "Malformed XML: %s at line %d"
 msgstr "잘못된 XML: %s (줄 번호 %d)"
 
-#: libsvn_wc/adm_crawler.c:380
+#: libsvn_wc/adm_crawler.c:379
 #, c-format
 msgid ""
 "The entry '%s' is no longer a directory; remove the entry before updating"
@@ -5954,28 +5980,28 @@ msgstr ""
 "엔트리 '%s' 은 더 이상 디렉토리가 아닙니다; 업데이트 하기 전에 엔트리를 제거"
 "하십시오"
 
-#: libsvn_wc/adm_crawler.c:637
+#: libsvn_wc/adm_crawler.c:633
 msgid "Error aborting report"
 msgstr "보고 중지 실패"
 
-#: libsvn_wc/adm_crawler.c:830
+#: libsvn_wc/adm_crawler.c:823
 #, c-format
 msgid "Checksum mismatch for '%s'; expected '%s', actual: '%s'"
 msgstr "'%s'의 체크섬값이 일치하지 않습니다. 기대값:'%s', 실제값: '%s'"
 
-#: libsvn_wc/adm_crawler.c:856
+#: libsvn_wc/adm_crawler.c:849
 msgid "Error opening local file"
 msgstr "로컬 파일 열기 오류"
 
-#: libsvn_wc/adm_files.c:196
+#: libsvn_wc/adm_files.c:202
 msgid "Bad type indicator"
 msgstr "잘못된 타입 지시자"
 
-#: libsvn_wc/adm_files.c:404
+#: libsvn_wc/adm_files.c:410
 msgid "APR_APPEND not supported for adm files"
 msgstr "adm 파일에는 APR_APPEND 가 지원되지 않습니다"
 
-#: libsvn_wc/adm_files.c:447
+#: libsvn_wc/adm_files.c:453
 msgid ""
 "Your .svn/tmp directory may be missing or corrupt; run 'svn cleanup' and try "
 "again"
@@ -5983,64 +6009,64 @@ msgstr ""
 "당신의 .svn/tmp 디릭토리가 누락되거나 손상되었습니다; 'svn cleanup' 명령을 실"
 "행한 뒤, 다시 시도하십시오"
 
-#: libsvn_wc/adm_files.c:622 libsvn_wc/adm_files.c:698 libsvn_wc/lock.c:377
-#: libsvn_wc/lock.c:630
+#: libsvn_wc/adm_files.c:628 libsvn_wc/adm_files.c:704 libsvn_wc/lock.c:378
+#: libsvn_wc/lock.c:631
 #, c-format
 msgid "'%s' is not a working copy"
 msgstr "'%s' 은 작업 사본이 아닙니다"
 
-#: libsvn_wc/adm_files.c:629 libsvn_wc/adm_files.c:705
-#: libsvn_wc/adm_files.c:769
+#: libsvn_wc/adm_files.c:635 libsvn_wc/adm_files.c:711
+#: libsvn_wc/adm_files.c:775
 msgid "No such thing as 'base' working copy properties!"
 msgstr "'base' 작업 사본 속성으로 그런 것은 없습니다.!"
 
-#: libsvn_wc/adm_files.c:838 libsvn_wc/util.c:51
+#: libsvn_wc/adm_files.c:844 libsvn_wc/util.c:51
 #, c-format
 msgid "'%s' is not a directory"
 msgstr "'%s'은 디렉토리가 아닙니다"
 
-#: libsvn_wc/adm_files.c:892
+#: libsvn_wc/adm_files.c:898
 #, c-format
 msgid "No entry for '%s'"
 msgstr "'%s'에 대한 항목이 없습니다"
 
-#: libsvn_wc/adm_files.c:904
+#: libsvn_wc/adm_files.c:910
 #, c-format
 msgid "Revision %ld doesn't match existing revision %ld in '%s'"
 msgstr "리비젼 %ld은 존재하는 리비젼 %ld 과 '%s'에서 일치하지 않습니다"
 
-#: libsvn_wc/adm_files.c:913
+#: libsvn_wc/adm_files.c:919
 #, c-format
 msgid "URL '%s' doesn't match existing URL '%s' in '%s'"
 msgstr "URL '%s'은 '%s'에 존재하는 URL '%s'과 일치하지 않습니다"
 
-#: libsvn_wc/adm_ops.c:222
+#: libsvn_wc/adm_ops.c:223
 #, c-format
 msgid "Unrecognized node kind: '%s'"
 msgstr "인실할 수 없는 노드 종류: '%s'"
 
-#: libsvn_wc/adm_ops.c:442 libsvn_wc/update_editor.c:945
-#: libsvn_wc/update_editor.c:1332
+#: libsvn_wc/adm_ops.c:443 libsvn_wc/update_editor.c:946
+#: libsvn_wc/update_editor.c:1347
 #, c-format
 msgid "Error writing log file for '%s'"
 msgstr "'%s'에 대한 로그 파일 쓰기 오류"
 
-#: libsvn_wc/adm_ops.c:976
+#: libsvn_wc/adm_ops.c:977
 #, c-format
 msgid "'%s' not found"
 msgstr "'%s' 이 발견되지 않았습니다"
 
-#: libsvn_wc/adm_ops.c:980
+#: libsvn_wc/adm_ops.c:981
 #, c-format
 msgid "Unsupported node kind for path '%s'"
 msgstr "경로 '%s'에 지원될 수 없는 노드 종류입니다"
 
-#: libsvn_wc/adm_ops.c:1010
+#: libsvn_wc/adm_ops.c:1011
 #, c-format
 msgid "'%s' is already under version control"
 msgstr "'%s'는 이미 버젼 관리 대상입니다"
 
-#: libsvn_wc/adm_ops.c:1022
+#: libsvn_wc/adm_ops.c:1023
 #, c-format
 msgid ""
 "Can't replace '%s' with a node of a differing type; commit the deletion, "
@@ -6049,53 +6075,52 @@ msgstr ""
 "'%s'는 다른 타입의 노드와 교체할 수 없습니다; 삭제하여 커밋하고, 상위를 업데"
 "이트 한 뒤, '%s'를 추가하십시오 "
 
-#: libsvn_wc/adm_ops.c:1038
+#: libsvn_wc/adm_ops.c:1039
 #, c-format
 msgid "Can't find parent directory's entry while trying to add '%s'"
 msgstr "'%s'를 추가하던 중, 상위 디렉토리의 엔트리를 발견할 수 없습니다."
 
-#: libsvn_wc/adm_ops.c:1043
+#: libsvn_wc/adm_ops.c:1044
 #, c-format
 msgid "Can't add '%s' to a parent directory scheduled for deletion"
 msgstr "삭제가 예정된 상위 디렉토리에 '%s'를 추가할 수 없습니다"
 
-#: libsvn_wc/adm_ops.c:1059
+#: libsvn_wc/adm_ops.c:1060
 #, c-format
 msgid "The URL '%s' has different repository root than its parent"
-msgstr ""
-"URL '%s'은(는) 상위 디렉토리와 다른 저장소입니다."
+msgstr "URL '%s'은(는) 상위 디렉토리와 다른 저장소입니다."
 
-#: libsvn_wc/adm_ops.c:1333 libsvn_wc/adm_ops.c:1338 libsvn_wc/adm_ops.c:1374
+#: libsvn_wc/adm_ops.c:1334 libsvn_wc/adm_ops.c:1339 libsvn_wc/adm_ops.c:1375
 #, c-format
 msgid "Error restoring props for '%s'"
 msgstr "'%s'에 대한 설정 복구 오류"
 
-#: libsvn_wc/adm_ops.c:1348
+#: libsvn_wc/adm_ops.c:1349
 #, c-format
 msgid "Error removing props for '%s'"
 msgstr "'%s'에 대한 설정 제거 오류"
 
-#: libsvn_wc/adm_ops.c:1420
+#: libsvn_wc/adm_ops.c:1421
 #, c-format
 msgid "Error restoring text for '%s'"
 msgstr "'%s'에 대한 텍스트 복구 오류"
 
-#: libsvn_wc/adm_ops.c:1521
+#: libsvn_wc/adm_ops.c:1522
 #, c-format
 msgid "Cannot revert: '%s' is not under version control"
 msgstr "복원할 수 없습니다: '%s'는 버전 관리 대상이 아닙니다."
 
-#: libsvn_wc/adm_ops.c:1549
+#: libsvn_wc/adm_ops.c:1550
 #, c-format
 msgid "Cannot revert '%s': unsupported entry node kind"
 msgstr "'%s'를 복원할 수 없습니다: 지원하지 않는 엔트리 노드 종류입니다"
 
-#: libsvn_wc/adm_ops.c:1560
+#: libsvn_wc/adm_ops.c:1561
 #, c-format
 msgid "Cannot revert '%s': unsupported node kind in working copy"
 msgstr "'%s'를 복원할 수 없습니다: 작업 사본에서 지원하지 않는 노드 종류입니다"
 
-#: libsvn_wc/adm_ops.c:1608
+#: libsvn_wc/adm_ops.c:1609
 msgid ""
 "Cannot revert addition of current directory; please try again from the "
 "parent directory"
@@ -6103,12 +6128,12 @@ msgstr ""
 "현재 디렉토리의 추가를 복원할 수 없습니다: 상위 디렉토리에서 다시 시도하십시"
 "오."
 
-#: libsvn_wc/adm_ops.c:1630
+#: libsvn_wc/adm_ops.c:1631
 #, c-format
 msgid "Unknown or unexpected kind for path '%s'"
 msgstr "경로 '%s'에 대한 알 수 없거나 기대하지 않은 종류입니다."
 
-#: libsvn_wc/adm_ops.c:1833
+#: libsvn_wc/adm_ops.c:1834
 #, c-format
 msgid "File '%s' has local modifications"
 msgstr "파일 '%s'는 로컬에서 수정되었습니다."
@@ -6155,63 +6180,63 @@ msgstr ""
 msgid "Cannot copy to '%s' as it is scheduled for deletion"
 msgstr "삭제가 예정된 상위 디렉토리에 '%s'를 추가할 수 없습니다"
 
-#: libsvn_wc/entries.c:126
+#: libsvn_wc/entries.c:127
 #, c-format
 msgid "Error writing entries file for '%s'"
 msgstr "'%s'에 대한 엔트리 파일 쓰기 오류"
 
-#: libsvn_wc/entries.c:221
+#: libsvn_wc/entries.c:222
 #, c-format
 msgid "Entry for '%s' has invalid repository root"
 msgstr "엔트리 '%s'에 유효하지 않은 저장소 루트가 있습니다."
 
-#: libsvn_wc/entries.c:243
+#: libsvn_wc/entries.c:244
 #, c-format
 msgid "Entry '%s' has invalid node kind"
 msgstr "엔트리 '%s'는 유효하지 않은 노드 종류를 갖고 있습니다"
 
-#: libsvn_wc/entries.c:268 libsvn_wc/entries.c:318 libsvn_wc/entries.c:358
-#: libsvn_wc/entries.c:385 libsvn_wc/entries.c:412
+#: libsvn_wc/entries.c:269 libsvn_wc/entries.c:319 libsvn_wc/entries.c:359
+#: libsvn_wc/entries.c:386 libsvn_wc/entries.c:413
 #, c-format
 msgid "Entry '%s' has invalid '%s' value"
 msgstr "엔트리 '%s'는 유효하지 않은 값 '%s'를 갖고 있습니다"
 
-#: libsvn_wc/entries.c:626
+#: libsvn_wc/entries.c:627
 msgid "Missing default entry"
 msgstr "기본 엔트리가 빠졌습니다"
 
-#: libsvn_wc/entries.c:631
+#: libsvn_wc/entries.c:632
 msgid "Default entry has no revision number"
 msgstr "기본 엔트리에 리비젼 넘버가 없습니다"
 
-#: libsvn_wc/entries.c:636
+#: libsvn_wc/entries.c:637
 msgid "Default entry is missing URL"
 msgstr "기본 엔트리게 URL 이 없습니다"
 
-#: libsvn_wc/entries.c:724
+#: libsvn_wc/entries.c:725
 #, c-format
 msgid "XML parser failed in '%s'"
 msgstr "XML 파서가 '%s'에 실패했습니다"
 
-#: libsvn_wc/entries.c:812
+#: libsvn_wc/entries.c:813
 #, c-format
 msgid "Corrupt working copy: '%s' has no default entry"
 msgstr "작업 사본이 손상되었습니다; '%s'는 기본 엔트리가 없습니다"
 
-#: libsvn_wc/entries.c:829
+#: libsvn_wc/entries.c:830
 #, c-format
 msgid "Corrupt working copy: directory '%s' has an invalid schedule"
 msgstr ""
 "작업 사본이 손상되었습니다; 디렉토리 '%s'는 유효하지 않은 스케쥴이 있습니다"
 
-#: libsvn_wc/entries.c:863
+#: libsvn_wc/entries.c:864
 #, c-format
 msgid "Corrupt working copy: '%s' in directory '%s' has an invalid schedule"
 msgstr ""
 "작업 사본이 손상되었습니다; 디렉토리 '%s'의 '%s'는 유효하지 않은 스케쥴이 있"
 "습니다"
 
-#: libsvn_wc/entries.c:872
+#: libsvn_wc/entries.c:873
 #, c-format
 msgid ""
 "Corrupt working copy: '%s' in directory '%s' (which is scheduled for "
@@ -6220,7 +6245,7 @@ msgstr ""
 "작업 사본이 손상되었습니다; 디렉토리 '%s'의 '%s'는 (추가 작업이 스케쥴된) 추"
 "가가 예정된 것과 다릅니다."
 
-#: libsvn_wc/entries.c:880
+#: libsvn_wc/entries.c:881
 #, c-format
 msgid ""
 "Corrupt working copy: '%s' in directory '%s' (which is scheduled for "
@@ -6229,7 +6254,7 @@ msgstr ""
 "작업 사본이 손상되었습니다; 디렉토리 '%s'의 '%s'는 (삭제 작업이 스케쥴된) 삭"
 "제가 예정된 것과 다릅니다."
 
-#: libsvn_wc/entries.c:888
+#: libsvn_wc/entries.c:889
 #, c-format
 msgid ""
 "Corrupt working copy: '%s' in directory '%s' (which is scheduled for "
@@ -6238,17 +6263,17 @@ msgstr ""
 "작업 사본이 손상되었습니다; 디렉토리 '%s'의 '%s'는 (교체 작업이 스케쥴된) 유"
 "효하지 않은 스케쥴이 있습니다."
 
-#: libsvn_wc/entries.c:1203
+#: libsvn_wc/entries.c:1204
 #, c-format
 msgid "No default entry in directory '%s'"
 msgstr "디릭토리 '%s'에 기본 엔트리가 없습니다"
 
-#: libsvn_wc/entries.c:1258
+#: libsvn_wc/entries.c:1259
 #, c-format
 msgid "Error writing to '%s'"
 msgstr "'%s'에 쓰기 오류"
 
-#: libsvn_wc/entries.c:1524
+#: libsvn_wc/entries.c:1525
 #, c-format
 msgid ""
 "Can't add '%s' to deleted directory; try undeleting its parent directory "
@@ -6257,7 +6282,7 @@ msgstr ""
 "삭제된 디렉토리에 '%s'를 추가 할 수 없습니다; 상위 디렉토리를 먼저 복원하십시"
 "오"
 
-#: libsvn_wc/entries.c:1530
+#: libsvn_wc/entries.c:1531
 #, c-format
 msgid ""
 "Can't replace '%s' in deleted directory; try undeleting its parent directory "
@@ -6266,185 +6291,185 @@ msgstr ""
 "삭제된 디렉토리에서 '%s'를 교체 할 수 없습니다; 상위 디렉토리를 먼저 복원하십"
 "시오"
 
-#: libsvn_wc/entries.c:1539
+#: libsvn_wc/entries.c:1540
 #, c-format
 msgid "'%s' is marked as absent, so it cannot be scheduled for addition"
 msgstr "'%s'는 없는 것으로 표시되어 있어서 추가 작업을 스케쥴할 수 없습니다"
 
-#: libsvn_wc/entries.c:1568
+#: libsvn_wc/entries.c:1569
 #, c-format
 msgid "Entry '%s' is already under version control"
 msgstr "'%s' 항목은 이미 관리 대상입니다."
 
-#: libsvn_wc/entries.c:1660
+#: libsvn_wc/entries.c:1661
 #, c-format
 msgid "Entry '%s' has illegal schedule"
 msgstr "'%s' 항목은 잘못된 스케쥴을 가지고 있습니다."
 
-#: libsvn_wc/entries.c:1801
+#: libsvn_wc/entries.c:1802
 #, c-format
 msgid "No such entry: '%s'"
 msgstr "없는 항목: '%s'"
 
-#: libsvn_wc/entries.c:1912
+#: libsvn_wc/entries.c:1913
 #, c-format
 msgid "Directory '%s' has no THIS_DIR entry"
 msgstr "'%s' 디렉토리는 THIS_DIR 항목이 없습니다."
 
-#: libsvn_wc/entries.c:2001
+#: libsvn_wc/entries.c:2002
 #, c-format
 msgid "'%s' has an unrecognized node kind"
 msgstr "'%s' 은/는 인식 불가능한 노드 종류입니다."
 
-#: libsvn_wc/entries.c:2037
+#: libsvn_wc/entries.c:2038
 #, c-format
 msgid "Unexpectedly found '%s': path is marked 'missing'"
 msgstr "예기치 않은 발견 '%s': 경로는 'missing' 표시가 되어 있습니다."
 
-#: libsvn_wc/lock.c:158 libsvn_wc/lock.c:359
+#: libsvn_wc/lock.c:159 libsvn_wc/lock.c:360
 #, c-format
 msgid "Working copy '%s' locked"
 msgstr "작업사본 '%s'은/는 잠겨 있습니다."
 
-#: libsvn_wc/lock.c:279
+#: libsvn_wc/lock.c:280
 #, c-format
 msgid "Path '%s' ends in '%s', which is unsupported for this operation"
 msgstr "경로 '%s'는 '%s'에서 끝나며, 이는 지원하지 않은 동작입니다."
 
-#: libsvn_wc/lock.c:678
+#: libsvn_wc/lock.c:679
 #, c-format
 msgid "Working copy '%s' is missing or not locked"
 msgstr "작업사본 '%s'은/는 없거나 잠겨있지 않습니다."
 
-#: libsvn_wc/lock.c:1078
+#: libsvn_wc/lock.c:1079
 #, c-format
 msgid "Write-lock stolen in '%s'"
-msgstr "쓰기 잠근이 '%s'에 은닉되어 있습니다"
+msgstr "어떤 이유에서인지 '%s'의 쓰기 잠금이 제거 되었습니다."
 
-#: libsvn_wc/lock.c:1086
+#: libsvn_wc/lock.c:1087
 #, c-format
 msgid "No write-lock in '%s'"
 msgstr "'%s'에 쓰기 잠금이 없습니다"
 
-#: libsvn_wc/lock.c:1108
+#: libsvn_wc/lock.c:1109
 #, c-format
 msgid "Lock file '%s' is not a regular file"
 msgstr "잠그는 파일 '%s'은/는 일반 파일이 아닙니다."
 
-#: libsvn_wc/log.c:182
+#: libsvn_wc/log.c:183
 msgid "Can't move source to dest"
 msgstr "원본을 대상으로 이동시킬 수 없습니다."
 
-#: libsvn_wc/log.c:338
+#: libsvn_wc/log.c:339
 #, c-format
 msgid "In directory '%s'"
 msgstr "디렉토리 '%s'"
 
-#: libsvn_wc/log.c:364
+#: libsvn_wc/log.c:365
 #, c-format
 msgid "Missing 'left' attribute in '%s'"
 msgstr "'%s'에 'left' 속성이 빠졌습니다"
 
-#: libsvn_wc/log.c:371
+#: libsvn_wc/log.c:372
 #, c-format
 msgid "Missing 'right' attribute in '%s'"
 msgstr "'%s'에 'right' 속성이 빠졌습니다"
 
-#: libsvn_wc/log.c:414
+#: libsvn_wc/log.c:415
 #, c-format
 msgid "Missing 'dest' attribute in '%s'"
 msgstr "'%s'에 'dest' 속성이 빠졌습니다"
 
-#: libsvn_wc/log.c:474
+#: libsvn_wc/log.c:475
 #, c-format
 msgid "Missing 'timestamp' attribute in '%s'"
 msgstr "'%s'에 'timestamp' 속성이 빠졌습니다"
 
-#: libsvn_wc/log.c:550 libsvn_wc/log.c:583
+#: libsvn_wc/log.c:551 libsvn_wc/log.c:584
 #, c-format
 msgid "Error checking path '%s'"
 msgstr "경로 '%s' 점검 오류"
 
-#: libsvn_wc/log.c:557 libsvn_wc/log.c:590
+#: libsvn_wc/log.c:558 libsvn_wc/log.c:591
 #, c-format
 msgid "Error getting 'affected time' on '%s'"
 msgstr "'%s'에 'affected time'을 얻어 오는 중 오류 발생"
 
-#: libsvn_wc/log.c:601
+#: libsvn_wc/log.c:602
 #, c-format
 msgid "Error modifying entry for '%s'"
 msgstr "'%s'에 대한 엔트리 수정 중 오류 발생"
 
-#: libsvn_wc/log.c:627
+#: libsvn_wc/log.c:628
 #, c-format
 msgid "Error removing lock from entry for '%s'"
 msgstr "'%s'에 대한 잠금해제 오류"
 
-#: libsvn_wc/log.c:758
+#: libsvn_wc/log.c:759
 #, c-format
 msgid "Missing 'revision' attribute for '%s'"
 msgstr "'%s'에 대한 'revision' 속성이 빠졌습니다"
 
-#: libsvn_wc/log.c:772
+#: libsvn_wc/log.c:773
 #, c-format
 msgid "Log command for directory '%s' is mislocated"
 msgstr "디렉토리 '%s'에 대한 로그 명령이 잘못된 곳에 위치해 있습니다"
 
-#: libsvn_wc/log.c:939 libsvn_wc/log.c:1011
+#: libsvn_wc/log.c:940 libsvn_wc/log.c:1012
 #, c-format
 msgid "Error checking existence of '%s'"
 msgstr "'%s'의 존재 여부 점검하는 중 오류 발생"
 
-#: libsvn_wc/log.c:950 libsvn_wc/log.c:1022
+#: libsvn_wc/log.c:951 libsvn_wc/log.c:1023
 #, c-format
 msgid "Error comparing '%s' and '%s'"
 msgstr "'%s' 와 '%s' 비교중 오류 발생"
 
-#: libsvn_wc/log.c:962
+#: libsvn_wc/log.c:963
 #, c-format
 msgid "Error getting 'affected time' for '%s'"
 msgstr "'%s'에 대한 'affected time' 얻어 오는 중 오류 발생"
 
-#: libsvn_wc/log.c:1033 libsvn_wc/log.c:1120
+#: libsvn_wc/log.c:1034 libsvn_wc/log.c:1121
 #, c-format
 msgid "Error getting 'affected time' of '%s'"
 msgstr "'%s'의 'afftected time' 얻어 오는 중 오류 발생"
 
-#: libsvn_wc/log.c:1091
+#: libsvn_wc/log.c:1092
 #, c-format
 msgid "Error replacing text-base of '%s'"
 msgstr "'%s'의 text-base 교체 중 오류 발생"
 
-#: libsvn_wc/log.c:1160 libsvn_wc/log.c:1209
+#: libsvn_wc/log.c:1161 libsvn_wc/log.c:1210
 #, c-format
 msgid "Error modifying entry of '%s'"
 msgstr "'%s'의 엔트리 수정 중 오류 발생"
 
-#: libsvn_wc/log.c:1268
+#: libsvn_wc/log.c:1269
 #, c-format
 msgid "Log entry missing 'name' attribute (entry '%s' for directory '%s')"
 msgstr "'name' 속성이 빠진 로그 엔트리 ( 디렉토리 '%s'에 대한 엔트리 '%s' )"
 
-#: libsvn_wc/log.c:1330
+#: libsvn_wc/log.c:1331
 #, c-format
 msgid "Unrecognized logfile element '%s' in '%s'"
 msgstr "'%s'의 인식 할 수 없는 로그 파일 요소 '%s'"
 
-#: libsvn_wc/log.c:1341
+#: libsvn_wc/log.c:1342
 #, c-format
 msgid "Error processing command '%s' in '%s'"
 msgstr "'%s'의 '%s' 명령 처리 중 오류 발생"
 
-#: libsvn_wc/log.c:1463
+#: libsvn_wc/log.c:1464
 msgid "Couldn't open log"
 msgstr "로그를 열수 없습니다"
 
-#: libsvn_wc/log.c:1474
+#: libsvn_wc/log.c:1475
 #, c-format
 msgid "Error reading administrative log file in '%s'"
 msgstr "'%s'의 관리 로그 파일을 읽는 중 오류 발생"
 
-#: libsvn_wc/log.c:1568
+#: libsvn_wc/log.c:1569
 #, c-format
 msgid "'%s' is not a working copy directory"
 msgstr "'%s'는 작업 사본 디렉토리가 아닙니다"
@@ -6469,72 +6494,99 @@ msgstr "속성 '%s'는 삭제하였으나, 업데이트하면서 '%s'로 설정�
 msgid "Property '%s' locally changed to '%s', but update sets it to '%s'\n"
 msgstr "속성 '%s'는 '%s'로 수정되었으나, 업데이트하면서, '%s'로 설정됩니다.\n"
 
-#: libsvn_wc/props.c:168
+#: libsvn_wc/props.c:172
 #, c-format
 msgid "Can't parse '%s'"
 msgstr "'%s'를 분석할 수 없습니다"
 
-#: libsvn_wc/props.c:195
+#: libsvn_wc/props.c:198
 #, c-format
 msgid "Can't write property hash to '%s'"
 msgstr "'%s'에 속성 해쉬를 쓸 수 없습니다"
 
-#: libsvn_wc/props.c:248
+#: libsvn_wc/props.c:251
 #, c-format
 msgid "Can't find entry '%s' in '%s'"
 msgstr "'%s'에 엔트리 '%s'를 찾을 수 없습니다"
 
-#: libsvn_wc/props.c:318 libsvn_wc/update_editor.c:2326
+#: libsvn_wc/props.c:323 libsvn_wc/props.c:1161 libsvn_wc/update_editor.c:2342
 #, c-format
 msgid "Error writing log for '%s'"
 msgstr "'%s'에 대한 로그 쓰기 오류"
 
-#: libsvn_wc/props.c:742
+#: libsvn_wc/props.c:459
+#, c-format
+msgid ""
+"Trying to add new property '%s' with value '%s',\n"
+"but property already exists with value '%s'."
+msgstr ""
+"새로운 속성 '%s'를 값 '%s'에 추가하려고  하지만,\n"
+"이미 value '%s'에 속성이 존재합니다. "
+
+#: libsvn_wc/props.c:481
+#, c-format
+msgid ""
+"Trying to change property '%s' from '%s' to '%s',\n"
+"but the property does not exist."
+msgstr ""
+"속성 '%s'를 '%s'에서 '%s'로 변경하려고 하지만,\n"
+"그 속성은 존재 하지 않습니다."
+
+#: libsvn_wc/props.c:510
+#, c-format
+msgid ""
+"Trying to change property '%s' from '%s' to '%s',\n"
+"but property already exists with value '%s'."
+msgstr ""
+"속성 '%s'를 '%s'에서 '%s'로 변경하려고 하지만,\n"
+"이미 값 '%s'에 속성이 존재합니다. "
+
+#: libsvn_wc/props.c:1202
 #, c-format
 msgid "Unknown node kind: '%s'"
 msgstr "알 수 없는 노드 종류: '%s'"
 
-#: libsvn_wc/props.c:778 libsvn_wc/props.c:800 libsvn_wc/props.c:884
-#: libsvn_wc/props.c:1122
+#: libsvn_wc/props.c:1238 libsvn_wc/props.c:1260 libsvn_wc/props.c:1344
+#: libsvn_wc/props.c:1582
 msgid "Failed to load properties from disk"
 msgstr "디스크로 부터 속성을 로드하는 데 실패했습니다"
 
-#: libsvn_wc/props.c:816 libsvn_wc/props.c:1152
+#: libsvn_wc/props.c:1276 libsvn_wc/props.c:1612
 #, c-format
 msgid "Cannot write property hash for '%s'"
 msgstr "'%s'에 대한 속성 해쉬를 쓸 수 없습니다"
 
-#: libsvn_wc/props.c:876 libsvn_wc/props.c:1014
+#: libsvn_wc/props.c:1336 libsvn_wc/props.c:1474
 #, c-format
 msgid "Property '%s' is an entry property"
 msgstr "속성 '%s'는 엔트리 속성입니다"
 
-#: libsvn_wc/props.c:921
+#: libsvn_wc/props.c:1381
 #, c-format
 msgid "Cannot set '%s' on a directory ('%s')"
 msgstr "속성('%s')을 디렉토리('%s')에  설정할 수 없습니다"
 
-#: libsvn_wc/props.c:929
+#: libsvn_wc/props.c:1389
 #, c-format
 msgid "Cannot set '%s' on a file ('%s')"
 msgstr "속성('%s')을 파일('%s')에 설정할 수 없습니다"
 
-#: libsvn_wc/props.c:935
+#: libsvn_wc/props.c:1395
 #, c-format
 msgid "'%s' is not a file or directory"
 msgstr "'%s'는 파일이나 디렉토리가 아닙니다"
 
-#: libsvn_wc/props.c:959
+#: libsvn_wc/props.c:1419
 #, c-format
 msgid "File '%s' has binary mime type property"
 msgstr "파일 '%s'는 바이너리 MIME 타입 속성을 갖고 있습니다"
 
-#: libsvn_wc/props.c:1578
+#: libsvn_wc/props.c:2038
 #, c-format
 msgid "Error parsing %s property on '%s': '%s'"
 msgstr "'%s'에 대한 %s 속성을 분석하던 중 오류 발생: '%s'"
 
-#: libsvn_wc/props.c:1591
+#: libsvn_wc/props.c:2051
 #, c-format
 msgid ""
 "Invalid %s property on '%s': target involves '.' or '..' or is an absolute "
@@ -6577,34 +6629,34 @@ msgstr ""
 msgid "'%s' has unknown value for svn:eol-style property"
 msgstr "'%s'은/는 알 수 없는 svn:eol-style 속성값을 가지고 있습니다."
 
-#: libsvn_wc/update_editor.c:386
+#: libsvn_wc/update_editor.c:387
 #, c-format
 msgid "No '.' entry in: '%s'"
 msgstr "'.' 이 등록되어 있지 않습니다: '%s'"
 
-#: libsvn_wc/update_editor.c:862
+#: libsvn_wc/update_editor.c:863
 #, c-format
 msgid "Won't delete locally modified directory '%s'"
 msgstr "수정한 디렉토리는 지우지 않을 것입니다. '%s'"
 
-#: libsvn_wc/update_editor.c:1048
+#: libsvn_wc/update_editor.c:1049
 #, c-format
 msgid "Failed to add directory '%s': object of the same name already exists"
 msgstr "디렉토리 추가 실패 '%s': 같은 이름의 개체가 이미 존재합니다."
 
-#: libsvn_wc/update_editor.c:1056
+#: libsvn_wc/update_editor.c:1057
 #, c-format
 msgid ""
 "Failed to add directory '%s': object of the same name as the administrative "
 "directory"
 msgstr "디렉토리 추가 실패 '%s': 같은 이름의 개체가 관리용도로 사용됩니다."
 
-#: libsvn_wc/update_editor.c:1070
+#: libsvn_wc/update_editor.c:1071
 #, c-format
 msgid "Failed to add directory '%s': copyfrom arguments not yet supported"
 msgstr "디렉토리 추가 실패 '%s': copyfrom 인자는 아직 지원되지 않습니다."
 
-#: libsvn_wc/update_editor.c:1091
+#: libsvn_wc/update_editor.c:1092
 #, c-format
 msgid ""
 "Failed to add directory '%s': object of the same name is already scheduled "
@@ -6612,11 +6664,11 @@ msgid ""
 msgstr ""
 "디렉토리 추가 실패 '%s': 같은 이름의 개체를 이미 추가 요청을 하였습니다."
 
-#: libsvn_wc/update_editor.c:1301
+#: libsvn_wc/update_editor.c:1315
 msgid "Couldn't do property merge"
 msgstr "속성을 병합할 수 없습니다"
 
-#: libsvn_wc/update_editor.c:1394
+#: libsvn_wc/update_editor.c:1409
 #, c-format
 msgid ""
 "Failed to mark '%s' absent: item of the same name is already scheduled for "
@@ -6625,12 +6677,12 @@ msgstr ""
 "'%s' 를 없는 것으로 표시할 수 없습니다: 이미 같은 이름의 항목이 추가되도록 스"
 "케쥴되어 있습니다"
 
-#: libsvn_wc/update_editor.c:1486
+#: libsvn_wc/update_editor.c:1501
 #, c-format
 msgid "Failed to add file '%s': object of the same name already exists"
 msgstr "파일 '%s'를 추가할 수 없습니다: 같은 이름의 대상이 이미 존재합니다"
 
-#: libsvn_wc/update_editor.c:1507
+#: libsvn_wc/update_editor.c:1522
 #, c-format
 msgid ""
 "Failed to add file '%s': object of the same name is already scheduled for "
@@ -6639,26 +6691,26 @@ msgstr ""
 "파일 '%s'를 추가 할수 없습니다: 이미 같은 이름의 대상이 추가되도록 스케쥴되"
 "어 있습니다"
 
-#: libsvn_wc/update_editor.c:1515
+#: libsvn_wc/update_editor.c:1530
 #, c-format
 msgid "File '%s' in directory '%s' is not a versioned resource"
 msgstr "디렉토리 '%s' 의 파일 '%s'는 버젼 관리 대상이 아닙니다"
 
-#: libsvn_wc/update_editor.c:1636
+#: libsvn_wc/update_editor.c:1651
 #, c-format
 msgid "Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"
 msgstr "'%s' 에 대한 체크섬이 일치하지 않습니다; 기록된 것:'%s', 실제:'%s'"
 
-#: libsvn_wc/update_editor.c:1942
+#: libsvn_wc/update_editor.c:1957
 msgid "Move failed"
 msgstr "이동 실패"
 
-#: libsvn_wc/update_editor.c:2868
+#: libsvn_wc/update_editor.c:2884
 #, c-format
 msgid "'%s' has no ancestry information"
 msgstr "'%s'가 히스토리를 갖고 있시 않습니다"
 
-#: libsvn_wc/update_editor.c:2956
+#: libsvn_wc/update_editor.c:2972
 #, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
 msgstr "복사 원본 URL '%s'은(는) '%s'와(과) 다른 저장소입니다."
@@ -6681,7 +6733,7 @@ msgid "'%s' is an URL when it should be a path"
 msgstr "'%s'는 그것이 경로로 존재할 때만 URL 입니다"
 
 #: svnadmin/main.c:233 svndumpfilter/main.c:762 svnlook/main.c:98
-#: svnserve/main.c:111 svnversion/main.c:215
+#: svnserve/main.c:111 svnversion/main.c:182
 msgid "show version information"
 msgstr "버젼 정보를 보여줍니다"
 
@@ -6804,7 +6856,7 @@ msgid ""
 msgstr ""
 "사용법: svnadmin help [SUBCOMMAND...]\n"
 "\n"
-"이 프로그램이나 그것의 subcommand 의 사용법을 보여줍니다.\n"
+"이 프로그램이나 그것의 하위 명령의 사용법을 보여줍니다.\n"
 
 #: svnadmin/main.c:325
 msgid ""
@@ -6961,7 +7013,7 @@ msgstr "잘못된 리비전 번호가 지정되었습니다."
 msgid "Revisions must not be greater than the youngest revision (%ld)"
 msgstr "리비전은 끝 최신 리비전(%ld) 보다 더 작아야합니다."
 
-#: svnadmin/main.c:521 svnadmin/main.c:602
+#: svnadmin/main.c:521 svnadmin/main.c:603
 msgid "First revision cannot be higher than second"
 msgstr "첫번 째 리비젼이 두번째 보다 더 높을 수 없습니다."
 
@@ -6974,7 +7026,7 @@ msgstr "리비젼 %ld 를 deltifying 합니다"
 msgid "done.\n"
 msgstr "처리되었습니다.\n"
 
-#: svnadmin/main.c:633
+#: svnadmin/main.c:634
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
 "Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
@@ -6982,12 +7034,12 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "일반적인 사용법: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
-"특정 subcommand 의 사용법을 위해서는 'svnadmin help <subcommand>' 를 참조하십"
-"시오.\n"
+"특정 하위명령의 사용법을 위해서는 'svnadmin help <subcommand>' 를 참조하십시"
+"오.\n"
 "\n"
 "가능한 하위 명령 목록:\n"
 
-#: svnadmin/main.c:640 svnlook/main.c:1765 svnserve/main.c:158
+#: svnadmin/main.c:641 svnlook/main.c:1765 svnserve/main.c:158
 msgid ""
 "The following repository back-end (FS) modules are available:\n"
 "\n"
@@ -6995,7 +7047,7 @@ msgstr ""
 "저장소(repository) 접근 모듈(FS) 목록:\n"
 "\n"
 
-#: svnadmin/main.c:723
+#: svnadmin/main.c:724
 msgid ""
 "Repository lock acquired.\n"
 "Please wait; recovering the repository may take some time...\n"
@@ -7003,7 +7055,7 @@ msgstr ""
 "저장소 잠금을 획득했습니다.\n"
 "기다려 주십시오; 저장소 복구는 시간이 소요될 수 있습니다...\n"
 
-#: svnadmin/main.c:758
+#: svnadmin/main.c:759
 msgid ""
 "Failed to get exclusive repository access; perhaps another process\n"
 "such as httpd, svnserve or svn has it open?"
@@ -7011,13 +7063,13 @@ msgstr ""
 "배타적인 저장소 접근을 얻을 수 없습니다; 혹시 httpd, \n"
 "svnserve 나 svn 같은 다른 프로세스들에 의해 열려있습니까?"
 
-#: svnadmin/main.c:763
+#: svnadmin/main.c:764
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
 msgstr ""
 "저장소 잠금을 기다리고 있습니다: 혹시 다른 프로세스에 의해 열려 있지 않습니"
 "까?\n"
 
-#: svnadmin/main.c:770
+#: svnadmin/main.c:771
 msgid ""
 "\n"
 "Recovery completed.\n"
@@ -7025,49 +7077,49 @@ msgstr ""
 "\n"
 "복구가 완료되었습니다.\n"
 
-#: svnadmin/main.c:777
+#: svnadmin/main.c:778
 #, c-format
 msgid "The latest repos revision is %ld.\n"
 msgstr "가장 최근의 repos 리비젼은 %ld 입니다.\n"
 
-#: svnadmin/main.c:887
+#: svnadmin/main.c:888
 #, c-format
 msgid "Transaction '%s' removed.\n"
 msgstr "트랜잭션 '%s' 가 제거되었습니다.\n"
 
-#: svnadmin/main.c:911
+#: svnadmin/main.c:912
 msgid "Missing revision"
 msgstr "리비젼이 누락되었습니다"
 
-#: svnadmin/main.c:914
+#: svnadmin/main.c:915
 msgid "Only one revision allowed"
 msgstr "오직 하나의 리비젼만이 허용됩니다"
 
-#: svnadmin/main.c:920
+#: svnadmin/main.c:921
 msgid "Exactly one file argument required"
 msgstr "정확하게 하나의 파일 인자만 필요합니다"
 
-#: svnadmin/main.c:1028 svnlook/main.c:1830
+#: svnadmin/main.c:1029 svnlook/main.c:1830
 #, c-format
 msgid "UUID Token: %s\n"
 msgstr "UUID 토큰: %s\n"
 
-#: svnadmin/main.c:1029 svnlook/main.c:1831
+#: svnadmin/main.c:1030 svnlook/main.c:1831
 #, c-format
 msgid "Owner: %s\n"
 msgstr "소유자: %s\n"
 
-#: svnadmin/main.c:1030 svnlook/main.c:1832
+#: svnadmin/main.c:1031 svnlook/main.c:1832
 #, c-format
 msgid "Created: %s\n"
 msgstr "생성일: %s\n"
 
-#: svnadmin/main.c:1031 svnlook/main.c:1833
+#: svnadmin/main.c:1032 svnlook/main.c:1833
 #, c-format
 msgid "Expires: %s\n"
 msgstr "만료일: %s\n"
 
-#: svnadmin/main.c:1033
+#: svnadmin/main.c:1034
 #, c-format
 msgid ""
 "Comment (%i lines):\n"
@@ -7078,7 +7130,7 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: svnadmin/main.c:1034
+#: svnadmin/main.c:1035
 #, c-format
 msgid ""
 "Comment (%i line):\n"
@@ -7089,27 +7141,27 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: svnadmin/main.c:1101
+#: svnadmin/main.c:1102
 #, c-format
 msgid "Path '%s' isn't locked.\n"
 msgstr "'%s' 는 잠궈지지 안않았습니다.\n"
 
-#: svnadmin/main.c:1113
+#: svnadmin/main.c:1114
 #, c-format
 msgid "Removed lock on '%s'.\n"
 msgstr "잠금 해제됨 '%s'\n"
 
-#: svnadmin/main.c:1348
+#: svnadmin/main.c:1324
 msgid "subcommand argument required\n"
-msgstr "subcommand 인자가 필요합니다\n"
+msgstr "하위명령 인자가 필요합니다\n"
 
-#: svnadmin/main.c:1438
+#: svnadmin/main.c:1409
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
 "Type 'svnadmin help %s' for usage.\n"
 msgstr ""
-"subcommand '%s' 는 옵션 '%s'를 허용할 수 없습니다\n"
+"하위명령 '%s' 는 옵션 '%s'를 허용할 수 없습니다\n"
 "사용법 'svnadmin help %s' 을 통해 얻을 수 있습니다.\n"
 
 #: svndumpfilter/main.c:325
@@ -7176,7 +7228,7 @@ msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: svndumpfilter help [SUBCOMMAND...]\n"
 msgstr ""
-"이 프로그램의 사용법 이나 그것의 subcommands 에 대해 설명합니다.\n"
+"이 프로그램의 사용법 이나 그것의 하위명령에 대해 설명합니다.\n"
 "사용법: svndumpfilter help [SUBCOMMAND...]\n"
 
 #: svndumpfilter/main.c:863
@@ -7187,8 +7239,8 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "일반적인 사용법: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
-"특정 subcommand 의 사용법을 위해서는 'svndumpfilter help <subcommand>'를 참조"
-"하십시오.\n"
+"특정 하위명령의 사용법을 위해서는 'svndumpfilter help <subcommand>'를 참조하"
+"십시오.\n"
 "\n"
 "가능한 하위 명령 목록:\n"
 
@@ -7231,7 +7283,7 @@ msgstr "   %ld => (없어졌습니다)\n"
 msgid "Dropped %d node(s):\n"
 msgstr "노드(s) %d 를 없앱니다: \n"
 
-#: svndumpfilter/main.c:1217
+#: svndumpfilter/main.c:1204
 msgid ""
 "\n"
 "Error: no prefixes supplied.\n"
@@ -7239,13 +7291,13 @@ msgstr ""
 "\n"
 "오류: prefixes 가 없습니다.\n"
 
-#: svndumpfilter/main.c:1260
+#: svndumpfilter/main.c:1247
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
 "Type 'svndumpfilter help %s' for usage.\n"
 msgstr ""
-"subcommand '%s' 는 옵션 '%s'를 허용할 수 없습니다.\n"
+"하위명령 '%s' 는 옵션 '%s'를 허용할 수 없습니다.\n"
 "'svndumpfilter help %s' 을 통해 사용법을 확인하세요.\n"
 
 #: svnlook/main.c:101
@@ -7271,6 +7323,10 @@ msgstr "추가된 파일에 대해서는 차이를 출력하지 않음"
 #: svnlook/main.c:119
 msgid "print differences against the copy source"
 msgstr "사본의 원본과 차이를 출력합니다."
+
+#: svnlook/main.c:122
+msgid "operate on a revision property (use with -r or -t)"
+msgstr "속성의 리비전 지정합니다. (-r 이나 -t 옵션과 같이 사용)"
 
 #: svnlook/main.c:125
 msgid "show full paths instead of indenting them"
@@ -7584,26 +7640,26 @@ msgstr "propname과 저장소 경로가 지정되지 않았습니다."
 msgid "Missing propname or repository path argument"
 msgstr "propname 또는 저장소 경로가 지정되지 않았습니다."
 
-#: svnlook/main.c:2054
+#: svnlook/main.c:2045
 msgid "Invalid revision number supplied"
 msgstr "잘못된 리비전 번호가 지정되었습니다."
 
-#: svnlook/main.c:2112
+#: svnlook/main.c:2103
 msgid ""
 "The '--transaction' (-t) and '--revision' (-r) arguments can not co-exist"
 msgstr ""
 "'--transaction' (-t) 과 '--revision' (-r) 인자는 동시에 사용 불가능합니다."
 
-#: svnlook/main.c:2186
+#: svnlook/main.c:2172
 msgid "Repository argument required\n"
 msgstr "저장소 인자가 팔요합니다\n"
 
-#: svnlook/main.c:2195
+#: svnlook/main.c:2181
 #, c-format
 msgid "'%s' is a URL when it should be a path\n"
 msgstr "'%s' 는 URL입니다. 경로를 넣어주세요.\n"
 
-#: svnlook/main.c:2243
+#: svnlook/main.c:2229
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -7628,7 +7684,7 @@ msgstr "리슨 호스트명 혹은 IP 주소 (데몬 모드)"
 msgid "run in foreground (useful for debugging)"
 msgstr "포어그라운드로 실행 (디버깅용)"
 
-#: svnserve/main.c:109 svnversion/main.c:214
+#: svnserve/main.c:109 svnversion/main.c:181
 msgid "display this help"
 msgstr "이 도움말을 출력함"
 
@@ -7736,15 +7792,11 @@ msgstr "시각 설정을 할 수 없습니다.: %s\n"
 msgid "Can't create thread: %s\n"
 msgstr "쓰레드를 생성 할 수 없습니다.: %s\n"
 
-#: svnversion/main.c:108
-msgid "Finished"
-msgstr "종료됨"
-
-#: svnversion/main.c:123
+#: svnversion/main.c:90
 msgid "Type 'svnversion --help' for usage.\n"
 msgstr "사용법을 보시려면, 'svnversion --help' 을 이용하세요.\n"
 
-#: svnversion/main.c:134
+#: svnversion/main.c:101
 msgid ""
 "usage: svnversion [OPTIONS] [WC_PATH [TRAIL_URL]]\n"
 "\n"
@@ -7801,44 +7853,26 @@ msgstr ""
 "\n"
 "가능한 옵션:\n"
 
-#: svnversion/main.c:212
+#: svnversion/main.c:179
 msgid "do not output the trailing newline"
 msgstr "맨 뒤의 개행 문자를 출력하지 않습니다."
 
-#: svnversion/main.c:213
+#: svnversion/main.c:180
 msgid "last changed rather than current revisions"
 msgstr "현재 리비전 대신 마지막 커밋된 리비전을 출력"
 
-#: svnversion/main.c:306
+#: svnversion/main.c:272
 #, c-format
 msgid "exported%s"
 msgstr "익스포트됨%s"
 
-#: svnversion/main.c:315
+#: svnversion/main.c:281
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' 는 관리대상이 아니며, 익스포트 되지 않았습니다\n"
 
-#~ msgid "Print client version info\n"
-#~ msgstr "클라이언트 버전을 출력합니다\n"
-
-#~ msgid "Your lock comment was left in a temporary file:"
-#~ msgstr "Lock comment는 임시 파일안에 저장되었습니다:"
-
-#~ msgid "repository argument required\n"
-#~ msgstr "저장소 인자가 필요합니다.\n"
-
-#~ msgid "unknown command: '%s'\n"
-#~ msgstr "알 수 없는 명령: '%s'\n"
-
-#~ msgid "'svn info' only works on working copy paths, not URLs"
+#~ msgid ""
+#~ "No deletion changes for path '%s' in transaction '%s' of filesystem '%s'"
 #~ msgstr ""
-#~ "'svn info'는 URL에 대해서는 수행할 수 없으며, 작업 사본에만 가능합니다."
-
-#~ msgid "Working copy not locked"
-#~ msgstr "작업사본이 잠기지 않았습니다."
-
-#~ msgid "Can't get default file perms for file at '%s' (file close error)"
-#~ msgstr "파일 권한을 얻을 수 없습니다. '%s' (파일 닫기 오류)"
-# vim: tenc=euc-kr
-# vim: enc=utf-8
+#~ "어떤 삭제도 변경되지 않았습니다. (경로 '%s', 트랜잭션 '%s', 파일 시스템 '%"
+#~ "s')"

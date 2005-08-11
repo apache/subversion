@@ -394,7 +394,7 @@ svn_fs_fs__hotcopy (const char *src_path,
                                      iterpool));
     }
 
-  apr_pool_destroy (iterpool);
+  svn_pool_destroy (iterpool);
 
   /* Make an empty transactions directory for now.  Eventually some
      method of copying in progress transactions will need to be
@@ -4065,7 +4065,7 @@ svn_fs_fs__list_transactions (apr_array_header_t **names_p,
   txn_dir = svn_path_join (fs->path, PATH_TXNS_DIR, pool);
 
   /* Now find a listing of this directory. */
-  SVN_ERR (svn_io_get_dirents (&dirents, txn_dir, pool));
+  SVN_ERR (svn_io_get_dirents2 (&dirents, txn_dir, pool));
 
   /* Loop through all the entries and return anything that ends with '.txn'. */
   for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
