@@ -335,12 +335,6 @@ module Svn
       end
       
       def set_notify_func(callback=Proc.new)
-        self.notify_func = nil
-        @notify_baton = callback
-        self.notify_baton = callback
-      end
-      
-      def set_notify_func2(callback=Proc.new)
         self.notify_func2 = nil
         @notify_baton2 = callback
         self.notify_baton2 = callback
@@ -356,7 +350,6 @@ module Svn
       def init_callbacks
         set_log_msg_func(nil)
         set_notify_func(nil)
-        set_notify_func2(nil)
         set_cancel_func(nil)
       end
       %w(log_msg notify cancel).each do |type|

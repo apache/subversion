@@ -82,15 +82,6 @@ svn_error_t *svn_swig_rb_get_commit_log_func(const char **log_msg,
                                              apr_pool_t *pool);
 
 
-void svn_swig_rb_notify_func(void *baton,
-                             const char *path,
-                             svn_wc_notify_action_t action,
-                             svn_node_kind_t kind,
-                             const char *mime_type,
-                             svn_wc_notify_state_t content_state,
-                             svn_wc_notify_state_t prop_state,
-                             svn_revnum_t revision);
-
 void svn_swig_rb_notify_func2(void *baton,
                               const svn_wc_notify_t *notify,
                               apr_pool_t *pool);
