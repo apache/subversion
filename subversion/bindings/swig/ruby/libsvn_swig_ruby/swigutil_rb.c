@@ -1130,7 +1130,9 @@ svn_swig_rb_get_commit_log_func(const char **log_msg,
     ret = (char *)r2c_string(value, NULL, pool);
     if (RTEST(is_message)) {
       *log_msg = ret;
+      *tmp_file = NULL;
     } else {
+      *log_msg = NULL;
       *tmp_file = ret;
     }
   }
