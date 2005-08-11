@@ -1853,8 +1853,13 @@ svn_client_export (svn_revnum_t *result_rev,
  * @a path_or_url is a file, return only the dirent for the file.  If @a
  * path_or_url is non-existent, return @c SVN_ERR_FS_NOT_FOUND.
  *
- * The hash maps entry names (<tt>const char *</tt>) to @c svn_dirent_t *'s.  
- * Do all allocation in @a pool.
+ * The @a dirents hash maps entry names (<tt>const char *</tt>) to
+ * @c svn_dirent_t *'s. Do all allocation in @a pool.
+ *
+ * If @a locks is not @c NULL, set @a *locks to a hash table mapping
+ * entry names (<tt>const char *</tt>) to @c svn_lock_t *'s,
+ * allocating both @a *locks and everything inside it in @a pool.
+ * This hash represents any existing repository locks on entries.
  *
  * Use authentication baton cached in @a ctx to authenticate against the 
  * repository.
@@ -1862,7 +1867,22 @@ svn_client_export (svn_revnum_t *result_rev,
  * If @a recurse is true (and @a path_or_url is a directory) this will
  * be a recursive operation.
  *
- * @since New in 1.2.
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_client_ls3 (apr_hash_t **dirents,
+                apr_hash_t **locks,
+                const char *path_or_url,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *revision,
+                svn_boolean_t recurse,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
+
+/**
+ * Same as svn_client_ls3(), but always passes a NULL lock hash.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
 svn_client_ls2 (apr_hash_t **dirents,
