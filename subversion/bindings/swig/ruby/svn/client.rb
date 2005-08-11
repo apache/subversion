@@ -114,6 +114,10 @@ module Svn
         Client.cleanup(dir, self)
       end
 
+      def relocate(dir, from, to, recurse=true)
+        Client.relocate(dir, from, to, recurse, self)
+      end
+
       def revert(paths, recurse=true)
         paths = [paths] unless paths.is_a?(Array)
         Client.revert(paths, recurse, self)
