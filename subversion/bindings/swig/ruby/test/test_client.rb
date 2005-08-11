@@ -685,6 +685,34 @@ class SvnClientTest < Test::Unit::TestCase
       ctx.commit(@wc_path)
     end
   end
+
+  def test_relocate
+    log = "sample log"
+    file = "sample.txt"
+    src = "sample\n"
+    path = File.join(@wc_path, file)
+
+    ctx = make_context(log)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(path)
+    ctx.commit(@wc_path)
+
+    assert_nothing_raised do
+      ctx.cat(path)
+    end
+
+    ctx.add_simple_prompt_provider(0) do |cred, realm, username, may_save|
+      cred.username = @author
+      cred.password = @password
+      cred.may_save = true
+    end
+    ctx.relocate(@wc_path, @repos_uri, @repos_svnserve_uri)
+    
+    ctx = make_context(log)
+    assert_raises(Svn::Error::AUTHN_NO_PROVIDER) do
+      ctx.cat(path)
+    end
+  end
   
   def test_cat
     log = "sample log"
