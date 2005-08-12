@@ -12,7 +12,7 @@ Candidate changes:
   * r15683
     Include missing header in core.i.
     Justification:
-      Bindings only. Silences compiler warnings when generating Pthong
+      Bindings only. Silences compiler warnings when generating Python
       bindings on Windows.
     Votes:
       +1: brane
