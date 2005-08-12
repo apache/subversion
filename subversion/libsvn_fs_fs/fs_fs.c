@@ -2702,6 +2702,28 @@ svn_fs_fs__purge_txn (svn_fs_t *fs,
   return svn_io_remove_dir (path_txn_dir (fs, txn_id, pool), pool);
 }
 
+
+svn_error_t *
+svn_fs_fs__abort_txn (svn_fs_txn_t *txn,
+                      apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd; 
+
+  SVN_ERR (svn_fs_fs__check_fs (txn->fs));
+
+  /* Clean out the directory cache. */
+  ffd = txn->fs->fsap_data;
+  svn_pool_clear (ffd->dir_cache_pool);
+  ffd->dir_cache_id = NULL;
+
+  /* Now, purge the transaction. */
+  SVN_ERR_W (svn_fs_fs__purge_txn (txn->fs, txn->id, pool),
+             _("Transaction cleanup failed"));
+
+  return SVN_NO_ERROR;
+}
+
+
 static const char *
 unparse_dir_entry (svn_node_kind_t kind, const svn_fs_id_t *id,
                    apr_pool_t *pool)
