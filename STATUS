@@ -9,6 +9,10 @@ Status of 1.2.2:
 
 Candidate changes:
 
+  (None.)
+
+Approved changes (further review is welcome, but not required):
+
   * r15683
     Include missing header in core.i.
     Justification:
@@ -16,6 +20,8 @@ Candidate changes:
       bindings on Windows.
     Votes:
       +1: brane
+      +0: djames
+
   * r15695
     Fix a bug in SVN::Core::Stream's read function.
     Justification:
@@ -23,6 +29,5 @@ Candidate changes:
       on a file with "0" in the content.
     Votes:
       +1: clkao
-
-Approved changes (further review is welcome, but not required):
+      +0: djames
 
