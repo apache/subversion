@@ -328,7 +328,7 @@ I.    BUILD REQUIREMENTS
 
       Windows users should get the source for ZLib version 1.2 or later:
 
-          http://www.gzip.org/zlib/zlib122.zip
+          http://www.zlib.net/zlib123.zip 
 
       The Windows build scripts will compile the ZLib sources.
 

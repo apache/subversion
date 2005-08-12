@@ -27,6 +27,17 @@ class SvnCoreTest < Test::Unit::TestCase
     end
   end
 
+  def test_version_to_x
+    major = 1
+    minor = 2
+    patch = 3
+    tag = "-dev"
+    ver = Svn::Core::Version.new(major, minor, patch, tag)
+    
+    assert_equal("#{major}.#{minor}.#{patch}#{tag}", ver.to_s)
+    assert_equal([major, minor, patch, tag], ver.to_a)
+  end
+  
   def test_version_valid?
     assert_true(Svn::Core::Version.new(1, 2, 3, "-devel").valid?)
     assert_true(Svn::Core::Version.new(nil, nil, nil, "").valid?)

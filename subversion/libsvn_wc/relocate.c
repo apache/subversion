@@ -24,6 +24,7 @@
 
 #include "wc.h"
 #include "entries.h"
+#include "lock.h"
 #include "props.h"
 
 #include "svn_private_config.h"

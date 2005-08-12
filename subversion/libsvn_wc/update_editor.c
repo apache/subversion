@@ -48,6 +48,7 @@
 #include "adm_files.h"
 #include "adm_ops.h"
 #include "entries.h"
+#include "lock.h"
 #include "props.h"
 
 

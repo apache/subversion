@@ -1,3 +1,35 @@
+Version 1.2.2
+(10 August 2005, from /branches/1.2.x)
+http://svn.collab.net/repos/svn/tags/1.2.2
+
+ User-visible-changes:
+  - Client:
+    * fixed: 'svn status -u' fails against pre-1.2 mod_dav_svn (r15359, r15423)
+    * fixed: 'svn export' segfault (r15516)
+    * fixed: 'svn merge' memory leak (r15233)
+    * fixed: horrible rename-tracing performance against 1.0 servers (r15315)
+    * fixed: 'svn cat' over file:// -- small leak  (r15253)
+    * improvements to 'svnmerge' utility (r14008,-458,-587,-632, r15329,-340)
+    * translation updates for French, German, Polish, Norwegian
+
+  - Server:
+    * fixed: mod_authz_svn being overly restrictive (r15463)
+
+  - Both:
+    * fixed: crash when >50 options passed to any commandline app (r15251)
+    * fixed: memory leak in character translation handle caching (r15379,-398)
+
+Developer-visible-changes:
+* rhel-4 RPM bugfix for python bindings (r15616)
+* javahl bindings:
+      - fixed: JNI library loading bug (r15552)
+      - fixed: JNI stack-name cut and paste error (r15337)
+* perl bindings:
+      - now compatible with SWIG 1.3.25 (r15248)
+      - allow SVN::Pool to be used as pool parameter (r15450)
+      - make SVN::Delta::Editor friendlier for debugging (r15609)
+
+
 Version 1.2.1
 (5 July 2005, from /branches/1.2.x)
 http://svn.collab.net/repos/svn/tags/1.2.1
@@ -11,9 +43,9 @@ http://svn.collab.net/repos/svn/tags/1.2.1
     * fixed: 'svn unlock' loses executable bit (r14859, r14923, r14939)
     * fixed: 'svn unlock URL' segfault (r14893)
     * fixed: 'svn commit' failure on XML-unsafe locked paths (issue #2335)
-    * fixed:  recursive directory copy bug (issue #2343)
-    * fixed:  don't initialize RA library in 'svnversion' (r14755)
-    * fixed:  svn-push segfault (r14732)
+    * fixed: recursive directory copy bug (issue #2343)
+    * fixed: don't initialize RA library in 'svnversion' (r14755)
+    * fixed: svn-push segfault (r14732)
     * various translation updates for localized client messages
 
   - Server:
@@ -22,10 +54,10 @@ http://svn.collab.net/repos/svn/tags/1.2.1
     * fixed: mod_dav_svn bug sets content-type incorrectly (r15046)
 
  Developer-visible-changes:
- * fixed:  win32 innosetup's add/repair/remove features (r14830)
- * fixed:  OBOE with 'limit' parameter of svn_repos_get_logs3(). (r15119)
+ * fixed: win32 innosetup's add/repair/remove features (r14830)
+ * fixed: OBOE with 'limit' parameter of svn_repos_get_logs3(). (r15119)
  * redhat RPM fixes (r15050)
- * perl bindings:  
+ * perl bindings:
       - accessors for svn_lock_t (r15082)
       - call utf_initialize, adjust global pool usage (r15076, r15080,
                                                        r15081, r15117)

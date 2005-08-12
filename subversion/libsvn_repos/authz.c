@@ -30,8 +30,6 @@
 /* Information for the config enumerators called during authz
    lookup. */
 struct authz_lookup_baton {
-  apr_pool_t *pool;
-
   /* The authz configuration. */
   svn_config_t *config;
 
@@ -43,14 +41,14 @@ struct authz_lookup_baton {
   /* Explicitely denied rights. */
   svn_repos_authz_access_t deny;
 
- /* The rights required by the caller of the lookup. */
+  /* The rights required by the caller of the lookup. */
   svn_repos_authz_access_t required_access;
 
   /* The following are used exclusively in recursive lookups. */
 
   /* The path in the repository to authorize. */
   const char *repos_path;
- /* repos_path prefixed by the repository name. */
+  /* repos_path prefixed by the repository name. */
   const char *qualified_repos_path;
 
   /* Whether, at the end of a recursive lookup, access is granted. */
@@ -60,7 +58,6 @@ struct authz_lookup_baton {
 /* Information for the config enumeration functions called during the
    validation process. */
 struct authz_validate_baton {
-  apr_pool_t *pool;
   svn_config_t *config; /* The configuration file being validated. */
   svn_error_t *err;     /* The error being thrown out of the
                            enumerator, if any. */
@@ -164,7 +161,8 @@ authz_group_contains_user (svn_config_t *cfg,
  * authz_baton accordingly.
  */
 static svn_boolean_t
-authz_parse_line (const char *name, const char *value, void *baton)
+authz_parse_line (const char *name, const char *value, 
+                  void *baton, apr_pool_t *pool)
 {
   struct authz_lookup_baton *b = baton;
 
@@ -179,7 +177,7 @@ authz_parse_line (const char *name, const char *value, void *baton)
       if (*name == '@')
         {
           if (!authz_group_contains_user (b->config, &name[1],
-                                          b->user, b->pool))
+                                          b->user, pool))
             return TRUE;
         }
 
@@ -208,7 +206,7 @@ authz_parse_line (const char *name, const char *value, void *baton)
  * section denies access to the subtree the baton describes.
  */
 static svn_boolean_t
-authz_parse_section (const char *section_name, void *baton)
+authz_parse_section (const char *section_name, void *baton, apr_pool_t *pool)
 {
   struct authz_lookup_baton *b = baton;
   svn_boolean_t conclusive;
@@ -223,7 +221,7 @@ authz_parse_section (const char *section_name, void *baton)
   /* Work out what this section grants. */
   b->allow = b->deny = 0;
   svn_config_enumerate2 (b->config, section_name,
-                         authz_parse_line, b, b->pool);
+                         authz_parse_line, b, pool);
 
   /* Has the section explicitely determined an access? */
   conclusive = authz_access_is_determined (b->allow, b->deny,
@@ -259,7 +257,6 @@ authz_get_path_access (svn_config_t *cfg, const char *repos_name,
   const char *qualified_path;
   struct authz_lookup_baton baton = { 0 };
 
-  baton.pool = pool;
   baton.config = cfg;
   baton.user = user;
 
@@ -303,7 +300,6 @@ authz_get_tree_access (svn_config_t *cfg, const char *repos_name,
 {
   struct authz_lookup_baton baton = { 0 };
 
-  baton.pool = pool;
   baton.config = cfg;
   baton.user = user;
   baton.required_access = required_access;
@@ -387,7 +383,8 @@ authz_group_walk (svn_config_t *cfg,
    errors.  Use BATON for context and error reporting. */
 static svn_boolean_t authz_validate_rule (const char *group,
                                           const char *value,
-                                          void *baton)
+                                          void *baton,
+                                          apr_pool_t *pool)
 {
   const char *val;
   struct authz_validate_baton *b = baton;
@@ -418,12 +415,12 @@ static svn_boolean_t authz_validate_rule (const char *group,
    BATON for context and error reporting. */
 static svn_boolean_t authz_validate_group (const char *group,
                                            const char *value,
-                                           void *baton)
+                                           void *baton,
+                                           apr_pool_t *pool)
 {
   struct authz_validate_baton *b = baton;
 
-  b->err = authz_group_walk (b->config, group, apr_hash_make (b->pool),
-                             b->pool);
+  b->err = authz_group_walk (b->config, group, apr_hash_make (pool), pool);
   if (b->err)
     return FALSE;
 
@@ -435,7 +432,8 @@ static svn_boolean_t authz_validate_group (const char *group,
 /* Callback to check the contents of the configuration section given
    by NAME.  Use BATON for context and error reporting. */
 static svn_boolean_t authz_validate_section (const char *name,
-                                             void *baton)
+                                             void *baton,
+                                             apr_pool_t *pool)
 {
   struct authz_validate_baton *b = baton;
 
@@ -443,10 +441,10 @@ static svn_boolean_t authz_validate_section (const char *name,
      callback. Otherwise, use the rule checking callback. */
   if (strncmp (name, "groups", 6) == 0)
     svn_config_enumerate2 (b->config, name, authz_validate_group,
-                           baton, b->pool);
+                           baton, pool);
   else
     svn_config_enumerate2 (b->config, name, authz_validate_rule,
-                           baton, b->pool);
+                           baton, pool);
 
   if (b->err)
     return FALSE;
@@ -463,7 +461,6 @@ svn_repos_authz_read (svn_authz_t **authz_p, const char *file,
   svn_authz_t *authz = apr_palloc (pool, sizeof(*authz));
   struct authz_validate_baton baton = { 0 };
 
-  baton.pool = pool;
   baton.err = SVN_NO_ERROR;
 
   /* Load the rule file. */

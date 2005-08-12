@@ -90,6 +90,30 @@
 }
 
 /* -----------------------------------------------------------------------
+   const char *header_encoding
+   svn_diff_file_output_unified2
+   svn_client_diff3
+*/
+%typemap(ruby, in) const char *header_encoding
+{
+  $1 = NULL;
+  
+  if (NIL_P($input)) {
+  } else if (TYPE($input) == T_FIXNUM) {
+    $1 = (char *)NUM2INT($input);
+    if (!($1 == APR_LOCALE_CHARSET || $1 == APR_DEFAULT_CHARSET)) {
+      $1 = NULL;
+    }
+  } else {
+    $1 = StringValuePtr($input);
+  }
+  
+  if (!$1) {
+    $1 = (char *)APR_LOCALE_CHARSET;
+  }
+}
+
+/* -----------------------------------------------------------------------
    Define a more refined 'memberin' typemap for 'const char *' members. This
    is used in place of the 'char *' handler defined automatically.
 
@@ -289,6 +313,17 @@
 };
 #endif
 
+
+/* -----------------------------------------------------------------------
+   CALLBACK_BATON: Do not convert to C object from Ruby object.
+*/
+
+%typemap(ruby, in) void *CALLBACK_BATON
+{
+  $1 = (void *)$input;
+}
+
+
 /* -----------------------------------------------------------------------
    Callback: svn_log_message_receiver_t
    svn_client_log()
@@ -332,6 +367,12 @@
 %typemap(python, in) (svn_cancel_func_t cancel_func, void *cancel_baton) {
   $1 = svn_swig_py_cancel_func;
   $2 = $input; /* our function is the baton. */
+}
+
+%typemap(ruby, in) (svn_cancel_func_t cancel_func, void *cancel_baton)
+{
+  $1 = svn_swig_rb_cancel_func;
+  $2 = (void *)$input;
 }
 
 /* -----------------------------------------------------------------------
@@ -533,6 +574,8 @@
 #endif
 
 #ifdef SWIGRUBY
+#include <apu.h>
+#include <apr_xlate.h>
 #include "swigutil_rb.h"
 #endif
 %}

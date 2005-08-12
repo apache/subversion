@@ -67,6 +67,7 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_LOCK_OWNER         "lock-owner"
 #define SVN_WC__ENTRY_ATTR_LOCK_COMMENT       "lock-comment"
 #define SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE "lock-creation-date"
+#define SVN_WC__ENTRY_ATTR_PROP_MODS          "prop-mods"
 
 /* Attribute values for 'schedule' */
 #define SVN_WC__ENTRY_VALUE_ADD        "add"
@@ -140,6 +141,7 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_LOCK_OWNER         0x00800000
 #define SVN_WC__ENTRY_MODIFY_LOCK_COMMENT       0x01000000
 #define SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE 0x02000000
+#define SVN_WC__ENTRY_MODIFY_PROP_MODS          0x04000000
 
 
 /* ...or perhaps this to mean all of those above... */

@@ -42,6 +42,7 @@
 #include "svn_md5.h"
 #include "svn_diff.h"
 #include "svn_error_codes.h"
+#include "svn_utf.h"
 #include "svn_nls.h"
 
 #ifdef SWIGPYTHON
@@ -53,6 +54,8 @@
 #endif
 
 #ifdef SWIGRUBY
+#include <apu.h>
+#include <apr_xlate.h>
 #include "swigutil_rb.h"
 #endif
 %}
@@ -370,12 +373,16 @@
 */
 %typemap(ruby, in) const void *value
 {
-  VALUE _rb_pool;
-  apr_pool_t *_global_pool;
-  char *value = StringValuePtr($input);
-  
-  svn_swig_rb_get_pool(1, argv, Qnil, &_rb_pool, &_global_pool);
-  $1 = (void *)apr_pstrdup(_global_pool, value);
+  if (NIL_P($input)) {
+    $1 = (void *)NULL;
+  } else {
+    VALUE _rb_pool;
+    apr_pool_t *_global_pool;
+    char *value = StringValuePtr($input);
+
+    svn_swig_rb_get_pool(1, argv, Qnil, &_rb_pool, &_global_pool);
+    $1 = (void *)apr_pstrdup(_global_pool, value);
+  }
 }
 
 /* get */
@@ -614,4 +621,19 @@ struct apr_pool_t
 };
 
 %include svn_diff.h
+
+%inline %{
+static VALUE
+svn_default_charset(void)
+{
+  return INT2NUM((int)APR_DEFAULT_CHARSET);
+}
+ 
+static VALUE
+svn_locale_charset(void)
+{
+  return INT2NUM((int)APR_LOCALE_CHARSET);
+}
+%}
+
 #endif

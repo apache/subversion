@@ -26,6 +26,7 @@
 
 #include "wc.h"
 #include "adm_files.h"
+#include "lock.h"
 #include "questions.h"
 
 #include "svn_private_config.h"

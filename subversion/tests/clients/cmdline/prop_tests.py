@@ -720,15 +720,7 @@ def revprop_change(sbox):
   sbox.build()
 
   # Create the revprop-change hook for this test
-  if os.name == 'posix':
-    hook = os.path.join(svntest.main.current_repo_dir,
-                        'hooks', 'pre-revprop-change')
-    svntest.main.file_append(hook, "#!/bin/sh\n\nexit 0\n")
-    os.chmod(hook, 0755)
-  elif sys.platform == 'win32':
-    hook = os.path.join(svntest.main.current_repo_dir,
-                        'hooks', 'pre-revprop-change.bat')
-    svntest.main.file_append(hook, "@exit 0\n")
+  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--revprop', '-r', '0',

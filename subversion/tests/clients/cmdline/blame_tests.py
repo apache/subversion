@@ -187,6 +187,44 @@ def blame_in_xml(sbox):
       raise svntest.Failure
 
 
+# For a line changed before the requested start revision, blame should not
+# print a revision number (as fixed in r8035) or crash (as it did with
+# "--verbose" before being fixed in r9890).
+#
+def blame_on_unknown_revision(sbox):
+  "blame lines from unknown revisions"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+
+  for i in range (1,3):
+    svntest.main.file_append(file_path, "\nExtra line %d" % (i))
+    expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+    svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                          None, None, None, None,
+                                          None, None, wc_dir)
+
+  output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'blame', file_path,
+                                                     '-rHEAD:HEAD')
+
+  if output[0].find(" - This is the file 'iota'.") == -1:
+    raise svntest.Failure
+
+  output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'blame', file_path,
+                                                     '--verbose',
+                                                     '-rHEAD:HEAD')
+
+  if output[0].find(" - This is the file 'iota'.") == -1:
+    raise svntest.Failure
+
+
 
 ########################################################################
 # Run the tests
@@ -198,6 +236,7 @@ test_list = [ None,
               blame_binary,
               blame_directory,
               blame_in_xml,
+              blame_on_unknown_revision,
              ]
 
 if __name__ == '__main__':

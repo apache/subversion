@@ -274,8 +274,8 @@ svn_fs_fs__dag_walk_predecessors (dag_node_t *node,
       if (callback)
         SVN_ERR (callback (baton, this_node, &done, iterpool));
     }
-  apr_pool_destroy (iterpool);
-  apr_pool_destroy (last_iterpool);
+  svn_pool_destroy (iterpool);
+  svn_pool_destroy (last_iterpool);
 
   return SVN_NO_ERROR;
 }

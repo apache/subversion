@@ -33,6 +33,7 @@
 #include "adm_files.h"
 #include "adm_ops.h"
 #include "entries.h"
+#include "lock.h"
 
 #include "svn_private_config.h"
 
@@ -536,6 +537,27 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
       }
   }
   
+  /* prop-mods flag. */
+  {
+    const char *prop_mods_str
+      = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_PROP_MODS,
+                      APR_HASH_KEY_STRING);
+        
+    if (prop_mods_str)
+      {
+        if (! strcmp (prop_mods_str, "true"))
+          entry->prop_mods = TRUE;
+        else if (strcmp (prop_mods_str, "false"))
+          return svn_error_createf 
+            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+             _("Entry '%s' has invalid '%s' value"),
+             (name ? name : SVN_WC_ENTRY_THIS_DIR),
+             SVN_WC__ENTRY_ATTR_PROP_MODS);
+
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_PROP_MODS;
+      }
+  }
+
   *new_entry = entry;
   return SVN_NO_ERROR;
 }
@@ -1095,6 +1117,11 @@ write_entry (svn_stringbuf_t **output,
                   APR_HASH_KEY_STRING,
                   svn_time_to_cstring (entry->lock_creation_date, pool));
 
+  /* Prop-mods. */
+  if (entry->prop_mods)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_PROP_MODS,
+                  APR_HASH_KEY_STRING, "true");
+
   /*** Now, remove stuff that can be derived through inheritance rules. ***/
 
   /* We only want to write out 'revision' and 'url' for the
@@ -1414,6 +1441,10 @@ fold_entry (apr_hash_t *entries,
   /* Lock creation date */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE)
     cur_entry->lock_creation_date = entry->lock_creation_date;
+
+  /* prop-mods flag */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_PROP_MODS)
+    cur_entry->prop_mods = entry->prop_mods;
 
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */

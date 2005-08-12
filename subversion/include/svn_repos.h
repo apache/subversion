@@ -73,6 +73,63 @@ typedef svn_error_t *(*svn_repos_authz_func_t) (svn_boolean_t *allowed,
                                                 void *baton,
                                                 apr_pool_t *pool);
 
+
+/** An enum defining the kinds of access authz looks up.
+ *
+ * @since New in 1.3.
+ */
+typedef enum
+{
+  /** No access. */
+  svn_authz_none = 0,
+
+  /** Path can be read. */
+  svn_authz_read = 1,
+
+  /** Path can be altered. */
+  svn_authz_write = 2,
+
+  /** The other access credentials are recursive. */
+  svn_authz_recursive = 4
+} svn_repos_authz_access_t;
+
+
+/** Callback type for checking authorization on paths produced by
+ * the repository commit editor.
+ *
+ * Set @a *allowed to TRUE to indicate that the @a required_access on
+ * @a path in @a root is authorized, or set it to FALSE to indicate
+ * unauthorized (presumable according to state stored in @a baton).
+ *
+ * This callback is very similar to svn_repos_authz_func_t, with the
+ * exception of the addition of the @a required_access parameter.
+ * This is due to historical reasons: when authz was first implemented
+ * for svn_repos_dir_delta(), it seemed there would need only checks
+ * for read and write operations, hence the svn_repos_authz_func_t
+ * callback prototype and usage scenario.  But it was then realized
+ * that lookups due to copying needed to be recursive, and that
+ * brute-force recursive lookups didn't square with the O(1)
+ * performances a copy operation should have.
+ *
+ * So a special way to ask for a recursive lookup was introduced.  The
+ * commit editor needs this capability to retain acceptable
+ * performance.  Instead of revving the existing callback, causing
+ * unnecessary revving of functions that don't actually need the
+ * extended functionality, this second, more complete callback was
+ * introduced, for use by the commit editor.
+ *
+ * Some day, it would be nice to reunite these two callbacks and do
+ * the necessary revving anyway, but for the time being, this dual
+ * callback mechanism will do.
+ */
+typedef svn_error_t *(*svn_repos_authz_callback_t)
+  (svn_repos_authz_access_t required,
+   svn_boolean_t *allowed,
+   svn_fs_root_t *root,
+   const char *path,
+   void *baton,
+   apr_pool_t *pool);
+
 /**
  * A callback function type for use in svn_repos_get_file_revs().
  * @a baton is provided by the caller, @a path is the pathname of the file
@@ -585,6 +642,11 @@ svn_repos_replay (svn_fs_root_t *root,
  * Iff @a log_msg is not @c NULL, store it as the log message
  * associated with the commit transaction.
  *
+ * Iff @a authz_callback is provided, check read/write authorizations
+ * on paths accessed by editor operations.  An operation which fails
+ * due to authz will return SVN_ERR_AUTHZ_UNREADABLE or
+ * SVN_ERR_AUTHZ_UNWRITABLE.
+ *
  * Calling @a (*editor)->close_edit completes the commit.  Before
  * @c close_edit returns, but after the commit has succeeded, it will
  * invoke @a callback with the new revision number, the commit date (as a
@@ -599,7 +661,28 @@ svn_repos_replay (svn_fs_root_t *root,
  * NULL).  Callers who supply their own transactions are responsible
  * for cleaning them up (either by committing them, or aborting them).
  *
- * @since New in 1.2.
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_repos_get_commit_editor3 (const svn_delta_editor_t **editor,
+                              void **edit_baton,
+                              svn_repos_t *repos,
+                              svn_fs_txn_t *txn,
+                              const char *repos_url,
+                              const char *base_path,
+                              const char *user,
+                              const char *log_msg,
+                              svn_commit_callback_t commit_callback,
+                              void *commit_callback_baton,
+                              svn_repos_authz_callback_t authz_callback,
+                              void *authz_baton,
+                              apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_get_commit_editor3(), but with @a
+ * authz_callback and @a authz_baton set to @c NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *svn_repos_get_commit_editor2 (const svn_delta_editor_t **editor,
                                            void **edit_baton,
@@ -1674,25 +1757,6 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser,
 
 
 /** @} */
-
-/** An enum defining the kinds of access authz looks up.
- *
- * @since New in 1.3.
- */
-typedef enum
-{
-  /** No access. */
-  svn_authz_none = 0,
-
-  /** Path can be read. */
-  svn_authz_read = 1,
-
-  /** Path can be altered. */
-  svn_authz_write = 2,
-
-  /** The other access credentials are recursive. */
-  svn_authz_recursive = 4
-} svn_repos_authz_access_t;
 
 /** A data type which stores the authz information. 
  *

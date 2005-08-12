@@ -86,7 +86,8 @@ trim_string (char **pstr)
 static svn_boolean_t
 auto_props_enumerator (const char *name,
                        const char *value,
-                       void *baton)
+                       void *baton,
+                       apr_pool_t *pool)
 {
   auto_props_baton_t *autoprops = baton;
   char *property;
@@ -494,7 +495,7 @@ path_driver_cb_func (void **dir_baton,
 
 
 static svn_error_t *
-mkdir_urls (svn_client_commit_info_t **commit_info,
+mkdir_urls (svn_client_commit_info2_t **commit_info,
             const apr_array_header_t *paths,
             svn_client_ctx_t *ctx,
             apr_pool_t *pool)
@@ -611,10 +612,10 @@ mkdir_urls (svn_client_commit_info_t **commit_info,
 
 
 svn_error_t *
-svn_client_mkdir (svn_client_commit_info_t **commit_info,
-                  const apr_array_header_t *paths,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
+svn_client_mkdir2 (svn_client_commit_info2_t **commit_info,
+                   const apr_array_header_t *paths,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
 {
   if (! paths->nelts)
     return SVN_NO_ERROR;
@@ -658,4 +659,20 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_client_mkdir (svn_client_commit_info_t **commit_info,
+                  const apr_array_header_t *paths,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  svn_client_commit_info2_t *commit_info2 = NULL;
+  svn_error_t *err;
+
+  err = svn_client_mkdir2 (&commit_info2, paths, ctx, pool);
+  /* These structs have the same layout for the common fields. */
+  *commit_info = (svn_client_commit_info_t *) commit_info2;
+  return err;
 }

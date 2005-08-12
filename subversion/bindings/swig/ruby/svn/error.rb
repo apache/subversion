@@ -10,7 +10,7 @@ module Svn
         value = Ext::Core.const_get(const_name)
         module_eval(<<-EOC, __FILE__, __LINE__)
           class #{$1} < Error
-            def initialize(message)
+            def initialize(message="")
               super(#{value}, message)
             end
           end

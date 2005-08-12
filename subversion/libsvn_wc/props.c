@@ -1760,9 +1760,35 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   svn_boolean_t bempty, wempty;
   const char *prop_path;
   const char *prop_base_path;
+  svn_node_kind_t kind;
   svn_boolean_t different_filesizes, equal_timestamps;
   const svn_wc_entry_t *entry;
   apr_pool_t *subpool = svn_pool_create (pool);
+  int wc_format = svn_wc__adm_wc_format (adm_access);
+
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, TRUE, subpool));  
+
+  /* For newer WCs, if there is an entry for the path, we have a fast
+   * and nice way to retrieve the information from the entry. */
+  if (wc_format > SVN_WC__NO_PROPCACHING_VERSION)
+    {
+      if (entry)
+        *modified_p = entry->prop_mods;
+      else
+        {
+          SVN_ERR (svn_wc__prop_path (&prop_path, path, adm_access,
+                                      FALSE, pool));
+          SVN_ERR (svn_io_check_path (path, &kind, pool));
+
+          /* An existing props file implies property changes. */
+          *modified_p = (kind != svn_node_none);
+        }
+
+      return SVN_NO_ERROR;
+    }
+      
+
+  /* So, we have a WC in an older format... We... Have some work to do... */
 
   /* First, get the paths of the working and 'base' prop files. */
   SVN_ERR (svn_wc__prop_path (&prop_path, path, adm_access, FALSE, subpool));
@@ -1776,7 +1802,6 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   /* If something is scheduled for replacement, we do *not* want to
      pay attention to any base-props;  they might be residual from the
      old deleted file. */
-  SVN_ERR (svn_wc_entry (&entry, path, adm_access, TRUE, subpool));  
   if (entry && (entry->schedule == svn_wc_schedule_replace))
     {
       *modified_p = wempty ? FALSE : TRUE;

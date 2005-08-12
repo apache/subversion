@@ -1152,6 +1152,15 @@ typedef struct svn_wc_entry_t
    */
   apr_time_t lock_creation_date;
 
+  /** Whether this entry has property modifications.
+   *
+   * @note For working copies in older formats, this flag is not valid.
+   *
+   * @see svn_wc_props_modified_p().
+   *
+   * @since New in 1.3. */
+  svn_boolean_t prop_mods;
+
   /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup() to see
      if you need to extend that as well. */
 } svn_wc_entry_t;

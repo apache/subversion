@@ -141,8 +141,11 @@ SVN_APRUTIL_PREFIX = @SVN_APRUTIL_PREFIX@
 
 MKDIR = @MKDIR@
 
-# the EXTRA_ exist so that extra flags can be passed at 'make' time
+# The EXTRA_ parameters can be used to pass extra flags at 'make' time.
 CFLAGS = @CFLAGS@ $(EXTRA_CFLAGS)
+### A few of the CFLAGS (e.g. -Wmissing-prototypes, -Wstrict-prototypes,
+### -Wmissing-declarations) are not valid for C++, and should be somehow
+### suppressed (but they may come from httpd or APR).
 CPPFLAGS = @CPPFLAGS@ $(EXTRA_CPPFLAGS)
 LDFLAGS = @LDFLAGS@ $(EXTRA_LDFLAGS)
 
