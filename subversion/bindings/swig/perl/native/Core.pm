@@ -201,7 +201,7 @@ sub getline
     my $self = shift;
     *$self->{pool} ||= SVN::Core::pool_create (undef);
     my ($buf, $eof) = *$self->{svn_stream}->readline ($/, *$self->{pool});
-    return undef if $eof && !$buf;
+    return undef if $eof && !length($buf);
     return $eof ? $buf : $buf.$/;
 }
 
@@ -226,7 +226,8 @@ sub READLINE
 	return $buf;
     }
     elsif (ref $/) {
-        return *$self->{svn_stream}->read (${$/}) || undef;
+        my $buf = *$self->{svn_stream}->read (${$/});
+	return length($buf) ? $buf : undef;
     }
     return wantarray ? $self->getlines : $self->getline;
 }
