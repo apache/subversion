@@ -9,5 +9,13 @@ Status of 1.2.2:
 
 Candidate changes:
 
+  * r15683
+    Include missing header in core.i.
+    Justification:
+      Bindings only. Silences compiler warnings when generating Pthong
+      bindings on Windows.
+    Votes:
+      +1: brane
+
 Approved changes (further review is welcome, but not required):
 
