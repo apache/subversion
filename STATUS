@@ -9,7 +9,12 @@ Status of 1.2.2:
 
 Candidate changes:
 
-  (None.)
+  * r15703
+    Fix client crash with "svn lock" against the tigris.org SVN server.
+    Justification:
+      It's a crash, right.
+    Votes:
+      +1: brane
 
 Approved changes (further review is welcome, but not required):
 
