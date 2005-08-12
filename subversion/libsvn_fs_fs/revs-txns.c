@@ -202,17 +202,3 @@ svn_fs_fs__begin_txn (svn_fs_txn_t **txn_p,
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_fs_fs__abort_txn (svn_fs_txn_t *txn,
-                      apr_pool_t *pool)
-{
-  SVN_ERR (svn_fs_fs__check_fs (txn->fs));
-
-  /* Now, purge it. */
-  SVN_ERR_W (svn_fs_fs__purge_txn (txn->fs, txn->id, pool),
-             _("Transaction cleanup failed"));
-
-  return SVN_NO_ERROR;
-}
-
