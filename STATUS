@@ -16,6 +16,13 @@ Candidate changes:
       bindings on Windows.
     Votes:
       +1: brane
+  * r15695
+    Fix a bug in SVN::Core::Stream's read function.
+    Justification:
+      Bindings only.  Correctness issue for $root->file_contents
+      on a file with "0" in the content.
+    Votes:
+      +1: clkao
 
 Approved changes (further review is welcome, but not required):
 
