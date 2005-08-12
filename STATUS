@@ -27,7 +27,7 @@ Candidate changes:
       have to be done hackily (perhaps by changing hardcoded "bdb" in 
       libsvn_fs_base/fs-test.c's delete () test to be "fsfs").
     Votes:
-      +1: cmpilato
+      +1: cmpilato, brane
 
 
 Approved changes (further review is welcome, but not required):
