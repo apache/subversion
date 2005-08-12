@@ -43,7 +43,7 @@ svn_cl__copy (apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *src_path, *dst_path;
   svn_boolean_t src_is_url, dst_is_url;
-  svn_client_commit_info_t *commit_info = NULL;
+  svn_client_commit_info2_t *commit_info = NULL;
   svn_error_t *err;
 
   SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
@@ -110,9 +110,9 @@ svn_cl__copy (apr_getopt_t *os,
     SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state, 
                                          NULL, ctx->config, pool));
 
-  err = svn_client_copy (&commit_info, src_path,
-                         &(opt_state->start_revision),
-                         dst_path, ctx, pool);
+  err = svn_client_copy2 (&commit_info, src_path,
+                          &(opt_state->start_revision),
+                          dst_path, ctx, pool);
 
   if (ctx->log_msg_func)
     SVN_ERR (svn_cl__cleanup_log_msg (ctx->log_msg_baton, err));
