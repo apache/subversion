@@ -42,6 +42,7 @@
 #include "svn_md5.h"
 #include "svn_diff.h"
 #include "svn_error_codes.h"
+#include "svn_utf.h"
 #include "svn_nls.h"
 
 #ifdef SWIGPYTHON
