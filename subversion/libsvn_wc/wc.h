@@ -59,10 +59,6 @@ extern "C" {
  */
 #define SVN_WC__VERSION       4
 
-/* A version <= to this (but > 0, of course) uses the old-style
-   property file names, without the .svn-work extension. */
-#define SVN_WC__OLD_PROPNAMES_VERSION 1
-
 
 /*** Update traversals. ***/
 
