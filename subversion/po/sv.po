@@ -43,7 +43,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-08-12 08:50+0200\n"
-"PO-Revision-Date: 2005-08-12 09:08+0200\n"
+"PO-Revision-Date: 2005-08-12 09:11+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -1927,7 +1927,7 @@ msgstr "En URL eller ett versionshanterat objekt krävs"
 #: clients/cmdline/propset-cmd.c:111
 #, c-format
 msgid "property '%s' set on repository revision %ld\n"
-msgstr "satt egenskapen \"%s\" på revision %ld i arkivet\n"
+msgstr "satte egenskapen \"%s\" på revision %ld i arkivet\n"
 
 #: clients/cmdline/propset-cmd.c:119
 #, c-format
@@ -1942,7 +1942,7 @@ msgstr "Mål måste anges (\"%s\" tolkas som egenskapsvärde)"
 #: clients/cmdline/propset-cmd.c:184
 #, c-format
 msgid "property '%s' set (recursively) on '%s'\n"
-msgstr "satt egenskapen \"%s\" (rekursivt) på \"%s\"\n"
+msgstr "satte egenskapen \"%s\" (rekursivt) på \"%s\"\n"
 
 #: clients/cmdline/propset-cmd.c:185
 #, c-format
