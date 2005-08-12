@@ -58,7 +58,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-08-12 08:36+0200\n"
-"PO-Revision-Date: 2005-08-05 05:40+0200\n"
+"PO-Revision-Date: 2005-08-12 08:44+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -850,7 +850,6 @@ msgstr ""
 "  MÅL kan enten være en sti i arbeidskopien eller en URL.\n"
 
 #: clients/cmdline/main.c:378
-#, fuzzy
 msgid ""
 "List directory entries in the repository.\n"
 "usage: list [TARGET[@REV]...]\n"
@@ -882,10 +881,11 @@ msgstr ""
 "  MÅLs standardverdi er «.» som tilsvarer depotets nettadresse\n"
 "  til den aktive katalogen i arbeidskopien.\n"
 "\n"
-"  Hvis --verbose brukes, vises status med følgende felt:\n"
+"  Hvis --verbose brukes, vil de følgende feltene bli vist for hvert element:\n"
 "\n"
 "    Siste innsendte revisjonsnummer\n"
 "    Forfatteren som gjorde siste innsending\n"
+"    Hvis låst, eieren av låsen\n"
 "    Størrelse (i byte)\n"
 "    Dato og tid for siste innsending\n"
 
@@ -2604,9 +2604,8 @@ msgid "Invalid authz configuration"
 msgstr "Ugyldig authz-oppsett"
 
 #: include/svn_error_codes.h:794
-#, fuzzy
 msgid "Item is not writable"
-msgstr "Element er ikke lesbart"
+msgstr "Elementet er ikke skrivbart"
 
 #: include/svn_error_codes.h:800
 msgid "Svndiff data has invalid header"
