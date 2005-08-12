@@ -43,7 +43,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-08-12 08:50+0200\n"
-"PO-Revision-Date: 2005-08-12 08:57+0200\n"
+"PO-Revision-Date: 2005-08-12 09:08+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -86,9 +86,7 @@ msgstr "Kan inte öppna standard fel"
 
 #: clients/cmdline/diff-cmd.c:156
 msgid "Target lists to diff may not contain both working copy paths and URLs"
-msgstr ""
-"Mållistor till diff kan inte innehålla både sökvägar till arbetskopior och "
-"URL:er"
+msgstr "Mållistor till diff kan inte innehålla både sökvägar till arbetskopior och URL:er"
 
 #: clients/cmdline/export-cmd.c:82
 msgid ""
@@ -1913,16 +1911,14 @@ msgid "Unversioned properties on revision %ld:\n"
 msgstr "Ej versionshanterade egenskaper på revision %ld:\n"
 
 #: clients/cmdline/props.c:51
-#, fuzzy
 msgid ""
 "Must specify the revision as a number, a date or 'HEAD' when operating on a "
 "revision property"
-msgstr "Revision måste anges vid arbete med revisionsegenskaper"
+msgstr "Revision måste anges som ett tal, datum eller som \"HEAD\" vid arbete med revisionsegenskaper"
 
 #: clients/cmdline/props.c:58
-#, fuzzy
 msgid "Wrong number of targets specified"
-msgstr "Fel antal sökvägar"
+msgstr "Fel antal mål"
 
 #: clients/cmdline/props.c:67
 msgid "Either a URL or versioned item is required"
@@ -2611,9 +2607,8 @@ msgid "Invalid authz configuration"
 msgstr "Ogiltig auktorisationskonfiguration"
 
 #: include/svn_error_codes.h:794
-#, fuzzy
 msgid "Item is not writable"
-msgstr "Objektet är inte läsbart"
+msgstr "Objektet är inte skrivbart"
 
 #: include/svn_error_codes.h:800
 msgid "Svndiff data has invalid header"
@@ -4155,9 +4150,8 @@ msgstr ""
 "   erhållen:   %s\n"
 
 #: libsvn_fs_base/tree.c:3660 libsvn_fs_fs/tree.c:2599
-#, fuzzy
 msgid "Cannot compare file contents between two different filesystems"
-msgstr "Kan inte jämföra egenskapsvärde mellan två olika filsystem"
+msgstr "Kan inte jämföra filinnehåll mellan två olika filsystem"
 
 #: libsvn_fs_base/tree.c:3669 libsvn_fs_base/tree.c:3674
 #: libsvn_fs_fs/tree.c:2608 libsvn_fs_fs/tree.c:2613
@@ -7995,4 +7989,4 @@ msgstr "exporterad%s"
 #: svnversion/main.c:281
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
-msgstr ""
+msgstr "\"%s\" är varken versionshanterad eller exporterad\n"
