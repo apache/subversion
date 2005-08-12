@@ -289,6 +289,8 @@ typedef struct svn_client_commit_info2_t
 /** Information about commits passed back to client from this module.
  *
  * ### This struct is soon going to be deprecated.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 typedef struct svn_client_commit_info_t
 {
@@ -733,7 +735,22 @@ svn_client_add (const char *path,
  * If @a ctx->notify_func2 is non-null, when the directory has been created
  * (successfully) in the working copy, call @a ctx->notify_func2 with
  * @a ctx->notify_baton2 and the path of the new directory.  Note that this is
- * only called for items added to the working copy.  */
+ * only called for items added to the working copy.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_client_mkdir2 (svn_client_commit_info2_t **commit_info,
+                   const apr_array_header_t *paths,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+
+/** Same as svn_client_mkdir2(), but takes the @c svn_client_commit_info_t
+ * for @a commit_info.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
+ */
 svn_error_t *
 svn_client_mkdir (svn_client_commit_info_t **commit_info,
                   const apr_array_header_t *paths,
@@ -768,13 +785,30 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
  *
  * If @a ctx->notify_func2 is non-null, then for each item deleted, call
  * @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of the deleted
- * item.  */
+ * item.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_client_delete2 (svn_client_commit_info2_t **commit_info,
+                    const apr_array_header_t *paths,
+                    svn_boolean_t force,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
+
+/** Similar to svn_client_delete2(), but takes @c svn_client_commit_info_t
+ * for @a commit_info.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
+ */
 svn_error_t *
 svn_client_delete (svn_client_commit_info_t **commit_info,
                    const apr_array_header_t *paths,
                    svn_boolean_t force,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
+
 
 
 /** Import file or directory @a path into repository directory @a url at
@@ -818,7 +852,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
  *
  * @since New in 1.3.
  */
-svn_error_t *svn_client_import2 (svn_client_commit_info_t **commit_info,
+svn_error_t *svn_client_import2 (svn_client_commit_info2_t **commit_info,
                                  const char *path,
                                  const char *url,
                                  svn_boolean_t nonrecursive,
@@ -828,7 +862,8 @@ svn_error_t *svn_client_import2 (svn_client_commit_info_t **commit_info,
 
 /**
  * Similar to svn_client_import2(), but with the @a no_ignore parameter 
- * always set to @c FALSE.
+ * always set to @c FALSE and using @c svn_client_commit_info_t for
+ * @a commit_info.
  * 
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
@@ -867,6 +902,21 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
  * If no error is returned and @a (*commit_info)->revision is set to
  * @c SVN_INVALID_REVNUM, then the commit was a no-op; nothing needed to
  * be committed.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_client_commit3 (svn_client_commit_info2_t **commit_info,
+                    const apr_array_header_t *targets,
+                    svn_boolean_t recurse,
+                    svn_boolean_t keep_locks,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
+/** Similar to svn_client_commit3(), but uses @c svn_client_commit_info_t
+ * for @a commit_info.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  *
  * @since New in 1.2.
  */
@@ -1421,6 +1471,22 @@ svn_client_resolved (const char *path,
  * If @a ctx->notify_func2 is non-null, invoke it with @a ctx->notify_baton2
  * for each item added at the new location, passing the new, relative path of
  * the added item.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_client_copy2 (svn_client_commit_info2_t **commit_info,
+                  const char *src_path,
+                  const svn_opt_revision_t *src_revision,
+                  const char *dst_path,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+
+/** Similar to svn_client_copy2(), but uses @c svn_client_commit_info_t
+ * for @a commit_info.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
 svn_client_copy (svn_client_commit_info_t **commit_info,
@@ -1474,8 +1540,23 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
  *
  * ### Is this really true?  What about svn_wc_notify_commit_replaced()? ###
  *
- * @since New in 1.2.
+ * @since New in 1.3.
  */ 
+svn_error_t *
+svn_client_move3 (svn_client_commit_info2_t **commit_info,
+                  const char *src_path,
+                  const char *dst_path,
+                  svn_boolean_t force,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+/** Similar to svn_client_move3(), but uses @c svn_client_commit_info
+ * for @a commit_info.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
+ *
+ * @since New in 1.2.
+ */
 svn_error_t *
 svn_client_move2 (svn_client_commit_info_t **commit_info,
                   const char *src_path,

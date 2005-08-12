@@ -226,7 +226,7 @@ svn_error_t *svn_cl__check_cancel (void *baton);
 
 /* Print out commit information found in COMMIT_INFO to the console.
  * POOL is used for temporay allocations. */
-svn_error_t *svn_cl__print_commit_info (svn_client_commit_info_t *commit_info,
+svn_error_t *svn_cl__print_commit_info (svn_client_commit_info2_t *commit_info,
                                         apr_pool_t *pool);
 
 

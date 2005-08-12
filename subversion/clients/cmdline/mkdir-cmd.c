@@ -43,7 +43,7 @@ svn_cl__mkdir (apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   apr_pool_t *subpool = svn_pool_create (pool);
-  svn_client_commit_info_t *commit_info = NULL;
+  svn_client_commit_info2_t *commit_info = NULL;
   svn_error_t *err;
 
   SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
@@ -72,7 +72,7 @@ svn_cl__mkdir (apr_getopt_t *os,
                                            NULL, ctx->config, subpool));
     }
 
-  err = svn_client_mkdir (&commit_info, targets, ctx, subpool);
+  err = svn_client_mkdir2 (&commit_info, targets, ctx, subpool);
 
   if (ctx->log_msg_func)
     err = svn_cl__cleanup_log_msg (ctx->log_msg_baton, err);

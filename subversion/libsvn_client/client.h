@@ -249,7 +249,7 @@ svn_client__open_ra_session_internal (svn_ra_session_t **ra_session,
 
 /* Get the commit_baton to be used in couple with commit_callback. */
 svn_error_t *svn_client__commit_get_baton (void **baton,
-                                           svn_client_commit_info_t **info,
+                                           svn_client_commit_info2_t **info,
                                            apr_pool_t *pool);
 
 /* The commit_callback function for storing svn_client_commit_info_t
