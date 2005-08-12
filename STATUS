@@ -22,12 +22,10 @@ Approved changes (further review is welcome, but not required):
       +1: brane
       +0: djames
 
-  * r15695
+  * r15695, r15700
     Fix a bug in SVN::Core::Stream's read function.
     Justification:
       Bindings only.  Correctness issue for $root->file_contents
       on a file with "0" in the content.
     Votes:
       +1: clkao
-      +0: djames
-
