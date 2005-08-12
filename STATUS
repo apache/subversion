@@ -16,6 +16,20 @@ Candidate changes:
     Votes:
       +1: brane
 
+  * r15705
+    Fix a latent bug in FSFS's directory cache which caused fs-test 13
+    to fail.
+    Justification:
+      Possible results in repository of dubious integrity if the cache
+      was wrong in just the right ways.  (Unverified.)
+    Notes:
+      In 1.2.x, there is no fs-test 13 for FSFS, so verification might
+      have to be done hackily (perhaps by changing hardcoded "bdb" in 
+      libsvn_fs_base/fs-test.c's delete () test to be "fsfs").
+    Votes:
+      +1: cmpilato
+
+
 Approved changes (further review is welcome, but not required):
 
   * r15683
