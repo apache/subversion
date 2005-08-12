@@ -297,7 +297,7 @@ svn_auth_save_credentials (svn_auth_iterstate_t *state,
   svn_auth_baton_t *auth_baton;
   void *creds;
 
-  if (! state)
+  if (! state || state->table->providers->nelts <= state->provider_idx)
     return SVN_NO_ERROR;
 
   auth_baton = state->auth_baton;
