@@ -105,10 +105,10 @@ print_dirents (apr_hash_t *dirents,
             lock_owner = apr_psprintf (subpool, "*%s", lock->owner);
 
           SVN_ERR (svn_cmdline_printf
-                   (subpool, "%7ld %-8.8s %-8.8s %10s %12s %s%s\n",
+                   (subpool, "%7ld %-8.8s %c %10s %12s %s%s\n",
                     dirent->created_rev,
                     dirent->last_author ? dirent->last_author : " ? ",
-                    lock ? lock_owner : "",
+                    lock ? 'O' : ' ',
                     (dirent->kind == svn_node_file) ? sizestr : "",
                     utf8_timestr,
                     utf8_entryname,

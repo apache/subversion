@@ -393,7 +393,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "\n"
        "    Revision number of the last commit\n"
        "    Author of the last commit\n"
-       "    If locked, the owner of the lock\n"
+       "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
        "    Size (in bytes)\n"
        "    Date and time of the last commit\n"),
     {'r', 'v', 'R', svn_cl__incremental_opt, svn_cl__xml_opt,
