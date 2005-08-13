@@ -29,6 +29,12 @@ Candidate changes:
     Votes:
       +1: cmpilato, brane
 
+  * r15713
+    Make do_ra_stat work in Perl bindings.
+    Justifaction:
+      Bindings only.  Completeness.
+    Votes:
+      +1: clkao
 
 Approved changes (further review is welcome, but not required):
 
