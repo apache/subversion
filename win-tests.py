@@ -160,10 +160,10 @@ def locate_libs():
   
 def fix_case(path):
     path = os.path.normpath(path)
-    parts = string.split(path, '\\')
+    parts = string.split(path, os.path.sep)
     drive = string.upper(parts[0])
     parts = parts[1:]
-    path = drive + '\\'
+    path = drive + os.path.sep
     for part in parts:
         dirs = os.listdir(path)
         for dir in dirs:
