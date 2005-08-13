@@ -38,6 +38,7 @@
 
 %apply SWIGTYPE **OUTPARAM {
   svn_client_commit_info_t **,
+  svn_client_commit_info2_t **,
   svn_auth_provider_object_t **,
   svn_client_ctx_t **
 };
