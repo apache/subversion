@@ -44,14 +44,26 @@ module Svn
         kind == Core::NODE_DIR
       end
 
+      def file?
+        kind == Core::NODE_FILE
+      end
+
       def add?
         schedule == SCHEDULE_ADD
+      end
+
+      def normal?
+        schedule == SCHEDULE_NORMAL
       end
     end
     
     class Status2
       def text_added?
         text_status == STATUS_ADDED
+      end
+
+      def text_normal?
+        text_status == STATUS_NORMAL
       end
     end
     
