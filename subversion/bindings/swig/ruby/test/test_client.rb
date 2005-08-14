@@ -340,24 +340,84 @@ class SvnClientTest < Test::Unit::TestCase
 
   def test_status
     log = "sample log"
+    file1 = "sample1.txt"
+    file2 = "sample2.txt"
     dir = "dir"
     dir_path = File.join(@wc_path, dir)
+    path1 = File.join(@wc_path, file1)
+    path2 = File.join(dir_path, file2)
     
     ctx = make_context(log)
+    File.open(path1, "w") {}
+    ctx.add(path1)
+    rev1 = ctx.commit(@wc_path).revision
 
+    
     ctx.mkdir(dir_path)
+    File.open(path2, "w") {}
+    
     infos = []
     rev = ctx.status(@wc_path) do |path, status|
       infos << [path, status]
     end
 
-    assert_equal(0, rev)
-    assert_equal(1, infos.size)
-    result_path, status = infos.first
-    assert_equal(result_path, dir_path)
-    assert(status.text_added?)
-    assert(status.entry.dir?)
-    assert(status.entry.add?)
+    assert_equal(youngest_rev, rev)
+    assert_equal([dir_path, path2].sort,
+                 infos.collect{|path, status| path}.sort)
+    dir_status = infos.assoc(dir_path).last
+    assert(dir_status.text_added?)
+    assert(dir_status.entry.dir?)
+    assert(dir_status.entry.add?)
+    path2_status = infos.assoc(path2).last
+    assert(!path2_status.text_added?)
+    assert_nil(path2_status.entry)
+
+
+    infos = []
+    rev = ctx.status(@wc_path, rev1, true, true) do |path, status|
+      infos << [path, status]
+    end
+    
+    assert_equal(rev1, rev)
+    assert_equal([@wc_path, dir_path, path1, path2].sort,
+                 infos.collect{|path, status| path}.sort)
+    wc_status = infos.assoc(@wc_path).last
+    assert(wc_status.text_normal?)
+    assert(wc_status.entry.dir?)
+    assert(wc_status.entry.normal?)
+    dir_status = infos.assoc(dir_path).last
+    assert(dir_status.text_added?)
+    assert(dir_status.entry.dir?)
+    assert(dir_status.entry.add?)
+    path1_status = infos.assoc(path1).last
+    assert(path1_status.text_normal?)
+    assert(path1_status.entry.file?)
+    assert(path1_status.entry.normal?)
+    path2_status = infos.assoc(path2).last
+    assert(!path2_status.text_added?)
+    assert_nil(path2_status.entry)
+
+
+    ctx.prop_set(Svn::Core::PROP_IGNORE, file2, dir_path)
+
+    infos = []
+    rev = ctx.status(@wc_path, nil, true, true, true, false) do |path, status|
+      infos << [path, status]
+    end
+    
+    assert_equal(rev1, rev)
+    assert_equal([@wc_path, dir_path, path1].sort,
+                 infos.collect{|path, status| path}.sort)
+
+
+    infos = []
+    rev = ctx.status(@wc_path, nil, true, true, true, true) do |path, status|
+      infos << [path, status]
+    end
+    
+    assert_equal(rev1, rev)
+    assert_equal([@wc_path, dir_path, path1, path2].sort,
+                 infos.collect{|path, status| path}.sort)
   end
 
   def test_checkout
@@ -765,7 +825,7 @@ class SvnClientTest < Test::Unit::TestCase
       ctx.cat(path)
     end
   end
-  
+
   def test_cat
     log = "sample log"
     src1 = "source1\n"
