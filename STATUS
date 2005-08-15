@@ -26,8 +26,15 @@ Candidate changes:
       In 1.2.x, there is no fs-test 13 for FSFS, so verification might
       have to be done hackily (perhaps by changing hardcoded "bdb" in 
       libsvn_fs_base/fs-test.c's delete () test to be "fsfs").
+    Problems:
+      This change causes segfaults in the Ruby bindings. Kouhei Sutou
+      has posted a fix, but this has not yet been integrated. See the
+      following threads:
+        http://svn.haxx.se/dev/archive-2005-08/0530.shtml
+        http://svn.haxx.se/dev/archive-2005-08/0553.shtml
     Votes:
       +1: cmpilato, brane
+      -0: djames
 
 Approved changes (further review is welcome, but not required):
 
