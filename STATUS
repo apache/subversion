@@ -14,7 +14,7 @@ Candidate changes:
     Justification:
       It's a crash, right.
     Votes:
-      +1: brane
+      +1: brane, philip
 
   * r15705
     Fix a latent bug in FSFS's directory cache which caused fs-test 13
