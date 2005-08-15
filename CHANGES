@@ -10,7 +10,7 @@ http://svn.collab.net/repos/svn/tags/1.2.2
     * fixed: horrible rename-tracing performance against 1.0 servers (r15315)
     * fixed: 'svn cat' over file:// -- small leak  (r15253)
     * improvements to 'svnmerge' utility (r14008,-458,-587,-632, r15329,-340)
-    * translation updates for French, German, Polish, Norwegian
+    * translation updates for French, German, Polish, Norwegian, Swedish
 
   - Server:
     * fixed: mod_authz_svn being overly restrictive (r15463)
