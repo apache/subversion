@@ -826,6 +826,47 @@ class SvnClientTest < Test::Unit::TestCase
     end
   end
 
+  def test_resolved
+    log = "sample log"
+    file = "sample.txt"
+    dir = "dir"
+    src1 = "before\n"
+    src2 = "after\n"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+
+    ctx = make_context(log)
+    ctx.mkdir(dir_path)
+    File.open(path, "w") {}
+    ctx.add(path)
+    rev1 = ctx.ci(@wc_path).revision
+
+    File.open(path, "w") {|f| f.print(src1)}
+    rev2 = ctx.ci(@wc_path).revision
+
+    ctx.up(@wc_path, rev1)
+
+    File.open(path, "w") {|f| f.print(src2)}
+    ctx.up(@wc_path)
+
+    assert_raises(Svn::Error::WC_FOUND_CONFLICT) do
+      ctx.ci(@wc_path)
+    end
+
+    ctx.resolved(dir_path, false)
+    assert_raises(Svn::Error::WC_FOUND_CONFLICT) do
+      ctx.ci(@wc_path)
+    end
+
+    ctx.resolved(dir_path)
+    info = nil
+    assert_nothing_raised do
+      info = ctx.ci(@wc_path)
+    end
+    assert_not_nil(info)
+    assert_equal(rev2 + 1, info.revision)
+  end
+
   def test_cat
     log = "sample log"
     src1 = "source1\n"

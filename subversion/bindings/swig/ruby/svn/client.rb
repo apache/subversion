@@ -122,6 +122,10 @@ module Svn
         paths = [paths] unless paths.is_a?(Array)
         Client.revert(paths, recurse, self)
       end
+
+      def resolved(path, recurse=true)
+        Client.resolved(path, recurse, self)
+      end
       
       def propset(name, value, target, recurse=true, force=false)
         Client.propset2(name, value, target, recurse, force, self)
