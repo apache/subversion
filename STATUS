@@ -23,23 +23,6 @@ Approved changes (further review is welcome, but not required):
       +1: brane
       +0: djames
 
-  * r15705, r15742
-    Fix a latent bug in FSFS's directory cache which caused fs-test 13
-    to fail.
-    Justification:
-      Possible results in repository of dubious integrity if the cache
-      was wrong in just the right ways.  (Unverified.)
-    Notes:
-    * In 1.2.x, there is no fs-test 13 for FSFS, so verification might
-      have to be done hackily (perhaps by changing hardcoded "bdb" in 
-      libsvn_fs_base/fs-test.c's delete () test to be "fsfs").
-    * By itself, r15705 causes crashes in commit_tests 38 and the Ruby
-      bindings test suite. r15742 fixes this problem.
-    Votes:
-      +1 (not r15742): brane
-      +1: lundblad, cmpilato, kfogel
-      +0: djames
-
   * r15737
     Fix crash in javahl with revision with no dates.
     Justification:
