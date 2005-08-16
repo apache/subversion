@@ -1744,11 +1744,9 @@ svn_fs_fs__rep_contents_dir (apr_hash_t **entries_p,
   SVN_ERR (get_dir_contents (entries, fs, noderev, pool));
 
   /* Prepare to cache this directory. */
-  if (ffd->dir_cache_id)
-    {
-      svn_pool_clear (ffd->dir_cache_pool);
-      ffd->dir_cache_id = NULL;
-    }
+  ffd->dir_cache_id = NULL;
+  if (ffd->dir_cache_pool)
+    svn_pool_clear (ffd->dir_cache_pool);
   else
     ffd->dir_cache_pool = svn_pool_create (fs->pool);
   ffd->dir_cache = apr_hash_make (ffd->dir_cache_pool);
@@ -2713,7 +2711,6 @@ svn_fs_fs__abort_txn (svn_fs_txn_t *txn,
 
   /* Clean out the directory cache. */
   ffd = txn->fs->fsap_data;
-  svn_pool_clear (ffd->dir_cache_pool);
   ffd->dir_cache_id = NULL;
 
   /* Now, purge the transaction. */
