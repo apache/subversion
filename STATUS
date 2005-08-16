@@ -1,6 +1,6 @@
 This file tracks the status of releases in the 1.2.x line.
 
-See "Stabilizing and maintaining releases" in
+See "Stabilizing and maintaining releases"
 <http://subversion.tigris.org/hacking.html#release-stabilization> for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
