@@ -33,6 +33,7 @@
 
 #include "svn_error.h"
 #include "svn_pools.h"
+#include "svn_types.h"
 #include "svn_intl.h"
 
 #include "../svn_test.h"
@@ -50,7 +51,7 @@ static const apr_getopt_option_t opt_def[] =
     {0, 0, 0, 0}
   };
 static const char *srcdir = NULL;
-static const char *verbose_mode = FALSE;
+static svn_boolean_t verbose_mode = FALSE;
 
 static svn_error_t *init_params (apr_pool_t *pool)
 {
@@ -124,6 +125,8 @@ static l10n_t l10n_list[] =
     { NULL, 0 }
   };
 
+static const char *LOCALE_PREFS[] = { "es_ES", "en_US" };
+
 static svn_error_t *
 test1 (const char **msg, 
        svn_boolean_t msg_only,
@@ -131,7 +134,7 @@ test1 (const char **msg,
        apr_pool_t *pool)
 {
   svn_error_t *err;
-  char **locale_prefs;
+  const char **locale_prefs;
 
   *msg = "test locale preference retrieval of svn_intl";
 
@@ -148,7 +151,7 @@ test1 (const char **msg,
                                "svn_intl_initialize failed");
     }
 
-  locale_prefs = svn_intl_get_locale_prefs(NULL, pool);
+  locale_prefs = svn_intl_get_locale_prefs(pool);
   if (locale_prefs == NULL)
     {
       /* This should never happen. */
@@ -169,6 +172,10 @@ test1 (const char **msg,
 }
 
 
+/* ### Test re-initialization after sub-pool passed to
+   ### svn_intl_initialize() is destroyed. */
+
+
 static svn_error_t *
 test2 (const char **msg, 
        svn_boolean_t msg_only,
@@ -179,7 +186,7 @@ test2 (const char **msg,
   svn_error_t *err;
   apr_pool_t *subpool;
 
-  *msg = "test l10n of svn_intl";
+  *msg = "test basic localization using svn_intl";
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -195,8 +202,7 @@ test2 (const char **msg,
                                "svn_intl_initialize failed");
     }
 
-  /* Test values retrieved from our intl module instance against
-     values retrieved using svn_intl. */
+  /* Test retrieval of localizations using our svn_intl module. */
   for (l10n = l10n_list; l10n->key != NULL; l10n++)
     {
       /* ### Account for a not-yet-installed resource bundle by using
@@ -220,8 +226,60 @@ test2 (const char **msg,
   return SVN_NO_ERROR;
 }
 
-/* ### Test re-initialization after sub-pool passed to
-   ### svn_intl_initialize() is destroyed. */
+
+
+static svn_error_t *
+test3 (const char **msg, 
+       svn_boolean_t msg_only,
+       svn_test_opts_t *opts,
+       apr_pool_t *pool)
+{
+  l10n_t *l10n;
+  svn_error_t *err;
+  const char **prefs;
+  int i;
+
+  *msg = "test storage of user locale prefs using svn_intl";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  err = svn_intl_initialize(pool);
+  if (err)
+    {
+      return svn_error_create (SVN_ERR_TEST_FAILED, err,
+                               "svn_intl_initialize failed");
+    }
+
+  svn_intl_set_locale_prefs ((char **) LOCALE_PREFS, pool);
+  prefs = svn_intl_get_locale_prefs (pool);
+  for (i = 0; prefs[i] != NULL; i++)
+    {
+      if (verbose_mode)
+        printf ("Comparing expected locale pref '%s' to contextual pref "
+                "'%s'\n", LOCALE_PREFS[i], prefs[i]);
+
+      if (apr_strnatcmp (prefs[i], LOCALE_PREFS[i]) != 0)
+        return fail (pool, "Expected locale pref '%s' not equal to "
+                     "contextual pref '%s'", LOCALE_PREFS[i], prefs[i]);
+    }
+
+  /* Test retrieval of localizations using our svn_intl module.
+  for (l10n = l10n_list; l10n->key != NULL; l10n++)
+    {
+      const char *intl_value = svn_intl_dlgettext (PACKAGE_NAME, l10n->locale,
+                                                   l10n->key);
+      if ((l10n->value == NULL) != (intl_value == NULL)
+          || (l10n->value != NULL && intl_value != NULL
+              && apr_strnatcmp(l10n->value, intl_value) != 0))
+        return fail(pool, "Expected value '%s' not equal to '%s' for "
+                    "text '%s'", l10n->value, intl_value, l10n->key);
+    }
+  */
+
+  return SVN_NO_ERROR;
+}
+
 
 /*
    ====================================================================
@@ -236,6 +294,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     /* ### XFAIL is a work-around for not-yet-installed bundles. */
     SVN_TEST_XFAIL (test1),
-    SVN_TEST_XFAIL (test2),
+    SVN_TEST_PASS (test2),
+    SVN_TEST_PASS (test3),
     SVN_TEST_NULL
   };

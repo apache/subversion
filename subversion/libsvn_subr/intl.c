@@ -19,7 +19,7 @@
 #include <apr_mmap.h>
 #include <apr_file_io.h>
 #include <apr_strings.h>
-#include <apr_thread_proc.h>
+#include <apr_thread_proc.h>  /* for thread-local APIs */
 #include <assert.h>
 #include <apr_hash.h>
 #include <ctype.h>
@@ -40,9 +40,13 @@
 
 static apr_hash_t *cache;
 static apr_pool_t *private_pool = NULL;
-#if APR_HAS_THREADS
+
+/* A mutex around writes to CACHE. */
 static apr_thread_mutex_t *cache_lock;
-#endif
+
+/* The key used to access thread-local storage for user-specific
+   locale preferences. */
+static apr_threadkey_t *locale_prefs_threadkey = NULL;
 
 #if !APR_HAS_MMAP
 #error This needs mmap support
@@ -60,7 +64,11 @@ static apr_status_t
 svn_intl_terminate (void *ignored)
 {
   cache = NULL;
-  /* ### Does an apr_thread_mutex_t need to be explicitly released? */
+#if APR_HAS_THREADS
+  apr_threadkey_private_delete (locale_prefs_threadkey);
+  apr_thread_mutex_destroy (cache_lock);
+#endif
+  locale_prefs_threadkey = NULL;
   cache_lock = NULL;
   private_pool = NULL;
   return APR_SUCCESS;
@@ -82,7 +90,19 @@ svn_intl_initialize (apr_pool_t *parent_pool)
 #if APR_HAS_THREADS
           st = apr_thread_mutex_create (&cache_lock, APR_THREAD_MUTEX_DEFAULT,
                                         private_pool);
-          if (st != APR_SUCCESS)
+          if (st == APR_SUCCESS)
+            {
+              /* Create thread-local storage in which to store user-specific
+                 locale preferences. */
+              /* ### Do we need to explicitly supply a destructor for the
+                 ### thread-local storage?  This module's private pool and our
+                 ### server's threads don't necessarily have the same
+                 ### lifetime. */
+              void *destructor_func = NULL;
+              apr_threadkey_private_create (&locale_prefs_threadkey,
+                                            destructor_func, private_pool);
+            }
+          else
             apr_pool_destroy (private_pool);
 #endif
         }
@@ -97,12 +117,16 @@ svn_intl_initialize (apr_pool_t *parent_pool)
          of its environment. */
       if (setlocale(LC_ALL, "") == NULL)
         {
+          /* setlocale() failed -- inspect the env vars it checks, and
+             report an error when we encounter one of them with a
+             value set. */
           const char *env_vars[] = { "LC_ALL", "LC_CTYPE", "LANG", NULL };
           const char **env_var = &env_vars[0], *env_val = NULL;
           while (*env_var)
             {
               env_val = getenv(*env_var);
               if (env_val && env_val[0])
+                /* The environment variable is set to some value. */
                 break;
               ++env_var;
             }
@@ -114,8 +138,8 @@ svn_intl_initialize (apr_pool_t *parent_pool)
               env_val = "not set";
             }
 
-          /* ### FIXME: Add meaningful error code. */
-          return svn_error_createf(-1, NULL, "cannot set LC_ALL locale\n"
+          return svn_error_createf(SVN_ERR_NLS_UNRECOGNIZED_LOCALE, NULL,
+                                   "cannot set LC_ALL locale\n"
                                    "environment variable '%s' is '%s'\n"
                                    "please check that your locale name "
                                    "is correct", *env_var, env_val);
@@ -131,44 +155,47 @@ svn_intl_initialize (apr_pool_t *parent_pool)
   return SVN_NO_ERROR;
 }
 
-/* The value returned by svn_intl_get_locale_prefs() when no locale
-   preferences are found. */
-static const char *NO_LOCALE_PREFS[] = { NULL };
-
-char **
-svn_intl_get_locale_prefs (void *context, apr_pool_t *pool)
+const char **
+svn_intl_get_locale_prefs (apr_pool_t *pool)
 {
-  char **prefs = NO_LOCALE_PREFS;
-  if (context != NULL)
+  const char **prefs = NULL;
+
+  /* Look for context-specific locale preferences. */
+  if (locale_prefs_threadkey != NULL)
     {
-      /* Look for context-specific locale preferences. */
-      /* ### TODO */
+      void *data;
+      apr_threadkey_private_get (&data, locale_prefs_threadkey);
+      prefs = data;
     }
 
   /* With no contextual locale, fall back to the system locale. */
-  if (prefs == NO_LOCALE_PREFS)
+  if (prefs == NULL || prefs[0] == NULL)
     {
       /* xgettext: Set this to the ISO-639 two-letter language code
          and -- optionally -- the ISO-3166 country code for this .po
          file (e.g. en-US, sv-SE, etc.). */
-      const char *locale = dgettext(PACKAGE_NAME, SVN_CLIENT_MESSAGE_LOCALE);
+      const char *locale = dgettext (PACKAGE_NAME, SVN_CLIENT_MESSAGE_LOCALE);
 
       /* The bundle could be missing the "translation", or we could be
          missing a bundle for the locale. */
-      if (apr_strnatcmp(locale, SVN_CLIENT_MESSAGE_LOCALE) != 0)
+      if (apr_strnatcmp (locale, SVN_CLIENT_MESSAGE_LOCALE) != 0)
         {
-          prefs = apr_pcalloc(pool, 2 * sizeof(char *));
+          prefs = apr_pcalloc (pool, 2 * sizeof(char *));
           prefs[0] = locale;
         }
     }
   return prefs;
 }
 
-void
-svn_intl_set_locale_prefs (void *context, char **locale_prefs)
-{
-  /* ### TODO: Save locale information to thread-local storage. */
 
+void
+svn_intl_set_locale_prefs (char **locale_prefs, apr_pool_t *pool)
+{
+  if (locale_prefs_threadkey != NULL)
+    {
+      /* ### TODO: Cleanup any previously set locale preferences. */
+      apr_threadkey_private_set (locale_prefs, locale_prefs_threadkey);
+    }
 
   /* ### LATER: Should we save the locale information to the context
      ### instead?  For instance, if context was an apr_pool_t, we
@@ -299,25 +326,33 @@ message_table_gettext (message_table_t *mt, const char *msgid)
 const char *
 svn_intl_dgettext (const char *domain, const char *msgid)
 {
-  const char *locale;
-  /* See http://apr.apache.org/docs/apr/group__apr__thread__proc.html */
-  apr_threadkey_t *key;
-  /* ### use sub-pool? */
-  apr_threadkey_private_create (&key, NULL /* ### */, private_pool);
-  apr_threadkey_private_get (&locale, key);
-  apr_threadkey_private_delete (key);
+  const char *text;
 
-  if (locale == NULL)
+  char **locale_prefs = svn_intl_get_locale_prefs (private_pool);
+  if (locale_prefs != NULL)
     {
-      /* ### A shortcut to avoid dealing with locale-related env vars,
-         ### GetThreadLocale(), etc.  Ideally, we'd used only one
-         ### gettext-like implementation which suites our purposes. */
-      return dgettext(domain, msgid);
+      /* Attempt to find a localization matching the specified locale
+         preferences. */
+      char *locale;
+      for (locale = locale_prefs[0]; locale_prefs != NULL; locale_prefs++)
+        {
+          text = svn_intl_dlgettext (domain, locale, msgid);
+          if (text != NULL && apr_strnatcmp (msgid, text) != 0)
+            /* Localization found, stop looking. */
+            break;
+        }
     }
-  else
+
+  if (text == NULL || apr_strnatcmp (msgid, text) == 0)
     {
-      return svn_intl_dlgettext(domain, locale, msgid);
+      /* Fall back to vanilla gettext to avoid dealing with
+         locale-related env vars, GetThreadLocale(), etc.  (Ideally,
+         we'd used only one gettext-like implementation which suites
+         our purposes.) */
+      text = dgettext (domain, msgid);
     }
+
+  return text;
 }
 
 const char *

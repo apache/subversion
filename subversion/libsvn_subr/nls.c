@@ -1,8 +1,8 @@
 /*
- * nls.c :  Helpers for NLS programs.
+ * nls.c: National Language Support (internationalization, localization, etc.)
  *
  * ====================================================================
- * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms

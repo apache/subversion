@@ -716,7 +716,7 @@ parsed_request(ne_session *sess,
   /* xgettext: Set this to the ISO-639 two-letter language code and --
      optionally -- the ISO-3166 country code for this .po file
      (e.g. en-US, sv-SE, etc.). */
-  locale = svn_intl_get_locale_prefs(NULL, pool);
+  locale = svn_intl_get_locale_prefs(pool);
   if (*locale != NULL)
     ne_add_request_header(req, "Accept-Language", *locale);
 

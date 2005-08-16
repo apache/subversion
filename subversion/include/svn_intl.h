@@ -39,21 +39,21 @@ extern "C" {
 svn_error_t *
 svn_intl_initialize (apr_pool_t *parent_pool);
 
-/* Gets the locale preferences for @a context.  If @a context is @c
-   NULL, gets the system locale for the current process.  Returns a
-   list of locales ordered by preference.  Never returns @c NULL, but
-   may return an empty array (e.g. consisting only of a single @c NULL
-   value). */
-char **
-svn_intl_get_locale_prefs (void *context, apr_pool_t *pool);
+/* Gets the locale preferences for the current context, falling back
+   to the system locale for the current process if no user preferences
+   have been set.  Returns a list of locales ordered by preference.
+   Never returns @c NULL, but may return an empty array
+   (e.g. consisting only of a single @c NULL value). */
+const char **
+svn_intl_get_locale_prefs (apr_pool_t *pool);
 
-/* Sets the locale preferences for @a context.  @a locale_prefs are
-   inspected in order for a matching resource bundle.  Not invoking
-   this API, or invoking it with a @c NULL locale, or finding no match
-   against the preferences will result in the global locale being used
-   instead. */
+/* Sets the locale preferences for the current user.  @a locale_prefs
+   are inspected in order for a matching resource bundle.  Not
+   invoking this API, or invoking it with a @c NULL locale, or finding
+   no match against the preferences will result in the global locale
+   being used instead. */
 void
-svn_intl_set_locale_prefs (void *context, char **locale_prefs);
+svn_intl_set_locale_prefs (char **locale_prefs, apr_pool_t *pool);
 
 /* Retrieve the text identified by @a msgid for the text bundle
    corresponding to @a domain and @a locale. */

@@ -138,6 +138,8 @@ extern "C" {
                                            + (19 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_AUTHZ_CATEGORY_START    (APR_OS_START_USERERR \
                                            + (20 * SVN_ERR_CATEGORY_SIZE))
+#define SVN_ERR_NLS_CATEGORY_START      (APR_OS_START_USERERR \
+                                           + (21 * SVN_ERR_CATEGORY_SIZE))
 
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
@@ -792,6 +794,11 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_AUTHZ_UNWRITABLE,
               SVN_ERR_AUTHZ_CATEGORY_START + 4,
               "Item is not writable")
+
+  /* @since New in 1.3 */
+  SVN_ERRDEF (SVN_ERR_NLS_UNRECOGNIZED_LOCALE,
+              SVN_ERR_NLS_CATEGORY_START + 0,
+              "Locale is not recognized")
 
   /* svndiff errors */
 

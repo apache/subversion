@@ -180,12 +180,15 @@ svn_error_t * svn_dav__negotiate_lang_prefs(request_rec *r)
     return SVN_NO_ERROR;
 
   qsort(a->elts, (size_t) a->nelts, sizeof(accept_rec), sort_lang_pref);
-  lang_prefs = apr_pcalloc(r->pool, (a->nelts + 1) * sizeof(*lang_prefs));
-  for (i = 0; i < a->nelts; i++)
+  if (a->nelts > 0)
     {
-      lang_prefs[i] = ((accept_rec **) (a->elts))[i]->name;
+      lang_prefs = apr_pcalloc(r->pool, (a->nelts + 1) * sizeof(*lang_prefs));
+      for (i = 0; i < a->nelts; i++)
+        {
+          lang_prefs[i] = ((accept_rec **) (a->elts))[i]->name;
+        }
     }
-  svn_intl_set_locale_prefs(r->pool, lang_prefs);
+  svn_intl_set_locale_prefs(lang_prefs, r->pool);
 
   return SVN_NO_ERROR;
 }
