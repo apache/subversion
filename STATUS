@@ -9,12 +9,7 @@ Status of 1.2.3:
 
 Candidate changes:
 
-  * r15734
-    Fix crash when calling svn_client_lock/_unlock with no targets.
-    Justification:
-      Trivial fix for corner case.
-    Votes:
-      +1: lundblad, kfogel
+   None.
 
 Approved changes (further review is welcome, but not required):
 
@@ -66,3 +61,10 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: pmayweg
       +0: lundblad, dlr
+
+  * r15734
+    Fix crash when calling svn_client_lock/_unlock with no targets.
+    Justification:
+      Trivial fix for corner case.
+    Votes:
+      +1: lundblad, kfogel, dlr
