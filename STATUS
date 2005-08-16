@@ -32,9 +32,11 @@ Candidate changes:
       following threads:
         http://svn.haxx.se/dev/archive-2005-08/0530.shtml
         http://svn.haxx.se/dev/archive-2005-08/0553.shtml
+      Also makes commit_tests 38 fail because of a crash.
     Votes:
       +1: cmpilato, brane
       -0: djames
+      -1: lundblad
 
 Approved changes (further review is welcome, but not required):
 
