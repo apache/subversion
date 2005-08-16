@@ -14,7 +14,7 @@ Candidate changes:
     Justification:
       It's a crash, right.
     Votes:
-      +1: brane, philip, lundblad
+      +1: brane, philip, lundblad, kfogel
 
   * r15705, r15742
     Fix a latent bug in FSFS's directory cache which caused fs-test 13
@@ -30,7 +30,7 @@ Candidate changes:
       bindings test suite. r15742 fixes this problem.
     Votes:
       +1 (not r15742): brane
-      +1: lundblad, cmpilato
+      +1: lundblad, cmpilato, kfogel
       +0: djames
 
   * r15734
@@ -38,7 +38,7 @@ Candidate changes:
     Justification:
       Trivial fix for corner case.
     Votes:
-      +1: lundblad
+      +1: lundblad, kfogel
 
   * r15737
     Fix crash in javahl with revision with no dates.
