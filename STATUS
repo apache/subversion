@@ -29,8 +29,8 @@ Candidate changes:
     * By itself, r15705 causes crashes in commit_tests 38 and the Ruby
       bindings test suite. r15742 fixes this problem.
     Votes:
-      +1 (not r15742): cmpilato, brane
-      +1: lundblad
+      +1 (not r15742): brane
+      +1: lundblad, cmpilato
       +0: djames
 
   * r15734
