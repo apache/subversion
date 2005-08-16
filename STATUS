@@ -16,7 +16,7 @@ Candidate changes:
     Votes:
       +1: brane, philip
 
-  * r15705
+  * r15705, r15742
     Fix a latent bug in FSFS's directory cache which caused fs-test 13
     to fail.
     Justification:
@@ -27,16 +27,17 @@ Candidate changes:
       have to be done hackily (perhaps by changing hardcoded "bdb" in 
       libsvn_fs_base/fs-test.c's delete () test to be "fsfs").
     Problems:
-      This change causes segfaults in the Ruby bindings. Kouhei Sutou
+      r15705 causes segfaults in the Ruby bindings. Kouhei Sutou
       has posted a fix, but this has not yet been integrated. See the
       following threads:
         http://svn.haxx.se/dev/archive-2005-08/0530.shtml
         http://svn.haxx.se/dev/archive-2005-08/0553.shtml
       Also makes commit_tests 38 fail because of a crash.
+      These were fixed in r15742.
     Votes:
-      +1: cmpilato, brane
+      +1 (not r15742): cmpilato, brane
       -0: djames
-      -1: lundblad
+      +1: lundblad
 
   * r15734
     Fix crash when calling svn_client_lock/_unlock with no targets.
