@@ -1149,12 +1149,21 @@ svn_swig_rb_notify_func2(void *baton,
   
   if (!NIL_P(proc)) {
     VALUE args;
+    apr_pool_t *notify_pool;
+    VALUE rb_notify_pool;
+    svn_wc_notify_t *copied_notify;
+    VALUE rb_copied_notify;
 
+    svn_swig_rb_get_pool(0, NULL, 0, &rb_notify_pool, &notify_pool);
+    copied_notify = svn_wc_dup_notify(notify, notify_pool);
+    rb_copied_notify = c2r_swig_type((void *)copied_notify,
+                                     (void *)"svn_wc_notify_t *");
+    rb_set_pool(rb_copied_notify, rb_notify_pool);
+    
     args = rb_ary_new3(3,
                        proc,
                        rb_id_call(),
-                       c2r_swig_type((void *)notify,
-                                     (void *)"svn_wc_notify_t *"));
+                       rb_copied_notify);
     callback(args);
   }
 }

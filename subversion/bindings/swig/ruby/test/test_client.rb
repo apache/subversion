@@ -163,29 +163,29 @@ class SvnClientTest < Test::Unit::TestCase
 
     ctx = make_context(log)
 
-    notify_info = []
+    infos = []
     ctx.set_notify_func do |notify|
-      notify_info << [notify.path, notify.action]
+      infos << [notify.path, notify]
     end
     
     dirs_path.each do |path|
       assert(!File.exist?(path))
     end
     ctx.mkdir(dirs_path)
-    assert_equal(dirs_path.collect do |d|
-                   [d, Svn::Wc::NOTIFY_STATE_INAPPLICABLE]
-                 end,
-                 notify_info)
+    assert_equal(dirs_path.sort,
+                 infos.collect{|path, notify| path}.sort)
+    assert_equal(dirs_path.collect{true},
+                 infos.collect{|path, notify| notify.add?})
     dirs_path.each do |path|
       assert(File.exist?(path))
     end
 
-    notify_info.clear
+    infos.clear
     ctx.commit(@wc_path)
-    assert_equal(dirs_path.collect do |d|
-                   [d, Svn::Wc::NOTIFY_COMMIT_ADDED]
-                 end,
-                 notify_info)
+    assert_equal(dirs_path.sort,
+                 infos.collect{|path, notify| path}.sort)
+    assert_equal(dirs_path.collect{true},
+                 infos.collect{|path, notify| notify.commit_added?})
   end
 
   def test_mkdir_multiple2
@@ -198,29 +198,29 @@ class SvnClientTest < Test::Unit::TestCase
 
     ctx = make_context(log)
 
-    notify_info = []
+    infos = []
     ctx.set_notify_func do |notify|
-      notify_info << [notify.path, notify.action]
+      infos << [notify.path, notify]
     end
     
     dirs_path.each do |path|
       assert(!File.exist?(path))
     end
     ctx.mkdir(*dirs_path)
-    assert_equal(dirs_path.collect do |d|
-                   [d, Svn::Wc::NOTIFY_STATE_INAPPLICABLE]
-                 end,
-                 notify_info)
+    assert_equal(dirs_path.sort,
+                 infos.collect{|path, notify| path}.sort)
+    assert_equal(dirs_path.collect{true},
+                 infos.collect{|path, notify| notify.add?})
     dirs_path.each do |path|
       assert(File.exist?(path))
     end
 
-    notify_info.clear
+    infos.clear
     ctx.commit(@wc_path)
-    assert_equal(dirs_path.collect do |d|
-                   [d, Svn::Wc::NOTIFY_COMMIT_ADDED]
-                 end,
-                 notify_info)
+    assert_equal(dirs_path.sort,
+                 infos.collect{|path, notify| path}.sort)
+    assert_equal(dirs_path.collect{true},
+                 infos.collect{|path, notify| notify.commit_added?})
   end
 
   def test_delete
@@ -876,6 +876,36 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal(rev2 + 1, info.revision)
   end
 
+  def test_copy
+    log = "sample log"
+    src = "source\n"
+    file1 = "sample1.txt"
+    file2 = "sample2.txt"
+    path1 = File.join(@wc_path, file1)
+    path2 = File.join(@wc_path, file2)
+
+    ctx = make_context(log)
+    File.open(path1, "w") {|f| f.print(src)}
+    ctx.add(path1)
+
+    ctx.ci(@wc_path)
+
+    ctx.cp(path1, path2)
+
+    infos = []
+    ctx.set_notify_func do |notify|
+      infos << [notify.path, notify]
+    end
+    ctx.ci(@wc_path)
+
+    assert_equal([path2].sort,
+                 infos.collect{|path, notify| path}.sort)
+    path2_notify = infos.assoc(path2)[1]
+    assert(path2_notify.commit_added?)
+    assert_equal(File.open(path1) {|f| f.read},
+                 File.open(path2) {|f| f.read})
+  end
+  
   def test_cat
     log = "sample log"
     src1 = "source1\n"
