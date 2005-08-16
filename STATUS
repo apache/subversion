@@ -45,6 +45,13 @@ Candidate changes:
     Votes:
       +1: lundblad
 
+  * r15737
+    Fix crash in javahl with revision with no dates.
+    Justification:
+      Trival fix in javahl only.
+    Votes:
+      +1: pmayweg
+
 Approved changes (further review is welcome, but not required):
 
   * r15683
