@@ -2000,9 +2000,6 @@ svn_error_t *SVNClient::messageReceiver (void *baton, apr_hash_t *changed_paths,
     svn_error_t * error = NULL;
     std::vector<jobject> *logs = (std::vector<jobject>*)baton;
 
-    apr_time_t timeTemp;
-    svn_time_from_cstring (&timeTemp, date, pool);
-
     static jmethodID mid = 0;
     JNIEnv *env = JNIUtil::getEnv();
     jclass clazz = env->FindClass(JAVA_PACKAGE"/LogMessage");
@@ -2045,10 +2042,17 @@ svn_error_t *SVNClient::messageReceiver (void *baton, apr_hash_t *changed_paths,
         return SVN_NO_ERROR;
     }
 
-    jobject jdate = JNIUtil::createDate(timeTemp);
-    if(JNIUtil::isJavaExceptionThrown())
+    jobject jdate = NULL;
+    if(date != NULL && *date != '\0')
     {
-        return SVN_NO_ERROR;
+        apr_time_t timeTemp;
+        svn_time_from_cstring (&timeTemp, date, pool);
+
+        jdate = JNIUtil::createDate(timeTemp);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return SVN_NO_ERROR;
+        }
     }
 
     jstring jauthor = JNIUtil::makeJString(author);
