@@ -448,24 +448,24 @@ int Prompter::askTrust(const char *question, bool maySave)
             {
                 return -1;
             }
-            jstring jquestion = JNIUtil::makeJString(question);
-            if(JNIUtil::isJavaExceptionThrown())
-            {
-                return -1;
-            }
-            jint ret = env->CallIntMethod(m_prompter, mid, jquestion, 
-                                          maySave ? JNI_TRUE : JNI_FALSE);
-            if(JNIUtil::isJavaExceptionThrown())
-            {
-                return -1;
-            }
-            env->DeleteLocalRef(jquestion);
-            if(JNIUtil::isJavaExceptionThrown())
-            {
-                return -1;
-            }
-            return ret;
         }
+        jstring jquestion = JNIUtil::makeJString(question);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return -1;
+        }
+        jint ret = env->CallIntMethod(m_prompter, mid, jquestion, 
+                                      maySave ? JNI_TRUE : JNI_FALSE);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return -1;
+        }
+        env->DeleteLocalRef(jquestion);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return -1;
+        }
+        return ret;
     }
     else
     {
