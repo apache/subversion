@@ -14,9 +14,4 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r15734
-    Fix crash when calling svn_client_lock/_unlock with no targets.
-    Justification:
-      Trivial fix for corner case.
-    Votes:
-      +1: lundblad, kfogel, dlr
+   None.
