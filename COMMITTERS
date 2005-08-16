@@ -16,7 +16,7 @@ Blanket commit access:
          brane   Branko Čibej <brane@xbc.nu>
            joe   Joe Orton <joe@light.plus.com>
        ghudson   Greg Hudson <ghudson@mit.edu>
-          fitz   Brian W. Fitzpatrick <fitz@collab.net>
+          fitz   Brian W. Fitzpatrick <fitz@red-bean.com>
         daniel   Daniel Stenberg <daniel@haxx.se>
       cmpilato   C. Michael Pilato <cmpilato@collab.net>
          kevin   Kevin Pilch-Bisson <kevin@pilchie.homeip.net>
@@ -79,6 +79,7 @@ Commit access for specific areas:
    archiecobbs   Archie Cobbs <archie@awarix.com>            (svnmerge)
         offby1   Eric Hanchrow <offby1@blarg.net>            (doc)
        nomis80   Simon Perreault <nomis80@nomis80.org>       (svn-clean)
+      jlvarner   Joshua Varner <jlvarner@gmail.com>          (doc)
 
   Translation:
 

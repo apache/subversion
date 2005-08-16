@@ -44,7 +44,8 @@
     svn_ra_plugin_t **,
     svn_ra_session_t **,
     const svn_ra_reporter2_t **reporter,
-    void **report_baton
+    void **report_baton,
+    svn_dirent_t **dirent
 };
 
 %apply apr_hash_t **PROPHASH { apr_hash_t **props };

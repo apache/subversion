@@ -15,6 +15,15 @@ class SvnClientTest < Test::Unit::TestCase
     teardown_basic
   end
 
+  def test_create_commit_info
+    info = Svn::Client::CommitInfo2.new
+    now = Time.now.gmtime
+    date_str = now.strftime("%Y-%m-%dT%H:%M:%S")
+    date_str << ".#{now.usec}Z"
+    info.date = date_str
+    assert_equal(now, info.date)
+  end
+  
   def test_version
     assert_equal(Svn::Core.subr_version, Svn::Client.version)
   end
@@ -154,29 +163,29 @@ class SvnClientTest < Test::Unit::TestCase
 
     ctx = make_context(log)
 
-    notify_info = []
+    infos = []
     ctx.set_notify_func do |notify|
-      notify_info << [notify.path, notify.action]
+      infos << [notify.path, notify]
     end
     
     dirs_path.each do |path|
       assert(!File.exist?(path))
     end
     ctx.mkdir(dirs_path)
-    assert_equal(dirs_path.collect do |d|
-                   [d, Svn::Wc::NOTIFY_STATE_INAPPLICABLE]
-                 end,
-                 notify_info)
+    assert_equal(dirs_path.sort,
+                 infos.collect{|path, notify| path}.sort)
+    assert_equal(dirs_path.collect{true},
+                 infos.collect{|path, notify| notify.add?})
     dirs_path.each do |path|
       assert(File.exist?(path))
     end
 
-    notify_info.clear
+    infos.clear
     ctx.commit(@wc_path)
-    assert_equal(dirs_path.collect do |d|
-                   [d, Svn::Wc::NOTIFY_COMMIT_ADDED]
-                 end,
-                 notify_info)
+    assert_equal(dirs_path.sort,
+                 infos.collect{|path, notify| path}.sort)
+    assert_equal(dirs_path.collect{true},
+                 infos.collect{|path, notify| notify.commit_added?})
   end
 
   def test_mkdir_multiple2
@@ -189,29 +198,29 @@ class SvnClientTest < Test::Unit::TestCase
 
     ctx = make_context(log)
 
-    notify_info = []
+    infos = []
     ctx.set_notify_func do |notify|
-      notify_info << [notify.path, notify.action]
+      infos << [notify.path, notify]
     end
     
     dirs_path.each do |path|
       assert(!File.exist?(path))
     end
     ctx.mkdir(*dirs_path)
-    assert_equal(dirs_path.collect do |d|
-                   [d, Svn::Wc::NOTIFY_STATE_INAPPLICABLE]
-                 end,
-                 notify_info)
+    assert_equal(dirs_path.sort,
+                 infos.collect{|path, notify| path}.sort)
+    assert_equal(dirs_path.collect{true},
+                 infos.collect{|path, notify| notify.add?})
     dirs_path.each do |path|
       assert(File.exist?(path))
     end
 
-    notify_info.clear
+    infos.clear
     ctx.commit(@wc_path)
-    assert_equal(dirs_path.collect do |d|
-                   [d, Svn::Wc::NOTIFY_COMMIT_ADDED]
-                 end,
-                 notify_info)
+    assert_equal(dirs_path.sort,
+                 infos.collect{|path, notify| path}.sort)
+    assert_equal(dirs_path.collect{true},
+                 infos.collect{|path, notify| notify.commit_added?})
   end
 
   def test_delete
@@ -340,24 +349,84 @@ class SvnClientTest < Test::Unit::TestCase
 
   def test_status
     log = "sample log"
+    file1 = "sample1.txt"
+    file2 = "sample2.txt"
     dir = "dir"
     dir_path = File.join(@wc_path, dir)
+    path1 = File.join(@wc_path, file1)
+    path2 = File.join(dir_path, file2)
     
     ctx = make_context(log)
+    File.open(path1, "w") {}
+    ctx.add(path1)
+    rev1 = ctx.commit(@wc_path).revision
 
+    
     ctx.mkdir(dir_path)
+    File.open(path2, "w") {}
+    
     infos = []
     rev = ctx.status(@wc_path) do |path, status|
       infos << [path, status]
     end
 
-    assert_equal(0, rev)
-    assert_equal(1, infos.size)
-    result_path, status = infos.first
-    assert_equal(result_path, dir_path)
-    assert(status.text_added?)
-    assert(status.entry.dir?)
-    assert(status.entry.add?)
+    assert_equal(youngest_rev, rev)
+    assert_equal([dir_path, path2].sort,
+                 infos.collect{|path, status| path}.sort)
+    dir_status = infos.assoc(dir_path).last
+    assert(dir_status.text_added?)
+    assert(dir_status.entry.dir?)
+    assert(dir_status.entry.add?)
+    path2_status = infos.assoc(path2).last
+    assert(!path2_status.text_added?)
+    assert_nil(path2_status.entry)
+
+
+    infos = []
+    rev = ctx.status(@wc_path, rev1, true, true) do |path, status|
+      infos << [path, status]
+    end
+    
+    assert_equal(rev1, rev)
+    assert_equal([@wc_path, dir_path, path1, path2].sort,
+                 infos.collect{|path, status| path}.sort)
+    wc_status = infos.assoc(@wc_path).last
+    assert(wc_status.text_normal?)
+    assert(wc_status.entry.dir?)
+    assert(wc_status.entry.normal?)
+    dir_status = infos.assoc(dir_path).last
+    assert(dir_status.text_added?)
+    assert(dir_status.entry.dir?)
+    assert(dir_status.entry.add?)
+    path1_status = infos.assoc(path1).last
+    assert(path1_status.text_normal?)
+    assert(path1_status.entry.file?)
+    assert(path1_status.entry.normal?)
+    path2_status = infos.assoc(path2).last
+    assert(!path2_status.text_added?)
+    assert_nil(path2_status.entry)
+
+
+    ctx.prop_set(Svn::Core::PROP_IGNORE, file2, dir_path)
+
+    infos = []
+    rev = ctx.status(@wc_path, nil, true, true, true, false) do |path, status|
+      infos << [path, status]
+    end
+    
+    assert_equal(rev1, rev)
+    assert_equal([@wc_path, dir_path, path1].sort,
+                 infos.collect{|path, status| path}.sort)
+
+
+    infos = []
+    rev = ctx.status(@wc_path, nil, true, true, true, true) do |path, status|
+      infos << [path, status]
+    end
+    
+    assert_equal(rev1, rev)
+    assert_equal([@wc_path, dir_path, path1, path2].sort,
+                 infos.collect{|path, status| path}.sort)
   end
 
   def test_checkout
@@ -765,6 +834,152 @@ class SvnClientTest < Test::Unit::TestCase
       ctx.cat(path)
     end
   end
+
+  def test_resolved
+    log = "sample log"
+    file = "sample.txt"
+    dir = "dir"
+    src1 = "before\n"
+    src2 = "after\n"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+
+    ctx = make_context(log)
+    ctx.mkdir(dir_path)
+    File.open(path, "w") {}
+    ctx.add(path)
+    rev1 = ctx.ci(@wc_path).revision
+
+    File.open(path, "w") {|f| f.print(src1)}
+    rev2 = ctx.ci(@wc_path).revision
+
+    ctx.up(@wc_path, rev1)
+
+    File.open(path, "w") {|f| f.print(src2)}
+    ctx.up(@wc_path)
+
+    assert_raises(Svn::Error::WC_FOUND_CONFLICT) do
+      ctx.ci(@wc_path)
+    end
+
+    ctx.resolved(dir_path, false)
+    assert_raises(Svn::Error::WC_FOUND_CONFLICT) do
+      ctx.ci(@wc_path)
+    end
+
+    ctx.resolved(dir_path)
+    info = nil
+    assert_nothing_raised do
+      info = ctx.ci(@wc_path)
+    end
+    assert_not_nil(info)
+    assert_equal(rev2 + 1, info.revision)
+  end
+
+  def test_copy
+    log = "sample log"
+    src = "source\n"
+    file1 = "sample1.txt"
+    file2 = "sample2.txt"
+    path1 = File.join(@wc_path, file1)
+    path2 = File.join(@wc_path, file2)
+
+    ctx = make_context(log)
+    File.open(path1, "w") {|f| f.print(src)}
+    ctx.add(path1)
+
+    ctx.ci(@wc_path)
+
+    ctx.cp(path1, path2)
+
+    infos = []
+    ctx.set_notify_func do |notify|
+      infos << [notify.path, notify]
+    end
+    ctx.ci(@wc_path)
+
+    assert_equal([path2].sort,
+                 infos.collect{|path, notify| path}.sort)
+    path2_notify = infos.assoc(path2)[1]
+    assert(path2_notify.commit_added?)
+    assert_equal(File.open(path1) {|f| f.read},
+                 File.open(path2) {|f| f.read})
+  end
+  
+  def test_move
+    log = "sample log"
+    src = "source\n"
+    file1 = "sample1.txt"
+    file2 = "sample2.txt"
+    path1 = File.join(@wc_path, file1)
+    path2 = File.join(@wc_path, file2)
+
+    ctx = make_context(log)
+    File.open(path1, "w") {|f| f.print(src)}
+    ctx.add(path1)
+
+    ctx.ci(@wc_path)
+
+    ctx.mv(path1, path2)
+
+    infos = []
+    ctx.set_notify_func do |notify|
+      infos << [notify.path, notify]
+    end
+    ctx.ci(@wc_path)
+
+    assert_equal([path1, path2].sort,
+                 infos.collect{|path, notify| path}.sort)
+    path1_notify = infos.assoc(path1)[1]
+    assert(path1_notify.commit_deleted?)
+    path2_notify = infos.assoc(path2)[1]
+    assert(path2_notify.commit_added?)
+    assert_equal(src, File.open(path2) {|f| f.read})
+  end
+  
+  def test_move_force
+    log = "sample log"
+    src1 = "source1\n"
+    src2 = "source2\n"
+    file1 = "sample1.txt"
+    file2 = "sample2.txt"
+    path1 = File.join(@wc_path, file1)
+    path2 = File.join(@wc_path, file2)
+    full_path2 = File.join(@full_wc_path, file2)
+
+    ctx = make_context(log)
+    File.open(path1, "w") {|f| f.print(src1)}
+    ctx.add(path1)
+
+    ctx.ci(@wc_path)
+
+    File.open(path1, "w") {|f| f.print(src2)}
+
+    assert_raises(Svn::Error::CLIENT_MODIFIED) do
+      ctx.mv(path1, path2)
+    end
+    ctx.cleanup(@wc_path)
+
+    assert_nothing_raised do
+      ctx.mv_f(path1, path2)
+    end
+
+    infos = []
+    ctx.set_notify_func do |notify|
+      infos << [notify.path, notify]
+    end
+    ctx.ci(@wc_path)
+
+    assert_equal([path1, path2, full_path2].sort,
+                 infos.collect{|path, notify| path}.sort)
+    path1_notify = infos.assoc(path1)[1]
+    assert(path1_notify.commit_deleted?)
+    path2_notify = infos.assoc(path2)[1]
+    assert(path2_notify.commit_added?)
+    assert_equal(src2, File.open(path2) {|f| f.read})
+    full_path2_notify = infos.assoc(full_path2)[1]
+    assert(full_path2_notify.commit_postfix_txdelta?)
+  end
   
   def test_cat
     log = "sample log"
@@ -1074,9 +1289,6 @@ class SvnClientTest < Test::Unit::TestCase
   def test_not_new
     assert_raise(NoMethodError) do
       Svn::Client::CommitItem.new
-    end
-    assert_raise(NoMethodError) do
-      Svn::Client::CommitInfo.new
     end
   end
 end

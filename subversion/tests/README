@@ -126,10 +126,6 @@ suite.
 This same rule applies to Subversion development: ** If you fix a
 bug, write a test for it. **
 
-(However, we should note that this rule is somewhat relaxed until
-Subversion hits 1.0.  A majority of pre-1.0 bugs are due to the code
-being in the "initial growth" stage.)
-
 
 What not to test
 ----------------

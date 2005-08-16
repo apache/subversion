@@ -43,7 +43,7 @@ svn_cl__import (apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *path;
   const char *url;
-  svn_client_commit_info_t *commit_info = NULL;
+  svn_client_commit_info2_t *commit_info = NULL;
 
   /* Import takes two arguments, for example
    *
