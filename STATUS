@@ -14,15 +14,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r15683
-    Include missing header in core.i.
-    Justification:
-      Bindings only. Silences compiler warnings when generating Python
-      bindings on Windows.
-    Votes:
-      +1: brane
-      +0: djames
-
   * r15737
     Fix crash in javahl with revision with no dates.
     Justification:
