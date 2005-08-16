@@ -159,6 +159,8 @@ store_locks_callback (void *baton,
  *
  * If *COMMON_PARENT is a URL, then the values are a pointer to
  * SVN_INVALID_REVNUM (allocated in pool) if DO_LOCK, else "".
+ *
+ * TARGETS may not be empty.
  */
 static svn_error_t *
 organize_lock_targets (const char **common_parent,
