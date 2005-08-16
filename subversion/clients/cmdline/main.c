@@ -1102,6 +1102,7 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
+        break;
       case svn_cl__no_unlock_opt:
         opt_state.no_unlock = TRUE;
         break;
