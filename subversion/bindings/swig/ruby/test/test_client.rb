@@ -906,6 +906,81 @@ class SvnClientTest < Test::Unit::TestCase
                  File.open(path2) {|f| f.read})
   end
   
+  def test_move
+    log = "sample log"
+    src = "source\n"
+    file1 = "sample1.txt"
+    file2 = "sample2.txt"
+    path1 = File.join(@wc_path, file1)
+    path2 = File.join(@wc_path, file2)
+
+    ctx = make_context(log)
+    File.open(path1, "w") {|f| f.print(src)}
+    ctx.add(path1)
+
+    ctx.ci(@wc_path)
+
+    ctx.mv(path1, path2)
+
+    infos = []
+    ctx.set_notify_func do |notify|
+      infos << [notify.path, notify]
+    end
+    ctx.ci(@wc_path)
+
+    assert_equal([path1, path2].sort,
+                 infos.collect{|path, notify| path}.sort)
+    path1_notify = infos.assoc(path1)[1]
+    assert(path1_notify.commit_deleted?)
+    path2_notify = infos.assoc(path2)[1]
+    assert(path2_notify.commit_added?)
+    assert_equal(src, File.open(path2) {|f| f.read})
+  end
+  
+  def test_move_force
+    log = "sample log"
+    src1 = "source1\n"
+    src2 = "source2\n"
+    file1 = "sample1.txt"
+    file2 = "sample2.txt"
+    path1 = File.join(@wc_path, file1)
+    path2 = File.join(@wc_path, file2)
+    full_path2 = File.join(@full_wc_path, file2)
+
+    ctx = make_context(log)
+    File.open(path1, "w") {|f| f.print(src1)}
+    ctx.add(path1)
+
+    ctx.ci(@wc_path)
+
+    File.open(path1, "w") {|f| f.print(src2)}
+
+    assert_raises(Svn::Error::CLIENT_MODIFIED) do
+      ctx.mv(path1, path2)
+    end
+    ctx.cleanup(@wc_path)
+
+    assert_nothing_raised do
+      ctx.mv_f(path1, path2)
+    end
+
+    infos = []
+    ctx.set_notify_func do |notify|
+      infos << [notify.path, notify]
+    end
+    ctx.ci(@wc_path)
+
+    assert_equal([path1, path2, full_path2].sort,
+                 infos.collect{|path, notify| path}.sort)
+    path1_notify = infos.assoc(path1)[1]
+    assert(path1_notify.commit_deleted?)
+    path2_notify = infos.assoc(path2)[1]
+    assert(path2_notify.commit_added?)
+    assert_equal(src2, File.open(path2) {|f| f.read})
+    full_path2_notify = infos.assoc(full_path2)[1]
+    assert(full_path2_notify.commit_postfix_txdelta?)
+  end
+  
   def test_cat
     log = "sample log"
     src1 = "source1\n"
