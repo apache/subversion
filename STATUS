@@ -23,13 +23,6 @@ Approved changes (further review is welcome, but not required):
       +1: brane
       +0: djames
 
-  * r15703
-    Fix client crash with "svn lock" against the tigris.org SVN server.
-    Justification:
-      It's a crash, right.
-    Votes:
-      +1: brane, philip, lundblad, kfogel
-
   * r15705, r15742
     Fix a latent bug in FSFS's directory cache which caused fs-test 13
     to fail.
