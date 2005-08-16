@@ -72,6 +72,14 @@ module Svn
         action == NOTIFY_COMMIT_ADDED
       end
 
+      def commit_deleted?
+        action == NOTIFY_COMMIT_DELETED
+      end
+
+      def commit_postfix_txdelta?
+        action == NOTIFY_COMMIT_POSTFIX_TXDELTA
+      end
+
       def add?
         action == NOTIFY_ADD
       end

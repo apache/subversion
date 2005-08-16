@@ -151,10 +151,14 @@ module Svn
       end
       alias cp copy
       
-      def move(src_path, dst_path, rev=nil, force=false)
-        Client.move(src_path, rev || "HEAD", dst_path, force, self)
+      def move(src_path, dst_path, force=false)
+        Client.move3(src_path, dst_path, force, self)
       end
       alias mv move
+
+      def mv_f(src_path, dst_path)
+        move(src_path, dst_path, true)
+      end
 
       def diff(options, path1, rev1, path2, rev2,
                out_file, err_file, recurse=true,
