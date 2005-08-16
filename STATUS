@@ -10,7 +10,13 @@ Status of 1.2.3:
 
 Candidate changes:
 
-   None.
+  * r14980:
+    Upgrade Ruby bindings to support SWIG 1.3.25.
+    Justification:
+      Trivial fix in Ruby bindings only.
+      Only affects SWIG 1.3.25 users.
+    Votes:
+      +1: djames
 
 Approved changes (further review is welcome, but not required):
 
