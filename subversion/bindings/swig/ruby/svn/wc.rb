@@ -66,6 +66,16 @@ module Svn
         text_status == STATUS_NORMAL
       end
     end
+
+    class Notify
+      def commit_added?
+        action == NOTIFY_COMMIT_ADDED
+      end
+
+      def add?
+        action == NOTIFY_ADD
+      end
+    end
     
   end
 end
