@@ -39,6 +39,7 @@
 
 %apply SWIGTYPE **OUTPARAM {
   svn_client_commit_info_t **,
+  svn_client_commit_info2_t **,
   svn_auth_provider_object_t **,
   svn_client_ctx_t **
 };
@@ -142,16 +143,6 @@
 %typemap(ruby, in) svn_cancel_func_t cancel_func
 {
   $1 = svn_swig_rb_cancel_func;
-}
-
-/* -----------------------------------------------------------------------
-   Callback: svn_wc_notify_func_t
-   svn_client_ctx_t
-*/
-
-%typemap(ruby, in) svn_wc_notify_func_t notify_func
-{
-  $1 = svn_swig_rb_notify_func;
 }
 
 /* -----------------------------------------------------------------------
@@ -321,7 +312,6 @@
 #ifdef SWIGRUBY
 %apply void *CALLBACK_BATON
 {
-  void *notify_baton,
   void *notify_baton2,
   void *log_msg_baton,
   void *cancel_baton

@@ -1744,11 +1744,9 @@ svn_fs_fs__rep_contents_dir (apr_hash_t **entries_p,
   SVN_ERR (get_dir_contents (entries, fs, noderev, pool));
 
   /* Prepare to cache this directory. */
-  if (ffd->dir_cache_id)
-    {
-      svn_pool_clear (ffd->dir_cache_pool);
-      ffd->dir_cache_id = NULL;
-    }
+  ffd->dir_cache_id = NULL;
+  if (ffd->dir_cache_pool)
+    svn_pool_clear (ffd->dir_cache_pool);
   else
     ffd->dir_cache_pool = svn_pool_create (fs->pool);
   ffd->dir_cache = apr_hash_make (ffd->dir_cache_pool);
@@ -2701,6 +2699,27 @@ svn_fs_fs__purge_txn (svn_fs_t *fs,
   /* Remove the directory associated with this transaction. */
   return svn_io_remove_dir (path_txn_dir (fs, txn_id, pool), pool);
 }
+
+
+svn_error_t *
+svn_fs_fs__abort_txn (svn_fs_txn_t *txn,
+                      apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd; 
+
+  SVN_ERR (svn_fs_fs__check_fs (txn->fs));
+
+  /* Clean out the directory cache. */
+  ffd = txn->fs->fsap_data;
+  ffd->dir_cache_id = NULL;
+
+  /* Now, purge the transaction. */
+  SVN_ERR_W (svn_fs_fs__purge_txn (txn->fs, txn->id, pool),
+             _("Transaction cleanup failed"));
+
+  return SVN_NO_ERROR;
+}
+
 
 static const char *
 unparse_dir_entry (svn_node_kind_t kind, const svn_fs_id_t *id,

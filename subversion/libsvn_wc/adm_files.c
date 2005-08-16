@@ -300,32 +300,16 @@ prop_path_internal (const char **prop_path,
     }
   else  /* It's either a file, or a non-wc dir (i.e., maybe an ex-file) */
     {
-      int wc_format = svn_wc__adm_wc_format (adm_access);
       svn_path_split (path, prop_path, &entry_name, pool);
-      if (wc_format <= SVN_WC__OLD_PROPNAMES_VERSION)
-        {
-          *prop_path = extend_with_adm_name
-            (*prop_path,
-             base ? SVN_WC__BASE_EXT : NULL,
-             tmp,
-             pool,
-             base ? SVN_WC__ADM_PROP_BASE
-             : (wcprop ? SVN_WC__ADM_WCPROPS : SVN_WC__ADM_PROPS),
-             entry_name,
-             NULL);
-        }
-      else
-        {
-          *prop_path = extend_with_adm_name
-            (*prop_path,
-             base ? SVN_WC__BASE_EXT : SVN_WC__WORK_EXT,
-             tmp,
-             pool,
-             base ? SVN_WC__ADM_PROP_BASE
-             : (wcprop ? SVN_WC__ADM_WCPROPS : SVN_WC__ADM_PROPS),
-             entry_name,
-             NULL);
-        }
+      *prop_path = extend_with_adm_name
+        (*prop_path,
+         base ? SVN_WC__BASE_EXT : SVN_WC__WORK_EXT,
+         tmp,
+         pool,
+         base ? SVN_WC__ADM_PROP_BASE
+         : (wcprop ? SVN_WC__ADM_WCPROPS : SVN_WC__ADM_PROPS),
+         entry_name,
+         NULL);
     }
 
   return SVN_NO_ERROR;
@@ -654,8 +638,7 @@ svn_wc__open_props (apr_file_t **handle,
         {
           return open_adm_file
             (handle, parent_dir,
-             ((wc_format_version <= SVN_WC__OLD_PROPNAMES_VERSION) ?
-              NULL : SVN_WC__WORK_EXT), APR_OS_DEFAULT,
+             SVN_WC__WORK_EXT, APR_OS_DEFAULT,
              flags, pool, SVN_WC__ADM_WCPROPS, base_name, NULL);
         }
     }
@@ -668,8 +651,7 @@ svn_wc__open_props (apr_file_t **handle,
         {
           return open_adm_file
             (handle, parent_dir,
-             ((wc_format_version <= SVN_WC__OLD_PROPNAMES_VERSION) ?
-              NULL : SVN_WC__WORK_EXT), APR_OS_DEFAULT,
+             SVN_WC__WORK_EXT, APR_OS_DEFAULT,
              flags, pool, SVN_WC__ADM_PROPS, base_name, NULL);
         }
     }
@@ -687,7 +669,6 @@ svn_wc__close_props (apr_file_t *fp,
 {
   const char *parent_dir, *base_name;
   svn_node_kind_t kind;
-  int wc_format_version;
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
   if (kind == svn_node_dir)
@@ -695,14 +676,9 @@ svn_wc__close_props (apr_file_t *fp,
   else    
     svn_path_split (path, &parent_dir, &base_name, pool);
   
-  /* At this point, we know we need to open a file in the admin area
-     of parent_dir.  First check that parent_dir is a working copy: */
-  SVN_ERR (svn_wc_check_wc (parent_dir, &wc_format_version, pool));
-  if (wc_format_version == 0)
-    return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       _("'%s' is not a working copy"),
-       svn_path_local_style (parent_dir, pool));
+  /* At this point, we know we need to close a file in the admin area
+     of parent_dir.  Since the file must be open already, we know that
+     parent_dir is a working copy. */
 
   /* Then examine the flags to know -which- kind of prop file to get. */
 
@@ -728,8 +704,7 @@ svn_wc__close_props (apr_file_t *fp,
       else
         return close_adm_file
           (fp, parent_dir,
-           ((wc_format_version <= SVN_WC__OLD_PROPNAMES_VERSION) ?
-            NULL : SVN_WC__WORK_EXT),
+           SVN_WC__WORK_EXT,
            sync, pool, SVN_WC__ADM_WCPROPS, base_name, NULL);
     }
   else /* plain old property file */
@@ -740,8 +715,7 @@ svn_wc__close_props (apr_file_t *fp,
       else
         return close_adm_file
           (fp, parent_dir,
-           ((wc_format_version <= SVN_WC__OLD_PROPNAMES_VERSION) ?
-            NULL : SVN_WC__WORK_EXT),
+           SVN_WC__WORK_EXT,
            sync, pool, SVN_WC__ADM_PROPS, base_name, NULL);
     }
 }

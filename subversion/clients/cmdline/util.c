@@ -50,7 +50,7 @@
 
 
 svn_error_t *
-svn_cl__print_commit_info (svn_client_commit_info_t *commit_info,
+svn_cl__print_commit_info (svn_client_commit_info2_t *commit_info,
                            apr_pool_t *pool)
 {
   if ((commit_info) 

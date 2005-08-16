@@ -37,6 +37,7 @@
 
 static svn_error_t *
 print_dirents (apr_hash_t *dirents,
+               apr_hash_t *locks,
                svn_boolean_t verbose,
                svn_client_ctx_t *ctx,
                apr_pool_t *pool)
@@ -51,6 +52,7 @@ print_dirents (apr_hash_t *dirents,
     {
       const char *utf8_entryname;
       svn_dirent_t *dirent;
+      svn_lock_t *lock;
       svn_sort__item_t *item;
 
       svn_pool_clear (subpool);
@@ -63,6 +65,7 @@ print_dirents (apr_hash_t *dirents,
       utf8_entryname = item->key;
 
       dirent = apr_hash_get (dirents, utf8_entryname, item->klen);
+      lock = apr_hash_get (locks, utf8_entryname, item->klen);
 
       if (verbose)
         {
@@ -71,7 +74,7 @@ print_dirents (apr_hash_t *dirents,
           apr_status_t apr_err;
           apr_size_t size;
           char timestr[20];
-          const char *sizestr, *utf8_timestr;
+          const char *sizestr, *utf8_timestr, *lock_owner;
           
           /* svn_time_to_human_cstring gives us something *way* too long
              to use for this, so we have to roll our own.  We include
@@ -98,11 +101,14 @@ print_dirents (apr_hash_t *dirents,
 
           sizestr = apr_psprintf (subpool, "%" SVN_FILESIZE_T_FMT,
                                   dirent->size);
+          if (lock)
+            lock_owner = apr_psprintf (subpool, "*%s", lock->owner);
 
           SVN_ERR (svn_cmdline_printf
-                   (subpool, "%7ld %-8.8s %10s %12s %s%s\n",
+                   (subpool, "%7ld %-8.8s %c %10s %12s %s%s\n",
                     dirent->created_rev,
                     dirent->last_author ? dirent->last_author : " ? ",
+                    lock ? 'O' : ' ',
                     (dirent->kind == svn_node_file) ? sizestr : "",
                     utf8_timestr,
                     utf8_entryname,
@@ -139,6 +145,7 @@ print_header_xml (apr_pool_t *pool)
 
 static svn_error_t *
 print_dirents_xml (apr_hash_t *dirents,
+                   apr_hash_t *locks,
                    const char *path,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
@@ -164,6 +171,7 @@ print_dirents_xml (apr_hash_t *dirents,
       const char *utf8_entryname;
       svn_dirent_t *dirent;
       svn_sort__item_t *item;
+      svn_lock_t *lock;
 
       svn_pool_clear (subpool);
 
@@ -175,6 +183,7 @@ print_dirents_xml (apr_hash_t *dirents,
       utf8_entryname = item->key;
 
       dirent = apr_hash_get (dirents, utf8_entryname, item->klen);
+      lock = apr_hash_get (locks, utf8_entryname, APR_HASH_KEY_STRING);
 
       sb = svn_stringbuf_create ("", subpool);
 
@@ -208,6 +217,49 @@ print_dirents_xml (apr_hash_t *dirents,
       /* "</commit>" */
       svn_xml_make_close_tag (&sb, subpool, "commit");
 
+      /* "<lock>" */
+      if (lock)
+        {
+          svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "lock", NULL);
+
+          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
+                                 "token", NULL);
+          svn_xml_escape_cdata_cstring (&sb, lock->token, pool);
+          svn_xml_make_close_tag (&sb, pool, "token");
+
+          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
+                                 "owner", NULL);
+          svn_xml_escape_cdata_cstring (&sb, lock->owner, pool);
+          svn_xml_make_close_tag (&sb, pool, "owner");
+
+          if (lock->comment)
+            {
+              svn_xml_make_open_tag (&sb, pool, svn_xml_normal,
+                                     "comment", NULL);
+              svn_xml_escape_cdata_cstring (&sb, lock->comment, pool);
+              svn_xml_make_close_tag (&sb, pool, "comment");
+            }
+
+          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
+                                 "created", NULL);
+          svn_xml_escape_cdata_cstring (&sb, svn_time_to_cstring
+                                        (lock->creation_date, pool),
+                                        pool);
+          svn_xml_make_close_tag (&sb, pool, "created");
+
+          if (lock->expiration_date != 0)
+            {
+              svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
+                                     "expires", NULL);
+              svn_xml_escape_cdata_cstring (&sb, svn_time_to_cstring
+                                            (lock->expiration_date, pool),
+                                            pool);
+              svn_xml_make_close_tag (&sb, pool, "expires");
+            }
+
+          /* "<lock>" */
+          svn_xml_make_close_tag (&sb, subpool, "lock");
+        }
       /* "</entry>" */
       svn_xml_make_close_tag (&sb, subpool, "entry");
 
@@ -281,6 +333,7 @@ svn_cl__ls (apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       apr_hash_t *dirents;
+      apr_hash_t *locks;
       const char *target = ((const char **) (targets->elts))[i];
       const char *truepath;
       svn_opt_revision_t peg_revision;
@@ -292,14 +345,15 @@ svn_cl__ls (apr_getopt_t *os,
       /* Get peg revisions. */
       SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, target,
                                    subpool));
-      SVN_ERR (svn_client_ls2 (&dirents, truepath, &peg_revision,
+
+      SVN_ERR (svn_client_ls3 (&dirents, &locks, truepath, &peg_revision,
                                &(opt_state->start_revision),
                                opt_state->recursive, ctx, subpool));
 
       if (opt_state->xml)
-        SVN_ERR (print_dirents_xml (dirents, truepath, ctx, subpool));
+        SVN_ERR (print_dirents_xml (dirents, locks, truepath, ctx, subpool));
       else
-        SVN_ERR (print_dirents (dirents, opt_state->verbose, ctx, subpool));
+        SVN_ERR (print_dirents (dirents, locks, opt_state->verbose, ctx, subpool));
     }
 
   svn_pool_destroy (subpool);

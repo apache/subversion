@@ -17,6 +17,7 @@ import filecmp
 import shutil
 import traceback
 import ConfigParser
+import string
 
 import getopt
 try:
@@ -156,6 +157,20 @@ def locate_libs():
 
   os.environ['APR_ICONV_PATH'] = apriconv_so_path
   os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
+  
+def fix_case(path):
+    path = os.path.normpath(path)
+    parts = string.split(path, os.path.sep)
+    drive = string.upper(parts[0])
+    parts = parts[1:]
+    path = drive + os.path.sep
+    for part in parts:
+        dirs = os.listdir(path)
+        for dir in dirs:
+            if string.lower(dir) == string.lower(part):
+                path = os.path.join(path, dir)
+                break
+    return path
 
 class Svnserve:
   "Run svnserve for ra_svn tests"
@@ -223,6 +238,8 @@ if create_dirs:
   else:
     os.chdir(old_cwd)
 
+# Ensure the tests directory is correctly cased
+abs_builddir = fix_case(abs_builddir)
 
 # Run the tests
 if run_svnserve:

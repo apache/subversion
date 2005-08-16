@@ -17,9 +17,14 @@ module Svn
       end
     end
 
-    class CommitInfo
+    class CommitInfo2
       class << self
         undef new
+        def new
+          info = Client.create_commit_info
+          info.__send__("initialize")
+          info
+        end
       end
 
       alias _date date
@@ -63,12 +68,12 @@ module Svn
 
       def mkdir(*paths)
         paths = paths.first if paths.size == 1 and paths.first.is_a?(Array)
-        Client.mkdir(normalize_path(paths), self)
+        Client.mkdir2(normalize_path(paths), self)
       end
 
       def commit(targets, recurse=true, keep_locks=false)
         targets = [targets] unless targets.is_a?(Array)
-        Client.commit2(targets, recurse, keep_locks, self)
+        Client.commit3(targets, recurse, keep_locks, self)
       end
       alias ci commit
 
@@ -86,7 +91,7 @@ module Svn
 
       def delete(paths, force=false)
         paths = [paths] unless paths.is_a?(Array)
-        Client.delete(paths, force, self)
+        Client.delete2(paths, force, self)
       end
       alias del delete
       alias remove delete
@@ -114,9 +119,17 @@ module Svn
         Client.cleanup(dir, self)
       end
 
+      def relocate(dir, from, to, recurse=true)
+        Client.relocate(dir, from, to, recurse, self)
+      end
+
       def revert(paths, recurse=true)
         paths = [paths] unless paths.is_a?(Array)
         Client.revert(paths, recurse, self)
+      end
+
+      def resolved(path, recurse=true)
+        Client.resolved(path, recurse, self)
       end
       
       def propset(name, value, target, recurse=true, force=false)
@@ -134,14 +147,18 @@ module Svn
       alias pd propdel
       
       def copy(src_path, dst_path, rev=nil)
-        Client.copy(src_path, rev || "HEAD", dst_path, self)
+        Client.copy2(src_path, rev || "HEAD", dst_path, self)
       end
       alias cp copy
       
-      def move(src_path, dst_path, rev=nil, force=false)
-        Client.move(src_path, rev || "HEAD", dst_path, force, self)
+      def move(src_path, dst_path, force=false)
+        Client.move3(src_path, dst_path, force, self)
       end
       alias mv move
+
+      def mv_f(src_path, dst_path)
+        move(src_path, dst_path, true)
+      end
 
       def diff(options, path1, rev1, path2, rev2,
                out_file, err_file, recurse=true,
@@ -331,12 +348,6 @@ module Svn
       end
       
       def set_notify_func(callback=Proc.new)
-        self.notify_func = nil
-        @notify_baton = callback
-        self.notify_baton = callback
-      end
-      
-      def set_notify_func2(callback=Proc.new)
         self.notify_func2 = nil
         @notify_baton2 = callback
         self.notify_baton2 = callback
@@ -352,7 +363,6 @@ module Svn
       def init_callbacks
         set_log_msg_func(nil)
         set_notify_func(nil)
-        set_notify_func2(nil)
         set_cancel_func(nil)
       end
       %w(log_msg notify cancel).each do |type|

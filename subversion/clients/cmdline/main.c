@@ -389,10 +389,11 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "current\n"
        "  working directory.\n"
        "\n"
-       "  With --verbose, the following fields show the status of the item:\n"
+       "  With --verbose, the following fields will be shown for each item:\n"
        "\n"
        "    Revision number of the last commit\n"
        "    Author of the last commit\n"
+       "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
        "    Size (in bytes)\n"
        "    Date and time of the last commit\n"),
     {'r', 'v', 'R', svn_cl__incremental_opt, svn_cl__xml_opt,
@@ -1101,6 +1102,7 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
+        break;
       case svn_cl__no_unlock_opt:
         opt_state.no_unlock = TRUE;
         break;
