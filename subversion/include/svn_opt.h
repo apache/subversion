@@ -251,8 +251,8 @@ int svn_opt_parse_revision (svn_opt_revision_t *start_revision,
  *
  * On each URL target, do some IRI-to-URI encoding and some
  * auto-escaping.  On each local path, canonicalize case and path
- * separators, and silently skip it if it is a Subversion administrative
- * directory.
+ * separators, and silently skip it if it has the same name as a
+ * Subversion working copy administrative directory.
  *
  * Allocate @a *targets_p and its elements in @a pool.
  *
