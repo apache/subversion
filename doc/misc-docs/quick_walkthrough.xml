@@ -27,8 +27,10 @@ svn, version 1.0.4 (r9844)
    compiled May 23 2004, 14:04:22
 
 Copyright (C) 2000-2004 CollabNet.
-Subversion is open source software, see @uref{http://subversion.tigris.org/}
-This product includes software developed by CollabNet (@uref{http://www.Collab.Net/}).
+Subversion is open source software, see <ulink
+url="http://subversion.tigris.org/" />
+This product includes software developed by CollabNet (<ulink
+url="http://www.Collab.Net/" />).
 
 The following repository access (RA) modules are available:
 
