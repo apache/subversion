@@ -144,11 +144,38 @@ rb_svn_pool_holder(void)
 }
 
 VALUE
-svn_swig_rb_svn_error_new(VALUE code, VALUE message)
+svn_swig_rb_svn_error_new(VALUE code, VALUE message, VALUE file, VALUE line)
 {
   return rb_funcall(rb_svn_error(),
                     rb_id_new_corresponding_error(),
-                    2, code, message);
+                    4, code, message, file, line);
+}
+
+void
+svn_swig_rb_handle_svn_error(svn_error_t *error)
+{
+  VALUE error_code = INT2NUM(error->apr_err);
+  VALUE message;
+  VALUE file = Qnil;
+  VALUE line = Qnil;
+
+  if (error->file)
+    file = rb_str_new2(error->file);
+  if (error->line)
+    line = LONG2NUM(error->line);
+  
+  message = rb_str_new2(error->message ? error->message : "");
+  
+  while (error->child) {
+    error = error->child;
+    if (error->message) {
+      rb_str_concat(message, rb_str_new2("\n"));
+      rb_str_concat(message, rb_str_new2(error->message));
+    }
+  }
+  svn_error_clear(error);
+  
+  rb_exc_raise(svn_swig_rb_svn_error_new(error_code, message, file, line));
 }
 
 static VALUE
