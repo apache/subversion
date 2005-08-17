@@ -383,7 +383,7 @@ class SvnClientTest < Test::Unit::TestCase
 
 
     infos = []
-    rev = ctx.status(@wc_path, rev1, true, true) do |path, status|
+    rev = ctx.st(@wc_path, rev1, true, true) do |path, status|
       infos << [path, status]
     end
     
@@ -979,6 +979,84 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal(src2, File.open(path2) {|f| f.read})
     full_path2_notify = infos.assoc(full_path2)[1]
     assert(full_path2_notify.commit_postfix_txdelta?)
+  end
+
+  def test_prop
+    log = "sample log"
+    dir = "dir"
+    file = "sample.txt"
+    dir_path = File.join(@wc_path, dir)
+    dir_uri = "#{@repos_uri}/#{dir}"
+    path = File.join(dir_path, file)
+    uri = "#{dir_uri}/#{file}"
+    prop_name = "sample-prop"
+    prop_value = "sample value"
+    invalid_mime_type_prop_value = "image"
+
+    ctx = make_context(log)
+
+    ctx.mkdir(dir_path)
+    File.open(path, "w") {}
+    ctx.add(path)
+
+    ctx.commit(@wc_path)
+
+    assert_equal({}, ctx.prop_get(prop_name, path))
+    ctx.prop_set(prop_name, prop_value, path)
+    ctx.commit(@wc_path)
+    assert_equal({uri => prop_value}, ctx.pget(prop_name, path))
+    
+    ctx.prop_del(prop_name, path)
+    ctx.commit(@wc_path)
+    assert_equal({}, ctx.pg(prop_name, path))
+    
+    ctx.ps(prop_name, prop_value, path)
+    ctx.commit(@wc_path)
+    assert_equal({uri => prop_value}, ctx.pg(prop_name, path))
+
+    ctx.ps(prop_name, nil, path)
+    ctx.commit(@wc_path)
+    assert_equal({}, ctx.pg(prop_name, path))
+
+    ctx.up(@wc_path)
+    ctx.ps(prop_name, prop_value, dir_path)
+    ctx.ci(@wc_path)
+    assert_equal({
+                   dir_uri => prop_value,
+                   uri => prop_value,
+                 },
+                 ctx.pg(prop_name, dir_path))
+
+    ctx.up(@wc_path)
+    ctx.pdel(prop_name, dir_path, false)
+    ctx.ci(@wc_path)
+    assert_equal({uri => prop_value}, ctx.pg(prop_name, dir_path))
+    
+    ctx.up(@wc_path)
+    ctx.pd(prop_name, dir_path)
+    ctx.ci(@wc_path)
+    assert_equal({}, ctx.pg(prop_name, dir_path))
+    
+    ctx.up(@wc_path)
+    ctx.ps(prop_name, prop_value, dir_path, false)
+    ctx.ci(@wc_path)
+    assert_equal({dir_uri => prop_value}, ctx.pg(prop_name, dir_path))
+
+    assert_raises(Svn::Error::BAD_MIME_TYPE) do
+      ctx.ps(Svn::Core::PROP_MIME_TYPE,
+             invalid_mime_type_prop_value,
+             path)
+    end
+    ctx.cleanup(@wc_path)
+
+    assert_nothing_raised do
+      ctx.ps(Svn::Core::PROP_MIME_TYPE,
+             invalid_mime_type_prop_value,
+             path, false, true)
+    end
+    ctx.commit(@wc_path)
+    assert_equal({uri => invalid_mime_type_prop_value},
+                 ctx.pg(Svn::Core::PROP_MIME_TYPE, path))
   end
   
   def test_cat

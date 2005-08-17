@@ -165,22 +165,7 @@
 %typemap(ruby, out) svn_error_t *
 {
   if ($1) {
-    svn_error_t *error = $1;
-    VALUE error_code = INT2NUM(error->apr_err);
-    VALUE message;
-
-    message = rb_str_new2(error->message ? error->message : "");
-    
-    while (error->child) {
-      error = error->child;
-      if (error->message) {
-        rb_str_concat(message, rb_str_new2("\n"));
-        rb_str_concat(message, rb_str_new2(error->message));
-      }
-    }
-    svn_error_clear(error);
-    
-    rb_exc_raise(svn_swig_rb_svn_error_new(error_code, message));
+    svn_swig_rb_handle_svn_error($1);
   }
   $result = Qnil;
 }

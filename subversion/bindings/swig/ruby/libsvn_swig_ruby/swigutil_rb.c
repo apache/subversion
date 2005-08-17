@@ -134,11 +134,38 @@ rb_svn_pool_holder(void)
 }
 
 VALUE
-svn_swig_rb_svn_error_new(VALUE code, VALUE message)
+svn_swig_rb_svn_error_new(VALUE code, VALUE message, VALUE file, VALUE line)
 {
   return rb_funcall(rb_svn_error(),
                     rb_id_new_corresponding_error(),
-                    2, code, message);
+                    4, code, message, file, line);
+}
+
+void
+svn_swig_rb_handle_svn_error(svn_error_t *error)
+{
+  VALUE error_code = INT2NUM(error->apr_err);
+  VALUE message;
+  VALUE file = Qnil;
+  VALUE line = Qnil;
+
+  if (error->file)
+    file = rb_str_new2(error->file);
+  if (error->line)
+    line = LONG2NUM(error->line);
+  
+  message = rb_str_new2(error->message ? error->message : "");
+  
+  while (error->child) {
+    error = error->child;
+    if (error->message) {
+      rb_str_concat(message, rb_str_new2("\n"));
+      rb_str_concat(message, rb_str_new2(error->message));
+    }
+  }
+  svn_error_clear(error);
+  
+  rb_exc_raise(svn_swig_rb_svn_error_new(error_code, message, file, line));
 }
 
 static VALUE
@@ -1547,13 +1574,22 @@ svn_swig_rb_wc_status_func(void *baton,
 
   if (!NIL_P(proc)) {
     VALUE args;
+    apr_pool_t *status_pool;
+    VALUE rb_status_pool;
+    svn_wc_status2_t *copied_status;
+    VALUE rb_copied_status;
 
+    svn_swig_rb_get_pool(0, NULL, 0, &rb_status_pool, &status_pool);
+    copied_status = svn_wc_dup_status2(status, status_pool);
+    rb_copied_status = c2r_swig_type((void *)copied_status,
+                                     (void *)"svn_wc_status2_t *");
+    rb_set_pool(rb_copied_status, rb_status_pool);
+    
     args = rb_ary_new3(4,
                        proc,
                        rb_id_call(),
                        rb_str_new2(path),
-                       c2r_swig_type((void *)status,
-                                     (void *)"svn_wc_status2_t *"));
+                       rb_copied_status);
     callback(args);
   }
 }
