@@ -28,6 +28,7 @@
 
 %include svn_global.swg
 %import apr.swg
+%import core.i
 %import svn_types.swg
 %import svn_string.swg
 %import svn_delta.i
