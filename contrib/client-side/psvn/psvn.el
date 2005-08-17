@@ -88,6 +88,8 @@
 ;; h     - svn-status-use-history
 ;; q     - svn-status-bury-buffer
 
+;; C-x C-j - svn-status-dired-jump
+
 ;; The output in the buffer contains this header to ease reading
 ;; of svn output:
 ;;   FPH BASE CMTD Author   em File
@@ -999,6 +1001,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "C-p") 'svn-status-previous-line)
   (define-key svn-status-mode-map (kbd "<down>") 'svn-status-next-line)
   (define-key svn-status-mode-map (kbd "<up>") 'svn-status-previous-line)
+  (define-key svn-status-mode-map (kbd "C-x C-j") 'svn-status-dired-jump)
   (define-key svn-status-mode-map [down-mouse-3] 'svn-status-popup-menu)
   (setq svn-status-mode-mark-map (make-sparse-keymap))
   (define-key svn-status-mode-map (kbd "*") svn-status-mode-mark-map)
@@ -1792,6 +1795,17 @@ non-interactive use."
   (previous-line nr-of-lines)
   (when (svn-status-get-line-information)
     (goto-char (+ (point-at-bol) svn-status-default-column))))
+
+(defun svn-status-dired-jump ()
+  "Jump to a dired buffer, containing the file at point."
+  (interactive)
+  (let* ((line-info (svn-status-get-line-information))
+         (file-full-path (svn-status-line-info->full-path line-info)))
+    (let ((default-directory
+            (file-name-as-directory
+             (expand-file-name (svn-status-line-info->directory-containing-line-info line-info t)))))
+      (dired-jump))
+    (dired-goto-file file-full-path)))
 
 (defun svn-status-possibly-negate-meaning-of-arg (arg &optional command)
   "Negate arg, if this-command is a member of svn-status-possibly-negate-meaning-of-arg."
