@@ -145,6 +145,15 @@ module Svn
       alias prop_del propdel
       alias pdel propdel
       alias pd propdel
+
+      def propget(name, target, rev=nil, peg_rev=nil, recurse=true)
+        rev ||= "HEAD"
+        peg_rev ||= rev
+        Client.propget2(name, target, rev, peg_rev, recurse, self)
+      end
+      alias prop_get propget
+      alias pget propget
+      alias pg propget
       
       def copy(src_path, dst_path, rev=nil)
         Client.copy2(src_path, rev || "HEAD", dst_path, self)
