@@ -84,6 +84,7 @@ module Svn
                        recurse, get_all, update, no_ignore,
                        ignore_externals, self)
       end
+      alias st status
 
       def add(path, recurse=true, force=false, no_ignore=false)
         Client.add3(path, recurse, force, no_ignore, self)

@@ -383,7 +383,7 @@ class SvnClientTest < Test::Unit::TestCase
 
 
     infos = []
-    rev = ctx.status(@wc_path, rev1, true, true) do |path, status|
+    rev = ctx.st(@wc_path, rev1, true, true) do |path, status|
       infos << [path, status]
     end
     
