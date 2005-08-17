@@ -16,7 +16,7 @@ Candidate changes:
       Trivial fix in Ruby bindings only.
       Only affects SWIG 1.3.25 users.
     Votes:
-      +1: djames
+      +1: djames, kou
 
   * r15672
     Fix an encoding error in svn_io_copy_dir_recursively().
