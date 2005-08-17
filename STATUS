@@ -16,7 +16,17 @@ Candidate changes:
       Simple fix and encoding errors are bad.
     Votes:
       +1: jszakmeister
-      
+
+  * r15419, r15420, r15422, r15448
+    Add contrib/client-side/svn_apply_autoprops.py.
+    Justification:
+      It's a contrib script that is useful for users to easily apply
+      their auto-props list to already checked in files across an
+      entire working copy.  It would be good for it to be in an
+      official release so that its more available.
+    Votes:
+      +1: blair
+
 Approved changes (further review is welcome, but not required):
 
    None.
