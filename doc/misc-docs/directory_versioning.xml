@@ -23,9 +23,9 @@
     
     <para>To begin, recall that the Subversion repository is an array
       of trees.  Each tree represents the application of a new atomic
-      commit, and is called a @dfn{revision}.  This is very different
-      from a CVS repository, which stores file histories in a
-      collection of RCS files (and doesn't track
+      commit, and is called a <firstterm>revision</firstterm>.  This
+      is very different from a CVS repository, which stores file
+      histories in a collection of RCS files (and doesn't track
       tree-structure.)</para>
 
     <para>So when we refer to <quote>revision 4 of
@@ -79,8 +79,9 @@
 
       <para>Already, we have a problem: our working copy still claims
         to have <filename>DIR:1</filename>.  But on the repository,
-        revision 1 of <filename>DIR</filename> is @emph{defined} to
-        contain <filename>foo</filename>&mdash;and our working copy
+        revision 1 of <filename>DIR</filename> is
+        <emphasis>defined</emphasis> to contain
+        <filename>foo</filename>&mdash;and our working copy
         <filename>DIR</filename> clearly does not have it anymore.
         How can we truthfully say that we still have
         <filename>DIR:1</filename>?</para>
@@ -105,8 +106,8 @@
         some new propchanges.  This clearly violates a UI principle:
         ``the client will never change your working copy until you ask
         it to.''  Committing changes to the repository is a
-        server-write operation only; it should @emph{not} modify your
-        working data!</para>
+        server-write operation only; it should
+        <emphasis>not</emphasis> modify your working data!</para>
 
       <para>Another solution is to do the naive thing: after
         committing the deletion of <filename>foo</filename>, simply
@@ -234,10 +235,10 @@
         <filename>DIR</filename> is now marked as being at revision
         3.</para>
 
-      <para>Of course, this is false; our working copy does @emph{not}
-        have <filename>DIR:3</filename>, because the
-        <quote>true</quote> <filename>DIR:3</filename> on the
-        repository contains the new file <filename>bar</filename>.
+      <para>Of course, this is false; our working copy does
+        <emphasis>not</emphasis> have <filename>DIR:3</filename>,
+        because the <quote>true</quote> <filename>DIR:3</filename> on
+        the repository contains the new file <filename>bar</filename>.
         Our working copy has no knowledge of <filename>bar</filename>
         at all.</para>
 
