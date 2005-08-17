@@ -1557,13 +1557,22 @@ svn_swig_rb_wc_status_func(void *baton,
 
   if (!NIL_P(proc)) {
     VALUE args;
+    apr_pool_t *status_pool;
+    VALUE rb_status_pool;
+    svn_wc_status2_t *copied_status;
+    VALUE rb_copied_status;
 
+    svn_swig_rb_get_pool(0, NULL, 0, &rb_status_pool, &status_pool);
+    copied_status = svn_wc_dup_status2(status, status_pool);
+    rb_copied_status = c2r_swig_type((void *)copied_status,
+                                     (void *)"svn_wc_status2_t *");
+    rb_set_pool(rb_copied_status, rb_status_pool);
+    
     args = rb_ary_new3(4,
                        proc,
                        rb_id_call(),
                        rb_str_new2(path),
-                       c2r_swig_type((void *)status,
-                                     (void *)"svn_wc_status2_t *"));
+                       rb_copied_status);
     callback(args);
   }
 }
