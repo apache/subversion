@@ -58,7 +58,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-08-17 02:53+0200\n"
-"PO-Revision-Date: 2005-08-12 08:44+0200\n"
+"PO-Revision-Date: 2005-08-17 03:16+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -850,7 +850,6 @@ msgstr ""
 "  MÅL kan enten være en sti i arbeidskopien eller en URL.\n"
 
 #: clients/cmdline/main.c:378
-#, fuzzy
 msgid ""
 "List directory entries in the repository.\n"
 "usage: list [TARGET[@REV]...]\n"
@@ -887,7 +886,7 @@ msgstr ""
 "\n"
 "    Siste innsendte revisjonsnummer\n"
 "    Forfatteren som gjorde siste innsending\n"
-"    Hvis låst, eieren av låsen\n"
+"    Hvis låst, bokstaven «O». (Bruk «svn info URL» for å se detaljer)\n"
 "    Størrelse (i byte)\n"
 "    Dato og tid for siste innsending\n"
 
@@ -7960,31 +7959,3 @@ msgstr "eksportert%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "«%s» er verken versjonert eller eksportert\n"
-
-#~ msgid "Can't get default file perms for file at '%s' (file close error)"
-#~ msgstr ""
-#~ "Klarer ikke å få tak i standard filrettigheter for filen i «%s» (feil "
-#~ "under lukking av fil)"
-
-#~ msgid "Error writing to stream: unexpected EOF"
-#~ msgstr "Feil under skriving til strøm, forventet EOF"
-
-#~ msgid "'%s' is already a file/something else"
-#~ msgstr "«%s» er allerede en fil eller noe annet"
-
-#~ msgid "Finished"
-#~ msgstr "Ferdig"
-
-#~ msgid "No URL target available"
-#~ msgstr "Intet URL-mål er tilgjengelig"
-
-#~ msgid ""
-#~ "No deletion changes for path '%s' in transaction '%s' of filesystem '%s'"
-#~ msgstr ""
-#~ "Ingen sletteforandringer for sti «%s» i transaksjon «%s» i filsystem «%s»"
-
-#~ msgid "Asking contents changed in two different filesystems"
-#~ msgstr "Forespurt innhold forandret i to forskjellige filsystemer"
-
-#~ msgid "Asking props changed in two different filesystems"
-#~ msgstr "Forespurte egenskaper forandret seg i to forskjellige filsystemer"
