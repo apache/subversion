@@ -312,28 +312,6 @@ class WinGeneratorBase(GeneratorBase):
       swig_options = string.split(self._swig_build_opts(target.lang))
       swig_deps = []
 
-      if target.lang == "perl":
-
-        objects = (("svn_delta_editor_t", "svn_delta.h", "delta_editor.hi"),
-                   ("svn_ra_plugin_t", "svn_ra.h", "ra_plugin.hi"),
-                   ("svn_ra_reporter_t", "svn_ra.h", "ra_reporter.hi"))
-
-        pfile = self.path("subversion/bindings/swig/perl/native/h2i.pl")
-
-        for objname, header, output in objects:
-          ifile = self.path("subversion/include", header)
-          ofile = self.path("subversion/bindings/swig", output)
-
-          obuild = "perl %s %s %s > %s" % (pfile, ifile, objname,
-                                           ofile)
-
-          sources.append(ProjectItem(path=ifile, reldir=None,
-                                     custom_build=obuild,
-                                     custom_target=ofile,
-                                     user_deps=()))
-
-          swig_deps.append(ofile)
-
       for include_dir in self.get_win_includes(target):
         swig_options.append("-I%s" % self.quote(include_dir))
 
