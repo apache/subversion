@@ -37,6 +37,10 @@ $LastChangedBy$
 """
 
 import getopt
+try:
+    my_getopt = getopt.gnu_getopt
+except AttributeError:
+    my_getopt = getopt.getopt
 import os
 import sys
 
@@ -358,14 +362,14 @@ if __name__ == '__main__':
     ctx.delete_needed = False
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:],
-                                   'hn:p:v',
-                                   ['delete',
-                                    'help',
-                                    'name=',
-                                    'path=',
-                                    'verbose'
-                                   ])
+        opts, args = my_getopt(sys.argv[1:],
+                               'hn:p:v',
+                               ['delete',
+                                'help',
+                                'name=',
+                                'path=',
+                                'verbose'
+                                ])
     except getopt.GetoptError:
         usage(False)
     if len(args) < 1 or len(args) > 2:
