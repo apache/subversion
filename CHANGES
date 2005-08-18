@@ -1,6 +1,6 @@
-Version 1.2.2
-(10 August 2005, from /branches/1.2.x)
-http://svn.collab.net/repos/svn/tags/1.2.2
+Version 1.2.3
+(xx August 2005, from /branches/1.2.x)
+http://svn.collab.net/repos/svn/tags/1.2.3
 
  User-visible-changes:
   - Client:
@@ -9,25 +9,39 @@ http://svn.collab.net/repos/svn/tags/1.2.2
     * fixed: 'svn merge' memory leak (r15233)
     * fixed: horrible rename-tracing performance against 1.0 servers (r15315)
     * fixed: 'svn cat' over file:// -- small leak  (r15253)
+    * fixed: crash with "svn lock" and authentication (r15703)
     * improvements to 'svnmerge' utility (r14008,-458,-587,-632, r15329,-340)
-    * translation updates for French, German, Polish, Norwegian, Swedish
+    * translation updates for French, German, Polish, Norwegian, Swedish,
+      Korean
 
   - Server:
     * fixed: mod_authz_svn being overly restrictive (r15463)
+    * fixed: fsfs directory caching bug (r15705, r15742)
 
   - Both:
     * fixed: crash when >50 options passed to any commandline app (r15251)
     * fixed: memory leak in character translation handle caching (r15379,-398)
 
 Developer-visible-changes:
+* fixed: crash when calling svn_client_(un)lock with no targets (r15734)
 * rhel-4 RPM bugfix for python bindings (r15616)
+* missing #include in SWIG bindings (r15683)
 * javahl bindings:
       - fixed: JNI library loading bug (r15552)
       - fixed: JNI stack-name cut and paste error (r15337)
+      - fixed: crash when revisions have no dates (r15737)
 * perl bindings:
       - now compatible with SWIG 1.3.25 (r15248)
       - allow SVN::Pool to be used as pool parameter (r15450)
       - make SVN::Delta::Editor friendlier for debugging (r15609)
+      - fixed: wrap svn_ra_stat properly (r15713)
+      - fixed: bug in SVN::Core::Stream's read function (r15698, r15700)
+* ruby bindings:
+      - now compatible with SWIG 1.3.25 (r14980, r15361)
+
+
+Version 1.2.2
+(Not released, see changes for 1.2.3.)
 
 
 Version 1.2.1
