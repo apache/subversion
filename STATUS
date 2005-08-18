@@ -25,6 +25,15 @@ Candidate changes:
       +1: rooneg
       -1: brane (see http://svn.haxx.se/dev/archive-2005-08/0677.shtml)
 
+  * r15732, r15796, r15802
+    Add contrib/client-side/svn_export_empty_files.py.
+    Justification:
+      It's a contrib script.  Make it more accessible to svn users
+      in the next svn release.
+    Votes:
+      (not r15802) +1: blair
+      (not r15802) +0: djames
+
 Approved changes (further review is welcome, but not required):
 
   * r15419, r15420, r15422, r15448
@@ -34,15 +43,6 @@ Approved changes (further review is welcome, but not required):
       their auto-props list to already checked in files across an
       entire working copy.  It would be good for it to be in an
       official release so that its more available.
-    Votes:
-      +1: blair
-      +0: djames
-
-  * r15732, r15796
-    Add contrib/client-side/svn_export_empty_files.py.
-    Justification:
-      It's a contrib script.  Make it more accessible to svn users
-      in the next svn release.
     Votes:
       +1: blair
       +0: djames
