@@ -1,8 +1,8 @@
 HOW-TO:  Compiling Subversion DocBook XML Documents
 ===================================================
 
-The Subversion project uses for some of its documentation Docbook
-Lite, a scaled-down version of the Docbook DTD, used by O'Reilly &
+The Subversion project uses for some of its documentation DocBook
+Lite, a scaled-down version of the DocBook DTD, used by O'Reilly &
 Associates.
 
 The goal of this document is to give simple instructions to anyone who
@@ -18,8 +18,8 @@ III. HACKING ON THE DOCS
 
 I. PRIMER
 
-  Docbook has a tortured, confusing history.  Before you do anything,
-  take a look at Eric Raymond's excellent "Docbook Demystification HOWTO":
+  DocBook has a tortured, confusing history.  Before you do anything,
+  take a look at Eric Raymond's excellent "DocBook Demystification HOWTO":
 
      http://tldp.org/HOWTO/DocBook-Demystification-HOWTO/
 
@@ -29,10 +29,10 @@ I. PRIMER
 II. COMPILING THE DOCS
 
 
-1. Fetch XSL stylesheets for Docbook and place them in tools/xsl
+1. Fetch XSL stylesheets for DocBook and place them in tools/xsl
 
-   The "Docbook Open Repository" on Sourceforge has a large collection
-   of XSL stylesheets that specifically operate on Docbook.  Download
+   The "DocBook Open Repository" on Sourceforge has a large collection
+   of XSL stylesheets that specifically operate on DocBook.  Download
    and install the latest 'docbook-xsl' package from this page:
   
       http://sourceforge.net/project/showfiles.php?group_id=21935
