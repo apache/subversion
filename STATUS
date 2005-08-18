@@ -17,7 +17,7 @@ Candidate changes:
     Votes:
       +1: jszakmeister
 
-  * r15732
+  * r15732, r15796
     Add contrib/client-side/svn_export_empty_files.py.
     Justification:
       It's a contrib script.  Make it more accessible to svn users
