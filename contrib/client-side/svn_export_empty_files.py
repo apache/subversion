@@ -358,14 +358,14 @@ if __name__ == '__main__':
     ctx.delete_needed = False
 
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:],
-                                       'hn:p:v',
-                                       ['delete',
-                                        'help',
-                                        'name=',
-                                        'path=',
-                                        'verbose'
-                                        ])
+        opts, args = getopt.getopt(sys.argv[1:],
+                                   'hn:p:v',
+                                   ['delete',
+                                    'help',
+                                    'name=',
+                                    'path=',
+                                    'verbose'
+                                   ])
     except getopt.GetoptError:
         usage(False)
     if len(args) < 1 or len(args) > 2:
@@ -373,7 +373,7 @@ if __name__ == '__main__':
         usage(False)
 
     for o, a in opts:
-        if o in ('--delete'):
+        if o in ('--delete',):
             ctx.delete_local_paths = True
             continue
         if o in ('-h', '--help'):
