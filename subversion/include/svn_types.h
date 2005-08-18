@@ -66,6 +66,16 @@ typedef struct svn_error_t
 
 
 
+/* this is now defined in APR, so undef it to avoid warnings here */
+#ifdef APR_ARRAY_IDX
+#undef APR_ARRAY_IDX
+#endif
+
+/* ditto. */
+#ifdef APR_ARRAY_PUSH
+#undef APR_ARRAY_PUSH
+#endif
+
 /** index into an apr_array_header_t */
 #define APR_ARRAY_IDX(ary,i,type) (((type *)(ary)->elts)[i])
 
