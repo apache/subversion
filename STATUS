@@ -31,7 +31,7 @@ Candidate changes:
       It's a contrib script.  Make it more accessible to svn users
       in the next svn release.
     Votes:
-      (not r15802) +1: blair
+      +1: blair
       +0: djames
 
 Approved changes (further review is welcome, but not required):
