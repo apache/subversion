@@ -57,7 +57,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-08-17 02:53+0200\n"
+"POT-Creation-Date: 2005-08-19 21:28+0200\n"
 "PO-Revision-Date: 2005-08-17 03:16+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -2906,7 +2906,7 @@ msgstr "Ukjent eller ikke-versjonabel type for «%s»"
 msgid "New entry name required when importing a file"
 msgstr "Nytt tilgangsnavn påkrevd ved import av en fil"
 
-#: libsvn_client/commit.c:556 libsvn_wc/props.c:1197 libsvn_wc/questions.c:62
+#: libsvn_client/commit.c:556 libsvn_wc/props.c:1218 libsvn_wc/questions.c:62
 #, c-format
 msgid "'%s' does not exist"
 msgstr "«%s» finnes ikke"
@@ -2997,7 +2997,7 @@ msgstr "Objekt «%s» for innsending har kopimerke, men ingen copyfrom-URL\n"
 #: libsvn_client/switch.c:104 libsvn_wc/adm_ops.c:2261
 #: libsvn_wc/adm_ops.c:2287 libsvn_wc/adm_ops.c:2324 libsvn_wc/copy.c:448
 #: libsvn_wc/entries.c:1498 libsvn_wc/entries.c:1990 libsvn_wc/props.c:286
-#: libsvn_wc/props.c:1124 libsvn_wc/questions.c:171
+#: libsvn_wc/props.c:1145 libsvn_wc/questions.c:171
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "«%s» er ikke under versjonskontroll"
@@ -3979,22 +3979,33 @@ msgstr ""
 msgid "Representation is not of type 'delta'"
 msgstr "Representasjonen er ikke en «delta»-type"
 
-#: libsvn_fs_base/reps-strings.c:495
+#: libsvn_fs_base/reps-strings.c:374
+msgid "Svndiff source length inconsistency"
+msgstr ""
+
+#: libsvn_fs_base/reps-strings.c:501
 #, c-format
 msgid "Diff version inconsistencies in representation '%s'"
 msgstr "Inkonsekvens i diffversjon for representasjon «%s»"
 
-#: libsvn_fs_base/reps-strings.c:758
+#: libsvn_fs_base/reps-strings.c:527
+#, c-format
+msgid ""
+"Corruption detected whilst reading delta chain from representation '%s' to '%"
+"s'"
+msgstr ""
+
+#: libsvn_fs_base/reps-strings.c:775
 #, c-format
 msgid "Rep contents are too large: got %s, limit is %s"
 msgstr "Representasjonsinnhold er for stort: Fikk %s, grensen er %s"
 
-#: libsvn_fs_base/reps-strings.c:774
+#: libsvn_fs_base/reps-strings.c:791
 #, c-format
 msgid "Failure reading rep '%s'"
 msgstr "Feil ved lesing av representasjon «%s»"
 
-#: libsvn_fs_base/reps-strings.c:790 libsvn_fs_base/reps-strings.c:876
+#: libsvn_fs_base/reps-strings.c:807 libsvn_fs_base/reps-strings.c:893
 #, c-format
 msgid ""
 "Checksum mismatch on rep '%s':\n"
@@ -4005,30 +4016,30 @@ msgstr ""
 "   forventet:  %s\n"
 "     faktisk:  %s\n"
 
-#: libsvn_fs_base/reps-strings.c:890
+#: libsvn_fs_base/reps-strings.c:907
 msgid "Null rep, but offset past zero already"
 msgstr "Tom (null) representasjon, men filposisjonen er forbi null allerede"
 
-#: libsvn_fs_base/reps-strings.c:1003 libsvn_fs_base/reps-strings.c:1199
+#: libsvn_fs_base/reps-strings.c:1020 libsvn_fs_base/reps-strings.c:1216
 #, c-format
 msgid "Rep '%s' is not mutable"
 msgstr "Representasjon «%s» er ikke foranderlig"
 
-#: libsvn_fs_base/reps-strings.c:1018
+#: libsvn_fs_base/reps-strings.c:1035
 #, c-format
 msgid "Rep '%s' both mutable and non-fulltext"
 msgstr "Representasjon «%s» er både foranderlig og ikke-fulltekst"
 
-#: libsvn_fs_base/reps-strings.c:1318
+#: libsvn_fs_base/reps-strings.c:1335
 msgid "Failed to get new string key"
 msgstr "Klarte ikke å få ny strengnøkkel"
 
-#: libsvn_fs_base/reps-strings.c:1393
+#: libsvn_fs_base/reps-strings.c:1410
 #, c-format
 msgid "Attempt to deltify '%s' against itself"
 msgstr "Forsøk på å deltifisere «%s» mot seg selv"
 
-#: libsvn_fs_base/reps-strings.c:1459
+#: libsvn_fs_base/reps-strings.c:1476
 #, c-format
 msgid "Failed to calculate MD5 digest for '%s'"
 msgstr "Klarte ikke å regne ut MD5-sum for «%s»"
@@ -5892,7 +5903,7 @@ msgstr "URLen «%s» inneholder et «..»-element"
 msgid "Error resolving case of '%s'"
 msgstr "Feil under løsning av bokstavstørrelse på «%s»"
 
-#: libsvn_subr/opt.c:738
+#: libsvn_subr/opt.c:736
 #, c-format
 msgid ""
 "%s, version %s\n"
@@ -5903,7 +5914,7 @@ msgstr ""
 "   kompilert %s, %s\n"
 "\n"
 
-#: libsvn_subr/opt.c:741
+#: libsvn_subr/opt.c:739
 msgid ""
 "Copyright (C) 2000-2005 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
@@ -5917,7 +5928,7 @@ msgstr ""
 "Net/).\n"
 "\n"
 
-#: libsvn_subr/opt.c:794
+#: libsvn_subr/opt.c:792
 #, c-format
 msgid "Type '%s help' for usage.\n"
 msgstr "Skriv «%s help» for bruk.\n"
@@ -5941,7 +5952,7 @@ msgstr "Kan ikke anslå den lokale sti-tegnsettkodingen"
 msgid "Invalid control character '0x%02x' in path '%s'"
 msgstr "Ugyldig kontrolltegn «0x%02x» i sti «%s»"
 
-#: libsvn_subr/subst.c:1013 libsvn_wc/props.c:1441
+#: libsvn_subr/subst.c:1013 libsvn_wc/props.c:1462
 #, c-format
 msgid "File '%s' has inconsistent newlines"
 msgstr "Filen «%s» har ikke ensartede linjeskift"
@@ -6582,7 +6593,7 @@ msgstr "Kan ikke skrive egenskapstabell til «%s»"
 msgid "Can't find entry '%s' in '%s'"
 msgstr "Finner ikke oppføringen «%s» i «%s»"
 
-#: libsvn_wc/props.c:323 libsvn_wc/props.c:1161 libsvn_wc/update_editor.c:2342
+#: libsvn_wc/props.c:323 libsvn_wc/props.c:1182 libsvn_wc/update_editor.c:2342
 #, c-format
 msgid "Error writing log for '%s'"
 msgstr "Feil under skriving av loggfil for «%s»"
@@ -6596,7 +6607,7 @@ msgstr ""
 "Prøver å legge til ny egenskap «%s» med verdien «%s»,\n"
 "men egenskapen finnes allerede med verdien «%s»."
 
-#: libsvn_wc/props.c:481
+#: libsvn_wc/props.c:483
 #, c-format
 msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
@@ -6605,7 +6616,15 @@ msgstr ""
 "Prøver å forandre egenskapen «%s» fra «%s» til «%s»,\n"
 "men egenskapen finnes ikke."
 
-#: libsvn_wc/props.c:510
+#: libsvn_wc/props.c:512
+#, fuzzy, c-format
+msgid ""
+"Trying to delete property '%s' but value has been modified from '%s' to '%s'."
+msgstr ""
+"Prøver å legge til ny egenskap «%s» med verdien «%s»,\n"
+"men egenskapen finnes allerede med verdien «%s»."
+
+#: libsvn_wc/props.c:531
 #, c-format
 msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
@@ -6614,52 +6633,52 @@ msgstr ""
 "Prøver å forandre egenskapen «%s» fra «%s» til «%s»,\n"
 "men egenskapen finnes allerede med verdien «%s»."
 
-#: libsvn_wc/props.c:1202
+#: libsvn_wc/props.c:1223
 #, c-format
 msgid "Unknown node kind: '%s'"
 msgstr "Ukjent nodetype: «%s»"
 
-#: libsvn_wc/props.c:1238 libsvn_wc/props.c:1260 libsvn_wc/props.c:1344
-#: libsvn_wc/props.c:1582
+#: libsvn_wc/props.c:1259 libsvn_wc/props.c:1281 libsvn_wc/props.c:1365
+#: libsvn_wc/props.c:1603
 msgid "Failed to load properties from disk"
 msgstr "Feil under lasting av egenskaper fra disk"
 
-#: libsvn_wc/props.c:1276 libsvn_wc/props.c:1612
+#: libsvn_wc/props.c:1297 libsvn_wc/props.c:1633
 #, c-format
 msgid "Cannot write property hash for '%s'"
 msgstr "Kan ikke skrive egenskapstabell for «%s»"
 
-#: libsvn_wc/props.c:1336 libsvn_wc/props.c:1474
+#: libsvn_wc/props.c:1357 libsvn_wc/props.c:1495
 #, c-format
 msgid "Property '%s' is an entry property"
 msgstr "Egenskapen «%s» er en oppføringsegenskap"
 
-#: libsvn_wc/props.c:1381
+#: libsvn_wc/props.c:1402
 #, c-format
 msgid "Cannot set '%s' on a directory ('%s')"
 msgstr "Kan ikke sette «%s» på en katalog («%s»)"
 
-#: libsvn_wc/props.c:1389
+#: libsvn_wc/props.c:1410
 #, c-format
 msgid "Cannot set '%s' on a file ('%s')"
 msgstr "Kan ikke sette «%s» på en fil («%s»)"
 
-#: libsvn_wc/props.c:1395
+#: libsvn_wc/props.c:1416
 #, c-format
 msgid "'%s' is not a file or directory"
 msgstr "«%s» er ikke en fil eller katalog"
 
-#: libsvn_wc/props.c:1419
+#: libsvn_wc/props.c:1440
 #, c-format
 msgid "File '%s' has binary mime type property"
 msgstr "Filen «%s» har en binær MIME-type-egenskap"
 
-#: libsvn_wc/props.c:2038
+#: libsvn_wc/props.c:2059
 #, c-format
 msgid "Error parsing %s property on '%s': '%s'"
 msgstr "Feil under tolking av %s-egenskapen på «%s»: «%s»"
 
-#: libsvn_wc/props.c:2051
+#: libsvn_wc/props.c:2072
 #, c-format
 msgid ""
 "Invalid %s property on '%s': target involves '.' or '..' or is an absolute "
