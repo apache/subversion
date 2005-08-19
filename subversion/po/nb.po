@@ -58,7 +58,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-08-19 21:28+0200\n"
-"PO-Revision-Date: 2005-08-17 03:16+0200\n"
+"PO-Revision-Date: 2005-08-19 21:54+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3981,7 +3981,7 @@ msgstr "Representasjonen er ikke en «delta»-type"
 
 #: libsvn_fs_base/reps-strings.c:374
 msgid "Svndiff source length inconsistency"
-msgstr ""
+msgstr "Inkonsistens i lengden på svndiff-kilde"
 
 #: libsvn_fs_base/reps-strings.c:501
 #, c-format
@@ -3993,7 +3993,8 @@ msgstr "Inkonsekvens i diffversjon for representasjon «%s»"
 msgid ""
 "Corruption detected whilst reading delta chain from representation '%s' to '%"
 "s'"
-msgstr ""
+msgstr "Oppdaget ødelagte data under lesing av delta-lenke fra representasjon "
+"«%s» til «%s»"
 
 #: libsvn_fs_base/reps-strings.c:775
 #, c-format
@@ -6617,12 +6618,11 @@ msgstr ""
 "men egenskapen finnes ikke."
 
 #: libsvn_wc/props.c:512
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Trying to delete property '%s' but value has been modified from '%s' to '%s'."
 msgstr ""
-"Prøver å legge til ny egenskap «%s» med verdien «%s»,\n"
-"men egenskapen finnes allerede med verdien «%s»."
+"Prøver å slette egenskap «%s», men verdien er blitt forandret fra «%s» til «%s»."
 
 #: libsvn_wc/props.c:531
 #, c-format
