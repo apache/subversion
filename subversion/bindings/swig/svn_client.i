@@ -106,6 +106,16 @@
     $result = t_output_helper($result, list);
 }
 
+%typemap(ruby, argout) apr_array_header_t **props
+{
+  $result = svn_swig_rb_apr_array_to_array_proplist_item(*$1);
+}
+
+%typemap(ruby, out) apr_hash_t *prop_hash
+{
+  $result = svn_swig_rb_prop_hash_to_hash($1);
+}
+
 %typemap(perl5,argout) apr_array_header_t **props {
     $result = svn_swig_pl_convert_array(*$1,SWIG_TypeQuery(
                                               "svn_client_proplist_item_t *"));

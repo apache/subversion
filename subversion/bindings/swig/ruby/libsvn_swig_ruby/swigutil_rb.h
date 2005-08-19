@@ -33,10 +33,13 @@ VALUE svn_swig_rb_apr_hash_to_hash_svn_string(apr_hash_t *hash);
 VALUE svn_swig_rb_apr_hash_to_hash_swig_type(apr_hash_t *hash,
                                              const char *type_name);
 
+VALUE svn_swig_rb_prop_hash_to_hash(apr_hash_t *prop_hash);
+
 VALUE svn_swig_rb_apr_array_to_array_string(const apr_array_header_t *ary);
 VALUE svn_swig_rb_apr_array_to_array_svn_string(const apr_array_header_t *ary);
 VALUE svn_swig_rb_apr_array_to_array_svn_rev(const apr_array_header_t *ary);
 VALUE svn_swig_rb_apr_array_to_array_prop(const apr_array_header_t *ary);
+VALUE svn_swig_rb_apr_array_to_array_proplist_item(const apr_array_header_t *ary);
 
 apr_hash_t *svn_swig_rb_hash_to_apr_hash_string(VALUE hash, apr_pool_t *pool);
 apr_hash_t *svn_swig_rb_hash_to_apr_hash_svn_string(VALUE hash,

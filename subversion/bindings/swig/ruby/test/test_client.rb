@@ -1059,6 +1059,48 @@ class SvnClientTest < Test::Unit::TestCase
                  ctx.pg(Svn::Core::PROP_MIME_TYPE, path))
   end
   
+  def test_prop_list
+    log = "sample log"
+    dir = "dir"
+    file = "sample.txt"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+    dir_uri = "#{@repos_uri}/#{dir}"
+    uri = "#{dir_uri}/#{file}"
+    name1 = "name1"
+    name2 = "name2"
+    value1 = "value1"
+    value2 = "value2"
+
+    ctx = make_context(log)
+
+    ctx.mkdir(dir_path)
+    File.open(path, "w") {}
+    ctx.add(path)
+
+    ctx.ci(@wc_path)
+
+    assert_equal([], ctx.prop_list(path))
+    
+    ctx.ps(name1, value1, path)
+    ctx.ci(@wc_path)
+    assert_equal([uri], ctx.prop_list(path).collect{|item| item.node_name})
+    assert_equal([{name1 => value1}],
+                 ctx.plist(path).collect{|item| item.prop_hash})
+    assert_equal([value1], ctx.pl(path).collect{|item| item[name1]})
+
+    ctx.up(@wc_path)
+    ctx.ps(name2, value2, dir_path)
+    ctx.ci(@wc_path)
+    assert_equal([uri, dir_uri].sort,
+                 ctx.prop_list(dir_path).collect{|item| item.name})
+    prop_list = ctx.plist(dir_path).collect{|item| [item.name, item.props]}
+    props = prop_list.assoc(uri)[1]
+    dir_props = prop_list.assoc(dir_uri)[1]
+    assert_equal({name1 => value1, name2 => value2}, props)
+    assert_equal({name2 => value2}, dir_props)
+  end
+  
   def test_cat
     log = "sample log"
     src1 = "source1\n"

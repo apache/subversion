@@ -33,6 +33,20 @@ module Svn
       end
     end
 
+    PropListItem = ProplistItem
+    class PropListItem
+      alias name node_name
+      alias props prop_hash
+
+      def method_missing(meth, *args)
+        _props = props
+        if _props.respond_to?(meth)
+          _props.__send__(meth, *args)
+        else
+          super
+        end
+      end
+    end
     
     Context = Ctx
     class Context
@@ -155,6 +169,15 @@ module Svn
       alias prop_get propget
       alias pget propget
       alias pg propget
+
+      def proplist(target, rev=nil, peg_rev=nil, recurse=true)
+        rev ||= "HEAD"
+        peg_rev ||= rev
+        Client.proplist2(target, rev, peg_rev, recurse, self)
+      end
+      alias prop_list proplist
+      alias plist proplist
+      alias pl proplist
       
       def copy(src_path, dst_path, rev=nil)
         Client.copy2(src_path, rev || "HEAD", dst_path, self)
