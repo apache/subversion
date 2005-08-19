@@ -2514,8 +2514,8 @@ Recommended values are ?m or ?M.")
                         (delete-region (point-at-bol) (point-at-eol))
                         (svn-insert-line-in-status-buffer (car st-info))
                         (delete-char 1))
-                    (message "psvn: file %s not found, updating `svn-status-buffer-name' buffer content..."
-                             i-fname)
+                    (message "psvn: file %s not found, updating %s buffer content..."
+                             i-fname svn-status-buffer-name)
                     (svn-status-update-buffer))))))
           (setq st-info (cdr st-info))))))
   nil)
@@ -3239,14 +3239,14 @@ This function will be removed again, when a faster parsing and
 display routine for svn-status is available."
   (interactive)
   (setq svn-status-sort-status-buffer (not svn-status-sort-status-buffer))
-  (message "The `svn-status-buffer-name' buffer will be%s sorted."
+  (message "The %s buffer will be%s sorted." svn-status-buffer-name
            (if svn-status-sort-status-buffer "" " not")))
 
 (defun svn-status-toggle-display-full-path ()
   "Toggle displaying the full path in the `svn-status-buffer-name' buffer"
   (interactive)
   (setq svn-status-display-full-path (not svn-status-display-full-path))
-  (message "The `svn-status-buffer-name' buffer will%s use full path names."
+  (message "The %s buffer will%s use full path names." svn-status-buffer-name
            (if svn-status-display-full-path "" " not"))
   (svn-status-update))
 
