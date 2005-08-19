@@ -285,6 +285,7 @@ module Svn
         value, = revprop_get(name, uri, rev)
         value
       end
+      alias rp revprop
       
       def revprop_get(name, uri, rev)
         result = Client.revprop_get(name, uri, rev, self)
@@ -294,14 +295,20 @@ module Svn
           [nil, result]
         end
       end
+      alias rpget revprop_get
+      alias rpg revprop_get
       
       def revprop_set(name, value, uri, rev, force=false)
         Client.revprop_set(name, value, uri, rev, force, self)
       end
+      alias rpset revprop_set
+      alias rps revprop_set
       
       def revprop_del(name, uri, rev, force=false)
         Client.revprop_set(name, nil, uri, rev, force, self)
       end
+      alias rpdel revprop_del
+      alias rpd revprop_del
 
       def revprop_list(uri, rev)
         props, rev = Client.revprop_list(uri, rev, self)
@@ -311,6 +318,8 @@ module Svn
         end
         [props, rev]
       end
+      alias rplist revprop_list
+      alias rpl revprop_list
       
       def switch(path, uri, rev=nil, recurse=true)
         Client.switch(path, uri, rev, recurse, self)
