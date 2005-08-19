@@ -1120,21 +1120,52 @@ class SvnClientTest < Test::Unit::TestCase
                  ctx.revprop_set(Svn::Core::PROP_REVISION_LOG, new_log,
                                  @repos_uri, info.revision))
     assert_equal([new_log, info.revision],
-                 ctx.revprop_get(Svn::Core::PROP_REVISION_LOG,
-                                 @repos_uri, info.revision))
+                 ctx.rpget(Svn::Core::PROP_REVISION_LOG,
+                           @repos_uri, info.revision))
     assert_equal(new_log,
-                 ctx.revprop(Svn::Core::PROP_REVISION_LOG,
-                             @repos_uri, info.revision))
-
+                 ctx.rp(Svn::Core::PROP_REVISION_LOG,
+                        @repos_uri, info.revision))
+    assert_equal([
+                   {
+                     Svn::Core::PROP_REVISION_AUTHOR => @author,
+                     Svn::Core::PROP_REVISION_DATE => info.date,
+                     Svn::Core::PROP_REVISION_LOG => new_log,
+                   },
+                   info.revision
+                 ],
+                 ctx.rplist(@repos_uri, info.revision))
+    
     assert_equal(info.revision,
                  ctx.revprop_del(Svn::Core::PROP_REVISION_LOG,
                                  @repos_uri, info.revision))
     assert_equal([nil, info.revision],
-                 ctx.revprop_get(Svn::Core::PROP_REVISION_LOG,
-                                 @repos_uri, info.revision))
+                 ctx.rpg(Svn::Core::PROP_REVISION_LOG,
+                         @repos_uri, info.revision))
     assert_equal(nil,
-                 ctx.revprop(Svn::Core::PROP_REVISION_LOG,
-                             @repos_uri, info.revision))
+                 ctx.rp(Svn::Core::PROP_REVISION_LOG,
+                        @repos_uri, info.revision))
+
+    assert_equal(info.revision,
+                 ctx.rpset(Svn::Core::PROP_REVISION_LOG, new_log,
+                           @repos_uri, info.revision))
+    assert_equal(new_log,
+                 ctx.rp(Svn::Core::PROP_REVISION_LOG,
+                        @repos_uri, info.revision))
+    assert_equal(info.revision,
+                 ctx.rps(Svn::Core::PROP_REVISION_LOG, nil,
+                         @repos_uri, info.revision))
+    assert_equal(nil,
+                 ctx.rp(Svn::Core::PROP_REVISION_LOG,
+                        @repos_uri, info.revision))
+    
+    assert_equal([
+                   {
+                     Svn::Core::PROP_REVISION_AUTHOR => @author,
+                     Svn::Core::PROP_REVISION_DATE => info.date,
+                   },
+                   info.revision
+                 ],
+                 ctx.rpl(@repos_uri, info.revision))
   end
   
   def test_switch
