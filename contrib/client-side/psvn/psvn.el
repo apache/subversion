@@ -1642,7 +1642,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
 (defun svn-status-update-buffer ()
   "Update the `svn-status-buffer-name' buffer, using `svn-status-info'."
   (interactive)
-  ;(message (format "buffer-name: %s" (buffer-name)))
+  ;(message "buffer-name: %s" (buffer-name))
   (unless (string= (buffer-name) svn-status-buffer-name)
     (set-buffer svn-status-buffer-name))
   (svn-status-mode)
@@ -2469,7 +2469,7 @@ See `svn-status-marked-files' for what counts as selected."
       (setq simple-path (or (file-name-directory simple-path) "."))
       (setq full-path (file-name-directory full-path)))
     (setq version (shell-command-to-string (concat "svnversion -n " full-path)))
-    (message (format "svnversion for '%s': %s" simple-path version))
+    (message "svnversion for '%s': %s" simple-path version)
     version))
 
 ;; --------------------------------------------------------------------------------
@@ -2493,12 +2493,12 @@ Recommended values are ?m or ?M.")
                (>= file-dir-len svn-dir-len)
                (string= (substring file-dir 0 svn-dir-len) svn-dir))
       (setq file-name (substring (buffer-file-name) svn-dir-len))
-      ;;(message (format "In svn-status directory %S" file-name))
+      ;;(message "In svn-status directory %S" file-name)
       (let ((st-info svn-status-info)
             (i-fname))
         (while st-info
           (setq i-fname (svn-status-line-info->filename (car st-info)))
-          ;;(message (format "i-fname=%S" i-fname))
+          ;;(message "i-fname=%S" i-fname)
           (when (and (string= file-name i-fname)
                      (not (eq (svn-status-line-info->filemark (car st-info)) ??)))
             (svn-status-line-info->set-filemark (car st-info)
@@ -2970,8 +2970,8 @@ Commands:
       (set (make-local-variable 'log-edit-callback) 'svn-log-edit-done)
       (set (make-local-variable 'log-edit-listfun) 'svn-log-edit-files-to-commit)
       (set (make-local-variable 'log-edit-initial-files) (log-edit-files))
-      (message (substitute-command-keys
-                "Press \\[log-edit-done] when you are done editing."))
+      (message "Press %s when you are done editing."
+               (substitute-command-keys "\\[log-edit-done]"))
       )
   (defun svn-log-edit-mode ()
     "Major Mode to edit svn log messages.
@@ -3035,7 +3035,7 @@ Commands:
                      "-F" svn-status-temp-file-to-remove)
         (save-excursion
           (set-buffer "*svn-process*")
-          (message (buffer-substring (point-min) (- (point-max) 1)))))
+          (message "%s" (buffer-substring (point-min) (- (point-max) 1)))))
     (when svn-status-files-to-commit ; there are files to commit
       (setq svn-status-operated-on-dot
             (and (= 1 (length svn-status-files-to-commit))
@@ -3239,17 +3239,15 @@ This function will be removed again, when a faster parsing and
 display routine for svn-status is available."
   (interactive)
   (setq svn-status-sort-status-buffer (not svn-status-sort-status-buffer))
-  (message (concat "The `svn-status-buffer-name' buffer will be"
-                   (if svn-status-sort-status-buffer "" " not")
-                   " sorted.")))
+  (message "The `svn-status-buffer-name' buffer will be%s sorted."
+           (if svn-status-sort-status-buffer "" " not")))
 
 (defun svn-status-toggle-display-full-path ()
   "Toggle displaying the full path in the `svn-status-buffer-name' buffer"
   (interactive)
   (setq svn-status-display-full-path (not svn-status-display-full-path))
-  (message (concat "The `svn-status-buffer-name' buffer will"
-                   (if svn-status-display-full-path "" " not")
-                   " use full path names."))
+  (message "The `svn-status-buffer-name' buffer will%s use full path names."
+           (if svn-status-display-full-path "" " not"))
   (svn-status-update))
 
 (defun svn-status-set-trac-project-root ()
