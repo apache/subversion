@@ -10,21 +10,18 @@ Status of 1.2.3:
 
 Candidate changes:
 
+Approved changes (further review is welcome, but not required):
+
   * r15672
     Fix an encoding error in svn_io_copy_dir_recursively().
     Justification:
       Simple fix and encoding errors are bad.
     Votes:
-      +1: jszakmeister, maxb
+      +1: jszakmeister, maxb, brane
 
   * r15799, r15815
     Avoid lots of warnings when compiling with current version of APR.
     Justification:
       Simple fix, these warnings could obscure other more important ones.
     Votes:
-      +1: rooneg, maxb
-      -1: brane (only r15799, see http://svn.haxx.se/dev/archive-2005-08/0677.shtml)
-
-Approved changes (further review is welcome, but not required):
-
-  
+      +1: rooneg, maxb, brane
