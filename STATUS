@@ -12,13 +12,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r15672
-    Fix an encoding error in svn_io_copy_dir_recursively().
-    Justification:
-      Simple fix and encoding errors are bad.
-    Votes:
-      +1: jszakmeister, maxb, brane
-
   * r15799, r15815
     Avoid lots of warnings when compiling with current version of APR.
     Justification:
