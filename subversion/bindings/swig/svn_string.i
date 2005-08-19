@@ -101,6 +101,34 @@ typedef struct svn_string_t svn_string_t;
     }
 }
 
+%typemap(ruby, in) svn_stringbuf_t *
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+  } else {
+    $1 = svn_stringbuf_ncreate(StringValuePtr($input),
+                               RSTRING($input)->len,
+                               _global_pool);
+  }
+}
+
+%typemap(ruby, in) svn_stringbuf_t *node_name
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+  } else {
+    VALUE rb_pool;
+    apr_pool_t *pool;
+
+    svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &pool);
+        
+    $1 = svn_stringbuf_ncreate(StringValuePtr($input),
+                               RSTRING($input)->len,
+                               pool);
+  }
+}
+
+
 %typemap(python,out) svn_stringbuf_t * {
     $result = PyString_FromStringAndSize($1->data, $1->len);
 }
@@ -110,6 +138,11 @@ typedef struct svn_string_t svn_string_t;
     sv_setpvn(sv,$1->data,$1->len);
     $result = sv;
     argvi++;
+}
+
+%typemap(ruby, out) svn_stringbuf_t *
+{
+  $result = rb_str_new($1->data, $1->len);
 }
 
 /* -----------------------------------------------------------------------
