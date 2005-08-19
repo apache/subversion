@@ -1099,6 +1099,16 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.add(path)
     info = ctx.commit(@wc_path)
 
+    assert_equal([
+                   {
+                     Svn::Core::PROP_REVISION_AUTHOR => @author,
+                     Svn::Core::PROP_REVISION_DATE => info.date,
+                     Svn::Core::PROP_REVISION_LOG => log,
+                   },
+                   info.revision
+                 ],
+                 ctx.revprop_list(@repos_uri, info.revision))
+    
     assert_equal([log, info.revision],
                  ctx.revprop_get(Svn::Core::PROP_REVISION_LOG,
                                  @repos_uri, info.revision))
