@@ -67,10 +67,14 @@ typedef struct svn_error_t
 
 
 /** index into an apr_array_header_t */
+#ifndef APR_ARRAY_IDX
 #define APR_ARRAY_IDX(ary,i,type) (((type *)(ary)->elts)[i])
+#endif
 
 /** easier array-pushing syntax */
+#ifndef APR_ARRAY_PUSH
 #define APR_ARRAY_PUSH(ary,type) (*((type *)apr_array_push (ary)))
+#endif
 
 
 /** The various types of nodes in the Subversion filesystem. */

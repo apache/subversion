@@ -12,9 +12,3 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r15799, r15815
-    Avoid lots of warnings when compiling with current version of APR.
-    Justification:
-      Simple fix, these warnings could obscure other more important ones.
-    Votes:
-      +1: rooneg, maxb, brane
