@@ -26,9 +26,11 @@
 
 %include typemaps.i
 
-%import apr.i
-%import svn_types.i
-%import svn_string.i
+%include svn_global.swg
+%import apr.swg
+%import core.i
+%import svn_types.swg
+%import svn_string.swg
 %import svn_delta.i
 
 /* -----------------------------------------------------------------------
@@ -91,11 +93,13 @@
 %typemap(python,argout,fragment="t_output_helper") apr_hash_t **entries_p {
     $result = t_output_helper(
         $result,
-        svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_fs_dirent_t));
+        svn_swig_py_convert_hash(*$1, $descriptor(svn_fs_dirent_t *),
+          _global_svn_swig_py_pool));
 }
 %typemap(perl5,in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
 %typemap(perl5,argout) apr_hash_t **entries_p {
-    ST(argvi++) = svn_swig_pl_convert_hash(*$1, SWIGTYPE_p_svn_fs_dirent_t);
+    ST(argvi++) = svn_swig_pl_convert_hash(*$1, 
+      $descriptor(svn_fs_dirent_t *));
 }
 %typemap(ruby,in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
 %typemap(ruby,argout) apr_hash_t **entries_p {
@@ -111,12 +115,14 @@
 %typemap(python, argout, fragment="t_output_helper") apr_hash_t **changed_paths_p {
     $result = t_output_helper(
         $result,
-        svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_fs_path_change_t));
+        svn_swig_py_convert_hash(*$1, $descriptor(svn_fs_path_change_t *),
+          _global_svn_swig_py_pool));
 }
 
 %typemap(perl5, in,numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
 %typemap(perl5, argout) apr_hash_t **changed_paths_p {
-    ST(argvi++) = svn_swig_pl_convert_hash(*$1, SWIGTYPE_p_svn_fs_path_change_t);
+    ST(argvi++) = svn_swig_pl_convert_hash(*$1, 
+      $descriptor(svn_fs_path_change_t *));
 }
 
 /* -----------------------------------------------------------------------
@@ -147,7 +153,6 @@
 
 %{
 #include "svn_md5.h"
-#include "svn_fs.h"
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
@@ -162,4 +167,4 @@
 #endif
 %}
 
-%include svn_fs.h
+%include svn_fs_h.swg

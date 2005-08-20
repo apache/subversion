@@ -1,5 +1,5 @@
 /*
- * apr.i :  SWIG interface file for selected APR types
+ * apr.swg :  SWIG include file for selected APR types
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
@@ -52,12 +52,12 @@ OUTPUT_TYPEMAP(unsigned long long, ULL2NUM, (unsigned long long));
 
 /* ----------------------------------------------------------------------- */
 
-%include apr.h
+%include apr_h.swg
 
 /* ### be nice to have all the error values and macros. there are some
    ### problems including this file, tho. SWIG isn't smart enough with some
    ### of the preprocessing and thinks there is a macro redefinition */
-//%include apr_errno.h
+//%include apr_errno_h.swg
 typedef int apr_status_t;
 
 /* -----------------------------------------------------------------------
@@ -205,7 +205,8 @@ apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
 %typemap(python,argout,fragment="t_output_helper") apr_file_t **
     "$result = t_output_helper(
         $result,
-        SWIG_NewPointerObj(*$1, $*1_descriptor, 0));";
+        svn_swig_NewPointerObj(*$1, $*1_descriptor, 
+           _global_svn_swig_py_pool));";
 
 %typemap(perl5, argout) apr_file_t ** {
     ST(argvi) = sv_newmortal();

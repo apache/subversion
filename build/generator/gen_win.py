@@ -252,6 +252,14 @@ class WinGeneratorBase(GeneratorBase):
                     ))
     return configs
   
+  def _swig_build_opts(self, lang):
+    """Options to pass in to SWIG for a specified language"""
+    return {
+      "python": self.swig_python_opts,
+      "ruby": self.swig_ruby_opts,
+      "perl": self.swig_perl_opts
+    }[lang]
+  
   def get_proj_sources(self, quote_path, target):
     "Get the list of source files for each project"
     sources = [ ]
@@ -301,44 +309,8 @@ class WinGeneratorBase(GeneratorBase):
                                  custom_build=cbuild, custom_target=jarfile))
 
     if isinstance(target, gen_base.TargetSWIG):
-      swig_options = ["-" + target.lang]
+      swig_options = string.split(self._swig_build_opts(target.lang))
       swig_deps = []
-
-      if self.swig_vernum >= 103024:
-        pass
-      elif self.swig_vernum >= 103020:
-        if target.include_runtime:
-          swig_options.append("-runtime")
-        else:
-          swig_options.append("-noruntime")
-      else:
-        if not target.include_runtime:
-          swig_options.append("-c")
-
-      if target.lang == "perl":
-        if self.swig_vernum >= 103020:
-          swig_options.append("-noproxy")
-        swig_options.append("-nopm")
-
-        objects = (("svn_delta_editor_t", "svn_delta.h", "delta_editor.hi"),
-                   ("svn_ra_plugin_t", "svn_ra.h", "ra_plugin.hi"),
-                   ("svn_ra_reporter_t", "svn_ra.h", "ra_reporter.hi"))
-
-        pfile = self.path("subversion/bindings/swig/perl/native/h2i.pl")
-
-        for objname, header, output in objects:
-          ifile = self.path("subversion/include", header)
-          ofile = self.path("subversion/bindings/swig", output)
-
-          obuild = "perl %s %s %s > %s" % (pfile, ifile, objname,
-                                           ofile)
-
-          sources.append(ProjectItem(path=ifile, reldir=None,
-                                     custom_build=obuild,
-                                     custom_target=ofile,
-                                     user_deps=()))
-
-          swig_deps.append(ofile)
 
       for include_dir in self.get_win_includes(target):
         swig_options.append("-I%s" % self.quote(include_dir))
@@ -349,14 +321,7 @@ class WinGeneratorBase(GeneratorBase):
             if isinstance(cobj, gen_base.SWIGObject):
               csrc = self.path(cobj.filename)
 
-              if self.swig_vernum < 103020 and target.lang == "python":
-                # workaround for a bug in the python module of old swigs.
-                # output path passed to swig has to use forward slashes,
-                # otherwise the generated python files (for shadow
-                # classes) will be saved to the wrong directory
-                cout = string.replace(csrc, '\\', '/')
-              else:
-                cout = csrc
+              cout = csrc
 
               # included header files that the generated c file depends on
               user_deps = swig_deps[:]
@@ -631,6 +596,8 @@ class WinGeneratorBase(GeneratorBase):
                       % (target.lang,
                          gen_base.lang_utillib_suffix[target.lang])
       fakeincludes = [ self.path("subversion/bindings/swig"),
+                       self.path("subversion/bindings/swig/proxy"),
+                       self.path("subversion/bindings/swig/include"),
                        self.path("subversion/include"),
                        self.path(util_includes),
                        self.apath(self.apr_path, "include"),
@@ -642,6 +609,7 @@ class WinGeneratorBase(GeneratorBase):
                        self.apath(self.apr_util_path, "xml/expat/lib"),
                        self.apath(self.neon_path, "src"),
                        self.apath(self.bdb_path, "include"),
+                       self.path("subversion/bindings/swig/proxy"),
                        self.path("subversion") ]
 
     if self.libintl_path:
@@ -827,9 +795,11 @@ class WinGeneratorBase(GeneratorBase):
       fp.close()
 
   def _find_swig(self):
-    # Require (and assume) version 1.3.19
-    base_version = '1.3.19'
-    vernum = base_vernum = 103019
+    # Require 1.3.24. If not found, assume 1.3.25.
+    default_version = '1.3.25'
+    minimum_version = '1.3.24'
+    vernum = 103025
+    minimum_vernum = 103024
     libdir = ''
 
     infp, outfp = os.popen4('swig -version')
@@ -849,14 +819,14 @@ class WinGeneratorBase(GeneratorBase):
         # build/ac-macros/swig.m4 explains the next incantation
         vernum = int('%d%02d%03d' % version)
         sys.stderr.write('Found installed SWIG version %d.%d.%d\n' % version)
-        if vernum < base_vernum:
+        if vernum < minimum_vernum:
           sys.stderr.write('WARNING: Subversion requires version %s\n'
-                           % base_version)
+                           % minimum_version)
 
         libdir = self._find_swig_libdir()
       else:
         sys.stderr.write('Could not find installed SWIG,'
-                         ' assuming version %s\n' % base_version)
+                         ' assuming version %s\n' % default_version)
         self.swig_libdir = ''
     finally:
       outfp.close()

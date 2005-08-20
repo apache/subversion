@@ -1,5 +1,5 @@
 /*
- * svn_types.i :  SWIG interface file for svn_types.h
+ * svn_types.swg :  SWIG include file for svn_types.h
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
@@ -19,7 +19,8 @@
 /* This interface file only defines types and their related information.
    There is no module associated with this interface file. */
 
-%import apr.i
+%include apr.swg
+%include exception.i
 
 /* -----------------------------------------------------------------------
    Create a typemap to define "type **" as OUT parameters.
@@ -40,7 +41,7 @@
 
 %typemap(python, argout, fragment="t_output_helper") SWIGTYPE **OUTPARAM {
     $result = t_output_helper($result,
-                              SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
+      svn_swig_NewPointerObj(*$1, $*1_descriptor, _global_svn_swig_py_pool));
 }
 %typemap(perl5, argout) SWIGTYPE **OUTPARAM {
     ST(argvi) = sv_newmortal();
@@ -137,7 +138,7 @@
             svn_swig_py_svn_exception($1);
         else
             svn_error_clear($1);
-        return NULL;
+        SWIG_fail;
     }
     Py_INCREF(Py_None);
     $result = Py_None;
@@ -216,7 +217,7 @@
 %typemap(python, in) (const char *PTR, apr_size_t LEN) {
     if (!PyString_Check($input)) {
         PyErr_SetString(PyExc_TypeError, "expecting a string");
-        return NULL;
+        SWIG_fail;
     }
     $1 = PyString_AS_STRING($input);
     $2 = PyString_GET_SIZE($input);
@@ -247,11 +248,56 @@
    Define a generic arginit mapping for pools.
 */
 
-%typemap(python, arginit) apr_pool_t *pool(apr_pool_t *_global_pool) {
-    /* Assume that the pool here is the last argument in the list */
-    SWIG_ConvertPtr(PyTuple_GET_ITEM(args, PyTuple_GET_SIZE(args) - 1),
-                    (void **)&$1, $1_descriptor, SWIG_POINTER_EXCEPTION | 0);
-    _global_pool = $1;
+#ifdef SWIGPYTHON
+%define svn_swig_py_pool_check(pool)
+  if (pool != NULL && !PyObject_HasAttrString(pool, (char *)"_mark_valid"))
+  {
+    int argnum = PyTuple_GET_SIZE(args);
+    SWIG_Python_TypeError(SWIG_TypePrettyName($descriptor), pool);
+    SWIG_arg_fail(argnum);
+    SWIG_fail;
+  }
+%enddef
+#endif
+
+%typemap(python, default) apr_pool_t *(apr_pool_t *_global_pool,
+  PyObject *_global_svn_swig_py_pool, int _global_svn_swig_py_is_local_pool)
+{
+  int argnum = PyTuple_GET_SIZE(args) - 1;
+  _global_svn_swig_py_is_local_pool = 1;
+  if (argnum >= 0) {
+    PyObject *input = PyTuple_GET_ITEM(args, argnum);
+    if (input != Py_None &&
+        PyObject_HasAttrString(input, (char *)"_mark_valid")) {
+      _global_pool = svn_swig_MustGetPtr(input, $1_descriptor, argnum+1, NULL);
+      if (PyErr_Occurred()) {
+        SWIG_fail;
+      }
+      _global_svn_swig_py_pool = input;
+    } else {
+      if (PyErr_Occurred()) {
+        PyErr_Clear();
+      }
+      svn_swig_get_application_pool(&_global_svn_swig_py_pool, &_global_pool); 
+    }
+  } else {
+    svn_swig_get_application_pool(&_global_svn_swig_py_pool, &_global_pool); 
+  }
+  $1 = _global_pool;
+  svn_swig_py_pool_check(_global_svn_swig_py_pool)
+}
+
+%typemap(python, in) apr_pool_t * {
+  if ($input != Py_None && $input != _global_svn_swig_py_pool) {
+    svn_swig_py_pool_check($input)
+    _global_pool = svn_swig_MustGetPtr($input, $1_descriptor, $svn_argnum, 
+      NULL);
+    if (PyErr_Occurred()) {
+        SWIG_fail;
+    }
+    _global_svn_swig_py_pool = $input;
+    $1 = _global_pool;
+  }
 }
 
 %typemap(perl5, in) apr_pool_t *pool "";
@@ -476,15 +522,14 @@
 
 %typemap(python,in,numinputs=0) apr_hash_t **dirents = apr_hash_t **OUTPUT;
 %typemap(python,argout,fragment="t_output_helper") apr_hash_t **dirents {
-    $result = t_output_helper
-	($result,
-	 svn_swig_py_convert_hash(*$1, SWIG_TypeQuery("svn_dirent_t *")));
+  $result = t_output_helper($result, svn_swig_py_convert_hash(*$1, 
+    $descriptor(svn_dirent_t *), _global_svn_swig_py_pool));
 }
 
 %typemap(perl5,in,numinputs=0) apr_hash_t **dirents = apr_hash_t **OUTPUT;
 %typemap(perl5,argout) apr_hash_t **dirents {
     ST(argvi++) = svn_swig_pl_convert_hash
-	(*$1, SWIG_TypeQuery("svn_dirent_t *"));
+	(*$1, $descriptor(svn_dirent_t *));
 }
 
 /* -----------------------------------------------------------------------
@@ -547,9 +592,6 @@
 /* ----------------------------------------------------------------------- */
 
 %{
-#include "svn_types.h"
-#include "svn_time.h"
-
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
 #endif
@@ -565,4 +607,5 @@
 #endif
 %}
 
-%include svn_types.h
+%include svn_time_h.swg
+%include svn_types_h.swg
