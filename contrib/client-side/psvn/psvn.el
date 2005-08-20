@@ -768,9 +768,10 @@ is prompted for give extra arguments, which are appended to ARGLIST."
     -1))
 
 
-(defun svn-status-make-dummy-dirs (dir-list)
+(defun svn-status-make-dummy-dirs (dir-list old-ui-information)
   (append (mapcar (lambda (dir)
-                    (list ui-status 32 nil dir -1 -1 "?" nil nil nil nil))
+                    (list (or (gethash dir old-ui-information) (list nil nil))
+                          32 nil dir -1 -1 "?" nil nil nil nil))
                   dir-list)
           svn-status-info))
 
@@ -794,6 +795,7 @@ The results are used to build the `svn-status-info' variable."
           (last-change-rev)
           (author)
           (path)
+          (dir)
           (user-elide nil)
           (ui-status '(nil nil))     ; contains (user-mark user-elide)
           (revision-width svn-status-default-revision-width)
@@ -878,7 +880,8 @@ The results are used to build the `svn-status-info' variable."
           (setq author-width (max author-width (length author)))))
         (forward-line 1))
       (unless svn-status-verbose
-        (setq svn-status-info (svn-status-make-dummy-dirs dir-set)))
+        (setq svn-status-info (svn-status-make-dummy-dirs dir-set
+                                                          old-ui-information)))
       (setq svn-status-default-column
             (+ 6 revision-width revision-width author-width
                (if svn-status-short-mod-flag-p 3 0)))
@@ -1391,6 +1394,7 @@ When called with the prefix argument 0, use the full path name."
         (len-fname)
         (test)
         (len-test)
+        (elided-list)
         (elide-mark))
     (while st-info
       (setq fname (svn-status-line-info->filename (car st-info)))
