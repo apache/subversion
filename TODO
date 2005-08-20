@@ -9,7 +9,12 @@ Specific list of items to do:
 
 * Implement handling of properties.
 * Implement handling of properties on directories.
-* Write tests.
+* Write tests
+  - revert of locally replaced file
+  - revert of locally replaced file with props
+  -
+* Change tests from XFAIL to PASS:
+  - revert_tests 4 (revert_replace_with_history_with_props)
 * Implement the enhancements to the cp and mv command (pretty much done
   just not committed yet).
 * Possibly enhance the handling of checksums.  Right now the code isn't
