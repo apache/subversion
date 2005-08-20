@@ -48,6 +48,10 @@
     const apr_array_header_t *diff_options
 };
 
+%apply const char *MAY_BE_NULL {
+    const char *native_eol
+};
+
 /* svn_client_propget(), svn_client_proplist(), svn_client_revprop_list() */
 %apply apr_hash_t **PROPHASH { apr_hash_t **props };
 

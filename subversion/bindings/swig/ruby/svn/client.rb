@@ -343,6 +343,13 @@ module Svn
       end
       alias rplist revprop_list
       alias rpl revprop_list
+
+      def export(from, to, rev=nil, peg_rev=nil,
+                 force=false, ignore_externals=false,
+                 recurse=true, native_eol=nil)
+        Client.export3(from, to, rev, peg_rev, force,
+                       ignore_externals, recurse, native_eol, self)
+      end
       
       def switch(path, uri, rev=nil, recurse=true)
         Client.switch(path, uri, rev, recurse, self)
