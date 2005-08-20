@@ -1,18 +1,8 @@
+#include "rubyhead.swg"
+#include "swig_ruby_external_runtime.swg"
 #include "swigutil_rb.h"
 #include <st.h>
 
-#if SVN_SWIG_VERSION >= 103025
-#  include <swiglabels.swg>
-#endif
-#include <ruby/rubyhead.swg>
-#include <swigrun.swg>
-#if SVN_SWIG_VERSION < 103025
-#  include <common.swg>
-#endif
-#include <ruby/rubydef.swg>
-#if SVN_SWIG_VERSION >= 103025
-#  include <runtime.swg>
-#endif
 
 #define POOL_P(obj) (RTEST(rb_obj_is_kind_of(obj, rb_svn_core_pool())))
 #define CONTEXT_P(obj) (RTEST(rb_obj_is_kind_of(obj, rb_svn_client_context())))

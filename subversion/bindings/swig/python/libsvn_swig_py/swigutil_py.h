@@ -40,42 +40,39 @@ extern "C" {
 
 
 
-#if SVN_SWIG_VERSION < 103024
-/* If this file is being included outside of a wrapper file, then need to
-   create stubs for some of the SWIG types. */
-
-/* if SWIGEXPORT is defined, then we're in a wrapper. otherwise, we need
-   the prototypes and type definitions. */
-#ifndef SWIGEXPORT
-#define SVN_NEED_SWIG_TYPES
-#endif
-
-#ifdef SVN_NEED_SWIG_TYPES
-
-#if SVN_SWIG_VERSION >= 103020
-#include "python/precommon.swg"
-#ifndef SWIG_ConvertPtr
-#define SWIG_ConvertPtr SWIG_Python_ConvertPtr
-#endif
-#ifndef SWIG_NewPointerObj
-#define SWIG_NewPointerObj SWIG_Python_NewPointerObj
-#endif
-#endif
-
-typedef struct _unnamed swig_type_info;
-
-PyObject *SWIG_NewPointerObj(void *, swig_type_info *, int own);
-swig_type_info *SWIG_TypeQuery(const char *name);
-int SWIG_ConvertPtr(PyObject *, void **, swig_type_info *, int flags);
-
-#endif /* SVN_NEED_SWIG_TYPES */
-#endif /* SVN_SWIG_VERSION < 103024 */
-
-
 /* Functions to manage python's global interpreter lock */
 void svn_swig_py_release_py_lock(void);
 void svn_swig_py_acquire_py_lock(void);
 
+
+/*** Automatic Pool Management Functions ***/
+extern int _global_svn_swig_py_is_local_pool;
+
+/* Set the application pool */
+void svn_swig_py_set_application_pool(PyObject *py_pool, apr_pool_t *pool);
+
+/* Clear the application pool */
+void svn_swig_py_clear_application_pool(void);
+
+/* Get the application pool */
+void svn_swig_get_application_pool(PyObject **py_pool, apr_pool_t **pool);
+
+/* Register cleanup function */
+PyObject * svn_swig_py_register_cleanup(PyObject *py_pool, apr_pool_t *pool);
+
+
+/*** SWIG Wrappers ***/
+
+/* Wrapper for SWIG_NewPointerObj */
+PyObject *svn_swig_NewPointerObj(void *obj, swig_type_info *type, 
+                                 PyObject *pool);
+
+/* Wrapper for SWIG_ConvertPtr */
+int svn_swig_ConvertPtr(PyObject *input, void **obj, swig_type_info *type);
+
+/* Wrapper for SWIG_MustGetPtr */
+void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum,
+                          PyObject **py_pool);
 
 /*** Functions to expose a custom SubversionException ***/
 
@@ -99,7 +96,8 @@ PyObject *svn_swig_py_prophash_to_dict(apr_hash_t *hash);
 PyObject *svn_swig_py_locationhash_to_dict(apr_hash_t *hash);
 
 /* convert a hash of 'const char *' -> TYPE into a Python dict */
-PyObject *svn_swig_py_convert_hash(apr_hash_t *hash, swig_type_info *type);
+PyObject *svn_swig_py_convert_hash(apr_hash_t *hash, swig_type_info *type, 
+                                   PyObject *py_pool);
 
 /* helper function to convert a 'char **' into a Python list of string
    objects */

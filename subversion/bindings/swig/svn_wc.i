@@ -26,10 +26,13 @@
 
 %include typemaps.i
 
-%import apr.i
-%import svn_types.i
-%import svn_string.i
+%include svn_global.swg
+%import apr.swg
+%import core.i
+%import svn_types.swg
+%import svn_string.swg
 %import svn_delta.i
+%import svn_ra.i
 
 /* -----------------------------------------------------------------------
    ### these functions require a pool, which we don't have immediately
@@ -65,7 +68,8 @@
 %typemap(python, argout, fragment="t_output_helper") apr_hash_t **entries {
     $result = t_output_helper(
         $result,
-        svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_wc_entry_t));
+        svn_swig_py_convert_hash(*$1, $descriptor(svn_wc_entry_t *),
+          _global_svn_swig_py_pool));
 }
 
 /* -----------------------------------------------------------------------
@@ -123,8 +127,6 @@
 /* ----------------------------------------------------------------------- */
 
 %{
-#include "svn_wc.h"
-
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
 #endif
@@ -138,4 +140,4 @@
 #endif
 %}
 
-%include svn_wc.h
+%include svn_wc_h.swg

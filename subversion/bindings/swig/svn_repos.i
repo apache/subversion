@@ -26,9 +26,11 @@
 
 %include typemaps.i
 
-%import apr.i
-%import svn_types.i
-%import svn_string.i
+%include svn_global.swg
+%import apr.swg
+%import core.i
+%import svn_types.swg
+%import svn_string.swg
 %import svn_delta.i
 %import svn_fs.i
 
@@ -69,7 +71,7 @@
     $1 = (apr_array_header_t *) svn_swig_py_revnums_to_array($input,
                                                              _global_pool);
     if ($1 == NULL)
-        return NULL;
+        SWIG_fail;
 }
 
 /* -----------------------------------------------------------------------
@@ -103,7 +105,8 @@
 %typemap(python,argout,fragment="t_output_helper") apr_hash_t **locks {
     $result = t_output_helper(
         $result,
-        svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_lock_t));
+        svn_swig_py_convert_hash(*$1, $descriptor(svn_lock_t *),
+          _global_svn_swig_py_pool));
 }
 
 
@@ -162,8 +165,6 @@
 /* ----------------------------------------------------------------------- */
 
 %{
-#include "svn_repos.h"
-
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
 #endif
@@ -177,4 +178,4 @@
 #endif
 %}
 
-%include svn_repos.h
+%include svn_repos_h.swg

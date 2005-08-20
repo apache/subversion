@@ -1,5 +1,5 @@
 /*
- * svn_string.i :  SWIG interface file for svn_string.h
+ * svn_string.swg :  SWIG include file for svn_string.h
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
@@ -19,8 +19,8 @@
 /* This interface file does not include a %module line because it should
    only be imported by other modules. */
 
-%import apr.i
-%import svn_types.i
+%import apr.swg
+%import svn_types.swg
 
 typedef struct svn_stringbuf_t svn_stringbuf_t;
 typedef struct svn_string_t svn_string_t;
@@ -42,7 +42,7 @@ typedef struct svn_string_t svn_string_t;
     else {
         s = PyString_FromStringAndSize((*$1)->data, (*$1)->len);
         if (s == NULL)
-            return NULL;
+            SWIG_fail;
     }
     $result = t_output_helper($result, s);
 }
@@ -76,7 +76,7 @@ typedef struct svn_string_t svn_string_t;
 %typemap(python,in) svn_stringbuf_t * {
     if (!PyString_Check($input)) {
         PyErr_SetString(PyExc_TypeError, "not a string");
-        return NULL;
+        SWIG_fail;
     }
     $1 = svn_stringbuf_ncreate(PyString_AS_STRING($input),
                                PyString_GET_SIZE($input),
@@ -156,7 +156,7 @@ typedef struct svn_string_t svn_string_t;
     else {
         if (!PyString_Check($input)) {
             PyErr_SetString(PyExc_TypeError, "not a string");
-            return NULL;
+            SWIG_fail;
         }
         value.data = PyString_AS_STRING($input);
         value.len = PyString_GET_SIZE($input);
@@ -227,7 +227,7 @@ typedef struct svn_string_t svn_string_t;
     else {
         s = PyString_FromString(*$1);
         if (s == NULL)
-            return NULL;
+            SWIG_fail;
     }
     $result = t_output_helper($result, s);
 }
@@ -257,7 +257,7 @@ typedef struct svn_string_t svn_string_t;
     $1 = (apr_array_header_t *) svn_swig_py_strings_to_array($input,
                                                              _global_pool);
     if ($1 == NULL)
-        return NULL;
+        SWIG_fail;
 }
 %typemap(perl5,in) const apr_array_header_t *STRINGLIST {
     $1 = (apr_array_header_t *) svn_swig_pl_strings_to_array($input,

@@ -26,9 +26,11 @@
 
 %include typemaps.i
 
-%import apr.i
-%import svn_types.i
-%import svn_string.i
+%include svn_global.swg
+%import apr.swg
+%import core.i
+%import svn_types.swg
+%import svn_string.swg
 %import svn_delta.i
 
 /* bad pool convention, also these should not be public interface at all
@@ -92,8 +94,6 @@
 /* ----------------------------------------------------------------------- */
 
 %{
-#include "svn_ra.h"
-
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
 #endif
@@ -107,8 +107,5 @@
 #endif
 %}
 
-%include svn_ra.h
+%include svn_ra_h.swg
 
-#ifdef SWIGPERL
-%include ra_reporter.hi
-#endif

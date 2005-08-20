@@ -26,9 +26,11 @@
 
 %include typemaps.i
 
-%import apr.i
-%import svn_types.i
-%import svn_string.i
+%include svn_global.swg
+%import core.i
+%import apr.swg
+%import svn_types.swg
+%import svn_string.swg
 %import svn_delta.i
 %import svn_wc.i
 
@@ -87,7 +89,7 @@
     int nelts = (*$1)->nelts;
     PyObject *list = PyList_New(nelts);
     if (list == NULL)
-        return NULL;
+        SWIG_fail;
     ppitem = (svn_client_proplist_item_t **)(*$1)->elts;
     for (i = 0; i < nelts; ++i, ++ppitem) {
         PyObject *item = PyTuple_New(2);
@@ -100,7 +102,7 @@
             Py_XDECREF(name);
             Py_XDECREF(hash);
             Py_DECREF(list);
-            return NULL;
+            SWIG_fail;
         }
         PyTuple_SET_ITEM(item, 0, name);
         PyTuple_SET_ITEM(item, 1, hash);
@@ -121,8 +123,8 @@
 }
 
 %typemap(perl5,argout) apr_array_header_t **props {
-    $result = svn_swig_pl_convert_array(*$1,SWIG_TypeQuery(
-                                              "svn_client_proplist_item_t *"));
+    $result = svn_swig_pl_convert_array(*$1,
+      $descriptor(svn_client_proplist_item_t *));
     argvi++;
 }
 
@@ -345,7 +347,8 @@
 }
 
 %typemap(perl5, out) apr_hash_t *config {
-  $result = svn_swig_pl_convert_hash($1, SWIG_TypeQuery("svn_config_t *"));
+  $result = svn_swig_pl_convert_hash($1, 
+    $descriptor(svn_config_t *));
   argvi++;
 }
 
@@ -417,7 +420,8 @@
  * converted back and forth from an array */
 
 %typemap(perl5, out) apr_array_header_t *wcprop_changes {
-    $result = svn_swig_pl_convert_array($1,SWIG_TypeQuery("svn_prop_t *"));
+    $result = svn_swig_pl_convert_array($1,
+      $descriptor(svn_prop_t *));
     argvi++;
 }
 
@@ -455,9 +459,6 @@
 /* ----------------------------------------------------------------------- */
 
 %{
-#include "svn_client.h"
-#include "svn_time.h"
-
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
 #endif
@@ -473,4 +474,5 @@
 #endif
 %}
 
-%include svn_client.h
+%include svn_time_h.swg
+%include svn_client_h.swg
