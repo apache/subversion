@@ -88,6 +88,8 @@
 ;; h     - svn-status-use-history
 ;; q     - svn-status-bury-buffer
 
+;; C-x C-j - svn-status-dired-jump
+
 ;; The output in the buffer contains this header to ease reading
 ;; of svn output:
 ;;   FPH BASE CMTD Author   em File
@@ -766,9 +768,10 @@ is prompted for give extra arguments, which are appended to ARGLIST."
     -1))
 
 
-(defun svn-status-make-dummy-dirs (dir-list)
+(defun svn-status-make-dummy-dirs (dir-list old-ui-information)
   (append (mapcar (lambda (dir)
-                    (list ui-status 32 nil dir -1 -1 "?" nil nil nil nil))
+                    (list (or (gethash dir old-ui-information) (list nil nil))
+                          32 nil dir -1 -1 "?" nil nil nil nil))
                   dir-list)
           svn-status-info))
 
@@ -792,6 +795,7 @@ The results are used to build the `svn-status-info' variable."
           (last-change-rev)
           (author)
           (path)
+          (dir)
           (user-elide nil)
           (ui-status '(nil nil))     ; contains (user-mark user-elide)
           (revision-width svn-status-default-revision-width)
@@ -876,7 +880,8 @@ The results are used to build the `svn-status-info' variable."
           (setq author-width (max author-width (length author)))))
         (forward-line 1))
       (unless svn-status-verbose
-        (setq svn-status-info (svn-status-make-dummy-dirs dir-set)))
+        (setq svn-status-info (svn-status-make-dummy-dirs dir-set
+                                                          old-ui-information)))
       (setq svn-status-default-column
             (+ 6 revision-width revision-width author-width
                (if svn-status-short-mod-flag-p 3 0)))
@@ -999,6 +1004,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "C-p") 'svn-status-previous-line)
   (define-key svn-status-mode-map (kbd "<down>") 'svn-status-next-line)
   (define-key svn-status-mode-map (kbd "<up>") 'svn-status-previous-line)
+  (define-key svn-status-mode-map (kbd "C-x C-j") 'svn-status-dired-jump)
   (define-key svn-status-mode-map [down-mouse-3] 'svn-status-popup-menu)
   (setq svn-status-mode-mark-map (make-sparse-keymap))
   (define-key svn-status-mode-map (kbd "*") svn-status-mode-mark-map)
@@ -1388,6 +1394,7 @@ When called with the prefix argument 0, use the full path name."
         (len-fname)
         (test)
         (len-test)
+        (elided-list)
         (elide-mark))
     (while st-info
       (setq fname (svn-status-line-info->filename (car st-info)))
@@ -1639,7 +1646,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
 (defun svn-status-update-buffer ()
   "Update the `svn-status-buffer-name' buffer, using `svn-status-info'."
   (interactive)
-  ;(message (format "buffer-name: %s" (buffer-name)))
+  ;(message "buffer-name: %s" (buffer-name))
   (unless (string= (buffer-name) svn-status-buffer-name)
     (set-buffer svn-status-buffer-name))
   (svn-status-mode)
@@ -1792,6 +1799,17 @@ non-interactive use."
   (previous-line nr-of-lines)
   (when (svn-status-get-line-information)
     (goto-char (+ (point-at-bol) svn-status-default-column))))
+
+(defun svn-status-dired-jump ()
+  "Jump to a dired buffer, containing the file at point."
+  (interactive)
+  (let* ((line-info (svn-status-get-line-information))
+         (file-full-path (svn-status-line-info->full-path line-info)))
+    (let ((default-directory
+            (file-name-as-directory
+             (expand-file-name (svn-status-line-info->directory-containing-line-info line-info t)))))
+      (dired-jump))
+    (dired-goto-file file-full-path)))
 
 (defun svn-status-possibly-negate-meaning-of-arg (arg &optional command)
   "Negate arg, if this-command is a member of svn-status-possibly-negate-meaning-of-arg."
@@ -2455,7 +2473,7 @@ See `svn-status-marked-files' for what counts as selected."
       (setq simple-path (or (file-name-directory simple-path) "."))
       (setq full-path (file-name-directory full-path)))
     (setq version (shell-command-to-string (concat "svnversion -n " full-path)))
-    (message (format "svnversion for '%s': %s" simple-path version))
+    (message "svnversion for '%s': %s" simple-path version)
     version))
 
 ;; --------------------------------------------------------------------------------
@@ -2479,12 +2497,12 @@ Recommended values are ?m or ?M.")
                (>= file-dir-len svn-dir-len)
                (string= (substring file-dir 0 svn-dir-len) svn-dir))
       (setq file-name (substring (buffer-file-name) svn-dir-len))
-      ;;(message (format "In svn-status directory %S" file-name))
+      ;;(message "In svn-status directory %S" file-name)
       (let ((st-info svn-status-info)
             (i-fname))
         (while st-info
           (setq i-fname (svn-status-line-info->filename (car st-info)))
-          ;;(message (format "i-fname=%S" i-fname))
+          ;;(message "i-fname=%S" i-fname)
           (when (and (string= file-name i-fname)
                      (not (eq (svn-status-line-info->filemark (car st-info)) ??)))
             (svn-status-line-info->set-filemark (car st-info)
@@ -2500,8 +2518,8 @@ Recommended values are ?m or ?M.")
                         (delete-region (point-at-bol) (point-at-eol))
                         (svn-insert-line-in-status-buffer (car st-info))
                         (delete-char 1))
-                    (message "psvn: file %s not found, updating `svn-status-buffer-name' buffer content..."
-                             i-fname)
+                    (message "psvn: file %s not found, updating %s buffer content..."
+                             i-fname svn-status-buffer-name)
                     (svn-status-update-buffer))))))
           (setq st-info (cdr st-info))))))
   nil)
@@ -2956,8 +2974,8 @@ Commands:
       (set (make-local-variable 'log-edit-callback) 'svn-log-edit-done)
       (set (make-local-variable 'log-edit-listfun) 'svn-log-edit-files-to-commit)
       (set (make-local-variable 'log-edit-initial-files) (log-edit-files))
-      (message (substitute-command-keys
-                "Press \\[log-edit-done] when you are done editing."))
+      (message "Press %s when you are done editing."
+               (substitute-command-keys "\\[log-edit-done]"))
       )
   (defun svn-log-edit-mode ()
     "Major Mode to edit svn log messages.
@@ -3021,7 +3039,7 @@ Commands:
                      "-F" svn-status-temp-file-to-remove)
         (save-excursion
           (set-buffer "*svn-process*")
-          (message (buffer-substring (point-min) (- (point-max) 1)))))
+          (message "%s" (buffer-substring (point-min) (- (point-max) 1)))))
     (when svn-status-files-to-commit ; there are files to commit
       (setq svn-status-operated-on-dot
             (and (= 1 (length svn-status-files-to-commit))
@@ -3225,17 +3243,15 @@ This function will be removed again, when a faster parsing and
 display routine for svn-status is available."
   (interactive)
   (setq svn-status-sort-status-buffer (not svn-status-sort-status-buffer))
-  (message (concat "The `svn-status-buffer-name' buffer will be"
-                   (if svn-status-sort-status-buffer "" " not")
-                   " sorted.")))
+  (message "The %s buffer will be%s sorted." svn-status-buffer-name
+           (if svn-status-sort-status-buffer "" " not")))
 
 (defun svn-status-toggle-display-full-path ()
   "Toggle displaying the full path in the `svn-status-buffer-name' buffer"
   (interactive)
   (setq svn-status-display-full-path (not svn-status-display-full-path))
-  (message (concat "The `svn-status-buffer-name' buffer will"
-                   (if svn-status-display-full-path "" " not")
-                   " use full path names."))
+  (message "The %s buffer will%s use full path names." svn-status-buffer-name
+           (if svn-status-display-full-path "" " not"))
   (svn-status-update))
 
 (defun svn-status-set-trac-project-root ()

@@ -33,6 +33,20 @@ module Svn
       end
     end
 
+    PropListItem = ProplistItem
+    class PropListItem
+      alias name node_name
+      alias props prop_hash
+
+      def method_missing(meth, *args)
+        _props = props
+        if _props.respond_to?(meth)
+          _props.__send__(meth, *args)
+        else
+          super
+        end
+      end
+    end
     
     Context = Ctx
     class Context
@@ -155,6 +169,15 @@ module Svn
       alias prop_get propget
       alias pget propget
       alias pg propget
+
+      def proplist(target, rev=nil, peg_rev=nil, recurse=true)
+        rev ||= "HEAD"
+        peg_rev ||= rev
+        Client.proplist2(target, rev, peg_rev, recurse, self)
+      end
+      alias prop_list proplist
+      alias plist proplist
+      alias pl proplist
       
       def copy(src_path, dst_path, rev=nil)
         Client.copy2(src_path, rev || "HEAD", dst_path, self)
@@ -285,6 +308,7 @@ module Svn
         value, = revprop_get(name, uri, rev)
         value
       end
+      alias rp revprop
       
       def revprop_get(name, uri, rev)
         result = Client.revprop_get(name, uri, rev, self)
@@ -294,13 +318,37 @@ module Svn
           [nil, result]
         end
       end
+      alias rpget revprop_get
+      alias rpg revprop_get
       
       def revprop_set(name, value, uri, rev, force=false)
         Client.revprop_set(name, value, uri, rev, force, self)
       end
+      alias rpset revprop_set
+      alias rps revprop_set
       
       def revprop_del(name, uri, rev, force=false)
         Client.revprop_set(name, nil, uri, rev, force, self)
+      end
+      alias rpdel revprop_del
+      alias rpd revprop_del
+
+      def revprop_list(uri, rev)
+        props, rev = Client.revprop_list(uri, rev, self)
+        if props.has_key?(Svn::Core::PROP_REVISION_DATE)
+          props[Svn::Core::PROP_REVISION_DATE] =
+            Util.string_to_time(props[Svn::Core::PROP_REVISION_DATE])
+        end
+        [props, rev]
+      end
+      alias rplist revprop_list
+      alias rpl revprop_list
+
+      def export(from, to, rev=nil, peg_rev=nil,
+                 force=false, ignore_externals=false,
+                 recurse=true, native_eol=nil)
+        Client.export3(from, to, rev, peg_rev, force,
+                       ignore_externals, recurse, native_eol, self)
       end
       
       def switch(path, uri, rev=nil, recurse=true)

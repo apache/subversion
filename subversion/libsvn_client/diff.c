@@ -61,6 +61,10 @@ static const char under_string[] =
 static svn_error_t *
 file_printf_from_utf8 (apr_file_t *fptr, const char *encoding,
                        const char *format, ...)
+    __attribute__ ((format (printf, 3, 4)));
+static svn_error_t *
+file_printf_from_utf8 (apr_file_t *fptr, const char *encoding,
+                       const char *format, ...)
 {
   va_list ap;
   const char *buf, *buf_apr;

@@ -50,6 +50,10 @@
     const apr_array_header_t *diff_options
 };
 
+%apply const char *MAY_BE_NULL {
+    const char *native_eol
+};
+
 /* svn_client_propget(), svn_client_proplist(), svn_client_revprop_list() */
 %apply apr_hash_t **PROPHASH { apr_hash_t **props };
 
@@ -106,6 +110,16 @@
         PyList_SET_ITEM(list, i, item);
     }
     $result = t_output_helper($result, list);
+}
+
+%typemap(ruby, argout) apr_array_header_t **props
+{
+  $result = svn_swig_rb_apr_array_to_array_proplist_item(*$1);
+}
+
+%typemap(ruby, out) apr_hash_t *prop_hash
+{
+  $result = svn_swig_rb_prop_hash_to_hash($1);
 }
 
 %typemap(perl5,argout) apr_array_header_t **props {

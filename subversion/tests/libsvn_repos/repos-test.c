@@ -1297,6 +1297,7 @@ authz (const char **msg,
 
 /* Callback for the commit editor tests that relays requests to
    authz. */
+static
 svn_error_t *commit_authz_cb (svn_repos_authz_access_t required,
                               svn_boolean_t *allowed,
                               svn_fs_root_t *root,
@@ -1315,7 +1316,7 @@ svn_error_t *commit_authz_cb (svn_repos_authz_access_t required,
 
 /* Test that the commit editor is taking authz into account
    properly */
-svn_error_t *
+static svn_error_t *
 commit_editor_authz  (const char **msg,
                       svn_boolean_t msg_only,
                       svn_test_opts_t *opts,

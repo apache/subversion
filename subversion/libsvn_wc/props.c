@@ -474,13 +474,24 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
         {
           if (! working_val)  /* ... but it's not in the working_props */
             {
-              conflict = TRUE;
-              conflict_description = 
-                svn_string_createf 
-                (pool, 
-                 _("Trying to change property '%s' from '%s' to '%s',\n"
-                   "but the property does not exist."),
-                 propname, from_val->data, to_val->data);
+              if (to_val)
+                {
+                  conflict = TRUE;
+                  conflict_description = 
+                    svn_string_createf 
+                    (pool, 
+                     _("Trying to change property '%s' from '%s' to '%s',\n"
+                       "but the property does not exist."),
+                     propname, from_val->data, to_val->data);
+                }
+              else
+                {
+                  /* The property to be deleted doesn't exist, so it's
+                     a 'clean merge'. */
+                  if (state && is_normal
+                      && (*state != svn_wc_notify_state_conflicted))
+                    *state = svn_wc_notify_state_merged;
+                }
             }
           
           else  /* property already exists */
@@ -491,6 +502,16 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
                      fine to set it to the 'to' value.  */
                   apr_hash_set (working_props, propname,
                                 APR_HASH_KEY_STRING, to_val);
+                }
+
+              else if (!to_val && !svn_string_compare (from_val, working_val))
+                {
+                  conflict = TRUE;
+                  conflict_description =
+                    svn_string_createf
+                    (pool, _("Trying to delete property '%s' but value"
+                             " has been modified from '%s' to '%s'."),
+                     propname, from_val->data, working_val->data);
                 }
 
               else if (svn_string_compare (working_val, to_val))

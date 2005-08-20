@@ -86,12 +86,14 @@ typedef struct svn_ra_svn_cmd_entry_t
 /** Memory representation of an on-the-wire data item. */
 typedef struct svn_ra_svn_item_t 
 {
+  /** Variant indicator. */
   enum {
     SVN_RA_SVN_NUMBER,
     SVN_RA_SVN_STRING,
     SVN_RA_SVN_WORD,
     SVN_RA_SVN_LIST
   } kind;
+  /** Variant data. */
   union {
     apr_uint64_t number;
     svn_string_t *string;

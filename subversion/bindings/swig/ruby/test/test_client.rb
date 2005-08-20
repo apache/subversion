@@ -1059,6 +1059,48 @@ class SvnClientTest < Test::Unit::TestCase
                  ctx.pg(Svn::Core::PROP_MIME_TYPE, path))
   end
   
+  def test_prop_list
+    log = "sample log"
+    dir = "dir"
+    file = "sample.txt"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+    dir_uri = "#{@repos_uri}/#{dir}"
+    uri = "#{dir_uri}/#{file}"
+    name1 = "name1"
+    name2 = "name2"
+    value1 = "value1"
+    value2 = "value2"
+
+    ctx = make_context(log)
+
+    ctx.mkdir(dir_path)
+    File.open(path, "w") {}
+    ctx.add(path)
+
+    ctx.ci(@wc_path)
+
+    assert_equal([], ctx.prop_list(path))
+    
+    ctx.ps(name1, value1, path)
+    ctx.ci(@wc_path)
+    assert_equal([uri], ctx.prop_list(path).collect{|item| item.node_name})
+    assert_equal([{name1 => value1}],
+                 ctx.plist(path).collect{|item| item.prop_hash})
+    assert_equal([value1], ctx.pl(path).collect{|item| item[name1]})
+
+    ctx.up(@wc_path)
+    ctx.ps(name2, value2, dir_path)
+    ctx.ci(@wc_path)
+    assert_equal([uri, dir_uri].sort,
+                 ctx.prop_list(dir_path).collect{|item| item.name})
+    prop_list = ctx.plist(dir_path).collect{|item| [item.name, item.props]}
+    props = prop_list.assoc(uri)[1]
+    dir_props = prop_list.assoc(dir_uri)[1]
+    assert_equal({name1 => value1, name2 => value2}, props)
+    assert_equal({name2 => value2}, dir_props)
+  end
+  
   def test_cat
     log = "sample log"
     src1 = "source1\n"
@@ -1099,6 +1141,16 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.add(path)
     info = ctx.commit(@wc_path)
 
+    assert_equal([
+                   {
+                     Svn::Core::PROP_REVISION_AUTHOR => @author,
+                     Svn::Core::PROP_REVISION_DATE => info.date,
+                     Svn::Core::PROP_REVISION_LOG => log,
+                   },
+                   info.revision
+                 ],
+                 ctx.revprop_list(@repos_uri, info.revision))
+    
     assert_equal([log, info.revision],
                  ctx.revprop_get(Svn::Core::PROP_REVISION_LOG,
                                  @repos_uri, info.revision))
@@ -1110,21 +1162,74 @@ class SvnClientTest < Test::Unit::TestCase
                  ctx.revprop_set(Svn::Core::PROP_REVISION_LOG, new_log,
                                  @repos_uri, info.revision))
     assert_equal([new_log, info.revision],
-                 ctx.revprop_get(Svn::Core::PROP_REVISION_LOG,
-                                 @repos_uri, info.revision))
+                 ctx.rpget(Svn::Core::PROP_REVISION_LOG,
+                           @repos_uri, info.revision))
     assert_equal(new_log,
-                 ctx.revprop(Svn::Core::PROP_REVISION_LOG,
-                             @repos_uri, info.revision))
-
+                 ctx.rp(Svn::Core::PROP_REVISION_LOG,
+                        @repos_uri, info.revision))
+    assert_equal([
+                   {
+                     Svn::Core::PROP_REVISION_AUTHOR => @author,
+                     Svn::Core::PROP_REVISION_DATE => info.date,
+                     Svn::Core::PROP_REVISION_LOG => new_log,
+                   },
+                   info.revision
+                 ],
+                 ctx.rplist(@repos_uri, info.revision))
+    
     assert_equal(info.revision,
                  ctx.revprop_del(Svn::Core::PROP_REVISION_LOG,
                                  @repos_uri, info.revision))
     assert_equal([nil, info.revision],
-                 ctx.revprop_get(Svn::Core::PROP_REVISION_LOG,
-                                 @repos_uri, info.revision))
+                 ctx.rpg(Svn::Core::PROP_REVISION_LOG,
+                         @repos_uri, info.revision))
     assert_equal(nil,
-                 ctx.revprop(Svn::Core::PROP_REVISION_LOG,
-                             @repos_uri, info.revision))
+                 ctx.rp(Svn::Core::PROP_REVISION_LOG,
+                        @repos_uri, info.revision))
+
+    assert_equal(info.revision,
+                 ctx.rpset(Svn::Core::PROP_REVISION_LOG, new_log,
+                           @repos_uri, info.revision))
+    assert_equal(new_log,
+                 ctx.rp(Svn::Core::PROP_REVISION_LOG,
+                        @repos_uri, info.revision))
+    assert_equal(info.revision,
+                 ctx.rps(Svn::Core::PROP_REVISION_LOG, nil,
+                         @repos_uri, info.revision))
+    assert_equal(nil,
+                 ctx.rp(Svn::Core::PROP_REVISION_LOG,
+                        @repos_uri, info.revision))
+    
+    assert_equal([
+                   {
+                     Svn::Core::PROP_REVISION_AUTHOR => @author,
+                     Svn::Core::PROP_REVISION_DATE => info.date,
+                   },
+                   info.revision
+                 ],
+                 ctx.rpl(@repos_uri, info.revision))
+  end
+  
+  def test_export
+    log = "sample log"
+    src = "source\n"
+    file = "sample.txt"
+    dir = "sample"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+    tmp_base_path = File.join(@tmp_path, "tmp")
+    tmp_dir_path = File.join(tmp_base_path, dir)
+    tmp_path = File.join(tmp_dir_path, file)
+
+    ctx = make_context(log)
+
+    ctx.mkdir(dir_path)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(path)
+    rev = ctx.ci(@wc_path).revision
+
+    assert_equal(rev, ctx.export(@repos_uri, tmp_base_path))
+    assert_equal(src, File.open(tmp_path) {|f| f.read})
   end
   
   def test_switch

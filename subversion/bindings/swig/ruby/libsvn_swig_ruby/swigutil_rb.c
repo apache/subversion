@@ -294,7 +294,10 @@ DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_prop,
                           (void *)"svn_prop_t *")
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_svn_rev,
                           c2r_long, &, svn_revnum_t, NULL)
-     
+DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_proplist_item,
+                          c2r_swig_type, , svn_client_proplist_item_t *,
+                          (void *)"svn_client_proplist_item_t *")
+
 
 
 /* Ruby Array -> apr_array_t */
@@ -343,7 +346,7 @@ c2r_hash(apr_hash_t *hash,
     const void *key;
     void *val;
     VALUE v = Qnil;
-      
+    
     apr_hash_this(hi, &key, NULL, &val);
     if (val) {
       v = (*func)(val, ctx);
@@ -372,6 +375,11 @@ svn_swig_rb_apr_hash_to_hash_swig_type(apr_hash_t *hash, const char *type_name)
   return c2r_hash(hash, c2r_swig_type, (void *)type_name);
 }
 
+VALUE
+svn_swig_rb_prop_hash_to_hash(apr_hash_t *prop_hash)
+{
+  return svn_swig_rb_apr_hash_to_hash_svn_string(prop_hash);
+}
 
 
 /* Ruby Hash -> apr_hash_t */
@@ -544,11 +552,18 @@ svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
   if (argc > 0) {
     if (POOL_P(argv[argc - 1])) {
       *rb_pool = argv[argc - 1];
+      argc -= 1;
     }
-    argc -= 1;
   }
 
-  if (NIL_P(rb_pool)) {
+  if (!NIL_P(self)) {
+    *rb_pool = rb_get_pool(self);
+    if (!POOL_P(*rb_pool)) {
+      *rb_pool = Qnil;
+    }
+  }
+
+  if (NIL_P(*rb_pool)) {
     VALUE target = find_swig_type_object(argc, argv);
     *rb_pool = rb_get_pool(target);
     if (!POOL_P(*rb_pool)) {

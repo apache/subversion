@@ -2548,13 +2548,14 @@ def safe_property_merge(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Add a property to a file and a directory, commit as r2.
+  # Add a property to two files and a directory, commit as r2.
   alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  beta_path = os.path.join(wc_dir, 'A', 'B', 'E', 'beta')
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'foo', 'foo_val',
-                                     alpha_path)
+                                     alpha_path, beta_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'foo', 'foo_val',
                                      E_path)
@@ -2562,9 +2563,11 @@ def safe_property_merge(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/E'       : Item(verb='Sending'),
     'A/B/E/alpha' : Item(verb='Sending'),
+    'A/B/E/beta'  : Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/B/E', 'A/B/E/alpha', wc_rev=2, status='  ')
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
+                        wc_rev=2, status='  ')
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output, expected_status,
                                          None, None, None, None, None,
@@ -2587,11 +2590,15 @@ def safe_property_merge(sbox):
                                      'propset', 'foo', 'foo_val2',
                                      alpha_path)
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propdel', 'foo',
+                                     beta_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'foo', 'foo_val2',
                                      E_path)
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/E'       : Item(verb='Sending'),
     'A/B/E/alpha' : Item(verb='Sending'),
+    'A/B/E/beta'  : Item(verb='Sending'),
     })
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output, None,
@@ -2599,13 +2606,14 @@ def safe_property_merge(sbox):
                                          wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
-  # Make local propchanges to E and alpha in the branch.
+  # Make local propchanges to E, alpha and beta in the branch.
   alpha_path2 = os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha')
+  beta_path2 = os.path.join(wc_dir, 'A', 'B2', 'E', 'beta')
   E_path2 = os.path.join(wc_dir, 'A', 'B2', 'E')
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'foo', 'branchval',
-                                     alpha_path2)
+                                     alpha_path2, beta_path2)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'foo', 'branchval',
                                      E_path2)
@@ -2617,6 +2625,7 @@ def safe_property_merge(sbox):
   expected_output = wc.State(B2_path, {
     'E'        : Item(status=' C'),
     'E/alpha'  : Item(status=' C'),
+    'E/beta'   : Item(status=' C'),
     })
 
   expected_disk = wc.State('', {
@@ -2626,14 +2635,14 @@ def safe_property_merge(sbox):
     'F'        : Item(),
     'lambda'   : Item("This is the file 'lambda'.\n"),
     })
-  expected_disk.tweak('E', 'E/alpha', 
+  expected_disk.tweak('E', 'E/alpha', 'E/beta',
                       props={'foo' : 'branchval'}) # local mods still present
 
   expected_status = wc.State(B2_path, {
     ''        : Item(status='  '),
     'E'       : Item(status=' C'),
     'E/alpha' : Item(status=' C'),
-    'E/beta'  : Item(status='  '),
+    'E/beta'  : Item(status=' C'),
     'F'       : Item(status='  '),
     'lambda'  : Item(status='  '),
     })
@@ -2641,8 +2650,8 @@ def safe_property_merge(sbox):
 
   expected_skip = wc.State('', { })
 
-  # should have 2 'prej' files left behind, describing prop conflicts:
-  extra_files = ['alpha.*\.prej', 'dir_conflicts.*\.prej']
+  # should have 3 'prej' files left behind, describing prop conflicts:
+  extra_files = ['alpha.*\.prej', 'beta.*\.prej', 'dir_conflicts.*\.prej']
   
   svntest.actions.run_and_verify_merge(B2_path, '3', '4', B_url,
                                        expected_output,
