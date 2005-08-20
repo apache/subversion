@@ -1210,6 +1210,28 @@ class SvnClientTest < Test::Unit::TestCase
                  ctx.rpl(@repos_uri, info.revision))
   end
   
+  def test_export
+    log = "sample log"
+    src = "source\n"
+    file = "sample.txt"
+    dir = "sample"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+    tmp_base_path = File.join(@tmp_path, "tmp")
+    tmp_dir_path = File.join(tmp_base_path, dir)
+    tmp_path = File.join(tmp_dir_path, file)
+
+    ctx = make_context(log)
+
+    ctx.mkdir(dir_path)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(path)
+    rev = ctx.ci(@wc_path).revision
+
+    assert_equal(rev, ctx.export(@repos_uri, tmp_base_path))
+    assert_equal(src, File.open(tmp_path) {|f| f.read})
+  end
+  
   def test_switch
     log = "sample log"
     trunk_src = "trunk source\n"
