@@ -1708,7 +1708,7 @@ def wc_copy_replace_with_props(sbox):
 
   # Verify both content and props have been copied
   expected_disk.tweak('A/D/G/rho',
-                      contents="This is the file 'pi'.",
+                      contents="This is the file 'pi'.\n",
                       props={ 'phony-prop': '*' })
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
   svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
