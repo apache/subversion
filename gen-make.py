@@ -167,7 +167,6 @@ if __name__ == '__main__':
                                 'with-httpd=',
                                 'with-libintl=',
                                 'with-openssl=',
-                                'with-swig=',
                                 'with-zlib=',
                                 'with-junit=',
                                 'enable-pool-debug',
