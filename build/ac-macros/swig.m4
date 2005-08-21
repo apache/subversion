@@ -16,6 +16,7 @@ AC_DEFUN(SVN_CHECK_SWIG,
     case "$withval" in
       "no")
         SWIG_SUITABLE=no
+        SVN_FIND_SWIG(no)
       ;;
       "yes")
         SVN_FIND_SWIG(check)
@@ -34,7 +35,9 @@ AC_DEFUN(SVN_FIND_SWIG,
 [
   where=$1
 
-  if test $where = check; then
+  if test $where = no; then
+    AC_PATH_PROG(SWIG, none, none)
+  elif test $where = check; then
     AC_PATH_PROG(SWIG, swig, none)
   else
     if test -f "$where"; then
