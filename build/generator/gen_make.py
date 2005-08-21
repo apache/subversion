@@ -194,7 +194,7 @@ class Generator(gen_base.GeneratorBase):
       opts = self.swig.opts[objname.lang]
       self.ofile.write('%s: %s\n' % (objname, deps) +
         '\t@if test $(abs_srcdir) != $(abs_builddir); then ' +
-        'cp -f $(abs_srcdir)/%s/*.i ' % source_dir +
+        'cp -pf $(abs_srcdir)/%s/*.i ' % source_dir +
         '$(abs_builddir)/%s; fi\n' % source_dir +
         '\t$(SWIG) $(SWIG_INCLUDES) %s ' % opts +
         '-o $@ $(abs_builddir)/%s\n' % source +
@@ -203,7 +203,7 @@ class Generator(gen_base.GeneratorBase):
         '\t@if test $(abs_srcdir) != $(abs_builddir) -a ' +
         '-e $(abs_srcdir)/%s -a ' % objname + 
         '! -e $(abs_builddir)/%s; then ' % objname +
-        'cp -f $(abs_srcdir)/%s $(abs_builddir)/%s; fi\n' % (objname, objname)
+        'cp -pf $(abs_srcdir)/%s $(abs_builddir)/%s; fi\n' % (objname, objname)
       )
 
     self.ofile.write('\n')

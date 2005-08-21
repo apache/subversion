@@ -627,7 +627,7 @@ copy-swig-py: autogen-swig-py
 	@if test $(top_srcdir) != . -a \
 	    -e $(SWIG_PY_SRC_DIR)/core.py -a \
 	    ! -e $(SWIG_SRC_DIR)/core.py; then \
-	  cp -f $(SWIG_PY_SRC_DIR)/*.py $(SWIG_PY_DIR); \
+	  cp -pf $(SWIG_PY_SRC_DIR)/*.py $(SWIG_PY_DIR); \
 	fi
 
 swig-py: autogen-swig-py copy-swig-py $(SWIG_PY_DIR)/libsvn
