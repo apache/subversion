@@ -2840,7 +2840,6 @@ static svn_error_t * reporter_finish_report(void *report_baton,
   report_baton_t *rb = report_baton;
   svn_error_t *err;
   const char *vcc;
-  int http_status;
 
 #define SVN_RA_DAV__REPORT_TAIL  "</S:update-report>" DEBUG_CR
   /* write the final closing gunk to our request body. */
@@ -2873,7 +2872,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
                                    cdata_handler,
                                    end_element,
                                    rb,
-                                   NULL, &http_status, 
+                                   NULL, NULL,
                                    rb->spool_response, rb->ras->pool);
 
   /* we're done with the file */
