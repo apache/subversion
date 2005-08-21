@@ -564,7 +564,11 @@ svn_ra_dav__lookup_xml_elem(const svn_ra_dav__xml_elm_t *table,
  * inserted as extra headers in the request.  Can be NULL.
  *
  * STATUS_CODE is an optional 'out' parameter; if non-NULL, then set
- * *STATUS_CODE to the http status code returned by the server.
+ * *STATUS_CODE to the http status code returned by the server.  This
+ * can be set to a useful value even when the function returns an error
+ * however it is not always set when an error is returned.  So any caller
+ * wishing to check *STATUS_CODE when an error has been returned must
+ * initialise *STATUS_CODE before calling the function.
  *
  * If SPOOL_RESPONSE is set, the request response will be cached to
  * disk in a tmpfile (in full), then read back and parsed.
