@@ -190,11 +190,12 @@ class Generator(gen_base.GeneratorBase):
     for objname, sources in swig_c_deps:
       deps = string.join(map(str, sources))
       source = str(sources[0])
+      source_dir = build_path_dirname(source)
       opts = self.swig.opts[objname.lang]
       self.ofile.write('%s: %s\n' % (objname, deps) +
         '\t@if test $(abs_srcdir) != $(abs_builddir); then ' +
-        'cp -f $(abs_srcdir)/%s $(abs_builddir)/%s; ' % (source, source) +
-        'fi\n' +
+        'cp -f $(abs_srcdir)/%s/*.i ' % source_dir +
+        '$(abs_builddir)/%s; fi\n' % source_dir +
         '\t$(SWIG) $(SWIG_INCLUDES) %s ' % opts +
         '-o $@ $(abs_builddir)/%s\n' % source +
         'autogen-swig-%s: copy-swig-%s\n' % (short[objname.lang], objname) +
