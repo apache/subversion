@@ -33,10 +33,58 @@ AC_DEFUN(SVN_CHECK_SWIG,
 AC_DEFUN(SVN_FIND_SWIG,
 [
   where=$1
-  SWIG_SUITABLE=yes
+
+  if test $where = check; then
+    AC_PATH_PROG(SWIG, swig, none)
+  else
+    if test -f "$where"; then
+      SWIG="$where"
+    else
+      SWIG="$where/bin/swig"
+    fi
+    if test ! -f "$SWIG" -o ! -x "$SWIG"; then
+      AC_MSG_ERROR([Could not find swig binary at $SWIG])
+    fi 
+  fi
+
+  if test "$SWIG" != "none"; then
+    AC_MSG_CHECKING([swig version])
+    SWIG_VERSION_RAW="`$SWIG -version 2>&1 | \
+                       sed -ne 's/^.*Version \(.*\)$/\1/p'`"
+    # We want the version as an integer so we can test against
+    # which version we're using.  SWIG doesn't provide this
+    # to us so we have to come up with it on our own. 
+    # The major is passed straight through,
+    # the minor is zero padded to two places,
+    # and the patch level is zero padded to three places.
+    # e.g. 1.3.24 becomes 103024
+    SWIG_VERSION="`echo \"$SWIG_VERSION_RAW\" | \
+                  sed -e 's/[[^0-9\.]].*$//' \
+                      -e 's/\.\([[0-9]]\)$/.0\1/' \
+                      -e 's/\.\([[0-9]][[0-9]]\)$/.0\1/' \
+                      -e 's/\.\([[0-9]]\)\./0\1/; s/\.//g;'`"
+    AC_MSG_RESULT([$SWIG_VERSION_RAW])
+    AC_SUBST(SWIG_VERSION)
+    # If you change the required swig version number, don't forget to update:
+    #   subversion/bindings/swig/INSTALL
+    #   subversion/bindings/swig/NOTES
+    #   packages/rpm/redhat-8+/subversion.spec
+    #   packages/rpm/redhat-7.x/subversion.spec
+    #   packages/rpm/rhel-3/subversion.spec
+    #   packages/rpm/rhel-4/subversion.spec
+    if test -n "$SWIG_VERSION" && test "$SWIG_VERSION" -ge "103024"; then
+      SWIG_SUITABLE=yes
+    else
+      SWIG_SUITABLE=no
+      AC_MSG_WARN([Detected SWIG version $SWIG_VERSION_RAW])
+      AC_MSG_WARN([This is not compatible with Subversion])
+      AC_MSG_WARN([Subversion can use SWIG version 1.3.24 or later])
+    fi
+  fi
+ 
   SWIG_PY_COMPILE="none"
   SWIG_PY_LINK="none"
-  if test "$PYTHON" != "none" -a "$SWIG_SUITABLE" = "yes"; then
+  if test "$PYTHON" != "none"; then
     AC_MSG_NOTICE([Configuring python swig binding])
     SWIG_CLEAN_RULES="$SWIG_CLEAN_RULES clean-swig-py" 
 
@@ -96,7 +144,7 @@ AC_DEFUN(SVN_FIND_SWIG,
                        [ for apr_int64_t])
   fi
 
-  if test "$PERL" != "none" -a "$SWIG_SUITABLE" = "yes"; then
+  if test "$PERL" != "none"; then
     AC_MSG_CHECKING([perl version])
     dnl Note that the q() bit is there to avoid unbalanced brackets
     dnl which m4 really doesn't like.
@@ -112,8 +160,7 @@ AC_DEFUN(SVN_FIND_SWIG,
 
   SWIG_RB_COMPILE="none"
   SWIG_RB_LINK="none"
-  if test "$RUBY" != "none" -a \
-        "$SWIG_SUITABLE" = "yes"; then
+  if test "$RUBY" != "none"; then
 
     AC_MSG_NOTICE([Configuring Ruby SWIG binding])
     SWIG_CLEAN_RULES="$SWIG_CLEAN_RULES clean-swig-rb" 
@@ -170,6 +217,7 @@ AC_DEFUN(SVN_FIND_SWIG,
       SWIG_RB_TEST_VERBOSE="$svn_ruby_test_verbose"
       AC_MSG_RESULT([$SWIG_RB_TEST_VERBOSE])
   fi
+  AC_SUBST(SWIG)
   AC_SUBST(SWIG_CLEAN_RULES)
   AC_SUBST(SWIG_PY_INCLUDES)
   AC_SUBST(SWIG_PY_COMPILE)
