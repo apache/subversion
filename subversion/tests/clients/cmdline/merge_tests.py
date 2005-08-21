@@ -365,25 +365,40 @@ def add_with_history(sbox):
   F_url = svntest.main.current_repo_url + '/A/B/F'
 
   Q_path = os.path.join(F_path, 'Q')
+  Q2_path = os.path.join(F_path, 'Q2')
   foo_path = os.path.join(F_path, 'foo')
+  foo2_path = os.path.join(F_path, 'foo2')
   bar_path = os.path.join(F_path, 'Q', 'bar')
+  bar2_path = os.path.join(F_path, 'Q', 'bar2')
 
   svntest.main.run_svn(None, 'mkdir', Q_path)
+  svntest.main.run_svn(None, 'mkdir', Q2_path)
   svntest.main.file_append(foo_path, "foo")
+  svntest.main.file_append(foo2_path, "foo2")
   svntest.main.file_append(bar_path, "bar")
-  svntest.main.run_svn(None, 'add', foo_path, bar_path)
+  svntest.main.file_append(bar2_path, "bar2")
+  svntest.main.run_svn(None, 'add', foo_path, foo2_path, bar_path, bar2_path)
+  svntest.main.run_svn(None, 'propset', 'x', 'x', Q2_path)
+  svntest.main.run_svn(None, 'propset', 'y', 'y', foo2_path)
+  svntest.main.run_svn(None, 'propset', 'z', 'z', bar2_path)
 
   expected_output = wc.State(wc_dir, {
     'A/B/F/Q'     : Item(verb='Adding'),
+    'A/B/F/Q2'    : Item(verb='Adding'),
     'A/B/F/Q/bar' : Item(verb='Adding'),
+    'A/B/F/Q/bar2': Item(verb='Adding'),
     'A/B/F/foo'   : Item(verb='Adding'),
+    'A/B/F/foo2'  : Item(verb='Adding'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
     'A/B/F/Q'     : Item(status='  ', wc_rev=2),
+    'A/B/F/Q2'    : Item(status='  ', wc_rev=2),
     'A/B/F/Q/bar' : Item(status='  ', wc_rev=2),
+    'A/B/F/Q/bar2': Item(status='  ', wc_rev=2),
     'A/B/F/foo'   : Item(status='  ', wc_rev=2),
+    'A/B/F/foo2'  : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
@@ -430,19 +445,28 @@ def add_with_history(sbox):
   short_C_path = C_path[shorten_by:]
   expected_output = wc.State(short_C_path, {
     'Q'      : Item(status='A '),
+    'Q2'     : Item(status='A '),
     'Q/bar'  : Item(status='A '),
+    'Q/bar2' : Item(status='A '),
     'foo'    : Item(status='A '),
+    'foo2'   : Item(status='A '),
     })
   expected_disk = wc.State('', {
     'Q'      : Item(),
+    'Q2'     : Item(props={'x' : 'x'}),
     'Q/bar'  : Item("bar"),
+    'Q/bar2' : Item("bar2", props={'z' : 'z'}),
     'foo'    : Item("foo"),
+    'foo2'   : Item("foo2", props={'y' : 'y'}),
     })
   expected_status = wc.State(short_C_path, {
     ''       : Item(status='  ', wc_rev=1),
     'Q'      : Item(status='A ', wc_rev='-', copied='+'),
+    'Q2'     : Item(status='A ', wc_rev='-', copied='+'),
     'Q/bar'  : Item(status='A ', wc_rev='-', copied='+'),
+    'Q/bar2' : Item(status='A ', wc_rev='-', copied='+'),
     'foo'    : Item(status='A ', wc_rev='-', copied='+'),
+    'foo2'   : Item(status='A ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(short_C_path, { })
 
@@ -453,24 +477,35 @@ def add_with_history(sbox):
                                          expected_output,
                                          expected_disk,
                                          expected_status,
-                                         expected_skip)
+                                         expected_skip,
+                                         None, None, None, None, None,
+                                         1) # check props
   finally:
     os.chdir(saved_cwd)
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/C/Q'     : Item(verb='Adding'),
+    'A/C/Q2'    : Item(verb='Adding'),
     'A/C/Q/bar' : Item(verb='Adding'),
+    'A/C/Q/bar2': Item(verb='Adding'),
     'A/C/foo'   : Item(verb='Adding'),
+    'A/C/foo2'  : Item(verb='Adding'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
     'A/B/F/Q'     : Item(status='  ', wc_rev=2),
+    'A/B/F/Q2'    : Item(status='  ', wc_rev=2),
     'A/B/F/Q/bar' : Item(status='  ', wc_rev=2),
+    'A/B/F/Q/bar2': Item(status='  ', wc_rev=2),
     'A/B/F/foo'   : Item(status='  ', wc_rev=2),
+    'A/B/F/foo2'  : Item(status='  ', wc_rev=2),
     'A/C/Q'       : Item(status='  ', wc_rev=3),
+    'A/C/Q2'      : Item(status='  ', wc_rev=3),
     'A/C/Q/bar'   : Item(status='  ', wc_rev=3),
+    'A/C/Q/bar2'  : Item(status='  ', wc_rev=3),
     'A/C/foo'     : Item(status='  ', wc_rev=3),
+    'A/C/foo2'    : Item(status='  ', wc_rev=3),
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,

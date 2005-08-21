@@ -588,6 +588,7 @@ add_directory (const char *path,
   /* ### TODO: support copyfrom? */
 
   b = make_dir_baton (path, pb, pb->edit_baton, TRUE, pool);
+  b->pristine_props = pb->edit_baton->empty_hash;
   *child_baton = b;
 
   SVN_ERR (get_path_access (&adm_access,
@@ -883,7 +884,10 @@ close_directory (void *dir_baton,
                   b->edit_baton->diff_cmd_baton));
     }
 
-  if (eb->notify_func)
+  /* ### Don't notify added directories as they triggered notification
+     in add_directory.  Does this mean that directory notification
+     isn't getting all the information? */
+  if (!b->added && eb->notify_func)
     {
       svn_wc_notify_t *notify
         = svn_wc_create_notify (b->wcpath, svn_wc_notify_update_update, pool);
