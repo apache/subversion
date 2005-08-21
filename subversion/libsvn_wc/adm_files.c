@@ -272,6 +272,23 @@ svn_wc__text_base_path (const char *path,
                                NULL);
 }
 
+const char *
+svn_wc__text_revert_path (const char *path,
+                          svn_boolean_t tmp,
+                          apr_pool_t *pool)
+{
+  const char *newpath, *base_name;
+
+  svn_path_split (path, &newpath, &base_name, pool);
+  return extend_with_adm_name (newpath,
+                               SVN_WC__REVERT_EXT,
+                               tmp,
+                               pool,
+                               SVN_WC__ADM_TEXT_BASE,
+                               base_name,
+                               NULL);
+}
+
 
 static svn_error_t *
 prop_path_internal (const char **prop_path,

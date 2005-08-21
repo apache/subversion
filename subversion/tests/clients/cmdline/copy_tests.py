@@ -485,9 +485,7 @@ def no_copy_overwrites(sbox):
 
 #----------------------------------------------------------------------
 
-# Issue 845.  A WC -> WC copy will write a destination text-base and
-# prop-base, so the destination cannot be a versioned file even if the
-# destination is scheduled for deletion.
+# Issue 845. WC -> WC copy should not overwrite base text-base
 
 def no_wc_copy_overwrites(sbox):
   "svn cp PATH PATH cannot overwrite destination"
@@ -495,29 +493,22 @@ def no_wc_copy_overwrites(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # File scheduled for deletion
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', rho_path)
-
   # File simply missing
   tau_path = os.path.join(wc_dir, 'A', 'D', 'G', 'tau')
   os.remove(tau_path)
 
   # Status before attempting copies
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/D/G/rho', status='D ')
   expected_status.tweak('A/D/G/tau', status='! ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # These copies should fail
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
-  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
   svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
                                      'cp', pi_path, rho_path)
   svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
                                      'cp', pi_path, tau_path)
-  svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
-                                     'cp', pi_path, alpha_path)
 
   # Status after failed copies should not have changed
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -1617,6 +1608,128 @@ def mixed_wc_to_url(sbox):
     raise svntest.Failure
 
 
+#----------------------------------------------------------------------
+
+# Issue 1516: WC replacement of files requires
+# a second text-base and prop-base
+
+def wc_copy_replacement(sbox):
+  "svn cp PATH PATH replacement of deleted target"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # File scheduled for deletion
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', rho_path)
+
+  # Status before attempting copies
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G/rho', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # The copy shouldn't fail
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  svntest.actions.run_and_verify_svn("", None, None,
+                                     'cp', pi_path, rho_path)
+
+  # Now commit
+  expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_status.tweak(repos_rev='2')
+  expected_status.tweak('A/D/G/rho', status='  ', copied=None,
+                        repos_rev='2', wc_rev='2')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/rho': Item(verb='Replacing'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+#----------------------------------------------------------------------
+
+def wc_copy_replace_with_props(sbox):
+  "svn cp PATH PATH replace with props"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Set props on file which is copy-source later on
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  svntest.actions.run_and_verify_svn("", None, None,
+                                     'ps', 'phony-prop', '*', pi_path)
+  svntest.actions.run_and_verify_svn("", None, None,
+                                     'ps', 'svn:eol-style', 'LF', rho_path)
+
+  # Verify props having been set
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_disk.tweak('A/D/G/pi',
+                      props={ 'phony-prop': '*' })
+  expected_disk.tweak('A/D/G/rho',
+                      props={ 'svn:eol-style': 'LF' })
+
+  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
+  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
+
+  # Commit props
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/pi':  Item(verb='Sending'),
+    'A/D/G/rho': Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev='2')
+  expected_status.tweak('A/D/G/pi',  wc_rev='2')
+  expected_status.tweak('A/D/G/rho', wc_rev='2')
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Bring wc into sync
+  svntest.actions.run_and_verify_svn("",None,None, 'up', wc_dir)
+
+  # File scheduled for deletion
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', rho_path)
+
+  # Status before attempting copies
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/D/G/rho', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # The copy shouldn't fail
+  svntest.actions.run_and_verify_svn("", None, None,
+                                     'cp', pi_path, rho_path)
+
+  # Verify both content and props have been copied
+  expected_disk.tweak('A/D/G/rho',
+                      contents="This is the file 'pi'.",
+                      props={ 'phony-prop': '*' })
+  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
+  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
+
+  # Now commit and verify
+  expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_status.tweak(repos_rev='3')
+  expected_status.tweak('A/D/G/rho', status='  ', copied=None,
+                        repos_rev='3', wc_rev='3')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/rho': Item(verb='Replacing'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+
 ########################################################################
 # Run the tests
 
@@ -1652,6 +1765,8 @@ test_list = [ None,
               old_dir_url_to_url,
               wc_copy_dir_to_itself,
               mixed_wc_to_url,
+              wc_copy_replacement,
+              wc_copy_replace_with_props,
              ]
 
 if __name__ == '__main__':

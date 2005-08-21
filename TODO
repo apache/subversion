@@ -1,0 +1,23 @@
+This branch is for handling replacing files with history within a wc.
+This covers issue #2148.  But also eventually will cover supporting
+allowing the cp and mv commands to replace files (Issue #1516).
+Currently you can only get a wc in this state with the merge command.
+
+As of right now files can be replaced.
+
+Specific list of items to do:
+
+* Implement handling of properties.
+* Implement handling of properties on directories.
+* Write tests
+  - revert of locally replaced file
+  - revert of locally replaced file with props
+  -
+* Change tests from XFAIL to PASS:
+  - revert_tests 4 (revert_replace_with_history_with_props)
+* Implement the enhancements to the cp and mv command (pretty much done
+  just not committed yet).
+* Possibly enhance the handling of checksums.  Right now the code isn't
+  storing checksums for replaced files.  To fix this would require a new
+  field in entries.
+

@@ -71,6 +71,14 @@ const char *svn_wc__text_base_path (const char *path,
                                     apr_pool_t *pool);
 
 
+/* Return a path to PATH's revert file.
+   If TMP is set, return a path to the tmp revert file. */
+const char *
+svn_wc__text_revert_path (const char *path,
+                          svn_boolean_t tmp,
+                          apr_pool_t *pool);
+
+
 /* Return a path to the 'wcprop' file for PATH, possibly in TMP area.
    ADM_ACCESS is an access baton set that contains PATH. */
 svn_error_t *svn_wc__wcprop_path (const char **wcprop_path,

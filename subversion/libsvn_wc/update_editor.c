@@ -1845,6 +1845,7 @@ install_file (svn_wc_notify_state_t *content_state,
   const char *parent_dir, *base_name;
   svn_stringbuf_t *log_accum;
   svn_boolean_t is_locally_modified;
+  svn_boolean_t is_replaced = FALSE;
   svn_boolean_t magic_props_changed = FALSE;
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
@@ -2056,10 +2057,33 @@ install_file (svn_wc_notify_state_t *content_state,
   SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
                                    file_path, FALSE, adm_access, pool));
 
+  /* In the case where the user has replaced a file with a copy it may 
+   * not show as locally modified.  So if the file isn't listed as
+   * locally modified test to see if it has been replaced.  If so
+   * remember that. */
+  if (!is_locally_modified)
+    {
+      const svn_wc_entry_t *entry;
+      SVN_ERR (svn_wc_entry (&entry, file_path, adm_access, FALSE, pool));
+      if (entry && entry->schedule == svn_wc_schedule_replace)
+        is_replaced = TRUE;
+    }
+  
   if (new_text_path)   /* is there a new text-base to install? */
     {
-      txtb     = svn_wc__text_base_path (base_name, FALSE, pool);
-      tmp_txtb = svn_wc__text_base_path (base_name, TRUE, pool);
+      if (!is_replaced)
+        {
+          txtb = svn_wc__text_base_path (base_name, FALSE, pool);
+          tmp_txtb = svn_wc__text_base_path (base_name, TRUE, pool);
+        }
+      else
+        {
+          const char *tmp_txtb_real = svn_wc__text_base_path (base_name, TRUE,
+                                                              pool);
+          txtb = svn_wc__text_revert_path (base_name, FALSE, pool);
+          tmp_txtb = svn_wc__text_revert_path (base_name, TRUE, pool);
+          SVN_ERR (svn_io_file_rename (tmp_txtb_real, tmp_txtb, pool));
+        }
     }
   else if (magic_props_changed) /* no new text base, but... */
     {
@@ -2139,7 +2163,7 @@ install_file (svn_wc_notify_state_t *content_state,
    matrix. */
   if (new_text_path)
     {
-      if (! is_locally_modified)
+      if (! is_locally_modified && ! is_replaced)
         {
           /* If there are no local mods, who cares whether it's a text
              or binary file!  Just write a log command to overwrite
@@ -2156,7 +2180,6 @@ install_file (svn_wc_notify_state_t *content_state,
                                  base_name,
                                  NULL);
         }
-  
       else   /* working file is locally modified... */
         {
           svn_node_kind_t wfile_kind = svn_node_unknown;
@@ -2287,20 +2310,22 @@ install_file (svn_wc_notify_state_t *content_state,
                              txtb,
                              NULL);
 
-      {
-        unsigned char digest[APR_MD5_DIGESTSIZE];
-        SVN_ERR (svn_io_file_checksum (digest, new_text_path, pool));
-        svn_xml_make_open_tag (&log_accum,
-                               pool,
-                               svn_xml_self_closing,
-                               SVN_WC__LOG_MODIFY_ENTRY,
-                               SVN_WC__LOG_ATTR_NAME,
-                               base_name,
-                               SVN_WC__ENTRY_ATTR_CHECKSUM,
-                               svn_md5_digest_to_cstring_display (digest,
-                                                                  pool),
-                               NULL);
-      }
+      /* If the file is replaced don't write the checksum.  Checksum is blank
+       * on replaced files */
+      if (!is_replaced)
+        {
+          unsigned char digest[APR_MD5_DIGESTSIZE];
+          SVN_ERR (svn_io_file_checksum (digest, new_text_path, pool));
+          svn_xml_make_open_tag (&log_accum,
+                                 pool,
+                                 svn_xml_self_closing,
+                                 SVN_WC__LOG_MODIFY_ENTRY,
+                                 SVN_WC__LOG_ATTR_NAME,
+                                 base_name,
+                                 SVN_WC__ENTRY_ATTR_CHECKSUM,
+                                 svn_md5_digest_to_cstring (digest, pool),
+                                 NULL);
+        }
     }
 
   /* This writes a whole bunch of log commands to install entryprops.  */
