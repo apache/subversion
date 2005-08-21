@@ -10,5 +10,12 @@ Status of 1.2.3:
 
 Candidate changes:
 
+  * r14782
+    Fix a Perl variable scoping bug in contrib/client-side/svn_load_dirs.pl.in.
+    Justification:
+      Simple fix in a contrib script requested by a user.
+    Votes:
+      +1: blair
+
 Approved changes (further review is welcome, but not required):
 
