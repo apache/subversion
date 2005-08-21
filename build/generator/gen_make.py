@@ -118,9 +118,15 @@ class Generator(gen_base.GeneratorBase):
           "$(abs_srcdir)/build/generator/swig/header_wrappers.py", self.conf))
       self.ofile.write(
         'swig-headers: %s\n' % wrapper_fname +
+        'extraclean-swig-headers-%s:\n' % wrapper_fname + 
+        '\trm -f $(abs_srcdir)/%s\n' % wrapper_fname + 
         'clean-swig-headers-%s:\n' % wrapper_fname + 
-        '\trm -f %s\n' % wrapper_fname + 
-        'clean-swig-headers: clean-swig-headers-%s\n' % wrapper_fname)
+        '\tif test $(abs_srcdir) != $(abs_builddir); then ' +
+        'rm -f $(abs_builddir)/%s; ' % wrapper_fname + 
+        'fi\n' +
+        'clean-swig-headers: clean-swig-headers-%s\n' % wrapper_fname +
+        'extraclean-swig-headers: extraclean-swig-headers-%s\n' % wrapper_fname
+      )
     self.ofile.write('\n')
 
     ########################################
@@ -134,8 +140,9 @@ class Generator(gen_base.GeneratorBase):
       '%s:\n' % runtime +
       '\t%s\n' % build_runtime+
       'swig-headers: %s\n' % runtime +
-      'clean-runtime:\n\trm -f %s\n' % runtime +
-      'clean-swig-headers: clean-runtime\n')
+      'extraclean-runtime:\n' +
+      '\trm -f $(abs_srcdir)/%s $(abs_builddir)/%s\n' % (runtime, runtime) +
+      'extraclean-swig-headers: extraclean-runtime\n')
     self.ofile.write('\n')
 
     ########################################
@@ -153,6 +160,17 @@ class Generator(gen_base.GeneratorBase):
     for objname, sources in swig_c_deps:
       lang = objname.lang
       swig_lang_deps[lang].append(str(objname))
+      self.ofile.write(
+        'extraclean-swig-%s:\n' % objname +
+        '\trm -f $(abs_builddir)/%s $(abs_srcdir)/%s\n' % (objname, objname) +
+        'extraclean-swig-%s: extraclean-swig-%s\n' % (short[lang], objname) +
+        'clean-swig-%s:\n' % objname + 
+        '\tif test $(abs_srcdir) != $(abs_builddir); then ' +
+        'rm -f $(abs_builddir)/%s; ' % objname + 
+        'rm -f $(abs_builddir)/%s; ' % sources[0] + 
+        'fi\n' +
+        'clean-swig-headers: clean-swig-%s\n' % objname
+      ) 
     
     for lang in self.swig.langs:
       lang_deps = string.join(swig_lang_deps[lang])
@@ -160,7 +178,10 @@ class Generator(gen_base.GeneratorBase):
         'autogen-swig-%s: swig-headers %s\n' % (short[lang], lang_deps) +
         'swig-%s: autogen-swig-%s\n' % (short[lang], short[lang]) +
         'autogen-swig: autogen-swig-%s\n' % short[lang] +
-        'clean-swig-%s: clean-swig-headers\n' % short[lang])
+        'extraclean-swig-%s: extraclean-swig-headers\n' % short[lang] +
+        'clean-swig-%s: clean-swig-headers\n' % short[lang] +
+        'extraclean-swig-%s: clean-swig-%s\n' % (short[lang], short[lang]) +
+        'extraclean: extraclean-swig-%s\n' % short[lang])
     self.ofile.write('\n')
     
     ########################################
@@ -168,10 +189,21 @@ class Generator(gen_base.GeneratorBase):
 
     for objname, sources in swig_c_deps:
       deps = string.join(map(str, sources))
-      source = build_path_join('$(abs_srcdir)', str(sources[0]))
-      self.ofile.write('%s: %s\n\t$(SWIG) $(SWIG_INCLUDES) %s -o $@ %s\n'
-                       % (objname, deps, self.swig.opts[objname.lang],
-                          source))
+      source = str(sources[0])
+      opts = self.swig.opts[objname.lang]
+      self.ofile.write('%s: %s\n' % (objname, deps) +
+        '\t@if test $(abs_srcdir) != $(abs_builddir); then ' +
+        'cp -f $(abs_srcdir)/%s $(abs_builddir)/%s; ' % (source, source) +
+        'fi\n' +
+        '\t$(SWIG) $(SWIG_INCLUDES) %s ' % opts +
+        '-o $@ $(abs_builddir)/%s\n' % source +
+        'autogen-swig-%s: copy-swig-%s\n' % (short[objname.lang], objname) +
+        'copy-swig-%s: %s\n' % (objname, objname) +
+        '\t@if test $(abs_srcdir) != $(abs_builddir) -a ' +
+        '-e $(abs_srcdir)/%s -a ' % objname + 
+        '! -e $(abs_builddir)/%s; then ' % objname +
+        'cp -f $(abs_srcdir)/%s $(abs_builddir)/%s; fi\n' % (objname, objname)
+      )
 
     self.ofile.write('\n')
 
@@ -487,6 +519,7 @@ class Generator(gen_base.GeneratorBase):
     standalone = open("autogen-standalone.mk", "w")
     standalone.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n')
     standalone.write('abs_srcdir = %s\n' % os.getcwd())
+    standalone.write('abs_builddir = %s\n' % os.getcwd())
     standalone.write('SWIG = swig\n')
     swig_includes = ['-DSVN_SWIG_VERSION=%d' % self.swig.version(),
                      '-Iapr/include', '-Iapr-util/include']
