@@ -113,7 +113,7 @@ class Generator(gen_base.GeneratorBase):
       wrapper_fname = build_path_join(self.swig.proxy_dir,
         string.replace(build_path_basename(fname),".h","_h.swg"))
       self.ofile.write(
-        '%s: %s\n\t%s %s $(SWIG) $<\n' % ( 
+        '%s: %s\n\tpython %s %s $(SWIG) $<\n' % ( 
           wrapper_fname, fname,
           "$(abs_srcdir)/build/generator/swig/header_wrappers.py", self.conf))
       self.ofile.write(
@@ -133,7 +133,7 @@ class Generator(gen_base.GeneratorBase):
     self.begin_section('SWIG external runtime')
 
     runtime = '%s/swig_python_external_runtime.swg' % self.swig.proxy_dir
-    build_runtime = \
+    build_runtime = 'python ' + \
       '$(abs_srcdir)/build/generator/swig/external_runtime.py ' + \
       '$(abs_srcdir)/build.conf "$(SWIG)"'
     self.ofile.write(
