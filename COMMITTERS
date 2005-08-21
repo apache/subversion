@@ -16,7 +16,7 @@ Blanket commit access:
          brane   Branko Čibej <brane@xbc.nu>
            joe   Joe Orton <joe@light.plus.com>
        ghudson   Greg Hudson <ghudson@mit.edu>
-          fitz   Brian W. Fitzpatrick <fitz@collab.net>
+          fitz   Brian W. Fitzpatrick <fitz@red-bean.com>
         daniel   Daniel Stenberg <daniel@haxx.se>
       cmpilato   C. Michael Pilato <cmpilato@collab.net>
          kevin   Kevin Pilch-Bisson <kevin@pilchie.homeip.net>
@@ -48,12 +48,11 @@ Commit access for specific areas:
 
   Bindings:
 
-        morten   Morten Ludvigsen <morten@2ps.dk>            (Swig-Java b.)
-      jespersm   Jesper Steen Møller <jesper@selskabet.org>  (Swig-Java b.)
-        knacke   Kai Nacke <kai.nacke@redstar.de>            (Swig-Java b.)
        pmayweg   Patrick Mayweg <mayweg@qint.de>             (JavaHL bindings)
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
+           kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)
+        djames   David James <james@cs.toronto.edu>          (Swig-Ruby b.)
 
   Packages:
 
@@ -67,9 +66,8 @@ Commit access for specific areas:
       josander   Jostein Andersen <jostein@josander.net>     (various)
       niemeyer   Gustavo Niemeyer <niemeyer@conectiva.com>   (svnperms.py)
         zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
-        mprice   Michael Price <mprice@atl.lmco.com>         (releases)
+        mprice   Michael Price <ectospheno@gmail.com>        (releases)
            pll   Paul lussier <p.lussier@comcast.net>        (releases)
-     gthompson   Glenn A. Thompson <gthompson@cdr.net>       (pluggable-db br.)
            kon   Kalle Olavi Niemitalo <kon@iki.fi>          (psvn.el)
     jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
       lonestar   Martin Maurer <martin.maurer@email.de>      (svnshow)
@@ -79,8 +77,9 @@ Commit access for specific areas:
       martinto   Martin Tomes <lists@tomes.org>              (chk-case-insens)
         danpat   Daniel Patterson <danpat@danpat.net>        (svn-graph.pl)
    archiecobbs   Archie Cobbs <archie@awarix.com>            (svnmerge)
-       sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
         offby1   Eric Hanchrow <offby1@blarg.net>            (doc)
+       nomis80   Simon Perreault <nomis80@nomis80.org>       (svn-clean)
+      jlvarner   Joshua Varner <jlvarner@gmail.com>          (doc)
 
   Translation:
 
@@ -106,11 +105,16 @@ Commit access for specific areas:
          ruben   Rubén Gómez <rugoli@euskalnet.net>          (doc: es)
       dbrouard   Diego Brouard <dbrouard@gmail.com>          (doc: es)
   gerhardoettl   Gerhard Oettl <gerhard.oettl.ml@oesoft.at>  (doc: de)
-giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (doc: it)
+giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
+        nebiac   Federico Nebiacolombo <cint1@amsjv.it>      (po: it)
+        fabien   Fabien Coelho <fabien@coelho.net>           (po: fr)
+       marcelg   Marcel Gosselin <marcel.gosselin@polymtl.ca> (po: fr)
 
   Experimental branches:
 
-        pmarek   Ph. Marek <philipp.marek@bmlv.gv.at>        (meta-data-versioning)
+     gthompson   Glenn A. Thompson <gthompson@cdr.net>       (pluggable-db br.)
+       sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
+        pmarek   Ph. Marek <philipp.marek@bmlv.gv.at>        (meta-data-v br.)
       markphip   Mark Phippard <MarkP@softlanding.com>       (ebcdic)
         pburba   Paul Burba <PaulB@softlanding.com>          (ebcdic)
 
@@ -122,6 +126,9 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (doc: it)
           mass   David Waite <mass@akuma.org>                (certs branch)
       sergeyli   Sergey A. Lipnevich <sergey@optimaltec.com> (neon-0.24 port)
       ballbach   Michael Ballbach <ballbach@rten.net>        (Old Mandrake RPM)
+        morten   Morten Ludvigsen <morten@2ps.dk>            (Swig-Java b.)
+      jespersm   Jesper Steen Møller <jesper@selskabet.org>  (Swig-Java b.)
+        knacke   Kai Nacke <kai.nacke@redstar.de>            (Swig-Java b.)
 
 Committers who have asked to be listed as dormant:
 

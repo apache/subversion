@@ -63,6 +63,7 @@ public:
     static void handleAPRError(int error, const char *op);
     static void putFinalizedClient(SVNBase *cl);
     static void handleSVNError(svn_error_t *err);
+    static jstring makeSVNErrorMessage(svn_error_t *err);
     static void throwError(const char *message);
     static apr_pool_t * getPool();
     static bool JNIInit(JNIEnv *env);

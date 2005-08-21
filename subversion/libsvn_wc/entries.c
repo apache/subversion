@@ -33,6 +33,7 @@
 #include "adm_files.h"
 #include "adm_ops.h"
 #include "entries.h"
+#include "lock.h"
 
 #include "svn_private_config.h"
 
@@ -56,6 +57,7 @@ svn_error_t *
 svn_wc__entries_init (const char *path,
                       const char *uuid,
                       const char *url,
+                      const char *repos,
                       svn_revnum_t initial_rev,
                       apr_pool_t *pool)
 {
@@ -65,11 +67,14 @@ svn_wc__entries_init (const char *path,
   char *initial_revstr =  apr_psprintf (pool, "%ld",
                                         initial_rev);
 
+  /* Sanity check. */
+  assert (! repos || svn_path_is_ancestor (repos, url));
+
   /* Create the entries file, which must not exist prior to this. */
   SVN_ERR (svn_wc__open_adm_file (&f, path, SVN_WC__ADM_ENTRIES,
                                   (APR_WRITE | APR_CREATE | APR_EXCL), pool));
 
-  /* Make a the XML standard header, to satisfy bureacracy. */
+  /* Make the XML standard header, to satisfy bureacracy. */
   svn_xml_make_header (&accum, pool);
 
   /* Open the file's top-level form. */
@@ -101,6 +106,9 @@ svn_wc__entries_init (const char *path,
                   sizeof (SVN_WC__ENTRY_ATTR_UUID) - 1,
                   uuid);
     
+  apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REPOS,
+                sizeof (SVN_WC__ENTRY_ATTR_REPOS) - 1, repos);
+
   if (initial_rev > 0)
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_INCOMPLETE,
                   sizeof (SVN_WC__ENTRY_ATTR_INCOMPLETE) - 1,
@@ -201,6 +209,21 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 
     if (entry->url)
       *modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
+  }
+
+  /* Set up repository root.  Make sure it is a prefix of url. */
+  {
+    entry->repos = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_REPOS,
+                                 APR_HASH_KEY_STRING);
+    if (entry->repos)
+      {
+        if (entry->url && ! svn_path_is_ancestor (entry->repos, entry->url))
+          return svn_error_createf (SVN_ERR_WC_CORRUPT, NULL,
+                                    _("Entry for '%s' has invalid repository "
+                                      "root"),
+                                    name ? name : SVN_WC_ENTRY_THIS_DIR);
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_REPOS;
+      }
   }
 
   /* Set up kind. */
@@ -404,7 +427,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                                  APR_HASH_KEY_STRING);
     if (text_timestr)
       {
-        if (! strcmp (text_timestr, SVN_WC_TIMESTAMP_WC))
+        if (! strcmp (text_timestr, SVN_WC__TIMESTAMP_WC))
           {
             /* Special case:  a magic string that means 'get this value
                from the working copy' -- we ignore it here, trusting
@@ -422,7 +445,7 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                                  APR_HASH_KEY_STRING);
     if (prop_timestr)
       {
-        if (! strcmp (prop_timestr, SVN_WC_TIMESTAMP_WC))
+        if (! strcmp (prop_timestr, SVN_WC__TIMESTAMP_WC))
           {
             /* Special case:  a magic string that means 'get this value
                from the working copy' -- we ignore it here, trusting
@@ -482,7 +505,37 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
     if (entry->cmt_author)
         *modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_AUTHOR;
   }
-  
+
+  /* Lock token. */
+  entry->lock_token = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_LOCK_TOKEN,
+                                    APR_HASH_KEY_STRING);
+  if (entry->lock_token)
+    *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_TOKEN;
+
+  /* lock owner. */
+  entry->lock_owner = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_LOCK_OWNER,
+                                    APR_HASH_KEY_STRING);
+  if (entry->lock_owner)
+    *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_OWNER;
+
+  /* lock comment. */
+  entry->lock_comment = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_LOCK_COMMENT,
+                                    APR_HASH_KEY_STRING);
+  if (entry->lock_comment)
+    *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_COMMENT;
+
+  /* lock creation date. */
+  {
+    const char *cdate_str = 
+      apr_hash_get (atts, SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE,
+                    APR_HASH_KEY_STRING);
+    if (cdate_str)
+      {
+        SVN_ERR (svn_time_from_cstring (&entry->lock_creation_date, 
+                                        cdate_str, pool));
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE;
+      }
+  }
   
   *new_entry = entry;
   return SVN_NO_ERROR;
@@ -544,6 +597,9 @@ take_from_entry (svn_wc_entry_t *src, svn_wc_entry_t *dst, apr_pool_t *pool)
   /* Inherits parent's url if doesn't have a url of one's own. */
   if (! dst->url) 
     dst->url = svn_path_url_add_component (src->url, dst->name, pool);
+
+  if (! dst->repos)
+    dst->repos = src->repos;
 
   if ((! dst->uuid) 
       && (! ((dst->schedule == svn_wc_schedule_add)
@@ -894,6 +950,11 @@ write_entry (svn_stringbuf_t **output,
     apr_hash_set (atts, SVN_WC__ENTRY_ATTR_URL, APR_HASH_KEY_STRING,
                   entry->url);
   
+  /* Repository root */
+  if (entry->repos)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REPOS, APR_HASH_KEY_STRING,
+                  entry->repos);
+
   /* Kind */
   switch (entry->kind)
     {
@@ -1014,6 +1075,26 @@ write_entry (svn_stringbuf_t **output,
                     svn_time_to_cstring (entry->cmt_date, pool));
     }
     
+  /* Lock token */
+  if (entry->lock_token)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_LOCK_TOKEN, APR_HASH_KEY_STRING,
+                  entry->lock_token);
+
+  /* Lock owner */
+  if (entry->lock_owner)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_LOCK_OWNER, APR_HASH_KEY_STRING,
+                  entry->lock_owner);
+
+  /* Lock comment */
+  if (entry->lock_comment)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_LOCK_COMMENT, APR_HASH_KEY_STRING,
+                  entry->lock_comment);
+
+  /* Lock creation date */
+  if (entry->lock_creation_date)
+    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE, 
+                  APR_HASH_KEY_STRING,
+                  svn_time_to_cstring (entry->lock_creation_date, pool));
 
   /*** Now, remove stuff that can be derived through inheritance rules. ***/
 
@@ -1039,11 +1120,13 @@ write_entry (svn_stringbuf_t **output,
 
       if (entry->kind == svn_node_dir)
         {
-          /* We don't write url, revision, or uuid for subdir
+          /* We don't write url, revision, repository root or uuid for subdir
              entries. */
           apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REVISION, APR_HASH_KEY_STRING,
                         NULL);
           apr_hash_set (atts, SVN_WC__ENTRY_ATTR_URL, APR_HASH_KEY_STRING,
+                        NULL);
+          apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REPOS, APR_HASH_KEY_STRING,
                         NULL);
           apr_hash_set (atts, SVN_WC__ENTRY_ATTR_UUID, APR_HASH_KEY_STRING,
                         NULL);
@@ -1078,6 +1161,12 @@ write_entry (svn_stringbuf_t **output,
                 apr_hash_set (atts, SVN_WC__ENTRY_ATTR_URL,
                               APR_HASH_KEY_STRING, NULL);
             }
+
+          /* Avoid writing repository root if that's the same as this_dir. */
+          if (entry->repos && this_dir->repos
+              && strcmp (entry->repos, this_dir->repos) == 0)
+            apr_hash_set (atts, SVN_WC__ENTRY_ATTR_REPOS, APR_HASH_KEY_STRING,
+                          NULL);
         }
     }
 
@@ -1218,6 +1307,10 @@ fold_entry (apr_hash_t *entries,
   if (modify_flags & SVN_WC__ENTRY_MODIFY_URL)
     cur_entry->url = entry->url ? apr_pstrdup (pool, entry->url) : NULL;
 
+  /* Repository root */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_REPOS)
+    cur_entry->repos = entry->repos ? apr_pstrdup (pool, entry->repos) : NULL;
+
   /* Kind */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_KIND)
     cur_entry->kind = entry->kind;
@@ -1300,6 +1393,28 @@ fold_entry (apr_hash_t *entries,
     cur_entry->uuid = entry->uuid
                             ? apr_pstrdup (pool, entry->uuid) 
                             : NULL;
+
+  /* Lock token */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_TOKEN)
+    cur_entry->lock_token = (entry->lock_token
+                             ? apr_pstrdup (pool, entry->lock_token)
+                             : NULL);
+
+  /* Lock owner */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_OWNER)
+    cur_entry->lock_owner = (entry->lock_owner
+                             ? apr_pstrdup (pool, entry->lock_owner)
+                             : NULL);
+
+  /* Lock comment */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_COMMENT)
+    cur_entry->lock_comment = (entry->lock_comment
+                               ? apr_pstrdup (pool, entry->lock_comment)
+                               : NULL);
+
+  /* Lock creation date */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE)
+    cur_entry->lock_creation_date = entry->lock_creation_date;
 
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */
@@ -1658,6 +1773,12 @@ svn_wc_entry_dup (const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->checksum = apr_pstrdup (pool, entry->checksum);
   if (entry->cmt_author)
     dupentry->cmt_author = apr_pstrdup (pool, entry->cmt_author);
+  if (entry->lock_token)
+    dupentry->lock_token = apr_pstrdup (pool, entry->lock_token);
+  if (entry->lock_owner)
+    dupentry->lock_owner = apr_pstrdup (pool, entry->lock_owner);
+  if (entry->lock_comment)
+    dupentry->lock_comment = apr_pstrdup (pool, entry->lock_comment);
 
   return dupentry;
 }
@@ -1667,7 +1788,9 @@ svn_error_t *
 svn_wc__tweak_entry (apr_hash_t *entries,
                      const char *name,
                      const char *new_url,
+                     const char *repos,
                      svn_revnum_t new_rev,
+                     svn_boolean_t allow_removal,
                      svn_boolean_t *write_required,
                      apr_pool_t *pool)
 {
@@ -1683,6 +1806,45 @@ svn_wc__tweak_entry (apr_hash_t *entries,
     {
       *write_required = TRUE;
       entry->url = apr_pstrdup (pool, new_url);
+    }
+
+  if (repos != NULL
+      && (! entry->repos || strcmp (repos, entry->repos))
+      && entry->url
+      && svn_path_is_ancestor (repos, entry->url))
+    {
+      svn_boolean_t set_repos = TRUE;
+
+      /* Setting the repository root on THIS_DIR will make files in this
+         directory inherit that property.  So to not make the WC corrupt,
+         we have to make sure that the repos root is valid for such entries as
+         well.  Note that this shouldn't happen in normal circumstances. */
+      if (strcmp (entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
+        {
+          apr_hash_index_t *hi;
+          for (hi = apr_hash_first (pool, entries); hi;
+               hi = apr_hash_next (hi))
+            {
+              void *value;
+              const svn_wc_entry_t *child_entry;
+
+              apr_hash_this (hi, NULL, NULL, &value);
+              child_entry = value;
+
+              if (! child_entry->repos && child_entry->url
+                  && ! svn_path_is_ancestor (repos, child_entry->url))
+                {
+                  set_repos = FALSE;
+                  break;
+                }
+            }
+        }
+
+      if (set_repos)
+        {
+          *write_required = TRUE;
+          entry->repos = apr_pstrdup (pool, repos);
+        }
     }
 
   if ((SVN_IS_VALID_REVNUM (new_rev))
@@ -1704,9 +1866,13 @@ svn_wc__tweak_entry (apr_hash_t *entries,
 
      If the entry is still marked 'absent' and yet is not the same
      revision as new_rev, then the server did not re-add it, nor
-     re-absent it, so we can remove the entry. */
-  if ((entry->deleted)
-      || (entry->absent && (entry->revision != new_rev)))
+     re-absent it, so we can remove the entry.
+
+     ### This function cannot always determine whether removal is
+     ### appropriate, hence the ALLOW_REMOVAL flag.  It's all a bit of a
+     ### mess. */
+  if (allow_removal
+      && (entry->deleted || (entry->absent && entry->revision != new_rev)))
     {
       *write_required = TRUE;
       apr_hash_set (entries, name, APR_HASH_KEY_STRING, NULL);

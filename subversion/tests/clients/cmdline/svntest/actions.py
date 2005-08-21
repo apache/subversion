@@ -158,10 +158,17 @@ def run_and_verify_svnversion(message, wc_dir, repo_url,
 
 def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
   """Invokes main.run_svn with *VARARGS, return stdout and stderr as
-  lists of lines.  If EXPECTED_STDOUT or EXPECTED_STDERR is not
-  'None', invokes compare_and_display_lines with MESSAGE and the
-  expected output.  If the comparison fails, compare_and_display_lines
-  will raise."""
+  lists of lines.  For both EXPECTED_STDOUT and EXPECTED_STDERR, do this:
+
+     - If it is an array of strings, invoke compare_and_display_lines()
+       on MESSAGE, the expected output, and the actual output.
+
+     - If it is a single string, invoke match_or_fail() on MESSAGE,
+       the expected output, and the actual output.
+
+     - If it is None, do nothing with it.
+
+  If a comparison function fails, it will raise an error."""
   ### TODO catch and throw particular exceptions from above
   want_err = None
   if expected_stderr is not None and expected_stderr is not []:
@@ -169,23 +176,20 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
 
   out, err = main.run_svn(want_err, *varargs)
 
-  if type(expected_stdout) is type([]):
-    compare_and_display_lines(message, 'STDOUT', expected_stdout, out)
-  elif expected_stdout == SVNAnyOutput:
-    if len(out) == 0:
-      if message is not None: print message
-      raise SVNExpectedStdout
-  elif expected_stdout is not None:
-    raise SVNIncorrectDatatype("Unexpected specification for stdout data")
-  
-  if type(expected_stderr) is type([]):
-    compare_and_display_lines(message, 'STDERR', expected_stderr, err)
-  elif expected_stderr == SVNAnyOutput:
-    if len(err) == 0:
-      if message is not None: print message
-      raise SVNExpectedStderr
-  elif expected_stderr is not None:
-    raise SVNIncorrectDatatype("Unexpected specification for stderr data")
+  for (expected, actual, output_type, raisable) in (
+      (expected_stdout, out, 'stdout', SVNExpectedStdout),
+      (expected_stderr, err, 'stderr', SVNExpectedStderr)):
+    if type(expected) is type([]):
+      compare_and_display_lines(message, output_type.upper(), expected, actual)
+    elif type(expected) is type(''):
+      match_or_fail(message, output_type.upper(), expected, actual)
+    elif expected == SVNAnyOutput:
+      if len(actual) == 0:
+        if message is not None: print message
+        raise raisable
+    elif expected is not None:
+      raise SVNIncorrectDatatype("Unexpected type for %s data" % output_type)
+
   return out, err
 
 
@@ -630,25 +634,21 @@ def run_and_verify_status(wc_dir_name, output_tree,
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
 
-  output, errput = main.run_svn (None, 'status', '-v', '-u', '-q', wc_dir_name)
+  output, errput = main.run_svn (None, 'status', '-v', '-u', '-q', 
+                                 '--username', main.wc_author,
+                                 '--password', main.wc_passwd,
+                                 wc_dir_name)
 
   mytree = tree.build_tree_from_status (output)
 
   # Verify actual output against expected output.
-  if (singleton_handler_a or singleton_handler_b):
-    try:
-      tree.compare_trees (mytree, output_tree,
-                          singleton_handler_a, a_baton,
-                          singleton_handler_b, b_baton)
-    except tree.SVNTreeError:
-      display_trees(None, 'OUTPUT TREE', output_tree, mytree)
-      raise
-  else:
-    try:
-      tree.compare_trees (mytree, output_tree)
-    except tree.SVNTreeError:
-      display_trees(None, 'OUTPUT TREE', output_tree, mytree)
-      raise
+  try:
+    tree.compare_trees (mytree, output_tree,
+                        singleton_handler_a, a_baton,
+                        singleton_handler_b, b_baton)
+  except tree.SVNTreeError:
+    display_trees(None, 'STATUS OUTPUT TREE', output_tree, mytree)
+    raise
 
 
 # A variant of previous func, but doesn't pass '-q'.  This allows us
@@ -695,13 +695,20 @@ def display_trees(message, label, expected, actual):
     tree.dump_tree(actual)
 
 
-def display_lines(message, label, expected, actual):
-  'Print two sets of output lines, expected and actual.'
+def display_lines(message, label, expected, actual, expected_is_regexp=None):
+  """Print MESSAGE, unless it is None, then print EXPECTED (labeled
+  with LABEL) followed by ACTUAL (also labeled with LABEL).
+  Both EXPECTED and ACTUAL may be strings or lists of strings."""
   if message is not None:
     print message
   if expected is not None:
-    print 'EXPECTED', label + ':'
+    if expected_is_regexp:
+      print 'EXPECTED', label + ' (regexp):'
+    else:
+      print 'EXPECTED', label + ':'
     map(sys.stdout.write, expected)
+    if expected_is_regexp:
+      map(sys.stdout.write, '\n')
   if actual is not None:
     print 'ACTUAL', label + ':'
     map(sys.stdout.write, actual)
@@ -718,6 +725,17 @@ def compare_and_display_lines(message, label, expected, actual):
     display_lines(message, label, expected, actual)
     raise main.SVNLineUnequal
 
+def match_or_fail(message, label, expected, actual):
+  """Make sure that regexp EXPECTED matches at least one line in list ACTUAL.
+  If no match, then print MESSAGE (if it's not None), followed by
+  EXPECTED and ACTUAL, both labeled with LABEL, and raise SVNLineUnequal."""
+  matched = None
+  for line in actual:
+    if re.match(expected, line):
+      matched = 1
+  if not matched:
+    display_lines(message, label, expected, actual, 1)
+    raise main.SVNLineUnequal
 
 ######################################################################
 # Other general utilities
@@ -773,7 +791,7 @@ def get_virginal_state(wc_dir, rev):
   state = main.greek_state.copy()
   state.wc_dir = wc_dir
   state.desc[''] = wc.StateItem()
-  state.tweak(contents=None, status='  ', wc_rev=rev, repos_rev=rev)
+  state.tweak(contents=None, status='  ', wc_rev=rev)
 
   return state
 
@@ -784,6 +802,20 @@ def lock_admin_dir(wc_dir):
 
   path = os.path.join(wc_dir, main.get_admin_name(), 'lock')
   main.file_append(path, "stop looking!")
+
+def enable_revprop_changes(repos_dir):
+  """Enable revprop changes in a repository REPOS_DIR by creating a
+pre-revprop-change hook script and (if appropriate) making it executable."""
+  if os.name == 'posix':
+    hook = os.path.join(repos_dir,
+                        'hooks', 'pre-revprop-change')
+    main.file_append(hook, "#!/bin/sh\n\nexit 0\n")
+    os.chmod(hook, 0755)
+  elif sys.platform == 'win32':
+    hook = os.path.join(repos_dir,
+                        'hooks', 'pre-revprop-change.bat')
+    main.file_append(hook, "@exit 0\n")
+
 
 
 ### End of file.

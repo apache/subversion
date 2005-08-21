@@ -37,6 +37,7 @@
 #include "svn_path.h"
 #include "svn_opt.h"
 #include "svn_repos.h"
+#include "svn_fs.h"
 #include "svn_version.h"
 
 #include "svn_private_config.h"
@@ -53,7 +54,6 @@ enum connection_handling_mode {
 
 /* The mode in which to run svnserve */
 enum run_mode {
-  run_mode_none,
   run_mode_inetd,
   run_mode_daemon,
   run_mode_tunnel,
@@ -123,19 +123,11 @@ static const apr_getopt_option_t svnserve__options[] =
   };
 
 
-static void enable_message_translation(void)
-{
-  /* discard the result; if setlocale fails, we'll just be serving
-     the english text instead of the localized version. */
-  setlocale (LC_ALL, "");
-}
-
 static void usage(const char *progname, apr_pool_t *pool)
 {
   if (!progname)
     progname = "svnserve";
 
-  enable_message_translation();
   svn_error_clear(svn_cmdline_fprintf(stderr, pool,
                                       _("Type '%s --help' for usage.\n"),
                                       progname));
@@ -146,7 +138,6 @@ static void help(apr_pool_t *pool)
 {
   apr_size_t i;
 
-  enable_message_translation();
   svn_error_clear(svn_cmdline_fputs(_("Usage: svnserve [options]\n"
                                       "\n"
                                       "Valid options:\n"),
@@ -163,9 +154,16 @@ static void help(apr_pool_t *pool)
 
 static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
 {
-  enable_message_translation();
-  return svn_opt_print_help(os, "svnserve", TRUE, FALSE, NULL, NULL,
-                            NULL, NULL, NULL, pool);
+  const char *fs_desc_start
+    = _("The following repository back-end (FS) modules are available:\n\n");
+
+  svn_stringbuf_t *version_footer;
+
+  version_footer = svn_stringbuf_create (fs_desc_start, pool);
+  SVN_ERR (svn_fs_print_modules (version_footer, pool));
+
+  return svn_opt_print_help(os, "svnserve", TRUE, FALSE, version_footer->data,
+                            NULL, NULL, NULL, NULL, pool);
 }
   
 
@@ -232,7 +230,7 @@ check_lib_versions(void)
 
 int main(int argc, const char *const *argv)
 {
-  enum run_mode run_mode = run_mode_none;
+  enum run_mode run_mode;
   svn_boolean_t foreground = FALSE;
   apr_socket_t *sock, *usock;
   apr_file_t *in_file, *out_file;
@@ -257,11 +255,11 @@ int main(int argc, const char *const *argv)
   enum connection_handling_mode handling_mode = CONNECTION_DEFAULT;
   apr_uint16_t port = SVN_RA_SVN_PORT;
   const char *host = NULL;
-  int ipv6_supported = APR_HAVE_IPV6;
   int family = APR_INET;
+  int mode_opt_count = 0;
 
   /* Initialize the app. */
-  if (svn_cmdline_init2("svn", stderr, TRUE) != EXIT_SUCCESS)
+  if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool. */
@@ -271,8 +269,17 @@ int main(int argc, const char *const *argv)
   err = check_lib_versions();
   if (err)
     {
-      enable_message_translation();
-      svn_handle_error(err, stderr, FALSE);
+      svn_handle_error2(err, stderr, FALSE, "svnserve: ");
+      svn_error_clear(err);
+      svn_pool_destroy(pool);
+      return EXIT_FAILURE;
+    }
+
+  /* Initialize the FS library. */
+  err = svn_fs_initialize(pool);
+  if (err)
+    {
+      svn_handle_error2(err, stderr, FALSE, "svnserve: ");
       svn_error_clear(err);
       svn_pool_destroy(pool);
       return EXIT_FAILURE;
@@ -304,6 +311,7 @@ int main(int argc, const char *const *argv)
           
         case 'd':
           run_mode = run_mode_daemon;
+          mode_opt_count++;
           break;
 
         case SVNSERVE_OPT_FOREGROUND:
@@ -312,6 +320,7 @@ int main(int argc, const char *const *argv)
 
         case 'i':
           run_mode = run_mode_inetd;
+          mode_opt_count++;
           break;
 
         case SVNSERVE_OPT_LISTEN_PORT:
@@ -324,6 +333,7 @@ int main(int argc, const char *const *argv)
 
         case 't':
           run_mode = run_mode_tunnel;
+          mode_opt_count++;
           break;
 
         case SVNSERVE_OPT_TUNNEL_USER:
@@ -332,6 +342,7 @@ int main(int argc, const char *const *argv)
 
         case 'X':
           run_mode = run_mode_listen_once;
+          mode_opt_count++;
           break;
 
         case 'r':
@@ -342,18 +353,16 @@ int main(int argc, const char *const *argv)
 
         case 'R':
           params.read_only = TRUE;
-          /* Don't translate the warning below: we may stay in
-             server mode (and thus don't want to translate messages) */
           svn_error_clear
             (svn_cmdline_fprintf
                (stderr, pool,
-                "Warning: -R is deprecated.\n"
-                "Anonymous access is now read-only by default.\n"
-                "To change, use conf/svnserve.conf in repos:\n"
-                "  [general]\n"
-                "  anon-access = read|write|none (default read)\n"
-                "  auth-access = read|write|none (default write)\n"
-                "Forcing all access to read-only for now\n"));
+                _("Warning: -R is deprecated.\n"
+                  "Anonymous access is now read-only by default.\n"
+                  "To change, use conf/svnserve.conf in repos:\n"
+                  "  [general]\n"
+                  "  anon-access = read|write|none (default read)\n"
+                  "  auth-access = read|write|none (default write)\n"
+                  "Forcing all access to read-only for now\n")));
           break;
 
         case 'T':
@@ -366,7 +375,6 @@ int main(int argc, const char *const *argv)
 
   if (params.tunnel_user && run_mode != run_mode_tunnel)
     {
-      enable_message_translation();
       svn_error_clear
         (svn_cmdline_fprintf
            (stderr, pool,
@@ -374,11 +382,10 @@ int main(int argc, const char *const *argv)
       exit(1);
     }
 
-  if (run_mode == run_mode_none)
+  if (mode_opt_count != 1)
     {
-      enable_message_translation();
       svn_error_clear(svn_cmdline_fputs
-                      (_("You must specify one of -d, -i, -t or -X.\n"),
+                      (_("You must specify exactly one of -d, -i, -t or -X.\n"),
                        stderr, pool));
       usage(argv[0], pool);
     }
@@ -396,7 +403,7 @@ int main(int argc, const char *const *argv)
     }
  
   /* Make sure we have IPV6 support first before giving apr_sockaddr_info_get
-     APR_UNSPEC, becuase it may give us back an IPV6 address even if we can't
+     APR_UNSPEC, because it may give us back an IPV6 address even if we can't
      create IPV6 sockets. */  
 
 #if APR_HAVE_IPV6
@@ -407,20 +414,20 @@ int main(int argc, const char *const *argv)
   status = apr_socket_create(&sock, APR_INET6, SOCK_STREAM, APR_PROTO_TCP,
                              pool);
 #endif
-  if (status != 0)   
-    ipv6_supported = 0;
-  else
-    apr_socket_close(sock);
+  if (status == 0)   
+    {
+      apr_socket_close(sock);
+      family = APR_UNSPEC;
+    }
 #endif
-
-  if (ipv6_supported)
-    family = APR_UNSPEC;
   
   status = apr_sockaddr_info_get(&sa, host, family, port, 0, pool);
   if (status)
     {
-      fprintf(stderr, "Can't get address info: %s\n",
-              apr_strerror(status, errbuf, sizeof(errbuf)));
+      svn_error_clear
+        (svn_cmdline_fprintf
+           (stderr, pool, _("Can't get address info: %s\n"),
+            apr_strerror(status, errbuf, sizeof(errbuf))));
       exit(1);
     }
 
@@ -434,8 +441,10 @@ int main(int argc, const char *const *argv)
 #endif
   if (status)
     {
-      fprintf(stderr, "Can't create server socket: %s\n",
-              apr_strerror(status, errbuf, sizeof(errbuf)));
+      svn_error_clear
+        (svn_cmdline_fprintf
+           (stderr, pool, _("Can't create server socket: %s\n"),
+            apr_strerror(status, errbuf, sizeof(errbuf))));
       exit(1);
     }
 
@@ -446,8 +455,10 @@ int main(int argc, const char *const *argv)
   status = apr_socket_bind(sock, sa);
   if (status)
     {
-      fprintf(stderr, "Can't bind server socket: %s\n",
-              apr_strerror(status, errbuf, sizeof(errbuf)));
+      svn_error_clear
+        (svn_cmdline_fprintf
+           (stderr, pool, _("Can't bind server socket: %s\n"),
+            apr_strerror(status, errbuf, sizeof(errbuf))));
       exit(1);
     }
 
@@ -487,8 +498,10 @@ int main(int argc, const char *const *argv)
         }
       if (status)
         {
-          fprintf(stderr, "Can't accept client connection: %s\n",
-                  apr_strerror(status, errbuf, sizeof(errbuf)));
+          svn_error_clear
+            (svn_cmdline_fprintf
+             (stderr, pool, _("Can't accept client connection: %s\n"),
+              apr_strerror(status, errbuf, sizeof(errbuf))));
           exit(1);
         }
 
@@ -499,7 +512,7 @@ int main(int argc, const char *const *argv)
           err = serve(conn, &params, connection_pool);
 
           if (err && err->apr_err != SVN_ERR_RA_SVN_CONNECTION_CLOSED)
-            svn_handle_error(err, stdout, FALSE);
+            svn_handle_error2(err, stdout, FALSE, "svnserve: ");
           svn_error_clear(err);
 
           apr_socket_close(usock);
@@ -540,15 +553,19 @@ int main(int argc, const char *const *argv)
           status = apr_threadattr_create(&tattr, connection_pool);
           if (status)
             {
-              fprintf(stderr, "Can't create threadattr: %s\n",
-                      apr_strerror(status, errbuf, sizeof(errbuf)));
+              svn_error_clear
+                (svn_cmdline_fprintf
+                 (stderr, pool, _("Can't create threadattr: %s\n"),
+                  apr_strerror(status, errbuf, sizeof(errbuf))));
               exit(1);
             }
           status = apr_threadattr_detach_set(tattr, 1);
           if (status)
             {
-              fprintf(stderr, "Can't set detached state: %s\n",
-                      apr_strerror(status, errbuf, sizeof(errbuf)));
+              svn_error_clear
+                (svn_cmdline_fprintf
+                 (stderr, pool, _("Can't set detached state: %s\n"),
+                  apr_strerror(status, errbuf, sizeof(errbuf))));
               exit(1);
             }
           thread_data = apr_palloc(connection_pool, sizeof(*thread_data));
@@ -559,8 +576,10 @@ int main(int argc, const char *const *argv)
                                      connection_pool);
           if (status)
             {
-              fprintf(stderr, "Can't create thread: %s\n",
-                      apr_strerror(status, errbuf, sizeof(errbuf)));
+              svn_error_clear
+                (svn_cmdline_fprintf
+                 (stderr, pool, _("Can't create thread: %s\n"),
+                  apr_strerror(status, errbuf, sizeof(errbuf))));
               exit(1);
             }
 #endif

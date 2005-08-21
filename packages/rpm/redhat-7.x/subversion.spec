@@ -1,12 +1,14 @@
 %define apache_version 2.0.48-0.1
 %define neon_version 0.24.7
-%define swig_version 1.3.19
+%define swig_version 1.3.19-3
 %define apache_dir /usr/local/apache2
-# If you don't have 360+ MB of free disk space or don't want to run checks then
-# set make_*_check to 0.
-%define make_ra_local_check 1
-%define make_ra_svn_check 1
-%define make_ra_dav_check 1
+# If you don't want to take time for the tests then set make_*_check to 0.
+%define make_ra_local_bdb_check 1
+%define make_ra_svn_bdb_check 1
+%define make_ra_dav_bdb_check 1
+%define make_ra_local_fsfs_check 1
+%define make_ra_svn_fsfs_check 1
+%define make_ra_dav_fsfs_check 1
 # If you want the perl bindings, you'll have to install perl-5.8.0 or higher.
 %define perl_bindings 0
 Summary: A Concurrent Versioning system similar to but better than CVS.
@@ -26,12 +28,12 @@ Requires: python2
 BuildPreReq: apache >= %{apache_version}
 BuildPreReq: apache-devel >= %{apache_version}
 BuildPreReq: apache-libapr-devel >= %{apache_version}
-BuildPreReq: autoconf >= 2.53
+BuildPreReq: autoconf253 >= 2.53
 BuildPreReq: db4-devel >= 4.0.14
 BuildPreReq: docbook-style-xsl >= 1.58.1
 BuildPreReq: doxygen
 BuildPreReq: expat-devel
-BuildPreReq: libtool >= 1.4.2-12
+BuildPreReq: libtool >= 1.4.2
 BuildPreReq: libxslt >= 1.0.27
 BuildPreReq: neon-devel >= %{neon_version}
 BuildPreReq: openssl-devel
@@ -105,6 +107,36 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Mon Jun 13 2005 David Summers <david@summersoft.fay.ar.us> r15049
+- Fix breakage that *only* occurs on release build (noticed on 1.2.0).
+
+* Sat Apr 30 2005 David Summers <david@summersoft.fay.ar.us> r14530
+- Make backend regression tests explicit and make sure we do them for both BDB
+  and FSFS backends.
+
+* Thu Mar 31 2005 David Summers <david@summersoft.fay.ar.us> r13821
+- Greatly reduce disk usage by telling each test pass to cleanup after
+  successful tests.
+
+* Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13716
+- Fixed dependencies to use libtool and autoconf253 that already comes
+  with RedHat 7.3.  I obviously didn't do my homework a couple of years ago.
+  No need to support updated/custom versions of these.
+
+* Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13714
+- Make use of new swig-1.3.19-3 RPM package which allows swig-1.3.19 to
+  co-exist with swig-1.1p5 package that comes with Redhat.
+
+* Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13711
+- Take out "static build" feature that never actually worked as intended.
+
+* Sun Mar 27 2005 David Summers <david@summersoft.fay.ar.us> r13709
+- Fix http tests to work with new locking feature which now requires
+  authentication.
+
+* Tue Mar 15 2005 David Summers <david@summersoft.fay.ar.us> r13417
+- Supplementary: Take out documentation patch altogether.
+
 * Sun Jan 09 2005 David Summers <david@summersoft.fay.ar.us> r13202
 - Bye bye book;  it is now no longer a part of the Subversion repository but
   is at the http://svn.red-bean.com/svnbook/ URL.
@@ -353,62 +385,18 @@ sh autogen.sh
 # Fix up mod_dav_svn installation.
 patch -p1 < packages/rpm/redhat-7.x/install.patch
 
-# Fix documentation version generation.
-patch -p1 < packages/rpm/redhat-7.x/doc.patch
-
-# Figure out version and release number for command and documentation display.
-case "%{release}" in
-   1)
-      # Build an official release
-      RELEASE_NAME="%{version}"
-      ;;
-   alpha*|beta*|gamma*)
-      # Build an alpha, beta, gamma release.
-      RELEASE_NAME="%{version} (%{release})"
-      ;;
-   *)
-      # Build a working copy release
-      RELEASE_NAME="%{version} (dev build, r%{release})"
-      ;;
-esac
-export RELEASE_NAME
-vsn_file="subversion/include/svn_version.h"
-sed -e \
- "/#define SVN_VERSION/s/SVN_VER_NUM.*$/\"${RELEASE_NAME}\"/" \
-  < "$vsn_file" > "${vsn_file}.tmp"
-mv "${vsn_file}.tmp" "$vsn_file"
-
 # Delete apr, apr-util, and neon from the tree as those packages should already
 # be installed.
 rm -rf apr apr-util neon
 
-# Configure static.
 %configure \
-	--without-berkeley-db \
-	--disable-shared \
-	--enable-all-static \
-	--with-swig \
+	--with-swig=/usr/bin/swig-1.3.19 \
 	--with-python=/usr/bin/python2.2 \
 	--with-apxs=%{apache_dir}/bin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-config \
 	--with-apr-util=%{apache_dir}/bin/apu-config
 
 %build
-# Make svnadmin static.
-make subversion/svnadmin/svnadmin
-
-# Move static svnadmin to safe place.
-cp subversion/svnadmin/svnadmin svnadmin.static
-
-# Configure shared.
-%configure \
-	--with-swig \
-	--with-python=/usr/bin/python2.2 \
-	--with-apxs=%{apache_dir}/bin/apxs \
-	--with-apr=%{apache_dir}/bin/apr-config \
-	--with-apr-util=%{apache_dir}/bin/apu-config
-
-# Make everything shared.
 make clean
 make
 
@@ -423,31 +411,68 @@ make all test
 )
 %endif
 
-%if %{make_ra_local_check}
+%if %{make_ra_local_bdb_check}
 echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
-make check
+make check CLEANUP=true FS_TYPE=bdb
 echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 %endif
 
-%if %{make_ra_svn_check}
+%if %{make_ra_svn_bdb_check}
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
 ./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline/
-make svncheck
+make svncheck CLEANUP=true FS_TYPE=bdb
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 %endif
 
-%if %{make_ra_dav_check}
+%if %{make_ra_dav_bdb_check}
 echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
 killall httpd || true
 sleep 1
 cp -f /usr/local/apache2/bin/httpd .
 sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/redhat-7.x/httpd.davcheck.conf > httpd.conf
+cat > passwd <<EOF
+jrandom:xCGl35kV9oWCY
+jconstant:xCGl35kV9oWCY
+EOF
 ./httpd -f `pwd`/httpd.conf
 sleep 1
-make check BASE_URL='http://localhost:15835'
+make check CLEANUP=true BASE_URL='http://localhost:15835' FS_TYPE=bdb
+killall httpd
+echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
+%endif
+
+%if %{make_ra_local_fsfs_check}
+echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
+make check CLEANUP=true FS_TYPE=fsfs
+echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
+%endif
+
+%if %{make_ra_svn_fsfs_check}
+echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
+killall lt-svnserve || true
+sleep 1
+./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/clients/cmdline/
+make svncheck CLEANUP=true FS_TYPE=fsfs
+killall lt-svnserve
+echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
+%endif
+
+%if %{make_ra_dav_fsfs_check}
+echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
+killall httpd || true
+sleep 1
+cp -f /usr/local/apache2/bin/httpd .
+sed -e "s;@SVNDIR@;`pwd`;" < packages/rpm/redhat-7.x/httpd.davcheck.conf > httpd.conf
+cat > passwd <<EOF
+jrandom:xCGl35kV9oWCY
+jconstant:xCGl35kV9oWCY
+EOF
+./httpd -f `pwd`/httpd.conf
+sleep 1
+make check CLEANUP=true BASE_URL='http://localhost:15835' FS_TYPE=fsfs
 killall httpd
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
@@ -480,22 +505,12 @@ cd ../../../../..
 rm -rf $RPM_BUILD_ROOT/%{_prefix}/lib/perl5/%{perl_version}
 %endif
 
-# Copy svnadmin.static to destination
-cp svnadmin.static $RPM_BUILD_ROOT/usr/bin/svnadmin-%{version}-%{release}.static
-
 # Set up tools package files.
 mkdir -p $RPM_BUILD_ROOT/usr/lib/subversion
 cp -r tools $RPM_BUILD_ROOT/usr/lib/subversion
 
 # Create doxygen documentation.
 doxygen doc/doxygen.conf
-
-%preun
-# Save current copy of svnadmin.static
-echo "Saving current svnadmin-%{version}-%{release}.static as svnadmin-%{version}-%{release}."
-echo "Erase this program only after you make sure you won't need to dump/reload"
-echo "any of your repositories to upgrade to a new version of the database."
-cp /usr/bin/svnadmin-%{version}-%{release}.static /usr/bin/svnadmin-%{version}-%{release}
 
 %post server
 # Load subversion server into apache configuration.
@@ -542,7 +557,6 @@ rm -rf $RPM_BUILD_ROOT
 %doc subversion/LICENSE
 /usr/bin/svn
 /usr/bin/svnadmin
-/usr/bin/svnadmin-%{version}-%{release}.static
 /usr/bin/svndumpfilter
 /usr/bin/svnlook
 /usr/bin/svnserve

@@ -155,18 +155,18 @@ wc_to_wc_copy (const char *src_path,
      ### won't detect any outstanding locks. If the source is locked and
      ### requires cleanup should we abort the copy? */
 
-  err = svn_wc_copy (src_path, adm_access, base_name,
-                     ctx->cancel_func, ctx->cancel_baton,
-                     ctx->notify_func, ctx->notify_baton, pool);
+  err = svn_wc_copy2 (src_path, adm_access, base_name,
+                      ctx->cancel_func, ctx->cancel_baton,
+                      ctx->notify_func2, ctx->notify_baton2, pool);
   svn_sleep_for_timestamps ();
   SVN_ERR (err);
 
 
   if (is_move)
     {
-      SVN_ERR (svn_wc_delete (src_path, src_access,
-                              ctx->cancel_func, ctx->cancel_baton,
-                              ctx->notify_func, ctx->notify_baton, pool));
+      SVN_ERR (svn_wc_delete2 (src_path, src_access,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               ctx->notify_func2, ctx->notify_baton2, pool));
 
       if (adm_access != src_access)
         SVN_ERR (svn_wc_adm_close (adm_access));
@@ -271,7 +271,7 @@ path_driver_cb_func (void **dir_baton,
 
 
 static svn_error_t *
-repos_to_repos_copy (svn_client_commit_info_t **commit_info,
+repos_to_repos_copy (svn_client_commit_info2_t **commit_info,
                      const char *src_url, 
                      const svn_opt_revision_t *src_revision, 
                      const char *dst_url, 
@@ -329,10 +329,9 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
-  err = svn_client__open_ra_session (&ra_session, top_url,
-                                     NULL,
-                                     NULL, NULL, FALSE, TRUE, 
-                                     ctx, pool);
+  err = svn_client__open_ra_session_internal (&ra_session, top_url,
+                                              NULL, NULL, NULL, FALSE, TRUE, 
+                                              ctx, pool);
 
   /* If the two URLs appear not to be in the same repository, then
      top_url will be empty and the call to svn_ra_open()
@@ -453,7 +452,9 @@ repos_to_repos_copy (svn_client_commit_info_t **commit_info,
   SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
   SVN_ERR (svn_ra_get_commit_editor (ra_session, &editor, &edit_baton, message,
                                      svn_client__commit_callback,
-                                     commit_baton, pool));
+                                     commit_baton, 
+                                     NULL, TRUE, /* No lock tokens */
+                                     pool));
 
   /* Setup our PATHS for the path-based editor drive. */
   APR_ARRAY_PUSH (paths, const char *) = dst_rel;
@@ -578,7 +579,7 @@ reconcile_errors (svn_error_t *commit_err,
 
 
 static svn_error_t *
-wc_to_repos_copy (svn_client_commit_info_t **commit_info,
+wc_to_repos_copy (svn_client_commit_info2_t **commit_info,
                   const char *src_path, 
                   const char *dst_url, 
                   svn_client_ctx_t *ctx,
@@ -613,10 +614,11 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   svn_path_split (dst_url, &anchor, &target, pool);
 
   /* Open an RA session for the anchor URL. */
-  SVN_ERR (svn_client__open_ra_session (&ra_session, anchor,
-                                        svn_wc_adm_access_path (adm_access),
-                                        adm_access, NULL, TRUE, TRUE, 
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, anchor,
+                                                 svn_wc_adm_access_path
+                                                 (adm_access),
+                                                 adm_access, NULL, TRUE, TRUE, 
+                                                 ctx, pool));
 
   /* Figure out the basename that will result from this operation. */
   SVN_ERR (svn_ra_check_path (ra_session, svn_path_uri_decode (target, pool),
@@ -695,10 +697,11 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
     goto cleanup;
 
   /* Open an RA session to BASE_URL. */
-  if ((cmt_err = svn_client__open_ra_session (&ra_session, base_url,
-                                              NULL, NULL, commit_items,
-                                              FALSE, FALSE,
-                                              ctx, pool)))
+  if ((cmt_err = svn_client__open_ra_session_internal (&ra_session, base_url,
+                                                       NULL, NULL,
+                                                       commit_items,
+                                                       FALSE, FALSE,
+                                                       ctx, pool)))
     goto cleanup;
 
   /* Fetch RA commit editor. */
@@ -706,7 +709,9 @@ wc_to_repos_copy (svn_client_commit_info_t **commit_info,
   if ((cmt_err = svn_ra_get_commit_editor (ra_session, &editor, &edit_baton, 
                                            message,
                                            svn_client__commit_callback,
-                                           commit_baton, pool)))
+                                           commit_baton, 
+                                           NULL, TRUE, /* No lock tokens */
+                                           pool)))
     goto cleanup;
 
   /* Make a note that we have a commit-in-progress. */
@@ -759,9 +764,9 @@ repos_to_wc_copy (const char *src_url,
   /* Open a repository session to the given URL. We do not (yet) have a
      working copy, so we don't have a corresponding path and tempfiles
      cannot go into the admin area. */
-  SVN_ERR (svn_client__open_ra_session (&ra_session, src_url, NULL,
-                                        NULL, NULL, FALSE, TRUE, 
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, src_url, NULL,
+                                                 NULL, NULL, FALSE, TRUE, 
+                                                 ctx, pool));
   
   /* Pass null for the path, to ensure error if trying to get a
      revision based on the working copy.  And additionally, we can't
@@ -925,9 +930,9 @@ repos_to_wc_copy (const char *src_url,
           /* Schedule dst_path for addition in parent, with copy history.
              (This function also recursively puts a 'copied' flag on every
              entry). */
-          SVN_ERR (svn_wc_add (dst_path, adm_access, src_url, src_revnum,
-                               ctx->cancel_func, ctx->cancel_baton, 
-                               ctx->notify_func, ctx->notify_baton, pool));
+          SVN_ERR (svn_wc_add2 (dst_path, adm_access, src_url, src_revnum,
+                                ctx->cancel_func, ctx->cancel_baton, 
+                                ctx->notify_func2, ctx->notify_baton2, pool));
         }
       else  /* different repositories */
         {
@@ -981,15 +986,14 @@ repos_to_wc_copy (const char *src_url,
          and baton, and we wouldn't have to make this call here.
          However, the situation is... complicated.  See issue #1552
          for the full story. */
-      if (!err && ctx->notify_func)
-        (*ctx->notify_func) (ctx->notify_baton,
-                             dst_path,
-                             svn_wc_notify_add,
-                             src_kind,
-                             NULL,
-                             svn_wc_notify_state_unknown,
-                             svn_wc_notify_state_unknown,
-                             SVN_INVALID_REVNUM);
+      if (!err && ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify = svn_wc_create_notify (dst_path,
+                                                          svn_wc_notify_add,
+                                                          pool);
+          notify->kind = src_kind;
+          (*ctx->notify_func2) (ctx->notify_baton2, notify, pool);
+        }
 
       svn_sleep_for_timestamps ();
       SVN_ERR (err);
@@ -1002,7 +1006,7 @@ repos_to_wc_copy (const char *src_url,
 
 
 static svn_error_t *
-setup_copy (svn_client_commit_info_t **commit_info,
+setup_copy (svn_client_commit_info2_t **commit_info,
             const char *src_path,
             const svn_opt_revision_t *src_revision,
             const char *dst_path,
@@ -1114,12 +1118,12 @@ setup_copy (svn_client_commit_info_t **commit_info,
 /* Public Interfaces */
 
 svn_error_t *
-svn_client_copy (svn_client_commit_info_t **commit_info,
-                 const char *src_path,
-                 const svn_opt_revision_t *src_revision,
-                 const char *dst_path,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
+svn_client_copy2 (svn_client_commit_info2_t **commit_info,
+                  const char *src_path,
+                  const svn_opt_revision_t *src_revision,
+                  const char *dst_path,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
 {
   return setup_copy (commit_info, 
                      src_path, src_revision, dst_path,
@@ -1131,7 +1135,25 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
 
 
 svn_error_t *
-svn_client_move2 (svn_client_commit_info_t **commit_info,
+svn_client_copy (svn_client_commit_info_t **commit_info,
+                 const char *src_path,
+                 const svn_opt_revision_t *src_revision,
+                 const char *dst_path,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  svn_client_commit_info2_t *commit_info2 = NULL;
+  svn_error_t *err;
+
+  err = svn_client_copy2 (&commit_info2, src_path, src_revision, dst_path,
+                          ctx, pool);
+  /* These structs have the same layout for the common fields. */
+  *commit_info = (svn_client_commit_info_t *) commit_info2;
+  return err;
+}
+
+svn_error_t *
+svn_client_move3 (svn_client_commit_info2_t **commit_info,
                   const char *src_path,
                   const char *dst_path,
                   svn_boolean_t force,
@@ -1150,6 +1172,24 @@ svn_client_move2 (svn_client_commit_info_t **commit_info,
 }
 
 svn_error_t *
+svn_client_move2 (svn_client_commit_info_t **commit_info,
+                  const char *src_path,
+                  const char *dst_path,
+                  svn_boolean_t force,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  svn_client_commit_info2_t *commit_info2 = NULL;
+  svn_error_t *err;
+
+  err = svn_client_move3 (&commit_info2, src_path, dst_path, force, ctx, pool);
+  /* These structs have the same layout for the common fields. */
+  *commit_info = (svn_client_commit_info_t *) commit_info2;
+  return err;
+}
+
+
+svn_error_t *
 svn_client_move (svn_client_commit_info_t **commit_info,
                  const char *src_path,
                  const svn_opt_revision_t *src_revision,
@@ -1158,6 +1198,8 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
+  svn_client_commit_info2_t *commit_info2 = NULL;
+  svn_error_t *err;
   /* It doesn't make sense to specify revisions in a move. */
 
   /* ### todo: this check could fail wrongly.  For example,
@@ -1172,11 +1214,14 @@ svn_client_move (svn_client_commit_info_t **commit_info,
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
          _("Cannot specify revisions (except HEAD) with move operations"));
     }
-
-  return setup_copy (commit_info,
-                     src_path, src_revision, dst_path,
-                     TRUE /* is_move */,
-                     force,
-                     ctx,
-                     pool);
+ 
+  err = setup_copy (&commit_info2,
+                    src_path, src_revision, dst_path,
+                    TRUE /* is_move */,
+                    force,
+                    ctx,
+                    pool);
+  /* These structs have the same layout for the common fields. */
+  *commit_info = (svn_client_commit_info_t *) commit_info2;
+  return err;
 }

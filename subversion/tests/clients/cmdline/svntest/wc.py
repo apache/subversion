@@ -48,19 +48,22 @@ class State:
     for path in paths:
       del self.desc[path]
 
-  def copy(self):
-    "Make a deep copy of self."
+  def copy(self, new_root=None):
+    """Make a deep copy of self.  If NEW_ROOT is not None, then set the
+    copy's wc_dir NEW_ROOT instead of to self's wc_dir."""
     desc = { }
     for path, item in self.desc.items():
       desc[path] = item.copy()
-    return State(self.wc_dir, desc)
+    if new_root is None:
+      new_root = self.wc_dir
+    return State(new_root, desc)
 
   def tweak(self, *args, **kw):
     """Tweak the items' values, optional restricting based on a filter.
 
     The general form of this method is .tweak(paths..., key=value). If
-    one or paths are provided, then those items' values are modified.
-    If no paths are given, then all items are modified.
+    one or more paths are provided, then those items' values are
+    modified.  If no paths are given, then all items are modified.
     """
     if args:
       for path in args:
@@ -99,7 +102,7 @@ class State:
           os.makedirs(dirpath)
 
         # write out the file contents now
-        open(fullpath, 'w').write(item.contents)
+        open(fullpath, 'wb').write(item.contents)
 
   def old_tree(self):
     "Return an old-style tree (for compatibility purposes)."
@@ -112,14 +115,14 @@ class State:
         atts['verb'] = item.verb
       if item.wc_rev is not None:
         atts['wc_rev'] = item.wc_rev
-      if item.repos_rev is not None:
-        atts['repos_rev'] = item.repos_rev
       if item.locked is not None:
         atts['locked'] = item.locked
       if item.copied is not None:
         atts['copied'] = item.copied
       if item.switched is not None:
         atts['switched'] = item.switched
+      if item.writelocked is not None:
+        atts['writelocked'] = item.writelocked
       nodelist.append((os.path.normpath(os.path.join(self.wc_dir, path)),
                        item.contents,
                        item.props,
@@ -137,8 +140,8 @@ class StateItem:
   """
 
   def __init__(self, contents=None, props=None,
-               status=None, verb=None, wc_rev=None, repos_rev=None,
-               locked=None, copied=None, switched=None):
+               status=None, verb=None, wc_rev=None,
+               locked=None, copied=None, switched=None, writelocked=None):
     # provide an empty prop dict if it wasn't provided
     if props is None:
       props = { }
@@ -146,18 +149,16 @@ class StateItem:
     ### keep/make these ints one day?
     if wc_rev is not None:
       wc_rev = str(wc_rev)
-    if repos_rev is not None:
-      repos_rev = str(repos_rev)
 
     self.contents = contents
     self.props = props
     self.status = status
     self.verb = verb
     self.wc_rev = wc_rev
-    self.repos_rev = repos_rev
     self.locked = locked
     self.copied = copied
     self.switched = switched
+    self.writelocked = writelocked
 
   def copy(self):
     "Make a deep copy of self."
@@ -169,6 +170,6 @@ class StateItem:
   def tweak(self, **kw):
     for name, value in kw.items():
       ### refine the revision args (for now) to ensure they are strings
-      if name == 'wc_rev' or name == 'repos_rev':
+      if name == 'wc_rev':
         value = str(value)
       setattr(self, name, value)

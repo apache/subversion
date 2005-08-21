@@ -129,6 +129,10 @@ class WinGeneratorBase(GeneratorBase):
     # Find the installed SWIG version to adjust swig options
     self._find_swig()
 
+    # Look for ML
+    if self.zlib_path:
+      self._find_ml()
+
     # Run apr-util's w32locatedb.pl script
     self._configure_apr_util()
 
@@ -146,6 +150,13 @@ class WinGeneratorBase(GeneratorBase):
       if self.write_file_if_changed(svnissdeb, buf.replace("@CONFIG@", "Debug")):
         print 'Wrote %s' % svnissdeb
 
+    # Generate the build_zlib.bat file
+    if self.zlib_path:
+      data = {'zlib_path': os.path.abspath(self.zlib_path),
+              'use_ml': self.have_ml and 1 or None}
+      bat = os.path.join('build', 'win32', 'build_zlib.bat')
+      self.write_with_template(bat, 'build_zlib.ezt', data)
+
     # Generate the build_neon.bat file
     data = {'neon_path': os.path.abspath(self.neon_path),
             'expat_path': os.path.join(os.path.abspath(self.apr_util_path),
@@ -154,8 +165,8 @@ class WinGeneratorBase(GeneratorBase):
                          and os.path.abspath(self.zlib_path),
             'openssl_path': self.openssl_path
                             and os.path.abspath(self.openssl_path)}
-    self.write_with_template(os.path.join('build', 'win32', 'build_neon.bat'),
-                             'build_neon.ezt', data)
+    bat = os.path.join('build', 'win32', 'build_neon.bat')
+    self.write_with_template(bat, 'build_neon.ezt', data)
 
     # Generate the build_locale.bat file
     pofiles = []
@@ -241,6 +252,14 @@ class WinGeneratorBase(GeneratorBase):
                     ))
     return configs
   
+  def _swig_build_opts(self, lang):
+    """Options to pass in to SWIG for a specified language"""
+    return {
+      "python": self.swig_python_opts,
+      "ruby": self.swig_ruby_opts,
+      "perl": self.swig_perl_opts
+    }[lang]
+  
   def get_proj_sources(self, quote_path, target):
     "Get the list of source files for each project"
     sources = [ ]
@@ -290,49 +309,8 @@ class WinGeneratorBase(GeneratorBase):
                                  custom_build=cbuild, custom_target=jarfile))
 
     if isinstance(target, gen_base.TargetSWIG):
-      swig_options = ["-" + target.lang]
+      swig_options = string.split(self._swig_build_opts(target.lang))
       swig_deps = []
-
-      if self.swig_vernum >= 103024:
-        pass
-      elif self.swig_vernum >= 103020:
-        if target.include_runtime:
-          swig_options.append("-runtime")
-        else:
-          swig_options.append("-noruntime")
-      else:
-        if not target.include_runtime:
-          swig_options.append("-c")
-
-      if target.lang == "java":
-        swig_options.append("-package org.tigris.subversion.swig")
-        swig_options.append("-outdir " + self.path("subversion/bindings/swig"
-                                                   "/java/org/tigris"
-                                                   "/subversion/swig"))
-      elif target.lang == "perl":
-        if self.swig_vernum >= 103020:
-          swig_options.append("-noproxy")
-        swig_options.append("-nopm")
-
-        objects = (("svn_delta_editor_t", "svn_delta.h", "delta_editor.hi"),
-                   ("svn_ra_plugin_t", "svn_ra.h", "ra_plugin.hi"),
-                   ("svn_ra_reporter_t", "svn_ra.h", "ra_reporter.hi"))
-
-        pfile = self.path("subversion/bindings/swig/perl/native/h2i.pl")
-
-        for objname, header, output in objects:
-          ifile = self.path("subversion/include", header)
-          ofile = self.path("subversion/bindings/swig", output)
-
-          obuild = "perl %s %s %s > %s" % (pfile, ifile, objname,
-                                           ofile)
-
-          sources.append(ProjectItem(path=ifile, reldir=None,
-                                     custom_build=obuild,
-                                     custom_target=ofile,
-                                     user_deps=()))
-
-          swig_deps.append(ofile)
 
       for include_dir in self.get_win_includes(target):
         swig_options.append("-I%s" % self.quote(include_dir))
@@ -343,14 +321,7 @@ class WinGeneratorBase(GeneratorBase):
             if isinstance(cobj, gen_base.SWIGObject):
               csrc = self.path(cobj.filename)
 
-              if self.swig_vernum < 103020 and target.lang == "python":
-                # workaround for a bug in the python module of old swigs.
-                # output path passed to swig has to use forward slashes,
-                # otherwise the generated python files (for shadow
-                # classes) will be saved to the wrong directory
-                cout = string.replace(csrc, '\\', '/')
-              else:
-                cout = csrc
+              cout = csrc
 
               # included header files that the generated c file depends on
               user_deps = swig_deps[:]
@@ -476,8 +447,16 @@ class WinGeneratorBase(GeneratorBase):
 
     depends.extend(self.get_win_depends(target, FILTER_PROJECTS))
 
+    # Make the default target generate the .mo files, too
+    if self.enable_nls and name == '__ALL__':
+      depends.extend(self.sections['locale'].get_targets())
+
+    # Build ZLib as a dependency of Neon if we have it
+    if  self.zlib_path and name == 'neon':
+      depends.extend(self.sections['zlib'].get_targets())
+
     return depends
-    
+
   def get_win_depends(self, target, mode):
     """Return the list of dependencies for target"""
 
@@ -580,8 +559,6 @@ class WinGeneratorBase(GeneratorBase):
     if isinstance(target, gen_base.TargetSWIG):
       fakedefines.append("SWIG_GLOBAL")
       fakedefines.append(self.swig_defines)
-      if target.lang == 'java':
-        fakedefines.append('SWIGJAVA')
 
     if isinstance(target, gen_base.TargetSWIGLib):
       fakedefines.append(self.swig_defines)
@@ -619,6 +596,8 @@ class WinGeneratorBase(GeneratorBase):
                       % (target.lang,
                          gen_base.lang_utillib_suffix[target.lang])
       fakeincludes = [ self.path("subversion/bindings/swig"),
+                       self.path("subversion/bindings/swig/proxy"),
+                       self.path("subversion/bindings/swig/include"),
                        self.path("subversion/include"),
                        self.path(util_includes),
                        self.apath(self.apr_path, "include"),
@@ -630,6 +609,7 @@ class WinGeneratorBase(GeneratorBase):
                        self.apath(self.apr_util_path, "xml/expat/lib"),
                        self.apath(self.neon_path, "src"),
                        self.apath(self.bdb_path, "include"),
+                       self.path("subversion/bindings/swig/proxy"),
                        self.path("subversion") ]
 
     if self.libintl_path:
@@ -738,8 +718,23 @@ class WinGeneratorBase(GeneratorBase):
     template = ezt.Template(compress_whitespace = 0)
     template.parse_file(os.path.join('build', 'generator', tname))
     template.generate(fout, data)
-
     self.write_file_if_changed(fname, fout.getvalue())
+
+  def write_zlib_project_file(self, name):
+    if not self.zlib_path:
+      return
+    zlib_path = os.path.abspath(self.zlib_path)
+    self.move_proj_file(os.path.join('build', 'win32'), name,
+                        (('zlib_path', zlib_path),
+                         ('zlib_sources',
+                          glob.glob(os.path.join(zlib_path, '*.c'))
+                          + glob.glob(os.path.join(zlib_path,
+                                                   'contrib/masmx86/*.c'))
+                          + glob.glob(os.path.join(zlib_path,
+                                                   'contrib/masmx86/*.asm'))),
+                         ('zlib_headers',
+                          glob.glob(os.path.join(zlib_path, '*.h'))),
+                        ))
 
   def write_neon_project_file(self, name):
     neon_path = os.path.abspath(self.neon_path)
@@ -753,7 +748,7 @@ class WinGeneratorBase(GeneratorBase):
 
   def move_proj_file(self, path, name, params=()):
     ### Move our slightly templatized pre-built project files into place --
-    ### these projects include apr, neon, locale, config, etc.
+    ### these projects include apr, zlib, neon, locale, config, etc.
 
     dest_file = os.path.join(path, name)
     source_template = name + '.ezt'
@@ -800,9 +795,11 @@ class WinGeneratorBase(GeneratorBase):
       fp.close()
 
   def _find_swig(self):
-    # Require (and assume) version 1.3.19
-    base_version = '1.3.19'
-    vernum = base_vernum = 103019
+    # Require 1.3.24. If not found, assume 1.3.25.
+    default_version = '1.3.25'
+    minimum_version = '1.3.24'
+    vernum = 103025
+    minimum_vernum = 103024
     libdir = ''
 
     infp, outfp = os.popen4('swig -version')
@@ -822,14 +819,14 @@ class WinGeneratorBase(GeneratorBase):
         # build/ac-macros/swig.m4 explains the next incantation
         vernum = int('%d%02d%03d' % version)
         sys.stderr.write('Found installed SWIG version %d.%d.%d\n' % version)
-        if vernum < base_vernum:
+        if vernum < minimum_vernum:
           sys.stderr.write('WARNING: Subversion requires version %s\n'
-                           % base_version)
+                           % minimum_version)
 
         libdir = self._find_swig_libdir()
       else:
         sys.stderr.write('Could not find installed SWIG,'
-                         ' assuming version %s\n' % base_version)
+                         ' assuming version %s\n' % default_version)
         self.swig_libdir = ''
     finally:
       outfp.close()
@@ -850,6 +847,21 @@ class WinGeneratorBase(GeneratorBase):
     finally:
       fp.close()
     return ''
+
+  def _find_ml(self):
+    "Check if the ML assembler is in the path"
+    fp = os.popen('ml /help', 'r')
+    try:
+      line = fp.readline()
+      if line:
+        msg = 'Found ML, ZLib build will use ASM sources'
+        self.have_ml = 1
+      else:
+        msg = 'Could not find ML, ZLib build will not use ASM sources'
+        self.have_ml = 0
+      sys.stderr.write('%s\n' % (msg,))
+    finally:
+      fp.close()
 
   def _configure_apr_util(self):
     if not self.configure_apr_util:

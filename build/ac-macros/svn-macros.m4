@@ -8,7 +8,8 @@ dnl of the arguments. this is different from config.status which simply
 dnl regenerates the output files. config.nice is useful after you rebuild
 dnl ./configure (via autoconf or autogen.sh)
 AC_DEFUN(SVN_CONFIG_NICE,[
-  echo creating $1
+  AC_REQUIRE([AC_CANONICAL_HOST])
+  AC_MSG_NOTICE([creating $1])
   rm -f $1
   cat >$1<<EOF
 #! /bin/sh
@@ -17,7 +18,17 @@ AC_DEFUN(SVN_CONFIG_NICE,[
 
 EOF
 
-  echo "exec \"[$]0\" \\" >> $1
+  case $host in
+    *-*-cygwin*)
+      # exec closes config.nice before configure attempts to rewrite it
+      EXEC_HACK="exec "
+      ;;
+    *)
+      EXEC_HACK=
+      ;;
+  esac
+
+  echo "$EXEC_HACK\"[$]0\" \\" >> $1
   for arg in "[$]@"; do
     case $arg in
       --no-create) ;;

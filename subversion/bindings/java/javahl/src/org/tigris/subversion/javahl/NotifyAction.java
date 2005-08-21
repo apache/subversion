@@ -90,6 +90,30 @@ public interface NotifyAction
     public static final int blame_revision = 20;
 
     /**
+     * @since 1.2
+     * Locking a path
+     */
+    public static final int locked = 21;
+
+    /**
+     * @since 1.2
+     * Unlocking a path
+     */
+    public static final int unlocked = 22;
+
+    /**
+     * @since 1.2
+     * Failed to lock a path
+     */
+    public static final int failed_lock = 23;
+
+    /**
+     * @since 1.2
+     * Failed to unlock a path
+     */
+    public static final int failed_unlock = 24;
+
+    /**
      * textual representation of the action types
      */
     public static final String[] actionNames =
@@ -114,6 +138,10 @@ public interface NotifyAction
         "sending deleted ",
         "sending replaced",
         "transfer",
-        "blame revision processed"
+        "blame revision processed",
+        "locked",
+        "unlocked",
+        "locking failed",
+        "unlocking failed",
     };
 }

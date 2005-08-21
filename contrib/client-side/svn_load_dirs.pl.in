@@ -654,7 +654,7 @@ while (defined (my $load_dir = &get_next_load_dir))
                     $print_rename_message = 0;
                     print "\n",
                       "The following table lists files and directories that\n",
-                      "exist in either the Subversion repository and the\n",
+                      "exist in either the Subversion repository or the\n",
                       "directory to be imported but not both.  You now have\n",
                       "the opportunity to match them up as renames instead\n",
                       "of deletes and adds.  This is a Good Thing as it'll\n",
@@ -1413,7 +1413,6 @@ sub file_info
 }
 
 # Start a child process safely without using /bin/sh.
-my $openfork_available = "MSWin32" ne $OSNAME;
 sub safe_read_from_pipe
 {
   unless (@_)
@@ -1421,6 +1420,7 @@ sub safe_read_from_pipe
       croak "$0: safe_read_from_pipe $INCORRECT_NUMBER_OF_ARGS";
     }
 
+  my $openfork_available = "MSWin32" ne $OSNAME;
   if ($openfork_available)
     {
       print "Running @_\n";

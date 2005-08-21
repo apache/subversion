@@ -116,9 +116,9 @@ class SVNTypeMismatch(SVNTreeError):
 #   - in the 'svn status' use-case (which is always run with the -v
 #     (--verbose) flag), each line of output contains a working revision
 #     number and a two-letter status code similar to the 'svn co/up'
-#     case.  The repository revision is also printed.  All of this
-#     information is stored in attributes named 'wc_rev', 'status', and
-#     'repos_rev', respectively.
+#     case.  This information is stored in attributes named 'wc_rev'
+#     and 'status'.  The repository revision is also printed, but it
+#     is ignored.
 
 #   - in the working-copy use-case, the att-hash is ignored.
 
@@ -193,6 +193,8 @@ class SVNTreeNode:
     ### self.children is None (file) and self.children == [] (empty
     ### diretory), but it seems that most places that construct
     ### SVNTreeNode objects don't even try to do that.  --xbc
+    ###
+    ### See issue #1611 about this problem.  -kfogel
     if self.children is not None:
       print "    Children:  ", len(self.children)
     else:
@@ -557,13 +559,14 @@ def build_generic_tree(nodelist):
 
 # Parse co/up output into a tree.
 #
-#   Tree nodes will contain no contents, and only one 'status' att.
+#   Tree nodes will contain no contents, a 'status' att, and a
+#   'writelocked' att.
 
 def build_tree_from_checkout(lines):
   "Return a tree derived by parsing the output LINES from 'co' or 'up'."
   
   root = SVNTreeNode(root_node_name)
-  rm1 = re.compile ('^([MAGCUD_ ][MAGCUD_ ])\s+(.+)')
+  rm1 = re.compile ('^([MAGCUD_ ][MAGCUD_ ])([B ])\s+(.+)')
   # There may be other verbs we need to match, in addition to
   # "Restored".  If so, add them as alternatives in the first match
   # group below.
@@ -572,7 +575,7 @@ def build_tree_from_checkout(lines):
   for line in lines:
     match = rm1.search(line)
     if match and match.groups():
-      new_branch = create_from_path(match.group(2), None, {},
+      new_branch = create_from_path(match.group(3), None, {},
                                     {'status' : match.group(1)})
       root.add_child(new_branch)
     else:
@@ -613,24 +616,54 @@ def build_tree_from_commit(lines):
 #
 #   Tree nodes will contain no contents, and these atts:
 #
-#          'status', 'wc_rev', 'repos_rev'
-#             ... and possibly 'locked', 'copied', IFF columns non-empty.
+#          'status', 'wc_rev',
+#             ... and possibly 'locked', 'copied', 'writelocked',
+#             IFF columns non-empty.
 # 
 
 def build_tree_from_status(lines):
-  "Return a tree derived by parsing the output LINES from 'st'."
+  "Return a tree derived by parsing the output LINES from 'st -vuq'."
 
   root = SVNTreeNode(root_node_name)
-  rm = re.compile ('^.+\:.+(\d+)')
-  lastline = string.strip(lines.pop())
-  match = rm.search(lastline)
-  if match and match.groups():
-    repos_rev = match.group(1)
-  else:
-    repos_rev = '?'
     
+  # 'status -v' output looks like this:
+  #
+  #      "%c%c%c%c%c%c %c   %6s   %6s %-12s %s\n"
+  #
+  # (Taken from 'print_status' in subversion/clients/cmdline/status.c.)
+  #
+  # Here are the parameters.  The middle number in parens is the
+  # match.group(), followed by a brief description of the field:
+  #
+  #    - text status           (1)  (single letter)
+  #    - prop status           (1)  (single letter)
+  #    - wc-lockedness flag    (2)  (single letter: "L" or " ")
+  #    - copied flag           (3)  (single letter: "+" or " ")
+  #    - switched flag         (4)  (single letter: "S" or " ")
+  #    - repos lock status     (5)  (single letter: "K", "O", "B", "T", " ")
+  #
+  #    [one space]
+  #
+  #    - out-of-date flag      (6)  (single letter: "*" or " ")
+  #
+  #    [three spaces]
+  #
+  #    - working revision      (7)  (either digits or "-")
+  #
+  #    [one space]
+  #
+  #    - last-changed revision (8)  (either digits or "?")
+  #
+  #    [one space]
+  #
+  #    - last author           (9)  (string of non-whitespace characters)
+  #
+  #    [one space]
+  #
+  #    - path                 (10)  (string of characters until newline)
+
   # Try http://www.wordsmith.org/anagram/anagram.cgi?anagram=ACDRMGU
-  rm = re.compile ('^([!MACDRUG_ ][MACDRUG_ ])(.)(.)(.)  .   [^0-9-]+(\d+|-)( +\S+ +\S+ +)(.+)')
+  rm = re.compile('^([!MACDRUG_ ][MACDRUG_ ])([L ])([+ ])([S ])([KOBT ]) ([* ])   [^0-9-]*(\d+|-|\?) +(\d|-|\?)+ +(\S+) +(.+)')
   for line in lines:
 
     # Quit when we hit an externals status announcement (### someday we can fix
@@ -641,17 +674,18 @@ def build_tree_from_status(lines):
     
     match = rm.search(line)
     if match and match.groups():
-      if match.group(6) != '-': # ignore items that only exist on repos
+      if match.group(9) != '-': # ignore items that only exist on repos
         atthash = {'status' : match.group(1),
-                   'wc_rev' : match.group(5),
-                   'repos_rev' : repos_rev}
+                   'wc_rev' : match.group(7)}
         if match.group(2) != ' ':
           atthash['locked'] = match.group(2)
         if match.group(3) != ' ':
           atthash['copied'] = match.group(3)
         if match.group(4) != ' ':
           atthash['switched'] = match.group(4)
-        new_branch = create_from_path(match.group(7), None, {}, atthash)
+        if match.group(5) != ' ':
+          atthash['writelocked'] = match.group(5)
+        new_branch = create_from_path(match.group(10), None, {}, atthash)
 
       root.add_child(new_branch)
 

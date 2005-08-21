@@ -88,7 +88,7 @@ make_error_internal (apr_status_t apr_err,
     }
 
   /* Create the new error structure */
-  new_error = (svn_error_t *) apr_pcalloc (pool, sizeof (*new_error));
+  new_error = apr_pcalloc (pool, sizeof (*new_error));
 
   /* Fill 'er up. */
   new_error->apr_err = apr_err;
@@ -120,7 +120,7 @@ svn_error_create (apr_status_t apr_err,
   err = make_error_internal (apr_err, child);
 
   if (message)
-    err->message = (const char *) apr_pstrdup (err->pool, message);
+    err->message = apr_pstrdup (err->pool, message);
 
   return err;
 }
@@ -208,7 +208,8 @@ svn_error_compose (svn_error_t *chain, svn_error_t *new_err)
       chain->child = apr_palloc (pool, sizeof (*chain->child));
       chain = chain->child;
       *chain = *new_err;
-      chain->message = apr_pstrdup (pool, new_err->message);
+      if (chain->message)
+        chain->message = apr_pstrdup (pool, new_err->message);
       chain->pool = pool;
 #if defined(SVN_DEBUG_ERROR)
       if (! new_err->child)
@@ -225,6 +226,39 @@ svn_error_compose (svn_error_t *chain, svn_error_t *new_err)
   apr_pool_destroy (oldpool);
 }
 
+svn_error_t *
+svn_error_dup (svn_error_t *err)
+{
+  apr_pool_t *pool;
+  svn_error_t *new_err = NULL, *tmp_err = NULL;
+
+  if (apr_pool_create (&pool, NULL))
+    abort ();
+
+  for (; err; err = err->child)
+    {
+      if (! new_err)
+        {
+          new_err = apr_palloc (pool, sizeof (*new_err));
+          tmp_err = new_err;
+        }
+      else
+        {
+          tmp_err->child = apr_palloc (pool, sizeof (*tmp_err->child));
+          tmp_err = tmp_err->child;
+        }
+      *tmp_err = *err;
+      tmp_err->pool = pool;
+      if (tmp_err->message)
+        tmp_err->message = apr_pstrdup (pool, tmp_err->message);
+    }
+
+#if defined(SVN_DEBUG_ERROR)
+  apr_pool_cleanup_register (pool, tmp_err, err_abort, NULL);
+#endif
+
+  return new_err;
+}
 
 void
 svn_error_clear (svn_error_t *err)
@@ -241,7 +275,7 @@ svn_error_clear (svn_error_t *err)
 }
 
 static void
-print_error (svn_error_t *err, FILE *stream)
+print_error (svn_error_t *err, FILE *stream, const char *prefix)
 {
   char errbuf[256];
   const char *err_string;
@@ -274,8 +308,8 @@ print_error (svn_error_t *err, FILE *stream)
   /* Only print the same APR error string once. */
   if (err->message)
     {
-      svn_error_clear (svn_cmdline_fprintf (stream, err->pool, "svn: %s\n",
-                                            err->message));
+      svn_error_clear (svn_cmdline_fprintf (stream, err->pool, "%s%s\n",
+                                            prefix, err->message));
     }
   else
     {
@@ -293,12 +327,21 @@ print_error (svn_error_t *err, FILE *stream)
         }
       
       svn_error_clear (svn_cmdline_fprintf (stream, err->pool,
-                                            "svn: %s\n", err_string));
+                                            "%s%s\n", prefix, err_string));
     }
 }
 
 void
 svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
+{
+  svn_handle_error2 (err, stream, fatal, "svn: ");
+}
+
+void
+svn_handle_error2 (svn_error_t *err,
+                   FILE *stream,
+                   svn_boolean_t fatal,
+                   const char *prefix)
 {
   /* In a long error chain, there may be multiple errors with the same
      error code and no custom message.  We only want to print the
@@ -338,7 +381,7 @@ svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
       
       if (! printed_already)
         {
-          print_error (err, stream);
+          print_error (err, stream, prefix);
           if (! err->message)
             {
               (*((apr_status_t *) apr_array_push (empties))) = err->apr_err;
@@ -361,8 +404,15 @@ svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
 void
 svn_handle_warning (FILE *stream, svn_error_t *err)
 {
-  svn_error_clear (svn_cmdline_fprintf (stream, err->pool, "svn: warning: %s\n",
-                                       err->message));
+  svn_handle_warning2(stream, err, "svn: ");
+}
+
+void
+svn_handle_warning2 (FILE *stream, svn_error_t *err, const char *prefix)
+{
+  svn_error_clear (svn_cmdline_fprintf (stream, err->pool,
+                                        _("%swarning: %s\n"),
+                                        prefix, err->message));
   fflush (stream);
 }
 
@@ -387,7 +437,7 @@ svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
   for (defn = error_table; defn->errdesc != NULL; ++defn)
     if (defn->errcode == (svn_errno_t)statcode)
       {
-        apr_cpystrn (buf, dgettext (PACKAGE_NAME, defn->errdesc), bufsize);
+        apr_cpystrn (buf, _(defn->errdesc), bufsize);
         return buf;
       }
 

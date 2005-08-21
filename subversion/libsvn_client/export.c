@@ -132,13 +132,13 @@ copy_one_versioned_file (const char *from,
     }
   else
     {
-      svn_wc_status_t *status;
+      svn_wc_status2_t *status;
       
       base = from;
       SVN_ERR (svn_wc_prop_list (&props, from, 
                                  adm_access, pool));
-      SVN_ERR (svn_wc_status (&status, from, 
-                              adm_access, pool));
+      SVN_ERR (svn_wc_status2 (&status, from, 
+                               adm_access, pool));
       if (status->text_status != svn_wc_status_normal)
         local_mod = TRUE;
     }
@@ -274,7 +274,7 @@ copy_versioned_files (const char *from,
             svn_error_clear (err);
         }
 
-      SVN_ERR (svn_wc_entries_read (&entries, adm_access, TRUE, pool));
+      SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
 
       iterpool = svn_pool_create (pool);
       for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
@@ -355,7 +355,7 @@ copy_versioned_files (const char *from,
 static svn_error_t *
 open_root_internal (const char *path,
                     svn_boolean_t force,
-                    svn_wc_notify_func_t notify_func,
+                    svn_wc_notify_func2_t notify_func,
                     void *notify_baton,
                     apr_pool_t *pool)
 {
@@ -374,15 +374,14 @@ open_root_internal (const char *path,
                               svn_path_local_style (path, pool));
 
   if (notify_func)
-    (*notify_func) (notify_baton,
-                    path,
-                    svn_wc_notify_update_add,
-                    svn_node_dir,
-                    NULL,
-                    svn_wc_notify_state_unknown,
-                    svn_wc_notify_state_unknown,
-                    SVN_INVALID_REVNUM);
-
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify (path,
+                                                      svn_wc_notify_update_add,
+                                                      pool);
+      notify->kind = svn_node_dir;
+      (*notify_func) (notify_baton, notify, pool);
+    }
+  
   return SVN_NO_ERROR;
 }
 
@@ -401,7 +400,7 @@ struct edit_baton
   apr_hash_t *externals;
   const char *native_eol;
 
-  svn_wc_notify_func_t notify_func;
+  svn_wc_notify_func2_t notify_func;
   void *notify_baton;
 };
 
@@ -518,15 +517,13 @@ add_directory (const char *path,
                               svn_path_local_style (full_path, pool));
 
   if (eb->notify_func)
-    (*eb->notify_func) (eb->notify_baton,
-                        full_path,
-                        svn_wc_notify_update_add,
-                        svn_node_dir,
-                        NULL,
-                        svn_wc_notify_state_unknown,
-                        svn_wc_notify_state_unknown,
-                        SVN_INVALID_REVNUM);
-
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify (full_path,
+                                                      svn_wc_notify_update_add,
+                                                      pool);
+      notify->kind = svn_node_dir;
+      (*eb->notify_func) (eb->notify_baton, notify, pool);
+    }
   
   /* Build our dir baton. */
   db->path = full_path;
@@ -730,14 +727,14 @@ close_file (void *file_baton,
     SVN_ERR (svn_io_set_file_affected_time (fb->date, fb->path, pool));
 
   if (fb->edit_baton->notify_func)
-    (*fb->edit_baton->notify_func) (fb->edit_baton->notify_baton,
-                                    fb->path,
-                                    svn_wc_notify_update_add,
-                                    svn_node_file,
-                                    NULL,
-                                    svn_wc_notify_state_unknown,
-                                    svn_wc_notify_state_unknown,
-                                    SVN_INVALID_REVNUM);
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify (fb->path,
+                                                      svn_wc_notify_update_add,
+                                                      pool);
+      notify->kind = svn_node_file;
+      (*fb->edit_baton->notify_func) (fb->edit_baton->notify_baton, notify,
+                                      pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -752,7 +749,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
                     const char *to,
                     const svn_opt_revision_t *peg_revision,
                     const svn_opt_revision_t *revision,
-                    svn_boolean_t force, 
+                    svn_boolean_t overwrite, 
                     svn_boolean_t ignore_externals,
                     svn_boolean_t recurse,
                     const char *native_eol,
@@ -780,10 +777,10 @@ svn_client_export3 (svn_revnum_t *result_rev,
 
       eb->root_path = to;
       eb->root_url = url;
-      eb->force = force;
+      eb->force = overwrite;
       eb->target_revision = &edit_revision;
-      eb->notify_func = ctx->notify_func;
-      eb->notify_baton = ctx->notify_baton;
+      eb->notify_func = ctx->notify_func2;
+      eb->notify_baton = ctx->notify_baton2;
       eb->externals = apr_hash_make (pool);
       eb->native_eol = native_eol; 
 
@@ -834,7 +831,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
         {
           void *edit_baton;
           const svn_delta_editor_t *export_editor;
-          const svn_ra_reporter_t *reporter;
+          const svn_ra_reporter2_t *reporter;
           void *report_baton;
           svn_delta_editor_t *editor = svn_delta_default_editor (pool);
           svn_boolean_t use_sleep = FALSE;
@@ -867,7 +864,7 @@ svn_client_export3 (svn_revnum_t *result_rev,
 
           SVN_ERR (reporter->set_path (report_baton, "", revnum,
                                        TRUE, /* "help, my dir is empty!" */
-                                       pool));
+                                       NULL, pool));
 
           SVN_ERR (reporter->finish_report (report_baton, pool));
  
@@ -884,7 +881,8 @@ svn_client_export3 (svn_revnum_t *result_rev,
           SVN_ERR (svn_io_check_path (to, &kind, pool));
           if (kind == svn_node_none)
             SVN_ERR (open_root_internal
-                     (to, force, ctx->notify_func, ctx->notify_baton, pool));
+                     (to, overwrite, ctx->notify_func2, 
+                      ctx->notify_baton2, pool));
 
           if (! ignore_externals && recurse)
             SVN_ERR (svn_client__fetch_externals (eb->externals, TRUE, 
@@ -903,20 +901,19 @@ svn_client_export3 (svn_revnum_t *result_rev,
         }
       
       /* just copy the contents of the working copy into the target path. */
-      SVN_ERR (copy_versioned_files (from, to, &working_revision, force, 
+      SVN_ERR (copy_versioned_files (from, to, &working_revision, overwrite, 
                                      recurse, native_eol, ctx, pool));
     }
   
 
-  if (ctx->notify_func)
-    (*ctx->notify_func) (ctx->notify_baton,
-                         to,
-                         svn_wc_notify_update_completed,
-                         svn_node_unknown,
-                         NULL,
-                         svn_wc_notify_state_unknown,
-                         svn_wc_notify_state_unknown,
-                         edit_revision);
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify (to,
+                                svn_wc_notify_update_completed, pool);
+      notify->revision = edit_revision;
+      (*ctx->notify_func2) (ctx->notify_baton2, notify, pool);
+    }
 
   if (result_rev)
     *result_rev = edit_revision;

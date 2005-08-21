@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -69,8 +69,9 @@ public class SVNTests extends TestCase
      */
     protected WC greekWC;
     /**
-     * the directory "local_tmp" in the rootDir. This will be used for the
-     * sample repository and its dumpfile and for the config directory
+     * the directory "svn-test-work/local_tmp" in the rootDir. This
+     * will be used for the sample repository and its dumpfile and for
+     * the config directory
      */
     protected File localTmp;
     /**
@@ -198,6 +199,9 @@ public class SVNTests extends TestCase
 
         // create a clean directory for the config files and the sample
         // repository
+        //
+        // ### The path is now "svn-test-work/local_tmp", however, I'm
+        // ### not sure how to update this code for that.
         localTmp = new File(rootDir, "local_tmp");
         if(localTmp.exists())
             removeDirectoryWithContent(localTmp);
@@ -208,6 +212,7 @@ public class SVNTests extends TestCase
         // create and configure the needed subversion objects
         admin = new SVNAdmin();
         client = new SVNClient();
+        client.notification2(new MyNotifier());
         client.commitMessageHandler(new MyCommitMessage());
         client.username("jrandom");
         client.password("rayjandom");
@@ -228,6 +233,10 @@ public class SVNTests extends TestCase
                 new IgnoreOutputer(), null, null, false);
 
         // create the directory for the repositories and the working copies
+        //
+        // ### The paths are now "svn-test-work/repositories" and
+        // ### "svn-test-work/repositories".  However, I'm not sure
+        // ### how to update this code for that. 
         repositories = new File(rootDir, "repositories");
         repositories.mkdirs();
         workingCopies = new File(rootDir, "working_copies");
@@ -595,11 +604,11 @@ public class SVNTests extends TestCase
                 throws Exception
         {
             // build a clean working directory
-            String url = makeReposUrl(repos);
+            String uri = makeReposUrl(repos);
             workingCopy = new File(workingCopies, testName);
             removeDirectoryWithContent(workingCopy);
             // checkout the repository
-            client.checkout(url, workingCopy.getAbsolutePath(), null, true);
+            client.checkout(uri, workingCopy.getAbsolutePath(), null, true);
             // sanity check the working with its expected status
             checkStatus();
             return workingCopy;
@@ -709,6 +718,21 @@ public class SVNTests extends TestCase
             assertEquals("commit item url", ci.getUrl(), myUrl);
             // after the test, remove the item from the expected map
             expectedCommitItems.remove(key);
+        }
+    }
+
+    class MyNotifier implements Notify2
+    {
+
+        /**
+         * Handler for Subversion notifications.
+         * <p/>
+         * Override this function to allow Subversion to send notifications
+         *
+         * @param info everything to know about this event
+         */
+        public void onNotify(NotifyInformation info)
+        {
         }
     }
 }

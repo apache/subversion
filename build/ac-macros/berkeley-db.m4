@@ -178,11 +178,11 @@ AC_DEFUN(SVN_LIB_BERKELEY_DB_TRY,
 
     AC_TRY_RUN(
       [
-#include <stdio.h>
+#include <stdlib.h>
 #define APU_WANT_DB
 #include <apu_want.h>
 
-main ()
+int main ()
 {
   int major, minor, patch;
 

@@ -16,6 +16,9 @@
  * @endcopyright
  */
 package org.tigris.subversion.javahl;
+
+import java.io.OutputStream;
+
 /**
  * This class provides a threadsafe wrapped for SVNClient
  */
@@ -104,9 +107,11 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param descend         Recurse into subdirectories if existant.
      * @param onServer        Request status information from server.
      * @param getAll          get status for uninteristing files (unchanged).
-     * @param noIgnore        get status for normaly ignored files and directories.
+     * @param noIgnore        get status for normaly ignored files and
+     *                        directories.
      * @param ignoreExternals if externals are ignored during checkout
      * @return Array of Status entries.
+     * @since 1.2
      */
     public Status[] status(String path, boolean descend, boolean onServer,
                            boolean getAll, boolean noIgnore,
@@ -143,6 +148,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param pegRevision the revision to interpret url
      * @param recurse     recurse into subdirectories
      * @return Array of DirEntry objects.
+     * @since 1.2
      */
     public DirEntry[] list(String url, Revision revision, Revision pegRevision,
                            boolean recurse) throws ClientException
@@ -213,7 +219,8 @@ public class SVNClientSynchronized implements SVNClientInterface
     {
         synchronized(clazz)
         {
-            return worker.logMessages(path, revisionStart, revisionEnd, true, false);
+            return worker.logMessages(path, revisionStart, revisionEnd, true,
+                    false);
         }
     }
 
@@ -269,6 +276,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param limit         limit the number of log messages (if 0 or less no
      *                      limit)
      * @return array of LogMessages
+     * @since 1.2
      */
     public LogMessage[] logMessages(String path, Revision revisionStart,
                                     Revision revisionEnd, boolean stopOnCopy,
@@ -288,6 +296,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param recurse whether you want it to checkout files recursively.
      * @param ignoreExternals if externals are ignored during checkout
      * @exception ClientException
+     * @since 1.2
      */
     public long checkout(String moduleName, String destPath, Revision revision,
                          Revision pegRevision, boolean recurse,
@@ -323,6 +332,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * to the calling program.
      * @param notify listener that the SVN library should call on many
      *               file operations.
+     * @deprecated use notification2 instead
      */
     public void notification(Notify notify)
     {
@@ -331,6 +341,23 @@ public class SVNClientSynchronized implements SVNClientInterface
             worker.notification(notify);
         }
     }
+
+    /**
+     * Sets the notification callback used to send processing information back
+     * to the calling program.
+     *
+     * @param notify listener that the SVN library should call on many
+     *               file operations.
+     * @since 1.2
+     */
+    public void notification2(Notify2 notify)
+    {
+        synchronized(clazz)
+        {
+            worker.notification2(notify);
+        }
+    }
+
     /**
      * Sets the commit message handler. This allows more complex commit message
      * with the list of the elements to be commited as input.
@@ -393,8 +420,10 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param force     if adding a directory and recurse true and path is a
      *                  directory, all not already managed files are added.
      * @exception ClientException
+     * @since 1.2
      */
-    public void add(String path, boolean recurse, boolean force) throws ClientException
+    public void add(String path, boolean recurse, boolean force)
+            throws ClientException
     {
         synchronized(clazz)
         {
@@ -429,6 +458,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param recurse recursively update.
      * @param ignoreExternals if externals are ignored during update
      * @exception ClientException
+     * @since 1.2
      */
     public long[] update(String[] path, Revision revision, boolean recurse,
                          boolean ignoreExternals) throws ClientException
@@ -453,7 +483,7 @@ public class SVNClientSynchronized implements SVNClientInterface
     {
         synchronized(clazz)
         {
-            return worker.commit(path, message, recurse);
+            return worker.commit(path, message, recurse, false);
         }
     }
     /**
@@ -480,6 +510,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param revision  source revision
      * @param force     even with local modifications.
      * @exception ClientException
+     * @since 1.2
      */
     public void move(String srcPath, String destPath, String message,
                      Revision revision, boolean force) throws ClientException
@@ -582,7 +613,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param recurse   recurse to subdirectories
      * @param nativeEOL       which EOL characters to use during export
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public long doExport(String srcPath, String destPath, Revision revision,
                          Revision pegRevision, boolean force,
@@ -665,7 +696,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param ignoreAncestry ignore if files are not related
      * @param dryRun         do not change anything
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public void merge(String path1, Revision revision1, String path2,
                       Revision revision2, String localPath, boolean force,
@@ -692,7 +723,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param ignoreAncestry ignore if files are not related
      * @param dryRun         do not change anything
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public void merge(String path, Revision pegRevision, Revision revision1,
                       Revision revision2, String localPath, boolean force,
@@ -740,7 +771,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param noDiffDeleted  no output on deleted files
      * @param force          diff even on binary files
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public void diff(String target1, Revision revision1, String target2,
                      Revision revision2, String outFileName, boolean recurse,
@@ -767,7 +798,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param noDiffDeleted  no output on deleted files
      * @param force          diff even on binary files
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public void diff(String target, Revision pegRevision,
                      Revision startRevision, Revision endRevision,
@@ -801,6 +832,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param path     the path of the item
      * @param revision the revision of the item
      * @return array of property objects
+     * @since 1.2
      */
     public PropertyData[] properties(String path, Revision revision)
             throws ClientException
@@ -818,6 +850,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param revision    the revision of the item
      * @param pegRevision the revision to interpret path
      * @return array of property objects
+     * @since 1.2
      */
     public PropertyData[] properties(String path, Revision revision,
                                      Revision pegRevision)
@@ -855,7 +888,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param recurse set property also on the subdirectories
      * @param force   do not check if the value is valid
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public void propertySet(String path, String name, String value,
                             boolean recurse, boolean force)
@@ -893,7 +926,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param recurse set property also on the subdirectories
      * @param force   do not check if the value is valid
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public void propertySet(String path, String name, byte[] value,
                             boolean recurse, boolean force)
@@ -946,7 +979,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param recurse set property also on the subdirectories
      * @param force   do not check if the value is valid
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public void propertyCreate(String path, String name, String value,
                                boolean recurse, boolean force)
@@ -984,7 +1017,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param recurse set property also on the subdirectories
      * @param force   do not check if the value is valid
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public void propertyCreate(String path, String name, byte[] value,
                                boolean recurse, boolean force)
@@ -1020,7 +1053,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param rev  revision to retrieve
      * @return the Properties
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public PropertyData[] revProperties(String path, Revision rev)
             throws ClientException
@@ -1039,6 +1072,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param value     value of the property
      * @param force
      * @throws ClientException
+     * @since 1.2
      */
     public void setRevProperty(String path, String name, Revision rev,
                                String value, boolean force)
@@ -1073,7 +1107,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param revision revision of the item
      * @return the Property
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public PropertyData propertyGet(String path, String name, Revision revision)
             throws ClientException
@@ -1090,9 +1124,10 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param path     path of the item
      * @param name     name of property
      * @param revision revision of the item
+     * @param pegRevision the revision to interpret path
      * @return the Property
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public PropertyData propertyGet(String path, String name, Revision revision,
                                     Revision pegRevision) throws ClientException
@@ -1127,7 +1162,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param pegRevision the revision to interpret path
      * @return the content as byte array
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public byte[] fileContent(String path, Revision revision,
                               Revision pegRevision) throws ClientException
@@ -1135,6 +1170,27 @@ public class SVNClientSynchronized implements SVNClientInterface
         synchronized(clazz)
         {
             return worker.fileContent(path, revision, pegRevision);
+        }
+    }
+
+    /**
+     * Write the file's content to the specified output stream.
+     *
+     * @param path        the path of the file
+     * @param revision    the revision to retrieve
+     * @param pegRevision the revision at which to interpret the path
+     * @param the stream to write the file's content to
+     * @throws ClientException
+     */
+    public void streamFileContent(String path, Revision revision,
+                                  Revision pegRevision, int bufferSize,
+                                  OutputStream stream) 
+        throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.streamFileContent(path, revision, pegRevision, bufferSize,
+                                     stream);
         }
     }
 
@@ -1201,6 +1257,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param callback      callback to receive the file content and the other
      *                      information
      * @throws ClientException
+     * @since 1.2
      */
     public void blame(String path, Revision pegRevision, Revision revisionStart,
                       Revision revisionEnd, BlameCallback callback)
@@ -1263,12 +1320,89 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * Commits changes to the repository.
+     *
+     * @param path     files to commit.
+     * @param message  log message.
+     * @param recurse  whether the operation should be done recursively.
+     * @param noUnlock do remove any locks
+     * @return Returns a long representing the revision. It returns a
+     *         -1 if the revision number is invalid.
+     * @throws ClientException
+     * @since 1.2
+     */
+    public long commit(String[] path, String message, boolean recurse,
+                       boolean noUnlock) throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.commit(path, message, recurse, noUnlock);
+        }
+    }
+
+    /**
+     * Lock a working copy item
+     *
+     * @param path  path of the item
+     * @param comment
+     * @param force break an existing lock
+     * @throws ClientException
+     * @since 1.2
+     */
+    public void lock(String[] path, String comment, boolean force)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.lock(path, comment, force);
+        }
+    }
+
+    /**
+     * Unlock a working copy item
+     *
+     * @param path  path of the item
+     * @param force break an existing lock
+     * @throws ClientException
+     * @since 1.2
+     */
+    public void unlock(String[] path, boolean force)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.unlock(path, force);
+        }
+    }
+
+    /**
+     * Retrieve information about repository or working copy items.
+     *
+     * @param pathOrUrl   the path or the url of the item
+     * @param revision    the revision of the item to return
+     * @param pegRevision the revision to interpret pathOrUrl
+     * @param recurse     flag if to recurse, if the item is a directory
+     * @return the information objects
+     * @since 1.2
+     */
+    public Info2[] info2(String pathOrUrl, Revision revision,
+                         Revision pegRevision, boolean recurse)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.info2(pathOrUrl, revision, pegRevision, recurse);
+        }
+    }
+
+    /**
      *  Produce a compact "version number" for a working copy
      * @param path          path of the working copy
      * @param trailUrl      to detect switches of the whole working copy
      * @param lastChanged   last changed rather than current revisions
      * @return      the compact "version number"
      * @throws ClientException
+     * @since 1.2
      */
     public String getVersionInfo(String path, String trailUrl,
                                  boolean lastChanged) throws ClientException

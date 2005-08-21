@@ -55,21 +55,26 @@ static const char under_string[] =
 
 /* Utilities */
 
-/* Wrapper for @c apr_file_printf(), which see.  FORMAT is a utf8-encoded
+/* Wrapper for apr_file_printf(), which see.  FORMAT is a utf8-encoded
    string after it is formatted, so this function can convert it to
-   native encoding before printing. */
+   ENCODING before printing. */
 static svn_error_t *
-file_printf_from_utf8 (apr_file_t *fptr, const char *format, ...)
+file_printf_from_utf8 (apr_file_t *fptr, const char *encoding,
+                       const char *format, ...)
+    __attribute__ ((format (printf, 3, 4)));
+static svn_error_t *
+file_printf_from_utf8 (apr_file_t *fptr, const char *encoding,
+                       const char *format, ...)
 {
   va_list ap;
   const char *buf, *buf_apr;
 
   va_start (ap, format);
   buf = apr_pvsprintf (apr_file_pool_get (fptr), format, ap); 
-  va_end(ap);
+  va_end (ap);
 
-  SVN_ERR (svn_utf_cstring_from_utf8 (&buf_apr, buf,
-                                       apr_file_pool_get (fptr)));
+  SVN_ERR (svn_utf_cstring_from_utf8_ex (&buf_apr, buf, encoding, NULL,
+                                         apr_file_pool_get (fptr)));
 
   return svn_io_file_write_full (fptr, buf_apr, strlen (buf_apr), 
                                  NULL, apr_file_pool_get (fptr));
@@ -78,27 +83,25 @@ file_printf_from_utf8 (apr_file_t *fptr, const char *format, ...)
 
 /* A helper func that writes out verbal descriptions of property diffs
    to FILE.   Of course, the apr_file_t will probably be the 'outfile'
-   passed to svn_client_diff2, which is probably stdout. */
+   passed to svn_client_diff3, which is probably stdout. */
 static svn_error_t *
 display_prop_diffs (const apr_array_header_t *propchanges,
                     apr_hash_t *original_props,
                     const char *path,
+                    const char *encoding,
                     apr_file_t *file,
                     apr_pool_t *pool)
 {
   int i;
 
-  SVN_ERR (file_printf_from_utf8 (file,
+  SVN_ERR (file_printf_from_utf8 (file, encoding,
                                   _("%sProperty changes on: %s%s"),
                                   APR_EOL_STR,
                                   svn_path_local_style (path, pool),
                                   APR_EOL_STR));
 
-  /* ### todo [issue #1533]: Use file_printf_from_utf8() to convert this
-     line of dashes to native encoding, at least conditionally?  Or is
-     it better to have under_string always output the same, so
-     programs can find it?  Also, what about checking for error? */
-  apr_file_printf (file, "%s" APR_EOL_STR, under_string);
+  SVN_ERR (file_printf_from_utf8 (file, encoding, "%s" APR_EOL_STR,
+                                  under_string));
 
   for (i = 0; i < propchanges->nelts; i++)
     {
@@ -112,8 +115,15 @@ display_prop_diffs (const apr_array_header_t *propchanges,
                                        propchange->name, APR_HASH_KEY_STRING);
       else
         original_value = NULL;
+
+      /* If the property doesn't exist on either side, or if it exists
+         with the same value, skip it.  */
+      if ((! (original_value || propchange->value))
+          || (original_value && propchange->value 
+              && svn_string_compare (original_value, propchange->value)))
+        continue;
       
-      SVN_ERR (file_printf_from_utf8 (file, _("Name: %s%s"),
+      SVN_ERR (file_printf_from_utf8 (file, encoding, _("Name: %s%s"),
                                       propchange->name, APR_EOL_STR));
 
       /* For now, we have a rather simple heuristic: if this is an
@@ -128,7 +138,8 @@ display_prop_diffs (const apr_array_header_t *propchanges,
             if (val_is_utf8)
               {
                 SVN_ERR (file_printf_from_utf8
-                         (file, "   - %s" APR_EOL_STR, original_value->data));
+                         (file, encoding,
+                          "   - %s" APR_EOL_STR, original_value->data));
               }
             else
               {
@@ -143,7 +154,7 @@ display_prop_diffs (const apr_array_header_t *propchanges,
             if (val_is_utf8)
               {
                 SVN_ERR (file_printf_from_utf8
-                         (file, "   + %s" APR_EOL_STR,
+                         (file, encoding, "   + %s" APR_EOL_STR,
                           propchange->value->data));
               }
             else
@@ -166,13 +177,13 @@ display_prop_diffs (const apr_array_header_t *propchanges,
 }
 
 
-/* Return SVN_ERR_UNSUPPORTED_FEATURE if URL's schema does not
-   match the schema of the url for ADM_ACCESS's path; return
-   SVN_ERR_BAD_URL if no schema can be found for one or both urls;
-   otherwise return SVN_NO_ERROR.  Use @a ADM_ACCESS's pool for
+/* Return SVN_ERR_UNSUPPORTED_FEATURE if URL's scheme does not
+   match the scheme of the url for ADM_ACCESS's path; return
+   SVN_ERR_BAD_URL if no scheme can be found for one or both urls;
+   otherwise return SVN_NO_ERROR.  Use ADM_ACCESS's pool for
    temporary allocation. */
 static svn_error_t *
-check_schema_match (svn_wc_adm_access_t *adm_access, const char *url)
+check_scheme_match (svn_wc_adm_access_t *adm_access, const char *url)
 {
   const char *path = svn_wc_adm_access_path (adm_access);
   apr_pool_t *pool = svn_wc_adm_access_pool (adm_access);
@@ -188,26 +199,26 @@ check_schema_match (svn_wc_adm_access_t *adm_access, const char *url)
     {
       return svn_error_createf
         (SVN_ERR_BAD_URL, NULL,
-         _("URLs have no schema ('%s' and '%s')"), url, ent->url);
+         _("URLs have no scheme ('%s' and '%s')"), url, ent->url);
     }
   else if (idx1 == NULL)
     {
       return svn_error_createf
         (SVN_ERR_BAD_URL, NULL,
-         _("URL has no schema: '%s'"), url);
+         _("URL has no scheme: '%s'"), url);
     }
   else if (idx2 == NULL)
     {
       return svn_error_createf
         (SVN_ERR_BAD_URL, NULL,
-         _("URL has no schema: '%s'"), ent->url);
+         _("URL has no scheme: '%s'"), ent->url);
     }
   else if (((idx1 - url) != (idx2 - ent->url))
            || (strncmp (url, ent->url, idx1 - url) != 0))
     {
       return svn_error_createf
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         _("Access schema mixtures not yet supported ('%s' and '%s')"),
+         _("Access scheme mixtures not yet supported ('%s' and '%s')"),
          url, ent->url);
     }
 
@@ -228,6 +239,8 @@ struct diff_cmd_baton {
   apr_file_t *outfile;
   apr_file_t *errfile;
 
+  const char *header_encoding;
+
   /* The original targets passed to the diff command.  We may need
      these to construct distinctive diff labels when comparing the
      same relative path in the same revision, under different anchors
@@ -236,7 +249,7 @@ struct diff_cmd_baton {
   const char *orig_path_2;
 
   /* These are the numeric representations of the revisions passed to
-     svn_client_diff2, either may be SVN_INVALID_REVNUM.  We need these
+     svn_client_diff3, either may be SVN_INVALID_REVNUM.  We need these
      because some of the svn_wc_diff_callbacks2_t don't get revision
      arguments.
 
@@ -295,6 +308,7 @@ diff_props_changed (svn_wc_adm_access_t *adm_access,
 
   if (props->nelts > 0)
     SVN_ERR (display_prop_diffs (props, original_props, path,
+                                 diff_cmd_baton->header_encoding,
                                  diff_cmd_baton->outfile, subpool));
 
   if (state)
@@ -356,7 +370,7 @@ diff_content_changed (const char *path,
      What a nightmare.
      
      For now, to distinguish the two paths, we'll just put the
-     unique portions of the original targets in parentheses before
+     unique portions of the original targets in parentheses after
      the received path, with ellipses for handwaving.  This makes
      the labels a bit clumsy, but at least distinctive.  Better
      solutions are possible, they'll just take more thought. */
@@ -409,33 +423,33 @@ diff_content_changed (const char *path,
   if (! diff_cmd_baton->force_binary && (mt1_binary || mt2_binary))
     {
       /* Print out the diff header. */
-      SVN_ERR (svn_stream_printf (os, subpool,
-                                  "Index: %s" APR_EOL_STR
-                                  "%s" APR_EOL_STR, path, equal_string));
+      SVN_ERR (svn_stream_printf_from_utf8
+               (os, diff_cmd_baton->header_encoding, subpool,
+                "Index: %s" APR_EOL_STR "%s" APR_EOL_STR, path, equal_string));
 
-      SVN_ERR (svn_stream_printf
-               (os, subpool,
+      SVN_ERR (svn_stream_printf_from_utf8
+               (os, diff_cmd_baton->header_encoding, subpool,
                 _("Cannot display: file marked as a binary type.%s"),
                 APR_EOL_STR));
       
       if (mt1_binary && !mt2_binary)
-        SVN_ERR (svn_stream_printf (os, subpool,
-                                    "svn:mime-type = %s" APR_EOL_STR,
-                                    mimetype1));
+        SVN_ERR (svn_stream_printf_from_utf8
+                 (os, diff_cmd_baton->header_encoding, subpool,
+                  "svn:mime-type = %s" APR_EOL_STR, mimetype1));
       else if (mt2_binary && !mt1_binary)
-        SVN_ERR (svn_stream_printf (os, subpool,
-                                    "svn:mime-type = %s" APR_EOL_STR,
-                                    mimetype2));
+        SVN_ERR (svn_stream_printf_from_utf8
+                 (os, diff_cmd_baton->header_encoding, subpool,
+                  "svn:mime-type = %s" APR_EOL_STR, mimetype2));
       else if (mt1_binary && mt2_binary)
         {
           if (strcmp (mimetype1, mimetype2) == 0)
-            SVN_ERR (svn_stream_printf
-                     (os, subpool,
+            SVN_ERR (svn_stream_printf_from_utf8
+                     (os, diff_cmd_baton->header_encoding, subpool,
                       "svn:mime-type = %s" APR_EOL_STR,
                       mimetype1));
           else
-            SVN_ERR (svn_stream_printf
-                     (os, subpool,
+            SVN_ERR (svn_stream_printf_from_utf8
+                     (os, diff_cmd_baton->header_encoding, subpool,
                       "svn:mime-type = (%s, %s)" APR_EOL_STR,
                       mimetype1, mimetype2));
         }
@@ -459,9 +473,9 @@ diff_content_changed (const char *path,
   if (diff_cmd)
     {
       /* Print out the diff header. */
-      SVN_ERR (svn_stream_printf (os, subpool,
-                                  "Index: %s" APR_EOL_STR
-                                  "%s" APR_EOL_STR, path, equal_string));
+      SVN_ERR (svn_stream_printf_from_utf8
+               (os, diff_cmd_baton->header_encoding, subpool,
+                "Index: %s" APR_EOL_STR "%s" APR_EOL_STR, path, equal_string));
       /* Close the stream (flush) */
       SVN_ERR (svn_stream_close (os));
 
@@ -497,15 +511,15 @@ diff_content_changed (const char *path,
       if (svn_diff_contains_diffs (diff) || diff_cmd_baton->force_empty)
         {
           /* Print out the diff header. */
-          SVN_ERR (svn_stream_printf (os, subpool,
-                                      "Index: %s" APR_EOL_STR
-                                      "%s" APR_EOL_STR, path, equal_string));
+          SVN_ERR (svn_stream_printf_from_utf8
+                   (os, diff_cmd_baton->header_encoding, subpool,
+                    "Index: %s" APR_EOL_STR "%s" APR_EOL_STR,
+                    path, equal_string));
 
           /* Output the actual diff */
-          SVN_ERR (svn_diff_file_output_unified (os, diff,
-                                                 tmpfile1, tmpfile2,
-                                                 label1, label2,
-                                                 subpool));
+          SVN_ERR (svn_diff_file_output_unified2
+                   (os, diff, tmpfile1, tmpfile2, label1, label2,
+                    diff_cmd_baton->header_encoding, subpool));
         }
     }
 
@@ -632,6 +646,7 @@ diff_file_deleted_no_diff (svn_wc_adm_access_t *adm_access,
 
   SVN_ERR (file_printf_from_utf8
            (diff_cmd_baton->outfile,
+            diff_cmd_baton->header_encoding,
             "Index: %s (deleted)" APR_EOL_STR "%s" APR_EOL_STR, 
             path, equal_string));
 
@@ -717,8 +732,8 @@ merge_props_changed (svn_wc_adm_access_t *adm_access,
      definition, 'svn merge' shouldn't touch any data within .svn/  */
   if (props->nelts)
     {
-      err = svn_wc_merge_prop_diffs (state, path, adm_access, props,
-                                     FALSE, merge_b->dry_run, subpool);
+      err = svn_wc_merge_props (state, path, adm_access, original_props, props,
+                                FALSE, merge_b->dry_run, subpool);
       if (err && (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
                   || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE))
         {
@@ -948,11 +963,11 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
           }
         if (! merge_b->dry_run)
           {
-            child = svn_path_is_child(merge_b->target, mine, merge_b->pool);
+            child = svn_path_is_child(merge_b->target, mine, subpool);
             assert (child != NULL);
             copyfrom_url = svn_path_url_add_component (merge_b->url, child,
-                                                       merge_b->pool);
-            SVN_ERR (check_schema_match (adm_access, copyfrom_url));
+                                                       subpool);
+            SVN_ERR (check_scheme_match (adm_access, copyfrom_url));
 
             /* Since 'mine' doesn't exist, and this is
                'merge_file_added', I hope it's safe to assume that
@@ -966,7 +981,7 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
                                             new_props,
                                             copyfrom_url,
                                             rev2,
-                                            merge_b->pool));
+                                            subpool));
           }
         if (content_state)
           *content_state = svn_wc_notify_state_changed;
@@ -1050,9 +1065,9 @@ merge_file_deleted (svn_wc_adm_access_t *adm_access,
   switch (kind)
     {
     case svn_node_file:
-      svn_path_split (mine, &parent_path, NULL, merge_b->pool);
+      svn_path_split (mine, &parent_path, NULL, subpool);
       SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
-                                    merge_b->pool));
+                                    subpool));
       {
         /* Passing NULL for the notify_func and notify_baton because
          * repos_diff.c:delete_item will do it for us. */
@@ -1124,7 +1139,7 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
   child = svn_path_is_child (merge_b->target, path, subpool);
   assert (child != NULL);
   copyfrom_url = svn_path_url_add_component (merge_b->url, child, subpool);
-  SVN_ERR (check_schema_match (adm_access, copyfrom_url));
+  SVN_ERR (check_scheme_match (adm_access, copyfrom_url));
 
   SVN_ERR (svn_io_check_path (path, &kind, subpool));
   switch (kind)
@@ -1141,12 +1156,12 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
       if (! merge_b->dry_run)
         {
           SVN_ERR (svn_io_make_dir_recursively (path, subpool));
-          SVN_ERR (svn_wc_add (path, adm_access,
-                               copyfrom_url, rev,
-                               merge_b->ctx->cancel_func,
-                               merge_b->ctx->cancel_baton,
-                               NULL, NULL, /* don't pass notification func! */
-                               merge_b->pool));
+          SVN_ERR (svn_wc_add2 (path, adm_access,
+                                copyfrom_url, rev,
+                                merge_b->ctx->cancel_func,
+                                merge_b->ctx->cancel_baton,
+                                NULL, NULL, /* don't pass notification func! */
+                                subpool));
 
         }
       if (merge_b->dry_run)
@@ -1160,13 +1175,12 @@ merge_dir_added (svn_wc_adm_access_t *adm_access,
       if (! entry || (entry && entry->schedule == svn_wc_schedule_delete))
         {
           if (!merge_b->dry_run)
-            SVN_ERR (svn_wc_add (path, adm_access,
-                                 copyfrom_url,
-                                 merge_b->revision->value.number,
-                                 merge_b->ctx->cancel_func,
-                                 merge_b->ctx->cancel_baton,
-                                 NULL, NULL, /* no notification func! */
-                                 merge_b->pool));
+            SVN_ERR (svn_wc_add2 (path, adm_access,
+                                  copyfrom_url, rev,
+                                  merge_b->ctx->cancel_func,
+                                  merge_b->ctx->cancel_baton,
+                                  NULL, NULL, /* no notification func! */
+                                  subpool));
           if (merge_b->dry_run)
             merge_b->added_path = apr_pstrdup (merge_b->pool, path);
           if (state)
@@ -1210,31 +1224,31 @@ typedef struct merge_delete_notify_baton_t
  * and set the proper action. */
 static void
 merge_delete_notify_func (void *baton,
-                          const char *path,
-                          svn_wc_notify_action_t action,
-                          svn_node_kind_t kind,
-                          const char *mime_type,
-                          svn_wc_notify_state_t content_state,
-                          svn_wc_notify_state_t prop_state,
-                          svn_revnum_t revision)
+                          const svn_wc_notify_t *notify,
+                          apr_pool_t *pool)
 {
-  merge_delete_notify_baton_t *mdb = (merge_delete_notify_baton_t *) baton;
+  merge_delete_notify_baton_t *mdb = baton;
+  svn_wc_notify_t *new_notify;
 
   /* Skip the notification for the path we called svn_client__wc_delete() with,
    * because it will be outputed by repos_diff.c:delete_item */  
-  if (strcmp (path, mdb->path_skip) == 0)
+  if (strcmp (notify->path, mdb->path_skip) == 0)
     return;
   
   /* svn_client__wc_delete() is written primarily for scheduling operations not
    * update operations.  Since merges are update operations we need to alter
    * the delete notification to show as an update not a schedule so alter 
    * the action. */
-  if (action == svn_wc_notify_delete)
-    action = svn_wc_notify_update_delete;
+  if (notify->action == svn_wc_notify_delete)
+    {
+      /* We need to copy it since notify is const. */
+      new_notify = svn_wc_dup_notify (notify, pool);
+      new_notify->action = svn_wc_notify_update_delete;
+      notify = new_notify;
+    }
 
-  if (mdb->ctx->notify_func)
-    (*mdb->ctx->notify_func) (mdb->ctx->notify_baton, path, action, kind,
-                              mime_type, content_state, prop_state, revision);
+  if (mdb->ctx->notify_func2)
+    (*mdb->ctx->notify_func2) (mdb->ctx->notify_baton2, notify, pool);
 }
 
 /* A svn_wc_diff_callbacks2_t function. */
@@ -1272,9 +1286,9 @@ merge_dir_deleted (svn_wc_adm_access_t *adm_access,
         mdb.ctx = merge_b->ctx;
         mdb.path_skip = path;
 
-        svn_path_split (path, &parent_path, NULL, merge_b->pool);
+        svn_path_split (path, &parent_path, NULL, subpool);
         SVN_ERR (svn_wc_adm_retrieve (&parent_access, adm_access, parent_path,
-                                      merge_b->pool));
+                                      subpool));
         err = svn_client__wc_delete (path, parent_access, merge_b->force,
                                      merge_b->dry_run,
                                      merge_delete_notify_func, &mdb,
@@ -1419,7 +1433,7 @@ do_merge (const char *initial_URL1,
 {
   svn_revnum_t start_revnum, end_revnum;
   svn_ra_session_t *ra_session, *ra_session2;
-  const svn_ra_reporter_t *reporter;
+  const svn_ra_reporter2_t *reporter;
   void *report_baton;
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
@@ -1467,9 +1481,9 @@ do_merge (const char *initial_URL1,
     }
   
   /* Establish first RA session to URL1. */
-  SVN_ERR (svn_client__open_ra_session (&ra_session, URL1, NULL,
-                                        NULL, NULL, FALSE, TRUE, 
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, URL1, NULL,
+                                                 NULL, NULL, FALSE, TRUE, 
+                                                 ctx, pool));
   /* Resolve the revision numbers. */
   SVN_ERR (svn_client__get_revision_number
            (&start_revnum, ra_session, revision1, path1, pool));
@@ -1482,9 +1496,9 @@ do_merge (const char *initial_URL1,
      the diff, is still being processed the first session cannot be
      reused. This applies to ra_dav, ra_local does not appears to have
      this limitation. */
-  SVN_ERR (svn_client__open_ra_session (&ra_session2, URL1, NULL,
-                                        NULL, NULL, FALSE, TRUE,
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session2, URL1, NULL,
+                                                 NULL, NULL, FALSE, TRUE,
+                                                 ctx, pool));
  
   SVN_ERR (svn_client__get_diff_editor (target_wcpath,
                                         adm_access,
@@ -1494,8 +1508,8 @@ do_merge (const char *initial_URL1,
                                         dry_run,
                                         ra_session2,
                                         start_revnum,
-                                        ctx->notify_func,
-                                        ctx->notify_baton,
+                                        ctx->notify_func2,
+                                        ctx->notify_baton2,
                                         ctx->cancel_func,
                                         ctx->cancel_baton,
                                         &diff_editor,
@@ -1511,7 +1525,8 @@ do_merge (const char *initial_URL1,
                            URL2,
                            diff_editor, diff_edit_baton, pool));
 
-  SVN_ERR (reporter->set_path (report_baton, "", start_revnum, FALSE, pool));
+  SVN_ERR (reporter->set_path (report_baton, "", start_revnum, FALSE, NULL,
+                               pool));
   
   SVN_ERR (reporter->finish_report (report_baton, pool));
   
@@ -1537,9 +1552,9 @@ single_file_merge_get_file (const char **filename,
   svn_ra_session_t *ra_session;
   apr_file_t *fp;
 
-  SVN_ERR (svn_client__open_ra_session (&ra_session, url, NULL,
-                                        NULL, NULL, FALSE, TRUE, 
-                                        merge_b->ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, url, NULL,
+                                                 NULL, NULL, FALSE, TRUE, 
+                                                 merge_b->ctx, pool));
   SVN_ERR (svn_client__get_revision_number (rev, ra_session, revision,
                                             path, pool));
   SVN_ERR (svn_io_open_unique_file (&fp, filename, 
@@ -1651,16 +1666,16 @@ do_single_file_merge (const char *initial_URL1,
     return err;
   svn_error_clear (err);
   
-  if (merge_b->ctx->notify_func)
+  if (merge_b->ctx->notify_func2)
     {
-      (*merge_b->ctx->notify_func) (merge_b->ctx->notify_baton,
-                                    merge_b->target,
-                                    svn_wc_notify_update_update,
-                                    svn_node_file,
-                                    NULL,
-                                    text_state, 
-                                    prop_state,
-                                    SVN_INVALID_REVNUM);
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify (merge_b->target, svn_wc_notify_update_update,
+                                pool);
+      notify->kind = svn_node_file;
+      notify->content_state = text_state;
+      notify->prop_state = prop_state;
+      (*merge_b->ctx->notify_func2) (merge_b->ctx->notify_baton2, notify,
+                                     pool);
     }
 
   return SVN_NO_ERROR;
@@ -1669,7 +1684,7 @@ do_single_file_merge (const char *initial_URL1,
 
 /* A Theoretical Note From Ben, regarding do_diff().
 
-   This function is really svn_client_diff2().  If you read the public
+   This function is really svn_client_diff3().  If you read the public
    API description for svn_client_diff, it sounds quite Grand.  It
    sounds really generalized and abstract and beautiful: that it will
    diff any two paths, be they working-copy paths or URLs, at any two
@@ -1690,7 +1705,7 @@ do_single_file_merge (const char *initial_URL1,
    pigeonholed into one of these three use-cases, we currently bail
    with a friendly apology.
 
-   Perhaps someday a brave soul will truly make svn_client_diff2
+   Perhaps someday a brave soul will truly make svn_client_diff3
    perfectly general.  For now, we live with the 90% case.  Certainly,
    the commandline client only calls this function in legal ways.
    When there are other users of svn_client.h, maybe this will become
@@ -1703,7 +1718,7 @@ static svn_error_t *
 unsupported_diff_error (svn_error_t *child_err)
 {
   return svn_error_create (SVN_ERR_INCORRECT_PARAMS, child_err,
-                           _("Sorry, svn_client_diff2 was called in a way "
+                           _("Sorry, svn_client_diff3 was called in a way "
                            "that is not yet supported"));
 }
 
@@ -1713,7 +1728,7 @@ unsupported_diff_error (svn_error_t *child_err)
    PATH1 and PATH2 are both working copy paths.  REVISION1 and
    REVISION2 are their respective revisions.
 
-   All other options are the same as those passed to svn_client_diff2(). */
+   All other options are the same as those passed to svn_client_diff3(). */
 static svn_error_t *
 diff_wc_wc (const apr_array_header_t *options,
             const char *path1,
@@ -1770,7 +1785,7 @@ diff_wc_wc (const apr_array_header_t *options,
    and the actual two paths compared are determined by following copy
    history from PATH2.
 
-   All other options are the same as those passed to svn_client_diff2(). */
+   All other options are the same as those passed to svn_client_diff3(). */
 static svn_error_t *
 diff_repos_repos (const apr_array_header_t *options,
                   const char *path1,
@@ -1790,7 +1805,7 @@ diff_repos_repos (const apr_array_header_t *options,
   svn_node_kind_t kind1, kind2;
   svn_revnum_t rev1, rev2;
   svn_ra_session_t *ra_session1, *ra_session2;
-  const svn_ra_reporter_t *reporter;
+  const svn_ra_reporter2_t *reporter;
   void *report_baton;
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
@@ -1829,12 +1844,12 @@ diff_repos_repos (const apr_array_header_t *options,
     }
   
   /* Open temporary RA sessions to each URL. */
-  SVN_ERR (svn_client__open_ra_session (&ra_session1, url1, NULL,
-                                        NULL, NULL, FALSE, TRUE, 
-                                        ctx, temppool));
-  SVN_ERR (svn_client__open_ra_session (&ra_session2, url2, NULL,
-                                        NULL, NULL, FALSE, TRUE, 
-                                        ctx, temppool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session1, url1, NULL,
+                                                 NULL, NULL, FALSE, TRUE, 
+                                                 ctx, temppool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session2, url2, NULL,
+                                                 NULL, NULL, FALSE, TRUE, 
+                                                 ctx, temppool));
 
   /* Resolve named revisions to real numbers. */
   SVN_ERR (svn_client__get_revision_number
@@ -1879,12 +1894,12 @@ diff_repos_repos (const apr_array_header_t *options,
 
   /* Now, we reopen two RA session to the correct anchor/target
      locations for our URLs. */
-  SVN_ERR (svn_client__open_ra_session (&ra_session1, anchor1,
-                                        NULL, NULL, NULL, FALSE, TRUE, 
-                                        ctx, pool));
-  SVN_ERR (svn_client__open_ra_session (&ra_session2, anchor1,
-                                        NULL, NULL, NULL, FALSE, TRUE,
-                                        ctx, pool));      
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session1, anchor1,
+                                                 NULL, NULL, NULL, FALSE, TRUE,
+                                                 ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session2, anchor1,
+                                                 NULL, NULL, NULL, FALSE, TRUE,
+                                                 ctx, pool));
 
   /* Set up the repos_diff editor on BASE_PATH, if available.
      Otherwise, we just use "". */
@@ -1915,7 +1930,7 @@ diff_repos_repos (const apr_array_header_t *options,
                            diff_editor, diff_edit_baton, pool));
 
   /* Drive the reporter; do the diff. */
-  SVN_ERR (reporter->set_path (report_baton, "", rev1, FALSE, pool));
+  SVN_ERR (reporter->set_path (report_baton, "", rev1, FALSE, NULL, pool));
   SVN_ERR (reporter->finish_report (report_baton, pool));
 
   return SVN_NO_ERROR;
@@ -1931,7 +1946,7 @@ diff_repos_repos (const apr_array_header_t *options,
    revision, and the actual repository path to be compared is
    determined by following copy history.
 
-   All other options are the same as those passed to svn_client_diff2(). */
+   All other options are the same as those passed to svn_client_diff3(). */
 static svn_error_t *
 diff_repos_wc (const apr_array_header_t *options,
                const char *path1,
@@ -1952,7 +1967,7 @@ diff_repos_wc (const apr_array_header_t *options,
   const svn_wc_entry_t *entry;
   svn_revnum_t rev;
   svn_ra_session_t *ra_session;
-  const svn_ra_reporter_t *reporter;
+  const svn_ra_reporter2_t *reporter;
   void *report_baton;
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
@@ -2003,9 +2018,9 @@ diff_repos_wc (const apr_array_header_t *options,
     }
   
   /* Establish RA session to path2's anchor */
-  SVN_ERR (svn_client__open_ra_session (&ra_session, anchor_url,
-                                        NULL, NULL, NULL, FALSE, TRUE,
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, anchor_url,
+                                                 NULL, NULL, NULL, FALSE, TRUE,
+                                                 ctx, pool));
       
   SVN_ERR (svn_wc_get_diff_editor3 (adm_access, target,
                                     callbacks, callback_baton,
@@ -2033,18 +2048,18 @@ diff_repos_wc (const apr_array_header_t *options,
 
   /* Create a txn mirror of path2;  the diff editor will print
      diffs in reverse.  :-)  */
-  SVN_ERR (svn_wc_crawl_revisions (path2, dir_access,
-                                   reporter, report_baton,
-                                   FALSE, recurse, FALSE,
-                                   NULL, NULL, /* notification is N/A */
-                                   NULL, pool));
+  SVN_ERR (svn_wc_crawl_revisions2 (path2, dir_access,
+                                    reporter, report_baton,
+                                    FALSE, recurse, FALSE,
+                                    NULL, NULL, /* notification is N/A */
+                                    NULL, pool));
 
   SVN_ERR (svn_wc_adm_close (adm_access));
   return SVN_NO_ERROR;
 }
 
 
-/* This is basically just the guts of svn_client_diff2(). */
+/* This is basically just the guts of svn_client_diff3(). */
 static svn_error_t *
 do_diff (const apr_array_header_t *options,
          const char *path1,
@@ -2129,7 +2144,7 @@ do_diff (const apr_array_header_t *options,
   return SVN_NO_ERROR;
 }
 
-/* This is basically just the guts of svn_client_diff_peg2(). */
+/* This is basically just the guts of svn_client_diff_peg3(). */
 static svn_error_t *
 do_diff_peg (const apr_array_header_t *options,
              const char *path,
@@ -2241,17 +2256,17 @@ do_diff_peg (const apr_array_header_t *options,
       ------------++------------+------------+------------+
       * These cases require server communication.
 
-   Svn_client_diff2() is the single entry point for all of the diff
+   Svn_client_diff3() is the single entry point for all of the diff
    operations, and will be in charge of examining the inputs and
    making decisions about how to accurately report contextual diffs.
 
-   NOTE:  In the near future, svn_client_diff2() will likely only
+   NOTE:  In the near future, svn_client_diff3() will likely only
    continue to report textual differences in files.  Property diffs
    are important, too, and will need to be supported in some fashion
    so that this code can be re-used for svn_client_merge(). 
 */
 svn_error_t *
-svn_client_diff2 (const apr_array_header_t *options,
+svn_client_diff3 (const apr_array_header_t *options,
                   const char *path1,
                   const svn_opt_revision_t *revision1,
                   const char *path2,
@@ -2259,7 +2274,8 @@ svn_client_diff2 (const apr_array_header_t *options,
                   svn_boolean_t recurse,
                   svn_boolean_t ignore_ancestry,
                   svn_boolean_t no_diff_deleted,
-                  svn_boolean_t force,
+                  svn_boolean_t ignore_content_type,
+                  const char *header_encoding,
                   apr_file_t *outfile,
                   apr_file_t *errfile,
                   svn_client_ctx_t *ctx,
@@ -2283,12 +2299,13 @@ svn_client_diff2 (const apr_array_header_t *options,
   diff_cmd_baton.pool = pool;
   diff_cmd_baton.outfile = outfile;
   diff_cmd_baton.errfile = errfile;
+  diff_cmd_baton.header_encoding = header_encoding;
   diff_cmd_baton.revnum1 = SVN_INVALID_REVNUM;
   diff_cmd_baton.revnum2 = SVN_INVALID_REVNUM;
 
   diff_cmd_baton.config = ctx->config;
   diff_cmd_baton.force_empty = FALSE;
-  diff_cmd_baton.force_binary = force;
+  diff_cmd_baton.force_binary = ignore_content_type;
 
   return do_diff (options,
                   path1, revision1,
@@ -2298,6 +2315,27 @@ svn_client_diff2 (const apr_array_header_t *options,
                   &diff_callbacks, &diff_cmd_baton,
                   ctx,
                   pool);
+}
+
+svn_error_t *
+svn_client_diff2 (const apr_array_header_t *options,
+                  const char *path1,
+                  const svn_opt_revision_t *revision1,
+                  const char *path2,
+                  const svn_opt_revision_t *revision2,
+                  svn_boolean_t recurse,
+                  svn_boolean_t ignore_ancestry,
+                  svn_boolean_t no_diff_deleted,
+                  svn_boolean_t ignore_content_type,
+                  apr_file_t *outfile,
+                  apr_file_t *errfile,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  return svn_client_diff3 (options, path1, revision1, path2, revision2,
+                           recurse, ignore_ancestry, no_diff_deleted,
+                           ignore_content_type, APR_LOCALE_CHARSET,
+                           outfile, errfile, ctx, pool);
 }
 
 svn_error_t *
@@ -2320,7 +2358,7 @@ svn_client_diff (const apr_array_header_t *options,
 }
 
 svn_error_t *
-svn_client_diff_peg2 (const apr_array_header_t *options,
+svn_client_diff_peg3 (const apr_array_header_t *options,
                       const char *path,
                       const svn_opt_revision_t *peg_revision,
                       const svn_opt_revision_t *start_revision,
@@ -2328,7 +2366,8 @@ svn_client_diff_peg2 (const apr_array_header_t *options,
                       svn_boolean_t recurse,
                       svn_boolean_t ignore_ancestry,
                       svn_boolean_t no_diff_deleted,
-                      svn_boolean_t force,
+                      svn_boolean_t ignore_content_type,
+                      const char *header_encoding,
                       apr_file_t *outfile,
                       apr_file_t *errfile,
                       svn_client_ctx_t *ctx,
@@ -2352,12 +2391,13 @@ svn_client_diff_peg2 (const apr_array_header_t *options,
   diff_cmd_baton.pool = pool;
   diff_cmd_baton.outfile = outfile;
   diff_cmd_baton.errfile = errfile;
+  diff_cmd_baton.header_encoding = header_encoding;
   diff_cmd_baton.revnum1 = SVN_INVALID_REVNUM;
   diff_cmd_baton.revnum2 = SVN_INVALID_REVNUM;
 
   diff_cmd_baton.config = ctx->config;
   diff_cmd_baton.force_empty = FALSE;
-  diff_cmd_baton.force_binary = force;
+  diff_cmd_baton.force_binary = ignore_content_type;
 
   return do_diff_peg (options,
                       path, peg_revision,
@@ -2367,6 +2407,28 @@ svn_client_diff_peg2 (const apr_array_header_t *options,
                       &diff_callbacks, &diff_cmd_baton,
                       ctx,
                       pool);
+}
+
+svn_error_t *
+svn_client_diff_peg2 (const apr_array_header_t *options,
+                      const char *path,
+                      const svn_opt_revision_t *peg_revision,
+                      const svn_opt_revision_t *start_revision,
+                      const svn_opt_revision_t *end_revision,
+                      svn_boolean_t recurse,
+                      svn_boolean_t ignore_ancestry,
+                      svn_boolean_t no_diff_deleted,
+                      svn_boolean_t ignore_content_type,
+                      apr_file_t *outfile,
+                      apr_file_t *errfile,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool)
+{
+  return svn_client_diff_peg3 (options, path, peg_revision, start_revision,
+                               end_revision, recurse, ignore_ancestry,
+                               no_diff_deleted, ignore_content_type,
+                               APR_LOCALE_CHARSET, outfile, errfile,
+                               ctx, pool);
 }
 
 svn_error_t *

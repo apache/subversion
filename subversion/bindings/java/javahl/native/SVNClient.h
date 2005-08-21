@@ -30,6 +30,7 @@
 
 class Revision;
 class Notify;
+class Notify2;
 class Targets;
 class JNIByteArray;
 class Prompter;
@@ -41,6 +42,10 @@ class CommitMessage;
 class SVNClient :public SVNBase
 {
 public:
+    jobjectArray info2(const char *path, Revision &revision, 
+        Revision &pegRevision, bool recurse);
+	void unlock(Targets &targets, bool force);
+	void lock(Targets &targets, const char *comment, bool force);
 	jobjectArray revProperties(jobject jthis, const char *path, 
                                 Revision &revision);
     void cancelOperation();
@@ -56,6 +61,9 @@ public:
                       bool recurse);
     jbyteArray fileContent(const char *path, Revision &revision,  
                            Revision &pegRevision);
+    void streamFileContent(const char *path, Revision &revision,
+                           Revision &pegRevision, jobject outputStream,
+                           size_t bufSize);
     void propertyCreate(const char *path, const char *name,
                             JNIByteArray &value, bool recurse, bool force);
     void propertyCreate(const char *path, const char *name,
@@ -88,13 +96,15 @@ public:
                   const char *message, bool force);
     void copy(const char *srcPath, const char *destPath,
                   const char *message, Revision &revision);
-    jlong commit(Targets &targets, const char *message, bool recurse);
+    jlong commit(Targets &targets, const char *message, bool recurse, 
+                  bool noUnlock);
     jlongArray update(Targets &targets, Revision &revision, bool recurse,
         bool ignoreExternals);
     void add(const char *path, bool recurse, bool force);
     void revert(const char *path, bool recurse);
     void remove(Targets &targets, const char *message,bool force);
     void notification(Notify *notify);
+    void notification2(Notify2 *notify2);
     jlong checkout(const char *moduleName, const char *destPath,
                        Revision &revision, Revision &pegRevsion, bool recurse,
                        bool ignoreExternals);
@@ -134,6 +144,7 @@ public:
     jlong getCppAddr();
     SVNClient();
     virtual ~SVNClient();
+    static jobject createJavaLock(const svn_lock_t *lock);
 private:
     static svn_error_t * checkCancel(void *cancelBaton);
     void propertySet(const char *path, const char *name,
@@ -143,7 +154,11 @@ private:
     jobject createJavaDirEntry(const char *path, svn_dirent_t *dirent);
     jobject createJavaInfo(const svn_wc_entry_t *entry);
     svn_client_ctx_t * getContext(const char *message);
+    svn_stream_t * createReadStream(apr_pool_t* pool, const char *path,
+                                    Revision &revision, Revision &pegRevision,
+                                    size_t& size);
     Notify *m_notify;
+    Notify2 *m_notify2;
     Prompter *m_prompter;
     Path m_lastPath;
     bool m_cancelOperation;
@@ -158,10 +173,7 @@ private:
     std::string m_passWord;
     std::string m_configDir;
     static jobject createJavaStatus(const char *path,
-                                        svn_wc_status_t *status);
-    static jint mapStatusKind(int svnKind);
-    static jint mapScheduleKind(int schedule);
-    static jint mapNodeKind(int nodeKind);
+                                        svn_wc_status2_t *status);
     static svn_error_t *messageReceiver(void *baton,
                                             apr_hash_t * changed_paths,
                                             svn_revnum_t rev,
@@ -170,7 +182,13 @@ private:
                                             const char *msg,
                                             apr_pool_t * pool);
     static void statusReceiver(void *baton,
-                                   const char *path, svn_wc_status_t *status);
+                                   const char *path, svn_wc_status2_t *status);
+    static svn_error_t *infoReceiver(void *baton, 
+                                     const char *path,
+                                     const svn_info_t *info,
+                                     apr_pool_t *pool);
+    static jobject createJavaInfo2(const char *path, const svn_info_t *info);
+
 };
 // !defined(AFX_SVNCLIENT_H__B5A135CD_3D7C_4ABC_8D75_643B14507979__INCLUDED_)
 #endif

@@ -37,6 +37,7 @@
 #include "props.h"
 #include "adm_files.h"
 #include "entries.h"
+#include "lock.h"
 #include "translate.h"
 #include "questions.h"
 
@@ -132,6 +133,9 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
                                                 TRUE,
                                                 special,
                                                 pool));
+
+        SVN_ERR (svn_wc__maybe_set_read_only (NULL, full_dest_path,
+                                              adm_access, pool));
 
         /* After copying, set the file executable if props dictate. */
         return svn_wc__maybe_set_executable (NULL, full_dest_path, adm_access,
@@ -296,6 +300,12 @@ install_committed_file (svn_boolean_t *overwrote_working,
 
   SVN_ERR (svn_io_remove_file (tmp_wfile, pool));
 
+  SVN_ERR (svn_wc__maybe_set_read_only (&did_set, filepath, adm_access, pool));
+  if (did_set)
+    /* the file may have been overwritten or its timestamp changed by
+       setting it read-only */
+    *overwrote_working = TRUE;
+
   /* Set the working file's execute bit if props dictate. */
   SVN_ERR (svn_wc__maybe_set_executable (&did_set, filepath, adm_access, pool));
   if (did_set)
@@ -429,6 +439,20 @@ log_do_file_readonly (struct log_runner *loggy,
   return SVN_NO_ERROR;
 }
 
+/* Maybe make file NAME in log's CWD readonly */
+static svn_error_t *
+log_do_file_maybe_readonly (struct log_runner *loggy,
+                            const char *name)
+{
+  const char *full_path
+    = svn_path_join (svn_wc_adm_access_path (loggy->adm_access), name,
+                     loggy->pool);
+
+  SVN_ERR (svn_wc__maybe_set_read_only (NULL, full_path, loggy->adm_access,
+                                        loggy->pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* Set file NAME in log's CWD to timestamp value in ATTS. */
 static svn_error_t *
@@ -515,7 +539,7 @@ log_do_modify_entry (struct log_runner *loggy,
                            APR_HASH_KEY_STRING);
 
   if ((modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)
-      && (! strcmp (valuestr, SVN_WC_TIMESTAMP_WC)))
+      && (! strcmp (valuestr, SVN_WC__TIMESTAMP_WC)))
     {
       svn_node_kind_t tfile_kind;
       apr_time_t text_time;
@@ -542,7 +566,7 @@ log_do_modify_entry (struct log_runner *loggy,
                            APR_HASH_KEY_STRING);
 
   if ((modify_flags & SVN_WC__ENTRY_MODIFY_PROP_TIME)
-      && (! strcmp (valuestr, SVN_WC_TIMESTAMP_WC)))
+      && (! strcmp (valuestr, SVN_WC__TIMESTAMP_WC)))
     {
       const char *pfile;
       svn_node_kind_t pfile_kind;
@@ -581,6 +605,32 @@ log_do_modify_entry (struct log_runner *loggy,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+log_do_delete_lock (struct log_runner *loggy,
+                    const char *name)
+{
+  svn_error_t *err;
+  svn_wc_entry_t entry;
+
+  entry.lock_token = entry.lock_comment = entry.lock_owner = NULL;
+  entry.lock_creation_date = 0;
+
+  /* Now write the new entry out */
+  err = svn_wc__entry_modify (loggy->adm_access, name,
+                              &entry,
+                              SVN_WC__ENTRY_MODIFY_LOCK_TOKEN
+                              | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
+                              | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
+                              | SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE,
+                              FALSE, loggy->pool);
+  if (err)
+    return svn_error_createf (pick_error_code (loggy), err,
+                              _("Error removing lock from entry for '%s'"),
+                              name);
+  loggy->entries_modified = TRUE;
+
+  return SVN_NO_ERROR;
+}
 
 /* Ben sez:  this log command is (at the moment) only executed by the
    update editor.  It attempts to forcefully remove working data. */
@@ -683,6 +733,7 @@ log_do_committed (struct log_runner *loggy,
   int is_this_dir = (strcmp (name, SVN_WC_ENTRY_THIS_DIR) == 0);
   const char *rev = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_REVISION, atts);
   svn_boolean_t wc_root, overwrote_working = FALSE, remove_executable = FALSE;
+  svn_boolean_t set_read_write = FALSE;
   const char *full_path;
   const char *pdir, *base_name;
   apr_hash_t *entries;
@@ -1006,6 +1057,19 @@ log_do_committed (struct log_runner *loggy,
                     break;
                   }
               }                
+
+            for (i = 0; i < propchanges->nelts; i++)
+              {
+                svn_prop_t *propchange
+                  = &APR_ARRAY_IDX (propchanges, i, svn_prop_t);
+                
+                if ((! strcmp (propchange->name, SVN_PROP_NEEDS_LOCK))
+                    && (propchange->value == NULL))
+                  {
+                    set_read_write = TRUE;
+                    break;
+                  }
+              }                
           }
 
         /* Make the tmp prop file the new pristine one. */
@@ -1038,6 +1102,15 @@ log_do_committed (struct log_runner *loggy,
                                                FALSE, pool));
           overwrote_working = TRUE; /* entry needs wc-file's timestamp  */
         }
+
+      if (set_read_write)
+        {
+          SVN_ERR (svn_io_set_file_read_write_carefully (full_path, TRUE, 
+                                                         FALSE, pool));
+          overwrote_working = TRUE; /* entry needs wc-file's timestamp  */
+        }
+
+
       
       /* If the working file was overwritten (due to re-translation)
          or touched (due to +x / -x), then use *that* textual
@@ -1208,6 +1281,9 @@ start_handler (void *userData, const char *eltname, const char **atts)
   if (strcmp (eltname, SVN_WC__LOG_MODIFY_ENTRY) == 0) {
     err = log_do_modify_entry (loggy, name, atts);
   }
+  else if (strcmp (eltname, SVN_WC__LOG_DELETE_LOCK) == 0) {
+    err = log_do_delete_lock (loggy, name);
+  }
   else if (strcmp (eltname, SVN_WC__LOG_DELETE_ENTRY) == 0) {
     err = log_do_delete_entry (loggy, name);
   }
@@ -1240,6 +1316,9 @@ start_handler (void *userData, const char *eltname, const char **atts)
   }
   else if (strcmp (eltname, SVN_WC__LOG_READONLY) == 0) {
     err = log_do_file_readonly (loggy, name);
+  }
+  else if (strcmp (eltname, SVN_WC__LOG_MAYBE_READONLY) == 0) {
+    err = log_do_file_maybe_readonly (loggy, name);
   }
   else if (strcmp (eltname, SVN_WC__LOG_SET_TIMESTAMP) == 0) {
     err = log_do_file_timestamp (loggy, name, atts);

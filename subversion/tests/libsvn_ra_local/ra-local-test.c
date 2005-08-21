@@ -34,8 +34,9 @@
 #include "svn_delta.h"
 #include "svn_ra.h"
 #include "svn_client.h"
-#include "svn_test.h"
-#include "../fs-helpers.h"
+
+#include "../svn_test.h"
+#include "../svn_test_fs.h"
 #include "../../libsvn_ra_local/ra_local.h"
 
 /*-------------------------------------------------------------------*/
@@ -77,6 +78,7 @@ static svn_error_t *
 make_and_open_local_repos (svn_ra_plugin_t **plugin,
                            void **session,
                            const char *repos_name,
+                           const char *fs_type,
                            apr_pool_t *pool)
 {
   svn_repos_t *repos;
@@ -84,7 +86,7 @@ make_and_open_local_repos (svn_ra_plugin_t **plugin,
   const char *url;
   svn_ra_callbacks_t *cbtable = apr_pcalloc (pool, sizeof(*cbtable));
 
-  SVN_ERR (svn_test__create_repos (&repos, repos_name, pool));
+  SVN_ERR (svn_test__create_repos (&repos, repos_name, fs_type, pool));
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
 
   /* Get the plugin which handles "file:" URLs */
@@ -105,7 +107,10 @@ make_and_open_local_repos (svn_ra_plugin_t **plugin,
 
 /* Open an RA session to a local repository. */
 static svn_error_t *
-open_ra_session (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
+open_ra_session (const char **msg, 
+                 svn_boolean_t msg_only, 
+                 svn_test_opts_t *opts,
+                 apr_pool_t *pool)
 {
   svn_ra_plugin_t *plugin;
   void *session;
@@ -116,7 +121,7 @@ open_ra_session (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
     return SVN_NO_ERROR;
 
   SVN_ERR (make_and_open_local_repos (&plugin, &session,
-                                      "test-repo-open", pool));
+                                      "test-repo-open", opts->fs_type, pool));
 
   return SVN_NO_ERROR;
 }
@@ -124,7 +129,10 @@ open_ra_session (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
 
 /* Discover the youngest revision in a repository.  */
 static svn_error_t *
-get_youngest_rev (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
+get_youngest_rev (const char **msg, 
+                  svn_boolean_t msg_only,
+                  svn_test_opts_t *opts, 
+                  apr_pool_t *pool)
 {
   svn_ra_plugin_t *plugin;
   void *session;
@@ -136,7 +144,8 @@ get_youngest_rev (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
     return SVN_NO_ERROR;
 
   SVN_ERR (make_and_open_local_repos (&plugin, &session,
-                                      "test-repo-getrev", pool));
+                                      "test-repo-getrev", opts->fs_type,
+                                      pool));
 
   /* Get the youngest revision and make sure it's 0. */
   SVN_ERR (plugin->get_latest_revnum (session, &latest_rev, pool));
@@ -171,7 +180,10 @@ try_split_url (const char *url, apr_pool_t *pool)
 
 
 static svn_error_t *
-split_url_syntax (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
+split_url_syntax (const char **msg, 
+                  svn_boolean_t msg_only,
+                  svn_test_opts_t *opts, 
+                  apr_pool_t *pool)
 {
   apr_status_t apr_err;
 
@@ -208,7 +220,10 @@ split_url_syntax (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
 }
 
 static svn_error_t *
-split_url_bad_host (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
+split_url_bad_host (const char **msg, 
+                    svn_boolean_t msg_only,
+                    svn_test_opts_t *opts, 
+                    apr_pool_t *pool)
 {
   apr_status_t apr_err;
 
@@ -228,7 +243,10 @@ split_url_bad_host (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
 }
 
 static svn_error_t *
-split_url_host (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
+split_url_host (const char **msg, 
+                svn_boolean_t msg_only,
+                svn_test_opts_t *opts, 
+                apr_pool_t *pool)
 {
   apr_status_t apr_err;
 
@@ -264,13 +282,14 @@ split_url_host (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
 static svn_error_t *
 check_split_url (const char *repos_path,
                  const char *in_repos_path,
+                 const char *fs_type,
                  apr_pool_t *pool)
 {
   svn_repos_t *repos;
   const char *url, *root_url, *repos_part, *in_repos_part;
 
   /* Create a filesystem and repository */
-  SVN_ERR (svn_test__create_repos (&repos, repos_path, pool));
+  SVN_ERR (svn_test__create_repos (&repos, repos_path, fs_type, pool));
 
   SVN_ERR (current_directory_url (&root_url, repos_path, pool));
   url = apr_pstrcat (pool, root_url, in_repos_path, NULL);
@@ -290,7 +309,10 @@ check_split_url (const char *repos_path,
 
 
 static svn_error_t *
-split_url_test (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
+split_url_test (const char **msg, 
+                svn_boolean_t msg_only,
+                svn_test_opts_t *opts, 
+                apr_pool_t *pool)
 {
   *msg = "test svn_ra_local__split_URL correctness";
 
@@ -302,9 +324,11 @@ split_url_test (const char **msg, svn_boolean_t msg_only, apr_pool_t *pool)
      in-repository path begins.  */
   SVN_ERR (check_split_url ("test-repo-split-fs1",
                             "/trunk/foobar/quux.c",
+                            opts->fs_type,
                             pool));
   SVN_ERR (check_split_url ("test-repo-split-fs2",
                             "/alpha/beta/gamma/delta/epsilon/zeta/eta/theta",
+                            opts->fs_type,
                             pool));
 
   return SVN_NO_ERROR;

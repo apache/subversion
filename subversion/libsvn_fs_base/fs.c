@@ -40,6 +40,7 @@
 #include "uuid.h"
 #include "tree.h"
 #include "id.h"
+#include "lock.h"
 #include "svn_private_config.h"
 
 #include "bdb/bdb-err.h"
@@ -52,6 +53,8 @@
 #include "bdb/reps-table.h"
 #include "bdb/strings-table.h"
 #include "bdb/uuids-table.h"
+#include "bdb/locks-table.h"
+#include "bdb/lock-tokens-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -161,6 +164,8 @@ cleanup_fs (svn_fs_t *fs)
   SVN_ERR (cleanup_fs_db (fs, &bfd->representations, "representations"));
   SVN_ERR (cleanup_fs_db (fs, &bfd->strings, "strings"));
   SVN_ERR (cleanup_fs_db (fs, &bfd->uuids, "uuids"));
+  SVN_ERR (cleanup_fs_db (fs, &bfd->locks, "locks"));
+  SVN_ERR (cleanup_fs_db (fs, &bfd->lock_tokens, "lock-tokens"));
 
   /* Finally, close the environment.  */
   bfd->env = 0;
@@ -521,9 +526,19 @@ bdb_write_config  (svn_fs_t *fs)
 
 
 
+static svn_error_t *
+base_serialized_init (svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
+{
+  /* Nothing to do here. */
+  return SVN_NO_ERROR;
+}
+
+
+
 /* Creating a new filesystem */
 
 static fs_vtable_t fs_vtable = {
+  base_serialized_init,
   svn_fs_base__youngest_rev,
   svn_fs_base__revision_prop,
   svn_fs_base__revision_proplist,
@@ -535,8 +550,16 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__open_txn,
   svn_fs_base__purge_txn,
   svn_fs_base__list_transactions,
-  svn_fs_base__deltify
+  svn_fs_base__deltify,
+  svn_fs_base__lock,
+  svn_fs_base__generate_lock_token,
+  svn_fs_base__unlock,
+  svn_fs_base__get_lock,
+  svn_fs_base__get_locks
 };
+
+/* Where the format number is stored. */
+#define FORMAT_FILE   "format"
 
 static svn_error_t *
 base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
@@ -563,7 +586,8 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   if (svn_err) goto error;
 
   /* Create the Berkeley DB environment.  */
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, fs->path, fs->pool));
+  svn_err = svn_utf_cstring_from_utf8 (&path_native, fs->path, pool);
+  if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "creating environment",
                       bfd->env->open (bfd->env, path_native,
                                       (DB_CREATE
@@ -607,9 +631,23 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
                       svn_fs_bdb__open_uuids_table (&bfd->uuids,
                                                     bfd->env, TRUE));
   if (svn_err) goto error;
+  svn_err = BDB_WRAP (fs, "creating 'locks' table",
+                      svn_fs_bdb__open_locks_table (&bfd->locks,
+                                                    bfd->env, TRUE));
+  if (svn_err) goto error;
+  svn_err = BDB_WRAP (fs, "creating 'lock-nodes' table",
+                      svn_fs_bdb__open_lock_tokens_table (&bfd->lock_tokens,
+                                                          bfd->env, TRUE));
+  if (svn_err) goto error;
 
   /* Initialize the DAG subsystem. */
   svn_err = svn_fs_base__dag_init_fs (fs);
+  if (svn_err) goto error;
+
+  /* This filesystem is ready.  Stamp it with a format number. */
+  svn_err = svn_io_write_version_file
+    (svn_path_join (fs->path, FORMAT_FILE, pool),
+     SVN_FS_BASE__FORMAT_NUMBER, pool);
   if (svn_err) goto error;
 
   return SVN_NO_ERROR;
@@ -623,12 +661,32 @@ error:
 /* Gaining access to an existing Berkeley DB-based filesystem.  */
 
 
+/* Return the error SVN_ERR_FS_UNSUPPORTED_FORMAT if FS's format
+   number is not the same as the format number supported by this
+   Subversion. */
+static svn_error_t *
+check_format (svn_fs_t *fs)
+{
+  int format = ((base_fs_data_t *) fs->fsap_data)->format;
+
+  if (format != SVN_FS_BASE__FORMAT_NUMBER)
+    {
+      return svn_error_createf 
+        (SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+         _("Expected FS format '%d'; found format '%d'"), 
+         SVN_FS_BASE__FORMAT_NUMBER, format);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   svn_error_t *svn_err;
   const char *path_native;
   base_fs_data_t *bfd;
+  int format;
 
   SVN_ERR (check_already_open (fs));
 
@@ -646,7 +704,8 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   if (svn_err) goto error;
 
   /* Open the Berkeley DB environment.  */
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, fs->path, fs->pool));
+  svn_err = svn_utf_cstring_from_utf8 (&path_native, fs->path, fs->pool);
+  if (svn_err) goto error;
   svn_err = BDB_WRAP (fs, "opening environment",
                       bfd->env->open (bfd->env, path_native,
                                       (DB_CREATE
@@ -690,6 +749,34 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
                       svn_fs_bdb__open_uuids_table (&bfd->uuids,
                                                     bfd->env, FALSE));
   if (svn_err) goto error;
+  svn_err = BDB_WRAP (fs, "opening 'locks' table",
+                      svn_fs_bdb__open_locks_table (&bfd->locks,
+                                                    bfd->env, FALSE));
+  if (svn_err) goto error;
+  svn_err = BDB_WRAP (fs, "opening 'lock-nodes' table",
+                      svn_fs_bdb__open_lock_tokens_table (&bfd->lock_tokens,
+                                                         bfd->env, FALSE));
+  if (svn_err) goto error;
+
+  /* Read the FS format number. */
+  svn_err = svn_io_read_version_file
+    (&format, svn_path_join (fs->path, FORMAT_FILE, pool), pool);
+  if (svn_err && APR_STATUS_IS_ENOENT (svn_err->apr_err))
+    {
+      /* Pre-1.2 filesystems did not have a format file (you could say
+         they were format "0"), so they get upgraded on the fly. */
+      svn_error_clear (svn_err);
+      format = SVN_FS_BASE__FORMAT_NUMBER;
+      svn_err = svn_io_write_version_file
+        (svn_path_join (fs->path, FORMAT_FILE, pool), format, pool);
+      if (svn_err) goto error;
+    }
+  else if (svn_err)
+    goto error;
+  
+  /* Now we've got a format number no matter what. */
+  ((base_fs_data_t *) fs->fsap_data)->format = format;
+  SVN_ERR (check_format (fs));
 
   return SVN_NO_ERROR;
 
@@ -702,9 +789,10 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 /* Running recovery on a Berkeley DB-based filesystem.  */
 
 
+/* Recover a database at PATH. Perform catastrophic recovery if FATAL
+   is TRUE. Use POOL for temporary allocation. */
 static svn_error_t *
-base_bdb_recover (const char *path,
-                  apr_pool_t *pool)
+bdb_recover (const char *path, svn_boolean_t fatal, apr_pool_t *pool)
 {
   DB_ENV *env;
   const char *path_native;
@@ -723,34 +811,17 @@ base_bdb_recover (const char *path,
      will simply join it instead, and will then be running with
      incorrectly sized (and probably terribly small) caches.  */
 
+  /* Note that since we're using a private environment, we shoudl
+     /not/ initialize locking. We want the environment files to go
+     away. */
+
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
   SVN_BDB_ERR (ec_baton, env->open (env, path_native,
-                                    (DB_RECOVER | DB_CREATE | DB_INIT_LOCK
-                                     | DB_INIT_LOG | DB_INIT_MPOOL
-                                     | DB_INIT_TXN | DB_PRIVATE),
-                          0666));
-  SVN_BDB_ERR (ec_baton, env->close (env, 0));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* This is the same as base_bdb_recover, but runs catastrophic
-   recovery instead of normal recovery. */
-static svn_error_t *
-bdb_catastrophic_recover (const char *path,
-                          apr_pool_t *pool)
-{
-  DB_ENV *env;
-  const char *path_native;
-  bdb_errcall_baton_t *ec_baton;
-
-  SVN_BDB_ERR (ec_baton, create_env (&env, &ec_baton, pool));
-  SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
-  SVN_BDB_ERR (ec_baton, env->open (env, path_native,
-                                    (DB_RECOVER_FATAL | DB_CREATE
-                                     | DB_INIT_LOCK | DB_INIT_LOG
-                                     | DB_INIT_MPOOL | DB_INIT_TXN
+                                    ((fatal ? DB_RECOVER_FATAL : DB_RECOVER)
+                                     | DB_CREATE
+                                     | DB_INIT_LOG
+                                     | DB_INIT_MPOOL
+                                     | DB_INIT_TXN
                                      | DB_PRIVATE),
                           0666));
   SVN_BDB_ERR (ec_baton, env->close (env, 0));
@@ -758,7 +829,12 @@ bdb_catastrophic_recover (const char *path,
   return SVN_NO_ERROR;
 }
 
-
+static svn_error_t *
+base_bdb_recover (const char *path,
+                  apr_pool_t *pool)
+{
+  return bdb_recover (path, FALSE, pool);
+}
 
 
 
@@ -1050,6 +1126,8 @@ base_hotcopy (const char *src_path,
   svn_error_t *err;
   u_int32_t pagesize;
   svn_boolean_t log_autoremove = FALSE;
+  svn_node_kind_t kind;
+  const char *format_path;
 
   /* If using DB 4.2 or later, note whether the DB_LOG_AUTOREMOVE
      feature is on.  If it is, we have a potential race condition:
@@ -1060,6 +1138,13 @@ base_hotcopy (const char *src_path,
   SVN_ERR (check_env_flags (&log_autoremove, DB_LOG_AUTOREMOVE,
                             src_path, pool));
 #endif
+
+  /* Copy the format file if it exists -- it is assumed to be format 1
+     if it does not exist. */
+  format_path = svn_path_join (src_path, FORMAT_FILE, pool);
+  SVN_ERR (svn_io_check_path (format_path, &kind, pool));
+  if (kind == svn_node_file)
+    SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, FORMAT_FILE, pool));
 
   /* Copy the DB_CONFIG file. */
   SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "DB_CONFIG", pool));
@@ -1098,6 +1183,10 @@ base_hotcopy (const char *src_path,
                                 "strings", pagesize, pool));
   SVN_ERR (copy_db_file_safely (src_path, dest_path,
                                 "uuids", pagesize, pool));
+  SVN_ERR (copy_db_file_safely (src_path, dest_path,
+                                "locks", pagesize, pool));
+  SVN_ERR (copy_db_file_safely (src_path, dest_path,
+                                "lock-tokens", pagesize, pool));
 
   {
     apr_array_header_t *logfiles;
@@ -1136,7 +1225,7 @@ base_hotcopy (const char *src_path,
   }
 
   /* Since this is a copy we will have exclusive access to the repository. */
-  err = bdb_catastrophic_recover (dest_path, pool);
+  err = bdb_recover (dest_path, TRUE, pool);
   if (err)
     {
       if (log_autoremove)
@@ -1250,6 +1339,12 @@ base_version (void)
   SVN_VERSION_BODY;
 }
 
+static const char *
+base_get_description (void)
+{
+  return _("Module for working with a Berkeley DB repository.");
+}
+
 
 
 /* Base FS library vtable, used by the FS loader library. */
@@ -1259,6 +1354,7 @@ static fs_library_vtable_t library_vtable = {
   base_open,
   base_delete_fs,
   base_hotcopy,
+  base_get_description,
   base_bdb_set_errcall,
   base_bdb_recover,
   base_bdb_logfiles,

@@ -17,6 +17,9 @@ package org.tigris.subversion.javahl;
  * ====================================================================
  * @endcopyright
  */
+
+import java.io.OutputStream;
+
 /**
  * This is the main interface class. All subversion commandline client svn &
  * svnversion operation are implemented in this class. This class is not
@@ -25,23 +28,51 @@ package org.tigris.subversion.javahl;
 public class SVNClient implements SVNClientInterface
 {
     /**
-     * load the needed native library
+     * Load the required native library.
      */
     static
     {
-        /*
-         * first try to load the library by the new name.
-         * if that fails, try to load the library by the old name.
-         */
+        loadNativeLibrary();
+    }
+
+    /**
+     * Called upon class initialization.
+     *
+     * @throws UnsatisfiedLinkError If the native library cannot be
+     * loaded.
+     */
+    private static void loadNativeLibrary()
+    {
+        // If the user specified the fully qualified path to the
+        // native library, try loading that first.
+        try
+        {
+            String specifiedLibraryName =
+                System.getProperty("subversion.native.library");
+            if (specifiedLibraryName != null)
+            {
+                System.load(specifiedLibraryName);
+                return;
+            }
+        }
+        catch (UnsatisfiedLinkError ex)
+        {
+            // ignore that error to try again
+        }
+
+        // Try to load the library by its name.  Failing that, try to
+        // load it by its old name.
         try
         {
             System.loadLibrary("svnjavahl-1");
+            return;
         }
-        catch(UnsatisfiedLinkError ex)
+        catch (UnsatisfiedLinkError ex)
         {
             try
             {
                 System.loadLibrary("libsvnjavahl-1");
+                return;
             }
             catch (UnsatisfiedLinkError e)
             {
@@ -49,6 +80,7 @@ public class SVNClient implements SVNClientInterface
             }
         }
     }
+
 
     /**
      * Standard empty contructor, builds just the native peer.
@@ -90,8 +122,8 @@ public class SVNClient implements SVNClientInterface
      * @param getAll    get status for uninteristing files (unchanged).
      * @return Array of Status entries.
      */
-    public Status[]status(String path, boolean descend, boolean onServer,
-                          boolean getAll) throws ClientException
+    public Status[] status(String path, boolean descend, boolean onServer,
+                           boolean getAll) throws ClientException
     {
         return status(path, descend, onServer, getAll, false);
     }
@@ -119,9 +151,11 @@ public class SVNClient implements SVNClientInterface
      * @param descend         Recurse into subdirectories if existant.
      * @param onServer        Request status information from server.
      * @param getAll          get status for uninteristing files (unchanged).
-     * @param noIgnore        get status for normaly ignored files and directories.
-     * @param ignoreExternals if externals are ignored during checkout
+     * @param noIgnore        get status for normaly ignored files and
+     * *                      directories.
+     * @param ignoreExternals if externals are ignored during status
      * @return Array of Status entries.
+     * @since 1.2
      */
     public native Status[] status(String path, boolean descend,
                                   boolean onServer, boolean getAll,
@@ -135,7 +169,7 @@ public class SVNClient implements SVNClientInterface
      * @param recurse   recurse into subdirectories
      * @return  Array of DirEntry objects.
      */
-    public DirEntry[]list(String url, Revision revision, boolean recurse)
+    public DirEntry[] list(String url, Revision revision, boolean recurse)
             throws ClientException
     {
         return list(url, revision, revision, recurse);
@@ -149,6 +183,7 @@ public class SVNClient implements SVNClientInterface
      * @param pegRevision the revision to interpret url
      * @param recurse     recurse into subdirectories
      * @return Array of DirEntry objects.
+     * @since 1.2
      */
     public native DirEntry[] list(String url, Revision revision,
                                   Revision pegRevision, boolean recurse)
@@ -236,6 +271,7 @@ public class SVNClient implements SVNClientInterface
      * @param limit         limit the number of log messages (if 0 or less no
      *                      limit)
      * @return array of LogMessages
+     * @since 1.2
      */
     public native LogMessage[] logMessages(String path, Revision revisionStart,
                                            Revision revisionEnd,
@@ -252,6 +288,7 @@ public class SVNClient implements SVNClientInterface
      * @param recurse whether you want it to checkout files recursively.
      * @param ignoreExternals if externals are ignored during checkout
      * @exception ClientException
+     * @since 1.2
      */
     public native long checkout(String moduleName, String destPath,
                                 Revision revision, Revision pegRevision,
@@ -278,8 +315,20 @@ public class SVNClient implements SVNClientInterface
      * to the calling program.
      * @param notify listener that the SVN library should call on many
      *               file operations.
+     * @deprecated use notification2 instead
      */
     public native void notification(Notify notify);
+
+    /**
+     * Sets the notification callback used to send processing information back
+     * to the calling program.
+     *
+     * @param notify listener that the SVN library should call on many
+     *               file operations.
+     * @since 1.2
+     */
+    public native void notification2(Notify2 notify);
+
     /**
      * Sets the commit message handler. This allows more complex commit message
      * with the list of the elements to be commited as input.
@@ -322,6 +371,7 @@ public class SVNClient implements SVNClientInterface
      * @param force     if adding a directory and recurse true and path is a
      *                  directory, all not already managed files are added.
      * @exception ClientException
+     * @since 1.2
      */
     public native void add(String path, boolean recurse, boolean force)
             throws ClientException;
@@ -350,6 +400,7 @@ public class SVNClient implements SVNClientInterface
      * @param recurse recursively update.
      * @param ignoreExternals externals will be ignore during update
      * @exception ClientException
+     * @since 1.2
      */
     public native long[] update(String[] path, Revision revision,
                                 boolean recurse, boolean ignoreExternals)
@@ -364,8 +415,11 @@ public class SVNClient implements SVNClientInterface
      *         -1 if the revision number is invalid.
      * @exception ClientException
      */
-    public native long commit(String[] path, String message, boolean recurse)
-            throws ClientException;
+    public long commit(String[] path, String message, boolean recurse)
+            throws ClientException
+    {
+        return commit(path, message, recurse, false);
+    }
     /**
      * Copies a versioned file with the history preserved.
      * @param srcPath   source path or url
@@ -400,7 +454,7 @@ public class SVNClient implements SVNClientInterface
      * @param message  commit message if destPath is an url
      * @param force    even with local modifications.
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public native void move(String srcPath, String destPath, String message,
                             boolean force) throws ClientException;
@@ -461,7 +515,7 @@ public class SVNClient implements SVNClientInterface
      * @param recurse         recurse to subdirectories
      * @param nativeEOL       which EOL characters to use during export
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public native long doExport(String srcPath, String destPath,
                                 Revision revision, Revision pegRevision,
@@ -523,7 +577,7 @@ public class SVNClient implements SVNClientInterface
      * @param ignoreAncestry ignore if files are not related
      * @param dryRun         do not change anything
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public native void merge(String path1, Revision revision1, String path2,
                              Revision revision2, String localPath,
@@ -544,7 +598,7 @@ public class SVNClient implements SVNClientInterface
      * @param ignoreAncestry ignore if files are not related
      * @param dryRun         do not change anything
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public native void merge(String path, Revision pegRevision,
                              Revision revision1, Revision revision2,
@@ -583,7 +637,7 @@ public class SVNClient implements SVNClientInterface
      * @param noDiffDeleted  no output on deleted files
      * @param force          diff even on binary files
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public native void diff(String target1, Revision revision1, String target2,
                        Revision revision2, String outFileName, boolean recurse,
@@ -606,7 +660,7 @@ public class SVNClient implements SVNClientInterface
      * @param noDiffDeleted  no output on deleted files
      * @param force          diff even on binary files
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public native void diff(String target, Revision pegRevision,
                             Revision startRevision, Revision endRevision,
@@ -630,6 +684,7 @@ public class SVNClient implements SVNClientInterface
      * @param path     the path of the item
      * @param revision the revision of the item
      * @return array of property objects
+     * @since 1.2
      */
     public PropertyData[] properties(String path, Revision revision)
             throws ClientException
@@ -644,6 +699,7 @@ public class SVNClient implements SVNClientInterface
      * @param revision    the revision of the item
      * @param pegRevision the revision to interpret path
      * @return array of property objects
+     * @since 1.2
      */
     public native PropertyData[] properties(String path, Revision revision,
                                             Revision pegRevision)
@@ -672,7 +728,7 @@ public class SVNClient implements SVNClientInterface
      * @param recurse set property also on the subdirectories
      * @param force   do not check if the value is valid
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public native void propertySet(String path, String name, String value,
                                    boolean recurse, boolean force)
@@ -700,7 +756,7 @@ public class SVNClient implements SVNClientInterface
      * @param recurse set property also on the subdirectories
      * @param force   do not check if the value is valid
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public native void propertySet(String path, String name, byte[] value,
                                    boolean recurse, boolean force)
@@ -738,7 +794,7 @@ public class SVNClient implements SVNClientInterface
      * @param recurse set property also on the subdirectories
      * @param force   do not check if the value is valid
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public native void propertyCreate(String path, String name, String value,
                                  boolean recurse, boolean force)
@@ -767,7 +823,7 @@ public class SVNClient implements SVNClientInterface
      * @param recurse set property also on the subdirectories
      * @param force   do not check if the value is valid
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public native void propertyCreate(String path, String name, byte[] value,
                                       boolean recurse, boolean force)
@@ -790,6 +846,7 @@ public class SVNClient implements SVNClientInterface
      * @param rev       revision to retrieve
      * @return the Properties
      * @throws ClientException
+     * @since 1.2
      */
     public native PropertyData[] revProperties(String path, Revision rev)
             throws ClientException;
@@ -802,6 +859,7 @@ public class SVNClient implements SVNClientInterface
      * @param value     value of the property
      * @param force
      * @throws ClientException
+     * @since 1.2
      */
     public native void setRevProperty(String path, String name, Revision rev,
                                       String value, boolean force)
@@ -828,7 +886,7 @@ public class SVNClient implements SVNClientInterface
      * @param revision revision of the item
      * @return the Property
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public PropertyData propertyGet(String path, String name,
                                            Revision revision)
@@ -843,9 +901,10 @@ public class SVNClient implements SVNClientInterface
      * @param path     path of the item
      * @param name     name of property
      * @param revision revision of the item
+     * @param pegRevision the revision to interpret path
      * @return the Property
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public native PropertyData propertyGet(String path, String name,
                                            Revision revision,
@@ -873,11 +932,29 @@ public class SVNClient implements SVNClientInterface
      * @param pegRevision the revision to interpret path
      * @return the content as byte array
      * @throws ClientException
-     *
+     * @since 1.2
      */
     public native byte[] fileContent(String path, Revision revision,
                                      Revision pegRevision)
             throws ClientException;
+
+    /**
+     * Write the file's content to the specified output stream.  If
+     * you need an InputStream, use a
+     * PipedInputStream/PipedOutputStream combination.
+     *
+     * @param path        the path of the file
+     * @param revision    the revision to retrieve
+     * @param pegRevision the revision at which to interpret the path
+     * @param the stream to write the file's content to
+     * @throws ClientException
+     * @see <a href="http://java.sun.com/j2se/1.4.2/docs/api/java/io/PipedOutputStream.html">PipedOutputStream</a>
+     * @see <a href="http://java.sun.com/j2se/1.4.2/docs/api/java/io/PipedInputStream.html">PipedInputStream</a>
+     */
+    public native void streamFileContent(String path, Revision revision, 
+                            Revision pegRevision, int bufferSize, 
+                            OutputStream stream) 
+            throws ClientException;    
 
     /**
      * Rewrite the url's in the working copy
@@ -928,6 +1005,7 @@ public class SVNClient implements SVNClientInterface
      * @param callback      callback to receive the file content and the other
      *                      information
      * @throws ClientException
+     * @since 1.2
      */
     public native void blame(String path, Revision pegRevision,
                              Revision revisionStart, Revision revisionEnd,
@@ -967,6 +1045,7 @@ public class SVNClient implements SVNClientInterface
      * @param lastChanged   last changed rather than current revisions
      * @return      the compact "version number"
      * @throws ClientException
+     * @since 1.2
      */
     public native String getVersionInfo(String path, String trailUrl,
                                         boolean lastChanged)
@@ -1010,4 +1089,56 @@ public class SVNClient implements SVNClientInterface
      * @return micro version number
      */
     public static native int versionMicro();
+
+    /**
+     * Commits changes to the repository.
+     *
+     * @param path     files to commit.
+     * @param message  log message.
+     * @param recurse  whether the operation should be done recursively.
+     * @param noUnlock do remove any locks
+     * @return Returns a long representing the revision. It returns a
+     *         -1 if the revision number is invalid.
+     * @throws ClientException
+     * @since 1.2
+     */
+    public native long commit(String[] path, String message, boolean recurse,
+                              boolean noUnlock) throws ClientException;
+
+    /**
+     * Lock a working copy item
+     *
+     * @param path  path of the item
+     * @param comment
+     * @param force break an existing lock
+     * @throws ClientException
+     * @since 1.2
+     */
+    public native void lock(String[] path, String comment, boolean force)
+            throws ClientException;
+
+    /**
+     * Unlock a working copy item
+     *
+     * @param path  path of the item
+     * @param force break an existing lock
+     * @throws ClientException
+     * @since 1.2
+     */
+    public native void unlock(String[] path, boolean force)
+            throws ClientException;
+
+    /**
+     * Retrieve information about repository or working copy items.
+     *
+     * @param pathOrUrl   the path or the url of the item
+     * @param revision    the revision of the item to return
+     * @param pegRevision the revision to interpret pathOrUrl
+     * @param recurse     flag if to recurse, if the item is a directory
+     * @return the information objects
+     * @since 1.2
+     */
+    public native Info2[] info2(String pathOrUrl, Revision revision,
+                                Revision pegRevision, boolean recurse)
+            throws ClientException;
 }

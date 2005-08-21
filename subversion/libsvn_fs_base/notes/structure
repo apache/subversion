@@ -571,6 +571,60 @@ The `copies' table is a btree, with no particular sort order.
 
 
 
+Locks
+
+When a caller locks a file -- reserving an exclusive right to modify
+or delete it -- an lock object is created in a `locks' table.
+
+The `locks' table is a btree whose key is a UUID string (also known as
+a "lock-token"), and whose value is a skel representing a lock.  The
+fields in the skel mirror those of an svn_lock__t (see svn_types.h):
+
+    ("lock" PATH UUID OWNER COMMENT XML-P CREATION-DATE EXPIRATION-DATE)
+
+where:
+
+   * PATH is the absolute filesystem path reserved by the lock.
+
+   * UUID is the universally unique identifier of the lock, also known
+     as the lock-token.  This is the same as the row's key.
+
+   * OWNER is the authenticated username that "owns" the lock.
+
+   * COMMENT is a string describing the lock.  It may be empty, or it
+     might describe the rationale for locking.
+
+   * XML-P is a boolean (either 0 or 1) indicating whether the COMMENT
+     field is wrapped in an XML tag.  (This is something only used by
+     the DAV layer, for webdav interoperabliity.)
+
+   * CREATION-DATE is a string representation of the date/time when
+     the lock was created.  (see svn_time_to_cstring())
+
+   * EXPIRATION-DATE is a string representation of the date/time when
+     the lock will cease to be valid.  (see svn_time_to_cstring())
+
+In addition to creating a lock in the `locks' table, a new row is
+created in a `locks-nodes' table.  The `lock-nodes' table is a btree
+whose key is an absolute path in the filesystem.  The value of each
+key is a lock-token (which is a key into the `locks' table.)
+
+To test if a path is locked, simply check if the path is a key in the
+`locks-nodes' table.  To see if a certain directory has any locked
+children below, we ask BerkeleyDB to do a "greater or equal match" on
+the directory path, and see if any results come back.  If they do,
+then at least one of the directory's children is locked, and thus the
+directory cannot be deleted without further investigation.
+
+Locks are epheremal things, not historied in any way.  They are
+potentially created and deleted quite often.  When a lock is
+destroyed, the appropriate row is removed from the `locks' table.
+Additionally, the locked-path is removed from the `lock-nodes' table.
+
+
+
+
+
 Merge rules
 
 The Subversion filesystem must provide the following characteristics:
@@ -588,74 +642,132 @@ Merging rules:
    The general principle: a series of changes can be merged iff the
    final outcome is independent of the order you apply them in.
 
-Merging two nodes, A and B, with respect to a common ancestor
-ANCESTOR:
-- First, the merge fails unless A, B, and ANCESTOR are all the same kind
-  of node.
-- If A and B are text files:
-  - If A is an ancestor of B, then B is the merged result.
-  - If A is identical to B, then B (arbitrarily) is the merged result.
-  - Otherwise, the merge fails.
-- If A and B are both directories:
-  - For every directory entry E in either A, B, or ANCESTOR, here are
-    the cases:
-      - E exists in neither ANCESTOR nor A.
-      - E doesn't exist in ANCESTOR, and has been added to A.
-      - E exists in ANCESTOR, but has been deleted from A.
-      - E exists in both ANCESTOR and A ...
-        - but refers to different nodes.
-        - but refers to different revisions of the same node.
-        - and refers to the same node revision.
+Merging algorithm:
 
-    The same set of possible relationships with ANCESTOR holds for B,
-    so there are thirty-six combinations.  The matrix is symmetrical
-    with A and B reversed, so we only have to describe one triangular
-    half, including the diagonal --- 21 combinations.
+   For each entry NAME in the directory ANCESTOR:
+  
+     Let ANCESTOR-ENTRY, SOURCE-ENTRY, and TARGET-ENTRY be the IDs of
+     the name within ANCESTOR, SOURCE, and TARGET respectively.
+     (Possibly null if NAME does not exist in SOURCE or TARGET.)
+  
+     If ANCESTOR-ENTRY == SOURCE-ENTRY, then:
+       No changes were made to this entry while the transaction was in
+       progress, so do nothing to the target.
+  
+     Else if ANCESTOR-ENTRY == TARGET-ENTRY, then:
+       A change was made to this entry while the transaction was in
+       process, but the transaction did not touch this entry.  Replace
+       TARGET-ENTRY with SOURCE-ENTRY.
+  
+     Else:
+       Changes were made to this entry both within the transaction and
+       to the repository while the transaction was in progress.  They
+       must be merged or declared to be in conflict.
+  
+       If SOURCE-ENTRY and TARGET-ENTRY are both null, that's a
+       double delete; flag a conflict.
+  
+       If any of the three entries is of type file, declare a conflict.
+  
+       If either SOURCE-ENTRY or TARGET-ENTRY is not a direct
+       modification of ANCESTOR-ENTRY (determine by comparing the
+       node-id fields), declare a conflict.  A replacement is
+       incompatible with a modification or other replacement--even
+       an identical replacement.
+  
+       Direct modifications were made to the directory ANCESTOR-ENTRY
+       in both SOURCE and TARGET.  Recursively merge these
+       modifications.
+  
+   For each leftover entry NAME in the directory SOURCE:
+  
+     If NAME exists in TARGET, declare a conflict.  Even if SOURCE and
+     TARGET are adding exactly the same thing, two additions are not
+     auto-mergeable with each other.
+  
+     Add NAME to TARGET with the entry from SOURCE.
+  
+   Now that we are done merging the changes from SOURCE into the
+   directory TARGET, update TARGET's predecessor to be SOURCE.
 
-    - (6) E exists in neither ANCESTOR nor A:
-      - (1) E exists in neither ANCESTOR nor B.  Can't occur, by assumption
-           that E exists in either A, B, or ancestor.
-      - (1) E has been added to B.  Add E in the merged result. ***
-      - (1) E has been deleted from B.  Can't occur, by assumption that E
-        doesn't exist in ANCESTOR.
-      - (3) E exists in both ANCESTOR and B.  Can't occur, by assumption that
-        E doesn't exist in ancestor.
-    - (5) E doesn't exist in ANCESTOR, and has been added to A.
-      - (1) E doesn't exist in ANCESTOR, and has been added to B.  Conflict.
-      - (1) E exists in ANCESTOR, but has been deleted from B.  Can't occur,
-        by assumption that E doesn't exist in ANCESTOR.
-      - (3) E exists in both ANCESTOR and B.  Can't occur, by assumption
-        that E doesn't exist in ANCESTOR.
-    - (4) E exists in ANCESTOR, but has been deleted from A.
-      - (1) E exists in ANCESTOR, but has been deleted from B.  If
-        neither delete was a result of a rename, then omit E from the
-        merged tree.  *** Otherwise, conflict.
-      - E exists in both ANCESTOR and B ...
-        - (1) but refers to different nodes.  Conflict.
-        - (1) but refers to different revisions of the same node.  Conflict.
-        - (1) and refers to the same node revision.  Omit E from the merged
-          tree. ***
-    - (3) E exists in both ANCESTOR and A, but refers to different nodes.
-      - (1) E exists in both ANCESTOR and B, but refers to different
-        nodes.  Conflict.
-      - (1) E exists in both ANCESTOR and B, but refers to different
-        revisions of the same node.  Conflict.
-      - (1) E exists in both ANCESTOR and B, and refers to the same
-        node revision.  Replace E with A's node revision.  ***
-    - (2) E exists in both ANCESTOR and A, but refers to different
-      revisions of the same node.
-      - (1) E exists in both ANCESTOR and B, but refers to different revisions
-        of the same node.  Try to merge A/E and B/E, recursively.  ***
-      - (1) E exists in both ANCESTOR and B, and refers to the same node
-        revision.  Replace E with A's node revision.   ***
-    - (1) E exists in both ANCESTOR and A, and refers to the same node
-      revision.
-      - (1) E exists in both ANCESTOR and B, and refers to the same
-        node revision.  Nothing has happened to ANCESTOR/E, so no change
-        is necessary.
+The following algorithm was used when the Subversion filesystem was
+initially written, but has been replaced with the simpler and more
+performant algorithm above:
 
-*** == something actually happens
-
+   Merging two nodes, A and B, with respect to a common ancestor
+   ANCESTOR:
+   
+   - First, the merge fails unless A, B, and ANCESTOR are all the same
+     kind of node.
+   - If A and B are text files:
+     - If A is an ancestor of B, then B is the merged result.
+     - If A is identical to B, then B (arbitrarily) is the merged
+       result.
+     - Otherwise, the merge fails.
+   - If A and B are both directories:
+     - For every directory entry E in either A, B, or ANCESTOR, here
+       are the cases:
+         - E exists in neither ANCESTOR nor A.
+         - E doesn't exist in ANCESTOR, and has been added to A.
+         - E exists in ANCESTOR, but has been deleted from A.
+         - E exists in both ANCESTOR and A ...
+           - but refers to different nodes.
+           - but refers to different revisions of the same node.
+           - and refers to the same node revision.
+   
+       The same set of possible relationships with ANCESTOR holds for B,
+       so there are thirty-six combinations.  The matrix is symmetrical
+       with A and B reversed, so we only have to describe one triangular
+       half, including the diagonal --- 21 combinations.
+   
+       - (6) E exists in neither ANCESTOR nor A:
+         - (1) E exists in neither ANCESTOR nor B.  Can't occur, by
+           assumption that E exists in either A, B, or ancestor.
+         - (1) E has been added to B.  Add E in the merged result. ***
+         - (1) E has been deleted from B.  Can't occur, by assumption
+           that E doesn't exist in ANCESTOR.
+         - (3) E exists in both ANCESTOR and B.  Can't occur, by
+           assumption that E doesn't exist in ancestor.
+       - (5) E doesn't exist in ANCESTOR, and has been added to A.
+         - (1) E doesn't exist in ANCESTOR, and has been added to B.
+           Conflict.
+         - (1) E exists in ANCESTOR, but has been deleted from B.
+           Can't occur, by assumption that E doesn't exist in
+           ANCESTOR.
+         - (3) E exists in both ANCESTOR and B.  Can't occur, by
+           assumption that E doesn't exist in ANCESTOR.
+       - (4) E exists in ANCESTOR, but has been deleted from A.
+         - (1) E exists in ANCESTOR, but has been deleted from B.  If
+           neither delete was a result of a rename, then omit E from
+           the merged tree.  *** Otherwise, conflict.
+         - E exists in both ANCESTOR and B ...
+           - (1) but refers to different nodes.  Conflict.
+           - (1) but refers to different revisions of the same node.
+             Conflict.
+           - (1) and refers to the same node revision.  Omit E from
+             the merged tree. ***
+       - (3) E exists in both ANCESTOR and A, but refers to different
+         nodes.
+         - (1) E exists in both ANCESTOR and B, but refers to
+           different nodes.  Conflict.
+         - (1) E exists in both ANCESTOR and B, but refers to
+           different revisions of the same node.  Conflict.
+         - (1) E exists in both ANCESTOR and B, and refers to the same
+           node revision.  Replace E with A's node revision.  ***
+       - (2) E exists in both ANCESTOR and A, but refers to different
+         revisions of the same node.
+         - (1) E exists in both ANCESTOR and B, but refers to
+           different revisions of the same node.  Try to merge A/E and
+           B/E, recursively.  ***
+         - (1) E exists in both ANCESTOR and B, and refers to the same
+           node revision.  Replace E with A's node revision.  ***
+       - (1) E exists in both ANCESTOR and A, and refers to the same
+         node revision.
+         - (1) E exists in both ANCESTOR and B, and refers to the same
+           node revision.  Nothing has happened to ANCESTOR/E, so no
+           change is necessary.
+   
+   *** == something actually happens
 
 
 Non-Historical Properties
@@ -730,6 +842,8 @@ Berkeley DB tables
               "strings" : btree(STR -> STRING, "next-id" -> STR)
       "representations" : btree(REP -> REPRESENTATION, "next-id" -> REP)
                 "uuids" : recno(UUID)
+                "locks" : btree(TOKEN -> LOCK)
+          "lock-tokens" : btree(PATH -> TOKEN)
 
 Syntactic elements
 ------------------
@@ -741,6 +855,7 @@ Table keys:
                     CPY ::= number-36 ;
                     STR ::= number-36 ;
                     REP ::= number-36 ;
+                  TOKEN ::= uuid ;
 
 Property lists:
 
@@ -841,7 +956,25 @@ Node revision IDs:
 
 UUIDs:
                    UUID ::= uuid ;
-                   
+
+
+Locks:
+
+                   LOCK ::= ("lock" PATH TOKEN OWNER 
+                                    COMMENT XML-P CR-DATE [X-DATE]);
+                   PATH ::= atom ;
+                  OWNER ::= atom ;
+                COMMENT ::= atom ;
+                  XML-P ::= "0" | "1" ;
+                CR-DATE ::= atom ;
+                 X-DATE ::= atom ;
+
+Lock tokens:
+
+               (the value is just a lock-token, which is a uuid)
+
+
+        
 Lexical elements
 ----------------
 

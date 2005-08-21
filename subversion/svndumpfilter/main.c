@@ -29,6 +29,7 @@
 #include "svn_path.h"
 #include "svn_hash.h"
 #include "svn_repos.h"
+#include "svn_fs.h"
 #include "svn_pools.h"
 #include "svn_sorts.h"
 #include "svn_props.h"
@@ -883,7 +884,6 @@ check_lib_versions (void)
     {
       { "svn_subr",  svn_subr_version },
       { "svn_repos", svn_repos_version },
-      { "svn_fs",    svn_fs_version },
       { "svn_delta", svn_delta_version },
       { NULL, NULL }
     };
@@ -1056,12 +1056,12 @@ main (int argc, const char * const *argv)
   struct svndumpfilter_opt_state opt_state;
   apr_getopt_t *os;
   int opt_id;
-  int received_opts[SVN_OPT_MAX_OPTIONS];
-  int i, num_opts = 0;
+  apr_array_header_t *received_opts;
+  int i;
 
 
   /* Initialize the app. */
-  if (svn_cmdline_init2 ("svndumpfilter", stderr, FALSE) != EXIT_SUCCESS)
+  if (svn_cmdline_init ("svndumpfilter", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   /* Create our top-level pool.  Use a seperate mutexless allocator,
@@ -1078,12 +1078,14 @@ main (int argc, const char * const *argv)
   /* Check library versions */
   err = check_lib_versions ();
   if (err)
-    {
-      svn_handle_error (err, stderr, FALSE);
-      svn_error_clear (err);
-      svn_pool_destroy (pool);
-      return EXIT_FAILURE;
-    }
+    return svn_cmdline_handle_exit_error (err, pool, "svndumpfilter: ");
+
+  received_opts = apr_array_make (pool, SVN_OPT_MAX_OPTIONS, sizeof (int));
+
+  /* Initialize the FS library. */
+  err = svn_fs_initialize (pool);
+  if (err)
+    return svn_cmdline_handle_exit_error (err, pool, "svndumpfilter: ");
 
   if (argc <= 1)
     {
@@ -1116,8 +1118,7 @@ main (int argc, const char * const *argv)
         }
 
       /* Stash the option code in an array before parsing it. */
-      received_opts[num_opts] = opt_id;
-      num_opts++;
+      APR_ARRAY_PUSH (received_opts, int) = opt_id;
 
       switch (opt_id)
         {
@@ -1177,12 +1178,8 @@ main (int argc, const char * const *argv)
               const char* first_arg_utf8;
               if ((err = svn_utf_cstring_to_utf8 (&first_arg_utf8, first_arg,
                                                   pool)))
-                {
-                  svn_handle_error (err, stderr, FALSE);
-                  svn_pool_destroy (pool);
-                  svn_error_clear (err);
-                  return EXIT_FAILURE;
-                }
+                return svn_cmdline_handle_exit_error (err, pool,
+                                                      "svndumpfilter: ");
                 
               svn_error_clear (svn_cmdline_fprintf (stderr, pool,
                                                     _("Unknown command: '%s'\n"),
@@ -1228,9 +1225,9 @@ main (int argc, const char * const *argv)
 
 
   /* Check that the subcommand wasn't passed any inappropriate options. */
-  for (i = 0; i < num_opts; i++)
+  for (i = 0; i < received_opts->nelts; i++)
     {
-      opt_id = received_opts[i];
+      opt_id = APR_ARRAY_IDX (received_opts, i, int);
 
       /* All commands implicitly accept --help, so just skip over this
          when we see it. Note that we don't want to include this option
@@ -1261,13 +1258,13 @@ main (int argc, const char * const *argv)
     {
       if (err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
         {
-          svn_handle_error (err, stderr, 0);
+          svn_handle_error2 (err, stderr, FALSE, "svndumpfilter: ");
           svn_opt_subcommand_help (subcommand->name, cmd_table,
                                    options_table, pool);
         }
       else
         {
-          svn_handle_error (err, stderr, 0);
+          svn_handle_error2 (err, stderr, FALSE, "svndumpfilter: ");
         }
       svn_pool_destroy (pool);
       return EXIT_FAILURE;

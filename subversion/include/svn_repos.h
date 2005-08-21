@@ -39,9 +39,9 @@ extern "C" {
 /* ---------------------------------------------------------------*/
 
 /**
- * @since New in 1.1.
- *
  * Get libsvn_repos version information.
+ *
+ * @since New in 1.1.
  */
 const svn_version_t *svn_repos_version (void);
 
@@ -64,7 +64,7 @@ const svn_version_t *svn_repos_version (void);
  * 'authz_write_func', which although sharing this type, would be a
  * different implementation.
  *
- * Note: If someday we want more sophisticated authorization states
+ * @note If someday we want more sophisticated authorization states
  * than just yes/no, @a allowed can become an enum type.
  */
 typedef svn_error_t *(*svn_repos_authz_func_t) (svn_boolean_t *allowed,
@@ -73,10 +73,65 @@ typedef svn_error_t *(*svn_repos_authz_func_t) (svn_boolean_t *allowed,
                                                 void *baton,
                                                 apr_pool_t *pool);
 
-/**
- * @since New in 1.1.
+
+/** An enum defining the kinds of access authz looks up.
  *
- * A callback function type for use in @c svn_repos_get_file_revs.
+ * @since New in 1.3.
+ */
+typedef enum
+{
+  /** No access. */
+  svn_authz_none = 0,
+
+  /** Path can be read. */
+  svn_authz_read = 1,
+
+  /** Path can be altered. */
+  svn_authz_write = 2,
+
+  /** The other access credentials are recursive. */
+  svn_authz_recursive = 4
+} svn_repos_authz_access_t;
+
+
+/** Callback type for checking authorization on paths produced by
+ * the repository commit editor.
+ *
+ * Set @a *allowed to TRUE to indicate that the @a required_access on
+ * @a path in @a root is authorized, or set it to FALSE to indicate
+ * unauthorized (presumable according to state stored in @a baton).
+ *
+ * This callback is very similar to svn_repos_authz_func_t, with the
+ * exception of the addition of the @a required_access parameter.
+ * This is due to historical reasons: when authz was first implemented
+ * for svn_repos_dir_delta(), it seemed there would need only checks
+ * for read and write operations, hence the svn_repos_authz_func_t
+ * callback prototype and usage scenario.  But it was then realized
+ * that lookups due to copying needed to be recursive, and that
+ * brute-force recursive lookups didn't square with the O(1)
+ * performances a copy operation should have.
+ *
+ * So a special way to ask for a recursive lookup was introduced.  The
+ * commit editor needs this capability to retain acceptable
+ * performance.  Instead of revving the existing callback, causing
+ * unnecessary revving of functions that don't actually need the
+ * extended functionality, this second, more complete callback was
+ * introduced, for use by the commit editor.
+ *
+ * Some day, it would be nice to reunite these two callbacks and do
+ * the necessary revving anyway, but for the time being, this dual
+ * callback mechanism will do.
+ */
+typedef svn_error_t *(*svn_repos_authz_callback_t)
+  (svn_repos_authz_access_t required,
+   svn_boolean_t *allowed,
+   svn_fs_root_t *root,
+   const char *path,
+   void *baton,
+   apr_pool_t *pool);
+
+/**
+ * A callback function type for use in svn_repos_get_file_revs().
  * @a baton is provided by the caller, @a path is the pathname of the file
  * in revision @a rev and @a rev_props are the revision properties.
  * If @a delta_handler and @a delta_baton are non-NULL, they may be set to a
@@ -87,7 +142,10 @@ typedef svn_error_t *(*svn_repos_authz_func_t) (svn_boolean_t *allowed,
  * delta for this and the previous revision.
  * @a pool may be used for temporary allocations, but you can't rely
  * on objects allocated to live outside of this particular call and the
- * immediately following calls to @a *delta_handler if any. */
+ * immediately following calls to @a *delta_handler if any.
+ *
+ * @since New in 1.1.
+ */
 typedef svn_error_t *(*svn_repos_file_rev_handler_t)
        (void *baton,
         const char *path,
@@ -159,7 +217,11 @@ svn_fs_t *svn_repos_fs (svn_repos_t *repos);
 /** Make a hot copy of the Subversion repository found at @a src_path 
  * to @a dst_path. 
  *
- * @copydoc svn_fs_hotcopy_berkeley()
+ * Copy a possibly live Subversion repository from @a src_path to
+ * @a dst_path.  If @a clean_logs is @c TRUE, perform cleanup on the
+ * source filesystem as part of the copy operation; currently, this
+ * means deleting copied, unused logfiles for a Berkeley DB source
+ * repository.
  */
 svn_error_t * svn_repos_hotcopy (const char *src_path,
                                  const char *dst_path,
@@ -167,8 +229,6 @@ svn_error_t * svn_repos_hotcopy (const char *src_path,
                                  apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0 API.
- *
  * Run database recovery procedures on the repository at @a path,
  * returning the database to a consistent state.  Use @a pool for all
  * allocation.
@@ -176,12 +236,12 @@ svn_error_t * svn_repos_hotcopy (const char *src_path,
  * Acquires an @a exclusive lock on the repository, recovers the
  * database, and releases the lock.  If an exclusive lock can't be
  * acquired, returns error.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 svn_error_t *svn_repos_recover (const char *path, apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
- *
  * Run database recovery procedures on the repository at @a path,
  * returning the database to a consistent state.  Use @a pool for all
  * allocation.
@@ -196,6 +256,8 @@ svn_error_t *svn_repos_recover (const char *path, apr_pool_t *pool);
  * If @a start_callback is not NULL, it will be called with @a
  * start_callback_baton as argument before the recovery starts, but
  * after the exclusive lock has been acquired.
+ *
+ * @since New in 1.1.
  */
 svn_error_t *svn_repos_recover2 (const char *path,
                                  svn_boolean_t nonblocking,
@@ -265,19 +327,37 @@ const char *svn_repos_post_revprop_change_hook (svn_repos_t *repos,
                                                 apr_pool_t *pool);
 
 
+/** @defgroup svn_repos_lock_hooks paths to lock hooks
+ * @{ 
+ * @since New in 1.2. */
+
+/** Return the path to @a repos's pre-lock hook, allocated in @a pool. */
+const char *svn_repos_pre_lock_hook (svn_repos_t *repos, apr_pool_t *pool);
+
+/** Return the path to @a repos's post-lock hook, allocated in @a pool. */
+const char *svn_repos_post_lock_hook (svn_repos_t *repos, apr_pool_t *pool);
+
+/** Return the path to @a repos's pre-unlock hook, allocated in @a pool. */
+const char *svn_repos_pre_unlock_hook (svn_repos_t *repos, apr_pool_t *pool);
+
+/** Return the path to @a repos's post-unlock hook, allocated in @a pool. */
+const char *svn_repos_post_unlock_hook (svn_repos_t *repos, apr_pool_t *pool);
+
+/** @} */
 
 /* ---------------------------------------------------------------*/
 
 /* Reporting the state of a working copy, for updates. */
 
 
-/** Construct and return a @a report_baton that will be paired with some
+/**
+ * Construct and return a @a report_baton that will be paired with some
  * @c svn_ra_reporter_t table.  The table and baton are used to build a
  * transaction in the system;  when the report is finished,
- * @c svn_repos_dir_delta is called on the transaction, driving
+ * svn_repos_dir_delta() is called on the transaction, driving
  * @a editor/@a edit_baton. 
  *
- * Specifically, the report will create a transaction made by @a username, 
+ * Specifically, the report will create a transaction
  * relative to @a fs_base in the filesystem.  @a target is a single path 
  * component, used to limit the scope of the report to a single entry of 
  * @a fs_base, or "" if all of @a fs_base itself is the main subject of
@@ -304,11 +384,17 @@ const char *svn_repos_post_revprop_change_hook (svn_repos_t *repos,
  * @a ignore_ancestry instructs the driver to ignore node ancestry
  * when determining how to transmit differences.
  *
+ * Locks that are reported by the caller and that are not valid in the
+ * repository will be deleted during the following edit.
+ *
  * The @a authz_read_func and @a authz_read_baton are passed along to
- * @c svn_repos_dir_delta(); see that function for how they are used.
+ * svn_repos_dir_delta(); see that function for how they are used.
  *
  * All allocation for the context and collected state will occur in
  * @a pool.
+ *
+ * @note @a username isn't used and should be removed if this function is
+ * revised.
  */
 svn_error_t *
 svn_repos_begin_report (void **report_baton,
@@ -327,8 +413,8 @@ svn_repos_begin_report (void **report_baton,
                         void *authz_read_baton,
                         apr_pool_t *pool);
 
-
-/** Given a @a report_baton constructed by @c svn_repos_begin_report(), this
+/**
+ * Given a @a report_baton constructed by svn_repos_begin_report(), this
  * routine will build @a revision:@a path into the current transaction.
  * This routine is called multiple times to create a transaction that
  * is a "mirror" of a working copy.
@@ -341,7 +427,24 @@ svn_repos_begin_report (void **report_baton,
  * all children and props of the freshly-linked directory.  This is
  * for 'low confidence' client reporting.
  * 
+ * If the caller has a lock token for @a path, then @a lock_token should
+ * be set to that token.  Else, @a lock_token should be NULL.
+ *
  * All temporary allocations are done in @a pool.
+ *
+ * @since New in 1.2.
+ */
+svn_error_t *svn_repos_set_path2 (void *report_baton,
+                                  const char *path,
+                                  svn_revnum_t revision,
+                                  svn_boolean_t start_empty,
+                                  const char *lock_token,
+                                  apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_set_path2(), but with @a lock_token set to @c NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *svn_repos_set_path (void *report_baton,
                                  const char *path,
@@ -349,8 +452,8 @@ svn_error_t *svn_repos_set_path (void *report_baton,
                                  svn_boolean_t start_empty,
                                  apr_pool_t *pool);
 
-
-/** Given a @a report_baton constructed by @c svn_repos_begin_report(), 
+/**
+ * Given a @a report_baton constructed by svn_repos_begin_report(), 
  * this routine will build @a revision:@a link_path into the current 
  * transaction at @a path.  Note that while @a path is relative to the 
  * anchor/target used in the creation of the @a report_baton, @a link_path 
@@ -360,7 +463,25 @@ svn_error_t *svn_repos_set_path (void *report_baton,
  * all children and props of the freshly-linked directory.  This is
  * for 'low confidence' client reporting.
  *
+ * If the caller has a lock token for @a link_path, then @a lock_token
+ * should be set to that token.  Else, @a lock_token should be NULL.
+ *
  * All temporary allocations are done in @a pool.
+ *
+ * @since New in 1.2.
+ */
+svn_error_t *svn_repos_link_path2 (void *report_baton,
+                                   const char *path,
+                                   const char *link_path,
+                                   svn_revnum_t revision,
+                                   svn_boolean_t start_empty,
+                                   const char *lock_token,
+                                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_link_path2(), but with @a lock_token set to @c NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *svn_repos_link_path (void *report_baton,
                                   const char *path,
@@ -369,7 +490,7 @@ svn_error_t *svn_repos_link_path (void *report_baton,
                                   svn_boolean_t start_empty,
                                   apr_pool_t *pool);
 
-/** Given a @a report_baton constructed by @c svn_repos_begin_report(), 
+/** Given a @a report_baton constructed by svn_repos_begin_report(), 
  * this routine will remove @a path from the current fs transaction. 
  *
  * (This allows the reporter's driver to describe missing pieces of a
@@ -382,19 +503,20 @@ svn_error_t *svn_repos_delete_path (void *report_baton,
                                     apr_pool_t *pool);
 
 /** Make the filesystem compare the transaction to a revision and have
- * it drive an update editor (using @c svn_repos_delta_dirs()), then
+ * it drive an update editor (using svn_repos_delta_dirs()), then
  * abort the transaction.  If an error occurs during the driving of
  * the editor, we do NOT abort the edit; that responsibility belongs
  * to the caller, if it happens at all.  The fs transaction will be
  * aborted even if the editor drive fails, so the caller does not need
- * to clean up.
+ * to clean up.  No other reporting functions, including
+ * svn_repos_abort_report, should be called after calling this function.
  */
 svn_error_t *svn_repos_finish_report (void *report_baton,
                                       apr_pool_t *pool);
 
 
 /** The report-driver is bailing, so abort the fs transaction.  This
- * function can be called anytime before @c svn_repos_finish_report() is
+ * function can be called anytime before svn_repos_finish_report() is
  * called.  No other reporting functions should be called after calling
  * this function.
  */
@@ -418,7 +540,7 @@ svn_error_t *svn_repos_abort_report (void *report_baton,
  * src_parent_dir and @a src_entry.
  *
  * @a src_root and @a tgt_root can both be either revision or transaction
- * roots.  If @a tgt_root is a revision, @a editor's @c set_target_revision()
+ * roots.  If @a tgt_root is a revision, @a editor's set_target_revision()
  * will be called with the @a tgt_root's revision number, else it will
  * not be called at all.
  *
@@ -448,7 +570,7 @@ svn_error_t *svn_repos_abort_report (void *report_baton,
  * when determining how to transmit differences.
  *
  * Before completing successfully, this function calls @a editor's
- * @c close_edit(), so the caller should expect its @a edit_baton to be
+ * close_edit(), so the caller should expect its @a edit_baton to be
  * invalid after its use with this function.
  *
  * Do any allocation necessary for the delta computation in @a pool.
@@ -482,7 +604,7 @@ svn_repos_dir_delta (svn_fs_root_t *src_root,
  * merely serve as indications that properties or textual contents
  * were changed. 
  *
- * NOTE: this editor driver passes SVN_INVALID_REVNUM for all
+ * @note This editor driver passes SVN_INVALID_REVNUM for all
  * revision parameters in the editor interface except the copyfrom
  * parameter of the add_file() and add_directory() editor functions.
  *
@@ -503,13 +625,27 @@ svn_repos_replay (svn_fs_root_t *root,
 
 /* Making commits. */
 
-/** Return an @a editor and @a edit_baton to commit changes to @a session->fs,
+/**
+ * Return an @a editor and @a edit_baton to commit changes to @a session->fs,
  * beginning at location 'rev:@a base_path', where "rev" is the argument
- * given to @c open_root().  Store @a user as the author of the commit and
- * @a log_msg as the commit message.
+ * given to open_root().
  *
- * @a repos is a previously opened repository.  @a repos_url is the decoded
- * URL to the base of the repository, and is used to check copyfrom paths.
+ * @a repos is a previously opened repository.  @a repos_url is the
+ * decoded URL to the base of the repository, and is used to check
+ * copyfrom paths.  @a txn is a filesystem transaction object to use
+ * during the commit, or @c NULL to indicate that this function should
+ * create (and fully manage) a new transaction.
+ *
+ * Iff @a user is not @c NULL, store it as the author of the commit
+ * transaction.
+ *
+ * Iff @a log_msg is not @c NULL, store it as the log message
+ * associated with the commit transaction.
+ *
+ * Iff @a authz_callback is provided, check read/write authorizations
+ * on paths accessed by editor operations.  An operation which fails
+ * due to authz will return SVN_ERR_AUTHZ_UNREADABLE or
+ * SVN_ERR_AUTHZ_UNWRITABLE.
  *
  * Calling @a (*editor)->close_edit completes the commit.  Before
  * @c close_edit returns, but after the commit has succeeded, it will
@@ -519,6 +655,53 @@ svn_repos_replay (svn_fs_root_t *root,
  * error will be returned from @c close_edit, otherwise if there was a
  * post-commit hook failure, then that error will be returned and will
  * have code SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.
+ *
+ * Calling @a (*editor)->abort_edit aborts the commit, and will also
+ * abort the commit transaction unless @a txn was supplied (not @c
+ * NULL).  Callers who supply their own transactions are responsible
+ * for cleaning them up (either by committing them, or aborting them).
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_repos_get_commit_editor3 (const svn_delta_editor_t **editor,
+                              void **edit_baton,
+                              svn_repos_t *repos,
+                              svn_fs_txn_t *txn,
+                              const char *repos_url,
+                              const char *base_path,
+                              const char *user,
+                              const char *log_msg,
+                              svn_commit_callback_t commit_callback,
+                              void *commit_callback_baton,
+                              svn_repos_authz_callback_t authz_callback,
+                              void *authz_baton,
+                              apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_get_commit_editor3(), but with @a
+ * authz_callback and @a authz_baton set to @c NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
+ */
+svn_error_t *svn_repos_get_commit_editor2 (const svn_delta_editor_t **editor,
+                                           void **edit_baton,
+                                           svn_repos_t *repos,
+                                           svn_fs_txn_t *txn,
+                                           const char *repos_url,
+                                           const char *base_path,
+                                           const char *user,
+                                           const char *log_msg,
+                                           svn_commit_callback_t callback,
+                                           void *callback_baton,
+                                           apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_repos_get_commit_editor2(), but with @a txn always
+ * set to @c NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
                                           void **edit_baton,
@@ -530,7 +713,6 @@ svn_error_t *svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
                                           svn_commit_callback_t callback,
                                           void *callback_baton,
                                           apr_pool_t *pool);
-
 
 /* ---------------------------------------------------------------*/
 
@@ -569,12 +751,12 @@ svn_repos_get_committed_info (svn_revnum_t *committed_rev,
 
 
 /**
- * @since New in 1.2.
- *
  * Set @a *dirent to an @c svn_dirent_t associated with @a path in @a
  * root.  If @a path does not exist in @a root, set @a *dirent to
  * NULL.  Use @a pool for memory allocation.
-*/
+ *
+ * @since New in 1.2.
+ */
 svn_error_t *
 svn_repos_stat (svn_dirent_t **dirent,
                 svn_fs_root_t *root,
@@ -595,8 +777,6 @@ typedef svn_error_t *(*svn_repos_history_func_t) (void *baton,
                                                   apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
- *
  * Call @a history_func (with @a history_baton) for each interesting
  * history location in the lifetime of @a path in @a fs, from the
  * youngest of @a end and @ start to the oldest.  Only cross
@@ -608,8 +788,10 @@ typedef svn_error_t *(*svn_repos_history_func_t) (void *baton,
  * not, return SVN_ERR_AUTHZ_UNREADABLE.  Also verify the readability
  * of every ancestral path/revision pair before pushing them at @a
  * history_func.  If a pair is deemed unreadable, then do not send
- * them; instead, immmediately stop traversing history and return
+ * them; instead, immediately stop traversing history and return
  * SVN_NO_ERROR.
+ *
+ * @since New in 1.1.
  */
 svn_error_t *
 svn_repos_history2 (svn_fs_t *fs,
@@ -624,10 +806,10 @@ svn_repos_history2 (svn_fs_t *fs,
                     apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0 API.
- *
- * Similar to @c svn_repos_history, but with @a authz_read_func
+ * Similar to svn_repos_history2(), but with @a authz_read_func
  * and @a authz_read_baton always set to NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 svn_error_t *
 svn_repos_history (svn_fs_t *fs,
@@ -641,8 +823,6 @@ svn_repos_history (svn_fs_t *fs,
 
 
 /**
- * @since New in 1.1.
- *
  * Set @a *locations to be a mapping of the revisions to the paths of
  * the file @a fs_path present at the repository in revision
  * @a peg_revision, where the revisions are taken out of the array
@@ -659,6 +839,8 @@ svn_repos_history (svn_fs_t *fs,
  * SVN_NO_ERROR.
  *
  * @a pool is used for all allocations.
+ *
+ * @since New in 1.1.
  */
 svn_error_t *
 svn_repos_trace_node_locations (svn_fs_t *fs,
@@ -686,8 +868,6 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
 
 
 /**
- * @since New in 1.2.
- *
  * Invoke @a receiver with @a receiver_baton on each log message from 
  * @a start to @a end in @a repos's filesystem.  @a start may be greater 
  * or less than @a end; this just controls whether the log messages are 
@@ -697,26 +877,16 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
  *
  * If @a paths is non-null and has one or more elements, then only show
  * revisions in which at least one of @a paths was changed (i.e., if
- * file, text or props changed; if dir, props changed or an entry was
- * added or deleted).  Each path is an <tt>const char *</tt> representing 
+ * file, text or props changed; if dir, props or entries changed or any node
+ * changed below it).  Each path is a <tt>const char *</tt> representing
  * an absolute path in the repository.
- *
- * ### todo: need to consider whether the above directory behavior is
- * most useful, or if we should actually treat _any_ node change in a
- * directory as a visible change for purposes of log... i.e., show
- * bubble-up.  The reason this might be useful is so that running log
- * on a directory would give a msg for every change under that dir,
- * no matter how far down.  See the thread started on the dev list by
- * Lars Kellogg-Stedman <lars@larsshack.org> with the subject
- * "Single repository, multiple projects?" for more.  We may simple
- * need to offer a few different semantics for @a paths.
  *
  * If @a limit is non-zero then only invoke @a receiver on the first
  * @a limit logs.
  *
  * If @a discover_changed_paths, then each call to @a receiver passes a
- * <tt>const apr_hash_t *</tt> for the receiver's @a changed_paths 
- * argument; the hash's keys are all the paths committed in that revision.
+ * hash mapping paths committed in that revision to information about them
+ * as the receiver's @a changed_paths argument.
  * Otherwise, each call to @a receiver passes null for @a changed_paths.
  *
  * If @a strict_node_history is set, copy history (if any exists) will
@@ -739,6 +909,8 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
  * See also the documentation for @c svn_log_message_receiver_t.
  *
  * Use @a pool for temporary allocations.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *
 svn_repos_get_logs3 (svn_repos_t *repos,
@@ -756,6 +928,8 @@ svn_repos_get_logs3 (svn_repos_t *repos,
 
 
 /**
+ * Same as svn_repos_get_logs3(), but with @a limit always set to 0.
+ *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *
@@ -771,11 +945,11 @@ svn_repos_get_logs2 (svn_repos_t *repos,
                      void *receiver_baton,
                      apr_pool_t *pool);
 
-/** 
- * @deprecated Provided for backward compatibility with the 1.0 API.
- *
- * Same as to svn_repos_dump_fs2(), but with @a authz_read_func and
+/**
+ * Same as svn_repos_get_logs2(), but with @a authz_read_func and
  * @a authz_read_baton always set to NULL.
+ * 
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 svn_error_t *
 svn_repos_get_logs (svn_repos_t *repos,
@@ -795,12 +969,10 @@ svn_repos_get_logs (svn_repos_t *repos,
 /* Retreiving multiple revisions of a file. */
 
 /**
- * @since New in 1.1.
- *
  * Retrieve a subset of the interesting revisions of a file @a path in
  * @a repos as seen in revision @a end.  Invoke @a handler with
  * @a handler_baton as its first argument for each such revision.
- * @a pool is used for all allocations.  See @c svn_fs_history_prev for
+ * @a pool is used for all allocations.  See svn_fs_history_prev() for
  * a discussion of interesting revisions.
  *
  * If optional @a authz_read_func is non-NULL, then use this function
@@ -821,7 +993,10 @@ svn_repos_get_logs (svn_repos_t *repos,
  *
  * In a series of calls, the file contents for the first interesting revision
  * will be provided as a text delta against the empty file.  In the following
- * calls, the delta will be against the contents for the previous call. */
+ * calls, the delta will be against the contents for the previous call.
+ *
+ * @since New in 1.1.
+ */
 svn_error_t *svn_repos_get_file_revs (svn_repos_t *repos,
                                       const char *path,
                                       svn_revnum_t start,
@@ -841,7 +1016,7 @@ svn_error_t *svn_repos_get_file_revs (svn_repos_t *repos,
  * @{
  */
 
-/** Like @c svn_fs_commit_txn(), but invoke the @a repos's pre- and
+/** Like svn_fs_commit_txn(), but invoke the @a repos's pre- and
  * post-commit hooks around the commit.  Use @a pool for any necessary
  * allocations.
  *
@@ -851,7 +1026,7 @@ svn_error_t *svn_repos_get_file_revs (svn_repos_t *repos,
  * SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED.  If the caller sees this
  * error, it knows that the commit succeeded anyway.
  *
- * @a conflict_p, @a new_rev, and @a txn are as in @c svn_fs_commit_txn().
+ * @a conflict_p, @a new_rev, and @a txn are as in svn_fs_commit_txn().
  */
 svn_error_t *svn_repos_fs_commit_txn (const char **conflict_p,
                                       svn_repos_t *repos,
@@ -859,10 +1034,10 @@ svn_error_t *svn_repos_fs_commit_txn (const char **conflict_p,
                                       svn_fs_txn_t *txn,
                                       apr_pool_t *pool);
 
-/** Like @c svn_fs_begin_txn(), but use @a author and @a log_msg to set the
+/** Like svn_fs_begin_txn(), but use @a author and @a log_msg to set the
  * corresponding properties on transaction @a *txn_p.  @a repos is the
  * repository object which contains the filesystem.  @a rev, @a *txn_p, and
- * @a pool are as in @c svn_fs_begin_txn().
+ * @a pool are as in svn_fs_begin_txn().
  *
  * Before a txn is created, the repository's start-commit hooks are
  * run; if any of them fail, no txn is created, @a *txn_p is unaffected, 
@@ -879,10 +1054,10 @@ svn_error_t *svn_repos_fs_begin_txn_for_commit (svn_fs_txn_t **txn_p,
                                                 apr_pool_t *pool);
 
 
-/** Like @c svn_fs_begin_txn(), but use @a author to set the corresponding
+/** Like svn_fs_begin_txn(), but use @a author to set the corresponding
  * property on transaction @a *txn_p.  @a repos is the repository object
  * which contains the filesystem.  @a rev, @a *txn_p, and @a pool are as in
- * @c svn_fs_begin_txn().
+ * svn_fs_begin_txn().
  *
  * ### Someday: before a txn is created, some kind of read-hook could
  *              be called here.
@@ -894,10 +1069,68 @@ svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
                                                 apr_pool_t *pool);
 
 
-/** 
- * @since New in 1.1.
+/** @defgroup svn_repos_fs_locks repository lock wrappers
+ * @{ 
+ * @since New in 1.2. */
+
+/** Like svn_fs_lock(), but invoke the @a repos's pre- and
+ * post-lock hooks before and after the locking action.  Use @a pool
+ * for any necessary allocations.
  *
- * Like @c svn_fs_change_rev_prop(), but invoke the @a repos's pre- and
+ * If the pre-lock hook or svn_fs_lock() fails, throw the original
+ * error to caller.  If an error occurs when running the post-lock
+ * hook, return the original error wrapped with
+ * SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED.  If the caller sees this
+ * error, it knows that the lock succeeded anyway.
+ */
+svn_error_t *svn_repos_fs_lock (svn_lock_t **lock,
+                                svn_repos_t *repos,
+                                const char *path,
+                                const char *token,
+                                const char *comment,
+                                svn_boolean_t is_dav_comment,
+                                apr_time_t expiration_date,
+                                svn_revnum_t current_rev,
+                                svn_boolean_t steal_lock,
+                                apr_pool_t *pool);
+
+
+/** Like svn_fs_unlock(), but invoke the @a repos's pre- and
+ * post-unlock hooks before and after the unlocking action.  Use @a
+ * pool for any necessary allocations.
+ *
+ * If the pre-unlock hook or svn_fs_unlock() fails, throw the original
+ * error to caller.  If an error occurs when running the post-unlock
+ * hook, return the original error wrapped with
+ * SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED.  If the caller sees this
+ * error, it knows that the unlock succeeded anyway.
+ */
+svn_error_t *svn_repos_fs_unlock (svn_repos_t *repos,
+                                  const char *path,
+                                  const char *token,
+                                  svn_boolean_t break_lock,
+                                  apr_pool_t *pool);
+
+
+
+/** Look up all the locks in and under @a path in @a repos, setting @a
+ * *locks to a hash which maps <tt>const char *</tt> paths to the @c
+ * svn_lock_t locks associated with those paths.  Use @a
+ * authz_read_func and @a authz_read_baton to "screen" all returned
+ * locks.  That is: do not return any locks on any paths that are
+ * unreadable in HEAD, just silently omit them.
+ */
+svn_error_t *svn_repos_fs_get_locks (apr_hash_t **locks,
+                                     svn_repos_t *repos,
+                                     const char *path,
+                                     svn_repos_authz_func_t authz_read_func,
+                                     void *authz_read_baton,
+                                     apr_pool_t *pool);
+
+/** @} */
+
+/**
+ * Like svn_fs_change_rev_prop(), but invoke the @a repos's pre- and
  * post-revprop-change hooks around the change.  Use @a pool for
  * temporary allocations.
  *
@@ -910,6 +1143,8 @@ svn_error_t *svn_repos_fs_begin_txn_for_update (svn_fs_txn_t **txn_p,
  * authz_read_baton) to validate the changed-paths associated with @a
  * rev.  If the revision contains any unreadable changed paths, then
  * return SVN_ERR_AUTHZ_UNREADABLE.
+ * 
+ * @since New in 1.1.
  */
 svn_error_t *svn_repos_fs_change_rev_prop2 (svn_repos_t *repos,
                                             svn_revnum_t rev,
@@ -922,10 +1157,10 @@ svn_error_t *svn_repos_fs_change_rev_prop2 (svn_repos_t *repos,
                                             apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0 API.
- *
- * Similar to @c svn_repos_fs_change_rev_prop2, but with the
+ * Similar to svn_repos_fs_change_rev_prop2(), but with the
  * @a authz_read_func parameter always NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 svn_error_t *svn_repos_fs_change_rev_prop (svn_repos_t *repos,
                                            svn_revnum_t rev,
@@ -937,8 +1172,6 @@ svn_error_t *svn_repos_fs_change_rev_prop (svn_repos_t *repos,
 
 
 /**
- * @since New in 1.1.
- *
  * Set @a *value_p to the value of the property named @a propname on
  * revision @a rev in the filesystem opened in @a repos.  If @a rev
  * has no property by that name, set @a *value_p to zero.  Allocate
@@ -950,6 +1183,8 @@ svn_error_t *svn_repos_fs_change_rev_prop (svn_repos_t *repos,
  * to zero unconditionally.  If only some of the changed-paths are
  * unreadable, then allow 'svn:author' and 'svn:date' propvalues to be
  * fetched, but return 0 for any other property.
+ *
+ * @since New in 1.1.
  */
 svn_error_t *svn_repos_fs_revision_prop (svn_string_t **value_p,
                                          svn_repos_t *repos,
@@ -962,8 +1197,6 @@ svn_error_t *svn_repos_fs_revision_prop (svn_string_t **value_p,
 
 
 /**
- * @since New in 1.1.
- *
  * Set @a *table_p to the entire property list of revision @a rev in
  * filesystem opened in @a repos, as a hash table allocated in @a
  * pool.  The table maps <tt>char *</tt> property names to @c
@@ -976,6 +1209,8 @@ svn_error_t *svn_repos_fs_revision_prop (svn_string_t **value_p,
  * hash. If only some of the changed-paths are unreadable, then return
  * an empty hash, except for 'svn:author' and 'svn:date' properties
  * (assuming those properties exist).
+ *
+ * @since New in 1.1.
  */
 svn_error_t *svn_repos_fs_revision_proplist (apr_hash_t **table_p,
                                              svn_repos_t *repos,
@@ -995,7 +1230,7 @@ svn_error_t *svn_repos_fs_revision_proplist (apr_hash_t **table_p,
    above with the hook-related functions. */
 
 
-/** Validating wrapper for @c svn_fs_change_node_prop() (which see for
+/** Validating wrapper for svn_fs_change_node_prop() (which see for
  * argument descriptions).
  */
 svn_error_t *svn_repos_fs_change_node_prop (svn_fs_root_t *root,
@@ -1004,7 +1239,7 @@ svn_error_t *svn_repos_fs_change_node_prop (svn_fs_root_t *root,
                                             const svn_string_t *value,
                                             apr_pool_t *pool);
 
-/** Validating wrapper for @c svn_fs_change_txn_prop() (which see for
+/** Validating wrapper for svn_fs_change_txn_prop() (which see for
  * argument descriptions).
  */
 svn_error_t *svn_repos_fs_change_txn_prop (svn_fs_txn_t *txn,
@@ -1021,16 +1256,16 @@ svn_error_t *svn_repos_fs_change_txn_prop (svn_fs_txn_t *txn,
  * repository inspection.
  * @{
  *
- * As it turns out, the @c svn_repos_dir_delta() interface can be
+ * As it turns out, the svn_repos_dir_delta() interface can be
  * extremely useful for examining the repository, or more exactly,
- * changes to the repository.  @c svn_repos_dir_delta() allows for
+ * changes to the repository.  svn_repos_dir_delta() allows for
  * differences between two trees to be described using an editor.
  *
- * By using the specific editor found below in conjunction with
- * @c svn_repos_dir_delta(), the description of how to transform one tree
+ * By using the editor obtained from svn_repos_node_editor() with
+ * svn_repos_dir_delta(), the description of how to transform one tree
  * into another can be used to build an in-memory linked-list tree,
  * which each node representing a repository node that was changed as a
- * result of having @c svn_repos_dir_delta() drive that editor.
+ * result of having svn_repos_dir_delta() drive that editor.
  */
 
 /** A node in the repository. */
@@ -1070,11 +1305,11 @@ typedef struct svn_repos_node_t
 
 
 /** Set @a *editor and @a *edit_baton to an editor that, when driven by
- * @c svn_repos_dir_delta(), builds an <tt>svn_repos_node_t *</tt> tree
+ * svn_repos_dir_delta(), builds an <tt>svn_repos_node_t *</tt> tree
  * representing the delta from @a base_root to @a root in @a repos's 
  * filesystem.
  *  
- * Invoke @c svn_repos_node_from_baton() on @a edit_baton to obtain the root
+ * Invoke svn_repos_node_from_baton() on @a edit_baton to obtain the root
  * node afterwards.
  *
  * Note that the delta includes "bubbled-up" directories; that is,
@@ -1092,8 +1327,8 @@ svn_error_t *svn_repos_node_editor (const svn_delta_editor_t **editor,
                                     apr_pool_t *pool);
 
 /** Return the root node of the linked-list tree generated by driving
- * the editor created by @c svn_repos_node_editor() with
- * @c svn_repos_dir_delta(), which is stored in @a edit_baton.  This is 
+ * the editor created by svn_repos_node_editor() with
+ * svn_repos_dir_delta(), which is stored in @a edit_baton.  This is 
  * only really useful if used *after* the editor drive is completed.
  */
 svn_repos_node_t *svn_repos_node_from_baton (void *edit_baton);
@@ -1166,9 +1401,7 @@ enum svn_repos_load_uuid
   svn_repos_load_uuid_force
 };
 
-/** 
- * @since New in 1.1.
- *
+/**
  * Dump the contents of the filesystem within already-open @a repos into
  * writable @a dumpstream.  Begin at revision @a start_rev, and dump every
  * revision up through @a end_rev.  Use @a pool for all allocation.  If
@@ -1193,6 +1426,8 @@ enum svn_repos_load_uuid
  * If @a cancel_func is not @c NULL, it is called periodically with
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the dump.
+ * 
+ * @since New in 1.1.
  */
 svn_error_t *svn_repos_dump_fs2 (svn_repos_t *repos,
                                  svn_stream_t *dumpstream,
@@ -1207,10 +1442,10 @@ svn_error_t *svn_repos_dump_fs2 (svn_repos_t *repos,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0 API.
- *
- * Similar to @c svn_repos_dump_fs2, but with the @a use_deltas
+ * Similar to svn_repos_dump_fs2(), but with the @a use_deltas
  * parameter always set to @c FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
                                 svn_stream_t *dumpstream,
@@ -1223,9 +1458,7 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
                                 apr_pool_t *pool);
 
 
-/** 
- * @since New in 1.2.
- *
+/**
  * Read and parse dumpfile-formatted @a dumpstream, reconstructing
  * filesystem revisions in already-open @a repos, handling uuids
  * in accordance with @a uuid_action.
@@ -1259,6 +1492,8 @@ svn_error_t *svn_repos_dump_fs (svn_repos_t *repos,
  * If @a cancel_func is not @c NULL, it is called periodically with
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the load.
+ * 
+ * @since New in 1.2.
  */
 svn_error_t *svn_repos_load_fs2 (svn_repos_t *repos,
                                  svn_stream_t *dumpstream,
@@ -1272,10 +1507,10 @@ svn_error_t *svn_repos_load_fs2 (svn_repos_t *repos,
                                  apr_pool_t *pool);
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0 API.
- *
- * Similar to @c svn_repos_load_fs2, but with @a use_pre_commit_hook and
+ * Similar to svn_repos_load_fs2(), but with @a use_pre_commit_hook and
  * @a use_post_commit_hook always @c FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 svn_error_t *svn_repos_load_fs (svn_repos_t *repos,
                                 svn_stream_t *dumpstream,
@@ -1287,10 +1522,11 @@ svn_error_t *svn_repos_load_fs (svn_repos_t *repos,
                                 apr_pool_t *pool);
 
 
-/** 
+/**
+ * A vtable that is driven by svn_repos_parse_dumpstream2().
+ * 
  * @since New in 1.1.
- *
- * A vtable that is driven by @c svn_repos_parse_dumpstream2. */
+ */
 typedef struct svn_repos_parse_fns2_t
 {
   /** The parser has discovered a new revision record within the
@@ -1315,9 +1551,9 @@ typedef struct svn_repos_parse_fns2_t
 
   /** The parser has discovered a new node record within the current
    * revision represented by @a revision_baton.  All the headers are
-   * placed in @a headers as above, allocated in @a pool.  The 
-   * @a node_baton received back is allocated in @a pool and represents 
-   * the node.
+   * placed in @a headers (as with @c new_revision_record), allocated in
+   * @a pool.  The @a node_baton received back is allocated in @a pool
+   * and represents the node.
    */
   svn_error_t *(*new_node_record) (void **node_baton,
                                    apr_hash_t *headers,
@@ -1342,7 +1578,7 @@ typedef struct svn_repos_parse_fns2_t
 
   /** For a given @a node_baton, receive a writable @a stream capable of
    * receiving the node's fulltext.  After writing the fulltext, call
-   * the stream's @c close() function.
+   * the stream's close() function.
    *
    * If a @c NULL is returned instead of a stream, the vtable is
    * indicating that no text is desired, and the parser will not
@@ -1375,13 +1611,13 @@ typedef struct svn_repos_parse_fns2_t
    */
   svn_error_t *(*close_revision) (void *revision_baton);
 
-} svn_repos_parser_fns2_t;
+} svn_repos_parse_fns2_t;
+
+/** @deprecated Provided for backward compatibility with the 1.2 API. */
+typedef svn_repos_parse_fns2_t svn_repos_parser_fns2_t;
 
 
-
-/** 
- * @since New in 1.1.
- *
+/**
  * Read and parse dumpfile-formatted @a stream, calling callbacks in
  * @a parse_fns/@a parse_baton, and using @a pool for allocations.
  *
@@ -1403,19 +1639,19 @@ typedef struct svn_repos_parse_fns2_t
  *
  * This is enough knowledge to make it easy on vtable implementors,
  * but still allow expansion of the format:  most headers are ignored.
+ * 
+ * @since New in 1.1.
  */
 svn_error_t *
 svn_repos_parse_dumpstream2 (svn_stream_t *stream,
-                             const svn_repos_parser_fns2_t *parse_fns,
+                             const svn_repos_parse_fns2_t *parse_fns,
                              void *parse_baton,
                              svn_cancel_func_t cancel_func,
                              void *cancel_baton,
                              apr_pool_t *pool);
 
 
-/** 
- * @since New in 1.1.
- *
+/**
  * Set @a *parser and @a *parse_baton to a vtable parser which commits new
  * revisions to the fs in @a repos.  The constructed parser will treat
  * UUID records in a manner consistent with @a uuid_action.  Use @a pool
@@ -1431,9 +1667,11 @@ svn_repos_parse_dumpstream2 (svn_stream_t *stream,
  *
  * Print all parsing feedback to @a outstream (if non-@c NULL).
  *
+ * 
+ * @since New in 1.1.
  */
 svn_error_t *
-svn_repos_get_fs_build_parser2 (const svn_repos_parser_fns2_t **parser,
+svn_repos_get_fs_build_parser2 (const svn_repos_parse_fns2_t **parser,
                                 void **parse_baton,
                                 svn_repos_t *repos,
                                 svn_boolean_t use_history,
@@ -1444,43 +1682,53 @@ svn_repos_get_fs_build_parser2 (const svn_repos_parser_fns2_t **parser,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0 API.
- *
- * A vtable that is driven by @c svn_repos_parse_dumpstream.  Lacks
+ * A vtable that is driven by svn_repos_parse_dumpstream().
+ * Similar to svn_repos_parse_fns2_t except that it lacks
  * the delete_node_property and apply_textdelta callbacks.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 typedef struct svn_repos_parse_fns_t
 {
+  /** Same as the corresponding field in @c svn_repos_parse_fns2_t. */
   svn_error_t *(*new_revision_record) (void **revision_baton,
                                        apr_hash_t *headers,
                                        void *parse_baton,
                                        apr_pool_t *pool);
+  /** Same as the corresponding field in @c svn_repos_parse_fns2_t. */
   svn_error_t *(*uuid_record) (const char *uuid,
                                void *parse_baton,
                                apr_pool_t *pool);
+  /** Same as the corresponding field in @c svn_repos_parse_fns2_t. */
   svn_error_t *(*new_node_record) (void **node_baton,
                                    apr_hash_t *headers,
                                    void *revision_baton,
                                    apr_pool_t *pool);
+  /** Same as the corresponding field in @c svn_repos_parse_fns2_t. */
   svn_error_t *(*set_revision_property) (void *revision_baton,
                                          const char *name,
                                          const svn_string_t *value);
+  /** Same as the corresponding field in @c svn_repos_parse_fns2_t. */
   svn_error_t *(*set_node_property) (void *node_baton,
                                      const char *name,
                                      const svn_string_t *value);
+  /** Same as the corresponding field in @c svn_repos_parse_fns2_t. */
   svn_error_t *(*remove_node_props) (void *node_baton);
+  /** Same as the corresponding field in @c svn_repos_parse_fns2_t. */
   svn_error_t *(*set_fulltext) (svn_stream_t **stream,
                                 void *node_baton);
+  /** Same as the corresponding field in @c svn_repos_parse_fns2_t. */
   svn_error_t *(*close_node) (void *node_baton);
+  /** Same as the corresponding field in @c svn_repos_parse_fns2_t. */
   svn_error_t *(*close_revision) (void *revision_baton);
 } svn_repos_parser_fns_t;
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0 API.
- *
- * Similar to @c svn_repos_parse_dumpstream2, but uses the more limited
+ * Similar to svn_repos_parse_dumpstream2(), but uses the more limited
  * @c svn_repos_parser_fns_t vtable type.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 svn_error_t *
 svn_repos_parse_dumpstream (svn_stream_t *stream,
@@ -1492,10 +1740,10 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.0 API.
- *
- * Similar to @c svn_repos_get_fs_build_parser2, but yields the more
+ * Similar to svn_repos_get_fs_build_parser2(), but yields the more
  * limited svn_repos_parser_fns_t vtable type.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
  */
 svn_error_t *
 svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser,
@@ -1509,6 +1757,41 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser,
 
 
 /** @} */
+
+/** A data type which stores the authz information. 
+ *
+ * @since New in 1.3.
+ */
+typedef struct svn_authz_t svn_authz_t;
+
+/** Read authz configuration data from @a file (a file or registry
+ * path) into @a *authz_p, allocated in @a pool.
+ *
+ * If @a file is not a valid authz rule file, then return
+ * SVN_AUTHZ_INVALID_CONFIG.  The contents of @a *authz_p is then
+ * undefined.  If @a must_exist is TRUE, a missing authz file is also
+ * an error.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_repos_authz_read (svn_authz_t **authz_p, const char *file,
+                      svn_boolean_t must_exist, apr_pool_t *pool);
+
+/**
+ * Check whether @a user can access @a path in the repository @a
+ * repos_name with the @a required_access.  @a authz lists the ACLs to
+ * check against.  Set @a *access_granted to indicate if the requested
+ * access is granted.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_repos_authz_check_access (svn_authz_t *authz, const char *repos_name,
+                              const char *path, const char *user,
+                              svn_repos_authz_access_t required_access,
+                              svn_boolean_t *access_granted,
+                              apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

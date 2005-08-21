@@ -24,6 +24,7 @@
 
 #include "wc.h"
 #include "entries.h"
+#include "lock.h"
 #include "props.h"
 
 #include "svn_private_config.h"
@@ -47,7 +48,21 @@ relocate_entry (svn_wc_adm_access_t *adm_access,
 {
   svn_wc_entry_t entry2;
   apr_uint32_t flags = 0;
-  int from_len = strlen (from);
+  apr_size_t from_len = strlen (from);
+
+  if (entry->repos)
+    {
+      /* We can't relocate beyond the repository root.  Do no URL rewriting
+         in this case. */
+      if (from_len > strlen (entry->repos))
+        return SVN_NO_ERROR;
+      if (strncmp (from, entry->repos, from_len) == 0)
+        {
+          entry2.repos = apr_psprintf (svn_wc_adm_access_pool (adm_access),
+                                       "%s%s", to, entry->repos + from_len);
+          flags |= SVN_WC__ENTRY_MODIFY_REPOS;
+        }
+    }
 
   if (entry->url && ! strncmp (entry->url, from, from_len))
     {

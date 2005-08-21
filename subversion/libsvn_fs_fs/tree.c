@@ -43,6 +43,7 @@
 #include "err.h"
 #include "key-gen.h"
 #include "dag.h"
+#include "lock.h"
 #include "tree.h"
 #include "revs-txns.h"
 #include "fs_fs.h"
@@ -111,7 +112,9 @@ typedef struct
 
   /* Cache structure for mapping const char * PATH to const char
      *COPYFROM_STRING, so that paths_changed can remember all the
-     copyfrom information in the changes file. */
+     copyfrom information in the changes file.
+     COPYFROM_STRING has the format "REV PATH", or is the empty string if
+     the path was added without history. */
   apr_hash_t *copyfrom_cache;
   
 } fs_root_data_t;
@@ -125,7 +128,7 @@ static svn_fs_root_t *make_revision_root (svn_fs_t *fs, svn_revnum_t rev,
                                           apr_pool_t *pool);
 
 static svn_fs_root_t *make_txn_root (svn_fs_t *fs, const char *txn,
-                                     apr_pool_t *pool);
+                                     apr_uint32_t flags, apr_pool_t *pool);
 
 
 /*** Node Caching in the Roots. ***/
@@ -251,8 +254,23 @@ svn_fs_fs__txn_root (svn_fs_root_t **root_p,
                      apr_pool_t *pool)
 {
   svn_fs_root_t *root;
+  apr_uint32_t flags = 0;
+  apr_hash_t *txnprops;
 
-  root = make_txn_root (txn->fs, txn->id, pool);
+  /* Look for the temporary txn props representing 'flags'. */
+  SVN_ERR (svn_fs_fs__txn_proplist (&txnprops, txn, pool));
+  if (txnprops)
+    {
+      if (apr_hash_get (txnprops, SVN_FS_PROP_TXN_CHECK_OOD,
+                        APR_HASH_KEY_STRING))
+        flags |= SVN_FS_TXN_CHECK_OOD;
+      
+      if (apr_hash_get (txnprops, SVN_FS_PROP_TXN_CHECK_LOCKS,
+                        APR_HASH_KEY_STRING))
+        flags |= SVN_FS_TXN_CHECK_LOCKS;
+    }
+  
+  root = make_txn_root (txn->fs, txn->id, flags, pool);
 
   *root_p = root;
   
@@ -941,15 +959,11 @@ fs_node_id (const svn_fs_id_t **id_p,
 }
 
 
-/* Set *REVISION to the revision in which PATH under ROOT was created.
-   Use POOL for any temporary allocations.  If PATH is in an
-   uncommitted transaction, *REVISION will be set to
-   SVN_INVALID_REVNUM. */
-static svn_error_t *
-fs_node_created_rev (svn_revnum_t *revision,
-                     svn_fs_root_t *root,
-                     const char *path,
-                     apr_pool_t *pool)
+svn_error_t *
+svn_fs_fs__node_created_rev (svn_revnum_t *revision,
+                             svn_fs_root_t *root,
+                             const char *path,
+                             apr_pool_t *pool)
 {
   dag_node_t *node;
 
@@ -1001,11 +1015,11 @@ node_kind (svn_node_kind_t *kind_p,
 /* Set *KIND_P to the type of node present at PATH under ROOT.  If
    PATH does not exist under ROOT, set *KIND_P to svn_node_none.  Use
    POOL for temporary allocation. */
-static svn_error_t *
-fs_check_path (svn_node_kind_t *kind_p,
-               svn_fs_root_t *root,
-               const char *path,
-               apr_pool_t *pool)
+svn_error_t *
+svn_fs_fs__check_path (svn_node_kind_t *kind_p,
+                       svn_fs_root_t *root,
+                       const char *path,
+                       apr_pool_t *pool)
 {
   svn_error_t *err = node_kind (kind_p, root, path, pool);
   if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND))
@@ -1085,6 +1099,13 @@ fs_change_node_prop (svn_fs_root_t *root,
   txn_id = root->txn;
 
   SVN_ERR (open_path (&parent_path, root, path, 0, txn_id, pool));
+
+  /* Check (non-recursively) to see if path is locked; if so, check
+     that we can use it. */
+  if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
+    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, FALSE, FALSE,
+                                                pool));
+
   SVN_ERR (make_path_mutable (root, parent_path, path, pool));
   SVN_ERR (svn_fs_fs__dag_get_proplist (&proplist, parent_path->node, pool));
 
@@ -1131,7 +1152,7 @@ fs_props_changed (svn_boolean_t *changed_p,
   if (root1->fs != root2->fs)
     return svn_error_create
       (SVN_ERR_FS_GENERAL, NULL,
-       _("Asking props changed in two different filesystems"));
+       _("Cannot compare property value between two different filesystems"));
   
   SVN_ERR (get_dag (&node1, root1, path1, pool));
   SVN_ERR (get_dag (&node2, root2, path2, pool));
@@ -1511,7 +1532,7 @@ merge (svn_stringbuf_t *conflict_p,
                (target, s_entry->name, s_entry->id, s_entry->kind,
                 txn_id, iterpool));
     }
-  apr_pool_destroy (iterpool);
+  svn_pool_destroy (iterpool);
 
   SVN_ERR (svn_fs_fs__dag_get_predecessor_count (&pred_count, source, pool));
   SVN_ERR (update_ancestry (fs, source_id, target_id, txn_id, target_path,
@@ -1816,6 +1837,13 @@ fs_make_dir (svn_fs_root_t *root,
   SVN_ERR (open_path (&parent_path, root, path, open_path_last_optional,
                       txn_id, pool));
 
+  /* Check (recursively) to see if some lock is 'reserving' a path at
+     that location, or even some child-path; if so, check that we can
+     use it. */
+  if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
+    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, TRUE, FALSE,
+                                                pool));
+
   /* If there's already a sub-directory by that name, complain.  This
      also catches the case of trying to make a subdirectory named `/'.  */
   if (parent_path->node)
@@ -1862,6 +1890,12 @@ fs_delete_node (svn_fs_root_t *root,
   if (! parent_path->parent)
     return svn_error_create (SVN_ERR_FS_ROOT_DIR, NULL,
                              _("The root directory cannot be deleted"));
+
+  /* Check to see if path (or any child thereof) is locked; if so,
+     check that we can use the existing lock(s). */
+  if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
+    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, TRUE, FALSE,
+                                                pool));
 
   /* Make the parent directory mutable, and do the deletion.  */
   SVN_ERR (make_path_mutable (root, parent_path->parent, path, pool));
@@ -1913,6 +1947,12 @@ copy_helper (svn_fs_root_t *from_root,
   SVN_ERR (open_path (&to_parent_path, to_root, to_path, 
                       open_path_last_optional, txn_id, pool));
 
+  /* Check to see if path (or any child thereof) is locked; if so,
+     check that we can use the existing lock(s). */
+  if (to_root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
+    SVN_ERR (svn_fs_fs__allow_locked_operation (to_path, to_root->fs, 
+                                                TRUE, FALSE, pool));
+  
   /* If the destination node already exists as the same node as the
      source (in other words, this operation would result in nothing
      happening at all), just do nothing an return successfully,
@@ -1949,6 +1989,10 @@ copy_helper (svn_fs_root_t *from_root,
                                     from_root->rev,
                                     from_canonpath,
                                     txn_id, pool));
+
+      if (kind == svn_fs_path_change_replace)
+        dag_node_cache_invalidate (to_root, parent_path_path (to_parent_path,
+                                                              pool));
 
       /* Make a record of this modification in the changes table. */
       SVN_ERR (get_dag (&new_node, to_root, to_path, pool));
@@ -2081,6 +2125,12 @@ fs_make_file (svn_fs_root_t *root,
      This also catches the case of trying to make a file named `/'.  */
   if (parent_path->node)
     return already_exists (root, path);
+
+  /* Check (non-recursively) to see if path is locked;  if so, check
+     that we can use it. */
+  if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
+    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, FALSE, FALSE,
+                                                pool));
 
   /* Create the file.  */
   SVN_ERR (make_path_mutable (root, parent_path->parent, path, pool));
@@ -2287,6 +2337,12 @@ apply_textdelta (void *baton, apr_pool_t *pool)
      if the node for which we are searching doesn't exist. */
   SVN_ERR (open_path (&parent_path, tb->root, tb->path, 0, txn_id, pool));
 
+  /* Check (non-recursively) to see if path is locked; if so, check
+     that we can use it. */
+  if (tb->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
+    SVN_ERR (svn_fs_fs__allow_locked_operation (tb->path, tb->root->fs, 
+                                                FALSE, FALSE, pool));
+
   /* Now, make sure this path is mutable. */
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, pool));
   tb->node = parent_path->node;
@@ -2464,6 +2520,12 @@ apply_text (void *baton, apr_pool_t *pool)
      if the node for which we are searching doesn't exist. */
   SVN_ERR (open_path (&parent_path, tb->root, tb->path, 0, txn_id, pool));
 
+  /* Check (non-recursively) to see if path is locked; if so, check
+     that we can use it. */
+  if (tb->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
+    SVN_ERR (svn_fs_fs__allow_locked_operation (tb->path, tb->root->fs,
+                                                FALSE, FALSE, pool));
+
   /* Now, make sure this path is mutable. */
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, pool));
   tb->node = parent_path->node;
@@ -2534,18 +2596,18 @@ fs_contents_changed (svn_boolean_t *changed_p,
   if (root1->fs != root2->fs)
     return svn_error_create
       (SVN_ERR_FS_GENERAL, NULL,
-       _("Asking contents changed in two different filesystems"));
+       _("Cannot compare file contents between two different filesystems"));
   
   /* Check that both paths are files. */
   {
     svn_node_kind_t kind;
 
-    SVN_ERR (fs_check_path (&kind, root1, path1, pool));
+    SVN_ERR (svn_fs_fs__check_path (&kind, root1, path1, pool));
     if (kind != svn_node_file)
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path1);
       
-    SVN_ERR (fs_check_path (&kind, root2, path2, pool));
+    SVN_ERR (svn_fs_fs__check_path (&kind, root2, path2, pool));
     if (kind != svn_node_file)
       return svn_error_createf
         (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path2);
@@ -2660,7 +2722,7 @@ fs_node_history (svn_fs_history_t **history_p,
     return svn_error_create (SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
 
   /* And we require that the path exist in the root. */
-  SVN_ERR (fs_check_path (&kind, root, path, pool));
+  SVN_ERR (svn_fs_fs__check_path (&kind, root, path, pool));
   if (kind == svn_node_none)
     return not_found (root, path);
 
@@ -2673,8 +2735,8 @@ fs_node_history (svn_fs_history_t **history_p,
 }
 
 /* Find the youngest copyroot for path PARENT_PATH or its parents in
-   filesystem FS, and store the node-id for this copyroot in
-   *COPYROOT_P.  Perform all allocations in POOL. */
+   filesystem FS, and store the copyroot in *REV_P and *PATH_P.
+   Perform all allocations in POOL. */
 static svn_error_t *
 find_youngest_copyroot (svn_revnum_t *rev_p,
                         const char **path_p,
@@ -2987,10 +3049,10 @@ assemble_history (svn_fs_t *fs,
 /* The vtable associated with root objects. */
 static root_vtable_t root_vtable = {
   fs_paths_changed,
-  fs_check_path,
+  svn_fs_fs__check_path,
   fs_node_history,
   fs_node_id,
-  fs_node_created_rev,
+  svn_fs_fs__node_created_rev,
   fs_node_created_path,
   fs_delete_node,
   fs_copied_from,
@@ -3059,15 +3121,18 @@ make_revision_root (svn_fs_t *fs,
 
 
 /* Construct a root object referring to the root of the transaction
-   named TXN in FS.  Create the new root in POOL.  */
+   named TXN in FS, with FLAGS to describe transaction's behavior.
+   Create the new root in POOL.  */
 static svn_fs_root_t *
 make_txn_root (svn_fs_t *fs,
                const char *txn,
+               apr_uint32_t flags,
                apr_pool_t *pool)
 {
   svn_fs_root_t *root = make_root (fs, pool);
   root->is_txn_root = TRUE;
   root->txn = apr_pstrdup (root->pool, txn);
+  root->txn_flags = flags;
 
   return root;
 }

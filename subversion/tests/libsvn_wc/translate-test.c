@@ -33,9 +33,9 @@
 #include <apr_general.h>
 #include <apr_file_io.h>
 #include <svn_wc.h>
-#include "svn_test.h"
 #include "svn_subst.h"
 
+#include "../svn_test.h"
 
 
 /*** Helpers ***/
@@ -309,6 +309,7 @@ substitute_and_verify (const char *test_name,
       else
         {
           svn_error_clear (err);
+          SVN_ERR (remove_file (src_fname, pool));
           return SVN_NO_ERROR;
         }
 
@@ -661,6 +662,7 @@ substitute_and_verify (const char *test_name,
 static svn_error_t *
 noop (const char **msg,
       svn_boolean_t msg_only,
+      svn_test_opts_t *opts,
       apr_pool_t *pool)
 {
   *msg = "no conversions";
@@ -691,6 +693,7 @@ noop (const char **msg,
 static svn_error_t *
 crlf_to_crlf (const char **msg,
               svn_boolean_t msg_only,
+              svn_test_opts_t *opts,
               apr_pool_t *pool)
 {
   *msg = "convert CRLF to CRLF";
@@ -709,6 +712,7 @@ crlf_to_crlf (const char **msg,
 static svn_error_t *
 lf_to_crlf (const char **msg,
             svn_boolean_t msg_only,
+            svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
   *msg = "convert LF to CRLF";
@@ -726,6 +730,7 @@ lf_to_crlf (const char **msg,
 static svn_error_t *
 cr_to_crlf (const char **msg,
             svn_boolean_t msg_only,
+            svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
   *msg = "convert CR to CRLF";
@@ -743,6 +748,7 @@ cr_to_crlf (const char **msg,
 static svn_error_t *
 mixed_to_crlf (const char **msg,
                svn_boolean_t msg_only,
+               svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
   *msg = "convert mixed line endings to CRLF";
@@ -761,6 +767,7 @@ mixed_to_crlf (const char **msg,
 static svn_error_t *
 lf_to_lf (const char **msg,
           svn_boolean_t msg_only,
+          svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
   *msg = "convert LF to LF";
@@ -778,6 +785,7 @@ lf_to_lf (const char **msg,
 static svn_error_t *
 crlf_to_lf (const char **msg,
             svn_boolean_t msg_only,
+            svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
   *msg = "convert CRLF to LF";
@@ -795,6 +803,7 @@ crlf_to_lf (const char **msg,
 static svn_error_t *
 cr_to_lf (const char **msg,
           svn_boolean_t msg_only,
+          svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
   *msg = "convert CR to LF";
@@ -812,6 +821,7 @@ cr_to_lf (const char **msg,
 static svn_error_t *
 mixed_to_lf (const char **msg,
              svn_boolean_t msg_only,
+             svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
   *msg = "convert mixed line endings to LF";
@@ -829,6 +839,7 @@ mixed_to_lf (const char **msg,
 static svn_error_t *
 crlf_to_cr (const char **msg,
             svn_boolean_t msg_only,
+            svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
   *msg = "convert CRLF to CR";
@@ -846,6 +857,7 @@ crlf_to_cr (const char **msg,
 static svn_error_t *
 lf_to_cr (const char **msg,
           svn_boolean_t msg_only,
+          svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
   *msg = "convert LF to CR";
@@ -863,6 +875,7 @@ lf_to_cr (const char **msg,
 static svn_error_t *
 cr_to_cr (const char **msg,
           svn_boolean_t msg_only,
+          svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
   *msg = "convert CR to CR";
@@ -880,6 +893,7 @@ cr_to_cr (const char **msg,
 static svn_error_t *
 mixed_to_cr (const char **msg,
              svn_boolean_t msg_only,
+             svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
   *msg = "convert mixed line endings to CR";
@@ -897,6 +911,7 @@ mixed_to_cr (const char **msg,
 static svn_error_t *
 mixed_no_repair (const char **msg,
                  svn_boolean_t msg_only,
+                 svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
   *msg = "keep mixed line endings without repair flag";
@@ -922,6 +937,7 @@ mixed_no_repair (const char **msg,
 static svn_error_t *
 expand_author (const char **msg,
                svn_boolean_t msg_only,
+               svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
   *msg = "expand author";
@@ -942,6 +958,7 @@ expand_author (const char **msg,
 static svn_error_t *
 expand_date (const char **msg,
              svn_boolean_t msg_only,
+             svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
   *msg = "expand date";
@@ -964,6 +981,7 @@ expand_date (const char **msg,
 static svn_error_t *
 expand_author_date (const char **msg,
                     svn_boolean_t msg_only,
+                    svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
   *msg = "expand author and date";
@@ -986,6 +1004,7 @@ expand_author_date (const char **msg,
 static svn_error_t *
 expand_author_rev (const char **msg,
                    svn_boolean_t msg_only,
+                   svn_test_opts_t *opts,
                    apr_pool_t *pool)
 {
   *msg = "expand author and rev";
@@ -1008,6 +1027,7 @@ expand_author_rev (const char **msg,
 static svn_error_t *
 expand_rev (const char **msg,
             svn_boolean_t msg_only,
+            svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
   *msg = "expand rev";
@@ -1030,6 +1050,7 @@ expand_rev (const char **msg,
 static svn_error_t *
 expand_rev_url (const char **msg,
                 svn_boolean_t msg_only,
+                svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
   *msg = "expand rev and url";
@@ -1052,6 +1073,7 @@ expand_rev_url (const char **msg,
 static svn_error_t *
 expand_author_date_rev_url (const char **msg,
                             svn_boolean_t msg_only,
+                            svn_test_opts_t *opts,
                             apr_pool_t *pool)
 {
   *msg = "expand author, date, rev, and url";
@@ -1085,6 +1107,7 @@ expand_author_date_rev_url (const char **msg,
 static svn_error_t *
 lf_to_crlf_expand_author (const char **msg,
                           svn_boolean_t msg_only,
+                          svn_test_opts_t *opts,
                           apr_pool_t *pool)
 {
   *msg = "lf_to_crlf; expand author";
@@ -1103,6 +1126,7 @@ lf_to_crlf_expand_author (const char **msg,
 static svn_error_t *
 mixed_to_lf_expand_author_date (const char **msg,
                                 svn_boolean_t msg_only,
+                                svn_test_opts_t *opts,
                                 apr_pool_t *pool)
 {
   *msg = "mixed_to_lf; expand author and date";
@@ -1121,6 +1145,7 @@ mixed_to_lf_expand_author_date (const char **msg,
 static svn_error_t *
 crlf_to_cr_expand_author_rev (const char **msg,
                               svn_boolean_t msg_only,
+                              svn_test_opts_t *opts,
                               apr_pool_t *pool)
 {
   *msg = "crlf_to_cr; expand author and rev";
@@ -1139,6 +1164,7 @@ crlf_to_cr_expand_author_rev (const char **msg,
 static svn_error_t *
 cr_to_crlf_expand_rev (const char **msg,
                        svn_boolean_t msg_only,
+                       svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
   *msg = "cr_to_crlf; expand rev";
@@ -1157,6 +1183,7 @@ cr_to_crlf_expand_rev (const char **msg,
 static svn_error_t *
 cr_to_crlf_expand_rev_url (const char **msg,
                            svn_boolean_t msg_only,
+                           svn_test_opts_t *opts,
                            apr_pool_t *pool)
 {
   *msg = "cr_to_crlf; expand rev and url";
@@ -1175,6 +1202,7 @@ cr_to_crlf_expand_rev_url (const char **msg,
 static svn_error_t *
 mixed_to_crlf_expand_author_date_rev_url (const char **msg,
                                           svn_boolean_t msg_only,
+                                          svn_test_opts_t *opts,
                                           apr_pool_t *pool)
 {
   *msg = "mixed_to_crlf; expand author, date, rev, and url";
@@ -1201,6 +1229,7 @@ mixed_to_crlf_expand_author_date_rev_url (const char **msg,
 static svn_error_t *
 unexpand_author (const char **msg,
                  svn_boolean_t msg_only,
+                 svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
   *msg = "unexpand author";
@@ -1221,6 +1250,7 @@ unexpand_author (const char **msg,
 static svn_error_t *
 unexpand_date (const char **msg,
                svn_boolean_t msg_only,
+               svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
   *msg = "unexpand date";
@@ -1243,6 +1273,7 @@ unexpand_date (const char **msg,
 static svn_error_t *
 unexpand_author_date (const char **msg,
                       svn_boolean_t msg_only,
+                      svn_test_opts_t *opts,
                       apr_pool_t *pool)
 {
   *msg = "unexpand author and date";
@@ -1265,6 +1296,7 @@ unexpand_author_date (const char **msg,
 static svn_error_t *
 unexpand_author_rev (const char **msg,
                      svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
                      apr_pool_t *pool)
 {
   *msg = "unexpand author and rev";
@@ -1287,6 +1319,7 @@ unexpand_author_rev (const char **msg,
 static svn_error_t *
 unexpand_rev (const char **msg,
               svn_boolean_t msg_only,
+              svn_test_opts_t *opts,
               apr_pool_t *pool)
 {
   *msg = "unexpand rev";
@@ -1309,6 +1342,7 @@ unexpand_rev (const char **msg,
 static svn_error_t *
 unexpand_rev_url (const char **msg,
                   svn_boolean_t msg_only,
+                  svn_test_opts_t *opts,
                   apr_pool_t *pool)
 {
   *msg = "unexpand rev and url";
@@ -1331,6 +1365,7 @@ unexpand_rev_url (const char **msg,
 static svn_error_t *
 unexpand_author_date_rev_url (const char **msg,
                               svn_boolean_t msg_only,
+                              svn_test_opts_t *opts,
                               apr_pool_t *pool)
 {
   *msg = "unexpand author, date, rev, and url";
@@ -1364,6 +1399,7 @@ unexpand_author_date_rev_url (const char **msg,
 static svn_error_t *
 lf_to_crlf_unexpand_author (const char **msg,
                             svn_boolean_t msg_only,
+                            svn_test_opts_t *opts,
                             apr_pool_t *pool)
 {
   *msg = "lf_to_crlf; unexpand author";
@@ -1382,6 +1418,7 @@ lf_to_crlf_unexpand_author (const char **msg,
 static svn_error_t *
 mixed_to_lf_unexpand_author_date (const char **msg,
                                   svn_boolean_t msg_only,
+                                  svn_test_opts_t *opts,
                                   apr_pool_t *pool)
 {
   *msg = "mixed_to_lf; unexpand author and date";
@@ -1400,6 +1437,7 @@ mixed_to_lf_unexpand_author_date (const char **msg,
 static svn_error_t *
 crlf_to_cr_unexpand_author_rev (const char **msg,
                                 svn_boolean_t msg_only,
+                                svn_test_opts_t *opts,
                                 apr_pool_t *pool)
 {
   *msg = "crlf_to_cr; unexpand author and rev";
@@ -1418,6 +1456,7 @@ crlf_to_cr_unexpand_author_rev (const char **msg,
 static svn_error_t *
 cr_to_crlf_unexpand_rev (const char **msg,
                          svn_boolean_t msg_only,
+                         svn_test_opts_t *opts,
                          apr_pool_t *pool)
 {
   *msg = "cr_to_crlf; unexpand rev";
@@ -1436,6 +1475,7 @@ cr_to_crlf_unexpand_rev (const char **msg,
 static svn_error_t *
 cr_to_crlf_unexpand_rev_url (const char **msg,
                              svn_boolean_t msg_only,
+                             svn_test_opts_t *opts,
                              apr_pool_t *pool)
 {
   *msg = "cr_to_crlf; unexpand rev and url";
@@ -1454,6 +1494,7 @@ cr_to_crlf_unexpand_rev_url (const char **msg,
 static svn_error_t *
 mixed_to_crlf_unexpand_author_date_rev_url (const char **msg,
                                             svn_boolean_t msg_only,
+                                            svn_test_opts_t *opts,
                                             apr_pool_t *pool)
 {
   *msg = "mixed_to_crlf; unexpand author, date, rev, url";

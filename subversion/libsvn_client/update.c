@@ -50,10 +50,11 @@ svn_client__update_internal (svn_revnum_t *result_rev,
 {
   const svn_delta_editor_t *update_editor;
   void *update_edit_baton;
-  const svn_ra_reporter_t *reporter;
+  const svn_ra_reporter2_t *reporter;
   void *report_baton;
   const svn_wc_entry_t *entry;
   const char *anchor, *target;
+  const char *repos_root;
   svn_error_t *err;
   svn_revnum_t revnum;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
@@ -102,25 +103,36 @@ svn_client__update_internal (svn_revnum_t *result_rev,
                                 SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE));
 
   /* Open an RA session for the URL */
-  SVN_ERR (svn_client__open_ra_session (&ra_session, entry->url, anchor, 
-                                        adm_access, NULL, TRUE, TRUE, 
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, entry->url,
+                                                 anchor, adm_access,
+                                                 NULL, TRUE, TRUE, 
+                                                 ctx, pool));
 
   /* ### todo: shouldn't svn_client__get_revision_number be able
      to take a URL as easily as a local path?  */
   SVN_ERR (svn_client__get_revision_number
            (&revnum, ra_session, revision, path, pool));
 
+  /* Take the chance to set the repository root on the target.
+     Why do we bother doing this for old working copies?
+     There are two reasons: first, it's nice to get this information into
+     old WCs so they are "ready" when we start depending on it.  (We can
+     never *depend* upon it in a strict sense, however.)
+     Second, if people mix old and new clients, this information will
+     be dropped by the old clients, which might be annoying. */
+  SVN_ERR (svn_ra_get_repos_root (ra_session, &repos_root, pool));
+  SVN_ERR (svn_wc_maybe_set_repos_root (dir_access, path, repos_root, pool));
+
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
-  SVN_ERR (svn_wc_get_update_editor (&revnum, adm_access, target,
-                                     use_commit_times, recurse,
-                                     ctx->notify_func, ctx->notify_baton,
-                                     ctx->cancel_func, ctx->cancel_baton,
-                                     diff3_cmd,
-                                     &update_editor, &update_edit_baton,
-                                     traversal_info,
-                                     pool));
+  SVN_ERR (svn_wc_get_update_editor2 (&revnum, adm_access, target,
+                                      use_commit_times, recurse,
+                                      ctx->notify_func2, ctx->notify_baton2,
+                                      ctx->cancel_func, ctx->cancel_baton,
+                                      diff3_cmd,
+                                      &update_editor, &update_edit_baton,
+                                      traversal_info,
+                                      pool));
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision.  */
@@ -134,10 +146,10 @@ svn_client__update_internal (svn_revnum_t *result_rev,
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
      update_editor will be driven by svn_repos_dir_delta. */
-  err = svn_wc_crawl_revisions (path, dir_access, reporter, report_baton,
-                                TRUE, recurse, use_commit_times,
-                                ctx->notify_func, ctx->notify_baton,
-                                traversal_info, pool);
+  err = svn_wc_crawl_revisions2 (path, dir_access, reporter, report_baton,
+                                 TRUE, recurse, use_commit_times,
+                                 ctx->notify_func2, ctx->notify_baton2,
+                                 traversal_info, pool);
       
   if (err)
     {
@@ -162,15 +174,17 @@ svn_client__update_internal (svn_revnum_t *result_rev,
   SVN_ERR (svn_wc_adm_close (adm_access));
 
   /* Let everyone know we're finished here. */
-  if (ctx->notify_func)
-    (*ctx->notify_func) (ctx->notify_baton,
-                         anchor,
-                         svn_wc_notify_update_completed,
-                         svn_node_none,
-                         NULL,
-                         svn_wc_notify_state_inapplicable,
-                         svn_wc_notify_state_inapplicable,
-                         revnum);
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify (anchor, svn_wc_notify_update_completed, pool);
+      notify->kind = svn_node_none;
+      notify->content_state = notify->prop_state
+        = svn_wc_notify_state_inapplicable;
+      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+      notify->revision = revnum;
+      (*ctx->notify_func2) (ctx->notify_baton2, notify, pool);
+    }
 
   /* If the caller wants the result revision, give it to them. */
   if (result_rev)
@@ -219,12 +233,11 @@ svn_client_update2 (apr_array_header_t **result_revs,
           svn_error_clear (err);
           err = SVN_NO_ERROR;
           result_rev = SVN_INVALID_REVNUM;
-          if (ctx->notify_func)
-            (*ctx->notify_func) (ctx->notify_baton, path,
-                                 svn_wc_notify_skip, svn_node_unknown,
-                                 NULL, svn_wc_notify_state_unknown,
-                                 svn_wc_notify_state_unknown,
-                                 SVN_INVALID_REVNUM);
+          if (ctx->notify_func2)
+            (*ctx->notify_func2) (ctx->notify_baton2,
+                                  svn_wc_create_notify (path,
+                                                        svn_wc_notify_skip,
+                                                        subpool), subpool);
         }
       if (result_revs)
         APR_ARRAY_PUSH (*result_revs, svn_revnum_t) = result_rev;

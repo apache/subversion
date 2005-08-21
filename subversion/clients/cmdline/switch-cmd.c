@@ -144,8 +144,8 @@ svn_cl__switch (apr_getopt_t *os,
     parent_dir = target;
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
-                          FALSE, pool);
+    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                          FALSE, FALSE, pool);
 
   /* Do the 'switch' update. */
   SVN_ERR (svn_client_switch (NULL, target, switch_url,

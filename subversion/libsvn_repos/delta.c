@@ -30,6 +30,7 @@
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "svn_private_config.h"
+#include "repos.h"
 
 
 
@@ -605,23 +606,23 @@ send_text_delta (struct context *c,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-compare_files (svn_boolean_t *changed_p,
-               svn_fs_root_t *root1,
-               const char *path1,
-               svn_fs_root_t *root2,
-               const char *path2,
-               apr_pool_t *pool)
+svn_error_t *
+svn_repos__compare_files (svn_boolean_t *changed_p,
+                          svn_fs_root_t *root1,
+                          const char *path1,
+                          svn_fs_root_t *root2,
+                          const char *path2,
+                          apr_pool_t *pool)
 {
   svn_filesize_t size1, size2;
   unsigned char digest1[APR_MD5_DIGESTSIZE], digest2[APR_MD5_DIGESTSIZE];
   svn_stream_t *stream1, *stream2;
-  char buf1[SVN_STREAM_CHUNK_SIZE], buf2[SVN_STREAM_CHUNK_SIZE];
+  char *buf1, *buf2;
   apr_size_t len1, len2;
 
   /* If the filesystem claims the things haven't changed, then they
      haven't changed. */
-  SVN_ERR (svn_fs_contents_changed (changed_p, root1, path1, 
+  SVN_ERR (svn_fs_contents_changed (changed_p, root1, path1,
                                     root2, path2, pool));
   if (!*changed_p)
     return SVN_NO_ERROR;
@@ -631,7 +632,7 @@ compare_files (svn_boolean_t *changed_p,
 
   /* So, things have changed.  But we need to know if the two sets of
      file contents are actually different.  If they have differing
-     sizes, then we know they differ.  */
+     sizes, then we know they differ. */
   SVN_ERR (svn_fs_file_length (&size1, root1, path1, pool));
   SVN_ERR (svn_fs_file_length (&size2, root2, path2, pool));
   if (size1 != size2)
@@ -655,6 +656,8 @@ compare_files (svn_boolean_t *changed_p,
   SVN_ERR (svn_fs_file_contents (&stream1, root1, path1, pool));
   SVN_ERR (svn_fs_file_contents (&stream2, root2, path2, pool));
 
+  buf1 = apr_palloc (pool, SVN_STREAM_CHUNK_SIZE);
+  buf2 = apr_palloc (pool, SVN_STREAM_CHUNK_SIZE);
   do
     {
       len1 = len2 = SVN_STREAM_CHUNK_SIZE;
@@ -704,10 +707,10 @@ delta_files (struct context *c,
          as".  We'll do everything we can to avoid transmitting even
          an empty text-delta in that case.  */
       if (c->ignore_ancestry)
-        SVN_ERR (compare_files (&changed, 
-                                c->target_root, target_path,
-                                c->source_root, source_path,
-                                subpool));
+        SVN_ERR (svn_repos__compare_files (&changed, 
+                                           c->target_root, target_path,
+                                           c->source_root, source_path,
+                                           subpool));
       else
         SVN_ERR (svn_fs_contents_changed (&changed, 
                                           c->target_root, target_path,

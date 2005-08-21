@@ -23,7 +23,8 @@
 #include <apr.h>
 
 #include "svn_error.h"
-#include "svn_test.h"
+
+#include "../svn_test.h"
 #include "../../libsvn_fs_base/key-gen.h"
 
 
@@ -31,6 +32,7 @@
 static svn_error_t *
 key_test (const char **msg, 
           svn_boolean_t msg_only,
+          svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
   int i;

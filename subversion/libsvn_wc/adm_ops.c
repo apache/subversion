@@ -46,6 +46,7 @@
 #include "adm_files.h"
 #include "adm_ops.h"
 #include "entries.h"
+#include "lock.h"
 #include "props.h"
 #include "translate.h"
 
@@ -59,8 +60,9 @@
 static svn_error_t *
 tweak_entries (svn_wc_adm_access_t *dirpath,
                const char *base_url,
+               const char *repos,
                svn_revnum_t new_rev,
-               svn_wc_notify_func_t notify_func,
+               svn_wc_notify_func2_t notify_func,
                void *notify_baton,
                svn_boolean_t remove_missing_dirs,
                svn_boolean_t recurse,
@@ -70,13 +72,15 @@ tweak_entries (svn_wc_adm_access_t *dirpath,
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_boolean_t write_required = FALSE;
+  svn_wc_notify_t *notify;
   
   /* Read DIRPATH's entries. */
   SVN_ERR (svn_wc_entries_read (&entries, dirpath, TRUE, pool));
 
   /* Tweak "this_dir" */
   SVN_ERR (svn_wc__tweak_entry (entries, SVN_WC_ENTRY_THIS_DIR,
-                                base_url, new_rev, &write_required,
+                                base_url, repos, new_rev, FALSE,
+                                &write_required,
                                 svn_wc_adm_access_pool (dirpath)));
 
   /* Recursively loop over all children. */
@@ -108,7 +112,8 @@ tweak_entries (svn_wc_adm_access_t *dirpath,
           || (recurse && (current_entry->deleted || current_entry->absent)))
         {
           SVN_ERR (svn_wc__tweak_entry (entries, name,
-                                        child_url, new_rev, &write_required,
+                                        child_url, repos, new_rev, TRUE,
+                                        &write_required,
                                         svn_wc_adm_access_pool (dirpath)));
         }
       
@@ -129,12 +134,13 @@ tweak_entries (svn_wc_adm_access_t *dirpath,
                 {
                   svn_wc__entry_remove (entries, name);
                   if (notify_func)
-                    (* notify_func) (notify_baton, child_path, 
-                                     svn_wc_notify_delete,
-                                     current_entry->kind, NULL, 
-                                     svn_wc_notify_state_unknown,
-                                     svn_wc_notify_state_unknown,
-                                     SVN_INVALID_REVNUM);
+                    {
+                      notify = svn_wc_create_notify (child_path,
+                                                     svn_wc_notify_delete,
+                                                     subpool);
+                      notify->kind = current_entry->kind;
+                      (* notify_func) (notify_baton, notify, subpool);
+                    }
                 }
               /* Else if missing item is schedule-add, do nothing. */
             }
@@ -146,7 +152,7 @@ tweak_entries (svn_wc_adm_access_t *dirpath,
               SVN_ERR (svn_wc_adm_retrieve (&child_access, dirpath, child_path,
                                             subpool));
               SVN_ERR (tweak_entries 
-                       (child_access, child_url, new_rev, notify_func, 
+                       (child_access, child_url, repos, new_rev, notify_func, 
                         notify_baton, remove_missing_dirs, recurse, subpool));
             }
         }
@@ -169,8 +175,9 @@ svn_wc__do_update_cleanup (const char *path,
                            svn_wc_adm_access_t *adm_access,
                            svn_boolean_t recursive,
                            const char *base_url,
+                           const char *repos,
                            svn_revnum_t new_revision,
-                           svn_wc_notify_func_t notify_func,
+                           svn_wc_notify_func2_t notify_func,
                            void *notify_baton,
                            svn_boolean_t remove_missing_dirs,
                            apr_pool_t *pool)
@@ -182,7 +189,8 @@ svn_wc__do_update_cleanup (const char *path,
   if (entry == NULL)
     return SVN_NO_ERROR;
 
-  if (entry->kind == svn_node_file)
+  if (entry->kind == svn_node_file
+      || (entry->kind == svn_node_dir && (entry->deleted || entry->absent)))
     {
       const char *parent, *base_name;
       svn_wc_adm_access_t *dir_access;
@@ -191,7 +199,10 @@ svn_wc__do_update_cleanup (const char *path,
       SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, parent, pool));
       SVN_ERR (svn_wc_entries_read (&entries, dir_access, TRUE, pool));
       SVN_ERR (svn_wc__tweak_entry (entries, base_name,
-                                    base_url, new_revision, &write_required,
+                                    base_url, repos, new_revision,
+                                    FALSE, /* Parent not updated so don't
+                                              remove PATH entry */
+                                    &write_required,
                                     svn_wc_adm_access_pool (dir_access)));
       if (write_required)
         SVN_ERR (svn_wc__entries_write (entries, dir_access, pool));
@@ -202,7 +213,7 @@ svn_wc__do_update_cleanup (const char *path,
       svn_wc_adm_access_t *dir_access;
       SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, path, pool));
 
-      SVN_ERR (tweak_entries (dir_access, base_url, new_revision,
+      SVN_ERR (tweak_entries (dir_access, base_url, repos, new_revision,
                               notify_func, notify_baton, remove_missing_dirs,
                               recursive, pool));
     }
@@ -215,24 +226,70 @@ svn_wc__do_update_cleanup (const char *path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_maybe_set_repos_root (svn_wc_adm_access_t *adm_access,
+                             const char *path,
+                             const char *repos,
+                             apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  svn_boolean_t write_required = FALSE;
+  const svn_wc_entry_t *entry;
+  const char *base_name;
+  svn_wc_adm_access_t *dir_access;
+
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+  if (! entry)
+    return SVN_NO_ERROR;
+
+  if (entry->kind == svn_node_file)
+    {
+      const char *parent;
+
+      svn_path_split (path, &parent, &base_name, pool);
+      SVN_ERR (svn_wc__adm_retrieve_internal (&dir_access, adm_access,
+                                              parent, pool));
+    }
+  else
+    {
+      base_name = SVN_WC_ENTRY_THIS_DIR;
+      SVN_ERR (svn_wc__adm_retrieve_internal (&dir_access, adm_access,
+                                              path, pool));
+    }
+
+  if (! dir_access)
+    return SVN_NO_ERROR;
+
+  SVN_ERR (svn_wc_entries_read (&entries, dir_access, TRUE, pool));
+
+  SVN_ERR (svn_wc__tweak_entry (entries, base_name,
+                                NULL, repos, SVN_INVALID_REVNUM, FALSE,
+                                &write_required,
+                                svn_wc_adm_access_pool (dir_access)));
+
+  if (write_required)
+    SVN_ERR (svn_wc__entries_write (entries, dir_access, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
-svn_wc_process_committed (const char *path,
-                          svn_wc_adm_access_t *adm_access,
-                          svn_boolean_t recurse,
-                          svn_revnum_t new_revnum,
-                          const char *rev_date,
-                          const char *rev_author,
-                          apr_array_header_t *wcprop_changes,
-                          apr_pool_t *pool)
+svn_wc_process_committed2 (const char *path,
+                           svn_wc_adm_access_t *adm_access,
+                           svn_boolean_t recurse,
+                           svn_revnum_t new_revnum,
+                           const char *rev_date,
+                           const char *rev_author,
+                           apr_array_header_t *wcprop_changes,
+                           svn_boolean_t remove_lock,
+                           apr_pool_t *pool)
 {
   const char *base_name;
   svn_stringbuf_t *logtags;
   apr_file_t *log_fp = NULL;
   char *revstr = apr_psprintf (pool, "%ld", new_revnum);
   const char *hex_digest = NULL;
-
-  logtags = svn_stringbuf_create ("", pool);
 
   SVN_ERR (svn_wc__adm_write_check (adm_access));
 
@@ -253,21 +310,9 @@ svn_wc_process_committed (const char *path,
   if (base_name)
     {
       /* PATH must be some sort of file */
-      const char *latest_base,*revert_file;
+      const char *latest_base;
       svn_node_kind_t kind;
 
-      /* If the revert file exists it needs to be deleted when the file
-       * is committed. */
-      revert_file = svn_wc__text_revert_path (path, FALSE, pool);
-      SVN_ERR (svn_io_check_path (revert_file, &kind, pool));
-      if (kind == svn_node_file)
-        {
-          svn_xml_make_open_tag (&logtags, pool, svn_xml_self_closing,
-                                 SVN_WC__LOG_RM,
-                                 SVN_WC__LOG_ATTR_NAME, revert_file,
-                                 NULL);
-        }
-      
       /* There may be a new text base is sitting in the adm tmp area by
          now, because the commit succeeded.  A file that is copied, but not
          otherwise modified, doesn't have a new text base, so we use
@@ -316,6 +361,7 @@ svn_wc_process_committed (const char *path,
       base_name = SVN_WC_ENTRY_THIS_DIR;
     }
 
+  logtags = svn_stringbuf_create ("", pool);
 
   /* Append a log command to set (overwrite) the 'committed-rev',
      'committed-date', 'last-author', and possibly `checksum'
@@ -352,6 +398,12 @@ svn_wc_process_committed (const char *path,
                            SVN_WC__LOG_ATTR_NAME, base_name,
                            SVN_WC__ENTRY_ATTR_CHECKSUM,
                            hex_digest,
+                           NULL);
+
+  if (remove_lock)
+    svn_xml_make_open_tag (&logtags, pool, svn_xml_self_closing,
+                           SVN_WC__LOG_DELETE_LOCK,
+                           SVN_WC__LOG_ATTR_NAME, base_name,
                            NULL);
 
   /* Regardless of whether it's a file or dir, the "main" logfile
@@ -454,8 +506,20 @@ svn_wc_process_committed (const char *path,
   return SVN_NO_ERROR;
 }
 
-
-
+svn_error_t *
+svn_wc_process_committed (const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t recurse,
+                          svn_revnum_t new_revnum,
+                          const char *rev_date,
+                          const char *rev_author,
+                          apr_array_header_t *wcprop_changes,
+                          apr_pool_t *pool)
+{
+  return svn_wc_process_committed2 (path, adm_access, recurse, new_revnum,
+                                    rev_date, rev_author, wcprop_changes,
+                                    FALSE, pool);
+}
 
 /* Remove FILE if it exists and is a file.  If it does not exist, do
    nothing.  If it is not a file, error. */
@@ -485,7 +549,7 @@ mark_tree (svn_wc_adm_access_t *adm_access,
            svn_boolean_t copied,
            svn_cancel_func_t cancel_func,
            void *cancel_baton,
-           svn_wc_notify_func_t notify_func,
+           svn_wc_notify_func2_t notify_func,
            void *notify_baton,
            apr_pool_t *pool)
 {
@@ -543,12 +607,9 @@ mark_tree (svn_wc_adm_access_t *adm_access,
 
       /* Tell someone what we've done. */
       if (schedule == svn_wc_schedule_delete && notify_func != NULL)
-        (*notify_func) (notify_baton, fullpath, svn_wc_notify_delete,
-                        svn_node_unknown,
-                        NULL,
-                        svn_wc_notify_state_unknown,
-                        svn_wc_notify_state_unknown,
-                        SVN_INVALID_REVNUM);
+        (*notify_func) (notify_baton,
+                        svn_wc_create_notify (fullpath, svn_wc_notify_delete,
+                                              subpool), pool);
     }
   
   /* Handle "this dir" for states that need it done post-recursion. */
@@ -674,7 +735,7 @@ erase_from_wc (const char *path,
            good here. */
 
         /* First handle the versioned items, this is better (probably) than
-           simply using svn_io_get_dirents for everything as it avoids the
+           simply using svn_io_get_dirents2 for everything as it avoids the
            need to do svn_io_check_path on each versioned item */
         SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access, path, pool));
         SVN_ERR (svn_wc_entries_read (&ver, dir_access, FALSE, pool));
@@ -731,13 +792,13 @@ erase_from_wc (const char *path,
 
 
 svn_error_t *
-svn_wc_delete (const char *path,
-               svn_wc_adm_access_t *adm_access,
-               svn_cancel_func_t cancel_func,
-               void *cancel_baton,
-               svn_wc_notify_func_t notify_func,
-               void *notify_baton,
-               apr_pool_t *pool)
+svn_wc_delete2 (const char *path,
+                svn_wc_adm_access_t *adm_access,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                svn_wc_notify_func2_t notify_func,
+                void *notify_baton,
+                apr_pool_t *pool)
 {
   svn_wc_adm_access_t *dir_access;
   const svn_wc_entry_t *entry;
@@ -833,12 +894,9 @@ svn_wc_delete (const char *path,
 
   /* Report the deletion to the caller. */
   if (notify_func != NULL)
-    (*notify_func) (notify_baton, path, svn_wc_notify_delete,
-                    svn_node_unknown,
-                    NULL,
-                    svn_wc_notify_state_unknown,
-                    svn_wc_notify_state_unknown,
-                    SVN_INVALID_REVNUM);
+    (*notify_func) (notify_baton,
+                    svn_wc_create_notify (path, svn_wc_notify_delete,
+                                          pool), pool);
 
   /* By the time we get here, anything that was scheduled to be added has
      become unversioned */
@@ -852,6 +910,23 @@ svn_wc_delete (const char *path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_delete (const char *path,
+               svn_wc_adm_access_t *adm_access,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func_t notify_func,
+               void *notify_baton,
+               apr_pool_t *pool)
+{
+  svn_wc__compat_notify_baton_t nb;
+  
+  nb.func = notify_func;
+  nb.baton = notify_baton;
+
+  return svn_wc_delete2 (path, adm_access, cancel_func, cancel_baton,
+                         svn_wc__compat_call_notify_func, &nb, pool);
+}
 
 svn_error_t *
 svn_wc_get_ancestry (char **url,
@@ -875,15 +950,15 @@ svn_wc_get_ancestry (char **url,
 
 
 svn_error_t *
-svn_wc_add (const char *path,
-            svn_wc_adm_access_t *parent_access,
-            const char *copyfrom_url,
-            svn_revnum_t copyfrom_rev,
-            svn_cancel_func_t cancel_func,
-            void *cancel_baton,
-            svn_wc_notify_func_t notify_func,
-            void *notify_baton,
-            apr_pool_t *pool)
+svn_wc_add2 (const char *path,
+             svn_wc_adm_access_t *parent_access,
+             const char *copyfrom_url,
+             svn_revnum_t copyfrom_rev,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             svn_wc_notify_func2_t notify_func,
+             void *notify_baton,
+             apr_pool_t *pool)
 {
   const char *parent_dir, *base_name;
   const svn_wc_entry_t *orig_entry, *parent_entry;
@@ -910,7 +985,7 @@ svn_wc_add (const char *path,
      this is actually a replacement of a previously deleted thing).
      
      Note that this is one of the few functions that is allowed to see
-    'deleted' entries;  it's totally fine to have an entry that is
+     'deleted' entries;  it's totally fine to have an entry that is
      scheduled for addition and still previously 'deleted'.  */
   SVN_ERR (svn_wc_adm_probe_try3 (&adm_access, parent_access, path,
                                   TRUE, copyfrom_url != NULL ? -1 : 0,
@@ -940,7 +1015,7 @@ svn_wc_add (const char *path,
         {
           /* ### todo: At some point, we obviously don't want to block
              replacements where the node kind changes.  When this
-             happens, svn_wc_revert() needs to learn how to revert
+             happens, svn_wc_revert2() needs to learn how to revert
              this situation.  At present we are using a specific node-change
              error so that clients can detect it. */
           return svn_error_createf 
@@ -974,9 +1049,16 @@ svn_wc_add (const char *path,
   if (! (is_replace || copyfrom_url))
     modify_flags |= SVN_WC__ENTRY_MODIFY_REVISION;
 
-  /* If a copy ancestor was given, put the proper ancestry info in a hash. */
+  /* If a copy ancestor was given, make sure the copyfrom URL is in the same
+     repository (if possible) and put the proper ancestry info in the new
+     entry */
   if (copyfrom_url)
     {
+      if (parent_entry->repos
+          && ! svn_path_is_ancestor (parent_entry->repos, copyfrom_url))
+        return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                  _("The URL '%s' has different repository "
+                                    "root than its parent"), copyfrom_url);
       tmp_entry.copyfrom_url = copyfrom_url;
       tmp_entry.copyfrom_rev = copyfrom_rev;
       tmp_entry.copied = TRUE;
@@ -985,14 +1067,6 @@ svn_wc_add (const char *path,
       modify_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
     }
 
-  /* If this is a replacement we want to remove the checksum so it is not set
-   * to the old value. */
-  if (is_replace)
-    {
-      tmp_entry.checksum = NULL;
-      modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
-    }
-  
   tmp_entry.revision = 0;
   tmp_entry.kind = kind;
   tmp_entry.schedule = svn_wc_schedule_add;
@@ -1029,7 +1103,8 @@ svn_wc_add (const char *path,
   
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it */
-          SVN_ERR (svn_wc_ensure_adm (path, NULL, new_url, 0, pool));
+          SVN_ERR (svn_wc_ensure_adm2 (path, NULL, new_url, p_entry->repos,
+                                       0, pool));
         }
       else
         {
@@ -1037,8 +1112,9 @@ svn_wc_add (const char *path,
              the admin directory already in existance, then the dir will
              contain the copyfrom settings.  So we need to pass the
              copyfrom arguments to the ensure call. */
-          SVN_ERR (svn_wc_ensure_adm (path, NULL, copyfrom_url, 
-                                      copyfrom_rev, pool));
+          SVN_ERR (svn_wc_ensure_adm2 (path, NULL, copyfrom_url,
+                                       parent_entry->repos, copyfrom_rev,
+                                       pool));
         }
       
       /* We want the locks to persist, so use the access baton's pool */
@@ -1053,7 +1129,7 @@ svn_wc_add (const char *path,
 
       /* We're making the same mods we made above, but this time we'll
          force the scheduling.  Also make sure to undo the
-         'incomplete' flag which svn_wc_ensure_adm sets by default. */
+         'incomplete' flag which svn_wc_ensure_adm2 sets by default. */
       modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
       modify_flags |= SVN_WC__ENTRY_MODIFY_INCOMPLETE;
       tmp_entry.schedule = is_replace 
@@ -1082,6 +1158,7 @@ svn_wc_add (const char *path,
 
           /* Change the entry urls recursively (but not the working rev). */
           SVN_ERR (svn_wc__do_update_cleanup (path, adm_access, TRUE, new_url, 
+                                              parent_entry->repos,
                                               SVN_INVALID_REVNUM, NULL, 
                                               NULL, FALSE, pool));
 
@@ -1100,17 +1177,37 @@ svn_wc_add (const char *path,
 
   /* Report the addition to the caller. */
   if (notify_func != NULL)
-    (*notify_func) (notify_baton, path, svn_wc_notify_add,
-                    kind,
-                    NULL,
-                    svn_wc_notify_state_unknown,
-                    svn_wc_notify_state_unknown,
-                    SVN_INVALID_REVNUM);
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify (path, svn_wc_notify_add,
+                                                      pool);
+      notify->kind = kind;
+      (*notify_func) (notify_baton, notify, pool);
+    }
 
   return SVN_NO_ERROR;
 }
 
 
+svn_error_t *
+svn_wc_add (const char *path,
+            svn_wc_adm_access_t *parent_access,
+            const char *copyfrom_url,
+            svn_revnum_t copyfrom_rev,
+            svn_cancel_func_t cancel_func,
+            void *cancel_baton,
+            svn_wc_notify_func_t notify_func,
+            void *notify_baton,
+            apr_pool_t *pool)
+{
+  svn_wc__compat_notify_baton_t nb;
+  
+  nb.func = notify_func;
+  nb.baton = notify_baton;
+
+  return svn_wc_add2 (path, parent_access, copyfrom_url, copyfrom_rev,
+                      cancel_func, cancel_baton,
+                      svn_wc__compat_call_notify_func, &nb, pool);
+}
 /* Thoughts on Reversion. 
 
     What does is mean to revert a given PATH in a tree?  We'll
@@ -1195,7 +1292,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
 
       /* Get the full list of property changes and see if any magic
          properties were changed. */
-      SVN_ERR (svn_wc_get_prop_diffs (&propchanges, NULL, name ? name : "",
+      SVN_ERR (svn_wc_get_prop_diffs (&propchanges, NULL, fullpath,
                                       adm_access, pool));
       
       /* Determine if any of the propchanges are the "magic" ones that
@@ -1210,7 +1307,8 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
             if ((! strcmp (propchange->name, SVN_PROP_EXECUTABLE))
                 || (! strcmp (propchange->name, SVN_PROP_KEYWORDS))
                 || (! strcmp (propchange->name, SVN_PROP_EOL_STYLE))
-                || (! strcmp (propchange->name, SVN_PROP_SPECIAL)))
+                || (! strcmp (propchange->name, SVN_PROP_SPECIAL))
+                || (! strcmp (propchange->name, SVN_PROP_NEEDS_LOCK)))
               magic_props_changed = TRUE;
           }
       }
@@ -1257,18 +1355,6 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
     }
   else if (entry->schedule == svn_wc_schedule_replace)
     {
-      /* If the replacement is a copy need to clean up the
-       * related things in entries */
-      if (entry->copied) 
-        {
-          entry->copied = FALSE;
-          *modify_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
-          entry->copyfrom_url = FALSE;
-          *modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
-          entry->copyfrom_rev = SVN_INVALID_REVNUM;
-          *modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
-        }
-
       /* Edge case: we're reverting a replacement, and
          svn_wc_props_modified_p thinks there's no property mods.
          However, because of the scheduled replacement,
@@ -1300,23 +1386,8 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
       SVN_ERR (svn_io_check_path (fullpath, &kind, pool));
       base_thing = svn_wc__text_base_path (fullpath, 0, pool);
 
-      /* Look for a revert base file.  If it exists use it for
-       * the text base for the file.  If it doesn't use the normal
-       * text base. */
-      {
-        svn_node_kind_t disk_kind;
-        const char *revert_thing;
-       
-        revert_thing = svn_wc__text_revert_path (fullpath, 0, pool);
-        SVN_ERR (svn_io_check_path (revert_thing, &disk_kind, pool));
-        if (disk_kind == svn_node_file)
-          {
-            SVN_ERR (svn_io_file_rename (revert_thing, base_thing, pool));
-          }          
-      }     
-
       if (! magic_props_changed)
-        SVN_ERR (svn_wc_text_modified_p (&modified_p, fullpath, TRUE,
+        SVN_ERR (svn_wc_text_modified_p (&modified_p, fullpath, FALSE,
                                          adm_access, pool));
       if ((modified_p) || (kind == svn_node_none) || (magic_props_changed))
         {
@@ -1350,7 +1421,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
               (err, apr_psprintf (pool, _("Error restoring text for '%s'"),
                                   svn_path_local_style (fullpath, pool)));
 
-          /* If necessary, tweak the new working file's executable bit. */
+          SVN_ERR (svn_wc__maybe_set_read_only (NULL, fullpath, adm_access, pool));
           SVN_ERR (svn_wc__maybe_set_executable (NULL, fullpath, adm_access,
                                                  pool));
 
@@ -1419,15 +1490,15 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
-svn_wc_revert (const char *path,
-               svn_wc_adm_access_t *parent_access,
-               svn_boolean_t recursive,
-               svn_boolean_t use_commit_times,
-               svn_cancel_func_t cancel_func,
-               void *cancel_baton,
-               svn_wc_notify_func_t notify_func,
-               void *notify_baton,
-               apr_pool_t *pool)
+svn_wc_revert2 (const char *path,
+                svn_wc_adm_access_t *parent_access,
+                svn_boolean_t recursive,
+                svn_boolean_t use_commit_times,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                svn_wc_notify_func2_t notify_func,
+                void *notify_baton,
+                apr_pool_t *pool)
 {
   svn_node_kind_t kind;
   const char *p_dir = NULL, *bname = NULL;
@@ -1464,14 +1535,10 @@ svn_wc_revert (const char *path,
              will make this happen.  For now, send notification of the
              failure. */
           if (notify_func != NULL)
-            (*notify_func) (notify_baton, path,
-                            svn_wc_notify_failed_revert,
-                            svn_node_unknown,
-                            NULL,
-                            svn_wc_notify_state_unknown,
-                            svn_wc_notify_state_unknown,
-                            SVN_INVALID_REVNUM);
-
+            (*notify_func)
+              (notify_baton,
+               svn_wc_create_notify (path, svn_wc_notify_failed_revert,
+                                     pool), pool);
           return SVN_NO_ERROR;
         }
     }
@@ -1656,13 +1723,10 @@ svn_wc_revert (const char *path,
 
   /* If PATH was reverted, tell our client that. */
   if ((notify_func != NULL) && reverted)
-    (*notify_func) (notify_baton, path, svn_wc_notify_revert,
-                    svn_node_unknown,
-                    NULL,  /* ### any way to get the mime type? */
-                    svn_wc_notify_state_unknown,
-                    svn_wc_notify_state_unknown,
-                    SVN_INVALID_REVNUM);
- 
+    (*notify_func) (notify_baton,
+                    svn_wc_create_notify (path, svn_wc_notify_revert, pool),
+                    pool);
+
   /* Finally, recurse if requested. */
   if (recursive && (entry->kind == svn_node_dir))
     {
@@ -1691,10 +1755,10 @@ svn_wc_revert (const char *path,
           full_entry_path = svn_path_join (path, keystring, subpool);
 
           /* Revert the entry. */
-          SVN_ERR (svn_wc_revert (full_entry_path, dir_access, TRUE,
-                                  use_commit_times,
-                                  cancel_func, cancel_baton,
-                                  notify_func, notify_baton, subpool));
+          SVN_ERR (svn_wc_revert2 (full_entry_path, dir_access, TRUE,
+                                   use_commit_times,
+                                   cancel_func, cancel_baton,
+                                   notify_func, notify_baton, subpool));
         }
       
         svn_pool_destroy (subpool);
@@ -1703,7 +1767,27 @@ svn_wc_revert (const char *path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_revert (const char *path,
+               svn_wc_adm_access_t *parent_access,
+               svn_boolean_t recursive,
+               svn_boolean_t use_commit_times,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func_t notify_func,
+               void *notify_baton,
+               apr_pool_t *pool)
+{
+  svn_wc__compat_notify_baton_t nb;
+  
+  nb.func = notify_func;
+  nb.baton = notify_baton;
 
+  return svn_wc_revert2 (path, parent_access, recursive, use_commit_times,
+                         cancel_func, cancel_baton,
+                         svn_wc__compat_call_notify_func, &nb, pool);
+}
+                         
 svn_error_t *
 svn_wc_get_pristine_copy_path (const char *path,
                                const char **pristine_path,
@@ -1998,7 +2082,7 @@ resolve_conflict_on_entry (const char *path,
                            const char *base_name,
                            svn_boolean_t resolve_text,
                            svn_boolean_t resolve_props,
-                           svn_wc_notify_func_t notify_func,
+                           svn_wc_notify_func2_t notify_func,
                            void *notify_baton,
                            apr_pool_t *pool)
 {
@@ -2063,12 +2147,9 @@ resolve_conflict_on_entry (const char *path,
                                         entry, pool));
           if ((! (resolve_text && text_conflict))
               && (! (resolve_props && prop_conflict)))
-            (*notify_func) (notify_baton, path, svn_wc_notify_resolved,
-                            svn_node_unknown,
-                            NULL,
-                            svn_wc_notify_state_unknown,
-                            svn_wc_notify_state_unknown,
-                            SVN_INVALID_REVNUM);
+            (*notify_func) (notify_baton,
+                            svn_wc_create_notify (path, svn_wc_notify_resolved,
+                                                  pool), pool);
         }
     }
           
@@ -2086,7 +2167,7 @@ struct resolve_callback_baton
   /* An access baton for the tree, with write access */
   svn_wc_adm_access_t *adm_access;
   /* Notification function and baton */
-  svn_wc_notify_func_t notify_func;
+  svn_wc_notify_func2_t notify_func;
   void *notify_baton;
 };
 
@@ -2134,14 +2215,19 @@ svn_wc_resolved_conflict (const char *path,
                           svn_wc_adm_access_t *adm_access,
                           svn_boolean_t resolve_text,
                           svn_boolean_t resolve_props,
-                          svn_boolean_t recursive,
+                          svn_boolean_t recurse,
                           svn_wc_notify_func_t notify_func,
                           void *notify_baton,                         
                           apr_pool_t *pool)
 {
+  svn_wc__compat_notify_baton_t nb;
+  
+  nb.func = notify_func;
+  nb.baton = notify_baton;
+
   return svn_wc_resolved_conflict2 (path, adm_access,
-                                    resolve_text, resolve_props, recursive,
-                                    notify_func, notify_baton,
+                                    resolve_text, resolve_props, recurse,
+                                    svn_wc__compat_call_notify_func, &nb,
                                     NULL, NULL, pool);
 
 }
@@ -2151,8 +2237,8 @@ svn_wc_resolved_conflict2 (const char *path,
                            svn_wc_adm_access_t *adm_access,
                            svn_boolean_t resolve_text,
                            svn_boolean_t resolve_props,
-                           svn_boolean_t recursive,
-                           svn_wc_notify_func_t notify_func,
+                           svn_boolean_t recurse,
+                           svn_wc_notify_func2_t notify_func,
                            void *notify_baton,                         
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
@@ -2166,7 +2252,7 @@ svn_wc_resolved_conflict2 (const char *path,
   baton->notify_func = notify_func;
   baton->notify_baton = notify_baton;
 
-  if (! recursive)
+  if (! recurse)
     {
       const svn_wc_entry_t *entry;
       SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
@@ -2188,4 +2274,73 @@ svn_wc_resolved_conflict2 (const char *path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *svn_wc_add_lock(const char *path, const svn_lock_t *lock,
+                             svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
+{
+  const svn_wc_entry_t *entry;
+  svn_wc_entry_t newentry;
 
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+
+  if (! entry)
+    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                              _("'%s' is not under version control"), path);
+
+  newentry.lock_token = lock->token;
+  newentry.lock_owner = lock->owner;
+  newentry.lock_comment = lock->comment;
+  newentry.lock_creation_date = lock->creation_date;
+
+  SVN_ERR (svn_wc__entry_modify (adm_access, entry->name, &newentry,
+                                 SVN_WC__ENTRY_MODIFY_LOCK_TOKEN
+                                 | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
+                                 | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
+                                 | SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE,
+                                 TRUE, pool));
+
+  { /* if svn:needs-lock is present, then make the file read-write. */
+    const svn_string_t *needs_lock;
+    
+    SVN_ERR (svn_wc_prop_get (&needs_lock, SVN_PROP_NEEDS_LOCK, 
+                              path, adm_access, pool));
+    if (needs_lock)
+      SVN_ERR (svn_io_set_file_read_write_carefully (path, TRUE, 
+                                                     FALSE, pool));
+  }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_wc_remove_lock(const char *path,
+                             svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
+{
+  const svn_wc_entry_t *entry;
+  svn_wc_entry_t newentry;
+
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+
+  if (! entry)
+    return svn_error_createf (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                              _("'%s' is not under version control"), path);
+
+  newentry.lock_token = newentry.lock_owner = newentry.lock_comment = NULL;
+  newentry.lock_creation_date = 0;
+  SVN_ERR (svn_wc__entry_modify (adm_access, entry->name, &newentry,
+                                 SVN_WC__ENTRY_MODIFY_LOCK_TOKEN
+                                 | SVN_WC__ENTRY_MODIFY_LOCK_OWNER
+                                 | SVN_WC__ENTRY_MODIFY_LOCK_COMMENT
+                                 | SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE,
+                                 TRUE, pool));
+
+  { /* if svn:needs-lock is present, then make the file read-only. */
+    const svn_string_t *needs_lock;
+    
+    SVN_ERR (svn_wc_prop_get (&needs_lock, SVN_PROP_NEEDS_LOCK, 
+                              path, adm_access, pool));
+    if (needs_lock)
+      SVN_ERR (svn_io_set_file_read_write_carefully (path, FALSE, 
+                                                     FALSE, pool));
+  }
+
+  return SVN_NO_ERROR;
+}

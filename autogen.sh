@@ -95,6 +95,15 @@ else
   fi
 fi
 
+# Compile SWIG headers into standalone C files if we are in release mode
+if test -n "$RELEASE_MODE"; then
+  echo "Generating SWIG code..."
+  echo abs_srcdir=. > autogen-standalone.mk
+  cat build-outputs.mk >> autogen-standalone.mk
+  make -f autogen-standalone.mk autogen-swig
+  rm autogen-standalone.mk
+fi
+
 if test -n "$gen_failed"; then
   echo "ERROR: gen-make.py failed"
   exit 1

@@ -21,6 +21,7 @@ Available subcommands:
    import
    info
    list (ls)
+   lock
    log
    merge
    mkdir
@@ -34,8 +35,8 @@ Available subcommands:
    revert
    status (stat, st)
    switch (sw)
+   unlock
    update (up)
-   version (ver)
 
 Subversion is a tool for version control.
 For additional information, see http://subversion.tigris.org/

@@ -153,6 +153,29 @@ look_up_committable (apr_hash_t *committables,
   return NULL;
 }
 
+/* This implements the svn_wc_entry_callbacks_t->found_entry interface. */
+static svn_error_t *
+add_lock_token (const char *path, const svn_wc_entry_t *entry,
+                void *walk_baton, apr_pool_t *pool)
+{
+  apr_hash_t *lock_tokens = walk_baton;
+  apr_pool_t *token_pool = apr_hash_pool_get (lock_tokens);
+
+  /* I want every lock-token I can get my dirty hands on!
+     If this entry is switched, so what.  We will send an irrelevant lock
+     token. */
+  if (entry->url && entry->lock_token)
+    apr_hash_set (lock_tokens, apr_pstrdup (token_pool, entry->url),
+                  APR_HASH_KEY_STRING,
+                  apr_pstrdup (token_pool, entry->lock_token));
+
+  return SVN_NO_ERROR;
+}
+
+/* Entry walker callback table to add lock tokens in an hierarchy. */
+static svn_wc_entry_callbacks_t add_tokens_callbacks = {
+  add_lock_token
+};
 
 /* Recursively search for commit candidates in (and under) PATH (with
    entry ENTRY and ancestry URL), and add those candidates to
@@ -160,15 +183,19 @@ look_up_committable (apr_hash_t *committables,
    recognized.  COPYFROM_URL is the default copyfrom-url for children
    of copied directories.  NONRECURSIVE indicates that this function
    will not recurse into subdirectories of PATH when PATH is itself a
-   directory.
+   directory.  Lock tokens of candidates will be added to LOCK_TOKENS, if
+   non-NULL.  JUST_LOCKED indicates whether to treat non-modified items with
+   lock tokens as commit candidates.
 
-   If in COPY_MODE, the entry is treated as if it is destined to be
-   added with history as URL.
+   If in COPY_MODE, treat the entry as if it is destined to be added
+   with history as URL, and add 'deleted' entries to COMMITTABLES as
+   items to delete in the copy destination.
 
    If CTX->CANCEL_FUNC is non-null, call it with CTX->CANCEL_BATON to see 
    if the user has cancelled the operation.  */
 static svn_error_t *
 harvest_committables (apr_hash_t *committables,
+                      apr_hash_t *lock_tokens,
                       const char *path,
                       svn_wc_adm_access_t *adm_access,
                       const char *url,
@@ -178,6 +205,7 @@ harvest_committables (apr_hash_t *committables,
                       svn_boolean_t adds_only,
                       svn_boolean_t copy_mode,
                       svn_boolean_t nonrecursive,
+                      svn_boolean_t just_locked,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
@@ -191,6 +219,8 @@ harvest_committables (apr_hash_t *committables,
   svn_revnum_t cf_rev = entry->copyfrom_rev;
   const svn_string_t *propval;
   svn_boolean_t is_special;
+  apr_pool_t *token_pool = (lock_tokens ? apr_hash_pool_get (lock_tokens)
+                            : NULL);
 
   /* Early out if the item is already marked as committable. */
   if (look_up_committable (committables, path, pool))
@@ -230,9 +260,11 @@ harvest_committables (apr_hash_t *committables,
   SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_SPECIAL, path, adm_access,
                             pool));
 
-  if ((((! propval) && (is_special)) ||
-          ((propval) && (! is_special))) &&
-      (kind != svn_node_none))
+  if ((((! propval) && (is_special))
+#ifdef HAVE_SYMLINK  
+       || ((propval) && (! is_special))
+#endif /* HAVE_SYMLINK */
+       ) && (kind != svn_node_none))
     {
       return svn_error_createf
         (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
@@ -249,7 +281,7 @@ harvest_committables (apr_hash_t *committables,
          recurse anyway, so... ) */
       svn_error_t *err;
       const svn_wc_entry_t *e = NULL;
-      err = svn_wc_entries_read (&entries, adm_access, FALSE, pool);
+      err = svn_wc_entries_read (&entries, adm_access, copy_mode, pool);
 
       /* If we failed to get an entries hash for the directory, no
          sweat.  Cleanup and move along.  */
@@ -296,11 +328,20 @@ harvest_committables (apr_hash_t *committables,
   if ((entry->url) && (! copy_mode))
     url = entry->url;
 
-  /* Check for the deletion case.  Deletes can occur only when we are
-     not in "adds-only mode".  They can be either explicit
-     (schedule == delete) or implicit (schedule == replace ::= delete+add).  */
+  /* Check for the deletion case.  Deletes occur only when not in
+     "adds-only mode".  We use the SVN_CLIENT_COMMIT_ITEM_DELETE flag
+     to represent two slightly different conditions:
+
+     - The entry is marked as 'deleted'.  When copying a mixed-rev wc,
+       we still need to send a delete for that entry, otherwise the
+       object will wrongly exist in the repository copy.
+
+     - The entry is scheduled for deletion or replacement, which case
+       we need to send a delete either way.
+  */
   if ((! adds_only)
-      && ((entry->schedule == svn_wc_schedule_delete)
+      && ((entry->deleted && entry->schedule == svn_wc_schedule_normal)
+          || (entry->schedule == svn_wc_schedule_delete)
           || (entry->schedule == svn_wc_schedule_replace)))
     {
       state_flags |= SVN_CLIENT_COMMIT_ITEM_DELETE;
@@ -327,6 +368,7 @@ harvest_committables (apr_hash_t *committables,
 
   /* Check for the copied-subtree addition case.  */
   if ((entry->copied || copy_mode) 
+      && (! entry->deleted)
       && (entry->schedule == svn_wc_schedule_normal))
     {
       svn_revnum_t p_rev = entry->revision - 1; /* arbitrary non-equal value */
@@ -422,6 +464,13 @@ harvest_committables (apr_hash_t *committables,
   if (prop_mod)
     state_flags |= SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
 
+  /* If the entry has a lock token and it is already a commit candidate,
+     or the caller wants unmodified locked items to be treated as
+     such, note this fact. */
+  if (entry->lock_token
+      && (state_flags || just_locked))
+    state_flags |= SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN;
+
   /* Now, if this is something to commit, add it to our list. */
   if (state_flags)
     {
@@ -429,6 +478,10 @@ harvest_committables (apr_hash_t *committables,
       add_committable (committables, path, entry->kind, url,
                        cf_url ? cf_rev : entry->revision, 
                        cf_url, state_flags);
+      if (lock_tokens && entry->lock_token)
+        apr_hash_set (lock_tokens, apr_pstrdup (token_pool, url),
+                      APR_HASH_KEY_STRING,
+                      apr_pstrdup (token_pool, entry->lock_token));
     }
 
   /* For directories, recursively handle each of their entries (except
@@ -527,19 +580,27 @@ harvest_committables (apr_hash_t *committables,
             dir_access = adm_access;
 
           SVN_ERR (harvest_committables 
-                   (committables, full_path, dir_access,
+                   (committables, lock_tokens, full_path, dir_access,
                     used_url ? used_url : this_entry->url,
                     this_cf_url,
                     this_entry,
                     entry,
                     adds_only,
                     copy_mode,
-                    FALSE,
+                    FALSE, just_locked,
                     ctx,
                     loop_pool));
         }
 
       svn_pool_destroy (loop_pool);
+    }
+
+  /* Fetch lock tokens for descendants of deleted directries. */
+  if (lock_tokens && entry->kind == svn_node_dir
+      && (state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE))
+    {
+      SVN_ERR (svn_wc_walk_entries (path, adm_access, &add_tokens_callbacks,
+                                    lock_tokens, FALSE, pool));
     }
 
   return SVN_NO_ERROR;
@@ -548,9 +609,11 @@ harvest_committables (apr_hash_t *committables,
 
 svn_error_t *
 svn_client__harvest_committables (apr_hash_t **committables,
+                                  apr_hash_t **lock_tokens,
                                   svn_wc_adm_access_t *parent_dir,
                                   apr_array_header_t *targets,
                                   svn_boolean_t nonrecursive,
+                                  svn_boolean_t just_locked,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool)
 {
@@ -584,6 +647,9 @@ svn_client__harvest_committables (apr_hash_t **committables,
 
   /* Create the COMMITTABLES hash. */
   *committables = apr_hash_make (pool);
+
+  /* And the LOCK_TOKENS dito. */
+  *lock_tokens = apr_hash_make (pool);
 
   do
     {
@@ -676,9 +742,10 @@ svn_client__harvest_committables (apr_hash_t **committables,
                                        ? target
                                        : svn_path_dirname (target, subpool)),
                                     subpool));
-      SVN_ERR (harvest_committables (*committables, target, dir_access,
+      SVN_ERR (harvest_committables (*committables, *lock_tokens, target, dir_access,
                                      entry->url, NULL, entry, NULL, FALSE, 
-                                     FALSE, nonrecursive, ctx, subpool));
+                                     FALSE, nonrecursive, just_locked, ctx,
+                                     subpool));
 
       i++;
     }
@@ -742,9 +809,9 @@ svn_client__get_copy_committables (apr_hash_t **committables,
        svn_path_local_style (target, pool));
       
   /* Handle our TARGET. */
-  SVN_ERR (harvest_committables (*committables, target, adm_access,
-                                 new_url, entry->url, entry, NULL,
-                                 FALSE, TRUE, FALSE, ctx, pool));
+  SVN_ERR (harvest_committables (*committables, NULL, target,
+                                 adm_access, new_url, entry->url, entry, NULL,
+                                 FALSE, TRUE, FALSE, FALSE, ctx, pool));
 
   return SVN_NO_ERROR;
 }
@@ -943,10 +1010,11 @@ do_item_commit (void **dir_baton,
 
   /* If a feedback table was supplied by the application layer,
      describe what we're about to do to this item.  */
-  if (ctx->notify_func)
+  if (ctx->notify_func2)
     {
       /* Convert an absolute path into a relative one (if possible.) */
       const char *npath = NULL;
+      svn_wc_notify_t *notify;
 
       if (notify_path_prefix)
         {
@@ -964,59 +1032,49 @@ do_item_commit (void **dir_baton,
           /* We don't print the "(bin)" notice for binary files when
              replacing, only when adding.  So we don't bother to get
              the mime-type here. */
-          (*ctx->notify_func) (ctx->notify_baton, npath,
-                               svn_wc_notify_commit_replaced,
-                               item->kind,
-                               NULL,
-                               svn_wc_notify_state_unknown,
-                               svn_wc_notify_state_unknown,
-                               SVN_INVALID_REVNUM);
+          notify = svn_wc_create_notify (npath, svn_wc_notify_commit_replaced,
+                                         pool);
         }
       else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
         {
-          (*ctx->notify_func) (ctx->notify_baton, npath,
-                               svn_wc_notify_commit_deleted,
-                               item->kind,
-                               NULL,
-                               svn_wc_notify_state_unknown,
-                               svn_wc_notify_state_unknown,
-                               SVN_INVALID_REVNUM);
+          notify = svn_wc_create_notify (npath, svn_wc_notify_commit_deleted,
+                                         pool);
         }
       else if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         {
-          const svn_string_t *propval = NULL;
-
+          notify = svn_wc_create_notify (npath, svn_wc_notify_commit_added,
+                                         pool);
           if (item->kind == svn_node_file)
-            SVN_ERR (svn_wc_prop_get
-                     (&propval, SVN_PROP_MIME_TYPE, item->path, adm_access,
-                      pool));
-
-          (*ctx->notify_func) (ctx->notify_baton, npath,
-                               svn_wc_notify_commit_added,
-                               item->kind,
-                               propval ? propval->data : NULL,
-                               svn_wc_notify_state_unknown,
-                               svn_wc_notify_state_unknown,
-                               SVN_INVALID_REVNUM);
+            {
+              const svn_string_t *propval;
+              SVN_ERR (svn_wc_prop_get
+                       (&propval, SVN_PROP_MIME_TYPE, item->path, adm_access,
+                        pool));
+              if (propval)
+                notify->mime_type = propval->data;
+            }
         }
-
       else if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
                || (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS))
         {
-          svn_boolean_t tmod
-            = (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS);
-          svn_boolean_t pmod
-            = (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS);
+          notify = svn_wc_create_notify (npath, svn_wc_notify_commit_modified,
+                                         pool);
+          if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
+            notify->content_state = svn_wc_notify_state_changed;
+          else
+            notify->content_state = svn_wc_notify_state_unchanged;
+          if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
+            notify->prop_state = svn_wc_notify_state_changed;
+          else
+            notify->prop_state = svn_wc_notify_state_unchanged;
+        }
+      else
+        notify = NULL;
 
-          (*ctx->notify_func) (ctx->notify_baton, npath,
-                               svn_wc_notify_commit_modified,
-                               item->kind,
-                               NULL,
-                               (tmod ? svn_wc_notify_state_changed
-                                     : svn_wc_notify_state_unchanged),
-                               (pmod ? svn_wc_notify_state_changed
-                                     : svn_wc_notify_state_unchanged),
-                               SVN_INVALID_REVNUM);
+      if (notify)
+        {
+          notify->kind = item->kind;
+          (*ctx->notify_func2) (ctx->notify_baton2, notify, pool);
         }
     }
 
@@ -1222,14 +1280,15 @@ svn_client__do_commit (const char *base_url,
       if (ctx->cancel_func)
         SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
 
-      if (ctx->notify_func)
-        (*ctx->notify_func) (ctx->notify_baton, item->path,
-                             svn_wc_notify_commit_postfix_txdelta, 
-                             svn_node_file,
-                             NULL,
-                             svn_wc_notify_state_unknown,
-                             svn_wc_notify_state_unknown,
-                             SVN_INVALID_REVNUM);
+      if (ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify
+            = svn_wc_create_notify (item->path,
+                                    svn_wc_notify_commit_postfix_txdelta,
+                                    subpool);
+          notify->kind = svn_node_file;
+          (*ctx->notify_func2) (ctx->notify_baton2, notify, subpool);
+        }
 
       if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         fulltext = TRUE;
@@ -1257,12 +1316,12 @@ svn_client__do_commit (const char *base_url,
 /* Commit callback baton */
 
 struct commit_baton {
-  svn_client_commit_info_t **info;
+  svn_client_commit_info2_t **info;
   apr_pool_t *pool;
 };
 
 svn_error_t *svn_client__commit_get_baton (void **baton,
-                                           svn_client_commit_info_t **info,
+                                           svn_client_commit_info2_t **info,
                                            apr_pool_t *pool)
 {
   struct commit_baton *cb = apr_pcalloc (pool, sizeof (*cb));
@@ -1279,9 +1338,9 @@ svn_error_t *svn_client__commit_callback (svn_revnum_t revision,
                                           void *baton)
 {
   struct commit_baton *cb = baton;
-  svn_client_commit_info_t **info = cb->info;
+  svn_client_commit_info2_t **info = cb->info;
 
-  *info = apr_palloc (cb->pool, sizeof (**info));
+  *info = svn_client_create_commit_info (cb->pool);
   (*info)->date = date ? apr_pstrdup (cb->pool, date) : NULL;
   (*info)->author = author ? apr_pstrdup (cb->pool, author) : NULL;
   (*info)->revision = revision;

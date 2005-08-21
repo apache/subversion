@@ -608,7 +608,27 @@ svn_path_is_child (const char *path1,
   return NULL;
 }
 
+svn_boolean_t
+svn_path_is_ancestor (const char *path1, const char *path2)
+{
+  apr_size_t path1_len = strlen (path1);
 
+  /* If path1 is empty and path2 is not absoulte, then path1 is an ancestor. */
+  if (SVN_PATH_IS_EMPTY (path1))
+    return *path2 != '/';
+
+  /* If path1 is a prefix of path2, then:
+     - If path1 ends in a path separator,
+     - If the paths are of the same length
+     OR
+     - path2 starts a new path component after the common prefix,
+     then path1 is an ancestor. */
+  if (strncmp (path1, path2, path1_len) == 0)
+    return path1[path1_len - 1] == '/'
+      || (path2[path1_len] == '/' || path2[path1_len] == '\0');
+
+  return FALSE;
+}
 apr_array_header_t *
 svn_path_decompose (const char *path,
                     apr_pool_t *pool)
@@ -708,43 +728,17 @@ svn_path_is_backpath_present (const char *path)
    NULL if PATH doesn't appear to be a valid URI.  The returned value
    is not alloced -- it shares memory with PATH. */
 static const char *
-skip_uri_schema (const char *path)
+skip_uri_scheme (const char *path)
 {
   apr_size_t j;
-  apr_size_t len = strlen (path);
 
-  /* ### Taking strlen() initially is inefficient.  It's a holdover
-     from svn_stringbuf_t days. */
+  for (j = 0; path[j]; ++j)
+    if (path[j] == ':' || path[j] == '/')
+       break;
 
-  /* Make sure we have enough characters to even compare. */
-  if (len < 4)
-    return NULL;
+  if (j > 0 && path[j] == ':' && path[j+1] == '/' && path[j+2] == '/')
+    return path + j + 3;
 
-  /* Look for the sequence '://' */
-  for (j = 0; j < len - 3; j++)
-    {
-      /* We hit a '/' before finding the sequence. */
-      if (path[j] == '/')
-        return NULL;
-
-      /* Skip stuff up to the first ':'. */
-      if (path[j] != ':')
-        continue;
-
-      /* Current character is a ':' now.  It better not be the first
-         character. */
-      if (j == 0)
-        return NULL;
-
-      /* Expecting the next two chars to be '/' */
-
-      if ((path[j + 1] == '/')
-          && (path[j + 2] == '/'))
-        return path + j + 3;
-      
-      return NULL;
-    }
-     
   return NULL;
 }
 
@@ -760,7 +754,7 @@ svn_path_is_url (const char *path)
 
      Someday it might be nice to have an actual URI parser here.
   */
-  return skip_uri_schema (path) ? TRUE : FALSE;
+  return skip_uri_scheme (path) ? TRUE : FALSE;
 }
 
 
@@ -808,14 +802,14 @@ svn_path_is_uri_safe (const char *path)
 {
   apr_size_t i;
 
-  /* Skip the schema. */
-  path = skip_uri_schema (path);
+  /* Skip the URI scheme. */
+  path = skip_uri_scheme (path);
 
-  /* No schema?  Get outta here. */
+  /* No scheme?  Get outta here. */
   if (! path)
     return FALSE;
 
-  /* Skip to the first slash that's after the schema. */
+  /* Skip to the first slash that's after the URI scheme. */
   path = strchr (path, '/');
 
   /* If there's no first slash, then there's only a host portion;
@@ -1120,8 +1114,8 @@ svn_path_canonicalize (const char *path, apr_pool_t *pool)
 
   dst = canon = apr_pcalloc (pool, strlen (path) + 1);
 
-  /* Copy over the URI shema if present. */
-  src = skip_uri_schema (path);
+  /* Copy over the URI scheme if present. */
+  src = skip_uri_scheme (path);
   if (src)
     {
       uri = TRUE;

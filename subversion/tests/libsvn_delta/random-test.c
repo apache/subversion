@@ -29,7 +29,8 @@
 #include "svn_delta.h"
 #include "svn_pools.h"
 #include "svn_error.h"
-#include "svn_test.h"
+
+#include "../svn_test.h"
 
 #include "../../libsvn_delta/delta.h"
 #include "delta-window-test.h"
@@ -281,6 +282,7 @@ copy_tempfile (apr_file_t *fp, apr_pool_t *pool)
 static svn_error_t *
 random_test (const char **msg,
              svn_boolean_t msg_only,
+             svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
   static char msg_buff[256];
@@ -504,6 +506,7 @@ do_random_combine_test (const char **msg,
 static svn_error_t *
 random_combine_test (const char **msg,
                      svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
                      apr_pool_t *pool)
 {
   apr_uint32_t seed;

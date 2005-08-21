@@ -42,4 +42,5 @@ public interface CommitItemStateFlags
      * the item has been copied
      */
     public static final int IsCopy=16;
+
 }

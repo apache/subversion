@@ -1,53 +1,22 @@
 TODO for locking
-===============
+================
 
-This is a summary of the current state of the locking implementation.
 
-* svn update removes defunct locks
-  - Send lock tokens over ra_dav (sussman)
-  - WC stuff (lundblad)
-  - Client changes
+NICE TO HAVE
+------------
 
-* libsvn_client and libsvn_ra take lists to lock/unlock:
-  - fix ra_dav shim (sussman)
-  - fix svnserve shim (fitz)
+* put quotes around user names as well as around lock names when we error.
 
-* rev svn_wc_notify_func_t (on trunk) (lundblad)
+* support cancellation during lock/unlock.
 
-* svn status -u shows lock info from repos.
-
-* client test cases (fitz) [broad cases done]
-
-* improve cmdline help messages
-
-* general bugs:
-
-   * 'svn commit' can easily create a no-op revision (fitz)
-   * svn lock and unlock should continue with next target on certain errors
-   * fs 'changes' table needs to be discussed w.r.t lock enforcement
-
-* svnserve bugs:
-  
-   * Fix svn_fs_access_t handling in svnserve
-
-* DAV bugs:
-
-   * need to xml-escape lock-comments over http.  (sussman;  almost done)
-   * need to send tokens in MERGE body  (sussman, jerenkranttz; almost done)
-   
-* get httpd 2.0.54 released, so that svn 1.2 can compile on win32 (??)
+-----------------------------------------------
 
 * Questions:
 
-   * Decide what should happen when unlocking in commit if an error happens.
+   * Should propedit and propset reject to set a property an a file with
+     svn:needs-lock set?
 
-
-* LIST DISCUSSIONS TO HAVE:
-
-  * should we bump the format file, so a libsvn_fs 1.0 or 1.1
-    library isn't allowed to circumvent locks?
-
-  * how do locks relate to dump/load?
+   * how do locks relate to dump/load?  file as an enhancement? 
 
 
 * Stuff to document in book:
@@ -62,18 +31,4 @@ This is a summary of the current state of the locking implementation.
        - two new bdb tables in BDB section.
        - update the description of autoversioning in appendix C!
 
-         ### remember to update authz policy doc. 
-
-* Autoversioning TODO:
-
- * propfind depth 1 on a collection should show lock-null resources.
-   currently not happening.  can this be done *compatibly* with svn
-   clients?
-
- * finish autoversioning:  see bug in issue 2161.
-        --> autoversioning on win32 webfolders and MSWord ?
-        --> investigate XP workaround for webfolders:
-                http://www.winnetmag.com/Article/ArticleID/24478/24478.html
-                http://zettai.net/Members/billfergus/1103749117/view
-            IE->File->Open->URL, check 'open as webfolder'?
 

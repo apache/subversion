@@ -31,6 +31,7 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
+#include "svn_xml.h"
 #include "ra_loader.h"
 #include "svn_private_config.h"
 
@@ -223,6 +224,12 @@ check_ra_version (const svn_version_t *ra_version, const char *scheme)
 /* -------------------------------------------------------------- */
 
 /*** Public Interfaces ***/
+
+svn_error_t *svn_ra_initialize (apr_pool_t *pool)
+{
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
                           const char *repos_URL,
                           const svn_ra_callbacks_t *callbacks,
@@ -250,7 +257,7 @@ svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
             /* Library not found. */
             break;
 
-          SVN_ERR (initfunc (svn_ra_version (), &vtable));
+          SVN_ERR (initfunc (svn_ra_version (), &vtable, pool));
 
           SVN_ERR (check_ra_version (vtable->get_version (), scheme));
         }
@@ -321,11 +328,13 @@ svn_error_t *svn_ra_get_commit_editor (svn_ra_session_t *session,
                                        const char *log_msg,
                                        svn_commit_callback_t callback,
                                        void *callback_baton,
+                                       apr_hash_t *lock_tokens,
+                                       svn_boolean_t keep_locks,
                                        apr_pool_t *pool)
 {
   return session->vtable->get_commit_editor (session, editor, edit_baton,
                                              log_msg, callback, callback_baton,
-                                             pool);
+                                             lock_tokens, keep_locks, pool);
 }
 
 svn_error_t *svn_ra_get_file (svn_ra_session_t *session,
@@ -353,7 +362,7 @@ svn_error_t *svn_ra_get_dir (svn_ra_session_t *session,
 }
 
 svn_error_t *svn_ra_do_update (svn_ra_session_t *session,
-                               const svn_ra_reporter_t **reporter,
+                               const svn_ra_reporter2_t **reporter,
                                void **report_baton,
                                svn_revnum_t revision_to_update_to,
                                const char *update_target,
@@ -369,7 +378,7 @@ svn_error_t *svn_ra_do_update (svn_ra_session_t *session,
 }
 
 svn_error_t *svn_ra_do_switch (svn_ra_session_t *session,
-                               const svn_ra_reporter_t **reporter,
+                               const svn_ra_reporter2_t **reporter,
                                void **report_baton,
                                svn_revnum_t revision_to_switch_to,
                                const char *switch_target,
@@ -386,7 +395,7 @@ svn_error_t *svn_ra_do_switch (svn_ra_session_t *session,
 }
 
 svn_error_t *svn_ra_do_status (svn_ra_session_t *session,
-                               const svn_ra_reporter_t **reporter,
+                               const svn_ra_reporter2_t **reporter,
                                void **report_baton,
                                const char *status_target,
                                svn_revnum_t revision,
@@ -401,7 +410,7 @@ svn_error_t *svn_ra_do_status (svn_ra_session_t *session,
 }
 
 svn_error_t *svn_ra_do_diff (svn_ra_session_t *session,
-                             const svn_ra_reporter_t **reporter,
+                             const svn_ra_reporter2_t **reporter,
                              void **report_baton,
                              svn_revnum_t revision,
                              const char *diff_target,
@@ -489,12 +498,55 @@ svn_error_t *svn_ra_get_file_revs (svn_ra_session_t *session,
                                          handler_baton, pool);
 }
 
+svn_error_t *svn_ra_lock (svn_ra_session_t *session,
+                          apr_hash_t *path_revs,
+                          const char *comment,
+                          svn_boolean_t steal_lock,
+                          svn_ra_lock_callback_t lock_func, 
+                          void *lock_baton,
+                          apr_pool_t *pool)
+{
+  if (comment && ! svn_xml_is_xml_safe(comment, strlen(comment)))
+    return svn_error_create
+      (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
+       _("Lock comment has illegal characters"));
+  
+  return session->vtable->lock (session, path_revs, comment, steal_lock,
+                                lock_func, lock_baton, pool);
+}
+
+svn_error_t *svn_ra_unlock (svn_ra_session_t *session,
+                            apr_hash_t *path_tokens,
+                            svn_boolean_t break_lock,
+                            svn_ra_lock_callback_t lock_func, 
+                            void *lock_baton,
+                            apr_pool_t *pool)
+{
+  return session->vtable->unlock (session, path_tokens, break_lock,
+                                  lock_func, lock_baton, pool);
+}
+
+svn_error_t *svn_ra_get_lock (svn_ra_session_t *session,
+                              svn_lock_t **lock,
+                              const char *path,
+                              apr_pool_t *pool)
+{
+  return session->vtable->get_lock (session, lock, path, pool);
+}
+
+svn_error_t *svn_ra_get_locks (svn_ra_session_t *session,
+                               apr_hash_t **locks,
+                               const char *path,
+                               apr_pool_t *pool)
+{
+  return session->vtable->get_locks (session, locks, path, pool);
+}
 
 
 
 svn_error_t *
-svn_ra_print_ra_libraries2 (svn_stringbuf_t **descriptions,
-                            apr_pool_t *pool)
+svn_ra_print_modules (svn_stringbuf_t *output,
+                      apr_pool_t *pool)
 {
   const struct ra_lib_defn *defn;
   const char * const *schemes;
@@ -502,7 +554,6 @@ svn_ra_print_ra_libraries2 (svn_stringbuf_t **descriptions,
   const svn_ra__vtable_t *vtable;
   apr_pool_t *iterpool = svn_pool_create (pool);
 
-  *descriptions = svn_stringbuf_create ("", pool);
   for (defn = ra_libraries; defn->ra_name != NULL; ++defn)
     {
       char *line;
@@ -516,18 +567,21 @@ svn_ra_print_ra_libraries2 (svn_stringbuf_t **descriptions,
 
       if (initfunc)
         {
-          SVN_ERR (initfunc (svn_ra_version(), &vtable));
+          SVN_ERR (initfunc (svn_ra_version(), &vtable, iterpool));
+
+          SVN_ERR (check_ra_version (vtable->get_version (), defn->ra_name));
+
           line = apr_psprintf (iterpool, "* ra_%s : %s\n",
                                defn->ra_name,
                                vtable->get_description());
-          svn_stringbuf_appendcstr (*descriptions, line);
+          svn_stringbuf_appendcstr (output, line);
 
           for (schemes = vtable->get_schemes(iterpool); *schemes != NULL;
                ++schemes)
             {
-              line = apr_psprintf (iterpool, _("  - handles '%s' schema\n"),
+              line = apr_psprintf (iterpool, _("  - handles '%s' scheme\n"),
                                    *schemes);
-              svn_stringbuf_appendcstr (*descriptions, line);
+              svn_stringbuf_appendcstr (output, line);
             }
         }
     }
@@ -543,7 +597,8 @@ svn_ra_print_ra_libraries (svn_stringbuf_t **descriptions,
                            void *ra_baton,
                            apr_pool_t *pool)
 {
-  return svn_ra_print_ra_libraries2 (descriptions, pool);
+  *descriptions = svn_stringbuf_create ("", pool);
+  return svn_ra_print_modules (*descriptions, pool);
 }
 
 

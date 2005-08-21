@@ -19,12 +19,14 @@
 #include <string.h>
 #include <svn_opt.h>
 #include <apr_general.h>
-#include "svn_test.h"
+
+#include "../svn_test.h"
 
 
 static svn_error_t *
 test_parse_peg_rev (const char **msg,
                     svn_boolean_t msg_only,
+                    svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {      
   apr_size_t i;
@@ -41,7 +43,7 @@ test_parse_peg_rev (const char **msg,
     { "http://a/b@COMMITTED", "http://a/b",   {svn_opt_revision_committed} },
     { "foo/bar@1:2",          NULL,           {svn_opt_revision_unspecified} },
     { "foo/bar@baz",          NULL,           {svn_opt_revision_unspecified} },
-    { "foo/bar@",             NULL,           {svn_opt_revision_unspecified} },
+    { "foo/bar@",             "foo/bar",      {svn_opt_revision_base} },
     { "foo/bar/@13",          "foo/bar",      {svn_opt_revision_number, {13}} },
     { "foo/bar@@13",          "foo/bar@",     {svn_opt_revision_number, {13}} },
     { "foo/@bar@HEAD",        "foo/@bar",     {svn_opt_revision_head} },

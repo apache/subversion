@@ -28,8 +28,8 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/*** Repository version number. */
-#define SVN_REPOS__VERSION     3
+/*** Repository format number. */
+#define SVN_REPOS__FORMAT_NUMBER     3
 
 
 /*** Repository layout. ***/
@@ -57,6 +57,10 @@ extern "C" {
 #define SVN_REPOS__HOOK_WRITE_SENTINEL  "write-sentinels"
 #define SVN_REPOS__HOOK_PRE_REVPROP_CHANGE  "pre-revprop-change"
 #define SVN_REPOS__HOOK_POST_REVPROP_CHANGE "post-revprop-change"
+#define SVN_REPOS__HOOK_PRE_LOCK        "pre-lock"
+#define SVN_REPOS__HOOK_POST_LOCK       "post-lock"
+#define SVN_REPOS__HOOK_PRE_UNLOCK      "pre-unlock"
+#define SVN_REPOS__HOOK_POST_UNLOCK     "post-unlock"
 
 
 /* The extension added to the names of example hook scripts. */
@@ -91,6 +95,9 @@ struct svn_repos_t
 
   /* The path to the Berkeley DB filesystem environment. */
   char *db_path;
+
+  /* The format number of this repository. */
+  int format;
 };
 
 
@@ -167,6 +174,62 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
                                       svn_string_t *old_value,
                                       char action,
                                       apr_pool_t *pool);
+
+/* Run the pre-lock hook for REPOS.  Use POOL for any temporary
+   allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  
+
+   PATH is the path being locked, USERNAME is the person doing it.  */
+svn_error_t *
+svn_repos__hooks_pre_lock (svn_repos_t *repos,
+                           const char *path,
+                           const char *username,
+                           apr_pool_t *pool);
+
+/* Run the post-lock hook for REPOS.  Use POOL for any temporary
+   allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  
+
+   PATHS is an array of paths being locked, USERNAME is the person
+   who did it.  */
+svn_error_t *
+svn_repos__hooks_post_lock (svn_repos_t *repos,
+                            apr_array_header_t *paths,
+                            const char *username,
+                            apr_pool_t *pool);
+
+/* Run the pre-unlock hook for REPOS.  Use POOL for any temporary
+   allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  
+   
+   PATH is the path being unlocked, USERNAME is the person doing it.  */
+svn_error_t *
+svn_repos__hooks_pre_unlock (svn_repos_t *repos,
+                             const char *path,
+                             const char *username,
+                             apr_pool_t *pool);
+
+/* Run the post-unlock hook for REPOS.  Use POOL for any temporary
+   allocations.  If the hook fails, return SVN_ERR_REPOS_HOOK_FAILURE.  
+   
+   PATHS is an array of paths being unlocked, USERNAME is the person
+   who did it.  */
+svn_error_t *
+svn_repos__hooks_post_unlock (svn_repos_t *repos,
+                              apr_array_header_t *paths,
+                              const char *username,
+                              apr_pool_t *pool);
+
+
+/*** Utility Functions ***/
+
+/* Set *CHANGED_P to TRUE if ROOT1/PATH1 and ROOT2/PATH2 have
+   different contents, FALSE if they have the same contents.
+   Use POOL for temporary allocation. */
+svn_error_t *
+svn_repos__compare_files (svn_boolean_t *changed_p,
+                          svn_fs_root_t *root1,
+                          const char *path1,
+                          svn_fs_root_t *root2,
+                          const char *path2,
+                          apr_pool_t *pool);
 
 
 #ifdef __cplusplus

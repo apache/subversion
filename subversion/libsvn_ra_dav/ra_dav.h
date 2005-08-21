@@ -116,6 +116,41 @@ typedef int svn_ra_dav__xml_endelm_cb(void *userdata,
 
 
 
+
+
+/* Context for neon request hooks; shared by the neon callbacks in
+   session.c.  */
+struct lock_request_baton
+{
+  /* The method neon is about to execute. */
+  const char *method;
+
+  /* The current working revision of item being locked. */
+  svn_revnum_t current_rev;
+
+  /* Whether client is "forcing" a lock or unlock. */
+  svn_boolean_t force;
+
+  /* The creation-date returned for newly created lock. */
+  apr_time_t creation_date;
+
+  /* The person who created the lock. */
+  const char *lock_owner;
+
+  /* A parser for handling <D:error> responses from mod_dav_svn. */
+  ne_xml_parser *error_parser;
+
+  /* If <D:error> is returned, here's where the parsed result goes. */
+  svn_error_t *err;
+
+  /* The neon request being executed */
+  ne_request *request;
+
+  /* A place for allocating fields in this structure. */
+  apr_pool_t *pool;
+};
+
+
 typedef struct {
   apr_pool_t *pool;
   const char *url;                      /* original, unparsed session url */
@@ -129,9 +164,14 @@ typedef struct {
   void *callback_baton;
  
   svn_auth_iterstate_t *auth_iterstate; /* state of authentication retries */
+  const char *auth_username;            /* last authenticated username used */
 
   svn_boolean_t compression;            /* should we use http compression? */
   const char *uuid;                     /* repository UUID */
+
+  
+  struct lock_request_baton *lrb;       /* used by lock/unlock */
+
 } svn_ra_dav__session_t;
 
 
@@ -182,6 +222,8 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   const char *log_msg,
   svn_commit_callback_t callback,
   void *callback_baton,
+  apr_hash_t *lock_tokens,
+  svn_boolean_t keep_locks,
   apr_pool_t *pool);
 
 svn_error_t * svn_ra_dav__get_file(
@@ -208,7 +250,7 @@ svn_error_t * svn_ra_dav__abort_commit(
 
 svn_error_t * svn_ra_dav__do_update(
   svn_ra_session_t *session,
-  const svn_ra_reporter_t **reporter,
+  const svn_ra_reporter2_t **reporter,
   void **report_baton,
   svn_revnum_t revision_to_update_to,
   const char *update_target,
@@ -219,7 +261,7 @@ svn_error_t * svn_ra_dav__do_update(
 
 svn_error_t * svn_ra_dav__do_status(
   svn_ra_session_t *session,
-  const svn_ra_reporter_t **reporter,
+  const svn_ra_reporter2_t **reporter,
   void **report_baton,
   const char *status_target,
   svn_revnum_t revision,
@@ -230,7 +272,7 @@ svn_error_t * svn_ra_dav__do_status(
 
 svn_error_t * svn_ra_dav__do_switch(
   svn_ra_session_t *session,
-  const svn_ra_reporter_t **reporter,
+  const svn_ra_reporter2_t **reporter,
   void **report_baton,
   svn_revnum_t revision_to_update_to,
   const char *update_target,
@@ -242,7 +284,7 @@ svn_error_t * svn_ra_dav__do_switch(
 
 svn_error_t * svn_ra_dav__do_diff(
   svn_ra_session_t *session,
-  const svn_ra_reporter_t **reporter,
+  const svn_ra_reporter2_t **reporter,
   void **report_baton,
   svn_revnum_t revision,
   const char *diff_target,
@@ -463,11 +505,13 @@ svn_error_t *svn_ra_dav__get_vcc(const char **vcc,
 /* Issue a PROPPATCH request on URL, transmitting PROP_CHANGES (a hash
    of const svn_string_t * values keyed on Subversion user-visible
    property names) and PROP_DELETES (an array of property names to
-   delete).  Use POOL for all allocations.  */
+   delete).  Send any extra request headers in EXTRA_HEADERS. Use POOL
+   for all allocations.  */
 svn_error_t *svn_ra_dav__do_proppatch (svn_ra_dav__session_t *ras,
                                        const char *url,
                                        apr_hash_t *prop_changes,
                                        apr_array_header_t *prop_deletes,
+                                       apr_hash_t *extra_headers,
                                        apr_pool_t *pool);
 
 extern const ne_propname svn_ra_dav__vcc_prop;
@@ -522,6 +566,9 @@ svn_ra_dav__lookup_xml_elem(const svn_ra_dav__xml_elm_t *table,
  * STATUS_CODE is an optional 'out' parameter; if non-NULL, then set
  * *STATUS_CODE to the http status code returned by the server.
  *
+ * If SPOOL_RESPONSE is set, the request response will be cached to
+ * disk in a tmpfile (in full), then read back and parsed.
+ *
  * Use POOL for any temporary allocation.
  */
 svn_error_t *
@@ -538,6 +585,7 @@ svn_ra_dav__parsed_request(ne_session *sess,
                            void *baton,
                            apr_hash_t *extra_headers,
                            int *status_code,
+                           svn_boolean_t spool_response,
                            apr_pool_t *pool);
   
 
@@ -563,6 +611,7 @@ svn_ra_dav__parsed_request_compat(ne_session *sess,
                                   void *baton,
                                   apr_hash_t *extra_headers,
                                   int *status_code,
+                                  svn_boolean_t spool_response,
                                   apr_pool_t *pool);
 
 
@@ -646,7 +695,15 @@ enum {
   ELEM_location,
   ELEM_file_revs_report,
   ELEM_file_rev,
-  ELEM_rev_prop
+  ELEM_rev_prop,
+  ELEM_get_locks_report,
+  ELEM_lock,
+  ELEM_lock_path,
+  ELEM_lock_token,
+  ELEM_lock_owner,
+  ELEM_lock_comment,
+  ELEM_lock_creationdate,
+  ELEM_lock_expirationdate
 };
 
 /* ### docco */
@@ -658,6 +715,8 @@ svn_error_t * svn_ra_dav__merge_activity(
     const char *repos_url,
     const char *activity_url,
     apr_hash_t *valid_targets,
+    apr_hash_t *lock_tokens,
+    svn_boolean_t keep_locks,
     svn_boolean_t disable_merge_response,
     apr_pool_t *pool);
 
@@ -678,6 +737,17 @@ svn_error_t *
 svn_ra_dav__maybe_store_auth_info (svn_ra_dav__session_t *ras);
 
 
+/* Like svn_ra_dav__maybe_store_auth_info(), but conditional on ERR.
+
+   Attempt to store auth info only if ERR is NULL or if ERR->apr_err
+   is not SVN_ERR_RA_NOT_AUTHORIZED.  If ERR is not null, return it no
+   matter what, otherwise return the result of the attempt (if any) to
+   store auth info, else return SVN_NO_ERROR. */
+svn_error_t *
+svn_ra_dav__maybe_store_auth_info_after_result(svn_error_t *err,
+                                               svn_ra_dav__session_t *ras);
+
+
 /* Create an error object for an error from neon in the given session,
    where the return code from neon was RETCODE, and CONTEXT describes
    what was being attempted.  Do temporary allocations in POOL. */
@@ -686,6 +756,17 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
                                        int retcode,
                                        apr_pool_t *pool);
 
+
+/* Callback to get data from a Neon request after it has been sent.
+
+   REQUEST is the request, DISPATCH_RETURN_VAL is the value that
+   ne_request_dispatch(REQUEST) returned to the caller.
+
+   USERDATA is a closure baton. */
+typedef svn_error_t *
+svn_ra_dav__request_interrogator(ne_request *request,
+                                 int dispatch_return_val,
+                                 void *userdata);
 
 /* Given a neon REQUEST and SESSION, run the request; if CODE_P is
    non-null, return the http status code in *CODE_P.  Return any
@@ -701,6 +782,16 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
    specified (e.g. as 200); use 0 for OKAY_2 if a second result code is
    not allowed.
 
+   #if SVN_NEON_0_25_0
+
+      If INTERROGATOR is non-NULL, invoke it with the Neon request,
+      the dispatch result, and INTERROGATOR_BATON.  This is done
+      regardless of whether the request appears successful or not.  If
+      the interrogator has an error result, return that error
+      immediately, after freeing the request.
+
+   #endif // SVN_NEON_0_25_0
+
    ### not super sure on this "okay" stuff, but it means that the request
    ### dispatching code can generate much better errors than the callers
    ### when something goes wrong. if we need more than two, then we could
@@ -715,7 +806,23 @@ svn_ra_dav__request_dispatch(int *code_p,
                              const char *url,
                              int okay_1,
                              int okay_2,
+#if SVN_NEON_0_25_0
+                             svn_ra_dav__request_interrogator interrogator,
+                             void *interrogator_baton,
+#endif /* SVN_NEON_0_25_0 */
                              apr_pool_t *pool);
+
+
+/* Give PARSER the ability to parse a mod_dav_svn <D:error> response
+   body in the case of a non-2XX response to REQUEST.  If a <D:error>
+   response is detected, then set *ERR to the parsed error.
+*/
+void
+svn_ra_dav__add_error_handler(ne_request *request,
+                              ne_xml_parser *parser,
+                              svn_error_t **err,
+                              apr_pool_t *pool);
+
 
 /*
  * Implements the get_locations RA layer function. */
@@ -726,6 +833,47 @@ svn_ra_dav__get_locations (svn_ra_session_t *session,
                            svn_revnum_t peg_revision,
                            apr_array_header_t *location_revisions,
                            apr_pool_t *pool);
+
+
+/*
+ * Implements the get_locks RA layer function. */
+svn_error_t *
+svn_ra_dav__get_locks(svn_ra_session_t *session,
+                      apr_hash_t **locks,
+                      const char *path,
+                      apr_pool_t *pool);
+
+/*
+ * Implements the get_lock RA layer function. */
+svn_error_t *
+svn_ra_dav__get_lock(svn_ra_session_t *session,
+                     svn_lock_t **lock,
+                     const char *path,
+                     apr_pool_t *pool);
+
+
+/* Helper function.  Loop over LOCK_TOKENS and assemble all keys and
+   values into a stringbuf allocated in POOL.  The string will be of
+   the form
+
+    <S:lock-token-list xmlns:S="svn:">
+      <S:lock>
+        <S:lock-path>path</S:lock-path>
+        <S:lock-token>token</S:lock-token>
+      </S:lock>
+      [...]
+    </S:lock-token-list>
+
+   Callers can then send this in the request bodies, as a way of
+   reliably marshalling potentially unbounded lists of locks.  (We do
+   this because httpd has limits on how much data can be sent in 'If:'
+   headers.)
+ */
+svn_error_t *
+svn_ra_dav__assemble_locktoken_body(svn_stringbuf_t **body,
+                                    apr_hash_t *lock_tokens,
+                                    apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }

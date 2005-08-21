@@ -32,7 +32,6 @@ struct status_baton
   svn_boolean_t switched; /* is anything switched? */
   svn_boolean_t modified; /* is anything modified? */
   svn_boolean_t committed; /* examine last committed revisions */
-  svn_boolean_t done;     /* note completion of our task. */
   const char *wc_path;    /* path whose URL we're looking for. */
   const char *wc_url;     /* URL for the path whose URL we're looking for. */
   apr_pool_t *pool;       /* pool in which to store alloc-needy things. */
@@ -44,13 +43,10 @@ struct status_baton
 static void
 analyze_status (void *baton,
                 const char *path,
-                svn_wc_status_t *status)
+                svn_wc_status2_t *status)
 {
   struct status_baton *sb = baton;
   
-  if (sb->done)
-    return;
-
   if (! status->entry)
     return;
 
@@ -81,35 +77,6 @@ analyze_status (void *baton,
 }
 
 
-/* This implements `svn_wc_notify_func_t'. */
-static void
-notify (void *baton,
-        const char *path,
-        svn_wc_notify_action_t action,
-        svn_node_kind_t kind,
-        const char *mime_type,
-        svn_wc_notify_state_t content_state,
-        svn_wc_notify_state_t prop_state,
-        svn_revnum_t revision)
-{
-  struct status_baton *sb = baton;
-  if ((action == svn_wc_notify_status_external)
-      || (action == svn_wc_notify_status_completed))
-    sb->done = TRUE;
-}
-
-
-/* This implements `svn_cancel_func_t'. */
-static svn_error_t *
-cancel (void *baton)
-{
-  struct status_baton *sb = baton;
-  if (sb->done)
-    return svn_error_create (SVN_ERR_CANCELLED, NULL, _("Finished"));
-  else
-    return SVN_NO_ERROR;
-}
-
 static svn_error_t * version(apr_getopt_t *os, apr_pool_t *pool)
 {
   return svn_opt_print_help(os, "svnversion", TRUE, FALSE, NULL, NULL,
@@ -131,7 +98,7 @@ help(const apr_getopt_option_t *options, apr_pool_t *pool)
   svn_error_clear
     (svn_cmdline_fprintf
      (stdout, pool,
-      _("usage: svnversion [OPTIONS] WC_PATH [TRAIL_URL]\n\n"
+      _("usage: svnversion [OPTIONS] [WC_PATH [TRAIL_URL]]\n\n"
         "  Produce a compact 'version number' for the working copy path\n"
         "  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
         "  determine if WC_PATH itself is switched (detection of switches\n"
@@ -153,6 +120,9 @@ help(const apr_getopt_option_t *options, apr_pool_t *pool)
         "\n"
         "  If invoked on a directory that is not a working copy, an\n"
         "  exported directory say, the program will output 'exported'.\n"
+        "\n"
+        "  If invoked without arguments WC_PATH will be the current "
+        "directory.\n"
         "\n"
         "Valid options:\n")));
   while (options->description)
@@ -232,7 +202,7 @@ main(int argc, const char *argv[])
   err = check_lib_versions ();
   if (err)
     {
-      svn_handle_error (err, stderr, FALSE);
+      svn_handle_error2 (err, stderr, FALSE, "svnversion: ");
       svn_error_clear (err);
       svn_pool_destroy (pool);
       return EXIT_FAILURE;
@@ -245,7 +215,6 @@ main(int argc, const char *argv[])
   sb.max_rev = SVN_INVALID_REVNUM;
   sb.wc_path = NULL;
   sb.wc_url = NULL;
-  sb.done = FALSE;
   sb.pool = pool;
 
   apr_getopt_init(&os, pool, argc, argv);
@@ -283,13 +252,15 @@ main(int argc, const char *argv[])
         }
     }
 
-  if (os->ind >= argc || os->ind < argc - 2)
+  if (os->ind > argc || os->ind < argc - 2)
     {
       usage(pool);
       return EXIT_FAILURE;
     }
 
-  SVN_INT_ERR (svn_utf_cstring_to_utf8 (&wc_path, os->argv[os->ind++], pool));
+  SVN_INT_ERR (svn_utf_cstring_to_utf8 (&wc_path, 
+			  (os->ind == argc) ? "." : os->argv[os->ind++], 
+			  pool));
   wc_path = svn_path_internal_style (wc_path, pool);
   SVN_INT_ERR (svn_wc_check_wc (wc_path, &wc_format, pool));
   if (! wc_format)
@@ -318,15 +289,8 @@ main(int argc, const char *argv[])
   rev.kind = svn_opt_revision_unspecified;
   ctx.config = apr_hash_make (pool);
 
-  /* Setup the notification and cancellation callbacks, and their
-     shared baton (which is also shared with the status function). */
-  ctx.notify_func = notify;
-  ctx.notify_baton = &sb;
-  ctx.cancel_func = cancel;
-  ctx.cancel_baton = &sb;
-
-  err = svn_client_status (NULL, wc_path, &rev, analyze_status, 
-                           &sb, TRUE, TRUE, FALSE, FALSE, &ctx, pool);
+  err = svn_client_status2 (NULL, wc_path, &rev, analyze_status, 
+                            &sb, TRUE, TRUE, FALSE, FALSE, TRUE, &ctx, pool);
   if (err && (err->apr_err == SVN_ERR_CANCELLED))
     svn_error_clear (err);
   else

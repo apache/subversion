@@ -88,8 +88,8 @@ def status_update_with_nested_adds(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak(wc_rev=1)
   expected_status.add({
-    'newdir' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'newdir/newfile' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'newdir' : Item(status='  ', wc_rev=2),
+    'newdir/newfile' : Item(status='  ', wc_rev=2),
     })
 
   # Commit.
@@ -603,7 +603,7 @@ def text_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
   "text-time behaviour"
 
   # Pristine text and text-time
-  fp = open(wc_path, 'r')
+  fp = open(wc_path, 'rb')
   pre_text = fp.readlines()
   pre_text_time = get_text_timestamp(wc_path)
 
@@ -616,7 +616,7 @@ def text_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
     raise svntest.Failure
 
   # Manually reverting the text does not affect the text-time
-  fp = open(wc_path, 'w')
+  fp = open(wc_path, 'wb')
   fp.writelines(pre_text)
   fp.close()
   expected_status.tweak(status_path, status='  ')
@@ -728,12 +728,10 @@ def status_on_unversioned_dotdot(sbox):
   os.chdir(new_subdir)
   try:
     out, err = svntest.main.run_svn(1, 'st', '..')
-    matched = 0
     for line in err:
-      if re.match(".*which is unsupported for this operation", line):
-        matched = 1
+      if line.find('svn: \'..\' is not a working copy') != -1:
         break
-    if not matched:
+    else:
       raise svntest.Failure
   finally:
     os.chdir(saved_cwd)
@@ -809,15 +807,69 @@ def missing_dir_in_anchor(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', foo_path)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'foo' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'foo' : Item(status='A ', wc_rev=0),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # At one point this caused a "foo not locked" error
   svntest.main.safe_rmtree(foo_path)
-  expected_status.remove('foo')
+  expected_status.tweak('foo', status='! ', wc_rev='?')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+
+def status_in_xml(sbox):
+  "status output in XML format"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_name = "iota"
+  file_path = os.path.join (wc_dir, file_name)
+  svntest.main.file_append(file_path, "test status --xml\n")
+
+  # Retrieve last changed date from svn log
+  output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'log', file_path,
+                                                     '--xml', '-rHEAD')
+  info_msg = "<date>"
+  for line in output:
+    if line.find(info_msg) >= 0:
+      time_str = line[:len(line)]
+      break
+  else:
+    raise svntest.Failure
+
+  template = ["<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
+              "<status>\n",
+              "<target\n",
+              "   path=\"%s\">\n" % (file_path),
+              "<entry\n",
+              "   path=\"%s\">\n" % (file_path),
+              "<wc-status\n",
+              "   props=\"none\"\n",
+              "   item=\"modified\"\n",
+              "   revision=\"1\">\n",
+              "<commit\n",
+              "   revision=\"1\">\n",
+              "<author>%s</author>\n" % svntest.main.wc_author,
+              time_str,
+              "</commit>\n",
+              "</wc-status>\n",
+              "</entry>\n",
+              "<against\n",
+              "   revision=\"1\"/>\n",
+              "</target>\n",
+              "</status>\n",
+             ]
+
+  output, error = svntest.actions.run_and_verify_svn (None, None, [],
+                                                      'status', file_path,
+                                                      '--xml', '-u')
+
+  for i in range(0, len(output)):
+    if output[i] != template[i]:
+      print "ERROR: expected:", template[i], "actual:", output[i]
+      raise svntest.Failure
 
 #----------------------------------------------------------------------  
 
@@ -844,6 +896,7 @@ test_list = [ None,
               status_on_unversioned_dotdot,
               status_on_partially_nonrecursive_wc,
               missing_dir_in_anchor,
+              status_in_xml,
              ]
 
 if __name__ == '__main__':

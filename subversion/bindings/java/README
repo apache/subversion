@@ -9,24 +9,25 @@ Contents:
 
      I. STATUS
     II. BUILDING
-   III. JAVAHL
-    IV. INTERFACES
-     V. SWIG
+   III. INTERFACES
+    IV. WHY NOT 100% PURE JAVA?
 
 
 I.     STATUS
 
-       Subversion has two core sets of Java bindings, JavaHL and
-       SWIG/Java.  The JavaHL bindings are currently more mature than
-       the Java/SWIG bindings, and can be considered for production
-       use.
+       The JavaHL bindings are currently quite mature, and can be
+       considered for production use.  They are based on the Sun JDK's
+       javah and are used by Subclipse <http://subclipse.tigris.org/>.
+
+       Formerly, there was a Java bindings project based on SWIG, and
+       before that, one based on hand-coded JNI.  Both projects have
+       since been abandoned.
 
 
 II.    BUILDING
 
-       The associated README for each Java bindings implementation is
-       the best reference on building.  A few comments apply across
-       the board:
+       The file subversion/bindings/java/javahl/README is the best
+       reference on building.  A few additional comments:
 
        * Passing the --with-maintainer-mode to configure will
          compile Java bytecode with debugging information.
@@ -36,24 +37,23 @@ II.    BUILDING
          via the --with-jikes=path flag to configure.
 
 
-III.   JAVAHL
-
-       See the README under subversion/bindings/java/javahl/ for
-       details.
-
-
-IV.   INTERFACES
+III.   INTERFACES
 
        The interface code exists to present an API which is familiar
        Subversion Java programmers regardless of the binding
        implementation method.  You can find it under the org/
-       sub-directory.  The SWIG/Java bindings currently conform to
-       this interface.  The API is likely to be adjusted to more
-       closely align with the JavaHL implementation in hopes of its
-       eventual adoption.  If that doesn't work out, it's likely that
-       the interface concept will be dropped entirely.
+       sub-directory.  The API is likely to be adjusted to more
+       closely align with the JavaHL implementation.  If that doesn't
+       work out, it's likely that the interface concept will be dropped
+       entirely.
 
 
-IV.    SWIG
+IV.    WHY NOT 100% PURE JAVA?
 
-       See the README under subversion/bindings/swig/java/ for details.
+       tigris.org's C library is the reference implementation of a
+       Subversion client's logic, and is the most robust client
+       implementation available.  An alternative to its rapidly
+       maturing code base and active developer community which is of
+       similar quality would require significant effort, effort more
+       efficiently contributed towards further development of the
+       loadable libraries shared by all existing implementations.

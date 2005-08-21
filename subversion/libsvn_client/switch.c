@@ -59,7 +59,7 @@ svn_client_switch (svn_revnum_t *result_rev,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  const svn_ra_reporter_t *reporter;
+  const svn_ra_reporter2_t *reporter;
   void *report_baton;
   const svn_wc_entry_t *entry;
   const char *URL, *anchor, *target;
@@ -118,21 +118,21 @@ svn_client_switch (svn_revnum_t *result_rev,
     revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
 
   /* Open an RA session to 'source' URL */
-  SVN_ERR (svn_client__open_ra_session (&ra_session, URL, anchor, 
-                                        adm_access, NULL, TRUE, FALSE, 
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, URL, anchor, 
+                                                 adm_access, NULL, TRUE, FALSE,
+                                                 ctx, pool));
   SVN_ERR (svn_client__get_revision_number
            (&revnum, ra_session, revision, path, pool));
 
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
-  SVN_ERR (svn_wc_get_switch_editor (&revnum, adm_access, target,
-                                     switch_url, use_commit_times, recurse,
-                                     ctx->notify_func, ctx->notify_baton,
-                                     ctx->cancel_func, ctx->cancel_baton,
-                                     diff3_cmd,
-                                     &switch_editor, &switch_edit_baton,
-                                     traversal_info, pool));
+  SVN_ERR (svn_wc_get_switch_editor2 (&revnum, adm_access, target,
+                                      switch_url, use_commit_times, recurse,
+                                      ctx->notify_func2, ctx->notify_baton2,
+                                      ctx->cancel_func, ctx->cancel_baton,
+                                      diff3_cmd,
+                                      &switch_editor, &switch_edit_baton,
+                                      traversal_info, pool));
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
@@ -147,11 +147,11 @@ svn_client_switch (svn_revnum_t *result_rev,
      We pass NULL for traversal_info because this is a switch, not an
      update, and therefore we don't want to handle any externals
      except the ones directly affected by the switch. */ 
-  err = svn_wc_crawl_revisions (path, dir_access, reporter, report_baton,
-                                TRUE, recurse, use_commit_times,
-                                ctx->notify_func, ctx->notify_baton,
-                                NULL, /* no traversal info */
-                                pool);
+  err = svn_wc_crawl_revisions2 (path, dir_access, reporter, report_baton,
+                                 TRUE, recurse, use_commit_times,
+                                 ctx->notify_func2, ctx->notify_baton2,
+                                 NULL, /* no traversal info */
+                                 pool);
     
   /* We handle externals after the switch is complete, so that
      handling external items (and any errors therefrom) doesn't delay
@@ -172,15 +172,17 @@ svn_client_switch (svn_revnum_t *result_rev,
   SVN_ERR (svn_wc_adm_close (adm_access));
 
   /* Let everyone know we're finished here. */
-  if (ctx->notify_func)
-    (*ctx->notify_func) (ctx->notify_baton,
-                         anchor,
-                         svn_wc_notify_update_completed,
-                         svn_node_none,
-                         NULL,
-                         svn_wc_notify_state_inapplicable,
-                         svn_wc_notify_state_inapplicable,
-                         revnum);
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify (anchor, svn_wc_notify_update_completed, pool);
+      notify->kind = svn_node_none;
+      notify->content_state = notify->prop_state
+        = svn_wc_notify_state_inapplicable;
+      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+      notify->revision = revnum;
+      (*ctx->notify_func2) (ctx->notify_baton2, notify, pool);
+    }
 
   /* If the caller wants the result revision, give it to them. */
   if (result_rev)

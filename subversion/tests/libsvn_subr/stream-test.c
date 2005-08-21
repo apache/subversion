@@ -20,12 +20,14 @@
 #include <svn_pools.h>
 #include <svn_io.h>
 #include <apr_general.h>
-#include "svn_test.h"
+
+#include "../svn_test.h"
 
 
 static svn_error_t *
 test_stream_from_string (const char **msg,
                          svn_boolean_t msg_only,
+                         svn_test_opts_t *opts,
                          apr_pool_t *pool)
 {
   int i;
@@ -147,6 +149,7 @@ generate_test_bytes(int num_bytes, apr_pool_t *pool)
 static svn_error_t *
 test_stream_compressed (const char **msg,
                         svn_boolean_t msg_only,
+                        svn_test_opts_t *opts,
                         apr_pool_t *pool)
 {
 #define NUM_TEST_STRINGS 5

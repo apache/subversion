@@ -71,7 +71,7 @@ main (int argc, char **argv)
 
   err = svn_stream_for_stdout (&stdout_stream, pool);
   if (err)
-    svn_handle_error (err, stdout, TRUE);
+    svn_handle_error2 (err, stdout, TRUE, "svndiff-test: ");
 
 #ifdef QUOPRINT_SVNDIFFS
   encoder = svn_quoprint_encode (stdout_stream, pool);
@@ -84,7 +84,7 @@ main (int argc, char **argv)
                                    svndiff_baton,
                                    pool);
   if (err)
-    svn_handle_error (err, stdout, TRUE);
+    svn_handle_error2 (err, stdout, TRUE, "svndiff-test: ");
 
   apr_file_close (source_file);
   apr_file_close (target_file);

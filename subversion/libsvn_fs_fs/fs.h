@@ -21,6 +21,7 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_md5.h>
+#include <apr_thread_mutex.h>
 #include "svn_fs.h"
 
 #ifdef __cplusplus
@@ -30,12 +31,30 @@ extern "C" {
 
 /*** The filesystem structure.  ***/
 
+/* The format number of this filesystem.
+   This is independent of the repository format number, and
+   independent of any other FS back ends. */
+#define SVN_FS_FS__FORMAT_NUMBER   1
+
 typedef struct
 {
   /* A cache of the last directory opened within the filesystem. */
   svn_fs_id_t *dir_cache_id;
   apr_hash_t *dir_cache;
   apr_pool_t *dir_cache_pool;
+
+  /* The format number of this FS. */
+  int format;
+
+  /* The uuid of this FS. */
+  const char *uuid;
+
+#if APR_HAS_THREADS
+  /* A lock for intra-process synchronization when grabbing the
+     repository write lock.  Common to all repositories with the same
+     uuid; discovered using the serialized_init function. */
+  apr_thread_mutex_t *lock;
+#endif
 } fs_fs_data_t;
 
 

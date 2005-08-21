@@ -24,10 +24,12 @@ import org.tigris.subversion.javahl.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.PrintWriter;
+import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
+
 /**
- * this class tests the basic functionality of javahl binding. It was inspired
- * by the tests in subversion/tests/clients/cmdline/basic_tests.py
+ * Tests the basic functionality of javahl binding (inspired by the
+ * tests in subversion/tests/clients/cmdline/basic_tests.py).
  */
 public class BasicTests extends SVNTests
 {
@@ -1144,6 +1146,32 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * test the basic SVNClient.fileContent functionality
+     * @throws Throwable
+     */
+    public void testBasicCatStream() throws Throwable
+    {
+        // create the working copy
+        OneTest thisTest = new OneTest();
+
+        // modify A/mu
+        File mu = new File(thisTest.getWorkingCopy(), "A/mu");
+        PrintWriter pw = new PrintWriter(new FileOutputStream(mu, true));
+        pw.print("some text");
+        pw.close();
+        // get the content from the repository
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        client.streamFileContent(thisTest.getWCPath() + "/A/mu", null, null,
+                                 100, baos);
+        
+        byte[] content = baos.toByteArray();
+        byte[] testContent = thisTest.getWc().getItemContent("A/mu").getBytes();
+
+        // the content should be the same
+        assertTrue("content changed", Arrays.equals(content, testContent));
+    }
+
+    /**
      * test the basic SVNClient.list functionality
      * @throws Throwable
      */
@@ -1266,7 +1294,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * test the basic SVNClientInfo.logMessage functionality
+     * test the basic SVNClient.logMessage functionality
      * @throws Throwable
      */
     public void testBasicLogMessage() throws Throwable
@@ -1290,6 +1318,11 @@ public class BasicTests extends SVNTests
         assertEquals("wrong action", 'A', cp[0].getAction());
     }
 
+    /**
+     * test the basic SVNClient.getVersionInfo functionality
+     * @throws Throwable
+     * @since 1.2
+     */
     public void testBasicVersionInfo() throws Throwable
     {
         // create the working copy
@@ -1297,4 +1330,136 @@ public class BasicTests extends SVNTests
         assertEquals("wrong version info","1",
                 client.getVersionInfo(thisTest.getWCPath(), null, false));        
     }
+
+    /**
+     * test the baisc SVNClient locking functionality
+     * @throws Throwable
+     * @since 1.2
+     */
+    public void testBasicLocking() throws Throwable
+    {
+        // build the first working copy
+        OneTest thisTest = new OneTest();
+
+        client.propertySet(thisTest.getWCPath()+"/A/mu",
+                           PropertyData.NEEDS_LOCK, "*", false);
+
+        addExpectedCommitItem(thisTest.getWCPath(),
+                thisTest.getUrl(), "A/mu",NodeKind.file,
+                CommitItemStateFlags.PropMods);
+        assertEquals("bad revision number on commit", 2,
+                     client.commit(new String[] {thisTest.getWCPath()},
+                                   "message", true));
+        File f = new File(thisTest.getWCPath()+"/A/mu");
+        assertEquals("file should be read only now", false, f.canWrite());
+        client.lock(new String[] {thisTest.getWCPath()+"/A/mu"},
+                                "comment", false);
+        assertEquals("file should be read write now", true, f.canWrite());
+        client.unlock(new String[]{thisTest.getWCPath()+"/A/mu"},
+                false);
+        assertEquals("file should be read only now", false, f.canWrite());
+        client.lock(new String[]{thisTest.getWCPath()+"/A/mu"},
+                           "comment", false);
+        assertEquals("file should be read write now", true, f.canWrite());
+        addExpectedCommitItem(thisTest.getWCPath(),
+                thisTest.getUrl(), "A/mu",NodeKind.file,
+                    0);
+        assertEquals("rev number from commit",-1, client.commit(
+                new String[]{thisTest.getWCPath()},"message", true));
+        assertEquals("file should be read write now", true, f.canWrite());
+    }
+
+    /**
+     * test the baisc SVNClient.info2 functionality 
+     * @throws Throwable
+     * @since 1.2
+     */
+    public void testBasicInfo2() throws Throwable
+    {
+        // build the first working copy
+        OneTest thisTest = new OneTest();
+
+        Info2[] infos = client.info2(thisTest.getWCPath(), null, null, false);
+        assertEquals("this should return 1 info object", 1, infos.length);
+        infos = client.info2(thisTest.getWCPath(), null, null, true);
+        assertEquals("this should return 21 info objects", 21, infos.length);
+        infos = client.info2(thisTest.getWCPath(), new Revision.Number(1),
+                             new Revision.Number(1), true);
+        assertEquals("this should return 21 info objects", 21, infos.length);
+    }
+
+    /**
+     * thest the basic SVNClient.merge functionality
+     * @throws Throwable
+     * @since 1.2
+     */
+    public void testBasicMerge() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        
+        // create branches directory in the repository
+        addExpectedCommitItem(null, thisTest.getUrl(), "branches", NodeKind.none,
+              CommitItemStateFlags.Add);
+        client.mkdir(new String[]{thisTest.getUrl() + "/branches"}, "log_msg");
+
+        // copy A to branches
+        addExpectedCommitItem(null, thisTest.getUrl(), "branches/A", NodeKind.none,
+                CommitItemStateFlags.Add);
+        client.copy(thisTest.getUrl() + "/A", thisTest.getUrl() + "/branches/A", "create A branch", Revision.HEAD);
+
+        // update the WC so that it has the branches folder
+        client.update(thisTest.getWCPath(), Revision.HEAD, true);
+
+        // modify file A/mu
+        File mu = new File(thisTest.getWorkingCopy(), "A/mu");
+        PrintWriter muPW = new PrintWriter(new FileOutputStream(mu, true));
+        muPW.print("appended mu text");
+        muPW.close();
+        thisTest.getWc().setItemWorkingCopyRevision("A/mu", 4);
+        thisTest.getWc().setItemContent("A/mu",
+                thisTest.getWc().getItemContent("A/mu") + "appended mu text");
+        addExpectedCommitItem(thisTest.getWCPath(),
+                thisTest.getUrl(), "A/mu",NodeKind.file,
+                CommitItemStateFlags.TextMods);
+
+        // modify file A/D/G/rho
+        File rho = new File(thisTest.getWorkingCopy(), "A/D/G/rho");
+        PrintWriter rhoPW = new PrintWriter(new FileOutputStream(rho, true));
+        rhoPW.print("new appended text for rho");
+        rhoPW.close();
+        thisTest.getWc().setItemWorkingCopyRevision("A/D/G/rho", 4);
+        thisTest.getWc().setItemContent("A/D/G/rho",
+                thisTest.getWc().getItemContent("A/D/G/rho")
+                + "new appended text for rho");
+        addExpectedCommitItem(thisTest.getWCPath(),
+                thisTest.getUrl(), "A/D/G/rho",NodeKind.file,
+                CommitItemStateFlags.TextMods);
+        // commit the changes
+        assertEquals("wrong revision number from commit",
+              client.commit(new String[]{thisTest.getWCPath()}, "log msg",
+                      true), 4);
+
+        // merge changes in A to branches/A
+        String branchPath = thisTest.getWCPath() + "/branches/A";
+        String modUrl = thisTest.getUrl() + "/A";
+        // test --dry-run
+        client.merge(modUrl, new Revision.Number(2), modUrl, Revision.HEAD, branchPath, false, true, false, true);
+
+        // now do the real merge
+        client.merge(modUrl, new Revision.Number(2), modUrl, Revision.HEAD, branchPath, false, true, false, false);
+        
+        // commit the changes so that we can verify merge
+        addExpectedCommitItem(thisTest.getWCPath(),
+                thisTest.getUrl(), "branches/A/mu",NodeKind.file,
+                CommitItemStateFlags.TextMods);
+        addExpectedCommitItem(thisTest.getWCPath(),
+                thisTest.getUrl(), "branches/A/D/G/rho",NodeKind.file,
+                CommitItemStateFlags.TextMods);
+        assertEquals("wrong revision number from commit",
+              client.commit(new String[]{thisTest.getWCPath()}, "log msg",
+                      true), 5);
+ 
+    }
+
 }

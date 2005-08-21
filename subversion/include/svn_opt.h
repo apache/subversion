@@ -154,7 +154,7 @@ svn_opt_format_option (const char **string,
  * Obtain option usage from @a options_table.  Use @a pool for temporary
  * allocation.  @a subcommand may be a canonical command name or an
  * alias.  (### todo: why does this only print to @c stdout, whereas
- * @c svn_opt_print_generic_help gives us a choice?)
+ * svn_opt_print_generic_help() gives us a choice?)
  */
 void
 svn_opt_subcommand_help (const char *subcommand, 
@@ -169,7 +169,7 @@ svn_opt_subcommand_help (const char *subcommand,
 /**
  * Various ways of specifying revisions. 
  *
- * Note:
+ * @note
  * In contexts where local mods are relevant, the `working' kind
  * refers to the uncommitted "working" revision, which may be modified
  * with respect to its base revision.  In other contexts, `working'
@@ -205,11 +205,11 @@ enum svn_opt_revision_kind {
 /** A revision, specified in one of @c svn_opt_revision_kind ways. */
 typedef struct svn_opt_revision_t
 {
-  enum svn_opt_revision_kind kind;
+  enum svn_opt_revision_kind kind;  /**< See svn_opt_revision_kind */
   union {
     svn_revnum_t number;
     apr_time_t date;
-  } value;
+  } value;                          /**< Extra data qualifying the @c kind */
 } svn_opt_revision_t;
 
 
@@ -224,14 +224,12 @@ typedef struct svn_opt_revision_t
  *      to represent N and M respectively. 
  * 
  * N and/or M may be one of the special revision descriptors
- * recognized by @c revision_from_word(), or a date in curly braces.
+ * recognized by revision_from_word(), or a date in curly braces.
  *
  * If @a arg is invalid, return -1; else return 0.
  * It is invalid to omit a revision (as in, ":", "N:" or ":M").
  *
- * Note:
- *
- * It is typical, though not required, for @a *start_revision and
+ * @note It is typical, though not required, for @a *start_revision and
  * @a *end_revision to be @c svn_opt_revision_unspecified kind on entry.
  *
  * Use @a pool for temporary allocations.
@@ -246,8 +244,6 @@ int svn_opt_parse_revision (svn_opt_revision_t *start_revision,
 /* Parsing arguments. */
 
 /**
- * @since New in 1.2.
- *
  * Pull remaining target arguments from @a os into @a *targets_p,
  * converting them to UTF-8, followed by targets from @a known_targets
  * (which might come from, for example, the "--targets" command line
@@ -255,10 +251,12 @@ int svn_opt_parse_revision (svn_opt_revision_t *start_revision,
  *
  * On each URL target, do some IRI-to-URI encoding and some
  * auto-escaping.  On each local path, canonicalize case and path
- * separators, and silently skip it if it is a Subversion administrative
- * directory.
+ * separators, and silently skip it if it has the same name as a
+ * Subversion working copy administrative directory.
  *
  * Allocate @a *targets_p and its elements in @a pool.
+ *
+ * @since New in 1.2.
  */
 svn_error_t *
 svn_opt_args_to_target_array2 (apr_array_header_t **targets_p,
@@ -268,9 +266,7 @@ svn_opt_args_to_target_array2 (apr_array_header_t **targets_p,
 
 
 /**
- * @deprecated Provided for backward compatibility with the 1.1 API.
- *
- * The same as @c svn_opt_args_to_target_array2 except that, in
+ * The same as svn_opt_args_to_target_array2() except that, in
  * addition, if @a extract_revisions is set, then look for trailing
  * "@rev" syntax on the first two paths.  If the first target in @a
  * *targets_p ends in "@rev", replace it with a canonicalized version of
@@ -279,7 +275,9 @@ svn_opt_args_to_target_array2 (apr_array_header_t **targets_p,
  * replace it with a canonicalized version of the part before "@rev"
  * and replace @a *end_revision with the value of "rev".  Ignore
  * revision specifiers on any further paths.  "rev" can be any form of
- * single revision specifier, as accepted by @c svn_opt_parse_revision.
+ * single revision specifier, as accepted by svn_opt_parse_revision().
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *
 svn_opt_args_to_target_array (apr_array_header_t **targets_p,
@@ -325,28 +323,26 @@ svn_opt_parse_all_args (apr_array_header_t **args_p,
                         apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
- *
  * Parse a working-copy or URL in @a path, extracting any trailing
  * revision specifier of the form "@rev" from the last component of
  * the path.
  *
  * Some examples would be:
  *
- *   - foo/bar              -> "foo/bar",      (unspecified)
- *   - foo/bar@13           -> "foo/bar",      (number, 13)
- *   - foo/bar@HEAD         -> "foo/bar",      (head)
- *   - foo/bar@{1999-12-31} -> "foo/bar",      (date, 1999-12-31)
- *   - http://a/b@27        -> "http://a/b",   (number, 27) 
- *   - http://a/b@COMMITTED -> "http://a/b",   (committed) [*]
- *   - foo/bar@1:2          -> error
- *   - foo/bar@baz          -> error
- *   - foo/bar@             -> error
- *   - foo/bar/@13          -> "foo/bar",      (number, 13)
- *   - foo/bar@@13          -> "foo/bar@",     (number, 13)
- *   - foo/@bar@HEAD        -> "foo/@bar",     (head)
- *   - foo@/bar             -> "foo@/bar",     (unspecified)
- *   - foo@HEAD/bar         -> "foo@HEAD/bar", (unspecified)
+ *   - foo/bar               -> "foo/bar",       (unspecified)
+ *   - foo/bar@@13           -> "foo/bar",       (number, 13)
+ *   - foo/bar@@HEAD         -> "foo/bar",       (head)
+ *   - foo/bar@@{1999-12-31} -> "foo/bar",       (date, 1999-12-31)
+ *   - http://a/b@27         -> "http://a/b",    (number, 27) 
+ *   - http://a/b@COMMITTED  -> "http://a/b",    (committed) [*]
+ *   - foo/bar@@1:2          -> error
+ *   - foo/bar@@baz          -> error
+ *   - foo/bar@              -> error
+ *   - foo/bar/@@13          -> "foo/bar",       (number, 13)
+ *   - foo/bar@@13           -> "foo/bar@",     (number, 13)
+ *   - foo/@@bar@@HEAD       -> "foo/@bar",     (head)
+ *   - foo@/bar              -> "foo@/bar",     (unspecified)
+ *   - foo@@HEAD/bar         -> "foo@HEAD/bar", (unspecified)
  *
  *   [*] Syntactically valid but probably not semantically useful.
  *
@@ -356,6 +352,8 @@ svn_opt_parse_all_args (apr_array_header_t **args_p,
  * specifier is invalid.  If no trailing revision specifier is found,
  * set @a *truepath to @a path and @a rev->kind to @c
  * svn_opt_revision_unspecified.
+ *
+ * @since New in 1.1.
  */
 svn_error_t *
 svn_opt_parse_path (svn_opt_revision_t *rev,
@@ -377,7 +375,7 @@ svn_opt_parse_path (svn_opt_revision_t *rev,
  *      information.
  *
  *    - Else if @a print_version is not true, then print generic help,
- *      via @c svn_opt_print_generic_help with the @a header, @a cmd_table,
+ *      via svn_opt_print_generic_help() with the @a header, @a cmd_table,
  *      @a option_table, and @a footer arguments.
  *
  * Use @a pool for temporary allocations.

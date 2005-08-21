@@ -21,6 +21,7 @@
 #define DAV_SVN_H
 
 #include <httpd.h>
+#include <http_log.h>
 #include <apr_tables.h>
 #include <apr_xml.h>
 #include <mod_dav.h>
@@ -36,7 +37,12 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* what the one VCC is called */
 #define DAV_SVN_DEFAULT_VCC_NAME        "default"
+
+/* a pool-key for the shared dav_svn_root used by autoversioning  */
+#define DAV_SVN_AUTOVERSIONING_ACTIVITY "svn-autoversioning-activity"
+
 
 /* dav_svn_repos
  *
@@ -99,6 +105,9 @@ typedef struct {
 
   /* the user operating against this repository */
   const char *username;
+
+  /* is the client a Subversion client? */
+  svn_boolean_t is_svn_client;
 
 } dav_svn_repos;
 
@@ -253,6 +262,7 @@ extern const dav_hooks_repository dav_svn_hooks_repos;
 extern const dav_hooks_propdb dav_svn_hooks_propdb;
 extern const dav_hooks_liveprop dav_svn_hooks_liveprop;
 extern const dav_hooks_vsn dav_svn_hooks_vsn;
+extern const dav_hooks_locks dav_svn_hooks_locks;
 
 /* for the repository referred to by this request, where is the SVN FS? */
 const char *dav_svn_get_fs_path(request_rec *r);
@@ -313,6 +323,14 @@ const char *dav_svn_get_xslt_uri(request_rec *r);
    string constant. */
 dav_error *dav_svn_convert_err(svn_error_t *serr, int status,
                                const char *message, apr_pool_t *pool);
+
+/* A wrapper around mod_dav's dav_new_error_tag, mod_dav_svn uses this
+   instead of the mod_dav function to enable special mod_dav_svn specific
+   processing.  See dav_new_error_tag for parameter documentation. */
+dav_error *dav_svn__new_error_tag(apr_pool_t *pool, int status,
+                                  int errno_id, const char *desc,
+                                  const char *namespace,
+                                  const char *tagname);
 
 /* Test PATH for canonicalness (defined as "what won't make the
    svn_path_* functions immediately explode"), returning an
@@ -381,6 +399,12 @@ dav_error *dav_svn_checkin(dav_resource *resource,
                            int keep_checked_out,
                            dav_resource **version_resource);
 
+/* For an autoversioning commit, a helper function which attaches an
+   auto-generated 'svn:log' property to a txn, as well as a property
+   that indicates the revision was made via autoversioning. */
+svn_error_t *dav_svn_attach_auto_revprops(svn_fs_txn_t *txn,
+                                          const char *fs_path,
+                                          apr_pool_t *pool);
 
 enum dav_svn_build_what {
   DAV_SVN_BUILD_URI_ACT_COLLECTION, /* the collection of activities */
@@ -569,6 +593,56 @@ svn_error_t *dav_svn_authz_read(svn_boolean_t *allowed,
                                 apr_pool_t *pool);
 
 
+/* Every provider needs to define an opaque locktoken type. */
+struct dav_locktoken
+{
+  /* This is identical to the 'token' field of an svn_lock_t. */
+  const char *uuid_str;
+};
+
+
+/* Helper for reading lock-tokens out of request bodies, by looking
+   for cached body in R->pool's userdata.
+
+   Return a hash that maps (const char *) absolute fs paths to (const
+   char *) locktokens.  Allocate the hash and all keys/vals in POOL.
+   PATH_PREFIX is the prefix we need to prepend to each relative
+   'lock-path' in the xml in order to create an absolute fs-path.
+*/
+dav_error *dav_svn__build_lock_hash(apr_hash_t **locks,
+                                    request_rec *r,
+                                    const char *path_prefix,
+                                    apr_pool_t *pool);
+
+
+/* Helper: push all of the lock-tokens (hash values) in LOCKS into
+   RESOURCE's already-open svn_fs_t. */
+dav_error *dav_svn__push_locks(dav_resource *resource,
+                               apr_hash_t *locks,
+                               apr_pool_t *pool);
+
+
+/* Convert @a serr into a dav_error.  If @a new_msg is non-NULL, use
+   @a new_msg in the returned error, and write the original
+   @a serr->message to httpd's log.  Destroy the passed-in @a serr,
+   similarly to dav_svn_convert_err().
+
+   @a new_msg is usually a "sanitized" version of @a serr->message.
+   That is, if @a serr->message contains security-sensitive data,
+   @a new_msg does not.
+
+   The purpose of sanitization is to prevent security-sensitive data
+   from being transmitted over the network to the client.  The error
+   messages produced by various APIs (e.g., svn_fs, svn_repos) may
+   contain security-sensitive data such as the actual server file
+   system's path to the repository.  We don't want to send that to the
+   client, but we do want to log the real error on the server side.
+ */
+dav_error *
+dav_svn__sanitize_error(svn_error_t *serr,
+                        const char *new_msg,
+                        int http_status,
+                        request_rec *r);
 
 #ifdef __cplusplus
 }

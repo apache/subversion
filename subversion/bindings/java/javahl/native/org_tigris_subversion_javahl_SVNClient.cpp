@@ -27,6 +27,7 @@
 #include "SVNClient.h"
 #include "Revision.h"
 #include "Notify.h"
+#include "Notify2.h"
 #include "CommitMessage.h"
 #include "Prompter.h"
 #include "Targets.h"
@@ -358,6 +359,28 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_notification
 }
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    notification2
+ * Signature: (Lorg/tigris/subversion/javahl/Notify2;)V
+ */
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_notification2
+  (JNIEnv* env, jobject jthis, jobject jnotify2)
+{
+    JNIEntry(SVNClient, notification2);
+    SVNClient *cl = SVNClient::getCppObject(jthis);
+    if(cl == NULL)
+    {
+        JNIUtil::throwError(_("bad c++ this"));
+        return;
+    }
+    Notify2 *notify2 = Notify2::makeCNotify(jnotify2);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    cl->notification2(notify2);
+}
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    commitMessageHandler
  * Signature: (Lorg/tigris/subversion/javahl/CommitMessage;)V
  */
@@ -484,11 +507,11 @@ JNIEXPORT jlongArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_update
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    commit
- * Signature: ([Ljava/lang/String;Ljava/lang/String;Z)J
+ * Signature: ([Ljava/lang/String;Ljava/lang/String;ZZ)J
  */
 JNIEXPORT jlong JNICALL Java_org_tigris_subversion_javahl_SVNClient_commit
   (JNIEnv* env, jobject jthis, jobjectArray jtargets, jstring jmessage, 
-   jboolean jrecurse)
+   jboolean jrecurse, jboolean jnoUnlock)
 {
     JNIEntry(SVNClient, commit);
     SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -503,7 +526,8 @@ JNIEXPORT jlong JNICALL Java_org_tigris_subversion_javahl_SVNClient_commit
     {
         return -1;
     }
-    return cl->commit(targets, message, jrecurse ? true : false);
+    return cl->commit(targets, message, jrecurse ? true : false, 
+        jnoUnlock ? true : false);
 }
 
 /*
@@ -1325,7 +1349,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_fileCon
   (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision, 
    jobject jpegRevision)
 {
-    JNIEntry(SVNClient, propertyCreate);
+    JNIEntry(SVNClient, fileContent);
     SVNClient *cl = SVNClient::getCppObject(jthis);
     if(cl == NULL)
     {
@@ -1349,6 +1373,36 @@ JNIEXPORT jbyteArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_fileCon
     }
     return cl->fileContent(path, revision, pegRevision);
 }
+
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_streamFileContent
+  (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision,
+   jobject jpegRevision, jint bufSize, jobject jstream)
+{
+    JNIEntry(SVNClient, streamFileContent);
+    SVNClient *cl = SVNClient::getCppObject(jthis);
+    if (cl == NULL)
+    {
+        JNIUtil::throwError(_("bad c++ this"));
+        return;
+    }
+    JNIStringHolder path(jpath);
+    if (JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    Revision revision(jrevision);
+    if (JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    Revision pegRevision(jpegRevision);
+    if (JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    cl->streamFileContent(path, revision, pegRevision, jstream, bufSize);
+}
+
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    getVersionInfo
@@ -1619,6 +1673,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_cancelOperati
         JNIUtil::throwError("bad c++ this");
         return;
     }
+    cl->cancelOperation();
 }
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
@@ -1642,4 +1697,92 @@ JNIEXPORT jobject JNICALL Java_org_tigris_subversion_javahl_SVNClient_info
         return NULL;
     }
     return cl->info(path);
+}
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    lock
+ * Signature: ([Ljava/lang/String;Ljava/lang/String;Z)V
+ */
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_lock
+  (JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jcomment, 
+   jboolean jforce)
+{
+    JNIEntry(SVNClient, lock);
+    SVNClient *cl = SVNClient::getCppObject(jthis);
+    if(cl == NULL)
+    {
+        JNIUtil::throwError("bad c++ this");
+        return;
+    }
+    Targets targets(jtargets);    
+    if(JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    JNIStringHolder comment(jcomment);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    cl->lock(targets, comment, jforce ? true : false);
+}
+
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    unlock
+ * Signature: ([Ljava/lang/String;Z)V
+ */
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_unlock
+  (JNIEnv *env, jobject jthis, jobjectArray jtargets, jboolean jforce)
+{
+    JNIEntry(SVNClient, unlock);
+    SVNClient *cl = SVNClient::getCppObject(jthis);
+    if(cl == NULL)
+    {
+        JNIUtil::throwError("bad c++ this");
+        return;
+    }
+    
+    Targets targets(jtargets);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+
+    cl->unlock(targets, jforce ? true : false);
+}
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    info2
+ * Signature: (Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;
+ *             Lorg/tigris/subversion/javahl/Revision;Z)
+ *            [Lorg/tigris/subversion/javahl/Info2;
+ */
+JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_info2
+  (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision, 
+   jobject jpegRevision, jboolean jrecurse)
+{
+    JNIEntry(SVNClient, unlock);
+    SVNClient *cl = SVNClient::getCppObject(jthis);
+    if(cl == NULL)
+    {
+        JNIUtil::throwError("bad c++ this");
+        return NULL;
+    }
+    JNIStringHolder path(jpath);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return NULL;
+    }
+    Revision revision(jrevision);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return NULL;
+    }
+    Revision pegRevision(jpegRevision);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return NULL;
+    }
+    return cl->info2(path, revision, pegRevision, jrecurse ? true : false);
 }

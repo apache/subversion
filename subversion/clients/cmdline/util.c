@@ -42,6 +42,7 @@
 #include "svn_utf.h"
 #include "svn_subst.h"
 #include "svn_config.h"
+#include "svn_xml.h"
 #include "svn_private_config.h"
 #include "cl.h"
 
@@ -49,7 +50,7 @@
 
 
 svn_error_t *
-svn_cl__print_commit_info (svn_client_commit_info_t *commit_info,
+svn_cl__print_commit_info (svn_client_commit_info2_t *commit_info,
                            apr_pool_t *pool)
 {
   if ((commit_info) 
@@ -280,9 +281,9 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
   apr_err = apr_filepath_set (old_cwd, pool);
   if (apr_err)
     {
-      svn_handle_error (svn_error_wrap_apr
-                        (apr_err, _("Can't restore working directory")),
-                        stderr, TRUE /* fatal */);
+      svn_handle_error2 (svn_error_wrap_apr
+                         (apr_err, _("Can't restore working directory")),
+                         stderr, TRUE /* fatal */, "svn: ");
     }
 
   return err;
@@ -296,7 +297,9 @@ struct log_msg_baton
   const char *message_encoding; /* the locale/encoding of the message. */
   const char *base_dir; /* the base directory for an external edit. UTF-8! */
   const char *tmpfile_left; /* the tmpfile left by an external edit. UTF-8! */
+  svn_boolean_t non_interactive; /* if true, don't pop up an editor */
   apr_hash_t *config; /* client configuration hash */
+  svn_boolean_t keep_locks; /* Keep repository locks? */
   apr_pool_t *pool; /* a pool. */
 };
 
@@ -346,6 +349,8 @@ svn_cl__make_log_msg_baton (void **baton,
   lmb->base_dir = base_dir ? base_dir : "";
   lmb->tmpfile_left = NULL;
   lmb->config = config;
+  lmb->keep_locks = opt_state->no_unlock;
+  lmb->non_interactive = opt_state->non_interactive;
   lmb->pool = pool;
   *baton = lmb;
   return SVN_NO_ERROR;
@@ -451,10 +456,7 @@ svn_cl__get_log_message (const char **log_msg,
   *tmp_file = NULL;
   if (lmb->message)
     {
-      svn_string_t *log_msg_string = svn_string_create ("", pool);
-
-      log_msg_string->data = lmb->message;
-      log_msg_string->len = strlen (lmb->message);
+      svn_string_t *log_msg_string = svn_string_create (lmb->message, pool);
 
       SVN_ERR (svn_subst_translate_string (&log_msg_string, log_msg_string,
                                            lmb->message_encoding, pool));
@@ -489,7 +491,7 @@ svn_cl__get_log_message (const char **log_msg,
           svn_client_commit_item_t *item
             = ((svn_client_commit_item_t **) commit_items->elts)[i];
           const char *path = item->path;
-          char text_mod = '_', prop_mod = ' ';
+          char text_mod = '_', prop_mod = ' ', unlock = ' ';
 
           if (! path)
             path = item->url;
@@ -516,9 +518,14 @@ svn_cl__get_log_message (const char **log_msg,
           if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
             prop_mod = 'M';
 
+          if (! lmb->keep_locks
+              && item->state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
+            unlock = 'U';
+
           svn_stringbuf_appendbytes (tmp_message, &text_mod, 1); 
           svn_stringbuf_appendbytes (tmp_message, &prop_mod, 1); 
-          svn_stringbuf_appendcstr (tmp_message, "   ");
+          svn_stringbuf_appendbytes (tmp_message, &unlock, 1); 
+          svn_stringbuf_appendcstr (tmp_message, "  ");
           svn_stringbuf_appendcstr (tmp_message, path);
           svn_stringbuf_appendcstr (tmp_message, APR_EOL_STR);
         }
@@ -527,10 +534,22 @@ svn_cl__get_log_message (const char **log_msg,
       msg_string->len = tmp_message->len;
 
       /* Use the external edit to get a log message. */
-      err = svn_cl__edit_externally (&msg_string, &lmb->tmpfile_left,
-                                     lmb->editor_cmd, lmb->base_dir,
-                                     msg_string, "svn-commit",
-                                     lmb->config, TRUE, NULL, pool);
+      if (! lmb->non_interactive)
+        {
+          err = svn_cl__edit_externally (&msg_string, &lmb->tmpfile_left,
+                                         lmb->editor_cmd, lmb->base_dir,
+                                         msg_string, "svn-commit",
+                                         lmb->config, TRUE,
+                                         lmb->message_encoding,
+                                         pool);
+        }
+      else /* non_interactive flag says we can't pop up an editor, so error */
+        {
+          return svn_error_create
+            (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
+             _("Cannot invoke editor to get log message "
+               "when non-interactive"));
+        }
 
       /* Dup the tmpfile path into its baton's pool. */
       *tmp_file = lmb->tmpfile_left = apr_pstrdup (lmb->pool, 
@@ -657,4 +676,71 @@ svn_cl__error_checked_fputs (const char *string, FILE* stream)
     }
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_cl__try (svn_error_t *err,
+             svn_boolean_t *success,
+             svn_boolean_t quiet,
+             ...)
+{
+  if (err)
+    {
+      apr_status_t apr_err;
+      va_list ap;
+
+      if (success)
+        *success = FALSE;
+
+      va_start (ap, quiet);
+      while ((apr_err = va_arg (ap, apr_status_t)) != SVN_NO_ERROR)
+        {
+          if (err->apr_err == apr_err)
+            {
+              if (! quiet)
+                svn_handle_warning (stderr, err);
+              svn_error_clear (err);
+              return SVN_NO_ERROR;
+            }
+        }
+      va_end (ap);
+    }
+  else if (success)
+    {
+      *success = TRUE;
+    }
+
+  return err;
+}
+
+
+void
+svn_cl__xml_tagged_cdata (svn_stringbuf_t **sb,
+                          apr_pool_t *pool,
+                          const char *tagname,
+                          const char *string)
+{
+  if (string)
+    {
+      svn_xml_make_open_tag (sb, pool, svn_xml_protect_pcdata,
+                             tagname, NULL);
+      svn_xml_escape_cdata_cstring (sb, string, pool);
+      svn_xml_make_close_tag (sb, pool, tagname);
+    }
+}
+
+
+const char *
+svn_cl__node_kind_str (svn_node_kind_t kind)
+{
+  switch (kind)
+    {
+    case svn_node_dir:
+      return "dir";
+    case svn_node_file:
+      return "file";
+    default:
+      return "";
+    }
 }

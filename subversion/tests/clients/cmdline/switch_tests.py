@@ -55,9 +55,9 @@ def get_routine_status_state(wc_dir):
   state = svntest.actions.get_virginal_state(wc_dir, 1)
   state.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/F', 'A/B/lambda')
   state.add({
-    'A/B/pi' : Item(status='  ', wc_rev=1, repos_rev=1),
-    'A/B/tau' : Item(status='  ', wc_rev=1, repos_rev=1),
-    'A/B/rho' : Item(status='  ', wc_rev=1, repos_rev=1),
+    'A/B/pi' : Item(status='  ', wc_rev=1),
+    'A/B/tau' : Item(status='  ', wc_rev=1),
+    'A/B/rho' : Item(status='  ', wc_rev=1),
     })
 
   return state
@@ -76,9 +76,9 @@ def get_routine_disk_state(wc_dir):
   # A/B/* no longer exist, but have been replaced by copies of A/D/G/*
   disk.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/F', 'A/B/lambda')
   disk.add({
-    'A/B/pi' : Item("This is the file 'pi'."),
-    'A/B/rho' : Item("This is the file 'rho'."),
-    'A/B/tau' : Item("This is the file 'tau'."),
+    'A/B/pi' : Item("This is the file 'pi'.\n"),
+    'A/B/rho' : Item("This is the file 'rho'.\n"),
+    'A/B/tau' : Item("This is the file 'tau'.\n"),
     })
 
   return disk
@@ -169,10 +169,10 @@ def commit_routine_switching(wc_dir, verify):
   zeta_path = os.path.join(wc_dir, 'A', 'D', 'G', 'Z', 'zeta')
 
   svntest.main.file_append(iota_path, "apple")
-  svntest.main.file_append(Bpi_path, "watermelon")
+  svntest.main.file_append(Bpi_path, "melon")
   svntest.main.file_append(Gpi_path, "banana")
   os.mkdir(Z_path)
-  svntest.main.file_append(zeta_path, "This is the file 'zeta'.")
+  svntest.main.file_append(zeta_path, "This is the file 'zeta'.\n")
   svntest.main.run_svn(None, 'add', Z_path)
 
   # Try to commit.  We expect this to fail because, if all the
@@ -199,12 +199,11 @@ def commit_routine_switching(wc_dir, verify):
 
   # Created expected status tree.
   expected_status = get_routine_status_state(wc_dir)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('iota', 'A/B', switched='S')
   expected_status.tweak('iota', 'A/B/pi', wc_rev=2, status='  ')
   expected_status.add({
-    'A/D/G/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/G/Z' : Item(status='  ', wc_rev=2),
+    'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2),
     })
 
   # Commit should succeed
@@ -290,25 +289,25 @@ def full_update(sbox):
 
   # Create expected disk tree for the update
   expected_disk = get_routine_disk_state(wc_dir)
-  expected_disk.tweak('iota', contents="This is the file 'gamma'.apple")
-  expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.apple")
-  expected_disk.tweak('A/B/pi', contents="This is the file 'pi'.watermelon")
-  expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.watermelon")
+  expected_disk.tweak('iota', contents="This is the file 'gamma'.\napple")
+  expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.\napple")
+  expected_disk.tweak('A/B/pi', contents="This is the file 'pi'.\nmelon")
+  expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.\nmelon")
   expected_disk.add({
     'A/B/Z' : Item(),
-    'A/B/Z/zeta' : Item(contents="This is the file 'zeta'."),
+    'A/B/Z/zeta' : Item(contents="This is the file 'zeta'.\n"),
     'A/D/G/Z' : Item(),
-    'A/D/G/Z/zeta' : Item(contents="This is the file 'zeta'."),
+    'A/D/G/Z/zeta' : Item(contents="This is the file 'zeta'.\n"),
     })
 
   # Create expected status tree for the update.
   expected_status = get_routine_status_state(wc_dir)
-  expected_status.tweak(repos_rev=2, wc_rev=2)
+  expected_status.tweak(wc_rev=2)
   expected_status.add({
-    'A/D/G/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/G/Z' : Item(status='  ', wc_rev=2),
+    'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2),
+    'A/B/Z' : Item(status='  ', wc_rev=2),
+    'A/B/Z/zeta' : Item(status='  ', wc_rev=2),
     })
   expected_status.tweak('iota', 'A/B', switched='S')
 
@@ -357,7 +356,6 @@ def full_rev_update(sbox):
     
   # Create expected status
   expected_status = get_routine_status_state(wc_dir)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('iota', 'A/B', switched='S')
 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -400,23 +398,22 @@ def update_switched_things(sbox):
 
   # Create expected disk tree for the update
   expected_disk = get_routine_disk_state(wc_dir)
-  expected_disk.tweak('iota', contents="This is the file 'gamma'.apple")
+  expected_disk.tweak('iota', contents="This is the file 'gamma'.\napple")
 
-  expected_disk.tweak('A/B/pi', contents="This is the file 'pi'.watermelon")
+  expected_disk.tweak('A/B/pi', contents="This is the file 'pi'.\nmelon")
   expected_disk.add({
     'A/B/Z' : Item(),
-    'A/B/Z/zeta' : Item("This is the file 'zeta'."),
+    'A/B/Z/zeta' : Item("This is the file 'zeta'.\n"),
     })
 
   # Create expected status tree for the update.
   expected_status = get_routine_status_state(wc_dir)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('iota', 'A/B', switched='S')
   expected_status.tweak('A/B', 'A/B/pi', 'A/B/rho', 'A/B/tau', 'iota',
                         wc_rev=2)
   expected_status.add({
-    'A/B/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/B/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/B/Z' : Item(status='  ', wc_rev=2),
+    'A/B/Z/zeta' : Item(status='  ', wc_rev=2),
     })
 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -459,22 +456,22 @@ def rev_update_switched_things(sbox):
 
   # Create expected disk tree
   expected_disk = get_routine_disk_state(wc_dir)
-  expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.apple")
-  expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.watermelon")
+  expected_disk.tweak('A/D/gamma', contents="This is the file 'gamma'.\napple")
+  expected_disk.tweak('A/D/G/pi', contents="This is the file 'pi'.\nmelon")
   expected_disk.add({
     'A/D/G/Z' : Item(),
-    'A/D/G/Z/zeta' : Item("This is the file 'zeta'."),
+    'A/D/G/Z/zeta' : Item("This is the file 'zeta'.\n"),
     })
     
   # Create expected status tree for the update.
   expected_status = get_routine_status_state(wc_dir)
-  expected_status.tweak(repos_rev=2, wc_rev=2)
+  expected_status.tweak(wc_rev=2)
   expected_status.tweak('iota', 'A/B', switched='S')
   expected_status.tweak('A/B', 'A/B/pi', 'A/B/rho', 'A/B/tau', 'iota',
                         wc_rev=1)
   expected_status.add({
-    'A/D/G/Z' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/G/Z' : Item(status='  ', wc_rev=2),
+    'A/D/G/Z/zeta' : Item(status='  ', wc_rev=2),
     })
 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -545,12 +542,12 @@ def relocate_deleted_missing_copied(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'copy',
                                      H_path, H2_path)
   expected_status.add({
-    'A/D/H2'       : Item(status='A ', wc_rev='-', copied='+', repos_rev=2),
-    'A/D/H2/chi'   : Item(status='  ', wc_rev='-', copied='+', repos_rev=2),
-    'A/D/H2/omega' : Item(status='  ', wc_rev='-', copied='+', repos_rev=2),
-    'A/D/H2/psi'   : Item(status='  ', wc_rev='-', copied='+', repos_rev=2),
+    'A/D/H2'       : Item(status='A ', wc_rev='-', copied='+'),
+    'A/D/H2/chi'   : Item(status='  ', wc_rev='-', copied='+'),
+    'A/D/H2/omega' : Item(status='  ', wc_rev='-', copied='+'),
+    'A/D/H2/psi'   : Item(status='  ', wc_rev='-', copied='+'),
     })
-  expected_status.remove('A/B/F')
+  expected_status.tweak('A/B/F', status='! ', wc_rev='?')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
                                          
   # Relocate
@@ -571,12 +568,12 @@ def relocate_deleted_missing_copied(sbox):
   expected_disk.remove('A/mu')
   expected_disk.add({
     'A/D/H2'       : Item(),
-    'A/D/H2/chi'   : Item("This is the file 'chi'."),
-    'A/D/H2/omega' : Item("This is the file 'omega'."),
-    'A/D/H2/psi'   : Item("This is the file 'psi'."),
+    'A/D/H2/chi'   : Item("This is the file 'chi'.\n"),
+    'A/D/H2/omega' : Item("This is the file 'omega'.\n"),
+    'A/D/H2/psi'   : Item("This is the file 'psi'.\n"),
     })
   expected_status.add({
-    'A/B/F'       : Item(status='  ', wc_rev='2', repos_rev=2),
+    'A/B/F'       : Item(status='  ', wc_rev='2'),
     })
   expected_status.tweak(wc_rev=2)
   expected_status.tweak('A/D/H2', 'A/D/H2/chi', 'A/D/H2/omega', 'A/D/H2/psi',
@@ -595,7 +592,6 @@ def relocate_deleted_missing_copied(sbox):
     })
   expected_status.tweak('A/D/H2', 'A/D/H2/chi', 'A/D/H2/omega', 'A/D/H2/psi',
                         status='  ', wc_rev='3', copied=None)
-  expected_status.tweak(repos_rev=3)
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output, expected_status,
                                          None, None, None, None, None,
@@ -688,7 +684,7 @@ def nonrecursive_switching(sbox):
   svntest.main.run_svn(None, 'mkdir', '-m', '', branch_url)
   svntest.main.run_svn(None, 'cp', '-m', '', trunk_url, version1_url)
   svntest.main.run_svn(None, 'up', wc1_dir)
-  svntest.main.file_append(wc1_new_file, "This is the file 'newfile'.")
+  svntest.main.file_append(wc1_new_file, "This is the file 'newfile'.\n")
   svntest.main.run_svn(None, 'add', wc1_new_file)
   svntest.main.run_svn(None, 'ci', '-m', '', wc1_dir)
 
@@ -769,9 +765,9 @@ def failed_anchor_is_target(sbox):
   expected_status.tweak('A/D/H', status='! ', switched='S', wc_rev=2)
   expected_status.remove('A/D/H/psi', 'A/D/H/chi', 'A/D/H/omega')
   expected_status.add({
-    'A/D/H/pi'      : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/H/tau'     : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/H/rho'     : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/H/pi'      : Item(status='  ', wc_rev=2),
+    'A/D/H/tau'     : Item(status='  ', wc_rev=2),
+    'A/D/H/rho'     : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -795,7 +791,6 @@ def failed_anchor_is_target(sbox):
   expected_status.tweak('A/D/H', status='  ') # remains switched
   expected_status.add({ 'A/D/H/psi' : Item(status='  ',
                                            switched=None,
-                                           repos_rev=2,
                                            wc_rev=2) })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -880,11 +875,68 @@ def obstructed_switch(sbox):
   os.remove(alpha_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'sw', E_url2, E_path)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=3)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', wc_rev=3)
   expected_status.tweak('A/B/E', switched='S')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+
+#----------------------------------------------------------------------
+# Issue 2353.
+def commit_mods_below_switch(sbox):
+  "commit with mods below switch" 
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  C_path = os.path.join(wc_dir, 'A', 'C')
+  B_url = svntest.main.current_repo_url + '/A/B'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C/E'       : Item(status='A '),
+    'A/C/E/alpha' : Item(status='A '),
+    'A/C/E/beta'  : Item(status='A '),
+    'A/C/F'       : Item(status='A '),
+    'A/C/lambda'  : Item(status='A '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/C/E'       : Item(),
+    'A/C/E/alpha' : Item(contents="This is the file 'alpha'.\n"),
+    'A/C/E/beta'  : Item(contents="This is the file 'beta'.\n"),
+    'A/C/F'       : Item(),
+    'A/C/lambda'  : Item(contents="This is the file 'lambda'.\n"),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/C', switched='S')
+  expected_status.add({
+    'A/C/E'       : Item(status='  ', wc_rev=1),
+    'A/C/E/alpha' : Item(status='  ', wc_rev=1),
+    'A/C/E/beta'  : Item(status='  ', wc_rev=1),
+    'A/C/F'       : Item(status='  ', wc_rev=1),
+    'A/C/lambda'  : Item(status='  ', wc_rev=1),
+    })
+  svntest.actions.run_and_verify_switch(wc_dir, C_path, B_url,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'x', 'x', C_path, D_path)
+
+  expected_status.tweak('A/C', 'A/D', status=' M')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C' : Item(verb='Sending'),
+    'A/D' : Item(verb='Sending'),
+    })
+  expected_status.tweak('A/C', 'A/D', status='  ', wc_rev=2)
+
+  # A/C erroneously classified as a wc root caused the commit to fail
+  # with "'A/C/E' is missing or not locked"
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        C_path, D_path)
 
 ########################################################################
 # Run the tests
@@ -906,6 +958,7 @@ test_list = [ None,
               failed_anchor_is_target,
               bad_intermediate_urls,
               obstructed_switch,
+              XFail(commit_mods_below_switch),
              ]
 
 if __name__ == '__main__':

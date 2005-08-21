@@ -16,17 +16,21 @@
  * ====================================================================
  */
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL)
 %module "SVN::_Ra"
+#elif defined(SWIGRUBY)
+%module "svn::ext::ra"
 #else
 %module ra
 #endif
 
 %include typemaps.i
 
-%import apr.i
-%import svn_types.i
-%import svn_string.i
+%include svn_global.swg
+%import apr.swg
+%import core.i
+%import svn_types.swg
+%import svn_string.swg
 %import svn_delta.i
 
 /* bad pool convention, also these should not be public interface at all
@@ -35,26 +39,15 @@
 %ignore svn_ra_local_init;
 %ignore svn_ra_dav_init;
 
-#ifdef SWIGJAVA
-/* Ignore these function pointer members because swig's string
-   representations of their types approach the maximum path
-   length on windows, causing swig to crash when it outputs 
-   java wrapper classes for them. */
-%ignore svn_ra_plugin_t::do_diff;
-%ignore svn_ra_plugin_t::do_switch;
-%ignore svn_ra_plugin_t::do_status;
-%ignore svn_ra_plugin_t::do_update;
-%ignore svn_ra_plugin_t::get_log;
-#endif
-
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */
 %apply SWIGTYPE **OUTPARAM {
     svn_ra_plugin_t **,
     svn_ra_session_t **,
-    const svn_ra_reporter_t **reporter,
-    void **report_baton
+    const svn_ra_reporter2_t **reporter,
+    void **report_baton,
+    svn_dirent_t **dirent
 };
 
 %apply apr_hash_t **PROPHASH { apr_hash_t **props };
@@ -94,17 +87,15 @@
 					   _global_pool);
 }
 
+%typemap(perl5, in) apr_hash_t *lock_tokens {
+    $1 = svn_swig_pl_strings_to_hash ($input, _global_pool);
+}
+
 /* ----------------------------------------------------------------------- */
 
 %{
-#include "svn_ra.h"
-
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
-#endif
-
-#ifdef SWIGJAVA
-#include "swigutil_java.h"
 #endif
 
 #ifdef SWIGPERL
@@ -116,8 +107,5 @@
 #endif
 %}
 
-%include svn_ra.h
+%include svn_ra_h.swg
 
-#ifdef SWIGPERL
-%include ra_reporter.hi
-#endif

@@ -24,7 +24,12 @@ import stat    # for ST_MODE
 import string  # for atof()
 import copy    # for deepcopy()
 import time    # for time()
+
 import getopt
+try:
+  my_getopt = getopt.gnu_getopt
+except AttributeError:
+  my_getopt = getopt.getopt
 
 from svntest import Failure
 from svntest import Skip
@@ -80,11 +85,11 @@ class SVNRepositoryCopyFailure(Failure):
 # Windows specifics
 if sys.platform == 'win32':
   windows = 1
-  file_schema_prefix = 'file:///'
+  file_scheme_prefix = 'file:///'
   _exe = '.exe'
 else:
   windows = 0
-  file_schema_prefix = 'file://'
+  file_scheme_prefix = 'file://'
   _exe = ''
 
 # The locations of the svn, svnadmin and svnlook binaries, relative to
@@ -98,6 +103,10 @@ svnversion_binary = os.path.abspath('../../../svnversion/svnversion' + _exe)
 wc_author = 'jrandom'
 wc_passwd = 'rayjandom'
 
+# Username and password used by the working copies for "second user"
+# scenarios
+wc_author2 = 'jconstant' # use the same password as wc_author
+
 # Global variable indicating if we want verbose output.
 verbose_mode = 0
 
@@ -105,17 +114,21 @@ verbose_mode = 0
 cleanup_mode = 0
 
 # Global URL to testing area.  Default to ra_local, current working dir.
-test_area_url = file_schema_prefix + os.path.abspath(os.getcwd())
+test_area_url = file_scheme_prefix + os.path.abspath(os.getcwd())
 if windows == 1:
   test_area_url = string.replace(test_area_url, '\\', '/')
 
 # Global variable indicating the FS type for repository creations.
 fs_type = None
 
+# All temporary repositories and working copies are created underneath
+# this dir, so there's one point at which to mount, e.g., a ramdisk.
+work_dir = "svn-test-work"
+
 # Where we want all the repositories and working copies to live.
 # Each test will have its own!
-general_repo_dir = "repositories"
-general_wc_dir = "working_copies"
+general_repo_dir = os.path.join(work_dir, "repositories")
+general_wc_dir = os.path.join(work_dir, "working_copies")
 
 # A relative path that will always point to latest repository
 current_repo_dir = None
@@ -124,7 +137,7 @@ current_repo_url = None
 # temp directory in which we will create our 'pristine' local
 # repository and other scratch data.  This should be removed when we
 # quit and when we startup.
-temp_dir = 'local_tmp'
+temp_dir = os.path.join(work_dir, 'local_tmp')
 
 # (derivatives of the tmp dir.)
 pristine_dir = os.path.join(temp_dir, "repos")
@@ -142,26 +155,26 @@ default_config_dir = config_dir
 #
 _item = wc.StateItem
 greek_state = wc.State('', {
-  'iota'        : _item("This is the file 'iota'."),
+  'iota'        : _item("This is the file 'iota'.\n"),
   'A'           : _item(),
-  'A/mu'        : _item("This is the file 'mu'."),
+  'A/mu'        : _item("This is the file 'mu'.\n"),
   'A/B'         : _item(),
-  'A/B/lambda'  : _item("This is the file 'lambda'."),
+  'A/B/lambda'  : _item("This is the file 'lambda'.\n"),
   'A/B/E'       : _item(),
-  'A/B/E/alpha' : _item("This is the file 'alpha'."),
-  'A/B/E/beta'  : _item("This is the file 'beta'."),
+  'A/B/E/alpha' : _item("This is the file 'alpha'.\n"),
+  'A/B/E/beta'  : _item("This is the file 'beta'.\n"),
   'A/B/F'       : _item(),
   'A/C'         : _item(),
   'A/D'         : _item(),
-  'A/D/gamma'   : _item("This is the file 'gamma'."),
+  'A/D/gamma'   : _item("This is the file 'gamma'.\n"),
   'A/D/G'       : _item(),
-  'A/D/G/pi'    : _item("This is the file 'pi'."),
-  'A/D/G/rho'   : _item("This is the file 'rho'."),
-  'A/D/G/tau'   : _item("This is the file 'tau'."),
+  'A/D/G/pi'    : _item("This is the file 'pi'.\n"),
+  'A/D/G/rho'   : _item("This is the file 'rho'.\n"),
+  'A/D/G/tau'   : _item("This is the file 'tau'.\n"),
   'A/D/H'       : _item(),
-  'A/D/H/chi'   : _item("This is the file 'chi'."),
-  'A/D/H/psi'   : _item("This is the file 'psi'."),
-  'A/D/H/omega' : _item("This is the file 'omega'."),
+  'A/D/H/chi'   : _item("This is the file 'chi'.\n"),
+  'A/D/H/psi'   : _item("This is the file 'psi'.\n"),
+  'A/D/H/omega' : _item("This is the file 'omega'.\n"),
   })
 
 
@@ -348,8 +361,9 @@ def create_repos(path):
 
   # Allow unauthenticated users to write to the repos, for ra_svn testing.
   file_append(os.path.join(path, "conf", "svnserve.conf"),
-              "[general]\nanon-access = write\n");
-
+              "[general]\nauth-access = write\npassword-db = passwd\n");
+  file_append(os.path.join(path, "conf", "passwd"),
+               "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)
 
@@ -427,12 +441,12 @@ def set_repos_paths(repo_dir):
 
 
 def canonize_url(input):
-  "Canonize the url, if the schema is unknown, returns intact input"
+  "Canonize the url, if the scheme is unknown, returns intact input"
   
   m = re.match(r"^((file://)|((svn|svn\+ssh|http|https)(://)))", input)
   if m:
-    schema = m.group(1)
-    return schema + re.sub(r'//*', '/', input[len(schema):])
+    scheme = m.group(1)
+    return scheme + re.sub(r'//*', '/', input[len(scheme):])
   else:
     return input
 
@@ -581,8 +595,8 @@ def run_tests(test_list):
   os.environ['SVN_EDITOR'] = ''
 
   try:
-    opts, args = getopt.getopt(sys.argv[1:], 'v',
-                               ['url=', 'fs-type=', 'verbose', 'cleanup'])
+    opts, args = my_getopt(sys.argv[1:], 'v',
+                           ['url=', 'fs-type=', 'verbose', 'cleanup'])
   except getopt.GetoptError:
     args = []
 
@@ -618,6 +632,9 @@ def run_tests(test_list):
 
     elif opt == "--cleanup":
       cleanup_mode = 1
+
+  if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
+    test_area_url = test_area_url[:-1]
 
   exit_code = _internal_run_tests(test_list, testnum)
 

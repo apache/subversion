@@ -62,26 +62,10 @@ svn_cl__propdel (apr_getopt_t *os,
   if (opt_state->revprop)  /* operate on a revprop */
     {
       svn_revnum_t rev;
-      const char *URL, *target;
+      const char *URL;
 
-      /* All property commands insist on a specific revision when
-         operating on a revprop. */
-      if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
-        return svn_cl__revprop_no_rev_error (pool);
-
-      /* Else some revision was specified, so proceed. */
-
-      /* Either we have a URL target, or an implicit wc-path ('.')
-         which needs to be converted to a URL. */
-      if (targets->nelts <= 0)
-        return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-                                _("No URL target available"));
-      target = ((const char **) (targets->elts))[0];
-      SVN_ERR (svn_client_url_from_path (&URL, target, pool));  
-      if (URL == NULL)
-        return svn_error_create
-          (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-           _("Either a URL or versioned item is required"));
+      SVN_ERR (svn_cl__revprop_prepare (&opt_state->start_revision, targets,
+                                        &URL, pool));
 
       /* Let libsvn_client do the real work. */
       SVN_ERR (svn_client_revprop_set (pname_utf8, NULL,
@@ -115,12 +99,15 @@ svn_cl__propdel (apr_getopt_t *os,
           svn_pool_clear (subpool);
           SVN_ERR (svn_cl__check_cancel (ctx->cancel_baton));
 
-          /* Pass 0 for 'force' because it doesn't matter here, and
-             opt_state->force doesn't apply to this command anyway. */
-          SVN_CL__TRY (svn_client_propset2 (pname_utf8, NULL, target,
-                                            opt_state->recursive,
-                                            FALSE, ctx, subpool),
-                       success);
+          /* Pass FALSE for 'skip_checks' because it doesn't matter here,
+             and opt_state->force doesn't apply to this command anyway. */
+          SVN_ERR (svn_cl__try (svn_client_propset2 (pname_utf8, NULL, target,
+                                                     opt_state->recursive,
+                                                     FALSE, ctx, subpool),
+                                &success, opt_state->quiet,
+                                SVN_ERR_UNVERSIONED_RESOURCE,
+                                SVN_ERR_ENTRY_NOT_FOUND,
+                                SVN_NO_ERROR));
           
           if (success && (! opt_state->quiet))
             {

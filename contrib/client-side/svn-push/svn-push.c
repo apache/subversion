@@ -135,7 +135,7 @@ do_job (apr_pool_t * pool, const char *src_url, const char *dest_url,
 			    &reporter,
 			    &report_baton,
 			    end_rev,
-			    NULL,
+			    "",
 			    1, 1, src_url, &my_delta_editor, edit_baton, pool));
 
   SVN_ERR (reporter->set_path (report_baton, "", start_rev, 0, pool));
@@ -182,7 +182,7 @@ main (int argc, char *argv[])
   error = check_lib_versions ();
   if (error)
     {
-      svn_handle_error (error, stderr, 0);
+      svn_handle_error2 (error, stderr, FALSE, "svn-push");
       return EXIT_FAILURE;
     }
 
@@ -215,7 +215,7 @@ main (int argc, char *argv[])
 
   if (error)
     {
-      svn_handle_error (error, stderr, 0);
+      svn_handle_error2 (error, stderr, FALSE, "svn-push: ");
       return EXIT_FAILURE;
     }
 

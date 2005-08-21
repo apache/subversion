@@ -35,12 +35,7 @@
 
 #include "svn_private_config.h" /* for SVN_APR_INT64_T_PYCFMT */
 
-#if SVN_SWIG_VERSION >= 103024
-#include <swigrun.swg>
-#include <python/pyrun.swg>
-#include <runtime.swg>
-#endif
-
+#include "swig_python_external_runtime.swg"
 #include "swigutil_py.h"
 
 
@@ -105,6 +100,191 @@ void svn_swig_py_acquire_py_lock(void)
 }
 
 
+
+/*** Automatic Pool Management Functions ***/
+
+/* The application pool */
+static apr_pool_t *_global_pool = NULL;
+static PyObject *_global_svn_swig_py_pool = NULL;
+int _global_svn_swig_py_is_local_pool = 0;
+static char assertValid[] = "assert_valid";
+static char parentPool[] = "_parent_pool";
+static char isValid[] = "_is_valid";
+static char setParentPool[] = "set_parent_pool";
+static char emptyTuple[] = "()";
+static char objectTuple[] = "(O)";
+
+
+/* Set the application pool */
+void svn_swig_py_set_application_pool(PyObject *py_pool, apr_pool_t *pool) 
+{
+  _global_pool = pool;
+  _global_svn_swig_py_pool = py_pool;
+}
+
+/* Clear the application pool */
+void svn_swig_py_clear_application_pool()
+{
+  _global_pool = NULL;
+  _global_svn_swig_py_pool = NULL;
+}
+
+/* Mark a pool as deleted after it is destroyed */
+static apr_status_t svn_swig_py_pool_destroyed(void *ptr)
+{
+  PyObject *pool = (PyObject *) ptr;
+  svn_swig_py_acquire_py_lock();
+  PyObject_DelAttrString(pool, isValid);
+  svn_swig_py_release_py_lock();
+  return APR_SUCCESS; 
+}
+
+/* Decrease a pool's reference count after it is destroyed */
+static apr_status_t svn_swig_py_pool_decref(void *ptr)
+{
+  PyObject *pool = (PyObject *) ptr;
+  svn_swig_py_acquire_py_lock();
+  Py_DECREF(pool);
+  svn_swig_py_release_py_lock();
+  return APR_SUCCESS; 
+}
+
+/* Register cleanup function */
+PyObject * svn_swig_py_register_cleanup(PyObject *py_pool, apr_pool_t *pool) 
+{
+  PyObject *result;
+  
+  svn_swig_py_acquire_py_lock();
+
+  /* Check that the pool object is valid */
+  result = PyObject_CallMethod(py_pool, assertValid, emptyTuple);
+  if (result == NULL) {
+    return NULL;
+  }
+  Py_DECREF(result);
+  svn_swig_py_release_py_lock();
+
+  /* Delete the "_isvalid" member when the pool is destroyed */
+  apr_pool_cleanup_register(pool, py_pool, svn_swig_py_pool_destroyed,
+                            apr_pool_cleanup_null);
+
+  /* Return None */
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+/* Get the application pool */
+void svn_swig_get_application_pool(PyObject **py_pool, apr_pool_t **pool)
+{
+  *pool = _global_pool;
+  *py_pool = _global_svn_swig_py_pool;
+}
+
+/* Set the parent pool of a proxy object */
+static int proxy_set_pool(PyObject *proxy, PyObject *pool)
+{
+  PyObject *result;
+
+  if (proxy != NULL && PyObject_HasAttrString(proxy, setParentPool)) {
+    
+    if (pool == NULL) {
+      result = PyObject_CallMethod(proxy, setParentPool, emptyTuple);
+    } else {
+      result = PyObject_CallMethod(proxy, setParentPool, objectTuple, pool);
+    }
+    
+    if (result == NULL) {
+      return 1;
+    }
+    Py_DECREF(result);
+
+    result = PyObject_CallMethod(proxy, assertValid, emptyTuple);
+    if (result == NULL) {
+      return 1;
+    }
+    Py_DECREF(result);
+
+  }
+
+  return 0;
+}
+
+/* Wrapper for SWIG_TypeQuery */
+#define svn_swig_TypeQuery(x) SWIG_TypeQuery(x)
+
+/** Wrapper for SWIG_NewPointerObj */
+PyObject *svn_swig_NewPointerObj(void *obj, swig_type_info *type, 
+                                 PyObject *pool)
+{
+  PyObject *proxy = SWIG_NewPointerObj(obj, type, 0);
+
+  if (proxy == NULL) {
+    return NULL;
+  }
+  
+  if (proxy_set_pool(proxy, pool)) {
+    Py_DECREF(proxy);
+    return NULL;
+  }
+
+  return proxy;
+}
+
+/** svn_swig_NewPointerObj, except a string is used to describe the type */
+static PyObject *svn_swig_NewPointerObjString(void *ptr, const char *type, 
+                                              PyObject *py_pool)
+{
+  swig_type_info *typeinfo = svn_swig_TypeQuery(type);
+  if (typeinfo == NULL) {
+    PyErr_SetString(PyExc_TypeError, "Cannot find required typeobject");
+    return NULL;
+  }
+  /* ### cache the swig_type_info at some point? */
+  return svn_swig_NewPointerObj(ptr, typeinfo, py_pool);
+}
+
+/** Wrapper for SWIG_ConvertPtr */
+int svn_swig_ConvertPtr(PyObject *input, void **obj, swig_type_info *type)
+{
+  if (PyObject_HasAttrString(input, assertValid)) {
+    PyObject *result = PyObject_CallMethod(input, assertValid, emptyTuple);
+    if (result == NULL) {
+      return 1;
+    }
+    Py_DECREF(result);
+  }
+  return SWIG_ConvertPtr(input, obj, type, SWIG_POINTER_EXCEPTION | 0);
+}
+
+/** svn_swig_ConvertPtr, except a string is used to describe the type */
+static int svn_swig_ConvertPtrString(PyObject *input,
+    void **obj, const char *type)
+{
+  return svn_swig_ConvertPtr(input, obj, svn_swig_TypeQuery(type));
+}
+
+/** Wrapper for SWIG_MustGetPtr */
+void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum,
+                          PyObject **py_pool)
+{
+  if (PyObject_HasAttrString(input, assertValid)) {
+    PyObject *result = PyObject_CallMethod(input, assertValid, emptyTuple);
+    if (result == NULL) {
+      return NULL;
+    }
+    Py_DECREF(result);
+  }
+  if (py_pool != NULL) {
+    if (PyObject_HasAttrString(input, parentPool)) {
+      *py_pool = PyObject_GetAttrString(input, parentPool);
+      Py_DECREF(*py_pool);
+    } else {
+      *py_pool = _global_svn_swig_py_pool;
+    }
+  }
+  return SWIG_MustGetPtr(input, type, argnum, SWIG_POINTER_EXCEPTION | 0);
+}
+  
 
 /*** Custom SubversionException stuffs. ***/
 
@@ -174,39 +354,83 @@ void svn_swig_py_svn_exception(svn_error_t *err)
 
 /*** Helper/Conversion Routines ***/
 
-static PyObject *make_pointer(const char *typename, void *ptr)
+/* Functions for making Python wrappers around Subversion structs */
+static PyObject *make_ob_pool(void *pool)
 {
-  /* ### cache the swig_type_info at some point? */
-  return SWIG_NewPointerObj(ptr, SWIG_TypeQuery(typename), 0);
+  PyObject *py_pool = SWIG_NewPointerObj(pool, 
+    svn_swig_TypeQuery("apr_pool_t *"), 0);
+
+  if (py_pool == NULL) {
+    return NULL;
+  }
+
+  apr_pool_cleanup_register((apr_pool_t *)pool, py_pool, 
+    svn_swig_py_pool_decref, apr_pool_cleanup_null); 
+  
+  if (proxy_set_pool(py_pool, NULL)) {
+    Py_DECREF(py_pool);
+    return NULL;
+  }
+  
+  Py_INCREF(py_pool);
+
+  return py_pool;
+}
+static PyObject *make_ob_window(svn_txdelta_window_t *ptr, PyObject *py_pool)
+{
+  return svn_swig_NewPointerObjString(ptr, "svn_txdelta_window_t *", py_pool);
+}
+static PyObject *make_ob_status(svn_wc_status_t *ptr, PyObject *py_pool)
+{
+  return svn_swig_NewPointerObjString(ptr, "svn_wc_status_t *", py_pool);
+} 
+static PyObject *make_ob_lock(svn_lock_t *ptr, PyObject *py_pool)
+{
+  return svn_swig_NewPointerObjString(ptr, "svn_lock_t *", py_pool);
+} 
+static PyObject *make_ob_fs_root(svn_fs_root_t *ptr, PyObject *py_pool)
+{
+  return svn_swig_NewPointerObjString(ptr, "svn_fs_root_t *", py_pool);
+} 
+static PyObject *make_ob_server_cert_info(
+  const svn_auth_ssl_server_cert_info_t *ptr, PyObject *py_pool)
+{
+  return svn_swig_NewPointerObjString((void *)ptr, 
+    "svn_auth_ssl_server_cert_info_t *", py_pool);
+} 
+/***/
+
+/* Conversion from Python single objects (not hashes/lists/etc.) to
+   Subversion types. */
+static const char *make_string_from_ob(PyObject *ob, apr_pool_t *pool)
+{
+  if (ob == Py_None)
+    return NULL;
+  if (! PyString_Check(ob)) {
+    PyErr_SetString(PyExc_TypeError, "not a string");
+    return NULL;
+  }
+  return apr_pstrdup(pool, PyString_AS_STRING(ob));
+}
+static svn_string_t *make_svn_string_from_ob(PyObject *ob, apr_pool_t *pool)
+{
+  if (ob == Py_None)
+    return NULL;
+  if (! PyString_Check(ob)) {
+    PyErr_SetString(PyExc_TypeError, "not a string");
+    return NULL;
+  }
+  return svn_string_create(PyString_AS_STRING(ob), pool);
 }
 
-/* Functions for use with the "O&" format specifier */
-static PyObject *make_ob_pool(void *ptr)
-{
-  return make_pointer("apr_pool_t *", ptr);
-}
-static PyObject *make_ob_window(void *ptr)
-{
-  return make_pointer("svn_txdelta_window_t *", ptr);
-}
-static PyObject *make_ob_status(void *ptr)
-{
-  return make_pointer("svn_wc_status_t *", ptr);
-} 
-static PyObject *make_ob_fs_root(void *ptr)
-{
-  return make_pointer("svn_fs_root_t *", ptr);
-} 
-static PyObject *make_ob_server_cert_info(void *ptr)
-{
-  return make_pointer("svn_auth_ssl_server_cert_info_t *", ptr);
-} 
+
 /***/
 
 static PyObject *convert_hash(apr_hash_t *hash,
                               PyObject * (*converter_func)(void *value,
-                                                           void *ctx),
-                              void *ctx)
+                                                           void *ctx,
+                                                           PyObject *py_pool),
+                              void *ctx, PyObject *py_pool)
 {
     apr_hash_index_t *hi;
     PyObject *dict = PyDict_New();
@@ -220,7 +444,7 @@ static PyObject *convert_hash(apr_hash_t *hash,
         PyObject *value;
 
         apr_hash_this(hi, &key, NULL, &val);
-        value = (*converter_func)(val, ctx);
+        value = (*converter_func)(val, ctx, py_pool);
         if (value == NULL) {
             Py_DECREF(dict);
             return NULL;
@@ -237,23 +461,21 @@ static PyObject *convert_hash(apr_hash_t *hash,
     return dict;
 }
 
-static PyObject *convert_to_swigtype(void *value, void *ctx)
+static PyObject *convert_to_swigtype(void *value, void *ctx, PyObject *py_pool)
 {
   /* ctx is a 'swig_type_info *' */
-  return SWIG_NewPointerObj(value, ctx, 0);
+  return svn_swig_NewPointerObj(value, ctx, py_pool);
 }
 
-static PyObject *convert_svn_string_t(void *value, void *ctx)
+static PyObject *convert_svn_string_t(void *value, void *ctx,
+                                      PyObject *py_pool)
 {
   /* ctx is unused */
 
   const svn_string_t *s = value;
 
-  /* ### borrowing from value in the pool. or should we copy? note
-     ### that copying is "safest" */
-
   /* ### gotta cast this thing cuz Python doesn't use "const" */
-  return PyBuffer_FromMemory((void *)s->data, s->len);
+  return PyString_FromStringAndSize((void *)s->data, s->len);
 }
 
 static PyObject *convert_svn_client_commit_item_t(void *value, void *ctx)
@@ -317,7 +539,7 @@ static PyObject *convert_svn_client_commit_item_t(void *value, void *ctx)
 
 PyObject *svn_swig_py_prophash_to_dict(apr_hash_t *hash)
 {
-  return convert_hash(hash, convert_svn_string_t, NULL);
+  return convert_hash(hash, convert_svn_string_t, NULL, NULL);
 }
 
 
@@ -362,9 +584,10 @@ PyObject *svn_swig_py_locationhash_to_dict(apr_hash_t *hash)
     return dict;
 }
 
-PyObject *svn_swig_py_convert_hash(apr_hash_t *hash, swig_type_info *type)
+PyObject *svn_swig_py_convert_hash(apr_hash_t *hash, swig_type_info *type, 
+                                   PyObject *py_pool)
 {
-  return convert_hash(hash, convert_to_swigtype, type);
+  return convert_hash(hash, convert_to_swigtype, type, py_pool);
 }
 
 PyObject *svn_swig_py_c_strings_to_list(char **strings)
@@ -387,6 +610,86 @@ PyObject *svn_swig_py_c_strings_to_list(char **strings)
     Py_DECREF(list);
     return NULL;
 }
+
+apr_hash_t *svn_swig_py_stringhash_from_dict(PyObject *dict,
+                                             apr_pool_t *pool)
+{
+  apr_hash_t *hash;
+  PyObject *keys;
+  int i, num_keys;
+  
+  if (dict == Py_None)
+    return NULL;
+
+  if (!PyDict_Check(dict)) {
+    PyErr_SetString(PyExc_TypeError, "not a dictionary");
+    return NULL;
+  }
+
+  hash = apr_hash_make(pool);  
+  keys = PyDict_Keys(dict);
+  num_keys = PyList_Size(keys);
+  for (i = 0; i < num_keys; i++)
+    {
+      PyObject *key = PyList_GetItem(keys, i);
+      PyObject *value = PyDict_GetItem(dict, key);
+      const char *propname = make_string_from_ob(key, pool);
+      const char *propval = make_string_from_ob(value, pool);
+      Py_DECREF(key);
+      Py_DECREF(value);
+      if (! (propname && propval))
+        {
+          PyErr_SetString(PyExc_TypeError, 
+                          "dictionary keys/values aren't strings");
+          Py_DECREF(keys);
+          return NULL;
+        }
+      apr_hash_set(hash, propname, APR_HASH_KEY_STRING, propval);
+    }
+  Py_DECREF(keys);
+  return hash;
+}
+
+
+apr_hash_t *svn_swig_py_prophash_from_dict(PyObject *dict,
+                                           apr_pool_t *pool)
+{
+  apr_hash_t *hash;
+  PyObject *keys;
+  int i, num_keys;
+
+  if (dict == Py_None)
+    return NULL;
+
+  if (!PyDict_Check(dict)) {
+    PyErr_SetString(PyExc_TypeError, "not a dictionary");
+    return NULL;
+  }
+
+  hash = apr_hash_make(pool);  
+  keys = PyDict_Keys(dict);
+  num_keys = PyList_Size(keys);
+  for (i = 0; i < num_keys; i++)
+    {
+      PyObject *key = PyList_GetItem(keys, i);
+      PyObject *value = PyDict_GetItem(dict, key);
+      const char *propname = make_string_from_ob(key, pool);
+      svn_string_t *propval = make_svn_string_from_ob(value, pool);
+      Py_DECREF(key);
+      Py_DECREF(value);
+      if (! (propname && propval))
+        {
+          PyErr_SetString(PyExc_TypeError, 
+                          "dictionary keys/values aren't strings");
+          Py_DECREF(keys);
+          return NULL;
+        }
+      apr_hash_set(hash, propname, APR_HASH_KEY_STRING, propval);
+    }
+  Py_DECREF(keys);
+  return hash;
+}
+
 
 const apr_array_header_t *svn_swig_py_strings_to_array(PyObject *source,
                                                        apr_pool_t *pool)
@@ -1068,26 +1371,33 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 /*** Other Wrappers for SVN Functions ***/
 
 
-/* This is very hacky and gross.  */
 apr_file_t *svn_swig_py_make_file (PyObject *py_file,
                                    apr_pool_t *pool)
 {
   apr_file_t *apr_file = NULL;
+  apr_status_t apr_err;
 
   if (py_file == NULL || py_file == Py_None)
     return NULL;
 
-  if (PyString_Check(py_file))
+  if (PyString_Check (py_file))
     {
       /* input is a path -- just open an apr_file_t */
-      apr_file_open(&apr_file, PyString_AS_STRING(py_file),
-                    APR_CREATE | APR_READ | APR_WRITE,
-                    APR_OS_DEFAULT,
-                    pool);
+      char* fname = PyString_AS_STRING (py_file);
+      apr_err = apr_file_open (&apr_file, fname,
+                              APR_CREATE | APR_READ | APR_WRITE,
+                              APR_OS_DEFAULT, pool);
+      if (apr_err)
+        {
+          char buf[256];
+          apr_strerror (apr_err, buf, sizeof(buf));
+          PyErr_Format (PyExc_IOError, "apr_file_open failed: %s: '%s'",
+                        buf, fname);
+          return NULL;
+        }
     }
   else if (PyFile_Check (py_file))
     {
-      apr_status_t status;
       FILE *file;
       apr_os_file_t osfile;
 
@@ -1098,9 +1408,14 @@ apr_file_t *svn_swig_py_make_file (PyObject *py_file,
 #else
       osfile = (apr_os_file_t)fileno(file);
 #endif
-      status = apr_os_file_put (&apr_file, &osfile, O_CREAT | O_WRONLY, pool);
-      if (status)
-        return NULL;
+      apr_err = apr_os_file_put (&apr_file, &osfile, O_CREAT | O_WRONLY, pool);
+      if (apr_err)
+        {
+          char buf[256];
+          apr_strerror (apr_err, buf, sizeof(buf));
+          PyErr_Format (PyExc_IOError, "apr_os_file_put failed: %s", buf);
+          return NULL;
+        }
     }
   return apr_file;
 }
@@ -1151,14 +1466,17 @@ write_handler_pyio (void *baton, const char *data, apr_size_t *len)
   PyObject *py_io = baton;
   svn_error_t *err = SVN_NO_ERROR;
 
-  svn_swig_py_acquire_py_lock();
-  if ((result = PyObject_CallMethod(py_io, (char *)"write",
-                                    (char *)"s#", data, *len)) == NULL)
+  if (data != NULL)
     {
-      err = callback_exception_error();
+      svn_swig_py_acquire_py_lock();
+      if ((result = PyObject_CallMethod(py_io, (char *)"write",
+                                        (char *)"s#", data, *len)) == NULL)
+        {
+          err = callback_exception_error();
+        }
+      Py_XDECREF(result);
+      svn_swig_py_release_py_lock();
     }
-  Py_XDECREF(result);
-  svn_swig_py_release_py_lock();
 
   return err;
 }
@@ -1292,6 +1610,50 @@ svn_error_t *svn_swig_py_cancel_func(void *cancel_baton)
   return err;
 }
 
+svn_error_t *svn_swig_py_fs_get_locks_func (void *baton, 
+                                            svn_lock_t *lock,
+                                            apr_pool_t *pool)
+{
+  PyObject *function = baton;
+  PyObject *result, *py_pool, *py_lock;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if (function == NULL || function == Py_None)
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+  py_pool = make_ob_pool(pool);
+  if (py_pool == NULL) {
+    err = callback_exception_error();
+    goto finished;
+  }
+  py_lock = make_ob_lock(lock, py_pool);
+  if (py_lock == NULL) {
+    Py_DECREF(py_pool);
+    err = callback_exception_error();
+    goto finished;
+  }
+  
+  if ((result = PyObject_CallFunction(function, (char *)"OO",
+                                      py_lock, py_pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      /* The callback shouldn't be returning anything. */
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+      Py_DECREF(result);
+    }
+
+  Py_DECREF(py_lock);
+  Py_DECREF(py_pool);
+
+finished: 
+  svn_swig_py_release_py_lock();
+  return err;
+}
 
 svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
                                              const char **tmp_file,
@@ -1368,18 +1730,31 @@ svn_error_t *svn_swig_py_repos_authz_func(svn_boolean_t *allowed,
 {
   PyObject *function = baton;
   PyObject *result;
+  PyObject *py_pool, *py_root;
   svn_error_t *err = SVN_NO_ERROR;
 
   if (function == NULL || function == Py_None)
     return SVN_NO_ERROR;
 
+  svn_swig_py_acquire_py_lock();
+  
+  py_pool = make_ob_pool(pool);
+  if (py_pool == NULL) {
+    err = callback_exception_error();
+    goto finished;
+  }
+  py_root = make_ob_fs_root(root, py_pool);
+  if (py_root == NULL) {
+    Py_DECREF(py_pool);
+    err = callback_exception_error();
+    goto finished; 
+  }
+  
   *allowed = TRUE;
 
-  svn_swig_py_acquire_py_lock();
   if ((result = PyObject_CallFunction(function, 
-                                      (char *)"O&sO&", 
-                                      make_ob_fs_root, root,
-                                      path, make_ob_pool, pool)) == NULL)
+                                      (char *)"OsO", 
+                                      py_root, path, py_pool)) == NULL)
     {
       err = callback_exception_error();
     }
@@ -1393,6 +1768,9 @@ svn_error_t *svn_swig_py_repos_authz_func(svn_boolean_t *allowed,
         err = callback_bad_return_error("Not an integer");
       Py_DECREF(result);
     }
+  Py_DECREF(py_root);
+  Py_DECREF(py_pool);
+finished:
   svn_swig_py_release_py_lock();
   return err;
 }
@@ -1438,8 +1816,7 @@ svn_error_t *svn_swig_py_log_receiver(void *baton,
                                       apr_pool_t *pool)
 {
   PyObject *receiver = baton;
-  PyObject *result;
-  swig_type_info *tinfo = SWIG_TypeQuery("svn_log_changed_path_t *");
+  PyObject *result, *py_pool;
   PyObject *chpaths;
   svn_error_t *err = SVN_NO_ERROR;
  
@@ -1448,9 +1825,16 @@ svn_error_t *svn_swig_py_log_receiver(void *baton,
 
   svn_swig_py_acquire_py_lock();
 
+  py_pool = make_ob_pool(pool);
+  if (py_pool == NULL) {
+    err = callback_exception_error();
+    goto finished;
+  }
+
   if (changed_paths)
     {
-      chpaths = svn_swig_py_convert_hash (changed_paths, tinfo);
+      swig_type_info *tinfo = svn_swig_TypeQuery("svn_log_changed_path_t *");
+      chpaths = svn_swig_py_convert_hash (changed_paths, tinfo, py_pool);
     }
   else
     {
@@ -1459,9 +1843,9 @@ svn_error_t *svn_swig_py_log_receiver(void *baton,
     }
 
   if ((result = PyObject_CallFunction(receiver, 
-                                      (char *)"OlsssO&", 
+                                      (char *)"OlsssO", 
                                       chpaths, rev, author, date, msg, 
-                                      make_ob_pool, pool)) == NULL)
+                                      py_pool)) == NULL)
     {
       err = callback_exception_error();
     }
@@ -1473,6 +1857,8 @@ svn_error_t *svn_swig_py_log_receiver(void *baton,
     }
 
   Py_DECREF(chpaths);
+  Py_DECREF(py_pool);
+finished:
   svn_swig_py_release_py_lock();
   return err;
 }
@@ -1545,8 +1931,8 @@ svn_swig_py_auth_simple_prompt_func (svn_auth_cred_simple_t **cred,
       if (result != Py_None)
         {
           svn_auth_cred_simple_t *tmp_creds = NULL;
-          if (SWIG_ConvertPtr(result, (void **)&tmp_creds, 
-                              SWIG_TypeQuery("svn_auth_cred_simple_t *"), 0))
+          if (svn_swig_ConvertPtrString(result, (void **)&tmp_creds, 
+                "svn_auth_cred_simple_t *"))
             {
               err = type_conversion_error("svn_auth_cred_simple_t *");
             }
@@ -1596,8 +1982,8 @@ svn_swig_py_auth_username_prompt_func (svn_auth_cred_username_t **cred,
       if (result != Py_None)
         {
           svn_auth_cred_username_t *tmp_creds = NULL;
-          if (SWIG_ConvertPtr(result, (void **)&tmp_creds, 
-                              SWIG_TypeQuery("svn_auth_cred_username_t *"), 0))
+          if (svn_swig_ConvertPtrString(result, (void **)&tmp_creds, 
+                "svn_auth_cred_username_t *"))
             {
               err = type_conversion_error("svn_auth_cred_username_t *");
             }
@@ -1628,7 +2014,7 @@ svn_swig_py_auth_ssl_server_trust_prompt_func(
     apr_pool_t *pool)
 {
   PyObject *function = baton;
-  PyObject *result;
+  PyObject *result, *py_pool, *py_cert_info;
   svn_auth_cred_ssl_server_trust_t *creds = NULL;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -1636,12 +2022,23 @@ svn_swig_py_auth_ssl_server_trust_prompt_func(
     return SVN_NO_ERROR;
 
   svn_swig_py_acquire_py_lock();
+  py_pool = make_ob_pool(pool);
+  if (py_pool == NULL) {
+    err = callback_exception_error();
+    goto finished;
+  }
+  py_cert_info = make_ob_server_cert_info(cert_info, py_pool); 
+  if (py_pool == NULL) {
+    Py_DECREF(py_pool);
+    err = callback_exception_error();
+    goto finished;
+  } 
 
   if ((result = PyObject_CallFunction(function, 
-                                      (char *)"slO&lO&", 
+                                      (char *)"slOlO", 
                                       realm, failures, 
-                                      make_ob_server_cert_info, cert_info,
-                                      may_save, make_ob_pool, pool)) == NULL)
+                                      py_cert_info,
+                                      may_save, py_pool)) == NULL)
     {
       err = callback_exception_error();
     }
@@ -1650,9 +2047,9 @@ svn_swig_py_auth_ssl_server_trust_prompt_func(
       if (result != Py_None)
         {
           svn_auth_cred_ssl_server_trust_t *tmp_creds = NULL;
-          if (SWIG_ConvertPtr
+          if (svn_swig_ConvertPtrString
               (result, (void **)&tmp_creds, 
-               SWIG_TypeQuery("svn_auth_cred_ssl_server_trust_t *"), 0))
+               "svn_auth_cred_ssl_server_trust_t *"))
             {
               err = type_conversion_error
                 ("svn_auth_cred_ssl_server_trust_t *");
@@ -1665,6 +2062,10 @@ svn_swig_py_auth_ssl_server_trust_prompt_func(
         }
       Py_DECREF(result);
     }
+ Py_DECREF(py_cert_info);
+ Py_DECREF(py_pool);
+
+finished:
   svn_swig_py_release_py_lock();
   *cred = creds;
   return err;
@@ -1700,9 +2101,9 @@ svn_swig_py_auth_ssl_client_cert_prompt_func(
       if (result != Py_None)
         {
           svn_auth_cred_ssl_client_cert_t *tmp_creds = NULL;
-          if (SWIG_ConvertPtr
+          if (svn_swig_ConvertPtrString
               (result, (void **)&tmp_creds, 
-               SWIG_TypeQuery("svn_auth_cred_ssl_client_cert_t *"), 0))
+               "svn_auth_cred_ssl_client_cert_t *"))
             {
               err = type_conversion_error("svn_auth_cred_ssl_client_cert_t *");
             }
@@ -1751,9 +2152,9 @@ svn_swig_py_auth_ssl_client_cert_pw_prompt_func(
       if (result != Py_None)
         {
           svn_auth_cred_ssl_client_cert_pw_t *tmp_creds = NULL;
-          if (SWIG_ConvertPtr
+          if (svn_swig_ConvertPtrString
               (result, (void **)&tmp_creds, 
-               SWIG_TypeQuery("svn_auth_cred_ssl_client_cert_pw_t *"), 0))
+               "svn_auth_cred_ssl_client_cert_pw_t *"))
             {
               err = type_conversion_error
                 ("svn_auth_cred_ssl_client_cert_pw_t *");

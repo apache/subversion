@@ -66,6 +66,7 @@ typedef enum {
   svn_cl__no_autoprops_opt,
   svn_cl__no_diff_deleted,
   svn_cl__no_ignore_opt,
+  svn_cl__no_unlock_opt,
   svn_cl__non_interactive_opt,
   svn_cl__notice_ancestry_opt,
   svn_cl__old_cmd_opt,
@@ -98,6 +99,9 @@ typedef struct svn_cl__opt_state_t
      commandline.  For example, 'svn up' (with no options) will *not*
      set either of these flags, but will be recursive anyway */
   svn_boolean_t recursive, nonrecursive;
+
+  /* Was --no-unlock specified? */
+  svn_boolean_t no_unlock;
 
   const char *message;           /* log message */
   const char *ancestor_path;     /* ### todo: who sets this? */
@@ -151,7 +155,6 @@ typedef struct
 svn_opt_subcommand_t
   svn_cl__add,
   svn_cl__blame,
-  svn_cl__cat,
   svn_cl__checkout,
   svn_cl__cleanup,
   svn_cl__commit,
@@ -162,6 +165,7 @@ svn_opt_subcommand_t
   svn_cl__help,
   svn_cl__import,
   svn_cl__info,
+  svn_cl__lock,
   svn_cl__log,
   svn_cl__ls,
   svn_cl__merge,
@@ -176,8 +180,9 @@ svn_opt_subcommand_t
   svn_cl__resolved,
   svn_cl__status,
   svn_cl__switch,
+  svn_cl__unlock,
   svn_cl__update,
-  svn_cl__version;
+  svn_cl__cat;
 
 
 /* See definition in main.c for documentation. */
@@ -187,34 +192,29 @@ extern const svn_opt_subcommand_desc_t svn_cl__cmd_table[];
 extern const apr_getopt_option_t svn_cl__options[];
 
 
-/* Evaluate EXPR.  If it yields an SVN_ERR_UNVERSIONED_RESOURCE error,
- * handle the error as a warning, clear the error, and set SUCCESS to
- * FALSE.  If it yields any other error, don't touch SUCCESS, just
- * return that error from the current function.  Otherwise, set
- * SUCCESS to TRUE and continue.
+/* A helper for the many subcommands that wish to merely warn when
+ * invoked on an unversioned, nonexistent, or otherwise innocuously
+ * errorful resource.  Meant to be wrapped with SVN_ERR().
+ * 
+ * If ERR is null, return SVN_NO_ERROR, setting *SUCCESS to TRUE
+ * if SUCCESS is not NULL.
  *
- * This macro is a helper for the many subcommands that merely warn
- * when invoked on an unversioned resource.  It is modeled on the
- * SVN_ERR() macro, see there for details.
+ * Else if ERR->apr_err is one of the error codes supplied in varargs,
+ * then handle ERR as a warning (unless QUIET is true), clear ERR, and
+ * return SVN_NO_ERROR, setting *SUCCESS to FALSE if SUCCESS is not
+ * NULL.
+ *
+ * Else return ERR, setting *SUCCESS to FALSE if SUCCESS is not NULL.
+ *
+ * Typically, error codes like SVN_ERR_UNVERSIONED_RESOURCE,
+ * SVN_ERR_ENTRY_NOT_FOUND, etc, are supplied in varargs.  Don't
+ * forget to terminate the argument list with SVN_NO_ERROR.
  */
-#define SVN_CL__TRY(expr, success)                                       \
-  do {                                                                   \
-    svn_error_t *svn_cl__try__temp = (expr);                             \
-    if (svn_cl__try__temp)                                               \
-      {                                                                  \
-        if (svn_cl__try__temp->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)  \
-          {                                                              \
-            svn_handle_warning (stderr, svn_cl__try__temp);              \
-            svn_error_clear (svn_cl__try__temp);                         \
-            (success) = FALSE;                                           \
-          }                                                              \
-        else                                                             \
-          return svn_cl__try__temp;                                      \
-      }                                                                  \
-    else                                                                 \
-        (success) = TRUE;                                                \
-  } while (0)
-
+svn_error_t *
+svn_cl__try (svn_error_t *err,
+             svn_boolean_t *success,
+             svn_boolean_t quiet,
+             ...);
 
 
 /* Our cancellation callback. */
@@ -226,7 +226,7 @@ svn_error_t *svn_cl__check_cancel (void *baton);
 
 /* Print out commit information found in COMMIT_INFO to the console.
  * POOL is used for temporay allocations. */
-svn_error_t *svn_cl__print_commit_info (svn_client_commit_info_t *commit_info,
+svn_error_t *svn_cl__print_commit_info (svn_client_commit_info2_t *commit_info,
                                         apr_pool_t *pool);
 
 
@@ -237,13 +237,26 @@ svn_error_t *svn_cl__print_commit_info (svn_client_commit_info_t *commit_info,
    the last-committed-revision and last-committed-author.
 
    If SKIP_UNRECOGNIZED is TRUE, this function will not print out
-   unversioned items found in the working copy. */
+   unversioned items found in the working copy.
+
+   When DETAILED is set, and REPOS_LOCKS is set, treat missing repository locks
+   as broken WC locks. */
 svn_error_t *svn_cl__print_status (const char *path,
-                           svn_wc_status_t *status,
-                           svn_boolean_t detailed,
-                           svn_boolean_t show_last_committed,
-                           svn_boolean_t skip_unrecognized,
-                           apr_pool_t *pool);
+                                   svn_wc_status2_t *status,
+                                   svn_boolean_t detailed,
+                                   svn_boolean_t show_last_committed,
+                                   svn_boolean_t skip_unrecognized,
+                                   svn_boolean_t repos_locks,
+                                   apr_pool_t *pool);
+
+
+/* Print STATUS for PATH in XML to stdout.  Use POOL for temporary
+   allocations. */
+svn_error_t *
+svn_cl__print_status_xml (const char *path,
+                          svn_wc_status2_t *status,
+                          apr_pool_t *pool);
+
 
 /* Print a hash that maps property names (char *) to property values
    (svn_string_t *).  The names are assumed to be in UTF-8 format;
@@ -257,10 +270,17 @@ svn_cl__print_prop_hash (apr_hash_t *prop_hash,
                          svn_boolean_t names_only,
                          apr_pool_t *pool);
 
-/* Return a SVN_ERR_CL_ARG_PARSING_ERROR error, with a message stating
-   that one must give an explicit revision when operating on a
-   revision property. */
-svn_error_t *svn_cl__revprop_no_rev_error (apr_pool_t *pool);
+/* Do the following things that are commonly required before accessing revision
+   properties.  Ensure that REVISION is specified explicitly and is not
+   relative to a working-copy item.  Ensure that exactly one target is
+   specified in TARGETS.  Set *URL to the URL of the target.  Return an
+   appropriate error if any of those checks or operations fail.
+ */
+svn_error_t *
+svn_cl__revprop_prepare (const svn_opt_revision_t *revision,
+                         apr_array_header_t *targets,
+                         const char **URL,
+                         apr_pool_t *pool);
 
 /* Search for a text editor command in standard environment variables,
    and invoke it to edit CONTENTS (using a temporary file created in
@@ -378,7 +398,7 @@ svn_cl__auth_ssl_client_cert_pw_prompt (
  * If don't want a summary line at the end of notifications, set
  * SUPPRESS_FINAL_LINE.
  */
-void svn_cl__get_notifier (svn_wc_notify_func_t *notify_func_p,
+void svn_cl__get_notifier (svn_wc_notify_func2_t *notify_func_p,
                            void **notify_baton_p,
                            svn_boolean_t is_checkout,
                            svn_boolean_t is_export,
@@ -437,6 +457,17 @@ svn_error_t *svn_cl__may_need_force (svn_error_t *err);
 /* Write the STRING to the stdio STREAM, returning an error if it fails. */
 svn_error_t *svn_cl__error_checked_fputs (const char *string,
                                           FILE* stream);
+
+/* If STRING is non-null, append it, wrapped in a simple XML CDATA element
+   named TAGNAME, to the string SB.  Use POOL for temporary allocations. */
+void svn_cl__xml_tagged_cdata (svn_stringbuf_t **sb,
+                               apr_pool_t *pool,
+                               const char *tagname,
+                               const char *string);
+
+/* Return a (non-localised) string representation of KIND, being "dir" or
+   "file" or, in any other case, the empty string. */
+const char *svn_cl__node_kind_str (svn_node_kind_t kind);
 
 
 #ifdef __cplusplus

@@ -178,6 +178,38 @@ print_info (const char *target,
                                                            pool)));
     }      
 
+  if (info->lock)
+    {
+      if (info->lock->token)
+        SVN_ERR (svn_cmdline_printf (pool, _("Lock Token: %s\n"),
+                                     info->lock->token));
+
+      if (info->lock->owner)
+        SVN_ERR (svn_cmdline_printf (pool, _("Lock Owner: %s\n"),
+                                     info->lock->owner));
+
+      if (info->lock->creation_date)
+        SVN_ERR (svn_cl__info_print_time (info->lock->creation_date,
+                                          _("Lock Created"), pool));
+
+      if (info->lock->expiration_date)
+        SVN_ERR (svn_cl__info_print_time (info->lock->expiration_date,
+                                          _("Lock Expires"), pool));
+      
+      if (info->lock->comment)
+        {
+          int comment_lines;
+          /* NOTE: The stdio will handle newline translation. */
+          comment_lines = svn_cstring_count_newlines (info->lock->comment) + 1;
+          SVN_ERR (svn_cmdline_printf (pool,
+                                       (comment_lines != 1)
+                                       ? _("Lock Comment (%i lines):\n%s\n")
+                                       : _("Lock Comment (%i line):\n%s\n"),
+                                       comment_lines, 
+                                       info->lock->comment));
+        }
+    }
+
   /* Print extra newline separator. */
   SVN_ERR (svn_cmdline_printf (pool, "\n"));
 
@@ -244,20 +276,22 @@ svn_cl__info (apr_getopt_t *os,
       if (err && err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
         {
           svn_error_clear (err);
-          SVN_ERR (svn_cmdline_printf
-                   (subpool, _("%s:  (Not a versioned resource)\n\n"),
+          SVN_ERR (svn_cmdline_fprintf
+                   (stderr, subpool,
+                    _("%s:  (Not a versioned resource)\n\n"),
                     svn_path_local_style (target, pool)));
           continue;
         }
       else if (err && err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
         {
           svn_error_clear (err);
-          SVN_ERR (svn_cmdline_printf
-                   (subpool, _("%s:  (Not a valid URL)\n\n"),
+          SVN_ERR (svn_cmdline_fprintf
+                   (stderr, subpool,
+                    _("%s:  (Not a valid URL)\n\n"),
                     svn_path_local_style (target, pool)));
           continue;
         }
-      else
+      else if (err)
         return err;
 
     }

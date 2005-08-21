@@ -23,6 +23,7 @@
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
+#include <apr_thread_mutex.h>
 
 #include "svn_fs.h"
 #include "svn_delta.h"
@@ -33,9 +34,16 @@
 #include "fs_fs.h"
 #include "revs-txns.h"
 #include "tree.h"
+#include "lock.h"
 #include "svn_private_config.h"
 
 #include "../libsvn_fs/fs-loader.h"
+
+/* A prefix for the pool userdata variables used to hold
+   per-repository mutexes.  See fs_serialized_init. */
+#if APR_HAS_THREADS
+#define SVN_FSFS_LOCK_USERDATA_PREFIX "svn-fsfs-lock-"
+#endif
 
 
 
@@ -51,21 +59,66 @@ check_already_open (svn_fs_t *fs)
     return SVN_NO_ERROR;
 }
 
-
 
 
-/* This function is provided for Subversion 1.0.x compatibility.  It
-   has no effect for fsfs backed Subversion filesystems. */
 static svn_error_t *
-fs_set_errcall (svn_fs_t *fs,
-                void (*db_errcall_fcn) (const char *errpfx, char *msg))
+fs_serialized_init (svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
 {
+#if APR_HAS_THREADS
+  fs_fs_data_t *ffd = fs->fsap_data;
+  const char *key;
+  void *val;
+  apr_thread_mutex_t *lock;
+  apr_status_t status;
+
+  /* POSIX fcntl locks are per-process, so we need a mutex for
+     intra-process synchronization when grabbing the repository write
+     lock.  Fetch a repository-specific lock from the pool user data.
+
+     Note that we are allocating a small amount of long-lived data for
+     each separate repository opened during the lifetime of the
+     svn_fs_initialize pool.  It's unlikely that anyone will notice
+     this modest expenditure; the alternative is to put each lock into
+     a reference-counted structure allocated in a subpool, and add a
+     serialized deconstructor to the FS vtable.  That's more machinery
+     than it's worth.
+
+     Using the uuid to obtain the lock creates a corner case if a
+     caller uses svn_fs_set_uuid on the repository in a process where
+     other threads might be using the same repository through another
+     FS object.  The only real-world consumer of svn_fs_set_uuid is
+     "svnadmin load", so this is a low-priority problem, and we don't
+     know of a better way of associating a mutex with the
+     repository. */
+
+  key = apr_pstrcat (pool, SVN_FSFS_LOCK_USERDATA_PREFIX, ffd->uuid,
+                     (char *) NULL);
+  status = apr_pool_userdata_get (&val, key, common_pool);
+  if (status)
+    return svn_error_wrap_apr (status, _("Can't fetch FSFS mutex"));
+  lock = val;
+  if (!lock)
+    {
+      status = apr_thread_mutex_create (&lock, APR_THREAD_MUTEX_DEFAULT,
+                                        common_pool);
+      if (status)
+        return svn_error_wrap_apr (status, _("Can't create FSFS mutex"));
+      key = apr_pstrdup (common_pool, key);
+      status = apr_pool_userdata_set (lock, key, NULL, common_pool);
+      if (status)
+        return svn_error_wrap_apr (status, _("Can't store FSFS mutex"));
+    }
+  ffd->lock = lock;
+#endif
 
   return SVN_NO_ERROR;
 }
 
+
+
 /* The vtable associated with a specific open filesystem. */
 static fs_vtable_t fs_vtable = {
+  fs_serialized_init,
   svn_fs_fs__youngest_rev,
   svn_fs_fs__revision_prop,
   svn_fs_fs__revision_proplist,
@@ -77,15 +130,20 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__open_txn,
   svn_fs_fs__purge_txn,
   svn_fs_fs__list_transactions,
-  svn_fs_fs__deltify
+  svn_fs_fs__deltify,
+  svn_fs_fs__lock,
+  svn_fs_fs__generate_lock_token,
+  svn_fs_fs__unlock,
+  svn_fs_fs__get_lock,
+  svn_fs_fs__get_locks
 };
 
 
 /* Creating a new filesystem. */
 
-/* Create a new fsfs backed Subversion filesystem at path PATH and
-   link it to the filesystem FS.  Perform temporary allocations in
-   POOL. */
+/* This implements the fs_library_vtable_t.create() API.  Create a new
+   fsfs-backed Subversion filesystem at path PATH and link it into
+   *FS.  Perform temporary allocations in POOL. */
 static svn_error_t *
 fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
@@ -106,29 +164,30 @@ fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 
 /* Gaining access to an existing filesystem.  */
 
-/* Implements the svn_fs_open API.  Opens a Subversion filesystem
-   located at PATH and sets FS to point to the correct vtable for the
-   fsfs filesystem.  All allocations are from POOL. */
+/* This implements the fs_library_vtable_t.open() API.  Open an FSFS
+   Subversion filesystem located at PATH, set *FS to point to the
+   correct vtable for the filesystem.  Use POOL for any temporary
+   allocations. */
 static svn_error_t *
 fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd;
 
-  SVN_ERR (svn_fs_fs__open (fs, path, fs->pool));
-
   ffd = apr_pcalloc (fs->pool, sizeof (*ffd));
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
+
+  SVN_ERR (svn_fs_fs__open (fs, path, pool));
 
   return SVN_NO_ERROR;
 }
 
 
 
-/* Copy a possibly live Subversion filesystem from SRC_PATH to
-   DEST_PATH.  The CLEAN_LOGS argument is ignored and included for
-   Subversion 1.0.x compatibility.  Perform all temporary allocations
-   in POOL. */
+/* This implements the fs_library_vtable_t.hotcopy() API.  Copy a
+   possibly live Subversion filesystem from SRC_PATH to DEST_PATH.
+   The CLEAN_LOGS argument is ignored and included for Subversion
+   1.0.x compatibility.  Perform all temporary allocations in POOL. */
 static svn_error_t *
 fs_hotcopy (const char *src_path, 
             const char *dest_path, 
@@ -142,8 +201,22 @@ fs_hotcopy (const char *src_path,
 
 
 
-/* This function is included for Subversion 1.0.x compability.  It has
-   no effect for fsfs backed Subversion filesystems. */
+/* This function is provided for Subversion 1.0.x compatibility.  It
+   has no effect for fsfs backed Subversion filesystems.  It conforms
+   to the fs_library_vtable_t.bdb_set_errcall() API. */
+static svn_error_t *
+fs_set_errcall (svn_fs_t *fs,
+                void (*db_errcall_fcn) (const char *errpfx, char *msg))
+{
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/* This function is included for Subversion 1.0.x compatibility.  It has
+   no effect for fsfs backed Subversion filesystems.  It conforms to
+   the fs_library_vtable_t.bdb_recover() API. */
 static svn_error_t *
 fs_recover (const char *path,
             apr_pool_t *pool)
@@ -157,7 +230,8 @@ fs_recover (const char *path,
 
 
 /* This function is included for Subversion 1.0.x compatibility.  It
-   has no effect for fsfs backed Subversion filesystems. */
+   has no effect for fsfs backed Subversion filesystems.  It conforms
+   to the fs_library_vtable_t.bdb_logfiles() API. */
 static svn_error_t *
 fs_logfiles (apr_array_header_t **logfiles,
              const char *path,
@@ -254,6 +328,12 @@ fs_version (void)
   SVN_VERSION_BODY;
 }
 
+static const char *
+fs_get_description (void)
+{
+  return _("Module for working with a plain file (FSFS) repository.");
+}
+
 
 
 /* Base FS library vtable, used by the FS loader library. */
@@ -264,6 +344,7 @@ static fs_library_vtable_t library_vtable = {
   fs_open,
   fs_delete_fs,
   fs_hotcopy,
+  fs_get_description,
   fs_set_errcall,
   fs_recover,
   fs_logfiles

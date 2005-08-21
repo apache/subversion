@@ -27,6 +27,7 @@
 #include "svn_error.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
 
 
 /*** Code. ***/
@@ -42,7 +43,8 @@ svn_cl__copy (apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *src_path, *dst_path;
   svn_boolean_t src_is_url, dst_is_url;
-  svn_client_commit_info_t *commit_info = NULL;
+  svn_client_commit_info2_t *commit_info = NULL;
+  svn_error_t *err;
 
   SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
                                           opt_state->targets, pool));
@@ -60,7 +62,7 @@ svn_cl__copy (apr_getopt_t *os,
     {
       /* WC->WC */
       if (! opt_state->quiet)
-        svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, 
+        svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2,
                               FALSE, FALSE, FALSE, pool);
     }
   else if ((! src_is_url) && (dst_is_url))
@@ -88,21 +90,34 @@ svn_cl__copy (apr_getopt_t *os,
     {
       /* URL->WC : Use checkout-style notification. */
       if (! opt_state->quiet)
-        svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, TRUE,
+        svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, TRUE,
                               FALSE, FALSE, pool);
     }
   else
     /* URL->URL : No notification needed. */
     ;
 
-  SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state, 
-                                       NULL, ctx->config, pool));
-  SVN_ERR (svn_cl__cleanup_log_msg
-           (ctx->log_msg_baton, svn_client_copy (&commit_info,
-                                                 src_path, 
-                                                 &(opt_state->start_revision), 
-                                                 dst_path,
-                                                 ctx, pool)));
+  if (! dst_is_url)
+    {
+      ctx->log_msg_func = NULL;
+      if (opt_state->message || opt_state->filedata)
+        return svn_error_create
+          (SVN_ERR_CL_UNNECESSARY_LOG_MESSAGE, NULL,
+           _("Local, non-commit operations do not take a log message"));
+    }
+
+  if (ctx->log_msg_func)
+    SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state, 
+                                         NULL, ctx->config, pool));
+
+  err = svn_client_copy2 (&commit_info, src_path,
+                          &(opt_state->start_revision),
+                          dst_path, ctx, pool);
+
+  if (ctx->log_msg_func)
+    SVN_ERR (svn_cl__cleanup_log_msg (ctx->log_msg_baton, err));
+  else if (err)
+    return err;
 
   if (commit_info && ! opt_state->quiet)
     SVN_ERR (svn_cl__print_commit_info (commit_info, pool));

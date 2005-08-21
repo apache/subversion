@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -51,6 +51,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+
 #if defined(SVN_ERROR_BUILD_ARRAY)
 
 #define SVN_ERROR_START \
@@ -91,8 +93,6 @@ extern "C" {
         the offset, again so that the values of other errors are not
         perturbed.
 */
-
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
 
 #define SVN_ERR_CATEGORY_SIZE 5000
 
@@ -141,6 +141,8 @@ extern "C" {
 
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
+/** Collection of Subversion error code values, located within the
+ * APR user error space. */
 SVN_ERROR_START
 
   /* validation ("BAD_FOO") errors */
@@ -188,6 +190,10 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_XML_MALFORMED,
               SVN_ERR_XML_CATEGORY_START + 3,
               "XML data was not well-formed")
+
+  SVN_ERRDEF (SVN_ERR_XML_UNESCAPABLE_DATA,
+              SVN_ERR_XML_CATEGORY_START + 4,
+              "Data cannot be safely XML-escaped")
 
   /* io errors */
 
@@ -512,6 +518,63 @@ SVN_ERROR_START
               SVN_ERR_FS_CATEGORY_START + 33,
               "Unknown FS type")
 
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_NO_USER,
+              SVN_ERR_FS_CATEGORY_START + 34,
+              "No user associated with filesystem")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_PATH_ALREADY_LOCKED,
+              SVN_ERR_FS_CATEGORY_START + 35,
+              "Path is already locked")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_PATH_NOT_LOCKED,
+              SVN_ERR_FS_CATEGORY_START + 36,
+              "Path is not locked")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_BAD_LOCK_TOKEN,
+              SVN_ERR_FS_CATEGORY_START + 37,
+              "Lock token is incorrect")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_NO_LOCK_TOKEN,
+              SVN_ERR_FS_CATEGORY_START + 38,
+              "No lock token provided")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_LOCK_OWNER_MISMATCH,
+              SVN_ERR_FS_CATEGORY_START + 39,
+              "Username does not match lock owner")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_NO_SUCH_LOCK,
+              SVN_ERR_FS_CATEGORY_START + 40,
+              "Filesystem has no such lock")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_LOCK_EXPIRED,
+              SVN_ERR_FS_CATEGORY_START + 41,
+              "Lock has expired")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_FS_OUT_OF_DATE,
+              SVN_ERR_FS_CATEGORY_START + 42,
+              "Item is out of date")
+
+  /* @since New in 1.2.
+   *
+   * This is analogous to SVN_ERR_REPOS_UNSUPPORTED_VERSION.  To avoid
+   * confusion with "versions" (i.e., releases) of Subversion, we've
+   * started calling this the "format" number instead.  The old
+   * SVN_ERR_REPOS_UNSUPPORTED_VERSION error predates this and so
+   * retains its name.
+   */
+  SVN_ERRDEF (SVN_ERR_FS_UNSUPPORTED_FORMAT,
+              SVN_ERR_FS_CATEGORY_START + 43,
+              "Unsupported FS format")
+
   /* repos errors */
 
   SVN_ERRDEF (SVN_ERR_REPOS_LOCKED,
@@ -534,6 +597,11 @@ SVN_ERROR_START
               SVN_ERR_REPOS_CATEGORY_START + 4,
               "Bogus revision report")
  
+  /* This is analogous to SVN_ERR_FS_UNSUPPORTED_FORMAT.  To avoid
+   * confusion with "versions" (i.e., releases) of Subversion, we
+   * started using the word "format" instead of "version".  However,
+   * this error code's name predates that decision.
+   */
   SVN_ERRDEF (SVN_ERR_REPOS_UNSUPPORTED_VERSION,
               SVN_ERR_REPOS_CATEGORY_START + 5,
               "Unsupported repository version")
@@ -545,6 +613,17 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED,
               SVN_ERR_REPOS_CATEGORY_START + 7,
               "Error running post-commit hook")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED,
+              SVN_ERR_REPOS_CATEGORY_START + 8,
+              "Error running post-lock hook")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED,
+              SVN_ERR_REPOS_CATEGORY_START + 9,
+              "Error running post-unlock hook")
+
 
   /* generic RA errors */
 
@@ -575,6 +654,12 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_RA_UNSUPPORTED_ABI_VERSION,
               SVN_ERR_RA_CATEGORY_START + 6,
               "Unsupported RA plugin ABI version")
+
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_RA_NOT_LOCKED,
+              SVN_ERR_RA_CATEGORY_START + 7,
+              "Path is not locked")
+
 
   /* ra_dav errors */
 
@@ -612,8 +697,17 @@ SVN_ERROR_START
 
   SVN_ERRDEF (SVN_ERR_RA_DAV_PROPPATCH_FAILED,
               SVN_ERR_RA_DAV_CATEGORY_START + 8,
-              "Failed to excute WebDAV PROPPATCH")
+              "Failed to execute WebDAV PROPPATCH")
 
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_RA_DAV_MALFORMED_DATA,
+              SVN_ERR_RA_DAV_CATEGORY_START + 9,
+              "Malformed network data")
+
+  /* @since New in 1.3 */
+  SVN_ERRDEF (SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS,
+              SVN_ERR_RA_DAV_CATEGORY_START + 10,
+              "Unable to extract data from response header")
 
   /* ra_local errors */
   
@@ -683,13 +777,21 @@ SVN_ERROR_START
   /* @since New in 1.1. */
   SVN_ERRDEF (SVN_ERR_AUTHZ_UNREADABLE,
               SVN_ERR_AUTHZ_CATEGORY_START + 1,
-              "Item is not readable.")
+              "Item is not readable")
 
   /* @since New in 1.1. */
   SVN_ERRDEF (SVN_ERR_AUTHZ_PARTIALLY_READABLE,
               SVN_ERR_AUTHZ_CATEGORY_START + 2,
-              "Item is partially readable.")
+              "Item is partially readable")
 
+  SVN_ERRDEF (SVN_ERR_AUTHZ_INVALID_CONFIG,
+              SVN_ERR_AUTHZ_CATEGORY_START + 3,
+              "Invalid authz configuration")
+
+  /* @since New in 1.3 */
+  SVN_ERRDEF (SVN_ERR_AUTHZ_UNWRITABLE,
+              SVN_ERR_AUTHZ_CATEGORY_START + 4,
+              "Item is not writable")
 
   /* svndiff errors */
 
@@ -792,6 +894,10 @@ SVN_ERROR_START
               SVN_ERR_CLIENT_CATEGORY_START + 12,
               "Two versioned resources are unrelated")
 
+  /* @since New in 1.2. */
+  SVN_ERRDEF (SVN_ERR_CLIENT_MISSING_LOCK_TOKEN,
+              SVN_ERR_CLIENT_CATEGORY_START + 13,
+              "Path has no lock token")
 
   /* misc errors */
 
@@ -913,6 +1019,10 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_CL_BAD_LOG_MESSAGE,
               SVN_ERR_CL_CATEGORY_START + 8,
               "Something is wrong with the log message's contents")
+
+  SVN_ERRDEF (SVN_ERR_CL_UNNECESSARY_LOG_MESSAGE,
+              SVN_ERR_CL_CATEGORY_START + 9,
+              "A log message was given where none was necessary")
 
 SVN_ERROR_END
 

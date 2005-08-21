@@ -49,10 +49,10 @@ def get_standard_state(wc_dir):
 
   # New things
   state.add({
-    'Q' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'Q/floo' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'A/D/H/gloo' : Item(status='A ', wc_rev=0, repos_rev=1),
-    'A/B/E/bloo' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'Q' : Item(status='A ', wc_rev=0),
+    'Q/floo' : Item(status='A ', wc_rev=0),
+    'A/D/H/gloo' : Item(status='A ', wc_rev=0),
+    'A/B/E/bloo' : Item(status='A ', wc_rev=0),
     })
 
   return state
@@ -147,7 +147,6 @@ def commit_one_file(sbox):
 
   # Created expected status tree.
   expected_status = get_standard_state(wc_dir) # pre-commit status
-  expected_status.tweak(repos_rev=2) # post-commit status
   expected_status.tweak('A/D/H/omega', wc_rev=2, status='  ')
 
   # Commit the one file.
@@ -180,7 +179,6 @@ def commit_one_new_file(sbox):
 
   # Created expected status tree.
   expected_status = get_standard_state(wc_dir) # pre-commit status
-  expected_status.tweak(repos_rev=2) # post-commit status
   expected_status.tweak('A/D/H/gloo', wc_rev=2, status='  ')
 
   # Commit the one file.
@@ -215,7 +213,6 @@ def commit_one_new_binary_file(sbox):
 
   # Created expected status tree.
   expected_status = get_standard_state(wc_dir) # pre-commit status
-  expected_status.tweak(repos_rev=2) # post-commit status
   expected_status.tweak('A/D/H/gloo', wc_rev=2, status='  ')
 
   # Commit the one file.
@@ -376,7 +373,6 @@ def commit_inclusive_dir(sbox):
 
   # Created expected status tree.
   expected_status = get_standard_state(wc_dir) # pre-commit status
-  expected_status.tweak(repos_rev=2) # post-commit status
 
   expected_status.remove('A/D/G/rho', 'A/D/gamma')
   expected_status.tweak('A/D', 'A/D/G/pi', 'A/D/H/omega',
@@ -440,7 +436,6 @@ def commit_top_dir(sbox):
   expected_status = get_standard_state(wc_dir) # pre-commit status
   expected_status.remove('A/D/G/rho', 'A/D/gamma', 'A/C',
                          'A/B/E/alpha', 'A/B/E/beta')
-  expected_status.tweak(repos_rev=2) # post-commit status
   expected_status.tweak('A/D', 'A/D/G/pi', 'A/D/H/omega', 'Q/floo', '',
                         wc_rev=2, status='  ')
   expected_status.tweak('A/D/H/chi', 'Q', 'A/B/E', 'A/B/E/bloo', 'A/B/lambda',
@@ -521,7 +516,7 @@ def nested_dir_replacements(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D', 'A/D/H', status='R ', wc_rev=1)
   expected_status.add({
-    'A/D/bloo' : Item(status='A ', wc_rev=0, repos_rev=1),
+    'A/D/bloo' : Item(status='A ', wc_rev=0),
     })
   expected_status.tweak('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
                         'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi', 'A/D/gamma',
@@ -543,7 +538,7 @@ def nested_dir_replacements(sbox):
   expected_status.tweak(wc_rev=1)
   expected_status.tweak('A/D', 'A/D/H', wc_rev=2)
   expected_status.add({
-    'A/D/bloo' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/bloo' : Item(status='  ', wc_rev=2),
     })
   expected_status.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
                         'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi', 'A/D/gamma')
@@ -819,11 +814,11 @@ def hudson_part_2_1(sbox):
   expected_status.remove('A/D/H/omega')
   expected_status.remove('A/D/H/psi')
   expected_status.add({ 'A/D/G/chi' :
-                        Item(wc_rev=2, repos_rev=2, status='  ') })
+                        Item(wc_rev=2, status='  ') })
   expected_status.add({ 'A/D/G/omega' :
-                        Item(wc_rev=2, repos_rev=2, status='  ') })
+                        Item(wc_rev=2, status='  ') })
   expected_status.add({ 'A/D/G/psi' :
-                        Item(wc_rev=2, repos_rev=2, status='  ') })
+                        Item(wc_rev=2, status='  ') })
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
@@ -841,13 +836,13 @@ def hudson_part_2_1(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
   expected_disk.add({
-    'A/D/G/chi' : Item("This is the file 'chi'."),
+    'A/D/G/chi' : Item("This is the file 'chi'.\n"),
     })
   expected_disk.add({
-    'A/D/G/omega' : Item("This is the file 'omega'."),
+    'A/D/G/omega' : Item("This is the file 'omega'.\n"),
     })
   expected_disk.add({
-    'A/D/G/psi' : Item("This is the file 'psi'."),
+    'A/D/G/psi' : Item("This is the file 'psi'.\n"),
     })
 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -945,15 +940,15 @@ def merge_mixed_revisions(sbox):
 
   # 2. svn up A/D/H
   expected_status = svntest.wc.State(wc_dir, {
-    'A/D/H' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/H/chi' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/H/omega' : Item(status='  ', wc_rev=2, repos_rev=2),
-    'A/D/H/psi' : Item(status='  ', wc_rev=2, repos_rev=2),
+    'A/D/H' : Item(status='  ', wc_rev=2),
+    'A/D/H/chi' : Item(status='  ', wc_rev=2),
+    'A/D/H/omega' : Item(status='  ', wc_rev=2),
+    'A/D/H/psi' : Item(status='  ', wc_rev=2),
     })
   expected_disk = svntest.wc.State('', {
-    'omega' : Item("This is the file 'omega'."),
-    'chi' : Item("This is the file 'chi'.moo"),
-    'psi' : Item("This is the file 'psi'."),
+    'omega' : Item("This is the file 'omega'.\n"),
+    'chi' : Item("This is the file 'chi'.\nmoo"),
+    'psi' : Item("This is the file 'psi'.\n"),
     })
   expected_output = svntest.wc.State(wc_dir, { })
   svntest.actions.run_and_verify_update (H_path,
@@ -1130,7 +1125,7 @@ def commit_uri_unsafe(sbox):
 
   # Items in our add list will be at rev 2
   for item in expected_output.desc.keys():
-    expected_status.add({ item : Item(wc_rev=2, repos_rev=2, status='  ') })
+    expected_status.add({ item : Item(wc_rev=2, status='  ') })
 
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output,
@@ -1260,7 +1255,6 @@ def commit_add_file_twice(sbox):
   expected_status.add({
     'A/D/H/gloo' : Item(status='A ', wc_rev=0),
     })
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('A/D/H/gloo', wc_rev=2, status='  ')
 
   # Commit should succeed
@@ -1365,7 +1359,6 @@ def commit_with_lock(sbox):
     'A/D/gamma' : Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2) # post-commit status
   expected_status.tweak('A/D/gamma', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
@@ -1407,7 +1400,6 @@ def commit_current_dir(sbox):
 
   # I can't get the status check to work as part of run_and_verify_commit.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.tweak('', wc_rev=2, status='  ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -1565,14 +1557,13 @@ def commit_nonrecursive(sbox):
     )
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2) # post-commit revision
   expected_status.add({
-    file1_path   : Item(status='  ', repos_rev=2, wc_rev=2),
-    dir1_path    : Item(status='  ', repos_rev=2, wc_rev=2),
-    file2_path   : Item(status='  ', repos_rev=2, wc_rev=2),
-    file3_path   : Item(status='  ', repos_rev=2, wc_rev=2),
-    dir2_path    : Item(status='  ', repos_rev=2, wc_rev=2),
-    file4_path   : Item(status='  ', repos_rev=2, wc_rev=2),
+    file1_path   : Item(status='  ', wc_rev=2),
+    dir1_path    : Item(status='  ', wc_rev=2),
+    file2_path   : Item(status='  ', wc_rev=2),
+    file3_path   : Item(status='  ', wc_rev=2),
+    dir2_path    : Item(status='  ', wc_rev=2),
+    file4_path   : Item(status='  ', wc_rev=2),
     })
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -1665,26 +1656,25 @@ def commit_nonrecursive(sbox):
     )
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=3)
 
   # Expect the leftovers from the first part of the test.
   expected_status.add({
-    file1_path : Item(status='  ', repos_rev=3, wc_rev=2),
-    dir1_path  : Item(status='  ', repos_rev=3, wc_rev=2),
-    file2_path : Item(status='  ', repos_rev=3, wc_rev=2),
-    file3_path : Item(status='  ', repos_rev=3, wc_rev=2),
-    dir2_path  : Item(status='  ', repos_rev=3, wc_rev=2),
-    file4_path : Item(status='  ', repos_rev=3, wc_rev=2),
+    file1_path : Item(status='  ', wc_rev=2),
+    dir1_path  : Item(status='  ', wc_rev=2),
+    file2_path : Item(status='  ', wc_rev=2),
+    file3_path : Item(status='  ', wc_rev=2),
+    dir2_path  : Item(status='  ', wc_rev=2),
+    file4_path : Item(status='  ', wc_rev=2),
     })
 
   # Expect the commits (and one noncommit) from this part of the test.
   expected_status.add({
-    dirA_path     : Item(status='  ', repos_rev=3, wc_rev=3),
-    fileA_path    : Item(status='  ', repos_rev=3, wc_rev=3),
-    fileB_path    : Item(status='  ', repos_rev=3, wc_rev=3),
-    dirB_path     : Item(status='  ', repos_rev=3, wc_rev=3),
-    fileC_path    : Item(status='  ', repos_rev=3, wc_rev=3),
-    nocommit_path : Item(status='A ', repos_rev=3, wc_rev=0)
+    dirA_path     : Item(status='  ', wc_rev=3),
+    fileA_path    : Item(status='  ', wc_rev=3),
+    fileB_path    : Item(status='  ', wc_rev=3),
+    dirB_path     : Item(status='  ', wc_rev=3),
+    fileC_path    : Item(status='  ', wc_rev=3),
+    nocommit_path : Item(status='A ', wc_rev=0)
     })
 
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -1849,7 +1839,6 @@ def mods_in_schedule_delete(sbox):
 
   # Commit should succeed
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev=2)
   expected_status.remove('A/C')
   expected_output = svntest.wc.State(wc_dir, {
     'A/C' : Item(verb='Deleting'),
@@ -1913,6 +1902,58 @@ def tab_test(sbox):
                                             source_url, tab_url)
   match_bad_tab_path(tab_dir, errlines)
 
+#----------------------------------------------------------------------
+
+def local_mods_are_not_commits(sbox):
+  "local ops should not be treated like commits"
+
+  # For issue #2285.
+  #
+  # Some commands can run on either a URL or a local path.  These
+  # commands take a log message, intended for the URL case.
+  # Therefore, they should make sure that getting a log message for
+  # a local operation errors (because not committing).
+  #
+  # This is in commit_tests.py because the unifying theme is that
+  # commits are *not* happening.  And because there was no better
+  # place to put it :-).
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_error = '.*Local, non-commit operations do not take a log message.*'
+
+  # copy wc->wc
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'cp', '-m', 'log msg',
+                                     os.path.join(wc_dir, 'iota'),
+                                     os.path.join(wc_dir, 'iota2'))
+
+  # copy repos->wc
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'cp', '-m', 'log msg',
+                                     '--username',
+                                     svntest.main.wc_author,
+                                     '--password',
+                                     svntest.main.wc_passwd,
+                                     svntest.main.current_repo_url + "/iota",
+                                     os.path.join(wc_dir, 'iota2'))
+
+  # delete
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'rm', '-m', 'log msg',
+                                     os.path.join(wc_dir, 'A', 'D', 'gamma'))
+
+  # mkdir
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'mkdir', '-m', 'log msg',
+                                     os.path.join(wc_dir, 'newdir'))
+
+  # rename
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'cp', '-m', 'log msg',
+                                     os.path.join(wc_dir, 'A', 'mu'),
+                                     os.path.join(wc_dir, 'A', 'yu'))
+
 
 ########################################################################
 # Run the tests
@@ -1952,6 +1993,7 @@ test_list = [ None,
               from_wc_top_with_bad_editor,
               mods_in_schedule_delete,
               Skip(tab_test, (os.name != 'posix' or sys.platform == 'cygwin')),
+              local_mods_are_not_commits,
              ]
 
 if __name__ == '__main__':

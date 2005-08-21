@@ -52,6 +52,8 @@ class GeneratorBase:
     # Read in the global options
     self.includes = \
         _collect_paths(parser.get('options', 'includes'))
+    self.swig_includes = \
+        _collect_paths(parser.get('options', 'swig-includes'))
     self.apache_files = \
         _collect_paths(parser.get('options', 'static-apache-files'))
     self.scripts = \
@@ -59,7 +61,15 @@ class GeneratorBase:
     self.bdb_scripts = \
         _collect_paths(parser.get('options', 'bdb-test-scripts'))
 
+    self.include_dirs = parser.get('options','include-dirs')
+    self.swig_include_dirs = parser.get('options','swig-include-dirs')
+    self.swig_python_opts = parser.get('options','swig-python-opts')
+    self.swig_perl_opts = parser.get('options','swig-perl-opts')
+    self.swig_ruby_opts = parser.get('options','swig-ruby-opts')
+    self.include_wildcards = \
+      string.split(parser.get('options', 'include-wildcards'))
     self.swig_lang = string.split(parser.get('options', 'swig-languages'))
+    self.swig_proxy_dir = parser.get('options', 'swig-proxy-dir')
     self.swig_dirs = string.split(parser.get('options', 'swig-dirs'))
 
     # Visual C++ projects - contents are either TargetProject instances,
@@ -121,13 +131,19 @@ class GeneratorBase:
             self.graph.bulk_add(dep_type, target.name,
                                 dep_section.get_dep_targets(target))
 
-  def compute_hdr_deps(self):
-    all_includes = map(native_path, self.includes)
+  def compute_hdrs(self):
+    """Get a list of the header files"""
+    all_includes = map(native_path, self.includes + self.swig_includes)
     for d in unique(self.target_dirs):
-      hdrs = glob.glob(os.path.join(native_path(d), '*.h'))
-      all_includes.extend(hdrs)
+      for wildcard in self.include_wildcards:
+        hdrs = glob.glob(os.path.join(native_path(d), wildcard))
+        all_includes.extend(hdrs)
+    return all_includes
+  
+  def compute_hdr_deps(self):
+    """Compute the dependencies of each header file"""
 
-    include_deps = IncludeDependencyInfo(all_includes)
+    include_deps = IncludeDependencyInfo(self.compute_hdrs())
 
     for objectfile, sources in self.graph.get_deps(DT_OBJECT):
       assert len(sources) == 1
@@ -252,21 +268,18 @@ class SWIGSource(SourceFile):
 
 lang_abbrev = {
   'python' : 'py',
-  'java' : 'java',
   'perl' : 'pl',
   'ruby' : 'rb',
   }
 
 lang_full_name = {
   'python' : 'Python',
-  'java' : 'Java',
   'perl' : 'Perl',
   'ruby' : 'Ruby',
   }
 
 lang_utillib_suffix = {
   'python' : 'py',
-  'java' : 'java',
   'perl' : 'perl',
   'ruby' : 'ruby',
   }
@@ -472,7 +485,7 @@ class TargetI18N(Target):
       self.gen_obj.graph.add(DT_OBJECT, ofile, SourceFile(src, reldir))
 
       # target depends upon object
-      self.gen_obj.graph.add(DT_NONLIB, self.name, ofile)
+      self.gen_obj.graph.add(DT_LINK, self.name, ofile)
 
     # Add us to the list of target dirs, so we're created in mkdir-init.
     self.gen_obj.target_dirs.append(self.path)
@@ -488,6 +501,9 @@ class TargetSWIG(TargetLib):
     self.link_cmd = '$(LINK_%s_WRAPPER)' % string.upper(lang_abbrev[lang])
 
   def add_dependencies(self):
+    # Look in source directory for dependencies
+    self.gen_obj.target_dirs.append(self.path)
+
     sources = _collect_paths(self.sources, self.path)
     assert len(sources) == 1  ### simple assertions for now
 
@@ -499,17 +515,22 @@ class TargetSWIG(TargetLib):
     cname = iname[:-2] + '.c'
     oname = iname[:-2] + self.gen_obj._extension_map['lib', 'object']
 
-    ### we should really extract the %module line
-    libname = iname[:4] != 'svn_' and ('_' + iname[:-2]) or iname[3:-2]
-    libfile = libname + self.gen_obj._extension_map['lib', 'target']
+    # Extract SWIG module name from .i file name
+    module_name = iname[:4] != 'svn_' and iname[:-2] or iname[4:-2]
 
-    self.name = self.lang + libname
+    lib_extension = self.gen_obj._extension_map['lib', 'target']
+    if self.lang == "ruby":
+      lib_filename = module_name + lib_extension
+    elif self.lang == "perl":
+      lib_filename = '_' + string.capitalize(module_name) + lib_extension
+    else:
+      lib_filename = '_' + module_name + lib_extension
+
+    self.name = self.lang + '_' + module_name
     self.path = build_path_join(self.path, self.lang)
     if self.lang == "perl":
-      self.filename = build_path_join(self.path, libfile[0]
-                                      + string.capitalize(libfile[1:]))
-    else:
-      self.filename = build_path_join(self.path, libfile)
+      self.path = build_path_join(self.path, "native")
+    self.filename = build_path_join(self.path, lib_filename)
 
     ifile = SWIGSource(ipath)
     cfile = SWIGObject(build_path_join(self.path, cname), self.lang)
@@ -827,11 +848,7 @@ class IncludeDependencyInfo:
   dependency data used to return all directly and indirectly referenced
   headers.
 
-  This class works exclusively in native-style paths.
-  
-  Note: Has the requirement that the basenames of all headers under
-  consideration are unique. This is currently the case for Subversion, and
-  it allows the code to be quite a bit simpler."""
+  This class works exclusively in native-style paths."""
 
   def __init__(self, filenames):
     """Scan all files in FILENAMES, which should be a sequence of paths to
@@ -839,29 +856,37 @@ class IncludeDependencyInfo:
     consider as interesting when following and reporting dependencies - i.e.
     all the Subversion header files, no system header files."""
     
-    basenames = map(os.path.basename, filenames)
-
-    # This data structure is:
-    # { 'basename.h': ('full/path/to/basename.h', { 'depbase1.h': None, } ) }
-    self._deps = {}
+    # This defines the domain (i.e. set of files) in which dependencies are
+    # being located. Its structure is:
+    # { 'basename.h': [ 'path/to/something/named/basename.h',
+    #                   'path/to/another/named/basename.h', ] }
+    self._domain = {}
     for fname in filenames:
       bname = os.path.basename(fname)
-      self._deps[bname] = (fname, self._scan_for_includes(fname, basenames))
+      if not self._domain.has_key(bname):
+        self._domain[bname] = []
+      self._domain[bname].append ( fname )
+
+    # This data structure is:
+    # { 'full/path/to/header.h': { 'full/path/to/dependency.h': None, } }
+    self._deps = {}
+    for fname in filenames:
+      self._deps[fname] = self._scan_for_includes(fname)
 
     # Keep recomputing closures until we see no more changes
     while 1:
       changes = 0
-      for bname in basenames:
-        changes = self._include_closure(self._deps[bname][1]) or changes
+      for fname in filenames:
+        changes = self._include_closure(self._deps[fname]) or changes
       if not changes:
         return
 
   def query(self, fname):
     """Scan the C file FNAME, and return the full paths of each include file
     that is a direct or indirect dependency."""
-    hdrs = self._scan_for_includes(fname, self._deps.keys())
+    hdrs = self._scan_for_includes(fname)
     self._include_closure(hdrs)
-    filenames = map(lambda x, self=self: self._deps[x][0], hdrs.keys())
+    filenames = hdrs.keys()
     filenames.sort() # Be independent of hash ordering
     return filenames
 
@@ -869,27 +894,45 @@ class IncludeDependencyInfo:
     """Mutate the passed dictionary HDRS, by performing a single pass
     through the listed headers, adding the headers on which the first group
     of headers depend, if not already present.
+
+    HDRS is of the form { 'path/to/header.h': None, }
     
     Return a boolean indicating whether any changes were made."""
     keys = hdrs.keys()
     for h in keys:
-      hdrs.update(self._deps[h][1])
+      hdrs.update(self._deps[h])
     return (len(keys) != len(hdrs))
 
-  _re_include = re.compile(r'^#\s*include\s*[<"]([^<"]+)[>"]')
-  def _scan_for_includes(self, fname, limit):
+  _re_include = re.compile(r'^\s*[#%]\s*(?:include|import)\s*[<"]?([^<">;\s]+)')
+  def _scan_for_includes(self, fname):
     """Scan C source file FNAME and return the basenames of any headers
-    which are directly included, and listed in LIMIT.
+    which are directly included, and within the set defined when this
+    IncludeDependencyProcessor was initialized.
 
-    Return a dictionary with included file basenames as keys and None as
+    Return a dictionary with included full file names as keys and None as
     values."""
     hdrs = { }
     for line in fileinput.input(fname):
       match = self._re_include.match(line)
       if match:
-        h = os.path.basename(native_path(match.group(1)))
-        if h in limit:
-          hdrs[h] = None
+        include_param = native_path(match.group(1))
+        bname = os.path.basename(include_param)
+        if self._domain.has_key(bname):
+          include_fnames = self._domain[bname]
+          if len(include_fnames) == 1:
+            include_fname = include_fnames[0]
+          else:
+            include_fname = os.path.normpath(os.path.join(
+              os.path.dirname(fname), include_param))
+            if include_fname not in include_fnames:
+              raise RuntimeError, (
+                  """Unable to determine which file is being included
+                  Include Parameter: '%s'
+                  Including File: '%s'
+                  Expected but not found: '%s'
+                  Possibilities: '%s'"""
+                  % (include_param, fname, include_fname, include_fnames))
+          hdrs[include_fname] = None
     return hdrs
 
 
@@ -920,15 +963,18 @@ def _sorted_files(graph, area):
       else:
         # no dependencies found in the targets list. this is a good "base"
         # to add to the files list now.
-        # If the filename is blank, see if there are any NONLIB dependencies
-        # rather than adding a blank filename to the list.
-        if not isinstance(t, TargetI18N) and not isinstance(t, TargetJava):
-          files.append(t.filename)
-        else:
-          s = graph.get_sources(DT_NONLIB, t.name)
+        if isinstance(t, TargetJava):
+          # Java targets have no filename, and we just ignore them.
+          pass
+        elif isinstance(t, TargetI18N):
+          # I18N targets have no filename, we recurse one level deeper, and
+          # get the filenames of their dependencies.
+          s = graph.get_sources(DT_LINK, t.name)
           for d in s:
             if d not in targets:
               files.append(d.filename)
+        else:
+          files.append(t.filename)
 
         # don't consider this target any more
         targets.remove(t)

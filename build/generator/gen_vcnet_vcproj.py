@@ -111,6 +111,7 @@ class Generator(gen_win.WinGeneratorBase):
                         'lib'), 'xml.vcproj')
     self.move_proj_file(os.path.join('build', 'win32'), 'svn_config.vcproj')
     self.move_proj_file(os.path.join('build', 'win32'), 'svn_locale.vcproj')
+    self.write_zlib_project_file('zlib.vcproj')
     self.write_neon_project_file('neon.vcproj')
 
     install_targets = self.get_install_targets()

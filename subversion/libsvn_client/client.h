@@ -226,16 +226,20 @@ typedef struct
    BASE_ACCESS should be null).
 
    The calling application's authentication baton is provided in CTX,
-   and allocations related to this session are performed in POOL.  */
-svn_error_t * svn_client__open_ra_session (svn_ra_session_t **ra_session,
-                                           const char *base_url,
-                                           const char *base_dir,
-                                           svn_wc_adm_access_t *base_access,
-                                           apr_array_header_t *commit_items,
-                                           svn_boolean_t use_admin,
-                                           svn_boolean_t read_only_wc,
-                                           svn_client_ctx_t *ctx,
-                                           apr_pool_t *pool);
+   and allocations related to this session are performed in POOL.
+
+   NOTE: The reason for the _internal suffix of this function's name is to
+   avoid confusion with the public API svn_client_open_ra_session(). */
+svn_error_t *
+svn_client__open_ra_session_internal (svn_ra_session_t **ra_session,
+                                      const char *base_url,
+                                      const char *base_dir,
+                                      svn_wc_adm_access_t *base_access,
+                                      apr_array_header_t *commit_items,
+                                      svn_boolean_t use_admin,
+                                      svn_boolean_t read_only_wc,
+                                      svn_client_ctx_t *ctx,
+                                      apr_pool_t *pool);
 
 
 
@@ -245,7 +249,7 @@ svn_error_t * svn_client__open_ra_session (svn_ra_session_t **ra_session,
 
 /* Get the commit_baton to be used in couple with commit_callback. */
 svn_error_t *svn_client__commit_get_baton (void **baton,
-                                           svn_client_commit_info_t **info,
+                                           svn_client_commit_info2_t **info,
                                            apr_pool_t *pool);
 
 /* The commit_callback function for storing svn_client_commit_info_t
@@ -298,7 +302,7 @@ svn_error_t * svn_client__wc_delete (const char *path,
                                      svn_wc_adm_access_t *adm_access,
                                      svn_boolean_t force,
                                      svn_boolean_t dry_run,
-                                     svn_wc_notify_func_t notify_func,
+                                     svn_wc_notify_func2_t notify_func,
                                      void *notify_baton,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
@@ -385,7 +389,7 @@ svn_client__get_diff_editor (const char *target,
                              svn_boolean_t dry_run,
                              svn_ra_session_t *ra_session, 
                              svn_revnum_t revision,
-                             svn_wc_notify_func_t notify_func,
+                             svn_wc_notify_func2_t notify_func,
                              void *notify_baton,
                              svn_cancel_func_t cancel_func,
                              void *cancel_baton,
@@ -468,25 +472,38 @@ svn_client__get_diff_editor (const char *target,
        multi-repository support actually exists, the single key here
        will actually be some arbitrary thing to be ignored.  
 
+     - if the candidate has a lock token, add it to the LOCK_TOKENS hash.
+
+     - if the candidate is a directory scheduled for deletion, crawl
+       the directories children recursively for any lock tokens and
+       add them to the LOCK_TOKENS array.
+
    At the successful return of this function, COMMITTABLES will be an
    apr_hash_t * hash of apr_array_header_t * arrays (of
    svn_client_commit_item_t * structures), keyed on const char *
-   canonical repository URLs.  Also, LOCKED_DIRS will be an apr_hash_t *
-   hash of svn_wc_adm_access_t * keyed on const char * working copy path
-   directory names which were locked in the process of this crawl.
-   These will need to be unlocked again post-commit.
+   canonical repository URLs.  LOCK_TOKENS will point to a hash table
+   with const char * lock tokens, keyed on const char * URLs.  Also,
+   LOCKED_DIRS will be an apr_hash_t * hash of svn_wc_adm_access_t *
+   keyed
+   on const char * working copy path directory names which were locked
+   in the process of this crawl.  These will need to be unlocked again post-commit.
 
    If NONRECURSIVE is specified, subdirectories of directory targets
-   found in TARGETS will not be crawled for modifications. 
+   found in TARGETS will not be crawled for modifications.
+
+   If JUST_LOCKED is TRUE, treat unmodified items with lock tokens as
+   commit candidates.
 
    If CTX->CANCEL_FUNC is non-null, it will be called with 
    CTX->CANCEL_BATON while harvesting to determine if the client has 
    cancelled the operation.  */
 svn_error_t *
 svn_client__harvest_committables (apr_hash_t **committables,
+                                  apr_hash_t **lock_tokens,
                                   svn_wc_adm_access_t *parent_dir,
                                   apr_array_header_t *targets,
                                   svn_boolean_t nonrecursive,
+                                  svn_boolean_t just_locked,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool);
 
@@ -609,9 +626,9 @@ svn_client__fetch_externals (apr_hash_t *externals,
 
 /* Perform status operations on each external in TRAVERSAL_INFO.  All
    other options are the same as those passed to svn_client_status(). */
-svn_error_t*
+svn_error_t *
 svn_client__do_external_status (svn_wc_traversal_info_t *traversal_info,
-                                svn_wc_status_func_t status_func,
+                                svn_wc_status_func2_t status_func,
                                 void *status_baton,
                                 svn_boolean_t get_all,
                                 svn_boolean_t update,

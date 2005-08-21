@@ -16,20 +16,24 @@
  * ====================================================================
  */
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL)
 %module "SVN::_Delta"
+#elif defined(SWIGRUBY)
+%module "svn::ext::delta"
 #else
 %module delta
 #endif
 
 %include "typemaps.i"
 
-%import apr.i
-%import svn_types.i
-%import svn_string.i
+%include svn_global.swg
+%import apr.swg
+%import core.i
+%import svn_types.swg
+%import svn_string.swg
 
 /* -----------------------------------------------------------------------
-   For these types, "type **" is always an OUT param.
+   %apply-ing of typemaps defined elsewhere
 */
 %apply SWIGTYPE **OUTPARAM {
     svn_txdelta_stream_t **,
@@ -38,6 +42,10 @@
     const svn_delta_editor_t **,
     svn_txdelta_window_handler_t *
 };
+
+#ifdef SWIGPYTHON
+%apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
+#endif
 
 /* -----------------------------------------------------------------------
    mark window.new_data as readonly since we would need a pool to set it
@@ -60,18 +68,20 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
     svn_delta_make_editor(&$1, &$2, $input, _global_pool);
 }
 
+#ifdef SWIGRUBY
+void svn_swig_rb_make_editor(const svn_delta_editor_t **editor,
+                             void **edit_baton,
+                             VALUE rb_editor,
+                             apr_pool_t *pool);
+#endif
+
 /* ----------------------------------------------------------------------- */
 
 %{
 #include "svn_md5.h"
-#include "svn_delta.h"
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
-#endif
-
-#ifdef SWIGJAVA
-#include "swigutil_java.h"
 #endif
 
 #ifdef SWIGPERL
@@ -83,7 +93,7 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 #endif
 %}
 
-%include svn_delta.h
+%include svn_delta_h.swg
 
 /* -----------------------------------------------------------------------
    editor callback invokers
@@ -93,6 +103,3 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
    if editor. */
 %typemap(perl5, in) (const svn_delta_editor_t *editor, void *edit_baton);
 
-#ifdef SWIGPERL
-%include delta_editor.hi
-#endif

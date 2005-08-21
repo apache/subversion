@@ -16,37 +16,26 @@
  * ====================================================================
  */
 
-#ifdef SWIGPERL
+#if defined(SWIGPERL)
 %module "SVN::_Core"
+#elif defined(SWIGRUBY)
+%module "svn::ext::core"
 #else
 %module core
 #endif
 
+%include svn_global.swg
 %include typemaps.i
 
 %{
 #include <apr.h>
 #include <apr_general.h>
 
-#include "svn_io.h"
-#include "svn_pools.h"
-#include "svn_version.h"
-#include "svn_time.h"
-#include "svn_props.h"
-#include "svn_opt.h"
-#include "svn_auth.h"
-#include "svn_config.h"
-#include "svn_version.h"
 #include "svn_md5.h"
 #include "svn_diff.h"
-#include "svn_error_codes.h"
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
-#endif
-
-#ifdef SWIGJAVA
-#include "swigutil_java.h"
 #endif
 
 #ifdef SWIGPERL
@@ -54,6 +43,8 @@
 #endif
 
 #ifdef SWIGRUBY
+#include <apu.h>
+#include <apr_xlate.h>
 #include "swigutil_rb.h"
 #endif
 %}
@@ -62,7 +53,9 @@
 #pragma SWIG nowarn=305
 
 /* ### for now, let's ignore this thing. */
+#ifndef SWIGRUBY
 %ignore svn_prop_t;
+#endif
 
 /* -----------------------------------------------------------------------
    The following struct members have to be read-only because otherwise
@@ -80,23 +73,24 @@
    before anything else does. 
 */
 
-%include svn_error_codes.h
+%include svn_error_codes_h.swg
 
 /* ----------------------------------------------------------------------- 
-   Include svn_types.h early. other .i files will import svn_types.i which
-   then includes svn_types.h, making further includes get skipped. we want
-   to actually generate wrappers, so manage svn_types.h right here.
+   Include svn_types.swg early. Other .i files will import svn_types.swg which
+   then includes svn_types.h, making further includes get skipped. We want
+   to actually generate wrappers for svn_types.h, so do an _include_ right
+   now, before any _import_ has happened.
 */
 
-%include svn_types.h
+%include svn_types.swg
 
 
 /* ----------------------------------------------------------------------- 
    moving along...
 */
-%import apr.i
-%import svn_types.i
-%import svn_string.i
+%import apr.swg
+%import svn_types.swg
+%import svn_string.swg
 
 /* ----------------------------------------------------------------------- 
    completely ignore a number of functions. the presumption is that the
@@ -165,6 +159,7 @@
 /* Scripts can do the printf, then write to a stream.
  * We can't really handle the variadic, so ignore it. */
 %ignore svn_stream_printf;
+%ignore svn_stream_printf_from_utf8;
 
 // svn_stream_readline
 // svn_stream_copy
@@ -175,6 +170,8 @@
 %ignore svn_io_remove_dir;
 %ignore svn_io_get_dirents;
 %ignore svn_io_dir_walk;
+%ignore svn_io_start_cmd;
+%ignore svn_io_wait_for_cmd;
 %ignore svn_io_run_cmd;
 %ignore svn_io_run_diff;
 %ignore svn_io_run_diff3;
@@ -214,7 +211,7 @@
    these types (as 'type **') will always be an OUT param
 */
 %apply SWIGTYPE **OUTPARAM {
-  svn_auth_baton_t **, svn_diff_t **
+  svn_auth_baton_t **, svn_diff_t **, svn_config_t **
 }
 
 /* -----------------------------------------------------------------------
@@ -229,19 +226,24 @@
     if (!PyInt_Check($input)) {
         PyErr_SetString(PyExc_TypeError,
                         "expecting an integer for the buffer size");
-        return NULL;
+        SWIG_fail;
     }
     temp = PyInt_AsLong($input);
     if (temp < 0) {
         PyErr_SetString(PyExc_ValueError,
                         "buffer size must be a positive integer");
-        return NULL;
+        SWIG_fail;
     }
     $1 = malloc(temp);
     $2 = ($2_ltype)&temp;
 }
 %typemap(perl5, in) (char *buffer, apr_size_t *len) ($*2_type temp) {
     temp = SvIV($input);
+    $1 = malloc(temp);
+    $2 = ($2_ltype)&temp;
+}
+%typemap(ruby, in) (char *buffer, apr_size_t *len) ($*2_type temp) {
+    temp = NUM2LONG($input);
     $1 = malloc(temp);
     $2 = ($2_ltype)&temp;
 }
@@ -259,6 +261,11 @@
     free($1);
     argvi++;
 }
+%typemap(ruby, argout, fragment="output_helper") (char *buffer, apr_size_t *len)
+{
+  $result = output_helper($result, *$2 == 0 ? Qnil : rb_str_new($1, *$2));
+  free($1);
+}
 
 /* -----------------------------------------------------------------------
    fix up the svn_stream_write() ptr/len arguments
@@ -267,7 +274,7 @@
     if (!PyString_Check($input)) {
         PyErr_SetString(PyExc_TypeError,
                         "expecting a string for the buffer");
-        return NULL;
+        SWIG_fail;
     }
     $1 = PyString_AS_STRING($input);
     temp = PyString_GET_SIZE($input);
@@ -276,6 +283,12 @@
 %typemap(perl5, in) (const char *data, apr_size_t *len) ($*2_type temp) {
     $1 = SvPV($input, temp);
     $2 = ($2_ltype)&temp;
+}
+%typemap(ruby, in) (const char *data, apr_size_t *len) ($*2_type temp)
+{
+  $1 = StringValuePtr($input);
+  temp = RSTRING($input)->len;
+  $2 = ($2_ltype)&temp;
 }
 
 %typemap(python, argout, fragment="t_output_helper") (const char *data, apr_size_t *len) {
@@ -286,11 +299,17 @@
     $result = sv_2mortal (newSViv(*$2));
 }
 
+%typemap(ruby, argout, fragment="output_helper") (const char *data, apr_size_t *len)
+{
+    $result = output_helper($result, LONG2NUM(*$2));
+}
+
 /* -----------------------------------------------------------------------
    auth provider convertors 
 */
 %typemap(perl5, in) apr_array_header_t *providers {
-    $1 = (apr_array_header_t *) svn_swig_pl_objs_to_array($input, SWIGTYPE_p_svn_auth_provider_object_t, _global_pool);
+    $1 = (apr_array_header_t *) svn_swig_pl_objs_to_array($input,
+      $descriptor(svn_auth_provider_object_t *), _global_pool);
 }
 
 %typemap(python, in) apr_array_header_t *providers {
@@ -298,23 +317,31 @@
     int targlen;
     if (!PySequence_Check($input)) {
         PyErr_SetString(PyExc_TypeError, "not a sequence");
-        return NULL;
+        SWIG_fail;
     }
     targlen = PySequence_Length($input);
     $1 = apr_array_make(_global_pool, targlen, sizeof(provider));
     ($1)->nelts = targlen;
     while (targlen--) {
-        SWIG_ConvertPtr(PySequence_GetItem($input, targlen),
-                        (void **)&provider, 
-                        $descriptor(svn_auth_provider_object_t *),
-                        SWIG_POINTER_EXCEPTION | 0);
+        provider = svn_swig_MustGetPtr(PySequence_GetItem($input, targlen),
+          $descriptor(svn_auth_provider_object_t *), $svn_argnum, NULL);
+        if (PyErr_Occurred()) {
+          SWIG_fail;
+        }
         APR_ARRAY_IDX($1, targlen, svn_auth_provider_object_t *) = provider;
     }
+}
+
+%typemap(ruby, in) apr_array_header_t *providers
+{
+  $1 = svn_swig_rb_array_to_auth_provider_object_apr_array($input, _global_pool);
 }
 
 /* -----------------------------------------------------------------------
    auth parameter set/get
 */
+
+/* set */
 %typemap(python, in) const void *value {
     if (PyString_Check($input)) {
         $1 = (void *)PyString_AS_STRING($input);
@@ -327,11 +354,43 @@
     }
     else {
         PyErr_SetString(PyExc_TypeError, "not a known type");
-        return NULL;
+        SWIG_fail;
     }
 }
 
+/*
+  - all values are converted to char*
+  - assume the first argument is Ruby object for svn_auth_baton_t*
+*/
+%typemap(ruby, in) const void *value
+{
+  if (NIL_P($input)) {
+    $1 = (void *)NULL;
+  } else {
+    VALUE _rb_pool;
+    apr_pool_t *_global_pool;
+    char *value = StringValuePtr($input);
+
+    svn_swig_rb_get_pool(1, argv, Qnil, &_rb_pool, &_global_pool);
+    $1 = (void *)apr_pstrdup(_global_pool, value);
+  }
+}
+
+/* get */
+/* assume the value is char* */
+%typemap(ruby, out) const void *
+{
+  char *value = $1;
+  if (value) {
+    $result = rb_str_new2(value);
+  } else {
+    $result = Qnil;
+  }
+}
+
+#ifndef SWIGRUBY
 %ignore svn_auth_get_parameter;
+#endif
 
 /* -----------------------------------------------------------------------
    describe how to pass a FILE* as a parameter (svn_stream_from_stdio)
@@ -340,7 +399,7 @@
     $1 = PyFile_AsFile($input);
     if ($1 == NULL) {
         PyErr_SetString(PyExc_ValueError, "Must pass in a valid file object");
-        return NULL;
+        SWIG_fail;
     }
 }
 %typemap(perl5, in) FILE * {
@@ -389,17 +448,27 @@ apr_status_t apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
 
 apr_pool_t *current_pool;
 
+#if SWIG_VERSION <= 0x10324
+%{
+#define SVN_SWIGEXPORT(t) SWIGEXPORT(t)
+%}
+#else
+%{
+#define SVN_SWIGEXPORT(t) SWIGEXPORT t
+%}
+#endif
+
 %{
 
 static apr_pool_t *current_pool = 0;
 
-SWIGEXPORT(apr_pool_t *)
+SVN_SWIGEXPORT(apr_pool_t *)
 svn_swig_pl_get_current_pool (void)
 {
   return current_pool;
 }
 
-SWIGEXPORT(void)
+SVN_SWIGEXPORT(void)
 svn_swig_pl_set_current_pool (apr_pool_t *pool)
 {
   current_pool = pool;
@@ -415,7 +484,7 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 
 %typemap(perl5,in,numinputs=0) apr_hash_t **cfg_hash = apr_hash_t **OUTPUT;
 %typemap(perl5,argout) apr_hash_t **cfg_hash {
-    ST(argvi++) = svn_swig_pl_convert_hash(*$1, SWIGTYPE_p_svn_config_t);
+    ST(argvi++) = svn_swig_pl_convert_hash(*$1, $descriptor(svn_config_t *));
 }
 
 %typemap(perl5, in) (svn_config_enumerator_t callback, void *baton) {
@@ -423,46 +492,101 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
     $2 = (void *)$input;
 };
 
+%typemap(ruby, in, numinputs=0) apr_hash_t **cfg_hash = apr_hash_t **OUTPUT;
+%typemap(ruby, argout) apr_hash_t **cfg_hash {
+  $result = svn_swig_rb_apr_hash_to_hash_swig_type(*$1, "svn_config_t *");
+}
+
 %typemap(python,in,numinputs=0) apr_hash_t **cfg_hash = apr_hash_t **OUTPUT;
 %typemap(python,argout,fragment="t_output_helper") apr_hash_t **cfg_hash {
     $result = t_output_helper(
         $result,
-        SWIG_NewPointerObj(*$1, SWIGTYPE_p_apr_hash_t, 0));
+        svn_swig_NewPointerObj(*$1, $descriptor(apr_hash_t *),
+                               _global_svn_swig_py_pool));
 }
 
 /* Allow None to be passed as config_dir argument */
 %typemap(python,in,parse="z") const char *config_dir "";
+%typemap(ruby, in) const char *config_dir {
+  if (NIL_P($input)) {
+    $1 = "";
+  } else {
+    $1 = StringValuePtr($input);
+  }
+}
 
 #ifdef SWIGPYTHON
 PyObject *svn_swig_py_exception_type(void);
 #endif
 
+/* svn_prop_diffs */
+%typemap(ruby, in, numinputs=0)
+     apr_array_header_t **propdiffs (apr_array_header_t *temp)
+{
+  $1 = &temp;
+}
+
+%typemap(ruby, argout, fragment="output_helper") apr_array_header_t **propdiffs
+{
+  $result = output_helper($result, svn_swig_rb_apr_array_to_array_prop(*$1));
+}
+
+%apply apr_hash_t *PROPHASH {
+  apr_hash_t *target_props,
+  apr_hash_t *source_props
+};
+
+%typemap(ruby, in) apr_array_header_t *proplist
+{
+  $1 = svn_swig_rb_array_to_apr_array_prop($input, _global_pool);
+}
+
+%apply apr_array_header_t **OUTPUT_OF_PROP {
+  apr_array_header_t **entry_props,
+  apr_array_header_t **wc_props,
+  apr_array_header_t **regular_props
+};
 
 /* ----------------------------------------------------------------------- */
 
-%include svn_types.h
-%include svn_pools.h
-%include svn_version.h
-%include svn_time.h
-%include svn_props.h
-%include svn_opt.h
-%include svn_auth.h
-%include svn_config.h
-%include svn_version.h
+%include svn_types_h.swg
+%include svn_pools_h.swg
+%include svn_version_h.swg
+%include svn_time_h.swg
+#ifdef SWIGRUBY
+%immutable name;
+%immutable value;
+#endif
+%include svn_props_h.swg
+#ifdef SWIGRUBY
+%mutable name;
+%mutable value;
+#endif
+%include svn_opt_h.swg
+%include svn_auth_h.swg
+%include svn_config_h.swg
+%include svn_version_h.swg
+%include svn_utf_h.swg
+%include svn_nls_h.swg
 
 
 /* SWIG won't follow through to APR's defining this to be empty, so we
    need to do it manually, before SWIG sees this in svn_io.h. */
 #define __attribute__(x)
 
-%include svn_io.h
+%include svn_io_h.swg
 
 #ifdef SWIGPERL
-%include svn_diff.h
-%include svn_error.h
+%include svn_diff_h.swg
+%include svn_error_h.swg
 #endif
 
 #ifdef SWIGPYTHON
+
+void svn_swig_py_set_application_pool(PyObject *py_pool, apr_pool_t *pool);
+void svn_swig_py_clear_application_pool();
+PyObject *svn_swig_py_register_cleanup(PyObject *py_pool, apr_pool_t *pool);
+
 %init %{
 /* This is a hack.  I dunno if we can count on SWIG calling the module "m" */
 PyModule_AddObject(m, "SubversionException", 
@@ -472,4 +596,46 @@ PyModule_AddObject(m, "SubversionException",
 %pythoncode %{
 SubversionException = _core.SubversionException
 %}
+
+/* Proxy classes for APR classes */
+%include proxy_apr.swg
+
 #endif
+
+#ifdef SWIGRUBY
+/* Dummy declaration */
+struct apr_pool_t 
+{
+};
+
+/* Leave memory administration to ruby's GC */
+%extend apr_pool_t
+{
+  apr_pool_t(apr_pool_t *parent=NULL, apr_allocator_t *allocator=NULL) {
+    /* Disable parent pool. */
+    return svn_pool_create_ex(NULL, NULL);
+  }
+
+  ~apr_pool_t() {
+    apr_pool_destroy(self);
+  }
+};
+
+%include svn_diff_h.swg
+
+%inline %{
+static VALUE
+svn_default_charset(void)
+{
+  return INT2NUM((int)APR_DEFAULT_CHARSET);
+}
+ 
+static VALUE
+svn_locale_charset(void)
+{
+  return INT2NUM((int)APR_LOCALE_CHARSET);
+}
+%}
+
+#endif
+

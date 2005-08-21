@@ -311,7 +311,7 @@ check_readability (svn_fs_root_t *root,
   SVN_ERR (authz_read_func (&readable, root, path, authz_read_baton, pool));
   if (! readable)
     return svn_error_create (SVN_ERR_AUTHZ_UNREADABLE, NULL,
-                             _("Unreadable path encountered; access denied."));
+                             _("Unreadable path encountered; access denied"));
   return SVN_NO_ERROR;
 }
 

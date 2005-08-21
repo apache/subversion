@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 
 ### Repository lock checker.  Gets and exclusive lock on the provided
 ### repository, then runs db_stat to see if the lock counts have been

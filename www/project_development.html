@@ -1,16 +1,15 @@
-<!DOCTYPE html PUBLIC "-//Tigris//DTD XHTML 1.0 Transitional//EN" 
-"http://style.tigris.org/tigris_transitional.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html>
 <head>
-<title>Project Development</title>
-<link rel="stylesheet" type="text/css" 
-      href="http://subversion.tigris.org/branding/css/tigris.css"/>
-<link rel="stylesheet" type="text/css" 
-      href="http://subversion.tigris.org/branding/css/inst.css"/>
+<style type="text/css"> /* <![CDATA[ */
+  @import "tigris-branding/css/tigris.css";
+  @import "tigris-branding/css/inst.css";
+  /* ]]> */</style>
 <link rel="stylesheet" type="text/css" media="print"
-      href="http://subversion.tigris.org/branding/css/print.css"/>
-<script type="text/javascript"
-        src="http://subversion.tigris.org/branding/scripts/tigris.js"></script>
+  href="tigris-branding/css/print.css"/>
+<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+<title>Project Development</title>
 </head>
 
 <body>
@@ -30,18 +29,11 @@ conversations you aren't interested in.  For real-time chat,
 developers use the same IRC channel as everyone else: <a
 href="irc://irc.freenode.net/svn">irc.freenode.net/svn</a>.</p>
 
-<p>The <b>HACKING</b> file contains developer guidelines, see:</p>
-
-<blockquote>
-   <a href="http://svn.collab.net/repos/svn/trunk/HACKING"
-           >http://svn.collab.net/repos/svn/trunk/HACKING</a>
-</blockquote>
-
-<p>There you can find information about submitting patches, learning
-your way around the code, interacting with other developers, project
+<p>The <a href="hacking.html">Hacker's Guide to Subversion</a>
+contains information about submitting patches, learning your way
+around the code, interacting with other developers, project
 governance, etc.  If you don't see the answers you need there, please
 ask on the mailing list or in IRC, we're happy to help.</p>
-
 
 <h3>Translating Subversion output</h3>
 
@@ -50,18 +42,36 @@ translated.  Discussion takes place both on the Subversion development
 mailing list as well as dedicated native language mailing lists
 (<em>l10n-??@subversion.tigris.org</em>).</p>
 
-<p>Next to any information it <b>HACKING</b> pertinent to translating
-Subversion output, additional information can be found in</p>
+<p>Next to any information the <a href="hacking.html">Hacker's Guide
+to Subversion</a> pertinent to translating Subversion output,
+additional information can be found in</p>
 
 <blockquote>
-   <a href="http://svn.collab.net/repos/svn/trunk/TRANSLATING"
-           >http://svn.collab.net/repos/svn/trunk/TRANSLATING</a>
+<p><a href="http://svn.collab.net/repos/svn/trunk/TRANSLATING"
+           >http://svn.collab.net/repos/svn/trunk/TRANSLATING</a></p>
 </blockquote>
 
 <p>Currently available translations can be found in
 <a href="http://svn.collab.net/repos/svn/trunk/subversion/po/"
 >the po section of the repository</a>.  Please contact the development
 mailing list when you want to start a translation not available yet.</p>
+
+<!-- ******************************************************************** -->
+
+<h3>The Big Picture</h3>
+
+<blockquote>
+
+<p>(taken from the <a
+href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=259"
+>design document</a>)</p>
+
+<p>
+<img src="subversion-diagram.png" alt="Design Diagram"
+     width="498" height="496"/>
+</p>
+
+</blockquote>
 
 </div>
 </body>

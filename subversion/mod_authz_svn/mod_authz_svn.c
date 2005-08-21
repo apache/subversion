@@ -3,7 +3,7 @@
  *                  based authorization for a Subversion repository.
  *
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -33,16 +33,10 @@
 #include "svn_path.h"
 #include "svn_config.h"
 #include "svn_string.h"
+#include "svn_repos.h"
 
 
 extern module AP_MODULE_DECLARE_DATA authz_svn_module;
-
-enum {
-    AUTHZ_SVN_NONE = 0,
-    AUTHZ_SVN_READ = 1,
-    AUTHZ_SVN_WRITE = 2,
-    AUTHZ_SVN_RECURSIVE = 4
-};
 
 typedef struct {
     int authoritative;
@@ -50,20 +44,6 @@ typedef struct {
     const char *base_path;
     const char *access_file;
 } authz_svn_config_rec;
-
-struct parse_authz_baton {
-    apr_pool_t *pool;
-    svn_config_t *config;
-    const char *user;
-    int allow;
-    int deny;
-
-    int required_access;
-    const char *repos_path;
-    const char *qualified_repos_path;
-
-    int access;
-};
 
 /*
  * Configuration
@@ -100,223 +80,6 @@ static const command_rec authz_svn_cmds[] =
     { NULL }
 };
 
-
-/*
- * Access checking
- */
-
-static int group_contains_user_internal(svn_config_t *cfg,
-    const char *group, const char *user, apr_hash_t *checked_groups,
-    apr_pool_t *pool)
-{
-    const char *value;
-    apr_array_header_t *list;
-    int i;
-
-    svn_config_get(cfg, &value, "groups", group, "");
-    list = svn_cstring_split(value, ",", TRUE, pool);
-
-    for (i = 0; i < list->nelts; i++) {
-       const char *group_user = APR_ARRAY_IDX(list, i, char *);
-
-       if (*group_user == '@') {
-           /* Guard against circular dependencies by checking group
-            * name against hash.
-            */
-           if (apr_hash_get(checked_groups, &group_user[1],
-                            APR_HASH_KEY_STRING))
-               continue;
-	   
-           /* Add group to hash of checked groups. */
-           apr_hash_set(checked_groups, &group_user[1],
-                        APR_HASH_KEY_STRING, "");
-
-           if (group_contains_user_internal(cfg, &group_user[1], user,
-                                            checked_groups, pool))
-               return 1;
-
-       } else if (!strcmp(user, group_user)) {
-           return 1;
-       }
-    }
-
-    return 0;
-}
-
-static int group_contains_user(svn_config_t *cfg,
-    const char *group, const char *user, apr_pool_t *pool)
-{
-    return group_contains_user_internal(cfg, group, user,
-                                        apr_hash_make(pool), pool);
-}
-
-static svn_boolean_t parse_authz_line(const char *name, const char *value,
-                                      void *baton)
-{
-    struct parse_authz_baton *b = baton;
-
-    if (strcmp(name, "*")) {
-        if (!b->user) {
-            return TRUE;
-        }
-
-        if (*name == '@') {
-            if (!group_contains_user(b->config, &name[1], b->user, b->pool))
-                return TRUE;
-        }
-        else if (strcmp(name, b->user)) {
-            return TRUE;
-        }
-    }
-
-    if (ap_strchr_c(value, 'r')) {
-        b->allow |= AUTHZ_SVN_READ;
-    }
-    else {
-        b->deny |= AUTHZ_SVN_READ;
-    }
-
-    if (ap_strchr_c(value, 'w')) {
-        b->allow |= AUTHZ_SVN_WRITE;
-    }
-    else {
-        b->deny |= AUTHZ_SVN_WRITE;
-    }
-
-    ap_log_perror(APLOG_MARK, APLOG_DEBUG, 0, b->pool,
-                  "%s = %s => allow = %i, deny = %i",
-                  name, value, b->allow, b->deny);
-
-    return TRUE;
-}
-
-/*
- * Return TRUE when ACCESS has been determined.
- */
-static int parse_authz_lines(svn_config_t *cfg,
-                             const char *repos_name, const char *repos_path,
-                             const char *user,
-                             int required_access, int *granted_access,
-                             apr_pool_t *pool)
-{
-    const char *qualified_repos_path;
-    struct parse_authz_baton baton = { 0 };
-
-    baton.pool = pool;
-    baton.config = cfg;
-    baton.user = user;
-
-    /* First try repos specific */
-    qualified_repos_path = apr_pstrcat(pool, repos_name, ":", repos_path,
-                                       NULL);
-    svn_config_enumerate(cfg, qualified_repos_path,
-                         parse_authz_line, &baton);
-    *granted_access = !(baton.deny & required_access)
-                      || (baton.allow & required_access);
-
-    if ((baton.deny & required_access)
-        || (baton.allow & required_access))
-        return TRUE;
-
-    svn_config_enumerate(cfg, repos_path,
-                         parse_authz_line, &baton);
-    *granted_access = !(baton.deny & required_access)
-                      || (baton.allow & required_access);
-
-    return (baton.deny & required_access)
-           || (baton.allow & required_access);
-}
-
-static svn_boolean_t parse_authz_section(const char *section_name,
-                                         void *baton)
-{
-  struct parse_authz_baton *b = baton;
-  int conclusive;
-
-  if (strncmp(section_name, b->qualified_repos_path,
-              strlen(b->qualified_repos_path))
-      && strncmp(section_name, b->repos_path,
-                 strlen(b->repos_path))) {
-      /* No match, move on to the next section. */
-      return TRUE;
-  }
-
-  b->allow = b->deny = 0;
-  svn_config_enumerate(b->config, section_name,
-                       parse_authz_line, b);
-
-  conclusive = (b->deny & b->required_access)
-               || (b->allow & b->required_access);
-
-  b->access = !(b->deny & b->required_access)
-              || (b->allow & b->required_access)
-              || !conclusive;
-  
-  /* If access isn't denied, move on to check the next section. */
-  return b->access;
-}
-
-static int parse_authz_sections(svn_config_t *cfg,
-                                const char *repos_name, const char *repos_path,
-                                const char *user,
-                                int required_access,
-                                apr_pool_t *pool)
-{
-    struct parse_authz_baton baton = { 0 };
-
-    baton.pool = pool;
-    baton.config = cfg;
-    baton.user = user;
-    baton.required_access = required_access;
-    baton.repos_path = repos_path;
-    baton.qualified_repos_path = apr_pstrcat(pool, repos_name, ":",
-                                             repos_path, NULL);
-    
-    baton.access = 1; /* Allow by default */
-    svn_config_enumerate_sections(cfg, parse_authz_section, &baton);
-
-    return baton.access;
-}
-
-static int check_access(svn_config_t *cfg, const char *repos_name,
-                        const char *repos_path, const char *user,
-                        int required_access, apr_pool_t *pool)
-{
-    const char *base_name;
-    const char *original_repos_path = repos_path;
-    int granted_access;
-
-    if (!repos_path) {
-        /* XXX: Check if the user has 'required_access' _anywhere_ in the
-         * XXX: repository.  For now, make this always succeed, until
-         * XXX: we come up with a good way of figuring this out.
-         */
-        return 1;
-    }
-
-    base_name = repos_path;
-    while (!parse_authz_lines(cfg, repos_name, repos_path,
-                              user, required_access, &granted_access,
-                              pool)) {
-        if (base_name[0] == '/' && base_name[1] == '\0') {
-            /* By default, deny access */
-            return 0;
-        }
-
-        svn_path_split(repos_path, &repos_path, &base_name, pool);
-    }
-
-    if (granted_access && (required_access & AUTHZ_SVN_RECURSIVE) != 0) {
-        /* Check access on entries below the current repos path */
-        granted_access = parse_authz_sections(cfg,
-                                              repos_name, original_repos_path,
-                                              user, required_access,
-                                              pool);
-    }
-
-    return granted_access;
-}
-
 /* Check if the current request R is allowed.  Upon exit *REPOS_PATH_REF
  * will contain the path and repository name that an operation was requested
  * on in the form 'name:path'.  *DEST_REPOS_PATH_REF will contain the
@@ -339,8 +102,9 @@ static int req_check_access(request_rec *r,
     const char *repos_path;
     const char *dest_repos_path = NULL;
     dav_error *dav_err;
-    int authz_svn_type = 0;
-    svn_config_t *access_conf = NULL;
+    svn_repos_authz_access_t authz_svn_type = svn_authz_none;
+    svn_boolean_t authz_access_granted = FALSE;
+    svn_authz_t *access_conf = NULL;
     svn_error_t *svn_err;
     const char *cache_key;
     void *user_data;
@@ -348,20 +112,20 @@ static int req_check_access(request_rec *r,
     switch (r->method_number) {
     /* All methods requiring read access to all subtrees of r->uri */
     case M_COPY:
-        authz_svn_type |= AUTHZ_SVN_RECURSIVE;
+      authz_svn_type |= svn_authz_recursive;
 
     /* All methods requiring read access to r->uri */
     case M_OPTIONS:
     case M_GET:
     case M_PROPFIND:
     case M_REPORT:
-        authz_svn_type |= AUTHZ_SVN_READ;
-        break;
+      authz_svn_type |= svn_authz_read;
+      break;
 
     /* All methods requiring write access to all subtrees of r->uri */
     case M_MOVE:
     case M_DELETE:
-        authz_svn_type |= AUTHZ_SVN_RECURSIVE;
+      authz_svn_type |= svn_authz_recursive;
 
     /* All methods requiring write access to r->uri */
     case M_MKCOL:
@@ -370,13 +134,15 @@ static int req_check_access(request_rec *r,
     case M_CHECKOUT:
     case M_MERGE:
     case M_MKACTIVITY:
-        authz_svn_type |= AUTHZ_SVN_WRITE;
-        break;
+    case M_LOCK:
+    case M_UNLOCK:
+      authz_svn_type |= svn_authz_write;
+      break;
 
     default:
-        /* Require most strict access for unknown methods */
-        authz_svn_type |= AUTHZ_SVN_WRITE|AUTHZ_SVN_RECURSIVE;
-        break;
+      /* Require most strict access for unknown methods */
+      authz_svn_type |= svn_authz_write | svn_authz_recursive;
+      break;
     }
 
     dav_err = dav_svn_split_uri(r,
@@ -461,11 +227,20 @@ static int req_check_access(request_rec *r,
     apr_pool_userdata_get(&user_data, cache_key, r->connection->pool);
     access_conf = user_data;
     if (access_conf == NULL) {
-        svn_err = svn_config_read(&access_conf, conf->access_file, FALSE,
-                                  r->connection->pool);
+        svn_err = svn_repos_authz_read(&access_conf, conf->access_file,
+                                       TRUE, r->connection->pool);
         if (svn_err) {
-            ap_log_rerror(APLOG_MARK, APLOG_ERR, svn_err->apr_err, r,
-                          "%s", svn_err->message);
+            ap_log_rerror(APLOG_MARK, APLOG_ERR,
+                          /* If it is an error code that APR can make sense
+                             of, then show it, otherwise, pass zero to avoid
+                             putting "APR does not understand this error code"
+                             in the error log. */
+                          ((svn_err->apr_err >= APR_OS_START_USERERR &&
+                            svn_err->apr_err < APR_OS_START_CANONERR) ?
+                           0 : svn_err->apr_err),
+                          r, "Failed to load the AuthzSVNAccessFile: %s",
+                          svn_err->message);
+            svn_error_clear(svn_err);
 
             return DECLINED;
         }
@@ -475,12 +250,43 @@ static int req_check_access(request_rec *r,
                               NULL, r->connection->pool);
     }
 
-    if (!check_access(access_conf,
-                      repos_name, repos_path,
-                      r->user, authz_svn_type,
-                      r->pool)) {
-        return DECLINED;
-    }
+    /* Perform authz access control.
+     *
+     * First test the special case where repos_path == NULL, and skip
+     * calling the authz routines in that case.  This is an oddity of
+     * the DAV RA method: some requests have no repos_path, but apache
+     * still triggers an authz lookup for the URI.
+     *
+     * XXX: For now, requesting access to the entire repository always
+     * XXX: succeeds, until we come up with a good way of figuring
+     * XXX: this out.
+     */
+    if (repos_path)
+      {
+        svn_err = svn_repos_authz_check_access(access_conf, repos_name,
+                                               repos_path, r->user,
+                                               authz_svn_type,
+                                               &authz_access_granted,
+                                               r->pool);
+        if (svn_err) {
+          ap_log_rerror(APLOG_MARK, APLOG_ERR,
+                        /* If it is an error code that APR can make
+                           sense of, then show it, otherwise, pass
+                           zero to avoid putting "APR does not
+                           understand this error code" in the error
+                           log. */
+                        ((svn_err->apr_err >= APR_OS_START_USERERR &&
+                          svn_err->apr_err < APR_OS_START_CANONERR) ?
+                         0 : svn_err->apr_err),
+                        r, "Failed to perform access control: %s",
+                        svn_err->message);
+          svn_error_clear(svn_err);
+
+          return DECLINED;
+        }
+        if (!authz_access_granted)
+          return DECLINED;
+      }
 
     /* XXX: MKCOL, MOVE, DELETE
      * XXX: Require write access to the parent dir of repos_path.
@@ -497,13 +303,36 @@ static int req_check_access(request_rec *r,
         return OK;
     }
 
-    /* Check access on the first repos_path */
-    if (!check_access(access_conf,
-                      dest_repos_name, dest_repos_path,
-                      r->user, AUTHZ_SVN_WRITE|AUTHZ_SVN_RECURSIVE,
-                      r->pool)) {
-        return DECLINED;
-    }
+    /* Check access on the destination repos_path.  Again, skip this if
+       repos_path == NULL (see above for explanations) */
+    if (repos_path)
+      {
+        svn_err = svn_repos_authz_check_access(access_conf,
+                                               dest_repos_name,
+                                               dest_repos_path,
+                                               r->user,
+                                               svn_authz_write
+                                               |svn_authz_recursive,
+                                               &authz_access_granted,
+                                               r->pool);
+        if (svn_err) {
+          ap_log_rerror(APLOG_MARK, APLOG_ERR,
+                        /* If it is an error code that APR can make sense
+                           of, then show it, otherwise, pass zero to avoid
+                           putting "APR does not understand this error code"
+                           in the error log. */
+                        ((svn_err->apr_err >= APR_OS_START_USERERR &&
+                          svn_err->apr_err < APR_OS_START_CANONERR) ?
+                         0 : svn_err->apr_err),
+                        r, "Failed to perform access control: %s",
+                        svn_err->message);
+          svn_error_clear(svn_err);
+
+          return DECLINED;
+        }
+        if (!authz_access_granted)
+          return DECLINED;
+      }
 
     /* XXX: MOVE and COPY, if the path doesn't exist yet, also
      * XXX: require write access to the parent dir of dest_repos_path.

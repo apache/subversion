@@ -57,7 +57,8 @@ del_lines_res = [
 
                  # Also for 'svn --version':
                  re.compile(r"\* ra_(dav|local|svn) :"),
-                 re.compile(r"  - handles '(https?|file|svn)' schema"),
+                 re.compile(r"  - handles '(https?|file|svn)' scheme"),
+                 re.compile(r"\* fs_(base|fs) :"),
                 ]
 
 # This is a list of lines to search and replace text on.
@@ -183,14 +184,6 @@ def getopt_help_bogus_cmd(sbox):
   "run svn help bogus-cmd"
   run_one_test(sbox, 'svn_help_bogus-cmd', 'help', 'bogus-cmd')
 
-def getopt_version(sbox):
-  "run svn version"
-  run_one_test(sbox, 'svn_version', 'version')
-
-def getopt_ver__q(sbox):
-  "run svn ver -q"
-  run_one_test(sbox, 'svn_ver-q', 'ver', '-q')
-
 ########################################################################
 # Run the tests
 
@@ -204,9 +197,7 @@ test_list = [ None,
               getopt_help,
               getopt_help__version,
               getopt_help_bogus_cmd,
-              getopt_help_log_switch,
-              getopt_version,
-              getopt_ver__q
+              getopt_help_log_switch
             ]
 
 if __name__ == '__main__':

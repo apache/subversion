@@ -113,14 +113,9 @@ class Generator(gen_base.GeneratorBase):
         # there is nothing to build
         continue
 
-      sources = self.graph.get_sources(gen_base.DT_LINK, target_ob.name)
-
-      if isinstance(target_ob, gen_base.TargetI18N):
-        sources = sources + self.graph.get_sources(gen_base.DT_NONLIB, target_ob.name)
-
       target = target_ob.name
       if isinstance(target_ob, gen_base.TargetJava):
-        path = target_ob.classes
+        path = target_ob.output_dir
       else:
         path = target_ob.path
 
@@ -135,38 +130,46 @@ class Generator(gen_base.GeneratorBase):
       deps = [ ]
       libs = [ ]
 
-      for source in sources:
-        if isinstance(source, gen_base.TargetJava):
-          deps.append(source.name)
-        elif isinstance(source, gen_base.TargetLinked):
-          if source.external_lib:
-            libs.append(source.external_lib)
+      for link_dep in self.graph.get_sources(gen_base.DT_LINK, target_ob.name):
+        if isinstance(link_dep, gen_base.TargetJava):
+          deps.append(link_dep.name)
+        elif isinstance(link_dep, gen_base.TargetLinked):
+          if link_dep.external_lib:
+            libs.append(link_dep.external_lib)
           else:
             # append the output of the target to our stated dependencies
-            deps.append(source.filename)
+            deps.append(link_dep.filename)
 
             # link against the library
-            libs.append(build_path_join(retreat, source.filename))
-        elif isinstance(source, gen_base.ObjectFile):
+            libs.append(build_path_join(retreat, link_dep.filename))
+        elif isinstance(link_dep, gen_base.ObjectFile):
           # link in the object file
-          objects.append(source.filename)
-          for dep in self.graph.get_sources(gen_base.DT_OBJECT, source, gen_base.SourceFile):
+          objects.append(link_dep.filename)
+          for dep in self.graph.get_sources(gen_base.DT_OBJECT, link_dep, gen_base.SourceFile):
             object_srcs.append(
               build_path_join('$(abs_srcdir)', dep.filename))
-        elif isinstance(source, gen_base.HeaderFile):
+        elif isinstance(link_dep, gen_base.HeaderFile):
           # link in the header file
           # N.B. that filename_win contains the '_'-escaped class name
-          headers.append(source.filename_win)
-          header_classes.append(source.classname)
-          for dep in self.graph.get_sources(gen_base.DT_OBJECT, source, gen_base.ObjectFile):
+          headers.append(link_dep.filename_win)
+          header_classes.append(link_dep.classname)
+          for dep in self.graph.get_sources(gen_base.DT_OBJECT, link_dep, gen_base.ObjectFile):
             header_class_filenames.append(dep.filename)
         else:
           ### we don't know what this is, so we don't know what to do with it
           raise UnknownDependency
 
+      for nonlib in self.graph.get_sources(gen_base.DT_NONLIB, target_ob.name):
+        if isinstance(nonlib, gen_base.TargetLinked):
+          if not nonlib.external_lib:
+            deps.append(nonlib.filename)
+
       targ_varname = string.replace(target, '-', '_')
       objnames = string.join(build_path_strip(path, objects))
 
+      # Output value of path variable
+      self.ofile.write('%s_PATH = %s\n' % (targ_varname, path))
+      
       # Add additional install dependencies if necessary
       if target_ob.add_install_deps:
         self.ofile.write('install-%s: %s\n'
@@ -280,15 +283,6 @@ class Generator(gen_base.GeneratorBase):
       # get the output files for these targets, sorted in dependency order
       files = gen_base._sorted_files(self.graph, area)
 
-      # reflect inter-library dependencies in the library install targets
-      inst_area_deps = {}
-      for target in inst_targets:
-        for target_dep in self.graph.get_sources(gen_base.DT_LINK, target.name,
-                                                 gen_base.TargetLib):
-          if target_dep.install and target_dep.install != area:
-            inst_area_deps['install-%s' % target_dep.install] = None
-      inst_area_deps = inst_area_deps.keys()
-
       if area == 'apache-mod':
         self.ofile.write('install-mods-shared: %s\n' % (string.join(files),))
         la_tweaked = { }
@@ -307,9 +301,10 @@ class Generator(gen_base.GeneratorBase):
         for apmod in inst_targets:
           for source in self.graph.get_sources(gen_base.DT_LINK, apmod.name,
                                                gen_base.Target):
-            bt = source.filename
-            if bt[-3:] == '.la':
-              la_tweaked[bt + '-a'] = None
+            if not source.external_lib:
+              bt = source.filename
+              if bt[-3:] == '.la':
+                la_tweaked[bt + '-a'] = None
         la_tweaked = la_tweaked.keys()
         la_tweaked.sort()
 
@@ -342,8 +337,7 @@ class Generator(gen_base.GeneratorBase):
         upper_var = string.upper(area_var)
         self.ofile.write('install-%s: %s\n'
                          '\t$(MKDIR) $(DESTDIR)$(%sdir)\n'
-                         % (area, string.join(files + inst_area_deps),
-                            area_var))
+                         % (area, string.join(files), area_var))
         for file in files:
           # cd to dirname before install to work around libtool 1.4.2 bug.
           dirname, fname = build_path_splitfile(file)
@@ -426,6 +420,9 @@ class Generator(gen_base.GeneratorBase):
           self.ofile.write('\t%s %s\n\n' % (cmd, sources[0]))
       else:
         self.ofile.write('\n')
+    
+    
+    self.ofile.close()
 
 
 class UnknownDependency(Exception):

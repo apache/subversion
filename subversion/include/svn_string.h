@@ -48,14 +48,14 @@
  *      then they must enforce this invariant.
  *
  *      Note that an @c svn_string(buf)_t may contain binary data,
- *      which means that @c strlen(s->data) does not have to equal @c
+ *      which means that strlen(s->data) does not have to equal @c
  *      s->len. The null terminator is provided to make it easier to
  *      pass @c s->data to C string interfaces.
  *
  *
  *   2. Non-null input:
  *
- *      All the functions below assume their input data is non-null,
+ *      All the functions assume their input data is non-null,
  *      unless otherwise documented, and may seg fault if passed
  *      null.  The input data may *contain* null bytes, of course, just
  *      the data pointer itself must not be null.
@@ -82,8 +82,8 @@ extern "C" {
 /** A simple counted string. */
 typedef struct svn_string_t
 {
-  const char *data;
-  apr_size_t len;
+  const char *data; /**< pointer to the bytestring */
+  apr_size_t len;   /**< length of bytestring */
 } svn_string_t;
 
 /** A buffered string, capable of appending without an allocation and copy 
@@ -128,7 +128,7 @@ svn_string_t *svn_string_create_from_buf (const svn_stringbuf_t *strbuf,
                                           apr_pool_t *pool);
 
 /** Create a new bytestring by formatting @a cstring (null-terminated)
- * from varargs, which are as appropriate for @c apr_psprintf.
+ * from varargs, which are as appropriate for apr_psprintf().
  */
 svn_string_t *svn_string_createf (apr_pool_t *pool,
                                   const char *fmt,
@@ -136,7 +136,7 @@ svn_string_t *svn_string_createf (apr_pool_t *pool,
        __attribute__ ((format (printf, 2, 3)));
 
 /** Create a new bytestring by formatting @a cstring (null-terminated)
- * from a @c va_list (see @c svn_stringbuf_createf).
+ * from a @c va_list (see svn_stringbuf_createf()).
  */
 svn_string_t *svn_string_createv (apr_pool_t *pool,
                                   const char *fmt,
@@ -188,7 +188,7 @@ svn_stringbuf_t *svn_stringbuf_create_from_string (const svn_string_t *str,
                                                    apr_pool_t *pool);
 
 /** Create a new bytestring by formatting @a cstring (null-terminated)
- * from varargs, which are as appropriate for @c apr_psprintf.
+ * from varargs, which are as appropriate for apr_psprintf().
  */
 svn_stringbuf_t *svn_stringbuf_createf (apr_pool_t *pool,
                                         const char *fmt,
@@ -196,7 +196,7 @@ svn_stringbuf_t *svn_stringbuf_createf (apr_pool_t *pool,
        __attribute__ ((format (printf, 2, 3)));
 
 /** Create a new bytestring by formatting @a cstring (null-terminated)
- * from a @c va_list (see svn_stringbuf_createf).
+ * from a @c va_list (see svn_stringbuf_createf()).
  */
 svn_stringbuf_t *svn_stringbuf_createv (apr_pool_t *pool,
                                         const char *fmt,
@@ -228,7 +228,7 @@ void svn_stringbuf_fillchar (svn_stringbuf_t *str, unsigned char c);
 
 /** Append an array of bytes onto @a targetstr.
  *
- * @c reallocs() if necessary. @a targetstr is affected, nothing else is.
+ * reallocs if necessary. @a targetstr is affected, nothing else is.
  */
 void svn_stringbuf_appendbytes (svn_stringbuf_t *targetstr,
                                 const char *bytes, 
@@ -236,14 +236,14 @@ void svn_stringbuf_appendbytes (svn_stringbuf_t *targetstr,
 
 /** Append an @c svn_stringbuf_t onto @a targetstr.
  *
- * @c reallocs() if necessary. @a targetstr is affected, nothing else is.
+ * reallocs if necessary. @a targetstr is affected, nothing else is.
  */
 void svn_stringbuf_appendstr (svn_stringbuf_t *targetstr, 
                               const svn_stringbuf_t *appendstr);
 
 /** Append a C string onto @a targetstr.
  *
- * @c reallocs() if necessary. @a targetstr is affected, nothing else is.
+ * reallocs if necessary. @a targetstr is affected, nothing else is.
  */
 void svn_stringbuf_appendcstr (svn_stringbuf_t *targetstr,
                                const char *cstr);
@@ -295,15 +295,13 @@ svn_boolean_t svn_string_compare_stringbuf (const svn_string_t *str1,
  *
  * If @a chop_whitespace is true, then remove leading and trailing
  * whitespace from the returned strings.
- *
- * @a input may not be null.
  */
 apr_array_header_t *svn_cstring_split (const char *input,
                                        const char *sep_chars,
                                        svn_boolean_t chop_whitespace,
                                        apr_pool_t *pool);
 
-/** Like @c svn_cstring_split(), but append to existing @a array instead of
+/** Like svn_cstring_split(), but append to existing @a array instead of
  * creating a new one.  Allocate the copied substrings in @a pool
  * (i.e., caller decides whether or not to pass @a array->pool as @a pool).
  */
@@ -322,6 +320,25 @@ void svn_cstring_split_append (apr_array_header_t *array,
 svn_boolean_t svn_cstring_match_glob_list (const char *str,
                                            apr_array_header_t *list);
 
+/**
+ * Return the number of line breaks in @a msg, allowing any kind of newline
+ * termination (CR, LF, CRLF, or LFCR), even inconsistent.
+ *
+ * @since New in 1.2.
+ */
+int svn_cstring_count_newlines (const char *msg);
+
+/**
+ * Return a cstring which is the concatenation of @a strings (an array
+ * of char *) each separated by @a separator.  The returned string is
+ * allocated from @a pool.
+ *
+ * @since New in 1.2.
+ */
+char *
+svn_cstring_join (apr_array_header_t *strings,
+                  const char *separator,
+                  apr_pool_t *pool);
 
 /** @} */
 

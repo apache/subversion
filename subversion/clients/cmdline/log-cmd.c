@@ -41,38 +41,6 @@
 
 /*** Code. ***/
 
-/* Helper for log_message_receiver(). 
- *
- * Return the number of lines in MSG, allowing any kind of newline
- * termination (CR, CRLF, or LFCR), even inconsistent.  The minimum
- * number of lines in MSG is 1 -- even the empty string is considered
- * to have one line, due to the way we print log messages.
- */
-static int
-num_lines (const char *msg)
-{
-  int count = 1;
-  const char *p;
-
-  for (p = msg; *p; p++)
-    {
-      if (*p == '\n')
-        {
-          count++;
-          if (*(p + 1) == '\r')
-            p++;
-        }
-      else if (*p == '\r')
-        {
-          count++;
-          if (*(p + 1) == '\n')
-            p++;
-        }
-    }
-
-  return count;
-}
-
 /* Baton for log_message_receiver() and log_message_receiver_xml(). */
 struct log_receiver_baton
 {
@@ -213,11 +181,11 @@ log_message_receiver (void *baton,
 
   if (! lb->omit_log_message)
     {
-      lines = num_lines (msg);
-      /*### FIXME: how do we translate this without ngettext?! */
+      lines = svn_cstring_count_newlines (msg) + 1;
       SVN_ERR (svn_cmdline_printf (pool,
-                                   " | %d line%s", lines,
-                                   (lines > 1) ? "s" : ""));
+                                   (lines != 1)
+                                   ? " | %d lines"
+                                   : " | %d line", lines));
     }
 
   SVN_ERR (svn_cmdline_printf (pool, "\n"));
@@ -328,24 +296,17 @@ log_message_receiver_xml (void *baton,
   svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "logentry",
                          "revision", revstr, NULL);
 
-  if (author)
-    {
-      /* <author>xxx</author> */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "author",
-                             NULL);
-      svn_xml_escape_cdata_cstring (&sb, author, pool);
-      svn_xml_make_close_tag (&sb, pool, "author");
-    }
+  /* <author>xxx</author> */
+  svn_cl__xml_tagged_cdata (&sb, pool, "author", author);
 
-  if (date)
-    {
-      /* Print the full, uncut, date.  This is machine output. */
-      /* <date>xxx</date> */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "date",
-                             NULL);
-      svn_xml_escape_cdata_cstring (&sb, date, pool);
-      svn_xml_make_close_tag (&sb, pool, "date");
-    }
+  /* Print the full, uncut, date.  This is machine output. */
+  /* According to the docs for svn_log_message_receiver_t, either
+     NULL or the empty string represents no date.  Avoid outputting an
+     empty date element. */
+  if (date && date[0] == '\0')
+    date = NULL;
+  /* <date>xxx</date> */
+  svn_cl__xml_tagged_cdata (&sb, pool, "date", date);
 
   if (changed_paths)
     {
@@ -372,7 +333,7 @@ log_message_receiver_xml (void *baton,
           if (log_item->copyfrom_path
               && SVN_IS_VALID_REVNUM (log_item->copyfrom_rev))
             {
-              /* <path action="X" copyfrom-path="aaa" copyfrom-rev="> */
+              /* <path action="X" copyfrom-path="xxx" copyfrom-rev="xxx"> */
               svn_stringbuf_t *escpath = svn_stringbuf_create ("", pool);
               svn_xml_escape_attr_cstring (&escpath,
                                            log_item->copyfrom_path, pool);
@@ -404,9 +365,7 @@ log_message_receiver_xml (void *baton,
         msg = "";
 
       /* <msg>xxx</msg> */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, "msg", NULL);
-      svn_xml_escape_cdata_cstring (&sb, msg, pool);
-      svn_xml_make_close_tag (&sb, pool, "msg");
+      svn_cl__xml_tagged_cdata (&sb, pool, "msg", msg);
     }
 
   /* </logentry> */
@@ -497,8 +456,8 @@ svn_cl__log (apr_getopt_t *os,
   lb.omit_log_message = opt_state->quiet;
   
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton, FALSE, FALSE,
-                          FALSE, pool);
+    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                          FALSE, FALSE, pool);
   
   if (opt_state->xml)
     {

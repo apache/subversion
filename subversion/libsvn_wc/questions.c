@@ -344,7 +344,7 @@ compare_and_verify (svn_boolean_t *modified_p,
       {
         const char *checksum;
         apr_md5_final (digest, &context);
-        checksum = svn_md5_digest_to_cstring (digest, pool);
+        checksum = svn_md5_digest_to_cstring_display (digest, pool);
         if (strcmp (checksum, entry->checksum) != 0)
           {
             return svn_error_createf
@@ -386,14 +386,7 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
   svn_boolean_t equal_timestamps;
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_node_kind_t kind;
-
-  /* Sanity check:  if the path doesn't exist, return FALSE. */
-  SVN_ERR (svn_io_check_path (filename, &kind, subpool));
-  if (kind != svn_node_file)
-    {
-      *modified_p = FALSE;
-      goto cleanup;
-    }
+  svn_error_t *err;
 
   if (! force_comparison)
     {
@@ -402,16 +395,36 @@ svn_wc_text_modified_p (svn_boolean_t *modified_p,
          theoretically, be wrong in certain rare cases, but with the
          addition of a forced delay after commits (see revision 419
          and issue #542) it's highly unlikely to be a problem. */
-      SVN_ERR (svn_wc__timestamps_equal_p (&equal_timestamps,
-                                           filename, adm_access,
-                                           svn_wc__text_time, subpool));
-      if (equal_timestamps)
+      err = svn_wc__timestamps_equal_p (&equal_timestamps,
+                                        filename, adm_access,
+                                        svn_wc__text_time, subpool);
+
+      /* We only care whether there was an error or not, so make sure it
+         is cleared. */
+      svn_error_clear (err);
+
+      /* If we have an error, we fall back on the slower code path below.
+         It might be tempting to optimize this further, for example by
+         detecting when the file didn't exists.  But we have to be careful
+         with what error codes we return.  If the file doesn't exist,
+         we should return no error.  But, *if* it exists, but it is
+         unversioned, we have to return SVN_ERR_ENTRY_NOT_FOUND. */
+      if (! err && equal_timestamps)
         {
           *modified_p = FALSE;
           goto cleanup;
         }
     }
-      
+
+  /* Make sure the file exists before proceeding. */
+  SVN_ERR (svn_io_check_path (filename, &kind, pool));
+  if (kind != svn_node_file)
+    {
+      /* If the file doesn't exist, consider it non-modified. */
+      *modified_p = FALSE;
+      goto cleanup;
+    }
+
   /* If there's no text-base file, we have to assume the working file
      is modified.  For example, a file scheduled for addition but not
      yet committed. */

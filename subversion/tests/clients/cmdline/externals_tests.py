@@ -56,13 +56,13 @@ def externals_test_setup(sbox):
 
   The arrangement of the externals in the first repository is:
 
-     /A/C/     ==>  exdir_G       <schema>:///<other_repos>/A/D/G
-                    exdir_H  -r 1 <schema>:///<other_repos>/A/D/H
+     /A/C/     ==>  exdir_G       <scheme>:///<other_repos>/A/D/G
+                    exdir_H  -r 1 <scheme>:///<other_repos>/A/D/H
 
-     /A/D/     ==>  exdir_A          <schema>:///<other_repos>/A
-                    exdir_A/G        <schema>:///<other_repos>/A/D/G
-                    exdir_A/H  -r 3  <schema>:///<other_repos>/A/D/H
-                    x/y/z/blah       <schema>:///<other_repos>/A/B
+     /A/D/     ==>  exdir_A          <scheme>:///<other_repos>/A
+                    exdir_A/G        <scheme>:///<other_repos>/A/D/G
+                    exdir_A/H  -r 3  <scheme>:///<other_repos>/A/D/H
+                    x/y/z/blah       <scheme>:///<other_repos>/A/B
 
   NOTE: Before calling this, use externals_test_cleanup(SBOX) to
   remove a previous incarnation of the other repository.
@@ -98,22 +98,22 @@ def externals_test_setup(sbox):
   # Make revisions 2 through 5, but don't bother with pre- and
   # post-commit status checks.
 
-  svntest.main.file_append(mu_path, "\nAdded to mu in revision 2.\n")
+  svntest.main.file_append(mu_path, "Added to mu in revision 2.\n")
   svntest.actions.run_and_verify_svn("", None, [],
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
 
-  svntest.main.file_append(pi_path, "\nAdded to pi in revision 3.\n")
+  svntest.main.file_append(pi_path, "Added to pi in revision 3.\n")
   svntest.actions.run_and_verify_svn("", None, [],
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
 
-  svntest.main.file_append(lambda_path, "\nAdded to lambda in revision 4.\n")
+  svntest.main.file_append(lambda_path, "Added to lambda in revision 4.\n")
   svntest.actions.run_and_verify_svn("", None, [],
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
 
-  svntest.main.file_append(omega_path, "\nAdded to omega in revision 5.\n")
+  svntest.main.file_append(omega_path, "Added to omega in revision 5.\n")
   svntest.actions.run_and_verify_svn("", None, [],
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
@@ -164,7 +164,6 @@ def externals_test_setup(sbox):
     })
 
   expected_status = svntest.actions.get_virginal_state(wc_init_dir, 5)
-  expected_status.tweak(repos_rev=6)
   expected_status.tweak('A/C', 'A/D', wc_rev=6, status='  ')
 
   svntest.actions.run_and_verify_commit(wc_init_dir,
@@ -252,7 +251,7 @@ def checkout_with_externals(sbox):
   # Pick a file at random, make sure it has the expected contents.
   fp = open(exdir_H_omega_path, 'r')
   lines = fp.readlines()
-  if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.")):
+  if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.\n")):
     raise svntest.Failure("Unexpected contents for rev 1 of " +
                           exdir_H_omega_path)
 
@@ -472,10 +471,10 @@ def update_change_modified_external(sbox):
   # Make a couple of mods in the "x/y/z/blah/" external.
   alpha_path = os.path.join(other_wc_dir, "A", "D",
                             "x", "y", "z", "blah", "alpha")
-  svntest.main.file_append(alpha_path, "\nSome new text in alpha.")
+  svntest.main.file_append(alpha_path, "Some new text in alpha.\n")
   new_file = os.path.join(other_wc_dir, "A", "D",
                           "x", "y", "z", "blah", "fish.txt")
-  svntest.main.file_append(new_file, "This is an unversioned file.")
+  svntest.main.file_append(new_file, "This is an unversioned file.\n")
 
   # Change the "x/y/z/blah" external on A/D to point to a different
   # URL.  There are some local mods under the old checked-out external,
@@ -532,13 +531,12 @@ def update_receive_change_under_external(sbox):
 
   # Commit some modifications from the other_wc.
   other_gamma_path = os.path.join(other_wc_dir, 'A', 'D', 'gamma')
-  svntest.main.file_append(other_gamma_path, "\nNew text in other gamma.")
+  svntest.main.file_append(other_gamma_path, "New text in other gamma.\n")
 
   expected_output = svntest.wc.State(other_wc_dir, {
     'A/D/gamma' : Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(other_wc_dir, 5)
-  expected_status.tweak(repos_rev=6)
   expected_status.tweak('A/D/gamma', wc_rev=6)
   svntest.actions.run_and_verify_commit(other_wc_dir,
                                         expected_output,
@@ -561,20 +559,19 @@ def update_receive_change_under_external(sbox):
   lines = fp.readlines()
   if not ((len(lines) == 2)
           and (lines[0] == "This is the file 'gamma'.\n")
-          and (lines[1] == "New text in other gamma.")):
+          and (lines[1] == "New text in other gamma.\n")):
     raise svntest.Failure("Unexpected contents for externally modified " +
                           external_gamma_path)
   fp.close()
 
   # Commit more modifications
   other_rho_path = os.path.join(other_wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.main.file_append(other_rho_path, "\nNew text in other rho.")
+  svntest.main.file_append(other_rho_path, "New text in other rho.\n")
 
   expected_output = svntest.wc.State(other_wc_dir, {
     'A/D/G/rho' : Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(other_wc_dir, 5)
-  expected_status.tweak(repos_rev=7)
   expected_status.tweak('A/D/gamma', wc_rev=6)
   expected_status.tweak('A/D/G/rho', wc_rev=7)
   svntest.actions.run_and_verify_commit(other_wc_dir,
@@ -591,7 +588,7 @@ def update_receive_change_under_external(sbox):
   lines = fp.readlines()
   if not ((len(lines) == 2)
           and (lines[0] == "This is the file 'rho'.\n")
-          and (lines[1] == "New text in other rho.")):
+          and (lines[1] == "New text in other rho.\n")):
     raise svntest.Failure("Unexpected contents for externally modified " +
                           external_rho_path)
   fp.close()
@@ -748,7 +745,7 @@ def export_with_externals(sbox):
                           exdir_G_pi_path)
   fp = open(exdir_H_omega_path, 'r')
   lines = fp.readlines()
-  if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.")):
+  if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.\n")):
     raise svntest.Failure("Unexpected contents for rev 1 of " +
                           exdir_H_omega_path)
 

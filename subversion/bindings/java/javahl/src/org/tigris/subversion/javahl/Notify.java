@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -25,6 +25,7 @@ package org.tigris.subversion.javahl;
  * class.
  * If you need to pass extra information to the notification
  * handler then just add these to you implementing class
+ * @deprecated Use Notify2 instead
  */
 public interface Notify
 {
@@ -56,7 +57,7 @@ public interface Notify
          */
 		public static final String getActionName(int action)
 		{
-			return actionNames[action];
+			return NotifyAction.actionNames[action];
 		}
 
     }
@@ -73,8 +74,7 @@ public interface Notify
          */
 		public static final String getStatusName(int status)
 		{
-			return statusNames[status];
+			return NotifyStatus.statusNames[status];
 		}
     }
-
 }

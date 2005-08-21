@@ -668,7 +668,7 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
                               svn_path_local_style (dst_path, pool));
   
   /* Create the new directory. */
-  /* ### TODO: copy permissions? */
+  /* ### TODO: copy permissions (needs apr_file_attrs_get()) */
   SVN_ERR (svn_io_dir_make (dst_path, APR_OS_DEFAULT, pool));
 
   /* Loop over the dirents in SRC.  ('.' and '..' are auto-excluded) */
@@ -712,6 +712,12 @@ svn_error_t *svn_io_copy_dir_recursively (const char *src,
             }
           else if (this_entry.filetype == APR_DIR) /* recurse */
             {
+              /* Prevent infinite recursion by filtering off our
+                 newly created destination path. */
+              if (strcmp (src, dst_parent) == 0
+                  && strcmp (entryname_utf8, dst_basename) == 0)
+                continue;
+
               SVN_ERR (svn_io_copy_dir_recursively 
                        (src_target,
                         dst_path,
@@ -831,7 +837,6 @@ svn_io_set_file_affected_time (apr_time_t apr_time,
 
   return SVN_NO_ERROR;
 }
-
 
 
 svn_error_t *
@@ -992,6 +997,147 @@ reown_file (const char *path_apr,
   SVN_ERR (svn_io_copy_file (unique_name, path_apr, TRUE, pool));
   SVN_ERR (svn_io_remove_file (unique_name, pool));
 
+  return SVN_NO_ERROR;
+}
+
+/* Determine what the read-write PERMS for PATH should be by ORing
+   together the permissions of PATH and the permissions of a temporary
+   file that we create.  Unfortunately, this is the only way to
+   determine which combination of write bits (User/Group/World) should
+   be set to restore a file from read-only to read-write.  Make
+   temporary allocations in POOL.  */
+static svn_error_t *
+get_default_file_perms (const char *path, apr_fileperms_t *perms,
+                        apr_pool_t *pool)
+{
+  apr_status_t status;
+  apr_finfo_t tmp_finfo, finfo;
+  apr_file_t *fd;
+  const char *tmp_path;
+  const char *apr_path;
+
+  /* Get the perms for a newly created file to find out what write
+   * bits should be set. */
+  SVN_ERR (svn_io_open_unique_file (&fd, &tmp_path, path, 
+                                    ".tmp", TRUE, pool));
+  status = apr_stat (&tmp_finfo, tmp_path, APR_FINFO_PROT, pool);
+  if (status)
+    return svn_error_wrap_apr (status, _("Can't get default file perms "
+                                         "for file at '%s' (file stat error)"),
+                               path);
+  apr_file_close(fd);
+
+  /* Get the perms for the original file so we'll have any other bits
+   * that were already set (like the execute bits, for example). */
+  SVN_ERR (svn_path_cstring_from_utf8 (&apr_path, path, pool));
+  status = apr_file_open (&fd, apr_path, APR_READ, APR_OS_DEFAULT, pool);
+  if (status)
+    return svn_error_wrap_apr (status, _("Can't open file at '%s'"), path);
+
+  status = apr_stat (&finfo, apr_path, APR_FINFO_PROT, pool);
+  if (status)
+    return svn_error_wrap_apr (status, _("Can't get file perms for file at "
+                                         "'%s' (file stat error)"), path);
+  apr_file_close(fd);
+
+  /* Glom the perms together. */
+  *perms = tmp_finfo.protection | finfo.protection;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_io_set_file_read_write_carefully (const char *path,
+                                      svn_boolean_t enable_write,
+                                      svn_boolean_t ignore_enoent,
+                                      apr_pool_t *pool)
+{
+  apr_status_t status;
+  const char *path_apr;
+  apr_finfo_t finfo;
+  apr_fileperms_t perms_to_set;
+
+  SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, path, pool));
+
+  /* Try to change only a minimal amount of the perms first 
+     by getting the current perms and adding execute bits
+     only on where read perms are granted.  If this fails
+     fall through to the svn_io_set_file* calls. */
+  status = apr_stat (&finfo, path_apr, APR_FINFO_PROT, pool);
+  if (status)
+    {
+      if (ignore_enoent && APR_STATUS_IS_ENOENT (status))
+        return SVN_NO_ERROR;
+      else if (status != APR_ENOTIMPL)
+        return svn_error_wrap_apr (status,
+                                   _("Can't change read-write perms of "
+                                     "file '%s'"),
+                                   svn_path_local_style (path, pool));
+    } 
+  else
+    {
+      perms_to_set = finfo.protection;
+      if (enable_write) /* Make read-write. */
+        SVN_ERR (get_default_file_perms (path, &perms_to_set, 
+                                         pool));
+      else /* Make read-only. */
+        {
+          if (finfo.protection & APR_UREAD)
+            perms_to_set &= ~APR_UWRITE;
+          if (finfo.protection & APR_GREAD)
+            perms_to_set &= ~APR_GWRITE;
+          if (finfo.protection & APR_WREAD)
+            perms_to_set &= ~APR_WWRITE;
+        }
+
+      /* If we aren't changing anything then just return, this save
+         some system calls and helps with shared working copies */
+      if (perms_to_set == finfo.protection)
+        return SVN_NO_ERROR;
+
+      status = apr_file_perms_set (path_apr, perms_to_set);
+      if (status)
+        {
+          if (APR_STATUS_IS_EPERM (status))
+            {
+              /* We don't have permissions to change the
+                 permissions!  Try a move, copy, and delete
+                 workaround to see if we can get the file owned by
+                 us.  If these succeed, try the permissions set
+                 again.
+
+                 Note that we only attempt this in the
+                 stat-available path.  This assumes that the
+                 move-copy workaround will only be helpful on
+                 platforms that implement apr_stat. */
+              SVN_ERR (reown_file (path_apr, pool));
+              status = apr_file_perms_set (path_apr, perms_to_set);
+            }
+
+          if (status)
+            {
+              if (ignore_enoent && APR_STATUS_IS_ENOENT (status))
+                return SVN_NO_ERROR;
+              else if (status == APR_ENOTIMPL) /* on win32, for example. */
+                {
+                  if (enable_write)
+                    SVN_ERR (svn_io_set_file_read_write (path, ignore_enoent,
+                                                         pool));
+
+                  else
+                    SVN_ERR (svn_io_set_file_read_only (path, ignore_enoent,
+                                                        pool));
+                }
+              else
+                return svn_error_wrap_apr
+                  (status, _("Can't change read-write perms of file '%s'"),
+                   svn_path_local_style (path, pool));
+            }
+          else
+            return SVN_NO_ERROR;
+        }
+      else
+        return SVN_NO_ERROR;
+    } 
   return SVN_NO_ERROR;
 }
 
@@ -1507,18 +1653,14 @@ svn_io_remove_dir (const char *path, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_io_get_dirents (apr_hash_t **dirents,
-                    const char *path,
-                    apr_pool_t *pool)
+svn_io_get_dirents2 (apr_hash_t **dirents,
+                     const char *path,
+                     apr_pool_t *pool)
 {
   apr_status_t status; 
   apr_dir_t *this_dir;
   apr_finfo_t this_entry;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
-
-  /* These exist so we can use their addresses as hash values! */
-  static const svn_node_kind_t static_svn_node_file = svn_node_file;
-  static const svn_node_kind_t static_svn_node_dir = svn_node_dir;
 
   *dirents = apr_hash_make (pool);
   
@@ -1538,20 +1680,26 @@ svn_io_get_dirents (apr_hash_t **dirents,
       else
         {
           const char *name;
+          svn_io_dirent_t *dirent = apr_pcalloc (pool, sizeof (*dirent));
 
           SVN_ERR (svn_path_cstring_to_utf8 (&name, this_entry.name, pool));
           
           if (this_entry.filetype == APR_REG)
-            apr_hash_set (*dirents, name, APR_HASH_KEY_STRING,
-                          &static_svn_node_file);
+            dirent->kind = svn_node_file;
           else if (this_entry.filetype == APR_DIR)
-            apr_hash_set (*dirents, name, APR_HASH_KEY_STRING,
-                          &static_svn_node_dir);
+            dirent->kind = svn_node_dir;
+          else if (this_entry.filetype == APR_LNK)
+            {
+              dirent->kind = svn_node_file;
+              dirent->special = TRUE;
+            }
           else
-            /* ### symlinks, etc. will fall into this category for now.
-               someday subversion will recognize them. :)  */
-            apr_hash_set (*dirents, name, APR_HASH_KEY_STRING,
-                          &static_svn_node_file);
+            /* ### Currently, Subversion supports just symlinks; other
+             * entry types are reported as regular files. This is inconsistent
+             * with svn_io_check_path(). */
+            dirent->kind = svn_node_file;
+
+          apr_hash_set (*dirents, name, APR_HASH_KEY_STRING, dirent);
         }
     }
 
@@ -1567,24 +1715,32 @@ svn_io_get_dirents (apr_hash_t **dirents,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_io_get_dirents (apr_hash_t **dirents,
+                    const char *path,
+                    apr_pool_t *pool)
+{
+  /* Note that in C, padding is not allowed at the beginning of structs,
+     so this is actually portable, since the kind field of svn_io_dirent_t
+     is first in that struct. */
+  return svn_io_get_dirents2 (dirents, path, pool);
+}
+
 
 svn_error_t *
-svn_io_run_cmd (const char *path,
-                const char *cmd,
-                const char *const *args,
-                int *exitcode,
-                apr_exit_why_e *exitwhy,
-                svn_boolean_t inherit,
-                apr_file_t *infile,
-                apr_file_t *outfile,
-                apr_file_t *errfile,
-                apr_pool_t *pool)
+svn_io_start_cmd (apr_proc_t *cmd_proc,
+                  const char *path,
+                  const char *cmd,
+                  const char *const *args,
+                  svn_boolean_t inherit,
+                  apr_file_t *infile,
+                  apr_file_t *outfile,
+                  apr_file_t *errfile,
+                  apr_pool_t *pool)
 {
   apr_status_t apr_err;
-  apr_proc_t cmd_proc;
   apr_procattr_t *cmdproc_attr;
-  apr_exit_why_e exitwhy_val;
-  int exitcode_val, num_args;
+  int num_args;
   const char **args_native;
   const char *cmd_apr;
 
@@ -1658,16 +1814,30 @@ svn_io_run_cmd (const char *path,
 
 
   /* Start the cmd command. */ 
-  apr_err = apr_proc_create (&cmd_proc, cmd_apr, args_native, NULL,
+  apr_err = apr_proc_create (cmd_proc, cmd_apr, args_native, NULL,
                              cmdproc_attr, pool);
   if (apr_err)
     return svn_error_wrap_apr (apr_err, _("Can't start process '%s'"), cmd);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_io_wait_for_cmd (apr_proc_t *cmd_proc,
+                     const char *cmd,
+                     int *exitcode,
+                     apr_exit_why_e *exitwhy,
+                     apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+  apr_exit_why_e exitwhy_val;
+  int exitcode_val;
 
   /* The Win32 apr_proc_wait doesn't set this... */
   exitwhy_val = APR_PROC_EXIT;
 
   /* Wait for the cmd command to finish. */
-  apr_err = apr_proc_wait (&cmd_proc, &exitcode_val, &exitwhy_val, APR_WAIT);
+  apr_err = apr_proc_wait (cmd_proc, &exitcode_val, &exitwhy_val, APR_WAIT);
   if (APR_STATUS_IS_CHILD_NOTDONE (apr_err))
     return svn_error_wrap_apr (apr_err, _("Error waiting for process '%s'"),
                                cmd);
@@ -1685,6 +1855,29 @@ svn_io_run_cmd (const char *path,
     return svn_error_createf
       (SVN_ERR_EXTERNAL_PROGRAM, NULL,
        _("Process '%s' returned error exitcode %d"), cmd, exitcode_val);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_io_run_cmd (const char *path,
+                const char *cmd,
+                const char *const *args,
+                int *exitcode,
+                apr_exit_why_e *exitwhy,
+                svn_boolean_t inherit,
+                apr_file_t *infile,
+                apr_file_t *outfile,
+                apr_file_t *errfile,
+                apr_pool_t *pool)
+{
+  apr_proc_t cmd_proc;
+
+  SVN_ERR (svn_io_start_cmd (&cmd_proc, path, cmd, args, inherit,
+                             infile, outfile, errfile, pool));
+
+  SVN_ERR (svn_io_wait_for_cmd (&cmd_proc, cmd, exitcode, exitwhy, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2002,10 +2195,10 @@ do_io_file_wrapper_cleanup (apr_file_t *file, apr_status_t status,
   svn_error_clear (err);
 
   if (name)
-    return svn_error_wrap_apr (status, gettext(msg),
+    return svn_error_wrap_apr (status, _(msg),
                                svn_path_local_style (name, pool));
   else
-    return svn_error_wrap_apr (status, gettext(msg_no_name));
+    return svn_error_wrap_apr (status, _(msg_no_name));
 }
 
 
@@ -2174,22 +2367,61 @@ svn_error_t *
 svn_io_file_rename (const char *from_path, const char *to_path,
                     apr_pool_t *pool)
 {
-  apr_status_t status;
+  apr_status_t status = APR_SUCCESS;
   const char *from_path_apr, *to_path_apr;
+
+#ifdef WIN32
+  /* Set the file writable but only on Windows, because Windows will
+     not allow us to rename files that are read-only. But preserve the
+     state of the read-only flag on the destination. */
+  svn_boolean_t was_read_only;
+  apr_finfo_t finfo;
+
+  SVN_ERR (svn_io_set_file_read_write (from_path, FALSE, pool));
+#endif /* WIN32 */
 
   SVN_ERR (svn_path_cstring_from_utf8 (&from_path_apr, from_path, pool));
   SVN_ERR (svn_path_cstring_from_utf8 (&to_path_apr, to_path, pool));
 
-  status = apr_file_rename (from_path_apr, to_path_apr, pool);
-  WIN32_RETRY_LOOP (status,
-                    apr_file_rename (from_path_apr, to_path_apr, pool));
+#ifdef WIN32
+  status = apr_stat (&finfo, to_path_apr, APR_FINFO_PROT, pool);
+  if (APR_STATUS_IS_ENOENT (status))
+    {
+      was_read_only = FALSE;
+      status = APR_SUCCESS;
+    }
+  else if (!status)
+    {
+      /* Note: apr_stat doesn't look at just the read-only bit. It's
+         concievable that we get a positive result here because of
+         file permissions. But that shouldn't happen in a Subversion
+         working copy, and then set_read_write will fail, so the end
+         result is the same. */
+      was_read_only = !(finfo.protection
+                        & (APR_UWRITE | APR_GWRITE | APR_WWRITE));
+      if (was_read_only)
+        SVN_ERR (svn_io_set_file_read_write (to_path, FALSE, pool));
+    }
+#endif /* WIN32 */
+
+  if (!status)
+    {
+      status = apr_file_rename (from_path_apr, to_path_apr, pool);
+      WIN32_RETRY_LOOP (status,
+                        apr_file_rename (from_path_apr, to_path_apr, pool));
+    }
 
   if (status)
     return svn_error_wrap_apr (status, _("Can't move '%s' to '%s'"),
                                svn_path_local_style (from_path, pool),
                                svn_path_local_style (to_path, pool));
 
-  return SVN_NO_ERROR;  
+#ifdef WIN32
+  if (was_read_only)
+    SVN_ERR (svn_io_set_file_read_only (to_path, FALSE, pool));
+#endif /* WIN32 */
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -2475,9 +2707,12 @@ svn_io_dir_walk (const char *dirname,
  * @param pool Used for temporary allocation.
  * @remark If path is not a directory, or some other error occurs,
  * then return the appropriate apr status code.
+ *
+ * (This function is written in APR style, in anticipation of
+ * perhaps someday being moved to APR as 'apr_dir_is_empty'.)
  */                        
 static apr_status_t
-apr_dir_is_empty (const char *dir, apr_pool_t *pool)
+dir_is_empty (const char *dir, apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_dir_t *dir_handle;
@@ -2491,9 +2726,6 @@ apr_dir_is_empty (const char *dir, apr_pool_t *pool)
   apr_err = apr_dir_open (&dir_handle, dir, pool);
   if (apr_err != APR_SUCCESS)
     return apr_err;
-      
-  /* ### What is the gospel on the APR_STATUS_IS_SUCCESS macro these
-     days? :-) */
 
   for (apr_err = apr_dir_read (&finfo, APR_FINFO_NAME, dir_handle);
        apr_err == APR_SUCCESS;
@@ -2534,7 +2766,7 @@ svn_io_dir_empty (svn_boolean_t *is_empty_p,
 
   SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, path, pool));
 
-  status = apr_dir_is_empty (path_apr, pool);
+  status = dir_is_empty (path_apr, pool);
 
   if (!status)
     *is_empty_p = TRUE;

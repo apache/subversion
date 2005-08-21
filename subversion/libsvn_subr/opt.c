@@ -134,8 +134,7 @@ print_command_info (const svn_opt_subcommand_desc_t *cmd,
       const apr_getopt_option_t *option;
       svn_boolean_t have_options = FALSE;
 
-      SVN_ERR (svn_cmdline_fprintf (stream, pool, ": %s",
-                                    dgettext (PACKAGE_NAME, cmd->help)));
+      SVN_ERR (svn_cmdline_fprintf (stream, pool, ": %s", _(cmd->help)));
 
       /* Loop over all valid option codes attached to the subcommand */
       for (i = 0; i < SVN_OPT_MAX_OPTIONS; i++)
@@ -207,7 +206,7 @@ svn_opt_print_generic_help (const char *header,
   return;
 
  print_error:
-  svn_handle_error (err, stderr, FALSE);
+  svn_handle_error2 (err, stderr, FALSE, "svn: ");
   svn_error_clear (err);
 }
 
@@ -234,11 +233,10 @@ svn_opt_format_option (const char **string,
     opts = apr_psprintf (pool, "--%s", opt->name);
 
   if (opt->has_arg)
-    opts = apr_pstrcat (pool, opts, " arg", NULL);
+    opts = apr_pstrcat (pool, opts, _(" arg"), NULL);
 
   if (doc)
-    opts = apr_psprintf (pool, "%-24s : %s", opts,
-                         dgettext( PACKAGE_NAME, opt->description));
+    opts = apr_psprintf (pool, "%-24s : %s", opts, _(opt->description));
 
   *string = opts;
 }
@@ -261,7 +259,7 @@ svn_opt_subcommand_help (const char *subcommand,
                                _("\"%s\": unknown command.\n\n"), subcommand);
   
   if (err) {
-    svn_handle_error (err, stderr, FALSE);
+    svn_handle_error2 (err, stderr, FALSE, "svn: ");
     svn_error_clear (err);
   }
 }
@@ -498,13 +496,36 @@ svn_opt_parse_path (svn_opt_revision_t *rev,
 
       if (path[i] == '@')
         {
+          svn_boolean_t is_url;
+          int ret;
           svn_opt_revision_t start_revision, end_revision;
 
           end_revision.kind = svn_opt_revision_unspecified;
-          if (svn_opt_parse_revision (&start_revision,
-                                      &end_revision,
-                                      path + i + 1, pool)
-              || end_revision.kind != svn_opt_revision_unspecified)
+
+          /* URLs get treated differently from wc paths. */
+          is_url = svn_path_is_url (path);
+
+          if (path[i + 1] == '\0')  /* looking at empty peg revision */
+            {
+              if (is_url)
+                {
+                  ret = svn_opt_parse_revision (&start_revision, &end_revision,
+                                                "head", pool);
+                }
+              else
+                {
+                  ret = svn_opt_parse_revision (&start_revision, &end_revision,
+                                                "base", pool);
+                }
+            }
+          else  /* looking at non-empty peg revision */
+            {
+              ret = svn_opt_parse_revision (&start_revision,
+                                            &end_revision,
+                                            path + i + 1, pool);
+            }
+
+          if (ret || end_revision.kind != svn_opt_revision_unspecified)
             return svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                       _("Syntax error parsing revision '%s'"),
                                       path + i + 1);
@@ -626,10 +647,8 @@ svn_opt_args_to_target_array2 (apr_array_header_t **targets_p,
           SVN_ERR (svn_path_cstring_to_utf8 (&target, apr_target, pool));
           target = svn_path_canonicalize (target, pool);
 
-          /* If this target is a Subversion administrative directory,
-             skip it.  TODO: Perhaps this check should not call the
-             target a SVN admin dir unless svn_wc_check_wc passes on
-             the target, too? */
+          /* If the target has the same name as a Subversion
+             working copy administrative dir, skip it. */
           base_name = svn_path_basename (target, pool);
           if (! strcmp (base_name, SVN_WC_ADM_DIR_NAME))
             continue;
@@ -717,7 +736,7 @@ print_version_info (const char *pgm_name,
   SVN_ERR (svn_cmdline_printf (pool, _("%s, version %s\n"
                                        "   compiled %s, %s\n\n"), pgm_name,
                                SVN_VERSION, __DATE__, __TIME__));
-  SVN_ERR (svn_cmdline_fputs (_("Copyright (C) 2000-2004 CollabNet.\n"
+  SVN_ERR (svn_cmdline_fputs (_("Copyright (C) 2000-2005 CollabNet.\n"
                                 "Subversion is open source software, see"
                                 " http://subversion.tigris.org/\n"
                                 "This product includes software developed by "

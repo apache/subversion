@@ -530,7 +530,8 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
                                           set_parser, propfind_elements, 
                                           validate_element, 
                                           start_element, end_element, 
-                                          &pc, extra_headers, NULL, pool);
+                                          &pc, extra_headers, NULL, FALSE, 
+                                          pool);
 
   ne_buffer_destroy(body);
   *results = pc.props;
@@ -643,7 +644,7 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
   ne_uri parsed_url;
   const char *lopped_path = "";
 
-  /* Split the url into its component pieces (schema, host, path,
+  /* Split the url into its component pieces (scheme, host, path,
      etc).  We want the path part. */
   ne_uri_parse (url, &parsed_url);
   if (parsed_url.path == NULL)
@@ -1012,6 +1013,7 @@ svn_ra_dav__do_proppatch (svn_ra_dav__session_t *ras,
                           const char *url,
                           apr_hash_t *prop_changes,
                           apr_array_header_t *prop_deletes,
+                          apr_hash_t *extra_headers,
                           apr_pool_t *pool)
 {
   ne_request *req;
@@ -1071,6 +1073,20 @@ svn_ra_dav__do_proppatch (svn_ra_dav__session_t *ras,
   req = ne_request_create(ras->sess, "PROPPATCH", url);
   ne_set_request_body_buffer(req, body->data, ne_buffer_size(body));
   ne_add_request_header(req, "Content-Type", "text/xml; charset=UTF-8");
+
+  /* add any extra headers passed in by caller. */
+  if (extra_headers != NULL)
+    {
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first(pool, extra_headers);
+           hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *val;
+          apr_hash_this(hi, &key, NULL, &val);
+          ne_add_request_header(req, (const char *) key, (const char *) val); 
+        }
+    }
 
   code = ne_simple_request(ras->sess, req);
 

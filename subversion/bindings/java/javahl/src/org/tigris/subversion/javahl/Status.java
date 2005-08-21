@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -50,7 +50,8 @@ public class Status
      */
     private long lastChangedRevision;
     /**
-     * the last date the item was changed before base
+     * the last date the item was changed before base (represented in
+     * microseconds since the epoch)
      */
     private long lastChangedDate;
     /**
@@ -109,6 +110,32 @@ public class Status
      * if copied, the revision number of the copy source
      */
     private long revisionCopiedFrom;
+    /**
+     * @since 1.2
+     * token specified for the lock (null if not locked)
+     */
+    private String lockToken;
+    /**
+     * @since 1.2
+     * owner of the lock (null if not locked)
+     */
+    private String lockOwner;
+    /**
+     * @since 1.2
+     * comment specified for the lock (null if not locked)
+     */
+    private String lockComment;
+    /**
+     * @since 1.2
+     * date of the creation of the lock (represented in microseconds
+     * since the epoch)
+     */
+    private long lockCreationDate;
+    /**
+     * @since 1.2
+     * the lock in the repository
+     */
+    private Lock reposLock;
 
     /**
      * this constructor should only called from JNI code
@@ -136,7 +163,14 @@ public class Status
      * @param urlCopiedFrom         if copied, the url of the copy source
      * @param revisionCopiedFrom    if copied, the revision number of the copy
      *                              source
-     * @param switched
+     * @param switched              flag if the node has been switched in the 
+     *                              path
+     * @param lockToken             the token for the current lock if any
+     * @param lockOwner             the owner of the current lock is any
+     * @param lockComment           the comment of the current lock if any
+     * @param lockCreationDate      the date, the lock was created if any
+     * @param reposLock             the lock as stored in the repository if
+     *                              any
      */
     public Status(String path, String url, int nodeKind, long revision,
                   long lastChangedRevision, long lastChangedDate,
@@ -145,7 +179,8 @@ public class Status
                   boolean locked, boolean copied, String conflictOld,
                   String conflictNew, String conflictWorking,
                   String urlCopiedFrom, long revisionCopiedFrom,
-                  boolean switched)
+                  boolean switched, String lockToken, String lockOwner, 
+                  String lockComment, long lockCreationDate, Lock reposLock)
     {
         this.path = path;
         this.url = url;
@@ -166,6 +201,11 @@ public class Status
         this.urlCopiedFrom = urlCopiedFrom;
         this.revisionCopiedFrom = revisionCopiedFrom;
         this.switched = switched;
+        this.lockToken = lockToken;
+        this.lockOwner = lockOwner;
+        this.lockComment = lockComment;
+        this.lockCreationDate = lockCreationDate;
+        this.reposLock = reposLock;
     }
 
     /**
@@ -202,10 +242,7 @@ public class Status
      */
     public Date getLastChangedDate()
     {
-        if (lastChangedDate == 0)
-            return null;
-        else
-            return new Date(lastChangedDate / 1000);
+        return microsecondsToDate(lastChangedDate);
     }
 
     /**
@@ -399,10 +436,10 @@ public class Status
      */
     public boolean isManaged()
     {
-        int textStatus = getTextStatus();
-        return ((textStatus != Status.Kind.unversioned) &&
-                (textStatus != Status.Kind.none) &&
-                (textStatus != Status.Kind.ignored));
+        int status = getTextStatus();
+        return (status != Status.Kind.unversioned &&
+                status != Status.Kind.none &&
+                status != Status.Kind.ignored);
     }
 
     /**
@@ -411,8 +448,7 @@ public class Status
      */
     public boolean hasRemote()
     {
-        int textStatus = getTextStatus();
-        return ((isManaged()) && (textStatus != Status.Kind.added));
+        return (isManaged() && getTextStatus() != Status.Kind.added);
     }
 
     /**
@@ -421,8 +457,7 @@ public class Status
      */
     public boolean isAdded()
     {
-        int textStatus = getTextStatus();
-        return textStatus == Status.Kind.added;
+        return getTextStatus() == Status.Kind.added;
     }
 
     /**
@@ -431,8 +466,7 @@ public class Status
      */
     public boolean isDeleted()
     {
-        int textStatus = getTextStatus();
-        return textStatus == Status.Kind.deleted;
+        return getTextStatus() == Status.Kind.deleted;
     }
 
     /**
@@ -441,8 +475,7 @@ public class Status
      */
     public boolean isMerged()
     {
-        int textStatus = getTextStatus();
-        return textStatus == Status.Kind.merged;
+        return getTextStatus() == Status.Kind.merged;
     }
 
     /**
@@ -452,8 +485,7 @@ public class Status
      */
     public boolean isIgnored()
     {
-        int textStatus = getTextStatus();
-        return textStatus == Status.Kind.ignored;
+        return getTextStatus() == Status.Kind.ignored;
     }
 
     /**
@@ -462,10 +494,58 @@ public class Status
      */
     public boolean isModified()
     {
-        int textStatus = getTextStatus();
-        return textStatus == Status.Kind.modified;
+        return getTextStatus() == Status.Kind.modified;
     }
 
+    /**
+     * Returns the lock token
+     * @return the lock token
+     * @since 1.2
+     */
+    public String getLockToken()
+    {
+        return lockToken;
+    }
+
+    /**
+     * Returns the lock  owner
+     * @return the lock owner
+     * @since 1.2
+     */
+    public String getLockOwner()
+    {
+        return lockOwner;
+    }
+
+    /**
+     * Returns the lock comment
+     * @return the lock comment
+     * @since 1.2
+     */
+    public String getLockComment()
+    {
+        return lockComment;
+    }
+
+    /**
+     * Returns the lock creation date
+     * @return the lock creation date
+     * @since 1.2
+     */
+    public Date getLockCreationDate()
+    {
+        return microsecondsToDate(lockCreationDate);
+    }
+
+    /**
+     * Returns the lock as in the repository
+     * @return the lock as in the repository
+     * @since 1.2
+     */
+    public Lock getReposLock()
+    {
+        return reposLock;
+    }
     /**
      * class for kind status of the item or its properties
      * the constants are defined in the interface StatusKind for building
@@ -482,35 +562,46 @@ public class Status
         {
             switch (kind)
             {
-            case none:
+            case StatusKind.none:
                 return "non-svn";
-            case normal:
+            case StatusKind.normal:
                 return "normal";
-            case added:
+            case StatusKind.added:
                 return "added";
-            case missing:
+            case StatusKind.missing:
                 return "missing";
-            case deleted:
+            case StatusKind.deleted:
                 return "deleted";
-            case replaced:
+            case StatusKind.replaced:
                 return "replaced";
-            case modified:
+            case StatusKind.modified:
                 return "modified";
-            case merged:
+            case StatusKind.merged:
                 return "merged";
-            case conflicted:
+            case StatusKind.conflicted:
                 return "conflicted";
-            case ignored:
+            case StatusKind.ignored:
                 return "ignored";
-            case incomplete:
+            case StatusKind.incomplete:
                 return "incomplete";
-            case external:
+            case StatusKind.external:
                 return "external";
-            case unversioned:
+            case StatusKind.unversioned:
             default:
                 return "unversioned";
             }
         }
     }
-}
 
+    /**
+     * Converts microseconds since the epoch to a Date object.
+     *
+     * @param micros Microseconds since the epoch.
+     * @return A Date object, or <code>null</code> if
+     * <code>micros</code> was zero.
+     */
+    private static Date microsecondsToDate(long micros)
+    {
+        return (micros == 0 ? null : new Date(micros / 1000));
+    }
+}

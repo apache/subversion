@@ -48,7 +48,7 @@ extern "C" {
 #define SVN_RA_SVN_UNSPECIFIED_NUMBER ~((apr_uint64_t) 0)
 
 /** A specialized form of @c SVN_ERR to deal with errors which occur in an
- * @c svn_ra_svn_command_handler.
+ * svn_ra_svn_command_handler().
  *
  * An error returned with this macro will be passed back to the other side 
  * of the connection.  Use this macro when performing the requested operation; 
@@ -65,13 +65,13 @@ extern "C" {
 /** an ra_svn connection. */
 typedef struct svn_ra_svn_conn_st svn_ra_svn_conn_t;
 
-/** Command handler, used by @c svn_ra_svn_handle_commands. */
+/** Command handler, used by svn_ra_svn_handle_commands(). */
 typedef svn_error_t *(*svn_ra_svn_command_handler)(svn_ra_svn_conn_t *conn,
                                                    apr_pool_t *pool,
                                                    apr_array_header_t *params,
                                                    void *baton);
 
-/** Command table, used by @c svn_ra_svn_handle_commands.
+/** Command table, used by svn_ra_svn_handle_commands().
  *
  * If @c terminate is set, command-handling will cease after command is
  * processed.
@@ -86,12 +86,14 @@ typedef struct svn_ra_svn_cmd_entry_t
 /** Memory representation of an on-the-wire data item. */
 typedef struct svn_ra_svn_item_t 
 {
+  /** Variant indicator. */
   enum {
     SVN_RA_SVN_NUMBER,
     SVN_RA_SVN_STRING,
     SVN_RA_SVN_WORD,
     SVN_RA_SVN_LIST
   } kind;
+  /** Variant data. */
   union {
     apr_uint64_t number;
     svn_string_t *string;
@@ -107,7 +109,7 @@ typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
 /** Initialize a connection structure for the given socket or
  * input/output files.
  *
- * Either @c sock or @c in_file/@c out_file must be set, not both.
+ * Either @a sock or @a in_file/@a out_file must be set, not both.
  */
 svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
                                           apr_file_t *in_file,
@@ -208,11 +210,11 @@ svn_error_t *svn_ra_svn_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
 svn_error_t *svn_ra_svn_write_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     const char *fmt, ...);
 
-/** Read an item from the network into @c item. */
+/** Read an item from the network into @a *item. */
 svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   svn_ra_svn_item_t **item);
 
-/** Scan data on @c conn until we find something which looks like the
+/** Scan data on @a conn until we find something which looks like the
  * beginning of an svn server greeting (an open paren followed by a
  * whitespace character).  This function is appropriate for beginning
  * a client connection opened in tunnel mode, since people's dotfiles
@@ -255,13 +257,13 @@ svn_error_t *svn_ra_svn_parse_tuple(apr_array_header_t *list,
                                     const char *fmt, ...);
 
 /** Read a tuple from the network and parse it as a tuple, using the
- * format string notation from @c svn_ra_svn_parse_tuple.
+ * format string notation from svn_ra_svn_parse_tuple().
  */
 svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    const char *fmt, ...);
 
 /** Read a command response from the network and parse it as a tuple, using 
- * the format string notation from @c svn_ra_svn_parse_tuple.
+ * the format string notation from svn_ra_svn_parse_tuple().
  */
 svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
                                           apr_pool_t *pool,
@@ -272,8 +274,8 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
  * pool (cleared after each command is handled), the parameters of the
  * command, and @a baton.  Commands will be accepted until a
  * terminating command is received (a command with "terminate" set in
- * the command table).  If a command handler returns an errors wrapped
- * in SVN_RA_SVN_CMD_ERR (see the SVN_CMD_ERR macro above), the error
+ * the command table).  If a command handler returns an error wrapped
+ * in SVN_RA_SVN_CMD_ERR (see the @c SVN_CMD_ERR macro), the error
  * will be reported to the other side of the connection and the
  * command loop will continue; any other kind of error (typically a
  * network or protocol error) is passed through to the caller.
@@ -284,13 +286,13 @@ svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
                                         void *baton);
 
 /** Write a command over the network, using the same format string notation 
- * as svn_ra_svn_write_tuple.
+ * as svn_ra_svn_write_tuple().
  */
 svn_error_t *svn_ra_svn_write_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   const char *cmdname, const char *fmt, ...);
 
 /** Write a successful command response over the network, using the
- * same format string notation as svn_ra_svn_write_tuple.  Do not use
+ * same format string notation as svn_ra_svn_write_tuple().  Do not use
  * partial tuples with this function; if you need to use partial
  * tuples, just write out the "success" and argument tuple by hand.
  */

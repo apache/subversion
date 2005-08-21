@@ -22,37 +22,47 @@ use File::Path;
 use Getopt::Long;
 use Pod::Usage;
 
-my $force = 0;
-my $quiet = 0;
-my $print = 0;
-my $help  = 0;
-my $man   = 0;
+my $force        = 0;
+my $quiet        = 0;
+my $print        = 0;
+my $help         = 0;
+my $man          = 0;
+my $nonrecursive = 0;
 GetOptions(
-    "force"  => \$force,
-    "quiet"  => \$quiet,
-    "print"  => \$print,
-    "help|?" => \$help,
-    "man"    => \$man
+    "force"           => \$force,
+    "non-recursive|N" => \$nonrecursive,
+    "quiet"           => \$quiet,
+    "print"           => \$print,
+    "help|?"          => \$help,
+    "man"             => \$man
   )
   or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage( -exitstatus => 0, -verbose => 2 ) if $man;
 
-# Default target is the current directory.
-@ARGV = (".") if not @ARGV;
+# Build svn client command
+my @command = qw(svn status --no-ignore -v);
+if ($nonrecursive) {
+    push @command, '-N';
+}
 
 # Main file-wiping loop.
-foreach (@ARGV) {
-    open SVN, "-|", qw(svn status --no-ignore -v), $_
-      or die "Can't call program \"svn\": $!\n";
-    while (<SVN>) {
-        if (/^[\?I]\s+(.+)$/) {
-            if ($print) {
-                print "$1\n";
-            }
-            else {
-                rmtree( $1, !$quiet, !$force );
-            }
+open SVN, "-|", @command, @ARGV
+  or die "Can't call program \"svn\": $!\n";
+while (<SVN>) {
+    if (/^([\?ID])/) {
+        my $file = (split)[-1];
+        if ( $1 eq 'D' ) {
+            next unless -f $file;
+        }
+        else {
+            next unless -e $file;
+        }
+        if ($print) {
+            print "$file\n";
+        }
+        else {
+            rmtree( $file, !$quiet, !$force );
         }
     }
 }
@@ -86,6 +96,11 @@ If no file or directory is given, B<svn-clean> defaults to the current directory
 Files to which you do not have delete access (if running under VMS) or write
 access (if running under another OS) will not be deleted unless you use this
 option.
+
+=item B<-N>, B<--non-recursive>
+
+Do not search recursively for unversioned files and directories. Unversioned
+directories will still be deleted along with all their contents.
 
 =item B<-q>, B<--quiet>
 

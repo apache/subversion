@@ -71,14 +71,6 @@ const char *svn_wc__text_base_path (const char *path,
                                     apr_pool_t *pool);
 
 
-/* Return a path to PATH's revert file.
-   If TMP is set, return a path to the tmp revert file. */
-const char *
-svn_wc__text_revert_path (const char *path,
-                          svn_boolean_t tmp,
-                          apr_pool_t *pool);
-
-
 /* Return a path to the 'wcprop' file for PATH, possibly in TMP area.
    ADM_ACCESS is an access baton set that contains PATH. */
 svn_error_t *svn_wc__wcprop_path (const char **wcprop_path,
@@ -239,6 +231,13 @@ svn_error_t *svn_wc__adm_destroy (svn_wc_adm_access_t *adm_access,
    directory. */
 svn_error_t *svn_wc__adm_cleanup_tmp_area (svn_wc_adm_access_t *adm_access,
                                            apr_pool_t *pool);
+
+/* Carries out platform specific operations needed before a file is
+ * replaced via a rename or copy.  Currently it only runs 
+ * svn_io_set_file_read_write() on Windows. */
+svn_error_t *svn_wc__prep_file_for_replacement (const char *path,
+                                                svn_boolean_t ignore_enoent,
+                                                apr_pool_t *pool);
 
 
 #ifdef __cplusplus

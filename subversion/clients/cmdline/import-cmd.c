@@ -43,7 +43,7 @@ svn_cl__import (apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *path;
   const char *url;
-  svn_client_commit_info_t *commit_info = NULL;
+  svn_client_commit_info2_t *commit_info = NULL;
 
   /* Import takes two arguments, for example
    *
@@ -101,18 +101,19 @@ svn_cl__import (apr_getopt_t *os,
        _("Invalid URL '%s'"), url);
 
   if (! opt_state->quiet)
-    svn_cl__get_notifier (&ctx->notify_func, &ctx->notify_baton,
+    svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2,
                           FALSE, FALSE, FALSE, pool);
 
   SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state, 
                                        NULL, ctx->config, pool));
   SVN_ERR (svn_cl__cleanup_log_msg 
-           (ctx->log_msg_baton, svn_client_import (&commit_info,
-                                                   path,
-                                                   url,
-                                                   opt_state->nonrecursive,
-                                                   ctx,
-                                                   pool)));
+           (ctx->log_msg_baton, svn_client_import2 (&commit_info,
+                                                    path,
+                                                    url,
+                                                    opt_state->nonrecursive,
+                                                    opt_state->no_ignore,
+                                                    ctx,
+                                                    pool)));
 
   if (commit_info && ! opt_state->quiet)
     SVN_ERR (svn_cl__print_commit_info (commit_info, pool));

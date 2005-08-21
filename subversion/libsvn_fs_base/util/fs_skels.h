@@ -62,6 +62,7 @@ svn_fs_base__parse_transaction_skel (transaction_t **transaction_p,
 
 /* Parse a `REPRESENTATION' SKEL into *REP_P.  Use POOL for all
    allocations.  */
+
 svn_error_t *
 svn_fs_base__parse_representation_skel (representation_t **rep_p,
                                         skel_t *skel,
@@ -94,6 +95,13 @@ svn_error_t *
 svn_fs_base__parse_change_skel (change_t **change_p,
                                 skel_t *skel,
                                 apr_pool_t *pool);
+
+/* Parse a `LOCK' SKEL into *LOCK_P.  Use POOL for all allocations. */
+svn_error_t *
+svn_fs_base__parse_lock_skel (svn_lock_t **lock_p,
+                              skel_t *skel,
+                              apr_pool_t *pool);
+
 
 
 /*** Unparsing (conversion from native FS type to skeleton) ***/
@@ -157,6 +165,14 @@ svn_error_t *
 svn_fs_base__unparse_change_skel (skel_t **skel_p,
                                   const change_t *change,
                                   apr_pool_t *pool);
+
+/* Unparse LOCK into a `LOCK' skel *SKEL_P.  Use POOL for all
+   allocations.  */
+svn_error_t *
+svn_fs_base__unparse_lock_skel (skel_t **skel_p,
+                                const svn_lock_t *lock,
+                                apr_pool_t *pool);
+
 
 
 #ifdef __cplusplus

@@ -1076,6 +1076,8 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "### Section for configuring external helper applications."
         APR_EOL_STR
+        "[helpers]"
+        APR_EOL_STR
         "### Set editor to the command used to invoke your text editor."
         APR_EOL_STR
         "###   This will override the environment variables that Subversion"
@@ -1084,11 +1086,15 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "###   et al)."
         APR_EOL_STR
+        "# editor-cmd = editor (vi, emacs, notepad, etc.)"
+        APR_EOL_STR
         "### Set diff-cmd to the absolute path of your 'diff' program."
         APR_EOL_STR
         "###   This will override the compile-time default, which is to use"
         APR_EOL_STR
         "###   Subversion's internal diff implementation."
+        APR_EOL_STR
+        "# diff-cmd = diff_program (diff, gdiff, etc.)"
         APR_EOL_STR
         "### Set diff3-cmd to the absolute path of your 'diff3' program."
         APR_EOL_STR
@@ -1096,17 +1102,11 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "###   Subversion's internal diff3 implementation."
         APR_EOL_STR
+        "# diff3-cmd = diff3_program (diff3, gdiff3, etc.)"
+        APR_EOL_STR
         "### Set diff3-has-program-arg to 'true' or 'yes' if your 'diff3'"
         APR_EOL_STR
         "###   program accepts the '--diff-program' option."
-        APR_EOL_STR
-        "[helpers]"
-        APR_EOL_STR
-        "# editor-cmd = editor (vi, emacs, notepad, etc.)"
-        APR_EOL_STR
-        "# diff-cmd = diff_program (diff, gdiff, etc.)"
-        APR_EOL_STR
-        "# diff3-cmd = diff3_program (diff3, gdiff3, etc.)"
         APR_EOL_STR
         "# diff3-has-program-arg = [true | false]"
         APR_EOL_STR
@@ -1168,7 +1168,9 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "### Set global-ignores to a set of whitespace-delimited globs"
         APR_EOL_STR
-        "### which Subversion will ignore in its 'status' output."
+        "### which Subversion will ignore in its 'status' output, and"
+        APR_EOL_STR
+        "### while importing or adding files and directories."
         APR_EOL_STR
         "# global-ignores = " SVN_CONFIG_DEFAULT_GLOBAL_IGNORES ""
         APR_EOL_STR
@@ -1182,6 +1184,12 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "# use-commit-times = yes"
         APR_EOL_STR
+        "### Set no-unlock to prevent 'svn commit' from automatically"
+        APR_EOL_STR
+        "### releasing locks on files."
+        APR_EOL_STR
+        "# no-unlock = yes"
+        APR_EOL_STR
         "### Set enable-auto-props to 'yes' to enable automatic properties"
         APR_EOL_STR
         "### for 'svn add' and 'svn import', it defaults to 'no'."
@@ -1192,6 +1200,8 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         APR_EOL_STR
         "### Section for configuring automatic properties."
+        APR_EOL_STR
+        "[auto-props]"
         APR_EOL_STR
         "### The format of the entries is:"
         APR_EOL_STR
@@ -1204,8 +1214,6 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         "### Note that auto-props functionality must be enabled, which"
         APR_EOL_STR
         "### is typically done by setting the 'enable-auto-props' option."
-        APR_EOL_STR
-        "[auto-props]"
         APR_EOL_STR
         "# *.c = svn:eol-style=native"
         APR_EOL_STR

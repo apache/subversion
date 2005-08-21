@@ -18,6 +18,8 @@
 #ifndef SVN_LIBSVN_FS__FS_FS_H
 #define SVN_LIBSVN_FS__FS_FS_H
 
+#include "revs-txns.h"
+
 /* Open the fsfs filesystem pointed to by PATH and associate it with
    filesystem object FS.  Use POOL for temporary allocations. */
 svn_error_t *svn_fs_fs__open (svn_fs_t *fs,
@@ -247,7 +249,7 @@ svn_error_t *svn_fs_fs__set_proplist (svn_fs_t *fs,
                                       apr_hash_t *proplist,
                                       apr_pool_t *pool);
 
-/* Commit the transaction TXN in filesystem FS and return it's new
+/* Commit the transaction TXN in filesystem FS and return its new
    revision number in *REV.  If the transaction is out of date, return
    the error SVN_ERR_FS_TXN_OUT_OF_DATE.  Use POOL for temporary
    allocations. */
@@ -322,5 +324,39 @@ svn_error_t *svn_fs_fs__txn_changes_fetch (apr_hash_t **changes,
                                            const char *txn_id,
                                            apr_hash_t *copyfrom_cache,
                                            apr_pool_t *pool);
+
+
+/* Move a file into place from OLD_FILENAME in the transactions
+   directory to its final location NEW_FILENAME in the repository.  On
+   Unix, match the permissions of the new file to the permissions of
+   PERMS_REFERENCE.  Temporary allocations are from POOL. */
+svn_error_t *svn_fs_fs__move_into_place (const char *old_filename, 
+                                         const char *new_filename,
+                                         const char *perms_reference, 
+                                         apr_pool_t *pool);
+
+/* Match the perms on FILENAME to the PERMS_REFERENCE file if we're
+   not on a win32 system.  On win32, this is a no-op. */
+svn_error_t *svn_fs_fs__dup_perms (const char *filename,
+                                   const char *perms_reference,
+                                   apr_pool_t *pool);
+
+/* Return the path to the file containing revision REV in FS.
+   Allocate the new char * from POOL. */
+const char *svn_fs_fs__path_rev (svn_fs_t *fs, 
+                                 svn_revnum_t rev, 
+                                 apr_pool_t *pool);
+
+/* Obtain a write lock on the filesystem FS in a subpool of POOL, call
+   BODY with BATON and that subpool, destroy the subpool (releasing the write
+   lock) and return what BODY returned. */
+svn_error_t *
+svn_fs_fs__with_write_lock (svn_fs_t *fs,
+                            svn_error_t *(*body)(void *baton,
+                                                 apr_pool_t *pool),
+                            void *baton,
+                            apr_pool_t *pool);
+
+
 
 #endif

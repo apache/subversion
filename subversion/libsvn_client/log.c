@@ -159,10 +159,10 @@ svn_client_log2 (const apr_array_header_t *targets,
 
   /* Open a repository session to the BASE_URL. */
   SVN_ERR (svn_path_condense_targets (&base_name, NULL, targets, TRUE, pool)); 
-  SVN_ERR (svn_client__open_ra_session (&ra_session, base_url, 
-                                        base_name, NULL, NULL,
-                                        (NULL != base_name), TRUE, 
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, base_url, 
+                                                 base_name, NULL, NULL,
+                                                 (NULL != base_name), TRUE, 
+                                                 ctx, pool));
 
   /* It's a bit complex to correctly handle the special revision words
    * such as "BASE", "COMMITTED", and "PREV".  For example, if the
@@ -318,7 +318,7 @@ svn_client_log (const apr_array_header_t *targets,
       /* Log receivers are free to handle revision 0 specially... But
          just in case some don't, we make up a message here. */
       SVN_ERR (receiver (receiver_baton,
-                         NULL, 0, "", "", _("No commits in repository."),
+                         NULL, 0, "", "", _("No commits in repository"),
                          pool));
     }
 

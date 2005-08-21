@@ -179,14 +179,19 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
   svn_error_t *serr;
 
   /*
-  ** None of SVN provider properties are defined if the resource does not
-  ** exist. Just bail for this case.
+  ** Almost none of the SVN provider properties are defined if the
+  ** resource does not exist.  We do need to return the one VCC
+  ** property and baseline-relative-path on lock-null resources,
+  ** however, so that svn clients can run 'svn unlock' and 'svn info'
+  ** on these things.
   **
   ** Even though we state that the SVN properties are not defined, the
   ** client cannot store dead values -- we deny that thru the is_writable
   ** hook function.
   */
-  if (!resource->exists)
+  if ((! resource->exists)
+      && (propid != DAV_PROPID_version_controlled_configuration)
+      && (propid != SVN_PROPID_baseline_relative_path))
     return DAV_PROP_INSERT_NOTSUPP;
 
   /* ### we may want to respond to DAV_PROPID_resourcetype for PRIVATE
@@ -329,6 +334,7 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
            svn:mime-type property is of type text/plain.  So it seems
            safe (and consistent) to assume the same on the server.  */
         svn_string_t *pval;
+        const char *mime_type = NULL;
 
         if (resource->baselined && resource->type == DAV_RESOURCE_TYPE_VERSION)
           return DAV_PROP_INSERT_NOTSUPP;
@@ -339,29 +345,32 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
             return DAV_PROP_INSERT_NOTSUPP;
           }
 
-        serr = svn_fs_node_prop (&pval, resource->info->root.root,
-                                 resource->info->repos_path,
-                                 SVN_PROP_MIME_TYPE, p);
-
-        if ((serr != NULL) || (pval == NULL))
+        if (resource->collection) /* defaults for directories */
           {
-            svn_error_clear(serr);
-            if (resource->collection) /* defaults for directories */
-              {
-                if (resource->info->repos->xslt_uri)
-                  value = "text/xml";
-                else
-                  value = "text/html";
-              }
+            if (resource->info->repos->xslt_uri)
+              mime_type = "text/xml";
             else
-              {
-                value = "text/plain"; /* default for file */
-              }
-          }            
+              mime_type = "text/html; charset=UTF-8";
+          }
         else
           {
-            serr = svn_mime_type_validate (pval->data, p);
-            if (serr)
+            if ((serr = svn_fs_node_prop (&pval, resource->info->root.root,
+                                          resource->info->repos_path,
+                                          SVN_PROP_MIME_TYPE, p)))
+              {
+                svn_error_clear(serr);
+                pval = NULL;
+              }
+
+            if (pval)
+              mime_type = pval->data;
+            else if ((! resource->info->repos->is_svn_client) 
+                     && resource->info->r->content_type)
+              mime_type = resource->info->r->content_type;
+            else
+              mime_type = "text/plain"; /* default for file */
+
+            if ((serr = svn_mime_type_validate (mime_type, p)))
               {
                 /* Probably serr->apr == SVN_ERR_BAD_MIME_TYPE, but
                    there's no point even checking.  No matter what the
@@ -370,10 +379,9 @@ static dav_prop_insert dav_svn_insert_prop(const dav_resource *resource,
                 svn_error_clear(serr);
                 return DAV_PROP_INSERT_NOTDEF;
               }
-            else
-              value = pval->data;
           }
 
+        value = mime_type;
         break;
       }
 

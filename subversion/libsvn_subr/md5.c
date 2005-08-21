@@ -34,29 +34,33 @@ svn_md5_empty_string_digest (void)
 
 
 const char *
+svn_md5_digest_to_cstring_display (const unsigned char digest[],
+                                   apr_pool_t *pool)
+{
+  static const char *hex = "0123456789abcdef";
+  char *str = apr_palloc (pool, (APR_MD5_DIGESTSIZE * 2) + 1);
+  int i;
+  
+  for (i = 0; i < APR_MD5_DIGESTSIZE; i++)
+    {
+      str[i*2]   = hex[digest[i] >> 4];
+      str[i*2+1] = hex[digest[i] & 0x0f];
+    }
+  str[i*2] = '\0';
+  
+  return str;
+}
+  
+
+const char *
 svn_md5_digest_to_cstring (const unsigned char digest[], apr_pool_t *pool)
 {
   static const unsigned char zeros_digest[APR_MD5_DIGESTSIZE] = { 0 };
 
   if (memcmp (digest, zeros_digest, APR_MD5_DIGESTSIZE) != 0)
-    {
-      static const char *hex = "0123456789abcdef";
-      char *str = apr_palloc (pool, (APR_MD5_DIGESTSIZE * 2) + 1);
-      int i;
-      
-      for (i = 0; i < APR_MD5_DIGESTSIZE; i++)
-        {
-          str[i*2]   = hex[digest[i] >> 4];
-          str[i*2+1] = hex[digest[i] & 0x0f];
-        }
-      str[i*2] = '\0';
-      
-      return str;
-    }
+    return svn_md5_digest_to_cstring_display (digest, pool);
   else
-    {
-      return NULL;
-    }
+    return NULL;
 }
 
 

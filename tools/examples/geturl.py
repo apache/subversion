@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #
 # USAGE: geturl.py FILE_OR_DIR1 FILE_OR_DIR2 ...
 #

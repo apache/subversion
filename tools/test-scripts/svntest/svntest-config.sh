@@ -3,7 +3,7 @@
 #
 # Root of the test tree
 #
-TEST_ROOT="/home/brane/svn"
+TEST_ROOT="${HOME}/svn"
 
 # Installation path, everything under that is considered
 # to be temporary
@@ -33,8 +33,16 @@ HTTPD_REPO=${HTTPD_REPO:="$TEST_ROOT/$HTTPD_NAME"}
 
 MAKE_OPTS=
 
-# RAMDISK=<yes|no>
+#
+# Whether a RAM disk is used to store test data, RAMDISK=<yes|no>
+#
 RAMDISK=no
+
+#
+# Whether to pass CLEANUP=true to Makefile test targets,
+# INTERMEDIATE_CLEANUP=<yes|no>
+#
+INTERMEDIATE_CLEANUP=${RAMDISK:="no"}
 
 #
 # Whether to test the BDB backend, TEST_FSFS=<yes|no>
@@ -52,6 +60,7 @@ TEST_FSFS=${TEST_FSFS:="yes"}
 TEST_BINDINGS_SWIG_PERL=${TEST_BINDINGS_SWIG_PERL:="no"}
 TEST_BINDINGS_JAVAHL=${TEST_BINDINGS_JAVAHL:="no"}
 TEST_BINDINGS_SWIG_PYTHON=${TEST_BINDINGS_SWIG_PYTHON:="no"}
+TEST_BINDINGS_SWIG_RUBY=${TEST_BINDINGS_SWIG_RUBY:="no"}
 
 # This should correspond with your httpd Listen directive
 RA_DAV_CHECK_ARGS="BASE_URL=http://localhost:42024"
@@ -72,9 +81,9 @@ OBJ_SHARED="obj-sh"
 #
 # E-mail addresses for reporting
 #
-FROM="brane@xbc.nu"
+FROM="YOUR_EMAIL_ADDRESS"
 TO="svn-breakage@subversion.tigris.org"
-ERROR_TO="brane@hermes.si"
+ERROR_TO="YOUR_EMAIL_ADDRESS"
 REPLY_TO="dev@subversion.tigris.org"
 
 #

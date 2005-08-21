@@ -225,8 +225,10 @@ case $host in
 esac
 AC_SUBST(LT_NO_UNDEFINED)
 
-NEON_WANTED_REGEX=0.24.7
-NEON_LATEST_WORKING_VER=0.24.7
+# Either a space-separated list of allowable Neon versions, or "any" to
+# mean allow anything.
+NEON_ALLOWED_LIST="0.24.7 0.25.0"
+NEON_LATEST_WORKING_VER=0.25.0
 NEON_URL="http://www.webdav.org/neon/neon-${NEON_LATEST_WORKING_VER}.tar.gz"
 dnl You can skip the neon version check only if you know what you are doing 
 AC_ARG_ENABLE(neon-version-check,
@@ -234,11 +236,11 @@ AC_ARG_ENABLE(neon-version-check,
 		 [do not check the Neon version]),
   [
     if test "$enableval" = "no" ; then
-      NEON_WANTED_REGEX="*"
+      NEON_ALLOWED_LIST="any"
     fi
   ],
   [])
-SVN_LIB_NEON($NEON_WANTED_REGEX, $NEON_LATEST_WORKING_VER, $NEON_URL)
+SVN_LIB_NEON($NEON_ALLOWED_LIST, $NEON_LATEST_WORKING_VER, $NEON_URL)
 
 dnl find Apache with a recent-enough magic module number.
 SVN_FIND_APACHE(20020903)
@@ -342,10 +344,9 @@ if test "$svn_lib_berkeley_db" = "yes"; then
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-bdb-lib"
   BDB_TEST_DEPS="\$(BDB_TEST_DEPS)"
   BDB_TEST_PROGRAMS="\$(BDB_TEST_PROGRAMS)"
-  DEFAULT_FS_TYPE="bdb"
-else
-  DEFAULT_FS_TYPE="fsfs"
 fi
+  
+DEFAULT_FS_TYPE="fsfs"
 
 if test "$svn_lib_neon" = "yes"; then
   BUILD_RULES="$BUILD_RULES dav-lib"
@@ -400,6 +401,17 @@ AC_CHECK_FUNCS(symlink readlink)
 
 	
 dnl Process some configuration options ----------
+
+AC_ARG_WITH(ssl,
+AC_HELP_STRING([--with-ssl],
+               [This option does NOT affect the Subversion build process in any
+                way. It enables OpenSSL support in the Neon library. If and
+                only if you are building Neon as an integrated part of the
+                Subversion build process, rather than linking to an already
+                installed version of Neon, you probably want to pass this
+                option so that Neon (and so indirectly, Subversion) will be
+                capable of https:// access.]),
+[])
 
 AC_ARG_ENABLE(debug,
 AC_HELP_STRING([--enable-debug],
@@ -554,6 +566,19 @@ SVN_CHECK_JDK
 
 AC_PATH_PROG(PERL, perl, none)
 
+AC_PATH_PROG(RUBY, ruby, none)
+if test "$RUBY" != "none"; then
+  if "$RUBY" -r mkmf -e 'exit(have_func("rb_hash_foreach") ? 0 : 1)'; then
+    :
+  else
+    RUBY="none"
+    AC_MSG_WARN([The detected Ruby is too old for Subversion to use])
+    AC_MSG_WARN([A Ruby which has rb_hash_foreach is required to use the])
+    AC_MSG_WARN([Subversion Ruby bindings])
+    AC_MSG_WARN([Upgrade to the official 1.8.2 release, or later])
+  fi
+fi
+
 SVN_CHECK_SWIG
 
 dnl try to find the "makeinfo" program
@@ -644,15 +669,30 @@ AC_ARG_ENABLE(javahl,
     fi
   ])
 
+JAVAHL_OBJDIR=""
 INSTALL_EXTRA_JAVAHL_LIB=""
+FIX_JAVAHL_LIB=""
 JAVAHL_TESTS_TARGET=""
 LT_CXX_LIBADD=""
 if test "$do_javahl_build" = "yes"; then
+  dnl Check for suitable JDK
+  if test "$JDK_SUITABLE" = "no"; then
+    AC_MSG_ERROR([Cannot compile JavaHL without a suitable JDK. 
+                  Please specify a suitable JDK using the --with-jdk option.])
+  fi
+  
   AC_PROG_CXX
+  
+  dnl The temporary directory where libtool compiles libsvnjavahl.
+  dnl N.B. objdir is "the name of the directory that contains temporary
+  dnl libtool files" and it is set by libtool.m4
+  JAVAHL_OBJDIR='$(libsvnjavahl_PATH)'/$objdir
+  
   os_arch=`uname`
   if test "$os_arch" = "Darwin"; then
     dnl On Darwin, JNI libs must be installed as .jnilib
     INSTALL_EXTRA_JAVAHL_LIB='ln -sf $(libdir)/libsvnjavahl-1.dylib $(libdir)/libsvnjavahl-1.jnilib'
+    FIX_JAVAHL_LIB="ln -sf libsvnjavahl-1.dylib $JAVAHL_OBJDIR/libsvnjavahl-1.jnilib"
   fi
   # This segment (and the rest of r10800) is very likely unnecessary
   # with libtool 1.5, which automatically adds libstdc++ as a
@@ -668,6 +708,8 @@ if test "$do_javahl_build" = "yes"; then
   fi
 fi
 AC_SUBST(INSTALL_EXTRA_JAVAHL_LIB)
+AC_SUBST(JAVAHL_OBJDIR)
+AC_SUBST(FIX_JAVAHL_LIB)
 AC_SUBST(LT_CXX_LIBADD)
 
 AC_ARG_WITH(junit,

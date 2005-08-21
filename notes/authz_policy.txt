@@ -129,9 +129,10 @@ WHAT USERS SHOULD EXPECT FROM PATH-BASED AUTHZ
 7. LOCKING
 
    If a client attempts to lock or unlock an unreadable path, the
-   command will fail.  If a client attempts to retrieve a list of all
-   locks "below" a directory, only readable paths will ever be
-   returned;  unreadable locked paths remain unknown.
+   command will fail.  If a client attempts to retrieve a lock on one
+   path, or a list of all locks "below" a directory, only readable
+   paths will ever be returned; unreadable locked paths remain
+   unknown.
 
 
 ============================================================================
@@ -161,9 +162,8 @@ here are its responsibilities:
            RA->lock()
            RA->unlock()
            RA->get_lock()
-           RA->get_locks()
    
-      (These concepts aren't wrapped by libsvn_repos becauseit's just
+      (These concepts aren't wrapped by libsvn_repos because it's just
       as easy to call an authz func directly on a single path, rather
       than pass it to a repos wrapper.)
    

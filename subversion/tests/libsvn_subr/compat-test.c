@@ -19,12 +19,14 @@
 #include <apr_pools.h>
 
 #include "svn_error.h"
-#include "svn_test.h"
 #include "svn_version.h"
+
+#include "../svn_test.h"
 
 static svn_error_t *
 test_version_compatibility (const char **msg, 
                             svn_boolean_t msg_only,
+                            svn_test_opts_t *opts,
                             apr_pool_t *pool)
 {
   unsigned int i;

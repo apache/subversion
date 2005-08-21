@@ -15,8 +15,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS_FS_H
-#define SVN_LIBSVN_FS_FS_H
+#ifndef SVN_LIBSVN_FS_BASE_H
+#define SVN_LIBSVN_FS_BASE_H
 
 #define APU_WANT_DB
 #include <apu_want.h>
@@ -33,6 +33,11 @@ extern "C" {
 
 /*** The filesystem structure.  ***/
 
+/* The format number of this filesystem.
+   This is independent of the repository format number, and
+   independent of any other FS back ends. */
+#define SVN_FS_BASE__FORMAT_NUMBER   1
+
 #define BDB_ERRCALL_BATON_ERRPFX_STRING "svn (bdb): "
 typedef struct
 {
@@ -45,8 +50,15 @@ typedef struct
   char errpfx_string[sizeof(BDB_ERRCALL_BATON_ERRPFX_STRING)];
 
   /* We hold the extended info here until the Berkeley DB function returns.
-     It returns an error code, triggering the collection and wrapping of the
-     additional errors stored here.  */
+     It usually returns an error code, triggering the collection and
+     wrapping of the additional errors stored here.
+
+     Note: In some circumstances BDB will call the error function and not
+     go on to return an error code, so the caller must always check whether
+     pending_errors is non-NULL to avoid leaking errors.  This behaviour
+     has been seen when running recovery on a repository upgraded to 4.3
+     that still has old 4.2 log files present, a typical error string is
+     "Skipping log file db/log.0000000002: historic log version 8" */
   svn_error_t *pending_errors;
 
   /* We permitted clients of our library to install a Berkeley BDB errcall.  
@@ -71,6 +83,8 @@ typedef struct
   DB *strings;
   DB *transactions;
   DB *uuids;
+  DB *locks;
+  DB *lock_tokens;
 
   /* A boolean for tracking when we have a live Berkeley DB
      transaction trail alive. */
@@ -81,6 +95,10 @@ typedef struct
 
   /* A baton for collecting detailed errors from Berkeley DB. */
   bdb_errcall_baton_t *errcall_baton;
+
+  /* The format number of this FS. */
+  int format;
+
 } base_fs_data_t;
 
 
@@ -299,9 +317,22 @@ typedef struct
 
 } change_t;
 
+
+/*** Lock node ***/
+typedef struct
+{
+  /* entries list, maps (const char *) name --> (const char *) lock-node-id */
+  apr_hash_t *entries;
+
+  /* optional lock-token, might be NULL. */
+  const char *lock_token;
+
+} lock_node_t;
+
+
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_LIBSVN_FS_FS_H */
+#endif /* SVN_LIBSVN_FS_BASE_H */
