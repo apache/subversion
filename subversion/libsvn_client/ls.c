@@ -90,6 +90,7 @@ svn_client_ls3 (apr_hash_t **dirents,
   apr_pool_t *subpool;
   apr_hash_t *new_locks;
   apr_hash_index_t *hi;
+  svn_error_t *err;
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR (svn_client__ra_session_from_path (&ra_session, &rev,
@@ -159,8 +160,16 @@ svn_client_ls3 (apr_hash_t **dirents,
   subpool = svn_pool_create (pool);
 
   /* Get lock. */
-  SVN_ERR (svn_ra_get_locks (ra_session, locks, "", pool));
+  err = svn_ra_get_locks (ra_session, locks, "", pool);
 
+  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+    {
+      svn_error_clear (err);
+      *locks = apr_hash_make (pool);
+    }
+  else if (err)
+    return err;
+  
   new_locks = apr_hash_make (pool);
   for (hi = apr_hash_first (pool, *locks); hi; hi = apr_hash_next (hi))
     {
