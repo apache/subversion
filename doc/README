@@ -29,7 +29,8 @@ A rough guide:
                              WARNING!  Extremely old!  From June 2000.
 
   programmer/WritingChangeLogs.txt
-                             A longer version of the info in HACKING.
+                             A longer version of the info in
+                             www/hacking.html.
 
   user/                      Documents for Subversion users.
 
