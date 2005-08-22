@@ -100,10 +100,6 @@ Commit access for specific areas:
        blueboh   Jeong Seolin <blueboh@ahnlab.com>           (po: ko)
         hynnet   YingNing Huang <hyn@bao.hynnet.com>         (po: zh_CN)
           lark   Wang Jian <lark@linux.net.cn>               (po: zh_CN)
-     beerfrick   Ariel Arjona <beerfrick@gmail.com>          (doc: es)
-        gradha   Grzegorz A. Hankiewicz <gradha@titanium.sabren.com> (doc: es)
-         ruben   Rubén Gómez <rugoli@euskalnet.net>          (doc: es)
-      dbrouard   Diego Brouard <dbrouard@gmail.com>          (doc: es)
   gerhardoettl   Gerhard Oettl <gerhard.oettl.ml@oesoft.at>  (doc: de)
 giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
         nebiac   Federico Nebiacolombo <cint1@amsjv.it>      (po: it)
@@ -134,6 +130,10 @@ Committers who have asked to be listed as dormant:
 
         bdenny   Brian Denny <brian@briandenny.net>
       rassilon   Bill Tutt <rassilon@lyra.org> (Win32, COM, issue-1003-dev br.)
+     beerfrick   Ariel Arjona <beerfrick@gmail.com>          (doc: es)
+        gradha   Grzegorz A. Hankiewicz <gradha@titanium.sabren.com> (doc: es)
+         ruben   Rubén Gómez <rugoli@euskalnet.net>          (doc: es)
+      dbrouard   Diego Brouard <dbrouard@gmail.com>          (doc: es)
 
 ## Local Variables:
 ## coding:utf-8
