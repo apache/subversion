@@ -72,7 +72,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2004-09-30 09:48+0200\n"
-"PO-Revision-Date: 2005-08-08 09:52+0100\n"
+"PO-Revision-Date: 2005-08-15 11:19+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3546,11 +3546,11 @@ msgstr "Speichere Kopiedatensatz"
 
 #: libsvn_fs_base/bdb/copies-table.c:112
 msgid "allocating new copy ID (getting 'next-key')"
-msgstr ""
+msgstr "Allokiere neuen Kopieschlüssel (hole 'next-key')"
 
 #: libsvn_fs_base/bdb/copies-table.c:130
 msgid "bumping next copy key"
-msgstr ""
+msgstr "Erzeuge nächsten Kopieschlüssel"
 
 #: libsvn_fs_base/bdb/copies-table.c:169
 msgid "deleting entry from 'copies' table"
@@ -3562,11 +3562,11 @@ msgstr "lese Kopie"
 
 #: libsvn_fs_base/bdb/nodes-table.c:99
 msgid "allocating new node ID (getting 'next-key')"
-msgstr ""
+msgstr "Allokiere neue Knoten ID (hole 'next-key')"
 
 #: libsvn_fs_base/bdb/nodes-table.c:117
 msgid "bumping next node ID key"
-msgstr ""
+msgstr "Erzeuge nächste Knoten ID"
 
 #: libsvn_fs_base/bdb/nodes-table.c:154
 #, c-format
@@ -3603,7 +3603,7 @@ msgstr "Speichere Darstellung"
 
 #: libsvn_fs_base/bdb/reps-table.c:156
 msgid "allocating new representation (getting next-key)"
-msgstr ""
+msgstr "Allokiere neuen Darstellungsschlüssel (hole 'next-key')"
 
 #: libsvn_fs_base/bdb/reps-table.c:177
 msgid "bumping next representation key"
@@ -3685,7 +3685,7 @@ msgstr ""
 #: libsvn_fs_base/dag.c:689
 #, c-format
 msgid "Can't set proplist on *immutable* node-revision %s"
-msgstr ""
+msgstr "Kann keine Eigenschafen für nicht-veränderliche Knotenrevision %s setzen."
 
 #: libsvn_fs_base/dag.c:801
 #, c-format
@@ -4047,7 +4047,7 @@ msgstr "Darstellung '%s' ist beides: veränderlich und kein Volltext"
 
 #: libsvn_fs_base/reps-strings.c:1318
 msgid "Failed to get new string key"
-msgstr ""
+msgstr "Konnte keinen neuen Schlüssel erzeugen"
 
 #: libsvn_fs_base/reps-strings.c:1393
 #, c-format
@@ -4144,13 +4144,13 @@ msgstr "Konflikt bei '%s'"
 #: libsvn_fs_fs/tree.c:1264
 #: libsvn_fs_fs/tree.c:1753
 msgid "Bad merge; ancestor, source, and target not all in same fs"
-msgstr ""
+msgstr "Fehlerhaftes Zusammenführen: Vorgänger, Quelle und Ziel nicht im gleichen Dateisystem"
 
 #: libsvn_fs_base/tree.c:1952
 #: libsvn_fs_fs/tree.c:1280
 #, c-format
 msgid "Bad merge; target '%s' has id '%s', same as ancestor"
-msgstr ""
+msgstr "Fehlerhaftes Zusammenführen: Ziel '%s' hat die gleiche ID '%s' wie der Vorgänger."
 
 #: libsvn_fs_base/tree.c:2654
 #, c-format

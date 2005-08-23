@@ -1,10 +1,18 @@
 #include "swigutil_rb.h"
 #include <st.h>
 
-#include <swigrun.swg>
+#if SVN_SWIG_VERSION >= 103025
+#  include <swiglabels.swg>
+#endif
 #include <ruby/rubyhead.swg>
-#include <common.swg>
+#include <swigrun.swg>
+#if SVN_SWIG_VERSION < 103025
+#  include <common.swg>
+#endif
 #include <ruby/rubydef.swg>
+#if SVN_SWIG_VERSION >= 103025
+#  include <runtime.swg>
+#endif
 
 static VALUE mSvn = Qnil;
 static VALUE mSvnCore = Qnil;
