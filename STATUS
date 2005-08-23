@@ -10,7 +10,15 @@ Status of 1.2.4:
 
 Candidate changes:
 
-  None.
+  * r15888
+    Complete issue #1361 for JavaHL, removing special handling in the
+    JavaHL bindings for 'svn cat -r BASE' in favor of the
+    implementation found in the libsvn_client library.
+    Justification:
+      Remove work-around, unnecessary since SVN 1.2.0, which incurs
+      other problems (e.g. EOL-translations, etc.).
+    Votes:
+      +1: dlr
 
 Approved changes (further review is welcome, but not required):
 
