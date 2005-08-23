@@ -17,6 +17,10 @@ Candidate changes:
     Justification:
       Remove work-around, unnecessary since SVN 1.2.0, which incurs
       other problems (e.g. EOL-translations, etc.).
+    Notes:
+      The merge will need to be applied to the fileContent() method,
+      rather than to the createReadStream() method (which is new in
+      1.3).
     Votes:
       +1: dlr
 
