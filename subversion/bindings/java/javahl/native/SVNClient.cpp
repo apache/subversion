@@ -2397,37 +2397,7 @@ svn_stream_t* SVNClient::createReadStream(apr_pool_t* pool, const char *path,
 {
     svn_stream_t *read_stream = NULL;
 
-    if (revision.revision()->kind == svn_opt_revision_base)
-    {
-	// We want the base of the current working copy, while
-	// avoiding a round-trip to the server.
-        const char *base_path;
-        svn_error_t *err = svn_wc_get_pristine_copy_path(path, &base_path,
-							 pool);
-        if(err != NULL)
-        {
-            JNIUtil::handleSVNError(err);
-            return NULL;
-        }
-        apr_file_t *file = NULL;
-        apr_finfo_t finfo;
-        apr_status_t apr_err = apr_stat(&finfo, base_path,
-                                   APR_FINFO_MIN, pool);
-        if(apr_err)
-        {
-            JNIUtil::handleAPRError(apr_err, _("open file"));
-            return NULL;
-        }
-        apr_err = apr_file_open(&file, base_path, APR_READ, 0, pool);
-        if(apr_err)
-        {
-            JNIUtil::handleAPRError(apr_err, _("open file"));
-            return NULL;
-        }
-        read_stream = svn_stream_from_aprfile(file, pool);
-        size = finfo.size;
-    }
-    else if (revision.revision()->kind == svn_opt_revision_working)
+    if (revision.revision()->kind == svn_opt_revision_working)
     {
 	// We want the working copy. Going back to the server returns
 	// base instead (which is not what we want).
