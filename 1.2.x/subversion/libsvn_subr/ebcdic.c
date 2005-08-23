@@ -677,7 +677,7 @@ svn_ebcdic_file_transfer_contents(const char *from_path,
  * Previously subversion implemented assumed this function was not implemented
  * on any platform other than unix and had a work-around in place.  This
  * work-around was removed in Julian's rev 11868.  So until IBM implements 
- * svn_io_make_dir_recursively for the iSeries we'll do it here with the
+ * apr_dir_make_recursive for the iSeries we'll do it here with the
  * following three functions.
  */
  
@@ -717,9 +717,9 @@ path_remove_last_component(const char *path,
 }
 
 apr_status_t
-apr_dir_make_recursive(const char *path,
-                       apr_fileperms_t perm,
-                       apr_pool_t *pool) 
+svn_as400_dir_make_recursive(const char *path,
+                             apr_fileperms_t perm,
+                             apr_pool_t *pool) 
 {
   apr_status_t apr_err = 0;
     
@@ -734,10 +734,10 @@ apr_dir_make_recursive(const char *path,
     char *dir;
          
     dir = path_remove_last_component(path, pool);
-    apr_err = apr_dir_make_recursive(dir, perm, pool);
+    apr_err = svn_as400_dir_make_recursive(dir, perm, pool);
          
     if (!apr_err) 
-      apr_err = apr_dir_make (path, perm, pool);
+      apr_err = apr_dir_make(path, perm, pool);
   }
 
   return apr_err;

@@ -202,8 +202,17 @@ svn_ebcdic_file_transfer_contents(const char *from_path,
                                   const char *to_path,
                                   apr_int32_t flags,
                                   apr_fileperms_t to_perms,
-                                  apr_pool_t *pool);                                 
-#endif /* AS400 */                                 
+                                  apr_pool_t *pool);
+
+
+/** Replaces apr_dir_make_recursive which is not implemented in the current
+ * APR PTF supported by the ebcdic port.
+ */
+apr_status_t
+svn_as400_dir_make_recursive(const char *path,
+                             apr_fileperms_t perm,
+                             apr_pool_t *pool);
+#endif /* AS400 */
 
 #ifdef __cplusplus
 }
