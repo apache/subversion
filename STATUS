@@ -21,8 +21,13 @@ Candidate changes:
       The merge will need to be applied to the fileContent() method,
       rather than to the createReadStream() method (which is new in
       1.3).
+      markphip:
+      Applied to 1.2.3 tarball and verified that it fixes our problem in
+      Subclipse.  We need to use svn cat to feed revisions to Eclipse GUI
+      compare/merge engine.  Having incorrect line endings breaks it.
     Votes:
       +1: dlr
+      +1 (non-binding): markphip
 
 Approved changes (further review is welcome, but not required):
 
