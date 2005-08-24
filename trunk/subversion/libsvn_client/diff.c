@@ -449,8 +449,8 @@ diff_content_changed (const char *path,
   if (! diff_cmd_baton->force_binary && (mt1_binary || mt2_binary))
     {
       /* Print out the diff header. */
-      char *out = APR_PSPRINTF2(subpool, "Index: %s" APR_EOL_STR "%s"
-                                APR_EOL_STR, path, equal_string);
+      char *out = APR_PSPRINTF(subpool, "Index: %s" APR_EOL_STR "%s"
+                               APR_EOL_STR, path, equal_string);
 
       SVN_ERR (svn_stream_printf_from_utf8
                (os, diff_cmd_baton->header_encoding, subpool, out));
@@ -501,8 +501,8 @@ diff_content_changed (const char *path,
   if (diff_cmd)
     {
       /* Print out the diff header. */
-      char *out = APR_PSPRINTF2(subpool, "Index: %s" APR_EOL_STR "%s"
-                                APR_EOL_STR, path, equal_string);
+      char *out = APR_PSPRINTF(subpool, "Index: %s" APR_EOL_STR "%s"
+                               APR_EOL_STR, path, equal_string);
 
       SVN_ERR (svn_stream_printf_from_utf8
                (os, diff_cmd_baton->header_encoding, subpool, out));
@@ -542,8 +542,8 @@ diff_content_changed (const char *path,
       if (svn_diff_contains_diffs (diff) || diff_cmd_baton->force_empty)
         {
           /* Print out the diff header. */
-          char *out = APR_PSPRINTF2(subpool, "Index: %s" APR_EOL_STR "%s"
-                                    APR_EOL_STR, path, equal_string);
+          char *out = APR_PSPRINTF(subpool, "Index: %s" APR_EOL_STR "%s"
+                                   APR_EOL_STR, path, equal_string);
 
           SVN_ERR (svn_stream_printf_from_utf8
                    (os, diff_cmd_baton->header_encoding, subpool, out));
