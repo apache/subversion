@@ -191,7 +191,7 @@ typedef struct
   const char *base_dir;
   svn_wc_adm_access_t *base_access;
 
-  /* An array of svn_client_commit_item_t * structures, present only
+  /* An array of svn_client_commit_item2_t * structures, present only
      during working copy commits. */
   apr_array_header_t *commit_items;
 
@@ -636,6 +636,16 @@ svn_client__do_external_status (svn_wc_traversal_info_t *traversal_info,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *pool);
 
+
+
+/* Retrieves log message using *CTX->log_msg_func or
+ * *CTX->log_msg_func2 callbacks.
+ * Other argements same as svn_client_get_commit_log2_t */
+svn_error_t * svn_client__get_log_msg(const char **log_msg,
+                                      const char **tmp_file,
+                                      apr_array_header_t *commit_items,
+                                      svn_client_ctx_t *ctx,
+                                      apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

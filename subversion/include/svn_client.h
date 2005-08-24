@@ -308,7 +308,7 @@ typedef struct svn_client_commit_info_t
 
 /**
  * @name Commit state flags
- * @brief State flags for use with the @c svn_client_commit_item_t structure
+ * @brief State flags for use with the @c svn_client_commit_item2_t structure
  * (see the note about the namespace for that structure, which also
  * applies to these flags).
  * @{
@@ -322,7 +322,49 @@ typedef struct svn_client_commit_info_t
 #define SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN  0x20
 /** @} */
 
-/** The commit candidate structure. */
+/** The commit candidate structure.
+ *
+ * @since New in 1.3.
+ */
+typedef struct svn_client_commit_item2_t
+{
+  /** absolute working-copy path of item */
+  const char *path;
+
+  /** node kind (dir, file) */
+  svn_node_kind_t kind;
+
+  /** commit URL for this item */
+  const char *url;
+
+  /** revision */
+  svn_revnum_t revision;
+
+  /** copyfrom-url */
+  const char *copyfrom_url;
+  
+  /** copyfrom-rev, valid when copyfrom_url != NULL */
+  svn_revnum_t copyfrom_rev;
+  
+  /** state flags */
+  apr_byte_t state_flags;
+
+  /** An array of `svn_prop_t *' changes to wc properties.  If adding
+   * to this array, allocate the svn_prop_t and its contents in
+   * wcprop_changes->pool, so that it has the same lifetime as this
+   * svn_client_commit_item_t.
+   *
+   * See http://subversion.tigris.org/issues/show_bug.cgi?id=806 for
+   * what would happen if the post-commit process didn't group these
+   * changes together with all other changes to the item :-).
+   */
+  apr_array_header_t *wcprop_changes;
+} svn_client_commit_item2_t;
+
+/** The commit candidate structure.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
+ */
 typedef struct svn_client_commit_item_t
 {
   /** absolute working-copy path of item */
@@ -367,6 +409,33 @@ typedef struct svn_client_commit_item_t
  * @c NULL, this value is undefined).  The log message MUST be a UTF8 
  * string with LF line separators.
  *
+ * @a commit_items is a read-only array of @c svn_client_commit_item2_t
+ * structures, which may be fully or only partially filled-in,
+ * depending on the type of commit operation.
+ *
+ * @a baton is provided along with the callback for use by the handler.
+ *
+ * All allocations should be performed in @a pool.
+ *
+ * @since New in 1.3.
+ */
+typedef svn_error_t *
+(*svn_client_get_commit_log2_t) (const char **log_msg,
+                                 const char **tmp_file,
+                                 apr_array_header_t *commit_items,
+                                 void *baton,
+                                 apr_pool_t *pool);
+
+/** Callback type used by commit-y operations to get a commit log message
+ * from the caller.
+ *
+ * Set @a *log_msg to the log message for the commit, allocated in @a
+ * pool, or @c NULL if wish to abort the commit process.  Set @a *tmp_file
+ * to the path of any temporary file which might be holding that log
+ * message, or @c NULL if no such file exists (though, if @a *log_msg is
+ * @c NULL, this value is undefined).  The log message MUST be a UTF8
+ * string with LF line separators.
+ *
  * @a commit_items is a read-only array of @c svn_client_commit_item_t
  * structures, which may be fully or only partially filled-in,
  * depending on the type of commit operation.
@@ -374,6 +443,8 @@ typedef struct svn_client_commit_item_t
  * @a baton is provided along with the callback for use by the handler.
  *
  * All allocations should be performed in @a pool.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 typedef svn_error_t *
 (*svn_client_get_commit_log_t) (const char **log_msg,
@@ -423,10 +494,12 @@ typedef struct svn_client_ctx_t
   void *notify_baton;
 
   /** Log message callback function.  NULL means that Subversion
-      should not attempt to fetch a log message. */ 
+    * should try not attempt to fetch a log message.
+    * @deprecated Provided for backward compatibility with the 1.2 API. */
   svn_client_get_commit_log_t log_msg_func;
 
-  /** log message callback baton */
+  /** log message callback baton
+    * @deprecated Provided for backward compatibility with the 1.2 API. */
   void *log_msg_baton;
 
   /** a hash mapping of <tt>const char *</tt> configuration file names to
@@ -451,6 +524,15 @@ typedef struct svn_client_ctx_t
   /** notification baton for notify_func2().
    * @since New in 1.2. */
   void *notify_baton2;
+
+  /** Log message callback function. NULL means that Subversion
+   *   should try log_msg_func.
+   * @since New in 1.3. */
+  svn_client_get_commit_log2_t log_msg_func2;
+
+  /** callback baton for log_msg_func2
+   * @since New in 1.3. */
+  void *log_msg_baton2;
 } svn_client_ctx_t;
 
 

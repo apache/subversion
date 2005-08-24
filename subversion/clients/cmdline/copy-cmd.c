@@ -99,23 +99,23 @@ svn_cl__copy (apr_getopt_t *os,
 
   if (! dst_is_url)
     {
-      ctx->log_msg_func = NULL;
+      ctx->log_msg_func2 = NULL;
       if (opt_state->message || opt_state->filedata)
         return svn_error_create
           (SVN_ERR_CL_UNNECESSARY_LOG_MESSAGE, NULL,
            _("Local, non-commit operations do not take a log message"));
     }
 
-  if (ctx->log_msg_func)
-    SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton), opt_state, 
+  if (ctx->log_msg_func2)
+    SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton2), opt_state,
                                          NULL, ctx->config, pool));
 
   err = svn_client_copy2 (&commit_info, src_path,
                           &(opt_state->start_revision),
                           dst_path, ctx, pool);
 
-  if (ctx->log_msg_func)
-    SVN_ERR (svn_cl__cleanup_log_msg (ctx->log_msg_baton, err));
+  if (ctx->log_msg_func2)
+    SVN_ERR (svn_cl__cleanup_log_msg (ctx->log_msg_baton2, err));
   else if (err)
     return err;
 
