@@ -55,12 +55,13 @@ add_committable (apr_hash_t *committables,
                  const char *url,
                  svn_revnum_t revision,
                  const char *copyfrom_url,
+                 svn_revnum_t copyfrom_rev,
                  apr_byte_t state_flags)
 {
   apr_pool_t *pool = apr_hash_pool_get (committables);
   const char *repos_name = SVN_CLIENT__SINGLE_REPOS_NAME;
   apr_array_header_t *array;
-  svn_client_commit_item_t *new_item;
+  svn_client_commit_item2_t *new_item;
 
   /* Sanity checks. */
   assert (path && url);
@@ -87,11 +88,12 @@ add_committable (apr_hash_t *committables,
   new_item->revision       = revision;
   new_item->copyfrom_url   = copyfrom_url 
                              ? apr_pstrdup (pool, copyfrom_url) : NULL;
+  new_item->copyfrom_rev   = copyfrom_rev;
   new_item->state_flags    = state_flags;
   new_item->wcprop_changes = apr_array_make (pool, 1, sizeof (svn_prop_t *));
    
   /* Now, add the commit item to the array. */
-  (*((svn_client_commit_item_t **) apr_array_push (array))) = new_item;
+  APR_ARRAY_PUSH(array, svn_client_commit_item2_t *) = new_item;
 }
 
 
@@ -122,7 +124,7 @@ check_prop_mods (svn_boolean_t *props_changed,
 
 /* If there is a commit item for PATH in COMMITTABLES, return it, else
    return NULL.  Use POOL for temporary allocation only. */
-static svn_client_commit_item_t *
+static svn_client_commit_item2_t *
 look_up_committable (apr_hash_t *committables,
                      const char *path,
                      apr_pool_t *pool)
@@ -141,9 +143,9 @@ look_up_committable (apr_hash_t *committables,
       
       for (i = 0; i < these_committables->nelts; i++)
         {
-          svn_client_commit_item_t *this_committable
+          svn_client_commit_item2_t *this_committable
             = APR_ARRAY_IDX (these_committables, i,
-                             svn_client_commit_item_t *);
+                             svn_client_commit_item2_t *);
           
           if (strcmp (this_committable->path, path) == 0)
             return this_committable;
@@ -476,8 +478,10 @@ harvest_committables (apr_hash_t *committables,
     {
       /* Finally, add the committable item. */
       add_committable (committables, path, entry->kind, url,
-                       cf_url ? cf_rev : entry->revision, 
-                       cf_url, state_flags);
+                       entry->revision,
+                       cf_url,
+                       cf_rev,
+                       state_flags);
       if (lock_tokens && entry->lock_token)
         apr_hash_set (lock_tokens, apr_pstrdup (token_pool, url),
                       APR_HASH_KEY_STRING,
@@ -562,6 +566,7 @@ harvest_committables (apr_hash_t *committables,
                                            this_entry->kind, used_url,
                                            SVN_INVALID_REVNUM, 
                                            NULL,
+                                           SVN_INVALID_REVNUM,
                                            SVN_CLIENT_COMMIT_ITEM_DELETE);
                           svn_error_clear (lockerr);
                           continue; /* don't recurse! */
@@ -819,10 +824,10 @@ svn_client__get_copy_committables (apr_hash_t **committables,
 
 int svn_client__sort_commit_item_urls (const void *a, const void *b)
 {
-  const svn_client_commit_item_t *item1
-    = *((const svn_client_commit_item_t * const *) a);
-  const svn_client_commit_item_t *item2
-    = *((const svn_client_commit_item_t * const *) b);
+  const svn_client_commit_item2_t *item1
+    = *((const svn_client_commit_item2_t * const *) a);
+  const svn_client_commit_item2_t *item2
+    = *((const svn_client_commit_item2_t * const *) b);
   return svn_path_compare_paths (item1->url, item2->url);
 }
 
@@ -835,7 +840,7 @@ svn_client__condense_commit_items (const char **base_url,
 {
   apr_array_header_t *ci = commit_items; /* convenience */
   const char *url;
-  svn_client_commit_item_t *item, *last_item = NULL;
+  svn_client_commit_item2_t *item, *last_item = NULL;
   int i;
   
   assert (ci && ci->nelts);
@@ -848,7 +853,7 @@ svn_client__condense_commit_items (const char **base_url,
      to all of them, and making sure there are no duplicate URLs.  */
   for (i = 0; i < ci->nelts; i++)
     {
-      item = (((svn_client_commit_item_t **) ci->elts)[i]);
+      item = APR_ARRAY_IDX(ci, i, svn_client_commit_item2_t *);
       url = item->url;
 
       if ((last_item) && (strcmp (last_item->url, url) == 0))
@@ -888,8 +893,8 @@ svn_client__condense_commit_items (const char **base_url,
      of all of our URLs. */
   for (i = 0; i < ci->nelts; i++)
     {
-      svn_client_commit_item_t *this_item
-        = ((svn_client_commit_item_t **) ci->elts)[i];
+      svn_client_commit_item2_t *this_item
+        = APR_ARRAY_IDX(ci, i, svn_client_commit_item2_t *);
       int url_len = strlen (this_item->url);
       int base_url_len = strlen (*base_url);
 
@@ -905,8 +910,8 @@ svn_client__condense_commit_items (const char **base_url,
   fprintf (stderr, "   FLAGS     REV  REL-URL (COPY-URL)\n");
   for (i = 0; i < ci->nelts; i++)
     {
-      svn_client_commit_item_t *this_item
-        = ((svn_client_commit_item_t **) ci->elts)[i];
+      svn_client_commit_item2_t *this_item
+        = APR_ARRAY_IDX(ci, i, svn_client_commit_item2_t *);
       char flags[6];
       flags[0] = (this_item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD)
                    ? 'a' : '-';
@@ -933,7 +938,7 @@ svn_client__condense_commit_items (const char **base_url,
 
 struct file_mod_t
 {
-  svn_client_commit_item_t *item;
+  svn_client_commit_item2_t *item;
   void *file_baton;
 };
 
@@ -961,7 +966,7 @@ do_item_commit (void **dir_baton,
                 apr_pool_t *pool)
 {
   struct path_driver_cb_baton *cb_baton = callback_baton;
-  svn_client_commit_item_t *item = apr_hash_get (cb_baton->commit_items,
+  svn_client_commit_item2_t *item = apr_hash_get (cb_baton->commit_items,
                                                  path, APR_HASH_KEY_STRING);
   svn_node_kind_t kind = item->kind;
   void *file_baton = NULL;
@@ -1001,7 +1006,7 @@ do_item_commit (void **dir_baton,
           (SVN_ERR_BAD_URL, NULL,
            _("Commit item '%s' has copy flag but no copyfrom URL"),
            svn_path_local_style (path, pool));
-      if (! SVN_IS_VALID_REVNUM (item->revision))
+      if (! SVN_IS_VALID_REVNUM (item->copyfrom_rev))
         return svn_error_createf 
           (SVN_ERR_CLIENT_BAD_REVISION, NULL,
            _("Commit item '%s' has copy flag but an invalid revision"),
@@ -1094,7 +1099,7 @@ do_item_commit (void **dir_baton,
           assert (parent_baton);
           SVN_ERR (editor->add_file 
                    (path, parent_baton, copyfrom_url, 
-                    copyfrom_url ? item->revision : SVN_INVALID_REVNUM,
+                    copyfrom_url ? item->copyfrom_rev : SVN_INVALID_REVNUM,
                     file_pool, &file_baton));
         }
       else
@@ -1102,7 +1107,7 @@ do_item_commit (void **dir_baton,
           assert (parent_baton);
           SVN_ERR (editor->add_directory
                    (path, parent_baton, copyfrom_url,
-                    copyfrom_url ? item->revision : SVN_INVALID_REVNUM,
+                    copyfrom_url ? item->copyfrom_rev : SVN_INVALID_REVNUM,
                     pool, dir_baton));
         }
     }
@@ -1234,8 +1239,8 @@ svn_client__do_commit (const char *base_url,
      keep an array of those decoded paths, too.  */
   for (i = 0; i < commit_items->nelts; i++)
     {
-      svn_client_commit_item_t *item = 
-        APR_ARRAY_IDX (commit_items, i, svn_client_commit_item_t *);
+      svn_client_commit_item2_t *item = 
+        APR_ARRAY_IDX (commit_items, i, svn_client_commit_item2_t *);
       const char *path = svn_path_uri_decode (item->url, pool);
       apr_hash_set (items_hash, path, APR_HASH_KEY_STRING, item);
       APR_ARRAY_PUSH (paths, const char *) = path;
@@ -1261,7 +1266,7 @@ svn_client__do_commit (const char *base_url,
       const void *key;
       apr_ssize_t klen;
       struct file_mod_t *mod;
-      svn_client_commit_item_t *item;
+      svn_client_commit_item2_t *item;
       void *val;
       void *file_baton;
       const char *tempfile, *dir_path;
@@ -1611,3 +1616,60 @@ get_test_editor (const svn_delta_editor_t **editor,
   return SVN_NO_ERROR;
 }
 #endif /* SVN_CLIENT_COMMIT_DEBUG */
+
+svn_error_t * svn_client__get_log_msg(const char **log_msg,
+                                      const char **tmp_file,
+                                      apr_array_header_t *commit_items,
+                                      svn_client_ctx_t *ctx,
+                                      apr_pool_t *pool)
+{
+    /* client provided new callback function. simply forward call to him */
+    if (ctx->log_msg_func2)
+      return (*ctx->log_msg_func2) (log_msg, tmp_file, commit_items,
+                                    ctx->log_msg_baton2, pool);
+
+    /* client want use old (pre 1.3) API, therefore build
+     * svn_client_commit_item_t array */
+
+    if (ctx->log_msg_func)
+      {
+        int i;
+        svn_error_t * err;
+        svn_client_commit_item_t *old_item;
+        apr_pool_t * subpool = svn_pool_create(pool);
+        apr_array_header_t *old_commit_items
+          = apr_array_make (subpool, commit_items->nelts, sizeof (old_item));
+
+        for (i = 0; i < commit_items->nelts; i++)
+          {
+            svn_client_commit_item2_t *item =
+              APR_ARRAY_IDX (commit_items, i, svn_client_commit_item2_t *);
+
+            old_item = apr_pcalloc (subpool, sizeof (*old_item));
+            old_item->path = item->path;
+            old_item->kind = item->kind;
+            old_item->url = item->url;
+            /* pre 1.3 API use revision field for copyfrom_rev and revision
+             * depeding of copyfrom_url */
+            old_item->revision = item->copyfrom_url ?
+              item->copyfrom_rev : item->revision;
+            old_item->copyfrom_url = item->copyfrom_url;
+            old_item->state_flags = item->state_flags;
+            old_item->wcprop_changes = item->wcprop_changes;
+
+            APR_ARRAY_PUSH (old_commit_items, svn_client_commit_item_t *)
+              = old_item;
+          }
+
+        err = (*ctx->log_msg_func) (log_msg, tmp_file, old_commit_items,
+          ctx->log_msg_baton, pool);
+
+        svn_pool_destroy(subpool);
+        return err;
+      }
+
+    *log_msg = "";
+    *tmp_file = NULL;
+
+    return SVN_NO_ERROR;
+}
