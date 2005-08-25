@@ -1700,6 +1700,11 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
   register_deltification_cleanup(source->info->repos->repos, new_rev,
                                  source->info->r->connection->pool);
 
+  /* We've detected a 'high level' svn action to log. */
+  apr_table_set(target->info->r->subprocess_env, "SVN-ACTION",
+                apr_psprintf(target->info->r->pool,
+                             "committed r%" SVN_REVNUM_T_FMT, new_rev));
+
   /* Since the commit was successful, the txn ID is no longer valid.
      Store an empty txn ID in the activity database so that when the
      client deletes the activity, we don't try to open and abort the
