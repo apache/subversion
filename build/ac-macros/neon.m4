@@ -125,7 +125,7 @@ AC_DEFUN(SVN_NEON_CONFIG,
 
       if test -n "`echo \"$NEON_VERSION\" | grep '^0\.25\.'`" ; then
         AC_DEFINE_UNQUOTED([SVN_NEON_0_25_0], [1],
-                           [Defined if have Neon 0.25.0 instead of 0.24.7.])
+                           [Defined if have Neon 0.25.x instead of 0.24.7.])
       fi
 
       for svn_allowed_neon in $NEON_ALLOWED_LIST; do
