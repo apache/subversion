@@ -179,6 +179,7 @@ check_lib_versions (void)
 /** Subcommands. **/
 
 static svn_opt_subcommand_t
+  subcommand_crashtest,
   subcommand_create,
   subcommand_deltify,
   subcommand_dump,
@@ -290,6 +291,12 @@ static const apr_getopt_option_t options_table[] =
  */
 static const svn_opt_subcommand_desc_t cmd_table[] =
   {
+    {"crashtest", subcommand_crashtest, {0},
+     N_("usage: svnadmin crash-test REPOS_PATH\n\n"
+        "Open the reposotory at REPOS_PATH, then abort, thus simulating\n"
+        "a process that crashes while holding an oper repository handle.\n"),
+     {0} },
+
     {"create", subcommand_create, {0},
      N_("usage: svnadmin create REPOS_PATH\n\n"
      "Create a new, empty repository at REPOS_PATH.\n"),
@@ -1451,4 +1458,18 @@ main (int argc, const char * const *argv)
       }
       return EXIT_SUCCESS;
     }
+}
+
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_crashtest (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_repos_t *repos;
+
+  SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
+  abort();
+
+  return SVN_NO_ERROR;
 }

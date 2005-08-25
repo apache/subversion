@@ -594,7 +594,8 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
                                        | DB_INIT_LOCK
                                        | DB_INIT_LOG
                                        | DB_INIT_MPOOL
-                                       | DB_INIT_TXN),
+                                       | DB_INIT_TXN
+                                       | SVN_BDB_AUTO_RECOVER),
                                       0666));
   if (svn_err) goto error;
 
@@ -712,7 +713,8 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
                                        | DB_INIT_LOCK
                                        | DB_INIT_LOG
                                        | DB_INIT_MPOOL
-                                       | DB_INIT_TXN),
+                                       | DB_INIT_TXN
+                                       | SVN_BDB_AUTO_RECOVER),
                                       0666));
   if (svn_err) goto error;
 
@@ -860,7 +862,8 @@ base_bdb_logfiles (apr_array_header_t **logfiles,
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
   SVN_BDB_ERR (ec_baton, env->open (env, path_native,
                                     (DB_CREATE | DB_INIT_LOCK | DB_INIT_LOG
-                                     | DB_INIT_MPOOL | DB_INIT_TXN),
+                                     | DB_INIT_MPOOL | DB_INIT_TXN
+                                     | SVN_BDB_AUTO_RECOVER),
                           0666));
   SVN_BDB_ERR (ec_baton, env->log_archive (env, &filelist, flags));
 
@@ -974,7 +977,8 @@ check_env_flags (svn_boolean_t *match,
 
   SVN_BDB_ERR (ec_baton, env->open (env, path_native,
                                     (DB_CREATE | DB_INIT_LOCK | DB_INIT_LOG
-                                     | DB_INIT_MPOOL | DB_INIT_TXN),
+                                     | DB_INIT_MPOOL | DB_INIT_TXN
+                                     | SVN_BDB_AUTO_RECOVER),
                           0666));
 
   SVN_BDB_ERR (ec_baton, env->get_flags (env, &envflags));
@@ -1007,7 +1011,8 @@ get_db_pagesize (u_int32_t *pagesize,
 
   SVN_BDB_ERR (ec_baton, env->open (env, path_native,
                                     (DB_CREATE | DB_INIT_LOCK | DB_INIT_LOG
-                                     | DB_INIT_MPOOL | DB_INIT_TXN),
+                                     | DB_INIT_MPOOL | DB_INIT_TXN
+                                     | SVN_BDB_AUTO_RECOVER),
                           0666));
 
   /* ### We're only asking for the pagesize on the 'nodes' table.
