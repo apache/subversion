@@ -218,15 +218,12 @@ append_prop_conflict (apr_file_t *fp,
   /* TODO:  someday, perhaps prefix each conflict_description with a
      timestamp or something? */
   apr_size_t written;
-  const svn_string_t *conflict_description_native;
+  const char *conflict_description_native =
+    svn_utf_cstring_from_utf8_fuzzy (conflict_description->data, pool);
 
-  SVN_ERR (svn_utf_string_from_utf8 (&conflict_description_native,
-                                     conflict_description,
-                                     pool));
-
-  SVN_ERR (svn_io_file_write_full (fp, conflict_description_native->data,
-                                   conflict_description_native->len, &written,
-                                   pool));
+  SVN_ERR (svn_io_file_write_full (fp, conflict_description_native,
+                                   strlen (conflict_description_native),
+                                   &written, pool));
 
   return SVN_NO_ERROR;
 }
