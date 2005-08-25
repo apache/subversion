@@ -532,6 +532,29 @@
 	(*$1, $descriptor(svn_dirent_t *));
 }
 
+%typemap(ruby, in, numinputs=0) apr_hash_t **dirents = apr_hash_t **OUTPUT;
+%typemap(ruby, argout, fragment="output_helper") apr_hash_t **dirents
+{
+  $result = output_helper($result,
+                          svn_swig_rb_apr_hash_to_hash_swig_type
+                            (*$1, "svn_dirent_t *"));
+}
+
+/* -----------------------------------------------------------------------
+   apr_hash_t **locks
+   svn_client_ls3()
+   svn_repos_fs_get_locks()
+   svn_ra_get_locks()
+*/
+
+%typemap(ruby, in, numinputs=0) apr_hash_t **locks = apr_hash_t **OUTPUT;
+%typemap(ruby, argout, fragment="output_helper") apr_hash_t **locks
+{
+  $result = output_helper($result,
+                          svn_swig_rb_apr_hash_to_hash_swig_type
+                            (*$1, "svn_lock_t *"));
+}
+
 /* -----------------------------------------------------------------------
    Special boolean mapping for ruby.
 */

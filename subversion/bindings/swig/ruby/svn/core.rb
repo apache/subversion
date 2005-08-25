@@ -207,5 +207,15 @@ module Svn
         "#{major}.#{minor}.#{patch}#{tag}"
       end
     end
+
+    class Dirent
+      def directory?
+        kind == NODE_DIR
+      end
+
+      def file?
+        kind == NODE_FILE
+      end
+    end
   end
 end

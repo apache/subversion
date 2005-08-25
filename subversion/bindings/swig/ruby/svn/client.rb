@@ -351,6 +351,12 @@ module Svn
                        ignore_externals, recurse, native_eol, self)
       end
       
+      def ls(path_or_uri, rev=nil, peg_rev=nil, recurse=false)
+        rev ||= URI(path_or_uri).scheme ? "HEAD" : "BASE"
+        peg_rev ||= rev
+        Client.ls3(path_or_uri, rev, peg_rev, recurse, self)
+      end
+      
       def switch(path, uri, rev=nil, recurse=true)
         Client.switch(path, uri, rev, recurse, self)
       end
