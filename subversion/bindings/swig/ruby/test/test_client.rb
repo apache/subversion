@@ -1231,6 +1231,29 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal(rev, ctx.export(@repos_uri, tmp_base_path))
     assert_equal(src, File.open(tmp_path) {|f| f.read})
   end
+
+  def test_ls
+    log = "sample log"
+    src = "source\n"
+    file = "sample.txt"
+    dir = "sample"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(@wc_path, file)
+
+    ctx = make_context(log)
+
+    ctx.mkdir(dir_path)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(path)
+    rev = ctx.ci(@wc_path).revision
+
+    dirents, locks = ctx.ls(@wc_path, rev)
+    assert_equal([dir, file].sort, dirents.keys.sort)
+    dir_dirent = dirents[dir]
+    assert(dir_dirent.directory?)
+    file_dirent = dirents[file]
+    assert(file_dirent.file?)
+  end
   
   def test_switch
     log = "sample log"
