@@ -548,9 +548,9 @@ mkdir_urls (svn_client_commit_info2_t **commit_info,
     }
 
   /* Create new commit items and add them to the array. */
-  if (ctx->log_msg_func)
+  if (ctx->log_msg_func || ctx->log_msg_func2)
     {
-      svn_client_commit_item_t *item;
+      svn_client_commit_item2_t *item;
       const char *tmp_file;
       apr_array_header_t *commit_items 
         = apr_array_make (pool, targets->nelts, sizeof (item));
@@ -561,10 +561,12 @@ mkdir_urls (svn_client_commit_info2_t **commit_info,
           item = apr_pcalloc (pool, sizeof (*item));
           item->url = svn_path_join (common, path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-          APR_ARRAY_PUSH (commit_items, svn_client_commit_item_t *) = item;
+          APR_ARRAY_PUSH (commit_items, svn_client_commit_item2_t *) = item;
         }
-      SVN_ERR ((*ctx->log_msg_func) (&log_msg, &tmp_file, commit_items, 
-                                     ctx->log_msg_baton, pool));
+
+      SVN_ERR (svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
+                                       ctx, pool));
+
       if (! log_msg)
         return SVN_NO_ERROR;
     }

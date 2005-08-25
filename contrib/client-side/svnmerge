@@ -1,7 +1,6 @@
 #!/bin/sh
-# $Id$
-
-# Copyright (c) 2004, Awarix, Inc.
+#
+# Copyright (c) 2004-2005, Awarix, Inc.
 # All rights reserved.
 # 
 # Subject to the following obligations and disclaimer of warranty,
@@ -40,6 +39,11 @@
 #
 # Acknowledgements:
 #   John Belmonte <john@neggie.net> - metadata and usability improvements
+#
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
 
 # Definitions (would like ':' in property names but can't because of bug 1971)
 NAME="svnmerge"
