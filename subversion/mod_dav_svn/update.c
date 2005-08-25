@@ -1364,6 +1364,12 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
           }
       }
 
+
+  /* ### Temporary placeholder for now:  really, this could be any of
+     {checkout, update, export, switch, status, diff, merge}.  */
+  apr_table_set(resource->info->r->subprocess_env,
+                "SVN-ACTION", "update");
+
   /* this will complete the report, and then drive our editor to generate
      the response to the client. */
   serr = svn_repos_finish_report(rbaton, resource->pool);

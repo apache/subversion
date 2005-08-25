@@ -294,6 +294,10 @@ dav_svn__file_revs_report(const dav_resource *resource,
 
  cleanup:
 
+  /* We've detected a 'high level' svn action to log. */
+  apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION",
+                apr_psprintf(resource->pool, "blame on '%s'", path));
+
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */
   if (((apr_err = ap_fflush(output, frb.bb))) && (! derr))
