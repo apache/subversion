@@ -649,11 +649,16 @@ def simple_property_merges(sbox):
 
   # Add a property to a file and a directory
   alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  beta_path = os.path.join(wc_dir, 'A', 'B', 'E', 'beta')
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'foo', 'foo_val',
                                      alpha_path)
+  # A binary, non-UTF8 property value
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'foo\201val',
+                                     beta_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'foo', 'foo_val',
                                      E_path)
@@ -662,9 +667,11 @@ def simple_property_merges(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/E'       : Item(verb='Sending'),
     'A/B/E/alpha' : Item(verb='Sending'),
+    'A/B/E/beta'  : Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('A/B/E', 'A/B/E/alpha', wc_rev=2, status='  ')
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
+                        wc_rev=2, status='  ')
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output, expected_status,
                                          None, None, None, None, None,
@@ -688,13 +695,18 @@ def simple_property_merges(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'bar', 'bar_val', alpha_path)
   svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'foo', 'mod\201foo', beta_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'propset', 'bar', 'bar\201val', beta_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'foo', 'mod_foo', E_path)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'bar', 'bar_val', E_path)
 
   # Commit change as rev 4
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak('A/B/E', 'A/B/E/alpha', wc_rev=4, status='  ')
+  expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
+                        wc_rev=4, status='  ')
   expected_status.add({
     'A/B2'         : Item(status='  ', wc_rev=3),
     'A/B2/E'       : Item(status='  ', wc_rev=3),
@@ -717,6 +729,7 @@ def simple_property_merges(sbox):
   expected_output = wc.State(B2_path, {
     'E'        : Item(status=' U'),
     'E/alpha'  : Item(status=' U'),
+    'E/beta'   : Item(status=' U'),
     })
   expected_disk = wc.State('', {
     'E'        : Item(),
@@ -727,11 +740,13 @@ def simple_property_merges(sbox):
     })
   expected_disk.tweak('E', 'E/alpha', 
                       props={'foo' : 'mod_foo', 'bar' : 'bar_val'})
+  expected_disk.tweak('E/beta', 
+                      props={'foo' : 'mod\201foo', 'bar' : 'bar\201val'})
   expected_status = wc.State(B2_path, {
     ''        : Item(status='  '),
     'E'       : Item(status=' M'),
     'E/alpha' : Item(status=' M'),
-    'E/beta'  : Item(status='  '),
+    'E/beta'  : Item(status=' M'),
     'F'       : Item(status='  '),
     'lambda'  : Item(status='  '),
     })
@@ -750,7 +765,7 @@ def simple_property_merges(sbox):
   svntest.actions.run_and_verify_status(wc_dir, pristine_status)
 
   # Merge B 2:1 into B2
-  expected_disk.tweak('E', 'E/alpha', props={})
+  expected_disk.tweak('E', 'E/alpha', 'E/beta', props={})
   svntest.actions.run_and_verify_merge(B2_path, '2', '1', B_url,
                                        expected_output,
                                        expected_disk,
@@ -766,9 +781,14 @@ def simple_property_merges(sbox):
     'E/alpha.prej'
     : Item("Trying to change property 'foo' from 'foo_val' to 'mod_foo',\n"
            + "but the property does not exist."),
+    'E/beta.prej'
+    : Item("Trying to change property 'foo' from 'foo?\\129val' to"
+           + " 'mod?\\129foo',\n"
+           + "but the property does not exist."),
     })
   expected_disk.tweak('E', 'E/alpha', props={'bar' : 'bar_val'})
-  expected_status.tweak('E', 'E/alpha', status=' C')
+  expected_disk.tweak('E/beta', props={'bar' : 'bar\201val'})
+  expected_status.tweak('E', 'E/alpha', 'E/beta', status=' C')
   svntest.actions.run_and_verify_merge(B2_path, '3', '4', B_url,
                                        expected_output,
                                        expected_disk,
