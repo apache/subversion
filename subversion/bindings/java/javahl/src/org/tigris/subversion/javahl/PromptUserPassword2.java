@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -18,28 +18,32 @@
 package org.tigris.subversion.javahl;
 
 /**
- * A bit more full interface for receiving callbacks for authentification
- * new applications should use PromptUserPassword3 instead
+ * Partial interface for receiving callbacks for authentication.  New
+ * applications should use PromptUserPassword3 instead.
  */
 public interface PromptUserPassword2 extends PromptUserPassword
 {
     /**
-     * reject the connection to the server
+     * Reject the connection to the server.
      */
     public static final int Reject = 0;
+
     /**
-     * accept the connection to the server one time.
+     * Accept the connection to the server <i>once</i>.
      */
     public static final int AcceptTemporary = 1;
+
     /**
-     * accept the connection to the server one time.
-     * @deprecated 
+     * @deprecated Use the correctly spelled "AcceptTemporary"
+     * constant instead.
      */
-    public static final int AccecptTemporary = 1;
+    public static final int AccecptTemporary = AcceptTemporary;
+
     /**
-     * accept the connection to the server forever
+     * Accept the connection to the server <i>forever</i>.
      */
     public static final int AcceptPermanently = 2;
+
     /**
      * If there are problems with the certifcate of the SSL-server, this
      * callback will be used to deside if the connection will be used.
