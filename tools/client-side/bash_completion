@@ -39,9 +39,12 @@ _svn()
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
 	helpCmds='help|--help|h|\?'
-	if [[ ${COMP_WORDS[1]} != @${helpCmds} ]] && \
+        # NOTE: The "@($foo)" syntax is correct, but it will cause a
+        # syntax error if extended pattern matching is not enabled in
+        # bash.  See the comments at the top of this file for more.
+	if [[ ${COMP_WORDS[1]} != @($helpCmds) ]] && \
 	   [[ "$cur" != -* ]] || \
-	   [[ ${COMP_WORDS[COMP_CWORD-1]} == @${optsParam} ]] ; then
+	   [[ ${COMP_WORDS[COMP_CWORD-1]} == @($optsParam) ]] ; then
 		return 0
 	fi
 
@@ -206,7 +209,10 @@ _svn()
 		esac
 
 		# skip next option if this one requires a parameter
-		if [[ $opt == @${optsParam} ]] ; then
+                # NOTE: The "@($foo)" syntax is correct, but it will cause a
+                # syntax error if extended pattern matching is not enabled in
+                # bash.  See the comments at the top of this file for more.
+		if [[ $opt == @($optsParam) ]] ; then
 			((++i))
 		fi
 	done
@@ -241,9 +247,12 @@ _svnadmin ()
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
 	helpCmds='help|--help|h|\?'
-	if [[ ${COMP_WORDS[1]} != @${helpCmds} ]] && \
+        # NOTE: The "@($foo)" syntax is correct, but it will cause a
+        # syntax error if extended pattern matching is not enabled in
+        # bash.  See the comments at the top of this file for more.
+	if [[ ${COMP_WORDS[1]} != @($helpCmds) ]] && \
 	   [[ "$cur" != -* ]] || \
-	   [[ ${COMP_WORDS[COMP_CWORD-1]} == @${optsParam} ]] ; then
+	   [[ ${COMP_WORDS[COMP_CWORD-1]} == @($optsParam) ]] ; then
 		return 0
 	fi
 
@@ -303,7 +312,10 @@ _svnadmin ()
 		esac
 
 		# skip next option if this one requires a parameter
-		if [[ $opt == @${optsParam} ]] ; then
+                # NOTE: The "@($foo)" syntax is correct, but it will cause a
+                # syntax error if extended pattern matching is not enabled in
+                # bash.  See the comments at the top of this file for more.
+		if [[ $opt == @($optsParam) ]] ; then
 			((++i))
 		fi
 	done
