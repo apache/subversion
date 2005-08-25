@@ -1332,8 +1332,8 @@ main (int argc, const char * const *argv)
                          SVN_CONFIG_OPTION_NO_UNLOCK, TRUE);
 
   /* Set the log message callback function.  Note that individual
-     subcommands will populate the ctx->log_msg_baton */
-  ctx->log_msg_func = svn_cl__get_log_message;
+     subcommands will populate the ctx->log_msg_baton2 */
+  ctx->log_msg_func2 = svn_cl__get_log_message;
 
   /* Authentication set-up. */
   {

@@ -656,12 +656,12 @@ svn_client_import2 (svn_client_commit_info2_t **commit_info,
   apr_pool_t *subpool;
 
   /* Create a new commit item and add it to the array. */
-  if (ctx->log_msg_func)
+  if (ctx->log_msg_func || ctx->log_msg_func2)
     {
       /* If there's a log message gatherer, create a temporary commit
          item array solely to help generate the log message.  The
          array is not used for the import itself. */
-      svn_client_commit_item_t *item;
+      svn_client_commit_item2_t *item;
       const char *tmp_file;
       apr_array_header_t *commit_items 
         = apr_array_make (pool, 1, sizeof (item));
@@ -669,10 +669,10 @@ svn_client_import2 (svn_client_commit_info2_t **commit_info,
       item = apr_pcalloc (pool, sizeof (*item));
       item->path = apr_pstrdup (pool, path);
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-      (*((svn_client_commit_item_t **) apr_array_push (commit_items))) = item;
+      APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
       
-      SVN_ERR ((*ctx->log_msg_func) (&log_msg, &tmp_file, commit_items, 
-                                     ctx->log_msg_baton, pool));
+      SVN_ERR (svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
+                                       ctx, pool));
       if (! log_msg)
         return SVN_NO_ERROR;
       if (tmp_file)
@@ -923,8 +923,8 @@ have_processed_parent (apr_array_header_t *commit_items,
   int i;
   for (i = 0; i < processed && i < commit_items->nelts; ++i)
     {
-      svn_client_commit_item_t *item
-        = ((svn_client_commit_item_t **) commit_items->elts)[i];
+      svn_client_commit_item2_t *item
+        = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item2_t *);
 
       if (svn_path_is_child (item->path, path, pool))
         return TRUE;
@@ -1460,8 +1460,8 @@ svn_client_commit3 (svn_client_commit_info2_t **commit_info,
 
     for (i = 0; i < commit_items->nelts; ++i)
       {
-        svn_client_commit_item_t *item;
-        item = APR_ARRAY_IDX (commit_items, i, svn_client_commit_item_t *);
+        svn_client_commit_item2_t *item;
+        item = APR_ARRAY_IDX (commit_items, i, svn_client_commit_item2_t *);
         
         if (item->state_flags != SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN) 
           {
@@ -1476,11 +1476,12 @@ svn_client_commit3 (svn_client_commit_info2_t **commit_info,
 
   /* Go get a log message.  If an error occurs, or no log message is
      specified, abort the operation. */
-  if (ctx->log_msg_func)
+  if (ctx->log_msg_func ||  ctx->log_msg_func2)
     {
       const char *tmp_file;
-      cmt_err = (*ctx->log_msg_func)(&log_msg, &tmp_file, commit_items, 
-                                     ctx->log_msg_baton, pool);
+      cmt_err = svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
+                                        ctx, pool);
+
       if (cmt_err || (! log_msg))
         goto cleanup;
     }
@@ -1531,8 +1532,8 @@ svn_client_commit3 (svn_client_commit_info2_t **commit_info,
 
       for (i = 0; i < commit_items->nelts; i++)
         {
-          svn_client_commit_item_t *item
-            = ((svn_client_commit_item_t **) commit_items->elts)[i];
+          svn_client_commit_item2_t *item
+            = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item2_t *);
           svn_boolean_t loop_recurse = FALSE;
           const char *adm_access_path;
           svn_wc_adm_access_t *adm_access;

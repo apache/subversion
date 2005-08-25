@@ -436,7 +436,7 @@ truncate_buffer_at_prefix (apr_size_t *new_len,
 
 #define EDITOR_EOF_PREFIX  _("--This line, and those below, will be ignored--")
 
-/* This function is of type svn_client_get_commit_log_t. */
+/* This function is of type svn_client_get_commit_log2_t. */
 svn_error_t *
 svn_cl__get_log_message (const char **log_msg,
                          const char **tmp_file,
@@ -488,8 +488,8 @@ svn_cl__get_log_message (const char **log_msg,
 
       for (i = 0; i < commit_items->nelts; i++)
         {
-          svn_client_commit_item_t *item
-            = ((svn_client_commit_item_t **) commit_items->elts)[i];
+          svn_client_commit_item2_t *item
+            = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item2_t *);
           const char *path = item->path;
           char text_mod = '_', prop_mod = ' ', unlock = ' ';
 
