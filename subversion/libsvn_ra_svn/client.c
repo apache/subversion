@@ -1403,7 +1403,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
 static svn_error_t *ra_svn_lock_compat(svn_ra_session_t *session,
                                        apr_hash_t *path_revs,
                                        const char *comment,
-                                       svn_boolean_t force,
+                                       svn_boolean_t steal_lock,
                                        svn_ra_lock_callback_t lock_func,
                                        void *lock_baton,
                                        apr_pool_t *pool)
@@ -1431,7 +1431,7 @@ static svn_error_t *ra_svn_lock_compat(svn_ra_session_t *session,
 
       SVN_ERR(svn_ra_svn_write_cmd(conn, iterpool, "lock", "c(?c)b(?r)", 
                                    path, comment,
-                                   force, *revnum));
+                                   steal_lock, *revnum));
 
       /* Servers before 1.2 doesn't support locking.  Check this here. */
       SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, pool),
@@ -1467,7 +1467,7 @@ static svn_error_t *ra_svn_lock_compat(svn_ra_session_t *session,
    now the default.  See svn_ra_unlock() docstring for interface details. */
 static svn_error_t *ra_svn_unlock_compat(svn_ra_session_t *session,
                                          apr_hash_t *path_tokens,
-                                         svn_boolean_t force,
+                                         svn_boolean_t break_lock,
                                          svn_ra_lock_callback_t lock_func, 
                                          void *lock_baton,
                                          apr_pool_t *pool)
@@ -1495,7 +1495,7 @@ static svn_error_t *ra_svn_unlock_compat(svn_ra_session_t *session,
         token = NULL;
 
       SVN_ERR(svn_ra_svn_write_cmd(conn, iterpool, "unlock", "c(?c)b",
-                                   path, token, force));
+                                   path, token, break_lock));
 
       /* Servers before 1.2 don't support locking.  Check this here. */
       SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess, iterpool),
@@ -1526,7 +1526,7 @@ static svn_error_t *ra_svn_unlock_compat(svn_ra_session_t *session,
 static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
                                 apr_hash_t *path_revs,
                                 const char *comment,
-                                svn_boolean_t force,
+                                svn_boolean_t steal_lock,
                                 svn_ra_lock_callback_t lock_func, 
                                 void *lock_baton,
                                 apr_pool_t *pool)
@@ -1545,7 +1545,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
 
   /* (lock-many (?c) b ( (c(?r)) ...) ) */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((?c)b(!", "lock-many",
-                                 comment, force));
+                                 comment, steal_lock));
 
   for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
     {
@@ -1571,8 +1571,8 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
   /* Pre-1.3 servers don't support 'lock-many'. If that fails, fall back
    * to 'lock'. */
   if (err && err->apr_err == SVN_ERR_RA_SVN_UNKNOWN_CMD)
-    return ra_svn_lock_compat(session, path_revs, comment, force, lock_func,
-                              lock_baton, pool);
+    return ra_svn_lock_compat(session, path_revs, comment, steal_lock,
+                              lock_func, lock_baton, pool);
 
   /* Unknown error */
   if (err)
@@ -1624,7 +1624,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
    See svn_ra_unlock() for interface details. */
 static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
                                   apr_hash_t *path_tokens,
-                                  svn_boolean_t force,
+                                  svn_boolean_t break_lock,
                                   svn_ra_lock_callback_t lock_func, 
                                   void *lock_baton,
                                   apr_pool_t *pool)
@@ -1636,7 +1636,8 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
   svn_error_t *err, *callback_err = NULL;
 
   /* (unlock-many (b ( (c(?c)) ...) ) ) */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(b(!", "unlock-many", force));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(b(!", "unlock-many",
+                                 break_lock));
 
   for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
     {
@@ -1665,7 +1666,7 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
    * to 'unlock'.
    */
   if (err && err->apr_err == SVN_ERR_RA_SVN_UNKNOWN_CMD)
-    return ra_svn_unlock_compat(session, path_tokens, force, lock_func,
+    return ra_svn_unlock_compat(session, path_tokens, break_lock, lock_func,
                                 lock_baton, pool);
 
   /* Unknown error */
