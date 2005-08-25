@@ -440,7 +440,7 @@ truncate_buffer_at_prefix (apr_size_t *new_len,
 svn_error_t *
 svn_cl__get_log_message (const char **log_msg,
                          const char **tmp_file,
-                         apr_array_header_t *commit_items,
+                         const apr_array_header_t *commit_items,
                          void *baton,
                          apr_pool_t *pool)
 {

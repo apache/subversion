@@ -967,7 +967,7 @@ do_item_commit (void **dir_baton,
 {
   struct path_driver_cb_baton *cb_baton = callback_baton;
   svn_client_commit_item2_t *item = apr_hash_get (cb_baton->commit_items,
-                                                 path, APR_HASH_KEY_STRING);
+                                                  path, APR_HASH_KEY_STRING);
   svn_node_kind_t kind = item->kind;
   void *file_baton = NULL;
   const char *copyfrom_url = NULL;
@@ -1619,7 +1619,7 @@ get_test_editor (const svn_delta_editor_t **editor,
 
 svn_error_t * svn_client__get_log_msg(const char **log_msg,
                                       const char **tmp_file,
-                                      apr_array_header_t *commit_items,
+                                      const apr_array_header_t *commit_items,
                                       svn_client_ctx_t *ctx,
                                       apr_pool_t *pool)
 {

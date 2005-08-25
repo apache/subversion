@@ -108,12 +108,12 @@ svn_cl__import (apr_getopt_t *os,
                                        NULL, ctx->config, pool));
   SVN_ERR (svn_cl__cleanup_log_msg 
            (ctx->log_msg_baton2, svn_client_import2 (&commit_info,
-                                                    path,
-                                                    url,
-                                                    opt_state->nonrecursive,
-                                                    opt_state->no_ignore,
-                                                    ctx,
-                                                    pool)));
+                                                     path,
+                                                     url,
+                                                     opt_state->nonrecursive,
+                                                     opt_state->no_ignore,
+                                                     ctx,
+                                                     pool)));
 
   if (commit_info && ! opt_state->quiet)
     SVN_ERR (svn_cl__print_commit_info (commit_info, pool));
