@@ -1,0 +1,121 @@
+
+
+Issues (and their resolutions) when using gettext for message translation
+
+
+Contents
+========
+
+ * Windows issues
+ * Automatic characterset conversion
+ * Translations on the client
+ * No translations on the server
+ * Translating plural forms (ngettext() support)
+
+
+
+Windows issues
+==============
+
+On Windows, Subversion is linked against a modified version of GNU gettext.
+This resolves several issues:
+
+ - Eliminated need to link against libiconv (which would be the second
+   iconv library, since we already link against apr-iconv)
+ - No automatic charset conversion (guaranteed UTF-8 strings returned by
+   gettext() calls without performance penalties)
+
+more in the paragraphs below...
+
+
+Automatic characterset conversion
+=================================
+
+Some gettext implementations automatically convert the strings in the
+message catalogue to the active system characterset.  The source encoding
+is stored in the "" message id.  The message string looks somewhat like
+a mime header and contains a "Content-Encoding" line. It's typically GNU's
+gettext which does this.
+
+Subversion uses UTF-8 to encode strings internally, which may not be the
+systems default character encoding.  To prevent internal corruption,
+libsvn_subr:svn_cmdline_init2() explicitly tells gettext to return UTF-8
+encoded strings if it has bind_textdomain_codeset().
+
+Some gettext implementations don't contain automatic string recoding.  In
+order to work with both recoding and non-recoding implementations, the
+source strings must be UTF-8 encoded.  This is achieved by requiring .po
+files to be UTF-8 encoded.  [Note: a pre-commit hook has been installed to
+ensure this.]
+
+On Windows Subversion links against a version of GNU gettext, which has
+been modified not to do character conversions.  This eliminates the
+requirement to link against libiconv which would mean Subversion being
+linked against 2 iconv libraries (apr_iconv as well as libiconv).
+
+
+Translations on the client
+==========================
+
+The translation effort is to translate all error messages generated on
+the system on which the user has invoked his subversion command (svnadmin,
+svnlook, svndumpfilter, svnversion or svn).
+
+This means that in all layers of the libraries strings have been marked for
+translation, either with _() or N_().
+
+Parameters are sprintf-ed straight into errorstrings at the time they are
+added to the error structure, so most strings are marked with _() and
+translated directly into the language for which the client was set up.
+[Note: The N_() macro markes strings for delayed translation.]
+
+
+
+Translations on the server
+==========================
+
+On systems which define the LC_MESSAGES constant, setlocale() can be used
+to set string translation for all (error) strings even those outside
+the Subversion domain.
+
+Windows doesn't define LC_MESSAGES.  Instead GNU gettext uses the environ-
+ment variables LANGUAGE, LC_ALL, LC_MESSAGES and LANG (in that order) to
+find out what language to translate to.  If none of these are defined, the
+system and user default locales are queried.
+
+While systems which have the LC_MESSAGES flag (or setenv() - of which
+Windows has neither) allow languages to be switched at run time, this cannot
+be done portably.
+
+Any attempt to use setlocale() in an Apache environment will conflict with
+settings other modules expect to be setup.  On the svnserve side having no
+portable way to change languages dynamically, means that the environment
+has to be set up correctly from the start.
+
+In other words, there is no way - programmatically - to ensure that messages
+are served in any specific language.
+
+Note: Original consensus indicated that translation of messages at the
+server side should stay untranslated for transmission to the client. Client
+side translation is not an option, because by then the parameter values
+have been inserted into the string meaning that it can't be looked up in the
+messages catalogue anymore.
+
+
+
+Translating plural forms (ngettext() support)
+=============================================
+
+The code below works in english and can be translated to a number of
+languages.  However in some languages more than 2 forms are required
+to do a correct translation.  The ngettext() function takes care of
+grabbing the right translation for those languages.  Unfortunately,
+the function is a GNU extention and thus non-portable.
+
+  message = (n > 1) ? _("1 File found") :
+                      apr_sprintf (pool, _("%d Files found"), n);
+
+Because of this limitation, some strings in the client have not been
+marked for translation.
+
+*** We're looking for good suggestions to work around this.

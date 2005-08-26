@@ -1,0 +1,21 @@
+These are scripts that might be useful to run from repository hooks.
+Your Mileage May Vary.
+
+   1. check-case-insensitive.pl
+      This script makes your repository case insensitive (given a
+      specific locale): it checks if a file with the same name
+      but different case already exists in the repository and possibly
+      aborts the commit.
+
+   2. check-mime-type.pl
+      Force the svn:mime-type and - in case of text files - svn:eol-style
+      properties to be in place.
+
+   3. commit-block-joke.pl
+      Prevents some committers from committing certain revisions.
+
+   4. pre-commit-check.py
+      Template for writing pre-commit checks with the python bindings.
+
+
+$Id$

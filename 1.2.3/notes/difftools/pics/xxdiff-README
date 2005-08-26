@@ -1,0 +1,29 @@
+xxdiff is a free graphical diff program.  Its home page is here.
+
+	http://xxdiff.sourceforge.net/
+
+xxdiff is descended from xdiff, and xdiff is descended from an old
+OpenGL program from SGI called gdiff.
+
+xxdiff's coolest feature is the rightmost pane, which conveys a lot of
+information about the files' differences and your view in a small
+area.
+
+xxdiff allows a lot of manipulation via keyboard equivalents -
+movement by lines or regions, selecting/deselecting lines, regions, or
+globally.  It's a strange oversight that it doesn't have a keyboard
+equivalent for "Redo Diff".
+
+Image xxdiff-1.png shows a somewhat contrived diff of a short file.
+
+Note the rightmost pane, which shows where the current view is in the
+two files, and where all the differences are in the files.  Also note
+the triangular ticks which show the current line in both files.
+
+The color coding is...
+
+	gray	  - these lines are identical in both files.
+	yellow	  - these lines are different in both files.
+	green	  - these lines are only in one file.
+	magenta   - these lines are selected for the output file.
+	dark gray - these lines are deselected for the output file.

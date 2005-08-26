@@ -1,0 +1,164 @@
+
+Here's the status of how well SVNAutoversioning works against various
+DAV clients.  Feel free to update this as we learn more.
+
+First, a general note: the one big feature we're lacking is support
+for the LOCK and UNLOCK dav requests.  This pretty much means that you
+won't be able to open a file (in write mode) directly from the dav
+share; every client tries to LOCK in that case.  [Note: mod_dav_lock
+in httpd-2.1 addresses this.]
+
+The workaround, for now, is to copy (or drag) the file out of the
+share, edit it, then copy (or drag) it back.
+
+
+The basic set of tests
+======================
+
+1. Add new file     (PUT)
+2. Add new folder   (MKCOL)
+3. Rename a file    (MOVE)
+4. Rename a folder  (MOVE)
+5. Copy a file      (COPY)
+6. Copy a folder    (COPY)
+7. Delete a file    (DELETE)
+8. Delete a folder  (DELETE)
+9. Open remote file directly  (LOCK)
+10. Copy/drag remote file to local disk (GET)
+11. Copy/drag local file back on top of remote file. 
+                            (PUT, or DELETE/PUT, or LOCK, PUT, UNLOCK)
+
+
+
+Nautilus 2.X  (tested by sussman and ttimo)
+============
+
+1. Add new file     (PUT)
+
+   Check:  but it does two PUTS instead of one.  First it PUTs an
+   empty file, then PUTs data into it.  So we get two new revisions.
+
+2. Add new folder   (MKCOL)
+
+   Check.
+
+3. Rename a file    (MOVE)
+
+   Check.
+
+4. Rename a folder  (MOVE)
+
+   Check.
+
+5. Copy a file      (COPY)
+
+   Can't figure out how to make Nautilus issue a COPY command.  If I
+   control-drag to copy, or if I right-click to copy/paste, it still
+   ends up doing two PUTs, just like in test #1.
+
+6. Copy a folder    (COPY)
+
+   If I right-click to copy/paste, it creates *N* new revisions:  one
+   MKCOL, followed by two PUTs per file, ugh.
+
+7. Delete a file    (DELETE)
+
+   Check.
+
+8. Delete a folder  (DELETE)
+
+   Ugh.  It creates N new revisions by issuing a separate DELETE
+   request for every item in the subtree, then finishing with a DELETE
+   on the dir itself.  Isn't just the final DELETE needed?  We should
+   send a patch to Nautilus.
+
+9. Open remote file directly  (LOCK)
+
+   Opens file as read-only, but it never tries to just GET.  I wonder
+   if this dav implementation is simply feature-incomplete.  Maybe it
+   just opens files as read-only no matter what...?
+
+10. Copy/drag remote file to local disk (GET)
+
+   Check.
+
+11. Copy/drag local file back on top of remote file. 
+                            (PUT, or DELETE/PUT, or LOCK, PUT, UNLOCK)
+
+   DELETEs old file, PUTs twice.  Yucky.
+
+
+
+
+Win32 WebFolders (on Win2K-sp3)  (tested by sussman)
+================
+
+This works pretty well:  the details needs to be filled in below.
+
+1. Add new file     (PUT)
+2. Add new folder   (MKCOL)
+3. Rename a file    (MOVE)
+4. Rename a folder  (MOVE)
+5. Copy a file      (COPY)
+6. Copy a folder    (COPY)
+7. Delete a file    (DELETE)
+8. Delete a folder  (DELETE)
+9. Open remote file directly  (LOCK)
+
+LOCK is not supported by WebFolders.
+
+10. Copy/drag remote file to local disk (GET)
+11. Copy/drag local file back on top of remote file. 
+                            (PUT, or DELETE/PUT, or LOCK, PUT, UNLOCK)
+
+
+
+
+OS X   (fitz/thom/sabi/sussman/jerenkrantz)
+====
+
+OS X's DAV client requires LOCK to do write operations.
+
+httpd-2.1 HEAD now has mod_dav_lock.  When used with DavGenericLockDB
+(part of mod_dav_lock), all operations work as follows:
+
+1. Add new file     (PUT)     - Works.
+2. Add new folder   (MKCOL)   - Works.
+3. Rename a file    (MOVE)    - Works.
+4. Rename a folder  (MOVE)    - Works.
+5. Copy a file      (COPY)    - Works.
+6. Copy a folder    (COPY)    - Works.
+7. Delete a file    (DELETE)  - Works.
+8. Delete a folder  (DELETE)  - Works.
+9. Open remote file directly  (LOCK) - Works.
+10. Copy/drag remote file to local disk (GET) - Works.
+11. Copy/drag local file back on top of remote file.  - Works.
+                            (PUT, or DELETE/PUT, or LOCK, PUT, UNLOCK)
+
+Note: The OS X DAV client isn't a speed demon.
+
+Note: When using it as a file system and editing it directly (i.e. using
+vi in the share), the client will PUT the new file as a temporary location,
+DELETE the old file, MOVE the temp resource to the original file name.  This
+probably isn't optimal on Apple's part.  It does wonders for the file
+history.
+
+Note: It seems to try to create ._<file> as well.  Implications of this
+are not yet understood (fitz hinted at AppleDouble as the reason). 
+
+Note: If you see a problem mounting the repository, you may need to enable
+the default BrowserMatch directive in httpd-std.conf for WebDAVFS.
+(It's included in the default httpd.conf now.)
+
+Something like:
+
+BrowserMatch "^WebDAVFS/1.[012]" redirect-carefully
+
+Linux davfs2   (hadaka)
+============
+
+Apparently this doesn't work at all.  This client always attempts to
+LOCK before any kind of write operation (PUT, PROPPATCH, etc.).  
+Talk about paranoid!
+
+

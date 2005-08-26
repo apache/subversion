@@ -1,0 +1,15 @@
+#!/bin/sh
+if [ -f /etc/fedora-release ]; then
+   case `rpm -q fedora-release` in
+      fedora-release-1*) echo fc1;;
+      *) echo Unknown;;
+   esac
+elif [ -f /etc/redhat-release ]; then
+   case `rpm -q redhat-release` in
+     redhat-release-7*) echo rh7x;;
+     redhat-release-8*) echo rh80;;
+     redhat-release-9-*) echo rh90;;
+     *) echo Unknown;;
+   esac
+fi
+exit 0

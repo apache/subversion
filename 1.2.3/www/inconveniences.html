@@ -1,0 +1,56 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "tigris-branding/css/tigris.css";
+  @import "tigris-branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="tigris-branding/css/print.css"/>
+<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+<title>Subversion Inconveniences</title>
+</head>
+
+<body>
+<div class="app">
+
+<h2>Subversion Inconveniences</h2>
+
+<p>
+These are some of the problems most likely to annoy new users:
+</p>
+
+<ol>
+   <li><p><b>Repository deadlocks</b></p>
+   <p>If an svn client is directly accessing a repository via a
+      file:/// url and is interrupted, or crashes, (or if httpd
+      crashes), the repository is likely to be left in a 'wedged'
+      state.  You'll need to run 
+      '<tt>svnadmin&nbsp;recover&nbsp;/path/to/repos</tt>' to
+      unwedge the repository.  Make sure you shut down httpd before
+      doing this.</p>
+   <p>See
+        <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=739"
+        >Issue&nbsp;#739</a>
+      and 
+        <a href="http://subversion.tigris.org/faq.html#wedged-repos"
+        >http://subversion.tigris.org/faq.html#wedged-repos</a>
+      for more details.</p>
+   </li>
+
+   <li><p><b>Charset conversion failure mode too extreme</b></p>
+   <p>If Subversion cannot convert log data to your local charset
+      encoding, it will (currently) just show "[unconvertible data]"
+      for the entire unconverted log message.  This is lossier than
+      necessary.  There are even some revisions in the Subversion
+      repository itself that exhibit this behavior when the client
+      locale is ISO-8859-1 (Latin-1).</p>
+   <p>See <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=807"
+      >Issue #807</a> for more details.</p>
+   </li>
+</ol>
+
+</div>
+</body>
+</html>

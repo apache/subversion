@@ -1,0 +1,246 @@
+A Functional Specification for "Locking"
+
+This document describes the features of a new locking system for
+Subversion.  It attempts to avoid specific design and implementation
+choices wherever possible.
+
+A separate document will outline a proposed implementation for this
+specification.
+
+I. Introduction
+
+   A. Goals
+
+      1. Provide a mechanism to ensure that a user has exclusive
+         rights to commit changes to a file from a particular working
+         copy.
+
+      2. Provide a communication mechanism to decrease the chances of
+         a user wasting time working on a file locked by someone else.
+
+   B. Summary
+
+      We recommend implementing a lightweight locking mechanism.
+      Teach the server to track and enforce exclusive write locks.
+      Provide means for repository administrators to manipulate locks
+      and enforce locking policies.  Provide a series of client
+      commands for creating, removing, breaking, and stealing locks.
+      Lastly, create a new property to communicate that a path must be
+      locked before committing.
+
+      Note that Subversion is still an inherently concurrent system.
+      The ability to lock paths is optional, and can even be prevented
+      by the repository administrator.
+
+
+II. New Client Behaviors
+
+   A. Overview
+
+      1. Definition of "lock"
+
+         A lock grants one user the exclusive right to change a
+         certain file from a specific working copy.
+
+      2. Lock restrictions
+
+         If a file is locked, the owner of the lock has the exclusive
+         right to change the file's text and properties, to delete the
+         file, and to move the file.
+
+         The restriction on moving or deleting a locked file is a
+         restriction on changing its full path name in any way,
+         including by moving or renaming or deleting any of its
+         parent directories.
+
+         (A locked file can still be read and copied, and any copy of it
+         will not automatically be locked.)
+
+   B. Client requirements for locking
+
+      1. Enforcement system
+
+         It must be possible to declare that certain files absolutely
+         require locks before committing.
+
+      2. Communication system
+
+         There must be a system in place that tells users when locking
+         is necessary;  ideally, it would prevent a user from
+         beginning work in the first place.  If a lock already exists,
+         a user should be able to see who created it, when, and why.
+ 
+   C. Lock manipulation via client
+
+      1. Lock Representations in the Working Copy
+
+         In order to associate a lock with a particular working copy,
+         the working copy must store some representation of the lock,
+         and occasionally synchronize this with the repository's
+         master list of locks.
+
+         Because locks can be broken or stolen, it is possible for a
+         working copy's lock representation to become "defunct".  A
+         defunct lock cannot be used or released--it is useless and is
+         cleaned up when the client next synchronizes with the server.
+
+      2. Actions
+
+         This section defines specific terminology to describe the
+         kind of lock-related actions that a Subversion client can
+         perform.
+
+         a. Creating a lock
+
+            To lock a file:
+
+               - A user must be authenticated to the server
+               - The file must not already be locked.  
+
+            Upon successfully locking a file, the working copy retains
+            a representation of the lock.
+
+         b. Using a lock
+
+            To make use of a lock, two forms of authentication must be
+            provided to the server:
+
+               - The authenticated username that owns the lock
+               - A non-defunct lock representation
+
+            If either of these forms of authentication are missing or
+            incorrect, the lock cannot be used.
+
+            1. Using a lock to Commit
+
+               Upon successful commit, a locked file is released by
+               default.  The Subversion client provides an option to
+               retain the lock after commit.
+
+            2. Releasing a lock
+
+               After successful release, the representation of the lock
+               is removed from both the working copy and the server.
+
+         c. Breaking a lock
+
+            "Breaking" a lock is a means of releasing a lock when:
+
+               - The authenticated username is not the same as the
+                 lock owner, or
+               - The working-copy lock representation is unavailable.
+
+            (e.g. Harry locks file foo and is suddenly laid off.
+            Sally decides to clean up his mess and breaks the lock on
+            foo, without using Harry's username or lock
+            representation.)
+
+         d. Stealing a lock
+
+            "Stealing" a lock is a means of creating a lock when:
+
+               - The file is locked by you, but you don't have a
+                 representation of the lock in your current working
+                 copy, or
+               - The file is locked by someone else.
+
+            In order to steal a lock, a user must be authenticated to
+            the server.
+
+            (e.g. Harry locks file foo and goes on vacation.  Sally
+            needs to make changes to foo and obtains a lock on foo by
+            stealing Harry's lock, without using Harry's username or
+            lock representation.)
+
+         e. Discovering/examining locks
+         
+            The Subversion client provides interfaces to answer the
+            following questions:
+
+            - Ask working copy to display all lock representations
+
+            - Examine a particular lock representation
+
+            - Ask server to list all locks underneath a given path,
+              optionally displaying all attributes of the locks
+              (Possibly able to restrict this query to a single user)
+
+            - Ask server whether a given file is locked
+
+
+III. New Server Behaviors
+
+   A. Overview
+
+      1. Definition of a lock
+
+         As noted in section II.A.1, a lock grants one user the
+         exclusive right to change a certain file from a specific
+         working copy.  
+
+      2. Attributes of a lock
+
+         A lock is an immutable data object.  It must contain: a
+         unique identifier, the path being locked, the username that
+         owns the lock, and a creation timestamp.  A lock comment is
+         optional.
+
+      3. Lock Restrictions
+
+         See II.A.2 for details.  The server will enforce these
+         behaviors.
+
+   B. Tracking locks
+
+      The Subversion server holds the master list of all locks for a
+      repository.  It responds to client requests to create, release,
+      break and steal locks.  
+
+      When a client asks about a lock, the server reports whether the
+      lock is valid or is defunct (i.e. the server no longer has a
+      lock corresponding to the lock representation in question).
+      When a client creates or steals a lock, the server returns a
+      lock representation. 
+
+   C. Enforcement
+
+      During a commit, the server checks for locks the same way that
+      it checks for out-of-dateness.  
+
+      As each changed path arrives, the server checks to see if the
+      path is locked.  If the path is locked, the server makes certain
+      that the correct username and lock representation have been
+      presented by the client.  If not, the entire commit is rejected
+      immediately.
+
+      In addition, the server re-checks and enforces locks during
+      commit finalization.
+
+   D. Configurable Mechanisms
+   
+      The server provides mechanisms to enable diverse administrative
+      locking policies, including:
+
+      1. Allow or disallow creating, breaking, and stealing of locks
+         based on specific criteria (e.g. username, path, etc.)
+
+      2. Perform tasks after creating, breaking, and stealing a lock
+         (e.g. sending email, collecting stats, etc.)
+
+   E. Lock manipulation with svnadmin
+
+      1. Discovering locks
+
+         svnadmin provides interfaces to answer the following
+         questions:
+
+         - List all locks in a repository underneath a given path
+           (Possibly able to restrict this query to a single user)
+
+         - Ask whether a given repository file is locked
+
+      2. Unconditional release of locks
+
+         svnadmin provides an interface to unconditionally release a
+         specific lock.
+

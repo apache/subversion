@@ -1,0 +1,33 @@
+These are scripts that might be useful run from repository hooks.
+Your Mileage May Vary.
+
+   1. commit-email.pl
+      Uses the `svnlook' program to send commit emails.  Invoke it
+      from `repository/hooks/post-commit'.  Run the script with no
+      arguments for usage.
+
+   2. mailer.py, mailer.conf.example
+      Uses the Python/SWIG bindings to directly query the repository
+      about the changes made by a particular revision.  The program
+      uses a configuration file for basic setup and to fine-tune where
+      changes are delivered.  Compared to commit-email.pl, the output
+      contains a bit more information about property changes, is
+      smarter with binary files, and it streams its output into the
+      mailer (to avoid in-memory buffering).
+
+   3. commit-access-control.pl, commit-access-control.cfg.example
+      Uses the `svnlook' program to check if the user who submitted
+      the commit has appropriate rights to perform the commit on all
+      the modified files and directories using the permissions
+      specified in the configuration file.
+
+   4. svnperms.py, svnperms.conf.example
+      Similar to commit-access-control.pl, but uses a different
+      syntax.  Run 'svnperms.py -h' for usage.
+
+   5. propchange-email.pl
+      Uses the `svnlook' program to send revision property change notice
+      emails.  Invoke it from `repository/hook/post-revprop-change'.  Run
+      the script with no arguments for usage.
+
+$Id$

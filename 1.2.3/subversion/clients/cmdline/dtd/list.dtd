@@ -1,0 +1,16 @@
+<!-- XML DTD for Subversion command-line client output. -->
+
+<!-- Common attributes and elements -->
+<!ELEMENT author (#PCDATA)>  <!-- user name -->
+<!ELEMENT date (#PCDATA)>  <!-- date as "yyyy-mm-ddThh:mm:ss.ssssssZ" -->
+
+<!-- For "svn list" -->
+<!ELEMENT lists (list+)>
+<!ELEMENT list (entry*)>
+<!ATTLIST list path CDATA #REQUIRED>  <!-- local path or URL -->
+<!ELEMENT entry (name, size?, commit)>
+<!ATTLIST entry kind (dir | file) #REQUIRED>
+<!ELEMENT name (#PCDATA)>  <!-- name of file or directory -->
+<!ELEMENT size (#PCDATA)>  <!-- file size in bytes: integer -->
+<!ELEMENT commit (author, date)>
+<!ATTLIST commit revision CDATA #REQUIRED>  <!-- revision number: integer -->
