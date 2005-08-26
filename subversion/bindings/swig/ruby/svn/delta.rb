@@ -13,6 +13,30 @@ module Svn
       alias make_editor swig_rb_make_editor
     end
 
+    TextDeltaStream = SWIG::TYPE_p_svn_txdelta_stream_t
+
+    class TextDeltaStream
+      class << self
+        def new(source, target)
+          Delta.txdelta(source, target)
+        end
+      end
+
+      def md5_digest
+        Delta.txdelta_md5_digest(self)
+      end
+
+      def next_window
+        Delta.txdelta_next_window(self, Svn::Core::Pool.new)
+      end
+
+      def each
+        while window = next_window
+          yield(window)
+        end
+      end
+    end
+    
     remove_const(:Editor)
     class Editor
       # open_root -> add_directory -> open_directory -> add_file -> open_file 
