@@ -63,6 +63,13 @@
 /* svn_fs_check_path() */
 %apply long *OUTPUT { svn_node_kind_t * };
 
+/* svn_config_get_server_setting_int() */
+#if APR_INT64_T_FMT == "ld"
+%apply long *OUTPUT { apr_int64_t * };
+#else
+%apply long long *OUTPUT { apr_int64_t * };
+#endif
+
 /* -----------------------------------------------------------------------
    Create a typemap for specifying string args that may be NULL.
 */
@@ -403,6 +410,16 @@
 %typemap(ruby, in) (svn_cancel_func_t cancel_func, void *cancel_baton)
 {
   $1 = svn_swig_rb_cancel_func;
+  $2 = (void *)$input;
+}
+
+/* -----------------------------------------------------------------------
+   Callback: svn_info_receiver_t
+*/
+
+%typemap(ruby, in) (svn_info_receiver_t receiver, void *receiver_baton)
+{
+  $1 = svn_swig_rb_info_receiver;
   $2 = (void *)$input;
 }
 

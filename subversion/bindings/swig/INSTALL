@@ -18,6 +18,9 @@ STATUS OF THE SWIG BINDINGS
   implemented. The Ruby bindings API may change incompatibly as development
   proceeds.
 
+  Completed modules:
+  - Svn::Client
+  - Svn::Core::Config
 
 BUILDING SWIG BINDINGS FOR SVN ON UNIX
 

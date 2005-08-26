@@ -93,6 +93,19 @@ void svn_swig_rb_notify_func2(void *baton,
 
 svn_error_t *svn_swig_rb_cancel_func(void *cancel_baton);
 
+svn_error_t *svn_swig_rb_info_receiver(void *baton,
+                                       const char *path,
+                                       const svn_info_t *info,
+                                       apr_pool_t *pool);
+
+svn_boolean_t svn_swig_rb_config_enumerator(const char *name,
+                                            const char *value,
+                                            void *baton,
+                                            apr_pool_t *pool);
+svn_boolean_t svn_swig_rb_config_section_enumerator(const char *name,
+                                                    void *baton,
+                                                    apr_pool_t *pool);
+
 
 /* auth provider callbacks */
 svn_error_t *svn_swig_rb_auth_simple_prompt_func(

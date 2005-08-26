@@ -220,6 +220,16 @@
 %apply const char **OUTPUT { const char ** };
 
 /* -----------------------------------------------------------------------
+   handle the default value of svn_config_get().and the
+   config directory of svn_config_read_auth_data() and
+   svn_config_write_auth_data().
+*/
+%apply const char *MAY_BE_NULL {
+    const char *default_value,
+    const char *config_dir
+};
+
+/* -----------------------------------------------------------------------
    fix up the svn_stream_read() ptr/len arguments
 */
 %typemap(python, in) (char *buffer, apr_size_t *len) ($*2_type temp) {
@@ -393,6 +403,27 @@
 #endif
 
 /* -----------------------------------------------------------------------
+   svn_config_read_auth_data()
+*/
+%typemap(ruby, in, numinputs=0) apr_hash_t **hash = apr_hash_t **OUTPUT;
+%typemap(ruby, argout) apr_hash_t **hash
+{
+  if (*$1) {
+    $result = svn_swig_rb_apr_hash_to_hash_svn_string(*$1);
+  } else {
+    $result = Qnil;
+  }
+}
+
+/* -----------------------------------------------------------------------
+   svn_config_write_auth_data()
+*/
+%typemap(ruby, in) apr_hash_t *hash
+{
+  $1 = svn_swig_rb_hash_to_apr_hash_svn_string($input, _global_pool);
+}
+
+/* -----------------------------------------------------------------------
    describe how to pass a FILE* as a parameter (svn_stream_from_stdio)
 */
 %typemap(python, in) FILE * {
@@ -496,6 +527,18 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %typemap(ruby, argout) apr_hash_t **cfg_hash {
   $result = svn_swig_rb_apr_hash_to_hash_swig_type(*$1, "svn_config_t *");
 }
+
+%typemap(ruby, in) (svn_config_enumerator2_t callback, void *baton)
+{
+  $1 = svn_swig_rb_config_enumerator;
+  $2 = (void *)$input;
+};
+
+%typemap(ruby, in) (svn_config_section_enumerator2_t callback, void *baton)
+{
+  $1 = svn_swig_rb_config_section_enumerator;
+  $2 = (void *)$input;
+};
 
 %typemap(python,in,numinputs=0) apr_hash_t **cfg_hash = apr_hash_t **OUTPUT;
 %typemap(python,argout,fragment="t_output_helper") apr_hash_t **cfg_hash {
