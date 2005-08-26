@@ -217,5 +217,78 @@ module Svn
         kind == NODE_FILE
       end
     end
+
+    Config = SWIG::TYPE_p_svn_config_t
+    
+    class Config
+       class << self
+         def config(path)
+           Core.config_get_config(path)
+         end
+
+         def read(file, must_exist=true)
+           Core.config_read(file, must_exist)
+         end
+
+         def ensure(dir)
+           Core.config_ensure(dir)
+         end
+
+         def read_auth_data(cred_kind, realm_string, config_dir=nil)
+           Core.config_read_auth_data(cred_kind, realm_string, config_dir)
+         end
+
+         def write_auth_data(hash, cred_kind, realm_string, config_dir=nil)
+           Core.config_write_auth_data(hash, cred_kind,
+                                       realm_string, config_dir)
+         end
+       end
+
+       def merge(file, must_exist=true)
+         Core.config_merge(self, file, must_exist)
+       end
+
+       def get(section, option, default=nil)
+         Core.config_get(self, section, option, default)
+       end
+       
+       def get_bool(section, option, default)
+         Core.config_get_bool(self, section, option, default)
+       end
+
+       def set(section, option, value)
+         Core.config_set(self, section, option, value)
+       end
+       
+       def set_bool(section, option, value)
+         Core.config_set_bool(self, section, option, value)
+       end
+
+       def each_option(section)
+         receiver = Proc.new do |name, value|
+           yield(name, value)
+         end
+         Core.config_enumerate2(self, section, receiver)
+       end
+
+       def each_section
+         receiver = Proc.new do |name|
+           yield(name)
+         end
+         Core.config_enumerate_sections2(self, receiver)
+       end
+
+       def find_group(key, section)
+         Core.config_find_group(self, key, section)
+       end
+
+       def get_server_setting(group, name, default=nil)
+         Core.config_get_server_setting(self, group, name, default)
+       end
+
+       def get_server_setting_int(group, name, default)
+         Core.config_get_server_setting_int(self, group, name, default)
+       end
+     end
   end
 end

@@ -51,7 +51,8 @@
 };
 
 %apply const char *MAY_BE_NULL {
-    const char *native_eol
+    const char *native_eol,
+    const char *comment
 };
 
 /* svn_client_propget(), svn_client_proplist(), svn_client_revprop_list() */
