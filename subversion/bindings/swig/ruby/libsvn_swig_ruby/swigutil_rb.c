@@ -1535,8 +1535,12 @@ read_handler_rbio (void *baton, char *buffer, apr_size_t *len)
   svn_error_t *err = SVN_NO_ERROR;
 
   result = rb_funcall(io, rb_id_read(), 1, INT2NUM(*len));
-  memcpy(buffer, StringValuePtr(result), RSTRING(result)->len);
-  *len = RSTRING(result)->len;
+  if (NIL_P(result)) {
+    *len = 0;
+  } else {
+    memcpy(buffer, StringValuePtr(result), RSTRING(result)->len);
+    *len = RSTRING(result)->len;
+  }
 
   return err;
 }
