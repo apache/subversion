@@ -294,7 +294,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"crashtest", subcommand_crashtest, {0},
      N_("usage: svnadmin crash-test REPOS_PATH\n\n"
         "Open the reposotory at REPOS_PATH, then abort, thus simulating\n"
-        "a process that crashes while holding an oper repository handle.\n"),
+        "a process that crashes while holding an open repository handle.\n"),
      {0} },
 
     {"create", subcommand_create, {0},
