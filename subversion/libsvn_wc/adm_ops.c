@@ -317,8 +317,13 @@ svn_wc_process_committed2 (const char *path,
 
       /* If the revert file exists it needs to be deleted when the file
        * is committed. */
-      revert_file = svn_wc__text_revert_path (path, FALSE, pool);
-      SVN_ERR (svn_io_check_path (revert_file, &kind, pool));
+      revert_file = svn_wc__text_revert_path (base_name, FALSE, pool);
+
+      SVN_ERR (svn_io_check_path
+               (svn_path_join (svn_wc_adm_access_path (adm_access),
+                               revert_file, pool),
+                &kind, pool));
+
       if (kind == svn_node_file)
         {
           svn_xml_make_open_tag (&logtags, pool, svn_xml_self_closing,
