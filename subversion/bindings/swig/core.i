@@ -226,7 +226,11 @@
 */
 %apply const char *MAY_BE_NULL {
     const char *default_value,
-    const char *config_dir
+    const char *config_dir,
+    const char *conflict_original,
+    const char *conflict_modified,
+    const char *conflict_latest,
+    const char *conflict_separator
 };
 
 /* -----------------------------------------------------------------------

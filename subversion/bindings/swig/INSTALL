@@ -22,6 +22,15 @@ STATUS OF THE SWIG BINDINGS
   - Svn::Client
   - Svn::Core::Config
 
+  Not completed but enough modules:
+  - Svn::Core::Diff
+    Unsupported functions:
+    - svn_diff_diff()
+    - svn_diff_diff3()
+    - svn_diff_diff4()
+    - svn_diff_output()
+    - svn_diff_file_diff4()
+
 BUILDING SWIG BINDINGS FOR SVN ON UNIX
 
 

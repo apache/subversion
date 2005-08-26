@@ -137,9 +137,13 @@ module Svn
 
     Diff = SWIG::TYPE_p_svn_diff_t
     class Diff
-      attr_accessor :original, :modified
+      attr_accessor :original, :modified, :latest
 
       class << self
+        def version
+          Core.diff_version
+        end
+        
         def file_diff(original, modified)
           diff = Core.diff_file_diff(original, modified)
           if diff
@@ -148,15 +152,44 @@ module Svn
           end
           diff
         end
+
+        def file_diff3(original, modified, latest)
+          diff = Core.diff_file_diff3(original, modified, latest)
+          if diff
+            diff.original = original
+            diff.modified = modified
+            diff.latest = latest
+          end
+          diff
+        end
       end
       
-      def unified(orig_label, mod_label)
+      def unified(orig_label, mod_label, header_encoding=nil)
+        header_encoding ||= Svn::Core.locale_charset
         output = StringIO.new
         args = [
           output, self, @original, @modified,
-          orig_label, mod_label,
+          orig_label, mod_label, header_encoding
         ]
-        Core.diff_file_output_unified(*args)
+        Core.diff_file_output_unified2(*args)
+        output.rewind
+        output.read
+      end
+
+      def merge(conflict_original=nil, conflict_modified=nil,
+                conflict_latest=nil, conflict_separator=nil,
+                display_original_in_conflict=true,
+                display_resolved_conflicts=true)
+        header_encoding ||= Svn::Core.locale_charset
+        output = StringIO.new
+        args = [
+          output, self, @original, @modified, @latest,
+          conflict_original, conflict_modified,
+          conflict_latest, conflict_separator,
+          display_original_in_conflict,
+          display_resolved_conflicts,
+        ]
+        Core.diff_file_output_merge(*args)
         output.rewind
         output.read
       end
