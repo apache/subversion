@@ -264,6 +264,63 @@ class SvnCoreTest < Test::Unit::TestCase
                                                   realm_string,
                                                   @config_path))
   end
+
+  def test_diff_version
+    assert_equal(Svn::Core.subr_version, Svn::Core::Diff.version)
+  end
+
+  def test_diff_unified
+    original = Tempfile.new("original")
+    modified = Tempfile.new("modified")
+    original_src = "a\nb\nc\n"
+    modified_src = "a\n\nc\n"
+    original_header = "(orig)"
+    modified_header = "(mod)"
+    expected = <<-EOT
+--- #{original_header}
++++ #{modified_header}
+@@ -1,3 +1,3 @@
+ a
+-b
++
+ c
+EOT
+    
+    original.open
+    original.print(original_src)
+    original.close
+    modified.open
+    modified.print(modified_src)
+    modified.close
+
+    diff = Svn::Core::Diff.file_diff(original.path, modified.path)
+    assert_equal(expected, diff.unified(original_header, modified_header))
+  end
+
+  def test_diff_merge
+    original = Tempfile.new("original")
+    modified = Tempfile.new("modified")
+    latest = Tempfile.new("latest")
+    original_src = "a\nb\nc\nd\ne\n"
+    modified_src = "a\nb\n\nd\ne\n"
+    latest_src = "\nb\nc\n\d\ne\n"
+    expected = "\nb\n\nd\ne\n"
+    
+    original.open
+    original.print(original_src)
+    original.close
+    modified.open
+    modified.print(modified_src)
+    modified.close
+    latest.open
+    latest.print(latest_src)
+    latest.close
+
+    diff = Svn::Core::Diff.file_diff3(original.path,
+                                      modified.path,
+                                      latest.path)
+    assert_equal(expected, diff.merge)
+  end
   
   private
   def used_pool
