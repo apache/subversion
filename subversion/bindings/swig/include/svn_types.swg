@@ -63,6 +63,13 @@
 /* svn_fs_check_path() */
 %apply long *OUTPUT { svn_node_kind_t * };
 
+/* svn_config_get_server_setting_int() */
+#if APR_INT64_T_FMT == "ld"
+%apply long *OUTPUT { apr_int64_t * };
+#else
+%apply long long *OUTPUT { apr_int64_t * };
+#endif
+
 /* -----------------------------------------------------------------------
    Create a typemap for specifying string args that may be NULL.
 */
@@ -407,6 +414,16 @@
 }
 
 /* -----------------------------------------------------------------------
+   Callback: svn_info_receiver_t
+*/
+
+%typemap(ruby, in) (svn_info_receiver_t receiver, void *receiver_baton)
+{
+  $1 = svn_swig_rb_info_receiver;
+  $2 = (void *)$input;
+}
+
+/* -----------------------------------------------------------------------
    svn_stream_t interoperability with language native io handles
 */
 
@@ -530,6 +547,29 @@
 %typemap(perl5,argout) apr_hash_t **dirents {
     ST(argvi++) = svn_swig_pl_convert_hash
 	(*$1, $descriptor(svn_dirent_t *));
+}
+
+%typemap(ruby, in, numinputs=0) apr_hash_t **dirents = apr_hash_t **OUTPUT;
+%typemap(ruby, argout, fragment="output_helper") apr_hash_t **dirents
+{
+  $result = output_helper($result,
+                          svn_swig_rb_apr_hash_to_hash_swig_type
+                            (*$1, "svn_dirent_t *"));
+}
+
+/* -----------------------------------------------------------------------
+   apr_hash_t **locks
+   svn_client_ls3()
+   svn_repos_fs_get_locks()
+   svn_ra_get_locks()
+*/
+
+%typemap(ruby, in, numinputs=0) apr_hash_t **locks = apr_hash_t **OUTPUT;
+%typemap(ruby, argout, fragment="output_helper") apr_hash_t **locks
+{
+  $result = output_helper($result,
+                          svn_swig_rb_apr_hash_to_hash_swig_type
+                            (*$1, "svn_lock_t *"));
 }
 
 /* -----------------------------------------------------------------------

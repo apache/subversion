@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -16,9 +16,11 @@
  * @endcopyright
  */
 package org.tigris.subversion.javahl;
+
 /**
- * simple interface for receiving callbacks for authentification.
- * new applications should use PromptUserPassword3 instead
+ * The original interface for receiving callbacks for authentication.
+ * Consider this code deprecated -- new applications should use
+ * PromptUserPassword3 instead.
  */
 public interface PromptUserPassword
 {
@@ -29,9 +31,12 @@ public interface PromptUserPassword
      *
      * @param realm     for which server realm this information is requested.
      * @param username  the default username
-     * @return  if the dialog was not cancelled
+     * @return Whether the prompt for authentication credentials was
+     * successful (e.g. in a GUI application whether the dialog box
+     * was canceled).
      */
     public boolean prompt(String realm, String username);
+
     /**
      * ask the user a yes/no question
      * @param realm         for which server realm this information is requested.
@@ -39,7 +44,9 @@ public interface PromptUserPassword
      * @param yesIsDefault  if yes should be the default
      * @return              the answer
      */
-    public boolean askYesNo(String realm, String question, boolean yesIsDefault);
+    public boolean askYesNo(String realm, String question,
+                            boolean yesIsDefault);
+
     /**
      * ask the user a question where she answers with a text.
      * @param realm         for which server realm this information is requested.
@@ -47,12 +54,15 @@ public interface PromptUserPassword
      * @param showAnswer    if the answer is shown or hidden
      * @return              the entered text or null if canceled
      */
-    public String askQuestion(String realm, String question, boolean showAnswer);
+    public String askQuestion(String realm, String question,
+                              boolean showAnswer);
+
     /**
      * retrieve the username entered during the prompt call
      * @return the username
      */
     public String getUsername();
+
     /**
      * retrieve the password entered during the prompt call
      * @return the password

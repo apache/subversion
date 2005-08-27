@@ -297,6 +297,48 @@ typedef struct svn_dirent_t
 /** @} */
 
 
+/** All information about a commit.
+ *
+ * @note Objects of this type should always be created using the
+ * svn_create_commit_info() function.
+ *
+ * @since New in 1.3.
+ */
+typedef struct svn_commit_info_t
+{
+  /** just-committed revision. */
+  svn_revnum_t revision;
+
+  /** server-side date of the commit. */
+  const char *date;
+
+  /** author of the commit. */
+  const char *author;
+
+  /** error message from post-commit hook, or NULL. */
+  const char *post_commit_err;
+
+} svn_commit_info_t;
+
+
+/**
+ * Allocate an object of type @c svn_commit_info_t in @a pool and
+ * return it.
+ *
+ * The @c revision field of the new struct is set to @c
+ * SVN_INVALID_REVNUM.  All other fields are initialized to @c NULL.
+ *
+ * @note Any object of the type @c svn_commit_info_t should
+ * be created using this function.
+ * This is to provide for extending the svn_commit_info_t in
+ * the future.
+ *
+ * @since New in 1.3.
+ */
+svn_commit_info_t *
+svn_create_commit_info (apr_pool_t *pool);
+
+
 /** A structure to represent a path that changed for a log entry. */
 typedef struct svn_log_changed_path_t
 {

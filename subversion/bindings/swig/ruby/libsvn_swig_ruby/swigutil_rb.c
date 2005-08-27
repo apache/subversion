@@ -1220,6 +1220,75 @@ svn_swig_rb_cancel_func(void *cancel_baton)
   return err;
 }
 
+svn_error_t *
+svn_swig_rb_info_receiver(void *baton,
+                          const char *path,
+                          const svn_info_t *info,
+                          apr_pool_t *pool)
+{
+  VALUE proc = (VALUE)baton;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if (!NIL_P(proc)) {
+    VALUE args;
+
+    args = rb_ary_new3(4,
+                       proc,
+                       rb_id_call(),
+                       rb_str_new2(path),
+                       c2r_swig_type((void *)info,
+                                     (void *)"svn_info_t *"));
+    rb_rescue2(callback, args,
+               callback_rescue, (VALUE)&err,
+               rb_svn_error(), (VALUE)0);
+  }
+  
+  return err;
+}
+
+svn_boolean_t
+svn_swig_rb_config_enumerator(const char *name,
+                              const char *value,
+                              void *baton,
+                              apr_pool_t *pool)
+{
+  VALUE proc = (VALUE)baton;
+  svn_boolean_t result = FALSE;
+
+  if (!NIL_P(proc)) {
+    VALUE args;
+
+    args = rb_ary_new3(4,
+                       proc,
+                       rb_id_call(),
+                       rb_str_new2(name),
+                       rb_str_new2(value));
+    result = RTEST(callback(args));
+  }
+  
+  return result;
+}
+
+svn_boolean_t
+svn_swig_rb_config_section_enumerator(const char *name,
+                                      void *baton,
+                                      apr_pool_t *pool)
+{
+  VALUE proc = (VALUE)baton;
+  svn_boolean_t result = FALSE;
+
+  if (!NIL_P(proc)) {
+    VALUE args;
+
+    args = rb_ary_new3(3,
+                       proc,
+                       rb_id_call(),
+                       rb_str_new2(name));
+    result = RTEST(callback(args));
+  }
+  
+  return result;
+}
 
 
 /* auth provider callbacks */
@@ -1466,8 +1535,12 @@ read_handler_rbio (void *baton, char *buffer, apr_size_t *len)
   svn_error_t *err = SVN_NO_ERROR;
 
   result = rb_funcall(io, rb_id_read(), 1, INT2NUM(*len));
-  memcpy(buffer, StringValuePtr(result), RSTRING(result)->len);
-  *len = RSTRING(result)->len;
+  if (NIL_P(result)) {
+    *len = 0;
+  } else {
+    memcpy(buffer, StringValuePtr(result), RSTRING(result)->len);
+    *len = RSTRING(result)->len;
+  }
 
   return err;
 }

@@ -84,3 +84,13 @@ updates/[^/]+/[^/]+/current/SOURCES/[^/]+ = @updaters,autouser(add,remove,update
 updates/[^/]+/[^/]+/releases/.* = autouser(add)
 updates/[^/]+/[^/]+/pristine/ = autouser(add,remove)
 
+#
+# Sections can inherit settings from previously defined sections, using
+# the "extends" keyword in the section declaration.  In this example, 
+# the [example5] section inherits all the settings from [example2], and 
+# adds a new setting for a releases directory which behaves like the 
+# tags directory.
+#
+[example5 extends example2]
+releases/[^/]+/ = *(add)
+

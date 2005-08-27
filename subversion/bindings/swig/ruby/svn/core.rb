@@ -137,9 +137,13 @@ module Svn
 
     Diff = SWIG::TYPE_p_svn_diff_t
     class Diff
-      attr_accessor :original, :modified
+      attr_accessor :original, :modified, :latest
 
       class << self
+        def version
+          Core.diff_version
+        end
+        
         def file_diff(original, modified)
           diff = Core.diff_file_diff(original, modified)
           if diff
@@ -148,15 +152,44 @@ module Svn
           end
           diff
         end
+
+        def file_diff3(original, modified, latest)
+          diff = Core.diff_file_diff3(original, modified, latest)
+          if diff
+            diff.original = original
+            diff.modified = modified
+            diff.latest = latest
+          end
+          diff
+        end
       end
       
-      def unified(orig_label, mod_label)
+      def unified(orig_label, mod_label, header_encoding=nil)
+        header_encoding ||= Svn::Core.locale_charset
         output = StringIO.new
         args = [
           output, self, @original, @modified,
-          orig_label, mod_label,
+          orig_label, mod_label, header_encoding
         ]
-        Core.diff_file_output_unified(*args)
+        Core.diff_file_output_unified2(*args)
+        output.rewind
+        output.read
+      end
+
+      def merge(conflict_original=nil, conflict_modified=nil,
+                conflict_latest=nil, conflict_separator=nil,
+                display_original_in_conflict=true,
+                display_resolved_conflicts=true)
+        header_encoding ||= Svn::Core.locale_charset
+        output = StringIO.new
+        args = [
+          output, self, @original, @modified, @latest,
+          conflict_original, conflict_modified,
+          conflict_latest, conflict_separator,
+          display_original_in_conflict,
+          display_resolved_conflicts,
+        ]
+        Core.diff_file_output_merge(*args)
         output.rewind
         output.read
       end
@@ -207,5 +240,88 @@ module Svn
         "#{major}.#{minor}.#{patch}#{tag}"
       end
     end
+
+    class Dirent
+      def directory?
+        kind == NODE_DIR
+      end
+
+      def file?
+        kind == NODE_FILE
+      end
+    end
+
+    Config = SWIG::TYPE_p_svn_config_t
+    
+    class Config
+       class << self
+         def config(path)
+           Core.config_get_config(path)
+         end
+
+         def read(file, must_exist=true)
+           Core.config_read(file, must_exist)
+         end
+
+         def ensure(dir)
+           Core.config_ensure(dir)
+         end
+
+         def read_auth_data(cred_kind, realm_string, config_dir=nil)
+           Core.config_read_auth_data(cred_kind, realm_string, config_dir)
+         end
+
+         def write_auth_data(hash, cred_kind, realm_string, config_dir=nil)
+           Core.config_write_auth_data(hash, cred_kind,
+                                       realm_string, config_dir)
+         end
+       end
+
+       def merge(file, must_exist=true)
+         Core.config_merge(self, file, must_exist)
+       end
+
+       def get(section, option, default=nil)
+         Core.config_get(self, section, option, default)
+       end
+       
+       def get_bool(section, option, default)
+         Core.config_get_bool(self, section, option, default)
+       end
+
+       def set(section, option, value)
+         Core.config_set(self, section, option, value)
+       end
+       
+       def set_bool(section, option, value)
+         Core.config_set_bool(self, section, option, value)
+       end
+
+       def each_option(section)
+         receiver = Proc.new do |name, value|
+           yield(name, value)
+         end
+         Core.config_enumerate2(self, section, receiver)
+       end
+
+       def each_section
+         receiver = Proc.new do |name|
+           yield(name)
+         end
+         Core.config_enumerate_sections2(self, receiver)
+       end
+
+       def find_group(key, section)
+         Core.config_find_group(self, key, section)
+       end
+
+       def get_server_setting(group, name, default=nil)
+         Core.config_get_server_setting(self, group, name, default)
+       end
+
+       def get_server_setting_int(group, name, default)
+         Core.config_get_server_setting_int(self, group, name, default)
+       end
+     end
   end
 end

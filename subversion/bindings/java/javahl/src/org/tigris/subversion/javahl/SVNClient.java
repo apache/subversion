@@ -3,7 +3,7 @@ package org.tigris.subversion.javahl;
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -199,8 +199,8 @@ public class SVNClient implements SVNClientInterface
     public native Status singleStatus(String path, boolean onServer)
             throws ClientException;
     /**
-     * Sets the username used for authentification.
-     * @param username  the username
+     * Sets the user name used for authentification.
+     * @param username The user name.
      */
     public native void username(String username);
     /**
@@ -209,7 +209,12 @@ public class SVNClient implements SVNClientInterface
      */
     public native void password(String password);
     /**
-     * Register callback interface to supply username and password on demand
+     * Register callback interface to supply user name and password on
+     * demand.  This callback can also be used to provide the
+     * equivalent of the <code>--no-auth-cache</code> and
+     * <code>--non-interactive</code> arguments accepted by the
+     * command-line client.
+     *
      * @param prompt the callback interface
      */
     public native void setPrompt(PromptUserPassword prompt);

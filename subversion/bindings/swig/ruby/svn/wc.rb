@@ -83,6 +83,14 @@ module Svn
       def add?
         action == NOTIFY_ADD
       end
+
+      def locked?
+        lock_state = NOTIFY_LOCK_STATE_LOCKED
+      end
+
+      def unlocked?
+        lock_state = NOTIFY_LOCK_STATE_UNLOCKED
+      end
     end
     
   end

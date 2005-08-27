@@ -8,12 +8,17 @@ class SvnCoreTest < Test::Unit::TestCase
   
   def setup
     @repos_path = File.join("test", "repos")
+    @config_path = File.join("test", "config")
+    @config_file = File.join(@config_path, Svn::Core::CONFIG_CATEGORY_CONFIG)
+    @servers_file = File.join(@config_path, Svn::Core::CONFIG_CATEGORY_SERVERS)
     setup_repository(@repos_path)
+    setup_config
   end
 
   def teardown
     GC.enable
     teardown_repository(@repos_path)
+    teardown_config
   end
   
   def test_binary_mime_type?
@@ -127,6 +132,196 @@ class SvnCoreTest < Test::Unit::TestCase
     assert_operator(made_number_of_pool * 0.8, :<=, recycled_number_of_pools)
   end
 
+  def test_config
+    assert_equal([
+                   Svn::Core::CONFIG_CATEGORY_CONFIG,
+                   Svn::Core::CONFIG_CATEGORY_SERVERS,
+                 ].sort,
+                 Svn::Core::Config.config(@config_path).keys.sort)
+
+    config = Svn::Core::Config.read(@config_file)
+    section = Svn::Core::CONFIG_SECTION_HELPERS
+    option = Svn::Core::CONFIG_OPTION_DIFF_CMD
+    value = "diff"
+    
+    assert_nil(config.get(section, option))
+    config.set(section, option, value)
+    assert_equal(value, config.get(section, option))
+  end
+  
+  def test_config_bool
+    config = Svn::Core::Config.read(@config_file)
+    section = Svn::Core::CONFIG_SECTION_MISCELLANY
+    option = Svn::Core::CONFIG_OPTION_ENABLE_AUTO_PROPS
+    
+    assert(config.get_bool(section, option, true))
+    config.set_bool(section, option, false)
+    assert(!config.get_bool(section, option, true))
+  end
+
+  def test_config_each
+    config = Svn::Core::Config.read(@config_file)
+    section = Svn::Core::CONFIG_SECTION_HELPERS
+    options = {
+      Svn::Core::CONFIG_OPTION_DIFF_CMD => "diff",
+      Svn::Core::CONFIG_OPTION_DIFF3_CMD => "diff3",
+    }
+
+    infos = {}
+    config.each_option(section) do |name, value|
+      infos[name] = value
+      true
+    end
+    assert_equal({}, infos)
+
+    section_names = []
+    config.each_section do |name|
+      section_names << name
+      true
+    end
+    assert_equal([], section_names)
+
+    options.each do |option, value|
+      config.set(section, option, value)
+    end
+
+    config.each_option(section) do |name, value|
+      infos[name] = value
+      true
+    end
+    assert_equal(options, infos)
+
+    config.each_section do |name|
+      section_names << name
+      true
+    end
+    assert_equal([section], section_names)
+  end
+
+  def test_config_find_group
+    config = Svn::Core::Config.read(@config_file)
+    section = Svn::Core::CONFIG_SECTION_HELPERS
+    option = Svn::Core::CONFIG_OPTION_DIFF_CMD
+    value = "diff"
+
+    assert_nil(config.find_group(value, section))
+    config.set(section, option, value)
+    assert_equal(option, config.find_group(value, section))
+  end
+
+  def test_config_get_server_setting
+    group = "group1"
+    host_prop_name = "http-proxy-host"
+    host_prop_value = "*.example.com"
+    default_host_value = "example.net"
+    port_prop_name = "http-proxy-port"
+    port_prop_value = 8080
+    default_port_value = 1818
+    
+    File.open(@servers_file, "w") do |f|
+      f.puts("[#{group}]")
+    end
+
+    config = Svn::Core::Config.read(@servers_file)
+    assert_equal(default_host_value,
+                 config.get_server_setting(group,
+                                           host_prop_name,
+                                           default_host_value))
+    assert_equal(default_port_value,
+                 config.get_server_setting_int(group,
+                                               port_prop_name,
+                                               default_port_value))
+    
+    File.open(@servers_file, "w") do |f|
+      f.puts("[#{group}]")
+      f.puts("#{host_prop_name} = #{host_prop_value}")
+      f.puts("#{port_prop_name} = #{port_prop_value}")
+    end
+
+    config = Svn::Core::Config.read(@servers_file)
+    assert_equal(host_prop_value,
+                 config.get_server_setting(group,
+                                           host_prop_name,
+                                           default_host_value))
+    assert_equal(port_prop_value,
+                 config.get_server_setting_int(group,
+                                               port_prop_name,
+                                               default_port_value))
+  end
+
+  def test_config_auth_data
+    cred_kind = Svn::Core::AUTH_CRED_SIMPLE
+    realm_string = "sample"
+    assert_nil(Svn::Core::Config.read_auth_data(cred_kind,
+                                                realm_string,
+                                                @config_path))
+    Svn::Core::Config.write_auth_data({},
+                                      cred_kind,
+                                      realm_string,
+                                      @config_path)
+    assert_equal({Svn::Core::CONFIG_REALMSTRING_KEY => realm_string},
+                 Svn::Core::Config.read_auth_data(cred_kind,
+                                                  realm_string,
+                                                  @config_path))
+  end
+
+  def test_diff_version
+    assert_equal(Svn::Core.subr_version, Svn::Core::Diff.version)
+  end
+
+  def test_diff_unified
+    original = Tempfile.new("original")
+    modified = Tempfile.new("modified")
+    original_src = "a\nb\nc\n"
+    modified_src = "a\n\nc\n"
+    original_header = "(orig)"
+    modified_header = "(mod)"
+    expected = <<-EOT
+--- #{original_header}
++++ #{modified_header}
+@@ -1,3 +1,3 @@
+ a
+-b
++
+ c
+EOT
+    
+    original.open
+    original.print(original_src)
+    original.close
+    modified.open
+    modified.print(modified_src)
+    modified.close
+
+    diff = Svn::Core::Diff.file_diff(original.path, modified.path)
+    assert_equal(expected, diff.unified(original_header, modified_header))
+  end
+
+  def test_diff_merge
+    original = Tempfile.new("original")
+    modified = Tempfile.new("modified")
+    latest = Tempfile.new("latest")
+    original_src = "a\nb\nc\nd\ne\n"
+    modified_src = "a\nb\n\nd\ne\n"
+    latest_src = "\nb\nc\n\d\ne\n"
+    expected = "\nb\n\nd\ne\n"
+    
+    original.open
+    original.print(original_src)
+    original.close
+    modified.open
+    modified.print(modified_src)
+    modified.close
+    latest.open
+    latest.print(latest_src)
+    latest.close
+
+    diff = Svn::Core::Diff.file_diff3(original.path,
+                                      modified.path,
+                                      latest.path)
+    assert_equal(expected, diff.merge)
+  end
+  
   private
   def used_pool
     pool = Svn::Core::Pool.new

@@ -337,10 +337,10 @@ typedef struct svn_client_commit_item2_t
   /** commit URL for this item */
   const char *url;
 
-  /** revision */
+  /** revision of textbase */
   svn_revnum_t revision;
 
-  /** copyfrom-url */
+  /** copyfrom-url or NULL if not a copied item */
   const char *copyfrom_url;
   
   /** copyfrom-rev, valid when copyfrom_url != NULL */
@@ -422,7 +422,7 @@ typedef struct svn_client_commit_item_t
 typedef svn_error_t *
 (*svn_client_get_commit_log2_t) (const char **log_msg,
                                  const char **tmp_file,
-                                 apr_array_header_t *commit_items,
+                                 const apr_array_header_t *commit_items,
                                  void *baton,
                                  apr_pool_t *pool);
 

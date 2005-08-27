@@ -136,6 +136,26 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   if (status)
     return svn_error_wrap_apr(status, _("Can't create socket"));
 
+  /* Setting a timeout does more than just cause the attempt to fail
+     automatically after 30 seconds without success (although that's
+     already preferable to the default timeout, which is around 3
+     minutes); it makes apr_socket_connect() interruptable, which it
+     otherwise would not be, at least on Mac OS X.  Also, on Mac OS X
+     you couldn't even SIGKILL, as that signal wouldn't be processed
+     until the program returned back to user process space.  See the
+     original report and its thread for more details:
+
+     http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=104587
+     From: Yun Zheng Hu <yunzheng.hu@gmail.com>
+     To: dev@subversion.tigris.org
+     Subject: [PATCH] fix non interruptable hang in svn client when connecting
+     Date: Thu, 25 Aug 2005 00:40:07 +0200
+     Message-ID: <df84014e05082415405cdd9b13@mail.gmail.com>
+  */
+  status = apr_socket_timeout_set(*sock, 30 * APR_USEC_PER_SEC);
+  if (status)
+    return svn_error_wrap_apr(status, _("Can't set timeout"));
+
   status = apr_socket_connect(*sock, sa);
   if (status)
     return svn_error_wrap_apr(status, _("Can't connect to host '%s'"),

@@ -1128,6 +1128,91 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal(src2, ctx.cat(path))
   end
 
+  def test_lock
+    log = "sample log"
+    src = "source\n"
+    file = "sample.txt"
+    path = File.join(@wc_path, file)
+
+    File.open(path, "w") {|f| f.print(src)}
+
+    ctx = make_context(log)
+    ctx.add(path)
+    ctx.commit(@wc_path)
+
+    infos = []
+    ctx.set_notify_func do |notify|
+      infos << [notify.path, notify]
+    end
+    ctx.lock(path)
+
+    assert_equal([file], infos.collect{|path, notify| path})
+    file_notify = infos.assoc(file)[1]
+    assert(file_notify.locked?)
+  end
+  
+  def test_unlock
+    log = "sample log"
+    src = "source\n"
+    file = "sample.txt"
+    path = File.join(@wc_path, file)
+
+    File.open(path, "w") {|f| f.print(src)}
+
+    ctx = make_context(log)
+    ctx.add(path)
+    ctx.commit(@wc_path)
+
+    ctx.lock(path)
+
+    infos = []
+    ctx.set_notify_func do |notify|
+      infos << [notify.path, notify]
+    end
+    ctx.unlock(path)
+    assert_equal([file], infos.collect{|path, notify| path})
+    file_notify = infos.assoc(file)[1]
+    assert(file_notify.unlocked?)
+  end
+
+  def test_info
+    log = "sample log"
+    ctx = make_context(log)
+    repos_base = File.basename(@repos_path)
+
+    infos = []
+    ctx.info(@wc_path) do |path, info|
+      infos << [path, info]
+    end
+    assert_equal([repos_base],
+                 infos.collect{|path, info| path})
+    top_info = infos.assoc(repos_base)[1]
+    assert_equal(@repos_uri, top_info.url)
+  end
+
+  def test_url_from_path
+    log = "sample log"
+    ctx = make_context(log)
+    assert_equal(@repos_uri, ctx.url_from_path(@wc_path))
+    assert_equal(@repos_uri, Svn::Client.url_from_path(@wc_path))
+  end
+  
+  def test_uuid
+    log = "sample log"
+    ctx = make_context(log)
+    Svn::Wc::AdmAccess.open(nil, @wc_path, false, 0) do |adm|
+      assert_equal(ctx.uuid_from_url(@repos_uri),
+                   ctx.uuid_from_path(@wc_path, adm))
+    end
+  end
+
+  def test_open_ra_session
+    log = "sample log"
+    ctx = make_context(log)
+
+    assert_instance_of(Svn::Ra::Session, ctx.open_ra_session(@repos_uri))
+  end
+  
   def test_revprop
     log = "sample log"
     new_log = "new sample log"
@@ -1230,6 +1315,29 @@ class SvnClientTest < Test::Unit::TestCase
 
     assert_equal(rev, ctx.export(@repos_uri, tmp_base_path))
     assert_equal(src, File.open(tmp_path) {|f| f.read})
+  end
+
+  def test_ls
+    log = "sample log"
+    src = "source\n"
+    file = "sample.txt"
+    dir = "sample"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(@wc_path, file)
+
+    ctx = make_context(log)
+
+    ctx.mkdir(dir_path)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(path)
+    rev = ctx.ci(@wc_path).revision
+
+    dirents, locks = ctx.ls(@wc_path, rev)
+    assert_equal([dir, file].sort, dirents.keys.sort)
+    dir_dirent = dirents[dir]
+    assert(dir_dirent.directory?)
+    file_dirent = dirents[file]
+    assert(file_dirent.file?)
   end
   
   def test_switch

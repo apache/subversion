@@ -207,6 +207,7 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   struct log_receiver_baton lrb;
   dav_svn_authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
+  const char *action;
   const char *target = NULL;
   int limit = 0;
   int ns;
@@ -314,6 +315,19 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
     }
 
  cleanup:
+
+  /* We've detected a 'high level' svn action to log. */
+  if (paths->nelts == 0)
+    action = "log";
+  else if (paths->nelts == 1)
+    action = apr_psprintf(resource->pool, "log on '%s'",
+                          APR_ARRAY_IDX (paths, 0, const char *));
+  else
+    action = apr_psprintf(resource->pool, "log on some set of paths below '%s'",
+                          APR_ARRAY_IDX (paths, 0, const char *));
+
+  apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION", action);
+
 
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */

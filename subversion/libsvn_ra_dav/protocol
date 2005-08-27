@@ -22,6 +22,21 @@ HTTP METHODS USED, indexed by svn commands that access network
 Read Commands  :  (OPTIONS, PROPFIND, GET, REPORT)
 -------------
 
+  Most commands have to resolve peg-revisions before starting:
+
+  * -r X foo@Y      REPORT                        ('get-locations')
+
+       ...if an old server doesn't support 'get-locations' report, the
+       client traces history using the 'log-report' instead.
+
+  And any command which has to convert a date to a revision:
+
+  * -r {DATE}       REPORT                        ('dated-rev-report')
+
+
+  The following group of commands all use the custom 'update-report'
+  request, which is just a fancy way of driving svn_repos_dir_delta():
+
   * svn checkout:   OPTIONS, PROPFIND, REPORT     ('update-report')
 
   * svn export:     OPTIONS, PROPFIND, REPORT     ('update-report')
@@ -31,13 +46,18 @@ Read Commands  :  (OPTIONS, PROPFIND, GET, REPORT)
   * svn switch:     OPTIONS, PROPFIND, REPORT     ('update-report')
 
   * svn diff:       OPTIONS, PROPFIND, REPORT     ('update-report')
+                    ... then many GETs
 
   * svn merge:      OPTIONS, PROPFIND, REPORT     ('update-report')
+                    ... then many GETs
 
   * svn status -u:  OPTIONS, PROPFIND, REPORT     ('update-report' and
                                                    'get-locks-report')
 
   * svn cp URL wc:  OPTIONS, PROPFIND, REPORT     ('update-report')
+
+
+  And these guys are left over:
 
   * svn log:        OPTIONS, PROPFIND, REPORT     ('log-report')
 
@@ -51,9 +71,8 @@ Read Commands  :  (OPTIONS, PROPFIND, GET, REPORT)
 
   * svn ls:         PROPFIND, REPORT              ('get-locks-report')
 
-  * -r {DATE}       REPORT                        ('dated-rev-report')
 
-  * -r X foo@Y      REPORT                        ('get-locations')
+
 
 
 

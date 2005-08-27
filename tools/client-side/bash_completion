@@ -8,6 +8,8 @@
 # pattern matching enabled (use 'shopt -s extglob progcomp' to enable
 # these if they are not already enabled).
 
+shopt -s extglob
+
 _svn()
 {
 	local cur cmds cmdOpts pOpts mOpts rOpts qOpts nOpts optsParam opt
@@ -39,9 +41,9 @@ _svn()
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
 	helpCmds='help|--help|h|\?'
-	if [[ ${COMP_WORDS[1]} != @${helpCmds} ]] && \
+	if [[ ${COMP_WORDS[1]} != @($helpCmds) ]] && \
 	   [[ "$cur" != -* ]] || \
-	   [[ ${COMP_WORDS[COMP_CWORD-1]} == @${optsParam} ]] ; then
+	   [[ ${COMP_WORDS[COMP_CWORD-1]} == @($optsParam) ]] ; then
 		return 0
 	fi
 
@@ -59,7 +61,7 @@ _svn()
 		;;
 	add)
 		cmdOpts="--auto-props --no-auto-props --force --targets \
-		         $nOpts $qOpts"
+		         --no-ignore $nOpts $qOpts"
 		;;
 	blame|annotate|ann|praise)
 		cmdOpts="$rOpts $pOpts -v --verbose --incremental --xml"
@@ -96,7 +98,7 @@ _svn()
 		;;
 	import)
 		cmdOpts="--auto-props --no-auto-props $mOpts $qOpts $nOpts \
-		         --editor-cmd $pOpts"
+		         --no-ignore --editor-cmd $pOpts"
 		;; 
 	info)
 		cmdOpts="$pOpts $rOpts --targets -R --recursive"
@@ -206,7 +208,7 @@ _svn()
 		esac
 
 		# skip next option if this one requires a parameter
-		if [[ $opt == @${optsParam} ]] ; then
+		if [[ $opt == @($optsParam) ]] ; then
 			((++i))
 		fi
 	done
@@ -241,9 +243,9 @@ _svnadmin ()
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
 	helpCmds='help|--help|h|\?'
-	if [[ ${COMP_WORDS[1]} != @${helpCmds} ]] && \
+	if [[ ${COMP_WORDS[1]} != @($helpCmds) ]] && \
 	   [[ "$cur" != -* ]] || \
-	   [[ ${COMP_WORDS[COMP_CWORD-1]} == @${optsParam} ]] ; then
+	   [[ ${COMP_WORDS[COMP_CWORD-1]} == @($optsParam) ]] ; then
 		return 0
 	fi
 
@@ -303,7 +305,7 @@ _svnadmin ()
 		esac
 
 		# skip next option if this one requires a parameter
-		if [[ $opt == @${optsParam} ]] ; then
+		if [[ $opt == @($optsParam) ]] ; then
 			((++i))
 		fi
 	done
