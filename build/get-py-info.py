@@ -43,7 +43,10 @@ if sys.argv[1] == '--compile':
   sys.exit(0)
 
 def ldshared_process(just_libs = None):
+  libdir = sysconfig.get_config_var('LIBDIR')
   ldshared = sysconfig.get_config_var('LDSHARED')
+  ldlibrary = sysconfig.get_config_var('LDLIBRARY')
+  libpyfwdir = sysconfig.get_config_var('PYTHONFRAMEWORKDIR')
   ldshared_elems = string.split(ldshared, " ")
   libs_elems = []
   for i in range(len(ldshared_elems)):
@@ -57,10 +60,29 @@ def ldshared_process(just_libs = None):
         libs_elems.append(ldshared_elems[i])
     elif ldshared_elems[i][:2] == '-l':
       libs_elems.append(ldshared_elems[i])
-  if sys.platform[:6] == 'cygwin':
+  ldlibpath = os.path.join(libdir, ldlibrary)
+  if libpyfwdir and libpyfwdir != "no-framework":
+    libpyfw = sysconfig.get_config_var('PYTHONFRAMEWORK')
+    py_lopt = "-framework " + libpyfw
+    libs_elems.append(py_lopt)
+    ldshared_elems.append(py_lopt)
+  elif (os.path.exists(ldlibpath)):
+    if libdir != '/usr/lib':
+      py_Lopt = "-L" + libdir
+      libs_elems.append(py_Lopt)
+      ldshared_elems.append(py_Lopt)
+    ldlibname, ldlibext = os.path.splitext(ldlibrary)
+    if ldlibname[:3] == 'lib' and ldlibext == '.so':
+      py_lopt = '-l' + ldlibname[3:]
+    else:
+      py_lopt = ldlibrary
+    libs_elems.append(py_lopt)
+    ldshared_elems.append(py_lopt)
+  else:
+    python_version = sys.version[:3]
     py_Lopt = "-L" + os.path.join(sys.prefix, "lib", "python" +
-        sysconfig.get_python_version(), "config")
-    py_lopt = "-lpython" + sysconfig.get_python_version()
+       python_version, "config")
+    py_lopt = "-lpython" + python_version
     libs_elems.append(py_Lopt)
     libs_elems.append(py_lopt)
     ldshared_elems.append(py_Lopt)
