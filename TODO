@@ -3,6 +3,8 @@ This covers issue #2148.  But also eventually will cover supporting
 allowing the cp and mv commands to replace files (Issue #1516).
 Currently you can only get a wc in this state with the merge command.
 
+Resolving this problem should also resolves #2144.
+
 As of right now files can be replaced.
 
 Specific list of items to do:
@@ -10,14 +12,40 @@ Specific list of items to do:
 * Implement handling of properties.
 * Implement handling of properties on directories.
 * Write tests
-  - revert of locally replaced file
-  - revert of locally replaced file with props
-  -
+  - revert of locally replaced file [ done ]
+  - revert of locally replaced file with props [ done ]
+  - update with changes to a replaced file (with props)
+  - update with changes to a replaced file (with prop-changes)
+  - 
 * Change tests from XFAIL to PASS:
   - revert_tests 4 (revert_replace_with_history_with_props)
-* Implement the enhancements to the cp and mv command (pretty much done
-  just not committed yet).
+    to do this, a revert-file needs to be implemented for prop-base
+    and dir-prop-base (also for wc-props?)
+* Implement the enhancements to the cp and mv command (pretty much done)
 * Possibly enhance the handling of checksums.  Right now the code isn't
   storing checksums for replaced files.  To fix this would require a new
-  field in entries.
+  field in entries which is no problem, since we need to upgrade the wc
+  format anyway.
 
+These sources are possible sources for replacements (with history) in a wc:
+
+- wc->wc copy or move operations
+- repos->wc copy operations
+- merge operations which contain 'R' (replacement) updates
+
+
+Thoughts
+========
+
+ * Running 'update' on a target means getting changes from the repository
+   into the working copy.  If a file is replaced and the repository sends
+   changes to the original file, that is a tree conflict.
+   Currently we merge the changes into the replaced file and signal
+   conflicts if there are any (content-conflicts).
+
+ * Running a 'merge' on a directory which includes a replaced-with-history
+   file, though, would not need to result in conflicts. Does ancestry play
+   a role here? If so, which?
+
+
+                                                                 -*- text -*-
