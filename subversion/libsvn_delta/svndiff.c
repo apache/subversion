@@ -565,7 +565,7 @@ write_handler (void *baton,
       db->subpool = newpool;
     }
 
-  return SVN_NO_ERROR;
+  /* NOTREACHED */
 }
 
 
