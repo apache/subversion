@@ -121,7 +121,7 @@ def _usage_exit():
   print "           junit is for testing the java bindings"
   print
   print "  --with-swig=DIR"
-  print "           look gor the swig prigram in DIR"
+  print "           look for the swig program in DIR"
   print
   print "  --enable-pool-debug"
   print "           turn on APR pool debugging"
