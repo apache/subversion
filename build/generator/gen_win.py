@@ -45,6 +45,7 @@ class WinGeneratorBase(GeneratorBase):
     self.zlib_path = None
     self.openssl_path = None
     self.junit_path = None
+    self.swig_path = None
     self.vsnet_version = '7.00'
     self.vsnet_proj_ver = '7.00'
     self.skip_sections = { 'mod_dav_svn': None,
@@ -81,6 +82,8 @@ class WinGeneratorBase(GeneratorBase):
         self.junit_path = val
       elif opt == '--with-zlib':
         self.zlib_path = val
+      elif opt == '--with-swig':
+        self.swig_path = val
       elif opt == '--with-openssl':
         self.openssl_path = val
       elif opt == '--enable-purify':
@@ -198,12 +201,13 @@ class WinGeneratorBase(GeneratorBase):
     self.configs = ['Debug','Release']
 
     # Generate external runtime
-    runtime = generator.swig.external_runtime.Generator("build.conf", "swig")
+    runtime = generator.swig.external_runtime.Generator("build.conf",
+                                                        self.swig_exe)
     runtime.write()
     
     # Generate SWIG header wrappers
     header_wrappers = \
-      generator.swig.header_wrappers.Generator("build.conf", "swig")
+      generator.swig.header_wrappers.Generator("build.conf", self.swig_exe)
     header_wrappers.write()
     
 
@@ -314,6 +318,7 @@ class WinGeneratorBase(GeneratorBase):
 
     if isinstance(target, gen_base.TargetSWIG):
       swig_options = string.split(self.swig.opts[target.lang])
+      swig_options.append('-DWIN32')
       swig_deps = []
 
       for include_dir in self.get_win_includes(target):
@@ -337,8 +342,8 @@ class WinGeneratorBase(GeneratorBase):
                   user_deps.append(isrc)
                   continue
 
-                cbuild = "swig %s -o %s $(InputPath)" \
-                         % (string.join(swig_options), cout)
+                cbuild = '%s %s -o %s $(InputPath)' \
+                         % (self.swig_exe, string.join(swig_options), cout)
 
                 sources.append(ProjectItem(path=isrc, reldir=None,
                                            custom_build=cbuild,
@@ -806,7 +811,12 @@ class WinGeneratorBase(GeneratorBase):
     minimum_vernum = 103024
     libdir = ''
 
-    infp, outfp = os.popen4('swig -version')
+    if self.swig_path is not None:
+      self.swig_exe = os.path.join(self.swig_path, 'swig.exe')
+    else:
+      self.swig_exe = 'swig.exe'
+
+    infp, outfp = os.popen4(self.swig_exe + ' -version')
     infp.close()
     try:
       txt = outfp.read()
@@ -840,7 +850,7 @@ class WinGeneratorBase(GeneratorBase):
     self.swig_libdir = libdir
 
   def _find_swig_libdir(self):
-    fp = os.popen('swig -swiglib', 'r')
+    fp = os.popen(self.swig_exe + ' -swiglib', 'r')
     try:
       libdir = string.rstrip(fp.readline())
       if libdir:
