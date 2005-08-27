@@ -1715,7 +1715,7 @@ svn_fs_fs__commit_txn (const char **conflict_p,
         }
     }
 
-  return SVN_NO_ERROR;
+  /* NOTREACHED */
 }
 
 
