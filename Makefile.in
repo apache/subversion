@@ -107,8 +107,10 @@ APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_TARGET = @APACHE_TARGET@
 APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@
 
-SWIG_INCLUDES = -I$(SWIG_SRC_DIR) \
+SWIG = @SWIG@
+SWIG_INCLUDES = -I$(SWIG_BUILD_DIR) \
                 -I$(SWIG_SRC_DIR)/include \
+                -I$(SWIG_BUILD_DIR)/proxy \
                 -I$(SWIG_SRC_DIR)/proxy \
                 -I$(abs_srcdir)/subversion/include \
                 $(SVN_APR_INCLUDES) $(SVN_APRUTIL_INCLUDES)
@@ -577,13 +579,30 @@ install-info: doc-all-info
 install-swig-py: install-swig-py-lib
 install-swig-rb: install-swig-rb-lib
 
+EXTRA_SWIG_PROXY_FILES = swigrun.swg common.swg runtime.swg \
+  pyrun.swg perlrun.swg rubydef.swg rubyhead.swg python.swg \
+  swig_python_external_runtime.swg swig_perl_external_runtime.swg \
+  swig_ruby_external_runtime.swg
+extraclean-swig-headers:
+	cd $(abs_srcdir)/subversion/bindings/swig/proxy && \
+	  rm -f $(EXTRA_SWIG_PROXY_FILES)
+	rm -f $(SWIG_PY_SRC_DIR)/[a-z]*.py
+clean-swig-headers:
+	if test $(top_srcdir) != .; then \
+	  cd $(abs_builddir)/subversion/bindings/swig/proxy && \
+	    rm -f $(EXTRA_SWIG_PROXY_FILES); \
+	  rm -f $(SWIG_PY_DIR)/*.py; \
+	fi
+
 $(SWIG_PL_DIR)/native/Makefile.PL: $(SWIG_SRC_DIR)/perl/native/Makefile.PL.in
 	./config.status subversion/bindings/swig/perl/native/Makefile.PL
 
 $(SWIG_PL_DIR)/native/Makefile: $(SWIG_PL_DIR)/native/Makefile.PL
 	cd $(SWIG_PL_DIR)/native; $(PERL) Makefile.PL
 
-swig-pl_DEPS = libsvn_client libsvn_delta libsvn_diff libsvn_fs libsvn_ra libsvn_repos libsvn_subr libsvn_wc libsvn_swig_perl $(SWIG_PL_DIR)/native/Makefile
+swig-pl_DEPS = autogen-swig-pl libsvn_client libsvn_delta libsvn_diff \
+  libsvn_fs libsvn_ra libsvn_repos libsvn_subr libsvn_wc libsvn_swig_perl \
+  $(SWIG_PL_DIR)/native/Makefile
 swig-pl: $(swig-pl_DEPS)
 	cd $(SWIG_PL_DIR)/native; $(MAKE)
 
@@ -604,10 +623,16 @@ clean-swig-pl:
 $(SWIG_PY_DIR)/libsvn:
 	ln -sf $(SWIG_PY_DIR) $(SWIG_PY_DIR)/libsvn
 
-$(SWIG_PY_DIR)/__init__.py:
-	cp -f $(SWIG_PY_SRC_DIR)/__init__.py $(SWIG_PY_DIR)
+copy-swig-py: autogen-swig-py
+	@if test $(top_srcdir) != .; then \
+	  cp -pf $(SWIG_PY_SRC_DIR)/__init__.py $(SWIG_PY_DIR); \
+	  if test -e $(SWIG_PY_SRC_DIR)/core.py -a \
+	     ! -e $(SWIG_SRC_DIR)/core.py; then \
+	    cp -pf $(SWIG_PY_SRC_DIR)/*.py $(SWIG_PY_DIR); \
+	  fi; \
+	fi
 
-swig-py: $(SWIG_PY_DIR)/libsvn $(SWIG_PY_DIR)/__init__.py
+swig-py: autogen-swig-py copy-swig-py $(SWIG_PY_DIR)/libsvn
 
 check-swig-py: swig-py
 	cd $(SWIG_PY_DIR); \
@@ -616,12 +641,15 @@ check-swig-py: swig-py
 clean-swig-py:
 	rm -f $(SWIG_PY_SRC_DIR)/svn/*.pyc $(SWIG_PY_SRC_DIR)/tests/*.pyc \
 	      $(SWIG_PY_DIR)/libsvn
-	test $(SWIG_PY_DIR) = $(SWIG_PY_SRC_DIR) || rm -f $(SWIG_PY_DIR)/__init__.py
+	if test $(top_srcdir) != .; then \
+	  rm -f $(SWIG_PY_DIR)/*.py; \
+	fi
 	for d in $(SWIG_PY_DIR) $(SWIG_PY_DIR)/libsvn_swig_py; \
 	do \
-	  cd $$d && rm -rf svn_*.c _*.c core.c *.lo *.la *.o *.pyc .libs \
-		  client.py core.py delta.py fs.py ra.py repos.py wc.py; \
+	  cd $$d && rm -rf *.lo *.la *.o *.pyc .libs; \
 	done
+
+swig-rb: autogen-swig-rb
 
 check-swig-rb: swig-rb svnserve
 	cd $(SWIG_RB_DIR); \
@@ -634,5 +662,5 @@ clean-swig-rb:
 	for d in $(SWIG_RB_DIR) $(SWIG_RB_DIR)/libsvn_swig_ruby; \
 	do \
 	  cd $$d; \
-	  rm -rf svn_*.c _*.c core.c *.lo *.la *.o .libs; \
+	  rm -rf *.lo *.la *.o .libs; \
 	done
