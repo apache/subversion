@@ -65,7 +65,7 @@ WriteMakefile(%config, NAME => 'SVN::_Core', C => ['core.c'],
                             "\$(INST_MAN3DIR)/SVN::$_.\$(MAN3EXT)") }
          map { perlish $_ }
          ('base', 'core', @modules)},
-        clean => { FILES => "*.c *.bs".
+        clean => { FILES => "*.bs".
                          join(' Makefile.','',@modules) }
        );
 

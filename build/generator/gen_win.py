@@ -8,6 +8,8 @@ import string
 import fnmatch
 import re
 import glob
+import generator.swig.header_wrappers
+import generator.swig.external_runtime
 
 try:
   from cStringIO import StringIO
@@ -195,6 +197,16 @@ class WinGeneratorBase(GeneratorBase):
     #Here we can add additional modes to compile for
     self.configs = ['Debug','Release']
 
+    # Generate external runtime
+    runtime = generator.swig.external_runtime.Generator("build.conf", "swig")
+    runtime.write()
+    
+    # Generate SWIG header wrappers
+    header_wrappers = \
+      generator.swig.header_wrappers.Generator("build.conf", "swig")
+    header_wrappers.write()
+    
+
   def path(self, *paths):
     """Convert build path to msvc path and prepend root"""
     return msvc_path_join(self.rootpath, *map(msvc_path, paths))
@@ -252,14 +264,6 @@ class WinGeneratorBase(GeneratorBase):
                     ))
     return configs
   
-  def _swig_build_opts(self, lang):
-    """Options to pass in to SWIG for a specified language"""
-    return {
-      "python": self.swig_python_opts,
-      "ruby": self.swig_ruby_opts,
-      "perl": self.swig_perl_opts
-    }[lang]
-  
   def get_proj_sources(self, quote_path, target):
     "Get the list of source files for each project"
     sources = [ ]
@@ -309,7 +313,7 @@ class WinGeneratorBase(GeneratorBase):
                                  custom_build=cbuild, custom_target=jarfile))
 
     if isinstance(target, gen_base.TargetSWIG):
-      swig_options = string.split(self._swig_build_opts(target.lang))
+      swig_options = string.split(self.swig.opts[target.lang])
       swig_deps = []
 
       for include_dir in self.get_win_includes(target):
