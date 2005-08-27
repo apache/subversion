@@ -51,6 +51,13 @@ extern "C" {
 #define SVN_BDB_DB_BUFFER_SMALL ENOMEM
 #endif
 
+/* BDB 4.4 introdiced the DB_REGISTER flag for DBEnv::open that allows
+   for automatic recovery of the databases after a program crash. */
+#ifdef DB_REGISTER
+#define SVN_BDB_AUTO_RECOVER (DB_REGISTER | DB_RECOVER)
+#else
+#define SVN_BDB_AUTO_RECOVER (0)
+#endif
 
 /* Parameter lists */
 

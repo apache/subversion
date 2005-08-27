@@ -4,6 +4,7 @@ require "svn/error"
 require "svn/util"
 require "svn/core"
 require "svn/wc"
+require "svn/ra"
 require "svn/ext/client"
 
 module Svn
@@ -31,6 +32,10 @@ module Svn
       def date
         Util.string_to_time(_date)
       end
+    end
+
+    class Info
+      alias url URL
     end
 
     PropListItem = ProplistItem
@@ -236,19 +241,7 @@ module Svn
                          force, dry_run, self)
       end
       
-      def cat(path, rev="HEAD", output=nil)
-        used_string_io = output.nil?
-        output ||= StringIO.new
-        Client.cat(output, path, rev, self)
-        if used_string_io
-          output.rewind
-          output.read
-        else
-          output
-        end
-      end
-      
-      def cat2(path, peg_rev=nil, rev="HEAD", output=nil)
+      def cat(path, rev="HEAD", peg_rev=nil, output=nil)
         used_string_io = output.nil?
         output ||= StringIO.new
         Client.cat2(output, path, peg_rev, rev, self)
@@ -258,6 +251,41 @@ module Svn
         else
           output
         end
+      end
+
+      def lock(targets, comment=nil, steal_lock=false)
+        targets = [targets] unless targets.is_a?(Array)
+        Client.lock(targets, comment, steal_lock, self)
+      end
+      
+      def unlock(targets, break_lock=false)
+        targets = [targets] unless targets.is_a?(Array)
+        Client.unlock(targets, break_lock, self)
+      end
+
+      def info(path_or_uri, rev=nil, peg_rev=nil, recurse=false)
+        rev ||= URI(path_or_uri).scheme ? "HEAD" : "BASE"
+        peg_rev ||= rev
+        receiver = Proc.new do |path, info|
+          yield(path, info)
+        end
+        Client.info(path_or_uri, rev, peg_rev, receiver, recurse, self)
+      end
+
+      def url_from_path(path)
+        Client.url_from_path(path)
+      end
+      
+      def uuid_from_path(path, adm)
+        Client.uuid_from_path(path, adm, self)
+      end
+      
+      def uuid_from_url(url)
+        Client.uuid_from_url(url, self)
+      end
+
+      def open_ra_session(url)
+        Client.open_ra_session(url, self)
       end
       
       def log(paths, start_rev, end_rev, limit,
@@ -349,6 +377,12 @@ module Svn
                  recurse=true, native_eol=nil)
         Client.export3(from, to, rev, peg_rev, force,
                        ignore_externals, recurse, native_eol, self)
+      end
+      
+      def ls(path_or_uri, rev=nil, peg_rev=nil, recurse=false)
+        rev ||= URI(path_or_uri).scheme ? "HEAD" : "BASE"
+        peg_rev ||= rev
+        Client.ls3(path_or_uri, rev, peg_rev, recurse, self)
       end
       
       def switch(path, uri, rev=nil, recurse=true)

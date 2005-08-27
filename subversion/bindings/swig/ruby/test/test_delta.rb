@@ -1,4 +1,5 @@
 require "util"
+require "stringio"
 
 require "svn/info"
 
@@ -11,6 +12,19 @@ class SvnDeltaTest < Test::Unit::TestCase
 
   def teardown
     teardown_basic
+  end
+
+  def test_version
+    assert_equal(Svn::Core.subr_version, Svn::Delta.version)
+  end
+
+  def test_delta
+    source = StringIO.new("abcde")
+    target = StringIO.new("abXde")
+    stream = Svn::Delta::TextDeltaStream.new(source, target)
+    assert_nil(stream.md5_digest)
+    stream.each {}
+    assert_not_nil(stream.md5_digest)
   end
   
   def test_changed

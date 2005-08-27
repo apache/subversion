@@ -1022,6 +1022,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
   update_ctx_t uc = { 0 };
   svn_revnum_t revnum = SVN_INVALID_REVNUM;
   int ns;
+  int entry_counter = 0;
+  svn_boolean_t entry_is_empty = FALSE;
   svn_error_t *serr;
   dav_error *derr = NULL;
   apr_status_t apr_err;
@@ -1289,6 +1291,8 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
             svn_boolean_t start_empty = FALSE;
             apr_xml_attr *this_attr = child->attr;
 
+            entry_counter++;
+
             while (this_attr)
               {
                 if (! strcmp(this_attr->name, "rev"))
@@ -1296,7 +1300,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                 else if (! strcmp(this_attr->name, "linkpath"))
                   linkpath = this_attr->value;
                 else if (! strcmp(this_attr->name, "start-empty"))
-                  start_empty = TRUE;
+                  start_empty = entry_is_empty = TRUE;
                 else if (! strcmp(this_attr->name, "lock-token"))
                   locktoken = this_attr->value;
 
@@ -1363,6 +1367,53 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
               }
           }
       }
+
+  /* Try to deduce what sort of client command is being run,, then
+     make this guess available to apache's logging subsystem. */
+  {
+    const char *action, *spath;
+
+    if (target)
+      spath = svn_path_join(src_path, target, resource->pool);
+    else
+      spath = src_path;
+
+    /* If a second path was passed to svn_repos_dir_delta(), then it
+       must have been switch, diff, or merge.  */
+    if (dst_path)
+      {
+        /* diff/merge don't ask for inline text-deltas. */
+        if (uc.send_all)
+          action = apr_psprintf(resource->pool,
+                                "switch from '%s' to '%s'",
+                                spath, dst_path);
+        else
+          action = apr_psprintf(resource->pool,
+                                "diff or merge, comparing '%s' and '%s'",
+                                spath, dst_path);          
+      }
+
+    /* Otherwise, it must be checkout, export, or update. */
+    else
+      {
+        /* svn_client_checkout() creates a single root directory, then
+           reports it (and it alone) to the server as being empty. */
+        if (entry_counter == 1 && entry_is_empty)
+          action = apr_psprintf(resource->pool,
+                                "checkout or export of '%s'", spath);
+        else
+          {
+            if (text_deltas)
+              action = apr_psprintf(resource->pool,
+                                    "update of '%s'", spath);
+            else
+              action = apr_psprintf(resource->pool,
+                                    "status --update of '%s'", spath);
+          }
+      }
+
+    apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION", action);
+  }
 
   /* this will complete the report, and then drive our editor to generate
      the response to the client. */

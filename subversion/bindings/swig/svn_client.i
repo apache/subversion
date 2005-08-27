@@ -51,7 +51,8 @@
 };
 
 %apply const char *MAY_BE_NULL {
-    const char *native_eol
+    const char *native_eol,
+    const char *comment
 };
 
 /* svn_client_propget(), svn_client_proplist(), svn_client_revprop_list() */
@@ -203,9 +204,11 @@
 */
 %types(svn_wc_status_t *);
 
-/* We also need SWIG to wrap svn_dirent_t for us.  It doesn't appear in
-   any API, but svn_client_ls returns a hash of pointers to dirents. */
+/* We also need SWIG to wrap svn_dirent_t and svn_lock_t for us.  They
+   don't appear in any API, but svn_client_ls returns a hash of pointers
+   to dirents and locks. */
 %types(svn_dirent_t *);
+%types(svn_lock_t *);
 
 /* -----------------------------------------------------------------------
   thunk the various authentication prompt functions.

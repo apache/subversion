@@ -105,7 +105,7 @@ module SvnTestUtil
   
   def setup_config
     teardown_config
-    Svn::Core.config_ensure(@config_path)
+    Svn::Core::Config.ensure(@config_path)
   end
 
   def teardown_config

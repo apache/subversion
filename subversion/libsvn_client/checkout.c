@@ -23,6 +23,7 @@
 /*** Includes. ***/
 
 #include <assert.h>
+#include "svn_pools.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_ra.h"
@@ -76,11 +77,13 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
       svn_ra_session_t *ra_session;
       svn_node_kind_t kind;
       const char *uuid, *repos;
+      apr_pool_t *session_pool = svn_pool_create (pool);
 
       /* Get the RA connection. */
       SVN_ERR (svn_client__ra_session_from_path (&ra_session, &revnum,
                                                  &URL, url, peg_revision,
-                                                 revision, ctx, pool));
+                                                 revision, ctx, 
+                                                 session_pool));
       
       SVN_ERR (svn_ra_check_path (ra_session, "", revnum, &kind, pool));
       if (kind == svn_node_none)
@@ -96,6 +99,13 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
       SVN_ERR (svn_ra_get_repos_root (ra_session, &repos, pool));
 
       SVN_ERR (svn_io_check_path (path, &kind, pool));
+
+      /* Finished with the RA session -- close up, but not without
+         copying out useful information that needs to survive.  */
+      URL = apr_pstrdup (pool, URL);
+      uuid = (uuid ? apr_pstrdup (pool, uuid) : NULL);
+      repos = (repos ? apr_pstrdup (pool, repos) : NULL);
+      svn_pool_destroy (session_pool);
 
       if (kind == svn_node_none)
         {

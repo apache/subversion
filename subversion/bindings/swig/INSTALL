@@ -18,6 +18,18 @@ STATUS OF THE SWIG BINDINGS
   implemented. The Ruby bindings API may change incompatibly as development
   proceeds.
 
+  Completed modules:
+  - Svn::Client
+  - Svn::Core::Config
+
+  Not completed but enough modules:
+  - Svn::Core::Diff
+    Unsupported functions:
+    - svn_diff_diff()
+    - svn_diff_diff3()
+    - svn_diff_diff4()
+    - svn_diff_output()
+    - svn_diff_file_diff4()
 
 BUILDING SWIG BINDINGS FOR SVN ON UNIX
 
