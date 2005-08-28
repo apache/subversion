@@ -160,7 +160,7 @@ typedef struct {
   ne_session *sess;                     /* HTTP session to server */
   ne_session *sess2;
 
-  const svn_ra_callbacks_t *callbacks;  /* callbacks to get auth data */
+  const svn_ra_callbacks2_t *callbacks; /* callbacks to get auth data */
   void *callback_baton;
  
   svn_auth_iterstate_t *auth_iterstate; /* state of authentication retries */
