@@ -561,6 +561,16 @@ ra_dav_get_schemes (apr_pool_t *pool)
 #endif /* if/else SVN_NEON_0_25 */
 }
 
+static void
+ra_dav_neonprogress(void * baton, off_t progress, off_t total)
+{
+  /* Important: don't change the svn_ra_callbacks2_t struct here! */
+  const svn_ra_callbacks2_t * callbacks = (svn_ra_callbacks2_t *)baton;
+  if (callbacks->progress_func)
+    {
+      callbacks->progress_func(progress, total, callbacks->progress_baton);
+    }
+}
 
 
 /* ### need an ne_session_dup to avoid the second gethostbyname
@@ -570,7 +580,7 @@ ra_dav_get_schemes (apr_pool_t *pool)
 static svn_error_t *
 svn_ra_dav__open (svn_ra_session_t *session,
                   const char *repos_URL,
-                  const svn_ra_callbacks_t *callbacks,
+                  const svn_ra_callbacks2_t *callbacks,
                   void *callback_baton,
                   apr_hash_t *config,
                   apr_pool_t *pool)
@@ -793,6 +803,12 @@ svn_ra_dav__open (svn_ra_session_t *session,
         }
     }
 
+  /* Set the neon callback to make it call the svn_progress_notify_func_t
+   * Note that ne_set_progress() takes a non-const baton as the third param.
+   * Since we don't change the callback struct but only use the non-const
+   * notification callback items of that struct, it's safe to cast */
+  ne_set_progress(sess, ra_dav_neonprogress, (void*)callbacks);
+  ne_set_progress(sess2, ra_dav_neonprogress, (void*)callbacks);
   session->priv = ras;
 
   return SVN_NO_ERROR;

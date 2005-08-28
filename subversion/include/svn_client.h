@@ -40,6 +40,7 @@
 #include "svn_error.h"
 #include "svn_opt.h"
 #include "svn_version.h"
+#include "svn_ra.h"
 
 
 #ifdef __cplusplus
@@ -533,6 +534,15 @@ typedef struct svn_client_ctx_t
   /** callback baton for log_msg_func2
    * @since New in 1.3. */
   void *log_msg_baton2;
+
+  /** Notification callback for network progress information.
+   * May be NULL if not used.
+   * @since New in 1.3. */
+  svn_ra_progress_notify_func_t progress_func;
+
+  /** Callback baton for progress_func.
+   * @since New in 1.3. */
+  void *progress_baton;
 } svn_client_ctx_t;
 
 
@@ -2374,7 +2384,7 @@ svn_client_uuid_from_path (const char **uuid,
  *
  * @since New in 1.3.
  *
- * @note This function is similar to svn_ra_open(), but the caller avoids
+ * @note This function is similar to svn_ra_open2(), but the caller avoids
  * having to providing its own callback functions.
  */
 svn_error_t *

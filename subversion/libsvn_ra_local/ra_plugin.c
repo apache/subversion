@@ -261,7 +261,7 @@ svn_ra_local__get_schemes (apr_pool_t *pool)
 static svn_error_t *
 svn_ra_local__open (svn_ra_session_t *session,
                     const char *repos_URL,
-                    const svn_ra_callbacks_t *callbacks,
+                    const svn_ra_callbacks2_t *callbacks,
                     void *callback_baton,
                     apr_hash_t *config,
                     apr_pool_t *pool)
