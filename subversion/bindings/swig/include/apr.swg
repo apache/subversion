@@ -61,6 +61,45 @@ OUTPUT_TYPEMAP(unsigned long long, ULL2NUM, (unsigned long long));
 typedef int apr_status_t;
 
 /* -----------------------------------------------------------------------
+   Create perl5 typemaps for long long datatypes
+*/
+%typemap(perl5, out) long long {
+    char temp[256];
+    sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) $1);
+    ST(argvi) = sv_newmortal();
+    sv_setpv((SV*)ST(argvi++), temp);
+}
+
+%typemap(perl5, out) unsigned long long {
+    char temp[256];
+    sprintf(temp, "%" APR_UINT64_T_FMT, (apr_uint64_t) $1);
+    ST(argvi) = sv_newmortal();
+    sv_setpv((SV*)ST(argvi++), temp);
+}
+
+%typemap(perl5, argout) long long *OUTPUT, long long &OUTPUT {
+  char temp[256];
+  if (argvi >= items) {
+    EXTEND(sp,1);
+  }
+  sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t)*($1));
+  $result = sv_newmortal();
+  sv_setpv($result,temp);
+  argvi++;
+}
+
+%typemap(perl5, argout) unsigned long long *OUTPUT, unsigned long long &OUTPUT {
+  char temp[256];
+  if (argvi >= items) {
+    EXTEND(sp,1);
+  }
+  sprintf(temp, "%" APR_UINT64_T_FMT, (apr_uint64_t)*($1));
+  $result = sv_newmortal();
+  sv_setpv($result,temp);
+  argvi++;
+}
+
+/* -----------------------------------------------------------------------
    apr_time_t
 */
 
