@@ -208,7 +208,7 @@
 /* XXX: apply long long *OUTPUT doesn't track $1 correctly */
 %typemap(perl5,argout) svn_filesize_t * {
     char temp[256];
-    sprintf(temp,"%lld", *$1);
+    sprintf(temp,"%" APR_INT64_T_FMT, *$1);
     ST(argvi) = sv_newmortal();
     sv_setpv((SV*)ST(argvi++), temp);
 };
