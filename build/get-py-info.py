@@ -9,7 +9,6 @@
 
 import sys
 import os
-import string
 from distutils import sysconfig
 
 def usage():
@@ -42,62 +41,89 @@ if sys.argv[1] == '--compile':
   print cc, opt, ccshared
   sys.exit(0)
 
-def ldshared_process(just_libs = None):
-  libdir = sysconfig.get_config_var('LIBDIR')
-  ldshared = sysconfig.get_config_var('LDSHARED')
-  ldlibrary = sysconfig.get_config_var('LDLIBRARY')
-  libpyfwdir = sysconfig.get_config_var('PYTHONFRAMEWORKDIR')
-  ldshared_elems = string.split(ldshared, " ")
-  libs_elems = []
-  for i in range(len(ldshared_elems)):
-    if ldshared_elems[i] == '-framework':
-      ldshared_elems[i] = '-Wl,' + ldshared_elems[i]
-      ldshared_elems[i+1] = '-Wl,' + ldshared_elems[i+1]
-      libs_elems.append(ldshared_elems[i])
-      libs_elems.append(ldshared_elems[i+1])
-    elif ldshared_elems[i][:2] == '-L':
-      if ldshared_elems[i][:3] != '-L:':
-        libs_elems.append(ldshared_elems[i])
-    elif ldshared_elems[i][:2] == '-l':
-      libs_elems.append(ldshared_elems[i])
-  ldlibpath = os.path.join(libdir, ldlibrary)
-  if libpyfwdir and libpyfwdir != "no-framework":
-    libpyfw = sysconfig.get_config_var('PYTHONFRAMEWORK')
-    py_lopt = "-framework " + libpyfw
-    libs_elems.append(py_lopt)
-    ldshared_elems.append(py_lopt)
-  elif (os.path.exists(ldlibpath)):
-    if libdir != '/usr/lib':
-      py_Lopt = "-L" + libdir
-      libs_elems.append(py_Lopt)
-      ldshared_elems.append(py_Lopt)
-    ldlibname, ldlibext = os.path.splitext(ldlibrary)
-    if ldlibname[:3] == 'lib' and ldlibext == '.so':
-      py_lopt = '-l' + ldlibname[3:]
-    else:
-      py_lopt = ldlibrary
-    libs_elems.append(py_lopt)
-    ldshared_elems.append(py_lopt)
+def add_option(options, name, value=None):
+  """Add option to list of options"""
+  options.append(name)
+  if value is not None:
+    options.append(value)
+
+def add_option_if_missing(options, name, value=None):
+  """Add option to list of options, if it is not already present"""
+  if options.count(name) == 0 and options.count("-Wl,%s" % name) == 0:
+    add_option(options, name, value)
+
+def link_options():
+  """Get list of Python linker options"""
+
+  # Initialize config variables
+  assert os.name == "posix"
+  options = sysconfig.get_config_var('LDSHARED').split()
+  fwdir = sysconfig.get_config_var('PYTHONFRAMEWORKDIR')
+
+  if fwdir and fwdir != "no-framework":
+
+    # Setup the framework prefix
+    fwprefix = sysconfig.get_config_var('PYTHONFRAMEWORKPREFIX')
+    if fwprefix != "/System/Library/Frameworks":
+      add_option_if_missing(options, "-F%s" % fwprefix)
+
+    # Load in the framework
+    fw = sysconfig.get_config_var('PYTHONFRAMEWORK')
+    add_option(options, "-framework", fw)
+
+  elif sys.platform == 'darwin':
+
+    # Load bundles from python
+    python_exe = os.path.join(sysconfig.get_config_var("BINDIR"),
+      sysconfig.get_config_var('PYTHON'))
+    add_option_if_missing(options, "-bundle_loader", python_exe)
+
   else:
-    python_version = sys.version[:3]
-    py_Lopt = "-L" + os.path.join(sys.prefix, "lib", "python" +
-       python_version, "config")
-    py_lopt = "-lpython" + python_version
-    libs_elems.append(py_Lopt)
-    libs_elems.append(py_lopt)
-    ldshared_elems.append(py_Lopt)
-    ldshared_elems.append(py_lopt)
-  if just_libs:
-    return string.join(libs_elems, " ")
-  else:
-    return string.join(ldshared_elems, " ")
+
+    # Initialize config variables
+    shared_libdir = sysconfig.get_config_var('LIBDIR')
+    static_libdir = sysconfig.get_config_var('LIBPL')
+    ldlibrary = sysconfig.get_config_var('LDLIBRARY')
+    python_version = sysconfig.get_config_var('VERSION')
+
+    # Find the path to the library
+    if os.path.exists(os.path.join(shared_libdir, ldlibrary)):
+      if shared_libdir != '/usr/lib':
+        add_option_if_missing(options, '-L%s' % shared_libdir)
+    elif os.path.exists(os.path.join(static_libdir, ldlibrary)):
+      add_option_if_missing(options, "-L%s" % static_libdir)
+
+    # Load in the library
+    add_option_if_missing(options, "-lpython%s" % python_version)
+
+  return options
+
+def lib_options():
+  """Get list of Python library options"""
+  link_command = link_options()
+  options = []
+
+  # Extract library-related options from link command
+  for i in range(len(link_command)):
+    option = link_command[i]
+    if (not option.startswith("-L:") and option.startswith("-L") or
+        option.startswith("-Wl,") or option.startswith("-l") or
+        option.startswith("-F") or option == "-bundle" or
+        option == "-flat_namespace"):
+      options.append(option)
+    elif (option == "-undefined" or option == "-bundle_loader" or
+          option == "-framework"):
+      options.append(option)
+      options.append(link_command[i+1])
+
+  return options
 
 if sys.argv[1] == '--link':
-  print ldshared_process()
+  print " ".join(link_options())
   sys.exit(0)
 
 if sys.argv[1] == '--libs':
-  print ldshared_process(just_libs = 1)
+  print " ".join(lib_options())
   sys.exit(0)
 
 usage()
