@@ -1,5 +1,5 @@
 /*
- * swigutil_py.c: utility functions for the SWIG Perl bindings
+ * swigutil_pl.c: utility functions for the SWIG Perl bindings
  *
  * ====================================================================
  * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
