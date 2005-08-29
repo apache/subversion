@@ -339,8 +339,8 @@ If t, their full path name will be displayed, else only the filename."
   (expand-file-name
    (or
     (when (boundp 'temporary-file-directory) temporary-file-directory) ;emacs
-    (when (boundp 'temp-directory) temp-directory)                     ;xemacs
-    "/tmp/")))
+    (when (fboundp 'temp-directory) (temp-directory))                  ;xemacs
+    "/tmp/")) "The directory that is used to store temporary files for psvn.")
 (defvar svn-temp-suffix (make-temp-name "."))
 (defvar svn-status-temp-file-to-remove nil)
 (defvar svn-status-temp-arg-file (concat svn-status-temp-dir "svn.arg" svn-temp-suffix))
