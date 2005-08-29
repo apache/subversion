@@ -2165,7 +2165,7 @@ or (if no files were marked) the file under point."
     (insert postfix))))
 
 (defun svn-status-show-process-buffer-internal (&optional scroll-to-top)
-  (when (eq (current-buffer) "`svn-status-buffer-name'")
+  (when (eq (current-buffer) svn-status-buffer-name)
     (delete-other-windows))
   (pop-to-buffer "*svn-process*")
   (when svn-status-wash-control-M-in-process-buffers
@@ -2189,7 +2189,7 @@ Consider svn-status-window-alist to choose the buffer name."
     (when svn-status-last-output-buffer-name
       (if window-mode
           (progn
-            (when (eq (current-buffer) svn-status-buffer-name)
+            (when (string= (buffer-name) svn-status-buffer-name)
               (delete-other-windows))
             (pop-to-buffer "*svn-process*")
             (switch-to-buffer (get-buffer-create svn-status-last-output-buffer-name))
