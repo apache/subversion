@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
-# Usage: 'contribulyze.py < SVN_LOG_OR_LOG-V_OUTPUT'
-# (Creates HTML files in the current directory; see index.html for more.)
+# See usage() for details, or run with --help option.
 # 
 #          .-------------------------------------------------.
 #          |  "An ad hoc format deserves an ad hoc parser."  |
@@ -43,6 +42,7 @@ import os
 import sys
 import re
 import shutil
+import getopt
 
 # Pretend we have true booleans on older python versions
 try:
@@ -480,45 +480,93 @@ def graze(input):
             num_lines -= 1
         continue
 
-# Gather the data.
-graze(sys.stdin)
+def drop():
+  # Output the data.
+  #
+  # The data structures are all linked up nicely to one another.  You
+  # can get all the LogMessages, and each LogMessage contains all the
+  # Contributors involved with that commit; likewise, each Contributor
+  # points back to all the LogMessages it contributed to.
+  #
+  # However, the HTML output is pretty simple right now.  It's not take
+  # full advantage of all that cross-linking.  For each contributor, we
+  # just create a file listing all the revisions contributed to; and we
+  # build a master index of all contributors, each name being a link to
+  # that contributor's individual file.  Much more is possible... but
+  # let's just get this up and running first.
 
-# Output the data.
-#
-# The data structures are all linked up nicely to one another.  You
-# can get all the LogMessages, and each LogMessage contains all the
-# Contributors involved with that commit; likewise, each Contributor
-# points back to all the LogMessages it contributed to.
-#
-# However, the HTML output is pretty simple right now.  It's not take
-# full advantage of all that cross-linking.  For each contributor, we
-# just create a file listing all the revisions contributed to; and we
-# build a master index of all contributors, each name being a link to
-# that contributor's individual file.  Much more is possible... but
-# let's just get this up and running first.
+  for key in LogMessage.all_logs.keys():
+    # You could print out all log messages this way, if you wanted to.
+    pass
+    # print LogMessage.all_logs[key]
 
-for key in LogMessage.all_logs.keys():
-  # You could print out all log messages this way, if you wanted to.
-  pass
-  # print LogMessage.all_logs[key]
+  index = open("index.html", "w")
+  index.write(html_header("Contributors"))
+  index.write("<ul>\n")
+  # The same contributor appears under multiple keys, so uniquify.
+  seen_contributors = { }
+  # Sorting alphabetically is acceptable, but even better would be to
+  # sort by number of contributions, so the most active people appear at
+  # the top -- that way we know whom to look at first for commit access
+  # proposals.
+  sorted_contributors = Contributor.all_contributors.values()
+  sorted_contributors.sort()
+  for c in sorted_contributors:
+    if not seen_contributors.has_key(c):
+      index.write('<li><p><a href="%s.html">%s</a></p></li>\n'
+                  % (c.canonical_name(), escape_html(c.big_name())))
+      c.html_out()
+    seen_contributors[c] = True
+  index.write("</ul>\n")
+  index.write(html_footer())
+  index.close()
 
-index = open("index.html", "w")
-index.write(html_header("Contributors"))
-index.write("<ul>\n")
-# The same contributor appears under multiple keys, so uniquify.
-seen_contributors = { }
-# Sorting alphabetically is acceptable, but even better would be to
-# sort by number of contributions, so the most active people appear at
-# the top -- that way we know whom to look at first for commit access
-# proposals.
-sorted_contributors = Contributor.all_contributors.values()
-sorted_contributors.sort()
-for c in sorted_contributors:
-  if not seen_contributors.has_key(c):
-    index.write('<li><p><a href="%s.html">%s</a></p></li>\n'
-                % (c.canonical_name(), escape_html(c.big_name())))
-    c.html_out()
-  seen_contributors[c] = True
-index.write("</ul>\n")
-index.write(html_footer())
-index.close()
+
+def process_committers(commiters_file):
+  """Read from open file handle COMMITTERS_FILE, which should be in
+  the same format as the Subversion 'COMMITTERS' file.  Create
+  Contributor objects based on the contents."""
+  complain("-C option not actually supported yet")
+
+
+def usage():
+  print 'USAGE: %s [-C COMMITTERS_FILE] < SVN_LOG_OR_LOG-V_OUTPUT' \
+        % os.path.basename(sys.argv[0])
+  print ""
+  print "Create HTML files in the current directory, rooted at index.html,"
+  print "in which you can browse to see who contributed what."
+  print ""
+  print "The log input should use the contribution-tracking format defined"
+  print "in http://subversion.tigris.org/hacking.html#crediting."
+  print ""
+  print "Options:"
+  print ""
+  print "  -h, -H, -?, --help   Print this usage message and exit\n"
+  print "  -C FILE              Use FILE as the 'COMMITTERS' file\n"
+  print ""
+
+
+def main():
+  try:
+    opts, args = getopt.getopt(sys.argv[1:], 'C:hH?', [ "--help" ])
+  except getopt.GetoptError, e:
+    complain(str(e) + '\n\n')
+    usage()
+    sys.exit(1)
+
+  # Parse options.
+  for opt, value in opts:
+    if (opt == '--help') or (opt == '-h') or (opt == '-H') or (opt == '-?'):
+      usage()
+      sys.exit(0)
+    elif opt == '-C':
+      process_committers(open(value))
+
+  # Gather the data.
+  graze(sys.stdin)
+
+  # Output the data.
+  drop()
+
+if __name__ == '__main__':
+  main()
