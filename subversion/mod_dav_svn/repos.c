@@ -2906,6 +2906,16 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   uri_len = ctx->uri->len;
   repos_len = ctx->repos_path->len;
 
+  /* Tell our logging subsystem that we're listing a directory.
+
+     Note: if we cared, we could look at the 'User-Agent:' request
+     header and distinguish an svn client ('svn ls') from a generic
+     DAV client.  */
+  apr_table_set(ctx->info.r->subprocess_env, "SVN-ACTION",
+                apr_psprintf(params->pool,
+                             "listing entries of directory '%s'",
+                             ctx->info.repos_path));
+
   /* fetch this collection's children */
   serr = svn_fs_dir_entries(&children, ctx->info.root.root,
                             ctx->info.repos_path, params->pool);
