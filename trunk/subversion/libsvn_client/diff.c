@@ -160,8 +160,8 @@ display_prop_diffs (const apr_array_header_t *propchanges,
                 apr_file_printf
                   (file, "   - %s" APR_EOL_STR, original_value->data);
 #else
-                svn_ebcdic_file_printf(pool, file, "   - %s" APR_EOL_STR,
-                                       original_value->data);
+                svn_ebcdic_file_printf2 (pool, file, "   - %s" APR_EOL_STR,
+                                         original_value->data);
 #endif
               }
           }
@@ -181,8 +181,8 @@ display_prop_diffs (const apr_array_header_t *propchanges,
                 apr_file_printf (file, "   + %s" APR_EOL_STR,
                                  propchange->value->data);
 #else
-                svn_ebcdic_file_printf (pool, file, "   + %s" APR_EOL_STR,
-                                        propchange->value->data);
+                svn_ebcdic_file_printf2 (pool, file, "   + %s" APR_EOL_STR,
+                                         propchange->value->data);
 #endif
               }
           }
@@ -410,7 +410,7 @@ diff_content_changed (const char *path,
   /* Make sure the prefix is made of whole components. (Issue #1771) */
   if (path1[i] || path2[i])
     {
-      for ( ; (i > 0) && (path1[i] != '/'); i--)
+      for ( ; (i > 0) && (path1[i] != SVN_UTF8_FSLASH); i--)
         ;
     }
   
@@ -455,11 +455,17 @@ diff_content_changed (const char *path,
       SVN_ERR (svn_stream_printf_from_utf8
                (os, diff_cmd_baton->header_encoding, subpool, out));
 
+#if !APR_CHARSET_EBCDIC
       SVN_ERR (svn_stream_printf_from_utf8
                (os, diff_cmd_baton->header_encoding, subpool,
-                _("Cannot display: file marked as a binary type.%s"),
-                APR_EOL_STR));
-      
+               _("Cannot display: file marked as a binary type." APR_EOL_STR));
+#else
+      SVN_ERR (svn_stream_printf_from_utf8
+               (os, diff_cmd_baton->header_encoding, subpool,
+               _("Cannot display: file marked as a binary type.%s"),
+                SVN_UTF8_NEWLINE_STR));
+#endif
+
       if (mt1_binary && !mt2_binary)
         SVN_ERR (svn_stream_printf_from_utf8
                  (os, diff_cmd_baton->header_encoding, subpool,
