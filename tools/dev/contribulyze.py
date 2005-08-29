@@ -238,9 +238,9 @@ class Contributor:
     if self.real_name: s += " " + self.real_name
     if self.email:
       if not self.real_name and not self.username:
-        s += " <" + self.email + ">"
-      else:
         s += " " + self.email
+      else:
+        s += " <" + self.email + ">"
     if self.username:
       if not self.real_name and not self.email:
         s += " " + self.username
@@ -303,9 +303,9 @@ class Contributor:
       out.write('<div class="h3" id="%s" title="%s">\n' % (log.revision,
                                                            log.revision))
       out.write("<pre>\n")
-      out.write("%s | %s | %s\n\n" % (log.revision,
-                                      escape_html(log.committer),
-                                      escape_html(log.date)))
+      out.write("<b>%s | %s | %s</b>\n\n" % (log.revision,
+                                             escape_html(log.committer),
+                                             escape_html(log.date)))
       out.write(escape_html(log.message))
       out.write("</pre>\n")
       out.write('</div>\n\n')
