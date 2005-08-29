@@ -145,7 +145,8 @@ class Contributor:
     # ### obvious most of the time, and the script ought to warn, or
     # ### unify on certain criteria, or something.  At the very least,
     # ### it could put the names near each other, so a human could
-    # ### catch it by eye.
+    # ### catch it by eye.  (Also, if took the COMMITTERS file as
+    # ### input, we probably *could* unify a lot of those pairs.)
     if username:
       if not c.username:
         c.username = username
