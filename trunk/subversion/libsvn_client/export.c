@@ -35,6 +35,7 @@
 #include "svn_time.h"
 #include "svn_md5.h"
 #include "svn_props.h"
+#include "svn_ebcdic.h"
 #include "client.h"
 
 #include "svn_private_config.h"
@@ -193,7 +194,7 @@ copy_one_versioned_file (const char *from,
       
       SVN_ERR (svn_subst_build_keywords 
                (&kw, keywords->data, 
-                apr_psprintf (pool, fmt, entry->cmt_rev),
+                APR_PSPRINTF2 (pool, fmt, entry->cmt_rev),
                 entry->url, tm, author, pool));
     }
 
