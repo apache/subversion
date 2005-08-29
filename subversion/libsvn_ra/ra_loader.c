@@ -230,12 +230,12 @@ svn_error_t *svn_ra_initialize (apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
-                          const char *repos_URL,
-                          const svn_ra_callbacks_t *callbacks,
-                          void *callback_baton,
-                          apr_hash_t *config,
-                          apr_pool_t *pool)
+svn_error_t *svn_ra_open2 (svn_ra_session_t **session_p,
+                           const char *repos_URL,
+                           const svn_ra_callbacks2_t *callbacks,
+                           void *callback_baton,
+                           apr_hash_t *config,
+                           apr_pool_t *pool)
 {
   svn_ra_session_t *session;
   const struct ra_lib_defn *defn;
@@ -279,6 +279,29 @@ svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
 
   *session_p = session;
   return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
+                          const char *repos_URL,
+                          const svn_ra_callbacks_t *callbacks,
+                          void *callback_baton,
+                          apr_hash_t *config,
+                          apr_pool_t *pool)
+{
+  /* Ddeprecated function. Copy the contents of the svn_ra_callbacks_t
+     to a new svn_ra_callbacks2_t and call svn_ra_open2(). */
+  svn_ra_callbacks2_t callbacks2;
+  callbacks2.open_tmp_file = callbacks->open_tmp_file;
+  callbacks2.auth_baton = callbacks->auth_baton;
+  callbacks2.get_wc_prop = callbacks->get_wc_prop;
+  callbacks2.set_wc_prop = callbacks->set_wc_prop;
+  callbacks2.push_wc_prop = callbacks->push_wc_prop;
+  callbacks2.invalidate_wc_props = callbacks->invalidate_wc_props;
+  callbacks2.progress_func = NULL;
+  callbacks2.progress_baton = NULL;
+  return svn_ra_open2 (session_p, repos_URL,
+                       &callbacks2, callback_baton,
+                       config, pool);
 }
 
 svn_error_t *svn_ra_get_latest_revnum (svn_ra_session_t *session,
