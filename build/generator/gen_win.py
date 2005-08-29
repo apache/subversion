@@ -200,17 +200,21 @@ class WinGeneratorBase(GeneratorBase):
     #Here we can add additional modes to compile for
     self.configs = ['Debug','Release']
 
-    # Generate external runtime
-    runtime = generator.swig.external_runtime.Generator("build.conf",
-                                                        self.swig_exe)
-    runtime.write()
+    if self.swig_libdir:
+      
+      # Generate SWIG header wrappers
+      header_wrappers = \
+        generator.swig.header_wrappers.Generator("build.conf", self.swig_exe)
+      header_wrappers.write()
+      
+      # Generate external runtime
+      runtime = \
+        generator.swig.external_runtime.Generator("build.conf", self.swig_exe)
+      runtime.write()
     
-    # Generate SWIG header wrappers
-    header_wrappers = \
-      generator.swig.header_wrappers.Generator("build.conf", self.swig_exe)
-    header_wrappers.write()
-    
-
+    else:
+      print "%s not found; skipping SWIG file generation..." % self.swig_exe
+      
   def path(self, *paths):
     """Convert build path to msvc path and prepend root"""
     return msvc_path_join(self.rootpath, *map(msvc_path, paths))
