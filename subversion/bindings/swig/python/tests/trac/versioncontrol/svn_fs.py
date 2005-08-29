@@ -20,11 +20,14 @@ import os.path
 import time
 import weakref
 import posixpath
+import re
 
 from svn import fs, repos, core, delta
 
 _kindmap = {core.svn_node_dir: Node.DIRECTORY,
             core.svn_node_file: Node.FILE}
+False = 0
+True = 1
 
 def _get_history(path, authz, fs_ptr, pool, start, end, limit=None):
     history = []
@@ -47,6 +50,9 @@ def _get_history(path, authz, fs_ptr, pool, start, end, limit=None):
     for item in history:
         yield item
 
+def _strip_path(path):
+    """Strip leading and trailing slashes from a path"""
+    return re.sub(r"^/+|/+$", "", path)
 
 class Pool(object):
     """
@@ -173,7 +179,7 @@ class SubversionRepository(Repository):
         return node_type in _kindmap
 
     def normalize_path(self, path):
-        return path == '/' and path or path and path.strip('/') or ''
+        return path == '/' and path or path and _strip_path(path) or ''  
 
     def normalize_rev(self, rev):
         try:
