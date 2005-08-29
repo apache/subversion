@@ -137,3 +137,7 @@ static PyObject * _global_svn_swig_py_pool = NULL;
 /* SWIG doesn't handle variadic parameters well */
 %ignore svn_string_createv;
 %ignore svn_stringbuf_createv;
+
+%{
+#include "svn_time.h"
+%}
