@@ -250,6 +250,11 @@ Otherwise: Don't display a header line")
   "*Arguments to pass to svn log.
 \(used in `svn-status-show-svn-log'; override these by giving prefixes\).")
 
+(defvar svn-status-default-diff-arguments nil
+  "*A list of arguments that is passed to the svn diff command.
+  If you'd like to supress whitespace changes use the following value:
+  '(\"--diff-cmd\" \"diff\" \"-x\" \"-wbBu\")")
+
 (defvar svn-trac-project-root nil "Path for an eventual existing trac issue tracker.")
 
 (defvar svn-status-module-name nil "A nice short name for the actual project.")
@@ -521,6 +526,27 @@ inside loops."
   (if (<= level svn-status-debug-level)
       (apply 'message args)))
 
+;; taken from esh-util: eshell-for
+(defmacro svn-status-for (for-var for-list &rest forms)
+  "Iterate through a list"
+  `(let ((list-iter ,for-list))
+     (while list-iter
+       (let ((,for-var (car list-iter)))
+         ,@forms)
+       (setq list-iter (cdr list-iter)))))
+(put 'svn-status-for 'lisp-indent-function 2)
+
+;; taken from esh-util: eshell-flatten-list
+(defun svn-status-flatten-list (args)
+  "Flatten any lists within ARGS, so that there are no sublists."
+  (let ((new-list (list t)))
+    (svn-status-for a args
+      (if (and (listp a)
+               (listp (cdr a)))
+          (nconc new-list (svn-status-flatten-list a))
+        (nconc new-list (list a))))
+    (cdr new-list)))
+
 (defvar svn-status-display-new-status-buffer nil)
 ;;;###autoload
 (defun svn-status (dir &optional arg)
@@ -590,9 +616,11 @@ command to run.
 
 ARGLIST is a list of arguments \(which must include the command name,
 for example: '(\"revert\" \"file1\"\)
+ARGLIST is flattened and any every nil value is discarded.
 
 If the variable `svn-status-edit-svn-command' is non-nil then the user
 is prompted for give extra arguments, which are appended to ARGLIST."
+  (setq arglist (delete nil (svn-status-flatten-list arglist)))
   (if (eq (process-status "svn") nil)
       (progn
         (when svn-status-edit-svn-command
@@ -2063,22 +2091,22 @@ If the file is not found, return nil."
                        (goto-char (previous-overlay-change cached-pos)))
                      (point)))
         (found))
-	;; performance optimization: search from point to end of buffer
-	(while (and (not found) (< (point) (point-max)))
-	  (goto-char (next-overlay-change (point)))
-	  (when (string= name (svn-status-line-info->filename
+    ;; performance optimization: search from point to end of buffer
+    (while (and (not found) (< (point) (point-max)))
+      (goto-char (next-overlay-change (point)))
+      (when (string= name (svn-status-line-info->filename
                            (svn-status-get-line-information)))
         (setq start-pos (+ (point) svn-status-default-column))
         (setq found t)))
-	;; search from buffer start to point
-	(goto-char (point-min))
-	(while (and (not found) (< (point) start-pos))
-	  (goto-char (next-overlay-change (point)))
-	  (when (string= name (svn-status-line-info->filename
+    ;; search from buffer start to point
+    (goto-char (point-min))
+    (while (and (not found) (< (point) start-pos))
+      (goto-char (next-overlay-change (point)))
+      (when (string= name (svn-status-line-info->filename
                            (svn-status-get-line-information)))
         (setq start-pos (+ (point) svn-status-default-column))
         (setq found t)))
-	(and found start-pos)))
+    (and found start-pos)))
 
 (defun svn-status-goto-file-name (name)
   "Move the cursor the the line that displays NAME."
@@ -2238,7 +2266,8 @@ If ARG then prompt for revision to diff against, else compare working copy with 
                          "BASE"
                        (if (svn-status-line-info->update-available (car fl)) "HEAD" "BASE")))))
     (while fl
-      (svn-run-svn nil clear-buf 'diff "diff" "-r" revision (svn-status-line-info->filename (car fl)))
+      (svn-run-svn nil clear-buf 'diff "diff" svn-status-default-diff-arguments
+                   "-r" revision (svn-status-line-info->filename (car fl)))
       (setq clear-buf nil)
       (setq fl (cdr fl))))
   (svn-status-diff-mode))
