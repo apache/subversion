@@ -288,7 +288,7 @@ svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
                           apr_hash_t *config,
                           apr_pool_t *pool)
 {
-  /* Ddeprecated function. Copy the contents of the svn_ra_callbacks_t
+  /* Deprecated function. Copy the contents of the svn_ra_callbacks_t
      to a new svn_ra_callbacks2_t and call svn_ra_open2(). */
   svn_ra_callbacks2_t callbacks2;
   callbacks2.open_tmp_file = callbacks->open_tmp_file;
