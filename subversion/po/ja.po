@@ -27,6 +27,7 @@
 # attribute               属性
 # author                  変更者
 # authorization           認証
+# authz                   認証
 # BASE                    BASE
 # baseline                ベースライン
 # basename                ベース名
@@ -141,8 +142,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-08-29 22:16+0900\n"
-"PO-Revision-Date: 2005-08-29 22:15+0900\n"
+"POT-Creation-Date: 2005-08-30 21:59+0900\n"
+"PO-Revision-Date: 2005-08-30 21:59+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -5844,36 +5845,40 @@ msgstr "post-revprop-change フックを作成しています"
 msgid "Creating conf directory"
 msgstr "設定用のディレクトリを作成しています"
 
-#: libsvn_repos/repos.c:1408
+#: libsvn_repos/repos.c:1422
 msgid "Creating svnserve.conf file"
 msgstr "svnserve.conf ファイルを作成しています"
 
-#: libsvn_repos/repos.c:1433
+#: libsvn_repos/repos.c:1447
 msgid "Creating passwd file"
 msgstr "パスワードファイルを作成しています"
 
-#: libsvn_repos/repos.c:1459
+#: libsvn_repos/repos.c:1496
+msgid "Creating authz file"
+msgstr "認証ファイルを作成しています"
+
+#: libsvn_repos/repos.c:1521
 msgid "Could not create top-level directory"
 msgstr "トップレベルのディレクトリを作成できませんでした"
 
-#: libsvn_repos/repos.c:1463
+#: libsvn_repos/repos.c:1525
 msgid "Creating DAV sandbox dir"
 msgstr "DAV サンドボックスディレクトリを作成しています"
 
-#: libsvn_repos/repos.c:1506
+#: libsvn_repos/repos.c:1568
 msgid "Creating readme file"
 msgstr "readme ファイルを作成しています"
 
-#: libsvn_repos/repos.c:1538
+#: libsvn_repos/repos.c:1600
 msgid "Repository creation failed"
 msgstr "リポジトリの作成に失敗しました"
 
-#: libsvn_repos/repos.c:1610
+#: libsvn_repos/repos.c:1672
 #, c-format
 msgid "Expected format '%d' of repository; found format '%d'"
 msgstr "予想されるリポジトリ形式は '%d' ですが、実際の形式は '%d' です"
 
-#: libsvn_repos/repos.c:1658
+#: libsvn_repos/repos.c:1720
 msgid "Error opening db lockfile"
 msgstr "DB ロックファイルを開く際にエラーが発生しました"
 
