@@ -1451,7 +1451,9 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
     static const char * const authz_contents =
       "### This file is an example authorization file for svnserve."
       APR_EOL_STR
-      "### Its format is similar to that of mod_authz_svn authorization files."
+      "### Its format is identical to that of mod_authz_svn authorization"
+      APR_EOL_STR
+      "### files."
       APR_EOL_STR
       "### As shown below each section defines authorizations for the path and"
       APR_EOL_STR
