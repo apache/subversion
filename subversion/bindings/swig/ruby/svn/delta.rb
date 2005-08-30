@@ -30,7 +30,6 @@ module Svn
       Delta.txdelta_skip_svndiff_window(file, version)
     end
 
-    # paths => [str, str, ...]
     def path_driver(editor, editor_baton, revision, paths, &callback_func)
       Delta.path_driver(editor, editor_baton, revision,
                         paths, callback_func)
