@@ -522,11 +522,25 @@ def drop():
   index.close()
 
 
-def process_committers(commiters_file):
-  """Read from open file handle COMMITTERS_FILE, which should be in
+def process_committers(committers):
+  """Read from open file handle COMMITTERS, which should be in
   the same format as the Subversion 'COMMITTERS' file.  Create
   Contributor objects based on the contents."""
-  complain("-C option not actually supported yet")
+  line = committers.readline()
+  while line != "Blanket commit access:\n":
+    line = committers.readline()
+  matcher = re.compile("(\S+)\s+([^\(\)]+)\s+(\([^()]+\)){0,1}")
+  line = committers.readline()
+  while line:
+    # Every @-sign we see after this point indicates a committer line.
+    if line.find("@") >= 0:
+      line = line.strip()
+      m = matcher.match(line)
+      user = m.group(1)
+      real_and_email = m.group(2).strip()
+      ignored, real, email = Contributor.parse(real_and_email)
+      c = Contributor.get(user, real, email)
+    line = committers.readline()
 
 
 def usage():
