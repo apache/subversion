@@ -1784,6 +1784,11 @@ svn_repos_authz_read (svn_authz_t **authz_p, const char *file,
  * check against.  Set @a *access_granted to indicate if the requested
  * access is granted.
  *
+ * If @a path is NULL, then check whether @a user has the @a
+ * required_access anywhere in the repository.  Set @a *access_granted
+ * to TRUE if at least one path is accessible with the @a
+ * required_access.
+ *
  * @since New in 1.3.
  */
 svn_error_t *
