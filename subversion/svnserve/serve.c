@@ -830,7 +830,7 @@ static svn_error_t *add_lock_tokens(svn_ra_svn_conn_t *conn,
 }
 
 /* Unlock the paths with lock tokens in LOCK_TOKENS, ignoring any errors.
-   LOCK_TOKENS contais svn_ra_svn_item_t elements, assumed to be lists. */
+   LOCK_TOKENS contains svn_ra_svn_item_t elements, assumed to be lists. */
 static svn_error_t *unlock_paths(apr_array_header_t *lock_tokens,
                                  server_baton_t *sb,
                                  apr_pool_t *pool)
