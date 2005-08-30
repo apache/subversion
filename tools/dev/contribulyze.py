@@ -577,8 +577,8 @@ def usage():
   print ""
   print "Options:"
   print ""
-  print "  -h, -H, -?, --help   Print this usage message and exit\n"
-  print "  -C FILE              Use FILE as the 'COMMITTERS' file\n"
+  print "  -h, -H, -?, --help   Print this usage message and exit\n",
+  print "  -C FILE              Use FILE as the 'COMMITTERS' file\n",
   print ""
 
 
