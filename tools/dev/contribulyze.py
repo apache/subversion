@@ -104,6 +104,8 @@ class Contributor:
     self.real_name = real_name
     self.username  = username
     self.email     = email
+    self.is_committer = False       # Assume not until hear otherwise.
+    self.is_full_committer = False  # Assume not until hear otherwise.
     # Map verbs (e.g., "Patch", "Suggested", "Review") to lists of
     # LogMessage objects.  For example, the log messages stored under
     # "Patch" represent all the revisions for which this contributor
@@ -136,17 +138,6 @@ class Contributor:
       c = Contributor(username, real_name, email)
     # If we know identifying information that the Contributor lacks,
     # then give it to the Contributor now.
-    #
-    # ### FIXME: Some people are cited in different, non-intersecting
-    # ### ways.  For example, Mike Pilato might appear as "cmpilato"
-    # ### in one commit, and "C. Michael Pilato <cmpilato@collab.net>"
-    # ### in another.  Although we can't automatically determine that
-    # ### these are the same person with 100% certainty, it's pretty
-    # ### obvious most of the time, and the script ought to warn, or
-    # ### unify on certain criteria, or something.  At the very least,
-    # ### it could put the names near each other, so a human could
-    # ### catch it by eye.  (Also, if took the COMMITTERS file as
-    # ### input, we probably *could* unify a lot of those pairs.)
     if username:
       if not c.username:
         c.username = username
@@ -175,8 +166,15 @@ class Contributor:
     return score
 
   def __cmp__(self, other):
-    # return cmp(self.score(), other.score())
-    return cmp(self.big_name(), other.big_name())
+    if self.is_full_committer and not other.is_full_committer:
+      return 1
+    if other.is_full_committer and not self.is_full_committer:
+      return -1
+    result = cmp(self.score(), other.score())
+    if result == 0:
+      return cmp(self.big_name(), other.big_name())
+    else:
+      return 0 - result
 
   def __hash__(self):
     """See LogMessage.__hash__() for why this exists."""
@@ -514,7 +512,7 @@ def drop():
 
   index = open("index.html", "w")
   index.write(html_header("Contributors"))
-  index.write("<ul>\n")
+  index.write("<ol>\n")
   # The same contributor appears under multiple keys, so uniquify.
   seen_contributors = { }
   # Sorting alphabetically is acceptable, but even better would be to
@@ -526,12 +524,17 @@ def drop():
   for c in sorted_contributors:
     if not seen_contributors.has_key(c):
       if c.score() > 0:
-        index.write('<li><p><a href="%s.html">%s</a>&nbsp;(%d)</p></li>\n'
-                    % (c.canonical_name(),
-                       escape_html(c.big_name()), c.score()))
+        committerness = ""
+        if c.is_full_committer:
+          committerness = "(full&nbsp;committer)&nbsp;"
+        elif c.is_committer:
+          committerness = "(partial&nbsp;committer)&nbsp;"
+        index.write('<li><p><a href="%s.html">%s</a>&nbsp;%s[%d]</p></li>\n'
+                    % (c.canonical_name(), escape_html(c.big_name()),
+                       committerness, c.score()))
         c.html_out()
     seen_contributors[c] = True
-  index.write("</ul>\n")
+  index.write("</ol>\n")
   index.write(html_footer())
   index.close()
 
@@ -543,17 +546,22 @@ def process_committers(committers):
   line = committers.readline()
   while line != "Blanket commit access:\n":
     line = committers.readline()
+  in_full_committers = True
   matcher = re.compile("(\S+)\s+([^\(\)]+)\s+(\([^()]+\)){0,1}")
   line = committers.readline()
   while line:
     # Every @-sign we see after this point indicates a committer line.
-    if line.find("@") >= 0:
+    if line == "Commit access for specific areas:\n":
+      in_full_committers = False
+    elif line.find("@") >= 0:
       line = line.strip()
       m = matcher.match(line)
       user = m.group(1)
       real_and_email = m.group(2).strip()
       ignored, real, email = Contributor.parse(real_and_email)
       c = Contributor.get(user, real, email)
+      c.is_committer = True
+      c.is_full_committer = in_full_committers
     line = committers.readline()
 
 
