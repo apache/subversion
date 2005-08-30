@@ -32,7 +32,9 @@
 #include "svn_path.h"
 #include "client.h"
 
-
+#define DOT_OLD_STR \
+        "\x2e\x4f\x4c\x44"
+        /* ".OLD" */
 
 /* Closure for handle_external_item_change. */
 struct handle_external_item_change_baton
@@ -123,7 +125,7 @@ relegate_external (const char *path,
 
       /* Reserve the new dir name. */
       SVN_ERR (svn_io_open_unique_file
-               (&f, &new_path, path, ".OLD", FALSE, pool));
+               (&f, &new_path, path, DOT_OLD_STR, FALSE, pool));
       apr_file_close (f);  /* toss error */
 
       /* Sigh...  We must fall ever so slightly from grace.
