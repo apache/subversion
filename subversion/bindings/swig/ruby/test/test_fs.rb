@@ -72,15 +72,6 @@ class SvnFsTest < Test::Unit::TestCase
     @fs.access.add_lock_token("token")
   end
 
-  def test_id
-  end
-
-  def test_transaction
-#     name = "txn"
-#     txn = @fs.open_txn(name)
-#     assert_equal(name, txn.name)
-  end
-
   def test_root
     log = "sample log"
     file = "sample.txt"
