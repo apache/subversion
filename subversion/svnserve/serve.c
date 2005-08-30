@@ -397,11 +397,11 @@ static svn_boolean_t lookup_access(apr_pool_t *pool,
  * behaviour is documented there.
  */
 static svn_error_t *must_have_access(svn_ra_svn_conn_t *conn,
-                                     apr_pool_t *pool,
                                      server_baton_t *b,
                                      svn_repos_authz_access_t required,
                                      const char *path,
-                                     svn_boolean_t needs_username)
+                                     svn_boolean_t needs_username,
+                                     apr_pool_t *pool)
 {
   enum access_type req = (required & svn_authz_write) ?
     WRITE_ACCESS : READ_ACCESS;
@@ -722,7 +722,7 @@ static svn_error_t *change_rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_string_t *value;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rc?s", &rev, &name, &value));
-  SVN_ERR(must_have_access(conn, pool, b, svn_authz_write, NULL, FALSE));
+  SVN_ERR(must_have_access(conn, b, svn_authz_write, NULL, FALSE, pool));
   SVN_CMD_ERR(svn_repos_fs_change_rev_prop2(b->repos, rev, b->user,
                                             name, value,
                                             authz_check_access_cb, b,
@@ -901,8 +901,8 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
      succeeded.  So we request write access and a username before
      adding tokens (if we have any), and subsequently fail if a lock
      violates authz. */
-  SVN_ERR(must_have_access(conn, pool, b, svn_authz_write,
-                           NULL, lock_tokens ? TRUE : FALSE));
+  SVN_ERR(must_have_access(conn, b, svn_authz_write, NULL,
+                           lock_tokens ? TRUE : FALSE, pool));
 
   /* Authorize the lock tokens and give them to the FS if we got
      any. */
@@ -970,8 +970,7 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                             svn_path_canonicalize(path, pool), pool);
 
   /* Check authorizations */
-  SVN_ERR(must_have_access(conn, pool, b, svn_authz_read,
-                           full_path, FALSE));
+  SVN_ERR(must_have_access(conn, b, svn_authz_read, full_path, FALSE, pool));
 
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
@@ -1049,8 +1048,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                             svn_path_canonicalize(path, pool), pool);
 
   /* Check authorizations */
-  SVN_ERR(must_have_access(conn, pool, b, svn_authz_read,
-                           full_path, FALSE));
+  SVN_ERR(must_have_access(conn, b, svn_authz_read, full_path, FALSE, pool));
 
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
@@ -1333,8 +1331,7 @@ static svn_error_t *check_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                             svn_path_canonicalize(path, pool), pool);
 
   /* Check authorizations */
-  SVN_ERR(must_have_access(conn, pool, b, svn_authz_read,
-                           full_path, FALSE));
+  SVN_ERR(must_have_access(conn, b, svn_authz_read, full_path, FALSE, pool));
 
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
@@ -1359,8 +1356,7 @@ static svn_error_t *stat(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                             svn_path_canonicalize(path, pool), pool);
 
   /* Check authorizations */
-  SVN_ERR(must_have_access(conn, pool, b, svn_authz_read,
-                           full_path, FALSE));
+  SVN_ERR(must_have_access(conn, b, svn_authz_read, full_path, FALSE, pool));
 
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
@@ -1576,8 +1572,7 @@ static svn_error_t *lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   full_path = svn_path_join(b->fs_path,
                             svn_path_canonicalize(path, pool), pool);
 
-  SVN_ERR(must_have_access(conn, pool, b, svn_authz_write,
-                           full_path, TRUE));
+  SVN_ERR(must_have_access(conn, b, svn_authz_write, full_path, TRUE, pool));
 
   SVN_CMD_ERR(svn_repos_fs_lock(&l, b->repos, full_path, NULL, comment, 0,
                                 0, /* No expiration time. */
@@ -1616,7 +1611,7 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
      a reply before parsing the lock commands.  This means an authz
      access denial will abort the processing of the locks and return
      an error. */
-  SVN_ERR(must_have_access(conn, pool, b, svn_authz_write, NULL, TRUE));
+  SVN_ERR(must_have_access(conn, b, svn_authz_write, NULL, TRUE, pool));
 
   /* Loop through the lock commands. */
   for (i = 0; i < locks->nelts; ++i)
@@ -1687,8 +1682,8 @@ static svn_error_t *unlock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                             pool);
 
   /* Username required unless force was specified. */
-  SVN_ERR(must_have_access(conn, pool, b, svn_authz_write,
-                           full_path, ! break_lock));
+  SVN_ERR(must_have_access(conn, b, svn_authz_write,
+                           full_path, ! break_lock, pool));
 
   SVN_CMD_ERR(svn_repos_fs_unlock(b->repos, full_path, token, break_lock,
                                   pool));
@@ -1719,7 +1714,8 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     apr_array_make(pool, unlock_tokens->nelts, sizeof(struct unlock_cmd));
 
   /* Username required unless force was specified. */
-  SVN_ERR(must_have_access(conn, pool, b, svn_authz_write, NULL, ! break_lock));
+  SVN_ERR(must_have_access(conn, b, svn_authz_write,
+                           NULL, ! break_lock, pool));
 
   subpool = svn_pool_create(pool);
   /* Loop through the unlock commands. */
@@ -1782,8 +1778,7 @@ static svn_error_t *get_lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   full_path = svn_path_join(b->fs_path, svn_path_canonicalize(path, pool),
                             pool);
 
-  SVN_ERR(must_have_access(conn, pool, b, svn_authz_read,
-                           full_path, FALSE));
+  SVN_ERR(must_have_access(conn, b, svn_authz_read, full_path, FALSE, pool));
 
   SVN_CMD_ERR(svn_fs_get_lock(&l, b->fs, full_path, pool));
 
