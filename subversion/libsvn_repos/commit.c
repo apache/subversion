@@ -763,8 +763,8 @@ svn_repos_get_commit_editor3 (const svn_delta_editor_t **editor,
                               const char *base_path,
                               const char *user,
                               const char *log_msg,
-                              svn_commit_callback_t commit_callback,
-                              void *commit_callback_baton,
+                              svn_commit_callback_t callback,
+                              void *callback_baton,
                               svn_repos_authz_callback_t authz_callback,
                               void *authz_baton,
                               apr_pool_t *pool)
@@ -791,8 +791,8 @@ svn_repos_get_commit_editor3 (const svn_delta_editor_t **editor,
   eb->pool = subpool;
   eb->user = user ? apr_pstrdup (subpool, user) : NULL;
   eb->log_msg = apr_pstrdup (subpool, log_msg);
-  eb->commit_callback = commit_callback;
-  eb->commit_callback_baton = commit_callback_baton;
+  eb->commit_callback = callback;
+  eb->commit_callback_baton = callback_baton;
   eb->authz_callback = authz_callback;
   eb->authz_baton = authz_baton;
   eb->base_path = apr_pstrdup (subpool, base_path);
