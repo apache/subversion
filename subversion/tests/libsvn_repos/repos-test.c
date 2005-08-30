@@ -1117,6 +1117,9 @@ authz (const char **msg,
        of subpaths. */
     { "/A/D", "plato", svn_authz_read | svn_authz_recursive, TRUE },
     { "/A/D", NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    /* Test global write access lookups. */
+    { NULL, "plato", svn_authz_read, TRUE },
+    { NULL, NULL, svn_authz_write, FALSE },
     /* Sentinel */
     { NULL, NULL, svn_authz_none, FALSE }
   };
