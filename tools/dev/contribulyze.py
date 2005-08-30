@@ -163,7 +163,19 @@ class Contributor:
     return c
   get = staticmethod(get)
 
+  def score(self):
+    """Return a contribution score for this contributor."""
+    # Right now we count a patch as 2, anything else as 1.
+    score = 0
+    for activity in self.activities.keys():
+      if activity == "Patch":
+        score += len(self.activities[activity]) * 2
+      else:
+        score += len(self.activities[activity])
+    return score
+
   def __cmp__(self, other):
+    # return cmp(self.score(), other.score())
     return cmp(self.big_name(), other.big_name())
 
   def __hash__(self):
@@ -513,9 +525,11 @@ def drop():
   sorted_contributors.sort()
   for c in sorted_contributors:
     if not seen_contributors.has_key(c):
-      index.write('<li><p><a href="%s.html">%s</a></p></li>\n'
-                  % (c.canonical_name(), escape_html(c.big_name())))
-      c.html_out()
+      if c.score() > 0:
+        index.write('<li><p><a href="%s.html">%s</a>&nbsp;(%d)</p></li>\n'
+                    % (c.canonical_name(),
+                       escape_html(c.big_name()), c.score()))
+        c.html_out()
     seen_contributors[c] = True
   index.write("</ul>\n")
   index.write(html_footer())
