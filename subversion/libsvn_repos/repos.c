@@ -1392,6 +1392,20 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# password-db = passwd"
       APR_EOL_STR
+      "### The authz-db option controls the location of the authorization"
+      APR_EOL_STR
+      "### rules for path-based access control.  Unless you specify a path"
+      APR_EOL_STR
+      "### starting with a /, the file's location is relative to the conf"
+      APR_EOL_STR
+      "### directory.  If you don't specify an authz-db, no path-based access"
+      APR_EOL_STR
+      "### control is done."
+      APR_EOL_STR
+      "### Uncomment the line below to use the default authorization file."
+      APR_EOL_STR
+      "# authz-db = authz"
+      APR_EOL_STR
       "### This option specifies the authentication realm of the repository."
       APR_EOL_STR
       "### If two repositories have the same authentication realm, they should"
@@ -1433,6 +1447,52 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
                _("Creating passwd file"));
   }
 
+  {
+    static const char * const authz_contents =
+      "### This file is an example authorization file for svnserve."
+      APR_EOL_STR
+      "### Its format is similar to that of mod_authz_svn authorization files."
+      APR_EOL_STR
+      "### As shown below each section defines authorizations for the path and"
+      APR_EOL_STR
+      "### (optional) repository specified by the section name."
+      APR_EOL_STR
+      "### The authorizations follow. An authorization line can refer to a"
+      APR_EOL_STR
+      "### single user, to a group of users defined in a special [groups]"
+      APR_EOL_STR
+      "### section, or to anyone using the '*' wildcard.  Each definition can"
+      APR_EOL_STR
+      "### grant read ('r') access, read-write ('rw') access, or no access"
+      APR_EOL_STR
+      "### ('')."
+      APR_EOL_STR
+      APR_EOL_STR
+      "# [groups]"
+      APR_EOL_STR
+      "# harry_and_sally = harry,sally"
+      APR_EOL_STR
+      APR_EOL_STR
+      "# [/foo/bar]"
+      APR_EOL_STR
+      "# harry = rw"
+      APR_EOL_STR
+      "# * ="
+      APR_EOL_STR
+      APR_EOL_STR
+      "# [repository:/baz/fuz]"
+      APR_EOL_STR
+      "# @harry_and_sally = rw"
+      APR_EOL_STR
+      "# * = r"
+      APR_EOL_STR;
+
+    SVN_ERR_W (svn_io_file_create (svn_path_join (repos->conf_path,
+                                                  SVN_REPOS__CONF_AUTHZ,
+                                                  pool),
+                                   authz_contents, pool),
+               _("Creating authz file"));
+  }
 
   return SVN_NO_ERROR;
 }
