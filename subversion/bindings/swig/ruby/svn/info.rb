@@ -56,7 +56,7 @@ module Svn
     
     def get_info
       @author = force_to_utf8(prop(Core::PROP_REVISION_AUTHOR))
-      @date = Util.string_to_time(prop(Core::PROP_REVISION_DATE))
+      @date = Time.from_svn_format(prop(Core::PROP_REVISION_DATE))
       @log = force_to_utf8(prop(Core::PROP_REVISION_LOG))
     end
 
@@ -269,7 +269,7 @@ module Svn
     end
 
     def format_date(str)
-      Util.string_to_time(str).strftime("%Y-%m-%d %H:%M:%S %Z")
+      Time.from_svn_format(str).strftime("%Y-%m-%d %H:%M:%S %Z")
     end
     
     class DiffEntry

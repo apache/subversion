@@ -150,8 +150,10 @@ typedef apr_int32_t time_t;
 }
 
 %typemap(ruby,in,numinputs=0) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
-%typemap(ruby,argout) apr_hash_t **PROPHASH {
-    $result = svn_swig_rb_apr_hash_to_hash_svn_string(*$1);
+%typemap(ruby, argout, fragment="output_helper") apr_hash_t **PROPHASH
+{
+  $result = output_helper($result,
+                          svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
 }
 
 /* -----------------------------------------------------------------------

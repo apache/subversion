@@ -30,7 +30,8 @@ module Svn
 
       alias _date date
       def date
-        Util.string_to_time(_date)
+        __date = _date
+        __date && Time.from_svn_format(__date)
       end
     end
 
@@ -292,7 +293,7 @@ module Svn
               discover_changed_paths, strict_node_history)
         paths = [paths] unless paths.is_a?(Array)
         receiver = Proc.new do |changed_paths, rev, author, date, message|
-          date = Util.string_to_time(date) if date
+          date = Time.from_svn_format(date) if date
           yield(changed_paths, rev, author, date, message)
         end
         Client.log2(paths, start_rev, end_rev, limit,
@@ -323,7 +324,8 @@ module Svn
         end_rev ||= URI(path_or_uri).scheme ? "HEAD" : "BASE"
         peg_rev ||= end_rev
         receiver = Proc.new do |line_no, revision, author, date, line|
-          yield(line_no, revision, author, Util.string_to_time(date), line)
+          date = Time.from_svn_format(date) if date
+          yield(line_no, revision, author, date, line)
         end
         Client.blame2(path_or_uri, peg_rev, start_rev,
                       end_rev, receiver, self)
@@ -365,7 +367,7 @@ module Svn
         props, rev = Client.revprop_list(uri, rev, self)
         if props.has_key?(Svn::Core::PROP_REVISION_DATE)
           props[Svn::Core::PROP_REVISION_DATE] =
-            Util.string_to_time(props[Svn::Core::PROP_REVISION_DATE])
+            Time.from_svn_format(props[Svn::Core::PROP_REVISION_DATE])
         end
         [props, rev]
       end

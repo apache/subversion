@@ -1,9 +1,5 @@
-require "time"
-
 module Svn
   module Util
-
-    MILLION = 1000000
 
     @@wrapper_procs = []
     
@@ -14,19 +10,6 @@ module Svn
       
     def to_ruby_const_name(name)
       name.upcase
-    end
-
-    def to_apr_time(value)
-      if value.is_a?(Time)
-        value.to_i * MILLION + value.usec
-      else
-        value
-      end
-    end
-
-    def string_to_time(str)
-      sec, usec = Core.time_from_cstring(str).divmod(MILLION)
-      Time.at(sec, usec)
     end
 
     def valid_rev?(rev)

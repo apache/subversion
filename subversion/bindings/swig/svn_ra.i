@@ -82,13 +82,41 @@
     svn_ra_make_callbacks(&$1, &$2, $input, _global_pool);
 }
 
+%typemap(ruby, in) (const svn_ra_callbackss_t *callbacks,
+                    void *callback_baton)
+{
+  svn_swig_rb_setup_ra_callbacks(&$1, &$2, $input, _global_pool);
+}
+
 %typemap(perl5, in) apr_hash_t *config {
     $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
 					   _global_pool);
 }
 
+%typemap(ruby, in) (svn_ra_lock_callback_t lock_func, void *lock_baton)
+{
+  $1 = svn_swig_rb_ra_lock_callback;
+  $2 = (void *)$input;
+}
+
+%typemap(ruby, in) (svn_ra_file_rev_handler_t handler, void *handler_baton)
+{
+  $1 = svn_swig_rb_ra_file_rev_handler;
+  $2 = (void *)$input;
+}
+
 %typemap(perl5, in) apr_hash_t *lock_tokens {
     $1 = svn_swig_pl_strings_to_hash ($input, _global_pool);
+}
+
+%typemap(ruby, in) apr_hash_t *lock_tokens
+{
+  $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
+}
+
+%typemap(ruby, in) apr_array_header_t *location_revisions
+{
+  $1 = svn_swig_rb_array_to_apr_array_revnum($input, _global_pool);
 }
 
 /* ----------------------------------------------------------------------- */

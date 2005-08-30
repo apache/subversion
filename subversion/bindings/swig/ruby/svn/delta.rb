@@ -13,12 +13,47 @@ module Svn
       alias make_editor swig_rb_make_editor
     end
 
+    module_function
+    def svndiff_handler(output)
+      obj = Delta.txdelta_to_svndiff_handler(output)
+      def obj.call(window)
+        Delta.txdelta_invoke_handler(@handler, window)
+      end
+      obj
+    end
+
+    def read_svndiff_window(stream, version)
+      Delta.txdelta_read_svndiff_window(stream, version)
+    end
+
+    def skip_svndiff_window(file, version)
+      Delta.txdelta_skip_svndiff_window(file, version)
+    end
+
+    # paths => [str, str, ...]
+    def path_driver(editor, editor_baton, revision, paths, &callback_func)
+      Delta.path_driver(editor, editor_baton, revision,
+                        paths, callback_func)
+    end
+    
     TextDeltaStream = SWIG::TYPE_p_svn_txdelta_stream_t
 
     class TextDeltaStream
       class << self
         def new(source, target)
           Delta.txdelta(source, target)
+        end
+
+        def push_target(source, &handler)
+          Delta.txdelta_target_push(handler, source)
+        end
+
+        def apply(source, target, error_info=nil, &handler)
+          Delta.txdelta_apply(source, target, error_info, handler)
+        end
+
+        def parse_svndiff(error_on_early_close=true, &handler)
+          Delta.parse_svndiff(handler, error_on_early_close)
         end
       end
 
@@ -35,8 +70,20 @@ module Svn
           yield(window)
         end
       end
+
+      def send_string(string, &handler)
+        Delta.txdelta_send_string(string, handler)
+      end
+
+      def send_stream(stream, digest=nil, &handler)
+        if stream.is_a?(TextDeltaStream)
+          Delta.txdelta_send_txstream(stream, handler, digest)
+        else
+          Delta.txdelta_send_stream(stream, handler, digest)
+        end
+      end
     end
-    
+
     remove_const(:Editor)
     class Editor
       # open_root -> add_directory -> open_directory -> add_file -> open_file 

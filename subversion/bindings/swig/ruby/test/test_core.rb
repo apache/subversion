@@ -26,6 +26,16 @@ class SvnCoreTest < Test::Unit::TestCase
     assert(!Svn::Core.binary_mime_type?("text/plain"))
   end
 
+  def test_time
+    now = Time.now.gmtime
+    str = now.strftime("%Y-%m-%dT%H:%M:%S.") + "#{now.usec}Z"
+
+    assert_equal(now, Time.from_svn_format(str))
+
+    apr_time = now.to_i * 1000000 + now.usec
+    assert_equal(apr_time, now.to_apr_time)
+  end
+  
   def test_not_new_auth_provider_object
     assert_raise(NoMethodError) do
       Svn::Core::AuthProviderObject.new
@@ -326,8 +336,7 @@ EOT
   def used_pool
     pool = Svn::Core::Pool.new
     now = Time.now.gmtime
-    apr_time = now.to_i * Svn::Util::MILLION + now.usec
-    Svn::Core.time_to_human_cstring(apr_time, pool)
+    Svn::Core.time_to_human_cstring(now.to_apr_time, pool)
     pool
   end
 
