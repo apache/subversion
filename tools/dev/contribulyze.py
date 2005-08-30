@@ -53,23 +53,23 @@ except:
 
 # Warnings and errors start with these strings.  They are typically
 # followed by a colon and a space, as in "%s: " ==> "WARNING: ".
-warning_prefix = "WARNING"
-error_prefix = "ERROR"
+warning_prefix = 'WARNING'
+error_prefix = 'ERROR'
 
 def complain(msg, fatal=False):
   """Print MSG as a warning, or if FATAL is true, print it as an error
   and exit."""
-  prefix = "WARNING: "
+  prefix = 'WARNING: '
   if fatal:
-    prefix = "ERROR: "
-  sys.stderr.write(prefix + msg + "\n")
+    prefix = 'ERROR: '
+  sys.stderr.write(prefix + msg + '\n')
   if fatal:
     sys.exit(1)
 
 
 def escape_html(str):
   """Return an HTML-escaped version of STR."""
-  return str.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+  return str.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
 
 def html_header(title):
@@ -159,7 +159,7 @@ class Contributor:
     # Right now we count a patch as 2, anything else as 1.
     score = 0
     for activity in self.activities.keys():
-      if activity == "Patch":
+      if activity == 'Patch':
         score += len(self.activities[activity]) * 2
       else:
         score += len(self.activities[activity])
@@ -200,7 +200,7 @@ class Contributor:
         complain("Python couldn't have done that, could it?", True)
       if name[0] == '<' and name[-1] == '>':
         email = name[1:-1]
-      elif name.find("@") != -1:
+      elif name.find('@') != -1:
         email = name
       else:
         username = name
@@ -230,47 +230,47 @@ class Contributor:
       # Take some rudimentary steps to shorten the email address, to
       # make it more manageable.  If this is ever discovered to result
       # in collisions, we can always just use to the full address.
-      at_posn = self.email.find("@")
+      at_posn = self.email.find('@')
       if not at_posn:
         return self.email
       else:
-        first_dot_after_at = self.email.find(".", at_posn)
+        first_dot_after_at = self.email.find('.', at_posn)
         return self.email[0:first_dot_after_at]
     if self.real_name:
       # Last resort: construct canonical name based on real name.  
       # ### FIXME: Need to tweak to guarantee that it's made only of
       # ### characters that would be safe in an email address.
-      return "".join(self.real_name.lower().split(" "))
-    complain("Unable to construct a canonical name for Contributor.", True)
+      return ''.join(self.real_name.lower().split(' '))
+    complain('Unable to construct a canonical name for Contributor.', True)
 
   def big_name(self):
     """Return as complete a name as possible for this contributor."""
-    s = ""
-    if self.real_name: s += " " + self.real_name
+    s = ''
+    if self.real_name: s += ' ' + self.real_name
     if self.email:
       if not self.real_name and not self.username:
-        s += " " + self.email
+        s += ' ' + self.email
       else:
-        s += " <" + self.email + ">"
+        s += ' <' + self.email + '>'
     if self.username:
       if not self.real_name and not self.email:
-        s += " " + self.username
+        s += ' ' + self.username
       else:
-        s += " (" + self.username + ")"
+        s += ' (' + self.username + ')'
     return s[1:]
 
   def __str__(self):
-    s = "CONTRIBUTOR: "
+    s = 'CONTRIBUTOR: '
     s += self.big_name()
     s += "\ncanonical name: '%s'" % self.canonical_name()
     if len(self.activities) > 0:
-      s += "\n   "
+      s += '\n   '
     for activity in self.activities.keys():
       val = self.activities[activity]
-      s += "[%s:" % activity
+      s += '[%s:' % activity
       for log in val:
-        s += " %s" % log.revision
-      s += "]"
+        s += ' %s' % log.revision
+      s += ']'
     return s
 
   def html_out(self):
@@ -278,7 +278,7 @@ class Contributor:
     "`self.canonical_name()`.html", showing all the revisions in which
     this contributor was active."""
     canon = self.canonical_name()
-    out = open(canon + ".html", "w")
+    out = open(canon + '.html', 'w')
     out.write(html_header(self.big_name()))
     unique_logs = { }
 
@@ -290,15 +290,15 @@ class Contributor:
     out.write('<tr>\n')
     for activity in sorted_activities:
       out.write('<td>%s</td>\n\n' % activity)
-    out.write("</tr>\n")
+    out.write('</tr>\n')
     out.write('<tr>\n')
     for activity in sorted_activities:
       out.write('<td>\n')
       first_activity = True
       for log in self.activities[activity]:
-        s = ",\n"
+        s = ',\n'
         if first_activity:
-          s = ""
+          s = ''
           first_activity = False
         out.write('%s<a href="#%s">%s</a>' % (s, log.revision, log.revision))
         unique_logs[log] = True
@@ -310,17 +310,17 @@ class Contributor:
     sorted_logs = unique_logs.keys()
     sorted_logs.sort()
     for log in sorted_logs:
-      out.write("<hr />\n")
+      out.write('<hr />\n')
       out.write('<div class="h3" id="%s" title="%s">\n' % (log.revision,
                                                            log.revision))
-      out.write("<pre>\n")
-      out.write("<b>%s | %s | %s</b>\n\n" % (log.revision,
+      out.write('<pre>\n')
+      out.write('<b>%s | %s | %s</b>\n\n' % (log.revision,
                                              escape_html(log.committer),
                                              escape_html(log.date)))
       out.write(escape_html(log.message))
-      out.write("</pre>\n")
+      out.write('</pre>\n')
       out.write('</div>\n\n')
-    out.write("<hr />\n")
+    out.write('<hr />\n')
 
     out.write(html_footer())
     out.close()
@@ -340,15 +340,15 @@ class Field:
     # parser only detects the first one anyway, because additional
     # ones are very uncommon and furthermore by that point one should
     # probably be looking at the full log message.
-    self.addendum = ""
+    self.addendum = ''
   def add_contributor(self, contributor):
     self.contributors.append(contributor)
   def add_endum(self, addendum):
     self.addendum += addendum
   def __str__(self):
-    s = "FIELD: %s (%d contributors)\n" % (self.name, len(self.contributors))
+    s = 'FIELD: %s (%d contributors)\n' % (self.name, len(self.contributors))
     for contributor in self.contributors:
-      s += str(contributor) + "\n"
+      s += str(contributor) + '\n'
     s += self.addendum
     return s
 
@@ -363,7 +363,7 @@ class LogMessage:
     self.revision = revision
     self.committer = committer
     self.date = date
-    self.message = ""
+    self.message = ''
     # Map field names (e.g., "Patch", "Review", "Suggested") onto
     # Field objects.
     self.fields = { }
@@ -400,28 +400,28 @@ class LogMessage:
     return int(self.revision[1:])
 
   def __str__(self):
-    s = "=" * 15
-    header = " LOG: %s | %s " % (self.revision, self.committer)
+    s = '=' * 15
+    header = ' LOG: %s | %s ' % (self.revision, self.committer)
     s += header
-    s += "=" * 15
-    s += "\n"
+    s += '=' * 15
+    s += '\n'
     for field_name in self.fields.keys():
-      s += str(self.fields[field_name]) + "\n"
-    s += "-" * 15
-    s += "-" * len(header)
-    s += "-" * 15
-    s += "\n"
+      s += str(self.fields[field_name]) + '\n'
+    s += '-' * 15
+    s += '-' * len(header)
+    s += '-' * 15
+    s += '\n'
     return s
 
 
 
 ### Code to parse the logs. ##
 
-log_separator = "-" * 72 + '\n'
+log_separator = '-' * 72 + '\n'
 log_header_re = re.compile\
-                ("^(r[0-9]+) \| ([^|]+) \| ([^|]+) \| ([0-9]+)[^0-9]")
-field_re = re.compile("^(Patch|Review|Suggested) by:\s+(.*)")
-parenthetical_aside_re = re.compile("^\(.*\)\s*$")
+                ('^(r[0-9]+) \| ([^|]+) \| ([^|]+) \| ([0-9]+)[^0-9]')
+field_re = re.compile('^(Patch|Review|Suggested) by:\s+(.*)')
+parenthetical_aside_re = re.compile('^\(.*\)\s*$')
 
 def graze(input):
   just_saw_separator = False
@@ -431,7 +431,7 @@ def graze(input):
     if line == '': break
     if line == log_separator:
       if just_saw_separator:
-        sys.stderr.write("Two separators in a row.\n")
+        sys.stderr.write('Two separators in a row.\n')
         sys.exit(1)
       else:
         just_saw_separator = True
@@ -441,8 +441,8 @@ def graze(input):
       if just_saw_separator:
         m = log_header_re.match(line)
         if not m:
-          sys.stderr.write("Could not match log message header.\n")
-          sys.stderr.write("Line was:\n")
+          sys.stderr.write('Could not match log message header.\n')
+          sys.stderr.write('Line was:\n')
           sys.stderr.write("'%s'\n" % line)
           sys.exit(1)
         else:
@@ -465,12 +465,12 @@ def graze(input):
                 if not field:
                   field = Field(m.group(1))
                 # Each line begins either with "WORD by:", or with whitespace.
-                in_field_re = re.compile("^("
+                in_field_re = re.compile('^('
                                          + field.name
-                                         + " by:\s+|\s+)(\S.*)+")
+                                         + ' by:\s+|\s+)(\S.*)+')
                 m = in_field_re.match(line)
                 user, real, email = Contributor.parse(m.group(2))
-                if user == "me":
+                if user == 'me':
                   user = log.committer
                 c = Contributor.get(user, real, email)
                 c.add_activity(field.name, log)
@@ -510,9 +510,9 @@ def drop():
     pass
     # print LogMessage.all_logs[key]
 
-  index = open("index.html", "w")
-  index.write(html_header("Contributors"))
-  index.write("<ol>\n")
+  index = open('index.html', 'w')
+  index.write(html_header('Contributors'))
+  index.write('<ol>\n')
   # The same contributor appears under multiple keys, so uniquify.
   seen_contributors = { }
   # Sorting alphabetically is acceptable, but even better would be to
@@ -529,15 +529,15 @@ def drop():
           # a distraction from the purposes for which we're here.
           continue
         else:
-          committerness = ""
+          committerness = ''
           if c.is_committer:
-            committerness = "&nbsp;(partial&nbsp;committer)"
+            committerness = '&nbsp;(partial&nbsp;committer)'
           index.write('<li><p><a href="%s.html">%s</a>&nbsp;[%d]%s</p></li>\n'
                       % (c.canonical_name(), escape_html(c.big_name()),
                          c.score(), committerness))
           c.html_out()
     seen_contributors[c] = True
-  index.write("</ol>\n")
+  index.write('</ol>\n')
   index.write(html_footer())
   index.close()
 
@@ -547,16 +547,16 @@ def process_committers(committers):
   the same format as the Subversion 'COMMITTERS' file.  Create
   Contributor objects based on the contents."""
   line = committers.readline()
-  while line != "Blanket commit access:\n":
+  while line != 'Blanket commit access:\n':
     line = committers.readline()
   in_full_committers = True
-  matcher = re.compile("(\S+)\s+([^\(\)]+)\s+(\([^()]+\)){0,1}")
+  matcher = re.compile('(\S+)\s+([^\(\)]+)\s+(\([^()]+\)){0,1}')
   line = committers.readline()
   while line:
     # Every @-sign we see after this point indicates a committer line.
-    if line == "Commit access for specific areas:\n":
+    if line == 'Commit access for specific areas:\n':
       in_full_committers = False
-    elif line.find("@") >= 0:
+    elif line.find('@') >= 0:
       line = line.strip()
       m = matcher.match(line)
       user = m.group(1)
@@ -571,23 +571,23 @@ def process_committers(committers):
 def usage():
   print 'USAGE: %s [-C COMMITTERS_FILE] < SVN_LOG_OR_LOG-V_OUTPUT' \
         % os.path.basename(sys.argv[0])
-  print ""
-  print "Create HTML files in the current directory, rooted at index.html,"
-  print "in which you can browse to see who contributed what."
-  print ""
-  print "The log input should use the contribution-tracking format defined"
-  print "in http://subversion.tigris.org/hacking.html#crediting."
-  print ""
-  print "Options:"
-  print ""
-  print "  -h, -H, -?, --help   Print this usage message and exit\n",
-  print "  -C FILE              Use FILE as the 'COMMITTERS' file\n",
-  print ""
+  print ''
+  print 'Create HTML files in the current directory, rooted at index.html,'
+  print 'in which you can browse to see who contributed what.'
+  print ''
+  print 'The log input should use the contribution-tracking format defined'
+  print 'in http://subversion.tigris.org/hacking.html#crediting.'
+  print ''
+  print 'Options:'
+  print ''
+  print '  -h, -H, -?, --help   Print this usage message and exit'
+  print '  -C FILE              Use FILE as the COMMITTERS file'
+  print ''
 
 
 def main():
   try:
-    opts, args = getopt.getopt(sys.argv[1:], 'C:hH?', [ "--help" ])
+    opts, args = getopt.getopt(sys.argv[1:], 'C:hH?', [ '--help' ])
   except getopt.GetoptError, e:
     complain(str(e) + '\n\n')
     usage()
