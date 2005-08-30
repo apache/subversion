@@ -43,7 +43,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-08-29 15:31+0200\n"
-"PO-Revision-Date: 2005-08-12 09:11+0200\n"
+"PO-Revision-Date: 2005-08-30 09:36+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -839,7 +839,6 @@ msgstr ""
 "  MÅL kan antingen vara till en arbertskopia eller en URL.\n"
 
 #: clients/cmdline/main.c:378
-#, fuzzy
 msgid ""
 "List directory entries in the repository.\n"
 "usage: list [TARGET[@REV]...]\n"
@@ -874,6 +873,7 @@ msgstr ""
 "\n"
 "    Revisionsnummer för senaste arkiveringen\n"
 "    Författare till senaste arkiveringen\n"
+"    Om filen är låst, bokstaven \"O\". (Använd \"svn info URL\" för mer info)\n"
 "    Storlek (i byte)\n"
 "    Datum och tid för senaste arkiveringen\n"
 
@@ -4002,7 +4002,7 @@ msgstr "Representationen är ej av typen \"delta\""
 
 #: libsvn_fs_base/reps-strings.c:374
 msgid "Svndiff source length inconsistency"
-msgstr ""
+msgstr "Längden på Svndiff-källan stämmer ej"
 
 #: libsvn_fs_base/reps-strings.c:501
 #, c-format
@@ -4014,7 +4014,7 @@ msgstr "Diffversioner stämmer ej i representationen \"%s\""
 msgid ""
 "Corruption detected whilst reading delta chain from representation '%s' to '%"
 "s'"
-msgstr ""
+msgstr "Trasig data upptäcktes vid läsning av delta-kedja från representationen \"%s\" till \"%s\""
 
 #: libsvn_fs_base/reps-strings.c:775
 #, c-format
@@ -4842,9 +4842,8 @@ msgid "Can't create socket"
 msgstr "Kan inte skapa uttag (socket)"
 
 #: libsvn_ra_svn/client.c:157
-#, fuzzy
 msgid "Can't set timeout"
-msgstr "Kan inte öppna standard ut"
+msgstr "Kan inte sätta tidsgräns"
 
 #: libsvn_ra_svn/client.c:161
 #, c-format
@@ -6633,8 +6632,8 @@ msgid ""
 "Trying to add new property '%s' with value '%s',\n"
 "but property already exists with value '%s'."
 msgstr ""
-"Försöker lägga till egenskapen '%s' med värdet '%s',\n"
-"men egenskapen finns redan med värdet '%s'."
+"Försöker lägga till egenskapen \"%s\" med värdet \"%s\",\n"
+"men egenskapen finns redan med värdet \"%s\"."
 
 #: libsvn_wc/props.c:480
 #, c-format
@@ -6642,16 +6641,14 @@ msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but the property does not exist."
 msgstr ""
-"Försöker ändra egenskapen '%s' från '%s' till '%s',\n"
+"Försöker ändra egenskapen \"%s\" från \"%s\" till \"%s\",\n"
 "men egenskapen finns inte."
 
 #: libsvn_wc/props.c:509
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Trying to delete property '%s' but value has been modified from '%s' to '%s'."
-msgstr ""
-"Försöker lägga till egenskapen '%s' med värdet '%s',\n"
-"men egenskapen finns redan med värdet '%s'."
+msgstr "Försöker radera egenskapen \"%s\" men värdet har ändrats från \"%s\" till \"%s\""
 
 #: libsvn_wc/props.c:528
 #, c-format
@@ -6659,8 +6656,8 @@ msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
 "but property already exists with value '%s'."
 msgstr ""
-"Försöker ändra egenskapen '%s' från '%s' till '%s',\n"
-"men egenskapen finns redan och har värdet '%s'."
+"Försöker ändra egenskapen \"%s\" från \"%s\" till \"%s\",\n"
+"men egenskapen finns redan och har värdet \"%s\"."
 
 #: libsvn_wc/props.c:1220
 #, c-format
@@ -6943,6 +6940,10 @@ msgid ""
 "Open the repository at REPOS_PATH, then abort, thus simulating\n"
 "a process that crashes while holding an open repository handle.\n"
 msgstr ""
+"användning: svnadmin crashtest ARKIV_SÖKVÄG\n"
+"\n"
+"Öppna arkivet under ARKIV_SÖKVÄG och avbryt därefter, vilket simulerar en\n"
+"process som kraschar då den har ett arkiv öppet.\n"
 
 #: svnadmin/main.c:301
 msgid ""
