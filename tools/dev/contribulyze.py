@@ -524,15 +524,18 @@ def drop():
   for c in sorted_contributors:
     if not seen_contributors.has_key(c):
       if c.score() > 0:
-        committerness = ""
         if c.is_full_committer:
-          committerness = "(full&nbsp;committer)&nbsp;"
-        elif c.is_committer:
-          committerness = "(partial&nbsp;committer)&nbsp;"
-        index.write('<li><p><a href="%s.html">%s</a>&nbsp;%s[%d]</p></li>\n'
-                    % (c.canonical_name(), escape_html(c.big_name()),
-                       committerness, c.score()))
-        c.html_out()
+          # Don't even bother to print out full committers.  They are
+          # a distraction from the purposes for which we're here.
+          continue
+        else:
+          committerness = ""
+          if c.is_committer:
+            committerness = "&nbsp;(partial&nbsp;committer)"
+          index.write('<li><p><a href="%s.html">%s</a>&nbsp;[%d]%s</p></li>\n'
+                      % (c.canonical_name(), escape_html(c.big_name()),
+                         c.score(), committerness))
+          c.html_out()
     seen_contributors[c] = True
   index.write("</ol>\n")
   index.write(html_footer())
