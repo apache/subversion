@@ -125,12 +125,25 @@
       $descriptor(svn_fs_path_change_t *));
 }
 
+%typemap(ruby, in, numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
+%typemap(ruby, argout) apr_hash_t **changed_paths_p
+{
+  $result = svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
+                                                   "svn_fs_path_change_t *");
+}
+
 /* -----------------------------------------------------------------------
    handle get_locks_func/get_locks_baton pairs.
 */
 %typemap(python, in) (svn_fs_get_locks_callback_t get_locks_func, void *get_locks_baton) {
   $1 = svn_swig_py_fs_get_locks_func;
   $2 = $input; /* our function is the baton. */
+}
+
+%typemap(ruby, in) (svn_fs_get_locks_callback_t get_locks_func, void *get_locks_baton)
+{
+  $1 = svn_swig_rb_fs_get_locks_callback;
+  $2 = (void *)$input;
 }
 
 /* -----------------------------------------------------------------------

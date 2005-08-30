@@ -398,6 +398,12 @@
     svn_swig_pl_hold_ref_in_pool (_global_pool, $input);
 };
 
+%typemap(ruby, in) (svn_commit_callback_t callback, void *callback_baton)
+{
+  $1 = svn_swig_rb_commit_callback;
+  $2 = (void *)$input;
+};
+
 /* -----------------------------------------------------------------------
    Callback: svn_cancel_func_t
 */
@@ -420,6 +426,16 @@
 %typemap(ruby, in) (svn_info_receiver_t receiver, void *receiver_baton)
 {
   $1 = svn_swig_rb_info_receiver;
+  $2 = (void *)$input;
+}
+
+/* -----------------------------------------------------------------------
+   Callback: svn_fs_warning_callback_t
+*/
+
+%typemap(ruby, in) (svn_fs_warning_callback_t warning, void *warning_baton)
+{
+  $1 = svn_swig_rb_fs_warning_callback;
   $2 = (void *)$input;
 }
 
@@ -467,6 +483,12 @@
 %typemap(perl5, argout) unsigned char digest[ANY] {
     ST(argvi) = sv_newmortal();
     sv_setpv((SV*)ST(argvi++), svn_md5_digest_to_cstring ($1,_global_pool));
+}
+
+%typemap(ruby, argout, fragment="output_helper") unsigned char digest[ANY]
+{
+  $result = output_helper($result,
+                          rb_str_new2(svn_md5_digest_to_cstring($1, _global_pool)));
 }
 
 /* svn_txdelta_send_stream() uses *digest not digest[] . */

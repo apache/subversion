@@ -14,9 +14,8 @@ STATUS OF THE SWIG BINDINGS
 
 * Ruby
 
-  The Ruby bindings are a recent development, and are only partially
-  implemented. The Ruby bindings API may change incompatibly as development
-  proceeds.
+  The Ruby bindings are a recent development, but are fully implemented.
+  The Ruby bindings API may change incompatibly as development proceeds.
 
   Completed modules:
   - Svn::Client
@@ -30,6 +29,13 @@ STATUS OF THE SWIG BINDINGS
     - svn_diff_diff4()
     - svn_diff_output()
     - svn_diff_file_diff4()
+
+  Completed but not enough test modules:
+  - Svn::Delta
+  - Svn::Fs
+  - Svn::Ra
+  - Svn::Repos
+  - Svn::Wc
 
 BUILDING SWIG BINDINGS FOR SVN ON UNIX
 

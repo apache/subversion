@@ -1,8 +1,45 @@
 require "English"
+require "time"
 require "stringio"
 require "svn/error"
 require "svn/util"
 require "svn/ext/core"
+
+class Time
+  MILLION = 1000000
+
+  class << self
+    def from_apr_time(apr_time)
+      sec, usec = apr_time.divmod(MILLION)
+      Time.at(sec, usec)
+    end
+
+    def from_svn_format(str)
+      from_apr_time(Svn::Core.time_from_cstring(str))
+    end
+
+    def parse_svn_format(str)
+      matched, result = Svn::Core.parse_date(str, Time.now.to_apr_time)
+      if matched
+        from_apr_time(result)
+      else
+        nil
+      end
+    end
+  end
+  
+  def to_apr_time
+    to_i * MILLION + usec
+  end
+
+  def to_svn_format
+    Svn::Core.time_to_cstring(self.to_apr_time)
+  end
+
+  def to_svn_human_format
+    Svn::Core.time_to_human_cstring(self.to_apr_time)
+  end
+end
 
 module Svn
   module Core
@@ -54,7 +91,7 @@ module Svn
       CHUNK_SIZE = Core::STREAM_CHUNK_SIZE
 
       def write(data)
-        Core.stream_close(self)
+        Core.stream_write(self, data)
       end
       
       def read(len=nil)
@@ -143,7 +180,7 @@ module Svn
         def version
           Core.diff_version
         end
-        
+
         def file_diff(original, modified)
           diff = Core.diff_file_diff(original, modified)
           if diff
@@ -321,6 +358,30 @@ module Svn
 
        def get_server_setting_int(group, name, default)
          Core.config_get_server_setting_int(self, group, name, default)
+       end
+     end
+
+     module Property
+       module_function
+       def kind(name)
+         kind, len = Core.property_kind(name)
+         [kind, name[0...len]]
+       end
+
+       def svn_prop?(name)
+         Core.prop_is_svn_prop(name)
+       end
+
+       def needs_translation?(name)
+         Core.prop_needs_translation(name)
+       end
+
+       def categorize_props(props)
+         Core.categorize_props(props)
+       end
+
+       def prop_diffs(target_props, source_props)
+         Core.prop_diffs(target_props, source_props)
        end
      end
   end
