@@ -29,10 +29,10 @@ I.    A FEW POINTERS
 II.   DOCUMENTATION
 
       The main documentation is the Subversion Book, written in
-      DocBook XML, which lives in the doc/ tree.  If you wish to build
-      the documentation from source, read doc/book/README.  Otherwise,
-      an on-line version of the book can be found at
-      http://svnbook.red-bean.com.
+      DocBook XML, which lives at http://svn.red-bean.com/svnbook.  If
+      you wish to build the documentation from source, read
+      src/en/README.  Otherwise, an on-line version of the book can be
+      found at http://svnbook.red-bean.com.
 
       See COPYING for copyright information.
       See INSTALL for installation information.
