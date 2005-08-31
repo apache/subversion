@@ -21,6 +21,7 @@ STATUS OF THE SWIG BINDINGS
   - Svn::Client
   - Svn::Core::Config
   - Svn::Delta
+  - Svn::Fs
 
   Not completed but enough modules:
   - Svn::Core::Diff
@@ -32,7 +33,6 @@ STATUS OF THE SWIG BINDINGS
     - svn_diff_file_diff4()
 
   Completed but not enough test modules:
-  - Svn::Fs
   - Svn::Ra
   - Svn::Repos
   - Svn::Wc

@@ -70,6 +70,8 @@ DEFINE_ID(file_deleted, "file_deleted")
 DEFINE_ID(dir_added, "dir_added")
 DEFINE_ID(dir_deleted, "dir_deleted")
 DEFINE_ID(dir_props_changed,"dir_props_changed")
+DEFINE_ID(handler,"handler")
+DEFINE_ID(handler_baton,"handler_baton")
 
 typedef void *(*r2c_func)(VALUE value, void *ctx, apr_pool_t *pool);
 typedef VALUE (*c2r_func)(void *value, void *ctx);
@@ -2531,3 +2533,53 @@ svn_swig_rb_wc_diff_callbacks2(void)
   return &wc_diff_callbacks2;
 }
 
+
+VALUE
+svn_swig_rb_make_txdelta_window_handler_wrapper(VALUE *rb_handler_pool,
+                                                apr_pool_t **handler_pool,
+                                                svn_txdelta_window_handler_t **handler,
+                                                void ***handler_baton)
+{
+  VALUE obj;
+
+  obj = rb_class_new_instance(0, NULL, rb_cObject);
+  svn_swig_rb_get_pool(0, NULL, obj, rb_handler_pool, handler_pool);
+  svn_swig_rb_set_pool_for_no_swig_type(obj, *rb_handler_pool);
+  *handler = apr_palloc(*handler_pool, sizeof(svn_txdelta_window_handler_t));
+  *handler_baton = apr_palloc(*handler_pool, sizeof(void *));
+
+  return obj;
+}
+
+VALUE
+svn_swig_rb_setup_txdelta_window_handler_wrapper(VALUE obj,
+                                                 svn_txdelta_window_handler_t handler,
+                                                 void *handler_baton)
+{
+  rb_ivar_set(obj, rb_id_handler(),
+              SWIG_NewPointerObj((void *)handler,
+                                 SWIG_TypeQuery("svn_txdelta_window_handler_t"),
+                                 0));
+  rb_ivar_set(obj, rb_id_handler_baton(),
+              SWIG_NewPointerObj((void *)handler_baton,
+                                 SWIG_TypeQuery("void *"),
+                                 0));
+  return obj;
+}
+
+svn_error_t *
+svn_swig_rb_invoke_txdelta_window_handler_wrapper(VALUE obj,
+                                                  svn_txdelta_window_t *window)
+{
+  svn_txdelta_window_handler_t handler;
+  void *handler_baton;
+
+  SWIG_ConvertPtr(rb_ivar_get(obj, rb_id_handler()),
+                  (void **)&handler,
+                  SWIG_TypeQuery("svn_txdelta_window_handler_t"),
+                  1);
+  SWIG_ConvertPtr(rb_ivar_get(obj, rb_id_handler_baton()),
+                  (void **)&handler_baton, SWIG_TypeQuery("void *"), 1);
+
+  return handler(window, handler_baton);
+}
