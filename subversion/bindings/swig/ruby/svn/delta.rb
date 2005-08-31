@@ -11,15 +11,14 @@ module Svn
 
     class << self
       alias make_editor swig_rb_make_editor
+      alias _path_driver path_driver
     end
+    alias _path_driver path_driver
 
     module_function
     def svndiff_handler(output)
       obj = Delta.txdelta_to_svndiff_handler(output)
-      def obj.call(window)
-        Delta.txdelta_invoke_handler(@handler, window)
-      end
-      obj
+      setup_handler_obj(obj)
     end
 
     def read_svndiff_window(stream, version)
@@ -31,10 +30,36 @@ module Svn
     end
 
     def path_driver(editor, editor_baton, revision, paths, &callback_func)
-      Delta.path_driver(editor, editor_baton, revision,
-                        paths, callback_func)
+      Delta._path_driver(editor, editor_baton, revision,
+                         paths, callback_func)
+    end
+
+    def send(string_or_stream, &handler)
+      if string_or_stream.is_a?(TextDeltaStream)
+        string_or_stream.send(&handler)
+      elsif string_or_stream.is_a?(String)
+        Delta.txdelta_send_string(string_or_stream, handler)
+      else
+        Delta.txdelta_send_stream(string_or_stream, handler)
+      end
+    end
+
+    def apply(source, target, error_info=nil)
+      result = Delta.txdelta_apply_wrapper(source, target, error_info)
+      obj, digest = result
+      [setup_handler_obj(obj), digest]
+    end
+
+    def parse_svndiff(error_on_early_close=true, &handler)
+      Delta.txdelta_parse_svndiff(handler, error_on_early_close)
     end
     
+    def setup_handler_obj(obj)
+      Proc.new do |window|
+        Delta.txdelta_invoke_handler(obj, window)
+      end
+    end
+
     TextDeltaStream = SWIG::TYPE_p_svn_txdelta_stream_t
 
     class TextDeltaStream
@@ -46,18 +71,10 @@ module Svn
         def push_target(source, &handler)
           Delta.txdelta_target_push(handler, source)
         end
-
-        def apply(source, target, error_info=nil, &handler)
-          Delta.txdelta_apply(source, target, error_info, handler)
-        end
-
-        def parse_svndiff(error_on_early_close=true, &handler)
-          Delta.parse_svndiff(handler, error_on_early_close)
-        end
       end
 
       def md5_digest
-        Delta.txdelta_md5_digest(self)
+        Delta.txdelta_md5_digest_as_cstring(self)
       end
 
       def next_window
@@ -70,16 +87,8 @@ module Svn
         end
       end
 
-      def send_string(string, &handler)
-        Delta.txdelta_send_string(string, handler)
-      end
-
-      def send_stream(stream, digest=nil, &handler)
-        if stream.is_a?(TextDeltaStream)
-          Delta.txdelta_send_txstream(stream, handler, digest)
-        else
-          Delta.txdelta_send_stream(stream, handler, digest)
-        end
+      def send(&handler)
+        Delta.txdelta_send_txstream(self, handler)
       end
     end
 

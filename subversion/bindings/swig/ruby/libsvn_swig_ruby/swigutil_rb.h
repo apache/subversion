@@ -61,6 +61,7 @@ apr_array_header_t *svn_swig_rb_array_to_apr_array_revnum(VALUE array,
   
 void svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self, VALUE *rb_pool, apr_pool_t **pool);
 void svn_swig_rb_set_pool(VALUE target, VALUE pool);
+void svn_swig_rb_set_pool_for_no_swig_type(VALUE target, VALUE pool);
 void svn_swig_rb_push_pool(VALUE pool);
 void svn_swig_rb_pop_pool(VALUE pool);
 
