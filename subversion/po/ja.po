@@ -142,8 +142,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-08-30 21:59+0900\n"
-"PO-Revision-Date: 2005-08-30 21:59+0900\n"
+"POT-Creation-Date: 2005-08-31 22:45+0900\n"
+"PO-Revision-Date: 2005-08-31 22:45+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -154,8 +154,8 @@ msgstr ""
 msgid "'verbose' option invalid in XML mode"
 msgstr "'verbose' オプションは XML モードでは無効です"
 
-#: clients/cmdline/blame-cmd.c:248 clients/cmdline/ls-cmd.c:328
-#: clients/cmdline/status-cmd.c:192
+#: clients/cmdline/blame-cmd.c:248 clients/cmdline/info-cmd.c:473
+#: clients/cmdline/ls-cmd.c:328 clients/cmdline/status-cmd.c:192
 msgid "'incremental' option only valid in XML mode"
 msgstr "'incremental' オプションは XML モードでのみ有効です"
 
@@ -251,144 +251,149 @@ msgstr "import コマンドへの引数が多すぎます"
 msgid "Invalid URL '%s'"
 msgstr "'%s' は不正な URL です"
 
-#: clients/cmdline/info-cmd.c:56 svnadmin/main.c:1035
+#: clients/cmdline/info-cmd.c:111
+#, c-format
+msgid "'%s' has invalid revision"
+msgstr "'%s' はリビジョンが不正です"
+
+#: clients/cmdline/info-cmd.c:263 svnadmin/main.c:1035
 #, c-format
 msgid "Path: %s\n"
 msgstr "パス: %s\n"
 
-#: clients/cmdline/info-cmd.c:62 svnlook/main.c:782
+#: clients/cmdline/info-cmd.c:269 svnlook/main.c:782
 #, c-format
 msgid "Name: %s\n"
 msgstr "名前: %s\n"
 
-#: clients/cmdline/info-cmd.c:66
+#: clients/cmdline/info-cmd.c:273
 #, c-format
 msgid "URL: %s\n"
 msgstr "URL: %s\n"
 
-#: clients/cmdline/info-cmd.c:69
+#: clients/cmdline/info-cmd.c:276
 #, c-format
 msgid "Repository Root: %s\n"
 msgstr "リポジトリのルート: %s\n"
 
-#: clients/cmdline/info-cmd.c:73
+#: clients/cmdline/info-cmd.c:280
 #, c-format
 msgid "Repository UUID: %s\n"
 msgstr "リポジトリ UUID: %s\n"
 
-#: clients/cmdline/info-cmd.c:77
+#: clients/cmdline/info-cmd.c:284
 #, c-format
 msgid "Revision: %ld\n"
 msgstr "リビジョン: %ld\n"
 
-#: clients/cmdline/info-cmd.c:82
+#: clients/cmdline/info-cmd.c:289
 msgid "Node Kind: file\n"
 msgstr "ノード種別: ファイル\n"
 
-#: clients/cmdline/info-cmd.c:86
+#: clients/cmdline/info-cmd.c:293
 msgid "Node Kind: directory\n"
 msgstr "ノード種別: ディレクトリ\n"
 
-#: clients/cmdline/info-cmd.c:90
+#: clients/cmdline/info-cmd.c:297
 msgid "Node Kind: none\n"
 msgstr "ノード種別: なし\n"
 
-#: clients/cmdline/info-cmd.c:95
+#: clients/cmdline/info-cmd.c:302
 msgid "Node Kind: unknown\n"
 msgstr "ノード種別: 不明\n"
 
-#: clients/cmdline/info-cmd.c:104
+#: clients/cmdline/info-cmd.c:311
 msgid "Schedule: normal\n"
 msgstr "準備中の処理: 特になし\n"
 
-#: clients/cmdline/info-cmd.c:108
+#: clients/cmdline/info-cmd.c:315
 msgid "Schedule: add\n"
 msgstr "準備中の処理: 追加\n"
 
-#: clients/cmdline/info-cmd.c:112
+#: clients/cmdline/info-cmd.c:319
 msgid "Schedule: delete\n"
 msgstr "準備中の処理: 削除\n"
 
-#: clients/cmdline/info-cmd.c:116
+#: clients/cmdline/info-cmd.c:323
 msgid "Schedule: replace\n"
 msgstr "準備中の処理: 置換\n"
 
-#: clients/cmdline/info-cmd.c:124
+#: clients/cmdline/info-cmd.c:331
 #, c-format
 msgid "Copied From URL: %s\n"
 msgstr "コピー元の URL: %s\n"
 
-#: clients/cmdline/info-cmd.c:128
+#: clients/cmdline/info-cmd.c:335
 #, c-format
 msgid "Copied From Rev: %ld\n"
 msgstr "コピー元のリビジョン: %ld\n"
 
-#: clients/cmdline/info-cmd.c:133
+#: clients/cmdline/info-cmd.c:340
 #, c-format
 msgid "Last Changed Author: %s\n"
 msgstr "最終変更者: %s\n"
 
-#: clients/cmdline/info-cmd.c:137
+#: clients/cmdline/info-cmd.c:344
 #, c-format
 msgid "Last Changed Rev: %ld\n"
 msgstr "最終変更リビジョン: %ld\n"
 
-#: clients/cmdline/info-cmd.c:142
+#: clients/cmdline/info-cmd.c:349
 msgid "Last Changed Date"
 msgstr "最終変更日時"
 
-#: clients/cmdline/info-cmd.c:148
+#: clients/cmdline/info-cmd.c:355
 msgid "Text Last Updated"
 msgstr "テキストの最終更新"
 
-#: clients/cmdline/info-cmd.c:152
+#: clients/cmdline/info-cmd.c:359
 msgid "Properties Last Updated"
 msgstr "属性の最終更新"
 
-#: clients/cmdline/info-cmd.c:155
+#: clients/cmdline/info-cmd.c:362
 #, c-format
 msgid "Checksum: %s\n"
 msgstr "チェックサム: %s\n"
 
-#: clients/cmdline/info-cmd.c:160
+#: clients/cmdline/info-cmd.c:367
 #, c-format
 msgid "Conflict Previous Base File: %s\n"
 msgstr "衝突状態にある、以前 BASE だったファイル: %s\n"
 
-#: clients/cmdline/info-cmd.c:166
+#: clients/cmdline/info-cmd.c:373
 #, c-format
 msgid "Conflict Previous Working File: %s\n"
 msgstr "衝突状態にある、以前作業中だったファイル: %s\n"
 
-#: clients/cmdline/info-cmd.c:171
+#: clients/cmdline/info-cmd.c:378
 #, c-format
 msgid "Conflict Current Base File: %s\n"
 msgstr "衝突状態にある、現在 BASE であるファイル: %s\n"
 
-#: clients/cmdline/info-cmd.c:176
+#: clients/cmdline/info-cmd.c:383
 #, c-format
 msgid "Conflict Properties File: %s\n"
 msgstr "衝突に関する属性ファイル: %s\n"
 
-#: clients/cmdline/info-cmd.c:184
+#: clients/cmdline/info-cmd.c:391
 #, c-format
 msgid "Lock Token: %s\n"
 msgstr "ロックトークン: %s\n"
 
-#: clients/cmdline/info-cmd.c:188
+#: clients/cmdline/info-cmd.c:395
 #, c-format
 msgid "Lock Owner: %s\n"
 msgstr "ロック所有者: %s\n"
 
-#: clients/cmdline/info-cmd.c:193
+#: clients/cmdline/info-cmd.c:400
 msgid "Lock Created"
 msgstr "ロック作成日時"
 
-#: clients/cmdline/info-cmd.c:197
+#: clients/cmdline/info-cmd.c:404
 msgid "Lock Expires"
 msgstr "ロック有効期限"
 
-#: clients/cmdline/info-cmd.c:206
+#: clients/cmdline/info-cmd.c:413
 #, c-format
 msgid ""
 "Lock Comment (%i lines):\n"
@@ -397,7 +402,7 @@ msgstr ""
 "ロックについてのコメント (%i 行):\n"
 "%s\n"
 
-#: clients/cmdline/info-cmd.c:207
+#: clients/cmdline/info-cmd.c:414
 #, c-format
 msgid ""
 "Lock Comment (%i line):\n"
@@ -406,7 +411,7 @@ msgstr ""
 "ロックについてのコメント (%i 行):\n"
 "%s\n"
 
-#: clients/cmdline/info-cmd.c:281
+#: clients/cmdline/info-cmd.c:505
 #, c-format
 msgid ""
 "%s:  (Not a versioned resource)\n"
@@ -415,7 +420,7 @@ msgstr ""
 "%s:  (バージョン管理されていないリソースです)\n"
 "\n"
 
-#: clients/cmdline/info-cmd.c:290
+#: clients/cmdline/info-cmd.c:514
 #, c-format
 msgid ""
 "%s:  (Not a valid URL)\n"
@@ -3690,7 +3695,7 @@ msgid "'%s' is not locked"
 msgstr "'%s' はロックされていません"
 
 #: libsvn_client/locking_commands.c:427 libsvn_fs/fs-loader.c:896
-#: libsvn_ra/ra_loader.c:535
+#: libsvn_ra/ra_loader.c:544
 msgid "Lock comment has illegal characters"
 msgstr "ロックについてのコメントに不正な文字が含まれています"
 
@@ -4846,17 +4851,17 @@ msgid "Mismatched RA version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
 msgstr ""
 "'%s' 用 RA のバージョンが一致しません: 実際 %d.%d.%d%s, 予想 %d.%d.%d%s"
 
-#: libsvn_ra/ra_loader.c:268
+#: libsvn_ra/ra_loader.c:276
 #, c-format
 msgid "Unrecognized URL scheme for '%s'"
 msgstr "'%s' 用の URL スキームを認識できません"
 
-#: libsvn_ra/ra_loader.c:605
+#: libsvn_ra/ra_loader.c:614
 #, c-format
 msgid "  - handles '%s' scheme\n"
 msgstr "  - '%s' スキームを操作します\n"
 
-#: libsvn_ra/ra_loader.c:691
+#: libsvn_ra/ra_loader.c:700
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
 msgstr "URL スキーム '%s' を認識できません"
@@ -4954,8 +4959,8 @@ msgstr "dated-rev リクエストへのサーバのレスポンスが不正で�
 msgid "'get-locations' REPORT not implemented"
 msgstr "'get-locations' REPORT は実装されていません"
 
-#: libsvn_ra_dav/fetch.c:1482 libsvn_ra_dav/session.c:1145
-#: libsvn_ra_dav/session.c:1431
+#: libsvn_ra_dav/fetch.c:1482 libsvn_ra_dav/session.c:1154
+#: libsvn_ra_dav/session.c:1440
 msgid "Incomplete lock data returned"
 msgstr "不完全なロックデータが返されました"
 
@@ -5114,53 +5119,53 @@ msgstr "不正な設定です: デバッグマスクの値が不正な文字で�
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
 msgstr "WebDAV (DeltaV) プロトコルを使ってリポジトリにアクセスするモジュール。"
 
-#: libsvn_ra_dav/session.c:603
+#: libsvn_ra_dav/session.c:614
 msgid "Malformed URL for repository"
 msgstr "リポジトリの URL が不正です"
 
-#: libsvn_ra_dav/session.c:611
+#: libsvn_ra_dav/session.c:622
 msgid "Network socket initialization failed"
 msgstr "ネットワークソケットを初期化できませんでした"
 
-#: libsvn_ra_dav/session.c:628
+#: libsvn_ra_dav/session.c:639
 msgid "SSL is not supported"
 msgstr "SSL はサポートされていません"
 
-#: libsvn_ra_dav/session.c:774
+#: libsvn_ra_dav/session.c:785
 #, c-format
 msgid "Invalid config: unable to load certificate file '%s'"
 msgstr "不正な設定です: 証明書ファイル '%s' をロードできません"
 
-#: libsvn_ra_dav/session.c:868
+#: libsvn_ra_dav/session.c:877
 msgid "The UUID property was not found on the resource or any of its parents"
 msgstr "UUID 属性を、リソースやその親に見つけられませんでした"
 
-#: libsvn_ra_dav/session.c:876
+#: libsvn_ra_dav/session.c:885
 msgid "Please upgrade the server to 0.19 or later"
 msgstr "サーバをバージョン 0.19 以降にアップグレードしてください"
 
-#: libsvn_ra_dav/session.c:1117 libsvn_ra_dav/session.c:1254
+#: libsvn_ra_dav/session.c:1126 libsvn_ra_dav/session.c:1263
 msgid "Failed to parse URI"
 msgstr "URI をパースできませんでした"
 
-#: libsvn_ra_dav/session.c:1140
+#: libsvn_ra_dav/session.c:1149
 msgid "Lock request failed"
 msgstr "ロックのリクエストが失敗しました"
 
-#: libsvn_ra_dav/session.c:1269
+#: libsvn_ra_dav/session.c:1278
 #, c-format
 msgid "'%s' is not locked in the repository"
 msgstr "'%s' はリポジトリでロックされていません"
 
-#: libsvn_ra_dav/session.c:1306
+#: libsvn_ra_dav/session.c:1315
 msgid "Unlock request failed"
 msgstr "ロック解除のリクエストが失敗しました"
 
-#: libsvn_ra_dav/session.c:1517
+#: libsvn_ra_dav/session.c:1526
 msgid "Failed to fetch lock information"
 msgstr "ロックの情報を取得できませんでした"
 
-#: libsvn_ra_dav/session.c:1588
+#: libsvn_ra_dav/session.c:1597
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_dav"
 msgstr ""
