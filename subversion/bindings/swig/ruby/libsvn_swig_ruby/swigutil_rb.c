@@ -478,38 +478,6 @@ svn_swig_rb_hash_to_apr_hash_swig_type(VALUE hash, const char *typename, apr_poo
 }
 
 
-/*
-static VALUE
-convert_svn_client_commit_item_t(void *value, void *ctx)
-{
-  VALUE ary;
-  VALUE path, kind, url, rev, cf_url, state;
-  svn_client_commit_item_t *item = value;
-
-  ary = rb_ary_new2(6);
-  
-  path = c2r_string2(item->path);
-  url = c2r_string2(item->url);
-  cf_url = c2r_string2(item->copyfrom_url);
-        
-  kind = INT2NUM(item->kind);
-  rev = INT2NUM(item->revision);
-  state = INT2NUM(item->state_flags);
-
-  if (path && kind && url && rev && cf_url && state) {
-    rb_ary_push(ary, path);
-    rb_ary_push(ary, kind);
-    rb_ary_push(ary, url);
-    rb_ary_push(ary, rev);
-    rb_ary_push(ary, cf_url);
-    rb_ary_push(ary, state);
-    return ary;
-  } else {
-    return Qnil;
-  }
-}
-*/
-
 
 static VALUE
 rb_get_pool(VALUE self)
@@ -530,7 +498,7 @@ rb_pools(VALUE self)
   return pools;
 }
 
-static void
+static VALUE
 rb_set_pool(VALUE self, VALUE pool)
 {
   if (NIL_P(pool)) {
@@ -544,6 +512,8 @@ rb_set_pool(VALUE self, VALUE pool)
       rb_hash_aset(rb_pools(self), rb_obj_id(pool), pool);
     }
   }
+
+  return Qnil;
 }
 
 static VALUE
@@ -648,6 +618,20 @@ svn_swig_rb_set_pool(VALUE target, VALUE pool)
   }
 
   rb_iterate(rb_each, target, rb_set_pool_if_swig_type_object, pool);
+}
+
+void
+svn_swig_rb_set_pool_for_no_swig_type(VALUE target, VALUE pool)
+{
+  if (NIL_P(target)) {
+    return;
+  }
+    
+  if (!RTEST(rb_obj_is_kind_of(target, rb_cArray))) {
+    target = rb_ary_new3(1, target);
+  }
+
+  rb_iterate(rb_each, target, rb_set_pool, pool);
 }
 
 void

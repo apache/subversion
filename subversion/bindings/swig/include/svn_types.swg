@@ -491,8 +491,14 @@
                           rb_str_new2(svn_md5_digest_to_cstring($1, _global_pool)));
 }
 
-/* svn_txdelta_send_stream() uses *digest not digest[] . */
-%apply unsigned char digest[ANY] { unsigned char *digest };
+/*
+   svn_txdelta_send_stream() uses *digest not digest[] .
+   svn_txdelta_apply() uses *result_digest not digest[] .
+*/
+%apply unsigned char digest[ANY] {
+    unsigned char *digest,
+    unsigned char *result_digest
+};
 
 /* -----------------------------------------------------------------------
   useful convertors for svn_opt_revision_t
