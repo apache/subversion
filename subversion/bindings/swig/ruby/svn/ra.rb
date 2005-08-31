@@ -1,4 +1,5 @@
 require "English"
+require "tempfile"
 require "svn/error"
 require "svn/util"
 require "svn/core"
@@ -36,15 +37,15 @@ module Svn
         Ra.get_dated_revision(self, time.to_apr_time)
       end
 
-      def set_rev_prop(name, value, rev=nil)
+      def set_prop(name, value, rev=nil)
         Ra.change_rev_prop(self, rev || latest_revnum, name, value)
       end
 
-      def rev_proplist(name, rev=nil)
+      def proplist(rev=nil)
         Ra.rev_proplist(self, rev || latest_revnum)
       end
 
-      def rev_prop(name, rev=nil)
+      def prop(name, rev=nil)
         Ra.rev_prop(self, rev || latest_revnum, name)
       end
 
@@ -53,30 +54,38 @@ module Svn
           date = Time.from_svn_format(date) if date
           yield(new_revision, date, author)
         end
-        editor, editor_baton = Ra.get_commit_editor(log_msg, callback,
+        editor, editor_baton = Ra.get_commit_editor(self, log_msg, callback,
                                                     lock_tokens, keep_lock)
       end
       
       def file(path, rev=nil)
         output = StringIO.new
-        *rv = Ra.get_file(self, path, rev || latest_revnum, output)
+        rev ||= latest_revnum
+        fetched_rev, props = Ra.get_file(self, path, rev, output)
         output.rewind
-        [output.read, *rv]
+        props_filter(props)
+        [output.read, props]
       end
 
       def dir(path, rev=nil)
-        Ra.get_dir(self, path, rev || latest_revnum)
+        rev ||= latest_revnum
+        entries, fetched_rev, props = Ra.get_dir(self, path, rev)
+        props_filter(props)
+        [entries, props]
       end
 
       def update(revision_to_update_to,	update_target,
                  editor, editor_baton, recurse=true)
         reporter, reporter_baton = Ra.do_update(self, revision_to_update_to,
-                                                update_target, editor)
+                                                update_target, recurse,
+                                                editor, editor_baton)
         reporter.baton = reporter_baton
         if block_given?
           yield(reporter)
-        else
           reporter.finish_report
+          nil
+        else
+          reporter
         end
       end
 
@@ -89,8 +98,10 @@ module Svn
         reporter.baton = reporter_baton
         if block_given?
           yield(reporter)
-        else
           reporter.finish_report
+          nil
+        else
+          reporter
         end
       end
 
@@ -102,22 +113,10 @@ module Svn
         reporter.baton = reporter_baton
         if block_given?
           yield(reporter)
-        else
           reporter.finish_report
-        end
-      end
-
-      def status(revision, diff_target, versus_url, editor,
-                 editor_baton, recurse=true, ignore_ancestry=false)
-        reporter, reporter_baton = Ra.do_diff(self, revision,
-                                              diff_target, recurse,
-                                              ignore_ancestry, versus_url,
-                                              editor, editor_baton)
-        reporter.baton = reporter_baton
-        if block_given?
-          yield(reporter)
+          nil
         else
-          reporter.finish_report
+          reporter
         end
       end
 
@@ -126,7 +125,7 @@ module Svn
               strict_node_history=false)
         paths = [paths] unless paths.is_a?(Array)
         receiver = Proc.new do |changed_paths, revision, author, date, message|
-          date = Util.string_to_time(date) if date
+          date = Time.parse_svn_format(date) if date
           yield(changed_paths, revision, author, date, message)
         end
         Ra.get_log(self, paths, start_rev, end_rev, limit,
@@ -157,10 +156,13 @@ module Svn
 
       def file_revs(path, start_rev, end_rev=nil)
         end_rev ||= latest_revnum
+        revs = []
         handler = Proc.new do |path, rev, rev_props, prop_diffs|
-          yield(path, rev, rev_props, prop_diffs)
+          revs << [path, rev, rev_props, prop_diffs]
+          yield(path, rev, rev_props, prop_diffs) if block_given?
         end
         Ra.get_file_revs(self, path, start_rev, end_rev, handler)
+        revs
       end
 
       def lock(path_revs, comment=nil, steal_lock=false)
@@ -170,10 +172,7 @@ module Svn
         Ra.lock(self, path_revs, comment, steal_lock, lock_func)
       end
 
-      def unlock(path_tokens, break_lock=false)
-        lock_func = Proc.new do |path, do_lock, lock, ra_err|
-          yield(path, do_lock, lock, ra_err)
-        end
+      def unlock(path_tokens, break_lock=false, &lock_func)
         Ra.unlock(self, path_tokens, break_lock, lock_func)
       end
 
@@ -184,37 +183,74 @@ module Svn
       def get_locks(path)
         Ra.get_locks(self, path)
       end
+
+      private
+      def props_filter(props)
+        date_str = props[Svn::Core::PROP_ENTRY_COMMITTED_DATE]
+        if date_str
+          date = Time.parse_svn_format(date_str)
+          props[Svn::Core::PROP_ENTRY_COMMITTED_DATE] = date
+        end
+        props
+      end
     end
 
     class Reporter2
       attr_accessor :baton
 
-      %w(set_path delete_path link_path finish_report
-         abort_report).each do |target|
-        alias_method("_#{target}", target)
-      end
-
       def set_path(path, revision, start_empty=true, lock_token=nil)
-        _set_path(@baton, path, revision, start_empty, lock_token)
+        Rs.reporter2_invoke_set_path(self, @baton, path, revision,
+                                     start_empty, lock_token)
       end
       
       def delete_path(path)
-        _set_path(@baton, path)
+        Rs.reporter2_invoke_set_path(self, @baton, path)
       end
       
       def link_path(path, url, revision, start_empty=true, lock_token=nil)
-        _link_path(@baton, path, url, revision,
-                   start_empty, lock_token)
+        Ra.reporter2_invoke_link_path(self, @baton, path, url,
+                                      revision, start_empty, lock_token)
       end
 
       def finish_report
-        _finish_report(@baton)
+        Ra.reporter2_invoke_finish_report(self, @baton)
       end
 
       def abort_report
-        _abort_report(@baton)
+        Ra.reporter2_invoke_abort_report(self, @baton)
       end
       
+    end
+
+    remove_const(:Callbacks)
+    class Callbacks
+      attr_accessor :auth_baton
+      def initialize(auth_baton)
+        @auth_baton = auth_baton
+      end
+
+      def open_tmp_file
+        tmp = Tempfile.new("Svn::Ra")
+        path = tmp.path
+        tmp.close(true)
+        path
+      end
+
+      def get_wc_prop(relpath, name)
+        nil
+      end
+
+      def set_wc_prop(path, name, value)
+      end
+
+      def push_wc_prop(path, name, value)
+      end
+
+      def invalidate_wc_props(path, name)
+      end
+
+      def progress_func(progress, total)
+      end
     end
   end
 end

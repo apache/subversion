@@ -377,9 +377,11 @@ DEFINE_ARRAY_TO_APR_ARRAY(svn_revnum_t,
 
 /* apr_hash_t -> Ruby Hash */
 static VALUE
-c2r_hash(apr_hash_t *hash,
-         c2r_func func,
-         void *ctx)
+c2r_hash_with_key_convert(apr_hash_t *hash,
+                          c2r_func key_conv,
+                          void *key_ctx,
+                          c2r_func value_conv,
+                          void *value_ctx)
 {
   apr_hash_index_t *hi;
   VALUE r_hash = rb_hash_new();
@@ -391,12 +393,20 @@ c2r_hash(apr_hash_t *hash,
     
     apr_hash_this(hi, &key, NULL, &val);
     if (val) {
-      v = (*func)(val, ctx);
+      v = (*value_conv)(val, value_ctx);
     }
-    rb_hash_aset(r_hash, c2r_string2(key), v);
+    rb_hash_aset(r_hash, (*key_conv)((void *)key, key_ctx), v);
   }
-    
+  
   return r_hash;
+}
+
+VALUE
+c2r_hash(apr_hash_t *hash,
+         c2r_func value_conv,
+         void *ctx)
+{
+  return c2r_hash_with_key_convert(hash, c2r_string, NULL, value_conv, ctx);
 }
 
 VALUE
@@ -421,6 +431,19 @@ VALUE
 svn_swig_rb_prop_hash_to_hash(apr_hash_t *prop_hash)
 {
   return svn_swig_rb_apr_hash_to_hash_svn_string(prop_hash);
+}
+
+VALUE
+c2r_revnum(void *value, void *ctx)
+{
+  svn_revnum_t *num = value;
+  return INT2NUM(*num);
+}
+
+VALUE
+svn_swig_rb_apr_revnum_key_hash_to_hash_string(apr_hash_t *hash)
+{
+  return c2r_hash_with_key_convert(hash, c2r_revnum, NULL, c2r_string, NULL);
 }
 
 
@@ -477,6 +500,42 @@ apr_hash_t *
 svn_swig_rb_hash_to_apr_hash_swig_type(VALUE hash, const char *typename, apr_pool_t *pool)
 {
   return r2c_hash(hash, r2c_swig_type, (void *)typename, pool);
+}
+
+static int
+r2c_hash_i_for_revnum(VALUE key, VALUE value, hash_to_apr_hash_data_t *data)
+{
+  if (key != Qundef) {
+    svn_revnum_t *revnum = apr_palloc(data->pool, sizeof(svn_revnum_t));
+    *revnum = NUM2INT(value);
+    apr_hash_set(data->apr_hash,
+                 apr_pstrdup(data->pool, StringValuePtr(key)),
+                 APR_HASH_KEY_STRING,
+                 (void *)revnum);
+  }
+  return ST_CONTINUE;
+}
+
+apr_hash_t *
+svn_swig_rb_hash_to_apr_hash_revnum(VALUE hash, apr_pool_t *pool)
+{
+  if (NIL_P(hash)) {
+    return NULL;
+  } else {
+    apr_hash_t *apr_hash;
+    hash_to_apr_hash_data_t data = {
+      NULL,
+      NULL,
+      NULL,
+      pool
+    };
+
+    apr_hash = apr_hash_make(pool);
+    data.apr_hash = apr_hash;
+    rb_hash_foreach(hash, r2c_hash_i_for_revnum, (VALUE)&data);
+    
+    return apr_hash;
+  }
 }
 
 
