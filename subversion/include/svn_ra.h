@@ -180,8 +180,7 @@ typedef svn_error_t *(*svn_ra_lock_callback_t) (void *baton,
  */
 typedef void (*svn_ra_progress_notify_func_t) (apr_off_t progress,
                                                apr_off_t total,
-                                               void *baton,
-                                               apr_pool_t *pool);
+                                               void * baton);
 
 
 /**
@@ -323,10 +322,6 @@ typedef struct svn_ra_reporter_t
  * Each routine takes a @a callback_baton originally provided with the
  * vtable.
  *
- * In order to ease future compatibility, clients must use
- * svn_ra_create_callbacks() to allocate and initialize this structure
- * instead of doing so themselves.
- *
  * @since New in 1.3.
  */
 typedef struct svn_ra_callbacks2_t
@@ -376,25 +371,52 @@ typedef struct svn_ra_callbacks2_t
   void *progress_baton;
 } svn_ra_callbacks2_t;
 
-/** Similar to svn_ra_callbacks2_t, except that the progress
- * notification function and baton is missing.
+/** A collection of callbacks implemented by libsvn_client which allows
+ * an RA layer to "pull" information from the client application, or
+ * possibly store information.  libsvn_client passes this vtable to
+ * @c RA->open().
+ *
+ * Each routine takes a @a callback_baton originally provided with the
+ * vtable.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 typedef struct svn_ra_callbacks_t
 {
+  /** Open a unique temporary file for writing in the working copy.
+   * This file will be automatically deleted when @a fp is closed.
+   */
   svn_error_t *(*open_tmp_file) (apr_file_t **fp,
                                  void *callback_baton,
                                  apr_pool_t *pool);
   
+  /** An authentication baton, created by the application, which is
+   * capable of retrieving all known types of credentials.
+   */
   svn_auth_baton_t *auth_baton;
 
+  /*** The following items may be set to NULL to disallow the RA layer
+       to perform the respective operations of the vtable functions.
+       Perhaps WC props are not defined or are in invalid for this
+       session, or perhaps the commit operation this RA session will
+       perform is a server-side only one that shouldn't do post-commit
+       processing on a working copy path.  ***/
+
+  /** Fetch working copy properties.
+   *
+   *<pre> ### we might have a problem if the RA layer ever wants a property
+   * ### that corresponds to a different revision of the file than
+   * ### what is in the WC. we'll cross that bridge one day...</pre>
+   */
   svn_ra_get_wc_prop_func_t get_wc_prop;
 
+  /** Immediately set new values for working copy properties. */
   svn_ra_set_wc_prop_func_t set_wc_prop;
 
+  /** Schedule new values for working copy properties. */
   svn_ra_push_wc_prop_func_t push_wc_prop;
 
+  /** Invalidate working copy properties. */
   svn_ra_invalidate_wc_props_func_t invalidate_wc_props;
 
 } svn_ra_callbacks_t;
@@ -416,19 +438,6 @@ typedef struct svn_ra_callbacks_t
  */
 svn_error_t *
 svn_ra_initialize (apr_pool_t *pool);
-
-/** Initialize a callback structure.
-* Set @a *callbacks to a ra callbacks object, allocated in @a pool.
-*
-* In order to easy future compatibility, clients must use this
-* function to allocate and initialize the @c svn_ra_callbacks2_t
-* structure rather than doing so themselves.
-*
-* @since New in 1.3.
-*/
-svn_error_t *
-svn_ra_create_callbacks (svn_ra_callbacks2_t **callbacks,
-                         apr_pool_t *pool);
 
 /**
  * A repository access session.  This object is used to perform requests
