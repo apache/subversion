@@ -240,6 +240,17 @@ svn_error_t *svn_swig_rb_client_blame_receiver_func(void *baton,
 
 svn_wc_entry_callbacks_t *svn_swig_rb_wc_entry_callbacks(void);
 svn_wc_diff_callbacks2_t *svn_swig_rb_wc_diff_callbacks2(void);
+
+
+VALUE svn_swig_rb_make_txdelta_window_handler_wrapper(VALUE *rb_handler_pool,
+                                                      apr_pool_t **handler_pool,
+                                                      svn_txdelta_window_handler_t **handler,
+                                                      void ***handler_baton);
+VALUE svn_swig_rb_setup_txdelta_window_handler_wrapper(VALUE obj,
+                                                       svn_txdelta_window_handler_t handler,
+                                                       void *handler_baton);
+svn_error_t *svn_swig_rb_invoke_txdelta_window_handler_wrapper(VALUE obj,
+                                                               svn_txdelta_window_t *window);
 
 #ifdef __cplusplus
 }

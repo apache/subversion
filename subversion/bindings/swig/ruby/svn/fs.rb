@@ -41,7 +41,7 @@ module Svn
         end
       end
 
-      def set_warning_func(func)
+      def set_warning_func(&func)
         Fs.set_warning_func(self, func)
       end
 
@@ -51,6 +51,10 @@ module Svn
       
       def open_txn(name)
         Fs.open_txn(self, name)
+      end
+
+      def purge_txn(id)
+        Fs.purge_txn(self, id)
       end
 
       def transaction(rev=nil, flags=0)
@@ -69,15 +73,25 @@ module Svn
       end
 
       def prop(name, rev=nil)
-        Fs.revision_prop(self, rev || youngest_rev, name)
+        value = Fs.revision_prop(self, rev || youngest_rev, name)
+        if value and name == Svn::Core::PROP_REVISION_DATE
+          Time.parse_svn_format(value)
+        else
+          value
+        end
       end
 
       def set_prop(name, value, rev=nil)
-        Fs.change_rev_prop(self, name, value, rev || youngest_rev)
+        Fs.change_rev_prop(self, rev || youngest_rev, name, value)
       end
 
       def proplist(rev=nil)
-        Fs.revision_proplist(self, rev || youngest_rev)
+        list = Fs.revision_proplist(self, rev || youngest_rev)
+        date_str = list[Svn::Core::PROP_REVISION_DATE]
+        if date_str
+          list[Svn::Core::PROP_REVISION_DATE] = Time.parse_svn_format(date_str)
+        end
+        list
       end
 
       def transactions
@@ -96,8 +110,8 @@ module Svn
         Fs.set_access(self, new_access)
       end
 
-      def deltify_revision(rev)
-        Fs.deltify_revision(self, rev)
+      def deltify_revision(rev=nil)
+        Fs.deltify_revision(self, rev || youngest_rev)
       end
 
       def uuid
@@ -108,12 +122,16 @@ module Svn
         Fs.set_uuid(self, new_uuid)
       end
 
-      def lock(path, token, comment, dav_comment,
-               expiration_date, current_rev=nil, steal_lock=false)
+      def lock(path, token=nil, comment=nil, dav_comment=true,
+               expiration_date=nil, current_rev=nil, steal_lock=false)
+        if expiration_date
+          expiration_date = expiration_date.to_apr_time
+        else
+          expiration_date = 0
+        end
         current_rev ||= youngest_rev
         Fs.lock(self, path, token, comment, dav_comment,
-                expiration_date && expiration_date.to_apr_time,
-                current_rev, steal_lock)
+                expiration_date, current_rev, steal_lock)
       end
 
       def unlock(path, token, break_lock=false)
@@ -129,10 +147,13 @@ module Svn
       end
 
       def get_locks(path)
+        locks = []
         receiver = Proc.new do |lock|
-          yield(lock)
+          locks << lock
+          yield(lock) if block_given?
         end
-        Fs.get_lock(self, path, receiver)
+        Fs.get_locks(self, path, receiver)
+        locks
       end
     end
 
@@ -181,7 +202,11 @@ module Svn
       end
       
       def prop(name)
-        Fs.txn_prop(self, name)
+        value = Fs.txn_prop(self, name)
+        if name == Svn::Core::PROP_REVISION_DATE and value
+          value = Time.parse_svn_format(value)
+        end
+        value
       end
 
       def set_prop(name, value, validate=true)
@@ -201,15 +226,16 @@ module Svn
       end
 
       def proplist
-        Fs.txn_proplist(self)
+        list = Fs.txn_proplist(self)
+        date_str = list[Svn::Core::PROP_REVISION_DATE]
+        if list[Svn::Core::PROP_REVISION_DATE]
+          list[Svn::Core::PROP_REVISION_DATE] = Time.parse_svn_format(date_str)
+        end
+        list
       end
 
       def abort
         Fs.abort_txn(self)
-      end
-
-      def purge(id)
-        Fs.purge_txn(self, id)
       end
 
       def commit
@@ -355,13 +381,13 @@ module Svn
         Fs.node_history(self, path)
       end
 
-      def props_changed(path1, root2, path2)
+      def props_changed?(path1, root2, path2)
         Fs.props_changed(self, path1, root2, path2)
       end
 
-      def merge(source_path, target_root, target_path,
+      def merge(target_path, source_root, source_path,
                 ancestor_root, ancestor_path)
-        Fs.merge(self, source_path, target_root, target_path,
+        Fs.merge(source_root, source_path, self, target_path,
                  ancestor_root, ancestor_path)
       end
 
@@ -373,12 +399,12 @@ module Svn
         Fs.delete(self, path)
       end
       
-      def copy(from_path, to_root, to_path)
-        Fs.copy(self, from_path, to_root, to_path)
+      def copy(to_path, from_root, from_path)
+        Fs.copy(from_root, from_path, self, to_path)
       end
 
-      def revision_link(to_root, path)
-        Fs.revision_link(self, to_root, path)
+      def revision_link(from_root, path)
+        Fs.revision_link(from_root, self, path)
       end
 
       def make_file(path)
@@ -386,7 +412,9 @@ module Svn
       end
 
       def apply_textdelta(path, base_checksum=nil, result_checksum=nil)
-        Fs.apply_textdelta(self, path, base_checksum, result_checksum)
+        obj = Fs.apply_textdelta_wrapper(self, path,
+                                         base_checksum, result_checksum)
+        Delta.setup_handler_obj(obj)
       end
       
       def apply_text(path, result_checksum=nil)
@@ -397,9 +425,9 @@ module Svn
         Fs.contents_changed(self, path1, root2, path2)
       end
 
-      def file_delta_stream(source_path, target_root, target_path)
-        Fs.get_file_delta_stream(self, source_path,
-                                 target_root, target_path)
+      def file_delta_stream(source_root, source_path, target_path)
+        Fs.get_file_delta_stream(source_root, source_path,
+                                 self, target_path)
       end
     end
 
