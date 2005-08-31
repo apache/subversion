@@ -47,10 +47,15 @@
     svn_ra_session_t **,
     const svn_ra_reporter2_t **reporter,
     void **report_baton,
-    svn_dirent_t **dirent
+    svn_dirent_t **dirent,
+    svn_lock_t **lock
 };
 
 %apply apr_hash_t **PROPHASH { apr_hash_t **props };
+
+%apply const char *MAY_BE_NULL {
+    const char *comment
+}
 
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
@@ -82,7 +87,7 @@
     svn_ra_make_callbacks(&$1, &$2, $input, _global_pool);
 }
 
-%typemap(ruby, in) (const svn_ra_callbackss_t *callbacks,
+%typemap(ruby, in) (const svn_ra_callbacks2_t *callbacks,
                     void *callback_baton)
 {
   svn_swig_rb_setup_ra_callbacks(&$1, &$2, $input, _global_pool);
@@ -114,9 +119,25 @@
   $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
 }
 
+%typemap(ruby, in) apr_hash_t *path_revs
+{
+  $1 = svn_swig_rb_hash_to_apr_hash_revnum($input, _global_pool);
+}
+
+%typemap(ruby, in) apr_hash_t *path_tokens
+{
+  $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
+}
+
 %typemap(ruby, in) apr_array_header_t *location_revisions
 {
   $1 = svn_swig_rb_array_to_apr_array_revnum($input, _global_pool);
+}
+
+%typemap(ruby, in, numinputs=0) apr_hash_t **locations = apr_hash_t **OUTPUT;
+%typemap(ruby, argout) apr_hash_t **locations
+{
+  $result = svn_swig_rb_apr_revnum_key_hash_to_hash_string(*$1);
 }
 
 /* ----------------------------------------------------------------------- */
