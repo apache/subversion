@@ -299,7 +299,7 @@ svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
   /* Deprecated function. Copy the contents of the svn_ra_callbacks_t
      to a new svn_ra_callbacks2_t and call svn_ra_open2(). */
   svn_ra_callbacks2_t *callbacks2;
-  SVN_ERR (svn_ra_create_callbacks (callbacks2, pool));
+  SVN_ERR (svn_ra_create_callbacks (&callbacks2, pool));
   callbacks2->open_tmp_file = callbacks->open_tmp_file;
   callbacks2->auth_baton = callbacks->auth_baton;
   callbacks2->get_wc_prop = callbacks->get_wc_prop;
