@@ -101,7 +101,8 @@ _svn()
 		         --no-ignore --editor-cmd $pOpts"
 		;; 
 	info)
-		cmdOpts="$pOpts $rOpts --targets -R --recursive"
+		cmdOpts="$pOpts $rOpts --targets -R --recursive \
+                         --incremental --xml"
 		;;
 	list|ls)
 		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts \
