@@ -48,7 +48,7 @@ static svn_error_t *compat_open (void **session_baton,
   sess->vtable = &VTBL;
   sess->pool = pool;
   svn_ra_callbacks2_t *callbacks2;
-  SVN_ERR (svn_ra_create_callbacks (callbacks2, pool));
+  SVN_ERR (svn_ra_create_callbacks (&callbacks2, pool));
 
   callbacks2->open_tmp_file = callbacks->open_tmp_file;
   callbacks2->auth_baton = callbacks->auth_baton;
