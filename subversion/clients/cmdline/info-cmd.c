@@ -28,6 +28,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_time.h"
+#include "svn_xml.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -45,6 +46,212 @@ svn_cl__info_print_time (apr_time_t atime,
   time_utf8 = svn_time_to_human_cstring (atime, pool);
   SVN_ERR (svn_cmdline_printf (pool, "%s: %s\n", desc, time_utf8));
   return SVN_NO_ERROR;
+}
+
+/* Prints XML header */
+static svn_error_t *
+print_header_xml (apr_pool_t *pool)
+{
+  svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+  /* <?xml version="1.0" encoding="utf-8"?> */
+  svn_xml_make_header (&sb, pool);
+
+  /* "<info>" */
+  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "info", NULL);
+
+  return svn_cl__error_checked_fputs (sb->data, stdout);
+}
+
+
+/* Prints XML footer */
+static svn_error_t *
+print_footer_xml (apr_pool_t *pool)
+{
+  svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+  /* "</info>" */
+  svn_xml_make_close_tag (&sb, pool, "info");
+  return svn_cl__error_checked_fputs (sb->data, stdout);
+}
+
+
+/* Return string representation of SCHEDULE */
+static const char *
+schedule_str (svn_wc_schedule_t schedule)
+{
+  switch (schedule)
+    {
+    case svn_wc_schedule_normal:
+      return "normal";
+    case svn_wc_schedule_add:
+      return "add";
+    case svn_wc_schedule_delete:
+      return "delete";
+    case svn_wc_schedule_replace:
+      return "replace";
+    default:
+      return "none";
+    }
+}
+
+
+/* prints svn info in xml mode to standard out */
+static svn_error_t *
+print_info_xml (const char *target,
+                const svn_info_t *info,
+                apr_pool_t *pool)
+{
+  svn_stringbuf_t *sb = svn_stringbuf_create ("", pool);
+  const char *rev_str;
+
+  /* If revision is invalid, assume WC is corrupt. */
+  if (SVN_IS_VALID_REVNUM(info->rev))
+    rev_str = apr_psprintf (pool, "%ld", info->rev);
+  else
+    return svn_error_createf (SVN_ERR_WC_CORRUPT, NULL,
+                              _("'%s' has invalid revision"),
+                              svn_path_local_style (target, pool));
+
+  /* "<entry ...>" */
+  svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "entry",
+                         "path", svn_path_local_style (target, pool),
+                         "kind", svn_cl__node_kind_str (info->kind),
+                         "revision", rev_str,
+                         NULL);
+
+  svn_cl__xml_tagged_cdata (&sb, pool, "url", info->URL);
+
+  if (info->repos_root_URL || info->repos_UUID)
+    {
+      /* "<repository>" */
+      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "repository", NULL);
+
+      /* "<root> xx </root>" */
+      svn_cl__xml_tagged_cdata (&sb, pool, "root", info->repos_root_URL);
+
+      /* "<uuid> xx </uuid>" */
+      svn_cl__xml_tagged_cdata (&sb, pool, "uuid", info->repos_UUID);
+
+      /* "</repository>" */
+      svn_xml_make_close_tag (&sb, pool, "repository");
+    }
+
+  if (info->has_wc_info)
+    {
+      /* "<wc-info>" */
+      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "wc-info", NULL);
+
+      /* "<schedule> xx </schedule>" */
+      svn_cl__xml_tagged_cdata (&sb, pool, "schedule",
+                                schedule_str (info->schedule));
+
+      /* "<copy-from-url> xx </copy-from-url>" */
+      svn_cl__xml_tagged_cdata (&sb, pool, "copy-from-url",
+                                info->copyfrom_url);
+
+      /* "<copy-from-rev> xx </copy-from-rev>" */
+      if (SVN_IS_VALID_REVNUM (info->copyfrom_rev))
+        svn_cl__xml_tagged_cdata (&sb, pool, "copy-from-rev",
+                                  apr_psprintf (pool, "%ld",
+                                                info->copyfrom_rev));
+
+      /* "<text-updated> xx </text-updated>" */
+      if (info->text_time)
+        svn_cl__xml_tagged_cdata (&sb, pool, "text-updated",
+                                  svn_time_to_cstring (info->text_time, pool));
+
+      /* "<prop-updated> xx </prop-updated>" */
+      if (info->prop_time)
+        svn_cl__xml_tagged_cdata (&sb, pool, "prop-updated",
+                                  svn_time_to_cstring (info->prop_time, pool));
+
+      /* "<checksum> xx </checksum>" */
+      svn_cl__xml_tagged_cdata (&sb, pool, "checksum", info->checksum);
+
+      /* "</wc-info>" */
+      svn_xml_make_close_tag (&sb, pool, "wc-info");
+    }
+
+  if (info->last_changed_author
+      || SVN_IS_VALID_REVNUM (info->last_changed_rev)
+      || info->last_changed_date)
+    {
+      /* "<commit ...>" */
+      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "commit",
+                             "revision", apr_psprintf (pool, "%ld",
+                                                       info->last_changed_rev),
+                             NULL);
+
+      /* "<author> xx </author>" */
+      svn_cl__xml_tagged_cdata (&sb, pool, "author",
+                                info->last_changed_author);
+
+      /* "<date> xx </date>" */
+      if (info->last_changed_date)
+        svn_cl__xml_tagged_cdata (&sb, pool, "date",
+                                  svn_time_to_cstring
+                                    (info->last_changed_date, pool));
+
+      /* "</commit>" */
+      svn_xml_make_close_tag (&sb, pool, "commit");
+    }
+
+  if (info->conflict_old || info->conflict_wrk
+      || info->conflict_new || info->prejfile)
+    {
+      /* "<conflict>" */
+      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "conflict", NULL);
+
+      /* "<prev-base-file> xx </prev-base-file>" */
+      svn_cl__xml_tagged_cdata (&sb, pool, "prev-base-file",
+                                info->conflict_old);
+
+      /* "<prev-wc-file> xx </prev-wc-file>" */
+      svn_cl__xml_tagged_cdata (&sb, pool, "prev-wc-file",
+                                info->conflict_wrk);
+
+      /* "<cur-base-file> xx </cur-base-file>" */
+      svn_cl__xml_tagged_cdata (&sb, pool, "cur-base-file",
+                                info->conflict_new);
+
+      /* "<prop-file> xx </prop-file>" */
+      svn_cl__xml_tagged_cdata (&sb, pool, "prop-file", info->prejfile);
+
+      /* "</conflict>" */
+      svn_xml_make_close_tag (&sb, pool, "conflict");
+    }
+
+  if (info->lock)
+    {
+      /* "<lock>" */
+      svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "lock", NULL);
+
+      /* "<token> xx </token>" */
+      svn_cl__xml_tagged_cdata (&sb, pool, "token", info->lock->token);
+
+      /* "<owner> xx </owner>" */
+      svn_cl__xml_tagged_cdata (&sb, pool, "owner", info->lock->owner);
+
+      /* "<comment ...> xxxx </comment>" */
+      svn_cl__xml_tagged_cdata (&sb, pool, "comment", info->lock->comment);
+
+      /* "<created> xx </created>" */
+      svn_cl__xml_tagged_cdata (&sb, pool, "created",
+                                svn_time_to_cstring
+                                  (info->lock->creation_date, pool));
+
+      /* "<expires> xx </expires>" */
+      svn_cl__xml_tagged_cdata (&sb, pool, "expires",
+                                svn_time_to_cstring
+                                  (info->lock->expiration_date, pool));
+
+      /* "</lock>" */
+      svn_xml_make_close_tag (&sb, pool, "lock");
+    }
+
+  /* "</entry>" */
+  svn_xml_make_close_tag (&sb, pool, "entry");
+
+  return svn_cl__error_checked_fputs (sb->data, stdout);
 }
 
 
@@ -217,7 +424,6 @@ print_info (const char *target,
 }
 
 
-
 /* A callback of type svn_info_receiver_t. */
 static svn_error_t *
 info_receiver (void *baton,
@@ -225,9 +431,11 @@ info_receiver (void *baton,
                const svn_info_t *info,
                apr_pool_t *pool)
 {
-  return print_info (path, info, pool);
+  if (((svn_cl__cmd_baton_t *) baton)->opt_state->xml)
+    return print_info_xml (path, info, pool);
+  else
+    return print_info (path, info, pool);
 }
-
 
 
 /* This implements the `svn_opt_subcommand_t' interface. */
@@ -249,6 +457,22 @@ svn_cl__info (apr_getopt_t *os,
 
   /* Add "." if user passed 0 arguments. */
   svn_opt_push_implicit_dot_target (targets, pool);
+
+  if (opt_state->xml)
+    {
+      /* If output is not incremental, output the XML header and wrap
+         everything in a top-level element. This makes the output in
+         its entirety a well-formed XML document. */
+      if (! opt_state->incremental)
+        SVN_ERR (print_header_xml (pool));
+    }
+  else
+    {
+      if (opt_state->incremental)
+        return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'incremental' option only valid in XML "
+                                   "mode"));
+    }
   
   for (i = 0; i < targets->nelts; i++)
     {
@@ -268,7 +492,7 @@ svn_cl__info (apr_getopt_t *os,
 
       err = svn_client_info (truepath,
                              &peg_revision, &(opt_state->start_revision),
-                             info_receiver, NULL,
+                             info_receiver, baton,
                              opt_state->recursive, ctx, subpool);
 
       /* If one of the targets is a non-existent URL or wc-entry,
@@ -296,6 +520,9 @@ svn_cl__info (apr_getopt_t *os,
 
     }
   svn_pool_destroy (subpool);
+
+  if (opt_state->xml && (! opt_state->incremental))
+    SVN_ERR (print_footer_xml (pool));
 
   return SVN_NO_ERROR;
 }
