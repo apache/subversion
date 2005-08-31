@@ -42,8 +42,7 @@ svn_intl_initialize (apr_pool_t *parent_pool);
 /* Gets the locale preferences for the current context, falling back
    to the system locale for the current process if no user preferences
    have been set.  Returns a list of locales ordered by preference.
-   Never returns @c NULL, but may return an empty array
-   (e.g. consisting only of a single @c NULL value). */
+   Returns @c NULL only if setlocale() fails to return a value. */
 const char **
 svn_intl_get_locale_prefs (apr_pool_t *pool);
 

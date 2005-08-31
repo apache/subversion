@@ -27,7 +27,8 @@
 
 #include <apr_getopt.h>
 #include <apr_pools.h>
-#include <httpd.h>
+#include <httpd.h>  /* for server_rec, request_rec, etc. */
+#include <http_config.h>  /* for ap_create_request_config */
 
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -54,21 +55,12 @@ fail (apr_pool_t *pool, const char *fmt, ...)
   return svn_error_create (SVN_ERR_TEST_FAILED, 0, msg);
 }
 
-typedef struct
-{
-  /* The HTTP header value. */
-  const char *header;
+/* The HTTP Accept-Language header value. */
+static const char *HTTP_HEADER = "es-ES; q=0.2, en-US, en; q=0.9";
 
-  /* The ordered list of locales represented by the header. */
-  const char **locale_prefs;
-} lang_pref_t;
+/* The ordered list of locales represented by the header. */
+static const char *LOCALE_PREFS[] = { "en_US", "en", "es_ES", NULL };
 
-/* ### Get sample data from RFC 2616. */
-static lang_pref_t lang_prefs[] =
-  {
-    { "es-ES; q=0.2, en-US, en; q=0.9", {"en_US", "en", "es_ES"} },
-    { NULL, NULL }
-  };
 
 static svn_error_t *
 test1 (const char **msg, 
@@ -76,21 +68,58 @@ test1 (const char **msg,
        svn_test_opts_t *opts,
        apr_pool_t *pool)
 {
-  svn_error_t err;
-  request_rec *r;
+  svn_error_t *err;
+  const char **prefs;
+  int i;
+  server_rec *server;
+  request_rec *req;
 
   *msg = "test mod_dav_svn's lang module";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  /* ### Setup request_rec */
-
-  /*SVN_ERR(svn_dav__negotiate_lang_prefs(r));*/
-
-  if (0)
+  err = svn_intl_initialize(pool);
+  if (err)
     {
-      return fail(pool, "svn_dav__negotiate_lang_prefs: x didn't match y");
+      return svn_error_create (SVN_ERR_TEST_FAILED, err,
+                               "svn_intl_initialize failed");
+    }
+
+  /* Setup a mock server_rec. */
+  server = apr_pcalloc(pool, sizeof(server_rec));
+  server->defn_name = "test";
+  server->server_admin = (char *) "dev@subversion.tigris.org";
+  server->server_hostname = (char *) "localhost";
+  server->port = 80;
+  server->is_virtual = 1;
+
+  /* Setup a mock request_rec. */
+  req = apr_pcalloc(pool, sizeof(request_rec));
+  req->pool = pool;
+  req->hostname = server->server_hostname;
+  req->request_time = 0;
+  /*r->connection = connection;*/
+  req->server = server;
+  /*req->request_config = ap_create_request_config(req->pool);*/
+  req->method = "GET";
+  req->method_number = M_GET;
+  /* ### Use HTTP_HEADER to set headers_in, an apr_table_t
+  req->headers_in = ...;
+  */
+
+  /*SVN_ERR(svn_dav__negotiate_lang_prefs(req));*/
+  prefs = svn_intl_get_locale_prefs(req->pool);
+
+  for (i = 0; LOCALE_PREFS[i] != NULL; i++)
+    {
+      if ((LOCALE_PREFS[i] == NULL) != (prefs[i] == NULL)
+          || (LOCALE_PREFS[i] != NULL && prefs[i] != NULL
+              && apr_strnatcmp(LOCALE_PREFS[i], prefs[i]) != 0))
+        {
+          return fail(pool, "svn_dav__negotiate_lang_prefs: %s "
+                      "didn't match %s", LOCALE_PREFS[i], prefs[i]);
+        }
     }
 
   return SVN_NO_ERROR;
@@ -107,6 +136,6 @@ test1 (const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS (test1),
+    SVN_TEST_XFAIL (test1),
     SVN_TEST_NULL
   };
