@@ -32,13 +32,32 @@ STATUS OF THE SWIG BINDINGS
     - svn_diff_diff4()
     - svn_diff_output()
     - svn_diff_file_diff4()
+
+  Completed modules but including no-unit-test functions:
   - Svn::Repos
-    Unsupported functions:
+    Untested functions:
     - svn_repos_parse_dumpstream2()
     - svn_repos_get_fs_build_parser2()
-
-  Completed but not enough test modules:
-  - Svn::Wc(50% completed)
+  - Svn::Wc
+    Untested functions:
+    - svn_wc_get_status_editor2()
+    - svn_wc_status_set_repos_locks()
+    - svn_wc_crawl_revisions2()
+    - svn_wc_get_update_editor2()
+    - svn_wc_get_switch_editor2()
+    - svn_wc_get_diff_editor3()
+    - svn_wc_diff3()
+    - svn_wc_get_prop_diffs()
+    - svn_wc_merge()
+    - svn_wc_merge_props()
+    - svn_wc_merge_prop_diffs()
+    - svn_wc_get_pristine_copy_path()
+    - svn_wc_cleanup2()
+    - svn_wc_relocate9)
+    - svn_wc_transmit_text_deltas()
+    - svn_wc_transmit_prop_deltas()
+    - svn_wc_add_lock()
+    - svn_wc_remove_lock()
 
 BUILDING SWIG BINDINGS FOR SVN ON UNIX
 

@@ -66,22 +66,22 @@ module Svn
     AdmAccess = SWIG::TYPE_p_svn_wc_adm_access_t
     class AdmAccess
       class << self
-        def open(associated, path, write_lock, depth, &cancel_func)
+        def open(associated, path, write_lock,
+                 depth, cancel_func=nil, &block)
           _open(:adm_open3, associated, path, write_lock,
-                depth, cancel_func)
+                depth, cancel_func, &block)
         end
 
-        def probe_open(associated, path, write_lock, depth, &cancel_func)
+        def probe_open(associated, path, write_lock, depth,
+                       cancel_func=nil, &block)
           _open(:adm_probe_open3, associated, path, write_lock,
-                depth, cancel_func)
+                depth, cancel_func, &block)
         end
 
-        def open_anchor(path, write_lock, depth, &cancel_func)
-          Wc.adm_open_anchor(path, write_lock, depth, cancel_func)
-        end
-
-        def probe_try(associated, path, write_lock, depth, &cancel_func)
-          Wc.adm_probe_try3(associated, path, write_lock, depth, cancel_func)
+        def open_anchor(path, write_lock, depth,
+                        cancel_func=nil, &block)
+          _open(:adm_open_anchor, path, write_lock, depth,
+                cancel_func, &block)
         end
 
         private
@@ -114,8 +114,8 @@ module Svn
         Wc.adm_probe_retrieve(self, path)
       end
 
-      def probe_try(*args, &block)
-        self.class.probe_try(self, *args, &block)
+      def probe_try(path, write_lock, depth, &cancel_func)
+        Wc.adm_probe_try3(self, path, write_lock, depth, cancel_func)
       end
 
       def close
@@ -163,7 +163,7 @@ module Svn
       end
 
       def maybe_set_repos_root(path, repos)
-        Wc.maybe_set_repos_rot(self, path, repos)
+        Wc.maybe_set_repos_root(self, path, repos)
       end
       
       def status(path)
@@ -181,10 +181,11 @@ module Svn
                                     cancel_func, traversal_info)
         editor, editor_baton, set_lock_baton = *ret
         editor.instance_variable_set("@__status_fun__", status_func)
+        editor.baton = editor_baton
         def set_lock_baton.set_repos_locks(locks, repos_root)
           Wc.status_set_repos_locks(self, locks, repos_root)
         end
-        [editor, editor_baton, set_lock_baton]
+        [editor, set_lock_baton]
       end
 
       def copy(src, dst_basename, cancel_func=nil, notify_func=nil)
@@ -195,14 +196,14 @@ module Svn
         Wc.delete2(path, self, cancel_func, notify_func)
       end
 
-      def add(path, copyfrom_url, copyfrom_rev,
+      def add(path, copyfrom_url=nil, copyfrom_rev=0,
               cancel_func=nil, notify_func=nil)
         Wc.add2(path, self, copyfrom_url, copyfrom_rev,
                 cancel_func, notify_func)
       end
 
       def add_repos_file(dst_path, new_text_path, new_props,
-                         copyfrom_url, copyfrom_rev)
+                         copyfrom_url=nil, copyfrom_rev=0)
         Wc.add_repos_file(dst_path, self, new_text_path,
                           new_props, copyfrom_url, copyfrom_rev)
       end
@@ -224,8 +225,8 @@ module Svn
                               notify_func, cancel_func)
       end
 
-      def process_committed(path, new_revnum, rev_date, rev_author,
-                            wcprop_changes=nil, recurse=true,
+      def process_committed(path, new_revnum, rev_date=nil, rev_author=nil,
+                            wcprop_changes=[], recurse=true,
                             remove_lock=true)
         Wc.process_committed2(path, self, recurse,
                               new_revnum, rev_date,
@@ -247,17 +248,24 @@ module Svn
       def update_editor(target, use_commit_times=true, recurse=true,
                         diff3_cmd=nil, notify_func=nil, cancel_func=nil,
                         traversal_info=nil)
-        Wc.get_update_editor2(target, self, use_commit_times, recurse,
-                              notify_func, cancel_func, diff3_cmd,
-                              traversal_info)
+        editor, editor_baton = Wc.get_update_editor2(target, self,
+                                                     use_commit_times, recurse,
+                                                     notify_func, cancel_func,
+                                                     diff3_cmd, traversal_info)
+        editor.baton = editor_baton
+        editor
       end
 
       def switch_editor(target, switch_url, use_commit_times=true,
                         recurse=true, diff3_cmd=nil, notify_func=nil,
                         cancel_func=nil, traversal_info=nil)
-        Wc.get_update_editor2(target, switch_url, self, use_commit_times,
-                              recurse, notify_func, cancel_func,
-                              diff3_cmd, traversal_info)
+        editor, editor_baton = Wc.get_update_editor2(target, switch_url,
+                                                     self, use_commit_times,
+                                                     recurse, notify_func,
+                                                     cancel_func, diff3_cmd,
+                                                     traversal_info)
+        editor.baton = editor_baton
+        editor
       end
 
       def prop_list(path)
@@ -275,9 +283,12 @@ module Svn
       def diff_editor(target, callbacks, recurse=true,
                       ignore_ancestry=true, use_text_base=false,
                       reverse_order=false, cancel_func=nil)
-        Wc.get_diff_editor3(target, self, callbacks,
-                            recurse, ignore_ancestry, use_text_base,
-                            reverse_order, cancel_func)
+        editor, editor_baton = Wc.get_diff_editor3(target, self, callbacks,
+                                                   recurse, ignore_ancestry,
+                                                   use_text_base, reverse_order,
+                                                   cancel_func)
+        editor.baton = editor_baton
+        editor
       end
 
       def diff(target, callbacks, recurse=true, ignore_ancestry=true)
@@ -343,6 +354,8 @@ module Svn
       end
     end
 
+    TraversalInfo = SWIG::TYPE_p_svn_wc_traversal_info_t
+    
     class TraversalInfo
       class << self
         def new
@@ -356,12 +369,23 @@ module Svn
     end
 
     class Entry
+
+      class << self
+        def new(path, adm_access, show_hidden)
+          Wc.entry(path, adm_access, show_hidden)
+        end
+      end
+      
       def dup
         Wc.entry_dup(self, Svn::Core::Pool.new)
       end
 
       def conflicted(dir_path)
         Wc.conflicted_p(dir_path, self)
+      end
+
+      def conflicted?(dir_path)
+        conflicted(dir_path).any? {|x| x}
       end
 
       def text_conflicted?(dir_path)
@@ -411,7 +435,7 @@ module Svn
       end
 
       def dup
-        Wc.dup_nodtify(self, Core::Pool.new)
+        Wc.dup_notify(self, Core::Pool.new)
       end
       
       def commit_added?
