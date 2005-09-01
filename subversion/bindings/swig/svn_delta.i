@@ -75,13 +75,19 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
     svn_delta_make_editor(&$1, &$2, $input, _global_pool);
 }
 
-#ifdef SWIGRUBY
-void svn_swig_rb_make_editor(const svn_delta_editor_t **editor,
-                             void **edit_baton,
-                             VALUE rb_editor,
-                             apr_pool_t *pool);
-#endif
-
+%typemap(ruby, in) (const svn_delta_editor_t *editor, void *edit_baton)
+{
+  if (RTEST(rb_obj_is_kind_of($input,
+                              svn_swig_rb_svn_delta_editor()))) {
+    $1 = svn_swig_rb_to_swig_type($input,
+                                  "svn_delta_editor_t *",
+                                  _global_pool);
+    $2 = svn_swig_rb_to_swig_type(rb_funcall($input, rb_intern("baton"), 0),
+                                  "void *", _global_pool);
+  } else {
+    svn_swig_rb_make_delta_editor(&$1, &$2, $input, _global_pool);
+  }
+}
 
 /* -----------------------------------------------------------------------
    handle svn_txdelta_window_handler_t/baton pair.

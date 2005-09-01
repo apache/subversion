@@ -87,12 +87,12 @@ module Svn
       
       def report(rev, username, fs_base, target, tgt_path,
                  editor, text_deltas=true, recurse=true,
-                 ignore_ancestry=false)
-        svn_editor, baton = Delta.make_editor(editor)
+                 ignore_ancestry=false, authz_read_func=nil)
+        authz_read_func ||= @authz_read_func
         args = [
           rev, username, self, fs_base, target, tgt_path,
-          text_deltas, recurse, ignore_ancestry, svn_editor,
-          baton, @authz_read_func,
+          text_deltas, recurse, ignore_ancestry, editor,
+          authz_read_func,
         ]
         report_baton = Repos.begin_report(*args)
         setup_report_baton(report_baton)
@@ -127,7 +127,9 @@ module Svn
 
       def logs(paths, start_rev, end_rev, limit,
                discover_changed_paths=true,
-               strict_node_history=false)
+               strict_node_history=false,
+               authz_read_func=nil)
+        authz_read_func ||= @authz_read_func
         paths = [paths] unless paths.is_a?(Array)
         infos = []
         receiver = Proc.new do |changed_paths, revision, author, date, message|
@@ -139,19 +141,20 @@ module Svn
         end
         Repos.get_logs3(self, paths, start_rev, end_rev,
                         limit, discover_changed_paths,
-                        strict_node_history, @authz_read_func,
+                        strict_node_history, authz_read_func,
                         receiver)
         infos
       end
 
-      def file_revs(path, start_rev, end_rev)
+      def file_revs(path, start_rev, end_rev, authz_read_func=nil)
+        authz_read_func ||= @authz_read_func
         revs = []
         handler = Proc.new do |path, rev, rev_props, prop_diffs|
           yield(path, rev, rev_props, prop_diffs) if block_given?
           revs << [path, rev, rev_props, prop_diffs]
         end
         Repos.get_file_revs(self, path, start_rev, end_rev,
-                            @authz_read_func, handler)
+                            authz_read_func, handler)
         revs
       end
 
@@ -179,7 +182,7 @@ module Svn
         
         if block_given?
           yield(txn)
-          commit(txn) if fs.transactions.include?(txn.name)
+          txn.abort if fs.transactions.include?(txn.name)
         else
           txn
         end
@@ -189,37 +192,45 @@ module Svn
         Repos.fs_commit_txn(self, txn)
       end
 
-      def lock(path, token,	comment, dav_comment,
-               expiration_date, current_rev=nil, steal_lock=false)
+      def lock(path, token=nil, comment=nil, dav_comment=true,
+               expiration_date=nil, current_rev=nil, steal_lock=false)
+        if expiration_date
+          expiration_date = expiration_date.to_apr_time
+        else
+          expiration_date = 0
+        end
         current_rev ||= youngest_rev
         Repos.fs_lock(self, path, token, comment,
-                      dav_comment,
-                      Util.to_apr_time(expiration_date),
+                      dav_comment, expiration_date,
                       current_rev, steal_lock)
       end
 
-      def unlock(path, token,	break_lock=false)
-        Repos.fs_unlock(self, path, token, comment, break_lock)
+      def unlock(path, token, break_lock=false)
+        Repos.fs_unlock(self, path, token, break_lock)
       end
 
-      def get_locks(path)
-        Repos.fs_get_locks(self, path, @authz_read_func)
+      def get_locks(path, authz_read_func=nil)
+        authz_read_func ||= @authz_read_func
+        Repos.fs_get_locks(self, path, authz_read_func)
       end
 
-      def set_prop(author, name, new_value, rev=nil)
+      def set_prop(author, name, new_value, rev=nil, authz_read_func=nil)
+        authz_read_func ||= @authz_read_func
         rev ||= youngest_rev
         Repos.fs_change_rev_prop2(self, rev, author, name,
-                                  new_value, @authz_read_func)
+                                  new_value, authz_read_func)
       end
 
-      def prop(name, rev=nil)
+      def prop(name, rev=nil, authz_read_func=nil)
+        authz_read_func ||= @authz_read_func
         rev ||= youngest_rev
-        Repos.fs_revision_prop(self, rev, name, @authz_read_func)
+        Repos.fs_revision_prop(self, rev, name, authz_read_func)
       end
 
-      def proplist(rev=nil)
+      def proplist(rev=nil, authz_read_func=nil)
+        authz_read_func ||= @authz_read_func
         rev ||= youngest_rev
-        Repos.fs_revision_proplist(self, rev, @authz_read_func)
+        Repos.fs_revision_proplist(self, rev, authz_read_func)
       end
 
       def node_editor(base_root, root)
@@ -227,7 +238,8 @@ module Svn
         def baton.node
           Repos.node_from_baton(self)
         end
-        [editor, baton]
+        editor.baton = baton
+        editor
       end
 
       def dump_fs(dumpstream, feedback_stream, start_rev, end_rev,
@@ -276,9 +288,9 @@ module Svn
     
       def delta_tree(root, base_rev)
         base_root = fs.root(base_rev)
-        editor, edit_baton = node_editor(base_root, root)
-        root.replay(editor, edit_baton)
-        Repos.node_from_baton(edit_baton)
+        editor = node_editor(base_root, root)
+        root.replay(editor)
+        editor.baton.node
       end
       
       private
@@ -355,14 +367,21 @@ module Svn
       
     end
 
-    Authz = SWIG::TYPE_p_p_svn_authz_t
+    Authz = SWIG::TYPE_p_svn_authz_t
     class Authz
 
+      class << self
+        def read(file, must_exist=true)
+          Repos.authz_read(file, must_exist)
+        end
+      end
+      
       def can_access?(repos_name, path, user, required_access)
-        Reposs.repos_authz_check_access(repos_name,
-                                        path,
-                                        user,
-                                        required_access)
+        Repos.authz_check_access(self,
+                                 repos_name,
+                                 path,
+                                 user,
+                                 required_access)
       end
     end
   end

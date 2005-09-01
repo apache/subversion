@@ -207,6 +207,39 @@ class SvnReposTest < Test::Unit::TestCase
     assert_equal(prev_rev + 1, @repos.youngest_rev)
     assert_equal(prev_rev, @repos.dated_revision(past_date))
     assert_equal(prev_rev + 1, @repos.dated_revision(Time.now))
+
+    prev_rev = @repos.youngest_rev
+    @repos.transaction_for_update(@author) do |txn|
+    end
+    assert_equal(prev_rev, @repos.youngest_rev)
+  end
+
+  def test_trace_node_locations
+    file1 = "file1"
+    file2 = "file2"
+    file3 = "file3"
+    path1 = File.join(@wc_path, file1)
+    path2 = File.join(@wc_path, file2)
+    path3 = File.join(@wc_path, file3)
+    log = "sample log"
+    ctx = make_context(log)
+
+    FileUtils.touch(path1)
+    ctx.add(path1)
+    rev1 = ctx.ci(@wc_path).revision
+
+    ctx.mv(path1, path2)
+    rev2 = ctx.ci(@wc_path).revision
+    
+    ctx.cp(path2, path3)
+    rev3 = ctx.ci(@wc_path).revision
+
+    assert_equal({
+                   rev1 => "/#{file1}",
+                   rev2 => "/#{file2}",
+                   rev3 => "/#{file2}",
+                 },
+                 @repos.fs.trace_node_locations(file2, [rev1, rev2, rev3]))
   end
 
   def test_report
@@ -358,6 +391,76 @@ class SvnReposTest < Test::Unit::TestCase
 
     assert_equal(@repos.fs.root.committed_info("/"),
                  repos.fs.root.committed_info("/"))
+  end
+
+  def test_node_editor
+    file = "file"
+    dir1 = "dir1"
+    dir2 = "dir2"
+    dir3 = "dir3"
+    dir1_path = File.join(@wc_path, dir1)
+    dir2_path = File.join(dir1_path, dir2)
+    dir3_path = File.join(dir2_path, dir3)
+    path = File.join(dir3_path, file)
+    source = "sample source"
+    log = "sample log"
+    
+    ctx = make_context(log)
+    FileUtils.mkdir_p(dir3_path)
+    FileUtils.touch(path)
+    ctx.add(dir1_path)
+    rev1 = ctx.ci(@wc_path).revision
+
+    ctx.rm(dir3_path)
+    rev2 = ctx.ci(@wc_path).revision
+
+    rev1_root = @repos.fs.root(rev1)
+    rev2_root = @repos.fs.root(rev2)
+    editor = @repos.node_editor(rev1_root, rev2_root)
+    rev2_root.replay(editor)
+
+    tree = editor.baton.node
+
+    assert_equal("", tree.name)
+    assert_equal(dir1, tree.child.name)
+    assert_equal(dir2, tree.child.child.name)
+  end
+
+  def test_lock
+    file = "file"
+    log = "sample log"
+    path = File.join(@wc_path, file)
+    path_in_repos = "/#{file}"
+    ctx = make_context(log)
+    
+    FileUtils.touch(path)
+    ctx.add(path)
+    rev = ctx.ci(@wc_path).revision
+    
+    access = Svn::Fs::Access.new(@author)
+    @repos.fs.access = access
+    lock = @repos.lock(file)
+    locks = @repos.get_locks(file)
+    assert_equal([path_in_repos], locks.keys)
+    assert_equal(lock.token, locks[path_in_repos].token)
+    @repos.unlock(file, lock.token)
+    assert_equal({}, @repos.get_locks(file))
+  end
+
+  def test_authz
+    name = "REPOS"
+    conf_path = File.join(@tmp_path, "authz_file")
+    File.open(conf_path, "w") do |f|
+      f.print(<<-EOF)
+[/]
+#{@author} = r
+EOF
+    end
+    
+    authz = Svn::Repos::Authz.read(conf_path)
+    assert(authz.can_access?(name, "/", @author, Svn::Repos::AUTHZ_READ))
+    assert(!authz.can_access?(name, "/", @author, Svn::Repos::AUTHZ_WRITE))
+    assert(!authz.can_access?(name, "/", "FOO", Svn::Repos::AUTHZ_READ))
   end
   
   class TestEditor < Svn::Delta::BaseEditor

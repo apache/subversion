@@ -40,6 +40,7 @@
 %apply SWIGTYPE **OUTPARAM {
     svn_repos_t **,
     svn_dirent_t **,
+    svn_authz_t **,
     const svn_delta_editor_t **editor,
     void **edit_baton
 };
@@ -141,9 +142,15 @@
   $2 = $input; /* our function is the baton. */
 }
 
-%typemap(ruby, in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton) {
-  $1 = svn_swig_rb_repos_authz_func;
-  $2 = (void *)$input;
+%typemap(ruby, in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton)
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+    $2 = NULL;
+  } else {
+    $1 = svn_swig_rb_repos_authz_func;
+    $2 = (void *)$input;
+  }
 }
 
 /* -----------------------------------------------------------------------

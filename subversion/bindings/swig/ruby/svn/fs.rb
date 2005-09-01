@@ -168,6 +168,14 @@ module Svn
                        cross_copies)
         hist
       end
+
+      def trace_node_locations(fs_path, location_revisions,
+                               peg_rev=nil, &authz_read_func)
+        peg_rev ||= youngest_rev
+        Repos.trace_node_locations(self, fs_path, peg_rev,
+                                   location_revisions,
+                                   authz_read_func)
+      end
     end
 
     Access = SWIG::TYPE_p_svn_fs_access_t
@@ -184,16 +192,6 @@ module Svn
 
       def add_lock_token(token)
         Fs.access_add_lock_token(self, token)
-      end
-
-      def trace_node_Locations(fs_path, location_revisions,
-                               peg_rev=nil)
-        authz_read_func = Proc.new do |root, path|
-          yield(root, path)
-        end
-        Repos.trace_node_locations(self, fs_path, peg_rev,
-                                   location_revisions,
-                                   authz_read_func)
       end
     end
     
@@ -342,26 +340,18 @@ module Svn
         entries
       end
 
-      def editor=(editor)
-        @editor = editor
-        @svn_editor, @baton = Delta.make_editor(@editor)
-      end
-
       def dir_delta(src_path, src_entry, tgt_root, tgt_path,
-                    text_deltas=false, recurse=true,
+                    editor, text_deltas=false, recurse=true,
                     entry_props=false, ignore_ancestry=false,
                     &authz_read_func)
-        authz_read_func = Proc.new{true} if authz_read_func.nil?
-        Repos.dir_delta(self, src_path, src_entry,
-                        tgt_root, tgt_path,
-                        @svn_editor, @baton, authz_read_func,
+        Repos.dir_delta(self, src_path, src_entry, tgt_root,
+                        tgt_path, editor, authz_read_func,
                         text_deltas, recurse, entry_props,
                         ignore_ancestry)
       end
 
-      def replay(editor, baton)
-        # Repos.replay(self, @svn_editor, @baton)
-        Repos.replay(self, editor, baton)
+      def replay(editor)
+        Repos.replay(self, editor)
       end
 
       def copied_from(path)

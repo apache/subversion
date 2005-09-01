@@ -16,6 +16,7 @@ static VALUE cSvnCorePool = Qnil;
 static VALUE mSvnClient = Qnil;
 static VALUE cSvnClientContext = Qnil;
 static VALUE cSvnDelta = Qnil;
+static VALUE cSvnDeltaEditor = Qnil;
 static VALUE cSvnDeltaTextDeltaWindowHandler = Qnil;
 
 #define DEFINE_ID(key, name)                    \
@@ -153,6 +154,16 @@ rb_svn_delta(void)
     cSvnDelta = rb_const_get(rb_svn(), rb_intern("Delta"));
   }
   return cSvnDelta;
+}
+
+VALUE
+svn_swig_rb_svn_delta_editor(void)
+{
+  if (NIL_P(cSvnDeltaEditor)) {
+    cSvnDeltaEditor =
+      rb_const_get(rb_svn_delta(), rb_intern("Editor"));
+  }
+  return cSvnDeltaEditor;
 }
 
 VALUE
@@ -1139,10 +1150,10 @@ delta_editor_abort_edit(void *edit_baton, apr_pool_t *pool)
 }
 
 void
-svn_swig_rb_make_editor(const svn_delta_editor_t **editor,
-                        void **edit_baton,
-                        VALUE rb_editor,
-                        apr_pool_t *pool)
+svn_swig_rb_make_delta_editor(svn_delta_editor_t **editor,
+                              void **edit_baton,
+                              VALUE rb_editor,
+                              apr_pool_t *pool)
 {
   svn_delta_editor_t *thunk_editor = svn_delta_default_editor(pool);
   

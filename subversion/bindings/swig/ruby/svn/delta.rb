@@ -10,7 +10,6 @@ module Svn
     Util.set_methods(Ext::Delta, self)
 
     class << self
-      alias make_editor swig_rb_make_editor
       alias _path_driver path_driver
     end
     alias _path_driver path_driver
@@ -30,9 +29,8 @@ module Svn
       Delta.txdelta_skip_svndiff_window(file, version)
     end
 
-    def path_driver(editor, editor_baton, revision, paths, &callback_func)
-      Delta._path_driver(editor, editor_baton, revision,
-                         paths, callback_func)
+    def path_driver(editor, revision, paths, &callback_func)
+      Delta._path_driver(editor, revision, paths, callback_func)
     end
 
     def send(string_or_stream, handler=nil)
