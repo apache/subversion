@@ -24,9 +24,13 @@ extern "C" {
 
 void svn_swig_rb_nls_initialize(void);
 
+VALUE svn_swig_rb_svn_delta_text_delta_window_handler(void);
+
 VALUE svn_swig_rb_svn_error_new(VALUE code, VALUE message,
                                 VALUE file, VALUE line);
 void svn_swig_rb_handle_svn_error(svn_error_t *error);
+
+void *svn_swig_rb_to_swig_type(VALUE value, void *ctx, apr_pool_t *pool);
 
 VALUE svn_swig_rb_apr_hash_to_hash_string(apr_hash_t *hash);
 VALUE svn_swig_rb_apr_hash_to_hash_svn_string(apr_hash_t *hash);
@@ -252,8 +256,12 @@ VALUE svn_swig_rb_make_txdelta_window_handler_wrapper(VALUE *rb_handler_pool,
 VALUE svn_swig_rb_setup_txdelta_window_handler_wrapper(VALUE obj,
                                                        svn_txdelta_window_handler_t handler,
                                                        void *handler_baton);
+svn_error_t *svn_swig_rb_invoke_txdelta_window_handler(VALUE window_handler,
+                                                       svn_txdelta_window_t *window,
+                                                       apr_pool_t *pool);
 svn_error_t *svn_swig_rb_invoke_txdelta_window_handler_wrapper(VALUE obj,
-                                                               svn_txdelta_window_t *window);
+                                                               svn_txdelta_window_t *window,
+                                                               apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

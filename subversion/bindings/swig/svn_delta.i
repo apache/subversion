@@ -44,7 +44,10 @@
 };
 
 %apply const char *MAY_BE_NULL {
-    const char *error_info
+    const char *error_info,
+    const char *copyfrom_path,
+    const char *copy_path,
+    const char *base_checksum
 };
 
 #ifdef SWIGPYTHON
@@ -87,8 +90,17 @@ void svn_swig_rb_make_editor(const svn_delta_editor_t **editor,
 %typemap(ruby, in) (svn_txdelta_window_handler_t handler,
                     void *handler_baton)
 {
-  $1 = svn_swig_rb_txdelta_window_handler;
-  $2 = (void *)$input;
+  if (RTEST(rb_obj_is_kind_of($input,
+                              svn_swig_rb_svn_delta_text_delta_window_handler()))) {
+    $1 = svn_swig_rb_to_swig_type($input,
+                                  "svn_txdelta_window_handler_t",
+                                  _global_pool);
+    $2 = svn_swig_rb_to_swig_type(rb_funcall($input, rb_intern("baton"), 0),
+                                  "void *", _global_pool);
+  } else {
+    $1 = svn_swig_rb_txdelta_window_handler;
+    $2 = (void *)$input;
+  }
 }
 
 /* -----------------------------------------------------------------------
@@ -132,55 +144,21 @@ void svn_swig_rb_make_editor(const svn_delta_editor_t **editor,
 */
 #ifdef SWIGRUBY
 %inline %{
-static VALUE
-svn_txdelta_to_svndiff_handler(svn_stream_t *output, apr_pool_t *pool)
-{
-  VALUE obj;
-  VALUE rb_handler_pool;
-  apr_pool_t *handler_pool;
-  svn_txdelta_window_handler_t *handler;
-  void **handler_baton;
-
-  obj = svn_swig_rb_make_txdelta_window_handler_wrapper(&rb_handler_pool,
-                                                        &handler_pool,
-                                                        &handler,
-                                                        &handler_baton);
-  svn_txdelta_to_svndiff(output, pool, handler, handler_baton);
-  svn_swig_rb_setup_txdelta_window_handler_wrapper(obj,
-                                                   *handler,
-                                                   *handler_baton);
-  return obj;
-}
-
-static VALUE
-svn_txdelta_apply_wrapper(svn_stream_t *source,
-                          svn_stream_t *target,
-                          unsigned char *result_digest,
-                          const char *error_info,
-                          apr_pool_t *pool)
-{
-  VALUE obj;
-  VALUE rb_handler_pool;
-  apr_pool_t *handler_pool;
-  svn_txdelta_window_handler_t *handler;
-  void **handler_baton;
-
-  obj = svn_swig_rb_make_txdelta_window_handler_wrapper(&rb_handler_pool,
-                                                        &handler_pool,
-                                                        &handler,
-                                                        &handler_baton);
-  svn_txdelta_apply(source, target, result_digest, error_info, pool,
-                    handler, handler_baton);
-  svn_swig_rb_setup_txdelta_window_handler_wrapper(obj,
-                                                   *handler,
-                                                   *handler_baton);
-  return obj;
-}
-
 static svn_error_t *
-svn_txdelta_invoke_handler(VALUE obj, svn_txdelta_window_t *window)
+svn_txdelta_invoke_window_handler(VALUE window_handler,
+                                  svn_txdelta_window_t *window,
+                                  apr_pool_t *pool)
 {
-  return svn_swig_rb_invoke_txdelta_window_handler_wrapper(obj, window);
+  return svn_swig_rb_invoke_txdelta_window_handler(window_handler,
+                                                   window, pool);
+}
+ 
+static svn_error_t *
+svn_txdelta_invoke_window_handler_wrapper(VALUE obj,
+                                          svn_txdelta_window_t *window,
+                                          apr_pool_t *pool)
+{
+  return svn_swig_rb_invoke_txdelta_window_handler_wrapper(obj, window, pool);
 }
  
 static const char *

@@ -75,6 +75,11 @@
 };
 
 
+/* svn_wc_cleanup2() */
+%apply const char *MAY_BE_NULL {
+    const char *diff3_cmd
+}
+
 /* -----------------------------------------------------------------------
    apr_hash_t ** <const char *, const svn_wc_entry_t *>
    svn_wc_entries_read()
@@ -111,6 +116,23 @@
 {
   $result = output_helper($result,
                           svn_swig_rb_apr_array_to_array_external_item(*$1));
+}
+
+/* -----------------------------------------------------------------------
+   apr_array_header_t **patterns
+   svn_wc_get_default_ignores()
+*/
+
+%typemap(ruby, in, numinputs=0)
+     apr_array_header_t **patterns (apr_array_header_t *temp)
+{
+  $1 = &temp;
+}
+%typemap(ruby, argout, fragment="output_helper")
+     apr_array_header_t **patterns
+{
+  $result = output_helper($result,
+                          svn_swig_rb_apr_array_to_array_string(*$1));
 }
 
 /* -----------------------------------------------------------------------
@@ -159,7 +181,7 @@
    svn_wc many
 */
 
-%typemap(ruby, in) (svn_wc_notify_func2_t notify_func2, void *notify_baton2)
+%typemap(ruby, in) (svn_wc_notify_func2_t notify_func, void *notify_baton)
 {
   $1 = svn_swig_rb_notify_func2;
   $2 = (void *)$input;

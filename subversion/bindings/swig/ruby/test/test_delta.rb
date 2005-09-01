@@ -63,17 +63,17 @@ class SvnDeltaTest < Test::Unit::TestCase
     apply_result = StringIO.new("")
     handler, digest = Svn::Delta.apply(apply_source, apply_result)
     
-    stream.send(&handler)
+    handler.send(stream)
     apply_result.rewind
     assert_equal(target_text, apply_result.read)
 
     puts "skip #{self.class}#test_apply to avoid SEGV"
     return
     
-    Svn::Delta.send(target_text, &handler)
+    handler.send(target_text)
     apply_result.rewind
     assert_equal(target_text * 2, apply_result.read)
-    Svn::Delta.send(StringIO.new(target_text), &handler)
+    handler.send(StringIO.new(target_text))
     apply_result.rewind
     assert_equal(target_text * 3, apply_result.read)
   end
@@ -88,7 +88,7 @@ class SvnDeltaTest < Test::Unit::TestCase
     output = StringIO.new("")
     handler = Svn::Delta.svndiff_handler(output)
 
-    Svn::Delta.send(target_text, &handler)
+    Svn::Delta.send(target_text, handler)
     output.rewind
     result = output.read
     assert_match(/\ASVN.*#{target_text}\z/, result)
@@ -114,7 +114,7 @@ class SvnDeltaTest < Test::Unit::TestCase
   end
 
   def test_path_driver
-    editor, editor_baton = Svn::Delta.make_editor(Svn::Delta::Editor.new)
+    editor, editor_baton = Svn::Delta.make_editor(Svn::Delta::BaseEditor.new)
     data = []
     callback = Proc.new do |parent_baton, path|
       if /\/\z/ =~ path

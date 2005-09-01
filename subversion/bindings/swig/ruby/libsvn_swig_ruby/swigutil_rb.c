@@ -15,6 +15,8 @@ static VALUE cSvnCoreStream = Qnil;
 static VALUE cSvnCorePool = Qnil;
 static VALUE mSvnClient = Qnil;
 static VALUE cSvnClientContext = Qnil;
+static VALUE cSvnDelta = Qnil;
+static VALUE cSvnDeltaTextDeltaWindowHandler = Qnil;
 
 #define DEFINE_ID(key, name)                    \
 static ID id_ ## key = 0;                       \
@@ -142,6 +144,25 @@ rb_svn_core_pool(void)
     rb_ivar_set(cSvnCorePool, rb_id___pools__(), rb_hash_new());
   }
   return cSvnCorePool;
+}
+
+static VALUE
+rb_svn_delta(void)
+{
+  if (NIL_P(cSvnDelta)) {
+    cSvnDelta = rb_const_get(rb_svn(), rb_intern("Delta"));
+  }
+  return cSvnDelta;
+}
+
+VALUE
+svn_swig_rb_svn_delta_text_delta_window_handler(void)
+{
+  if (NIL_P(cSvnDeltaTextDeltaWindowHandler)) {
+    cSvnDeltaTextDeltaWindowHandler =
+      rb_const_get(rb_svn_delta(), rb_intern("TextDeltaWindowHandler"));
+  }
+  return cSvnDeltaTextDeltaWindowHandler;
 }
 
 static VALUE
@@ -275,14 +296,15 @@ r2c_svn_string(VALUE value, void *ctx, apr_pool_t *pool)
   return (void *)svn_string_create(StringValuePtr(value), pool);
 }
 
-static void *
-r2c_swig_type(VALUE value, void *ctx, apr_pool_t *pool)
+void *
+svn_swig_rb_to_swig_type(VALUE value, void *ctx, apr_pool_t *pool)
 {
   void **result = NULL;
   result = apr_palloc(pool, sizeof(void *));
   SWIG_ConvertPtr(value, result, SWIG_TypeQuery((char *)ctx), 1);
   return *result;
 }
+#define r2c_swig_type svn_swig_rb_to_swig_type
 
 static void *
 r2c_long(VALUE value, void *ctx, apr_pool_t *pool)
@@ -730,6 +752,8 @@ callback_rescue(VALUE error)
 }
 
 
+
+/* svn_delta_editor_t */
 typedef struct {
   VALUE editor;
   VALUE baton;
@@ -749,9 +773,9 @@ make_baton(apr_pool_t *pool, VALUE editor, VALUE baton)
 
 
 static svn_error_t *
-set_target_revision(void *edit_baton,
-                    svn_revnum_t target_revision,
-                    apr_pool_t *pool)
+delta_editor_set_target_revision(void *edit_baton,
+                                 svn_revnum_t target_revision,
+                                 apr_pool_t *pool)
 {
   item_baton *ib = edit_baton;
   svn_error_t *err = SVN_NO_ERROR;
@@ -768,10 +792,10 @@ set_target_revision(void *edit_baton,
 }
 
 static svn_error_t *
-open_root(void *edit_baton,
-          svn_revnum_t base_revision,
-          apr_pool_t *dir_pool,
-          void **root_baton)
+delta_editor_open_root(void *edit_baton,
+                       svn_revnum_t base_revision,
+                       apr_pool_t *dir_pool,
+                       void **root_baton)
 {
   item_baton *ib = edit_baton;
   svn_error_t *err = SVN_NO_ERROR;
@@ -790,10 +814,10 @@ open_root(void *edit_baton,
 }
 
 static svn_error_t *
-delete_entry(const char *path,
-             svn_revnum_t revision,
-             void *parent_baton,
-             apr_pool_t *pool)
+delta_editor_delete_entry(const char *path,
+                          svn_revnum_t revision,
+                          void *parent_baton,
+                          apr_pool_t *pool)
 {
   item_baton *ib = parent_baton;
   svn_error_t *err = SVN_NO_ERROR;
@@ -812,12 +836,12 @@ delete_entry(const char *path,
 }
 
 static svn_error_t *
-add_directory(const char *path,
-              void *parent_baton,
-              const char *copyfrom_path,
-              svn_revnum_t copyfrom_revision,
-              apr_pool_t *dir_pool,
-              void **child_baton)
+delta_editor_add_directory(const char *path,
+                           void *parent_baton,
+                           const char *copyfrom_path,
+                           svn_revnum_t copyfrom_revision,
+                           apr_pool_t *dir_pool,
+                           void **child_baton)
 {
   item_baton *ib = parent_baton;
   svn_error_t *err = SVN_NO_ERROR;
@@ -839,11 +863,11 @@ add_directory(const char *path,
 }
 
 static svn_error_t *
-open_directory(const char *path,
-               void *parent_baton,
-               svn_revnum_t base_revision,
-               apr_pool_t *dir_pool,
-               void **child_baton)
+delta_editor_open_directory(const char *path,
+                            void *parent_baton,
+                            svn_revnum_t base_revision,
+                            apr_pool_t *dir_pool,
+                            void **child_baton)
 {
   item_baton *ib = parent_baton;
   svn_error_t *err = SVN_NO_ERROR;
@@ -864,10 +888,10 @@ open_directory(const char *path,
 }
 
 static svn_error_t *
-change_dir_prop(void *dir_baton,
-                const char *name,
-                const svn_string_t *value,
-                apr_pool_t *pool)
+delta_editor_change_dir_prop(void *dir_baton,
+                             const char *name,
+                             const svn_string_t *value,
+                             apr_pool_t *pool)
 {
   item_baton *ib = dir_baton;
   svn_error_t *err = SVN_NO_ERROR;
@@ -886,7 +910,7 @@ change_dir_prop(void *dir_baton,
 }
 
 static svn_error_t *
-close_baton(void *baton, ID method_id)
+delta_editor_close_baton(void *baton, ID method_id)
 {
   item_baton *ib = baton;
   svn_error_t *err = SVN_NO_ERROR;
@@ -903,13 +927,15 @@ close_baton(void *baton, ID method_id)
 }
 
 static svn_error_t *
-close_directory(void *dir_baton, apr_pool_t *pool)
+delta_editor_close_directory(void *dir_baton, apr_pool_t *pool)
 {
-  return close_baton(dir_baton, rb_id_close_directory());
+  return delta_editor_close_baton(dir_baton, rb_id_close_directory());
 }
 
 static svn_error_t *
-absent_directory(const char *path, void *parent_baton, apr_pool_t *pool)
+delta_editor_absent_directory(const char *path,
+                              void *parent_baton,
+                              apr_pool_t *pool)
 {
   item_baton *ib = parent_baton;
   svn_error_t *err = SVN_NO_ERROR;
@@ -927,12 +953,12 @@ absent_directory(const char *path, void *parent_baton, apr_pool_t *pool)
 }
 
 static svn_error_t *
-add_file(const char *path,
-         void *parent_baton,
-         const char *copyfrom_path,
-         svn_revnum_t copyfrom_revision,
-         apr_pool_t *file_pool,
-         void **file_baton)
+delta_editor_add_file(const char *path,
+                      void *parent_baton,
+                      const char *copyfrom_path,
+                      svn_revnum_t copyfrom_revision,
+                      apr_pool_t *file_pool,
+                      void **file_baton)
 {
   item_baton *ib = parent_baton;
   svn_error_t *err = SVN_NO_ERROR;
@@ -954,11 +980,11 @@ add_file(const char *path,
 }
 
 static svn_error_t *
-open_file(const char *path,
-          void *parent_baton,
-          svn_revnum_t base_revision,
-          apr_pool_t *file_pool,
-          void **file_baton)
+delta_editor_open_file(const char *path,
+                       void *parent_baton,
+                       svn_revnum_t base_revision,
+                       apr_pool_t *file_pool,
+                       void **file_baton)
 {
   item_baton *ib = parent_baton;
   svn_error_t *err = SVN_NO_ERROR;
@@ -979,7 +1005,7 @@ open_file(const char *path,
 }
 
 static svn_error_t *
-window_handler(svn_txdelta_window_t *window, void *baton)
+delta_editor_window_handler(svn_txdelta_window_t *window, void *baton)
 {
   VALUE handler = (VALUE)baton;
   VALUE args;
@@ -999,11 +1025,11 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 }
 
 static svn_error_t *
-apply_textdelta(void *file_baton, 
-                const char *base_checksum,
-                apr_pool_t *pool,
-                svn_txdelta_window_handler_t *handler,
-                void **h_baton)
+delta_editor_apply_textdelta(void *file_baton, 
+                             const char *base_checksum,
+                             apr_pool_t *pool,
+                             svn_txdelta_window_handler_t *handler,
+                             void **h_baton)
 {
   item_baton *ib = file_baton;
   svn_error_t *err = SVN_NO_ERROR;
@@ -1022,7 +1048,7 @@ apply_textdelta(void *file_baton,
     *handler = svn_delta_noop_window_handler;
     *h_baton = NULL;
   } else {
-    *handler = window_handler;
+    *handler = delta_editor_window_handler;
     *h_baton = (void *)result;
   }
 
@@ -1030,10 +1056,10 @@ apply_textdelta(void *file_baton,
 }
 
 static svn_error_t *
-change_file_prop(void *file_baton,
-                 const char *name,
-                 const svn_string_t *value,
-                 apr_pool_t *pool)
+delta_editor_change_file_prop(void *file_baton,
+                              const char *name,
+                              const svn_string_t *value,
+                              apr_pool_t *pool)
 {
   item_baton *ib = file_baton;
   svn_error_t *err = SVN_NO_ERROR;
@@ -1053,9 +1079,9 @@ change_file_prop(void *file_baton,
 }
 
 static svn_error_t *
-close_file(void *file_baton,
-           const char *text_checksum,
-           apr_pool_t *pool)
+delta_editor_close_file(void *file_baton,
+                        const char *text_checksum,
+                        apr_pool_t *pool)
 {
   item_baton *ib = file_baton;
   svn_error_t *err = SVN_NO_ERROR;
@@ -1074,9 +1100,9 @@ close_file(void *file_baton,
 }
 
 static svn_error_t *
-absent_file(const char *path,
-            void *parent_baton,
-            apr_pool_t *pool)
+delta_editor_absent_file(const char *path,
+                         void *parent_baton,
+                         apr_pool_t *pool)
 {
   item_baton *ib = parent_baton;
   svn_error_t *err = SVN_NO_ERROR;
@@ -1095,19 +1121,19 @@ absent_file(const char *path,
 }
 
 static svn_error_t *
-close_edit(void *edit_baton, apr_pool_t *pool)
+delta_editor_close_edit(void *edit_baton, apr_pool_t *pool)
 {
   item_baton *ib = edit_baton;
-  svn_error_t *err = close_baton(edit_baton, rb_id_close_edit());
+  svn_error_t *err = delta_editor_close_baton(edit_baton, rb_id_close_edit());
   rb_ary_clear(rb_ivar_get(ib->editor, rb_id_baton()));
   return err;
 }
 
 static svn_error_t *
-abort_edit(void *edit_baton, apr_pool_t *pool)
+delta_editor_abort_edit(void *edit_baton, apr_pool_t *pool)
 {
   item_baton *ib = edit_baton;
-  svn_error_t *err = close_baton(edit_baton, rb_id_abort_edit());
+  svn_error_t *err = delta_editor_close_baton(edit_baton, rb_id_abort_edit());
   rb_ary_clear(rb_ivar_get(ib->editor, rb_id_baton()));
   return err;
 }
@@ -1120,22 +1146,22 @@ svn_swig_rb_make_editor(const svn_delta_editor_t **editor,
 {
   svn_delta_editor_t *thunk_editor = svn_delta_default_editor(pool);
   
-  thunk_editor->set_target_revision = set_target_revision;
-  thunk_editor->open_root = open_root;
-  thunk_editor->delete_entry = delete_entry;
-  thunk_editor->add_directory = add_directory;
-  thunk_editor->open_directory = open_directory;
-  thunk_editor->change_dir_prop = change_dir_prop;
-  thunk_editor->close_directory = close_directory;
-  thunk_editor->absent_directory = absent_directory;
-  thunk_editor->add_file = add_file;
-  thunk_editor->open_file = open_file;
-  thunk_editor->apply_textdelta = apply_textdelta;
-  thunk_editor->change_file_prop = change_file_prop;
-  thunk_editor->close_file = close_file;
-  thunk_editor->absent_file = absent_file;
-  thunk_editor->close_edit = close_edit;
-  thunk_editor->abort_edit = abort_edit;
+  thunk_editor->set_target_revision = delta_editor_set_target_revision;
+  thunk_editor->open_root = delta_editor_open_root;
+  thunk_editor->delete_entry = delta_editor_delete_entry;
+  thunk_editor->add_directory = delta_editor_add_directory;
+  thunk_editor->open_directory = delta_editor_open_directory;
+  thunk_editor->change_dir_prop = delta_editor_change_dir_prop;
+  thunk_editor->close_directory = delta_editor_close_directory;
+  thunk_editor->absent_directory = delta_editor_absent_directory;
+  thunk_editor->add_file = delta_editor_add_file;
+  thunk_editor->open_file = delta_editor_open_file;
+  thunk_editor->apply_textdelta = delta_editor_apply_textdelta;
+  thunk_editor->change_file_prop = delta_editor_change_file_prop;
+  thunk_editor->close_file = delta_editor_close_file;
+  thunk_editor->absent_file = delta_editor_absent_file;
+  thunk_editor->close_edit = delta_editor_close_edit;
+  thunk_editor->abort_edit = delta_editor_abort_edit;
 
   *editor = thunk_editor;
   rb_ivar_set(rb_editor, rb_id_baton(), rb_ary_new());
@@ -2627,8 +2653,27 @@ svn_swig_rb_setup_txdelta_window_handler_wrapper(VALUE obj,
 }
 
 svn_error_t *
+svn_swig_rb_invoke_txdelta_window_handler(VALUE window_handler,
+                                          svn_txdelta_window_t *window,
+                                          apr_pool_t *pool)
+{
+  svn_txdelta_window_handler_t handler;
+  void *handler_baton;
+
+  handler = r2c_swig_type(window_handler,
+                          (void *)"svn_txdelta_window_handler_t",
+                          pool);
+  handler_baton = r2c_swig_type(rb_funcall(window_handler, rb_id_baton(), 0),
+                                (void *)"void *",
+                                pool);
+
+  return handler(window, handler_baton);
+}
+
+svn_error_t *
 svn_swig_rb_invoke_txdelta_window_handler_wrapper(VALUE obj,
-                                                  svn_txdelta_window_t *window)
+                                                  svn_txdelta_window_t *window,
+                                                  apr_pool_t *pool)
 {
   svn_txdelta_window_handler_t handler;
   void *handler_baton;

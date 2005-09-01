@@ -48,8 +48,8 @@ module Svn
       recover2(path, nonblocking, start_callback)
     end
 
-    def db_logfiles(path)
-      _db_logfiles(path, nil)
+    def db_logfiles(path, only_unused=true)
+      _db_logfiles(path, only_unused)
     end
 
     def read_authz(file, must_exist=true)
@@ -105,12 +105,15 @@ module Svn
         end
       end
 
-      def commit_editor(txn, repos_url, base_path, user=nil,
+      def commit_editor(repos_url, base_path, txn=nil, user=nil,
                         log_msg=nil, commit_callback=nil,
                         authz_callback=nil)
-        Repos.get_commit_editor3(self, txn, repos_url,
-                                 base_path, user, log_msg,
-                                 commit_callback, authz_callback)
+        editor, baton = Repos.get_commit_editor3(self, txn, repos_url,
+                                                 base_path, user, log_msg,
+                                                 commit_callback,
+                                                 authz_callback)
+        editor.baton = baton
+        editor
       end
       
       def youngest_rev
@@ -123,10 +126,6 @@ module Svn
 
       def committed_info(path)
         Repos.get_committed_info(self, path)
-      end
-
-      def stat(path)
-        Repos.stat(self, path)
       end
 
       def logs(paths, start_rev, end_rev, limit,
@@ -278,7 +277,7 @@ module Svn
       private
       def setup_report_baton(baton)
         def baton.set_path(path, revision, start_empty=false, lock_token=nil)
-          Repos.set_path2(self, path, revision, start_empty, lock_tokens)
+          Repos.set_path2(self, path, revision, start_empty, lock_token)
         end
         
         def baton.link_path(path, link_path, revision,
@@ -288,7 +287,7 @@ module Svn
         end
         
         def baton.delete_path(path)
-          Repos.delete_path(path, self)
+          Repos.delete_path(self, path)
         end
         
         def baton.finish_report
