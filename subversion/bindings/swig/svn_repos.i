@@ -39,6 +39,7 @@
 */
 %apply SWIGTYPE **OUTPARAM {
     svn_repos_t **,
+    svn_dirent_t **,
     const svn_delta_editor_t **editor,
     void **edit_baton
 };
@@ -58,6 +59,13 @@
 /* svn_repos_get_logs() */
 %apply const apr_array_header_t *STRINGLIST {
     const apr_array_header_t *paths
+};
+
+/* svn_repos_get_commit_editor3() */
+%apply const char *MAY_BE_NULL {
+    const char *user,
+    const char *log_msg,
+    const char *lock_token
 };
 
 #ifdef SWIGPYTHON

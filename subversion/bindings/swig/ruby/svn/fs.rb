@@ -155,6 +155,19 @@ module Svn
         Fs.get_locks(self, path, receiver)
         locks
       end
+
+      def history(path, start_rev, end_rev,
+                  cross_copies=true, authz_read_func=nil)
+        hist = []
+        history_func = Proc.new do |path, revision|
+          yield(path, revision) if block_given?
+          hist << [path, revision]
+        end
+        Repos.history2(self, path, history_func,
+                       authz_read_func, start_rev, end_rev,
+                       cross_copies)
+        hist
+      end
     end
 
     Access = SWIG::TYPE_p_svn_fs_access_t
@@ -171,16 +184,6 @@ module Svn
 
       def add_lock_token(token)
         Fs.access_add_lock_token(self, token)
-      end
-
-      def history(path, start_rev, end_rev,
-                  cross_copies=true, authz_read_func=nil)
-        history_func = Proc.new do |path, revision|
-          yield(path, revision)
-        end
-        Repos.history2(self, path, history_func,
-                       authz_read_func, start_rev, end_rev,
-                       cross_copies)
       end
 
       def trace_node_Locations(fs_path, location_revisions,
@@ -412,9 +415,11 @@ module Svn
       end
 
       def apply_textdelta(path, base_checksum=nil, result_checksum=nil)
-        obj = Fs.apply_textdelta_wrapper(self, path,
-                                         base_checksum, result_checksum)
-        Delta.setup_handler_obj(obj)
+        handler, handler_baton = Fs.apply_textdelta(self, path,
+                                                    base_checksum,
+                                                    result_checksum)
+        handler.baton = handler_baton
+        handler
       end
       
       def apply_text(path, result_checksum=nil)
@@ -428,6 +433,10 @@ module Svn
       def file_delta_stream(source_root, source_path, target_path)
         Fs.get_file_delta_stream(source_root, source_path,
                                  self, target_path)
+      end
+
+      def stat(path)
+        Repos.stat(self, path)
       end
     end
 

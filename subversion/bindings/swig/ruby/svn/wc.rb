@@ -10,7 +10,8 @@ module Svn
     Util.set_constants(Ext::Wc, self)
     Util.set_methods(Ext::Wc, self)
 
-    @@alias_targets = %w(parse_externals_description ensure_adm)
+    @@alias_targets = %w(parse_externals_description
+                         ensure_adm cleanup)
     class << self
       @@alias_targets.each do |target|
         alias_method "_#{target}", target
@@ -58,6 +59,10 @@ module Svn
       Wc.get_default_ignores(config)
     end
     
+    def cleanup(path, diff3_cmd=nil, cancel_func=nil)
+      Wc.cleanup2(path, diff3_cmd, cancel_func)
+    end
+
     AdmAccess = SWIG::TYPE_p_svn_wc_adm_access_t
     class AdmAccess
       class << self
@@ -72,11 +77,11 @@ module Svn
         end
 
         def open_anchor(path, write_lock, depth, &cancel_func)
-          Wc.open_anchor(path, write_lock, depth, cancel_func)
+          Wc.adm_open_anchor(path, write_lock, depth, cancel_func)
         end
 
         def probe_try(associated, path, write_lock, depth, &cancel_func)
-          Wc.probe_try(associated, path, write_lock, depth, cancel_func)
+          Wc.adm_probe_try3(associated, path, write_lock, depth, cancel_func)
         end
 
         private
@@ -117,7 +122,7 @@ module Svn
         Wc.adm_close(self)
       end
 
-      def access_path
+      def path
         Wc.adm_access_path(self)
       end
 
@@ -303,10 +308,6 @@ module Svn
                            base_merge, dry_run)
       end
 
-      def cleanup(path, diff3_cmd=nil, cancel_func=nil)
-        Wc.cleanup2(path, diff3_cmd, self, cancel_func)
-      end
-
       def relocate(path, from, to, recurse=true)
         validator = Proc.new do |uuid, url|
           yield(uuid, url)
@@ -317,7 +318,7 @@ module Svn
       def revert(path, recurse=true, use_commit_times=true,
                  cancel_func=nil, notify_func=nil)
         Wc.revert2(path, self, recurse, use_commit_times,
-                 cancel_func, notify_func)
+                   cancel_func, notify_func)
       end
 
       def transmit_text_deltas(path, editor, file_baton, fulltext=false)
@@ -330,7 +331,7 @@ module Svn
       end
 
       def ignores(config)
-        Wc.get_ignores(self, config)
+        Wc.get_ignores(config, self)
       end
 
       def add_lock(path, lock)
