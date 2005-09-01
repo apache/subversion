@@ -129,8 +129,7 @@ test1 (const char **msg,
 #endif
       /* Fail iff one value is null, or the strings don't match. */
       if ((c_val == NULL) != (py_val == NULL)
-          || (c_val != NULL && py_val != NULL
-              && apr_strnatcmp(c_val, py_val) != 0))
+          || (c_val != NULL && py_val != NULL && strcmp(c_val, py_val) != 0))
         return fail(pool, "Expected value '%s' not equal to '%s' for "
                     "option '%s'", py_val, c_val, key);
     }
