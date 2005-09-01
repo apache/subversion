@@ -129,17 +129,6 @@
   $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
 }
 
-%typemap(ruby, in) apr_array_header_t *location_revisions
-{
-  $1 = svn_swig_rb_array_to_apr_array_revnum($input, _global_pool);
-}
-
-%typemap(ruby, in, numinputs=0) apr_hash_t **locations = apr_hash_t **OUTPUT;
-%typemap(ruby, argout) apr_hash_t **locations
-{
-  $result = svn_swig_rb_apr_revnum_key_hash_to_hash_string(*$1);
-}
-
 /* ----------------------------------------------------------------------- */
 
 %{

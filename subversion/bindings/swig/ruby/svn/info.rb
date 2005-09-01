@@ -263,8 +263,7 @@ module Svn
       else
         editor = editor_class.new
       end
-      base_root.editor = editor
-      base_root.dir_delta("", "", @root, "")
+      base_root.dir_delta("", "", @root, "", editor)
       editor
     end
 

@@ -24,6 +24,7 @@ extern "C" {
 
 void svn_swig_rb_nls_initialize(void);
 
+VALUE svn_swig_rb_svn_delta_editor(void);
 VALUE svn_swig_rb_svn_delta_text_delta_window_handler(void);
 
 VALUE svn_swig_rb_svn_error_new(VALUE code, VALUE message,
@@ -72,10 +73,10 @@ void svn_swig_rb_set_pool_for_no_swig_type(VALUE target, VALUE pool);
 void svn_swig_rb_push_pool(VALUE pool);
 void svn_swig_rb_pop_pool(VALUE pool);
 
-void svn_swig_rb_make_editor(const svn_delta_editor_t **editor,
-                             void **edit_baton,
-                             VALUE rb_editor,
-                             apr_pool_t *pool);
+void svn_swig_rb_make_delta_editor(svn_delta_editor_t **editor,
+                                   void **edit_baton,
+                                   VALUE rb_editor,
+                                   apr_pool_t *pool);
 
 svn_error_t *svn_swig_rb_log_receiver(void *baton,
                                       apr_hash_t *changed_paths,

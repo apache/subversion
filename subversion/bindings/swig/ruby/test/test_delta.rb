@@ -114,7 +114,7 @@ class SvnDeltaTest < Test::Unit::TestCase
   end
 
   def test_path_driver
-    editor, editor_baton = Svn::Delta.make_editor(Svn::Delta::BaseEditor.new)
+    editor = Svn::Delta::BaseEditor.new
     data = []
     callback = Proc.new do |parent_baton, path|
       if /\/\z/ =~ path
@@ -124,7 +124,7 @@ class SvnDeltaTest < Test::Unit::TestCase
         data << [:file, path]
       end
     end
-    Svn::Delta.path_driver(editor, editor_baton, 0, ["/"], &callback)
+    Svn::Delta.path_driver(editor, 0, ["/"], &callback)
     assert_equal([[:dir, '/']], data)
   end
   
@@ -409,8 +409,7 @@ class SvnDeltaTest < Test::Unit::TestCase
     else
       editor = editor_class.new
     end
-    base_root.editor = editor
-    base_root.dir_delta("", "", root, "")
+    base_root.dir_delta("", "", root, "", editor)
     editor
   end
 end

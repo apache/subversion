@@ -601,6 +601,29 @@
 }
 
 /* -----------------------------------------------------------------------
+   apr_array_header_t *location_revisions
+   svn_repos_trace_node_locations()
+   svn_ra_get_locations()
+*/
+
+%typemap(ruby, in) apr_array_header_t *location_revisions
+{
+  $1 = svn_swig_rb_array_to_apr_array_revnum($input, _global_pool);
+}
+
+/* -----------------------------------------------------------------------
+   apr_hash_t **locations
+   svn_repos_trace_node_locations()
+   svn_ra_get_locations()
+*/
+
+%typemap(ruby, in, numinputs=0) apr_hash_t **locations = apr_hash_t **OUTPUT;
+%typemap(ruby, argout) apr_hash_t **locations
+{
+  $result = svn_swig_rb_apr_revnum_key_hash_to_hash_string(*$1);
+}
+
+/* -----------------------------------------------------------------------
    Special boolean mapping for ruby.
 */
 
