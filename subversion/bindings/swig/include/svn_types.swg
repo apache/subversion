@@ -628,16 +628,19 @@
 */
 
 %typemap(ruby, in) svn_boolean_t "$1 = RTEST($input);";
-%typemap(ruby, out) svn_boolean_t "$result = $1 ? Qtrue : Qfalse;";
+%typemap(ruby, out, fragment="output_helper") svn_boolean_t
+{
+  $result = output_helper($result, $1 ? Qtrue : Qfalse);
+}
 
 %typemap(ruby, in, numinputs=0) svn_boolean_t * (svn_boolean_t temp)
 {
   $1 = &temp;
 }
 
-%typemap(ruby, argout) svn_boolean_t *
+%typemap(ruby, argout, fragment="output_helper") svn_boolean_t *
 {
-  $result = *$1 ? Qtrue : Qfalse;
+  $result = output_helper($result, *$1 ? Qtrue : Qfalse);
 }
 
 /* -----------------------------------------------------------------------

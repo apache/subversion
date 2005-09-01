@@ -50,7 +50,8 @@
 %apply SWIGTYPE **OUTPARAM {
     svn_wc_entry_t **,
     svn_wc_adm_access_t **,
-    svn_wc_status_t **
+    svn_wc_status_t **,
+    svn_wc_status2_t **
 };
 
 /* svn_wc_check_wc(wc_format) */
@@ -71,14 +72,23 @@
 };
 
 %apply apr_hash_t *PROPHASH {
-  apr_hash_t *baseprops
+  apr_hash_t *baseprops,
+  apr_hash_t *new_props
 };
 
 
 /* svn_wc_cleanup2() */
 %apply const char *MAY_BE_NULL {
-    const char *diff3_cmd
+    const char *diff3_cmd,
+    const char *uuid,
+    const char *repos,
+    const char *copyfrom_url,
+    const char *rev_date,
+    const char *rev_author
 }
+
+%apply const char **OUTPUT { char **url };
+
 
 /* -----------------------------------------------------------------------
    apr_hash_t ** <const char *, const svn_wc_entry_t *>
@@ -100,6 +110,23 @@
                           svn_swig_rb_apr_hash_to_hash_swig_type
                             (*$1, "svn_wc_entry_t *"));
 }
+
+/* -----------------------------------------------------------------------
+   apr_hash_t **externals_old
+   apr_hash_t **externals_new
+   svn_wc_edited_externals()
+*/
+
+%typemap(ruby, in, numinputs=0) apr_hash_t **externals_old = apr_hash_t **OUTPUT;
+%typemap(ruby, argout, fragment="output_helper") apr_hash_t **externals_old
+{
+  $result = output_helper($result,
+                          svn_swig_rb_apr_hash_to_hash_string(*$1));
+}
+
+%typemap(ruby, in, numinputs=0) apr_hash_t **externals_new = apr_hash_t **externals_old;
+%typemap(ruby, argout, fragment="output_helper") apr_hash_t **externals_new = apr_hash_t **externals_old;
+
 
 /* -----------------------------------------------------------------------
    apr_array_header_t **externals_p
