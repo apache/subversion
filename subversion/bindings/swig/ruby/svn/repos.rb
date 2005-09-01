@@ -33,7 +33,7 @@ module Svn
       end
     end
 
-    def create(path, config, fs_config)
+    def create(path, config={}, fs_config={})
       _create(path, nil, nil, config, fs_config)
     end
 
@@ -97,8 +97,9 @@ module Svn
         report_baton = Repos.begin_report(*args)
         setup_report_baton(report_baton)
         if block_given?
+          report_baton.set_path("", rev)
           result = yield(report_baton)
-          report_baton.finish_report
+          report_baton.finish_report unless report_baton.aborted?
           result
         else
           report_baton
@@ -124,30 +125,34 @@ module Svn
         Repos.dated_revision(self, date.to_apr_time)
       end
 
-      def committed_info(path)
-        Repos.get_committed_info(self, path)
-      end
-
       def logs(paths, start_rev, end_rev, limit,
                discover_changed_paths=true,
                strict_node_history=false)
         paths = [paths] unless paths.is_a?(Array)
+        infos = []
         receiver = Proc.new do |changed_paths, revision, author, date, message|
-          date = Util.string_to_time(date) if date 
-          yield(changed_paths, revision, author, date, message)
+          date = Time.parse_svn_format(date) if date
+          if block_given?
+            yield(changed_paths, revision, author, date, message)
+          end
+          infos << [changed_paths, revision, author, date, message]
         end
         Repos.get_logs3(self, paths, start_rev, end_rev,
                         limit, discover_changed_paths,
                         strict_node_history, @authz_read_func,
                         receiver)
+        infos
       end
 
       def file_revs(path, start_rev, end_rev)
+        revs = []
         handler = Proc.new do |path, rev, rev_props, prop_diffs|
-          yield(path, rev, rev_props, prop_diffs)
+          yield(path, rev, rev_props, prop_diffs) if block_given?
+          revs << [path, rev, rev_props, prop_diffs]
         end
         Repos.get_file_revs(self, path, start_rev, end_rev,
                             @authz_read_func, handler)
+        revs
       end
 
       def commit_txn(txn)
@@ -201,18 +206,19 @@ module Svn
         Repos.fs_get_locks(self, path, @authz_read_func)
       end
 
-      def set_rev_prop(rev, author, name, new_value)
+      def set_prop(author, name, new_value, rev=nil)
+        rev ||= youngest_rev
         Repos.fs_change_rev_prop2(self, rev, author, name,
                                   new_value, @authz_read_func)
       end
-      alias set_revision_prop set_rev_prop
 
-      def rev_prop(rev, propname)
-        Repos.fs_revision_prop(self, rev, propname, @authz_read_func)
+      def prop(name, rev=nil)
+        rev ||= youngest_rev
+        Repos.fs_revision_prop(self, rev, name, @authz_read_func)
       end
-      alias revision_prop rev_prop
 
-      def rev_proplist(rev)
+      def proplist(rev=nil)
+        rev ||= youngest_rev
         Repos.fs_revision_proplist(self, rev, @authz_read_func)
       end
 
@@ -234,9 +240,10 @@ module Svn
       def load_fs(dumpstream, feedback_stream, uuid_action,
                   parent_dir, use_pre_commit_hook=true,
                   use_post_commit_hook=true, &cancel_func)
-        Repos.dump_fs2(self, feedback_stream, uuid_action,
-                       parent_dir, use_pre_commit_hook,
-                       use_post_commit_hook, cancel_func)
+        Repos.load_fs2(self, dumpstream, feedback_stream,
+                       uuid_action, parent_dir,
+                       use_pre_commit_hook, use_post_commit_hook,
+                       cancel_func)
       end
 
       def build_parser(uuid_action, parent_dir,
@@ -276,14 +283,20 @@ module Svn
       
       private
       def setup_report_baton(baton)
+        baton.instance_variable_set("@aborted", false)
+        
+        def baton.aborted?
+          @aborted
+        end
+        
         def baton.set_path(path, revision, start_empty=false, lock_token=nil)
           Repos.set_path2(self, path, revision, start_empty, lock_token)
         end
         
         def baton.link_path(path, link_path, revision,
                             start_empty=false, lock_token=nil)
-          Repos.set_link2(self, path, link_path, revision,
-                          start_empty, lock_tokens)
+          Repos.link_path2(self, path, link_path, revision,
+                           start_empty, lock_token)
         end
         
         def baton.delete_path(path)
@@ -295,7 +308,8 @@ module Svn
         end
         
         def baton.abort_report
-          Repos.finish_report(self)
+          Repos.abort_report(self)
+          @aborted = true
         end
         
       end

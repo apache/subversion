@@ -118,7 +118,7 @@ class SvnRaTest < Test::Unit::TestCase
     assert_equal({}, session.get_locks(file))
   end
 
-  def test_prop1
+  def test_prop
     log = "sample log"
     file = "sample.txt"
     path = File.join(@wc_path, file)
