@@ -205,7 +205,7 @@ SVN_ERROR_START
               SVN_ERR_IO_CATEGORY_START + 1,
               "Unrecognized line ending style")
 
-  /* @deprecated Unused, slated for removal in the next major release. */
+  /** @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_IO_CORRUPT_EOL,
               SVN_ERR_IO_CATEGORY_START + 2,
               "Line endings other than expected")
@@ -214,12 +214,12 @@ SVN_ERROR_START
               SVN_ERR_IO_CATEGORY_START + 3,
               "Ran out of unique names")
 
-  /* @deprecated Unused, slated for removal in the next major release. */
+  /** @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_IO_PIPE_FRAME_ERROR,
               SVN_ERR_IO_CATEGORY_START + 4,
               "Framing error in pipe protocol")
 
-  /* @deprecated Unused, slated for removal in the next major release. */
+  /** @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_IO_PIPE_READ_ERROR,
               SVN_ERR_IO_CATEGORY_START + 5,
               "Read error in pipe")
@@ -282,17 +282,17 @@ SVN_ERROR_START
               SVN_ERR_WC_CATEGORY_START + 0,
               "Obstructed update")
 
-  /* @deprecated Unused, slated for removal in the next major release. */
+  /** @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_WC_UNWIND_MISMATCH,
               SVN_ERR_WC_CATEGORY_START + 1,
               "Mismatch popping the WC unwind stack")
 
-  /* @deprecated Unused, slated for removal in the next major release. */
+  /** @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_WC_UNWIND_EMPTY,
               SVN_ERR_WC_CATEGORY_START + 2,
               "Attempt to pop empty WC unwind stack")
 
-  /* @deprecated Unused, slated for removal in the next major release. */
+  /** @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_WC_UNWIND_NOT_EMPTY,
               SVN_ERR_WC_CATEGORY_START + 3,
               "Attempt to unlock with non-empty unwind stack")
@@ -305,7 +305,7 @@ SVN_ERROR_START
               SVN_ERR_WC_CATEGORY_START + 5,
               "Working copy not locked; this is probably a bug, please report")
 
-  /* @deprecated Unused, slated for removal in the next major release. */
+  /** @deprecated Unused, slated for removal in the next major release. */
   SVN_ERRDEF (SVN_ERR_WC_INVALID_LOCK,
               SVN_ERR_WC_CATEGORY_START + 6,
               "Invalid lock")
@@ -374,7 +374,7 @@ SVN_ERROR_START
               SVN_ERR_WC_CATEGORY_START + 22,
               "Path syntax not supported in this context")  
 
-  /* @since New in 1.2. */
+  /** @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_WC_INVALID_SCHEDULE,
               SVN_ERR_WC_CATEGORY_START + 23,
               "Invalid schedule")  
@@ -513,57 +513,57 @@ SVN_ERROR_START
               SVN_ERR_FS_CATEGORY_START + 32,
               "Transaction is not dead")
 
-  /* @since New in 1.1. */
+  /** @since New in 1.1. */
   SVN_ERRDEF (SVN_ERR_FS_UNKNOWN_FS_TYPE,
               SVN_ERR_FS_CATEGORY_START + 33,
               "Unknown FS type")
 
-  /* @since New in 1.2. */
+  /** @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_NO_USER,
               SVN_ERR_FS_CATEGORY_START + 34,
               "No user associated with filesystem")
 
-  /* @since New in 1.2. */
+  /** @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_PATH_ALREADY_LOCKED,
               SVN_ERR_FS_CATEGORY_START + 35,
               "Path is already locked")
 
-  /* @since New in 1.2. */
+  /** @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_PATH_NOT_LOCKED,
               SVN_ERR_FS_CATEGORY_START + 36,
               "Path is not locked")
 
-  /* @since New in 1.2. */
+  /** @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_BAD_LOCK_TOKEN,
               SVN_ERR_FS_CATEGORY_START + 37,
               "Lock token is incorrect")
 
-  /* @since New in 1.2. */
+  /** @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_NO_LOCK_TOKEN,
               SVN_ERR_FS_CATEGORY_START + 38,
               "No lock token provided")
 
-  /* @since New in 1.2. */
+  /** @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_LOCK_OWNER_MISMATCH,
               SVN_ERR_FS_CATEGORY_START + 39,
               "Username does not match lock owner")
 
-  /* @since New in 1.2. */
+  /** @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_NO_SUCH_LOCK,
               SVN_ERR_FS_CATEGORY_START + 40,
               "Filesystem has no such lock")
 
-  /* @since New in 1.2. */
+  /** @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_LOCK_EXPIRED,
               SVN_ERR_FS_CATEGORY_START + 41,
               "Lock has expired")
 
-  /* @since New in 1.2. */
+  /** @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_FS_OUT_OF_DATE,
               SVN_ERR_FS_CATEGORY_START + 42,
               "Item is out of date")
 
-  /* @since New in 1.2.
+  /**@since New in 1.2.
    *
    * This is analogous to SVN_ERR_REPOS_UNSUPPORTED_VERSION.  To avoid
    * confusion with "versions" (i.e., releases) of Subversion, we've
@@ -614,12 +614,12 @@ SVN_ERROR_START
               SVN_ERR_REPOS_CATEGORY_START + 7,
               "Error running post-commit hook")
 
-  /* @since New in 1.2. */
+  /** @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_REPOS_POST_LOCK_HOOK_FAILED,
               SVN_ERR_REPOS_CATEGORY_START + 8,
               "Error running post-lock hook")
 
-  /* @since New in 1.2. */
+  /** @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_REPOS_POST_UNLOCK_HOOK_FAILED,
               SVN_ERR_REPOS_CATEGORY_START + 9,
               "Error running post-unlock hook")
@@ -655,7 +655,7 @@ SVN_ERROR_START
               SVN_ERR_RA_CATEGORY_START + 6,
               "Unsupported RA plugin ABI version")
 
-  /* @since New in 1.2. */
+  /** @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_RA_NOT_LOCKED,
               SVN_ERR_RA_CATEGORY_START + 7,
               "Path is not locked")
@@ -699,12 +699,12 @@ SVN_ERROR_START
               SVN_ERR_RA_DAV_CATEGORY_START + 8,
               "Failed to execute WebDAV PROPPATCH")
 
-  /* @since New in 1.2. */
+  /** @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_RA_DAV_MALFORMED_DATA,
               SVN_ERR_RA_DAV_CATEGORY_START + 9,
               "Malformed network data")
 
-  /* @since New in 1.3 */
+  /** @since New in 1.3 */
   SVN_ERRDEF (SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS,
               SVN_ERR_RA_DAV_CATEGORY_START + 10,
               "Unable to extract data from response header")
@@ -774,12 +774,12 @@ SVN_ERROR_START
               SVN_ERR_AUTHZ_CATEGORY_START + 0,
               "Read access denied for root of edit")
 
-  /* @since New in 1.1. */
+  /** @since New in 1.1. */
   SVN_ERRDEF (SVN_ERR_AUTHZ_UNREADABLE,
               SVN_ERR_AUTHZ_CATEGORY_START + 1,
               "Item is not readable")
 
-  /* @since New in 1.1. */
+  /** @since New in 1.1. */
   SVN_ERRDEF (SVN_ERR_AUTHZ_PARTIALLY_READABLE,
               SVN_ERR_AUTHZ_CATEGORY_START + 2,
               "Item is partially readable")
@@ -788,7 +788,7 @@ SVN_ERROR_START
               SVN_ERR_AUTHZ_CATEGORY_START + 3,
               "Invalid authz configuration")
 
-  /* @since New in 1.3 */
+  /** @since New in 1.3 */
   SVN_ERRDEF (SVN_ERR_AUTHZ_UNWRITABLE,
               SVN_ERR_AUTHZ_CATEGORY_START + 4,
               "Item is not writable")
@@ -889,12 +889,12 @@ SVN_ERROR_START
               SVN_ERR_CLIENT_CATEGORY_START + 11,
               "Bad property name")
 
-  /* @since New in 1.1. */
+  /** @since New in 1.1. */
   SVN_ERRDEF (SVN_ERR_CLIENT_UNRELATED_RESOURCES,
               SVN_ERR_CLIENT_CATEGORY_START + 12,
               "Two versioned resources are unrelated")
 
-  /* @since New in 1.2. */
+  /** @since New in 1.2. */
   SVN_ERRDEF (SVN_ERR_CLIENT_MISSING_LOCK_TOKEN,
               SVN_ERR_CLIENT_CATEGORY_START + 13,
               "Path has no lock token")
@@ -977,7 +977,7 @@ SVN_ERROR_START
               SVN_ERR_MISC_CATEGORY_START + 18,
               "No auth file path available")
 
-  /* @since New in 1.1. */
+  /** @since New in 1.1. */
   SVN_ERRDEF (SVN_ERR_VERSION_MISMATCH,
               SVN_ERR_MISC_CATEGORY_START + 19,
               "Incompatible library version")
