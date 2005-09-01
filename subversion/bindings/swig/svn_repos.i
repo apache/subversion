@@ -48,7 +48,11 @@
     const char *src_entry,
     const char *unused_1,
     const char *unused_2,
-    const char *token
+    const char *token,
+    const char *user,
+    const char *log_msg,
+    const char *lock_token,
+    const char *tgt_path
 };
 
 /* svn_repos_db_logfiles() */
@@ -59,13 +63,6 @@
 /* svn_repos_get_logs() */
 %apply const apr_array_header_t *STRINGLIST {
     const apr_array_header_t *paths
-};
-
-/* svn_repos_get_commit_editor3() */
-%apply const char *MAY_BE_NULL {
-    const char *user,
-    const char *log_msg,
-    const char *lock_token
 };
 
 #ifdef SWIGPYTHON

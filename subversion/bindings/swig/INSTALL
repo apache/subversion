@@ -34,7 +34,7 @@ STATUS OF THE SWIG BINDINGS
     - svn_diff_file_diff4()
 
   Completed but not enough test modules:
-  - Svn::Repos(50% completed)
+  - Svn::Repos(75% completed)
   - Svn::Wc(50% completed)
 
 BUILDING SWIG BINDINGS FOR SVN ON UNIX

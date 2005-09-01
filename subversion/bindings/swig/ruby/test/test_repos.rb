@@ -1,3 +1,5 @@
+require "tempfile"
+
 require "my-assertions"
 require "util"
 
@@ -87,6 +89,72 @@ class SvnReposTest < Test::Unit::TestCase
     assert(!File.exist?(tmp_repos_path))
   end
 
+  def test_logs
+    log1 = "sample log1"
+    log2 = "sample log2"
+    log3 = "sample log3"
+    file = "file"
+    src = "source"
+    path = File.join(@wc_path, file)
+
+    ctx = make_context(log1)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(path)
+    info1 = ctx.ci(@wc_path)
+    start_rev = info1.revision
+
+    ctx = make_context(log2)
+    File.open(path, "a") {|f| f.print(src)}
+    info2 = ctx.ci(@wc_path)
+
+    ctx = make_context(log3)
+    File.open(path, "a") {|f| f.print(src)}
+    info3 = ctx.ci(@wc_path)
+    end_rev = info3.revision
+
+    logs = @repos.logs(file, start_rev, end_rev, end_rev - start_rev)
+    assert_equal([
+                   [
+                     {"/#{file}" => "A"},
+                     info1.revision,
+                     @author,
+                     info1.date,
+                     log1,
+                   ],
+                   [
+                     {"/#{file}" => "M"},
+                     info2.revision,
+                     @author,
+                     info2.date,
+                     log2,
+                   ],
+                   [
+                     {"/#{file}" => "M"},
+                     info3.revision,
+                     @author,
+                     info3.date,
+                     log3,
+                   ],
+                 ],
+                 logs)
+    revs = []
+    @repos.file_revs(file, start_rev, end_rev) do |path, rev, *rest|
+      revs << [path, rev]
+    end
+    assert_equal([
+                   ["/#{file}", info1.revision],
+                   ["/#{file}", info2.revision],
+                   ["/#{file}", info3.revision],
+                 ],
+                 revs)
+
+
+    rev, date, author = @repos.fs.root.committed_info("/")
+    assert_equal(info3.revision, rev)
+    assert_equal(info3.date, date)
+    assert_equal(info3.author, author)
+  end
+
   def test_hotcopy
     log = "sample log"
     file = "hello.txt"
@@ -143,7 +211,10 @@ class SvnReposTest < Test::Unit::TestCase
 
   def test_report
     file = "file"
+    file2 = "file2"
+    fs_base = "base"
     path = File.join(@wc_path, file)
+    path2 = File.join(@wc_path, file2)
     source = "sample source"
     log = "sample log"
     ctx = make_context(log)
@@ -154,11 +225,18 @@ class SvnReposTest < Test::Unit::TestCase
 
     assert_equal(Svn::Core::NODE_FILE, @repos.fs.root.stat(file).kind)
 
-    assert_raise(Svn::Error::REPOS_BAD_REVISION_REPORT) do
-      @repos.report(rev, @author, @repos_path,
-                    @wc_path, "/", Svn::Delta::BaseEditor.new) do |baton|
-      end
+    editor = TestEditor.new
+    @repos.report(rev, @author, fs_base, "/", nil, editor) do |baton|
+      baton.link_path(file, file2, rev)
+      baton.delete_path(file)
     end
+    assert_equal([
+                   :set_target_revision,
+                   :open_root,
+                   :close_directory,
+                   :close_edit,
+                 ],
+                 editor.sequence.collect{|meth, *args| meth})
   end
 
   def test_commit_editor
@@ -218,5 +296,144 @@ class SvnReposTest < Test::Unit::TestCase
 
     ctx.up(@wc_path)
     assert(!File.exist?(tags_path))
+  end
+
+  def test_prop
+    file = "file"
+    path = File.join(@wc_path, file)
+    source = "sample source"
+    log = "sample log"
+    ctx = make_context(log)
+
+    File.open(path, "w") {|f| f.print(source)}
+    ctx.add(path)
+    ctx.ci(@wc_path)
+
+    assert_equal([
+                   Svn::Core::PROP_REVISION_AUTHOR,
+                   Svn::Core::PROP_REVISION_LOG,
+                   Svn::Core::PROP_REVISION_DATE,
+                 ].sort,
+                 @repos.proplist.keys.sort)
+    assert_equal(log, @repos.prop(Svn::Core::PROP_REVISION_LOG))
+    @repos.set_prop(@author, Svn::Core::PROP_REVISION_LOG, nil)
+    assert_nil(@repos.prop(Svn::Core::PROP_REVISION_LOG))
+    assert_equal([
+                   Svn::Core::PROP_REVISION_AUTHOR,
+                   Svn::Core::PROP_REVISION_DATE,
+                 ].sort,
+                 @repos.proplist.keys.sort)
+  end
+  
+  def test_load
+    file = "file"
+    path = File.join(@wc_path, file)
+    source = "sample source"
+    log = "sample log"
+    ctx = make_context(log)
+
+    File.open(path, "w") {|f| f.print(source)}
+    ctx.add(path)
+    rev1 = ctx.ci(@wc_path).revision
+
+    File.open(path, "a") {|f| f.print(source)}
+    rev2 = ctx.ci(@wc_path).revision
+
+    dest_path = File.join(@tmp_path, "dest")
+    repos = Svn::Repos.create(dest_path)
+
+    assert_not_equal(@repos.fs.root.committed_info("/"),
+                     repos.fs.root.committed_info("/"))
+
+    dump = Tempfile.new("dump")
+    feedback = Tempfile.new("feedback")
+    dump.open
+    feedback.open
+    @repos.dump_fs(dump, feedback, rev1, rev2)
+    dump.close
+    feedback.close
+    dump.open
+    feedback.open
+    repos.load_fs(dump, feedback, Svn::Repos::LOAD_UUID_DEFAULT, "/")
+
+    assert_equal(@repos.fs.root.committed_info("/"),
+                 repos.fs.root.committed_info("/"))
+  end
+  
+  class TestEditor < Svn::Delta::BaseEditor
+    attr_reader :sequence
+    def initialize
+      @sequence = []
+    end
+    
+    def set_target_revision(target_revision)
+      @sequence << [:set_target_revision, target_revision]
+    end
+    
+    def open_root(base_revision)
+      @sequence << [:open_root, base_revision]
+    end
+    
+    def delete_entry(path, revision, parent_baton)
+      @sequence << [:delete_entry, path, revision, parent_baton]
+    end
+    
+    def add_directory(path, parent_baton,
+                      copyfrom_path, copyfrom_revision)
+      @sequence << [:add_directory, path, parent_baton,
+        copyfrom_path, copyfrom_revision]
+    end
+    
+    def open_directory(path, parent_baton, base_revision)
+      @sequence << [:open_directory, path, parent_baton, base_revision]
+    end
+    
+    def change_dir_prop(dir_baton, name, value)
+      @sequence << [:change_dir_prop, dir_baton, name, value]
+    end
+    
+    def close_directory(dir_baton)
+      @sequence << [:close_directory, dir_baton]
+    end
+    
+    def absent_directory(path, parent_baton)
+      @sequence << [:absent_directory, path, parent_baton]
+    end
+    
+    def add_file(path, parent_baton,
+                 copyfrom_path, copyfrom_revision)
+      @sequence << [:add_file, path, parent_baton,
+        copyfrom_path, copyfrom_revision]
+    end
+    
+    def open_file(path, parent_baton, base_revision)
+      @sequence << [:open_file, path, parent_baton, base_revision]
+    end
+    
+    # return nil or object which has `call' method.
+    def apply_textdelta(file_baton, base_checksum)
+      @sequence << [:apply_textdelta, file_baton, base_checksum]
+      nil
+    end
+    
+    def change_file_prop(file_baton, name, value)
+      @sequence << [:change_file_prop, file_baton, name, value]
+    end
+    
+    def close_file(file_baton, text_checksum)
+      @sequence << [:close_file, file_baton, text_checksum]
+    end
+    
+    def absent_file(path, parent_baton)
+      @sequence << [:absent_file, path, parent_baton]
+    end
+    
+    def close_edit(baton)
+      @sequence << [:close_edit, baton]
+    end
+    
+    def abort_edit(baton)
+      @sequence << [:abort_edit, baton]
+    end
   end
 end

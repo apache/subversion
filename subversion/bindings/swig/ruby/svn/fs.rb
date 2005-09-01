@@ -438,6 +438,12 @@ module Svn
       def stat(path)
         Repos.stat(self, path)
       end
+
+      def committed_info(path)
+        rev, date, author = Repos.get_committed_info(self, path)
+        date = Time.parse_svn_format(date) if date
+        [rev, date, author]
+      end
     end
 
     History = SWIG::TYPE_p_svn_fs_history_t
