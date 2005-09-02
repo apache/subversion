@@ -19,6 +19,7 @@
 #include <locale.h>  /* for setlocale() and LC_MESSAGES */
 
 #include <apr_pools.h>
+#include <apr_tables.h>
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
@@ -592,7 +593,7 @@ parsed_request(ne_session *sess,
   ne_decompress *decompress_err = NULL;
   ne_xml_parser *success_parser = NULL;
   ne_xml_parser *error_parser = NULL;
-  char **locale;
+  apr_array_header_t *locale;
   int rv;
 #ifndef SVN_NEON_0_25_0
   int decompress_rv;
@@ -716,9 +717,10 @@ parsed_request(ne_session *sess,
   /* xgettext: Set this to the ISO-639 two-letter language code and --
      optionally -- the ISO-3166 country code for this .po file
      (e.g. en-US, sv-SE, etc.). */
-  locale = svn_intl_get_locale_prefs(pool);
-  if (*locale != NULL)
-    ne_add_request_header(req, "Accept-Language", *locale);
+  svn_intl_get_locale_prefs(&locale, pool);
+  if (locale != NULL && apr_is_empty_table(locale))
+    ne_add_request_header(req, "Accept-Language",
+                          APR_ARRAY_IDX(locale, 0, char *));
 
   /* Register the "error" accepter and body-reader with the request --
      the one to use when HTTP status is *not* 2XX */

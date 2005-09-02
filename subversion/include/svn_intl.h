@@ -25,6 +25,7 @@
 #define SVN_INTL_H
 
 #include <apr_errno.h>
+#include <apr_tables.h>
 
 #include "svn_error.h"
 
@@ -32,30 +33,45 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Initialize the library, using @a parent_pool to acquire a sub-pool
-   for storage of localization bundle data.  A @c NULL @a parent_pool
-   indicates that the global pool should be used.  The lifetime of the
-   resources used by this module can be managed via @a parent_pool. */
+/** Initialize the library, using @a parent_pool to acquire a sub-pool
+ * for storage of localization bundle data.  A @c NULL @a parent_pool
+ * indicates that the global pool should be used.  The lifetime of the
+ * resources used by this module can be managed via @a parent_pool.
+ */
 svn_error_t *
 svn_intl_initialize (apr_pool_t *parent_pool);
 
-/* Gets the locale preferences for the current context, falling back
-   to the system locale for the current process if no user preferences
-   have been set.  Returns a list of locales ordered by preference.
-   Returns @c NULL only if setlocale() fails to return a value. */
-const char **
-svn_intl_get_locale_prefs (apr_pool_t *pool);
-
-/* Sets the locale preferences for the current user.  @a locale_prefs
-   are inspected in order for a matching resource bundle.  Not
-   invoking this API, or invoking it with a @c NULL locale, or finding
-   no match against the preferences will result in the global locale
-   being used instead. */
+/** Returns the locale preferences for the current context in @c
+ * *locale_prefs, falling back to the locale of the current process if
+ * no user preferences have been set.  Returns a list of locales
+ * ordered by preference (allocated in @a pool).  Returns @c NULL only
+ * if setlocale() fails to return a value.
+ */
 void
-svn_intl_set_locale_prefs (char **locale_prefs, apr_pool_t *pool);
+svn_intl_get_locale_prefs (apr_array_header_t **locale_prefs,
+                           apr_pool_t *pool);
 
-/* Retrieve the text identified by @a msgid for the text bundle
-   corresponding to @a domain and @a locale. */
+/** Sets the locale preferences for the current context.  @a
+ * locale_prefs are inspected in order for a matching resource bundle.
+ * Not invoking this API, invoking it with a @c NULL locale, or
+ * finding no match against the preferences will result in the locale
+ * of the current process being used instead.
+ */
+void
+svn_intl_set_locale_prefs (const apr_array_header_t *locale_prefs,
+                           apr_pool_t *pool);
+
+/** Retrieve the text identified by @a msgid for the text bundle
+ * corresponding to @a domain and any contextual locale preferences.
+ * Returns @a msgid if no translation is found.
+ */
+const char *
+svn_intl_dgettext (const char *domain, const char *msgid);
+
+/** Retrieve the text identified by @a msgid for the text bundle
+ * corresponding to @a domain and @a locale.  Returns @a msgid if no
+ * translation is found.
+ */
 const char *
 svn_intl_dlgettext (const char *domain, const char *locale, const char *msgid);
 

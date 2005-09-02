@@ -20,6 +20,7 @@
 #include <apr_file_io.h>
 #include <apr_strings.h>
 #include <apr_thread_proc.h>  /* for thread-local APIs */
+#include <apr_tables.h>
 #include <assert.h>
 #include <apr_hash.h>
 #include <ctype.h>
@@ -31,6 +32,7 @@
 #include "svn_intl.h"
 #include "svn_nls.h" /* for svn_nls_init */
 #include "svn_error.h"
+#include "svn_types.h"
 #include "svn_private_config.h" /* for SVN_LOCALE_DIR */
 
 
@@ -41,8 +43,10 @@
 static apr_hash_t *cache;
 static apr_pool_t *private_pool = NULL;
 
+#if APR_HAS_THREADS
 /* A mutex around writes to CACHE. */
 static apr_thread_mutex_t *cache_lock;
+#endif
 
 /* The key used to access thread-local storage for user-specific
    locale preferences. */
@@ -67,9 +71,9 @@ svn_intl_terminate (void *ignored)
 #if APR_HAS_THREADS
   apr_threadkey_private_delete (locale_prefs_threadkey);
   apr_thread_mutex_destroy (cache_lock);
+  cache_lock = NULL;
 #endif
   locale_prefs_threadkey = NULL;
-  cache_lock = NULL;
   private_pool = NULL;
   return APR_SUCCESS;
 }
@@ -155,21 +159,20 @@ svn_intl_initialize (apr_pool_t *parent_pool)
   return SVN_NO_ERROR;
 }
 
-const char **
-svn_intl_get_locale_prefs (apr_pool_t *pool)
+void
+svn_intl_get_locale_prefs (apr_array_header_t **locale_prefs,
+                           apr_pool_t *pool)
 {
-  const char **prefs = NULL;
+  apr_array_header_t *prefs = NULL;
 
   /* Look for context-specific locale preferences. */
   if (locale_prefs_threadkey != NULL)
-    {
-      void *data;
-      apr_threadkey_private_get (&data, locale_prefs_threadkey);
-      prefs = data;
-    }
+    /* If no preferences have been set for the thread, prefs will be
+       set to NULL. */
+    apr_threadkey_private_get ((void **) &prefs, locale_prefs_threadkey);
 
   /* With no contextual locale, fall back to the system locale. */
-  if (prefs == NULL || prefs[0] == NULL)
+  if (prefs == NULL || apr_is_empty_array (prefs))
     {
       /* xgettext: Set this to the ISO-639 two-letter language code
          and -- optionally -- the ISO-3166 country code for this .po
@@ -178,23 +181,33 @@ svn_intl_get_locale_prefs (apr_pool_t *pool)
 
       /* The bundle could be missing the "translation", or we could be
          missing a bundle for the locale. */
-      if (apr_strnatcmp (locale, SVN_CLIENT_MESSAGE_LOCALE) != 0)
+      if (locale == SVN_CLIENT_MESSAGE_LOCALE)
         {
-          prefs = apr_pcalloc (pool, 2 * sizeof(char *));
-          prefs[0] = locale;
+          /* Attempt to fall back to the inherited locale. */
+          locale = setlocale (LC_ALL, NULL);
+        }
+
+      if (locale != NULL)
+        {
+          prefs = apr_array_make (pool, 1, sizeof(locale));
+          APR_ARRAY_PUSH (prefs, const char *) = locale;
         }
     }
-  return prefs;
+  *locale_prefs = prefs;
 }
 
 
 void
-svn_intl_set_locale_prefs (char **locale_prefs, apr_pool_t *pool)
+svn_intl_set_locale_prefs (const apr_array_header_t *locale_prefs,
+                           apr_pool_t *pool)
 {
   if (locale_prefs_threadkey != NULL)
     {
+      /* ### Need to copy each element's data explicitly? */
+      apr_array_header_t *prefs = apr_array_copy (pool, locale_prefs);
+
       /* ### TODO: Cleanup any previously set locale preferences. */
-      apr_threadkey_private_set (locale_prefs, locale_prefs_threadkey);
+      apr_threadkey_private_set (prefs, locale_prefs_threadkey);
     }
 
   /* ### LATER: Should we save the locale information to the context
@@ -283,6 +296,8 @@ message_table_open (message_table_t **mt, const char *domain,
   return 0;
 }
 
+/* Looks up a translation for MSGID.  Returns the translation, or
+   MSGID if not found. */
 static const char *
 message_table_gettext (message_table_t *mt, const char *msgid)
 {
@@ -323,27 +338,36 @@ message_table_gettext (message_table_t *mt, const char *msgid)
    ### language preferences, and its contents used to differentiate
    ### between per-client session preferences (server-side) and global
    ### user preferences (client-side). */
+
+/* Looks up a translation for MSGID, taking any contextual locale
+   preferences into account.  Returns the translation, or MSGID if not
+   found. */
 const char *
 svn_intl_dgettext (const char *domain, const char *msgid)
 {
-  const char *text;
+  const char *text = msgid;
+  apr_array_header_t *locale_prefs;
 
-  char **locale_prefs = svn_intl_get_locale_prefs (private_pool);
+  /* We assume that nothing is allocated in private_pool. */
+  svn_intl_get_locale_prefs (&locale_prefs, private_pool);
+
   if (locale_prefs != NULL)
     {
-      /* Attempt to find a localization matching the specified locale
+      /* Attempt to find a translation matching the specified locale
          preferences. */
-      char *locale;
-      for (locale = locale_prefs[0]; locale_prefs != NULL; locale_prefs++)
+      int i;
+      for (i = 0; i < locale_prefs->nelts; i++)
         {
-          text = svn_intl_dlgettext (domain, locale, msgid);
-          if (text != NULL && apr_strnatcmp (msgid, text) != 0)
-            /* Localization found, stop looking. */
+          text = svn_intl_dlgettext (domain,
+                                     APR_ARRAY_IDX (locale_prefs, i, char *),
+                                     msgid);
+          if (text != msgid)
+            /* Translation found, stop looking. */
             break;
         }
     }
 
-  if (text == NULL || apr_strnatcmp (msgid, text) == 0)
+  if (text == msgid)
     {
       /* Fall back to vanilla gettext to avoid dealing with
          locale-related env vars, GetThreadLocale(), etc.  (Ideally,

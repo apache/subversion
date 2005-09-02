@@ -30,6 +30,7 @@
 #include <apr_file_info.h>
 #endif
 #include <apr_pools.h>
+#include <apr_tables.h>
 
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -127,6 +128,17 @@ static l10n_t l10n_list[] =
 
 static const char *LOCALE_PREFS[] = { "es_ES", "en_US" };
 
+/* Helper which initializes an apr_array_header_t to contain
+   LOCALE_PREFS. */
+static void
+init_user_locale_prefs (apr_array_header_t **user_prefs, apr_pool_t *p)
+{
+  int i;
+  *user_prefs = apr_array_make (p, 2, sizeof (*LOCALE_PREFS));
+  for (i = 0; i < 2; i++)
+    APR_ARRAY_PUSH (*user_prefs, const char *) = LOCALE_PREFS[i];
+}
+
 static svn_error_t *
 test1 (const char **msg, 
        svn_boolean_t msg_only,
@@ -134,7 +146,7 @@ test1 (const char **msg,
        apr_pool_t *pool)
 {
   svn_error_t *err;
-  const char **locale_prefs;
+  apr_array_header_t *locale_prefs;
 
   *msg = "test locale preference retrieval of svn_intl";
 
@@ -151,19 +163,20 @@ test1 (const char **msg,
                                "svn_intl_initialize failed");
     }
 
-  locale_prefs = svn_intl_get_locale_prefs(pool);
+  svn_intl_get_locale_prefs(&locale_prefs, pool);
   if (locale_prefs == NULL)
     {
       /* This should never happen. */
       return fail(pool, "svn_intl_get_locale_prefs should never "
-                  "return NULL, but did");
+                  "return NULL, but did: setlocale() failed?");
     }
   else if (verbose_mode)
     {
-      if (*locale_prefs == NULL)
+      if (apr_is_empty_table (locale_prefs))
         printf("Locale not recorded in .po file\n");
       else
-        printf("System locale is '%s'\n", *locale_prefs);
+        printf("Process locale is '%s'\n",
+               APR_ARRAY_IDX(locale_prefs, 0, char *));
     }
 
   /* ### Set some contextual prefs and try again. */
@@ -216,7 +229,7 @@ test2 (const char **msg,
                                                    l10n->key);
       if ((l10n->value == NULL) != (intl_value == NULL)
           || (l10n->value != NULL && intl_value != NULL
-              && apr_strnatcmp(l10n->value, intl_value) != 0))
+              && strcmp (l10n->value, intl_value) != 0))
         return fail(pool, "Expected value '%s' not equal to '%s' for "
                     "text '%s'", l10n->value, intl_value, l10n->key);
     }
@@ -236,7 +249,8 @@ test3 (const char **msg,
 {
   l10n_t *l10n;
   svn_error_t *err;
-  const char **prefs;
+  apr_array_header_t *user_prefs;
+  apr_array_header_t *prefs;
   int i;
 
   *msg = "test storage of user locale prefs using svn_intl";
@@ -251,17 +265,31 @@ test3 (const char **msg,
                                "svn_intl_initialize failed");
     }
 
-  svn_intl_set_locale_prefs ((char **) LOCALE_PREFS, pool);
-  prefs = svn_intl_get_locale_prefs (pool);
-  for (i = 0; prefs[i] != NULL; i++)
+  init_user_locale_prefs (&user_prefs, pool);
+
+  if (verbose_mode)
+    {
+      int i;
+      printf ("Setting locale preferences: ");
+      for (i = 0; i < user_prefs->nelts; i++)
+        printf ("%s ", APR_ARRAY_IDX (user_prefs, i, char *));
+      printf ("\n");
+    }
+  svn_intl_set_locale_prefs (user_prefs, pool);
+  svn_intl_get_locale_prefs (&prefs, pool);
+  for (i = 0; i < prefs->nelts; i++)
     {
       if (verbose_mode)
         printf ("Comparing expected locale pref '%s' to contextual pref "
-                "'%s'\n", LOCALE_PREFS[i], prefs[i]);
+                "'%s'\n", APR_ARRAY_IDX (user_prefs, i, char *),
+                APR_ARRAY_IDX (prefs, i, char *));
 
-      if (apr_strnatcmp (prefs[i], LOCALE_PREFS[i]) != 0)
+      if (strcmp (APR_ARRAY_IDX (prefs, i, char *),
+                  APR_ARRAY_IDX (user_prefs, i, char *)) != 0)
         return fail (pool, "Expected locale pref '%s' not equal to "
-                     "contextual pref '%s'", LOCALE_PREFS[i], prefs[i]);
+                     "contextual pref '%s'",
+                     APR_ARRAY_IDX (user_prefs, i, char *),
+                     APR_ARRAY_IDX (prefs, i, char *));
     }
 
   /* Test retrieval of localizations using our svn_intl module.
@@ -271,7 +299,7 @@ test3 (const char **msg,
                                                    l10n->key);
       if ((l10n->value == NULL) != (intl_value == NULL)
           || (l10n->value != NULL && intl_value != NULL
-              && apr_strnatcmp(l10n->value, intl_value) != 0))
+              && strcmp (l10n->value, intl_value) != 0))
         return fail(pool, "Expected value '%s' not equal to '%s' for "
                     "text '%s'", l10n->value, intl_value, l10n->key);
     }

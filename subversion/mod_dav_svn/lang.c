@@ -24,6 +24,8 @@
 #include <httpd.h>      /* for ap_get_token */
 
 #include "svn_error.h"
+#include "svn_intl.h"   /* for svn_intl_set_locale_prefs */
+#include "dav_svn.h"
 
 /* --------------- Borrowed from httpd's mod_negotiation.c -------------- */
 
@@ -163,9 +165,6 @@ static int sort_lang_pref(const void *accept_rec1, const void *accept_rec2)
 
 svn_error_t * svn_dav__negotiate_lang_prefs(request_rec *r)
 {
-  char **lang_prefs = NULL;
-  int i;
-
   /* It would be nice if mod_negotiation
      <http://httpd.apache.org/docs-2.1/mod/mod_negotiation.html> could
      handle the Accept-Language header parsing for us.  Sadly, it
@@ -173,21 +172,14 @@ svn_error_t * svn_dav__negotiate_lang_prefs(request_rec *r)
      httpd/modules/mappers/mod_negotiation.c).  Thus, we duplicate the
      necessary ones in this file. */
 
-  apr_array_header_t *a =
+  const apr_array_header_t *lang_prefs =
     do_header_line(r->pool, apr_table_get(r->headers_in, "Accept-Language"));
 
-  if (apr_is_empty_array(a))
+  if (apr_is_empty_array(lang_prefs))
     return SVN_NO_ERROR;
 
-  qsort(a->elts, (size_t) a->nelts, sizeof(accept_rec), sort_lang_pref);
-  if (a->nelts > 0)
-    {
-      lang_prefs = apr_pcalloc(r->pool, (a->nelts + 1) * sizeof(*lang_prefs));
-      for (i = 0; i < a->nelts; i++)
-        {
-          lang_prefs[i] = ((accept_rec **) (a->elts))[i]->name;
-        }
-    }
+  qsort(lang_prefs->elts, (size_t) lang_prefs->nelts,
+        sizeof(accept_rec), sort_lang_pref);
   svn_intl_set_locale_prefs(lang_prefs, r->pool);
 
   return SVN_NO_ERROR;

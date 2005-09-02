@@ -795,7 +795,7 @@ SVN_ERROR_START
               SVN_ERR_AUTHZ_CATEGORY_START + 4,
               "Item is not writable")
 
-  /* @since New in 1.3 */
+  /** @since New in 1.3 */
   SVN_ERRDEF (SVN_ERR_NLS_UNRECOGNIZED_LOCALE,
               SVN_ERR_NLS_CATEGORY_START + 0,
               "Locale is not recognized")
