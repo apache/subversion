@@ -444,7 +444,7 @@ static int auth_checker(request_rec *r)
                     r->user, r->method, repos_path);
             }
             ap_note_auth_failure(r);
-            return HTTP_UNAUTHORIZED;
+            return HTTP_FORBIDDEN;
         }
 
         return DECLINED;
