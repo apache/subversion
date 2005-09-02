@@ -39,6 +39,8 @@
 */
 %apply SWIGTYPE **OUTPARAM {
     svn_repos_t **,
+    svn_dirent_t **,
+    svn_authz_t **,
     const svn_delta_editor_t **editor,
     void **edit_baton
 };
@@ -47,7 +49,11 @@
     const char *src_entry,
     const char *unused_1,
     const char *unused_2,
-    const char *token
+    const char *token,
+    const char *user,
+    const char *log_msg,
+    const char *lock_token,
+    const char *tgt_path
 };
 
 /* svn_repos_db_logfiles() */
@@ -98,6 +104,12 @@
   $2 = $input; /* our function is the baton. */
 }
 
+%typemap(ruby, in) (svn_repos_history_func_t history_func, void *history_baton)
+{
+  $1 = svn_swig_rb_repos_history_func;
+  $2 = (void *)$input;
+}
+
 /* -----------------------------------------------------------------------
    handle svn_repos_fs_get_locks
 */
@@ -130,9 +142,71 @@
   $2 = $input; /* our function is the baton. */
 }
 
-%typemap(ruby, in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton) {
+%typemap(ruby, in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton)
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+    $2 = NULL;
+  } else {
+    $1 = svn_swig_rb_repos_authz_func;
+    $2 = (void *)$input;
+  }
+}
+
+/* -----------------------------------------------------------------------
+   handle start_callback of svn_repos_recover2().
+*/
+
+/* cause SWIG syntax error.
+%typemap(ruby, in) (svn_error_t *(*)(void *baton) start_callback, void *start_callback_baton)
+{
+  $1 = svn_swig_rb_just_call;
+  $2 = (void *)$input;
+}
+*/
+
+/* -----------------------------------------------------------------------
+   handle svn_repos_file_rev_handler_t/baton pairs
+*/
+
+%typemap(ruby, in) (svn_repos_file_rev_handler_t handler,
+                    void *handler_baton)
+{
+  $1 = svn_swig_rb_repos_file_rev_handler;
+  $2 = (void *)$input;
+}
+
+/* -----------------------------------------------------------------------
+   handle svn_repos_authz_func_t/baton pairs
+*/
+
+%typemap(ruby, in) (svn_repos_authz_func_t authz_read_func,
+                    void *authz_read_baton)
+{
   $1 = svn_swig_rb_repos_authz_func;
   $2 = (void *)$input;
+}
+
+/* -----------------------------------------------------------------------
+   handle svn_repos_authz_callback_t/baton pairs
+*/
+
+%typemap(ruby, in) (svn_repos_authz_callback_t authz_callback,
+                    void *authz_baton)
+{
+  $1 = svn_swig_rb_repos_authz_callback;
+  $2 = (void *)$input;
+}
+
+/* -----------------------------------------------------------------------
+   handle svn_repos_fs_revision_proplist().
+*/
+
+%typemap(ruby, in, numinputs=0) apr_hash_t **table_p = apr_hash_t **OUTPUT;
+%typemap(ruby, argout, fragment="output_helper") apr_hash_t **dirents
+{
+  $result = output_helper($result,
+                          svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
 }
 
 /* -----------------------------------------------------------------------

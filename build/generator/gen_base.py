@@ -9,6 +9,7 @@ import glob
 import re
 import fileinput
 import ConfigParser
+import generator.swig
 
 import getversion
 
@@ -38,6 +39,8 @@ class GeneratorBase:
     parser = ConfigParser.ConfigParser()
     parser.read(fname)
 
+    self.conf = build_path(os.path.abspath(fname))
+
     self.sections = { }
     self.graph = DependencyGraph()
 
@@ -63,14 +66,13 @@ class GeneratorBase:
 
     self.include_dirs = parser.get('options','include-dirs')
     self.swig_include_dirs = parser.get('options','swig-include-dirs')
-    self.swig_python_opts = parser.get('options','swig-python-opts')
-    self.swig_perl_opts = parser.get('options','swig-perl-opts')
-    self.swig_ruby_opts = parser.get('options','swig-ruby-opts')
     self.include_wildcards = \
       string.split(parser.get('options', 'include-wildcards'))
     self.swig_lang = string.split(parser.get('options', 'swig-languages'))
-    self.swig_proxy_dir = parser.get('options', 'swig-proxy-dir')
     self.swig_dirs = string.split(parser.get('options', 'swig-dirs'))
+
+    # SWIG Generator
+    self.swig = generator.swig.Generator(self.conf, "swig")
 
     # Visual C++ projects - contents are either TargetProject instances,
     # or other targets with an external-project attribute.
@@ -917,6 +919,8 @@ class IncludeDependencyInfo:
       if match:
         include_param = native_path(match.group(1))
         bname = os.path.basename(include_param)
+        if not self._domain.has_key(bname):
+          bname = string.replace(bname, "_h.swg", ".h")
         if self._domain.has_key(bname):
           include_fnames = self._domain[bname]
           if len(include_fnames) == 1:

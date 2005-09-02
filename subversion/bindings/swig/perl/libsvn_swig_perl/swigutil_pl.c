@@ -1,5 +1,5 @@
 /*
- * swigutil_py.c: utility functions for the SWIG Perl bindings
+ * swigutil_pl.c: utility functions for the SWIG Perl bindings
  *
  * ====================================================================
  * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
@@ -21,6 +21,9 @@
 #include <XSUB.h>
 
 #include <stdarg.h>
+#ifdef WIN32
+#include <io.h>
+#endif
 
 #include <apr.h>
 #include <apr_general.h>
@@ -1370,7 +1373,12 @@ apr_file_t *svn_swig_pl_make_file (SV *file, apr_pool_t *pool)
                     pool);
     } else if (SvROK(file) && SvTYPE(SvRV(file)) == SVt_PVGV) {
         apr_status_t status;
+#ifdef WIN32
+        apr_os_file_t osfile = (apr_os_file_t)
+          _get_osfhandle(PerlIO_fileno(IoIFP(sv_2io(file))));
+#else
         apr_os_file_t osfile = PerlIO_fileno(IoIFP(sv_2io(file)));
+#endif
         status = apr_os_file_put (&apr_file, &osfile, 
                                   O_CREAT | O_WRONLY, pool);
         if (status)

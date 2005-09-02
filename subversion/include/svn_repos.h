@@ -672,8 +672,8 @@ svn_repos_get_commit_editor3 (const svn_delta_editor_t **editor,
                               const char *base_path,
                               const char *user,
                               const char *log_msg,
-                              svn_commit_callback_t commit_callback,
-                              void *commit_callback_baton,
+                              svn_commit_callback_t callback,
+                              void *callback_baton,
                               svn_repos_authz_callback_t authz_callback,
                               void *authz_baton,
                               apr_pool_t *pool);
@@ -1783,6 +1783,11 @@ svn_repos_authz_read (svn_authz_t **authz_p, const char *file,
  * repos_name with the @a required_access.  @a authz lists the ACLs to
  * check against.  Set @a *access_granted to indicate if the requested
  * access is granted.
+ *
+ * If @a path is NULL, then check whether @a user has the @a
+ * required_access anywhere in the repository.  Set @a *access_granted
+ * to TRUE if at least one path is accessible with the @a
+ * required_access.
  *
  * @since New in 1.3.
  */

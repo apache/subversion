@@ -10,7 +10,58 @@ module Svn
     Util.set_methods(Ext::Delta, self)
 
     class << self
-      alias make_editor swig_rb_make_editor
+      alias _path_driver path_driver
+    end
+    alias _path_driver path_driver
+
+    module_function
+    def svndiff_handler(output)
+      handler, handler_baton = Delta.txdelta_to_svndiff(output)
+      handler.baton = handler_baton
+      handler
+    end
+
+    def read_svndiff_window(stream, version)
+      Delta.txdelta_read_svndiff_window(stream, version)
+    end
+
+    def skip_svndiff_window(file, version)
+      Delta.txdelta_skip_svndiff_window(file, version)
+    end
+
+    def path_driver(editor, revision, paths, &callback_func)
+      Delta._path_driver(editor, revision, paths, callback_func)
+    end
+
+    def send(string_or_stream, handler=nil)
+      if handler.nil? and block_given?
+        handler = Proc.new {|window| yield(window)}
+        Delta.setup_handler_wrapper(handler)
+      end
+      if string_or_stream.is_a?(TextDeltaStream)
+        string_or_stream.send(handler)
+      elsif string_or_stream.is_a?(String)
+        Delta.txdelta_send_string(string_or_stream, handler)
+      else
+        Delta.txdelta_send_stream(string_or_stream, handler)
+      end
+    end
+
+    def apply(source, target, error_info=nil)
+      result = Delta.txdelta_apply(source, target, error_info)
+      digest, handler, handler_baton = result
+      handler.baton = handler_baton
+      [handler, digest]
+    end
+
+    def parse_svndiff(error_on_early_close=true, &handler)
+      Delta.txdelta_parse_svndiff(handler, error_on_early_close)
+    end
+    
+    def setup_handler_wrapper(wrapper)
+      Proc.new do |window|
+        Delta.txdelta_invoke_window_handler_wrapper(wrapper, window)
+      end
     end
 
     TextDeltaStream = SWIG::TYPE_p_svn_txdelta_stream_t
@@ -20,10 +71,14 @@ module Svn
         def new(source, target)
           Delta.txdelta(source, target)
         end
+
+        def push_target(source, &handler)
+          Delta.txdelta_target_push(handler, source)
+        end
       end
 
       def md5_digest
-        Delta.txdelta_md5_digest(self)
+        Delta.txdelta_md5_digest_as_cstring(self)
       end
 
       def next_window
@@ -35,10 +90,136 @@ module Svn
           yield(window)
         end
       end
+
+      def send(handler=nil)
+        if handler.nil? and block_given?
+          handler = Proc.new {|window| yield(window)}
+          Delta.setup_handler_wrapper(handler)
+        end
+        Delta.txdelta_send_txstream(self, handler)
+      end
+    end
+
+    TextDeltaWindowHandler =
+      SWIG::TYPE_p_f_p_svn_txdelta_window_t_p_void__p_svn_error_t
+    
+    class TextDeltaWindowHandler
+      attr_accessor :baton
+
+      def call(window)
+        Delta.txdelta_invoke_window_handler(self, window)
+      end
+      
+      def send(string_or_stream)
+        if string_or_stream.is_a?(TextDeltaStream)
+          Delta.txdelta_send_txstream(string_or_stream, self, @baton)
+        elsif string_or_stream.is_a?(String)
+          Delta.txdelta_send_string(string_or_stream, self, @baton)
+        else
+          Delta.txdelta_send_stream(string_or_stream, self, @baton)
+        end
+      end
     end
     
-    remove_const(:Editor)
     class Editor
+
+      %w(set_target_revision open_root delete_entry
+         add_directory open_directory change_dir_prop
+         close_directory absent_directory add_file open_file
+         apply_textdelta change_file_prop close_file
+         absent_file close_edit abort_edit).each do |name|
+        alias_method("_#{name}", name)
+        alias_method("_#{name}=", "#{name}=")
+      end
+
+      attr_accessor :baton
+      
+      def set_target_revision(target_revision)
+        args = [self, @baton, target_revision]
+        Svn::Delta.editor_invoke_set_target_revision(*args)
+      end
+      
+      def open_root(base_revision)
+        args = [self, @baton, base_revision]
+        Svn::Delta.editor_invoke_open_root(*args)
+      end
+        
+      def delete_entry(path, revision, parent_baton)
+        args = [self, path, revision, parent_baton]
+        Svn::Delta.editor_invoke_delete_entry(*args)
+      end
+
+      def add_directory(path, parent_baton,
+                        copyfrom_path, copyfrom_revision)
+        args = [self, path, parent_baton, copyfrom_path, copyfrom_revision]
+        Svn::Delta.editor_invoke_add_directory(*args)
+      end
+
+      def open_directory(path, parent_baton, base_revision)
+        args = [self, path, parent_baton, base_revision]
+        Svn::Delta.editor_invoke_open_directory(*args)
+      end
+
+      def change_dir_prop(dir_baton, name, value)
+        args = [self, @baton, dir_baton, name, value]
+        Svn::Delta.editor_invoke_change_dir_prop(*args)
+      end
+
+      def close_directory(dir_baton)
+        args = [self, dir_baton]
+        Svn::Delta.editor_invoke_close_directory(*args)
+      end
+
+      def absent_directory(path, parent_baton)
+        args = [self, path, parent_baton]
+        Svn::Delta.editor_invoke_absent_directory(*args)
+      end
+
+      def add_file(path, parent_baton,
+                   copyfrom_path, copyfrom_revision)
+        args = [self, path, parent_baton, copyfrom_path, copyfrom_revision]
+        Svn::Delta.editor_invoke_add_file(*args)
+      end
+
+      def open_file(path, parent_baton, base_revision)
+        args = [self, path, parent_baton, base_revision]
+        Svn::Delta.editor_invoke_open_file(*args)
+      end
+
+      def apply_textdelta(file_baton, base_checksum)
+        args = [self, file_baton, base_checksum]
+        handler, handler_baton = Svn::Delta.editor_invoke_apply_textdelta(*args)
+        handler.baton = handler_baton
+        handler
+      end
+
+      def change_file_prop(file_baton, name, value)
+        args = [self, file_baton, name, value]
+        Svn::Delta.editor_invoke_change_file_prop(*args)
+      end
+
+      def close_file(file_baton, text_checksum)
+        args = [self, file_baton, text_checksum]
+        Svn::Delta.editor_invoke_close_file(*args)
+      end
+
+      def absent_file(path, parent_baton)
+        args = [self, path, parent_baton]
+        Svn::Delta.editor_invoke_absent_file(*args)
+      end
+
+      def close_edit
+        args = [self, @baton]
+        Svn::Delta.editor_invoke_close_edit(*args)
+      end
+
+      def abort_edit
+        args = [self, @baton]
+        Svn::Delta.editor_invoke_abort_edit(*args)
+      end
+    end
+    
+    class BaseEditor
       # open_root -> add_directory -> open_directory -> add_file -> open_file 
       def set_target_revision(target_revision)
       end
@@ -92,7 +273,7 @@ module Svn
       end
     end
 
-    class CopyDetectableEditor < Editor
+    class CopyDetectableEditor < BaseEditor
       def add_directory(path, parent_baton,
                         copyfrom_path, copyfrom_revision)
       end
@@ -102,7 +283,7 @@ module Svn
       end
     end
     
-    class ChangedDirsEditor < Editor
+    class ChangedDirsEditor < BaseEditor
       attr_reader :changed_dirs
 
       def initialize
@@ -154,7 +335,7 @@ module Svn
       end
     end
 
-    class ChangedEditor < Editor
+    class ChangedEditor < BaseEditor
 
       attr_reader :copied_files, :copied_dirs
       attr_reader :added_files, :added_dirs

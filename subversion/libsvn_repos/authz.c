@@ -317,6 +317,61 @@ authz_get_tree_access (svn_config_t *cfg, const char *repos_name,
 
 
 
+/* Callback to parse sections of the configuration file, looking for
+   any kind of granted access.  Implements the
+   svn_config_section_enumerator2_t interface. */
+static svn_boolean_t
+authz_global_parse_section (const char *section_name, void *baton,
+                            apr_pool_t *pool)
+{
+  struct authz_lookup_baton *b = baton;
+
+  /* Does the section apply to the query? */
+  if (section_name[0] == '/'
+      || strncmp (section_name, b->repos_path,
+                  strlen(b->repos_path)) == 0)
+    {
+      b->allow = b->deny = svn_authz_none;
+
+      svn_config_enumerate2 (b->config, section_name,
+                             authz_parse_line, baton, pool);
+      b->access = authz_access_is_granted (b->allow, b->deny,
+                                           b->required_access);
+
+      /* Continue as long as we don't find a granted access. */
+      return !b->access;
+    }
+
+  return TRUE;
+}
+
+
+
+/* Walk through the authz CFG to check if USER has the REQUIRED_ACCESS
+ * to any path within the REPOSITORY.  Return TRUE if so.  Use POOL
+ * for temporary allocations. */
+static svn_boolean_t
+authz_get_global_access (svn_config_t *cfg, const char *repos_name,
+                         const char *user,
+                         svn_repos_authz_access_t required_access,
+                         apr_pool_t *pool)
+{
+  struct authz_lookup_baton baton = { 0 };
+
+  baton.config = cfg;
+  baton.user = user;
+  baton.required_access = required_access;
+  baton.access = FALSE; /* Deny access by default. */
+  baton.repos_path = apr_pstrcat (pool, repos_name, ":/", NULL);
+
+  svn_config_enumerate_sections2 (cfg, authz_global_parse_section,
+                                  &baton, pool);
+
+  return baton.access;
+}
+
+
+
 /* Check for errors in GROUP's definition of CFG.  The errors
  * detected are references to non-existent groups and circular
  * dependencies between groups.  If an error is found, return
@@ -486,6 +541,15 @@ svn_repos_authz_check_access (svn_authz_t *authz, const char *repos_name,
                               apr_pool_t *pool)
 {
   const char *current_path = path;
+
+  /* If PATH is NULL, do a global access lookup. */
+  if (!path)
+    {
+      *access_granted = authz_get_global_access (authz->cfg, repos_name,
+                                                 user, required_access,
+                                                 pool);
+      return SVN_NO_ERROR;
+    }
 
   /* Determine the granted access for the requested path. */
   while (!authz_get_path_access (authz->cfg, repos_name,

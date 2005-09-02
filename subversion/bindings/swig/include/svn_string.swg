@@ -145,6 +145,11 @@ typedef struct svn_string_t svn_string_t;
   $result = rb_str_new($1->data, $1->len);
 }
 
+%typemap(ruby, argout) svn_stringbuf_t *output
+{
+  $result = rb_str_new($1->data, $1->len);
+}
+
 /* -----------------------------------------------------------------------
    TYPE: svn_string_t
 */

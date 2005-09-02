@@ -270,7 +270,7 @@ svn_client__open_ra_session_internal (svn_ra_session_t **ra_session,
                                       svn_client_ctx_t *ctx,
                                       apr_pool_t *pool)
 {
-  svn_ra_callbacks_t *cbtable = apr_pcalloc (pool, sizeof(*cbtable));
+  svn_ra_callbacks2_t *cbtable = apr_pcalloc (pool, sizeof(*cbtable));
   svn_client__callback_baton_t *cb = apr_pcalloc (pool, sizeof(*cb));
   
   cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
@@ -279,6 +279,8 @@ svn_client__open_ra_session_internal (svn_ra_session_t **ra_session,
   cbtable->push_wc_prop = commit_items ? push_wc_prop : NULL;
   cbtable->invalidate_wc_props = read_only_wc ? NULL : invalidate_wc_props;
   cbtable->auth_baton = ctx->auth_baton; /* new-style */
+  cbtable->progress_func = ctx->progress_func;
+  cbtable->progress_baton = ctx->progress_baton;
 
   cb->base_dir = base_dir;
   cb->base_access = base_access;
@@ -286,7 +288,8 @@ svn_client__open_ra_session_internal (svn_ra_session_t **ra_session,
   cb->commit_items = commit_items;
   cb->ctx = ctx;
 
-  SVN_ERR (svn_ra_open (ra_session, base_url, cbtable, cb, ctx->config, pool));
+  SVN_ERR (svn_ra_open2 (ra_session, base_url, cbtable, cb,
+                         ctx->config, pool));
 
   return SVN_NO_ERROR;
 }

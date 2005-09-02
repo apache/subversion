@@ -43,6 +43,13 @@
     svn_txdelta_window_handler_t *
 };
 
+%apply const char *MAY_BE_NULL {
+    const char *error_info,
+    const char *copyfrom_path,
+    const char *copy_path,
+    const char *base_checksum
+};
+
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif
@@ -68,12 +75,55 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
     svn_delta_make_editor(&$1, &$2, $input, _global_pool);
 }
 
-#ifdef SWIGRUBY
-void svn_swig_rb_make_editor(const svn_delta_editor_t **editor,
-                             void **edit_baton,
-                             VALUE rb_editor,
-                             apr_pool_t *pool);
-#endif
+%typemap(ruby, in) (const svn_delta_editor_t *editor, void *edit_baton)
+{
+  if (RTEST(rb_obj_is_kind_of($input,
+                              svn_swig_rb_svn_delta_editor()))) {
+    $1 = svn_swig_rb_to_swig_type($input,
+                                  "svn_delta_editor_t *",
+                                  _global_pool);
+    $2 = svn_swig_rb_to_swig_type(rb_funcall($input, rb_intern("baton"), 0),
+                                  "void *", _global_pool);
+  } else {
+    svn_swig_rb_make_delta_editor(&$1, &$2, $input, _global_pool);
+  }
+}
+
+/* -----------------------------------------------------------------------
+   handle svn_txdelta_window_handler_t/baton pair.
+*/
+
+%typemap(ruby, in) (svn_txdelta_window_handler_t handler,
+                    void *handler_baton)
+{
+  if (RTEST(rb_obj_is_kind_of($input,
+                              svn_swig_rb_svn_delta_text_delta_window_handler()))) {
+    $1 = svn_swig_rb_to_swig_type($input,
+                                  "svn_txdelta_window_handler_t",
+                                  _global_pool);
+    $2 = svn_swig_rb_to_swig_type(rb_funcall($input, rb_intern("baton"), 0),
+                                  "void *", _global_pool);
+  } else {
+    $1 = svn_swig_rb_txdelta_window_handler;
+    $2 = (void *)$input;
+  }
+}
+
+/* -----------------------------------------------------------------------
+   handle svn_delta_path_driver().
+*/
+
+%typemap(ruby, in) apr_array_header_t *paths
+{
+  $1 = svn_swig_rb_strings_to_apr_array($input, _global_pool);
+}
+
+%typemap(ruby, in) (svn_delta_path_driver_cb_func_t callback_func,
+                    void *callback_baton)
+{
+  $1 = svn_swig_rb_delta_path_driver_cb_func;
+  $2 = (void *)$input;
+}
 
 /* ----------------------------------------------------------------------- */
 
@@ -94,6 +144,47 @@ void svn_swig_rb_make_editor(const svn_delta_editor_t **editor,
 %}
 
 %include svn_delta_h.swg
+
+/* -----------------------------------------------------------------------
+   handle svn_txdelta_to_svndiff().
+*/
+#ifdef SWIGRUBY
+%inline %{
+static svn_error_t *
+svn_txdelta_invoke_window_handler(VALUE window_handler,
+                                  svn_txdelta_window_t *window,
+                                  apr_pool_t *pool)
+{
+  return svn_swig_rb_invoke_txdelta_window_handler(window_handler,
+                                                   window, pool);
+}
+ 
+static svn_error_t *
+svn_txdelta_invoke_window_handler_wrapper(VALUE obj,
+                                          svn_txdelta_window_t *window,
+                                          apr_pool_t *pool)
+{
+  return svn_swig_rb_invoke_txdelta_window_handler_wrapper(obj, window, pool);
+}
+ 
+static const char *
+svn_txdelta_md5_digest_as_cstring(svn_txdelta_stream_t *stream,
+                                  apr_pool_t *pool)
+{
+  const unsigned char *digest;
+
+  digest = svn_txdelta_md5_digest(stream);
+
+  if (digest) {
+    return svn_md5_digest_to_cstring(digest, pool);
+  } else {
+    return NULL;
+  }
+}
+ 
+%}
+#endif
+
 
 /* -----------------------------------------------------------------------
    editor callback invokers

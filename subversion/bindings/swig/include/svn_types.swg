@@ -208,7 +208,7 @@
 /* XXX: apply long long *OUTPUT doesn't track $1 correctly */
 %typemap(perl5,argout) svn_filesize_t * {
     char temp[256];
-    sprintf(temp,"%lld", *$1);
+    sprintf(temp,"%" APR_INT64_T_FMT, *$1);
     ST(argvi) = sv_newmortal();
     sv_setpv((SV*)ST(argvi++), temp);
 };
@@ -398,6 +398,12 @@
     svn_swig_pl_hold_ref_in_pool (_global_pool, $input);
 };
 
+%typemap(ruby, in) (svn_commit_callback_t callback, void *callback_baton)
+{
+  $1 = svn_swig_rb_commit_callback;
+  $2 = (void *)$input;
+};
+
 /* -----------------------------------------------------------------------
    Callback: svn_cancel_func_t
 */
@@ -420,6 +426,16 @@
 %typemap(ruby, in) (svn_info_receiver_t receiver, void *receiver_baton)
 {
   $1 = svn_swig_rb_info_receiver;
+  $2 = (void *)$input;
+}
+
+/* -----------------------------------------------------------------------
+   Callback: svn_fs_warning_callback_t
+*/
+
+%typemap(ruby, in) (svn_fs_warning_callback_t warning, void *warning_baton)
+{
+  $1 = svn_swig_rb_fs_warning_callback;
   $2 = (void *)$input;
 }
 
@@ -469,8 +485,20 @@
     sv_setpv((SV*)ST(argvi++), svn_md5_digest_to_cstring ($1,_global_pool));
 }
 
-/* svn_txdelta_send_stream() uses *digest not digest[] . */
-%apply unsigned char digest[ANY] { unsigned char *digest };
+%typemap(ruby, argout, fragment="output_helper") unsigned char digest[ANY]
+{
+  $result = output_helper($result,
+                          rb_str_new2(svn_md5_digest_to_cstring($1, _global_pool)));
+}
+
+/*
+   svn_txdelta_send_stream() uses *digest not digest[] .
+   svn_txdelta_apply() uses *result_digest not digest[] .
+*/
+%apply unsigned char digest[ANY] {
+    unsigned char *digest,
+    unsigned char *result_digest
+};
 
 /* -----------------------------------------------------------------------
   useful convertors for svn_opt_revision_t
@@ -573,20 +601,46 @@
 }
 
 /* -----------------------------------------------------------------------
+   apr_array_header_t *location_revisions
+   svn_repos_trace_node_locations()
+   svn_ra_get_locations()
+*/
+
+%typemap(ruby, in) apr_array_header_t *location_revisions
+{
+  $1 = svn_swig_rb_array_to_apr_array_revnum($input, _global_pool);
+}
+
+/* -----------------------------------------------------------------------
+   apr_hash_t **locations
+   svn_repos_trace_node_locations()
+   svn_ra_get_locations()
+*/
+
+%typemap(ruby, in, numinputs=0) apr_hash_t **locations = apr_hash_t **OUTPUT;
+%typemap(ruby, argout) apr_hash_t **locations
+{
+  $result = svn_swig_rb_apr_revnum_key_hash_to_hash_string(*$1);
+}
+
+/* -----------------------------------------------------------------------
    Special boolean mapping for ruby.
 */
 
 %typemap(ruby, in) svn_boolean_t "$1 = RTEST($input);";
-%typemap(ruby, out) svn_boolean_t "$result = $1 ? Qtrue : Qfalse;";
+%typemap(ruby, out, fragment="output_helper") svn_boolean_t
+{
+  $result = output_helper($result, $1 ? Qtrue : Qfalse);
+}
 
 %typemap(ruby, in, numinputs=0) svn_boolean_t * (svn_boolean_t temp)
 {
   $1 = &temp;
 }
 
-%typemap(ruby, argout) svn_boolean_t *
+%typemap(ruby, argout, fragment="output_helper") svn_boolean_t *
 {
-  $result = *$1 ? Qtrue : Qfalse;
+  $result = output_helper($result, *$1 ? Qtrue : Qfalse);
 }
 
 /* -----------------------------------------------------------------------

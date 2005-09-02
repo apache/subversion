@@ -151,17 +151,26 @@ static dav_error *save_value(dav_db *db, const dav_prop_name *name,
       serr = svn_repos_fs_change_txn_prop(db->resource->info->root.txn,
                                           propname, value, db->resource->pool);
     else
-      /* ### VIOLATING deltaV: you can't proppatch a baseline, it's
-         not a working resource!  But this is how we currently
-         (hackily) allow the svn client to change unversioned rev
-         props.  See issue #916. */
-      serr = svn_repos_fs_change_rev_prop2(db->resource->info->repos->repos,
-                                           db->resource->info->root.rev,
-                                           db->resource->info->repos->username,
-                                           propname, value,
-                                           db->authz_read_func,
-                                           db->authz_read_baton,
-                                           db->resource->pool);
+      {
+        /* ### VIOLATING deltaV: you can't proppatch a baseline, it's
+           not a working resource!  But this is how we currently
+           (hackily) allow the svn client to change unversioned rev
+           props.  See issue #916. */
+        serr = svn_repos_fs_change_rev_prop2
+          (db->resource->info->repos->repos,
+           db->resource->info->root.rev,
+           db->resource->info->repos->username,
+           propname, value,
+           db->authz_read_func,
+           db->authz_read_baton,
+           db->resource->pool);
+
+        /* Tell the logging subsystem about the revprop change. */
+        apr_table_set(db->resource->info->r->subprocess_env, "SVN-ACTION",
+                      apr_psprintf(db->resource->pool,
+                                   "changed value of revision property '%s'",
+                                   propname));
+      }
   else
     serr = svn_repos_fs_change_node_prop(db->resource->info->root.root,
                                          get_repos_path(db->resource->info),

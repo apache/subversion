@@ -55,6 +55,7 @@ Read Commands  :  (OPTIONS, PROPFIND, GET, REPORT)
                                                    'get-locks-report')
 
   * svn cp URL wc:  OPTIONS, PROPFIND, REPORT     ('update-report')
+                    (this is just like checkout)
 
 
   And these guys are left over:
@@ -65,14 +66,16 @@ Read Commands  :  (OPTIONS, PROPFIND, GET, REPORT)
                     [older clients use GET
                      and different REPORT]        ('log-report')
 
-  * svn cat:        OPTIONS, PROPFIND, GET
+  * svn ls:         PROPFIND, REPORT              ('get-locks-report')
+
+  * svn cat:        PROPFIND, GET
 
   * svn info URL:   PROPFIND
 
-  * svn ls:         PROPFIND, REPORT              ('get-locks-report')
+  * svn plist URL:  PROPFIND
 
-
-
+  * svn pget URL:   PROPFIND
+ 
 
 
 
@@ -84,7 +87,7 @@ Write Commands  :  (MKACTIVITY, PROPPATCH, PUT, CHECKOUT, MKCOL, MOVE,
   by creating a transaction (MKACTIVITY), applies a log message
   (PROPPATCH), does some other write methods, and then ends by
   committing the transaction (MERGE).  If the MERGE fails, the client
-  may try to clean up the transaction with a DELETE.
+  may try to remove the transaction with a DELETE.
 
   * svn commit:     OPTIONS, PROPFIND, MKACTIVITY, 
                     {CHECKOUT, COPY, MOVE, DELETE, PROPPATCH, PUT, MKCOL},
@@ -107,4 +110,6 @@ Write Commands  :  (MKACTIVITY, PROPPATCH, PUT, CHECKOUT, MKCOL, MOVE,
   * svn rm URL:     OPTIONS, PROPFIND, MKACTIVITY, PROPPATCH, DELETE, MERGE.
 
   * svn mkdir URL:  OPTIONS, PROPFIND, MKACTIVITY, PROPPATCH, MKCOL, MERGE.
+
+  * svn pset --revprop:  PROPPATCH
 

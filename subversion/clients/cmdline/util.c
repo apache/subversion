@@ -430,7 +430,7 @@ truncate_buffer_at_prefix (apr_size_t *new_len,
         }
     }
 
-  return;
+  /* NOTREACHED */
 }
 
 

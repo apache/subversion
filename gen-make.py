@@ -16,8 +16,6 @@ sys.path.insert(0, os.path.join('build', 'generator'))
 # for getversion
 sys.path.insert(1, 'build')
 
-import gen_swig
-
 gen_modules = {
   'make' : ('gen_make', 'Makefiles for POSIX systems'),
   'dsp' : ('gen_msvc_dsp', 'MSVC 6.x project files'),
@@ -29,13 +27,6 @@ def main(fname, gentype, verfname=None,
   if verfname is None:
     verfname = os.path.join('subversion', 'include', 'svn_version.h')
 
-  swig_generator = gen_swig.Generator(fname, verfname, other_options)
-
-  if not skip_depends:
-    swig_generator.compute_hdr_deps()
-
-  swig_generator.write()
-  
   gen_module = __import__(gen_modules[gentype][0])
 
   generator = gen_module.Generator(fname, verfname, other_options)
@@ -45,9 +36,6 @@ def main(fname, gentype, verfname=None,
 
   generator.write()
   
-  if gentype == "make":
-    swig_generator.write_swig_deps()
-
   if other_options and ('--debug', '') in other_options:
     for dep_type, target_dict in generator.graph.deps.items():
       sorted_targets = target_dict.keys(); sorted_targets.sort()
@@ -124,16 +112,16 @@ def _usage_exit():
   print "           tell neon to look for OpenSSL headers"
   print "           and libs in DIR"
   print
-  print "  --with-swig=PATH"
-  print "           look for SWIG in PATH"
-  print
   print "  --with-zlib=DIR"
   print "           tell neon to look for ZLib headers and"
   print "           libs in DIR"
   print
-  print "  --with-junit=PATH"
+  print "  --with-junit=DIR"
   print "           look for the junit jar here"
   print "           junit is for testing the java bindings"
+  print
+  print "  --with-swig=DIR"
+  print "           look for the swig program in DIR"
   print
   print "  --enable-pool-debug"
   print "           turn on APR pool debugging"
@@ -182,9 +170,9 @@ if __name__ == '__main__':
                                 'with-httpd=',
                                 'with-libintl=',
                                 'with-openssl=',
-                                'with-swig=',
                                 'with-zlib=',
                                 'with-junit=',
+                                'with-swig=',
                                 'enable-pool-debug',
                                 'enable-purify',
                                 'enable-quantify',

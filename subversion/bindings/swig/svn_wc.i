@@ -50,14 +50,45 @@
 %apply SWIGTYPE **OUTPARAM {
     svn_wc_entry_t **,
     svn_wc_adm_access_t **,
-    svn_wc_status_t **
+    svn_wc_status_t **,
+    svn_wc_status2_t **
 };
 
 /* svn_wc_check_wc(wc_format) */
 %apply int *OUTPUT { int * };
 
-/* svn_wc_prop_list() */
-%apply apr_hash_t **PROPHASH { apr_hash_t **props };
+/*
+   svn_wc_prop_list()
+   svn_wc_get_prop_diffs()
+*/
+%apply apr_hash_t **PROPHASH {
+  apr_hash_t **props,
+  apr_hash_t **original_props
+};
+
+/* svn_wc_get_prop_diffs() */
+%apply apr_array_header_t **OUTPUT_OF_PROP {
+  apr_array_header_t **propchanges
+};
+
+%apply apr_hash_t *PROPHASH {
+  apr_hash_t *baseprops,
+  apr_hash_t *new_props
+};
+
+
+/* svn_wc_cleanup2() */
+%apply const char *MAY_BE_NULL {
+    const char *diff3_cmd,
+    const char *uuid,
+    const char *repos,
+    const char *copyfrom_url,
+    const char *rev_date,
+    const char *rev_author
+}
+
+%apply const char **OUTPUT { char **url };
+
 
 /* -----------------------------------------------------------------------
    apr_hash_t ** <const char *, const svn_wc_entry_t *>
@@ -70,6 +101,94 @@
         $result,
         svn_swig_py_convert_hash(*$1, $descriptor(svn_wc_entry_t *),
           _global_svn_swig_py_pool));
+}
+
+%typemap(ruby, in, numinputs=0) apr_hash_t **entries = apr_hash_t **OUTPUT;
+%typemap(ruby, argout, fragment="output_helper") apr_hash_t **entries
+{
+  $result = output_helper($result,
+                          svn_swig_rb_apr_hash_to_hash_swig_type
+                            (*$1, "svn_wc_entry_t *"));
+}
+
+/* -----------------------------------------------------------------------
+   apr_hash_t **externals_old
+   apr_hash_t **externals_new
+   svn_wc_edited_externals()
+*/
+
+%typemap(ruby, in, numinputs=0) apr_hash_t **externals_old = apr_hash_t **OUTPUT;
+%typemap(ruby, argout, fragment="output_helper") apr_hash_t **externals_old
+{
+  $result = output_helper($result,
+                          svn_swig_rb_apr_hash_to_hash_string(*$1));
+}
+
+%typemap(ruby, in, numinputs=0) apr_hash_t **externals_new = apr_hash_t **externals_old;
+%typemap(ruby, argout, fragment="output_helper") apr_hash_t **externals_new = apr_hash_t **externals_old;
+
+
+/* -----------------------------------------------------------------------
+   apr_array_header_t **externals_p
+   svn_wc_parse_externals_description2()
+*/
+
+%typemap(ruby, in, numinputs=0)
+     apr_array_header_t **externals_p (apr_array_header_t *temp)
+{
+  $1 = &temp;
+}
+%typemap(ruby, argout, fragment="output_helper")
+     apr_array_header_t **externals_p
+{
+  $result = output_helper($result,
+                          svn_swig_rb_apr_array_to_array_external_item(*$1));
+}
+
+/* -----------------------------------------------------------------------
+   apr_array_header_t **patterns
+   svn_wc_get_default_ignores()
+*/
+
+%typemap(ruby, in, numinputs=0)
+     apr_array_header_t **patterns (apr_array_header_t *temp)
+{
+  $1 = &temp;
+}
+%typemap(ruby, argout, fragment="output_helper")
+     apr_array_header_t **patterns
+{
+  $result = output_helper($result,
+                          svn_swig_rb_apr_array_to_array_string(*$1));
+}
+
+/* -----------------------------------------------------------------------
+   apr_array_header_t *wcprop_changes
+   svn_wc_process_committed2()
+*/
+
+%typemap(ruby, in) apr_array_header_t *wcprop_changes
+{
+  VALUE rb_pool;
+  apr_pool_t *pool;
+
+  svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &pool);
+        
+  $1 = svn_swig_rb_array_to_apr_array_prop($input, pool);
+}
+
+/* -----------------------------------------------------------------------
+   apr_array_header_t *propchanges
+   svn_wc_merge_props()
+*/
+%typemap(ruby, in) apr_array_header_t *propchanges
+{
+  VALUE rb_pool;
+  apr_pool_t *pool;
+
+  svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &pool);
+        
+  $1 = svn_swig_rb_array_to_apr_array_prop($input, pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -89,9 +208,21 @@
    svn_wc many
 */
 
-%typemap(ruby, in) (svn_wc_notify_func2_t notify_func2, void *notify_baton2)
+%typemap(ruby, in) (svn_wc_notify_func2_t notify_func, void *notify_baton)
 {
   $1 = svn_swig_rb_notify_func2;
+  $2 = (void *)$input;
+}
+
+/* -----------------------------------------------------------------------
+   Callback: svn_wc_entry_callbacks_t
+   svn_wc_walk_entries2()
+*/
+
+%typemap(ruby, in) (const svn_wc_entry_callbacks_t *walk_callbacks,
+                    void *walk_baton)
+{
+  $1 = svn_swig_rb_wc_entry_callbacks();
   $2 = (void *)$input;
 }
 
@@ -121,6 +252,30 @@
                     void *status_baton)
 {
   $1 = svn_swig_rb_wc_status_func;
+  $2 = (void *)$input;
+}
+
+/* -----------------------------------------------------------------------
+   Callback: svn_wc_callbacks2_t
+   svn_wc_get_diff_editor3()
+*/
+
+%typemap(ruby, in) (const svn_wc_diff_callbacks2_t *callbacks,
+                    void *callback_baton)
+{
+  $1 = svn_swig_rb_wc_diff_callbacks2();
+  $2 = (void *)$input;
+}
+
+/* -----------------------------------------------------------------------
+   Callback: svn_wc_relocation_validator_t
+   svn_wc_relocate()
+*/
+
+%typemap(ruby, in) (svn_wc_relocation_validator_t validator,
+                    void *validator_baton)
+{
+  $1 = svn_swig_rb_wc_relocation_validator;
   $2 = (void *)$input;
 }
 

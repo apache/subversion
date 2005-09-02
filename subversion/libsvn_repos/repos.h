@@ -67,9 +67,14 @@ extern "C" {
 #define SVN_REPOS__HOOK_DESC_EXT        ".tmpl"
 
 
-/* In the repository conf directory, look for these files. */
+/* The configuration file for svnserve, in the repository conf directory. */
 #define SVN_REPOS__CONF_SVNSERVE_CONF "svnserve.conf"
+
+/* In the svnserve default configuration, these are the suggested
+   locations for the passwd and authz files (in the repository conf
+   directory), and we put example templates there. */ 
 #define SVN_REPOS__CONF_PASSWD "passwd"
+#define SVN_REPOS__CONF_AUTHZ "authz"
 
 /* The Repository object, created by svn_repos_open() and
    svn_repos_create(), allocated in POOL. */

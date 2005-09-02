@@ -47,10 +47,15 @@
     svn_ra_session_t **,
     const svn_ra_reporter2_t **reporter,
     void **report_baton,
-    svn_dirent_t **dirent
+    svn_dirent_t **dirent,
+    svn_lock_t **lock
 };
 
 %apply apr_hash_t **PROPHASH { apr_hash_t **props };
+
+%apply const char *MAY_BE_NULL {
+    const char *comment
+}
 
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
@@ -82,13 +87,46 @@
     svn_ra_make_callbacks(&$1, &$2, $input, _global_pool);
 }
 
+%typemap(ruby, in) (const svn_ra_callbacks2_t *callbacks,
+                    void *callback_baton)
+{
+  svn_swig_rb_setup_ra_callbacks(&$1, &$2, $input, _global_pool);
+}
+
 %typemap(perl5, in) apr_hash_t *config {
     $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
 					   _global_pool);
 }
 
+%typemap(ruby, in) (svn_ra_lock_callback_t lock_func, void *lock_baton)
+{
+  $1 = svn_swig_rb_ra_lock_callback;
+  $2 = (void *)$input;
+}
+
+%typemap(ruby, in) (svn_ra_file_rev_handler_t handler, void *handler_baton)
+{
+  $1 = svn_swig_rb_ra_file_rev_handler;
+  $2 = (void *)$input;
+}
+
 %typemap(perl5, in) apr_hash_t *lock_tokens {
     $1 = svn_swig_pl_strings_to_hash ($input, _global_pool);
+}
+
+%typemap(ruby, in) apr_hash_t *lock_tokens
+{
+  $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
+}
+
+%typemap(ruby, in) apr_hash_t *path_revs
+{
+  $1 = svn_swig_rb_hash_to_apr_hash_revnum($input, _global_pool);
+}
+
+%typemap(ruby, in) apr_hash_t *path_tokens
+{
+  $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
 }
 
 /* ----------------------------------------------------------------------- */
