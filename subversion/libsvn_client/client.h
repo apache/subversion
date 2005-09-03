@@ -150,16 +150,19 @@ svn_client__repos_locations (const char **start_url,
 
 
 /* Given PATH_OR_URL, which contains either a working copy path or an
-   absolute url, a peg revision PEG_REVISON, and a desired revision
+   absolute URL, a peg revision PEG_REVISION, and a desired revision
    REVISION, create an RA connection to that object as it exists in
    that revision, following copy history if necessary.  If REVISION is
    younger than PEG_REVISION, then PATH_OR_URL will be checked to see
-   that it is the same node in both PEG_REVISION and REVISON.  If it
+   that it is the same node in both PEG_REVISION and REVISION.  If it
    is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
+
+   If PEG_REVISION's kind is svn_opt_revision_unspecified, it is
+   interpreted as "head" for a URL or "working" for a working-copy path.
 
    Store the resulting ra_session in *RA_SESSION_P.  Store the actual
    revision number of the object in *REV_P, and the final resulting
-   url in *URL_P.
+   URL in *URL_P.
 
    Use authentication baton cached in CTX to authenticate against the
    repository.
