@@ -5811,8 +5811,9 @@ msgid "Can't remove directory '%s'"
 msgstr "Não foi possível remover o diretório '%s'"
 
 #: libsvn_subr/io.c:2530
+#, fuzzy
 msgid "Can't read directory"
-msgstr "Não foi possível ler o diretório '%s'"
+msgstr "Não foi possível ler o diretório"
 
 #: libsvn_subr/io.c:2601
 #, c-format

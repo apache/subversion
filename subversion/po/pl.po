@@ -5829,8 +5829,9 @@ msgid "Can't write to file '%s'"
 msgstr "Nie można pisać do pliku '%s'"
 
 #: libsvn_subr/io.c:2233 libsvn_subr/io.c:2246
+#, fuzzy
 msgid "Can't write to stream"
-msgstr "Nie można pisać do strumienia '%s'"
+msgstr "Nie można pisać do strumienia"
 
 #: libsvn_subr/io.c:2286
 #, c-format
