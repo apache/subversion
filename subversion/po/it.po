@@ -5981,8 +5981,9 @@ msgid "Can't remove directory '%s'"
 msgstr "Non riesco a rimuovere la directory '%s'"
 
 #: libsvn_subr/io.c:2580
+#, fuzzy
 msgid "Can't read directory"
-msgstr "Non riesco a leggere la directory '%s'"
+msgstr "Non riesco a leggere la directory"
 
 #: libsvn_subr/io.c:2651
 #, c-format
@@ -8105,7 +8106,7 @@ msgstr "Non riesco a creare il thread: %s\n"
 
 #: svnversion/main.c:90
 msgid "Type 'svnversion --help' for usage.\n"
-msgstr "Digita '%s --help' per informazioni.\n"
+msgstr "Digita 'svnversion --help' per informazioni.\n"
 
 #: svnversion/main.c:101
 msgid ""

@@ -2405,7 +2405,7 @@ msgstr "Chemin déjà verrouillé"
 
 #: include/svn_error_codes.h:534 include/svn_error_codes.h:661
 msgid "Path is not locked"
-msgstr "Le chemin '%s' n'est pas verrouillé"
+msgstr "Le chemin n'est pas verrouillé"
 
 #: include/svn_error_codes.h:539
 msgid "Lock token is incorrect"
