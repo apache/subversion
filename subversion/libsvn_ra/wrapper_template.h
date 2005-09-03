@@ -45,20 +45,33 @@ static svn_error_t *compat_open (void **session_baton,
                                  apr_pool_t *pool)
 {
   svn_ra_session_t *sess = apr_pcalloc (pool, sizeof (svn_ra_session_t));
-  svn_ra_callbacks2_t callbacks2;
   sess->vtable = &VTBL;
   sess->pool = pool;
+  /* Here, we should be calling svn_ra_create_callbacks to initialize
+   * the svn_ra_callbacks2_t structure.  However, doing that
+   * introduces a circular dependancy between libsvn_ra and
+   * libsvn_ra_{local,dav,svn}, which include wrapper_template.h.  In
+   * turn, circular dependancies break the build on win32 (and
+   * possibly other systems).
+   *
+   * In order to avoid this happening at all, the code of
+   * svn_ra_create_callbacks is duplicated here.  This is evil, but
+   * the alternative (creating a new ra_util library) would be massive
+   * overkill for the time being.  Just be sure to keep the following
+   * line and the code of svn_ra_create_callbacks in sync.  */
+  svn_ra_callbacks2_t *callbacks2 = apr_pcalloc (pool,
+                                                 sizeof (*callbacks2));
 
-  callbacks2.open_tmp_file = callbacks->open_tmp_file;
-  callbacks2.auth_baton = callbacks->auth_baton;
-  callbacks2.get_wc_prop = callbacks->get_wc_prop;
-  callbacks2.set_wc_prop = callbacks->set_wc_prop;
-  callbacks2.push_wc_prop = callbacks->push_wc_prop;
-  callbacks2.invalidate_wc_props = callbacks->invalidate_wc_props;
-  callbacks2.progress_func = NULL;
-  callbacks2.progress_baton = NULL;
+  callbacks2->open_tmp_file = callbacks->open_tmp_file;
+  callbacks2->auth_baton = callbacks->auth_baton;
+  callbacks2->get_wc_prop = callbacks->get_wc_prop;
+  callbacks2->set_wc_prop = callbacks->set_wc_prop;
+  callbacks2->push_wc_prop = callbacks->push_wc_prop;
+  callbacks2->invalidate_wc_props = callbacks->invalidate_wc_props;
+  callbacks2->progress_func = NULL;
+  callbacks2->progress_baton = NULL;
 
-  SVN_ERR (VTBL.open (sess, repos_URL, &callbacks2, callback_baton,
+  SVN_ERR (VTBL.open (sess, repos_URL, callbacks2, callback_baton,
                       config, pool));
   *session_baton = sess;
   return SVN_NO_ERROR;
