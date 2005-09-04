@@ -44,9 +44,6 @@ static svn_error_t *compat_open (void **session_baton,
                                  apr_hash_t *config,
                                  apr_pool_t *pool)
 {
-  svn_ra_session_t *sess = apr_pcalloc (pool, sizeof (svn_ra_session_t));
-  sess->vtable = &VTBL;
-  sess->pool = pool;
   /* Here, we should be calling svn_ra_create_callbacks to initialize
    * the svn_ra_callbacks2_t structure.  However, doing that
    * introduces a circular dependancy between libsvn_ra and
@@ -61,6 +58,10 @@ static svn_error_t *compat_open (void **session_baton,
    * line and the code of svn_ra_create_callbacks in sync.  */
   svn_ra_callbacks2_t *callbacks2 = apr_pcalloc (pool,
                                                  sizeof (*callbacks2));
+
+  svn_ra_session_t *sess = apr_pcalloc (pool, sizeof (svn_ra_session_t));
+  sess->vtable = &VTBL;
+  sess->pool = pool;
 
   callbacks2->open_tmp_file = callbacks->open_tmp_file;
   callbacks2->auth_baton = callbacks->auth_baton;
