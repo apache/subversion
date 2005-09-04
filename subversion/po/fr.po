@@ -834,7 +834,7 @@ msgstr ""
 "     Si CHEMIN2 est omis, le dernier composant de CHEMIN1 est utilisé\n"
 "     comme nom de répertoire local. Si REV n'est pas précisé, toutes les\n"
 "     modifications locales sont conservées. Les fichiers hors du\n"
-"     gestionnaire de version de sont pas copiés.\n"
+"     gestionnaire de version ne sont pas copiés.\n"
 "\n"
 "  Si spécifiée, PEGREV donne la révision de la cible d'abord regardée.\n"
 
