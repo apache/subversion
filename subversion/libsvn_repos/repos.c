@@ -1404,7 +1404,8 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "### Uncomment the line below to use the default authorization file."
       APR_EOL_STR
-      "# authz-db = authz"
+      "# authz-db = "
+      SVN_REPOS__CONF_AUTHZ
       APR_EOL_STR
       "### This option specifies the authentication realm of the repository."
       APR_EOL_STR
