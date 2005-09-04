@@ -38,7 +38,6 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_md5.h"
-#include "svn_base64.h"
 #include "svn_wc.h"
 #include "svn_private_config.h"
 #include "svn_time.h"
@@ -1637,20 +1636,10 @@ apply_textdelta (void *file_baton,
       
       if (strcmp (hex_digest, ent->checksum) != 0)
         {
-          /* Compatibility hack: working copies created before 13 Jan
-             2003 may have entry checksums stored in base64.  See
-             svn_io_file_checksum_base64()'s doc string for
-             details. */ 
-          const char *base64_digest 
-            = (svn_base64_from_md5 (digest, pool))->data;
-              
-          if (strcmp (base64_digest, ent->checksum) != 0)
-            {
-              return svn_error_createf
-                (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-                 _("Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"),
-                 svn_path_local_style (tb, pool), ent->checksum, hex_digest);
-            }
+          return svn_error_createf
+            (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+             _("Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"),
+             svn_path_local_style (tb, pool), ent->checksum, hex_digest);
         }
     }
   
