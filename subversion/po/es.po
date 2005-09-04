@@ -84,7 +84,7 @@ msgid ""
 "The following repository access (RA) modules are available:\n"
 "\n"
 msgstr ""
-"Los siguientes módulos de acceso a repositorios (RA) están disponibles:\n"
+"Están disponibles los siguientes módulos de acceso a repositorios (RA):\n"
 "\n"
 
 #: clients/cmdline/import-cmd.c:82
@@ -118,12 +118,12 @@ msgstr "URL: %s\n"
 #: clients/cmdline/info-cmd.c:69
 #, c-format
 msgid "Repository Root: %s\n"
-msgstr "Raíz del Repositorio: %s\n"
+msgstr "Raíz del repositorio: %s\n"
 
 #: clients/cmdline/info-cmd.c:73
 #, c-format
 msgid "Repository UUID: %s\n"
-msgstr "UUID en el repositorio: %s\n"
+msgstr "UUID del repositorio: %s\n"
 
 #: clients/cmdline/info-cmd.c:77
 #, c-format
@@ -2376,7 +2376,6 @@ msgid "Path is already locked"
 msgstr "La ruta ya está bloqueada"
 
 #: include/svn_error_codes.h:534 include/svn_error_codes.h:661
-#, fuzzy
 msgid "Path is not locked"
 msgstr "La ruta no está bloqueada"
 
@@ -4687,7 +4686,7 @@ msgstr ""
 
 #: libsvn_ra_dav/session.c:542
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
-msgstr "Módulo para acceder a un repositorio vía el WebDAV (DeltaV)."
+msgstr "Módulo para acceder a un repositorio vía WebDAV (DeltaV)."
 
 #: libsvn_ra_dav/session.c:588
 msgid "Malformed URL for repository"
