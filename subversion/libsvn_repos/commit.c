@@ -777,9 +777,26 @@ svn_repos_get_commit_editor3 (const svn_delta_editor_t **editor,
                               void *authz_baton,
                               apr_pool_t *pool)
 {
-  svn_delta_editor_t *e = svn_delta_default_editor (pool);
+  svn_delta_editor_t *e;
   apr_pool_t *subpool = svn_pool_create (pool);
-  struct edit_baton *eb = apr_pcalloc (subpool, sizeof (*eb));
+  struct edit_baton *eb;
+
+  /* Do a global authz access lookup.  Users with no write access
+     whatsoever to the repository don't get a commit editor. */
+  if (authz_callback)
+    {
+      svn_boolean_t allowed;
+
+      authz_callback (svn_authz_write, &allowed, NULL, NULL,
+                      authz_baton, pool);
+      if (!allowed)
+        return svn_error_create(SVN_ERR_AUTHZ_UNWRITABLE, NULL,
+                                "Not authorized to open a commit editor.");
+    }
+
+  /* Allocate the structures. */
+  e = svn_delta_default_editor (pool);
+  eb = apr_pcalloc (subpool, sizeof (*eb));
 
   /* Set up the editor. */
   e->open_root         = open_root;

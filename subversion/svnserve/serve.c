@@ -118,7 +118,7 @@ static svn_error_t *authz_check_access(svn_boolean_t *allowed,
      as the default policy when authz is performed on a path with no
      rules.  In the latter case, the default is to deny access, and is
      set by svn_repos_authz_check_access. */
-  if (!b->authzdb || !path)
+  if (!b->authzdb)
     {
       *allowed = TRUE;
       return SVN_NO_ERROR;
@@ -130,7 +130,7 @@ static svn_error_t *authz_check_access(svn_boolean_t *allowed,
      absolute path. Passing such a malformed path to the authz
      routines throws them into an infinite loop and makes them miss
      ACLs. */
-  if (*path != '/')
+  if (path && *path != '/')
     path = svn_path_join("/", path, pool);
 
   return svn_repos_authz_check_access(b->authzdb, b->authz_repos_name,
