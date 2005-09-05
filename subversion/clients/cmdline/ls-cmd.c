@@ -52,7 +52,6 @@ print_dirents (apr_hash_t *dirents,
     {
       const char *utf8_entryname;
       svn_dirent_t *dirent;
-      svn_lock_t *lock;
       svn_sort__item_t *item;
 
       svn_pool_clear (subpool);
@@ -65,7 +64,6 @@ print_dirents (apr_hash_t *dirents,
       utf8_entryname = item->key;
 
       dirent = apr_hash_get (dirents, utf8_entryname, item->klen);
-      lock = apr_hash_get (locks, utf8_entryname, item->klen);
 
       if (verbose)
         {
@@ -74,8 +72,9 @@ print_dirents (apr_hash_t *dirents,
           apr_status_t apr_err;
           apr_size_t size;
           char timestr[20];
-          const char *sizestr, *utf8_timestr, *lock_owner;
-          
+          const char *sizestr, *utf8_timestr;
+          svn_lock_t *lock;
+
           /* svn_time_to_human_cstring gives us something *way* too long
              to use for this, so we have to roll our own.  We include
              the year if the entry's time is not within half a year. */
@@ -101,8 +100,7 @@ print_dirents (apr_hash_t *dirents,
 
           sizestr = apr_psprintf (subpool, "%" SVN_FILESIZE_T_FMT,
                                   dirent->size);
-          if (lock)
-            lock_owner = apr_psprintf (subpool, "*%s", lock->owner);
+          lock = apr_hash_get (locks, utf8_entryname, item->klen);
 
           SVN_ERR (svn_cmdline_printf
                    (subpool, "%7ld %-8.8s %c %10s %12s %s%s\n",
@@ -217,47 +215,27 @@ print_dirents_xml (apr_hash_t *dirents,
       /* "</commit>" */
       svn_xml_make_close_tag (&sb, subpool, "commit");
 
-      /* "<lock>" */
       if (lock)
         {
-          svn_xml_make_open_tag (&sb, pool, svn_xml_normal, "lock", NULL);
+          /* "<lock>" */
+          svn_xml_make_open_tag (&sb, subpool, svn_xml_normal, "lock", NULL);
 
-          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
-                                 "token", NULL);
-          svn_xml_escape_cdata_cstring (&sb, lock->token, pool);
-          svn_xml_make_close_tag (&sb, pool, "token");
+          svn_cl__xml_tagged_cdata (&sb, subpool, "token", lock->token);
 
-          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
-                                 "owner", NULL);
-          svn_xml_escape_cdata_cstring (&sb, lock->owner, pool);
-          svn_xml_make_close_tag (&sb, pool, "owner");
+          svn_cl__xml_tagged_cdata (&sb, subpool, "owner", lock->owner);
 
-          if (lock->comment)
-            {
-              svn_xml_make_open_tag (&sb, pool, svn_xml_normal,
-                                     "comment", NULL);
-              svn_xml_escape_cdata_cstring (&sb, lock->comment, pool);
-              svn_xml_make_close_tag (&sb, pool, "comment");
-            }
+          svn_cl__xml_tagged_cdata (&sb, subpool, "comment", lock->comment);
 
-          svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
-                                 "created", NULL);
-          svn_xml_escape_cdata_cstring (&sb, svn_time_to_cstring
-                                        (lock->creation_date, pool),
-                                        pool);
-          svn_xml_make_close_tag (&sb, pool, "created");
+          svn_cl__xml_tagged_cdata (&sb, subpool, "created",
+                                    svn_time_to_cstring (lock->creation_date,
+                                                         subpool));
 
           if (lock->expiration_date != 0)
-            {
-              svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata,
-                                     "expires", NULL);
-              svn_xml_escape_cdata_cstring (&sb, svn_time_to_cstring
-                                            (lock->expiration_date, pool),
-                                            pool);
-              svn_xml_make_close_tag (&sb, pool, "expires");
-            }
+            svn_cl__xml_tagged_cdata (&sb, subpool, "expires",
+                                      svn_time_to_cstring
+                                        (lock->expiration_date, subpool));
 
-          /* "<lock>" */
+          /* "</lock>" */
           svn_xml_make_close_tag (&sb, subpool, "lock");
         }
       /* "</entry>" */
@@ -346,7 +324,10 @@ svn_cl__ls (apr_getopt_t *os,
       SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, target,
                                    subpool));
 
-      SVN_ERR (svn_client_ls3 (&dirents, &locks, truepath, &peg_revision,
+      SVN_ERR (svn_client_ls3 (&dirents,
+                               (opt_state->xml || opt_state->verbose)
+                                 ? &locks : NULL,
+                               truepath, &peg_revision,
                                &(opt_state->start_revision),
                                opt_state->recursive, ctx, subpool));
 

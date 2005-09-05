@@ -2060,6 +2060,8 @@ svn_client_ls3 (apr_hash_t **dirents,
 /**
  * Same as svn_client_ls3(), but always passes a NULL lock hash.
  *
+ * @since New in 1.2.
+ *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *

@@ -87,10 +87,6 @@ svn_client_ls3 (apr_hash_t **dirents,
   const char *url;
   const char *repos_root;
   const char *rel_path;
-  apr_pool_t *subpool;
-  apr_hash_t *new_locks;
-  apr_hash_index_t *hi;
-  svn_error_t *err;
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR (svn_client__ra_session_from_path (&ra_session, &rev,
@@ -149,46 +145,41 @@ svn_client_ls3 (apr_hash_t **dirents,
                               _("URL '%s' non-existent in that revision"),
                               url);
 
-  if (locks == NULL)
-    return SVN_NO_ERROR;
-
-  if (rel_path == NULL || rel_path[0] == 0)
-    rel_path = "/";
-  else
-    rel_path = apr_psprintf (pool, "/%s/", rel_path);
-
-  subpool = svn_pool_create (pool);
-
-  /* Get lock. */
-  err = svn_ra_get_locks (ra_session, locks, "", pool);
-
-  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+  if (locks)
     {
-      svn_error_clear (err);
-      *locks = apr_hash_make (pool);
+      apr_hash_t *new_locks;
+      apr_hash_index_t *hi;
+      svn_error_t *err;
+
+      /* Add a leading slash to match the paths from svn_ra_get_locks(). */
+      rel_path = apr_psprintf (pool, "/%s", rel_path ? rel_path : "");
+
+      /* Get locks. */
+      err = svn_ra_get_locks (ra_session, locks, "", pool);
+
+      if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+        {
+          svn_error_clear (err);
+          *locks = apr_hash_make (pool);
+        }
+      else if (err)
+        return err;
+
+      new_locks = apr_hash_make (pool);
+      for (hi = apr_hash_first (pool, *locks); hi; hi = apr_hash_next (hi))
+        {
+          const void *key;
+          void *val;
+          const char *newkey;
+
+          apr_hash_this (hi, &key, NULL, &val);
+          newkey = svn_path_is_child (rel_path, key, pool);
+          if (newkey)
+            apr_hash_set (new_locks, newkey, APR_HASH_KEY_STRING, val);
+        }
+
+      *locks = new_locks;
     }
-  else if (err)
-    return err;
-  
-  new_locks = apr_hash_make (pool);
-  for (hi = apr_hash_first (pool, *locks); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      void *val;
-      const char *newkey;
-
-      svn_pool_clear (subpool);
-
-      apr_hash_this (hi, &key, NULL, &val);
-      newkey = svn_path_is_child (svn_path_canonicalize (rel_path, subpool),
-                                  svn_path_canonicalize (key, subpool),
-                                  pool);
-      if (newkey)
-        apr_hash_set (new_locks, newkey, APR_HASH_KEY_STRING, val);
-    }
-
-  svn_pool_destroy (subpool);
-  *locks = new_locks;
 
   return SVN_NO_ERROR;
 }
