@@ -97,12 +97,18 @@ typedef enum
 /** Callback type for checking authorization on paths produced by
  * the repository commit editor.
  *
- * Set @a *allowed to TRUE to indicate that the @a required_access on
+ * Set @a *allowed to TRUE to indicate that the @a required access on
  * @a path in @a root is authorized, or set it to FALSE to indicate
  * unauthorized (presumable according to state stored in @a baton).
  *
+ * If @a path is NULL, the callback should perform a global authz
+ * lookup for the @a required access.  That is, the lookup should
+ * check if the @a required access is granted for at least one path of
+ * the repository, and set @a *allowed to TRUE if so.  @a root may
+ * also be NULL if @a path is NULL.
+ *
  * This callback is very similar to svn_repos_authz_func_t, with the
- * exception of the addition of the @a required_access parameter.
+ * exception of the addition of the @a required parameter.
  * This is due to historical reasons: when authz was first implemented
  * for svn_repos_dir_delta(), it seemed there would need only checks
  * for read and write operations, hence the svn_repos_authz_func_t

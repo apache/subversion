@@ -257,11 +257,21 @@ static int req_check_access(request_rec *r,
      * the DAV RA method: some requests have no repos_path, but apache
      * still triggers an authz lookup for the URI.
      *
+     * However, if repos_path == NULL and the request requires write
+     * access, then perform a global authz lookup.  The request is
+     * denied if the user commiting isn't granted any access anywhere
+     * in the repository.  This is to avoid operations that involve no
+     * paths (commiting an empty revision, leaving a dangling
+     * transaction in the FS) being granted by default, letting
+     * unauthenticated users write some changes to the repository.
+     * This was issue #2388.
+     *
      * XXX: For now, requesting access to the entire repository always
      * XXX: succeeds, until we come up with a good way of figuring
      * XXX: this out.
      */
-    if (repos_path)
+    if (repos_path
+        || (!repos_path && (authz_svn_type & svn_authz_write)))
       {
         svn_err = svn_repos_authz_check_access(access_conf, repos_name,
                                                repos_path, r->user,
