@@ -905,7 +905,7 @@ def repos_to_wc(sbox):
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.add({
-    'pi' : Item(status='A ',  wc_rev='0'),
+    'pi' : Item(status='A ',  wc_rev='1'),
     })
   svntest.actions.run_and_verify_status (wc_dir, expected_output)
 
@@ -1730,6 +1730,42 @@ def wc_copy_replace_with_props(sbox):
                                         wc_dir)
 
 
+def repos_to_wc_copy_replacement(sbox):
+  "svn cp URL PATH replacement of deleted target"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # File scheduled for deletion
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', rho_path)
+
+  # Status before attempting copies
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G/rho', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # The copy shouldn't fail
+  pi_url = svntest.main.current_repo_url + "/A/D/G/pi"
+  svntest.actions.run_and_verify_svn("", None, None,
+                                     'cp', pi_url, rho_path)
+
+  # Now commit
+  expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_status.tweak(repos_rev='2')
+  expected_status.tweak('A/D/G/rho', status='  ', copied=None,
+                        repos_rev='2', wc_rev='2')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/rho': Item(verb='Replacing'),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -1767,6 +1803,7 @@ test_list = [ None,
               mixed_wc_to_url,
               wc_copy_replacement,
               wc_copy_replace_with_props,
+              repos_to_wc_copy_replacement,
              ]
 
 if __name__ == '__main__':

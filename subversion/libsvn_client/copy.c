@@ -851,7 +851,8 @@ repos_to_wc_copy (const char *src_url,
     const svn_wc_entry_t *ent;
 
     SVN_ERR (svn_wc_entry (&ent, dst_path, adm_access, FALSE, pool));
-    if (ent && (ent->kind != svn_node_dir))
+    if (ent && (ent->kind != svn_node_dir) && 
+        (ent->schedule != svn_wc_schedule_delete))
       return svn_error_createf
         (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
          _("Entry for '%s' exists (though the working file is missing)"),

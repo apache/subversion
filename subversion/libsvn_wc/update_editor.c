@@ -1748,8 +1748,7 @@ change_file_prop (void *file_baton,
  *
  * Given a @a file_path either already under version control, or
  * prepared (see below) to join revision control, fully install a @a
- * new_revision of the file; @a new_revision must be 0 if copyfrom
- * args are passed, see below for details.  @a adm_access is an access
+ * new_revision of the file;  @a adm_access is an access
  * baton with a write lock for the directory containing @a file_path.
  *
  * If @a file_path is not already under version control (i.e., does
@@ -1809,8 +1808,7 @@ change_file_prop (void *file_baton,
  * copyfrom history for the added file.  An assertion error may occur
  * if copyfrom args while @a is_add is false.  An assertion error may
  * occur if @a copyfrom_url is non-null but @a copyfrom_rev is not a
- * valid revision number.  An assertion error may occur if @a is_add
- * is true but @a new_revision is not 0.
+ * valid revision number.
  *
  * If @a diff3_cmd is non-null, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.
@@ -1908,8 +1906,6 @@ install_file (svn_wc_notify_state_t *content_state,
     {
       const char *rev_str = NULL;
       
-      assert (new_revision == 0);
-
       if (copyfrom_url)
         {
           assert (SVN_IS_VALID_REVNUM (copyfrom_rev));
@@ -2980,11 +2976,11 @@ svn_wc_add_repos_file (const char *dst_path,
   const char *new_URL;
   apr_array_header_t *propchanges;
   int log_number = 0;
+  const svn_wc_entry_t *ent;
 
   /* Fabricate the anticipated new URL of the target and check the
      copyfrom URL to be in the same repository. */
   {
-    const svn_wc_entry_t *ent;
     const char *dir_name, *base_name;
     
     svn_path_split (dst_path, &dir_name, &base_name, pool);
@@ -3011,7 +3007,7 @@ svn_wc_add_repos_file (const char *dst_path,
                          adm_access,
                          &log_number,
                          dst_path,
-                         0,
+                         ent->revision,
                          new_text_path,
                          propchanges,
                          TRUE, /* a full proplist */
