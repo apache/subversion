@@ -48,14 +48,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r14782
-    Fix a Perl variable scoping bug in contrib/client-side/svn_load_dirs.pl.in.
-    Justification:
-      Simple fix in a contrib script requested by a user.
-    Votes:
-      +1: blair
-      +0: djames
-
   * r15888
     Complete issue #1361 for JavaHL, removing special handling in the
     JavaHL bindings for 'svn cat -r BASE' in favor of the
