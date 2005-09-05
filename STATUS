@@ -10,6 +10,15 @@ Status of 1.2.4:
 
 Candidate changes:
 
+  * r15807
+    Guard against NULL stream write calls.
+    Branch: python-bindings-improvements
+    Justification:
+      Affects Python bindings only. Prevents crashes when using
+      ViewCVS with remote repositories.
+    Votes:
+      +1: djames
+
   * r15906, r15941
     Favour "python" over "python2", if "python" is Python 2.x.
     Branch: 1.2.x-r15906-r15941
