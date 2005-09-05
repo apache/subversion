@@ -287,6 +287,8 @@ locale-gnu-pot:
 	  --flag=svn_stringbuf_createv:2:c-format \
 	  --flag=svn_fs_bdb__dberrf:3:c-format \
 	  --flag=file_printf_from_utf8:3:c-format \
+	  --flag=do_io_file_wrapper_cleanup:3:c-format \
+	  --flag=do_io_file_wrapper_cleanup:4:c-format \
 	  --msgid-bugs-address=dev@subversion.tigris.org \
 	  --add-comments --files-from=- -o po/subversion.pot )
 
