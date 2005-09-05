@@ -96,6 +96,10 @@ AC_DEFUN(SVN_FIND_SWIG,
     ])
     SWIG_PY_INCLUDES="\$(SWIG_INCLUDES) $ac_cv_python_includes"
 
+    if test "$ac_cv_python_includes" = "none"; then
+      AC_MSG_WARN([python bindings cannot be built without distutils module])
+    fi
+
     AC_CACHE_CHECK([for compiling Python extensions], [ac_cv_python_compile],[
       ac_cv_python_compile="`$PYTHON ${abs_srcdir}/build/get-py-info.py --compile`"
     ])

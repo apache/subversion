@@ -9,7 +9,6 @@
 
 import sys
 import os
-from distutils import sysconfig
 
 def usage():
   print 'USAGE: %s WHAT' % sys.argv[0]
@@ -23,6 +22,13 @@ def usage():
 
 if len(sys.argv) != 2:
   usage()
+
+try:
+  from distutils import sysconfig
+except ImportError:
+  # No information available
+  print "none"
+  sys.exit(1)
 
 if sys.argv[1] == '--includes':
   inc = sysconfig.get_python_inc()
