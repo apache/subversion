@@ -10,6 +10,13 @@ Status of 1.2.4:
 
 Candidate changes:
 
+  * r14646
+    Allow users to "make clean" without building the Perl bindings.
+    Justification:
+      Affects Perl bindings only.
+    Votes:
+      +1: djames
+
   * r15807
     Guard against NULL stream write calls.
     Branch: python-bindings-improvements
