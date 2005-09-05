@@ -34,6 +34,7 @@
 ;; is run. Currently you have to toggle this variable manually.
 ;; This buffer uses svn-status mode in which the following keys are defined:
 ;; g     - svn-status-update:               run 'svn status -v'
+;; M-s   - svn-status-update:               run 'svn status -v'
 ;; C-u g - svn-status-update:               run 'svn status -vu'
 ;; =     - svn-status-show-svn-diff         run 'svn diff'
 ;; l     - svn-status-show-svn-log          run 'svn log'
@@ -264,6 +265,10 @@ Otherwise: Don't display a header line")
 ;;; hooks
 (defvar svn-log-edit-mode-hook nil "Hook run when entering `svn-log-edit-mode'.")
 (defvar svn-log-edit-done-hook nil "Hook run after commiting files via svn.")
+
+(defvar svn-status-coding-system nil
+  "A special coding system is needed for the output of svn.
+svn-status-coding-system is used in svn-run-svn, if it is not nil.")
 
 (defvar svn-status-wash-control-M-in-process-buffers
   (eq system-type 'windows-nt)
@@ -526,26 +531,11 @@ inside loops."
   (if (<= level svn-status-debug-level)
       (apply 'message args)))
 
-;; taken from esh-util: eshell-for
-(defmacro svn-status-for (for-var for-list &rest forms)
-  "Iterate through a list"
-  `(let ((list-iter ,for-list))
-     (while list-iter
-       (let ((,for-var (car list-iter)))
-         ,@forms)
-       (setq list-iter (cdr list-iter)))))
-(put 'svn-status-for 'lisp-indent-function 2)
-
-;; taken from esh-util: eshell-flatten-list
-(defun svn-status-flatten-list (args)
+(defun svn-status-flatten-list (list)
   "Flatten any lists within ARGS, so that there are no sublists."
-  (let ((new-list (list t)))
-    (svn-status-for a args
-      (if (and (listp a)
-               (listp (cdr a)))
-          (nconc new-list (svn-status-flatten-list a))
-        (nconc new-list (list a))))
-    (cdr new-list)))
+  (loop for item in list
+	if (listp item) nconc (svn-status-flatten-list item)
+	else collect item))
 
 (defvar svn-status-display-new-status-buffer nil)
 ;;;###autoload
@@ -620,7 +610,7 @@ ARGLIST is flattened and any every nil value is discarded.
 
 If the variable `svn-status-edit-svn-command' is non-nil then the user
 is prompted for give extra arguments, which are appended to ARGLIST."
-  (setq arglist (delete nil (svn-status-flatten-list arglist)))
+  (setq arglist (svn-status-flatten-list arglist))
   (if (eq (process-status "svn") nil)
       (progn
         (when svn-status-edit-svn-command
@@ -639,6 +629,8 @@ is prompted for give extra arguments, which are appended to ARGLIST."
             (setq arglist (car arglist)))
           (save-excursion
             (set-buffer proc-buf)
+            (when svn-status-coding-system
+              (setq buffer-file-coding-system svn-status-coding-system))
             (setq buffer-read-only nil)
             (fundamental-mode)
             (if clear-process-buffer
@@ -976,6 +968,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "v") 'svn-status-view-file-other-window)
   (define-key svn-status-mode-map (kbd "e") 'svn-status-toggle-edit-cmd-flag)
   (define-key svn-status-mode-map (kbd "g") 'svn-status-update)
+  (define-key svn-status-mode-map (kbd "M-s") 'svn-status-update) ;; PCL-CVS compatibility
   (define-key svn-status-mode-map (kbd "q") 'svn-status-bury-buffer)
   (define-key svn-status-mode-map (kbd "h") 'svn-status-use-history)
   (define-key svn-status-mode-map (kbd "m") 'svn-status-set-user-mark)
