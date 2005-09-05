@@ -10,7 +10,32 @@ Status of 1.2.4:
 
 Candidate changes:
 
-  None
+  * r15906, r15941
+    Favour "python" over "python2", if "python" is Python 2.x.
+    Branch: 1.2.x-r15906-r15941
+    Justification:
+      Allows Python bindings to build correctly when the user upgrades
+      the standard "python" binary to Python 2.4, but leaves the
+      nonstandard "python2" binary as Python 2.2.
+    Notes:
+      In the 1.2.x-r15906-r15941 branch, I merged r15906 and r15941
+      from trunk. I did not include the changes in r15906 which affect
+      autogen.sh, because the changes to autogen.sh can wait until
+      Subversion 1.3.
+    Thread: http://svn.haxx.se/users/archive-2005-09/0106.shtml
+    Votes:
+      +1: djames
+  
+  * r15943, r15967, r16050
+    Improve portability of the build system for Python bindings, so that
+    they will work out of the box in a variety of build setups.
+    Branch: 1.2.x-r15943-r15967-r16050
+    Justification:
+      Affects Python bindings only. Improves portability.
+    Notes:
+      Branch solves a trivial merge conflict.
+    Votes:
+      +1: djames
 
 Approved changes (further review is welcome, but not required):
 
