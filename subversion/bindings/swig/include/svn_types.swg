@@ -548,7 +548,7 @@
             rev.kind = svn_opt_revision_date;
             rev.value.date = tm;
         } else
-            SWIG_croak("unknown opt_revison_t type");
+            SWIG_croak("unknown opt_revision_t type");
     } else
         SWIG_croak("unknown opt_revision_t type");
 }

@@ -124,12 +124,12 @@ def svnversion_test(sbox):
 #----------------------------------------------------------------------
 
 def ignore_externals(sbox):
-  "test 'svnversion' with svn:eternals"
+  "test 'svnversion' with svn:externals"
   sbox.build()
   wc_dir = sbox.wc_dir
   repo_url = sbox.repo_url
 
-  # Setup an svn:external
+  # Set up an external item
   C_path = os.path.join(wc_dir, "A", "C")
   externals_desc = "ext -r 1 " + repo_url + "/A/D/G" + "\n"
   tmp_f = os.tempnam(wc_dir, 'tmp')

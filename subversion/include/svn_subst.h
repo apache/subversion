@@ -32,7 +32,7 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Eol conversion and keyword expansion. */
+/* EOL conversion and keyword expansion. */
 
 /** Valid states for 'svn:eol-style' property.
  *
@@ -254,7 +254,7 @@ svn_subst_translate_cstring (const char *src,
                              apr_pool_t *pool);
 
 
-/* Eol conversion and character encodings */
+/* EOL conversion and character encodings */
 
 /** Translate the data in @a value (assumed to be in encoded in charset
  * @a encoding) to UTF8 and LF line-endings.  If @a encoding is @c NULL, 
@@ -268,7 +268,7 @@ svn_error_t *svn_subst_translate_string (svn_string_t **new_value,
 
 /** Translate the data in @a value from UTF8 and LF line-endings into
  * native locale and native line-endings, or to the output locale if
- * @a for_output is TURE.  Return the translated data in @a
+ * @a for_output is TRUE.  Return the translated data in @a
  * *new_value, allocated in @a pool.
  */
 svn_error_t *svn_subst_detranslate_string (svn_string_t **new_value,

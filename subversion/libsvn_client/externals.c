@@ -468,7 +468,7 @@ handle_externals_desc_change (const void *key, apr_ssize_t klen,
 
   /* We must use a custom version of svn_hash_diff so that the diff
      entries are processed in the order they were originally specified
-     in the svn:external properties. */
+     in the svn:externals properties. */
 
   for (i = 0; old_desc && (i < old_desc->nelts); i++)
     {

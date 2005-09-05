@@ -1689,7 +1689,7 @@ svn_repos_get_fs_build_parser2 (const svn_repos_parse_fns2_t **parser,
 
 /**
  * A vtable that is driven by svn_repos_parse_dumpstream().
- * Similar to svn_repos_parse_fns2_t except that it lacks
+ * Similar to @c svn_repos_parse_fns2_t except that it lacks
  * the delete_node_property and apply_textdelta callbacks.
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
