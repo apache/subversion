@@ -130,8 +130,8 @@ static svn_error_t *authz_check_access(svn_boolean_t *allowed,
      absolute path. Passing such a malformed path to the authz
      routines throws them into an infinite loop and makes them miss
      ACLs. */
-  if (*path == '\0')
-    path = "/";
+  if (*path != '/')
+    path = svn_path_join("/", path, pool);
 
   return svn_repos_authz_check_access(b->authzdb, b->authz_repos_name,
                                       path, b->user, required,
