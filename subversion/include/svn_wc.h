@@ -1433,7 +1433,7 @@ enum svn_wc_status_kind
     /** is not a versioned thing in this wc */
     svn_wc_status_unversioned,
 
-    /** exists, but uninteresting. */
+    /** exists, but uninteresting */
     svn_wc_status_normal,
 
     /** is scheduled for addition */
@@ -1463,10 +1463,10 @@ enum svn_wc_status_kind
     /** an unversioned resource is in the way of the versioned resource */
     svn_wc_status_obstructed,
 
-    /** an unversioned path populated by an svn:external property */
+    /** an unversioned path populated by an svn:externals property */
     svn_wc_status_external,
 
-    /** a directory doesn't contain a complete entries list  */
+    /** a directory doesn't contain a complete entries list */
     svn_wc_status_incomplete
 };
 
@@ -1521,7 +1521,7 @@ typedef struct svn_wc_status2_t
 
 
 /**
- * Same as svn_wc_status2_t, but without the svn_lock_t 'repos_lock' field.
+ * Same as @c svn_wc_status2_t, but without the svn_lock_t 'repos_lock' field.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
@@ -2935,7 +2935,7 @@ svn_wc_create_tmp_file (apr_file_t **fp,
 
 
 
-/* Eol conversion and keyword expansion. */
+/* EOL conversion and keyword expansion. */
 
 /** Set @a *xlated_p to a path to a possibly translated copy of versioned
  * file @a vfile, or to @a vfile itself if no translation is necessary.

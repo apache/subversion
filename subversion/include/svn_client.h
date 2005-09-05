@@ -1330,7 +1330,7 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
  * changed between @a start_revision and @a end_revision.  @a path can
  * be either a working-copy path or URL.
  *
- * All other options are handled identically to svn_client_diff2().
+ * All other options are handled identically to svn_client_diff3().
  *
  * @since New in 1.3.
  */

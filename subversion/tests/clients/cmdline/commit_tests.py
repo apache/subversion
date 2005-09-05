@@ -1447,7 +1447,7 @@ def failed_commit(sbox):
 
 # Commit from multiple working copies is not yet supported.  At
 # present an error is generated and none of the working copies change.
-# Related to issue 959, this test here doesn't use svn:external but the
+# Related to issue 959, this test here doesn't use svn:externals but the
 # behaviour needs to be considered.
 
 def commit_multiple_wc(sbox):
