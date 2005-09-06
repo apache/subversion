@@ -11,9 +11,9 @@ Status of 1.2.4:
 Candidate changes:
 
   * r14646
-    Allow users to "make clean" without building the Perl bindings.
+    Allow users to "make clean" without running Makefile.PL.
     Justification:
-      Affects Perl bindings only.
+      Trivial fix.
     Votes:
       +1: djames
 
@@ -47,7 +47,7 @@ Candidate changes:
     they will work out of the box in a variety of build setups.
     Branch: 1.2.x-r15943-r15967-r16050
     Justification:
-      Affects Python bindings only. Improves portability.
+      Improves portability.
     Notes:
       Branch solves a trivial merge conflict.
     Votes:
