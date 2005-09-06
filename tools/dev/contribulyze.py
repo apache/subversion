@@ -76,6 +76,8 @@ def html_header(title):
   title = escape_html(title)
   s  = '<title>%s</title>\n' % title
   s += '<html>\n\n'
+  s += '<head><meta http-equiv=Content-Type ' \
+       'content="text/html; charset=UTF-8"></head>\n\n'
   s += '<body text="#000000" bgcolor="#FFFFFF">\n\n'
   s += '<center><h1>%s</h1></center>\n\n' % title
   s += '<hr />\n\n'
