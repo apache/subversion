@@ -991,7 +991,10 @@ svn_ra_dav__request_dispatch(int *code_p,
 #if SVN_NEON_0_25
   /* If the request interrogator returned error, pass that along now. */
   if (err2)
-    return err2;
+    {
+      svn_error_clear(err);
+      return err2;
+    }
 #endif /* SVN_NEON_0_25 */
 
   /* If the status code was one of the two that we expected, then go

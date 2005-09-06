@@ -2904,8 +2904,11 @@ contents_identical_p (svn_boolean_t *identical_p,
       err2 = svn_io_file_read_full (file2_h, buf2, 
                                     sizeof(buf2), &bytes_read2, pool);
       if (err2 && !APR_STATUS_IS_EOF(err2->apr_err))
-        return err2;
-      
+        {
+          svn_error_clear (err1);
+          return err2;
+        }
+
       if ((bytes_read1 != bytes_read2)
           || (memcmp (buf1, buf2, bytes_read1)))
         {

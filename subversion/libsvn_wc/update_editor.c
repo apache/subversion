@@ -609,6 +609,8 @@ window_handler (svn_txdelta_window_t *window, void *baton)
       err2 = svn_wc__close_text_base (hb->source, fb->path, 0, fb->pool);
       if (err2 != SVN_NO_ERROR && err == SVN_NO_ERROR)
         err = err2;
+      else
+        svn_error_clear (err2);
     }
   err2 = svn_wc__close_text_base (hb->dest, fb->path, 0, fb->pool);
   if (err2 != SVN_NO_ERROR)
