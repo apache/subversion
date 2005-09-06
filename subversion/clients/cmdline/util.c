@@ -273,6 +273,8 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
       /* Only report remove error if there was no previous error. */
       if (! err && err2)
         err = err2;
+      else
+        svn_error_clear (err2);
     }
 
  cleanup2:
