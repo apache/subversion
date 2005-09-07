@@ -277,7 +277,7 @@ test_list = [ None,
               XFail(revert_reexpand_keyword),
               revert_replaced_file_without_props,
               XFail(revert_moved_file),
-              XFail(revert_replace_with_history_with_props),
+              revert_replace_with_history_with_props,
              ]
 
 if __name__ == '__main__':

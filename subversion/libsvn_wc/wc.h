@@ -114,6 +114,7 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_PROP_BASE           "prop-base"
 #define SVN_WC__ADM_DIR_PROPS           "dir-props"
 #define SVN_WC__ADM_DIR_PROP_BASE       "dir-prop-base"
+#define SVN_WC__ADM_DIR_PROP_REVERT     "dir-prop-revert"
 #define SVN_WC__ADM_WCPROPS             "wcprops"
 #define SVN_WC__ADM_DIR_WCPROPS         "dir-wcprops"
 #define SVN_WC__ADM_LOG                 "log"

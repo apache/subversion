@@ -289,13 +289,20 @@ svn_wc__text_revert_path (const char *path,
                                NULL);
 }
 
+/* Kind for prop_path_internal. */
+typedef enum prop_path_kind_t
+{
+  prop_path_kind_base = 0,
+  prop_path_kind_revert,
+  prop_path_kind_wcprop,
+  prop_path_kind_working
+} prop_path_kind_t;
 
 static svn_error_t *
 prop_path_internal (const char **prop_path,
                     const char *path,
                     svn_wc_adm_access_t *adm_access,
-                    svn_boolean_t base,
-                    svn_boolean_t wcprop,
+                    prop_path_kind_t path_kind,
                     svn_boolean_t tmp,
                     apr_pool_t *pool)
 {
@@ -306,25 +313,44 @@ prop_path_internal (const char **prop_path,
 
   if (entry && entry->kind == svn_node_dir)  /* It's a working copy dir */
     {
+      static const char * names[] = {
+        SVN_WC__ADM_DIR_PROP_BASE,    /* prop_path_kind_base */
+        SVN_WC__ADM_DIR_PROP_REVERT,  /* prop_path_kind_revert */
+        SVN_WC__ADM_DIR_WCPROPS,      /* prop_path_kind_wcprop */
+        SVN_WC__ADM_DIR_PROPS         /* prop_path_kind_working */
+      };
+
       *prop_path = extend_with_adm_name
         (path,
          NULL,
          tmp,
          pool,
-         base ? SVN_WC__ADM_DIR_PROP_BASE
-         : (wcprop ? SVN_WC__ADM_DIR_WCPROPS : SVN_WC__ADM_DIR_PROPS),
+         names[path_kind],
          NULL);
     }
   else  /* It's either a file, or a non-wc dir (i.e., maybe an ex-file) */
     {
+      static const char * extensions[] = {
+        SVN_WC__BASE_EXT,     /* prop_path_kind_base */
+        SVN_WC__REVERT_EXT,   /* prop_path_kind_revert */
+        SVN_WC__WORK_EXT,     /* prop_path_kind_wcprop */
+        SVN_WC__WORK_EXT      /* prop_path_kind_working */
+      };
+
+      static const char * dirs[] = {
+        SVN_WC__ADM_PROP_BASE,  /* prop_path_kind_base */
+        SVN_WC__ADM_PROP_BASE,  /* prop_path_kind_revert */
+        SVN_WC__ADM_WCPROPS,    /* prop_path_kind_wcprop */
+        SVN_WC__ADM_PROPS       /* prop_path_kind_working */
+      };
+
       svn_path_split (path, prop_path, &entry_name, pool);
       *prop_path = extend_with_adm_name
         (*prop_path,
-         base ? SVN_WC__BASE_EXT : SVN_WC__WORK_EXT,
+         extensions[path_kind],
          tmp,
          pool,
-         base ? SVN_WC__ADM_PROP_BASE
-         : (wcprop ? SVN_WC__ADM_WCPROPS : SVN_WC__ADM_PROPS),
+         dirs[path_kind],
          entry_name,
          NULL);
     }
@@ -342,8 +368,8 @@ svn_wc__wcprop_path (const char **wcprop_path,
                      svn_boolean_t tmp,
                      apr_pool_t *pool)
 {
-  return prop_path_internal (wcprop_path, path, adm_access, FALSE, TRUE, tmp,
-                             pool);
+  return prop_path_internal (wcprop_path, path, adm_access,
+                             prop_path_kind_wcprop, tmp, pool);
 }
 
 
@@ -356,8 +382,8 @@ svn_wc__prop_path (const char **prop_path,
                    svn_boolean_t tmp,
                    apr_pool_t *pool)
 {
-  return prop_path_internal (prop_path, path, adm_access, FALSE, FALSE, tmp,
-                             pool);
+  return prop_path_internal (prop_path, path, adm_access,
+                             prop_path_kind_working, tmp, pool);
 }
 
 
@@ -368,11 +394,21 @@ svn_wc__prop_base_path (const char **prop_path,
                         svn_boolean_t tmp,
                         apr_pool_t *pool)
 {
-  return prop_path_internal (prop_path, path, adm_access, TRUE, FALSE, tmp,
-                             pool);
+  return prop_path_internal (prop_path, path, adm_access, 
+                             prop_path_kind_base, tmp, pool);
 }
 
 
+svn_error_t *
+svn_wc__prop_revert_path (const char **prop_path,
+                          const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t tmp,
+                          apr_pool_t *pool)
+{
+  return prop_path_internal (prop_path, path, adm_access,
+                             prop_path_kind_revert, tmp, pool);
+}
 
 
 /*** Opening and closing files in the adm area. ***/

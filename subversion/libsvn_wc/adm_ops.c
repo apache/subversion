@@ -168,7 +168,38 @@ tweak_entries (svn_wc_adm_access_t *dirpath,
   return SVN_NO_ERROR;
 }
 
+/* Helper for svn_wc_process_committed2. */
+static svn_error_t *
+remove_revert_file(svn_stringbuf_t **logtags,
+                   svn_wc_adm_access_t *adm_access,
+                   const char *base_name,
+                   svn_boolean_t is_prop,
+                   apr_pool_t * pool)
+{
+  const char * revert_file;
+  svn_node_kind_t kind;
+  
+  if (is_prop)
+    SVN_ERR (svn_wc__prop_revert_path (&revert_file, base_name, adm_access,
+                                       FALSE, pool));
+  else
+    revert_file = svn_wc__text_revert_path (base_name, FALSE, pool);
 
+  SVN_ERR (svn_io_check_path
+            (svn_path_join (svn_wc_adm_access_path (adm_access),
+                            revert_file, pool),
+            &kind, pool));
+
+  if (kind == svn_node_file)
+    {
+      svn_xml_make_open_tag (logtags, pool, svn_xml_self_closing,
+                             SVN_WC__LOG_RM,
+                             SVN_WC__LOG_ATTR_NAME, revert_file,
+                             NULL);
+    }
+  
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__do_update_cleanup (const char *path,
@@ -312,26 +343,16 @@ svn_wc_process_committed2 (const char *path,
   if (base_name)
     {
       /* PATH must be some sort of file */
-      const char *latest_base,*revert_file;
+      const char *latest_base;
       svn_node_kind_t kind;
 
-      /* If the revert file exists it needs to be deleted when the file
-       * is committed. */
-      revert_file = svn_wc__text_revert_path (base_name, FALSE, pool);
+      /* If the props or text revert file exists it needs to be deleted when
+       * the file is committed. */
+      SVN_ERR (remove_revert_file (&logtags, adm_access, base_name,
+                                   FALSE, pool));
+      SVN_ERR (remove_revert_file (&logtags, adm_access, base_name,
+                                   TRUE, pool));
 
-      SVN_ERR (svn_io_check_path
-               (svn_path_join (svn_wc_adm_access_path (adm_access),
-                               revert_file, pool),
-                &kind, pool));
-
-      if (kind == svn_node_file)
-        {
-          svn_xml_make_open_tag (&logtags, pool, svn_xml_self_closing,
-                                 SVN_WC__LOG_RM,
-                                 SVN_WC__LOG_ATTR_NAME, revert_file,
-                                 NULL);
-        }
-      
       /* There may be a new text base is sitting in the adm tmp area by
          now, because the commit succeeded.  A file that is copied, but not
          otherwise modified, doesn't have a new text base, so we use
@@ -1309,6 +1330,26 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
   fullpath = svn_wc_adm_access_path (adm_access);
   if (name && (strcmp (name, SVN_WC_ENTRY_THIS_DIR) != 0))
     fullpath = svn_path_join (fullpath, name, pool);
+  
+  /* Look for a revert base file. If it exists use it for
+   * the prop base for the file.  If it doesn't use the normal
+   * prop base. */
+  {
+    svn_node_kind_t disk_kind;
+    const char *bprop, *rprop;
+
+    SVN_ERR (svn_wc__prop_base_path (&bprop, fullpath,
+                                     adm_access, FALSE, pool));
+
+    SVN_ERR (svn_wc__prop_revert_path (&rprop, fullpath,
+                                       adm_access, FALSE, pool));
+
+    SVN_ERR (svn_io_check_path (rprop, &disk_kind, pool));
+    if (disk_kind == svn_node_file)
+      {
+        SVN_ERR (svn_io_file_rename (rprop, bprop, pool));
+      }          
+  }
 
   /* Check for prop changes. */
   SVN_ERR (svn_wc_props_modified_p (&modified_p, fullpath, adm_access, pool));  

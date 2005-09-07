@@ -137,10 +137,25 @@ copy_file_administratively (const char *src_path,
   const svn_wc_entry_t *src_entry, *dst_entry;
   svn_boolean_t special;
   svn_boolean_t replace = FALSE;
+  const char *src_wprop, *src_bprop, *dst_wprop, *dst_bprop;
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
   const char *dst_path
     = svn_path_join (svn_wc_adm_access_path (dst_parent), dst_basename, pool);
+
+  /* Discover the paths to the two text-base files */
+  const char *src_txtb = svn_wc__text_base_path (src_path, FALSE, pool);
+  const char *dst_txtb = svn_wc__text_base_path (dst_path, FALSE, pool);
+
+  /* Discover the paths to the four prop files */
+  SVN_ERR (svn_wc__prop_path (&src_wprop, src_path,
+                              src_access, FALSE, pool));
+  SVN_ERR (svn_wc__prop_base_path (&src_bprop, src_path,
+                                   src_access, FALSE, pool));
+  SVN_ERR (svn_wc__prop_path (&dst_wprop, dst_path,
+                              dst_parent, FALSE, pool));
+  SVN_ERR (svn_wc__prop_base_path (&dst_bprop, dst_path,
+                                    dst_parent, FALSE, pool));
 
   /* Sanity check:  if dst file exists already, don't allow overwrite. */
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
@@ -197,14 +212,18 @@ copy_file_administratively (const char *src_path,
                                             pool));
  
   /* If we're replacing the file then we need to save the destination files
-   * text base before replacing it (see comments below for why it gets
-   * replaced).  This allows us to revert the entire change. */
+   * text base and prop base before replacing it (see comments below for why
+   * it gets replaced).  This allows us to revert the entire change. */
   if (replace) 
     {
-      const char *src_txtb = svn_wc__text_base_path (dst_path, FALSE, pool);
-      const char *dst_rvrt = svn_wc__text_revert_path (dst_path, FALSE, pool);
+      const char *dst_rtext = svn_wc__text_revert_path (dst_path, FALSE, pool);
+      const char *dst_rprop;
 
-      SVN_ERR (svn_io_copy_file (src_txtb, dst_rvrt, TRUE, pool));
+      SVN_ERR (svn_wc__prop_revert_path (&dst_rprop, dst_path,
+                                         dst_parent, FALSE, pool));
+
+      SVN_ERR (svn_io_copy_file (dst_txtb, dst_rtext, TRUE, pool));
+      SVN_ERR (svn_io_copy_file (dst_bprop, dst_rprop, TRUE, pool));
     }
   
   /* Copy the pristine text-base over.  Why?  Because it's the *only*
@@ -223,21 +242,6 @@ copy_file_administratively (const char *src_path,
      working and pristine propfiles over too. */
   {
     svn_node_kind_t kind;
-    const char *src_wprop, *src_bprop, *dst_wprop, *dst_bprop;
-
-    /* Discover the paths to the two text-base files */
-    const char *src_txtb = svn_wc__text_base_path (src_path, FALSE, pool);
-    const char *dst_txtb = svn_wc__text_base_path (dst_path, FALSE, pool);
-
-    /* Discover the paths to the four prop files */
-    SVN_ERR (svn_wc__prop_path (&src_wprop, src_path, 
-                                src_access, FALSE, pool));
-    SVN_ERR (svn_wc__prop_base_path (&src_bprop, src_path, 
-                                     src_access, FALSE, pool));
-    SVN_ERR (svn_wc__prop_path (&dst_wprop, dst_path, 
-                                dst_parent, FALSE, pool));
-    SVN_ERR (svn_wc__prop_base_path (&dst_bprop, dst_path, 
-                                     dst_parent, FALSE, pool));
 
     /* Copy the text-base over unconditionally. */
     SVN_ERR (svn_io_copy_file (src_txtb, dst_txtb, TRUE, pool));
