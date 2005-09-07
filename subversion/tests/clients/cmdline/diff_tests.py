@@ -1787,6 +1787,74 @@ def diff_force(sbox):
     if (re_nodisplay.match(line)):
       raise svntest.Failure
 
+#----------------------------------------------------------------------
+# Regression test for issue #2333: Renaming a directory should produce
+# deletion and addition diffs for each included file.
+def diff_renamed_dir(sbox):
+  "diff a renamed directory"
+
+  sbox.build()
+
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+
+  svntest.main.run_svn(None, 'mv', os.path.join('A', 'D', 'G'),
+                                   os.path.join('A', 'D', 'I'))
+
+  # Check a repos->wc diff
+  diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                 os.path.join('A', 'D'))
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'G', 'pi'),
+                       'D') :
+    raise svntest.Failure
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'I', 'pi'),
+                       'A') :
+    raise svntest.Failure
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', 'log msg')
+
+  # Check repos->wc after commit
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
+                                                 os.path.join('A', 'D'))
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'G', 'pi'),
+                       'D') :
+    raise svntest.Failure
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'I', 'pi'),
+                       'A') :
+    raise svntest.Failure
+
+  # Test a repos->repos diff after commit
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2')
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'G', 'pi'),
+                       'D') :
+    raise svntest.Failure
+  if check_diff_output(diff_output,
+                       os.path.join('A', 'D', 'I', 'pi'),
+                       'A') :
+    raise svntest.Failure
+
+  # Test the diff while within the moved directory
+  os.chdir(os.path.join('A','D','I'))
+
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1')
+
+  if check_diff_output(diff_output, 'pi', 'A') :
+    raise svntest.Failure
+
+  # Test a repos->repos diff while within the moved directory
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2')
+
+  if check_diff_output(diff_output, 'pi', 'A') :
+    raise svntest.Failure
+
+  os.chdir(was_cwd)
+
 
 
 ########################################################################
@@ -1820,7 +1888,8 @@ test_list = [ None,
               diff_within_renamed_dir,
               diff_prop_on_named_dir,
               diff_keywords,
-              diff_force
+              diff_force,
+              XFail(diff_renamed_dir)
               ]
 
 if __name__ == '__main__':
