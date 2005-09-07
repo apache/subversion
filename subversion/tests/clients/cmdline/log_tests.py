@@ -679,6 +679,44 @@ def log_xml_empty_date(sbox):
     if date_re.search(line):
       raise svntest.Failure ("log contains date element when svn:date is empty")
 
+#----------------------------------------------------------------------
+def log_limit(sbox):
+  "svn log --limit"
+  guarantee_repos_and_wc(sbox)
+
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'log', '--limit', '2',
+                                                svntest.main.current_repo_url)
+  log_chain = parse_log_output (out)
+  if check_log_chain (log_chain, [9, 8]):
+    raise svntest.Failure
+
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'log', '--limit', '2',
+                                                svntest.main.current_repo_url,
+                                                'A/B')
+  log_chain = parse_log_output (out)
+  if check_log_chain (log_chain, [9, 6]):
+    raise svntest.Failure
+
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'log', '--limit', '2',
+                                                '--revision', '2:HEAD',
+                                                svntest.main.current_repo_url,
+                                                'A/B')
+  log_chain = parse_log_output (out)
+  if check_log_chain (log_chain, [3, 6]):
+    raise svntest.Failure
+
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'log', '--limit', '2',
+                                                '--revision', '1',
+                                                svntest.main.current_repo_url,
+                                                'A/B')
+  log_chain = parse_log_output (out)
+  if check_log_chain (log_chain, [1]):
+    raise svntest.Failure
+
 ########################################################################
 # Run the tests
 
@@ -695,6 +733,7 @@ test_list = [ None,
               log_through_copyfrom_history,
               escape_control_chars,
               log_xml_empty_date,
+              log_limit,
              ]
 
 if __name__ == '__main__':
