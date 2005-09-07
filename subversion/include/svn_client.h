@@ -602,6 +602,9 @@ svn_client_create_commit_info (apr_pool_t *pool);
  * NULL, set @a *result_rev to the value of the revision actually
  * checked out from the repository.
  *
+ * If @a peg_revision->kind is @c svn_opt_revision_unspecified, then it
+ * defaults to @c svn_opt_revision_head.
+ *
  * @a revision must be of kind @c svn_opt_revision_number,
  * @c svn_opt_revision_head, or @c svn_opt_revision_date.  If
  * @a revision does not meet these requirements, return the error
@@ -1182,8 +1185,8 @@ svn_client_log (const apr_array_header_t *targets,
  * Invoke @a receiver with @a receiver_baton on each line-blame item
  * associated with revision @a end of @a path_or_url, using @a start
  * as the default source of all blame.  @a peg_revision indicates in
- * which revision @a path_or_url is valid.  If @a peg_revision is @c
- * svn_opt_revision_unspecified, then it defaults to @c
+ * which revision @a path_or_url is valid.  If @a peg_revision->kind
+ * is @c svn_opt_revision_unspecified, then it defaults to @c
  * svn_opt_revision_head for URLs or @c svn_opt_revision_working for
  * WC targets.
  *
@@ -1327,7 +1330,7 @@ svn_error_t *svn_client_diff (const apr_array_header_t *diff_options,
  * changed between @a start_revision and @a end_revision.  @a path can
  * be either a working-copy path or URL.
  *
- * All other options are handled identically to svn_client_diff2().
+ * All other options are handled identically to svn_client_diff3().
  *
  * @since New in 1.3.
  */
@@ -1859,7 +1862,7 @@ svn_client_revprop_get (const char *propname,
  * path, or from the repository head if @a target is a URL.  Else get
  * the properties as of @a revision.  The actual node revision
  * selected is determined by the path as it exists in @a peg_revision.
- * If @a peg_revision is @c svn_opt_revision_unspecified, then it
+ * If @a peg_revision->kind is @c svn_opt_revision_unspecified, then it
  * defaults to @c svn_opt_revision_head for URLs or @c
  * svn_opt_revision_working for WC targets.  Use the authentication
  * baton cached in @a ctx for authentication if contacting the
@@ -1933,7 +1936,9 @@ svn_client_revprop_list (apr_hash_t **props,
  * tree.
  *
  * @a peg_revision is the revision where the path is first looked up
- * when exporting from a repository.
+ * when exporting from a repository.  If @a peg_revision->kind is @c
+ * svn_opt_revision_unspecified, then it defaults to @c svn_opt_revision_head
+ * for URLs or @c svn_opt_revision_working for WC targets.
  *
  * @a revision is the revision that should be exported, which is only used 
  * when exporting from a repository.
@@ -2018,7 +2023,7 @@ svn_client_export (svn_revnum_t *result_rev,
  * Set @a *dirents to a newly allocated hash of entries for @a
  * path_or_url at @a revision.  The actual node revision selected is
  * determined by the path as it exists in @a peg_revision.  If @a
- * peg_revision is @c svn_opt_revision_unspecified, then it defaults
+ * peg_revision->kind is @c svn_opt_revision_unspecified, then it defaults
  * to @c svn_opt_revision_head for URLs or @c svn_opt_revision_working
  * for WC targets.
  *
@@ -2055,6 +2060,8 @@ svn_client_ls3 (apr_hash_t **dirents,
 /**
  * Same as svn_client_ls3(), but always passes a NULL lock hash.
  *
+ * @since New in 1.2.
+ *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
@@ -2085,7 +2092,7 @@ svn_client_ls (apr_hash_t **dirents,
  * Output the content of file identified by @a path_or_url and @a
  * revision to the stream @a out.  The actual node revision selected
  * is determined by the path as it exists in @a peg_revision.  If @a
- * peg_revision is @c svn_opt_revision_unspecified, then it defaults
+ * peg_revision->kind is @c svn_opt_revision_unspecified, then it defaults
  * to @c svn_opt_revision_head for URLs or @c svn_opt_revision_working
  * for WC targets.
  *
@@ -2291,7 +2298,7 @@ typedef svn_error_t *(*svn_info_receiver_t)
  *
  * Otherwise, information will be pulled from a repository.  The
  * actual node revision selected is determined by the @a path_or_url
- * as it exists in @a peg_revision.  If @a peg_revision is @c
+ * as it exists in @a peg_revision.  If @a peg_revision->kind is @c
  * svn_opt_revision_unspecified, then it defaults to @c
  * svn_opt_revision_head for URLs or @c svn_opt_revision_working for
  * WC targets.

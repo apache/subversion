@@ -38,7 +38,6 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_md5.h"
-#include "svn_base64.h"
 #include "svn_wc.h"
 #include "svn_private_config.h"
 #include "svn_time.h"
@@ -610,6 +609,8 @@ window_handler (svn_txdelta_window_t *window, void *baton)
       err2 = svn_wc__close_text_base (hb->source, fb->path, 0, fb->pool);
       if (err2 != SVN_NO_ERROR && err == SVN_NO_ERROR)
         err = err2;
+      else
+        svn_error_clear (err2);
     }
   err2 = svn_wc__close_text_base (hb->dest, fb->path, 0, fb->pool);
   if (err2 != SVN_NO_ERROR)
@@ -1637,20 +1638,10 @@ apply_textdelta (void *file_baton,
       
       if (strcmp (hex_digest, ent->checksum) != 0)
         {
-          /* Compatibility hack: working copies created before 13 Jan
-             2003 may have entry checksums stored in base64.  See
-             svn_io_file_checksum_base64()'s doc string for
-             details. */ 
-          const char *base64_digest 
-            = (svn_base64_from_md5 (digest, pool))->data;
-              
-          if (strcmp (base64_digest, ent->checksum) != 0)
-            {
-              return svn_error_createf
-                (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-                 _("Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"),
-                 svn_path_local_style (tb, pool), ent->checksum, hex_digest);
-            }
+          return svn_error_createf
+            (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+             _("Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"),
+             svn_path_local_style (tb, pool), ent->checksum, hex_digest);
         }
     }
   

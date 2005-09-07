@@ -144,7 +144,7 @@ def revert_replaced_file_without_props(sbox):
 
   # revert file1
   svntest.actions.run_and_verify_svn(None, ["Reverted '" + file1_path + "'\n"],
-                                     None, 'revert', file1_path)
+                                     [], 'revert', file1_path)
 
   # test that file1 really was reverted
   expected_status.tweak('file1', status='  ', wc_rev=2)
@@ -172,7 +172,7 @@ def revert_moved_file(sbox):
     
     # now revert the file iota
     svntest.actions.run_and_verify_svn(None, 
-      ["Reverted '" + iota_path + "'\n"], None, 'revert', iota_path)
+      ["Reverted '" + iota_path + "'\n"], [], 'revert', iota_path)
     
     # at this point, svn status on iota_path_moved should return nothing
     # since it should disappear on reverting the move, and since svn status

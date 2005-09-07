@@ -70,7 +70,7 @@ def cat_traces_renames(sbox):
 
   # svn cat -r1 rho  --> should show pi's contents.
   svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'pi'.\n"], None,
+                                      [ "This is the file 'pi'.\n"], [],
                                       'cat',  '-r', '1', rho_path)
   
   expected_output = svntest.wc.State(wc_dir, {
@@ -110,17 +110,17 @@ def cat_traces_renames(sbox):
 
   # 'svn cat bloo' --> should show rho's contents.
   svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'rho'.\n"], None,
+                                      [ "This is the file 'rho'.\n"], [],
                                       'cat',  bloo_path)
   
   # svn cat -r1 bloo --> should still show rho's contents.
   svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'rho'.\n"], None,
+                                      [ "This is the file 'rho'.\n"], [],
                                       'cat',  '-r', '1', bloo_path)
 
   # svn cat -r1 rho  --> should show pi's contents.
   svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'pi'.\n"], None,
+                                      [ "This is the file 'pi'.\n"], [],
                                       'cat',  '-r', '1', rho_path)
   
   # svn up -r1

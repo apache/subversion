@@ -561,14 +561,22 @@ ra_dav_get_schemes (apr_pool_t *pool)
 #endif /* if/else SVN_NEON_0_25 */
 }
 
-static void
-ra_dav_neonprogress(void * baton, off_t progress, off_t total)
+typedef struct neonprogress_baton_t
 {
-  /* Important: don't change the svn_ra_callbacks2_t struct here! */
-  const svn_ra_callbacks2_t * callbacks = (svn_ra_callbacks2_t *)baton;
-  if (callbacks->progress_func)
+  svn_ra_progress_notify_func_t progress_func;
+  void *progress_baton;
+  apr_pool_t *pool;
+} neonprogress_baton_t;
+
+static void
+ra_dav_neonprogress(void *baton, off_t progress, off_t total)
+{
+  const neonprogress_baton_t *neonprogress_baton = baton;
+  if (neonprogress_baton->progress_func)
     {
-      callbacks->progress_func(progress, total, callbacks->progress_baton);
+      neonprogress_baton->progress_func(progress, total,
+                                        neonprogress_baton->progress_baton,
+                                        neonprogress_baton->pool);
     }
 }
 
@@ -593,6 +601,8 @@ svn_ra_dav__open (svn_ra_session_t *session,
   svn_boolean_t compression;
   svn_config_t *cfg;
   const char *server_group;
+  neonprogress_baton_t *neonprogress_baton =
+    apr_pcalloc(pool, sizeof(*neonprogress_baton));
 
   /* Sanity check the URI */
   if (ne_uri_parse(repos_URL, &uri) 
@@ -802,13 +812,11 @@ svn_ra_dav__open (svn_ra_session_t *session,
           ne_ssl_trust_default_ca(sess2);
         }
     }
-
-  /* Set the neon callback to make it call the svn_progress_notify_func_t
-   * Note that ne_set_progress() takes a non-const baton as the third param.
-   * Since we don't change the callback struct but only use the non-const
-   * notification callback items of that struct, it's safe to cast */
-  ne_set_progress(sess, ra_dav_neonprogress, (void*)callbacks);
-  ne_set_progress(sess2, ra_dav_neonprogress, (void*)callbacks);
+  neonprogress_baton->pool = pool;
+  neonprogress_baton->progress_baton = callbacks->progress_baton;
+  neonprogress_baton->progress_func = callbacks->progress_func;
+  ne_set_progress(sess, ra_dav_neonprogress, neonprogress_baton);
+  ne_set_progress(sess2, ra_dav_neonprogress, neonprogress_baton);
   session->priv = ras;
 
   return SVN_NO_ERROR;

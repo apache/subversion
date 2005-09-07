@@ -623,7 +623,7 @@ svn_repos_get_logs3 (svn_repos_t *repos,
                                     fs, discover_changed_paths,
                                     authz_read_func, authz_read_baton,
                                     receiver, receiver_baton, subpool));
-          if (limit && i >= limit)
+          if (limit && i + 1 >= limit)
             break;
         }
     }

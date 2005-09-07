@@ -263,14 +263,14 @@ def textual_merges_galore(sbox):
   # whole expected_foo routine for these intermediate operations;
   # they're not what we're here to test, after all, so it's enough to
   # know that they worked.  Is this a bad practice? ###
-  out, err = svntest.actions.run_and_verify_svn(None, None, None,
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                 'revert', other_rho_path)
   if (err):
     for line in err:
       print "Error reverting: ", line,
     raise svntest.Failure
 
-  out, err = svntest.actions.run_and_verify_svn(None, None, None,
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                 'up', '-r', '2',
                                                 other_rho_path)
   if (err):
@@ -2357,7 +2357,7 @@ def merge_prop_change_to_deleted_target(sbox):
   try:
     os.chdir(wc_dir)
     svntest.actions.run_and_verify_svn("Merge errored unexpectedly",
-                                       SVNAnyOutput, None,
+                                       SVNAnyOutput, [],
                                        'merge', '-r1:2', '.')
   finally:
     os.chdir(saved_cwd)
