@@ -41,19 +41,19 @@ def svnversion_test(sbox):
   # Unmodified
   svntest.actions.run_and_verify_svnversion("Unmodified working copy",
                                             wc_dir, repo_url,
-                                            [ "1\n" ], None)
+                                            [ "1\n" ], [])
 
   # Unmodified, whole wc switched
   svntest.actions.run_and_verify_svnversion("Unmodified switched working copy",
                                             wc_dir, "some/other/url",
-                                            [ "1S\n" ], None)
+                                            [ "1S\n" ], [])
 
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   svntest.main.file_append (mu_path, 'appended mu text')
 
   # Text modified
   svntest.actions.run_and_verify_svnversion("Modified text", wc_dir, repo_url,
-                                            [ "1M\n" ], None)
+                                            [ "1M\n" ], [])
 
   expected_output = wc.State(wc_dir, {'A/mu' : Item(verb='Sending')})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
@@ -68,7 +68,7 @@ def svnversion_test(sbox):
   # Unmodified, mixed
   svntest.actions.run_and_verify_svnversion("Unmodified mixed working copy",
                                             wc_dir, repo_url,
-                                            [ "1:2\n" ], None)
+                                            [ "1:2\n" ], [])
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'blue', 'azul',
@@ -77,7 +77,7 @@ def svnversion_test(sbox):
   # Prop modified, mixed
   svntest.actions.run_and_verify_svnversion("Property modified mixed wc",
                                             wc_dir, repo_url,
-                                            [ "1:2M\n" ], None)
+                                            [ "1:2M\n" ], [])
 
   iota_path = os.path.join(wc_dir, 'iota')
   gamma_url = svntest.main.current_repo_url + '/A/D/gamma'
@@ -99,21 +99,21 @@ def svnversion_test(sbox):
   # Prop modified, mixed, part wc switched
   svntest.actions.run_and_verify_svnversion("Prop-mod mixed partly switched",
                                             wc_dir, repo_url,
-                                            [ "1:2MS\n" ], None)
+                                            [ "1:2MS\n" ], [])
 
   # Plain (exported) directory that is a direct subdir of a versioned dir
   Q_path = os.path.join(wc_dir, 'Q')
   os.mkdir(Q_path)
   svntest.actions.run_and_verify_svnversion("Exported subdirectory",
                                             Q_path, repo_url,
-                                            [ "exported\n" ], None)
+                                            [ "exported\n" ], [])
 
   # Plain (exported) directory that is not a direct subdir of a versioned dir
   R_path = os.path.join(Q_path, 'Q')
   os.mkdir(R_path)
   svntest.actions.run_and_verify_svnversion("Exported directory",
                                             R_path, repo_url,
-                                            [ "exported\n" ], None)
+                                            [ "exported\n" ], [])
 
   # No directory generates an error
   svntest.actions.run_and_verify_svnversion("None existent directory",
@@ -162,7 +162,7 @@ def ignore_externals(sbox):
 
   svntest.actions.run_and_verify_svnversion("working copy with svn:externals",
                                             wc_dir, repo_url,
-                                            [ "2\n" ], None)
+                                            [ "2\n" ], [])
 
 ########################################################################
 # Run the tests

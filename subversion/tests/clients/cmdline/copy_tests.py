@@ -1506,10 +1506,10 @@ def non_existent_url_to_url(sbox):
   pi_url = svntest.main.current_repo_url + '/A/D/G/pi'
   new_url = svntest.main.current_repo_url + '/newfile'
 
-  svntest.actions.run_and_verify_svn(None, None, None, 'delete',
+  svntest.actions.run_and_verify_svn(None, None, [], 'delete',
                                      adg_url, '-m', '')
 
-  svntest.actions.run_and_verify_svn(None, None, None, 'copy',
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
                                      '-r', '1', pi_url, new_url,
                                      '-m', '')
 
@@ -1525,17 +1525,17 @@ def old_dir_url_to_url(sbox):
   new_url = svntest.main.current_repo_url + '/newfile'
 
   # Delete a directory
-  svntest.actions.run_and_verify_svn(None, None, None, 'delete',
+  svntest.actions.run_and_verify_svn(None, None, [], 'delete',
                                      adg_url, '-m', '')
 
   # Copy a file to where the directory used to be
-  svntest.actions.run_and_verify_svn(None, None, None, 'copy',
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
                                      iota_url, adg_url,
                                      '-m', '')
 
   # Try copying a file that was in the deleted directory that is now a
   # file
-  svntest.actions.run_and_verify_svn(None, None, None, 'copy',
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
                                      '-r', '1', pi_url, new_url,
                                      '-m', '')
 
@@ -1555,7 +1555,7 @@ def wc_copy_dir_to_itself(sbox):
     dir_path = os.path.join(sbox.wc_dir, dirname)
 
     # try to copy dir to itself
-    svntest.actions.run_and_verify_svn(None, svntest.SVNAnyOutput, None,
+    svntest.actions.run_and_verify_svn(None, svntest.SVNAnyOutput, [],
                                        'copy', dir_path, dir_path)
 
 

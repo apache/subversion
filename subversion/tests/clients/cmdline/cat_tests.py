@@ -117,7 +117,7 @@ def cat_skip_uncattable(sbox):
     else:
       svntest.actions.run_and_verify_svn(None,
                                          ["This is the file '"+file+"'.\n"],
-                                         None, 'cat', item_to_cat)
+                                         [], 'cat', item_to_cat)
 
   G_path = os.path.join(dir_path, 'G')
   rho_path = os.path.join(G_path, 'rho')
