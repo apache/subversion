@@ -1086,7 +1086,7 @@ def basic_delete(sbox):
   iota_URL = svntest.main.current_repo_url + '/iota'
 
   svntest.actions.run_and_verify_svn(None,
-                                     ["\n", "Committed revision 2.\n"], None,
+                                     ["\n", "Committed revision 2.\n"], [],
                                      'rm', '-m', 'delete iota URL',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -1265,7 +1265,7 @@ def basic_cat(sbox):
   # Get repository text even if wc is modified
   svntest.main.file_append(mu_path, "some text")
   svntest.actions.run_and_verify_svn(None, ["This is the file 'mu'.\n"],
-                                     None, 'cat',
+                                     [], 'cat',
                                      ###TODO is user/pass really necessary?
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -1288,7 +1288,7 @@ def basic_ls(sbox):
     os.chdir(wc_dir)
     svntest.actions.run_and_verify_svn("ls implicit current directory",
                                        ["A/\n", "iota\n"],
-                                       None, 'ls',
+                                       [], 'ls',
                                        '--username', svntest.main.wc_author,
                                        '--password', svntest.main.wc_passwd)
   finally:
@@ -1296,28 +1296,28 @@ def basic_ls(sbox):
 
   svntest.actions.run_and_verify_svn('ls the root of working copy',
                                      ['A/\n', 'iota\n'],
-                                     None, 'ls',
+                                     [], 'ls',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      wc_dir)
 
   svntest.actions.run_and_verify_svn('ls a working copy directory',
                                      ['B/\n', 'C/\n', 'D/\n', 'mu\n'],
-                                     None, 'ls',
+                                     [], 'ls',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      os.path.join(wc_dir, 'A'))
 
   svntest.actions.run_and_verify_svn('ls working copy directory with -r BASE',
                                      ['B/\n', 'C/\n', 'D/\n', 'mu\n'],
-                                     None, 'ls', '-r', 'BASE',
+                                     [], 'ls', '-r', 'BASE',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      os.path.join(wc_dir, 'A'))
 
   svntest.actions.run_and_verify_svn('ls a single file',
                                      ['mu\n'],
-                                     None, 'ls',
+                                     [], 'ls',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      os.path.join(wc_dir, 'A', 'mu'))
@@ -1427,7 +1427,7 @@ def basic_add_ignores(sbox):
   open(foo_o_path, 'w')
 
   output, err = svntest.actions.run_and_verify_svn(
-    "No output where some expected", SVNAnyOutput, None,
+    "No output where some expected", SVNAnyOutput, [],
     'add', dir_path)
 
   for line in output:
@@ -1479,7 +1479,7 @@ def basic_add_no_ignores(sbox):
   open(foo_rej_path, 'w')
 
   output, err = svntest.actions.run_and_verify_svn(
-    "No output where some expected", SVNAnyOutput, None,
+    "No output where some expected", SVNAnyOutput, [],
     'add', '--no-ignore', dir_path)
 
   for line in output:
@@ -1603,9 +1603,9 @@ def basic_peg_revision(sbox):
     None, None, ".*Syntax error parsing revision 'abc'", 'cat', url)
 
   # With the trailing "@", expect success.
-  output, errlines = svntest.actions.run_and_verify_svn(None, ["xyz\n"], None,
+  output, errlines = svntest.actions.run_and_verify_svn(None, ["xyz\n"], [],
                                                         'cat', wc_file+'@')
-  output, errlines = svntest.actions.run_and_verify_svn(None, ["xyz\n"], None,
+  output, errlines = svntest.actions.run_and_verify_svn(None, ["xyz\n"], [],
                                                         'cat', url+'@')
 
 

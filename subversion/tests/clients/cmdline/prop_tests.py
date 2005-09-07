@@ -617,25 +617,25 @@ def inappropriate_props(sbox):
   
   path = os.path.join(wc_dir, 'binary')
   svntest.main.file_append(path, "binary")
-  svntest.actions.run_and_verify_svn(None, None, None,
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--force',
                                      'svn:eol-style', 'CRLF',
                                      path)
    
   path = os.path.join(wc_dir, 'multi-eol')
-  svntest.actions.run_and_verify_svn(None, None, None,
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--force',
                                      'svn:eol-style', 'LF',
                                      path)
     
   path = os.path.join(wc_dir, 'backwards-eol')
-  svntest.actions.run_and_verify_svn(None, None, None,
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--force',
                                      'svn:eol-style', 'native',
                                      path)
     
   path = os.path.join(wc_dir, 'incomplete-eol')
-  svntest.actions.run_and_verify_svn(None, None, None,
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--force',
                                      'svn:eol-style', 'CR',
                                      path)

@@ -814,7 +814,7 @@ def diff_head_of_moved_file(sbox):
   # Modify the file to ensure that the diff is non-empty.
   svntest.main.file_append(new_mu_path, "\nActually, it's a new mu.")
 
-  svntest.actions.run_and_verify_svn(None, SVNAnyOutput, None,
+  svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
                                      'diff', '-r', 'HEAD', new_mu_path)
 
 

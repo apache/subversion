@@ -616,7 +616,7 @@ def cat_keyword_expansion(sbox):
   # At one stage the keywords were expanded to values for the requested
   # revision, not to those committed revision
   svntest.actions.run_and_verify_svn (None, [ "This is the file 'mu'.\n",
-                                              "$Rev: 2 $" ], None,
+                                              "$Rev: 2 $" ], [],
                                       'cat', '-r', 'HEAD', mu_path)
   
 
@@ -693,7 +693,7 @@ def propset_commit_checkout_nocrash(sbox):
   other_wc_dir = sbox.add_wc_path('other')
   mu_other_path = os.path.join(other_wc_dir, 'A', 'mu')
   
-  svntest.actions.run_and_verify_svn (None, None, None, 'checkout',
+  svntest.actions.run_and_verify_svn (None, None, [], 'checkout',
                                       '--username', svntest.main.wc_author,
                                       '--password', svntest.main.wc_passwd,
                                       svntest.main.current_repo_url,

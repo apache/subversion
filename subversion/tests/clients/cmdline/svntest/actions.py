@@ -151,7 +151,7 @@ def run_and_verify_svnversion(message, wc_dir, repo_url,
     if len(err) == 0:
       if message is not None: print message
       raise SVNExpectedStderr
-  elif expected_stderr is not None:
+  else:
     raise SVNIncorrectDatatype("Unexpected specification for stderr data")
   return out, err
   
@@ -166,10 +166,15 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
      - If it is a single string, invoke match_or_fail() on MESSAGE,
        the expected output, and the actual output.
 
-     - If it is None, do nothing with it.
+  If EXPECTED_STDOUT is None, do not check stdout.
+  EXPECTED_STDERR may not be None.
 
   If a comparison function fails, it will raise an error."""
   ### TODO catch and throw particular exceptions from above
+
+  if expected_stderr is None:
+    raise SVNIncorrectDatatype("expected_stderr must not be None")
+
   want_err = None
   if expected_stderr is not None and expected_stderr is not []:
     want_err = 1
