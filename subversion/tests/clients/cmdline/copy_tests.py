@@ -1630,7 +1630,7 @@ def wc_copy_replacement(sbox):
 
   # The copy shouldn't fail
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
-  svntest.actions.run_and_verify_svn("", None, None,
+  svntest.actions.run_and_verify_svn("", None, [],
                                      'cp', pi_path, rho_path)
 
   # Now commit
@@ -1660,9 +1660,9 @@ def wc_copy_replace_with_props(sbox):
   # Set props on file which is copy-source later on
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.actions.run_and_verify_svn("", None, None,
+  svntest.actions.run_and_verify_svn("", None, [],
                                      'ps', 'phony-prop', '*', pi_path)
-  svntest.actions.run_and_verify_svn("", None, None,
+  svntest.actions.run_and_verify_svn("", None, [],
                                      'ps', 'svn:eol-style', 'LF', rho_path)
 
   # Verify props having been set
@@ -1692,7 +1692,7 @@ def wc_copy_replace_with_props(sbox):
                                         wc_dir)
 
   # Bring wc into sync
-  svntest.actions.run_and_verify_svn("",None,None, 'up', wc_dir)
+  svntest.actions.run_and_verify_svn("", None, [], 'up', wc_dir)
 
   # File scheduled for deletion
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', rho_path)
@@ -1703,7 +1703,7 @@ def wc_copy_replace_with_props(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # The copy shouldn't fail
-  svntest.actions.run_and_verify_svn("", None, None,
+  svntest.actions.run_and_verify_svn("", None, [],
                                      'cp', pi_path, rho_path)
 
   # Verify both content and props have been copied
@@ -1747,7 +1747,7 @@ def repos_to_wc_copy_replacement(sbox):
 
   # The copy shouldn't fail
   pi_url = svntest.main.current_repo_url + "/A/D/G/pi"
-  svntest.actions.run_and_verify_svn("", None, None,
+  svntest.actions.run_and_verify_svn("", None, [],
                                      'cp', pi_url, rho_path)
 
   # Now commit

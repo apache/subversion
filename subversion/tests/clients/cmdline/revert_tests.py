@@ -193,9 +193,9 @@ def revert_replace_with_history_with_props(sbox):
   # Set props on file which is copy-source later on
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.actions.run_and_verify_svn("", None, None,
+  svntest.actions.run_and_verify_svn("", None, [],
                                      'ps', 'phony-prop', '*', pi_path)
-  svntest.actions.run_and_verify_svn("", None, None,
+  svntest.actions.run_and_verify_svn("", None, [],
                                      'ps', 'svn:eol-style', 'LF', rho_path)
 
   # Verify props having been set
@@ -225,7 +225,7 @@ def revert_replace_with_history_with_props(sbox):
                                         wc_dir)
 
   # Bring wc into sync
-  svntest.actions.run_and_verify_svn("",None,None, 'up', wc_dir)
+  svntest.actions.run_and_verify_svn("", None, [], 'up', wc_dir)
 
   # File scheduled for deletion
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', rho_path)
@@ -236,7 +236,7 @@ def revert_replace_with_history_with_props(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # The copy shouldn't fail
-  svntest.actions.run_and_verify_svn("", None, None,
+  svntest.actions.run_and_verify_svn("", None, [],
                                      'cp', pi_path, rho_path)
 
   # Verify both content and props have been copied
@@ -256,7 +256,7 @@ def revert_replace_with_history_with_props(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G/rho': Item(verb='Replacing'),
     })
-  svntest.actions.run_and_verify_svn("", None, None,
+  svntest.actions.run_and_verify_svn("", None, [],
                                      'revert', '-R', wc_dir)
 
   # Check disk status
@@ -284,7 +284,7 @@ def revert_file_merge_replace_with_history(sbox):
 
   # File scheduled for deletion
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.actions.run_and_verify_svn(None, [], [], 'rm', rho_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', rho_path)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/G/rho', status='D ')
@@ -308,7 +308,7 @@ def revert_file_merge_replace_with_history(sbox):
   fp.close()
 
   # Add the new file
-  svntest.actions.run_and_verify_svn(None, [], [], 'add', rho_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', rho_path)
 
   # Commit revsion 3
   expected_status.add({
@@ -354,7 +354,7 @@ def revert_file_merge_replace_with_history(sbox):
   # Now revert
   svntest.actions.run_and_verify_svn(None,
                                      None,
-                                     None, 'revert', rho_path)
+                                     [], 'revert', rho_path)
 
   # test that rho really was reverted
   expected_status.tweak('A/D/G/rho', copied=None, status='  ', wc_rev=3)
