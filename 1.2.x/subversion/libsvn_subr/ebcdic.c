@@ -21,7 +21,7 @@
 #include <apr_lib.h>
 #if AS400
 #include <qshell.h> /* For QzshSystem */
-//#include <apr_file_io.h>
+#include <Qp0lstdi.h> /* For QlgSetAttr */
 #endif
 
 #include "svn_ebcdic.h"
@@ -468,17 +468,74 @@ svn_ebcdic_set_file_ccsid (const char *path,
                            int ccsid,
                            apr_pool_t *pool)
 {
-  const char *cmd, *path_native;
-  int exit_code;
-  SVN_ERR (svn_utf_cstring_from_utf8(&path_native, path, pool));
-  cmd = apr_psprintf(pool, "setccsid %d %s", ccsid, path_native);
-  exit_code = QzshSystem(cmd);
-  if(exit_code)
+  /* Modified from code by jack j. woehr jax@softwoehr.com
+   * http://www.well.com/~jax/rcfb/as400examp/CHGCCSID.MBR */ 
+  
+  /* Structs required by Qp0lSetAttr */
+  typedef struct t_path_name
+  {
+    Qlg_Path_Name_T qlg_path_name;
+    char *ifs_path;
+  } path_name_t;
+  
+  typedef struct t_chg_cod_pag
+  {
+    Qp0l_Attr_Header_t attr_hdr;
+    int code_page;
+  } chg_cod_pag_t;
+  
+  int result;
+  char *path_native;
+  path_name_t *path_name;
+  chg_cod_pag_t *chg_cod_pag;
+  
+  SVN_ERR (svn_utf_cstring_from_utf8(&path_native, path, pool));  
+    
+  /* Allocate memory for Qp0lSetAttr structs */
+  path_name = apr_palloc(pool, sizeof(Qlg_Path_Name_T) + strlen(path_native));  
+  chg_cod_pag = apr_palloc(pool, sizeof(chg_cod_pag_t));
+  
+  /* Build chg_cod_pag_t   
+   * Note: Using strncpy here and below because we
+   * don't want null termination. */
+  chg_cod_pag->attr_hdr.Next_Attr_Offset = 0;
+  chg_cod_pag->attr_hdr.Attr_ID          = QP0L_ATTR_CODEPAGE;
+  chg_cod_pag->attr_hdr.Attr_Size        = sizeof (int);
+  strncpy (chg_cod_pag->attr_hdr.Reserved, "\0\0\0", 4);
+  chg_cod_pag->code_page = ccsid;
+
+  /* Build path_name_t */
+  
+  /* Use current job default CCSID */
+  path_name->qlg_path_name.CCSID = 0;
+  
+  /* Use current job country ID */  
+  strncpy(path_name->qlg_path_name.Country_ID , "\x00\x00", 2);
+  
+  /* Use current job language ID */  
+  strncpy(path_name->qlg_path_name.Language_ID, "\x00\x00\x00", 3);  
+  
+  strncpy(path_name->qlg_path_name.Reserved, "\x00\x00", 3);
+  path_name->qlg_path_name.Path_Type = 0;
+  path_name->qlg_path_name.Path_Length = strlen(path_native);
+  strncpy(path_name->qlg_path_name.Path_Name_Delimiter, "/", 2);
+  strncpy(path_name->qlg_path_name.Reserved2, "\0\0\0\0\0\0\0\0\0", 10);
+  
+  /* Path must follow immediately after Qlg_Path_Name_T in memory */
+  strncpy((char *)(&(path_name->ifs_path)), path_native, strlen(path_native));
+
+  /* Attempt to set the ccsid */
+  result = Qp0lSetAttr((Qlg_Path_Name_T *) path_name,
+                       (char *) chg_cod_pag,
+                       sizeof(*chg_cod_pag),
+                       QP0L_FOLLOW_SYMLNK);
+                       
+  if (result)
     return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
                              "Attempt to set ccsid of '%s' to '%d' failed " \
-                             "with exit code = '%d'",
-                             path, ccsid, exit_code);  
-  return SVN_NO_ERROR;
+                             "with errno = '%d'",
+                             path, ccsid, errno);
+  return SVN_NO_ERROR; 
 }
                            
 
