@@ -718,7 +718,7 @@ parsed_request(ne_session *sess,
      optionally -- the ISO-3166 country code for this .po file
      (e.g. en-US, sv-SE, etc.). */
   svn_intl_get_locale_prefs(&locale, pool);
-  if (locale != NULL && apr_is_empty_table(locale))
+  if (locale != NULL && !apr_is_empty_table(locale))
     ne_add_request_header(req, "Accept-Language",
                           APR_ARRAY_IDX(locale, 0, char *));
 
