@@ -2109,3 +2109,24 @@ svn_wc_parse_externals_description (apr_hash_t **externals_p,
     }
   return SVN_NO_ERROR;
 }
+
+
+svn_boolean_t
+svn_wc__is_magic_props_changed (apr_array_header_t *propchanges)
+{
+  int i;
+
+  for (i = 0; i < propchanges->nelts; i++)
+    {
+      svn_prop_t *propchange
+        = APR_ARRAY_IDX (propchanges, i, svn_prop_t *);
+
+      if ((! strcmp (propchange->name, SVN_PROP_EXECUTABLE))
+          || (! strcmp (propchange->name, SVN_PROP_KEYWORDS))
+          || (! strcmp (propchange->name, SVN_PROP_EOL_STYLE))
+          || (! strcmp (propchange->name, SVN_PROP_SPECIAL))
+          || (! strcmp (propchange->name, SVN_PROP_NEEDS_LOCK)))
+        return TRUE;
+    }
+  return FALSE;
+}

@@ -140,6 +140,11 @@ svn_error_t *svn_wc__remove_wcprops (svn_wc_adm_access_t *adm_access,
                                      svn_boolean_t recurse,
                                      apr_pool_t *pool);
 
+/* Returns TRUE if any of the PROPCHANGES are the "magic" ones that
+   might require changing the working file. At present time magic props are
+   SVN_PROP_EXECUTABLE, SVN_PROP_KEYWORDS, SVN_PROP_EOL_STYLE,
+   SVN_PROP_SPECIAL, SVN_PROP_NEEDS_LOCK. */
+svn_boolean_t svn_wc__is_magic_props_changed (apr_array_header_t *propchanges);
 
 #ifdef __cplusplus
 }
