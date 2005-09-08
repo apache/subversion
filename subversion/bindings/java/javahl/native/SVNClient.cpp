@@ -3082,12 +3082,11 @@ void SVNClient::lock(Targets &targets, const char *comment,
     }
     apr_pool_t * apr_pool = requestPool.pool ();
     svn_client_ctx_t *ctx = getContext(NULL);
-    svn_error_t *err = svn_client_lock(targetsApr,
-        comment, force, ctx, apr_pool);
+    Err = svn_client_lock(targetsApr, comment, force, ctx, apr_pool);
 
     if (Err != NULL)
     {
-        JNIUtil::handleSVNError(err);
+        JNIUtil::handleSVNError(Err);
     }
 }
 
