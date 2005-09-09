@@ -4139,6 +4139,155 @@ static history_vtable_t history_vtable = {
 };
 
 
+
+struct closest_copy_args
+{
+  svn_fs_root_t **root_p;
+  const char **path_p;
+  svn_fs_root_t *root;
+  const char *path;
+  apr_pool_t *pool;
+};
+
+
+static svn_error_t *
+txn_body_closest_copy (void *baton, trail_t *trail)
+{
+  struct closest_copy_args *args = baton;
+  svn_fs_root_t *root = args->root;
+  const char *path = args->path;
+  svn_fs_t *fs = root->fs;
+  parent_path_t *parent_path;
+  const svn_fs_id_t *node_id;
+  const char *txn_id, *copy_id;
+  copy_t *copy = NULL;
+  svn_fs_root_t *copy_dst_root;
+  dag_node_t *path_node_in_copy_dst, *copy_dst_node, *copy_dst_root_node;
+  const char *copy_dst_path;
+  svn_revnum_t copy_dst_rev, created_rev;
+  svn_error_t *err;
+
+  *(args->path_p) = NULL;
+  *(args->root_p) = NULL;
+
+  /* Get the transaction ID associated with our root. */
+  if (root->is_txn_root)
+    txn_id = root->txn;
+  else
+    SVN_ERR (svn_fs_base__rev_get_txn_id (&txn_id, fs, root->rev, 
+                                          trail, trail->pool));
+
+  /* Open PATH in ROOT -- it must exist. */
+  SVN_ERR (open_path (&parent_path, root, path, 0, txn_id, 
+                      trail, trail->pool));
+  node_id = svn_fs_base__dag_get_id (parent_path->node);
+
+  /* Now, examine the copy inheritance rules in play should our path
+     be made mutable in the future (if it isn't already).  This will
+     tell us about the youngest affecting copy.  */
+  SVN_ERR (examine_copy_inheritance (&copy_id, &copy, fs, parent_path,
+                                     trail, trail->pool));
+
+  /* Easy out:  if the copy ID is 0, there's nothing of interest here. */
+  if (((copy_id)[0] == '0') && ((copy_id)[1] == '\0'))
+    return SVN_NO_ERROR;
+
+  /* Fetch our copy if examine_copy_inheritance() didn't do it for us. */
+  if (! copy)
+    SVN_ERR (svn_fs_bdb__get_copy (&copy, fs, copy_id, trail, trail->pool));
+
+  /* Figure out the destination path and revision of the copy operation. */
+  SVN_ERR (svn_fs_base__dag_get_node (&copy_dst_node, fs, copy->dst_noderev_id,
+                                      trail, trail->pool));
+  copy_dst_path = svn_fs_base__dag_get_created_path (copy_dst_node);
+  SVN_ERR (svn_fs_base__dag_get_revision (&copy_dst_rev, copy_dst_node, 
+                                          trail, trail->pool));
+
+  /* Turn that revision into a revision root. */
+  SVN_ERR (svn_fs_base__dag_revision_root (&copy_dst_root_node, fs, 
+                                           copy_dst_rev, trail, args->pool));
+  copy_dst_root = make_revision_root (fs, copy_dst_rev, 
+                                      copy_dst_root_node, args->pool);
+
+  /* It is possible that this node was created from scratch at some
+     revision between COPY_DST_REV and the transaction associated with
+     our ROOT.  Make sure that PATH exists as of COPY_DST_REV and is
+     related to this node-rev. */
+  err = get_dag (&path_node_in_copy_dst, copy_dst_root, path, 
+                 trail, trail->pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+        {
+          svn_error_clear (err);
+          return SVN_NO_ERROR;
+        }
+      return err;
+    }
+  if ((svn_fs_base__dag_node_kind (path_node_in_copy_dst) == svn_node_none)
+      || (! (svn_fs_base__id_check_related 
+             (node_id, svn_fs_base__dag_get_id (path_node_in_copy_dst)))))
+    {
+      return SVN_NO_ERROR;
+    }
+
+  /* One final check must be done here.  If you copy a directory and
+     create a new entity somewhere beneath that directory in the same
+     txn, then we can't claim that the copy affected the new entity.
+     For example, if you do:
+
+        copy dir1 dir2
+        create dir2/new-thing
+        commit
+  
+     then dir2/new-thing was not affected by the copy of dir1 to dir2.
+     We detect this situation by asking if PATH@COPY_DST_REV's
+     created-rev is COPY_DST_REV, and that node-revision has no
+     predecessors, then there is no relevant closest copy.
+  */
+  SVN_ERR (svn_fs_base__dag_get_revision (&created_rev, parent_path->node, 
+                                          trail, trail->pool));
+  if (created_rev == copy_dst_rev)
+    {
+      const svn_fs_id_t *pred_id;
+      SVN_ERR (svn_fs_base__dag_get_predecessor_id (&pred_id, 
+                                                    parent_path->node, 
+                                                    trail, trail->pool));
+      if (! pred_id)
+        return SVN_NO_ERROR;
+    }
+
+  *(args->path_p) = apr_pstrdup (args->pool, copy_dst_path);
+  *(args->root_p) = copy_dst_root;
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+base_closest_copy (svn_fs_root_t **root_p,
+                   const char **path_p,
+                   svn_fs_root_t *root,
+                   const char *path,
+                   apr_pool_t *pool)
+{
+  struct closest_copy_args args;
+  svn_fs_t *fs = root->fs;
+  svn_fs_root_t *closest_root = NULL;
+  const char *closest_path = NULL;
+
+  args.root_p = &closest_root;
+  args.path_p = &closest_path;
+  args.root = root;
+  args.path = path;
+  args.pool = pool;
+  SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_closest_copy, &args, pool));
+  *root_p = closest_root;
+  *path_p = closest_path;
+  return SVN_NO_ERROR;
+}
+
+
 /* Return a new history object (marked as "interesting") for PATH and
    REVISION, allocated in POOL, and with its members set to the values
    of the parameters provided.  Note that PATH and PATH_HINT are not
@@ -4180,6 +4329,7 @@ static root_vtable_t root_vtable = {
   base_node_created_path,
   base_delete_node,
   base_copied_from,
+  base_closest_copy,
   base_node_prop,
   base_node_proplist,
   base_change_node_prop,
