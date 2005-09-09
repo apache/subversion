@@ -2118,8 +2118,7 @@ svn_wc__is_magic_props_changed (apr_array_header_t *propchanges)
 
   for (i = 0; i < propchanges->nelts; i++)
     {
-      svn_prop_t *propchange
-        = APR_ARRAY_IDX (propchanges, i, svn_prop_t *);
+      svn_prop_t *propchange = &APR_ARRAY_IDX (propchanges, i, svn_prop_t);
 
       if ((! strcmp (propchange->name, SVN_PROP_EXECUTABLE))
           || (! strcmp (propchange->name, SVN_PROP_KEYWORDS))
