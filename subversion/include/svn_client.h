@@ -264,29 +264,6 @@ typedef struct svn_client_proplist_item_t
 } svn_client_proplist_item_t;
 
 
-/** Information about commits passed back to clients from this module.
- *
- * @note Objects of this type should always be created using the
- * svn_client_create_commit_info() function.
- *
- * @since New in 1.3.
- */
-typedef struct svn_client_commit_info2_t
-{
-  /** just-committed revision. */
-  svn_revnum_t revision;
-
-  /** server-side date of the commit. */
-  const char *date;
-
-  /** author of the commit. */
-  const char *author;
-
-  /** error message from post-commit hook, or NULL. */
-  const char *post_commit_err;
-
-} svn_client_commit_info2_t;
-
 /** Information about commits passed back to client from this module.
  *
  * ### This struct is soon going to be deprecated.
@@ -578,23 +555,6 @@ svn_client_create_context (svn_client_ctx_t **ctx,
                            apr_pool_t *pool);
 
 /**
- * Allocate an object of type @c svn_client_commit_info2_t in @a pool and
- * return it.
- * 
- * The @c revision field of the new struct is set to @c
- * SVN_INVALID_REVNUM.  All other fields are initialized to @c NULL.
- *
- * @note Any object of the type @c svn_client_commit_info2_t should
- * be created using this function.
- * This is to provide for extending the svn_client_commit_info2_t in
- * the future.
- *
- * @since New in 1.3.
- */
-svn_client_commit_info2_t *
-svn_client_create_commit_info (apr_pool_t *pool);
-
-/**
  * Checkout a working copy of @a URL at @a revision, looked up at @a
  * peg_revision, using @a path as the root directory of the newly
  * checked out working copy, and authenticating with the
@@ -835,7 +795,7 @@ svn_client_add (const char *path,
  * @since New in 1.3.
  */
 svn_error_t *
-svn_client_mkdir2 (svn_client_commit_info2_t **commit_info,
+svn_client_mkdir2 (svn_commit_info_t **commit_info,
                    const apr_array_header_t *paths,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
@@ -885,7 +845,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
  * @since New in 1.3.
  */
 svn_error_t *
-svn_client_delete2 (svn_client_commit_info2_t **commit_info,
+svn_client_delete2 (svn_commit_info_t **commit_info,
                     const apr_array_header_t *paths,
                     svn_boolean_t force,
                     svn_client_ctx_t *ctx,
@@ -947,7 +907,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
  *
  * @since New in 1.3.
  */
-svn_error_t *svn_client_import2 (svn_client_commit_info2_t **commit_info,
+svn_error_t *svn_client_import2 (svn_commit_info_t **commit_info,
                                  const char *path,
                                  const char *url,
                                  svn_boolean_t nonrecursive,
@@ -1001,7 +961,7 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
  * @since New in 1.3.
  */
 svn_error_t *
-svn_client_commit3 (svn_client_commit_info2_t **commit_info,
+svn_client_commit3 (svn_commit_info_t **commit_info,
                     const apr_array_header_t *targets,
                     svn_boolean_t recurse,
                     svn_boolean_t keep_locks,
@@ -1570,7 +1530,7 @@ svn_client_resolved (const char *path,
  * @since New in 1.3.
  */
 svn_error_t *
-svn_client_copy2 (svn_client_commit_info2_t **commit_info,
+svn_client_copy2 (svn_commit_info_t **commit_info,
                   const char *src_path,
                   const svn_opt_revision_t *src_revision,
                   const char *dst_path,
@@ -1638,7 +1598,7 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
  * @since New in 1.3.
  */ 
 svn_error_t *
-svn_client_move3 (svn_client_commit_info2_t **commit_info,
+svn_client_move3 (svn_commit_info_t **commit_info,
                   const char *src_path,
                   const char *dst_path,
                   svn_boolean_t force,

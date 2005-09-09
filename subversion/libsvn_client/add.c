@@ -495,7 +495,7 @@ path_driver_cb_func (void **dir_baton,
 
 
 static svn_error_t *
-mkdir_urls (svn_client_commit_info2_t **commit_info,
+mkdir_urls (svn_commit_info_t **commit_info,
             const apr_array_header_t *paths,
             svn_client_ctx_t *ctx,
             apr_pool_t *pool)
@@ -614,7 +614,7 @@ mkdir_urls (svn_client_commit_info2_t **commit_info,
 
 
 svn_error_t *
-svn_client_mkdir2 (svn_client_commit_info2_t **commit_info,
+svn_client_mkdir2 (svn_commit_info_t **commit_info,
                    const apr_array_header_t *paths,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
@@ -670,7 +670,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  svn_client_commit_info2_t *commit_info2 = NULL;
+  svn_commit_info_t *commit_info2 = NULL;
   svn_error_t *err;
 
   err = svn_client_mkdir2 (&commit_info2, paths, ctx, pool);
