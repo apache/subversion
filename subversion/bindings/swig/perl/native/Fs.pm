@@ -34,7 +34,7 @@ package _p_svn_fs_root_t;
 
 our @methods = qw/apply_textdelta apply_text change_node_prop
 		 check_path close_root copied_from copy
-		 dir_entries delete file_contents
+		 dir_entries delete file_contents closest_copy
 		 file_length file_md5_checksum is_dir is_file
 		 is_revision_root is_txn_root make_dir make_file
 		 node_created_rev node_history node_id node_prop

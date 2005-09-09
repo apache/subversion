@@ -218,6 +218,9 @@ typedef struct root_vtable_t
   svn_error_t *(*copied_from) (svn_revnum_t *rev_p, const char **path_p,
                                svn_fs_root_t *root, const char *path,
                                apr_pool_t *pool);
+  svn_error_t *(*closest_copy) (svn_fs_root_t **root_p, const char **path_p,
+                               svn_fs_root_t *root, const char *path,
+                               apr_pool_t *pool);
 
   /* Property operations */
   svn_error_t *(*node_prop) (svn_string_t **value_p, svn_fs_root_t *root,

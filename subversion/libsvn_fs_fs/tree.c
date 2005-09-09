@@ -2772,7 +2772,79 @@ find_youngest_copyroot (svn_revnum_t *rev_p,
 
   return SVN_NO_ERROR;
 }
+
+
+static svn_error_t *fs_closest_copy (svn_fs_root_t **root_p,
+                                     const char **path_p,
+                                     svn_fs_root_t *root,
+                                     const char *path,
+                                     apr_pool_t *pool)
+{
+  svn_fs_t *fs = root->fs;
+  parent_path_t *parent_path;
+  svn_revnum_t copy_dst_rev, created_rev;
+  const char *copy_dst_path;
+  svn_fs_root_t *copy_dst_root;
+  const svn_fs_id_t *id, *copy_id;
+  svn_node_kind_t kind;
+
+  /* Initialize return values. */
+  *root_p = NULL;
+  *path_p = NULL;
+
+  SVN_ERR (open_path (&parent_path, root, path, 0, NULL, pool));
+
+  /* Find the youngest copyroot in the path of this node-rev, which
+     will indicate the target of the innermost copy affecting the
+     node-rev. */
+  SVN_ERR (find_youngest_copyroot (&copy_dst_rev, &copy_dst_path, 
+                                   fs, parent_path, pool));
+  if (copy_dst_rev == 0)  /* There are no copies affecting this node-rev. */
+    return SVN_NO_ERROR;
+
+  /* It is possible that this node was created from scratch at some
+     revision between COPY_DST_REV and REV.  Make sure that PATH
+     exists as of COPY_DST_REV and is related to this node-rev. */
+  SVN_ERR (svn_fs_fs__revision_root (&copy_dst_root, fs, copy_dst_rev, pool));
+  SVN_ERR (svn_fs_fs__check_path (&kind, copy_dst_root, path, pool));
+  if (kind == svn_node_none)
+    return SVN_NO_ERROR;
+  SVN_ERR (fs_node_id (&copy_id, copy_dst_root, path, pool));
+  id = svn_fs_fs__dag_get_id (parent_path->node);
+  if (! svn_fs_fs__id_check_related (id, copy_id))
+    return SVN_NO_ERROR;
+
+  /* One final check must be done here.  If you copy a directory and
+     create a new entity somewhere beneath that directory in the same
+     txn, then we can't claim that the copy affected the new entity.
+     For example, if you do:
+
+        copy dir1 dir2
+        create dir2/new-thing
+        commit
   
+     then dir2/new-thing was not affected by the copy of dir1 to dir2.
+     We detect this situation by asking if PATH@COPY_DST_REV's
+     created-rev is COPY_DST_REV, and that node-revision has no
+     predecessors, then there is no relevant closest copy.
+  */
+  SVN_ERR (svn_fs_fs__dag_get_revision (&created_rev, 
+                                        parent_path->node, pool));
+  if (created_rev == copy_dst_rev)
+    {
+      const svn_fs_id_t *pred_id;
+      SVN_ERR (svn_fs_fs__dag_get_predecessor_id (&pred_id, 
+                                                  parent_path->node, pool));
+      if (! pred_id)
+        return SVN_NO_ERROR;
+    }
+
+  /* The copy destination checks out.  Return it. */
+  *root_p = copy_dst_root;
+  *path_p = copy_dst_path;
+  return SVN_NO_ERROR;
+}
+
 
 struct history_prev_args
 {
@@ -3056,6 +3128,7 @@ static root_vtable_t root_vtable = {
   fs_node_created_path,
   fs_delete_node,
   fs_copied_from,
+  fs_closest_copy,
   fs_node_prop,
   fs_node_proplist,
   fs_change_node_prop,
