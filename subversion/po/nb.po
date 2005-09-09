@@ -58,7 +58,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-09-09 21:01+0200\n"
-"PO-Revision-Date: 2005-08-19 21:54+0200\n"
+"PO-Revision-Date: 2005-09-09 21:25+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -168,9 +168,9 @@ msgid "Invalid URL '%s'"
 msgstr "Ugyldig URL «%s»"
 
 #: clients/cmdline/info-cmd.c:111
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' has invalid revision"
-msgstr "Posten «%s» har ugyldig nodetype"
+msgstr "«%s» har ugyldig revisjon"
 
 #: clients/cmdline/info-cmd.c:263 svnadmin/main.c:1035
 #, c-format
@@ -4874,9 +4874,9 @@ msgid "Can't create socket"
 msgstr "Kan ikke opprette sokkel"
 
 #: libsvn_ra_svn/client.c:157
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set timeout"
-msgstr "Kan ikke åpne for standardutdata"
+msgstr "Kan ikke sette lengde på tidsavbrudd"
 
 #: libsvn_ra_svn/client.c:161
 #, c-format
@@ -5446,9 +5446,8 @@ msgid "Creating passwd file"
 msgstr "Oppretter passordfil"
 
 #: libsvn_repos/repos.c:1497
-#, fuzzy
 msgid "Creating authz file"
-msgstr "Oppretter passordfil"
+msgstr "Oppretter authz-fil"
 
 #: libsvn_repos/repos.c:1522
 msgid "Could not create top-level directory"
@@ -7005,7 +7004,10 @@ msgid ""
 "\n"
 "Open the repository at REPOS_PATH, then abort, thus simulating\n"
 "a process that crashes while holding an open repository handle.\n"
-msgstr ""
+msgstr "bruk: svnadmin crashtest DEPOTSTI"
+"\n"
+"Lukk opp depotet i DEPOTSTI og avbryt, med det formål å simulere\n"
+"en prosess som krasjer mens den holder et depot åpent.\n"
 
 #: svnadmin/main.c:301
 msgid ""
