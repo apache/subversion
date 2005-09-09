@@ -2007,7 +2007,7 @@ install_file (svn_wc_notify_state_t *content_state,
       
       /* Determine if any of the propchanges are the "magic" ones that
          might require changing the working file. */
-      magic_props_changed = svn_wc__is_magic_props_changed(propchanges);
+      magic_props_changed = svn_wc__has_magic_property (propchanges);
 
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged

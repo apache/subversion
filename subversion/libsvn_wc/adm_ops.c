@@ -1297,7 +1297,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
       
       /* Determine if any of the propchanges are the "magic" ones that
          might require changing the working file. */
-      magic_props_changed = svn_wc__is_magic_props_changed(propchanges);
+      magic_props_changed = svn_wc__has_magic_property (propchanges);
   
       SVN_ERR (svn_wc__prop_path (&thing, fullpath, adm_access, FALSE, pool)); 
       SVN_ERR (svn_wc__prop_base_path (&base_thing, fullpath, adm_access, FALSE,
