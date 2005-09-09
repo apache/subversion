@@ -58,7 +58,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-09-09 21:01+0200\n"
-"PO-Revision-Date: 2005-09-09 21:25+0200\n"
+"PO-Revision-Date: 2005-09-09 23:05+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -4876,7 +4876,7 @@ msgstr "Kan ikke opprette sokkel"
 #: libsvn_ra_svn/client.c:157
 #, c-format
 msgid "Can't set timeout"
-msgstr "Kan ikke sette lengde på tidsavbrudd"
+msgstr "Kan ikke sette tidsavbrudd"
 
 #: libsvn_ra_svn/client.c:161
 #, c-format
