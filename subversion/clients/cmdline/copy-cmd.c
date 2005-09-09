@@ -43,7 +43,7 @@ svn_cl__copy (apr_getopt_t *os,
   apr_array_header_t *targets;
   const char *src_path, *dst_path;
   svn_boolean_t src_is_url, dst_is_url;
-  svn_client_commit_info2_t *commit_info = NULL;
+  svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
 
   SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 

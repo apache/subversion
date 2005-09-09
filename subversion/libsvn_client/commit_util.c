@@ -1321,12 +1321,12 @@ svn_client__do_commit (const char *base_url,
 /* Commit callback baton */
 
 struct commit_baton {
-  svn_client_commit_info2_t **info;
+  svn_commit_info_t **info;
   apr_pool_t *pool;
 };
 
 svn_error_t *svn_client__commit_get_baton (void **baton,
-                                           svn_client_commit_info2_t **info,
+                                           svn_commit_info_t **info,
                                            apr_pool_t *pool)
 {
   struct commit_baton *cb = apr_pcalloc (pool, sizeof (*cb));
@@ -1343,9 +1343,9 @@ svn_error_t *svn_client__commit_callback (svn_revnum_t revision,
                                           void *baton)
 {
   struct commit_baton *cb = baton;
-  svn_client_commit_info2_t **info = cb->info;
+  svn_commit_info_t **info = cb->info;
 
-  *info = svn_client_create_commit_info (cb->pool);
+  *info = svn_create_commit_info (cb->pool);
   (*info)->date = date ? apr_pstrdup (cb->pool, date) : NULL;
   (*info)->author = author ? apr_pstrdup (cb->pool, author) : NULL;
   (*info)->revision = revision;

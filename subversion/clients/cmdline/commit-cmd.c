@@ -46,7 +46,7 @@ svn_cl__commit (apr_getopt_t *os,
   const char *base_dir;
   svn_config_t *cfg;
   svn_boolean_t no_unlock = FALSE;
-  svn_client_commit_info2_t *commit_info = NULL;
+  svn_commit_info_t *commit_info = NULL;
 
   SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
                                           opt_state->targets, pool));

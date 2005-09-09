@@ -109,7 +109,7 @@ path_driver_cb_func (void **dir_baton,
 
 
 static svn_error_t *
-delete_urls (svn_client_commit_info2_t **commit_info,
+delete_urls (svn_commit_info_t **commit_info,
              const apr_array_header_t *paths,
              svn_client_ctx_t *ctx,
              apr_pool_t *pool)
@@ -233,7 +233,7 @@ svn_client__wc_delete (const char *path,
 
 
 svn_error_t *
-svn_client_delete2 (svn_client_commit_info2_t **commit_info,
+svn_client_delete2 (svn_commit_info_t **commit_info,
                     const apr_array_header_t *paths,
                     svn_boolean_t force, 
                     svn_client_ctx_t *ctx,
@@ -289,7 +289,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  svn_client_commit_info2_t *commit_info2 = NULL;
+  svn_commit_info_t *commit_info2 = NULL;
   svn_error_t *err = NULL;
 
   err = svn_client_delete2 (&commit_info2, paths, force, ctx, pool);

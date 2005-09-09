@@ -588,7 +588,7 @@ get_ra_editor (svn_ra_session_t **ra_session,
                svn_wc_adm_access_t *base_access,
                const char *log_msg,
                apr_array_header_t *commit_items,
-               svn_client_commit_info2_t **commit_info,
+               svn_commit_info_t **commit_info,
                svn_boolean_t is_commit,
                apr_hash_t *lock_tokens,
                svn_boolean_t keep_locks,
@@ -633,7 +633,7 @@ get_ra_editor (svn_ra_session_t **ra_session,
 /*** Public Interfaces. ***/
 
 svn_error_t *
-svn_client_import2 (svn_client_commit_info2_t **commit_info,
+svn_client_import2 (svn_commit_info_t **commit_info,
                     const char *path,
                     const char *url,
                     svn_boolean_t nonrecursive,
@@ -770,9 +770,9 @@ svn_client_import2 (svn_client_commit_info2_t **commit_info,
   /* Transfer *COMMIT_INFO from the subpool to the callers pool */
   if (*commit_info)
     {
-      svn_client_commit_info2_t *tmp_commit_info;
+      svn_commit_info_t *tmp_commit_info;
 
-      tmp_commit_info = svn_client_create_commit_info (pool);
+      tmp_commit_info = svn_create_commit_info (pool);
       *tmp_commit_info = **commit_info;
       if (tmp_commit_info->date)
         tmp_commit_info->date = apr_pstrdup (pool, tmp_commit_info->date);
@@ -794,7 +794,7 @@ svn_client_import (svn_client_commit_info_t **commit_info,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
-  svn_client_commit_info2_t *commit_info2 = NULL;
+  svn_commit_info_t *commit_info2 = NULL;
   svn_error_t *err;
 
   err = svn_client_import2 (&commit_info2,
@@ -1170,20 +1170,9 @@ collect_lock_tokens (apr_hash_t **result,
   return SVN_NO_ERROR;
 }
 
-svn_client_commit_info2_t *
-svn_client_create_commit_info (apr_pool_t *pool)
-{
-  svn_client_commit_info2_t *commit_info
-    = apr_pcalloc (pool, sizeof (svn_client_commit_info2_t));
-
-  commit_info->revision = SVN_INVALID_REVNUM;
-  /* All other fields were initialized to NULL above. */
-
-  return commit_info;
-}
 
 svn_error_t *
-svn_client_commit3 (svn_client_commit_info2_t **commit_info,
+svn_client_commit3 (svn_commit_info_t **commit_info,
                     const apr_array_header_t *targets,
                     svn_boolean_t recurse,
                     svn_boolean_t keep_locks,
@@ -1650,7 +1639,7 @@ svn_client_commit2 (svn_client_commit_info_t **commit_info,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
-  svn_client_commit_info2_t *commit_info2 = NULL;
+  svn_commit_info_t *commit_info2 = NULL;
   svn_error_t *err;
 
   err = svn_client_commit3 (&commit_info2, targets, recurse, keep_locks,
