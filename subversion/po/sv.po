@@ -43,7 +43,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-09-10 14:18+0200\n"
-"PO-Revision-Date: 2005-08-30 09:36+0200\n"
+"PO-Revision-Date: 2005-09-10 14:26+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -155,9 +155,9 @@ msgid "Invalid URL '%s'"
 msgstr "Ogiltig URL \"%s\""
 
 #: clients/cmdline/info-cmd.c:111
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' has invalid revision"
-msgstr "Posten \"%s\" har ogiltig nodtyp"
+msgstr "\"%s\" har ogiltig revision"
 
 #: clients/cmdline/info-cmd.c:263 svnadmin/main.c:1035
 #, c-format
@@ -5471,9 +5471,8 @@ msgid "Creating passwd file"
 msgstr "Skapar filen passwd"
 
 #: libsvn_repos/repos.c:1497
-#, fuzzy
 msgid "Creating authz file"
-msgstr "Skapar filen passwd"
+msgstr "Skapar fil för behörighetskontroll"
 
 #: libsvn_repos/repos.c:1522
 msgid "Could not create top-level directory"
