@@ -88,7 +88,7 @@ public class BasicTests extends SVNTests
                     null, true);
             fail("missing exception");
         }
-        catch (ClientException e)
+        catch (ClientException expected)
         {
         }
         // modify file A/mu
@@ -780,7 +780,7 @@ public class BasicTests extends SVNTests
                     null, false);
             fail("missing exception");
         }
-        catch(ClientException e)
+        catch(ClientException expected)
         {
         }
 
@@ -792,7 +792,7 @@ public class BasicTests extends SVNTests
                     false);
             fail("missing exception");
         }
-        catch(ClientException e)
+        catch(ClientException expected)
         {
         }
 
@@ -804,7 +804,7 @@ public class BasicTests extends SVNTests
                     null, false);
             fail("missing exception");
         }
-        catch(ClientException e)
+        catch(ClientException expected)
         {
         }
 
@@ -816,7 +816,7 @@ public class BasicTests extends SVNTests
                     false);
             fail("missing exception");
         }
-        catch(ClientException e)
+        catch(ClientException expected)
         {
         }
 
@@ -828,7 +828,7 @@ public class BasicTests extends SVNTests
                     false);
             fail("missing exception");
         }
-        catch(ClientException e)
+        catch(ClientException expected)
         {
         }
 
@@ -840,7 +840,7 @@ public class BasicTests extends SVNTests
                     false);
             fail("missing exception");
         }
-        catch(ClientException e)
+        catch(ClientException expected)
         {
         }
 
@@ -852,7 +852,7 @@ public class BasicTests extends SVNTests
                     null, false);
             fail("missing exception");
         }
-        catch(ClientException e)
+        catch(ClientException expected)
         {
         }
 
@@ -864,7 +864,7 @@ public class BasicTests extends SVNTests
                     false);
             fail("missing exception");
         }
-        catch(ClientException e)
+        catch(ClientException expected)
         {
         }
 
@@ -875,7 +875,7 @@ public class BasicTests extends SVNTests
                     false);
             fail("missing exception");
         }
-        catch(ClientException e)
+        catch(ClientException expected)
         {
         }
 
@@ -1375,7 +1375,7 @@ public class BasicTests extends SVNTests
                         false);
             fail("missing exception");
         }
-        catch (ClientException e)
+        catch (ClientException expected)
         {
         }
     }
