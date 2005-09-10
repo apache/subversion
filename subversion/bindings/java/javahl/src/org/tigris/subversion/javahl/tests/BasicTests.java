@@ -1367,6 +1367,17 @@ public class BasicTests extends SVNTests
         assertEquals("rev number from commit",-1, client.commit(
                 new String[]{thisTest.getWCPath()},"message", true));
         assertEquals("file should be read write now", true, f.canWrite());
+
+        try
+        {
+            // Attempt to lock an invalid path
+            client.lock(new String[]{thisTest.getWCPath()+"/A/mu2"}, "comment",
+                        false);
+            fail("missing exception");
+        }
+        catch (ClientException e)
+        {
+        }
     }
 
     /**
