@@ -268,6 +268,9 @@ class SvnFsTest < Test::Unit::TestCase
     end
     ctx.up(@wc_path)
     assert(File.exist?(path))
+
+    closest_root, closet_path = @fs.root.closest_copy(file2)
+    assert_equal(path2_in_repos, closet_path)
   end
 
   def test_delta
