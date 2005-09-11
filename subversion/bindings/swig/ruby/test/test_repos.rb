@@ -112,7 +112,7 @@ class SvnReposTest < Test::Unit::TestCase
     info3 = ctx.ci(@wc_path)
     end_rev = info3.revision
 
-    logs = @repos.logs(file, start_rev, end_rev, end_rev - start_rev)
+    logs = @repos.logs(file, start_rev, end_rev, end_rev - start_rev + 1)
     assert_equal([
                    [
                      {"/#{file}" => "A"},
@@ -239,7 +239,8 @@ class SvnReposTest < Test::Unit::TestCase
                    rev2 => "/#{file2}",
                    rev3 => "/#{file2}",
                  },
-                 @repos.fs.trace_node_locations(file2, [rev1, rev2, rev3]))
+                 @repos.fs.trace_node_locations("/#{file2}",
+                                                [rev1, rev2, rev3]))
   end
 
   def test_report
