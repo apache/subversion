@@ -150,6 +150,28 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 */
 #ifdef SWIGRUBY
 %inline %{
+static void
+svn_txdelta_apply_wrapper(svn_stream_t *source,
+                          svn_stream_t *target,
+                          unsigned char *result_digest,
+                          const char *error_info,
+                          svn_txdelta_window_handler_t *handler,
+                          void **handler_baton,
+                          apr_pool_t *pool)
+{
+  svn_txdelta_apply(source, target, result_digest, error_info,
+                    pool, handler, handler_baton);
+}
+ 
+static void
+svn_txdelta_to_svndiff_wrapper(svn_stream_t *output,
+                               svn_txdelta_window_handler_t *handler,
+                               void **handler_baton,
+                               apr_pool_t *pool)
+{
+  svn_txdelta_to_svndiff(output, pool, handler, handler_baton);
+}
+ 
 static svn_error_t *
 svn_txdelta_invoke_window_handler(VALUE window_handler,
                                   svn_txdelta_window_t *window,

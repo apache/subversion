@@ -61,15 +61,18 @@ class SvnDeltaTest < Test::Unit::TestCase
 
     apply_source = StringIO.new(source_text)
     apply_result = StringIO.new("")
+
     handler, digest = Svn::Delta.apply(apply_source, apply_result)
-    
     handler.send(stream)
     apply_result.rewind
     assert_equal(target_text, apply_result.read)
     
+    handler, digest = Svn::Delta.apply(apply_source, apply_result)
     handler.send(target_text)
     apply_result.rewind
     assert_equal(target_text * 2, apply_result.read)
+
+    handler, digest = Svn::Delta.apply(apply_source, apply_result)
     handler.send(StringIO.new(target_text))
     apply_result.rewind
     assert_equal(target_text * 3, apply_result.read)
