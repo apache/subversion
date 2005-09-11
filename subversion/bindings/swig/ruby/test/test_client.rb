@@ -15,15 +15,6 @@ class SvnClientTest < Test::Unit::TestCase
     teardown_basic
   end
 
-  def test_create_commit_info
-    info = Svn::Client::CommitInfo2.new
-    now = Time.now.gmtime
-    date_str = now.strftime("%Y-%m-%dT%H:%M:%S")
-    date_str << ".#{now.usec}Z"
-    info.date = date_str
-    assert_equal(now, info.date)
-  end
-  
   def test_version
     assert_equal(Svn::Core.subr_version, Svn::Client.version)
   end
