@@ -333,7 +333,7 @@ EOT
   end
   
   def test_create_commit_info
-    info = Svn::CommitInfo.new
+    info = Svn::Core::CommitInfo.new
     now = Time.now.gmtime
     date_str = now.strftime("%Y-%m-%dT%H:%M:%S")
     date_str << ".#{now.usec}Z"
