@@ -434,6 +434,10 @@ module Svn
         date = Time.parse_svn_format(date) if date
         [rev, date, author]
       end
+
+      def closest_copy(path)
+        Fs.closest_copy(self, path)
+      end
     end
 
     History = SWIG::TYPE_p_svn_fs_history_t
