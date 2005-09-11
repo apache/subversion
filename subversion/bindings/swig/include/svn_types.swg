@@ -55,7 +55,10 @@
    %apply-ing of typemaps
 */
 
-%apply SWIGTYPE **OUTPARAM { svn_stream_t ** };
+%apply SWIGTYPE **OUTPARAM {
+  svn_stream_t **,
+  svn_commit_info_t **
+};
 
 %apply long *OUTPUT { svn_revnum_t * };
 %apply int *OUTPUT { svn_boolean_t * };

@@ -18,23 +18,6 @@ module Svn
       end
     end
 
-    class CommitInfo2
-      class << self
-        undef new
-        def new
-          info = Client.create_commit_info
-          info.__send__("initialize")
-          info
-        end
-      end
-
-      alias _date date
-      def date
-        __date = _date
-        __date && Time.from_svn_format(__date)
-      end
-    end
-
     class Info
       alias url URL
     end

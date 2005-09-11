@@ -384,5 +384,22 @@ module Svn
          Core.prop_diffs(target_props, source_props)
        end
      end
+
+    class CommitInfo
+      class << self
+        undef new
+        def new
+          info = Core.create_commit_info
+          info.__send__("initialize")
+          info
+        end
+      end
+      
+      alias _date date
+      def date
+        __date = _date
+        __date && Time.from_svn_format(__date)
+      end
+    end
   end
 end
