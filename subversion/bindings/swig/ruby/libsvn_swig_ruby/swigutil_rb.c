@@ -1694,7 +1694,8 @@ ra_callbacks_invalidate_wc_props(void *baton,
 static void
 ra_callbacks_progress_func(apr_off_t progress,
                            apr_off_t total,
-                           void *baton)
+                           void *baton,
+                           apr_pool_t *pool)
 {
   VALUE callbacks = (VALUE)baton;
   if (!NIL_P(callbacks)) {
