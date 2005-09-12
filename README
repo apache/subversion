@@ -81,7 +81,7 @@ IV.   QUICKSTART GUIDE
             the newly created 'repos' directory.
 
           - understand that the repository is mainly a collection of
-            BerkeleyDB files;  you won't actually see your versioned
+            Berkeley DB files;  you won't actually see your versioned
             data if you peek in there.
 
      2.  svn import /tmp/project file:///path/to/repos -m "Initial import"

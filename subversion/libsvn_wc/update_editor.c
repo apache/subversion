@@ -2004,17 +2004,7 @@ install_file (svn_wc_notify_state_t *content_state,
       
       /* Determine if any of the propchanges are the "magic" ones that
          might require changing the working file. */
-      for (i = 0; i < propchanges->nelts; i++)
-        {
-          svn_prop_t *propchange = &APR_ARRAY_IDX (propchanges, i, svn_prop_t);
-            
-          if ((! strcmp (propchange->name, SVN_PROP_EXECUTABLE))
-              || (! strcmp (propchange->name, SVN_PROP_NEEDS_LOCK))
-              || (! strcmp (propchange->name, SVN_PROP_KEYWORDS))
-              || (! strcmp (propchange->name, SVN_PROP_EOL_STYLE))
-              || (! strcmp (propchange->name, SVN_PROP_SPECIAL)))
-            magic_props_changed = TRUE;
-        }
+      magic_props_changed = svn_wc__has_magic_property (propchanges);
 
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged

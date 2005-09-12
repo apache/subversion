@@ -721,6 +721,13 @@ svn_fs_copied_from (svn_revnum_t *rev_p, const char **path_p,
 }
 
 svn_error_t *
+svn_fs_closest_copy (svn_fs_root_t **root_p, const char **path_p,
+                     svn_fs_root_t *root, const char *path, apr_pool_t *pool)
+{
+  return root->vtable->closest_copy (root_p, path_p, root, path, pool);
+}
+
+svn_error_t *
 svn_fs_merge (const char **conflict_p, svn_fs_root_t *source_root,
               const char *source_path, svn_fs_root_t *target_root,
               const char *target_path, svn_fs_root_t *ancestor_root,

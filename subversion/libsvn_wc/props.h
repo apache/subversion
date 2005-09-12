@@ -140,6 +140,10 @@ svn_error_t *svn_wc__remove_wcprops (svn_wc_adm_access_t *adm_access,
                                      svn_boolean_t recurse,
                                      apr_pool_t *pool);
 
+/* Given PROPERTIES is array of @c svn_prop_t structures. Returns TRUE if any
+   of the PROPERTIES are the "magic" ones that might require changing the
+   working file. */
+svn_boolean_t svn_wc__has_magic_property (apr_array_header_t *properties);
 
 #ifdef __cplusplus
 }

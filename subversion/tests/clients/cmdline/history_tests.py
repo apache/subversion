@@ -217,8 +217,8 @@ def cat_avoids_false_identities(sbox):
 # list all tests here, starting with None:
 test_list = [ None,
               cat_traces_renames,
-              XFail(cat_avoids_false_identities),
-             ]
+              cat_avoids_false_identities,
+              ]
 
 if __name__ == '__main__':
   svntest.main.run_tests(test_list)

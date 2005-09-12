@@ -69,7 +69,7 @@ class SvnRaTest < Test::Unit::TestCase
     receiver = Proc.new do |changed_paths, revision, author, date, message|
       logs << [revision, message]
     end
-    session.log([file], rev1, rev2, rev2 - rev1, &receiver)
+    session.log([file], rev1, rev2, rev2 - rev1 + 1, &receiver)
     assert_equal([
                    [rev1, log],
                    [rev2, log2],
@@ -80,14 +80,8 @@ class SvnRaTest < Test::Unit::TestCase
     assert_equal(Svn::Core::NODE_FILE, session.stat(file).kind)
 
     assert_equal({
-                   rev1 => path_in_repos,
-                   rev2 => path_in_repos,
-                 },
-                 session.locations(file, [rev1, rev2]))
-
-    assert_equal({
-                   rev1 => path_in_repos,
-                   rev2 => path_in_repos,
+                   rev1 => file,
+                   rev2 => file,
                  },
                  session.locations(file, [rev1, rev2]))
 

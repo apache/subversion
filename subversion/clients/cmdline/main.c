@@ -1342,7 +1342,7 @@ main (int argc, const char * const *argv)
 
     /* The whole list of registered providers */
     apr_array_header_t *providers
-      = apr_array_make (pool, 10, sizeof (svn_auth_provider_object_t *));
+      = apr_array_make (pool, 11, sizeof (svn_auth_provider_object_t *));
 
     /* The main disk-caching auth providers, for both
        'username/password' creds and 'username' creds.  */

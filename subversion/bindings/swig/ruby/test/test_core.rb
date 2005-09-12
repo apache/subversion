@@ -332,6 +332,15 @@ EOT
     assert_equal(expected, diff.merge)
   end
   
+  def test_create_commit_info
+    info = Svn::Core::CommitInfo.new
+    now = Time.now.gmtime
+    date_str = now.strftime("%Y-%m-%dT%H:%M:%S")
+    date_str << ".#{now.usec}Z"
+    info.date = date_str
+    assert_equal(now, info.date)
+  end
+  
   private
   def used_pool
     pool = Svn::Core::Pool.new

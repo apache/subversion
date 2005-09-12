@@ -16,7 +16,7 @@ module Svn
 
     module_function
     def svndiff_handler(output)
-      handler, handler_baton = Delta.txdelta_to_svndiff(output)
+      handler, handler_baton = Delta.txdelta_to_svndiff_wrapper(output)
       handler.baton = handler_baton
       handler
     end
@@ -48,7 +48,7 @@ module Svn
     end
 
     def apply(source, target, error_info=nil)
-      result = Delta.txdelta_apply(source, target, error_info)
+      result = Delta.txdelta_apply_wrapper(source, target, error_info)
       digest, handler, handler_baton = result
       handler.baton = handler_baton
       [handler, digest]

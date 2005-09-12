@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <apr_pools.h>
+#include <assert.h>
 
 #include "svn_pools.h"
 #include "svn_time.h"
@@ -4265,6 +4266,153 @@ verify_checksum (const char **msg,
   return SVN_NO_ERROR;
 }
 
+
+/* Helper for closest_copy_test().  Verify that CLOSEST_PATH and the
+   revision associated with CLOSEST_ROOT match the EXPECTED_PATH and
+   EXPECTED_REVISION, respectively. */
+static svn_error_t *
+test_closest_copy_pair (svn_fs_root_t *closest_root,
+                        const char *closest_path,
+                        svn_revnum_t expected_revision,
+                        const char *expected_path)
+{
+  svn_revnum_t closest_rev = SVN_INVALID_REVNUM;
+
+  /* Callers must pass valid -- EXPECTED_PATH and EXPECTED_REVISION
+     come as a both-or-nothing pair. */
+  assert (((! expected_path) && (! SVN_IS_VALID_REVNUM (expected_revision)))
+          || (expected_path && SVN_IS_VALID_REVNUM (expected_revision)));
+ 
+  /* CLOSEST_PATH and CLOSEST_ROOT come as a both-or-nothing pair, too. */
+  if (closest_path && (! closest_root))
+    return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
+                             "got closest path but no closest root");
+  if ((! closest_path) && closest_root)
+    return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
+                             "got closest root but no closest path");
+  
+  /* Now that our pairs are known sane, we can compare them. */
+  if (closest_path && (! expected_path))
+    return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                              "got closest path ('%s') when none expected",
+                              closest_path);
+  if ((! closest_path) && expected_path)
+    return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                              "got no closest path; expected '%s'",
+                              expected_path);
+  if (closest_path && (strcmp (closest_path, expected_path) != 0))
+    return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                              "got a different closest path than expected:\n"
+                              "   expected:  %s\n"
+                              "     actual:  %s",
+                              expected_path, closest_path);
+  if (closest_root)
+    closest_rev = svn_fs_revision_root_revision (closest_root);
+  if (closest_rev != expected_revision)
+    return svn_error_createf (SVN_ERR_FS_GENERAL, NULL,
+                              "got a different closest rev than expected:\n"
+                              "   expected:  %ld\n"
+                              "     actual:  %ld",
+                              expected_revision, closest_rev);
+        
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+closest_copy_test (const char **msg,
+                   svn_boolean_t msg_only,
+                   svn_test_opts_t *opts,
+                   apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root, *croot;
+  svn_revnum_t after_rev;
+  const char *cpath;
+  apr_pool_t *spool = svn_pool_create (pool);
+
+  *msg = "calculating closest history-affecting copies";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Prepare a filesystem. */
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-closest-copy",
+                                opts->fs_type, pool));
+
+  /* In first txn, create and commit the greek tree. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, spool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, spool)); 
+
+  /* Copy A to Z, and commit. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A", txn_root, "Z", spool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, spool)); 
+
+  /* Anything under Z should have a closest copy pair of ("/A", 1), so
+     we'll pick some spots to test.  Stuff under A should have no
+     relevant closest copy. */
+  SVN_ERR (svn_fs_closest_copy (&croot, &cpath, rev_root, "Z", spool));
+  SVN_ERR (test_closest_copy_pair (croot, cpath, 2, "/Z"));
+  SVN_ERR (svn_fs_closest_copy (&croot, &cpath, rev_root, "Z/D/G", spool));
+  SVN_ERR (test_closest_copy_pair (croot, cpath, 2, "/Z"));
+  SVN_ERR (svn_fs_closest_copy (&croot, &cpath, rev_root, "Z/mu", spool));
+  SVN_ERR (test_closest_copy_pair (croot, cpath, 2, "/Z"));
+  SVN_ERR (svn_fs_closest_copy (&croot, &cpath, rev_root, "Z/B/E/beta", spool));
+  SVN_ERR (test_closest_copy_pair (croot, cpath, 2, "/Z"));
+  SVN_ERR (svn_fs_closest_copy (&croot, &cpath, rev_root, "A", spool));
+  SVN_ERR (test_closest_copy_pair (croot, cpath, SVN_INVALID_REVNUM, NULL));
+  SVN_ERR (svn_fs_closest_copy (&croot, &cpath, rev_root, "A/D/G", spool));
+  SVN_ERR (test_closest_copy_pair (croot, cpath, SVN_INVALID_REVNUM, NULL));
+  SVN_ERR (svn_fs_closest_copy (&croot, &cpath, rev_root, "A/mu", spool));
+  SVN_ERR (test_closest_copy_pair (croot, cpath, SVN_INVALID_REVNUM, NULL));
+  SVN_ERR (svn_fs_closest_copy (&croot, &cpath, rev_root, "A/B/E/beta", spool));
+  SVN_ERR (test_closest_copy_pair (croot, cpath, SVN_INVALID_REVNUM, NULL));
+
+  /* Okay, so let's do some more stuff.  We'll edit Z/mu, copy A to
+     Z2, copy A/D/H to Z2/D/H2, and edit Z2/D/H2/chi.  We'll also make
+     new Z/t and Z2/D/H2/t files. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, spool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "Z/mu", 
+                                        "Edited text.", spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A", txn_root, "Z2", spool));
+  SVN_ERR (svn_fs_copy (rev_root, "A/D/H", txn_root, "Z2/D/H2", spool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "Z2/D/H2/chi", 
+                                        "Edited text.", spool));
+  SVN_ERR (svn_fs_make_file (txn_root, "Z/t", pool));
+  SVN_ERR (svn_fs_make_file (txn_root, "Z2/D/H2/t", pool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, spool));
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, spool)); 
+
+  /* Now, we expect Z2/D/H2 to have a closest copy of ("/Z2/D/H2", 3)
+     because of the deepest path rule.  We expected Z2/D to have a
+     closest copy of ("/Z2", 3).  Z/mu should still have a closest
+     copy of ("/Z", 2).  As for the two new files (Z/t and Z2/D/H2/t),
+     neither should have a closest copy. */
+  SVN_ERR (svn_fs_closest_copy (&croot, &cpath, rev_root, "A/mu", spool));
+  SVN_ERR (test_closest_copy_pair (croot, cpath, SVN_INVALID_REVNUM, NULL));
+  SVN_ERR (svn_fs_closest_copy (&croot, &cpath, rev_root, "Z/mu", spool));
+  SVN_ERR (test_closest_copy_pair (croot, cpath, 2, "/Z"));
+  SVN_ERR (svn_fs_closest_copy (&croot, &cpath, rev_root, "Z2/D/H2", spool));
+  SVN_ERR (test_closest_copy_pair (croot, cpath, 3, "/Z2/D/H2"));
+  SVN_ERR (svn_fs_closest_copy (&croot, &cpath, rev_root, "Z2/D", spool));
+  SVN_ERR (test_closest_copy_pair (croot, cpath, 3, "/Z2"));
+  SVN_ERR (svn_fs_closest_copy (&croot, &cpath, rev_root, "Z/t", spool));
+  SVN_ERR (test_closest_copy_pair (croot, cpath, SVN_INVALID_REVNUM, NULL));
+  SVN_ERR (svn_fs_closest_copy (&croot, &cpath, rev_root, "Z2/D/H2/t", spool));
+  SVN_ERR (test_closest_copy_pair (croot, cpath, SVN_INVALID_REVNUM, NULL));
+
+  return SVN_NO_ERROR;
+}
+
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -4301,5 +4449,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (check_related),
     SVN_TEST_PASS (branch_test),
     SVN_TEST_PASS (verify_checksum),
+    SVN_TEST_PASS (closest_copy_test),
     SVN_TEST_NULL
   };
