@@ -6933,7 +6933,7 @@ msgstr "seta UUID de repositório para o encontrado na cadeia, se houver algum"
 
 #: svnadmin/main.c:257
 msgid "type of repository: 'fsfs' (default) or 'bdb'"
-msgstr "tipo de repositório: 'fsfs' (padrão) ou 'dbd'"
+msgstr "tipo de repositório: 'fsfs' (padrão) ou 'bdb'"
 
 #: svnadmin/main.c:260
 msgid "load at specified directory in repository"
