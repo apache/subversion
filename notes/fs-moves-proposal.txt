@@ -1,0 +1,146 @@
+            .:  SVN_FS_RENAME:  A DESIGN PROPOSAL :.
+                     by: C. Michael Pilato
+
+CONVENTIONS
+
+Below, the term "move" means what has in the past been referred to as
+an "atomic move", "atomic rename", "true move", "true rename", and so
+on.  It does *not* refer to the Subversion command-line client's
+"move" subcommand, nor to the combined copy and delete operations of
+which that subcommand is currently comprised.
+
+Also, I will be speaking only about the Berkeley DB backend.  I
+believe the document also applies to the FSFS backend, but am not
+entirely sure of that.  So for now, I'll stick with what I know.
+
+THE GOALS
+
+  * A move should be a first-class atomic operation, unlike the
+    copy+delete manifestation that exists today (of which only one of
+    the copy or delete might succeed).
+
+  * A move is an operation on the directory entries lists of the
+    source and destination parents, *not* an operation on the object
+    being moved.  An examination of a versioned target before and
+    after a move must find it unchanged, merely relocated.
+
+  * A move should be easily detectable after the fact, that is,
+    distinguishable from a [copy-with-history + delete].
+
+THE NAIVE APPROACH
+
+In early 2003, Philip Martin posted a patch for the naive
+implemenation of svn_fs_rename().  The algorithm was what you'd
+expect: in a single Berkeley DB transaction, update the directory
+entry lists of the source and target containing directories, such that
+the source no longer referred to the node revision ID of the moved
+object, and the target did.  And to be sure (I mean, it *is* Philip
+Martin), the code behaved as expected.
+
+Most of the time.
+
+THE PROBLEM
+
+The problem with the naive approach lies in how we construct node
+revision IDs.  The node revision ID schema in Berkeley DB is:
+
+   NODE_ID.COPY_ID.TXN_ID
+
+where:
+
+   - NODE_ID identifies a unique tree of versioned history.  Node
+     revision's which have the same NODE_ID necessarily share an
+     ancestor, but are not necessarily ancestors of each other.
+
+   - COPY_ID identifies the copy operation responsible for the
+     creation of a particular fork in a line of history.
+ 
+   - TXN_ID identifies the transaction in which a given node revision
+     came into existence.
+
+In Subversion, a copy operation is the only way to cause a line of
+versioned history to be represented by more than one object in a given
+revision.  Because of copies, you may have in a given revision several
+different node revisions sharing the same NODE_ID (when a node
+revision is copied, the newly created target node keeps the NODE_ID of
+the source node, as do all its successors).  And if you chose to
+change any two of those in the same transaction, their successors
+would also have the same TXN_ID.  Fortunately, the two copies would
+get different COPY_ID components, thus preventing completely identical
+node revision IDs.
+
+When a node revision is copied, a new copy record (keyed on COPY_ID)
+is written to the 'copies' table contain details of the copy, and the
+new target node gets that COPY_ID.  As children (directory-wise
+descendants) of that copy target are modified in the future, they
+inherit that COPY_ID, so that Subversion can identify that the reason
+that tree exists at all is due to that copy, and so that nodes in the
+tree that represents the source of that copy and nodes in the tree of
+the copy target cannot possibly have identical node revision IDs.  The
+promise provided is that whenever a single line of history incurs a
+change in tree location (the path), there is also an associated change
+in the COPY_IDs used by objects in that line of history, and in the
+directory case, by objects which are children (and grandchildren, etc)
+of that directory.
+
+Along comes Philip's svn_fs_rename() implementation, and suddenly the
+promise no longer holds.  Suddenly a line of history could incur a
+change in tree location without a change in the COPY_ID.  The broken
+promise is devastating.  With just a few simple operation, you can now
+wind up with more than one node revision slated to have the same node
+revision ID.  A recipe is posted here:
+
+   http://subversion.tigris.org/issues/show_bug.cgi?id=898#desc10
+
+As you can see, modifying both copies of bar.c in the same transaction
+(4) would yield two different node revisions, yet both would get the
+same node revision ID, "3.0.4".  In fact, you wouldn't even get that
+far in the recipe, because bar's parent directory (/branches/foo, or
+/trunk/bloo, depending on which way you crawl the tree) would also
+suffer a collision, on the node revision ID 2.0.4.
+
+Clearly, the naive implementation is insufficient by itself.  The
+other solutions proposed in that issue are also unattractive, for
+various reasons; anyway, a good solution is available.
+
+THE IMPROVED APPROACH
+
+Do things exactly the way Philip's patch does, but add these two
+details:
+
+   * When a move occurs, a new row is added to the 'copies' table,
+     with a new "move" operation indicator, the source path, the
+     destination path, and the transaction:
+
+        ("move" SRC-PATH DST-PATH TXN-ID)
+
+   * When the moved object's node revision ID is being added to the
+     destination directory's entries list, the entry is annotated with
+     the ID of the new 'copies' table row.  Note that's "entry", not
+     "node revision": we're attaching metadata to a directory entry
+     itself, not to the thing the entry refers to.  The new definition
+     of an ENTRY would be:
+
+        (NAME NODE-REVISION-ID [MOVE-ID])
+
+The presence of the MOVE-ID on the entry NAME means that the first
+time the directory's child NAME is modified, the newly-created node
+revision ID should have its COPY-ID set to the value of the MOVE-ID
+(and of course keep the same NODE-ID as its predecessor, and get the
+TXN-ID of the current txn).  Then the (now-cloned-for-mutability)
+container directory's entry list has the MOVE-ID removed from NAME's
+entry in that list, to indicate that this one-time delayed inheritance
+has occured.
+
+Besides meeting the criteria for a true move, this system:
+
+   * Preserves node revision ID uniqueness via COPY-ID
+
+   * Offers move detection compatible with the existing history
+     algorithm.  The only difference is that the COPY-ID might point
+     to a move instead of to a copy.  ### VERIFY THIS.  THE HISTORY
+     CODE IS, SHALL WE SAY, A NUANCE-FUL LITTLE CHUNK OF PAIN.
+
+### WHAT HAPPENS IF A DIRECTORY WITH A MOVE-ID-HAVING ENTRIES LIST IS
+### COPIED, OR ITSELF MOVED?  DO WE NEED A SOFT-MOVE CONCEPT LIKE THE
+### SOFT-COPY ONE?  I BELIEVE SO.
