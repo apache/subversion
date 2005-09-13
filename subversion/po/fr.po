@@ -2318,12 +2318,12 @@ msgstr "Le système de fichiers ne contient pas cet élément"
 #: include/svn_error_codes.h:442
 msgid "Filesystem has no such node-rev-id"
 msgstr "Le système de fichiers ne contient pas cet identificateur de "
-"noeud de révision (node-rev-id)"
+"révision de noeud (node-rev-id)"
 
 #: include/svn_error_codes.h:446
 msgid "String does not represent a node or node-rev-id"
-msgstr "La chaîne ne représente pas un noeud ou un identificateur de "
-"noeud de révision (node-rev-id)"
+msgstr "La chaîne ne représente ni un noeud ni un identificateur de "
+"révision de noeud (node-rev-id)"
 
 #: include/svn_error_codes.h:450
 msgid "Name does not refer to a filesystem directory"
@@ -2827,7 +2827,7 @@ msgstr "Quelque chose ne va pas dans l'entrée du journal"
 
 #: include/svn_error_codes.h:1025
 msgid "A log message was given where none was necessary"
-msgstr "Message de journal fourni alors qu'aucun n'est nécessaire"
+msgstr "Message de journal fourni alors qu'aucun n'était nécessaire"
 
 #: libsvn_client/add.c:371
 #, c-format
@@ -3463,7 +3463,7 @@ msgstr ""
 #: libsvn_diff/diff_file.c:666
 #, c-format
 msgid "%s\\ No newline at end of file%s"
-msgstr "%s\\ Pas de saut de ligne en fin de fichier%s"
+msgstr "%s\\ Pas de fin de ligne à la fin du fichier%s"
 
 #: libsvn_diff/diff_file.c:1225
 #, c-format
@@ -5570,7 +5570,7 @@ msgstr "Ne peut mettre le fichier '%s' en lecture-écriture"
 #, c-format
 msgid "Can't get default file perms for file at '%s' (file stat error)"
 msgstr "Ne peut obtenir les permissions de fichier par défaut pour le "
-"fichier '%s' (file stat error)"
+"fichier '%s' (erreur de stat sur le fichier)"
 
 #: libsvn_subr/io.c:1035
 #, c-format
@@ -5581,7 +5581,7 @@ msgstr "Le fichier '%s' ne peut être ouvert"
 #, c-format
 msgid "Can't get file perms for file at '%s' (file stat error)"
 msgstr "Ne peut obtenir les permissions de fichier pour le fichier "
-"'%s' (file stat error)"
+"'%s' (erreur de stat sur le fichier)"
 
 #: libsvn_subr/io.c:1072 libsvn_subr/io.c:1132
 #, c-format
