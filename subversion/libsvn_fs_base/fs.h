@@ -276,7 +276,9 @@ typedef struct
 typedef enum
 {
   copy_kind_real = 1, /* real copy */
-  copy_kind_soft      /* soft copy */
+  copy_kind_soft,     /* soft copy */
+  copy_kind_move,     /* real move */
+  copy_kind_soft_move /* soft move */
 
 } copy_kind_t;
 
@@ -328,6 +330,18 @@ typedef struct
   const char *lock_token;
 
 } lock_node_t;
+
+
+/*** Directory Entry ***/
+typedef struct
+{
+  /* entry node revision id */
+  const svn_fs_id_t *id;
+
+  /* (optional) move id */
+  const char *move_id;
+
+} directory_entry_t;
 
 
 

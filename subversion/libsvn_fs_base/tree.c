@@ -1426,7 +1426,7 @@ base_props_changed (svn_boolean_t *changed_p,
 
 struct dir_entries_args
 {
-  apr_hash_t **table_p;
+  apr_hash_t **table_p;  /* child -> directory_entry_t */
   svn_fs_root_t *root;
   const char *path;
 };
@@ -1458,8 +1458,10 @@ base_dir_entries (apr_hash_t **table_p,
                   apr_pool_t *pool)
 {
   struct dir_entries_args args;
-  apr_hash_t *table;
+  apr_hash_t *table, *entries = apr_hash_make (pool);
   svn_fs_t *fs = root->fs;
+  apr_hash_index_t *hi;
+  apr_pool_t *subpool;
 
   args.table_p = &table;
   args.root    = root;
@@ -1467,33 +1469,35 @@ base_dir_entries (apr_hash_t **table_p,
   SVN_ERR (svn_fs_base__retry_txn (root->fs, txn_body_dir_entries, &args,
                                    pool));
 
-  /* Add in the kind data. */
-  if (table)
+  /* Add in the kind data, and convert from directory_entry_t's to
+     svn_fs_dirent_t's  */
+  subpool = svn_pool_create (pool);
+  for (hi = apr_hash_first (pool, table); hi; hi = apr_hash_next (hi))
     {
-      apr_hash_index_t *hi;
-      apr_pool_t *subpool = svn_pool_create (pool);
-      for (hi = apr_hash_first (subpool, table); hi; hi = apr_hash_next (hi))
-        {
-          svn_fs_dirent_t *entry;
-          struct node_kind_args nk_args;
-          void *val;
+      directory_entry_t *entry;
+      svn_fs_dirent_t *dirent;
+      struct node_kind_args nk_args;
+      const void *key;
+      void *val;
+      apr_ssize_t klen;
+      
+      svn_pool_clear (subpool);
 
-          /* KEY will be the entry name in ancestor (about which we
-             simple don't care), VAL the dirent. */
-          apr_hash_this (hi, NULL, NULL, &val);
-          entry = val;
-          nk_args.id = entry->id;
-          SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_node_kind, &nk_args,
-                                           pool));
-          entry->kind = nk_args.kind;
-        }
+      /* KEY will be the entry name in ancestor, VAL the directory_entry_t. */
+      apr_hash_this (hi, &key, &klen, &val);
+      entry = val;
+      nk_args.id = entry->id;
+      SVN_ERR (svn_fs_base__retry_txn (fs, txn_body_node_kind, 
+                                       &nk_args, subpool));
+      dirent = apr_pcalloc (pool, sizeof (*dirent));
+      dirent->name = key;
+      dirent->id = entry->id;
+      dirent->kind = nk_args.kind;
+      apr_hash_set (entries, key, klen, dirent);
     }
-  else
-    {
-      table = apr_hash_make (pool);
-    }
+  svn_pool_destroy (pool);
 
-  *table_p = table;
+  *table_p = entries;
   return SVN_NO_ERROR;
 }
 
@@ -2011,16 +2015,18 @@ merge (svn_stringbuf_t *conflict_p,
        hi;
        hi = apr_hash_next (hi))
     {
-      svn_fs_dirent_t *s_entry, *t_entry, *a_entry;
+      directory_entry_t *s_entry, *t_entry, *a_entry;
 
       const void *key;
       void *val;
       apr_ssize_t klen;
+      const char *name;
 
       svn_pool_clear (iterpool);
 
       /* KEY will be the entry name in ancestor, VAL the dirent */
       apr_hash_this (hi, &key, &klen, &val);
+      name = key;
       a_entry = val;
 
       s_entry = apr_hash_get (s_entries, key, klen);
@@ -2059,18 +2065,14 @@ merge (svn_stringbuf_t *conflict_p,
              double delete; flag a conflict. */
           if (s_entry == NULL || t_entry == NULL)
             return conflict_err (conflict_p,
-                                 svn_path_join (target_path,
-                                                a_entry->name,
-                                                iterpool));
+                                 svn_path_join (target_path, name, iterpool));
 
           /* If any of the three entries is of type file, flag a conflict. */
           if ((svn_fs_base__dag_node_kind (s_ent_node) == svn_node_file)
               || (svn_fs_base__dag_node_kind (t_ent_node) == svn_node_file)
               || (svn_fs_base__dag_node_kind (a_ent_node) == svn_node_file))
             return conflict_err (conflict_p,
-                                 svn_path_join (target_path,
-                                                a_entry->name,
-                                                iterpool));
+                                 svn_path_join (target_path, name, iterpool));
 
           /* If either SOURCE-ENTRY or TARGET-ENTRY is not a direct
              modification of ANCESTOR-ENTRY, declare a conflict. */
@@ -2083,9 +2085,7 @@ merge (svn_stringbuf_t *conflict_p,
               || strcmp (svn_fs_base__id_copy_id (t_entry->id),
                          svn_fs_base__id_copy_id (a_entry->id)) != 0)
             return conflict_err (conflict_p,
-                                 svn_path_join (target_path,
-                                                a_entry->name,
-                                                iterpool));
+                                 svn_path_join (target_path, name, iterpool));
 
           /* Direct modifications were made to the directory
              ANCESTOR-ENTRY in both SOURCE and TARGET.  Recursively
@@ -2096,7 +2096,7 @@ merge (svn_stringbuf_t *conflict_p,
                                               t_entry->id, trail, iterpool));
           SVN_ERR (svn_fs_base__dag_get_node (&a_ent_node, fs,
                                               a_entry->id, trail, iterpool));
-          new_tpath = svn_path_join (target_path, t_entry->name, iterpool);
+          new_tpath = svn_path_join (target_path, name, iterpool);
           SVN_ERR (merge (conflict_p, new_tpath,
                           t_ent_node, s_ent_node, a_ent_node,
                           txn_id, trail, iterpool));
@@ -2115,26 +2115,26 @@ merge (svn_stringbuf_t *conflict_p,
        hi; 
        hi = apr_hash_next (hi))
     {
-      svn_fs_dirent_t *s_entry, *t_entry;
+      directory_entry_t *s_entry, *t_entry;
       const void *key;
       void *val;
       apr_ssize_t klen;
+      const char *name;
 
       svn_pool_clear (iterpool);
 
       apr_hash_this (hi, &key, &klen, &val);
+      name = key;
       s_entry = val;
       t_entry = apr_hash_get (t_entries, key, klen);
 
       /* If NAME exists in TARGET, declare a conflict. */
       if (t_entry)
         return conflict_err (conflict_p,
-                             svn_path_join (target_path,
-                                            t_entry->name,
-                                            iterpool));
+                             svn_path_join (target_path, name, iterpool));
 
       SVN_ERR (svn_fs_base__dag_set_entry
-               (target, s_entry->name, s_entry->id, txn_id, trail, iterpool));
+               (target, name, s_entry->id, txn_id, trail, iterpool));
     }
   svn_pool_destroy (iterpool);
 

@@ -283,7 +283,9 @@ is_valid_copy_skel (skel_t *skel)
 {
   return (((svn_fs_base__list_length (skel) == 4)
            && (svn_fs_base__matches_atom (skel->children, "copy")
-               || svn_fs_base__matches_atom (skel->children, "soft-copy"))
+               || svn_fs_base__matches_atom (skel->children, "move")
+               || svn_fs_base__matches_atom (skel->children, "soft-copy")
+               || svn_fs_base__matches_atom (skel->children, "soft-move"))
            && skel->children->next->is_atom
            && skel->children->next->next->is_atom
            && skel->children->next->next->next->is_atom) ? TRUE : FALSE);
@@ -680,6 +682,10 @@ svn_fs_base__parse_copy_skel (copy_t **copy_p,
   /* KIND */
   if (svn_fs_base__matches_atom (skel->children, "soft-copy"))
     copy->kind = copy_kind_soft;
+  else if (svn_fs_base__matches_atom (skel->children, "soft-move"))
+    copy->kind = copy_kind_soft_move;
+  else if (svn_fs_base__matches_atom (skel->children, "move"))
+    copy->kind = copy_kind_move;
   else
     copy->kind = copy_kind_real;
 
@@ -725,20 +731,25 @@ svn_fs_base__parse_entries_skel (apr_hash_t **entries_p,
       for (elt = skel->children; elt; elt = elt->next)
         {
           const char *name;
-          svn_fs_id_t *id;
+          int entry_len = svn_fs_base__list_length (elt);
+          directory_entry_t *entry = apr_pcalloc (pool, sizeof (*entry));
 
-          /* ENTRY must be a list of two elements. */
-          if (svn_fs_base__list_length (elt) != 2)
+          /* ENTRY must be a list of two or three elements. */
+          if ((entry_len != 2) && (entry_len != 3))
             return skel_err ("entries");
 
           /* Get the entry's name and ID. */
           name = apr_pstrmemdup (pool, elt->children->data,
                                  elt->children->len);
-          id = svn_fs_base__id_parse (elt->children->next->data,
-                                      elt->children->next->len, pool);
+          entry->id = svn_fs_base__id_parse (elt->children->next->data,
+                                             elt->children->next->len, pool);
+          if (entry_len == 3)
+            entry->move_id = apr_pstrmemdup (pool, 
+                                             elt->children->next->next->data,
+                                             elt->children->next->next->len);
 
           /* Add the entry to the hash. */
-          apr_hash_set (entries, name, elt->children->len, id);
+          apr_hash_set (entries, name, elt->children->len, entry);
         }
     }
 
@@ -1256,8 +1267,14 @@ svn_fs_base__unparse_copy_skel (skel_t **skel_p,
   /* "copy" */
   if (copy->kind == copy_kind_real)
     svn_fs_base__prepend (svn_fs_base__str_atom ("copy", pool), skel);
-  else
+  else if (copy->kind == copy_kind_move)
+    svn_fs_base__prepend (svn_fs_base__str_atom ("move", pool), skel);
+  else if (copy->kind == copy_kind_soft)
     svn_fs_base__prepend (svn_fs_base__str_atom ("soft-copy", pool), skel);
+  else if (copy->kind == copy_kind_soft_move)
+    svn_fs_base__prepend (svn_fs_base__str_atom ("soft-move", pool), skel);
+  else
+    return skel_err ("copy");
 
   /* Validate and return the skel. */
   if (! is_valid_copy_skel (skel))
@@ -1284,18 +1301,23 @@ svn_fs_base__unparse_entries_skel (skel_t **skel_p,
           const void *key;
           void *val;
           apr_ssize_t klen;
-          svn_fs_id_t *value;
+          directory_entry_t *entry;
           svn_string_t *id_str;
           skel_t *entry_skel = svn_fs_base__make_empty_list (pool);
 
           apr_hash_this (hi, &key, &klen, &val);
-          value = val;
+          entry = val;
 
-          /* VALUE */
-          id_str = svn_fs_base__id_unparse (value, pool);
+          /* MOVE_ID */
+          if (entry->move_id)
+            svn_fs_base__prepend (svn_fs_base__str_atom (entry->move_id, pool),
+                                  entry_skel);
+
+          /* ID */
+          id_str = svn_fs_base__id_unparse (entry->id, pool);
           svn_fs_base__prepend (svn_fs_base__mem_atom (id_str->data,
                                                        id_str->len, pool),
-                           entry_skel);
+                                entry_skel);
 
           /* NAME */
           svn_fs_base__prepend (svn_fs_base__mem_atom (key, klen, pool),

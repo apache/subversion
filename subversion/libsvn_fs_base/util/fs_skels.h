@@ -82,9 +82,9 @@ svn_fs_base__parse_copy_skel (copy_t **copy_p,
                               apr_pool_t *pool);
 
 /* Parse an `ENTRIES' SKEL into *ENTRIES_P, which is a hash with const
-   char * names (the directory entry name) and svn_fs_id_t * values
-   (the node-id of the entry), or NULL if SKEL contains no entries.
-   Use POOL for all allocations. */
+   char * names (the directory entry name) and directory_entry_t *
+   values or NULL if SKEL contains no entries.  Use POOL for all
+   allocations. */
 svn_error_t *
 svn_fs_base__parse_entries_skel (apr_hash_t **entries_p,
                                  skel_t *skel,
@@ -152,8 +152,8 @@ svn_fs_base__unparse_copy_skel (skel_t **skel_p,
                                 apr_pool_t *pool);
 
 /* Unparse an ENTRIES hash, which has const char * names (the entry
-   name) and svn_fs_id_t * values (the node-id of the entry) into an
-   `ENTRIES' skel *SKEL_P.  Use POOL for all allocations.  */
+   name) and directory_entry_t * values into an `ENTRIES' skel
+   *SKEL_P.  Use POOL for all allocations.  */
 svn_error_t *
 svn_fs_base__unparse_entries_skel (skel_t **skel_p,
                                    apr_hash_t *entries,

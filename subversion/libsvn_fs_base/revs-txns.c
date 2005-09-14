@@ -881,8 +881,7 @@ delete_txn_tree (svn_fs_t *fs,
       for (hi = apr_hash_first (pool, dirents); hi; hi = apr_hash_next (hi))
         {
           void *val;
-          svn_fs_dirent_t *dirent;
-
+          directory_entry_t *dirent;
           svn_pool_clear (subpool);
           apr_hash_this (hi, NULL, NULL, &val);
           dirent = val;

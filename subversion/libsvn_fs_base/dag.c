@@ -293,7 +293,6 @@ get_dir_entries (apr_hash_t **entries_p,
                  apr_pool_t *pool)
 {
   apr_hash_t *entries = apr_hash_make (pool);
-  apr_hash_index_t *hi;
   svn_string_t entries_raw;
   skel_t *entries_skel;
 
@@ -318,29 +317,8 @@ get_dir_entries (apr_hash_t **entries_p,
                                                   pool));
     }
 
-  /* No hash?  No problem.  */
-  *entries_p = NULL;
-  if (! entries)
-    return SVN_NO_ERROR;
-
-  /* Else, convert the hash from a name->id mapping to a name->dirent one.  */
-  *entries_p = apr_hash_make (pool);
-  for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
-    {
-      const void *key;
-      apr_ssize_t klen;
-      void *val;
-      svn_fs_dirent_t *dirent = apr_palloc (pool, sizeof (*dirent));
-
-      /* KEY will be the entry name in ancestor, VAL the id.  */
-      apr_hash_this (hi, &key, &klen, &val);
-      dirent->name = key;
-      dirent->id = val;
-      dirent->kind = svn_node_unknown;
-      apr_hash_set (*entries_p, key, klen, dirent);
-    }
-
   /* Return our findings. */
+  *entries_p = entries;
   return SVN_NO_ERROR;
 }
 
@@ -357,7 +335,7 @@ dir_entry_id_from_node (const svn_fs_id_t **id_p,
                         apr_pool_t *pool)
 {
   apr_hash_t *entries;
-  svn_fs_dirent_t *dirent;
+  directory_entry_t *dirent;
 
   SVN_ERR (svn_fs_base__dag_dir_entries (&entries, parent, trail, pool));
   if (entries)
@@ -370,8 +348,8 @@ dir_entry_id_from_node (const svn_fs_id_t **id_p,
 }
 
 
-/* Add or set in PARENT a directory entry NAME pointing to ID.
-   Allocations are done in TRAIL.
+/* Add or set in PARENT a directory entry NAME with node revision ID
+   and reserved move id MOVE_ID.
 
    Assumptions:
    - PARENT is a mutable directory.
@@ -382,6 +360,7 @@ static svn_error_t *
 set_entry (dag_node_t *parent,
            const char *name,
            const svn_fs_id_t *id,
+           const char *move_id,
            const char *txn_id,
            trail_t *trail,
            apr_pool_t *pool)
@@ -394,6 +373,7 @@ set_entry (dag_node_t *parent,
   svn_string_t raw_entries;
   svn_stringbuf_t *raw_entries_buf;
   skel_t *entries_skel;
+  directory_entry_t *entry;
   svn_fs_t *fs = svn_fs_base__dag_get_fs (parent);
 
   /* Get the parent's node-revision. */
@@ -434,7 +414,10 @@ set_entry (dag_node_t *parent,
     entries = apr_hash_make (pool);
 
   /* Now, add our new entry to the entries list. */
-  apr_hash_set (entries, name, APR_HASH_KEY_STRING, id);
+  entry = apr_pcalloc (pool, sizeof (*entry));
+  entry->id = id;
+  entry->move_id = move_id;
+  apr_hash_set (entries, name, APR_HASH_KEY_STRING, entry);
 
   /* Finally, replace the old entries list with the new one. */
   SVN_ERR (svn_fs_base__unparse_entries_skel (&entries_skel, entries,
@@ -511,7 +494,7 @@ make_entry (dag_node_t **child_p,
      PARENT is mutable, and we just created CHILD, so we know it has
      no ancestors (therefore, PARENT cannot be an ancestor of CHILD) */
   SVN_ERR (set_entry (parent, name, svn_fs_base__dag_get_id (*child_p),
-                      txn_id, trail, pool));
+                      NULL, txn_id, trail, pool));
 
   return SVN_NO_ERROR;
 }
@@ -550,7 +533,7 @@ svn_fs_base__dag_set_entry (dag_node_t *node,
       (SVN_ERR_FS_NOT_DIRECTORY, NULL,
        _("Attempted to set entry in immutable node"));
 
-  return set_entry (node, entry_name, id, txn_id, trail, pool);
+  return set_entry (node, entry_name, id, NULL, txn_id, trail, pool);
 }
 
 
@@ -755,7 +738,8 @@ svn_fs_base__dag_clone_child (dag_node_t **child_p,
 
       /* Replace the ID in the parent's ENTRY list with the ID which
          refers to the mutable clone of this child. */
-      SVN_ERR (set_entry (parent, name, new_node_id, txn_id, trail, pool));
+      SVN_ERR (set_entry (parent, name, new_node_id, NULL, 
+                          txn_id, trail, pool));
     }
 
   /* Initialize the youngster. */
@@ -822,13 +806,6 @@ svn_fs_base__dag_clone_root (dag_node_t **root_p,
 }
 
 
-/* Delete the directory entry named NAME from PARENT, as part of
-   TRAIL.  PARENT must be mutable.  NAME must be a single path
-   component.  If REQUIRE_EMPTY is true and the node being deleted is
-   a directory, it must be empty.
-
-   If return SVN_ERR_FS_NO_SUCH_ENTRY, then there is no entry NAME in
-   PARENT.  */
 svn_error_t *
 svn_fs_base__dag_delete (dag_node_t *parent,
                          const char *name,
@@ -842,7 +819,7 @@ svn_fs_base__dag_delete (dag_node_t *parent,
   skel_t *entries_skel;
   svn_fs_t *fs = parent->fs;
   svn_string_t str;
-  svn_fs_id_t *id = NULL;
+  const svn_fs_id_t *id = NULL;
   dag_node_t *node;
 
   /* Make sure parent is a directory. */
@@ -902,7 +879,11 @@ svn_fs_base__dag_delete (dag_node_t *parent,
 
   /* Find NAME in the ENTRIES skel.  */
   if (entries)
-    id = apr_hash_get (entries, name, APR_HASH_KEY_STRING);
+    {
+      directory_entry_t *entry = apr_hash_get (entries, name, 
+                                               APR_HASH_KEY_STRING);
+      id = entry->id;
+    }
 
   /* If we never found ID in ENTRIES (perhaps because there are no
      ENTRIES, perhaps because ID just isn't in the existing ENTRIES
@@ -1018,7 +999,7 @@ svn_fs_base__dag_delete_if_mutable (svn_fs_t *fs,
                hi = apr_hash_next (hi))
             {
               void *val;
-              svn_fs_dirent_t *dirent;
+              directory_entry_t *dirent;
 
               apr_hash_this (hi, NULL, NULL, &val);
               dirent = val;
