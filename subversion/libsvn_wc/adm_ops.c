@@ -1057,7 +1057,7 @@ svn_wc_add2 (const char *path,
       if (parent_entry->repos
           && ! svn_path_is_ancestor (parent_entry->repos, copyfrom_url))
         return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                  _("The URL '%s' has different repository "
+                                  _("The URL '%s' has a different repository "
                                     "root than its parent"), copyfrom_url);
       tmp_entry.copyfrom_url = copyfrom_url;
       tmp_entry.copyfrom_rev = copyfrom_rev;
