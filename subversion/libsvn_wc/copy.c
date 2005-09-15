@@ -158,7 +158,8 @@ copy_file_administratively (const char *src_path,
       if (dst_entry->schedule == svn_wc_schedule_delete)
         return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
                                   _("'%s' is scheduled for deletion; it must"
-                                    " be committed before being overwritten"),
+                                    " be committed before it can be"
+                                    " overwritten"),
                                   svn_path_local_style (dst_path, pool));
       else
         return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
