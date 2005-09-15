@@ -1357,6 +1357,29 @@ def double_uri_escaping_1814(sbox):
 
 
 #----------------------------------------------------------------------
+#  Regression test for issues 2404
+
+def wc_to_wc_copy_between_different_repos(sbox):
+  "wc to wc copy attempts between different repositories"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox2 = sbox.clone_dependent()
+  sbox2.build()
+  wc2_dir = sbox2.wc_dir
+
+  # Attempt a copy between different repositories.
+  out, err = svntest.main.run_svn(1, 'cp',
+                                  os.path.join(wc2_dir, 'A'),
+                                  os.path.join(wc_dir, 'A', 'B'))
+  for line in err:
+    if line.find("it is not from repository") != -1:
+      break
+  else:
+    raise svntest.Failure
+
+#----------------------------------------------------------------------
 #  Regression test for issues 2101 and 2020
 
 def wc_to_wc_copy_deleted(sbox):
@@ -1646,6 +1669,7 @@ test_list = [ None,
               copy_over_missing_file,
               repos_to_wc_1634,
               double_uri_escaping_1814,
+              wc_to_wc_copy_between_different_repos,
               wc_to_wc_copy_deleted,
               url_to_non_existent_url_path,
               non_existent_url_to_url,
