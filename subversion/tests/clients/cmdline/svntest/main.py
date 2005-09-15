@@ -598,7 +598,7 @@ def run_tests(test_list):
     opts, args = my_getopt(sys.argv[1:], 'v',
                            ['url=', 'fs-type=', 'verbose', 'cleanup'])
   except getopt.GetoptError:
-    args = []
+    opts, args = [], []
 
   for arg in args:
     if arg == "list":
