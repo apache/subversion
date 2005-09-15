@@ -275,10 +275,10 @@ typedef struct
 /*** Copy Kind ***/
 typedef enum
 {
-  copy_kind_real = 1, /* real copy */
-  copy_kind_soft,     /* soft copy */
-  copy_kind_move,     /* real move */
-  copy_kind_soft_move /* soft move */
+  copy_kind_copy = 1,  /* real copy */
+  copy_kind_soft_copy, /* soft copy */
+  copy_kind_move,      /* real move */
+  copy_kind_soft_move  /* soft move */
 
 } copy_kind_t;
 

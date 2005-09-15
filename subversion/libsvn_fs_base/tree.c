@@ -920,7 +920,7 @@ make_path_mutable (svn_fs_root_t *root,
           SVN_ERR (svn_fs_bdb__create_copy (fs, copy_id, copy_src_path,
                                             svn_fs_base__id_txn_id (node_id),
                                             new_node_id,
-                                            copy_kind_soft, trail, pool));
+                                            copy_kind_soft_copy, trail, pool));
           SVN_ERR (svn_fs_base__add_txn_copy (fs, txn_id, copy_id, 
                                               trail, pool));
         }
@@ -2987,7 +2987,7 @@ txn_body_copied_from (void *baton, trail_t *trail)
       SVN_ERR (svn_fs_bdb__get_copy (&copy, fs,
                                      svn_fs_base__id_copy_id (node_id),
                                      trail, trail->pool));
-      if ((copy->kind == copy_kind_real)
+      if ((copy->kind == copy_kind_copy)
           && svn_fs_base__id_eq (copy->dst_noderev_id, node_id))
         {
           args->result_path = copy->src_path;
@@ -3860,7 +3860,7 @@ examine_copy_inheritance (const char **copy_id,
          one), we have our answer.  Otherwise, we fall through to the
          recursive case. */
       SVN_ERR (svn_fs_bdb__get_copy (copy, fs, *copy_id, trail, pool));
-      if ((*copy)->kind != copy_kind_soft)
+      if ((*copy)->kind != copy_kind_soft_copy)
         return SVN_NO_ERROR;
     }
 
@@ -4035,7 +4035,7 @@ txn_body_history_prev (void *baton, trail_t *trail)
                     trail, trail->pool));
           src_path = svn_path_join (copy->src_path, remainder,
                                     trail->pool);
-          if (copy->kind == copy_kind_soft)
+          if (copy->kind == copy_kind_soft_copy)
             retry = TRUE;
         }
     }

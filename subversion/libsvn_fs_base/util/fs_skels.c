@@ -681,13 +681,13 @@ svn_fs_base__parse_copy_skel (copy_t **copy_p,
 
   /* KIND */
   if (svn_fs_base__matches_atom (skel->children, "soft-copy"))
-    copy->kind = copy_kind_soft;
+    copy->kind = copy_kind_soft_copy;
   else if (svn_fs_base__matches_atom (skel->children, "soft-move"))
     copy->kind = copy_kind_soft_move;
   else if (svn_fs_base__matches_atom (skel->children, "move"))
     copy->kind = copy_kind_move;
   else
-    copy->kind = copy_kind_real;
+    copy->kind = copy_kind_copy;
 
   /* SRC-PATH */
   copy->src_path = apr_pstrmemdup (pool,
@@ -1265,11 +1265,11 @@ svn_fs_base__unparse_copy_skel (skel_t **skel_p,
     svn_fs_base__prepend (svn_fs_base__mem_atom (NULL, 0, pool), skel);
 
   /* "copy" */
-  if (copy->kind == copy_kind_real)
+  if (copy->kind == copy_kind_copy)
     svn_fs_base__prepend (svn_fs_base__str_atom ("copy", pool), skel);
   else if (copy->kind == copy_kind_move)
     svn_fs_base__prepend (svn_fs_base__str_atom ("move", pool), skel);
-  else if (copy->kind == copy_kind_soft)
+  else if (copy->kind == copy_kind_soft_copy)
     svn_fs_base__prepend (svn_fs_base__str_atom ("soft-copy", pool), skel);
   else if (copy->kind == copy_kind_soft_move)
     svn_fs_base__prepend (svn_fs_base__str_atom ("soft-move", pool), skel);
