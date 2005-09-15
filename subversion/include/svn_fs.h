@@ -1221,6 +1221,12 @@ svn_error_t *svn_fs_copy (svn_fs_root_t *from_root,
                           apr_pool_t *pool);
 
 
+svn_error_t *svn_fs_move (svn_fs_root_t *from_root,
+                          const char *from_path,
+                          svn_fs_root_t *to_root,
+                          const char *to_path,
+                          apr_pool_t *pool);
+
 /** Like svn_fs_copy(), but doesn't record copy history, and preserves
  * the PATH.  You cannot use svn_fs_copied_from() later to find out
  * where this copy came from.

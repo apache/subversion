@@ -572,6 +572,10 @@ get_copy_inheritance (copy_id_inherit_t *inherit_p,
       return SVN_NO_ERROR;
     }
 
+  /* If the parent's entries list is storing a delayed copy ID for our
+     child to inherit, we'll use that. */
+  /* ### WAS HERE ### */
+
   /* From this point on, we'll assume that the child will just take
      its copy ID from its parent. */
   *inherit_p = copy_id_inherit_parent;
@@ -619,7 +623,7 @@ get_copy_inheritance (copy_id_inherit_t *inherit_p,
 
 
 /* Allocate a new parent_path_t node from POOL, referring to NODE,
-   ENTRY, PARENT, and COPY_ID.  */
+   ENTRY, and PARENT.  */
 static parent_path_t *
 make_parent_path (dag_node_t *node,
                   char *entry,
@@ -2941,6 +2945,131 @@ base_revision_link (svn_fs_root_t *from_root,
 }
 
 
+struct move_args
+{
+  svn_fs_root_t *from_root;
+  const char *from_path;
+  svn_fs_root_t *to_root;
+  const char *to_path;
+};
+
+
+static svn_error_t *
+txn_body_move (void *baton,
+               trail_t *trail)
+{
+  struct move_args *args = baton;
+  svn_fs_root_t *from_root = args->from_root;
+  const char *from_path = args->from_path;
+  svn_fs_root_t *to_root = args->to_root;
+  const char *to_path = args->to_path;
+  parent_path_t *from_parent_path, *to_parent_path;
+  const char *txn_id = to_root->txn;
+
+  /* Build up the parent path from TO_PATH in TO_ROOT.  If the last
+     component does not exist, it's not that big a deal.  We'll just
+     make one there. */
+  SVN_ERR (open_path (&to_parent_path, to_root, to_path,
+                      open_path_last_optional, txn_id, trail, trail->pool));
+  if (to_parent_path->node)
+    return already_exists (to_root, to_path);
+
+  /* Build up the parent path from FROM_PATH in FROM_ROOT. */
+  SVN_ERR (open_path (&from_parent_path, from_root, from_path,
+                      0, txn_id, trail, trail->pool));
+
+  /* ### TODO:  Review locking policies for sanity. ### */
+  /* Check to see if either to-path or from-path (or any child
+     thereof) is locked, or at least 'reserved', whether it exists or
+     not; if so, check that we can use the existing lock(s). */
+  if (to_root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
+    {
+      SVN_ERR (svn_fs_base__allow_locked_operation (to_path, TRUE,
+                                                    trail, trail->pool));
+      SVN_ERR (svn_fs_base__allow_locked_operation (from_path, TRUE,
+                                                    trail, trail->pool));
+    }
+
+  if (! from_root->is_txn_root)
+    {
+      svn_fs_path_change_kind_t kind;
+      dag_node_t *new_node;
+
+      /* ### TODO:  Get a real change type, folks. ### */
+      kind = svn_fs_path_change_add;
+
+      /* Make sure the source node's parents are mutable.  */
+      SVN_ERR (make_path_mutable (to_root, from_parent_path->parent,
+                                  from_path, trail, trail->pool));
+
+      /* Make sure the target node's parents are mutable.  */
+      SVN_ERR (make_path_mutable (to_root, to_parent_path->parent,
+                                  to_path, trail, trail->pool));
+
+      SVN_ERR (svn_fs_base__dag_move 
+               (from_parent_path->parent->node,
+                from_parent_path->entry,
+                svn_fs_base__canonicalize_abspath (from_path, trail->pool),
+                svn_fs_base__dag_get_id (from_parent_path->node),
+                to_parent_path->parent->node,
+                to_parent_path->entry,
+                txn_id, trail, trail->pool));
+
+      /* Make a record of this modification in the changes table. */
+      SVN_ERR (get_dag (&new_node, to_root, to_path, trail, trail->pool));
+      SVN_ERR (add_change (to_root->fs, txn_id, to_path,
+                           svn_fs_base__dag_get_id (new_node),
+                           kind, 0, 0, trail, trail->pool));
+    }
+  else
+    {
+      /* See IZ Issue #436 */
+      /* Move from transaction roots not currently available.
+
+         ### cmpilato todo someday: make this not so. :-) Note that
+         when copying from mutable trees, you have to make sure that
+         you aren't creating a cyclic graph filesystem, and a simple
+         referencing operation won't cut it.  Currently, we should not
+         be able to reach this clause, and the interface reports that
+         this only works from immutable trees anyway, but JimB has
+         stated that this requirement need not be necessary in the
+         future. */
+
+      abort ();
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+base_move (svn_fs_root_t *from_root,
+           const char *from_path,
+           svn_fs_root_t *to_root,
+           const char *to_path,
+           apr_pool_t *pool)
+{
+  struct move_args args;
+
+  assert (from_root->fs == to_root->fs);
+
+  if (! to_root->is_txn_root)
+    return not_txn (to_root);
+
+  if (from_root->is_txn_root)
+    return svn_error_create
+      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+       _("Move from mutable tree not currently supported"));
+
+  args.from_root         = from_root;
+  args.from_path         = from_path;
+  args.to_root           = to_root;
+  args.to_path           = to_path;
+
+  return svn_fs_base__retry_txn (to_root->fs, txn_body_move, &args, pool);
+}
+
+
 struct copied_from_args
 {
   svn_fs_root_t *root;      /* Root for the node whose ancestry we seek. */
@@ -4337,6 +4466,7 @@ static root_vtable_t root_vtable = {
   base_dir_entries,
   base_make_dir,
   base_copy,
+  base_move,
   base_revision_link,
   base_file_length,
   base_file_md5_checksum,

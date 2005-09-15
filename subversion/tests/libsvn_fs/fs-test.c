@@ -4413,6 +4413,60 @@ closest_copy_test (const char **msg,
 }
 
 
+static svn_error_t *
+move_test (const char **msg,
+           svn_boolean_t msg_only,
+           svn_test_opts_t *opts,
+           apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t after_rev;
+
+  *msg = "testing svn_fs_move";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Prepare a filesystem. */
+  SVN_ERR (svn_test__create_fs (&fs, "test-repo-move-test", 
+                                opts->fs_type, pool));
+
+  /* In first txn, create and commit the greek tree. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, pool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+
+  /* In second txn, copy the directory A to Z. */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_copy (rev_root, "A", txn_root, "Z", pool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+
+  /* In the third txn, we want to move A/D to Z/d. */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_fs_move (rev_root, "A/D", txn_root, "Z/d", pool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+
+  /* Now, we want to modify both Z/D/gamma and Z/d/gamma in the same
+     transaction. */
+  SVN_ERR (svn_fs_revision_root (&rev_root, fs, after_rev, pool)); 
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, after_rev, pool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "Z/D/gamma", 
+                                        "I have new contents!", pool));
+  SVN_ERR (svn_test__set_file_contents (txn_root, "Z/d/gamma", 
+                                        "I also have new contents!", pool));
+  SVN_ERR (test_commit_txn (&after_rev, txn, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -4450,5 +4504,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (branch_test),
     SVN_TEST_PASS (verify_checksum),
     SVN_TEST_PASS (closest_copy_test),
+    SVN_TEST_XFAIL (move_test),
     SVN_TEST_NULL
   };

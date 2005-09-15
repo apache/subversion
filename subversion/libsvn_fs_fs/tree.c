@@ -2036,6 +2036,20 @@ fs_copy (svn_fs_root_t *from_root,
 
 
 /* Create a copy of FROM_PATH in FROM_ROOT named TO_PATH in TO_ROOT.
+   If FROM_PATH is a directory, copy it recursively.  Temporary
+   allocations are from POOL.*/
+static svn_error_t *
+fs_move (svn_fs_root_t *from_root,
+         const char *from_path,
+         svn_fs_root_t *to_root,
+         const char *to_path,
+         apr_pool_t *pool)
+{
+  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
+}
+
+
+/* Create a copy of FROM_PATH in FROM_ROOT named TO_PATH in TO_ROOT.
    If FROM_PATH is a directory, copy it recursively.  No history is
    preserved.  Temporary allocations are from POOL. */
 static svn_error_t *
@@ -3136,6 +3150,7 @@ static root_vtable_t root_vtable = {
   fs_dir_entries,
   fs_make_dir,
   fs_copy,
+  fs_move,
   fs_revision_link,
   fs_file_length,
   fs_file_md5_checksum,

@@ -349,7 +349,8 @@ dir_entry_id_from_node (const svn_fs_id_t **id_p,
 
 
 /* Add or set in PARENT a directory entry NAME with node revision ID
-   and reserved move id MOVE_ID.
+   and reserved move id MOVE_ID.  If ID is NULL, an existing entry for
+   NAME will be removed.
 
    Assumptions:
    - PARENT is a mutable directory.
@@ -413,11 +414,18 @@ set_entry (dag_node_t *parent,
   if (! entries)
     entries = apr_hash_make (pool);
 
-  /* Now, add our new entry to the entries list. */
-  entry = apr_pcalloc (pool, sizeof (*entry));
-  entry->id = id;
-  entry->move_id = move_id;
-  apr_hash_set (entries, name, APR_HASH_KEY_STRING, entry);
+  /* Now, set (or remove, as the case may be) our entry. */
+  if (id)
+    {
+      entry = apr_pcalloc (pool, sizeof (*entry));
+      entry->id = id;
+      entry->move_id = move_id;
+      apr_hash_set (entries, name, APR_HASH_KEY_STRING, entry);
+    }
+  else
+    {
+      apr_hash_set (entries, name, APR_HASH_KEY_STRING, NULL);
+    }
 
   /* Finally, replace the old entries list with the new one. */
   SVN_ERR (svn_fs_base__unparse_entries_skel (&entries_skel, entries,
@@ -1371,6 +1379,34 @@ svn_fs_base__dag_copy (dag_node_t *to_node,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_fs_base__dag_move (dag_node_t *src_parent_node,
+                       const char *src_entry,
+                       const char *src_path,
+                       const svn_fs_id_t *node_id,
+                       dag_node_t *tgt_parent_node,
+                       const char *tgt_entry,
+                       const char *txn_id,
+                       trail_t *trail,
+                       apr_pool_t *pool)
+{
+  const char *move_id;
+  svn_fs_t *fs = trail->fs;
+
+  /* Get the source parent directory's entries list, and remove our
+     node from it. */
+  SVN_ERR (svn_fs_bdb__reserve_copy_id (&move_id, fs, trail, pool));
+  SVN_ERR (svn_fs_bdb__create_copy (fs, move_id, src_path, txn_id, node_id,
+                                    copy_kind_move, trail, pool));
+  SVN_ERR (svn_fs_base__add_txn_copy (fs, txn_id, move_id, trail, pool));
+  SVN_ERR (set_entry (src_parent_node, src_entry, NULL, NULL, 
+                      txn_id, trail, pool));
+  SVN_ERR (set_entry (tgt_parent_node, tgt_entry, node_id, move_id,
+                      txn_id, trail, pool));
+
+  return SVN_NO_ERROR;
+}
 
 
 /*** Deltification ***/

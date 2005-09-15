@@ -453,6 +453,17 @@ svn_error_t *svn_fs_base__dag_copy (dag_node_t *to_node,
                                     trail_t *trail,
                                     apr_pool_t *pool);
 
+svn_error_t *
+svn_fs_base__dag_move (dag_node_t *src_parent_node,
+                       const char *src_entry,
+                       const char *src_path,
+                       const svn_fs_id_t *node_id,
+                       dag_node_t *tgt_parent_node,
+                       const char *tgt_entry,
+                       const char *txn_id,
+                       trail_t *trail,
+                       apr_pool_t *pool);
+
 
 
 /* Deltification */
