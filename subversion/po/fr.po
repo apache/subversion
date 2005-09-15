@@ -1754,15 +1754,15 @@ msgstr "'%s' déverrouillé.\n"
 
 #: clients/cmdline/prompt.c:94
 msgid "Can't open stdin"
-msgstr "Ne peut ouvrir l'entrée standard (stdin)"
+msgstr "Impossible d'ouvrir l'entrée standard (stdin)"
 
 #: clients/cmdline/prompt.c:112 clients/cmdline/prompt.c:116
 msgid "Can't read stdin"
-msgstr "Ne peut lire l'entrée standard (stdin)"
+msgstr "Impossible de lire l'entrée standard (stdin)"
 
 #: clients/cmdline/prompt.c:153 libsvn_ra_svn/client.c:330
 msgid "Can't get password"
-msgstr "Ne peut obtenir le mot de passe"
+msgstr "Impossible d'obtenir le mot de passe"
 
 #: clients/cmdline/prompt.c:175
 #, c-format
@@ -3183,7 +3183,7 @@ msgstr "%s\t(copie de travail)"
 #: libsvn_client/diff.c:432
 #, c-format
 msgid "Cannot display: file marked as a binary type.%s"
-msgstr "Ne peut afficher : fichier considéré comme binaire.%s"
+msgstr "Impossible d'afficher : fichier considéré comme binaire.%s"
 
 #: libsvn_client/diff.c:505
 #, c-format
@@ -3692,7 +3692,7 @@ msgstr ""
 #: libsvn_fs_base/dag.c:615
 #, c-format
 msgid "Can't set proplist on *immutable* node-revision %s"
-msgstr "Ne peut fixer des propriétés sur la révision de noeud "
+msgstr "Impossible de fixer des propriétés sur la révision de noeud "
 "*non modifiable* %s"
 
 #: libsvn_fs_base/dag.c:727
@@ -4799,7 +4799,7 @@ msgstr "Nom d'hôte inconnu '%s'"
 
 #: libsvn_ra_svn/client.c:137
 msgid "Can't create socket"
-msgstr "Ne peut créer un 'socket'"
+msgstr "Impossible de créer un 'socket'"
 
 #: libsvn_ra_svn/client.c:157
 msgid "Can't set timeout"
@@ -4808,7 +4808,7 @@ msgstr "Une date d'expiration ne peut être fixée"
 #: libsvn_ra_svn/client.c:161
 #, c-format
 msgid "Can't connect to host '%s'"
-msgstr "Ne peut se connecter à l'hôte '%s'"
+msgstr "Impossible de se connecter à l'hôte '%s'"
 
 #: libsvn_ra_svn/client.c:182
 msgid "Proplist element not a list"
@@ -4859,7 +4859,7 @@ msgstr ""
 
 #: libsvn_ra_svn/client.c:561
 msgid "Can't create tunnel"
-msgstr "Ne peut créer le tunnel"
+msgstr "Impossible de créer le tunnel"
 
 #: libsvn_ra_svn/client.c:590
 msgid "Module for accessing a repository using the svn network protocol."
@@ -5450,12 +5450,12 @@ msgstr ""
 #: libsvn_subr/config_file.c:393
 #, c-format
 msgid "Can't open config file '%s'"
-msgstr "Ne peut ouvrir le fichier de configuration '%s'"
+msgstr "Impossible d'ouvrir le fichier de configuration '%s'"
 
 #: libsvn_subr/config_file.c:397
 #, c-format
 msgid "Can't find config file '%s'"
-msgstr "Ne peut trouver le fichier de configuration '%s'"
+msgstr "Impossible de trouver le fichier de configuration '%s'"
 
 #: libsvn_subr/date.c:204
 msgid "Can't manipulate current date"
@@ -5486,7 +5486,7 @@ msgstr ""
 #: libsvn_subr/io.c:248 libsvn_subr/io.c:337
 #, c-format
 msgid "Can't open '%s'"
-msgstr "Ne peut ouvrir '%s'"
+msgstr "Impossible d'ouvrir '%s'"
 
 #: libsvn_subr/io.c:262 libsvn_subr/io.c:350
 #, c-format
@@ -5499,26 +5499,26 @@ msgstr "Les liens symboliques ne sont pas supportés sur cette plateforme"
 
 #: libsvn_subr/io.c:377
 msgid "Can't read contents of link"
-msgstr "Ne peut lire le contenu du lien"
+msgstr "Impossible de lire le contenu du lien"
 
 #: libsvn_subr/io.c:519 libsvn_subr/io.c:529
 msgid "Can't find a temporary directory"
-msgstr "Ne peut trouver de répertoire temporaire"
+msgstr "Impossible de trouver de répertoire temporaire"
 
 #: libsvn_subr/io.c:566
 #, c-format
 msgid "Can't copy '%s' to '%s'"
-msgstr "Ne peut copier '%s' vers '%s'"
+msgstr "Impossible de copier '%s' vers '%s'"
 
 #: libsvn_subr/io.c:599
 #, c-format
 msgid "Can't set permissions on '%s'"
-msgstr "Ne peut fixer les permissions sur '%s'"
+msgstr "Impossible de fixer les permissions sur '%s'"
 
 #: libsvn_subr/io.c:621
 #, c-format
 msgid "Can't append '%s' to '%s'"
-msgstr "Ne peut ajouter le contenu de '%s' à '%s'"
+msgstr "Impossible d'ajouter le contenu de '%s' à '%s'"
 
 #: libsvn_subr/io.c:655
 #, c-format
@@ -5538,7 +5538,7 @@ msgstr "La destination '%s' existe déjà"
 #: libsvn_subr/io.c:736 libsvn_subr/io.c:1636 libsvn_subr/io.c:1707
 #, c-format
 msgid "Can't read directory '%s'"
-msgstr "Ne peut lire le répertoire '%s'"
+msgstr "Impossible de lire le répertoire '%s'"
 
 #: libsvn_subr/io.c:741 libsvn_subr/io.c:1641 libsvn_subr/io.c:1712
 #: libsvn_subr/io.c:2695
@@ -5549,27 +5549,27 @@ msgstr "Erreur de fermeture du répertoire '%s'"
 #: libsvn_subr/io.c:767
 #, c-format
 msgid "Can't make directory '%s'"
-msgstr "Ne peut créer le répertoire '%s'"
+msgstr "Impossible de créer le répertoire '%s'"
 
 #: libsvn_subr/io.c:835
 #, c-format
 msgid "Can't set access time of '%s'"
-msgstr "Ne peut changer l'heure de dernier accès de '%s'"
+msgstr "Impossible de changer l'heure du dernier accès à '%s'"
 
 #: libsvn_subr/io.c:950
 #, c-format
 msgid "Can't set file '%s' read-only"
-msgstr "Ne peut mettre le fichier '%s' en lecture seule"
+msgstr "Impossible de mettre le fichier '%s' en lecture seule"
 
 #: libsvn_subr/io.c:975
 #, c-format
 msgid "Can't set file '%s' read-write"
-msgstr "Ne peut mettre le fichier '%s' en lecture-écriture"
+msgstr "Impossible de mettre le fichier '%s' en lecture-écriture"
 
 #: libsvn_subr/io.c:1025
 #, c-format
 msgid "Can't get default file perms for file at '%s' (file stat error)"
-msgstr "Ne peut obtenir les permissions de fichier par défaut pour le "
+msgstr "Impossible d'obtenir les permissions de fichier par défaut pour le "
 "fichier '%s' (erreur de stat sur le fichier)"
 
 #: libsvn_subr/io.c:1035
@@ -5580,19 +5580,19 @@ msgstr "Le fichier '%s' ne peut être ouvert"
 #: libsvn_subr/io.c:1039
 #, c-format
 msgid "Can't get file perms for file at '%s' (file stat error)"
-msgstr "Ne peut obtenir les permissions de fichier pour le fichier "
+msgstr "Impossible d'obtenir les permissions de fichier pour le fichier "
 "'%s' (erreur de stat sur le fichier)"
 
 #: libsvn_subr/io.c:1072 libsvn_subr/io.c:1132
 #, c-format
 msgid "Can't change read-write perms of file '%s'"
-msgstr "Ne peut changer les permissions de lecture-écriture pour le "
+msgstr "Impossible de changer les permissions de lecture-écriture pour le "
 "fichier '%s'"
 
 #: libsvn_subr/io.c:1171 libsvn_subr/io.c:1215 libsvn_subr/io.c:1239
 #, c-format
 msgid "Can't change executability of file '%s'"
-msgstr "Ne peut changer les permissions d'exécution du fichier '%s'"
+msgstr "Impossible de changer les permissions d'exécution du fichier '%s'"
 
 #: libsvn_subr/io.c:1266
 msgid "Error getting UID of process"
@@ -5601,12 +5601,12 @@ msgstr ""
 #: libsvn_subr/io.c:1347
 #, c-format
 msgid "Can't get shared lock on file '%s'"
-msgstr "Ne peut obtenir le verrou partagé sur le fichier '%s'"
+msgstr "Impossible d'obtenir le verrou partagé sur le fichier '%s'"
 
 #: libsvn_subr/io.c:1351
 #, c-format
 msgid "Can't get exclusive lock on file '%s'"
-msgstr "Ne peut obtenir le verrou exclusif sur le fichier '%s'"
+msgstr "Impossible d'obtenir le verrou exclusif sur le fichier '%s'"
 
 #: libsvn_subr/io.c:1382
 #, c-format
@@ -5642,12 +5642,12 @@ msgstr ""
 #: libsvn_subr/io.c:1586 libsvn_subr/io.c:2544 libsvn_subr/io.c:2632
 #, c-format
 msgid "Can't open directory '%s'"
-msgstr "Ne peut ouvrir le répertoire '%s'"
+msgstr "Impossible d'ouvrir le répertoire '%s'"
 
 #: libsvn_subr/io.c:1625 libsvn_subr/io.c:1647
 #, c-format
 msgid "Can't remove '%s'"
-msgstr "Ne peut supprimer '%s'"
+msgstr "Impossible de supprimer '%s'"
 
 #: libsvn_subr/io.c:1751
 #, c-format
@@ -5722,76 +5722,76 @@ msgstr ""
 #: libsvn_subr/io.c:2107
 #, c-format
 msgid "Can't detect MIME type of non-file '%s'"
-msgstr "Ne peut détecter le type MIME de l'objet '%s' (pas un fichier)"
+msgstr "Impossible de détecter le type MIME de l'objet '%s' (pas un fichier)"
 
 #: libsvn_subr/io.c:2174
 #, c-format
 msgid "Can't open file '%s'"
-msgstr "Ne peut ouvrir le fichier '%s'"
+msgstr "Impossible d'ouvrir le fichier '%s'"
 
 #: libsvn_subr/io.c:2211
 msgid "Can't close stream"
-msgstr "Ne peut fermer le flux"
+msgstr "Impossible de fermer le flux"
 
 #: libsvn_subr/io.c:2221 libsvn_subr/io.c:2245 libsvn_subr/io.c:2258
 #, c-format
 msgid "Can't read file '%s'"
-msgstr "Ne peut lire le fichier '%s'"
+msgstr "Impossible de lire le fichier '%s'"
 
 #: libsvn_subr/io.c:2222 libsvn_subr/io.c:2246 libsvn_subr/io.c:2259
 msgid "Can't read stream"
-msgstr "Ne peut lire le flux"
+msgstr "Impossible de lire le flux"
 
 #: libsvn_subr/io.c:2233
 #, c-format
 msgid "Can't get attribute information from file '%s'"
-msgstr "Ne peut obtenir les informations d'attribut du fichier '%s'"
+msgstr "Impossible d'obtenir les informations d'attribut du fichier '%s'"
 
 #: libsvn_subr/io.c:2234
 msgid "Can't get attribute information from stream"
-msgstr "Ne peut obtenir les informations d'attribut du flux"
+msgstr "Impossible d'obtenir les informations d'attribut du flux"
 
 #: libsvn_subr/io.c:2270
 #, c-format
 msgid "Can't set position pointer in file '%s'"
-msgstr "Ne peut fixer le pointeur de position dans le fichier '%s'"
+msgstr "Impossible de fixer le pointeur de position dans le fichier '%s'"
 
 #: libsvn_subr/io.c:2271
 msgid "Can't set position pointer in stream"
-msgstr "Ne peut fixer le pointeur de position dans le flux"
+msgstr "Impossible de fixer le pointeur de position dans le flux"
 
 #: libsvn_subr/io.c:2282 libsvn_subr/io.c:2295
 #, c-format
 msgid "Can't write to file '%s'"
-msgstr "Ne peut écrire dans le fichier '%s'"
+msgstr "Impossible d'écrire dans le fichier '%s'"
 
 #: libsvn_subr/io.c:2283 libsvn_subr/io.c:2296
 msgid "Can't write to stream"
-msgstr "Ne peut écrire dans le flux"
+msgstr "Impossible d'écrire dans le flux"
 
 #: libsvn_subr/io.c:2336
 #, c-format
 msgid "Can't read length line in file '%s'"
-msgstr "Ne peut lire la longueur de la ligne dans le fichier '%s'"
+msgstr "Impossible de lire la longueur de la ligne dans le fichier '%s'"
 
 #: libsvn_subr/io.c:2340
 msgid "Can't read length line in stream"
-msgstr "Ne peut lire la longueur de la ligne dans le flux"
+msgstr "Impossible de lire la longueur de la ligne dans le flux"
 
 #: libsvn_subr/io.c:2415
 #, c-format
 msgid "Can't move '%s' to '%s'"
-msgstr "Ne peut déplacer '%s' vers '%s'"
+msgstr "Impossible de déplacer '%s' vers '%s'"
 
 #: libsvn_subr/io.c:2460
 #, c-format
 msgid "Can't create directory '%s'"
-msgstr "Ne peut créer le répertoire '%s'"
+msgstr "Impossible de créer le répertoire '%s'"
 
 #: libsvn_subr/io.c:2471 libsvn_wc/copy.c:303
 #, c-format
 msgid "Can't hide directory '%s'"
-msgstr "Ne peut cacher le répertoire '%s'"
+msgstr "Impossible de cacher le répertoire '%s'"
 
 #: libsvn_subr/io.c:2484
 #, c-format
@@ -5806,21 +5806,21 @@ msgstr ""
 #: libsvn_subr/io.c:2562
 #, c-format
 msgid "Can't remove directory '%s'"
-msgstr "Ne peut supprimer le répertoire '%s'"
+msgstr "Impossible de supprimer le répertoire '%s'"
 
 #: libsvn_subr/io.c:2580
 msgid "Can't read directory"
-msgstr "Ne peut lire le répertoire"
+msgstr "Impossible de lire le répertoire"
 
 #: libsvn_subr/io.c:2651
 #, c-format
 msgid "Can't read directory entry in '%s'"
-msgstr "Ne peut lire l'entrée de répertoire dans '%s'"
+msgstr "Impossible de lire l'entrée de répertoire dans '%s'"
 
 #: libsvn_subr/io.c:2776
 #, c-format
 msgid "Can't check directory '%s'"
-msgstr "Ne peut vérifier le répertoire '%s'"
+msgstr "Impossible de vérifier le répertoire '%s'"
 
 #: libsvn_subr/io.c:2798
 #, c-format
@@ -5841,16 +5841,16 @@ msgstr ""
 #: libsvn_subr/nls.c:79
 #, c-format
 msgid "Can't convert string to UCS-2: '%s'"
-msgstr "Ne peut convertir la chaîne vers UCS-2 : '%s'"
+msgstr "Impossible de convertir la chaîne vers UCS-2 : '%s'"
 
 #: libsvn_subr/nls.c:86
 msgid "Can't get module file name"
-msgstr "Ne peut obtenir le nom de fichier du module"
+msgstr "Impossible d'obtenir le nom de fichier du module"
 
 #: libsvn_subr/nls.c:101
 #, c-format
 msgid "Can't convert module path to UTF-8 from UCS-2: '%s'"
-msgstr "Ne peut convertir le chemin de module de UTF-8 vers UCS-2 : '%s'"
+msgstr "Impossible de convertir le chemin de module de UTF-8 vers UCS-2 : '%s'"
 
 #: libsvn_subr/opt.c:146
 msgid ""
@@ -5928,7 +5928,7 @@ msgstr "Entrer '%s help' pour l'aide.\n"
 #: libsvn_subr/path.c:1059
 #, c-format
 msgid "Couldn't determine absolute path of '%s'"
-msgstr "Ne peut déterminer le chemin absolu de '%s'"
+msgstr "Impossible de déterminer le chemin absolu de '%s'"
 
 #: libsvn_subr/path.c:1098
 #, c-format
@@ -5937,7 +5937,7 @@ msgstr "'%s' n'est ni un fichier ni un répertoire"
 
 #: libsvn_subr/path.c:1204
 msgid "Can't determine the native path encoding"
-msgstr "Ne peut déterminer l'encodage natif du chemin"
+msgstr "Impossible de déterminer l'encodage natif du chemin"
 
 #: libsvn_subr/path.c:1258
 #, c-format
@@ -5960,29 +5960,29 @@ msgstr ""
 #: libsvn_subr/utf.c:222
 #, c-format
 msgid "Can't create a character converter from native encoding to '%s'"
-msgstr "Ne peut créer un convertisseur de caractères de l'encodage "
+msgstr "Impossible de créer un convertisseur de caractères de l'encodage "
 "natif vers '%s'"
 
 #: libsvn_subr/utf.c:226
 #, c-format
 msgid "Can't create a character converter from '%s' to native encoding"
-msgstr "Ne peut créer un convertisseur de caractères de '%s' vers "
+msgstr "Impossible de créer un convertisseur de caractères de '%s' vers "
 "l'encodage natif"
 
 #: libsvn_subr/utf.c:230
 #, c-format
 msgid "Can't create a character converter from '%s' to '%s'"
-msgstr "Ne peut créer un convertisseur de caractères de '%s' vers '%s'"
+msgstr "Impossible de créer un convertisseur de caractères de '%s' vers '%s'"
 
 #: libsvn_subr/utf.c:454
 #, c-format
 msgid "Can't convert string from native encoding to '%s':"
-msgstr "Ne peut convertir la chaîne de l'encodage natif vers '%s':"
+msgstr "Impossible de convertir la chaîne de l'encodage natif vers '%s':"
 
 #: libsvn_subr/utf.c:458
 #, c-format
 msgid "Can't convert string from '%s' to native encoding:"
-msgstr "Ne peut convertir la chaîne de '%s' vers l'encodage natif:"
+msgstr "Impossible de convertir la chaîne de '%s' vers l'encodage natif:"
 
 #: libsvn_subr/utf.c:462
 #, c-format
@@ -6549,7 +6549,7 @@ msgstr "'%s' n'est pas un répertoire d'une copie de travail"
 #: libsvn_wc/merge.c:306 libsvn_wc/merge.c:308 libsvn_wc/merge.c:310
 #: libsvn_wc/merge.c:312
 msgid "Unable to delete temporary file"
-msgstr "Ne peut supprimer un fichier temporaire"
+msgstr "Impossible de supprimer un fichier temporaire"
 
 #: libsvn_wc/props.c:100
 #, c-format
@@ -7843,7 +7843,7 @@ msgstr "Informations de l'adresse inaccessibles : %s\n"
 #: svnserve/main.c:446
 #, c-format
 msgid "Can't create server socket: %s\n"
-msgstr "Ne peut créer un 'socket' serveur : %s\n"
+msgstr "Impossible de créer un 'socket' serveur : %s\n"
 
 #: svnserve/main.c:460
 #, c-format
