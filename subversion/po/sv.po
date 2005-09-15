@@ -42,8 +42,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-09-10 14:18+0200\n"
-"PO-Revision-Date: 2005-09-10 14:26+0200\n"
+"POT-Creation-Date: 2005-09-15 21:14+0200\n"
+"PO-Revision-Date: 2005-09-15 21:16+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -3037,7 +3037,7 @@ msgstr ""
 #: libsvn_client/prop_commands.c:951 libsvn_client/ra.c:181
 #: libsvn_client/revisions.c:89 libsvn_client/status.c:256
 #: libsvn_client/switch.c:104 libsvn_wc/adm_ops.c:2247
-#: libsvn_wc/adm_ops.c:2273 libsvn_wc/adm_ops.c:2310 libsvn_wc/copy.c:448
+#: libsvn_wc/adm_ops.c:2273 libsvn_wc/adm_ops.c:2310 libsvn_wc/copy.c:449
 #: libsvn_wc/entries.c:1498 libsvn_wc/entries.c:1990 libsvn_wc/props.c:283
 #: libsvn_wc/props.c:1142 libsvn_wc/questions.c:171
 #, c-format
@@ -5897,7 +5897,7 @@ msgstr "Kan inte flytta \"%s\" till \"%s\""
 msgid "Can't create directory '%s'"
 msgstr "Kan inte skapa katalogen \"%s\""
 
-#: libsvn_subr/io.c:2471 libsvn_wc/copy.c:303
+#: libsvn_subr/io.c:2471 libsvn_wc/copy.c:304
 #, c-format
 msgid "Can't hide directory '%s'"
 msgstr "Kan inte dölja katalogen \"%s\""
@@ -6326,22 +6326,23 @@ msgstr "\"%s\" finns redan och är i vägen"
 #: libsvn_wc/copy.c:160
 #, c-format
 msgid ""
-"'%s' is scheduled for deletion; it must be committed before being overwritten"
+"'%s' is scheduled for deletion; it must be committed before it can be "
+"overwritten"
 msgstr ""
 "\"%s\" är schemalagd för radering; den måste arkiveras innan den kan skrivas "
 "över"
 
-#: libsvn_wc/copy.c:165
+#: libsvn_wc/copy.c:166
 #, c-format
 msgid "There is already a versioned item '%s'"
 msgstr "Det finns redan ett versionshanterat objekt \"%s\""
 
-#: libsvn_wc/copy.c:176
+#: libsvn_wc/copy.c:177
 #, c-format
 msgid "Cannot copy or move '%s': it's not under version control"
 msgstr "Kan inte kopiera eller flytta \"%s\": den är inte versionshanterad"
 
-#: libsvn_wc/copy.c:183
+#: libsvn_wc/copy.c:184
 #, c-format
 msgid ""
 "Cannot copy or move '%s': it's not in the repository yet; try committing "
@@ -6350,7 +6351,7 @@ msgstr ""
 "Kan inte kopiera eller flytta \"%s\": den är inte i arkivet ännu; arkivera "
 "den först"
 
-#: libsvn_wc/copy.c:455
+#: libsvn_wc/copy.c:456
 #, c-format
 msgid ""
 "Cannot copy or move '%s': it is not in the repository yet; try committing "
@@ -6359,7 +6360,7 @@ msgstr ""
 "Kan inte kopiera eller flytta \"%s\": den är inte i arkivet ännu; arkivera "
 "den först"
 
-#: libsvn_wc/copy.c:525
+#: libsvn_wc/copy.c:526
 #, c-format
 msgid "Cannot copy to '%s' as it is scheduled for deletion"
 msgstr "Kan inte kopiera till \"%s\", då den är schemalagd att raderas"
