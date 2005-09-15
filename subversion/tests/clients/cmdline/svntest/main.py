@@ -454,16 +454,35 @@ def canonize_url(input):
 # Sandbox handling
 
 class Sandbox:
-  "Manages a sandbox for a test to operate within."
+  """Manages a sandbox (one or more repository/working copy pairs) for
+  a test to operate within."""
+
+  dependents = None
 
   def __init__(self, module, idx):
-    self.name = '%s-%d' % (module, idx)
+    self._set_name("%s-%d" % (module, idx))
+
+  def _set_name(self, name):
+    """A convenience method for renaming a sandbox, useful when
+    working with multiple repositories in the same unit test."""
+    self.name = name
     self.wc_dir = os.path.join(general_wc_dir, self.name)
     self.repo_dir = os.path.join(general_repo_dir, self.name)
     self.repo_url = test_area_url + '/' + self.repo_dir
     if windows == 1:
       self.repo_url = string.replace(self.repo_url, '\\', '/')
     self.test_paths = [self.wc_dir, self.repo_dir]
+
+  def clone_dependent(self):
+    """A convenience method for creating a near-duplicate of this
+    sandbox, useful when working with multiple repositories in the
+    same unit test.  Any necessary cleanup operations are triggered
+    by cleanup of the original sandbox."""
+    if not self.dependents:
+      self.dependents = []
+    self.dependents.append(copy.deepcopy(self))
+    self.dependents[-1]._set_name("%s-%d" % (self.name, len(self.dependents)))
+    return self.dependents[-1]
 
   def build(self):
     if actions.make_repo_and_wc(self):
@@ -486,6 +505,11 @@ class Sandbox:
     return path
 
   def cleanup_test_paths(self):
+    "Clean up detritus from this sandbox, and any dependents."
+    if self.dependents:
+      # Recursively cleanup any dependent sandboxes.
+      for sbox in self.dependents:
+        sbox.cleanup_test_paths()
     for path in self.test_paths:
       _cleanup_test_path(path)
 
