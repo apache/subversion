@@ -1491,11 +1491,11 @@ base_dir_entries (apr_hash_t **table_p,
                                        &nk_args, subpool));
       dirent = apr_pcalloc (pool, sizeof (*dirent));
       dirent->name = key;
-      dirent->id = entry->id;
+      dirent->id = svn_fs_base__id_copy (entry->id, pool);
       dirent->kind = nk_args.kind;
       apr_hash_set (entries, key, klen, dirent);
     }
-  svn_pool_destroy (pool);
+  svn_pool_destroy (subpool);
 
   *table_p = entries;
   return SVN_NO_ERROR;
