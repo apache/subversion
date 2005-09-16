@@ -58,7 +58,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
   svn_revnum_t revnum;
   svn_boolean_t sleep_here = FALSE;
   svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
-  const char *URL;
+  const char *session_url;
 
   /* Sanity check.  Without these, the checkout is meaningless. */
   assert (path != NULL);
@@ -71,7 +71,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
     return svn_error_create (SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
   /* Canonicalize the URL. */
-  URL = svn_path_canonicalize (url, pool);
+  url = svn_path_canonicalize (url, pool);
 
   {
     svn_ra_session_t *ra_session;
@@ -81,18 +81,18 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
     
     /* Get the RA connection. */
     SVN_ERR (svn_client__ra_session_from_path (&ra_session, &revnum,
-                                               &URL, url, peg_revision,
-                                               revision, ctx, 
+                                               &session_url, url,
+                                               peg_revision, revision, ctx, 
                                                session_pool));
     
     SVN_ERR (svn_ra_check_path (ra_session, "", revnum, &kind, pool));
     if (kind == svn_node_none)
       return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                _("URL '%s' doesn't exist"), URL);
+                                _("URL '%s' doesn't exist"), session_url);
     else if (kind == svn_node_file)
       return svn_error_createf
         (SVN_ERR_UNSUPPORTED_FEATURE , NULL,
-         _("URL '%s' refers to a file, not a directory"), URL);
+         _("URL '%s' refers to a file, not a directory"), session_url);
     
     /* Get the repos UUID and root URL. */
     SVN_ERR (svn_ra_get_uuid (ra_session, &uuid, pool));
@@ -102,7 +102,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
     
     /* Finished with the RA session -- close up, but not without
        copying out useful information that needs to survive.  */
-    URL = apr_pstrdup (pool, URL);
+    session_url = apr_pstrdup (pool, session_url);
     uuid = (uuid ? apr_pstrdup (pool, uuid) : NULL);
     repos = (repos ? apr_pstrdup (pool, repos) : NULL);
     svn_pool_destroy (session_pool);
@@ -113,7 +113,8 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
            entries file should only have an entry for THIS_DIR with a
            URL, revnum, and an 'incomplete' flag.  */
         SVN_ERR (svn_io_make_dir_recursively (path, pool));          
-        SVN_ERR (svn_wc_ensure_adm2 (path, uuid, URL, repos, revnum, pool));
+        SVN_ERR (svn_wc_ensure_adm2 (path, uuid, session_url,
+                                     repos, revnum, pool));
         
         /* Have update fix the incompleteness. */
         err = svn_client__update_internal (result_rev, path, revision,
@@ -130,8 +131,8 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
         if (! wc_format)
           {
             /* Make the unversioned directory into a versioned one. */
-            SVN_ERR (svn_wc_ensure_adm2 (path, uuid, URL, repos, revnum,
-                                         pool));
+            SVN_ERR (svn_wc_ensure_adm2 (path, uuid, session_url,
+                                         repos, revnum, pool));
             err = svn_client__update_internal (result_rev, path, revision,
                                                recurse, ignore_externals,
                                                use_sleep, ctx, pool);
@@ -148,7 +149,7 @@ svn_client__checkout_internal (svn_revnum_t *result_rev,
         /* If PATH's existing URL matches the incoming one, then
            just update.  This allows 'svn co' to restart an
            interrupted checkout. */
-        if (entry->url && (strcmp (entry->url, URL) == 0))
+        if (entry->url && (strcmp (entry->url, session_url) == 0))
           {
             err = svn_client__update_internal (result_rev, path, revision,
                                                recurse, ignore_externals,
