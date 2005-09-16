@@ -1360,7 +1360,7 @@ def double_uri_escaping_1814(sbox):
 #  Regression test for issues 2404
 
 def wc_to_wc_copy_between_different_repos(sbox):
-  "wc to wc copy attempts between different repositories"
+  "wc to wc copy attempts between different repos"
 
   sbox.build()
   wc_dir = sbox.wc_dir
