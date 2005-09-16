@@ -527,7 +527,8 @@ svn_wc_copy2 (const char *src_path,
   SVN_ERR (svn_path_split_if_file (src_path, &src_path_dir, &src_path_file,
                                    pool));
   SVN_ERR (svn_wc_entry (&src_entry, src_path_dir, adm_access, FALSE, pool));
-  if (strcmp (src_entry->repos, dst_entry->repos) != 0)
+  if ((src_entry->repos != NULL && dst_entry->repos != NULL) &&
+      strcmp (src_entry->repos, dst_entry->repos) != 0)
     return svn_error_createf
       (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
        _("Cannot copy to '%s', as it is not from repository '%s'"),
