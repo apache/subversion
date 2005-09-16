@@ -1067,7 +1067,7 @@ typedef struct svn_wc_entry_t
   /** url in repository */
   const char *url;
 
-  /** canonical repository URL */
+  /** canonical repository URL or NULL if not known */
   const char *repos;
 
   /** repository uuid */
