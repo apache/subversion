@@ -509,6 +509,29 @@ make_entry (dag_node_t **child_p,
 
 
 svn_error_t *
+svn_fs_base__dag_entry_move_id (const char **move_id,
+                                dag_node_t *parent,
+                                const char *entry_name,
+                                trail_t *trail,
+                                apr_pool_t *pool)
+{
+  apr_hash_t *entries;
+  directory_entry_t *entry;
+
+  SVN_ERR (svn_fs_base__dag_dir_entries (&entries, parent, trail, pool));
+  if (! (entries
+         && apr_hash_count (entries)
+         && ((entry = 
+              apr_hash_get (entries, entry_name, APR_HASH_KEY_STRING)))))
+    return svn_error_createf
+      (SVN_ERR_FS_NOT_FOUND, NULL,
+       _("Attempted to open non-existent child node '%s'"), entry_name);
+  *move_id = entry->move_id;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_fs_base__dag_dir_entries (apr_hash_t **entries,
                               dag_node_t *node,
                               trail_t *trail,

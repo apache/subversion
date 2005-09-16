@@ -251,6 +251,15 @@ svn_error_t *svn_fs_base__dag_dir_entries (apr_hash_t **entries_p,
                                            apr_pool_t *pool);
 
 
+/* Set *MOVE_ID to the ID of the move operation 
+   ### TODO: Finish this thought which isn't coming to me right now. ### */
+svn_error_t *svn_fs_base__dag_entry_move_id (const char **move_id,
+                                             dag_node_t *parent,
+                                             const char *entry_name,
+                                             trail_t *trail,
+                                             apr_pool_t *pool);
+
+
 /* Set ENTRY_NAME in NODE to point to ID, as part of TRAIL.  NODE must
    be a mutable directory.  ID can refer to a mutable or immutable
    node.  If ENTRY_NAME does not exist, it will be created.  TXN_ID is
