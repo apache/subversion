@@ -528,19 +528,32 @@ svn_wc_copy2 (const char *src_path,
 {
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t src_kind;
-  const svn_wc_entry_t *entry;
+  const svn_wc_entry_t *dst_entry, *src_entry;
+  const char *src_path_dir, *src_path_file;
 
-  SVN_ERR (svn_wc_entry (&entry, svn_wc_adm_access_path (dst_parent),
+  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, src_path, FALSE, -1,
+                                   cancel_func, cancel_baton, pool));
+
+  SVN_ERR (svn_wc_entry (&dst_entry, svn_wc_adm_access_path (dst_parent),
                          dst_parent, FALSE, pool));
-  if (entry->schedule == svn_wc_schedule_delete)
+  SVN_ERR (svn_path_split_if_file (src_path, &src_path_dir, &src_path_file,
+                                   pool));
+  SVN_ERR (svn_wc_entry (&src_entry, src_path_dir, adm_access, FALSE, pool));
+  if ((src_entry->repos != NULL && dst_entry->repos != NULL) &&
+      strcmp (src_entry->repos, dst_entry->repos) != 0)
+    return svn_error_createf
+      (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
+       _("Cannot copy to '%s', as it is not from repository '%s'"),
+       svn_path_local_style (svn_wc_adm_access_path (dst_parent), pool),
+       src_entry->repos);
+  if (dst_entry->schedule == svn_wc_schedule_delete)
     return svn_error_createf
       (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
        _("Cannot copy to '%s' as it is scheduled for deletion"),
        svn_path_local_style (svn_wc_adm_access_path (dst_parent), pool));
 
-  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, src_path, FALSE, -1,
-                                   cancel_func, cancel_baton, pool));
-
+  /* ### Can this call be avoided, since we now already have
+     ### src_entry->kind, or is it still needed for error handling? */
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
   
   if (src_kind == svn_node_file)

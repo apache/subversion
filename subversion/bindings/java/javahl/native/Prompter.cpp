@@ -731,7 +731,7 @@ svn_error_t *Prompter::ssl_server_trust_prompt(
     svn_auth_cred_ssl_server_trust_t *ret = 
             (svn_auth_cred_ssl_server_trust_t*)apr_pcalloc(pool, sizeof(*ret));
 
-    std::string question = _("Error validating server certificate for");
+    std::string question = _("Error validating server certificate for ");
     question += realm;
     question += ":\n";
 

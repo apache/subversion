@@ -2064,9 +2064,9 @@ merge (svn_stringbuf_t *conflict_p,
                                                 iterpool));
 
           /* If any of the three entries is of type file, flag a conflict. */
-          if (s_entry->kind == svn_node_file
-              || t_entry->kind == svn_node_file
-              || a_entry->kind == svn_node_file)
+          if ((svn_fs_base__dag_node_kind (s_ent_node) == svn_node_file)
+              || (svn_fs_base__dag_node_kind (t_ent_node) == svn_node_file)
+              || (svn_fs_base__dag_node_kind (a_ent_node) == svn_node_file))
             return conflict_err (conflict_p,
                                  svn_path_join (target_path,
                                                 a_entry->name,
