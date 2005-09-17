@@ -1385,11 +1385,11 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
         /* diff/merge don't ask for inline text-deltas. */
         if (uc.send_all)
           action = apr_psprintf(resource->pool,
-                                "switch from '%s' to '%s'",
+                                "switch '%s' '%s'",
                                 spath, dst_path);
         else
           action = apr_psprintf(resource->pool,
-                                "diff or merge, comparing '%s' and '%s'",
+                                "diff-or-merge '%s' '%s'",
                                 spath, dst_path);          
       }
 
@@ -1400,15 +1400,15 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
            reports it (and it alone) to the server as being empty. */
         if (entry_counter == 1 && entry_is_empty)
           action = apr_psprintf(resource->pool,
-                                "checkout or export of '%s'", spath);
+                                "checkout-or-export '%s'", spath);
         else
           {
             if (text_deltas)
               action = apr_psprintf(resource->pool,
-                                    "update of '%s'", spath);
+                                    "update '%s'", spath);
             else
               action = apr_psprintf(resource->pool,
-                                    "status --update of '%s'", spath);
+                                    "remote-status '%s'", spath);
           }
       }
 

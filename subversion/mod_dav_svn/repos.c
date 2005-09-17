@@ -2913,7 +2913,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
      DAV client.  */
   apr_table_set(ctx->info.r->subprocess_env, "SVN-ACTION",
                 apr_psprintf(params->pool,
-                             "listing entries of directory '%s'",
+                             "list-dir '%s'",
                              ctx->info.repos_path));
 
   /* fetch this collection's children */

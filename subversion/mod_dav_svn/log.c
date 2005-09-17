@@ -320,10 +320,10 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   if (paths->nelts == 0)
     action = "log";
   else if (paths->nelts == 1)
-    action = apr_psprintf(resource->pool, "log on '%s'",
+    action = apr_psprintf(resource->pool, "log-all '%s'",
                           APR_ARRAY_IDX (paths, 0, const char *));
   else
-    action = apr_psprintf(resource->pool, "log on some set of paths below '%s'",
+    action = apr_psprintf(resource->pool, "log-partial '%s'",
                           APR_ARRAY_IDX (paths, 0, const char *));
 
   apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION", action);

@@ -845,7 +845,7 @@ dav_svn_append_locks(dav_lockdb *lockdb,
   /* Log the locking as a 'high-level' action. */
   apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION",
                 apr_psprintf(resource->info->r->pool,
-                             "locked '%s'", slock->path));
+                             "lock '%s'", slock->path));
 
   return 0;
 }
@@ -936,7 +936,7 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
   /* Log the unlocking as a 'high-level' action. */
   apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION",
                 apr_psprintf(resource->info->r->pool,
-                             "unlocked '%s'", resource->info->repos_path));
+                             "unlock '%s'", resource->info->repos_path));
 
   return 0;
 }
