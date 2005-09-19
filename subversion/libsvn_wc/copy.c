@@ -538,8 +538,6 @@ svn_wc_copy2 (const char *src_path,
        _("Cannot copy to '%s' as it is scheduled for deletion"),
        svn_path_local_style (svn_wc_adm_access_path (dst_parent), pool));
 
-  /* ### Can this call be avoided, since we now already have
-     ### src_entry->kind, or is it still needed for error handling? */
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
   
   if (src_kind == svn_node_file)
