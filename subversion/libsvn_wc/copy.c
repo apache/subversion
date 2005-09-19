@@ -517,16 +517,14 @@ svn_wc_copy2 (const char *src_path,
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t src_kind;
   const svn_wc_entry_t *dst_entry, *src_entry;
-  const char *src_path_dir, *src_path_file;
 
   SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, src_path, FALSE, -1,
                                    cancel_func, cancel_baton, pool));
 
   SVN_ERR (svn_wc_entry (&dst_entry, svn_wc_adm_access_path (dst_parent),
                          dst_parent, FALSE, pool));
-  SVN_ERR (svn_path_split_if_file (src_path, &src_path_dir, &src_path_file,
-                                   pool));
-  SVN_ERR (svn_wc_entry (&src_entry, src_path_dir, adm_access, FALSE, pool));
+  SVN_ERR (svn_wc_entry (&src_entry, svn_wc_adm_access_path (adm_access),
+                         adm_access, FALSE, pool));
   if ((src_entry->repos != NULL && dst_entry->repos != NULL) &&
       strcmp (src_entry->repos, dst_entry->repos) != 0)
     return svn_error_createf
