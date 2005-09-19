@@ -2958,6 +2958,7 @@ svn_wc_add_repos_file (const char *dst_path,
   apr_array_header_t *propchanges;
   int log_number = 0;
   const svn_wc_entry_t *ent;
+  const svn_wc_entry_t *dst_entry;
 
   /* Fabricate the anticipated new URL of the target and check the
      copyfrom URL to be in the same repository. */
@@ -2975,6 +2976,33 @@ svn_wc_add_repos_file (const char *dst_path,
                                   " root than '%s'"),
                                 copyfrom_url, ent->repos);
   }
+
+  /* If we're replacing the file then we need to save the destination files
+   * text base and prop base before replacing it. This allows us to revert
+   * the entire change. */
+  SVN_ERR (svn_wc_entry (&dst_entry, dst_path, adm_access, FALSE, pool));
+  if (dst_entry && dst_entry->schedule == svn_wc_schedule_delete)
+    {
+      const char *dst_rtext = svn_wc__text_revert_path (dst_path, FALSE,
+                                                        pool);
+      const char *dst_txtb = svn_wc__text_base_path (dst_path, FALSE, pool);
+      const char *dst_rprop;
+      const char *dst_bprop;
+      svn_node_kind_t kind;
+
+      SVN_ERR (svn_wc__prop_revert_path (&dst_rprop, dst_path,
+                                         adm_access, FALSE, pool));
+
+      SVN_ERR (svn_wc__prop_base_path (&dst_bprop, dst_path,
+                                       adm_access, FALSE, pool));
+
+      SVN_ERR (svn_io_copy_file (dst_txtb, dst_rtext, TRUE, pool));
+      
+      /* If prop base exist, copy it to revert base. */
+      SVN_ERR (svn_io_check_path(dst_bprop, &kind, pool));
+      if (kind == svn_node_file)
+        SVN_ERR (svn_io_copy_file (dst_bprop, dst_rprop, TRUE, pool));
+    }
   
   /* Construct the new properties.  Passing an empty hash for the
      source props will result in the right kind of prop array for

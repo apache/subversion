@@ -29,7 +29,107 @@ Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
 Item = svntest.wc.StateItem
 
- 
+
+######################################################################
+# Helpers
+
+def revert_replacement_with_props(sbox, wc_copy):
+  """Helper implementing the core of
+  revert_{repos,wc}_to_wc_replace_with_props().
+
+  Uses a working copy (when wc_copy == True) or a URL (when wc_copy == False)
+  source to copy from.
+  """
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Set props on file which is copy-source later on
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  svntest.actions.run_and_verify_svn("", None, [],
+                                     'ps', 'phony-prop', '*', pi_path)
+  svntest.actions.run_and_verify_svn("", None, [],
+                                     'ps', 'svn:eol-style', 'LF', rho_path)
+
+  # Verify props having been set
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_disk.tweak('A/D/G/pi',
+                      props={ 'phony-prop': '*' })
+  expected_disk.tweak('A/D/G/rho',
+                      props={ 'svn:eol-style': 'LF' })
+
+  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
+  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
+
+  # Commit props
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/pi':  Item(verb='Sending'),
+    'A/D/G/rho': Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(repos_rev='2')
+  expected_status.tweak('A/D/G/pi',  wc_rev='2')
+  expected_status.tweak('A/D/G/rho', wc_rev='2')
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+  # Bring wc into sync
+  svntest.actions.run_and_verify_svn("", None, [], 'up', wc_dir)
+
+  # File scheduled for deletion
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', rho_path)
+
+  # Status before attempting copies
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/D/G/rho', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # The copy shouldn't fail
+  if wc_copy:
+    pi_src = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  else:
+    pi_src = svntest.main.current_repo_url + '/A/D/G/pi'
+
+  svntest.actions.run_and_verify_svn("", None, [],
+                                     'cp', pi_src, rho_path)
+
+  # Verify both content and props have been copied
+  expected_disk.tweak('A/D/G/rho',
+                      contents="This is the file 'pi'.\n",
+                      props={ 'phony-prop': '*' })
+  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
+  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
+
+  # Now revert
+  expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_status.tweak(repos_rev='3')
+  expected_status.tweak('A/D/G/rho', status='  ', copied=None,
+                        repos_rev='3', wc_rev='3')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/rho': Item(verb='Replacing'),
+    })
+  svntest.actions.run_and_verify_svn("", None, [],
+                                     'revert', '-R', wc_dir)
+
+  # Check disk status
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_disk.tweak('A/D/G/pi',
+                      props={ 'phony-prop': '*' })
+  expected_disk.tweak('A/D/G/rho',
+                      props={ 'svn:eol-style': 'LF' })
+  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
+  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
+
+
+
+
 ######################################################################
 # Tests
 #
@@ -180,94 +280,6 @@ def revert_moved_file(sbox):
     
     svntest.actions.run_and_verify_svn(None, [], [], 
                                       'status', '-v', iota_path_moved)
-    
-       
-#----------------------------------------------------------------------
-
-def revert_replace_with_history_with_props(sbox):
-  "revert 'svn cp PATH PATH' replace with props"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  # Set props on file which is copy-source later on
-  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.actions.run_and_verify_svn("", None, [],
-                                     'ps', 'phony-prop', '*', pi_path)
-  svntest.actions.run_and_verify_svn("", None, [],
-                                     'ps', 'svn:eol-style', 'LF', rho_path)
-
-  # Verify props having been set
-  expected_disk = svntest.main.greek_state.copy()
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_disk.tweak('A/D/G/pi',
-                      props={ 'phony-prop': '*' })
-  expected_disk.tweak('A/D/G/rho',
-                      props={ 'svn:eol-style': 'LF' })
-
-  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
-
-  # Commit props
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/pi':  Item(verb='Sending'),
-    'A/D/G/rho': Item(verb='Sending'),
-    })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev='2')
-  expected_status.tweak('A/D/G/pi',  wc_rev='2')
-  expected_status.tweak('A/D/G/rho', wc_rev='2')
-  svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output,
-                                        expected_status,
-                                        None, None, None, None, None,
-                                        wc_dir)
-
-  # Bring wc into sync
-  svntest.actions.run_and_verify_svn("", None, [], 'up', wc_dir)
-
-  # File scheduled for deletion
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', rho_path)
-
-  # Status before attempting copies
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/D/G/rho', status='D ')
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-
-  # The copy shouldn't fail
-  svntest.actions.run_and_verify_svn("", None, [],
-                                     'cp', pi_path, rho_path)
-
-  # Verify both content and props have been copied
-  expected_disk.tweak('A/D/G/rho',
-                      contents="This is the file 'pi'.\n",
-                      props={ 'phony-prop': '*' })
-  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
-
-  # Now revert
-  expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-
-  expected_status.tweak(repos_rev='3')
-  expected_status.tweak('A/D/G/rho', status='  ', copied=None,
-                        repos_rev='3', wc_rev='3')
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/rho': Item(verb='Replacing'),
-    })
-  svntest.actions.run_and_verify_svn("", None, [],
-                                     'revert', '-R', wc_dir)
-
-  # Check disk status
-  expected_disk = svntest.main.greek_state.copy()
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_disk.tweak('A/D/G/pi',
-                      props={ 'phony-prop': '*' })
-  expected_disk.tweak('A/D/G/rho',
-                      props={ 'svn:eol-style': 'LF' })
-  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
-  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
 
 
 #----------------------------------------------------------------------
@@ -365,6 +377,17 @@ def revert_file_merge_replace_with_history(sbox):
   svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
 
 
+def revert_wc_to_wc_replace_with_props(sbox):
+  "revert svn cp PATH PATH replace file with props"
+
+  revert_replacement_with_props(sbox, True)
+
+def revert_repos_to_wc_replace_with_props(sbox):
+  "revert svn cp URL PATH replace file with props"
+
+  revert_replacement_with_props(sbox, False)
+
+
 ########################################################################
 # Run the tests
 
@@ -374,8 +397,9 @@ test_list = [ None,
               XFail(revert_reexpand_keyword),
               revert_replaced_file_without_props,
               XFail(revert_moved_file),
-              revert_replace_with_history_with_props,
-              XFail(revert_file_merge_replace_with_history)
+              revert_wc_to_wc_replace_with_props,
+              XFail(revert_file_merge_replace_with_history),
+              revert_repos_to_wc_replace_with_props,
              ]
 
 if __name__ == '__main__':
