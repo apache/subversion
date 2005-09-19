@@ -218,12 +218,18 @@ copy_file_administratively (const char *src_path,
     {
       const char *dst_rtext = svn_wc__text_revert_path (dst_path, FALSE, pool);
       const char *dst_rprop;
+      svn_node_kind_t kind;
 
       SVN_ERR (svn_wc__prop_revert_path (&dst_rprop, dst_path,
                                          dst_parent, FALSE, pool));
 
       SVN_ERR (svn_io_copy_file (dst_txtb, dst_rtext, TRUE, pool));
-      SVN_ERR (svn_io_copy_file (dst_bprop, dst_rprop, TRUE, pool));
+      
+      /* If prop base exist, copy it to revert base. We need this check
+       * because in some situations prop base doesn't exists */
+      SVN_ERR (svn_io_check_path(dst_bprop, &kind, pool));
+      if (kind == svn_node_file)
+        SVN_ERR (svn_io_copy_file (dst_bprop, dst_rprop, TRUE, pool));
     }
   
   /* Copy the pristine text-base over.  Why?  Because it's the *only*
