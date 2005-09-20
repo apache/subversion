@@ -379,6 +379,11 @@ SVN_ERROR_START
               SVN_ERR_WC_CATEGORY_START + 23,
               "Invalid schedule")  
 
+  /** @since New in 1.3. */
+  SVN_ERRDEF (SVN_ERR_WC_INVALID_RELOCATION,
+              SVN_ERR_WC_CATEGORY_START + 24,
+              "Invalid relocation")
+
   /* fs errors */
 
   SVN_ERRDEF (SVN_ERR_FS_GENERAL,

@@ -52,10 +52,27 @@ relocate_entry (svn_wc_adm_access_t *adm_access,
 
   if (entry->repos)
     {
-      /* We can't relocate beyond the repository root.  Do no URL rewriting
-         in this case. */
-      if (from_len > strlen (entry->repos))
-        return SVN_NO_ERROR;
+      /* We can't relocate beyond the repository root, but the user is allowed
+         to specify a redundant part of the fs path in from and to, but only
+         if this part is identical in both strings. */
+      apr_size_t repos_len = strlen (entry->repos);
+           
+      if (from_len > repos_len)
+        {
+          apr_size_t to_len = strlen (to);
+          apr_size_t fs_path_len = from_len - repos_len;
+          if (to_len < fs_path_len
+              || strncmp (from + repos_len, to + (to_len - fs_path_len),
+                         fs_path_len) != 0)
+            return svn_error_create (SVN_ERR_WC_INVALID_RELOCATION, NULL,
+                                     _("Relocate can only change the "
+                                       "repository part of an URL"));
+          /* Since the fs path part is redundant, we don't need to change
+             that part anyway, and the below code depends on this. */
+          from_len = repos_len;
+          to = apr_pstrndup (pool, to, to_len - fs_path_len);
+        }
+
       if (strncmp (from, entry->repos, from_len) == 0)
         {
           entry2.repos = apr_psprintf (svn_wc_adm_access_pool (adm_access),
