@@ -168,7 +168,8 @@ static dav_error *save_value(dav_db *db, const dav_prop_name *name,
         /* Tell the logging subsystem about the revprop change. */
         apr_table_set(db->resource->info->r->subprocess_env, "SVN-ACTION",
                       apr_psprintf(db->resource->pool,
-                                   "changed value of revision property '%s'",
+                                   "revprop-change r%" SVN_REVNUM_T_FMT 
+                                   " '%s'", db->resource->info->root.rev,
                                    propname));
       }
   else

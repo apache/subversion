@@ -1184,6 +1184,63 @@ static apr_status_t cleanup_fs_access(void *data)
 
 
 
+
+/* Helper func to construct a special 'parentpath' private resource. */
+static dav_error *
+get_parentpath_resource(request_rec *r,
+                        const char *root_path,
+                        dav_resource **resource)
+{
+  const char *new_uri;
+  dav_svn_root *droot = apr_pcalloc(r->pool, sizeof(*droot));
+  dav_svn_repos *repos = apr_pcalloc(r->pool, sizeof(*repos));
+  dav_resource_combined *comb = apr_pcalloc(r->pool, sizeof(*comb));
+  apr_size_t len = strlen(r->uri);
+
+  comb->res.exists = TRUE;
+  comb->res.collection = TRUE;
+  comb->res.uri = apr_pstrdup(r->pool, r->uri);
+  comb->res.info = &comb->priv;
+  comb->res.hooks = &dav_svn_hooks_repos;
+  comb->res.pool = r->pool;
+  comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
+  
+  comb->priv.restype = DAV_SVN_RESTYPE_PARENTPATH_COLLECTION;
+  comb->priv.r = r;
+  comb->priv.repos_path = "Collection of Repositories";
+  comb->priv.root = *droot;
+  droot->rev = SVN_INVALID_REVNUM;
+  
+  comb->priv.repos = repos;      
+  repos->pool = r->pool;
+  repos->xslt_uri = dav_svn_get_xslt_uri(r);
+  repos->autoversioning = dav_svn_get_autoversioning_flag(r);
+  repos->base_url = ap_construct_url(r->pool, "", r);
+  repos->special_uri = dav_svn_get_special_uri(r);
+  repos->username = r->user;
+  
+  /* Make sure this type of resource always has a trailing slash; if
+     not, redirect to a URI that does. */
+  if (r->uri[len-1] != '/')
+    {
+      new_uri = apr_pstrcat(r->pool, ap_escape_uri(r->pool, r->uri),
+                            "/", NULL);
+      apr_table_setn(r->headers_out, "Location",
+                     ap_construct_url(r->pool, new_uri, r));
+      return dav_new_error(r->pool, HTTP_MOVED_PERMANENTLY, 0,
+                           "Requests for a collection must have a "
+                           "trailing slash on the URI.");
+    }
+  
+  /* No other "prepping" of resource needs to happen -- no opening
+     of a repository or anything like that, because, well, there's
+     no repository to open. */
+  *resource = &comb->res;
+  return NULL;
+}
+
+
+
 static dav_error * dav_svn_get_resource(request_rec *r,
                                         const char *root_path,
                                         const char *label,
@@ -1210,6 +1267,31 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 
   repo_name = dav_svn_get_repo_name(r);
   xslt_uri = dav_svn_get_xslt_uri(r);
+  fs_parent_path = dav_svn_get_fs_parent_path(r);
+
+  /* Special case: detect and build the SVNParentPath as a unique type
+     of private resource, iff the SVNListParentPath directive is 'on'. */
+  if (fs_parent_path && dav_svn_get_list_parentpath_flag(r))
+    {
+      char *uri = apr_pstrdup(r->pool, r->uri);
+      char *parentpath = apr_pstrdup(r->pool, root_path);
+      apr_size_t uri_len = strlen(uri);
+      apr_size_t parentpath_len = strlen(parentpath);
+
+      if (uri[uri_len-1] == '/')
+        uri[uri_len-1] = '\0';          
+
+      if (parentpath[parentpath_len-1] == '/')
+        parentpath[parentpath_len-1] = '\0';          
+
+      if (strcmp(parentpath, uri) == 0)
+        {
+          err = get_parentpath_resource(r, root_path, resource);
+          if (err)
+            return err;
+          return NULL;
+        }
+    }
 
   /* This does all the work of interpreting/splitting the request uri. */
   err = dav_svn_split_uri(r, r->uri, root_path,
@@ -1223,7 +1305,6 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   fs_path = dav_svn_get_fs_path(r);
 
   /* If the SVNParentPath directive was used instead... */
-  fs_parent_path = dav_svn_get_fs_parent_path(r);
   if (fs_parent_path != NULL)
     {      
       /* ...then the URL to the repository is actually one implicit
@@ -2187,11 +2268,13 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
   /* Check resource type */
   if (resource->type != DAV_RESOURCE_TYPE_REGULAR
       && resource->type != DAV_RESOURCE_TYPE_VERSION
-      && resource->type != DAV_RESOURCE_TYPE_WORKING) {
-    return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
-                         "Cannot GET this type of resource.");
-  }
-
+      && resource->type != DAV_RESOURCE_TYPE_WORKING
+      && resource->info->restype != DAV_SVN_RESTYPE_PARENTPATH_COLLECTION)
+    {
+      return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
+                           "Cannot GET this type of resource.");
+    }
+  
   if (resource->collection) {
     const int gen_html = !resource->info->repos->xslt_uri;
     apr_hash_t *entries;
@@ -2231,12 +2314,55 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
          </index>
        </svn> */
 
-    serr = svn_fs_dir_entries(&entries, resource->info->root.root,
-                              resource->info->repos_path, resource->pool);
-    if (serr != NULL)
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "could not fetch directory entries",
-                                 resource->pool);
+
+    /* ### TO-DO:  check for a new mod_dav_svn directive here also. */
+    if (resource->info->restype == DAV_SVN_RESTYPE_PARENTPATH_COLLECTION)
+      {
+        apr_hash_index_t *hi;
+        apr_hash_t *dirents;
+        const char *fs_parent_path = 
+          dav_svn_get_fs_parent_path(resource->info->r);
+
+        serr = svn_io_get_dirents(&dirents, fs_parent_path, resource->pool);
+        if (serr != NULL)
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "couldn't fetch dirents of SVNParentPath",
+                                     resource->pool);
+        
+        /* convert an io dirent hash to an fs dirent hash. */
+        entries = apr_hash_make(resource->pool);
+        for (hi = apr_hash_first(resource->pool, dirents);
+             hi; hi = apr_hash_next (hi))
+          {
+            const void *key;
+            apr_ssize_t klen;
+            void *val;
+            svn_node_kind_t *path_kind;
+            svn_fs_dirent_t *ent = apr_pcalloc(resource->pool, sizeof(*ent));
+
+            apr_hash_this(hi, &key, &klen, &val);
+            path_kind = val;
+
+            if (*path_kind != svn_node_dir)
+              continue;
+
+            ent->name = key;
+            ent->id = NULL;     /* ### does it matter? */
+            ent->kind = *path_kind;
+
+            apr_hash_set(entries, key, APR_HASH_KEY_STRING, ent);
+          }
+
+      }
+    else
+      {
+        serr = svn_fs_dir_entries(&entries, resource->info->root.root,
+                                  resource->info->repos_path, resource->pool);
+        if (serr != NULL)
+          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                     "could not fetch directory entries",
+                                     resource->pool);
+      }
 
     bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
 
@@ -2248,15 +2374,18 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         else
           title = resource->info->repos_path;
 
-        if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
-          title = apr_psprintf(resource->pool,
-                               "Revision %ld: %s",
-                               resource->info->root.rev, title);
+        if (resource->info->restype != DAV_SVN_RESTYPE_PARENTPATH_COLLECTION)
+          {
+            if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
+              title = apr_psprintf(resource->pool,
+                                   "Revision %ld: %s",
+                                   resource->info->root.rev, title);
 
-        if (resource->info->repos->repo_name)
-          title = apr_psprintf(resource->pool, "%s - %s",
-                               resource->info->repos->repo_name,
-                               title);
+            if (resource->info->repos->repo_name)
+              title = apr_psprintf(resource->pool, "%s - %s",
+                                   resource->info->repos->repo_name,
+                                   title);
+          }
 
         ap_fprintf(output, bb, "<html><head><title>%s</title></head>\n"
                    "<body>\n <h2>%s</h2>\n <ul>\n", title, title);
@@ -2289,7 +2418,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
         ap_fputs(output, bb, ">\n");
       }
 
-    if (resource->info->repos_path && resource->info->repos_path[1] != '\0')
+    if ((resource->info->repos_path && resource->info->repos_path[1] != '\0')
+        && (resource->info->restype != DAV_SVN_RESTYPE_PARENTPATH_COLLECTION))
       {
         if (gen_html)
           ap_fprintf(output, bb, "  <li><a href=\"../\">..</a></li>\n");
@@ -2913,7 +3043,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
      DAV client.  */
   apr_table_set(ctx->info.r->subprocess_env, "SVN-ACTION",
                 apr_psprintf(params->pool,
-                             "listing entries of directory '%s'",
+                             "list-dir '%s'",
                              ctx->info.repos_path));
 
   /* fetch this collection's children */

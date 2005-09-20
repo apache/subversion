@@ -17,7 +17,7 @@
 ######################################################################
 
 from libsvn.delta import *
-from core import _unprefix_names
+from svn.core import _unprefix_names
 _unprefix_names(locals(), 'svn_delta_')
 _unprefix_names(locals(), 'svn_txdelta_', 'tx_')
 del _unprefix_names
