@@ -17,14 +17,14 @@
 ######################################################################
 
 from libsvn.repos import *
-from core import _unprefix_names
+from svn.core import _unprefix_names
 _unprefix_names(locals(), 'svn_repos_')
 _unprefix_names(locals(), 'SVN_REPOS_')
 del _unprefix_names
 
 
 # Names that are not to be exported
-import core as _core, fs as _fs, delta as _delta
+import svn.core as _core, svn.fs as _fs, svn.delta as _delta
 
 
 class ChangedPath:
