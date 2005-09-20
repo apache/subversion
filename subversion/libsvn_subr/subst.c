@@ -91,31 +91,175 @@ svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
     }
 }
 
-/* A helper function to convert the date property to something suitable for 
-   printing out.  If LONG_P is TRUE, use the long format, otherwise use a 
-   shorter one.  Returns a UTF8 encoded cstring. */
-static svn_error_t *
-date_prop_to_human (const char **human, svn_boolean_t long_p, apr_time_t when,
-                    apr_pool_t *pool)
+
+/* Helper function for svn_subst_build_keywords */
+
+/* Given a printf-like format string, return a string with proper
+ * information filled in.
+ *
+ * Important API note: This function is the core of the implementation of
+ * svn_subst_build_keywords (all versions), and as such must implement the
+ * tolerance of NULL and zero inputs that that function's documention
+ * stipulates.
+ *
+ * The format codes:
+ *
+ * %a author of this revision
+ * %b basename of the URL of this file
+ * %d short format of date of this revision
+ * %D long format of date of this revision
+ * %r number of this revision
+ * %u URL of this file
+ * %% a literal %
+ *
+ * All memory is allocated out of @a pool.
+ */
+static svn_string_t *
+keyword_printf (const char *fmt,
+                const char *rev,
+                const char *url,
+                apr_time_t date,
+                const char *author,
+                apr_pool_t *pool)
 {
-  if (long_p)
-    *human = svn_time_to_human_cstring (when, pool);
-  else
+  svn_stringbuf_t *value = svn_stringbuf_ncreate ("", 0, pool);
+  const char *cur;
+  int n;
+
+  for (;;)
     {
-      apr_time_exp_t exploded_time;
+      cur = fmt;
 
-      apr_time_exp_gmt (&exploded_time, when);
+      while (*cur != '\0' && *cur != '%')
+        cur++;
 
-      *human = apr_psprintf (pool, "%04d-%02d-%02d %02d:%02d:%02dZ",
-                             exploded_time.tm_year + 1900,
-                             exploded_time.tm_mon + 1,
-                             exploded_time.tm_mday,
-                             exploded_time.tm_hour,
-                             exploded_time.tm_min,
-                             exploded_time.tm_sec);
+      if ((n = cur - fmt) > 0) /* Do we have an as-is string? */
+        svn_stringbuf_appendbytes (value, fmt, n);
+
+      if (*cur == '\0')
+        break;
+
+      switch (cur[1])
+        {
+        case 'a': /* author of this revision */
+          if (author)
+            svn_stringbuf_appendcstr (value, author);
+          break;
+        case 'b': /* basename of this file */
+          if (url)
+            {
+              const char *base_name
+                = svn_path_uri_decode (svn_path_basename (url, pool), pool);
+              svn_stringbuf_appendcstr (value, base_name);
+            }
+          break;
+        case 'd': /* short format of date of this revision */
+          if (date)
+            {
+              apr_time_exp_t exploded_time;
+              const char *human;
+
+              apr_time_exp_gmt (&exploded_time, date);
+
+              human = apr_psprintf (pool, "%04d-%02d-%02d %02d:%02d:%02dZ",
+                                    exploded_time.tm_year + 1900,
+                                    exploded_time.tm_mon + 1,
+                                    exploded_time.tm_mday,
+                                    exploded_time.tm_hour,
+                                    exploded_time.tm_min,
+                                    exploded_time.tm_sec);
+
+              svn_stringbuf_appendcstr (value, human);
+            }
+          break;
+        case 'D': /* long format of date of this revision */
+          if (date)
+            svn_stringbuf_appendcstr (value,
+                                      svn_time_to_human_cstring (date, pool));
+          break;
+        case 'r': /* number of this revision */
+          if (rev)
+            svn_stringbuf_appendcstr (value, rev);
+          break;
+        case 'u': /* URL of this file */
+          if (url)
+            svn_stringbuf_appendcstr (value, url);
+          break;
+        case '%': /* '%%' => a literal % */
+          svn_stringbuf_appendbytes (value, cur, 1);
+          break;
+        case '\0': /* '%' as the last character of the string. */
+          svn_stringbuf_appendbytes (value, cur, 1);
+          /* Now go back one character, since this was just a one character
+           * sequence, whereas all others are two characters, and we do not
+           * want to skip the null terminator entirely and carry on
+           * formatting random memory contents. */
+          cur--;
+          break;
+        default: /* Unrecognized code, just print it literally. */
+          svn_stringbuf_appendbytes (value, cur, 2);
+          break;
+        }
+
+      /* Format code is processed - skip it, and get ready for next chunk. */
+      fmt = cur + 2;
     }
 
-  return SVN_NO_ERROR;
+  return svn_string_create_from_buf (value, pool);
+}
+
+/* Convert an old-style svn_subst_keywords_t struct * into a new-style
+ * keywords hash.  Keyword values are shallow copies, so the produced
+ * hash must not be assumed to have lifetime longer than the struct it
+ * is based on.  A NULL input causes a NULL output. */
+static apr_hash_t *
+kwstruct_to_kwhash (const svn_subst_keywords_t *kwstruct,
+                    apr_pool_t *pool)
+{
+  apr_hash_t *kwhash;
+
+  if (kwstruct == NULL)
+    return NULL;
+
+  kwhash = apr_hash_make(pool);
+
+  if (kwstruct->revision)
+    {
+      apr_hash_set (kwhash, SVN_KEYWORD_REVISION_LONG,
+                    APR_HASH_KEY_STRING, kwstruct->revision);
+      apr_hash_set (kwhash, SVN_KEYWORD_REVISION_MEDIUM,
+                    APR_HASH_KEY_STRING, kwstruct->revision);
+      apr_hash_set (kwhash, SVN_KEYWORD_REVISION_SHORT,
+                    APR_HASH_KEY_STRING, kwstruct->revision);
+    }
+  if (kwstruct->date)
+    {
+      apr_hash_set (kwhash, SVN_KEYWORD_DATE_LONG,
+                    APR_HASH_KEY_STRING, kwstruct->date);
+      apr_hash_set (kwhash, SVN_KEYWORD_DATE_SHORT,
+                    APR_HASH_KEY_STRING, kwstruct->date);
+    }
+  if (kwstruct->author)
+    {
+      apr_hash_set (kwhash, SVN_KEYWORD_AUTHOR_LONG,
+                    APR_HASH_KEY_STRING, kwstruct->author);
+      apr_hash_set (kwhash, SVN_KEYWORD_AUTHOR_SHORT,
+                    APR_HASH_KEY_STRING, kwstruct->author);
+    }
+  if (kwstruct->url)
+    {
+      apr_hash_set (kwhash, SVN_KEYWORD_URL_LONG,
+                    APR_HASH_KEY_STRING, kwstruct->url);
+      apr_hash_set (kwhash, SVN_KEYWORD_URL_SHORT,
+                    APR_HASH_KEY_STRING, kwstruct->url);
+    }
+  if (kwstruct->id)
+    {
+      apr_hash_set (kwhash, SVN_KEYWORD_ID,
+                    APR_HASH_KEY_STRING, kwstruct->id);
+    }
+
+  return kwhash;
 }
 
 svn_error_t *
@@ -127,8 +271,52 @@ svn_subst_build_keywords (svn_subst_keywords_t *kw,
                           const char *author,
                           apr_pool_t *pool)
 {
+  apr_hash_t *kwhash;
+  const svn_string_t *val;
+
+  SVN_ERR (svn_subst_build_keywords2 (&kwhash, keywords_val, rev,
+                                      url, date, author, pool));
+
+  /* The behaviour of pre-1.3 svn_subst_build_keywords, which we are
+   * replicating here, is to write to a slot in the svn_subst_keywords_t
+   * only if the relevant keyword was present in keywords_val, otherwise
+   * leaving that slot untouched. */
+
+  val = apr_hash_get(kwhash, SVN_KEYWORD_REVISION_LONG, APR_HASH_KEY_STRING);
+  if (val)
+    kw->revision = val;
+
+  val = apr_hash_get(kwhash, SVN_KEYWORD_DATE_LONG, APR_HASH_KEY_STRING);
+  if (val)
+    kw->date = val;
+
+  val = apr_hash_get(kwhash, SVN_KEYWORD_AUTHOR_LONG, APR_HASH_KEY_STRING);
+  if (val)
+    kw->author = val;
+
+  val = apr_hash_get(kwhash, SVN_KEYWORD_URL_LONG, APR_HASH_KEY_STRING);
+  if (val)
+    kw->url = val;
+
+  val = apr_hash_get(kwhash, SVN_KEYWORD_ID, APR_HASH_KEY_STRING);
+  if (val)
+    kw->id = val;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_subst_build_keywords2 (apr_hash_t **kw,
+                           const char *keywords_val,
+                           const char *rev,
+                           const char *url,
+                           apr_time_t date,
+                           const char *author,
+                           apr_pool_t *pool)
+{
   apr_array_header_t *keyword_tokens;
   int i;
+  *kw = apr_hash_make (pool);
 
   keyword_tokens = svn_cstring_split (keywords_val, " \t\v\n\b\r\f",
                                       TRUE /* chop */, pool);
@@ -141,47 +329,57 @@ svn_subst_build_keywords (svn_subst_keywords_t *kw,
           || (! strcmp (keyword, SVN_KEYWORD_REVISION_MEDIUM))
           || (! strcasecmp (keyword, SVN_KEYWORD_REVISION_SHORT)))
         {
-          kw->revision = svn_string_create (rev, pool);
-        }      
+          svn_string_t *revision_val;
+
+          revision_val = keyword_printf ("%r", rev, url, date, author, pool);
+          apr_hash_set (*kw, SVN_KEYWORD_REVISION_LONG,
+                        APR_HASH_KEY_STRING, revision_val);
+          apr_hash_set (*kw, SVN_KEYWORD_REVISION_MEDIUM,
+                        APR_HASH_KEY_STRING, revision_val);
+          apr_hash_set (*kw, SVN_KEYWORD_REVISION_SHORT,
+                        APR_HASH_KEY_STRING, revision_val);
+        }
       else if ((! strcmp (keyword, SVN_KEYWORD_DATE_LONG))
                || (! strcasecmp (keyword, SVN_KEYWORD_DATE_SHORT)))
         {
-          if (date)
-            {
-              const char *human_date;
+          svn_string_t *date_val;
 
-              SVN_ERR (date_prop_to_human (&human_date, TRUE, date, pool));
-
-              kw->date = svn_string_create (human_date, pool);
-            }
-          else
-            kw->date = svn_string_create ("", pool);
+          date_val = keyword_printf ("%D", rev, url, date, author, pool);
+          apr_hash_set (*kw, SVN_KEYWORD_DATE_LONG,
+                        APR_HASH_KEY_STRING, date_val);
+          apr_hash_set (*kw, SVN_KEYWORD_DATE_SHORT,
+                        APR_HASH_KEY_STRING, date_val);
         }
       else if ((! strcmp (keyword, SVN_KEYWORD_AUTHOR_LONG))
                || (! strcasecmp (keyword, SVN_KEYWORD_AUTHOR_SHORT)))
         {
-          kw->author = svn_string_create (author ? author : "", pool);
+          svn_string_t *author_val;
+
+          author_val = keyword_printf ("%a", rev, url, date, author, pool);
+          apr_hash_set (*kw, SVN_KEYWORD_AUTHOR_LONG,
+                        APR_HASH_KEY_STRING, author_val);
+          apr_hash_set (*kw, SVN_KEYWORD_AUTHOR_SHORT,
+                        APR_HASH_KEY_STRING, author_val);
         }
       else if ((! strcmp (keyword, SVN_KEYWORD_URL_LONG))
                || (! strcasecmp (keyword, SVN_KEYWORD_URL_SHORT)))
         {
-          kw->url = svn_string_create (url ? url : "", pool);
+          svn_string_t *url_val;
+
+          url_val = keyword_printf ("%u", rev, url, date, author, pool);
+          apr_hash_set (*kw, SVN_KEYWORD_URL_LONG,
+                        APR_HASH_KEY_STRING, url_val);
+          apr_hash_set (*kw, SVN_KEYWORD_URL_SHORT,
+                        APR_HASH_KEY_STRING, url_val);
         }
       else if ((! strcasecmp (keyword, SVN_KEYWORD_ID)))
         {
-          const char *base_name = url
-            ? svn_path_uri_decode (svn_path_basename (url, pool), pool)
-            : "";
-          const char *human_date = NULL;
+          svn_string_t *id_val;
 
-          if (date)
-            SVN_ERR (date_prop_to_human (&human_date, FALSE, date, pool));
-
-          kw->id = svn_string_createf (pool, "%s %s %s %s",
-                                       base_name,
-                                       rev,
-                                       human_date ? human_date : "",
-                                       author ? author : "");
+          id_val = keyword_printf ("%b %r %d %a", rev, url, date, author,
+                                   pool);
+          apr_hash_set (*kw, SVN_KEYWORD_ID,
+                        APR_HASH_KEY_STRING, id_val);
         }
     }
 
@@ -379,8 +577,12 @@ static svn_boolean_t
 translate_keyword (char *buf,
                    apr_size_t *len,
                    svn_boolean_t expand,
-                   const svn_subst_keywords_t *keywords)
+                   apr_hash_t *keywords)
 {
+  const svn_string_t *value;
+  char keyword_name[SVN_KEYWORD_MAX_LEN + 1];
+  int i;
+
   /* Make sure we gotz good stuffs. */
   assert (*len <= SVN_KEYWORD_MAX_LEN);
   assert ((buf[0] == '$') && (buf[*len - 1] == '$'));
@@ -389,87 +591,20 @@ translate_keyword (char *buf,
   if (! keywords)
     return FALSE;
 
-  /* Revision */
-  if (keywords->revision)
+  /* Extract the name of the keyword */
+  for (i = 0; i < *len - 2 && buf[i + 1] != ':'; i++)
+    keyword_name[i] = buf[i + 1];
+  keyword_name[i] = '\0';
+
+  value = apr_hash_get (keywords, keyword_name, APR_HASH_KEY_STRING);
+
+  if (value)
     {
-      if (translate_keyword_subst (buf, len,
-                                   SVN_KEYWORD_REVISION_LONG,
-                                   (sizeof (SVN_KEYWORD_REVISION_LONG)) - 1,
-                                   expand ? keywords->revision : NULL))
-        return TRUE;
-
-      if (translate_keyword_subst (buf, len,
-                                   SVN_KEYWORD_REVISION_MEDIUM,
-                                   (sizeof (SVN_KEYWORD_REVISION_MEDIUM)) - 1,
-                                   expand ? keywords->revision : NULL))
-        return TRUE;
-
-      if (translate_keyword_subst (buf, len,
-                                   SVN_KEYWORD_REVISION_SHORT,
-                                   (sizeof (SVN_KEYWORD_REVISION_SHORT)) - 1,
-                                   expand ? keywords->revision : NULL))
-        return TRUE;
+      return translate_keyword_subst (buf, len,
+                                      keyword_name, strlen (keyword_name),
+                                      expand ? value : NULL);
     }
 
-  /* Date */
-  if (keywords->date)
-    {
-      if (translate_keyword_subst (buf, len,
-                                   SVN_KEYWORD_DATE_LONG,
-                                   (sizeof (SVN_KEYWORD_DATE_LONG)) - 1,
-                                   expand ? keywords->date : NULL))
-        return TRUE;
-
-      if (translate_keyword_subst (buf, len,
-                                   SVN_KEYWORD_DATE_SHORT,
-                                   (sizeof (SVN_KEYWORD_DATE_SHORT)) - 1,
-                                   expand ? keywords->date : NULL))
-        return TRUE;
-    }
-
-  /* Author */
-  if (keywords->author)
-    {
-      if (translate_keyword_subst (buf, len,
-                                   SVN_KEYWORD_AUTHOR_LONG,
-                                   (sizeof (SVN_KEYWORD_AUTHOR_LONG)) - 1,
-                                   expand ? keywords->author : NULL))
-        return TRUE;
-
-      if (translate_keyword_subst (buf, len,
-                                   SVN_KEYWORD_AUTHOR_SHORT,
-                                   (sizeof (SVN_KEYWORD_AUTHOR_SHORT)) - 1,
-                                   expand ? keywords->author : NULL))
-        return TRUE;
-    }
-
-  /* URL */
-  if (keywords->url)
-    {
-      if (translate_keyword_subst (buf, len,
-                                   SVN_KEYWORD_URL_LONG,
-                                   (sizeof (SVN_KEYWORD_URL_LONG)) - 1,
-                                   expand ? keywords->url : NULL))
-        return TRUE;
-
-      if (translate_keyword_subst (buf, len,
-                                   SVN_KEYWORD_URL_SHORT,
-                                   (sizeof (SVN_KEYWORD_URL_SHORT)) - 1,
-                                   expand ? keywords->url : NULL))
-        return TRUE;
-    }
-
-  /* Id */
-  if (keywords->id)
-    {
-      if (translate_keyword_subst (buf, len,
-                                   SVN_KEYWORD_ID,
-                                   (sizeof (SVN_KEYWORD_ID)) - 1,
-                                   expand ? keywords->id : NULL))
-        return TRUE;
-    }
-
-  /* No translations were successful.  Return FALSE. */
   return FALSE;
 }
 
@@ -586,6 +721,45 @@ svn_subst_keywords_differ (const svn_subst_keywords_t *a,
   return FALSE;
 }
 
+svn_boolean_t
+svn_subst_keywords_differ2 (apr_hash_t *a,
+                            apr_hash_t *b,
+                            svn_boolean_t compare_values,
+                            apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  unsigned int a_count, b_count;
+
+  /* An empty hash is logically equal to a NULL,
+   * as far as this API is concerned. */
+  a_count = (a == NULL) ? 0 : apr_hash_count (a);
+  b_count = (b == NULL) ? 0 : apr_hash_count (b);
+
+  if (a_count != b_count)
+    return TRUE;
+
+  if (a_count == 0)
+    return FALSE;
+
+  /* The hashes are both non-NULL, and have the same number of items.
+   * We must check that every item of A is present in B. */
+  for (hi = apr_hash_first(pool, a); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *void_a_val;
+      svn_string_t *a_val, *b_val;
+
+      apr_hash_this (hi, &key, &klen, &void_a_val);
+      a_val = void_a_val;
+      b_val = apr_hash_get (b, key, klen);
+
+      if (!b_val || (compare_values && !svn_string_compare (a_val, b_val)))
+        return TRUE;
+    }
+
+  return FALSE;
+}
 
 svn_error_t *
 svn_subst_translate_stream2 (svn_stream_t *s, /* src stream */
@@ -593,6 +767,20 @@ svn_subst_translate_stream2 (svn_stream_t *s, /* src stream */
                              const char *eol_str,
                              svn_boolean_t repair,
                              const svn_subst_keywords_t *keywords,
+                             svn_boolean_t expand,
+                             apr_pool_t *pool)
+{
+  apr_hash_t *kh = kwstruct_to_kwhash (keywords, pool);
+
+  return svn_subst_translate_stream3 (s, d, eol_str, repair, kh, expand, pool);
+}
+
+svn_error_t *
+svn_subst_translate_stream3 (svn_stream_t *s, /* src stream */
+                             svn_stream_t *d, /* dst stream */
+                             const char *eol_str,
+                             svn_boolean_t repair,
+                             apr_hash_t *keywords,
                              svn_boolean_t expand,
                              apr_pool_t *pool)
 {
@@ -742,6 +930,21 @@ svn_subst_translate_cstring (const char *src,
                              svn_boolean_t expand,
                              apr_pool_t *pool)
 {
+  apr_hash_t *kh = kwstruct_to_kwhash (keywords, pool);
+
+  return svn_subst_translate_cstring2 (src, dst, eol_str, repair,
+                                       kh, expand, pool);
+}
+
+svn_error_t *
+svn_subst_translate_cstring2 (const char *src,
+                              const char **dst,
+                              const char *eol_str,
+                              svn_boolean_t repair,
+                              apr_hash_t *keywords,
+                              svn_boolean_t expand,
+                              apr_pool_t *pool)
+{
   svn_stringbuf_t *src_stringbuf, *dst_stringbuf;
   svn_stream_t *src_stream, *dst_stream;
   svn_error_t *err;
@@ -761,7 +964,7 @@ svn_subst_translate_cstring (const char *src,
   dst_stream = svn_stream_from_stringbuf (dst_stringbuf, pool);
 
   /* Translate src stream into dst stream. */
-  err = svn_subst_translate_stream2 (src_stream, dst_stream,
+  err = svn_subst_translate_stream3 (src_stream, dst_stream,
                                      eol_str, repair, keywords, expand, pool);
   if (err)
     {
@@ -951,6 +1154,23 @@ svn_subst_copy_and_translate2 (const char *src,
                                svn_boolean_t special,
                                apr_pool_t *pool)
 {
+  apr_hash_t *kh = kwstruct_to_kwhash (keywords, pool);
+
+  return svn_subst_copy_and_translate3 (src, dst, eol_str,
+                                        repair, kh, expand, special,
+                                        pool);
+}
+
+svn_error_t *
+svn_subst_copy_and_translate3 (const char *src,
+                               const char *dst,
+                               const char *eol_str,
+                               svn_boolean_t repair,
+                               apr_hash_t *keywords,
+                               svn_boolean_t expand,
+                               svn_boolean_t special,
+                               apr_pool_t *pool)
+{
   const char *dst_tmp = NULL;
   svn_stream_t *src_stream, *dst_stream;
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
@@ -1003,7 +1223,7 @@ svn_subst_copy_and_translate2 (const char *src,
   dst_stream = svn_stream_from_aprfile (d, subpool);
 
   /* Translate src stream into dst stream. */
-  err = svn_subst_translate_stream2 (src_stream, dst_stream, eol_str,
+  err = svn_subst_translate_stream3 (src_stream, dst_stream, eol_str,
                                      repair, keywords, expand, subpool);
   if (err)
     {
@@ -1074,13 +1294,13 @@ svn_subst_translate_string (svn_string_t **new_value,
       SVN_ERR (svn_utf_cstring_to_utf8 (&val_utf8, value->data, pool));
     }
 
-  SVN_ERR (svn_subst_translate_cstring (val_utf8,
-                                        &val_utf8_lf,
-                                        "\n",  /* translate to LF */
-                                        FALSE, /* no repair */
-                                        NULL,  /* no keywords */
-                                        FALSE, /* no expansion */
-                                        pool));
+  SVN_ERR (svn_subst_translate_cstring2 (val_utf8,
+                                         &val_utf8_lf,
+                                         "\n",  /* translate to LF */
+                                         FALSE, /* no repair */
+                                         NULL,  /* no keywords */
+                                         FALSE, /* no expansion */
+                                         pool));
   
   *new_value = svn_string_create (val_utf8_lf, pool);
 
@@ -1104,13 +1324,13 @@ svn_subst_detranslate_string (svn_string_t **new_value,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR (svn_subst_translate_cstring (value->data,
-                                        &val_neol,
-                                        APR_EOL_STR,  /* 'native' eol */
-                                        FALSE, /* no repair */
-                                        NULL,  /* no keywords */
-                                        FALSE, /* no expansion */
-                                        pool));
+  SVN_ERR (svn_subst_translate_cstring2 (value->data,
+                                         &val_neol,
+                                         APR_EOL_STR,  /* 'native' eol */
+                                         FALSE, /* no repair */
+                                         NULL,  /* no keywords */
+                                         FALSE, /* no expansion */
+                                         pool));
 
   if (for_output)
     {
