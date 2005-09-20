@@ -95,9 +95,23 @@ throughout the perl bindings), with the edit_baton omitted.
 =cut
 
 package SVN::TxDelta;
-use SVN::Base qw(Delta svn_txdelta_);
+use SVN::Base qw(Delta svn_txdelta_ apply);
 
 *new = *SVN::_Delta::svn_txdelta;
+
+# special case for backward compatibility.  When called with an additional
+# argument "md5", it's the old style and don't return the md5.
+# Note that since the returned m5 is to be populated upon the last window
+# sent to the handler, it's not currently working to magically change things
+# in Perl land.
+sub apply {
+    if (@_ == 5 || (@_ == 4 && ref($_[-1]) ne 'SVN::Pool' && ref($_[-1]) ne '_p_apr_pool_t')) {
+	splice(@_, 3, 1);
+	my @ret = SVN::_Delta::svn_txdelta_apply(@_);
+	return @ret[1,2];
+    }
+    goto &SVN::_Delta::svn_txdelta_apply;
+}
 
 package _p_svn_txdelta_op_t;
 use SVN::Base qw(Delta svn_txdelta_op_t_);
