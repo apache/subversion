@@ -938,6 +938,39 @@ def commit_mods_below_switch(sbox):
                                         None, None, None, None, None,
                                         C_path, D_path)
 
+def relocate_beyond_repos_root(sbox):
+  "relocate with prefixes longer than repo root"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1)
+  svntest.main.safe_rmtree(repo_dir, 1)
+
+  A_url = repo_url + "/A"
+  other_A_url = other_repo_url + "/A"
+  other_B_url = other_repo_url + "/B"
+  A_wc_dir = os.path.join(wc_dir, "A")
+
+  # A relocate that changes the repo path part of the URL shouldn't work.
+  # This tests for issue #2380.
+  svntest.actions.run_and_verify_svn(None, None,
+                                     ".*can only change the repository part.*",
+                                     'switch', '--relocate',
+                                     A_url, other_B_url, A_wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', '--relocate',
+                                     A_url, other_A_url, A_wc_dir)
+
+  # Check that we can contact the repository, meaning that the relocate
+  # actually changed the URL.
+  svntest.actions.run_and_verify_svn(None, '^URL: ' + other_A_url + '$', [],
+                                     'info', '-rHEAD', A_wc_dir)
+                                     
+
 ########################################################################
 # Run the tests
 
@@ -959,6 +992,7 @@ test_list = [ None,
               bad_intermediate_urls,
               obstructed_switch,
               XFail(commit_mods_below_switch),
+              relocate_beyond_repos_root,
              ]
 
 if __name__ == '__main__':
