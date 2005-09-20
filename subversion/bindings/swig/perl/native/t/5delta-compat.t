@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 use strict;
-use Test::More tests => 3;
+use Test::More tests => 2;
 require SVN::Core;
 require SVN::Delta;
 
@@ -14,13 +14,9 @@ my $txstream = SVN::TxDelta::new ($source, $target);
 
 isa_ok ($txstream, '_p_svn_txdelta_stream_t');
 open my $asource, '<', \$srctext;
-my ($md5, @handle) = SVN::TxDelta::apply ($asource, $aresult, undef);
+my $handle = [SVN::TxDelta::apply ($asource, $aresult, undef, undef)];
 
-SVN::TxDelta::send_txstream ($txstream, @handle);
+SVN::TxDelta::send_txstream ($txstream, @$handle);
 
 is ($result, $tgttext, 'delta self test');
 
-TODO: {
-local $TODO = 'md5 to be populated.';
-is($md5, 'a22b3dadcbddac48d2f1eae3ec5fb86a', 'md5 matched');
-}
