@@ -735,11 +735,8 @@ svn_subst_keywords_differ2 (apr_hash_t *a,
   a_count = (a == NULL) ? 0 : apr_hash_count (a);
   b_count = (b == NULL) ? 0 : apr_hash_count (b);
 
-  if (a_count != b_count)
+  if (a_count != b_count || a_count == 0)
     return TRUE;
-
-  if (a_count == 0)
-    return FALSE;
 
   /* The hashes are both non-NULL, and have the same number of items.
    * We must check that every item of A is present in B. */
