@@ -1324,7 +1324,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
   svn_error_t *err;
   apr_time_t tstamp;
   apr_array_header_t *propchanges;
-  svn_boolean_t magic_props_changed = FALSE;
+  svn_boolean_t target_needs_retranslation = FALSE;
 
   /* Build the full path of the thing we're reverting. */
   fullpath = svn_wc_adm_access_path (adm_access);
@@ -1364,7 +1364,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
       
       /* Determine if any of the propchanges are the "magic" ones that
          might require changing the working file. */
-      magic_props_changed = svn_wc__has_magic_property (propchanges);
+      target_needs_retranslation = svn_wc__has_magic_property (propchanges);
   
       SVN_ERR (svn_wc__prop_path (&thing, fullpath, adm_access, FALSE, pool)); 
       SVN_ERR (svn_wc__prop_base_path (&base_thing, fullpath, adm_access, FALSE,
@@ -1463,13 +1463,19 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
         if (disk_kind == svn_node_file)
           {
             SVN_ERR (svn_io_file_rename (revert_thing, base_thing, pool));
+            /* After modifying the text base, refresh the working file */
+            target_needs_retranslation = TRUE;
           }          
       }     
 
-      if (! magic_props_changed)
+      if (! target_needs_retranslation)
+        /* A shortcut: since we will translate when
+           target_needs_retranslation, we don't need to check if
+           the working file is modified
+         */
         SVN_ERR (svn_wc_text_modified_p (&modified_p, fullpath, FALSE,
                                          adm_access, pool));
-      if ((modified_p) || (kind == svn_node_none) || (magic_props_changed))
+      if (modified_p || kind == svn_node_none || target_needs_retranslation)
         {
           /* If there are textual mods (or if the working file is
              missing altogether), copy the text-base out into

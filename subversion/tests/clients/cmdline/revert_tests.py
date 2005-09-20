@@ -398,7 +398,7 @@ test_list = [ None,
               revert_replaced_file_without_props,
               XFail(revert_moved_file),
               revert_wc_to_wc_replace_with_props,
-              XFail(revert_file_merge_replace_with_history),
+              revert_file_merge_replace_with_history,
               revert_repos_to_wc_replace_with_props,
              ]
 
