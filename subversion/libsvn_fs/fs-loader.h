@@ -339,6 +339,9 @@ struct svn_fs_t
   /* FSAP-specific vtable and private data */
   fs_vtable_t *vtable;
   void *fsap_data;
+
+  /* What type of filesystem is this (e.g., FSFS, BDB, ...?) */
+  svn_fs_fs_type_t type;
 };
 
 
