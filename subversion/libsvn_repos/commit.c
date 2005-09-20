@@ -670,8 +670,7 @@ close_edit (void *edit_baton,
      error. */
   if ((! eb->txn) || (! eb->txn_owner))
     return svn_error_create(SVN_ERR_REPOS_BAD_ARGS, NULL,
-                            "No valid transaction supplied to "
-                            "close_edit");
+                            "No valid transaction supplied to close_edit");
 
   /* Commit. */
   err = svn_repos_fs_commit_txn (&conflict, eb->repos, 
