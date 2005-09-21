@@ -1134,20 +1134,20 @@ svn_client_copy2 (svn_commit_info_t **commit_info,
 
 
 svn_error_t *
-svn_client_copy (svn_client_commit_info_t **commit_info,
+svn_client_copy (svn_client_commit_info_t **commit_info_p,
                  const char *src_path,
                  const svn_opt_revision_t *src_revision,
                  const char *dst_path,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  svn_commit_info_t *commit_info2 = NULL;
+  svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
 
-  err = svn_client_copy2 (&commit_info2, src_path, src_revision, dst_path,
+  err = svn_client_copy2 (&commit_info, src_path, src_revision, dst_path,
                           ctx, pool);
   /* These structs have the same layout for the common fields. */
-  *commit_info = (svn_client_commit_info_t *) commit_info2;
+  *commit_info_p = (svn_client_commit_info_t *) commit_info;
   return err;
 }
 
@@ -1171,25 +1171,25 @@ svn_client_move3 (svn_commit_info_t **commit_info,
 }
 
 svn_error_t *
-svn_client_move2 (svn_client_commit_info_t **commit_info,
+svn_client_move2 (svn_client_commit_info_t **commit_info_p,
                   const char *src_path,
                   const char *dst_path,
                   svn_boolean_t force,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  svn_commit_info_t *commit_info2 = NULL;
+  svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
 
-  err = svn_client_move3 (&commit_info2, src_path, dst_path, force, ctx, pool);
+  err = svn_client_move3 (&commit_info, src_path, dst_path, force, ctx, pool);
   /* These structs have the same layout for the common fields. */
-  *commit_info = (svn_client_commit_info_t *) commit_info2;
+  *commit_info_p = (svn_client_commit_info_t *) commit_info;
   return err;
 }
 
 
 svn_error_t *
-svn_client_move (svn_client_commit_info_t **commit_info,
+svn_client_move (svn_client_commit_info_t **commit_info_p,
                  const char *src_path,
                  const svn_opt_revision_t *src_revision,
                  const char *dst_path,
@@ -1197,7 +1197,7 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  svn_commit_info_t *commit_info2 = NULL;
+  svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
   /* It doesn't make sense to specify revisions in a move. */
 
@@ -1214,13 +1214,13 @@ svn_client_move (svn_client_commit_info_t **commit_info,
          _("Cannot specify revisions (except HEAD) with move operations"));
     }
  
-  err = setup_copy (&commit_info2,
+  err = setup_copy (&commit_info,
                     src_path, src_revision, dst_path,
                     TRUE /* is_move */,
                     force,
                     ctx,
                     pool);
   /* These structs have the same layout for the common fields. */
-  *commit_info = (svn_client_commit_info_t *) commit_info2;
+  *commit_info_p = (svn_client_commit_info_t *) commit_info;
   return err;
 }
