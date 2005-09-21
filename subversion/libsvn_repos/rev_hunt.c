@@ -405,6 +405,11 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
   /* Sanity check. */
   assert (location_revisions_orig->elt_size == sizeof(svn_revnum_t));
 
+  /* Ensure that FS_PATH is absolute, because our path-math below will
+     depend on that being the case.  */
+  if (*fs_path != '/')
+    fs_path = apr_pstrcat (pool, "/", fs_path, NULL);
+
   /* Another sanity check. */
   if (authz_read_func)
     {
