@@ -158,7 +158,8 @@ copy_file_administratively (const char *src_path,
       if (dst_entry->schedule == svn_wc_schedule_delete)
         return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
                                   _("'%s' is scheduled for deletion; it must"
-                                    " be committed before being overwritten"),
+                                    " be committed before it can be"
+                                    " overwritten"),
                                   svn_path_local_style (dst_path, pool));
       else
         return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
@@ -515,18 +516,27 @@ svn_wc_copy2 (const char *src_path,
 {
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t src_kind;
-  const svn_wc_entry_t *entry;
+  const svn_wc_entry_t *dst_entry, *src_entry;
 
-  SVN_ERR (svn_wc_entry (&entry, svn_wc_adm_access_path (dst_parent),
+  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, src_path, FALSE, -1,
+                                   cancel_func, cancel_baton, pool));
+
+  SVN_ERR (svn_wc_entry (&dst_entry, svn_wc_adm_access_path (dst_parent),
                          dst_parent, FALSE, pool));
-  if (entry->schedule == svn_wc_schedule_delete)
+  SVN_ERR (svn_wc_entry (&src_entry, svn_wc_adm_access_path (adm_access),
+                         adm_access, FALSE, pool));
+  if ((src_entry->repos != NULL && dst_entry->repos != NULL) &&
+      strcmp (src_entry->repos, dst_entry->repos) != 0)
+    return svn_error_createf
+      (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
+       _("Cannot copy to '%s', as it is not from repository '%s'"),
+       svn_path_local_style (svn_wc_adm_access_path (dst_parent), pool),
+       src_entry->repos);
+  if (dst_entry->schedule == svn_wc_schedule_delete)
     return svn_error_createf
       (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
        _("Cannot copy to '%s' as it is scheduled for deletion"),
        svn_path_local_style (svn_wc_adm_access_path (dst_parent), pool));
-
-  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, src_path, FALSE, -1,
-                                   cancel_func, cancel_baton, pool));
 
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
   

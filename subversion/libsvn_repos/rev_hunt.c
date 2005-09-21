@@ -446,8 +446,11 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
   revision = is_ancestor ? *revision_ptr : peg_revision;
   path = fs_path;
   if (authz_read_func)
-    SVN_ERR (check_readability (root, fs_path, authz_read_func,
-                                authz_read_baton, pool));
+    {
+      SVN_ERR (svn_fs_revision_root (&root, fs, revision, pool));
+      SVN_ERR (check_readability (root, fs_path, authz_read_func,
+                                  authz_read_baton, pool));
+    }
 
   while (revision_ptr < revision_ptr_end)
     {

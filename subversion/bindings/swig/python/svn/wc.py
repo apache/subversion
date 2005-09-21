@@ -17,7 +17,7 @@
 ######################################################################
 
 from libsvn.wc import *
-from core import _unprefix_names
+from svn.core import _unprefix_names
 _unprefix_names(locals(), 'svn_wc_')
 _unprefix_names(locals(), 'SVN_WC_')
 del _unprefix_names

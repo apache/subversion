@@ -312,6 +312,7 @@ svn_fs_new (apr_hash_t *fs_config, apr_pool_t *pool)
   fs->access_ctx = NULL;
   fs->vtable = NULL;
   fs->fsap_data = NULL;
+  fs->type = svn_fs_type_unknown;
   return fs;
 }
 
@@ -357,6 +358,12 @@ svn_fs_open (svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   *fs_p = svn_fs_new (fs_config, pool);
   SVN_ERR (vtable->open (*fs_p, path, pool));
   return serialized_init (*fs_p, pool);
+}
+
+svn_fs_fs_type_t
+svn_fs_type (svn_fs_t *fs)
+{
+  return fs->type;
 }
 
 const char *

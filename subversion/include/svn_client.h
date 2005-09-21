@@ -266,8 +266,6 @@ typedef struct svn_client_proplist_item_t
 
 /** Information about commits passed back to client from this module.
  *
- * ### This struct is soon going to be deprecated.
- *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 typedef struct svn_client_commit_info_t

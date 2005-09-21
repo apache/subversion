@@ -17,7 +17,7 @@
 ######################################################################
 
 from libsvn.fs import *
-from core import _unprefix_names
+from svn.core import _unprefix_names
 _unprefix_names(locals(), 'svn_fs_')
 _unprefix_names(locals(), 'SVN_FS_')
 del _unprefix_names
@@ -26,7 +26,7 @@ del _unprefix_names
 # Names that are not to be exported
 import sys as _sys, os as _os, popen2 as _popen2, tempfile as _tempfile
 import __builtin__
-import core as _core
+import svn.core as _core
 
 
 def entries(root, path, pool):

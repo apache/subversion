@@ -75,7 +75,10 @@ svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
                                 const char *value);
 
 
-/** Values used in keyword expansion. */
+/** Values used in keyword expansion.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
+ */
 typedef struct svn_subst_keywords_t
 {
   /**
@@ -93,14 +96,34 @@ typedef struct svn_subst_keywords_t
 } svn_subst_keywords_t;
 
 
-/** Fill in an <tt>svn_subst_keywords_t *</tt> @a kw with the appropriate 
- * contents given a @a keywords_string (the contents of the svn:keywords 
+/**
+ * Set @a *kw to a new keywords hash filled with the appropriate contents
+ * given a @a keywords_string (the contents of the svn:keywords
  * property for the file in question), the revision @a rev, the @a url, 
  * the @a date the file was committed on, and the @a author of the last 
- * commit.  Any of these can be @c NULL to indicate that the information is 
+ * commit.  Any of these can be @c NULL to indicate that the information is
  * not present, or @c 0 for @a date.
+ *
+ * Hash keys are of type <tt>const char *</tt>.
+ * Hash values are of type <tt>svn_string_t *</tt>.
  * 
  * All memory is allocated out of @a pool.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_subst_build_keywords2 (apr_hash_t **kw,
+                           const char *keywords_string,
+                           const char *rev,
+                           const char *url,
+                           apr_time_t date,
+                           const char *author,
+                           apr_pool_t *pool);
+
+/** Similar to svn_subst_build_keywords2() except that it populates
+ * an existing structure @a *kw instead of creating a keywords hash.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
 svn_subst_build_keywords (svn_subst_keywords_t *kw,
@@ -114,6 +137,11 @@ svn_subst_build_keywords (svn_subst_keywords_t *kw,
 
 /** Return @c TRUE if @a a and @a b do not hold the same keywords.
  *
+ * @a a and @a b are hashes of the form produced by
+ * svn_subst_build_keywords2().
+ *
+ * @since New in 1.3.
+ *
  * If @a compare_values is @c TRUE, "same" means that the @a a and @a b 
  * contain exactly the same set of keywords, and the values of corresponding
  * keywords match as well.  Else if @a compare_values is @c FALSE, then
@@ -122,6 +150,17 @@ svn_subst_build_keywords (svn_subst_keywords_t *kw,
  *
  * @a a and/or @a b may be @c NULL; for purposes of comparison, @c NULL is
  * equivalent to holding no keywords.
+ */
+svn_boolean_t 
+svn_subst_keywords_differ2 (apr_hash_t *a,
+                            apr_hash_t *b,
+                            svn_boolean_t compare_values,
+                            apr_pool_t *pool);
+
+/** Similar to svn_subst_keywords_differ2() except that it compares
+ * two @c svn_subst_keywords_t structs instead of keyword hashes.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_boolean_t 
 svn_subst_keywords_differ (const svn_subst_keywords_t *a,
@@ -133,7 +172,7 @@ svn_subst_keywords_differ (const svn_subst_keywords_t *a,
  * Copy and translate the data in stream @a src into stream @a dst.  It is
  * assumed that @a src is a readable stream and @a dst is a writable stream.
  *
- * @since New in 1.2.
+ * @since New in 1.3.
  *
  * If @a eol_str is non-@c NULL, replace whatever bytestring @a src uses to
  * denote line endings with @a eol_str in the output.  If @a src has an
@@ -147,7 +186,7 @@ svn_subst_keywords_differ (const svn_subst_keywords_t *a,
  * re-expand expanded keywords.  If @a expand is @c FALSE, contract expanded
  * keywords and ignore contracted ones.  @c NULL for any of the keyword
  * values (@a keywords->revision, e.g.) indicates that keyword should be
- * ignored (not contracted or expanded).  If the @a keywords structure
+ * ignored (not contracted or expanded).  If the @a keywords hash
  * itself is @c NULL, keyword substitution will be altogether ignored.
  *
  * Detect only keywords that are no longer than @c SVN_IO_MAX_KEYWORD_LEN
@@ -157,12 +196,27 @@ svn_subst_keywords_differ (const svn_subst_keywords_t *a,
  * @a keywords must be non-@c NULL.
  *
  * Recommendation: if @a expand is false, then you don't care about the
- * keyword values, so pass empty strings as non-null signifiers.
+ * keyword values, so use empty strings as non-null signifiers when you
+ * build the keywords hash.
  *
  * Notes: 
  *
  * See svn_wc__get_keywords() and svn_wc__get_eol_style() for a
  * convenient way to get @a eol_str and @a keywords if in libsvn_wc.
+ */
+svn_error_t *
+svn_subst_translate_stream3 (svn_stream_t *src,
+                             svn_stream_t *dst,
+                             const char *eol_str,
+                             svn_boolean_t repair,
+                             apr_hash_t *keywords,
+                             svn_boolean_t expand,
+                             apr_pool_t *pool);
+
+/** Similar to svn_subst_translate_stream3() except relies upon a
+ * @c svn_subst_keywords_t struct instead of a hash for the keywords.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
 svn_subst_translate_stream2 (svn_stream_t *src,
@@ -191,10 +245,9 @@ svn_subst_translate_stream (svn_stream_t *src,
 
 
 /**
- * Convenience routine: a variant of svn_subst_translate_stream2()
- * which operates on files.  (See previous docstring for details.)  In
- * addition, it will create/detranslate a special file if @a special
- * is @c TRUE.
+ * Convenience routine: a variant of svn_subst_translate_stream3()
+ * which operates on files.  In addition, it will create/detranslate a special
+ * file if @a special is @c TRUE.
  *
  * Copy the contents of file-path @a src to file-path @a dst atomically,
  * either creating @a dst (or overwriting @a dst if it exists), possibly
@@ -206,6 +259,23 @@ svn_subst_translate_stream (svn_stream_t *src,
  * If @a eol_str and @a keywords are @c NULL, behavior is just a byte-for-byte
  * copy.
  *
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_subst_copy_and_translate3 (const char *src,
+                               const char *dst,
+                               const char *eol_str,
+                               svn_boolean_t repair,
+                               apr_hash_t *keywords,
+                               svn_boolean_t expand,
+                               svn_boolean_t special,
+                               apr_pool_t *pool);
+
+/**
+ * Similar to svn_subst_copy_and_translate3() except that @a keywords is a
+ * @c svn_subst_keywords_t struct instead of a keywords hash.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  * @since New in 1.1.
  */
 svn_error_t *
@@ -234,8 +304,11 @@ svn_subst_copy_and_translate (const char *src,
                               apr_pool_t *pool);
 
 
-/** Convenience routine: a variant of svn_subst_translate_stream2() which
- * operates on cstrings.  (See previous docstring for details.)
+/**
+ * Convenience routine: a variant of svn_subst_translate_stream3() which
+ * operates on cstrings.
+ *
+ * @since New in 1.3.
  *
  * Return a new string in @a *dst, allocated in @a pool, by copying the
  * contents of string @a src, possibly performing line ending and keyword
@@ -243,6 +316,21 @@ svn_subst_copy_and_translate (const char *src,
  *
  * If @a eol_str and @a keywords are @c NULL, behavior is just a byte-for-byte
  * copy.
+ */
+svn_error_t *
+svn_subst_translate_cstring2 (const char *src,
+                              const char **dst,
+                              const char *eol_str,
+                              svn_boolean_t repair,
+                              apr_hash_t *keywords,
+                              svn_boolean_t expand,
+                              apr_pool_t *pool);
+
+/**
+ * Similar to svn_subst_translate_cstring2() except that @a keywords is a
+ * @c svn_subst_keywords_t struct instead of a keywords hash.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
 svn_subst_translate_cstring (const char *src,

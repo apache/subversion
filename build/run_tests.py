@@ -2,6 +2,16 @@
 # run_tests.py - run the tests in the regression test suite.
 #
 
+'''usage: run_tests.py [--url=<base-url>] [--fs-type=<fs-type>]
+                    [--verbose] [--cleanup]
+                    <abs_srcdir> <abs_builddir>
+                    <prog ...>
+
+The optional base-url, fs-type, verbose, and cleanup options, and
+the first four parameters are passed unchanged to the TestHarness
+constuctor.  All other parameters are names of test programs.
+'''
+
 import os, sys
 
 import getopt
@@ -145,16 +155,6 @@ class TestHarness:
 
 
 def main():
-  '''Usage: run_tests.py [--url=<base-url>] [--fs-type=<fs-type>]
-                      [--verbose] [--cleanup]
-                      <abs_srcdir> <abs_builddir>
-                      <prog ...>
-
-  The optional base-url, fs-type, verbose, and cleanup options, and
-  the first four parameters are passed unchanged to the TestHarness
-  constuctor.  All other parameters are names of test programs.
-  '''
-
   try:
     opts, args = my_getopt(sys.argv[1:], 'u:f:vc',
                            ['url=', 'fs-type=', 'verbose', 'cleanup'])
