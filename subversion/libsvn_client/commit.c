@@ -588,7 +588,7 @@ get_ra_editor (svn_ra_session_t **ra_session,
                svn_wc_adm_access_t *base_access,
                const char *log_msg,
                apr_array_header_t *commit_items,
-               svn_commit_info_t **commit_info,
+               svn_commit_info_t **commit_info_p,
                svn_boolean_t is_commit,
                apr_hash_t *lock_tokens,
                svn_boolean_t keep_locks,
@@ -622,7 +622,7 @@ get_ra_editor (svn_ra_session_t **ra_session,
     SVN_ERR (svn_ra_get_latest_revnum (*ra_session, latest_rev, pool));
   
   /* Fetch RA commit editor. */
-  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
+  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info_p, pool));
   return svn_ra_get_commit_editor (*ra_session, editor, edit_baton, log_msg,
                                    svn_client__commit_callback,
                                    commit_baton, lock_tokens, keep_locks,
@@ -633,7 +633,7 @@ get_ra_editor (svn_ra_session_t **ra_session,
 /*** Public Interfaces. ***/
 
 svn_error_t *
-svn_client_import2 (svn_commit_info_t **commit_info,
+svn_client_import2 (svn_commit_info_t **commit_info_p,
                     const char *path,
                     const char *url,
                     svn_boolean_t nonrecursive,
@@ -717,7 +717,7 @@ svn_client_import2 (svn_commit_info_t **commit_info,
     }
   while ((err = get_ra_editor (&ra_session, NULL,
                                &editor, &edit_baton, ctx, url, base_dir,
-                               NULL, log_msg, NULL, commit_info,
+                               NULL, log_msg, NULL, commit_info_p,
                                FALSE, NULL, TRUE, subpool)));
 
   /* Reverse the order of the components we added to our NEW_ENTRIES array. */
@@ -768,17 +768,17 @@ svn_client_import2 (svn_commit_info_t **commit_info,
     }
 
   /* Transfer *COMMIT_INFO from the subpool to the callers pool */
-  if (*commit_info)
+  if (*commit_info_p)
     {
       svn_commit_info_t *tmp_commit_info;
 
       tmp_commit_info = svn_create_commit_info (pool);
-      *tmp_commit_info = **commit_info;
+      *tmp_commit_info = **commit_info_p;
       if (tmp_commit_info->date)
         tmp_commit_info->date = apr_pstrdup (pool, tmp_commit_info->date);
       if (tmp_commit_info->author)
         tmp_commit_info->author = apr_pstrdup (pool, tmp_commit_info->author);
-      *commit_info = tmp_commit_info;
+      *commit_info_p = tmp_commit_info;
     }
 
   svn_pool_destroy (subpool);
@@ -1172,7 +1172,7 @@ collect_lock_tokens (apr_hash_t **result,
 
 
 svn_error_t *
-svn_client_commit3 (svn_commit_info_t **commit_info,
+svn_client_commit3 (svn_commit_info_t **commit_info_p,
                     const apr_array_header_t *targets,
                     svn_boolean_t recurse,
                     svn_boolean_t keep_locks,
@@ -1491,7 +1491,7 @@ svn_client_commit3 (svn_commit_info_t **commit_info,
   if ((cmt_err = get_ra_editor (&ra_session, NULL,
                                 &editor, &edit_baton, ctx,
                                 base_url, base_dir, base_dir_access,
-                                log_msg, commit_items, commit_info,
+                                log_msg, commit_items, commit_info_p,
                                 TRUE, lock_tokens, keep_locks, pool)))
     goto cleanup;
 
@@ -1590,15 +1590,16 @@ svn_client_commit3 (svn_commit_info_t **commit_info,
 
           remove_lock = (! keep_locks && (item->state_flags
                                           & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN));
-          assert (*commit_info);
-          if ((bump_err = svn_wc_process_committed2 (item->path, adm_access,
-                                                     loop_recurse,
-                                                     (*commit_info)->revision,
-                                                     (*commit_info)->date,
-                                                     (*commit_info)->author,
-                                                     item->wcprop_changes,
-                                                     remove_lock,
-                                                     subpool)))
+          assert (*commit_info_p);
+          if ((bump_err = svn_wc_process_committed2
+               (item->path, adm_access,
+                loop_recurse,
+                (*commit_info_p)->revision,
+                (*commit_info_p)->date,
+                (*commit_info_p)->author,
+                item->wcprop_changes,
+                remove_lock,
+                subpool)))
             break;
 
         }
@@ -1650,13 +1651,13 @@ svn_client_commit2 (svn_client_commit_info_t **commit_info_p,
 }
 
 svn_error_t *
-svn_client_commit (svn_client_commit_info_t **commit_info,
+svn_client_commit (svn_client_commit_info_t **commit_info_p,
                    const apr_array_header_t *targets,
                    svn_boolean_t nonrecursive,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  return svn_client_commit2 (commit_info, targets, 
+  return svn_client_commit2 (commit_info_p, targets,
                              nonrecursive ? FALSE : TRUE, 
                              TRUE,
                              ctx, pool);

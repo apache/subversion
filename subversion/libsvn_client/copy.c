@@ -271,7 +271,7 @@ path_driver_cb_func (void **dir_baton,
 
 
 static svn_error_t *
-repos_to_repos_copy (svn_commit_info_t **commit_info,
+repos_to_repos_copy (svn_commit_info_t **commit_info_p,
                      const char *src_url, 
                      const svn_opt_revision_t *src_revision, 
                      const char *dst_url, 
@@ -448,7 +448,7 @@ repos_to_repos_copy (svn_commit_info_t **commit_info,
 
 
   /* Fetch RA commit editor. */
-  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
+  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info_p, pool));
   SVN_ERR (svn_ra_get_commit_editor (ra_session, &editor, &edit_baton, message,
                                      svn_client__commit_callback,
                                      commit_baton, 
@@ -578,7 +578,7 @@ reconcile_errors (svn_error_t *commit_err,
 
 
 static svn_error_t *
-wc_to_repos_copy (svn_commit_info_t **commit_info,
+wc_to_repos_copy (svn_commit_info_t **commit_info_p,
                   const char *src_path, 
                   const char *dst_url, 
                   svn_client_ctx_t *ctx,
@@ -704,7 +704,7 @@ wc_to_repos_copy (svn_commit_info_t **commit_info,
     goto cleanup;
 
   /* Fetch RA commit editor. */
-  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
+  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info_p, pool));
   if ((cmt_err = svn_ra_get_commit_editor (ra_session, &editor, &edit_baton, 
                                            message,
                                            svn_client__commit_callback,
@@ -1005,7 +1005,7 @@ repos_to_wc_copy (const char *src_url,
 
 
 static svn_error_t *
-setup_copy (svn_commit_info_t **commit_info,
+setup_copy (svn_commit_info_t **commit_info_p,
             const char *src_path,
             const svn_opt_revision_t *src_revision,
             const char *dst_path,
@@ -1094,7 +1094,7 @@ setup_copy (svn_commit_info_t **commit_info,
     }
   else if ((! src_is_url) && (dst_is_url))
     {
-      SVN_ERR (wc_to_repos_copy (commit_info, src_path, dst_path, 
+      SVN_ERR (wc_to_repos_copy (commit_info_p, src_path, dst_path, 
                                  ctx, pool));
     }
   else if ((src_is_url) && (! dst_is_url))
@@ -1105,7 +1105,7 @@ setup_copy (svn_commit_info_t **commit_info,
     }
   else
     {
-      SVN_ERR (repos_to_repos_copy (commit_info, src_path, src_revision,
+      SVN_ERR (repos_to_repos_copy (commit_info_p, src_path, src_revision,
                                     dst_path, ctx, is_move, pool));
     }
 
@@ -1117,14 +1117,14 @@ setup_copy (svn_commit_info_t **commit_info,
 /* Public Interfaces */
 
 svn_error_t *
-svn_client_copy2 (svn_commit_info_t **commit_info,
+svn_client_copy2 (svn_commit_info_t **commit_info_p,
                   const char *src_path,
                   const svn_opt_revision_t *src_revision,
                   const char *dst_path,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  return setup_copy (commit_info, 
+  return setup_copy (commit_info_p,
                      src_path, src_revision, dst_path,
                      FALSE /* is_move */,
                      TRUE /* force, set to avoid deletion check */,
@@ -1152,7 +1152,7 @@ svn_client_copy (svn_client_commit_info_t **commit_info_p,
 }
 
 svn_error_t *
-svn_client_move3 (svn_commit_info_t **commit_info,
+svn_client_move3 (svn_commit_info_t **commit_info_p,
                   const char *src_path,
                   const char *dst_path,
                   svn_boolean_t force,
@@ -1162,7 +1162,7 @@ svn_client_move3 (svn_commit_info_t **commit_info,
   const svn_opt_revision_t src_revision
     = { svn_opt_revision_unspecified, { 0 } };
 
-  return setup_copy (commit_info,
+  return setup_copy (commit_info_p,
                      src_path, &src_revision, dst_path,
                      TRUE /* is_move */,
                      force,
