@@ -99,7 +99,7 @@ copy_one_versioned_file (const char *from,
                          apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
-  svn_subst_keywords_t kw = { 0 };
+  apr_hash_t *kw = NULL;
   svn_subst_eol_style_t style;
   apr_hash_t *props;
   const char *base;
@@ -188,14 +188,14 @@ copy_one_versioned_file (const char *from,
           author = entry->cmt_author;
         }
       
-      SVN_ERR (svn_subst_build_keywords 
+      SVN_ERR (svn_subst_build_keywords2
                (&kw, keywords->data, 
                 apr_psprintf (pool, fmt, entry->cmt_rev),
                 entry->url, tm, author, pool));
     }
 
-  SVN_ERR (svn_subst_copy_and_translate2 (base, to, eol, FALSE,
-                                          &kw, TRUE,
+  SVN_ERR (svn_subst_copy_and_translate3 (base, to, eol, FALSE,
+                                          kw, TRUE,
                                           special ? TRUE : FALSE,
                                           pool));
   if (executable)
@@ -697,22 +697,22 @@ close_file (void *file_baton,
     {
       svn_subst_eol_style_t style;
       const char *eol;
-      svn_subst_keywords_t final_kw = {0};
+      apr_hash_t *final_kw;
 
       if (fb->eol_style_val)
         SVN_ERR (get_eol_style (&style, &eol, fb->eol_style_val->data, 
                                 eb->native_eol));
 
       if (fb->keywords_val)
-        SVN_ERR (svn_subst_build_keywords (&final_kw, fb->keywords_val->data, 
-                                           fb->revision, fb->url, fb->date, 
-                                           fb->author, pool));
+        SVN_ERR (svn_subst_build_keywords2 (&final_kw, fb->keywords_val->data,
+                                            fb->revision, fb->url, fb->date,
+                                            fb->author, pool));
 
-      SVN_ERR (svn_subst_copy_and_translate2
+      SVN_ERR (svn_subst_copy_and_translate3
                (fb->tmppath, fb->path,
                 fb->eol_style_val ? eol : NULL,
                 fb->eol_style_val ? TRUE : FALSE, /* repair */
-                fb->keywords_val ? &final_kw : NULL,
+                fb->keywords_val ? final_kw : NULL,
                 TRUE, /* expand */
                 fb->special,
                 pool));

@@ -110,7 +110,7 @@ send_file_contents (const char *path,
      Keywords get unexpanded.  */
   if (eol_style_val || keywords_val || special)
     {
-      svn_subst_keywords_t keywords = {0};
+      apr_hash_t *keywords = NULL;
       const char *temp_dir;
       apr_file_t *tmp_f;
 
@@ -124,14 +124,14 @@ send_file_contents (const char *path,
 
       /* Generate a keyword structure. */
       if (keywords_val)
-        SVN_ERR (svn_subst_build_keywords (&keywords, keywords_val->data, 
-                                           APR_STRINGIFY(SVN_INVALID_REVNUM),
-                                           "", 0, "", pool));
+        SVN_ERR (svn_subst_build_keywords2 (&keywords, keywords_val->data,
+                                            APR_STRINGIFY(SVN_INVALID_REVNUM),
+                                            "", 0, "", pool));
       
-      if ((err = svn_subst_copy_and_translate2 (path, tmpfile_path,
+      if ((err = svn_subst_copy_and_translate3 (path, tmpfile_path,
                                                 eol_style_val ? "\n" : NULL,
                                                 FALSE,
-                                                keywords_val ? &keywords : NULL,
+                                                keywords_val ? keywords : NULL,
                                                 FALSE,
                                                 special,
                                                 pool)))
