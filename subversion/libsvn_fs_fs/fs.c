@@ -154,7 +154,7 @@ fs_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   ffd = apr_pcalloc (fs->pool, sizeof (*ffd));
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
-  fs->type = svn_fs_type_fsfs;
+  fs->type = SVN_FS_TYPE_FSFS;
 
   SVN_ERR (svn_fs_fs__create (fs, path, pool));
 
@@ -177,7 +177,7 @@ fs_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   ffd = apr_pcalloc (fs->pool, sizeof (*ffd));
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
-  fs->type = svn_fs_type_fsfs;
+  fs->type = SVN_FS_TYPE_FSFS;
 
   SVN_ERR (svn_fs_fs__open (fs, path, pool));
 
