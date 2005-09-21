@@ -495,7 +495,7 @@ path_driver_cb_func (void **dir_baton,
 
 
 static svn_error_t *
-mkdir_urls (svn_commit_info_t **commit_info,
+mkdir_urls (svn_commit_info_t **commit_info_p,
             const apr_array_header_t *paths,
             svn_client_ctx_t *ctx,
             apr_pool_t *pool)
@@ -588,7 +588,7 @@ mkdir_urls (svn_commit_info_t **commit_info,
     }
 
   /* Fetch RA commit editor */
-  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
+  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info_p, pool));
   SVN_ERR (svn_ra_get_commit_editor (ra_session, &editor, &edit_baton,
                                      log_msg, svn_client__commit_callback,
                                      commit_baton, 
@@ -614,7 +614,7 @@ mkdir_urls (svn_commit_info_t **commit_info,
 
 
 svn_error_t *
-svn_client_mkdir2 (svn_commit_info_t **commit_info,
+svn_client_mkdir2 (svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *paths,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
@@ -624,7 +624,7 @@ svn_client_mkdir2 (svn_commit_info_t **commit_info,
   
   if (svn_path_is_url (APR_ARRAY_IDX (paths, 0, const char *)))
     {
-      SVN_ERR (mkdir_urls (commit_info, paths, ctx, pool));
+      SVN_ERR (mkdir_urls (commit_info_p, paths, ctx, pool));
     }
   else
     {
