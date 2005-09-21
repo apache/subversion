@@ -49,7 +49,7 @@ svn_wc_translated_file (const char **xlated_p,
 {
   svn_subst_eol_style_t style;
   const char *eol;
-  svn_subst_keywords_t *keywords;
+  apr_hash_t *keywords;
   svn_boolean_t special;
   
   SVN_ERR (svn_wc__get_eol_style (&style, &eol, vfile, adm_access, pool));
@@ -86,7 +86,7 @@ svn_wc_translated_file (const char **xlated_p,
       
       if (style == svn_subst_eol_style_fixed)
         {
-          SVN_ERR (svn_subst_copy_and_translate2 (vfile,
+          SVN_ERR (svn_subst_copy_and_translate3 (vfile,
                                                   tmp_vfile,
                                                   eol,
                                                   TRUE,
@@ -97,7 +97,7 @@ svn_wc_translated_file (const char **xlated_p,
         }
       else if (style == svn_subst_eol_style_native)
         {
-          SVN_ERR (svn_subst_copy_and_translate2 (vfile,
+          SVN_ERR (svn_subst_copy_and_translate3 (vfile,
                                                   tmp_vfile,
                                                   SVN_WC__DEFAULT_EOL_MARKER,
                                                   force_repair,
@@ -108,7 +108,7 @@ svn_wc_translated_file (const char **xlated_p,
         }
       else if (style == svn_subst_eol_style_none)
         {
-          SVN_ERR (svn_subst_copy_and_translate2 (vfile,
+          SVN_ERR (svn_subst_copy_and_translate3 (vfile,
                                                   tmp_vfile,
                                                   NULL,
                                                   force_repair,
@@ -169,18 +169,14 @@ svn_wc__eol_value_from_string (const char **value, const char *eol)
 
 
 svn_error_t *
-svn_wc__get_keywords (svn_subst_keywords_t **keywords,
+svn_wc__get_keywords (apr_hash_t **keywords,
                       const char *path,
                       svn_wc_adm_access_t *adm_access,
                       const char *force_list,
                       apr_pool_t *pool)
 {
   const char *list;
-  svn_subst_keywords_t tmp_keywords = { 0 };
   const svn_wc_entry_t *entry = NULL;
-
-  /* Start by assuming no keywords. */
-  *keywords = NULL;
 
   /* Choose a property list to parse:  either the one that came into
      this function, or the one attached to PATH. */
@@ -198,21 +194,25 @@ svn_wc__get_keywords (svn_subst_keywords_t **keywords,
 
   /* The easy answer. */
   if (list == NULL)
-    return SVN_NO_ERROR;
+    {
+      *keywords = NULL;
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
 
-  SVN_ERR (svn_subst_build_keywords (&tmp_keywords,
-                                     list,
-                                     apr_psprintf (pool, "%ld",
-                                                   entry->cmt_rev),
-                                     entry->url,
-                                     entry->cmt_date,
-                                     entry->cmt_author,
-                                     pool));
+  SVN_ERR (svn_subst_build_keywords2 (keywords,
+                                      list,
+                                      apr_psprintf (pool, "%ld",
+                                                    entry->cmt_rev),
+                                      entry->url,
+                                      entry->cmt_date,
+                                      entry->cmt_author,
+                                      pool));
 
-  *keywords = apr_pmemdup (pool, &tmp_keywords, sizeof (tmp_keywords));
-      
+  if (apr_hash_count (*keywords) == 0)
+    *keywords = NULL;
+
   return SVN_NO_ERROR;
 }
 

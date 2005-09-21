@@ -263,26 +263,56 @@ substitute_and_verify (const char *test_name,
 {
   svn_error_t *err;
   svn_stringbuf_t *contents;
-  svn_subst_keywords_t keywords;
+  apr_hash_t *keywords = apr_hash_make (pool);
   apr_size_t idx = 0;
   apr_size_t i;
   const char *expect[(sizeof (lines) / sizeof (*lines))];
   const char *src_fname = apr_pstrcat (pool, test_name, ".src", NULL);
   const char *dst_fname = apr_pstrcat (pool, test_name, ".dst", NULL);
+  svn_string_t *val;
 
   /** Clean up from previous tests, set up src data, and convert. **/
   SVN_ERR (remove_file (src_fname, pool));
   SVN_ERR (remove_file (dst_fname, pool));
   SVN_ERR (create_file (src_fname, src_eol, pool));
 
-  keywords.revision = rev    ? svn_string_create (rev, pool)    : NULL;
-  keywords.date     = date   ? svn_string_create (date, pool)   : NULL;
-  keywords.author   = author ? svn_string_create (author, pool) : NULL;
-  keywords.url      = url    ? svn_string_create (url, pool)    : NULL;
-  keywords.id       = NULL;
+  if (rev)
+    {
+      val = svn_string_create (rev, pool);
+      apr_hash_set (keywords, SVN_KEYWORD_REVISION_LONG,
+                    APR_HASH_KEY_STRING, val);
+      apr_hash_set (keywords, SVN_KEYWORD_REVISION_MEDIUM,
+                    APR_HASH_KEY_STRING, val);
+      apr_hash_set (keywords, SVN_KEYWORD_REVISION_SHORT,
+                    APR_HASH_KEY_STRING, val);
+    }
+  if (date)
+    {
+      val = svn_string_create (date, pool);
+      apr_hash_set (keywords, SVN_KEYWORD_DATE_LONG,
+                    APR_HASH_KEY_STRING, val);
+      apr_hash_set (keywords, SVN_KEYWORD_DATE_SHORT,
+                    APR_HASH_KEY_STRING, val);
+    }
+  if (author)
+    {
+      val = svn_string_create (author, pool);
+      apr_hash_set (keywords, SVN_KEYWORD_AUTHOR_LONG,
+                    APR_HASH_KEY_STRING, val);
+      apr_hash_set (keywords, SVN_KEYWORD_AUTHOR_SHORT,
+                    APR_HASH_KEY_STRING, val);
+    }
+  if (url)
+    {
+      val = svn_string_create (url, pool);
+      apr_hash_set (keywords, SVN_KEYWORD_URL_LONG,
+                    APR_HASH_KEY_STRING, val);
+      apr_hash_set (keywords, SVN_KEYWORD_URL_SHORT,
+                    APR_HASH_KEY_STRING, val);
+    }
 
-  err = svn_subst_copy_and_translate (src_fname, dst_fname, dst_eol, repair,
-                                      &keywords, expand, pool);
+  err = svn_subst_copy_and_translate3 (src_fname, dst_fname, dst_eol, repair,
+                                       keywords, expand, FALSE, pool);
 
 
   /* Conversion should have failed, if src has mixed eol, and the
