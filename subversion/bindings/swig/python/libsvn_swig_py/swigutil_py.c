@@ -1733,6 +1733,8 @@ svn_error_t *svn_swig_py_repos_authz_func(svn_boolean_t *allowed,
   PyObject *py_pool, *py_root;
   svn_error_t *err = SVN_NO_ERROR;
 
+  *allowed = TRUE;
+
   if (function == NULL || function == Py_None)
     return SVN_NO_ERROR;
 
@@ -1749,8 +1751,6 @@ svn_error_t *svn_swig_py_repos_authz_func(svn_boolean_t *allowed,
     err = callback_exception_error();
     goto finished; 
   }
-  
-  *allowed = TRUE;
 
   if ((result = PyObject_CallFunction(function, 
                                       (char *)"OsO", 
