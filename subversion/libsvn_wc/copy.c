@@ -529,9 +529,10 @@ svn_wc_copy2 (const char *src_path,
       strcmp (src_entry->repos, dst_entry->repos) != 0)
     return svn_error_createf
       (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
-       _("Cannot copy to '%s', as it is not from repository '%s'"),
+       _("Cannot copy to '%s', as it is not from repository '%s'; "
+         "it is from '%s'"),
        svn_path_local_style (svn_wc_adm_access_path (dst_parent), pool),
-       src_entry->repos);
+       src_entry->repos, dst_entry->repos);
   if (dst_entry->schedule == svn_wc_schedule_delete)
     return svn_error_createf
       (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
