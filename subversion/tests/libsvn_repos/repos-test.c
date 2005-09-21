@@ -797,7 +797,12 @@ node_locations (const char **msg,
         { 2, "/mu.new" },
         { 0 }
       };
+
+    /* Test this twice, once with a leading slash, once without,
+       because we know that the "without" form has caused us trouble
+       in the past. */
     SVN_ERR (check_locations (fs, info, "/mu.new", 2, pool));
+    SVN_ERR (check_locations (fs, info, "mu.new", 2, pool));
   }
   svn_pool_clear (subpool);
   
