@@ -318,7 +318,9 @@
     if (PyErr_Occurred()) {
         SWIG_fail;
     }
+    Py_XDECREF(_global_svn_swig_py_pool);
     _global_svn_swig_py_pool = $input;
+    Py_XINCREF(_global_svn_swig_py_pool);
     $1 = _global_pool;
   }
 }
