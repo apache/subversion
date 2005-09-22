@@ -1791,6 +1791,39 @@ def repos_to_wc_copy_replace_with_props(sbox):
 
   copy_replace_with_props(sbox, False)
 
+def delete_replaced_file(sbox):
+  "delete file scheduled for replace"
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # File scheduled for deletion.
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', rho_path)
+
+  # Status before attempting copies
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G/rho', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Copy 'pi' over 'rho' with history.
+  pi_src = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  svntest.actions.run_and_verify_svn("", None, [], 'cp', pi_src, rho_path)
+
+  # Check that file copied.
+  expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  
+  # Now delete replaced file.
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+                                     '--force', rho_path)
+  
+  # Verify status after deletion.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G/rho', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -1831,6 +1864,7 @@ test_list = [ None,
               wc_copy_replace_with_props,
               repos_to_wc_copy_replacement,
               repos_to_wc_copy_replace_with_props,
+              XFail(delete_replaced_file),
              ]
 
 if __name__ == '__main__':
