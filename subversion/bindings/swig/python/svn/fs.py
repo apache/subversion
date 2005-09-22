@@ -29,7 +29,7 @@ import __builtin__
 import svn.core as _core
 
 
-def entries(root, path, pool=Pool()):
+def entries(root, path, pool=None):
   "Call dir_entries returning a dictionary mappings names to IDs."
   e = dir_entries(root, path, pool)
   for name, entry in e.items():
@@ -38,7 +38,7 @@ def entries(root, path, pool=Pool()):
 
 
 class FileDiff:
-  def __init__(self, root1, path1, root2, path2, pool=Pool(), diffoptions=[]):
+  def __init__(self, root1, path1, root2, path2, pool=None, diffoptions=[]):
     assert path1 or path2
 
     self.tempfile1 = None
@@ -62,7 +62,7 @@ class FileDiff:
         return 1
     return 0
 
-  def _dump_contents(self, file, root, path, pool=Pool()):
+  def _dump_contents(self, file, root, path, pool=None):
     fp = __builtin__.open(file, 'w+') # avoid namespace clash with
                                       # trimmed-down svn_fs_open()
     if path is not None:
