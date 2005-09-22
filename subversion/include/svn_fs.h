@@ -169,13 +169,6 @@ svn_error_t *svn_fs_create (svn_fs_t **fs_p, const char *path,
 svn_error_t *svn_fs_open (svn_fs_t **fs_p, const char *path,
                           apr_hash_t *config, apr_pool_t *pool);
 
-typedef enum
-{
-  svn_fs_type_unknown = 0,   /* Back-end type not (yet) known. */
-  svn_fs_type_fsfs,          /* OS filesystem back end. */
-  svn_fs_type_bdb            /* Berkeley DB back end. */
-} svn_fs_fs_type_t;
-
 /**
  * Return a constant string describing the back-end type of @a fs,
  * e.g. "fsfs", "bdb".  If the type is not yet known, for example
