@@ -13,24 +13,24 @@ import pprint
 from svn import fs, core, repos
 
 
-def dumpprops(pool, path, filename='', rev=None):
+def dumpprops(path, filename='', rev=None):
 
   if path[-1] == "/":
      path = path[:-1]
 
-  repos_ptr = repos.open(path, pool)
+  repos_ptr = repos.open(path)
   fsob = repos.fs(repos_ptr)
 
   if rev is None:
-    rev = fs.youngest_rev(fsob, pool)
+    rev = fs.youngest_rev(fsob)
 
-  root = fs.revision_root(fsob, rev, pool)
-  print_props(root, filename, pool)
-  if fs.is_dir(root, filename, pool):
-    walk_tree(root, filename, pool)
+  root = fs.revision_root(fsob, rev)
+  print_props(root, filename)
+  if fs.is_dir(root, filename):
+    walk_tree(root, filename)
 
-def print_props(root, path, pool):
-  raw_props = fs.node_proplist(root, path, pool)
+def print_props(root, path):
+  raw_props = fs.node_proplist(root, path)
   # need to massage some buffers into strings for printing
   props = { }
   for key, value in raw_props.items():
@@ -39,17 +39,12 @@ def print_props(root, path, pool):
   print '---', path
   pprint.pprint(props)
 
-def walk_tree(root, path, pool):
-  subpool = core.svn_pool_create(pool)
-  try: 
-    for name in fs.dir_entries(root, path, subpool).keys():
-      full = path + '/' + name
-      print_props(root, full, subpool)
-      if fs.is_dir(root, full, subpool):
-        walk_tree(root, full, subpool)
-      core.svn_pool_clear(subpool)
-  finally:
-    core.svn_pool_destroy(subpool)
+def walk_tree(root, path):
+  for name in fs.dir_entries(root, path).keys():
+    full = path + '/' + name
+    print_props(root, full)
+    if fs.is_dir(root, full):
+      walk_tree(root, full)
 
 def usage():
   print "USAGE: dumpprops.py [-r REV] repos-path [file]"
@@ -62,9 +57,9 @@ def main():
     if name == '-r':
       rev = int(value)
   if len(args) == 2:
-    core.run_app(dumpprops, args[0], args[1], rev)
+    dumpprops(args[0], args[1], rev)
   elif len(args) == 1:
-    core.run_app(dumpprops, args[0], "", rev)
+    dumpprops(args[0], "", rev)
   else:
     usage()
 
