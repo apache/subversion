@@ -140,4 +140,5 @@ static PyObject * _global_svn_swig_py_pool = NULL;
 
 %{
 #include "svn_time.h"
+#include <svn_pools.h>
 %}
