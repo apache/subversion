@@ -29,8 +29,10 @@ class PoolTestCase(unittest.TestCase):
 
     # Check that garbage collection is working OK
     self.assertNotNone(parent_pool_ref())
+    top_pool_ref = weakref.ref(parent_pool._parent_pool)
     del parent_pool
     self.assertNotNone(parent_pool_ref())
+    self.assertNotNone(top_pool_ref())
     pool.clear()
     newpool = libsvn.core.svn_pool_create(pool)
     libsvn.core.apr_pool_destroy(newpool)
@@ -41,6 +43,7 @@ class PoolTestCase(unittest.TestCase):
     self.assertNotNone(parent_pool_ref())
     del newpool
     self.assertNone(parent_pool_ref())
+    self.assertNone(top_pool_ref())
 
     # Make sure anonymous pools are destroyed properly
     anonymous_pool_ref = weakref.ref(Pool())
