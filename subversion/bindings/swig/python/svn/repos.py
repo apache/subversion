@@ -58,7 +58,7 @@ class ChangeCollector(_delta.Editor):
   
   # BATON FORMAT: [path, base_path, base_rev]
   
-  def __init__(self, fs_ptr, root, pool=Pool(), notify_cb=None):
+  def __init__(self, fs_ptr, root, pool=None, notify_cb=None):
     self.fs_ptr = fs_ptr
     self.changes = { } # path -> ChangedPathEntry()
     self.roots = { } # revision -> svn_fs_root_t
@@ -105,10 +105,10 @@ class ChangeCollector(_delta.Editor):
     root = self.roots[rev] = _fs.revision_root(self.fs_ptr, rev)
     return root
     
-  def open_root(self, base_revision, dir_pool=Pool()):
+  def open_root(self, base_revision, dir_pool=None):
     return ('', '', self.base_rev)  # dir_baton
 
-  def delete_entry(self, path, revision, parent_baton, pool=Pool()):
+  def delete_entry(self, path, revision, parent_baton, pool=None):
     base_path = self._make_base_path(parent_baton[1], path)
     if _fs.is_dir(self._get_root(parent_baton[2]), base_path):
       item_type = _core.svn_node_dir
@@ -125,7 +125,7 @@ class ChangeCollector(_delta.Editor):
     self._send_change(path)
 
   def add_directory(self, path, parent_baton,
-                    copyfrom_path, copyfrom_revision, dir_pool=Pool()):
+                    copyfrom_path, copyfrom_revision, dir_pool=None):
     self.changes[path] = ChangedPath(_core.svn_node_dir,
                                      False,
                                      False,
@@ -141,11 +141,11 @@ class ChangeCollector(_delta.Editor):
     base_rev = copyfrom_revision
     return (path, base_path, base_rev)  # dir_baton
 
-  def open_directory(self, path, parent_baton, base_revision, dir_pool=Pool()):
+  def open_directory(self, path, parent_baton, base_revision, dir_pool=None):
     base_path = self._make_base_path(parent_baton[1], path)
     return (path, base_path, parent_baton[2])  # dir_baton
 
-  def change_dir_prop(self, dir_baton, name, value, pool=Pool()):
+  def change_dir_prop(self, dir_baton, name, value, pool=None):
     dir_path = dir_baton[0]
     if self.changes.has_key(dir_path):
       self.changes[dir_path].prop_changes = True
@@ -161,7 +161,7 @@ class ChangeCollector(_delta.Editor):
                                            )
 
   def add_file(self, path, parent_baton,
-               copyfrom_path, copyfrom_revision, file_pool=Pool()):
+               copyfrom_path, copyfrom_revision, file_pool=None):
     self.changes[path] = ChangedPath(_core.svn_node_file,
                                      False,
                                      False,
@@ -177,7 +177,7 @@ class ChangeCollector(_delta.Editor):
     base_rev = copyfrom_revision
     return (path, base_path, base_rev)  # file_baton
 
-  def open_file(self, path, parent_baton, base_revision, file_pool=Pool()):
+  def open_file(self, path, parent_baton, base_revision, file_pool=None):
     base_path = self._make_base_path(parent_baton[1], path)
     return (path, base_path, parent_baton[2])  # file_baton
 
@@ -200,7 +200,7 @@ class ChangeCollector(_delta.Editor):
     # no handler
     return None
 
-  def change_file_prop(self, file_baton, name, value, pool=Pool()):
+  def change_file_prop(self, file_baton, name, value, pool=None):
     file_path = file_baton[0]
     if self.changes.has_key(file_path):
       self.changes[file_path].prop_changes = True
@@ -230,7 +230,7 @@ class RevisionChangeCollector(ChangeCollector):
   Important difference: base_path members have a leading '/' character in
   this interface."""
 
-  def __init__(self, fs_ptr, root, pool=Pool(), notify_cb=None):
+  def __init__(self, fs_ptr, root, pool=None, notify_cb=None):
     root = _fs.revision_root(fs_ptr, root)
     ChangeCollector.__init__(self, fs_ptr, root, pool, notify_cb)
 
