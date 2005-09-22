@@ -173,10 +173,10 @@
 (defvar svn-log-edit-use-log-edit-mode (and (condition-case nil (require 'log-edit) (error nil)) t) "*Use log-edit-mode as base for svn-log-edit-mode")
 (defvar svn-status-hide-unknown nil
   "*Hide unknown files in `svn-status-buffer-name' buffer.
-This can be toggled with \[svn-status-toggle-hide-unknown].")
+This can be toggled with \\[svn-status-toggle-hide-unknown].")
 (defvar svn-status-hide-unmodified nil
   "*Hide unmodified files in `svn-status-buffer-name' buffer.
-This can be toggled with \[svn-status-toggle-hide-unmodified].")
+This can be toggled with \\[svn-status-toggle-hide-unmodified].")
 (defvar svn-status-sort-status-buffer t "Sort the `svn-status-buffer-name' buffer.
 Setting this variable to nil speeds up M-x svn-status.
 However, it is possible, that the sorting is wrong in this case.")
