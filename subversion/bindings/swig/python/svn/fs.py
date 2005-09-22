@@ -17,7 +17,7 @@
 ######################################################################
 
 from libsvn.fs import *
-from svn.core import _unprefix_names
+from svn.core import _unprefix_names, Pool
 _unprefix_names(locals(), 'svn_fs_')
 _unprefix_names(locals(), 'SVN_FS_')
 del _unprefix_names
@@ -29,7 +29,7 @@ import __builtin__
 import svn.core as _core
 
 
-def entries(root, path, pool):
+def entries(root, path, pool=Pool()):
   "Call dir_entries returning a dictionary mappings names to IDs."
   e = dir_entries(root, path, pool)
   for name, entry in e.items():
@@ -38,7 +38,7 @@ def entries(root, path, pool):
 
 
 class FileDiff:
-  def __init__(self, root1, path1, root2, path2, pool, diffoptions=[]):
+  def __init__(self, root1, path1, root2, path2, pool=Pool(), diffoptions=[]):
     assert path1 or path2
 
     self.tempfile1 = None
@@ -50,25 +50,19 @@ class FileDiff:
     self.path2 = path2
     self.diffoptions = diffoptions
 
-    # the caller can't manage this pool very well given our indirect use
-    # of it. so we'll create a subpool and clear it at "proper" times.
-    self.pool = _core.svn_pool_create(pool)
-
   def either_binary(self):
     "Return true if either of the files are binary."
     if self.path1 is not None:
-      prop = node_prop(self.root1, self.path1, _core.SVN_PROP_MIME_TYPE,
-                       self.pool)
+      prop = node_prop(self.root1, self.path1, _core.SVN_PROP_MIME_TYPE)
       if prop and _core.svn_mime_type_is_binary(prop):
         return 1
     if self.path2 is not None:
-      prop = node_prop(self.root2, self.path2, _core.SVN_PROP_MIME_TYPE,
-                       self.pool)
+      prop = node_prop(self.root2, self.path2, _core.SVN_PROP_MIME_TYPE)
       if prop and _core.svn_mime_type_is_binary(prop):
         return 1
     return 0
 
-  def _dump_contents(self, file, root, path, pool):
+  def _dump_contents(self, file, root, path, pool=Pool()):
     fp = __builtin__.open(file, 'w+') # avoid namespace clash with
                                       # trimmed-down svn_fs_open()
     if path is not None:
@@ -93,10 +87,8 @@ class FileDiff:
     self.tempfile1 = _tempfile.mktemp()
     self.tempfile2 = _tempfile.mktemp()
 
-    self._dump_contents(self.tempfile1, self.root1, self.path1, self.pool)
-    _core.svn_pool_clear(self.pool)
-    self._dump_contents(self.tempfile2, self.root2, self.path2, self.pool)
-    _core.svn_pool_clear(self.pool)
+    self._dump_contents(self.tempfile1, self.root1, self.path1)
+    self._dump_contents(self.tempfile2, self.root2, self.path2)
 
     return self.tempfile1, self.tempfile2
 
