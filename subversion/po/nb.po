@@ -58,7 +58,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-09-22 22:17+0200\n"
-"PO-Revision-Date: 2005-09-09 23:05+0200\n"
+"PO-Revision-Date: 2005-09-22 22:31+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2288,9 +2288,8 @@ msgid "Invalid schedule"
 msgstr "Ugyldig klargjøring"
 
 #: include/svn_error_codes.h:385
-#, fuzzy
 msgid "Invalid relocation"
-msgstr "Ugyldig lås"
+msgstr "Ugyldig forflytning"
 
 #: include/svn_error_codes.h:391
 msgid "General filesystem error"
@@ -6253,7 +6252,7 @@ msgid "Can't add '%s' to a parent directory scheduled for deletion"
 msgstr "Kan ikke legge til «%s» når foreldrekatalogen er klarert for sletting"
 
 #: libsvn_wc/adm_ops.c:1060
-#, fuzzy, c-format
+#, c-format
 msgid "The URL '%s' has a different repository root than its parent"
 msgstr "URLen «%s» har en forskjellig depotrot enn sin forelder"
 
@@ -6311,11 +6310,11 @@ msgid "'%s' already exists and is in the way"
 msgstr "«%s» finnes allerede og er i veien"
 
 #: libsvn_wc/copy.c:160
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "'%s' is scheduled for deletion; it must be committed before it can be "
 "overwritten"
-msgstr "«%s» er klarert for sletting og må sendes inn før den overskrives"
+msgstr "«%s» er klarert for sletting; den må legges inn før den kan overskrives"
 
 #: libsvn_wc/copy.c:166
 #, c-format
@@ -6346,11 +6345,10 @@ msgstr ""
 "innsending først"
 
 #: libsvn_wc/copy.c:532
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot copy to '%s', as it is not from repository '%s'; it is from '%s'"
 msgstr ""
-"Kan ikke kopiere eller flytte «%s»: Den er foreløpig ikke i depotet. Prøv "
-"innsending først"
+"Kan ikke kopiere til «%s», den kommer ikke fra depotet «%s», men fra «%s»"
 
 #: libsvn_wc/copy.c:539
 #, c-format
@@ -6818,7 +6816,7 @@ msgstr ""
 
 #: libsvn_wc/relocate.c:68
 msgid "Relocate can only change the repository part of an URL"
-msgstr ""
+msgstr "«relocate» kan bare forandre depot-delen av en URL"
 
 #: libsvn_wc/translate.c:124
 #, c-format
