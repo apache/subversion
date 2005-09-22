@@ -357,22 +357,18 @@ svn_client_info (const char *path_or_url,
                               url, rev);
 
   /* Possibly discover a lock attached to the remote URL. */
-  lock = NULL;
-  if (peg_revision->kind == svn_opt_revision_head)
-    {
-      err = svn_ra_get_lock (ra_session, &lock, "", pool);
+  err = svn_ra_get_lock (ra_session, &lock, "", pool);
 
-      /* An old mod_dav_svn will always work; there's nothing wrong with
-         doing a PROPFIND for a property named "DAV:supportedlock".  But
-         an old svnserve will error. */
-      if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
-        {
-          svn_error_clear(err);
-          lock = NULL;
-        }
-      else if (err)
-        return err;
+  /* An old mod_dav_svn will always work; there's nothing wrong with
+     doing a PROPFIND for a property named "DAV:supportedlock". But
+     an old svnserve will error. */
+  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+    {
+      svn_error_clear (err);
+      lock = NULL;
     }
+  else if (err)
+    return err;
 
   /* Push the URL's dirent (and lock) at the callback.*/  
   SVN_ERR (build_info_from_dirent (&info, the_ent, lock, url, rev,
