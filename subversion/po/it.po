@@ -80,8 +80,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-09-21 07:04+0200\n"
-"PO-Revision-Date: 2005-09-21 15:09+0200\n"
+"POT-Creation-Date: 2005-09-22 07:04+0200\n"
+"PO-Revision-Date: 2005-09-22 10:13+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2926,7 +2926,7 @@ msgstr ""
 msgid "Start revision must precede end revision"
 msgstr "La revisione di inizio deve precedere la revisione di fine"
 
-#: libsvn_client/blame.c:659 libsvn_client/cat.c:205
+#: libsvn_client/blame.c:659 libsvn_client/cat.c:208
 #, c-format
 msgid "URL '%s' refers to a directory"
 msgstr "L'URL '%s' si riferisce ad una directory"
@@ -2952,7 +2952,7 @@ msgstr "'%s' si riferisce ad una directory"
 msgid "(local)"
 msgstr "(locale)"
 
-#: libsvn_client/cat.c:245
+#: libsvn_client/cat.c:248
 #, c-format
 msgid "Can't seek in '%s'"
 msgstr "Non riesco a cercare in '%s'"
@@ -4241,7 +4241,7 @@ msgstr "Node immutabile inatteso in '%s'"
 msgid "Conflict at '%s'"
 msgstr "Conflitto in '%s'"
 
-#: libsvn_fs_base/tree.c:1867 libsvn_fs_base/tree.c:2570
+#: libsvn_fs_base/tree.c:1867 libsvn_fs_base/tree.c:2572
 #: libsvn_fs_fs/tree.c:1264 libsvn_fs_fs/tree.c:1753
 msgid "Bad merge; ancestor, source, and target not all in same fs"
 msgstr ""
@@ -4254,20 +4254,20 @@ msgid "Bad merge; target '%s' has id '%s', same as ancestor"
 msgstr ""
 "Cattiva fusione: la destinazione '%s' ha lo stesso id ('%s') del suo antenato"
 
-#: libsvn_fs_base/tree.c:2377
+#: libsvn_fs_base/tree.c:2379
 #, c-format
 msgid "Transaction '%s' out of date with respect to revision '%s'"
 msgstr "La transazione '%s' non è sincronizzata con la transazione '%s' "
 
-#: libsvn_fs_base/tree.c:2753 libsvn_fs_fs/tree.c:1892
+#: libsvn_fs_base/tree.c:2755 libsvn_fs_fs/tree.c:1892
 msgid "The root directory cannot be deleted"
 msgstr "La directory di root non può essere cancellata"
 
-#: libsvn_fs_base/tree.c:2912 libsvn_fs_fs/tree.c:1939
+#: libsvn_fs_base/tree.c:2914 libsvn_fs_fs/tree.c:1939
 msgid "Copy from mutable tree not currently supported"
 msgstr "La copia da un albero modificabile non è attualmente supportata"
 
-#: libsvn_fs_base/tree.c:3407 libsvn_fs_fs/tree.c:2363
+#: libsvn_fs_base/tree.c:3409 libsvn_fs_fs/tree.c:2363
 #, c-format
 msgid ""
 "Base checksum mismatch on '%s':\n"
@@ -4278,13 +4278,13 @@ msgstr ""
 "   atteso:   %s\n"
 "   effettivo:  %s\n"
 
-#: libsvn_fs_base/tree.c:3660 libsvn_fs_fs/tree.c:2599
+#: libsvn_fs_base/tree.c:3662 libsvn_fs_fs/tree.c:2599
 msgid "Cannot compare file contents between two different filesystems"
 msgstr "Non posso confrontare due file provenienti da differenti filesystems"
 
-#: libsvn_fs_base/tree.c:3669 libsvn_fs_base/tree.c:3674
+#: libsvn_fs_base/tree.c:3671 libsvn_fs_base/tree.c:3676
 #: libsvn_fs_fs/tree.c:2608 libsvn_fs_fs/tree.c:2613
-#: libsvn_repos/rev_hunt.c:600
+#: libsvn_repos/rev_hunt.c:605
 #, c-format
 msgid "'%s' is not a file"
 msgstr "Il percorso '%s' non è un file"
@@ -6450,10 +6450,10 @@ msgstr ""
 
 #: libsvn_wc/copy.c:532
 #, c-format
-msgid "Cannot copy to '%s', as it is not from repository '%s'"
-msgstr "Non posso copiare in '%s', non essendo nel repository '%s'"
+msgid "Cannot copy to '%s', as it is not from repository '%s'; it is from '%s'"
+msgstr "Non posso copiare in '%s', non essendo nel repository '%s'; proviene da '%s'"
 
-#: libsvn_wc/copy.c:538
+#: libsvn_wc/copy.c:539
 #, c-format
 msgid "Cannot copy to '%s' as it is scheduled for deletion"
 msgstr "Non posso copiare in '%s' essendone programmata la sua cancellazione"
