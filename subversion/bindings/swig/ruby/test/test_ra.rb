@@ -80,8 +80,8 @@ class SvnRaTest < Test::Unit::TestCase
     assert_equal(Svn::Core::NODE_FILE, session.stat(file).kind)
 
     assert_equal({
-                   rev1 => file,
-                   rev2 => file,
+                   rev1 => "/#{file}",
+                   rev2 => "/#{file}",
                  },
                  session.locations(file, [rev1, rev2]))
 
