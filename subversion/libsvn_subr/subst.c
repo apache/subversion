@@ -797,6 +797,10 @@ svn_subst_translate_stream3 (svn_stream_t *s, /* src stream */
 
   buf = apr_palloc (pool, SVN_STREAM_CHUNK_SIZE + 1);
 
+  /* For efficiency, convert an empty set of keywords to NULL. */
+  if (keywords && (apr_hash_count (keywords) == 0))
+    keywords = NULL;
+
   /* The docstring requires that *some* translation be requested. */
   assert (eol_str || keywords);
   interesting = (eol_str && keywords) ? "$\r\n" : eol_str ? "\r\n" : "$";
@@ -952,7 +956,7 @@ svn_subst_translate_cstring2 (const char *src,
   src_stringbuf = svn_stringbuf_create (src, pool);
   
   /* The easy way out:  no translation needed, just copy. */
-  if (! (eol_str || keywords))
+  if (! (eol_str || (keywords && (apr_hash_count (keywords) > 0))))
     {
       dst_stringbuf = svn_stringbuf_dup (src_stringbuf, pool);
       goto all_good;
@@ -1194,7 +1198,7 @@ svn_subst_copy_and_translate3 (const char *src,
     }
 
   /* The easy way out:  no translation needed, just copy. */
-  if (! (eol_str || keywords))
+  if (! (eol_str || (keywords && (apr_hash_count (keywords) > 0))))
     return svn_io_copy_file (src, dst, FALSE, pool);
 
   subpool = svn_pool_create (pool);
