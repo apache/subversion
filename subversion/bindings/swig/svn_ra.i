@@ -62,6 +62,20 @@
 #endif
 
 /* -----------------------------------------------------------------------
+   handle svn_ra_get_locations()
+*/
+%typemap(python,in) apr_array_header_t *location_revisions {
+    $1 = (apr_array_header_t *) svn_swig_py_revnums_to_array($input, 
+                                                             _global_pool);
+    if ($1 == NULL)
+        SWIG_fail;
+}
+%typemap(python,in,numinputs=0) apr_hash_t **locations = apr_hash_t **OUTPUT;
+%typemap(python,argout,fragment="t_output_helper") apr_hash_t **locations {
+    $result = t_output_helper($result, svn_swig_py_locationhash_to_dict(*$1));
+}
+
+/* -----------------------------------------------------------------------
    thunk ra_callback
 */
 %apply const char **OUTPUT {
