@@ -387,7 +387,56 @@ def revert_repos_to_wc_replace_with_props(sbox):
 
   revert_replacement_with_props(sbox, False)
 
+def revert_after_second_replace(sbox):
+  "revert file after second replace"
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
 
+  # File scheduled for deletion
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', rho_path)
+
+  # Status before attempting copy
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G/rho', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Replace file for the first time
+  pi_src = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+
+  svntest.actions.run_and_verify_svn("", None, [],
+                                     'cp', pi_src, rho_path)
+
+  expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  
+  # Now delete replaced file.
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--force', rho_path)
+  
+  # Status should be same as after first delete
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D/G/rho', status='D ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Replace file for the second time
+  pi_src = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+
+  svntest.actions.run_and_verify_svn("", None, [], 'cp', pi_src, rho_path)
+
+  expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Now revert
+  svntest.actions.run_and_verify_svn("", None, [],
+                                     'revert', '-R', wc_dir)
+
+  # Check disk status
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
+  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
+  
 ########################################################################
 # Run the tests
 
@@ -400,6 +449,7 @@ test_list = [ None,
               revert_wc_to_wc_replace_with_props,
               revert_file_merge_replace_with_history,
               revert_repos_to_wc_replace_with_props,
+              XFail(revert_after_second_replace),
              ]
 
 if __name__ == '__main__':
