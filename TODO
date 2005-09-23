@@ -3,13 +3,13 @@ This covers issue #2148.  But also eventually will cover supporting
 allowing the cp and mv commands to replace files (Issue #1516).
 Currently you can only get a wc in this state with the merge command.
 
-Resolving this problem should also resolves #2144.
+Resolving this problem should also resolves #2144 and #2135.
 
 As of right now files can be replaced.
 
 Specific list of items to do:
 
-* Implement handling of properties.
+* Implement handling of properties [done].
 * Implement handling of properties on directories.
 * Write tests
   - revert of locally replaced file [ done ]
@@ -19,8 +19,8 @@ Specific list of items to do:
   - 
 * Change tests from XFAIL to PASS:
   - revert_tests 4 (revert_replace_with_history_with_props)
-    to do this, a revert-file needs to be implemented for prop-base
-    and dir-prop-base (also for wc-props?)
+    to do this, a revert-file needs to be implemented for prop-base [done]
+    
 * Implement the enhancements to the cp and mv command (pretty much done)
 * Possibly enhance the handling of checksums.  Right now the code isn't
   storing checksums for replaced files.  To fix this would require a new
@@ -32,7 +32,7 @@ These sources are possible sources for replacements (with history) in a wc:
 - wc->wc copy or move operations
 - repos->wc copy operations
 - merge operations which contain 'R' (replacement) updates
-
+- merge operations which contain 'D+A' (delete + add) updates
 
 Thoughts
 ========
