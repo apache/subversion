@@ -1864,7 +1864,7 @@ test_list = [ None,
               wc_copy_replace_with_props,
               repos_to_wc_copy_replacement,
               repos_to_wc_copy_replace_with_props,
-              XFail(delete_replaced_file),
+              delete_replaced_file,
              ]
 
 if __name__ == '__main__':
