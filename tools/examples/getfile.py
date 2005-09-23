@@ -13,21 +13,21 @@ from svn import fs, core, repos
 
 CHUNK_SIZE = 16384
 
-def getfile(pool, path, filename, rev=None):
+def getfile(path, filename, rev=None):
   #since the backslash on the end of path is not allowed, 
   #we truncate it
   if path[-1] == "/":
      path = path[:-1]
 
-  repos_ptr = repos.open(path, pool)
+  repos_ptr = repos.open(path)
   fsob = repos.fs(repos_ptr)
 
   if rev is None:
-    rev = fs.youngest_rev(fsob, pool)
+    rev = fs.youngest_rev(fsob)
     print "Using youngest revision ", rev
     
-  root = fs.revision_root(fsob, rev, pool)
-  file = fs.file_contents(root, filename, pool)
+  root = fs.revision_root(fsob, rev)
+  file = fs.file_contents(root, filename)
   while 1:
     data = core.svn_stream_read(file, CHUNK_SIZE)
     if not data:
@@ -46,7 +46,7 @@ def main():
   for name, value in opts:
     if name == '-r':
       rev = int(value)
-  core.run_app(getfile, args[0], args[1], rev)
+  getfile(args[0], args[1], rev)
 
 if __name__ == '__main__':
   main()
