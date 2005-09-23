@@ -62,7 +62,7 @@ def recursive_delete(dirname):
             os.unlink(file_or_dir)
     os.rmdir(dirname)
 
-def check_url_for_export(ctx, url, revision, client_ctx, pool):
+def check_url_for_export(ctx, url, revision, client_ctx):
     """Given a URL to a Subversion repository, check that the URL is
     in the repository and that it refers to a directory and not a
     non-directory."""
@@ -70,11 +70,10 @@ def check_url_for_export(ctx, url, revision, client_ctx, pool):
     # Try to do a listing on the URL to see if the repository can be
     # contacted.  Do not catch failures here, as they imply that there
     # is something wrong with the given URL.
-    subpool = svn.core.svn_pool_create(pool)
     try:
         if ctx.verbose:
             print "Trying to list '%s'" % url
-        svn.client.svn_client_ls(url, revision, 0, client_ctx, subpool)
+        svn.client.svn_client_ls(url, revision, 0, client_ctx)
 
         # Given a URL, the svn_client_ls command does not tell you if
         # you have a directory or a non-directory, so try doing a
@@ -96,8 +95,7 @@ def check_url_for_export(ctx, url, revision, client_ctx, pool):
             remote_ls = svn.client.svn_client_ls(parent_url,
                                                  revision,
                                                  0,
-                                                 client_ctx,
-                                                 subpool)
+                                                 client_ctx)
         except libsvn._core.SubversionException:
             if ctx.verbose:
                 print "Listing of '%s' failed, assuming URL is top of repos" \
@@ -119,9 +117,8 @@ def check_url_for_export(ctx, url, revision, client_ctx, pool):
             if ctx.verbose:
                 print "The URL '%s' is a directory" % url
             return True
-
     finally:
-        svn.core.svn_pool_destroy(subpool)
+        pass
 
 LOCAL_PATH_DIR = 'Directory'
 LOCAL_PATH_NON_DIR = 'Non-directory'
@@ -141,7 +138,7 @@ def get_local_path_kind(pathname):
 
     return status
 
-def synchronize_dir(ctx, url, dir_name, revision, client_ctx, pool):
+def synchronize_dir(ctx, url, dir_name, revision, client_ctx):
     """Synchronize a directory given by a URL to a Subversion
     repository with a local directory located by the dir_name
     argument."""
@@ -170,12 +167,10 @@ def synchronize_dir(ctx, url, dir_name, revision, client_ctx, pool):
         print "Creating directory '%s'" % dir_name
         os.mkdir(dir_name)
 
-    subpool = svn.core.svn_pool_create(pool)
     remote_ls = svn.client.svn_client_ls(url,
                                          revision,
                                          0,
-                                         client_ctx,
-                                         subpool)
+                                         client_ctx)
 
     if ctx.verbose:
         print "Syncing '%s' to '%s'" % (url, dir_name)
@@ -210,8 +205,7 @@ def synchronize_dir(ctx, url, dir_name, revision, client_ctx, pool):
                                 os.path.join(url, remote_pathname),
                                 full_remote_pathname,
                                 revision,
-                                client_ctx,
-                                subpool)
+                                client_ctx)
             status &= s
 
         else:
@@ -241,8 +235,6 @@ def synchronize_dir(ctx, url, dir_name, revision, client_ctx, pool):
                 f = file(full_remote_pathname, 'w')
                 f.close()
 
-    svn.core.svn_pool_destroy(subpool)
-
     # Any remaining local paths should be removed.
     local_pathnames.sort()
     for local_pathname in local_pathnames:
@@ -264,9 +256,11 @@ def synchronize_dir(ctx, url, dir_name, revision, client_ctx, pool):
 
     return status
 
-def main(pool, ctx, url, export_pathname):
+def main(ctx, url, export_pathname):
     # Create a client context to run all Subversion client commands
-    # with.
+    # with. Subversion doesn't track pool ownership for struct members
+    # yet, so we have to manage our own memory here.
+    pool = svn.core.Pool()
     client_ctx = svn.client.svn_client_create_context(pool)
 
     # Give the client context baton a suite of authentication
@@ -289,7 +283,7 @@ def main(pool, ctx, url, export_pathname):
 
     # Check that the URL refers to a directory in the repository and
     # not non-directory (file, special, etc).
-    status = check_url_for_export(ctx, url, head_revision, client_ctx, pool)
+    status = check_url_for_export(ctx, url, head_revision, client_ctx)
     if not status:
         return 1
 
@@ -299,8 +293,7 @@ def main(pool, ctx, url, export_pathname):
                              url,
                              export_pathname,
                              head_revision,
-                             client_ctx,
-                             pool)
+                             client_ctx)
 
     if ctx.delete_needed:
         print "There are files and directories in the local filesystem"
@@ -411,4 +404,4 @@ if __name__ == '__main__':
             usage(False)
         export_pathname = url[last_slash_index+1:]
 
-    sys.exit(svn.core.run_app(main, ctx, url, export_pathname))
+    sys.exit(main(ctx, url, export_pathname))
