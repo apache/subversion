@@ -1,7 +1,7 @@
 %define apache_version 2.0.48-0.1
 %define apr_version 0.9.5
 %define neon_version 0.24.7
-%define swig_version 1.3.19-3
+%define swig_version 1.3.25
 %define apache_dir /usr
 # If you don't want to take time for the tests then set make_*_check to 0.
 %define make_ra_local_bdb_check 1
@@ -37,7 +37,7 @@ BuildPreReq: libtool >= 1.4.2
 BuildPreReq: libxslt >= 1.0.27
 BuildPreReq: neon-devel >= %{neon_version}
 BuildPreReq: openssl-devel
-BuildPreReq: perl
+BuildPreReq: perl >= 5.8.0-88
 BuildPreReq: python
 BuildPreReq: python-devel
 BuildPreReq: swig >= %{swig_version}
@@ -83,7 +83,6 @@ the Apache directories and configuration.
 %package perl
 Group: Utilities/System
 Summary: Allows Perl scripts to directly use Subversion repositories.
-Requires: swig >= %{swig_version}
 Requires: perl
 %description perl
 Provides Perl (SWIG) support for Subversion.
@@ -91,7 +90,6 @@ Provides Perl (SWIG) support for Subversion.
 %package python
 Group: Utilities/System
 Summary: Allows Python scripts to directly use Subversion repositories.
-Requires: swig >= %{swig_version}
 Requires: python >= 2
 %description python
 Provides Python (SWIG) support for Subversion.
@@ -103,6 +101,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Sep 24 2005 David Summers <david@summersoft.fay.ar.us> r16237
+- Updated to swig 1.3.25 to get rid of run-time dependencies on swig package.
+  With this update, only the developer/packager needs to install swig.
+
 * Mon Jun 13 2005 David Summers <david@summersoft.fay.ar.us> r15049
 - Fix breakage that *only* occurs during release build (noticed on 1.2.0).
 
@@ -364,7 +366,7 @@ Tools for Subversion.
 - Release M3-r117: Initial Version.
 
 %define __perl_requires %{SOURCE3}
-%define perl_vendorarch %(eval "`perl -V:installvendorarch`"; echo $installvendorarch)
+%define perl_sitearch %(eval "`perl -V:installsitearch`"; echo $installsitearch)
 %define perl_version %(eval "`perl -V:version`"; echo $version)
 
 %prep
@@ -386,7 +388,7 @@ patch -p1 < packages/rpm/redhat-8+/install.patch
 rm -rf apr apr-util neon
 
 %configure \
-	--with-swig=/usr/bin/swig-1.3.19 \
+	--with-swig=/usr/bin/swig \
 	--with-python=/usr/bin/python2.2 \
 	--with-apxs=%{apache_dir}/sbin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-config \
@@ -400,13 +402,8 @@ make
 make swig-py
 
 # Build PERL bindings
-make swig-pl-lib
-cd subversion/bindings/swig/perl/native
-env APR_CONFIG=/usr/bin/apr-config perl Makefile.PL INSTALLDIRS=vendor PREFIX=$RPM_BUILD_ROOT/%{_prefix}
-make all
-# FIXME - The tests should be made to work.
-(make test)
-cd ../../../../..
+make swig-pl
+make check-swig-pl
 
 %if %{make_ra_local_bdb_check}
 echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
@@ -488,13 +485,16 @@ mv $RPM_BUILD_ROOT/usr/lib/svn-python/* $RPM_BUILD_ROOT/usr/lib/python2.2/site-p
 rmdir $RPM_BUILD_ROOT/usr/lib/svn-python
 
 # Install PERL SWIG bindings.
-make install-swig-pl-lib DESTDIR=$RPM_BUILD_ROOT
-cd subversion/bindings/swig/perl/native
-make PREFIX=$RPM_BUILD_ROOT/%{_prefix} install
-cd ../../../../..
+(cd subversion/bindings/swig/perl/native
+perl Makefile.PL PREFIX=$RPM_BUILD_ROOT
+)
+make install-swig-pl DESTDIR=$RPM_BUILD_ROOT
 
-# Clean up unneeded files for package installation
-rm -rf $RPM_BUILD_ROOT/%{_prefix}/lib/perl5/%{perl_version}
+# Clean up.
+mkdir -p $RPM_BUILD_ROOT/usr/lib/perl5
+mv $RPM_BUILD_ROOT/lib/perl5/site_perl $RPM_BUILD_ROOT/usr/lib/perl5
+mv $RPM_BUILD_ROOT/share/man/man3 $RPM_BUILD_ROOT/usr/share/man
+rm -rf $RPM_BUILD_ROOT/lib $RPM_BUILD_ROOT/share $RPM_BUILD_ROOT/usr/lib/perl5/site_perl/5.8.0/i386-linux-thread-multi/perllocal.pod
 
 # Set up tools package files.
 mkdir -p $RPM_BUILD_ROOT/usr/lib/subversion
@@ -560,8 +560,8 @@ rm -rf $RPM_BUILD_ROOT
 
 %files perl
 %defattr(-,root,root)
-%{perl_vendorarch}/SVN
-%{perl_vendorarch}/auto/SVN
+%{perl_sitearch}/SVN
+%{perl_sitearch}/auto/SVN
 /usr/lib/libsvn_swig_perl*so*
 /usr/share/man/man3/SVN*
 
