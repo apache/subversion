@@ -1,6 +1,6 @@
 %define apache_version 2.0.48-0.1
 %define neon_version 0.24.7
-%define swig_version 1.3.19-3
+%define swig_version 1.3.25
 %define apache_dir /usr/local/apache2
 # If you don't want to take time for the tests then set make_*_check to 0.
 %define make_ra_local_bdb_check 1
@@ -86,7 +86,6 @@ the Apache directories and configuration.
 %package perl
 Group: Utilities/System
 Summary: Allows Perl scripts to directly use Subversion repositories.
-Requires: swig >= %{swig_version}
 Requires: perl >= 5.8.0
 %description perl
 Provides Perl (SWIG) support for Subversion.
@@ -95,7 +94,6 @@ Provides Perl (SWIG) support for Subversion.
 %package python
 Group: Utilities/System
 Summary: Allows Python scripts to directly use Subversion repositories.
-Requires: swig >= %{swig_version}
 Requires: python2
 %description python
 Provides Pythong (SWIG) support for Subversion.
@@ -107,6 +105,10 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Sat Sep 24 2005 David Summers <david@summersoft.fay.ar.us> r16236
+- Update do swig-1.3.25.  This makes it so that only the packager/developer
+  needs to install the swig package.
+
 * Mon Jun 13 2005 David Summers <david@summersoft.fay.ar.us> r15049
 - Fix breakage that *only* occurs on release build (noticed on 1.2.0).
 
@@ -390,7 +392,7 @@ patch -p1 < packages/rpm/redhat-7.x/install.patch
 rm -rf apr apr-util neon
 
 %configure \
-	--with-swig=/usr/bin/swig-1.3.19 \
+	--with-swig=/usr/bin/swig \
 	--with-python=/usr/bin/python2.2 \
 	--with-apxs=%{apache_dir}/bin/apxs \
 	--with-apr=%{apache_dir}/bin/apr-config \
@@ -489,9 +491,16 @@ make install DESTDIR="$RPM_BUILD_ROOT"
 cp packages/rpm/redhat-7.x/subversion.conf $RPM_BUILD_ROOT/%{apache_dir}/conf
 
 # Install Python bindings.
-make install-swig-py DESTDIR=$RPM_BUILD_ROOT DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT
+make install-swig-py DESTDIR=$RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
 mv $RPM_BUILD_ROOT/usr/lib/svn-python/* $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages
+(cd $RPM_BUILD_DIR/%{name}-%{version}/subversion/bindings/swig/python/.libs/
+for i in _*.soU
+do
+  n=`basename $i U`
+  mv $i $RPM_BUILD_ROOT/usr/lib/python2.2/site-packages/libsvn/$n
+done
+)
 rmdir $RPM_BUILD_ROOT/usr/lib/svn-python
 
 %if %{perl_bindings}
@@ -601,7 +610,8 @@ rm -rf $RPM_BUILD_ROOT
 %files python
 %defattr(-,root,root)
 /usr/lib/python2.2/site-packages/svn
-/usr/lib/python2.2/site-packages/libsvn
+/usr/lib/python2.2/site-packages/libsvn/*.py*
+/usr/lib/python2.2/site-packages/libsvn/_*.so*
 /usr/lib/libsvn_swig_py*so*
 
 %files tools
