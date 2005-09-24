@@ -163,12 +163,10 @@ get_library_vtable (fs_library_vtable_t **vtable, const char *fs_type,
                             _("Unknown FS type '%s'"), fs_type);
 }
 
-/* Fetch the library vtable for an existing FS. */
-static svn_error_t *
-fs_library_vtable (fs_library_vtable_t **vtable, const char *path,
-                   apr_pool_t *pool)
+svn_error_t *
+svn_fs_type (const char **fs_type, const char *path, apr_pool_t *pool)
 {
-  const char *filename, *fs_type;
+  const char *filename;
   char buf[128];
   svn_error_t *err;
   apr_file_t *file;
@@ -180,17 +178,28 @@ fs_library_vtable (fs_library_vtable_t **vtable, const char *path,
   if (err && APR_STATUS_IS_ENOENT (err->apr_err))
     {
       svn_error_clear (err);
-      fs_type = SVN_FS_TYPE_BDB;
+      *fs_type = apr_pstrdup (pool, SVN_FS_TYPE_BDB);
+      return SVN_NO_ERROR;
     }
   else if (err)
     return err;
-  else
-    {
-      len = sizeof(buf);
-      SVN_ERR (svn_io_read_length_line (file, buf, &len, pool));
-      SVN_ERR (svn_io_file_close (file, pool));
-      fs_type = buf;
-    }
+
+  len = sizeof(buf);
+  SVN_ERR (svn_io_read_length_line (file, buf, &len, pool));
+  SVN_ERR (svn_io_file_close (file, pool));
+  *fs_type = apr_pstrdup (pool, buf);
+
+  return SVN_NO_ERROR;
+}
+
+/* Fetch the library vtable for an existing FS. */
+static svn_error_t *
+fs_library_vtable (fs_library_vtable_t **vtable, const char *path,
+                   apr_pool_t *pool)
+{
+  const char *fs_type;
+
+  SVN_ERR (svn_fs_type (&fs_type, path, pool));
 
   /* Fetch the library vtable by name, now that we've chosen one. */
   return get_library_vtable (vtable, fs_type, pool);
@@ -312,7 +321,6 @@ svn_fs_new (apr_hash_t *fs_config, apr_pool_t *pool)
   fs->access_ctx = NULL;
   fs->vtable = NULL;
   fs->fsap_data = NULL;
-  fs->type = NULL;
   return fs;
 }
 
@@ -358,12 +366,6 @@ svn_fs_open (svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   *fs_p = svn_fs_new (fs_config, pool);
   SVN_ERR (vtable->open (*fs_p, path, pool));
   return serialized_init (*fs_p, pool);
-}
-
-const char *
-svn_fs_type (svn_fs_t *fs)
-{
-  return fs->type;
 }
 
 const char *

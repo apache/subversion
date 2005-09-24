@@ -576,7 +576,6 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   bfd = apr_pcalloc (fs->pool, sizeof (*bfd));
   fs->vtable = &fs_vtable;
   fs->fsap_data = bfd;
-  fs->type = SVN_FS_TYPE_BDB;
 
   /* Initialize the fs's path. */
   fs->path = apr_pstrdup (fs->pool, path);
@@ -698,7 +697,6 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   bfd = apr_pcalloc (fs->pool, sizeof (*bfd));
   fs->vtable = &fs_vtable;
   fs->fsap_data = bfd;
-  fs->type = SVN_FS_TYPE_BDB;
 
   /* Initialize paths. */
   fs->path = apr_pstrdup (fs->pool, path);

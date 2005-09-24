@@ -339,11 +339,6 @@ struct svn_fs_t
   /* FSAP-specific vtable and private data */
   fs_vtable_t *vtable;
   void *fsap_data;
-
-  /* What type of filesystem is this (e.g., "fsfs", "bdb", etc).
-     This should be a constant string, not allocated in any pool.
-     See svn_fs_type(). */
-  const char *type;
 };
 
 

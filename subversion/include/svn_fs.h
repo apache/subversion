@@ -170,13 +170,13 @@ svn_error_t *svn_fs_open (svn_fs_t **fs_p, const char *path,
                           apr_hash_t *config, apr_pool_t *pool);
 
 /**
- * Return a constant string describing the back-end type of @a fs,
- * e.g. "fsfs", "bdb".  If the type is not yet known, for example
- * because @a fs has been created but not opened, just return NULL.
+ * Return, in @a *fs_type, a string identifying the back-end type of
+ * the Subversion filesystem located in @a path.
+ * e.g. "fsfs", "bdb".
  *
- * For filesystem back ends that ship with Subversion, the string
- * returned here is the same as the corresponding @c SVN_FS_TYPE_*
- * defined constant.
+ * The string should be equal to one of the @c SVN_FS_TYPE_* defined
+ * constants, unless the filesystem is a new back-end type added in
+ * a later version of Subversion.
  *
  * In general, the type should make no difference in the filesystem's
  * semantics, but there are a few situations (such as backups) where
@@ -184,7 +184,8 @@ svn_error_t *svn_fs_open (svn_fs_t **fs_p, const char *path,
  *
  * @since New in 1.3.
  */
-const char *svn_fs_type (svn_fs_t *fs);
+svn_error_t *svn_fs_type (const char **fs_type, const char *path,
+                          apr_pool_t *pool);
 
 /**
  * Return the path to @a fs's repository, allocated in @a pool.
