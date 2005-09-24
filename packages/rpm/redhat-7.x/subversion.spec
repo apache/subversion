@@ -96,7 +96,7 @@ Group: Utilities/System
 Summary: Allows Python scripts to directly use Subversion repositories.
 Requires: python2
 %description python
-Provides Pythong (SWIG) support for Subversion.
+Provides Python (SWIG) support for Subversion.
 
 %package tools
 Group: Utilities/System
