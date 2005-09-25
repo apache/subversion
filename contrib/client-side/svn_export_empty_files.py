@@ -258,24 +258,22 @@ def synchronize_dir(ctx, url, dir_name, revision, client_ctx):
 
 def main(ctx, url, export_pathname):
     # Create a client context to run all Subversion client commands
-    # with. Subversion doesn't track pool ownership for struct members
-    # yet, so we have to manage our own memory here.
-    pool = svn.core.Pool()
-    client_ctx = svn.client.svn_client_create_context(pool)
+    # with.
+    client_ctx = svn.client.svn_client_create_context()
 
     # Give the client context baton a suite of authentication
     # providers.
     providers = [
-        svn.client.svn_client_get_simple_provider(pool),
-        svn.client.svn_client_get_ssl_client_cert_file_provider(pool),
-        svn.client.svn_client_get_ssl_client_cert_pw_file_provider(pool),
-        svn.client.svn_client_get_ssl_server_trust_file_provider(pool),
-        svn.client.svn_client_get_username_provider(pool),
+        svn.client.svn_client_get_simple_provider(),
+        svn.client.svn_client_get_ssl_client_cert_file_provider(),
+        svn.client.svn_client_get_ssl_client_cert_pw_file_provider(),
+        svn.client.svn_client_get_ssl_server_trust_file_provider(),
+        svn.client.svn_client_get_username_provider(),
         ]
-    client_ctx.auth_baton = svn.core.svn_auth_open(providers, pool)
+    client_ctx.auth_baton = svn.core.svn_auth_open(providers)
 
     # Load the configuration information from the configuration files.
-    client_ctx.config = svn.core.svn_config_get_config(None, pool)
+    client_ctx.config = svn.core.svn_config_get_config(None)
 
     # Use the HEAD revision to check out.
     head_revision = svn.core.svn_opt_revision_t()
