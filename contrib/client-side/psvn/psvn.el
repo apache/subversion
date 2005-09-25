@@ -521,6 +521,14 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
      '(documentation-property 'svn-global-keymap 'variable-documentation t))
 
 
+;; named after SVN_WC_ADM_DIR_NAME in svn_wc.h
+(defun svn-wc-adm-dir-name ()
+  "Return the name of the \".svn\" subdirectory or equivalent."
+  (if (and (eq system-type 'windows-nt)
+           (getenv "SVN_ASP_DOT_NET_HACK"))
+      "_svn"
+    ".svn"))
+
 (defun svn-status-message (level &rest args)
   "If LEVEL is lower than `svn-status-debug-level' print ARGS using `message'.
 
@@ -548,10 +556,11 @@ If ARG then pass the -u argument to `svn status'."
   (setq arg (svn-status-possibly-negate-meaning-of-arg arg 'svn-status))
   (unless (file-directory-p dir)
     (error "%s is not a directory" dir))
-  (if (not (file-exists-p (concat dir "/.svn/")))
+  (if (not (file-exists-p (concat dir "/" (svn-wc-adm-dir-name) "/")))
       (when (y-or-n-p
              (concat dir
-                     " does not seem to be a Subversion working copy (no .svn directory).  "
+                     " does not seem to be a Subversion working copy (no "
+                     (svn-wc-adm-dir-name) " directory).  "
                      "Run dired instead? "))
         (dired dir))
     (setq dir (file-name-as-directory dir))
@@ -2580,7 +2589,8 @@ Otherwise get only the actual file."
                (with-temp-buffer
                  (if (string= revision "BASE")
                      (insert-file-contents (concat (file-name-directory file-name)
-                                                   ".svn/text-base/"
+                                                   (svn-wc-adm-dir-name)
+                                                   "/text-base/"
                                                    (file-name-nondirectory file-name)
                                                    ".svn-base"))
                    (progn
@@ -3217,12 +3227,12 @@ When called with a prefix argument, ask the user for the revision."
   (let ((base-dir (expand-file-name default-directory))
         (dot-svn-dir)
         (dir-below (expand-file-name default-directory)))
-    (setq dot-svn-dir (concat base-dir ".svn"))
+    (setq dot-svn-dir (concat base-dir (svn-wc-adm-dir-name)))
     (while (when (and dir-below (file-exists-p dot-svn-dir))
              (setq base-dir (file-name-directory dot-svn-dir))
              (string-match "\\(.+/\\).+/" dir-below)
              (setq dir-below (match-string 1 dir-below))
-             (setq dot-svn-dir (concat dir-below ".svn"))))
+             (setq dot-svn-dir (concat dir-below (svn-wc-adm-dir-name)))))
     base-dir))
 
 (defun svn-status-save-state ()
