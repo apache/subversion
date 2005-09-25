@@ -208,6 +208,19 @@ main(int argc, const char *argv[])
       return EXIT_FAILURE;
     }
 
+#ifdef WIN32
+  /* Set the working copy administrative directory name. */
+  if (getenv ("SVN_ASP_DOT_NET_HACK"))
+    {
+      err = svn_wc_set_adm_dir ("_svn", pool);
+      if (err)
+        {
+          svn_handle_error2 (err, stderr, FALSE, "svnversion: ");
+          return EXIT_FAILURE;
+        }
+    }
+#endif
+
   sb.switched = FALSE;
   sb.modified = FALSE;
   sb.committed = FALSE;

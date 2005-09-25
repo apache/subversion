@@ -29,7 +29,9 @@
 
 #include <apr_errno.h>          /* for apr_strerror */
 #include <apr_general.h>        /* for apr_initialize/apr_terminate */
+#include <apr_atomic.h>         /* for apr_atomic_init */
 #include <apr_strings.h>        /* for apr_snprintf */
+#include <apr_pools.h>
 
 #include "svn_cmdline.h"
 #include "svn_path.h"
@@ -48,6 +50,18 @@ static const char *input_encoding = NULL;
 
 /* The stdout encoding. If null, it's the same as the native encoding. */
 static const char *output_encoding = NULL;
+
+
+/* Perform APR global initialization for Subversion. */
+static apr_status_t
+svn_apr_initialize (void)
+{
+  apr_status_t status;
+  status = apr_initialize();
+  if (!status)
+    status = apr_atomic_init (svn_pool_create (NULL));
+  return status;
+}
 
 
 int
@@ -127,7 +141,7 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
 
   /* Initialize the APR subsystem, and register an atexit() function
      to Uninitialize that subsystem at program exit. */
-  status = apr_initialize();
+  status = svn_apr_initialize();
   if (status)
     {
       if (error_stream)

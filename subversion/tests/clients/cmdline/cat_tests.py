@@ -101,7 +101,7 @@ def cat_skip_uncattable(sbox):
 
   # item_list has all the files and directories under 'dir_path'
   for file in item_list:
-    if file == '.svn':
+    if file == svntest.main.get_admin_name():
       continue
     item_to_cat = os.path.join(dir_path, file)
     if item_to_cat == new_file_path:

@@ -771,7 +771,7 @@ erase_from_wc (const char *path,
             name = key;
 
             /* The admin directory will show up, we don't want to delete it */
-            if (!strcmp (name, SVN_WC_ADM_DIR_NAME))
+            if (svn_wc_is_adm_dir (name, pool))
               continue;
 
             /* Versioned directories will show up, don't delete those either */

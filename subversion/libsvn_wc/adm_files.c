@@ -24,9 +24,11 @@
 
 #include <stdarg.h>
 #include <assert.h>
+#include <apr_atomic.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include <apr_strings.h>
+
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_io.h"
@@ -43,9 +45,69 @@
 
 /*** File names in the adm area. ***/
 
+/* The default name of the WC admin directory. This name is always
+   checked by svn_wc_is_adm_dir. */
+#define DEFAULT_ADM_DIR_NAME ".svn"
+
+/* The name that is actually used for the WC admin directory.  The
+   commonest case where this won't be the default is in Windows
+   ASP.NET development environments, which choke on ".svn". */
+static void *volatile adm_dir_name = DEFAULT_ADM_DIR_NAME;
+
+
+svn_boolean_t
+svn_wc_is_adm_dir (const char *name, apr_pool_t *pool)
+{
+  (void)pool;  /* Silence compiler warnings about unused parameter */
+  return (0 == strcmp (name, adm_dir_name)
+          || 0 == strcmp (name, DEFAULT_ADM_DIR_NAME));
+}
+
+
+svn_error_t *
+svn_wc_set_adm_dir (const char *name, apr_pool_t *pool)
+{
+  /* FIXME:
+     This is the canonical list of administrative directory.
+     An identical list is used in
+       libsvn_subr/opt.c:svn_opt_args_to_target_array2(),
+     but that function can't use this list, because that use would
+     create a circular dependency between libsvn_wc and libsvn_subr
+     Make sure changes to the lists are always synchronized! */
+  static const char *valid_dir_names[] = {
+    DEFAULT_ADM_DIR_NAME,
+    "_svn",
+    NULL
+  };
+
+  const char **dir_name;
+  for (dir_name = valid_dir_names; *dir_name; ++dir_name)
+    if (0 == strcmp (name, *dir_name))
+      {
+        void *new_adm_dir_name = (void*) *dir_name;
+        void *old_adm_dir_name = adm_dir_name;
+        if (old_adm_dir_name != apr_atomic_casptr (&adm_dir_name,
+                                                   new_adm_dir_name,
+                                                   old_adm_dir_name))
+          {
+            /* Another thread won the race to change the name. */
+            return svn_error_create
+              (APR_EAGAIN, NULL,
+               _("Could not set the administrative directory name"));
+          }
+
+        return SVN_NO_ERROR;
+      }
+  return svn_error_createf
+    (SVN_ERR_BAD_FILENAME, NULL,
+     _("'%s' is not a valid administrative directory name"),
+     svn_path_local_style (name, pool));
+}
+
+
 
 /* Return the path to something in PATH's administrative area.
- * 
+ *
  * First, the adm subdir is appended to PATH as a component, then the
  * "tmp" directory is added iff USE_TMP is set, then each of the
  * varargs in AP (char *'s) is appended as a path component.  The list
@@ -67,7 +129,7 @@ v_extend_with_adm_name (const char *path,
   const char *this;
 
   /* Tack on the administrative subdirectory. */
-  path = svn_path_join (path, SVN_WC_ADM_DIR_NAME, pool);
+  path = svn_path_join (path, adm_dir_name, pool);
 
   /* If this is a tmp file, name it into the tmp area. */
   if (use_tmp)
