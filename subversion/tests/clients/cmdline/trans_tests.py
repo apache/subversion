@@ -332,8 +332,8 @@ def keywords_from_birth(sbox):
     '$URL::x%sx$\n' % (' ' * len(url_expand_test_data))
     ]
   
-  fp = open(os.path.join(wc_dir, '.svn', 'text-base',
-			 'fixed_length_keywords.svn-base'), 'r')
+  fp = open(os.path.join(wc_dir, svntest.main.get_admin_name(),
+                         'text-base', 'fixed_length_keywords.svn-base'), 'r')
   actual_textbase_kw = fp.readlines()
   fp.close()
   check_keywords(actual_textbase_kw, kw_textbase, "text base")
@@ -526,7 +526,8 @@ def eol_change_is_text_mod(sbox):
   else:
     if contents != "1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n":
       raise svntest.Failure
-  f = open(os.path.join(wc_dir, '.svn', 'text-base', 'foo.svn-base'), 'rb')
+  f = open(os.path.join(wc_dir, svntest.main.get_admin_name(),
+                        'text-base', 'foo.svn-base'), 'rb')
   base_contents = f.read()
   f.close()
   if contents != base_contents:

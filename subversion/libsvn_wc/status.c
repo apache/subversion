@@ -870,8 +870,8 @@ get_dir_status (struct edit_baton *eb,
         
       /* Skip versioned things, and skip the administrative
          directory. */
-      if ((apr_hash_get (entries, key, klen)) 
-          || (strcmp (key, SVN_WC_ADM_DIR_NAME) == 0))
+      if (apr_hash_get (entries, key, klen)
+          || svn_wc_is_adm_dir (key, subpool))
         continue;
 
       /* Clear the iteration subpool. */

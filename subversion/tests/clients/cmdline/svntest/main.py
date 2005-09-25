@@ -184,9 +184,10 @@ greek_state = wc.State('', {
 def get_admin_name():
   "Return name of SVN administrative subdirectory."
 
-  # todo: One day this sucker will try to intelligently discern what
-  # the admin dir is.  For now, '.svn' will suffice.
-  return '.svn'
+  if windows and os.environ.has_key('SVN_ASP_DOT_NET_HACK'):
+    return '_svn'
+  else:
+    return '.svn'
 
 def get_start_commit_hook_path(repo_dir):
   "Return the path of the start-commit-hook conf file in REPO_DIR."

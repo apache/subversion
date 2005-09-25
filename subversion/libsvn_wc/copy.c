@@ -292,7 +292,7 @@ post_copy_cleanup (svn_wc_adm_access_t *adm_access,
      hidden. */
 #ifdef APR_FILE_ATTR_HIDDEN
   {
-    const char *adm_dir = svn_path_join (path, SVN_WC_ADM_DIR_NAME, pool);
+    const char *adm_dir = svn_wc__adm_path (path, FALSE, pool, NULL);
     const char *path_apr;
     apr_status_t status;
     SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, adm_dir, pool));

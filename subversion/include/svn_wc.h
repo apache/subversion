@@ -337,6 +337,36 @@ svn_error_t *svn_wc_locked (svn_boolean_t *locked,
                             apr_pool_t *pool);
 
 
+/**
+ * Return @c TRUE if @a name is the name of the WC administrative
+ * directory.  Use @a pool for any temporary allocations.
+ *
+ * For compatibility, the default name (.svn) will always be treated
+ * as an admin dir name, even if the working copy is actually using an
+ * alternative name.
+ *
+ * @since New in 1.3.
+ */
+svn_boolean_t svn_wc_is_adm_dir (const char *name, apr_pool_t *pool);
+
+
+/**
+ * Use @a name for the administrative directory in the working copy.
+ * Use @a pool for any temporary allocations.
+ *
+ * The list of valid names is limited.  Currently only ".svn" (the
+ * default) and "_svn" are allowed.
+ *
+ * If the function fails because of a lost race condition, the
+ * returned error code will be @c APR_EAGAIN.
+ *
+ * @note You must call apr_atomic_init() before using this function.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *svn_wc_set_adm_dir (const char *name, apr_pool_t *pool);
+
+
 
 /** Traversal information is information gathered by a working copy
  * crawl or update.  For example, the before and after values of the
@@ -1023,6 +1053,8 @@ svn_error_t *svn_wc_props_modified_p (svn_boolean_t *modified_p,
  * who knew the adm subdir's name).  However, import wants to protect
  * against importing administrative subdirs, so now the name is a
  * matter of public record.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 #define SVN_WC_ADM_DIR_NAME   ".svn"
 

@@ -10,6 +10,7 @@ Usage: python win-tests.py [option] [test-path]
 
     --svnserve-args=list   comma-separated list of arguments for svnserve;
                            default is '-d,-r,<test-path-root>'
+    --asp.net-hack     use '_svn' instead of '.svn' for the admin dir name
 """
 
 import os, sys
@@ -38,7 +39,7 @@ client_tests = filter(lambda x: x.startswith('subversion/tests/clients/'),
 
 opts, args = my_getopt(sys.argv[1:], 'rdvcu:f:',
                        ['release', 'debug', 'verbose', 'cleanup', 'url=',
-                        'svnserve-args=', 'fs-type='])
+                        'svnserve-args=', 'fs-type=', 'asp.net-hack'])
 if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
@@ -77,6 +78,8 @@ for opt, val in opts:
   elif opt == '--svnserve-args':
     svnserve_args = val.split(',')
     run_svnserve = 1
+  elif opt == '--asp.net-hack':
+    os.environ['SVN_ASP_DOT_NET_HACK'] = opt
 
 
 # Calculate the source and test directory names

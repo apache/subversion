@@ -1052,7 +1052,7 @@ add_directory (const char *path,
        svn_path_local_style (db->path, pool));
 
   /* It may not be named the same as the administrative directory. */
-  if (strcmp (svn_path_basename (path, pool), SVN_WC_ADM_DIR_NAME) == 0)
+  if (svn_wc_is_adm_dir (svn_path_basename (path, pool), pool))
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        _("Failed to add directory '%s': object of the same name as the "

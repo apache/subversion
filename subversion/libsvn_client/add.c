@@ -328,7 +328,7 @@ add_dir_recursive (const char *dirname,
         SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
       
       /* Skip over SVN admin directories. */
-      if (strcmp (this_entry.name, SVN_WC_ADM_DIR_NAME) == 0)
+      if (svn_wc_is_adm_dir (this_entry.name, subpool))
         continue;
 
       /* Skip entries for this dir and its parent.  */

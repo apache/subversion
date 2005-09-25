@@ -845,6 +845,16 @@ main (int argc, const char * const *argv)
   if (err)
     return svn_cmdline_handle_exit_error (err, pool, "svn: ");
 
+#ifdef WIN32
+  /* Set the working copy administrative directory name. */
+  if (getenv ("SVN_ASP_DOT_NET_HACK"))
+    {
+      err = svn_wc_set_adm_dir ("_svn", pool);
+      if (err)
+        return svn_cmdline_handle_exit_error (err, pool, "svn: ");
+    }
+#endif
+
   /* Initialize the RA library. */
   err = svn_ra_initialize (pool);
   if (err)
@@ -1299,7 +1309,7 @@ main (int argc, const char * const *argv)
 
   cfg = apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
                       APR_HASH_KEY_STRING);
-  
+
   /* Update the options in the config */
   /* XXX: Only diff_cmd for now, overlay rest later and stop passing
      opt_state altogether? */

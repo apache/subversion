@@ -335,7 +335,7 @@ import_dir (const svn_delta_editor_t *editor,
       if (ctx->cancel_func)
         SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
 
-      if (strcmp (filename, SVN_WC_ADM_DIR_NAME) == 0)
+      if (svn_wc_is_adm_dir (filename, subpool))
         {
           /* If someone's trying to import a directory named the same
              as our administrative directories, that's probably not
@@ -747,15 +747,20 @@ svn_client_import2 (svn_commit_info_t **commit_info_p,
 
   /* The repository doesn't know about the reserved administrative
      directory. */
-  if (new_entries->nelts && 
-      (strcmp (APR_ARRAY_IDX (new_entries, 
-                              new_entries->nelts - 1, 
-                              const char *), SVN_WC_ADM_DIR_NAME) == 0))
+  if (new_entries->nelts
+      /* What's this, what's this?  This assignment is here because we
+         use the value to construct the error message just below.  It
+         may not be asethetically pleasing, but it's less ugly than
+         calling APR_ARRAY_IDX twice. */
+      && svn_wc_is_adm_dir (temp = APR_ARRAY_IDX (new_entries,
+                                                  new_entries->nelts - 1,
+                                                  const char *),
+                            pool))
     return svn_error_createf
       (SVN_ERR_CL_ADM_DIR_RESERVED, NULL,
        _("'%s' is a reserved name and cannot be imported"),
        /* ### Is svn_path_local_style() really necessary for this? */
-       svn_path_local_style (SVN_WC_ADM_DIR_NAME, pool));
+       svn_path_local_style (temp, pool));
 
 
   /* If an error occurred during the commit, abort the edit and return
