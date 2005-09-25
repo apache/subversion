@@ -21,8 +21,8 @@
 
 
 
-#ifndef CONFIG_HW
-#define CONFIG_HW
+#ifndef SVN_PRIVATE_CONFIG_HW
+#define SVN_PRIVATE_CONFIG_HW
 
 /* The version of Berkeley DB we want */
 #define SVN_FS_WANT_DB_MAJOR	4
@@ -82,4 +82,4 @@
 #define dgettext(domain,x) (x)
 #endif
 
-#endif /* CONFIG_HW */
+#endif /* SVN_PRIVATE_CONFIG_HW */
