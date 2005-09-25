@@ -37,11 +37,18 @@
   def __getattr__(self, name):
     """Get an attribute from this object"""
     self.assert_valid();
-    return _swig_getattr(self, self.__class__, name)
+    value = _swig_getattr(self, self.__class__, name)
+    if name in self.__dict__["_member_dicts"]:
+      old_dict = self.__dict__["_member_dicts"][name]
+      value.__dict__["_parent_pool"] = old_dict.get("_parent_pool")
+      value.__dict__["_member_dicts"] = old_dict.get("_member_dicts")
+      value.assert_valid()
+    return value
 
   def __setattr__(self, name, value):
     """Set an attribute on this object"""
     self.assert_valid();
+    self.__dict__.setdefault("_member_dicts",{})[name] = value.__dict__
     return _swig_setattr(self, self.__class__, name, value)
 %}
 %enddef
