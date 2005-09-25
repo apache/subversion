@@ -1276,7 +1276,7 @@ svn_wc__entries_write (apr_hash_t *entries,
    already exists, the requested changes will be folded (merged) into
    the entry's existing state.  If the entry doesn't exist, the entry
    will be created with exactly those properties described by the set
-   of changes. Also cleanups meaningless fields combinations. */
+   of changes. Also cleanups meaningless fields combinations.
 
    POOL may be used to allocate memory referenced by ENTRIES.
  */
@@ -1427,7 +1427,8 @@ fold_entry (apr_hash_t *entries,
     }
 
   /* Cleanup meaningless fields */
-  if (entry->schedule == svn_wc_schedule_delete)
+  if (!(entry->schedule == svn_wc_schedule_add
+        || entry->schedule == svn_wc_schedule_replace))
     {
       cur_entry->copied = FALSE;
       cur_entry->copyfrom_rev = SVN_INVALID_REVNUM;
