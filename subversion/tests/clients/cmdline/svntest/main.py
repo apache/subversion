@@ -277,6 +277,28 @@ def reset_config_dir():
 
   config_dir = default_config_dir
 
+def create_config_dir(cfgdir,
+                      config_contents = '#\n',
+                      server_contents = '#\n'):
+  "Ccreate config directories and files"
+
+  # config file names
+  cfgfile_cfg = os.path.join(cfgdir, 'config')
+  cfgfile_srv = os.path.join(cfgdir, 'server')
+
+  # create the directory
+  if not os.path.isdir(cfgdir):
+    os.makedirs(cfgdir)
+
+  fd = open(cfgfile_cfg, 'w')
+  fd.write(config_contents)
+  fd.close()
+
+  fd = open(cfgfile_srv, 'w')
+  fd.write(server_contents)
+  fd.close()
+
+
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
   """Run svn with VARARGS; return stdout, stderr as lists of lines.

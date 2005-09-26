@@ -682,15 +682,11 @@ def timestamp_behaviour(sbox):
   # Create a config to enable use-commit-times
   config_dir = os.path.join(os.path.abspath(svntest.main.temp_dir),
                             'use_commit_config')
-  if not os.path.isdir(config_dir):
-    os.makedirs(config_dir)
-  fd = open(os.path.join(config_dir, 'config'), 'w')
-  fd.write('[miscellany]\n')
-  fd.write('use-commit-times = yes\n')
-  fd.close()
-  fd = open(os.path.join(config_dir, 'server'), 'w')
-  fd.write('\n')
-  fd.close()
+  config_contents = '''\
+[miscellany]
+use-commit-times = yes
+'''
+  svntest.main.create_config_dir(config_dir, config_contents)
   svntest.main.set_config_dir(config_dir)
 
   other_wc = sbox.add_wc_path('other')
