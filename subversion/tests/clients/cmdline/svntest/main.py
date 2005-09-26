@@ -280,7 +280,7 @@ def reset_config_dir():
 def create_config_dir(cfgdir,
                       config_contents = '#\n',
                       server_contents = '#\n'):
-  "Ccreate config directories and files"
+  "Create config directories and files"
 
   # config file names
   cfgfile_cfg = os.path.join(cfgdir, 'config')
