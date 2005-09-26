@@ -1416,7 +1416,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
-/* For each path in @a path_revs, send a 'lock' command to the server.
+/* For each path in PATH_REVS, send a 'lock' command to the server.
    Used with 1.2.x series servers which support locking, but of only
    one path at a time.  ra_svn_lock(), which supports 'lock-many'
    is now the default.  See svn_ra_lock() docstring for interface details. */
@@ -1481,7 +1481,7 @@ static svn_error_t *ra_svn_lock_compat(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
-/* For each path in @path_tokens, send an 'unlock' command to the server.
+/* For each path in PATH_TOKENS, send an 'unlock' command to the server.
    Used with 1.2.x series servers which support unlocking, but of only
    one path at a time.  ra_svn_unlock(), which supports 'unlock-many' is
    now the default.  See svn_ra_unlock() docstring for interface details. */
@@ -1541,7 +1541,7 @@ static svn_error_t *ra_svn_unlock_compat(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
-/* Tell the server to lock all paths in @a path_revs.
+/* Tell the server to lock all paths in PATH_REVS.
    See svn_ra_lock() for interface details. */
 static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
                                 apr_hash_t *path_revs,
@@ -1552,7 +1552,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
                                 apr_pool_t *pool)
 {
   ra_svn_session_baton_t *sess = session->priv;
-  svn_ra_svn_conn_t* conn = sess->conn;
+  svn_ra_svn_conn_t *conn = sess->conn;
   apr_array_header_t *list;
   apr_hash_index_t *hi;
   int i;
@@ -1561,9 +1561,8 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
   apr_pool_t *subpool = svn_pool_create(pool);
   const char *status;
   apr_array_header_t *condensed_tgt_paths;
-  condensed_tgt_paths = apr_array_make(pool, 1, sizeof(const char*));
+  condensed_tgt_paths = apr_array_make(pool, 1, sizeof(const char *));
 
-  /* (lock-many (?c) b ( (c(?r)) ...) ) */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((?c)b(!", "lock-many",
                                  comment, steal_lock));
 
@@ -1577,7 +1576,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
       svn_pool_clear(subpool);
       apr_hash_this(hi, &key, NULL, &val);
       path = key;
-      APR_ARRAY_PUSH(condensed_tgt_paths, const char*) = path;
+      APR_ARRAY_PUSH(condensed_tgt_paths, const char *) = path;
       revnum = val;
 
       SVN_ERR(svn_ra_svn_write_tuple(conn, subpool, "c(?r)",
@@ -1623,8 +1622,8 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
 
       err = parse_lock(elt->u.list, subpool, &lock);
       if (err)
-          return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, err,
-                                  _("Unable to parse lock data"));
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, err,
+                                _("Unable to parse lock data"));
 
       if (lock_func)
         callback_err = lock_func(lock_baton, condensed_tgt_path, TRUE,
@@ -1640,7 +1639,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
-/* Tell the server to lock all paths in @a path_tokens.
+/* Tell the server to lock all paths in PATH_TOKENS.
    See svn_ra_unlock() for interface details. */
 static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
                                   apr_hash_t *path_tokens,
@@ -1650,12 +1649,11 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
                                   apr_pool_t *pool)
 {
   ra_svn_session_baton_t *sess = session->priv;
-  svn_ra_svn_conn_t* conn = sess->conn;
+  svn_ra_svn_conn_t *conn = sess->conn;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_error_t *err, *callback_err = NULL;
 
-  /* (unlock-many (b ( (c(?c)) ...) ) ) */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(b(!", "unlock-many",
                                  break_lock));
 
@@ -1689,7 +1687,6 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
     return ra_svn_unlock_compat(session, path_tokens, break_lock, lock_func,
                                 lock_baton, pool);
 
-  /* Unknown error */
   if (err)
     return err;
 
