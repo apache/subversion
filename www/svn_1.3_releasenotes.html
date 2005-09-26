@@ -41,6 +41,13 @@ disappears, that will mean 1.3.0 is released.</p>
 <div class="h2" id="news" title="news">
 <h2>What's New in Subversion 1.3</h2>
 
+<p>Subversion 1.3 is a superset of all previous Subversion releases.
+Anything in 1.0.x, 1.1.x, or 1.2.x is also in 1.3, but 1.3 contains
+features and bugfixes not present in any earlier release.  The new
+features will eventually be documented in a 1.3 version of the free
+Subversion book, see
+<a href="http://svnbook.red-bean.com">svnbook.red-bean.com</a>.</p>
+
 <ul>
    <li><p>Path-based authorization for svnserve (works similarly to
        mod_authz_svn).</p>
@@ -72,9 +79,9 @@ disappears, that will mean 1.3.0 is released.</p>
    </li>
 
    <li><p>The Apache HTTPD-based server (mod_dav_svn) can now display
-          (in a web browser) the collection of repositories exported
-          by the SVNParentPath directive:  simply set
-          'SVNListParentPath on'.</p>
+        (in a web browser) the collection of repositories exported
+        by the SVNParentPath directive:  simply set
+        'SVNListParentPath&nbsp;on'.</p>
    </li>
 
    <li><p>Commands that accept peg revisions now operate faster when
@@ -83,50 +90,52 @@ disappears, that will mean 1.3.0 is released.</p>
        >Issue #1970</a> for details.</p>
    </li>
 
+   <li><p>Interruptable http:// and https:// connections.  If built
+       with Neon 0.25.0 or higher, Subversion can be interrupted
+       during network operations over http and https.</p>
+   </li>
+
    <li><p>The "<b>_svn</b>" hack is now officially supported: since
        some versions of ASP.NET don't allow directories beginning
        with dot (e.g., ".svn", the standard Subversion working copy
        administrative directory), the <b>svn</b> command line client
        and <b>svnversion</b> now treat the environment variable
        SVN_ASP_DOT_NET_HACK specially on Windows.  If this
-       variable is set, they will use "_svn" instead of ".svn".</p>
+       variable is set, they will use "_svn" instead of ".svn".  We
+       recommend that all Subversion clients runing on Windows take
+       advantage of this behaviour.  Note that once the environment
+       variable is set, legacy working copies with ".svn" directories
+       will stop working, and will need to be re-checked-out.</p>
 
-       <p>We recommend that all Subversion clients that run on Windows
-       implement this behaviour.  Note that once the environment
-       variable is set, legacy working copies (ones that still have
-       ".svn" directories) will stop working, and will need to be
-       re-checked-out.  Also, third party software that uses the
-       Subversion libraries will need to be changed to set
-       SVN_ASP_DOT_NET_HACK or make the equivalent API calls.  See <a
+       <p class="warningmark">Third party software that uses the
+       Subversion libraries needs to be updated to make the
+       equivalent API calls.  See the three new
+       APIs: <b>svn_wc_is_adm_dir</b>, <b>svn_wc_get_adm_dir</b>, and
+       <b>svn_wc_set_adm_dir</b>.  Setting the SVN_ASP_DOT_NET_HACK
+       environment variable only works for the above-mentioned client
+       programs, and only on Windows.  It doesn't work for libraries;
+       users of the libraries should call the new APIs, which are
+       platform-indepndent.  See <a
     href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=105810"
        >this mail</a> and its thread for more details.</p>
-   </li>
 
-   <li><p>Interruptable http:// and https:// connections.  If built
-   with Neon 0.25.0 or higher, Subversion can be interrupted during
-   network operations over http and https.</p>
+       <p class="todo"><i>TODO: We should update the bindings to pay
+       attention to the environment variable on Windows.</i></p>
    </li>
 
    <li><p class="todo"><i>TODO: we need either finish r15287 or revert
-     it.  See <a
+       it.  See <a
      href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=105738"
-     >this mail</a> about it.  Peter Lundblad may get time to
-     integrate VK Sameer's patch for this tonight; if he doesn't,
-     kfogel will revert r15287 before branching.  Watch this space
-     for updates.</i></p></li>
+       >this mail</a> about it.  Peter Lundblad may get time to
+       integrate VK Sameer's patch for this tonight; if he doesn't,
+       kfogel will revert r15287 before branching.  Watch this space
+       for updates.</i></p></li>
 
    <li><p>The usual slew of bugfixes and improved APIs.  See the
        <a href="http://svn.collab.net/repos/svn/trunk/CHANGES"
        >CHANGES</a> file for details.</p>
    </li>
 </ul>
-
-<p>Subversion 1.3 is a superset of all previous Subversion releases.
-Anything in 1.0.x, 1.1.x, or 1.2.x is also in 1.3, but 1.3 contains
-features and bugfixes not present in any earlier release.  The new
-features will eventually be documented in a 1.3 version of the free
-Subversion book, see
-<a href="http://svnbook.red-bean.com">svnbook.red-bean.com</a>.</p>
 
 </div>
 
