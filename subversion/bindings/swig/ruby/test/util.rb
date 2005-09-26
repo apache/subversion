@@ -38,13 +38,13 @@ module SvnTestUtil
 
   def gc
     if $DEBUG
-      before_pools = ObjectSpace.each_object(::Svn::Core::Pool) {}
+      before_pools = Svn::Core::Pool.number_of_pools
       puts
       puts "before pools: #{before_pools}"
     end
     GC.start
     if $DEBUG
-      after_pools = ObjectSpace.each_object(::Svn::Core::Pool) {}
+      after_pools = Svn::Core::Pool.number_of_pools
       puts "after pools: #{after_pools}"
       STDOUT.flush
     end
