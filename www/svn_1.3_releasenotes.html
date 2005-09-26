@@ -62,14 +62,13 @@ disappears, that will mean 1.3.0 is released.</p>
    <li><p>The Apache HTTPD-based server (mod_dav_svn) can now log
        high-level Subversion operations, e.g., "update", "lock",
        "commit", etc.  This feature is turned on or off in the httpd
-       configuration file; the default is off.  Equivalent
-       functionality is planned for svnserve, the standalone server,
-       but not until Subversion 1.4, because the implementation
-       strategy there will be a bit different.</p>
+       configuration file; the default is off.</p>
 
-       <p class="todo"><i>TODO: file a 1.4 issue for svnserve logging.
-       The strategy will be to first create proto-apr-API to write to
-       syslodg/win32-eventd.</i></p>
+       <p>Equivalent functionality is planned for svnserve, the
+       standalone server, but not until Subversion 1.4, because the
+       implementation strategy there will be a bit different.  See <a
+       href="http://subversion.tigris.org/issues/show_bug.cgi?id=2409"
+       >Issue #2409</a> for details.</p>
    </li>
 
    <li><p>The Apache HTTPD-based server (mod_dav_svn) can now display
@@ -80,18 +79,27 @@ disappears, that will mean 1.3.0 is released.</p>
 
    <li><p>Commands that accept peg revisions now operate faster when
        invoked on older pegs. See <a
-        href="http://subversion.tigris.org/issues/show_bug.cgi?id=1970"
-        >Issue #1970</a> for details.</p>
+       href="http://subversion.tigris.org/issues/show_bug.cgi?id=1970"
+       >Issue #1970</a> for details.</p>
    </li>
 
-   <li><p>A solution for the ".svn" / "_svn" problem in
-       ASP.NET.</p>
+   <li><p>The "<b>_svn</b>" hack is now officially supported: since
+       some versions of ASP.NET don't allow directories beginning
+       with dot (e.g., ".svn", the standard Subversion working copy
+       administrative directory), the <b>svn</b> command line client
+       and <b>svnversion</b> now treat the environment variable
+       SVN_ASP_DOT_NET_HACK specially on Windows.  If this
+       variable is set, they will use "_svn" instead of ".svn".</p>
 
-       <p class="todo"><i>TODO: Brane has a solution almost done, it's
-       sitting in his working copy. <a
-     href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=105406"
-     >http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=105406</a> 
-       is the latest message in that thread.</i></p>
+       <p>We recommend that all Subversion clients that run on Windows
+       implement this behaviour.  Note that once the environment
+       variable is set, legacy working copies (ones that still have
+       ".svn" directories) will stop working, and will need to be
+       re-checked-out.  Also, third party software that uses the
+       Subversion libraries will need to be changed to set
+       SVN_ASP_DOT_NET_HACK or make the equivalent API calls.  See <a
+    href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=105810"
+       >this mail</a> and its thread for more details.</p>
    </li>
 
    <li><p>Interruptable http:// and https:// connections.  If built
@@ -99,14 +107,13 @@ disappears, that will mean 1.3.0 is released.</p>
    network operations over http and https.</p>
    </li>
 
-   <li><p class="todo"><i>TODO: we need to temporarily revert r15287.  See <a 
+   <li><p class="todo"><i>TODO: we need either finish r15287 or revert
+     it.  See <a
      href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=105738"
-     >this mail</a> about it.</i></p></li>
-
-   <li><p class="todo"><i>TODO: need to fix the svn_fs_type() API as
-       described in <a
-    href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=105627"
-    >this mail</a>.  Karl Fogel is working on that.</i></p></li>
+     >this mail</a> about it.  Peter Lundblad may get time to
+     integrate VK Sameer's patch for this tonight; if he doesn't,
+     kfogel will revert r15287 before branching.  Watch this space
+     for updates.</i></p></li>
 
    <li><p>The usual slew of bugfixes and improved APIs.  See the
        <a href="http://svn.collab.net/repos/svn/trunk/CHANGES"
