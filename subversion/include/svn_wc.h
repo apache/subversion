@@ -357,10 +357,9 @@ svn_boolean_t svn_wc_is_adm_dir (const char *name, apr_pool_t *pool);
  * The list of valid names is limited.  Currently only ".svn" (the
  * default) and "_svn" are allowed.
  *
- * If the function fails because of a lost race condition, the
- * returned error code will be @c APR_EAGAIN.
- *
- * @note You must call apr_atomic_init() before using this function.
+ * @note This function changes global (per-process) state and should,
+ * to maintain consistency, be called in a single-threaded context
+ * during the initialization of a Subversion client.
  *
  * @since New in 1.3.
  */
