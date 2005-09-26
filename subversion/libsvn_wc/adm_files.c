@@ -52,14 +52,18 @@
 /* The name that is actually used for the WC admin directory.  The
    commonest case where this won't be the default is in Windows
    ASP.NET development environments, which choke on ".svn". */
-static void *volatile adm_dir_name = DEFAULT_ADM_DIR_NAME;
+static void *volatile adm_dir_name = (void*) DEFAULT_ADM_DIR_NAME;
+/* NOTE: we cast away the implicit const here to avoid GCC warnings. */
+
+/* This is an atomic reader for adm_dir_name. */
+#define ADM_DIR_NAME apr_atomic_casptr (&adm_dir_name, NULL, NULL)
 
 
 svn_boolean_t
 svn_wc_is_adm_dir (const char *name, apr_pool_t *pool)
 {
   (void)pool;  /* Silence compiler warnings about unused parameter */
-  return (0 == strcmp (name, adm_dir_name)
+  return (0 == strcmp (name, ADM_DIR_NAME)
           || 0 == strcmp (name, DEFAULT_ADM_DIR_NAME));
 }
 
@@ -85,7 +89,7 @@ svn_wc_set_adm_dir (const char *name, apr_pool_t *pool)
     if (0 == strcmp (name, *dir_name))
       {
         void *new_adm_dir_name = (void*) *dir_name;
-        void *old_adm_dir_name = adm_dir_name;
+        void *old_adm_dir_name = ADM_DIR_NAME;
         if (old_adm_dir_name != apr_atomic_casptr (&adm_dir_name,
                                                    new_adm_dir_name,
                                                    old_adm_dir_name))
@@ -129,7 +133,7 @@ v_extend_with_adm_name (const char *path,
   const char *this;
 
   /* Tack on the administrative subdirectory. */
-  path = svn_path_join (path, adm_dir_name, pool);
+  path = svn_path_join (path, ADM_DIR_NAME, pool);
 
   /* If this is a tmp file, name it into the tmp area. */
   if (use_tmp)
