@@ -18,13 +18,27 @@ class PoolTestCase(unittest.TestCase):
     """Assert that the specified value is None"""
     return self.assertEqual(value, None);
   
-  def test_struct_members(self):
+  def test_object_struct_members(self):
     """Check that parent pools are set correctly on struct accesses"""
     client_ctx = svn.client.svn_client_create_context()
     config = svn.core.svn_config_get_config(None)
     client_ctx.config = config
     self.assertEqual(client_ctx.config._parent_pool, config._parent_pool)
+
+  def test_integer_struct_members(self):
+    """Check that integer struct members work correctly"""
  
+    # Test good integer assignment operations
+    head_revision = svn.core.svn_opt_revision_t()
+    head_revision.kind = svn.core.svn_opt_revision_head
+    self.assertEqual(head_revision.kind, svn.core.svn_opt_revision_head)
+
+    # Test bad integer assignment operations
+    def test_bad_assignment(self):
+      client_ctx = svn.client.svn_client_create_context()
+      client_ctx.config = 2
+    self.assertRaises(TypeError, test_bad_assignment)
+
   def test_pool(self):
     # Create pools
     parent_pool = Pool()
