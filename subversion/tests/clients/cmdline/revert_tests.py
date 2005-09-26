@@ -449,7 +449,7 @@ test_list = [ None,
               revert_wc_to_wc_replace_with_props,
               revert_file_merge_replace_with_history,
               revert_repos_to_wc_replace_with_props,
-              XFail(revert_after_second_replace),
+              revert_after_second_replace,
              ]
 
 if __name__ == '__main__':

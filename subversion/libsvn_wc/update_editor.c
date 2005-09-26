@@ -1829,7 +1829,6 @@ install_file (svn_wc_notify_state_t *content_state,
               const char *timestamp_string,
               apr_pool_t *pool)
 {
-  apr_file_t *log_fp = NULL;
   char *revision_str = NULL;
   const char *parent_dir, *base_name;
   svn_stringbuf_t *log_accum;
@@ -1839,7 +1838,6 @@ install_file (svn_wc_notify_state_t *content_state,
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
-  const char *logfile_name;
   svn_wc_notify_lock_state_t local_lock_state;
 
   /* The code flow does not depend upon these being set to NULL, but
@@ -1874,16 +1872,6 @@ install_file (svn_wc_notify_state_t *content_state,
       that have already been done are no-ops, and when we reach the
       end of the log file, we remove it.
   */
-
-  /* Open a log file.  This is safe because the adm area is locked
-     right now. */
-  logfile_name = svn_wc__logfile_path (*log_number, pool);
-
-  SVN_ERR (svn_wc__open_adm_file (&log_fp,
-                                  parent_dir,
-                                  logfile_name,
-                                  (APR_WRITE | APR_CREATE), /* not excl */
-                                  pool));
 
   /* Accumulate log commands in this buffer until we're ready to close
      and run the log.  */
@@ -2339,15 +2327,9 @@ install_file (svn_wc_notify_state_t *content_state,
 
 
   /* Write our accumulation of log entries into a log file */
-  SVN_ERR_W (svn_io_file_write_full (log_fp, log_accum->data, 
-                                    log_accum->len, NULL, pool),
-             apr_psprintf (pool, _("Error writing log for '%s'"),
-                           svn_path_local_style (file_path, pool)));
 
-  /* The log is done, close it. */
-  SVN_ERR (svn_wc__close_adm_file (log_fp, parent_dir,
-                                   logfile_name,
-                                   TRUE, /* sync */ pool));
+  SVN_ERR (svn_wc__write_log (adm_access, *log_number, log_accum, pool));
+
   (*log_number)++;
   
   if (content_state)

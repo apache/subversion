@@ -1528,6 +1528,32 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
 
 
 
+/*** Helper to write log files ***/
+
+svn_error_t *
+svn_wc__write_log (svn_wc_adm_access_t *adm_access,
+                   int log_number, svn_stringbuf_t *log_content,
+                   apr_pool_t *pool)
+{
+  apr_file_t *log_file;
+  const char *logfile_name = svn_wc__logfile_path (log_number, pool);
+  const char *adm_path = svn_wc_adm_access_path (adm_access);
+
+  SVN_ERR (svn_wc__open_adm_file (&log_file, adm_path, logfile_name,
+                                  (APR_WRITE | APR_CREATE), pool));
+
+  SVN_ERR_W (svn_io_file_write_full (log_file, log_content->data,
+                                     log_content->len, NULL, pool),
+             apr_psprintf (pool, _("Error writing log for '%s'"),
+                           svn_path_local_style (logfile_name, pool)));
+
+  SVN_ERR (svn_wc__close_adm_file (log_file, adm_path, logfile_name,
+                                   TRUE, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 /*** Recursively do log things. ***/
 
 svn_error_t *

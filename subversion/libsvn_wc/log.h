@@ -149,6 +149,18 @@ extern "C" {
 const char *svn_wc__logfile_path (int log_number,
                                   apr_pool_t *pool);
 
+
+/* Create a log file with LOG_NUMBER. Write LOG_CONTENT to it and close-
+   and-sync afterwards. ADM_ACCESS must point to a locked working copy.
+
+
+   Helper to eliminate code duplication. */
+svn_error_t *
+svn_wc__write_log (svn_wc_adm_access_t *adm_access,
+                   int log_number, svn_stringbuf_t *log_content,
+                   apr_pool_t *pool);
+
+
 /* Process the instructions in the log file for ADM_ACCESS. 
    DIFF3_CMD is the external differ used by the 'SVN_WC__LOG_MERGE'
    log entry.  It is always safe to pass null for this.

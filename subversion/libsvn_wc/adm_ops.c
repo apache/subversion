@@ -842,8 +842,9 @@ svn_wc_delete2 (const char *path,
   svn_wc_adm_access_t *dir_access;
   const svn_wc_entry_t *entry;
   const char *parent, *base_name;
-  svn_boolean_t was_schedule_add;
+  svn_boolean_t was_schedule;
   svn_node_kind_t was_kind;
+  svn_boolean_t was_copied;
   svn_boolean_t was_deleted = FALSE; /* Silence a gcc uninitialized warning */
 
   SVN_ERR (svn_wc_adm_probe_try3 (&dir_access, adm_access, path,
@@ -858,8 +859,9 @@ svn_wc_delete2 (const char *path,
     
   /* Note: Entries caching?  What happens to this entry when the entries
      file is updated?  Lets play safe and copy the values */
-  was_schedule_add = entry->schedule == svn_wc_schedule_add;
+  was_schedule = entry->schedule;
   was_kind = entry->kind;
+  was_copied = entry->copied;
 
   svn_path_split (path, &parent, &base_name, pool);
 
@@ -876,7 +878,7 @@ svn_wc_delete2 (const char *path,
       entry_in_parent = apr_hash_get (entries, base_name, APR_HASH_KEY_STRING);
       was_deleted = entry_in_parent ? entry_in_parent->deleted : FALSE;
 
-      if (was_schedule_add && !was_deleted)
+      if (was_schedule == svn_wc_schedule_add && !was_deleted)
         {
           /* Deleting a directory that has been added but not yet
              committed is easy, just remove the administrative dir. */
@@ -918,17 +920,89 @@ svn_wc_delete2 (const char *path,
         }
     }
   
-  if (!(was_kind == svn_node_dir && was_schedule_add && !was_deleted))
+  if (!(was_kind == svn_node_dir && was_schedule == svn_wc_schedule_add
+        && !was_deleted))
     {
       /* We need to mark this entry for deletion in its parent's entries
          file, so we split off base_name from the parent path, then fold in
          the addition of a delete flag. */
-      svn_wc_entry_t tmp_entry;
-      
-      tmp_entry.schedule = svn_wc_schedule_delete;
-      SVN_ERR (svn_wc__entry_modify (adm_access, base_name, &tmp_entry,
-                                     SVN_WC__ENTRY_MODIFY_SCHEDULE, TRUE,
-                                     pool));
+      svn_stringbuf_t *log_accum = svn_stringbuf_create ("", pool);
+
+      /* Edit the entry to reflect the now deleted state.
+         entries.c:fold_entry() clears the values of copied, copyfrom_rev
+         and copyfrom_url. */
+      svn_xml_make_open_tag
+        (&log_accum,
+         pool,
+         svn_xml_self_closing,
+         SVN_WC__LOG_MODIFY_ENTRY,
+         SVN_WC__LOG_ATTR_NAME,
+         base_name,
+         SVN_WC__ENTRY_ATTR_SCHEDULE,
+         SVN_WC__ENTRY_VALUE_DELETE,
+         NULL);
+
+      /* is it a replacement with history? */
+      if (was_schedule == svn_wc_schedule_replace && was_copied)
+        {
+          const char *text_base =
+            svn_wc__text_base_path (base_name, FALSE, pool);
+          const char *text_revert =
+            svn_wc__text_revert_path (base_name, FALSE, pool);
+          const char *full_path = svn_wc_adm_access_path (adm_access);
+          svn_node_kind_t kind = svn_node_unknown;
+          const char *prop_base, *prop_revert;
+
+          SVN_ERR (svn_wc__prop_base_path (&prop_base, base_name,
+                                           adm_access, FALSE, pool));
+          SVN_ERR (svn_wc__prop_revert_path (&prop_revert, base_name,
+                                             adm_access, FALSE, pool));
+
+          if (was_kind != svn_node_dir) /* Dirs don't have text-bases */
+            /* Restore the original text-base */
+            svn_xml_make_open_tag
+              (&log_accum,
+               pool,
+               svn_xml_self_closing,
+               SVN_WC__LOG_MV,
+               SVN_WC__LOG_ATTR_NAME, text_revert,
+               SVN_WC__LOG_ATTR_DEST, text_base,
+               NULL);
+
+          /* Is there a prop-revert to restore to prop-base? */
+          SVN_ERR (svn_io_check_path
+                   (svn_path_join (full_path, prop_revert, pool),
+                    &kind, pool));
+
+          if (kind == svn_node_file)
+              svn_xml_make_open_tag
+                (&log_accum,
+                 pool,
+                 svn_xml_self_closing,
+                 SVN_WC__LOG_MV,
+                 SVN_WC__LOG_ATTR_NAME, prop_revert,
+                 SVN_WC__LOG_ATTR_DEST, prop_base,
+                 NULL);
+          else
+            {
+              /* If not, delete an existing prop_base if there is one. */
+              SVN_ERR (svn_io_check_path
+                       (svn_path_join (full_path, prop_base, pool),
+                        &kind, pool));
+              if (kind != svn_node_none)
+                svn_xml_make_open_tag
+                  (&log_accum,
+                   pool,
+                   svn_xml_self_closing,
+                   SVN_WC__LOG_RM,
+                   SVN_WC__LOG_ATTR_NAME, prop_base);
+            }
+        }
+
+      SVN_ERR (svn_wc__write_log (adm_access, 0, log_accum, pool));
+
+      SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
+
     }
 
   /* Report the deletion to the caller. */
@@ -939,7 +1013,7 @@ svn_wc_delete2 (const char *path,
 
   /* By the time we get here, anything that was scheduled to be added has
      become unversioned */
-  if (was_schedule_add)
+  if (was_schedule == svn_wc_schedule_add)
     SVN_ERR (erase_unversioned_from_wc
              (path, cancel_func, cancel_baton, pool));
   else
