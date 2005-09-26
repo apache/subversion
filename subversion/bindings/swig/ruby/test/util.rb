@@ -20,9 +20,7 @@ module SvnTestUtil
     @config_path = File.join("test", "config")
     setup_tmp
     setup_repository
-    @repos = Svn::Repos.open(@repos_path)
     add_hooks
-    @fs = @repos.fs
     setup_svnserve
     setup_config
     setup_wc
@@ -35,6 +33,21 @@ module SvnTestUtil
     teardown_wc
     teardown_config
     teardown_tmp
+    gc
+  end
+
+  def gc
+    if $DEBUG
+      before_pools = ObjectSpace.each_object(::Svn::Core::Pool) {}
+      puts
+      puts "before pools: #{before_pools}"
+    end
+    GC.start
+    if $DEBUG
+      after_pools = ObjectSpace.each_object(::Svn::Core::Pool) {}
+      puts "after pools: #{after_pools}"
+      STDOUT.flush
+    end
   end
 
   def setup_tmp(path=@tmp_path)
@@ -50,10 +63,14 @@ module SvnTestUtil
     FileUtils.rm_rf(path)
     FileUtils.mkdir_p(File.dirname(path))
     Svn::Repos.create(path, config, fs_config)
+    @repos = Svn::Repos.open(@repos_path)
+    @fs = @repos.fs
   end
 
   def teardown_repository(path=@repos_path)
     Svn::Repos.delete(path)
+    @repos = nil
+    @fs = nil
   end
 
   def setup_svnserve
