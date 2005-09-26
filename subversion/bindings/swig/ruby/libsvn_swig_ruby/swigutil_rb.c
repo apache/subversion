@@ -97,12 +97,6 @@ rb_ary_aref1(VALUE ary, VALUE arg)
   return rb_ary_aref(1, args, ary);
 }
 
-static VALUE
-rb_ary_aref_n(VALUE ary, int n)
-{
-  return rb_ary_aref1(ary, INT2NUM(n));
-}
-
 
 static VALUE
 rb_svn(void)
@@ -453,7 +447,7 @@ name(VALUE array, apr_pool_t *pool)                               \
   for (i = 0; i < len; i++) {                                     \
     VALUE value;                                                  \
     type val;                                                     \
-    value = rb_ary_aref_n(array, i);                              \
+    value = rb_ary_entry(array, i);                               \
     val = (type)converter(value, context, pool);                  \
     APR_ARRAY_IDX(apr_ary, i, type) = val;                        \
   }                                                               \
@@ -809,8 +803,8 @@ svn_swig_rb_pop_pool(VALUE pool)
 static VALUE
 callback(VALUE info)
 {
-  return rb_apply(rb_ary_aref_n(info, 0),
-                  (ID)rb_ary_aref_n(info, 1),
+  return rb_apply(rb_ary_entry(info, 0),
+                  (ID)rb_ary_entry(info, 1),
                   rb_ary_aref1(info,
                                rb_range_new(INT2NUM(2),
                                             INT2NUM(-1),
@@ -1364,8 +1358,8 @@ svn_swig_rb_get_commit_log_func(const char **log_msg,
                         callback_rescue, (VALUE)&err,
                         rb_svn_error(), (VALUE)0);
 
-    is_message = rb_ary_aref_n(result, 0);
-    value = rb_ary_aref_n(result, 1);
+    is_message = rb_ary_entry(result, 0);
+    value = rb_ary_entry(result, 1);
 
     Check_Type(value, T_STRING);
     ret = (char *)r2c_string(value, NULL, pool);
@@ -2505,9 +2499,9 @@ wc_diff_callbacks_file_changed(svn_wc_adm_access_t *adm_access,
                         rb_svn_error(), (VALUE)0);
 
     if (contentstate)
-      *contentstate = NUM2INT(rb_ary_aref_n(result, 0));
+      *contentstate = NUM2INT(rb_ary_entry(result, 0));
     if (propstate)
-      *propstate = NUM2INT(rb_ary_aref_n(result, 1));
+      *propstate = NUM2INT(rb_ary_entry(result, 1));
   }
   
   return err;
@@ -2554,9 +2548,9 @@ wc_diff_callbacks_file_added(svn_wc_adm_access_t *adm_access,
                         rb_svn_error(), (VALUE)0);
 
     if (contentstate)
-      *contentstate = NUM2INT(rb_ary_aref_n(result, 0));
+      *contentstate = NUM2INT(rb_ary_entry(result, 0));
     if (propstate)
-      *propstate = NUM2INT(rb_ary_aref_n(result, 1));
+      *propstate = NUM2INT(rb_ary_entry(result, 1));
   }
   
   return err;
