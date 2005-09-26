@@ -17,8 +17,10 @@ application_pool = None
 class GenericSWIGWrapper:
   def __init__(self, this, pool):
     """Create new Generic SWIG wrapper object"""
+    import weakref
     self.this = this
     self._parent_pool = pool
+    self._is_valid = weakref.ref(pool._is_valid)
 
   def set_parent_pool(self, pool):
     """Set the parent pool of this object"""
@@ -26,7 +28,7 @@ class GenericSWIGWrapper:
 
   def valid(self):
     """Is this object valid?"""
-    return self._parent_pool.valid()
+    return self._is_valid()
 
   def assert_valid(self):
     """Assert that this object is still valid"""
