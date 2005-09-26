@@ -19,7 +19,7 @@ Candidate changes:
 
   * r15807
     Guard against NULL stream write calls.
-    Branch: python-bindings-improvements
+    Branch: 1.2.x-r15807
     Justification:
       Affects Python bindings only. Prevents crashes when using
       ViewCVS with remote repositories.
