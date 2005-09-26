@@ -17,15 +17,6 @@ Candidate changes:
     Votes:
       +1: djames
 
-  * r15807
-    Guard against NULL stream write calls.
-    Branch: 1.2.x-r15807
-    Justification:
-      Affects Python bindings only. Prevents crashes when using
-      ViewCVS with remote repositories.
-    Votes:
-      +1: djames, dlr
-
   * r15906, r15941
     Favour "python" over "python2", if "python" is Python 2.x.
     Branch: 1.2.x-r15906-r15941
@@ -73,3 +64,12 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: dlr
       +1 (non-binding): markphip
+
+  * r15807
+    Guard against NULL stream write calls.
+    Branch: 1.2.x-r15807
+    Justification:
+      Affects Python bindings only. Prevents crashes when using
+      ViewCVS with remote repositories.
+    Votes:
+      +1: djames, dlr
