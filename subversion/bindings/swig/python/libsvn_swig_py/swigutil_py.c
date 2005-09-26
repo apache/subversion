@@ -1264,14 +1264,17 @@ write_handler_pyio (void *baton, const char *data, apr_size_t *len)
   PyObject *py_io = baton;
   svn_error_t *err = SVN_NO_ERROR;
 
-  svn_swig_py_acquire_py_lock();
-  if ((result = PyObject_CallMethod(py_io, (char *)"write",
-                                    (char *)"s#", data, *len)) == NULL)
+  if (data != NULL)
     {
-      err = callback_exception_error();
+      svn_swig_py_acquire_py_lock();
+      if ((result = PyObject_CallMethod(py_io, (char *)"write",
+                                        (char *)"s#", data, *len)) == NULL)
+        {
+          err = callback_exception_error();
+        }
+      Py_XDECREF(result);
+      svn_swig_py_release_py_lock();
     }
-  Py_XDECREF(result);
-  svn_swig_py_release_py_lock();
 
   return err;
 }
