@@ -19,10 +19,14 @@ class PoolTestCase(unittest.TestCase):
     return self.assertEqual(value, None);
   
   def test_object_struct_members(self):
-    """Check that parent pools are set correctly on struct accesses"""
+    """Check that object struct members work correctly"""
+    
+    # Test good object assignment operations
     client_ctx = svn.client.svn_client_create_context()
     config = svn.core.svn_config_get_config(None)
     client_ctx.config = config
+    
+    # Check that parent pools are set correctly on struct accesses
     self.assertEqual(client_ctx.config._parent_pool, config._parent_pool)
 
     # Test bad object assignment operations
@@ -30,6 +34,15 @@ class PoolTestCase(unittest.TestCase):
       head_revision = svn.core.svn_opt_revision_t()
       head_revision.kind = config
     self.assertRaises(TypeError, test_bad_assignment)
+
+  def test_assert_valid(self):
+    """Test assert_valid method on proxy objects"""
+    client_ctx = svn.client.svn_client_create_context()
+    config = svn.core.svn_config_get_config(None)
+    client_ctx.config = config
+    config._parent_pool.destroy()
+    self.assertRaises(AssertionError, lambda: config.assert_valid())
+    self.assertRaises(AssertionError, lambda: client_ctx.config)
 
   def test_integer_struct_members(self):
     """Check that integer struct members work correctly"""
