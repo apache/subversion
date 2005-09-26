@@ -175,6 +175,7 @@
 %typemap(ruby, out) svn_error_t *
 {
   if ($1) {
+    svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
     svn_swig_rb_handle_svn_error($1);
   }
   $result = Qnil;
@@ -335,26 +336,31 @@
 }
 %typemap(ruby, in) apr_pool_t *pool "";
 %typemap(ruby, default) apr_pool_t *pool
-    (VALUE _global_rb_pool, apr_pool_t *_global_pool) {
-  svn_swig_rb_get_pool(argc, argv, self, &_global_rb_pool, &$1);
+    (VALUE _global_svn_swig_rb_pool, apr_pool_t *_global_pool)
+{
+  svn_swig_rb_get_pool(argc, argv, self, &_global_svn_swig_rb_pool, &$1);
   _global_pool = $1;
-  svn_swig_rb_push_pool(_global_rb_pool);
+  svn_swig_rb_push_pool(_global_svn_swig_rb_pool);
 }
 
 %typemap(ruby, default) (svn_client_ctx_t *ctx, apr_pool_t *pool)
-     (VALUE _global_rb_pool, apr_pool_t *_global_pool) {
+     (VALUE _global_svn_swig_rb_pool, apr_pool_t *_global_pool)
+{
   int adjusted_argc = argc;
   VALUE *adjusted_argv = argv;
 
-  svn_swig_rb_adjust_arg_for_client_ctx_and_pool(&adjusted_argc, &adjusted_argv);
-  svn_swig_rb_get_pool(adjusted_argc, adjusted_argv, self, &_global_rb_pool, &$2);
+  svn_swig_rb_adjust_arg_for_client_ctx_and_pool(&adjusted_argc,
+                                                 &adjusted_argv);
+  svn_swig_rb_get_pool(adjusted_argc, adjusted_argv, self,
+                       &_global_svn_swig_rb_pool, &$2);
   _global_pool = $2;
-  svn_swig_rb_push_pool(_global_rb_pool);
+  svn_swig_rb_push_pool(_global_svn_swig_rb_pool);
 }
 
-%typemap(ruby, argout) apr_pool_t *pool {
-  svn_swig_rb_set_pool($result, _global_rb_pool);
-  svn_swig_rb_pop_pool(_global_rb_pool);
+%typemap(ruby, argout) apr_pool_t *pool
+{
+  svn_swig_rb_set_pool($result, _global_svn_swig_rb_pool);
+  svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
 }
 
 #ifdef SWIGPERL
