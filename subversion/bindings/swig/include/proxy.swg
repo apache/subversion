@@ -38,11 +38,13 @@
     """Get an attribute from this object"""
     self.assert_valid()
     value = _swig_getattr(self, self.__class__, name)
-    if name in self.__dict__.get("_member_dicts",{}):
+    try:
       old_dict = self.__dict__["_member_dicts"][name]
       value.__dict__["_parent_pool"] = old_dict.get("_parent_pool")
       value.__dict__["_member_dicts"] = old_dict.get("_member_dicts")
       value.assert_valid()
+    except AttributeError:
+      pass
     return value
 
   def __setattr__(self, name, value):
