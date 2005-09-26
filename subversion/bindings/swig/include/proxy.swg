@@ -26,8 +26,9 @@
     import libsvn.core, weakref
     self.__dict__["_parent_pool"] = \
       parent_pool or libsvn.core.application_pool;
-    self.__dict__["_is_valid"] = \
-      weakref.ref(self._parent_pool._is_valid)
+    if self._parent_pool:
+      self.__dict__["_is_valid"] = \
+        weakref.ref(self._parent_pool._is_valid)
 
   def assert_valid(self):
     """Assert that this object is using valid pool memory"""
@@ -43,7 +44,7 @@
       value.__dict__["_parent_pool"] = old_dict.get("_parent_pool")
       value.__dict__["_member_dicts"] = old_dict.get("_member_dicts")
       value.assert_valid()
-    except AttributeError:
+    except KeyError:
       pass
     return value
 
