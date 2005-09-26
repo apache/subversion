@@ -1607,6 +1607,10 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
       svn_pool_clear(subpool);
       SVN_ERR(svn_ra_svn_read_item(conn, subpool, &elt));
 
+      /* The server might have encountered some sort of fatal error in
+         the middle of the request list.  If this happens, it will
+         transmit "done" to end the lock-info early, and then the
+         overall command response will talk about the fatal error. */
       if (elt->kind == SVN_RA_SVN_WORD && strcmp(elt->u.word, "done") == 0)
         break;
 
@@ -1723,6 +1727,10 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
 
       SVN_ERR(svn_ra_svn_read_item(conn, subpool, &elt));
 
+      /* The server might have encountered some sort of fatal error in
+         the middle of the request list.  If this happens, it will
+         transmit "done" to end the lock-info early, and then the
+         overall command response will talk about the fatal error. */
       if (elt->kind == SVN_RA_SVN_WORD && (strcmp(elt->u.word, "done") == 0))
         break;
 
