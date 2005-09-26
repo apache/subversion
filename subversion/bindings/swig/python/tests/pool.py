@@ -25,6 +25,12 @@ class PoolTestCase(unittest.TestCase):
     client_ctx.config = config
     self.assertEqual(client_ctx.config._parent_pool, config._parent_pool)
 
+    # Test bad object assignment operations
+    def test_bad_assignment(self):
+      head_revision = svn.core.svn_opt_revision_t()
+      head_revision.kind = config
+    self.assertRaises(TypeError, test_bad_assignment)
+
   def test_integer_struct_members(self):
     """Check that integer struct members work correctly"""
  
