@@ -42,7 +42,7 @@ module Svn
       end
 
       def set_warning_func(&func)
-        Fs.set_warning_func(self, func)
+        Fs.set_warning_func_wrapper(self, func)
       end
 
       def path

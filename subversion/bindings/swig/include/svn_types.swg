@@ -457,6 +457,7 @@
 
 %typemap(ruby, in) (svn_fs_warning_callback_t warning, void *warning_baton)
 {
+  svn_swig_rb_fs_warning_callback_baton_register($input, _global_pool);
   $1 = svn_swig_rb_fs_warning_callback;
   $2 = (void *)$input;
 }

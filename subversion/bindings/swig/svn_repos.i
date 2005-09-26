@@ -252,4 +252,18 @@
 #endif
 %}
 
+#ifdef SWIGRUBY
+%ignore svn_repos_fs;
+#endif
+
 %include svn_repos_h.swg
+
+#ifdef SWIGRUBY
+%inline %{
+static svn_fs_t *
+svn_repos_fs_wrapper(svn_repos_t *fs, apr_pool_t *pool)
+{
+  return svn_repos_fs(fs);
+}
+%}
+#endif
