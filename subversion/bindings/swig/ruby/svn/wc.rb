@@ -89,9 +89,11 @@ module Svn
           adm = Wc.__send__(name, *args, &block)
           
           if block_given?
-            ret = yield adm
-            adm.close
-            ret
+            begin
+              yield adm
+            ensure
+              adm.close
+            end
           else
             adm
           end
