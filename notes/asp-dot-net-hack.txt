@@ -23,7 +23,8 @@ Once the environment variable is set, legacy working copies with
 ".svn" directories will stop working, and will need to be
 re-checked-out.
 
-This hack prevents sharing of working copies between Windows.  
+This hack prevents sharing of working copies between Windows and other
+operating systems (e.g. over network mounts).
 
 Thread for more details:
 http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=105810
