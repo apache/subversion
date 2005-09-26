@@ -139,6 +139,8 @@ svn_error_t *svn_swig_rb_txdelta_window_handler(svn_txdelta_window_t *window,
                                                 void *baton);
 
 void svn_swig_rb_fs_warning_callback(void *baton, svn_error_t *err);
+void svn_swig_rb_fs_warning_callback_baton_register(VALUE baton,
+                                                    apr_pool_t *pool);
 
 svn_error_t *svn_swig_rb_fs_get_locks_callback(void *baton,
                                                svn_lock_t *lock,

@@ -18,6 +18,8 @@ static VALUE cSvnClientContext = Qnil;
 static VALUE cSvnDelta = Qnil;
 static VALUE cSvnDeltaEditor = Qnil;
 static VALUE cSvnDeltaTextDeltaWindowHandler = Qnil;
+static VALUE cSvnFs = Qnil;
+static VALUE cSvnFsFileSystem = Qnil;
 
 #define DEFINE_ID(key, name)                    \
 static ID id_ ## key = 0;                       \
@@ -72,9 +74,10 @@ DEFINE_ID(file_added, "file_added")
 DEFINE_ID(file_deleted, "file_deleted")
 DEFINE_ID(dir_added, "dir_added")
 DEFINE_ID(dir_deleted, "dir_deleted")
-DEFINE_ID(dir_props_changed,"dir_props_changed")
-DEFINE_ID(handler,"handler")
-DEFINE_ID(handler_baton,"handler_baton")
+DEFINE_ID(dir_props_changed, "dir_props_changed")
+DEFINE_ID(handler, "handler")
+DEFINE_ID(handler_baton, "handler_baton")
+DEFINE_ID(__batons__, "__batons__")
 
 typedef void *(*r2c_func)(VALUE value, void *ctx, apr_pool_t *pool);
 typedef VALUE (*c2r_func)(void *value, void *ctx);
@@ -156,6 +159,25 @@ rb_svn_delta(void)
   return cSvnDelta;
 }
 
+static VALUE
+rb_svn_fs(void)
+{
+  if (NIL_P(cSvnFs)) {
+    cSvnFs = rb_const_get(rb_svn(), rb_intern("Fs"));
+  }
+  return cSvnFs;
+}
+
+static VALUE
+rb_svn_fs_file_system(void)
+{
+  if (NIL_P(cSvnFsFileSystem)) {
+    cSvnFsFileSystem = rb_const_get(rb_svn_fs(), rb_intern("FileSystem"));
+    rb_ivar_set(cSvnFsFileSystem, rb_id___batons__(), rb_hash_new());
+  }
+  return cSvnFsFileSystem;
+}
+
 VALUE
 svn_swig_rb_svn_delta_editor(void)
 {
@@ -180,6 +202,49 @@ static VALUE
 rb_svn_pool_holder(void)
 {
   return rb_ivar_get(rb_svn_core_pool(), rb_id___pools__());
+}
+
+static VALUE
+rb_svn_fs_warning_callback_baton_holder(void)
+{
+  return rb_ivar_get(rb_svn_fs_file_system(), rb_id___batons__());
+}
+
+static VALUE
+rb_holder_push(VALUE holder, VALUE obj)
+{
+  VALUE key, objs;
+
+  key = rb_obj_id(obj);
+  objs = rb_hash_aref(holder, key);
+
+  if (NIL_P(objs)) {
+    objs = rb_ary_new();
+    rb_hash_aset(holder, key, objs);
+  }
+
+  rb_ary_push(objs, obj);
+
+  return Qnil;
+}
+
+static VALUE
+rb_holder_pop(VALUE holder, VALUE obj)
+{
+  VALUE key, objs;
+  VALUE result = Qnil;
+
+  key = rb_obj_id(obj);
+  objs = rb_hash_aref(holder, key);
+
+  if (!NIL_P(objs)) {
+    result = rb_ary_pop(objs);
+    if (RARRAY(objs)->len == 0) {
+      rb_hash_delete(holder, key);
+    }
+  }
+
+  return result;
 }
 
 VALUE
@@ -731,13 +796,13 @@ svn_swig_rb_set_pool_for_no_swig_type(VALUE target, VALUE pool)
 void
 svn_swig_rb_push_pool(VALUE pool)
 {
-  rb_hash_aset(rb_svn_pool_holder(), rb_obj_id(pool), pool);
+  rb_holder_push(rb_svn_pool_holder(), pool);
 }
 
 void
 svn_swig_rb_pop_pool(VALUE pool)
 {
-  rb_hash_delete(rb_svn_pool_holder(), rb_obj_id(pool));
+  rb_holder_pop(rb_svn_pool_holder(), pool);
 }
 
 
@@ -1528,6 +1593,22 @@ svn_swig_rb_fs_warning_callback(void *baton, svn_error_t *err)
                        svn_swig_rb_svn_error_to_rb_error(err));
     callback(args);
   }
+}
+
+static apr_status_t
+cleanup_fs_warning_callback_baton(void *baton)
+{
+  rb_holder_pop(rb_svn_fs_warning_callback_baton_holder(), (VALUE)baton);
+  return APR_SUCCESS;
+}
+
+void
+svn_swig_rb_fs_warning_callback_baton_register(VALUE baton, apr_pool_t *pool)
+{
+  rb_holder_push(rb_svn_fs_warning_callback_baton_holder(), (VALUE)baton);
+  apr_pool_cleanup_register(pool, (void *)baton,
+                            cleanup_fs_warning_callback_baton,
+                            apr_pool_cleanup_null);
 }
 
 svn_error_t *
