@@ -99,17 +99,20 @@ Subversion book, see
        during network operations over http and https.</p>
    </li>
 
-   <li><p>The "<b>_svn</b>" hack is now officially supported: since
-       some versions of ASP.NET don't allow directories beginning
-       with dot (e.g., ".svn", the standard Subversion working copy
-       administrative directory), the <b>svn</b> command line client
-       and <b>svnversion</b> now treat the environment variable
-       SVN_ASP_DOT_NET_HACK specially on Windows.  If this
-       variable is set, they will use "_svn" instead of ".svn".  We
-       recommend that all Subversion clients runing on Windows take
-       advantage of this behaviour.  Note that once the environment
-       variable is set, legacy working copies with ".svn" directories
-       will stop working, and will need to be re-checked-out.</p>
+   <li><p>The "<b>_svn</b>" hack is now <a
+
+       href="http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt">officially
+       supported</a>: since some versions of ASP.NET don't allow
+       directories beginning with dot (e.g., ".svn", the standard
+       Subversion working copy administrative directory), the
+       <b>svn</b> command line client and <b>svnversion</b> now treat
+       the environment variable SVN_ASP_DOT_NET_HACK specially on
+       Windows.  If this variable is set, they will use "_svn" instead
+       of ".svn".  We recommend that all Subversion clients runing on
+       Windows take advantage of this behaviour.  Note that once the
+       environment variable is set, legacy working copies with ".svn"
+       directories will stop working, and will need to be
+       re-checked-out.</p>
 
        <p class="warningmark">Third party software that uses the
        Subversion libraries needs to be updated to make the
