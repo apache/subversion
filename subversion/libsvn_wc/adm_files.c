@@ -46,14 +46,20 @@
 /*** File names in the adm area. ***/
 
 /* The default name of the WC admin directory. This name is always
-   checked by svn_wc_is_adm_dir. */
-#define DEFAULT_ADM_DIR_NAME ".svn"
+   checked by svn_wc_is_adm_dir.
+
+   Note: This is a static string, not a define, so that adm_dir_name
+   can be initialised from it and svn_wc_set_adm_dir() can safely use
+   pointer comparisons without having to rely on the compiler to fold
+   string constants. */
+static const char default_adm_dir_name[] = ".svn";
+
 
 /* The name that is actually used for the WC admin directory.  The
    commonest case where this won't be the default is in Windows
    ASP.NET development environments, which choke on ".svn". */
-static void *volatile adm_dir_name = (void*) DEFAULT_ADM_DIR_NAME;
-/* NOTE: we cast away the implicit const here to avoid GCC warnings. */
+static void *volatile adm_dir_name = (void*) default_adm_dir_name;
+/* NOTE: we cast away the const here to avoid GCC warnings. */
 
 /* This is an atomic reader for adm_dir_name. */
 #define ADM_DIR_NAME apr_atomic_casptr (&adm_dir_name, NULL, NULL)
@@ -64,22 +70,23 @@ svn_wc_is_adm_dir (const char *name, apr_pool_t *pool)
 {
   (void)pool;  /* Silence compiler warnings about unused parameter */
   return (0 == strcmp (name, ADM_DIR_NAME)
-          || 0 == strcmp (name, DEFAULT_ADM_DIR_NAME));
+          || 0 == strcmp (name, default_adm_dir_name));
 }
 
 
 svn_error_t *
 svn_wc_set_adm_dir (const char *name, apr_pool_t *pool)
 {
-  /* FIXME:
-     This is the canonical list of administrative directory.
+  /* This is the canonical list of administrative directory names.
+
+     FIXME:
      An identical list is used in
        libsvn_subr/opt.c:svn_opt_args_to_target_array2(),
      but that function can't use this list, because that use would
-     create a circular dependency between libsvn_wc and libsvn_subr
+     create a circular dependency between libsvn_wc and libsvn_subr.
      Make sure changes to the lists are always synchronized! */
   static const char *valid_dir_names[] = {
-    DEFAULT_ADM_DIR_NAME,
+    default_adm_dir_name,
     "_svn",
     NULL
   };
@@ -88,26 +95,24 @@ svn_wc_set_adm_dir (const char *name, apr_pool_t *pool)
   for (dir_name = valid_dir_names; *dir_name; ++dir_name)
     if (0 == strcmp (name, *dir_name))
       {
-        void *new_adm_dir_name = (void*) *dir_name;
-        void *old_adm_dir_name = ADM_DIR_NAME;
-        if (old_adm_dir_name != apr_atomic_casptr (&adm_dir_name,
-                                                   new_adm_dir_name,
-                                                   old_adm_dir_name))
+        void *const new_name = (void*) *dir_name;
+        while (1)
           {
-            /* Another thread won the race to change the name. */
-            return svn_error_create
-              (APR_EAGAIN, NULL,
-               _("Could not set the administrative directory name"));
-          }
+            void *const old_name = ADM_DIR_NAME;
+            if (old_name == apr_atomic_casptr (&adm_dir_name,
+                                               new_name,
+                                               old_name))
+              return SVN_NO_ERROR;
 
-        return SVN_NO_ERROR;
+            /* Another thread won the race to change the name; retry. */
+            /* ### Should we put a random sleep here? */
+          }
       }
   return svn_error_createf
     (SVN_ERR_BAD_FILENAME, NULL,
      _("'%s' is not a valid administrative directory name"),
      svn_path_local_style (name, pool));
 }
-
 
 
 /* Return the path to something in PATH's administrative area.
