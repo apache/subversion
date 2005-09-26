@@ -1639,7 +1639,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
-/* Tell the server to lock all paths in PATH_TOKENS.
+/* Tell the server to unlock all paths in PATH_TOKENS.
    See svn_ra_unlock() for interface details. */
 static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
                                   apr_hash_t *path_tokens,
