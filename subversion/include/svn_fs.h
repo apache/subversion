@@ -171,8 +171,8 @@ svn_error_t *svn_fs_open (svn_fs_t **fs_p, const char *path,
 
 /**
  * Return, in @a *fs_type, a string identifying the back-end type of
- * the Subversion filesystem located in @a path.
- * e.g. "fsfs", "bdb".
+ * the Subversion filesystem located in @a path.  Allocate @a *fs_type
+ * in @a pool.
  *
  * The string should be equal to one of the @c SVN_FS_TYPE_* defined
  * constants, unless the filesystem is a new back-end type added in
