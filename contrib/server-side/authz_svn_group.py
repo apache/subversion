@@ -108,7 +108,7 @@ class __config:
 
   def __init__(self, req):
     self.__authz_file = None
-    self.__authorative = True
+    self.__authoritative = True
     cfg = req.get_options()
 
     if cfg.has_key(self.GROUP_FILE):
@@ -122,9 +122,9 @@ class __config:
     if cfg.has_key(self.AUTHORITATIVE):
       authcfg = cfg[self.AUTHORITATIVE].lower()
       if authcfg in ['yes', 'on', '1']:
-        self.__authorative = True
+        self.__authoritative = True
       elif authcfg in ['no', 'off', '0']:
-        self.__authorative = False
+        self.__authoritative = False
       else:
         req.log_error(('%s: invalid value "%s"'
                        % (self.AUTHORITATIVE, cfg[self.AUTHORITATIVE])),
@@ -135,8 +135,8 @@ class __config:
   def authz_file(self):
     return self.__authz_file
 
-  def authorative(self):
-    return self.__authorative
+  def authoritative(self):
+    return self.__authoritative
 
 
 def __init_authz_info(req, cfg):
@@ -155,7 +155,7 @@ def authzhandler(req):
   if not __init_authz_info(req, cfg):
     return apache.DECLINED
 
-  if cfg.authorative():
+  if cfg.authoritative():
     unauthorized = apache.HTTP_FORBIDDEN
   else:
     unauthorized = apache.DECLINED
