@@ -1626,7 +1626,7 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
       if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                "Lock commands should be list of lists\n");
+                                "Lock commands should be list of lists");
 
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, pool, "c(?r)",
                                      &cmd->path, &cmd->current_rev));
@@ -1655,7 +1655,6 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     steal_lock, pool));
     }
 
-  /* (success( (ccc(?c)c(?c) ... )) */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(!", "success"));
 
   for (i = 0; i < lock_cmds->nelts; i++)
@@ -1733,7 +1732,7 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
       if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                "Unlock command should be a list of lists\n");
+                                "Unlock command should be a list of lists");
 
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "c(?c)",
                                      &cmd->path, &cmd->token));
