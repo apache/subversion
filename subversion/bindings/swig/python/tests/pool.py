@@ -4,7 +4,7 @@ import svn.client
 import libsvn.core
 import unittest
 import weakref
-from libsvn.core import application_pool
+from libsvn.core import application_pool, GenericSWIGWrapper
 
 # Test case for the new automatic pool management infrastructure
 
@@ -37,11 +37,31 @@ class PoolTestCase(unittest.TestCase):
 
   def test_assert_valid(self):
     """Test assert_valid method on proxy objects"""
+
+    # Test assert_valid with destroy()
     client_ctx = svn.client.svn_client_create_context()
     config = svn.core.svn_config_get_config(None)
+    wrapped_config = GenericSWIGWrapper(config, config._parent_pool)
     client_ctx.config = config
+    config.assert_valid()
+    wrapped_config.assert_valid()
+    client_ctx.config.assert_valid()
     config._parent_pool.destroy()
     self.assertRaises(AssertionError, lambda: config.assert_valid())
+    self.assertRaises(AssertionError, lambda: wrapped_config.assert_valid())
+    self.assertRaises(AssertionError, lambda: client_ctx.config)
+    
+    # Test assert_valid with clear()
+    client_ctx = svn.client.svn_client_create_context()
+    config = svn.core.svn_config_get_config(None)
+    wrapped_config = GenericSWIGWrapper(config, config._parent_pool)
+    client_ctx.config = config
+    config.assert_valid()
+    client_ctx.config.assert_valid()
+    wrapped_config.assert_valid()
+    config._parent_pool.clear()
+    self.assertRaises(AssertionError, lambda: config.assert_valid())
+    self.assertRaises(AssertionError, lambda: wrapped_config.assert_valid())
     self.assertRaises(AssertionError, lambda: client_ctx.config)
 
   def test_integer_struct_members(self):

@@ -26,11 +26,14 @@
     import libsvn.core, weakref
     self.__dict__["_parent_pool"] = \
       parent_pool or libsvn.core.application_pool;
+    if self.__dict__["_parent_pool"]:
+      self.__dict__["_is_valid"] = weakref.ref(
+        self.__dict__["_parent_pool"]._is_valid)
 
   def assert_valid(self):
     """Assert that this object is using valid pool memory"""
-    if "_parent_pool" in self.__dict__ and self.__dict__["_parent_pool"]:
-      self.__dict__["_parent_pool"].assert_valid()
+    if "_is_valid" in self.__dict__:
+      assert self.__dict__["_is_valid"](), "Variable has already been deleted"
 
   def __getattr__(self, name):
     """Get an attribute from this object"""
@@ -40,6 +43,7 @@
       old_dict = self.__dict__["_member_dicts"][name]
       value.__dict__["_parent_pool"] = old_dict.get("_parent_pool")
       value.__dict__["_member_dicts"] = old_dict.get("_member_dicts")
+      value.__dict__["_is_valid"] = old_dict.get("_is_valid")
       value.assert_valid()
     except KeyError:
       pass
