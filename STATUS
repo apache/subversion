@@ -24,7 +24,7 @@ Candidate changes:
       Affects Python bindings only. Prevents crashes when using
       ViewCVS with remote repositories.
     Votes:
-      +1: djames
+      +1: djames, dlr
 
   * r15906, r15941
     Favour "python" over "python2", if "python" is Python 2.x.
