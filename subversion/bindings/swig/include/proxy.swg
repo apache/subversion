@@ -31,12 +31,12 @@
 
   def assert_valid(self):
     """Assert that this object is using valid pool memory"""
-    if self.__dict__.has_key("_is_valid"):
+    if "_is_valid" in self.__dict__:
       assert self._is_valid(), "Variable has already been deleted"
 
   def __getattr__(self, name):
     """Get an attribute from this object"""
-    self.assert_valid();
+    self.assert_valid()
     value = _swig_getattr(self, self.__class__, name)
     if name in self.__dict__.get("_member_dicts",{}):
       old_dict = self.__dict__["_member_dicts"][name]
@@ -47,7 +47,7 @@
 
   def __setattr__(self, name, value):
     """Set an attribute on this object"""
-    self.assert_valid();
+    self.assert_valid()
     try:
       self.__dict__.setdefault("_member_dicts",{})[name] = value.__dict__
     except AttributeError:
