@@ -39,7 +39,7 @@
      <Location ...>
        PythonAuthzHandler authz_svn_group
        PythonOption AuthzSVNGroupFile /path/to/file
-       PythonOption AuthzSVNGroupAuthorirative Yes/On/1|No/Off/0
+       PythonOption AuthzSVNGroupAuthoritative Yes/On/1|No/Off/0
        ...
      </Location>
 
