@@ -1427,8 +1427,19 @@ fold_entry (apr_hash_t *entries,
     }
 
   /* Cleanup meaningless fields */
-  if (!(entry->schedule == svn_wc_schedule_add
-        || entry->schedule == svn_wc_schedule_replace))
+
+  /* ### svn_wc_schedule_delete is the minimal value. We need it because it's
+     impossible to NULLify copyfrom_url with log-instructions.
+
+     Note that I tried to find the smallest collection not to clear these
+     fields for, but this condition still fails the test suite:
+
+     !(entry->schedule == svn_wc_schedule_add
+       || entry->schedule == svn_wc_schedule_replace
+       || (entry->schedule == svn_wc_schedule_normal && entry->copied)))
+
+  */
+  if (entry->schedule == svn_wc_schedule_delete)
     {
       cur_entry->copied = FALSE;
       cur_entry->copyfrom_rev = SVN_INVALID_REVNUM;
