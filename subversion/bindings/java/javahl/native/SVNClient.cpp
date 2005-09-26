@@ -2278,44 +2278,10 @@ jbyteArray SVNClient::fileContent(const char *path, Revision &revision,
     svn_stream_t *read_stream = NULL;
     size_t size = 0;
 
-    if(revision.revision()->kind == svn_opt_revision_base)
-    // we want the base of the current working copy. Bad hack to avoid going to 
-    // the server
+    if(revision.revision()->kind == svn_opt_revision_working)
     {
-
-        const char *base_path;
-        svn_error_t *err = svn_wc_get_pristine_copy_path (intPath.c_str(),
-                               &base_path,
-                               requestPool.pool());
-        if(err != NULL)
-        {
-            JNIUtil::handleSVNError(err);
-            return NULL;
-        }
-        apr_file_t *file = NULL;
-        apr_finfo_t finfo;
-        apr_status_t apr_err = apr_stat(&finfo, base_path,
-                                   APR_FINFO_MIN, requestPool.pool());
-        if(apr_err)
-        {
-            JNIUtil::handleAPRError(apr_err, _("open file"));
-            return NULL;
-        }
-        apr_err = apr_file_open(&file, base_path, APR_READ, 0, 
-                                requestPool.pool());
-        if(apr_err)
-        {
-            JNIUtil::handleAPRError(apr_err, _("open file"));
-            return NULL;
-        }
-        read_stream = svn_stream_from_aprfile(file, requestPool.pool());
-        size = finfo.size;
-    }
-    else if(revision.revision()->kind == svn_opt_revision_working)
-    // we want the working copy. Going back to the server returns base instead 
-    // (not good)
-    {
-
+ 	// We want the working copy. Going back to the server returns
+ 	// base instead (which is not what we want).
         apr_file_t *file = NULL;
         apr_finfo_t finfo;
         apr_status_t apr_err = apr_stat(&finfo, intPath.c_str(),
