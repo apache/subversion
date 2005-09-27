@@ -38,30 +38,14 @@ class SubversionRepositoryTestSetup(TestSetup):
         dumpfile = open(os.path.join(os.path.split(__file__)[0],
                                      'svnrepos.dump'))
 
-        core.apr_initialize()
-        pool = core.svn_pool_create(None)
-        dumpstream = None
-
         # Remove the trac-svnrepos directory, so that we can
         # ensure a fresh start.
         self.tearDown()
 
-        try:
-            r = repos.svn_repos_create(REPOS_PATH, '', '', None, None, pool)
-            if hasattr(repos, 'svn_repos_load_fs2'):
-                repos.svn_repos_load_fs2(r, dumpfile, StringIO(),
-                                        repos.svn_repos_load_uuid_default, '',
-                                        0, 0, None, pool)
-            else:
-                dumpstream = core.svn_stream_from_aprfile(dumpfile, pool)
-                repos.svn_repos_load_fs(r, dumpstream, None,
-                                        repos.svn_repos_load_uuid_default, '',
-                                        None, None, pool)
-        finally:
-            if dumpstream:
-                core.svn_stream_close(dumpstream)
-            core.svn_pool_destroy(pool)
-            core.apr_terminate()
+        r = repos.svn_repos_create(REPOS_PATH, '', '', None, None)
+        repos.svn_repos_load_fs2(r, dumpfile, StringIO(),
+                                repos.svn_repos_load_uuid_default, '',
+                                0, 0, None)
 
     def tearDown(self):
         if os.path.exists(REPOS_PATH):
