@@ -170,7 +170,8 @@ static dav_error *save_value(dav_db *db, const dav_prop_name *name,
                       apr_psprintf(db->resource->pool,
                                    "revprop-change r%" SVN_REVNUM_T_FMT 
                                    " '%s'", db->resource->info->root.rev,
-                                   propname));
+                                   svn_path_uri_encode(propname,
+                                                       db->resource->pool)));
       }
   else
     serr = svn_repos_fs_change_node_prop(db->resource->info->root.root,
