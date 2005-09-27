@@ -19,7 +19,7 @@
 # obstruct(ed) blockera
 # PROPNAME     EGENSKAPSNAMN
 # PROPVAL      EGENSKAPSVÄRDE
-# relocate     flytta (??? förväxlas med move)
+# relocate     omlokalisera
 # REPOS        ARKIV
 # REPOS_PATH   ARKIV_SÖKVÄG
 # Repository   Arkiv
@@ -43,7 +43,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-09-27 22:27+0200\n"
-"PO-Revision-Date: 2005-09-15 21:16+0200\n"
+"PO-Revision-Date: 2005-09-27 22:38+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -2297,9 +2297,8 @@ msgid "Invalid schedule"
 msgstr "Ogiltig schemaläggning"
 
 #: include/svn_error_codes.h:385
-#, fuzzy
 msgid "Invalid relocation"
-msgstr "Ogiltigt lås"
+msgstr "Ogiltig omlokalisering"
 
 #: include/svn_error_codes.h:391
 msgid "General filesystem error"
@@ -5040,32 +5039,28 @@ msgid "Server doesn't support the unlock command"
 msgstr "Servern stöder ej unlock-kommandot"
 
 #: libsvn_ra_svn/client.c:1619
-#, fuzzy
 msgid "Lock response not a list"
-msgstr "Element med lås är ingen lista"
+msgstr "Svar på lock-kommandot är ingen lista"
 
 #: libsvn_ra_svn/client.c:1633
-#, fuzzy
 msgid "Unknown status for lock command"
-msgstr "Okänt kommando i svn-protokollet"
+msgstr "Okänd statusindikering för lock-kommandot"
 
 #: libsvn_ra_svn/client.c:1655
 msgid "Didn't receive end marker for lock responses"
-msgstr ""
+msgstr "Erhöll ingen slutmarkör i svaret på lock-kommandot"
 
 #: libsvn_ra_svn/client.c:1742
-#, fuzzy
 msgid "Unlock response not a list"
-msgstr "Element med lås är ingen lista"
+msgstr "Svar på unlock-kommandot är ingen lista"
 
 #: libsvn_ra_svn/client.c:1756
-#, fuzzy
 msgid "Unknown status for unlock command"
-msgstr "Okänd status \"%s\" i kommandorespons"
+msgstr "Okänd statusindikation för unlock-kommandot"
 
 #: libsvn_ra_svn/client.c:1777
 msgid "Didn't receive end marker for unlock responses"
-msgstr ""
+msgstr "Erhöll ingen slutmarkör i svaret på unlock-kommandot"
 
 #: libsvn_ra_svn/client.c:1801 libsvn_ra_svn/client.c:1829
 msgid "Server doesn't support the get-lock command"
@@ -6198,9 +6193,9 @@ msgid "Error opening local file"
 msgstr "Fel när lokal fil skulle öppnas"
 
 #: libsvn_wc/adm_files.c:113
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a valid administrative directory name"
-msgstr "\"%s\" är varken ett fil- eller katalognamn"
+msgstr "\"%s\" är inget giltigt namn på administrationskatalogen"
 
 #: libsvn_wc/adm_files.c:273
 msgid "Bad type indicator"
@@ -6296,7 +6291,7 @@ msgstr ""
 "radering"
 
 #: libsvn_wc/adm_ops.c:1060
-#, fuzzy, c-format
+#, c-format
 msgid "The URL '%s' has a different repository root than its parent"
 msgstr "URL:en \"%s\" har annan arkivrot än sin förälder"
 
@@ -6391,11 +6386,9 @@ msgstr ""
 "den först"
 
 #: libsvn_wc/copy.c:532
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot copy to '%s', as it is not from repository '%s'; it is from '%s'"
-msgstr ""
-"Kan inte kopiera eller flytta \"%s\": den är inte i arkivet ännu; arkivera "
-"den först"
+msgstr "Kan inte kopiera till \"%s\", då den inte är från arkivet \"%s\", utan från \"%s\""
 
 #: libsvn_wc/copy.c:539
 #, c-format
@@ -6862,7 +6855,7 @@ msgstr ""
 
 #: libsvn_wc/relocate.c:68
 msgid "Relocate can only change the repository part of an URL"
-msgstr ""
+msgstr "Vid omlokalisering kan endast den del av URL:en ändras som anger arkivet"
 
 #: libsvn_wc/translate.c:124
 #, c-format
@@ -8175,9 +8168,3 @@ msgstr "exporterad%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "\"%s\" är varken versionshanterad eller exporterad\n"
-
-#~ msgid "Unable to parse lock data"
-#~ msgstr "Kan inte tolka låsdata"
-
-#~ msgid "Creating readme file"
-#~ msgstr "Skapar filen readme"
