@@ -241,10 +241,8 @@ get_file_offset (apr_off_t *offset_p, apr_file_t *file, apr_pool_t *pool)
    number is not the same as the format number supported by this
    Subversion. */
 static svn_error_t *
-check_format (svn_fs_t *fs)
+check_format (int format)
 {
-  int format = ((fs_fs_data_t *) fs->fsap_data)->format;
-
   if (format != SVN_FS_FS__FORMAT_NUMBER)
     {
       return svn_error_createf 
@@ -297,7 +295,7 @@ svn_fs_fs__open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   
   /* Now we've got a format number no matter what. */
   ffd->format = format;
-  SVN_ERR (check_format (fs));
+  SVN_ERR (check_format (format));
 
   /* Read in and cache the repository uuid. */
   SVN_ERR (svn_io_file_open (&uuid_file, path_uuid (fs, pool),
@@ -344,17 +342,25 @@ svn_fs_fs__hotcopy (const char *src_path,
                     const char *dst_path,
                     apr_pool_t *pool)
 {
-  const char *src_subdir, *dst_subdir, *format_path;
+  const char *src_subdir, *dst_subdir;
   svn_revnum_t youngest, rev;
   apr_pool_t *iterpool;
   svn_node_kind_t kind;
+  int format;
+  svn_error_t *err;
 
-  /* Copy the format file if it exists -- it is assumed to be format 1
-     if it does not exist. */
-  format_path = svn_path_join (src_path, PATH_FORMAT, pool);
-  SVN_ERR (svn_io_check_path (format_path, &kind, pool));
-  if (kind == svn_node_file)
-    SVN_ERR (svn_io_dir_file_copy (src_path, dst_path, PATH_FORMAT, pool));
+  /* Check format to be sure we know how to hotcopy this FS. */
+  SVN_ERR (svn_io_read_version_file
+           (&format, svn_path_join (src_path, PATH_FORMAT, pool), pool));
+  if (err && APR_STATUS_IS_ENOENT (err->apr_err))
+    {
+      /* See duplicate code above in svn_fs_fs__open() for explanation. */
+      svn_error_clear (err);
+      format = 1;
+    }
+  else if (err)
+    return err;
+  SVN_ERR (check_format (format));
 
   /* Copy the current file. */
   SVN_ERR (svn_io_dir_file_copy (src_path, dst_path, PATH_CURRENT, pool));
@@ -409,6 +415,11 @@ svn_fs_fs__hotcopy (const char *src_path,
     SVN_ERR (svn_io_copy_dir_recursively (src_subdir, dst_path,
                                           PATH_LOCKS_DIR, TRUE, NULL,
                                           NULL, pool));
+
+  /* Hotcopied FS is complete. Stamp it with a format file. */
+  SVN_ERR (svn_io_write_version_file 
+           (svn_path_join (dst_path, PATH_FORMAT, pool), format, pool));
+
   return SVN_NO_ERROR;
 }
 
