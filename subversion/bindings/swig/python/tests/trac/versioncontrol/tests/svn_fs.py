@@ -41,6 +41,14 @@ class SubversionRepositoryTestSetup(TestSetup):
         core.apr_initialize()
         pool = core.svn_pool_create(None)
         dumpstream = None
+
+        # Remove the trac-svnrepos directory, so that we can
+        # ensure a fresh start.
+        try:
+          self.tearDown()
+        except:
+          pass
+
         try:
             r = repos.svn_repos_create(REPOS_PATH, '', '', None, None, pool)
             if hasattr(repos, 'svn_repos_load_fs2'):
