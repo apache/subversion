@@ -42,6 +42,7 @@
 ;; r     - svn-status-revert                run 'svn revert'
 ;; X v   - svn-status-resolved              run 'svn resolved'
 ;; U     - svn-status-update-cmd            run 'svn update'
+;; M-u   - svn-status-update-cmd            run 'svn update'
 ;; c     - svn-status-commit                run 'svn commit'
 ;; a     - svn-status-add-file              run 'svn add --non-recursive'
 ;; A     - svn-status-add-file-recursively  run 'svn add'
@@ -1019,6 +1020,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "c") 'svn-status-commit)
   (define-key svn-status-mode-map (kbd "M-c") 'svn-status-cleanup)
   (define-key svn-status-mode-map (kbd "U") 'svn-status-update-cmd)
+  (define-key svn-status-mode-map (kbd "M-u") 'svn-status-update-cmd)
   (define-key svn-status-mode-map (kbd "r") 'svn-status-revert)
   (define-key svn-status-mode-map (kbd "l") 'svn-status-show-svn-log)
   (define-key svn-status-mode-map (kbd "i") 'svn-status-info)
