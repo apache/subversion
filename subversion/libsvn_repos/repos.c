@@ -1576,11 +1576,6 @@ create_repos_structure (svn_repos_t *repos,
                _("Creating readme file"));
   }
 
-  /* Write the top-level FORMAT file. */
-  SVN_ERR (svn_io_write_version_file 
-           (svn_path_join (path, SVN_REPOS__FORMAT, pool),
-            SVN_REPOS__FORMAT_NUMBER, pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -1646,6 +1641,11 @@ svn_repos_create (svn_repos_t **repos_p,
       svn_error_clear (svn_io_remove_dir (path, pool));
       return err;
     }
+
+  /* This repository is ready.  Stamp it with a format number. */
+  SVN_ERR (svn_io_write_version_file 
+           (svn_path_join (path, SVN_REPOS__FORMAT, pool),
+            SVN_REPOS__FORMAT_NUMBER, pool));
 
   *repos_p = repos;
   return SVN_NO_ERROR;
@@ -1943,6 +1943,12 @@ static svn_error_t *hotcopy_structure (void *baton,
                                            sub_path, pool),
             SVN_REPOS__LOCK_DIR) == 0)
         return SVN_NO_ERROR;
+      
+      if (svn_path_compare_paths(
+            svn_path_get_longest_ancestor (SVN_REPOS__FORMAT, 
+                                           sub_path, pool),
+            SVN_REPOS__FORMAT) == 0)
+        return SVN_NO_ERROR;
     }
 
   target = svn_path_join (ctx->dest, sub_path, pool);
@@ -2032,6 +2038,11 @@ svn_repos_hotcopy (const char *src_path,
 
   SVN_ERR (svn_fs_hotcopy (src_repos->db_path, dst_repos->db_path,
                            clean_logs, pool));
+
+  /* Destination repository is ready.  Stamp it with a format number. */
+  SVN_ERR (svn_io_write_version_file 
+           (svn_path_join (dst_repos->path, SVN_REPOS__FORMAT, pool),
+            dst_repos->format, pool));
 
   return SVN_NO_ERROR;
 }
