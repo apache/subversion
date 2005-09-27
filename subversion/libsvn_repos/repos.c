@@ -1907,9 +1907,9 @@ struct hotcopy_ctx_t {
 };
 
 /** Called by (svn_io_dir_walk).
- * Copies the repository structure with exception of
- * @c SVN_REPOS__DB_DIR and @c SVN_REPOS__LOCK_DIR.
- * Those directories are handled separetly.
+ * Copies the repository structure with exception of @c SVN_REPOS__DB_DIR,
+ * @c SVN_REPOS__LOCK_DIR and @c SVN_REPOS__FORMAT.
+ * Those directories and files are handled separetly.
  * @a baton is a pointer to (struct hotcopy_ctx_t) specifying
  * destination path to copy to and the length of the source path.
  *  
