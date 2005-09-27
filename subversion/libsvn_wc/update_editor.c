@@ -1052,7 +1052,7 @@ add_directory (const char *path,
        svn_path_local_style (db->path, pool));
 
   /* It may not be named the same as the administrative directory. */
-  if (strcmp (svn_path_basename (path, pool), SVN_WC_ADM_DIR_NAME) == 0)
+  if (svn_wc_is_adm_dir (svn_path_basename (path, pool), pool))
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        _("Failed to add directory '%s': object of the same name as the "
@@ -1928,10 +1928,17 @@ install_file (svn_wc_notify_state_t *content_state,
          pointing to parent_dir/.svn/tmp/text-base/basename.  */
       if (strcmp (final_location, new_text_path))
         {
-          SVN_ERR_W (svn_io_file_rename (new_text_path, final_location,
-                                         pool),
-                     _("Move failed"));
+          svn_error_t *err =
+            svn_io_file_rename (new_text_path, final_location, pool);
 
+          if (err)
+            {
+              svn_error_clear (err);
+              SVN_ERR_W (svn_io_copy_file (new_text_path,
+                                           final_location, TRUE, pool),
+                         _("Move failed"));
+              SVN_ERR (svn_io_remove_file (new_text_path, pool));
+            }
           new_text_path = final_location;
         }
     }

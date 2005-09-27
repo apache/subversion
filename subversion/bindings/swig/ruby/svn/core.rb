@@ -53,10 +53,10 @@ module Svn
         loop do
           i += 1
           print "number of pools before GC(#{i}): "
-          before_pools = ObjectSpace.each_object(Svn::Core::Pool) {}
+          before_pools = Svn::Core::Pool.number_of_pools
           p before_pools
           GC.start
-          after_pools = ObjectSpace.each_object(Svn::Core::Pool) {}
+          after_pools = Svn::Core::Pool.number_of_pools
           print "number of pools after GC(#{i}): "
           p after_pools
           break if before_pools == after_pools
@@ -84,6 +84,14 @@ module Svn
     
     
     Pool = Svn::Ext::Core::Apr_pool_t
+    
+    class Pool
+      class << self
+        def number_of_pools
+          ObjectSpace.each_object(Pool) {}
+        end
+      end
+    end
 
     Stream = SWIG::TYPE_p_svn_stream_t
 

@@ -1225,6 +1225,136 @@ def commit_xml_unsafe_file_unlock(sbox):
   # Make sure the file is unlocked
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+#----------------------------------------------------------------------
+def repos_lock_with_info(sbox):
+  "verify info path@X or path -rY return repos lock"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  fname = 'iota'
+  comment = 'This is a lock test.'
+  file_path = os.path.join(sbox.wc_dir, fname)
+  file_url = svntest.main.current_repo_url + '/' + fname
+
+  # lock wc file
+  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+                                     '--username', svntest.main.wc_author2,
+                                     '--password', svntest.main.wc_passwd,
+                                     '--no-auth-cache',
+                                     '-m', comment, file_path)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(fname, writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Steal lock on wc file
+  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+                                     '--username', svntest.main.wc_author2,
+                                     '--password', svntest.main.wc_passwd,
+                                     '--no-auth-cache',
+                                     '--force',
+                                     '-m', comment, file_url)
+  expected_status.tweak(fname, writelocked='T')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Get repository lock token
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'info',
+                                                   file_url)
+  for line in output:
+    if line.find("Lock Token:") != -1:
+      repos_lock_token = line[12:]
+      break
+  else:
+    print "Error: Lock token not found"
+    raise svntest.Failure
+
+  # info with revision option
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'info',
+                                                   file_path, '-r1')
+
+  for line in output:
+    if line.find("Lock Token:") != -1:
+      lock_token = line[12:]
+      break
+  else:
+    print "Error: Lock token not found"
+    raise svntest.Failure
+
+  if (repos_lock_token != lock_token):
+    print "Error: expected repository lock information not found."
+    raise svntest.Failure
+
+  # info with peg revision
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'info',
+                                                   file_path + '@1')
+  for line in output:
+    if line.find("Lock Token:") != -1:
+      lock_token = line[12:]
+      break
+  else:
+    print "Error: Lock token not found"
+    raise svntest.Failure
+
+  if (repos_lock_token != lock_token):
+    print "Error: expected repository lock information not found."
+    raise svntest.Failure
+
+#----------------------------------------------------------------------
+def unlock_already_unlocked_files(sbox):
+  "(un)lock set of files, one already (un)locked"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Deliberately have no direct child of A as a target
+  iota_path = os.path.join(wc_dir, 'iota')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'lock',
+                                     '--username', svntest.main.wc_author2,
+                                     '--password', svntest.main.wc_passwd,
+                                     '--no-auth-cache',
+                                     '-m', 'lock several',
+                                     iota_path, lambda_path, alpha_path)
+  
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', 'A/B/lambda', 'A/B/E/alpha', writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  error_msg = ".*Path '/A/B/E/alpha' is already locked by user '" + \
+              svntest.main.wc_author2 + "'.*"
+  svntest.actions.run_and_verify_svn(None, None, error_msg,
+                                     'lock',
+                                     '--username', svntest.main.wc_author2,
+                                     '--password', svntest.main.wc_passwd,
+                                     '--no-auth-cache',
+                                     alpha_path, gamma_path)
+  expected_status.tweak('A/D/gamma', writelocked='K')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'unlock',
+                                     '--username', svntest.main.wc_author2,
+                                     '--password', svntest.main.wc_passwd,
+                                     '--no-auth-cache',
+                                     lambda_path)
+
+  expected_status.tweak('A/B/lambda', writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  error_msg = ".*No lock on path '/A/B/lambda'.*"
+  svntest.actions.run_and_verify_svn(None, None, error_msg,
+                                     'unlock',
+                                     '--username', svntest.main.wc_author2,
+                                     '--password', svntest.main.wc_passwd,
+                                     '--no-auth-cache',
+                                     '--force',
+                                     iota_path, lambda_path, alpha_path)
+
+
+  expected_status.tweak('iota', 'A/B/E/alpha', writelocked=None)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 ########################################################################
 # Run the tests
@@ -1258,6 +1388,8 @@ test_list = [ None,
               Skip(lock_and_exebit1, (os.name != 'posix')),
               Skip(lock_and_exebit2, (os.name != 'posix')),
               commit_xml_unsafe_file_unlock,
+              repos_lock_with_info,
+              unlock_already_unlocked_files,
             ]
 
 if __name__ == '__main__':

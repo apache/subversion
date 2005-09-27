@@ -109,7 +109,7 @@ path_driver_cb_func (void **dir_baton,
 
 
 static svn_error_t *
-delete_urls (svn_commit_info_t **commit_info,
+delete_urls (svn_commit_info_t **commit_info_p,
              const apr_array_header_t *paths,
              svn_client_ctx_t *ctx,
              apr_pool_t *pool)
@@ -184,7 +184,7 @@ delete_urls (svn_commit_info_t **commit_info,
   svn_pool_destroy (subpool);
 
   /* Fetch RA commit editor */
-  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
+  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info_p, pool));
   SVN_ERR (svn_ra_get_commit_editor (ra_session, &editor, &edit_baton,
                                      log_msg, svn_client__commit_callback,
                                      commit_baton,
@@ -233,7 +233,7 @@ svn_client__wc_delete (const char *path,
 
 
 svn_error_t *
-svn_client_delete2 (svn_commit_info_t **commit_info,
+svn_client_delete2 (svn_commit_info_t **commit_info_p,
                     const apr_array_header_t *paths,
                     svn_boolean_t force, 
                     svn_client_ctx_t *ctx,
@@ -244,7 +244,7 @@ svn_client_delete2 (svn_commit_info_t **commit_info,
 
   if (svn_path_is_url (APR_ARRAY_IDX (paths, 0, const char *)))
     {
-      SVN_ERR (delete_urls (commit_info, paths, ctx, pool));
+      SVN_ERR (delete_urls (commit_info_p, paths, ctx, pool));
     }
   else
     {
@@ -283,17 +283,17 @@ svn_client_delete2 (svn_commit_info_t **commit_info,
 
 
 svn_error_t *
-svn_client_delete (svn_client_commit_info_t **commit_info,
+svn_client_delete (svn_client_commit_info_t **commit_info_p,
                    const apr_array_header_t *paths,
                    svn_boolean_t force, 
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  svn_commit_info_t *commit_info2 = NULL;
+  svn_commit_info_t *commit_info = NULL;
   svn_error_t *err = NULL;
 
-  err = svn_client_delete2 (&commit_info2, paths, force, ctx, pool);
+  err = svn_client_delete2 (&commit_info, paths, force, ctx, pool);
   /* These structs have the same layout for the common fields. */
-  *commit_info = (svn_client_commit_info_t *) commit_info2;
+  *commit_info_p = (svn_client_commit_info_t *) commit_info;
   return err;
 }

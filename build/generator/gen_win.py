@@ -40,6 +40,7 @@ class WinGeneratorBase(GeneratorBase):
     self.apr_iconv_path = 'apr-iconv'
     self.bdb_path = 'db4-win32'
     self.neon_path = 'neon'
+    self.neon_ver = 24007
     self.httpd_path = None
     self.libintl_path = None
     self.zlib_path = None
@@ -137,6 +138,10 @@ class WinGeneratorBase(GeneratorBase):
     # Look for ML
     if self.zlib_path:
       self._find_ml()
+      
+    # Find neon version
+    if self.neon_path:
+      self._find_neon()
 
     # Run apr-util's w32locatedb.pl script
     self._configure_apr_util()
@@ -588,6 +593,10 @@ class WinGeneratorBase(GeneratorBase):
     # check if they wanted nls
     if self.enable_nls:
       fakedefines.append("ENABLE_NLS")
+      
+    # check if we have a newer neon (0.25.x)
+    if self.neon_ver >= 25000:
+      fakedefines.append("SVN_NEON_0_25=1")
 
     return fakedefines
 
@@ -881,6 +890,26 @@ class WinGeneratorBase(GeneratorBase):
     finally:
       fp.close()
 
+  def _find_neon(self):
+    "Find the neon version"
+    msg = 'WARNING: Unable to determine neon version'
+    try:
+      fp = open(os.path.join(self.neon_path, '.version'))
+      txt = fp.read()
+      vermatch = re.compile(r'(\d+)\.(\d+)\.(\d+)$', re.M) \
+                   .search(txt)
+  
+      if (vermatch):
+        version = (int(vermatch.group(1)),
+                   int(vermatch.group(2)),
+                   int(vermatch.group(3)))
+        # build/ac-macros/swig.m4 explains the next incantation
+        self.neon_ver = int('%d%02d%03d' % version)
+        msg = 'Found neon version %d.%d.%d\n' % version
+    except:
+      msg = 'WARNING: Error while determining neon version'
+    sys.stderr.write(msg)
+    
   def _configure_apr_util(self):
     if not self.configure_apr_util:
       return

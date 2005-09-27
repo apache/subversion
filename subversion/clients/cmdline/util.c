@@ -130,9 +130,9 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
   if (as_text)
     {
       const char *translated;
-      SVN_ERR (svn_subst_translate_cstring (contents->data, &translated,
-                                            APR_EOL_STR, FALSE,
-                                            NULL, FALSE, pool));
+      SVN_ERR (svn_subst_translate_cstring2 (contents->data, &translated,
+                                             APR_EOL_STR, FALSE,
+                                             NULL, FALSE, pool));
       translated_contents = svn_string_create ("", pool);
       if (encoding)
         SVN_ERR (svn_utf_cstring_from_utf8_ex (&translated_contents->data,

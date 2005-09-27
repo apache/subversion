@@ -179,13 +179,12 @@ svn_subst_keywords_differ (const svn_subst_keywords_t *a,
  * inconsistent line ending style, then: if @a repair is @c FALSE, return
  * @c SVN_ERR_IO_INCONSISTENT_EOL, else if @a repair is @c TRUE, convert any
  * line ending in @a src to @a eol_str in @a dst.  Recognized line endings are:
- * "\\n", "\\r", and "\\r\\n".
+ * "\n", "\r", and "\r\n".
  *
  * Expand and contract keywords using the contents of @a keywords as the
  * new values.  If @a expand is @c TRUE, expand contracted keywords and
  * re-expand expanded keywords.  If @a expand is @c FALSE, contract expanded
- * keywords and ignore contracted ones.  @c NULL for any of the keyword
- * values (@a keywords->revision, e.g.) indicates that keyword should be
+ * keywords and ignore contracted ones.  Keywords not found in the hash are
  * ignored (not contracted or expanded).  If the @a keywords hash
  * itself is @c NULL, keyword substitution will be altogether ignored.
  *

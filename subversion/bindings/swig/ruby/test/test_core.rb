@@ -124,20 +124,20 @@ class SvnCoreTest < Test::Unit::TestCase
     pools = []
     
     gc
-    before_number_of_pools = number_of_pools
+    before_number_of_pools = Svn::Core::Pool.number_of_pools
     made_number_of_pool.times do
       pools << used_pool
     end
     gc
-    current_number_of_pools = number_of_pools
+    current_number_of_pools = Svn::Core::Pool.number_of_pools
     created_number_of_pools = current_number_of_pools - before_number_of_pools
     assert_operator(made_number_of_pool, :<=, current_number_of_pools)
 
     gc
     pools.clear
-    before_number_of_pools = number_of_pools
+    before_number_of_pools = Svn::Core::Pool.number_of_pools
     gc
-    current_number_of_pools = number_of_pools
+    current_number_of_pools = Svn::Core::Pool.number_of_pools
     recycled_number_of_pools = before_number_of_pools - current_number_of_pools
     assert_operator(made_number_of_pool * 0.8, :<=, recycled_number_of_pools)
   end
@@ -347,10 +347,6 @@ EOT
     now = Time.now.gmtime
     Svn::Core.time_to_human_cstring(now.to_apr_time, pool)
     pool
-  end
-
-  def number_of_pools
-    ObjectSpace.each_object(Svn::Core::Pool) {}
   end
 
   def gc

@@ -837,7 +837,6 @@ in MOVE and COPY requests, so you have to be a little careful here - a
 
 <p>Some links on SSH port forwarding</p>
 
-</div>
 <ul>
 <li><a href="http://www.onlamp.com/pub/a/onlamp/excerpt/ssh_11/index3.html"
 >http://www.onlamp.com/pub/a/onlamp/excerpt/ssh_11/index3.html</a></li>
@@ -845,6 +844,8 @@ in MOVE and COPY requests, so you have to be a little careful here - a
 >http://csociety.ecn.purdue.edu/~sigos/projects/ssh/forwarding/</a></li>
 <li><a href="http://www.zip.com.au/~roca/ttssh.html">TTSSH: A Win32 SSH client capable of port forwarding</a></li>
 </ul>
+
+</div>
 
 <![CDATA[=========================================================]]>
 
@@ -874,8 +875,6 @@ repositories.</p>
 The difference between these two approaches is this (as explained by
 Ben Collins-Sussman &lt;sussman@collab.net&gt;):</p>
 
-</div>
-
 <ul>
   <li>
      In the first case, code can easily be copied or moved around
@@ -900,6 +899,8 @@ Ben Collins-Sussman &lt;sussman@collab.net&gt;):</p>
      course, we already have such a script, ready for you to use.
   </li>
 </ul>
+
+</div>
 
 <![CDATA[=========================================================]]>
   
@@ -1194,7 +1195,6 @@ formatting or content changes necessary), and check it in.</p>
 
 <p>The basic process looks like this:</p>
 
-</div>
 <blockquote><pre>
 	$ svn co http://svn.collab.net/repos/svn/trunk subversion
 	$ cd subversion/www
@@ -1206,11 +1206,13 @@ formatting or content changes necessary), and check it in.</p>
 	$ Mail -s "[PATCH] FAQ updates" &lt; /tmp/foo
 </pre></blockquote>
 
-Of course, the email you send should contain a nice long
+<p>Of course, the email you send should contain a nice long
 explanation about what the patch does, as per the
 <a href="hacking.html">Hacker's Guide to Subversion</a>, but you
 already know that, since you read and completely understood
-it <em>before</em> actually hacking the code, right? :)
+it <em>before</em> actually hacking the code, right? :)</p>
+
+</div>
 
 <![CDATA[=========================================================]]>
 
@@ -1451,8 +1453,6 @@ named <tt>foo</tt> you are going to edit.</p>
 <p>For the purpose of tracing branch merges, this repository has set up
 <tt>tags/branch_traces/</tt> to keep tags.</p>
 
-</div>
-
 <pre># setup branch and tags
 $ svn copy file:///home/repos/trunk \
            file:///home/repos/branches/bar_branch \
@@ -1486,6 +1486,8 @@ $ svn copy file:///home/repos/branches/bar_branch                     \
            file:///home/repos/tags/branch_traces/bar_last_merge       \
            -m "Reflect merge of change X."
 </pre>
+
+</div>
 
 <![CDATA[=========================================================]]>
 
@@ -1622,8 +1624,6 @@ href="http://www.google.com/search?hl=en&amp;lr=&amp;ie=UTF-8&amp;q=%22ssh-agent
 >Google search for "ssh-agent"</a> will quickly get you answers.  Or
 if you're <i>really</i> impatient, try one of these:</p>
 
-</div>
-
 <pre>
    <a href="http://www.csua.berkeley.edu/ssh-howto.html"
             >http://www.csua.berkeley.edu/ssh-howto.html</a>
@@ -1632,6 +1632,8 @@ if you're <i>really</i> impatient, try one of these:</p>
    <a href="http://kimmo.suominen.com/docs/ssh/"
            >http://kimmo.suominen.com/docs/ssh/</a>
 </pre>
+
+</div>
 
 <![CDATA[=========================================================]]>
 
@@ -1687,12 +1689,12 @@ out how to modify their <tt>PATH</tt> so that they can run <tt>svnserve</tt>.</h
       the private half of their keypair, by doing something like this
       (for the Bourne Again shell):</p>
 
-</div>
 <pre>
 SVN_SSH="ssh -i $HOME/.ssh/id_dsa.subversion"
 export SVN_SSH
 </pre>
-      
+
+</div>
       
 
 <![CDATA[=========================================================]]>
@@ -1763,8 +1765,6 @@ the file as a BDB logfile.  The second number is the log format version
 - match it to a BDB program version
 using the table below:</p>
 
-</div>
-
 <table border="1" cellspacing="2" cellpadding="2">
   <tr><th>Log format version</th><th>BDB program version</th></tr>
   <tr><td>5 (0x00000005)</td><td>4.0</td></tr>
@@ -1772,6 +1772,8 @@ using the table below:</p>
   <tr><td>8 (0x00000008)</td><td>4.2</td></tr>
   <tr><td>10 (0x0000000a)</td><td>4.3</td></tr>
 </table>
+
+</div>
 
 <![CDATA[=========================================================]]>
 
@@ -1817,8 +1819,6 @@ binary.</p>
 .svn/ directories in the live working copy.  Add this to your
 <tt>httpd.conf</tt>:</p>
 
-</div>
-
 <pre>
 # Disallow browsing of Subversion working copy administrative dirs.
 &lt;DirectoryMatch "^/.*/\.svn/"&gt;
@@ -1826,6 +1826,8 @@ binary.</p>
     Deny from all
 &lt;/DirectoryMatch&gt;
 </pre>
+
+</div>
 
 <![CDATA[=========================================================]]>
 
@@ -2200,11 +2202,11 @@ working copy will fail when it sees the locks.  To awaken your working
 copy, you need to tell the svn client to finish the work.  Simply
 run:</p>
 
-</div>
-
 <pre>
 svn cleanup working-copy
 </pre>
+
+</div>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -2542,12 +2544,12 @@ to the <tt>dav/</tt> directory (and to <tt>db/</tt>, of course).  </p>
 <p>You need to install Window XP Service Pack 1.  You can get all
 sorts of information about that Service Pack here:</p>
 
-</div>
-
     <ul><li>
     <a href="http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949"
     >http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949</a>
     </li></ul>
+
+</div>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -2556,7 +2558,7 @@ sorts of information about that Service Pack here:</p>
     trace of the conversation between a Subversion client and
     server?</h3>
 
-<p>Use <a href="http://ethereal.ntop.org/">Ethereal</a> to eavesdrop
+<p>Use <a href="http://www.ethereal.com/">Ethereal</a> to eavesdrop
 on the conversation:</p>
 
 <!-- TODO: Make these instructions less specific to ra_dav. -->
@@ -2575,20 +2577,19 @@ on the conversation:</p>
 </ol>
 
 <p>The above instructions are specific to the graphical version of
-Ethereal, and may not apply to the commandline version (whose binary
+Ethereal, and do not apply to the commandline version (whose binary
 is usually named tethereal).</p>
 
-<p>Alternatively, if you have an up-to-date client (more recent than
-the 0.16 tarball) you may set the <tt>neon-debug-mask</tt> parameter in your
+<p>Alternatively, you may set the <tt>neon-debug-mask</tt> parameter in your
 <tt>servers</tt> configuration file to cause neon's debugging output
 to appear when you run the <tt>svn</tt> client.  The numeric value of
 <tt>neon-debug-mask</tt> is a combination of the <tt>NE_DBG_...</tt> values
-in the header file <tt>ne_utils.h</tt>.  For neon 0.23.7 setting
+in the header file <tt>ne_utils.h</tt>.  For current versions of neon, setting
 <tt>neon-debug-mask</tt> to 130 (i.e. <tt>NE_DBG_HTTP+NE_DBG_HTTPBODY)</tt>
 will cause the HTTP data to be shown.</p>
 
 <p>You may well want to disable compression when doing a network
-trace, see the <tt>compression</tt> parameter in the <tt>config</tt>
+trace&mdash;see the <tt>http-compression</tt> parameter in the <tt>servers</tt>
 configuration file.</p>
 
 </div>
@@ -2804,8 +2805,6 @@ discover them yourself using <tt>svn log -v</tt>, and then provide
 them explicitly to the svn client.  For example, instead of
 running</p>
 
-</div>
-
 <pre>
 $ svn diff -r 1000:2000 http://host/repos/branches/mybranch/foo.c
 svn: Filesystem has no item
@@ -2818,6 +2817,8 @@ svn: '/branches/mybranch/fooc..c' not found in the repository at revision 1000
 $ svn diff -r1000:2000 http://host/repos/trunk/foo.c
 ...
 </pre>
+
+</div>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -2918,7 +2919,6 @@ spell out that program's absolute name.</p>
 If you're using Linux or Unix, try running the script "by hand", by
 following these steps:</p>
 
-</div>
           <ol>
             <li>Use "su", "sudo", or something similar, to become the user who
               normally would run the script.  This might be <tt>httpd</tt> or
@@ -2942,6 +2942,8 @@ following these steps:</p>
               Check your console for errors.
             </li>
           </ol>
+
+</div>
 
 <![CDATA[-----------------------------------------------------------]]>
 
@@ -3022,8 +3024,6 @@ procedures are outlined below - if they do not succeed, you should
 contact the Subversion Users <a
   href="mailto:users@subversion.tigris.org">mailing list</a>.</p>
 
-</div>
-
 <ul>
   <li>Ensure that no other processes will attempt to access your
   repository.</li>
@@ -3043,6 +3043,8 @@ contact the Subversion Users <a
   highest revision number in the new repository is what you think it
   should be.</li>
 </ul>
+
+</div>
 
 <![CDATA[-----------------------------------------------------------]]>
 

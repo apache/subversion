@@ -1404,8 +1404,7 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "### Uncomment the line below to use the default authorization file."
       APR_EOL_STR
-      "# authz-db = "
-      SVN_REPOS__CONF_AUTHZ
+      "# authz-db = " SVN_REPOS__CONF_AUTHZ
       APR_EOL_STR
       "### This option specifies the authentication realm of the repository."
       APR_EOL_STR
@@ -1500,15 +1499,23 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-static void
-init_repos_dirs (svn_repos_t *repos, const char *path, apr_pool_t *pool)
+/* Allocate and return a new svn_repos_t * object, initializing the
+   directory pathname members based on PATH.
+   The members FS and FORMAT are *not* initialized (they are null),
+   and it it the caller's responsibility to fill them in if needed.  */
+static svn_repos_t *
+create_svn_repos_t (const char *path, apr_pool_t *pool)
 {
+  svn_repos_t *repos = apr_pcalloc (pool, sizeof (*repos));
+
   repos->path = apr_pstrdup (pool, path);
   repos->db_path = svn_path_join (path, SVN_REPOS__DB_DIR, pool);
   repos->dav_path = svn_path_join (path, SVN_REPOS__DAV_DIR, pool);
   repos->conf_path = svn_path_join (path, SVN_REPOS__CONF_DIR, pool);
   repos->hook_path = svn_path_join (path, SVN_REPOS__HOOK_DIR, pool);
   repos->lock_path = svn_path_join (path, SVN_REPOS__LOCK_DIR, pool);
+
+  return repos;
 }
 
 
@@ -1578,6 +1585,34 @@ create_repos_structure (svn_repos_t *repos,
 }
 
 
+/* There is, at present, nothing within the direct responsibility
+   of libsvn_repos which requires locking.  For historical compatibility
+   reasons, the BDB libsvn_fs backend does not do its own locking, expecting
+   libsvn_repos to do the locking for it.  Here we take care of that
+   backend-specific requirement. 
+   The kind of lock is controlled by EXCLUSIVE and NONBLOCKING.
+   The lock is scoped to POOL.  */
+static svn_error_t *
+lock_repos (svn_repos_t *repos,
+            svn_boolean_t exclusive,
+            svn_boolean_t nonblocking,
+            apr_pool_t *pool)
+{
+  const char *lockfile_path;
+  svn_error_t *err;
+
+  /* Get a filehandle for the repository's db lockfile. */
+  lockfile_path = svn_repos_db_lockfile (repos, pool);
+
+  err = svn_io_file_lock2 (lockfile_path, exclusive, nonblocking, pool);
+  if (err != NULL && APR_STATUS_IS_EAGAIN (err->apr_err))
+    return err;
+  SVN_ERR_W (err, _("Error opening db lockfile"));
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_repos_create (svn_repos_t **repos_p,
                   const char *path,
@@ -1590,16 +1625,17 @@ svn_repos_create (svn_repos_t **repos_p,
   svn_repos_t *repos;
   svn_error_t *err;
 
-  /* Allocate a repository object. */
-  repos = apr_pcalloc (pool, sizeof (*repos));
-
-  /* Initialize the repository paths. */
-  init_repos_dirs (repos, path, pool);
+  /* Allocate a repository object, filling in the format we will create. */
+  repos = create_svn_repos_t (path, pool);
+  repos->format = SVN_REPOS__FORMAT_NUMBER;
 
   /* Create the various files and subdirectories for the repository. */
   SVN_ERR_W (create_repos_structure (repos, path, pool),
              _("Repository creation failed"));
   
+  /* Lock if needed. */
+  SVN_ERR (lock_repos (repos, FALSE, FALSE, pool));
+
   /* Create an environment for the filesystem. */
   if ((err = svn_fs_create (&repos->fs, repos->db_path, fs_config, pool)))
     {
@@ -1680,14 +1716,11 @@ check_repos_format (svn_repos_t *repos,
 }
 
 
-/* Set *REPOS_P to a repository at PATH which has been opened with
-   some kind of lock.  LOCKTYPE is one of APR_FLOCK_SHARED (for
-   standard readers/writers), or APR_FLOCK_EXCLUSIVE (for processes
-   that need exclusive access, like db_recover.)  OPEN_FS indicates
-   whether the database should be opened and placed into repos->fs.
-
-   Do all allocation in POOL.  When POOL is destroyed, the lock will
-   be released as well. */
+/* Set *REPOS_P to a repository at PATH which has been opened.
+   See lock_repos() above regarding EXCLUSIVE and NONBLOCKING.
+   OPEN_FS indicates whether the Subversion filesystem should be opened,
+   the handle being placed into repos->fs.
+   Do all allocation in POOL.  */
 static svn_error_t *
 get_repos (svn_repos_t **repos_p,
            const char *path,
@@ -1699,27 +1732,13 @@ get_repos (svn_repos_t **repos_p,
   svn_repos_t *repos;
 
   /* Allocate a repository object. */
-  repos = apr_pcalloc (pool, sizeof (*repos));
-
-  /* Initialize the repository paths. */
-  init_repos_dirs (repos, path, pool);
+  repos = create_svn_repos_t (path, pool);
 
   /* Verify the validity of our repository format. */
   SVN_ERR (check_repos_format (repos, pool));
 
-  /* Locking. */
-  {
-    const char *lockfile_path;
-    svn_error_t *err;
-
-    /* Get a filehandle for the repository's db lockfile. */
-    lockfile_path = svn_repos_db_lockfile (repos, pool);
-
-    err = svn_io_file_lock2 (lockfile_path, exclusive, nonblocking, pool);
-    if (err != NULL && APR_STATUS_IS_EAGAIN (err->apr_err))
-      return err;
-    SVN_ERR_W (err, _("Error opening db lockfile"));
-  }
+  /* Lock if needed. */
+  SVN_ERR (lock_repos (repos, exclusive, nonblocking, pool));
 
   /* Open up the filesystem only after obtaining the lock. */
   if (open_fs)
@@ -2000,25 +2019,16 @@ svn_repos_hotcopy (const char *src_path,
   /* Prepare dst_repos object so that we may create locks,
      so that we may open repository */
 
-  dst_repos = apr_pcalloc (pool, sizeof (*dst_repos));
-
-  init_repos_dirs (dst_repos, dst_path, pool);
+  dst_repos = create_svn_repos_t (dst_path, pool);
+  dst_repos->format = src_repos->format;
 
   SVN_ERR (create_locks (dst_repos, pool));
 
   SVN_ERR (svn_io_dir_make_sgid (dst_repos->db_path, APR_OS_DEFAULT, pool));
 
-  /* Open repository, since before we only initialized the directories. 
-     Above is a work around because lock creation functions expect a
-     pointer to (svn_repos_t) with initialized paths. */
-
   /* Exclusively lock the new repository.  
      No one should be accessing it at the moment */ 
-  SVN_ERR (get_repos (&dst_repos, dst_path,
-                      TRUE, FALSE,
-                      FALSE,    /* don't try to open the db yet. */
-                      pool));
-
+  SVN_ERR (lock_repos (dst_repos, TRUE, FALSE, pool));
 
   SVN_ERR (svn_fs_hotcopy (src_repos->db_path, dst_repos->db_path,
                            clean_logs, pool));

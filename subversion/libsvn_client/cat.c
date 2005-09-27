@@ -50,7 +50,7 @@ cat_local_file (const char *path,
                 apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
-  svn_subst_keywords_t kw = { 0 };
+  apr_hash_t *kw = NULL;
   svn_subst_eol_style_t style;
   apr_hash_t *props;
   const char *base;
@@ -136,7 +136,7 @@ cat_local_file (const char *path,
           author = entry->cmt_author;
         }
       
-      SVN_ERR (svn_subst_build_keywords 
+      SVN_ERR (svn_subst_build_keywords2
                (&kw, keywords->data, 
                 apr_psprintf (pool, fmt, entry->cmt_rev),
                 entry->url, tm, author, pool));
@@ -146,8 +146,11 @@ cat_local_file (const char *path,
                              APR_READ, APR_OS_DEFAULT, pool));
   input = svn_stream_from_aprfile (input_file, pool);
 
-  SVN_ERR (svn_subst_translate_stream2 (input, output, eol, FALSE, &kw, TRUE, 
-                                        pool));
+  if ( eol || kw )
+    SVN_ERR (svn_subst_translate_stream3 (input, output, eol, FALSE, kw,
+                                          TRUE, pool));
+  else
+    SVN_ERR (svn_stream_copy (input, output, pool));
 
   SVN_ERR (svn_stream_close (input));
   SVN_ERR (svn_io_file_close (input_file, pool));
@@ -218,7 +221,7 @@ svn_client_cat2 (svn_stream_t *out,
     }
   else
     {
-      svn_subst_keywords_t kw = { 0 };
+      apr_hash_t *kw = NULL;
       svn_subst_eol_style_t style;
       const char *temp_dir;
       const char *tmp_filename;
@@ -262,7 +265,7 @@ svn_client_cat2 (svn_stream_t *out,
           if (cmt_date)
             SVN_ERR (svn_time_from_cstring (&when, cmt_date->data, pool));
 
-          SVN_ERR (svn_subst_build_keywords
+          SVN_ERR (svn_subst_build_keywords2
                    (&kw, keywords->data, 
                     cmt_rev->data,
                     url,
@@ -271,7 +274,7 @@ svn_client_cat2 (svn_stream_t *out,
                     pool));
         }
 
-      SVN_ERR (svn_subst_translate_stream2 (tmp_stream, out, eol, FALSE, &kw,
+      SVN_ERR (svn_subst_translate_stream3 (tmp_stream, out, eol, FALSE, kw,
                                             TRUE, pool));
 
       SVN_ERR (svn_stream_close (tmp_stream));

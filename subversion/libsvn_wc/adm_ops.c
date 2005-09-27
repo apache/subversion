@@ -810,7 +810,7 @@ erase_from_wc (const char *path,
             name = key;
 
             /* The admin directory will show up, we don't want to delete it */
-            if (!strcmp (name, SVN_WC_ADM_DIR_NAME))
+            if (svn_wc_is_adm_dir (name, pool))
               continue;
 
             /* Versioned directories will show up, don't delete those either */
@@ -1555,7 +1555,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
              missing altogether), copy the text-base out into
              the working copy, and update the timestamp in the entries
              file. */
-          svn_subst_keywords_t *keywords;
+          apr_hash_t *keywords;
           const char *eol;
           svn_boolean_t special;
           
@@ -1569,7 +1569,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
              sure to do any eol translations or keyword substitutions,
              as dictated by the property values.  If these properties
              are turned off, then this is just a normal copy. */
-          if ((err = svn_subst_copy_and_translate2 (base_thing,
+          if ((err = svn_subst_copy_and_translate3 (base_thing,
                                                     fullpath,
                                                     eol, 
                                                     FALSE, /* don't repair */

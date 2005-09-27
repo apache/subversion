@@ -18,6 +18,8 @@ static VALUE cSvnClientContext = Qnil;
 static VALUE cSvnDelta = Qnil;
 static VALUE cSvnDeltaEditor = Qnil;
 static VALUE cSvnDeltaTextDeltaWindowHandler = Qnil;
+static VALUE cSvnFs = Qnil;
+static VALUE cSvnFsFileSystem = Qnil;
 
 #define DEFINE_ID(key, name)                    \
 static ID id_ ## key = 0;                       \
@@ -72,9 +74,10 @@ DEFINE_ID(file_added, "file_added")
 DEFINE_ID(file_deleted, "file_deleted")
 DEFINE_ID(dir_added, "dir_added")
 DEFINE_ID(dir_deleted, "dir_deleted")
-DEFINE_ID(dir_props_changed,"dir_props_changed")
-DEFINE_ID(handler,"handler")
-DEFINE_ID(handler_baton,"handler_baton")
+DEFINE_ID(dir_props_changed, "dir_props_changed")
+DEFINE_ID(handler, "handler")
+DEFINE_ID(handler_baton, "handler_baton")
+DEFINE_ID(__batons__, "__batons__")
 
 typedef void *(*r2c_func)(VALUE value, void *ctx, apr_pool_t *pool);
 typedef VALUE (*c2r_func)(void *value, void *ctx);
@@ -92,12 +95,6 @@ rb_ary_aref1(VALUE ary, VALUE arg)
 {
   VALUE args[1] = {arg};
   return rb_ary_aref(1, args, ary);
-}
-
-static VALUE
-rb_ary_aref_n(VALUE ary, int n)
-{
-  return rb_ary_aref1(ary, INT2NUM(n));
 }
 
 
@@ -156,6 +153,25 @@ rb_svn_delta(void)
   return cSvnDelta;
 }
 
+static VALUE
+rb_svn_fs(void)
+{
+  if (NIL_P(cSvnFs)) {
+    cSvnFs = rb_const_get(rb_svn(), rb_intern("Fs"));
+  }
+  return cSvnFs;
+}
+
+static VALUE
+rb_svn_fs_file_system(void)
+{
+  if (NIL_P(cSvnFsFileSystem)) {
+    cSvnFsFileSystem = rb_const_get(rb_svn_fs(), rb_intern("FileSystem"));
+    rb_ivar_set(cSvnFsFileSystem, rb_id___batons__(), rb_hash_new());
+  }
+  return cSvnFsFileSystem;
+}
+
 VALUE
 svn_swig_rb_svn_delta_editor(void)
 {
@@ -180,6 +196,49 @@ static VALUE
 rb_svn_pool_holder(void)
 {
   return rb_ivar_get(rb_svn_core_pool(), rb_id___pools__());
+}
+
+static VALUE
+rb_svn_fs_warning_callback_baton_holder(void)
+{
+  return rb_ivar_get(rb_svn_fs_file_system(), rb_id___batons__());
+}
+
+static VALUE
+rb_holder_push(VALUE holder, VALUE obj)
+{
+  VALUE key, objs;
+
+  key = rb_obj_id(obj);
+  objs = rb_hash_aref(holder, key);
+
+  if (NIL_P(objs)) {
+    objs = rb_ary_new();
+    rb_hash_aset(holder, key, objs);
+  }
+
+  rb_ary_push(objs, obj);
+
+  return Qnil;
+}
+
+static VALUE
+rb_holder_pop(VALUE holder, VALUE obj)
+{
+  VALUE key, objs;
+  VALUE result = Qnil;
+
+  key = rb_obj_id(obj);
+  objs = rb_hash_aref(holder, key);
+
+  if (!NIL_P(objs)) {
+    result = rb_ary_pop(objs);
+    if (RARRAY(objs)->len == 0) {
+      rb_hash_delete(holder, key);
+    }
+  }
+
+  return result;
 }
 
 VALUE
@@ -388,7 +447,7 @@ name(VALUE array, apr_pool_t *pool)                               \
   for (i = 0; i < len; i++) {                                     \
     VALUE value;                                                  \
     type val;                                                     \
-    value = rb_ary_aref_n(array, i);                              \
+    value = rb_ary_entry(array, i);                               \
     val = (type)converter(value, context, pool);                  \
     APR_ARRAY_IDX(apr_ary, i, type) = val;                        \
   }                                                               \
@@ -731,21 +790,21 @@ svn_swig_rb_set_pool_for_no_swig_type(VALUE target, VALUE pool)
 void
 svn_swig_rb_push_pool(VALUE pool)
 {
-  rb_hash_aset(rb_svn_pool_holder(), rb_obj_id(pool), pool);
+  rb_holder_push(rb_svn_pool_holder(), pool);
 }
 
 void
 svn_swig_rb_pop_pool(VALUE pool)
 {
-  rb_hash_delete(rb_svn_pool_holder(), rb_obj_id(pool));
+  rb_holder_pop(rb_svn_pool_holder(), pool);
 }
 
 
 static VALUE
 callback(VALUE info)
 {
-  return rb_apply(rb_ary_aref_n(info, 0),
-                  (ID)rb_ary_aref_n(info, 1),
+  return rb_apply(rb_ary_entry(info, 0),
+                  (ID)rb_ary_entry(info, 1),
                   rb_ary_aref1(info,
                                rb_range_new(INT2NUM(2),
                                             INT2NUM(-1),
@@ -1299,8 +1358,8 @@ svn_swig_rb_get_commit_log_func(const char **log_msg,
                         callback_rescue, (VALUE)&err,
                         rb_svn_error(), (VALUE)0);
 
-    is_message = rb_ary_aref_n(result, 0);
-    value = rb_ary_aref_n(result, 1);
+    is_message = rb_ary_entry(result, 0);
+    value = rb_ary_entry(result, 1);
 
     Check_Type(value, T_STRING);
     ret = (char *)r2c_string(value, NULL, pool);
@@ -1528,6 +1587,22 @@ svn_swig_rb_fs_warning_callback(void *baton, svn_error_t *err)
                        svn_swig_rb_svn_error_to_rb_error(err));
     callback(args);
   }
+}
+
+static apr_status_t
+cleanup_fs_warning_callback_baton(void *baton)
+{
+  rb_holder_pop(rb_svn_fs_warning_callback_baton_holder(), (VALUE)baton);
+  return APR_SUCCESS;
+}
+
+void
+svn_swig_rb_fs_warning_callback_baton_register(VALUE baton, apr_pool_t *pool)
+{
+  rb_holder_push(rb_svn_fs_warning_callback_baton_holder(), (VALUE)baton);
+  apr_pool_cleanup_register(pool, (void *)baton,
+                            cleanup_fs_warning_callback_baton,
+                            apr_pool_cleanup_null);
 }
 
 svn_error_t *
@@ -2424,9 +2499,9 @@ wc_diff_callbacks_file_changed(svn_wc_adm_access_t *adm_access,
                         rb_svn_error(), (VALUE)0);
 
     if (contentstate)
-      *contentstate = NUM2INT(rb_ary_aref_n(result, 0));
+      *contentstate = NUM2INT(rb_ary_entry(result, 0));
     if (propstate)
-      *propstate = NUM2INT(rb_ary_aref_n(result, 1));
+      *propstate = NUM2INT(rb_ary_entry(result, 1));
   }
   
   return err;
@@ -2473,9 +2548,9 @@ wc_diff_callbacks_file_added(svn_wc_adm_access_t *adm_access,
                         rb_svn_error(), (VALUE)0);
 
     if (contentstate)
-      *contentstate = NUM2INT(rb_ary_aref_n(result, 0));
+      *contentstate = NUM2INT(rb_ary_entry(result, 0));
     if (propstate)
-      *propstate = NUM2INT(rb_ary_aref_n(result, 1));
+      *propstate = NUM2INT(rb_ary_entry(result, 1));
   }
   
   return err;

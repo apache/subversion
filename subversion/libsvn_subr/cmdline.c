@@ -29,7 +29,9 @@
 
 #include <apr_errno.h>          /* for apr_strerror */
 #include <apr_general.h>        /* for apr_initialize/apr_terminate */
+#include <apr_atomic.h>         /* for apr_atomic_init */
 #include <apr_strings.h>        /* for apr_snprintf */
+#include <apr_pools.h>
 
 #include "svn_cmdline.h"
 #include "svn_path.h"

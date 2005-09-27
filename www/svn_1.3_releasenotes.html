@@ -1,0 +1,254 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "tigris-branding/css/tigris.css";
+  @import "tigris-branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="tigris-branding/css/print.css"/>
+<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+<title>Subversion 1.3 Release Notes</title>
+</head>
+
+<body>
+<div class="app">
+
+<h1 style="text-align: center">Subversion 1.3 Release Notes</h1>
+
+<table border="0" cellpadding="2" cellspacing="2" width="98%"
+  style="background-color: white;">
+<tr>
+<td style="background-color: yellow">
+<div style="color: red">
+
+<p style="font-style: italic;"><b>WARNING:</b></p> 
+
+<p style="font-style: italic;">Subversion 1.3.0 has NOT yet been
+released!  This document is a draft&nbsp;&mdash;&nbsp;we're using it
+as a checklist for the tasks that remain.  When this warning
+disappears, that will mean 1.3.0 is released.</p>
+
+<p>$LastChangedDate$</p>
+
+</div>
+</td>
+</tr>
+
+</table>
+
+<div class="h2" id="news" title="news">
+<h2>What's New in Subversion 1.3</h2>
+
+<p>Subversion 1.3 is a superset of all previous Subversion releases.
+Anything in 1.0.x, 1.1.x, or 1.2.x is also in 1.3, but 1.3 contains
+features and bugfixes not present in any earlier release.  The new
+features will eventually be documented in a 1.3 version of the free
+Subversion book, see
+<a href="http://svnbook.red-bean.com">svnbook.red-bean.com</a>.</p>
+
+<ul>
+   <li><p>Path-based authorization for svnserve (works similarly to
+       mod_authz_svn).</p>
+
+       <p class="todo"><i>TODO: but it needs to be documented.</i></p>
+   </li>
+
+   <li><p>Vastly improved bindings to Python: the bound APIs no longer
+       require APR pool arguments.  There is also much greater test
+       coverage of the Python bindings.</p>
+
+       <p>Users building from a Subversion source tarball do not need
+       SWIG at compile-time or run-time.  The Python bindings should
+       "just work" now, no SWIG required.  SWIG is only needed by
+       tarball packagers and those building Subversion from working
+       copy source, in which case it must be SWIG 1.3.24 or 1.3.25.</p>
+   </li>
+
+   <li><p>The Apache HTTPD-based server (mod_dav_svn) can now log
+       high-level Subversion operations, e.g., "update", "lock",
+       "commit", etc.  This feature is turned on or off in the httpd
+       configuration file; the default is off.</p>
+
+       <p>Equivalent functionality is planned for svnserve, the
+       standalone server, but not until Subversion 1.4, because the
+       implementation strategy there will be a bit different.  See <a
+       href="http://subversion.tigris.org/issues/show_bug.cgi?id=2409"
+       >Issue #2409</a> for details.</p>
+
+       <p class="todo"><i>TODO: we still need to decide how to encode,
+       and possibly delimit, paths in the new logs.  Discussion
+       taking place right now, on dev@ and in IRC.</i></p>
+   </li>
+
+   <li><p>The Apache HTTPD-based server (mod_dav_svn) can now display
+        (in a web browser) the collection of repositories exported
+        by the SVNParentPath directive:  simply set
+        'SVNListParentPath&nbsp;on'.</p>
+   </li>
+
+   <li><p>Commands that accept peg revisions now operate faster when
+       invoked on older pegs. See <a
+       href="http://subversion.tigris.org/issues/show_bug.cgi?id=1970"
+       >Issue #1970</a> for details.</p>
+   </li>
+
+   <li><p>Interruptable http:// and https:// connections.  If built
+       with Neon 0.25.0 or higher, Subversion can be interrupted
+       during network operations over http and https.</p>
+   </li>
+
+   <li><p>The "<b>_svn</b>" hack is now <a
+
+       href="http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt">officially
+       supported</a>: since some versions of ASP.NET don't allow
+       directories beginning with dot (e.g., ".svn", the standard
+       Subversion working copy administrative directory), the
+       <b>svn</b> command line client and <b>svnversion</b> now treat
+       the environment variable SVN_ASP_DOT_NET_HACK specially on
+       Windows.  If this variable is set, they will use "_svn" instead
+       of ".svn".  We recommend that all Subversion clients runing on
+       Windows take advantage of this behaviour.  Note that once the
+       environment variable is set, working copies with standard
+       ".svn" directories will stop working, and will need to be
+       re-checked-out to get "_svn" instead.</p>
+
+       <p class="warningmark">Third party software that uses the
+       Subversion libraries needs to be updated to make the
+       equivalent API calls.  See the three new
+       APIs: <b>svn_wc_is_adm_dir</b>, <b>svn_wc_get_adm_dir</b>, and
+       <b>svn_wc_set_adm_dir</b>.  Setting the SVN_ASP_DOT_NET_HACK
+       environment variable only works for the above-mentioned client
+       programs, and only on Windows.  It doesn't work for libraries;
+       users of the libraries should call the new APIs, which are
+       platform-indepndent.  See <a
+    href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=105810"
+       >this mail</a> and its thread for more details.</p>
+
+       <p class="todo"><i>TODO: We should update the bindings to pay
+       attention to the environment variable on Windows.</i></p>
+   </li>
+
+   <li><p class="todo"><i>TODO: we need either finish r15287 or revert
+       it.  See <a
+     href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=105738"
+       >this mail</a> about it.  Peter Lundblad may get time to
+       integrate VK Sameer's patch for this tonight; if he doesn't,
+       kfogel will revert r15287 before branching.  Watch this space
+       for updates.</i></p></li>
+
+   <li><p>The usual slew of bugfixes and improved APIs.  See the
+       <a href="http://svn.collab.net/repos/svn/trunk/CHANGES"
+       >CHANGES</a> file for details.</p>
+   </li>
+</ul>
+
+</div>
+
+<div class="h2" id="downloading" title="downloading">
+<h2>Downloading</h2>
+
+<p>Subversion 1.3 is available as source code in three formats:</p>
+
+<ul>
+<li><a href="http://subversion.tigris.org/downloads/subversion-1.3.0.tar.gz-NOT-YET"
+    >subversion-1.3.0.tar.gz</a></li>
+<li><a href="http://subversion.tigris.org/downloads/subversion-1.3.0.tar.bz2-NOT-YET"
+    >subversion-1.3.0.tar.bz2</a></li>
+<li><a href="http://subversion.tigris.org/downloads/subversion-1.3.0.zip-NOT-YET"
+    >subversion-1.3.0.zip</a>&nbsp;(Windows)</li>
+</ul>
+
+<p>For binary packages, please see <a
+href="project_packages.html#binary-packages">the binary package
+list</a>.  Note that binary packages usually come out about a week
+after the corresponding source release.  The package maintainers are
+volunteers, so please don't harass them&nbsp;&mdash;&nbsp;they know
+when a new source release has come out, and they work as fast as they
+can to make binaries available.</p>
+
+<p>For other Subversion releases, see <a
+href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=260&amp;expandFolder=74"
+>this folder</a>.</p>
+
+</div>
+
+<div class="h2" id="compatibility" title="compatibility">
+<h2>Compatibility Concerns</h2>
+
+<p>Older clients and servers interoperate transparently with 1.3
+servers and clients.  Of course, some of the new 1.3 features may not
+be available unless both client and server are the latest version.
+There is <strong>no need</strong> to upgrade your repositories;
+Subversion 1.3 can read repositories created by earlier versions.  To
+upgrade an existing installation, just install the newest libraries
+and binaries on top of the older ones. (<em>WARNING:</em> if you're
+using Berkeley DB repositories, installing a new binary distribution
+of Subversion may force you to upgrade Berkeley DB as well, see
+<a href="#bdb-upgrade">Unexpected Berkeley DB Upgrades</a> below.)</p>
+
+<p>Subversion 1.3 maintains API/ABI compatibility with earlier
+releases, by only adding new functions.  A program written to the 1.0,
+1.1, or 1.2 API can both compile and run using 1.3 libraries.
+However, a program written for 1.3 cannot necessarily compile or run
+against older libraries.</p>
+
+<div class="h3" id="output-changes" title="output-changes">
+<h3>Command Line Output Changes</h3>
+
+<p>Although the Subversion developers try hard to keep output from the
+command line programs compatible between releases, new information
+sometimes has to be added.  This might break scripts that rely on the
+exact format of the output.  In 1.3, the following changes have been
+made to the output:</p>
+
+<ul>
+<li><p class="todo"><i>TODO: I don't think we actually have any this
+    time, do we?</i></p></li>
+</ul>
+
+</div>
+
+<div class="h3" id="bdb-upgrade" title="bdb-upgrade">
+<h3>Unexpected Berkeley DB Upgrades</h3>
+
+<p>This is not actually related to the Subversion 1.3 release, but it
+may affect you if you upgrade to 1.3 via a package distribution
+system.</p>
+
+<p>A lot of operating systems now ship Berkeley DB 4.3.  Sometimes the
+system Berkeley DB libraries can be unintentionally upgraded to 4.3 as
+part of some other change pulled down via an OS package delivery
+mechanism&nbsp;&mdash;&nbsp;for example, upgrading one's Subversion
+package.  If this happens to you, you will need
+to <a href="faq.html#bdb43-upgrade">upgrade existing BerkeleyDB-based
+repositories to 4.3.</a></p>
+
+<p>Since Subversion 1.2, the <a
+href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91"
+>Windows binary distributions</a> of Subversion from Branko &#268;ibej
+use Berkeley DB 4.3.  If you are upgrading from an older version, the
+above may be of concern to you.</p>
+
+</div>
+
+</div>
+
+<div class="h2" id="svn-1.1-deprecation" title="svn-1.1-deprecation">
+<h2>Deprecation of 1.1.x Series</h2>
+
+<p class="todo"><i>TODO: We need to decide whether we want to do this.</i></p>
+
+<p>The Subversion 1.1.x line is no longer supported.  This doesn't
+mean that your 1.1 installation is doomed; if it works well and is all
+you need, that's fine.  "No longer supported" just means we've stopped
+accepting bug reports against 1.1.x versions, and will not make any
+more 1.1.x bugfix releases (except perhaps for a critical security or
+data-loss bug.)</p>
+
+</div>
+
+</div>
+</body>
+</html>

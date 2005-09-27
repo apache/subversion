@@ -175,6 +175,7 @@
 %typemap(ruby, out) svn_error_t *
 {
   if ($1) {
+    svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
     svn_swig_rb_handle_svn_error($1);
   }
   $result = Qnil;
@@ -268,46 +269,65 @@
     SWIG_fail;
   }
 %enddef
+%define svn_swig_py_pool_create_subpool(py_pool, pool)
+  if (py_pool != NULL) {
+    pool = svn_pool_create(pool);
+    py_pool = svn_swig_NewPointerObj(pool, $descriptor, py_pool);
+  }
+%enddef
 #endif
 
 %typemap(python, default) apr_pool_t *(apr_pool_t *_global_pool,
-  PyObject *_global_svn_swig_py_pool, int _global_svn_swig_py_is_local_pool)
+  PyObject *_global_svn_swig_py_pool, int _global_svn_swig_py_is_local_pool,
+  int _global_is_default_pool)
 {
   int argnum = PyTuple_GET_SIZE(args) - 1;
   _global_svn_swig_py_is_local_pool = 1;
+  _global_is_default_pool = 1;
   if (argnum >= 0) {
     PyObject *input = PyTuple_GET_ITEM(args, argnum);
     if (input != Py_None &&
         PyObject_HasAttrString(input, (char *)"_mark_valid")) {
       _global_pool = svn_swig_MustGetPtr(input, $1_descriptor, argnum+1, NULL);
       if (PyErr_Occurred()) {
+        _global_svn_swig_py_pool = NULL;
         SWIG_fail;
       }
       _global_svn_swig_py_pool = input;
+      Py_XINCREF(_global_svn_swig_py_pool);
+      _global_is_default_pool = 0;
     } else {
       if (PyErr_Occurred()) {
         PyErr_Clear();
       }
       svn_swig_get_application_pool(&_global_svn_swig_py_pool, &_global_pool); 
+      svn_swig_py_pool_create_subpool(_global_svn_swig_py_pool, _global_pool);
     }
   } else {
     svn_swig_get_application_pool(&_global_svn_swig_py_pool, &_global_pool); 
+    svn_swig_py_pool_create_subpool(_global_svn_swig_py_pool, _global_pool);
   }
   $1 = _global_pool;
   svn_swig_py_pool_check(_global_svn_swig_py_pool)
 }
 
 %typemap(python, in) apr_pool_t * {
-  if ($input != Py_None && $input != _global_svn_swig_py_pool) {
+  if ($input != Py_None && _global_is_default_pool == 1) {
     svn_swig_py_pool_check($input)
     _global_pool = svn_swig_MustGetPtr($input, $1_descriptor, $svn_argnum, 
       NULL);
     if (PyErr_Occurred()) {
         SWIG_fail;
     }
+    Py_XDECREF(_global_svn_swig_py_pool);
     _global_svn_swig_py_pool = $input;
+    Py_XINCREF(_global_svn_swig_py_pool);
     $1 = _global_pool;
   }
+}
+
+%typemap(python, freearg) apr_pool_t * {
+  Py_XDECREF(_global_svn_swig_py_pool);
 }
 
 %typemap(perl5, in) apr_pool_t *pool "";
@@ -316,26 +336,31 @@
 }
 %typemap(ruby, in) apr_pool_t *pool "";
 %typemap(ruby, default) apr_pool_t *pool
-    (VALUE _global_rb_pool, apr_pool_t *_global_pool) {
-  svn_swig_rb_get_pool(argc, argv, self, &_global_rb_pool, &$1);
+    (VALUE _global_svn_swig_rb_pool, apr_pool_t *_global_pool)
+{
+  svn_swig_rb_get_pool(argc, argv, self, &_global_svn_swig_rb_pool, &$1);
   _global_pool = $1;
-  svn_swig_rb_push_pool(_global_rb_pool);
+  svn_swig_rb_push_pool(_global_svn_swig_rb_pool);
 }
 
 %typemap(ruby, default) (svn_client_ctx_t *ctx, apr_pool_t *pool)
-     (VALUE _global_rb_pool, apr_pool_t *_global_pool) {
+     (VALUE _global_svn_swig_rb_pool, apr_pool_t *_global_pool)
+{
   int adjusted_argc = argc;
   VALUE *adjusted_argv = argv;
 
-  svn_swig_rb_adjust_arg_for_client_ctx_and_pool(&adjusted_argc, &adjusted_argv);
-  svn_swig_rb_get_pool(adjusted_argc, adjusted_argv, self, &_global_rb_pool, &$2);
+  svn_swig_rb_adjust_arg_for_client_ctx_and_pool(&adjusted_argc,
+                                                 &adjusted_argv);
+  svn_swig_rb_get_pool(adjusted_argc, adjusted_argv, self,
+                       &_global_svn_swig_rb_pool, &$2);
   _global_pool = $2;
-  svn_swig_rb_push_pool(_global_rb_pool);
+  svn_swig_rb_push_pool(_global_svn_swig_rb_pool);
 }
 
-%typemap(ruby, argout) apr_pool_t *pool {
-  svn_swig_rb_set_pool($result, _global_rb_pool);
-  svn_swig_rb_pop_pool(_global_rb_pool);
+%typemap(ruby, argout) apr_pool_t *pool
+{
+  svn_swig_rb_set_pool($result, _global_svn_swig_rb_pool);
+  svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
 }
 
 #ifdef SWIGPERL
@@ -438,6 +463,7 @@
 
 %typemap(ruby, in) (svn_fs_warning_callback_t warning, void *warning_baton)
 {
+  svn_swig_rb_fs_warning_callback_baton_register($input, _global_pool);
   $1 = svn_swig_rb_fs_warning_callback;
   $2 = (void *)$input;
 }

@@ -26,22 +26,36 @@
     import libsvn.core, weakref
     self.__dict__["_parent_pool"] = \
       parent_pool or libsvn.core.application_pool;
-    self.__dict__["_is_valid"] = \
-      weakref.ref(self._parent_pool._is_valid)
+    if self.__dict__["_parent_pool"]:
+      self.__dict__["_is_valid"] = weakref.ref(
+        self.__dict__["_parent_pool"]._is_valid)
 
   def assert_valid(self):
     """Assert that this object is using valid pool memory"""
-    if self.__dict__.has_key("_is_valid"):
-      assert self._is_valid(), "Variable has already been deleted"
+    if "_is_valid" in self.__dict__:
+      assert self.__dict__["_is_valid"](), "Variable has already been deleted"
 
   def __getattr__(self, name):
     """Get an attribute from this object"""
-    self.assert_valid();
-    return _swig_getattr(self, self.__class__, name)
+    self.assert_valid()
+    value = _swig_getattr(self, self.__class__, name)
+    try:
+      old_dict = self.__dict__["_member_dicts"][name]
+      value.__dict__["_parent_pool"] = old_dict.get("_parent_pool")
+      value.__dict__["_member_dicts"] = old_dict.get("_member_dicts")
+      value.__dict__["_is_valid"] = old_dict.get("_is_valid")
+      value.assert_valid()
+    except KeyError:
+      pass
+    return value
 
   def __setattr__(self, name, value):
     """Set an attribute on this object"""
-    self.assert_valid();
+    self.assert_valid()
+    try:
+      self.__dict__.setdefault("_member_dicts",{})[name] = value.__dict__
+    except AttributeError:
+      pass
     return _swig_setattr(self, self.__class__, name, value)
 %}
 %enddef

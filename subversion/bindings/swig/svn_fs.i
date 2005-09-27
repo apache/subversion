@@ -181,4 +181,21 @@
 #endif
 %}
 
+#ifdef SWIGRUBY
+%ignore svn_fs_set_warning_func;
+#endif
+
 %include svn_fs_h.swg
+
+#ifdef SWIGRUBY
+%inline %{
+static void
+svn_fs_set_warning_func_wrapper(svn_fs_t *fs,
+                                svn_fs_warning_callback_t warning,
+                                void *warning_baton,
+                                apr_pool_t *pool)
+{
+  svn_fs_set_warning_func(fs, warning, warning_baton);
+}
+%}
+#endif

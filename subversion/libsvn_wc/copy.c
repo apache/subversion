@@ -310,7 +310,7 @@ post_copy_cleanup (svn_wc_adm_access_t *adm_access,
      hidden. */
 #ifdef APR_FILE_ATTR_HIDDEN
   {
-    const char *adm_dir = svn_path_join (path, SVN_WC_ADM_DIR_NAME, pool);
+    const char *adm_dir = svn_wc__adm_path (path, FALSE, pool, NULL);
     const char *path_apr;
     apr_status_t status;
     SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, adm_dir, pool));
@@ -547,9 +547,10 @@ svn_wc_copy2 (const char *src_path,
       strcmp (src_entry->repos, dst_entry->repos) != 0)
     return svn_error_createf
       (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
-       _("Cannot copy to '%s', as it is not from repository '%s'"),
+       _("Cannot copy to '%s', as it is not from repository '%s'; "
+         "it is from '%s'"),
        svn_path_local_style (svn_wc_adm_access_path (dst_parent), pool),
-       src_entry->repos);
+       src_entry->repos, dst_entry->repos);
   if (dst_entry->schedule == svn_wc_schedule_delete)
     return svn_error_createf
       (SVN_ERR_WC_INVALID_SCHEDULE, NULL,

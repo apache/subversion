@@ -113,7 +113,7 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
 
     case svn_wc__xfer_cp_and_translate:
       {
-        svn_subst_keywords_t *keywords;
+        apr_hash_t *keywords;
         const char *eol_str;
         svn_boolean_t special;
 
@@ -125,7 +125,7 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
         SVN_ERR (svn_wc__get_special (&special, full_dest_path, adm_access,
                                       pool));
 
-        SVN_ERR (svn_subst_copy_and_translate2 (full_from_path,
+        SVN_ERR (svn_subst_copy_and_translate3 (full_from_path,
                                                 full_dest_path,
                                                 eol_str,
                                                 TRUE,
@@ -144,7 +144,7 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
 
     case svn_wc__xfer_cp_and_detranslate:
       {
-        svn_subst_keywords_t *keywords;
+        apr_hash_t *keywords;
         const char *eol_str;
         svn_boolean_t special;
 
@@ -159,7 +159,7 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
         /* If any specific eol style was indicated, then detranslate
            back to repository normal form ("\n"), repairingly.  But if
            no style indicated, don't touch line endings at all. */
-        return svn_subst_copy_and_translate2 (full_from_path,
+        return svn_subst_copy_and_translate3 (full_from_path,
                                               full_dest_path,
                                               (eol_str ? "\n" : NULL),
                                               (eol_str ? TRUE : FALSE),  
@@ -218,7 +218,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
   const char *filepath;
   const char *tmp_text_base;
   svn_node_kind_t kind;
-  svn_subst_keywords_t *keywords;
+  apr_hash_t *keywords;
   apr_file_t *ignored;
   svn_boolean_t same, did_set;
   const char *tmp_wfile, *pdir, *bname;
@@ -265,7 +265,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
   SVN_ERR (svn_io_check_path (tmp_text_base, &kind, pool));
 
   if (kind == svn_node_file)
-    SVN_ERR (svn_subst_copy_and_translate2 (tmp_text_base,
+    SVN_ERR (svn_subst_copy_and_translate3 (tmp_text_base,
                                             tmp_wfile,
                                             eol_str,
                                             FALSE, /* don't repair eol */
@@ -274,7 +274,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
                                             special,
                                             pool));
   else
-    SVN_ERR (svn_subst_copy_and_translate2 (filepath,
+    SVN_ERR (svn_subst_copy_and_translate3 (filepath,
                                             tmp_wfile,
                                             eol_str,
                                             FALSE, /* don't repair eol */

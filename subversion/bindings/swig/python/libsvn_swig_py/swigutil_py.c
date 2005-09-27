@@ -110,6 +110,8 @@ int _global_svn_swig_py_is_local_pool = 0;
 static char assertValid[] = "assert_valid";
 static char parentPool[] = "_parent_pool";
 static char isValid[] = "_is_valid";
+static char wrap[] = "_wrap";
+static char unwrap[] = "_unwrap";
 static char setParentPool[] = "set_parent_pool";
 static char emptyTuple[] = "()";
 static char objectTuple[] = "(O)";
@@ -181,29 +183,24 @@ void svn_swig_get_application_pool(PyObject **py_pool, apr_pool_t **pool)
 }
 
 /* Set the parent pool of a proxy object */
-static int proxy_set_pool(PyObject *proxy, PyObject *pool)
+static int proxy_set_pool(PyObject **proxy, PyObject *pool)
 {
   PyObject *result;
 
-  if (proxy != NULL && PyObject_HasAttrString(proxy, setParentPool)) {
-    
+  if (*proxy != NULL) {
     if (pool == NULL) {
-      result = PyObject_CallMethod(proxy, setParentPool, emptyTuple);
+      if (PyObject_HasAttrString(*proxy, setParentPool)) {
+        result = PyObject_CallMethod(*proxy, setParentPool, emptyTuple);
+        if (result == NULL) {
+          return 1;
+        }
+        Py_DECREF(result);
+      }
     } else {
-      result = PyObject_CallMethod(proxy, setParentPool, objectTuple, pool);
+      result = PyObject_CallMethod(pool, wrap, objectTuple, *proxy);
+      Py_DECREF(*proxy);
+      *proxy = result;
     }
-    
-    if (result == NULL) {
-      return 1;
-    }
-    Py_DECREF(result);
-
-    result = PyObject_CallMethod(proxy, assertValid, emptyTuple);
-    if (result == NULL) {
-      return 1;
-    }
-    Py_DECREF(result);
-
   }
 
   return 0;
@@ -222,7 +219,7 @@ PyObject *svn_swig_NewPointerObj(void *obj, swig_type_info *type,
     return NULL;
   }
   
-  if (proxy_set_pool(proxy, pool)) {
+  if (proxy_set_pool(&proxy, pool)) {
     Py_DECREF(proxy);
     return NULL;
   }
@@ -253,6 +250,13 @@ int svn_swig_ConvertPtr(PyObject *input, void **obj, swig_type_info *type)
     }
     Py_DECREF(result);
   }
+  if (PyObject_HasAttrString(input, unwrap)) {
+    input = PyObject_CallMethod(input, unwrap, emptyTuple);
+    if (input == NULL) {
+      return 1;
+    }
+    Py_DECREF(input);
+  }
   return SWIG_ConvertPtr(input, obj, type, SWIG_POINTER_EXCEPTION | 0);
 }
 
@@ -281,6 +285,13 @@ void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum,
     } else {
       *py_pool = _global_svn_swig_py_pool;
     }
+  }
+  if (PyObject_HasAttrString(input, unwrap)) {
+    input = PyObject_CallMethod(input, unwrap, emptyTuple);
+    if (input == NULL) {
+      return NULL;
+    }
+    Py_DECREF((PyObject *) input);
   }
   return SWIG_MustGetPtr(input, type, argnum, SWIG_POINTER_EXCEPTION | 0);
 }
@@ -367,7 +378,7 @@ static PyObject *make_ob_pool(void *pool)
   apr_pool_cleanup_register((apr_pool_t *)pool, py_pool, 
     svn_swig_py_pool_decref, apr_pool_cleanup_null); 
   
-  if (proxy_set_pool(py_pool, NULL)) {
+  if (proxy_set_pool(&py_pool, NULL)) {
     Py_DECREF(py_pool);
     return NULL;
   }
@@ -1733,6 +1744,8 @@ svn_error_t *svn_swig_py_repos_authz_func(svn_boolean_t *allowed,
   PyObject *py_pool, *py_root;
   svn_error_t *err = SVN_NO_ERROR;
 
+  *allowed = TRUE;
+
   if (function == NULL || function == Py_None)
     return SVN_NO_ERROR;
 
@@ -1749,8 +1762,6 @@ svn_error_t *svn_swig_py_repos_authz_func(svn_boolean_t *allowed,
     err = callback_exception_error();
     goto finished; 
   }
-  
-  *allowed = TRUE;
 
   if ((result = PyObject_CallFunction(function, 
                                       (char *)"OsO", 

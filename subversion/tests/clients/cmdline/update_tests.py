@@ -998,7 +998,8 @@ def update_receive_illegal_name(sbox):
   # This tests the revision 4334 fix for issue #1068.
   
   legal_url = svntest.main.current_repo_url + '/A/D/G/svn'
-  illegal_url = svntest.main.current_repo_url + '/A/D/G/.svn'
+  illegal_url = (svntest.main.current_repo_url
+                 + '/A/D/G/' + svntest.main.get_admin_name())
   # Ha!  The client doesn't allow us to mkdir a '.svn' but it does
   # allow us to copy to a '.svn' so ...
   svntest.actions.run_and_verify_svn(None, None, [],

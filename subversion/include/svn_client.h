@@ -266,8 +266,6 @@ typedef struct svn_client_proplist_item_t
 
 /** Information about commits passed back to client from this module.
  *
- * ### This struct is soon going to be deprecated.
- *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 typedef struct svn_client_commit_info_t
@@ -777,7 +775,7 @@ svn_client_add (const char *path,
  * If @a paths contains URLs, use the authentication baton in @a ctx
  * and @a message to immediately attempt to commit the creation of the
  * directories in @a paths in the repository.  If the commit succeeds,
- * allocate (in @a pool) and populate @a *commit_info.
+ * allocate (in @a pool) and populate @a *commit_info_p.
  *
  * Else, create the directories on disk, and attempt to schedule them
  * for addition (using svn_client_add(), whose docstring you should
@@ -795,19 +793,19 @@ svn_client_add (const char *path,
  * @since New in 1.3.
  */
 svn_error_t *
-svn_client_mkdir2 (svn_commit_info_t **commit_info,
+svn_client_mkdir2 (svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *paths,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
 
 /** Same as svn_client_mkdir2(), but takes the @c svn_client_commit_info_t
- * for @a commit_info.
+ * for @a commit_info_p.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
-svn_client_mkdir (svn_client_commit_info_t **commit_info,
+svn_client_mkdir (svn_client_commit_info_t **commit_info_p,
                   const apr_array_header_t *paths,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
@@ -819,7 +817,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
  * @a ctx and @a ctx->log_msg_func/@a ctx->log_msg_baton to
  * immediately attempt to commit a deletion of the URLs from the
  * repository.  If the commit succeeds, allocate (in @a pool) and
- * populate @a *commit_info.  Every path must belong to the same
+ * populate @a *commit_info_p.  Every path must belong to the same
  * repository.
  *
  * Else, schedule the working copy paths in @a paths for removal from
@@ -845,7 +843,7 @@ svn_client_mkdir (svn_client_commit_info_t **commit_info,
  * @since New in 1.3.
  */
 svn_error_t *
-svn_client_delete2 (svn_commit_info_t **commit_info,
+svn_client_delete2 (svn_commit_info_t **commit_info_p,
                     const apr_array_header_t *paths,
                     svn_boolean_t force,
                     svn_client_ctx_t *ctx,
@@ -853,12 +851,12 @@ svn_client_delete2 (svn_commit_info_t **commit_info,
 
 
 /** Similar to svn_client_delete2(), but takes @c svn_client_commit_info_t
- * for @a commit_info.
+ * for @a commit_info_p.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
-svn_client_delete (svn_client_commit_info_t **commit_info,
+svn_client_delete (svn_client_commit_info_t **commit_info_p,
                    const apr_array_header_t *paths,
                    svn_boolean_t force,
                    svn_client_ctx_t *ctx,
@@ -869,7 +867,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
 /** Import file or directory @a path into repository directory @a url at
  * head, authenticating with the authentication baton cached in @a ctx, 
  * and using @a ctx->log_msg_func/@a ctx->log_msg_baton to get a log message 
- * for the (implied) commit.  Set @a *commit_info to the results of the 
+ * for the (implied) commit.  Set @a *commit_info_p to the results of the 
  * commit, allocated in @a pool.  If some components of @a url do not exist
  * then create parent directories as necessary.
  *
@@ -907,7 +905,7 @@ svn_client_delete (svn_client_commit_info_t **commit_info,
  *
  * @since New in 1.3.
  */
-svn_error_t *svn_client_import2 (svn_commit_info_t **commit_info,
+svn_error_t *svn_client_import2 (svn_commit_info_t **commit_info_p,
                                  const char *path,
                                  const char *url,
                                  svn_boolean_t nonrecursive,
@@ -918,11 +916,11 @@ svn_error_t *svn_client_import2 (svn_commit_info_t **commit_info,
 /**
  * Similar to svn_client_import2(), but with the @a no_ignore parameter 
  * always set to @c FALSE and using @c svn_client_commit_info_t for
- * @a commit_info.
+ * @a commit_info_p.
  * 
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
-svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
+svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info_p,
                                 const char *path,
                                 const char *url,
                                 svn_boolean_t nonrecursive,
@@ -934,7 +932,7 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
  * Commit files or directories into repository, authenticating with
  * the authentication baton cached in @a ctx, and using 
  * @a ctx->log_msg_func/@a ctx->log_msg_baton to obtain the log message. 
- * Set @a *commit_info to the results of the commit, allocated in @a pool.
+ * Set @a *commit_info_p to the results of the commit, allocated in @a pool.
  *
  * @a targets is an array of <tt>const char *</tt> paths to commit.  They 
  * need not be canonicalized nor condensed; this function will take care of
@@ -954,14 +952,14 @@ svn_error_t *svn_client_import (svn_client_commit_info_t **commit_info,
  *
  * Use @a pool for any temporary allocations.
  *
- * If no error is returned and @a (*commit_info)->revision is set to
+ * If no error is returned and @a (*commit_info_p)->revision is set to
  * @c SVN_INVALID_REVNUM, then the commit was a no-op; nothing needed to
  * be committed.
  *
  * @since New in 1.3.
  */
 svn_error_t *
-svn_client_commit3 (svn_commit_info_t **commit_info,
+svn_client_commit3 (svn_commit_info_t **commit_info_p,
                     const apr_array_header_t *targets,
                     svn_boolean_t recurse,
                     svn_boolean_t keep_locks,
@@ -969,14 +967,14 @@ svn_client_commit3 (svn_commit_info_t **commit_info,
                     apr_pool_t *pool);
 
 /** Similar to svn_client_commit3(), but uses @c svn_client_commit_info_t
- * for @a commit_info.
+ * for @a commit_info_p.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  *
  * @since New in 1.2.
  */
 svn_error_t *
-svn_client_commit2 (svn_client_commit_info_t **commit_info,
+svn_client_commit2 (svn_client_commit_info_t **commit_info_p,
                     const apr_array_header_t *targets,
                     svn_boolean_t recurse,
                     svn_boolean_t keep_locks,
@@ -990,7 +988,7 @@ svn_client_commit2 (svn_client_commit_info_t **commit_info,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *
-svn_client_commit (svn_client_commit_info_t **commit_info,
+svn_client_commit (svn_client_commit_info_t **commit_info_p,
                    const apr_array_header_t *targets,
                    svn_boolean_t nonrecursive,
                    svn_client_ctx_t *ctx,
@@ -1511,7 +1509,7 @@ svn_client_resolved (const char *path,
  * If @a dst_path is a URL, use the authentication baton 
  * in @a ctx and @a ctx->log_msg_func/@a ctx->log_msg_baton to immediately 
  * attempt to commit the copy action in the repository.  If the commit 
- * succeeds, allocate (in @a pool) and populate @a *commit_info.
+ * succeeds, allocate (in @a pool) and populate @a *commit_info_p.
  *
  * If @a dst_path is not a URL, then this is just a
  * variant of svn_client_add(), where the @a dst_path items are scheduled
@@ -1530,7 +1528,7 @@ svn_client_resolved (const char *path,
  * @since New in 1.3.
  */
 svn_error_t *
-svn_client_copy2 (svn_commit_info_t **commit_info,
+svn_client_copy2 (svn_commit_info_t **commit_info_p,
                   const char *src_path,
                   const svn_opt_revision_t *src_revision,
                   const char *dst_path,
@@ -1539,12 +1537,12 @@ svn_client_copy2 (svn_commit_info_t **commit_info,
 
 
 /** Similar to svn_client_copy2(), but uses @c svn_client_commit_info_t
- * for @a commit_info.
+ * for @a commit_info_p.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
-svn_client_copy (svn_client_commit_info_t **commit_info,
+svn_client_copy (svn_client_commit_info_t **commit_info_p,
                  const char *src_path,
                  const svn_opt_revision_t *src_revision,
                  const char *dst_path,
@@ -1566,7 +1564,7 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
  *     ctx->log_msg_baton are used to commit the move.
  *
  *   - The move operation will be immediately committed.  If the
- *     commit succeeds, allocate (in @a pool) and populate @a *commit_info.
+ *     commit succeeds, allocate (in @a pool) and populate @a *commit_info_p.
  *
  * If @a src_path is a working copy path:
  *
@@ -1598,22 +1596,22 @@ svn_client_copy (svn_client_commit_info_t **commit_info,
  * @since New in 1.3.
  */ 
 svn_error_t *
-svn_client_move3 (svn_commit_info_t **commit_info,
+svn_client_move3 (svn_commit_info_t **commit_info_p,
                   const char *src_path,
                   const char *dst_path,
                   svn_boolean_t force,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
 
-/** Similar to svn_client_move3(), but uses @c svn_client_commit_info
- * for @a commit_info.
+/** Similar to svn_client_move3(), but uses @c svn_client_commit_info_t
+ * for @a commit_info_p.
  *
  * @deprecated Provided for backward compatibility with the 1.2 API.
  *
  * @since New in 1.2.
  */
 svn_error_t *
-svn_client_move2 (svn_client_commit_info_t **commit_info,
+svn_client_move2 (svn_client_commit_info_t **commit_info_p,
                   const char *src_path,
                   const char *dst_path,
                   svn_boolean_t force,
@@ -1629,7 +1627,7 @@ svn_client_move2 (svn_client_commit_info_t **commit_info,
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */ 
 svn_error_t *
-svn_client_move (svn_client_commit_info_t **commit_info,
+svn_client_move (svn_client_commit_info_t **commit_info_p,
                  const char *src_path,
                  const svn_opt_revision_t *src_revision,
                  const char *dst_path,

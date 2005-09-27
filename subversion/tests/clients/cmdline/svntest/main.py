@@ -184,9 +184,10 @@ greek_state = wc.State('', {
 def get_admin_name():
   "Return name of SVN administrative subdirectory."
 
-  # todo: One day this sucker will try to intelligently discern what
-  # the admin dir is.  For now, '.svn' will suffice.
-  return '.svn'
+  if windows and os.environ.has_key('SVN_ASP_DOT_NET_HACK'):
+    return '_svn'
+  else:
+    return '.svn'
 
 def get_start_commit_hook_path(repo_dir):
   "Return the path of the start-commit-hook conf file in REPO_DIR."
@@ -275,6 +276,28 @@ def reset_config_dir():
   global default_config_dir
 
   config_dir = default_config_dir
+
+def create_config_dir(cfgdir,
+                      config_contents = '#\n',
+                      server_contents = '#\n'):
+  "Create config directories and files"
+
+  # config file names
+  cfgfile_cfg = os.path.join(cfgdir, 'config')
+  cfgfile_srv = os.path.join(cfgdir, 'server')
+
+  # create the directory
+  if not os.path.isdir(cfgdir):
+    os.makedirs(cfgdir)
+
+  fd = open(cfgfile_cfg, 'w')
+  fd.write(config_contents)
+  fd.close()
+
+  fd = open(cfgfile_srv, 'w')
+  fd.write(server_contents)
+  fd.close()
+
 
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):

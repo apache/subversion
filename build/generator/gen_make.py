@@ -112,10 +112,11 @@ class Generator(gen_base.GeneratorBase):
     for fname in self.includes:
       wrapper_fname = build_path_join(self.swig.proxy_dir,
         string.replace(build_path_basename(fname),".h","_h.swg"))
+      python_script = "$(abs_srcdir)/build/generator/swig/header_wrappers.py"
       self.ofile.write(
-        '%s: %s\n\tpython %s %s $(SWIG) $<\n' % ( 
-          wrapper_fname, fname,
-          "$(abs_srcdir)/build/generator/swig/header_wrappers.py", self.conf))
+        '%s: %s %s\n\t$(PYTHON) %s %s $(SWIG) $<\n' % ( 
+          wrapper_fname, fname, python_script,
+          python_script, self.conf))
       self.ofile.write(
         'swig-headers: %s\n' % wrapper_fname +
         'extraclean-swig-headers-%s:\n' % wrapper_fname + 
@@ -133,8 +134,8 @@ class Generator(gen_base.GeneratorBase):
     self.begin_section('SWIG external runtime')
 
     runtime = '%s/swig_python_external_runtime.swg' % self.swig.proxy_dir
-    build_runtime = 'python ' + \
-      '$(abs_srcdir)/build/generator/swig/external_runtime.py ' + \
+    python_script = "$(abs_srcdir)/build/generator/swig/external_runtime.py"
+    build_runtime = '$(PYTHON) %s ' % python_script + \
       '$(abs_srcdir)/build.conf "$(SWIG)"'
     self.ofile.write(
       '%s:\n' % runtime +
@@ -522,6 +523,7 @@ class Generator(gen_base.GeneratorBase):
     standalone.write('abs_srcdir = %s\n' % os.getcwd())
     standalone.write('abs_builddir = %s\n' % os.getcwd())
     standalone.write('SWIG = swig\n')
+    standalone.write('PYTHON = python\n')
     swig_includes = ['-DSVN_SWIG_VERSION=%d' % self.swig.version(),
                      '-Iapr/include', '-Iapr-util/include']
     for dirs in self.include_dirs, self.swig_include_dirs:

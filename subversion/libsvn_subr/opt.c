@@ -650,7 +650,15 @@ svn_opt_args_to_target_array2 (apr_array_header_t **targets_p,
           /* If the target has the same name as a Subversion
              working copy administrative dir, skip it. */
           base_name = svn_path_basename (target, pool);
-          if (! strcmp (base_name, SVN_WC_ADM_DIR_NAME))
+          /* FIXME:
+             The canonical list of administrative directory names is
+             maintained in libsvn_wc/adm_files.c:svn_wc_set_adm_dir().
+             That list can't be used here, because that use would
+             create a circular dependency between libsvn_wc and
+             libsvn_subr.  Make sure changes to the lists are always
+             synchronized! */
+          if (0 == strcmp (base_name, ".svn")
+              || 0 == strcmp (base_name, "_svn"))
             continue;
         }
 

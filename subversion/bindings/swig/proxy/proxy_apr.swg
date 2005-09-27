@@ -14,6 +14,31 @@
 
 %pythoncode %{
 application_pool = None
+class GenericSWIGWrapper:
+  def __init__(self, this, pool):
+    """Create new Generic SWIG wrapper object"""
+    import weakref
+    self.this = this
+    self._parent_pool = pool
+    self._is_valid = weakref.ref(pool._is_valid)
+
+  def set_parent_pool(self, pool):
+    """Set the parent pool of this object"""
+    self._parent_pool = pool
+
+  def valid(self):
+    """Is this object valid?"""
+    return self._is_valid()
+
+  def assert_valid(self):
+    """Assert that this object is still valid"""
+    assert self.valid(), "This object has already been destroyed"
+
+  def _unwrap(self):
+    """Return underlying SWIG object"""
+    self.assert_valid()
+    return self.this
+ 
 %}
 
 struct apr_pool_t {
@@ -91,6 +116,16 @@ struct apr_pool_t {
   
         # Mark pool as valid
         self._is_valid = lambda: 1
+
+      def _wrap(self, obj):
+        """Mark a SWIG object as owned by this pool"""
+        self.assert_valid()
+        if hasattr(obj, "set_parent_pool"):
+          obj.set_parent_pool(self)
+          return obj 
+        else:
+          return GenericSWIGWrapper(obj, self)
+
     %}
   }
 };

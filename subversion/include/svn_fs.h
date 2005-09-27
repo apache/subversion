@@ -59,7 +59,7 @@ typedef struct svn_fs_t svn_fs_t;
 #define SVN_FS_CONFIG_BDB_TXN_NOSYNC            "bdb-txn-nosync"
 #define SVN_FS_CONFIG_BDB_LOG_AUTOREMOVE        "bdb-log-autoremove"
 
-/* See also svn_fs_fs_type_t and svn_fs_type(). */
+/* See also svn_fs_type(). */
 /** @since New in 1.1. */
 #define SVN_FS_CONFIG_FS_TYPE                   "fs-type"
 /** @since New in 1.1. */
@@ -169,27 +169,23 @@ svn_error_t *svn_fs_create (svn_fs_t **fs_p, const char *path,
 svn_error_t *svn_fs_open (svn_fs_t **fs_p, const char *path,
                           apr_hash_t *config, apr_pool_t *pool);
 
-/** The back-end type of filesystem.  
- *
- * In general, this should make no difference in the filesystem's
- * behavior, but there are a few situations (such as backups) where
- * it can matter.  See also the @c SVN_FS_TYPE_* defined constants.
- *
- * @since New in 1.3.
- */
-typedef enum
-{
-  svn_fs_type_unknown = 0,   /* Back-end type not (yet) known. */
-  svn_fs_type_fsfs,          /* OS filesystem back end. */
-  svn_fs_type_bdb            /* Berkeley DB back end. */
-} svn_fs_fs_type_t;
-
 /**
- * Return the type of @a fs.
+ * Return, in @a *fs_type, a string identifying the back-end type of
+ * the Subversion filesystem located in @a path.  Allocate @a *fs_type
+ * in @a pool.
+ *
+ * The string should be equal to one of the @c SVN_FS_TYPE_* defined
+ * constants, unless the filesystem is a new back-end type added in
+ * a later version of Subversion.
+ *
+ * In general, the type should make no difference in the filesystem's
+ * semantics, but there are a few situations (such as backups) where
+ * it might matter.
  *
  * @since New in 1.3.
  */
-svn_fs_fs_type_t svn_fs_type (svn_fs_t *fs);
+svn_error_t *svn_fs_type (const char **fs_type, const char *path,
+                          apr_pool_t *pool);
 
 /**
  * Return the path to @a fs's repository, allocated in @a pool.
