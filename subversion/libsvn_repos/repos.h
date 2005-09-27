@@ -103,6 +103,9 @@ struct svn_repos_t
 
   /* The format number of this repository. */
   int format;
+
+  /* The FS backend in use within this repository. */
+  const char *fs_type;
 };
 
 

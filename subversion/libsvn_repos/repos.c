@@ -1501,7 +1501,7 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
 
 /* Allocate and return a new svn_repos_t * object, initializing the
    directory pathname members based on PATH.
-   The members FS and FORMAT are *not* initialized (they are null),
+   The members FS, FORMAT, and FS_TYPE are *not* initialized (they are null),
    and it it the caller's responsibility to fill them in if needed.  */
 static svn_repos_t *
 create_svn_repos_t (const char *path, apr_pool_t *pool)
@@ -1593,17 +1593,16 @@ lock_repos (svn_repos_t *repos,
             svn_boolean_t nonblocking,
             apr_pool_t *pool)
 {
-  const char *lockfile_path;
-  svn_error_t *err;
+  if (strcmp (repos->fs_type, SVN_FS_TYPE_BDB) == 0)
+    {
+      svn_error_t *err;
+      const char *lockfile_path = svn_repos_db_lockfile (repos, pool);
 
-  /* Get a filehandle for the repository's db lockfile. */
-  lockfile_path = svn_repos_db_lockfile (repos, pool);
-
-  err = svn_io_file_lock2 (lockfile_path, exclusive, nonblocking, pool);
-  if (err != NULL && APR_STATUS_IS_EAGAIN (err->apr_err))
-    return err;
-  SVN_ERR_W (err, _("Error opening db lockfile"));
-
+      err = svn_io_file_lock2 (lockfile_path, exclusive, nonblocking, pool);
+      if (err != NULL && APR_STATUS_IS_EAGAIN (err->apr_err))
+        return err;
+      SVN_ERR_W (err, _("Error opening db lockfile"));
+    }
   return SVN_NO_ERROR;
 }
 
@@ -1628,6 +1627,12 @@ svn_repos_create (svn_repos_t **repos_p,
   SVN_ERR_W (create_repos_structure (repos, path, pool),
              _("Repository creation failed"));
   
+  /* Discover the type of the filesystem we are about to create. */
+  repos->fs_type = apr_hash_get (fs_config, SVN_FS_CONFIG_FS_TYPE,
+                                 APR_HASH_KEY_STRING);
+  if (! repos->fs_type)
+    repos->fs_type = DEFAULT_FS_TYPE;
+
   /* Lock if needed. */
   SVN_ERR (lock_repos (repos, FALSE, FALSE, pool));
 
@@ -1736,6 +1741,9 @@ get_repos (svn_repos_t **repos_p,
 
   /* Verify the validity of our repository format. */
   SVN_ERR (check_repos_format (repos, pool));
+
+  /* Discover the FS type. */
+  SVN_ERR (svn_fs_type (&repos->fs_type, repos->db_path, pool));
 
   /* Lock if needed. */
   SVN_ERR (lock_repos (repos, exclusive, nonblocking, pool));
@@ -2026,6 +2034,7 @@ svn_repos_hotcopy (const char *src_path,
      so that we may open repository */
 
   dst_repos = create_svn_repos_t (dst_path, pool);
+  dst_repos->fs_type = src_repos->fs_type;
   dst_repos->format = src_repos->format;
 
   SVN_ERR (create_locks (dst_repos, pool));
