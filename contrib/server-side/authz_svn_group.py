@@ -103,7 +103,7 @@ class __authz_info:
 class __config:
   '''Handler configuration'''
 
-  GROUP_FILE = 'AuthzSVNGroupFile'
+  AUTHZ_FILE = 'AuthzSVNGroupFile'
   AUTHORITATIVE = 'AuthzSVNGroupAuthoritative'
 
   def __init__(self, req):
@@ -111,11 +111,11 @@ class __config:
     self.__authoritative = True
     cfg = req.get_options()
 
-    if cfg.has_key(self.GROUP_FILE):
-      self.__authz_file = cfg[self.GROUP_FILE]
+    if cfg.has_key(self.AUTHZ_FILE):
+      self.__authz_file = cfg[self.AUTHZ_FILE]
       if not os.path.exists(self.__authz_file):
         req.log_error(('%s: "%s" not found'
-                       % (self.GROUP_FILE, self.__authz_file)),
+                       % (self.AUTHZ_FILE, self.__authz_file)),
                       apache.APLOG_ERR)
         raise apache.SERVER_RETURN, apache.HTTP_INTERNAL_SERVER_ERROR
 
@@ -151,30 +151,32 @@ def __init_authz_info(req, cfg):
 
 
 def authzhandler(req):
+  '''The authorization handler.'''
   cfg = __config(req)
   if not __init_authz_info(req, cfg):
     return apache.DECLINED
 
   if cfg.authoritative():
-    unauthorized = apache.HTTP_FORBIDDEN
+    forbidden = apache.HTTP_FORBIDDEN
   else:
-    unauthorized = apache.DECLINED
+    forbidden = apache.DECLINED
 
   req.get_basic_auth_pw()
-  for authz in req.requires():
-    if authz == 'valid-user':
+  for requires in req.requires():
+    if requires == 'valid-user':
       if not __authz_svn_group_info.is_valid_user(req.user):
-        return unauthorized
-    elif authz.startswith('group '):
-      for group in authz.split()[1:]:
+        return forbidden
+    elif requires.startswith('group '):
+      for group in requires.split()[1:]:
         if __authz_svn_group_info.is_user_in_group(req.user, group):
           break
       else:
-        return unauthorized
-    elif authz.startswith('user '):
-      return apache.DECLINED           # Handled by the authen handler
+        return forbidden
+    elif requires.startswith('user '):
+      pass                             # Handled by the authen handler
     else:
-      req.log_error('Unknown directive "Require %s"' % authz, apache.APLOG_ERR)
+      req.log_error('Unknown directive "Require %s"' % requires,
+                    apache.APLOG_ERR)
       return apache.HTTP_INTERNAL_SERVER_ERROR
 
   return apache.OK
