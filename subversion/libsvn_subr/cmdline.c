@@ -52,18 +52,6 @@ static const char *input_encoding = NULL;
 static const char *output_encoding = NULL;
 
 
-/* Perform APR global initialization for Subversion. */
-static apr_status_t
-svn_apr_initialize (void)
-{
-  apr_status_t status;
-  status = apr_initialize();
-  if (!status)
-    status = apr_atomic_init (svn_pool_create (NULL));
-  return status;
-}
-
-
 int
 svn_cmdline_init (const char *progname, FILE *error_stream)
 {
@@ -141,7 +129,7 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
 
   /* Initialize the APR subsystem, and register an atexit() function
      to Uninitialize that subsystem at program exit. */
-  status = svn_apr_initialize();
+  status = apr_initialize();
   if (status)
     {
       if (error_stream)
