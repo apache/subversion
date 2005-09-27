@@ -2571,10 +2571,15 @@ Otherwise get only the actual file."
   (svn-status-get-specific-revision-internal (not arg) t))
 
 (defun svn-status-get-specific-revision-internal (&optional only-actual-file arg)
-  (let* ((file-names (if only-actual-file
+  (let* ((fl (if only-actual-file
+                 (list (svn-status-get-line-information))
+               (svn-status-marked-files)))
+         (file-names (if only-actual-file
                          (list (svn-status-line-info->filename (svn-status-get-line-information)))
                        (svn-status-marked-file-names)))
-         (revision (if arg (svn-status-read-revision-string "Get files for version: " "PREV") "BASE"))
+         (revision (if arg
+                       (svn-status-read-revision-string "Get files for version: " "PREV")
+                     (if (svn-status-line-info->update-available (car fl)) "HEAD" "BASE")))
          (file-name)
          (file-name-with-revision))
     (message "Getting revision %s for %S" revision file-names)
