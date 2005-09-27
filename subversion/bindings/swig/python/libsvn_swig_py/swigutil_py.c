@@ -16,6 +16,8 @@
  * ====================================================================
  */
 
+/* Tell swigutil_py.h that we're inside the implementation */
+#define SVN_SWIG_SWIGUTIL_PY_C
 
 #include <Python.h>
 
