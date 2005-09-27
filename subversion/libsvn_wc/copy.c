@@ -523,8 +523,7 @@ svn_wc_copy2 (const char *src_path,
 
   SVN_ERR (svn_wc_entry (&dst_entry, svn_wc_adm_access_path (dst_parent),
                          dst_parent, FALSE, pool));
-  SVN_ERR (svn_wc_entry (&src_entry, svn_wc_adm_access_path (adm_access),
-                         adm_access, FALSE, pool));
+  SVN_ERR (svn_wc_entry (&src_entry, src_path, adm_access, FALSE, pool));
   if ((src_entry->repos != NULL && dst_entry->repos != NULL) &&
       strcmp (src_entry->repos, dst_entry->repos) != 0)
     return svn_error_createf
