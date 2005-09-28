@@ -899,6 +899,14 @@ svn_io_file_rename (const char *from_path, const char *to_path,
                     apr_pool_t *pool);
 
 
+/** Move the file from @a from_path to @a to_path.
+ * Overwrite @a to_path if it exists.
+ */
+svn_error_t *
+svn_io_file_move (const char *from_path, const char *to_path,
+                  apr_pool_t *pool);
+
+
 /** Wrapper for apr_dir_make(), which see.  @a path is utf8-encoded. */
 svn_error_t *
 svn_io_dir_make (const char *path, apr_fileperms_t perm, apr_pool_t *pool);
