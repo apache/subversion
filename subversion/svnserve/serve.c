@@ -1597,7 +1597,7 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_array_header_t *path_revs;
   const char *comment;
   svn_boolean_t steal_lock;
-  apr_size_t i;
+  int i;
   apr_pool_t *subpool;
   const char *path;
   const char *full_path;
@@ -1710,7 +1710,7 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   server_baton_t *b = baton;
   svn_boolean_t break_lock;
   apr_array_header_t *unlock_tokens;
-  apr_size_t i;
+  int i;
   apr_pool_t *subpool;
   const char *path;
   const char *full_path;
