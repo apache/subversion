@@ -1,0 +1,22 @@
+This file tracks the status of releases in the 1.3.x line.
+
+See "Stabilizing and maintaining releases" in trunk/HACKING for
+details on how release lines and voting work, what kinds of bugs can
+delay a release, etc.
+
+Status of 1.3.0:
+================
+
+Candidate changes:
+
+  * r16329, r16330
+    Address non-atomicity problem introduced in r16293.
+    Justification:
+      Prevents atomicity problems and limits copy-attempt to
+      cross-device renames.
+    Votes:
+      +1: dionisos
+
+Approved changes (further review is welcome, but not required):
+
+(there are currently no approved changes)
