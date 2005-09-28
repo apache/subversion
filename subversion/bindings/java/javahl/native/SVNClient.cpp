@@ -245,8 +245,8 @@ void SVNClient::statusReceiver(void *baton, const char *path,
     if(JNIUtil::isJavaExceptionThrown())
         return;
 
-    // we don't create here java Status object as we don't want too many local 
-    // references
+    // Avoid creating Java Status objects here, as there could be
+    // many, and we don't want too many local JNI references.
     status_baton *statusBaton = (status_baton*)baton;
     status_entry statusEntry;
     statusEntry.path = apr_pstrdup(statusBaton->pool,path);
