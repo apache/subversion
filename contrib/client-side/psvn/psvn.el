@@ -252,6 +252,10 @@ Otherwise: Don't display a header line")
   "*Arguments to pass to svn log.
 \(used in `svn-status-show-svn-log'; override these by giving prefixes\).")
 
+(defvar svn-status-default-commit-arguments ""
+  "*Arguments to pass to svn commit.
+If you dont't like recursive commits, set this value to \"-N\".")
+
 (defvar svn-status-default-diff-arguments nil
   "*A list of arguments that is passed to the svn diff command.
   If you'd like to supress whitespace changes use the following value:
@@ -3086,7 +3090,8 @@ Commands:
       (svn-status-create-arg-file svn-status-temp-arg-file ""
                                   svn-status-files-to-commit "")
       (svn-run-svn t t 'commit "commit" "--targets" svn-status-temp-arg-file
-                   "-F" svn-status-temp-file-to-remove))
+                   "-F" svn-status-temp-file-to-remove
+                   svn-status-default-commit-arguments))
     (set-window-configuration svn-status-pre-commit-window-configuration)
     (message "svn-log editing done")))
 
