@@ -115,13 +115,13 @@
 %typemap(ruby, in) (svn_ra_lock_callback_t lock_func, void *lock_baton)
 {
   $1 = svn_swig_rb_ra_lock_callback;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 %typemap(ruby, in) (svn_ra_file_rev_handler_t handler, void *handler_baton)
 {
   $1 = svn_swig_rb_ra_file_rev_handler;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 %typemap(perl5, in) apr_hash_t *lock_tokens {
