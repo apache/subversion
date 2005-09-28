@@ -107,7 +107,7 @@
 %typemap(ruby, in) (svn_repos_history_func_t history_func, void *history_baton)
 {
   $1 = svn_swig_rb_repos_history_func;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -149,7 +149,7 @@
     $2 = NULL;
   } else {
     $1 = svn_swig_rb_repos_authz_func;
-    $2 = (void *)$input;
+    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
   }
 }
 
@@ -161,7 +161,7 @@
 %typemap(ruby, in) (svn_error_t *(*)(void *baton) start_callback, void *start_callback_baton)
 {
   $1 = svn_swig_rb_just_call;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 */
 
@@ -173,7 +173,7 @@
                     void *handler_baton)
 {
   $1 = svn_swig_rb_repos_file_rev_handler;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -184,7 +184,7 @@
                     void *authz_read_baton)
 {
   $1 = svn_swig_rb_repos_authz_func;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -195,7 +195,7 @@
                     void *authz_baton)
 {
   $1 = svn_swig_rb_repos_authz_callback;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------

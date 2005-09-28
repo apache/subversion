@@ -105,7 +105,7 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
                                   "void *", _global_pool);
   } else {
     $1 = svn_swig_rb_txdelta_window_handler;
-    $2 = (void *)$input;
+    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
   }
 }
 
@@ -122,7 +122,7 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
                     void *callback_baton)
 {
   $1 = svn_swig_rb_delta_path_driver_cb_func;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* ----------------------------------------------------------------------- */

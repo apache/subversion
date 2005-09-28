@@ -211,7 +211,7 @@
 %typemap(ruby, in) (svn_wc_notify_func2_t notify_func, void *notify_baton)
 {
   $1 = svn_swig_rb_notify_func2;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -223,7 +223,7 @@
                     void *walk_baton)
 {
   $1 = svn_swig_rb_wc_entry_callbacks();
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -252,7 +252,7 @@
                     void *status_baton)
 {
   $1 = svn_swig_rb_wc_status_func;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -264,7 +264,7 @@
                     void *callback_baton)
 {
   $1 = svn_swig_rb_wc_diff_callbacks2();
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -276,7 +276,7 @@
                     void *validator_baton)
 {
   $1 = svn_swig_rb_wc_relocation_validator;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* ----------------------------------------------------------------------- */

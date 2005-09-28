@@ -144,7 +144,7 @@
 %typemap(ruby, in) (svn_fs_get_locks_callback_t get_locks_func, void *get_locks_baton)
 {
   $1 = svn_swig_rb_fs_get_locks_callback;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------

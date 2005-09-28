@@ -535,13 +535,13 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %typemap(ruby, in) (svn_config_enumerator2_t callback, void *baton)
 {
   $1 = svn_swig_rb_config_enumerator;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 };
 
 %typemap(ruby, in) (svn_config_section_enumerator2_t callback, void *baton)
 {
   $1 = svn_swig_rb_config_section_enumerator;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 };
 
 %typemap(python,in,numinputs=0) apr_hash_t **cfg_hash = apr_hash_t **OUTPUT;
