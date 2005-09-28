@@ -901,6 +901,8 @@ svn_io_file_rename (const char *from_path, const char *to_path,
 
 /** Move the file from @a from_path to @a to_path.
  * Overwrite @a to_path if it exists.
+ *
+ * @since New in 1.3.
  */
 svn_error_t *
 svn_io_file_move (const char *from_path, const char *to_path,
