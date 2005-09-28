@@ -369,7 +369,7 @@ const char *svn_wc_get_adm_dir (apr_pool_t *pool);
  * The list of valid names is limited.  Currently only ".svn" (the
  * default) and "_svn" are allowed.
  *
- * @note This function changes global (per-process) state and ,ist be
+ * @note This function changes global (per-process) state and must be
  * called in a single-threaded context during the initialization of a
  * Subversion client.
  *
