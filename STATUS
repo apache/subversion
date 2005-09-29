@@ -26,14 +26,14 @@ Candidate changes:
       +1: brane (r16333 only)
       +1: philip
 
+Approved changes (further review is welcome, but not required):
+
+(there are currently no approved changes)
+
   * r16338, r16342
     Fix memory leak of Ruby bindings.
     Justification:
       Memory leak is a critical bug.
     Votes:
-      +1: kou
+      +1: kou, dlr
       +0: blair (concept, haven't reviewed the changes)
-
-Approved changes (further review is welcome, but not required):
-
-(there are currently no approved changes)
