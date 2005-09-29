@@ -1596,7 +1596,7 @@ typedef struct svn_wc_status2_t
    */
   const char *ood_last_cmt_author;
 
-/** @} */
+  /** @} */
 
 } svn_wc_status2_t;
 
