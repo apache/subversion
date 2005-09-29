@@ -26,6 +26,16 @@ Candidate changes:
       +1: brane (r16333 only)
       +1: philip
 
+  * r16344
+    Provide more complete server-side information about working copy
+    items which are out of date in the repository.
+    Justification:
+      This info is extremely useful to Subversion clients; the first
+      consumer is likely to be the "Synchronize" view of the Subclipse
+      plug-in for the Eclipse IDE.
+    Votes:
+      +1: dlr
+
 Approved changes (further review is welcome, but not required):
 
 (there are currently no approved changes)
