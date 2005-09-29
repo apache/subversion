@@ -27,6 +27,7 @@ Candidate changes:
       Invalid dumpfiles are not nice.
     Votes:
       +1: cmpilato
+      +0: dlr (concept, new to this area of the code)
 
 Approved changes (further review is welcome, but not required):
 
