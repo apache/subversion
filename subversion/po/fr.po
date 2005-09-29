@@ -78,6 +78,7 @@ msgstr "Option 'incremental' valide seulement en mode XML"
 # a lock-token: une marque de verrou ? un nom de verrou ?? 
 # a repository back-end (FS - file system) : "stockage de dépôt" ?
 # a repository access (RA) module : module d'accès au dépôt
+# a pegged revision : révision fixée
 #
 # fulltext: texte complet
 # version control: gestion(naire) de version ?
@@ -1957,7 +1958,7 @@ msgstr "Essayer plutôt 'svn revert --recursive' ?"
 #: clients/cmdline/status.c:261
 #, c-format
 msgid "'%s' has lock token, but no lock owner"
-msgstr ""
+msgstr "'%s' possède un verrou local, mais pas de propriétaire de verrou"
 
 #: clients/cmdline/switch-cmd.c:58
 #, c-format
@@ -2335,7 +2336,7 @@ msgstr "Le nom ne réfère pas à un fichier du système de fichiers"
 
 #: include/svn_error_codes.h:458
 msgid "Name is not a single path component"
-msgstr ""
+msgstr "Le nom n'est pas un composant simple de chemin"
 
 #: include/svn_error_codes.h:462
 msgid "Attempt to change immutable filesystem node"
@@ -2348,15 +2349,16 @@ msgstr "L'élément exite déjà dans le système de fichiers"
 
 #: include/svn_error_codes.h:470
 msgid "Attempt to remove or recreate fs root dir"
-msgstr ""
+msgstr "Tentative de suppression ou de recréation du répertoire racine "
+"du système de fichiers"
 
 #: include/svn_error_codes.h:474
 msgid "Object is not a transaction root"
-msgstr ""
+msgstr "L'objet n'est pas une racine de transaction"
 
 #: include/svn_error_codes.h:478
 msgid "Object is not a revision root"
-msgstr ""
+msgstr "L'objet n'est pas une racine de révision"
 
 #: include/svn_error_codes.h:482
 msgid "Merge conflict during commit"
@@ -2364,11 +2366,11 @@ msgstr "Fusion conflictuelle lors d'une propagation (commit)"
 
 #: include/svn_error_codes.h:486
 msgid "A representation vanished or changed between reads"
-msgstr ""
+msgstr "Une représentation a disparu ou changé entre deux lectures"
 
 #: include/svn_error_codes.h:490
 msgid "Tried to change an immutable representation"
-msgstr ""
+msgstr "Tentative de changement d'une représentation non-modifiable"
 
 #: include/svn_error_codes.h:494
 msgid "Malformed skeleton data"
@@ -2376,7 +2378,7 @@ msgstr ""
 
 #: include/svn_error_codes.h:498
 msgid "Transaction is out of date"
-msgstr ""
+msgstr "La transaction est obsolète"
 
 #: include/svn_error_codes.h:502
 msgid "Berkeley DB error"
@@ -2452,7 +2454,7 @@ msgstr "Arguments fournis incorrects"
 
 #: include/svn_error_codes.h:594
 msgid "A report cannot be generated because no data was supplied"
-msgstr ""
+msgstr "Un rapport ne peut être généré car aucune donnée n'a été fournie"
 
 #: include/svn_error_codes.h:598
 msgid "Bogus revision report"
@@ -2508,27 +2510,27 @@ msgstr ""
 
 #: include/svn_error_codes.h:668
 msgid "RA layer failed to init socket layer"
-msgstr ""
+msgstr "La couche RA n'a pu initialiser la couche socket"
 
 #: include/svn_error_codes.h:672
 msgid "RA layer failed to create HTTP request"
-msgstr ""
+msgstr "La couche RA n'a pu créer l'en-tête HTTP"
 
 #: include/svn_error_codes.h:676
 msgid "RA layer request failed"
-msgstr ""
+msgstr "La requête de la couche RA a échoué"
 
 #: include/svn_error_codes.h:680
 msgid "RA layer didn't receive requested OPTIONS info"
-msgstr ""
+msgstr "La couche RA n'a pas reçu les informations d'OPTIONS demandées"
 
 #: include/svn_error_codes.h:684
 msgid "RA layer failed to fetch properties"
-msgstr ""
+msgstr "La couche RA n'a pu aller chercher les propriétés"
 
 #: include/svn_error_codes.h:688
 msgid "RA layer file already exists"
-msgstr ""
+msgstr "Le fichier existe (couche RA)"
 
 #: include/svn_error_codes.h:692
 msgid "Invalid configuration value"
@@ -2540,17 +2542,17 @@ msgstr "Chemin HTTP non trouvé"
 
 #: include/svn_error_codes.h:700
 msgid "Failed to execute WebDAV PROPPATCH"
-msgstr ""
+msgstr "Échec lors de l'exécution de WebDAV PROPPATCH"
 
 #: include/svn_error_codes.h:705 include/svn_error_codes.h:741
 #: libsvn_ra_svn/marshal.c:603 libsvn_ra_svn/marshal.c:711
 #: libsvn_ra_svn/marshal.c:738
 msgid "Malformed network data"
-msgstr ""
+msgstr "Donnée du réseau malformée"
 
 #: include/svn_error_codes.h:710
 msgid "Unable to extract data from response header"
-msgstr ""
+msgstr "Impossible d'extraire les données de l'en-tête de réponse"
 
 #: include/svn_error_codes.h:716 include/svn_error_codes.h:745
 msgid "Couldn't find a repository"
@@ -2566,15 +2568,15 @@ msgstr ""
 
 #: include/svn_error_codes.h:729
 msgid "Unknown svn protocol command"
-msgstr ""
+msgstr "Commande du protocole svn inconnue"
 
 #: include/svn_error_codes.h:733
 msgid "Network connection closed unexpectedly"
-msgstr ""
+msgstr "La connection réseau a été fermée de façon inattendue"
 
 #: include/svn_error_codes.h:737
 msgid "Network read/write error"
-msgstr ""
+msgstr "Erreur d'écriture/lecture réseau"
 
 #: include/svn_error_codes.h:749
 msgid "Client/server version mismatch"
@@ -2582,19 +2584,19 @@ msgstr "Versions client/serveur incompatibles"
 
 #: include/svn_error_codes.h:757
 msgid "Credential data unavailable"
-msgstr ""
+msgstr "Données d'identité (credentials) non disponibles"
 
 #: include/svn_error_codes.h:761
 msgid "No authentication provider available"
-msgstr ""
+msgstr "Aucun fournisseur d'authentification disponible"
 
 #: include/svn_error_codes.h:765 include/svn_error_codes.h:769
 msgid "All authentication providers exhausted"
-msgstr ""
+msgstr "Tous les fournisseurs d'authentifications sont épuisés"
 
 #: include/svn_error_codes.h:775
 msgid "Read access denied for root of edit"
-msgstr ""
+msgstr "Accès en lecture refusé pour la racine de l'édition"
 
 #: include/svn_error_codes.h:780
 msgid "Item is not readable"
@@ -2614,11 +2616,11 @@ msgstr "Éléments non accessibles en écriture"
 
 #: include/svn_error_codes.h:800
 msgid "Svndiff data has invalid header"
-msgstr ""
+msgstr "Les données de svndiff contiennent un en-tête invalide"
 
 #: include/svn_error_codes.h:804
 msgid "Svndiff data contains corrupt window"
-msgstr ""
+msgstr "Les données de svndiff contiennent une fenêtre corrompue"
 
 #: include/svn_error_codes.h:808
 msgid "Svndiff data contains backward-sliding source view"
@@ -2626,19 +2628,19 @@ msgstr ""
 
 #: include/svn_error_codes.h:812
 msgid "Svndiff data contains invalid instruction"
-msgstr ""
+msgstr "Les données de svndiff contiennent une instruction invalide"
 
 #: include/svn_error_codes.h:816
 msgid "Svndiff data ends unexpectedly"
-msgstr ""
+msgstr "Les données de svndiff se terminent de façon inattendue"
 
 #: include/svn_error_codes.h:822
 msgid "Apache has no path to an SVN filesystem"
-msgstr ""
+msgstr "Apache n'a pas de chemin vers un système de fichier SVN"
 
 #: include/svn_error_codes.h:826
 msgid "Apache got a malformed URI"
-msgstr ""
+msgstr "Apache a reçu une URI malformé"
 
 #: include/svn_error_codes.h:830
 msgid "Activity not found"
@@ -2702,7 +2704,7 @@ msgstr "Mauvais nom de propriété"
 
 #: include/svn_error_codes.h:895
 msgid "Two versioned resources are unrelated"
-msgstr ""
+msgstr "Les deux ressources versionnées ne sont pas apparentées"
 
 #: include/svn_error_codes.h:900
 msgid "Path has no lock token"
@@ -2714,11 +2716,11 @@ msgstr "Une erreur est survenue; voir erreurs suivantes pour plus de détails"
 
 #: include/svn_error_codes.h:910
 msgid "Failure loading plugin"
-msgstr ""
+msgstr "Erreur lors du chargement du plugin"
 
 #: include/svn_error_codes.h:914
 msgid "Malformed file"
-msgstr ""
+msgstr "Fichier malformé"
 
 #: include/svn_error_codes.h:918
 msgid "Incomplete data"
@@ -2947,11 +2949,12 @@ msgstr "Erreur en déverrouillant des répertoires verrouillés, détails :"
 
 #: libsvn_client/commit.c:895
 msgid "Error bumping revisions post-commit (details follow):"
-msgstr ""
+msgstr "Erreur en incrémentant les révisions après la propagation "
+"(post-commit), détails :"
 
 #: libsvn_client/commit.c:906 libsvn_client/copy.c:569
 msgid "Error in post-commit clean-up (details follow):"
-msgstr ""
+msgstr "Erreur lors du nettoyage d'après-propagation (post-commit), détails :"
 
 #: libsvn_client/commit.c:1220
 #, c-format
@@ -2969,7 +2972,7 @@ msgstr "Propagation non récursive de la suppression d'un répertoire impossible
 #: libsvn_client/commit_util.c:245 libsvn_client/commit_util.c:256
 #, c-format
 msgid "Unknown entry kind for '%s'"
-msgstr ""
+msgstr "Type d'entrée inconnu pour '%s'"
 
 #: libsvn_client/commit_util.c:273
 #, c-format
@@ -2984,12 +2987,13 @@ msgstr "Arrêt de la propagation : '%s' demeure en conflit"
 #: libsvn_client/commit_util.c:390
 #, c-format
 msgid "Did not expect '%s' to be a working copy root"
-msgstr ""
+msgstr "'%s' ne devrait pas être une racine de copie de travail"
 
 #: libsvn_client/commit_util.c:408
 #, c-format
 msgid "Commit item '%s' has copy flag but no copyfrom URL\n"
-msgstr ""
+msgstr "L'élément de propagation '%s' marqué pour copie sans URL "
+"d'origine (copyfrom)\n"
 
 #: libsvn_client/commit_util.c:683 libsvn_client/commit_util.c:813
 #: libsvn_client/copy.c:1072 libsvn_client/delete.c:67
@@ -3048,12 +3052,14 @@ msgstr ""
 #: libsvn_client/commit_util.c:1007
 #, c-format
 msgid "Commit item '%s' has copy flag but no copyfrom URL"
-msgstr ""
+msgstr "L'élément de propagation '%s' marqué pour copie sans URL "
+"d'origine (copyfrom)"
 
 #: libsvn_client/commit_util.c:1012
 #, c-format
 msgid "Commit item '%s' has copy flag but an invalid revision"
-msgstr ""
+msgstr "L'élément de propagation '%s' marqué pour copie avec une révision "
+"invalide"
 
 #: libsvn_client/copy.c:101 libsvn_client/copy.c:645 libsvn_client/copy.c:831
 #: libsvn_ra_dav/commit.c:1172
@@ -3235,7 +3241,7 @@ msgstr "Le répertoire '%s' n'a pas d'URL associée"
 
 #: libsvn_client/diff.c:2183
 msgid "At least one revision must be non-local for a pegged diff"
-msgstr ""
+msgstr "Au moins une révision ne doit pas être locale pour un diff avec révision fixée"
 
 #: libsvn_client/diff.c:2487 libsvn_client/diff.c:2493
 #: libsvn_client/diff.c:2608 libsvn_client/locking_commands.c:254
@@ -3327,7 +3333,8 @@ msgstr "L'URL '%s' n'existe pas à cette révision"
 #: libsvn_client/prop_commands.c:104
 #, c-format
 msgid "'%s' is a wcprop, thus not accessible to clients"
-msgstr ""
+msgstr "'%s' est une propriété de copie de travail donc inaccessible "
+"aux clients"
 
 #: libsvn_client/prop_commands.c:183
 #, c-format
@@ -3367,7 +3374,7 @@ msgstr "Pas d'entrée pour '%s'"
 #: libsvn_client/ra.c:493
 #, c-format
 msgid "Missing changed-path information for '%s' in revision %ld"
-msgstr ""
+msgstr "Information de modification manquante pour '%s' à la révision %ld"
 
 #: libsvn_client/ra.c:613
 #, c-format
@@ -3564,7 +3571,7 @@ msgstr "allouant un nouvel identifiant de copie ('next-key')"
 
 #: libsvn_fs_base/bdb/copies-table.c:130
 msgid "bumping next copy key"
-msgstr ""
+msgstr "incrémentant le prochain identifiant de copie"
 
 #: libsvn_fs_base/bdb/copies-table.c:169
 msgid "deleting entry from 'copies' table"
@@ -3580,12 +3587,13 @@ msgstr "allouant un nouvel identifiant de noeud ('next-key')"
 
 #: libsvn_fs_base/bdb/nodes-table.c:117
 msgid "bumping next node ID key"
-msgstr ""
+msgstr "incrémentant le prochain identifiant de noeud"
 
 #: libsvn_fs_base/bdb/nodes-table.c:154
 #, c-format
 msgid "Successor id '%s' (for '%s') already exists in filesystem '%s'"
-msgstr ""
+msgstr "L'identifiant suivant '%s' (pour '%s') existe déjà dans le "
+"système de fichiers '%s'"
 
 #: libsvn_fs_base/bdb/nodes-table.c:180
 msgid "deleting entry from 'nodes' table"
@@ -3620,7 +3628,7 @@ msgstr "allouant une nouvelle représentation (next-key)"
 
 #: libsvn_fs_base/bdb/reps-table.c:177
 msgid "bumping next representation key"
-msgstr ""
+msgstr "incrémentant le prochain identifiant de représentation"
 
 #. Handle any other error conditions.
 #: libsvn_fs_base/bdb/reps-table.c:205
@@ -4126,7 +4134,7 @@ msgstr ""
 #: libsvn_fs_base/tree.c:2377
 #, c-format
 msgid "Transaction '%s' out of date with respect to revision '%s'"
-msgstr ""
+msgstr "La transaction '%s' est obsolète par rapport à la révision '%s'"
 
 #: libsvn_fs_base/tree.c:2753 libsvn_fs_fs/tree.c:1892
 msgid "The root directory cannot be deleted"
@@ -4368,7 +4376,7 @@ msgstr ""
 
 #: libsvn_fs_fs/fs_fs.c:3858
 msgid "Transaction out of date"
-msgstr ""
+msgstr "Transaction obsolète"
 
 #: libsvn_fs_fs/fs_fs.c:4130
 msgid "No such transaction"
@@ -4433,7 +4441,7 @@ msgstr ""
 #: libsvn_ra_dav/commit.c:572
 #, c-format
 msgid "Your file or directory '%s' is probably out-of-date"
-msgstr ""
+msgstr "Le fichier ou répertoire '%s' est probablement obsolète"
 
 #: libsvn_ra_dav/commit.c:580
 msgid "The CHECKOUT response did not contain a 'Location:' header"
