@@ -9,7 +9,8 @@ Status of 1.3.0:
 
 Candidate changes:
 
-  * r16344
+  * r16344, r16347, r16358
+    Branch: (to be created)
     Provide more complete server-side information about working copy
     items which are out of date in the repository.
     Justification:
