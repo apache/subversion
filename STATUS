@@ -39,14 +39,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r16329, r16330
-    Address non-atomicity problem introduced in r16293.
-    Justification:
-      Prevents atomicity problems and limits copy-attempt to
-      cross-device renames.
-    Votes:
-      +1: dionisos, lundblad, dlr
-
   * r16338, r16342
     Fix memory leak of Ruby bindings.
     Justification:
