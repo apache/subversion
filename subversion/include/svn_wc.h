@@ -1591,7 +1591,8 @@ typedef struct svn_wc_status2_t
    */
   const char *ood_url;
 
-  /** Set to the user name of the youngeste commit, or @c NULL if out of date.
+  /** Set to the user name of the youngest commit, or @c NULL if out
+   * of date.
    * @since New in 1.3
    */
   const char *ood_last_cmt_author;
