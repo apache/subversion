@@ -351,15 +351,27 @@ svn_boolean_t svn_wc_is_adm_dir (const char *name, apr_pool_t *pool);
 
 
 /**
+ * Return the name of the administrative directory.
+ * Use @a pool for any temporary allocations.
+ *
+ * The returned pointer will refer to either a statically allocated
+ * string, or to a string allocated in @a pool.
+ *
+ * @since New in 1.3.
+ */
+const char *svn_wc_get_adm_dir (apr_pool_t *pool);
+
+
+/**
  * Use @a name for the administrative directory in the working copy.
  * Use @a pool for any temporary allocations.
  *
  * The list of valid names is limited.  Currently only ".svn" (the
  * default) and "_svn" are allowed.
  *
- * @note This function changes global (per-process) state and should,
- * to maintain consistency, be called in a single-threaded context
- * during the initialization of a Subversion client.
+ * @note This function changes global (per-process) state and must be
+ * called in a single-threaded context during the initialization of a
+ * Subversion client.
  *
  * @since New in 1.3.
  */
