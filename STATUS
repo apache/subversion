@@ -32,6 +32,7 @@ Candidate changes:
       Memory leak is a critical bug.
     Votes:
       +1: kou
+      +0: blair (concept, haven't reviewed the changes)
 
 Approved changes (further review is welcome, but not required):
 
