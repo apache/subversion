@@ -36,9 +36,16 @@ Candidate changes:
     Votes:
       +1: dlr
 
-Approved changes (further review is welcome, but not required):
+  * r16350
+    Fix issue #1911, where svndumpfilter generated invalid dumpfiles
+    when copies occurred and --drop-empty-revs and --renumber-revs
+    were in use.
+    Justification:
+      Invalid dumpfiles are not nice.
+    Votes:
+      +1: cmpilato
 
-(there are currently no approved changes)
+Approved changes (further review is welcome, but not required):
 
   * r16338, r16342
     Fix memory leak of Ruby bindings.
