@@ -17,13 +17,14 @@ Candidate changes:
     Votes:
       +1: dionisos, lundblad
 
-  * r16333
+  * r16333, r16335
     Remove use of atomics from svn_wc_set_adm_dir.
     Justification:
       Performance enhancement and API semantics simplification.
       This change was ready before the branch, but I forgot to commit it...
     Votes:
-      +1: brane
+      +1: brane (r16333 only)
+      +1: philip
 
 Approved changes (further review is welcome, but not required):
 
