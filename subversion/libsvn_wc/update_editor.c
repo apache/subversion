@@ -1943,17 +1943,7 @@ install_file (svn_wc_notify_state_t *content_state,
          pointing to parent_dir/.svn/tmp/text-base/basename.  */
       if (strcmp (final_location, new_text_path))
         {
-          svn_error_t *err =
-            svn_io_file_rename (new_text_path, final_location, pool);
-
-          if (err)
-            {
-              svn_error_clear (err);
-              SVN_ERR_W (svn_io_copy_file (new_text_path,
-                                           final_location, TRUE, pool),
-                         _("Move failed"));
-              SVN_ERR (svn_io_remove_file (new_text_path, pool));
-            }
+          SVN_ERR (svn_io_file_move (new_text_path, final_location, pool));
           new_text_path = final_location;
         }
     }
