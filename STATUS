@@ -17,7 +17,7 @@ Candidate changes:
     Votes:
       +1: maxb
 
-  * r16344, r16347, r16358
+  * r16344, r16347, r16358, 16375
     Branch: (to be created)
     Provide more complete server-side information about working copy
     items which are out of date in the repository.
