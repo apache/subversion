@@ -1508,11 +1508,9 @@ change_dir_prop (void *dir_baton,
     db->ood_last_cmt_author = apr_pstrdup (db->pool, value->data);
   else if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
     {
-      const char *time_str;
-      apr_time_t time;
-      SVN_ERR (svn_time_from_cstring (&time, value->data, db->pool));
-      time_str = svn_time_to_cstring (time, db->pool);
-      db->ood_last_cmt_date = time;
+      apr_time_t tm;
+      SVN_ERR (svn_time_from_cstring (&tm, value->data, db->pool));
+      db->ood_last_cmt_date = tm;
     }
 
   return SVN_NO_ERROR;
@@ -1712,10 +1710,9 @@ change_file_prop (void *file_baton,
                                            value->data);
   else if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
     {
-      apr_time_t time;
-      SVN_ERR (svn_time_from_cstring (&time, value->data,
-                                      fb->dir_baton->pool));
-      fb->ood_last_cmt_date = time;
+      apr_time_t tm;
+      SVN_ERR (svn_time_from_cstring (&tm, value->data, fb->dir_baton->pool));
+      fb->ood_last_cmt_date = tm;
     }
 
   return SVN_NO_ERROR;
