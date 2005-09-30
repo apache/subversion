@@ -15,7 +15,7 @@ Candidate changes:
     Justification:
       Correctness, and fixes SWIG Python and Perl tests.
     Votes:
-      +1: maxb
+      +1: maxb, dlr
 
   * r16344, r16347, r16358, 16375
     Branch: (to be created)
