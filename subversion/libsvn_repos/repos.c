@@ -1545,7 +1545,6 @@ create_svn_repos_t (const char *path, apr_pool_t *pool)
   repos->conf_path = svn_path_join (path, SVN_REPOS__CONF_DIR, pool);
   repos->hook_path = svn_path_join (path, SVN_REPOS__HOOK_DIR, pool);
   repos->lock_path = svn_path_join (path, SVN_REPOS__LOCK_DIR, pool);
-  repos->fs_type = DEFAULT_FS_TYPE;
 
   return repos;
 }
@@ -1660,18 +1659,16 @@ svn_repos_create (svn_repos_t **repos_p,
 {
   svn_repos_t *repos;
   svn_error_t *err;
-  const char *cfg_fs_type = NULL;
 
   /* Allocate a repository object, filling in the format we will create. */
   repos = create_svn_repos_t (path, pool);
   repos->format = SVN_REPOS__FORMAT_NUMBER;
 
   /* Discover the type of the filesystem we are about to create. */
-  if (fs_config)
-    cfg_fs_type = apr_hash_get (fs_config, SVN_FS_CONFIG_FS_TYPE,
-                                APR_HASH_KEY_STRING);
-  if (cfg_fs_type)
-    repos->fs_type = cfg_fs_type;
+  repos->fs_type = apr_hash_get (fs_config, SVN_FS_CONFIG_FS_TYPE,
+                                 APR_HASH_KEY_STRING);
+  if (! repos->fs_type)
+    repos->fs_type = DEFAULT_FS_TYPE;
 
   /* Create the various files and subdirectories for the repository. */
   SVN_ERR_W (create_repos_structure (repos, path, pool),
