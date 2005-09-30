@@ -53,15 +53,12 @@ struct apr_pool_t {
   
         # Protect important functions from GC
         self._apr_pool_destroy = _core.apr_pool_destroy
-        self._apr_terminate = _core.apr_terminate
         self._svn_swig_py_clear_application_pool = \
           _core.svn_swig_py_clear_application_pool
   
         # If we are an application-level pool,
-        # then initialize APR and set this pool
-        # to be the application-level pool
+        # then set this pool to be the application-level pool
         if not self._parent_pool:
-          apr_initialize()
           svn_swig_py_set_application_pool(self, self)
           application_pool = self
   
@@ -95,11 +92,10 @@ struct apr_pool_t {
         # Destroy pool
         self._apr_pool_destroy(self)
   
-        # Clear application pool and terminate APR if necessary
+        # Clear application pool if necessary
         if is_application_pool:
           application_pool = None
           self._svn_swig_py_clear_application_pool()
-          self._apr_terminate()
   
         del self._parent_pool
   
