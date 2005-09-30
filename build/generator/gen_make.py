@@ -13,6 +13,12 @@ _exec = generator.util.executable
 from gen_base import build_path_join, build_path_strip, build_path_splitfile, \
       build_path_basename, build_path_dirname, build_path_retreat, unique
 
+try:
+  True
+except NameError:
+  True = 1
+  False = 0
+
 class Generator(gen_base.GeneratorBase):
 
   _extension_map = {
@@ -25,6 +31,9 @@ class Generator(gen_base.GeneratorBase):
   def __init__(self, fname, verfname, options=None):
     gen_base.GeneratorBase.__init__(self, fname, verfname, options)
     self.section_counter = 0
+    self.assume_shared_libs = False
+    if ('--assume-shared-libs', '') in options:
+      self.assume_shared_libs = True
 
   def begin_section(self, description):
     self.section_counter = self.section_counter + 1
@@ -243,7 +252,8 @@ class Generator(gen_base.GeneratorBase):
             libs.append(link_dep.external_lib)
           else:
             # append the output of the target to our stated dependencies
-            deps.append(link_dep.filename)
+            if not self.assume_shared_libs:
+              deps.append(link_dep.filename)
 
             # link against the library
             libs.append(build_path_join(retreat, link_dep.filename))
