@@ -411,7 +411,7 @@
 %typemap(ruby, in) (svn_log_message_receiver_t receiver, 
                     void *receiver_baton) {
     $1 = svn_swig_rb_log_receiver;
-    $2 = (void *)$input;
+    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -429,7 +429,7 @@
 %typemap(ruby, in) (svn_commit_callback_t callback, void *callback_baton)
 {
   $1 = svn_swig_rb_commit_callback;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 };
 
 /* -----------------------------------------------------------------------
@@ -444,7 +444,7 @@
 %typemap(ruby, in) (svn_cancel_func_t cancel_func, void *cancel_baton)
 {
   $1 = svn_swig_rb_cancel_func;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -454,7 +454,7 @@
 %typemap(ruby, in) (svn_info_receiver_t receiver, void *receiver_baton)
 {
   $1 = svn_swig_rb_info_receiver;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -463,9 +463,10 @@
 
 %typemap(ruby, in) (svn_fs_warning_callback_t warning, void *warning_baton)
 {
-  svn_swig_rb_fs_warning_callback_baton_register($input, _global_pool);
+  VALUE baton = svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+  svn_swig_rb_fs_warning_callback_baton_register(baton, _global_pool);
   $1 = svn_swig_rb_fs_warning_callback;
-  $2 = (void *)$input;
+  $2 = (void *)baton;
 }
 
 /* -----------------------------------------------------------------------
