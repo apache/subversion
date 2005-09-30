@@ -1665,8 +1665,9 @@ svn_repos_create (svn_repos_t **repos_p,
   repos->format = SVN_REPOS__FORMAT_NUMBER;
 
   /* Discover the type of the filesystem we are about to create. */
-  repos->fs_type = apr_hash_get (fs_config, SVN_FS_CONFIG_FS_TYPE,
-                                 APR_HASH_KEY_STRING);
+  if (fs_config)
+    repos->fs_type = apr_hash_get (fs_config, SVN_FS_CONFIG_FS_TYPE,
+                                   APR_HASH_KEY_STRING);
   if (! repos->fs_type)
     repos->fs_type = DEFAULT_FS_TYPE;
 
