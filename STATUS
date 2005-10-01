@@ -89,6 +89,14 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r16360
+    Fix a compilation warning about an unused label on non-Windows OSes.
+    A follow-up to r16329.
+    Justification:
+      Provides a clean compile when all warnings are turned on.
+    Votes:
+      +1: dlr
+
 Approved changes (further review is welcome, but not required):
 
 (there are currently no approved changes)
