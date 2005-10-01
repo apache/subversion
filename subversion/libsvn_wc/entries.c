@@ -766,12 +766,7 @@ svn_wc_entry (const svn_wc_entry_t **entry,
   const char *entry_name;
   svn_wc_adm_access_t *dir_access;
 
-  if (strcmp (path, SVN_WC_ENTRY_THIS_DIR) == 0)
-    dir_access = adm_access;
-  else
-    SVN_ERR (svn_wc__adm_retrieve_internal (&dir_access,
-                                            adm_access, path, pool));
-
+  SVN_ERR (svn_wc__adm_retrieve_internal (&dir_access, adm_access, path, pool));
   if (! dir_access)
     {
       const char *dir_path, *base_name;
