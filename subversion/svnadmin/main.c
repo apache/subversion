@@ -33,6 +33,7 @@
 #include "svn_version.h"
 #include "svn_props.h"
 #include "svn_time.h"
+#include "svn_user.h"
 
 #include "svn_private_config.h"
 
@@ -1067,19 +1068,9 @@ subcommand_rmlocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* svn_fs_unlock() demands that some username be associated with the
      filesystem, so just use the UID of the person running 'svnadmin'.*/
-  {
-    apr_uid_t uid;
-    apr_gid_t gid;
-    char *un;
-    if (apr_uid_current (&uid, &gid, pool) == APR_SUCCESS &&
-        apr_uid_name_get (&un, uid, pool) == APR_SUCCESS)
-      {
-        err = svn_utf_cstring_to_utf8 (&username, un, pool);
-        svn_error_clear (err);
-        if (err)
-          username = "administrator";
-        }
-  }
+  username = svn_user_get_name(pool);
+  if (! username)
+    username = "administrator";
 
   /* Create an access context describing the current user. */
   SVN_ERR (svn_fs_create_access (&access, username, pool));
