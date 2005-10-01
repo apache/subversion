@@ -71,6 +71,24 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r16387
+    Fix issue 2406 - Do not pass URL-encoded hostname to ra_svn tunnel agent.
+    Justification:
+      Small bug, easy fix, of value to Windows users of PuTTY.
+    Votes:
+      +1: maxb
+
+  * r16388
+    Fix numerous bugs in the svn_fs_*berkeley*() APIs.
+    Fix issue 2361 (recover on a FSFS repository errors if BDB not linked).
+    Fix creation of BDB files in FSFS repositories by 'svnadmin recover',
+      'svnadmin list-dblogs' and 'svnadmin list-unused-dblogs'.
+    Justification:
+      Not vital, but the creation of Berkeley DB files in a FSFS repository
+      is a long standing bug which doesn't really give a good impression.
+    Votes:
+      +1: maxb
+
 Approved changes (further review is welcome, but not required):
 
 (there are currently no approved changes)
