@@ -37,6 +37,8 @@ SWIG_BUILD_DIR = $(abs_builddir)/subversion/bindings/swig
 
 EXTERNAL_PROJECT_DIRS = @SVN_SUBDIRS@
 
+SCHEMA_DIR = subversion/clients/cmdline/schema
+
 NEON_LIBS = @NEON_LIBS@
 SVN_APR_LIBS = @SVN_APR_LIBS@
 SVN_APRUTIL_LIBS = @SVN_APRUTIL_LIBS@
@@ -84,6 +86,7 @@ MSGFMT = @MSGFMT@
 MSGFMTFLAGS = @MSGFMTFLAGS@
 MSGMERGE = @MSGMERGE@
 XGETTEXT = @XGETTEXT@
+TRANG = @TRANG@
 
 PACKAGE_NAME=@PACKAGE_NAME@
 PACKAGE_VERSION=@PACKAGE_VERSION@
@@ -411,12 +414,12 @@ check-clean:
                tests.log
 
 mkdir-init:
-	@list='$(BUILD_DIRS) $(DOC_DIRS)';                  \
-        for i in $$list doc; do                         \
-            if [ ! -d $$i ]; then                       \
-                echo "mkdir $$i" ;                      \
-                $(MKDIR) $$i ;                          \
-            fi;                                         \
+	@list='$(BUILD_DIRS) $(DOC_DIRS) $(SCHEMA_DIR)'; \
+        for i in $$list doc; do                          \
+            if [ ! -d $$i ]; then                        \
+                echo "mkdir $$i" ;                       \
+                $(MKDIR) $$i ;                           \
+            fi;                                          \
         done
 
 # recursive targets to handle external projects (e.g. APR, Neon)
@@ -512,12 +515,36 @@ doc-clean:
                    *.dvi *.txt *.html *.ps *.pdf *.fo);     \
         done
 
+# Converting from the .rnc XML shcemas to various other schema formats.
+SCHEMAS_DTD = $(SCHEMA_DIR)/blame.dtd $(SCHEMA_DIR)/info.dtd \
+              $(SCHEMA_DIR)/list.dtd $(SCHEMA_DIR)/log.dtd \
+              $(SCHEMA_DIR)/status.dtd
+
+SCHEMAS_RNG = $(SCHEMA_DIR)/blame.rng $(SCHEMA_DIR)/info.rng \
+              $(SCHEMA_DIR)/list.rng $(SCHEMA_DIR)/log.rng \
+              $(SCHEMA_DIR)/status.rng
+
+SCHEMAS_XSD = $(SCHEMA_DIR)/blame.xsd $(SCHEMA_DIR)/info.xsd \
+              $(SCHEMA_DIR)/list.xsd $(SCHEMA_DIR)/log.xsd \
+              $(SCHEMA_DIR)/status.xsd
+
+schema: schema-rng schema-dtd schema-xsd
+
+schema-rng: $(SCHEMAS_RNG)
+schema-dtd: $(SCHEMAS_DTD)
+schema-xsd: $(SCHEMAS_XSD)
+
+$(SCHEMAS_RNG) $(SCHEMAS_DTD) $(SCHEMAS_XSD): $(SCHEMA_DIR)/common.rnc
+
+schema-clean:
+	(cd $(SCHEMA_DIR) && rm -f *.rng *.dtd *.xsd)
+
 #
 # Implicit rules for creating outputs from input files
 #
 .SUFFIXES:
 .SUFFIXES: .c .lo .o .la-a .la .texi .info .dvi .txt .html .ps .pdf \
-           .po .spo .mo
+           .po .spo .mo .rnc .rng .dtd .xsd
 
 .c.o:
 	$(COMPILE) -o $@ -c $<
@@ -563,6 +590,14 @@ doc-clean:
 @GETTEXT_CODESET@.po.mo:
 @GETTEXT_CODESET@	$(MSGFMT) $(MSGFMTFLAGS) -o $@ $<
 
+.rnc.rng:
+	@TRANG@ $< $@
+
+.rnc.dtd:
+	@TRANG@ $< $@
+
+.rnc.xsd:
+	@TRANG@ $< $@
 
 install-docs: install-man @INSTALL_INFO@
 
