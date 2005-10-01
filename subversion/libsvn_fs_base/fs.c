@@ -555,7 +555,8 @@ static fs_vtable_t fs_vtable = {
   svn_fs_base__generate_lock_token,
   svn_fs_base__unlock,
   svn_fs_base__get_lock,
-  svn_fs_base__get_locks
+  svn_fs_base__get_locks,
+  base_bdb_set_errcall,
 };
 
 /* Where the format number is stored. */
@@ -1366,7 +1367,6 @@ static fs_library_vtable_t library_vtable = {
   base_delete_fs,
   base_hotcopy,
   base_get_description,
-  base_bdb_set_errcall,
   base_bdb_recover,
   base_bdb_logfiles,
   svn_fs_base__id_parse

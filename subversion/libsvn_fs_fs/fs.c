@@ -116,6 +116,19 @@ fs_serialized_init (svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
 
 
 
+/* This function is provided for Subversion 1.0.x compatibility.  It
+   has no effect for fsfs backed Subversion filesystems.  It conforms
+   to the fs_library_vtable_t.bdb_set_errcall() API. */
+static svn_error_t *
+fs_set_errcall (svn_fs_t *fs,
+                void (*db_errcall_fcn) (const char *errpfx, char *msg))
+{
+
+  return SVN_NO_ERROR;
+}
+
+
+
 /* The vtable associated with a specific open filesystem. */
 static fs_vtable_t fs_vtable = {
   fs_serialized_init,
@@ -135,7 +148,8 @@ static fs_vtable_t fs_vtable = {
   svn_fs_fs__generate_lock_token,
   svn_fs_fs__unlock,
   svn_fs_fs__get_lock,
-  svn_fs_fs__get_locks
+  svn_fs_fs__get_locks,
+  fs_set_errcall
 };
 
 
@@ -201,19 +215,6 @@ fs_hotcopy (const char *src_path,
 
 
 
-/* This function is provided for Subversion 1.0.x compatibility.  It
-   has no effect for fsfs backed Subversion filesystems.  It conforms
-   to the fs_library_vtable_t.bdb_set_errcall() API. */
-static svn_error_t *
-fs_set_errcall (svn_fs_t *fs,
-                void (*db_errcall_fcn) (const char *errpfx, char *msg))
-{
-
-  return SVN_NO_ERROR;
-}
-
-
-
 /* This function is included for Subversion 1.0.x compatibility.  It has
    no effect for fsfs backed Subversion filesystems.  It conforms to
    the fs_library_vtable_t.bdb_recover() API. */
@@ -239,7 +240,7 @@ fs_logfiles (apr_array_header_t **logfiles,
              apr_pool_t *pool)
 {
   /* A no-op for FSFS. */
-  *logfiles = NULL;
+  *logfiles = apr_array_make (pool, 0, sizeof (const char *));
 
   return SVN_NO_ERROR;
 }
@@ -345,7 +346,6 @@ static fs_library_vtable_t library_vtable = {
   fs_delete_fs,
   fs_hotcopy,
   fs_get_description,
-  fs_set_errcall,
   fs_recover,
   fs_logfiles
 };

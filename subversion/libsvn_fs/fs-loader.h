@@ -75,9 +75,6 @@ typedef struct fs_library_vtable_t
 
   /* Provider-specific functions should go here, even if they could go
      in an object vtable, so that they are all kept together. */
-  svn_error_t *(*bdb_set_errcall) (svn_fs_t *fs,
-                                   void (*handler) (const char *errpfx,
-                                                    char *msg));
   svn_error_t *(*bdb_recover) (const char *path, apr_pool_t *pool);
   svn_error_t *(*bdb_logfiles) (apr_array_header_t **logfiles,
                                 const char *path, svn_boolean_t only_unused,
@@ -168,6 +165,9 @@ typedef struct fs_vtable_t
                              svn_fs_get_locks_callback_t get_locks_func,
                              void *get_locks_baton,
                              apr_pool_t *pool);
+  svn_error_t *(*bdb_set_errcall) (svn_fs_t *fs,
+                                   void (*handler) (const char *errpfx,
+                                                    char *msg));
 } fs_vtable_t;
 
 
