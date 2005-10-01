@@ -38,6 +38,39 @@ Candidate changes:
       +1: cmpilato
       +0: dlr (concept, new to this area of the code)
 
+  * r16372
+    Fix shell test in Makefile breaking swig-py build, due to sometimes
+    misidentifying a srcdir == objdir build as a srcdir != objdir build.
+    Justification:
+      Tiny fix, broken build bad.
+    Votes:
+      +1: maxb
+
+  * r16373, r16374
+    Add some missing swig-related dependencies to build.conf.
+    Justification:
+      Easily reviewable, might save someone some problems.
+    Votes:
+      +1: maxb
+
+  * r16378
+    Make the Python bindings testsuite be able to find the needed shared
+    libraries on Cygwin. Needed to compensate for Windows' complete lack of
+    library RPATHs.
+    Justification:
+      Critical to be able to use the testsuite on Cygwin, and conditionalized
+      to only affect that platform.
+    Votes:
+      +1: maxb
+
+  * r16382
+    Rearrange the apr_initialize()/apr_terminate() code of the Python bindings.
+    Justification:
+      Without this, the Python bindings are critically broken when using a
+      non-threaded APR.
+    Votes:
+      +1: maxb
+
 Approved changes (further review is welcome, but not required):
 
 (there are currently no approved changes)
