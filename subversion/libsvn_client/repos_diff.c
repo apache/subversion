@@ -812,11 +812,6 @@ close_file (void *file_baton,
     }
 
 
-  /* ### Is b->path the repos path?  Probably.  This doesn't really
-     matter while issue #748 (svn merge only happens in ".") is
-     outstanding.  But when we take a wc_path as an argument to
-     merge, then we'll need to pass around a wc path somehow. */
-
   if ((content_state == svn_wc_notify_state_missing)
       || (content_state == svn_wc_notify_state_obstructed))
     action = svn_wc_notify_skip;
