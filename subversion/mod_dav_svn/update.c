@@ -1400,15 +1400,20 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
            reports it (and it alone) to the server as being empty. */
         if (entry_counter == 1 && entry_is_empty)
           action = apr_psprintf(resource->pool,
-                                "checkout-or-export '%s'", spath);
+                                "checkout-or-export '%s'",
+                                svn_path_uri_encode(spath, resource->pool));
         else
           {
             if (text_deltas)
               action = apr_psprintf(resource->pool,
-                                    "update '%s'", spath);
+                                    "update '%s'",
+                                    svn_path_uri_encode(spath,
+                                                        resource->pool));
             else
               action = apr_psprintf(resource->pool,
-                                    "remote-status '%s'", spath);
+                                    "remote-status '%s'",
+                                    svn_path_uri_encode(spath,
+                                                        resource->pool));
           }
       }
 

@@ -180,6 +180,48 @@ create_repos_dir (const char *path, apr_pool_t *pool)
   return err;
 }
 
+static const char * bdb_lock_file_contents = 
+  "DB lock file, representing locks on the versioned filesystem."
+  APR_EOL_STR
+  APR_EOL_STR
+  "All accessors -- both readers and writers -- of the repository's"
+  APR_EOL_STR
+  "Berkeley DB environment take out shared locks on this file, and"
+  APR_EOL_STR
+  "each accessor removes its lock when done.  If and when the DB"
+  APR_EOL_STR
+  "recovery procedure is run, the recovery code takes out an"
+  APR_EOL_STR
+  "exclusive lock on this file, so we can be sure no one else is"
+  APR_EOL_STR
+  "using the DB during the recovery."
+  APR_EOL_STR
+  APR_EOL_STR
+  "You should never have to edit or remove this file."
+  APR_EOL_STR;
+
+static const char * bdb_logs_lock_file_contents = 
+  "DB logs lock file, representing locks on the versioned filesystem logs."
+  APR_EOL_STR
+  APR_EOL_STR
+  "All log manipulators of the repository's Berkeley DB environment"
+  APR_EOL_STR
+  "take out exclusive locks on this file to ensure that only one"
+  APR_EOL_STR
+  "accessor manipulates the logs at a time."
+  APR_EOL_STR
+  APR_EOL_STR
+  "You should never have to edit or remove this file."
+  APR_EOL_STR;
+
+static const char * pre12_compat_unneeded_file_contents = 
+  "This file is not used by Subversion 1.3.x or later."
+  APR_EOL_STR
+  "However, its existence is required for compatibility with"
+  APR_EOL_STR
+  "Subversion 1.2.x or earlier."
+  APR_EOL_STR;
+
 /* Create the DB logs lockfile. */
 static svn_error_t *
 create_db_logs_lock (svn_repos_t *repos, apr_pool_t *pool) {
@@ -187,14 +229,10 @@ create_db_logs_lock (svn_repos_t *repos, apr_pool_t *pool) {
   const char *lockfile_path;
 
   lockfile_path = svn_repos_db_logs_lockfile (repos, pool);
-  contents = 
-    "DB logs lock file, representing locks on the versioned filesystem logs.\n"
-    "\n"
-    "All log manipulators of the repository's\n"
-    "Berkeley DB environment take out exclusive locks on this file\n"
-    "to ensure that only one accessor manupulates the logs at the time.\n"
-    "\n"
-    "You should never have to edit or remove this file.\n";
+  if (strcmp (repos->fs_type, SVN_FS_TYPE_BDB) == 0)
+    contents = bdb_logs_lock_file_contents;
+  else
+    contents = pre12_compat_unneeded_file_contents;
 
   SVN_ERR_W (svn_io_file_create (lockfile_path, contents, pool),
              _("Creating db logs lock file"));
@@ -205,21 +243,14 @@ create_db_logs_lock (svn_repos_t *repos, apr_pool_t *pool) {
 /* Create the DB lockfile. */
 static svn_error_t *
 create_db_lock (svn_repos_t *repos, apr_pool_t *pool) {
-    const char *contents;
-    const char *lockfile_path;
+  const char *contents;
+  const char *lockfile_path;
 
-    lockfile_path = svn_repos_db_lockfile (repos, pool);
-    contents = 
-      "DB lock file, representing locks on the versioned filesystem.\n"
-      "\n"
-      "All accessors -- both readers and writers -- of the repository's\n"
-      "Berkeley DB environment take out shared locks on this file, and\n"
-      "each accessor removes its lock when done.  If and when the DB\n"
-      "recovery procedure is run, the recovery code takes out an\n"
-      "exclusive lock on this file, so we can be sure no one else is\n"
-      "using the DB during the recovery.\n"
-      "\n"
-      "You should never have to edit or remove this file.\n";
+  lockfile_path = svn_repos_db_lockfile (repos, pool);
+  if (strcmp (repos->fs_type, SVN_FS_TYPE_BDB) == 0)
+    contents = bdb_lock_file_contents;
+  else
+    contents = pre12_compat_unneeded_file_contents;
     
   SVN_ERR_W (svn_io_file_create (lockfile_path, contents, pool),
              _("Creating db lock file"));
@@ -1501,7 +1532,7 @@ create_conf (svn_repos_t *repos, apr_pool_t *pool)
 
 /* Allocate and return a new svn_repos_t * object, initializing the
    directory pathname members based on PATH.
-   The members FS and FORMAT are *not* initialized (they are null),
+   The members FS, FORMAT, and FS_TYPE are *not* initialized (they are null),
    and it it the caller's responsibility to fill them in if needed.  */
 static svn_repos_t *
 create_svn_repos_t (const char *path, apr_pool_t *pool)
@@ -1543,22 +1574,16 @@ create_repos_structure (svn_repos_t *repos,
 
   /* Write the top-level README file. */
   {
-    const char *readme_file_name 
-      = svn_path_join (path, SVN_REPOS__README, pool);
-    static const char * const readme_contents =
+    const char * const readme_header =
       "This is a Subversion repository; use the 'svnadmin' tool to examine"
       APR_EOL_STR
       "it.  Do not add, delete, or modify files here unless you know how"
       APR_EOL_STR
       "to avoid corrupting the repository."
       APR_EOL_STR
-      /* ### It would be preferable to conditionalize the mention of
-         DB_CONFIG below, since it's pointless if this is an FSFS
-         repository, but we don't currently have an clear API for
-         determining the fs type.  Hence, the conditional is in the
-         English, not the code :-). */
-      APR_EOL_STR
-      "If the directory \""
+      APR_EOL_STR;
+    const char * const readme_bdb_insert =
+      "The directory \""
       SVN_REPOS__DB_DIR
       "\" contains a Berkeley DB environment,"
       APR_EOL_STR
@@ -1568,18 +1593,29 @@ create_repos_structure (svn_repos_t *repos,
       APR_EOL_STR
       "requirements of your site."
       APR_EOL_STR
-      APR_EOL_STR
+      APR_EOL_STR;
+    const char * const readme_footer =
       "Visit http://subversion.tigris.org/ for more information."
       APR_EOL_STR;
+    apr_file_t *f;
+    apr_size_t written;
 
-    SVN_ERR_W (svn_io_file_create (readme_file_name, readme_contents, pool),
-               _("Creating readme file"));
+    SVN_ERR (svn_io_file_open (&f,
+                               svn_path_join (path, SVN_REPOS__README, pool),
+                               (APR_WRITE | APR_CREATE | APR_EXCL),
+                               APR_OS_DEFAULT, pool));
+    
+    SVN_ERR (svn_io_file_write_full (f, readme_header, strlen (readme_header),
+                                     &written, pool));
+    if (strcmp (repos->fs_type, SVN_FS_TYPE_BDB) == 0)
+      SVN_ERR (svn_io_file_write_full (f, readme_bdb_insert,
+                                       strlen (readme_bdb_insert),
+                                       &written, pool));
+    SVN_ERR (svn_io_file_write_full (f, readme_footer, strlen (readme_footer),
+                                     &written, pool));
+
+    SVN_ERR (svn_io_file_close (f, pool));
   }
-
-  /* Write the top-level FORMAT file. */
-  SVN_ERR (svn_io_write_version_file 
-           (svn_path_join (path, SVN_REPOS__FORMAT, pool),
-            SVN_REPOS__FORMAT_NUMBER, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1598,17 +1634,16 @@ lock_repos (svn_repos_t *repos,
             svn_boolean_t nonblocking,
             apr_pool_t *pool)
 {
-  const char *lockfile_path;
-  svn_error_t *err;
+  if (strcmp (repos->fs_type, SVN_FS_TYPE_BDB) == 0)
+    {
+      svn_error_t *err;
+      const char *lockfile_path = svn_repos_db_lockfile (repos, pool);
 
-  /* Get a filehandle for the repository's db lockfile. */
-  lockfile_path = svn_repos_db_lockfile (repos, pool);
-
-  err = svn_io_file_lock2 (lockfile_path, exclusive, nonblocking, pool);
-  if (err != NULL && APR_STATUS_IS_EAGAIN (err->apr_err))
-    return err;
-  SVN_ERR_W (err, _("Error opening db lockfile"));
-
+      err = svn_io_file_lock2 (lockfile_path, exclusive, nonblocking, pool);
+      if (err != NULL && APR_STATUS_IS_EAGAIN (err->apr_err))
+        return err;
+      SVN_ERR_W (err, _("Error opening db lockfile"));
+    }
   return SVN_NO_ERROR;
 }
 
@@ -1629,6 +1664,13 @@ svn_repos_create (svn_repos_t **repos_p,
   repos = create_svn_repos_t (path, pool);
   repos->format = SVN_REPOS__FORMAT_NUMBER;
 
+  /* Discover the type of the filesystem we are about to create. */
+  if (fs_config)
+    repos->fs_type = apr_hash_get (fs_config, SVN_FS_CONFIG_FS_TYPE,
+                                   APR_HASH_KEY_STRING);
+  if (! repos->fs_type)
+    repos->fs_type = DEFAULT_FS_TYPE;
+
   /* Create the various files and subdirectories for the repository. */
   SVN_ERR_W (create_repos_structure (repos, path, pool),
              _("Repository creation failed"));
@@ -1646,6 +1688,11 @@ svn_repos_create (svn_repos_t **repos_p,
       svn_error_clear (svn_io_remove_dir (path, pool));
       return err;
     }
+
+  /* This repository is ready.  Stamp it with a format number. */
+  SVN_ERR (svn_io_write_version_file 
+           (svn_path_join (path, SVN_REPOS__FORMAT, pool),
+            SVN_REPOS__FORMAT_NUMBER, pool));
 
   *repos_p = repos;
   return SVN_NO_ERROR;
@@ -1736,6 +1783,9 @@ get_repos (svn_repos_t **repos_p,
 
   /* Verify the validity of our repository format. */
   SVN_ERR (check_repos_format (repos, pool));
+
+  /* Discover the FS type. */
+  SVN_ERR (svn_fs_type (&repos->fs_type, repos->db_path, pool));
 
   /* Lock if needed. */
   SVN_ERR (lock_repos (repos, exclusive, nonblocking, pool));
@@ -1907,9 +1957,9 @@ struct hotcopy_ctx_t {
 };
 
 /** Called by (svn_io_dir_walk).
- * Copies the repository structure with exception of
- * @c SVN_REPOS__DB_DIR and @c SVN_REPOS__LOCK_DIR.
- * Those directories are handled separetly.
+ * Copies the repository structure with exception of @c SVN_REPOS__DB_DIR,
+ * @c SVN_REPOS__LOCK_DIR and @c SVN_REPOS__FORMAT.
+ * Those directories and files are handled separetly.
  * @a baton is a pointer to (struct hotcopy_ctx_t) specifying
  * destination path to copy to and the length of the source path.
  *  
@@ -1942,6 +1992,12 @@ static svn_error_t *hotcopy_structure (void *baton,
             svn_path_get_longest_ancestor (SVN_REPOS__LOCK_DIR, 
                                            sub_path, pool),
             SVN_REPOS__LOCK_DIR) == 0)
+        return SVN_NO_ERROR;
+      
+      if (svn_path_compare_paths(
+            svn_path_get_longest_ancestor (SVN_REPOS__FORMAT, 
+                                           sub_path, pool),
+            SVN_REPOS__FORMAT) == 0)
         return SVN_NO_ERROR;
     }
 
@@ -2020,6 +2076,7 @@ svn_repos_hotcopy (const char *src_path,
      so that we may open repository */
 
   dst_repos = create_svn_repos_t (dst_path, pool);
+  dst_repos->fs_type = src_repos->fs_type;
   dst_repos->format = src_repos->format;
 
   SVN_ERR (create_locks (dst_repos, pool));
@@ -2032,6 +2089,11 @@ svn_repos_hotcopy (const char *src_path,
 
   SVN_ERR (svn_fs_hotcopy (src_repos->db_path, dst_repos->db_path,
                            clean_logs, pool));
+
+  /* Destination repository is ready.  Stamp it with a format number. */
+  SVN_ERR (svn_io_write_version_file 
+           (svn_path_join (dst_repos->path, SVN_REPOS__FORMAT, pool),
+            dst_repos->format, pool));
 
   return SVN_NO_ERROR;
 }

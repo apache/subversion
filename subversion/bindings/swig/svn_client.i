@@ -145,9 +145,11 @@
   $2 = $input; /* our function is the baton. */
 }
 
-%typemap(ruby, in) svn_client_get_commit_log_t log_msg_func
+%typemap(ruby, in) (svn_client_get_commit_log_t log_msg_func,
+                    void *log_msg_baton)
 {
   $1 = svn_swig_rb_get_commit_log_func;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -155,9 +157,10 @@
    svn_client_ctx_t
 */
 
-%typemap(ruby, in) svn_cancel_func_t cancel_func
+%typemap(ruby, in) (svn_cancel_func_t cancel_func, void *cancel_baton)
 {
   $1 = svn_swig_rb_cancel_func;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -165,9 +168,10 @@
    svn_client_ctx_t
 */
 
-%typemap(ruby, in) svn_wc_notify_func2_t notify_func2
+%typemap(ruby, in) (svn_wc_notify_func2_t notify_func2, void *notify_baton2)
 {
   $1 = svn_swig_rb_notify_func2;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 
@@ -192,7 +196,7 @@
                     void *receiver_baton)
 {
   $1 = svn_swig_rb_client_blame_receiver_func;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -228,7 +232,7 @@
 %typemap(ruby, in) (svn_auth_simple_prompt_func_t prompt_func,
                     void *prompt_baton) {
     $1 = svn_swig_rb_auth_simple_prompt_func;
-    $2 = (void *) $input;
+    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 %typemap(perl5, in) (svn_auth_username_prompt_func_t prompt_func,
@@ -245,7 +249,7 @@
 %typemap(ruby, in) (svn_auth_username_prompt_func_t prompt_func,
                       void *prompt_baton) {
     $1 = svn_swig_rb_auth_username_prompt_func;
-    $2 = (void *) $input;
+    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 %typemap(perl5, in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,
@@ -262,7 +266,7 @@
 %typemap(ruby, in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,
                      void *prompt_baton) {
     $1 = svn_swig_rb_auth_ssl_server_trust_prompt_func;
-    $2 = (void *) $input;
+    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 %typemap(perl5, in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
@@ -279,7 +283,7 @@
 %typemap(ruby, in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
                       void *prompt_baton) {
     $1 = svn_swig_rb_auth_ssl_client_cert_prompt_func;
-    $2 = (void *) $input;
+    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 %typemap(perl5, in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
@@ -296,7 +300,7 @@
 %typemap(ruby, in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
                       void *prompt_baton) {
     $1 = svn_swig_rb_auth_ssl_client_cert_pw_prompt_func;
-    $2 = (void *) $input;
+    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -478,3 +482,37 @@
 
 %include svn_time_h.swg
 %include svn_client_h.swg
+
+#ifdef SWIGRUBY
+%inline %{
+static void
+svn_client_set_log_msg_func(svn_client_ctx_t *ctx,
+                            svn_client_get_commit_log_t log_msg_func,
+                            void *log_msg_baton,
+                            apr_pool_t *pool)
+{
+  ctx->log_msg_func = log_msg_func;
+  ctx->log_msg_baton = log_msg_baton;
+}
+ 
+static void
+svn_client_set_notify_func2(svn_client_ctx_t *ctx,
+                            svn_wc_notify_func2_t notify_func2,
+                            void *notify_baton2,
+                            apr_pool_t *pool)
+{
+  ctx->notify_func2 = notify_func2;
+  ctx->notify_baton2 = notify_baton2;
+}
+
+static void
+svn_client_set_cancel_func(svn_client_ctx_t *ctx,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           apr_pool_t *pool)
+{
+  ctx->cancel_func = cancel_func;
+  ctx->cancel_baton = cancel_baton;
+}
+%}
+#endif

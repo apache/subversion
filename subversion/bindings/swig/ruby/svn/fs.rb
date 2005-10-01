@@ -271,7 +271,7 @@ module Svn
       end
 
       def fs
-        Fs.root_fs(self)
+        Fs.root_fs_wrapper(self)
       end
       
       def node_id(path)

@@ -535,13 +535,13 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %typemap(ruby, in) (svn_config_enumerator2_t callback, void *baton)
 {
   $1 = svn_swig_rb_config_enumerator;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 };
 
 %typemap(ruby, in) (svn_config_section_enumerator2_t callback, void *baton)
 {
   $1 = svn_swig_rb_config_section_enumerator;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 };
 
 %typemap(python,in,numinputs=0) apr_hash_t **cfg_hash = apr_hash_t **OUTPUT;
@@ -635,6 +635,12 @@ void svn_swig_py_clear_application_pool();
 PyObject *svn_swig_py_register_cleanup(PyObject *py_pool, apr_pool_t *pool);
 
 %init %{
+/* Theoretically, we should be checking for errors from these calls,
+   but I do not know of any useful way to signal an error to Python
+   from within a module initialization function. */
+apr_initialize();
+atexit(apr_terminate);
+
 /* This is a hack.  I dunno if we can count on SWIG calling the module "m" */
 PyModule_AddObject(m, "SubversionException", 
                    svn_swig_py_register_exception());

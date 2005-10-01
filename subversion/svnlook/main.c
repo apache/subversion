@@ -77,7 +77,8 @@ enum
     svnlook__no_diff_added,
     svnlook__diff_copy_from,
     svnlook__revprop_opt,
-    svnlook__full_paths
+    svnlook__full_paths,
+    svnlook__copy_info
   };
 
 /*
@@ -124,6 +125,9 @@ static const apr_getopt_option_t options_table[] =
     {"full-paths", svnlook__full_paths, 0,
      N_("show full paths instead of indenting them")},
 
+    {"copy-info", svnlook__copy_info, 0,
+     N_("show details for copies")},
+
 
     {0,               0, 0, 0}
   };
@@ -148,7 +152,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     {"changed", subcommand_changed, {0},
      N_("usage: svnlook changed REPOS_PATH\n\n"
         "Print the paths that were changed.\n"),
-     {'r', 't'} },
+     {'r', 't', svnlook__copy_info} },
     
     {"date", subcommand_date, {0},
      N_("usage: svnlook date REPOS_PATH\n\n"
@@ -243,6 +247,7 @@ struct svnlook_opt_state
   svn_boolean_t verbose;          /* --verbose */
   svn_boolean_t revprop;          /* --revprop */
   svn_boolean_t full_paths;       /* --full-paths */
+  svn_boolean_t copy_info;        /* --copy-info */
 };
 
 
@@ -256,6 +261,7 @@ typedef struct svnlook_ctxt_t
   svn_boolean_t no_diff_added;
   svn_boolean_t diff_copy_from;
   svn_boolean_t full_paths;
+  svn_boolean_t copy_info;
   svn_revnum_t rev_id;
   svn_fs_txn_t *txn;
   const char *txn_name /* UTF-8! */;
@@ -479,10 +485,11 @@ print_dirs_changed_tree (svn_repos_node_t *node,
 static svn_error_t *
 print_changed_tree (svn_repos_node_t *node,
                     const char *path /* UTF-8! */,
+                    svn_boolean_t copy_info,
                     apr_pool_t *pool)
 {
   const char *full_path;
-  char status[3] = "_ ";
+  char status[4] = "_  ";
   int print_me = 1;
   apr_pool_t *subpool;
 
@@ -493,7 +500,11 @@ print_changed_tree (svn_repos_node_t *node,
 
   /* Print the node. */
   if (node->action == 'A')
-    status[0] = 'A';
+    {
+      status[0] = 'A';
+      if (copy_info && node->copyfrom_path)
+        status[2] = '+';
+    }
   else if (node->action == 'D')
     status[0] = 'D';
   else if (node->action == 'R')
@@ -511,10 +522,19 @@ print_changed_tree (svn_repos_node_t *node,
   /* Print this node unless told to skip it. */
   if (print_me)
     {
-      SVN_ERR (svn_cmdline_printf (pool, "%s  %s%s\n",
+      SVN_ERR (svn_cmdline_printf (pool, "%s %s%s\n",
                                    status,
                                    path,
                                    node->kind == svn_node_dir ? "/" : ""));
+      if (copy_info && node->copyfrom_path)
+        /* Remove the leading slash from the copyfrom path for consistency
+           with the rest of the output. */
+        SVN_ERR (svn_cmdline_printf (pool, "    (from %s%s:r%ld)\n",
+                                     (node->copyfrom_path[0] == '/'
+                                      ? node->copyfrom_path + 1
+                                      : node->copyfrom_path),
+                                     (node->kind == svn_node_dir ? "/" : ""),
+                                     node->copyfrom_rev));
     }
   
   /* Return here if the node has no children. */
@@ -525,13 +545,13 @@ print_changed_tree (svn_repos_node_t *node,
   /* Recursively handle the node's children. */
   subpool = svn_pool_create (pool);  
   full_path = svn_path_join (path, node->name, subpool);
-  SVN_ERR (print_changed_tree (node, full_path, subpool));
+  SVN_ERR (print_changed_tree (node, full_path, copy_info, subpool));
   while (node->sibling)
     {
       svn_pool_clear (subpool);
       node = node->sibling;
       full_path = svn_path_join (path, node->name, subpool);
-      SVN_ERR (print_changed_tree (node, full_path, subpool));
+      SVN_ERR (print_changed_tree (node, full_path, copy_info, subpool));
     }
   svn_pool_destroy (subpool);
 
@@ -1326,7 +1346,7 @@ do_changed (svnlook_ctxt_t *c, apr_pool_t *pool)
   SVN_ERR (generate_delta_tree (&tree, c->repos, root, base_rev_id, 
                                 TRUE, pool)); 
   if (tree)
-    SVN_ERR (print_changed_tree (tree, "", pool));
+    SVN_ERR (print_changed_tree (tree, "", c->copy_info, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1653,6 +1673,7 @@ get_ctxt_baton (svnlook_ctxt_t **baton_p,
   baton->no_diff_added = opt_state->no_diff_added;
   baton->diff_copy_from = opt_state->diff_copy_from;
   baton->full_paths = opt_state->full_paths;
+  baton->copy_info = opt_state->copy_info;
   baton->is_revision = opt_state->txn ? FALSE : TRUE;
   baton->rev_id = opt_state->rev;
   baton->txn_name = apr_pstrdup (pool, opt_state->txn);
@@ -2086,6 +2107,10 @@ main (int argc, const char * const *argv)
 
         case svnlook__full_paths:
           opt_state.full_paths = TRUE;
+          break;
+
+        case svnlook__copy_info:
+          opt_state.copy_info = TRUE;
           break;
 
         default:

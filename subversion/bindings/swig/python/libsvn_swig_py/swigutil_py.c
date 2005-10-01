@@ -16,6 +16,8 @@
  * ====================================================================
  */
 
+/* Tell swigutil_py.h that we're inside the implementation */
+#define SVN_SWIG_SWIGUTIL_PY_C
 
 #include <Python.h>
 
@@ -70,14 +72,6 @@ void svn_swig_py_release_py_lock(void)
   PyThreadState *thread_state;
 
   if (_saved_thread_key == NULL) {
-
-    /* This is ugly.  We call svn_swig_py_release_py_lock before executing any
-       subversion function.  Thus it gets called before any call to
-       apr_initialize in our script.  This means we have to call
-       apr_initialize ourselves, or otherwise we won't be able to
-       create our pool. */
-    apr_initialize();
-    
     /* Obviously, creating a top-level pool for this is pretty stupid. */
     apr_pool_create(&_saved_thread_pool, NULL);
     apr_threadkey_private_create(&_saved_thread_key, NULL, _saved_thread_pool);

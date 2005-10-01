@@ -581,7 +581,7 @@ translate_keyword (char *buf,
 {
   const svn_string_t *value;
   char keyword_name[SVN_KEYWORD_MAX_LEN + 1];
-  int i;
+  apr_size_t i;
 
   /* Make sure we gotz good stuffs. */
   assert (*len <= SVN_KEYWORD_MAX_LEN);

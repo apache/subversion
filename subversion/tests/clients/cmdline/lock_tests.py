@@ -1323,8 +1323,8 @@ def unlock_already_unlocked_files(sbox):
   expected_status.tweak('iota', 'A/B/lambda', 'A/B/E/alpha', writelocked='K')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  error_msg = ".*Path '/A/B/E/alpha' is already locked by user '" + \
-              svntest.main.wc_author2 + "'.*"
+  error_msg = "(.*Path '/A/B/E/alpha' is already locked by user '" + \
+              svntest.main.wc_author2 + "'.*)|(.*423 Locked.*)"
   svntest.actions.run_and_verify_svn(None, None, error_msg,
                                      'lock',
                                      '--username', svntest.main.wc_author2,
@@ -1343,7 +1343,8 @@ def unlock_already_unlocked_files(sbox):
   expected_status.tweak('A/B/lambda', writelocked=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  error_msg = ".*No lock on path '/A/B/lambda'.*"
+  error_msg = "(.*No lock on path '/A/B/lambda'.*)" + \
+              "|(.*'A/B/lambda' is not locked.*)"
   svntest.actions.run_and_verify_svn(None, None, error_msg,
                                      'unlock',
                                      '--username', svntest.main.wc_author2,

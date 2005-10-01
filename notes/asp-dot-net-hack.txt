@@ -5,8 +5,9 @@ Description:
 ============
 Allow use of an alternate name for Subversion working copy
 administrative directories on Windows (which were formerly always
-named ".svn"), by setting the SVN_ASP_DOT_NET_HACK environment
-variable
+named ".svn"), by setting the SVN_ASP_DOT_NET_HACK environment variable.
+When the variable is set (to any value), the administrative directory
+will be "_svn" instead of ".svn".
 
 
 Use case:

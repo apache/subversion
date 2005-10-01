@@ -42,6 +42,7 @@
 ;; r     - svn-status-revert                run 'svn revert'
 ;; X v   - svn-status-resolved              run 'svn resolved'
 ;; U     - svn-status-update-cmd            run 'svn update'
+;; M-u   - svn-status-update-cmd            run 'svn update'
 ;; c     - svn-status-commit                run 'svn commit'
 ;; a     - svn-status-add-file              run 'svn add --non-recursive'
 ;; A     - svn-status-add-file-recursively  run 'svn add'
@@ -250,6 +251,10 @@ Otherwise: Don't display a header line")
 (defvar svn-status-default-log-arguments ""
   "*Arguments to pass to svn log.
 \(used in `svn-status-show-svn-log'; override these by giving prefixes\).")
+
+(defvar svn-status-default-commit-arguments ""
+  "*Arguments to pass to svn commit.
+If you dont't like recursive commits, set this value to \"-N\".")
 
 (defvar svn-status-default-diff-arguments nil
   "*A list of arguments that is passed to the svn diff command.
@@ -1019,6 +1024,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "c") 'svn-status-commit)
   (define-key svn-status-mode-map (kbd "M-c") 'svn-status-cleanup)
   (define-key svn-status-mode-map (kbd "U") 'svn-status-update-cmd)
+  (define-key svn-status-mode-map (kbd "M-u") 'svn-status-update-cmd)
   (define-key svn-status-mode-map (kbd "r") 'svn-status-revert)
   (define-key svn-status-mode-map (kbd "l") 'svn-status-show-svn-log)
   (define-key svn-status-mode-map (kbd "i") 'svn-status-info)
@@ -2571,10 +2577,15 @@ Otherwise get only the actual file."
   (svn-status-get-specific-revision-internal (not arg) t))
 
 (defun svn-status-get-specific-revision-internal (&optional only-actual-file arg)
-  (let* ((file-names (if only-actual-file
+  (let* ((fl (if only-actual-file
+                 (list (svn-status-get-line-information))
+               (svn-status-marked-files)))
+         (file-names (if only-actual-file
                          (list (svn-status-line-info->filename (svn-status-get-line-information)))
                        (svn-status-marked-file-names)))
-         (revision (if arg (svn-status-read-revision-string "Get files for version: " "PREV") "BASE"))
+         (revision (if arg
+                       (svn-status-read-revision-string "Get files for version: " "PREV")
+                     (if (svn-status-line-info->update-available (car fl)) "HEAD" "BASE")))
          (file-name)
          (file-name-with-revision))
     (message "Getting revision %s for %S" revision file-names)
@@ -3079,7 +3090,8 @@ Commands:
       (svn-status-create-arg-file svn-status-temp-arg-file ""
                                   svn-status-files-to-commit "")
       (svn-run-svn t t 'commit "commit" "--targets" svn-status-temp-arg-file
-                   "-F" svn-status-temp-file-to-remove))
+                   "-F" svn-status-temp-file-to-remove
+                   svn-status-default-commit-arguments))
     (set-window-configuration svn-status-pre-commit-window-configuration)
     (message "svn-log editing done")))
 

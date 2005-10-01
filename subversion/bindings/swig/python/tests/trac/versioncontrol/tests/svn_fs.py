@@ -38,35 +38,28 @@ class SubversionRepositoryTestSetup(TestSetup):
         dumpfile = open(os.path.join(os.path.split(__file__)[0],
                                      'svnrepos.dump'))
 
-        core.apr_initialize()
-        pool = core.svn_pool_create(None)
-        dumpstream = None
-        try:
-            r = repos.svn_repos_create(REPOS_PATH, '', '', None, None, pool)
-            if hasattr(repos, 'svn_repos_load_fs2'):
-                repos.svn_repos_load_fs2(r, dumpfile, StringIO(),
-                                        repos.svn_repos_load_uuid_default, '',
-                                        0, 0, None, pool)
-            else:
-                dumpstream = core.svn_stream_from_aprfile(dumpfile, pool)
-                repos.svn_repos_load_fs(r, dumpstream, None,
-                                        repos.svn_repos_load_uuid_default, '',
-                                        None, None, pool)
-        finally:
-            if dumpstream:
-                core.svn_stream_close(dumpstream)
-            core.svn_pool_destroy(pool)
-            core.apr_terminate()
+        # Remove the trac-svnrepos directory, so that we can
+        # ensure a fresh start.
+        self.tearDown()
+
+        r = repos.svn_repos_create(REPOS_PATH, '', '', None, None)
+        repos.svn_repos_load_fs2(r, dumpfile, StringIO(),
+                                repos.svn_repos_load_uuid_default, '',
+                                0, 0, None)
 
     def tearDown(self):
-        if os.name == 'nt':
-            # The Windows version of 'shutil.rmtree' doesn't override the
-            # permissions of read-only files, so we have to do it ourselves:
-            format_file = os.path.join(REPOS_PATH, 'db', 'format')
-            if os.path.isfile(format_file):
-                os.chmod(format_file, stat.S_IRWXU)
-            os.chmod(os.path.join(REPOS_PATH, 'format'), stat.S_IRWXU)
-        shutil.rmtree(REPOS_PATH)
+        if os.path.exists(REPOS_PATH):
+            if os.name == 'nt':
+                # The Windows version of 'shutil.rmtree' doesn't override the
+                # permissions of read-only files, so we have to do it
+                # ourselves:
+                db_format_file = os.path.join(REPOS_PATH, 'db', 'format')
+                if os.path.isfile(db_format_file):
+                    os.chmod(db_format_file, stat.S_IRWXU)
+                format_file = os.path.join(REPOS_PATH, 'format')
+                if os.path.isfile(format_file):
+                    os.chmod(format_file, stat.S_IRWXU)
+            shutil.rmtree(REPOS_PATH)
 
 
 class SubversionRepositoryTestCase(unittest.TestCase):
