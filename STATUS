@@ -46,13 +46,6 @@ Candidate changes:
     Votes:
       +1: maxb, djames
 
-  * r16373, r16374
-    Add some missing swig-related dependencies to build.conf.
-    Justification:
-      Easily reviewable, might save someone some problems.
-    Votes:
-      +1: maxb, djames
-
   * r16387
     Fix issue 2406 - Do not pass URL-encoded hostname to ra_svn tunnel agent.
     Justification:
@@ -96,6 +89,14 @@ Candidate changes:
       another device than '.').
     Votes:
       +1: dionisos
+
+  * r16410
+    Ensure that SWIG external runtime dependencies are correctly added
+    to build-outputs.mk.
+    Justification:
+      Easily reviewable, might save someone some problems.
+    Votes:
+      +1: djames
 
 Approved changes (further review is welcome, but not required):
 
