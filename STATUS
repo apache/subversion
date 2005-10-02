@@ -44,6 +44,18 @@ Candidate changes:
     Votes:
       +1: djames
 
+  * /branches/1.2.x-issue-2388
+    mod_authz_svn bugfix: commiting empty revisions incorrectly
+    authorized.
+    Justification:
+      Unauthorized users can pollute revision space with empty
+      revisions or dangling transactions.
+    Notes:
+      See the original bug report at
+      http://subversion.tigris.org/issues/show_bug.cgi?id=2388
+    Votes:
+      +1: danderson
+
 Approved changes (further review is welcome, but not required):
 
   * r15807
