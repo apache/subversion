@@ -914,6 +914,8 @@ class IncludeDependencyInfo:
     Return a dictionary with included full file names as keys and None as
     values."""
     hdrs = { }
+    if not os.path.exists(fname):
+      return hdrs
     for line in fileinput.input(fname):
       match = self._re_include.match(line)
       if match:
