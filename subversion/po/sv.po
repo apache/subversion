@@ -43,7 +43,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-10-02 10:57+0200\n"
-"PO-Revision-Date: 2005-09-27 22:38+0200\n"
+"PO-Revision-Date: 2005-10-02 11:02+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -7464,7 +7464,7 @@ msgstr "Ogiltig sökväg som källa för kopiering \"%s\""
 #: svndumpfilter/main.c:558
 #, c-format
 msgid "No valid copyfrom revision in filtered stream"
-msgstr ""
+msgstr "Ingen giltig ursprungsrevision för kopiering i den filtrerade strömmen"
 
 #: svndumpfilter/main.c:663
 msgid "Delta property block detected - not supported by svndumpfilter"
@@ -7619,7 +7619,7 @@ msgstr "visa fullständiga sökvägar istället för indrag"
 
 #: svnlook/main.c:129
 msgid "show details for copies"
-msgstr ""
+msgstr "visa detaljer för kopior"
 
 #: svnlook/main.c:142
 msgid ""
@@ -8177,9 +8177,3 @@ msgstr "exporterad%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "\"%s\" är varken versionshanterad eller exporterad\n"
-
-#~ msgid "Move failed"
-#~ msgstr "Flytt misslyckades"
-
-#~ msgid "Node with dropped parent sneaked in"
-#~ msgstr "Nod med borttagen förälder har slunkit in"
