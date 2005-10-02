@@ -875,15 +875,6 @@ class IncludeDependencyInfo:
     for fname in filenames:
       self._deps[fname] = self._scan_for_includes(fname)
 
-    # Add in dependencies for the external runtime files,
-    # if they are missing
-    for lang in lang_abbrev.keys():
-      fname = "swig_%s_external_runtime.swg" % lang
-      full_fname = "subversion/bindings/swig/proxy/%s" % fname 
-      if not os.path.exists(full_fname):
-        self._domain[fname] = [ full_fname ]
-        self._deps[full_fname] = {}
-
     # Keep recomputing closures until we see no more changes
     while 1:
       changes = 0
