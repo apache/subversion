@@ -60,7 +60,7 @@ Candidate changes:
     Votes:
       +1: maxb
 
-  * r16388
+  * r16388, r16408
     Fix numerous bugs in the svn_fs_*berkeley*() APIs.
     Fix issue 2361 (recover on a FSFS repository errors if BDB not linked).
     Fix creation of BDB files in FSFS repositories by 'svnadmin recover',
