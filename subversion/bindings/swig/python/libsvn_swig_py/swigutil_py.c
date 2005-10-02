@@ -34,6 +34,7 @@
 #include "svn_opt.h"
 #include "svn_delta.h"
 #include "svn_auth.h"
+#include "svn_pools.h"
 
 #include "svn_private_config.h" /* for SVN_APR_INT64_T_PYCFMT */
 
@@ -381,27 +382,9 @@ static PyObject *make_ob_pool(void *pool)
 
   return py_pool;
 }
-static PyObject *make_ob_window(svn_txdelta_window_t *ptr, PyObject *py_pool)
-{
-  return svn_swig_NewPointerObjString(ptr, "svn_txdelta_window_t *", py_pool);
-}
-static PyObject *make_ob_status(svn_wc_status_t *ptr, PyObject *py_pool)
-{
-  return svn_swig_NewPointerObjString(ptr, "svn_wc_status_t *", py_pool);
-} 
-static PyObject *make_ob_lock(svn_lock_t *ptr, PyObject *py_pool)
-{
-  return svn_swig_NewPointerObjString(ptr, "svn_lock_t *", py_pool);
-} 
 static PyObject *make_ob_fs_root(svn_fs_root_t *ptr, PyObject *py_pool)
 {
   return svn_swig_NewPointerObjString(ptr, "svn_fs_root_t *", py_pool);
-} 
-static PyObject *make_ob_server_cert_info(
-  const svn_auth_ssl_server_cert_info_t *ptr, PyObject *py_pool)
-{
-  return svn_swig_NewPointerObjString((void *)ptr, 
-    "svn_auth_ssl_server_cert_info_t *", py_pool);
 } 
 /***/
 
@@ -593,7 +576,33 @@ PyObject *svn_swig_py_convert_hash(apr_hash_t *hash, swig_type_info *type,
                                    PyObject *py_pool)
 {
   return convert_hash(hash, convert_to_swigtype, type, py_pool);
+}  
+
+#define DECLARE_SWIG_CONSTRUCTOR(type, dup) \
+static PyObject *make_ob_##type(void *value) \
+{ \
+  apr_pool_t *new_pool = svn_pool_create(_global_pool); \
+  PyObject *new_py_pool = svn_swig_NewPointerObj(new_pool, \
+    svn_swig_TypeQuery("apr_pool_t *"), _global_svn_swig_py_pool); \
+  svn_##type##_t *new_value = dup(value, new_pool); \
+  return svn_swig_NewPointerObjString(new_value, "svn_" #type "_t *", \
+      new_py_pool); \
+} \
+static PyObject *convert_##type(void *value, void *ctx, PyObject *py_pool) \
+{ \
+  return make_ob_##type(value); \
+} \
+PyObject *svn_swig_py_convert_##type##_hash(apr_hash_t *hash) \
+{ \
+  return convert_hash(hash, convert_##type, NULL, NULL); \
 }
+ 
+DECLARE_SWIG_CONSTRUCTOR(txdelta_window, svn_txdelta_window_dup)
+DECLARE_SWIG_CONSTRUCTOR(log_changed_path, svn_log_changed_path_dup)
+DECLARE_SWIG_CONSTRUCTOR(wc_status, svn_wc_dup_status)
+DECLARE_SWIG_CONSTRUCTOR(lock, svn_lock_dup)
+DECLARE_SWIG_CONSTRUCTOR(auth_ssl_server_cert_info,
+    svn_auth_ssl_server_cert_info_dup)
 
 PyObject *svn_swig_py_c_strings_to_list(char **strings)
 {
@@ -1198,8 +1207,8 @@ static svn_error_t *window_handler(svn_txdelta_window_t *window,
     {
       /* invoke the handler with the window */
       /* ### python doesn't have 'const' on the format */
-      result = PyObject_CallFunction(handler,
-                                     (char *)"O&", make_ob_window, window);
+      result = PyObject_CallFunction(handler, (char *)"O&", 
+        make_ob_txdelta_window, window);
     }
 
   if (result == NULL)
@@ -1559,7 +1568,7 @@ void svn_swig_py_status_func(void *baton,
 
   svn_swig_py_acquire_py_lock();
   if ((result = PyObject_CallFunction(function, (char *)"sO&", path,
-                                      make_ob_status, status)) == NULL)
+                                      make_ob_wc_status, status)) == NULL)
     {
       err = callback_exception_error();
     }
@@ -1632,15 +1641,9 @@ svn_error_t *svn_swig_py_fs_get_locks_func (void *baton,
     err = callback_exception_error();
     goto finished;
   }
-  py_lock = make_ob_lock(lock, py_pool);
-  if (py_lock == NULL) {
-    Py_DECREF(py_pool);
-    err = callback_exception_error();
-    goto finished;
-  }
   
-  if ((result = PyObject_CallFunction(function, (char *)"OO",
-                                      py_lock, py_pool)) == NULL)
+  if ((result = PyObject_CallFunction(function, (char *)"O&O",
+                                      make_ob_lock, py_lock, py_pool)) == NULL)
     {
       err = callback_exception_error();
     }
@@ -1838,8 +1841,7 @@ svn_error_t *svn_swig_py_log_receiver(void *baton,
 
   if (changed_paths)
     {
-      swig_type_info *tinfo = svn_swig_TypeQuery("svn_log_changed_path_t *");
-      chpaths = svn_swig_py_convert_hash (changed_paths, tinfo, py_pool);
+      chpaths = svn_swig_py_convert_log_changed_path_hash(changed_paths);
     }
   else
     {
@@ -2032,18 +2034,10 @@ svn_swig_py_auth_ssl_server_trust_prompt_func(
     err = callback_exception_error();
     goto finished;
   }
-  py_cert_info = make_ob_server_cert_info(cert_info, py_pool); 
-  if (py_pool == NULL) {
-    Py_DECREF(py_pool);
-    err = callback_exception_error();
-    goto finished;
-  } 
 
-  if ((result = PyObject_CallFunction(function, 
-                                      (char *)"slOlO", 
-                                      realm, failures, 
-                                      py_cert_info,
-                                      may_save, py_pool)) == NULL)
+  if ((result = PyObject_CallFunction(function, (char *)"slO&lO", 
+                  realm, failures, make_ob_auth_ssl_server_cert_info,
+                  cert_info, may_save, py_pool)) == NULL)
     {
       err = callback_exception_error();
     }

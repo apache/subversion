@@ -16,6 +16,7 @@ if sys.platform == 'cygwin':
 
 import unittest
 import pool
+import repository
 import trac.versioncontrol.tests
 
 # Run all tests
@@ -24,6 +25,7 @@ def suite():
   """Run all tests"""
   suite = unittest.TestSuite()
   suite.addTest(pool.suite())
+  suite.addTest(repository.suite())
   suite.addTest(trac.versioncontrol.tests.suite());
   return suite
 

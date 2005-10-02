@@ -354,6 +354,15 @@ typedef struct svn_log_changed_path_t
 } svn_log_changed_path_t;
 
 
+/**
+ * Return a deep copy of @a changed_path, allocated in @a pool.
+ *
+ * @since New in 1.3.
+ */
+svn_log_changed_path_t *svn_log_changed_path_dup (
+  const svn_log_changed_path_t *changed_path, apr_pool_t *pool);
+
+
 /** The callback invoked by log message loopers, such as
  * @c svn_ra_plugin_t.get_log() and svn_repos_get_logs().
  *
