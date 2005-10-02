@@ -799,10 +799,33 @@ is prompted for give extra arguments, which are appended to ARGLIST."
       (string-to-number str)
     -1))
 
+(defsubst svn-status-make-ui-status ()
+  "Make a ui-status structure for a file in a svn working copy.
+The initial values in the structure returned by this function
+are good for a file or directory that the user hasn't seen before.
+
+The ui-status structure keeps track of how the file or directory
+should be displayed in svn-status mode.  Updating the svn-status
+buffer from the working copy preserves the ui-status if possible.
+User commands modify this structure; each file or directory must
+thus have its own copy.
+
+Currently, the ui-status is a list (USER-MARK USER-ELIDE).
+USER-MARK is non-nil iff the user has marked the file or directory,
+  typically with `svn-status-set-user-mark'.  To read USER-MARK,
+  call `svn-status-line-info->has-usermark'.
+USER-ELIDE is non-nil iff the user has elided the file or directory
+  from the svn-status buffer, typically with `svn-status-toggle-elide'.
+  To read USER-ELIDE, call `svn-status-line-info->user-elide'.
+
+Call `svn-status-line-info->ui-status' to access the whole ui-status
+structure."
+  (list nil nil))
 
 (defun svn-status-make-dummy-dirs (dir-list old-ui-information)
   (append (mapcar (lambda (dir)
-                    (list (or (gethash dir old-ui-information) (list nil nil))
+                    (list (or (gethash dir old-ui-information)
+                              (svn-status-make-ui-status))
                           32 nil dir -1 -1 "?" nil nil nil nil))
                   dir-list)
           svn-status-info))
@@ -815,7 +838,6 @@ The results are used to build the `svn-status-info' variable."
   (save-excursion
     (let ((old-ui-information (svn-status-ui-information-hash-table))
           (line-string)
-          (user-mark)
           (svn-marks)
           (svn-file-mark)
           (svn-property-mark)
@@ -828,8 +850,6 @@ The results are used to build the `svn-status-info' variable."
           (author)
           (path)
           (dir)
-          (user-elide nil)
-          (ui-status '(nil nil))     ; contains (user-mark user-elide)
           (revision-width svn-status-default-revision-width)
           (author-width svn-status-default-author-width)
           (svn-marks-length (if (and svn-status-verbose svn-status-remote)
@@ -893,8 +913,8 @@ The results are used to build the `svn-status-info' variable."
               (let ((dirname (directory-file-name dir)))
                 (if (not (member dirname dir-set))
                     (setq dir-set (cons dirname dir-set)))))
-          (setq ui-status (or (gethash path old-ui-information) (list user-mark user-elide)))
-          (setq svn-status-info (cons (list ui-status
+          (setq svn-status-info (cons (list (or (gethash path old-ui-information)
+                                                (svn-status-make-ui-status))
                                             svn-file-mark
                                             svn-property-mark
                                             path
@@ -1294,7 +1314,10 @@ EVENT could be \"mouse clicked\" or similar."
   (mouse-set-point event)
   (svn-status-find-file-or-examine-directory))
 
-(defun svn-status-line-info->ui-status (line-info) (nth 0 line-info))
+(defun svn-status-line-info->ui-status (line-info)
+  "Return the ui-status structure of LINE-INFO.
+See `svn-status-make-ui-status' for information about the ui-status."
+  (nth 0 line-info))
 
 (defun svn-status-line-info->has-usermark (line-info) (nth 0 (nth 0 line-info)))
 (defun svn-status-line-info->user-elide (line-info) (nth 1 (nth 0 line-info)))
