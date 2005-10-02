@@ -294,6 +294,33 @@ static int parse_authz_sections(svn_config_t *cfg,
     return baton.access;
 }
 
+/* Callback to parse sections of the configuration file, looking for
+   any kind of granted access.  Implements the
+   svn_config_section_enumerator_t interface. */
+static svn_boolean_t
+global_authz_parse_section (const char *section_name, void *baton)
+{
+  struct parse_authz_baton *b = baton;
+
+  /* Does the section apply to the query? */
+  if (section_name[0] == '/'
+      || strncmp (section_name, b->repos_path,
+                  strlen(b->repos_path)) == 0)
+    {
+      b->allow = b->deny = AUTHZ_SVN_NONE;
+
+      svn_config_enumerate (b->config, section_name,
+                            parse_authz_line, baton);
+      b->access = !(b->deny & b->required_access)
+        || (b->allow & b->required_access);
+
+      /* Continue as long as we don't find a granted access. */
+      return !b->access;
+    }
+
+  return TRUE;
+}
+
 static int check_access(svn_config_t *cfg, const char *repos_name,
                         const char *repos_path, const char *user,
                         int required_access, apr_pool_t *pool)
@@ -302,12 +329,29 @@ static int check_access(svn_config_t *cfg, const char *repos_name,
     const char *original_repos_path = repos_path;
     int granted_access;
 
+    /* If there is no REPOS_PATH, then check whether CFG grants the
+     * REQUIRED_ACCESS to USER for at least one path.  This is called
+     * a global access lookup, and is used to make sure that
+     * operations like starting a commit have at least a theoretical
+     * possibility of succeeding.
+     *
+     * This addresses issue #2388, which was about users being able to
+     * commit empty revisions, or leave dangling transactions in the
+     * repository, even with no write access.  The issue was fixed in
+     * trunk in r16048. */
     if (!repos_path) {
-        /* XXX: Check if the user has 'required_access' _anywhere_ in the
-         * XXX: repository.  For now, make this always succeed, until
-         * XXX: we come up with a good way of figuring this out.
-         */
-        return 1;
+      struct parse_authz_baton baton = { 0 };
+
+      baton.config = cfg;
+      baton.user = user;
+      baton.required_access = required_access;
+      baton.access = 0; /* Deny access by default. */
+      baton.repos_path = apr_pstrcat (pool, repos_name, ":/", NULL);
+
+      svn_config_enumerate_sections (cfg, global_authz_parse_section,
+                                     &baton);
+
+      return baton.access;
     }
 
     base_name = repos_path;
