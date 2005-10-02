@@ -90,7 +90,7 @@ Candidate changes:
     Votes:
       +1: dionisos
 
-  * r16410
+  * r16414
     Ensure that SWIG external runtime dependencies are correctly added
     to build-outputs.mk.
     Justification:
