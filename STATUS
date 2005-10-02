@@ -77,7 +77,7 @@ Candidate changes:
     Justification:
       Provides a clean compile when all warnings are turned on.
     Votes:
-      +1: dlr
+      +1: dlr, dionisos
 
   * r16398
     Fix Issue #2172 (segfaults in the Python bindings caused by pool lifetime
@@ -87,6 +87,15 @@ Candidate changes:
       worry about memory pools.
     Votes:
       +1: djames
+
+  * r16405
+    Fix issue #2411 (merge requires write access to '.')
+    Justification:
+      Merge should use the .svn/tmp directory.  The current situation can
+      lead to unnecessary extra copying between devices (when the wc is on
+      another device than '.').
+    Votes:
+      +1: dionisos
 
 Approved changes (further review is welcome, but not required):
 
