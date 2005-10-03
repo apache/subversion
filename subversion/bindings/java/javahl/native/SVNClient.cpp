@@ -1997,7 +1997,6 @@ svn_error_t *SVNClient::messageReceiver (void *baton, apr_hash_t *changed_paths,
     {
         return SVN_NO_ERROR;
     }
-    svn_error_t * error = NULL;
     std::vector<jobject> *logs = (std::vector<jobject>*)baton;
 
     static jmethodID mid = 0;
