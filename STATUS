@@ -142,10 +142,3 @@ Approved changes (further review is welcome, but not required):
       non-threaded APR.
     Votes:
       +1: maxb, djames
-
-  * r16395
-    Tweak build.conf adding libsvn_swig_ruby -> libsvn_wc dependency.
-    Justification:
-      Correctness, fixes brokenness on Cygwin and probably OS X 10.4 too.
-    Votes:
-      +1: maxb, kou, dlr
