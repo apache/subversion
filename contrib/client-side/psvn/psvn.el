@@ -2719,6 +2719,7 @@ Note: use C-q C-j to send a line termination character."
       (message "No valid file selected - No property listing possible"))))
 
 (defun svn-status-proplist-start ()
+  (svn-status-ensure-cursor-on-file)
   (svn-run-svn t t 'proplist-parse "proplist" (svn-status-line-info->filename
                                                (svn-status-get-line-information))))
 (defun svn-status-property-edit-one-entry (arg)
