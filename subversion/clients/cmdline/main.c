@@ -845,7 +845,7 @@ main (int argc, const char * const *argv)
   if (err)
     return svn_cmdline_handle_exit_error (err, pool, "svn: ");
 
-#ifdef WIN32
+#if defined(WIN32) || defined(__CYGWIN__)
   /* Set the working copy administrative directory name. */
   if (getenv ("SVN_ASP_DOT_NET_HACK"))
     {

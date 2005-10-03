@@ -184,7 +184,8 @@ greek_state = wc.State('', {
 def get_admin_name():
   "Return name of SVN administrative subdirectory."
 
-  if windows and os.environ.has_key('SVN_ASP_DOT_NET_HACK'):
+  if (windows or sys.platform == 'cygwin') \
+      and os.environ.has_key('SVN_ASP_DOT_NET_HACK'):
     return '_svn'
   else:
     return '.svn'
