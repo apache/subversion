@@ -126,6 +126,12 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r16434
+    Fix broken error reporting for "blame" in JavaHL bindings.
+    Justification:
+      Any error from svn_client_blame2() is otherwise discarded.
+    Votes:
+      +1: dlr
 
 Approved changes (further review is welcome, but not required):
 
