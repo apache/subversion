@@ -1651,7 +1651,9 @@ fold_scheduling (apr_hash_t *entries,
       switch (*schedule)
         {
         case svn_wc_schedule_normal:
-          /* These are all no-op cases. */
+          /* Reverting replacements results normal. */
+          return SVN_NO_ERROR;
+        
         case svn_wc_schedule_add:
           /* Adding a to-be-replaced entry breaks down to ((delete +
              add) + add) which might deserve a warning, but we'll just
