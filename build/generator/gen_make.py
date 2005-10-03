@@ -142,16 +142,18 @@ class Generator(gen_base.GeneratorBase):
     ########################################
     self.begin_section('SWIG external runtime')
 
-    runtime = '%s/swig_python_external_runtime.swg' % self.swig.proxy_dir
+    runtime_pattern = '%s/swig_%%s_external_runtime.swg' % self.swig.proxy_dir
     python_script = "$(abs_srcdir)/build/generator/swig/external_runtime.py"
     build_runtime = '$(PYTHON) %s ' % python_script + \
       '$(abs_srcdir)/build.conf "$(SWIG)"'
+    runtimes = map(lambda lang: runtime_pattern % lang, self.swig_lang)
     self.ofile.write(
-      '%s:\n' % runtime +
-      '\t%s\n' % build_runtime+
-      'swig-headers: %s\n' % runtime +
+      '%s:\n' % " ".join(runtimes) +
+      '\t%s\n' % build_runtime +
+      'swig-headers: %s\n' % " ".join(runtimes) +
       'extraclean-runtime:\n' +
-      '\trm -f $(abs_srcdir)/%s $(abs_builddir)/%s\n' % (runtime, runtime) +
+      '\trm -f %s\n' % " ".join(map(lambda x: "$(abs_srcdir)/" + x,
+        runtimes) + map(lambda x: "$(abs_builddir)/" + x, runtimes)) +
       'extraclean-swig-headers: extraclean-runtime\n')
     self.ofile.write('\n')
 
