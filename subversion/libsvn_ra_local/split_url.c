@@ -65,20 +65,9 @@ svn_ra_local__split_URL (svn_repos_t **repos,
   else
     hostname = NULL;
   
-#ifndef WIN32
-  /* Currently, the only hostnames we are allowing on non-Win32 platforms
-     are the empty string and 'localhost'. */
-  if (hostname)
-    return svn_error_createf
-      (SVN_ERR_RA_ILLEGAL_URL, NULL, 
-       _("Local URL '%s' contains unsupported hostname"), URL);
-#endif
-
   /* Duplicate the URL, starting at the top of the path.
      At the same time, we URI-decode the path. */
-#ifndef WIN32
-  repos_root = svn_path_uri_decode (path, pool);
-#else  /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
   /* On Windows, we'll typically have to skip the leading / if the
      path starts with a drive letter.  Like most Web browsers, We
      support two variants of this scheme:
@@ -100,7 +89,8 @@ svn_ra_local__split_URL (svn_repos_t **repos,
   {
     static const char valid_drive_letters[] =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    char *dup_path = svn_path_uri_decode (path, pool);
+    /* Casting away const! */
+    char *dup_path = (char *)svn_path_uri_decode (path, pool);
     if (!hostname && dup_path[1] && strchr(valid_drive_letters, dup_path[1])
         && (dup_path[2] == ':' || dup_path[2] == '|')
         && dup_path[3] == '/')
@@ -118,7 +108,16 @@ svn_ra_local__split_URL (svn_repos_t **repos,
     else
       repos_root = dup_path;
   }
-#endif /* WIN32 */
+#else
+  /* Currently, the only hostnames we are allowing on non-Win32 platforms
+     are the empty string and 'localhost'. */
+  if (hostname)
+    return svn_error_createf
+      (SVN_ERR_RA_ILLEGAL_URL, NULL, 
+       _("Local URL '%s' contains unsupported hostname"), URL);
+
+  repos_root = svn_path_uri_decode (path, pool);
+#endif
 
   /* Search for a repository in the full path. */
   repos_root = svn_repos_find_root_path(repos_root, pool);
