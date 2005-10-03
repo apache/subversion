@@ -124,4 +124,4 @@ Approved changes (further review is welcome, but not required):
     Justification:
       Correctness, fixes brokenness on Cygwin and probably OS X 10.4 too.
     Votes:
-      +1: maxb, kou
+      +1: maxb, kou, dlr
