@@ -119,7 +119,7 @@ Candidate changes:
     Justification:
       Cygwin is likely to be exposed to native-Windows-created WCs.
     Votes:
-      +1: maxb
+      +1: maxb, dlr
 
 
 Approved changes (further review is welcome, but not required):
