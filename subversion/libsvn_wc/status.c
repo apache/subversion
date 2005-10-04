@@ -192,9 +192,6 @@ struct file_baton
    will assemble a special status structure item which implies a
    non-versioned thing.
 
-   Else, ENTRY's pool must not be shorter-lived than STATUS's, since
-   ENTRY will be stored directly, not copied.
-
    PARENT_ENTRY is the entry for the parent directory of PATH, it may be
    NULL if ENTRY is NULL or if PATH is a working copy root.  The lifetime
    of PARENT_ENTRY's pool is not important.
