@@ -296,3 +296,19 @@
 %}
 
 %include svn_wc_h.swg
+
+%inline %{
+svn_error_t *
+svn_swig_init_asp_dot_net_hack (apr_pool_t *pool)
+{
+#if defined(WIN32) || defined(__CYGWIN__)
+  if (getenv ("SVN_ASP_DOT_NET_HACK"))
+    SVN_ERR (svn_wc_set_adm_dir("_svn", pool));
+#endif /* WIN32 */
+  return SVN_NO_ERROR;
+}
+%}
+
+#if defined(SWIGPYTHON)
+%pythoncode %{ svn_swig_init_asp_dot_net_hack() %}
+#endif
