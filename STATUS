@@ -110,7 +110,7 @@ Candidate changes:
     Justification:
       Avoid build errors when certain combinations of make targets are invoked.
     Votes:
-      +1: maxb
+      +1: maxb, djames
 
   * r16428
     Activate some Windows-specific behaviour on Cygwin too:
@@ -125,6 +125,7 @@ Candidate changes:
     Make the Python bindings automatically support the SVN_ASP_DOT_NET_HACK.
     Votes:
       +1: maxb
+      +0: djames
 
   * r16434
     Fix broken error reporting for "blame" in JavaHL bindings.
@@ -132,6 +133,7 @@ Candidate changes:
       Any error from svn_client_blame2() is otherwise discarded.
     Votes:
       +1: dlr
+      +0: djames
 
   * r16437
     Remove needless "case" clause.
