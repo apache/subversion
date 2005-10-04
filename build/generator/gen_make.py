@@ -1,10 +1,10 @@
-#
 # gen_make.py -- generate makefiles and dependencies
 #
 
 import os
 import sys
 import string
+import re
 
 import gen_base
 import generator.util.executable
@@ -209,7 +209,20 @@ class Generator(gen_base.GeneratorBase):
         'cp -pf $(abs_srcdir)/%s/*.i ' % source_dir +
         '$(abs_builddir)/%s; fi\n' % source_dir +
         '\t$(SWIG) $(SWIG_INCLUDES) %s ' % opts +
-        '-o $@ $(abs_builddir)/%s\n' % source +
+        '-o $@ $(abs_builddir)/%s\n' % source
+      )
+      if objname.lang == "python":
+        # Ensure that all python modules import libsvn._core before importing
+        # any other modules, so that the initialization code is run in the
+        # correct order. We can't implement this trick in SWIG, so we do it
+        # by postprocessing the SWIG output files.
+        pyfile = re.sub(r"(?:svn_)?(\w+)\.c$",r"\1.py", str(objname))
+        self.ofile.write(
+          '\tmv %s %s-swig ' % (pyfile, pyfile) +
+          '&& (echo import _core | cat - %s-swig > %s) ' % (pyfile, pyfile) +
+          '&& rm %s-swig\n' % (pyfile)
+        )
+      self.ofile.write(
         'autogen-swig-%s: copy-swig-%s\n' % (short[objname.lang], objname) +
         'copy-swig-%s: %s\n' % (objname, objname) +
         '\t@if test $(abs_srcdir) != $(abs_builddir) -a ' +
