@@ -74,6 +74,8 @@
     const char *comment
 };
 
+%apply apr_hash_t *STRING_TO_STRING { apr_hash_t *fs_config };
+
 /* svn_fs_parse_id() */
 %apply (const char *PTR, apr_size_t LEN) {
     (const char *data, apr_size_t len)

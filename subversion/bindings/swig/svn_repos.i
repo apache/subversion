@@ -56,6 +56,8 @@
     const char *tgt_path
 };
 
+%apply apr_hash_t *STRING_TO_STRING { apr_hash_t *fs_config };
+
 /* svn_repos_db_logfiles() */
 %apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
     apr_array_header_t **logfiles
@@ -210,22 +212,14 @@
 }
 
 /* -----------------------------------------------------------------------
-   handle config and fs_config in svn_repos_create
+   handle config in svn_repos_create
 */
 
 /* ### TODO: %typemap(python, in) apr_hash_t *config {} */
 
-%typemap(python, in) apr_hash_t *fs_config {
-    $1 = svn_swig_py_stringhash_from_dict ($input, _global_pool);
-}
-    
 %typemap(perl5, in) apr_hash_t *config {
     $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
 					   _global_pool);
-}
-
-%typemap(perl5, in) apr_hash_t *fs_config {
-    $1 = svn_swig_pl_strings_to_hash ($input, _global_pool);
 }
 
 /* -----------------------------------------------------------------------
