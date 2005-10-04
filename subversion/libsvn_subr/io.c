@@ -2462,8 +2462,8 @@ svn_io_file_move (const char *from_path, const char *to_path,
       if (! err)
         return SVN_NO_ERROR;
 
-    failed_final:
 #ifdef WIN32
+    failed_final:
       svn_error_clear (svn_io_set_file_read_write (to_path, FALSE, pool));
 #endif
       svn_error_clear (svn_io_remove_file (to_path, pool));
