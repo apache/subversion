@@ -83,15 +83,6 @@ Candidate changes:
     Votes:
       +1: djames
 
-  * r16405
-    Fix issue #2411 (merge requires write access to '.')
-    Justification:
-      Merge should use the .svn/tmp directory.  The current situation can
-      lead to unnecessary extra copying between devices (when the wc is on
-      another device than '.').
-    Votes:
-      +1: dionisos, maxb
-
   * r16414
     Ensure that SWIG external runtime dependencies are correctly added
     to build-outputs.mk.
@@ -141,4 +132,11 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-   (None pending.)
+  * r16405
+    Fix issue #2411 (merge requires write access to '.')
+    Justification:
+      Merge should use the .svn/tmp directory.  The current situation can
+      lead to unnecessary extra copying between devices (when the wc is on
+      another device than '.').
+    Votes:
+      +1: dionisos, maxb, dlr
