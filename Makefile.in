@@ -474,9 +474,6 @@ doc: doc-design doc-misc-docs doc-api
 # Generate API documentation for the C libraries.
 ### This could also generate JavaDoc for JavaHL, POD for swig-perl, etc.
 doc-api:
-	if [ ! -e subversion/include ]; then \
-	  ln -s $(abs_srcdir)/subversion/include subversion/include; \
-	fi
 	doxygen $(top_srcdir)/doc/doxygen.conf
 
 # Build all types of a certain doc.
