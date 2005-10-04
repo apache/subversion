@@ -133,6 +133,15 @@ Candidate changes:
     Votes:
       +1: dlr
 
+  * r16437
+    Remove needless "case" clause.
+    Justification:
+      The needless clause maybe cause a problem.
+      For example:
+        http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=106222
+    Votes:
+      +1: kou
+
 Approved changes (further review is welcome, but not required):
 
   * r16378
