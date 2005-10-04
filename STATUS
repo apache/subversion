@@ -80,7 +80,7 @@ Candidate changes:
       lead to unnecessary extra copying between devices (when the wc is on
       another device than '.').
     Votes:
-      +1: dionisos
+      +1: dionisos, maxb
 
   * r16414
     Ensure that SWIG external runtime dependencies are correctly added
