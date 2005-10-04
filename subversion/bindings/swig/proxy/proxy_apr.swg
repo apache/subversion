@@ -119,6 +119,8 @@ struct apr_pool_t {
         if hasattr(obj, "set_parent_pool"):
           obj.set_parent_pool(self)
           return obj 
+        elif obj is None:
+          return None
         else:
           return GenericSWIGWrapper(obj, self)
 

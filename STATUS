@@ -139,13 +139,6 @@ Candidate changes:
     Votes:
       +1: maxb
 
-  * r16450, r16454
-    Fix Python bindings behaviour when returning NULL pointers.
-    Justification:
-      NULL/None is a vital signifier in some of our APIs.
-    Votes:
-      +1: maxb, dlr
-
 Approved changes (further review is welcome, but not required):
 
   * r16434
