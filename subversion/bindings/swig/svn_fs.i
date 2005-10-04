@@ -41,6 +41,9 @@
 */
 %nodefault;
 
+/* Redundant from 1.1 onwards, so not worth manually wrapping the callback. */
+%ignore svn_fs_set_berkeley_errcall;
+
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */
