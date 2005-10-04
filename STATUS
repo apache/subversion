@@ -132,12 +132,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r16432
-    Make the Python bindings automatically support the SVN_ASP_DOT_NET_HACK.
-    Votes:
-      +1: maxb
-      +0: djames
-
   * r16434
     Fix broken error reporting for "blame" in JavaHL bindings.
     Justification:
