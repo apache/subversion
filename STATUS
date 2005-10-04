@@ -132,17 +132,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r16378
-    Make the Python bindings testsuite be able to find the needed shared
-    libraries on Cygwin. Needed to compensate for Windows' complete lack of
-    library RPATHs.
-    Justification:
-      Critical to be able to use the testsuite on Cygwin, and conditionalized
-      to only affect that platform.
-    Votes:
-      +1: maxb
-      +0: djames
-
   * r16382
     Rearrange the apr_initialize()/apr_terminate() code of the Python bindings.
     Justification:
