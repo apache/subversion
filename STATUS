@@ -9,16 +9,6 @@ Status of 1.3.0:
 
 Candidate changes:
 
-  * r16456
-    Add notes on new Python version of svnmerge, where to find
-      it.  Rename Bourne shell svnmerge to svnmerge.sh to make
-      space for Python version.
-    Justification:
-      Good to get consistent filenames for scripts in all 1.3.x
-      releases.  It's in the contrib directory.
-    Votes:
-      +1: blair
-
   * r16369
     Align implementation of repository creation with claims made in
     svn_repos.h's doc string.
