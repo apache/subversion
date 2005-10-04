@@ -88,13 +88,6 @@ Candidate changes:
     Votes:
       +1: maxb
 
-  * r16426
-    Fix missing make rules relating to the perl/ruby SWIG external runtimes.
-    Justification:
-      Avoid build errors when certain combinations of make targets are invoked.
-    Votes:
-      +1: maxb, djames
-
   * r16428
     Activate some Windows-specific behaviour on Cygwin too:
      - SVN_ASP_DOT_NET_HACK
@@ -122,3 +115,9 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
+  * r16426
+    Fix missing make rules relating to the perl/ruby SWIG external runtimes.
+    Justification:
+      Avoid build errors when certain combinations of make targets are invoked.
+    Votes:
+      +1: maxb, djames, dlr
