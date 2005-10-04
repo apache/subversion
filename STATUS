@@ -121,20 +121,6 @@ Candidate changes:
     Votes:
       +1: maxb, dlr
 
-  * r16432
-    Make the Python bindings automatically support the SVN_ASP_DOT_NET_HACK.
-    Votes:
-      +1: maxb
-      +0: djames
-
-  * r16434
-    Fix broken error reporting for "blame" in JavaHL bindings.
-    Justification:
-      Any error from svn_client_blame2() is otherwise discarded.
-    Votes:
-      +1: dlr
-      +0: djames
-
   * r16437
     Remove needless "case" clause.
     Justification:
@@ -164,3 +150,18 @@ Approved changes (further review is welcome, but not required):
       non-threaded APR.
     Votes:
       +1: maxb, djames
+
+  * r16432
+    Make the Python bindings automatically support the SVN_ASP_DOT_NET_HACK.
+    Votes:
+      +1: maxb
+      +0: djames
+
+  * r16434
+    Fix broken error reporting for "blame" in JavaHL bindings.
+    Justification:
+      Any error from svn_client_blame2() is otherwise discarded.
+    Votes:
+      +1: dlr
+      +0: djames
+
