@@ -577,7 +577,16 @@ remove_file_if_present (const char *file, apr_pool_t *pool)
   return svn_io_remove_file (file, pool);
 }
 
-
+/* Extend log_accum with log operations to do MOVE_COPY_OP to SRC_PATH and
+ * DST_PATH, removing DST_PATH if no SRC_PATH exists when
+ * REMOVE_DST_IF_NO_SRC is true.
+ *
+ * Sets *DST_MODIFIED (if DST_MODIFIED isn't NULL) to indicate that the
+ * destination path has been modified after running the log:
+ * either MOVE_COPY_OP has been executed, or DST_PATH was removed.
+ *
+ * SRC_PATH and DST_PATH are relative to ADM_ACCESS.
+ */
 static svn_error_t *
 loggy_move_copy_internal (svn_stringbuf_t **log_accum,
                           svn_boolean_t *dst_modified,
@@ -591,23 +600,13 @@ loggy_move_copy_internal (svn_stringbuf_t **log_accum,
   const char *full_src = svn_path_join (svn_wc_adm_access_path(adm_access),
                                         src_path, pool);
 
-  /* Does this file exist?  If not, get outta here. */
   SVN_ERR (svn_io_check_path (full_src, &kind, pool));
-  if (kind == svn_node_none)
-    {
-      if (remove_dst_if_no_src)
-        {
-          svn_xml_make_open_tag (log_accum, pool,
-                                 svn_xml_self_closing,
-                                 SVN_WC__LOG_RM,
-                                 SVN_WC__LOG_ATTR_NAME,
-                                 dst_path,
-                                 NULL);
-          if (dst_modified)
-            *dst_modified = TRUE;
-        }
-    }
-  else
+
+  if (dst_modified)
+    *dst_modified = FALSE;
+
+  /* Does this file exist? */
+  if (kind != svn_node_none)
     {
       svn_xml_make_open_tag (log_accum, pool,
                              svn_xml_self_closing,
@@ -617,6 +616,21 @@ loggy_move_copy_internal (svn_stringbuf_t **log_accum,
                              SVN_WC__LOG_ATTR_DEST,
                              dst_path,
                              NULL);
+      if (dst_modified)
+        *dst_modified = TRUE;
+    }
+  /* File doesn't exists, but caller wants for dst_path to be
+     removed. */
+  else if (kind == svn_node_none && remove_dst_if_no_src)
+    {
+      /* no need to check whether dst_path exists: ENOENT is ignored
+         by the log-runner */
+      svn_xml_make_open_tag (log_accum, pool,
+                              svn_xml_self_closing,
+                              SVN_WC__LOG_RM,
+                              SVN_WC__LOG_ATTR_NAME,
+                              dst_path,
+                              NULL);
       if (dst_modified)
         *dst_modified = TRUE;
     }
@@ -631,16 +645,8 @@ loggy_remove_file_if_present (svn_stringbuf_t **log_accum,
                               svn_wc_adm_access_t *adm_access,
                               const char *base_name, apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
-  const char *full_path = svn_path_join (svn_wc_adm_access_path(adm_access),
-                                          base_name, pool);
-
-  /* Does this file exist?  If not, get outta here. */
-  SVN_ERR (svn_io_check_path (full_path, &kind, pool));
-  if (kind == svn_node_none)
-    return SVN_NO_ERROR;
-
-  /* Else, remove the file. */
+  /* No need to check whether dst_path exists: ENOENT is ignored
+     by the log-runner */
   svn_xml_make_open_tag (log_accum, pool,
                          svn_xml_self_closing,
                          SVN_WC__LOG_RM,
@@ -650,7 +656,6 @@ loggy_remove_file_if_present (svn_stringbuf_t **log_accum,
 
   return SVN_NO_ERROR;
 }
-
 
 static svn_error_t *
 loggy_copy_if_present (svn_stringbuf_t **log_accum,
@@ -1579,7 +1584,6 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
          working props.  It's *still* possible that the base-props
          exist, however, from the original replaced file.  If they do,
          then we need to restore them. */
-      tgt_modified = FALSE;
       SVN_ERR (loggy_copy_if_present (&log_accum, &tgt_modified, adm_access,
                                       local_bprop, local_wprop, FALSE, pool));
 
@@ -1613,9 +1617,10 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
        * the text base for the file.  If it doesn't use the normal
        * text base. */
       SVN_ERR (loggy_move_if_present
-               (&log_accum, &target_needs_retranslation, adm_access,
+               (&log_accum, &tgt_modified, adm_access,
                 svn_wc__text_revert_path (name, FALSE, pool), base_thing,
                 FALSE, pool));
+      target_needs_retranslation = target_needs_retranslation || tgt_modified;
 
       if (! target_needs_retranslation)
         /* A shortcut: since we will translate when
