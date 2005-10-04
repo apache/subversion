@@ -132,7 +132,7 @@ Candidate changes:
     Votes:
       +1: kou
 
-  * r16462
+  * r16468
     Make VPATH (srcdir != builddir) doc-api builds work.
     Justification:
       Make it easier for packagers to build doxygen docs.
