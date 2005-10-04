@@ -2747,14 +2747,9 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     {
         return;
     }
-    svn_error_t * error = svn_client_blame2 (intPath.c_str(),
-                                            pegRevision.revision(),
-                                            revisionStart.revision(),
-                                            revisionEnd.revision(),
-                                            blame_receiver2,
-                                            callback,
-                                            ctx,
-                                            apr_pool);
+    Err = svn_client_blame2 (intPath.c_str(), pegRevision.revision(),
+			     revisionStart.revision(), revisionEnd.revision(),
+			     blame_receiver2, callback, ctx, apr_pool);
     if(Err != SVN_NO_ERROR)
     {
         JNIUtil::handleSVNError(Err);
