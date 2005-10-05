@@ -1806,7 +1806,8 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
             "(Ljava/lang/String;Ljava/lang/String;IJJJLjava/lang/String;IIIIZZ"
              "Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
              "Ljava/lang/String;JZLjava/lang/String;Ljava/lang/String;"
-             "Ljava/lang/String;JLorg/tigris/subversion/javahl/Lock;)V");
+             "Ljava/lang/String;JLorg/tigris/subversion/javahl/Lock;"
+             "JJILjava/lang/String;)V");
         if(JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
@@ -1843,6 +1844,11 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
     jstring jLockOwner = NULL;
     jlong jLockCreationDate = 0;
     jobject jLock = NULL;
+    jlong jOODLastCmtRevision =
+                    org_tigris_subversion_javahl_Revision_SVN_INVALID_REVNUM;
+    jlong jOODLastCmtDate = 0;
+    jint jOODKind = org_tigris_subversion_javahl_NodeKind_none;
+    jstring jOODLastCmtAuthor = NULL;
     if(status != NULL)
     {
 
@@ -1858,10 +1864,19 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
         {
             return NULL;
         }
+        jOODLastCmtRevision = status->ood_last_cmt_rev;
+        jOODLastCmtDate = status->ood_last_cmt_date;
+        jOODKind = EnumMapper::mapNodeKind(status->ood_kind);
+        jOODLastCmtAuthor = JNIUtil::makeJString(status->ood_last_cmt_author);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+
         svn_wc_entry_t * entry = status->entry;
         if (entry != NULL)
         {
-            jUrl = JNIUtil::makeJString(entry->url);
+            jUrl = JNIUtil::makeJString(status->url);
             if(JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
@@ -1921,7 +1936,8 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
         jTextType, jPropType, jRepositoryTextType, jRepositoryPropType, 
         jIsLocked, jIsCopied, jConflictOld, jConflictNew, jConflictWorking,
         jURLCopiedFrom, jRevisionCopiedFrom, jIsSwitched, jLockToken, 
-        jLockOwner, jLockComment, jLockCreationDate, jLock);
+        jLockOwner, jLockComment, jLockCreationDate, jLock,
+        jOODLastCmtRevision, jOODLastCmtDate, jOODKind, jOODLastCmtAuthor);
     if(JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
@@ -1982,6 +1998,11 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
         return NULL;
     }
     env->DeleteLocalRef(jLock);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    env->DeleteLocalRef(jOODLastCmtAuthor);
     if(JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
