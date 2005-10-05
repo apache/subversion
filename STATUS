@@ -85,21 +85,66 @@ Candidate changes:
     Votes:
       +1: djames, dlr
 
-  * r16428
+  * r16428, r16500
     Activate some Windows-specific behaviour on Cygwin too:
      - SVN_ASP_DOT_NET_HACK
      - Windows-specific augmented file:// URLs
+    r16500 is a small followup.
     Justification:
       Cygwin is likely to be exposed to native-Windows-created WCs.
     Votes:
       +1: maxb, dlr
-
+  * r16500
+    Justification:
+    Make svn_swig_py_init_asp_dot_net_hack() static.
+    Justification:
+      Greater visibility is not required, so keep the exported namespace clean.
+    Votes:
+      +1: maxb
+     
   * r16486
     Fiddle with the Perl bindings link command to avoid linking to installed,
     rather then build-tree libsvn_* libraries.
     Votes:
       +1: maxb
-     
+
+  * r16465
+    Fix erroneous %include of apr.h into SWIG Perl and Ruby bindings, which
+    was causing many irrelevant APR feature macros to be imported into the core
+    modules.
+    Justification:
+      Namespace pollution bad.
+    Votes:
+      +1: maxb
+
+  * r16470
+    Move proxy_apr.swg from proxy/ to include/, leaving proxy/ to be a
+    directory solely for build-time generated files.
+    Justification:
+      Keep branch close to trunk on this layout issue, because future build
+      generator change will probably make use of this.
+    Votes:
+      +1: maxb
+
+  * r16479
+    Make _global_svn_swig_py_is_local_pool a local variable instead of a global
+    variable. Use _global_pool_is_application_pool instead of
+    _global_svn_swig_py_is_local_pool. Rename _global_is_default_pool to
+    _global_pool_is_default_pool.
+    Justification:
+      Keep non "svn_" prefixed symbol out of the global namespace.
+    Votes:
+      +0: maxb
+
+  * r16480
+    Remove compatibility code for old versions of SWIG (SWIG 1.3.24 is now
+    required).
+    Justification:
+      Don't want to include vestigial remnants of old SWIG support in the
+      release.
+    Votes:
+      +1: maxb
+
 
 Approved changes (further review is welcome, but not required):
 
