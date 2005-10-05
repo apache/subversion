@@ -2012,13 +2012,20 @@ svn_error_t *svn_wc_add (const char *path,
                          void *notify_baton,
                          apr_pool_t *pool);
 
-/** Add a file to a working copy at @a dst_path, obtaining the file's
- * contents from @a new_text_path and its properties from @a new_props,
- * which normally come from the repository file represented by the
- * copyfrom args, see below.  The new file will be scheduled for
- * addition with history.
+/** Add a file to a working copy at @a dst_path, obtaining the base-text's
+ * contents from @a new_text_base_path, the wc file's content from
+ * @a new_text_path, its base properties from @a new_base_props and
+ * wc properties from @a new_props.
+ * The base text and props normally come from the repository file
+ * represented by the copyfrom args, see below.  The new file will
+ * be scheduled for addition with history.
  *
- * Automatically remove @a new_text_path upon successful completion.
+ * Automatically remove @a new_text_path and @a new_text_path upon
+ * successful completion.
+ *
+ * @a new_text_path and @a new_props may be null, in which case
+ * the working copy text and props are taken from the base files with
+ * appropriate translation of the file's content.
  *
  * @a adm_access, or an access baton in its associated set, must
  * contain a write lock for the parent of @a dst_path.
@@ -2040,7 +2047,27 @@ svn_error_t *svn_wc_add (const char *path,
  * doc string about how that's really weird, outside its core mission,
  * etc, etc.  So another part of the Ideal Plan is that that
  * functionality of svn_wc_add() would move into a separate function.
+ *
+ * @since New in 1.4
  */
+
+svn_error_t *svn_wc_add_repos_file2 (const char *dst_path,
+                                     svn_wc_adm_access_t *adm_access,
+                                     const char *new_text_base_path,
+                                     const char *new_text_path,
+                                     apr_hash_t *new_base_props,
+                                     apr_hash_t *new_props,
+                                     const char *copyfrom_url,
+                                     svn_revnum_t copyfrom_rev,
+                                     apr_pool_t *pool);
+
+/** Same as svn_wc_add_repos_file2(), except that it doesn't have the
+ * new_text_base_path and new_base_props arguments.
+ *
+ * @deprecated Provided for compatibility with the 1.3 API
+ *
+ */
+
 svn_error_t *svn_wc_add_repos_file (const char *dst_path,
                                     svn_wc_adm_access_t *adm_access,
                                     const char *new_text_path,

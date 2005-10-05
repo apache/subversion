@@ -2925,13 +2925,15 @@ svn_wc_get_actual_target (const char *path,
 }
 
 svn_error_t *
-svn_wc_add_repos_file (const char *dst_path,
-                       svn_wc_adm_access_t *adm_access,
-                       const char *new_text_path,
-                       apr_hash_t *new_props,
-                       const char *copyfrom_url,
-                       svn_revnum_t copyfrom_rev,
-                       apr_pool_t *pool)
+svn_wc_add_repos_file2 (const char *dst_path,
+                        svn_wc_adm_access_t *adm_access,
+                        const char *new_text_base_path,
+                        const char *new_text_path,
+                        apr_hash_t *new_base_props,
+                        apr_hash_t *new_props,
+                        const char *copyfrom_url,
+                        svn_revnum_t copyfrom_rev,
+                        apr_pool_t *pool)
 {
   const char *new_URL;
   apr_array_header_t *propchanges;
@@ -3002,7 +3004,7 @@ svn_wc_add_repos_file (const char *dst_path,
   /* Construct the new properties.  Passing an empty hash for the
      source props will result in the right kind of prop array for
      install_file().  Ooh, magic. */
-  SVN_ERR (svn_prop_diffs (&propchanges, new_props,
+  SVN_ERR (svn_prop_diffs (&propchanges, new_base_props,
                            apr_hash_make (pool), pool));
   
   SVN_ERR (install_file (log_accum,
@@ -3012,7 +3014,7 @@ svn_wc_add_repos_file (const char *dst_path,
                          adm_access,
                          dst_path,
                          ent->revision,
-                         new_text_path,
+                         new_text_base_path,
                          propchanges,
                          TRUE, /* a full proplist */
                          new_URL,
@@ -3023,10 +3025,78 @@ svn_wc_add_repos_file (const char *dst_path,
                          NULL,
                          pool));
 
+  if (new_props)
+    {
+      const char *tmp_prop_path, *prop_path;
+      apr_file_t *file;
+      const char *adm_path = svn_wc_adm_access_path (adm_access);
+      apr_size_t adm_path_len = strlen (adm_path) + 1;
+
+      /* Save new props to temporary file. Don't use svn_wc__prop_path()
+         because install_file() will overwrite it! */
+      SVN_ERR (svn_wc_create_tmp_file (&file, adm_path, FALSE, pool));
+      apr_file_name_get (&tmp_prop_path, file);
+      SVN_ERR (svn_io_file_close (file, pool));
+      SVN_ERR (svn_wc__save_prop_file (tmp_prop_path, new_props, pool));
+
+      /* Rename temporary props file to working props. */
+      SVN_ERR (svn_wc__prop_path (&prop_path, base_name, adm_access,
+                                  FALSE, pool));
+      svn_xml_make_open_tag (&log_accum, pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_MV,
+                             SVN_WC__LOG_ATTR_NAME,
+                             tmp_prop_path + adm_path_len,
+                             SVN_WC__LOG_ATTR_DEST,
+                             prop_path,
+                             NULL);
+    }
+
+  if (new_text_path)
+    {
+      const char *tmp_text_path;
+      apr_file_t *file;
+      const char *adm_path = svn_wc_adm_access_path (adm_access);
+      apr_size_t adm_path_len = strlen (adm_path) + 1;
+
+      /* Copy new text to temporary file in adm_access. */
+      SVN_ERR (svn_wc_create_tmp_file (&file, adm_path, FALSE, pool));
+      apr_file_name_get (&tmp_text_path, file);
+      SVN_ERR (svn_io_file_close (file, pool));
+      SVN_ERR (svn_io_copy_file (new_text_path, tmp_text_path, FALSE, pool));
+
+      /* Rename new temporary text file to working text. */
+      svn_xml_make_open_tag (&log_accum, pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_MV,
+                             SVN_WC__LOG_ATTR_NAME,
+                             tmp_text_path + adm_path_len,
+                             SVN_WC__LOG_ATTR_DEST,
+                             base_name,
+                             NULL);
+    }
+
   /* Write our accumulation of log entries into a log file */
   SVN_ERR (svn_wc__write_log (adm_access, 0, log_accum, pool));
 
   SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_add_repos_file (const char *dst_path,
+                       svn_wc_adm_access_t *adm_access,
+                       const char *new_text_path,
+                       apr_hash_t *new_props,
+                       const char *copyfrom_url,
+                       svn_revnum_t copyfrom_rev,
+                       apr_pool_t *pool)
+{
+  return svn_wc_add_repos_file2 (dst_path, adm_access,
+                                 new_text_path, NULL,
+                                 new_props, NULL,
+                                 copyfrom_url, copyfrom_rev,
+                                 pool);
 }

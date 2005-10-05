@@ -135,9 +135,7 @@ copy_file_administratively (const char *src_path,
 {
   svn_node_kind_t dst_kind;
   const svn_wc_entry_t *src_entry, *dst_entry;
-  svn_boolean_t special;
-  svn_boolean_t replace = FALSE;
-  const char *src_wprop, *src_bprop, *dst_wprop, *dst_bprop;
+  const char *src_wprop, *src_bprop, *dst_wprop;
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
   const char *dst_path
@@ -145,7 +143,7 @@ copy_file_administratively (const char *src_path,
 
   /* Discover the paths to the two text-base files */
   const char *src_txtb = svn_wc__text_base_path (src_path, FALSE, pool);
-  const char *dst_txtb = svn_wc__text_base_path (dst_path, FALSE, pool);
+  const char *tmp_txtb = svn_wc__text_base_path (dst_path, TRUE, pool);
 
   /* Discover the paths to the four prop files */
   SVN_ERR (svn_wc__prop_path (&src_wprop, src_path,
@@ -154,8 +152,6 @@ copy_file_administratively (const char *src_path,
                                    src_access, FALSE, pool));
   SVN_ERR (svn_wc__prop_path (&dst_wprop, dst_path,
                               dst_parent, FALSE, pool));
-  SVN_ERR (svn_wc__prop_base_path (&dst_bprop, dst_path,
-                                    dst_parent, FALSE, pool));
 
   /* Sanity check:  if dst file exists already, don't allow overwrite. */
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
@@ -171,9 +167,7 @@ copy_file_administratively (const char *src_path,
   SVN_ERR (svn_wc_entry (&dst_entry, dst_path, dst_parent, FALSE, pool));
   if (dst_entry && dst_entry->kind == svn_node_file)
     {
-      if (dst_entry->schedule == svn_wc_schedule_delete)
-        replace = TRUE;
-      else
+      if (dst_entry->schedule != svn_wc_schedule_delete)
         return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
                                   _("There is already a versioned item '%s'"),
                                   svn_path_local_style (dst_path, pool));
@@ -197,87 +191,42 @@ copy_file_administratively (const char *src_path,
          "try committing first"),
        svn_path_local_style (src_path, pool));
 
-  /* Now, make an actual copy of the working file.  If this is a
-     special file, we can't copy it directly, but should instead
-     use the translation routines to create the new file. */
-  SVN_ERR (svn_wc__get_special (&special, src_path, src_access, pool));
-  if (! special)
-    SVN_ERR (svn_io_copy_file (src_path, dst_path, TRUE, pool));
-  else
-    SVN_ERR (svn_subst_copy_and_translate2 (src_path,
-                                            dst_path, NULL, FALSE,
-                                            NULL,
-                                            TRUE, /* expand */
-                                            TRUE, /* special */
-                                            pool));
- 
-  /* If we're replacing the file then we need to save the destination files
-   * text base and prop base before replacing it (see comments below for why
-   * it gets replaced).  This allows us to revert the entire change. */
-  if (replace) 
-    {
-      const char *dst_rtext = svn_wc__text_revert_path (dst_path, FALSE, pool);
-      const char *dst_rprop;
-      svn_node_kind_t kind;
-
-      SVN_ERR (svn_wc__prop_revert_path (&dst_rprop, dst_path,
-                                         dst_parent, FALSE, pool));
-
-      SVN_ERR (svn_io_copy_file (dst_txtb, dst_rtext, TRUE, pool));
-      
-      /* If prop base exist, copy it to revert base. We need this check
-       * because in some situations prop base doesn't exists */
-      SVN_ERR (svn_io_check_path(dst_bprop, &kind, pool));
-      if (kind == svn_node_file)
-        SVN_ERR (svn_io_copy_file (dst_bprop, dst_rprop, TRUE, pool));
-    }
-  
-  /* Copy the pristine text-base over.  Why?  Because it's the *only*
-     way we can detect any upcoming local mods on the copy.
-
-     In other words, we're talking about the scenario where somebody
-     makes local mods to 'foo.c', then does an 'svn cp foo.c bar.c'.
-     In this case, bar.c should still be locally modified too.
-     
-     Why do we want the copy to have local mods?  Even though the user
-     will only see an 'A' instead of an 'M', local mods means that the
-     client doesn't have to send anything but a small delta during
-     commit; the server can make efficient use of the copyfrom args. 
-
-     As long as we're copying the text-base over, we should copy the
-     working and pristine propfiles over too. */
-  {
-    svn_node_kind_t kind;
-
-    /* Copy the text-base over unconditionally. */
-    SVN_ERR (svn_io_copy_file (src_txtb, dst_txtb, TRUE, pool));
-
-    /* Copy the props over if they exist. */
-    SVN_ERR (svn_io_check_path (src_wprop, &kind, pool));
-    if (kind == svn_node_file)
-      SVN_ERR (svn_io_copy_file (src_wprop, dst_wprop, TRUE, pool));
-      
-    /* Copy the base-props over if they exist */
-    SVN_ERR (svn_io_check_path (src_bprop, &kind, pool));
-    if (kind == svn_node_file)
-      SVN_ERR (svn_io_copy_file (src_bprop, dst_bprop, TRUE, pool));
-  }
 
   /* Schedule the new file for addition in its parent, WITH HISTORY. */
   {
     char *copyfrom_url;
     svn_revnum_t copyfrom_rev;
+    apr_hash_t *props, *base_props;
 
     SVN_ERR (svn_wc_get_ancestry (&copyfrom_url, &copyfrom_rev,
                                   src_path, src_access, pool));
-    
-    /* Pass NULL, NULL for cancellation func and baton, as this is
-       only one file, not N files. */
-    SVN_ERR (svn_wc_add2 (dst_path, dst_parent,
-                          copyfrom_url, copyfrom_rev,
-                          NULL, NULL,
-                          notify_copied, notify_baton, pool));
+
+    /* Copy pristine text-base to temporary location. */
+    SVN_ERR (svn_io_copy_file (src_txtb, tmp_txtb, TRUE, pool));
+
+    /* Load source base props. */
+    base_props = apr_hash_make (pool);
+    SVN_ERR (svn_wc__load_prop_file (src_bprop, base_props, pool));
+
+    /* Load source working props. */
+    props = apr_hash_make (pool);
+    SVN_ERR (svn_wc__load_prop_file (src_wprop, props, pool));
+
+    SVN_ERR (svn_wc_add_repos_file2 (dst_path, dst_parent,
+                                     tmp_txtb, src_path, 
+                                     base_props, props,
+                                     copyfrom_url, copyfrom_rev, pool));
   }
+                
+  /* Report the addition to the caller. */
+  if (notify_copied != NULL)
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify (dst_path,
+                                                      svn_wc_notify_add,
+                                                      pool);
+      notify->kind = svn_node_file;
+      (*notify_copied) (notify_baton, notify, pool);
+    }
 
   return SVN_NO_ERROR;
 }
