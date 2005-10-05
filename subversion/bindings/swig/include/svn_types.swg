@@ -293,12 +293,11 @@
 #endif
 
 %typemap(python, default) apr_pool_t *(apr_pool_t *_global_pool,
-  PyObject *_global_svn_swig_py_pool, int _global_svn_swig_py_is_local_pool,
-  int _global_is_default_pool)
+  PyObject *_global_svn_swig_py_pool, int _global_pool_is_default_pool)
 {
   int argnum = PyTuple_GET_SIZE(args) - 1;
-  _global_svn_swig_py_is_local_pool = 1;
-  _global_is_default_pool = 1;
+  _global_pool_is_application_pool = 0;
+  _global_pool_is_default_pool = 1;
   if (argnum >= 0) {
     PyObject *input = PyTuple_GET_ITEM(args, argnum);
     if (input != Py_None &&
@@ -310,7 +309,7 @@
       }
       _global_svn_swig_py_pool = input;
       Py_XINCREF(_global_svn_swig_py_pool);
-      _global_is_default_pool = 0;
+      _global_pool_is_default_pool = 0;
     } else {
       if (PyErr_Occurred()) {
         PyErr_Clear();
@@ -327,7 +326,7 @@
 }
 
 %typemap(python, in) apr_pool_t * {
-  if ($input != Py_None && _global_is_default_pool == 1) {
+  if ($input != Py_None && _global_pool_is_default_pool == 1) {
     svn_swig_py_pool_check($input)
     _global_pool = svn_swig_MustGetPtr($input, $1_descriptor, $svn_argnum, 
       NULL);
