@@ -3196,6 +3196,7 @@ svn_error_t * svn_ra_dav__do_diff(svn_ra_session_t *session,
                                   const char *diff_target,
                                   svn_boolean_t recurse,
                                   svn_boolean_t ignore_ancestry,
+                                  svn_boolean_t text_deltas,
                                   const char *versus_url,
                                   const svn_delta_editor_t *wc_diff,
                                   void *wc_diff_baton,
@@ -3212,7 +3213,7 @@ svn_error_t * svn_ra_dav__do_diff(svn_ra_session_t *session,
                         FALSE,
                         wc_diff,
                         wc_diff_baton,
-                        TRUE, /* fetch_content */
+                        text_deltas, /* fetch_content */
                         FALSE, /* send_all */
                         TRUE, /* spool_response */
                         pool);

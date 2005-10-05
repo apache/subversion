@@ -312,8 +312,8 @@ static svn_error_t *compat_do_diff (void *session_baton,
   void *baton2;
   
   SVN_ERR (VTBL.do_diff (session_baton, &reporter2, &baton2, revision,
-                         diff_target, recurse, ignore_ancestry, versus_url,
-                         diff_editor, diff_baton, pool));
+                         diff_target, recurse, ignore_ancestry, TRUE,
+                         versus_url, diff_editor, diff_baton, pool));
 
   compat_wrap_reporter (reporter, report_baton, reporter2, baton2, pool);
 

@@ -403,6 +403,33 @@ svn_client__get_diff_editor (const char *target,
 
 /* ---------------------------------------------------------------- */
 
+/*** Editor for diff summary ***/
+
+/* Create an editor for a repository diff summary, i.e. comparing one
+ * repository version against the other and only providing information
+ * about the changed items without the text deltas.
+ *
+ * @a summarize_func is called with @a summarize_baton as parameter by the
+ * created svn_delta_editor_t for each changed item.
+ *
+ * See svn_client__get_diff_editor() for a description of the other
+ * parameters.
+ */
+svn_error_t *
+svn_client__get_diff_summarize_editor (const char *target,
+                                       svn_client_diff_summarize_func_t
+                                       summarize_func,
+                                       void *summarize_baton,
+                                       svn_ra_session_t *ra_session, 
+                                       svn_revnum_t revision,
+                                       svn_cancel_func_t cancel_func,
+                                       void *cancel_baton,
+                                       const svn_delta_editor_t **editor,
+                                       void **edit_baton,
+                                       apr_pool_t *pool);
+
+/* ---------------------------------------------------------------- */
+
 /*** Commit Stuff ***/
 
 /* WARNING: This is all new, untested, un-peer-reviewed conceptual

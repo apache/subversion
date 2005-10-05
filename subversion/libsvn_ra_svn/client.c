@@ -1070,6 +1070,7 @@ static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
                                 svn_revnum_t rev, const char *target,
                                 svn_boolean_t recurse,
                                 svn_boolean_t ignore_ancestry,
+                                svn_boolean_t text_deltas,
                                 const char *versus_url,
                                 const svn_delta_editor_t *diff_editor,
                                 void *diff_baton, apr_pool_t *pool)
@@ -1078,8 +1079,9 @@ static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
   svn_ra_svn_conn_t *conn = sess_baton->conn;
 
   /* Tell the server we want to start a diff. */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "diff", "(?r)cbbc", rev, target,
-                               recurse, ignore_ancestry, versus_url));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "diff", "(?r)cbbcb", rev,
+                               target, recurse, ignore_ancestry,
+                               versus_url, text_deltas));
   SVN_ERR(handle_auth_request(sess_baton, pool));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
