@@ -9,14 +9,6 @@ Status of 1.3.0:
 
 Candidate changes:
 
-  * r16369
-    Align implementation of repository creation with claims made in
-    svn_repos.h's doc string.
-    Justification:
-      Correctness, and fixes SWIG Python and Perl tests.
-    Votes:
-      +1: maxb, dlr, kfogel
-
   * r16344, r16347, r16358, 16375
     Branch: (to be created)
     Provide more complete server-side information about working copy
