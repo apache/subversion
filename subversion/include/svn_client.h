@@ -449,6 +449,74 @@ typedef svn_error_t *
                                 apr_pool_t *pool);
 
 
+/** The difference type in an svn_diff_summarize_t structure.
+ *
+ * @since New in 1.4.
+ */
+typedef enum svn_client_diff_summarize_kind_t
+{
+  /** An item with no text modification.s */
+  svn_client_diff_summarize_kind_normal,
+
+  /** An added item */
+  svn_client_diff_summarize_kind_added,
+
+  /** An item with text modifications */
+  svn_client_diff_summarize_kind_modified,
+
+  /** A deleted item */
+  svn_client_diff_summarize_kind_deleted
+} svn_client_diff_summarize_kind_t;
+
+
+/** A struct that describes the diff of an item. Passed to
+ * @c svn_diff_summarize_func_t.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
+ *
+ * @since New in 1.4.
+ */
+typedef struct svn_client_diff_summarize_t
+{
+  /** Path relative to the target. */
+  const char *path;
+
+  /** Set if @a path was copied from @a path_copyfrom, else NULL. */
+  const char *copyfrom_path;
+  
+  /** Copy-from revision, os @C SVN_INVALID_REVNUM if @c copyfrom_path is NULL.
+   */
+  svn_revnum_t copyfrom_rev;
+
+  /** Change kind */
+  svn_client_diff_summarize_kind_t summarize_kind;
+
+  /** Properties changed? */
+  svn_boolean_t prop_changed;
+
+  /** File or dir */
+  svn_node_kind_t node_kind;
+} svn_client_diff_summarize_t;  
+
+
+/** A callback used in svn_client_diff_summarize/svn_client_diff_summarize_peg
+ * for reporting a @a diff summary. 
+ *
+ * All allocations should be performed in @a pool.
+ *
+ * @a baton is a closure object; it should be provided by the implementation,
+ * and passed by the caller.
+ *
+ * @since New in 1.4.
+ */
+typedef svn_error_t *
+(*svn_client_diff_summarize_func_t) (const svn_client_diff_summarize_t *diff,
+                                     void *baton,
+                                     apr_pool_t *pool);
+ 
+
 /** A client context structure, which holds client specific callbacks, 
  * batons, serves as a cache for configuration options, and other various 
  * and sundry things.  In order to avoid backwards compatibility problems 
@@ -1348,6 +1416,62 @@ svn_error_t *svn_client_diff_peg (const apr_array_header_t *diff_options,
                                   apr_file_t *errfile,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool);
+
+/**
+ * Produce a diff summary which lists the changed items between
+ * @a path1/@a revision1 and @a path2/@a revision2 without creating text
+ * deltas. @a path1 and @a path2 can be either working-copy paths or URLs.
+ *
+ * The function may report false positives if @a ignore_ancestry is false,
+ * since a file might have been modified between two revisions, but still
+ * have the same contents.
+ *
+ * Calls @a summarize_func with @a summarize_baton for each difference
+ * with a @c svn_client_diff_summarize_t structure describing the difference.
+ *
+ * See svn_client_diff3() for a description of the other parameters.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *
+svn_client_diff_summarize (const char *path1,
+                           const svn_opt_revision_t *revision1,
+                           const char *path2,
+                           const svn_opt_revision_t *revision2,
+                           svn_boolean_t recurse,
+                           svn_boolean_t ignore_ancestry,
+                           svn_client_diff_summarize_func_t summarize_func,
+                           void *summarize_baton,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool);
+
+/**
+ * Produce a diff summary which lists the changed items between the
+ * filesystem object @a path in peg revision @a peg_revision, as it
+ * changed between @a start_revision and @a end_revision. @a path can
+ * be either a working-copy path or URL.
+ *
+ * The function may report false positives if @a ignore_ancestry is false,
+ * as described in the documentation for svn_client_diff_summarize().
+ *
+ * Call @a summarize_func with @a sumarize_baton for each difference
+ * with a @c svn_client_diff_summarize_t structure describing the difference.
+ *
+ * See svn_client_diff_peg3() for a description of the other parameters.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *
+svn_client_diff_summarize_peg (const char *path,
+                               const svn_opt_revision_t *peg_revision,
+                               const svn_opt_revision_t *start_revision,
+                               const svn_opt_revision_t *end_revision,
+                               svn_boolean_t recurse,
+                               svn_boolean_t ignore_ancestry,
+                               svn_client_diff_summarize_func_t summarize_func,
+                               void *summarize_baton,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *pool);
 
 /** Merge changes from @a source1/@a revision1 to @a source2/@a revision2 into 
  * the working-copy path @a target_wcpath.

@@ -449,6 +449,25 @@ svn_error_t *svn_ra_do_status (svn_ra_session_t *session,
                                      status_editor, status_baton, pool);
 }
 
+svn_error_t *svn_ra_do_diff2 (svn_ra_session_t *session,
+                              const svn_ra_reporter2_t **reporter,
+                              void **report_baton,
+                              svn_revnum_t revision,
+                              const char *diff_target,
+                              svn_boolean_t recurse,
+                              svn_boolean_t ignore_ancestry,
+                              svn_boolean_t text_deltas,
+                              const char *versus_url,
+                              const svn_delta_editor_t *diff_editor,
+                              void *diff_baton,
+                              apr_pool_t *pool)
+{
+  return session->vtable->do_diff (session, reporter, report_baton, revision,
+                                   diff_target, recurse, ignore_ancestry,
+                                   text_deltas, versus_url, diff_editor,
+                                   diff_baton, pool);
+}
+
 svn_error_t *svn_ra_do_diff (svn_ra_session_t *session,
                              const svn_ra_reporter2_t **reporter,
                              void **report_baton,
@@ -461,9 +480,9 @@ svn_error_t *svn_ra_do_diff (svn_ra_session_t *session,
                              void *diff_baton,
                              apr_pool_t *pool)
 {
-  return session->vtable->do_diff (session, reporter, report_baton, revision,
-                                   diff_target, recurse, ignore_ancestry,
-                                   versus_url, diff_editor, diff_baton, pool);
+  return svn_ra_do_diff2 (session, reporter, report_baton, revision,
+                          diff_target, recurse, ignore_ancestry, TRUE,
+                          versus_url, diff_editor, diff_baton, pool);
 }
 
 svn_error_t *svn_ra_get_log (svn_ra_session_t *session,

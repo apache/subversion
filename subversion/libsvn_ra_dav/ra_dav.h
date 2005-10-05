@@ -291,6 +291,7 @@ svn_error_t * svn_ra_dav__do_diff(
   const char *diff_target,
   svn_boolean_t recurse,
   svn_boolean_t ignore_ancestry,
+  svn_boolean_t text_deltas,
   const char *versus_url,
   const svn_delta_editor_t *wc_diff,
   void *wc_diff_baton,
