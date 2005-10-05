@@ -94,15 +94,6 @@ Candidate changes:
     Votes:
       +1: maxb, dlr
 
-  * r16437
-    Remove needless "case" clause.
-    Justification:
-      The needless clause maybe cause a problem.
-      For example:
-        http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=106222
-    Votes:
-      +1: kou
-
   * r16486
     Fiddle with the Perl bindings link command to avoid linking to installed,
     rather then build-tree libsvn_* libraries.
