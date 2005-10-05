@@ -1629,21 +1629,17 @@ svn_error_t *svn_swig_py_fs_get_locks_func (void *baton,
                                             apr_pool_t *pool)
 {
   PyObject *function = baton;
-  PyObject *result, *py_pool, *py_lock;
+  PyObject *result;
   svn_error_t *err = SVN_NO_ERROR;
 
   if (function == NULL || function == Py_None)
     return SVN_NO_ERROR;
 
   svn_swig_py_acquire_py_lock();
-  py_pool = make_ob_pool(pool);
-  if (py_pool == NULL) {
-    err = callback_exception_error();
-    goto finished;
-  }
   
-  if ((result = PyObject_CallFunction(function, (char *)"O&O",
-                                      make_ob_lock, py_lock, py_pool)) == NULL)
+  if ((result = PyObject_CallFunction(function, (char *)"O&O&",
+                                      make_ob_lock, lock,
+                                      make_ob_pool, pool)) == NULL)
     {
       err = callback_exception_error();
     }
@@ -1655,10 +1651,6 @@ svn_error_t *svn_swig_py_fs_get_locks_func (void *baton,
       Py_DECREF(result);
     }
 
-  Py_DECREF(py_lock);
-  Py_DECREF(py_pool);
-
-finished: 
   svn_swig_py_release_py_lock();
   return err;
 }
@@ -2021,7 +2013,7 @@ svn_swig_py_auth_ssl_server_trust_prompt_func(
     apr_pool_t *pool)
 {
   PyObject *function = baton;
-  PyObject *result, *py_pool, *py_cert_info;
+  PyObject *result;
   svn_auth_cred_ssl_server_trust_t *creds = NULL;
   svn_error_t *err = SVN_NO_ERROR;
 
@@ -2029,15 +2021,10 @@ svn_swig_py_auth_ssl_server_trust_prompt_func(
     return SVN_NO_ERROR;
 
   svn_swig_py_acquire_py_lock();
-  py_pool = make_ob_pool(pool);
-  if (py_pool == NULL) {
-    err = callback_exception_error();
-    goto finished;
-  }
 
-  if ((result = PyObject_CallFunction(function, (char *)"slO&lO", 
+  if ((result = PyObject_CallFunction(function, (char *)"slO&lO&", 
                   realm, failures, make_ob_auth_ssl_server_cert_info,
-                  cert_info, may_save, py_pool)) == NULL)
+                  cert_info, may_save, make_ob_pool, pool)) == NULL)
     {
       err = callback_exception_error();
     }
@@ -2061,10 +2048,7 @@ svn_swig_py_auth_ssl_server_trust_prompt_func(
         }
       Py_DECREF(result);
     }
- Py_DECREF(py_cert_info);
- Py_DECREF(py_pool);
 
-finished:
   svn_swig_py_release_py_lock();
   *cred = creds;
   return err;
