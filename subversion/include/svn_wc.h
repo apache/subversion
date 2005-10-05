@@ -1559,6 +1559,11 @@ typedef struct svn_wc_status2_t
   /** The entry's lock in the repository, if any. */
   svn_lock_t *repos_lock;
 
+  /** Set to the URI (actual or expected) of the item.
+   * @since New in 1.3
+   */
+  const char *url;
+
   /**
    * @defgroup svn_wc_status_ood Repository out of date info
    * @{
@@ -1585,11 +1590,6 @@ typedef struct svn_wc_status2_t
    * @since New in 1.3
    */
   svn_node_kind_t ood_kind;
-
-  /** Set to the URL of the youngest commit, or @c NULL if out of date.
-   * @since New in 1.3
-   */
-  const char *ood_url;
 
   /** Set to the user name of the youngest commit, or @c NULL if out
    * of date.
