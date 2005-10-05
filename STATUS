@@ -119,10 +119,3 @@ Approved changes (further review is welcome, but not required):
       Use-of-uninitialized-value bugs are crash bugs.
     Votes:
       +1: maxb, djames, dlr
-
-  * r16424
-    Avoid gcc uninitialized warning.
-    Justificiation:
-      Should build without warnings.
-    Votes:
-      +1: maxb, lundblad, dlr
