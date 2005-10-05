@@ -2366,7 +2366,7 @@ diff_summarize_repos_repos (const struct diff_parameters *diff_param,
 /* Return an error for unsupported summarizing diff operation, i.e.
  * a diff that doesn't compare repository to repository. */
 static svn_error_t *
-unsupported_diff_summarize ()
+unsupported_diff_summarize (void)
 {
   return svn_error_create (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                            _("Summarizing diff can only compare repository "
