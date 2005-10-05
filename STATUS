@@ -83,7 +83,7 @@ Candidate changes:
     Justification:
       Easily reviewable, might save someone some problems.
     Votes:
-      +1: djames
+      +1: djames, dlr
 
   * r16424
     Avoid gcc uninitialized warning.
