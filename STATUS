@@ -98,13 +98,6 @@ Candidate changes:
     Votes:
       +1: kou
 
-  * r16468
-    Make VPATH (srcdir != builddir) doc-api builds work.
-    Justification:
-      Make it easier for packagers to build doxygen docs.
-    Votes:
-      +1: maxb, dlr, lundblad
-
   * r16486
     Fiddle with the Perl bindings link command to avoid linking to installed,
     rather then build-tree libsvn_* libraries.
