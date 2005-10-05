@@ -9,14 +9,26 @@ Status of 1.3.0:
 
 Candidate changes:
 
-  * r16344, r16347, r16358, 16375
-    Branch: (to be created)
+  * r16344, r16347, r16358, r16375, r16494
     Provide more complete server-side information about working copy
     items which are out of date in the repository.
+    Branch: status-from-repos-enhancements
     Justification:
       This info is extremely useful to Subversion clients; the first
       consumer is likely to be the "Synchronize" view of the Subclipse
       plug-in for the Eclipse IDE.
+    Votes:
+      +1: dlr
+
+  * r16495
+    Expose the "out of date" and URI fields now available from the
+    svn_wc_status2_t data type to the JavaHL bindings via its Status
+    class.
+    Justification:
+      Bindings should fully reflect the core Subversion API.
+      Subclipse will start using these new APIs immediately.
+    Notes:
+      Depends on the status-from-repos-enhancements branch.
     Votes:
       +1: dlr
 
