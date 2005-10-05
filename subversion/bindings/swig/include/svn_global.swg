@@ -18,18 +18,7 @@
 
 #ifdef SWIGPYTHON
 
-#if SVN_SWIG_VERSION >= 103024
 %feature("autodoc",1);
-#else
-/* Old versions of SWIG can't handle __attribute__ */
-#define __attribute__(x)
-
-/* Old versions of SWIG can't handle functions
-   where the pool is not the last argument */
-%ignore svn_stream_printf;
-%ignore svn_stream_printf_from_utf8;
-%ignore svn_opt_print_generic_help;
-#endif
 
 %{
 static PyObject * _global_svn_swig_py_pool = NULL;
