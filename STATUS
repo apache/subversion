@@ -119,7 +119,7 @@ Candidate changes:
     Justification:
       Use-of-uninitialized-value bugs are crash bugs.
     Votes:
-      +1: maxb
+      +1: maxb, djames
      
 Approved changes (further review is welcome, but not required):
 
