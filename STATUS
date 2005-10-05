@@ -94,13 +94,6 @@ Candidate changes:
       Cygwin is likely to be exposed to native-Windows-created WCs.
     Votes:
       +1: maxb, dlr
-  * r16500
-    Justification:
-    Make svn_swig_py_init_asp_dot_net_hack() static.
-    Justification:
-      Greater visibility is not required, so keep the exported namespace clean.
-    Votes:
-      +1: maxb
      
   * r16486
     Fiddle with the Perl bindings link command to avoid linking to installed,
