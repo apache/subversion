@@ -298,7 +298,7 @@
 %include svn_wc_h.swg
 
 %inline %{
-svn_error_t *
+static svn_error_t *
 svn_swig_init_asp_dot_net_hack (apr_pool_t *pool)
 {
 #if defined(WIN32) || defined(__CYGWIN__)
