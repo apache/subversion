@@ -113,6 +113,8 @@ Candidate changes:
     Votes:
       +1: maxb, dlr
 
+Approved changes (further review is welcome, but not required):
+
   * r16477
     Python bindings. Followup to r16398. Fix use-of-uninitialized-value bugs
     introduced by the half-migration of two functions to a new style.
@@ -121,5 +123,3 @@ Candidate changes:
     Votes:
       +1: maxb, djames
      
-Approved changes (further review is welcome, but not required):
-
