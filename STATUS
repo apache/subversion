@@ -51,7 +51,7 @@ Candidate changes:
     Justification:
       Small bug, easy fix, of value to Windows users of PuTTY.
     Votes:
-      +1: maxb
+      +1: maxb, lundblad
 
   * r16388, r16408
     Fix numerous bugs in the svn_fs_*berkeley*() APIs.
@@ -86,7 +86,7 @@ Candidate changes:
     Justificiation:
       Should build without warnings.
     Votes:
-      +1: maxb
+      +1: maxb, lundblad
 
   * r16428
     Activate some Windows-specific behaviour on Cygwin too:
@@ -111,7 +111,7 @@ Candidate changes:
     Justification:
       Make it easier for packagers to build doxygen docs.
     Votes:
-      +1: maxb, dlr
+      +1: maxb, dlr, lundblad
 
   * r16486
     Fiddle with the Perl bindings link command to avoid linking to installed,
