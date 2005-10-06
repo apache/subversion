@@ -136,6 +136,29 @@ public class Status
      * the lock in the repository
      */
     private Lock reposLock;
+    /**
+     * @since 1.3
+     * Set to the youngest committed revision, or {@link
+     * Revision#SVN_INVALID_REVNUM} if not out of date.
+     */
+    private long reposLastCmtRevision = Revision.SVN_INVALID_REVNUM;
+    /**
+     * @since 1.3
+     * Set to the most recent commit date, or 0 if not out of date.
+     */
+    private long reposLastCmtDate = 0;
+    /**
+     * @since 1.3
+     * Set to the node kind of the youngest commit, or {@link
+     * NodeKind#none} if not out of date.
+     */
+    private int reposKind = NodeKind.none;
+    /**
+     * @since 1.3
+     * Set to the user name of the youngest commit, or
+     * <code>null</code> if not out of date.
+     */
+    private String reposLastCmtAuthor;
 
     /**
      * this constructor should only called from JNI code
@@ -171,6 +194,12 @@ public class Status
      * @param lockCreationDate      the date, the lock was created if any
      * @param reposLock             the lock as stored in the repository if
      *                              any
+     * @param reposLastCmtRevision  the youngest revision, if out of date
+     * @param reposLastCmtDate      the last commit date, if out of date
+     * @param reposKind             the kind of the youngest revision, if
+     *                              out of date
+     * @param reposLastCmtAuthor    the author of the last commit, if out of
+     *                              date
      */
     public Status(String path, String url, int nodeKind, long revision,
                   long lastChangedRevision, long lastChangedDate,
@@ -180,7 +209,9 @@ public class Status
                   String conflictNew, String conflictWorking,
                   String urlCopiedFrom, long revisionCopiedFrom,
                   boolean switched, String lockToken, String lockOwner, 
-                  String lockComment, long lockCreationDate, Lock reposLock)
+                  String lockComment, long lockCreationDate, Lock reposLock,
+                  long reposLastCmtRevision, long reposLastCmtDate,
+                  int reposKind, String reposLastCmtAuthor)
     {
         this.path = path;
         this.url = url;
@@ -206,6 +237,10 @@ public class Status
         this.lockComment = lockComment;
         this.lockCreationDate = lockCreationDate;
         this.reposLock = reposLock;
+        this.reposLastCmtRevision = reposLastCmtRevision;
+        this.reposLastCmtDate = reposLastCmtDate;
+        this.reposKind = reposKind;
+        this.reposLastCmtAuthor = reposLastCmtAuthor;
     }
 
     /**
@@ -358,8 +393,13 @@ public class Status
     }
 
     /**
-     * Returns the repository url if any
-     * @return url in repository or null if not known
+     * Returns the URI to where the item might exist in the
+     * repository.  We say "might" because the item might exist in
+     * your working copy, but have been deleted from the repository.
+     * Or it might exist in the repository, but your working copy
+     * might not yet contain it (because the WC is not up to date).
+     * @return URI in repository, or <code>null</code> if the item
+     * exists in neither the repository nor the WC.
      */
     public String getUrl()
     {
@@ -546,6 +586,47 @@ public class Status
     {
         return reposLock;
     }
+
+    /**
+     * @return The last committed revision, or {@link
+     * Revision#SVN_INVALID_REVNUM} if up to date.
+     * @since 1.3
+     */
+    public Revision getReposLastCmtRevision()
+    {
+        return Revision.createNumber(reposLastCmtRevision);
+    }
+
+    /**
+     * @return The last committed date, or <code>null</code> if up to
+     * date.
+     * @since 1.3
+     */
+    public Date getReposLastCmtDate()
+    {
+        return microsecondsToDate(reposLastCmtDate);
+    }
+
+    /**
+     * @return The node kind (e.g. file, directory, etc.), or
+     * <code>null</code> if up to date.
+     * @since 1.3
+     */
+    public int getReposKind()
+    {
+        return reposKind;
+    }
+
+    /**
+     * @return The author of the last commit, or <code>null</code> if
+     * up to date.
+     * @since 1.3
+     */
+    public String getReposLastCmtAuthor()
+    {
+        return reposLastCmtAuthor;
+    }
+
     /**
      * class for kind status of the item or its properties
      * the constants are defined in the interface StatusKind for building
