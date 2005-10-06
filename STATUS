@@ -68,7 +68,7 @@ Candidate changes:
     Votes:
       +1: maxb
 
-  * r16398
+  * r16398, r16477
     Fix Issue #2172 (segfaults in the Python bindings caused by pool lifetime
     problems).
     Justification:
@@ -76,6 +76,7 @@ Candidate changes:
       worry about memory pools.
     Votes:
       +1: djames, dlr
+      +1: maxb (r16477 only)
 
   * r16414, r16512, r16513
     Ensure that SWIG dependencies are correctly added to build-outputs.mk.
@@ -131,14 +132,6 @@ Approved changes (further review is welcome, but not required):
       generator change will probably make use of this.
     Votes:
       +1: maxb, djames
-
-  * r16477
-    Python bindings. Followup to r16398. Fix use-of-uninitialized-value bugs
-    introduced by the half-migration of two functions to a new style.
-    Justification:
-      Use-of-uninitialized-value bugs are crash bugs.
-    Votes:
-      +1: maxb, djames, dlr
 
   * r16479
     Make _global_svn_swig_py_is_local_pool a local variable instead of a global
