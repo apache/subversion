@@ -60,8 +60,6 @@ void svn_swig_py_acquire_py_lock(void);
 
 
 /*** Automatic Pool Management Functions ***/
-SVN_SWIG_SWIGUTIL_EXPORT
-extern int _global_svn_swig_py_is_local_pool;
 
 /* Set the application pool */
 SVN_SWIG_SWIGUTIL_EXPORT

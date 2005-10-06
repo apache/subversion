@@ -47,8 +47,10 @@ static PyObject * _global_svn_swig_py_pool = NULL;
 
 /* Pointers, references, and arrays */
 %typemap (arginit) POOLINIT ( \
-  PyObject *_global_svn_swig_py_pool, apr_pool_t *_global_pool) 
+  PyObject *_global_svn_swig_py_pool, apr_pool_t *_global_pool,
+  int _global_pool_is_application_pool) 
 {
+  _global_pool_is_application_pool = 1;
   svn_swig_get_application_pool(&_global_svn_swig_py_pool, &_global_pool); 
 }
 %apply POOLINIT { void *, SWIGTYPE *, SWIGTYPE [] };
@@ -57,7 +59,7 @@ static PyObject * _global_svn_swig_py_pool = NULL;
 %typemap (in) void *, SWIGTYPE *, SWIGTYPE []
 {
   $1 = ($1_ltype)svn_swig_MustGetPtr($input, $descriptor, $svn_argnum,
-    _global_svn_swig_py_is_local_pool ? NULL : &_global_svn_swig_py_pool);
+    _global_pool_is_application_pool ? &_global_svn_swig_py_pool : NULL);
   if (PyErr_Occurred()) {
     SWIG_fail;
   }
