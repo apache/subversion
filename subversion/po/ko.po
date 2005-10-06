@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-08-11 14:08+0900\n"
+"POT-Creation-Date: 2005-10-06 15:34+0900\n"
 "PO-Revision-Date: 2004-10-28 16:10+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Korean <dev@subversion.tigris.org>\n"
@@ -785,7 +785,6 @@ msgstr ""
 "\n"
 "  각 PATH에 해당하는 정보를 출력합니다. (기본값: '.').\n"
 "  PATH는 작업 사본 경로 혹은 URL이 될 수 있습니다.\n"
-
 
 #: clients/cmdline/main.c:363
 msgid ""
@@ -1904,7 +1903,7 @@ msgid "Can't write to '%s'"
 msgstr "'%s' 에 쓸 수 없습니다."
 
 #: clients/cmdline/util.c:204 clients/cmdline/util.c:228
-#: libsvn_fs_fs/fs_fs.c:1082 libsvn_fs_fs/fs_fs.c:3568 libsvn_subr/io.c:2309
+#: libsvn_fs_fs/fs_fs.c:1082 libsvn_fs_fs/fs_fs.c:3587 libsvn_subr/io.c:2309
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "'%s' 의 stat을 볼 수 없습니다."
@@ -3177,7 +3176,7 @@ msgstr "'%s' 은 현 작업사본에서 잠기지 않았습니다."
 msgid "'%s' is not locked"
 msgstr "'%s'는 잠기지 않았습니다."
 
-#: libsvn_client/locking_commands.c:421 libsvn_fs/fs-loader.c:892
+#: libsvn_client/locking_commands.c:424 libsvn_fs/fs-loader.c:892
 #: libsvn_ra/ra_loader.c:512
 msgid "Lock comment has illegal characters"
 msgstr "잠금 설명에 잘못된 문자가 있습니다."
@@ -3363,11 +3362,11 @@ msgstr "FS 모듈 버전 불일치 '%s': 발견된 것 %d.%d.%d%s, 기대되는 
 msgid "Unknown FS type '%s'"
 msgstr "알수 없는 파일시스템 종류 '%s'"
 
-#: libsvn_fs/fs-loader.c:244
+#: libsvn_fs/fs-loader.c:242
 msgid "Can't allocate FS mutex"
 msgstr "FS 뮤텍스 할당 불가능"
 
-#: libsvn_fs/fs-loader.c:280
+#: libsvn_fs/fs-loader.c:276
 msgid "Can't grab FS mutex"
 msgstr "FS 뮤텍스를 얻을 수 없습니다."
 
@@ -3392,15 +3391,15 @@ msgstr "변경 내용 생성중"
 msgid "deleting changes"
 msgstr "변경 내용 삭제중"
 
-#: libsvn_fs_base/bdb/changes-table.c:146 libsvn_fs_fs/fs_fs.c:1965
+#: libsvn_fs_base/bdb/changes-table.c:146 libsvn_fs_fs/fs_fs.c:1963
 msgid "Missing required node revision ID"
 msgstr "필요한 노드 리비전 ID가 누락되었습니다."
 
-#: libsvn_fs_base/bdb/changes-table.c:157 libsvn_fs_fs/fs_fs.c:1975
+#: libsvn_fs_base/bdb/changes-table.c:157 libsvn_fs_fs/fs_fs.c:1973
 msgid "Invalid change ordering: new node revision ID without delete"
 msgstr "변경 순서 오류: 삭제 없는 새 노드 리비전 ID"
 
-#: libsvn_fs_base/bdb/changes-table.c:167 libsvn_fs_fs/fs_fs.c:1986
+#: libsvn_fs_base/bdb/changes-table.c:167 libsvn_fs_fs/fs_fs.c:1984
 msgid "Invalid change ordering: non-add change on deleted path"
 msgstr "변경 순서 오류: 삭제된 경로상에는 추가할 수 없습니다."
 
@@ -3519,17 +3518,17 @@ msgstr "저장소 uuid 얻기"
 msgid "set repository uuid"
 msgstr "저장소 uuid 설정"
 
-#: libsvn_fs_base/dag.c:239
+#: libsvn_fs_base/dag.c:313
 #, c-format
 msgid "Corrupt DB: initial transaction id not '0' in filesystem '%s'"
 msgstr "손상된 DB: 파일시스템('%s')의 초기 트랜잭션 id가 '0'이 아닙니다."
 
-#: libsvn_fs_base/dag.c:247
+#: libsvn_fs_base/dag.c:321
 #, c-format
 msgid "Corrupt DB: initial copy id not '0' in filesystem '%s'"
 msgstr "손상된 DB: 파일 시스템('%s')의 초기 copy id가 '0'이 아닙니다."
 
-#: libsvn_fs_base/dag.c:256
+#: libsvn_fs_base/dag.c:330
 #, c-format
 msgid "Corrupt DB: initial revision number is not '0' in filesystem '%s'"
 msgstr "손상된 DB: 파일시스템('%s')의 초기 리비전 번호가 '0'이 아닙니다."
@@ -3975,7 +3974,8 @@ msgstr "경로 '%s'에 기대하지 못한 변경 불가능한 노드를 발견�
 #, c-format
 msgid ""
 "No deletion changes for path '%s' in transaction '%s' of filesystem '%s'"
-msgstr "삭제가 이루어지지 않았습니다. (경로 '%s', 트랜잭션 '%s', 파일 시스템 '%s')"
+msgstr ""
+"삭제가 이루어지지 않았습니다. (경로 '%s', 트랜잭션 '%s', 파일 시스템 '%s')"
 
 #: libsvn_fs_base/tree.c:1887 libsvn_fs_fs/tree.c:1215
 #, c-format
@@ -4107,7 +4107,7 @@ msgstr "node-rev 내에 copyroot 형식이 잘못되었습니다."
 msgid "Malformed copyfrom line in node-rev"
 msgstr "node-rev 내에 copyfrom 행에 오류가 있습니다."
 
-#: libsvn_fs_fs/fs_fs.c:871 libsvn_fs_fs/fs_fs.c:3162
+#: libsvn_fs_fs/fs_fs.c:871 libsvn_fs_fs/fs_fs.c:3181
 msgid "Attempted to write to non-transaction"
 msgstr "트랜잭션이 아닌 것에 쓰기 시도를 하였습니다."
 
@@ -4135,7 +4135,7 @@ msgstr "리비전 파일 마지막 행의 길이가 64 문자를 넘습니다."
 msgid "Final line in revision file missing space"
 msgstr "리비전 파일의 마지막 행에 스페이스가 없습니다."
 
-#: libsvn_fs_fs/fs_fs.c:1085 libsvn_fs_fs/fs_fs.c:3571
+#: libsvn_fs_fs/fs_fs.c:1085 libsvn_fs_fs/fs_fs.c:3590
 #, c-format
 msgid "Can't chmod '%s'"
 msgstr "chmod '%s' 할 수 없음"
@@ -4178,68 +4178,72 @@ msgstr ""
 "   기대값:  %s\n"
 "   실제값:  %s\n"
 
-#: libsvn_fs_fs/fs_fs.c:1773 libsvn_fs_fs/fs_fs.c:1786
-#: libsvn_fs_fs/fs_fs.c:1792
+#: libsvn_fs_fs/fs_fs.c:1771 libsvn_fs_fs/fs_fs.c:1784
+#: libsvn_fs_fs/fs_fs.c:1790
 msgid "Directory entry corrupt"
 msgstr "디렉토리 등록정보가 손상되었습니다."
 
-#: libsvn_fs_fs/fs_fs.c:2128 libsvn_fs_fs/fs_fs.c:2136
-#: libsvn_fs_fs/fs_fs.c:2168 libsvn_fs_fs/fs_fs.c:2188
-#: libsvn_fs_fs/fs_fs.c:2222 libsvn_fs_fs/fs_fs.c:2227
+#: libsvn_fs_fs/fs_fs.c:2126 libsvn_fs_fs/fs_fs.c:2134
+#: libsvn_fs_fs/fs_fs.c:2166 libsvn_fs_fs/fs_fs.c:2186
+#: libsvn_fs_fs/fs_fs.c:2220 libsvn_fs_fs/fs_fs.c:2225
 msgid "Invalid changes line in rev-file"
 msgstr "rev-file 안에 변경된 줄 수 잘못됨"
 
-#: libsvn_fs_fs/fs_fs.c:2161
+#: libsvn_fs_fs/fs_fs.c:2159
 msgid "Invalid change kind in rev file"
 msgstr "rev-file 안에 종류값이 잘못됨"
 
-#: libsvn_fs_fs/fs_fs.c:2181
+#: libsvn_fs_fs/fs_fs.c:2179
 msgid "Invalid text-mod flag in rev-file"
 msgstr "rev-file 안에 text-mod 플래그 잘못됨"
 
-#: libsvn_fs_fs/fs_fs.c:2201
+#: libsvn_fs_fs/fs_fs.c:2199
 msgid "Invalid prop-mod flag in rev-file"
 msgstr "rev-file 안에 prop-mod 값 잘못됨"
 
-#: libsvn_fs_fs/fs_fs.c:2384
+#: libsvn_fs_fs/fs_fs.c:2382
 msgid "Copying from transactions not allowed"
 msgstr "트랜잭션으로부터의 복사는 허용되지 않습니다."
 
-#: libsvn_fs_fs/fs_fs.c:2440
+#: libsvn_fs_fs/fs_fs.c:2438
 #, c-format
 msgid "Unable to create transaction directory in '%s' for revision %ld"
 msgstr "'%s'에 트랜잭션 디렉토리를 만들 수 없습니다. 리비전 %ld."
 
-#: libsvn_fs_fs/fs_fs.c:2629 libsvn_fs_fs/fs_fs.c:2636
+#: libsvn_fs_fs/fs_fs.c:2627 libsvn_fs_fs/fs_fs.c:2634
 msgid "next-id file corrupt"
 msgstr "next-id 파일 손상됨"
 
-#: libsvn_fs_fs/fs_fs.c:2862
+#: libsvn_fs_fs/fs_fs.c:2718
+msgid "Transaction cleanup failed"
+msgstr "트랜잭션이 'cleanup' 오류"
+
+#: libsvn_fs_fs/fs_fs.c:2881
 msgid "Invalid change type"
 msgstr "변경 형식이 잘못됨"
 
-#: libsvn_fs_fs/fs_fs.c:3181
+#: libsvn_fs_fs/fs_fs.c:3200
 msgid "Can't set text contents of a directory"
 msgstr "디렉토리의 텍스트 내용을 설정할 수 없음"
 
-#: libsvn_fs_fs/fs_fs.c:3271 libsvn_fs_fs/fs_fs.c:3276
-#: libsvn_fs_fs/fs_fs.c:3283
+#: libsvn_fs_fs/fs_fs.c:3290 libsvn_fs_fs/fs_fs.c:3295
+#: libsvn_fs_fs/fs_fs.c:3302
 msgid "Corrupt current file"
 msgstr "현재파일 손상됨"
 
-#: libsvn_fs_fs/fs_fs.c:3709
+#: libsvn_fs_fs/fs_fs.c:3728
 msgid "Can't grab FSFS repository mutex"
 msgstr "FSFS 저장소 뮤텍스를 얻을 수 없습니다."
 
-#: libsvn_fs_fs/fs_fs.c:3723
+#: libsvn_fs_fs/fs_fs.c:3742
 msgid "Can't ungrab FSFS repository mutex"
 msgstr "FSFS 저장소 뮤텍스를 반환할 수 없습니다."
 
-#: libsvn_fs_fs/fs_fs.c:3839
+#: libsvn_fs_fs/fs_fs.c:3858
 msgid "Transaction out of date"
 msgstr "트랜잭션이 오래된 것임"
 
-#: libsvn_fs_fs/fs_fs.c:4111
+#: libsvn_fs_fs/fs_fs.c:4130
 msgid "No such transaction"
 msgstr "그런 트랜잭션이 없습니다."
 
@@ -4262,10 +4266,6 @@ msgstr "경로 '%s'는 HEAD 리비전에 존재하지 않습니다."
 #, c-format
 msgid "Lock failed: newer version of '%s' exists"
 msgstr "잠금 실패: 새로운 버전의 '%s'가 존재합니다"
-
-#: libsvn_fs_fs/revs-txns.c:214
-msgid "Transaction cleanup failed"
-msgstr "트랜잭션이 'cleanup' 오류"
 
 #: libsvn_ra/ra_loader.c:212
 #, c-format
@@ -4822,6 +4822,10 @@ msgstr "서버가 lock 명령을 지원하지 않습니다."
 #: libsvn_ra_svn/client.c:1498
 msgid "Server doesn't support the unlock command"
 msgstr "서버가 unlock 명령을 지원하지 않습니다."
+
+#: libsvn_ra_svn/client.c:1533 libsvn_ra_svn/client.c:1561
+msgid "Server doesn't support the get-lock command"
+msgstr "서버가 get-lock 명령을 지원하지 않습니다."
 
 #: libsvn_ra_svn/client.c:1574
 msgid "Lock element not a list"
@@ -7749,18 +7753,18 @@ msgstr "익스포트됨%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' 는 관리대상이 아니며, 익스포트 되지 않았습니다\n"
 
-#~ msgid "repository argument required\n"
-#~ msgstr "저장소 인자가 필요합니다.\n"
-
-#~ msgid "unknown command: '%s'\n"
-#~ msgstr "알 수 없는 명령: '%s'\n"
-
-#~ msgid "Working copy not locked"
-#~ msgstr "작업사본이 잠기지 않았습니다."
+#~ msgid "'svn info' only works on working copy paths, not URLs"
+#~ msgstr ""
+#~ "'svn info'는 URL에 대해서는 수행할 수 없으며, 작업 사본에만 가능합니다."
 
 #~ msgid "Print client version info\n"
 #~ msgstr "클라이언트 버전을 출력합니다\n"
 
-#~ msgid "'svn info' only works on working copy paths, not URLs"
-#~ msgstr ""
-#~ "'svn info'는 URL에 대해서는 수행할 수 없으며, 작업 사본에만 가능합니다."
+#~ msgid "Working copy not locked"
+#~ msgstr "작업사본이 잠기지 않았습니다."
+
+#~ msgid "unknown command: '%s'\n"
+#~ msgstr "알 수 없는 명령: '%s'\n"
+
+#~ msgid "repository argument required\n"
+#~ msgstr "저장소 인자가 필요합니다.\n"
