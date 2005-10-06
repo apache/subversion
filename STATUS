@@ -82,18 +82,6 @@ Candidate changes:
 
 Approved changes (further review is welcome, but not required):
 
-  * r16495, r16525
-    Expose the "out of date" and URI fields now available from the
-    svn_wc_status2_t data type to the JavaHL bindings via its Status
-    class.
-    Justification:
-      Bindings should fully reflect the core Subversion API.
-      Subclipse will start using these new APIs immediately.
-    Notes:
-      Depends on the status-from-repos-enhancements branch.
-    Votes:
-      +1: dlr, jszakmeister
-
   * r16470
     Move proxy_apr.swg from proxy/ to include/, leaving proxy/ to be a
     directory solely for build-time generated files.
