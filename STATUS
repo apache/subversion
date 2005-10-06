@@ -105,3 +105,13 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: dlr, jszakmeister
 
+  * r16470
+    Move proxy_apr.swg from proxy/ to include/, leaving proxy/ to be a
+    directory solely for build-time generated files.
+    Justification:
+      Keep branch close to trunk on this layout issue, because future build
+      generator change will probably make use of this.
+    Notes:
+      Depends on r16414 and r16513.
+    Votes:
+      +1: maxb, djames
