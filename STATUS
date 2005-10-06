@@ -20,18 +20,6 @@ Candidate changes:
     Votes:
       +1: dlr, jszakmeister
 
-  * r16495
-    Expose the "out of date" and URI fields now available from the
-    svn_wc_status2_t data type to the JavaHL bindings via its Status
-    class.
-    Justification:
-      Bindings should fully reflect the core Subversion API.
-      Subclipse will start using these new APIs immediately.
-    Notes:
-      Depends on the status-from-repos-enhancements branch.
-    Votes:
-      +1: dlr
-
   * r16350
     Fix issue #1911, where svndumpfilter generated invalid dumpfiles
     when copies occurred and --drop-empty-revs and --renumber-revs
@@ -107,6 +95,18 @@ Candidate changes:
       +1: djames
 
 Approved changes (further review is welcome, but not required):
+
+  * r16495, r16525
+    Expose the "out of date" and URI fields now available from the
+    svn_wc_status2_t data type to the JavaHL bindings via its Status
+    class.
+    Justification:
+      Bindings should fully reflect the core Subversion API.
+      Subclipse will start using these new APIs immediately.
+    Notes:
+      Depends on the status-from-repos-enhancements branch.
+    Votes:
+      +1: dlr, jszakmeister
 
   * r16465
     Fix erroneous %include of apr.h into SWIG Perl and Ruby bindings, which
