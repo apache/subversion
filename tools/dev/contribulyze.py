@@ -492,6 +492,25 @@ def graze(input):
             num_lines -= 1
         continue
 
+index_introduction = '''
+<p>The following list of contributors is meant solely to help the
+Subversion project keep tabs on whom to propose for partial or full
+commit access.  It was generated from "svn&nbsp;log" output by <a
+href="http://svn.collab.net/repos/svn/trunk/tools/dev/contribulyze.py"
+>contribulyze.py</a>, which looks for log messages that use the <a
+href="http://subversion.tigris.org/hacking.html#crediting">special
+contribution format</a>.</p>
+
+<p>Please do <i>not</i> use this list as a general guide to who has
+contributed what to Subversion.  It omits many contributions from
+existing committers, for example, because they are irrelevant to our
+search for new committers.  Also, it merely counts changes, it does
+not judge them: to truly understand what someone has contributed, you
+have to click on their name and read the changes in detail.  This page
+can only assist human judgement, not substitute for it.</p>
+
+'''
+
 def drop():
   # Output the data.
   #
@@ -514,6 +533,7 @@ def drop():
 
   index = open('index.html', 'w')
   index.write(html_header('Contributors'))
+  index.write(index_introduction)
   index.write('<ol>\n')
   # The same contributor appears under multiple keys, so uniquify.
   seen_contributors = { }
