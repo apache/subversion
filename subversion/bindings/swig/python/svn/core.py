@@ -27,9 +27,6 @@ def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
 
 Pool = svn_pool_create
 
-# Initialize application-level pool
-Pool()
-
 # Hide raw pool management functions.
 # If you still want to use these, use libsvn.core instead.
 del apr_pool_destroy
