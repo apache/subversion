@@ -110,7 +110,7 @@ Candidate changes:
     Justification:
       Namespace pollution bad.
     Votes:
-      +1: maxb
+      +1: maxb, djames
 
   * r16470
     Move proxy_apr.swg from proxy/ to include/, leaving proxy/ to be a
@@ -119,7 +119,7 @@ Candidate changes:
       Keep branch close to trunk on this layout issue, because future build
       generator change will probably make use of this.
     Votes:
-      +1: maxb
+      +1: maxb, djames
 
   * r16479
     Make _global_svn_swig_py_is_local_pool a local variable instead of a global
@@ -129,6 +129,7 @@ Candidate changes:
     Justification:
       Keep non "svn_" prefixed symbol out of the global namespace.
     Votes:
+      +1: djames
       +0: maxb
 
   * r16480
@@ -138,7 +139,7 @@ Candidate changes:
       Don't want to include vestigial remnants of old SWIG support in the
       release.
     Votes:
-      +1: maxb
+      +1: maxb, djames
 
   * r16508
     Create svn_swig_py_initialize() API function.
@@ -146,7 +147,7 @@ Candidate changes:
       Code style improved, plus helps avoid crash in the dubiously-valid
       case of a static APR library.
     Votes:
-      +1: maxb
+      +1: maxb, djames
 
 Approved changes (further review is welcome, but not required):
 
