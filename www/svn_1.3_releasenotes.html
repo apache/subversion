@@ -140,12 +140,16 @@ href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=105810"
        attention to the environment variable on Windows.</i></p>
    </li>
 
-   <li><p class="todo">status --show-updates should show revision,
-       date, and author as reported by the server in addition to the
-       state of the working copy.  This has been committed to the
-       trunk, and is pending voting for backport from a merge
-       branch.  Corresponding JavaHL bindings changes are also pending
-       voting for backport.</p>
+   <li><p>The APIs used by 'status --show-updates' now make URI,
+       youngest revision, date last modified, youngest node kind, and
+       most recent author as reported by the server available, in
+       addition to the status reflected by the working copy.</p>
+
+       <p>'status --show-updates --verbose' itself may eventually also
+       have this behavior, but for now retains its previous behavior
+       of reflecting the status of the working copy, and only showing
+       an asterisk to denote a difference between the working copy and
+       repository state.</p>
    </li>
 
    <li><p>The usual slew of bugfixes and improved APIs.  See the
