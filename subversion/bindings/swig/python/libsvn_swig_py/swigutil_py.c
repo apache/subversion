@@ -110,6 +110,17 @@ static char emptyTuple[] = "()";
 static char objectTuple[] = "(O)";
 
 
+apr_status_t svn_swig_py_initialize(void)
+{
+  apr_status_t status;
+
+  if ((status = apr_initialize()) != APR_SUCCESS)
+    return status;
+  if (atexit(apr_terminate) != 0)
+    return APR_EGENERAL;
+  return APR_SUCCESS;
+}
+
 /* Set the application pool */
 void svn_swig_py_set_application_pool(PyObject *py_pool, apr_pool_t *pool) 
 {
