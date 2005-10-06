@@ -103,6 +103,15 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r16510
+    Initialize APR pools in libsvn.core, instead of in svn.core.
+    Justification:
+      Prevents crashes in svn_swig_init_asp_dot_net_hack on WIN32,
+      when svn.wc is imported before svn.core. Ensures that the
+      global pool is initialized early.
+    Votes:
+      +1: djames
+
 Approved changes (further review is welcome, but not required):
 
   * r16465
