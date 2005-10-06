@@ -1851,7 +1851,6 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
     jstring jOODLastCmtAuthor = NULL;
     if(status != NULL)
     {
-
         jTextType = EnumMapper::mapStatusKind(status->text_status);
         jPropType = EnumMapper::mapStatusKind(status->prop_status);
         jRepositoryTextType = EnumMapper::mapStatusKind(status->repos_text_status);
@@ -1860,6 +1859,11 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
         jIsLocked = (status->locked == 1) ? JNI_TRUE: JNI_FALSE;
         jIsSwitched = (status->switched == 1) ? JNI_TRUE: JNI_FALSE;
         jLock = createJavaLock(status->repos_lock);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+        jUrl = JNIUtil::makeJString(status->url);
         if(JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
@@ -1876,11 +1880,6 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
         svn_wc_entry_t * entry = status->entry;
         if (entry != NULL)
         {
-            jUrl = JNIUtil::makeJString(status->url);
-            if(JNIUtil::isJavaExceptionThrown())
-            {
-                return NULL;
-            }
             jNodeKind = EnumMapper::mapNodeKind(entry->kind);
             jRevision = entry->revision;
             jLastChangedRevision = entry->cmt_rev;
