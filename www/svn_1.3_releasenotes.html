@@ -139,8 +139,8 @@ href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=105810"
        <p class="todo"><i>TODO: The Python bindings have been updated
        to pay attention to SVN_ASP_DOT_NET_HACK on Windows (in
        r16432, and r16444 ported the change to the 1.3.x line).  But
-       the other bindings have not been so updated; they probably
-       should be.</i></p>
+       the other bindings have not been so updated (nor has Cygwin on
+       the the 1.3 branch); they eventually will be.</i></p>
    </li>
 
    <li><p>The APIs used by 'status --show-updates' now make URI,
@@ -151,8 +151,8 @@ href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=105810"
        <p>'status --show-updates --verbose' itself may eventually also
        have this behavior, but for now retains its previous behavior
        of reflecting the status of the working copy, and only showing
-       an asterisk to denote a difference between the working copy and
-       repository state.</p>
+       an asterisk to indicate any difference between the working copy
+       and repository states.</p>
    </li>
 
    <li><p>The usual slew of bugfixes and improved APIs.  See the
