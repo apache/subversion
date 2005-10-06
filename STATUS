@@ -154,9 +154,3 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: maxb, djames
 
-  * r16387
-    Fix issue 2406 - Do not pass URL-encoded hostname to ra_svn tunnel agent.
-    Justification:
-      Small bug, easy fix, of value to Windows users of PuTTY.
-    Votes:
-      +1: maxb, lundblad, jszakmeister
