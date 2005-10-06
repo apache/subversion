@@ -77,13 +77,15 @@ Candidate changes:
     Votes:
       +1: djames, dlr
 
-  * r16414
-    Ensure that SWIG external runtime dependencies are correctly added
-    to build-outputs.mk.
+  * r16414, r16512, r16513
+    Ensure that SWIG dependencies are correctly added to build-outputs.mk.
     Justification:
-      Easily reviewable, might save someone some problems.
+      Improves robustness of build system, fixes compile errors
+      when user runs `make install-swig-py' without having run
+      `make swig-py'.
     Votes:
-      +1: djames, dlr
+      +1: djames
+      +1: dlr (r16414 only)
 
   * r16428, r16500
     Activate some Windows-specific behaviour on Cygwin too:
