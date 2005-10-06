@@ -61,8 +61,7 @@ Candidate changes:
       when user runs `make install-swig-py' without having run
       `make swig-py'.
     Votes:
-      +1: djames
-      +1: dlr (r16414 and r16513 only)
+      +1: djames, dlr
 
   * r16428, r16500
     Activate some Windows-specific behaviour on Cygwin too:
