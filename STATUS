@@ -50,13 +50,6 @@ Candidate changes:
     Votes:
       +1: maxb, djames
 
-  * r16387
-    Fix issue 2406 - Do not pass URL-encoded hostname to ra_svn tunnel agent.
-    Justification:
-      Small bug, easy fix, of value to Windows users of PuTTY.
-    Votes:
-      +1: maxb, lundblad
-
   * r16388, r16408
     Fix numerous bugs in the svn_fs_*berkeley*() APIs.
     Fix issue 2361 (recover on a FSFS repository errors if BDB not linked).
@@ -160,3 +153,10 @@ Approved changes (further review is welcome, but not required):
       case of a static APR library.
     Votes:
       +1: maxb, djames
+
+  * r16387
+    Fix issue 2406 - Do not pass URL-encoded hostname to ra_svn tunnel agent.
+    Justification:
+      Small bug, easy fix, of value to Windows users of PuTTY.
+    Votes:
+      +1: maxb, lundblad, jszakmeister
