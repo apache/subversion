@@ -63,10 +63,11 @@ struct item_baton {
 /* Create an item baton, with the fields initialized to EDIT_BATON, PATH,
  * NODE_KIND and POOL, respectively.  Allocate the returned structure in POOL.
  */
-struct item_baton *create_item_baton (struct edit_baton *edit_baton,
-                                      const char *path,
-                                      svn_node_kind_t node_kind,
-                                      apr_pool_t *pool)
+static struct item_baton *
+create_item_baton (struct edit_baton *edit_baton,
+                   const char *path,
+                   svn_node_kind_t node_kind,
+                   apr_pool_t *pool)
 {
   struct item_baton *b = apr_pcalloc (pool, sizeof (*b));
 
@@ -82,7 +83,7 @@ struct item_baton *create_item_baton (struct edit_baton *edit_baton,
  * If it doesn't before this call, allocate a new struct in the item's pool,
  * initializing the diff kind to SUM_KIND.
  * All other fields are also initialized from IB to to NULL/invalid values. */
-void
+static void
 ensure_summarize (struct item_baton *ib,
                   svn_client_diff_summarize_kind_t sum_kind)
 {
