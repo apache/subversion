@@ -49,7 +49,7 @@ Candidate changes:
       minimum voting requirements for backport. Thus, the votes are separated
       into two sections. r16477 contains exclusively bindings changes.
     Votes (core changes - parts of r16398):
-      +1: dlr
+      +1: dlr, lundblad
     Votes (bindings changes - parts of r16398 + all of r16477):
       +1: djames, dlr
       +1: maxb (r16477 only)
