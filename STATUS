@@ -138,6 +138,13 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r16508
+    Create svn_swig_py_initialize() API function.
+    Justification:
+      Code style improved, plus helps avoid crash in the dubiously-valid
+      case of a static APR library.
+    Votes:
+      +1: maxb
 
 Approved changes (further review is welcome, but not required):
 
