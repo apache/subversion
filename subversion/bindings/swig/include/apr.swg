@@ -52,7 +52,14 @@ OUTPUT_TYPEMAP(unsigned long long, ULL2NUM, (unsigned long long));
 
 /* ----------------------------------------------------------------------- */
 
-%include apr_h.swg
+#ifdef WIN32
+/* Fool SWIG into understanding the __int64 datatype */
+#define __int64 long long
+#endif
+%import apr.h
+#ifdef WIN32
+#undef __int64
+#endif
 
 /* ### be nice to have all the error values and macros. there are some
    ### problems including this file, tho. SWIG isn't smart enough with some
