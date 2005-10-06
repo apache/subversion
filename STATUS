@@ -1,0 +1,107 @@
+This file tracks the status of releases in the 1.3.x line.
+
+See "Stabilizing and maintaining releases" in trunk/www/hacking.html for
+details on how release lines and voting work, what kinds of bugs can
+delay a release, etc.
+
+Status of 1.3.0:
+================
+
+Candidate changes:
+
+  * r16344, r16347, r16358, r16375, r16494
+    Provide more complete server-side information about working copy
+    items which are out of date in the repository.
+    Branch: status-from-repos-enhancements
+    Justification:
+      This info is extremely useful to Subversion clients; the first
+      consumer is likely to be the "Synchronize" view of the Subclipse
+      plug-in for the Eclipse IDE.
+    Votes:
+      +1: dlr, jszakmeister
+
+  * r16350
+    Fix issue #1911, where svndumpfilter generated invalid dumpfiles
+    when copies occurred and --drop-empty-revs and --renumber-revs
+    were in use.
+    Justification:
+      Invalid dumpfiles are not nice.
+    Votes:
+      +1: cmpilato
+      +0: dlr (concept, new to this area of the code)
+
+  * r16372
+    Fix shell test in Makefile breaking swig-py build, due to sometimes
+    misidentifying a srcdir == objdir build as a srcdir != objdir build.
+    Justification:
+      Tiny fix, broken build bad.
+    Votes:
+      +1: maxb, djames
+
+  * r16388, r16408
+    Fix numerous bugs in the svn_fs_*berkeley*() APIs.
+    Fix issue 2361 (recover on a FSFS repository errors if BDB not linked).
+    Fix creation of BDB files in FSFS repositories by 'svnadmin recover',
+      'svnadmin list-dblogs' and 'svnadmin list-unused-dblogs'.
+    Justification:
+      Not vital, but the creation of Berkeley DB files in a FSFS repository
+      is a long standing bug which doesn't really give a good impression.
+    Votes:
+      +1: maxb
+
+  * r16398, r16477
+    Fix Issue #2172 (segfaults in the Python bindings caused by pool lifetime
+    problems).
+    Justification:
+      Segfaults are bad. In 1.3.x, Python bindings users should not have to
+      worry about memory pools.
+    Notes:
+      r16398 contains both bindings and core changes, which have different
+      minimum voting requirements for backport. Thus, the votes are separated
+      into two sections. r16477 contains exclusively bindings changes.
+    Votes (core changes - parts of r16398):
+      +1: dlr
+    Votes (bindings changes - parts of r16398 + all of r16477):
+      +1: djames, dlr
+      +1: maxb (r16477 only)
+
+  * r16414, r16512, r16513
+    Ensure that SWIG dependencies are correctly added to build-outputs.mk.
+    Justification:
+      Improves robustness of build system, fixes compile errors
+      when user runs `make install-swig-py' without having run
+      `make swig-py'.
+    Votes:
+      +1: djames
+      +1: dlr (r16414 and r16513 only)
+
+  * r16428, r16500
+    Activate some Windows-specific behaviour on Cygwin too:
+     - SVN_ASP_DOT_NET_HACK
+     - Windows-specific augmented file:// URLs
+    r16500 is a small followup.
+    Justification:
+      Cygwin is likely to be exposed to native-Windows-created WCs.
+    Votes:
+      +1: maxb, dlr
+     
+  * r16486
+    Fiddle with the Perl bindings link command to avoid linking to installed,
+    rather then build-tree libsvn_* libraries.
+    Votes:
+      +1: maxb
+
+Approved changes (further review is welcome, but not required):
+
+  * r16495, r16525
+    Expose the "out of date" and URI fields now available from the
+    svn_wc_status2_t data type to the JavaHL bindings via its Status
+    class.
+    Justification:
+      Bindings should fully reflect the core Subversion API.
+      Subclipse will start using these new APIs immediately.
+    Notes:
+      Depends on the status-from-repos-enhancements branch.
+    Votes:
+      +1: dlr, jszakmeister
+
