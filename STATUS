@@ -108,15 +108,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: dlr, jszakmeister
 
-  * r16465
-    Fix erroneous %include of apr.h into SWIG Perl and Ruby bindings, which
-    was causing many irrelevant APR feature macros to be imported into the core
-    modules.
-    Justification:
-      Namespace pollution bad.
-    Votes:
-      +1: maxb, djames
-
   * r16470
     Move proxy_apr.swg from proxy/ to include/, leaving proxy/ to be a
     directory solely for build-time generated files.
