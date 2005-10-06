@@ -975,9 +975,9 @@ repos_to_wc_copy (const char *src_url,
       if (! SVN_IS_VALID_REVNUM (src_revnum))
         src_revnum = real_rev;
 
-      err = svn_wc_add_repos_file
+      err = svn_wc_add_repos_file2
         (dst_path, adm_access,
-         new_text_path, new_props,
+         new_text_path, NULL, new_props, NULL,
          same_repositories ? src_url : NULL,
          same_repositories ? src_revnum : SVN_INVALID_REVNUM,
          pool);
