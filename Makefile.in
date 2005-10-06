@@ -317,13 +317,15 @@ fast-clean: doc-clean
 	rm -f $(CLEAN_FILES)
 
 # clean all but bulky test output, returning to before './configure' was run.
+SVN_CONFIG_SCRIPT_FILES = @SVN_CONFIG_SCRIPT_FILES@
 fast-distclean: fast-clean
 	rm -f Makefile config.cache config.log config.status libtool \
-              svn_private_config.h svn-config
+              subversion/svn_private_config.h \
+              $(SVN_CONFIG_SCRIPT_FILES)
 
 # clean everything out, returning to before './autogen.sh' was run.
 local-extraclean: local-distclean
-	rm -f build-outputs.mk svn_private_config.h.in configure \
+	rm -f build-outputs.mk subversion/svn_private_config.h.in configure \
               ac-helpers/config.guess ac-helpers/config.sub      \
               ac-helpers/libtool.m4 ac-helpers/ltconfig          \
               ac-helpers/ltmain.sh
