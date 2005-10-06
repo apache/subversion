@@ -33,6 +33,7 @@
 #include "svn_io.h"
 #include "svn_wc.h"
 #include "svn_config.h"
+#include "svn_time.h"
 #include "svn_private_config.h"
 
 #include "wc.h"
@@ -132,6 +133,15 @@ struct dir_baton
 
   /* The pool in which this baton itself is allocated. */
   apr_pool_t *pool;
+
+  /* The URI to this item in the repository. */
+  const char *url;
+
+  /* Out of date info corresponding to ood_* fields in svn_wc_status2_t. */
+  svn_revnum_t ood_last_cmt_rev;
+  apr_time_t ood_last_cmt_date;
+  svn_node_kind_t ood_kind;
+  const char *ood_last_cmt_author;
 };
 
 
@@ -166,6 +176,14 @@ struct file_baton
      the code that syncs up the adm dir and working copy. */
   svn_boolean_t prop_changed;
 
+  /* The URI to this item in the repository. */
+  const char *url;
+
+  /* Out of date info corresponding to ood_* fields in svn_wc_status2_t. */
+  svn_revnum_t ood_last_cmt_rev;
+  apr_time_t ood_last_cmt_date;
+  svn_node_kind_t ood_kind;
+  const char *ood_last_cmt_author;
 };
 
 
@@ -282,6 +300,11 @@ assemble_status (svn_wc_status2_t **status,
         }
 
       stat->repos_lock = repos_lock;
+      stat->url = NULL;
+      stat->ood_last_cmt_rev = SVN_INVALID_REVNUM;
+      stat->ood_last_cmt_date = 0;
+      stat->ood_kind = svn_wc_status_none;
+      stat->ood_last_cmt_author = NULL;
 
       *status = stat;
       return SVN_NO_ERROR;
@@ -466,6 +489,11 @@ assemble_status (svn_wc_status2_t **status,
   stat->switched = switched_p;
   stat->copied = entry->copied;
   stat->repos_lock = repos_lock;
+  stat->url = (entry->url ? entry->url : NULL);
+  stat->ood_last_cmt_rev = SVN_INVALID_REVNUM;
+  stat->ood_last_cmt_date = 0;
+  stat->ood_kind = svn_wc_status_none;
+  stat->ood_last_cmt_author = NULL;
 
   *status = stat;
 
@@ -952,14 +980,16 @@ hash_stash (void *baton,
 }
 
 
-/* Look up the key PATH in STATUSHASH.  If the value doesn't yet
-   exist, and the REPOS_TEXT_STATUS indicates that this is an
+/* Look up the key PATH in BATON->STATII.  IS_DIR_BATON indicates whether
+   baton is a struct *dir_baton or struct *file_baton.  If the value doesn't
+   yet exist, and the REPOS_TEXT_STATUS indicates that this is an
    addition, create a new status struct using the hash's pool.  Merge
    REPOS_TEXT_STATUS and REPOS_PROP_STATUS into the status structure's
    "network" fields.
    If a new struct was added, set the repos_lock to REPOS_LOCK. */
 static svn_error_t *
-tweak_statushash (apr_hash_t *statushash,
+tweak_statushash (void *baton,
+                  svn_boolean_t is_dir_baton,
                   svn_wc_adm_access_t *adm_access,
                   const char *path,
                   svn_boolean_t is_dir,
@@ -968,7 +998,14 @@ tweak_statushash (apr_hash_t *statushash,
                   svn_lock_t *repos_lock)
 {
   svn_wc_status2_t *statstruct;
-  apr_pool_t *pool = apr_hash_pool_get (statushash);
+  apr_pool_t *pool;
+  apr_hash_t *statushash;
+
+  if (is_dir_baton)
+    statushash = ((struct dir_baton *) baton)->statii;
+  else
+    statushash = ((struct file_baton *) baton)->dir_baton->statii;
+  pool = apr_hash_pool_get (statushash);
 
   /* Is PATH already a hash-key? */
   statstruct = apr_hash_get (statushash, path, APR_HASH_KEY_STRING);
@@ -1008,7 +1045,57 @@ tweak_statushash (apr_hash_t *statushash,
   if (repos_prop_status)
     statstruct->repos_prop_status = repos_prop_status;
   
+  /* Copy out of date info. */
+  if (is_dir_baton)
+    {
+      struct dir_baton *b = baton;
+      if (b->url)
+        statstruct->url = b->url;
+      statstruct->ood_kind = b->ood_kind;
+      /* The last committed rev, date, and author for deleted items
+         isn't available. */
+      if (statstruct->repos_text_status != svn_wc_status_deleted)
+        {
+          statstruct->ood_last_cmt_rev = b->ood_last_cmt_rev;
+          statstruct->ood_last_cmt_date = b->ood_last_cmt_date;
+          statstruct->ood_last_cmt_author = b->ood_last_cmt_author;
+        }
+    }
+  else
+    {
+      struct file_baton *b = baton;
+      if (b->url)
+        statstruct->url = b->url;
+      statstruct->ood_last_cmt_rev = b->ood_last_cmt_rev;
+      statstruct->ood_last_cmt_date = b->ood_last_cmt_date;
+      statstruct->ood_kind = b->ood_kind;
+      statstruct->ood_last_cmt_author = b->ood_last_cmt_author;
+    }
   return SVN_NO_ERROR;
+}
+
+/* Returns the URL for DB, or NULL: */
+static const char *
+find_dir_url (const struct dir_baton *db, apr_pool_t *pool)
+{
+  /* If we have no name, we're the root, return the anchor URL. */
+  if (! db->name)
+    return db->edit_baton->anchor_status->entry->url;
+  else
+    {
+      const char *url;
+      struct dir_baton *pb = db->parent_baton;
+      svn_wc_status2_t *status = apr_hash_get (pb->statii, db->name,
+                                               APR_HASH_KEY_STRING);
+      if (status && status->entry)
+        return status->entry->url;
+
+      url = find_dir_url (pb, pool);
+      if (url)
+        return svn_path_url_add_component (url, db->name, pool);
+      else
+        return NULL;
+    }
 }
 
 
@@ -1038,12 +1125,17 @@ make_dir_baton (void **dir_baton,
     full_path = apr_pstrdup (pool, eb->anchor);
 
   /* Finish populating the baton members. */
-  d->path         = full_path;
-  d->name         = path ? (svn_path_basename (path, pool)) : NULL;
-  d->edit_baton   = edit_baton;
+  d->path = full_path;
+  d->name = path ? (svn_path_basename (path, pool)) : NULL;
+  d->edit_baton = edit_baton;
   d->parent_baton = parent_baton;
-  d->pool         = pool;
-  d->statii       = apr_hash_make (pool);
+  d->pool = pool;
+  d->statii = apr_hash_make (pool);
+  d->url = apr_pstrdup (pool, find_dir_url (d, pool));
+  d->ood_last_cmt_rev = SVN_INVALID_REVNUM;
+  d->ood_last_cmt_date = 0;
+  d->ood_kind = svn_node_dir;
+  d->ood_last_cmt_author = NULL;
 
   /* Get the status for this path's children.  Of course, we only want
      to do this if the path is versioned as a directory. */
@@ -1098,37 +1190,19 @@ make_file_baton (struct dir_baton *parent_dir_baton,
     full_path = apr_pstrdup (pool, eb->anchor);
 
   /* Finish populating the baton members. */
-  f->path       = full_path;
-  f->name       = svn_path_basename (path, pool);
-  f->pool       = pool;
-  f->dir_baton  = pb;
+  f->path = full_path;
+  f->name = svn_path_basename (path, pool);
+  f->pool = pool;
+  f->dir_baton = pb;
   f->edit_baton = eb;
-
+  f->url = svn_path_url_add_component (find_dir_url (pb, pool),
+                                       svn_path_basename (full_path, pool),
+                                       pool);
+  f->ood_last_cmt_rev = SVN_INVALID_REVNUM;
+  f->ood_last_cmt_date = 0;
+  f->ood_kind = svn_node_file;
+  f->ood_last_cmt_author = NULL;
   return f;
-}
-
-/* Returns the URL for DB, or NULL: */
-static const char *
-find_dir_url (const struct dir_baton *db, apr_pool_t *pool)
-{
-  /* If we have no name, we're the root, return the anchor URL. */
-  if (! db->name)
-    return db->edit_baton->anchor_status->entry->url;
-  else
-    {
-      const char *url;
-      struct dir_baton *pb = db->parent_baton;
-      svn_wc_status2_t *status = apr_hash_get (pb->statii, db->name,
-                                               APR_HASH_KEY_STRING);
-      if (status && status->entry)
-        return status->entry->url;
-
-      url = find_dir_url (pb, pool);
-      if (url)
-        return svn_path_url_add_component (url, db->name, pool);
-      else
-        return NULL;
-    }
 }
 
 /* Return a boolean answer to the question "Is STATUS something that
@@ -1369,7 +1443,7 @@ delete_entry (const char *path,
 
   SVN_ERR (svn_wc_entries_read (&entries, adm_access, FALSE, pool));
   if (apr_hash_get (entries, hash_key, APR_HASH_KEY_STRING))
-    SVN_ERR (tweak_statushash (db->statii, eb->adm_access,
+    SVN_ERR (tweak_statushash (db, TRUE, eb->adm_access,
                                full_path, kind == svn_node_dir,
                                svn_wc_status_deleted, 0, NULL));
 
@@ -1377,7 +1451,7 @@ delete_entry (const char *path,
      is the root node and we're not supposed to report on the root
      node).  */
   if (db->parent_baton && (! *eb->target))
-    SVN_ERR (tweak_statushash (db->parent_baton->statii, eb->adm_access,
+    SVN_ERR (tweak_statushash (db->parent_baton, TRUE, eb->adm_access,
                                db->path, kind == svn_node_dir,
                                svn_wc_status_modified, 0, NULL));
 
@@ -1431,6 +1505,19 @@ change_dir_prop (void *dir_baton,
   struct dir_baton *db = dir_baton;
   if (svn_wc_is_normal_prop (name))    
     db->prop_changed = TRUE;
+
+  /* Note any changes to the repository. */
+  if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_REV) == 0)
+    db->ood_last_cmt_rev = SVN_STR_TO_REV (value->data);
+  else if (strcmp (name, SVN_PROP_ENTRY_LAST_AUTHOR) == 0)
+    db->ood_last_cmt_author = apr_pstrdup (db->pool, value->data);
+  else if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
+    {
+      apr_time_t tm;
+      SVN_ERR (svn_time_from_cstring (&tm, value->data, db->pool));
+      db->ood_last_cmt_date = tm;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -1469,7 +1556,7 @@ close_directory (void *dir_baton,
       if (pb)
         /* NOTE: When we add directory locking, we need to find a directory
            lock here. */
-        SVN_ERR (tweak_statushash (pb->statii,
+        SVN_ERR (tweak_statushash (pb, TRUE,
                                    eb->adm_access,
                                    db->path, TRUE,
                                    repos_text_status,
@@ -1608,6 +1695,20 @@ change_file_prop (void *file_baton,
   struct file_baton *fb = file_baton;
   if (svn_wc_is_normal_prop (name))
     fb->prop_changed = TRUE;
+
+  /* Note any changes to the repository. */
+  if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_REV) == 0)
+    fb->ood_last_cmt_rev = SVN_STR_TO_REV (value->data);
+  else if (strcmp (name, SVN_PROP_ENTRY_LAST_AUTHOR) == 0)
+    fb->ood_last_cmt_author = apr_pstrdup (fb->dir_baton->pool,
+                                           value->data);
+  else if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
+    {
+      apr_time_t tm;
+      SVN_ERR (svn_time_from_cstring (&tm, value->data, fb->dir_baton->pool));
+      fb->ood_last_cmt_date = tm;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -1653,7 +1754,7 @@ close_file (void *file_baton,
       repos_prop_status = fb->prop_changed ? svn_wc_status_modified : 0;
     }
 
-  SVN_ERR (tweak_statushash (fb->dir_baton->statii,
+  SVN_ERR (tweak_statushash (fb, FALSE,
                              fb->edit_baton->adm_access,
                              fb->path, FALSE,
                              repos_text_status,
