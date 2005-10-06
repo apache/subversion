@@ -103,6 +103,8 @@ Candidate changes:
     Votes:
       +1: maxb
 
+Approved changes (further review is welcome, but not required):
+
   * r16465
     Fix erroneous %include of apr.h into SWIG Perl and Ruby bindings, which
     was causing many irrelevant APR feature macros to be imported into the core
@@ -120,6 +122,14 @@ Candidate changes:
       generator change will probably make use of this.
     Votes:
       +1: maxb, djames
+
+  * r16477
+    Python bindings. Followup to r16398. Fix use-of-uninitialized-value bugs
+    introduced by the half-migration of two functions to a new style.
+    Justification:
+      Use-of-uninitialized-value bugs are crash bugs.
+    Votes:
+      +1: maxb, djames, dlr
 
   * r16479
     Make _global_svn_swig_py_is_local_pool a local variable instead of a global
@@ -148,13 +158,3 @@ Candidate changes:
       case of a static APR library.
     Votes:
       +1: maxb, djames
-
-Approved changes (further review is welcome, but not required):
-
-  * r16477
-    Python bindings. Followup to r16398. Fix use-of-uninitialized-value bugs
-    introduced by the half-migration of two functions to a new style.
-    Justification:
-      Use-of-uninitialized-value bugs are crash bugs.
-    Votes:
-      +1: maxb, djames, dlr
