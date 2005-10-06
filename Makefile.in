@@ -331,7 +331,7 @@ local-extraclean: local-distclean
               ac-helpers/ltmain.sh
 
 # clean everything, including test output.
-local-clean: fast-clean check-clean @SWIG_CLEAN_RULES@ 
+local-clean: fast-clean check-clean clean-swig
 
 # clean everything, including test output.
 local-distclean: fast-distclean check-clean
@@ -630,6 +630,8 @@ install-info: doc-all-info
           echo "$(INSTALL_DATA) $$file $(DESTDIR)$(infodir)/$$inst";  \
           $(INSTALL_DATA) $$file $(DESTDIR)$(infodir)/$$inst;         \
         done
+
+clean-swig: clean-swig-py clean-swig-pl clean-swig-rb
 
 install-swig-py: install-swig-py-lib
 install-swig-rb: install-swig-rb-lib
