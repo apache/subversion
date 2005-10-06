@@ -31,7 +31,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
   def test_get_logs(self):
     """Test scope of get_logs callbacks"""
     logs = []
-    def addLog( paths, revision, author, date, message, pool ):
+    def addLog(paths, revision, author, date, message, pool):
       if paths is not None:
         logs.append(paths)
 
