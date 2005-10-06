@@ -18,7 +18,7 @@ Candidate changes:
       consumer is likely to be the "Synchronize" view of the Subclipse
       plug-in for the Eclipse IDE.
     Votes:
-      +1: dlr
+      +1: dlr, jszakmeister
 
   * r16495
     Expose the "out of date" and URI fields now available from the
