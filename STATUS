@@ -108,15 +108,6 @@ Approved changes (further review is welcome, but not required):
     Votes:
       +1: dlr, jszakmeister
 
-  * r16480
-    Remove compatibility code for old versions of SWIG (SWIG 1.3.24 is now
-    required).
-    Justification:
-      Don't want to include vestigial remnants of old SWIG support in the
-      release.
-    Votes:
-      +1: maxb, djames
-
   * r16508
     Create svn_swig_py_initialize() API function.
     Justification:
