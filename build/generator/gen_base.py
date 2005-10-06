@@ -921,11 +921,7 @@ class IncludeDependencyInfo:
       if match:
         include_param = native_path(match.group(1))
         bname = os.path.basename(include_param)
-        if bname.endswith("_h.swg"):
-          # Manually handle dependencies for _h.swg files, so that 
-          # we can generate dependencies before they are created.
-          hdrs[native_path("subversion/bindings/swig/include/proxy.swg")] \
-              = None
+        if not self._domain.has_key(bname):
           bname = string.replace(bname, "_h.swg", ".h")
         if self._domain.has_key(bname):
           include_fnames = self._domain[bname]
