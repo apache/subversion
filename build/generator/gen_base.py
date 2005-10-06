@@ -936,7 +936,10 @@ class IncludeDependencyInfo:
     Return a dictionary with included full file names as keys and None as
     values."""
     hdrs = { }
-    if not os.path.exists(fname):
+    if fname.endswith('_external_runtime.swg'):
+      # These files exist only if running in a previously built tree.
+      # Never scan them, so that the behaviour is the same in all
+      # circumstances.
       return hdrs
     for line in fileinput.input(fname):
       match = self._re_include.match(line)
