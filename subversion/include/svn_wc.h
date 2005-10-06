@@ -1559,6 +1559,46 @@ typedef struct svn_wc_status2_t
   /** The entry's lock in the repository, if any. */
   svn_lock_t *repos_lock;
 
+  /** Set to the URI (actual or expected) of the item.
+   * @since New in 1.3
+   */
+  const char *url;
+
+  /**
+   * @defgroup svn_wc_status_ood Repository out of date info
+   * @{
+   *
+   * When the working copy item is out of date compared to the
+   * repository, the following fields represent the state of the
+   * youngest revision of the item in the repository.  If not out of
+   * date, the fields are set as described below.
+   */
+
+  /** Set to the youngest committed revision, or @c SVN_INVALID_REVNUM
+   * if out of date.
+   * @since New in 1.3
+   */
+  svn_revnum_t ood_last_cmt_rev;
+
+  /** Set to the most recent commit date, or @c 0 if out of date.
+   * @since New in 1.3
+   */
+  apr_time_t ood_last_cmt_date;
+
+  /** Set to the node kind of the youngest commit, or @c
+   * svn_wc_status_none if out of date.
+   * @since New in 1.3
+   */
+  svn_node_kind_t ood_kind;
+
+  /** Set to the user name of the youngest commit, or @c NULL if out
+   * of date.
+   * @since New in 1.3
+   */
+  const char *ood_last_cmt_author;
+
+  /** @} */
+
 } svn_wc_status2_t;
 
 
