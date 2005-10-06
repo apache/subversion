@@ -57,7 +57,7 @@ Candidate changes:
       worry about memory pools.
     Notes:
       r16398 contains both bindings and core changes, which have different
-      minimum voting requirements for backport. Thus, the votes are seperated
+      minimum voting requirements for backport. Thus, the votes are separated
       into two sections. r16477 contains exclusively bindings changes.
     Votes (core changes - parts of r16398):
       +1: dlr
