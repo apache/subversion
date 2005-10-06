@@ -127,5 +127,9 @@ struct apr_pool_t {
     %}
   }
 };
+%pythoncode %{
+# Initialize a global pool
+svn_pool_create()
+%}
 #endif
 
