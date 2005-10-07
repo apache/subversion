@@ -80,8 +80,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-10-03 08:25+0200\n"
-"PO-Revision-Date: 2005-10-03 11:06+0200\n"
+"POT-Creation-Date: 2005-10-05 17:03+0200\n"
+"PO-Revision-Date: 2005-10-07 10:08+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3077,8 +3077,8 @@ msgstr ""
 
 #: libsvn_client/commit_util.c:683 libsvn_client/commit_util.c:813
 #: libsvn_client/copy.c:1072 libsvn_client/delete.c:67
-#: libsvn_client/diff.c:1394 libsvn_client/diff.c:1992
-#: libsvn_client/diff.c:2514 libsvn_client/diff.c:2623
+#: libsvn_client/diff.c:1394 libsvn_client/diff.c:2130
+#: libsvn_client/diff.c:2795 libsvn_client/diff.c:2904
 #: libsvn_client/locking_commands.c:250 libsvn_client/locking_commands.c:274
 #: libsvn_client/log.c:129 libsvn_client/prop_commands.c:213
 #: libsvn_client/prop_commands.c:446 libsvn_client/prop_commands.c:602
@@ -3297,17 +3297,25 @@ msgstr ".merge-sx.r%ld"
 msgid ".merge-right.r%ld"
 msgstr ".merge-dx.r%ld"
 
-#: libsvn_client/diff.c:1450 libsvn_client/diff.c:2092
-#: libsvn_client/diff.c:2172
+#: libsvn_client/diff.c:1473 libsvn_client/diff.c:1677
 msgid "Not all required revisions are specified"
 msgstr "Non tutte le revisioni richieste sono state specificate"
 
-#: libsvn_client/diff.c:1721
+#: libsvn_client/diff.c:1488
+msgid "At least one revision must be non-local for a pegged diff"
+msgstr "Almeno una revisione deve essere non locale per una pegged diff"
+
+#: libsvn_client/diff.c:1610 libsvn_client/diff.c:1615
+#, c-format
+msgid "'%s' was not found in the repository at revision %ld"
+msgstr "'%s' non è stato trovato nel repository alla revisione %ld"
+
+#: libsvn_client/diff.c:1948
 msgid "Sorry, svn_client_diff3 was called in a way that is not yet supported"
 msgstr ""
 "Spiacente, svn_client_diff3 è stato invocato in un modo non ancora supportato"
 
-#: libsvn_client/diff.c:1760
+#: libsvn_client/diff.c:1987
 msgid ""
 "Only diffs between a path's text-base and its working files are supported at "
 "this time"
@@ -3315,22 +3323,17 @@ msgstr ""
 "Solo differenze fra il testo base di un percorso e i suoi file di lavoro "
 "sono supportati correntemente"
 
-#: libsvn_client/diff.c:1875 libsvn_client/diff.c:1880
-#, c-format
-msgid "'%s' was not found in the repository at revision %ld"
-msgstr "'%s' non è stato trovato nel repository alla revisione %ld"
-
-#: libsvn_client/diff.c:1996 libsvn_client/switch.c:108
+#: libsvn_client/diff.c:2134 libsvn_client/switch.c:108
 #, c-format
 msgid "Directory '%s' has no URL"
 msgstr "La directory '%s' non ha URL"
 
-#: libsvn_client/diff.c:2183
-msgid "At least one revision must be non-local for a pegged diff"
-msgstr "Almeno una revisione deve essere non locale per una pegged diff"
+#: libsvn_client/diff.c:2372
+msgid "Summarizing diff can only compare repository to repository"
+msgstr "Il diff riassuntivo può confrontare solo un repository ad un altro repository"
 
-#: libsvn_client/diff.c:2487 libsvn_client/diff.c:2493
-#: libsvn_client/diff.c:2608 libsvn_client/locking_commands.c:254
+#: libsvn_client/diff.c:2768 libsvn_client/diff.c:2774
+#: libsvn_client/diff.c:2889 libsvn_client/locking_commands.c:254
 #: libsvn_client/locking_commands.c:278 libsvn_client/ra.c:372
 #: libsvn_client/ra.c:733 libsvn_client/ra.c:869
 #, c-format
@@ -3395,7 +3398,7 @@ msgid "'%s' is not locked"
 msgstr "'%s' non è bloccato"
 
 #: libsvn_client/locking_commands.c:427 libsvn_fs/fs-loader.c:895
-#: libsvn_ra/ra_loader.c:552
+#: libsvn_ra/ra_loader.c:571
 msgid "Lock comment has illegal characters"
 msgstr "Il commento al blocco contiene dei caratteri illegali"
 
@@ -4546,12 +4549,12 @@ msgstr ""
 msgid "Unrecognized URL scheme for '%s'"
 msgstr "Protocollo '%s' dell'URL non riconosciuto"
 
-#: libsvn_ra/ra_loader.c:622
+#: libsvn_ra/ra_loader.c:641
 #, c-format
 msgid "  - handles '%s' scheme\n"
 msgstr "  - gestisce il protocollo '%s'\n"
 
-#: libsvn_ra/ra_loader.c:708
+#: libsvn_ra/ra_loader.c:727
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
 msgstr "Protocollo '%s' dell'URL non riconosciuto"
@@ -4937,7 +4940,7 @@ msgstr "Modulo per accedere ad un repository sul disco locale."
 msgid "Unable to open an ra_local session to URL"
 msgstr "Non posso aprire una sessione ra_local su una URL"
 
-#: libsvn_ra_local/ra_plugin.c:1286
+#: libsvn_ra_local/ra_plugin.c:1287
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_local"
 msgstr "Versione del lettore (%d) per ra_local non supportata"
@@ -4952,12 +4955,12 @@ msgstr "L'URL locale '%s' non contiene il prefisso 'file://'"
 msgid "Local URL '%s' contains only a hostname, no path"
 msgstr "L'URL locale '%s' contiene solo il nome host, non il percorso"
 
-#: libsvn_ra_local/split_url.c:74
+#: libsvn_ra_local/split_url.c:117
 #, c-format
 msgid "Local URL '%s' contains unsupported hostname"
 msgstr "L'URL locale '%s' contiene un nome host non supportato"
 
-#: libsvn_ra_local/split_url.c:128 libsvn_ra_local/split_url.c:135
+#: libsvn_ra_local/split_url.c:127 libsvn_ra_local/split_url.c:134
 #, c-format
 msgid "Unable to open repository '%s'"
 msgstr "Non riesco ad aprire il repository '%s'"
@@ -5064,83 +5067,83 @@ msgstr "Non-stringa come parte del contenuto di un file"
 msgid "Dirlist element not a list"
 msgstr "Dirlist non è una lista"
 
-#: libsvn_ra_svn/client.c:1136
+#: libsvn_ra_svn/client.c:1138
 msgid "Log entry not a list"
 msgstr "La voce di log non è una lista"
 
-#: libsvn_ra_svn/client.c:1149
+#: libsvn_ra_svn/client.c:1151
 msgid "Changed-path entry not a list"
 msgstr "La voce del percorso modificato non è una lista"
 
-#: libsvn_ra_svn/client.c:1228
+#: libsvn_ra_svn/client.c:1230
 msgid "'stat' not implemented"
 msgstr "'stat' non è implementato"
 
-#: libsvn_ra_svn/client.c:1285
+#: libsvn_ra_svn/client.c:1287
 msgid "'get-locations' not implemented"
 msgstr "'get-locations' non è implementato"
 
-#: libsvn_ra_svn/client.c:1297
+#: libsvn_ra_svn/client.c:1299
 msgid "Location entry not a list"
 msgstr "La voce di locazione non è una lista"
 
-#: libsvn_ra_svn/client.c:1347
+#: libsvn_ra_svn/client.c:1349
 msgid "'get-file-revs' not implemented"
 msgstr "'get-file-revs' non è implementato"
 
-#: libsvn_ra_svn/client.c:1360
+#: libsvn_ra_svn/client.c:1362
 msgid "Revision entry not a list"
 msgstr "La voce di revisione non è una lista"
 
-#: libsvn_ra_svn/client.c:1373 libsvn_ra_svn/client.c:1398
+#: libsvn_ra_svn/client.c:1375 libsvn_ra_svn/client.c:1400
 msgid "Text delta chunk not a string"
 msgstr "Il frammento di delta del testo non è una stringa"
 
-#: libsvn_ra_svn/client.c:1410
+#: libsvn_ra_svn/client.c:1412
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "Il comando get-file-revs non ha restituito nessuna revisione"
 
-#: libsvn_ra_svn/client.c:1458
+#: libsvn_ra_svn/client.c:1460
 msgid "Server doesn't support the lock command"
 msgstr "Il server non supporta il comando lock"
 
-#: libsvn_ra_svn/client.c:1522
+#: libsvn_ra_svn/client.c:1524
 msgid "Server doesn't support the unlock command"
 msgstr "Il server non supporta il comando unlock"
 
-#: libsvn_ra_svn/client.c:1619
+#: libsvn_ra_svn/client.c:1621
 msgid "Lock response not a list"
 msgstr "La risposta di blocco non è una lista"
 
-#: libsvn_ra_svn/client.c:1633
+#: libsvn_ra_svn/client.c:1635
 msgid "Unknown status for lock command"
 msgstr "Status sconosciuto per il comando di blocco"
 
-#: libsvn_ra_svn/client.c:1655
+#: libsvn_ra_svn/client.c:1657
 msgid "Didn't receive end marker for lock responses"
 msgstr "Non ho ricevuto il marcatore di terminazione della risposta di blocco"
 
-#: libsvn_ra_svn/client.c:1742
+#: libsvn_ra_svn/client.c:1744
 msgid "Unlock response not a list"
 msgstr "La risposta di sblocco non è una lista"
 
-#: libsvn_ra_svn/client.c:1756
+#: libsvn_ra_svn/client.c:1758
 msgid "Unknown status for unlock command"
 msgstr "Status sconosciuto per il comando di sblocco"
 
-#: libsvn_ra_svn/client.c:1777
+#: libsvn_ra_svn/client.c:1779
 msgid "Didn't receive end marker for unlock responses"
 msgstr "Non ho ricevuto il marcatore di terminazione della risposta di sblocco"
 
-#: libsvn_ra_svn/client.c:1801 libsvn_ra_svn/client.c:1829
+#: libsvn_ra_svn/client.c:1803 libsvn_ra_svn/client.c:1831
 msgid "Server doesn't support the get-lock command"
 msgstr "Il server non supporta il comando get-lock"
 
-#: libsvn_ra_svn/client.c:1842
+#: libsvn_ra_svn/client.c:1844
 msgid "Lock element not a list"
 msgstr "L'elemento di blocco non è una lista"
 
-#: libsvn_ra_svn/client.c:1901
+#: libsvn_ra_svn/client.c:1903
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Versione %d del lettore per ra_svn non supportata"
@@ -7057,7 +7060,7 @@ msgid "'%s' is an URL when it should be a path"
 msgstr "'%s' è un'URL quando dovrebbe essere un percorso"
 
 #: svnadmin/main.c:235 svndumpfilter/main.c:787 svnlook/main.c:99
-#: svnserve/main.c:111 svnversion/main.c:182
+#: svnserve/main.c:112 svnversion/main.c:182
 msgid "show version information"
 msgstr "mostra le informazioni di versione"
 
@@ -7385,7 +7388,7 @@ msgstr ""
 "\n"
 "Commandi disponibili:\n"
 
-#: svnadmin/main.c:649 svnlook/main.c:1786 svnserve/main.c:158
+#: svnadmin/main.c:649 svnlook/main.c:1786 svnserve/main.c:159
 msgid ""
 "The following repository back-end (FS) modules are available:\n"
 "\n"
@@ -8021,60 +8024,60 @@ msgstr ""
 "il comando '%s' non accetta l'opzione '%s'\n"
 "Digita 'svnlook help %s' per l'uso.\n"
 
-#: svnserve/main.c:102
+#: svnserve/main.c:103
 msgid "daemon mode"
 msgstr "modalità daemon"
 
-#: svnserve/main.c:104
+#: svnserve/main.c:105
 msgid "listen port (for daemon mode)"
 msgstr "porta d'ascolto (per la modalità daemon)"
 
-#: svnserve/main.c:106
+#: svnserve/main.c:107
 msgid "listen hostname or IP address (for daemon mode)"
 msgstr "ascolta nomehost o l'indirizzo IP (per la modalità daemon)"
 
-#: svnserve/main.c:108
+#: svnserve/main.c:109
 msgid "run in foreground (useful for debugging)"
 msgstr "viene eseguito in primo piano (utile per il debugging)"
 
-#: svnserve/main.c:109 svnversion/main.c:181
+#: svnserve/main.c:110 svnversion/main.c:181
 msgid "display this help"
 msgstr "mostra questo aiuto"
 
-#: svnserve/main.c:112
+#: svnserve/main.c:113
 msgid "inetd mode"
 msgstr "modalità inetd"
 
-#: svnserve/main.c:113
+#: svnserve/main.c:114
 msgid "root of directory to serve"
 msgstr "directory di root da servire"
 
-#: svnserve/main.c:114
+#: svnserve/main.c:115
 msgid "deprecated; use repository config file"
 msgstr "deprecato; usa il file di configurazione del repository"
 
-#: svnserve/main.c:115
+#: svnserve/main.c:116
 msgid "tunnel mode"
 msgstr "modalità tunnel"
 
-#: svnserve/main.c:117
+#: svnserve/main.c:118
 msgid "tunnel username (default is current uid's name)"
 msgstr "tunnel nomeutente (il default è l'uid corrispondente al nome)"
 
-#: svnserve/main.c:119
+#: svnserve/main.c:120
 msgid "use threads instead of fork"
 msgstr "usa i threads invece di effettuare una fork"
 
-#: svnserve/main.c:121
+#: svnserve/main.c:122
 msgid "listen once (useful for debugging)"
 msgstr "ascolta una sola volta (utile per il debuggin)"
 
-#: svnserve/main.c:132
+#: svnserve/main.c:133
 #, c-format
 msgid "Type '%s --help' for usage.\n"
 msgstr "Digita '%s --help' per informazioni.\n"
 
-#: svnserve/main.c:141
+#: svnserve/main.c:142
 msgid ""
 "Usage: svnserve [options]\n"
 "\n"
@@ -8084,7 +8087,7 @@ msgstr ""
 "\n"
 "Opzioni valide:\n"
 
-#: svnserve/main.c:359
+#: svnserve/main.c:360
 msgid ""
 "Warning: -R is deprecated.\n"
 "Anonymous access is now read-only by default.\n"
@@ -8102,45 +8105,45 @@ msgstr ""
 "auth-access = read|write|none (default write)\n"
 "Per ora tutti gli accessi sono in sola lettura\n"
 
-#: svnserve/main.c:379
+#: svnserve/main.c:380
 msgid "You must specify exactly one of -d, -i, -t or -X.\n"
 msgstr "Devi specificare esattamente un'opzione fra -d, -i, -t o -X.\n"
 
-#: svnserve/main.c:389
+#: svnserve/main.c:390
 msgid "Option --tunnel-user is only valid in tunnel mode.\n"
 msgstr "L'opzione --tunnel-user è valida solo per la modalità tunnel.\n"
 
-#: svnserve/main.c:429
+#: svnserve/main.c:430
 #, c-format
 msgid "Can't get address info: %s\n"
 msgstr "Non riesco ad ottenere le informazioni per l'indirizzo: %s\n"
 
-#: svnserve/main.c:446
+#: svnserve/main.c:447
 #, c-format
 msgid "Can't create server socket: %s\n"
 msgstr "Non riesco a creare un socket per il server: %s\n"
 
-#: svnserve/main.c:460
+#: svnserve/main.c:461
 #, c-format
 msgid "Can't bind server socket: %s\n"
 msgstr "Non riesco ad attaccarmi al socket del server: %s\n"
 
-#: svnserve/main.c:503
+#: svnserve/main.c:504
 #, c-format
 msgid "Can't accept client connection: %s\n"
 msgstr "Non posso accettare la connessione del client: %s\n"
 
-#: svnserve/main.c:558
+#: svnserve/main.c:559
 #, c-format
 msgid "Can't create threadattr: %s\n"
 msgstr "Non riesco a creare il l'attributo del thread: %s\n"
 
-#: svnserve/main.c:567
+#: svnserve/main.c:568
 #, c-format
 msgid "Can't set detached state: %s\n"
 msgstr "Non riesco ad impostare lo stato scollegato: %s\n"
 
-#: svnserve/main.c:581
+#: svnserve/main.c:582
 #, c-format
 msgid "Can't create thread: %s\n"
 msgstr "Non riesco a creare il thread: %s\n"
