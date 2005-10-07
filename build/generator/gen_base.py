@@ -547,11 +547,6 @@ class TargetSWIG(TargetLib):
     # the library depends upon the object
     self.gen_obj.graph.add(DT_LINK, self.name, ofile)
 
-    # Some languages may depend on swig runtime libraries
-    if self.lang in ('python', 'perl'):
-      self.gen_obj.graph.add(DT_LINK, self.name,
-                             TargetSWIGRuntime(self.lang, {}, self.gen_obj))
-
     # the specified install area depends upon the library
     self.gen_obj.graph.add(DT_INSTALL, 'swig-' + lang_abbrev[self.lang], self)
 
@@ -570,23 +565,10 @@ class TargetSWIG(TargetLib):
       target = self.targets.get(target.lang, None)
       return target and [target] or [ ]
 
-class TargetSWIGRuntime(TargetLinked):
-  def __init__(self, lang, options, gen_obj):
-    name = "<SWIG Runtime Library for " + lang_full_name[lang] + ">"
-    TargetLinked.__init__(self, name, options, gen_obj)
-    self.external_lib = "$(LSWIG" + string.upper(lang_abbrev[lang]) + ")"
-
 class TargetSWIGLib(TargetLib):
   def __init__(self, name, options, gen_obj):
     TargetLib.__init__(self, name, options, gen_obj)
     self.lang = options.get('lang')
-
-  def add_dependencies(self):
-    TargetLib.add_dependencies(self)
-    # Some languages may depend on swig runtime libraries
-    if self.lang in ('python', 'perl'):
-      self.gen_obj.graph.add(DT_LINK, self.name,
-                             TargetSWIGRuntime(self.lang, {}, self.gen_obj))
 
   class Section(TargetLib.Section):
     def get_dep_targets(self, target):
