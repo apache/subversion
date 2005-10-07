@@ -88,6 +88,28 @@ Candidate changes:
     Votes:
       +1: dlr
 
+  * r16562
+    Detect files not to scan for includes by name, not by existance.
+    Justification:
+      Avoid a different code path being followed depending on whether the build
+      tree is clean or not.
+    Votes:
+      +1: maxb
+
+  * r16563
+    Remove unnecessary complication in Makefile SWIG clean rules.
+    Justification:
+      Modernize the 'clean-swig' rules, because a future commit will add 
+      'extraclean-swig' rules in the new style.
+    Votes:
+      +1: maxb
+
+  * r16569
+    Remove additional relics of pre-1.3.24 SWIG support.
+    Votes:
+      +1: maxb
+
+
 Approved changes (further review is welcome, but not required):
 
   * r16470
