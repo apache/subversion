@@ -504,12 +504,12 @@ name is that person\'s contribution count: each patch is counted as 2,
 and anything else (e.g., suggestion, review) counts as 1.</p>
 
 <p><i>Please do not use this list as a generic guide to who has
-contributed what to Subversion!</i> It omits many contributions from
-existing full committers, for example, because they are irrelevant to
-our search for new committers.  Also, it merely counts changes, it
-does not judge them.  To truly understand what someone has
-contributed, you have to read their changes in detail.  This page can
-only assist human judgement, not substitute for it.</p>
+contributed what to Subversion!</i> It omits existing full committers,
+for example, because they are irrelevant to our search for new
+committers.  Also, it merely counts changes, it does not evaluate
+them.  To truly understand what someone has contributed, you have to
+read their changes in detail.  This page can only assist human
+judgement, not substitute for it.</p>
 
 '''
 
