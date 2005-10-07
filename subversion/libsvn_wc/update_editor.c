@@ -3063,7 +3063,7 @@ svn_wc_add_repos_file2 (const char *dst_path,
       SVN_ERR (svn_wc_create_tmp_file (&file, adm_path, FALSE, pool));
       apr_file_name_get (&tmp_text_path, file);
       SVN_ERR (svn_io_file_close (file, pool));
-      SVN_ERR (svn_io_copy_file (new_text_path, tmp_text_path, FALSE, pool));
+      SVN_ERR (svn_io_copy_file (new_text_path, tmp_text_path, TRUE, pool));
 
       /* Rename new temporary text file to working text. */
       svn_xml_make_open_tag (&log_accum, pool,
