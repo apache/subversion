@@ -39,6 +39,7 @@ import sys
 import re
 import shutil
 import getopt
+from urllib import quote as url_encode
 
 # Pretend we have true booleans on older python versions
 try:
@@ -70,12 +71,15 @@ def escape_html(str):
 
 def html_header(title):
   title = escape_html(title)
-  s  = '<title>%s</title>\n' % title
-  s += '<html>\n\n'
-  s += '<head><meta http-equiv=Content-Type ' \
-       'content="text/html; charset=UTF-8"></head>\n\n'
-  s += '<body text="#000000" bgcolor="#FFFFFF">\n\n'
-  s += '<center><h1>%s</h1></center>\n\n' % title
+  s  = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"\n'
+  s += ' "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">\n'
+  s += '<html><head>\n'
+  s += '<meta http-equiv="Content-Type"'
+  s += ' content="text/html; charset=UTF-8" />\n'
+  s += '<title>%s</title>\n' % title
+  s += '</head>\n\n'
+  s += '<body style="text-color: black; background-color: white">\n\n'
+  s += '<h1 style="text-align: center">%s</h1>\n\n' % title
   s += '<hr />\n\n'
   return s
 
@@ -553,7 +557,8 @@ def drop():
           if c.is_committer:
             committerness = '&nbsp;(partial&nbsp;committer)'
           index.write('<li><p><a href="%s.html">%s</a>&nbsp;[%d]%s</p></li>\n'
-                      % (c.canonical_name(), escape_html(c.big_name()),
+                      % (url_encode(c.canonical_name()),
+                         escape_html(c.big_name()),
                          c.score(), committerness))
           c.html_out()
     seen_contributors[c] = True
@@ -607,7 +612,7 @@ def usage():
 
 def main():
   try:
-    opts, args = getopt.getopt(sys.argv[1:], 'C:hH?', [ '--help' ])
+    opts, args = getopt.getopt(sys.argv[1:], 'C:hH?', [ 'help' ])
   except getopt.GetoptError, e:
     complain(str(e) + '\n\n')
     usage()
