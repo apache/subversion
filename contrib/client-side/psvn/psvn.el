@@ -246,15 +246,18 @@ When 'inline: Insert the header line in the `svn-status-buffer-name' buffer
 Otherwise: Don't display a header line")
 
 ;;; default arguments to pass to svn commands
-(defvar svn-status-default-log-arguments ""
-  "*Arguments to pass to svn log.
+(defvar svn-status-default-log-arguments '()
+  "*List of arguments to pass to svn log.
 \(used in `svn-status-show-svn-log'; override these by giving prefixes\).")
 
-(defvar svn-status-default-commit-arguments ""
-  "*Arguments to pass to svn commit.
-If you dont't like recursive commits, set this value to \"-N\".")
+(defvar svn-status-default-commit-arguments '()
+  "*List of arguments to pass to svn commit.
+If you don't like recursive commits, set this value to (\"-N\").
+Do not put an empty string here: Subversion and the operating system may
+treat that as a file name equivalent to \".\", so you would commit more
+than you intended.")
 
-(defvar svn-status-default-diff-arguments nil
+(defvar svn-status-default-diff-arguments '()
   "*A list of arguments that is passed to the svn diff command.
   If you'd like to supress whitespace changes use the following value:
   '(\"--diff-cmd\" \"diff\" \"-x\" \"-wbBu\")")
@@ -2235,21 +2238,19 @@ Consider svn-status-window-alist to choose the buffer name."
   "Run `svn log' on selected files.
 The output is put into the *svn-log* buffer
 The optional prefix argument ARG determines which switches are passed to `svn log':
- no prefix               --- use whatever is in the string `svn-status-default-log-arguments'
+ no prefix               --- use whatever is in the list `svn-status-default-log-arguments'
  prefix argument of -1   --- use no arguments
  prefix argument of 0:   --- use the -q switch (quiet)
  other prefix arguments: --- use the -v switch (verbose)
 
 See `svn-status-marked-files' for what counts as selected."
   (interactive "P")
-  (let ((switch (cond ((eq arg 0) "-q")
-                      ((eq arg -1) "")
-                      (arg        "-v")
-                      (t          svn-status-default-log-arguments))))
+  (let ((switches (cond ((eq arg 0)  '("-q"))
+                        ((eq arg -1) '())
+                        (arg         '("-v"))
+                        (t           svn-status-default-log-arguments))))
     (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-    (if (> (length switch) 0)
-        (svn-run-svn t t 'log "log" "--targets" svn-status-temp-arg-file switch)
-      (svn-run-svn t t 'log "log" "--targets" svn-status-temp-arg-file))
+    (svn-run-svn t t 'log "log" "--targets" svn-status-temp-arg-file switches)
     (save-excursion
       (set-buffer "*svn-process*")
       (svn-log-view-mode))))
