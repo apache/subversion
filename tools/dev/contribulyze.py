@@ -493,21 +493,23 @@ def graze(input):
         continue
 
 index_introduction = '''
-<p>The following list of contributors is meant solely to help us keep
-tabs on whom to propose for partial or full commit access.  It was
-generated from "svn&nbsp;log" output by <a
+<p>The following list of contributors and their contributions is meant
+to help us keep track of whom to consider for commit access.  The list
+was generated from "svn&nbsp;log" output by <a
 href="http://svn.collab.net/repos/svn/trunk/tools/dev/contribulyze.py"
 >contribulyze.py</a>, which looks for log messages that use the <a
 href="http://subversion.tigris.org/hacking.html#crediting">special
-contribution format</a>.</p>
+contribution format</a>.  The number in square brackets after each
+name is that person\'s contribution count: each patch is counted as 2,
+and anything else (e.g., suggestion, review) counts as 1.</p>
 
-<p>Please do <i>not</i> use this list as a general guide to who has
-contributed what to Subversion.  It omits many contributions from
+<p><i>Please do not use this list as a generic guide to who has
+contributed what to Subversion!</i> It omits many contributions from
 existing full committers, for example, because they are irrelevant to
 our search for new committers.  Also, it merely counts changes, it
-does not judge them.  To truly understand what someone has contributed,
-you have to click on their name and read the changes in detail.  This
-page can only assist human judgement, not substitute for it.</p>
+does not judge them.  To truly understand what someone has
+contributed, you have to read their changes in detail.  This page can
+only assist human judgement, not substitute for it.</p>
 
 '''
 
