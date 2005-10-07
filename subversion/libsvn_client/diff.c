@@ -2041,8 +2041,8 @@ diff_repos_repos (const struct diff_parameters *diff_param,
   callback_baton->revnum1 = drr.rev1;
   callback_baton->revnum2 = drr.rev2;
 
-  /* Now, we reopen two RA session to the correct anchor/target
-     locations for our URLs. */
+  /* Now, we open two RA sessions to the correct anchor/target
+     location for URL1. */
   SVN_ERR (svn_client__open_ra_session_internal
            (&ra_session1, drr.anchor1, NULL, NULL, NULL, FALSE, TRUE, ctx,
             pool));
@@ -2055,8 +2055,8 @@ diff_repos_repos (const struct diff_parameters *diff_param,
   SVN_ERR (svn_client__get_diff_editor 
            (drr.base_path ? drr.base_path : "",
             NULL, callbacks, callback_baton, diff_param->recurse,
-            FALSE, /* doesn't matter for diff */ ra_session2, drr.rev1, 
-            NULL, /* no notify_func */ NULL, /* no notify_baton */
+            FALSE /* doesn't matter for diff */, ra_session2, drr.rev1, 
+            NULL /* no notify_func */, NULL /* no notify_baton */,
             ctx->cancel_func, ctx->cancel_baton,
             &diff_editor, &diff_edit_baton, pool));
   
@@ -2332,8 +2332,8 @@ diff_summarize_repos_repos (const struct diff_parameters *diff_param,
   /* Prepare info for the repos repos diff. */
   SVN_ERR (diff_prepare_repos_repos (diff_param, &drr, ctx, pool));
 
-  /* Now, we reopen two RA session to the correct anchor/target
-     locations for our URLs. */
+  /* Now, we open two RA sessions to the correct anchor/target
+     location for URL1. */
   SVN_ERR (svn_client__open_ra_session_internal
            (&ra_session1, drr.anchor1, NULL, NULL, NULL, FALSE, TRUE,
             ctx, pool));
