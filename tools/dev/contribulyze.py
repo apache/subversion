@@ -29,10 +29,6 @@
 #   - Expand "me" to the committer name for this revision.
 #   - Associate a parenthetical aside following a field with that field.
 #
-# Right now we do not offer any conversion between committers'
-# usernames and their real names.  In the future, we could take the
-# COMMITTERS file as an optional parameter and do such a transform.
-#
 # NOTES: You might be wondering, why not take 'svn log --xml' input?
 # Well, that would be the Right Thing to do, but in practice this was
 # a lot easier to whip up for straight 'svn log' output.  I'd have no
