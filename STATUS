@@ -7,7 +7,7 @@ delay a release, etc.
 Status of 1.3.0:
 ================
 
-Candidate changes:
+Candidate changes (NOT under subversion/bindings/swig):
 
   * r16350
     Fix issue #1911, where svndumpfilter generated invalid dumpfiles
@@ -38,21 +38,18 @@ Candidate changes:
     Votes:
       +1: maxb
 
-  * r16398, r16477
-    Fix Issue #2172 (segfaults in the Python bindings caused by pool lifetime
-    problems).
+  * r16398 (parts NOT lying under subversion/bindings/swig/)
+    Provide APIs needed to fix Issue #2172 (segfaults in the Python bindings
+    caused by pool lifetime problems).
     Justification:
       Segfaults are bad. In 1.3.x, Python bindings users should not have to
       worry about memory pools.
     Notes:
       r16398 contains both bindings and core changes, which have different
-      minimum voting requirements for backport. Thus, the votes are separated
-      into two sections. r16477 contains exclusively bindings changes.
-    Votes (core changes - parts of r16398):
+      minimum voting requirements for backport. Thus, the change is separated
+      into two completely detatched entries.
+    Votes:
       +1: dlr, lundblad
-    Votes (bindings changes - parts of r16398 + all of r16477):
-      +1: djames, dlr
-      +1: maxb (r16477 only)
 
   * r16414, r16512, r16513
     Ensure that SWIG dependencies are correctly added to build-outputs.mk.
@@ -63,22 +60,15 @@ Candidate changes:
     Votes:
       +1: djames, dlr
 
-  * r16428, r16500
+  * r16428
     Activate some Windows-specific behaviour on Cygwin too:
      - SVN_ASP_DOT_NET_HACK
      - Windows-specific augmented file:// URLs
-    r16500 is a small followup.
     Justification:
       Cygwin is likely to be exposed to native-Windows-created WCs.
     Votes:
       +1: maxb, dlr
      
-  * r16486
-    Fiddle with the Perl bindings link command to avoid linking to installed,
-    rather then build-tree libsvn_* libraries.
-    Votes:
-      +1: maxb, dlr
-
   * r16556
     Consolidated and better documented loading of the "svnjavahl-1"
     native library.
@@ -109,6 +99,55 @@ Candidate changes:
     Votes:
       +1: maxb
 
+Candidate changes (under subversion/bindings/swig):
+
+  IMPORTANT NOTE: If all these changes are approved, we need not merge them
+  individually. We can just:
+    
+    rs=http://svn.collab.net/repos/svn
+    svn rm $rs/branches/1.3.x/subversion/bindings/swig
+    svn cp -r 16582 $rs/trunk/subversion/bindings/swig \
+           $rs/branches/1.3.x/subversion/bindings/swig
+
+  * r16448
+    %ignore svn_fs_set_berkeley_errcall.
+    Justification:
+      It is now redundant and so need never be wrapped.
+    Votes:
+      +1: maxb
+
+  * r16453
+    Unify SWIG bindings typemapping of 'const char *' => 'const char *'
+    apr_hash_t input parameters.
+    Justification:
+      Makes several additional APIs usably wrapped for multiple SWIG languages.
+    Votes:
+      +1: maxb
+
+  * r16480
+      Remove compatibility code for old versions of SWIG (SWIG 1.3.24 is now
+      required).
+    Justification:
+      Don't ship residual mess.
+    Votes:
+      +1: maxb
+
+  * r16482
+    Use _core.svn_pool_create instead of svn_pool_create.  This clarifies that
+    we are importing svn_pool_create from _core, rather than using our local
+    (deprecated) compatibility wrapper.
+    Justification:
+      Enhance self-documenting nature of the code.
+    Votes:
+      +1: maxb
+
+  * r16518
+    Fix spacing in subversion/bindings/swig/python/tests/repository.py.
+    Justification:
+      Trivial stylistic fix.
+    Votes:
+      +1: maxb
+
   * r16582
     Python bindings fix. Even a typemap which does nothing is better than one
     which does invalid pointer assignment.
@@ -118,8 +157,25 @@ Candidate changes:
     Votes:
       +1: maxb
 
+Approved changes (NOT under subversion/bindings/swig):
 
-Approved changes (further review is welcome, but not required):
+
+Approved changes (under subversion/bindings/swig):
+
+  * r16398 (ONLY parts lying under subversion/bindings/swig/), r16477
+    Fix Issue #2172 (segfaults in the Python bindings caused by pool lifetime
+    problems).
+    Justification:
+      Segfaults are bad. In 1.3.x, Python bindings users should not have to
+      worry about memory pools.
+    Notes:
+      r16398 contains both bindings and core changes, which have different
+      minimum voting requirements for backport. Thus, the change is separated
+      into two completely detatched entries.
+      r16477 contains exclusively bindings changes.
+    Votes:
+      +1: djames, dlr
+      +1: maxb (r16477 only)
 
   * r16470
     Move proxy_apr.swg from proxy/ to include/, leaving proxy/ to be a
@@ -131,3 +187,17 @@ Approved changes (further review is welcome, but not required):
       Depends on r16414 and r16513.
     Votes:
       +1: maxb, djames
+
+  * r16486
+    Fiddle with the Perl bindings link command to avoid linking to installed,
+    rather then build-tree libsvn_* libraries.
+    Votes:
+      +1: maxb, dlr
+
+  * r16500
+    Make svn_swig_py_init_asp_dot_net_hack static.
+    Justification:
+      Greater visibility is not required, so keep the exported namespace clean.
+    Votes:
+      +1: maxb, dlr
+
