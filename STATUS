@@ -67,6 +67,14 @@ Candidate changes (NOT under subversion/bindings/swig):
 
 Approved changes (areas other than under subversion/bindings/swig):
 
+  * r16372
+    Fix shell test in Makefile breaking swig-py build, due to sometimes
+    misidentifying a srcdir == objdir build as a srcdir != objdir build.
+    Justification:
+      Tiny fix, broken build bad.
+    Votes:
+      +1: maxb, djames, lundblad
+
   * r16556
     Consolidated and better documented loading of the "svnjavahl-1"
     native library.
@@ -76,14 +84,6 @@ Approved changes (areas other than under subversion/bindings/swig):
     Votes:
       +1: dlr
       +0: maxb
-
-  * r16372
-    Fix shell test in Makefile breaking swig-py build, due to sometimes
-    misidentifying a srcdir == objdir build as a srcdir != objdir build.
-    Justification:
-      Tiny fix, broken build bad.
-    Votes:
-      +1: maxb, djames, lundblad
 
   * r16563
     Remove unnecessary complication in Makefile SWIG clean rules.
