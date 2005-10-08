@@ -64,6 +64,12 @@ def complain(msg, fatal=False):
     sys.exit(1)
 
 
+def email_address_html_spam_guard(addr):
+  """Return a spam-protected version of email ADDR that renders the
+  same in HTML as the original address."""
+  return addr
+
+
 def escape_html(str):
   """Return an HTML-escaped version of STR."""
   return str.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
@@ -166,6 +172,35 @@ class Contributor:
       else:
         score += len(self.activities[activity])
     return score
+
+  def score_str(self):
+    """Return a contribution score HTML string for this contributor."""
+    patch_score = 0
+    other_score = 0
+    for activity in self.activities.keys():
+      if activity == 'Patch':
+        patch_score += len(self.activities[activity])
+      else:
+        other_score += len(self.activities[activity])
+    if patch_score == 0:
+      patch_str = ""
+    elif patch_score == 1:
+      patch_str = "1&nbsp;patch"
+    else:
+      patch_str = "%d&nbsp;patches" % patch_score
+    if other_score == 0:
+      other_str = ""
+    elif other_score == 1:
+      other_str = "1&nbsp;non-patch"
+    else:
+      other_str = "%d&nbsp;non-patches" % other_score
+    if patch_str:
+      if other_str:
+        return ",&nbsp;".join((patch_str, other_str))
+      else:
+        return patch_str
+    else:
+      return other_str
 
   def __cmp__(self, other):
     if self.is_full_committer and not other.is_full_committer:
@@ -505,9 +540,7 @@ was generated from "svn&nbsp;log" output by <a
 href="http://svn.collab.net/repos/svn/trunk/tools/dev/contribulyze.py"
 >contribulyze.py</a>, which looks for log messages that use the <a
 href="http://subversion.tigris.org/hacking.html#crediting">special
-contribution format</a>.  The number in square brackets after each
-name is that person\'s contribution count: each patch is counted as 2,
-and anything else (e.g., suggestion, review) counts as 1.</p>
+contribution format</a>.</p>
 
 <p><i>Please do not use this list as a generic guide to who has
 contributed what to Subversion!</i> It omits existing full committers,
@@ -562,10 +595,10 @@ def drop(revision_url_pattern):
           committerness = ''
           if c.is_committer:
             committerness = '&nbsp;(partial&nbsp;committer)'
-          index.write('<li><p><a href="%s.html">%s</a>&nbsp;[%d]%s</p></li>\n'
+          index.write('<li><p><a href="%s.html">%s</a>&nbsp;[%s]%s</p></li>\n'
                       % (url_encode(c.canonical_name()),
                          escape_html(c.big_name()),
-                         c.score(), committerness))
+                         c.score_str(), committerness))
           c.html_out(revision_url_pattern)
     seen_contributors[c] = True
   index.write('</ol>\n')
