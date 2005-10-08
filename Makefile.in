@@ -642,7 +642,7 @@ $(SWIG_PY_DIR)/libsvn:
 	ln -sf $(SWIG_PY_DIR) $(SWIG_PY_DIR)/libsvn
 
 copy-swig-py: autogen-swig-py
-	@if test $(top_srcdir) != .; then \
+	@if test ! -e $(SWIG_PY_DIR)/__init__.py ; then \
 	  cp -pf $(SWIG_PY_SRC_DIR)/__init__.py $(SWIG_PY_DIR); \
 	  if test -e $(SWIG_PY_SRC_DIR)/core.py -a \
 	     ! -e $(SWIG_SRC_DIR)/core.py; then \
