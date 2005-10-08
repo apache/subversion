@@ -67,11 +67,6 @@ Candidate changes (NOT under subversion/bindings/swig):
 
 Approved changes (areas other than under subversion/bindings/swig):
 
-  * r16569
-    Remove additional relics of pre-1.3.24 SWIG support.
-    Votes:
-      +1: maxb, djames, lundblad
-
   * r16588
     Help message change for --with-apxs and --with-apache.
     Justification:
