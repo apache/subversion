@@ -67,13 +67,6 @@ Candidate changes (NOT under subversion/bindings/swig):
 
 Approved changes (areas other than under subversion/bindings/swig):
 
-  * r16588
-    Help message change for --with-apxs and --with-apache.
-    Justification:
-      Warn people that they probably don't want --with-apache.
-    Votes:
-      +1: maxb, lundblad, djames
-
 Approved changes (under subversion/bindings/swig):
 
   IMPORTANT NOTE: All of the changes made in the "subversion/bindings/swig"
