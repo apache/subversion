@@ -25,7 +25,7 @@ Candidate changes (NOT under subversion/bindings/swig):
     Justification:
       Tiny fix, broken build bad.
     Votes:
-      +1: maxb, djames
+      +1: maxb, djames, lundblad
 
   * r16388, r16408
     Fix numerous bugs in the svn_fs_*berkeley*() APIs.
