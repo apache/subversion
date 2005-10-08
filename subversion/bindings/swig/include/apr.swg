@@ -189,7 +189,7 @@ typedef apr_int32_t time_t;
 %typemap(python, argout, fragment="output_helper")
      apr_array_header_t **OUTPUT_OF_PROP
 {
-  $result = $1; /* ### WRONG! */
+  /* FIXME: Actually do something here. */
 }
 
 %typemap(ruby, in, numinputs=0)
