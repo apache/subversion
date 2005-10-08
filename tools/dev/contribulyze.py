@@ -275,7 +275,7 @@ class Contributor:
       s += ']'
     return s
 
-  def html_out(self):
+  def html_out(self, revision_url_pattern):
     """Create an HTML file in the current directory, named
     "`self.canonical_name()`.html", showing all the revisions in which
     this contributor was active."""
@@ -316,7 +316,13 @@ class Contributor:
       out.write('<div class="h3" id="%s" title="%s">\n' % (log.revision,
                                                            log.revision))
       out.write('<pre>\n')
-      out.write('<b>%s | %s | %s</b>\n\n' % (log.revision,
+      if revision_url_pattern:
+        revision_url = revision_url_pattern % log.revision[1:]
+        revision = '<a href="%s">%s</a>' \
+            % (escape_html(revision_url), log.revision)
+      else:
+        revision = log.revision
+      out.write('<b>%s | %s | %s</b>\n\n' % (revision,
                                              escape_html(log.committer),
                                              escape_html(log.date)))
       out.write(escape_html(log.message))
@@ -513,7 +519,7 @@ judgement, not substitute for it.</p>
 
 '''
 
-def drop():
+def drop(revision_url_pattern):
   # Output the data.
   #
   # The data structures are all linked up nicely to one another.  You
@@ -560,7 +566,7 @@ def drop():
                       % (url_encode(c.canonical_name()),
                          escape_html(c.big_name()),
                          c.score(), committerness))
-          c.html_out()
+          c.html_out(revision_url_pattern)
     seen_contributors[c] = True
   index.write('</ol>\n')
   index.write(html_footer())
@@ -607,30 +613,39 @@ def usage():
   print ''
   print '  -h, -H, -?, --help   Print this usage message and exit'
   print '  -C FILE              Use FILE as the COMMITTERS file'
+  print '  -U URL               Use URL as a Python interpolation pattern to'
+  print '                       generate URLs to link revisions to some kind'
+  print '                       of web-based viewer (e.g. ViewCVS).  The'
+  print '                       interpolation pattern should contain exactly'
+  print '                       one format specifier, \'%s\', which will be'
+  print '                       replaced with the revision number.'
   print ''
 
 
 def main():
   try:
-    opts, args = getopt.getopt(sys.argv[1:], 'C:hH?', [ 'help' ])
+    opts, args = getopt.getopt(sys.argv[1:], 'C:U:hH?', [ 'help' ])
   except getopt.GetoptError, e:
     complain(str(e) + '\n\n')
     usage()
     sys.exit(1)
 
   # Parse options.
+  revision_url_pattern = None
   for opt, value in opts:
-    if (opt == '--help') or (opt == '-h') or (opt == '-H') or (opt == '-?'):
+    if opt in ('--help', '-h', '-H', '-?'):
       usage()
       sys.exit(0)
     elif opt == '-C':
       process_committers(open(value))
+    elif opt == '-U':
+      revision_url_pattern = value
 
   # Gather the data.
   graze(sys.stdin)
 
   # Output the data.
-  drop()
+  drop(revision_url_pattern)
 
 if __name__ == '__main__':
   main()
