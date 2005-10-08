@@ -294,6 +294,14 @@ typedef struct svn_auth_ssl_server_cert_info_t
   const char *ascii_cert;
 } svn_auth_ssl_server_cert_info_t;
 
+/**
+ * Return a deep copy of @a info, allocated in @a pool.
+ *
+ * @since New in 1.3.
+ */
+svn_auth_ssl_server_cert_info_t *svn_auth_ssl_server_cert_info_dup (
+  const svn_auth_ssl_server_cert_info_t *info, apr_pool_t *pool);
+
 /** @c SVN_AUTH_CRED_SSL_SERVER_TRUST credentials. */
 typedef struct svn_auth_cred_ssl_server_trust_t
 {

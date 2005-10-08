@@ -51,6 +51,12 @@ extern "C" {
 
 
 
+/* Initialize the libsvn_swig_py library. */
+SVN_SWIG_SWIGUTIL_EXPORT
+apr_status_t svn_swig_py_initialize(void);
+
+
+
 /* Functions to manage python's global interpreter lock */
 SVN_SWIG_SWIGUTIL_EXPORT
 void svn_swig_py_release_py_lock(void);
@@ -60,8 +66,6 @@ void svn_swig_py_acquire_py_lock(void);
 
 
 /*** Automatic Pool Management Functions ***/
-SVN_SWIG_SWIGUTIL_EXPORT
-extern int _global_svn_swig_py_is_local_pool;
 
 /* Set the application pool */
 SVN_SWIG_SWIGUTIL_EXPORT

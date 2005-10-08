@@ -24,7 +24,6 @@
 #include <apr_want.h>
 #include <apr_general.h>
 #include <apr_strings.h>
-#include <apr_user.h>
 #include <apr_md5.h>
 
 #include "svn_private_config.h"  /* For SVN_PATH_LOCAL_SEPARATOR */
@@ -39,6 +38,7 @@
 #include <svn_md5.h>
 #include <svn_config.h>
 #include <svn_props.h>
+#include <svn_user.h>
 
 #include "server.h"
 
@@ -1207,10 +1207,22 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t rev;
   const char *target, *versus_url, *versus_path;
   svn_boolean_t recurse, ignore_ancestry;
+  svn_boolean_t text_deltas;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbbc", &rev, &target,
-                                 &recurse, &ignore_ancestry, &versus_url));
+  if (params->nelts == 5)
+    {
+      /* Clients before 1.4 don't send the text_deltas boolean. */
+      SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbbc", &rev, &target,
+                                     &recurse, &ignore_ancestry, &versus_url));
+      text_deltas = TRUE;
+    }
+  else
+    {
+      SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbbcb", &rev, &target,
+                                     &recurse, &ignore_ancestry, &versus_url,
+                                     &text_deltas));
+    }
   target = svn_path_canonicalize(target, pool);
   versus_url = svn_path_canonicalize(versus_url, pool);
   SVN_ERR(trivial_auth_request(conn, pool, b));
@@ -1220,8 +1232,8 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                           svn_path_uri_decode(versus_url, pool),
                           &versus_path, pool));
 
-  return accept_report(conn, pool, b, rev, target, versus_path, TRUE, recurse,
-                       ignore_ancestry);
+  return accept_report(conn, pool, b, rev, target, versus_path,
+                       text_deltas, recurse, ignore_ancestry);
 }
 
 /* Send a log entry to the client. */
@@ -2020,10 +2032,6 @@ static svn_error_t *find_repos(const char *url, const char *root,
 /* Compute the authentication name EXTERNAL should be able to get, if any. */
 static const char *get_tunnel_user(serve_params_t *params, apr_pool_t *pool)
 {
-  apr_uid_t uid;
-  apr_gid_t gid;
-  char *user;
-
   /* Only offer EXTERNAL for connections tunneled over a login agent. */
   if (!params->tunnel)
     return NULL;
@@ -2032,15 +2040,7 @@ static const char *get_tunnel_user(serve_params_t *params, apr_pool_t *pool)
   if (params->tunnel_user)
     return params->tunnel_user;
 
-#if APR_HAS_USER
-  /* Use the current uid's name, if we can. */
-  if (apr_uid_current(&uid, &gid, pool) == APR_SUCCESS
-      && apr_uid_name_get(&user, uid, pool) == APR_SUCCESS)
-    return user;
-#endif
-
-  /* Give up and don't offer EXTERNAL. */
-  return NULL;
+  return svn_user_get_name(pool);
 }
 
 svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,

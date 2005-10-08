@@ -134,11 +134,13 @@ struct dir_baton
   /* The pool in which this baton itself is allocated. */
   apr_pool_t *pool;
 
+  /* The URI to this item in the repository. */
+  const char *url;
+
   /* Out of date info corresponding to ood_* fields in svn_wc_status2_t. */
   svn_revnum_t ood_last_cmt_rev;
   apr_time_t ood_last_cmt_date;
   svn_node_kind_t ood_kind;
-  const char *ood_url;
   const char *ood_last_cmt_author;
 };
 
@@ -174,11 +176,13 @@ struct file_baton
      the code that syncs up the adm dir and working copy. */
   svn_boolean_t prop_changed;
 
+  /* The URI to this item in the repository. */
+  const char *url;
+
   /* Out of date info corresponding to ood_* fields in svn_wc_status2_t. */
   svn_revnum_t ood_last_cmt_rev;
   apr_time_t ood_last_cmt_date;
   svn_node_kind_t ood_kind;
-  const char *ood_url;
   const char *ood_last_cmt_author;
 };
 
@@ -191,9 +195,6 @@ struct file_baton
    ENTRY may be null, for non-versioned entities.  In this case, we
    will assemble a special status structure item which implies a
    non-versioned thing.
-
-   Else, ENTRY's pool must not be shorter-lived than STATUS's, since
-   ENTRY will be stored directly, not copied.
 
    PARENT_ENTRY is the entry for the parent directory of PATH, it may be
    NULL if ENTRY is NULL or if PATH is a working copy root.  The lifetime
@@ -296,10 +297,10 @@ assemble_status (svn_wc_status2_t **status,
         }
 
       stat->repos_lock = repos_lock;
+      stat->url = NULL;
       stat->ood_last_cmt_rev = SVN_INVALID_REVNUM;
       stat->ood_last_cmt_date = 0;
       stat->ood_kind = svn_wc_status_none;
-      stat->ood_url = NULL;
       stat->ood_last_cmt_author = NULL;
 
       *status = stat;
@@ -485,10 +486,10 @@ assemble_status (svn_wc_status2_t **status,
   stat->switched = switched_p;
   stat->copied = entry->copied;
   stat->repos_lock = repos_lock;
+  stat->url = (entry->url ? entry->url : NULL);
   stat->ood_last_cmt_rev = SVN_INVALID_REVNUM;
   stat->ood_last_cmt_date = 0;
   stat->ood_kind = svn_wc_status_none;
-  stat->ood_url = NULL;
   stat->ood_last_cmt_author = NULL;
 
   *status = stat;
@@ -1045,8 +1046,9 @@ tweak_statushash (void *baton,
   if (is_dir_baton)
     {
       struct dir_baton *b = baton;
+      if (b->url)
+        statstruct->url = b->url;
       statstruct->ood_kind = b->ood_kind;
-      statstruct->ood_url  = b->ood_url;
       /* The last committed rev, date, and author for deleted items
          isn't available. */
       if (statstruct->repos_text_status != svn_wc_status_deleted)
@@ -1059,13 +1061,38 @@ tweak_statushash (void *baton,
   else
     {
       struct file_baton *b = baton;
+      if (b->url)
+        statstruct->url = b->url;
       statstruct->ood_last_cmt_rev = b->ood_last_cmt_rev;
       statstruct->ood_last_cmt_date = b->ood_last_cmt_date;
       statstruct->ood_kind = b->ood_kind;
-      statstruct->ood_url = b->ood_url;
       statstruct->ood_last_cmt_author = b->ood_last_cmt_author;
     }
   return SVN_NO_ERROR;
+}
+
+/* Returns the URL for DB, or NULL: */
+static const char *
+find_dir_url (const struct dir_baton *db, apr_pool_t *pool)
+{
+  /* If we have no name, we're the root, return the anchor URL. */
+  if (! db->name)
+    return db->edit_baton->anchor_status->entry->url;
+  else
+    {
+      const char *url;
+      struct dir_baton *pb = db->parent_baton;
+      svn_wc_status2_t *status = apr_hash_get (pb->statii, db->name,
+                                               APR_HASH_KEY_STRING);
+      if (status && status->entry)
+        return status->entry->url;
+
+      url = find_dir_url (pb, pool);
+      if (url)
+        return svn_path_url_add_component (url, db->name, pool);
+      else
+        return NULL;
+    }
 }
 
 
@@ -1101,10 +1128,10 @@ make_dir_baton (void **dir_baton,
   d->parent_baton = parent_baton;
   d->pool = pool;
   d->statii = apr_hash_make (pool);
+  d->url = apr_pstrdup (pool, find_dir_url (d, pool));
   d->ood_last_cmt_rev = SVN_INVALID_REVNUM;
   d->ood_last_cmt_date = 0;
-  d->ood_kind = svn_wc_status_none;
-  d->ood_url = NULL;
+  d->ood_kind = svn_node_dir;
   d->ood_last_cmt_author = NULL;
 
   /* Get the status for this path's children.  Of course, we only want
@@ -1165,36 +1192,14 @@ make_file_baton (struct dir_baton *parent_dir_baton,
   f->pool = pool;
   f->dir_baton = pb;
   f->edit_baton = eb;
+  f->url = svn_path_url_add_component (find_dir_url (pb, pool),
+                                       svn_path_basename (full_path, pool),
+                                       pool);
   f->ood_last_cmt_rev = SVN_INVALID_REVNUM;
   f->ood_last_cmt_date = 0;
-  f->ood_kind = svn_wc_status_none;
-  f->ood_url = NULL;
+  f->ood_kind = svn_node_file;
   f->ood_last_cmt_author = NULL;
   return f;
-}
-
-/* Returns the URL for DB, or NULL: */
-static const char *
-find_dir_url (const struct dir_baton *db, apr_pool_t *pool)
-{
-  /* If we have no name, we're the root, return the anchor URL. */
-  if (! db->name)
-    return db->edit_baton->anchor_status->entry->url;
-  else
-    {
-      const char *url;
-      struct dir_baton *pb = db->parent_baton;
-      svn_wc_status2_t *status = apr_hash_get (pb->statii, db->name,
-                                               APR_HASH_KEY_STRING);
-      if (status && status->entry)
-        return status->entry->url;
-
-      url = find_dir_url (pb, pool);
-      if (url)
-        return svn_path_url_add_component (url, db->name, pool);
-      else
-        return NULL;
-    }
 }
 
 /* Return a boolean answer to the question "Is STATUS something that
@@ -1498,10 +1503,7 @@ change_dir_prop (void *dir_baton,
   if (svn_wc_is_normal_prop (name))    
     db->prop_changed = TRUE;
 
-  /* Store out of date info. */
-  db->ood_kind = svn_node_dir;
-  if (!db->ood_url)
-    db->ood_url = apr_pstrdup (db->pool, find_dir_url (db, pool));
+  /* Note any changes to the repository. */
   if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_REV) == 0)
     db->ood_last_cmt_rev = SVN_STR_TO_REV (value->data);
   else if (strcmp (name, SVN_PROP_ENTRY_LAST_AUTHOR) == 0)
@@ -1691,18 +1693,7 @@ change_file_prop (void *file_baton,
   if (svn_wc_is_normal_prop (name))
     fb->prop_changed = TRUE;
 
-  /* Store out of date info. */
-  fb->ood_kind = svn_node_file;
-  if (!fb->ood_url)
-    {
-      const char *url =
-        svn_path_url_add_component (find_dir_url (fb->dir_baton, pool),
-                                    svn_path_basename (fb->path, pool),
-                                    pool);
-
-      /* Copy into file_baton with a safe pool. */
-      fb->ood_url = apr_pstrdup (fb->dir_baton->pool, url);
-    }
+  /* Note any changes to the repository. */
   if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_REV) == 0)
     fb->ood_last_cmt_rev = SVN_STR_TO_REV (value->data);
   else if (strcmp (name, SVN_PROP_ENTRY_LAST_AUTHOR) == 0)

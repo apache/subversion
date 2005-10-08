@@ -224,18 +224,30 @@ svn_error_t *svn_fs_hotcopy (const char *src_path, const char *dest_path,
  */
 
 /** Register an error handling function for Berkeley DB error messages.
- * If a Berkeley DB error occurs, the filesystem will call @a handler
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
+ *
+ * Despite being first declared deprecated in Subversion 1.3, this API
+ * is redundant in versions 1.1 and 1.2 as well.
+ *
+ * Berkeley DB's error codes are seldom sufficiently informative to allow
+ * adequate troubleshooting.  Berkeley DB provides extra messages through
+ * a callback function - if an error occurs, the @a handler will be called
  * with two strings: an error message prefix, which will be zero, and
- * an error message.  @a handler should print it out, log it somewhere,
+ * an error message.  @a handler might print it out, log it somewhere,
  * etc.
  *
- * Since Berkeley DB's error messages are sometimes much more
- * informative than the error codes the functions return, it's worth
- * calling this function and providing some kind of error message
- * handler.
+ * Subversion 1.1 and later install their own handler internally, and
+ * wrap the messages from Berkeley DB into the standard svn_error_t object,
+ * making any information gained through this interface redundant.
  *
- * This function calls @c DBENV->set_errcall, with @a handler as the
- * @c db_errcall_fcn argument.
+ * It is only worth using this function if your program will be used
+ * with Subversion 1.0.
+ *
+ * This function connects to the Berkeley DB @c DBENV->set_errcall interface.
+ * Since that interface supports only a single callback, Subversion's internal
+ * callback is registered with Berkeley DB, and will forward notifications to
+ * a user provided callback after performing its own processing.
  */
 svn_error_t *svn_fs_set_berkeley_errcall (svn_fs_t *fs, 
                                           void (*handler) (const char *errpfx,
@@ -287,8 +299,11 @@ svn_error_t *svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
 
 
 /**
- * The following functions are similar to their generic counterparts,
- * but only work on Berkeley DB filesystems.
+ * The following functions are similar to their generic counterparts.
+ *
+ * In Subversion 1.2 and earlier, they only work on Berkeley DB filesystems.
+ * In Subversion 1.3 and later, they perform largely as aliases for their
+ * generic counterparts.
  *
  * @defgroup svn_fs_bdb_deprecated berkeley db filesystem compatibility
  * @{

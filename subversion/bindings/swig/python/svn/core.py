@@ -25,10 +25,7 @@ def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
       symbol_dict[to_prefix + name[len(from_prefix):]] = value
 
 
-Pool = svn_pool_create
-
-# Initialize application-level pool
-Pool()
+Pool = _core.svn_pool_create
 
 # Hide raw pool management functions.
 # If you still want to use these, use libsvn.core instead.

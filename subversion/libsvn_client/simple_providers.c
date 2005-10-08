@@ -28,6 +28,7 @@
 #include "svn_error.h"
 #include "svn_utf.h"
 #include "svn_config.h"
+#include "svn_user.h"
 
 
 /*-----------------------------------------------------------------------*/
@@ -41,30 +42,6 @@
 
 #define SVN_CLIENT__SIMPLE_PASSWORD_TYPE             "simple"
 #define SVN_CLIENT__WINCRYPT_PASSWORD_TYPE           "wincrypt"
-
-
-/* Get the username from the OS */
-static const char *
-get_os_username (apr_pool_t *pool)
-{
-  const char *username_utf8;
-  char *username;
-  apr_uid_t uid;
-  apr_gid_t gid;
-
-  if (apr_uid_current (&uid, &gid, pool) == APR_SUCCESS &&
-      apr_uid_name_get (&username, uid, pool) == APR_SUCCESS)
-    {
-      svn_error_t *err;
-      err = svn_utf_cstring_to_utf8 (&username_utf8, username, pool);
-      svn_error_clear (err);
-      if (! err)
-        return username_utf8;
-    }
-
-  return NULL;
-}
-
 
 
 /* A function that takes a password IN, mangles it as per spec, and
@@ -164,7 +141,7 @@ simple_first_creds_helper (void **credentials,
   /* Ask the OS for the username if we have a password but no
      username. */
   if (password && ! username)
-    username = get_os_username (pool);
+    username = svn_user_get_name (pool);
 
   if (username && password)
     {
@@ -391,7 +368,7 @@ prompt_for_simple_creds (svn_auth_cred_simple_t **cred_p,
 
       /* Still no default username?  Try the UID. */
       if (! def_username)
-        def_username = get_os_username (pool);
+        def_username = svn_user_get_name (pool);
 
       def_password = apr_hash_get (parameters,
                                    SVN_AUTH_PARAM_DEFAULT_PASSWORD,

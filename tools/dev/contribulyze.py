@@ -29,10 +29,6 @@
 #   - Expand "me" to the committer name for this revision.
 #   - Associate a parenthetical aside following a field with that field.
 #
-# Right now we do not offer any conversion between committers'
-# usernames and their real names.  In the future, we could take the
-# COMMITTERS file as an optional parameter and do such a transform.
-#
 # NOTES: You might be wondering, why not take 'svn log --xml' input?
 # Well, that would be the Right Thing to do, but in practice this was
 # a lot easier to whip up for straight 'svn log' output.  I'd have no
@@ -43,6 +39,7 @@ import sys
 import re
 import shutil
 import getopt
+from urllib import quote as url_encode
 
 # Pretend we have true booleans on older python versions
 try:
@@ -74,12 +71,15 @@ def escape_html(str):
 
 def html_header(title):
   title = escape_html(title)
-  s  = '<title>%s</title>\n' % title
-  s += '<html>\n\n'
-  s += '<head><meta http-equiv=Content-Type ' \
-       'content="text/html; charset=UTF-8"></head>\n\n'
-  s += '<body text="#000000" bgcolor="#FFFFFF">\n\n'
-  s += '<center><h1>%s</h1></center>\n\n' % title
+  s  = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"\n'
+  s += ' "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">\n'
+  s += '<html><head>\n'
+  s += '<meta http-equiv="Content-Type"'
+  s += ' content="text/html; charset=UTF-8" />\n'
+  s += '<title>%s</title>\n' % title
+  s += '</head>\n\n'
+  s += '<body style="text-color: black; background-color: white">\n\n'
+  s += '<h1 style="text-align: center">%s</h1>\n\n' % title
   s += '<hr />\n\n'
   return s
 
@@ -275,7 +275,7 @@ class Contributor:
       s += ']'
     return s
 
-  def html_out(self):
+  def html_out(self, revision_url_pattern):
     """Create an HTML file in the current directory, named
     "`self.canonical_name()`.html", showing all the revisions in which
     this contributor was active."""
@@ -316,7 +316,13 @@ class Contributor:
       out.write('<div class="h3" id="%s" title="%s">\n' % (log.revision,
                                                            log.revision))
       out.write('<pre>\n')
-      out.write('<b>%s | %s | %s</b>\n\n' % (log.revision,
+      if revision_url_pattern:
+        revision_url = revision_url_pattern % log.revision[1:]
+        revision = '<a href="%s">%s</a>' \
+            % (escape_html(revision_url), log.revision)
+      else:
+        revision = log.revision
+      out.write('<b>%s | %s | %s</b>\n\n' % (revision,
                                              escape_html(log.committer),
                                              escape_html(log.date)))
       out.write(escape_html(log.message))
@@ -492,7 +498,28 @@ def graze(input):
             num_lines -= 1
         continue
 
-def drop():
+index_introduction = '''
+<p>The following list of contributors and their contributions is meant
+to help us keep track of whom to consider for commit access.  The list
+was generated from "svn&nbsp;log" output by <a
+href="http://svn.collab.net/repos/svn/trunk/tools/dev/contribulyze.py"
+>contribulyze.py</a>, which looks for log messages that use the <a
+href="http://subversion.tigris.org/hacking.html#crediting">special
+contribution format</a>.  The number in square brackets after each
+name is that person\'s contribution count: each patch is counted as 2,
+and anything else (e.g., suggestion, review) counts as 1.</p>
+
+<p><i>Please do not use this list as a generic guide to who has
+contributed what to Subversion!</i> It omits existing full committers,
+for example, because they are irrelevant to our search for new
+committers.  Also, it merely counts changes, it does not evaluate
+them.  To truly understand what someone has contributed, you have to
+read their changes in detail.  This page can only assist human
+judgement, not substitute for it.</p>
+
+'''
+
+def drop(revision_url_pattern):
   # Output the data.
   #
   # The data structures are all linked up nicely to one another.  You
@@ -514,6 +541,7 @@ def drop():
 
   index = open('index.html', 'w')
   index.write(html_header('Contributors'))
+  index.write(index_introduction)
   index.write('<ol>\n')
   # The same contributor appears under multiple keys, so uniquify.
   seen_contributors = { }
@@ -535,9 +563,10 @@ def drop():
           if c.is_committer:
             committerness = '&nbsp;(partial&nbsp;committer)'
           index.write('<li><p><a href="%s.html">%s</a>&nbsp;[%d]%s</p></li>\n'
-                      % (c.canonical_name(), escape_html(c.big_name()),
+                      % (url_encode(c.canonical_name()),
+                         escape_html(c.big_name()),
                          c.score(), committerness))
-          c.html_out()
+          c.html_out(revision_url_pattern)
     seen_contributors[c] = True
   index.write('</ol>\n')
   index.write(html_footer())
@@ -584,30 +613,39 @@ def usage():
   print ''
   print '  -h, -H, -?, --help   Print this usage message and exit'
   print '  -C FILE              Use FILE as the COMMITTERS file'
+  print '  -U URL               Use URL as a Python interpolation pattern to'
+  print '                       generate URLs to link revisions to some kind'
+  print '                       of web-based viewer (e.g. ViewCVS).  The'
+  print '                       interpolation pattern should contain exactly'
+  print '                       one format specifier, \'%s\', which will be'
+  print '                       replaced with the revision number.'
   print ''
 
 
 def main():
   try:
-    opts, args = getopt.getopt(sys.argv[1:], 'C:hH?', [ '--help' ])
+    opts, args = getopt.getopt(sys.argv[1:], 'C:U:hH?', [ 'help' ])
   except getopt.GetoptError, e:
     complain(str(e) + '\n\n')
     usage()
     sys.exit(1)
 
   # Parse options.
+  revision_url_pattern = None
   for opt, value in opts:
-    if (opt == '--help') or (opt == '-h') or (opt == '-H') or (opt == '-?'):
+    if opt in ('--help', '-h', '-H', '-?'):
       usage()
       sys.exit(0)
     elif opt == '-C':
       process_committers(open(value))
+    elif opt == '-U':
+      revision_url_pattern = value
 
   # Gather the data.
   graze(sys.stdin)
 
   # Output the data.
-  drop()
+  drop(revision_url_pattern)
 
 if __name__ == '__main__':
   main()

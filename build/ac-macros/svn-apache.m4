@@ -9,6 +9,7 @@ dnl       source dir, we cannot create static builds of the system.
 dnl
 
 AC_DEFUN(SVN_FIND_APACHE,[
+AC_REQUIRE([AC_CANONICAL_HOST])
 
 HTTPD_WANTED_MMN="$1"
 
@@ -123,6 +124,12 @@ if test -n "$APXS" -a "$APXS" != "no"; then
     APACHE_INCLUDES="$APACHE_INCLUDES -I$APXS_INCLUDE"
     APACHE_LIBEXECDIR="`$APXS -q libexecdir`"
 
+    case $host in
+      *-*-cygwin*)
+        APACHE_LDFLAGS="-shrext .so"
+        ;;
+    esac
+
     INSTALL_APACHE_RULE=install-mods-shared
 
     AC_SUBST(APXS)
@@ -139,6 +146,7 @@ if test "$BINNAME" = ""; then
 else
     BUILD_APACHE_RULE=apache-mod
 fi
+AC_SUBST(APACHE_LDFLAGS)
 AC_SUBST(APACHE_TARGET)
 AC_SUBST(APACHE_INCLUDES)
 AC_SUBST(APACHE_LIBEXECDIR)

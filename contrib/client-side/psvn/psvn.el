@@ -122,8 +122,6 @@
 ;; * when editing the command line - offer help from the svn client
 ;; * finish svn-status-property-set
 ;; * eventually use the customize interface
-;; * interactive svn-status should complete existing directories only;
-;;   unfortunately `read-directory-name' doesn't exist in Emacs 21.3
 ;; * Add repository browser
 ;; * Improve support for svn blame
 
@@ -248,15 +246,18 @@ When 'inline: Insert the header line in the `svn-status-buffer-name' buffer
 Otherwise: Don't display a header line")
 
 ;;; default arguments to pass to svn commands
-(defvar svn-status-default-log-arguments ""
-  "*Arguments to pass to svn log.
+(defvar svn-status-default-log-arguments '()
+  "*List of arguments to pass to svn log.
 \(used in `svn-status-show-svn-log'; override these by giving prefixes\).")
 
-(defvar svn-status-default-commit-arguments ""
-  "*Arguments to pass to svn commit.
-If you dont't like recursive commits, set this value to \"-N\".")
+(defvar svn-status-default-commit-arguments '()
+  "*List of arguments to pass to svn commit.
+If you don't like recursive commits, set this value to (\"-N\").
+Do not put an empty string here: Subversion and the operating system may
+treat that as a file name equivalent to \".\", so you would commit more
+than you intended.")
 
-(defvar svn-status-default-diff-arguments nil
+(defvar svn-status-default-diff-arguments '()
   "*A list of arguments that is passed to the svn diff command.
   If you'd like to supress whitespace changes use the following value:
   '(\"--diff-cmd\" \"diff\" \"-x\" \"-wbBu\")")
@@ -801,10 +802,33 @@ is prompted for give extra arguments, which are appended to ARGLIST."
       (string-to-number str)
     -1))
 
+(defsubst svn-status-make-ui-status ()
+  "Make a ui-status structure for a file in a svn working copy.
+The initial values in the structure returned by this function
+are good for a file or directory that the user hasn't seen before.
+
+The ui-status structure keeps track of how the file or directory
+should be displayed in svn-status mode.  Updating the svn-status
+buffer from the working copy preserves the ui-status if possible.
+User commands modify this structure; each file or directory must
+thus have its own copy.
+
+Currently, the ui-status is a list (USER-MARK USER-ELIDE).
+USER-MARK is non-nil iff the user has marked the file or directory,
+  typically with `svn-status-set-user-mark'.  To read USER-MARK,
+  call `svn-status-line-info->has-usermark'.
+USER-ELIDE is non-nil iff the user has elided the file or directory
+  from the svn-status buffer, typically with `svn-status-toggle-elide'.
+  To read USER-ELIDE, call `svn-status-line-info->user-elide'.
+
+Call `svn-status-line-info->ui-status' to access the whole ui-status
+structure."
+  (list nil nil))
 
 (defun svn-status-make-dummy-dirs (dir-list old-ui-information)
   (append (mapcar (lambda (dir)
-                    (list (or (gethash dir old-ui-information) (list nil nil))
+                    (list (or (gethash dir old-ui-information)
+                              (svn-status-make-ui-status))
                           32 nil dir -1 -1 "?" nil nil nil nil))
                   dir-list)
           svn-status-info))
@@ -817,7 +841,6 @@ The results are used to build the `svn-status-info' variable."
   (save-excursion
     (let ((old-ui-information (svn-status-ui-information-hash-table))
           (line-string)
-          (user-mark)
           (svn-marks)
           (svn-file-mark)
           (svn-property-mark)
@@ -830,8 +853,6 @@ The results are used to build the `svn-status-info' variable."
           (author)
           (path)
           (dir)
-          (user-elide nil)
-          (ui-status '(nil nil))     ; contains (user-mark user-elide)
           (revision-width svn-status-default-revision-width)
           (author-width svn-status-default-author-width)
           (svn-marks-length (if (and svn-status-verbose svn-status-remote)
@@ -895,8 +916,8 @@ The results are used to build the `svn-status-info' variable."
               (let ((dirname (directory-file-name dir)))
                 (if (not (member dirname dir-set))
                     (setq dir-set (cons dirname dir-set)))))
-          (setq ui-status (or (gethash path old-ui-information) (list user-mark user-elide)))
-          (setq svn-status-info (cons (list ui-status
+          (setq svn-status-info (cons (list (or (gethash path old-ui-information)
+                                                (svn-status-make-ui-status))
                                             svn-file-mark
                                             svn-property-mark
                                             path
@@ -1296,7 +1317,10 @@ EVENT could be \"mouse clicked\" or similar."
   (mouse-set-point event)
   (svn-status-find-file-or-examine-directory))
 
-(defun svn-status-line-info->ui-status (line-info) (nth 0 line-info))
+(defun svn-status-line-info->ui-status (line-info)
+  "Return the ui-status structure of LINE-INFO.
+See `svn-status-make-ui-status' for information about the ui-status."
+  (nth 0 line-info))
 
 (defun svn-status-line-info->has-usermark (line-info) (nth 0 (nth 0 line-info)))
 (defun svn-status-line-info->user-elide (line-info) (nth 1 (nth 0 line-info)))
@@ -2214,21 +2238,19 @@ Consider svn-status-window-alist to choose the buffer name."
   "Run `svn log' on selected files.
 The output is put into the *svn-log* buffer
 The optional prefix argument ARG determines which switches are passed to `svn log':
- no prefix               --- use whatever is in the string `svn-status-default-log-arguments'
+ no prefix               --- use whatever is in the list `svn-status-default-log-arguments'
  prefix argument of -1   --- use no arguments
  prefix argument of 0:   --- use the -q switch (quiet)
  other prefix arguments: --- use the -v switch (verbose)
 
 See `svn-status-marked-files' for what counts as selected."
   (interactive "P")
-  (let ((switch (cond ((eq arg 0) "-q")
-                      ((eq arg -1) "")
-                      (arg        "-v")
-                      (t          svn-status-default-log-arguments))))
+  (let ((switches (cond ((eq arg 0)  '("-q"))
+                        ((eq arg -1) '())
+                        (arg         '("-v"))
+                        (t           svn-status-default-log-arguments))))
     (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
-    (if (> (length switch) 0)
-        (svn-run-svn t t 'log "log" "--targets" svn-status-temp-arg-file switch)
-      (svn-run-svn t t 'log "log" "--targets" svn-status-temp-arg-file))
+    (svn-run-svn t t 'log "log" "--targets" svn-status-temp-arg-file switches)
     (save-excursion
       (set-buffer "*svn-process*")
       (svn-log-view-mode))))
@@ -2698,6 +2720,7 @@ Note: use C-q C-j to send a line termination character."
       (message "No valid file selected - No property listing possible"))))
 
 (defun svn-status-proplist-start ()
+  (svn-status-ensure-cursor-on-file)
   (svn-run-svn t t 'proplist-parse "proplist" (svn-status-line-info->filename
                                                (svn-status-get-line-information))))
 (defun svn-status-property-edit-one-entry (arg)

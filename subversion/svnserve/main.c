@@ -54,6 +54,7 @@ enum connection_handling_mode {
 
 /* The mode in which to run svnserve */
 enum run_mode {
+  run_mode_unspecified,
   run_mode_inetd,
   run_mode_daemon,
   run_mode_tunnel,
@@ -230,7 +231,7 @@ check_lib_versions(void)
 
 int main(int argc, const char *const *argv)
 {
-  enum run_mode run_mode;
+  enum run_mode run_mode = run_mode_unspecified;
   svn_boolean_t foreground = FALSE;
   apr_socket_t *sock, *usock;
   apr_file_t *in_file, *out_file;

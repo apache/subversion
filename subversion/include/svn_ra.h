@@ -834,9 +834,32 @@ svn_error_t *svn_ra_do_status (svn_ra_session_t *session,
  * finishing the report, and may not perform any RA operations using
  * @a session from within the editing operations of @a diff_editor.
  *
+ * @a text_deltas instructs the driver of the @a diff_editor to enable
+ * the generation of text deltas. If @a text_deltas is FALSE the window
+ * handler returned by apply_textdelta will be called once with a NULL
+ * @c svn_txdelta_window_t pointer.
+ *
  * Use @a pool for memory allocation.
  *
- * @since New in 1.2.
+ * @since New in 1.4.
+ */
+svn_error_t *svn_ra_do_diff2 (svn_ra_session_t *session,
+                              const svn_ra_reporter2_t **reporter,
+                              void **report_baton,
+                              svn_revnum_t revision,
+                              const char *diff_target,
+                              svn_boolean_t recurse,
+                              svn_boolean_t ignore_ancestry,
+                              svn_boolean_t text_deltas,
+                              const char *versus_url,
+                              const svn_delta_editor_t *diff_editor,
+                              void *diff_baton,
+                              apr_pool_t *pool);
+
+/**
+ * Similar to svn_ra_do_diff2(), but with @a text_deltas set to @c TRUE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 svn_error_t *svn_ra_do_diff (svn_ra_session_t *session,
                              const svn_ra_reporter2_t **reporter,
