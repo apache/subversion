@@ -64,13 +64,6 @@ Candidate changes (NOT under subversion/bindings/swig):
       Cygwin is likely to be exposed to native-Windows-created WCs.
     Votes:
       +1: maxb, dlr
-     
-  * r16588
-    Help message change for --with-apxs and --with-apache.
-    Justification:
-      Warn people that they probably don't want --with-apache.
-    Votes:
-      +1: maxb, lundblad
 
 Approved changes (areas other than under subversion/bindings/swig):
 
@@ -104,6 +97,13 @@ Approved changes (areas other than under subversion/bindings/swig):
     Remove additional relics of pre-1.3.24 SWIG support.
     Votes:
       +1: maxb, djames, lundblad
+
+  * r16588
+    Help message change for --with-apxs and --with-apache.
+    Justification:
+      Warn people that they probably don't want --with-apache.
+    Votes:
+      +1: maxb, lundblad, djames
 
 Approved changes (under subversion/bindings/swig):
 
