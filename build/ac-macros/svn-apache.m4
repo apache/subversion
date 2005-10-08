@@ -16,8 +16,10 @@ HTTPD_WANTED_MMN="$1"
 AC_MSG_CHECKING(for static Apache module support)
 AC_ARG_WITH(apache,
 AC_HELP_STRING([--with-apache=DIR],
-	       [Build static Apache module.  DIR is the path to the top-level
-		Apache source directory.]),
+	       [Build static Apache modules.  DIR is the path to the top-level
+		Apache source directory. IMPORTANT: Unless you are *absolutely*
+                certain that you want to build the modules *statically*, you
+                probably want --with-apxs, and not this option.]),
 [
 	if test "$withval" = "yes"; then
 		AC_MSG_ERROR(You need to specify a directory with --with-apache)
@@ -57,7 +59,7 @@ VERSION_OKAY
 
 AC_MSG_CHECKING(for Apache module support via DSO through APXS)
 AC_ARG_WITH(apxs,
-[[  --with-apxs[=FILE]      Build shared Apache module.  FILE is the optional
+[[  --with-apxs[=FILE]      Build shared Apache modules.  FILE is the optional
                           pathname to the Apache apxs tool; defaults to "apxs".]],
 [
     if test "$BINNAME" != ""; then
