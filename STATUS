@@ -109,6 +109,15 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r16582
+    Python bindings fix. Even a typemap which does nothing is better than one
+    which does invalid pointer assignment.
+    Justification:
+      Invalid pointer assignments lead to badness - warnings, undefined
+      behaviour, etc.
+    Votes:
+      +1: maxb
+
 
 Approved changes (further review is welcome, but not required):
 
