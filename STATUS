@@ -67,16 +67,6 @@ Candidate changes (NOT under subversion/bindings/swig):
 
 Approved changes (areas other than under subversion/bindings/swig):
 
-  * r16556
-    Consolidated and better documented loading of the "svnjavahl-1"
-    native library.
-    Justification:
-      Avoids a difference in handling of the loading of the native
-      library between JavaHL's SVNClient and SVNAdmin classes.
-    Votes:
-      +1: dlr
-      +0: maxb
-
   * r16563
     Remove unnecessary complication in Makefile SWIG clean rules.
     Justification:

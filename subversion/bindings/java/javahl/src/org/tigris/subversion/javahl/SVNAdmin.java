@@ -22,44 +22,11 @@ package org.tigris.subversion.javahl;
 public class SVNAdmin
 {
     /**
-     * load the needed native library
+     * Load the required native library.
      */
     static
     {
-        /*
-         * see if the user has specified the fully qualified path to the native
-         * library
-         */
-        try
-        {
-            String specifiedLibraryName =
-                    System.getProperty("subversion.native.library");
-            if(specifiedLibraryName != null)
-                System.load(specifiedLibraryName);
-        }
-        catch(UnsatisfiedLinkError ex)
-        {
-            // ignore that error to try again
-        }
-        /*
-         * first try to load the library by the new names.
-         * if that fails, try to load the library by the old name.
-         */
-        try
-        {
-            System.loadLibrary("svnjavahl-1");
-        }
-        catch(UnsatisfiedLinkError ex)
-        {
-            try
-            {
-                System.loadLibrary("libsvnjavahl-1");
-            }
-            catch (UnsatisfiedLinkError e)
-            {
-                System.loadLibrary("svnjavahl");
-            }
-        }
+        NativeResources.loadNativeLibrary();
     }
 
     /**
