@@ -904,6 +904,25 @@
 					</FileConfiguration>
 				</File>
 				<File
+					RelativePath="poll\unix\pollacc.c">
+					<FileConfiguration
+						Name="Debug|Win32">
+						<Tool
+							Name="VCCLCompilerTool"
+							Optimization="0"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions="_DEBUG;APR_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32">
+						<Tool
+							Name="VCCLCompilerTool"
+							Optimization="2"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions="NDEBUG;APR_DECLARE_EXPORT;WIN32;_WINDOWS;$(NoInherit)"/>
+					</FileConfiguration>
+				</File>
+				<File
 					RelativePath="network_io\win32\sendrecv.c">
 					<FileConfiguration
 						Name="Debug|Win32">
