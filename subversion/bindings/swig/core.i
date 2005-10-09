@@ -483,7 +483,7 @@ apr_status_t apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
 
 apr_pool_t *current_pool;
 
-#if SWIG_VERSION <= 0x10324
+#if SWIG_VERSION <= 0x010324
 %{
 #define SVN_SWIGEXPORT(t) SWIGEXPORT(t)
 %}
