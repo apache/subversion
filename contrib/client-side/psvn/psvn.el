@@ -587,7 +587,14 @@ Otherwise, return \"\"."
     (defsubst match-string-no-properties (match)
       (buffer-substring-no-properties (match-beginning match) (match-end match)))))
 
-(if (get 'alist 'widget-type)
+;; XEmacs 21.4.17 does not have an `alist' widget.  Define a replacement.
+;; To find out whether the `alist' widget exists, we cannot check just
+;; (get 'alist 'widget-type), because GNU Emacs 21.4 defines it in
+;; "wid-edit.el", which is not preloaded; it will be autoloaded when
+;; `widget-create' is called.  Instead, we call `widgetp', which is
+;; also autoloaded from "wid-edit.el".  XEmacs 21.4.17 does not have
+;; `widgetp' either, so we check that first.
+(if (and (fboundp 'widgetp) (widgetp 'alist))
     (define-widget 'svn-alist 'alist
       "An association list.
 Use this instead of `alist', for XEmacs 21.4 compatibility.")
@@ -599,11 +606,6 @@ Use this instead of `alist', for XEmacs 21.4 compatibility."
     :key-type 'sexp
     :value-type 'sexp)
   (defun svn-alist-convert-widget (widget)
-    (dolist (type-property '(:key-type :value-type))
-      ;; svn-alist-match calls widget-get, which requires a list.
-      (when (symbolp (widget-get widget type-property))
-        (widget-put widget type-property
-                    (list (widget-get widget type-property)))))
     (let* ((value-type (widget-get widget :value-type))
            (option-widgets (loop for option in (widget-get widget :options)
                              collect `(cons :format "%v"
@@ -618,7 +620,7 @@ Use this instead of `alist', for XEmacs 21.4 compatibility."
                     (editable-list :inline t
                                    (cons :format "%v"
                                          ,(widget-get widget :key-type)
-                                         ,(widget-get widget :value-type))))))
+                                         ,value-type)))))
     widget))
 
 (defvar svn-global-keymap nil "Global keymap for psvn.el.
