@@ -111,12 +111,6 @@ APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@
 APACHE_LDFLAGS = @APACHE_LDFLAGS@
 
 SWIG = @SWIG@
-SWIG_INCLUDES = -I$(SWIG_BUILD_DIR) \
-                -I$(SWIG_SRC_DIR)/include \
-                -I$(SWIG_BUILD_DIR)/proxy \
-                -I$(SWIG_SRC_DIR)/proxy \
-                -I$(abs_srcdir)/subversion/include \
-                $(SVN_APR_INCLUDES) $(SVN_APRUTIL_INCLUDES)
 SWIG_PY_INCLUDES = @SWIG_PY_INCLUDES@ -I$(SWIG_SRC_DIR)/python/libsvn_swig_py
 SWIG_PY_COMPILE = @SWIG_PY_COMPILE@
 SWIG_PY_LINK = @SWIG_PY_LINK@
