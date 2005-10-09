@@ -7,7 +7,7 @@ delay a release, etc.
 Status of 1.3.0:
 ================
 
-Candidate changes (NOT under subversion/bindings/swig):
+Candidate changes:
 
   * r16350
     Fix issue #1911, where svndumpfilter generated invalid dumpfiles
@@ -66,6 +66,19 @@ Candidate changes (NOT under subversion/bindings/swig):
     Votes:
       +1: djames, dlr (not r16562, r16595), maxb
 
+  * r16622
+    Fix breakage of defining of SVN_SWIG_VERSION, by migrating its only user
+    to use SWIG_VERSION, and fully removing relics of SVN_SWIG_VERSION.
+    Justification:
+      Caused Ruby bindings regression with swig 1.3.24.
+    Notes:
+      Parts of the change are under subversion/bindings/swig.
+      If merging before the big rebranch, increase the rebranch revision
+      in the notes below to 16622.
+    Votes:
+      +1: maxb
+    
+  
 Approved changes (areas other than under subversion/bindings/swig):
 
 Approved changes (under subversion/bindings/swig):
