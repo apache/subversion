@@ -97,6 +97,8 @@ enum run_mode {
 #define SVNSERVE_OPT_FOREGROUND  258
 #define SVNSERVE_OPT_TUNNEL_USER 259
 #define SVNSERVE_OPT_VERSION     260
+#define SVNSERVE_OPT_CERT_FILE   261
+#define SVNSERVE_OPT_KEY_FILE    262
 
 static const apr_getopt_option_t svnserve__options[] =
   {
@@ -120,6 +122,10 @@ static const apr_getopt_option_t svnserve__options[] =
     {"threads",          'T', 0, N_("use threads instead of fork")},
 #endif
     {"listen-once",      'X', 0, N_("listen once (useful for debugging)")},
+    {"cert-file",        SVNSERVE_OPT_CERT_FILE, 1,
+     "public certificate for SSL"},
+    {"key-file",         SVNSERVE_OPT_KEY_FILE, 1,
+     "private key to certificate for SSL"},
     {0,                  0,   0, 0}
   };
 
@@ -228,7 +234,6 @@ check_lib_versions(void)
   return svn_ver_check_list(&my_version, checklist);
 }
 
-
 int main(int argc, const char *const *argv)
 {
   enum run_mode run_mode = run_mode_unspecified;
@@ -258,7 +263,9 @@ int main(int argc, const char *const *argv)
   const char *host = NULL;
   int family = APR_INET;
   int mode_opt_count = 0;
-
+  const char *ssl_cert_file = NULL;
+  const char *ssl_key_file = NULL;
+	
   /* Initialize the app. */
   if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
@@ -292,6 +299,7 @@ int main(int argc, const char *const *argv)
   params.tunnel = FALSE;
   params.tunnel_user = NULL;
   params.read_only = FALSE;
+  params.ssl_baton = NULL;
   while (1)
     {
       status = apr_getopt_long(os, svnserve__options, &opt, &arg);
@@ -369,6 +377,19 @@ int main(int argc, const char *const *argv)
         case 'T':
           handling_mode = connection_mode_thread;
           break;
+
+        case SVNSERVE_OPT_CERT_FILE:
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&ssl_cert_file, arg, pool));
+          ssl_cert_file = svn_path_internal_style(ssl_cert_file, pool);
+          SVN_INT_ERR(svn_path_get_absolute(&ssl_cert_file, ssl_cert_file, 
+                                            pool));
+          break;
+
+        case SVNSERVE_OPT_KEY_FILE:
+          SVN_INT_ERR(svn_utf_cstring_to_utf8(&ssl_key_file, arg, pool));
+          ssl_key_file = svn_path_internal_style(ssl_key_file, pool);
+          SVN_INT_ERR(svn_path_get_absolute(&ssl_key_file, ssl_key_file, pool));
+          break;
         }
     }
   if (os->ind != argc)
@@ -380,6 +401,26 @@ int main(int argc, const char *const *argv)
                       (_("You must specify exactly one of -d, -i, -t or -X.\n"),
                        stderr, pool));
       usage(argv[0], pool);
+    }
+
+  if (ssl_cert_file || ssl_key_file)
+    {
+      if (!ssl_cert_file || !ssl_key_file)
+        {
+          fprintf(stderr,
+                  "Both a certificate file and a key file must "
+                  "be provided.\n");
+          exit(1);
+        }
+      if (run_mode != run_mode_listen_once &&
+          run_mode != run_mode_daemon)
+        {
+          fprintf(stderr,
+                  "Only daemon and listen-once is supported for SSL.\n");
+          exit(1);
+        }
+      SVN_INT_ERR(ssl_init(ssl_cert_file, ssl_key_file, &params.ssl_baton,
+                           pool));
     }
 
   if (params.tunnel_user && run_mode != run_mode_tunnel)
@@ -595,3 +636,4 @@ int main(int argc, const char *const *argv)
 
   /* NOTREACHED */
 }
+

@@ -36,6 +36,7 @@ AC_SUBST(INSTALL)
 MKDIR="$INSTALL -d"
 AC_SUBST(MKDIR)
 
+sinclude(build/ac-macros/ssl.m4)
 
 dnl Generate config.nice early (before the args are munged)
 SVN_CONFIG_NICE(config.nice)
@@ -284,6 +285,12 @@ esac
 # Look for libdb4.so first:
 SVN_LIB_BERKELEY_DB($SVN_FS_WANT_DB_MAJOR, $SVN_FS_WANT_DB_MINOR,
                     $SVN_FS_WANT_DB_PATCH, [db4 db])
+
+# Check for SSL
+SVN_LIB_SSL()
+if test "$svn_lib_ssl" = "yes"; then
+  AC_DEFINE(SVN_HAVE_SSL, 1, [Define if OpenSSL is available.])
+fi
 
 dnl I18n -------------------
 

@@ -43,6 +43,8 @@ struct svn_stream_t {
   svn_read_fn_t read_fn;
   svn_write_fn_t write_fn;
   svn_close_fn_t close_fn;
+  svn_timeout_fn_t timeout_fn;
+  svn_data_pending_fn_t data_pending_fn;
 };
 
 
@@ -59,6 +61,8 @@ svn_stream_create (void *baton, apr_pool_t *pool)
   stream->read_fn = NULL;
   stream->write_fn = NULL;
   stream->close_fn = NULL;
+  stream->timeout_fn = NULL;
+  stream->data_pending_fn = NULL;
   return stream;
 }
 
@@ -91,6 +95,21 @@ svn_stream_set_close (svn_stream_t *stream, svn_close_fn_t close_fn)
 }
 
 
+void
+svn_stream_set_timeout (svn_stream_t *stream, svn_timeout_fn_t timeout_fn)
+{
+  stream->timeout_fn = timeout_fn;
+}
+
+
+void
+svn_stream_set_data_pending (svn_stream_t *stream,
+                             svn_data_pending_fn_t data_pending_fn)
+{
+  stream->data_pending_fn = data_pending_fn;
+}
+
+
 svn_error_t *
 svn_stream_read (svn_stream_t *stream, char *buffer, apr_size_t *len)
 {
@@ -113,6 +132,23 @@ svn_stream_close (svn_stream_t *stream)
   if (stream->close_fn == NULL)
     return SVN_NO_ERROR;
   return stream->close_fn (stream->baton);
+}
+
+
+void
+svn_stream_timeout (svn_stream_t *stream,
+                    apr_interval_time_t interval)
+{
+  assert(stream->timeout_fn != NULL);
+  stream->timeout_fn (stream->baton, interval);
+}
+
+
+svn_boolean_t
+svn_stream_data_pending (svn_stream_t *stream)
+{
+  assert(stream->data_pending_fn != NULL);
+  return stream->data_pending_fn (stream->baton);
 }
 
 

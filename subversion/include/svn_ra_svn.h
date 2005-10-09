@@ -41,6 +41,7 @@ extern "C" {
 
 /** Currently-defined capabilities. */
 #define SVN_RA_SVN_CAP_EDIT_PIPELINE "edit-pipeline"
+#define SVN_RA_SVN_CAP_SSL "ssl"
 
 /** A value used to indicate an optional number element in a tuple that was
  * not received.
@@ -341,6 +342,17 @@ svn_error_t *svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
  * @since New in 1.1.
  */
 const svn_version_t *svn_ra_svn_version (void);
+
+/** This function is only intended for use by svnserve.
+ *
+ * Perform the server-side steps of the SSL session handshake
+ * initiated by the client associated with @a conn, using the @a ssl_baton
+ * obtained from the SSL provider.
+ *
+ * @since New in 1.2.
+ */
+svn_error_t *svn_ra_svn_ssl_start(svn_ra_svn_conn_t *conn, void *ssl_baton,
+                                  apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
