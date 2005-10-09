@@ -18,8 +18,8 @@
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cmd /c build_locale.bat"
-				ReBuildCommandLine="cmd /c build_locale.bat"
+				BuildCommandLine="cmd /c build_locale.bat Debug"
+				ReBuildCommandLine="cmd /c build_locale.bat Debug"
                         />
 		</Configuration>
 		<Configuration
@@ -29,8 +29,8 @@
 			ATLMinimizesCRunTimeLibraryUsage="FALSE">
 			<Tool
 				Name="VCNMakeTool"
-				BuildCommandLine="cmd /c build_locale.bat"
-				ReBuildCommandLine="cmd /c build_locale.bat"
+				BuildCommandLine="cmd /c build_locale.bat Release"
+				ReBuildCommandLine="cmd /c build_locale.bat Release"
 			/>
 		</Configuration>
 	</Configurations>

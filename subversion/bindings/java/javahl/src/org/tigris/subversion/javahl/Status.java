@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -50,7 +50,8 @@ public class Status
      */
     private long lastChangedRevision;
     /**
-     * the last date the item was changed before base
+     * the last date the item was changed before base (represented in
+     * microseconds since the epoch)
      */
     private long lastChangedDate;
     /**
@@ -126,7 +127,8 @@ public class Status
     private String lockComment;
     /**
      * @since 1.2
-     * date of the creation of the lock (null if not locked)
+     * date of the creation of the lock (represented in microseconds
+     * since the epoch)
      */
     private long lockCreationDate;
     /**
@@ -134,6 +136,29 @@ public class Status
      * the lock in the repository
      */
     private Lock reposLock;
+    /**
+     * @since 1.3
+     * Set to the youngest committed revision, or {@link
+     * Revision#SVN_INVALID_REVNUM} if not out of date.
+     */
+    private long reposLastCmtRevision = Revision.SVN_INVALID_REVNUM;
+    /**
+     * @since 1.3
+     * Set to the most recent commit date, or 0 if not out of date.
+     */
+    private long reposLastCmtDate = 0;
+    /**
+     * @since 1.3
+     * Set to the node kind of the youngest commit, or {@link
+     * NodeKind#none} if not out of date.
+     */
+    private int reposKind = NodeKind.none;
+    /**
+     * @since 1.3
+     * Set to the user name of the youngest commit, or
+     * <code>null</code> if not out of date.
+     */
+    private String reposLastCmtAuthor;
 
     /**
      * this constructor should only called from JNI code
@@ -169,6 +194,12 @@ public class Status
      * @param lockCreationDate      the date, the lock was created if any
      * @param reposLock             the lock as stored in the repository if
      *                              any
+     * @param reposLastCmtRevision  the youngest revision, if out of date
+     * @param reposLastCmtDate      the last commit date, if out of date
+     * @param reposKind             the kind of the youngest revision, if
+     *                              out of date
+     * @param reposLastCmtAuthor    the author of the last commit, if out of
+     *                              date
      */
     public Status(String path, String url, int nodeKind, long revision,
                   long lastChangedRevision, long lastChangedDate,
@@ -178,7 +209,9 @@ public class Status
                   String conflictNew, String conflictWorking,
                   String urlCopiedFrom, long revisionCopiedFrom,
                   boolean switched, String lockToken, String lockOwner, 
-                  String lockComment, long lockCreationDate, Lock reposLock)
+                  String lockComment, long lockCreationDate, Lock reposLock,
+                  long reposLastCmtRevision, long reposLastCmtDate,
+                  int reposKind, String reposLastCmtAuthor)
     {
         this.path = path;
         this.url = url;
@@ -204,6 +237,10 @@ public class Status
         this.lockComment = lockComment;
         this.lockCreationDate = lockCreationDate;
         this.reposLock = reposLock;
+        this.reposLastCmtRevision = reposLastCmtRevision;
+        this.reposLastCmtDate = reposLastCmtDate;
+        this.reposKind = reposKind;
+        this.reposLastCmtAuthor = reposLastCmtAuthor;
     }
 
     /**
@@ -240,10 +277,7 @@ public class Status
      */
     public Date getLastChangedDate()
     {
-        if (lastChangedDate == 0)
-            return null;
-        else
-            return new Date(lastChangedDate / 1000);
+        return microsecondsToDate(lastChangedDate);
     }
 
     /**
@@ -359,8 +393,13 @@ public class Status
     }
 
     /**
-     * Returns the repository url if any
-     * @return url in repository or null if not known
+     * Returns the URI to where the item might exist in the
+     * repository.  We say "might" because the item might exist in
+     * your working copy, but have been deleted from the repository.
+     * Or it might exist in the repository, but your working copy
+     * might not yet contain it (because the WC is not up to date).
+     * @return URI in repository, or <code>null</code> if the item
+     * exists in neither the repository nor the WC.
      */
     public String getUrl()
     {
@@ -437,10 +476,10 @@ public class Status
      */
     public boolean isManaged()
     {
-        int textStatus = getTextStatus();
-        return ((textStatus != Status.Kind.unversioned) &&
-                (textStatus != Status.Kind.none) &&
-                (textStatus != Status.Kind.ignored));
+        int status = getTextStatus();
+        return (status != Status.Kind.unversioned &&
+                status != Status.Kind.none &&
+                status != Status.Kind.ignored);
     }
 
     /**
@@ -449,8 +488,7 @@ public class Status
      */
     public boolean hasRemote()
     {
-        int textStatus = getTextStatus();
-        return ((isManaged()) && (textStatus != Status.Kind.added));
+        return (isManaged() && getTextStatus() != Status.Kind.added);
     }
 
     /**
@@ -459,8 +497,7 @@ public class Status
      */
     public boolean isAdded()
     {
-        int textStatus = getTextStatus();
-        return textStatus == Status.Kind.added;
+        return getTextStatus() == Status.Kind.added;
     }
 
     /**
@@ -469,8 +506,7 @@ public class Status
      */
     public boolean isDeleted()
     {
-        int textStatus = getTextStatus();
-        return textStatus == Status.Kind.deleted;
+        return getTextStatus() == Status.Kind.deleted;
     }
 
     /**
@@ -479,8 +515,7 @@ public class Status
      */
     public boolean isMerged()
     {
-        int textStatus = getTextStatus();
-        return textStatus == Status.Kind.merged;
+        return getTextStatus() == Status.Kind.merged;
     }
 
     /**
@@ -490,8 +525,7 @@ public class Status
      */
     public boolean isIgnored()
     {
-        int textStatus = getTextStatus();
-        return textStatus == Status.Kind.ignored;
+        return getTextStatus() == Status.Kind.ignored;
     }
 
     /**
@@ -500,8 +534,7 @@ public class Status
      */
     public boolean isModified()
     {
-        int textStatus = getTextStatus();
-        return textStatus == Status.Kind.modified;
+        return getTextStatus() == Status.Kind.modified;
     }
 
     /**
@@ -541,10 +574,7 @@ public class Status
      */
     public Date getLockCreationDate()
     {
-        if (lockCreationDate == 0)
-            return null;
-        else
-            return new Date(lastChangedDate / 1000);
+        return microsecondsToDate(lockCreationDate);
     }
 
     /**
@@ -556,6 +586,47 @@ public class Status
     {
         return reposLock;
     }
+
+    /**
+     * @return The last committed revision, or {@link
+     * Revision#SVN_INVALID_REVNUM} if up to date.
+     * @since 1.3
+     */
+    public Revision getReposLastCmtRevision()
+    {
+        return Revision.createNumber(reposLastCmtRevision);
+    }
+
+    /**
+     * @return The last committed date, or <code>null</code> if up to
+     * date.
+     * @since 1.3
+     */
+    public Date getReposLastCmtDate()
+    {
+        return microsecondsToDate(reposLastCmtDate);
+    }
+
+    /**
+     * @return The node kind (e.g. file, directory, etc.), or
+     * <code>null</code> if up to date.
+     * @since 1.3
+     */
+    public int getReposKind()
+    {
+        return reposKind;
+    }
+
+    /**
+     * @return The author of the last commit, or <code>null</code> if
+     * up to date.
+     * @since 1.3
+     */
+    public String getReposLastCmtAuthor()
+    {
+        return reposLastCmtAuthor;
+    }
+
     /**
      * class for kind status of the item or its properties
      * the constants are defined in the interface StatusKind for building
@@ -572,35 +643,46 @@ public class Status
         {
             switch (kind)
             {
-            case none:
+            case StatusKind.none:
                 return "non-svn";
-            case normal:
+            case StatusKind.normal:
                 return "normal";
-            case added:
+            case StatusKind.added:
                 return "added";
-            case missing:
+            case StatusKind.missing:
                 return "missing";
-            case deleted:
+            case StatusKind.deleted:
                 return "deleted";
-            case replaced:
+            case StatusKind.replaced:
                 return "replaced";
-            case modified:
+            case StatusKind.modified:
                 return "modified";
-            case merged:
+            case StatusKind.merged:
                 return "merged";
-            case conflicted:
+            case StatusKind.conflicted:
                 return "conflicted";
-            case ignored:
+            case StatusKind.ignored:
                 return "ignored";
-            case incomplete:
+            case StatusKind.incomplete:
                 return "incomplete";
-            case external:
+            case StatusKind.external:
                 return "external";
-            case unversioned:
+            case StatusKind.unversioned:
             default:
                 return "unversioned";
             }
         }
     }
-}
 
+    /**
+     * Converts microseconds since the epoch to a Date object.
+     *
+     * @param micros Microseconds since the epoch.
+     * @return A Date object, or <code>null</code> if
+     * <code>micros</code> was zero.
+     */
+    private static Date microsecondsToDate(long micros)
+    {
+        return (micros == 0 ? null : new Date(micros / 1000));
+    }
+}

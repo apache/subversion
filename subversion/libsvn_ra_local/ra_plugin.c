@@ -261,7 +261,7 @@ svn_ra_local__get_schemes (apr_pool_t *pool)
 static svn_error_t *
 svn_ra_local__open (svn_ra_session_t *session,
                     const char *repos_URL,
-                    const svn_ra_callbacks_t *callbacks,
+                    const svn_ra_callbacks2_t *callbacks,
                     void *callback_baton,
                     apr_hash_t *config,
                     apr_pool_t *pool)
@@ -525,12 +525,12 @@ svn_ra_local__get_commit_editor (svn_ra_session_t *session,
     }
               
   /* Get the repos commit-editor */     
-  SVN_ERR (svn_repos_get_commit_editor2
+  SVN_ERR (svn_repos_get_commit_editor3
            (editor, edit_baton, sess_baton->repos, NULL,
             svn_path_uri_decode (sess_baton->repos_url, pool),
             sess_baton->fs_path,
             sess_baton->username, log_msg,
-            deltify_etc, db, pool));
+            deltify_etc, db, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -697,6 +697,7 @@ svn_ra_local__do_diff (svn_ra_session_t *session,
                        const char *update_target,
                        svn_boolean_t recurse,
                        svn_boolean_t ignore_ancestry,
+                       svn_boolean_t text_deltas,
                        const char *switch_url,
                        const svn_delta_editor_t *update_editor,
                        void *update_baton,
@@ -708,7 +709,7 @@ svn_ra_local__do_diff (svn_ra_session_t *session,
                         update_revision,
                         update_target,
                         switch_url,
-                        TRUE,
+                        text_deltas,
                         recurse,
                         ignore_ancestry,
                         update_editor,
@@ -920,6 +921,7 @@ svn_ra_local__get_file (svn_ra_session_t *session,
          a loop.  Truly, Nothing Can Go Wrong :-).  But RA layers that
          go over a network should confirm the checksum. */
       SVN_ERR (svn_stream_copy (contents, stream, pool));
+      SVN_ERR (svn_stream_close (contents));
     }
 
   /* Handle props if requested. */
@@ -1093,14 +1095,17 @@ svn_ra_local__lock (svn_ra_session_t *session,
       abs_path = svn_path_join (sess->fs_path, path, iterpool);
 
       /* This wrapper will call pre- and post-lock hooks. */
-      err = svn_repos_fs_lock (&lock, sess->repos, abs_path, NULL, comment, 
-                               0 /* no timeout */, *revnum, force, iterpool);
+      err = svn_repos_fs_lock (&lock, sess->repos, abs_path, NULL, comment,
+                               FALSE /* not DAV comment */,
+                               0 /* no expiration */, *revnum, force, 
+                               iterpool);
 
       if (err && !SVN_ERR_IS_LOCK_ERROR (err))
         return err;
 
       if (lock_func)
-        callback_err = lock_func (lock_baton, path, TRUE, lock, err, iterpool);
+        callback_err = lock_func (lock_baton, path, TRUE, err ? NULL : lock,
+                                  err, iterpool);
 
       svn_error_clear (err);
 
@@ -1262,7 +1267,8 @@ static const svn_ra__vtable_t ra_local_vtable =
 
 svn_error_t *
 svn_ra_local__init (const svn_version_t *loader_version,
-                    const svn_ra__vtable_t **vtable)
+                    const svn_ra__vtable_t **vtable,
+                    apr_pool_t *pool)
 {
   static const svn_version_checklist_t checklist[] =
     {
@@ -1283,6 +1289,11 @@ svn_ra_local__init (const svn_version_t *loader_version,
                               loader_version->major);
 
   SVN_ERR (svn_ver_check_list (ra_local_version(), checklist));
+
+#ifndef SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
+  /* This assumes that POOL was the pool used to load the dso. */
+  SVN_ERR (svn_fs_initialize (pool));
+#endif
 
   *vtable = &ra_local_vtable;
 

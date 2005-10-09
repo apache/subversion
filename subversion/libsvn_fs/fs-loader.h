@@ -75,9 +75,6 @@ typedef struct fs_library_vtable_t
 
   /* Provider-specific functions should go here, even if they could go
      in an object vtable, so that they are all kept together. */
-  svn_error_t *(*bdb_set_errcall) (svn_fs_t *fs,
-                                   void (*handler) (const char *errpfx,
-                                                    char *msg));
   svn_error_t *(*bdb_recover) (const char *path, apr_pool_t *pool);
   svn_error_t *(*bdb_logfiles) (apr_array_header_t **logfiles,
                                 const char *path, svn_boolean_t only_unused,
@@ -116,6 +113,17 @@ svn_error_t *svn_fs_fs__init (const svn_version_t *loader_version,
 
 typedef struct fs_vtable_t
 {
+  /* The FS loader library invokes serialized_init after a create or
+     open call, with the new FS object as its first parameter.  Calls
+     to serialized_init are globally serialized, so the FS module
+     function has exclusive access to COMMON_POOL.  The same
+     COMMON_POOL will be passed for every FS object created during the
+     lifetime of the pool passed to svn_fs_initialize(), or during the
+     lifetime of the process if svn_fs_initialize() is not invoked.
+     Temporary allocations can be made in POOL. */
+  svn_error_t *(*serialized_init) (svn_fs_t *fs, apr_pool_t *common_pool,
+                                   apr_pool_t *pool);
+
   svn_error_t *(*youngest_rev) (svn_revnum_t *youngest_p, svn_fs_t *fs,
                                 apr_pool_t *pool);
   svn_error_t *(*revision_prop) (svn_string_t **value_p, svn_fs_t *fs,
@@ -143,7 +151,8 @@ typedef struct fs_vtable_t
   svn_error_t *(*deltify) (svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool);
   svn_error_t *(*lock) (svn_lock_t **lock, svn_fs_t *fs,
                         const char *path, const char *token,
-                        const char *comment, int timeout,
+                        const char *comment, svn_boolean_t is_dav_comment,
+                        apr_time_t expiration_date,
                         svn_revnum_t current_rev, svn_boolean_t steal_lock,
                         apr_pool_t *pool);
   svn_error_t *(*generate_lock_token) (const char **token, svn_fs_t *fs,
@@ -156,6 +165,9 @@ typedef struct fs_vtable_t
                              svn_fs_get_locks_callback_t get_locks_func,
                              void *get_locks_baton,
                              apr_pool_t *pool);
+  svn_error_t *(*bdb_set_errcall) (svn_fs_t *fs,
+                                   void (*handler) (const char *errpfx,
+                                                    char *msg));
 } fs_vtable_t;
 
 
@@ -204,6 +216,9 @@ typedef struct root_vtable_t
   svn_error_t *(*delete_node) (svn_fs_root_t *root, const char *path,
                                apr_pool_t *pool);
   svn_error_t *(*copied_from) (svn_revnum_t *rev_p, const char **path_p,
+                               svn_fs_root_t *root, const char *path,
+                               apr_pool_t *pool);
+  svn_error_t *(*closest_copy) (svn_fs_root_t **root_p, const char **path_p,
                                svn_fs_root_t *root, const char *path,
                                apr_pool_t *pool);
 

@@ -24,7 +24,7 @@ public interface StatusKind
     /** does not exist */
     public static final int none = 0;
 
-    /** exists, but uninteresting. */
+    /** exists, but uninteresting */
     public static final int normal = 1;
 
     /** text or props have been modified */
@@ -57,10 +57,10 @@ public interface StatusKind
     /** a resource marked as ignored */
     public static final int ignored = 11;
 
-    /** a directory doesn't contain a complete entries list  */
+    /** a directory doesn't contain a complete entries list */
     public static final int incomplete = 12;
 
-    /** an unversioned path populated by an svn:external property */
+    /** an unversioned path populated by an svn:externals property */
     public static final int external = 13;
 
 }

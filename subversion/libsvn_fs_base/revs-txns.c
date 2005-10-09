@@ -820,7 +820,7 @@ txn_body_get_dirents (void *baton, trail_t *trail)
   if (svn_fs_base__dag_node_kind (node) != svn_node_dir)
     return SVN_NO_ERROR;
 
-  /* Else it's mutable.  Get it's dirents. */
+  /* Else it's mutable.  Get its dirents. */
   return svn_fs_base__dag_dir_entries (args->dirents, node, 
                                        trail, trail->pool);
 }

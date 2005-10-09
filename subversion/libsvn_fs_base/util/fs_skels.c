@@ -829,9 +829,9 @@ svn_fs_base__parse_lock_skel (svn_lock_t **lock_p,
   /* XML_P */
   if (svn_fs_base__matches_atom 
       (skel->children->next->next->next->next->next, "1"))
-    lock->xml_comment = TRUE;
+    lock->is_dav_comment = TRUE;
   else
-    lock->xml_comment = FALSE;
+    lock->is_dav_comment = FALSE;
 
   /* CREATION-DATE */
   timestr = apr_pstrmemdup 
@@ -1410,7 +1410,7 @@ svn_fs_base__unparse_lock_skel (skel_t **skel_p,
      (svn_time_to_cstring (lock->creation_date, pool), pool), skel);
 
   /* XML_P */
-  if (lock->xml_comment)
+  if (lock->is_dav_comment)
     svn_fs_base__prepend (svn_fs_base__str_atom ("1", pool), skel);
   else
     svn_fs_base__prepend (svn_fs_base__str_atom ("0", pool), skel);

@@ -10,13 +10,13 @@ directly.
 Blanket commit access:
 
           jimb   Jim Blandy <jimb@redhat.com>
-       sussman   Ben Collins-Sussman <sussman@collab.net>
+       sussman   Ben Collins-Sussman <sussman@red-bean.com>
         kfogel   Karl Fogel <kfogel@collab.net>
         gstein   Greg Stein <gstein@lyra.org>
          brane   Branko Čibej <brane@xbc.nu>
            joe   Joe Orton <joe@light.plus.com>
        ghudson   Greg Hudson <ghudson@mit.edu>
-          fitz   Brian W. Fitzpatrick <fitz@collab.net>
+          fitz   Brian W. Fitzpatrick <fitz@red-bean.com>
         daniel   Daniel Stenberg <daniel@haxx.se>
       cmpilato   C. Michael Pilato <cmpilato@collab.net>
          kevin   Kevin Pilch-Bisson <kevin@pilchie.homeip.net>
@@ -43,6 +43,8 @@ Blanket commit access:
           maxb   Max Bowsher <maxb@ukf.net>
       lundblad   Peter N. Lundblad <peter@famlundblad.se>
        dberlin   Daniel Berlin <dberlin@dberlin.org>
+     danderson   David Anderson <david.anderson@calixo.net>
+        zhakov   Ivan Zhakov <chemodax@gmail.com>
 
 Commit access for specific areas:
 
@@ -52,6 +54,7 @@ Commit access for specific areas:
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
            kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)
+        djames   David James <james@cs.toronto.edu>          (bindings, build)
 
   Packages:
 
@@ -65,9 +68,8 @@ Commit access for specific areas:
       josander   Jostein Andersen <jostein@josander.net>     (various)
       niemeyer   Gustavo Niemeyer <niemeyer@conectiva.com>   (svnperms.py)
         zbrown   Zack Brown <zbrown@tumblerings.org>         (doc)
-        mprice   Michael Price <mprice@atl.lmco.com>         (releases)
+        mprice   Michael Price <ectospheno@gmail.com>        (releases)
            pll   Paul lussier <p.lussier@comcast.net>        (releases)
-     gthompson   Glenn A. Thompson <gthompson@cdr.net>       (pluggable-db br.)
            kon   Kalle Olavi Niemitalo <kon@iki.fi>          (psvn.el)
     jrepenning   Jack Repenning <jrepenning@collab.net>      (tools/dev)
       lonestar   Martin Maurer <martin.maurer@email.de>      (svnshow)
@@ -77,11 +79,9 @@ Commit access for specific areas:
       martinto   Martin Tomes <lists@tomes.org>              (chk-case-insens)
         danpat   Daniel Patterson <danpat@danpat.net>        (svn-graph.pl)
    archiecobbs   Archie Cobbs <archie@awarix.com>            (svnmerge)
-       sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
         offby1   Eric Hanchrow <offby1@blarg.net>            (doc)
        nomis80   Simon Perreault <nomis80@nomis80.org>       (svn-clean)
-        imajes   James Cox <?@?.?>                           (?)
-      jgoerzen   John Goerzen <?@?.?>                        (?)
+      jlvarner   Joshua Varner <jlvarner@gmail.com>          (doc)
 
   Translation:
 
@@ -102,17 +102,17 @@ Commit access for specific areas:
        blueboh   Jeong Seolin <blueboh@ahnlab.com>           (po: ko)
         hynnet   YingNing Huang <hyn@bao.hynnet.com>         (po: zh_CN)
           lark   Wang Jian <lark@linux.net.cn>               (po: zh_CN)
-     beerfrick   Ariel Arjona <beerfrick@gmail.com>          (doc: es)
-        gradha   Grzegorz A. Hankiewicz <gradha@titanium.sabren.com> (doc: es)
-         ruben   Rubén Gómez <rugoli@euskalnet.net>          (doc: es)
-      dbrouard   Diego Brouard <dbrouard@gmail.com>          (doc: es)
   gerhardoettl   Gerhard Oettl <gerhard.oettl.ml@oesoft.at>  (doc: de)
 giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
         nebiac   Federico Nebiacolombo <cint1@amsjv.it>      (po: it)
+        fabien   Fabien Coelho <fabien@coelho.net>           (po: fr)
+       marcelg   Marcel Gosselin <marcel.gosselin@polymtl.ca> (po: fr)
 
   Experimental branches:
 
-        pmarek   Ph. Marek <philipp.marek@bmlv.gv.at>        (meta-data-versioning)
+     gthompson   Glenn A. Thompson <gthompson@cdr.net>       (pluggable-db br.)
+       sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
+        pmarek   Ph. Marek <philipp.marek@bmlv.gv.at>        (meta-data-v br.)
       markphip   Mark Phippard <MarkP@softlanding.com>       (ebcdic)
         pburba   Paul Burba <PaulB@softlanding.com>          (ebcdic)
 
@@ -132,6 +132,10 @@ Committers who have asked to be listed as dormant:
 
         bdenny   Brian Denny <brian@briandenny.net>
       rassilon   Bill Tutt <rassilon@lyra.org> (Win32, COM, issue-1003-dev br.)
+     beerfrick   Ariel Arjona <beerfrick@gmail.com>          (doc: es)
+        gradha   Grzegorz A. Hankiewicz <gradha@titanium.sabren.com> (doc: es)
+         ruben   Rubén Gómez <rugoli@euskalnet.net>          (doc: es)
+      dbrouard   Diego Brouard <dbrouard@gmail.com>          (doc: es)
 
 ## Local Variables:
 ## coding:utf-8

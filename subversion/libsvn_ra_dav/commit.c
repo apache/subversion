@@ -209,11 +209,12 @@ static svn_error_t * simple_request(svn_ra_dav__session_t *ras,
     }
 
   /* run the request and get the resulting status code (and svn_error_t) */
-  SVN_ERR( svn_ra_dav__request_dispatch(code, req, ras->sess,
-                                        method, url, okay_1, okay_2,
-                                        pool) );
-
-  return SVN_NO_ERROR;
+  return svn_ra_dav__request_dispatch(code, req, ras->sess,
+                                      method, url, okay_1, okay_2,
+#if SVN_NEON_0_25
+                                      NULL, NULL,
+#endif /* SVN_NEON_0_25 */
+                                      pool);
 }
 
 
@@ -438,6 +439,27 @@ static svn_error_t * add_child(resource_t **child,
   return SVN_NO_ERROR;
 }
 
+#if SVN_NEON_0_25
+/* This implements the svn_ra_dav__request_interrogator() interface.
+   USERDATA is 'char **'. */
+static svn_error_t *interrogate_for_location(ne_request *request,
+                                             int dispatch_return_val,
+                                             void *userdata)
+{
+  char **location = userdata;
+
+  if (location)
+    {
+      const char *val = ne_get_response_header(request, "location");
+      if (val)
+        *location = strdup(val);
+    }
+
+  return SVN_NO_ERROR;
+}
+#endif /* SVN_NEON_0_25 */
+
+
 static svn_error_t * do_checkout(commit_ctx_t *cc,
                                  const char *vsn_url,
                                  svn_boolean_t allow_404,
@@ -448,6 +470,7 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
 {
   ne_request *req;
   const char *body;
+  svn_error_t *err;
 
   /* assert: vsn_url != NULL */
 
@@ -472,12 +495,14 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
                       "</D:activity-set></D:checkout>", cc->activity_url);
   ne_set_request_body_buffer(req, body, strlen(body));
 
+#ifndef SVN_NEON_0_25
   /* 
    * We have different const qualifiers here. locn is const char **,
    * but the prototype is void * (as opposed to const void *).
    */
   ne_add_response_header_handler(req, "location",
                                  ne_duplicate_header, (void *)locn);
+#endif /* ! SVN_NEON_0_25 */
 
   if (token)
     {
@@ -487,11 +512,16 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
     }
 
   /* run the request and get the resulting status code (and svn_error_t) */
-  return svn_ra_dav__request_dispatch(code, req, cc->ras->sess,
-                                      "CHECKOUT", vsn_url,
-                                      201 /* Created */,
-                                      allow_404 ? 404 /* Not Found */ : 0,
-                                      pool);
+  err = svn_ra_dav__request_dispatch(code, req, cc->ras->sess,
+                                     "CHECKOUT", vsn_url,
+                                     201 /* Created */,
+                                     allow_404 ? 404 /* Not Found */ : 0,
+#if SVN_NEON_0_25
+                                     interrogate_for_location, locn,
+#endif /* SVN_NEON_0_25 */
+                                     pool);
+
+  return err;
 }
 
 
@@ -657,7 +687,7 @@ add_valid_target (commit_ctx_t *cc,
 {
   apr_hash_t *hash = cc->valid_targets;
   svn_string_t *path_str = svn_string_create(path, apr_hash_pool_get(hash));
-  apr_hash_set (hash, path_str->data, path_str->len, &kind);
+  apr_hash_set (hash, path_str->data, path_str->len, (void*)kind);
 }
 
 
@@ -805,7 +835,7 @@ static svn_error_t * commit_delete_entry(const char *path,
   if (serr && ((serr->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)
                || (serr->apr_err == SVN_ERR_FS_NO_LOCK_TOKEN)
                || (serr->apr_err == SVN_ERR_FS_LOCK_OWNER_MISMATCH)
-               || (serr->apr_err == SVN_ERR_FS_PATH_LOCKED)))
+               || (serr->apr_err == SVN_ERR_FS_PATH_ALREADY_LOCKED)))
     {
       /* Re-attempt the DELETE request as if the path were a directory.
          Discover all lock-tokens within the directory, and send them in
@@ -817,17 +847,19 @@ static svn_error_t * commit_delete_entry(const char *path,
          the same reason we're not sending in MERGE's headers: httpd has
        limits on the amount of data it's willing to receive in headers. */
       
-      apr_hash_t *child_tokens;
+      apr_hash_t *child_tokens = NULL;
       ne_request *req;
       const char *body;
       const char *token;
       svn_stringbuf_t *locks_list;
       
-      child_tokens = get_child_tokens(parent->cc->tokens, path, pool);
+      if (parent->cc->tokens)
+        child_tokens = get_child_tokens(parent->cc->tokens, path, pool);
       
       /* No kiddos?  Return the original error.  Else, clear it so it
          doesn't get leaked.  */
-      if (! apr_hash_count(child_tokens))
+      if ((! child_tokens) 
+          || (apr_hash_count(child_tokens) == 0))
         return serr;
       else
         svn_error_clear(serr);
@@ -852,10 +884,17 @@ static svn_error_t * commit_delete_entry(const char *path,
                           locks_list->data);
       ne_set_request_body_buffer(req, body, strlen(body));
       
-      SVN_ERR (svn_ra_dav__request_dispatch(&code, req, parent->cc->ras->sess,
-                                            "DELETE", child,
-                                            204 /* Created */,
-                                            404 /* Not Found */, pool));
+      /* Don't use SVN_ERR() here because some preprocessors can't
+         handle a compile-time conditional inside a macro call. */
+      serr = svn_ra_dav__request_dispatch(&code, req, parent->cc->ras->sess,
+                                          "DELETE", child,
+                                          204 /* Created */,
+                                          404 /* Not Found */,
+#if SVN_NEON_0_25
+                                          NULL, NULL,
+#endif /* SVN_NEON_0_25 */
+                                          pool);
+      SVN_ERR(serr);
     }
   else if (serr)
     return serr;
@@ -1328,9 +1367,6 @@ static svn_error_t * commit_change_file_prop(void *file_baton,
   /* ### we should put this into the file_baton's pool */
   record_prop_change(file->pool, file, name, value);
 
-  if (file->cc->tokens)
-    file->token = apr_hash_get(file->cc->tokens, name, APR_HASH_KEY_STRING);
-
   /* do the CHECKOUT sooner rather than later */
   SVN_ERR( checkout_resource(file->cc, file->rsrc, TRUE, file->token, pool) );
 
@@ -1400,6 +1436,9 @@ static svn_error_t * commit_close_file(void *file_baton,
       err = svn_ra_dav__request_dispatch(&code, req, sess, "PUT", url,
                                          201 /* Created */,
                                          204 /* No Content */,
+#if SVN_NEON_0_25
+                                         NULL, NULL,
+#endif /* SVN_NEON_0_25 */
                                          pool);
       
       /* we're done with the file.  this should delete it. */

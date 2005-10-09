@@ -38,10 +38,10 @@ II. Client Implementation
           
          a. Creating a lock
 
-             'svn lock' calls new RA->lock() function, which marshalls
+             'svn lock' calls new RA->lock() function, which marshals
              BASE rev of file to svn_fs_lock().  FS does a
              complimentary out-of-dateness check before creating the
-             lock.  The lock is marshalled back to client, stored in
+             lock.  The lock is marshaled back to client, stored in
              .svn/entries file.
 
          b. Using a lock
@@ -93,7 +93,7 @@ II. Client Implementation
 
             2. seeing locks in a repository
 
-               The server will marshall the lock information as
+               The server will marshal the lock information as
                entryprops when calling the status editor.
 
                svn info URL will use RA->get_lock to get the lock for the
@@ -104,7 +104,7 @@ II. Client Implementation
                 A.  At the start of an update, a new version of the
                 'reporter' vtable is used to describe not only mixed
                 revnums to the server, but also existing locktokens.
-                We need to be careful with protocols when marshalling
+                We need to be careful with protocols when marshaling
                 this new information to older or newer servers.
 
                 In ra_svn a new command will be added to the report

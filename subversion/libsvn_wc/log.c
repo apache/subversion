@@ -37,6 +37,7 @@
 #include "props.h"
 #include "adm_files.h"
 #include "entries.h"
+#include "lock.h"
 #include "translate.h"
 #include "questions.h"
 
@@ -112,7 +113,7 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
 
     case svn_wc__xfer_cp_and_translate:
       {
-        svn_subst_keywords_t *keywords;
+        apr_hash_t *keywords;
         const char *eol_str;
         svn_boolean_t special;
 
@@ -124,7 +125,7 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
         SVN_ERR (svn_wc__get_special (&special, full_dest_path, adm_access,
                                       pool));
 
-        SVN_ERR (svn_subst_copy_and_translate2 (full_from_path,
+        SVN_ERR (svn_subst_copy_and_translate3 (full_from_path,
                                                 full_dest_path,
                                                 eol_str,
                                                 TRUE,
@@ -143,7 +144,7 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
 
     case svn_wc__xfer_cp_and_detranslate:
       {
-        svn_subst_keywords_t *keywords;
+        apr_hash_t *keywords;
         const char *eol_str;
         svn_boolean_t special;
 
@@ -158,7 +159,7 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
         /* If any specific eol style was indicated, then detranslate
            back to repository normal form ("\n"), repairingly.  But if
            no style indicated, don't touch line endings at all. */
-        return svn_subst_copy_and_translate2 (full_from_path,
+        return svn_subst_copy_and_translate3 (full_from_path,
                                               full_dest_path,
                                               (eol_str ? "\n" : NULL),
                                               (eol_str ? TRUE : FALSE),  
@@ -217,7 +218,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
   const char *filepath;
   const char *tmp_text_base;
   svn_node_kind_t kind;
-  svn_subst_keywords_t *keywords;
+  apr_hash_t *keywords;
   apr_file_t *ignored;
   svn_boolean_t same, did_set;
   const char *tmp_wfile, *pdir, *bname;
@@ -264,7 +265,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
   SVN_ERR (svn_io_check_path (tmp_text_base, &kind, pool));
 
   if (kind == svn_node_file)
-    SVN_ERR (svn_subst_copy_and_translate2 (tmp_text_base,
+    SVN_ERR (svn_subst_copy_and_translate3 (tmp_text_base,
                                             tmp_wfile,
                                             eol_str,
                                             FALSE, /* don't repair eol */
@@ -273,7 +274,7 @@ install_committed_file (svn_boolean_t *overwrote_working,
                                             special,
                                             pool));
   else
-    SVN_ERR (svn_subst_copy_and_translate2 (filepath,
+    SVN_ERR (svn_subst_copy_and_translate3 (filepath,
                                             tmp_wfile,
                                             eol_str,
                                             FALSE, /* don't repair eol */
@@ -299,7 +300,11 @@ install_committed_file (svn_boolean_t *overwrote_working,
 
   SVN_ERR (svn_io_remove_file (tmp_wfile, pool));
 
-  SVN_ERR (svn_wc__maybe_set_read_only (NULL, filepath, adm_access, pool));
+  SVN_ERR (svn_wc__maybe_set_read_only (&did_set, filepath, adm_access, pool));
+  if (did_set)
+    /* the file may have been overwritten or its timestamp changed by
+       setting it read-only */
+    *overwrote_working = TRUE;
 
   /* Set the working file's execute bit if props dictate. */
   SVN_ERR (svn_wc__maybe_set_executable (&did_set, filepath, adm_access, pool));
@@ -534,7 +539,7 @@ log_do_modify_entry (struct log_runner *loggy,
                            APR_HASH_KEY_STRING);
 
   if ((modify_flags & SVN_WC__ENTRY_MODIFY_TEXT_TIME)
-      && (! strcmp (valuestr, SVN_WC_TIMESTAMP_WC)))
+      && (! strcmp (valuestr, SVN_WC__TIMESTAMP_WC)))
     {
       svn_node_kind_t tfile_kind;
       apr_time_t text_time;
@@ -561,7 +566,7 @@ log_do_modify_entry (struct log_runner *loggy,
                            APR_HASH_KEY_STRING);
 
   if ((modify_flags & SVN_WC__ENTRY_MODIFY_PROP_TIME)
-      && (! strcmp (valuestr, SVN_WC_TIMESTAMP_WC)))
+      && (! strcmp (valuestr, SVN_WC__TIMESTAMP_WC)))
     {
       const char *pfile;
       svn_node_kind_t pfile_kind;

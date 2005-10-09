@@ -110,32 +110,31 @@ svn_error_t *svn_client__prev_log_path (const char **prev_path_p,
                                         apr_pool_t *pool);
 
 
-/** Set @a *start_url and @a *start_revision (and maybe @a *end_url
- * and @a *end_revision) to the revisions and repository URLs of one
- * (or two) points of interest along a particular versioned resource's
- * line of history.  @a path as it exists in "peg revision" @a
- * revision identifies that line of history, and @a start and @a end
- * specify the point(s) of interest (typically the revisions referred
- * to as the "operative range" for a given operation) along that history.
- *
- * @a end may be of kind svn_opt_revision_unspecified (in which case
- * @a end_url and @a end_revision are not touched by the function);
- * @a start and @a revision may not.
- *
- * A NOTE ABOUT FUTURE REPORTING:
- *
- * If either @a start or @end are greater than @a revision, then do a
- * sanity check (since we cannot search future history yet): verify
- * that @a path in the future revision(s) is the "same object" as the
- * one pegged by @a revision.  In other words, all three objects must
- * be connected by a single line of history which exactly passes
- * through @a path at @a revision.  If this sanity check fails, return
- * SVN_ERR_CLIENT_UNRELATED_RESOURCES.
- *
- * @a ctx is the client context baton.
- *
- * Use @a pool for all allocations.
- */
+/* Set *START_URL and *START_REVISION (and maybe *END_URL
+   and *END_REVISION) to the revisions and repository URLs of one
+   (or two) points of interest along a particular versioned resource's
+   line of history.  PATH as it exists in "peg revision"
+   REVISION identifies that line of history, and START and END
+   specify the point(s) of interest (typically the revisions referred
+   to as the "operative range" for a given operation) along that history.
+
+   eND may be of kind svn_opt_revision_unspecified (in which case
+   END_URL and END_REVISION are not touched by the function);
+   START and REVISION may not.
+
+   A NOTE ABOUT FUTURE REPORTING:
+
+   If either START or END are greater than REVISION, then do a
+   sanity check (since we cannot search future history yet): verify
+   that PATH in the future revision(s) is the "same object" as the
+   one pegged by REVISION.  In other words, all three objects must
+   be connected by a single line of history which exactly passes
+   through PATH at REVISION.  If this sanity check fails, return
+   SVN_ERR_CLIENT_UNRELATED_RESOURCES.
+
+   CTX is the client context baton.
+
+   Use POOL for all allocations.  */
 svn_error_t *
 svn_client__repos_locations (const char **start_url,
                              svn_opt_revision_t **start_revision,
@@ -150,16 +149,19 @@ svn_client__repos_locations (const char **start_url,
 
 
 /* Given PATH_OR_URL, which contains either a working copy path or an
-   absolute url, a peg revision PEG_REVISON, and a desired revision
+   absolute URL, a peg revision PEG_REVISION, and a desired revision
    REVISION, create an RA connection to that object as it exists in
    that revision, following copy history if necessary.  If REVISION is
    younger than PEG_REVISION, then PATH_OR_URL will be checked to see
-   that it is the same node in both PEG_REVISION and REVISON.  If it
+   that it is the same node in both PEG_REVISION and REVISION.  If it
    is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
+
+   If PEG_REVISION's kind is svn_opt_revision_unspecified, it is
+   interpreted as "head" for a URL or "working" for a working-copy path.
 
    Store the resulting ra_session in *RA_SESSION_P.  Store the actual
    revision number of the object in *REV_P, and the final resulting
-   url in *URL_P.
+   URL in *URL_P.
 
    Use authentication baton cached in CTX to authenticate against the
    repository.
@@ -191,7 +193,7 @@ typedef struct
   const char *base_dir;
   svn_wc_adm_access_t *base_access;
 
-  /* An array of svn_client_commit_item_t * structures, present only
+  /* An array of svn_client_commit_item2_t * structures, present only
      during working copy commits. */
   apr_array_header_t *commit_items;
 
@@ -226,16 +228,20 @@ typedef struct
    BASE_ACCESS should be null).
 
    The calling application's authentication baton is provided in CTX,
-   and allocations related to this session are performed in POOL.  */
-svn_error_t * svn_client__open_ra_session (svn_ra_session_t **ra_session,
-                                           const char *base_url,
-                                           const char *base_dir,
-                                           svn_wc_adm_access_t *base_access,
-                                           apr_array_header_t *commit_items,
-                                           svn_boolean_t use_admin,
-                                           svn_boolean_t read_only_wc,
-                                           svn_client_ctx_t *ctx,
-                                           apr_pool_t *pool);
+   and allocations related to this session are performed in POOL.
+
+   NOTE: The reason for the _internal suffix of this function's name is to
+   avoid confusion with the public API svn_client_open_ra_session(). */
+svn_error_t *
+svn_client__open_ra_session_internal (svn_ra_session_t **ra_session,
+                                      const char *base_url,
+                                      const char *base_dir,
+                                      svn_wc_adm_access_t *base_access,
+                                      apr_array_header_t *commit_items,
+                                      svn_boolean_t use_admin,
+                                      svn_boolean_t read_only_wc,
+                                      svn_client_ctx_t *ctx,
+                                      apr_pool_t *pool);
 
 
 
@@ -245,7 +251,7 @@ svn_error_t * svn_client__open_ra_session (svn_ra_session_t **ra_session,
 
 /* Get the commit_baton to be used in couple with commit_callback. */
 svn_error_t *svn_client__commit_get_baton (void **baton,
-                                           svn_client_commit_info_t **info,
+                                           svn_commit_info_t **info,
                                            apr_pool_t *pool);
 
 /* The commit_callback function for storing svn_client_commit_info_t
@@ -393,6 +399,33 @@ svn_client__get_diff_editor (const char *target,
                              void **edit_baton,
                              apr_pool_t *pool);
 
+
+/* ---------------------------------------------------------------- */
+
+/*** Editor for diff summary ***/
+
+/* Create an editor for a repository diff summary, i.e. comparing one
+ * repository version against the other and only providing information
+ * about the changed items without the text deltas.
+ *
+ * @a summarize_func is called with @a summarize_baton as parameter by the
+ * created svn_delta_editor_t for each changed item.
+ *
+ * See svn_client__get_diff_editor() for a description of the other
+ * parameters.
+ */
+svn_error_t *
+svn_client__get_diff_summarize_editor (const char *target,
+                                       svn_client_diff_summarize_func_t
+                                       summarize_func,
+                                       void *summarize_baton,
+                                       svn_ra_session_t *ra_session, 
+                                       svn_revnum_t revision,
+                                       svn_cancel_func_t cancel_func,
+                                       void *cancel_baton,
+                                       const svn_delta_editor_t **editor,
+                                       void **edit_baton,
+                                       apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 
@@ -632,6 +665,16 @@ svn_client__do_external_status (svn_wc_traversal_info_t *traversal_info,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *pool);
 
+
+
+/* Retrieves log message using *CTX->log_msg_func or
+ * *CTX->log_msg_func2 callbacks.
+ * Other argements same as svn_client_get_commit_log2_t */
+svn_error_t * svn_client__get_log_msg(const char **log_msg,
+                                      const char **tmp_file,
+                                      const apr_array_header_t *commit_items,
+                                      svn_client_ctx_t *ctx,
+                                      apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

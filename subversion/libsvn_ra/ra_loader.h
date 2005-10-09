@@ -50,7 +50,7 @@ typedef struct svn_ra__vtable_t {
      time this is called.  SESSION->priv may be set by this function. */
   svn_error_t *(*open) (svn_ra_session_t *session,
                         const char *repos_URL,
-                        const svn_ra_callbacks_t *callbacks,
+                        const svn_ra_callbacks2_t *callbacks,
                         void *callback_baton,
                         apr_hash_t *config,
                         apr_pool_t *pool);
@@ -134,6 +134,7 @@ typedef struct svn_ra__vtable_t {
                            const char *diff_target,
                            svn_boolean_t recurse,
                            svn_boolean_t ignore_ancestry,
+                           svn_boolean_t text_deltas,
                            const char *versus_url,
                            const svn_delta_editor_t *diff_editor,
                            void *diff_baton,
@@ -217,19 +218,25 @@ struct svn_ra_session_t {
  * function must use the C calling convention on all platforms, so that
  * the init functions can safely read the version parameter.
  *
+ * POOL will be available as long as this module is being used.
+ *
  * ### need to force this to be __cdecl on Windows... how??
  */
 typedef svn_error_t
 *(*svn_ra__init_func_t)(const svn_version_t *loader_version,
-                        const svn_ra__vtable_t **vtable);
+                        const svn_ra__vtable_t **vtable,
+                        apr_pool_t *pool);
 
 /* Declarations of the init functions for the available RA libraries. */
 svn_error_t *svn_ra_local__init(const svn_version_t *loader_version,
-                                const svn_ra__vtable_t **vtable);
+                                const svn_ra__vtable_t **vtable,
+                                apr_pool_t *pool);
 svn_error_t *svn_ra_svn__init(const svn_version_t *loader_version,
-                                const svn_ra__vtable_t **vtable);
+                              const svn_ra__vtable_t **vtable,
+                              apr_pool_t *pool);
 svn_error_t *svn_ra_dav__init(const svn_version_t *loader_version,
-                                const svn_ra__vtable_t **vtable);
+                              const svn_ra__vtable_t **vtable,
+                              apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

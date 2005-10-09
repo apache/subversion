@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file svn_delta.h
- * @brief Structures related to delta-parsing
+ * @brief Delta-parsing
  */
 
 /* ==================================================================== */
@@ -42,9 +42,9 @@ extern "C" {
 
 
 /**
- * @since New in 1.1.
- *
  * Get libsvn_delta version information.
+ *
+ * @since New in 1.1.
  */
 const svn_version_t *svn_delta_version (void);
 
@@ -65,13 +65,13 @@ const svn_version_t *svn_delta_version (void);
  *
  * To compute a new text delta:
  *
- * - We call @c svn_txdelta on the streams we want to compare.  That
+ * - We call svn_txdelta() on the streams we want to compare.  That
  *   returns us an @c svn_txdelta_stream_t object.
  *
- * - We then call @c svn_txdelta_next_window on the stream object
+ * - We then call svn_txdelta_next_window() on the stream object
  *   repeatedly.  Each call returns a new @c svn_txdelta_window_t
  *   object, which describes the next portion of the target string.
- *   When @c svn_txdelta_next_window returns zero, we are done building
+ *   When svn_txdelta_next_window() returns zero, we are done building
  *   the target string.
  *
  * @defgroup svn_delta_txt_delta text deltas
@@ -99,7 +99,7 @@ enum svn_delta_action {
      * If you start at @a offset, and append @a len bytes one at a time,
      * it'll work out --- you're adding new bytes to the end at the
      * same rate you're reading them from the middle.  Thus, if your
-     * current target text is "abcdefgh", and you get an @c svn_delta_target
+     * current target text is "abcdefgh", and you get an @c svn_txdelta_target
      * instruction whose @a offset is @a 6 and whose @a len is @a 7, 
      * the resulting string is "abcdefghghghghg".  This trick is actually 
      * useful in encoding long runs of consecutive characters, long runs 
@@ -112,7 +112,7 @@ enum svn_delta_action {
      *
      * It must be the case that @a 0 <= @a offset < @a offset +
      * @a len <= length of @a new.  Windows MUST use new data in ascending
-     * order with no overlap at the moment; @c svn_txdelta_to_svndiff
+     * order with no overlap at the moment; svn_txdelta_to_svndiff()
      * depends on this.
      */
     svn_txdelta_new
@@ -170,11 +170,18 @@ typedef struct svn_txdelta_window_t
   /** The instructions for this window.  */
   const svn_txdelta_op_t *ops;
 
-  /** New data, for use by any `svn_delta_new' instructions.  */
+  /** New data, for use by any `svn_txdelta_new' instructions.  */
   const svn_string_t *new_data;
 
 } svn_txdelta_window_t;
 
+/**
+ * Return a deep copy of @a window, allocated in @a pool.
+ *
+ * @since New in 1.3.
+ */
+svn_txdelta_window_t *svn_txdelta_window_dup (
+  const svn_txdelta_window_t *window, apr_pool_t *pool);
 
 /** A typedef for functions that consume a series of delta windows, for
  * use in caller-pushes interfaces.  Such functions will typically
@@ -216,7 +223,7 @@ const unsigned char *svn_txdelta_md5_digest (svn_txdelta_stream_t *stream);
  * string from @a source into the byte stream from @a target.
  *
  * @a source and @a target are both readable generic streams.  When we call
- * @c svn_txdelta_next_window on @a *stream, it will read from @a source and
+ * svn_txdelta_next_window() on @a *stream, it will read from @a source and
  * @a target to gather as much data as it needs.
  *
  * Do any necessary allocation in a sub-pool of @a pool.
@@ -227,15 +234,15 @@ void svn_txdelta (svn_txdelta_stream_t **stream,
                   apr_pool_t *pool);
 
 
-/** 
- * @since New in 1.1.
- *
+/**
  * Return a writable stream which, when fed target data, will send
  * delta windows to @a handler/@a handler_baton which transform the
  * data in @a source to the target data.  As usual, the window handler
  * will receive a NULL window to signify the end of the window stream.
  * The stream handler functions will read data from @a source as
  * necessary.
+ * 
+ * @since New in 1.1.
  */
 svn_stream_t *svn_txdelta_target_push (svn_txdelta_window_handler_t handler,
                                        void *handler_baton,
@@ -298,7 +305,7 @@ svn_error_t *svn_txdelta_send_txstream (svn_txdelta_stream_t *txstream,
  * since there's nothing else in the delta application's context to
  * supply a path for error messages.)
  *
- * Note: To avoid lifetime issues, @a error_info is copied into 
+ * @note To avoid lifetime issues, @a error_info is copied into 
  * @a pool or a subpool thereof.
  */
 void svn_txdelta_apply (svn_stream_t *source,
@@ -337,30 +344,32 @@ svn_stream_t *svn_txdelta_parse_svndiff (svn_txdelta_window_handler_t handler,
                                          apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
- *
  * Read and parse one delta window in svndiff format from the
  * readable stream @a stream and place it in @a *window, allocating
  * the result in @a pool.  The caller must take responsibility for
  * stripping off the four-byte 'SVN@<ver@>' header at the beginning of
  * the svndiff document before reading the first window, and must
  * provide the version number (the value of the fourth byte) to each
- * invocation of this routine with the @a svndiff_version argument. */
+ * invocation of this routine with the @a svndiff_version argument.
+ *
+ * @since New in 1.1.
+ */
 svn_error_t *svn_txdelta_read_svndiff_window (svn_txdelta_window_t **window,
                                               svn_stream_t *stream,
                                               int svndiff_version,
                                               apr_pool_t *pool);
 
 /**
- * @since New in 1.1.
- *
  * Skip one delta window in svndiff format in the file @a file.  and
  * place it in @a *window, allocating the result in @a pool.  The
  * caller must take responsibility for stripping off the four-byte
  * 'SVN@<ver@>' header at the beginning of the svndiff document before
  * reading or skipping the first window, and must provide the version
  * number (the value of the fourth byte) to each invocation of this
- * routine with the @a svndiff_version argument. */
+ * routine with the @a svndiff_version argument.
+ *
+ * @since New in 1.1.
+ */
 svn_error_t *svn_txdelta_skip_svndiff_window (apr_file_t *file,
                                               int svndiff_version,
                                               apr_pool_t *pool);

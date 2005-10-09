@@ -4,7 +4,7 @@
 # particular concurrent read, write and read-write access by the 'svn'
 # client. It can also create working copy trees containing a large
 # number of files and directories. All repository access is via the
-# 'svnadmin', 'svnlook' and 'svn' commands.
+# 'svnadmin' and 'svn' commands.
 #
 # This script constructs a repository, and populates it with
 # files. Then it loops making changes to a subset of the files and
@@ -90,19 +90,13 @@ sub init_repo
       {
         rmtree([$repo]) if -e $repo;
         my $svnadmin_cmd = "svnadmin create $repo";
-        $svnadmin_cmd .= " --fs-type fsfs" if $fsfs;
+        $svnadmin_cmd .= " --fs-type bdb" if not $fsfs;
         $svnadmin_cmd .= " --bdb-txn-nosync" if $no_sync;
         system( $svnadmin_cmd) and die "$svnadmin_cmd: failed: $?\n";
         open ( CONF, ">>$repo/conf/svnserve.conf")
           or die "open svnserve.conf: $!\n";
         print CONF "[general]\nanon-access = write\n";
         close CONF or die "close svnserve.conf: $!\n";
-      }
-    else
-      {
-        my $svnlook_cmd = "svnlook youngest $repo";
-        my $revision = readpipe $svnlook_cmd;
-        die "$svnlook_cmd: failed\n" if not $revision =~ m{^[0-9]};
       }
     $repo = getcwd . "/$repo" if not $repo =~ m[^/];
     return $repo;

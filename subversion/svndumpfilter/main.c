@@ -29,6 +29,7 @@
 #include "svn_path.h"
 #include "svn_hash.h"
 #include "svn_repos.h"
+#include "svn_fs.h"
 #include "svn_pools.h"
 #include "svn_sorts.h"
 #include "svn_props.h"
@@ -136,6 +137,12 @@ ary_prefix_match (apr_array_header_t *pfxlist, const char *path)
 
 /* Filtering batons */
 
+struct revmap_t
+{
+  svn_revnum_t rev; /* Last non-dropped revision to which this maps. */
+  svn_boolean_t was_dropped; /* Was this revision dropped? */
+};
+
 struct parse_baton_t 
 {
   /* Command-line options values. */
@@ -153,7 +160,8 @@ struct parse_baton_t
   /* State for the filtering process. */
   apr_int32_t rev_drop_count;
   apr_hash_t *dropped_nodes;
-  apr_hash_t *renumber_history;
+  apr_hash_t *renumber_history;  /* svn_revnum_t -> struct revmap_t */
+  svn_revnum_t last_live_revision;
 };
 
 struct revision_baton_t 
@@ -222,9 +230,6 @@ new_revision_record (void **revision_baton,
   void *val;
   svn_stream_t *header_stream;
 
-  apr_pool_t *revhistory_pool;
-  svn_revnum_t *rr_key, *rr_value;
-
   *revision_baton = apr_palloc (pool, sizeof (struct revision_baton_t));
   rb = *revision_baton;
   rb->pb = parse_baton;
@@ -244,16 +249,6 @@ new_revision_record (void **revision_baton,
   if (rb->pb->do_renumber_revs)
     {
       rb->rev_actual = rb->rev_orig - rb->pb->rev_drop_count;
-
-      revhistory_pool = apr_hash_pool_get (rb->pb->renumber_history);
-      rr_key = apr_palloc (revhistory_pool, sizeof (svn_revnum_t));
-      rr_value = apr_palloc (revhistory_pool, sizeof (svn_revnum_t));
-
-      *rr_key = rb->rev_orig;
-      *rr_value = rb->rev_actual;
-
-      apr_hash_set (rb->pb->renumber_history, rr_key,
-                    sizeof (svn_revnum_t), rr_value);
     }
   else
     {
@@ -368,10 +363,27 @@ output_revision (struct revision_baton_t *rb)
       || (! rb->pb->drop_empty_revs)
       || (! rb->had_dropped_nodes))
     {
+      /* This revision is a keeper. */
       SVN_ERR (svn_stream_write (rb->pb->out_stream,
-                                 rb->header->data , &(rb->header->len)));
+                                 rb->header->data, &(rb->header->len)));
       SVN_ERR (svn_stream_write (rb->pb->out_stream,
-                                 props->data      , &(props->len)));
+                                 props->data, &(props->len)));
+
+      if (rb->pb->do_renumber_revs)
+        {
+          svn_revnum_t *rr_key;
+          struct revmap_t *rr_val;
+          apr_pool_t *rr_pool = apr_hash_pool_get (rb->pb->renumber_history);
+          rr_key = apr_palloc (rr_pool, sizeof (*rr_key));
+          rr_val = apr_palloc (rr_pool, sizeof (*rr_val));
+          *rr_key = rb->rev_orig;
+          rr_val->rev = rb->rev_actual;
+          rr_val->was_dropped = FALSE;
+          apr_hash_set (rb->pb->renumber_history, rr_key, 
+                        sizeof (*rr_key), rr_val);
+          rb->pb->last_live_revision = rb->rev_actual;
+        }
+
       if (! rb->pb->quiet)
         SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
                                       _("Revision %ld committed as %ld.\n"),
@@ -379,7 +391,22 @@ output_revision (struct revision_baton_t *rb)
     }
   else
     {
+      /* We're dropping this revision. */
       rb->pb->rev_drop_count++;
+      if (rb->pb->do_renumber_revs)
+        {
+          svn_revnum_t *rr_key;
+          struct revmap_t *rr_val;
+          apr_pool_t *rr_pool = apr_hash_pool_get (rb->pb->renumber_history);
+          rr_key = apr_palloc (rr_pool, sizeof (*rr_key));
+          rr_val = apr_palloc (rr_pool, sizeof (*rr_val));
+          *rr_key = rb->rev_orig;
+          rr_val->rev = rb->pb->last_live_revision;
+          rr_val->was_dropped = TRUE;
+          apr_hash_set (rb->pb->renumber_history, rr_key, 
+                        sizeof (*rr_key), rr_val);
+        }
+
       if (! rb->pb->quiet)
         SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
                                       _("Revision %ld skipped.\n"),
@@ -411,7 +438,6 @@ new_node_record (void **node_baton,
   struct parse_baton_t *pb;
   struct node_baton_t *nb;
   char *node_path, *copyfrom_path;
-  svn_revnum_t cf_orig_rev, *cf_renum_rev;
   apr_hash_index_t *hi;
   const void *key;
   void *val;
@@ -519,21 +545,21 @@ new_node_record (void **node_baton,
           if (pb->do_renumber_revs
               && (!strcmp (key, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV)))
             {
+              svn_revnum_t cf_orig_rev;
+              struct revmap_t *cf_renum_val;
+
               cf_orig_rev = SVN_STR_TO_REV(val);
-              cf_renum_rev = apr_hash_get (pb->renumber_history,
+              cf_renum_val = apr_hash_get (pb->renumber_history,
                                            &cf_orig_rev,
                                            sizeof (svn_revnum_t));
-              if ((cf_renum_rev == NULL) || (*cf_renum_rev == -1))
-                {
-                  /* bail out with an error */
-                  return svn_error_createf
-                    (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                     _("Node with dropped parent sneaked in"));
-                }
+              if (! (cf_renum_val && SVN_IS_VALID_REVNUM (cf_renum_val->rev)))
+                return svn_error_createf
+                  (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                   _("No valid copyfrom revision in filtered stream"));
               SVN_ERR (svn_stream_printf
                        (nb->rb->pb->out_stream, pool,
                         SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV ": %ld\n",
-                        *cf_renum_rev));
+                        cf_renum_val->rev));
               continue;
             }
 
@@ -837,6 +863,7 @@ parse_baton_initialize (struct parse_baton_t **pb,
   baton->rev_drop_count = 0; /* used to shift revnums while filtering */
   baton->dropped_nodes = apr_hash_make (pool);
   baton->renumber_history = apr_hash_make (pool);
+  baton->last_live_revision = SVN_INVALID_REVNUM;
 
   /* This is non-ideal: We should pass through the version of the
    * input dumpstream.  However, our API currently doesn't allow that.
@@ -970,22 +997,21 @@ do_filter (apr_getopt_t *os,
              keys->elt_size, svn_sort_compare_revisions);
       for (i = 0; i < keys->nelts; i++)
         {
-          svn_revnum_t this_key, this_val;
+          svn_revnum_t this_key;
+          struct revmap_t *this_val;
 
           svn_pool_clear (subpool);
           this_key = APR_ARRAY_IDX (keys, i, svn_revnum_t);
-          this_val = 
-            *((svn_revnum_t *)apr_hash_get (pb->renumber_history,
-                                            &this_key,
-                                            sizeof (this_key)));
-          if (this_val == SVN_INVALID_REVNUM)
+          this_val = apr_hash_get (pb->renumber_history, &this_key, 
+                                   sizeof (this_key));
+          if (this_val->was_dropped)
             SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
                                           _("   %ld => (dropped)\n"),
                                           this_key));
           else
             SVN_ERR (svn_cmdline_fprintf (stderr, subpool,
                                           "   %ld => %ld\n",
-                                          this_key, this_val));
+                                          this_key, this_val->rev));
         }
       SVN_ERR (svn_cmdline_fputs ("\n", stderr, subpool));
       svn_pool_destroy (subpool);
@@ -1055,8 +1081,8 @@ main (int argc, const char * const *argv)
   struct svndumpfilter_opt_state opt_state;
   apr_getopt_t *os;
   int opt_id;
-  int received_opts[SVN_OPT_MAX_OPTIONS];
-  int i, num_opts = 0;
+  apr_array_header_t *received_opts;
+  int i;
 
 
   /* Initialize the app. */
@@ -1077,12 +1103,14 @@ main (int argc, const char * const *argv)
   /* Check library versions */
   err = check_lib_versions ();
   if (err)
-    {
-      svn_handle_error2 (err, stderr, FALSE, "svndumpfilter: ");
-      svn_error_clear (err);
-      svn_pool_destroy (pool);
-      return EXIT_FAILURE;
-    }
+    return svn_cmdline_handle_exit_error (err, pool, "svndumpfilter: ");
+
+  received_opts = apr_array_make (pool, SVN_OPT_MAX_OPTIONS, sizeof (int));
+
+  /* Initialize the FS library. */
+  err = svn_fs_initialize (pool);
+  if (err)
+    return svn_cmdline_handle_exit_error (err, pool, "svndumpfilter: ");
 
   if (argc <= 1)
     {
@@ -1115,8 +1143,7 @@ main (int argc, const char * const *argv)
         }
 
       /* Stash the option code in an array before parsing it. */
-      received_opts[num_opts] = opt_id;
-      num_opts++;
+      APR_ARRAY_PUSH (received_opts, int) = opt_id;
 
       switch (opt_id)
         {
@@ -1176,12 +1203,8 @@ main (int argc, const char * const *argv)
               const char* first_arg_utf8;
               if ((err = svn_utf_cstring_to_utf8 (&first_arg_utf8, first_arg,
                                                   pool)))
-                {
-                  svn_handle_error2 (err, stderr, FALSE, "svndumpfilter: ");
-                  svn_pool_destroy (pool);
-                  svn_error_clear (err);
-                  return EXIT_FAILURE;
-                }
+                return svn_cmdline_handle_exit_error (err, pool,
+                                                      "svndumpfilter: ");
                 
               svn_error_clear (svn_cmdline_fprintf (stderr, pool,
                                                     _("Unknown command: '%s'\n"),
@@ -1227,9 +1250,9 @@ main (int argc, const char * const *argv)
 
 
   /* Check that the subcommand wasn't passed any inappropriate options. */
-  for (i = 0; i < num_opts; i++)
+  for (i = 0; i < received_opts->nelts; i++)
     {
-      opt_id = received_opts[i];
+      opt_id = APR_ARRAY_IDX (received_opts, i, int);
 
       /* All commands implicitly accept --help, so just skip over this
          when we see it. Note that we don't want to include this option

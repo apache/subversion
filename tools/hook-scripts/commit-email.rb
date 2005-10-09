@@ -137,7 +137,10 @@ end
 def copied_files(info)
   changed_files("Copied", info.copied_files) do |rv, files|
     rv << files.collect do |file, from_file, from_rev|
-      "    #{file} (from rev #{from_rev}, #{from_file})\n"
+      <<-INFO
+    #{file}
+      (from rev #{from_rev}, #{from_file})
+INFO
     end.join("")
   end
 end
@@ -194,8 +197,11 @@ def changed_dirs_info(info, uri)
   rev = info.revision
   (info.added_dirs.collect do |dir|
      "  Added: #{dir}\n"
-   end + info.copied_dirs.collect do |dir, from_dir|
-     "  Copied: #{dir} (from #{from_dir})\n"
+   end + info.copied_dirs.collect do |dir, from_dir, from_rev|
+     <<-INFO
+  Copied: #{dir}
+    (from rev #{from_rev}, #{from_dir})
+INFO
    end + info.deleted_dirs.collect do |dir|
      <<-INFO
   Deleted: #{dir}
@@ -373,9 +379,7 @@ def main
   options = parse(rest)
   
   require "svn/info"
-  info = Svn::Core::Pool.new do |pool|
-    Svn::Info.new(repos, revision, pool)
-  end
+  info = Svn::Info.new(repos, revision)
   from = options.from || info.author
   to = [to, *options.to]
   params = {

@@ -159,10 +159,10 @@ svn_client_log2 (const apr_array_header_t *targets,
 
   /* Open a repository session to the BASE_URL. */
   SVN_ERR (svn_path_condense_targets (&base_name, NULL, targets, TRUE, pool)); 
-  SVN_ERR (svn_client__open_ra_session (&ra_session, base_url, 
-                                        base_name, NULL, NULL,
-                                        (NULL != base_name), TRUE, 
-                                        ctx, pool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, base_url, 
+                                                 base_name, NULL, NULL,
+                                                 (NULL != base_name), TRUE, 
+                                                 ctx, pool));
 
   /* It's a bit complex to correctly handle the special revision words
    * such as "BASE", "COMMITTED", and "PREV".  For example, if the

@@ -112,7 +112,9 @@ typedef struct
 
   /* Cache structure for mapping const char * PATH to const char
      *COPYFROM_STRING, so that paths_changed can remember all the
-     copyfrom information in the changes file. */
+     copyfrom information in the changes file.
+     COPYFROM_STRING has the format "REV PATH", or is the empty string if
+     the path was added without history. */
   apr_hash_t *copyfrom_cache;
   
 } fs_root_data_t;
@@ -1101,7 +1103,8 @@ fs_change_node_prop (svn_fs_root_t *root,
   /* Check (non-recursively) to see if path is locked; if so, check
      that we can use it. */
   if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
-    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, FALSE, pool));
+    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, FALSE, FALSE,
+                                                pool));
 
   SVN_ERR (make_path_mutable (root, parent_path, path, pool));
   SVN_ERR (svn_fs_fs__dag_get_proplist (&proplist, parent_path->node, pool));
@@ -1149,7 +1152,7 @@ fs_props_changed (svn_boolean_t *changed_p,
   if (root1->fs != root2->fs)
     return svn_error_create
       (SVN_ERR_FS_GENERAL, NULL,
-       _("Asking props changed in two different filesystems"));
+       _("Cannot compare property value between two different filesystems"));
   
   SVN_ERR (get_dag (&node1, root1, path1, pool));
   SVN_ERR (get_dag (&node2, root2, path2, pool));
@@ -1529,7 +1532,7 @@ merge (svn_stringbuf_t *conflict_p,
                (target, s_entry->name, s_entry->id, s_entry->kind,
                 txn_id, iterpool));
     }
-  apr_pool_destroy (iterpool);
+  svn_pool_destroy (iterpool);
 
   SVN_ERR (svn_fs_fs__dag_get_predecessor_count (&pred_count, source, pool));
   SVN_ERR (update_ancestry (fs, source_id, target_id, txn_id, target_path,
@@ -1712,7 +1715,7 @@ svn_fs_fs__commit_txn (const char **conflict_p,
         }
     }
 
-  return SVN_NO_ERROR;
+  /* NOTREACHED */
 }
 
 
@@ -1838,7 +1841,8 @@ fs_make_dir (svn_fs_root_t *root,
      that location, or even some child-path; if so, check that we can
      use it. */
   if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
-    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, TRUE, pool));
+    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, TRUE, FALSE,
+                                                pool));
 
   /* If there's already a sub-directory by that name, complain.  This
      also catches the case of trying to make a subdirectory named `/'.  */
@@ -1890,7 +1894,8 @@ fs_delete_node (svn_fs_root_t *root,
   /* Check to see if path (or any child thereof) is locked; if so,
      check that we can use the existing lock(s). */
   if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
-    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, TRUE, pool));
+    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, TRUE, FALSE,
+                                                pool));
 
   /* Make the parent directory mutable, and do the deletion.  */
   SVN_ERR (make_path_mutable (root, parent_path->parent, path, pool));
@@ -1946,7 +1951,7 @@ copy_helper (svn_fs_root_t *from_root,
      check that we can use the existing lock(s). */
   if (to_root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     SVN_ERR (svn_fs_fs__allow_locked_operation (to_path, to_root->fs, 
-                                                TRUE, pool));
+                                                TRUE, FALSE, pool));
   
   /* If the destination node already exists as the same node as the
      source (in other words, this operation would result in nothing
@@ -1984,6 +1989,10 @@ copy_helper (svn_fs_root_t *from_root,
                                     from_root->rev,
                                     from_canonpath,
                                     txn_id, pool));
+
+      if (kind == svn_fs_path_change_replace)
+        dag_node_cache_invalidate (to_root, parent_path_path (to_parent_path,
+                                                              pool));
 
       /* Make a record of this modification in the changes table. */
       SVN_ERR (get_dag (&new_node, to_root, to_path, pool));
@@ -2120,7 +2129,8 @@ fs_make_file (svn_fs_root_t *root,
   /* Check (non-recursively) to see if path is locked;  if so, check
      that we can use it. */
   if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
-    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, FALSE, pool));
+    SVN_ERR (svn_fs_fs__allow_locked_operation (path, root->fs, FALSE, FALSE,
+                                                pool));
 
   /* Create the file.  */
   SVN_ERR (make_path_mutable (root, parent_path->parent, path, pool));
@@ -2331,7 +2341,7 @@ apply_textdelta (void *baton, apr_pool_t *pool)
      that we can use it. */
   if (tb->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     SVN_ERR (svn_fs_fs__allow_locked_operation (tb->path, tb->root->fs, 
-                                                FALSE, pool));
+                                                FALSE, FALSE, pool));
 
   /* Now, make sure this path is mutable. */
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, pool));
@@ -2514,7 +2524,7 @@ apply_text (void *baton, apr_pool_t *pool)
      that we can use it. */
   if (tb->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
     SVN_ERR (svn_fs_fs__allow_locked_operation (tb->path, tb->root->fs,
-                                                FALSE, pool));
+                                                FALSE, FALSE, pool));
 
   /* Now, make sure this path is mutable. */
   SVN_ERR (make_path_mutable (tb->root, parent_path, tb->path, pool));
@@ -2586,7 +2596,7 @@ fs_contents_changed (svn_boolean_t *changed_p,
   if (root1->fs != root2->fs)
     return svn_error_create
       (SVN_ERR_FS_GENERAL, NULL,
-       _("Asking contents changed in two different filesystems"));
+       _("Cannot compare file contents between two different filesystems"));
   
   /* Check that both paths are files. */
   {
@@ -2725,8 +2735,8 @@ fs_node_history (svn_fs_history_t **history_p,
 }
 
 /* Find the youngest copyroot for path PARENT_PATH or its parents in
-   filesystem FS, and store the node-id for this copyroot in
-   *COPYROOT_P.  Perform all allocations in POOL. */
+   filesystem FS, and store the copyroot in *REV_P and *PATH_P.
+   Perform all allocations in POOL. */
 static svn_error_t *
 find_youngest_copyroot (svn_revnum_t *rev_p,
                         const char **path_p,
@@ -2762,7 +2772,79 @@ find_youngest_copyroot (svn_revnum_t *rev_p,
 
   return SVN_NO_ERROR;
 }
+
+
+static svn_error_t *fs_closest_copy (svn_fs_root_t **root_p,
+                                     const char **path_p,
+                                     svn_fs_root_t *root,
+                                     const char *path,
+                                     apr_pool_t *pool)
+{
+  svn_fs_t *fs = root->fs;
+  parent_path_t *parent_path;
+  svn_revnum_t copy_dst_rev, created_rev;
+  const char *copy_dst_path;
+  svn_fs_root_t *copy_dst_root;
+  const svn_fs_id_t *id, *copy_id;
+  svn_node_kind_t kind;
+
+  /* Initialize return values. */
+  *root_p = NULL;
+  *path_p = NULL;
+
+  SVN_ERR (open_path (&parent_path, root, path, 0, NULL, pool));
+
+  /* Find the youngest copyroot in the path of this node-rev, which
+     will indicate the target of the innermost copy affecting the
+     node-rev. */
+  SVN_ERR (find_youngest_copyroot (&copy_dst_rev, &copy_dst_path, 
+                                   fs, parent_path, pool));
+  if (copy_dst_rev == 0)  /* There are no copies affecting this node-rev. */
+    return SVN_NO_ERROR;
+
+  /* It is possible that this node was created from scratch at some
+     revision between COPY_DST_REV and REV.  Make sure that PATH
+     exists as of COPY_DST_REV and is related to this node-rev. */
+  SVN_ERR (svn_fs_fs__revision_root (&copy_dst_root, fs, copy_dst_rev, pool));
+  SVN_ERR (svn_fs_fs__check_path (&kind, copy_dst_root, path, pool));
+  if (kind == svn_node_none)
+    return SVN_NO_ERROR;
+  SVN_ERR (fs_node_id (&copy_id, copy_dst_root, path, pool));
+  id = svn_fs_fs__dag_get_id (parent_path->node);
+  if (! svn_fs_fs__id_check_related (id, copy_id))
+    return SVN_NO_ERROR;
+
+  /* One final check must be done here.  If you copy a directory and
+     create a new entity somewhere beneath that directory in the same
+     txn, then we can't claim that the copy affected the new entity.
+     For example, if you do:
+
+        copy dir1 dir2
+        create dir2/new-thing
+        commit
   
+     then dir2/new-thing was not affected by the copy of dir1 to dir2.
+     We detect this situation by asking if PATH@COPY_DST_REV's
+     created-rev is COPY_DST_REV, and that node-revision has no
+     predecessors, then there is no relevant closest copy.
+  */
+  SVN_ERR (svn_fs_fs__dag_get_revision (&created_rev, 
+                                        parent_path->node, pool));
+  if (created_rev == copy_dst_rev)
+    {
+      const svn_fs_id_t *pred_id;
+      SVN_ERR (svn_fs_fs__dag_get_predecessor_id (&pred_id, 
+                                                  parent_path->node, pool));
+      if (! pred_id)
+        return SVN_NO_ERROR;
+    }
+
+  /* The copy destination checks out.  Return it. */
+  *root_p = copy_dst_root;
+  *path_p = copy_dst_path;
+  return SVN_NO_ERROR;
+}
+
 
 struct history_prev_args
 {
@@ -3046,6 +3128,7 @@ static root_vtable_t root_vtable = {
   fs_node_created_path,
   fs_delete_node,
   fs_copied_from,
+  fs_closest_copy,
   fs_node_prop,
   fs_node_proplist,
   fs_change_node_prop,

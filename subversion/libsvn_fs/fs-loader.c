@@ -21,6 +21,7 @@
 #include <apr.h>
 #include <apr_hash.h>
 #include <apr_dso.h>
+#include <apr_thread_mutex.h>
 
 #include "svn_types.h"
 #include "svn_version.h"
@@ -41,11 +42,13 @@
 
 #define FS_TYPE_FILENAME "fs-type"
 
-/* The implementation of this library is deliberately not separated
-   into multiple files, to avoid circular dependency problems with
-   Unix static linking.  We want FS back ends to be able to use our
-   functions without forcing applications to link against this library
-   twice. */
+/* A pool common to all FS objects.  See the documentation on the
+   serialized_init function in fs-loader.h and for
+   svn_fs_initialize(). */
+static apr_pool_t *common_pool;
+#if APR_HAS_THREADS
+static apr_thread_mutex_t *common_pool_lock;
+#endif
 
 
 /* --- Utility functions for the loader --- */
@@ -160,12 +163,10 @@ get_library_vtable (fs_library_vtable_t **vtable, const char *fs_type,
                             _("Unknown FS type '%s'"), fs_type);
 }
 
-/* Fetch the library vtable for an existing FS. */
-static svn_error_t *
-fs_library_vtable (fs_library_vtable_t **vtable, const char *path,
-                   apr_pool_t *pool)
+svn_error_t *
+svn_fs_type (const char **fs_type, const char *path, apr_pool_t *pool)
 {
-  const char *filename, *fs_type;
+  const char *filename;
   char buf[128];
   svn_error_t *err;
   apr_file_t *file;
@@ -177,17 +178,28 @@ fs_library_vtable (fs_library_vtable_t **vtable, const char *path,
   if (err && APR_STATUS_IS_ENOENT (err->apr_err))
     {
       svn_error_clear (err);
-      fs_type = SVN_FS_TYPE_BDB;
+      *fs_type = apr_pstrdup (pool, SVN_FS_TYPE_BDB);
+      return SVN_NO_ERROR;
     }
   else if (err)
     return err;
-  else
-    {
-      len = sizeof(buf);
-      SVN_ERR (svn_io_read_length_line (file, buf, &len, pool));
-      SVN_ERR (svn_io_file_close (file, pool));
-      fs_type = buf;
-    }
+
+  len = sizeof(buf);
+  SVN_ERR (svn_io_read_length_line (file, buf, &len, pool));
+  SVN_ERR (svn_io_file_close (file, pool));
+  *fs_type = apr_pstrdup (pool, buf);
+
+  return SVN_NO_ERROR;
+}
+
+/* Fetch the library vtable for an existing FS. */
+static svn_error_t *
+fs_library_vtable (fs_library_vtable_t **vtable, const char *path,
+                   apr_pool_t *pool)
+{
+  const char *fs_type;
+
+  SVN_ERR (svn_fs_type (&fs_type, path, pool));
 
   /* Fetch the library vtable by name, now that we've chosen one. */
   return get_library_vtable (vtable, fs_type, pool);
@@ -213,6 +225,78 @@ write_fs_type (const char *path, const char *fs_type, apr_pool_t *pool)
 
 /* --- Functions for operating on filesystems by pathname --- */
 
+static apr_status_t uninit (void *data)
+{
+  common_pool = NULL;
+#if APR_HAS_THREADS
+  common_pool_lock = NULL;
+#endif
+  return APR_SUCCESS;
+}
+
+svn_error_t *
+svn_fs_initialize (apr_pool_t *pool)
+{
+#if APR_HAS_THREADS
+  apr_status_t status;
+#endif
+
+  /* Protect against multiple calls. */
+  if (common_pool)
+    return SVN_NO_ERROR;
+
+  common_pool = svn_pool_create (pool);
+#if APR_HAS_THREADS
+  status = apr_thread_mutex_create (&common_pool_lock,
+                                    APR_THREAD_MUTEX_DEFAULT, common_pool);
+  if (status)
+    return svn_error_wrap_apr (status, _("Can't allocate FS mutex"));
+#endif
+
+  /* ### This won't work if POOL is NULL and libsvn_fs is loaded as a DSO
+     ### (via libsvn_ra_local say) since the global common_pool will live
+     ### longer than the DSO, which gets unloaded when the pool used to
+     ### load it is cleared, and so when the handler runs it will refer to
+     ### a function that no longer exists.  libsvn_ra_local attempts to
+     ### work around this by explicitly calling svn_fs_initialize. */
+  apr_pool_cleanup_register (common_pool, NULL, uninit, apr_pool_cleanup_null);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+serialized_init (svn_fs_t *fs, apr_pool_t *pool)
+{
+  svn_error_t *err;
+#if APR_HAS_THREADS
+  apr_status_t status;
+#endif
+
+  /* Per our API compatibility rules, we cannot ensure that
+     svn_fs_initialize is called by the application.  If not, we
+     cannot create the common pool and lock in a thread-safe fashion,
+     nor can we clean up the common pool if libsvn_fs is dynamically
+     unloaded.  This function makes a best effort by creating the
+     common pool as a child of the global pool; the window of failure
+     due to thread collision is small. */
+  if (!common_pool)
+    SVN_ERR (svn_fs_initialize (NULL));
+
+  /* Invoke the FS module's serialized_init function with the common
+     pool protected by a lock. */
+#if APR_HAS_THREADS
+  status = apr_thread_mutex_lock (common_pool_lock);
+  if (status)
+    return svn_error_wrap_apr (status, _("Can't grab FS mutex"));
+#endif
+  err = fs->vtable->serialized_init (fs, common_pool, pool);
+#if APR_HAS_THREADS
+  status = apr_thread_mutex_unlock (common_pool_lock);
+  if (status && !err)
+    return svn_error_wrap_apr (status, _("Can't ungrab FS mutex"));
+#endif
+  return err;
+}
+
 /* A default warning handling function.  */
 static void
 default_warning_func (void *baton, svn_error_t *err)
@@ -234,6 +318,7 @@ svn_fs_new (apr_hash_t *fs_config, apr_pool_t *pool)
   fs->warning = default_warning_func;
   fs->warning_baton = NULL;
   fs->config = fs_config;
+  fs->access_ctx = NULL;
   fs->vtable = NULL;
   fs->fsap_data = NULL;
   return fs;
@@ -267,7 +352,8 @@ svn_fs_create (svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
 
   /* Perform the actual creation. */
   *fs_p = svn_fs_new (fs_config, pool);
-  return vtable->create (*fs_p, path, pool);
+  SVN_ERR (vtable->create (*fs_p, path, pool));
+  return serialized_init (*fs_p, pool);
 }
 
 svn_error_t *
@@ -278,7 +364,8 @@ svn_fs_open (svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
 
   SVN_ERR (fs_library_vtable (&vtable, path, pool));
   *fs_p = svn_fs_new (fs_config, pool);
-  return vtable->open (*fs_p, path, pool);
+  SVN_ERR (vtable->open (*fs_p, path, pool));
+  return serialized_init (*fs_p, pool);
 }
 
 const char *
@@ -301,18 +388,12 @@ svn_fs_hotcopy (const char *src_path, const char *dest_path,
                 svn_boolean_t clean, apr_pool_t *pool)
 {
   fs_library_vtable_t *vtable;
-  const char *path;
-  svn_node_kind_t kind;
+  const char *fs_type;
 
-  SVN_ERR (fs_library_vtable (&vtable, src_path, pool));
+  SVN_ERR (svn_fs_type (&fs_type, src_path, pool));
+  SVN_ERR (get_library_vtable (&vtable, fs_type, pool));
   SVN_ERR (vtable->hotcopy (src_path, dest_path, clean, pool));
-
-  /* Copy the fs-type file. */
-  path = svn_path_join (src_path, FS_TYPE_FILENAME, pool);
-  SVN_ERR (svn_io_check_path (path, &kind, pool));
-  if (kind != svn_node_none)
-    SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, FS_TYPE_FILENAME,
-                                   pool));
+  SVN_ERR (write_fs_type (dest_path, fs_type, pool));
 
   return SVN_NO_ERROR;
 }
@@ -328,11 +409,12 @@ svn_fs_create_berkeley (svn_fs_t *fs, const char *path)
   SVN_ERR (get_library_vtable (&vtable, SVN_FS_TYPE_BDB, fs->pool));
 
   /* Create the FS directory and write out the fsap-name file. */
-  SVN_ERR (svn_io_dir_make (path, APR_OS_DEFAULT, fs->pool));
+  SVN_ERR (svn_io_dir_make_sgid (path, APR_OS_DEFAULT, fs->pool));
   SVN_ERR (write_fs_type (path, SVN_FS_TYPE_BDB, fs->pool));
 
   /* Perform the actual creation. */
-  return vtable->create (fs, path, fs->pool);
+  SVN_ERR (vtable->create (fs, path, fs->pool));
+  return serialized_init (fs, fs->pool);
 }
 
 svn_error_t *
@@ -340,8 +422,9 @@ svn_fs_open_berkeley (svn_fs_t *fs, const char *path)
 {
   fs_library_vtable_t *vtable;
 
-  SVN_ERR (get_library_vtable (&vtable, SVN_FS_TYPE_BDB, fs->pool));
-  return vtable->open (fs, path, fs->pool);
+  SVN_ERR (fs_library_vtable (&vtable, path, fs->pool));
+  SVN_ERR (vtable->open (fs, path, fs->pool));
+  return serialized_init (fs, fs->pool);
 }
 
 const char *
@@ -353,22 +436,14 @@ svn_fs_berkeley_path (svn_fs_t *fs, apr_pool_t *pool)
 svn_error_t *
 svn_fs_delete_berkeley (const char *path, apr_pool_t *pool)
 {
-  fs_library_vtable_t *vtable;
-
-  SVN_ERR (get_library_vtable (&vtable, SVN_FS_TYPE_BDB, pool));
-  return vtable->delete_fs (path, pool);
+  return svn_fs_delete_fs (path, pool);
 }
 
 svn_error_t *
 svn_fs_hotcopy_berkeley (const char *src_path, const char *dest_path,
                          svn_boolean_t clean_logs, apr_pool_t *pool)
 {
-  fs_library_vtable_t *vtable;
-
-  SVN_ERR (get_library_vtable (&vtable, SVN_FS_TYPE_BDB, pool));
-  SVN_ERR (vtable->hotcopy (src_path, dest_path, clean_logs, pool));
-  SVN_ERR (write_fs_type (dest_path, SVN_FS_TYPE_BDB, pool));
-  return SVN_NO_ERROR;
+  return svn_fs_hotcopy (src_path, dest_path, clean_logs, pool);
 }
 
 svn_error_t *
@@ -376,7 +451,7 @@ svn_fs_berkeley_recover (const char *path, apr_pool_t *pool)
 {
   fs_library_vtable_t *vtable;
 
-  SVN_ERR (get_library_vtable (&vtable, SVN_FS_TYPE_BDB, pool));
+  SVN_ERR (fs_library_vtable (&vtable, path, pool));
   return vtable->bdb_recover (path, pool);
 }
 
@@ -384,10 +459,7 @@ svn_error_t *
 svn_fs_set_berkeley_errcall (svn_fs_t *fs,
                              void (*handler) (const char *errpfx, char *msg))
 {
-  fs_library_vtable_t *vtable;
-
-  SVN_ERR (get_library_vtable (&vtable, SVN_FS_TYPE_BDB, fs->pool));
-  return vtable->bdb_set_errcall (fs, handler);
+  return fs->vtable->bdb_set_errcall (fs, handler);
 }
 
 svn_error_t *
@@ -398,7 +470,7 @@ svn_fs_berkeley_logfiles (apr_array_header_t **logfiles,
 {
   fs_library_vtable_t *vtable;
 
-  SVN_ERR (get_library_vtable (&vtable, SVN_FS_TYPE_BDB, pool));
+  SVN_ERR (fs_library_vtable (&vtable, path, pool));
   return vtable->bdb_logfiles (logfiles, path, only_unused, pool);
 }
 
@@ -641,6 +713,13 @@ svn_fs_copied_from (svn_revnum_t *rev_p, const char **path_p,
 }
 
 svn_error_t *
+svn_fs_closest_copy (svn_fs_root_t **root_p, const char **path_p,
+                     svn_fs_root_t *root, const char *path, apr_pool_t *pool)
+{
+  return root->vtable->closest_copy (root_p, path_p, root, path, pool);
+}
+
+svn_error_t *
 svn_fs_merge (const char **conflict_p, svn_fs_root_t *source_root,
               const char *source_path, svn_fs_root_t *target_root,
               const char *target_path, svn_fs_root_t *ancestor_root,
@@ -802,7 +881,8 @@ svn_fs_set_uuid (svn_fs_t *fs, const char *uuid, apr_pool_t *pool)
 
 svn_error_t *
 svn_fs_lock (svn_lock_t **lock, svn_fs_t *fs, const char *path, 
-             const char *token, const char *comment, int timeout,
+             const char *token, const char *comment,
+             svn_boolean_t is_dav_comment, apr_time_t expiration_date, 
              svn_revnum_t current_rev, svn_boolean_t steal_lock, 
              apr_pool_t *pool)
 {
@@ -815,8 +895,13 @@ svn_fs_lock (svn_lock_t **lock, svn_fs_t *fs, const char *path,
            _("Lock comment has illegal characters"));      
     }
 
-  return fs->vtable->lock (lock, fs, path, token, comment, timeout,
-                           current_rev, steal_lock, pool);  
+  if (expiration_date < 0)
+        return svn_error_create
+          (SVN_ERR_INCORRECT_PARAMS, NULL,
+           _("Negative expiration date passed to svn_fs_lock"));      
+
+  return fs->vtable->lock (lock, fs, path, token, comment, is_dav_comment,
+                           expiration_date, current_rev, steal_lock, pool);  
 }
 
 svn_error_t *

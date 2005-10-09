@@ -419,7 +419,7 @@ An unversioned resource is in the way of the versioned resource.
 
 =item $SVN::Wc::Status::external
 
-An unversioned path populated by an svn:external property.
+An unversioned path populated by an svn:externals property.
 
 =item $SVN::Wc::Status::incomplete
 

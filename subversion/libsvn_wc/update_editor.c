@@ -38,7 +38,6 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_md5.h"
-#include "svn_base64.h"
 #include "svn_wc.h"
 #include "svn_private_config.h"
 #include "svn_time.h"
@@ -48,6 +47,7 @@
 #include "adm_files.h"
 #include "adm_ops.h"
 #include "entries.h"
+#include "lock.h"
 #include "props.h"
 
 
@@ -86,6 +86,9 @@ struct edit_baton
  
   /* Non-null if this is a 'switch' operation. */
   const char *switch_url;
+
+  /* The URL to the root of the repository, or NULL. */
+  const char *repos;
 
   /* External diff3 to use for merges (can be null, in which case
      internal merge code is used). */
@@ -606,6 +609,8 @@ window_handler (svn_txdelta_window_t *window, void *baton)
       err2 = svn_wc__close_text_base (hb->source, fb->path, 0, fb->pool);
       if (err2 != SVN_NO_ERROR && err == SVN_NO_ERROR)
         err = err2;
+      else
+        svn_error_clear (err2);
     }
   err2 = svn_wc__close_text_base (hb->dest, fb->path, 0, fb->pool);
   if (err2 != SVN_NO_ERROR)
@@ -650,8 +655,9 @@ prep_directory (struct dir_baton *db,
 
   /* Make sure it's the right working copy, either by creating it so,
      or by checking that it is so already. */
-  SVN_ERR (svn_wc_ensure_adm (db->path, NULL,
-                              ancestor_url, ancestor_revision, pool));
+  SVN_ERR (svn_wc_ensure_adm2 (db->path, NULL,
+                               ancestor_url, db->edit_baton->repos,
+                               ancestor_revision, pool));
 
   if (! db->edit_baton->adm_access
       || strcmp (svn_wc_adm_access_path (db->edit_baton->adm_access),
@@ -801,6 +807,7 @@ open_root (void *edit_baton,
       /* Mark directory as being at target_revision, but incomplete. */  
       tmp_entry.revision = *(eb->target_revision);
       tmp_entry.url = d->new_URL;
+      tmp_entry.repos = eb->repos;
       tmp_entry.incomplete = TRUE;
       SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
                                     d->path, pool));
@@ -808,6 +815,7 @@ open_root (void *edit_baton,
                                      &tmp_entry,
                                      SVN_WC__ENTRY_MODIFY_REVISION |
                                      SVN_WC__ENTRY_MODIFY_URL |
+                                     SVN_WC__ENTRY_MODIFY_REPOS |
                                      SVN_WC__ENTRY_MODIFY_INCOMPLETE,
                                      TRUE /* immediate write */,
                                      pool));
@@ -1044,7 +1052,7 @@ add_directory (const char *path,
        svn_path_local_style (db->path, pool));
 
   /* It may not be named the same as the administrative directory. */
-  if (strcmp (svn_path_basename (path, pool), SVN_WC_ADM_DIR_NAME) == 0)
+  if (svn_wc_is_adm_dir (svn_path_basename (path, pool), pool))
     return svn_error_createf
       (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
        _("Failed to add directory '%s': object of the same name as the "
@@ -1145,6 +1153,7 @@ open_directory (const char *path,
   /* Mark directory as being at target_revision and URL, but incomplete. */
   tmp_entry.revision = *(eb->target_revision);
   tmp_entry.url = db->new_URL;
+  tmp_entry.repos = eb->repos;
   tmp_entry.incomplete = TRUE;
 
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access,
@@ -1153,6 +1162,7 @@ open_directory (const char *path,
                                  &tmp_entry,
                                  SVN_WC__ENTRY_MODIFY_REVISION |
                                  SVN_WC__ENTRY_MODIFY_URL |
+                                 SVN_WC__ENTRY_MODIFY_REPOS |
                                  SVN_WC__ENTRY_MODIFY_INCOMPLETE,
                                  TRUE /* immediate write */,
                                  pool));
@@ -1284,13 +1294,27 @@ close_directory (void *dir_baton,
                 }
             }
 
-          /* Merge pending properties into temporary files (ignoring
-             conflicts). */
-          SVN_ERR_W (svn_wc__merge_prop_diffs (&prop_state,
-                                               adm_access, NULL,
-                                               regular_props, TRUE, FALSE,
-                                               db->pool, &entry_accum),
-                     _("Couldn't do property merge"));
+          {
+            apr_hash_t *old_pristine_props;
+            const char *pristine_prop_path;
+
+            /* Get the current pristine props. */
+            old_pristine_props = apr_hash_make (db->pool);      
+            SVN_ERR (svn_wc__prop_base_path (&pristine_prop_path,
+                                             db->path, adm_access, 
+                                             FALSE, db->pool));
+            SVN_ERR (svn_wc__load_prop_file (pristine_prop_path,
+                                             old_pristine_props, db->pool));
+
+            /* Merge pending properties into temporary files (ignoring
+               conflicts). */
+            SVN_ERR_W (svn_wc__merge_props (&prop_state,
+                                            adm_access, NULL,
+                                            old_pristine_props,
+                                            regular_props, TRUE, FALSE,
+                                            db->pool, &entry_accum),
+                       _("Couldn't do property merge"));
+          }
 
           /* Are the directory's props locally modified? */
           SVN_ERR (svn_wc_props_modified_p (&prop_modified,
@@ -1308,7 +1332,7 @@ close_directory (void *dir_baton,
                                    SVN_WC_ENTRY_THIS_DIR,
                                    SVN_WC__ENTRY_ATTR_PROP_TIME,
                                    /* use wfile time */
-                                   SVN_WC_TIMESTAMP_WC,
+                                   SVN_WC__TIMESTAMP_WC,
                                    NULL);
         }
 
@@ -1614,20 +1638,10 @@ apply_textdelta (void *file_baton,
       
       if (strcmp (hex_digest, ent->checksum) != 0)
         {
-          /* Compatibility hack: working copies created before 13 Jan
-             2003 may have entry checksums stored in base64.  See
-             svn_io_file_checksum_base64()'s doc string for
-             details. */ 
-          const char *base64_digest 
-            = (svn_base64_from_md5 (digest, pool))->data;
-              
-          if (strcmp (base64_digest, ent->checksum) != 0)
-            {
-              return svn_error_createf
-                (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-                 _("Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"),
-                 svn_path_local_style (tb, pool), ent->checksum, hex_digest);
-            }
+          return svn_error_createf
+            (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+             _("Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"),
+             svn_path_local_style (tb, pool), ent->checksum, hex_digest);
         }
     }
   
@@ -1929,10 +1943,7 @@ install_file (svn_wc_notify_state_t *content_state,
          pointing to parent_dir/.svn/tmp/text-base/basename.  */
       if (strcmp (final_location, new_text_path))
         {
-          SVN_ERR_W (svn_io_file_rename (new_text_path, final_location,
-                                         pool),
-                     _("Move failed"));
-
+          SVN_ERR (svn_io_file_move (new_text_path, final_location, pool));
           new_text_path = final_location;
         }
     }
@@ -1952,23 +1963,23 @@ install_file (svn_wc_notify_state_t *content_state,
     {
       apr_array_header_t *propchanges;
       apr_hash_t *old_pristine_props, *new_pristine_props;
+      const char *pristine_prop_path;
       int i;
+
+      /* Get the current pristine props. */
+      old_pristine_props = apr_hash_make (pool);      
+      SVN_ERR (svn_wc__prop_base_path (&pristine_prop_path,
+                                       file_path, adm_access, 
+                                       FALSE, pool));
+      SVN_ERR (svn_wc__load_prop_file (pristine_prop_path,
+                                       old_pristine_props, pool));
       
       if (is_full_proplist)
         {         
           /* If the caller passed a definitive list that represents all
              of the file's properties, we need to compare it to the
              current 'pristine' list and deduce the differences. */
-          const char *pristine_prop_path;
-          old_pristine_props = apr_hash_make (pool);
           new_pristine_props = apr_hash_make (pool);
-          
-          /* Get the current pristine props. */
-          SVN_ERR (svn_wc__prop_base_path (&pristine_prop_path,
-                                           file_path, adm_access, 
-                                           FALSE, pool));
-          SVN_ERR (svn_wc__load_prop_file (pristine_prop_path,
-                                           old_pristine_props, pool));
           
           /* Convert the given array into hash of 'new' pristine props. */
           for (i = 0; i < regular_props->nelts; i++)
@@ -1993,25 +2004,16 @@ install_file (svn_wc_notify_state_t *content_state,
       
       /* Determine if any of the propchanges are the "magic" ones that
          might require changing the working file. */
-      for (i = 0; i < propchanges->nelts; i++)
-        {
-          svn_prop_t *propchange = &APR_ARRAY_IDX (propchanges, i, svn_prop_t);
-            
-          if ((! strcmp (propchange->name, SVN_PROP_EXECUTABLE))
-              || (! strcmp (propchange->name, SVN_PROP_NEEDS_LOCK))
-              || (! strcmp (propchange->name, SVN_PROP_KEYWORDS))
-              || (! strcmp (propchange->name, SVN_PROP_EOL_STYLE))
-              || (! strcmp (propchange->name, SVN_PROP_SPECIAL)))
-            magic_props_changed = TRUE;
-        }
+      magic_props_changed = svn_wc__has_magic_property (propchanges);
 
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
          props.  */
-      SVN_ERR (svn_wc__merge_prop_diffs (prop_state,
-                                         adm_access, base_name,
-                                         propchanges, TRUE, FALSE, pool,
-                                         &log_accum));
+      SVN_ERR (svn_wc__merge_props (prop_state,
+                                    adm_access, base_name,
+                                    old_pristine_props,
+                                    propchanges, TRUE, FALSE, pool,
+                                    &log_accum));
     }
   
   /* If there are any ENTRY PROPS, make sure those get appended to the
@@ -2236,7 +2238,7 @@ install_file (svn_wc_notify_state_t *content_state,
                                base_name,
                                SVN_WC__ENTRY_ATTR_PROP_TIME,
                                /* use wfile time */
-                               SVN_WC_TIMESTAMP_WC,
+                               SVN_WC__TIMESTAMP_WC,
                                NULL);
     }
 
@@ -2307,7 +2309,7 @@ install_file (svn_wc_notify_state_t *content_state,
                                SVN_WC__LOG_ATTR_NAME,
                                base_name,
                                SVN_WC__ENTRY_ATTR_TEXT_TIME,
-                               SVN_WC_TIMESTAMP_WC,
+                               SVN_WC__TIMESTAMP_WC,
                                NULL);
     }
 
@@ -2481,6 +2483,7 @@ close_edit (void *edit_baton,
                                         eb->adm_access,
                                         eb->recurse,
                                         eb->switch_url,
+                                        eb->repos,
                                         *(eb->target_revision),
                                         eb->notify_func,
                                         eb->notify_baton,
@@ -2524,6 +2527,10 @@ make_editor (svn_revnum_t *target_revision,
   struct edit_baton *eb;
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_delta_editor_t *tree_editor = svn_delta_default_editor (subpool);
+  const svn_wc_entry_t *entry;
+
+  /* Get the anchor entry, so we can fetch the repository root. */
+  SVN_ERR (svn_wc_entry (&entry, anchor, adm_access, FALSE, pool));
 
   /* Construct an edit baton. */
   eb = apr_pcalloc (subpool, sizeof (*eb));
@@ -2531,6 +2538,7 @@ make_editor (svn_revnum_t *target_revision,
   eb->use_commit_times= use_commit_times;
   eb->target_revision = target_revision;
   eb->switch_url      = switch_url;
+  eb->repos           = entry ? entry->repos : NULL;
   eb->adm_access      = adm_access;
   eb->anchor          = anchor;
   eb->target          = target;
@@ -2926,7 +2934,8 @@ svn_wc_add_repos_file (const char *dst_path,
   apr_array_header_t *propchanges;
   int log_number = 0;
 
-  /* Fabricate the anticipated new URL of the target. */
+  /* Fabricate the anticipated new URL of the target and check the
+     copyfrom URL to be in the same repository. */
   {
     const svn_wc_entry_t *ent;
     const char *dir_name, *base_name;
@@ -2934,6 +2943,13 @@ svn_wc_add_repos_file (const char *dst_path,
     svn_path_split (dst_path, &dir_name, &base_name, pool);
     SVN_ERR (svn_wc_entry (&ent, dir_name, adm_access, FALSE, pool));
     new_URL = svn_path_url_add_component (ent->url, base_name, pool);
+
+    if (copyfrom_url && ent->repos &&
+        ! svn_path_is_ancestor (ent->repos, copyfrom_url))
+      return svn_error_createf (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                _("Copyfrom-url '%s' has different repository"
+                                  " root than '%s'"),
+                                copyfrom_url, ent->repos);
   }
   
   /* Construct the new properties.  Passing an empty hash for the

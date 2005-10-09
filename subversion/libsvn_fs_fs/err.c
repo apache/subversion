@@ -291,12 +291,12 @@ svn_fs_fs__err_not_file (svn_fs_t *fs, const char *path)
 
 
 svn_error_t *
-svn_fs_fs__err_path_locked (svn_fs_t *fs, svn_lock_t *lock)
+svn_fs_fs__err_path_already_locked (svn_fs_t *fs, svn_lock_t *lock)
 {
   return
     svn_error_createf
-    (SVN_ERR_FS_PATH_LOCKED, 0,
-     _("Path '%s' is locked by user '%s' in filesystem '%s'"),
+    (SVN_ERR_FS_PATH_ALREADY_LOCKED, 0,
+     _("Path '%s' is already locked by user '%s' in filesystem '%s'"),
      lock->path, lock->owner, fs->path);
 }
 

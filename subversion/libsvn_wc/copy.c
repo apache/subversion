@@ -158,7 +158,8 @@ copy_file_administratively (const char *src_path,
       if (dst_entry->schedule == svn_wc_schedule_delete)
         return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
                                   _("'%s' is scheduled for deletion; it must"
-                                    " be committed before being overwritten"),
+                                    " be committed before it can be"
+                                    " overwritten"),
                                   svn_path_local_style (dst_path, pool));
       else
         return svn_error_createf (SVN_ERR_ENTRY_EXISTS, NULL,
@@ -291,7 +292,7 @@ post_copy_cleanup (svn_wc_adm_access_t *adm_access,
      hidden. */
 #ifdef APR_FILE_ATTR_HIDDEN
   {
-    const char *adm_dir = svn_path_join (path, SVN_WC_ADM_DIR_NAME, pool);
+    const char *adm_dir = svn_wc__adm_path (path, FALSE, pool, NULL);
     const char *path_apr;
     apr_status_t status;
     SVN_ERR (svn_path_cstring_from_utf8 (&path_apr, adm_dir, pool));
@@ -515,18 +516,27 @@ svn_wc_copy2 (const char *src_path,
 {
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t src_kind;
-  const svn_wc_entry_t *entry;
+  const svn_wc_entry_t *dst_entry, *src_entry;
 
-  SVN_ERR (svn_wc_entry (&entry, svn_wc_adm_access_path (dst_parent),
+  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, src_path, FALSE, -1,
+                                   cancel_func, cancel_baton, pool));
+
+  SVN_ERR (svn_wc_entry (&dst_entry, svn_wc_adm_access_path (dst_parent),
                          dst_parent, FALSE, pool));
-  if (entry->schedule == svn_wc_schedule_delete)
+  SVN_ERR (svn_wc_entry (&src_entry, src_path, adm_access, FALSE, pool));
+  if ((src_entry->repos != NULL && dst_entry->repos != NULL) &&
+      strcmp (src_entry->repos, dst_entry->repos) != 0)
+    return svn_error_createf
+      (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
+       _("Cannot copy to '%s', as it is not from repository '%s'; "
+         "it is from '%s'"),
+       svn_path_local_style (svn_wc_adm_access_path (dst_parent), pool),
+       src_entry->repos, dst_entry->repos);
+  if (dst_entry->schedule == svn_wc_schedule_delete)
     return svn_error_createf
       (SVN_ERR_WC_INVALID_SCHEDULE, NULL,
        _("Cannot copy to '%s' as it is scheduled for deletion"),
        svn_path_local_style (svn_wc_adm_access_path (dst_parent), pool));
-
-  SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, src_path, FALSE, -1,
-                                   cancel_func, cancel_baton, pool));
 
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
   
@@ -558,7 +568,10 @@ svn_wc_copy (const char *src_path,
              void *notify_baton,
              apr_pool_t *pool)
 {
-  svn_wc__compat_notify_baton_t nb = { notify_func, notify_baton };
+  svn_wc__compat_notify_baton_t nb;
+  
+  nb.func = notify_func;
+  nb.baton = notify_baton;
 
   return svn_wc_copy2 (src_path, dst_parent, dst_basename, cancel_func,
                        cancel_baton, svn_wc__compat_call_notify_func,

@@ -1,22 +1,22 @@
-<!DOCTYPE html PUBLIC "-//Tigris//DTD XHTML 1.0 Transitional//EN" 
-"http://style.tigris.org/tigris_transitional.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html>
 <head>
-<title>Guidelines for Posting to the Subversion Mailing Lists</title>
-<link rel="stylesheet" type="text/css" 
-      href="http://subversion.tigris.org/branding/css/tigris.css"/>
-<link rel="stylesheet" type="text/css" 
-      href="http://subversion.tigris.org/branding/css/inst.css"/>
+<style type="text/css"> /* <![CDATA[ */
+  @import "tigris-branding/css/tigris.css";
+  @import "tigris-branding/css/inst.css";
+  /* ]]> */</style>
 <link rel="stylesheet" type="text/css" media="print"
-      href="http://subversion.tigris.org/branding/css/print.css"/>
-<script type="text/javascript"
-        src="http://subversion.tigris.org/branding/scripts/tigris.js"></script>
+  href="tigris-branding/css/print.css"/>
+<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+<title>Guidelines for Posting to the Subversion Mailing Lists</title>
 </head>
 
 <body>
 <div class="app">
 
-<h2>Guidelines for Posting to the Subversion Mailing Lists</h2>
+<h1 style="text-align: center"
+>Guidelines for Posting to the Subversion Mailing Lists</h1>
 
 <p>This document is based on years of experience with the Subversion
 mailing lists, and specifically addresses the problems seen most
@@ -31,12 +31,10 @@ lists, your post is much more likely to be read and answered.</p>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h3>Where to post:</h3>
+<div class="h2" id="where" title="where">
+<h2>Where to post:</h2>
 
-<ul>
-
-<li> <a name="where"></a> <p>Post to <a
-href="mailto:users@subversion.tigris.org"
+<p>Post to <a href="mailto:users@subversion.tigris.org"
 >users@subversion.tigris.org</a> if you have a question about
 Subversion, or if you think you've found a bug (developers read the
 users list too, so they'll see your bug report).  If you want to
@@ -44,19 +42,36 @@ discuss Subversion development, or post a <a href="#patches">code
 contribution</a>, then mail <a
 href="mailto:dev@subversion.tigris.org">dev@subversion.tigris.org</a>.</p>
 
-<p>When in doubt, mail users@, not dev@.</p></li>
+<p>When in doubt, mail users@, not dev@.</p>
 
-</ul>
+</div>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h3>Formatting:</h3>
-<a name="formatting"></a>
+<div class="h2" id="when" title="when">
+<h2>When to post:</h2>
 
-<ul>
+<p>Sometimes, when really impassioned about a topic, it's tempting to
+respond to every message in a mail thread.  Please don't do this.  Our
+mailing lists are already high-traffic, and following up to every
+message only adds to the noise.</p>
 
-<li>
-<a name="line-length"></a>
+<p>Instead, read the entire mail thread, think carefully about what
+you have to say, pick a single message to reply to, and then lay out
+your thoughts.  Occasionally it might make sense to reply to two
+separate messages in a thread, but only if the topics have started to
+diverge.</p>
+
+</div>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<div class="h2" id="formatting" title="formatting">
+<h2>Formatting:</h2>
+
+<div class="h3" id="line-length" title="line-length">
+<h3>Line Length</h3>
+
 <p>Please don't use lines longer than 72 columns.  Many people use
 80-column terminals to read their email.  By writing your text in 72
 columns, you leave room for quoting characters to be added in future
@@ -70,28 +85,29 @@ you're writing your mail, the display shows line breaks that aren't
 actually there.  When the mail reaches the list, it won't have the
 line breaks you thought it had.  If your mail editor does this, look
 for a setting you can tweak to make it show true line breaks.</p>
-</li>
 
-<li>
-<a name="capitalization"></a>
+</div>
+
+<div class="h3" id="capitalization" title="capitalization">
+<h3>Capitalization</h3>
+
 <p>Capitalize the first letter of each sentence, and use paragraphs.
 If you're showing screen output or some other sort of example, offset
 it so it's clearly separate from the prose.  If you don't do these
 things, your mail will be <i>much</i> less readable than it could be,
 and many people will not bother to read it at all.</p>
-</li>
 
-</ul>
+</div>
+
+</div>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h3>Replying:</h3>
-<a name="replying"></a>
+<div class="h2" id="replying" title="replying">
+<h2>Replying:</h2>
 
-<ul>
-
-<li>
-<a name="reply-to"></a>
+<div class="h3" id="reply-to" title="reply-to">
+<h3>Reply-To</h3>
 
 <p>Make sure to use your mailreader's "Follow-up" or "Reply-to-all" or
 "Group reply" feature when responding to a list post.  Otherwise, your
@@ -111,20 +127,22 @@ href="http://www.unicom.com/pw/reply-to-harmful.html"
 "Principle of Least Damage" and "Can't Find My Way Back Home"
 sections.  From time to time, someone posts asking why we don't set
 the <tt>Reply-to</tt> header.  Sometimes that person will mention <a
-href="http://www.metasystema.org/essays/reply-to-useful.mhtml"
->http://www.metasystema.org/essays/reply-to-useful.mhtml</a>, which
+href="http://www.metasystema.net/essays/reply-to.mhtml"
+>http://www.metasystema.net/essays/reply-to.mhtml</a>, which
 gives arguments in favor of modifying the <tt>Reply-to</tt> field.
 The list administrators are aware of both documents, and see that both
 sides of the argument have merits, but in the end have chosen not to
 modify the <tt>Reply-to</tt> headers.  Please don't resurrect the
 topic.</p>
-</li>
 
-<li>
-<a name="fresh-post"></a>
+</div>
+
+<div class="h3" id="fresh-post" title="fresh-post">
+<h3>Making a Fresh Post</h3>
 
 <p>Don't start a new thread (subject) by replying to an existing
-post.  Instead, start a fresh mail, and write out the list address by
+post.  Instead, start a fresh mail, even if that means you have to
+write out the list address by
 hand.  If you reply to an existing post, your mailreader may include
 metadata that marks your post as a followup in that thread.  Changing
 the <tt>Subject</tt> header is not enough to prevent this!  Many
@@ -133,10 +151,18 @@ the wrong thread.  If this happens, not only will some people not see
 your post (because they're ignoring that thread), but people who are
 reading the thread will waste their time with your off-topic post.
 The safest way to avoid this is to never use "reply" to start a new
-topic.</p></li>
+topic.</p>
 
-<li>
-<a name="rethreading"></a>
+<p>(The root of the problem is really that some mail interfaces do
+not indicate that the message generated by the "Reply" function is
+different from a fresh message.  If you use such a program, consider
+submitting an enhancement request or a patch to its developers to make
+it show a distinction.)</p>
+
+</div>
+
+<div class="h3" id="rethreading" title="rethreading">
+<h3>Re-threading</h3>
 
 <p>If you do need to change the <tt>Subject</tt> header while
 preserving the thread (perhaps because the thread has wandered into
@@ -153,10 +179,10 @@ the old subject in parenthesis, like this:</p>
             |_ Re: Yellow elephants
 </pre>
 
-</li>
+</div>
 
-<li>
-<a name="top-posting"></a>
+<div class="h3" id="top-posting" title="top-posting">
+<h3>Top-Posting</h3>
 
 <p>Please don't reflexively chide people for top-posting.
 "Top-posting" is the practice of putting the response text above the
@@ -178,18 +204,15 @@ href="http://www.netmeister.org/news/learn2quote.html"
 >http://www.netmeister.org/news/learn2quote.html</a> (Deutsch:
 <a href="http://learn.to/quote">http://learn.to/quote</a>).</p>
 
-</li>
+</div>
 
-</ul>
+</div>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h3>Sending patches:</h3>
-<a name="patches"></a>
+<div class="h2" id="patches" title="patches">
+<h2>Sending patches:</h2>
 
-<ul>
-
-<li>
 <p>If you're posting a patch, start the subject line with
 <tt>[PATCH]</tt>.  This helps our patch manager spot patches right
 away.  If the patch addresses a particular issue, include the issue
@@ -212,23 +235,16 @@ inline patches by inserting unasked-for line breaks in the middle of
 long lines.  If you think your mail software might do this, then the
 patch must be sent as as an attachment.</p>
 
-<p>Please include a log message with your patch.  See <a
-href="http://svn.collab.net/repos/svn/trunk/HACKING" >HACKING</a> for
-guidelines on writing log messages.</p>
+<p>Please include a log message with your patch.  See the
+<a href="hacking.html#log-messages">Hacker's Guide to Subversion</a>
+for guidelines on writing log messages.</p>
 
-</li>
-
-</ul>
-
+</div>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h3>Languages and encodings:</h3>
-<a name="encodings"></a>
-
-<ul>
-
-<li>
+<div class="h2" id="encodings" title="encodings">
+<h2>Languages and encodings:</h2>
 
 <p>Please use ASCII or ISO-8859 text if possible.  Don't post HTML
 mails, RichText mails, or other formats that might be opaque to
@@ -247,19 +263,13 @@ something like:
           Content-Transfer-Encoding: 8bit
           Content-Transfer-Encoding: quoted-printable
    -->
-</li>
 
-</ul>
-
+</div>
 
 <![CDATA[-----------------------------------------------------------]]>
 
-<h3>Look before you post:</h3>
-
-<ul>
-
-<li>
-<a name="archives"></a>
+<div class="h2" id="archives" title="archives">
+<h2>Look before you post:</h2>
 
 <p>Look in the FAQ, and maybe poke around in the mailing list
 archives, before asking a question.  The Subversion FAQ is here: <a
@@ -279,9 +289,7 @@ interface, is at <a href="http://svn.haxx.se/users"
 <a href="http://svn.haxx.se/dev"
 >http://svn.haxx.se/dev</a> (for <tt>dev@</tt>).</p>
 
-</li>
-
-</ul>
+</div>
 
 <![CDATA[-----------------------------------------------------------]]>
 

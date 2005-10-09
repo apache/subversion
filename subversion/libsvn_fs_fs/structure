@@ -21,7 +21,7 @@ In-progress transactions are represented with a prototype rev file
 containing only the new text representations of files (appended to as
 changed file contents come in), along with a separate file for each
 node-revision, directory representation, or property representation
-which has been changed or added in the transaction.  During the finale
+which has been changed or added in the transaction.  During the final
 stage of the commit, these separate files are marshalled onto the end
 of the prototype rev file to form the immutable revision file.
 
@@ -40,8 +40,8 @@ repository) is:
   locks               Subdirectory containing locks
     partial-digest    Subdirectory named for first 3 letters of an MD5 digest
       <digest>        File containing locks/children for path with <digest>
-  current       File specifying current revision
-  write-lock    Lockfile for commits
+  current             File specifying current revision
+  write-lock          Lockfile for commits
 
 Files in the revprops directory are in the hash dump format used by
 svn_hash_write.

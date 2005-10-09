@@ -29,23 +29,18 @@
 
 #include <apr_errno.h>          /* for apr_strerror */
 #include <apr_general.h>        /* for apr_initialize/apr_terminate */
+#include <apr_atomic.h>         /* for apr_atomic_init */
 #include <apr_strings.h>        /* for apr_snprintf */
+#include <apr_pools.h>
 
 #include "svn_cmdline.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_nls.h"
 #include "utf_impl.h"
 
 #include "svn_private_config.h"
-
-#ifdef WIN32
-/* FIXME: We're using an internal APR header here, which means we
-   have to build Subversion with APR sources. This being Win32-only,
-   that should be fine for now, but a better solution must be found in
-   combination with issue #850. */
-#include "arch/win32/apr_arch_utf8.h"
-#endif
 
 #define SVN_UTF_CONTOU_XLATE_HANDLE "svn-utf-contou-xlate-handle"
 #define SVN_UTF_UTOCON_XLATE_HANDLE "svn-utf-utocon-xlate-handle"
@@ -161,69 +156,19 @@ svn_cmdline_init (const char *progname, FILE *error_stream)
      up by APR at exit time. */
   pool = svn_pool_create (NULL);
   svn_utf_initialize (pool);
-
-#ifdef ENABLE_NLS
-#ifdef WIN32
+  
   {
-    WCHAR ucs2_path[MAX_PATH];
-    char* utf8_path;
-    const char* internal_path;
-    apr_pool_t* pool;
-    apr_status_t apr_err;
-    apr_size_t inwords, outbytes, outlength;
-    
-    apr_pool_create (&pool, 0);
-    /* get exe name - our locale info will be in '../share/locale' */
-    inwords = GetModuleFileNameW (0, ucs2_path,
-                                  sizeof (ucs2_path) / sizeof(ucs2_path[0]));
-    if (! inwords)
+    svn_error_t *err = svn_nls_init();
+    if (err)
       {
-        /* We must be on a Win9x machine, so attempt to get an ANSI path,
-           and convert it to Unicode. */
-        CHAR ansi_path[MAX_PATH];
-
-        if (! GetModuleFileNameA (0, ansi_path, sizeof (ansi_path)))
-          goto utf8_error;
-
-        inwords = 
-          MultiByteToWideChar (CP_ACP, 0, ansi_path, -1, ucs2_path,
-                               sizeof (ucs2_path) / sizeof (ucs2_path[0]));
-        if (! inwords)
-          goto utf8_error;
-      }
-
-    outbytes = outlength = 3 * (inwords + 1);
-    utf8_path = apr_palloc (pool, outlength);
-    apr_err = apr_conv_ucs2_to_utf8 (ucs2_path, &inwords,
-                                     utf8_path, &outbytes);
-    if (!apr_err && (inwords > 0 || outbytes == 0))
-      apr_err = APR_INCOMPLETE;
-    if (apr_err)
-      {
-       utf8_error:
-        if (error_stream)
-          fprintf (error_stream, "Can't convert module path to UTF-8");
+        if (error_stream && err->message)
+          fprintf (error_stream, "%s", err->message);
+        
+        svn_error_clear (err);
         return EXIT_FAILURE;
       }
-
-    utf8_path[outlength - outbytes] = '\0';
-    internal_path = svn_path_internal_style (utf8_path, pool);
-    /* get base path name */
-    internal_path = svn_path_dirname (internal_path, pool);
-    internal_path = svn_path_join (internal_path, SVN_LOCALE_RELATIVE_PATH,
-                                   pool);
-    bindtextdomain (PACKAGE_NAME, internal_path);    
-    apr_pool_destroy (pool);
   }
-#else
-  bindtextdomain(PACKAGE_NAME, SVN_LOCALE_DIR);
-#ifdef HAVE_BIND_TEXTDOMAIN_CODESET
-  bind_textdomain_codeset(PACKAGE_NAME, "UTF-8");
-#endif
-#endif
-  textdomain(PACKAGE_NAME);
-#endif
-
+  
   return EXIT_SUCCESS;
 }
 
@@ -355,4 +300,24 @@ svn_cmdline_fflush (FILE *stream)
     }
 
   return SVN_NO_ERROR;
+}
+
+const char *svn_cmdline_output_encoding (apr_pool_t *pool)
+{
+  if (output_encoding)
+    return apr_pstrdup (pool, output_encoding);
+  else
+    return APR_LOCALE_CHARSET;
+}
+
+int
+svn_cmdline_handle_exit_error (svn_error_t *err,
+                               apr_pool_t *pool,
+                               const char *prefix)
+{
+  svn_handle_error2 (err, stderr, FALSE, prefix);
+  svn_error_clear (err);
+  if (pool)
+    svn_pool_destroy (pool);
+  return EXIT_FAILURE;
 }

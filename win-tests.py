@@ -10,11 +10,21 @@ Usage: python win-tests.py [option] [test-path]
 
     --svnserve-args=list   comma-separated list of arguments for svnserve;
                            default is '-d,-r,<test-path-root>'
+    --asp.net-hack     use '_svn' instead of '.svn' for the admin dir name
 """
 
-import os, sys, string, shutil, traceback
-import getopt
+import os, sys
+import filecmp
+import shutil
+import traceback
 import ConfigParser
+import string
+
+import getopt
+try:
+    my_getopt = getopt.gnu_getopt
+except AttributeError:
+    my_getopt = getopt.getopt
 
 sys.path.insert(0, os.path.join('build', 'generator'))
 sys.path.insert(1, 'build')
@@ -27,50 +37,49 @@ all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
 client_tests = filter(lambda x: x.startswith('subversion/tests/clients/'),
                       all_tests)
 
-opts, args = getopt.getopt(sys.argv[1:], 'rdvcu:f:sS:',
-                           ['release', 'debug', 'verbose', 'cleanup', 'url=',
-                            'svnserve-args=', 'fs-type='])
+opts, args = my_getopt(sys.argv[1:], 'rdvcu:f:',
+                       ['release', 'debug', 'verbose', 'cleanup', 'url=',
+                        'svnserve-args=', 'fs-type=', 'asp.net-hack'])
 if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
 # Interpret the options and set parameters
+base_url, fs_type, verbose, cleanup = None, None, None, None
 repo_loc = 'local repository.'
-base_url = None
-verbose = 0
-cleanup = None
 objdir = 'Debug'
 log = 'tests.log'
 run_svnserve = None
 svnserve_args = None
-fs_type = None
 
-for opt,arg in opts:
-  if opt in ['-r', '--release']:
-    objdir = 'Release'
-  elif opt in ['-d', '--debug']:
-    objdir = 'Debug'
-  elif opt in ['-v', '--verbose']:
-    verbose = 1
-  elif opt in ['-c', '--cleanup']:
-    cleanup = 1
-  elif opt in ['-u', '--url']:
+for opt, val in opts:
+  if opt in ('-u', '--url'):
     all_tests = client_tests
-    repo_loc = 'remote repository ' + arg + '.'
-    base_url = arg
-    if arg[:4] == 'http':
+    repo_loc = 'remote repository ' + val + '.'
+    base_url = val
+    if val[:4] == 'http':
       log = 'dav-tests.log'
-    elif arg[:3] == 'svn':
+    elif val[:3] == 'svn':
       log = 'svn-tests.log'
       run_svnserve = 1
     else:
       # Don't know this scheme, but who're we to judge whether it's
       # correct or not?
       log = 'url-tests.log'
+  elif opt in ('-f', '--fs-type'):
+    fs_type = val
+  elif opt in ('-v', '--verbose'):
+    verbose = 1
+  elif opt in ('-c', '--cleanup'):
+    cleanup = 1
+  elif opt in ['-r', '--release']:
+    objdir = 'Release'
+  elif opt in ['-d', '--debug']:
+    objdir = 'Debug'
   elif opt == '--svnserve-args':
-    svnserve_args = string.split(arg, ',')
+    svnserve_args = val.split(',')
     run_svnserve = 1
-  elif opt in ['-f', '--fs-type']:
-    fs_type = arg
+  elif opt == '--asp.net-hack':
+    os.environ['SVN_ASP_DOT_NET_HACK'] = opt
 
 
 # Calculate the source and test directory names
@@ -94,23 +103,33 @@ def create_target_dir(dirname):
         print "mkdir:", tgt_dir
       os.makedirs(tgt_dir)
 
-def copy_execs(dummy, dirname, names):
-  global copied_execs
+def copy_changed_file(src, tgt):
+  assert os.path.isfile(src)
+  if os.path.isdir(tgt):
+    tgt = os.path.join(tgt, os.path.basename(src))
+  if os.path.exists(tgt):
+    assert os.path.isfile(tgt)
+    if filecmp.cmp(src, tgt):
+      if verbose:
+        print "same:", src
+        print " and:", tgt
+      return 0
+  if verbose:
+    print "copy:", src
+    print "  to:", tgt
+  shutil.copy(src, tgt)
+  return 1
+
+def copy_execs(baton, dirname, names):
+  copied_execs = baton
   for name in names:
     if os.path.splitext(name)[1] != ".exe":
       continue
     src = os.path.join(dirname, name)
     tgt = os.path.join(abs_builddir, dirname, name)
     create_target_dir(dirname)
-    try:
-      if verbose:
-        print "copy:", src
-        print "  to:", tgt
-      shutil.copy(src, tgt)
+    if copy_changed_file(src, tgt):
       copied_execs.append(tgt)
-    except:
-      traceback.print_exc(file=sys.stdout)
-      pass
 
 def locate_libs():
   "Move DLLs to a known location and set env vars"
@@ -130,30 +149,82 @@ def locate_libs():
   apriconv_dll_path = os.path.join(apriconv_path, objdir, 'libapriconv.dll')
   apriconv_so_path = os.path.join(apriconv_path, objdir, 'iconv')
 
-  shutil.copy(apr_dll_path, abs_objdir)
-  shutil.copy(aprutil_dll_path, abs_objdir)
-  shutil.copy(apriconv_dll_path, abs_objdir)
+  copy_changed_file(apr_dll_path, abs_objdir)
+  copy_changed_file(aprutil_dll_path, abs_objdir)
+  copy_changed_file(apriconv_dll_path, abs_objdir)
 
   libintl_path = get(cp, 'options', '--with-libintl', None)
   if libintl_path is not None:
-    shutil.copy(os.path.join(libintl_path, 'bin', 'intl3_svn.dll'), abs_objdir)
+    libintl_dll_path = os.path.join(libintl_path, 'bin', 'intl3_svn.dll')
+    copy_changed_file(libintl_dll_path, abs_objdir)
 
   os.environ['APR_ICONV_PATH'] = apriconv_so_path
   os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
+  
+def fix_case(path):
+    path = os.path.normpath(path)
+    parts = string.split(path, os.path.sep)
+    drive = string.upper(parts[0])
+    parts = parts[1:]
+    path = drive + os.path.sep
+    for part in parts:
+        dirs = os.listdir(path)
+        for dir in dirs:
+            if string.lower(dir) == string.lower(part):
+                path = os.path.join(path, dir)
+                break
+    return path
 
-def start_svnserve():
+class Svnserve:
   "Run svnserve for ra_svn tests"
-  global svnserve_args
-  svnserve_name = 'svnserve.exe'
-  svnserve_path = os.path.join(abs_objdir,
-                               'subversion', 'svnserve', svnserve_name)
-  svnserve_root = os.path.join(abs_builddir,
-                               'subversion', 'tests', 'clients', 'cmdline')
-  if not svnserve_args:
-    svnserve_args = [svnserve_name, '-d', '-r', svnserve_root]
-  else:
-    svnserve_args = [svnserve_name] + svnserve_args
-  os.spawnv(os.P_NOWAIT, svnserve_path, svnserve_args)
+  def __init__(self, svnserve_args, objdir, abs_objdir, abs_builddir):
+    self.args = svnserve_args
+    self.name = 'svnserve.exe'
+    self.kind = objdir
+    self.path = os.path.join(abs_objdir,
+                             'subversion', 'svnserve', self.name)
+    self.root = os.path.join(abs_builddir,
+                             'subversion', 'tests', 'clients', 'cmdline')
+    self.proc_handle = None
+
+  def __del__(self):
+    "Stop svnserve when the object is deleted"
+    self.stop()
+
+  def _quote(self, arg):
+    if ' ' in arg:
+      return '"' + arg + '"'
+    else:
+      return arg
+
+  def start(self):
+    if not self.args:
+      args = [self.name, '-d', '-r', self.root]
+    else:
+      args = [self.name] + self.args
+    print 'Starting', self.kind, self.name
+    try:
+      import win32process
+      import win32con
+      args = ' '.join(map(lambda x: self._quote(x), args))
+      self.proc_handle = (
+        win32process.CreateProcess(self._quote(self.path), args,
+                                   None, None, 0,
+                                   win32con.CREATE_NEW_CONSOLE,
+                                   None, None, win32process.STARTUPINFO()))[0]
+    except ImportError:
+      os.spawnv(os.P_NOWAIT, self.path, args)
+
+  def stop(self):
+    if self.proc_handle is not None:
+      try:
+        import win32process
+        print 'Stopping', self.name
+        win32process.TerminateProcess(self.proc_handle, 0)
+        return
+      except ImportError:
+        pass
+    print 'Svnserve.stop not implemented'
 
 # Move the binaries to the test directory
 locate_libs()
@@ -161,7 +232,8 @@ if create_dirs:
   old_cwd = os.getcwd()
   try:
     os.chdir(abs_objdir)
-    os.path.walk('subversion', copy_execs, None)
+    baton = copied_execs
+    os.path.walk('subversion', copy_execs, baton)
     create_target_dir('subversion/tests/clients/cmdline')
   except:
     os.chdir(old_cwd)
@@ -169,15 +241,17 @@ if create_dirs:
   else:
     os.chdir(old_cwd)
 
+# Ensure the tests directory is correctly cased
+abs_builddir = fix_case(abs_builddir)
 
 # Run the tests
 if run_svnserve:
-  print 'Starting', objdir, 'svnserve'
-  start_svnserve()
+  svnserve = Svnserve(svnserve_args, objdir, abs_objdir, abs_builddir)
+  svnserve.start()
 print 'Testing', objdir, 'configuration on', repo_loc
 sys.path.insert(0, os.path.join(abs_srcdir, 'build'))
 import run_tests
-th = run_tests.TestHarness(abs_srcdir, abs_builddir, sys.executable, None,
+th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                            os.path.join(abs_builddir, log),
                            base_url, fs_type, 1, cleanup)
 old_cwd = os.getcwd()
@@ -203,8 +277,5 @@ for tgt in copied_execs:
     pass
 
 
-# Print final status
 if failed:
-  print
-  print 'FAIL:', sys.argv[0]
   sys.exit(1)

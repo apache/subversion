@@ -40,7 +40,7 @@
    exit status will be checked, and if an error occurred the hook's stderr
    output will be added to the returned error.
 
-   If READ_ERRSTREAM is FALSE the hook's exit status will be ignored.
+   If READ_ERRSTREAM is FALSE the hook's stderr output will be discarded.
 
    If STDIN_HANDLE is non-null, pass it as the hook's stdin, else pass
    no stdin to the hook. */
@@ -57,6 +57,7 @@ run_hook_cmd (const char *name,
   svn_error_t *err;
   int exitcode;
   apr_exit_why_e exitwhy;
+  apr_proc_t cmd_proc;
 
   /* Create a pipe to access stderr of the child. */
   apr_err = apr_file_pipe_create(&read_errhandle, &write_errhandle, pool);
@@ -71,8 +72,8 @@ run_hook_cmd (const char *name,
     return svn_error_wrap_apr
       (apr_err, _("Can't create null stdout for hook '%s'"), cmd);
 
-  err = svn_io_run_cmd (".", cmd, args, &exitcode, &exitwhy, FALSE,
-                        stdin_handle, null_handle, write_errhandle, pool);
+  err = svn_io_start_cmd (&cmd_proc, ".", cmd, args, FALSE,
+                          stdin_handle, null_handle, write_errhandle, pool);
 
   /* This seems to be done automatically if we pass the third parameter of
      apr_procattr_child_in/out_set(), but svn_io_run_cmd()'s interface does
@@ -83,37 +84,44 @@ run_hook_cmd (const char *name,
     return svn_error_wrap_apr
       (apr_err, _("Error closing write end of stderr pipe"));
 
-  /* Function failed. */
   if (err)
     {
       err = svn_error_createf
-        (SVN_ERR_REPOS_HOOK_FAILURE, err, _("Failed to run '%s' hook"), cmd);
+        (SVN_ERR_REPOS_HOOK_FAILURE, err, _("Failed to start '%s' hook"), cmd);
     }
-
-  if (!err)
+  else
     {
-      /* Command failed. */
-      if (! APR_PROC_CHECK_EXIT (exitwhy) || exitcode != 0)
-        {
-          svn_stringbuf_t *error;
+      svn_stringbuf_t *error;
+      svn_error_t *err2;
 
-          if (read_errstream)
+      err2 = svn_stringbuf_from_aprfile (&error, read_errhandle, pool);
+
+      err = svn_io_wait_for_cmd(&cmd_proc, cmd, &exitcode, &exitwhy, pool);
+      if (! err)
+        {
+          if (! APR_PROC_CHECK_EXIT (exitwhy) || exitcode != 0)
             {
-              /* Read the file's contents into a stringbuf, allocated
-                 in POOL. */
-              SVN_ERR (svn_stringbuf_from_aprfile (&error, read_errhandle, 
-                                                   pool));
-              err = svn_error_createf
-                (SVN_ERR_REPOS_HOOK_FAILURE, err,
-                 _("'%s' hook failed with error output:\n%s"),
-                 name, error->data);
+              if (read_errstream && ! err2)
+                {
+                  err = svn_error_createf
+                    (SVN_ERR_REPOS_HOOK_FAILURE, err,
+                     _("'%s' hook failed with error output:\n%s"),
+                     name, error->data);
+                }
+              else
+                {
+                  err = svn_error_createf
+                    (SVN_ERR_REPOS_HOOK_FAILURE, err,
+                     _("'%s' hook failed; no error output available"), name);
+                }
             }
+        }
+      if (err2)
+        {
+          if (err)
+            svn_error_clear (err2);
           else
-            {
-              err = svn_error_createf
-                (SVN_ERR_REPOS_HOOK_FAILURE, err,
-                 _("'%s' hook failed; no error output available"), name);
-            }
+            err = err2;
         }
     }
 

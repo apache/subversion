@@ -85,13 +85,7 @@ else
   esac
 fi
 
-libtool=`which glibtool 2>/dev/null`
-if test ! -x "$libtool"; then
-  libtool=`which libtool`
-fi
-if test ! -x "$libtool"; then
-  libtool=`which libtool15`
-fi
+libtool=`./build/PrintPath glibtool libtool libtool15`
 lt_pversion=`$libtool --version 2>/dev/null|sed -e 's/^[^0-9]*//' -e 's/[- ].*//' -e 1q`
 if test -z "$lt_pversion"; then
   echo "buildcheck: libtool not found."

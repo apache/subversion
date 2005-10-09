@@ -39,7 +39,7 @@ extern "C" {
 /** A general in-memory representation of a single property.  Most of
  * the time, property lists will be stored completely in hashes.  But
  * sometimes it's useful to have an "ordered" collection of
- * properties, in which case we use an apr_array of the type below.
+ * properties, in which case we use an array of these structures.
  *
  * Also: sometimes we want a list that represents a set of property
  * *changes*, and in this case, an @c apr_hash_t won't work -- there's no
@@ -91,13 +91,13 @@ svn_boolean_t svn_prop_is_svn_prop (const char *prop_name);
  * repository, then return @c TRUE.  Else return @c FALSE.  This is for
  * users of libsvn_client or libsvn_fs, since it their responsibility
  * to do this translation in both directions.  (See
- * @c svn_subst_translate_string/@c svn_subst_detranslate_string for 
+ * svn_subst_translate_string()/svn_subst_detranslate_string() for
  * help with this task.)
  */
 svn_boolean_t svn_prop_needs_translation (const char *propname);
 
 
-/** Given an @a proplist array of @c svn_prop_t structures, allocate
+/** Given a @a proplist array of @c svn_prop_t structures, allocate
  * three new arrays in @a pool.  Categorize each property and then
  * create new @c svn_prop_t structures in the proper lists.  Each new
  * @c svn_prop_t structure's fields will point to the same data within
@@ -105,7 +105,7 @@ svn_boolean_t svn_prop_needs_translation (const char *propname);
  *
  * Callers may pass NULL for each of the property lists in which they
  * are uninterested.  If no props exist in a certain category, and the
- * property list argment for that category is non-NULL, then that
+ * property list argument for that category is non-NULL, then that
  * array will come back with <tt>->nelts == 0</tt>.
  *
  * ### Hmmm, maybe a better future interface is to return an array of
@@ -153,11 +153,11 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
  * and dirs, and are visible (and tweakable) by svn client programs
  * and users.  Adding these properties causes specific effects.
  *
- * NOTE: the values of these properties are always UTF8-encoded with
+ * @note the values of these properties are always UTF8-encoded with
  * LF line-endings.  It is the burden of svn library users to enforce
- * this.  Use @c svn_prop_needs_translation() above to discover if a
+ * this.  Use svn_prop_needs_translation() to discover if a
  * certain property needs translation, and you can use
- * @c svn_subst_translate_string()/@c svn_subst_[de]translate_string() 
+ * svn_subst_translate_string()/svn_subst_detranslate_string() 
  * to do the translation.
  *
  * @defgroup svn_prop_visible_props Visible properties
@@ -251,8 +251,8 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
 /** The UUID of this entry's repository. */
 #define SVN_PROP_ENTRY_UUID       SVN_PROP_ENTRY_PREFIX "uuid"
 
-/** @since New in 1.2.
- * The lock token for this entry. */
+/** The lock token for this entry.
+ * @since New in 1.2. */
 #define SVN_PROP_ENTRY_LOCK_TOKEN SVN_PROP_ENTRY_PREFIX "lock-token"
 
 /** When custom, user-defined properties are passed over the wire, they will
@@ -265,7 +265,7 @@ svn_error_t *svn_prop_diffs (apr_array_header_t **propdiffs,
 /**
  * These are reserved properties attached to a "revision" object in
  * the repository filesystem.  They can be queried by using
- * @c svn_fs_revision_prop().  They are invisible to svn clients.
+ * svn_fs_revision_prop().  They are invisible to svn clients.
  *
  * @defgroup svn_props_revision_props Revision properties
  * @{

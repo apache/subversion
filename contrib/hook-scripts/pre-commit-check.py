@@ -48,7 +48,7 @@ def test_path_change(path, change):
   return 1
 
 
-def main(pool, repos_dir, txn, config_fp):
+def main(pool, repos_dir, txn):
   # Construct a ChangeCollector to fetch our changes.
   fs_ptr = repos.svn_repos_fs(repos.svn_repos_open(repos_dir, pool))
   root = fs.txn_root(fs.open_txn(fs_ptr, txn, pool), pool)
@@ -85,5 +85,5 @@ def _usage_and_exit():
 if __name__ == '__main__':
   if len(sys.argv) < 3:
     _usage_and_exit()
-  sys.exit(core.run_app(main, sys.argv[1], sys.argv[2], None))
+  sys.exit(core.run_app(main, sys.argv[1], sys.argv[2]))
   

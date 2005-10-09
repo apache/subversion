@@ -23,15 +23,19 @@
 #include <httpd.h>
 #include <http_config.h>
 #include <http_request.h>
+#include <http_log.h>
 #include <mod_dav.h>
 #include <ap_provider.h>
 
 #include <apr_strings.h>
 
 #include "svn_version.h"
+#include "svn_fs.h"
+#include "svn_utf.h"
 
 #include "dav_svn.h"
 
+#include <mod_dav_svn.h>
 
 /* This is the default "special uri" used for SVN's special resources
    (e.g. working resources, activities) */
@@ -54,12 +58,14 @@ enum dav_svn_flag {
 
 /* per-dir configuration */
 typedef struct {
-  const char *fs_path;              /* path to the SVN FS */
-  const char *repo_name;            /* repository name */
-  const char *xslt_uri;             /* XSL transform URI */
-  const char *fs_parent_path;       /* path to parent of SVN FS'es  */
-  enum dav_svn_flag autoversioning; /* whether autoversioning is active */
-  enum dav_svn_flag do_path_authz;  /* whether GET subrequests are active */
+  const char *fs_path;               /* path to the SVN FS */
+  const char *repo_name;             /* repository name */
+  const char *xslt_uri;              /* XSL transform URI */
+  const char *fs_parent_path;        /* path to parent of SVN FS'es  */
+  enum dav_svn_flag autoversioning;  /* whether autoversioning is active */
+  enum dav_svn_flag do_path_authz;   /* whether GET subrequests are active */
+  enum dav_svn_flag list_parentpath; /* whether to allow GET of parentpath */
+
 } dav_svn_dir_conf;
 
 #define INHERIT_VALUE(parent, child, field) \
@@ -72,7 +78,21 @@ extern module AP_MODULE_DECLARE_DATA dav_svn_module;
 static int dav_svn_init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp,
                         server_rec *s)
 {
+    svn_error_t *serr;
     ap_add_version_component(p, "SVN/" SVN_VER_NUMBER);
+
+    serr = svn_fs_initialize(p);
+    if (serr)
+      {
+        ap_log_perror(APLOG_MARK, APLOG_ERR, serr->apr_err, p,
+                      "dav_svn_init: error calling svn_fs_initialize: '%s'",
+                      serr->message ? serr->message : "(no more info)");
+        return HTTP_INTERNAL_SERVER_ERROR;
+      }
+
+    /* This returns void, so we can't check for error. */
+    svn_utf_initialize(p);
+
     return OK;
 }
 
@@ -118,6 +138,7 @@ static void *dav_svn_merge_dir_config(apr_pool_t *p,
     newconf->fs_parent_path = INHERIT_VALUE(parent, child, fs_parent_path);
     newconf->autoversioning = INHERIT_VALUE(parent, child, autoversioning);
     newconf->do_path_authz = INHERIT_VALUE(parent, child, do_path_authz);
+    newconf->list_parentpath = INHERIT_VALUE(parent, child, list_parentpath);
 
     return newconf;
 }
@@ -164,6 +185,20 @@ static const char *dav_svn_pathauthz_cmd(cmd_parms *cmd, void *config,
     conf->do_path_authz = DAV_SVN_FLAG_ON;
   else
     conf->do_path_authz = DAV_SVN_FLAG_OFF;
+
+  return NULL;
+}
+
+
+static const char *dav_svn_list_parentpath_cmd(cmd_parms *cmd, void *config,
+                                               int arg)
+{
+  dav_svn_dir_conf *conf = config;
+
+  if (arg)
+    conf->list_parentpath = DAV_SVN_FLAG_ON;
+  else
+    conf->list_parentpath = DAV_SVN_FLAG_OFF;
 
   return NULL;
 }
@@ -248,6 +283,48 @@ const char *dav_svn_get_fs_parent_path(request_rec *r)
     return conf->fs_parent_path;
 }
 
+AP_MODULE_DECLARE(dav_error *) dav_svn_get_repos_path(request_rec *r, 
+                                                      const char *root_path,
+                                                      const char **repos_path)
+{
+
+    const char *fs_path;        
+    const char *fs_parent_path; 
+    const char *repos_name;
+    const char *ignored_path_in_repos;
+    const char *ignored_cleaned_uri;
+    const char *ignored_relative;
+    int ignored_had_slash;
+    dav_error *derr;
+
+    /* Handle the SVNPath case. */
+    fs_path = dav_svn_get_fs_path(r);
+
+    if (fs_path != NULL)
+      {
+        *repos_path = fs_path;
+        return NULL;
+      }
+
+    /* Handle the SVNParentPath case.  If neither directive was used,
+       dav_svn_split_uri will throw a suitable error for us - we do
+       not need to check that here. */
+    fs_parent_path = dav_svn_get_fs_parent_path(r);
+
+    /* Split the svn URI to get the name of the repository below
+       the parent path. */
+    derr = dav_svn_split_uri(r, r->uri, root_path,
+                             &ignored_cleaned_uri, &ignored_had_slash,
+                             &repos_name,
+                             &ignored_relative, &ignored_path_in_repos);
+    if (derr)
+      return derr;
+
+    /* Construct the full path from the parent path base directory
+       and the repository name. */
+    *repos_path = svn_path_join(fs_parent_path, repos_name, r->pool);
+    return NULL;
+}
 
 const char *dav_svn_get_repo_name(request_rec *r)
 {
@@ -288,6 +365,14 @@ svn_boolean_t dav_svn_get_pathauthz_flag(request_rec *r)
 
     conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
     return conf->do_path_authz != DAV_SVN_FLAG_OFF;
+}
+
+svn_boolean_t dav_svn_get_list_parentpath_flag(request_rec *r)
+{
+    dav_svn_dir_conf *conf;
+
+    conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+    return conf->list_parentpath == DAV_SVN_FLAG_ON;
 }
 
 static void merge_xml_filter_insert(request_rec *r)
@@ -437,6 +522,10 @@ static const command_rec dav_svn_cmds[] =
   AP_INIT_FLAG("SVNPathAuthz", dav_svn_pathauthz_cmd, NULL,
                ACCESS_CONF|RSRC_CONF,
                "control path-based authz by enabling/disabling subrequests"),
+
+  /* per directory/location */
+  AP_INIT_FLAG("SVNListParentPath", dav_svn_list_parentpath_cmd, NULL,
+               ACCESS_CONF|RSRC_CONF, "allow GET of SVNParentPath."),
 
   { NULL }
 };

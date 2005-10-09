@@ -347,9 +347,9 @@ def receive_copy_in_update(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     'A/B/newG' : Item(),
-    'A/B/newG/pi' : Item("This is the file 'pi'."),
-    'A/B/newG/rho' : Item("This is the file 'rho'."),
-    'A/B/newG/tau' : Item("This is the file 'tau'."),
+    'A/B/newG/pi' : Item("This is the file 'pi'.\n"),
+    'A/B/newG/rho' : Item("This is the file 'rho'.\n"),
+    'A/B/newG/tau' : Item("This is the file 'tau'.\n"),
     })
 
   # Create expected status tree for the update.
@@ -437,7 +437,7 @@ def resurrect_deleted_dir(sbox):
 
 #----------------------------------------------------------------------
 
-# Test that we're enforcing proper' svn cp' overwrite behavior.  Note
+# Test that we're enforcing proper 'svn cp' overwrite behavior.  Note
 # that svn_fs_copy() will always overwrite its destination if an entry
 # by the same name already exists.  However, libsvn_client should be
 # doing existence checks to prevent directories from being
@@ -533,8 +533,7 @@ def copy_modify_commit(sbox):
   wc_dir = sbox.wc_dir
   
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                     wc_dir + '/A/B', wc_dir + '/A/B2',
-                                     '-m', 'fooogle')
+                                     wc_dir + '/A/B', wc_dir + '/A/B2')
   
   alpha_path = os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha')
   svntest.main.file_append(alpha_path, "modified alpha")
@@ -638,8 +637,7 @@ def copy_delete_commit(sbox):
 
   # copy a tree
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                     wc_dir + '/A/B', wc_dir + '/A/B2',
-                                     '-m', 'fooogle')
+                                     wc_dir + '/A/B', wc_dir + '/A/B2')
   
   # delete a file
   alpha_path = os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha')
@@ -660,8 +658,7 @@ def copy_delete_commit(sbox):
 
   # copy a tree
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                     wc_dir + '/A/B', wc_dir + '/A/B3',
-                                     '-m', 'fooogle')
+                                     wc_dir + '/A/B', wc_dir + '/A/B3')
   
   # delete a directory
   E_path = os.path.join(wc_dir, 'A', 'B3', 'E')
@@ -769,7 +766,7 @@ def wc_to_repos(sbox):
 
   # modify some items to be copied
   svntest.main.file_append(os.path.join(wc_dir, 'A', 'D', 'H', 'omega'),
-                           "new otext")
+                           "new otext\n")
   svntest.actions.run_and_verify_svn(None, None, [], 'propset', 'foo', 'bar',
                                      beta_path)
 
@@ -794,13 +791,13 @@ def wc_to_repos(sbox):
     })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/H/omega',
-                      contents="This is the file 'omega'.new otext")
+                      contents="This is the file 'omega'.\nnew otext\n")
   expected_disk.add({
-    'A/B/E/beta2'  : Item("This is the file 'beta'."),
-    'A/D/H2/chi'   : Item("This is the file 'chi'."),
-    'A/D/H2/omega' : Item("This is the file 'omega'.new otext"),
-    'A/D/H2/psi'   : Item("This is the file 'psi'."),
-    'A/D/H2/beta'  : Item("This is the file 'beta'."),
+    'A/B/E/beta2'  : Item("This is the file 'beta'.\n"),
+    'A/D/H2/chi'   : Item("This is the file 'chi'.\n"),
+    'A/D/H2/omega' : Item("This is the file 'omega'.\nnew otext\n"),
+    'A/D/H2/psi'   : Item("This is the file 'psi'.\n"),
+    'A/D/H2/beta'  : Item("This is the file 'beta'.\n"),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 4)
   expected_status.add({
@@ -850,7 +847,7 @@ def repos_to_wc(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', pi_url, wc_dir)
 
   # Extra test: modify file ASAP to check there was a timestamp sleep
-  svntest.main.file_append(pi_path, 'zig')
+  svntest.main.file_append(pi_path, 'zig\n')
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.add({
@@ -867,7 +864,7 @@ def repos_to_wc(sbox):
     print "diff failed"
     raise svntest.Failure
   for line in out:
-    if line == '-This is the file \'pi\'.\n': # Crude check for diff-like output
+    if line == '+zig\n': # Crude check for diff-like output
       break
   else:
     print "diff output incorrect", out
@@ -971,10 +968,10 @@ def url_copy_parent_into_child(sbox):
   expected_disk.add({
     'A/B/F/B'         : Item(),
     'A/B/F/B/E'       : Item(),
-    'A/B/F/B/E/alpha' : Item("This is the file 'alpha'."),
-    'A/B/F/B/E/beta'  : Item("This is the file 'beta'."),
+    'A/B/F/B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'A/B/F/B/E/beta'  : Item("This is the file 'beta'.\n"),
     'A/B/F/B/F'       : Item(),
-    'A/B/F/B/lambda'  : Item("This is the file 'lambda'."),
+    'A/B/F/B/lambda'  : Item("This is the file 'lambda'.\n"),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
@@ -1035,16 +1032,16 @@ def wc_copy_parent_into_child(sbox):
     })
   expected_disk = svntest.wc.State('', {
     'E'           : Item(),
-    'E/alpha'     : Item("This is the file 'alpha'."),
-    'E/beta'      : Item("This is the file 'beta'."),
+    'E/alpha'     : Item("This is the file 'alpha'.\n"),
+    'E/beta'      : Item("This is the file 'beta'.\n"),
     'F'           : Item(),
-    'lambda'      : Item("This is the file 'lambda'."),
+    'lambda'      : Item("This is the file 'lambda'.\n"),
     'F/B'         : Item(),
     'F/B/E'       : Item(),
-    'F/B/E/alpha' : Item("This is the file 'alpha'."),
-    'F/B/E/beta'  : Item("This is the file 'beta'."),
+    'F/B/E/alpha' : Item("This is the file 'alpha'.\n"),
+    'F/B/E/beta'  : Item("This is the file 'beta'.\n"),
     'F/B/F'       : Item(),
-    'F/B/lambda'  : Item("This is the file 'lambda'."),
+    'F/B/lambda'  : Item("This is the file 'lambda'.\n"),
     })
   expected_status = svntest.wc.State(wc_dir, {
     ''            : Item(status='  ', wc_rev=2),
@@ -1145,7 +1142,7 @@ def repos_to_wc_copy_eol_keywords(sbox):
 
   # Modify iota to make it checkworthy.
   f = open(iota_wc_path, "ab")
-  f.write("\nHello\nSubversion\n$LastChangedRevision$\n")
+  f.write("Hello\nSubversion\n$LastChangedRevision$\n")
   f.close()
 
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1202,19 +1199,19 @@ def revision_kinds_local_source(sbox):
   # Make a file with different content in each revision and WC; BASE != HEAD.
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu' : Item(verb='Sending'), })
-  svntest.main.file_append(mu_path, "New r2 text.")
+  svntest.main.file_append(mu_path, "New r2 text.\n")
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, None,
                                         None, None, None, None, None, wc_dir)
-  svntest.main.file_append(mu_path, "New r3 text.")
+  svntest.main.file_append(mu_path, "New r3 text.\n")
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, None,
                                         None, None, None, None, None, wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r2', mu_path)
-  svntest.main.file_append(mu_path, "Working copy.")
+  svntest.main.file_append(mu_path, "Working copy.\n")
 
-  r1 = "This is the file 'mu'."
-  r2 = r1 + "New r2 text."
-  r3 = r2 + "New r3 text."
-  rWC = r2 + "Working copy."
+  r1 = "This is the file 'mu'.\n"
+  r2 = r1 + "New r2 text.\n"
+  r3 = r2 + "New r3 text.\n"
+  rWC = r2 + "Working copy.\n"
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu', contents=rWC)
@@ -1360,6 +1357,29 @@ def double_uri_escaping_1814(sbox):
 
 
 #----------------------------------------------------------------------
+#  Regression test for issues 2404
+
+def wc_to_wc_copy_between_different_repos(sbox):
+  "wc to wc copy attempts between different repos"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox2 = sbox.clone_dependent()
+  sbox2.build()
+  wc2_dir = sbox2.wc_dir
+
+  # Attempt a copy between different repositories.
+  out, err = svntest.main.run_svn(1, 'cp',
+                                  os.path.join(wc2_dir, 'A'),
+                                  os.path.join(wc_dir, 'A', 'B'))
+  for line in err:
+    if line.find("it is not from repository") != -1:
+      break
+  else:
+    raise svntest.Failure
+
+#----------------------------------------------------------------------
 #  Regression test for issues 2101 and 2020
 
 def wc_to_wc_copy_deleted(sbox):
@@ -1477,7 +1497,10 @@ def url_to_non_existent_url_path(sbox):
 
   dirURL1 = svntest.main.current_repo_url + "/A/B/E"
   dirURL2 = svntest.main.current_repo_url + "/G/C/E/I"
-  msg = ".*: Path 'G' not present"
+
+  # Look for both possible versions of the error message, as the DAV
+  # error is worded differently from that of other RA layers.
+  msg = ".*: (Path 'G' not present|.*G' path not found)"
 
   # Expect failure on 'svn cp SRC DST' where one or more ancestor
   # directories of DST do not exist
@@ -1506,10 +1529,10 @@ def non_existent_url_to_url(sbox):
   pi_url = svntest.main.current_repo_url + '/A/D/G/pi'
   new_url = svntest.main.current_repo_url + '/newfile'
 
-  svntest.actions.run_and_verify_svn(None, None, None, 'delete',
+  svntest.actions.run_and_verify_svn(None, None, [], 'delete',
                                      adg_url, '-m', '')
 
-  svntest.actions.run_and_verify_svn(None, None, None, 'copy',
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
                                      '-r', '1', pi_url, new_url,
                                      '-m', '')
 
@@ -1525,20 +1548,96 @@ def old_dir_url_to_url(sbox):
   new_url = svntest.main.current_repo_url + '/newfile'
 
   # Delete a directory
-  svntest.actions.run_and_verify_svn(None, None, None, 'delete',
+  svntest.actions.run_and_verify_svn(None, None, [], 'delete',
                                      adg_url, '-m', '')
 
   # Copy a file to where the directory used to be
-  svntest.actions.run_and_verify_svn(None, None, None, 'copy',
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
                                      iota_url, adg_url,
                                      '-m', '')
 
   # Try copying a file that was in the deleted directory that is now a
   # file
-  svntest.actions.run_and_verify_svn(None, None, None, 'copy',
+  svntest.actions.run_and_verify_svn(None, None, [], 'copy',
                                      '-r', '1', pi_url, new_url,
                                      '-m', '')
 
+
+
+#----------------------------------------------------------------------
+# Test fix for issue 2224 - copying wc dir to itself causes endless
+# recursion
+def wc_copy_dir_to_itself(sbox):
+  "copy wc dir to itself"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  dnames = ['A','A/B']
+
+  for dirname in dnames:
+    dir_path = os.path.join(sbox.wc_dir, dirname)
+
+    # try to copy dir to itself
+    svntest.actions.run_and_verify_svn(None, svntest.SVNAnyOutput, [],
+                                       'copy', dir_path, dir_path)
+
+
+#----------------------------------------------------------------------
+
+def mixed_wc_to_url(sbox):
+  "copy a complex mixed-rev wc"
+
+  # For issue 2153.
+  #
+  # Copy a mixed-revision wc (that also has some uncommitted local
+  # mods, and an entry marked as 'deleted') to a URL.  Make sure the
+  # copy gets the uncommitted mods, and does not contain the deleted
+  # file.
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  url = svntest.main.current_repo_url
+  G_url = svntest.main.current_repo_url + '/A/D/G'
+  Z_url = svntest.main.current_repo_url + '/A/D/Z'
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+
+  # Remove A/D/G/pi, then commit that removal.
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', pi_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', "Delete pi.", wc_dir)
+
+  # Make a modification to A/D/G/rho, then commit that modification.
+  svntest.main.file_append(rho_path, "\nFirst modification to rho.\n")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ci', '-m', "Modify rho.", wc_dir)
+
+  # Make another modification to A/D/G/rho, but don't commit it.
+  svntest.main.file_append(rho_path, "Second modification to rho.\n")
+
+  # Now copy local A/D/G to create new directory A/D/Z the repository.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', '-m', "Make a copy.",
+                                     G_path, Z_url)
+
+  # Check out A/D/Z.  If it has pi, that's a bug; or if its rho does
+  # not have the second local mod, that's also a bug.
+  svntest.main.safe_rmtree(wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'co', Z_url, wc_dir)
+  
+  if os.path.exists(os.path.join(wc_dir, 'pi')):
+    raise svntest.Failure
+
+  fp = open(os.path.join(wc_dir, 'rho'), 'r')
+  found_it = 0
+  for line in fp.readlines():
+    if re.match("^Second modification to rho.", line):
+      found_it = 1
+  if not found_it:
+    raise svntest.Failure
 
 
 ########################################################################
@@ -1570,10 +1669,13 @@ test_list = [ None,
               copy_over_missing_file,
               repos_to_wc_1634,
               double_uri_escaping_1814,
+              wc_to_wc_copy_between_different_repos,
               wc_to_wc_copy_deleted,
               url_to_non_existent_url_path,
               non_existent_url_to_url,
               old_dir_url_to_url,
+              wc_copy_dir_to_itself,
+              mixed_wc_to_url,
              ]
 
 if __name__ == '__main__':

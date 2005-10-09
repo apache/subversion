@@ -40,21 +40,30 @@ test "$TEST_BINDINGS_SWIG_PERL" = "yes" && {
     fi
 }
 
+# With swig-rb run following targets:
+# build, check
+BINDING_NAME="swig-rb"
+test "$TEST_BINDINGS_SWIG_RUBY" = "yes" && {
+    $NICE $EXEC_PATH/svntest-bindings-generic.sh \
+       "$BUILD_TYPE" "$BINDING_NAME" \
+       "swig-rb" "" "check-swig-rb"
+    if test $? = 0
+    then
+        send_bindings_email "$BINDING_NAME" "PASS"
+    else
+        send_bindings_email "$BINDING_NAME" "FAIL"
+    fi
+}
+
 # With swig-py run following targets:
 # build, install
 BINDING_NAME="swig-py"
 test "$TEST_BINDINGS_SWIG_PYTHON" = "yes" && {
     $NICE $EXEC_PATH/svntest-bindings-generic.sh \
        "$BUILD_TYPE" "$BINDING_NAME" \
-       "swig-py" "install-swig-py" ""
+       "swig-py" "install-swig-py" "check-swig-py"
     if test $? = 0
     then
-        cat >> "$LOG_FILE_DIR/LOG_${BINDING_NAME}.$BUILD_TYPE" <<EOF
-
-Hey!  My friends have got beautiful and shining unit tests, 
-but I have been left out in the cold. This is soooo unfair! 
-
-EOF
         send_bindings_email "$BINDING_NAME" "PASS"
     else
         send_bindings_email "$BINDING_NAME" "FAIL"

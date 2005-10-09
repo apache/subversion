@@ -1,5 +1,13 @@
-Using the svntest scripts                                 -*- Text -*-
-=========================
+svntest scripts                                           -*- Text -*-
+===============
+
+This set of scripts is designed to wrap execution of all of
+Subversion's Makefile test targets (e.g. "check", "davcheck",
+"svncheck", etc.).
+
+
+Usage
+=====
 
 1) Read the INSTALL (http://svn.collab.net/repos/svn/trunk/INSTALL)
    file, especially the sections about bootstrapping from a tarball
@@ -19,7 +27,7 @@ Using the svntest scripts                                 -*- Text -*-
    Also notice that this test script will wipe out following paths
    during rebuilding:
    $INST_DIR/<proj_name>, ie. with present configuration the paths are: 
-   /home/brane/svn/inst/{apr-0.9,apr-util-0.9,httpd-2.0,svn}
+   /home/YOUR_USERNAME/svn/inst/{apr-0.9,apr-util-0.9,httpd-2.0,svn}
 
 3) Create one or more scripts that configure Subversion in different
    ways (e.g., configure.shared, configure.static). Here's the script
@@ -29,7 +37,7 @@ Using the svntest scripts                                 -*- Text -*-
     #!/bin/sh
 
     "../apr-0.9/configure" \
-    "--prefix=/home/brane/svn/inst/apr-0.9" \
+    "--prefix=/home/YOUR_USERNAME/svn/inst/apr-0.9" \
     "--with-pic" \
     "$@"
 
@@ -38,8 +46,8 @@ Using the svntest scripts                                 -*- Text -*-
     #!/bin/sh
 
     "../apr-util-0.9/configure" \
-    "--prefix=/home/brane/svn/inst/apr-util-0.9" \
-    "--with-apr=/home/brane/svn/inst/apr-0.9" \
+    "--prefix=/home/YOUR_USERNAME/svn/inst/apr-util-0.9" \
+    "--with-apr=/home/YOUR_USERNAME/svn/inst/apr-0.9" \
     "--with-pic" \
     "--with-dbm=db4" \
     "--with-berkeley-db" \
@@ -54,15 +62,15 @@ Using the svntest scripts                                 -*- Text -*-
     cd ../httpd-2.0
 
     "./buildconf" \
-    "--with-apr=/home/brane/svn/apr-0.9" \
-    "--with-apr-util=/home/brane/svn/apr-util-0.9"
+    "--with-apr=/home/YOUR_USERNAME/svn/apr-0.9" \
+    "--with-apr-util=/home/YOUR_USERNAME/svn/apr-util-0.9"
 
     cd "$CURR_WD"
 
     "../httpd-2.0/configure" \
-    "--prefix=/home/brane/svn/inst/httpd-2.0" \
-    "--with-apr=/home/brane/svn/inst/apr-0.9/bin/apr-config" \
-    "--with-apr-util=/home/brane/svn/inst/apr-util-0.9/bin/apu-config" \
+    "--prefix=/home/YOUR_USERNAME/svn/inst/httpd-2.0" \
+    "--with-apr=/home/YOUR_USERNAME/svn/inst/apr-0.9/bin/apr-config" \
+    "--with-apr-util=/home/YOUR_USERNAME/svn/inst/apr-util-0.9/bin/apu-config" \
     "--enable-dav" \
     "$@"
     
@@ -71,11 +79,11 @@ Using the svntest scripts                                 -*- Text -*-
     #!/bin/sh
     env CC='gcc' \
        "../svn/configure" \
-       "--prefix=/home/brane/svn/inst" \
-       "--with-berkeley-db=/home/brane/svn/db4" \
-       "--with-apr=/home/brane/svn/inst/apr-0.9/bin/apr-config" \
-       "--with-apr-util=/home/brane/svn/inst/apr-util-0.9/bin/apu-config" \
-       "--with-apxs=/home/brane/svn/inst/httpd-2.0/bin/apxs" \
+       "--prefix=/home/YOUR_USERNAME/svn/inst" \
+       "--with-berkeley-db=/home/YOUR_USERNAME/svn/db4" \
+       "--with-apr=/home/YOUR_USERNAME/svn/inst/apr-0.9/bin/apr-config" \
+       "--with-apr-util=/home/YOUR_USERNAME/svn/inst/apr-util-0.9/bin/apu-config" \
+       "--with-apxs=/home/YOUR_USERNAME/svn/inst/httpd-2.0/bin/apxs" \
        "--disable-shared" \
        "$@"
 
@@ -87,44 +95,59 @@ Using the svntest scripts                                 -*- Text -*-
    your needs, (easiest way to get a template for http-2.0.conf is 
    install Apache httpd at once, and after that copy installed httpd.conf, and
    edit it). Things to change are probably: 
-   i)   Listen 127.0.0.1:42024
+
+   i)   Listen 127.0.0.1:52080
    ii)  LoadModule dav_svn_module     modules/mod_dav_svn.so
-   iii) User brane
-        Group brane
-   v)   ServerName localhost:42024
-   
-   vi)  Add mod_dav_svn block:
+   iii) User YOUR_USERNAME
+        Group YOUR_GROUPNAME
+   v)   ServerName localhost:52080
+   vi)  Add mod_dav_svn block to the $HTTPD_NAME.conf:
     
-    <IfModule mod_dav_svn.c>
-        Include conf/mod_dav_svn.conf
-    </IfModule>
-           
-   vii) mod_dav_svn_shared.conf for shared builds:
-    <Location /repositories>
-        DAV svn
-        SVNParentPath /home/brane/svn/obj-sh/subversion/tests/clients/cmdline/repositories
-    </Location>
-    <Location /local_tmp/repos>
-        DAV svn
-        SVNPath      /home/brane/svn/obj-sh/subversion/tests/clients/cmdline/local_tmp/repos
-    </Location>
-    
+        <IfModule mod_dav_svn.c>
+           Include conf/mod_dav_svn.conf
+        </IfModule>
+
+   vii) Check and fix the content of mod_dav_svn.conf
+
+        The actual name of the used mod_dav_svn conf file is
+        mod_dav_${SVN_NAME}.conf, which is mod_dav_svn.conf with
+        default settings.
+
+        If you like to run regression tests for 1.1.x or 1.2.x with
+        the same svntest setup, you have to change the name of
+        SVN_NAME variable, and you have to generate two additional
+        mod_dav_svn conf files:
+
+        sed 's!/svn-test-work!!' mod_dav_svn.conf > mod_dav_svn_1.2.x.conf
+        sed 's!/svn-test-work!!' mod_dav_svn.conf > mod_dav_svn_1.1.x.conf
+        
+        and set SVN_NAME=svn_1.2.x for 1.2.x, and SVN_NAME=svn_1.1.x
+        for 1.1.x.
+
+
    Don't ever touch config files under $INST_DIR/$HTTPD_NAME/conf, they will be overwritten by
    the script.
    
 5) Make sure your environment (e.g., LD_LIBRARY_PATH) is set correctly
    to find Berkeley DB, etc.
 
-6) If you like run test against ramdisk (subversion test data will be held on ramdisk)
-   then you should have something like that in your /etc/fstab (in Linux system):
-   tmpfs           /home/brane/svn/obj-sh/subversion/tests tmpfs defaults,user,noauto,exec,size=600m
-   tmpfs           /home/brane/svn/obj-st/subversion/tests tmpfs defaults,user,noauto,exec,size=600m
+6) Test execution can be dramatically sped up by keeping Subversion
+   test data on a RAM disk.  On a Linux system, add lines like the
+   following in your /etc/fstab file:
 
-   The minimum required size for ramdisk is appr. 570 MB at the moment.  
-   You should also set RAMDISK=yes, and check mount_ramdisk and umount_ramdisk 
-   in the svntest-config.sh file if your system is not GNU/Linux.
-   See http://subversion.tigris.org/project_faq.html#ramdisk-tests for 
-   further information.
+   tmpfs  /home/YOUR_USERNAME/svn/obj-sh/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m
+   tmpfs  /home/YOUR_USERNAME/svn/obj-st/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m
+
+   The minimum required size for testing RAM disk is actually many
+   times greater than shown above.  However, svntest will
+   automatically flag your test targets for cleanup when using a
+   ramdisk, which dramatically reduces the space requirement.
+
+   To enable RAM disk usage by svntest, set RAMDISK=yes, and check
+   mount_ramdisk and umount_ramdisk in the svntest-config.sh file if
+   your system is not GNU/Linux.  See
+   http://subversion.tigris.org/faq.html#ramdisk-tests for further
+   information.
    
 7) Run svntest.sh to get the latest versions of ARP, APR-UTIL, HTTPPD and
    Subversion, build and test all the configurations. 

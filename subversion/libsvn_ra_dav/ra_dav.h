@@ -34,6 +34,7 @@
 #include "svn_delta.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
+#include "svn_private_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -134,11 +135,17 @@ struct lock_request_baton
   /* The creation-date returned for newly created lock. */
   apr_time_t creation_date;
 
+  /* The person who created the lock. */
+  const char *lock_owner;
+
   /* A parser for handling <D:error> responses from mod_dav_svn. */
   ne_xml_parser *error_parser;
 
   /* If <D:error> is returned, here's where the parsed result goes. */
   svn_error_t *err;
+
+  /* The neon request being executed */
+  ne_request *request;
 
   /* A place for allocating fields in this structure. */
   apr_pool_t *pool;
@@ -154,7 +161,7 @@ typedef struct {
   ne_session *sess;                     /* HTTP session to server */
   ne_session *sess2;
 
-  const svn_ra_callbacks_t *callbacks;  /* callbacks to get auth data */
+  const svn_ra_callbacks2_t *callbacks; /* callbacks to get auth data */
   void *callback_baton;
  
   svn_auth_iterstate_t *auth_iterstate; /* state of authentication retries */
@@ -284,6 +291,7 @@ svn_error_t * svn_ra_dav__do_diff(
   const char *diff_target,
   svn_boolean_t recurse,
   svn_boolean_t ignore_ancestry,
+  svn_boolean_t text_deltas,
   const char *versus_url,
   const svn_delta_editor_t *wc_diff,
   void *wc_diff_baton,
@@ -558,7 +566,11 @@ svn_ra_dav__lookup_xml_elem(const svn_ra_dav__xml_elm_t *table,
  * inserted as extra headers in the request.  Can be NULL.
  *
  * STATUS_CODE is an optional 'out' parameter; if non-NULL, then set
- * *STATUS_CODE to the http status code returned by the server.
+ * *STATUS_CODE to the http status code returned by the server.  This
+ * can be set to a useful value even when the function returns an error
+ * however it is not always set when an error is returned.  So any caller
+ * wishing to check *STATUS_CODE when an error has been returned must
+ * initialise *STATUS_CODE before calling the function.
  *
  * If SPOOL_RESPONSE is set, the request response will be cached to
  * disk in a tmpfile (in full), then read back and parsed.
@@ -731,6 +743,17 @@ svn_error_t *
 svn_ra_dav__maybe_store_auth_info (svn_ra_dav__session_t *ras);
 
 
+/* Like svn_ra_dav__maybe_store_auth_info(), but conditional on ERR.
+
+   Attempt to store auth info only if ERR is NULL or if ERR->apr_err
+   is not SVN_ERR_RA_NOT_AUTHORIZED.  If ERR is not null, return it no
+   matter what, otherwise return the result of the attempt (if any) to
+   store auth info, else return SVN_NO_ERROR. */
+svn_error_t *
+svn_ra_dav__maybe_store_auth_info_after_result(svn_error_t *err,
+                                               svn_ra_dav__session_t *ras);
+
+
 /* Create an error object for an error from neon in the given session,
    where the return code from neon was RETCODE, and CONTEXT describes
    what was being attempted.  Do temporary allocations in POOL. */
@@ -739,6 +762,17 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
                                        int retcode,
                                        apr_pool_t *pool);
 
+
+/* Callback to get data from a Neon request after it has been sent.
+
+   REQUEST is the request, DISPATCH_RETURN_VAL is the value that
+   ne_request_dispatch(REQUEST) returned to the caller.
+
+   USERDATA is a closure baton. */
+typedef svn_error_t *
+svn_ra_dav__request_interrogator(ne_request *request,
+                                 int dispatch_return_val,
+                                 void *userdata);
 
 /* Given a neon REQUEST and SESSION, run the request; if CODE_P is
    non-null, return the http status code in *CODE_P.  Return any
@@ -754,6 +788,16 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
    specified (e.g. as 200); use 0 for OKAY_2 if a second result code is
    not allowed.
 
+   #if SVN_NEON_0_25
+
+      If INTERROGATOR is non-NULL, invoke it with the Neon request,
+      the dispatch result, and INTERROGATOR_BATON.  This is done
+      regardless of whether the request appears successful or not.  If
+      the interrogator has an error result, return that error
+      immediately, after freeing the request.
+
+   #endif // SVN_NEON_0_25
+
    ### not super sure on this "okay" stuff, but it means that the request
    ### dispatching code can generate much better errors than the callers
    ### when something goes wrong. if we need more than two, then we could
@@ -768,6 +812,10 @@ svn_ra_dav__request_dispatch(int *code_p,
                              const char *url,
                              int okay_1,
                              int okay_2,
+#if SVN_NEON_0_25
+                             svn_ra_dav__request_interrogator interrogator,
+                             void *interrogator_baton,
+#endif /* SVN_NEON_0_25 */
                              apr_pool_t *pool);
 
 

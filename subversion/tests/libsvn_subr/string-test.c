@@ -32,7 +32,8 @@
 #include "svn_io.h"
 #include "svn_error.h"
 #include "svn_string.h"   /* This includes <apr_*.h> */
-#include "svn_test.h"
+
+#include "../svn_test.h"
 
 
 /* A quick way to create error messages.  */

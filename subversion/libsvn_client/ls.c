@@ -23,6 +23,7 @@
 #include "client.h"
 #include "svn_client.h"
 #include "svn_path.h"
+#include "svn_pools.h"
 
 #include "svn_private_config.h"
 
@@ -71,7 +72,8 @@ get_dir_contents (apr_hash_t *dirents,
 }
 
 svn_error_t *
-svn_client_ls2 (apr_hash_t **dirents,
+svn_client_ls3 (apr_hash_t **dirents,
+                apr_hash_t **locks,
                 const char *path_or_url,
                 const svn_opt_revision_t *peg_revision,
                 const svn_opt_revision_t *revision,
@@ -83,11 +85,18 @@ svn_client_ls2 (apr_hash_t **dirents,
   svn_revnum_t rev;
   svn_node_kind_t url_kind;
   const char *url;
+  const char *repos_root;
+  const char *rel_path;
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR (svn_client__ra_session_from_path (&ra_session, &rev,
                                              &url, path_or_url, peg_revision,
                                              revision, ctx, pool));
+  /* Getting repository root. */
+  SVN_ERR (svn_ra_get_repos_root (ra_session, &repos_root, pool));
+
+  /* Getting relative path respective to repository root. */
+  rel_path = svn_path_is_child (repos_root, url, pool);
 
   /* Decide if the URL is a file or directory. */
   SVN_ERR (svn_ra_check_path (ra_session, "", rev, &url_kind, pool));
@@ -107,14 +116,14 @@ svn_client_ls2 (apr_hash_t **dirents,
 
       /* Re-open the session to the file's parent instead. */
       svn_path_split (url, &parent_url, &base_name, pool);
+
       /* 'base_name' is now the last component of an URL, but we want
          to use it as a plain file name. Therefore, we must URI-decode
          it. */
       base_name = svn_path_uri_decode(base_name, pool);
-      SVN_ERR (svn_client__open_ra_session (&ra_session, parent_url,
-                                            NULL,
-                                            NULL, NULL, FALSE, TRUE, 
-                                            ctx, pool));
+      SVN_ERR (svn_client__open_ra_session_internal (&ra_session, parent_url,
+                                                     NULL, NULL, NULL, FALSE,
+                                                     TRUE, ctx, pool));
 
       /* Get all parent's entries, no props. */
       SVN_ERR (svn_ra_get_dir (ra_session, "", rev, &parent_ents, 
@@ -127,6 +136,7 @@ svn_client_ls2 (apr_hash_t **dirents,
         return svn_error_createf (SVN_ERR_FS_NOT_FOUND, NULL,
                                   _("URL '%s' non-existent in that revision"),
                                   url);
+      svn_path_split (rel_path, &rel_path, NULL, pool);
 
       apr_hash_set (*dirents, base_name, APR_HASH_KEY_STRING, the_ent);
     }
@@ -135,8 +145,60 @@ svn_client_ls2 (apr_hash_t **dirents,
                               _("URL '%s' non-existent in that revision"),
                               url);
 
+  if (locks)
+    {
+      apr_hash_t *new_locks;
+      apr_hash_index_t *hi;
+      svn_error_t *err;
+
+      /* Add a leading slash to match the paths from svn_ra_get_locks(). */
+      rel_path = apr_psprintf (pool, "/%s", rel_path ? rel_path : "");
+
+      /* Get locks. */
+      err = svn_ra_get_locks (ra_session, locks, "", pool);
+
+      if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+        {
+          svn_error_clear (err);
+          *locks = apr_hash_make (pool);
+        }
+      else if (err)
+        return err;
+
+      new_locks = apr_hash_make (pool);
+      for (hi = apr_hash_first (pool, *locks); hi; hi = apr_hash_next (hi))
+        {
+          const void *key;
+          void *val;
+          const char *newkey;
+
+          apr_hash_this (hi, &key, NULL, &val);
+          newkey = svn_path_is_child (rel_path, key, pool);
+          if (newkey)
+            apr_hash_set (new_locks, newkey, APR_HASH_KEY_STRING, val);
+        }
+
+      *locks = new_locks;
+    }
+
   return SVN_NO_ERROR;
 }
+
+
+svn_error_t *
+svn_client_ls2 (apr_hash_t **dirents,
+                const char *path_or_url,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *revision,
+                svn_boolean_t recurse,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+
+  return svn_client_ls3 (dirents, NULL, path_or_url, peg_revision,
+                         revision, recurse, ctx, pool);
+}
+
 
 svn_error_t *
 svn_client_ls (apr_hash_t **dirents,

@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file svn_auth.h
- * @brief Interface to Subversion authentication system
+ * @brief Subversion's authentication system
  */
 
 #ifndef SVN_AUTH_H
@@ -95,8 +95,8 @@ typedef struct svn_auth_provider_t
    * next_credentials, in case the first credentials fail to
    * authenticate.  @a provider_baton is general context for the
    * vtable, @a parameters contains any run-time data that the
-   * provider may need, and @a realmstring comes from the @c
-   * svn_auth_first_credentials call.
+   * provider may need, and @a realmstring comes from the
+   * svn_auth_first_credentials() call.
    */
   svn_error_t * (*first_credentials) (void **credentials,
                                       void **iter_baton,
@@ -110,11 +110,11 @@ typedef struct svn_auth_provider_t
    * Set @a *credentials to another set of valid credentials, (using
    * @a iter_baton as the context from previous call to first_credentials
    * or next_credentials).  If no more credentials are available, set
-   * @a **credentials to NULL.  If the provider only has one set of
+   * @a *credentials to NULL.  If the provider only has one set of
    * credentials, this function pointer should simply be NULL. @a
    * provider_baton is general context for the vtable, @a parameters
    * contains any run-time data that the provider may need, and @a
-   * realmstring comes from the @c svn_auth_first_credentials call.
+   * realmstring comes from the svn_auth_first_credentials() call.
    */
   svn_error_t * (*next_credentials) (void **credentials,
                                      void *iter_baton,
@@ -132,7 +132,7 @@ typedef struct svn_auth_provider_t
    * to save; if it refuses or is unable to save for non-fatal
    * reasons, return false.  If the provider never saves data, then
    * this function pointer should simply be NULL. @a realmstring comes
-   * from the @c svn_auth_first_credentials call.
+   * from the svn_auth_first_credentials() call.
    */
   svn_error_t * (*save_credentials) (svn_boolean_t *saved,
                                      void *credentials,
@@ -145,7 +145,7 @@ typedef struct svn_auth_provider_t
 
 
 /** A provider object, ready to be put into an array and given to
-    @c svn_auth_open. */
+    svn_auth_open(). */
 typedef struct svn_auth_provider_object_t
 {
   const svn_auth_provider_t *vtable;
@@ -246,7 +246,7 @@ typedef struct svn_auth_cred_ssl_client_cert_t
  */
 #define SVN_AUTH_CRED_SSL_CLIENT_CERT_PW "svn.ssl.client-passphrase"
 
-/** @c SVN_AUTH_CRED_SSL_CLIENT_CERT_PW crentials. */
+/** @c SVN_AUTH_CRED_SSL_CLIENT_CERT_PW credentials. */
 typedef struct svn_auth_cred_ssl_client_cert_pw_t
 {
   /** Certificate password */
@@ -293,6 +293,14 @@ typedef struct svn_auth_ssl_server_cert_info_t
   /** Base-64 encoded DER certificate representation */
   const char *ascii_cert;
 } svn_auth_ssl_server_cert_info_t;
+
+/**
+ * Return a deep copy of @a info, allocated in @a pool.
+ *
+ * @since New in 1.3.
+ */
+svn_auth_ssl_server_cert_info_t *svn_auth_ssl_server_cert_info_dup (
+  const svn_auth_ssl_server_cert_info_t *info, apr_pool_t *pool);
 
 /** @c SVN_AUTH_CRED_SSL_SERVER_TRUST credentials. */
 typedef struct svn_auth_cred_ssl_server_trust_t
@@ -393,9 +401,9 @@ typedef svn_error_t *
  *
  * @a cert_info is a structure describing the server cert that was
  * presented to the client, and @a failures is a bitmask that
- * describes exactly why the cert could not be automatically validated.
- * (See the #define error flag values below.)  @a realm is a string
- * that can be used in the prompt string.
+ * describes exactly why the cert could not be automatically validated,
+ * composed from the constants SVN_AUTH_SSL_* (@c SVN_AUTH_SSL_NOTYETVALID
+ * etc.).  @a realm is a string that can be used in the prompt string.
  *
  * If @a may_save is FALSE, the auth system does not allow the credentials
  * to be saved (to disk). A prompt function shall not ask the user if the
@@ -494,11 +502,15 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
 /** The auth-hash prefix indicating that the parameter is global. */
 #define SVN_AUTH_PARAM_PREFIX "svn:auth:"
 
-/** @brief Any 'default' credentials that came in through the application
- * itself, (e.g. --username and --password options).  Property values are
- * const char *.  */
+/**
+ * @name Default credentials defines
+ * Any 'default' credentials that came in through the application itself,
+ * (e.g. --username and --password options). Property values are
+ * const char *.
+ * @{ */
 #define SVN_AUTH_PARAM_DEFAULT_USERNAME  SVN_AUTH_PARAM_PREFIX "username"
 #define SVN_AUTH_PARAM_DEFAULT_PASSWORD  SVN_AUTH_PARAM_PREFIX "password"
+/** @} */
 
 /** @brief The application doesn't want any providers to prompt
  * users. Property value is irrelevant; only property's existence
@@ -543,8 +555,8 @@ const void * svn_auth_get_parameter(svn_auth_baton_t *auth_baton,
  * Ask @a auth_baton to set @a *credentials to a set of credentials
  * defined by @a cred_kind and valid within @a realmstring, or NULL if
  * no credentials are available.  Otherwise, return an iteration state
- * in @a *state, so that the caller can call @c
- * svn_auth_next_credentials, in case the first set of credentials
+ * in @a *state, so that the caller can call
+ * svn_auth_next_credentials(), in case the first set of credentials
  * fails to authenticate.
  *
  * Use @a pool to allocate @a *state, and for temporary allocation.
@@ -561,8 +573,8 @@ svn_error_t * svn_auth_first_credentials(void **credentials,
  * authenticate.
  *
  * Use @a state to fetch a different set of @a *credentials, as a
- * follow-up to @c svn_auth_first_credentials or @c
- * svn_auth_next_credentials.  If no more credentials are available,
+ * follow-up to svn_auth_first_credentials() or
+ * svn_auth_next_credentials().  If no more credentials are available,
  * set @a *credentials to NULL.
  *
  * Note that @a *credentials will be allocated in @c auth_baton's pool.

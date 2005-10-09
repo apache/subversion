@@ -58,7 +58,7 @@ typedef struct svn_ra_local__session_baton_t
   const char *uuid;
 
   /* Callbacks/baton passed to svn_ra_open. */
-  const svn_ra_callbacks_t *callbacks;
+  const svn_ra_callbacks2_t *callbacks;
   void *callback_baton;
 } svn_ra_local__session_baton_t;
 

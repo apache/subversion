@@ -65,35 +65,45 @@ cp $ltfile ac-helpers/libtool.m4
 #
 # Note: this dependency on Python is fine: only SVN developers use autogen.sh
 #       and we can state that dev people need Python on their machine. Note
-#       that running gen-make.py requires Python 1.X or newer.
+#       that running gen-make.py requires Python 2.X or newer.
 
-OK=`python -c 'print "OK"'`
-if test "${OK}" != "OK" ; then
-  echo "Python check failed, make sure python is installed and on the PATH"
+PYTHON="`./build/find_python.sh`"
+if test -z "$PYTHON"; then
+  echo "Python 2.0 or later is required to run autogen.sh"
+  echo "If you have a suitable Python installed, but not on the"
+  echo "PATH, set the environment variable PYTHON to the full path"
+  echo "to the Python executable, and re-run autogen.sh"
   exit 1
 fi
 
 if test -n "$SKIP_DEPS"; then
   echo "Creating build-outputs.mk (no dependencies)..."
-  python ./gen-make.py -s build.conf || gen_failed=1
+  "$PYTHON" ./gen-make.py -s build.conf || gen_failed=1
 
   ### if apr and apr-util are not subdirs, then this fails. only do it
   ### for the release (from dist.sh; for now)
   if test -n "$RELEASE_MODE"; then
     echo "Creating MSVC files (no dependencies)..."
-    python ./gen-make.py -t dsp -s build.conf || gen_failed=1
+    "$PYTHON" ./gen-make.py -t dsp -s build.conf || gen_failed=1
   fi
 else
   echo "Creating build-outputs.mk..."
-  python ./gen-make.py build.conf || gen_failed=1
+  "$PYTHON" ./gen-make.py build.conf || gen_failed=1
 
   ### if apr and apr-util are not subdirs, then this fails. only do it
   ### for the release (from dist.sh; for now)
   if test -n "$RELEASE_MODE"; then
     echo "Creating MSVC files..."
-    python ./gen-make.py -t dsp -s build.conf || gen_failed=1
+    "$PYTHON" ./gen-make.py -t dsp -s build.conf || gen_failed=1
   fi
 fi
+
+# Compile SWIG headers into standalone C files if we are in release mode
+if test -n "$RELEASE_MODE"; then
+  echo "Generating SWIG code..."
+  make -f autogen-standalone.mk autogen-swig
+fi
+rm autogen-standalone.mk
 
 if test -n "$gen_failed"; then
   echo "ERROR: gen-make.py failed"

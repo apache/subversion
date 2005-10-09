@@ -7,9 +7,17 @@ import sys
 import string
 
 import gen_base
+import generator.util.executable
+_exec = generator.util.executable
 
 from gen_base import build_path_join, build_path_strip, build_path_splitfile, \
       build_path_basename, build_path_dirname, build_path_retreat, unique
+
+try:
+  True
+except NameError:
+  True = 1
+  False = 0
 
 class Generator(gen_base.GeneratorBase):
 
@@ -23,6 +31,9 @@ class Generator(gen_base.GeneratorBase):
   def __init__(self, fname, verfname, options=None):
     gen_base.GeneratorBase.__init__(self, fname, verfname, options)
     self.section_counter = 0
+    self.assume_shared_libs = False
+    if ('--assume-shared-libs', '') in options:
+      self.assume_shared_libs = True
 
   def begin_section(self, description):
     self.section_counter = self.section_counter + 1
@@ -105,6 +116,111 @@ class Generator(gen_base.GeneratorBase):
     self.ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
 
     ########################################
+    self.begin_section('SWIG header wrappers')
+
+    for fname in self.includes:
+      wrapper_fname = build_path_join(self.swig.proxy_dir,
+        string.replace(build_path_basename(fname),".h","_h.swg"))
+      python_script = "$(abs_srcdir)/build/generator/swig/header_wrappers.py"
+      self.ofile.write(
+        '%s: %s %s\n\t$(PYTHON) %s %s $(SWIG) $<\n' % ( 
+          wrapper_fname, fname, python_script,
+          python_script, self.conf))
+      self.ofile.write(
+        'swig-headers: %s\n' % wrapper_fname +
+        'extraclean-swig-headers-%s:\n' % wrapper_fname + 
+        '\trm -f $(abs_srcdir)/%s\n' % wrapper_fname + 
+        'clean-swig-headers-%s:\n' % wrapper_fname + 
+        '\tif test $(abs_srcdir) != $(abs_builddir); then ' +
+        'rm -f $(abs_builddir)/%s; ' % wrapper_fname + 
+        'fi\n' +
+        'clean-swig-headers: clean-swig-headers-%s\n' % wrapper_fname +
+        'extraclean-swig-headers: extraclean-swig-headers-%s\n' % wrapper_fname
+      )
+    self.ofile.write('\n')
+
+    ########################################
+    self.begin_section('SWIG external runtime')
+
+    runtime_pattern = '%s/swig_%%s_external_runtime.swg' % self.swig.proxy_dir
+    python_script = "$(abs_srcdir)/build/generator/swig/external_runtime.py"
+    build_runtime = '$(PYTHON) %s ' % python_script + \
+      '$(abs_srcdir)/build.conf "$(SWIG)"'
+    runtimes = map(lambda lang: runtime_pattern % lang, self.swig_lang)
+    self.ofile.write(
+      '%s:\n' % " ".join(runtimes) +
+      '\t%s\n' % build_runtime +
+      'swig-headers: %s\n' % " ".join(runtimes) +
+      'extraclean-runtime:\n' +
+      '\trm -f %s\n' % " ".join(map(lambda x: "$(abs_srcdir)/" + x,
+        runtimes) + map(lambda x: "$(abs_builddir)/" + x, runtimes)) +
+      'extraclean-swig-headers: extraclean-runtime\n')
+    self.ofile.write('\n')
+
+    ########################################
+    self.begin_section('SWIG autogeneration rules')
+
+    # write dependencies and build rules for generated .c files
+    swig_c_deps = self.graph.get_deps(gen_base.DT_SWIG_C)
+    swig_c_deps.sort(lambda (t1, s1), (t2, s2): cmp(t1.filename, t2.filename))
+
+    swig_lang_deps = {}
+    for lang in self.swig.langs:
+      swig_lang_deps[lang] = []
+      
+    short = self.swig.short
+    for objname, sources in swig_c_deps:
+      lang = objname.lang
+      swig_lang_deps[lang].append(str(objname))
+      self.ofile.write(
+        'extraclean-swig-%s:\n' % objname +
+        '\trm -f $(abs_builddir)/%s $(abs_srcdir)/%s\n' % (objname, objname) +
+        'extraclean-swig-%s: extraclean-swig-%s\n' % (short[lang], objname) +
+        'clean-swig-%s:\n' % objname + 
+        '\tif test $(abs_srcdir) != $(abs_builddir); then ' +
+        'rm -f $(abs_builddir)/%s; ' % objname + 
+        'rm -f $(abs_builddir)/%s; ' % sources[0] + 
+        'fi\n' +
+        'clean-swig-headers: clean-swig-%s\n' % objname
+      ) 
+    
+    for lang in self.swig.langs:
+      lang_deps = string.join(swig_lang_deps[lang])
+      self.ofile.write(
+        'autogen-swig-%s: swig-headers %s\n' % (short[lang], lang_deps) +
+        'swig-%s: autogen-swig-%s\n' % (short[lang], short[lang]) +
+        'autogen-swig: autogen-swig-%s\n' % short[lang] +
+        'extraclean-swig-%s: extraclean-swig-headers\n' % short[lang] +
+        'clean-swig-%s: clean-swig-headers\n' % short[lang] +
+        'extraclean-swig-%s: clean-swig-%s\n' % (short[lang], short[lang]) +
+        'extraclean: extraclean-swig-%s\n' % short[lang])
+    self.ofile.write('\n')
+    
+    ########################################
+    self.begin_section('Rules to build SWIG .c files from .i files')
+
+    for objname, sources in swig_c_deps:
+      deps = string.join(map(str, sources))
+      source = str(sources[0])
+      source_dir = build_path_dirname(source)
+      opts = self.swig.opts[objname.lang]
+      self.ofile.write('%s: %s\n' % (objname, deps) +
+        '\t@if test $(abs_srcdir) != $(abs_builddir); then ' +
+        'cp -pf $(abs_srcdir)/%s/*.i ' % source_dir +
+        '$(abs_builddir)/%s; fi\n' % source_dir +
+        '\t$(SWIG) $(SWIG_INCLUDES) %s ' % opts +
+        '-o $@ $(abs_builddir)/%s\n' % source +
+        'autogen-swig-%s: copy-swig-%s\n' % (short[objname.lang], objname) +
+        'copy-swig-%s: %s\n' % (objname, objname) +
+        '\t@if test $(abs_srcdir) != $(abs_builddir) -a ' +
+        '-e $(abs_srcdir)/%s -a ' % objname + 
+        '! -e $(abs_builddir)/%s; then ' % objname +
+        'cp -pf $(abs_srcdir)/%s $(abs_builddir)/%s; fi\n' % (objname, objname)
+      )
+
+    self.ofile.write('\n')
+
+    ########################################
     self.begin_section('Individual target build rules')
 
     for target_ob in install_sources:
@@ -115,7 +231,7 @@ class Generator(gen_base.GeneratorBase):
 
       target = target_ob.name
       if isinstance(target_ob, gen_base.TargetJava):
-        path = target_ob.classes
+        path = target_ob.output_dir
       else:
         path = target_ob.path
 
@@ -138,7 +254,8 @@ class Generator(gen_base.GeneratorBase):
             libs.append(link_dep.external_lib)
           else:
             # append the output of the target to our stated dependencies
-            deps.append(link_dep.filename)
+            if not self.assume_shared_libs:
+              deps.append(link_dep.filename)
 
             # link against the library
             libs.append(build_path_join(retreat, link_dep.filename))
@@ -167,6 +284,9 @@ class Generator(gen_base.GeneratorBase):
       targ_varname = string.replace(target, '-', '_')
       objnames = string.join(build_path_strip(path, objects))
 
+      # Output value of path variable
+      self.ofile.write('%s_PATH = %s\n' % (targ_varname, path))
+      
       # Add additional install dependencies if necessary
       if target_ob.add_install_deps:
         self.ofile.write('install-%s: %s\n'
@@ -298,9 +418,10 @@ class Generator(gen_base.GeneratorBase):
         for apmod in inst_targets:
           for source in self.graph.get_sources(gen_base.DT_LINK, apmod.name,
                                                gen_base.Target):
-            bt = source.filename
-            if bt[-3:] == '.la':
-              la_tweaked[bt + '-a'] = None
+            if not source.external_lib:
+              bt = source.filename
+              if bt[-3:] == '.la':
+                la_tweaked[bt + '-a'] = None
         la_tweaked = la_tweaked.keys()
         la_tweaked.sort()
 
@@ -380,21 +501,6 @@ class Generator(gen_base.GeneratorBase):
         self.ofile.write('%s: %s\n' % (target.name, target.filename))
 
     ########################################
-    self.begin_section('Rules to build SWIG .c files from .i files')
-
-    # write dependencies and build rules for generated .c files
-    swig_c_deps = self.graph.get_deps(gen_base.DT_SWIG_C)
-    swig_c_deps.sort(lambda (t1, s1), (t2, s2): cmp(t1.filename, t2.filename))
-
-    for objname, sources in swig_c_deps:
-      deps = string.join(map(str, sources))
-      source = build_path_join('$(abs_srcdir)', str(sources[0]))
-      self.ofile.write('%s: %s\n\t$(RUN_SWIG_%s) %s\n'
-                       % (objname, deps, string.upper(objname.lang_abbrev),
-                          source))
-    self.ofile.write('\n')
-
-    ########################################
     self.begin_section('Rules to build all other kinds of object-like files')
 
     # write dependencies and build rules (when not using suffix rules)
@@ -416,7 +522,34 @@ class Generator(gen_base.GeneratorBase):
           self.ofile.write('\t%s %s\n\n' % (cmd, sources[0]))
       else:
         self.ofile.write('\n')
+    
+    
+    self.ofile.close()
+    self.write_standalone()
 
+  def write_standalone(self):
+    """Write autogen-standalone.mk"""
+    
+    standalone = open("autogen-standalone.mk", "w")
+    standalone.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n')
+    standalone.write('abs_srcdir = %s\n' % os.getcwd())
+    standalone.write('abs_builddir = %s\n' % os.getcwd())
+    standalone.write('SWIG = swig\n')
+    standalone.write('PYTHON = python\n')
+    swig_includes = ['-DSVN_SWIG_VERSION=%d' % self.swig.version(),
+                     '-Iapr/include', '-Iapr-util/include']
+    for dirs in self.include_dirs, self.swig_include_dirs:
+      for dir in string.split(string.strip(dirs)):
+        swig_includes.append("-I%s" % dir)
+        swig_includes.append("-I$(abs_srcdir)/%s" % dir)
+    if not os.path.exists("apr/include"):
+      try:
+        swig_includes.append("-I%s" % _exec.output("apr-config --includedir"))
+      except AssertionError:
+        pass
+    standalone.write('SWIG_INCLUDES = %s\n' % string.join(swig_includes))
+    standalone.write(open("build-outputs.mk","r").read())
+    standalone.close()
 
 class UnknownDependency(Exception):
   "We don't know how to deal with the dependent to link it in."

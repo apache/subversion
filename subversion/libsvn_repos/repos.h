@@ -67,9 +67,14 @@ extern "C" {
 #define SVN_REPOS__HOOK_DESC_EXT        ".tmpl"
 
 
-/* In the repository conf directory, look for these files. */
+/* The configuration file for svnserve, in the repository conf directory. */
 #define SVN_REPOS__CONF_SVNSERVE_CONF "svnserve.conf"
+
+/* In the svnserve default configuration, these are the suggested
+   locations for the passwd and authz files (in the repository conf
+   directory), and we put example templates there. */ 
 #define SVN_REPOS__CONF_PASSWD "passwd"
+#define SVN_REPOS__CONF_AUTHZ "authz"
 
 /* The Repository object, created by svn_repos_open() and
    svn_repos_create(), allocated in POOL. */
@@ -98,6 +103,9 @@ struct svn_repos_t
 
   /* The format number of this repository. */
   int format;
+
+  /* The FS backend in use within this repository. */
+  const char *fs_type;
 };
 
 
@@ -216,6 +224,21 @@ svn_repos__hooks_post_unlock (svn_repos_t *repos,
                               apr_array_header_t *paths,
                               const char *username,
                               apr_pool_t *pool);
+
+
+/*** Utility Functions ***/
+
+/* Set *CHANGED_P to TRUE if ROOT1/PATH1 and ROOT2/PATH2 have
+   different contents, FALSE if they have the same contents.
+   Use POOL for temporary allocation. */
+svn_error_t *
+svn_repos__compare_files (svn_boolean_t *changed_p,
+                          svn_fs_root_t *root1,
+                          const char *path1,
+                          svn_fs_root_t *root2,
+                          const char *path2,
+                          apr_pool_t *pool);
+
 
 #ifdef __cplusplus
 }

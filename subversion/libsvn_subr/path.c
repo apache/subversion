@@ -608,7 +608,27 @@ svn_path_is_child (const char *path1,
   return NULL;
 }
 
+svn_boolean_t
+svn_path_is_ancestor (const char *path1, const char *path2)
+{
+  apr_size_t path1_len = strlen (path1);
 
+  /* If path1 is empty and path2 is not absoulte, then path1 is an ancestor. */
+  if (SVN_PATH_IS_EMPTY (path1))
+    return *path2 != '/';
+
+  /* If path1 is a prefix of path2, then:
+     - If path1 ends in a path separator,
+     - If the paths are of the same length
+     OR
+     - path2 starts a new path component after the common prefix,
+     then path1 is an ancestor. */
+  if (strncmp (path1, path2, path1_len) == 0)
+    return path1[path1_len - 1] == '/'
+      || (path2[path1_len] == '/' || path2[path1_len] == '\0');
+
+  return FALSE;
+}
 apr_array_header_t *
 svn_path_decompose (const char *path,
                     apr_pool_t *pool)
@@ -711,40 +731,14 @@ static const char *
 skip_uri_scheme (const char *path)
 {
   apr_size_t j;
-  apr_size_t len = strlen (path);
 
-  /* ### Taking strlen() initially is inefficient.  It's a holdover
-     from svn_stringbuf_t days. */
+  for (j = 0; path[j]; ++j)
+    if (path[j] == ':' || path[j] == '/')
+       break;
 
-  /* Make sure we have enough characters to even compare. */
-  if (len < 4)
-    return NULL;
+  if (j > 0 && path[j] == ':' && path[j+1] == '/' && path[j+2] == '/')
+    return path + j + 3;
 
-  /* Look for the sequence '://' */
-  for (j = 0; j < len - 3; j++)
-    {
-      /* We hit a '/' before finding the sequence. */
-      if (path[j] == '/')
-        return NULL;
-
-      /* Skip stuff up to the first ':'. */
-      if (path[j] != ':')
-        continue;
-
-      /* Current character is a ':' now.  It better not be the first
-         character. */
-      if (j == 0)
-        return NULL;
-
-      /* Expecting the next two chars to be '/' */
-
-      if ((path[j + 1] == '/')
-          && (path[j + 2] == '/'))
-        return path + j + 3;
-      
-      return NULL;
-    }
-     
   return NULL;
 }
 

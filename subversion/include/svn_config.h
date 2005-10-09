@@ -16,7 +16,7 @@
  * @endcopyright
  *
  * @file svn_config.h
- * @brief Functions for accessing SVN configuration files.
+ * @brief Accessing SVN configuration files.
  */
 
 
@@ -50,6 +50,12 @@ typedef struct svn_config_t svn_config_t;
 
 /*** Configuration Defines ***/
 
+/**
+ * @name Client configuration files strings
+ * Strings for the names of files, sections, and options in the
+ * client configuration files.
+ * @{
+ */
 #define SVN_CONFIG_CATEGORY_SERVERS        "servers"
 #define SVN_CONFIG_SECTION_GROUPS               "groups"
 #define SVN_CONFIG_SECTION_GLOBAL               "global"
@@ -84,16 +90,24 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_NO_UNLOCK                 "no-unlock"
 #define SVN_CONFIG_SECTION_TUNNELS              "tunnels"
 #define SVN_CONFIG_SECTION_AUTO_PROPS           "auto-props"
+/** @} */
 
+/** @name Repository conf directory configuration files strings
+ * Strings for the names of sections and options in the
+ * repository conf directory configuration files.
+ * @{
+ */
 /* For repository svnserve.conf files */
 #define SVN_CONFIG_SECTION_GENERAL              "general"
 #define SVN_CONFIG_OPTION_ANON_ACCESS               "anon-access"
 #define SVN_CONFIG_OPTION_AUTH_ACCESS               "auth-access"
 #define SVN_CONFIG_OPTION_PASSWORD_DB               "password-db"
 #define SVN_CONFIG_OPTION_REALM                     "realm"
+#define SVN_CONFIG_OPTION_AUTHZ_DB                  "authz-db"
 
 /* For repository password database */
 #define SVN_CONFIG_SECTION_USERS                "users"
+/** @} */
 
 /*** Configuration Default Values ***/
 
@@ -134,10 +148,10 @@ svn_error_t *svn_config_read (svn_config_t **cfgp,
                               svn_boolean_t must_exist,
                               apr_pool_t *pool);
 
-/** Like @c svn_config_read, but merges the configuration data from @a file 
+/** Like svn_config_read(), but merges the configuration data from @a file
  * (a file or registry path) into @a *cfg, which was previously returned
- * from @c svn_config_read.  This function invalidates all value
- * expansions in @a cfg, so that the next @c svn_option_get takes the
+ * from svn_config_read().  This function invalidates all value
+ * expansions in @a cfg, so that the next svn_config_get() takes the
  * modifications into account.
  */
 svn_error_t *svn_config_merge (svn_config_t *cfg,
@@ -149,10 +163,11 @@ svn_error_t *svn_config_merge (svn_config_t *cfg,
  * *valuep to the value.
  *
  * If @a cfg is @c NULL, just sets @a *valuep to @a default_value. If
- * the value does not exist, expand and return @a default_value.
+ * the value does not exist, expand and return @a default_value. @a
+ * default_value can be NULL.
  *
  * The returned value will be valid at least until the next call to
- * @c svn_config_get, or for the lifetime of @a default_value. It is
+ * svn_config_get(), or for the lifetime of @a default_value. It is
  * safest to consume the returned value immediately.
  *
  * This function may change @a cfg by expanding option values.
@@ -170,7 +185,7 @@ void svn_config_set (svn_config_t *cfg,
                      const char *section, const char *option,
                      const char *value);
 
-/** Like @c svn_config_get, but for boolean values.
+/** Like svn_config_get(), but for boolean values.
  *
  * Parses the option as a boolean value. The recognized representations
  * are 'true'/'false', 'yes'/'no', 'on'/'off', '1'/'0'; case does not
@@ -180,7 +195,7 @@ svn_error_t *svn_config_get_bool (svn_config_t *cfg, svn_boolean_t *valuep,
                                   const char *section, const char *option,
                                   svn_boolean_t default_value);
 
-/** Like @c svn_config_set, but for boolean values.
+/** Like svn_config_set(), but for boolean values.
  *
  * Sets the option to 'true'/'false', depending on @a value.
  */
@@ -188,33 +203,76 @@ void svn_config_set_bool (svn_config_t *cfg,
                           const char *section, const char *option,
                           svn_boolean_t value);
 
-/** A callback function used in enumerating config sections.
+/** Similar to @c svn_config_section_enumerator2_t, but is not
+ * provided with a memory pool argument.
  *
- * See @c svn_config_enumerate_sections for the details of this type.
+ * See svn_config_enumerate_sections() for the details of this type.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.2 API.
  */
 typedef svn_boolean_t (*svn_config_section_enumerator_t)
        (const char *name, void *baton);
 
-/** Enumerate the sections, passing @a baton and the current section's name to
- * @a callback.  Continue the enumeration if @a callback returns @c TRUE.
- * Return the number of times @a callback was called.
+/** Similar to svn_config_enumerate_sections2(), but uses a memory pool of 
+ * @a cfg instead of one that is explicitely provided.
  *
- * ### See kff's comment to @c svn_config_enumerate.  It applies to this
- * function, too. ###
- *
- * @a callback's @a name and @a name parameters are only valid for the
- * duration of the call.
+ * @deprecated Provided for backwards compatibility with the 1.2 API. 
  */
 int svn_config_enumerate_sections (svn_config_t *cfg, 
                                    svn_config_section_enumerator_t callback,
                                    void *baton);
 
-/** A callback function used in enumerating config options.
+/** A callback function used in enumerating config sections.
  *
- * See @c svn_config_enumerate for the details of this type.
+ * See svn_config_enumerate_sections2() for the details of this type.
+ *
+ * @since New in 1.3.
+ */
+typedef svn_boolean_t (*svn_config_section_enumerator2_t)
+       (const char *name, void *baton, apr_pool_t *pool);
+
+/** Enumerate the sections, passing @a baton and the current section's name
+ * to @a callback.  Continue the enumeration if @a callback returns @c TRUE.
+ * Return the number of times @a callback was called. 
+ *
+ * ### See kff's comment to svn_config_enumerate2().  It applies to this
+ * function, too. ###
+ *
+ * @a callback's @a name and @a name parameters are only valid for the
+ * duration of the call.
+ *
+ * @since New in 1.3.
+ */
+int svn_config_enumerate_sections2 (svn_config_t *cfg, 
+                                    svn_config_section_enumerator2_t callback,
+                                    void *baton, apr_pool_t *pool);
+
+/** Similar to @c svn_config_enumerator2_t, but is not
+ * provided with a memory pool argument.
+ * See svn_config_enumerate() for the details of this type.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.2 API. 
  */
 typedef svn_boolean_t (*svn_config_enumerator_t)
        (const char *name, const char *value, void *baton);
+
+/** Similar to svn_config_enumerate2(), but uses a memory pool of 
+ * @a cfg instead of one that is explicitely provided.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.2 API. 
+ */
+int svn_config_enumerate (svn_config_t *cfg, const char *section,
+                          svn_config_enumerator_t callback, void *baton);
+
+
+/** A callback function used in enumerating config options.
+ *
+ * See svn_config_enumerate2() for the details of this type.
+ *
+ * @since New in 1.3.
+ */
+typedef svn_boolean_t (*svn_config_enumerator2_t)
+       (const char *name, const char *value, void *baton, apr_pool_t *pool);
 
 /** Enumerate the options in @a section, passing @a baton and the current
  * option's name and value to @a callback.  Continue the enumeration if
@@ -224,16 +282,19 @@ typedef svn_boolean_t (*svn_config_enumerator_t)
  * ### kff asks: A more usual interface is to continue enumerating
  *     while @a callback does not return error, and if @a callback does
  *     return error, to return the same error (or a wrapping of it)
- *     from @c svn_config_enumerate.  What's the use case for
- *     @c svn_config_enumerate?  Is it more likely to need to break out
+ *     from svn_config_enumerate().  What's the use case for
+ *     svn_config_enumerate()?  Is it more likely to need to break out
  *     of an enumeration early, with no error, than an invocation of
  *     @a callback is likely to need to return an error? ###
  *
  * @a callback's @a name and @a value parameters are only valid for the
  * duration of the call.
+ *
+ * @since New in 1.3.
  */
-int svn_config_enumerate (svn_config_t *cfg, const char *section,
-                          svn_config_enumerator_t callback, void *baton);
+int svn_config_enumerate2 (svn_config_t *cfg, const char *section,
+                           svn_config_enumerator2_t callback, void *baton,
+                           apr_pool_t *pool);
 
 
 /** Enumerate the group @a master_section in @a cfg.  Each variable
@@ -315,7 +376,7 @@ svn_error_t *svn_config_ensure (const char *config_dir, apr_pool_t *pool);
  * also contain @c SVN_CONFIG_REALMSTRING_KEY.  The caller can examine
  * this value as a sanity-check that the correct file was loaded.
  *
- * The hashtable will contain <tt>const char *</tt>keys and
+ * The hashtable will contain <tt>const char *</tt> keys and
  * <tt>svn_string_t *</tt> values.
  */
 svn_error_t * svn_config_read_auth_data (apr_hash_t **hash,
@@ -333,7 +394,7 @@ svn_error_t * svn_config_read_auth_data (apr_hash_t **hash,
  * SVN_CONFIG_REALMSTRING_KEY.  This allows programs (or users) to
  * verify exactly which set credentials live within the file.
  *
- * The hashtable must contain <tt>const char *</tt>keys and
+ * The hashtable must contain <tt>const char *</tt> keys and
  * <tt>svn_string_t *</tt> values.
  */
 svn_error_t * svn_config_write_auth_data (apr_hash_t *hash,

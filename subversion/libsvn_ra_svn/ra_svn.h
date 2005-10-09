@@ -39,8 +39,10 @@ typedef svn_error_t *(*ra_svn_block_handler_t)(svn_ra_svn_conn_t *conn,
 /* This structure is opaque to the server.  The client pokes at the
  * first few fields during setup and cleanup. */
 struct svn_ra_svn_conn_st {
-  svn_stream_t *in_stream;
-  svn_stream_t *out_stream;
+  apr_socket_t *sock;     /* NULL if using in_file/out_file */
+  apr_file_t *in_file;
+  apr_file_t *out_file;
+  apr_proc_t *proc;       /* Used by client.c when sock is NULL */
   char read_buf[4096];
   char *read_ptr;
   char *read_end;
@@ -85,14 +87,12 @@ svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      const char *user, const char *password,
                                      const char **message);
 
-/* Maps input/output stream interfaces onto a socket. */
-void svn_ra_svn__sock_streams(apr_socket_t *sock, svn_stream_t **in,
-                              svn_stream_t **out, apr_pool_t *pool);
-
-/* Maps input/output stream interfaces onto a pair of files. */
-void svn_ra_svn__file_streams(apr_file_t *in_file, apr_file_t *out_file,
-                              svn_stream_t **in, svn_stream_t **out,
-                              apr_pool_t *pool);
+/* Return an error chain based on @a params (which contains a
+ * command response indicating failure).  The error chain will be
+ * in the same order as the errors indicated in @a params.  Use
+ * @a pool for temporary allocations. */
+svn_error_t *svn_ra_svn__handle_failure_status(apr_array_header_t *params,
+                                               apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

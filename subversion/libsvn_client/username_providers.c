@@ -28,6 +28,7 @@
 #include "svn_error.h"
 #include "svn_utf.h"
 #include "svn_config.h"
+#include "svn_user.h"
 
 
 /*-----------------------------------------------------------------------*/
@@ -82,19 +83,7 @@ username_first_creds (void **credentials,
 
   /* If that failed, ask the OS for the username */
   if (! username)
-    {
-      apr_uid_t uid;
-      apr_gid_t gid;
-      char *un;
-      if (apr_uid_current (&uid, &gid, pool) == APR_SUCCESS &&
-          apr_uid_name_get (&un, uid, pool) == APR_SUCCESS)
-        {
-          err = svn_utf_cstring_to_utf8 (&username, un, pool);
-          svn_error_clear (err);
-          if (err)
-            username = NULL;
-        }
-    }
+    username = svn_user_get_name (pool);
 
   if (username)
     {

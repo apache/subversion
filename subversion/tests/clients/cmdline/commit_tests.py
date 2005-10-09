@@ -836,13 +836,13 @@ def hudson_part_2_1(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
   expected_disk.add({
-    'A/D/G/chi' : Item("This is the file 'chi'."),
+    'A/D/G/chi' : Item("This is the file 'chi'.\n"),
     })
   expected_disk.add({
-    'A/D/G/omega' : Item("This is the file 'omega'."),
+    'A/D/G/omega' : Item("This is the file 'omega'.\n"),
     })
   expected_disk.add({
-    'A/D/G/psi' : Item("This is the file 'psi'."),
+    'A/D/G/psi' : Item("This is the file 'psi'.\n"),
     })
 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -891,7 +891,7 @@ def hook_test(sbox):
   expected_output = [abs_repo_dir + "\n",
                      abs_repo_dir + " 1\n",
                      abs_repo_dir + " 2\n"]
-  svntest.actions.run_and_verify_svn (None, expected_output, None,
+  svntest.actions.run_and_verify_svn (None, expected_output, [],
                                       'ci', '--quiet',
                                       '-m', 'log msg', wc_dir)
 
@@ -946,9 +946,9 @@ def merge_mixed_revisions(sbox):
     'A/D/H/psi' : Item(status='  ', wc_rev=2),
     })
   expected_disk = svntest.wc.State('', {
-    'omega' : Item("This is the file 'omega'."),
-    'chi' : Item("This is the file 'chi'.moo"),
-    'psi' : Item("This is the file 'psi'."),
+    'omega' : Item("This is the file 'omega'.\n"),
+    'chi' : Item("This is the file 'chi'.\nmoo"),
+    'psi' : Item("This is the file 'psi'.\n"),
     })
   expected_output = svntest.wc.State(wc_dir, { })
   svntest.actions.run_and_verify_update (H_path,
@@ -1228,7 +1228,7 @@ def commit_rmd_and_deleted_file(sbox):
 
   # Commit, hoping to see no errors
   svntest.actions.run_and_verify_svn("Output on stderr where none expected",
-                                     SVNAnyOutput, None,
+                                     SVNAnyOutput, [],
                                      'commit', '-m', 'logmsg', mu_path)
 
 #----------------------------------------------------------------------
@@ -1351,7 +1351,7 @@ def commit_with_lock(sbox):
                                            
   # unlock directory
   svntest.actions.run_and_verify_svn("Output on stderr where none expected",
-                                     [], None,
+                                     [], [],
                                      'cleanup', D_path)
 
   # this commit should succeed
@@ -1427,7 +1427,7 @@ def failed_commit(sbox):
 
   # Commit both working copies. The second commit should fail.
   svntest.actions.run_and_verify_svn("Output on stderr where none expected",
-                                     SVNAnyOutput, None,
+                                     SVNAnyOutput, [],
                                      'commit', '-m', 'log', wc_dir)
 
   svntest.actions.run_and_verify_svn("Output on stderr expected",
@@ -1447,7 +1447,7 @@ def failed_commit(sbox):
 
 # Commit from multiple working copies is not yet supported.  At
 # present an error is generated and none of the working copies change.
-# Related to issue 959, this test here doesn't use svn:external but the
+# Related to issue 959, this test here doesn't use svn:externals but the
 # behaviour needs to be considered.
 
 def commit_multiple_wc(sbox):
@@ -1535,7 +1535,7 @@ def commit_nonrecursive(sbox):
   svntest.main.file_append(os.path.join(wc_dir, file4_path), 'this is file4')
 
   # Add them to version control.
-  svntest.actions.run_and_verify_svn("", SVNAnyOutput, None,
+  svntest.actions.run_and_verify_svn("", SVNAnyOutput, [],
                                      'add', '-N',
                                      os.path.join(wc_dir, file1_path),
                                      os.path.join(wc_dir, dir1_path),
@@ -1636,7 +1636,7 @@ def commit_nonrecursive(sbox):
   svntest.main.file_append(os.path.join(wc_dir, nocommit_path), 'nocommit')
 
   # Add them to version control.
-  svntest.actions.run_and_verify_svn("", SVNAnyOutput, None,
+  svntest.actions.run_and_verify_svn("", SVNAnyOutput, [],
                                      'add', '-N',
                                      os.path.join(wc_dir, dirA_path),
                                      os.path.join(wc_dir, fileA_path),
@@ -1804,7 +1804,7 @@ def from_wc_top_with_bad_editor(sbox):
   wc_dir = sbox.wc_dir
   
   svntest.actions.run_and_verify_svn("Unexpected failure from propset.",
-                                     SVNAnyOutput, None,
+                                     SVNAnyOutput, [],
                                      'pset', 'fish', 'food', wc_dir)
   was_cwd = os.getcwd()
   try:
@@ -1902,6 +1902,58 @@ def tab_test(sbox):
                                             source_url, tab_url)
   match_bad_tab_path(tab_dir, errlines)
 
+#----------------------------------------------------------------------
+
+def local_mods_are_not_commits(sbox):
+  "local ops should not be treated like commits"
+
+  # For issue #2285.
+  #
+  # Some commands can run on either a URL or a local path.  These
+  # commands take a log message, intended for the URL case.
+  # Therefore, they should make sure that getting a log message for
+  # a local operation errors (because not committing).
+  #
+  # This is in commit_tests.py because the unifying theme is that
+  # commits are *not* happening.  And because there was no better
+  # place to put it :-).
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  expected_error = '.*Local, non-commit operations do not take a log message.*'
+
+  # copy wc->wc
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'cp', '-m', 'log msg',
+                                     os.path.join(wc_dir, 'iota'),
+                                     os.path.join(wc_dir, 'iota2'))
+
+  # copy repos->wc
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'cp', '-m', 'log msg',
+                                     '--username',
+                                     svntest.main.wc_author,
+                                     '--password',
+                                     svntest.main.wc_passwd,
+                                     svntest.main.current_repo_url + "/iota",
+                                     os.path.join(wc_dir, 'iota2'))
+
+  # delete
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'rm', '-m', 'log msg',
+                                     os.path.join(wc_dir, 'A', 'D', 'gamma'))
+
+  # mkdir
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'mkdir', '-m', 'log msg',
+                                     os.path.join(wc_dir, 'newdir'))
+
+  # rename
+  svntest.actions.run_and_verify_svn(None, None, expected_error,
+                                     'cp', '-m', 'log msg',
+                                     os.path.join(wc_dir, 'A', 'mu'),
+                                     os.path.join(wc_dir, 'A', 'yu'))
+
 
 ########################################################################
 # Run the tests
@@ -1941,6 +1993,7 @@ test_list = [ None,
               from_wc_top_with_bad_editor,
               mods_in_schedule_delete,
               Skip(tab_test, (os.name != 'posix' or sys.platform == 'cygwin')),
+              local_mods_are_not_commits,
              ]
 
 if __name__ == '__main__':

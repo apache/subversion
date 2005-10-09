@@ -17,32 +17,20 @@
 ######################################################################
 
 from libsvn.core import *
+import libsvn.core as _core
 
 def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
   for name, value in symbol_dict.items():
     if name.startswith(from_prefix):
       symbol_dict[to_prefix + name[len(from_prefix):]] = value
 
-# some minor patchups
-svn_pool_destroy = apr_pool_destroy
-svn_pool_clear = apr_pool_clear
 
-def run_app(func, *args, **kw):
-  '''Run a function as an "APR application".
+Pool = _core.svn_pool_create
 
-  APR is initialized, and an application pool is created. Cleanup is
-  performed as the function exits (normally or via an exception.
-  '''
-  apr_initialize()
-  try:
-    pool = svn_pool_create(None)
-    try:
-      return apply(func, (pool,) + args, kw)
-    finally:
-      svn_pool_destroy(pool)
-  finally:
-    apr_terminate()
-
+# Hide raw pool management functions.
+# If you still want to use these, use libsvn.core instead.
+del apr_pool_destroy
+del apr_pool_clear
 
 def svn_path_compare_paths(path1, path2):
   path1_len = len (path1);
@@ -166,3 +154,60 @@ else:
 
     return _string.join(map(escape_shell_arg, argv), " ")
 # ============================================================================
+# Deprecated functions
+
+def apr_initialize():
+  """Deprecated. APR is now initialized automatically. This is
+  a compatibility wrapper providing the interface of the
+  Subversion 1.2.x and earlier bindings."""
+  pass
+
+def apr_terminate():
+  """Deprecated. APR is now terminated automatically. This is
+  a compatibility wrapper providing the interface of the
+  Subversion 1.2.x and earlier bindings."""
+  pass
+
+def svn_pool_create(parent_pool=None):
+  """Deprecated. Use Pool() instead. This is a compatibility
+  wrapper providing the interface of the Subversion 1.2.x and
+  earlier bindings."""
+  return Pool(parent_pool)
+
+def svn_pool_destroy(pool):
+  """Deprecated. Pools are now destroyed automatically. If you
+  want to manually destroy a pool, use Pool.destroy. This is
+  a compatibility wrapper providing the interface of the
+  Subversion 1.2.x and earlier bindings."""
+  
+  assert pool is not None
+
+  if hasattr(pool,"destroy"):
+    pool.destroy()
+  else:
+    _core.apr_pool_destroy(pool)
+
+def svn_pool_clear(pool):
+  """Deprecated. Use Pool.clear instead. This is a compatibility
+  wrapper providing the interface of the Subversion 1.2.x and
+  earlier bindings."""
+
+  assert pool is not None
+
+  if hasattr(pool,"clear"):
+    pool.clear()
+  else:
+    _core.apr_pool_clear(pool)
+
+def run_app(func, *args, **kw):
+  '''Deprecated: Application-level pools are now created
+  automatically. APR is also initialized and terminated
+  automatically. This is a compatibility wrapper providing the
+  interface of the Subversion 1.2.x and earlier bindings.
+
+  Run a function as an "APR application".
+
+  APR is initialized, and an application pool is created. Cleanup is
+  performed as the function exits (normally or via an exception).
+  '''
+  return apply(func, (_core.application_pool,) + args, kw)

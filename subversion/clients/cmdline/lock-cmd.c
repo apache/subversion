@@ -36,9 +36,8 @@
 
 /* Get a lock comment, allocate it in POOL and store it in *COMMENT. */
 static svn_error_t *
-get_comment (const char **comment, const char **tmp_file,
-             svn_client_ctx_t *ctx, svn_cl__opt_state_t *opt_state,
-             const char *base_dir, apr_pool_t *pool)
+get_comment (const char **comment, svn_client_ctx_t *ctx,
+             svn_cl__opt_state_t *opt_state, apr_pool_t *pool)
 {
   svn_string_t *comment_string;
 
@@ -62,21 +61,7 @@ get_comment (const char **comment, const char **tmp_file,
     }
   else
     {
-      /* Invoke the editor. */
-      /* ### Should we do this in a loop like for the commit message? */
-      comment_string = svn_string_create ("", pool);
-      SVN_ERR (svn_cl__edit_externally (&comment_string, tmp_file,
-                                        opt_state->editor_cmd, base_dir,
-                                        comment_string, "svn-lock",
-                                        ctx->config, TRUE, NULL,
-                                        pool));
-      if (comment_string)
-        *comment = comment_string->data;
-      else
-        *comment = NULL;
-
-      /* The above translates the string to UTF8/LF for us, so we are ready
-         now. */
+      *comment = NULL;
       return SVN_NO_ERROR;
     }
 
@@ -97,10 +82,7 @@ svn_cl__lock (apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  const char *base_dir;
   const char *comment;
-  const char *tmp_file = NULL;
-  svn_error_t *err;
 
   SVN_ERR (svn_opt_args_to_target_array2 (&targets, os,
                                           opt_state->targets, pool));
@@ -109,34 +91,14 @@ svn_cl__lock (apr_getopt_t *os,
   if (! targets->nelts)
     return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
-  /* Put lock comment file in directory of first target. */
-  base_dir = svn_path_dirname (APR_ARRAY_IDX (targets, 0, const char *), pool);
-  {
-    /* But if that doesn't work out, just grab a standard temp dir. */
-    svn_node_kind_t kind;
-    svn_io_check_path (base_dir, &kind, pool);
-    if (kind != svn_node_dir)
-      SVN_ERR (svn_io_temp_dir (&base_dir, pool));
-  }
-
   /* Get comment. */
-  SVN_ERR (get_comment (&comment, &tmp_file, ctx, opt_state, base_dir, pool));
+  SVN_ERR (get_comment (&comment, ctx, opt_state, pool));
 
   svn_cl__get_notifier (&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                         FALSE, FALSE, pool);
 
-  err = svn_client_lock (targets, comment, opt_state->force,
-                         ctx, pool);
-  if (err && tmp_file)
-    svn_error_compose
-      (err,
-       svn_error_create (err->apr_err,
-                         svn_error_createf (err->apr_err, NULL,
-                                            "   '%s'", tmp_file),
-                         _("Your lock comment was left in "
-                           "a temporary file:")));
-  else if (tmp_file)
-    SVN_ERR (svn_io_remove_file (tmp_file, pool));
+  SVN_ERR (svn_client_lock (targets, comment, opt_state->force,
+                            ctx, pool));
 
-  return err;
+  return SVN_NO_ERROR;
 }

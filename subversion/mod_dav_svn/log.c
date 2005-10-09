@@ -207,6 +207,7 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   struct log_receiver_baton lrb;
   dav_svn_authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
+  const char *action;
   const char *target = NULL;
   int limit = 0;
   int ns;
@@ -223,12 +224,12 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-                               "The request does not contain the 'svn:' "
-                               "namespace, so it is not going to have certain "
-                               "required elements.",
-                               SVN_DAV_ERROR_NAMESPACE,
-                               SVN_DAV_ERROR_TAG);
+      return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+                                    "The request does not contain the 'svn:' "
+                                    "namespace, so it is not going to have "
+                                    "certain required elements.",
+                                    SVN_DAV_ERROR_NAMESPACE,
+                                    SVN_DAV_ERROR_TAG);
     }
   
   /* ### todo: okay, now go fill in svn_ra_dav__get_log() based on the
@@ -244,40 +245,18 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
       else if (strcmp(child->name, "end-revision") == 0)
         end = SVN_STR_TO_REV(dav_xml_get_cdata(child, resource->pool, 1));
       else if (strcmp(child->name, "limit") == 0)
-        {
-          limit = atoi(child->first_cdata.first->text);
-        }
+        limit = atoi(dav_xml_get_cdata(child, resource->pool, 1));
       else if (strcmp(child->name, "discover-changed-paths") == 0)
-        {
-          /* ### todo: value doesn't matter, presence alone is enough?
-             (I.e., is that a traditional way to do things here?) */
-          discover_changed_paths = 1;
-        }
+        discover_changed_paths = 1; /* presence indicates positivity */
       else if (strcmp(child->name, "strict-node-history") == 0)
-        {
-          /* ### todo: value doesn't matter, presence alone is enough?
-             (I.e., is that a traditional way to do things here?) */
-          strict_node_history = 1;
-        }
+        strict_node_history = 1; /* presence indicates positivity */
       else if (strcmp(child->name, "path") == 0)
         {
-          /* Convert these relative paths to absolute paths in the
-             repository. */
-          target = apr_pstrdup (resource->pool, resource->info->repos_path);
-
-          /* Don't add on an empty string, but do add the target to the
-             path.  This special case means that we have passed a single
-             directory to get the log of, and we need a path to call
-             svn_fs_revisions_changed on. */
-          if (child->first_cdata.first)
-            {
-              if ((derr = dav_svn__test_canonical
-                   (child->first_cdata.first->text, resource->pool)))
-                return derr;
-              target = svn_path_join(target, child->first_cdata.first->text,
-                                     resource->pool);
-            }
-
+          const char *rel_path = dav_xml_get_cdata(child, resource->pool, 0);
+          if ((derr = dav_svn__test_canonical (rel_path, resource->pool)))
+            return derr;
+          target = svn_path_join(resource->info->repos_path, rel_path, 
+                                 resource->pool);
           (*((const char **)(apr_array_push (paths)))) = target;
         }
       /* else unknown element; skip it */
@@ -336,6 +315,23 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
     }
 
  cleanup:
+
+  /* We've detected a 'high level' svn action to log. */
+  if (paths->nelts == 0)
+    action = "log";
+  else if (paths->nelts == 1)
+    action = apr_psprintf(resource->pool, "log-all '%s'",
+                          svn_path_uri_encode(APR_ARRAY_IDX
+                                              (paths, 0, const char *),
+                                              resource->pool));
+  else
+    action = apr_psprintf(resource->pool, "log-partial '%s'",
+                          svn_path_uri_encode(APR_ARRAY_IDX
+                                              (paths, 0, const char *),
+                                              resource->pool));
+
+  apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION", action);
+
 
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */

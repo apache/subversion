@@ -75,7 +75,7 @@ svn_lock_to_dav_lock(dav_lock **dlock,
   /* the svn_lock_t 'comment' field maps to the 'DAV:owner' field. */
   if (slock->comment)
     {
-      if (! slock->xml_comment)
+      if (! slock->is_dav_comment)
         {
           /* This comment was originally given to us by an svn client,
              so, we need to wrap the naked comment with <DAV:owner>,
@@ -109,7 +109,7 @@ svn_lock_to_dav_lock(dav_lock **dlock,
   /* This is absurd.  apr_time.h has an apr_time_t->time_t func,
      but not the reverse?? */
   if (slock->expiration_date)
-    lock->timeout = (time_t)slock->expiration_date / APR_USEC_PER_SEC;
+    lock->timeout = (time_t) (slock->expiration_date / APR_USEC_PER_SEC);
   else
     lock->timeout = DAV_TIMEOUT_INFINITE;
 
@@ -195,7 +195,7 @@ dav_lock_to_svn_lock(svn_lock_t **slock,
              the <D:owner> wrapper) when storing in the repository, so
              it looks reasonable to the rest of svn. */
           dav_error *derr;
-          lock->xml_comment = 0;  /* comment is NOT xml-wrapped. */
+          lock->is_dav_comment = 0;  /* comment is NOT xml-wrapped. */
           derr = unescape_xml(&(lock->comment), dlock->owner, pool);
           if (derr)
             return derr;
@@ -205,14 +205,14 @@ dav_lock_to_svn_lock(svn_lock_t **slock,
           /* The comment comes from a non-svn client;  don't touch
              this data at all. */
           lock->comment = apr_pstrdup(pool, dlock->owner);
-          lock->xml_comment = 1; /* comment IS xml-wrapped. */
+          lock->is_dav_comment = 1; /* comment IS xml-wrapped. */
         }
     }
 
-  if (dlock->timeout)
-    lock->expiration_date = (apr_time_t)dlock->timeout * APR_USEC_PER_SEC;
-  else
+  if (dlock->timeout == DAV_TIMEOUT_INFINITE)
     lock->expiration_date = 0; /* never expires */
+  else
+    lock->expiration_date = ((apr_time_t)dlock->timeout) * APR_USEC_PER_SEC;
 
   *slock = lock;
   return 0;
@@ -539,6 +539,10 @@ dav_svn_get_locks(dav_lockdb *lockdb,
       apr_table_setn(info->r->headers_out, SVN_DAV_CREATIONDATE_HEADER,
                      svn_time_to_cstring (slock->creation_date,
                                           resource->pool));
+      
+      /* Let svn clients know who "owns" the slock. */
+      apr_table_setn(info->r->headers_out, SVN_DAV_LOCK_OWNER_HEADER,
+                     slock->owner);
     }
 
   *locks = lock;
@@ -609,6 +613,10 @@ dav_svn_find_lock(dav_lockdb *lockdb,
       apr_table_setn(info->r->headers_out, SVN_DAV_CREATIONDATE_HEADER,
                      svn_time_to_cstring (slock->creation_date,
                                           resource->pool));
+
+      /* Let svn clients know the 'owner' of the slock. */
+      apr_table_setn(info->r->headers_out, SVN_DAV_LOCK_OWNER_HEADER,
+                     slock->owner);
     }
 
   *lock = dlock;
@@ -802,7 +810,8 @@ dav_svn_append_locks(dav_lockdb *lockdb,
                            slock->path,
                            slock->token,
                            slock->comment,
-                           lock->timeout * APR_USEC_PER_SEC,
+                           slock->is_dav_comment,
+                           slock->expiration_date,
                            info->working_revnum,
                            info->lock_steal,
                            resource->pool);
@@ -823,6 +832,22 @@ dav_svn_append_locks(dav_lockdb *lockdb,
      client should just ignore the header. */
   apr_table_setn(info->r->headers_out, SVN_DAV_CREATIONDATE_HEADER,
                  svn_time_to_cstring (slock->creation_date, resource->pool));
+
+  /* A standard webdav LOCK response doesn't include any information
+     about the owner of the lock.  ('DAV:owner' has nothing to do with
+     authorization, it's just a comment that we map to
+     svn_lock_t->comment.)  We send the owner in a custom header, so
+     that svn clients can fill in svn_lock_t->owner.  A generic DAV
+     client should just ignore the header. */
+  apr_table_setn(info->r->headers_out, SVN_DAV_LOCK_OWNER_HEADER,
+                 slock->owner);
+
+  /* Log the locking as a 'high-level' action. */
+  apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION",
+                apr_psprintf(resource->info->r->pool,
+                             "lock '%s'",
+                             svn_path_uri_encode(slock->path,
+                                                 resource->info->r->pool)));
 
   return 0;
 }
@@ -910,6 +935,13 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
                                    resource->pool);
     }
 
+  /* Log the unlocking as a 'high-level' action. */
+  apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION",
+                apr_psprintf(resource->info->r->pool,
+                             "unlock '%s'",
+                             svn_path_uri_encode(resource->info->repos_path,
+                                                 resource->info->r->pool)));
+
   return 0;
 }
 
@@ -977,7 +1009,9 @@ dav_svn_refresh_locks(dav_lockdb *lockdb,
                            slock->path,
                            slock->token,
                            slock->comment,
-                           (apr_time_t)new_time * APR_USEC_PER_SEC,
+                           slock->is_dav_comment,
+                           (new_time == DAV_TIMEOUT_INFINITE)
+                             ? 0 : (apr_time_t)new_time * APR_USEC_PER_SEC,
                            SVN_INVALID_REVNUM,
                            TRUE, /* forcibly steal existing lock */
                            resource->pool);

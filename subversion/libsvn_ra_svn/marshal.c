@@ -34,7 +34,6 @@
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_ra_svn.h"
-#include "svn_io.h"
 #include "svn_private_config.h"
 
 #include "ra_svn.h"
@@ -51,6 +50,9 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
   svn_ra_svn_conn_t *conn = apr_palloc(pool, sizeof(*conn));
 
   assert((sock && !in_file && !out_file) || (!sock && in_file && out_file));
+  conn->sock = sock;
+  conn->in_file = in_file;
+  conn->out_file = out_file;
   conn->read_ptr = conn->read_buf;
   conn->read_end = conn->read_buf;
   conn->write_pos = 0;
@@ -58,13 +60,6 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
   conn->block_baton = NULL;
   conn->capabilities = apr_hash_make(pool);
   conn->pool = pool;
-
-  
-  if (sock != NULL)
-    svn_ra_svn__sock_streams(sock, &conn->in_stream, &conn->out_stream, pool);
-  else
-    svn_ra_svn__file_streams(in_file, out_file, &conn->in_stream,
-                             &conn->out_stream, pool);
   return conn;
 }
 
@@ -102,13 +97,31 @@ void svn_ra_svn__set_block_handler(svn_ra_svn_conn_t *conn,
 
   conn->block_handler = handler;
   conn->block_baton = baton;
-  svn_stream_timeout(conn->out_stream, interval);
+  if (conn->sock)
+    apr_socket_timeout_set(conn->sock, interval);
+  else
+    apr_file_pipe_timeout_set(conn->out_file, interval);
 }
 
 svn_boolean_t svn_ra_svn__input_waiting(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool)
 {
-  return svn_stream_data_pending(conn->in_stream);
+  apr_pollfd_t pfd;
+  int n;
+
+  if (conn->sock)
+    {
+      pfd.desc_type = APR_POLL_SOCKET;
+      pfd.desc.s = conn->sock;
+    }
+  else
+    {
+      pfd.desc_type = APR_POLL_FILE;
+      pfd.desc.f = conn->in_file;
+    }
+  pfd.p = pool;
+  pfd.reqevents = APR_POLLIN;
+  return ((apr_poll(&pfd, 1, &n, 0) == APR_SUCCESS) && n);
 }
 
 /* --- WRITE BUFFER MANAGEMENT --- */
@@ -132,13 +145,19 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     const char *data, apr_size_t len)
 {
   const char *end = data + len;
+  apr_status_t status;
   apr_size_t count;
   apr_pool_t *subpool = NULL;
 
   while (data < end)
     {
       count = end - data;
-      SVN_ERR(svn_stream_write(conn->out_stream, data, &count));
+      if (conn->sock)
+        status = apr_socket_send(conn->sock, data, &count);
+      else
+        status = apr_file_write(conn->out_file, data, &count);
+      if (status)
+        return svn_error_wrap_apr(status, _("Can't write to connection"));
       if (count == 0)
         {
           if (!subpool)
@@ -187,6 +206,9 @@ static svn_error_t *writebuf_write(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 static svn_error_t *writebuf_printf(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     const char *fmt, ...)
+    __attribute__ ((format (printf, 3, 4)));
+static svn_error_t *writebuf_printf(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                    const char *fmt, ...)
 {
   va_list ap;
   char *str;
@@ -212,11 +234,23 @@ static char *readbuf_drain(svn_ra_svn_conn_t *conn, char *data, char *end)
   return data + copylen;
 }
 
-/* Read data from from input stream. */
+/* Read data from socket or input file as appropriate. */
 static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
                                   apr_size_t *len)
 {
-  SVN_ERR(svn_stream_read(conn->in_stream, data, len));
+  apr_status_t status;
+
+  /* Always block for reading. */
+  if (conn->sock && conn->block_handler)
+    apr_socket_timeout_set(conn->sock, -1);
+  if (conn->sock)
+    status = apr_socket_recv(conn->sock, data, len);
+  else
+    status = apr_file_read(conn->in_file, data, len);
+  if (conn->sock && conn->block_handler)
+    apr_socket_timeout_set(conn->sock, 0);
+  if (status && !APR_STATUS_IS_EOF(status))
+    return svn_error_wrap_apr(status, _("Can't read from connection"));
   if (*len == 0)
     return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL,
                             _("Connection closed unexpectedly"));
@@ -710,17 +744,51 @@ svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 /* --- READING AND WRITING COMMANDS AND RESPONSES --- */
 
+svn_error_t *svn_ra_svn__handle_failure_status(apr_array_header_t *params,
+                                               apr_pool_t *pool)
+{
+  const char *message, *file;
+  svn_error_t *err = NULL;
+  svn_ra_svn_item_t *elt;
+  int i;
+  apr_uint64_t apr_err, line;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  if (params->nelts == 0)
+    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                            _("Empty error list"));
+
+  /* Rebuild the error list from the end, to avoid reversing the order. */
+  for (i = params->nelts - 1; i >= 0; i--)
+    {
+      svn_pool_clear(subpool);
+      elt = &((svn_ra_svn_item_t *) params->elts)[i];
+      if (elt->kind != SVN_RA_SVN_LIST)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                _("Malformed error list"));
+      SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, subpool, "nccn", &apr_err,
+                                      &message, &file, &line));
+      /* The message field should have been optional, but we can't
+         easily change that, so "" means a nonexistent message. */
+      if (!*message)
+        message = NULL;
+      err = svn_error_create(apr_err, err, message);
+      err->file = apr_pstrdup(err->pool, file);
+      err->line = line;
+    }
+
+  svn_pool_destroy(subpool);
+  return err;
+}
+
 svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
                                           apr_pool_t *pool,
                                           const char *fmt, ...)
 {
   va_list ap;
-  const char *status, *message, *file;
+  const char *status;
   apr_array_header_t *params;
   svn_error_t *err;
-  svn_ra_svn_item_t *elt;
-  int i;
-  apr_uint64_t apr_err, line;
 
   SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "wl", &status, &params));
   if (strcmp(status, "success") == 0)
@@ -732,28 +800,7 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
     }
   else if (strcmp(status, "failure") == 0)
     {
-      /* Rebuild the error list from the end, to avoid reversing the order. */
-      if (params->nelts == 0)
-        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                _("Empty error list"));
-      err = NULL;
-      for (i = params->nelts - 1; i >= 0; i--)
-        {
-          elt = &((svn_ra_svn_item_t *) params->elts)[i];
-          if (elt->kind != SVN_RA_SVN_LIST)
-            return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                    _("Malformed error list"));
-          SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "nccn", &apr_err,
-                                          &message, &file, &line));
-          /* The message field should have been optional, but we can't
-             easily change that, so "" means a nonexistent message. */
-          if (!*message)
-            message = NULL;
-          err = svn_error_create(apr_err, err, message);
-          err->file = apr_pstrdup(err->pool, file);
-          err->line = line;
-        }
-      return err;
+      return svn_ra_svn__handle_failure_status(params, pool);
     }
 
   return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,

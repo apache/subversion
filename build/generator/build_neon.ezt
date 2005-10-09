@@ -10,7 +10,10 @@
 [if-any zlib_path]
 @rem **************************************************************************
 @rem ZLib support
-set ZLIB_SRC=[zlib_path][end]
+set ZLIB_SRC=[zlib_path]
+if not "%1" == "debug" goto zlibend
+set ZLIB_LIB_OPTS=ZLIB_LIBS="$(ZLIB_SRC)\zlibstatD.lib"
+:zlibend[end]
 [if-any openssl_path]
 @rem **************************************************************************
 @rem OpenSSL support
@@ -47,8 +50,8 @@ goto end
 
 @rem **************************************************************************
 :debug
-@echo nmake /f neon.mak %target% DEBUG_BUILD=Aye
-nmake /nologo /f neon.mak %target% DEBUG_BUILD=Aye
+@echo nmake /f neon.mak %target% DEBUG_BUILD=Aye %ZLIB_LIB_OPTS%
+nmake /nologo /f neon.mak %target% DEBUG_BUILD=Aye %ZLIB_LIB_OPTS%
 if not errorlevel 0 goto err
 goto end
 

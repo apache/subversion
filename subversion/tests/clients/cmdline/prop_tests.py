@@ -617,25 +617,25 @@ def inappropriate_props(sbox):
   
   path = os.path.join(wc_dir, 'binary')
   svntest.main.file_append(path, "binary")
-  svntest.actions.run_and_verify_svn(None, None, None,
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--force',
                                      'svn:eol-style', 'CRLF',
                                      path)
    
   path = os.path.join(wc_dir, 'multi-eol')
-  svntest.actions.run_and_verify_svn(None, None, None,
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--force',
                                      'svn:eol-style', 'LF',
                                      path)
     
   path = os.path.join(wc_dir, 'backwards-eol')
-  svntest.actions.run_and_verify_svn(None, None, None,
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--force',
                                      'svn:eol-style', 'native',
                                      path)
     
   path = os.path.join(wc_dir, 'incomplete-eol')
-  svntest.actions.run_and_verify_svn(None, None, None,
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--force',
                                      'svn:eol-style', 'CR',
                                      path)
@@ -720,15 +720,7 @@ def revprop_change(sbox):
   sbox.build()
 
   # Create the revprop-change hook for this test
-  if os.name == 'posix':
-    hook = os.path.join(svntest.main.current_repo_dir,
-                        'hooks', 'pre-revprop-change')
-    svntest.main.file_append(hook, "#!/bin/sh\n\nexit 0\n")
-    os.chmod(hook, 0755)
-  elif sys.platform == 'win32':
-    hook = os.path.join(svntest.main.current_repo_dir,
-                        'hooks', 'pre-revprop-change.bat')
-    svntest.main.file_append(hook, "@exit 0\n")
+  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--revprop', '-r', '0',
@@ -848,8 +840,8 @@ def prop_value_conversions(sbox):
              ['foo http://foo.com/repos'+os.linesep])
 
   # Check svn:keywords
-  check_prop('svn:keywords', iota_path, ['Revision Date'])
-  check_prop('svn:keywords', mu_path, ['Revision Date'])
+  check_prop('svn:keywords', iota_path, ['Rev Date'])
+  check_prop('svn:keywords', mu_path, ['Rev  Date'])
 
   # Check svn:executable
   check_prop('svn:executable', iota_path, ['*'])

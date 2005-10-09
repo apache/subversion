@@ -24,6 +24,7 @@
 #include "JNIUtil.h"
 #include "svn_repos.h"
 #include "svn_config.h"
+#include "svn_props.h"
 #include "svn_pools.h"
 #include "svn_path.h"
 #include "svn_utf.h"

@@ -35,6 +35,7 @@
 #include "svn_io.h"
 #include "svn_error.h"
 #include "svn_string.h"
+#include "svn_utf.h"
 
 
 struct svn_stream_t {
@@ -42,8 +43,6 @@ struct svn_stream_t {
   svn_read_fn_t read_fn;
   svn_write_fn_t write_fn;
   svn_close_fn_t close_fn;
-  svn_timeout_fn_t timeout_fn;
-  svn_data_pending_fn_t data_pending_fn;
 };
 
 
@@ -60,8 +59,6 @@ svn_stream_create (void *baton, apr_pool_t *pool)
   stream->read_fn = NULL;
   stream->write_fn = NULL;
   stream->close_fn = NULL;
-  stream->timeout_fn = NULL;
-  stream->data_pending_fn = NULL;
   return stream;
 }
 
@@ -94,21 +91,6 @@ svn_stream_set_close (svn_stream_t *stream, svn_close_fn_t close_fn)
 }
 
 
-void
-svn_stream_set_timeout (svn_stream_t *stream, svn_timeout_fn_t timeout_fn)
-{
-  stream->timeout_fn = timeout_fn;
-}
-
-
-void
-svn_stream_set_data_pending (svn_stream_t *stream,
-                             svn_data_pending_fn_t data_pending_fn)
-{
-  stream->data_pending_fn = data_pending_fn;
-}
-
-
 svn_error_t *
 svn_stream_read (svn_stream_t *stream, char *buffer, apr_size_t *len)
 {
@@ -134,23 +116,6 @@ svn_stream_close (svn_stream_t *stream)
 }
 
 
-void
-svn_stream_timeout (svn_stream_t *stream,
-                    apr_interval_time_t interval)
-{
-  assert(stream->timeout_fn != NULL);
-  stream->timeout_fn (stream->baton, interval);
-}
-
-
-svn_boolean_t
-svn_stream_data_pending (svn_stream_t *stream)
-{
-  assert(stream->data_pending_fn != NULL);
-  return stream->data_pending_fn (stream->baton);
-}
-
-
 svn_error_t *
 svn_stream_printf (svn_stream_t *stream,
                    apr_pool_t *pool,
@@ -165,8 +130,32 @@ svn_stream_printf (svn_stream_t *stream,
   message = apr_pvsprintf (pool, fmt, ap);
   va_end (ap);
   
-  len = strlen(message);
+  len = strlen (message);
   return svn_stream_write (stream, message, &len);
+}
+
+
+svn_error_t *
+svn_stream_printf_from_utf8 (svn_stream_t *stream,
+                             const char *encoding,
+                             apr_pool_t *pool,
+                             const char *fmt,
+                             ...)
+{
+  const char *message, *translated;
+  va_list ap;
+  apr_size_t len;
+
+  va_start (ap, fmt);
+  message = apr_pvsprintf (pool, fmt, ap);
+  va_end (ap);
+
+  SVN_ERR (svn_utf_cstring_from_utf8_ex (&translated, message, encoding,
+                                         NULL, pool));
+  
+  len = strlen (translated);
+
+  return svn_stream_write (stream, translated, &len);
 }
 
 
@@ -219,7 +208,7 @@ svn_stream_readline (svn_stream_t *stream,
 svn_error_t *svn_stream_copy (svn_stream_t *from, svn_stream_t *to,
                               apr_pool_t *pool)
 {
-  char buf[SVN_STREAM_CHUNK_SIZE];
+  char *buf = apr_palloc (pool, SVN_STREAM_CHUNK_SIZE);
   apr_size_t len;
 
   /* Read and write chunks until we get a short read, indicating the
@@ -227,11 +216,11 @@ svn_error_t *svn_stream_copy (svn_stream_t *from, svn_stream_t *to,
      associated error.) */
   while (1)
     {
-      len = sizeof (buf); 
+      len = SVN_STREAM_CHUNK_SIZE;
       SVN_ERR (svn_stream_read (from, buf, &len));
       if (len > 0)
         SVN_ERR (svn_stream_write (to, buf, &len));
-      if (len != sizeof (buf))
+      if (len != SVN_STREAM_CHUNK_SIZE)
         break;
     }
   return SVN_NO_ERROR;

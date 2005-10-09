@@ -24,6 +24,7 @@
 
 #include "wc.h"
 #include "entries.h"
+#include "lock.h"
 #include "props.h"
 
 #include "svn_private_config.h"
@@ -47,7 +48,38 @@ relocate_entry (svn_wc_adm_access_t *adm_access,
 {
   svn_wc_entry_t entry2;
   apr_uint32_t flags = 0;
-  int from_len = strlen (from);
+  apr_size_t from_len = strlen (from);
+
+  if (entry->repos)
+    {
+      /* We can't relocate beyond the repository root, but the user is allowed
+         to specify a redundant part of the fs path in from and to, but only
+         if this part is identical in both strings. */
+      apr_size_t repos_len = strlen (entry->repos);
+           
+      if (from_len > repos_len)
+        {
+          apr_size_t to_len = strlen (to);
+          apr_size_t fs_path_len = from_len - repos_len;
+          if (to_len < fs_path_len
+              || strncmp (from + repos_len, to + (to_len - fs_path_len),
+                         fs_path_len) != 0)
+            return svn_error_create (SVN_ERR_WC_INVALID_RELOCATION, NULL,
+                                     _("Relocate can only change the "
+                                       "repository part of an URL"));
+          /* Since the fs path part is redundant, we don't need to change
+             that part anyway, and the below code depends on this. */
+          from_len = repos_len;
+          to = apr_pstrndup (pool, to, to_len - fs_path_len);
+        }
+
+      if (strncmp (from, entry->repos, from_len) == 0)
+        {
+          entry2.repos = apr_psprintf (svn_wc_adm_access_pool (adm_access),
+                                       "%s%s", to, entry->repos + from_len);
+          flags |= SVN_WC__ENTRY_MODIFY_REPOS;
+        }
+    }
 
   if (entry->url && ! strncmp (entry->url, from, from_len))
     {

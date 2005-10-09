@@ -383,6 +383,25 @@ static svn_error_t *add_props(apr_hash_t *props,
 }
                       
 
+#if SVN_NEON_0_25
+/* This implements the svn_ra_dav__request_interrogator() interface.
+   USERDATA is 'ne_content_type *'. */
+static svn_error_t *interrogate_for_content_type(ne_request *request,
+                                                 int dispatch_return_val,
+                                                 void *userdata)
+{
+  ne_content_type *ctype = userdata;
+
+  if (ne_get_content_type(request, ctype) != 0)
+    return svn_error_createf
+      (SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,
+       _("Could not get content-type from response."));
+
+  return SVN_NO_ERROR;
+}
+#endif /* SVN_NEON_0_25 */
+
+
 static svn_error_t *custom_get_request(ne_session *sess,
                                        const char *url,
                                        const char *relpath,
@@ -398,8 +417,9 @@ static svn_error_t *custom_get_request(ne_session *sess,
   ne_request *req;
   ne_decompress *decompress;
   svn_error_t *err;
-  int code;
+#ifndef SVN_NEON_0_25
   int decompress_rv;
+#endif /* ! SVN_NEON_0_25 */
   svn_ra_dav__session_t *ras = ne_get_session_private(sess,
                                                      SVN_RA_NE_SESSION_ID);
 
@@ -424,10 +444,12 @@ static svn_error_t *custom_get_request(ne_session *sess,
                                url);
     }
 
+#ifndef SVN_NEON_0_25
   /* we want to get the Content-Type so that we can figure out whether
      this is an svndiff or a fulltext */
   ne_add_response_header_handler(req, "Content-Type", ne_content_type_handler,
                                  &cgc.ctype);
+#endif /* ! SVN_NEON_0_25 */
 
   if (delta_base)
     {
@@ -456,16 +478,24 @@ static svn_error_t *custom_get_request(ne_session *sess,
   /* complete initialization of the body reading context */
   cgc.subctx = subctx;
 
-  /* run the request and get the resulting status code (and svn_error_t) */
-  err = svn_ra_dav__request_dispatch(&code, req, sess, "GET", url,
+  /* run the request */
+  err = svn_ra_dav__request_dispatch(NULL, req, sess, "GET", url,
                                      200 /* OK */,
                                      226 /* IM Used */,
+#if SVN_NEON_0_25
+                                     interrogate_for_content_type, &cgc.ctype,
+#endif /* SVN_NEON_0_25 */
                                      pool);
 
+#if SVN_NEON_0_25
+  if (decompress)
+    ne_decompress_destroy(decompress);
+#else /* ! SVN_NEON_0_25 */
   if (decompress) 
     decompress_rv = ne_decompress_destroy(decompress);
   else 
     decompress_rv = 0;
+#endif /* if/else SVN_NEON_0_25 */
 
   /* we no longer need this */
   if (cgc.ctype.value != NULL)
@@ -480,6 +510,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
       return cgc.err;
     }
 
+#ifndef SVN_NEON_0_25
   if (decompress_rv != 0)
     {
        const char *msg;
@@ -489,34 +520,46 @@ static svn_error_t *custom_get_request(ne_session *sess,
          svn_error_clear (err);
        err = svn_ra_dav__convert_error(sess, msg, decompress_rv, pool);
     }
-  
-  if (err)
-    return err;
+#endif /* ! SVN_NEON_0_25 */
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
-static void fetch_file_reader(void *userdata, const char *buf, size_t len)
+/* This implements the ne_block_reader() callback interface. */
+#if SVN_NEON_0_25
+static int
+#else /* ! SVN_NEON_0_25 */
+static void
+#endif /* if/else SVN_NEON_0_25 */
+fetch_file_reader(void *userdata, const char *buf, size_t len)
 {
   custom_get_ctx_t *cgc = userdata;
   file_read_ctx_t *frc = cgc->subctx;
 
   if (cgc->err)
     {
-      /* We must have gotten an error during the last read... 
-
-         ### what we'd *really* like to do here (or actually, at the
-         bottom of this function) is to somehow abort the read
-         process...no sense on banging a server for 10 megs of data
-         when we've already established that we, for some reason,
-         can't handle that data. */
+      /* We must have gotten an error during the last read. */
+#if SVN_NEON_0_25
+      /* Abort the rest of the read. */
+      /* ### Call ne_set_error(), as ne_block_reader doc implies? */
+      return 1;
+#else /* ! SVN_NEON_0_25 */
+      /* In Neon < 0.25.0, we have no way to abort the read process,
+         so we'll just have to eat all the data, even though we
+         already know we can't handle it. */
       return;
+#endif /* if/else SVN_NEON_0_25 */
+
     }
 
   if (len == 0)
     {
       /* file is complete. */
+#if SVN_NEON_0_25
+      return 0;
+#else /* ! SVN_NEON_0_25 */
       return;
+#endif /* if/else SVN_NEON_0_25 */
     }
 
   if (!cgc->checked_type)
@@ -587,6 +630,10 @@ static void fetch_file_reader(void *userdata, const char *buf, size_t len)
                                      written, len);
 #endif
     }
+
+#if SVN_NEON_0_25
+  return 0;
+#endif /* SVN_NEON_0_25 */
 }
 
 static svn_error_t *simple_fetch_file(ne_session *sess,
@@ -629,11 +676,18 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
   return SVN_NO_ERROR;
 }
 
-/* Helper (neon callback) for svn_ra_dav__get_file. */
-static void get_file_reader(void *userdata, const char *buf, size_t len)
+/* Helper (neon callback) for svn_ra_dav__get_file.  This implements
+   the ne_block_reader() callback interface. */
+#if SVN_NEON_0_25
+static int
+#else /* ! SVN_NEON_0_25 */
+static void
+#endif /* if/else SVN_NEON_0_25 */
+get_file_reader(void *userdata, const char *buf, size_t len)
 {
   custom_get_ctx_t *cgc = userdata;
   apr_size_t wlen;
+  svn_error_t *err;
 
   /* The stream we want to push data at. */
   file_write_ctx_t *fwc = cgc->subctx; 
@@ -644,22 +698,22 @@ static void get_file_reader(void *userdata, const char *buf, size_t len)
 
   /* Write however many bytes were passed in by neon. */
   wlen = len;
-  svn_error_clear(svn_stream_write(stream, buf, &wlen));
+  err = svn_stream_write(stream, buf, &wlen);
 
-#if 0
-  /* Neon's callback won't let us return error.  Joe knows this is a
-     bug in his API, so this section can be reactivated someday. */
-
-  SVN_ERR(svn_stream_write(stream, buf, &wlen));
-  if (wlen != len)
+#if SVN_NEON_0_25
+  /* Technically, if the write came up short then there's guaranteed
+     to be an error anyway, so we only really need to check for error.
+     But heck, why not gather as much information as possible about
+     what happened before tossing it all and just returning non-zero? */
+  if (err || (wlen != len))
     {
-      /* Uh oh, didn't write as many bytes as neon gave us. */
-      return 
-        svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                         _("Error writing to stream: unexpected EOF"));
+      /* ### Call ne_set_error(), as ne_block_reader doc implies? */
+      svn_error_clear(err);
+      return 1;
     }
-#endif
-      
+
+  return 0;
+#endif /* SVN_NEON_0_25 */
 }
 
 
@@ -1575,18 +1629,38 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
                                    &status_code,
                                    FALSE,
                                    pool);
+
+  /* ### Should svn_ra_dav__parsed_request() take care of storing auth
+     ### info itself? */
+  err = svn_ra_dav__maybe_store_auth_info_after_result(err, ras);
+
+  /* At this point, 'err' might represent a local error (neon choked,
+     or maybe something went wrong storing auth creds).  But if
+     'baton.err' exists, that's an error coming right from the server,
+     marshalled over the network.  We give that top priority. */
   if (baton.err)
-    return baton.err;
+    {
+      if (err)
+        svn_error_clear(err);
+      
+      /* mod_dav_svn is known to return "unsupported feature" on
+         unknown REPORT requests, but it's our svn_ra.h promise to
+         return a similar, specific error code.  */
+      if (baton.err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+        return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, baton.err,
+                                _("Server does not support locking features"));
+      return baton.err;
+    }
 
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.0.x servers and older don't support this report. */
   if (status_code == 501)
-    return svn_error_create (SVN_ERR_RA_NOT_IMPLEMENTED, err,
-                             _("Server does not support locking features"));
+    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
+                            _("Server does not support locking features"));
 
   if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
-    return svn_error_quick_wrap(err,
-                                _("Server does not support locking features"));
+    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
+                            _("Server does not support locking features"));
 
   else if (err)
     return err;
@@ -1594,7 +1668,7 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
   svn_pool_destroy(baton.scratchpool);
 
   *locks = baton.lock_hash;
-  return err;
+  return SVN_NO_ERROR;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -2766,7 +2840,6 @@ static svn_error_t * reporter_finish_report(void *report_baton,
   report_baton_t *rb = report_baton;
   svn_error_t *err;
   const char *vcc;
-  int http_status;
 
 #define SVN_RA_DAV__REPORT_TAIL  "</S:update-report>" DEBUG_CR
   /* write the final closing gunk to our request body. */
@@ -2799,16 +2872,23 @@ static svn_error_t * reporter_finish_report(void *report_baton,
                                    cdata_handler,
                                    end_element,
                                    rb,
-                                   NULL, &http_status, 
+                                   NULL, NULL,
                                    rb->spool_response, rb->ras->pool);
 
   /* we're done with the file */
   (void) apr_file_close(rb->tmpfile);
 
+  /* rb->err contains the relevant error if the response was aborted
+   * by a callback returning NE_XML_ABORT; always return that error if
+   * present. */
+  if (rb->err != NULL)
+    {
+      if (err)
+        svn_error_clear(err);
+      return rb->err;
+    }
   if (err != NULL)
     return err;
-  if (rb->err != NULL)
-    return rb->err;
 
   /* We got the whole HTTP response thing done.  *Whew*.  Our edit
      baton should have been closed by now, so return a failure if it
@@ -2889,6 +2969,7 @@ make_reporter (svn_ra_session_t *session,
   svn_ra_dav__session_t *ras = session->priv;
   report_baton_t *rb;
   const char *s;
+  svn_stringbuf_t *xml_s;
 
   /* ### create a subpool for this operation? */
 
@@ -2937,7 +3018,9 @@ make_reporter (svn_ra_session_t *session,
      style" update-report syntax.  if the tmpfile is used in an "old
      style' update-report request, older servers will just ignore this
      unknown xml element. */
-  s = apr_psprintf(pool, "<S:src-path>%s</S:src-path>" DEBUG_CR, ras->url);
+  xml_s = NULL;
+  svn_xml_escape_cdata_cstring(&xml_s, ras->url, pool);
+  s = apr_psprintf(pool, "<S:src-path>%s</S:src-path>" DEBUG_CR, xml_s->data);
   SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
 
   /* an invalid revnum means "latest". we can just omit the target-revision
@@ -2953,12 +3036,10 @@ make_reporter (svn_ra_session_t *session,
   /* Pre-0.36 servers don't like to see an empty target string.  */
   if (*target)
     {
-      svn_stringbuf_t *escaped_target = NULL;
-      svn_xml_escape_cdata_cstring(&escaped_target, target, pool);
-
-      s = apr_psprintf(pool,
-                       "<S:update-target>%s</S:update-target>" DEBUG_CR,
-                       escaped_target->data);
+      xml_s = NULL;
+      svn_xml_escape_cdata_cstring(&xml_s, target, pool);
+      s = apr_psprintf(pool, "<S:update-target>%s</S:update-target>" DEBUG_CR,
+                       xml_s->data);
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }
 
@@ -2969,11 +3050,10 @@ make_reporter (svn_ra_session_t *session,
      identical paths. */
   if (dst_path)
     {
-      svn_stringbuf_t *dst_path_str = NULL;
-      svn_xml_escape_cdata_cstring (&dst_path_str, dst_path, pool);
-
+      xml_s = NULL;
+      svn_xml_escape_cdata_cstring(&xml_s, dst_path, pool);
       s = apr_psprintf(pool, "<S:dst-path>%s</S:dst-path>" DEBUG_CR,
-                       dst_path_str->data);
+                       xml_s->data);
       SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
     }
 
@@ -3116,6 +3196,7 @@ svn_error_t * svn_ra_dav__do_diff(svn_ra_session_t *session,
                                   const char *diff_target,
                                   svn_boolean_t recurse,
                                   svn_boolean_t ignore_ancestry,
+                                  svn_boolean_t text_deltas,
                                   const char *versus_url,
                                   const svn_delta_editor_t *wc_diff,
                                   void *wc_diff_baton,
@@ -3132,7 +3213,7 @@ svn_error_t * svn_ra_dav__do_diff(svn_ra_session_t *session,
                         FALSE,
                         wc_diff,
                         wc_diff_baton,
-                        TRUE, /* fetch_content */
+                        text_deltas, /* fetch_content */
                         FALSE, /* send_all */
                         TRUE, /* spool_response */
                         pool);

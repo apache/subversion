@@ -29,9 +29,9 @@
       revisions.</para>
 
     <para>You can avoid these problems by following clearly-defined
-      formatting rules.  The Subversion project's own HACKING document
-      (<systemitem
-      class="url">http://svn.collab.net/repos/svn/trunk/HACKING</systemitem>)
+      formatting rules.  The Subversion project's own
+      <filename>hacking.html</filename> document (<systemitem
+      class="url">http://svn.collab.net/repos/svn/trunk/www/hacking.html</systemitem>)
       and the Code Conventions for the Java Programming Language
       (<systemitem
       class="url">http://java.sun.com/docs/codeconv/html/CodeConvTOC.doc.html</systemitem>),
@@ -288,8 +288,9 @@ $ svn commit -m 'Merged branch'
     </itemizedlist>
 
     <para>Defining a log entry policy is also helpful --- the
-      Subversion HACKING document <systemitem
-      class="url">http://svn.collab.net/repos/svn/trunk/HACKING</systemitem>
+      Subversion <filename>hacking.html</filename> document
+      <systemitem
+      class="url">http://svn.collab.net/repos/svn/trunk/www/hacking.html</systemitem>
       is a good model. If you always embed filenames, function names,
       etc. then you can easily search through the logs with
       search-svnlog.pl <systemitem

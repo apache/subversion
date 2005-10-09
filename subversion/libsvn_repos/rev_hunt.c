@@ -26,6 +26,7 @@
 #include "svn_string.h"
 #include "svn_time.h"
 #include "svn_sorts.h"
+#include "svn_path.h"
 #include "svn_props.h"
 #include "repos.h"
 
@@ -395,14 +396,19 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
   apr_array_header_t *location_revisions;
   svn_revnum_t *revision_ptr, *revision_ptr_end;
   svn_fs_root_t *root;
-  svn_fs_history_t *history;
   const char *path;
   svn_revnum_t revision;
   svn_boolean_t is_ancestor;
   apr_pool_t *lastpool, *currpool;
+  const svn_fs_id_t *id;
 
   /* Sanity check. */
   assert (location_revisions_orig->elt_size == sizeof(svn_revnum_t));
+
+  /* Ensure that FS_PATH is absolute, because our path-math below will
+     depend on that being the case.  */
+  if (*fs_path != '/')
+    fs_path = apr_pstrcat (pool, "/", fs_path, NULL);
 
   /* Another sanity check. */
   if (authz_read_func)
@@ -442,25 +448,28 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
       ++revision_ptr;
     }
 
-  SVN_ERR (svn_fs_revision_root (&root, fs,
-                                 (is_ancestor ?
-                                  (*revision_ptr) :
-                                  peg_revision), pool));
+  revision = is_ancestor ? *revision_ptr : peg_revision;
+  path = fs_path;
   if (authz_read_func)
-    SVN_ERR (check_readability (root, fs_path, authz_read_func,
-                                authz_read_baton, pool));
-
-  SVN_ERR (svn_fs_node_history (&history, root, fs_path, lastpool));
+    {
+      SVN_ERR (svn_fs_revision_root (&root, fs, revision, pool));
+      SVN_ERR (check_readability (root, fs_path, authz_read_func,
+                                  authz_read_baton, pool));
+    }
 
   while (revision_ptr < revision_ptr_end)
     {
       apr_pool_t *tmppool;
+      svn_fs_root_t *croot;
+      svn_revnum_t crev, srev;
+      const char *cpath, *spath, *remainder;
 
-      SVN_ERR (svn_fs_history_prev (&history, history, TRUE, currpool));
-      if (!history)
+      /* Find the target of the innermost copy relevant to path@revision.
+         The copy may be of path itself, or of a parent directory. */
+      SVN_ERR (svn_fs_revision_root (&root, fs, revision, currpool));
+      SVN_ERR (svn_fs_closest_copy (&croot, &cpath, root, path, currpool));
+      if (! croot)
         break;
-
-      SVN_ERR (svn_fs_history_location (&path, &revision, history, currpool));
 
       if (authz_read_func)
         {
@@ -477,8 +486,9 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
         }
 
       /* Assign the current path to all younger revisions until we reach
-         the current one. */
-      while ((revision_ptr < revision_ptr_end) && (*revision_ptr >= revision))
+         the copy target rev. */
+      crev = svn_fs_revision_root_revision (croot);
+      while ((revision_ptr < revision_ptr_end) && (*revision_ptr >= crev))
         {
           /* *revision_ptr is allocated out of pool, so we can point
              to in the hash table. */
@@ -487,12 +497,67 @@ svn_repos_trace_node_locations (svn_fs_t *fs,
           revision_ptr++;
         }
 
+      /* Follow the copy to its source.  Ignore all revs between the
+         copy target rev and the copy source rev (non-inclusive). */
+      SVN_ERR (svn_fs_copied_from (&srev, &spath, croot, cpath, currpool));
+      while ((revision_ptr < revision_ptr_end) && (*revision_ptr > srev))
+        revision_ptr++;
+
+      /* Ultimately, it's not the path of the closest copy's source
+         that we care about -- it's our own path's location in the
+         copy source revision.  So we'll tack the relative path that
+         expresses the difference between the copy destination and our
+         path in the copy revision onto the copy source path to
+         determine this information.  
+
+         In other words, if our path is "/branches/my-branch/foo/bar",
+         and we know that the closest relevant copy was a copy of
+         "/trunk" to "/branches/my-branch", then that relative path
+         under the copy destination is "/foo/bar".  Tacking that onto
+         the copy source path tells us that our path was located at
+         "/trunk/foo/bar" before the copy.
+      */
+      remainder = (strcmp (cpath, path) == 0) ? "" :
+        svn_path_is_child (cpath, path, currpool);
+      path = svn_path_join (spath, remainder, currpool);
+      revision = srev;
+
       /* Clear last pool and switch. */
       svn_pool_clear (lastpool);
       tmppool = lastpool;
       lastpool = currpool;
       currpool = tmppool;
     }
+
+  /* There are no copies relevant to path@revision.  So any remaining
+     revisions either predate the creation of path@revision or have
+     the node existing at the same path.  We will look up path@lrev
+     for each remaining location-revision and make sure it is related
+     to path@revision. */
+  SVN_ERR (svn_fs_revision_root (&root, fs, revision, currpool));
+  SVN_ERR (svn_fs_node_id (&id, root, path, pool));
+  while (revision_ptr < revision_ptr_end)
+    {
+      svn_node_kind_t kind;
+      const svn_fs_id_t *lrev_id;
+
+      svn_pool_clear (currpool);
+      SVN_ERR (svn_fs_revision_root (&root, fs, *revision_ptr, currpool));
+      SVN_ERR (svn_fs_check_path (&kind, root, path, currpool));
+      if (kind == svn_node_none)
+        break;
+      SVN_ERR (svn_fs_node_id (&lrev_id, root, path, currpool));
+      if (! svn_fs_check_related (id, lrev_id))
+        break;
+
+      /* The node exists at the same path; record that and advance. */
+      apr_hash_set (*locations, revision_ptr, sizeof (*revision_ptr),
+                    apr_pstrdup (pool, path));
+      revision_ptr++;
+    }
+
+  /* Ignore any remaining location-revisions; they predate the
+     creation of path@revision. */
 
   svn_pool_destroy (lastpool);
   svn_pool_destroy (currpool);

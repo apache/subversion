@@ -296,6 +296,8 @@ void JNIUtil::throwError(const char *message)
 }
 jstring JNIUtil::makeSVNErrorMessage(svn_error_t *err)
 {
+    if(err == NULL)
+        return NULL;
     std::string buffer;
     assembleErrorMessage(err, 0, APR_SUCCESS, buffer);
     jstring jmessage = makeJString(buffer.c_str());

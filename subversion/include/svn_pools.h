@@ -46,8 +46,8 @@ extern "C" {
 #define SVN_ALLOCATOR_RECOMMENDED_MAX_FREE (4096 * 1024)
 
 
-/** Wrapper around @c apr_pool_create_ex, with a simpler interface.
- * The return pool with have an abort function set, which will call
+/** Wrapper around apr_pool_create_ex(), with a simpler interface.
+ * The return pool will have an abort function set, which will call
  * abort() on OOM.
  */
 apr_pool_t *svn_pool_create_ex (apr_pool_t *parent_pool,

@@ -7,11 +7,19 @@
 # $LastChangedBy$
 # $LastChangedRevision$
 #
-# USAGE: mailer.py commit     REPOS REVISION [CONFIG-FILE]
-#        mailer.py propchange REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
+# USAGE: mailer.py commit      REPOS REVISION [CONFIG-FILE]
+#        mailer.py propchange  REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
+#        mailer.py propchange2 REPOS REVISION AUTHOR PROPNAME ACTION \
+#                              [CONFIG-FILE]
+#        mailer.py lock        REPOS AUTHOR [CONFIG-FILE]
+#        mailer.py unlock      REPOS AUTHOR [CONFIG-FILE]
 #
 #   Using CONFIG-FILE, deliver an email describing the changes between
 #   REV and REV-1 for the repository REPOS.
+#
+#   ACTION was added as a fifth argument to the post-revprop-change hook
+#   in Subversion 1.2.0.  Its value is one of 'A', 'M' or 'D' to indicate
+#   if the property was added, modified or deleted, respectively.
 #
 #   This version of mailer.py requires the python bindings from
 #   subversion 1.2.0 or later.
@@ -28,6 +36,7 @@ import smtplib
 import re
 import tempfile
 import types
+import urllib
 
 import svn.fs
 import svn.delta
@@ -37,17 +46,29 @@ import svn.core
 SEPARATOR = '=' * 78
 
 
-def main(pool, cmd, config_fp, repos_dir, rev, author, propname, action):
-  repos = Repository(repos_dir, rev, pool)
-
+def main(pool, cmd, config_fname, repos_dir, cmd_args):
+  ### TODO:  Sanity check the incoming args
+  
   if cmd == 'commit':
-    cfg = Config(config_fp, repos, { 'author' : repos.author })
+    revision = int(cmd_args[0])
+    repos = Repository(repos_dir, revision, pool)
+    cfg = Config(config_fname, repos, { 'author' : repos.author })
     messenger = Commit(pool, cfg, repos)
-  elif cmd == 'propchange':
+  elif cmd == 'propchange' or cmd == 'propchange2':
+    revision = int(cmd_args[0])
+    author = cmd_args[1]
+    propname = cmd_args[2]
+    action = (cmd == 'propchange2' and cmd_args[3] or 'A')
+    repos = Repository(repos_dir, revision, pool)
     # Override the repos revision author with the author of the propchange
     repos.author = author
-    cfg = Config(config_fp, repos, { 'author' : author })
+    cfg = Config(config_fname, repos, { 'author' : author })
     messenger = PropChange(pool, cfg, repos, author, propname, action)
+  elif cmd == 'lock' or cmd == 'unlock':
+    author = cmd_args[0]
+    repos = Repository(repos_dir, 0, pool) ### any old revision will do
+    cfg = Config(config_fname, repos, { 'author' : author })
+    messenger = Lock(pool, cfg, repos, author, cmd == 'lock')
   else:
     raise UnknownSubcommand(cmd)
 
@@ -112,7 +133,7 @@ class OutputBase:
 
     try:
       truncate_subject = int(
-          self.cfg.get('truncate-subject', group, params))
+          self.cfg.get('truncate_subject', group, params))
     except ValueError:
       truncate_subject = 0
 
@@ -169,6 +190,11 @@ class MailedOutput(OutputBase):
 
   def mail_headers(self, group, params):
     subject = self.make_subject(group, params)
+    try:
+      subject.encode('ascii')
+    except UnicodeError:
+      from email.Header import Header
+      subject = Header(subject, 'utf-8').encode()
     hdrs = 'From: %s\n'    \
            'To: %s\n'      \
            'Subject: %s\n' \
@@ -306,31 +332,7 @@ class Commit(Messenger):
 
     dirlist = dirs.keys()
 
-    # figure out the common portion of all the dirs. note that there is
-    # no "common" if only a single dir was changed, or the root was changed.
-    if len(dirs) == 1 or dirs.has_key(''):
-      commondir = ''
-    else:
-      common = string.split(dirlist.pop(), '/')
-      for d in dirlist:
-        parts = string.split(d, '/')
-        for i in range(len(common)):
-          if i == len(parts) or common[i] != parts[i]:
-            del common[i:]
-            break
-      commondir = string.join(common, '/')
-      if commondir:
-        # strip the common portion from each directory
-        l = len(commondir) + 1
-        dirlist = [ ]
-        for d in dirs.keys():
-          if d == commondir:
-            dirlist.append('.')
-          else:
-            dirlist.append(d[l:])
-      else:
-        # nothing in common, so reset the list of directories
-        dirlist = dirs.keys()
+    commondir, dirlist = get_commondir(dirlist)
 
     # compose the basic subject line. later, we can prefix it.
     dirlist.sort()
@@ -411,12 +413,13 @@ class PropChange(Messenger):
                         'Action: %s\n'
                         '\n'
                         % (self.author, self.repos.rev, self.propname,
-                           actions.get(action, 'Unknown (\'%s\')' % action)))
-      if action == 'A':
+                           actions.get(self.action, 'Unknown (\'%s\')' \
+                                       % self.action)))
+      if self.action == 'A' or not actions.has_key(self.action):
         self.output.write('Property value:\n')
         propvalue = self.repos.get_rev_prop(self.propname)
         self.output.write(propvalue)
-      elif action != 'D':
+      elif self.action == 'M':
         self.output.write('Property diff:\n')
         tempfile1 = NamedTemporaryFile()
         tempfile1.write(sys.stdin.read())
@@ -430,6 +433,101 @@ class PropChange(Messenger):
           'from' : tempfile1.name,
           'to' : tempfile2.name,
           }))
+      self.output.finish()
+
+
+def get_commondir(dirlist):
+  """Figure out the common portion/parent (commondir) of all the paths
+  in DIRLIST and return a tuple consisting of commondir, dirlist.  If
+  a commondir is found, the dirlist returned is rooted in that
+  commondir.  If no commondir is found, dirlist is returned unchanged,
+  and commondir is the empty string."""
+  if len(dirlist) == 1 or '/' in dirlist:
+    commondir = ''
+    newdirs = dirlist
+  else:
+    common = string.split(dirlist[0], '/')
+    for j in range(1, len(dirlist)):
+      d = dirlist[j]
+      parts = string.split(d, '/')
+      for i in range(len(common)):
+        if i == len(parts) or common[i] != parts[i]:
+          del common[i:]
+          break
+    commondir = string.join(common, '/')
+    if commondir:
+      # strip the common portion from each directory
+      l = len(commondir) + 1
+      newdirs = [ ]
+      for d in dirlist:
+        if d == commondir:
+          newdirs.append('.')
+        else:
+          newdirs.append(d[l:])
+    else:
+      # nothing in common, so reset the list of directories
+      newdirs = dirlist
+
+  return commondir, newdirs
+
+
+class Lock(Messenger):
+  def __init__(self, pool, cfg, repos, author, do_lock):
+    self.author = author
+    self.do_lock = do_lock
+
+    Messenger.__init__(self, pool, cfg, repos,
+                       (do_lock and 'lock_subject_prefix'
+                        or 'unlock_subject_prefix'))
+
+    # read all the locked paths from STDIN and strip off the trailing newlines
+    self.dirlist = map(lambda x: x.rstrip(), sys.stdin.readlines())
+
+    # collect the set of groups and the unique sets of params for the options
+    self.groups = { }
+    for path in self.dirlist:
+      for (group, params) in self.cfg.which_groups(path):
+        # turn the params into a hashable object and stash it away
+        param_list = params.items()
+        param_list.sort()
+        # collect the set of paths belonging to this group
+        if self.groups.has_key( (group, tuple(param_list)) ):
+          old_param, paths = self.groups[group, tuple(param_list)]
+        else:
+          paths = { }
+        paths[path] = None
+        self.groups[group, tuple(param_list)] = (params, paths)
+
+    commondir, dirlist = get_commondir(self.dirlist)
+
+    # compose the basic subject line. later, we can prefix it.
+    dirlist.sort()
+    dirlist = string.join(dirlist)
+    if commondir:
+      self.output.subject = '%s: %s' % (commondir, dirlist)
+    else:
+      self.output.subject = '%s' % (dirlist)
+
+    # The lock comment is the same for all paths, so we can just pull
+    # the comment for the first path in the dirlist and cache it.
+    self.lock = svn.fs.svn_fs_get_lock(self.repos.fs_ptr,
+                                       self.dirlist[0], self.pool)
+
+  def generate(self):
+    for (group, param_tuple), (params, paths) in self.groups.items():
+      self.output.start(group, params)
+
+      self.output.write('Author: %s\n'
+                        '%s paths:\n' %
+                        (self.author, self.do_lock and 'Locked' or 'Unlocked'))
+
+      self.dirlist.sort()
+      for dir in self.dirlist:
+        self.output.write('   %s\n\n' % dir)
+
+      if self.do_lock:
+        self.output.write('Comment:\n%s\n' % (self.lock.comment or ''))
+
       self.output.finish()
 
 
@@ -470,6 +568,14 @@ class DiffSelections:
         self.add = False
 
 
+class DiffURLSelections:
+  def __init__(self, cfg, group):
+    self.add = cfg.get('diff_add_url', group, None)
+    self.copy = cfg.get('diff_copy_url', group, None)
+    self.delete = cfg.get('diff_delete_url', group, None)
+    self.modify = cfg.get('diff_modify_url', group, None)
+
+
 def generate_content(renderer, cfg, repos, changelist, group, params, paths,
                      pool):
 
@@ -478,6 +584,7 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
   date = time.ctime(svn.core.secs_from_timestr(svndate, pool))
 
   diffsels = DiffSelections(cfg, group, params)
+  diffurls = DiffURLSelections(cfg, group)
 
   show_nonmatching_paths = cfg.get('show_nonmatching_paths', group, params) \
       or 'yes'
@@ -491,7 +598,7 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
 
   if len(paths) != len(changelist) and show_nonmatching_paths == 'yes':
     other_diffs = DiffGenerator(changelist, paths, False, cfg, repos, date,
-                                group, params, diffsels, pool),
+                                group, params, diffsels, diffurls, pool),
   else:
     other_diffs = [ ]
 
@@ -503,11 +610,12 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
     added_data=generate_list('A', changelist, paths, True),
     removed_data=generate_list('R', changelist, paths, True),
     modified_data=generate_list('M', changelist, paths, True),
+    show_nonmatching_paths=show_nonmatching_paths,
     other_added_data=other_added_data,
     other_removed_data=other_removed_data,
     other_modified_data=other_modified_data,
     diffs=DiffGenerator(changelist, paths, True, cfg, repos, date, group,
-                        params, diffsels, pool),
+                        params, diffsels, diffurls, pool),
     other_diffs=other_diffs,
     )
   renderer.render(data)
@@ -542,7 +650,7 @@ class DiffGenerator:
   "This is a generator-like object returning DiffContent objects."
 
   def __init__(self, changelist, paths, in_paths, cfg, repos, date, group,
-               params, diffsels, pool):
+               params, diffsels, diffurls, pool):
     self.changelist = changelist
     self.paths = paths
     self.in_paths = in_paths
@@ -552,6 +660,7 @@ class DiffGenerator:
     self.group = group
     self.params = params
     self.diffsels = diffsels
+    self.diffurls = diffurls
     self.pool = pool
 
     self.idx = 0
@@ -560,6 +669,17 @@ class DiffGenerator:
     # we always have some items
     return True
 
+  def _gen_url(self, urlstr, repos_rev, change):
+    if not len(urlstr):
+      return None
+    args = {
+      'path' : change.path and urllib.quote(change.path) or None,
+      'base_path' : change.base_path and urllib.quote(change.base_path) or None,
+      'rev' : repos_rev,
+      'base_rev' : change.base_rev,
+      }
+    return urlstr % args
+    
   def __getitem__(self, idx):
     while 1:
       if self.idx == len(self.changelist):
@@ -568,6 +688,16 @@ class DiffGenerator:
       path, change = self.changelist[self.idx]
       self.idx = self.idx + 1
 
+      diff = diff_url = None
+      kind = None
+      label1 = None
+      label2 = None
+      src_fname = None
+      dst_fname = None
+      binary = None
+      singular = None
+      content = None
+      
       # just skip directories. they have no diffs.
       if change.item_kind == svn.core.svn_node_dir:
         continue
@@ -579,24 +709,76 @@ class DiffGenerator:
       # figure out if/how to generate a diff
 
       if not change.path:
-        # it was deleted. should we show deletion diffs?
-        if not self.diffsels.delete:
-          continue
+        # it was delete.
+        kind = 'D'
 
-        kind = 'R'
-        diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
-                               change.base_path, None, None, self.pool)
+        # show the diff url?
+        if self.diffurls.delete:
+          diff_url = self._gen_url(self.diffurls.delete,
+                                   self.repos.rev, change)
 
-        label1 = '%s\t%s' % (change.base_path, self.date)
-        label2 = '(empty file)'
-        singular = True
+        # show the diff?
+        if self.diffsels.delete:
+          diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
+                                 change.base_path, None, None, self.pool)
+
+          label1 = '%s\t%s' % (change.base_path, self.date)
+          label2 = '(empty file)'
+          singular = True
+          
       elif change.added:
         if change.base_path and (change.base_rev != -1):
-          # this file was copied. any diff to show? should we?
-          if not change.text_changed or not self.diffsels.copy:
-            continue
-
+          # this file was copied.
           kind = 'C'
+
+          # any diff of interest?
+          if change.text_changed:
+
+            # show the diff url?
+            if self.diffurls.copy:
+              diff_url = self._gen_url(self.diffurls.copy,
+                                       self.repos.rev, change)
+
+            # show the diff?
+            if self.diffsels.copy:
+              diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
+                                     change.base_path,
+                                     self.repos.root_this, change.path,
+                                     self.pool)
+              label1 = change.base_path + '\t(original)'
+              label2 = '%s\t%s' % (change.path, self.date)
+              singular = False
+        else:
+          # the file was added.
+          kind = 'A'
+
+          # show the diff url?
+          if self.diffurls.add:
+            diff_url = self._gen_url(self.diffurls.add,
+                                     self.repos.rev, change)
+
+          # show the diff?
+          if self.diffsels.add:
+            diff = svn.fs.FileDiff(None, None, self.repos.root_this,
+                                   change.path, self.pool)
+            label1 = '(empty file)'
+            label2 = '%s\t%s' % (change.path, self.date)
+            singular = True
+
+      elif not change.text_changed:
+        # the text didn't change, so nothing to show.
+        continue
+      else:
+        # a simple modification.
+        kind = 'M'
+
+        # show the diff url?
+        if self.diffurls.modify:
+          diff_url = self._gen_url(self.diffurls.modify,
+                                   self.repos.rev, change)
+
+        # show the diff?
+        if self.diffsels.modify:
           diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
                                  change.base_path,
                                  self.repos.root_this, change.path,
@@ -604,53 +786,28 @@ class DiffGenerator:
           label1 = change.base_path + '\t(original)'
           label2 = '%s\t%s' % (change.path, self.date)
           singular = False
+
+      if diff:
+        binary = diff.either_binary()
+        if binary:
+          content = src_fname = dst_fname = None
         else:
-          # the file was added. should we show it?
-          if not self.diffsels.add:
-            continue
-
-          kind = 'A'
-          diff = svn.fs.FileDiff(None, None, self.repos.root_this,
-                                 change.path, self.pool)
-          label1 = '(empty file)'
-          label2 = '%s\t%s' % (change.path, self.date)
-          singular = True
-
-      elif not change.text_changed:
-        # the text didn't change, so nothing to show.
-        continue
-      else:
-        # a simple modification. show the diff?
-        if not self.diffsels.modify:
-          continue
-
-        kind = 'M'
-        diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
-                               change.base_path,
-                               self.repos.root_this, change.path,
-                               self.pool)
-        label1 = change.base_path + '\t(original)'
-        label2 = '%s\t%s' % (change.path, self.date)
-        singular = False
-
-      binary = diff.either_binary()
-      if binary:
-        content = src_fname = dst_fname = None
-      else:
-        src_fname, dst_fname = diff.get_files()
-        content = DiffContent(self.cfg.get_diff_cmd(self.group, {
-          'label_from' : label1,
-          'label_to' : label2,
-          'from' : src_fname,
-          'to' : dst_fname,
-          }))
+          src_fname, dst_fname = diff.get_files()
+          content = DiffContent(self.cfg.get_diff_cmd(self.group, {
+            'label_from' : label1,
+            'label_to' : label2,
+            'from' : src_fname,
+            'to' : dst_fname,
+            }))
 
       # return a data item for this diff
       return _data(
-        kind=kind,
         path=change.path,
         base_path=change.base_path,
         base_rev=change.base_rev,
+        diff=diff,
+        diff_url=diff_url,
+        kind=kind,
         label_from=label1,
         label_to=label2,
         from_fname=src_fname,
@@ -658,7 +815,6 @@ class DiffGenerator:
         binary=binary,
         singular=singular,
         content=content,
-        diff=diff,
         )
 
 
@@ -782,17 +938,30 @@ class TextCommitRenderer:
     w = self.output.write
 
     for diff in diffs:
+      if not diff.diff and not diff.diff_url:
+        continue
       if diff.kind == 'D':
         w('\nDeleted: %s\n' % diff.base_path)
+        if diff.diff_url:
+          w('Url: %s\n' % diff.diff_url)
       elif diff.kind == 'C':
         w('\nCopied: %s (from r%d, %s)\n'
           % (diff.path, diff.base_rev, diff.base_path))
+        if diff.diff_url:
+          w('Url: %s\n' % diff.diff_url)
       elif diff.kind == 'A':
         w('\nAdded: %s\n' % diff.path)
+        if diff.diff_url:
+          w('Url: %s\n' % diff.diff_url)
       else:
         # kind == 'M'
         w('\nModified: %s\n' % diff.path)
+        if diff.diff_url:
+          w('Url: %s\n' % diff.diff_url)
 
+      if not diff.diff:
+        continue
+      
       w(SEPARATOR + '\n')
 
       if diff.binary:
@@ -841,9 +1010,9 @@ class Config:
   # set of groups.
   _predefined = ('general', 'defaults', 'maps')
 
-  def __init__(self, fp, repos, global_params):
+  def __init__(self, fname, repos, global_params):
     cp = ConfigParser.ConfigParser()
-    cp.readfp(fp)
+    cp.read(fname)
 
     # record the (non-default) groups that we find
     self._groups = [ ]
@@ -864,6 +1033,8 @@ class Config:
     # be compatible with old format config files
     if hasattr(self.general, 'diff') and not hasattr(self.defaults, 'diff'):
       self.defaults.diff = self.general.diff
+    if not hasattr(self, 'maps'):
+      self.maps = _sub_section()
 
     # these params are always available, although they may be overridden
     self._global_params = global_params.copy()
@@ -921,6 +1092,8 @@ class Config:
   def _prep_maps(self):
     "Rewrite the [maps] options into callables that look up values."
 
+    mapsections = []
+
     for optname, mapvalue in vars(self.maps).items():
       if mapvalue[:1] == '[':
         # a section is acting as a mapping
@@ -934,8 +1107,9 @@ class Config:
                 lambda value,
                        sect=getattr(self, sectname): getattr(sect, value,
                                                              value))
-        # remove the mapping section from consideration as a group
-        self._groups.remove(sectname)
+        # mark for removal when all optnames are done
+        if sectname not in mapsections:
+          mapsections.append(sectname)
 
       # elif test for other mapper types. possible examples:
       #   dbm:filename.db
@@ -945,6 +1119,11 @@ class Config:
 
       else:
         raise UnknownMappingSpec(mapvalue)
+
+    # remove each mapping section from consideration as a group
+    for sectname in mapsections:
+      self._groups.remove(sectname)
+
 
   def _prep_groups(self, repos):
     self._group_re = [ ]
@@ -1040,71 +1219,65 @@ except NameError:
 
 if __name__ == '__main__':
   def usage():
+    scriptname = os.path.basename(sys.argv[0])
     sys.stderr.write(
-"""USAGE: %s commit     REPOS REVISION [CONFIG-FILE]
-       %s propchange REPOS REVISION AUTHOR PROPNAME ACTION [CONFIG-FILE]
+"""USAGE: %s commit      REPOS REVISION [CONFIG-FILE]
+       %s propchange  REPOS REVISION AUTHOR PROPNAME [CONFIG-FILE]
+       %s propchange2 REPOS REVISION AUTHOR PROPNAME ACTION [CONFIG-FILE]
+       %s lock        REPOS AUTHOR [CONFIG-FILE]
+       %s unlock      REPOS AUTHOR [CONFIG-FILE]
 
 If no CONFIG-FILE is provided, the script will first search for a mailer.conf
 file in REPOS/conf/.  Failing that, it will search the directory in which
 the script itself resides.
 
-Additionally, CONFIG-FILE may be '-' to indicate that configuration options
-will be provided via standard input.
+ACTION was added as a fifth argument to the post-revprop-change hook
+in Subversion 1.2.0.  Its value is one of 'A', 'M' or 'D' to indicate
+if the property was added, modified or deleted, respectively.
 
-""" % (sys.argv[0], sys.argv[0]))
+""" % (scriptname, scriptname, scriptname, scriptname, scriptname))
     sys.exit(1)
 
-  if len(sys.argv) < 4:
+  # Command list:  subcommand -> number of arguments expected (not including
+  #                              the repository directory and config-file)
+  cmd_list = {'commit'     : 1,
+              'propchange' : 3,
+              'propchange2': 4,
+              'lock'       : 1,
+              'unlock'     : 1,
+              }
+
+  config_fname = None
+  argc = len(sys.argv)
+  if argc < 3:
     usage()
 
   cmd = sys.argv[1]
   repos_dir = sys.argv[2]
   try:
-    revision = int(sys.argv[3])
-  except ValueError:
-    usage()
-  config_fname = None
-
-  # Used for propchange only
-  author = None
-  propname = None
-  action = None
-
-  if cmd == 'commit':
-    if len(sys.argv) > 5:
-      usage()
-    if len(sys.argv) > 4:
-      config_fname = sys.argv[4]
-  elif cmd == 'propchange':
-    if len(sys.argv) < 6 or len(sys.argv) > 8:
-      usage()
-    author = sys.argv[4]
-    propname = sys.argv[5]
-    action = sys.argv[6]
-    if len(sys.argv) > 7:
-      config_fname = sys.argv[7]
-  else:
+    expected_args = cmd_list[cmd]
+  except KeyError:
     usage()
 
+  if argc < (expected_args + 3):
+    usage()
+  elif argc > expected_args + 4:
+    usage()
+  elif argc == (expected_args + 4):
+    config_fname = sys.argv[expected_args + 3]
+
+  # Settle on a config file location, and open it.
   if config_fname is None:
-    # default to REPOS-DIR/conf/mailer.conf
+    # Default to REPOS-DIR/conf/mailer.conf.
     config_fname = os.path.join(repos_dir, 'conf', 'mailer.conf')
     if not os.path.exists(config_fname):
-      # okay. look for 'mailer.conf' as a sibling of this script
+      # Okay.  Look for 'mailer.conf' as a sibling of this script.
       config_fname = os.path.join(os.path.dirname(sys.argv[0]), 'mailer.conf')
+  if not os.path.exists(config_fname):
+    raise MissingConfig(config_fname)
 
-  # If we're supposed to read from stdin, do so.
-  if config_fname == '-':
-    config_fp = sys.stdin
-  else:
-    # Not reading stdin, so open up the real config file.
-    if not os.path.exists(config_fname):
-      raise MissingConfig(config_fname)
-    config_fp = open(config_fname)
-
-  ### run some validation on these params
-  svn.core.run_app(main, cmd, config_fp, repos_dir, revision,
-                   author, propname, action)
+  svn.core.run_app(main, cmd, config_fname, repos_dir,
+                   sys.argv[3:3+expected_args])
 
 # ------------------------------------------------------------------------
 # TODO
@@ -1119,9 +1292,7 @@ will be provided via standard input.
 #     o max size of entire commit message before truncation
 #   - per-repository configuration
 #     o extra config living in repos
-#     o how to construct a ViewCVS URL for the diff  [DONE (as patch)]
 #     o optional, non-mail log file
 #     o look up authors (username -> email; for the From: header) in a
 #       file(s) or DBM
-#   - if the subject line gets too long, then trim it. configurable?
 # * get rid of global functions that should properly be class methods

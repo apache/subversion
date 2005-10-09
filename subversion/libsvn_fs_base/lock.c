@@ -68,8 +68,9 @@ struct lock_args
   const char *path;
   const char *token;
   const char *comment;
+  svn_boolean_t is_dav_comment;
   svn_boolean_t steal_lock;
-  int timeout;
+  apr_time_t expiration_date;
   svn_revnum_t current_rev;
 };
 
@@ -166,7 +167,8 @@ txn_body_lock (void *baton, trail_t *trail)
       if (! args->steal_lock)
         {
           /* Sorry, the path is already locked. */
-          return svn_fs_base__err_path_locked (trail->fs, existing_lock);
+          return svn_fs_base__err_path_already_locked (trail->fs,
+                                                       existing_lock);
         }
       else
         {
@@ -187,11 +189,9 @@ txn_body_lock (void *baton, trail_t *trail)
   lock->path = apr_pstrdup (trail->pool, args->path);
   lock->owner = apr_pstrdup (trail->pool, trail->fs->access_ctx->username);
   lock->comment = apr_pstrdup (trail->pool, args->comment);
+  lock->is_dav_comment = args->is_dav_comment;
   lock->creation_date = apr_time_now();
-  if (args->timeout)
-    lock->expiration_date = lock->creation_date + 
-      apr_time_from_sec(args->timeout);
-  
+  lock->expiration_date = args->expiration_date;
   SVN_ERR (add_lock_and_token (lock, lock->token, args->path, trail));
   *(args->lock_p) = lock;
 
@@ -206,7 +206,8 @@ svn_fs_base__lock (svn_lock_t **lock,
                    const char *path,
                    const char *token,
                    const char *comment,
-                   int timeout,
+                   svn_boolean_t is_dav_comment,
+                   apr_time_t expiration_date,
                    svn_revnum_t current_rev,
                    svn_boolean_t steal_lock,
                    apr_pool_t *pool)
@@ -219,8 +220,9 @@ svn_fs_base__lock (svn_lock_t **lock,
   args.path = svn_fs_base__canonicalize_abspath (path, pool);
   args.token = token;
   args.comment = comment;
+  args.is_dav_comment = is_dav_comment;
   args.steal_lock = steal_lock;
-  args.timeout = timeout;
+  args.expiration_date = expiration_date;
   args.current_rev = current_rev;
 
   return svn_fs_base__retry_txn (fs, txn_body_lock, &args, pool);
@@ -379,14 +381,12 @@ svn_fs_base__get_lock (svn_lock_t **lock,
                        apr_pool_t *pool)
 {
   struct lock_token_get_args args;
-  svn_error_t *err;
 
   SVN_ERR (svn_fs_base__check_fs (fs));
   
   args.path = svn_fs_base__canonicalize_abspath (path, pool);
   args.lock_p = lock;  
   return svn_fs_base__retry_txn (fs, txn_body_get_lock, &args, pool);
-  return err;
 }
 
 

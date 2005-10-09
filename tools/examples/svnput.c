@@ -41,6 +41,10 @@
 #include "svn_client.h"
 #include "svn_pools.h"
 #include "svn_config.h"
+#include "svn_fs.h"
+#include "svn_cmdline.h"
+#include "svn_path.h"
+#include "svn_time.h"
 
 
 /* Display a prompt and read a one-line response into the provided buffer,
@@ -120,6 +124,27 @@ my_username_prompt_callback (svn_auth_cred_username_t **cred,
   return SVN_NO_ERROR;
 }
 
+/* A callback function used when the RA layer needs a handle to a
+   temporary file.  This is a reduced version of the callback used in
+   the official svn cmdline client. */
+static svn_error_t *
+open_tmp_file (apr_file_t **fp,
+               void *callback_baton,
+               apr_pool_t *pool)
+{
+  const char *path;
+  const char *ignored_filename;
+
+  SVN_ERR (svn_io_temp_dir (&path, pool));
+  path = svn_path_join (path, "tempfile", pool);
+
+  /* Open a unique file, with delete-on-close set. */
+  SVN_ERR (svn_io_open_unique_file (fp, &ignored_filename,
+                                    path, ".tmp", TRUE, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Called when a commit is successful. */
 static svn_error_t *
@@ -140,11 +165,8 @@ main (int argc, const char **argv)
   apr_pool_t *pool;
   svn_error_t *err;
   apr_hash_t *dirents;
-  apr_hash_index_t *hi;
-  svn_client_ctx_t *ctx;
-  const char *upload_file, *URL, *url;
+  const char *upload_file, *URL;
   const char *parent_URL, *basename;
-  svn_node_kind_t url_kind, child_kind;
   svn_ra_plugin_t *ra_lib;  
   void *session, *ra_baton;
   svn_revnum_t rev;
@@ -171,6 +193,10 @@ main (int argc, const char **argv)
   /* Create top-level memory pool. Be sure to read the HACKING file to
      understand how to properly use/free subpools. */
   pool = svn_pool_create (NULL);
+
+  /* Initialize the FS library. */
+  err = svn_fs_initialize (pool);
+  if (err) goto hit_error;
 
   /* Make sure the ~/.subversion run-time config files exist, and load. */  
   err = svn_config_ensure (NULL, pool);
@@ -206,6 +232,7 @@ main (int argc, const char **argv)
   /* Create a table of callbacks for the RA session, mostly nonexistent. */
   cbtable = apr_pcalloc (pool, sizeof(*cbtable));
   cbtable->auth_baton = auth_baton;
+  cbtable->open_tmp_file = open_tmp_file;
 
   /* Now do the real work. */
 

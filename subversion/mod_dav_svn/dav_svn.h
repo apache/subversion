@@ -21,6 +21,7 @@
 #define DAV_SVN_H
 
 #include <httpd.h>
+#include <http_log.h>
 #include <apr_tables.h>
 #include <apr_xml.h>
 #include <mod_dav.h>
@@ -130,7 +131,8 @@ enum dav_svn_private_restype {
   DAV_SVN_RESTYPE_BC_COLLECTION,        /* .../!svn/bc/  */
   DAV_SVN_RESTYPE_BLN_COLLECTION,       /* .../!svn/bln/ */
   DAV_SVN_RESTYPE_WBL_COLLECTION,       /* .../!svn/wbl/ */
-  DAV_SVN_RESTYPE_VCC                   /* .../!svn/vcc/NAME */
+  DAV_SVN_RESTYPE_VCC,                  /* .../!svn/vcc/NAME */
+  DAV_SVN_RESTYPE_PARENTPATH_COLLECTION /* see SVNParentPath directive */
 };
 
 
@@ -273,6 +275,11 @@ svn_boolean_t dav_svn_get_autoversioning_flag(request_rec *r);
 /* for the repository referred to by this request, are subrequests active? */
 svn_boolean_t dav_svn_get_pathauthz_flag(request_rec *r);
 
+/* for the repository referred to by this request, is a GET of
+   SVNParentPath allowed? */
+svn_boolean_t dav_svn_get_list_parentpath_flag(request_rec *r);
+
+
 
 /* SPECIAL URI
 
@@ -322,6 +329,14 @@ const char *dav_svn_get_xslt_uri(request_rec *r);
    string constant. */
 dav_error *dav_svn_convert_err(svn_error_t *serr, int status,
                                const char *message, apr_pool_t *pool);
+
+/* A wrapper around mod_dav's dav_new_error_tag, mod_dav_svn uses this
+   instead of the mod_dav function to enable special mod_dav_svn specific
+   processing.  See dav_new_error_tag for parameter documentation. */
+dav_error *dav_svn__new_error_tag(apr_pool_t *pool, int status,
+                                  int errno_id, const char *desc,
+                                  const char *namespace,
+                                  const char *tagname);
 
 /* Test PATH for canonicalness (defined as "what won't make the
    svn_path_* functions immediately explode"), returning an
@@ -514,7 +529,7 @@ dav_error * dav_svn__file_revs_report(const dav_resource *resource,
 
 int dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri);
 
-/* Output XML data to OUTPUT using BB.  Use FMT as format string for the.
+/* Output XML data to OUTPUT using BB.  Use FMT as format string for the
    output. */
 svn_error_t * dav_svn__send_xml(apr_bucket_brigade *bb, ap_filter_t *output,
                                 const char *fmt, ...)
@@ -612,6 +627,28 @@ dav_error *dav_svn__push_locks(dav_resource *resource,
                                apr_hash_t *locks,
                                apr_pool_t *pool);
 
+
+/* Convert @a serr into a dav_error.  If @a new_msg is non-NULL, use
+   @a new_msg in the returned error, and write the original
+   @a serr->message to httpd's log.  Destroy the passed-in @a serr,
+   similarly to dav_svn_convert_err().
+
+   @a new_msg is usually a "sanitized" version of @a serr->message.
+   That is, if @a serr->message contains security-sensitive data,
+   @a new_msg does not.
+
+   The purpose of sanitization is to prevent security-sensitive data
+   from being transmitted over the network to the client.  The error
+   messages produced by various APIs (e.g., svn_fs, svn_repos) may
+   contain security-sensitive data such as the actual server file
+   system's path to the repository.  We don't want to send that to the
+   client, but we do want to log the real error on the server side.
+ */
+dav_error *
+dav_svn__sanitize_error(svn_error_t *serr,
+                        const char *new_msg,
+                        int http_status,
+                        request_rec *r);
 
 #ifdef __cplusplus
 }

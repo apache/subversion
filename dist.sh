@@ -249,14 +249,20 @@ find "$DISTPATH" -depth -type d -name 'autom4te*.cache' -exec rm -rf {} \;
 echo "Downloading book into sandbox..."
 
 BOOK_PDF=http://svnbook.red-bean.com/en/1.1/svn-book.pdf
-BOOK_PDF_DEST="$DISTPATH/doc/book/book/svn-book.pdf"
 BOOK_HTML=http://svnbook.red-bean.com/en/1.1/svn-book.html
-BOOK_HTML_DEST="$DISTPATH/doc/book/book/svn-book.html"
 
-$HTTP_FETCH $BOOK_PDF $HTTP_FETCH_OUTPUT $BOOK_PDF_DEST ||
+# We don't include the book source in newer versions of our trees
+# so if the doc/book/book path doesn't exist then use doc/book
+if [ -d "$DISTPATH/doc/book/book" ]; then
+  BOOK_DEST="$DISTPATH/doc/book/book"
+else
+  BOOK_DEST="$DISTPATH/doc/book"
+fi
+
+$HTTP_FETCH $BOOK_PDF $HTTP_FETCH_OUTPUT "$BOOK_DEST/svn-book.pdf" ||
   ( echo "ERROR: Problem getting the svn-book.pdf file." && exit 1 )
 
-$HTTP_FETCH $BOOK_HTML $HTTP_FETCH_OUTPUT $BOOK_HTML_DEST ||
+$HTTP_FETCH $BOOK_HTML $HTTP_FETCH_OUTPUT "$BOOK_DEST/svn-book.html" ||
   ( echo "ERROR: Problem getting the svn-book.html file." && exit 1 )
 
 cat > "$DISTPATH/ChangeLog.CVS" <<EOF
@@ -302,8 +308,17 @@ if [ -z "$ZIP" ]; then
   echo "Compressing to $DISTNAME.tar.bz2 ..."
   bzip2 -9fk "$DISTNAME.tar"
 
+  # Use the gzip -n flag - this prevents it from storing the original name of
+  # the .tar file, and far more importantly, the mtime of the .tar file, in the
+  # produced .tar.gz file. This is important, because it makes the gzip
+  # encoding reproducable by anyone else who has an similar version of gzip,
+  # and also uses "gzip -9n". This means that committers who want to GPG-sign
+  # both the .tar.gz and the .tar.bz2 can download the .tar.bz2 (which is
+  # smaller), and locally generate an exact duplicate of the official .tar.gz
+  # file. This metadata is data on the temporary uncompressed tarball itself,
+  # not any of its contents, so there will be no effect on end-users.
   echo "Compressing to $DISTNAME.tar.gz ..."
-  gzip -9f "$DISTNAME.tar"
+  gzip -9nf "$DISTNAME.tar"
 else
   echo "Rolling $DISTNAME.zip ..."
   (cd "$DIST_SANDBOX" > /dev/null && zip -q -r - "$DISTNAME") > \
@@ -342,16 +357,16 @@ sign_file()
 echo ""
 echo "Done:"
 if [ -z "$ZIP" ]; then
-  ls -l "$DISTNAME.tar.gz" "$DISTNAME.tar.bz2"
+  ls -l "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
   sign_file $DISTNAME.tar.gz $DISTNAME.tar.bz2
   echo ""
   echo "md5sums:"
-  md5sum "$DISTNAME.tar.gz" "$DISTNAME.tar.bz2"
+  md5sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
   type sha1sum > /dev/null 2>&1
   if [ $? -eq 0 ]; then
     echo ""
     echo "sha1sums:"
-    sha1sum "$DISTNAME.tar.gz" "$DISTNAME.tar.bz2"
+    sha1sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
   fi
 else
   ls -l "$DISTNAME.zip"

@@ -151,17 +151,28 @@ static dav_error *save_value(dav_db *db, const dav_prop_name *name,
       serr = svn_repos_fs_change_txn_prop(db->resource->info->root.txn,
                                           propname, value, db->resource->pool);
     else
-      /* ### VIOLATING deltaV: you can't proppatch a baseline, it's
-         not a working resource!  But this is how we currently
-         (hackily) allow the svn client to change unversioned rev
-         props.  See issue #916. */
-      serr = svn_repos_fs_change_rev_prop2(db->resource->info->repos->repos,
-                                           db->resource->info->root.rev,
-                                           db->resource->info->repos->username,
-                                           propname, value,
-                                           db->authz_read_func,
-                                           db->authz_read_baton,
-                                           db->resource->pool);
+      {
+        /* ### VIOLATING deltaV: you can't proppatch a baseline, it's
+           not a working resource!  But this is how we currently
+           (hackily) allow the svn client to change unversioned rev
+           props.  See issue #916. */
+        serr = svn_repos_fs_change_rev_prop2
+          (db->resource->info->repos->repos,
+           db->resource->info->root.rev,
+           db->resource->info->repos->username,
+           propname, value,
+           db->authz_read_func,
+           db->authz_read_baton,
+           db->resource->pool);
+
+        /* Tell the logging subsystem about the revprop change. */
+        apr_table_set(db->resource->info->r->subprocess_env, "SVN-ACTION",
+                      apr_psprintf(db->resource->pool,
+                                   "revprop-change r%" SVN_REVNUM_T_FMT 
+                                   " '%s'", db->resource->info->root.rev,
+                                   svn_path_uri_encode(propname,
+                                                       db->resource->pool)));
+      }
   else
     serr = svn_repos_fs_change_node_prop(db->resource->info->root.root,
                                          get_repos_path(db->resource->info),
@@ -286,8 +297,9 @@ static dav_error *dav_svn_db_output_value(dav_db *db,
          across the wire. */
       if (! svn_xml_is_xml_safe(propval->data, propval->len))
         {
-          propval = (svn_string_t *)svn_base64_encode_string(propval, pool);
-          xml_safe = propval->data;
+          const svn_string_t *enc_propval
+            = svn_base64_encode_string(propval, pool);
+          xml_safe = enc_propval->data;
           encoding = apr_pstrcat(pool, " V:encoding=\"base64\"", NULL);
         }
       else
@@ -325,7 +337,7 @@ static dav_error *dav_svn_db_store(dav_db *db, const dav_prop_name *name,
                                    const apr_xml_elem *elem,
                                    dav_namespace_map *mapping)
 {
-  svn_string_t *propval = apr_pcalloc(db->p, sizeof(*propval));
+  const svn_string_t *propval;
   apr_pool_t *pool = db->p;
   apr_xml_attr *attr = elem->attr;
 
@@ -335,8 +347,8 @@ static dav_error *dav_svn_db_store(dav_db *db, const dav_prop_name *name,
      dav_xml_get_cdata() will figure it all out for us, but (normally) it
      should be awfully fast and not need to copy any data. */
 
-  propval->data = dav_xml_get_cdata(elem, pool, 0 /* strip_white */);
-  propval->len = strlen(propval->data);
+  propval = svn_string_create
+    (dav_xml_get_cdata(elem, pool, 0 /* strip_white */), pool);
   
   /* Check for special encodings of the property value. */
   while (attr)
@@ -347,7 +359,7 @@ static dav_error *dav_svn_db_store(dav_db *db, const dav_prop_name *name,
 
           /* Handle known encodings here. */
           if (enc_type && (strcmp (enc_type, "base64") == 0))
-            propval = (svn_string_t *)svn_base64_decode_string(propval, pool);
+            propval = svn_base64_decode_string(propval, pool);
           else
             return dav_new_error (pool, HTTP_INTERNAL_SERVER_ERROR, 0,
                                   "Unknown property encoding");

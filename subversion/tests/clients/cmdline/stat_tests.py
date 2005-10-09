@@ -603,7 +603,7 @@ def text_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
   "text-time behaviour"
 
   # Pristine text and text-time
-  fp = open(wc_path, 'r')
+  fp = open(wc_path, 'rb')
   pre_text = fp.readlines()
   pre_text_time = get_text_timestamp(wc_path)
 
@@ -616,7 +616,7 @@ def text_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
     raise svntest.Failure
 
   # Manually reverting the text does not affect the text-time
-  fp = open(wc_path, 'w')
+  fp = open(wc_path, 'wb')
   fp.writelines(pre_text)
   fp.close()
   expected_status.tweak(status_path, status='  ')
@@ -682,15 +682,11 @@ def timestamp_behaviour(sbox):
   # Create a config to enable use-commit-times
   config_dir = os.path.join(os.path.abspath(svntest.main.temp_dir),
                             'use_commit_config')
-  if not os.path.isdir(config_dir):
-    os.makedirs(config_dir)
-  fd = open(os.path.join(config_dir, 'config'), 'w')
-  fd.write('[miscellany]\n')
-  fd.write('use-commit-times = yes\n')
-  fd.close()
-  fd = open(os.path.join(config_dir, 'server'), 'w')
-  fd.write('\n')
-  fd.close()
+  config_contents = '''\
+[miscellany]
+use-commit-times = yes
+'''
+  svntest.main.create_config_dir(config_dir, config_contents)
   svntest.main.set_config_dir(config_dir)
 
   other_wc = sbox.add_wc_path('other')
@@ -817,6 +813,60 @@ def missing_dir_in_anchor(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+def status_in_xml(sbox):
+  "status output in XML format"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_name = "iota"
+  file_path = os.path.join (wc_dir, file_name)
+  svntest.main.file_append(file_path, "test status --xml\n")
+
+  # Retrieve last changed date from svn log
+  output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'log', file_path,
+                                                     '--xml', '-rHEAD')
+  info_msg = "<date>"
+  for line in output:
+    if line.find(info_msg) >= 0:
+      time_str = line[:len(line)]
+      break
+  else:
+    raise svntest.Failure
+
+  template = ["<?xml version=\"1.0\" encoding=\"utf-8\"?>\n",
+              "<status>\n",
+              "<target\n",
+              "   path=\"%s\">\n" % (file_path),
+              "<entry\n",
+              "   path=\"%s\">\n" % (file_path),
+              "<wc-status\n",
+              "   props=\"none\"\n",
+              "   item=\"modified\"\n",
+              "   revision=\"1\">\n",
+              "<commit\n",
+              "   revision=\"1\">\n",
+              "<author>%s</author>\n" % svntest.main.wc_author,
+              time_str,
+              "</commit>\n",
+              "</wc-status>\n",
+              "</entry>\n",
+              "<against\n",
+              "   revision=\"1\"/>\n",
+              "</target>\n",
+              "</status>\n",
+             ]
+
+  output, error = svntest.actions.run_and_verify_svn (None, None, [],
+                                                      'status', file_path,
+                                                      '--xml', '-u')
+
+  for i in range(0, len(output)):
+    if output[i] != template[i]:
+      print "ERROR: expected:", template[i], "actual:", output[i]
+      raise svntest.Failure
+
 #----------------------------------------------------------------------  
 
 
@@ -842,6 +892,7 @@ test_list = [ None,
               status_on_unversioned_dotdot,
               status_on_partially_nonrecursive_wc,
               missing_dir_in_anchor,
+              status_in_xml,
              ]
 
 if __name__ == '__main__':

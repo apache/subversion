@@ -28,6 +28,7 @@
 #include "svn_auth.h"
 #include "svn_utf.h"
 #include "svn_pools.h"
+#include "svn_user.h"
 
 #include "svn_private_config.h"
 
@@ -315,36 +316,12 @@ svn_config__user_config_path (const char *config_dir,
 
 #else  /* ! WIN32 */
   {
-    apr_status_t apr_err;
-    char *homedir;
-    const char *homedir_utf8;
-
-    apr_err = apr_env_get (&homedir, "HOME", pool);
-    if ( apr_err || ! homedir )
-      {
-        apr_uid_t uid;
-        apr_gid_t gid;
-        char *username;
-
-        apr_err = apr_uid_current (&uid, &gid, pool);
-        if (apr_err)
-          return SVN_NO_ERROR;
-
-        apr_err = apr_uid_name_get (&username, uid, pool);
-        if (apr_err)
-          return SVN_NO_ERROR;
-
-        apr_err = apr_uid_homepath_get (&homedir, username, pool);
-        if (apr_err)
-          return SVN_NO_ERROR;
-      }
-
-    SVN_ERR (svn_utf_cstring_to_utf8 (&homedir_utf8, homedir, pool));
-
+    const char *homedir = svn_user_get_homedir (pool); 
+    if (! homedir)
+      return SVN_NO_ERROR;
     *path_p = svn_path_join_many (pool,
-                                  svn_path_canonicalize (homedir_utf8, pool),
+                                  svn_path_canonicalize (homedir, pool),
                                   SVN_CONFIG__USR_DIRECTORY, fname, NULL);
-    
   }
 #endif /* WIN32 */
 
@@ -1168,7 +1145,9 @@ svn_config_ensure (const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "### Set global-ignores to a set of whitespace-delimited globs"
         APR_EOL_STR
-        "### which Subversion will ignore in its 'status' output."
+        "### which Subversion will ignore in its 'status' output, and"
+        APR_EOL_STR
+        "### while importing or adding files and directories."
         APR_EOL_STR
         "# global-ignores = " SVN_CONFIG_DEFAULT_GLOBAL_IGNORES ""
         APR_EOL_STR

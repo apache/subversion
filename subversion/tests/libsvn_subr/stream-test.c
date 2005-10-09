@@ -20,7 +20,8 @@
 #include <svn_pools.h>
 #include <svn_io.h>
 #include <apr_general.h>
-#include "svn_test.h"
+
+#include "../svn_test.h"
 
 
 static svn_error_t *

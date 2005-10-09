@@ -245,8 +245,8 @@ void SVNClient::statusReceiver(void *baton, const char *path,
     if(JNIUtil::isJavaExceptionThrown())
         return;
 
-    // we don't create here java Status object as we don't want too many local 
-    // references
+    // Avoid creating Java Status objects here, as there could be
+    // many, and we don't want too many local JNI references.
     status_baton *statusBaton = (status_baton*)baton;
     status_entry statusEntry;
     statusEntry.path = apr_pstrdup(statusBaton->pool,path);
@@ -1671,6 +1671,10 @@ svn_client_ctx_t * SVNClient::getContext(const char *message)
     /* The main disk-caching auth providers, for both
        'username/password' creds and 'username' creds.  */
     svn_auth_provider_object_t *provider;
+#ifdef WIN32
+    svn_client_get_windows_simple_provider (&provider, pool);
+    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+#endif
     svn_client_get_simple_provider (&provider, pool);
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
     svn_client_get_username_provider (&provider, pool);
@@ -1802,7 +1806,8 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
             "(Ljava/lang/String;Ljava/lang/String;IJJJLjava/lang/String;IIIIZZ"
              "Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
              "Ljava/lang/String;JZLjava/lang/String;Ljava/lang/String;"
-             "Ljava/lang/String;JLorg/tigris/subversion/javahl/Lock;)V");
+             "Ljava/lang/String;JLorg/tigris/subversion/javahl/Lock;"
+             "JJILjava/lang/String;)V");
         if(JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
@@ -1839,9 +1844,13 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
     jstring jLockOwner = NULL;
     jlong jLockCreationDate = 0;
     jobject jLock = NULL;
+    jlong jOODLastCmtRevision =
+                    org_tigris_subversion_javahl_Revision_SVN_INVALID_REVNUM;
+    jlong jOODLastCmtDate = 0;
+    jint jOODKind = org_tigris_subversion_javahl_NodeKind_none;
+    jstring jOODLastCmtAuthor = NULL;
     if(status != NULL)
     {
-
         jTextType = EnumMapper::mapStatusKind(status->text_status);
         jPropType = EnumMapper::mapStatusKind(status->prop_status);
         jRepositoryTextType = EnumMapper::mapStatusKind(status->repos_text_status);
@@ -1854,14 +1863,23 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
         {
             return NULL;
         }
+        jUrl = JNIUtil::makeJString(status->url);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+        jOODLastCmtRevision = status->ood_last_cmt_rev;
+        jOODLastCmtDate = status->ood_last_cmt_date;
+        jOODKind = EnumMapper::mapNodeKind(status->ood_kind);
+        jOODLastCmtAuthor = JNIUtil::makeJString(status->ood_last_cmt_author);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+
         svn_wc_entry_t * entry = status->entry;
         if (entry != NULL)
         {
-            jUrl = JNIUtil::makeJString(entry->url);
-            if(JNIUtil::isJavaExceptionThrown())
-            {
-                return NULL;
-            }
             jNodeKind = EnumMapper::mapNodeKind(entry->kind);
             jRevision = entry->revision;
             jLastChangedRevision = entry->cmt_rev;
@@ -1917,7 +1935,8 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
         jTextType, jPropType, jRepositoryTextType, jRepositoryPropType, 
         jIsLocked, jIsCopied, jConflictOld, jConflictNew, jConflictWorking,
         jURLCopiedFrom, jRevisionCopiedFrom, jIsSwitched, jLockToken, 
-        jLockOwner, jLockComment, jLockCreationDate, jLock);
+        jLockOwner, jLockComment, jLockCreationDate, jLock,
+        jOODLastCmtRevision, jOODLastCmtDate, jOODKind, jOODLastCmtAuthor);
     if(JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
@@ -1982,6 +2001,11 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
     {
         return NULL;
     }
+    env->DeleteLocalRef(jOODLastCmtAuthor);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
     return ret;
 }
 
@@ -1993,11 +2017,7 @@ svn_error_t *SVNClient::messageReceiver (void *baton, apr_hash_t *changed_paths,
     {
         return SVN_NO_ERROR;
     }
-    svn_error_t * error = NULL;
     std::vector<jobject> *logs = (std::vector<jobject>*)baton;
-
-    apr_time_t timeTemp;
-    svn_time_from_cstring (&timeTemp, date, pool);
 
     static jmethodID mid = 0;
     JNIEnv *env = JNIUtil::getEnv();
@@ -2041,10 +2061,17 @@ svn_error_t *SVNClient::messageReceiver (void *baton, apr_hash_t *changed_paths,
         return SVN_NO_ERROR;
     }
 
-    jobject jdate = JNIUtil::createDate(timeTemp);
-    if(JNIUtil::isJavaExceptionThrown())
+    jobject jdate = NULL;
+    if(date != NULL && *date != '\0')
     {
-        return SVN_NO_ERROR;
+        apr_time_t timeTemp;
+        svn_time_from_cstring (&timeTemp, date, pool);
+
+        jdate = JNIUtil::createDate(timeTemp);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return SVN_NO_ERROR;
+        }
     }
 
     jstring jauthor = JNIUtil::makeJString(author);
@@ -2267,64 +2294,149 @@ jbyteArray SVNClient::fileContent(const char *path, Revision &revision,
         return NULL;
     }
 
-    svn_stream_t *read_stream = NULL;
     size_t size = 0;
-
-    if(revision.revision()->kind == svn_opt_revision_base)
-    // we want the base of the current working copy. Bad hack to avoid going to 
-    // the server
+    svn_stream_t *read_stream = createReadStream(requestPool.pool(),
+						 intPath.c_str(), revision,
+						 pegRevision, size);
+    if (read_stream == NULL)
     {
-
-        const char *base_path;
-        svn_error_t *err = svn_wc_get_pristine_copy_path (intPath.c_str(),
-                               &base_path,
-                               requestPool.pool());
-        if(err != NULL)
-        {
-            JNIUtil::handleSVNError(err);
-            return NULL;
-        }
-        apr_file_t *file = NULL;
-        apr_finfo_t finfo;
-        apr_status_t apr_err = apr_stat(&finfo, base_path,
-                                   APR_FINFO_MIN, requestPool.pool());
-        if(apr_err)
-        {
-            JNIUtil::handleAPRError(apr_err, _("open file"));
-            return NULL;
-        }
-        apr_err = apr_file_open(&file, base_path, APR_READ, 0, 
-                                requestPool.pool());
-        if(apr_err)
-        {
-            JNIUtil::handleAPRError(apr_err, _("open file"));
-            return NULL;
-        }
-        read_stream = svn_stream_from_aprfile(file, requestPool.pool());
-        size = finfo.size;
+        return NULL;
     }
-    else if(revision.revision()->kind == svn_opt_revision_working)
-    // we want the working copy. Going back to the server returns base instead 
-    // (not good)
-    {
 
+    JNIEnv *env = JNIUtil::getEnv();
+    // size will be set to the number of bytes available.
+    jbyteArray ret = env->NewByteArray(size);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    jbyte *retdata = env->GetByteArrayElements(ret, NULL);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    Err = svn_stream_read(read_stream, (char *)retdata, &size);
+    env->ReleaseByteArrayElements(ret, retdata, 0);
+    if (Err != NULL)
+    {
+        JNIUtil::handleSVNError(Err);
+        return NULL;
+    }
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    return ret;
+}
+
+void SVNClient::streamFileContent(const char *path, Revision &revision,
+				  Revision &pegRevision, jobject outputStream,
+				  size_t bufSize)
+{
+    Pool requestPool;
+    if (path == NULL)
+    {
+        JNIUtil::throwNullPointerException("path");
+        return;
+    }
+    Path intPath(path);
+    svn_error_t *Err = intPath.error_occured();
+    if (Err != NULL)
+    {
+        JNIUtil::handleSVNError(Err);
+        return;
+    }
+
+    JNIEnv *env = JNIUtil::getEnv();
+    jclass outputStreamClass = env->FindClass("java/io/OutputStream");
+    if (outputStreamClass == NULL)
+    {
+        return;
+    }
+    jmethodID writeMethod = env->GetMethodID(outputStreamClass, "write",
+					     "([BII)V");
+    if (writeMethod == NULL)
+    {
+        return;
+    }
+
+    // Create the buffer.
+    jbyteArray buffer = env->NewByteArray(bufSize);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return;
+    }
+    jbyte *bufData = env->GetByteArrayElements(buffer, NULL);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return;
+    }
+
+    size_t contentSize = 0;
+    svn_stream_t* read_stream = createReadStream(requestPool.pool(), path,
+						 revision, pegRevision,
+						 contentSize);
+    if (read_stream == NULL)
+    {
+        return;
+    }
+
+    while (contentSize > 0)
+    {
+        size_t readSize = bufSize > contentSize ? contentSize : bufSize;
+        Err = svn_stream_read(read_stream, (char *)bufData, &readSize);
+        if (Err != NULL)
+        {
+            env->ReleaseByteArrayElements(buffer, bufData, 0);
+            svn_stream_close(read_stream);
+            JNIUtil::handleSVNError(Err);
+            return;
+        }
+
+        env->ReleaseByteArrayElements(buffer, bufData, JNI_COMMIT);
+        env->CallVoidMethod(outputStream, writeMethod, buffer, 0, readSize);
+        if (JNIUtil::isJavaExceptionThrown())
+        {
+            env->ReleaseByteArrayElements(buffer, bufData, 0);
+            svn_stream_close(read_stream);
+            return;
+        }
+        contentSize -= readSize;
+    }
+
+    env->ReleaseByteArrayElements(buffer, bufData, 0);
+    return;
+}
+
+svn_stream_t* SVNClient::createReadStream(apr_pool_t* pool, const char *path,
+					  Revision& revision,
+					  Revision &pegRevision, size_t& size)
+{
+    svn_stream_t *read_stream = NULL;
+
+    if (revision.revision()->kind == svn_opt_revision_working)
+    {
+	// We want the working copy. Going back to the server returns
+	// base instead (which is not what we want).
         apr_file_t *file = NULL;
         apr_finfo_t finfo;
-        apr_status_t apr_err = apr_stat(&finfo, intPath.c_str(),
-                                   APR_FINFO_MIN, requestPool.pool());
+        apr_status_t apr_err = apr_stat(&finfo, path,
+                                   APR_FINFO_MIN, pool);
         if(apr_err)
         {
             JNIUtil::handleAPRError(apr_err, _("open file"));
             return NULL;
         }
-        apr_err = apr_file_open(&file, intPath.c_str(), APR_READ, 0, 
-                                requestPool.pool());
+        apr_err = apr_file_open(&file, path, APR_READ, 0, 
+                                pool);
         if(apr_err)
         {
             JNIUtil::handleAPRError(apr_err, _("open file"));
             return NULL;
         }
-        read_stream = svn_stream_from_aprfile(file, requestPool.pool());
+        read_stream = svn_stream_from_aprfile(file, pool);
         size = finfo.size;
     }
     else
@@ -2334,11 +2446,10 @@ jbyteArray SVNClient::fileContent(const char *path, Revision &revision,
         {
             return NULL;
         }
-        svn_stringbuf_t *buf = svn_stringbuf_create("", requestPool.pool());
-        read_stream = svn_stream_from_stringbuf(buf, requestPool.pool());
+        svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
+        read_stream = svn_stream_from_stringbuf(buf, pool);
         svn_error_t *err = svn_client_cat2 (read_stream,
-                intPath.c_str(), pegRevision.revision(), revision.revision(), 
-                ctx, requestPool.pool());
+                path, pegRevision.revision(), revision.revision(), ctx, pool);
         if(err != NULL)
         {
             JNIUtil::handleSVNError(err);
@@ -2346,40 +2457,9 @@ jbyteArray SVNClient::fileContent(const char *path, Revision &revision,
         }
         size = buf->len;
     }
-    if(read_stream == NULL)
-    {
-        return NULL;
-    }
-
-    JNIEnv *env = JNIUtil::getEnv();
-    jbyteArray ret = env->NewByteArray(size);
-    if(JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    jbyte *retdata = env->GetByteArrayElements(ret, NULL);
-    if(JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    svn_error_t *err = svn_stream_read (read_stream, (char *)retdata,
-                              &size);
-
-    if(err != NULL)
-    {
-        env->ReleaseByteArrayElements(ret, retdata, 0);
-        JNIUtil::handleSVNError(err);
-        return NULL;
-    }
-    env->ReleaseByteArrayElements(ret, retdata, 0);
-    if(JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-
-
-    return ret;
+    return read_stream;
 }
+
 
 /**
  * create a DirEntry java object from svn_dirent_t structure
@@ -2686,14 +2766,9 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     {
         return;
     }
-    svn_error_t * error = svn_client_blame2 (intPath.c_str(),
-                                            pegRevision.revision(),
-                                            revisionStart.revision(),
-                                            revisionEnd.revision(),
-                                            blame_receiver2,
-                                            callback,
-                                            ctx,
-                                            apr_pool);
+    Err = svn_client_blame2 (intPath.c_str(), pegRevision.revision(),
+			     revisionStart.revision(), revisionEnd.revision(),
+			     blame_receiver2, callback, ctx, apr_pool);
     if(Err != SVN_NO_ERROR)
     {
         JNIUtil::handleSVNError(Err);
@@ -3021,12 +3096,11 @@ void SVNClient::lock(Targets &targets, const char *comment,
     }
     apr_pool_t * apr_pool = requestPool.pool ();
     svn_client_ctx_t *ctx = getContext(NULL);
-    svn_error_t *err = svn_client_lock(targetsApr,
-        comment, force, ctx, apr_pool);
+    Err = svn_client_lock(targetsApr, comment, force, ctx, apr_pool);
 
     if (Err != NULL)
     {
-        JNIUtil::handleSVNError(err);
+        JNIUtil::handleSVNError(Err);
     }
 }
 

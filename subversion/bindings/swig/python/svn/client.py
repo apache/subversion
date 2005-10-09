@@ -17,7 +17,7 @@
 ######################################################################
 
 from libsvn.client import *
-from core import _unprefix_names
+from svn.core import _unprefix_names
 _unprefix_names(locals(), 'svn_client_')
 _unprefix_names(locals(), 'SVN_CLIENT_')
 del _unprefix_names

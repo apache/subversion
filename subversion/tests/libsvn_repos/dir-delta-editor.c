@@ -27,11 +27,12 @@
 #include <apr_file_io.h>
 
 #include "svn_types.h"
-#include "svn_test.h"
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_fs.h"
+
+#include "../svn_test.h"
 #include "dir-delta-editor.h"
 
 /* Also used for dir batons. */

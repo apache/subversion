@@ -10,8 +10,8 @@ module Svn
         value = Ext::Core.const_get(const_name)
         module_eval(<<-EOC, __FILE__, __LINE__)
           class #{$1} < Error
-            def initialize(message)
-              super(#{value}, message)
+            def initialize(message="", file=nil, line=nil)
+              super(#{value}, message, file, line)
             end
           end
         EOC
@@ -20,20 +20,42 @@ module Svn
     end
     
     class << self
-      def new_corresponding_error(code, message)
+      def new_corresponding_error(code, message, file=nil, line=nil)
         if TABLE.has_key?(code)
-          TABLE[code].new(message)
+          TABLE[code].new(message, file, line)
         else
-          new(code, message)
+          new(code, message, file, line)
         end
       end
     end
 
-    attr_reader :code, :message
-    def initialize(code, message)
+    attr_reader :code, :error_message, :file, :line
+    def initialize(code, message, file=nil, line=nil)
       @code = code
-      @message = message
-      super(message)
+      @error_message = to_locale_encoding(message)
+      @file = file
+      @line = line
+      msg = ""
+      if file
+        msg << "#{file}"
+        msg << ":#{line}" if line
+        msg << " "
+      end
+      msg << @error_message
+      super(msg)
+    end
+
+    private
+    begin
+      require "gettext"
+      require "iconv"
+      def to_locale_encoding(str)
+        Iconv.iconv(Locale.charset, "UTF-8", str).join
+      end
+    rescue LoadError
+      def to_locale_encoding(str)
+        str
+      end
     end
   end
 end

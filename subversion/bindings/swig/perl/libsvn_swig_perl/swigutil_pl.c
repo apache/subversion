@@ -1,5 +1,5 @@
 /*
- * swigutil_py.c: utility functions for the SWIG Perl bindings
+ * swigutil_pl.c: utility functions for the SWIG Perl bindings
  *
  * ====================================================================
  * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
@@ -21,6 +21,9 @@
 #include <XSUB.h>
 
 #include <stdarg.h>
+#ifdef WIN32
+#include <io.h>
+#endif
 
 #include <apr.h>
 #include <apr_general.h>
@@ -29,14 +32,7 @@
 #include "svn_pools.h"
 #include "svn_opt.h"
 
-#if SVN_SWIG_VERSION >= 103024
-#if SVN_SWIG_VERSION >= 103025
-#include <swiglabels.swg>
-#endif
-#include <swigrun.swg>
-#include <perl5/perlrun.swg>
-#include <runtime.swg>
-#endif
+#include "swig_perl_external_runtime.swg"
 
 #include "swigutil_pl.h"
 
@@ -440,8 +436,6 @@ static item_baton * make_baton(apr_pool_t *pool,
 {
     item_baton *newb = apr_palloc(pool, sizeof(*newb));
 
-    SvREFCNT_inc(editor);
-
     newb->editor = editor;
     newb->baton = baton;
 
@@ -465,7 +459,6 @@ static svn_error_t * close_baton(void *baton, const char *method, apr_pool_t *po
                                              "OS", ib->editor, pool, POOLINFO));
     }
 
-    SvREFCNT_dec(ib->editor);
     return SVN_NO_ERROR;
 }
 
@@ -716,7 +709,6 @@ static svn_error_t * thunk_close_file(void *file_baton,
 				         ib->editor, ib->baton, text_checksum,
 				         pool, POOLINFO));
 
-    SvREFCNT_dec(ib->editor);
     SvREFCNT_dec(ib->baton);
 
     return SVN_NO_ERROR;
@@ -774,6 +766,7 @@ void svn_delta_make_editor(svn_delta_editor_t **editor,
 
     *editor = thunk_editor;
     *edit_baton = make_baton(pool, perl_editor, NULL);
+    svn_swig_pl_hold_ref_in_pool (pool, perl_editor);
 }
 
 svn_error_t *svn_swig_pl_thunk_log_receiver(void *baton,
@@ -1380,7 +1373,12 @@ apr_file_t *svn_swig_pl_make_file (SV *file, apr_pool_t *pool)
                     pool);
     } else if (SvROK(file) && SvTYPE(SvRV(file)) == SVt_PVGV) {
         apr_status_t status;
+#ifdef WIN32
+        apr_os_file_t osfile = (apr_os_file_t)
+          _get_osfhandle(PerlIO_fileno(IoIFP(sv_2io(file))));
+#else
         apr_os_file_t osfile = PerlIO_fileno(IoIFP(sv_2io(file)));
+#endif
         status = apr_os_file_put (&apr_file, &osfile, 
                                   O_CREAT | O_WRONLY, pool);
         if (status)

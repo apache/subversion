@@ -27,6 +27,21 @@
 
 #include "dav_svn.h"
 
+dav_error * dav_svn__new_error_tag(apr_pool_t *pool,
+                                   int status,
+                                   int error_id,
+                                   const char *desc,
+                                   const char *namespace,
+                                   const char *tagname)
+{
+  /* dav_new_error_tag will record errno but Subversion makes no attempt
+     to ensure that it is valid.  We reset it to avoid putting incorrect
+     information into the error log, at the expense of possibly removing
+     valid information. */
+  errno = 0;
+
+  return dav_new_error_tag(pool, status, error_id, desc, namespace, tagname);
+}
 
 dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
                                 const char *message, apr_pool_t *pool)
@@ -38,9 +53,10 @@ dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
        svn_error_t's are marshalled to the client via the single
        generic <svn:error/> tag nestled within a <D:error> block. */
 
-    /* Even though the caller passed in some HTTP status code, we
-       should look at the actual subversion error code and use the
-       -best- HTTP mapping we can. */
+    /* Examine the Subverion error code, and select the most
+       appropriate HTTP status code.  If no more appropriate HTTP
+       status code maps to the Subversion error code, use the one
+       suggested status provided by the caller. */
     switch (serr->apr_err)
       {
       case SVN_ERR_FS_NOT_FOUND:
@@ -52,19 +68,12 @@ dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
         /* add other mappings here */
       }
 
-    /* dav_new_error_tag will record errno but Subversion makes no attempt
-       to ensure that it is valid.  We reset it to avoid putting incorrect
-       information into the error log, at the expense of possibly removing
-       valid information. */
-    errno = 0;
-
-    derr = dav_new_error_tag(pool, status,
-                             serr->apr_err, apr_pstrdup(pool, serr->message),
-                             SVN_DAV_ERROR_NAMESPACE,
-                             SVN_DAV_ERROR_TAG);
+    derr = dav_svn__new_error_tag(pool, status, serr->apr_err,
+                                  apr_pstrdup(pool, serr->message),
+                                  SVN_DAV_ERROR_NAMESPACE,
+                                  SVN_DAV_ERROR_TAG);
     if (message != NULL)
-        derr = dav_push_error(pool, status, serr->apr_err,
-                              message, derr);
+      derr = dav_push_error(pool, status, serr->apr_err, message, derr);
 
     /* Now, destroy the Subversion error. */
     svn_error_clear(serr);
@@ -373,10 +382,30 @@ dav_error * dav_svn__test_canonical(const char *path, apr_pool_t *pool)
     return NULL;
 
   /* Otherwise, generate a generic HTTP_BAD_REQUEST error. */
-  return dav_new_error_tag
+  return dav_svn__new_error_tag
     (pool, HTTP_BAD_REQUEST, 0, 
      apr_psprintf(pool, 
                   "Path '%s' is not canonicalized; "
                   "there is a problem with the client.", path),
      SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+}
+
+dav_error * dav_svn__sanitize_error(svn_error_t *serr,
+                                    const char *new_msg,
+                                    int http_status,
+                                    request_rec *r)
+{
+    svn_error_t *safe_err = serr;
+    if (new_msg != NULL)
+      {
+        /* Sanitization is necessary.  Create a new, safe error and
+           log the original error. */
+        safe_err = svn_error_create(serr->apr_err, NULL, new_msg);
+        ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
+                      "%s", serr->message);
+        svn_error_clear(serr);
+      }
+    return dav_svn_convert_err(safe_err, http_status,
+                               apr_psprintf(r->pool, safe_err->message),
+                               r->pool);
 }

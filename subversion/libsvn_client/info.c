@@ -72,6 +72,7 @@ build_info_from_entry (svn_info_t **info,
   tmpinfo->rev                  = entry->revision;
   tmpinfo->kind                 = entry->kind;
   tmpinfo->repos_UUID           = entry->uuid;
+  tmpinfo->repos_root_URL       = entry->repos;
   tmpinfo->last_changed_rev     = entry->cmt_rev;
   tmpinfo->last_changed_date    = entry->cmt_date;
   tmpinfo->last_changed_author  = entry->cmt_author;
@@ -331,10 +332,10 @@ svn_client_info (const char *path_or_url,
         }        
       
       /* Open a new RA session to the item's parent. */
-      SVN_ERR (svn_client__open_ra_session (&parent_ra_session, parent_url,
-                                            NULL,
-                                            NULL, NULL, FALSE, TRUE, 
-                                            ctx, pool));
+      SVN_ERR (svn_client__open_ra_session_internal (&parent_ra_session,
+                                                     parent_url, NULL,
+                                                     NULL, NULL, FALSE, TRUE, 
+                                                     ctx, pool));
       
       /* Get all parent's entries, and find the item's dirent in the hash. */
       SVN_ERR (svn_ra_get_dir (parent_ra_session, "", rev, &parent_ents, 
@@ -356,22 +357,18 @@ svn_client_info (const char *path_or_url,
                               url, rev);
 
   /* Possibly discover a lock attached to the remote URL. */
-  lock = NULL;
-  if (peg_revision->kind == svn_opt_revision_head)
-    {
-      err = svn_ra_get_lock (ra_session, &lock, "", pool);
+  err = svn_ra_get_lock (ra_session, &lock, "", pool);
 
-      /* An old mod_dav_svn will always work; there's nothing wrong with
-         doing a PROPFIND for a property named "DAV:supportedlock".  But
-         an old svnserve will error. */
-      if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
-        {
-          svn_error_clear(err);
-          lock = NULL;
-        }
-      else if (err)
-        return err;
+  /* An old mod_dav_svn will always work; there's nothing wrong with
+     doing a PROPFIND for a property named "DAV:supportedlock". But
+     an old svnserve will error. */
+  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+    {
+      svn_error_clear (err);
+      lock = NULL;
     }
+  else if (err)
+    return err;
 
   /* Push the URL's dirent (and lock) at the callback.*/  
   SVN_ERR (build_info_from_dirent (&info, the_ent, lock, url, rev,

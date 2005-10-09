@@ -75,7 +75,7 @@ char *svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize);
  * Notes: Errors are always allocated in a subpool of the global pool,
  *        since an error's lifetime is generally not related to the
  *        lifetime of any convenient pool.  Errors must be freed
- *        with @c svn_error_clear().  The specific message should be NULL
+ *        with svn_error_clear().  The specific message should be NULL
  *        if there is nothing to add to the general message associated
  *        with the error code.
  *
@@ -92,7 +92,7 @@ svn_error_t *svn_error_create (apr_status_t apr_err,
 
 /** Create an error structure with the given @a apr_err and @a child,
  * with a printf-style error message produced by passing @a fmt, using
- * @c apr_psprintf.
+ * apr_psprintf().
  */
 svn_error_t *svn_error_createf (apr_status_t apr_err,
                                 svn_error_t *child,
@@ -105,9 +105,9 @@ svn_error_t *svn_error_createf (apr_status_t apr_err,
   (svn_error__locate(__FILE__,__LINE__), (svn_error_createf))
 
 /** Wrap a status from an APR function.  If @a fmt is NULL, this is
- * equivalent to @c svn_error_create(status, NULL, NULL).  Otherwise,
+ * equivalent to svn_error_create(status,NULL,NULL).  Otherwise,
  * the error message is constructed by formatting @a fmt and the
- * following arguments according to @c apr_psprintf, and then
+ * following arguments according to apr_psprintf(), and then
  * appending ": " and the error message corresponding to @a status.
  * (If UTF-8 translation of the APR error message fails, the ": " and
  * APR error are not appended to the error message.)
@@ -135,9 +135,10 @@ svn_error_t *svn_error_quick_wrap (svn_error_t *child, const char *new_msg);
  */
 void svn_error_compose (svn_error_t *chain, svn_error_t *new_err);
 
-/** @since New in 1.2.
+/** Create a new error that is a deep copy of err and return it.
  *
- * Create a new error that is a deep copy of err and return it. */
+ * @since New in 1.2.
+ */
 svn_error_t *svn_error_dup (svn_error_t *err);
 
 /** Free the memory used by @a error, as well as all ancestors and
@@ -146,39 +147,47 @@ svn_error_t *svn_error_dup (svn_error_t *err);
  * Unlike other Subversion objects, errors are managed explicitly; you 
  * MUST clear an error if you are ignoring it, or you are leaking memory. 
  * For convenience, @a error may be @c NULL, in which case this function does 
- * nothing; thus, @c svn_error_clear(svn_foo(...)) works as an idiom to 
+ * nothing; thus, svn_error_clear(svn_foo(...)) works as an idiom to 
  * ignore errors.
  */
 void svn_error_clear (svn_error_t *error);
 
 
-/** @since New in 1.2
- *
+/**
  * Very basic default error handler: print out error stack @a error to the
  * stdio stream @a stream, with each error prefixed by @a prefix, and quit
  * iff the @a fatal flag is set.  Allocations are performed in the error's
  * pool.
+ *
+ * If you're not sure what prefix to pass, just pass "svn: ".  That's
+ * what code that used to call svn_handle_error() and now calls
+ * svn_handle_error2() does.
+ *
+ * @since New in 1.2.
  */
 void svn_handle_error2 (svn_error_t *error,
                         FILE *stream,
                         svn_boolean_t fatal,
                         const char *prefix);
 
-/** Like @c svn_handle_error2 but with @c prefix set to "svn: "
+/** Like svn_handle_error2() but with @c prefix set to "svn: "
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 void svn_handle_error (svn_error_t *error,
                        FILE *stream,
                        svn_boolean_t fatal);
 
-/** @since New in 1.2
- *
+/**
  * Very basic default warning handler: print out the error @a error to the
  * stdio stream @a stream, prefixed by @a prefix.  Allocations are
  * performed in the error's pool.
+ *
+ * @since New in 1.2.
  */
 void svn_handle_warning2 (FILE *stream, svn_error_t *error, const char *prefix);
 
-/** Like @c svn_handle_warning2 but with @c prefix set to "svn: "
+/** Like svn_handle_warning2() but with @c prefix set to "svn: "
  */
 void svn_handle_warning (FILE *stream, svn_error_t *error);
 
@@ -227,35 +236,36 @@ void svn_handle_warning (FILE *stream, svn_error_t *error);
  * Evaluate @a expr. If it yields an error, handle that error and
  * return @c EXIT_FAILURE.
  */
-#define SVN_INT_ERR(expr)                                   \
-  do {                                                      \
-    svn_error_t *svn_err__temp = (expr);                    \
-    if (svn_err__temp) {                                    \
-      svn_handle_error (svn_err__temp, stderr, FALSE);      \
-      svn_error_clear (svn_err__temp);                      \
-      return EXIT_FAILURE; }                                \
+#define SVN_INT_ERR(expr)                                        \
+  do {                                                           \
+    svn_error_t *svn_err__temp = (expr);                         \
+    if (svn_err__temp) {                                         \
+      svn_handle_error2 (svn_err__temp, stderr, FALSE, "svn: "); \
+      svn_error_clear (svn_err__temp);                           \
+      return EXIT_FAILURE; }                                     \
   } while (0)
 
 /** @} */
 
 /**
- * @since New in 1.2.  
- *
  * Return TRUE if @a err is an error specifically related to locking a
  * path in the repository, FALSE otherwise. 
  *
  * SVN_ERR_FS_OUT_OF_DATE is in here because it's a non-fatal error
  * that can be thrown when attempting to lock an item.
+ *
+ * @since New in 1.2.
  */
 #define SVN_ERR_IS_LOCK_ERROR(err)                          \
-  (err->apr_err == SVN_ERR_FS_PATH_LOCKED ||                \
+  (err->apr_err == SVN_ERR_FS_PATH_ALREADY_LOCKED ||        \
    err->apr_err == SVN_ERR_FS_OUT_OF_DATE)                  \
 
 /**
- * @since New in 1.2.  
- *
  * Return TRUE if @a err is an error specifically related to unlocking
- * a path in the repository, FALSE otherwise. */
+ * a path in the repository, FALSE otherwise.
+ *
+ * @since New in 1.2.
+ */
 #define SVN_ERR_IS_UNLOCK_ERROR(err)                        \
   (err->apr_err == SVN_ERR_FS_PATH_NOT_LOCKED ||            \
    err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN ||             \

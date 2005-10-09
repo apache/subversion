@@ -39,6 +39,10 @@
 
 /*** Getting update information ***/
 
+/* Baton for tweak_status.  It wraps a bit of extra functionality
+   around the received status func/baton, so we can remember if the
+   target was deleted in HEAD and tweak incoming status structures
+   accordingly. */
 struct status_baton
 {
   svn_boolean_t deleted_in_repos;          /* target is deleted in repos */
@@ -49,7 +53,9 @@ struct status_baton
 /* A status callback function which wraps the *real* status
    function/baton.   This sucker takes care of any status tweaks we
    need to make (such as noting that the target of the status is
-   missing from HEAD in the repository).  */
+   missing from HEAD in the repository).
+
+   This implements the 'svn_wc_status_func2_t' function type. */
 static void
 tweak_status (void *baton,
               const char *path,
@@ -139,14 +145,16 @@ reporter_finish_report (void *report_baton, apr_pool_t *pool)
 
   /* Open an RA session to our common ancestor and grab the locks under it.
    */
-  SVN_ERR (svn_client__open_ra_session (&ras, rb->ancestor, NULL, NULL, NULL,
-                                        FALSE, TRUE, rb->ctx, subpool));
+  SVN_ERR (svn_client__open_ra_session_internal (&ras, rb->ancestor, NULL,
+                                                 NULL, NULL, FALSE, TRUE,
+                                                 rb->ctx, subpool));
 
   /* The locks need to live throughout the edit.  Note that if the
      server doesn't support lock discovery, we'll just not do locky
      stuff. */
   err = svn_ra_get_locks (ras, &locks, "", rb->pool);
-  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+  if (err && ((err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+              || (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)))
     {
       svn_error_clear (err);
       err = SVN_NO_ERROR;
@@ -192,7 +200,7 @@ static svn_ra_reporter2_t lock_fetch_reporter = {
 svn_error_t *
 svn_client_status2 (svn_revnum_t *result_rev,
                     const char *path,
-                    svn_opt_revision_t *revision,
+                    const svn_opt_revision_t *revision,
                     svn_wc_status_func2_t status_func,
                     void *status_baton,
                     svn_boolean_t recurse,
@@ -255,9 +263,10 @@ svn_client_status2 (svn_revnum_t *result_rev,
       URL = apr_pstrdup (pool, entry->url);
 
       /* Open a repository session to the URL. */
-      SVN_ERR (svn_client__open_ra_session (&ra_session, URL, anchor,
-                                            anchor_access, NULL, TRUE, TRUE, 
-                                            ctx, pool));
+      SVN_ERR (svn_client__open_ra_session_internal (&ra_session, URL, anchor,
+                                                     anchor_access, NULL,
+                                                     TRUE, TRUE, 
+                                                     ctx, pool));
 
       /* Verify that URL exists in HEAD.  If it doesn't, this can save
          us a whole lot of hassle; if it does, the cost of this
@@ -354,14 +363,17 @@ svn_client_status2 (svn_revnum_t *result_rev,
 }
 
 
-/* Helpers for deprecated svn_wc_status_editor(), of type
-   svn_wc_status_func2_t. */
+/* Baton for old_status_func_cb; does what you think it does. */
 struct old_status_func_cb_baton
 {
   svn_wc_status_func_t original_func;
   void *original_baton;
 };
 
+/* Help svn_client_status() accept an old-style status func and baton,
+   by wrapping them before passing along to svn_client_status2().
+   
+   This implements the 'svn_wc_status_func2_t' function type. */
 static void old_status_func_cb (void *baton,
                                 const char *path,
                                 svn_wc_status2_t *status)

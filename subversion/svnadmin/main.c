@@ -33,6 +33,7 @@
 #include "svn_version.h"
 #include "svn_props.h"
 #include "svn_time.h"
+#include "svn_user.h"
 
 #include "svn_private_config.h"
 
@@ -179,6 +180,7 @@ check_lib_versions (void)
 /** Subcommands. **/
 
 static svn_opt_subcommand_t
+  subcommand_crashtest,
   subcommand_create,
   subcommand_deltify,
   subcommand_dump,
@@ -254,7 +256,7 @@ static const apr_getopt_option_t options_table[] =
      N_("set repos UUID to that found in stream, if any")},
 
     {"fs-type", svnadmin__fs_type, 1,
-     N_("type of repository: 'bdb' or 'fsfs'")},
+     N_("type of repository: 'fsfs' (default) or 'bdb'")},
 
     {"parent-dir", svnadmin__parent_dir, 1,
      N_("load at specified directory in repository")},
@@ -290,6 +292,12 @@ static const apr_getopt_option_t options_table[] =
  */
 static const svn_opt_subcommand_desc_t cmd_table[] =
   {
+    {"crashtest", subcommand_crashtest, {0},
+     N_("usage: svnadmin crashtest REPOS_PATH\n\n"
+        "Open the repository at REPOS_PATH, then abort, thus simulating\n"
+        "a process that crashes while holding an open repository handle.\n"),
+     {0} },
+
     {"create", subcommand_create, {0},
      N_("usage: svnadmin create REPOS_PATH\n\n"
      "Create a new, empty repository at REPOS_PATH.\n"),
@@ -559,6 +567,7 @@ static svn_error_t *recode_write (void *baton,
                                   apr_size_t *len)
 {
   struct recode_write_baton *rwb = baton;
+  svn_pool_clear(rwb->pool);
   return svn_cmdline_fputs (data, rwb->out, rwb->pool);
 }
 
@@ -610,7 +619,7 @@ subcommand_dump (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (! opt_state->quiet)
     {
       stderr_stream = svn_stream_create (&stderr_stream_rwb, pool);
-      stderr_stream_rwb.pool = pool;
+      stderr_stream_rwb.pool = svn_pool_create(pool);
       stderr_stream_rwb.out = stderr;
       svn_stream_set_write (stderr_stream, recode_write);
     }
@@ -673,7 +682,7 @@ subcommand_load (apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (! opt_state->quiet)
     {
       stdout_stream = svn_stream_create (&stdout_stream_rwb, pool);
-      stdout_stream_rwb.pool = pool;
+      stdout_stream_rwb.pool = svn_pool_create(pool);
       stdout_stream_rwb.out = stdout;
       svn_stream_set_write (stdout_stream, recode_write);
     }
@@ -1059,19 +1068,9 @@ subcommand_rmlocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* svn_fs_unlock() demands that some username be associated with the
      filesystem, so just use the UID of the person running 'svnadmin'.*/
-  {
-    apr_uid_t uid;
-    apr_gid_t gid;
-    char *un;
-    if (apr_uid_current (&uid, &gid, pool) == APR_SUCCESS &&
-        apr_uid_name_get (&un, uid, pool) == APR_SUCCESS)
-      {
-        err = svn_utf_cstring_to_utf8 (&username, un, pool);
-        svn_error_clear (err);
-        if (err)
-          username = "administrator";
-        }
-  }
+  username = svn_user_get_name(pool);
+  if (! username)
+    username = "administrator";
 
   /* Create an access context describing the current user. */
   SVN_ERR (svn_fs_create_access (&access, username, pool));
@@ -1143,8 +1142,8 @@ main (int argc, const char * const *argv)
   struct svnadmin_opt_state opt_state;
   apr_getopt_t *os;  
   int opt_id;
-  int received_opts[SVN_OPT_MAX_OPTIONS];
-  int i, num_opts = 0;
+  apr_array_header_t *received_opts;
+  int i;
 
   /* Initialize the app. */
   if (svn_cmdline_init ("svnadmin", stderr) != EXIT_SUCCESS)
@@ -1161,15 +1160,17 @@ main (int argc, const char * const *argv)
   pool = svn_pool_create_ex (NULL, allocator);
   apr_allocator_owner_set (allocator, pool);
 
+  received_opts = apr_array_make (pool, SVN_OPT_MAX_OPTIONS, sizeof (int));
+
   /* Check library versions */
   err = check_lib_versions ();
   if (err)
-    {
-      svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
-      svn_error_clear (err);
-      svn_pool_destroy (pool);
-      return EXIT_FAILURE;
-    }
+    return svn_cmdline_handle_exit_error (err, pool, "svnadmin: ");
+
+  /* Initialize the FS library. */
+  err = svn_fs_initialize (pool);
+  if (err)
+    return svn_cmdline_handle_exit_error (err, pool, "svnadmin: ");
 
   if (argc <= 1)
     {
@@ -1204,8 +1205,7 @@ main (int argc, const char * const *argv)
         }
 
       /* Stash the option code in an array before parsing it. */
-      received_opts[num_opts] = opt_id;
-      num_opts++;
+      APR_ARRAY_PUSH (received_opts, int) = opt_id;
 
       switch (opt_id) {
       case 'r':
@@ -1216,10 +1216,7 @@ main (int argc, const char * const *argv)
                 (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                  _("Multiple revision arguments encountered; "
                    "try '-r M:N' instead of '-r M -r N'"));
-              svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
-              svn_error_clear (err);
-              svn_pool_destroy (pool);
-              return EXIT_FAILURE;
+              return svn_cmdline_handle_exit_error (err, pool, "svnadmin: ");
             }
           if (svn_opt_parse_revision (&(opt_state.start_revision),
                                       &(opt_state.end_revision),
@@ -1233,10 +1230,7 @@ main (int argc, const char * const *argv)
                   (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                    _("Syntax error in revision argument '%s'"),
                    utf8_opt_arg);
-              svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
-              svn_error_clear (err);
-              svn_pool_destroy (pool);
-              return EXIT_FAILURE;
+              return svn_cmdline_handle_exit_error (err, pool, "svnadmin: ");
             }
         }
         break;
@@ -1266,23 +1260,13 @@ main (int argc, const char * const *argv)
       case svnadmin__fs_type:
         err = svn_utf_cstring_to_utf8 (&opt_state.fs_type, opt_arg, pool);
         if (err)
-          {
-            svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
-            svn_error_clear (err);
-            svn_pool_destroy (pool);
-            return EXIT_FAILURE;
-          }
+          return svn_cmdline_handle_exit_error (err, pool, "svnadmin: ");
         break;
       case svnadmin__parent_dir:
         err = svn_utf_cstring_to_utf8 (&opt_state.parent_dir, opt_arg,
                                        pool);
         if (err)
-          {
-            svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
-            svn_error_clear (err);
-            svn_pool_destroy (pool);
-            return EXIT_FAILURE;
-          }
+          return svn_cmdline_handle_exit_error (err, pool, "svnadmin: ");
         opt_state.parent_dir 
           = svn_path_internal_style (opt_state.parent_dir, pool);
         break;
@@ -1349,12 +1333,7 @@ main (int argc, const char * const *argv)
               const char* first_arg_utf8;
               err = svn_utf_cstring_to_utf8 (&first_arg_utf8, first_arg, pool);
               if (err)
-                {
-                  svn_handle_error2 (err, stderr, FALSE, "svnadmin: ");
-                  svn_error_clear (err);
-                  svn_pool_destroy (pool);
-                  return EXIT_FAILURE;
-                }
+                return svn_cmdline_handle_exit_error (err, pool, "svnadmin: ");
               svn_error_clear
                 (svn_cmdline_fprintf (stderr, pool,
                                       _("Unknown command: '%s'\n"),
@@ -1406,9 +1385,9 @@ main (int argc, const char * const *argv)
     }
 
   /* Check that the subcommand wasn't passed any inappropriate options. */
-  for (i = 0; i < num_opts; i++)
+  for (i = 0; i < received_opts->nelts; i++)
     {
-      opt_id = received_opts[i];
+      opt_id = APR_ARRAY_IDX (received_opts, i, int);
 
       /* All commands implicitly accept --help, so just skip over this
          when we see it. Note that we don't want to include this option
@@ -1470,4 +1449,18 @@ main (int argc, const char * const *argv)
       }
       return EXIT_SUCCESS;
     }
+}
+
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_crashtest (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_repos_t *repos;
+
+  SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
+  abort();
+
+  return SVN_NO_ERROR;
 }

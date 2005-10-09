@@ -23,7 +23,8 @@
 #include <apr.h>
 
 #include "svn_error.h"
-#include "svn_test.h"
+
+#include "../svn_test.h"
 #include "../../libsvn_fs_base/key-gen.h"
 
 

@@ -122,8 +122,9 @@ svn_error_t *svn_fs_fs__err_no_user (svn_fs_t *fs);
 /* SVN_ERR_FS_NOT_FILE: PATH in FS is not a file. */
 svn_error_t *svn_fs_fs__err_not_file (svn_fs_t *fs, const char *path);
 
-/* SVN_ERR_FS_PATH_LOCKED: a path is locked.  */
-svn_error_t *svn_fs_fs__err_path_locked (svn_fs_t *fs, svn_lock_t *lock);
+/* SVN_ERR_FS_PATH_ALREADY_LOCKED: a path is already locked.  */
+svn_error_t *svn_fs_fs__err_path_already_locked (svn_fs_t *fs,
+                                                 svn_lock_t *lock);
 
 /* SVN_ERR_FS_LOCK_OWNER_MISMATCH: trying to use a lock whose OWNER
    doesn't match the USERNAME associated with FS.  */

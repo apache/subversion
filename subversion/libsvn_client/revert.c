@@ -43,22 +43,13 @@
 static svn_error_t *
 revert (const char *path,
         svn_boolean_t recursive,
+        svn_boolean_t use_commit_times,
         svn_client_ctx_t *ctx,
         apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access, *target_access;
-  svn_boolean_t use_commit_times;
   const char *target;
-  svn_config_t *cfg;
   svn_error_t *err;
-
-  cfg = ctx->config ? apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,  
-                                    APR_HASH_KEY_STRING) : NULL;
-
-  SVN_ERR (svn_config_get_bool (cfg, &use_commit_times,
-                                SVN_CONFIG_SECTION_MISCELLANY,
-                                SVN_CONFIG_OPTION_USE_COMMIT_TIMES,
-                                FALSE));
 
   SVN_ERR (svn_wc_adm_open_anchor (&adm_access, &target_access, &target, path,
                                    TRUE, recursive ? -1 : 0,
@@ -70,17 +61,27 @@ revert (const char *path,
                         ctx->notify_func2, ctx->notify_baton2,
                         pool);
 
-  /* If no error, or SVN_ERR_UNVERSIONED_RESOURCE error, then we want
-     to close up before returning.  For any other kind of error, we
-     want to leave things exactly as they were when the error
-     occurred. */
-
-  if (err && err->apr_err != SVN_ERR_UNVERSIONED_RESOURCE)
-    return err;
+  if (err)
+    {
+      /* If target isn't versioned, just send a 'skip'
+         notification and move on. */
+      if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
+          || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
+        {
+          if (ctx->notify_func2)
+            (*ctx->notify_func2)
+              (ctx->notify_baton2,
+               svn_wc_create_notify (path, svn_wc_notify_skip, pool),
+               pool);
+          svn_error_clear (err);
+        }
+      else
+        return err;
+    }
 
   SVN_ERR (svn_wc_adm_close (adm_access));
 
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
@@ -90,9 +91,21 @@ svn_client_revert (const apr_array_header_t *paths,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  apr_pool_t *subpool = svn_pool_create (pool);
+  apr_pool_t *subpool;
   svn_error_t *err = SVN_NO_ERROR;
   int i;
+  svn_config_t *cfg;
+  svn_boolean_t use_commit_times;
+
+  cfg = ctx->config ? apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,  
+                                    APR_HASH_KEY_STRING) : NULL;
+
+  SVN_ERR (svn_config_get_bool (cfg, &use_commit_times,
+                                SVN_CONFIG_SECTION_MISCELLANY,
+                                SVN_CONFIG_OPTION_USE_COMMIT_TIMES,
+                                FALSE));
+
+  subpool = svn_pool_create (pool);
 
   for (i = 0; i < paths->nelts; i++)
     {
@@ -105,26 +118,9 @@ svn_client_revert (const apr_array_header_t *paths,
           && ((err = ctx->cancel_func (ctx->cancel_baton))))
         goto errorful;
 
-      err = revert (path, recursive, ctx, subpool);
+      err = revert (path, recursive, use_commit_times, ctx, subpool);
       if (err)
-        {
-          /* If one of the targets isn't versioned, just send a 'skip'
-             notification and move on. */
-          if (err->apr_err == SVN_ERR_ENTRY_NOT_FOUND
-              || err->apr_err == SVN_ERR_UNVERSIONED_RESOURCE)
-            {
-              if (ctx->notify_func2)
-                (*ctx->notify_func2)
-                  (ctx->notify_baton2,
-                   svn_wc_create_notify (path, svn_wc_notify_skip, subpool),
-                   subpool);
-              svn_error_clear (err);
-              err = SVN_NO_ERROR;
-              continue;
-            }
-          else
-            goto errorful;
-        }
+        goto errorful;
     }
   
  errorful:

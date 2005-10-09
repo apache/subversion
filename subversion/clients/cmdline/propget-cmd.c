@@ -86,26 +86,11 @@ svn_cl__propget (apr_getopt_t *os,
   if (opt_state->revprop)  /* operate on a revprop */
     {
       svn_revnum_t rev;
-      const char *URL, *target;
+      const char *URL;
       svn_string_t *propval;
 
-      /* All property commands insist on a specific revision when
-         operating on a revprop. */
-      if (opt_state->start_revision.kind == svn_opt_revision_unspecified)
-        return svn_cl__revprop_no_rev_error (pool);
-
-      /* Else some revision was specified, so proceed. */
-
-      /* Either we have a URL target, or an implicit wc-path ('.')
-         which needs to be converted to a URL. */
-      if (targets->nelts <= 0)
-        return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-                                "No URL target available");
-      target = ((const char **) (targets->elts))[0];
-      SVN_ERR (svn_client_url_from_path (&URL, target, pool));  
-      if (URL == NULL)
-        return svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                "Either a URL or versioned item is required");
+      SVN_ERR (svn_cl__revprop_prepare (&opt_state->start_revision, targets,
+                                        &URL, pool));
       
       /* Let libsvn_client do the real work. */
       SVN_ERR (svn_client_revprop_get (pname_utf8, &propval,
@@ -125,7 +110,8 @@ svn_cl__propget (apr_getopt_t *os,
           
           SVN_ERR (stream_write (out, printable_val->data, 
                                  printable_val->len));
-          SVN_ERR (stream_write (out, APR_EOL_STR, strlen (APR_EOL_STR)));
+          if (! opt_state->strict)
+            SVN_ERR (stream_write (out, APR_EOL_STR, strlen (APR_EOL_STR)));
         }
     }
   else  /* operate on a normal, versioned property (not a revprop) */
