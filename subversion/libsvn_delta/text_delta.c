@@ -179,6 +179,9 @@ svn_txdelta_window_dup (const svn_txdelta_window_t *window,
 /* This is a private interlibrary compatibility wrapper. */
 svn_txdelta_window_t *
 svn_txdelta__copy_window (const svn_txdelta_window_t *window,
+                          apr_pool_t *pool);
+svn_txdelta_window_t *
+svn_txdelta__copy_window (const svn_txdelta_window_t *window,
                           apr_pool_t *pool)
 {
   return svn_txdelta_window_dup (window, pool);
