@@ -67,7 +67,6 @@ AC_DEFUN(SVN_FIND_SWIG,
                       -e 's/\.\([[0-9]][[0-9]]\)$/.0\1/' \
                       -e 's/\.\([[0-9]]\)\./0\1/; s/\.//g;'`"
     AC_MSG_RESULT([$SWIG_VERSION_RAW])
-    AC_SUBST(SWIG_VERSION)
     # If you change the required swig version number, don't forget to update:
     #   subversion/bindings/swig/INSTALL
     #   subversion/bindings/swig/NOTES
