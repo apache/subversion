@@ -169,7 +169,9 @@
 (defvar svn-status-verbose t
   "*Add '-v' to svn status call.")
 (defvar svn-log-edit-file-name "++svn-log++"
-  "*Name of a saved log file.")
+  "*Name of a saved log file.
+This can be either absolute, or relative to the default directory
+of the *svn-log-edit* buffer.")
 (defvar svn-log-edit-insert-files-to-commit t
   "*Insert the filelist to commit in the *svn-log* buffer")
 (defvar svn-log-edit-use-log-edit-mode
@@ -197,7 +199,8 @@ Possible values are: commit, revert.")
 The supported functions are `svn-status' and `svn-status-set-user-mark'.")
 
 (defvar svn-status-svn-executable "svn"
-  "*The name of the svn executable.")
+  "*The name of the svn executable.
+This can be either absolute or looked up on `exec-path'.")
 
 ;; TODO: bind `process-environment' instead of running env?
 ;; That would probably work more reliably in Windows.
@@ -248,7 +251,7 @@ See `svn-status-message' for the meaning of values for that variable.")
 
 (defvar svn-status-buffer-name "*svn-status*" "Name for the svn status buffer")
 
-(defvar svn-status-use-header-line t
+(defvar svn-status-use-header-line (if (boundp 'header-line-format) t 'inline)
   "*Whether a header line should be used.
 When t: Use the emacs header line
 When 'inline: Insert the header line in the `svn-status-buffer-name' buffer
