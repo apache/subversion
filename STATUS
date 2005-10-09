@@ -30,7 +30,7 @@ Candidate changes (NOT under subversion/bindings/swig):
     Votes:
       +1: maxb
 
-  * r16398 (parts NOT lying under subversion/bindings/swig/)
+  * r16398 (parts NOT lying under subversion/bindings/swig/), r16614
     Provide APIs needed to fix Issue #2172 (segfaults in the Python bindings
     caused by pool lifetime problems).
     Justification:
@@ -40,8 +40,18 @@ Candidate changes (NOT under subversion/bindings/swig):
       r16398 contains both bindings and core changes, which have different
       minimum voting requirements for backport. Thus, the change is separated
       into two completely detatched entries.
+      r16614 adds back a removed interlibrary private API. I know that there
+      is some advocacy that people who mix core libraries deserve all the
+      crashes they might get, but the clearest documentation of compatibility
+      rules we have at the moment is the implementation of
+      svn_ver_check_list() and svn_ver_compatible(), any by those rules, this
+      wrapper should exist. Therefore, let us put in into 1.3.0, in order to
+      decouple the 1.3.0 soak period from the ongoing discussion about
+      library compatibility. If this wrapper function turns out to be redundant
+      with the final consensus, then it is not a problem, as its presence does
+      no harm.
     Votes:
-      +1: dlr, lundblad
+      +1: dlr (not r16614), lundblad (not r16614), maxb
 
   * r16414, r16512, r16513, r16562, r16595
     Ensure that SWIG dependencies are correctly added to build-outputs.mk.
@@ -96,7 +106,8 @@ Approved changes (under subversion/bindings/swig):
       r16477 contains exclusively bindings changes.
     Votes:
       +1: djames, dlr
-      +1: maxb (r16477 only)
+      +1 (concept): maxb (Don't understand the swigutil_py.c changes in
+                          sufficient detail yet for full +1)
 
   * r16448
     %ignore svn_fs_set_berkeley_errcall.
