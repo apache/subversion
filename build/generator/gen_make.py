@@ -115,6 +115,14 @@ class Generator(gen_base.GeneratorBase):
     cfiles.sort()
     self.ofile.write('CLEAN_FILES = %s\n\n' % string.join(cfiles))
 
+    # this is here because autogen-standalone needs it too
+    self.ofile.write('SWIG_INCLUDES = -I$(abs_srcdir)/subversion/include \\\n'
+        '  -I$(abs_srcdir)/subversion/bindings/swig \\\n'
+        '  -I$(abs_srcdir)/subversion/bindings/swig/include \\\n'
+        '  -I$(abs_srcdir)/subversion/bindings/swig/proxy \\\n'
+        '  -I$(abs_builddir)/subversion/bindings/swig/proxy \\\n'
+        '  $(SVN_APR_INCLUDES) $(SVN_APRUTIL_INCLUDES)\n\n')
+
     ########################################
     self.begin_section('SWIG header wrappers')
 
@@ -536,17 +544,23 @@ class Generator(gen_base.GeneratorBase):
     standalone.write('abs_builddir = %s\n' % os.getcwd())
     standalone.write('SWIG = swig\n')
     standalone.write('PYTHON = python\n')
-    swig_includes = ['-Iapr/include', '-Iapr-util/include']
-    for dirs in self.include_dirs, self.swig_include_dirs:
-      for dir in string.split(string.strip(dirs)):
-        swig_includes.append("-I%s" % dir)
-        swig_includes.append("-I$(abs_srcdir)/%s" % dir)
+    apr_includes = ['-Iapr/include']
+    apu_includes = ['-Iapr-util/include']
     if not os.path.exists("apr/include"):
       try:
-        swig_includes.append("-I%s" % _exec.output("apr-config --includedir"))
+        apr_includes.append("-I%s"
+            % _exec.output("apr-config --includedir", strip=True))
       except AssertionError:
         pass
-    standalone.write('SWIG_INCLUDES = %s\n' % string.join(swig_includes))
+    if not os.path.exists("apr-util/include"):
+      try:
+        apu_includes.append("-I%s"
+            % _exec.output("apu-config --includedir", strip=True))
+      except AssertionError:
+        pass
+    standalone.write('SVN_APR_INCLUDES = %s\n' % " ".join(apr_includes))
+    standalone.write('SVN_APRUTIL_INCLUDES = %s\n' % " ".join(apu_includes))
+    standalone.write('\n')
     standalone.write(open("build-outputs.mk","r").read())
     standalone.close()
 
