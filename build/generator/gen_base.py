@@ -14,6 +14,13 @@ import generator.swig
 import getversion
 
 
+def _warning(msg):
+  sys.stderr.write("WARNING: %s\n" % msg)
+
+def _error(msg):
+  sys.stderr.write("ERROR: %s\n" % msg)
+  sys.exit(1)
+
 class GeneratorBase:
 
   #
@@ -912,7 +919,8 @@ class IncludeDependencyInfo:
       hdrs.update(self._deps[h])
     return (len(keys) != len(hdrs))
 
-  _re_include = re.compile(r'^\s*[#%]\s*(?:include|import)\s*[<"]?([^<">;\s]+)')
+  _re_include = \
+      re.compile(r'^\s*([#%])\s*(?:include|import)\s*([<"])?([^<">;\s]+)')
   def _scan_for_includes(self, fname):
     """Scan C source file FNAME and return the basenames of any headers
     which are directly included, and within the set defined when this
@@ -928,25 +936,34 @@ class IncludeDependencyInfo:
       return hdrs
     for line in fileinput.input(fname):
       match = self._re_include.match(line)
-      if match:
-        include_param = native_path(match.group(1))
-        bname = os.path.basename(include_param)
-        if self._domain.has_key(bname):
-          include_fnames = self._domain[bname]
-          if len(include_fnames) == 1:
-            include_fname = include_fnames[0]
-          else:
-            include_fname = os.path.normpath(os.path.join(
-              os.path.dirname(fname), include_param))
-            if include_fname not in include_fnames:
-              raise RuntimeError, (
-                  """Unable to determine which file is being included
-                  Include Parameter: '%s'
-                  Including File: '%s'
-                  Expected but not found: '%s'
-                  Possibilities: '%s'"""
-                  % (include_param, fname, include_fname, include_fnames))
-          hdrs[include_fname] = None
+      if not match:
+        continue
+      include_param = native_path(match.group(3))
+      direct_possibility_fname = os.path.normpath(os.path.join(
+        os.path.dirname(fname), include_param))
+      domain_fnames = self._domain.get(os.path.basename(include_param), [])
+      if direct_possibility_fname in domain_fnames:
+        hdrs[direct_possibility_fname] = None
+      elif include_param.find(os.sep) == -1 and len(domain_fnames) == 1:
+        hdrs[domain_fnames[0]] = None
+      else:
+        # None found
+        if include_param.find(os.sep) == -1 and len(domain_fnames) > 1:
+          _error(
+              "Unable to determine which file is being included\n"
+              "  Include Parameter: '%s'\n"
+              "  Including File: '%s'\n"
+              "  Direct possibility: '%s'\n"
+              "  Other possibilities: %s\n"
+              % (include_param, fname, direct_possibility_fname,
+                domain_fnames))
+        if match.group(2) == '"':
+          pass
+          #_warning('"%s" header not found, file %s' % (include_param, fname))
+        continue
+      if match.group(2) == '<':
+        pass
+        #_warning('<%s> header *found*, file %s' % (include_param, fname))
     return hdrs
 
 
