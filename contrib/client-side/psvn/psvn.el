@@ -166,33 +166,42 @@
 (require 'easymenu)
 
 ;;; user setable variables
-(defvar svn-status-verbose t "*Add '-v' to svn status call.")
-(defvar svn-log-edit-file-name "++svn-log++" "*Name of a saved log file.")
-(defvar svn-log-edit-insert-files-to-commit t "*Insert the filelist to commit in the *svn-log* buffer")
-(defvar svn-log-edit-use-log-edit-mode (and (condition-case nil (require 'log-edit) (error nil)) t) "*Use log-edit-mode as base for svn-log-edit-mode")
+(defvar svn-status-verbose t
+  "*Add '-v' to svn status call.")
+(defvar svn-log-edit-file-name "++svn-log++"
+  "*Name of a saved log file.")
+(defvar svn-log-edit-insert-files-to-commit t
+  "*Insert the filelist to commit in the *svn-log* buffer")
+(defvar svn-log-edit-use-log-edit-mode
+  (and (condition-case nil (require 'log-edit) (error nil)) t)
+  "*Use log-edit-mode as base for svn-log-edit-mode
+This variable takes effect only when psvn.el is being loaded.")
 (defvar svn-status-hide-unknown nil
   "*Hide unknown files in `svn-status-buffer-name' buffer.
 This can be toggled with \\[svn-status-toggle-hide-unknown].")
 (defvar svn-status-hide-unmodified nil
   "*Hide unmodified files in `svn-status-buffer-name' buffer.
 This can be toggled with \\[svn-status-toggle-hide-unmodified].")
-(defvar svn-status-sort-status-buffer t "Sort the `svn-status-buffer-name' buffer.
+(defvar svn-status-sort-status-buffer t
+  "Sort the `svn-status-buffer-name' buffer.
 Setting this variable to nil speeds up M-x svn-status.
-However, it is possible, that the sorting is wrong in this case.")
+However, it is possible, that the sorting is wrong in this case.
+This can be toggled with \\[svn-status-toggle-sort-status-buffer].")
 
 (defvar svn-status-unmark-files-after-list '(commit revert)
   "*List of operations after which all user marks will be removed.
 Possible values are: commit, revert.")
 
-(defvar svn-status-negate-meaning-of-arg-commands nil
+(defvar svn-status-negate-meaning-of-arg-commands '()
   "*List of operations that should use a negated meaning of the prefix argument.
 The supported functions are `svn-status' and `svn-status-set-user-mark'.")
 
-(defvar svn-status-svn-executable "svn" "*The name of the svn executable.")
+(defvar svn-status-svn-executable "svn"
+  "*The name of the svn executable.")
 
 ;; TODO: bind `process-environment' instead of running env?
 ;; That would probably work more reliably in Windows.
-(defvar svn-status-svn-environment-var-list nil
+(defvar svn-status-svn-environment-var-list '()
   "*A list of environment variables that should be set for that svn process.
 If you set that variable, svn is called with that environment variables set.
 That is done via the env program.
@@ -253,18 +262,22 @@ Otherwise: Don't display a header line")
 (defvar svn-status-default-commit-arguments '()
   "*List of arguments to pass to svn commit.
 If you don't like recursive commits, set this value to (\"-N\").
-Do not put an empty string here: Subversion and the operating system may
-treat that as a file name equivalent to \".\", so you would commit more
-than you intended.")
+Do not put an empty string here, except as an argument of an option:
+Subversion and the operating system may treat that as a file name
+equivalent to \".\", so you would commit more than you intended.")
 
 (defvar svn-status-default-diff-arguments '()
   "*A list of arguments that is passed to the svn diff command.
-  If you'd like to supress whitespace changes use the following value:
-  '(\"--diff-cmd\" \"diff\" \"-x\" \"-wbBu\")")
+If you'd like to suppress whitespace changes use the following value:
+'(\"--diff-cmd\" \"diff\" \"-x\" \"-wbBu\")")
 
-(defvar svn-trac-project-root nil "Path for an eventual existing trac issue tracker.")
+(defvar svn-trac-project-root nil
+  "Path for an eventual existing trac issue tracker.
+This can be set with \\[svn-status-set-trac-project-root].")
 
-(defvar svn-status-module-name nil "A nice short name for the actual project.")
+(defvar svn-status-module-name nil
+  "A nice short name for the actual project.
+This can be set with \\[svn-status-set-module-name].")
 
 (defvar svn-status-load-state-before-svn-status t "Load the ++psvn.state file, before running svn-status")
 
