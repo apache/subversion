@@ -505,10 +505,14 @@ Otherwise, return \"\"."
     (defalias 'puthash 'cl-puthash))
 
 ; xemacs
-(if (fboundp 'match-string-no-properties)
-    nil ;; great
-  (defsubst match-string-no-properties (match)
-    (buffer-substring-no-properties (match-beginning match) (match-end match))))
+;; Evaluate the defsubst at compile time, so that the byte compiler
+;; knows the definition and can inline calls.  It cannot detect the
+;; defsubst automatically from within the if form.
+(eval-and-compile
+  (if (fboundp 'match-string-no-properties)
+      nil ;; great
+    (defsubst match-string-no-properties (match)
+      (buffer-substring-no-properties (match-beginning match) (match-end match)))))
 
 (defvar svn-global-keymap nil "Global keymap for psvn.el.
 To bind this to a different key, customize `svn-status-prefix-key'.")
@@ -853,7 +857,6 @@ The results are used to build the `svn-status-info' variable."
   (setq svn-status-head-revision nil)
   (save-excursion
     (let ((old-ui-information (svn-status-ui-information-hash-table))
-          (line-string)
           (svn-marks)
           (svn-file-mark)
           (svn-property-mark)
@@ -2381,7 +2384,6 @@ itself) before running mv."
   (interactive)
   (let* ((marked-files (svn-status-marked-files))
          (num-of-files (length marked-files))
-         original
          dest)
     (if (= 1 num-of-files)
         ;; one file to rename, prompt for new name, or directory to move the
@@ -2415,10 +2417,10 @@ itself) before running mv."
 ;;              ;; run  svn-status-set-user-mark   to remark dir
 ;;              ;; maybe check for local mods here, and unmark if user does't say --force?
 ;;              ))
-        (dolist (original marked-files)
+    (dolist (original marked-files)
       (let ((original-name (svn-status-line-info->filename original))
-                        (original-filemarks (svn-status-line-info->filemark original))
-                        (original-propmarks (svn-status-line-info->propmark original)))
+            (original-filemarks (svn-status-line-info->filemark original))
+            (original-propmarks (svn-status-line-info->propmark original)))
         (cond
          ((or (eq original-filemarks 77)  ;;original has local mods: maybe do `svn mv --force'
               (eq original-propmarks 77)) ;;original has local prop mods: maybe do `svn mv --force'
@@ -2757,7 +2759,6 @@ When called with a prefix argument, it is possible to enter a new property."
   ;(svn-status-show-process-buffer-internal t)
   (message "svn-status-property-parse-property-names")
   (let ((pl)
-        (pfl)
         (prop-name)
         (prop-value))
     (save-excursion
