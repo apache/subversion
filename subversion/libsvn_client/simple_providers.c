@@ -44,26 +44,75 @@
 #define SVN_CLIENT__WINCRYPT_PASSWORD_TYPE           "wincrypt"
 
 
-/* A function that takes a password IN, mangles it as per spec, and
-   returns the mangled password in *OUT.  *OUT is either allocated in
-   POOL, or is the same as IN. */
-typedef svn_boolean_t (*password_mangler_t) (const char **out, const char *in,
-                                             apr_pool_t *pool);
+/* A function that stores PASSWORD (or some encrypted version thereof)
+   either directly in CREDS, or externally using REALMSTRING and USERNAME
+   as keys into the external store.  POOL is used for any necessary
+   allocation. */
+typedef svn_boolean_t (*password_set_t) (apr_hash_t *creds,
+                                         const char *realmstring,
+                                         const char *username,
+                                         const char *password,
+                                         apr_pool_t *pool);
 
+/* A function that stores in *PASSWORD (potentially after decrypting it)
+   the user's password.  It might be obtained directly from CREDS, or
+   from an external store, using REALMSTRING and USERNAME as keys.
+   POOL is used for any necessary allocation. */
+typedef svn_boolean_t (*password_get_t) (const char **password,
+                                         apr_hash_t *creds,
+                                         const char *realmstring,
+                                         const char *username,
+                                         apr_pool_t *pool);
+
+
+
+/* Implementation of password_get_t that retrieves the plaintext password
+   from CREDS. */
+static svn_boolean_t
+simple_password_get (const char **password,
+                     apr_hash_t *creds,
+                     const char *realmstring,
+                     const char *username,
+                     apr_pool_t *pool)
+{
+  svn_string_t *str;
+  str = apr_hash_get (creds, SVN_CLIENT__AUTHFILE_PASSWORD_KEY,
+                      APR_HASH_KEY_STRING);
+  if (str && str->data)
+    {
+      *password = str->data;
+      return TRUE;
+    }
+  return FALSE;
+}
+
+/* Implementation of password_set_t that store the plaintext password
+   in CREDS. */
+static svn_boolean_t
+simple_password_set (apr_hash_t *creds,
+                     const char *realmstring,
+                     const char *username,
+                     const char *password,
+                     apr_pool_t *pool)
+{
+  apr_hash_set (creds, SVN_CLIENT__AUTHFILE_PASSWORD_KEY, APR_HASH_KEY_STRING,
+                svn_string_create (password, pool));
+  return TRUE;
+}
 
 /* Common implementation for simple_first_creds and
    windows_simple_first_creds. Uses PARAMETERS, REALMSTRING and the
    simple auth provider's username and password cache to fill a set of
-   CREDENTIALS. MANGLE_PASSWORD transforms the cached password value
-   to its in-memory representation. PASSTYPE identifies the type of
-   the cached password. CREDENTIALS are allocated from POOL. */
+   CREDENTIALS. PASSWORD_GET is used to obtain the password value.
+   PASSTYPE identifies the type of the cached password. CREDENTIALS are
+   allocated from POOL. */
 static svn_error_t *
 simple_first_creds_helper (void **credentials,
                            void **iter_baton,
                            void *provider_baton,
                            apr_hash_t *parameters,
                            const char *realmstring,
-                           password_mangler_t mangle_password,
+                           password_get_t password_get,
                            const char *passtype,
                            apr_pool_t *pool)
 {
@@ -119,14 +168,9 @@ simple_first_creds_helper (void **credentials,
                 password = NULL;
               else
                 {
-                  str = apr_hash_get (creds_hash,
-                                      SVN_CLIENT__AUTHFILE_PASSWORD_KEY,
-                                      APR_HASH_KEY_STRING);
-                  if (str && str->data)
-                    {
-                      if (!mangle_password (&password, str->data, pool))
-                        password = NULL;
-                    }
+                  if (!password_get (&password, creds_hash, realmstring,
+                                     username, pool))
+                    password = NULL;
 
                   /* If the auth data didn't contain a password type,
                      force a write to upgrade the format of the auth
@@ -163,16 +207,15 @@ simple_first_creds_helper (void **credentials,
 /* Common implementation for simple_save_creds and
    windows_simple_save_creds. Uses PARAMETERS and REALMSTRING to save
    a set of CREDENTIALS to the simple auth provider's username and
-   password cache. MANGLE_PASSWORD transforms the in-memory
-   representation of the password to its cached form. PASSTYPE
-   identifies the type of the cached password. Allocates from POOL. */
+   password cache. PASSWORD_SET is used to store the password.
+   PASSTYPE identifies the type of the cached password. Allocates from POOL. */
 static svn_error_t *
 simple_save_creds_helper (svn_boolean_t *saved,
                           void *credentials,
                           void *provider_baton,
                           apr_hash_t *parameters,
                           const char *realmstring,
-                          password_mangler_t mangle_password,
+                          password_set_t password_set,
                           const char *passtype,
                           apr_pool_t *pool)
 {
@@ -202,14 +245,10 @@ simple_save_creds_helper (svn_boolean_t *saved,
                 svn_string_create (creds->username, pool));
   if (! dont_store_passwords)
     {
-      const char *password;
-      password_stored = mangle_password (&password, creds->password, pool);
+      password_stored = password_set (creds_hash, realmstring, creds->username,
+                                      creds->password, pool);
       if (password_stored)
         {
-          apr_hash_set (creds_hash, SVN_CLIENT__AUTHFILE_PASSWORD_KEY,
-                        APR_HASH_KEY_STRING,
-                        svn_string_create (password, pool));
-
           /* Store the password type with the auth data, so that we
              know which provider owns the password. */
           if (passtype)
@@ -234,16 +273,6 @@ simple_save_creds_helper (svn_boolean_t *saved,
   return SVN_NO_ERROR;
 }
 
-/* A no-op implementation of password_mangler_t for
-   simple_first_creads and simple_save_creds. */
-static svn_boolean_t
-simple_password_mangler (const char **out, const char *in, apr_pool_t *pool)
-{
-  (void)pool;                   /* Silence compiler warnings */
-  *out = in;
-  return TRUE;
-}
-
 /* Get cached (unencrypted) credentials from the simple provider's cache. */
 static svn_error_t *
 simple_first_creds (void **credentials,
@@ -256,7 +285,7 @@ simple_first_creds (void **credentials,
   return simple_first_creds_helper (credentials,
                                     iter_baton, provider_baton,
                                     parameters, realmstring,
-                                    simple_password_mangler,
+                                    simple_password_get,
                                     SVN_CLIENT__SIMPLE_PASSWORD_TYPE,
                                     pool);
 }
@@ -272,7 +301,7 @@ simple_save_creds (svn_boolean_t *saved,
 {
   return simple_save_creds_helper (saved, credentials, provider_baton,
                                    parameters, realmstring,
-                                   simple_password_mangler,
+                                   simple_password_set,
                                    SVN_CLIENT__SIMPLE_PASSWORD_TYPE,
                                    pool);
 }
@@ -528,10 +557,14 @@ get_crypto_function (const char *name, HINSTANCE *pdll, FARPROC *pfn)
   return FALSE;
 }
 
-/* Implementation of password_mangler_t that encrypts the incoming
+/* Implementation of password_set_t that encrypts the incoming
    password using the Windows CryptoAPI. */
 static svn_boolean_t
-windows_password_encrypter (const char **out, const char *in, apr_pool_t *pool)
+windows_password_encrypter (apr_hash_t *creds,
+                            const char *realmstring,
+                            const char *username,
+                            const char *in,
+                            apr_pool_t *pool)
 {
   typedef BOOL (CALLBACK *encrypt_fn_t)(
     DATA_BLOB *,                /* pDataIn */
@@ -561,7 +594,8 @@ windows_password_encrypter (const char **out, const char *in, apr_pool_t *pool)
     {
       char *coded = apr_palloc (pool, apr_base64_encode_len (blobout.cbData));
       apr_base64_encode(coded, blobout.pbData, blobout.cbData);
-      *out = coded;
+      crypted = simple_password_set (creds, realmstring, username, coded,
+                                     pool);
       LocalFree (blobout.pbData);
     }
 
@@ -569,10 +603,14 @@ windows_password_encrypter (const char **out, const char *in, apr_pool_t *pool)
   return crypted;
 }
 
-/* Implementation of password_mangler_t that decrypts the incoming
+/* Implementation of password_get_t that decrypts the incoming
    password using the Windows CryptoAPI and verifies its validity. */
 static svn_boolean_t
-windows_password_decrypter (const char **out, const char *in, apr_pool_t *pool)
+windows_password_decrypter (const char **out,
+                            apr_hash_t *creds,
+                            const char *realmstring,
+                            const char *username,
+                            apr_pool_t *pool)
 {
   typedef BOOL (CALLBACK * decrypt_fn_t)(
     DATA_BLOB *,                /* pDataIn */
@@ -590,6 +628,10 @@ windows_password_decrypter (const char **out, const char *in, apr_pool_t *pool)
   LPWSTR descr;
   decrypt_fn_t decrypt;
   svn_boolean_t decrypted;
+  char *in;
+
+  if (!simple_password_get (&in, creds, realmstring, username, pool))
+    return FALSE;
 
   if (!get_crypto_function ("CryptUnprotectData", &dll, &fn))
     return FALSE;
