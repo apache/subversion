@@ -121,7 +121,6 @@
 ;; * perhaps shortcuts for ranges, dates
 ;; * when editing the command line - offer help from the svn client
 ;; * finish svn-status-property-set
-;; * eventually use the customize interface
 ;; * Add repository browser
 ;; * Improve support for svn blame
 
@@ -166,61 +165,105 @@
 (require 'easymenu)
 
 ;;; user setable variables
-(defvar svn-status-verbose t
-  "*Add '-v' to svn status call.")
-(defvar svn-log-edit-file-name "++svn-log++"
+(defcustom svn-status-verbose t
+  "*Add '-v' to svn status call."
+  :type 'boolean
+  :group 'psvn)
+(defcustom svn-log-edit-file-name "++svn-log++"
   "*Name of a saved log file.
 This can be either absolute, or relative to the default directory
-of the *svn-log-edit* buffer.")
-(defvar svn-log-edit-insert-files-to-commit t
-  "*Insert the filelist to commit in the *svn-log* buffer")
-(defvar svn-log-edit-use-log-edit-mode
+of the *svn-log-edit* buffer."
+  :type 'file
+  :group 'psvn)
+(defcustom svn-log-edit-insert-files-to-commit t
+  "*Insert the filelist to commit in the *svn-log* buffer"
+  :type 'boolean
+  :group 'psvn)
+(defcustom svn-log-edit-use-log-edit-mode
   (and (condition-case nil (require 'log-edit) (error nil)) t)
   "*Use log-edit-mode as base for svn-log-edit-mode
-This variable takes effect only when psvn.el is being loaded.")
-(defvar svn-status-hide-unknown nil
+This variable takes effect only when psvn.el is being loaded."
+  :type 'boolean
+  :group 'psvn)
+(defcustom svn-status-hide-unknown nil
   "*Hide unknown files in `svn-status-buffer-name' buffer.
-This can be toggled with \\[svn-status-toggle-hide-unknown].")
-(defvar svn-status-hide-unmodified nil
+This can be toggled with \\[svn-status-toggle-hide-unknown]."
+  :type 'boolean
+  :group 'psvn)
+(defcustom svn-status-hide-unmodified nil
   "*Hide unmodified files in `svn-status-buffer-name' buffer.
-This can be toggled with \\[svn-status-toggle-hide-unmodified].")
-(defvar svn-status-sort-status-buffer t
+This can be toggled with \\[svn-status-toggle-hide-unmodified]."
+  :type 'boolean
+  :group 'psvn)
+(defcustom svn-status-sort-status-buffer t
   "Sort the `svn-status-buffer-name' buffer.
 Setting this variable to nil speeds up M-x svn-status.
 However, it is possible, that the sorting is wrong in this case.
-This can be toggled with \\[svn-status-toggle-sort-status-buffer].")
+This can be toggled with \\[svn-status-toggle-sort-status-buffer]."
+  :type 'boolean
+  :group 'psvn)
 
-(defvar svn-status-unmark-files-after-list '(commit revert)
+(defcustom svn-status-unmark-files-after-list '(commit revert)
   "*List of operations after which all user marks will be removed.
-Possible values are: commit, revert.")
+Possible values are: commit, revert."
+  :type '(set (const commit)
+              (const revert))
+  :group 'psvn)
 
-(defvar svn-status-negate-meaning-of-arg-commands '()
+(defcustom svn-status-negate-meaning-of-arg-commands '()
   "*List of operations that should use a negated meaning of the prefix argument.
-The supported functions are `svn-status' and `svn-status-set-user-mark'.")
+The supported functions are `svn-status' and `svn-status-set-user-mark'."
+  :type '(set (function-item svn-status)
+              (function-item svn-status-set-user-mark))
+  :group 'psvn)
 
-(defvar svn-status-svn-executable "svn"
+(defcustom svn-status-svn-executable "svn"
   "*The name of the svn executable.
-This can be either absolute or looked up on `exec-path'.")
+This can be either absolute or looked up on `exec-path'."
+  ;; Don't use (file :must-match t).  It doesn't know about `exec-path'.
+  :type 'file
+  :group 'psvn)
 
 ;; TODO: bind `process-environment' instead of running env?
 ;; That would probably work more reliably in Windows.
-(defvar svn-status-svn-environment-var-list '()
+(defcustom svn-status-svn-environment-var-list '()
   "*A list of environment variables that should be set for that svn process.
 If you set that variable, svn is called with that environment variables set.
 That is done via the env program.
 
-You could set it for example to '(\"LANG=C\")")
+You could set it for example to '(\"LANG=C\")"
+  :type '(repeat (string :valid-regexp "=" :value "LANG=C"))
+  :group 'psvn)
 
-(defvar svn-browse-url-function nil
+(defcustom svn-browse-url-function nil
   ;; If the user hasn't changed `svn-browse-url-function', then changing
   ;; `browse-url-browser-function' should affect psvn even after it has
   ;; been loaded.
   "Function to display a Subversion related WWW page in a browser.
 So far, this is used only for \"trac\" issue tracker integration.
 By default, this is nil, which means use `browse-url-browser-function'.
-Any non-nil value overrides that variable, with the same syntax.")
+Any non-nil value overrides that variable, with the same syntax."
+  ;; It would be nice to show the full list of browsers supported by
+  ;; browse-url, but (custom-variable-type 'browse-url-browser-function)
+  ;; returns just `function' if browse-url has not yet been loaded,
+  ;; and there seems to be no easy way to autoload browse-url when
+  ;; the custom-type of svn-browse-url-function is actually needed.
+  ;; So I'll only offer enough choices to cover all supported types.
+  :type `(choice (const :tag "Specified by `browse-url-browser-function'" nil)
+                 (function :value browse-url-default-browser
+                           ;; In XEmacs 21.4.17, the `function' widget matches
+                           ;; all objects.  Constrain it here so that alists
+                           ;; fall through to the next choice.  Accept either
+                           ;; a symbol (fbound or not) or a lambda expression.
+                           :match ,(lambda (widget value)
+                                     (or (symbolp value) (functionp value))))
+                 (svn-alist :tag "Regexp/function association list"
+                            :key-type regexp :value-type function
+                            :value (("." . browse-url-default-browser))))
+  :link '(emacs-commentary-link "browse-url")
+  :group 'psvn)
 
-(defvar svn-status-window-alist
+(defcustom svn-status-window-alist
   '((diff "*svn-diff*") (log "*svn-log*") (info t) (blame t) (proplist t) (update t))
   "An alist to specify which windows should be used for svn command outputs.
 The following keys are supported: diff, log, info, blame, proplist, update.
@@ -228,9 +271,19 @@ The following values can be given:
 nil       ... show in *svn-process* buffer
 t         ... show in dedicated *svn-info* buffer
 invisible ... don't show the buffer (eventually useful for update)
-a string  ... show in a buffer named string")
+a string  ... show in a buffer named string"
+  :type '(svn-alist
+          :key-type symbol
+          :value-type (group
+                       (choice
+                        (const :tag "Show in *svn-process* buffer" nil)
+                        (const :tag "Show in dedicated *svn-info* buffer" t)
+                        (const :tag "Don't show the output" invisible)
+                        (string :tag "Show in a buffer named"))))
+  :options '(diff log info blame proplist update)
+  :group 'psvn)
 
-(defvar svn-status-short-mod-flag-p t
+(defcustom svn-status-short-mod-flag-p t
   "*Whether the mark for out of date files is short or long.
 
 If this variable is is t, and a file is out of date (i.e., there is a newer
@@ -242,7 +295,10 @@ If this variable is nil, and the file is out of date then the longer phrase
 
 In either case the mark gets the face
 `svn-status-update-available-face', and will only be visible if
-`\\[svn-status-update]' is run with a prefix argument")
+`\\[svn-status-update]' is run with a prefix argument"
+  :type '(choice (const :tag "Short \"**\"" t)
+                 (const :tag "Long \"(Update Available)\"" nil))
+  :group 'psvn)
 
 (defvar svn-status-debug-level 0 "The psvn.el debugging verbosity level.
 The higher the number, the more debug messages are shown.
@@ -251,28 +307,40 @@ See `svn-status-message' for the meaning of values for that variable.")
 
 (defvar svn-status-buffer-name "*svn-status*" "Name for the svn status buffer")
 
-(defvar svn-status-use-header-line (if (boundp 'header-line-format) t 'inline)
+(defcustom svn-status-use-header-line
+  (if (boundp 'header-line-format) t 'inline)
   "*Whether a header line should be used.
 When t: Use the emacs header line
 When 'inline: Insert the header line in the `svn-status-buffer-name' buffer
-Otherwise: Don't display a header line")
+Otherwise: Don't display a header line"
+  :type '(choice (const :tag "Show column titles as a header line" t)
+                 (const :tag "Insert column titles as text in the buffer" inline)
+                 (other :tag "No column titles" nil))
+  :group 'psvn)
 
 ;;; default arguments to pass to svn commands
-(defvar svn-status-default-log-arguments '()
+;; TODO: When customizing, an option menu or completion might be nice....
+(defcustom svn-status-default-log-arguments '()
   "*List of arguments to pass to svn log.
-\(used in `svn-status-show-svn-log'; override these by giving prefixes\).")
+\(used in `svn-status-show-svn-log'; override these by giving prefixes\)."
+  :type '(repeat string)
+  :group 'psvn)
 
-(defvar svn-status-default-commit-arguments '()
+(defcustom svn-status-default-commit-arguments '()
   "*List of arguments to pass to svn commit.
 If you don't like recursive commits, set this value to (\"-N\").
 Do not put an empty string here, except as an argument of an option:
 Subversion and the operating system may treat that as a file name
-equivalent to \".\", so you would commit more than you intended.")
+equivalent to \".\", so you would commit more than you intended."
+  :type '(repeat string)
+  :group 'psvn)
 
-(defvar svn-status-default-diff-arguments '()
+(defcustom svn-status-default-diff-arguments '()
   "*A list of arguments that is passed to the svn diff command.
 If you'd like to suppress whitespace changes use the following value:
-'(\"--diff-cmd\" \"diff\" \"-x\" \"-wbBu\")")
+'(\"--diff-cmd\" \"diff\" \"-x\" \"-wbBu\")"
+  :type '(repeat string)
+  :group 'psvn)
 
 (defvar svn-trac-project-root nil
   "Path for an eventual existing trac issue tracker.
@@ -292,9 +360,11 @@ This can be set with \\[svn-status-set-module-name].")
   "A special coding system is needed for the output of svn.
 svn-status-coding-system is used in svn-run-svn, if it is not nil.")
 
-(defvar svn-status-wash-control-M-in-process-buffers
+(defcustom svn-status-wash-control-M-in-process-buffers
   (eq system-type 'windows-nt)
-  "*Remove any trailing ^M from the *svn-process* buffer.")
+  "*Remove any trailing ^M from the *svn-process* buffer."
+  :type 'boolean
+  :group 'psvn)
 
 ;;; experimental features
 (defvar svn-status-track-user-input nil "Track user/password queries.
@@ -516,6 +586,40 @@ Otherwise, return \"\"."
       nil ;; great
     (defsubst match-string-no-properties (match)
       (buffer-substring-no-properties (match-beginning match) (match-end match)))))
+
+(if (get 'alist 'widget-type)
+    (define-widget 'svn-alist 'alist
+      "An association list.
+Use this instead of `alist', for XEmacs 21.4 compatibility.")
+  (define-widget 'svn-alist 'list
+    "An association list.
+Use this instead of `alist', for XEmacs 21.4 compatibility."
+    :convert-widget 'svn-alist-convert-widget
+    :tag "Association List"
+    :key-type 'sexp
+    :value-type 'sexp)
+  (defun svn-alist-convert-widget (widget)
+    (dolist (type-property '(:key-type :value-type))
+      ;; svn-alist-match calls widget-get, which requires a list.
+      (when (symbolp (widget-get widget type-property))
+        (widget-put widget type-property
+                    (list (widget-get widget type-property)))))
+    (let* ((value-type (widget-get widget :value-type))
+           (option-widgets (loop for option in (widget-get widget :options)
+                             collect `(cons :format "%v"
+                                            (const :format "%t: %v\n"
+                                                   :tag "Key"
+                                                   ,option)
+                                            ,value-type))))
+      (widget-put widget :args
+                  `(,@(when option-widgets
+                        `((set :inline t :format "%v"
+                               ,@option-widgets)))
+                    (editable-list :inline t
+                                   (cons :format "%v"
+                                         ,(widget-get widget :key-type)
+                                         ,(widget-get widget :value-type))))))
+    widget))
 
 (defvar svn-global-keymap nil "Global keymap for psvn.el.
 To bind this to a different key, customize `svn-status-prefix-key'.")
