@@ -1,31 +1,26 @@
 This branch is for handling replacing files with history within a wc.
-This covers issue #2148.  But also eventually will cover supporting
-allowing the cp and mv commands to replace files (Issue #1516).
-Currently you can only get a wc in this state with the merge command.
+This covers issues #2148, #2135 and #1516.
 
-Resolving this problem should also resolves #2144 and #2135.
-
-As of right now files can be replaced.
+Resolution of this issue paves the way for resolving issue #2144.
 
 Specific list of items to do:
 
 * Implement handling of properties [done].
-* Implement handling of properties on directories.
+* Implement handling of properties on directories. [done]
 * Write tests
   - revert of locally replaced file [ done ]
   - revert of locally replaced file with props [ done ]
   - update with changes to a replaced file (with props)
   - update with changes to a replaced file (with prop-changes)
-  - 
-* Change tests from XFAIL to PASS:
+* Change tests from XFAIL to PASS: [ done ]
   - revert_tests 4 (revert_replace_with_history_with_props)
     to do this, a revert-file needs to be implemented for prop-base [done]
-    
-* Implement the enhancements to the cp and mv command (pretty much done)
+
+* Implement the enhancements to the cp and mv command [ done ]
 * Possibly enhance the handling of checksums.  Right now the code isn't
   storing checksums for replaced files.  To fix this would require a new
   field in entries which is no problem, since we need to upgrade the wc
-  format anyway.
+  format anyway. [ not done; should be part of a larger issue with checksums ]
 
 These sources are possible sources for replacements (with history) in a wc:
 
@@ -45,7 +40,9 @@ Thoughts
 
  * Running a 'merge' on a directory which includes a replaced-with-history
    file, though, would not need to result in conflicts. Does ancestry play
-   a role here? If so, which?
+   a role here? If so, which? [ currently handled as a normal update;
+   list discussion (non-conclusive) at
+   http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=105168 ]
 
 
                                                                  -*- text -*-
