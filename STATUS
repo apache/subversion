@@ -16,7 +16,7 @@ Candidate changes:
     Justification:
       Invalid dumpfiles are not nice.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, kfogel
       +0: dlr (concept, new to this area of the code)
 
   * r16388, r16408
