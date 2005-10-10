@@ -255,6 +255,50 @@ crawl_entries (const char *wcpath,
   return SVN_NO_ERROR;
 }
 
+/* Set *SAME_P to TRUE if URL exists in the head of the repository and
+   refers to the same resource as it does in REV, using POOL for
+   temporary allocations. */
+static svn_error_t *
+same_resource_in_head (svn_boolean_t *same_p,
+                       const char *url,
+                       svn_revnum_t rev,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_opt_revision_t start_rev, end_rev, peg_rev;
+  svn_opt_revision_t *ignored_rev;
+  const char *head_url, *ignored_url;
+
+  start_rev.kind = svn_opt_revision_head;
+  peg_rev.kind = svn_opt_revision_number;
+  peg_rev.value.number = rev;
+  end_rev.kind = svn_opt_revision_unspecified;
+
+  err = svn_client__repos_locations (&head_url, &ignored_rev,
+                                     &ignored_url, &ignored_rev,
+                                     url, &peg_rev,
+                                     &start_rev, &end_rev,
+                                     ctx, pool);
+  if (err && err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
+    {
+      svn_error_clear (err);
+      *same_p = FALSE;
+    }
+  else if (err)
+    return err;
+  else
+    {
+      /* ### Currently, the URLs should always be equal, since we can't
+         ### walk forwards in history. */
+      if (strcmp (url, head_url) == 0)
+        *same_p = TRUE;
+      else
+        *same_p = FALSE;
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_client_info (const char *path_or_url,
@@ -272,6 +316,7 @@ svn_client_info (const char *path_or_url,
   svn_node_kind_t url_kind;
   const char *repos_root_URL, *repos_UUID;
   svn_lock_t *lock;
+  svn_boolean_t related;
   apr_hash_t *parent_ents;
   const char *parent_url, *base_name;
   svn_dirent_t *the_ent;
@@ -356,19 +401,26 @@ svn_client_info (const char *path_or_url,
                               _("URL '%s' non-existent in revision '%ld'"),
                               url, rev);
 
-  /* Possibly discover a lock attached to the remote URL. */
-  err = svn_ra_get_lock (ra_session, &lock, "", pool);
-
-  /* An old mod_dav_svn will always work; there's nothing wrong with
-     doing a PROPFIND for a property named "DAV:supportedlock". But
-     an old svnserve will error. */
-  if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+  /* Check if the URL exists in HEAD and refers to the same resource.
+     In this case, we check the repository for a lock on this URL. */
+  SVN_ERR (same_resource_in_head (&related, url, rev, ctx, pool));
+  if (related)
     {
-      svn_error_clear (err);
-      lock = NULL;
+      err = svn_ra_get_lock (ra_session, &lock, "", pool);
+
+      /* An old mod_dav_svn will always work; there's nothing wrong with
+         doing a PROPFIND for a property named "DAV:supportedlock". But
+         an old svnserve will error. */
+      if (err && err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+        {
+          svn_error_clear (err);
+          lock = NULL;
+        }
+      else if (err)
+        return err;
     }
-  else if (err)
-    return err;
+  else
+    lock = NULL;
 
   /* Push the URL's dirent (and lock) at the callback.*/  
   SVN_ERR (build_info_from_dirent (&info, the_ent, lock, url, rev,
