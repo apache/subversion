@@ -53,19 +53,6 @@ Candidate changes:
     Votes:
       +1: dlr (not r16614, r16616), lundblad, maxb, kfogel
 
-  * r16414, r16512, r16513, r16562, r16595
-    Ensure that SWIG dependencies are correctly added to build-outputs.mk.
-    Justification:
-      Improves robustness of build system, fixes compile errors
-      when user runs `make install-swig-py' without having run
-      `make swig-py'.
-    Notes:
-      r16562: Followup to detect files not to scan for includes by name, not by
-      existance.  Justification: Avoid a different code path being followed
-      depending on whether the build tree is clean or not.
-    Votes:
-      +1: djames, dlr (not r16562, r16595), maxb
-
   * r16622
     Fix breakage of defining of SVN_SWIG_VERSION, by migrating its only user
     to use SWIG_VERSION, and fully removing relics of SVN_SWIG_VERSION.
@@ -121,6 +108,19 @@ Approved changes (under subversion/bindings/swig):
       +1: djames, dlr
       +1 (concept): maxb (Don't understand the swigutil_py.c changes in
                           sufficient detail yet for full +1)
+
+  * r16414, r16512, r16513, r16562, r16595
+    Ensure that SWIG dependencies are correctly added to build-outputs.mk.
+    Justification:
+      Improves robustness of build system, fixes compile errors
+      when user runs `make install-swig-py' without having run
+      `make swig-py'.
+    Notes:
+      r16562: Followup to detect files not to scan for includes by name, not by
+      existance.  Justification: Avoid a different code path being followed
+      depending on whether the build tree is clean or not.
+    Votes:
+      +1: djames, dlr, maxb
 
   * r16448
     %ignore svn_fs_set_berkeley_errcall.
