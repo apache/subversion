@@ -1,5 +1,5 @@
 This branch is for handling replacing files with history within a wc.
-This covers issues #2148, #2135, #1516 and 845.
+This covers issues #2148, #2135, #1516 and #845.
 
 Resolution of this issue paves the way for resolving issue #2144.
 
