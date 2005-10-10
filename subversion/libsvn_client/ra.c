@@ -813,12 +813,12 @@ svn_client__repos_locations (const char **start_url,
   /* We'd better have all the paths we were looking for! */
   if (! start_path)
     return svn_error_createf 
-      (APR_EGENERAL, NULL,
+      (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
        _("Unable to find repository location for '%s' in revision %ld"),
        path, start_revnum);
   if (! end_path)
     return svn_error_createf 
-      (APR_EGENERAL, NULL,
+      (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
        _("The location for '%s' for revision %ld does not exist in the "
          "repository or refers to an unrelated object"),
        path, end_revnum);
