@@ -17,6 +17,7 @@
  */
 
 #include <apr_pools.h>
+#include <apr_strings.h>
 
 #include "svn_types.h"
 
@@ -33,3 +34,18 @@ svn_create_commit_info (apr_pool_t *pool)
   return commit_info;
 }
 
+svn_log_changed_path_t *
+svn_log_changed_path_dup (const svn_log_changed_path_t *changed_path,
+                          apr_pool_t *pool)
+{
+  svn_log_changed_path_t *new_changed_path
+    = apr_palloc (pool, sizeof (*new_changed_path));
+
+  *new_changed_path = *changed_path;
+
+  if (new_changed_path->copyfrom_path)
+    new_changed_path->copyfrom_path =
+      apr_pstrdup (pool, new_changed_path->copyfrom_path);
+
+  return new_changed_path;
+}

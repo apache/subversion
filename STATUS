@@ -30,29 +30,6 @@ Candidate changes:
     Votes:
       +1: maxb, kfogel
 
-  * r16398 (parts NOT lying under subversion/bindings/swig/), r16614, r16616
-    Provide APIs needed to fix Issue #2172 (segfaults in the Python bindings
-    caused by pool lifetime problems).
-    Justification:
-      Segfaults are bad. In 1.3.x, Python bindings users should not have to
-      worry about memory pools.
-    Notes:
-      r16398 contains both bindings and core changes, which have different
-      minimum voting requirements for backport. Thus, the change is separated
-      into two completely detatched entries.
-      r16614 adds back a removed interlibrary private API. I know that there
-      is some advocacy that people who mix core libraries deserve all the
-      crashes they might get, but the clearest documentation of compatibility
-      rules we have at the moment is the implementation of
-      svn_ver_check_list() and svn_ver_compatible(), any by those rules, this
-      wrapper should exist. Therefore, let us put in into 1.3.0, in order to
-      decouple the 1.3.0 soak period from the ongoing discussion about
-      library compatibility. If this wrapper function turns out to be redundant
-      with the final consensus, then it is not a problem, as its presence does
-      no harm.
-    Votes:
-      +1: dlr (not r16614, r16616), lundblad, maxb, kfogel
-
   * r16622
     Fix breakage of defining of SVN_SWIG_VERSION, by migrating its only user
     to use SWIG_VERSION, and fully removing relics of SVN_SWIG_VERSION.
