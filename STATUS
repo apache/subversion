@@ -85,7 +85,7 @@ Candidate changes:
       problems for tortoisesvn and returns wrong information.
       (It may also eat your dog...)
       Votes:
-        +1: lundblad
+        +1: lundblad, kfogel
     
   
 Approved changes (areas other than under subversion/bindings/swig):
