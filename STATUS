@@ -35,10 +35,6 @@ Candidate changes:
     to use SWIG_VERSION, and fully removing relics of SVN_SWIG_VERSION.
     Justification:
       Caused Ruby bindings regression with swig 1.3.24.
-    Notes:
-      Parts of the change are under subversion/bindings/swig.
-      If merging before the big rebranch, increase the rebranch revision
-      in the notes below to 16622.
     Votes:
       +1: maxb
 
@@ -52,108 +48,5 @@ Candidate changes:
         +1: lundblad, kfogel
     
   
-Approved changes (areas other than under subversion/bindings/swig):
+Approved changes:
 
-Approved changes (under subversion/bindings/swig):
-
-  IMPORTANT NOTE: All of the changes made in the "subversion/bindings/swig"
-  directory up until r16582 have been approved. However, there are still
-  core changes which need to be approved in order for the Python changes to
-  build and compile cleanly (namely, r16398 and r16414).
-   
-  When all of the required core changes have been merged, we should
-  rebranch the subversion/bindings/swig directory, using the following
-  commands:
-    
-    rs=http://svn.collab.net/repos/svn
-    svn rm $rs/branches/1.3.x/subversion/bindings/swig
-    svn cp -r 16582 $rs/trunk/subversion/bindings/swig \
-           $rs/branches/1.3.x/subversion/bindings/swig
-  
-  * r16398 (ONLY parts lying under subversion/bindings/swig/), r16477
-    Fix Issue #2172 (segfaults in the Python bindings caused by pool lifetime
-    problems).
-    Justification:
-      Segfaults are bad. In 1.3.x, Python bindings users should not have to
-      worry about memory pools.
-    Notes:
-      r16398 contains both bindings and core changes, which have different
-      minimum voting requirements for backport. Thus, the change is separated
-      into two completely detatched entries.
-      r16477 contains exclusively bindings changes.
-    Votes:
-      +1: djames, dlr
-      +1 (concept): maxb (Don't understand the swigutil_py.c changes in
-                          sufficient detail yet for full +1)
-
-  * r16448
-    %ignore svn_fs_set_berkeley_errcall.
-    Justification:
-      It is now redundant and so need never be wrapped.
-    Votes:
-      +1: maxb, djames
-
-  * r16453
-    Unify SWIG bindings typemapping of 'const char *' => 'const char *'
-    apr_hash_t input parameters.
-    Justification:
-      Makes several additional APIs usably wrapped for multiple SWIG languages.
-    Votes:
-      +1: maxb, djames
-
-  * r16470
-    Move proxy_apr.swg from proxy/ to include/, leaving proxy/ to be a
-    directory solely for build-time generated files.
-    Justification:
-      Keep branch close to trunk on this layout issue, because future build
-      generator change will probably make use of this.
-    Notes:
-      Depends on r16414 and r16513.
-    Votes:
-      +1: maxb, djames
-
-  * r16480
-      Remove compatibility code for old versions of SWIG (SWIG 1.3.24 is now
-      required).
-    Justification:
-      Don't ship residual mess.
-    Votes:
-      +1: maxb, djames
-
-  * r16482
-    Use _core.svn_pool_create instead of svn_pool_create.  This clarifies that
-    we are importing svn_pool_create from _core, rather than using our local
-    (deprecated) compatibility wrapper.
-    Justification:
-      Enhance self-documenting nature of the code.
-    Votes:
-      +1: maxb, djames
-
-  * r16486
-    Fiddle with the Perl bindings link command to avoid linking to installed,
-    rather then build-tree libsvn_* libraries.
-    Votes:
-      +1: maxb, dlr
-
-  * r16500
-    Make svn_swig_py_init_asp_dot_net_hack static.
-    Justification:
-      Greater visibility is not required, so keep the exported namespace clean.
-    Votes:
-      +1: maxb, dlr
-
-  * r16518
-    Fix spacing in subversion/bindings/swig/python/tests/repository.py.
-    Justification:
-      Trivial stylistic fix.
-    Votes:
-      +1: maxb, djames
-
-  * r16582
-    Python bindings fix. Even a typemap which does nothing is better than one
-    which does invalid pointer assignment.
-    Justification:
-      Invalid pointer assignments lead to badness - warnings, undefined
-      behaviour, etc.
-    Votes:
-      +1: maxb, djames
