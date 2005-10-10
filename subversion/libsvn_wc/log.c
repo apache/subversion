@@ -87,12 +87,17 @@ enum svn_wc__xfer_action {
       svn_wc__xfer_cp_and_detranslate: copy NAME to DEST, converting to LF
                                        and contracting keywords according to
                                        the current property vals of NAME.
+
+      When SPECIAL_ONLY is TRUE, only translate special,
+      not keywords and eol-style.
+
 */
 static svn_error_t *
 file_xfer_under_path (svn_wc_adm_access_t *adm_access,
                       const char *name,
                       const char *dest,
                       enum svn_wc__xfer_action action,
+                      svn_boolean_t special_only,
                       apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -113,15 +118,18 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
 
     case svn_wc__xfer_cp_and_translate:
       {
-        apr_hash_t *keywords;
-        const char *eol_str;
-        svn_boolean_t special;
+        apr_hash_t *keywords = NULL;
+        const char *eol_str = NULL;
+        svn_boolean_t special = FALSE;
 
-        /* Note that this action takes properties from dest, not source. */
-        SVN_ERR (svn_wc__get_keywords (&keywords, full_dest_path, adm_access,
-                                       NULL, pool));
-        SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, full_dest_path,
-                                        adm_access, pool));
+        if (! special_only)
+          {
+            /* Note that this action takes properties from dest, not source. */
+            SVN_ERR (svn_wc__get_keywords (&keywords, full_dest_path,
+                                           adm_access, NULL, pool));
+            SVN_ERR (svn_wc__get_eol_style (NULL, &eol_str, full_dest_path,
+                                            adm_access, pool));
+          }
         SVN_ERR (svn_wc__get_special (&special, full_dest_path, adm_access,
                                       pool));
 
@@ -407,9 +415,12 @@ log_do_file_xfer (struct log_runner *loggy,
 {
   svn_error_t *err;
   const char *dest = NULL;
+  svn_boolean_t special_only;
 
   /* We have the name (src), and the destination is absolutely required. */
   dest = svn_xml_get_attr_value (SVN_WC__LOG_ATTR_DEST, atts);
+  special_only =
+    svn_xml_get_attr_value (SVN_WC__LOG_ATTR_ARG_1, atts) != NULL;
   if (! dest)
     return svn_error_createf (pick_error_code (loggy), NULL,
                               _("Missing 'dest' attribute in '%s'"),
@@ -418,7 +429,7 @@ log_do_file_xfer (struct log_runner *loggy,
                                loggy->pool));
 
   err = file_xfer_under_path (loggy->adm_access, name, dest, action,
-                              loggy->pool);
+                              special_only, loggy->pool);
   if (err)
     signal_error (loggy, err);
 

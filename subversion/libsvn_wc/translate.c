@@ -37,6 +37,7 @@
 #include "wc.h"
 #include "adm_files.h"
 #include "translate.h"
+#include "props.h"
 
 #include "svn_private_config.h"
 
@@ -223,13 +224,17 @@ svn_wc__get_special (svn_boolean_t *special,
                      svn_wc_adm_access_t *adm_access,
                      apr_pool_t *pool)
 {
-  const svn_string_t *propval;
+  apr_hash_t *prophash;
+  svn_error_t *err;
 
   /* Get the property value. */
-  SVN_ERR (svn_wc_prop_get (&propval, SVN_PROP_SPECIAL, path, adm_access,
-                            pool));
+  err = svn_wc_prop_list (&prophash, path, adm_access, pool);
+  if (err)
+    return
+      svn_error_quick_wrap
+      (err, _("Failed to load properties from disk"));
 
-  *special = propval ? TRUE : FALSE;
+  *special = svn_wc__has_special_property (prophash);
 
   return SVN_NO_ERROR;
 }

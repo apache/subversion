@@ -2110,6 +2110,11 @@ svn_wc_parse_externals_description (apr_hash_t **externals_p,
   return SVN_NO_ERROR;
 }
 
+svn_boolean_t
+svn_wc__has_special_property (apr_hash_t *props)
+{
+  return apr_hash_get (props, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING) != NULL;
+}
 
 svn_boolean_t
 svn_wc__has_magic_property (apr_array_header_t *properties)

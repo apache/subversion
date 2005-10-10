@@ -195,14 +195,12 @@ copy_file_administratively (const char *src_path,
   /* Schedule the new file for addition in its parent, WITH HISTORY. */
   {
     char *copyfrom_url;
+    const char *tmp_wc_text;
     svn_revnum_t copyfrom_rev;
     apr_hash_t *props, *base_props;
 
     SVN_ERR (svn_wc_get_ancestry (&copyfrom_url, &copyfrom_rev,
                                   src_path, src_access, pool));
-
-    /* Copy pristine text-base to temporary location. */
-    SVN_ERR (svn_io_copy_file (src_txtb, tmp_txtb, TRUE, pool));
 
     /* Load source base props. */
     base_props = apr_hash_make (pool);
@@ -212,12 +210,36 @@ copy_file_administratively (const char *src_path,
     props = apr_hash_make (pool);
     SVN_ERR (svn_wc__load_prop_file (src_wprop, props, pool));
 
+    /* Copy pristine text-base to temporary location. */
+    SVN_ERR (svn_io_copy_file (src_txtb, tmp_txtb, TRUE, pool));
+
+    /* Copy working copy file to temporary location */
+    {
+      apr_file_t *fp;
+      svn_boolean_t special;
+
+      SVN_ERR (svn_wc_create_tmp_file2 (&fp, &tmp_wc_text,
+                                        svn_wc_adm_access_path (dst_parent),
+                                        FALSE, pool));
+      SVN_ERR (svn_io_file_close (fp, pool));
+
+      SVN_ERR (svn_wc__get_special (&special, src_path, src_access, pool));
+      if (special)
+        {
+          SVN_ERR (svn_subst_copy_and_translate3 (src_path, tmp_wc_text,
+                                                  NULL, FALSE, NULL,
+                                                  FALSE, special, pool));
+        }
+      else
+          SVN_ERR (svn_io_copy_file (src_path, tmp_wc_text, TRUE, pool));
+    }
+
     SVN_ERR (svn_wc_add_repos_file2 (dst_path, dst_parent,
-                                     tmp_txtb, src_path, 
+                                     tmp_txtb, tmp_wc_text,
                                      base_props, props,
                                      copyfrom_url, copyfrom_rev, pool));
   }
-                
+
   /* Report the addition to the caller. */
   if (notify_copied != NULL)
     {

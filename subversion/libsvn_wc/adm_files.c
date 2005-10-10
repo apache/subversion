@@ -1227,23 +1227,44 @@ svn_wc__adm_cleanup_tmp_area (svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
+svn_wc_create_tmp_file2 (apr_file_t **fp,
+                         const char **new_name,
+                         const char *path,
+                         svn_boolean_t delete_on_close,
+                         apr_pool_t *pool)
+{
+  const char *ignored_filename;
+  apr_file_t *file;
+
+  assert (fp || new_name);
+
+  /* Use a self-explanatory name for the file :-) . */
+  path = svn_wc__adm_path (path, TRUE, pool, "tempfile", NULL);
+
+  /* Open a unique file;  use APR_DELONCLOSE. */
+  SVN_ERR (svn_io_open_unique_file (&file, &ignored_filename,
+                                    path, ".tmp", delete_on_close, pool));
+
+  if (new_name)
+    *new_name = ignored_filename;
+
+  if (fp)
+    *fp = file;
+  else
+    SVN_ERR (svn_io_file_close (file, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc_create_tmp_file (apr_file_t **fp,
                         const char *path,
                         svn_boolean_t delete_on_close,
                         apr_pool_t *pool)
 {
-  const char *ignored_filename;
-
-  /* Use a self-explanatory name for the file :-) . */
-  path = svn_wc__adm_path (path, TRUE, pool, "tempfile", NULL);
-
-  /* Open a unique file;  use APR_DELONCLOSE. */  
-  SVN_ERR (svn_io_open_unique_file (fp, &ignored_filename,
-                                    path, ".tmp", delete_on_close, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc_create_tmp_file2 (fp, NULL, path, delete_on_close, pool);
 }
-
 
 svn_error_t *
 svn_wc__prep_file_for_replacement (const char *path,

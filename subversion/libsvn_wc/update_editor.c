@@ -49,6 +49,7 @@
 #include "entries.h"
 #include "lock.h"
 #include "props.h"
+#include "translate.h"
 
 
 /*** batons ***/
@@ -3028,15 +3029,13 @@ svn_wc_add_repos_file2 (const char *dst_path,
   if (new_props)
     {
       const char *tmp_prop_path, *prop_path;
-      apr_file_t *file;
       const char *adm_path = svn_wc_adm_access_path (adm_access);
       apr_size_t adm_path_len = strlen (adm_path) + 1;
 
       /* Save new props to temporary file. Don't use svn_wc__prop_path()
          because install_file() will overwrite it! */
-      SVN_ERR (svn_wc_create_tmp_file (&file, adm_path, FALSE, pool));
-      apr_file_name_get (&tmp_prop_path, file);
-      SVN_ERR (svn_io_file_close (file, pool));
+      SVN_ERR (svn_wc_create_tmp_file2 (NULL, &tmp_prop_path,
+                                        adm_path, FALSE, pool));
       SVN_ERR (svn_wc__save_prop_file (tmp_prop_path, new_props, pool));
 
       /* Rename temporary props file to working props. */
@@ -3054,26 +3053,38 @@ svn_wc_add_repos_file2 (const char *dst_path,
 
   if (new_text_path)
     {
-      const char *tmp_text_path;
       apr_file_t *file;
+      const char *tmp_text_path;
       const char *adm_path = svn_wc_adm_access_path (adm_access);
       apr_size_t adm_path_len = strlen (adm_path) + 1;
 
-      /* Copy new text to temporary file in adm_access. */
-      SVN_ERR (svn_wc_create_tmp_file (&file, adm_path, FALSE, pool));
-      apr_file_name_get (&tmp_text_path, file);
+      /* Move new text to temporary file in adm_access. */
+      SVN_ERR (svn_wc_create_tmp_file2 (&file, &tmp_text_path,
+                                        adm_path, FALSE, pool));
       SVN_ERR (svn_io_file_close (file, pool));
-      SVN_ERR (svn_io_copy_file (new_text_path, tmp_text_path, TRUE, pool));
+      SVN_ERR (svn_io_file_move (new_text_path, tmp_text_path, pool));
 
-      /* Rename new temporary text file to working text. */
-      svn_xml_make_open_tag (&log_accum, pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_MV,
-                             SVN_WC__LOG_ATTR_NAME,
-                             tmp_text_path + adm_path_len,
-                             SVN_WC__LOG_ATTR_DEST,
-                             base_name,
-                             NULL);
+      /* Translate/rename new temporary text file to working text. */
+      if (svn_wc__has_special_property (new_base_props))
+        svn_xml_make_open_tag (&log_accum, pool,
+                               svn_xml_self_closing,
+                               SVN_WC__LOG_CP_AND_TRANSLATE,
+                               SVN_WC__LOG_ATTR_NAME,
+                               tmp_text_path + adm_path_len,
+                               SVN_WC__LOG_ATTR_DEST,
+                               base_name,
+                               SVN_WC__LOG_ATTR_ARG_1,
+                               "true",
+                               NULL);
+      else
+        svn_xml_make_open_tag (&log_accum, pool,
+                               svn_xml_self_closing,
+                               SVN_WC__LOG_MV,
+                               SVN_WC__LOG_ATTR_NAME,
+                               tmp_text_path + adm_path_len,
+                               SVN_WC__LOG_ATTR_DEST,
+                               base_name,
+                               NULL);
     }
 
   /* Write our accumulation of log entries into a log file */

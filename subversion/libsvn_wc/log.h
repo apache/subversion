@@ -132,8 +132,10 @@ extern "C" {
 #define SVN_WC__LOG_ATTR_TEXT_REJFILE   "text-rejfile"
 #define SVN_WC__LOG_ATTR_PROP_REJFILE   "prop-rejfile"
 #define SVN_WC__LOG_ATTR_TIMESTAMP      "timestamp"
-/* The rest are for SVN_WC__LOG_MERGE.  Extend as necessary. */
+/* This one is for SVN_WC__LOG_MERGE
+   and optionally SVN_WC__LOG_CP_AND_(DE)TRANSLATE to indicate special-only */
 #define SVN_WC__LOG_ATTR_ARG_1          "arg1"
+/* The rest are for SVN_WC__LOG_MERGE.  Extend as necessary. */
 #define SVN_WC__LOG_ATTR_ARG_2          "arg2"
 #define SVN_WC__LOG_ATTR_ARG_3          "arg3"
 #define SVN_WC__LOG_ATTR_ARG_4          "arg4"

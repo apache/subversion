@@ -3029,13 +3029,28 @@ svn_wc_revert (const char *path,
 /* Tmp files */
 
 /** Create a unique temporary file in administrative tmp/ area of
- * directory @a path.  Return a handle in @a *fp.
+ * directory @a path.  Return a handle in @a *fp and the path
+ * in @a *new_name. Either @a fp or @a new_name can be null.
  *
  * The flags will be <tt>APR_WRITE | APR_CREATE | APR_EXCL</tt> and
  * optionally @c APR_DELONCLOSE (if the @a delete_on_close argument is 
  * set @c TRUE).
  *
  * This means that as soon as @a fp is closed, the tmp file will vanish.
+ *
+ * @since New in 1.4
+ */
+svn_error_t *
+svn_wc_create_tmp_file2 (apr_file_t **fp,
+                         const char **new_name,
+                         const char *path,
+                         svn_boolean_t delete_on_close,
+                         apr_pool_t *pool);
+
+
+/** Same as svn_wc_add_repos_file2(), but without the path return value
+ *
+ * @deprecated For compatibility with 1.3 API
  */
 svn_error_t *
 svn_wc_create_tmp_file (apr_file_t **fp,
