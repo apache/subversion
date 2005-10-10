@@ -674,8 +674,8 @@ inside loops."
 (defun svn-status-flatten-list (list)
   "Flatten any lists within ARGS, so that there are no sublists."
   (loop for item in list
-	if (listp item) nconc (svn-status-flatten-list item)
-	else collect item))
+        if (listp item) nconc (svn-status-flatten-list item)
+        else collect item))
 
 (defvar svn-status-display-new-status-buffer nil)
 ;;;###autoload
@@ -3610,4 +3610,7 @@ The conflicts must be marked with rcsmerge conflict markers."
 
 (provide 'psvn)
 
+;; Local Variables:
+;; indent-tabs-mode: nil
+;; End:
 ;;; psvn.el ends here
