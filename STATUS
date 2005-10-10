@@ -51,7 +51,7 @@ Candidate changes:
       with the final consensus, then it is not a problem, as its presence does
       no harm.
     Votes:
-      +1: dlr (not r16614, r16616), lundblad, maxb
+      +1: dlr (not r16614, r16616), lundblad, maxb, kfogel
 
   * r16414, r16512, r16513, r16562, r16595
     Ensure that SWIG dependencies are correctly added to build-outputs.mk.
