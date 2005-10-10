@@ -28,7 +28,7 @@ Candidate changes:
       Not vital, but the creation of Berkeley DB files in a FSFS repository
       is a long standing bug which doesn't really give a good impression.
     Votes:
-      +1: maxb
+      +1: maxb, kfogel
 
   * r16398 (parts NOT lying under subversion/bindings/swig/), r16614, r16616
     Provide APIs needed to fix Issue #2172 (segfaults in the Python bindings
