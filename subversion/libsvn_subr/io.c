@@ -2450,30 +2450,15 @@ svn_io_file_move (const char *from_path, const char *to_path,
       if (err)
         goto failed_tmp;
 
-#ifdef WIN32
-      /* Windows won't let us delete a file marked as read-only,
-         so, mark as read+write */
-      err = svn_io_set_file_read_write (from_path, FALSE, pool);
-      if (err)
-        goto failed_final;
-#endif
-
       err = svn_io_remove_file (from_path, pool);
       if (! err)
         return SVN_NO_ERROR;
 
-#ifdef WIN32
-    failed_final:
-      svn_error_clear (svn_io_set_file_read_write (to_path, FALSE, pool));
-#endif
       svn_error_clear (svn_io_remove_file (to_path, pool));
 
       return err;
 
     failed_tmp:
-#ifdef WIN32
-      svn_error_clear (svn_io_set_file_read_write (tmp_to_path, FALSE, pool));
-#endif
       svn_error_clear (svn_io_remove_file (tmp_to_path, pool));
     }
 
