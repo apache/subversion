@@ -143,8 +143,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-10-02 17:42+0900\n"
-"PO-Revision-Date: 2005-10-02 17:41+0900\n"
+"POT-Creation-Date: 2005-10-11 02:21+0900\n"
+"PO-Revision-Date: 2005-10-11 02:19+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3402,8 +3402,8 @@ msgstr ""
 
 #: libsvn_client/commit_util.c:683 libsvn_client/commit_util.c:813
 #: libsvn_client/copy.c:1072 libsvn_client/delete.c:67
-#: libsvn_client/diff.c:1394 libsvn_client/diff.c:1992
-#: libsvn_client/diff.c:2514 libsvn_client/diff.c:2623
+#: libsvn_client/diff.c:1394 libsvn_client/diff.c:2130
+#: libsvn_client/diff.c:2795 libsvn_client/diff.c:2904
 #: libsvn_client/locking_commands.c:250 libsvn_client/locking_commands.c:274
 #: libsvn_client/log.c:129 libsvn_client/prop_commands.c:213
 #: libsvn_client/prop_commands.c:446 libsvn_client/prop_commands.c:602
@@ -3626,18 +3626,29 @@ msgstr ".merge-left.r%ld"
 msgid ".merge-right.r%ld"
 msgstr ".merge-right.r%ld"
 
-#: libsvn_client/diff.c:1450 libsvn_client/diff.c:2092
-#: libsvn_client/diff.c:2172
+#: libsvn_client/diff.c:1473 libsvn_client/diff.c:1677
 msgid "Not all required revisions are specified"
 msgstr "必要なリビジョンがすべては指定されていません"
 
-#: libsvn_client/diff.c:1721
+# ? pegged diff
+#: libsvn_client/diff.c:1488
+msgid "At least one revision must be non-local for a pegged diff"
+msgstr ""
+"pegged diff を使う場合、少なくとも一方のリビジョンはローカルにあってはいけま"
+"せん"
+
+#: libsvn_client/diff.c:1610 libsvn_client/diff.c:1615
+#, c-format
+msgid "'%s' was not found in the repository at revision %ld"
+msgstr "'%s' は、リポジトリのリビジョン %ld には見つかりませんでした"
+
+#: libsvn_client/diff.c:1948
 msgid "Sorry, svn_client_diff3 was called in a way that is not yet supported"
 msgstr ""
 "すみません。まだサポートされていないやり方で svn_client_diff3 が呼び出されま"
 "した"
 
-#: libsvn_client/diff.c:1760
+#: libsvn_client/diff.c:1987
 msgid ""
 "Only diffs between a path's text-base and its working files are supported at "
 "this time"
@@ -3645,25 +3656,17 @@ msgstr ""
 "今のところ、パスのテキストベースと作業ファイルの差分しかサポートされていませ"
 "ん"
 
-#: libsvn_client/diff.c:1875 libsvn_client/diff.c:1880
-#, c-format
-msgid "'%s' was not found in the repository at revision %ld"
-msgstr "'%s' は、リポジトリのリビジョン %ld には見つかりませんでした"
-
-#: libsvn_client/diff.c:1996 libsvn_client/switch.c:108
+#: libsvn_client/diff.c:2134 libsvn_client/switch.c:108
 #, c-format
 msgid "Directory '%s' has no URL"
 msgstr "ディレクトリ '%s' に URL はありません"
 
-# ? pegged diff
-#: libsvn_client/diff.c:2183
-msgid "At least one revision must be non-local for a pegged diff"
-msgstr ""
-"pegged diff を使う場合、少なくとも一方のリビジョンはローカルにあってはいけま"
-"せん"
+#: libsvn_client/diff.c:2372
+msgid "Summarizing diff can only compare repository to repository"
+msgstr "差分の要約はリポジトリとリポジトリとの比較にしか使えません"
 
-#: libsvn_client/diff.c:2487 libsvn_client/diff.c:2493
-#: libsvn_client/diff.c:2608 libsvn_client/locking_commands.c:254
+#: libsvn_client/diff.c:2768 libsvn_client/diff.c:2774
+#: libsvn_client/diff.c:2889 libsvn_client/locking_commands.c:254
 #: libsvn_client/locking_commands.c:278 libsvn_client/ra.c:372
 #: libsvn_client/ra.c:733 libsvn_client/ra.c:869
 #, c-format
@@ -3702,7 +3705,7 @@ msgstr "'%s' のチェックサムが一致しませんでした。予想: '%s',
 msgid "Cannot read entry for '%s'"
 msgstr "'%s' のエントリが読み込めません"
 
-#: libsvn_client/info.c:321 libsvn_client/info.c:346 libsvn_client/info.c:356
+#: libsvn_client/info.c:366 libsvn_client/info.c:391 libsvn_client/info.c:401
 #, c-format
 msgid "URL '%s' non-existent in revision '%ld'"
 msgstr "URL '%s' は、リビジョン '%ld' には存在しません"
@@ -3725,8 +3728,8 @@ msgstr "'%s' はこの作業コピーでロックされていません"
 msgid "'%s' is not locked"
 msgstr "'%s' はロックされていません"
 
-#: libsvn_client/locking_commands.c:427 libsvn_fs/fs-loader.c:896
-#: libsvn_ra/ra_loader.c:552
+#: libsvn_client/locking_commands.c:427 libsvn_fs/fs-loader.c:895
+#: libsvn_ra/ra_loader.c:571
 msgid "Lock comment has illegal characters"
 msgstr "ロックについてのコメントに不正な文字が含まれています"
 
@@ -3944,7 +3947,7 @@ msgstr "ファイルシステム相互排除ロックを奪えません"
 msgid "Can't ungrab FS mutex"
 msgstr "ファイルシステム相互排除ロックを手放せません"
 
-#: libsvn_fs/fs-loader.c:902
+#: libsvn_fs/fs-loader.c:901
 msgid "Negative expiration date passed to svn_fs_lock"
 msgstr "svn_fs_lock に渡された有効期限の値が負です"
 
@@ -4905,12 +4908,12 @@ msgstr ""
 msgid "Unrecognized URL scheme for '%s'"
 msgstr "'%s' 用の URL スキームを認識できません"
 
-#: libsvn_ra/ra_loader.c:622
+#: libsvn_ra/ra_loader.c:641
 #, c-format
 msgid "  - handles '%s' scheme\n"
 msgstr "  - '%s' スキームを操作します\n"
 
-#: libsvn_ra/ra_loader.c:708
+#: libsvn_ra/ra_loader.c:727
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
 msgstr "URL スキーム '%s' を認識できません"
@@ -5298,7 +5301,7 @@ msgstr "ローカルディスク上のリポジトリにアクセスするモジ
 msgid "Unable to open an ra_local session to URL"
 msgstr "URL に対し ra_local セッションを開始できません"
 
-#: libsvn_ra_local/ra_plugin.c:1286
+#: libsvn_ra_local/ra_plugin.c:1287
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_local"
 msgstr ""
@@ -5314,12 +5317,12 @@ msgstr "ローカルの URL '%s' にプレフィックス 'file://' が含まれ
 msgid "Local URL '%s' contains only a hostname, no path"
 msgstr "ローカルの URL '%s' にホスト名しか含まれていません。パスが必要です"
 
-#: libsvn_ra_local/split_url.c:74
+#: libsvn_ra_local/split_url.c:117
 #, c-format
 msgid "Local URL '%s' contains unsupported hostname"
 msgstr "ローカルの URL '%s' に含まれているホスト名はサポートされていません"
 
-#: libsvn_ra_local/split_url.c:128 libsvn_ra_local/split_url.c:135
+#: libsvn_ra_local/split_url.c:127 libsvn_ra_local/split_url.c:134
 #, c-format
 msgid "Unable to open repository '%s'"
 msgstr "リポジトリ '%s' を開けませんでした"
@@ -5427,84 +5430,84 @@ msgstr "ファイルの一部に文字列以外が含まれています"
 msgid "Dirlist element not a list"
 msgstr "dirlist 要素がリストではありません"
 
-#: libsvn_ra_svn/client.c:1136
+#: libsvn_ra_svn/client.c:1138
 msgid "Log entry not a list"
 msgstr "log エントリがリストではありません"
 
-#: libsvn_ra_svn/client.c:1149
+#: libsvn_ra_svn/client.c:1151
 msgid "Changed-path entry not a list"
 msgstr "changed-path エントリがリストではありません"
 
-#: libsvn_ra_svn/client.c:1228
+#: libsvn_ra_svn/client.c:1230
 msgid "'stat' not implemented"
 msgstr "'stat' は実装されていません"
 
-#: libsvn_ra_svn/client.c:1285
+#: libsvn_ra_svn/client.c:1287
 msgid "'get-locations' not implemented"
 msgstr "'get-locations' は実装されていません"
 
-#: libsvn_ra_svn/client.c:1297
+#: libsvn_ra_svn/client.c:1299
 msgid "Location entry not a list"
 msgstr "location エントリがリストではありません"
 
-#: libsvn_ra_svn/client.c:1347
+#: libsvn_ra_svn/client.c:1349
 msgid "'get-file-revs' not implemented"
 msgstr "'get-file-revs' は実装されていません"
 
-#: libsvn_ra_svn/client.c:1360
+#: libsvn_ra_svn/client.c:1362
 msgid "Revision entry not a list"
 msgstr "revision エントリはリストではありません"
 
 # ? text delta chunk
-#: libsvn_ra_svn/client.c:1373 libsvn_ra_svn/client.c:1398
+#: libsvn_ra_svn/client.c:1375 libsvn_ra_svn/client.c:1400
 msgid "Text delta chunk not a string"
 msgstr "テキスト差分の塊が文字列ではありません"
 
-#: libsvn_ra_svn/client.c:1410
+#: libsvn_ra_svn/client.c:1412
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "コマンド get-file-revs がリビジョンを返しませんでした"
 
-#: libsvn_ra_svn/client.c:1458
+#: libsvn_ra_svn/client.c:1460
 msgid "Server doesn't support the lock command"
 msgstr "ロック (lock) コマンドをサーバがサポートしていません"
 
-#: libsvn_ra_svn/client.c:1522
+#: libsvn_ra_svn/client.c:1524
 msgid "Server doesn't support the unlock command"
 msgstr "ロック解除 (unlock) コマンドをサーバがサポートしていません"
 
-#: libsvn_ra_svn/client.c:1619
+#: libsvn_ra_svn/client.c:1621
 msgid "Lock response not a list"
 msgstr "lock レスポンスがリストではありません"
 
-#: libsvn_ra_svn/client.c:1633
+#: libsvn_ra_svn/client.c:1635
 msgid "Unknown status for lock command"
 msgstr "lock コマンドに関するステータスが未知です"
 
-#: libsvn_ra_svn/client.c:1655
+#: libsvn_ra_svn/client.c:1657
 msgid "Didn't receive end marker for lock responses"
 msgstr "lock レスポンスに対する終了記号を受け取れませんでした"
 
-#: libsvn_ra_svn/client.c:1742
+#: libsvn_ra_svn/client.c:1744
 msgid "Unlock response not a list"
 msgstr "unlock レスポンスがリストではありません"
 
-#: libsvn_ra_svn/client.c:1756
+#: libsvn_ra_svn/client.c:1758
 msgid "Unknown status for unlock command"
 msgstr "unlock コマンドに関するステータスが未知です"
 
-#: libsvn_ra_svn/client.c:1777
+#: libsvn_ra_svn/client.c:1779
 msgid "Didn't receive end marker for unlock responses"
 msgstr "unlock レスポンスに対する終了記号を受け取れませんでした"
 
-#: libsvn_ra_svn/client.c:1801 libsvn_ra_svn/client.c:1829
+#: libsvn_ra_svn/client.c:1803 libsvn_ra_svn/client.c:1831
 msgid "Server doesn't support the get-lock command"
 msgstr "ロック取得 (get-lock) コマンドをサーバがサポートしていません"
 
-#: libsvn_ra_svn/client.c:1842
+#: libsvn_ra_svn/client.c:1844
 msgid "Lock element not a list"
 msgstr "lock 要素がリストではありません"
 
-#: libsvn_ra_svn/client.c:1901
+#: libsvn_ra_svn/client.c:1903
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr ""
@@ -7447,7 +7450,7 @@ msgstr "'%s' は URL です。そこはパスで指定するべきです"
 # * Description for 'svn{admin,dumpfilter,look,serve,version} --version'.
 # * 29 half-size characters are displayed on the left.
 #: svnadmin/main.c:235 svndumpfilter/main.c:787 svnlook/main.c:99
-#: svnserve/main.c:111 svnversion/main.c:182
+#: svnserve/main.c:112 svnversion/main.c:182
 msgid "show version information"
 msgstr "バージョン情報を表示します"
 
@@ -7868,7 +7871,7 @@ msgstr ""
 "\n"
 "利用可能なサブコマンド:\n"
 
-#: svnadmin/main.c:649 svnlook/main.c:1786 svnserve/main.c:158
+#: svnadmin/main.c:649 svnlook/main.c:1786 svnserve/main.c:159
 msgid ""
 "The following repository back-end (FS) modules are available:\n"
 "\n"
@@ -8627,13 +8630,13 @@ msgstr ""
 
 # * Description for 'svnserve --daemon'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:102
+#: svnserve/main.c:103
 msgid "daemon mode"
 msgstr "デーモンモード"
 
 # * Description for 'svnserve --listen-port'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:104
+#: svnserve/main.c:105
 msgid "listen port (for daemon mode)"
 msgstr ""
 "指定されたポート番号で待ち受けます (デーモンモー\n"
@@ -8641,7 +8644,7 @@ msgstr ""
 
 # * Description for 'svnserve --listen-host'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:106
+#: svnserve/main.c:107
 msgid "listen hostname or IP address (for daemon mode)"
 msgstr ""
 "指定されたホスト名または IP アドレスで待ち受けま\n"
@@ -8649,31 +8652,31 @@ msgstr ""
 
 # * Description for 'svnserve --foreground'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:108
+#: svnserve/main.c:109
 msgid "run in foreground (useful for debugging)"
 msgstr "フォアグラウンドで実行します (デバッグに便利です)"
 
 # * Description for 'svn{serve,version} --help'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:109 svnversion/main.c:181
+#: svnserve/main.c:110 svnversion/main.c:181
 msgid "display this help"
 msgstr "このヘルプを表示します"
 
 # * Description for 'svnserve --inetd'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:112
+#: svnserve/main.c:113
 msgid "inetd mode"
 msgstr "inetd モード"
 
 # * Description for 'svnserve --root'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:113
+#: svnserve/main.c:114
 msgid "root of directory to serve"
 msgstr "サービスを提供するディレクトリのルート"
 
 # * Description for 'svnserve --read-only'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:114
+#: svnserve/main.c:115
 msgid "deprecated; use repository config file"
 msgstr ""
 "推奨されません。リポジトリ内の設定ファイルを利用\n"
@@ -8681,13 +8684,13 @@ msgstr ""
 
 # * Description for 'svnserve --tunnel'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:115
+#: svnserve/main.c:116
 msgid "tunnel mode"
 msgstr "トンネルモード"
 
 # * Description for 'svnserve --tunnel-user'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:117
+#: svnserve/main.c:118
 msgid "tunnel username (default is current uid's name)"
 msgstr ""
 "トンネルモードでのユーザ名 (デフォルトは現在の\n"
@@ -8695,23 +8698,23 @@ msgstr ""
 
 # * Description for 'svnserve --threads'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:119
+#: svnserve/main.c:120
 msgid "use threads instead of fork"
 msgstr "fork の代わりにスレッドを用います"
 
 # * Description for 'svnserve --listen-once'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:121
+#: svnserve/main.c:122
 msgid "listen once (useful for debugging)"
 msgstr "一度だけ待ち受けます (デバッグに便利です)"
 
-#: svnserve/main.c:132
+#: svnserve/main.c:133
 #, c-format
 msgid "Type '%s --help' for usage.\n"
 msgstr "使用方法を知りたいときは '%s --help' と打ってください。\n"
 
 # * Description for svnserve.
-#: svnserve/main.c:141
+#: svnserve/main.c:142
 msgid ""
 "Usage: svnserve [options]\n"
 "\n"
@@ -8721,7 +8724,7 @@ msgstr ""
 "\n"
 "有効なオプション:\n"
 
-#: svnserve/main.c:359
+#: svnserve/main.c:360
 #, c-format
 msgid ""
 "Warning: -R is deprecated.\n"
@@ -8740,46 +8743,46 @@ msgstr ""
 "  auth-access = read|write|none (default write)\n"
 "今のところすべてのアクセスを強制的に読み取り専用としています\n"
 
-#: svnserve/main.c:379
+#: svnserve/main.c:380
 msgid "You must specify exactly one of -d, -i, -t or -X.\n"
 msgstr "-d, -i, -t, -X のいずれかを一つだけ指定しなければいけません。\n"
 
-#: svnserve/main.c:389
+#: svnserve/main.c:390
 #, c-format
 msgid "Option --tunnel-user is only valid in tunnel mode.\n"
 msgstr "オプション --tunnel-user はトンネルモードでのみ有効です。\n"
 
-#: svnserve/main.c:429
+#: svnserve/main.c:430
 #, c-format
 msgid "Can't get address info: %s\n"
 msgstr "アドレス情報を取得できません: %s\n"
 
-#: svnserve/main.c:446
+#: svnserve/main.c:447
 #, c-format
 msgid "Can't create server socket: %s\n"
 msgstr "サーバソケットを作成できません: %s\n"
 
-#: svnserve/main.c:460
+#: svnserve/main.c:461
 #, c-format
 msgid "Can't bind server socket: %s\n"
 msgstr "サーバソケットをバインドできません: %s\n"
 
-#: svnserve/main.c:503
+#: svnserve/main.c:504
 #, c-format
 msgid "Can't accept client connection: %s\n"
 msgstr "クライアントの接続を受け入れることができません: %s\n"
 
-#: svnserve/main.c:558
+#: svnserve/main.c:559
 #, c-format
 msgid "Can't create threadattr: %s\n"
 msgstr "スレッド属性を作成できません: %s\n"
 
-#: svnserve/main.c:567
+#: svnserve/main.c:568
 #, c-format
 msgid "Can't set detached state: %s\n"
 msgstr "独立した状態を設定できません: '%s'\n"
 
-#: svnserve/main.c:581
+#: svnserve/main.c:582
 #, c-format
 msgid "Can't create thread: %s\n"
 msgstr "スレッドを作成できません: %s\n"
