@@ -20,10 +20,7 @@ class Generator(generator.swig.Generator):
     generator.swig.Generator.__init__(self, conf, swig_path)
 
     # Build list of header files
-    self.header_files = []
-    for include_dir in string.split(self.include_dirs):
-      hdrs = glob.glob(os.path.join(native_path(include_dir), "*.h"))
-      self.header_files.extend(hdrs)
+    self.header_files = map(native_path, self.includes)
     self.header_basenames = map(os.path.basename, self.header_files)
 
   # Ignore svn_md5.h because SWIG can't parse it
