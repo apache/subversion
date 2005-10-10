@@ -71,8 +71,6 @@ class GeneratorBase:
     self.bdb_scripts = \
         _collect_paths(parser.get('options', 'bdb-test-scripts'))
 
-    self.include_dirs = parser.get('options','include-dirs')
-    self.swig_include_dirs = parser.get('options','swig-include-dirs')
     self.include_wildcards = \
       string.split(parser.get('options', 'include-wildcards'))
     self.swig_lang = string.split(parser.get('options', 'swig-languages'))

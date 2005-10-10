@@ -3,8 +3,8 @@
 #
 
 import shutil, ConfigParser, re, os
-import generator.util.executable
-_exec = generator.util.executable
+import generator.util.executable as _exec
+from generator.gen_base import _collect_paths
 
 class Generator:
   """Base class for SWIG-related generators"""
@@ -20,8 +20,8 @@ class Generator:
 
     # Read configuration options
     self.proxy_dir = parser.get('options', 'swig-proxy-dir')
-    self.include_dirs = parser.get('options','include-dirs')
-    self.swig_include_dirs = parser.get('options','swig-include-dirs')
+    self.includes = \
+        _collect_paths(parser.get('options', 'includes'))
 
     # Calculate build options
     self.opts = {}
