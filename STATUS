@@ -47,14 +47,14 @@ Candidate changes:
     Votes:
       +1: lundblad, kfogel
 
-  * r16649
+  * r16649, r16652
     Fix Python bindings wrapping of svn_opt_revision_t (and other union-
     having structures).
     Justification:
       Regression that, among other things, makes ViewCVS's 'svn_ra'
       module completely crippled.
     Votes:
-      +1: cmpilato
+      +1: cmpilato (not r16652)
   
 Approved changes:
 
