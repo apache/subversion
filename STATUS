@@ -44,8 +44,8 @@ Candidate changes:
       Makes svn info fail with "not found" when it shouldn't; causes
       problems for tortoisesvn and returns wrong information.
       (It may also eat your dog...)
-      Votes:
-        +1: lundblad, kfogel
+    Votes:
+      +1: lundblad, kfogel
     
   
 Approved changes:
