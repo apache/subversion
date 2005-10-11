@@ -38,15 +38,6 @@ Candidate changes:
     Votes:
       +1: maxb
 
-  * r16626
-    Fix svn info fetching locks for wrong path sometimes.
-    Justification:
-      Makes svn info fail with "not found" when it shouldn't; causes
-      problems for tortoisesvn and returns wrong information.
-      (It may also eat your dog...)
-    Votes:
-      +1: lundblad, kfogel, dlr
-
   * r16649, r16652
     Fix Python bindings wrapping of svn_opt_revision_t (and other union-
     having structures).
