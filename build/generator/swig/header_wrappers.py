@@ -103,10 +103,12 @@ class Generator(generator.swig.Generator):
   _re_includes = re.compile(r'#\s*include\s*[<"]([^<">;\s]+)')
 
   """Regular expression for parsing structs from a C header file"""
-  _re_structs = re.compile(r'\btypedef\s+struct\s+(svn_[a-z_0-9]+_t)\b\s*(\{?)')
+  _re_structs = re.compile(r'\btypedef\s+(?:struct|union)\s+'
+                           r'(svn_[a-z_0-9]+)\b\s*(\{?)')
 
   """Regular expression for parsing callbacks from a C header file"""
-  _re_callbacks = re.compile(r'\btypedef\s+struct\s+(svn_[a-z_0-9]+_t)\b|'
+  _re_callbacks = re.compile(r'\btypedef\s+(?:struct|union)\s+'
+                             r'(svn_[a-z_0-9]+)\b|'
                              r'\n\s*svn_error_t\s*\*\(\*(\w+)\)\s*\(([^)]+)\);')
 
   """Regular expression for parsing parameter names from a parameter list"""

@@ -201,15 +201,20 @@ enum svn_opt_revision_kind {
   svn_opt_revision_head
 };
 
+/**
+ * A revision value, which can be stored in one of @c svn_opt_revision_kind
+ * ways. 
+ */
+typedef union svn_opt_revision_value {
+  svn_revnum_t number;
+  apr_time_t date;
+} svn_opt_revision_value;
 
 /** A revision, specified in one of @c svn_opt_revision_kind ways. */
 typedef struct svn_opt_revision_t
 {
   enum svn_opt_revision_kind kind;  /**< See svn_opt_revision_kind */
-  union {
-    svn_revnum_t number;
-    apr_time_t date;
-  } value;                          /**< Extra data qualifying the @c kind */
+  svn_opt_revision_value value;     /**< Extra data qualifying the @c kind */
 } svn_opt_revision_t;
 
 
