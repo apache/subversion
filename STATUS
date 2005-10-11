@@ -45,7 +45,7 @@ Candidate changes:
       problems for tortoisesvn and returns wrong information.
       (It may also eat your dog...)
     Votes:
-      +1: lundblad, kfogel
+      +1: lundblad, kfogel, dlr
 
   * r16649, r16652
     Fix Python bindings wrapping of svn_opt_revision_t (and other union-
