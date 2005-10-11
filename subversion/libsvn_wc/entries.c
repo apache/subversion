@@ -1745,7 +1745,7 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
 svn_wc_entry_t *
 svn_wc_entry_dup (const svn_wc_entry_t *entry, apr_pool_t *pool)
 {
-  svn_wc_entry_t *dupentry = apr_pcalloc (pool, sizeof(*dupentry));
+  svn_wc_entry_t *dupentry = apr_palloc (pool, sizeof (*dupentry));
 
   /* Perform a trivial copy ... */
   *dupentry = *entry;
