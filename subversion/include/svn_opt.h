@@ -203,7 +203,11 @@ enum svn_opt_revision_kind {
 
 /**
  * A revision value, which can be specified as a number or a date.
- * @note This union should only be used in a @c svn_opt_revision_t struct.
+ *
+ * @note This union was formerly an anonymous inline type in
+ * @c svn_opt_revision_t, and was converted to a named type just to
+ * make things easier for SWIG.
+ *
  * @since New in 1.3.
  */
 typedef union svn_opt_revision_value
