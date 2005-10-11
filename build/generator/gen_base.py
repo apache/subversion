@@ -62,8 +62,10 @@ class GeneratorBase:
     # Read in the global options
     self.includes = \
         _collect_paths(parser.get('options', 'includes'))
-    self.swig_includes = \
-        _collect_paths(parser.get('options', 'swig-includes'))
+    self.private_includes = \
+        _collect_paths(parser.get('options', 'private-includes'))
+    self.private_built_includes = \
+        string.split(parser.get('options', 'private-built-includes'))
     self.apache_files = \
         _collect_paths(parser.get('options', 'static-apache-files'))
     self.scripts = \
@@ -140,7 +142,7 @@ class GeneratorBase:
 
   def compute_hdrs(self):
     """Get a list of the header files"""
-    all_includes = map(native_path, self.includes + self.swig_includes)
+    all_includes = map(native_path, self.includes + self.private_includes)
     for d in unique(self.target_dirs):
       for wildcard in self.include_wildcards:
         hdrs = glob.glob(os.path.join(native_path(d), wildcard))
@@ -150,7 +152,8 @@ class GeneratorBase:
   def compute_hdr_deps(self):
     """Compute the dependencies of each header file"""
 
-    include_deps = IncludeDependencyInfo(self.compute_hdrs())
+    include_deps = IncludeDependencyInfo(self.compute_hdrs(),
+        map(native_path, self.private_built_includes))
 
     for objectfile, sources in self.graph.get_deps(DT_OBJECT):
       assert len(sources) == 1
@@ -846,18 +849,25 @@ class IncludeDependencyInfo:
 
   This class works exclusively in native-style paths."""
 
-  def __init__(self, filenames):
-    """Scan all files in FILENAMES, which should be a sequence of paths to
-    all header files that this IncludeDependencyInfo instance should
-    consider as interesting when following and reporting dependencies - i.e.
-    all the Subversion header files, no system header files."""
+  def __init__(self, filenames, fnames_nonexist):
+    """FILENAMES and FNAMES_NONEXIST together, which should be sequences of
+    paths to header files, define the headers that this IncludeDependencyInfo
+    instance should consider as interesting when following and reporting
+    dependencies - i.e.  all the Subversion header files, no system header
+    files.  FILENAMES are those includes that exist, and are to be scanned to
+    gather dependency info.  FNAMES_NONEXIST are those includes which will be
+    created as part of the build process, so cannot be scanned now - 
+    dependencies on these files will be reported, and they are assumed to not
+    depend themselves on any further interesting includes.
+    In addition to these two parameters, special handling for SWIG proxy
+    includes is hardcoded."""
     
     # This defines the domain (i.e. set of files) in which dependencies are
     # being located. Its structure is:
     # { 'basename.h': [ 'path/to/something/named/basename.h',
     #                   'path/to/another/named/basename.h', ] }
     self._domain = {}
-    for fname in filenames:
+    for fname in filenames + fnames_nonexist:
       bname = os.path.basename(fname)
       if not self._domain.has_key(bname):
         self._domain[bname] = []
@@ -868,6 +878,8 @@ class IncludeDependencyInfo:
     self._deps = {}
     for fname in filenames:
       self._deps[fname] = self._scan_for_includes(fname)
+    for fname in fnames_nonexist:
+      self._deps[fname] = {}
 
     # Keep recomputing closures until we see no more changes
     while 1:
@@ -927,11 +939,6 @@ class IncludeDependencyInfo:
     Return a dictionary with included full file names as keys and None as
     values."""
     hdrs = { }
-    if fname.endswith('_external_runtime.swg'):
-      # These files exist only if running in a previously built tree.
-      # Never scan them, so that the behaviour is the same in all
-      # circumstances.
-      return hdrs
     for line in fileinput.input(fname):
       match = self._re_include.match(line)
       if not match:
