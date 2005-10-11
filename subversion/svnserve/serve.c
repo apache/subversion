@@ -1978,7 +1978,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
   url_buf = svn_stringbuf_create(url, pool);
   svn_path_remove_components(url_buf, svn_path_component_count(b->fs_path));
   b->repos_url = url_buf->data;
-  b->authz_repos_name = svn_path_basename(repos_root, pool);
+  b->authz_repos_name = svn_path_is_child(root, repos_root, pool);
 
   /* Read repository configuration. */
   SVN_ERR(svn_config_read(&b->cfg, svn_repos_svnserve_conf(b->repos, pool),
