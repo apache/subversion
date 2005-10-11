@@ -56,15 +56,14 @@ Candidate changes:
     Votes:
       +1: cmpilato (not r16652), dlr
 
+Approved changes:
+
   * r16656
     Fix an aliasing bug in authz with svnserve, by letting repository
     names include any number of directories.
     Justification:
       Aliasing is bad, and can lead to unwittingly opening security
       holes. Discussed in
-      http://svn.haxx.se/dev/archive-2005-10/0415.shtml .
+      <http://svn.haxx.se/dev/archive-2005-10/0415.shtml>.
     Votes:
-      +1: danderson, lundblad
-
-Approved changes:
-
+      +1: danderson, lundblad, dlr
