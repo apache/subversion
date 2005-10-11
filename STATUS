@@ -54,7 +54,7 @@ Candidate changes:
       Regression that, among other things, makes ViewCVS's 'svn_ra'
       module completely crippled.
     Votes:
-      +1: cmpilato (not r16652)
+      +1: cmpilato (not r16652), dlr
   
 Approved changes:
 
