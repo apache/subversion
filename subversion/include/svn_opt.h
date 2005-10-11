@@ -202,10 +202,12 @@ enum svn_opt_revision_kind {
 };
 
 /**
- * A revision value, which can be stored in one of @c svn_opt_revision_kind
- * ways. 
+ * A revision value, which can be specified as a number or a date.
+ * @note This union should only be used in a @c svn_opt_revision_t struct.
+ * @since New in 1.3.
  */
-typedef union svn_opt_revision_value {
+typedef union svn_opt_revision_value
+{
   svn_revnum_t number;
   apr_time_t date;
 } svn_opt_revision_value;
