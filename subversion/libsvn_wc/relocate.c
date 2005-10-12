@@ -153,7 +153,9 @@ svn_wc_relocate (const char *path,
       if (strcmp (key, SVN_WC_ENTRY_THIS_DIR) == 0)
         continue;
 
-      if (recurse && (entry->kind == svn_node_dir))
+      if (recurse && (entry->kind == svn_node_dir)
+          && (! entry->deleted || (entry->schedule == svn_wc_schedule_add))
+          && ! entry->absent)
         {
           svn_wc_adm_access_t *subdir_access;
           const char *subdir = svn_path_join (path, key, pool);
