@@ -144,6 +144,11 @@ href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=105810"
        and repository states.</p>
    </li>
 
+   <li><p>'svnlook&nbsp;changed' now takes a <tt>--copy-info</tt>
+       option, causing it to show copyfrom information in the same
+       format as 'svn&nbsp;log&nbsp;-v', for files added with
+       history.</p></li>
+
    <li><p>The usual slew of bugfixes and improved APIs.  See the
        <a href="http://svn.collab.net/repos/svn/trunk/CHANGES"
        >CHANGES</a> file for details.</p>
@@ -211,15 +216,15 @@ made to the output:</p>
 
 <ul>
 
-<li><p><tt>svnlook&nbsp;diff</tt> always diffs added files by default now,
-    and the new <tt>--diff-copy-from</tt> option causes those diffs
+<li><p>'svnlook&nbsp;diff' always diffs added files by default now,
+    and the new '--diff-copy-from' option causes those diffs
     to be against the copyfrom source instead of against an empty
-    file (for consistency with <tt>svn&nbsp;diff</tt>).  Also, when
+    file (for consistency with 'svn&nbsp;diff').  Also, when
     diffing against the empty file, the diff headers now say
     "revision&nbsp;0" instead of the copyfrom revision (again for
-    consistency with <tt>svn&nbsp;diff</tt>).</p></li>
+    consistency with 'svn&nbsp;diff').</p></li>
 
-<li><p><tt>svn&nbsp;diff</tt> output is now in native encoding,
+<li><p>'svn&nbsp;diff' output is now in native encoding,
     instead of in UTF8.</p></li>
 
 <li><p>Merge conflict markers are now in the encoding of the user's
