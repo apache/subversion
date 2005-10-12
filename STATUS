@@ -38,16 +38,6 @@ Candidate changes:
     Votes:
       +1: maxb, djames
 
-  * r16649, r16652, r16655, r16664
-    Fix Python bindings wrapping of svn_opt_revision_t (and other union-
-    having structures).
-    Justification:
-      Regression that, among other things, makes ViewCVS's 'svn_ra'
-      module completely crippled.
-    Votes:
-      +1: cmpilato, djames, dlr (r16649 and r16652 only),
-          kfogel, lundblad (core changes only, not r16655),
-
   * r16673
     Fix a bug whereby "switch --relocate" failed on a deleted directory
     whose parent was not up to date.
@@ -57,3 +47,13 @@ Candidate changes:
       +1: julianfoad, dlr
 
 Approved changes:
+
+  * r16649, r16652, r16655, r16664
+    Fix Python bindings wrapping of svn_opt_revision_t (and other union-
+    having structures).
+    Justification:
+      Regression that, among other things, makes ViewCVS's 'svn_ra'
+      module completely crippled.
+    Votes:
+      +1: cmpilato, djames, dlr, kfogel,
+          lundblad (core changes only, not r16655),
