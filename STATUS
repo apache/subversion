@@ -46,6 +46,6 @@ Candidate changes:
       module completely crippled.
     Votes:
       +1: cmpilato, djames, dlr (r16649 and r16652 only),
-          kfogel (not r16655), lundblad (core changes only, not r16655),
+          kfogel, lundblad (core changes only, not r16655),
 
 Approved changes:
