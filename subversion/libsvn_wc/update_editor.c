@@ -3066,16 +3066,25 @@ svn_wc_add_repos_file2 (const char *dst_path,
 
       /* Translate/rename new temporary text file to working text. */
       if (svn_wc__has_special_property (new_base_props))
-        svn_xml_make_open_tag (&log_accum, pool,
-                               svn_xml_self_closing,
-                               SVN_WC__LOG_CP_AND_TRANSLATE,
-                               SVN_WC__LOG_ATTR_NAME,
-                               tmp_text_path + adm_path_len,
-                               SVN_WC__LOG_ATTR_DEST,
-                               base_name,
-                               SVN_WC__LOG_ATTR_ARG_1,
-                               "true",
-                               NULL);
+        {
+          svn_xml_make_open_tag (&log_accum, pool,
+                                 svn_xml_self_closing,
+                                 SVN_WC__LOG_CP_AND_TRANSLATE,
+                                 SVN_WC__LOG_ATTR_NAME,
+                                 tmp_text_path + adm_path_len,
+                                 SVN_WC__LOG_ATTR_DEST,
+                                 base_name,
+                                 SVN_WC__LOG_ATTR_ARG_1,
+                                 "true",
+                                 NULL);
+          /* Remove the copy-source, making it look like a move */
+          svn_xml_make_open_tag (&log_accum, pool,
+                                 svn_xml_self_closing,
+                                 SVN_WC__LOG_RM,
+                                 SVN_WC__LOG_ATTR_NAME,
+                                 tmp_text_path + adm_path_len,
+                                 NULL);
+        }
       else
         svn_xml_make_open_tag (&log_accum, pool,
                                svn_xml_self_closing,
