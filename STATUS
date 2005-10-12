@@ -38,14 +38,6 @@ Candidate changes:
     Votes:
       +1: maxb, djames
 
-  * r16673
-    Fix a bug whereby "switch --relocate" failed on a deleted directory
-    whose parent was not up to date.
-    Justification:
-      Simple fix.
-    Votes:
-      +1: julianfoad, dlr, kfogel
-
 Approved changes:
 
   * r16649, r16652, r16655, r16664
