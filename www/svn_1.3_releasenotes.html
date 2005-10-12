@@ -68,11 +68,6 @@ Subversion book, see
        <p class="todo"><i>TODO: Fix <a 
          href="http://svn.haxx.se/dev/archive-2005-09/1047.shtml">test suite
          crashes on Windows</a>.</i></p>
-    
-       <p class="todo"><i>TODO: Upgrade server-side python scripts to use
-         new automatic memory management API. See <a
-         href="http://svn.haxx.se/dev/archive-2005-09/0821.shtml"
-         >patch</a>.</i></p>
    </li>
 
    <li><p>The Apache HTTPD-based server (mod_dav_svn) can now log
@@ -135,12 +130,6 @@ Subversion book, see
        platform-indepndent.  See <a
 href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=105810"
        >this mail</a> and its thread for more details.</p>
-
-       <p class="todo"><i>TODO: The Python bindings have been updated
-       to pay attention to SVN_ASP_DOT_NET_HACK on Windows (in
-       r16432, and r16444 ported the change to the 1.3.x line).  But
-       the other bindings have not been so updated (nor has Cygwin on
-       the the 1.3 branch); they eventually will be.</i></p>
    </li>
 
    <li><p>The APIs used by 'status --show-updates' now make URI,
@@ -221,8 +210,22 @@ exact format of the output.  In 1.3, the following changes have been
 made to the output:</p>
 
 <ul>
-<li><p class="todo"><i>TODO: I don't think we actually have any this
-    time, do we?</i></p></li>
+
+<li><p><tt>svnlook&nbsp;diff</tt> always diffs added files by default now,
+    and the new <tt>--diff-copy-from</tt> option causes those diffs
+    to be against the copyfrom source instead of against an empty
+    file (for consistency with <tt>svn&nbsp;diff</tt>).  Also, when
+    diffing against the empty file, the diff headers now say
+    "revision&nbsp;0" instead of the copyfrom revision (again for
+    consistency with <tt>svn&nbsp;diff</tt>).</p></li>
+
+<li><p><tt>svn&nbsp;diff</tt> output is now in native encoding,
+    instead of in UTF8.</p></li>
+
+<li><p>Merge conflict markers are now in the encoding of the user's
+    locale.  (Not exactly a command line output change, but near
+    enough).</p></li>
+
 </ul>
 
 </div>
@@ -253,16 +256,14 @@ above may be of concern to you.</p>
 </div>
 
 <div class="h2" id="svn-1.1-deprecation" title="svn-1.1-deprecation">
-<h2>Deprecation of 1.1.x Series</h2>
-
-<p class="todo"><i>TODO: We need to decide whether we want to do this.</i></p>
+<h2>Subversion 1.1.x series no longer supported</h2>
 
 <p>The Subversion 1.1.x line is no longer supported.  This doesn't
 mean that your 1.1 installation is doomed; if it works well and is all
 you need, that's fine.  "No longer supported" just means we've stopped
 accepting bug reports against 1.1.x versions, and will not make any
-more 1.1.x bugfix releases (except perhaps for a critical security or
-data-loss bug.)</p>
+more 1.1.x bugfix releases, except perhaps for a critical security or
+data-loss bug.</p>
 
 </div>
 
