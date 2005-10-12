@@ -305,7 +305,16 @@ to ask for review on the developer mailing list.</p>
 </li>
 <li><p><tt>tools/</tt><br />
     Stuff that works with Subversion, but that Subversion doesn't
-    depend on.</p>
+    depend on.  Code in tools/ is maintained collectively by the
+    Subversion project, and is under the same open source copyright as
+    Subversion itself.</p>
+</li>
+<li><p><tt>contrib/</tt><br />
+    Stuff that works with Subversion, but that Subversion doesn't
+    depend on, and that is maintained by individuals who may or may
+    not participate in Subversion development.  Code in contrib/ is
+    open source, but may have a different license or copyright holder
+    than Subversion itself.</p>
 </li>
 <li><p><tt>packages/</tt><br />
     Stuff to help packaging systems, like rpm and dpkg.</p>
@@ -1804,6 +1813,22 @@ log message, like so:</p>
 <pre>
    Approved by: lundblad
 </pre>
+
+</div>
+
+<div class="h3" id="contrib-area" title="contrib-area">
+<h3>The contrib/ area</h3>
+
+<p>When a tool is accepted into the <i>contrib/</i> area, we
+automatically offer its author partial commit access to maintain the
+tool there.  Any full committer can sponsor this.  Usually no
+discussion or vote is necessary, though if there are objections then
+the usual decision-making procedures apply (attempt to reach consensus
+first, then vote among the full committers if consensus cannot be
+reached).</p>
+
+<p>Code under contrib/ must be open source, but need not have the same
+license or copyright holder as Subversion itself.</p>
 
 </div>
 
