@@ -1,0 +1,9 @@
+This directory contains code that works with Subversion but that
+Subversion doesn't depend on, and that is maintained by various
+individuals who may or may not participate in Subversion development.
+Code in contrib/ is open source, but may have a different license or
+copyright holder than Subversion itself.  The Subversion project does
+not maintain these programs, but merely distributes them for our
+users' convenience.
+
+See also ../tools/.
