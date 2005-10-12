@@ -6,4 +6,7 @@ copyright holder than Subversion itself.  The Subversion project does
 not maintain these programs, but merely distributes them for our
 users' convenience.
 
+See http://subversion.tigris.org/hacking.html#contrib-area for the
+process by which new stuff gets added here.
+
 See also ../tools/.
