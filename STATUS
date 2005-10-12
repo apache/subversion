@@ -36,16 +36,17 @@ Candidate changes:
     Justification:
       Caused Ruby bindings regression with swig 1.3.24.
     Votes:
-      +1: maxb
+      +1: maxb, djames
 
-  * r16649, r16652, r16664
+  * r16649, r16652, r16655, r16664
     Fix Python bindings wrapping of svn_opt_revision_t (and other union-
     having structures).
     Justification:
       Regression that, among other things, makes ViewCVS's 'svn_ra'
       module completely crippled.
     Votes:
-      +1: cmpilato (r16649 only), dlr (not r16664), kfogel, lundblad (core
-          changes only)
+      +1: cmpilato (r16649 only), dlr (r16649 and r16652 only), 
+          kfogel (not r16655), lundblad (core changes only, not r16655),
+          djames
 
 Approved changes:
