@@ -45,6 +45,7 @@ Blanket commit access:
        dberlin   Daniel Berlin <dberlin@dberlin.org>
      danderson   David Anderson <david.anderson@calixo.net>
         zhakov   Ivan Zhakov <chemodax@gmail.com>
+        djames   David James <james@cs.toronto.edu>
 
 Commit access for specific areas:
 
@@ -54,7 +55,6 @@ Commit access for specific areas:
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
            kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)
-        djames   David James <james@cs.toronto.edu>          (bindings, build)
 
   Packages:
 
