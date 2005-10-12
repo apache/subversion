@@ -57,13 +57,3 @@ Approved changes:
     Votes:
       +1: cmpilato, djames, dlr, kfogel,
           lundblad (core changes only, not r16655),
-
-  * r16328
-    Add a --copy-info option to 'svnlook changed' that prints the
-    copyfrom path/rev for paths added with history.
-    Justification:
-      Simple change which missed the branching for 1.3.0 by three
-      revs, nice feature to help hook scripts enforce
-      branching/tagging policies.
-    Votes:
-      +1: danderson, lundblad, kfogel

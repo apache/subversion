@@ -319,6 +319,50 @@ text
   if errput:
     raise svntest.Failure
 
+def changed_copy_info(sbox):
+  "test --copy-info flag on the changed command"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  # Copy alpha to /A/alpha2.
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
+  alpha2_path = os.path.join(wc_dir, 'A', 'alpha2')
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', alpha_path,
+                                     alpha2_path)
+
+  # commit
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/alpha2' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/alpha2'      : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None,
+                                         None, None,
+                                         None, None,
+                                         wc_dir)
+
+  output, errput = svntest.main.run_svnlook("changed", repo_dir)
+  if errput:
+    raise svntest.Failure
+
+  expect("changed without --copy-info", ["A   A/alpha2\n"], output)
+
+  output, errput = svntest.main.run_svnlook("changed", repo_dir, "--copy-info")
+  if errput:
+    raise svntest.Failure
+
+  expect("changed with --copy-info",
+         ["A + A/alpha2\n",
+          "    (from A/B/E/alpha:r1)\n"],
+          output)
+
 
 ########################################################################
 # Run the tests
@@ -330,6 +374,7 @@ test_list = [ None,
               delete_file_in_moved_dir,
               test_print_property_diffs,
               info_bad_newlines,
+              changed_copy_info,
              ]
 
 if __name__ == '__main__':
