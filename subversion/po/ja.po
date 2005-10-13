@@ -143,8 +143,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-10-11 02:21+0900\n"
-"PO-Revision-Date: 2005-10-11 02:19+0900\n"
+"POT-Creation-Date: 2005-10-13 21:52+0900\n"
+"PO-Revision-Date: 2005-10-13 21:51+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2146,7 +2146,7 @@ msgstr "標準入力を開けません"
 msgid "Can't read stdin"
 msgstr "標準入力を読めません"
 
-#: clients/cmdline/prompt.c:153 libsvn_ra_svn/client.c:330
+#: clients/cmdline/prompt.c:153 libsvn_ra_svn/client.c:333
 #, c-format
 msgid "Can't get password"
 msgstr "パスワードを取得できません"
@@ -3402,8 +3402,8 @@ msgstr ""
 
 #: libsvn_client/commit_util.c:683 libsvn_client/commit_util.c:813
 #: libsvn_client/copy.c:1072 libsvn_client/delete.c:67
-#: libsvn_client/diff.c:1394 libsvn_client/diff.c:2130
-#: libsvn_client/diff.c:2795 libsvn_client/diff.c:2904
+#: libsvn_client/diff.c:1394 libsvn_client/diff.c:2129
+#: libsvn_client/diff.c:2792 libsvn_client/diff.c:2901
 #: libsvn_client/locking_commands.c:250 libsvn_client/locking_commands.c:274
 #: libsvn_client/log.c:129 libsvn_client/prop_commands.c:213
 #: libsvn_client/prop_commands.c:446 libsvn_client/prop_commands.c:602
@@ -3626,7 +3626,7 @@ msgstr ".merge-left.r%ld"
 msgid ".merge-right.r%ld"
 msgstr ".merge-right.r%ld"
 
-#: libsvn_client/diff.c:1473 libsvn_client/diff.c:1677
+#: libsvn_client/diff.c:1473 libsvn_client/diff.c:1676
 msgid "Not all required revisions are specified"
 msgstr "必要なリビジョンがすべては指定されていません"
 
@@ -3637,18 +3637,18 @@ msgstr ""
 "pegged diff を使う場合、少なくとも一方のリビジョンはローカルにあってはいけま"
 "せん"
 
-#: libsvn_client/diff.c:1610 libsvn_client/diff.c:1615
+#: libsvn_client/diff.c:1597 libsvn_client/diff.c:1609
 #, c-format
 msgid "'%s' was not found in the repository at revision %ld"
 msgstr "'%s' は、リポジトリのリビジョン %ld には見つかりませんでした"
 
-#: libsvn_client/diff.c:1948
+#: libsvn_client/diff.c:1949
 msgid "Sorry, svn_client_diff3 was called in a way that is not yet supported"
 msgstr ""
 "すみません。まだサポートされていないやり方で svn_client_diff3 が呼び出されま"
 "した"
 
-#: libsvn_client/diff.c:1987
+#: libsvn_client/diff.c:1988
 msgid ""
 "Only diffs between a path's text-base and its working files are supported at "
 "this time"
@@ -3656,19 +3656,19 @@ msgstr ""
 "今のところ、パスのテキストベースと作業ファイルの差分しかサポートされていませ"
 "ん"
 
-#: libsvn_client/diff.c:2134 libsvn_client/switch.c:108
+#: libsvn_client/diff.c:2133 libsvn_client/switch.c:108
 #, c-format
 msgid "Directory '%s' has no URL"
 msgstr "ディレクトリ '%s' に URL はありません"
 
-#: libsvn_client/diff.c:2372
+#: libsvn_client/diff.c:2369
 msgid "Summarizing diff can only compare repository to repository"
 msgstr "差分の要約はリポジトリとリポジトリとの比較にしか使えません"
 
-#: libsvn_client/diff.c:2768 libsvn_client/diff.c:2774
-#: libsvn_client/diff.c:2889 libsvn_client/locking_commands.c:254
+#: libsvn_client/diff.c:2765 libsvn_client/diff.c:2771
+#: libsvn_client/diff.c:2886 libsvn_client/locking_commands.c:254
 #: libsvn_client/locking_commands.c:278 libsvn_client/ra.c:372
-#: libsvn_client/ra.c:733 libsvn_client/ra.c:869
+#: libsvn_client/ra.c:738 libsvn_client/ra.c:875
 #, c-format
 msgid "'%s' has no URL"
 msgstr "'%s' に URL がありません"
@@ -3705,7 +3705,7 @@ msgstr "'%s' のチェックサムが一致しませんでした。予想: '%s',
 msgid "Cannot read entry for '%s'"
 msgstr "'%s' のエントリが読み込めません"
 
-#: libsvn_client/info.c:366 libsvn_client/info.c:391 libsvn_client/info.c:401
+#: libsvn_client/info.c:368 libsvn_client/info.c:393 libsvn_client/info.c:403
 #, c-format
 msgid "URL '%s' non-existent in revision '%ld'"
 msgstr "URL '%s' は、リビジョン '%ld' には存在しません"
@@ -3729,7 +3729,7 @@ msgid "'%s' is not locked"
 msgstr "'%s' はロックされていません"
 
 #: libsvn_client/locking_commands.c:427 libsvn_fs/fs-loader.c:895
-#: libsvn_ra/ra_loader.c:571
+#: libsvn_ra/ra_loader.c:589
 msgid "Lock comment has illegal characters"
 msgstr "ロックについてのコメントに不正な文字が含まれています"
 
@@ -3803,7 +3803,7 @@ msgstr "'%s' (リビジョン %ld) にはパス変更情報がありません"
 msgid "path '%s' doesn't exist in revision %ld"
 msgstr "パス '%s' はリビジョン %ld に存在しません"
 
-#: libsvn_client/ra.c:660 libsvn_client/ra.c:817
+#: libsvn_client/ra.c:660 libsvn_client/ra.c:823
 #, c-format
 msgid "Unable to find repository location for '%s' in revision %ld"
 msgstr "'%s' (リビジョン %ld) のリポジトリの位置が見つかりません"
@@ -3813,7 +3813,7 @@ msgstr "'%s' (リビジョン %ld) のリポジトリの位置が見つかりま
 msgid "'%s' in revision %ld is an unrelated object"
 msgstr "'%s' (リビジョン %ld) は無関係のオブジェクトです"
 
-#: libsvn_client/ra.c:822
+#: libsvn_client/ra.c:828
 #, c-format
 msgid ""
 "The location for '%s' for revision %ld does not exist in the repository or "
@@ -3908,8 +3908,8 @@ msgstr "%s\\ ファイルの末尾に改行がありません%s"
 msgid "Failed to delete mmap '%s'"
 msgstr "メモリへのマップ '%s' を削除できませんでした"
 
-#: libsvn_fs/fs-loader.c:105 libsvn_ra/ra_loader.c:157
-#: libsvn_ra/ra_loader.c:170
+#: libsvn_fs/fs-loader.c:105 libsvn_ra/ra_loader.c:158
+#: libsvn_ra/ra_loader.c:171
 #, c-format
 msgid "'%s' does not define '%s()'"
 msgstr "'%s' は '%s()' を定義しません"
@@ -4897,23 +4897,28 @@ msgstr "パス '%s' は HEAD リビジョンに存在しません"
 msgid "Lock failed: newer version of '%s' exists"
 msgstr "ロックが失敗しました: '%s' の新しいバージョンが存在します"
 
-#: libsvn_ra/ra_loader.c:212
+#: libsvn_ra/ra_loader.c:213
 #, c-format
 msgid "Mismatched RA version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
 msgstr ""
 "'%s' 用 RA のバージョンが一致しません: 実際 %d.%d.%d%s, 予想 %d.%d.%d%s"
 
-#: libsvn_ra/ra_loader.c:284
+#: libsvn_ra/ra_loader.c:285
 #, c-format
 msgid "Unrecognized URL scheme for '%s'"
 msgstr "'%s' 用の URL スキームを認識できません"
 
-#: libsvn_ra/ra_loader.c:641
+#: libsvn_ra/ra_loader.c:336
+#, c-format
+msgid "'%s' isn't in the same repository as '%s'"
+msgstr "'%s' は '%s' と同じリポジトリにありません"
+
+#: libsvn_ra/ra_loader.c:659
 #, c-format
 msgid "  - handles '%s' scheme\n"
 msgstr "  - '%s' スキームを操作します\n"
 
-#: libsvn_ra/ra_loader.c:727
+#: libsvn_ra/ra_loader.c:745
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
 msgstr "URL スキーム '%s' を認識できません"
@@ -4990,7 +4995,7 @@ msgstr "'%s' に対する GET リクエストが失敗しました"
 msgid "Could not save file"
 msgstr "ファイルを保存できませんでした"
 
-#: libsvn_ra_dav/fetch.c:898 libsvn_ra_svn/client.c:932
+#: libsvn_ra_dav/fetch.c:898 libsvn_ra_svn/client.c:997
 #, c-format
 msgid ""
 "Checksum mismatch for '%s':\n"
@@ -5013,8 +5018,8 @@ msgstr "dated-rev リクエストへのサーバのレスポンスが不正で�
 msgid "'get-locations' REPORT not implemented"
 msgstr "'get-locations' REPORT は実装されていません"
 
-#: libsvn_ra_dav/fetch.c:1482 libsvn_ra_dav/session.c:1153
-#: libsvn_ra_dav/session.c:1439
+#: libsvn_ra_dav/fetch.c:1482 libsvn_ra_dav/session.c:1176
+#: libsvn_ra_dav/session.c:1462
 msgid "Incomplete lock data returned"
 msgstr "不完全なロックデータが返されました"
 
@@ -5174,53 +5179,53 @@ msgstr "不正な設定です: デバッグマスクの値が不正な文字で�
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
 msgstr "WebDAV (DeltaV) プロトコルを使ってリポジトリにアクセスするモジュール。"
 
-#: libsvn_ra_dav/session.c:613
+#: libsvn_ra_dav/session.c:598
 msgid "Malformed URL for repository"
 msgstr "リポジトリの URL が不正です"
 
-#: libsvn_ra_dav/session.c:621
+#: libsvn_ra_dav/session.c:633
 msgid "Network socket initialization failed"
 msgstr "ネットワークソケットを初期化できませんでした"
 
-#: libsvn_ra_dav/session.c:638
+#: libsvn_ra_dav/session.c:650
 msgid "SSL is not supported"
 msgstr "SSL はサポートされていません"
 
-#: libsvn_ra_dav/session.c:784
+#: libsvn_ra_dav/session.c:792
 #, c-format
 msgid "Invalid config: unable to load certificate file '%s'"
 msgstr "不正な設定です: 証明書ファイル '%s' をロードできません"
 
-#: libsvn_ra_dav/session.c:876
+#: libsvn_ra_dav/session.c:899
 msgid "The UUID property was not found on the resource or any of its parents"
 msgstr "UUID 属性を、リソースやその親に見つけられませんでした"
 
-#: libsvn_ra_dav/session.c:884
+#: libsvn_ra_dav/session.c:907
 msgid "Please upgrade the server to 0.19 or later"
 msgstr "サーバをバージョン 0.19 以降にアップグレードしてください"
 
-#: libsvn_ra_dav/session.c:1125 libsvn_ra_dav/session.c:1262
+#: libsvn_ra_dav/session.c:1148 libsvn_ra_dav/session.c:1285
 msgid "Failed to parse URI"
 msgstr "URI をパースできませんでした"
 
-#: libsvn_ra_dav/session.c:1148
+#: libsvn_ra_dav/session.c:1171
 msgid "Lock request failed"
 msgstr "ロックのリクエストが失敗しました"
 
-#: libsvn_ra_dav/session.c:1277
+#: libsvn_ra_dav/session.c:1300
 #, c-format
 msgid "'%s' is not locked in the repository"
 msgstr "'%s' はリポジトリでロックされていません"
 
-#: libsvn_ra_dav/session.c:1314
+#: libsvn_ra_dav/session.c:1337
 msgid "Unlock request failed"
 msgstr "ロック解除のリクエストが失敗しました"
 
-#: libsvn_ra_dav/session.c:1525
+#: libsvn_ra_dav/session.c:1548
 msgid "Failed to fetch lock information"
 msgstr "ロックの情報を取得できませんでした"
 
-#: libsvn_ra_dav/session.c:1596
+#: libsvn_ra_dav/session.c:1620
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_dav"
 msgstr ""
@@ -5279,7 +5284,7 @@ msgstr ""
 msgid "%s request failed on '%s'"
 msgstr "%s リクエスト (相手: '%s') が失敗しました"
 
-#: libsvn_ra_local/ra_plugin.c:103 libsvn_ra_local/ra_plugin.c:576
+#: libsvn_ra_local/ra_plugin.c:103 libsvn_ra_local/ra_plugin.c:592
 #, c-format
 msgid ""
 "'%s'\n"
@@ -5297,11 +5302,11 @@ msgstr ""
 msgid "Module for accessing a repository on local disk."
 msgstr "ローカルディスク上のリポジトリにアクセスするモジュール。"
 
-#: libsvn_ra_local/ra_plugin.c:285
+#: libsvn_ra_local/ra_plugin.c:287
 msgid "Unable to open an ra_local session to URL"
 msgstr "URL に対し ra_local セッションを開始できません"
 
-#: libsvn_ra_local/ra_plugin.c:1287
+#: libsvn_ra_local/ra_plugin.c:1304
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_local"
 msgstr ""
@@ -5327,187 +5332,187 @@ msgstr "ローカルの URL '%s' に含まれているホスト名はサポー�
 msgid "Unable to open repository '%s'"
 msgstr "リポジトリ '%s' を開けませんでした"
 
-#: libsvn_ra_svn/client.c:125
+#: libsvn_ra_svn/client.c:128
 #, c-format
 msgid "Unknown hostname '%s'"
 msgstr "ホスト名 '%s' が不明です"
 
-#: libsvn_ra_svn/client.c:137
+#: libsvn_ra_svn/client.c:140
 #, c-format
 msgid "Can't create socket"
 msgstr "ソケットを作成できません"
 
-#: libsvn_ra_svn/client.c:157
+#: libsvn_ra_svn/client.c:160
 #, c-format
 msgid "Can't set timeout"
 msgstr "タイムアウト時間を設定できません"
 
-#: libsvn_ra_svn/client.c:161
+#: libsvn_ra_svn/client.c:164
 #, c-format
 msgid "Can't connect to host '%s'"
 msgstr "ホスト '%s' に接続できません"
 
-#: libsvn_ra_svn/client.c:182
+#: libsvn_ra_svn/client.c:185
 msgid "Proplist element not a list"
 msgstr "proplist 要素がリストではありません"
 
-#: libsvn_ra_svn/client.c:206
+#: libsvn_ra_svn/client.c:209
 msgid "Prop diffs element not a list"
 msgstr "prop diffs 要素がリストではありません"
 
-#: libsvn_ra_svn/client.c:244
+#: libsvn_ra_svn/client.c:247
 #, c-format
 msgid "Unrecognized node kind '%s' from server"
 msgstr "サーバから送られてきたノード種別 '%s' を認識できません"
 
-#: libsvn_ra_svn/client.c:289 libsvn_ra_svn/client.c:343
+#: libsvn_ra_svn/client.c:292 libsvn_ra_svn/client.c:346
 #, c-format
 msgid "Authentication error from server: %s"
 msgstr "サーバの認証エラーです: %s"
 
-#: libsvn_ra_svn/client.c:292 libsvn_ra_svn/cram.c:194
+#: libsvn_ra_svn/client.c:295 libsvn_ra_svn/cram.c:194
 #: libsvn_ra_svn/cram.c:212
 msgid "Unexpected server response to authentication"
 msgstr "認証に対する予想外のサーバのレスポンスです"
 
-#: libsvn_ra_svn/client.c:350
+#: libsvn_ra_svn/client.c:353
 msgid "Cannot negotiate authentication mechanism"
 msgstr "認証機構と交渉できません"
 
-#: libsvn_ra_svn/client.c:481
+#: libsvn_ra_svn/client.c:484
 #, c-format
 msgid "Undefined tunnel scheme '%s'"
 msgstr "トンネルスキーマ '%s' は未定義です"
 
-#: libsvn_ra_svn/client.c:498
+#: libsvn_ra_svn/client.c:501
 #, c-format
 msgid "Tunnel scheme %s requires environment variable %s to be defined"
 msgstr ""
 "トンネルスキーマ %s を使うには環境変数 %s が定義されている必要があります"
 
-#: libsvn_ra_svn/client.c:509
+#: libsvn_ra_svn/client.c:512
 #, c-format
 msgid "Can't tokenize command '%s'"
 msgstr "コマンド '%s' をトークン化できません"
 
-#: libsvn_ra_svn/client.c:538
+#: libsvn_ra_svn/client.c:541
 #, c-format
 msgid "Error in child process: %s"
 msgstr "子プロセスにおいてエラーが発生しました: %s"
 
-#: libsvn_ra_svn/client.c:561
+#: libsvn_ra_svn/client.c:564
 #, c-format
 msgid "Can't create tunnel"
 msgstr "トンネルを作成できません"
 
-#: libsvn_ra_svn/client.c:590
-msgid "Module for accessing a repository using the svn network protocol."
-msgstr "svn ネットワークプロトコルを使ってリポジトリにアクセスするモジュール。"
-
-#: libsvn_ra_svn/client.c:627
+#: libsvn_ra_svn/client.c:614
 #, c-format
 msgid "Illegal svn repository URL '%s'"
 msgstr "Subversion リポジトリの URL '%s' が不正です"
 
-#: libsvn_ra_svn/client.c:653
+#: libsvn_ra_svn/client.c:640
 #, c-format
 msgid "Server requires minimum version %d"
 msgstr "バージョン %d 以上をサーバが必要としています"
 
-#: libsvn_ra_svn/client.c:703
+#: libsvn_ra_svn/client.c:692
 msgid "Impossibly long repository root from server"
 msgstr "サーバから送られてきたリポジトリのルートが長すぎます"
 
-#: libsvn_ra_svn/client.c:770
+#: libsvn_ra_svn/client.c:703
+msgid "Module for accessing a repository using the svn network protocol."
+msgstr "svn ネットワークプロトコルを使ってリポジトリにアクセスするモジュール。"
+
+#: libsvn_ra_svn/client.c:835
 msgid "Server did not send repository root"
 msgstr "サーバがリポジトリのルートを送信しませんでした"
 
-#: libsvn_ra_svn/client.c:912
+#: libsvn_ra_svn/client.c:977
 msgid "Non-string as part of file contents"
 msgstr "ファイルの一部に文字列以外が含まれています"
 
-#: libsvn_ra_svn/client.c:980
+#: libsvn_ra_svn/client.c:1045
 msgid "Dirlist element not a list"
 msgstr "dirlist 要素がリストではありません"
 
-#: libsvn_ra_svn/client.c:1138
+#: libsvn_ra_svn/client.c:1203
 msgid "Log entry not a list"
 msgstr "log エントリがリストではありません"
 
-#: libsvn_ra_svn/client.c:1151
+#: libsvn_ra_svn/client.c:1216
 msgid "Changed-path entry not a list"
 msgstr "changed-path エントリがリストではありません"
 
-#: libsvn_ra_svn/client.c:1230
+#: libsvn_ra_svn/client.c:1295
 msgid "'stat' not implemented"
 msgstr "'stat' は実装されていません"
 
-#: libsvn_ra_svn/client.c:1287
+#: libsvn_ra_svn/client.c:1352
 msgid "'get-locations' not implemented"
 msgstr "'get-locations' は実装されていません"
 
-#: libsvn_ra_svn/client.c:1299
+#: libsvn_ra_svn/client.c:1364
 msgid "Location entry not a list"
 msgstr "location エントリがリストではありません"
 
-#: libsvn_ra_svn/client.c:1349
+#: libsvn_ra_svn/client.c:1414
 msgid "'get-file-revs' not implemented"
 msgstr "'get-file-revs' は実装されていません"
 
-#: libsvn_ra_svn/client.c:1362
+#: libsvn_ra_svn/client.c:1427
 msgid "Revision entry not a list"
 msgstr "revision エントリはリストではありません"
 
 # ? text delta chunk
-#: libsvn_ra_svn/client.c:1375 libsvn_ra_svn/client.c:1400
+#: libsvn_ra_svn/client.c:1440 libsvn_ra_svn/client.c:1465
 msgid "Text delta chunk not a string"
 msgstr "テキスト差分の塊が文字列ではありません"
 
-#: libsvn_ra_svn/client.c:1412
+#: libsvn_ra_svn/client.c:1477
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "コマンド get-file-revs がリビジョンを返しませんでした"
 
-#: libsvn_ra_svn/client.c:1460
+#: libsvn_ra_svn/client.c:1525
 msgid "Server doesn't support the lock command"
 msgstr "ロック (lock) コマンドをサーバがサポートしていません"
 
-#: libsvn_ra_svn/client.c:1524
+#: libsvn_ra_svn/client.c:1589
 msgid "Server doesn't support the unlock command"
 msgstr "ロック解除 (unlock) コマンドをサーバがサポートしていません"
 
-#: libsvn_ra_svn/client.c:1621
+#: libsvn_ra_svn/client.c:1686
 msgid "Lock response not a list"
 msgstr "lock レスポンスがリストではありません"
 
-#: libsvn_ra_svn/client.c:1635
+#: libsvn_ra_svn/client.c:1700
 msgid "Unknown status for lock command"
 msgstr "lock コマンドに関するステータスが未知です"
 
-#: libsvn_ra_svn/client.c:1657
+#: libsvn_ra_svn/client.c:1722
 msgid "Didn't receive end marker for lock responses"
 msgstr "lock レスポンスに対する終了記号を受け取れませんでした"
 
-#: libsvn_ra_svn/client.c:1744
+#: libsvn_ra_svn/client.c:1809
 msgid "Unlock response not a list"
 msgstr "unlock レスポンスがリストではありません"
 
-#: libsvn_ra_svn/client.c:1758
+#: libsvn_ra_svn/client.c:1823
 msgid "Unknown status for unlock command"
 msgstr "unlock コマンドに関するステータスが未知です"
 
-#: libsvn_ra_svn/client.c:1779
+#: libsvn_ra_svn/client.c:1844
 msgid "Didn't receive end marker for unlock responses"
 msgstr "unlock レスポンスに対する終了記号を受け取れませんでした"
 
-#: libsvn_ra_svn/client.c:1803 libsvn_ra_svn/client.c:1831
+#: libsvn_ra_svn/client.c:1868 libsvn_ra_svn/client.c:1896
 msgid "Server doesn't support the get-lock command"
 msgstr "ロック取得 (get-lock) コマンドをサーバがサポートしていません"
 
-#: libsvn_ra_svn/client.c:1844
+#: libsvn_ra_svn/client.c:1909
 msgid "Lock element not a list"
 msgstr "lock 要素がリストではありません"
 
-#: libsvn_ra_svn/client.c:1903
+#: libsvn_ra_svn/client.c:1969
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr ""
@@ -6119,7 +6124,7 @@ msgid "Can't read directory '%s'"
 msgstr "ディレクトリ '%s' を読めません"
 
 #: libsvn_subr/io.c:741 libsvn_subr/io.c:1641 libsvn_subr/io.c:1712
-#: libsvn_subr/io.c:2750
+#: libsvn_subr/io.c:2735
 #, c-format
 msgid "Error closing directory '%s'"
 msgstr "ディレクトリ '%s' を閉じる際にエラーが発生しました"
@@ -6222,7 +6227,7 @@ msgstr "ファイル '%s' を削除できません"
 msgid "Can't rewind directory '%s'"
 msgstr "ディレクトリ '%s' の読み込み位置を先頭に戻せません"
 
-#: libsvn_subr/io.c:1586 libsvn_subr/io.c:2599 libsvn_subr/io.c:2687
+#: libsvn_subr/io.c:1586 libsvn_subr/io.c:2584 libsvn_subr/io.c:2672
 #, c-format
 msgid "Can't open directory '%s'"
 msgstr "ディレクトリ '%s' を開けません"
@@ -6372,57 +6377,57 @@ msgstr "ストリーム中の長さの行を読めません"
 msgid "Can't move '%s' to '%s'"
 msgstr "'%s' から '%s' にファイル名を変更できません"
 
-#: libsvn_subr/io.c:2515
+#: libsvn_subr/io.c:2500
 #, c-format
 msgid "Can't create directory '%s'"
 msgstr "ディレクトリ '%s' を作成できません"
 
-#: libsvn_subr/io.c:2526 libsvn_wc/copy.c:304
+#: libsvn_subr/io.c:2511 libsvn_wc/copy.c:304
 #, c-format
 msgid "Can't hide directory '%s'"
 msgstr "ディレクトリ '%s' を隠せません"
 
-#: libsvn_subr/io.c:2539
+#: libsvn_subr/io.c:2524
 #, c-format
 msgid "Can't stat directory '%s'"
 msgstr "ディレクトリ '%s' に対して stat を実行できません"
 
-#: libsvn_subr/io.c:2555
+#: libsvn_subr/io.c:2540
 #, c-format
 msgid "Can't stat new directory '%s'"
 msgstr "新しいディレクトリ '%s' に対して stat を実行できません"
 
-#: libsvn_subr/io.c:2617
+#: libsvn_subr/io.c:2602
 #, c-format
 msgid "Can't remove directory '%s'"
 msgstr "ディレクトリ '%s' を削除できません"
 
-#: libsvn_subr/io.c:2635
+#: libsvn_subr/io.c:2620
 #, c-format
 msgid "Can't read directory"
 msgstr "ディレクトリを読めません"
 
-#: libsvn_subr/io.c:2706
+#: libsvn_subr/io.c:2691
 #, c-format
 msgid "Can't read directory entry in '%s'"
 msgstr "'%s' 中のディレクトリエントリを読めません"
 
-#: libsvn_subr/io.c:2831
+#: libsvn_subr/io.c:2816
 #, c-format
 msgid "Can't check directory '%s'"
 msgstr "ディレクトリ '%s' をチェックできません"
 
-#: libsvn_subr/io.c:2853
+#: libsvn_subr/io.c:2838
 #, c-format
 msgid "Version %d is not non-negative"
 msgstr "バージョン %d が非負の数でありません"
 
-#: libsvn_subr/io.c:2900
+#: libsvn_subr/io.c:2885
 #, c-format
 msgid "Reading '%s'"
 msgstr "'%s' を読んでいます"
 
-#: libsvn_subr/io.c:2916
+#: libsvn_subr/io.c:2901
 #, c-format
 msgid "First line of '%s' contains non-digit"
 msgstr "'%s' の 1 行目に数字以外が含まれています"
