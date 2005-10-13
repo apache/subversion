@@ -19,5 +19,13 @@ Candidate changes:
       +1: cmpilato, kfogel
       +0: dlr (concept, new to this area of the code)
 
+  * r16693
+    Fix crash in libsvn_ra_dav's get_repos_root.
+    Justification:
+      Crash bad.  Our own code doesn't trigger this, but other library
+      users might.
+    Votes:
+      +1: lundblad
+
 Approved changes:
 
