@@ -25,7 +25,7 @@ Candidate changes:
       Crash bad.  Our own code doesn't trigger this, but other library
       users might.
     Votes:
-      +1: lundblad
+      +1: lundblad, dlr
 
 Approved changes:
 
