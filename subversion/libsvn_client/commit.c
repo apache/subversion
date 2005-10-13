@@ -623,10 +623,10 @@ get_ra_editor (svn_ra_session_t **ra_session,
   
   /* Fetch RA commit editor. */
   SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info_p, pool));
-  return svn_ra_get_commit_editor (*ra_session, editor, edit_baton, log_msg,
-                                   svn_client__commit_callback,
-                                   commit_baton, lock_tokens, keep_locks,
-                                   pool);
+  return svn_ra_get_commit_editor2 (*ra_session, editor, edit_baton, log_msg,
+                                    svn_client__commit_callback,
+                                    commit_baton, lock_tokens, keep_locks,
+                                    pool);
 }
 
 

@@ -1337,18 +1337,13 @@ svn_error_t *svn_client__commit_get_baton (void **baton,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_client__commit_callback (svn_revnum_t revision,
-                                          const char *date,
-                                          const char *author,
-                                          void *baton)
+svn_error_t *svn_client__commit_callback (const svn_commit_info_t *commit_info,
+                                          void *baton,
+                                          apr_pool_t *pool)
 {
   struct commit_baton *cb = baton;
-  svn_commit_info_t **info = cb->info;
 
-  *info = svn_create_commit_info (cb->pool);
-  (*info)->date = date ? apr_pstrdup (cb->pool, date) : NULL;
-  (*info)->author = author ? apr_pstrdup (cb->pool, author) : NULL;
-  (*info)->revision = revision;
+  *(cb->info) = svn_commit_info_dup (commit_info, cb->pool);
 
   return SVN_NO_ERROR;
 }

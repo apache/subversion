@@ -424,7 +424,7 @@ struct deltify_etc_baton
   const char *fs_path;             /* fs-path part of split session URL */
   apr_hash_t *lock_tokens;         /* tokens to unlock, if any */
   apr_pool_t *pool;                /* pool for scratch work */
-  svn_commit_callback_t callback;  /* the original callback */
+  svn_commit_callback2_t callback;  /* the original callback */
   void *callback_baton;            /* the original callback's baton */
 };
 
@@ -433,10 +433,8 @@ struct deltify_etc_baton
    possibly unlocks committed paths.
    BATON is 'struct deltify_etc_baton *'. */
 static svn_error_t * 
-deltify_etc (svn_revnum_t new_revision,
-             const char *date,
-             const char *author,
-             void *baton)
+deltify_etc (const svn_commit_info_t *commit_info,
+             void *baton, apr_pool_t *pool)
 {
   struct deltify_etc_baton *db = baton;
   svn_error_t *err1, *err2;
@@ -446,7 +444,7 @@ deltify_etc (svn_revnum_t new_revision,
   /* Invoke the original callback first, in case someone's waiting to
      know the revision number so they can go off and annotate an
      issue or something. */
-  err1 = (*db->callback) (new_revision, date, author, db->callback_baton);
+  err1 = (*db->callback) (commit_info, db->callback_baton, pool);
 
   /* Maybe unlock the paths. */
   if (db->lock_tokens)
@@ -475,7 +473,7 @@ deltify_etc (svn_revnum_t new_revision,
   /* But, deltification shouldn't be stopped just because someone's
      random callback failed, so proceed unconditionally on to
      deltification. */
-  err2 = svn_fs_deltify_revision (db->fs, new_revision, db->pool);
+  err2 = svn_fs_deltify_revision (db->fs, commit_info->revision, db->pool);
 
   /* It's more interesting if the original callback failed, so let
      that one dominate. */
@@ -494,7 +492,7 @@ svn_ra_local__get_commit_editor (svn_ra_session_t *session,
                                  const svn_delta_editor_t **editor,
                                  void **edit_baton,
                                  const char *log_msg,
-                                 svn_commit_callback_t callback,
+                                 svn_commit_callback2_t callback,
                                  void *callback_baton,
                                  apr_hash_t *lock_tokens,
                                  svn_boolean_t keep_locks,
@@ -541,7 +539,7 @@ svn_ra_local__get_commit_editor (svn_ra_session_t *session,
     }
               
   /* Get the repos commit-editor */     
-  SVN_ERR (svn_repos_get_commit_editor3
+  SVN_ERR (svn_repos_get_commit_editor4
            (editor, edit_baton, sess_baton->repos, NULL,
             svn_path_uri_decode (sess_baton->repos_url, pool),
             sess_baton->fs_path,

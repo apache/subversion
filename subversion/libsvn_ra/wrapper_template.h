@@ -37,6 +37,7 @@
 #error Missing define for RA compatibility wrapper.
 #endif
 
+
 static svn_error_t *compat_open (void **session_baton,
                                  const char *repos_URL,
                                  const svn_ra_callbacks_t *callbacks,
@@ -128,8 +129,15 @@ static svn_error_t *compat_get_commit_editor (void *session_baton,
                                               void *callback_baton,
                                               apr_pool_t *pool)
 {
+  svn_commit_callback2_t callback2;
+  void *callback2_baton;
+
+  svn_compat_wrap_commit_callback (callback, callback_baton,
+                                   &callback2, &callback2_baton,
+                                   pool);
   return VTBL.get_commit_editor (session_baton, editor, edit_baton, log_msg,
-                                 callback, callback_baton, NULL, TRUE, pool);
+                                 callback2, callback2_baton,
+                                 NULL, TRUE, pool);
 }
 
 static svn_error_t *compat_get_file (void *session_baton,
