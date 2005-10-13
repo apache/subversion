@@ -36,7 +36,7 @@ Candidate changes:
     Justification:
       Caused Ruby bindings regression with swig 1.3.24.
     Votes:
-      +1: maxb, djames
+      +1: maxb, djames, kfogel
 
 Approved changes:
 
