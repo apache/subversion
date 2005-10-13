@@ -58,6 +58,9 @@ typedef struct {
   svn_boolean_t read_only; /* Disallow write access (global flag) */
   int protocol_version;
   apr_pool_t *pool;
+  /* Subpool of pool for storing fs_path, so we can get rid of it in
+     reparent. */
+  apr_pool_t *path_pool;
 } server_baton_t;
 
 typedef struct {
@@ -682,6 +685,23 @@ static svn_error_t *get_props(apr_hash_t **props, svn_fs_root_t *root,
   str = (uuid) ? svn_string_create(uuid, pool) : NULL;
   apr_hash_set(*props, SVN_PROP_ENTRY_UUID, APR_HASH_KEY_STRING, str);
 
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *reparent(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                             apr_array_header_t *params, void *baton)
+{
+  server_baton_t *b = baton;
+  const char *url;
+  const char *fs_path;
+
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &url));
+  url = svn_path_uri_decode(svn_path_canonicalize(url, pool), pool);
+  SVN_ERR(trivial_auth_request(conn, pool, b));
+  SVN_CMD_ERR(get_fs_path(b->repos_url, url, &fs_path, pool));
+  svn_pool_clear(b->path_pool);
+  b->fs_path = apr_pstrdup(b->path_pool, fs_path);
+  SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
 }
 
@@ -1855,6 +1875,7 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 
 static const svn_ra_svn_cmd_entry_t main_commands[] = {
+  { "reparent", reparent },
   { "get-latest-rev",  get_latest_rev },
   { "get-dated-rev",   get_dated_rev },
   { "change-rev-prop", change_rev_prop },
@@ -1974,7 +1995,8 @@ static svn_error_t *find_repos(const char *url, const char *root,
   /* Open the repository and fill in b with the resulting information. */
   SVN_ERR(svn_repos_open(&b->repos, repos_root, pool));
   b->fs = svn_repos_fs(b->repos);
-  b->fs_path = apr_pstrdup(pool, full_path + strlen(repos_root));
+  b->path_pool = svn_pool_create(pool);
+  b->fs_path = apr_pstrdup(b->path_pool, full_path + strlen(repos_root));
   url_buf = svn_stringbuf_create(url, pool);
   svn_path_remove_components(url_buf, svn_path_component_count(b->fs_path));
   b->repos_url = url_buf->data;

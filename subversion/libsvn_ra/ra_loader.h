@@ -54,6 +54,10 @@ typedef struct svn_ra__vtable_t {
                         void *callback_baton,
                         apr_hash_t *config,
                         apr_pool_t *pool);
+  /* URL is guaranteed to have what get_repos_root() returns as a prefix. */
+  svn_error_t *(*reparent) (svn_ra_session_t *session,
+                            const char *url,
+                            apr_pool_t *pool);
   svn_error_t *(*get_latest_revnum) (svn_ra_session_t *session,
                                      svn_revnum_t *latest_revnum,
                                      apr_pool_t *pool);

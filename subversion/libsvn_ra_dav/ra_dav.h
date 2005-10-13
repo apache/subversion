@@ -154,6 +154,8 @@ struct lock_request_baton
 
 typedef struct {
   apr_pool_t *pool;
+  /* Subpool of pool to store url in, so that reparent can get rid of it. */
+  apr_pool_t *url_pool;
   const char *url;                      /* original, unparsed session url */
   ne_uri root;                          /* parsed version of above */
   const char *repos_root;               /* URL for repository root */

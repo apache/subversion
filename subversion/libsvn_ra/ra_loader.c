@@ -32,6 +32,7 @@
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_xml.h"
+#include "svn_path.h"
 #include "ra_loader.h"
 #include "svn_private_config.h"
 
@@ -319,6 +320,23 @@ svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
   return svn_ra_open2 (session_p, repos_URL,
                        callbacks2, callback_baton,
                        config, pool);
+}
+
+svn_error_t *svn_ra_reparent (svn_ra_session_t *session,
+                              const char *url,
+                              apr_pool_t *pool)
+{
+  const char *repos_root;
+
+  /* Make sure the new URL is in the same repository, so that the
+     implementations don't have to do it. */
+  SVN_ERR (svn_ra_get_repos_root (session, &repos_root, pool));
+  if (! svn_path_is_ancestor (repos_root, url))
+    return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("'%s' isn't in the same repository as '%s'"),
+                             url, repos_root);
+
+  return session->vtable->reparent (session, url, pool);
 }
 
 svn_error_t *svn_ra_get_latest_revnum (svn_ra_session_t *session,

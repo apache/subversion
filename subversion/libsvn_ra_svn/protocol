@@ -206,6 +206,10 @@ auth-request contains an empty mechanism list, and the server proceeds
 immediately to sending the command response.)  Some commands include a
 second place for auth-request point as noted below.
 
+  reparent
+    params:   ( url:string )
+    response: ( )
+
   get-latest-rev
     params:   ( )
     response: ( rev:number )

@@ -60,6 +60,9 @@ typedef struct svn_ra_local__session_baton_t
   /* Callbacks/baton passed to svn_ra_open. */
   const svn_ra_callbacks2_t *callbacks;
   void *callback_baton;
+  /* Pool to store repository_URL and fs_path in.
+     (Needed for reparent.).  */
+  apr_pool_t *path_pool;
 } svn_ra_local__session_baton_t;
 
 

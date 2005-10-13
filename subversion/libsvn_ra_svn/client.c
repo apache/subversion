@@ -44,12 +44,15 @@
 #include "ra_svn.h"
 
 typedef struct {
+  apr_pool_t *pool;
   svn_ra_svn_conn_t *conn;
   int protocol_version;
   svn_boolean_t is_tunneled;
   svn_auth_baton_t *auth_baton;
   const char *user;
   const char *realm_prefix;
+  /* Config hash passed by the caller of ra_svn_open(). */
+  apr_hash_t *config;
 } ra_svn_session_baton_t;
 
 typedef struct {
@@ -586,29 +589,13 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   return SVN_NO_ERROR;
 }
 
-#define RA_SVN_DESCRIPTION \
-  N_("Module for accessing a repository using the svn network protocol.")
-
-static const char *ra_svn_get_description(void)
-{
-  return _(RA_SVN_DESCRIPTION);
-}
-
-static const char * const *
-ra_svn_get_schemes (apr_pool_t *pool)
-{
-  static const char *schemes[] = { "svn", NULL };
-
-  return schemes;
-}
-
-
-
-static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
-                                const svn_ra_callbacks2_t *callbacks,
-                                void *callback_baton,
-                                apr_hash_t *config,
-                                apr_pool_t *pool)
+/* Open a session to URL, returning it in *SESS_P, allocating it in POOL.
+   CONFIG and AUTH_BATON are provided by the caller of ra_svn_open. */
+static svn_error_t *open_session(ra_svn_session_baton_t **sess_p,
+                                 const char *url,
+                                 apr_hash_t *config,
+                                 svn_auth_baton_t *auth_baton,
+                                 apr_pool_t *pool)
 {
   ra_svn_session_baton_t *sess;
   svn_ra_svn_conn_t *conn;
@@ -655,12 +642,14 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
   SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
 
   sess = apr_palloc(pool, sizeof(*sess));
+  sess->pool = pool;
   sess->conn = conn;
   sess->protocol_version = (maxver > 2) ? 2 : maxver;
   sess->is_tunneled = (tunnel != NULL);
-  sess->auth_baton = callbacks->auth_baton;
+  sess->auth_baton = auth_baton;
   sess->user = user;
   sess->realm_prefix = apr_psprintf(pool, "<svn://%s:%d>", hostname, port);
+  sess->config = config;
 
   /* In protocol version 2, we send back our protocol version, our
    * capability list, and the URL, and subsequently there is an auth
@@ -704,7 +693,83 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
                                   "server"));
     }
 
+  *sess_p = sess;
+
+  return SVN_NO_ERROR;
+}
+
+
+#define RA_SVN_DESCRIPTION \
+  N_("Module for accessing a repository using the svn network protocol.")
+
+static const char *ra_svn_get_description(void)
+{
+  return _(RA_SVN_DESCRIPTION);
+}
+
+static const char * const *
+ra_svn_get_schemes (apr_pool_t *pool)
+{
+  static const char *schemes[] = { "svn", NULL };
+
+  return schemes;
+}
+
+
+
+static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
+                                const svn_ra_callbacks2_t *callbacks,
+                                void *callback_baton,
+                                apr_hash_t *config,
+                                apr_pool_t *pool)
+{
+  apr_pool_t *sess_pool = svn_pool_create (pool);
+  ra_svn_session_baton_t *sess;
+  
+  /* We open the session in a subpool so we can get rid of it if we
+     reparent with a server that doesn't support reparenting. */
+  SVN_ERR(open_session(&sess, url, config, callbacks->auth_baton, sess_pool));
   session->priv = sess;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
+                                    const char *url,
+                                    apr_pool_t *pool)
+{
+  ra_svn_session_baton_t *sess = ra_session->priv;
+  svn_ra_svn_conn_t *conn = sess->conn;
+  svn_error_t *err;
+  apr_pool_t *sess_pool;
+  ra_svn_session_baton_t *new_sess;
+
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "reparent", "c", url));
+  err = handle_auth_request(sess, pool);
+  if (! err)
+    return svn_ra_svn_read_cmd_response(conn, pool, "");
+  else if (err->apr_err != SVN_ERR_RA_SVN_UNKNOWN_CMD)
+    return err;
+  
+  /* Servers before 1.4 doesn't support this command; try to reconnect
+     instead. */
+  svn_error_clear(err);
+  /* Create a new subpool of the RA session pool. */
+  sess_pool = svn_pool_create(ra_session->pool);
+  err = open_session(&new_sess, url, sess->config, sess->auth_baton,
+                     sess_pool);
+  /* We destroy the new session pool on error, since it is allocated in
+     the main session pool. */
+  if (err)
+    {
+      svn_pool_destroy(sess_pool);
+      return err;
+    }
+
+  /* We have a new connection, assign it and destroy the old. */
+  ra_session->priv = new_sess;
+  svn_pool_destroy(sess->pool);
+
   return SVN_NO_ERROR;
 }
 
@@ -1855,6 +1920,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_get_description,
   ra_svn_get_schemes,
   ra_svn_open,
+  ra_svn_reparent,
   ra_svn_get_latest_rev,
   ra_svn_get_dated_rev,
   ra_svn_change_rev_prop,

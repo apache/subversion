@@ -585,6 +585,24 @@ ra_dav_neonprogress(void *baton, off_t progress, off_t total)
  * call and make this halfway sane. */
 
 
+/* Parse URL into *URI, doing some sanity checking and initializing the port
+   to a default value if it wasn't specified in URL.  */
+static svn_error_t *
+parse_url(ne_uri *uri, const char *url)
+{
+  if (ne_uri_parse(url, uri) 
+      || uri->host == NULL || uri->path == NULL || uri->scheme == NULL)
+    {
+      ne_uri_free(uri);
+      return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                              _("Malformed URL for repository"));
+    }
+  if (uri->port == 0)
+    uri->port = ne_uri_defaultport(uri->scheme);
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 svn_ra_dav__open (svn_ra_session_t *session,
                   const char *repos_URL,
@@ -605,13 +623,7 @@ svn_ra_dav__open (svn_ra_session_t *session,
     apr_pcalloc(pool, sizeof(*neonprogress_baton));
 
   /* Sanity check the URI */
-  if (ne_uri_parse(repos_URL, &uri) 
-      || uri.host == NULL || uri.path == NULL || uri.scheme == NULL)
-    {
-      ne_uri_free(&uri);
-      return svn_error_create(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                              _("Malformed URL for repository"));
-    }
+  SVN_ERR (parse_url (&uri, repos_URL));
 
   /* Can we initialize network? */
   if (ne_sock_init() != 0)
@@ -638,11 +650,6 @@ svn_ra_dav__open (svn_ra_session_t *session,
                                   _("SSL is not supported"));
         }
     }
-  if (uri.port == 0)
-    {
-      uri.port = ne_uri_defaultport(uri.scheme);
-    }
-
   /* Create two neon session objects, and set their properties... */
   sess = ne_session_create(uri.scheme, uri.host, uri.port);
   sess2 = ne_session_create(uri.scheme, uri.host, uri.port);
@@ -727,7 +734,8 @@ svn_ra_dav__open (svn_ra_session_t *session,
   /* Create and fill a session_baton. */
   ras = apr_pcalloc(pool, sizeof(*ras));
   ras->pool = pool;
-  ras->url = apr_pstrdup (pool, repos_URL);
+  ras->url_pool = svn_pool_create (pool);
+  ras->url = apr_pstrdup (ras->url_pool, repos_URL);
   /* copies uri pointer members, they get free'd in __close. */
   ras->root = uri; 
   ras->sess = sess;
@@ -822,6 +830,21 @@ svn_ra_dav__open (svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *svn_ra_dav__reparent(svn_ra_session_t *session,
+                                         const char *url,
+                                         apr_pool_t *pool)
+{
+  svn_ra_dav__session_t *ras = session->priv;
+  ne_uri uri = { 0 };
+
+  SVN_ERR(parse_url(&uri, url));
+  svn_pool_clear(ras->url_pool);
+  ne_uri_free(&ras->root);
+  ras->root = uri;
+  ras->url = apr_pstrdup(ras->url_pool, url);
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *svn_ra_dav__get_repos_root(svn_ra_session_t *session,
                                                const char **url,
@@ -1548,6 +1571,7 @@ static const svn_ra__vtable_t dav_vtable = {
   ra_dav_get_description,
   ra_dav_get_schemes,
   svn_ra_dav__open,
+  svn_ra_dav__reparent,
   svn_ra_dav__get_latest_revnum,
   svn_ra_dav__get_dated_revision,
   svn_ra_dav__change_rev_prop,
