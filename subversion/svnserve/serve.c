@@ -64,6 +64,7 @@ typedef struct {
 } server_baton_t;
 
 typedef struct {
+  apr_pool_t *pool;
   svn_revnum_t *new_rev;
   const char **date;
   const char **author;
@@ -785,14 +786,16 @@ static svn_error_t *rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *commit_done(svn_revnum_t new_rev, const char *date,
-                                const char *author, void *baton)
+static svn_error_t *commit_done(const svn_commit_info_t *commit_info,
+                                void *baton, apr_pool_t *pool)
 {
   commit_callback_baton_t *ccb = baton;
 
-  *ccb->new_rev = new_rev;
-  *ccb->date = date;
-  *ccb->author = author;
+  *ccb->new_rev = commit_info->revision;
+  *ccb->date = commit_info->date
+    ? apr_pstrdup(ccb->pool, commit_info->date): NULL;
+  *ccb->author = commit_info->author
+    ? apr_pstrdup(ccb->pool, commit_info->author) : NULL;
   return SVN_NO_ERROR;
 }
 
@@ -929,11 +932,12 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (lock_tokens)
     SVN_CMD_ERR(add_lock_tokens(conn, lock_tokens, b, pool));
 
+  ccb.pool = pool;
   ccb.new_rev = &new_rev;
   ccb.date = &date;
   ccb.author = &author;
   /* ### Note that svn_repos_get_commit_editor actually wants a decoded URL. */
-  SVN_CMD_ERR(svn_repos_get_commit_editor3
+  SVN_CMD_ERR(svn_repos_get_commit_editor4
               (&editor, &edit_baton, b->repos, NULL,
                svn_path_uri_decode(b->repos_url, pool),
                b->fs_path, b->user,

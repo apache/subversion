@@ -262,10 +262,9 @@ svn_error_t *svn_client__commit_get_baton (void **baton,
    pointed by commit_baton. If the commit_info supplied by get_baton
    points to NULL after close_edit, it means the commit is a no-op.
 */
-svn_error_t *svn_client__commit_callback (svn_revnum_t revision,
-                                          const char *date,
-                                          const char *author,
-                                          void *baton);
+svn_error_t *svn_client__commit_callback (const svn_commit_info_t *commit_info,
+                                          void *baton,
+                                          apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 

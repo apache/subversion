@@ -34,6 +34,21 @@ svn_create_commit_info (apr_pool_t *pool)
   return commit_info;
 }
 
+svn_commit_info_t *
+svn_commit_info_dup (const svn_commit_info_t *src_commit_info,
+                     apr_pool_t *pool)
+{
+  svn_commit_info_t *dst_commit_info = svn_create_commit_info (pool);
+
+  dst_commit_info->date = src_commit_info->date
+    ? apr_pstrdup (pool, src_commit_info->date) : NULL;
+  dst_commit_info->author = src_commit_info->author
+    ? apr_pstrdup (pool, src_commit_info->author) : NULL;
+  dst_commit_info->revision = src_commit_info->revision;
+
+  return dst_commit_info;
+}
+
 svn_log_changed_path_t *
 svn_log_changed_path_dup (const svn_log_changed_path_t *changed_path,
                           apr_pool_t *pool)

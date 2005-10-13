@@ -114,7 +114,7 @@ typedef struct
   const char *log_msg;
 
   /* The commit callback and baton */
-  svn_commit_callback_t callback;
+  svn_commit_callback2_t callback;
   void *callback_baton;
 
   /* The hash of lock-tokens owned by the working copy. */
@@ -1461,12 +1461,11 @@ static svn_error_t * commit_close_edit(void *edit_baton,
 {
   commit_ctx_t *cc = edit_baton;
   svn_revnum_t new_rev;
-  const char *committed_date;
-  const char *committed_author;
+  svn_commit_info_t *commit_info = svn_create_commit_info (pool);
 
-  SVN_ERR( svn_ra_dav__merge_activity(&new_rev,
-                                      &committed_date,
-                                      &committed_author,
+  SVN_ERR( svn_ra_dav__merge_activity(&(commit_info->revision),
+                                      &(commit_info->date),
+                                      &(commit_info->author),
                                       cc->ras,
                                       cc->ras->root.path,
                                       cc->activity_url,
@@ -1479,8 +1478,7 @@ static svn_error_t * commit_close_edit(void *edit_baton,
   SVN_ERR( svn_ra_dav__maybe_store_auth_info(cc->ras) );
 
   if (new_rev != SVN_INVALID_REVNUM)
-    SVN_ERR( cc->callback (new_rev, committed_date, committed_author,
-                           cc->callback_baton));
+    SVN_ERR( cc->callback (commit_info, cc->callback_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1573,7 +1571,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
                                             const svn_delta_editor_t **editor,
                                             void **edit_baton,
                                             const char *log_msg,
-                                            svn_commit_callback_t callback,
+                                            svn_commit_callback2_t callback,
                                             void *callback_baton,
                                             apr_hash_t *lock_tokens,
                                             svn_boolean_t keep_locks,

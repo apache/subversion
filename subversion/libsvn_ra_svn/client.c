@@ -59,7 +59,7 @@ typedef struct {
   ra_svn_session_baton_t *sess_baton;
   apr_pool_t *pool;
   svn_revnum_t *new_rev;
-  svn_commit_callback_t callback;
+  svn_commit_callback2_t callback;
   void *callback_baton;
 } ra_svn_commit_callback_baton_t;
 
@@ -867,18 +867,15 @@ static svn_error_t *ra_svn_rev_prop(svn_ra_session_t *session, svn_revnum_t rev,
 static svn_error_t *ra_svn_end_commit(void *baton)
 {
   ra_svn_commit_callback_baton_t *ccb = baton;
-  svn_revnum_t new_rev;
-  const char *committed_date;
-  const char *committed_author;
+  svn_commit_info_t *commit_info = svn_create_commit_info (ccb->pool);
 
   SVN_ERR(handle_auth_request(ccb->sess_baton, ccb->pool));
   SVN_ERR(svn_ra_svn_read_tuple(ccb->sess_baton->conn, ccb->pool, "r(?c)(?c)",
-                                &new_rev,
-                                &committed_date,
-                                &committed_author));
+                                &(commit_info->revision),
+                                &(commit_info->date),
+                                &(commit_info->author)));
 
-  return ccb->callback(new_rev, committed_date, committed_author,
-                       ccb->callback_baton);
+  return ccb->callback(commit_info, ccb->callback_baton, ccb->pool);
 
 }
 
@@ -886,7 +883,7 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
                                   const svn_delta_editor_t **editor,
                                   void **edit_baton,
                                    const char *log_msg,
-                                  svn_commit_callback_t callback,
+                                  svn_commit_callback2_t callback,
                                   void *callback_baton,
                                   apr_hash_t *lock_tokens,
                                   svn_boolean_t keep_locks,

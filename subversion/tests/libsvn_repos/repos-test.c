@@ -1415,7 +1415,7 @@ commit_editor_authz  (const char **msg,
 
   /* Create a new commit editor in which we're going to play with
      authz */
-  SVN_ERR (svn_repos_get_commit_editor3 (&editor, &edit_baton, repos,
+  SVN_ERR (svn_repos_get_commit_editor4 (&editor, &edit_baton, repos,
                                          NULL, "file://test", "/",
                                          "plato", "test commit", NULL,
                                          NULL, commit_authz_cb, authz_file,
