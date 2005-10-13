@@ -3155,7 +3155,7 @@ test_list = [ None,
               property_merge_from_branch,
               property_merge_undo_redo,
               cherry_pick_text_conflict,
-              XFail(merge_file_replace),
+              merge_file_replace,
              ]
 
 if __name__ == '__main__':

@@ -852,7 +852,8 @@ repos_to_wc_copy (const char *src_url,
     const svn_wc_entry_t *ent;
 
     SVN_ERR (svn_wc_entry (&ent, dst_path, adm_access, FALSE, pool));
-    if (ent && (ent->kind != svn_node_dir))
+    if (ent && (ent->kind != svn_node_dir) && 
+        (ent->schedule != svn_wc_schedule_delete))
       return svn_error_createf
         (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
          _("Entry for '%s' exists (though the working file is missing)"),
@@ -975,9 +976,9 @@ repos_to_wc_copy (const char *src_url,
       if (! SVN_IS_VALID_REVNUM (src_revnum))
         src_revnum = real_rev;
 
-      err = svn_wc_add_repos_file
+      err = svn_wc_add_repos_file2
         (dst_path, adm_access,
-         new_text_path, new_props,
+         new_text_path, NULL, new_props, NULL,
          same_repositories ? src_url : NULL,
          same_repositories ? src_revnum : SVN_INVALID_REVNUM,
          pool);

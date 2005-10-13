@@ -37,6 +37,8 @@ extern "C" {
 #define SVN_WC__PROP_REJ_EXT  ".prej"
 #define SVN_WC__BASE_EXT      ".svn-base" /* for text and prop bases */
 #define SVN_WC__WORK_EXT      ".svn-work" /* for working propfiles */
+#define SVN_WC__REVERT_EXT    ".svn-revert" /* for reverting a replaced
+                                               file */
 
 
 
@@ -55,9 +57,12 @@ extern "C" {
  * The change from 3 to 4 was the renaming of the magic "svn:this_dir"
  * entry name to "".
  *
+ * The change from 4 to 5 was the addition of support for replacing files
+ * with history.
+ *
  * Please document any further format changes here.
  */
-#define SVN_WC__VERSION       4
+#define SVN_WC__VERSION       5
 
 
 /*** Update traversals. ***/
@@ -109,6 +114,7 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_PROP_BASE           "prop-base"
 #define SVN_WC__ADM_DIR_PROPS           "dir-props"
 #define SVN_WC__ADM_DIR_PROP_BASE       "dir-prop-base"
+#define SVN_WC__ADM_DIR_PROP_REVERT     "dir-prop-revert"
 #define SVN_WC__ADM_WCPROPS             "wcprops"
 #define SVN_WC__ADM_DIR_WCPROPS         "dir-wcprops"
 #define SVN_WC__ADM_LOG                 "log"
