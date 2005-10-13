@@ -36,7 +36,7 @@ class JNIByteArray;
 class Prompter;
 class BlameCallback;
 class CommitMessage;
-#include <svn_client.h>
+#include "svn_client.h"
 #include "SVNBase.h"
 
 class SVNClient :public SVNBase

@@ -17,7 +17,7 @@
  */
 
 #include <string.h>
-#include <svn_opt.h>
+#include "svn_opt.h"
 #include <apr_general.h>
 
 #include "../svn_test.h"

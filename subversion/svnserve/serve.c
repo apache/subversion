@@ -27,18 +27,18 @@
 #include <apr_md5.h>
 
 #include "svn_private_config.h"  /* For SVN_PATH_LOCAL_SEPARATOR */
-#include <svn_types.h>
-#include <svn_string.h>
-#include <svn_pools.h>
-#include <svn_error.h>
-#include <svn_ra_svn.h>
-#include <svn_repos.h>
-#include <svn_path.h>
-#include <svn_time.h>
-#include <svn_md5.h>
-#include <svn_config.h>
-#include <svn_props.h>
-#include <svn_user.h>
+#include "svn_types.h"
+#include "svn_string.h"
+#include "svn_pools.h"
+#include "svn_error.h"
+#include "svn_ra_svn.h"
+#include "svn_repos.h"
+#include "svn_path.h"
+#include "svn_time.h"
+#include "svn_md5.h"
+#include "svn_config.h"
+#include "svn_props.h"
+#include "svn_user.h"
 
 #include "server.h"
 

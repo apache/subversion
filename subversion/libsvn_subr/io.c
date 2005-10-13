@@ -422,7 +422,7 @@ svn_io_copy_link (const char *src,
 
 
 #if 1 /* TODO: Remove this code when APR 0.9.6 is released. */
-#include "apr_env.h"
+#include <apr_env.h>
 
 /* Try to open a temporary file in the temporary dir, write to it,
    and then close it. */

@@ -28,7 +28,7 @@ extern "C" {
 #include <apr_network_io.h>
 #include <apr_file_io.h>
 #include <apr_thread_proc.h>
-#include <svn_ra_svn.h>
+#include "svn_ra_svn.h"
 
 /* Handler for blocked writes. */
 typedef svn_error_t *(*ra_svn_block_handler_t)(svn_ra_svn_conn_t *conn,

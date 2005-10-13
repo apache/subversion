@@ -28,7 +28,7 @@
 #include <apr.h>
 #include <apr_pools.h>
 #include <apr_network_io.h>
-#include <svn_config.h>
+#include "svn_config.h"
 
 #include "svn_delta.h"
 

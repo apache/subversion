@@ -963,12 +963,18 @@ class IncludeDependencyInfo:
               % (include_param, fname, direct_possibility_fname,
                 domain_fnames))
         if match.group(2) == '"':
-          pass
-          #_warning('"%s" header not found, file %s' % (include_param, fname))
+          _warning('"%s" header not found, file %s' % (include_param, fname))
         continue
       if match.group(2) == '<':
-        pass
-        #_warning('<%s> header *found*, file %s' % (include_param, fname))
+        _warning('<%s> header *found*, file %s' % (include_param, fname))
+      # The above warnings help to avoid the following problems:
+      # - If header is uses the correct <> or "" convention, then the warnings
+      #   reveal if the build generator does/does not make dependencies for it 
+      #   when it should not/should - e.g. might reveal changes needed to
+      #   build.conf.
+      #   ...and...
+      # - If the generator is correct, them the warnings reveal incorrect use
+      #   of <>/"" convention.
     return hdrs
 
 

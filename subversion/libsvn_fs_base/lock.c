@@ -21,7 +21,7 @@
 #include "svn_fs.h"
 #include "svn_private_config.h"
 
-#include "apr_uuid.h"
+#include <apr_uuid.h>
 
 #include "lock.h"
 #include "tree.h"

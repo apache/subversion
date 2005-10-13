@@ -32,7 +32,7 @@
 #include <string.h>
 #include <apr_general.h>
 #include <apr_file_io.h>
-#include <svn_wc.h>
+#include "svn_wc.h"
 #include "svn_subst.h"
 
 #include "../svn_test.h"
