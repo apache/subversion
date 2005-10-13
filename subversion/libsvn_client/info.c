@@ -404,7 +404,12 @@ svn_client_info (const char *path_or_url,
                               url, rev);
 
   /* Check if the URL exists in HEAD and refers to the same resource.
-     In this case, we check the repository for a lock on this URL. */
+     In this case, we check the repository for a lock on this URL.
+     ### There is a possible race here, since HEAD might have changed since
+     ### we checked it.  A solution to this problem could be to do the below
+     ### check in a loop which only terminates if the HEAD revision is the same
+     ### before and after this check.  Tha could, however, lead to a starvation
+     ### situation instead.  */
   SVN_ERR (same_resource_in_head (&related, url, rev, ra_session, ctx, pool));
   if (related)
     {
