@@ -122,6 +122,9 @@ svn_error_t *svn_client__prev_log_path (const char **prev_path_p,
    END_URL and END_REVISION are not touched by the function);
    START and REVISION may not.
 
+   RA_SESSION should be an open RA session pointing at the URL of PATH,
+   or NULL, in which case this function will open its own temporary session.
+
    A NOTE ABOUT FUTURE REPORTING:
 
    If either START or END are greater than REVISION, then do a
@@ -140,6 +143,7 @@ svn_client__repos_locations (const char **start_url,
                              svn_opt_revision_t **start_revision,
                              const char **end_url,
                              svn_opt_revision_t **end_revision,
+                             svn_ra_session_t *ra_session,
                              const char *path,
                              const svn_opt_revision_t *revision,
                              const svn_opt_revision_t *start,

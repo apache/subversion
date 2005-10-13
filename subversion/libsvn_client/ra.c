@@ -680,6 +680,7 @@ svn_client__repos_locations (const char **start_url,
                              svn_opt_revision_t **start_revision,
                              const char **end_url,
                              svn_opt_revision_t **end_revision,
+                             svn_ra_session_t *ra_session,
                              const char *path,
                              const svn_opt_revision_t *revision,
                              const svn_opt_revision_t *start,
@@ -695,7 +696,6 @@ svn_client__repos_locations (const char **start_url,
   svn_revnum_t start_revnum, end_revnum;
   apr_array_header_t *revs;
   apr_hash_t *rev_locs;
-  svn_ra_session_t *ra_session;
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_error_t *err;
 
@@ -722,6 +722,11 @@ svn_client__repos_locations (const char **start_url,
         {
           url = entry->copyfrom_url;
           peg_revnum = entry->copyfrom_rev;
+          if (!entry->url || strcmp (entry->url, entry->copyfrom_url) != 0)
+            {
+              /* We can't use the caller provided RA session in this case */
+              ra_session = NULL;
+            }
         }
       else if (entry->url)
         {
@@ -743,10 +748,11 @@ svn_client__repos_locations (const char **start_url,
      WORKING revisions, we should already have the correct URL:s, so we
      don't need to do anything more here in that case. */
 
-  /* Open a RA session to this URL. */
-  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, url, NULL,
-                                                 NULL, NULL, FALSE, TRUE,
-                                                 ctx, subpool));
+  /* Open a RA session to this URL if we don't have one already. */
+  if (! ra_session)
+    SVN_ERR (svn_client__open_ra_session_internal (&ra_session, url, NULL,
+                                                   NULL, NULL, FALSE, TRUE,
+                                                   ctx, subpool));
 
   /* Resolve the opt_revision_ts. */
   if (peg_revnum == SVN_INVALID_REVNUM)
@@ -904,21 +910,25 @@ svn_client__ra_session_from_path (svn_ra_session_t **ra_session_p,
         peg_revision = *peg_revision_p;
     }
   
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, initial_url,
+                                                 NULL, NULL, NULL,
+                                                 FALSE, FALSE, ctx, pool));
+
   dead_end_rev.kind = svn_opt_revision_unspecified;
   
   /* Run the history function to get the object's (possibly
      different) url in REVISION. */
   SVN_ERR (svn_client__repos_locations (&url, &new_rev,
                                         &ignored_url, &ignored_rev,
+                                        ra_session,
                                         path_or_url, &peg_revision,
                                         /* search range: */
                                         &start_rev, &dead_end_rev,
                                         ctx, pool));
   good_rev = new_rev;
 
-  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, url,
-                                                 NULL, NULL, NULL,
-                                                 FALSE, FALSE, ctx, pool));
+  /* Make the session point to the real URL. */
+  SVN_ERR (svn_ra_reparent (ra_session, url, pool));
 
   /* Resolve good_rev into a real revnum. */
   SVN_ERR (svn_client__get_revision_number (&rev, ra_session,

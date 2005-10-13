@@ -473,6 +473,16 @@ svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
                           apr_hash_t *config,
                           apr_pool_t *pool);
 
+/** Change the root URL of an open @a ra_session to point to a new path in the
+ * same repository.  @a url is the new root URL.  Use @a pool for
+ * temporary allocations.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *svn_ra_reparent (svn_ra_session_t *ra_session,
+                              const char *url,
+                              apr_pool_t *pool);
+
 /**
  * Get the latest revision number from the repository of @a session.
  *

@@ -267,10 +267,12 @@ svn_ra_local__open (svn_ra_session_t *session,
                     apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *baton;
+  const char *fs_path;
   
   /* Allocate and stash the session_baton args we have already. */
   baton = apr_pcalloc (pool, sizeof(*baton));
-  baton->repository_URL = apr_pstrdup (session->pool, repos_URL);
+  baton->path_pool = svn_pool_create (session->pool);
+  baton->repository_URL = apr_pstrdup (baton->path_pool, repos_URL);
   baton->callbacks = callbacks;
   baton->callback_baton = callback_baton;
   
@@ -279,10 +281,11 @@ svn_ra_local__open (svn_ra_session_t *session,
      repository. */
   SVN_ERR_W (svn_ra_local__split_URL (&(baton->repos),
                                       &(baton->repos_url),
-                                      &(baton->fs_path),
+                                      &fs_path,
                                       baton->repository_URL,
                                       session->pool),
              _("Unable to open an ra_local session to URL"));
+  baton->fs_path = apr_pstrdup (baton->path_pool, fs_path);
 
   /* Cache the filesystem object from the repos here for
      convenience. */
@@ -298,7 +301,20 @@ svn_ra_local__open (svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+svn_ra_local__reparent (svn_ra_session_t *session,
+                        const char *url,
+                        apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *baton = session->priv;
 
+  svn_pool_clear (baton->path_pool);
+  baton->fs_path = svn_path_uri_decode (url + strlen (baton->repos_url),
+                                        baton->path_pool);
+  baton->repository_URL = apr_pstrdup (baton->path_pool, url);
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 svn_ra_local__get_latest_revnum (svn_ra_session_t *session,
@@ -1235,6 +1251,7 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__get_description,
   svn_ra_local__get_schemes,
   svn_ra_local__open,
+  svn_ra_local__reparent,
   svn_ra_local__get_latest_revnum,
   svn_ra_local__get_dated_revision,
   svn_ra_local__change_rev_prop,

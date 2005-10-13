@@ -257,11 +257,12 @@ crawl_entries (const char *wcpath,
 
 /* Set *SAME_P to TRUE if URL exists in the head of the repository and
    refers to the same resource as it does in REV, using POOL for
-   temporary allocations. */
+   temporary allocations.  RA_SESSION is an open RA session for URL.  */
 static svn_error_t *
 same_resource_in_head (svn_boolean_t *same_p,
                        const char *url,
                        svn_revnum_t rev,
+                       svn_ra_session_t *ra_session,
                        svn_client_ctx_t *ctx,
                        apr_pool_t *pool)
 {
@@ -277,6 +278,7 @@ same_resource_in_head (svn_boolean_t *same_p,
 
   err = svn_client__repos_locations (&head_url, &ignored_rev,
                                      &ignored_url, &ignored_rev,
+                                     ra_session,
                                      url, &peg_rev,
                                      &start_rev, &end_rev,
                                      ctx, pool);
@@ -403,7 +405,7 @@ svn_client_info (const char *path_or_url,
 
   /* Check if the URL exists in HEAD and refers to the same resource.
      In this case, we check the repository for a lock on this URL. */
-  SVN_ERR (same_resource_in_head (&related, url, rev, ctx, pool));
+  SVN_ERR (same_resource_in_head (&related, url, rev, ra_session, ctx, pool));
   if (related)
     {
       err = svn_ra_get_lock (ra_session, &lock, "", pool);
