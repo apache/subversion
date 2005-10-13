@@ -24,7 +24,7 @@
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
 #include "../include/org_tigris_subversion_javahl_PromptUserPassword2.h"
-#include <svn_client.h>
+#include "svn_client.h"
 #include "svn_private_config.h"
 
 /**

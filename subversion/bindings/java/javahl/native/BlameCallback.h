@@ -26,7 +26,7 @@
 #pragma once
 #endif // _MSC_VER > 1000
 #include <jni.h>
-#include <svn_client.h>
+#include "svn_client.h"
 
 /**
  * this class holds a java callback object, which will receive every line of 

@@ -24,7 +24,7 @@
 %module delta
 #endif
 
-%include "typemaps.i"
+%include typemaps.i
 
 %include svn_global.swg
 %import apr.swg

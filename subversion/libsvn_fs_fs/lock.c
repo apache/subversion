@@ -26,10 +26,10 @@
 #include "svn_utf.h"
 #include "svn_md5.h"
 
-#include "apr_uuid.h"
-#include "apr_file_io.h"
-#include "apr_file_info.h"
-#include "apr_md5.h"
+#include <apr_uuid.h>
+#include <apr_file_io.h>
+#include <apr_file_info.h>
+#include <apr_md5.h>
 
 #include "lock.h"
 #include "tree.h"

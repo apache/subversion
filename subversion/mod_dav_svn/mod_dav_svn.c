@@ -35,7 +35,7 @@
 
 #include "dav_svn.h"
 
-#include <mod_dav_svn.h>
+#include "mod_dav_svn.h"
 
 /* This is the default "special uri" used for SVN's special resources
    (e.g. working resources, activities) */

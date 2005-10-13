@@ -26,7 +26,7 @@
 #pragma once
 #endif // _MSC_VER > 1000
 #include <jni.h>
-#include <svn_wc.h>
+#include "svn_wc.h"
 /**
  *  this class passes notification from subversion to a java object
  */

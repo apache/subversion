@@ -17,7 +17,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_ra.h"
-#include "apr_lib.h"
+#include <apr_lib.h>
 #include <stdio.h>
 #include <string.h>
 

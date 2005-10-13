@@ -26,9 +26,9 @@
 #include <apr_general.h>
 #include <apr_lib.h>
 
-#include <svn_pools.h>
-#include <svn_config.h>
-#include <svn_path.h>
+#include "svn_pools.h"
+#include "svn_config.h"
+#include "svn_path.h"
 #include <apr_file_info.h>
 #include "svn_private_config.h"
 #ifdef WIN32
@@ -37,7 +37,7 @@
    that should be fine for now, but a better solution must be found in
    combination with issue #850. */
 extern "C" {
-#include "arch/win32/apr_arch_utf8.h"
+#include <arch/win32/apr_arch_utf8.h>
 };
 #endif
 

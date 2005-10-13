@@ -137,5 +137,5 @@ static VALUE _global_svn_swig_rb_pool = Qnil;
 
 %{
 #include "svn_time.h"
-#include <svn_pools.h>
+#include "svn_pools.h"
 %}

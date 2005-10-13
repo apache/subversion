@@ -29,9 +29,9 @@
 #include "utf_impl.h"
 
 #ifdef SVN_HAVE_OLD_EXPAT
-#include "xmlparse.h"
+#include <xmlparse.h>
 #else
-#include "expat.h"
+#include <expat.h>
 #endif
 
 #ifdef XML_UNICODE
