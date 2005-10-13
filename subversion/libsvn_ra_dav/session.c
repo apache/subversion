@@ -843,7 +843,7 @@ static svn_error_t *svn_ra_dav__get_repos_root(svn_ra_session_t *session,
       url_buf = svn_stringbuf_create(ras->url, pool);
       svn_path_remove_components
         (url_buf, svn_path_component_count(bc_relative.data));
-      ras->repos_root = url_buf->data;
+      ras->repos_root = apr_pstrdup(ras->pool, url_buf->data);
     }
 
   *url = ras->repos_root;
