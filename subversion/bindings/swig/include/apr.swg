@@ -31,7 +31,7 @@
 %include typemaps.i
 
 #ifdef SWIGRUBY
-#if SVN_SWIG_VERSION <= 103024
+#if SWIG_VERSION <= 0x010324
 /* for SWIG bug */
 %define OUTPUT_TYPEMAP(type, converter, convtype)
 %typemap(in,numinputs=0) type *OUTPUT($*1_ltype temp), type &OUTPUT($*1_ltype temp) "$1 = &temp;";

@@ -30,14 +30,6 @@ Candidate changes:
     Votes:
       +1: maxb, kfogel
 
-  * r16622
-    Fix breakage of defining of SVN_SWIG_VERSION, by migrating its only user
-    to use SWIG_VERSION, and fully removing relics of SVN_SWIG_VERSION.
-    Justification:
-      Caused Ruby bindings regression with swig 1.3.24.
-    Votes:
-      +1: maxb, djames, kfogel
-
 Approved changes:
 
   * r16649, r16652, r16655, r16664
