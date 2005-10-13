@@ -132,8 +132,10 @@ extern "C" {
 #define SVN_WC__LOG_ATTR_TEXT_REJFILE   "text-rejfile"
 #define SVN_WC__LOG_ATTR_PROP_REJFILE   "prop-rejfile"
 #define SVN_WC__LOG_ATTR_TIMESTAMP      "timestamp"
-/* The rest are for SVN_WC__LOG_MERGE.  Extend as necessary. */
+/* This one is for SVN_WC__LOG_MERGE
+   and optionally SVN_WC__LOG_CP_AND_(DE)TRANSLATE to indicate special-only */
 #define SVN_WC__LOG_ATTR_ARG_1          "arg1"
+/* The rest are for SVN_WC__LOG_MERGE.  Extend as necessary. */
 #define SVN_WC__LOG_ATTR_ARG_2          "arg2"
 #define SVN_WC__LOG_ATTR_ARG_3          "arg3"
 #define SVN_WC__LOG_ATTR_ARG_4          "arg4"
@@ -148,6 +150,18 @@ extern "C" {
    "log.2", etc. */
 const char *svn_wc__logfile_path (int log_number,
                                   apr_pool_t *pool);
+
+
+/* Create a log file with LOG_NUMBER. Write LOG_CONTENT to it and close-
+   and-sync afterwards. ADM_ACCESS must point to a locked working copy.
+
+
+   Helper to eliminate code duplication. */
+svn_error_t *
+svn_wc__write_log (svn_wc_adm_access_t *adm_access,
+                   int log_number, svn_stringbuf_t *log_content,
+                   apr_pool_t *pool);
+
 
 /* Process the instructions in the log file for ADM_ACCESS. 
    DIFF3_CMD is the external differ used by the 'SVN_WC__LOG_MERGE'

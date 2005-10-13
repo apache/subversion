@@ -976,12 +976,12 @@ merge_file_added (svn_wc_adm_access_t *adm_access,
                the whole text-base and props installed too, just as if
                we had called 'svn cp wc wc'. */
 
-            SVN_ERR (svn_wc_add_repos_file (mine, adm_access,
-                                            yours,
-                                            new_props,
-                                            copyfrom_url,
-                                            rev2,
-                                            subpool));
+            SVN_ERR (svn_wc_add_repos_file2 (mine, adm_access,
+                                             yours, NULL,
+                                             new_props, NULL,
+                                             copyfrom_url,
+                                             rev2,
+                                             subpool));
           }
         if (content_state)
           *content_state = svn_wc_notify_state_changed;

@@ -49,6 +49,7 @@
 #include "entries.h"
 #include "lock.h"
 #include "props.h"
+#include "translate.h"
 
 
 /*** batons ***/
@@ -1739,8 +1740,7 @@ change_file_prop (void *file_baton,
  *
  * Given a @a file_path either already under version control, or
  * prepared (see below) to join revision control, fully install a @a
- * new_revision of the file; @a new_revision must be 0 if copyfrom
- * args are passed, see below for details.  @a adm_access is an access
+ * new_revision of the file;  @a adm_access is an access
  * baton with a write lock for the directory containing @a file_path.
  *
  * If @a file_path is not already under version control (i.e., does
@@ -1753,7 +1753,7 @@ change_file_prop (void *file_baton,
  * update all metadata so that the working copy believes it has a new
  * working revision of the file.  All of this work includes being
  * sensitive to eol translation, keyword substitution, and performing
- * all actions using a journaled logfile.
+ * all actions accumulated to existing @a log_accum.
  *
  * The caller provides a @a new_text_path which points to a temporary
  * file containing the 'new' base text of the file at revision @a
@@ -1800,8 +1800,7 @@ change_file_prop (void *file_baton,
  * copyfrom history for the added file.  An assertion error may occur
  * if copyfrom args while @a is_add is false.  An assertion error may
  * occur if @a copyfrom_url is non-null but @a copyfrom_rev is not a
- * valid revision number.  An assertion error may occur if @a is_add
- * is true but @a new_revision is not 0.
+ * valid revision number.
  *
  * If @a diff3_cmd is non-null, then use it as the diff3 command for
  * any merging; otherwise, use the built-in merge code.
@@ -1813,11 +1812,11 @@ change_file_prop (void *file_baton,
  * @a pool is used for all bookkeeping work during the installation.
  */
 static svn_error_t *
-install_file (svn_wc_notify_state_t *content_state,
+install_file (svn_stringbuf_t * log_accum,
+              svn_wc_notify_state_t *content_state,
               svn_wc_notify_state_t *prop_state,
               svn_wc_notify_lock_state_t *lock_state,
               svn_wc_adm_access_t *adm_access,
-              int *log_number,
               const char *file_path,
               svn_revnum_t new_revision,
               const char *new_text_path,
@@ -1831,16 +1830,14 @@ install_file (svn_wc_notify_state_t *content_state,
               const char *timestamp_string,
               apr_pool_t *pool)
 {
-  apr_file_t *log_fp = NULL;
   char *revision_str = NULL;
   const char *parent_dir, *base_name;
-  svn_stringbuf_t *log_accum;
   svn_boolean_t is_locally_modified;
+  svn_boolean_t is_replaced = FALSE;
   svn_boolean_t magic_props_changed = FALSE;
   apr_array_header_t *regular_props = NULL, *wc_props = NULL,
     *entry_props = NULL;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
-  const char *logfile_name;
   svn_wc_notify_lock_state_t local_lock_state;
 
   /* The code flow does not depend upon these being set to NULL, but
@@ -1876,20 +1873,6 @@ install_file (svn_wc_notify_state_t *content_state,
       end of the log file, we remove it.
   */
 
-  /* Open a log file.  This is safe because the adm area is locked
-     right now. */
-  logfile_name = svn_wc__logfile_path (*log_number, pool);
-
-  SVN_ERR (svn_wc__open_adm_file (&log_fp,
-                                  parent_dir,
-                                  logfile_name,
-                                  (APR_WRITE | APR_CREATE), /* not excl */
-                                  pool));
-
-  /* Accumulate log commands in this buffer until we're ready to close
-     and run the log.  */
-  log_accum = svn_stringbuf_create ("", pool);
-  
   /* If we need to schedule this for addition, do it first, before the
    * entry exists.  Otherwise we'll get bounced out with an error
    * about scheduling an already-versioned item for addition.
@@ -1898,8 +1881,6 @@ install_file (svn_wc_notify_state_t *content_state,
     {
       const char *rev_str = NULL;
       
-      assert (new_revision == 0);
-
       if (copyfrom_url)
         {
           assert (SVN_IS_VALID_REVNUM (copyfrom_rev));
@@ -2034,10 +2015,33 @@ install_file (svn_wc_notify_state_t *content_state,
   SVN_ERR (svn_wc_text_modified_p (&is_locally_modified,
                                    file_path, FALSE, adm_access, pool));
 
+  /* In the case where the user has replaced a file with a copy it may 
+   * not show as locally modified.  So if the file isn't listed as
+   * locally modified test to see if it has been replaced.  If so
+   * remember that. */
+  if (!is_locally_modified)
+    {
+      const svn_wc_entry_t *entry;
+      SVN_ERR (svn_wc_entry (&entry, file_path, adm_access, FALSE, pool));
+      if (entry && entry->schedule == svn_wc_schedule_replace)
+        is_replaced = TRUE;
+    }
+  
   if (new_text_path)   /* is there a new text-base to install? */
     {
-      txtb     = svn_wc__text_base_path (base_name, FALSE, pool);
-      tmp_txtb = svn_wc__text_base_path (base_name, TRUE, pool);
+      if (!is_replaced)
+        {
+          txtb = svn_wc__text_base_path (base_name, FALSE, pool);
+          tmp_txtb = svn_wc__text_base_path (base_name, TRUE, pool);
+        }
+      else
+        {
+          const char *tmp_txtb_real = svn_wc__text_base_path (base_name, TRUE,
+                                                              pool);
+          txtb = svn_wc__text_revert_path (base_name, FALSE, pool);
+          tmp_txtb = svn_wc__text_revert_path (base_name, TRUE, pool);
+          SVN_ERR (svn_io_file_rename (tmp_txtb_real, tmp_txtb, pool));
+        }
     }
   else if (magic_props_changed) /* no new text base, but... */
     {
@@ -2117,7 +2121,7 @@ install_file (svn_wc_notify_state_t *content_state,
    matrix. */
   if (new_text_path)
     {
-      if (! is_locally_modified)
+      if (! is_locally_modified && ! is_replaced)
         {
           /* If there are no local mods, who cares whether it's a text
              or binary file!  Just write a log command to overwrite
@@ -2134,7 +2138,6 @@ install_file (svn_wc_notify_state_t *content_state,
                                  base_name,
                                  NULL);
         }
-  
       else   /* working file is locally modified... */
         {
           svn_node_kind_t wfile_kind = svn_node_unknown;
@@ -2265,20 +2268,22 @@ install_file (svn_wc_notify_state_t *content_state,
                              txtb,
                              NULL);
 
-      {
-        unsigned char digest[APR_MD5_DIGESTSIZE];
-        SVN_ERR (svn_io_file_checksum (digest, new_text_path, pool));
-        svn_xml_make_open_tag (&log_accum,
-                               pool,
-                               svn_xml_self_closing,
-                               SVN_WC__LOG_MODIFY_ENTRY,
-                               SVN_WC__LOG_ATTR_NAME,
-                               base_name,
-                               SVN_WC__ENTRY_ATTR_CHECKSUM,
-                               svn_md5_digest_to_cstring_display (digest,
-                                                                  pool),
-                               NULL);
-      }
+      /* If the file is replaced don't write the checksum.  Checksum is blank
+       * on replaced files */
+      if (!is_replaced)
+        {
+          unsigned char digest[APR_MD5_DIGESTSIZE];
+          SVN_ERR (svn_io_file_checksum (digest, new_text_path, pool));
+          svn_xml_make_open_tag (&log_accum,
+                                 pool,
+                                 svn_xml_self_closing,
+                                 SVN_WC__LOG_MODIFY_ENTRY,
+                                 SVN_WC__LOG_ATTR_NAME,
+                                 base_name,
+                                 SVN_WC__ENTRY_ATTR_CHECKSUM,
+                                 svn_md5_digest_to_cstring (digest, pool),
+                                 NULL);
+        }
     }
 
   /* This writes a whole bunch of log commands to install entryprops.  */
@@ -2314,18 +2319,6 @@ install_file (svn_wc_notify_state_t *content_state,
     }
 
 
-  /* Write our accumulation of log entries into a log file */
-  SVN_ERR_W (svn_io_file_write_full (log_fp, log_accum->data, 
-                                    log_accum->len, NULL, pool),
-             apr_psprintf (pool, _("Error writing log for '%s'"),
-                           svn_path_local_style (file_path, pool)));
-
-  /* The log is done, close it. */
-  SVN_ERR (svn_wc__close_adm_file (log_fp, parent_dir,
-                                   logfile_name,
-                                   TRUE, /* sync */ pool));
-  (*log_number)++;
-  
   if (content_state)
     {
       /* Initialize the state of our returned value. */
@@ -2369,6 +2362,7 @@ close_file (void *file_baton,
   svn_wc_notify_state_t content_state, prop_state;
   svn_wc_notify_lock_state_t lock_state;
   svn_wc_adm_access_t *adm_access;
+  svn_stringbuf_t *log_accum;
 
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
   if (fb->text_changed)
@@ -2395,11 +2389,15 @@ close_file (void *file_baton,
   SVN_ERR (svn_wc_adm_retrieve (&adm_access, eb->adm_access, 
                                 parent_path, pool));
 
-  SVN_ERR (install_file (&content_state,
+  /* Accumulate log commands in this buffer until we're ready to
+     write the log. */
+  log_accum = svn_stringbuf_create ("", pool);
+
+  SVN_ERR (install_file (log_accum,
+                         &content_state,
                          &prop_state,
                          &lock_state,
                          adm_access,
-                         &fb->dir_baton->log_number,
                          fb->path,
                          (*eb->target_revision),
                          new_text_path,
@@ -2412,6 +2410,12 @@ close_file (void *file_baton,
                          eb->diff3_cmd,
                          fb->last_changed_date,
                          pool));
+
+  /* Write our accumulation of log entries into a log file */
+  SVN_ERR (svn_wc__write_log (adm_access, fb->dir_baton->log_number,
+                              log_accum, pool));
+
+  fb->dir_baton->log_number++;
 
   /* We have one less referrer to the directory's bump information. */
   SVN_ERR (maybe_bump_dir_info (eb, fb->bump_info, pool));
@@ -2922,25 +2926,28 @@ svn_wc_get_actual_target (const char *path,
 }
 
 svn_error_t *
-svn_wc_add_repos_file (const char *dst_path,
-                       svn_wc_adm_access_t *adm_access,
-                       const char *new_text_path,
-                       apr_hash_t *new_props,
-                       const char *copyfrom_url,
-                       svn_revnum_t copyfrom_rev,
-                       apr_pool_t *pool)
+svn_wc_add_repos_file2 (const char *dst_path,
+                        svn_wc_adm_access_t *adm_access,
+                        const char *new_text_base_path,
+                        const char *new_text_path,
+                        apr_hash_t *new_base_props,
+                        apr_hash_t *new_props,
+                        const char *copyfrom_url,
+                        svn_revnum_t copyfrom_rev,
+                        apr_pool_t *pool)
 {
   const char *new_URL;
   apr_array_header_t *propchanges;
-  int log_number = 0;
+  const svn_wc_entry_t *ent;
+  const svn_wc_entry_t *dst_entry;
+  svn_stringbuf_t *log_accum;
+  const char *dir_name, *base_name;
+
+  svn_path_split (dst_path, &dir_name, &base_name, pool);
 
   /* Fabricate the anticipated new URL of the target and check the
      copyfrom URL to be in the same repository. */
   {
-    const svn_wc_entry_t *ent;
-    const char *dir_name, *base_name;
-    
-    svn_path_split (dst_path, &dir_name, &base_name, pool);
     SVN_ERR (svn_wc_entry (&ent, dir_name, adm_access, FALSE, pool));
     new_URL = svn_path_url_add_component (ent->url, base_name, pool);
 
@@ -2951,21 +2958,64 @@ svn_wc_add_repos_file (const char *dst_path,
                                   " root than '%s'"),
                                 copyfrom_url, ent->repos);
   }
+
+  /* Accumulate log commands in this buffer until we're ready to close
+     and run the log.  */
+  log_accum = svn_stringbuf_create ("", pool);
+
+  /* If we're replacing the file then we need to save the destination files
+   * text base and prop base before replacing it. This allows us to revert
+   * the entire change. */
+  SVN_ERR (svn_wc_entry (&dst_entry, dst_path, adm_access, FALSE, pool));
+  if (dst_entry && dst_entry->schedule == svn_wc_schedule_delete)
+    {
+      const char *full_path = svn_wc_adm_access_path (adm_access);
+      const char *dst_rtext = svn_wc__text_revert_path (base_name, FALSE,
+                                                        pool);
+      const char *dst_txtb = svn_wc__text_base_path (base_name, FALSE, pool);
+      const char *dst_rprop;
+      const char *dst_bprop;
+      svn_node_kind_t kind;
+
+      SVN_ERR (svn_wc__prop_revert_path (&dst_rprop, base_name,
+                                         adm_access, FALSE, pool));
+
+      SVN_ERR (svn_wc__prop_base_path (&dst_bprop, base_name,
+                                       adm_access, FALSE, pool));
+
+      svn_xml_make_open_tag (&log_accum, pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_MV,
+                             SVN_WC__LOG_ATTR_NAME, dst_txtb,
+                             SVN_WC__LOG_ATTR_DEST, dst_rtext,
+                             NULL);
+
+      /* If prop base exist, copy it to revert base. */
+      SVN_ERR (svn_io_check_path (svn_path_join(full_path, dst_bprop, pool),
+                                  &kind, pool));
+      if (kind == svn_node_file)
+        svn_xml_make_open_tag (&log_accum, pool,
+                               svn_xml_self_closing,
+                               SVN_WC__LOG_MV,
+                               SVN_WC__LOG_ATTR_NAME, dst_bprop,
+                               SVN_WC__LOG_ATTR_DEST, dst_rprop,
+                               NULL);
+    }
   
   /* Construct the new properties.  Passing an empty hash for the
      source props will result in the right kind of prop array for
      install_file().  Ooh, magic. */
-  SVN_ERR (svn_prop_diffs (&propchanges, new_props,
+  SVN_ERR (svn_prop_diffs (&propchanges, new_base_props,
                            apr_hash_make (pool), pool));
   
-  SVN_ERR (install_file (NULL,
+  SVN_ERR (install_file (log_accum,
+                         NULL,
                          NULL,
                          NULL,
                          adm_access,
-                         &log_number,
                          dst_path,
-                         0,
-                         new_text_path,
+                         ent->revision,
+                         new_text_base_path,
                          propchanges,
                          TRUE, /* a full proplist */
                          new_URL,
@@ -2976,7 +3026,97 @@ svn_wc_add_repos_file (const char *dst_path,
                          NULL,
                          pool));
 
+  if (new_props)
+    {
+      const char *tmp_prop_path, *prop_path;
+      const char *adm_path = svn_wc_adm_access_path (adm_access);
+      apr_size_t adm_path_len = strlen (adm_path) + 1;
+
+      /* Save new props to temporary file. Don't use svn_wc__prop_path()
+         because install_file() will overwrite it! */
+      SVN_ERR (svn_wc_create_tmp_file2 (NULL, &tmp_prop_path,
+                                        adm_path, FALSE, pool));
+      SVN_ERR (svn_wc__save_prop_file (tmp_prop_path, new_props, pool));
+
+      /* Rename temporary props file to working props. */
+      SVN_ERR (svn_wc__prop_path (&prop_path, base_name, adm_access,
+                                  FALSE, pool));
+      svn_xml_make_open_tag (&log_accum, pool,
+                             svn_xml_self_closing,
+                             SVN_WC__LOG_MV,
+                             SVN_WC__LOG_ATTR_NAME,
+                             tmp_prop_path + adm_path_len,
+                             SVN_WC__LOG_ATTR_DEST,
+                             prop_path,
+                             NULL);
+    }
+
+  if (new_text_path)
+    {
+      apr_file_t *file;
+      const char *tmp_text_path;
+      const char *adm_path = svn_wc_adm_access_path (adm_access);
+      apr_size_t adm_path_len = strlen (adm_path) + 1;
+
+      /* Move new text to temporary file in adm_access. */
+      SVN_ERR (svn_wc_create_tmp_file2 (&file, &tmp_text_path,
+                                        adm_path, FALSE, pool));
+      SVN_ERR (svn_io_file_close (file, pool));
+      SVN_ERR (svn_io_file_move (new_text_path, tmp_text_path, pool));
+
+      /* Translate/rename new temporary text file to working text. */
+      if (svn_wc__has_special_property (new_base_props))
+        {
+          svn_xml_make_open_tag (&log_accum, pool,
+                                 svn_xml_self_closing,
+                                 SVN_WC__LOG_CP_AND_TRANSLATE,
+                                 SVN_WC__LOG_ATTR_NAME,
+                                 tmp_text_path + adm_path_len,
+                                 SVN_WC__LOG_ATTR_DEST,
+                                 base_name,
+                                 SVN_WC__LOG_ATTR_ARG_1,
+                                 "true",
+                                 NULL);
+          /* Remove the copy-source, making it look like a move */
+          svn_xml_make_open_tag (&log_accum, pool,
+                                 svn_xml_self_closing,
+                                 SVN_WC__LOG_RM,
+                                 SVN_WC__LOG_ATTR_NAME,
+                                 tmp_text_path + adm_path_len,
+                                 NULL);
+        }
+      else
+        svn_xml_make_open_tag (&log_accum, pool,
+                               svn_xml_self_closing,
+                               SVN_WC__LOG_MV,
+                               SVN_WC__LOG_ATTR_NAME,
+                               tmp_text_path + adm_path_len,
+                               SVN_WC__LOG_ATTR_DEST,
+                               base_name,
+                               NULL);
+    }
+
+  /* Write our accumulation of log entries into a log file */
+  SVN_ERR (svn_wc__write_log (adm_access, 0, log_accum, pool));
+
   SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_add_repos_file (const char *dst_path,
+                       svn_wc_adm_access_t *adm_access,
+                       const char *new_text_path,
+                       apr_hash_t *new_props,
+                       const char *copyfrom_url,
+                       svn_revnum_t copyfrom_rev,
+                       apr_pool_t *pool)
+{
+  return svn_wc_add_repos_file2 (dst_path, adm_access,
+                                 new_text_path, NULL,
+                                 new_props, NULL,
+                                 copyfrom_url, copyfrom_rev,
+                                 pool);
 }

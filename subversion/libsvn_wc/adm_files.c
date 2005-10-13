@@ -332,13 +332,37 @@ svn_wc__text_base_path (const char *path,
                                NULL);
 }
 
+const char *
+svn_wc__text_revert_path (const char *path,
+                          svn_boolean_t tmp,
+                          apr_pool_t *pool)
+{
+  const char *newpath, *base_name;
+
+  svn_path_split (path, &newpath, &base_name, pool);
+  return extend_with_adm_name (newpath,
+                               SVN_WC__REVERT_EXT,
+                               tmp,
+                               pool,
+                               SVN_WC__ADM_TEXT_BASE,
+                               base_name,
+                               NULL);
+}
+
+/* Kind for prop_path_internal. */
+typedef enum prop_path_kind_t
+{
+  prop_path_kind_base = 0,
+  prop_path_kind_revert,
+  prop_path_kind_wcprop,
+  prop_path_kind_working
+} prop_path_kind_t;
 
 static svn_error_t *
 prop_path_internal (const char **prop_path,
                     const char *path,
                     svn_wc_adm_access_t *adm_access,
-                    svn_boolean_t base,
-                    svn_boolean_t wcprop,
+                    prop_path_kind_t path_kind,
                     svn_boolean_t tmp,
                     apr_pool_t *pool)
 {
@@ -349,25 +373,44 @@ prop_path_internal (const char **prop_path,
 
   if (entry && entry->kind == svn_node_dir)  /* It's a working copy dir */
     {
+      static const char * names[] = {
+        SVN_WC__ADM_DIR_PROP_BASE,    /* prop_path_kind_base */
+        SVN_WC__ADM_DIR_PROP_REVERT,  /* prop_path_kind_revert */
+        SVN_WC__ADM_DIR_WCPROPS,      /* prop_path_kind_wcprop */
+        SVN_WC__ADM_DIR_PROPS         /* prop_path_kind_working */
+      };
+
       *prop_path = extend_with_adm_name
         (path,
          NULL,
          tmp,
          pool,
-         base ? SVN_WC__ADM_DIR_PROP_BASE
-         : (wcprop ? SVN_WC__ADM_DIR_WCPROPS : SVN_WC__ADM_DIR_PROPS),
+         names[path_kind],
          NULL);
     }
   else  /* It's either a file, or a non-wc dir (i.e., maybe an ex-file) */
     {
+      static const char * extensions[] = {
+        SVN_WC__BASE_EXT,     /* prop_path_kind_base */
+        SVN_WC__REVERT_EXT,   /* prop_path_kind_revert */
+        SVN_WC__WORK_EXT,     /* prop_path_kind_wcprop */
+        SVN_WC__WORK_EXT      /* prop_path_kind_working */
+      };
+
+      static const char * dirs[] = {
+        SVN_WC__ADM_PROP_BASE,  /* prop_path_kind_base */
+        SVN_WC__ADM_PROP_BASE,  /* prop_path_kind_revert */
+        SVN_WC__ADM_WCPROPS,    /* prop_path_kind_wcprop */
+        SVN_WC__ADM_PROPS       /* prop_path_kind_working */
+      };
+
       svn_path_split (path, prop_path, &entry_name, pool);
       *prop_path = extend_with_adm_name
         (*prop_path,
-         base ? SVN_WC__BASE_EXT : SVN_WC__WORK_EXT,
+         extensions[path_kind],
          tmp,
          pool,
-         base ? SVN_WC__ADM_PROP_BASE
-         : (wcprop ? SVN_WC__ADM_WCPROPS : SVN_WC__ADM_PROPS),
+         dirs[path_kind],
          entry_name,
          NULL);
     }
@@ -385,8 +428,8 @@ svn_wc__wcprop_path (const char **wcprop_path,
                      svn_boolean_t tmp,
                      apr_pool_t *pool)
 {
-  return prop_path_internal (wcprop_path, path, adm_access, FALSE, TRUE, tmp,
-                             pool);
+  return prop_path_internal (wcprop_path, path, adm_access,
+                             prop_path_kind_wcprop, tmp, pool);
 }
 
 
@@ -399,8 +442,8 @@ svn_wc__prop_path (const char **prop_path,
                    svn_boolean_t tmp,
                    apr_pool_t *pool)
 {
-  return prop_path_internal (prop_path, path, adm_access, FALSE, FALSE, tmp,
-                             pool);
+  return prop_path_internal (prop_path, path, adm_access,
+                             prop_path_kind_working, tmp, pool);
 }
 
 
@@ -411,11 +454,21 @@ svn_wc__prop_base_path (const char **prop_path,
                         svn_boolean_t tmp,
                         apr_pool_t *pool)
 {
-  return prop_path_internal (prop_path, path, adm_access, TRUE, FALSE, tmp,
-                             pool);
+  return prop_path_internal (prop_path, path, adm_access, 
+                             prop_path_kind_base, tmp, pool);
 }
 
 
+svn_error_t *
+svn_wc__prop_revert_path (const char **prop_path,
+                          const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t tmp,
+                          apr_pool_t *pool)
+{
+  return prop_path_internal (prop_path, path, adm_access,
+                             prop_path_kind_revert, tmp, pool);
+}
 
 
 /*** Opening and closing files in the adm area. ***/
@@ -1174,23 +1227,44 @@ svn_wc__adm_cleanup_tmp_area (svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
+svn_wc_create_tmp_file2 (apr_file_t **fp,
+                         const char **new_name,
+                         const char *path,
+                         svn_boolean_t delete_on_close,
+                         apr_pool_t *pool)
+{
+  const char *ignored_filename;
+  apr_file_t *file;
+
+  assert (fp || new_name);
+
+  /* Use a self-explanatory name for the file :-) . */
+  path = svn_wc__adm_path (path, TRUE, pool, "tempfile", NULL);
+
+  /* Open a unique file;  use APR_DELONCLOSE. */
+  SVN_ERR (svn_io_open_unique_file (&file, &ignored_filename,
+                                    path, ".tmp", delete_on_close, pool));
+
+  if (new_name)
+    *new_name = ignored_filename;
+
+  if (fp)
+    *fp = file;
+  else
+    SVN_ERR (svn_io_file_close (file, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc_create_tmp_file (apr_file_t **fp,
                         const char *path,
                         svn_boolean_t delete_on_close,
                         apr_pool_t *pool)
 {
-  const char *ignored_filename;
-
-  /* Use a self-explanatory name for the file :-) . */
-  path = svn_wc__adm_path (path, TRUE, pool, "tempfile", NULL);
-
-  /* Open a unique file;  use APR_DELONCLOSE. */  
-  SVN_ERR (svn_io_open_unique_file (fp, &ignored_filename,
-                                    path, ".tmp", delete_on_close, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc_create_tmp_file2 (fp, NULL, path, delete_on_close, pool);
 }
-
 
 svn_error_t *
 svn_wc__prep_file_for_replacement (const char *path,
