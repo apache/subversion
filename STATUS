@@ -19,16 +19,5 @@ Candidate changes:
       +1: cmpilato, kfogel
       +0: dlr (concept, new to this area of the code)
 
-  * r16388, r16408
-    Fix numerous bugs in the svn_fs_*berkeley*() APIs.
-    Fix issue 2361 (recover on a FSFS repository errors if BDB not linked).
-    Fix creation of BDB files in FSFS repositories by 'svnadmin recover',
-      'svnadmin list-dblogs' and 'svnadmin list-unused-dblogs'.
-    Justification:
-      Not vital, but the creation of Berkeley DB files in a FSFS repository
-      is a long standing bug which doesn't really give a good impression.
-    Votes:
-      +1: maxb, kfogel, dberlin
-
 Approved changes:
 
