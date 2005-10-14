@@ -2367,6 +2367,15 @@ typedef svn_error_t *(*svn_info_receiver_t)
       const svn_info_t *info,
       apr_pool_t *pool);
 
+/** 
+ * Return a duplicate of @a info, allocated in @a pool. No part of the new
+ * structure will be shared with @a info.
+ *
+ * @since New in 1.3.
+ */
+svn_info_t *
+svn_info_dup(const svn_info_t *info, apr_pool_t *pool);
+
 /**
  * Invoke @a receiver with @a receiver_baton to return information
  * about @a path_or_url in @a revision.  The information returned is
