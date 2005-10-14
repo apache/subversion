@@ -19,7 +19,7 @@ Candidate changes:
       +1: cmpilato, kfogel
       +0: dlr (concept, new to this area of the code)
 
-  * r16708, r16710
+  * r16708, r16710, r16712
     Add functions to duplicate the svn_info_t and svn_prop_t structures.
     Justification:
       Needed by the Ruby bindings to fix segfaults related to pool scoping.
