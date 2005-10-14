@@ -567,15 +567,17 @@ Otherwise, return \"\"."
 
 ; compatibility
 ; emacs 20
-(unless (fboundp 'point-at-eol) (defalias 'point-at-eol 'line-end-position))
-(unless (fboundp 'point-at-bol) (defalias 'point-at-bol 'line-beginning-position))
-(unless (functionp 'read-directory-name) (defalias 'read-directory-name 'read-file-name))
+(defalias 'svn-point-at-eol
+  (if (fboundp 'point-at-eol) 'point-at-eol 'line-end-position))
+(defalias 'svn-point-at-bol
+  (if (fboundp 'point-at-bol) 'point-at-bol 'line-beginning-position))
+(defalias 'svn-read-directory-name 
+  (if (fboundp 'read-directory-name) 'read-directory-name 'read-file-name))
 
 (eval-when-compile
   (if (not (fboundp 'gethash))
       (require 'cl-macs)))
-(if (not (fboundp 'puthash))
-    (defalias 'puthash 'cl-puthash))
+(defalias 'svn-puthash (if (fboundp 'puthash) 'puthash 'cl-puthash))
 
 ; xemacs
 ;; Evaluate the defsubst at compile time, so that the byte compiler
@@ -583,8 +585,8 @@ Otherwise, return \"\"."
 ;; defsubst automatically from within the if form.
 (eval-and-compile
   (if (fboundp 'match-string-no-properties)
-      nil ;; great
-    (defsubst match-string-no-properties (match)
+      (defalias 'svn-match-string-no-properties 'match-string-no-properties)
+    (defsubst svn-match-string-no-properties (match)
       (buffer-substring-no-properties (match-beginning match) (match-end match)))))
 
 ;; XEmacs 21.4.17 does not have an `alist' widget.  Define a replacement.
@@ -682,8 +684,8 @@ inside loops."
 (defun svn-status (dir &optional arg)
   "Examine the status of Subversion working copy in directory DIR.
 If ARG then pass the -u argument to `svn status'."
-  (interactive (list (read-directory-name "SVN status directory: "
-                                          nil default-directory nil)
+  (interactive (list (svn-read-directory-name "SVN status directory: "
+                                              nil default-directory nil)
                      current-prefix-arg))
   (setq arg (svn-status-possibly-negate-meaning-of-arg arg 'svn-status))
   (unless (file-directory-p dir)
@@ -988,7 +990,7 @@ The results are used to build the `svn-status-info' variable."
       (goto-char (point-min))
       (while (< (point) (point-max))
         (cond
-         ((= (point-at-eol) (point-at-bol)) ;skip blank lines
+         ((= (svn-point-at-eol) (svn-point-at-bol)) ;skip blank lines
           nil)
          ((looking-at "Status against revision:[ ]+\\([0-9]+\\)")
           ;; the above message appears for the main listing plus once for each svn:externals entry
@@ -1639,7 +1641,7 @@ When called with the prefix argument 0, use the full path name."
           (progn
             (goto-char fname-pos)
             (svn-status-goto-file-name fname)
-            (goto-char (+ column (point-at-bol))))
+            (goto-char (+ column (svn-point-at-bol))))
         (goto-char (+ (next-overlay-change (point-min)) svn-status-default-column))))))
 
 (defun svn-status-annotate-status-buffer-entry (action line-info)
@@ -1666,7 +1668,7 @@ When called with the prefix argument 0, use the full path name."
       (svn-status-line-info->set-filemark line-info ? )
       (svn-status-line-info->set-propmark line-info ? ))
     (let ((buffer-read-only nil))
-      (delete-region (point-at-bol) (point-at-eol))
+      (delete-region (svn-point-at-bol) (svn-point-at-eol))
       (svn-insert-line-in-status-buffer line-info)
       (backward-char 1)
       (when tag-string
@@ -1692,7 +1694,7 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
       (setq svn-status-commit-rev-number nil)
       (setq skip nil) ; set to t whenever we find a line not about a committed file
       (while (< (point) (point-max))
-        (cond ((= (point-at-eol) (point-at-bol)) ;skip blank lines
+        (cond ((= (svn-point-at-eol) (svn-point-at-bol)) ;skip blank lines
                (setq skip t))
               ((looking-at "Sending")
                (setq action 'committed))
@@ -1704,7 +1706,7 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
                (setq skip t))
               ((looking-at "Committed revision \\([0-9]+\\)")
                (setq svn-status-commit-rev-number
-                     (string-to-number (match-string-no-properties 1)))
+                     (string-to-number (svn-match-string-no-properties 1)))
                (setq skip t))
               (t ;; this should never be needed(?)
                (setq action 'unknown)))
@@ -1714,7 +1716,7 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
             ;; when the commit used . as argument, delete the trailing directory
             ;; from the svn output
             (search-forward "/" nil t))
-          (setq name (buffer-substring-no-properties (point) (point-at-eol)))
+          (setq name (buffer-substring-no-properties (point) (svn-point-at-eol)))
           (setq result (cons (list name action)
                              result))
           (setq skip nil))
@@ -1734,7 +1736,7 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
           (result))
       (goto-char (point-min))
       (while (< (point) (point-max))
-        (cond ((= (point-at-eol) (point-at-bol)) ;skip blank lines
+        (cond ((= (svn-point-at-eol) (svn-point-at-bol)) ;skip blank lines
                (setq skip t))
               ((looking-at "A")
                (setq action 'added-wc))
@@ -1744,7 +1746,7 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
                (setq action 'unknown)))
         (unless skip ;found an interesting line
           (forward-char 10)
-          (setq name (buffer-substring-no-properties (point) (point-at-eol)))
+          (setq name (buffer-substring-no-properties (point) (svn-point-at-eol)))
           (setq result (cons (list name action)
                              result))
           (setq skip nil))
@@ -1805,9 +1807,9 @@ Symbolic links to directories count as directories (see `file-directory-p')."
                        'svn-status-directory-face
                        'svn-status-filename-face)))
         (elide-hint (if (svn-status-line-info->show-user-elide-continuation line-info) " ..." "")))
-    (puthash (svn-status-line-info->filename line-info)
-             (point)
-             svn-status-filename-to-buffer-position-cache)
+    (svn-puthash (svn-status-line-info->filename line-info)
+                 (point)
+                 svn-status-filename-to-buffer-position-cache)
     (insert (svn-status-maybe-add-face
              (svn-status-line-info->has-usermark line-info)
              (concat usermark
@@ -1913,7 +1915,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
         (progn
           (goto-char fname-pos)
           (svn-status-goto-file-name fname)
-          (goto-char (+ column (point-at-bol))))
+          (goto-char (+ column (svn-point-at-bol))))
       (goto-char (+ (next-overlay-change (point-min)) svn-status-default-column)))))
 
 (defun svn-status-parse-info (arg)
@@ -1939,7 +1941,7 @@ non-interactive use."
       (goto-char (point-min))
       (let ((case-fold-search t))
         (search-forward "url: "))
-      (setq url (buffer-substring-no-properties (point) (point-at-eol))))
+      (setq url (buffer-substring-no-properties (point) (svn-point-at-eol))))
     (setq svn-status-base-info `((url ,url)))))
 
 (defun svn-status-base-info->url ()
@@ -1977,13 +1979,13 @@ non-interactive use."
   (interactive "p")
   (next-line nr-of-lines)
   (when (svn-status-get-line-information)
-    (goto-char (+ (point-at-bol) svn-status-default-column))))
+    (goto-char (+ (svn-point-at-bol) svn-status-default-column))))
 
 (defun svn-status-previous-line (nr-of-lines)
   (interactive "p")
   (previous-line nr-of-lines)
   (when (svn-status-get-line-information)
-    (goto-char (+ (point-at-bol) svn-status-default-column))))
+    (goto-char (+ (svn-point-at-bol) svn-status-default-column))))
 
 (defun svn-status-dired-jump ()
   "Jump to a dired buffer, containing the file at point."
@@ -2147,7 +2149,7 @@ Then move to that line."
               (save-excursion
                 (let ((buffer-read-only nil))
                   (goto-line current-line)
-                  (delete-region (point-at-bol) (point-at-eol))
+                  (delete-region (svn-point-at-bol) (svn-point-at-eol))
                   (svn-insert-line-in-status-buffer (car st-info))
                   (delete-char 1)))
               (message "%s %s" (if set-mark "Marked" "Unmarked") i-fname)))))
@@ -2303,9 +2305,9 @@ or (if no files were marked) the file under point."
   (let ((st-info svn-status-info)
         (svn-status-ui-information (make-hash-table :test 'equal)))
     (while st-info
-      (puthash (svn-status-line-info->filename (car st-info))
-               (svn-status-line-info->ui-status (car st-info))
-               svn-status-ui-information)
+      (svn-puthash (svn-status-line-info->filename (car st-info))
+                   (svn-status-line-info->ui-status (car st-info))
+                   svn-status-ui-information)
       (setq st-info (cdr st-info)))
     svn-status-ui-information))
 
@@ -2432,8 +2434,9 @@ If ARG then prompt for revision to diff against, else compare working copy with 
   (svn-status-show-process-output 'diff t)
   (save-excursion
     (set-buffer svn-status-last-output-buffer-name)
-    (diff-mode)
-    (font-lock-fontify-buffer)
+    (when (fboundp 'diff-mode) ;not in GNU Emacs 20.7
+      (diff-mode)
+      (font-lock-fontify-buffer))
     (setq buffer-read-only t)))
 
 (defun svn-status-show-process-buffer ()
@@ -2501,8 +2504,8 @@ itself) before running mv."
                                            (svn-status-line-info->filename (car marked-files)))
                                    (svn-status-directory-containing-point t)))
       ;;multiple files selected, so prompt for existing directory to mv them into.
-      (setq dest (read-directory-name (format "Move %d files to directory: " num-of-files)
-                                      (svn-status-directory-containing-point t) nil t))
+      (setq dest (svn-read-directory-name (format "Move %d files to directory: " num-of-files)
+                                          (svn-status-directory-containing-point t) nil t))
       (unless (file-directory-p dest)
         (error "%s is not a directory" dest)))
     (when (string= dest "")
@@ -2698,7 +2701,7 @@ Recommended values are ?m or ?M.")
                   (if pos
                       (progn
                         (goto-char pos)
-                        (delete-region (point-at-bol) (point-at-eol))
+                        (delete-region (svn-point-at-bol) (svn-point-at-eol))
                         (svn-insert-line-in-status-buffer (car st-info))
                         (delete-char 1))
                     (message "psvn: file %s not found, updating %s buffer content..."
@@ -3346,7 +3349,7 @@ Commands:
 (defun svn-log-revision-at-point ()
   (save-excursion
     (re-search-backward "^r\\([0-9]+\\)")
-    (match-string-no-properties 1)))
+    (svn-match-string-no-properties 1)))
 
 (defun svn-log-view-diff (arg)
   "Show the changeset for a given log entry.
