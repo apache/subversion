@@ -28,12 +28,4 @@ Candidate changes:
 
 Approved changes:
 
-  * r16704
-    Revert r16486. Perl bindings linkage change.
-    Justification:
-      Better to be slightly buggy on all platforms than not buggy on some
-      platforms and seriously buggy on others.
-    Votes:
-      +1: maxb, dlr, djames
-
-
+  (none)
