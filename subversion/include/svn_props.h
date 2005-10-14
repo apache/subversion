@@ -54,6 +54,15 @@ typedef struct svn_prop_t
 
 
 /**
+ * Return a duplicate of @a prop, allocated in @a pool. No part of the new
+ * structure will be shared with @a prop.
+ *
+ * @since New in 1.3.
+ */
+svn_prop_t *svn_prop_dup(const svn_prop_t *prop, apr_pool_t *pool);
+
+
+/**
  * Subversion distinguishes among several kinds of properties,
  * particularly on the client-side.  There is no "unknown" kind; if
  * there's nothing special about a property name, the default category
