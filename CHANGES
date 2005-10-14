@@ -1,3 +1,100 @@
+Version 1.3.0
+(?? October 2005, from /branches/1.3.x)
+http://svn.collab.net/repos/svn/tags/1.3.0
+
+ User-visible-changes:
+  - Client:
+    * 'svn ls -v' now shows remote locks (issue #2291)
+    * 'svn status' speedup (r15061, r15103)
+    * 'svn blame' speedup on files with long history (issue #1970)
+    * 'svnversion' now assumes default argument of '.' (r14892)
+    * support for neon 0.25.x, which fixes http:// control-c bug (issue #2297)
+    * support for ISO-8601 date format, and date components not starting with 0
+    * on Windows, '_svn' admin dir now toggled by runtime env. variable (r16244)
+    * new switches added:
+       - 'svn blame --xml [--incremental]' (r14690)
+       - 'svn status --xml [--incremental]'  (issue #2069)
+       - 'svn info --xml [--incremental]'
+       - 'svn add/import --no-ignore'  (issue #2105)
+       - 'svnlook tree --full-paths'  (r13976)
+       - 'svnlook diff --diff-copy-from'  (r14855)
+       - 'svnlook changed --copy-info' (r16681)
+    * fixed: 'svn copy wc URL' might include deleted items (issue #2153)
+    * fixed: 'svn copy wc wc' allows cross-repository copies (issue #2404)
+    * fixed: 'svn up/merge' major property-merging bugs (issue #2035)
+    * fixed: 'svn merge' insisting on write access to '.' (issue #2411)
+    * fixed: 'svn merge' cross-device move problems (r16293, -329, -330)
+    * fixed: 'svn diff' outputs headers in wrong encoding (issue #1533)
+    * fixed: 'svn proplist/add/cat' dies on unversioned items (issue #2030)
+    * fixed: 'svn add' not honoring svn:ignore property (issue #2243)
+    * fixed: 'svn log -rN:M --limit X' error over http:// (issue #2396)
+    * fixed: 'svn switch --relocate' silent failure (issue #2380)
+    * fixed: 'svn switch --relocate' failure on 'deleted' dir (r16673)
+    * fixed: 'svn info' not always showing repos lock (issue #2276)
+    * fixed: 'svn info' might show lock on wrong path (r16626)
+    * fixed: 'svnlook' chokes on logs with inconsistent newlines (r14573)
+    * fixed: 'svnlook propget --revprop -t' failure (r15203)
+    * fixed: 'svnversion' wrongly traverses into externals (r15161)
+    * fixed: incorrect URI encoding passed to svn+ssh:// (issue #2406)
+    * fixed: properly handle filenames containing '@' (issue #2317)
+    * fixed: '--non-interactive' now suppresses launch of $EDITOR (r15277)
+    * fixed: conflict markers not in current locale (r14621)
+    * fixed: commands ignoring extraneous -m or -F switches (issue #2285)
+    * fixed: poor error-checking when using revprops (r15542)
+    * fixed: non-interruptible OSX socket connection with svn:// (r15909)
+    * fixed: stack-smashing bugs (r15948, r16037)
+    * translation updates for all languages
+
+  - Server:
+    * svnserve improvements:
+       - can now restrict read/write access by path (see releasenotes)
+    * mod_dav_svn improvements:
+       - 'SVNListParentPath on' shows all repositories in web browser (r16158)
+       - ability to log high-level client operations (see releasenotes)
+       - sets svn:mime-type on autoversioning commits (r14359)
+    * 'svn log' performance improvement (r14722)
+    * fixed: fs history algorithm might return wrong objects (issue #1970)
+    * fixed: theoretical FSFS posix-lock race condition (issue #2265)
+    * fixed: repos deadlock when hooks output too much (issue #2078)
+    * fixed: mod_dav_svn displays errors with sensitive paths (r14792)
+    * fixed: anonymous reader could create empty commits (issue #2388)
+    * fixed: possible segfault to callers of trace_node_locations() (r16188)
+    * fixed: BDB-style locking actions on FSFS repositories (r16295, r16297)
+    * fixed: numerous bugs running BDB commands on FSFS (issue #2361, r16388)
+
+  - Both:
+    * faster multiple (un)locks in a single svn:// request (issue #2264)
+
+Developer-visible-changes:
+* reorganization of automated tests, including ability to run on ramdisk
+* lots of Doxygen/API documentation cleanup
+* numerous improvements to gen-make.py build system, especially on win32
+* working copy is now storing repos_root as separate field (issue #960)
+* keywords are now stored in an internal hash (issue #890)
+* client status APIs now makes more server-side info available (r16344)
+* new public APIs:  
+   - new transfer progress callback for DAV (r15948)
+   - svn_ra_initialize(), svn_client_open_ra_session()
+   - svn_fs_closest_copy(), svn_fs_type()
+   - several rev'd APIs, see doxygen docs
+* SWIG 1.3.25 support:  no more compile-time or runtime SWIG dependencies!
+    - SWIG/python bindings -- huge improvements:
+       - automatic memory management: APIs no longer require pool arguments
+       - new automated test suite (donated from trac), more unit coverage
+       - better error-messages and docs (SWIG autodoc feature)
+    - SWIG/ruby bindings:
+       - complete API coverage
+       - expanded testsuite and test coverage
+    -  SWIG/perl bindings:
+       - new accessors for svn_lock_t, svn_fs_access_t
+       - a number of bugfixes
+* javahl bindings:
+    - add streamy API for fetching file contents (r15584) 
+    - fixed: let tests run before bindings are installed (issue #2040)
+    - fixed: lock command not raising errors propertly (issue #2394)
+    - fixed: ignored errors from svn_client_blame2() (r16434)
+
+
 Version 1.2.3
 (19 August 2005, from /branches/1.2.x)
 http://svn.collab.net/repos/svn/tags/1.2.3
