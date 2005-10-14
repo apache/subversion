@@ -20,6 +20,8 @@
 #include <apr_strings.h>
 
 #include "svn_types.h"
+#include "svn_props.h"
+#include "svn_string.h"
 
 
 svn_commit_info_t *
@@ -64,3 +66,16 @@ svn_log_changed_path_dup (const svn_log_changed_path_t *changed_path,
 
   return new_changed_path;
 }
+
+svn_prop_t *
+svn_prop_dup (const svn_prop_t *prop, apr_pool_t *pool)
+{
+  svn_prop_t *new_prop = apr_pcalloc (pool, sizeof (*new_prop));
+
+  if (prop->name)
+    new_prop->name = apr_pstrdup (pool, prop->name);
+  if (prop->value)
+    new_prop->value = svn_string_dup (prop->value, pool);
+
+}
+
