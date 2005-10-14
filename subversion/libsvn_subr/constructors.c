@@ -77,5 +77,6 @@ svn_prop_dup (const svn_prop_t *prop, apr_pool_t *pool)
   if (prop->value)
     new_prop->value = svn_string_dup (prop->value, pool);
 
+  return new_prop;
 }
 
