@@ -19,22 +19,38 @@ Candidate changes:
       +1: cmpilato, kfogel
       +0: dlr (concept, new to this area of the code)
 
-  * r16722, r16727, r16728
-    Duplicate objects passed to callbacks in the Ruby bindings to avoid
-    pool-related scoping issues.
-    Justification:
-      Fixes segfaults in the Ruby test suite.
-    Votes:
-      +1: kou
-      +1: djames(r16722)
-      +0: blair
-
   * r16725
     Enable running autogen.sh with Python <2.1, in which the scope of
     variables within lambda is restricted.
     Justification:
       Build failure due only to the scope issue of old Python is not good.
     Votes:
+      +1: djames
       +0: nori
 
+  * r16734
+    Use svn_commit_item2_t instead of svn_commit_item_t in the Ruby bindings.
+    Justification:
+      Avoids use of deprecated structs.
+    Votes:
+      +0: djames
+
+  * r16735
+    Create deep copy utility functions for svn_wc_external_item_t,
+    svn_client_proplist_item_t, and svn_client_commit_item2_t.
+    Justification:
+      Needed to prevent pool-related scoping segfaults in the Ruby bindings.
+    Votes:
+      +0: djames
+
+
 Approved changes:
+
+  * r16722, r16727, r16728
+    Duplicate objects passed to callbacks in the Ruby bindings to avoid
+    pool-related scoping issues.
+    Justification:
+      Fixes segfaults in the Ruby test suite.
+    Votes:
+      +1: kou, djames
+      +0: blair
