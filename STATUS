@@ -19,4 +19,12 @@ Candidate changes:
       +1: cmpilato, kfogel
       +0: dlr (concept, new to this area of the code)
 
+  * r16722
+    Duplicate objects passed to callbacks in the Ruby bindings to avoid
+    pool-related scoping issues.
+    Justification:
+      Fixes segfaults in the Ruby test suite.
+    Votes:
+      +1: djames
+
 Approved changes:
