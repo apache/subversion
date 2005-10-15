@@ -233,9 +233,7 @@ action.  So, for example, the following <em>httpd.conf</em> directive
 would log all subversion-related actions to a private logfile, along
 with timestamp and username:</p>
 
-<p>
 <pre>CustomLog logs/svn_logfile "%t %u %{SVN-ACTION}e" env=SVN-ACTION</pre>
-</p>
 
 <p>Equivalent functionality is planned for svnserve, the standalone
   server, but not until Subversion 1.4, because the implementation
