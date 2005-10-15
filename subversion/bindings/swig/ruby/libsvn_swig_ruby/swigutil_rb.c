@@ -9,15 +9,15 @@
 #define SVN_ERR_P(obj) (RTEST(rb_obj_is_kind_of(obj, rb_svn_error())))
 
 static VALUE mSvn = Qnil;
-static VALUE mSvnCore = Qnil;
-static VALUE cSvnError = Qnil;
-static VALUE cSvnCoreStream = Qnil;
-static VALUE cSvnCorePool = Qnil;
 static VALUE mSvnClient = Qnil;
 static VALUE cSvnClientContext = Qnil;
+static VALUE mSvnCore = Qnil;
+static VALUE cSvnCorePool = Qnil;
+static VALUE cSvnCoreStream = Qnil;
 static VALUE cSvnDelta = Qnil;
 static VALUE cSvnDeltaEditor = Qnil;
 static VALUE cSvnDeltaTextDeltaWindowHandler = Qnil;
+static VALUE cSvnError = Qnil;
 static VALUE cSvnFs = Qnil;
 static VALUE cSvnFsFileSystem = Qnil;
 
@@ -98,6 +98,8 @@ rb_ary_aref1(VALUE ary, VALUE arg)
 }
 
 
+
+/* constant getter */
 static VALUE
 rb_svn(void)
 {
@@ -108,30 +110,30 @@ rb_svn(void)
 }
 
 static VALUE
+rb_svn_client(void)
+{
+  if (NIL_P(mSvnClient)) {
+    mSvnClient = rb_const_get(rb_svn(), rb_intern("Client"));
+  }
+  return mSvnClient;
+}
+
+static VALUE
+rb_svn_client_context(void)
+{
+  if (NIL_P(cSvnClientContext)) {
+    cSvnClientContext = rb_const_get(rb_svn_client(), rb_intern("Context"));
+  }
+  return cSvnClientContext;
+}
+
+static VALUE
 rb_svn_core(void)
 {
   if (NIL_P(mSvnCore)) {
     mSvnCore = rb_const_get(rb_svn(), rb_intern("Core"));
   }
   return mSvnCore;
-}
-
-static VALUE
-rb_svn_error(void)
-{
-  if (NIL_P(cSvnError)) {
-    cSvnError = rb_const_get(rb_svn(), rb_intern("Error"));
-  }
-  return cSvnError;
-}
-
-static VALUE
-rb_svn_core_stream(void)
-{
-  if (NIL_P(cSvnCoreStream)) {
-    cSvnCoreStream = rb_const_get(rb_svn_core(), rb_intern("Stream"));
-  }
-  return cSvnCoreStream;
 }
 
 static VALUE
@@ -145,31 +147,21 @@ rb_svn_core_pool(void)
 }
 
 static VALUE
+rb_svn_core_stream(void)
+{
+  if (NIL_P(cSvnCoreStream)) {
+    cSvnCoreStream = rb_const_get(rb_svn_core(), rb_intern("Stream"));
+  }
+  return cSvnCoreStream;
+}
+
+static VALUE
 rb_svn_delta(void)
 {
   if (NIL_P(cSvnDelta)) {
     cSvnDelta = rb_const_get(rb_svn(), rb_intern("Delta"));
   }
   return cSvnDelta;
-}
-
-static VALUE
-rb_svn_fs(void)
-{
-  if (NIL_P(cSvnFs)) {
-    cSvnFs = rb_const_get(rb_svn(), rb_intern("Fs"));
-  }
-  return cSvnFs;
-}
-
-static VALUE
-rb_svn_fs_file_system(void)
-{
-  if (NIL_P(cSvnFsFileSystem)) {
-    cSvnFsFileSystem = rb_const_get(rb_svn_fs(), rb_intern("FileSystem"));
-    rb_ivar_set(cSvnFsFileSystem, rb_id___batons__(), rb_hash_new());
-  }
-  return cSvnFsFileSystem;
 }
 
 VALUE
@@ -192,6 +184,36 @@ svn_swig_rb_svn_delta_text_delta_window_handler(void)
   return cSvnDeltaTextDeltaWindowHandler;
 }
 
+static VALUE
+rb_svn_error(void)
+{
+  if (NIL_P(cSvnError)) {
+    cSvnError = rb_const_get(rb_svn(), rb_intern("Error"));
+  }
+  return cSvnError;
+}
+
+static VALUE
+rb_svn_fs(void)
+{
+  if (NIL_P(cSvnFs)) {
+    cSvnFs = rb_const_get(rb_svn(), rb_intern("Fs"));
+  }
+  return cSvnFs;
+}
+
+static VALUE
+rb_svn_fs_file_system(void)
+{
+  if (NIL_P(cSvnFsFileSystem)) {
+    cSvnFsFileSystem = rb_const_get(rb_svn_fs(), rb_intern("FileSystem"));
+    rb_ivar_set(cSvnFsFileSystem, rb_id___batons__(), rb_hash_new());
+  }
+  return cSvnFsFileSystem;
+}
+
+
+/* pool holder */
 static VALUE
 rb_svn_pool_holder(void)
 {
@@ -241,6 +263,181 @@ rb_holder_pop(VALUE holder, VALUE obj)
   return result;
 }
 
+
+/* pool */
+static VALUE
+rb_get_pool(VALUE self)
+{
+  return rb_ivar_get(self, rb_id___pool__());
+}
+
+static VALUE
+rb_pools(VALUE self)
+{
+  VALUE pools = rb_ivar_get(self, rb_id___pools__());
+
+  if (NIL_P(pools)) {
+    pools = rb_hash_new();
+    rb_ivar_set(self, rb_id___pools__(), pools);
+  }
+  
+  return pools;
+}
+
+static VALUE
+rb_set_pool(VALUE self, VALUE pool)
+{
+  if (NIL_P(pool)) {
+    VALUE old_pool = rb_ivar_get(self, rb_id___pool__());
+    rb_hash_aset(rb_pools(self), rb_obj_id(old_pool), old_pool);
+    rb_ivar_set(self, rb_id___pool__(), Qnil);
+  } else {
+    if (NIL_P(rb_ivar_get(self, rb_id___pool__()))) {
+      rb_ivar_set(self, rb_id___pool__(), pool);
+    } else {
+      rb_hash_aset(rb_pools(self), rb_obj_id(pool), pool);
+    }
+  }
+
+  return Qnil;
+}
+
+static VALUE
+rb_pool_new(void)
+{
+  return rb_funcall(rb_svn_core_pool(), rb_id_new(), 0);
+}
+
+static VALUE swig_type_re = Qnil;
+
+static VALUE
+swig_type_regex(void)
+{
+  if (NIL_P(swig_type_re)) {
+    char reg_str[] = "\\A(?:SWIG|Svn::Ext)::";
+    swig_type_re = rb_reg_new(reg_str, strlen(reg_str), 0);
+    rb_ivar_set(rb_svn(), rb_id_swig_type_regex(), swig_type_re);
+  }
+  return swig_type_re;
+}
+
+static VALUE
+find_swig_type_object(int num, VALUE *objects)
+{
+  VALUE re = swig_type_regex();
+  int i;
+
+  for (i = 0; i < num; i++) {
+    if (RTEST(rb_reg_match(re,
+                           rb_funcall(rb_obj_class(objects[i]),
+                                      rb_id_name(),
+                                      0)))) {
+      return objects[i];
+    }
+  }
+  
+  return Qnil;
+}
+
+void
+svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
+                     VALUE *rb_pool, apr_pool_t **pool)
+{
+  *rb_pool = Qnil;
+  
+  if (argc > 0) {
+    if (POOL_P(argv[argc - 1])) {
+      *rb_pool = argv[argc - 1];
+      argc -= 1;
+    }
+  }
+
+  if (!NIL_P(self)) {
+    *rb_pool = rb_get_pool(self);
+    if (!POOL_P(*rb_pool)) {
+      *rb_pool = Qnil;
+    }
+  }
+
+  if (NIL_P(*rb_pool)) {
+    VALUE target = find_swig_type_object(argc, argv);
+    *rb_pool = rb_get_pool(target);
+    if (!POOL_P(*rb_pool)) {
+      *rb_pool = Qnil;
+    }
+  }
+  
+  if (NIL_P(*rb_pool)) {
+    *rb_pool = rb_pool_new();
+    {
+      VALUE target = find_swig_type_object(argc, argv);
+      if (!NIL_P(target)) {
+        rb_set_pool(target, *rb_pool);
+      }
+    }
+  }
+  
+  SWIG_ConvertPtr(*rb_pool, (void **)pool, SWIG_TypeQuery("apr_pool_t *"), 1);
+}
+
+static VALUE
+rb_set_pool_if_swig_type_object(VALUE target, VALUE pool)
+{
+  VALUE targets[1] = {target};
+  
+  if (!NIL_P(find_swig_type_object(1, targets))) {
+    rb_set_pool(target, pool);
+  }
+
+  return Qnil;
+}
+
+void
+svn_swig_rb_set_pool(VALUE target, VALUE pool)
+{
+  if (NIL_P(target)) {
+    return;
+  }
+    
+  if (!RTEST(rb_obj_is_kind_of(target, rb_cArray))) {
+    target = rb_ary_new3(1, target);
+  }
+
+  rb_iterate(rb_each, target, rb_set_pool_if_swig_type_object, pool);
+}
+
+void
+svn_swig_rb_set_pool_for_no_swig_type(VALUE target, VALUE pool)
+{
+  if (NIL_P(target)) {
+    return;
+  }
+    
+  if (!RTEST(rb_obj_is_kind_of(target, rb_cArray))) {
+    target = rb_ary_new3(1, target);
+  }
+
+  rb_iterate(rb_each, target, rb_set_pool, pool);
+}
+
+void
+svn_swig_rb_push_pool(VALUE pool)
+{
+  if (!NIL_P(pool)) {
+    rb_holder_push(rb_svn_pool_holder(), pool);
+  }
+}
+
+void
+svn_swig_rb_pop_pool(VALUE pool)
+{
+  if (!NIL_P(pool)) {
+    rb_holder_pop(rb_svn_pool_holder(), pool);
+  }
+}
+
+
+/* error */
 VALUE
 svn_swig_rb_svn_error_new(VALUE code, VALUE message, VALUE file, VALUE line)
 {
@@ -281,24 +478,6 @@ svn_swig_rb_handle_svn_error(svn_error_t *error)
   VALUE rb_error = svn_swig_rb_svn_error_to_rb_error(error);
   svn_error_clear(error);
   rb_exc_raise(rb_error);
-}
-
-static VALUE
-rb_svn_client(void)
-{
-  if (NIL_P(mSvnClient)) {
-    mSvnClient = rb_const_get(rb_svn(), rb_intern("Client"));
-  }
-  return mSvnClient;
-}
-
-static VALUE
-rb_svn_client_context(void)
-{
-  if (NIL_P(cSvnClientContext)) {
-    cSvnClientContext = rb_const_get(rb_svn_client(), rb_intern("Context"));
-  }
-  return cSvnClientContext;
 }
 
 
@@ -351,6 +530,42 @@ c2r_svn_string(void *value, void *ctx)
 
   return c2r_string2(s->data);
 }
+
+
+/* C -> Ruby (dup) */
+#define DEFINE_DUP_BASE(type, dup_func, arg_prefix)                        \
+static VALUE                                                               \
+dup_ ## type (arg_prefix svn_ ## type ## _t *type)                         \
+{                                                                          \
+  apr_pool_t *type ## _pool;                                               \
+  VALUE rb_ ## type ## _pool;                                              \
+  svn_ ## type ## _t *copied_ ## type;                                     \
+  VALUE rb_copied_ ## type;                                                \
+                                                                           \
+  if (!type)                                                               \
+    return Qnil;                                                           \
+                                                                           \
+  svn_swig_rb_get_pool(0, NULL, 0, &rb_ ## type ## _pool, &type ## _pool); \
+  copied_ ## type = svn_ ## dup_func(type, type ## _pool);                 \
+  rb_copied_ ## type = c2r_swig_type((void *)copied_ ## type,              \
+                                     (void *)"svn_" # type "_t *");        \
+  rb_set_pool(rb_copied_ ## type, rb_ ## type ##_pool);                    \
+                                                                           \
+  return rb_copied_ ## type;                                               \
+}
+
+#define DEFINE_DUP(type, dup_func) DEFINE_DUP_BASE(type, dup_func, const)
+#define DEFINE_DUP2(type) DEFINE_DUP(type, type ## _dup)
+#define DEFINE_DUP_NO_CONST(type, dup_func) DEFINE_DUP_BASE(type, dup_func,)
+#define DEFINE_DUP_NO_CONST2(type) DEFINE_DUP_NO_CONST(type, type ## _dup)
+
+DEFINE_DUP2(txdelta_window)
+DEFINE_DUP2(info)
+DEFINE_DUP2(lock)
+DEFINE_DUP2(auth_ssl_server_cert_info)
+DEFINE_DUP2(wc_entry)
+DEFINE_DUP(wc_notify, wc_dup_notify)
+DEFINE_DUP_NO_CONST(wc_status2, wc_dup_status2)
 
 
 /* Ruby -> C */
@@ -629,216 +844,6 @@ svn_swig_rb_hash_to_apr_hash_revnum(VALUE hash, apr_pool_t *pool)
     return apr_hash;
   }
 }
-
-
-
-/* pool */
-static VALUE
-rb_get_pool(VALUE self)
-{
-  return rb_ivar_get(self, rb_id___pool__());
-}
-
-static VALUE
-rb_pools(VALUE self)
-{
-  VALUE pools = rb_ivar_get(self, rb_id___pools__());
-
-  if (NIL_P(pools)) {
-    pools = rb_hash_new();
-    rb_ivar_set(self, rb_id___pools__(), pools);
-  }
-  
-  return pools;
-}
-
-static VALUE
-rb_set_pool(VALUE self, VALUE pool)
-{
-  if (NIL_P(pool)) {
-    VALUE old_pool = rb_ivar_get(self, rb_id___pool__());
-    rb_hash_aset(rb_pools(self), rb_obj_id(old_pool), old_pool);
-    rb_ivar_set(self, rb_id___pool__(), Qnil);
-  } else {
-    if (NIL_P(rb_ivar_get(self, rb_id___pool__()))) {
-      rb_ivar_set(self, rb_id___pool__(), pool);
-    } else {
-      rb_hash_aset(rb_pools(self), rb_obj_id(pool), pool);
-    }
-  }
-
-  return Qnil;
-}
-
-static VALUE
-rb_pool_new(void)
-{
-  return rb_funcall(rb_svn_core_pool(), rb_id_new(), 0);
-}
-
-static VALUE swig_type_re = Qnil;
-
-static VALUE
-swig_type_regex(void)
-{
-  if (NIL_P(swig_type_re)) {
-    char reg_str[] = "\\A(?:SWIG|Svn::Ext)::";
-    swig_type_re = rb_reg_new(reg_str, strlen(reg_str), 0);
-    rb_ivar_set(rb_svn(), rb_id_swig_type_regex(), swig_type_re);
-  }
-  return swig_type_re;
-}
-
-static VALUE
-find_swig_type_object(int num, VALUE *objects)
-{
-  VALUE re = swig_type_regex();
-  int i;
-
-  for (i = 0; i < num; i++) {
-    if (RTEST(rb_reg_match(re,
-                           rb_funcall(rb_obj_class(objects[i]),
-                                      rb_id_name(),
-                                      0)))) {
-      return objects[i];
-    }
-  }
-  
-  return Qnil;
-}
-
-void
-svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
-                     VALUE *rb_pool, apr_pool_t **pool)
-{
-  *rb_pool = Qnil;
-  
-  if (argc > 0) {
-    if (POOL_P(argv[argc - 1])) {
-      *rb_pool = argv[argc - 1];
-      argc -= 1;
-    }
-  }
-
-  if (!NIL_P(self)) {
-    *rb_pool = rb_get_pool(self);
-    if (!POOL_P(*rb_pool)) {
-      *rb_pool = Qnil;
-    }
-  }
-
-  if (NIL_P(*rb_pool)) {
-    VALUE target = find_swig_type_object(argc, argv);
-    *rb_pool = rb_get_pool(target);
-    if (!POOL_P(*rb_pool)) {
-      *rb_pool = Qnil;
-    }
-  }
-  
-  if (NIL_P(*rb_pool)) {
-    *rb_pool = rb_pool_new();
-    {
-      VALUE target = find_swig_type_object(argc, argv);
-      if (!NIL_P(target)) {
-        rb_set_pool(target, *rb_pool);
-      }
-    }
-  }
-  
-  SWIG_ConvertPtr(*rb_pool, (void **)pool, SWIG_TypeQuery("apr_pool_t *"), 1);
-}
-
-static VALUE
-rb_set_pool_if_swig_type_object(VALUE target, VALUE pool)
-{
-  VALUE targets[1] = {target};
-  
-  if (!NIL_P(find_swig_type_object(1, targets))) {
-    rb_set_pool(target, pool);
-  }
-
-  return Qnil;
-}
-
-void
-svn_swig_rb_set_pool(VALUE target, VALUE pool)
-{
-  if (NIL_P(target)) {
-    return;
-  }
-    
-  if (!RTEST(rb_obj_is_kind_of(target, rb_cArray))) {
-    target = rb_ary_new3(1, target);
-  }
-
-  rb_iterate(rb_each, target, rb_set_pool_if_swig_type_object, pool);
-}
-
-void
-svn_swig_rb_set_pool_for_no_swig_type(VALUE target, VALUE pool)
-{
-  if (NIL_P(target)) {
-    return;
-  }
-    
-  if (!RTEST(rb_obj_is_kind_of(target, rb_cArray))) {
-    target = rb_ary_new3(1, target);
-  }
-
-  rb_iterate(rb_each, target, rb_set_pool, pool);
-}
-
-void
-svn_swig_rb_push_pool(VALUE pool)
-{
-  if (!NIL_P(pool)) {
-    rb_holder_push(rb_svn_pool_holder(), pool);
-  }
-}
-
-void
-svn_swig_rb_pop_pool(VALUE pool)
-{
-  if (!NIL_P(pool)) {
-    rb_holder_pop(rb_svn_pool_holder(), pool);
-  }
-}
-
-
-/* dup */
-#define DEFINE_DUP_BASE(type, dup_func, arg_prefix)                        \
-static VALUE                                                               \
-dup_ ## type (arg_prefix svn_ ## type ## _t *type)                         \
-{                                                                          \
-  apr_pool_t *type ## _pool;                                               \
-  VALUE rb_ ## type ## _pool;                                              \
-  svn_ ## type ## _t *copied_ ## type;                                     \
-  VALUE rb_copied_ ## type;                                                \
-                                                                           \
-  if (!type)                                                               \
-    return Qnil;                                                           \
-                                                                           \
-  svn_swig_rb_get_pool(0, NULL, 0, &rb_ ## type ## _pool, &type ## _pool); \
-  copied_ ## type = svn_ ## dup_func(type, type ## _pool);                 \
-  rb_copied_ ## type = c2r_swig_type((void *)copied_ ## type,              \
-                                     (void *)"svn_" # type "_t *");        \
-  rb_set_pool(rb_copied_ ## type, rb_ ## type ##_pool);                    \
-                                                                           \
-  return rb_copied_ ## type;                                               \
-}
-
-#define DEFINE_DUP(type, dup_func) DEFINE_DUP_BASE(type, dup_func, const)
-#define DEFINE_DUP2(type) DEFINE_DUP(type, type ## _dup)
-#define DEFINE_DUP_NO_CONST(type, dup_func) DEFINE_DUP_BASE(type, dup_func,)
-#define DEFINE_DUP_NO_CONST2(type) DEFINE_DUP_NO_CONST(type, type ## _dup)
-
-DEFINE_DUP2(txdelta_window)
-DEFINE_DUP2(info)
-DEFINE_DUP2(lock)
-DEFINE_DUP2(auth_ssl_server_cert_info)
-DEFINE_DUP2(wc_entry)
-DEFINE_DUP(wc_notify, wc_dup_notify)
-DEFINE_DUP_NO_CONST(wc_status2, wc_dup_status2)
 
 
 /* callback */
