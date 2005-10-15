@@ -1626,6 +1626,9 @@ fold_scheduling (apr_hash_t *entries,
       switch (*schedule)
         {
         case svn_wc_schedule_normal:
+          /* Reverting a delete results in normal */
+          return SVN_NO_ERROR;
+
         case svn_wc_schedule_delete:
           /* These are no-op cases. */
           *modify_flags &= ~SVN_WC__ENTRY_MODIFY_SCHEDULE;
