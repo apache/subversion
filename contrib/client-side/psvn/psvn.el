@@ -2324,7 +2324,7 @@ or (if no files were marked) the file under point."
     (insert postfix))))
 
 (defun svn-status-show-process-buffer-internal (&optional scroll-to-top)
-  (when (eq (current-buffer) svn-status-buffer-name)
+  (when (string= (buffer-name) svn-status-buffer-name)
     (delete-other-windows))
   (pop-to-buffer "*svn-process*")
   (when svn-status-wash-control-M-in-process-buffers
