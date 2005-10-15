@@ -639,9 +639,9 @@ DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_string,
                           c2r_string, , const char *, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_svn_string,
                           c2r_svn_string, &, svn_string_t, NULL)
-DEFINE_APR_ARRAY_TO_ARRAY(static VALUE, c2r_commit_item_array,
-                          c2r_swig_type, &, svn_client_commit_item_t,
-                          (void *)"svn_client_commit_item_t *")
+DEFINE_APR_ARRAY_TO_ARRAY(static VALUE, c2r_commit_item2_array,
+                          c2r_swig_type, &, svn_client_commit_item2_t,
+                          (void *)"svn_client_commit_item2_t *")
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_prop,
                           c2r_prop_dup, &, svn_prop_t, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_svn_rev,
@@ -1442,11 +1442,11 @@ svn_swig_rb_repos_authz_callback(svn_repos_authz_access_t required,
 }
 
 svn_error_t *
-svn_swig_rb_get_commit_log_func(const char **log_msg,
-                                const char **tmp_file,
-                                apr_array_header_t *commit_items,
-                                void *baton,
-                                apr_pool_t *pool)
+svn_swig_rb_get_commit_log_func2(const char **log_msg,
+                                 const char **tmp_file,
+                                 const apr_array_header_t *commit_items,
+                                 void *baton,
+                                 apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   VALUE proc, rb_pool;
@@ -1463,7 +1463,7 @@ svn_swig_rb_get_commit_log_func(const char **log_msg,
     args = rb_ary_new3(3,
                        proc,
                        rb_id_call(),
-                       c2r_commit_item_array(commit_items));
+                       c2r_commit_item2_array(commit_items));
     result = invoke_callback_handle_error(args, rb_pool, &err);
 
     is_message = rb_ary_entry(result, 0);
