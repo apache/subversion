@@ -2726,12 +2726,18 @@ Otherwise get only the actual file."
   (svn-status-get-specific-revision-internal (not arg) t))
 
 (defun svn-status-get-specific-revision-internal (&optional only-actual-file arg)
-  (let* ((fl (if only-actual-file
-                 (list (svn-status-get-line-information))
-               (svn-status-marked-files)))
-         (file-names (if only-actual-file
-                         (list (svn-status-line-info->filename (svn-status-get-line-information)))
-                       (svn-status-marked-file-names)))
+  "Retrieve older revisions of files.
+If ONLY-ACTUAL-FILE is non-nil, use the file at point.  Otherwise,
+use the marked files, or the file at point if nothing has been marked.
+If ARG is non-nil, ask the user to specify the revision.  Otherwise,
+retrieve HEAD if an update is known to be available, or BASE if not.
+
+After the call, `svn-status-get-revision-file-info' will be an alist
+\((WORKING-FILE-NAME . RETRIEVED-REVISION-FILE-NAME) ...).  These file
+names are relative to the directory where `svn-status' was run."
+  ;; TODO: Return the alist, instead of storing it in a variable.
+  (let* ((fl (svn-status-get-file-list (not only-actual-file)))
+         (file-names (mapcar 'svn-status-line-info->filename fl))
          (revision (if arg
                        (svn-status-read-revision-string "Get files for version: " "PREV")
                      (if (svn-status-line-info->update-available (car fl)) "HEAD" "BASE")))
