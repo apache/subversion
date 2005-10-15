@@ -115,6 +115,16 @@
 ;; Or you can check it out from the subversion repository:
 ;;   svn co http://svn.collab.net/repos/svn/trunk/contrib/client-side/psvn psvn
 
+;; "svn-" is the package prefix used in psvn.el.  There are also longer
+;; prefixes which clarify the code and help symbol completion, but they
+;; are not intended to prevent name clashes with other packages.  All
+;; interactive commands meant to be used only in a specific mode should
+;; have names beginning with the name of that mode: for example,
+;; "svn-status-add-file" in "svn-status-mode".  "psvn" should be used
+;; only in names of files, customization groups, and features.  If SVK
+;; support is ever added, it should use "svn-svk-" when no existing
+;; prefix is applicable.
+
 ;; TODO:
 ;; * shortcut for svn propset svn:keywords "Date" psvn.el
 ;; * docstrings for the functions
