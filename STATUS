@@ -27,6 +27,7 @@ Candidate changes:
     Votes:
       +1: kou
       +1: djames(r16722)
+      +0: blair
 
   * r16725
     Enable running autogen.sh with Python <2.1, in which the scope of
