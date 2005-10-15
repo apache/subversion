@@ -30,8 +30,9 @@ struct commit_wrapper_baton {
 };
 
 /* This implements svn_commit_callback2_t. */
-svn_error_t *commit_wrapper_callback (const svn_commit_info_t *commit_info,
-                                      void *baton, apr_pool_t *pool)
+static svn_error_t *
+commit_wrapper_callback (const svn_commit_info_t *commit_info,
+                         void *baton, apr_pool_t *pool)
 {
   struct commit_wrapper_baton *cwb = baton;
 
@@ -46,10 +47,10 @@ svn_error_t *commit_wrapper_callback (const svn_commit_info_t *commit_info,
 
 void
 svn_compat_wrap_commit_callback (svn_commit_callback_t callback,
-                                       void *callback_baton,
-                                       svn_commit_callback2_t *callback2,
-                                       void **callback2_baton,
-                                       apr_pool_t *pool)
+                                 void *callback_baton,
+                                 svn_commit_callback2_t *callback2,
+                                 void **callback2_baton,
+                                 apr_pool_t *pool)
 {
   struct commit_wrapper_baton *cwb = apr_palloc (pool, sizeof (*cwb));
 
