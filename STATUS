@@ -27,4 +27,12 @@ Candidate changes:
     Votes:
       +1: djames
 
+  * r16725
+    Enable running autogen.sh with Python <2.1, in which the scope of
+    variables within lambda is restricted.
+    Justification:
+      Build failure due only to the scope issue of old Python is not good.
+    Votes:
+      +0: nori
+
 Approved changes:
