@@ -1439,7 +1439,8 @@ fold_entry (apr_hash_t *entries,
        || (entry->schedule == svn_wc_schedule_normal && entry->copied)))
 
   */
-  if (entry->schedule == svn_wc_schedule_delete)
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE
+      && entry->schedule == svn_wc_schedule_delete)
     {
       cur_entry->copied = FALSE;
       cur_entry->copyfrom_rev = SVN_INVALID_REVNUM;
