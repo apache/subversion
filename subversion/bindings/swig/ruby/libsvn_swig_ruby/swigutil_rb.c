@@ -533,25 +533,32 @@ c2r_svn_string(void *value, void *ctx)
 
 
 /* C -> Ruby (dup) */
-#define DEFINE_DUP_BASE(type, dup_func, arg_prefix)                        \
-static VALUE                                                               \
-dup_ ## type (arg_prefix svn_ ## type ## _t *type)                         \
-{                                                                          \
-  apr_pool_t *type ## _pool;                                               \
-  VALUE rb_ ## type ## _pool;                                              \
-  svn_ ## type ## _t *copied_ ## type;                                     \
-  VALUE rb_copied_ ## type;                                                \
-                                                                           \
-  if (!type)                                                               \
-    return Qnil;                                                           \
-                                                                           \
-  svn_swig_rb_get_pool(0, NULL, 0, &rb_ ## type ## _pool, &type ## _pool); \
-  copied_ ## type = svn_ ## dup_func(type, type ## _pool);                 \
-  rb_copied_ ## type = c2r_swig_type((void *)copied_ ## type,              \
-                                     (void *)"svn_" # type "_t *");        \
-  rb_set_pool(rb_copied_ ## type, rb_ ## type ##_pool);                    \
-                                                                           \
-  return rb_copied_ ## type;                                               \
+#define DEFINE_DUP_BASE(type, dup_func, type_prefix)                         \
+static VALUE                                                                 \
+c2r_ ## type ## _dup(void *type, void *ctx)                                  \
+{                                                                            \
+  apr_pool_t *type ## _pool;                                                 \
+  VALUE rb_ ## type ## _pool;                                                \
+  svn_ ## type ## _t *copied_ ## type;                                       \
+  VALUE rb_copied_ ## type;                                                  \
+                                                                             \
+  if (!type)                                                                 \
+    return Qnil;                                                             \
+                                                                             \
+  svn_swig_rb_get_pool(0, NULL, 0, &rb_ ## type ## _pool, &type ## _pool);   \
+  copied_ ## type = svn_ ## dup_func((type_prefix svn_ ## type ## _t *)type, \
+                                     type ## _pool);                         \
+  rb_copied_ ## type = c2r_swig_type((void *)copied_ ## type,                \
+                                     (void *)"svn_" # type "_t *");          \
+  rb_set_pool(rb_copied_ ## type, rb_ ## type ##_pool);                      \
+                                                                             \
+  return rb_copied_ ## type;                                                 \
+}                                                                            \
+                                                                             \
+static VALUE                                                                 \
+c2r_ ## type ## __dup(type_prefix svn_ ## type ## _t *type)                  \
+{                                                                            \
+  return c2r_ ## type ## _dup((void *)type, NULL);                           \
 }
 
 #define DEFINE_DUP(type, dup_func) DEFINE_DUP_BASE(type, dup_func, const)
@@ -564,6 +571,7 @@ DEFINE_DUP2(info)
 DEFINE_DUP2(lock)
 DEFINE_DUP2(auth_ssl_server_cert_info)
 DEFINE_DUP2(wc_entry)
+DEFINE_DUP2(prop)
 DEFINE_DUP(wc_notify, wc_dup_notify)
 DEFINE_DUP_NO_CONST(wc_status2, wc_dup_status2)
 
@@ -635,8 +643,7 @@ DEFINE_APR_ARRAY_TO_ARRAY(static VALUE, c2r_commit_item_array,
                           c2r_swig_type, &, svn_client_commit_item_t,
                           (void *)"svn_client_commit_item_t *")
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_prop,
-                          c2r_swig_type, &, svn_prop_t,
-                          (void *)"svn_prop_t *")
+                          c2r_prop_dup, &, svn_prop_t, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_svn_rev,
                           c2r_long, &, svn_revnum_t, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_proplist_item,
@@ -1175,7 +1182,7 @@ delta_editor_window_handler(svn_txdelta_window_t *window, void *baton)
   args = rb_ary_new3(3,
                      handler,
                      rb_id_call(),
-                     dup_txdelta_window(window));
+                     c2r_txdelta_window__dup(window));
   result = invoke_callback_handle_error(args, Qnil, &err);
   return err;
 }
@@ -1491,7 +1498,7 @@ svn_swig_rb_notify_func2(void *baton,
     args = rb_ary_new3(3,
                        proc,
                        rb_id_call(),
-                       dup_wc_notify(notify));
+                       c2r_wc_notify__dup(notify));
     invoke_callback(args, rb_pool);
   }
 }
@@ -1560,7 +1567,7 @@ svn_swig_rb_info_receiver(void *baton,
                        proc,
                        rb_id_call(),
                        rb_str_new2(path),
-                       dup_info(info));
+                       c2r_info__dup(info));
     invoke_callback_handle_error(args, rb_pool, &err);
   }
   
@@ -1661,7 +1668,7 @@ svn_swig_rb_txdelta_window_handler(svn_txdelta_window_t *window,
     args = rb_ary_new3(3,
                        proc,
                        rb_id_call(),
-                       dup_txdelta_window(window));
+                       c2r_txdelta_window__dup(window));
     invoke_callback_handle_error(args, rb_pool, &err);
   }
   
@@ -1718,7 +1725,7 @@ svn_swig_rb_fs_get_locks_callback(void *baton,
     args = rb_ary_new3(3,
                        proc,
                        rb_id_call(),
-                       dup_lock(lock));
+                       c2r_lock__dup(lock));
     invoke_callback_handle_error(args, rb_pool, &err);
   }
   
@@ -1922,7 +1929,7 @@ svn_swig_rb_ra_lock_callback(void *baton,
                        rb_id_call(),
                        c2r_string2(path),
                        do_lock ? Qtrue : Qfalse,
-                       dup_lock(lock),
+                       c2r_lock__dup(lock),
                        ra_err ?
                        svn_swig_rb_svn_error_to_rb_error(ra_err) :
                        Qnil);
@@ -1975,8 +1982,7 @@ svn_swig_rb_ra_file_rev_handler(void *baton,
                        rb_id_call(),
                        c2r_string2(path),
                        c2r_long(&rev, NULL),
-                       svn_swig_rb_apr_hash_to_hash_swig_type(rev_props,
-                                                              "svn_prop_t *"),
+                       svn_swig_rb_apr_hash_to_hash_svn_string(rev_props),
                        svn_swig_rb_apr_array_to_array_prop(prop_diffs));
     
     invoke_callback_handle_error(args, rb_pool, &err);
@@ -2038,8 +2044,7 @@ svn_swig_rb_repos_file_rev_handler(void *baton,
                        rb_id_call(),
                        c2r_string2(path),
                        c2r_long(&rev, NULL),
-                       svn_swig_rb_apr_hash_to_hash_swig_type(rev_props,
-                                                              "svn_prop_t *"),
+                       svn_swig_rb_apr_hash_to_hash_svn_string(rev_props),
                        svn_swig_rb_apr_array_to_array_prop(prop_diffs));
     
     invoke_callback_handle_error(args, rb_pool, &err);
@@ -2189,7 +2194,7 @@ svn_swig_rb_auth_ssl_server_trust_prompt_func(
                        rb_id_call(),
                        rb_str_new2(realm),
                        UINT2NUM(failures),
-                       dup_auth_ssl_server_cert_info(cert_info),
+                       c2r_auth_ssl_server_cert_info__dup(cert_info),
                        RTEST(may_save) ? Qtrue : Qfalse);
     result = invoke_callback_handle_error(args, rb_pool, &err);
 
@@ -2452,7 +2457,7 @@ svn_swig_rb_wc_status_func(void *baton,
                        proc,
                        rb_id_call(),
                        rb_str_new2(path),
-                       dup_wc_status2(status));
+                       c2r_wc_status2__dup(status));
     invoke_callback(args, rb_pool);
   }
 }
@@ -2512,7 +2517,7 @@ wc_entry_callbacks_found_entry(const char *path,
                        callbacks,
                        rb_id_found_entry(),
                        c2r_string2(path),
-                       dup_wc_entry(entry));
+                       c2r_wc_entry__dup(entry));
     
     invoke_callback_handle_error(args, rb_pool, &err);
   }
