@@ -545,7 +545,8 @@ c2r_ ## type ## _dup(void *type, void *ctx)                                  \
   if (!type)                                                                 \
     return Qnil;                                                             \
                                                                              \
-  svn_swig_rb_get_pool(0, NULL, 0, &rb_ ## type ## _pool, &type ## _pool);   \
+  svn_swig_rb_get_pool(0, (VALUE *)0, 0,                                     \
+                       &rb_ ## type ## _pool, &type ## _pool);               \
   copied_ ## type = svn_ ## dup_func((type_prefix svn_ ## type ## _t *)type, \
                                      type ## _pool);                         \
   rb_copied_ ## type = c2r_swig_type((void *)copied_ ## type,                \
@@ -572,6 +573,9 @@ DEFINE_DUP2(lock)
 DEFINE_DUP2(auth_ssl_server_cert_info)
 DEFINE_DUP2(wc_entry)
 DEFINE_DUP2(prop)
+DEFINE_DUP2(client_commit_item2)
+DEFINE_DUP2(client_proplist_item)
+DEFINE_DUP2(wc_external_item)
 DEFINE_DUP(wc_notify, wc_dup_notify)
 DEFINE_DUP_NO_CONST(wc_status2, wc_dup_status2)
 
@@ -640,18 +644,18 @@ DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_string,
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_svn_string,
                           c2r_svn_string, &, svn_string_t, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(static VALUE, c2r_commit_item2_array,
-                          c2r_swig_type, &, svn_client_commit_item2_t,
-                          (void *)"svn_client_commit_item2_t *")
+                          c2r_client_commit_item2_dup, ,
+                          svn_client_commit_item2_t *, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_prop,
                           c2r_prop_dup, &, svn_prop_t, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_svn_rev,
                           c2r_long, &, svn_revnum_t, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_proplist_item,
-                          c2r_swig_type, , svn_client_proplist_item_t *,
-                          (void *)"svn_client_proplist_item_t *")
+                          c2r_client_proplist_item_dup, ,
+                          svn_client_proplist_item_t *, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_external_item,
-                          c2r_swig_type, , svn_wc_external_item_t *,
-                          (void *)"svn_wc_external_item_t *")
+                          c2r_wc_external_item_dup, ,
+                          svn_wc_external_item_t *, NULL)
 
 
 /* Ruby Array -> apr_array_t */
