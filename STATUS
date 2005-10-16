@@ -33,6 +33,7 @@ Candidate changes:
     Justification:
       Avoids use of deprecated structs.
     Votes:
+      +1: kou
       +0: djames
 
   * r16735, r16741
@@ -43,6 +44,12 @@ Candidate changes:
     Votes:
       +0: djames
 
+  * r16744
+    Duplicate C object when converting to Ruby object.
+    Justification:
+      Avoid pool and Ruby's GC releated segfalugs.
+    Votes:
+      +1: kou
 
 Approved changes:
 
