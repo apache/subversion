@@ -1652,7 +1652,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
                                    SVN_WC__LOG_SET_TIMESTAMP,
                                    SVN_WC__LOG_ATTR_NAME,
                                    name,
-                                   SVN_WC__LOG_ATTR_DEST,
+                                   SVN_WC__LOG_ATTR_TIMESTAMP,
                                    svn_time_to_cstring (entry->cmt_date, pool),
                                    NULL);
 
