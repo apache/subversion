@@ -1768,7 +1768,7 @@ def mixed_wc_to_url(sbox):
 
 #----------------------------------------------------------------------
 
-# Issue 1516: WC replacement of files requires
+# Issue 845 and 1516: WC replacement of files requires
 # a second text-base and prop-base
 
 def wc_copy_replacement(sbox):
