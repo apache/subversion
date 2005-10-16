@@ -936,7 +936,6 @@ class SvnClientTest < Test::Unit::TestCase
     file2 = "sample2.txt"
     path1 = File.join(@wc_path, file1)
     path2 = File.join(@wc_path, file2)
-    full_path2 = File.join(@full_wc_path, file2)
 
     ctx = make_context(log)
     File.open(path1, "w") {|f| f.print(src1)}
@@ -961,15 +960,13 @@ class SvnClientTest < Test::Unit::TestCase
     end
     ctx.ci(@wc_path)
 
-    assert_equal([path1, path2, full_path2].sort,
+    assert_equal([path1, path2].sort,
                  infos.collect{|path, notify| path}.sort)
     path1_notify = infos.assoc(path1)[1]
     assert(path1_notify.commit_deleted?)
     path2_notify = infos.assoc(path2)[1]
     assert(path2_notify.commit_added?)
     assert_equal(src2, File.open(path2) {|f| f.read})
-    full_path2_notify = infos.assoc(full_path2)[1]
-    assert(full_path2_notify.commit_postfix_txdelta?)
   end
 
   def test_prop
