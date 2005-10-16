@@ -1460,7 +1460,6 @@ static svn_error_t * commit_close_edit(void *edit_baton,
                                        apr_pool_t *pool)
 {
   commit_ctx_t *cc = edit_baton;
-  svn_revnum_t new_rev;
   svn_commit_info_t *commit_info = svn_create_commit_info (pool);
 
   SVN_ERR( svn_ra_dav__merge_activity(&(commit_info->revision),
@@ -1477,7 +1476,7 @@ static svn_error_t * commit_close_edit(void *edit_baton,
   SVN_ERR( delete_activity(edit_baton, pool) );
   SVN_ERR( svn_ra_dav__maybe_store_auth_info(cc->ras) );
 
-  if (new_rev != SVN_INVALID_REVNUM)
+  if (commit_info->revision != SVN_INVALID_REVNUM)
     SVN_ERR( cc->callback (commit_info, cc->callback_baton, pool));
 
   return SVN_NO_ERROR;
