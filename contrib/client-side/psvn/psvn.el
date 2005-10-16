@@ -2740,33 +2740,64 @@ The older revisions are stored in backup files named F.~REVISION~.
 When the function is called without a prefix argument: get all marked files.
 With a prefix argument: get only the actual file."
   (interactive "P")
-  (svn-status-get-specific-revision-internal arg t))
+  (svn-status-get-specific-revision-internal
+   (svn-status-get-file-list (not arg))
+   :ask))
 
-(defun svn-status-get-specific-revision-internal (&optional only-actual-file arg)
+(defun svn-status-get-specific-revision-internal (line-infos revision)
   "Retrieve older revisions of files.
-If ONLY-ACTUAL-FILE is non-nil, use the file at point.  Otherwise,
-use the marked files, or the file at point if nothing has been marked.
-If ARG is non-nil, ask the user to specify the revision.  Otherwise,
-retrieve HEAD if an update is known to be available, or BASE if not.
+LINE-INFOS is a list of line-info structures (see
+`svn-status-get-line-information').
+REVISION is one of:
+- a string: whatever the -r option allows.
+- `:ask': asks the user to specify the revision, which then becomes
+  saved in `minibuffer-history' rather than in `command-history'.
+- `:auto': Use \"HEAD\" if an update is known to exist, \"BASE\" otherwise.
 
 After the call, `svn-status-get-revision-file-info' will be an alist
 \((WORKING-FILE-NAME . RETRIEVED-REVISION-FILE-NAME) ...).  These file
 names are relative to the directory where `svn-status' was run."
+  ;; In `svn-status-show-svn-diff-internal', there is a comment
+  ;; that REVISION `nil' might mean omitting the -r option entirely.
+  ;; That doesn't seem like a good idea with svn cat.
+  ;;
   ;; TODO: Return the alist, instead of storing it in a variable.
-  (let* ((fl (svn-status-get-file-list (not only-actual-file)))
-         (file-names (mapcar 'svn-status-line-info->filename fl))
-         (revision (if arg
-                       (svn-status-read-revision-string "Get files for version: " "PREV")
-                     (if (svn-status-line-info->update-available (car fl)) "HEAD" "BASE")))
-         (file-name)
-         (file-name-with-revision))
-    (message "Getting revision %s for %S" revision file-names)
-    (setq svn-status-get-specific-revision-file-info nil)
-    (while file-names
-      (setq file-name (car file-names))
-      (setq file-name-with-revision (concat file-name ".~" revision "~"))
-      (add-to-list 'svn-status-get-specific-revision-file-info
-                   (cons file-name file-name-with-revision))
+
+  (when (eq revision :ask)
+    (setq revision (svn-status-read-revision-string
+                    "Get files for version: " "PREV")))
+
+  (let ((count (length line-infos)))
+    (if (= count 1)
+        (let ((line-info (car line-infos)))
+          (message "Getting revision %s of %s"
+                   (if (eq revision :auto)
+                       (if (svn-status-line-info->update-available line-info)
+                           "HEAD" "BASE")
+                     revision)
+                   (svn-status-line-info->filename line-info)))
+      ;; We could compute "Getting HEAD of 8 files and BASE of 11 files"
+      ;; but that'd be more bloat than it's worth.
+      (message "Getting revision %s of %d files"
+               (if (eq revision :auto) "HEAD or BASE" revision)
+               count)))
+
+  (setq svn-status-get-specific-revision-file-info '())
+  (dolist (line-info line-infos)
+    (let* ((revision (if (eq revision :auto)
+                         (if (svn-status-line-info->update-available line-info)
+                             "HEAD" "BASE")
+                       revision))       ;must be a string by this point
+           (file-name (svn-status-line-info->filename line-info))
+           ;; If REVISION is e.g. "HEAD", should we find out the actual
+           ;; revision number and save "foo.~123~" rather than "foo.~HEAD~"?
+           ;; OTOH, `auto-mode-alist' already ignores ".~HEAD~" suffixes,
+           ;; and if users often want to know the revision numbers of such
+           ;; files, they can use svn:keywords.
+           (file-name-with-revision (concat file-name ".~" revision "~")))
+      ;; `add-to-list' would unnecessarily check for duplicates.
+      (push (cons file-name file-name-with-revision)
+            svn-status-get-specific-revision-file-info)
       (save-excursion
         (let ((content
                (with-temp-buffer
@@ -2777,7 +2808,7 @@ names are relative to the directory where `svn-status' was run."
                                                    (file-name-nondirectory file-name)
                                                    ".svn-base"))
                    (progn
-                     (svn-run-svn nil t 'cat (append (list "cat" "-r" revision) (list file-name)))
+                     (svn-run-svn nil t 'cat "cat" "-r" revision file-name)
                      ;;todo: error processing
                      ;;svn: Filesystem has no item
                      ;;svn: file not found: revision `15', path `/trunk/file.txt'
@@ -2787,19 +2818,20 @@ names are relative to the directory where `svn-status' was run."
           (setq buffer-read-only nil)
           (erase-buffer)  ;Widen, because we'll save the whole buffer.
           (insert content)
-          (save-buffer)))
-      (setq file-names (cdr file-names)))
-    (setq svn-status-get-specific-revision-file-info
-      (nreverse svn-status-get-specific-revision-file-info))
-    (message "svn-status-get-specific-revision-file-info: %S"
-             svn-status-get-specific-revision-file-info)))
+          (save-buffer)))))
+  (setq svn-status-get-specific-revision-file-info
+        (nreverse svn-status-get-specific-revision-file-info))
+  (message "svn-status-get-specific-revision-file-info: %S"
+           svn-status-get-specific-revision-file-info))
 
 
 (defun svn-status-ediff-with-revision (arg)
   "Run ediff on the current file with a previous revision.
 If ARG then prompt for revision to diff against."
   (interactive "P")
-  (svn-status-get-specific-revision-internal t arg)
+  (svn-status-get-specific-revision-internal
+   (list (svn-status-get-line-information))
+   (if arg :ask :auto))
   (let* ((ediff-after-quit-destination-buffer (current-buffer))
          (my-buffer (find-file-noselect (caar svn-status-get-specific-revision-file-info)))
          (base-buff (find-file-noselect (cdar svn-status-get-specific-revision-file-info)))
