@@ -76,15 +76,16 @@ Developer-visible-changes:
    - svn_ra_initialize(), svn_client_open_ra_session()
    - svn_fs_closest_copy(), svn_fs_type()
    - several rev'd APIs, see doxygen docs
-* SWIG 1.3.25 support:  no more compile-time or runtime SWIG dependencies!
-    - SWIG/python bindings -- huge improvements:
-       - automatic memory management: APIs no longer require pool arguments
-       - new automated test suite (donated from trac), more unit coverage
-       - better error-messages and docs (SWIG autodoc feature)
+* SWIG bindings: No more compile-time or runtime SWIG dependencies
+    - SWIG/python bindings:
+       - automatic memory management: APIs no longer require pool arguments!
+       - improved stability, as shown by our new testsuite
+       - better error messages
     - SWIG/ruby bindings:
-       - complete API coverage
-       - expanded testsuite and test coverage
-    -  SWIG/perl bindings:
+       - complete API coverage!
+       - automatic memory management
+       - greatly expanded test suite
+    - SWIG/perl bindings:
        - new accessors for svn_lock_t, svn_fs_access_t
        - a number of bugfixes
 * javahl bindings:
