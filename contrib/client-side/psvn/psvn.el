@@ -338,7 +338,8 @@ Otherwise: Don't display a header line"
 
 (defcustom svn-status-default-commit-arguments '()
   "*List of arguments to pass to svn commit.
-If you don't like recursive commits, set this value to (\"-N\").
+If you don't like recursive commits, set this value to (\"-N\")
+or mark the directory before committing it.
 Do not put an empty string here, except as an argument of an option:
 Subversion and the operating system may treat that as a file name
 equivalent to \".\", so you would commit more than you intended."
@@ -434,7 +435,12 @@ If t, their full path name will be displayed, else only the filename."
 (defvar svn-status-default-author-width 9)
 (defvar svn-status-line-format " %c%c%c %4s %4s %-9s")
 (defvar svn-start-of-file-list-line-number 0)
-(defvar svn-status-files-to-commit nil)
+(defvar svn-status-files-to-commit nil
+  "List of files to commit at `svn-log-edit-done'.
+This is always set together with `svn-status-recursive-commit'.")
+(defvar svn-status-recursive-commit nil
+  "Non-nil if the next commit should be recursive.
+This is always set together with `svn-status-files-to-commit'.")
 (defvar svn-status-pre-commit-window-configuration nil)
 (defvar svn-status-pre-propedit-window-configuration nil)
 (defvar svn-status-head-revision nil)
@@ -865,7 +871,8 @@ is prompted for give extra arguments, which are appended to ARGLIST."
                     (svn-status-unset-all-usermarks))
                   (svn-status-update-with-command-list (svn-status-parse-commit-output))
                   (run-hooks 'svn-log-edit-done-hook)
-                  (setq svn-status-files-to-commit nil)
+                  (setq svn-status-files-to-commit nil
+                        svn-status-recursive-commit nil)
                   (message "svn commit finished"))
                  ((eq svn-process-cmd 'update)
                   (svn-status-show-process-output 'update t)
@@ -2311,6 +2318,15 @@ or (if no files were marked) the file under point."
 (defun svn-status-marked-file-names ()
   (mapcar 'svn-status-line-info->filename (svn-status-marked-files)))
 
+(defun svn-status-some-files-marked-p ()
+  "Return non-nil iff a file has been marked by `svn-status-set-user-mark'.
+Unlike `svn-status-marked-files', this does not select the file under point
+if no files have been marked."
+  ;; `some' would be shorter but requires cl-seq at runtime.
+  ;; (Because it accepts both lists and vectors, it is difficult to inline.)
+  (loop for file in svn-status-info
+        thereis (svn-status-line-info->has-usermark file)))
+
 (defun svn-status-ui-information-hash-table ()
   (let ((st-info svn-status-info)
         (svn-status-ui-information (make-hash-table :test 'equal)))
@@ -2408,23 +2424,28 @@ See `svn-status-marked-files' for what counts as selected."
 
 (defun svn-status-show-svn-diff (arg)
   "Run `svn diff' on the current file.
-If there is a newer revision in the repository, the diff is done against HEAD, otherwise
-compare the working copy with BASE.
+If the current file is a directory, compare it recursively.
+If there is a newer revision in the repository, the diff is done against HEAD,
+otherwise compare the working copy with BASE.
 If ARG then prompt for revision to diff against."
   (interactive "P")
   (svn-status-ensure-cursor-on-file)
-  (svn-status-show-svn-diff-internal (list (svn-status-get-line-information))
+  (svn-status-show-svn-diff-internal (list (svn-status-get-line-information)) t
                                      (if arg :ask :auto)))
 
 (defun svn-status-show-svn-diff-for-marked-files (arg)
   "Run `svn diff' on all selected files.
-See `svn-status-marked-files' for what counts as selected.
+If some files have been marked, compare those non-recursively;
+this is because marking a directory with \\[svn-status-set-user-mark]
+normally marks all of its files as well.
+If no files have been marked, compare recursively the file at point.
 If ARG then prompt for revision to diff against, else compare working copy with BASE."
   (interactive "P")
   (svn-status-show-svn-diff-internal (svn-status-marked-files)
+                                     (not (svn-status-some-files-marked-p))
                                      (if arg :ask "BASE")))
 
-(defun svn-status-show-svn-diff-internal (line-infos revision) 
+(defun svn-status-show-svn-diff-internal (line-infos recursive revision)
   ;; REVISION must be one of:
   ;; - a string: whatever the -r option allows.
   ;; - `:ask': asks the user to specify the revision, which then becomes
@@ -2442,6 +2463,7 @@ If ARG then prompt for revision to diff against, else compare working copy with 
                             (if (svn-status-line-info->update-available line-info)
                                 "HEAD" "BASE")
                           revision)
+                   (unless recursive "--non-recursive")
                    (svn-status-line-info->filename line-info))
       (setq clear-buf nil)))
   (svn-status-diff-mode))
@@ -2616,10 +2638,15 @@ When called with a prefix argument add the command line switch --force."
 
 (defun svn-status-commit ()
   "Commit selected files.
-See `svn-status-marked-files' for what counts as selected."
+If some files have been marked, commit those non-recursively;
+this is because marking a directory with \\[svn-status-set-user-mark]
+normally marks all of its files as well.
+If no files have been marked, commit recursively the file at point."
   (interactive)
-  (let* ((marked-files (svn-status-marked-files)))
-    (setq svn-status-files-to-commit marked-files)
+  (let* ((selected-files (svn-status-marked-files))
+         (marked-files-p (svn-status-some-files-marked-p)))
+    (setq svn-status-files-to-commit selected-files
+          svn-status-recursive-commit (not marked-files-p))
     (svn-log-edit-show-files-to-commit)
     (svn-status-pop-to-commit-buffer)
     (when svn-log-edit-insert-files-to-commit
@@ -3198,7 +3225,8 @@ Commands:
 (defun svn-prop-edit-svn-diff (arg)
   (interactive "P")
   (set-buffer svn-status-buffer-name)
-  (svn-status-show-svn-diff-internal svn-status-propedit-file-list
+  ;; Because propedit is not recursive in our use, neither is this diff.
+  (svn-status-show-svn-diff-internal svn-status-propedit-file-list nil
                                      (if arg :ask "BASE")))
 
 (defun svn-prop-edit-svn-log (arg)
@@ -3298,7 +3326,9 @@ Commands:
                  (string= "." (svn-status-line-info->filename (car svn-status-files-to-commit)))))
       (svn-status-create-arg-file svn-status-temp-arg-file ""
                                   svn-status-files-to-commit "")
-      (svn-run-svn t t 'commit "commit" "--targets" svn-status-temp-arg-file
+      (svn-run-svn t t 'commit "commit"
+                   (unless svn-status-recursive-commit "--non-recursive")
+                   "--targets" svn-status-temp-arg-file
                    "-F" svn-status-temp-file-to-remove
                    svn-status-default-commit-arguments))
     (set-window-configuration svn-status-pre-commit-window-configuration)
@@ -3312,6 +3342,7 @@ If ARG then show diff between some other version of the selected files."
   ;; This call is very much like `svn-status-show-svn-diff-for-marked-files'
   ;; but uses commit-specific variables instead of the current marks.
   (svn-status-show-svn-diff-internal svn-status-files-to-commit
+                                     svn-status-recursive-commit
                                      (if arg :ask "BASE")))
 
 (defun svn-log-edit-svn-log (arg)
@@ -3329,7 +3360,9 @@ If ARG then show diff between some other version of the selected files."
 
 (defun svn-log-edit-show-files-to-commit ()
   (interactive)
-  (message "Files to commit: %S" (svn-log-edit-files-to-commit)))
+  (message "Files to commit%s: %S"
+           (if svn-status-recursive-commit " recursively" "")
+           (svn-log-edit-files-to-commit)))
 
 (defun svn-log-edit-save-message ()
   "Save the current log message to the file `svn-log-edit-file-name'."
@@ -3349,7 +3382,8 @@ If ARG then show diff between some other version of the selected files."
     (save-excursion
       (goto-char (point-min))
       (insert "## Lines starting with '## ' will be removed from the log message.\n")
-      (insert "## File(s) to commit:\n")
+      (insert "## File(s) to commit"
+              (if svn-status-recursive-commit " recursively" "") ":\n")
       (let ((file-list svn-status-files-to-commit))
         (while file-list
           (insert (concat "## " (svn-status-line-info->filename (car file-list)) "\n"))
