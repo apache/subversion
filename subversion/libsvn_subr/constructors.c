@@ -160,6 +160,9 @@ svn_client_commit_item2_dup (const svn_client_commit_item2_t *item,
   if (new_item->url)
     new_item->url = apr_pstrdup (pool, new_item->url);
 
+  if (new_item->copyfrom_url)   
+    new_item->copyfrom_url = apr_pstrdup (pool, new_item->copyfrom_url);
+
   if (new_item->wcprop_changes)
     new_item->wcprop_changes = svn_prop_array_dup (new_item->wcprop_changes, 
                                                    pool);
