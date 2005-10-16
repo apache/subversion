@@ -263,15 +263,6 @@ typedef struct svn_client_proplist_item_t
 
 } svn_client_proplist_item_t;
 
-/** 
- * Return a duplicate of @a item, allocated in @a pool. No part of the new
- * structure will be shared with @a item.
- *
- * @since New in 1.3.
- */
-svn_client_proplist_item_t *
-svn_client_proplist_item_dup (const svn_client_proplist_item_t *item,
-                              apr_pool_t *pool);
 
 /** Information about commits passed back to client from this module.
  *
@@ -345,16 +336,6 @@ typedef struct svn_client_commit_item2_t
    */
   apr_array_header_t *wcprop_changes;
 } svn_client_commit_item2_t;
-
-/** 
- * Return a duplicate of @a item, allocated in @a pool. No part of the new
- * structure will be shared with @a item.
- *
- * @since New in 1.3.
- */
-svn_client_commit_item2_t *
-svn_client_commit_item2_dup (const svn_client_commit_item2_t *item,
-                             apr_pool_t *pool);
 
 /** The commit candidate structure.
  *
