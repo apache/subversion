@@ -100,16 +100,16 @@ static apr_hash_t *
 svn_string_hash_dup (apr_hash_t *hash, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  const char *key;
+  const void *key;
   apr_ssize_t klen;
-  svn_string_t *val;
+  void *val;
   apr_hash_t *new_hash = apr_hash_make (pool);
   for (hi = apr_hash_first (pool, hash); hi; hi = apr_hash_next (hi) )
     {
-      apr_hash_this (hi, (const void *) &key, &klen, (void *) &val);
+      apr_hash_this (hi, &key, &klen, &val);      
       key = apr_pstrdup (pool, key);
       val = svn_string_dup (val, pool);
-      apr_hash_set (hash, key, klen, val);
+      apr_hash_set (new_hash, key, klen, val);
     }
   return new_hash;
 }
