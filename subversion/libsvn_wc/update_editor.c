@@ -2198,6 +2198,9 @@ install_file (svn_stringbuf_t * log_accum,
                  client as the changes come in. */
               base = svn_wc_adm_access_path (adm_access);
 
+              /* ### FIXME: We force use of the internal diff3 here
+                     because we don't want to run a graphical external
+                     diff3 twice.  See issue 1914. */
               SVN_ERR (svn_wc_merge (svn_path_join (base, txtb, pool),
                                      svn_path_join (base, tmp_txtb, pool),
                                      svn_path_join (base, base_name, pool),
