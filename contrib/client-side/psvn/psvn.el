@@ -2413,30 +2413,37 @@ compare the working copy with BASE.
 If ARG then prompt for revision to diff against."
   (interactive "P")
   (svn-status-ensure-cursor-on-file)
-  (svn-status-show-svn-diff-internal arg nil))
+  (svn-status-show-svn-diff-internal (list (svn-status-get-line-information))
+                                     (if arg :ask :auto)))
 
 (defun svn-status-show-svn-diff-for-marked-files (arg)
   "Run `svn diff' on all selected files.
 See `svn-status-marked-files' for what counts as selected.
 If ARG then prompt for revision to diff against, else compare working copy with BASE."
   (interactive "P")
-  (svn-status-show-svn-diff-internal arg t))
+  (svn-status-show-svn-diff-internal (svn-status-marked-files)
+                                     (if arg :ask "BASE")))
 
-(defun svn-status-show-svn-diff-internal (arg &optional use-all-marked-files)
-  (let* ((fl (if use-all-marked-files
-                 (svn-status-marked-files)
-               (list (svn-status-get-line-information))))
-         (clear-buf t)
-         (revision (if arg
-                       (svn-status-read-revision-string "Diff with files for version: " "PREV")
-                     (if use-all-marked-files
-                         "BASE"
-                       (if (svn-status-line-info->update-available (car fl)) "HEAD" "BASE")))))
-    (while fl
-      (svn-run-svn nil clear-buf 'diff "diff" svn-status-default-diff-arguments
-                   "-r" revision (svn-status-line-info->filename (car fl)))
-      (setq clear-buf nil)
-      (setq fl (cdr fl))))
+(defun svn-status-show-svn-diff-internal (line-infos revision) 
+  ;; REVISION must be one of:
+  ;; - a string: whatever the -r option allows.
+  ;; - `:ask': asks the user to specify the revision, which then becomes
+  ;;   saved in `minibuffer-history' rather than in `command-history'.
+  ;; - `:auto': use "HEAD" if an update is known to exist, "BASE" otherwise.
+  ;; In the future, `nil' might mean omit the -r option entirely;
+  ;; but that currently seems to imply "BASE", so we just use that.
+  (when (eq revision :ask)
+    (setq revision (svn-status-read-revision-string
+                    "Diff with files for version: " "PREV")))
+  (let ((clear-buf t))
+    (dolist (line-info line-infos)
+      (svn-run-svn nil clear-buf 'diff "diff"
+                   "-r" (if (eq revision :auto)
+                            (if (svn-status-line-info->update-available line-info)
+                                "HEAD" "BASE")
+                          revision)
+                   (svn-status-line-info->filename line-info))
+      (setq clear-buf nil)))
   (svn-status-diff-mode))
 
 (defun svn-status-diff-mode ()
