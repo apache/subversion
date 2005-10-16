@@ -35,7 +35,7 @@ Candidate changes:
     Votes:
       +0: djames
 
-  * r16735
+  * r16735, r16741
     Create deep copy utility functions for svn_wc_external_item_t,
     svn_client_proplist_item_t, and svn_client_commit_item2_t.
     Justification:
