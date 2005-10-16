@@ -3198,7 +3198,8 @@ Commands:
 (defun svn-prop-edit-svn-diff (arg)
   (interactive "P")
   (set-buffer svn-status-buffer-name)
-  (svn-status-show-svn-diff-for-marked-files arg))
+  (svn-status-show-svn-diff-internal svn-status-propedit-file-list
+                                     (if arg :ask "BASE")))
 
 (defun svn-prop-edit-svn-log (arg)
   (interactive "P")
@@ -3307,8 +3308,11 @@ Commands:
   "Show the diff we are about to commit.
 If ARG then show diff between some other version of the selected files."
   (interactive "P")
-  (set-buffer svn-status-buffer-name)
-  (svn-status-show-svn-diff-for-marked-files arg))
+  (set-buffer svn-status-buffer-name)   ; TODO: is this necessary?
+  ;; This call is very much like `svn-status-show-svn-diff-for-marked-files'
+  ;; but uses commit-specific variables instead of the current marks.
+  (svn-status-show-svn-diff-internal svn-status-files-to-commit
+                                     (if arg :ask "BASE")))
 
 (defun svn-log-edit-svn-log (arg)
   (interactive "P")
