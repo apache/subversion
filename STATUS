@@ -28,6 +28,16 @@ Candidate changes:
       +1: djames
       +0: nori
 
+  * r16754
+    Create deep copy utility functions for svn_wc_external_item_t,
+    svn_client_proplist_item_t, and svn_client_commit_item2_t.
+    Justification:
+      Needed to prevent pool-related scoping segfaults in the Ruby bindings.
+    Votes:
+      +1: djames
+
+Approved changes:
+
   * r16734
     Use svn_commit_item2_t instead of svn_commit_item_t in the Ruby bindings.
     Justification:
@@ -36,19 +46,12 @@ Candidate changes:
       +1: kou
       +0: djames
 
-  * r16735, r16741
-    Create deep copy utility functions for svn_wc_external_item_t,
-    svn_client_proplist_item_t, and svn_client_commit_item2_t.
-    Justification:
-      Needed to prevent pool-related scoping segfaults in the Ruby bindings.
-    Votes:
-      +0: djames
-
   * r16744
     Duplicate C object when converting to Ruby object.
     Justification:
-      Avoid pool and Ruby's GC releated segfalugs.
+      Prevent pool-related segfaults.
+    Notes:
+      Depends on r16734, r16754
     Votes:
       +1: kou
-
-Approved changes:
+      +0: djames
