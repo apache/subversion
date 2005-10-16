@@ -2738,9 +2738,9 @@ Recommended values are ?m or ?M.")
 The older revisions are stored in backup files named F.~REVISION~.
 
 When the function is called without a prefix argument: get all marked files.
-Otherwise get only the actual file."
+With a prefix argument: get only the actual file."
   (interactive "P")
-  (svn-status-get-specific-revision-internal (not arg) t))
+  (svn-status-get-specific-revision-internal arg t))
 
 (defun svn-status-get-specific-revision-internal (&optional only-actual-file arg)
   "Retrieve older revisions of files.
