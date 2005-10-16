@@ -249,20 +249,20 @@ with timestamp and username:</p>
 <h3>Major Language Binding Improvements</h3>
 
 <ul>
-  <li>We now use SWIG 1.3.25 to generate bindings.  This new version
-    of SWIG has <em>no</em> compile-time package requirements and
-    uses <em>no</em> run-time libraries.  Subversion developers run
-    SWIG exactly once; SWIG then generates C code which gets packaged
-    in the release tarball for users.</li>
+  <li>It's now possible to build the SWIG bindings from source without 
+      installing SWIG, because we now bundle the generated output of SWIG
+      with the release tarball.</li>
+    
+  <li>The Python and Ruby bindings now support automatic memory management.
+      If you don't supply Subversion API functions with memory pools,
+      Subversion will automatically manage its own memory.</li>
 
-  <li>The python bindings are vastly improved: the bound APIs no
-    longer require APR pool arguments.  Error messages and
-    documentation are better, and a new testsuite provides wider
-    coverage.</li>
+  <li>The Python and Ruby bindings are now more stable, as verified
+      by our expanded test suites.</li>
+      
+  <li>The Ruby bindings now offer complete coverage of the Subversion
+      APIs.</li>
 
-  <li>The ruby bindings have gone from skeletal (in subversion 1.2) to
-    complete API coverage in 1.3.  They also have a new, extensive
-    testsuite.</li>
 </ul>
 
 </div>  <!-- bindings-improvements -->
