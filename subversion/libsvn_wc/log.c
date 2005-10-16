@@ -513,9 +513,16 @@ log_do_rm (struct log_runner *loggy, const char *name)
     = svn_path_join (svn_wc_adm_access_path (loggy->adm_access),
                      name, loggy->pool);
 
-  SVN_ERR (svn_io_remove_file (full_path, loggy->pool));
+  svn_error_t *err =
+    svn_io_remove_file (full_path, loggy->pool);
 
-  return SVN_NO_ERROR;
+  if (err && APR_STATUS_IS_ENOENT (err->apr_err))
+    {
+      svn_error_clear (err);
+      return SVN_NO_ERROR;
+    }
+  else
+    return err;
 }
 
 
