@@ -36,6 +36,14 @@ Candidate changes:
     Votes:
       +1: djames
 
+  * r16764
+    Add missing include for Test/Unit in Ruby bindings.
+    Justification:
+      Makes it possible for us to run Ruby tests individually, without
+      going through the run-test.rb test harness.
+    Votes:
+      +1: djames
+
 Approved changes:
 
   * r16734
