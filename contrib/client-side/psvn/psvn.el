@@ -2785,7 +2785,7 @@ names are relative to the directory where `svn-status' was run."
                  (buffer-string))))
           (find-file file-name-with-revision)
           (setq buffer-read-only nil)
-          (delete-region (point-min) (point-max))
+          (erase-buffer)  ;Widen, because we'll save the whole buffer.
           (insert content)
           (save-buffer)))
       (setq file-names (cdr file-names)))
@@ -2961,6 +2961,8 @@ When called with a prefix argument, it is possible to enter a new property."
     (setq svn-status-propedit-file-list file-info-list)
     (setq svn-status-pre-propedit-window-configuration (current-window-configuration))
     (pop-to-buffer commit-buffer)
+    ;; If the buffer has been narrowed, `svn-prop-edit-done' will use
+    ;; only the accessible part.  So we need not erase the rest here.
     (delete-region (point-min) (point-max))
     (setq default-directory dir)
     (insert prop-value)
@@ -2982,6 +2984,8 @@ When called with a prefix argument, it is possible to enter a new property."
   "Set a property on a given file list."
   (save-excursion
     (set-buffer (get-buffer-create "*svn-property-edit*"))
+    ;; If the buffer has been narrowed, `svn-prop-edit-do-it' will use
+    ;; only the accessible part.  So we need not erase the rest here.
     (delete-region (point-min) (point-max))
     (insert prop-value))
   (setq svn-status-propedit-file-list (svn-status-marked-files))
@@ -3398,6 +3402,8 @@ When called with a prefix argument, ask the user for the revision."
                             (buffer-substring (point-min) (- (point-max) 1))
                           "")))
     (svn-status-pop-to-commit-buffer)
+    ;; If the buffer has been narrowed, `svn-log-edit-done' will use
+    ;; only the accessible part.  So we need not erase the rest here.
     (delete-region (point-min) (point-max))
     (insert log-message)
     (goto-char (point-min))
@@ -3422,7 +3428,7 @@ When called with a prefix argument, ask the user for the revision."
 (defun svn-status-save-state ()
   (interactive)
   (let ((buf (find-file (concat (svn-status-base-dir) "++psvn.state"))))
-    (delete-region (point-min) (point-max))
+    (erase-buffer)        ;Widen, because we'll save the whole buffer.
     (setq svn-status-options
           (list
            (list "svn-trac-project-root" svn-trac-project-root)
