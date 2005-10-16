@@ -3156,6 +3156,7 @@ test_list = [ None,
               property_merge_undo_redo,
               cherry_pick_text_conflict,
               merge_file_replace,
+              merge_dir_replace,
              ]
 
 if __name__ == '__main__':
