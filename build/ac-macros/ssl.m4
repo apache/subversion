@@ -51,6 +51,9 @@ int main(int argc, char **argv)
 
   AC_SUBST(SVN_SSL_LIBS)
   AC_SUBST(SVN_SSL_INCLUDES)
+  if test "$svn_lib_ssl" = "yes"; then
+    AC_DEFINE(SVN_HAVE_SSL, 1, [Define if OpenSSL is available.])
+  fi
 ])
 
 
