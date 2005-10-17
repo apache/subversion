@@ -35,6 +35,7 @@ Candidate changes:
       Needed to prevent pool-related scoping segfaults in the Ruby bindings.
     Votes:
       +1: djames
+      +0: kou
 
   * r16764
     Add missing include for Test/Unit in Ruby bindings.
@@ -42,7 +43,7 @@ Candidate changes:
       Makes it possible for us to run Ruby tests individually, without
       going through the run-test.rb test harness.
     Votes:
-      +1: djames
+      +1: djames, kou
 
 Approved changes:
 
