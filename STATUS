@@ -34,7 +34,7 @@ Candidate changes:
     Justification:
       Needed to prevent pool-related scoping segfaults in the Ruby bindings.
     Votes:
-      +1: djames
+      +1: djames, lundblad
       +0: kou (r16754 only)
 
 Approved changes:
