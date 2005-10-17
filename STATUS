@@ -44,7 +44,7 @@ Approved changes:
     Justification:
       Prevent pool-related segfaults.
     Notes:
-      Depends on r16734, r16754
+      Depends on r16754
     Votes:
       +1: kou
       +0: djames
