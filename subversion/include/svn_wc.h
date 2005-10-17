@@ -446,7 +446,7 @@ typedef struct svn_wc_external_item_t
  * Return a duplicate of @a item, allocated in @a pool.  No part of the new
  * item will be shared with @a item.
  *
- * @since New in 1.3
+ * @since New in 1.3.
  */
 svn_wc_external_item_t *
 svn_wc_external_item_dup (const svn_wc_external_item_t *entry,
