@@ -28,6 +28,12 @@
 #pragma convert (1208)
 #endif
 
+/* This is defined by configure on platforms which use configure, but
+   we need to define a fallback for the IBM iSeries. */
+#ifndef DEFAULT_FS_TYPE
+#define DEFAULT_FS_TYPE "\x66\x73\x66\x73" /* "fsfs" */
+#endif
+
 /* The version of Berkeley DB we want */
 #define SVN_FS_WANT_DB_MAJOR	4
 #define SVN_FS_WANT_DB_MINOR	0

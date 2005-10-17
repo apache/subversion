@@ -17,6 +17,7 @@
 
 #include <svn_time.h>
 #include "svn_error.h"
+#include "svn_utf.h"
 
 #include "svn_private_config.h"
 
@@ -55,6 +56,9 @@ typedef struct
   apr_int32_t offminutes;
 } match_state;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 #define DIGITS "0123456789"
 
 /* A declarative specification of how each template character
@@ -82,6 +86,9 @@ rules[] =
   { ']', NULL, SKIP, 0 },
   { '\0', NULL, ACCEPT, 0 },
 };
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
 /* Return the rule associated with TCHAR, or NULL if there
    is no such rule. */
@@ -130,10 +137,10 @@ template_match (apr_time_exp_t *expt, svn_boolean_t *localtz,
       switch (match->action)
         {
         case ACCUM:
-          *place = *place * 10 + vchar - '0';
+          *place = *place * 10 + vchar - SVN_UTF8_0;
           continue;
         case MICRO:
-          *place += (vchar - '0') * multiplier;
+          *place += (vchar - SVN_UTF8_0) * multiplier;
           multiplier /= 10;
           continue;
         case TZIND:
@@ -149,7 +156,7 @@ template_match (apr_time_exp_t *expt, svn_boolean_t *localtz,
             break;
           match = find_rule (*template);
           if (!strchr (match->valid, vchar))
-            template = strchr (template, ']') + 1;
+            template = strchr (template, SVN_UTF8_RBRACKET) + 1;
           value--;
           continue;
         case ACCEPT:
@@ -169,10 +176,10 @@ template_match (apr_time_exp_t *expt, svn_boolean_t *localtz,
      indicate UTC, or 0 to indicate local time. */
   switch (tzind)
     {
-    case '+':
+    case SVN_UTF8_PLUS:
       ms.base.tm_gmtoff = ms.offhours * 3600 + ms.offminutes * 60;
       break;
-    case '-':
+    case SVN_UTF8_MINUS:
       ms.base.tm_gmtoff = -(ms.offhours * 3600 + ms.offminutes * 60);
       break;
     }
@@ -203,6 +210,9 @@ svn_parse_date (svn_boolean_t *matched, apr_time_t *result, const char *text,
   if (apr_err != APR_SUCCESS)
     return svn_error_wrap_apr (apr_err, _("Can't manipulate current date"));
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   if (template_match (&expt, &localtz, /* ISO-8601 extended, date only */
                       "YYYY-MM-DD",
                       text)
@@ -234,6 +244,9 @@ svn_parse_date (svn_boolean_t *matched, apr_time_t *result, const char *text,
   else if (template_match (&expt, &localtz, /* Just a time */
                            "hh:mm[:ss[.u[u[u[u[u[u]",
                            text))
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
     {
       expt.tm_year = expnow.tm_year;
       expt.tm_mon = expnow.tm_mon;

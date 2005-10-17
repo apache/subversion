@@ -439,11 +439,11 @@ make_string_from_option (const char **valuep, svn_config_t *cfg,
 
 
 /* Start of variable-replacement placeholder */
-#define FMT_START     "%("
+#define FMT_START     SVN_UTF8_PERCENT_STR SVN_UTF8_LPAREN_STR
 #define FMT_START_LEN (sizeof (FMT_START) - 1)
 
 /* End of variable-replacement placeholder */
-#define FMT_END       ")s"
+#define FMT_END       SVN_UTF8_RPAREN_STR SVN_UTF8_s_STR
 #define FMT_END_LEN   (sizeof (FMT_END) - 1)
 
 

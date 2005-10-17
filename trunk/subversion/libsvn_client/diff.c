@@ -57,6 +57,10 @@ static const char under_string[] =
 #pragma convert(37)
 #endif
 
+#define DOT_TMP_STR \
+        "\x2e\x74\x6d\x70"
+        /* ".tmp" */
+
 #define DOT_WORKING_STR \
         "\x2e\x77\x6f\x72\x6b\x69\x6e\x67"
         /* ".working" */
@@ -1595,7 +1599,7 @@ single_file_merge_get_file (const char **filename,
   SVN_ERR (svn_client__get_revision_number (rev, ra_session, revision,
                                             path, pool));
   SVN_ERR (svn_io_open_unique_file (&fp, filename, 
-                                    merge_b->target, ".tmp",
+                                    merge_b->target, DOT_TMP_STR,
                                     FALSE, pool));
   SVN_ERR (svn_ra_get_file (ra_session, "", *rev,
                             svn_stream_from_aprfile (fp, pool),
