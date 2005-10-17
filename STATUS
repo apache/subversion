@@ -28,14 +28,14 @@ Candidate changes:
       +1: djames
       +0: nori
 
-  * r16754
+  * r16754, r16772
     Create deep copy utility functions for svn_wc_external_item_t,
     svn_client_proplist_item_t, and svn_client_commit_item2_t.
     Justification:
       Needed to prevent pool-related scoping segfaults in the Ruby bindings.
     Votes:
       +1: djames
-      +0: kou
+      +0: kou (r16754 only)
 
 Approved changes:
 
