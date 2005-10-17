@@ -145,10 +145,10 @@
   $2 = $input; /* our function is the baton. */
 }
 
-%typemap(ruby, in) (svn_client_get_commit_log_t log_msg_func,
-                    void *log_msg_baton)
+%typemap(ruby, in) (svn_client_get_commit_log2_t log_msg_func2,
+                    void *log_msg_baton2)
 {
-  $1 = svn_swig_rb_get_commit_log_func;
+  $1 = svn_swig_rb_get_commit_log_func2;
   $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
@@ -334,7 +334,7 @@
 %apply void *CALLBACK_BATON
 {
   void *notify_baton2,
-  void *log_msg_baton,
+  void *log_msg_baton2,
   void *cancel_baton
 }
 #endif
@@ -486,13 +486,13 @@
 #ifdef SWIGRUBY
 %inline %{
 static void
-svn_client_set_log_msg_func(svn_client_ctx_t *ctx,
-                            svn_client_get_commit_log_t log_msg_func,
-                            void *log_msg_baton,
-                            apr_pool_t *pool)
+svn_client_set_log_msg_func2(svn_client_ctx_t *ctx,
+                             svn_client_get_commit_log2_t log_msg_func2,
+                             void *log_msg_baton2,
+                             apr_pool_t *pool)
 {
-  ctx->log_msg_func = log_msg_func;
-  ctx->log_msg_baton = log_msg_baton;
+  ctx->log_msg_func2 = log_msg_func2;
+  ctx->log_msg_baton2 = log_msg_baton2;
 }
  
 static void
