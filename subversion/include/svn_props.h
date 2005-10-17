@@ -63,6 +63,15 @@ svn_prop_t *svn_prop_dup(const svn_prop_t *prop, apr_pool_t *pool);
 
 
 /**
+ * Duplicate an @a array of svn_prop_t items using @a pool.
+ *
+ * @since New in 1.3.
+ */
+apr_array_header_t *
+svn_prop_array_dup (const apr_array_header_t *array, apr_pool_t *pool);
+
+
+/**
  * Subversion distinguishes among several kinds of properties,
  * particularly on the client-side.  There is no "unknown" kind; if
  * there's nothing special about a property name, the default category
