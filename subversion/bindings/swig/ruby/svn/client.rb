@@ -18,6 +18,12 @@ module Svn
       end
     end
 
+    class CommitItem2
+      class << self
+        undef new
+      end
+    end
+
     class Info
       alias url URL
     end
@@ -420,7 +426,7 @@ module Svn
 
       def set_log_msg_func(callback=Proc.new)
         @log_msg_baton = callback
-        Client.set_log_msg_func(self, callback)
+        Client.set_log_msg_func2(self, callback)
       end
       
       def set_notify_func(callback=Proc.new)

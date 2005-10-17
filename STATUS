@@ -39,14 +39,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r16734
-    Use svn_commit_item2_t instead of svn_commit_item_t in the Ruby bindings.
-    Justification:
-      Avoids use of deprecated structs.
-    Votes:
-      +1: kou
-      +0: djames
-
   * r16744
     Duplicate C object when converting to Ruby object.
     Justification:
