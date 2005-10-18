@@ -25,7 +25,7 @@ Candidate changes:
     Justification:
       Build failure due only to the scope issue of old Python is not good.
     Votes:
-      +1: djames
+      +1: djames, rooneg
       +0: nori
 
 Approved changes:
