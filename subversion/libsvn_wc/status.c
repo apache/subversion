@@ -300,7 +300,7 @@ assemble_status (svn_wc_status2_t **status,
       stat->url = NULL;
       stat->ood_last_cmt_rev = SVN_INVALID_REVNUM;
       stat->ood_last_cmt_date = 0;
-      stat->ood_kind = svn_wc_status_none;
+      stat->ood_kind = svn_node_none;
       stat->ood_last_cmt_author = NULL;
 
       *status = stat;
@@ -489,7 +489,7 @@ assemble_status (svn_wc_status2_t **status,
   stat->url = (entry->url ? entry->url : NULL);
   stat->ood_last_cmt_rev = SVN_INVALID_REVNUM;
   stat->ood_last_cmt_date = 0;
-  stat->ood_kind = svn_wc_status_none;
+  stat->ood_kind = svn_node_none;
   stat->ood_last_cmt_author = NULL;
 
   *status = stat;
