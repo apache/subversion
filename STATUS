@@ -19,6 +19,16 @@ Candidate changes:
       +1: cmpilato, kfogel
       +0: dlr (concept, new to this area of the code)
 
+  * r16793
+    Correct and clarify doc strings related to the new WC/repository
+    state APIs in svn_wc.h.
+    Justification:
+      The doc strings otherwise indicate the opposite of the actual
+      behavior, and in one case, the wrong initialization value.
+    Votes:
+      +1: dlr
+    
+
 Approved changes:
 
   * r16744
