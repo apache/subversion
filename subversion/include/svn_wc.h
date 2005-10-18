@@ -1576,34 +1576,35 @@ typedef struct svn_wc_status2_t
   const char *url;
 
   /**
-   * @defgroup svn_wc_status_ood Repository out of date info
+   * @defgroup svn_wc_status_ood WC out of date info from the repository
    * @{
    *
    * When the working copy item is out of date compared to the
    * repository, the following fields represent the state of the
-   * youngest revision of the item in the repository.  If not out of
-   * date, the fields are set as described below.
+   * youngest revision of the item in the repository.  If the working
+   * copy is not out of date, the fields are initialized as described
+   * below.
    */
 
   /** Set to the youngest committed revision, or @c SVN_INVALID_REVNUM
-   * if out of date.
+   * if not out of date.
    * @since New in 1.3
    */
   svn_revnum_t ood_last_cmt_rev;
 
-  /** Set to the most recent commit date, or @c 0 if out of date.
+  /** Set to the most recent commit date, or @c 0 if not out of date.
    * @since New in 1.3
    */
   apr_time_t ood_last_cmt_date;
 
-  /** Set to the node kind of the youngest commit, or @c
-   * svn_wc_status_none if out of date.
+  /** Set to the node kind of the youngest commit, or @c svn_node_none
+   * if not out of date.
    * @since New in 1.3
    */
   svn_node_kind_t ood_kind;
 
-  /** Set to the user name of the youngest commit, or @c NULL if out
-   * of date.
+  /** Set to the user name of the youngest commit, or @c NULL if not
+   * out of date.
    * @since New in 1.3
    */
   const char *ood_last_cmt_author;
