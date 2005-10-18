@@ -19,7 +19,7 @@ Candidate changes:
       +1: cmpilato, kfogel
       +0: dlr (concept, new to this area of the code)
 
-  * r16793
+  * r16793, r16798
     Correct and clarify doc strings related to the new WC/repository
     state APIs in svn_wc.h.
     Justification:
