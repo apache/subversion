@@ -28,7 +28,7 @@ Candidate changes:
       Crashes are bad.  This repository state is easily achievable
       using propdel, or a DAV server which does not require auth.
     Votes:
-      +1: dlr
+      +1: dlr, rooneg
 
 
 Approved changes:
