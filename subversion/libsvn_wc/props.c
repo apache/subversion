@@ -300,12 +300,7 @@ svn_wc_merge_props (svn_wc_notify_state_t *state,
     }
 
   if (! dry_run)
-    {
-      SVN_ERR (svn_wc__open_adm_file (&log_fp, parent, SVN_WC__ADM_LOG,
-                                      (APR_WRITE | APR_CREATE), /* not excl */
-                                      pool));
-      log_accum = svn_stringbuf_create ("", pool);
-    }
+    log_accum = svn_stringbuf_create ("", pool);
   
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
@@ -315,13 +310,7 @@ svn_wc_merge_props (svn_wc_notify_state_t *state,
 
   if (! dry_run)
     {
-      SVN_ERR_W (svn_io_file_write_full (log_fp, log_accum->data, 
-                                         log_accum->len, NULL, pool),
-                 apr_psprintf (pool, _("Error writing log for '%s'"),
-                               svn_path_local_style (path, pool)));
-
-      SVN_ERR (svn_wc__close_adm_file (log_fp, parent, SVN_WC__ADM_LOG,
-                                       1, /* sync */ pool));
+      SVN_ERR (svn_wc__write_log (adm_access, 0, log_accum, pool));
       SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
     }
 
@@ -1134,7 +1123,6 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
   const svn_wc_entry_t *entry;
   const char *parent, *base_name;
   svn_stringbuf_t *log_accum;
-  apr_file_t *log_fp = NULL;
 
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   if (entry == NULL)
@@ -1159,12 +1147,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
     }
 
   if (! dry_run)
-    {
-      SVN_ERR (svn_wc__open_adm_file (&log_fp, parent, SVN_WC__ADM_LOG,
-                                      (APR_WRITE | APR_CREATE), /* not excl */
-                                      pool));
-      log_accum = svn_stringbuf_create ("", pool);
-    }
+    log_accum = svn_stringbuf_create ("", pool);
   
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
@@ -1174,13 +1157,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
 
   if (! dry_run)
     {
-      SVN_ERR_W (svn_io_file_write_full (log_fp, log_accum->data, 
-                                         log_accum->len, NULL, pool),
-                 apr_psprintf (pool, _("Error writing log for '%s'"),
-                               svn_path_local_style (path, pool)));
-
-      SVN_ERR (svn_wc__close_adm_file (log_fp, parent, SVN_WC__ADM_LOG,
-                                       1, /* sync */ pool));
+      SVN_ERR (svn_wc__write_log (adm_access, 0, log_accum, pool));
       SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
     }
 
