@@ -38,6 +38,14 @@ Candidate changes:
      Votes:
        +1: dlr
 
+   * r16781
+     Fix invalid enum type assignments.
+     Justification:
+       Assignment was not only to the completely wrong enum type, but
+       worse, the values for the elements do not even match!
+     Votes:
+       +1: dlr
+
 
 Approved changes:
 
