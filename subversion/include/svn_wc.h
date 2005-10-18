@@ -1604,7 +1604,10 @@ typedef struct svn_wc_status2_t
   svn_node_kind_t ood_kind;
 
   /** Set to the user name of the youngest commit, or @c NULL if not
-   * out of date.
+   * out of date or non-existent.  Because a non-existent @c
+   * svn:author property has the same behavior as an out of date
+   * working copy, examine @c ood_last_cmt_rev to determine whether
+   * the working copy is out of date.
    * @since New in 1.3
    */
   const char *ood_last_cmt_author;
