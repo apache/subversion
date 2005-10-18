@@ -19,15 +19,6 @@ Candidate changes:
       +1: cmpilato, kfogel
       +0: dlr (concept, new to this area of the code)
 
-  * r16725
-    Enable running autogen.sh with Python <2.1, in which the scope of
-    variables within lambda is restricted.
-    Justification:
-      Build failure due only to the scope issue of old Python is not good.
-    Votes:
-      +1: djames, rooneg
-      +0: nori
-
   * r16784
     Fix segfault possibility (introduced by the new WC/repository
     state APIs in r16344), which exhibits itself when the "svn:author"
@@ -41,6 +32,15 @@ Candidate changes:
 
 
 Approved changes:
+
+  * r16725
+    Enable running autogen.sh with Python <2.1, in which the scope of
+    variables within lambda is restricted.
+    Justification:
+      Build failure due only to the scope issue of old Python is not good.
+    Votes:
+      +1: djames, rooneg, dlr
+      +0: nori
 
   * r16754, r16772
     Create deep copy utility functions for svn_wc_external_item_t,
