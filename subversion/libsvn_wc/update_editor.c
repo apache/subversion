@@ -1228,20 +1228,8 @@ close_directory (void *dir_baton,
      to deal with them. */
   if (regular_props->nelts || entry_props->nelts || wc_props->nelts)
     {
-      apr_file_t *log_fp = NULL;
-      const char *logfile_name;
-
       /* to hold log messages: */
       svn_stringbuf_t *entry_accum = svn_stringbuf_create ("", db->pool);
-
-      logfile_name = svn_wc__logfile_path (db->log_number, pool);
-      
-      /* Open log file */
-      SVN_ERR (svn_wc__open_adm_file (&log_fp,
-                                      db->path,
-                                      logfile_name,
-                                      (APR_WRITE | APR_CREATE), /* not excl */
-                                      db->pool));
 
       if (regular_props->nelts)
         {
@@ -1343,19 +1331,7 @@ close_directory (void *dir_baton,
       accumulate_wcprops (entry_accum, SVN_WC_ENTRY_THIS_DIR, wc_props, pool);
 
       /* Write our accumulation of log entries into a log file */
-      SVN_ERR_W (svn_io_file_write_full (log_fp, entry_accum->data,
-                                         entry_accum->len, NULL, pool),
-                 apr_psprintf (pool,
-                               _("Error writing log file for '%s'"),
-                               svn_path_local_style (db->path, pool)));
-
-      /* The log is ready to run, close it. */
-      SVN_ERR (svn_wc__close_adm_file (log_fp,
-                                       db->path,
-                                       logfile_name,
-                                       TRUE, /* sync */
-                                       db->pool));
-
+      SVN_ERR (svn_wc__write_log (adm_access, db->log_number, entry_accum, pool));
     }
 
   /* Run the log. */

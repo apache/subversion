@@ -319,7 +319,6 @@ svn_wc_process_committed2 (const char *path,
 {
   const char *base_name;
   svn_stringbuf_t *logtags;
-  apr_file_t *log_fp = NULL;
   char *revstr = apr_psprintf (pool, "%ld", new_revnum);
   const char *hex_digest = NULL;
 
@@ -331,13 +330,6 @@ svn_wc_process_committed2 (const char *path,
      REV_AUTHOR are both non-NULL, then set the 'committed-rev',
      'committed-date', and 'last-author' entry values; and set the
      checksum if a file. */
-
-  /* Open a log file in the administrative directory */
-  SVN_ERR (svn_wc__open_adm_file (&log_fp,
-                                  svn_wc_adm_access_path (adm_access),
-                                  SVN_WC__ADM_LOG,
-                                  (APR_WRITE | APR_CREATE),
-                                  pool));
 
   base_name = svn_path_is_child (svn_wc_adm_access_path (adm_access), path,
                                  pool);
@@ -478,16 +470,8 @@ svn_wc_process_committed2 (const char *path,
         }
     }
 
-  SVN_ERR_W (svn_io_file_write_full (log_fp, logtags->data, 
-                                     logtags->len, NULL, pool),
-             apr_psprintf (pool, _("Error writing log file for '%s'"),
-                           svn_path_local_style (path, pool)));
-      
-  SVN_ERR (svn_wc__close_adm_file (log_fp, svn_wc_adm_access_path (adm_access),
-                                   SVN_WC__ADM_LOG,
-                                   TRUE, /* sync */
-                                   pool));
-
+  /* Write our accumulation of log entries into a log file */
+  SVN_ERR (svn_wc__write_log (adm_access, 0, logtags, pool));
 
   /* Run the log file we just created. */
   SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
