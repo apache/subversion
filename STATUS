@@ -33,15 +33,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r16725
-    Enable running autogen.sh with Python <2.1, in which the scope of
-    variables within lambda is restricted.
-    Justification:
-      Build failure due only to the scope issue of old Python is not good.
-    Votes:
-      +1: djames, rooneg, dlr
-      +0: nori
-
   * r16754, r16772
     Create deep copy utility functions for svn_wc_external_item_t,
     svn_client_proplist_item_t, and svn_client_commit_item2_t.
