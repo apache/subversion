@@ -137,7 +137,9 @@ class Generator(gen_base.GeneratorBase):
     python_script = "$(abs_srcdir)/build/generator/swig/external_runtime.py"
     build_runtime = '$(PYTHON) %s ' % python_script + \
       '$(abs_srcdir)/build.conf "$(SWIG)"'
-    runtimes = map(lambda lang: runtime_pattern % lang, self.swig_lang)
+    runtimes = []
+    for lang in self.swig_lang:
+      runtimes.append(runtime_pattern % lang)
     self.ofile.write(
       '%s:\n' % " ".join(runtimes) +
       '\t%s\n' % build_runtime +
