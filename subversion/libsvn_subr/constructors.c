@@ -52,16 +52,40 @@ svn_log_changed_path_dup (const svn_log_changed_path_t *changed_path,
   return new_changed_path;
 }
 
+/**
+ * Reallocate the members of PROP using POOL.
+ */
+static void
+svn_prop__members_dup (svn_prop_t *prop, apr_pool_t *pool)
+{
+  if (prop->name)
+    prop->name = apr_pstrdup (pool, prop->name);
+  if (prop->value)
+    prop->value = svn_string_dup (prop->value, pool);
+}
+
 svn_prop_t *
 svn_prop_dup (const svn_prop_t *prop, apr_pool_t *pool)
 {
-  svn_prop_t *new_prop = apr_pcalloc (pool, sizeof (*new_prop));
+  svn_prop_t *new_prop = apr_palloc (pool, sizeof (*new_prop));
 
-  if (prop->name)
-    new_prop->name = apr_pstrdup (pool, prop->name);
-  if (prop->value)
-    new_prop->value = svn_string_dup (prop->value, pool);
+  *new_prop = *prop;
+
+  svn_prop__members_dup (new_prop, pool);
 
   return new_prop;
+}
+
+apr_array_header_t *
+svn_prop_array_dup (const apr_array_header_t *array, apr_pool_t *pool)
+{
+  int i;
+  apr_array_header_t *new_array = apr_array_copy (pool, array);
+  for (i = 0; i < new_array->nelts; ++i)
+    {
+      svn_prop_t *elt = &APR_ARRAY_IDX (new_array, i, svn_prop_t);
+      svn_prop__members_dup (elt, pool);
+    }
+  return new_array;
 }
 
