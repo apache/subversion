@@ -28,18 +28,6 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r16796
-    Fix segfault possibility (introduced by the new WC/repository
-    state APIs in r16344), which exhibits itself when the "svn:author"
-    property has been deleted or does not exist.  This is a follow-up
-    to r16784, which only corrected handling of directories (not
-    files).
-    Justification:
-      Crashes are bad.  This repository state is easily achievable
-      using propdel, or a DAV server which does not require auth.
-    Votes:
-      +1: dlr, lundblad
-    
    * r16801
      In the commit-email.pl.in hook script, fix a warning from an
      undefined TEMP env var, and an error from invocation of sendmail
@@ -53,6 +41,18 @@ Candidate changes:
 
 Approved changes:
 
+  * r16796
+    Fix segfault possibility (introduced by the new WC/repository
+    state APIs in r16344), which exhibits itself when the "svn:author"
+    property has been deleted or does not exist.  This is a follow-up
+    to r16784, which only corrected handling of directories (not
+    files).
+    Justification:
+      Crashes are bad.  This repository state is easily achievable
+      using propdel, or a DAV server which does not require auth.
+    Votes:
+      +1: dlr, lundblad, rooneg
+ 
   * r16744
     Duplicate C object when converting to Ruby object.
     Justification:
