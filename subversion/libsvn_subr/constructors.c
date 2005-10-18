@@ -98,7 +98,7 @@ svn_prop_array_dup (const apr_array_header_t *array, apr_pool_t *pool)
   apr_array_header_t *new_array = apr_array_copy (pool, array);
   for (i = 0; i < new_array->nelts; ++i)
     {
-      svn_prop_t *elt = &APR_ARRAY_IDX(new_array, i, svn_prop_t);
+      svn_prop_t *elt = &APR_ARRAY_IDX (new_array, i, svn_prop_t);
       svn_prop__members_dup (elt, pool);
     }
   return new_array;
