@@ -221,7 +221,8 @@ unless (-d _)
 # directory. This could be removed - it's only for compatibility with
 # 1.0.x svnlook - from 1.1.0, svnlook will be sensible about choosing a
 # temporary directory all by itself.
-my $tmp_dir = ( -d $ENV{'TEMP'} ? $ENV{'TEMP'} : '/tmp' );
+my $tmp_dir = ((defined($ENV{'TEMP'}) && -d $ENV{'TEMP'}) ?
+               $ENV{'TEMP'} : '/tmp');
 chdir($tmp_dir)
   or die "$0: cannot chdir `$tmp_dir': $!\n";
 
@@ -463,7 +464,7 @@ foreach my $project (@project_settings_list)
     if ($sendmail =~ /\w/ and @email_addresses)
       {
         # Open a pipe to sendmail.
-        my $command = "$sendmail -f$mail_from $userlist";
+        my $command = "$sendmail -f'$mail_from' $userlist";
         if (open(SENDMAIL, "| $command"))
           {
             print SENDMAIL @head, @body;
