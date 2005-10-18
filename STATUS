@@ -28,6 +28,18 @@ Candidate changes:
       +1: djames, rooneg
       +0: nori
 
+  * r16784
+    Fix segfault possibility (introduced by the new WC/repository
+    state APIs in r16344), which exhibits itself when the "svn:author"
+    property has been deleted or does not exist.
+    http://svn.haxx.se/dev/archive-2005-10/0819.shtml
+    Justification:
+      Crashes are bad.  This repository state is easily achievable
+      using propdel, or a DAV server which does not require auth.
+    Votes:
+      +1: dlr
+
+
 Approved changes:
 
   * r16754, r16772
