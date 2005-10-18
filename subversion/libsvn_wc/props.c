@@ -275,7 +275,6 @@ svn_wc_merge_props (svn_wc_notify_state_t *state,
   const svn_wc_entry_t *entry;
   const char *parent, *base_name;
   svn_stringbuf_t *log_accum;
-  apr_file_t *log_fp = NULL;
 
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   if (entry == NULL)
