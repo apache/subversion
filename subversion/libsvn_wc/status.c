@@ -1700,16 +1700,20 @@ change_file_prop (void *file_baton,
     fb->prop_changed = TRUE;
 
   /* Note any changes to the repository. */
-  if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_REV) == 0)
-    fb->ood_last_cmt_rev = SVN_STR_TO_REV (value->data);
-  else if (strcmp (name, SVN_PROP_ENTRY_LAST_AUTHOR) == 0)
-    fb->ood_last_cmt_author = apr_pstrdup (fb->dir_baton->pool,
-                                           value->data);
-  else if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
+  if (value != NULL)
     {
-      apr_time_t tm;
-      SVN_ERR (svn_time_from_cstring (&tm, value->data, fb->dir_baton->pool));
-      fb->ood_last_cmt_date = tm;
+      if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_REV) == 0)
+        fb->ood_last_cmt_rev = SVN_STR_TO_REV (value->data);
+      else if (strcmp (name, SVN_PROP_ENTRY_LAST_AUTHOR) == 0)
+        fb->ood_last_cmt_author = apr_pstrdup (fb->dir_baton->pool,
+                                               value->data);
+      else if (strcmp (name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
+        {
+          apr_time_t tm;
+          SVN_ERR (svn_time_from_cstring (&tm, value->data,
+                                          fb->dir_baton->pool));
+          fb->ood_last_cmt_date = tm;
+        }
     }
 
   return SVN_NO_ERROR;
