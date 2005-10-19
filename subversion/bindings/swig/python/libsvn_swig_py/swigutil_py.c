@@ -331,7 +331,7 @@ static PyObject *make_ob_pool(void *pool)
   /* Return a brand new default pool to Python. This pool isn't
    * normally used for anything. It's just here for compatibility
    * with Subversion 1.2. */
-  pool = pool;
+  (void) pool;
   apr_pool_t *new_pool = svn_pool_create(_global_pool);
   PyObject *new_py_pool = svn_swig_NewPointerObj(new_pool,
     svn_swig_TypeQuery("apr_pool_t *"), _global_svn_swig_py_pool);
