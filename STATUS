@@ -29,14 +29,6 @@ Candidate changes:
      Votes:
        +1: djames
 
-  * r16829
-    Correctly deep copy all svn_wc_status2_t fields in svn_wc_dup_status2.
-    Justification:
-      Refering to memory allocated in an old pool is bad, could cause
-      crashes.
-    Votes:
-      +1: rooneg, dlr
-
    * r16834
      Initialize SVN_ASP_DOT_NET_HACK in the Perl and Ruby bindings.
      Justification:
@@ -45,3 +37,12 @@ Candidate changes:
        +0: djames 
 
 Approved changes:
+
+  * r16829
+    Correctly deep copy all svn_wc_status2_t fields in svn_wc_dup_status2.
+    Justification:
+      Refering to memory allocated in an old pool is bad, could cause
+      crashes.
+    Votes:
+      +1: rooneg, dlr, lundblad
+
