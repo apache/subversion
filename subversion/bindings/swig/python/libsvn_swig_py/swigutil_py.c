@@ -601,10 +601,6 @@ static PyObject *make_ob_##type(void *value) \
 static PyObject *convert_##type(void *value, void *ctx, PyObject *py_pool) \
 { \
   return make_ob_##type(value); \
-} \
-PyObject *svn_swig_py_convert_##type##_hash(apr_hash_t *hash) \
-{ \
-  return convert_hash(hash, convert_##type, NULL, NULL); \
 }
  
 DECLARE_SWIG_CONSTRUCTOR(txdelta_window, svn_txdelta_window_dup)
@@ -1843,7 +1839,8 @@ svn_error_t *svn_swig_py_log_receiver(void *baton,
 
   if (changed_paths)
     {
-      chpaths = svn_swig_py_convert_log_changed_path_hash(changed_paths);
+      chpaths = convert_hash(changed_paths, convert_log_changed_path,
+                             NULL, NULL);
     }
   else
     {
