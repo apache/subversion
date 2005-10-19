@@ -477,6 +477,9 @@ svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
  * same repository.  @a url is the new root URL.  Use @a pool for
  * temporary allocations.
  *
+ * If @a url has a different repository root than the current session
+ * URL, return @c SVN_ERR_RA_ILLEGAL_URL.
+ *
  * @since New in 1.4.
  */
 svn_error_t *svn_ra_reparent (svn_ra_session_t *ra_session,

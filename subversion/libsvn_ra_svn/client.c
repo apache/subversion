@@ -51,8 +51,7 @@ typedef struct {
   svn_auth_baton_t *auth_baton;
   const char *user;
   const char *realm_prefix;
-  /* Config hash passed by the caller of ra_svn_open(). */
-  apr_hash_t *config;
+  const char **tunnel_argv;
 } ra_svn_session_baton_t;
 
 typedef struct {
@@ -589,45 +588,47 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   return SVN_NO_ERROR;
 }
 
+/* Parse URL inot URI, validating it and setting the default port if none
+   was given.  Allocate the URI fileds out of POOL. */
+static svn_error_t *parse_url (const char *url, apr_uri_t *uri,
+                               apr_pool_t *pool)
+{
+  apr_status_t apr_err;
+
+  apr_err = apr_uri_parse (pool, url, uri);
+  
+  if (apr_err != 0)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("Illegal svn repository URL '%s'"), url);
+  
+  if (! uri->port)
+    uri->port = SVN_RA_SVN_PORT;
+
+  return SVN_NO_ERROR;
+}
+
 /* Open a session to URL, returning it in *SESS_P, allocating it in POOL.
-   CONFIG and AUTH_BATON are provided by the caller of ra_svn_open. */
+   URI is a parsed version of URL.  AUTH_BATON is provided by the caller of
+   ra_svn_open.  If tunnel_argv is non-null, it points to a program
+   argument list to use when invoking the tunnel agent. */
 static svn_error_t *open_session(ra_svn_session_baton_t **sess_p,
                                  const char *url,
-                                 apr_hash_t *config,
+                                 const apr_uri_t *uri,
                                  svn_auth_baton_t *auth_baton,
+                                 const char **tunnel_argv,
                                  apr_pool_t *pool)
 {
   ra_svn_session_baton_t *sess;
   svn_ra_svn_conn_t *conn;
   apr_socket_t *sock;
-  const char *hostname, *user, *tunnel, **args, *hostinfo;
-  unsigned short port;
   apr_uint64_t minver, maxver;
   apr_array_header_t *mechlist, *caplist;
-  apr_uri_t uri;
-  apr_status_t err;
   
-  err = apr_uri_parse (pool, url, &uri);
-  
-  if (err != 0)
-    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                             _("Illegal svn repository URL '%s'"), url);
-  
-  port = uri.port ? uri.port : SVN_RA_SVN_PORT;
-  hostname = uri.hostname;
-  user = uri.user;
-  hostinfo = uri.hostinfo;
-  
-  parse_tunnel (url, &tunnel, pool);
-
-  if (tunnel)
-    {
-      SVN_ERR(find_tunnel_agent(tunnel, hostinfo, &args, config, pool));
-      SVN_ERR(make_tunnel(args, &conn, pool));
-    }
+  if (tunnel_argv)
+    SVN_ERR(make_tunnel(tunnel_argv, &conn, pool));
   else
     {
-      SVN_ERR(make_connection(hostname, port, &sock, pool));
+      SVN_ERR(make_connection(uri->hostname, uri->port, &sock, pool));
       conn = svn_ra_svn_create_conn(sock, NULL, NULL, pool);
     }
 
@@ -645,11 +646,12 @@ static svn_error_t *open_session(ra_svn_session_baton_t **sess_p,
   sess->pool = pool;
   sess->conn = conn;
   sess->protocol_version = (maxver > 2) ? 2 : maxver;
-  sess->is_tunneled = (tunnel != NULL);
+  sess->is_tunneled = (tunnel_argv != NULL);
   sess->auth_baton = auth_baton;
-  sess->user = user;
-  sess->realm_prefix = apr_psprintf(pool, "<svn://%s:%d>", hostname, port);
-  sess->config = config;
+  sess->user = uri->user;
+  sess->realm_prefix = apr_psprintf(pool, "<svn://%s:%d>", uri->hostname,
+                                    uri->port);
+  sess->tunnel_argv = tunnel_argv;
 
   /* In protocol version 2, we send back our protocol version, our
    * capability list, and the URL, and subsequently there is an auth
@@ -725,10 +727,23 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
 {
   apr_pool_t *sess_pool = svn_pool_create (pool);
   ra_svn_session_baton_t *sess;
+  const char *tunnel, **tunnel_argv;
+  apr_uri_t uri;
   
+  SVN_ERR(parse_url(url, &uri, sess_pool));
+
+  parse_tunnel (url, &tunnel, pool);
+
+  if (tunnel)
+    SVN_ERR(find_tunnel_agent(tunnel, uri.hostinfo, &tunnel_argv, config,
+                              pool));
+  else
+    tunnel_argv = NULL;
+
   /* We open the session in a subpool so we can get rid of it if we
      reparent with a server that doesn't support reparenting. */
-  SVN_ERR(open_session(&sess, url, config, callbacks->auth_baton, sess_pool));
+  SVN_ERR(open_session(&sess, url, &uri, callbacks->auth_baton, tunnel_argv,
+                       sess_pool));
   session->priv = sess;
 
   return SVN_NO_ERROR;
@@ -743,6 +758,7 @@ static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
   svn_error_t *err;
   apr_pool_t *sess_pool;
   ra_svn_session_baton_t *new_sess;
+  apr_uri_t uri;
 
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "reparent", "c", url));
   err = handle_auth_request(sess, pool);
@@ -756,8 +772,10 @@ static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
   svn_error_clear(err);
   /* Create a new subpool of the RA session pool. */
   sess_pool = svn_pool_create(ra_session->pool);
-  err = open_session(&new_sess, url, sess->config, sess->auth_baton,
-                     sess_pool);
+  err = parse_url(url, &uri, sess_pool);
+  if (! err)
+    err = open_session(&new_sess, url, &uri, sess->auth_baton,
+                       sess->tunnel_argv, sess_pool);
   /* We destroy the new session pool on error, since it is allocated in
      the main session pool. */
   if (err)
