@@ -37,4 +37,11 @@ Candidate changes:
     Votes:
       +1: rooneg, dlr
 
+   * r16834
+     Initialize SVN_ASP_DOT_NET_HACK in the Perl and Ruby bindings.
+     Justification:
+       Simple fix.
+     Votes:
+       +0: djames 
+
 Approved changes:
