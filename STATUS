@@ -29,11 +29,4 @@ Candidate changes:
      Votes:
        +1: djames
 
-   * r16808
-     Eliminate unnecessary function definitions in Python bindings.
-     Justification:
-       Prevents warnings.
-     Votes:
-       +1: djames, danderson
-
 Approved changes:
