@@ -46,6 +46,21 @@ Candidate changes:
      Votes:
        +1: dlr
 
+   * r16806, r16807
+     Convert automatic memory management code into pure Python, so as
+     to ensure thread safety.
+     Justification:
+       Might prevent segfaults and deadlock in multi-threaded
+       environments (unverified).
+     Votes:
+       +0: djames
+
+   * r16808
+     Eliminate unnecessary function definitions in Python bindings.
+     Justification:
+       Prevents warnings.
+     Votes:
+       +1: djames
 
 Approved changes:
 
