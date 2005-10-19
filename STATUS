@@ -29,4 +29,12 @@ Candidate changes:
      Votes:
        +1: djames
 
+  * r16829
+    Correctly copy all svn_wc_status2_t fields in svn_wc_dup_status2.
+    Justification:
+      Refering to memory allocated in an old pool is bad, could cause
+      crashes.
+    Votes:
+      +1: rooneg
+
 Approved changes:
