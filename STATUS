@@ -56,6 +56,18 @@ Candidate changes:
     Votes:
       +1: danderson
 
+  * r16829
+    Fix svn_wc_dup_status2() to deep copy the "url" field.
+    Justification:
+      Refering to memory allocated in an old pool is bad, could cause
+      crashes.
+    Notes:
+      We only want part of r16829, as it includes copying of some
+      additional fields which do not exist in 1.2.x (the merge is
+      trivial).
+    Votes:
+      +1: dlr
+
 Approved changes (further review is welcome, but not required):
 
   * r15807
