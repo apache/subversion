@@ -233,7 +233,7 @@ class SvnShell
         date = @fs.prop(Svn::Core::PROP_REVISION_DATE, created_rev)
         args = [
           created_rev, author[0,8],
-          node_id, size, format_date(date), name
+          node_id, size, date.strftime("%b %d %H:%M(%Z)"), name
         ]
         puts "%6s %8s <%10s> %8s %17s %s" % args
         
@@ -245,7 +245,7 @@ class SvnShell
   def do_lstxns
     
     # Get a sorted list of open transactions
-    txns = @fs.list_transactions
+    txns = @fs.transactions
     txns.sort
     counter = 0
     
@@ -267,7 +267,7 @@ class SvnShell
   def do_pcat(path=nil)
     
     # Default to the current directory
-    catpath = path || @path
+    catpath = path ? normalize_path(path) : @path
 
     # Make sure that the specified path exists
     if @root.check_path(catpath) == Svn::Core::NODE_NONE
@@ -430,12 +430,6 @@ class SvnShell
     else
       find_available_path(parent_dir(path))
     end
-  end
-
-  # Format a date for output in a standard format
-  def format_date(date_str)
-    date = Svn::Util.string_to_time(date_str)
-    date.strftime("%b %d %H:%M(%Z)")
   end
   
 end
