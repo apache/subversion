@@ -26,7 +26,7 @@ Candidate changes:
       The doc strings otherwise indicate the opposite of the actual
       behavior, and in one case, the wrong initialization value.
     Votes:
-      +1: dlr
+      +1: dlr, lundblad
 
    * r16781
      Fix invalid enum type assignments.
@@ -34,7 +34,7 @@ Candidate changes:
        Assignment was not only to the completely wrong enum type, but
        worse, the values for the elements do not even match!
      Votes:
-       +1: dlr
+       +1: dlr, lundblad
 
    * r16806, r16807
      Convert automatic memory management code into pure Python, so as
