@@ -1614,6 +1614,7 @@ typedef struct svn_wc_status2_t
 
   /** @} */
 
+  /* NOTE! Please update svn_wc_dup_status2() when adding new fields here. */
 } svn_wc_status2_t;
 
 
