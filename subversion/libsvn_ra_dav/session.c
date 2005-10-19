@@ -734,8 +734,7 @@ svn_ra_dav__open (svn_ra_session_t *session,
   /* Create and fill a session_baton. */
   ras = apr_pcalloc(pool, sizeof(*ras));
   ras->pool = pool;
-  ras->url_pool = svn_pool_create (pool);
-  ras->url = apr_pstrdup (ras->url_pool, repos_URL);
+  ras->url = svn_stringbuf_create (repos_URL, pool);
   /* copies uri pointer members, they get free'd in __close. */
   ras->root = uri; 
   ras->sess = sess;
@@ -839,10 +838,9 @@ static svn_error_t *svn_ra_dav__reparent(svn_ra_session_t *session,
   ne_uri uri = { 0 };
 
   SVN_ERR(parse_url(&uri, url));
-  svn_pool_clear(ras->url_pool);
   ne_uri_free(&ras->root);
   ras->root = uri;
-  ras->url = apr_pstrdup(ras->url_pool, url);
+  svn_stringbuf_set (ras->url, url);
   return SVN_NO_ERROR;
 }
 
@@ -858,12 +856,12 @@ static svn_error_t *svn_ra_dav__get_repos_root(svn_ra_session_t *session,
       svn_stringbuf_t *url_buf;
 
       SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &bc_relative,
-                                            NULL, ras->sess, ras->url,
+                                            NULL, ras->sess, ras->url->data,
                                             SVN_INVALID_REVNUM, pool));
 
       /* Remove as many path components from the URL as there are components
          in bc_relative. */
-      url_buf = svn_stringbuf_create(ras->url, pool);
+      url_buf = svn_stringbuf_dup(ras->url, pool);
       svn_path_remove_components
         (url_buf, svn_path_component_count(bc_relative.data));
       ras->repos_root = apr_pstrdup(ras->pool, url_buf->data);
@@ -887,7 +885,7 @@ static svn_error_t *svn_ra_dav__do_get_uuid(svn_ra_session_t *session,
       const svn_string_t *uuid_propval;
 
       SVN_ERR (svn_ra_dav__search_for_starting_props(&rsrc, &lopped_path,
-                                                     ras->sess, ras->url,
+                                                     ras->sess, ras->url->data,
                                                      pool) );
 
       uuid_propval = apr_hash_get(rsrc->propset,
@@ -1125,7 +1123,7 @@ shim_svn_ra_dav__lock(svn_ra_session_t *session,
   svn_lock_t *slock;
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
-  url = svn_path_url_add_component(ras->url, path, pool);  
+  url = svn_path_url_add_component(ras->url->data, path, pool);  
   SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras->sess,
                                         url, SVN_INVALID_REVNUM, pool));
 
@@ -1278,7 +1276,7 @@ shim_svn_ra_dav__unlock(svn_ra_session_t *session,
 
   /* Make a neon lock structure containing token and full URL to unlock. */
   nlock = ne_lock_create();
-  url = svn_path_url_add_component(ras->url, path, pool);  
+  url = svn_path_url_add_component(ras->url->data, path, pool);  
   if ((rv = ne_uri_parse(url, &(nlock->uri))))
     {
       ne_lock_destroy(nlock);
@@ -1501,7 +1499,7 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
   svn_error_t *err;
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
-  url = svn_path_url_add_component (ras->url, path, pool);  
+  url = svn_path_url_add_component (ras->url->data, path, pool);  
 
   err = svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras->sess,
                                       url, SVN_INVALID_REVNUM, pool);

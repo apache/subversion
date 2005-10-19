@@ -341,7 +341,7 @@ svn_ra_dav__get_file_revs (svn_ra_session_t *session,
      dav_get_resource() to choke on the server.  So instead, we pass a
      baseline-collection URL, which we get from END. */
   SVN_ERR (svn_ra_dav__get_baseline_info (NULL, &bc_url, &bc_relative, NULL,
-                                          ras->sess, ras->url, end,
+                                          ras->sess, ras->url->data, end,
                                           ras->pool));
   final_bc_url = svn_path_url_add_component (bc_url.data, bc_relative.data,
                                              ras->pool);
