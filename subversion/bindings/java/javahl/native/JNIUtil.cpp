@@ -28,6 +28,7 @@
 
 #include "svn_pools.h"
 #include "svn_config.h"
+#include "svn_wc.h"
 #include "svn_path.h"
 #include <apr_file_info.h>
 #include "svn_private_config.h"
@@ -211,6 +212,27 @@ bool JNIUtil::JNIInit(JNIEnv *env)
 
     /* Create our top-level pool. */
     g_pool = svn_pool_create (NULL);
+
+#if defined(WIN32) || defined(__CYGWIN__)
+    /* See http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt */
+    /* ### This code really only needs to be invoked by consumers of
+       ### the libsvn_wc library, which basically means SVNClient. */
+    if (getenv ("SVN_ASP_DOT_NET_HACK"))
+    {
+        svn_error_t *err = svn_wc_set_adm_dir("_svn", g_pool);
+        if (err)
+        {
+            if (stderr)
+            {
+                fprintf(stderr,
+                        "%s: error: SVN_ASP_DOT_NET_HACK failed: %s\n",
+                        "svnjavahl", err->message);
+            }
+            svn_error_clear(err);
+            return FALSE;
+        }
+    }
+#endif
 
     // we use the default directory for config files
     // this can be changed later
