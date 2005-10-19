@@ -54,16 +54,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r16744
-    Duplicate C object when converting to Ruby object.
-    Justification:
-      Prevent pool-related segfaults.
-    Notes:
-      Depends on r16754
-    Votes:
-      +1: kou, dlr
-      +0: djames
-
    * r16801
      In the commit-email.pl.in hook script, fix a warning from an
      undefined TEMP env var, and an error from invocation of sendmail
