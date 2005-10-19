@@ -46,12 +46,3 @@ Approved changes:
      Votes:
        +1: kou
        +0: nori
-
-  * r16793, r16798
-    Correct and clarify doc strings related to the new WC/repository
-    state APIs in svn_wc.h.
-    Justification:
-      The doc strings otherwise indicate the opposite of the actual
-      behavior, and in one case, the wrong initialization value.
-    Votes:
-      +1: dlr, lundblad, rooneg
