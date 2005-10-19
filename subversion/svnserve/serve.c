@@ -1965,6 +1965,7 @@ static svn_error_t *find_repos(const char *url, const char *root,
 {
   const char *path, *full_path, *repos_root, *pwdb_path, *authz_path;
   svn_stringbuf_t *url_buf;
+  svn_error_t *err;
 
   /* Skip past the scheme and authority part. */
   path = skip_scheme_part(url);
@@ -2011,21 +2012,31 @@ static svn_error_t *find_repos(const char *url, const char *root,
                           FALSE, pool));
   svn_config_get(b->cfg, &pwdb_path, SVN_CONFIG_SECTION_GENERAL,
                  SVN_CONFIG_OPTION_PASSWORD_DB, NULL);
+  
+  b->pwdb = NULL;
+  b->realm = "";
   if (pwdb_path)
     {
       pwdb_path = svn_path_join(svn_repos_conf_dir(b->repos, pool),
                                 pwdb_path, pool);
-      SVN_ERR(svn_config_read(&b->pwdb, pwdb_path, TRUE, pool));
 
-      /* Use the repository UUID as the default realm. */
-      SVN_ERR(svn_fs_get_uuid(b->fs, &b->realm, pool));
-      svn_config_get(b->cfg, &b->realm, SVN_CONFIG_SECTION_GENERAL,
-                     SVN_CONFIG_OPTION_REALM, b->realm);
-    }
-  else
-    {
-      b->pwdb = NULL;
-      b->realm = "";
+      /* Because it may be possible to read the pwdb file with some
+       * access methods and not others, ignore errors reading the
+       * pwdb file and just don't present password authentication as
+       * an option.  TODO: Log a warning in this case, when we have a
+       * way of doing logging. */
+      err = svn_config_read(&b->pwdb, pwdb_path, TRUE, pool);
+      if (err && err->apr_err == SVN_ERR_BAD_FILENAME)
+        svn_error_clear(err);
+      else if (err)
+        return err;
+      else
+        {
+          /* Use the repository UUID as the default realm. */
+          SVN_ERR(svn_fs_get_uuid(b->fs, &b->realm, pool));
+          svn_config_get(b->cfg, &b->realm, SVN_CONFIG_SECTION_GENERAL,
+                         SVN_CONFIG_OPTION_REALM, b->realm);
+        }
     }
 
   /* Read authz configuration. */
