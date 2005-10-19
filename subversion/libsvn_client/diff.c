@@ -1583,10 +1583,12 @@ diff_prepare_repos_repos (const struct diff_parameters *params,
                                             params->revision1,
                                             params->revision2,
                                             ctx, pool));
+      /* Reparent the session, since drr->url2 might have changed as a result
+         the above call. */
+      SVN_ERR (svn_ra_reparent (ra_session, drr->url2, pool));
     }
   
   /* Resolve revision and get path kind for the second target. */
-  SVN_ERR (svn_ra_reparent (ra_session, drr->url2, pool));
   SVN_ERR (svn_client__get_revision_number
            (&drr->rev2, ra_session, params->revision2,
             (params->path2 == drr->url2) ? NULL : params->path2, pool));
