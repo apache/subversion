@@ -53,14 +53,3 @@ Candidate changes:
        +1: djames
 
 Approved changes:
-
-   * r16801
-     In the commit-email.pl.in hook script, fix a warning from an
-     undefined TEMP env var, and an error from invocation of sendmail
-     when the address in the sender envelop contains spaces.
-     Notes:
-       Though obvious problems, not essential for 1.3.0, but
-       reasonable for the 1.3.x stream.
-     Votes:
-       +1: dlr
-       +0: djames
