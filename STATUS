@@ -29,14 +29,6 @@ Candidate changes:
     Votes:
       +1: djames
 
-   * r16834
-     Initialize SVN_ASP_DOT_NET_HACK in the Perl and Ruby bindings.
-     Justification:
-       Consistent with behavior of the command-line client and Python
-       bindings in supporting this work-around.
-     Votes:
-       +0: djames, dlr
-
    * r16839
      Add support for the SVN_ASP_DOT_NET_HACK env var, and associated
      working copy administrative directory name change.
@@ -50,3 +42,11 @@ Candidate changes:
 
 Approved changes:
 
+   * r16834
+     Initialize SVN_ASP_DOT_NET_HACK in the Perl and Ruby bindings.
+     Justification:
+       Consistent with behavior of the command-line client and Python
+       bindings in supporting this work-around.
+     Votes:
+       +0: djames, dlr
+       +1: rooneg
