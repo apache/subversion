@@ -46,14 +46,6 @@ Candidate changes:
        +1: djames
 
 Approved changes:
-
-   * r16781
-     Fix invalid enum type assignments.
-     Justification:
-       Assignment was not only to the completely wrong enum type, but
-       worse, the values for the elements do not even match!
-     Votes:
-       +1: dlr, lundblad, rooneg
  
    * r16816
      Use new APIs for a sample script, svnshell.rb, to fix its breakage
