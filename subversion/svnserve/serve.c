@@ -51,16 +51,13 @@ typedef struct {
   const char *authz_repos_name; /* The name of the repository */
   const char *realm;       /* Authentication realm */
   const char *repos_url;   /* URL to base of repository */
-  const char *fs_path;     /* Decoded base path inside repository */
+  svn_stringbuf_t *fs_path;/* Decoded base path inside repository */
   const char *user;
   svn_boolean_t tunnel;    /* Tunneled through login agent */
   const char *tunnel_user; /* Allow EXTERNAL to authenticate as this */
   svn_boolean_t read_only; /* Disallow write access (global flag) */
   int protocol_version;
   apr_pool_t *pool;
-  /* Subpool of pool for storing fs_path, so we can get rid of it in
-     reparent. */
-  apr_pool_t *path_pool;
 } server_baton_t;
 
 typedef struct {
@@ -552,9 +549,10 @@ static svn_error_t *accept_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
    * when the report is complete. */
   svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
   SVN_CMD_ERR(svn_repos_begin_report(&report_baton, rev, b->user, b->repos,
-                                     b->fs_path, target, tgt_path, text_deltas,
-                                     recurse, ignore_ancestry, editor,
-                                     edit_baton, authz_check_access_cb, b, pool));
+                                     b->fs_path->data, target, tgt_path,
+                                     text_deltas, recurse, ignore_ancestry,
+                                     editor, edit_baton, authz_check_access_cb,
+                                     b, pool));
 
   rb.sb = b;
   rb.repos_url = svn_path_uri_decode(b->repos_url, pool);
@@ -700,8 +698,7 @@ static svn_error_t *reparent(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   url = svn_path_uri_decode(svn_path_canonicalize(url, pool), pool);
   SVN_ERR(trivial_auth_request(conn, pool, b));
   SVN_CMD_ERR(get_fs_path(b->repos_url, url, &fs_path, pool));
-  svn_pool_clear(b->path_pool);
-  b->fs_path = apr_pstrdup(b->path_pool, fs_path);
+  svn_stringbuf_set (b->fs_path, fs_path);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
 }
@@ -876,7 +873,7 @@ static svn_error_t *unlock_paths(apr_array_header_t *lock_tokens,
       path = path_item->u.string->data;
       token = token_item->u.string->data;
 
-      full_path = svn_path_join(sb->fs_path,
+      full_path = svn_path_join(sb->fs_path->data,
                                 svn_path_canonicalize(path, iterpool),
                                 iterpool);
 
@@ -940,7 +937,7 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_CMD_ERR(svn_repos_get_commit_editor4
               (&editor, &edit_baton, b->repos, NULL,
                svn_path_uri_decode(b->repos_url, pool),
-               b->fs_path, b->user,
+               b->fs_path->data, b->user,
                log_msg, commit_done, &ccb,
                authz_commit_cb, baton, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -990,7 +987,7 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)bb", &path, &rev,
                                  &want_props, &want_contents));
 
-  full_path = svn_path_join(b->fs_path,
+  full_path = svn_path_join(b->fs_path->data,
                             svn_path_canonicalize(path, pool), pool);
 
   /* Check authorizations */
@@ -1069,7 +1066,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)bb", &path, &rev,
                                  &want_props, &want_contents));
 
-  full_path = svn_path_join(b->fs_path,
+  full_path = svn_path_join(b->fs_path->data,
                             svn_path_canonicalize(path, pool), pool);
 
   /* Check authorizations */
@@ -1328,7 +1325,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       if (elt->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Log path entry not a string");
-      full_path = svn_path_join(b->fs_path,
+      full_path = svn_path_join(b->fs_path->data,
                                 svn_path_canonicalize(elt->u.string->data,
                                                       pool),
                                 pool);
@@ -1337,7 +1334,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(trivial_auth_request(conn, pool, b));
 
   /* Get logs.  (Can't report errors back to the client at this point.) */
-  lb.fs_path = b->fs_path;
+  lb.fs_path = b->fs_path->data;
   lb.conn = conn;
   err = svn_repos_get_logs3(b->repos, full_paths, start_rev, end_rev,
                             (int) limit, changed_paths, strict_node,
@@ -1365,7 +1362,7 @@ static svn_error_t *check_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_node_kind_t kind;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)", &path, &rev));
-  full_path = svn_path_join(b->fs_path,
+  full_path = svn_path_join(b->fs_path->data,
                             svn_path_canonicalize(path, pool), pool);
 
   /* Check authorizations */
@@ -1391,7 +1388,7 @@ static svn_error_t *stat(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_dirent_t *dirent;
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)", &path, &rev));
-  full_path = svn_path_join(b->fs_path,
+  full_path = svn_path_join(b->fs_path->data,
                             svn_path_canonicalize(path, pool), pool);
 
   /* Check authorizations */
@@ -1447,7 +1444,7 @@ static svn_error_t *get_locations(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                  &loc_revs_proto));
   relative_path = svn_path_canonicalize(relative_path, pool);
 
-  abs_path = svn_path_join(b->fs_path, relative_path, pool);
+  abs_path = svn_path_join(b->fs_path->data, relative_path, pool);
 
   location_revisions = apr_array_make(pool, loc_revs_proto->nelts,
                                       sizeof(svn_revnum_t));
@@ -1576,7 +1573,7 @@ static svn_error_t *get_file_revs(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                  &path, &start_rev, &end_rev));
   path = svn_path_canonicalize(path, pool);
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  full_path = svn_path_join(b->fs_path, path, pool);
+  full_path = svn_path_join(b->fs_path->data, path, pool);
 
   frb.conn = conn;
   frb.pool = NULL;
@@ -1609,7 +1606,7 @@ static svn_error_t *lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?c)b(?r)", &path, &comment,
                                  &steal_lock, &current_rev));
-  full_path = svn_path_join(b->fs_path,
+  full_path = svn_path_join(b->fs_path->data,
                             svn_path_canonicalize(path, pool), pool);
 
   SVN_ERR(must_have_access(conn, pool, b, svn_authz_write,
@@ -1667,7 +1664,7 @@ static svn_error_t *lock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, pool, "c(?r)", &path,
                                      &current_rev));
 
-      full_path = svn_path_join(b->fs_path,
+      full_path = svn_path_join(b->fs_path->data,
                                 svn_path_canonicalize(path, subpool),
                                 subpool);
 
@@ -1725,7 +1722,7 @@ static svn_error_t *unlock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?c)b", &path, &token,
                                  &break_lock));
 
-  full_path = svn_path_join(b->fs_path, svn_path_canonicalize(path, pool),
+  full_path = svn_path_join(b->fs_path->data, svn_path_canonicalize(path, pool),
                             pool);
 
   /* Username required unless break_lock was specified. */
@@ -1776,7 +1773,7 @@ static svn_error_t *unlock_many(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       SVN_ERR(svn_ra_svn_parse_tuple(item->u.list, subpool, "c(?c)", &path,
                                      &token));
 
-      full_path = svn_path_join(b->fs_path,
+      full_path = svn_path_join(b->fs_path->data,
                                 svn_path_canonicalize(path, subpool),
                                 subpool);
 
@@ -1827,7 +1824,8 @@ static svn_error_t *get_lock(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &path));
 
-  full_path = svn_path_join(b->fs_path, svn_path_canonicalize(path, pool),
+  full_path = svn_path_join(b->fs_path->data, svn_path_canonicalize(path,
+                                                                    pool),
                             pool);
 
   SVN_ERR(must_have_access(conn, pool, b, svn_authz_read,
@@ -1857,7 +1855,8 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &path));
 
-  full_path = svn_path_join(b->fs_path, svn_path_canonicalize(path, pool),
+  full_path = svn_path_join(b->fs_path->data, svn_path_canonicalize(path,
+                                                                    pool),
                             pool);
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
@@ -1999,10 +1998,11 @@ static svn_error_t *find_repos(const char *url, const char *root,
   /* Open the repository and fill in b with the resulting information. */
   SVN_ERR(svn_repos_open(&b->repos, repos_root, pool));
   b->fs = svn_repos_fs(b->repos);
-  b->path_pool = svn_pool_create(pool);
-  b->fs_path = apr_pstrdup(b->path_pool, full_path + strlen(repos_root));
+  b->fs_path = svn_stringbuf_create (full_path + strlen(repos_root),
+                                     pool);
   url_buf = svn_stringbuf_create(url, pool);
-  svn_path_remove_components(url_buf, svn_path_component_count(b->fs_path));
+  svn_path_remove_components(url_buf,
+                             svn_path_component_count(b->fs_path->data));
   b->repos_url = url_buf->data;
   b->authz_repos_name = svn_path_is_child(root, repos_root, pool);
 

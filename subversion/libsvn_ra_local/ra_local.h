@@ -37,15 +37,12 @@ extern "C" {
 /* A baton which represents a single ra_local session. */
 typedef struct svn_ra_local__session_baton_t
 {
-  /* A `file://' URL containing a local repository and path. */
-  const char *repository_URL;
-
   /* The user accessing the repository. */
   const char *username;
 
-  /* The URL above, split into two components. */
+  /* The URL of the session, split into two components. */
   const char *repos_url;
-  const char *fs_path;  /* URI-decoded. */
+  svn_stringbuf_t *fs_path;  /* URI-decoded. */
 
   /* A repository object. */
   svn_repos_t *repos;
@@ -60,9 +57,6 @@ typedef struct svn_ra_local__session_baton_t
   /* Callbacks/baton passed to svn_ra_open. */
   const svn_ra_callbacks2_t *callbacks;
   void *callback_baton;
-  /* Pool to store repository_URL and fs_path in.
-     (Needed for reparent.).  */
-  apr_pool_t *path_pool;
 } svn_ra_local__session_baton_t;
 
 

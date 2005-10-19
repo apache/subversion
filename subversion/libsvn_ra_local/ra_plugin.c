@@ -147,7 +147,7 @@ svn_ra_local__get_file_revs (svn_ra_session_t *session,
                              apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sbaton = session->priv;
-  const char *abs_path = sbaton->fs_path;
+  const char *abs_path = sbaton->fs_path->data;
 
   /* Concatenate paths */
   abs_path = svn_path_join (abs_path, path, pool);
@@ -271,8 +271,6 @@ svn_ra_local__open (svn_ra_session_t *session,
   
   /* Allocate and stash the session_baton args we have already. */
   baton = apr_pcalloc (pool, sizeof(*baton));
-  baton->path_pool = svn_pool_create (session->pool);
-  baton->repository_URL = apr_pstrdup (baton->path_pool, repos_URL);
   baton->callbacks = callbacks;
   baton->callback_baton = callback_baton;
   
@@ -282,10 +280,10 @@ svn_ra_local__open (svn_ra_session_t *session,
   SVN_ERR_W (svn_ra_local__split_URL (&(baton->repos),
                                       &(baton->repos_url),
                                       &fs_path,
-                                      baton->repository_URL,
+                                      repos_URL,
                                       session->pool),
              _("Unable to open an ra_local session to URL"));
-  baton->fs_path = apr_pstrdup (baton->path_pool, fs_path);
+  baton->fs_path = svn_stringbuf_create (fs_path, session->pool);
 
   /* Cache the filesystem object from the repos here for
      convenience. */
@@ -308,10 +306,9 @@ svn_ra_local__reparent (svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *baton = session->priv;
 
-  svn_pool_clear (baton->path_pool);
-  baton->fs_path = svn_path_uri_decode (url + strlen (baton->repos_url),
-                                        baton->path_pool);
-  baton->repository_URL = apr_pstrdup (baton->path_pool, url);
+  svn_stringbuf_set (baton->fs_path,
+                     svn_path_uri_decode (url + strlen (baton->repos_url),
+                                          pool));
 
   return SVN_NO_ERROR;
 }
@@ -505,7 +502,7 @@ svn_ra_local__get_commit_editor (svn_ra_session_t *session,
 
   db->fs = sess_baton->fs;
   db->repos = sess_baton->repos;
-  db->fs_path = sess_baton->fs_path;
+  db->fs_path = sess_baton->fs_path->data;
   if (! keep_locks)
     db->lock_tokens = lock_tokens;
   else
@@ -542,7 +539,7 @@ svn_ra_local__get_commit_editor (svn_ra_session_t *session,
   SVN_ERR (svn_repos_get_commit_editor4
            (editor, edit_baton, sess_baton->repos, NULL,
             svn_path_uri_decode (sess_baton->repos_url, pool),
-            sess_baton->fs_path,
+            sess_baton->fs_path->data,
             sess_baton->username, log_msg,
             deltify_etc, db, NULL, NULL, pool));
 
@@ -604,7 +601,7 @@ make_reporter (svn_ra_session_t *session,
                                    revision,
                                    sbaton->username,
                                    sbaton->repos, 
-                                   sbaton->fs_path,
+                                   sbaton->fs_path->data,
                                    target, 
                                    other_fs_path,
                                    text_deltas,
@@ -758,7 +755,8 @@ svn_ra_local__get_log (svn_ra_session_t *session,
           
           /* Append the relative paths to the base FS path to get an
              absolute repository path. */
-          abs_path = svn_path_join (sbaton->fs_path, relative_path, pool);
+          abs_path = svn_path_join (sbaton->fs_path->data, relative_path,
+                                    pool);
           (*((const char **)(apr_array_push (abs_paths)))) = abs_path;
         }
     }
@@ -786,7 +784,7 @@ svn_ra_local__do_check_path (svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sbaton = session->priv;
   svn_fs_root_t *root;
-  const char *abs_path = sbaton->fs_path;
+  const char *abs_path = sbaton->fs_path->data;
 
   /* ### Not sure if this counts as a workaround or not.  The
      session baton uses the empty string to mean root, and not
@@ -818,7 +816,7 @@ svn_ra_local__stat (svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sbaton = session->priv;
   svn_fs_root_t *root;
-  const char *abs_path = sbaton->fs_path;
+  const char *abs_path = sbaton->fs_path->data;
   
   /* ### see note above in __do_check_path() */
   if (abs_path[0] == '\0')
@@ -895,7 +893,7 @@ svn_ra_local__get_file (svn_ra_session_t *session,
   svn_stream_t *contents;
   svn_revnum_t youngest_rev;
   svn_ra_local__session_baton_t *sbaton = session->priv;
-  const char *abs_path = sbaton->fs_path;
+  const char *abs_path = sbaton->fs_path->data;
 
   /* ### Not sure if this counts as a workaround or not.  The
      session baton uses the empty string to mean root, and not
@@ -962,7 +960,7 @@ svn_ra_local__get_dir (svn_ra_session_t *session,
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   svn_ra_local__session_baton_t *sbaton = session->priv;
-  const char *abs_path = sbaton->fs_path;
+  const char *abs_path = sbaton->fs_path->data;
   apr_pool_t *subpool;
 
   /* ### Not sure if this counts as a workaround or not.  The
@@ -1064,7 +1062,7 @@ svn_ra_local__get_locations (svn_ra_session_t *session,
 
   /* Append the relative path to the base FS path to get an
      absolute repository path. */
-  abs_path = svn_path_join (sbaton->fs_path, relative_path, pool);
+  abs_path = svn_path_join (sbaton->fs_path->data, relative_path, pool);
 
   SVN_ERR (svn_repos_trace_node_locations (sbaton->fs, locations, abs_path,
                                            peg_revision, location_revisions,
@@ -1106,7 +1104,7 @@ svn_ra_local__lock (svn_ra_session_t *session,
       path = key;
       revnum = val;
 
-      abs_path = svn_path_join (sess->fs_path, path, iterpool);
+      abs_path = svn_path_join (sess->fs_path->data, path, iterpool);
 
       /* This wrapper will call pre- and post-lock hooks. */
       err = svn_repos_fs_lock (&lock, sess->repos, abs_path, NULL, comment,
@@ -1166,7 +1164,7 @@ svn_ra_local__unlock (svn_ra_session_t *session,
       else
         token = NULL;
 
-      abs_path = svn_path_join (sess->fs_path, path, iterpool);
+      abs_path = svn_path_join (sess->fs_path->data, path, iterpool);
 
       /* This wrapper will call pre- and post-unlock hooks. */
       err = svn_repos_fs_unlock (sess->repos, abs_path, token, force,
@@ -1201,7 +1199,7 @@ svn_ra_local__get_lock (svn_ra_session_t *session,
   const char *abs_path;
 
   /* Get the absolute path. */
-  abs_path = svn_path_join (sess->fs_path, path, pool);
+  abs_path = svn_path_join (sess->fs_path->data, path, pool);
 
   SVN_ERR (svn_fs_get_lock (lock, sess->fs, abs_path, pool));
 
@@ -1220,7 +1218,7 @@ svn_ra_local__get_locks (svn_ra_session_t *session,
   const char *abs_path;
 
   /* Get the absolute path. */
-  abs_path = svn_path_join (sess->fs_path, path, pool);
+  abs_path = svn_path_join (sess->fs_path->data, path, pool);
 
   /* Kinda silly to call the repos wrapper, since we have no authz
      func to give it.  But heck, why not. */

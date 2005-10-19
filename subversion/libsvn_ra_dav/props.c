@@ -1117,7 +1117,7 @@ svn_ra_dav__do_check_path(svn_ra_session_t *session,
                           apr_pool_t *pool)
 {
   svn_ra_dav__session_t *ras = session->priv;
-  const char *url = ras->url;
+  const char *url = ras->url->data;
   svn_error_t *err;
   svn_boolean_t is_dir;
 
@@ -1183,7 +1183,7 @@ svn_ra_dav__do_stat(svn_ra_session_t *session,
                     apr_pool_t *pool)
 {
   svn_ra_dav__session_t *ras = session->priv;
-  const char *url = ras->url;
+  const char *url = ras->url->data;
   const char *final_url;
   apr_hash_t *resources;
   apr_hash_index_t *hi;

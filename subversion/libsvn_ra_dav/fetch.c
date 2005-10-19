@@ -815,7 +815,7 @@ svn_error_t *svn_ra_dav__get_file(svn_ra_session_t *session,
   svn_ra_dav_resource_t *rsrc;
   const char *final_url;
   svn_ra_dav__session_t *ras = session->priv;
-  const char *url = svn_path_url_add_component (ras->url, path, pool);
+  const char *url = svn_path_url_add_component (ras->url->data, path, pool);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
      the public URL, because that will always get HEAD. */
@@ -929,7 +929,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
   const char *final_url;
   apr_size_t final_url_n_components;
   svn_ra_dav__session_t *ras = session->priv;
-  const char *url = svn_path_url_add_component (ras->url, path, pool);
+  const char *url = svn_path_url_add_component (ras->url->data, path, pool);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
      the public URL, because that will always get HEAD. */
@@ -1291,7 +1291,8 @@ svn_ra_dav__get_locations(svn_ra_session_t *session,
      baseline-collection URL, which we get from the largest of the
      START and END revisions. */
   SVN_ERR( svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                         ras->sess, ras->url, peg_revision,
+                                         ras->sess, ras->url->data,
+                                         peg_revision,
                                          session->pool) );
   final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
                                             session->pool);
@@ -1617,7 +1618,7 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
   /* We always run the report on the 'public' URL, which represents
      HEAD anyway.  If the path doesn't exist in HEAD, then
      svn_ra_get_locks() *should* fail.  Lock queries are always on HEAD. */
-  url = svn_path_url_add_component (ras->url, path, pool);
+  url = svn_path_url_add_component (ras->url->data, path, pool);
 
   err = svn_ra_dav__parsed_request(ras->sess, "REPORT", url,
                                    body, NULL, NULL,
@@ -1710,7 +1711,7 @@ svn_error_t *svn_ra_dav__change_rev_prop (svn_ra_session_t *session,
   /* Get the baseline resource. */
   SVN_ERR (svn_ra_dav__get_baseline_props(NULL, &baseline,
                                           ras->sess, 
-                                          ras->url,
+                                          ras->url->data,
                                           rev,
                                           wanted_props, /* DAV:auto-version */
                                           pool));
@@ -1757,7 +1758,7 @@ svn_error_t *svn_ra_dav__rev_proplist (svn_ra_session_t *session,
   /* Main objective: do a PROPFIND (allprops) on a baseline object */  
   SVN_ERR (svn_ra_dav__get_baseline_props(NULL, &baseline,
                                           ras->sess, 
-                                          ras->url,
+                                          ras->url->data,
                                           rev,
                                           NULL, /* get ALL properties */
                                           pool));
@@ -2859,7 +2860,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
   /* get the VCC.  if this doesn't work out for us, don't forget to
      remove the tmpfile before returning the error. */
   if ((err = svn_ra_dav__get_vcc(&vcc, rb->ras->sess, 
-                                 rb->ras->url, rb->ras->pool)))
+                                 rb->ras->url->data, rb->ras->pool)))
     {
       (void) apr_file_close(rb->tmpfile);
       return err;
@@ -3019,7 +3020,7 @@ make_reporter (svn_ra_session_t *session,
      style' update-report request, older servers will just ignore this
      unknown xml element. */
   xml_s = NULL;
-  svn_xml_escape_cdata_cstring(&xml_s, ras->url, pool);
+  svn_xml_escape_cdata_cstring(&xml_s, ras->url->data, pool);
   s = apr_psprintf(pool, "<S:src-path>%s</S:src-path>" DEBUG_CR, xml_s->data);
   SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
 
