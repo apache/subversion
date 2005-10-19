@@ -2089,6 +2089,13 @@ svn_wc_dup_status2 (svn_wc_status2_t *orig_stat,
   if (orig_stat->repos_lock)
     new_stat->repos_lock = svn_lock_dup (orig_stat->repos_lock, pool);
 
+  if (orig_stat->url)
+    new_stat->url = apr_pstrdup (pool, orig_stat->url);
+
+  if (orig_stat->ood_last_cmt_author)
+    new_stat->ood_last_cmt_author
+      = apr_pstrdup (pool, orig_stat->ood_last_cmt_author);
+
   /* Return the new hotness. */
   return new_stat;
 }
