@@ -531,21 +531,24 @@ public class BasicTests extends SVNTests
         OneTest thisTest = new OneTest();
 
         // create a lock file in A/B
-        File adminLock = new File(thisTest.getWorkingCopy(),"A/B/.svn/lock");
+        File adminLock = new File(thisTest.getWorkingCopy(),"A/B/" +
+                                  getAdminDirectoryName() + "/lock");
         PrintWriter pw = new PrintWriter(new FileOutputStream(adminLock));
         pw.print("stop looking!");
         pw.close();
         thisTest.getWc().setItemIsLocked("A/B", true);
 
         // create a lock file in A/D/G
-        adminLock = new File(thisTest.getWorkingCopy(),"A/D/G/.svn/lock");
+        adminLock = new File(thisTest.getWorkingCopy(),"A/D/G/" +
+                             getAdminDirectoryName() + "/lock");
         pw = new PrintWriter(new FileOutputStream(adminLock));
         pw.print("stop looking!");
         pw.close();
         thisTest.getWc().setItemIsLocked("A/D/G", true);
 
         // create a lock file in A/C
-        adminLock = new File(thisTest.getWorkingCopy(),"A/C/.svn/lock");
+        adminLock = new File(thisTest.getWorkingCopy(),"A/C/" +
+                             getAdminDirectoryName() + "/lock");
         pw = new PrintWriter(new FileOutputStream(adminLock));
         pw.print("stop looking!");
         pw.close();

@@ -61,6 +61,15 @@ public class SVNClient implements SVNClientInterface
      */
     protected long cppAddr;
     /**
+     * @return The name of the working copy's administrative
+     * directory, which is usually <code>.svn</code>.
+     * @see <a
+     * href="http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt">Instructions</a>
+     * on changing this as a work-around for the behavior of ASP.Net
+     * on Windows.
+     */
+    public native String getAdminDirectoryName();
+    /**
       * Returns the last destination path submitted.
       * @deprecated
       * @return path in Subversion format.

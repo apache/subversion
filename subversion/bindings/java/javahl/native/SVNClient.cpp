@@ -132,6 +132,18 @@ void SVNClient::finalize()
     JNIUtil::putFinalizedClient(this);
 }
 
+jstring SVNClient::getAdminDirectoryName()
+{
+    Pool requestPool;
+    jstring name =
+        JNIUtil::makeJString(svn_wc_get_adm_dir(requestPool.pool()));
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    return name;
+}
+
 const char * SVNClient::getLastPath()
 {
     return m_lastPath.c_str();
