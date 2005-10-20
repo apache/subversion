@@ -9,16 +9,6 @@ Status of 1.3.0:
 
 Candidate changes:
 
-  * r16350
-    Fix issue #1911, where svndumpfilter generated invalid dumpfiles
-    when copies occurred and --drop-empty-revs and --renumber-revs
-    were in use.
-    Justification:
-      Invalid dumpfiles are not nice.
-    Votes:
-      +1: cmpilato, kfogel
-      +0: dlr (concept, new to this area of the code)
-
    * r16854, r16864
      Expose two of the three APIs backing SVN_ASP_DOT_NET_HACK via JavaHL.
      Justification:
@@ -57,4 +47,12 @@ Candidate changes:
 
 Approved changes:
 
-  (None)
+  * r16350
+    Fix issue #1911, where svndumpfilter generated invalid dumpfiles
+    when copies occurred and --drop-empty-revs and --renumber-revs
+    were in use.
+    Justification:
+      Invalid dumpfiles are not nice.
+    Votes:
+      +1: cmpilato, kfogel, danderson
+      +0: dlr (concept, new to this area of the code)
