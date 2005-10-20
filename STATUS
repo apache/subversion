@@ -9,6 +9,15 @@ Status of 1.3.0:
 
 Candidate changes:
 
+  * r16860
+    Initial import of the Python version of svnmerge.py.
+    Justification:
+      It's written in Python!
+      It's a contrib program!
+      It's much better than the Bourne shell version!
+    Votes:
+      +1: blair
+
   * r16350
     Fix issue #1911, where svndumpfilter generated invalid dumpfiles
     when copies occurred and --drop-empty-revs and --renumber-revs
