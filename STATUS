@@ -48,14 +48,3 @@ Approved changes:
      Votes:
        +0: djames, dlr
        +1: rooneg
-
-   * r16839
-     Add support for the SVN_ASP_DOT_NET_HACK env var, and associated
-     working copy administrative directory name change.
-     Justification:
-       Consistent with behavior of the command-line client and Python
-       bindings in supporting this work-around.
-     Notes:
-       http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt
-     Votes:
-       +1: dlr, rooneg
