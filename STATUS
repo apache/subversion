@@ -35,16 +35,6 @@ Candidate changes:
      +1: dberlin, brane
      +0: dlr
 
-  * r16860
-    Initial import of the Python version of svnmerge.py.
-    Justification:
-      It's written in Python!
-      It's a contrib program!
-      It's much better than the Bourne shell version!
-    Votes:
-      +1: blair
-      +0: dlr
-
 Approved changes:
 
   * r16350

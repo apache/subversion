@@ -4,7 +4,8 @@ svnmerge has been set up at
     http://www.orcaware.com/mailman/listinfo/svnmerge
 
 The Python version is newer and undergoing active development.  It
-also supports more features than the Bourne shell version:
+also supports more features than the Bourne shell version, including,
+but not limited to:
 
   * Add support for more informative commit messages (-V).
 
@@ -21,9 +22,3 @@ also supports more features than the Bourne shell version:
   * "svnmerge avail" has grown two new options:
     -B to display a list of the blocked revisions.
     -A to display both the the blocked and the available revisions.
-
-When the Python version has been stabilized, it will be checked into
-the Subversion repository.  Until that occurs, you may check it out
-from
-
-    svn://pyinstaller.hpcf.upr.edu/svnmerge
