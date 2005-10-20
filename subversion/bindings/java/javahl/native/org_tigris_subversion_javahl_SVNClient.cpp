@@ -104,6 +104,29 @@ JNIEXPORT jstring JNICALL Java_org_tigris_subversion_javahl_SVNClient_getAdminDi
 
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    isAdminDirectory
+ * Signature: (Ljava/lang/String;)Z
+ */
+JNIEXPORT jboolean JNICALL Java_org_tigris_subversion_javahl_SVNClient_isAdminDirectory
+  (JNIEnv* env, jobject jthis, jstring jname)
+{
+    JNIEntry(Client, isAdminDirectory);
+    SVNClient *cl = SVNClient::getCppObject(jthis);
+    if (cl == NULL)
+    {
+        JNIUtil::throwError(_("bad c++ this"));
+        return JNI_FALSE;
+    }
+    JNIStringHolder name(jname);
+    if (JNIUtil::isExceptionThrown())
+    {
+        return JNI_FALSE;
+    }
+    return cl->isAdminDirectory(name);
+}
+
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    getLastPath
  * Signature: ()Ljava/lang/String;
  */

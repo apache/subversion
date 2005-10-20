@@ -366,6 +366,7 @@ public class SVNTests extends TestCase
      * directory name cannot be determined.
      *
      * @return The name of the working copy administrative directory.
+     * @since 1.3
      */
     protected String getAdminDirectoryName() {
         String admDirName = null;
