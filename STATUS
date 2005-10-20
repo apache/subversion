@@ -9,15 +9,6 @@ Status of 1.3.0:
 
 Candidate changes:
 
-  * r16860
-    Initial import of the Python version of svnmerge.py.
-    Justification:
-      It's written in Python!
-      It's a contrib program!
-      It's much better than the Bourne shell version!
-    Votes:
-      +1: blair
-
   * r16350
     Fix issue #1911, where svndumpfilter generated invalid dumpfiles
     when copies occurred and --drop-empty-revs and --renumber-revs
@@ -38,15 +29,41 @@ Candidate changes:
     Votes:
       +1: djames
 
+   * r16854, r16864
+     Expose two of the three APIs backing SVN_ASP_DOT_NET_HACK via JavaHL.
+     Justification:
+       svn_wc_get_adm_dir() is necessary for deviation from ".svn".
+       svn_wc_is_adm_dir() is necessary for WC information hiding.
+     Notes:
+       http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt
+     Votes:
+       +1: dlr
+
   * r16855
     Don't write empty hashes to props file.
     Justification:
       Severely bloats working copy size and causes extra i/o when you
       have a lot of files, but no properties on them.  (4k per file on
       most fs'en.)
+    Notes:
+      While the core libraries remain backwards compatible, this
+      changes the raw 1.3 WC format without bumping the format number.
+      This "breaks" code written against the 1.3- WC format which does
+      not leverage Subversion's core libraries (e.g. JavaSVN, a case
+      that DannyB confirmed).
     Votes:
      +1: dberlin, brane
      +0: dlr
+
+  * r16860
+    Initial import of the Python version of svnmerge.py.
+    Justification:
+      It's written in Python!
+      It's a contrib program!
+      It's much better than the Bourne shell version!
+    Votes:
+      +1: blair
+      +0: dlr
 
 Approved changes:
 
