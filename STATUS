@@ -67,11 +67,4 @@ Candidate changes:
 
 Approved changes:
 
-   * r16834
-     Initialize SVN_ASP_DOT_NET_HACK in the Perl and Ruby bindings.
-     Justification:
-       Consistent with behavior of the command-line client and Python
-       bindings in supporting this work-around.
-     Votes:
-       +0: djames, dlr
-       +1: rooneg
+   (none)

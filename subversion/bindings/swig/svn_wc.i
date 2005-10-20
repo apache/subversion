@@ -299,7 +299,7 @@
 
 %inline %{
 static svn_error_t *
-svn_swig_init_asp_dot_net_hack (apr_pool_t *pool)
+svn_wc_swig_init_asp_dot_net_hack (apr_pool_t *pool)
 {
 #if defined(WIN32) || defined(__CYGWIN__)
   if (getenv ("SVN_ASP_DOT_NET_HACK"))
@@ -310,5 +310,5 @@ svn_swig_init_asp_dot_net_hack (apr_pool_t *pool)
 %}
 
 #if defined(SWIGPYTHON)
-%pythoncode %{ svn_swig_init_asp_dot_net_hack() %}
+%pythoncode %{ svn_wc_swig_init_asp_dot_net_hack() %}
 #endif
