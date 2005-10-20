@@ -37,12 +37,4 @@ Candidate changes:
 
 Approved changes:
 
-  * r16350
-    Fix issue #1911, where svndumpfilter generated invalid dumpfiles
-    when copies occurred and --drop-empty-revs and --renumber-revs
-    were in use.
-    Justification:
-      Invalid dumpfiles are not nice.
-    Votes:
-      +1: cmpilato, kfogel, danderson
-      +0: dlr (concept, new to this area of the code)
+  (None)
