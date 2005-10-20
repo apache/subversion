@@ -395,7 +395,7 @@ static svn_error_t *interrogate_for_content_type(ne_request *request,
   if (ne_get_content_type(request, ctype) != 0)
     return svn_error_createf
       (SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,
-       _("Could not get content-type from response."));
+       _("Could not get content-type from response"));
 
   return SVN_NO_ERROR;
 }
@@ -1288,8 +1288,7 @@ svn_ra_dav__get_locations(svn_ra_session_t *session,
   /* ras's URL may not exist in HEAD, and thus it's not safe to send
      it as the main argument to the REPORT request; it might cause
      dav_get_resource() to choke on the server.  So instead, we pass a
-     baseline-collection URL, which we get from the largest of the
-     START and END revisions. */
+     baseline-collection URL, which we get from the peg revision.  */
   SVN_ERR( svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
                                          ras->sess, ras->url->data,
                                          peg_revision,
