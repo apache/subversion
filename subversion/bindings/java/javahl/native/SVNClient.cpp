@@ -144,6 +144,12 @@ jstring SVNClient::getAdminDirectoryName()
     return name;
 }
 
+jboolean SVNClient::isAdminDirectory(const char *name)
+{
+    Pool requestPool;
+    return svn_wc_is_adm_dir(name, requestPool.pool()) ? JNI_TRUE : JNI_FALSE;
+}
+
 const char * SVNClient::getLastPath()
 {
     return m_lastPath.c_str();

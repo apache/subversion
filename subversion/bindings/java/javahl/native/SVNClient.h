@@ -115,6 +115,7 @@ public:
     void password(const char *pi_password);
     void username(const char *pi_username);
     jstring getAdminDirectoryName();
+    jboolean isAdminDirectory(const char *name);
     jobject info(const char *path);
     jobject singleStatus(const char *path, bool onServer);
     jobjectArray status(const char *path, bool descend, bool onServer,
