@@ -339,7 +339,8 @@ svn_error_t *svn_wc_locked (svn_boolean_t *locked,
 
 /**
  * Return @c TRUE if @a name is the name of the WC administrative
- * directory.  Use @a pool for any temporary allocations.
+ * directory.  Use @a pool for any temporary allocations.  Only works
+ * with base directory names, not paths or URIs.
  *
  * For compatibility, the default name (.svn) will always be treated
  * as an admin dir name, even if the working copy is actually using an
