@@ -16,6 +16,7 @@ Candidate changes:
     lot of files, but no properties on them.
     (4k per file on most fs'en)
     Votes:
+     +1: dberlin
 
   * r16350
     Fix issue #1911, where svndumpfilter generated invalid dumpfiles
