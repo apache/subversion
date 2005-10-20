@@ -103,7 +103,6 @@ static apr_pool_t *_global_pool = NULL;
 static PyObject *_global_svn_swig_py_pool = NULL;
 static char assertValid[] = "assert_valid";
 static char parentPool[] = "_parent_pool";
-static char isValid[] = "_is_valid";
 static char wrap[] = "_wrap";
 static char unwrap[] = "_unwrap";
 static char setParentPool[] = "set_parent_pool";
@@ -134,50 +133,6 @@ void svn_swig_py_clear_application_pool()
 {
   _global_pool = NULL;
   _global_svn_swig_py_pool = NULL;
-}
-
-/* Mark a pool as deleted after it is destroyed */
-static apr_status_t svn_swig_py_pool_destroyed(void *ptr)
-{
-  PyObject *pool = (PyObject *) ptr;
-  svn_swig_py_acquire_py_lock();
-  PyObject_DelAttrString(pool, isValid);
-  svn_swig_py_release_py_lock();
-  return APR_SUCCESS; 
-}
-
-/* Decrease a pool's reference count after it is destroyed */
-static apr_status_t svn_swig_py_pool_decref(void *ptr)
-{
-  PyObject *pool = (PyObject *) ptr;
-  svn_swig_py_acquire_py_lock();
-  Py_DECREF(pool);
-  svn_swig_py_release_py_lock();
-  return APR_SUCCESS; 
-}
-
-/* Register cleanup function */
-PyObject * svn_swig_py_register_cleanup(PyObject *py_pool, apr_pool_t *pool) 
-{
-  PyObject *result;
-  
-  svn_swig_py_acquire_py_lock();
-
-  /* Check that the pool object is valid */
-  result = PyObject_CallMethod(py_pool, assertValid, emptyTuple);
-  if (result == NULL) {
-    return NULL;
-  }
-  Py_DECREF(result);
-  svn_swig_py_release_py_lock();
-
-  /* Delete the "_isvalid" member when the pool is destroyed */
-  apr_pool_cleanup_register(pool, py_pool, svn_swig_py_pool_destroyed,
-                            apr_pool_cleanup_null);
-
-  /* Return None */
-  Py_INCREF(Py_None);
-  return Py_None;
 }
 
 /* Get the application pool */
@@ -373,24 +328,14 @@ void svn_swig_py_svn_exception(svn_error_t *err)
 /* Functions for making Python wrappers around Subversion structs */
 static PyObject *make_ob_pool(void *pool)
 {
-  PyObject *py_pool = SWIG_NewPointerObj(pool, 
-    svn_swig_TypeQuery("apr_pool_t *"), 0);
-
-  if (py_pool == NULL) {
-    return NULL;
-  }
-
-  apr_pool_cleanup_register((apr_pool_t *)pool, py_pool, 
-    svn_swig_py_pool_decref, apr_pool_cleanup_null); 
-  
-  if (proxy_set_pool(&py_pool, NULL)) {
-    Py_DECREF(py_pool);
-    return NULL;
-  }
-  
-  Py_INCREF(py_pool);
-
-  return py_pool;
+  /* Return a brand new default pool to Python. This pool isn't
+   * normally used for anything. It's just here for compatibility
+   * with Subversion 1.2. */
+  apr_pool_t *new_pool = svn_pool_create(_global_pool);
+  PyObject *new_py_pool = svn_swig_NewPointerObj(new_pool,
+    svn_swig_TypeQuery("apr_pool_t *"), _global_svn_swig_py_pool);
+  (void) pool; /* Silence compiler warnings about unused parameter. */
+  return new_py_pool;
 }
 static PyObject *make_ob_fs_root(svn_fs_root_t *ptr, PyObject *py_pool)
 {

@@ -632,7 +632,6 @@ PyObject *svn_swig_py_exception_type(void);
 
 void svn_swig_py_set_application_pool(PyObject *py_pool, apr_pool_t *pool);
 void svn_swig_py_clear_application_pool();
-PyObject *svn_swig_py_register_cleanup(PyObject *py_pool, apr_pool_t *pool);
 
 %init %{
 /* Theoretically, we should be checking for errors here,

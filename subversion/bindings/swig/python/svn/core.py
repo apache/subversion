@@ -18,6 +18,8 @@
 
 from libsvn.core import *
 import libsvn.core as _core
+import atexit as _atexit
+_atexit.register(lambda: _core.application_pool.destroy())
 
 def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
   for name, value in symbol_dict.items():

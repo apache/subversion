@@ -79,10 +79,6 @@ void svn_swig_py_clear_application_pool(void);
 SVN_SWIG_SWIGUTIL_EXPORT
 void svn_swig_get_application_pool(PyObject **py_pool, apr_pool_t **pool);
 
-/* Register cleanup function */
-SVN_SWIG_SWIGUTIL_EXPORT
-PyObject * svn_swig_py_register_cleanup(PyObject *py_pool, apr_pool_t *pool);
-
 
 /*** SWIG Wrappers ***/
 
