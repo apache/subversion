@@ -300,7 +300,7 @@ svn_ra_dav__get_file_revs (svn_ra_session_t *session,
                            apr_pool_t *pool)
 {
   svn_ra_dav__session_t *ras = session->priv;
-  svn_stringbuf_t *request_body = svn_stringbuf_create ("", ras->pool);
+  svn_stringbuf_t *request_body = svn_stringbuf_create ("", pool);
   svn_string_t bc_url, bc_relative;
   const char *final_bc_url;
   int http_status = 0;
@@ -315,16 +315,16 @@ svn_ra_dav__get_file_revs (svn_ra_session_t *session,
   /* Construct request body. */
   svn_stringbuf_appendcstr (request_body, request_head);
   svn_stringbuf_appendcstr (request_body,
-                            apr_psprintf (ras->pool,
+                            apr_psprintf (pool,
                                           "<S:start-revision>%ld"
                                           "</S:start-revision>", start));
   svn_stringbuf_appendcstr (request_body,
-                            apr_psprintf (ras->pool,
+                            apr_psprintf (pool,
                                           "<S:end-revision>%ld"
                                           "</S:end-revision>", end));
   svn_stringbuf_appendcstr (request_body, "<S:path>");
   svn_stringbuf_appendcstr (request_body,
-                            apr_xml_quote_string (ras->pool, path, 0));
+                            apr_xml_quote_string (pool, path, 0));
   svn_stringbuf_appendcstr (request_body, "</S:path>");
   svn_stringbuf_appendcstr (request_body, request_tail);
 
@@ -342,16 +342,16 @@ svn_ra_dav__get_file_revs (svn_ra_session_t *session,
      baseline-collection URL, which we get from END. */
   SVN_ERR (svn_ra_dav__get_baseline_info (NULL, &bc_url, &bc_relative, NULL,
                                           ras->sess, ras->url->data, end,
-                                          ras->pool));
+                                          pool));
   final_bc_url = svn_path_url_add_component (bc_url.data, bc_relative.data,
-                                             ras->pool);
+                                             pool);
 
   /* Dispatch the request. */
   err = svn_ra_dav__parsed_request (ras->sess, "REPORT", final_bc_url,
                                     request_body->data, NULL, NULL,
                                     start_element, cdata_handler, end_element,
                                     &rb, NULL, &http_status, FALSE,
-                                    ras->pool);
+                                    pool);
 
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.0.x servers and older don't support this report. */

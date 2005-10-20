@@ -1474,7 +1474,7 @@ static svn_error_t * commit_close_edit(void *edit_baton,
                                       cc->disable_merge_response,
                                       pool) );
   SVN_ERR( delete_activity(edit_baton, pool) );
-  SVN_ERR( svn_ra_dav__maybe_store_auth_info(cc->ras) );
+  SVN_ERR( svn_ra_dav__maybe_store_auth_info(cc->ras, pool) );
 
   if (commit_info->revision != SVN_INVALID_REVNUM)
     SVN_ERR( cc->callback (commit_info, cc->callback_baton, pool));

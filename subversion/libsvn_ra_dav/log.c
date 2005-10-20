@@ -317,7 +317,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
 
   int i;
   svn_ra_dav__session_t *ras = session->priv;
-  svn_stringbuf_t *request_body = svn_stringbuf_create("", ras->pool);
+  svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
   struct log_baton lb;
   svn_string_t bc_url, bc_relative;
   const char *final_bc_url;
@@ -359,31 +359,31 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
   /* Construct the request body. */
   svn_stringbuf_appendcstr(request_body, log_request_head);
   svn_stringbuf_appendcstr(request_body,
-                           apr_psprintf(ras->pool,
+                           apr_psprintf(pool,
                                         "<S:start-revision>%ld"
                                         "</S:start-revision>", start));
   svn_stringbuf_appendcstr(request_body,
-                           apr_psprintf(ras->pool,
+                           apr_psprintf(pool,
                                         "<S:end-revision>%ld"
                                         "</S:end-revision>", end));
   if (limit)
     {
       svn_stringbuf_appendcstr(request_body,
-                               apr_psprintf(ras->pool,
+                               apr_psprintf(pool,
                                             "<S:limit>%d</S:limit>", limit));
     }
 
   if (discover_changed_paths)
     {
       svn_stringbuf_appendcstr(request_body,
-                               apr_psprintf(ras->pool,
+                               apr_psprintf(pool,
                                             "<S:discover-changed-paths/>"));
     }
 
   if (strict_node_history)
     {
       svn_stringbuf_appendcstr(request_body,
-                               apr_psprintf(ras->pool,
+                               apr_psprintf(pool,
                                             "<S:strict-node-history/>"));
     }
 
@@ -392,7 +392,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
       for (i = 0; i < paths->nelts; i++)
         {
           const char *this_path =
-            apr_xml_quote_string(ras->pool,
+            apr_xml_quote_string(pool,
                                  ((const char **)paths->elts)[i],
                                  0);
           svn_stringbuf_appendcstr(request_body, "<S:path>");
@@ -405,7 +405,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
 
   lb.receiver = receiver;
   lb.receiver_baton = receiver_baton;
-  lb.subpool = svn_pool_create (ras->pool);
+  lb.subpool = svn_pool_create (pool);
   lb.err = NULL;
   lb.limit = limit;
   lb.count = 0;
@@ -419,9 +419,9 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
   use_rev = (start > end) ? start : end;
   SVN_ERR( svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
                                          ras->sess, ras->url->data, use_rev,
-                                         ras->pool) );
+                                         pool) );
   final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
-                                            ras->pool);
+                                            pool);
 
 
   err = svn_ra_dav__parsed_request_compat(ras->sess,
@@ -438,7 +438,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
                                           NULL, 
                                           NULL,
                                           FALSE,
-                                          ras->pool);
+                                          pool);
   
   if (lb.err)
     {

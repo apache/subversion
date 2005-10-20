@@ -882,7 +882,8 @@ svn_ra_dav__parsed_request_compat(ne_session *sess,
 
 
 svn_error_t *
-svn_ra_dav__maybe_store_auth_info(svn_ra_dav__session_t *ras)
+svn_ra_dav__maybe_store_auth_info(svn_ra_dav__session_t *ras,
+                                  apr_pool_t *pool)
 {
   /* No auth_baton?  Never mind. */
   if (! ras->callbacks->auth_baton)
@@ -890,7 +891,7 @@ svn_ra_dav__maybe_store_auth_info(svn_ra_dav__session_t *ras)
 
   /* If we ever got credentials, ask the iter_baton to save them.  */
   SVN_ERR (svn_auth_save_credentials(ras->auth_iterstate,
-                                     ras->pool));
+                                     pool));
   
   return SVN_NO_ERROR;
 }
@@ -898,11 +899,12 @@ svn_ra_dav__maybe_store_auth_info(svn_ra_dav__session_t *ras)
 
 svn_error_t *
 svn_ra_dav__maybe_store_auth_info_after_result(svn_error_t *err,
-                                               svn_ra_dav__session_t *ras)
+                                               svn_ra_dav__session_t *ras,
+                                               apr_pool_t *pool)
 {
   if (! err || (err->apr_err != SVN_ERR_RA_NOT_AUTHORIZED))
     {
-      svn_error_t *err2 = svn_ra_dav__maybe_store_auth_info(ras);
+      svn_error_t *err2 = svn_ra_dav__maybe_store_auth_info(ras, pool);
       if (err2 && ! err)
         return err2;
       else if (err)
