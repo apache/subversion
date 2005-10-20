@@ -19,16 +19,6 @@ Candidate changes:
       +1: cmpilato, kfogel
       +0: dlr (concept, new to this area of the code)
 
-  * r16806, r16807, r16842
-    Convert automatic memory management code into pure Python, so as
-    to ensure thread safety.
-    Justification:
-      Prevents segfaults on Windows with mod_python.
-    Thread:
-      http://svn.haxx.se/dev/archive-2005-10/0867.shtml
-    Votes:
-      +1: djames
-
    * r16854, r16864
      Expose two of the three APIs backing SVN_ASP_DOT_NET_HACK via JavaHL.
      Justification:
@@ -67,4 +57,12 @@ Candidate changes:
 
 Approved changes:
 
-   (none)
+  * r16806, r16807, r16842
+    Convert automatic memory management code into pure Python, so as
+    to ensure thread safety.
+    Justification:
+      Prevents segfaults on Windows with mod_python.
+    Thread:
+      http://svn.haxx.se/dev/archive-2005-10/0867.shtml
+    Votes:
+      +1: djames, rooneg
