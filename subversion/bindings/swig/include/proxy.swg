@@ -18,8 +18,8 @@
 
 #ifdef SWIGPYTHON
 
-/* Note: see the big comment at the top of proxy_apr.swg for details on
- *       how this _is_valid stuff actually works, it's part of the magic
+/* Note: See the big comment at the top of proxy_apr.swg for details on
+ *       how this _is_valid stuff actually works.  It's part of the magic
  *       that lets us gracefully handle objects that are allocated from
  *       a pool that's been cleared or destroyed.
  */

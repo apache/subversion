@@ -31,12 +31,12 @@
 /* The python memory management code is designed to mark pools as invalid
  * when their parent pools have been garbage collected.  This is implemented
  * by registering a callback with the Python garbage collector, so that when
- * the objects parent pool is deleted we can be notified.  For more info on
+ * the object's parent pool is deleted we can be notified.  For more info on
  * how these kind of callbacks work, see the python documentation for the
  * weakref.ref() function.
  *
  * Each object has an _is_valid member, and stores a weakref to its parent
- * pool's _is_valid, and when that weakref is broken _mark_weakpool_invalid
+ * pool's _is_valid, and when that weakref is broken _mark_weakpool_invalid()
  * gets called in order to mark the object as invalid.
  * 
  * You can destroy a pool in three ways:
