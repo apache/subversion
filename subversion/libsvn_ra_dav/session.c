@@ -1257,7 +1257,7 @@ svn_ra_dav__lock(svn_ra_session_t *session,
   svn_pool_destroy(iterpool);
 
  departure:
-  return svn_ra_dav__maybe_store_auth_info_after_result(ret_err, ras);
+  return svn_ra_dav__maybe_store_auth_info_after_result(ret_err, ras, pool);
 }
 
 
@@ -1403,7 +1403,7 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
   svn_pool_destroy(iterpool);
 
  departure:
-  return svn_ra_dav__maybe_store_auth_info_after_result(ret_err, ras);
+  return svn_ra_dav__maybe_store_auth_info_after_result(ret_err, ras, pool);
 }
 
 
@@ -1503,7 +1503,7 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
 
   err = svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras->sess,
                                       url, SVN_INVALID_REVNUM, pool);
-  SVN_ERR( svn_ra_dav__maybe_store_auth_info_after_result(err, ras) );
+  SVN_ERR( svn_ra_dav__maybe_store_auth_info_after_result(err, ras, pool) );
 
   /* Build context for neon callbacks and then register them. */
   setup_neon_request_hook(ras);

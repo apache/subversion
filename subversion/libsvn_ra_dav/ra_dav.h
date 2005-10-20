@@ -738,9 +738,10 @@ void svn_ra_dav__copy_href(svn_stringbuf_t *dst, const char *src);
 
 
 /* If RAS contains authentication info, attempt to store it via client
-   callbacks.  */
+   callbacks and using POOL for temporary allocations.  */
 svn_error_t *
-svn_ra_dav__maybe_store_auth_info (svn_ra_dav__session_t *ras);
+svn_ra_dav__maybe_store_auth_info (svn_ra_dav__session_t *ras,
+                                   apr_pool_t *pool);
 
 
 /* Like svn_ra_dav__maybe_store_auth_info(), but conditional on ERR.
@@ -751,7 +752,8 @@ svn_ra_dav__maybe_store_auth_info (svn_ra_dav__session_t *ras);
    store auth info, else return SVN_NO_ERROR. */
 svn_error_t *
 svn_ra_dav__maybe_store_auth_info_after_result(svn_error_t *err,
-                                               svn_ra_dav__session_t *ras);
+                                               svn_ra_dav__session_t *ras,
+                                               apr_pool_t *pool);
 
 
 /* Create an error object for an error from neon in the given session,
