@@ -1726,6 +1726,19 @@ svn_io_get_dirents (apr_hash_t **dirents,
   return svn_io_get_dirents2 (dirents, path, pool);
 }
 
+/* Handle an error from the child process (before command execution) by
+   printing DESC and the error string corresponding to STATUS to stderr. */
+static void
+handle_child_process_error (apr_pool_t *pool, apr_status_t status,
+                            const char *desc)
+{
+  char errbuf[256];
+
+  /* What we get from APR is in native encoding. */
+  fprintf (stderr, "%s: %s", desc, apr_strerror (status, errbuf,
+                                                 sizeof (errbuf)));
+}
+
 
 svn_error_t *
 svn_io_start_cmd (apr_proc_t *cmd_proc,
@@ -1795,6 +1808,13 @@ svn_io_start_cmd (apr_proc_t *cmd_proc,
         return svn_error_wrap_apr
           (apr_err, _("Can't set process '%s' child errfile"), cmd);
     }
+
+  /* Have the child print any problems executing its program to stderr. */
+  apr_err = apr_procattr_child_errfn_set (cmdproc_attr,
+                                          handle_child_process_error);
+  if (apr_err)
+    return svn_error_wrap_apr
+      (apr_err, _("Can't set process '%s' error handler"), cmd);
 
   /* Convert cmd and args from UTF-8 */
   SVN_ERR (svn_path_cstring_from_utf8 (&cmd_apr, cmd, pool));
