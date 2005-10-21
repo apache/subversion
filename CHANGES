@@ -60,6 +60,7 @@ http://svn.collab.net/repos/svn/tags/1.3.0
     * fixed: possible segfault to callers of trace_node_locations() (r16188)
     * fixed: BDB-style locking actions on FSFS repositories (r16295, r16297)
     * fixed: numerous bugs running BDB commands on FSFS (issue #2361, r16388)
+    * fixed: svndumpfilter incorrectly remapping dropped revs (issue #1911)
 
   - Both:
     * faster multiple (un)locks in a single svn:// request (issue #2264)
@@ -71,6 +72,7 @@ Developer-visible-changes:
 * working copy is now storing repos_root as separate field (issue #960)
 * keywords are now stored in an internal hash (issue #890)
 * client status APIs now makes more server-side info available (r16344)
+* optimize working copy size with empty propfiles (r16855, see releasenotes)
 * new public APIs:  
    - new transfer progress callback for DAV (r15948)
    - svn_ra_initialize(), svn_client_open_ra_session()
