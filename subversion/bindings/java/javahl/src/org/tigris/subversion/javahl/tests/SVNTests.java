@@ -361,6 +361,25 @@ public class SVNTests extends TestCase
     }
 
     /**
+     * Intended to be called as part of test method execution
+     * (post-{@link #setUp()}).  Calls <code>fail()</code> if the
+     * directory name cannot be determined.
+     *
+     * @return The name of the working copy administrative directory.
+     * @since 1.3
+     */
+    protected String getAdminDirectoryName() {
+        String admDirName = null;
+        if (this.client != null) {
+            admDirName = client.getAdminDirectoryName();
+        }
+        if (admDirName == null) {
+            fail("Unable to determine the WC admin directory name");
+        }
+        return admDirName;
+    }
+
+    /**
      * internal class which implements the OutputInterface to write the data
      * to a file.
      */
