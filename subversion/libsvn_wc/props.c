@@ -212,9 +212,9 @@ svn_wc__save_prop_file (const char *propfile_path,
 /* Opens reject temporary file for FULL_PATH. */
 static svn_error_t *
 open_reject_tmp_file (apr_file_t **fp, const char **reject_tmp_path,
-				      const char *full_path,
-					  svn_wc_adm_access_t *adm_access,
-					  svn_boolean_t is_dir, apr_pool_t *pool)
+                      const char *full_path,
+                      svn_wc_adm_access_t *adm_access,
+                      svn_boolean_t is_dir, apr_pool_t *pool)
 {
   const char *tmp_path, *tmp_name;
 
@@ -778,7 +778,7 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
 
   /* Non-empty path without trailing slash need an extra slash removed */
   if (access_len != 0 && access_path[access_len - 1] != '/')
-	access_len++;
+    access_len++;
 
   if (name == NULL)
     {
