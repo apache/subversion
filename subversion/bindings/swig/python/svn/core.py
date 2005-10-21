@@ -29,11 +29,6 @@ def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
 
 Pool = _core.svn_pool_create
 
-# Hide raw pool management functions.
-# If you still want to use these, use libsvn.core instead.
-del apr_pool_destroy
-del apr_pool_clear
-
 def svn_path_compare_paths(path1, path2):
   path1_len = len (path1);
   path2_len = len (path2);
@@ -188,6 +183,7 @@ def svn_pool_destroy(pool):
     pool.destroy()
   else:
     _core.apr_pool_destroy(pool)
+apr_pool_destroy = svn_pool_destroy
 
 def svn_pool_clear(pool):
   """Deprecated. Use Pool.clear instead. This is a compatibility
@@ -200,6 +196,7 @@ def svn_pool_clear(pool):
     pool.clear()
   else:
     _core.apr_pool_clear(pool)
+apr_pool_clear = svn_pool_clear
 
 def run_app(func, *args, **kw):
   '''Deprecated: Application-level pools are now created
