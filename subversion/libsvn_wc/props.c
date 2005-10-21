@@ -216,31 +216,31 @@ open_reject_tmp_file (apr_file_t **fp, const char **reject_tmp_path,
 					  svn_wc_adm_access_t *adm_access,
 					  svn_boolean_t is_dir, apr_pool_t *pool)
 {
-  const char *tmppath, *tmpname;
+  const char *tmp_path, *tmp_name;
 
   /* Get path to /temporary/ local prop file */
-  SVN_ERR (svn_wc__prop_path (&tmppath, full_path, adm_access, TRUE, pool));
+  SVN_ERR (svn_wc__prop_path (&tmp_path, full_path, adm_access, TRUE, pool));
 
   /* Reserve a .prej file based on it.  */
-  SVN_ERR (svn_io_open_unique_file (fp, reject_tmp_path, tmppath,
-	                                SVN_WC__PROP_REJ_EXT, FALSE, pool));
+  SVN_ERR (svn_io_open_unique_file (fp, reject_tmp_path, tmp_path,
+                                    SVN_WC__PROP_REJ_EXT, FALSE, pool));
 
   /* reject_tmp_path is an absolute path at this point,
      but that's no good for us.  We need to convert this
      path to a *relative* path to use in the logfile. */
-  tmpname = svn_path_basename (*reject_tmp_path, pool);
+  tmp_name = svn_path_basename (*reject_tmp_path, pool);
 
   if (is_dir)
     {
       /* Dealing with directory "path" */
       *reject_tmp_path = svn_wc__adm_path ("", TRUE, /* use tmp */ pool,
-										   tmpname, NULL);
+                                           tmp_name, NULL);
     }
   else
     {
       /* Dealing with file "path/name" */
       *reject_tmp_path = svn_wc__adm_path ("", TRUE, pool, SVN_WC__ADM_PROPS,
-                                           tmpname, NULL);
+                                           tmp_name, NULL);
     }
 
   return SVN_NO_ERROR;
@@ -570,9 +570,9 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
           
           if (! reject_tmp_fp)
             /* This is the very first prop conflict found on this item. */
-			SVN_ERR (open_reject_tmp_file (&reject_tmp_fp, &reject_tmp_path,
-										   full_path, adm_access, is_dir,
-										   pool));
+            SVN_ERR (open_reject_tmp_file (&reject_tmp_fp, &reject_tmp_path,
+                                           full_path, adm_access, is_dir,
+                                           pool));
           
           /* Append the conflict to the open tmp/PROPS/---.prej file */
           SVN_ERR (append_prop_conflict (reject_tmp_fp, conflict_description,
@@ -888,9 +888,9 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
 
               if (! reject_tmp_fp)
                 /* This is the very first prop conflict found on this item. */
-				SVN_ERR (open_reject_tmp_file (&reject_tmp_fp, &reject_tmp_path,
-				                               full_path, adm_access, is_dir,
-											   pool));
+                SVN_ERR (open_reject_tmp_file (&reject_tmp_fp, &reject_tmp_path,
+                                               full_path, adm_access, is_dir,
+                                               pool));
 
               /* Append the conflict to the open tmp/PROPS/---.prej file */
               SVN_ERR (append_prop_conflict (reject_tmp_fp,
