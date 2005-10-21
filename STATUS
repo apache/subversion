@@ -17,7 +17,7 @@ Candidate changes:
      Notes:
        http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt
      Votes:
-       +1: dlr
+       +1: dlr, jerenkrantz
 
 Approved changes:
 
@@ -34,4 +34,4 @@ Approved changes:
       not leverage Subversion's core libraries (e.g. JavaSVN, a case
       that DannyB confirmed).
     Votes:
-     +1: dberlin, brane, dlr
+     +1: dberlin, brane, dlr, jerenkrantz
