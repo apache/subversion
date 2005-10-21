@@ -603,24 +603,13 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
   real_props = apr_pstrdup (pool, local_propfile_path + access_len);
   
   /* Write log entry to move working tmp copy to real working area. */
-  svn_xml_make_open_tag (entry_accum,
-                         pool,
-                         svn_xml_self_closing,
-                         SVN_WC__LOG_MV,
-                         SVN_WC__LOG_ATTR_NAME,
-                         tmp_props,
-                         SVN_WC__LOG_ATTR_DEST,
-                         real_props,
-                         NULL);
+  SVN_ERR (svn_wc__loggy_move (entry_accum, NULL,
+                               adm_access, tmp_props, real_props,
+                               FALSE, pool));
 
   /* Make props readonly */
-  svn_xml_make_open_tag (entry_accum,
-                         pool,
-                         svn_xml_self_closing,
-                         SVN_WC__LOG_READONLY,
-                         SVN_WC__LOG_ATTR_NAME,
-                         real_props,
-                         NULL);
+  SVN_ERR (svn_wc__loggy_set_readonly (entry_accum, adm_access,
+                                       real_props, pool));
 
   /* Repeat the above steps for the base properties if required. */
   if (base_merge)
@@ -634,23 +623,12 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
       tmp_prop_base = apr_pstrdup (pool, base_prop_tmp_path + access_len);
       real_prop_base = apr_pstrdup (pool, base_propfile_path + access_len);
 
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_MV,
-                             SVN_WC__LOG_ATTR_NAME,
-                             tmp_prop_base,
-                             SVN_WC__LOG_ATTR_DEST,
-                             real_prop_base,
-                             NULL);
+      SVN_ERR (svn_wc__loggy_move (entry_accum, NULL, adm_access,
+                                    tmp_prop_base, real_prop_base,
+                                   FALSE, pool));
 
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_READONLY,
-                             SVN_WC__LOG_ATTR_NAME,
-                             real_prop_base,
-                             NULL);
+      SVN_ERR (svn_wc__loggy_set_readonly (entry_accum, adm_access,
+                                           real_prop_base, pool));
     }
 
   if (reject_tmp_fp)
@@ -697,25 +675,13 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
 
       /* We've now guaranteed that some kind of .prej file exists
          above the .svn/ dir.  We write log entries to append our
-         conflicts to it. */      
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_APPEND,
-                             SVN_WC__LOG_ATTR_NAME,
-                             reject_tmp_path,
-                             SVN_WC__LOG_ATTR_DEST,
-                             reject_path,
-                             NULL);
+         conflicts to it. */
+      SVN_ERR (svn_wc__loggy_append (entry_accum, adm_access,
+                                     reject_tmp_path, reject_path, pool));
 
       /* And of course, delete the temporary reject file. */
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_RM,
-                             SVN_WC__LOG_ATTR_NAME,
-                             reject_tmp_path,
-                             NULL);
+      SVN_ERR (svn_wc__loggy_remove (entry_accum, adm_access,
+                                     reject_tmp_path, pool));
       
       /* Mark entry as "conflicted" with a particular .prej file. */
       svn_xml_make_open_tag (entry_accum,
@@ -939,24 +905,12 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
   real_props = apr_pstrdup (pool, local_propfile_path + access_len);
   
   /* Write log entry to move working tmp copy to real working area. */
-  svn_xml_make_open_tag (entry_accum,
-                         pool,
-                         svn_xml_self_closing,
-                         SVN_WC__LOG_MV,
-                         SVN_WC__LOG_ATTR_NAME,
-                         tmp_props,
-                         SVN_WC__LOG_ATTR_DEST,
-                         real_props,
-                         NULL);
+  SVN_ERR (svn_wc__loggy_move (entry_accum, NULL, adm_access,
+                               tmp_props, real_props, FALSE, pool));
 
   /* Make props readonly */
-  svn_xml_make_open_tag (entry_accum,
-                         pool,
-                         svn_xml_self_closing,
-                         SVN_WC__LOG_READONLY,
-                         SVN_WC__LOG_ATTR_NAME,
-                         real_props,
-                         NULL);
+  SVN_ERR (svn_wc__loggy_set_readonly (entry_accum, adm_access,
+                                       real_props, pool));
 
   /* Repeat the above steps for the base properties if required */
   if (base_merge)
@@ -968,22 +922,11 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
       tmp_prop_base = apr_pstrdup (pool, base_prop_tmp_path + access_len);
       real_prop_base = apr_pstrdup (pool, base_propfile_path + access_len);
 
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_MV,
-                             SVN_WC__LOG_ATTR_NAME,
-                             tmp_prop_base,
-                             SVN_WC__LOG_ATTR_DEST,
-                             real_prop_base,
-                             NULL);
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_READONLY,
-                             SVN_WC__LOG_ATTR_NAME,
-                             real_prop_base,
-                             NULL);
+      SVN_ERR (svn_wc__loggy_move (entry_accum, NULL, adm_access,
+                                   tmp_prop_base, real_prop_base,
+                                   FALSE, pool));
+      SVN_ERR (svn_wc__loggy_set_readonly (entry_accum, adm_access,
+                                           real_prop_base, pool));
     }
 
 
@@ -1035,26 +978,14 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
 
       /* We've now guaranteed that some kind of .prej file exists
          above the .svn/ dir.  We write log entries to append our
-         conflicts to it. */      
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_APPEND,
-                             SVN_WC__LOG_ATTR_NAME,
-                             reject_tmp_path,
-                             SVN_WC__LOG_ATTR_DEST,
-                             reject_path,
-                             NULL);
+         conflicts to it. */
+      SVN_ERR (svn_wc__loggy_append (entry_accum, adm_access,
+                                     reject_tmp_path, reject_path, pool));
 
       /* And of course, delete the temporary reject file. */
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_RM,
-                             SVN_WC__LOG_ATTR_NAME,
-                             reject_tmp_path,
-                             NULL);
-      
+      SVN_ERR (svn_wc__loggy_remove (entry_accum, adm_access,
+                                     reject_tmp_path, pool));
+
       /* Mark entry as "conflicted" with a particular .prej file. */
       svn_xml_make_open_tag (entry_accum,
                              pool,
