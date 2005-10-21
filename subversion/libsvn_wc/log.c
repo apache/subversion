@@ -123,6 +123,8 @@
 /** Log attributes.  See the documentation above for log actions for
     how these are used. **/
 
+#define SVN_WC__LOG_ATTR_PROPNAME       "propname"
+#define SVN_WC__LOG_ATTR_PROPVAL        "propval"
 
 /* This one is for SVN_WC__LOG_MERGE
    and optionally SVN_WC__LOG_CP_AND_(DE)TRANSLATE to indicate special-only */
