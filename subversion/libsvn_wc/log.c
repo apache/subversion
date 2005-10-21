@@ -44,6 +44,99 @@
 #include "svn_private_config.h"
 
 
+/*** Constant definitions for xml generation/parsing ***/
+
+/** Log actions. **/
+/* Delete lock related fields from the entry SVN_WC__LOG_ATTR_NAME. */
+#define SVN_WC__LOG_DELETE_LOCK         "delete-lock"
+
+/* Delete the entry SVN_WC__LOG_ATTR_NAME. */
+#define SVN_WC__LOG_DELETE_ENTRY        "delete-entry"
+
+/* Move file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
+#define SVN_WC__LOG_MV                  "mv"
+
+/* Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
+#define SVN_WC__LOG_CP                  "cp"
+
+/* Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST, but
+   expand any keywords and use any eol-style defined by properties of
+   the DEST. */
+#define SVN_WC__LOG_CP_AND_TRANSLATE    "cp-and-translate"
+
+/* Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST, but
+   contract any keywords and convert to LF eol, according to
+   properties of NAME. */
+#define SVN_WC__LOG_CP_AND_DETRANSLATE    "cp-and-detranslate"
+
+/* Remove file SVN_WC__LOG_ATTR_NAME. */
+#define SVN_WC__LOG_RM                  "rm"
+
+/* Append file from SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
+#define SVN_WC__LOG_APPEND              "append"
+
+/* Make file SVN_WC__LOG_ATTR_NAME readonly */
+#define SVN_WC__LOG_READONLY            "readonly"
+
+/* Make file SVN_WC__LOG_ATTR_NAME readonly if needs-lock property is set
+   and there is no lock token for the file in the working copy. */
+#define SVN_WC__LOG_MAYBE_READONLY "maybe-readonly"
+
+/* Set SVN_WC__LOG_ATTR_NAME to have timestamp SVN_WC__LOG_ATTR_TIMESTAMP. */
+#define SVN_WC__LOG_SET_TIMESTAMP       "set-timestamp"
+
+
+/* Handle closure after a commit completes successfully:
+ *
+ *   If SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME exists, then
+ *      compare SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME with working file
+ *         if they're the same, use working file's timestamp
+ *         else use SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME's timestamp
+ *      set SVN_WC__LOG_ATTR_NAME's revision to N
+ */
+#define SVN_WC__LOG_COMMITTED           "committed"
+
+/* On target SVN_WC__LOG_ATTR_NAME, set wc property
+   SVN_WC__LOG_ATTR_PROPNAME to value SVN_WC__LOG_ATTR_PROPVAL.  If
+   SVN_WC__LOG_ATTR_PROPVAL is absent, then remove the property. */
+#define SVN_WC__LOG_MODIFY_WCPROP        "modify-wcprop"
+
+
+/* A log command which runs svn_wc_merge().
+   See its documentation for details.
+
+   Here is a map of entry-attributes to svn_wc_merge arguments:
+
+         SVN_WC__LOG_NAME         : MERGE_TARGET
+         SVN_WC__LOG_ATTR_ARG_1   : LEFT
+         SVN_WC__LOG_ATTR_ARG_2   : RIGHT
+         SVN_WC__LOG_ATTR_ARG_3   : LEFT_LABEL
+         SVN_WC__LOG_ATTR_ARG_4   : RIGHT_LABEL
+         SVN_WC__LOG_ATTR_ARG_5   : TARGET_LABEL
+
+   Of course, the three paths should be *relative* to the directory in
+   which the log is running, as with all other log commands.  (Usually
+   they're just basenames within loggy->path.)
+ */
+#define SVN_WC__LOG_MERGE        "merge"
+
+/** Log attributes.  See the documentation above for log actions for
+    how these are used. **/
+
+
+/* This one is for SVN_WC__LOG_MERGE
+   and optionally SVN_WC__LOG_CP_AND_(DE)TRANSLATE to indicate special-only */
+#define SVN_WC__LOG_ATTR_ARG_1          "arg1"
+/* The rest are for SVN_WC__LOG_MERGE.  Extend as necessary. */
+#define SVN_WC__LOG_ATTR_ARG_2          "arg2"
+#define SVN_WC__LOG_ATTR_ARG_3          "arg3"
+#define SVN_WC__LOG_ATTR_ARG_4          "arg4"
+#define SVN_WC__LOG_ATTR_ARG_5          "arg5"
+
+
+
+
+
 /*** Userdata for the callbacks. ***/
 struct log_runner
 {
@@ -1540,6 +1633,297 @@ svn_wc__run_log (svn_wc_adm_access_t *adm_access,
     }
 
   svn_pool_destroy (iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/*** Log file generation helpers ***/
+
+/* Extend log_accum with log operations to do MOVE_COPY_OP to SRC_PATH and
+ * DST_PATH, removing DST_PATH if no SRC_PATH exists when
+ * REMOVE_DST_IF_NO_SRC is true.
+ *
+ * Sets *DST_MODIFIED (if DST_MODIFIED isn't NULL) to indicate that the
+ * destination path has been modified after running the log:
+ * either MOVE_COPY_OP has been executed, or DST_PATH was removed.
+ *
+ * SRC_PATH and DST_PATH are relative to ADM_ACCESS.
+ */
+static svn_error_t *
+loggy_move_copy_internal (svn_stringbuf_t **log_accum,
+                          svn_boolean_t *dst_modified,
+                          const char *move_copy_op,
+                          svn_boolean_t special_only,
+                          svn_wc_adm_access_t *adm_access,
+                          const char *src_path, const char *dst_path,
+                          svn_boolean_t remove_dst_if_no_src,
+                          apr_pool_t *pool)
+{
+  svn_node_kind_t kind;
+  const char *full_src = svn_path_join (svn_wc_adm_access_path(adm_access),
+                                        src_path, pool);
+
+  SVN_ERR (svn_io_check_path (full_src, &kind, pool));
+
+  if (dst_modified)
+    *dst_modified = FALSE;
+
+  /* Does this file exist? */
+  if (kind != svn_node_none)
+    {
+      svn_xml_make_open_tag (log_accum, pool,
+                             svn_xml_self_closing,
+                             move_copy_op,
+                             SVN_WC__LOG_ATTR_NAME,
+                             src_path,
+                             SVN_WC__LOG_ATTR_DEST,
+                             dst_path,
+                             SVN_WC__LOG_ATTR_ARG_1,
+                             special_only ? "true" : NULL,
+                             NULL);
+      if (dst_modified)
+        *dst_modified = TRUE;
+    }
+  /* File doesn't exists, the caller wants dst_path to be removed. */
+  else if (kind == svn_node_none && remove_dst_if_no_src)
+    {
+      SVN_ERR (svn_wc__loggy_remove (log_accum, adm_access, dst_path, pool));
+
+      if (dst_modified)
+        *dst_modified = TRUE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+
+
+svn_error_t *
+svn_wc__loggy_append (svn_stringbuf_t **log_accum,
+                      svn_wc_adm_access_t *adm_access,
+                      const char *src, const char *dst,
+                      apr_pool_t *pool)
+{
+  svn_xml_make_open_tag (log_accum,
+                         pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_APPEND,
+                         SVN_WC__LOG_ATTR_NAME,
+                         src,
+                         SVN_WC__LOG_ATTR_DEST,
+                         dst,
+                         NULL);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__loggy_committed (svn_stringbuf_t **log_accum,
+                         svn_wc_adm_access_t *adm_access,
+                         const char *path, svn_revnum_t revnum,
+                         apr_pool_t *pool)
+{
+  svn_xml_make_open_tag (log_accum, pool, svn_xml_self_closing,
+                         SVN_WC__LOG_COMMITTED,
+                         SVN_WC__LOG_ATTR_NAME, path,
+                         SVN_WC__LOG_ATTR_REVISION,
+                         apr_psprintf (pool, "%ld", revnum),
+                         NULL);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__loggy_copy (svn_stringbuf_t **log_accum,
+                    svn_boolean_t *dst_modified,
+                    svn_wc_adm_access_t *adm_access,
+                    svn_wc__copy_t copy_type,
+                    const char *src_path, const char *dst_path,
+                    svn_boolean_t remove_dst_if_no_src,
+                    apr_pool_t *pool)
+{
+  static const char *copy_op[] =
+    {
+      SVN_WC__LOG_CP,
+      SVN_WC__LOG_CP_AND_TRANSLATE,
+      SVN_WC__LOG_CP_AND_TRANSLATE,
+      SVN_WC__LOG_CP_AND_DETRANSLATE
+    };
+
+  return loggy_move_copy_internal
+    (log_accum, dst_modified,
+     copy_op[copy_type], copy_type == svn_wc__copy_translate_special_only,
+     adm_access, src_path, dst_path, remove_dst_if_no_src, pool);
+}
+
+svn_error_t *
+svn_wc__loggy_delete_entry (svn_stringbuf_t **log_accum,
+                            svn_wc_adm_access_t *adm_access,
+                            const char *path,
+                            apr_pool_t *pool)
+{
+  svn_xml_make_open_tag (log_accum, pool, svn_xml_self_closing,
+                         SVN_WC__LOG_DELETE_ENTRY,
+                         SVN_WC__LOG_ATTR_NAME, path,
+                         NULL);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__loggy_delete_lock (svn_stringbuf_t **log_accum,
+                           svn_wc_adm_access_t *adm_access,
+                           const char *path,
+                           apr_pool_t *pool)
+{
+  svn_xml_make_open_tag (log_accum, pool, svn_xml_self_closing,
+                         SVN_WC__LOG_DELETE_LOCK,
+                         SVN_WC__LOG_ATTR_NAME, path,
+                         NULL);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__loggy_modify_wcprop (svn_stringbuf_t **log_accum,
+                             svn_wc_adm_access_t *adm_access,
+                             const char *path,
+                             const char *propname,
+                             const char *propval,
+                             apr_pool_t *pool)
+{
+  svn_xml_make_open_tag (log_accum, pool, svn_xml_self_closing,
+                         SVN_WC__LOG_MODIFY_WCPROP,
+                         SVN_WC__LOG_ATTR_NAME,
+                         path,
+                         SVN_WC__LOG_ATTR_PROPNAME,
+                         propname,
+                         SVN_WC__LOG_ATTR_PROPVAL,
+                         propval,
+                         NULL);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__loggy_merge (svn_stringbuf_t **log_accum,
+                     svn_wc_adm_access_t *adm_access,
+                     const char *target,
+                     const char *left,
+                     const char *right,
+                     const char *left_label,
+                     const char *right_label,
+                     const char *target_label,
+                     apr_pool_t *pool)
+{
+  svn_xml_make_open_tag (log_accum,
+                         pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_MERGE,
+                         SVN_WC__LOG_ATTR_NAME, target,
+                         SVN_WC__LOG_ATTR_ARG_1, left,
+                         SVN_WC__LOG_ATTR_ARG_2, right,
+                         SVN_WC__LOG_ATTR_ARG_3, left_label,
+                         SVN_WC__LOG_ATTR_ARG_4, right_label,
+                         SVN_WC__LOG_ATTR_ARG_5, target_label,
+                         NULL);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__loggy_move (svn_stringbuf_t **log_accum,
+                    svn_boolean_t *dst_modified,
+                    svn_wc_adm_access_t *adm_access,
+                    const char *src_path, const char *dst_path,
+                    svn_boolean_t remove_dst_if_no_src,
+                    apr_pool_t *pool)
+{
+  return loggy_move_copy_internal (log_accum, dst_modified,
+                                   SVN_WC__LOG_MV, FALSE, adm_access,
+                                   src_path, dst_path, remove_dst_if_no_src,
+                                   pool);
+}
+
+
+svn_error_t *
+svn_wc__loggy_maybe_set_readonly (svn_stringbuf_t **log_accum,
+                                  svn_wc_adm_access_t *adm_access,
+                                  const char *path,
+                                  apr_pool_t *pool)
+{
+  svn_xml_make_open_tag (log_accum,
+                         pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_MAYBE_READONLY,
+                         SVN_WC__LOG_ATTR_NAME,
+                         path,
+                         NULL);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__loggy_set_readonly (svn_stringbuf_t **log_accum,
+                            svn_wc_adm_access_t *adm_access,
+                            const char *path,
+                            apr_pool_t *pool)
+{
+  svn_xml_make_open_tag (log_accum,
+                         pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_READONLY,
+                         SVN_WC__LOG_ATTR_NAME,
+                         path,
+                         NULL);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__loggy_set_timestamp (svn_stringbuf_t **log_accum,
+                             svn_wc_adm_access_t *adm_access,
+                             const char *path,
+                             const char *ctime,
+                             apr_pool_t *pool)
+{
+  svn_xml_make_open_tag (log_accum,
+                         pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_SET_TIMESTAMP,
+                         SVN_WC__LOG_ATTR_NAME,
+                         path,
+                         SVN_WC__LOG_ATTR_TIMESTAMP,
+                         ctime,
+                         NULL);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__loggy_remove (svn_stringbuf_t **log_accum,
+                      svn_wc_adm_access_t *adm_access,
+                      const char *base_name,
+                      apr_pool_t *pool)
+{
+  /* No need to check whether dst_path exists: ENOENT is ignored
+     by the log-runner */
+  svn_xml_make_open_tag (log_accum, pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_RM,
+                         SVN_WC__LOG_ATTR_NAME,
+                         base_name,
+                         NULL);
 
   return SVN_NO_ERROR;
 }
