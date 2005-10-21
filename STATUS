@@ -9,15 +9,7 @@ Status of 1.3.0:
 
 Candidate changes:
 
-   * r16854, r16864
-     Expose two of the three APIs backing SVN_ASP_DOT_NET_HACK via JavaHL.
-     Justification:
-       svn_wc_get_adm_dir() is necessary for deviation from ".svn".
-       svn_wc_is_adm_dir() is necessary for WC information hiding.
-     Notes:
-       http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt
-     Votes:
-       +1: dlr, jerenkrantz
+   (none)
 
 Approved changes:
 
