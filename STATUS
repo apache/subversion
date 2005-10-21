@@ -19,6 +19,8 @@ Candidate changes:
      Votes:
        +1: dlr
 
+Approved changes:
+
   * r16855
     Don't write empty hashes to props file.
     Justification:
@@ -33,7 +35,3 @@ Candidate changes:
       that DannyB confirmed).
     Votes:
      +1: dberlin, brane, dlr
-
-Approved changes:
-
-  (None)
