@@ -1643,9 +1643,9 @@ svn_wc_is_entry_prop (const char *name)
 
 /* Helper to optimize svn_wc_props_modified_p().
 
-   If PATH_TO_PROP_FILE is nonexistent, or is of size 4 bytes ("END"),
-   then set EMPTY_P to true.   Otherwise set EMPTY_P to false, which
-   means that the file must contain real properties.  */
+   If PATH_TO_PROP_FILE is nonexistent, is empty, or is of size 4 bytes
+   ("END\n"), then set EMPTY_P to true.   Otherwise set EMPTY_P to false,
+   which means that the file must contain real properties.  */
 static svn_error_t *
 empty_props_p (svn_boolean_t *empty_p,
                const char *path_to_prop_file,
@@ -1671,14 +1671,14 @@ empty_props_p (svn_boolean_t *empty_p,
 
 
       /* If we remove props from a propfile, eventually the file will
+         be empty, or, for working copies written by pre-1.3 libraries, will
          contain nothing but "END\n" */
       if (finfo.filetype == APR_REG && (finfo.size == 4 || finfo.size == 0))
         *empty_p = TRUE;
-
       else
         *empty_p = FALSE;
 
-      /* If the size is < 4, then something is corrupt.
+      /* If the size is between 1 and 4, then something is corrupt.
          If the size is between 4 and 16, then something is corrupt,
          because 16 is the -smallest- the file can possibly be if it
          contained only one property.  So long as we say it is "not
