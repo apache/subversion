@@ -192,7 +192,7 @@ remove_revert_file(svn_stringbuf_t **logtags,
             &kind, pool));
 
   if (kind == svn_node_file)
-      SVN_ERR (svn_wc__loggy_remove (logtags, adm_access, revert_file, pool));
+    SVN_ERR (svn_wc__loggy_remove (logtags, adm_access, revert_file, pool));
 
   return SVN_NO_ERROR;
 }

@@ -57,8 +57,6 @@ extern "C" {
     how these are used. **/
 #define SVN_WC__LOG_ATTR_NAME           "name"
 #define SVN_WC__LOG_ATTR_DEST           "dest"
-#define SVN_WC__LOG_ATTR_PROPNAME       "propname"
-#define SVN_WC__LOG_ATTR_PROPVAL        "propval"
 #define SVN_WC__LOG_ATTR_REVISION       "revision"
 #define SVN_WC__LOG_ATTR_TEXT_REJFILE   "text-rejfile"
 #define SVN_WC__LOG_ATTR_PROP_REJFILE   "prop-rejfile"
@@ -149,6 +147,16 @@ svn_wc__loggy_delete_lock (svn_stringbuf_t **log_accum,
                            const char *path,
                            apr_pool_t *pool);
 
+
+/* Extend **LOG_ACCUM with 
+ */
+svn_error_t *
+svn_wc__loggy_entry_modify (svn_stringbuf_t **log_accum,
+                            svn_wc_adm_access_t *adm_access,
+                            const char *name,
+                            svn_wc_entry_t *entry,
+                            apr_uint32_t modify_flags,
+                            apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with xml instructions to modify wcprop PROPNAME
    for PATH, setting it to PROPVAL.
