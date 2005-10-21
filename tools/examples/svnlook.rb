@@ -99,8 +99,7 @@ class SvnLook
 
       if date
         # Print out the date in a nice format
-        time = str_to_time(date)
-        puts time.strftime('%Y-%m-%d %H:%M(%Z)')
+        puts date.strftime('%Y-%m-%d %H:%M(%Z)')
       else
         # The specified revision doesn't have an associated date.
         # Output just a blank line.
@@ -189,17 +188,11 @@ class SvnLook
 
     # Do a directory delta between the two roots with 
     # the specified editor
-    base_root.editor = editor
-    base_root.dir_delta('', '', root, '')
+    base_root.dir_delta('', '', root, '', editor)
   end
 
-  # Convert a string to an SVN date/time object
-  def str_to_time(str)
-    Svn::Util.string_to_time(str)
-  end
-  
   # Output the current tree for a specified revision 
-  class Editor < Svn::Delta::Editor
+  class Editor < Svn::Delta::BaseEditor
 
     # Initialize the Editor object
     def initialize(root=nil, base_root=nil)
@@ -252,7 +245,7 @@ class SvnLook
 
   
   # Output directories that have been changed
-  class DirsChangedEditor < Svn::Delta::Editor
+  class DirsChangedEditor < Svn::Delta::BaseEditor
 
     # Recurse through the root node
     def open_root(base_revision)
@@ -315,7 +308,7 @@ class SvnLook
   end
     
   # Output files that have been changed between two roots
-  class ChangedEditor < Svn::Delta::Editor
+  class ChangedEditor < Svn::Delta::BaseEditor
 
     # Constructor
     def initialize(root, base_root)
@@ -412,7 +405,7 @@ class SvnLook
   end
         
   # Output diffs of files that have been changed
-  class DiffEditor < Svn::Delta::Editor
+  class DiffEditor < Svn::Delta::BaseEditor
 
     # Constructor
     def initialize(root, base_root)
@@ -448,7 +441,7 @@ class SvnLook
       if file_baton[2].nil?
         nil
       else
-        do_diff(file_baton[2], file_baton[2], file_baton[3])
+        do_diff(file_baton[2], file_baton[2])
       end
     end
 
