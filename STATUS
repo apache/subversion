@@ -9,12 +9,7 @@ Status of 1.3.0:
 
 Candidate changes:
 
-  * r16885
-    Update svnlook.rb to use new Ruby bindings APIs.
-    Justification:
-      Without this fix, svnlook.rb doesn't work.
-    Votes:
-      +1: djames
+  (None)
 
 Approved changes:
 
