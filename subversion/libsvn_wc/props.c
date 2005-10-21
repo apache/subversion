@@ -187,16 +187,18 @@ svn_wc__save_prop_file (const char *propfile_path,
                         apr_pool_t *pool)
 {
   apr_file_t *prop_tmp;
+  
 
   SVN_ERR (svn_io_file_open (&prop_tmp, propfile_path,
                              (APR_WRITE | APR_CREATE | APR_TRUNCATE
                               | APR_BUFFERED), 
                              APR_OS_DEFAULT, pool));
 
-  SVN_ERR_W (svn_hash_write (hash, prop_tmp, pool),
-             apr_psprintf (pool, 
-                           _("Can't write property hash to '%s'"),
-                           svn_path_local_style (propfile_path, pool)));
+  if (apr_hash_count (hash) != 0)
+    SVN_ERR_W (svn_hash_write (hash, prop_tmp, pool),
+               apr_psprintf (pool, 
+                             _("Can't write property hash to '%s'"),
+                             svn_path_local_style (propfile_path, pool)));
 
   SVN_ERR (svn_io_file_close (prop_tmp, pool));
 
@@ -1729,7 +1731,7 @@ empty_props_p (svn_boolean_t *empty_p,
 
       /* If we remove props from a propfile, eventually the file will
          contain nothing but "END\n" */
-      if (finfo.filetype == APR_REG && finfo.size == 4)  
+      if (finfo.filetype == APR_REG && (finfo.size == 4 || finfo.size == 0))
         *empty_p = TRUE;
 
       else
