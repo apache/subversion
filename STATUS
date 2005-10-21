@@ -32,8 +32,7 @@ Candidate changes:
       not leverage Subversion's core libraries (e.g. JavaSVN, a case
       that DannyB confirmed).
     Votes:
-     +1: dberlin, brane
-     +0: dlr
+     +1: dberlin, brane, dlr
 
 Approved changes:
 
