@@ -12,6 +12,7 @@ http://svn.collab.net/repos/svn/tags/1.3.0
     * support for ISO-8601 date formats (r14428)
     * support for single-digit date components (r15459)
     * on Windows, '_svn' admin dir now toggled by runtime env. variable (r16244)
+    * working copy size with empty propfiles reduced (r16855, see releasenotes)
     * new switches added:
        - 'svn blame --xml [--incremental]' (r14690)
        - 'svn status --xml [--incremental]'  (issue #2069)
@@ -72,7 +73,6 @@ Developer-visible-changes:
 * working copy is now storing repos_root as separate field (issue #960)
 * keywords are now stored in an internal hash (issue #890)
 * client status APIs now makes more server-side info available (r16344)
-* optimize working copy size with empty propfiles (r16855, see releasenotes)
 * new public APIs:  
    - new transfer progress callback for DAV (r15948)
    - svn_ra_initialize(), svn_client_open_ra_session()
