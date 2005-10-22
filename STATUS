@@ -23,16 +23,5 @@ Candidate changes:
     Votes:
       +1: danderson, djames
 
-  * r16904
-    Use SWIG_PY_COMPILE and SWIG_RB_COMPILE when compiling SWIG
-    libraries for Python and Ruby.
-    Justification:
-      If SWIG Python helper libraries need -fno-strict-aliasing to
-      compile correctly, SWIG_PY_COMPILE should contain this option.
-      It's also possible that SWIG_RB_COMPILE could contain needed
-      switches, so we might as well be consistent.
-    Votes:
-      +1: danderson, djames
-
 Approved changes:
 
