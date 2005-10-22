@@ -29,7 +29,7 @@ Candidate changes:
       Change backported in branches/1.3.x-r16903 to resolve conflicts
       with regard to the altered build system in trunk.
     Votes:
-      +1: danderson
+      +1: danderson, djames
 
   * r16904
     Use SWIG_PY_COMPILE and SWIG_RB_COMPILE when compiling SWIG
@@ -40,8 +40,7 @@ Candidate changes:
       It's also possible that SWIG_RB_COMPILE could contain needed
       switches, so we might as well be consistent.
     Votes:
-      +1: danderson
-      +0: djames
+      +1: danderson, djames
 
 Approved changes:
 
