@@ -23,5 +23,41 @@ Candidate changes:
     Votes:
       +1: danderson, djames
 
+   * r16914, r16919
+     Remove unused and unnecessary portability typemaps from the SWIG
+     bindings.
+     Justification:
+       Unused and unnecessary portability typemaps can be misleading.
+     Notes:
+       These typemaps have never been used, because the SWIG preprocessor does
+       not support string comparisons. In addition to this, APR_INT64_T is now
+       undefined at SWIG-time, thanks to r16903. I've verified that the Python
+       and Perl bindings pass tests on 64-bit platforms, both with and without
+       this fix. This patch just makes our code more clear.
+    Votes:
+       +1: djames
+
+   * r16915
+     Only allow SWIG 1.3.24 or 1.3.25.
+     Justification:
+       The SWIG bindings are not compatible with SWIG 1.3.26 or later.
+     Votes:
+       +1: djames
+
+   * r16918
+     Don't hardcode the packager's build directory in the release tarball.
+     Notes:
+       Critical fix. Blocker for release candidate.
+     Votes:
+       +1: djames
+
+   * r16920
+     Apply long long typemaps to apr_int64_t and apr_uint64_t.
+     Apply unsigned char typemap to apr_byte_t.
+     Justification:
+       Fixes check-swig-pl on 64 bit platforms.
+     Votes:
+       +1: djames
+
 Approved changes:
 
