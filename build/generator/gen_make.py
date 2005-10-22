@@ -131,9 +131,9 @@ class Generator(gen_base.GeneratorBase):
         string.replace(build_path_basename(fname),".h","_h.swg"))
       python_script = "$(abs_srcdir)/build/generator/swig/header_wrappers.py"
       self.ofile.write(
-        '%s: %s %s\n\t$(PYTHON) %s %s $(SWIG) $<\n' % ( 
+        '%s: %s %s\n\t$(PYTHON) %s $(abs_srcdir)/build.conf $(SWIG) $<\n' % ( 
           wrapper_fname, fname, python_script,
-          python_script, self.conf))
+          python_script))
       self.ofile.write(
         'swig-headers: %s\n' % wrapper_fname +
         'extraclean-swig-headers-%s:\n' % wrapper_fname + 
