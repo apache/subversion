@@ -528,16 +528,11 @@ class Generator(gen_base.GeneratorBase):
     standalone.write('abs_builddir = %s\n' % os.getcwd())
     standalone.write('SWIG = swig\n')
     standalone.write('PYTHON = python\n')
-    swig_includes = ['-Iapr/include', '-Iapr-util/include']
+    swig_includes = []
     for dirs in self.include_dirs, self.swig_include_dirs:
       for dir in string.split(string.strip(dirs)):
         swig_includes.append("-I%s" % dir)
         swig_includes.append("-I$(abs_srcdir)/%s" % dir)
-    if not os.path.exists("apr/include"):
-      try:
-        swig_includes.append("-I%s" % _exec.output("apr-config --includedir"))
-      except AssertionError:
-        pass
     standalone.write('SWIG_INCLUDES = %s\n' % string.join(swig_includes))
     standalone.write(open("build-outputs.mk","r").read())
     standalone.close()
