@@ -26,6 +26,7 @@ Candidate changes:
       It's also possible that SWIG_RB_COMPILE could contain needed
       switches, so we might as well be consistent.
     Votes:
+      +1: danderson
       +0: djames
 
 Approved changes:
