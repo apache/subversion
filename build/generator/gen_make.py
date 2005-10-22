@@ -546,22 +546,6 @@ class Generator(gen_base.GeneratorBase):
     standalone.write('abs_builddir = %s\n' % os.getcwd())
     standalone.write('SWIG = swig\n')
     standalone.write('PYTHON = python\n')
-    apr_includes = ['-Iapr/include']
-    apu_includes = ['-Iapr-util/include']
-    if not os.path.exists("apr/include"):
-      try:
-        apr_includes.append("-I%s"
-            % _exec.output("apr-config --includedir", strip=True))
-      except AssertionError:
-        pass
-    if not os.path.exists("apr-util/include"):
-      try:
-        apu_includes.append("-I%s"
-            % _exec.output("apu-config --includedir", strip=True))
-      except AssertionError:
-        pass
-    standalone.write('SVN_APR_INCLUDES = %s\n' % " ".join(apr_includes))
-    standalone.write('SVN_APRUTIL_INCLUDES = %s\n' % " ".join(apu_includes))
     standalone.write('\n')
     standalone.write(open("build-outputs.mk","r").read())
     standalone.close()
