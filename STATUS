@@ -17,6 +17,20 @@ Candidate changes:
     Votes:
       +1: djames
 
+  * r16903
+    Remove spurious dependencies on APR in the SWIG code and build
+    scripts, that prevent running autogen.sh --release through to
+    completion.
+    Branch: 1.3.x-r16903
+    Justification:
+      We can't release a tarball that doesn't depend on SWIG without
+      this, because apr.h is system-dependent.
+    Notes:
+      Change backported in branches/1.3.x-r16903 to resolve conflicts
+      with regard to the altered build system in trunk.
+    Votes:
+      +1: danderson
+
   * r16904
     Use SWIG_PY_COMPILE and SWIG_RB_COMPILE when compiling SWIG
     libraries for Python and Ruby.
