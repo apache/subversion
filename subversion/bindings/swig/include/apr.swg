@@ -67,6 +67,7 @@ typedef int apr_status_t;
     ST(argvi) = sv_newmortal();
     sv_setpv((SV*)ST(argvi++), temp);
 }
+%apply long long { apr_int64_t }
 
 %typemap(perl5, out) unsigned long long {
     char temp[256];
@@ -74,6 +75,7 @@ typedef int apr_status_t;
     ST(argvi) = sv_newmortal();
     sv_setpv((SV*)ST(argvi++), temp);
 }
+%apply unsigned long long { apr_uint64_t }
 
 %typemap(perl5, argout) long long *OUTPUT, long long &OUTPUT {
   char temp[256];
@@ -96,6 +98,11 @@ typedef int apr_status_t;
   sv_setpv($result,temp);
   argvi++;
 }
+
+/* -----------------------------------------------------------------------
+ * apr_byte_t
+ */
+%apply unsigned char { apr_byte_t }
 
 /* -----------------------------------------------------------------------
    apr_time_t
