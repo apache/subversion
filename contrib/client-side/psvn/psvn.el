@@ -2458,7 +2458,7 @@ If ARG then prompt for revision to diff against, else compare working copy with 
                     "Diff with files for version: " "PREV")))
   (let ((clear-buf t))
     (dolist (line-info line-infos)
-      (svn-run-svn nil clear-buf 'diff "diff"
+      (svn-run-svn nil clear-buf 'diff "diff" svn-status-default-diff-arguments
                    "-r" (if (eq revision :auto)
                             (if (svn-status-line-info->update-available line-info)
                                 "HEAD" "BASE")
