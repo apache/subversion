@@ -917,8 +917,6 @@ svn_wc_delete2 (const char *path,
             svn_wc__text_base_path (base_name, FALSE, pool);
           const char *text_revert =
             svn_wc__text_revert_path (base_name, FALSE, pool);
-          const char *full_path = svn_wc_adm_access_path (adm_access);
-          svn_node_kind_t kind = svn_node_unknown;
           const char *prop_base, *prop_revert;
 
           SVN_ERR (svn_wc__prop_base_path (&prop_base, base_name,
