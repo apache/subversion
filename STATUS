@@ -9,14 +9,6 @@ Status of 1.3.0:
 
 Candidate changes:
 
-  * r16898
-    Restore definitions of apr_pool_destroy and apr_pool_clear for
-    compatibility with Subversion 1.2.x.
-    Justification:
-      Necessary for compatibility with Trac 0.9b2. Trivial change.
-    Votes:
-      +1: djames
-
   * r16903
     Remove spurious dependencies on APR in the SWIG code and build
     scripts, that prevent running autogen.sh --release through to
