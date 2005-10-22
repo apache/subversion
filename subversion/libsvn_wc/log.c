@@ -1896,7 +1896,7 @@ svn_error_t *
 svn_wc__loggy_set_timestamp (svn_stringbuf_t **log_accum,
                              svn_wc_adm_access_t *adm_access,
                              const char *path,
-                             const char *ctime,
+                             const char *timestr,
                              apr_pool_t *pool)
 {
   svn_xml_make_open_tag (log_accum,
@@ -1906,7 +1906,7 @@ svn_wc__loggy_set_timestamp (svn_stringbuf_t **log_accum,
                          SVN_WC__LOG_ATTR_NAME,
                          path,
                          SVN_WC__LOG_ATTR_TIMESTAMP,
-                         ctime,
+                         timestr,
                          NULL);
 
   return SVN_NO_ERROR;

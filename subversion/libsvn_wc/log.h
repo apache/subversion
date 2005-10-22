@@ -230,7 +230,7 @@ svn_error_t *
 svn_wc__loggy_set_timestamp (svn_stringbuf_t **log_accum,
                              svn_wc_adm_access_t *adm_access,
                              const char *path,
-                             const char *ctime,
+                             const char *timestr,
                              apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with xml instructions to remove the file
