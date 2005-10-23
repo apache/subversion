@@ -60,10 +60,15 @@ extern "C" {
  * The change from 4 to 5 was the addition of support for replacing files
  * with history.
  *
+ * The change from 5 to 6 was the introduction of caching of property
+ * modification state and certain properties in the entries file.
+ *
  * Please document any further format changes here.
  */
-#define SVN_WC__VERSION       5
+#define SVN_WC__VERSION       6
 
+/* A version <= this doesn't have property caching in the entries file. */
+#define SVN_WC__NO_PROPCACHING_VERSION 5
 
 /*** Update traversals. ***/
 
