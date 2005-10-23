@@ -314,8 +314,9 @@ svn_wc_process_committed2 (const char *path,
 {
   const char *base_name;
   svn_stringbuf_t *logtags;
-  char *revstr = apr_psprintf (pool, "%ld", new_revnum);
   const char *hex_digest = NULL;
+  svn_wc_entry_t tmp_entry;
+  apr_uint32_t modify_flags = 0;
 
   logtags = svn_stringbuf_create ("", pool);
 
@@ -398,34 +399,30 @@ svn_wc_process_committed2 (const char *path,
      LOG_COMMITTED command, because log_do_committed() might actually
      remove the entry! */
   if (rev_date)
-    svn_xml_make_open_tag (&logtags, pool, svn_xml_self_closing,
-                           SVN_WC__LOG_MODIFY_ENTRY,
-                           SVN_WC__LOG_ATTR_NAME, base_name,
-                           SVN_WC__ENTRY_ATTR_CMT_REV,
-                           revstr,
-                           SVN_WC__ENTRY_ATTR_CMT_DATE,
-                           rev_date,
-                           rev_author ? SVN_WC__ENTRY_ATTR_CMT_AUTHOR : NULL,
-                           rev_author,
-                           NULL);
-  else if (rev_author)
-    svn_xml_make_open_tag (&logtags, pool, svn_xml_self_closing,
-                           SVN_WC__LOG_MODIFY_ENTRY,
-                           SVN_WC__LOG_ATTR_NAME, base_name,
-                           SVN_WC__ENTRY_ATTR_CMT_REV,
-                           revstr,
-                           SVN_WC__ENTRY_ATTR_CMT_AUTHOR,
-                           rev_author,
-                           NULL);
-    
+    {
+      tmp_entry.cmt_rev = new_revnum;
+      SVN_ERR (svn_time_from_cstring (&tmp_entry.cmt_date, rev_date, pool));
+      modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_REV
+        | SVN_WC__ENTRY_MODIFY_CMT_DATE;
+    }
+
+  if (rev_author)
+    {
+      tmp_entry.cmt_rev = new_revnum;
+      tmp_entry.cmt_author = rev_author;
+      modify_flags |= SVN_WC__ENTRY_MODIFY_CMT_REV
+        | SVN_WC__ENTRY_MODIFY_CMT_AUTHOR;
+    }
 
   if (hex_digest)
-    svn_xml_make_open_tag (&logtags, pool, svn_xml_self_closing,
-                           SVN_WC__LOG_MODIFY_ENTRY,
-                           SVN_WC__LOG_ATTR_NAME, base_name,
-                           SVN_WC__ENTRY_ATTR_CHECKSUM,
-                           hex_digest,
-                           NULL);
+    {
+      tmp_entry.checksum = hex_digest;
+      modify_flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
+    }
+
+  SVN_ERR (svn_wc__loggy_entry_modify (&logtags, adm_access,
+                                       base_name, &tmp_entry, modify_flags,
+                                       pool));
 
   if (remove_lock)
     SVN_ERR (svn_wc__loggy_delete_lock (&logtags, adm_access,
@@ -895,20 +892,16 @@ svn_wc_delete2 (const char *path,
          file, so we split off base_name from the parent path, then fold in
          the addition of a delete flag. */
       svn_stringbuf_t *log_accum = svn_stringbuf_create ("", pool);
+      svn_wc_entry_t tmp_entry;
 
       /* Edit the entry to reflect the now deleted state.
          entries.c:fold_entry() clears the values of copied, copyfrom_rev
          and copyfrom_url. */
-      svn_xml_make_open_tag
-        (&log_accum,
-         pool,
-         svn_xml_self_closing,
-         SVN_WC__LOG_MODIFY_ENTRY,
-         SVN_WC__LOG_ATTR_NAME,
-         base_name,
-         SVN_WC__ENTRY_ATTR_SCHEDULE,
-         SVN_WC__ENTRY_VALUE_DELETE,
-         NULL);
+      tmp_entry.schedule = svn_wc_schedule_delete;
+      SVN_ERR (svn_wc__loggy_entry_modify (&log_accum, adm_access,
+                                           base_name, &tmp_entry,
+                                           SVN_WC__ENTRY_MODIFY_SCHEDULE,
+                                           pool));
 
       /* is it a replacement with history? */
       if (was_schedule == svn_wc_schedule_replace && was_copied)
@@ -1525,16 +1518,8 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
     apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_SCHEDULE,
                   APR_HASH_KEY_STRING, "");
 
-  if (apr_hash_count(modify_entry_atts) > 0)
-    {
-      apr_hash_set (modify_entry_atts, SVN_WC__LOG_ATTR_NAME,
-                    APR_HASH_KEY_STRING, name);
-
-      svn_xml_make_open_tag_hash (&log_accum, pool,
-                                  svn_xml_self_closing,
-                                  SVN_WC__LOG_MODIFY_ENTRY,
-                                  modify_entry_atts);
-    }
+  SVN_ERR (svn_wc__loggy_entry_modify_hash (&log_accum, adm_access, name,
+                                            modify_entry_atts, pool));
 
   /* Don't run log if nothing to change. */
   if (!svn_stringbuf_isempty(log_accum))

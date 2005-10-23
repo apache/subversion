@@ -684,15 +684,17 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
                                      reject_tmp_path, pool));
       
       /* Mark entry as "conflicted" with a particular .prej file. */
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_MODIFY_ENTRY,
-                             SVN_WC__LOG_ATTR_NAME,
-                             entryname,
-                             SVN_WC__ENTRY_ATTR_PREJFILE,
-                             reject_path,
-                             NULL);      
+      {
+        svn_wc_entry_t entry;
+
+        entry.prejfile = reject_path;
+        SVN_ERR (svn_wc__loggy_entry_modify (entry_accum,
+                                             adm_access,
+                                             entryname,
+                                             &entry,
+                                             SVN_WC__ENTRY_MODIFY_PREJFILE,
+                                             pool));
+      }
 
     } /* if (reject_tmp_fp) */
   
@@ -987,15 +989,17 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
                                      reject_tmp_path, pool));
 
       /* Mark entry as "conflicted" with a particular .prej file. */
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_MODIFY_ENTRY,
-                             SVN_WC__LOG_ATTR_NAME,
-                             entryname,
-                             SVN_WC__ENTRY_ATTR_PREJFILE,
-                             reject_path,
-                             NULL);      
+      {
+        svn_wc_entry_t entry;
+
+        entry.prejfile = reject_path;
+        SVN_ERR (svn_wc__loggy_entry_modify (entry_accum,
+                                             adm_access,
+                                             entryname,
+                                             &entry,
+                                             SVN_WC__ENTRY_MODIFY_PREJFILE,
+                                             pool));
+      }
 
     } /* if (reject_tmp_fp) */
   
