@@ -450,7 +450,7 @@ typedef struct svn_wc_external_item_t
  * @since New in 1.3.
  */
 svn_wc_external_item_t *
-svn_wc_external_item_dup (const svn_wc_external_item_t *entry,
+svn_wc_external_item_dup (const svn_wc_external_item_t *item,
                           apr_pool_t *pool);
 
 
