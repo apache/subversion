@@ -2456,7 +2456,9 @@ If ARG then prompt for revision to diff against, else compare working copy with 
   (when (eq revision :ask)
     (setq revision (svn-status-read-revision-string
                     "Diff with files for version: " "PREV")))
-  (let ((clear-buf t))
+
+  (let ((clear-buf t)
+        (beginning nil))
     (dolist (line-info line-infos)
       (svn-run-svn nil clear-buf 'diff "diff" svn-status-default-diff-arguments
                    "-r" (if (eq revision :auto)
@@ -2465,7 +2467,25 @@ If ARG then prompt for revision to diff against, else compare working copy with 
                           revision)
                    (unless recursive "--non-recursive")
                    (svn-status-line-info->filename line-info))
-      (setq clear-buf nil)))
+      (setq clear-buf nil)
+
+      ;; "svn diff --non-recursive" skips only subdirectories, not files.
+      ;; But a non-recursive diff via psvn should skip files too, because
+      ;; the user would have marked them if he wanted them to be compared.
+      ;; So we'll look for the "Index: foo" line that marks the first file
+      ;; in the diff output, and delete it and everything that follows.
+      ;; This is made more complicated by the fact that `svn-status-diff-mode'
+      ;; expects the output to be left in the *svn-process* buffer.
+      (unless recursive
+        ;; Check `directory-p' relative to the `default-directory' of the
+        ;; "*svn-status*" buffer, not that of the "*svn-process*" buffer.
+        (let ((directory-p (svn-status-line-info->directory-p line-info)))
+          (with-current-buffer "*svn-process*"
+            (when directory-p
+              (goto-char (or beginning (point-min)))
+              (when (re-search-forward "^Index: " nil t)
+                (delete-region (match-beginning 0) (point-max))))
+            (goto-char (setq beginning (point-max))))))))
   (svn-status-diff-mode))
 
 (defun svn-status-diff-mode ()
