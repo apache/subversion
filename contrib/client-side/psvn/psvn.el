@@ -133,6 +133,10 @@
 ;; * finish svn-status-property-set
 ;; * Add repository browser
 ;; * Improve support for svn blame
+;; * Get rid of all byte-compiler warnings
+;; * SVK working copy support
+;; * multiple independent buffers in svn-status-mode
+;; There are "TODO" comments in other parts of this file as well.
 
 ;; Overview over the implemented/not (yet) implemented svn sub-commands:
 ;; * add                       implemented
@@ -441,6 +445,9 @@ This is always set together with `svn-status-recursive-commit'.")
 (defvar svn-status-recursive-commit nil
   "Non-nil if the next commit should be recursive.
 This is always set together with `svn-status-files-to-commit'.")
+(defvar svn-log-edit-update-log-entry nil
+  "Revision number whose log entry is being edited.
+This is nil if the log entry is for a new commit.")
 (defvar svn-status-pre-commit-window-configuration nil)
 (defvar svn-status-pre-propedit-window-configuration nil)
 (defvar svn-status-head-revision nil)
@@ -467,6 +474,22 @@ This is always set together with `svn-status-files-to-commit'.")
 (defvar svn-status-operated-on-dot nil)
 (defvar svn-status-elided-list nil)
 (defvar svn-status-custom-hide-function nil)
+(defvar svn-status-get-specific-revision-file-info)
+(defvar svn-transient-buffers)
+(defvar svn-ediff-windows)
+(defvar svn-ediff-result)
+
+;; Emacs 21 defines these in ediff-init.el but it seems more robust
+;; to just declare the variables here than try to load that file.
+(defvar ediff-buffer-A)
+(defvar ediff-buffer-B)
+(defvar ediff-buffer-C)
+(defvar ediff-quit-hook)
+
+;; Ediff does not use this variable in GNU Emacs 20.7, GNU Emacs 21.4,
+;; nor XEmacs 21.4.17.  However, pcl-cvs (a.k.a. pcvs) does.
+;; TODO: Check if this should be moved into the "svn-" namespace.
+(defvar ediff-after-quit-destination-buffer)
 
 ;; That is an example for the svn-status-custom-hide-function:
 ;; (setq svn-status-custom-hide-function 'svn-status-hide-pyc-files)
