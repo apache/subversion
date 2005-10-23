@@ -68,5 +68,15 @@ Candidate changes:
      Votes:
        +1: kou
 
+   * r16930
+     Tweak Perl bindings to avoid use of goto in svn_txdelta_apply.
+     Justification:
+       Prevents segfaults in the Perl test suite.
+     Notes:
+       The goto &function syntax can cause segfaults, if the supplied
+       function is a SWIG/C wrapper.
+     Votes:
+       +1: djames
+
 Approved changes:
 
