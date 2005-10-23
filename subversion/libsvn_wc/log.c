@@ -18,6 +18,7 @@
 
 
 
+#include <assert.h>
 #include <string.h>
 
 #include <apr_pools.h>
@@ -46,7 +47,24 @@
 
 /*** Constant definitions for xml generation/parsing ***/
 
+/* Note: every entry in the logfile is either idempotent or atomic.
+ * This allows us to remove the entire logfile when every entry in it
+ * has been completed -- if you crash in the middle of running a
+ * logfile, and then later are running over it again as part of the
+ * recovery, a given entry is "safe" in the sense that you can either
+ * tell it has already been done (in which case, ignore it) or you can
+ * do it again without ill effect.
+ *
+ * All log commands are self-closing tags with attributes.
+ */
+
+
 /** Log actions. **/
+
+/* Set some attributes on SVN_WC__LOG_ATTR_NAME's entry.  Unmentioned
+   attributes are unaffected. */
+#define SVN_WC__LOG_MODIFY_ENTRY        "modify-entry"
+
 /* Delete lock related fields from the entry SVN_WC__LOG_ATTR_NAME. */
 #define SVN_WC__LOG_DELETE_LOCK         "delete-lock"
 
@@ -123,6 +141,10 @@
 /** Log attributes.  See the documentation above for log actions for
     how these are used. **/
 
+#define SVN_WC__LOG_ATTR_NAME           "name"
+#define SVN_WC__LOG_ATTR_DEST           "dest"
+#define SVN_WC__LOG_ATTR_REVISION       "revision"
+#define SVN_WC__LOG_ATTR_TIMESTAMP      "timestamp"
 #define SVN_WC__LOG_ATTR_PROPNAME       "propname"
 #define SVN_WC__LOG_ATTR_PROPVAL        "propval"
 
@@ -1794,6 +1816,169 @@ svn_wc__loggy_delete_lock (svn_stringbuf_t **log_accum,
 
 
 svn_error_t *
+svn_wc__loggy_entry_modify (svn_stringbuf_t **log_accum,
+                            svn_wc_adm_access_t *adm_access,
+                            const char *name,
+                            svn_wc_entry_t *entry,
+                            apr_uint32_t modify_flags,
+                            apr_pool_t *pool)
+{
+  apr_hash_t *prop_hash = apr_hash_make (pool);
+  static const char *kind_str[] =
+    { "none",
+      SVN_WC__ENTRIES_ATTR_FILE_STR,
+      SVN_WC__ENTRIES_ATTR_DIR_STR,
+      "unknown",
+    };
+  static const char *schedule_str[] =
+    {
+      "", /* svn_wc_schedule_normal */
+      SVN_WC__ENTRY_VALUE_ADD,
+      SVN_WC__ENTRY_VALUE_DELETE,
+      SVN_WC__ENTRY_VALUE_REPLACE,
+    };
+
+
+  if (! modify_flags)
+    return SVN_NO_ERROR;
+
+#define ADD_ENTRY_ATTR(attr_flag, attr_name, value) \
+   if (modify_flags & (attr_flag)) \
+     apr_hash_set (prop_hash, (attr_name), APR_HASH_KEY_STRING, value)
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_REVISION,
+                  SVN_WC__ENTRY_ATTR_REVISION,
+                  apr_psprintf (pool, "%ld", entry->revision));
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_URL,
+                  SVN_WC__ENTRY_ATTR_URL,
+                  entry->url);
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_REPOS,
+                  SVN_WC__ENTRY_ATTR_REPOS,
+                  entry->repos);
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_UUID,
+                  SVN_WC__ENTRY_ATTR_UUID,
+                  entry->uuid);
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_KIND,
+                  SVN_WC__ENTRY_ATTR_KIND,
+                  kind_str[entry->kind]);
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_SCHEDULE,
+                  SVN_WC__ENTRY_ATTR_SCHEDULE,
+                  schedule_str[entry->schedule]);
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_COPIED,
+                  SVN_WC__ENTRY_ATTR_COPIED,
+                  entry->copied ? "true" : "false");
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_DELETED,
+                  SVN_WC__ENTRY_ATTR_DELETED,
+                  entry->deleted ? "true" : "false");
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_ABSENT,
+                  SVN_WC__ENTRY_ATTR_ABSENT,
+                  entry->absent ? "true" : "false");
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_INCOMPLETE,
+                  SVN_WC__ENTRY_ATTR_INCOMPLETE,
+                  entry->incomplete ? "true" : "false");
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_COPYFROM_URL,
+                  SVN_WC__ENTRY_ATTR_COPYFROM_URL,
+                  entry->copyfrom_url);
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_COPYFROM_REV,
+                  SVN_WC__ENTRY_ATTR_COPYFROM_REV,
+                  apr_psprintf (pool, "%ld", entry->copyfrom_rev));
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_CONFLICT_OLD,
+                  SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
+                  entry->conflict_old);
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_CONFLICT_NEW,
+                  SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
+                  entry->conflict_new);
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_CONFLICT_WRK,
+                  SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
+                  entry->conflict_wrk);
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_PREJFILE,
+                  SVN_WC__ENTRY_ATTR_PREJFILE,
+                  entry->prejfile);
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_TEXT_TIME,
+                  SVN_WC__ENTRY_ATTR_TEXT_TIME,
+                  svn_time_to_cstring (entry->text_time, pool));
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_PROP_TIME,
+                  SVN_WC__ENTRY_ATTR_PROP_TIME,
+                  svn_time_to_cstring (entry->prop_time, pool));
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_CHECKSUM,
+                  SVN_WC__ENTRY_ATTR_CHECKSUM,
+                  entry->checksum);
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_CMT_REV,
+                  SVN_WC__ENTRY_ATTR_CMT_REV,
+                  apr_psprintf (pool, "%ld", entry->cmt_rev));
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_CMT_DATE,
+                  SVN_WC__ENTRY_ATTR_CMT_DATE,
+                  svn_time_to_cstring (entry->cmt_date, pool));
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_CMT_AUTHOR,
+                  SVN_WC__ENTRY_ATTR_CMT_AUTHOR,
+                  entry->cmt_author);
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_LOCK_TOKEN,
+                  SVN_WC__ENTRY_ATTR_LOCK_TOKEN,
+                  entry->lock_token);
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_LOCK_OWNER,
+                  SVN_WC__ENTRY_ATTR_LOCK_OWNER,
+                  entry->lock_owner);
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_LOCK_COMMENT,
+                  SVN_WC__ENTRY_ATTR_LOCK_COMMENT,
+                  entry->lock_comment);
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE,
+                  SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE,
+                  svn_time_to_cstring (entry->lock_creation_date, pool));
+
+#undef ADD_ENTRY_ATTR
+
+  return svn_wc__loggy_entry_modify_hash (log_accum, adm_access, name,
+                                          prop_hash, pool);
+}
+
+
+svn_error_t *
+svn_wc__loggy_entry_modify_hash (svn_stringbuf_t **log_accum,
+                                 svn_wc_adm_access_t *adm_access,
+                                 const char *name,
+                                 apr_hash_t *props,
+                                 apr_pool_t *pool)
+{
+  if (apr_hash_count (props) == 0)
+    return SVN_NO_ERROR;
+
+  apr_hash_set (props, SVN_WC__LOG_ATTR_NAME, APR_HASH_KEY_STRING, name);
+
+  svn_xml_make_open_tag_hash (log_accum, pool,
+                              svn_xml_self_closing,
+                              SVN_WC__LOG_MODIFY_ENTRY,
+                              props);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc__loggy_modify_wcprop (svn_stringbuf_t **log_accum,
                              svn_wc_adm_access_t *adm_access,
                              const char *path,
@@ -1869,6 +2054,27 @@ svn_wc__loggy_maybe_set_readonly (svn_stringbuf_t **log_accum,
                          SVN_WC__LOG_MAYBE_READONLY,
                          SVN_WC__LOG_ATTR_NAME,
                          path,
+                         NULL);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__loggy_set_entry_timestamp_from_wc (svn_stringbuf_t **log_accum,
+                                           svn_wc_adm_access_t *adm_access,
+                                           const char *path,
+                                           const char *time_prop,
+                                           apr_pool_t *pool)
+{
+  svn_xml_make_open_tag (log_accum,
+                         pool,
+                         svn_xml_self_closing,
+                         SVN_WC__LOG_MODIFY_ENTRY,
+                         SVN_WC__LOG_ATTR_NAME,
+                         path,
+                         time_prop,
+                         SVN_WC__TIMESTAMP_WC,
                          NULL);
 
   return SVN_NO_ERROR;

@@ -696,14 +696,15 @@ accumulate_entry_props (svn_stringbuf_t *log_accum,
                         apr_pool_t *pool)
 {
   int i;
+  apr_hash_t *props = apr_hash_make (pool);
 
   if (lock_state)
     *lock_state = svn_wc_notify_lock_state_unchanged;
-  
+
   for (i = 0; i < entry_props->nelts; ++i)
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX (entry_props, i, svn_prop_t);
-      const char *entry_field = NULL;
+      const char *entry_field;
 
       /* The removal of the lock-token entryprop means that the lock was
          defunct. */
@@ -733,12 +734,14 @@ accumulate_entry_props (svn_stringbuf_t *log_accum,
       else
         continue;
 
-      svn_xml_make_open_tag (&log_accum, pool, svn_xml_self_closing,
-                             SVN_WC__LOG_MODIFY_ENTRY,
-                             SVN_WC__LOG_ATTR_NAME, base_name,
-                             entry_field, prop->value->data,
-                             NULL);         
+      apr_hash_set (props, entry_field,
+                    APR_HASH_KEY_STRING, prop->value->data);
     }
+
+  if (apr_hash_count (props) > 0)
+    SVN_ERR (svn_wc__loggy_entry_modify_hash (&log_accum, adm_access,
+                                              base_name, props, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -880,7 +883,6 @@ do_entry_deletion (struct edit_baton *eb,
 {
   apr_file_t *log_fp = NULL;
   const char *base_name;
-  const char *tgt_rev_str = NULL;
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t kind;
   const char *logfile_path, *logfile_name;
@@ -918,22 +920,19 @@ do_entry_deletion (struct edit_baton *eb,
      accurate reports about itself in the future. */
   if (strcmp (path, eb->target) == 0)
     {
-      tgt_rev_str = apr_psprintf (pool, "%ld",
-                                  *(eb->target_revision));
+      svn_wc_entry_t tmp_entry;
 
-      svn_xml_make_open_tag (&log_item, pool, svn_xml_self_closing,
-                             SVN_WC__LOG_MODIFY_ENTRY,
-                             SVN_WC__LOG_ATTR_NAME,
-                             path,
-                             SVN_WC__ENTRY_ATTR_KIND,
-                             (kind == svn_node_file) ? 
-                                SVN_WC__ENTRIES_ATTR_FILE_STR :
-                                SVN_WC__ENTRIES_ATTR_DIR_STR,
-                             SVN_WC__ENTRY_ATTR_REVISION,
-                             tgt_rev_str,
-                             SVN_WC__ENTRY_ATTR_DELETED,
-                             "true",
-                             NULL);
+      tmp_entry.revision = *(eb->target_revision);
+      tmp_entry.kind = (kind == svn_node_file) ? svn_node_file : svn_node_dir;
+      tmp_entry.deleted = TRUE;
+
+      SVN_ERR (svn_wc__loggy_entry_modify (&log_item, adm_access,
+                                           path, &tmp_entry,
+                                           /*### path should have been base_name?! */
+                                           SVN_WC__ENTRY_MODIFY_REVISION
+                                           | SVN_WC__ENTRY_MODIFY_KIND
+                                           | SVN_WC__ENTRY_MODIFY_DELETED,
+                                           pool));
 
       eb->target_deleted = TRUE;
     }
@@ -1309,16 +1308,10 @@ close_directory (void *dir_baton,
           /* Log entry which sets a new property timestamp, but *only* if
              there are no local changes to the props. */
           if (! prop_modified)
-            svn_xml_make_open_tag (&entry_accum,
-                                   db->pool,
-                                   svn_xml_self_closing,
-                                   SVN_WC__LOG_MODIFY_ENTRY,
-                                   SVN_WC__LOG_ATTR_NAME,
-                                   SVN_WC_ENTRY_THIS_DIR,
-                                   SVN_WC__ENTRY_ATTR_PROP_TIME,
-                                   /* use wfile time */
-                                   SVN_WC__TIMESTAMP_WC,
-                                   NULL);
+            SVN_ERR (svn_wc__loggy_set_entry_timestamp_from_wc
+                     (&entry_accum, adm_access,
+                      SVN_WC_ENTRY_THIS_DIR,
+                      SVN_WC__ENTRY_ATTR_PROP_TIME, pool));
         }
 
       SVN_ERR (accumulate_entry_props (entry_accum, NULL,
@@ -1804,7 +1797,6 @@ install_file (svn_stringbuf_t * log_accum,
               const char *timestamp_string,
               apr_pool_t *pool)
 {
-  char *revision_str = NULL;
   const char *parent_dir, *base_name;
   svn_boolean_t is_locally_modified;
   svn_boolean_t is_replaced = FALSE;
@@ -1853,30 +1845,30 @@ install_file (svn_stringbuf_t * log_accum,
    */
   if (is_add)
     {
-      const char *rev_str = NULL;
-      
+      svn_wc_entry_t tmp_entry;
+      apr_uint32_t modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE;
+
+      tmp_entry.schedule = svn_wc_schedule_add;
+
+      if (copyfrom_url)
+        assert (SVN_IS_VALID_REVNUM (copyfrom_rev));
+
       if (copyfrom_url)
         {
           assert (SVN_IS_VALID_REVNUM (copyfrom_rev));
-          rev_str = apr_psprintf (pool, "%ld", copyfrom_rev);
+
+          tmp_entry.copyfrom_url = copyfrom_url;
+          tmp_entry.copyfrom_rev = copyfrom_rev;
+          tmp_entry.copied = TRUE;
+
+          modify_flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL
+            | SVN_WC__ENTRY_MODIFY_COPYFROM_REV
+            | SVN_WC__ENTRY_MODIFY_COPIED;
         }
 
-      svn_xml_make_open_tag
-        (&log_accum,
-         pool,
-         svn_xml_self_closing,
-         SVN_WC__LOG_MODIFY_ENTRY,
-         SVN_WC__LOG_ATTR_NAME,
-         base_name,
-         SVN_WC__ENTRY_ATTR_SCHEDULE,
-         SVN_WC__ENTRY_VALUE_ADD,
-         copyfrom_url ? SVN_WC__ENTRY_ATTR_COPYFROM_URL : NULL,
-         copyfrom_url,
-         SVN_WC__ENTRY_ATTR_COPYFROM_REV,
-         rev_str,
-         SVN_WC__ENTRY_ATTR_COPIED,
-         "true",
-         NULL);
+      SVN_ERR (svn_wc__loggy_entry_modify (&log_accum, adm_access,
+                                           base_name, &tmp_entry,
+                                           modify_flags, pool));
     }
   else
     {
@@ -2042,37 +2034,30 @@ install_file (svn_stringbuf_t * log_accum,
   /* Write log entry which will bump the revision number.  Also, just
      in case we're overwriting an existing phantom 'deleted' or
      'absent' entry, be sure to remove the hiddenness. */
-  revision_str = apr_psprintf (pool, "%ld", new_revision);
-  svn_xml_make_open_tag (&log_accum,
-                         pool,
-                         svn_xml_self_closing,
-                         SVN_WC__LOG_MODIFY_ENTRY,
-                         SVN_WC__LOG_ATTR_NAME,
-                         base_name,
-                         SVN_WC__ENTRY_ATTR_KIND,
-                         SVN_WC__ENTRIES_ATTR_FILE_STR,
-                         SVN_WC__ENTRY_ATTR_REVISION,
-                         revision_str,
-                         SVN_WC__ENTRY_ATTR_DELETED,
-                         "false",
-                         SVN_WC__ENTRY_ATTR_ABSENT,
-                         "false",
-                         NULL);
+  {
+    svn_wc_entry_t tmp_entry;
+    apr_uint32_t modify_flags = SVN_WC__ENTRY_MODIFY_KIND
+      | SVN_WC__ENTRY_MODIFY_REVISION
+      | SVN_WC__ENTRY_MODIFY_DELETED
+      | SVN_WC__ENTRY_MODIFY_ABSENT;
 
 
-  /* Possibly install a *non*-inherited URL in the entry. */
-  if (new_URL)
-    {
-      svn_xml_make_open_tag (&log_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_MODIFY_ENTRY,
-                             SVN_WC__LOG_ATTR_NAME,
-                             base_name,
-                             SVN_WC__ENTRY_ATTR_URL,
-                             new_URL,
-                             NULL);
-    }
+    tmp_entry.revision = new_revision;
+    tmp_entry.kind = svn_node_file;
+    tmp_entry.deleted = FALSE;
+    tmp_entry.absent = FALSE;
+
+    /* Possibly install a *non*-inherited URL in the entry. */
+    if (new_URL)
+      {
+        tmp_entry.url = new_URL;
+        modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
+      }
+
+    SVN_ERR (svn_wc__loggy_entry_modify (&log_accum, adm_access,
+                                         base_name, &tmp_entry, modify_flags,
+                                         pool));
+  }
 
   /* For 'textual' merging, we implement this matrix.
 
@@ -2181,16 +2166,9 @@ install_file (svn_stringbuf_t * log_accum,
       /* Log entry which sets a new property timestamp, but only if
          there are no local changes to the props. */
       if (! prop_modified)
-        svn_xml_make_open_tag (&log_accum,
-                               pool,
-                               svn_xml_self_closing,
-                               SVN_WC__LOG_MODIFY_ENTRY,
-                               SVN_WC__LOG_ATTR_NAME,
-                               base_name,
-                               SVN_WC__ENTRY_ATTR_PROP_TIME,
-                               /* use wfile time */
-                               SVN_WC__TIMESTAMP_WC,
-                               NULL);
+        SVN_ERR (svn_wc__loggy_set_entry_timestamp_from_wc
+                 (&log_accum, adm_access,
+                  base_name, SVN_WC__ENTRY_ATTR_PROP_TIME, pool));
     }
 
   if (new_text_path)
@@ -2208,17 +2186,16 @@ install_file (svn_stringbuf_t * log_accum,
        * on replaced files */
       if (!is_replaced)
         {
+          svn_wc_entry_t tmp_entry;
           unsigned char digest[APR_MD5_DIGESTSIZE];
           SVN_ERR (svn_io_file_checksum (digest, new_text_path, pool));
-          svn_xml_make_open_tag (&log_accum,
-                                 pool,
-                                 svn_xml_self_closing,
-                                 SVN_WC__LOG_MODIFY_ENTRY,
-                                 SVN_WC__LOG_ATTR_NAME,
-                                 base_name,
-                                 SVN_WC__ENTRY_ATTR_CHECKSUM,
-                                 svn_md5_digest_to_cstring (digest, pool),
-                                 NULL);
+
+          tmp_entry.checksum = svn_md5_digest_to_cstring (digest, pool);
+
+          SVN_ERR (svn_wc__loggy_entry_modify (&log_accum, adm_access,
+                                               base_name, &tmp_entry,
+                                               SVN_WC__ENTRY_MODIFY_CHECKSUM,
+                                               pool));
         }
     }
 
@@ -2238,15 +2215,9 @@ install_file (svn_stringbuf_t * log_accum,
 
       if (new_text_path || magic_props_changed)
         /* Adjust entries file to match working file */
-        svn_xml_make_open_tag (&log_accum,
-                               pool,
-                               svn_xml_self_closing,
-                               SVN_WC__LOG_MODIFY_ENTRY,
-                               SVN_WC__LOG_ATTR_NAME,
-                               base_name,
-                               SVN_WC__ENTRY_ATTR_TEXT_TIME,
-                               SVN_WC__TIMESTAMP_WC,
-                               NULL);
+        SVN_ERR (svn_wc__loggy_set_entry_timestamp_from_wc
+                 (&log_accum, adm_access,
+                  base_name, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
     }
 
 

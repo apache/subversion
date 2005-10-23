@@ -31,36 +31,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Note: every entry in the logfile is either idempotent or atomic.
- * This allows us to remove the entire logfile when every entry in it
- * has been completed -- if you crash in the middle of running a
- * logfile, and then later are running over it again as part of the
- * recovery, a given entry is "safe" in the sense that you can either
- * tell it has already been done (in which case, ignore it) or you can
- * do it again without ill effect.
- *
- * All log commands are self-closing tags with attributes.
- */
 
-/** Log actions. **/
-
-/* Set some attributes on SVN_WC__LOG_ATTR_NAME's entry.  Unmentioned
-   attributes are unaffected. */
-/*### The next step in making XML generation private is to create a function
-  svn_wc__loggy_modify_entry (log_accum, adm_access, name, modify_flags,
-                              pool)
-*/
-#define SVN_WC__LOG_MODIFY_ENTRY        "modify-entry"
-
-
-/** Log attributes.  See the documentation above for log actions for
-    how these are used. **/
-#define SVN_WC__LOG_ATTR_NAME           "name"
-#define SVN_WC__LOG_ATTR_DEST           "dest"
-#define SVN_WC__LOG_ATTR_REVISION       "revision"
-#define SVN_WC__LOG_ATTR_TEXT_REJFILE   "text-rejfile"
-#define SVN_WC__LOG_ATTR_PROP_REJFILE   "prop-rejfile"
-#define SVN_WC__LOG_ATTR_TIMESTAMP      "timestamp"
 /* Return the path to use for logfile number LOG_NUMBER.  The returned
    string will be allocated from POOL.
 
@@ -148,8 +119,13 @@ svn_wc__loggy_delete_lock (svn_stringbuf_t **log_accum,
                            apr_pool_t *pool);
 
 
-/* Extend **LOG_ACCUM with 
- */
+/* Extend **LOG_ACCUM with commands to modify the entry associated with NAME
+   according to the flags specified in MODIFY_FLAGS, based on the values
+   supplied in *ENTRY.
+
+   The flags in MODIFY_FLAGS are to be taken from the svn_wc__entry_modify
+   parameter by the same name.
+*/
 svn_error_t *
 svn_wc__loggy_entry_modify (svn_stringbuf_t **log_accum,
                             svn_wc_adm_access_t *adm_access,
@@ -157,6 +133,20 @@ svn_wc__loggy_entry_modify (svn_stringbuf_t **log_accum,
                             svn_wc_entry_t *entry,
                             apr_uint32_t modify_flags,
                             apr_pool_t *pool);
+
+/* Extend **LOG_ACCUM with commands to modify the entry associated with NAME
+   according entry fieldnames and values specified in *PROPS.
+
+   The fieldnames should be taken from SVN_WC__ENTRY_ATTR_* as specified in
+   entries.h.  The values should be the associated string-encoded values.
+*/
+svn_error_t *
+svn_wc__loggy_entry_modify_hash (svn_stringbuf_t **log_accum,
+                                 svn_wc_adm_access_t *adm_access,
+                                 const char *name,
+                                 apr_hash_t *props,
+                                 apr_pool_t *pool);
+
 
 /* Extend **LOG_ACCUM with xml instructions to modify wcprop PROPNAME
    for PATH, setting it to PROPVAL.
@@ -212,6 +202,16 @@ svn_wc__loggy_maybe_set_readonly (svn_stringbuf_t **log_accum,
                                   const char *path,
                                   apr_pool_t *pool);
 
+
+/* Extend **LOG_ACCUM with xml instructions to set the timestamp of PATH.
+*/
+
+svn_error_t *
+svn_wc__loggy_set_entry_timestamp_from_wc (svn_stringbuf_t **log_accum,
+                                           svn_wc_adm_access_t *adm_access,
+                                           const char *path,
+                                           const char *time_prop,
+                                           apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with xml instructions to set permissions of PATH
    to 'readonly'.
