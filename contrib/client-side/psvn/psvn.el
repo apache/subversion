@@ -470,11 +470,13 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-status-temp-file-to-remove nil)
 (defvar svn-status-temp-arg-file (concat svn-status-temp-dir "svn.arg" svn-temp-suffix))
 (defvar svn-status-options nil)
+(defvar svn-status-remote)
 (defvar svn-status-commit-rev-number nil)
 (defvar svn-status-operated-on-dot nil)
 (defvar svn-status-elided-list nil)
 (defvar svn-status-custom-hide-function nil)
 (defvar svn-status-get-specific-revision-file-info)
+(defvar svn-status-last-output-buffer-name)
 (defvar svn-transient-buffers)
 (defvar svn-ediff-windows)
 (defvar svn-ediff-result)
@@ -485,6 +487,11 @@ This is nil if the log entry is for a new commit.")
 (defvar ediff-buffer-B)
 (defvar ediff-buffer-C)
 (defvar ediff-quit-hook)
+
+;; Ditto for log-edit.el.
+(defvar log-edit-initial-files)
+(defvar log-edit-callback)
+(defvar log-edit-listfun)
 
 ;; Ediff does not use this variable in GNU Emacs 20.7, GNU Emacs 21.4,
 ;; nor XEmacs 21.4.17.  However, pcl-cvs (a.k.a. pcvs) does.
@@ -1148,6 +1155,8 @@ A and B must be line-info's."
   (error (message "psvn: could not install menu")))
 
 (defvar svn-status-mode-map () "Keymap used in `svn-status-mode' buffers.")
+(defvar svn-status-mode-mark-map ()
+  "Subkeymap used in `svn-status-mode' for mark commands.")
 (defvar svn-status-mode-property-map ()
   "Subkeymap used in `svn-status-mode' for property commands.")
 (defvar svn-status-mode-options-map ()
@@ -3287,6 +3296,8 @@ Commands:
 ;; --------------------------------------------------------------------------------
 
 (defvar svn-log-edit-mode-map () "Keymap used in `svn-log-edit-mode' buffers.")
+
+(defvar svn-log-edit-mode-menu) ;really defined with `easy-menu-define' below.
 
 (if svn-log-edit-use-log-edit-mode
     (define-derived-mode svn-log-edit-mode log-edit-mode "svn-log-edit"
