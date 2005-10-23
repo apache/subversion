@@ -145,22 +145,29 @@ here are its responsibilities:
    1. Implement a read-authz callback (see svn_repos_authz_read_func_t), 
       and pass it to the following svn_repos.h functions:
    
+           svn_repos_begin_report()
            svn_repos_dir_delta()
-           svn_repos_get_logs2()
+           svn_repos_history2()
+           svn_repos_get_logs3()
            svn_repos_trace_node_locations()
            svn_repos_get_file_revs()
-           svn_repos_rev_prop()
-           svn_repos_rev_proplist()
            svn_repos_fs_get_locks()
+           svn_repos_fs_change_rev_prop2()
+           svn_repos_fs_revision_prop()
+           svn_repos_fs_revision_proplist()
+           svn_repos_get_commit_editor3()
    
-   2. Manually implement read-authz for incoming network requests that
+   2. Manually implement authz for incoming network requests that
       represent calls to:
    
            RA->get_file()
            RA->get_dir()
            RA->check_path()
+           RA->stat()
            RA->lock()
+           RA->lock_many()
            RA->unlock()
+           RA->unlock_many()
            RA->get_lock()
    
       (These concepts aren't wrapped by libsvn_repos because it's just

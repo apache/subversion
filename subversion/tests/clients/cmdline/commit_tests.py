@@ -891,7 +891,7 @@ def hook_test(sbox):
   expected_output = [abs_repo_dir + "\n",
                      abs_repo_dir + " 1\n",
                      abs_repo_dir + " 2\n"]
-  svntest.actions.run_and_verify_svn (None, expected_output, None,
+  svntest.actions.run_and_verify_svn (None, expected_output, [],
                                       'ci', '--quiet',
                                       '-m', 'log msg', wc_dir)
 
@@ -1228,7 +1228,7 @@ def commit_rmd_and_deleted_file(sbox):
 
   # Commit, hoping to see no errors
   svntest.actions.run_and_verify_svn("Output on stderr where none expected",
-                                     SVNAnyOutput, None,
+                                     SVNAnyOutput, [],
                                      'commit', '-m', 'logmsg', mu_path)
 
 #----------------------------------------------------------------------
@@ -1351,7 +1351,7 @@ def commit_with_lock(sbox):
                                            
   # unlock directory
   svntest.actions.run_and_verify_svn("Output on stderr where none expected",
-                                     [], None,
+                                     [], [],
                                      'cleanup', D_path)
 
   # this commit should succeed
@@ -1427,7 +1427,7 @@ def failed_commit(sbox):
 
   # Commit both working copies. The second commit should fail.
   svntest.actions.run_and_verify_svn("Output on stderr where none expected",
-                                     SVNAnyOutput, None,
+                                     SVNAnyOutput, [],
                                      'commit', '-m', 'log', wc_dir)
 
   svntest.actions.run_and_verify_svn("Output on stderr expected",
@@ -1447,7 +1447,7 @@ def failed_commit(sbox):
 
 # Commit from multiple working copies is not yet supported.  At
 # present an error is generated and none of the working copies change.
-# Related to issue 959, this test here doesn't use svn:external but the
+# Related to issue 959, this test here doesn't use svn:externals but the
 # behaviour needs to be considered.
 
 def commit_multiple_wc(sbox):
@@ -1535,7 +1535,7 @@ def commit_nonrecursive(sbox):
   svntest.main.file_append(os.path.join(wc_dir, file4_path), 'this is file4')
 
   # Add them to version control.
-  svntest.actions.run_and_verify_svn("", SVNAnyOutput, None,
+  svntest.actions.run_and_verify_svn("", SVNAnyOutput, [],
                                      'add', '-N',
                                      os.path.join(wc_dir, file1_path),
                                      os.path.join(wc_dir, dir1_path),
@@ -1636,7 +1636,7 @@ def commit_nonrecursive(sbox):
   svntest.main.file_append(os.path.join(wc_dir, nocommit_path), 'nocommit')
 
   # Add them to version control.
-  svntest.actions.run_and_verify_svn("", SVNAnyOutput, None,
+  svntest.actions.run_and_verify_svn("", SVNAnyOutput, [],
                                      'add', '-N',
                                      os.path.join(wc_dir, dirA_path),
                                      os.path.join(wc_dir, fileA_path),
@@ -1804,7 +1804,7 @@ def from_wc_top_with_bad_editor(sbox):
   wc_dir = sbox.wc_dir
   
   svntest.actions.run_and_verify_svn("Unexpected failure from propset.",
-                                     SVNAnyOutput, None,
+                                     SVNAnyOutput, [],
                                      'pset', 'fish', 'food', wc_dir)
   was_cwd = os.getcwd()
   try:

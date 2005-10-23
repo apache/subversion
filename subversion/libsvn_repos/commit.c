@@ -50,7 +50,7 @@ struct edit_baton
   const char *log_msg;
 
   /* Callback to run when the commit is done. */
-  svn_commit_callback_t commit_callback;
+  svn_commit_callback2_t commit_callback;
   void *commit_callback_baton;
 
   /* Callback to check authorizations on paths. */
@@ -665,6 +665,13 @@ close_edit (void *edit_baton,
   svn_error_t *err;
   const char *conflict;
 
+  /* If no transaction has been created (ie. if open_root wasn't
+     called before close_edit), abort the operation here with an
+     error. */
+  if ((! eb->txn) || (! eb->txn_owner))
+    return svn_error_create(SVN_ERR_REPOS_BAD_ARGS, NULL,
+                            "No valid transaction supplied to close_edit");
+
   /* Commit. */
   err = svn_repos_fs_commit_txn (&conflict, eb->repos, 
                                  &new_revision, eb->txn, pool);
@@ -709,30 +716,37 @@ close_edit (void *edit_baton,
   {
     svn_string_t *date, *author;
     svn_error_t *err2;
+    svn_commit_info_t *commit_info;
 
     /* Even if there was a post-commit hook failure, it's more serious
        if one of the calls here fails, so we explicitly check for errors
        here, while saving the possible post-commit error for later. */
 
     err2 = svn_fs_revision_prop (&date, svn_repos_fs (eb->repos),
-                                new_revision, SVN_PROP_REVISION_DATE,
-                                eb->pool);
+                                 new_revision, SVN_PROP_REVISION_DATE,
+                                 pool);
     if (! err2)
       err2 =  svn_fs_revision_prop (&author, svn_repos_fs (eb->repos),
                                     new_revision, SVN_PROP_REVISION_AUTHOR,
-                                    eb->pool);
+                                    pool);
 
     if (! err2)
-      err2 = (*eb->commit_callback) (new_revision, 
-                              date ? date->data : NULL, 
-                              author ? author->data : NULL,
-                              eb->commit_callback_baton);
-    if (err2)
       {
-        svn_error_clear (err);
-        return err2;
-      }
+        commit_info = svn_create_commit_info (pool);
 
+        /* fill up the svn_commit_info structure */
+        commit_info->revision = new_revision;
+        commit_info->date = date ? date->data : NULL;
+        commit_info->author = author ? author->data : NULL;
+        err2 = (*eb->commit_callback) (commit_info, 
+                                       eb->commit_callback_baton,
+                                       pool);
+        if (err2)
+          {
+            svn_error_clear (err);
+            return err2;
+          }
+      }
   }
 
   return err;
@@ -750,12 +764,11 @@ abort_edit (void *edit_baton,
 }
 
 
-
 
 /*** Public interfaces. ***/
 
 svn_error_t *
-svn_repos_get_commit_editor3 (const svn_delta_editor_t **editor,
+svn_repos_get_commit_editor4 (const svn_delta_editor_t **editor,
                               void **edit_baton,
                               svn_repos_t *repos,
                               svn_fs_txn_t *txn,
@@ -763,15 +776,32 @@ svn_repos_get_commit_editor3 (const svn_delta_editor_t **editor,
                               const char *base_path,
                               const char *user,
                               const char *log_msg,
-                              svn_commit_callback_t commit_callback,
-                              void *commit_callback_baton,
+                              svn_commit_callback2_t callback,
+                              void *callback_baton,
                               svn_repos_authz_callback_t authz_callback,
                               void *authz_baton,
                               apr_pool_t *pool)
 {
-  svn_delta_editor_t *e = svn_delta_default_editor (pool);
+  svn_delta_editor_t *e;
   apr_pool_t *subpool = svn_pool_create (pool);
-  struct edit_baton *eb = apr_pcalloc (subpool, sizeof (*eb));
+  struct edit_baton *eb;
+
+  /* Do a global authz access lookup.  Users with no write access
+     whatsoever to the repository don't get a commit editor. */
+  if (authz_callback)
+    {
+      svn_boolean_t allowed;
+
+      authz_callback (svn_authz_write, &allowed, NULL, NULL,
+                      authz_baton, pool);
+      if (!allowed)
+        return svn_error_create(SVN_ERR_AUTHZ_UNWRITABLE, NULL,
+                                "Not authorized to open a commit editor.");
+    }
+
+  /* Allocate the structures. */
+  e = svn_delta_default_editor (pool);
+  eb = apr_pcalloc (subpool, sizeof (*eb));
 
   /* Set up the editor. */
   e->open_root         = open_root;
@@ -791,8 +821,8 @@ svn_repos_get_commit_editor3 (const svn_delta_editor_t **editor,
   eb->pool = subpool;
   eb->user = user ? apr_pstrdup (subpool, user) : NULL;
   eb->log_msg = apr_pstrdup (subpool, log_msg);
-  eb->commit_callback = commit_callback;
-  eb->commit_callback_baton = commit_callback_baton;
+  eb->commit_callback = callback;
+  eb->commit_callback_baton = callback_baton;
   eb->authz_callback = authz_callback;
   eb->authz_baton = authz_baton;
   eb->base_path = apr_pstrdup (subpool, base_path);
@@ -808,6 +838,35 @@ svn_repos_get_commit_editor3 (const svn_delta_editor_t **editor,
   *editor = e;
   
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_repos_get_commit_editor3 (const svn_delta_editor_t **editor,
+                              void **edit_baton,
+                              svn_repos_t *repos,
+                              svn_fs_txn_t *txn,
+                              const char *repos_url,
+                              const char *base_path,
+                              const char *user,
+                              const char *log_msg,
+                              svn_commit_callback_t callback,
+                              void *callback_baton,
+                              svn_repos_authz_callback_t authz_callback,
+                              void *authz_baton,
+                              apr_pool_t *pool)
+{
+  svn_commit_callback2_t callback2;
+  void *callback2_baton;
+
+  svn_compat_wrap_commit_callback (callback, callback_baton,
+                                   &callback2, &callback2_baton,
+                                   pool);
+
+  return svn_repos_get_commit_editor4 (editor, edit_baton, repos, txn,
+                                       repos_url, base_path, user,
+                                       log_msg, callback2,
+                                       callback2_baton, authz_callback,
+                                       authz_baton, pool);
 }
 
 
@@ -843,8 +902,8 @@ svn_repos_get_commit_editor (const svn_delta_editor_t **editor,
                              void *callback_baton,
                              apr_pool_t *pool)
 {
-  return svn_repos_get_commit_editor3 (editor, edit_baton, repos, NULL,
+  return svn_repos_get_commit_editor2 (editor, edit_baton, repos, NULL,
                                        repos_url, base_path, user,
-                                       log_msg,  callback, callback_baton,
-                                       NULL, NULL, pool);
+                                       log_msg, callback,
+                                       callback_baton, pool);
 }

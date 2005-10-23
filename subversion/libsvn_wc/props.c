@@ -193,10 +193,11 @@ svn_wc__save_prop_file (const char *propfile_path,
                               | APR_BUFFERED), 
                              APR_OS_DEFAULT, pool));
 
-  SVN_ERR_W (svn_hash_write (hash, prop_tmp, pool),
-             apr_psprintf (pool, 
-                           _("Can't write property hash to '%s'"),
-                           svn_path_local_style (propfile_path, pool)));
+  if (apr_hash_count (hash) != 0)
+    SVN_ERR_W (svn_hash_write (hash, prop_tmp, pool),
+               apr_psprintf (pool, 
+                             _("Can't write property hash to '%s'"),
+                             svn_path_local_style (propfile_path, pool)));
 
   SVN_ERR (svn_io_file_close (prop_tmp, pool));
 
@@ -208,6 +209,44 @@ svn_wc__save_prop_file (const char *propfile_path,
 
 /*** Misc ***/
 
+/* Opens reject temporary file for FULL_PATH. */
+static svn_error_t *
+open_reject_tmp_file (apr_file_t **fp, const char **reject_tmp_path,
+                      const char *full_path,
+                      svn_wc_adm_access_t *adm_access,
+                      svn_boolean_t is_dir, apr_pool_t *pool)
+{
+  const char *tmp_path, *tmp_name;
+
+  /* Get path to /temporary/ local prop file */
+  SVN_ERR (svn_wc__prop_path (&tmp_path, full_path, adm_access, TRUE, pool));
+
+  /* Reserve a .prej file based on it.  */
+  SVN_ERR (svn_io_open_unique_file (fp, reject_tmp_path, tmp_path,
+                                    SVN_WC__PROP_REJ_EXT, FALSE, pool));
+
+  /* reject_tmp_path is an absolute path at this point,
+     but that's no good for us.  We need to convert this
+     path to a *relative* path to use in the logfile. */
+  tmp_name = svn_path_basename (*reject_tmp_path, pool);
+
+  if (is_dir)
+    {
+      /* Dealing with directory "path" */
+      *reject_tmp_path = svn_wc__adm_path ("", TRUE, /* use tmp */ pool,
+                                           tmp_name, NULL);
+    }
+  else
+    {
+      /* Dealing with file "path/name" */
+      *reject_tmp_path = svn_wc__adm_path ("", TRUE, pool, SVN_WC__ADM_PROPS,
+                                           tmp_name, NULL);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Assuming FP is a filehandle already open for appending, write
    CONFLICT_DESCRIPTION to file. */
 static svn_error_t *
@@ -218,15 +257,12 @@ append_prop_conflict (apr_file_t *fp,
   /* TODO:  someday, perhaps prefix each conflict_description with a
      timestamp or something? */
   apr_size_t written;
-  const svn_string_t *conflict_description_native;
+  const char *conflict_description_native =
+    svn_utf_cstring_from_utf8_fuzzy (conflict_description->data, pool);
 
-  SVN_ERR (svn_utf_string_from_utf8 (&conflict_description_native,
-                                     conflict_description,
-                                     pool));
-
-  SVN_ERR (svn_io_file_write_full (fp, conflict_description_native->data,
-                                   conflict_description_native->len, &written,
-                                   pool));
+  SVN_ERR (svn_io_file_write_full (fp, conflict_description_native,
+                                   strlen (conflict_description_native),
+                                   &written, pool));
 
   return SVN_NO_ERROR;
 }
@@ -278,7 +314,6 @@ svn_wc_merge_props (svn_wc_notify_state_t *state,
   const svn_wc_entry_t *entry;
   const char *parent, *base_name;
   svn_stringbuf_t *log_accum;
-  apr_file_t *log_fp = NULL;
 
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   if (entry == NULL)
@@ -303,12 +338,7 @@ svn_wc_merge_props (svn_wc_notify_state_t *state,
     }
 
   if (! dry_run)
-    {
-      SVN_ERR (svn_wc__open_adm_file (&log_fp, parent, SVN_WC__ADM_LOG,
-                                      (APR_WRITE | APR_CREATE), /* not excl */
-                                      pool));
-      log_accum = svn_stringbuf_create ("", pool);
-    }
+    log_accum = svn_stringbuf_create ("", pool);
   
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
@@ -318,13 +348,7 @@ svn_wc_merge_props (svn_wc_notify_state_t *state,
 
   if (! dry_run)
     {
-      SVN_ERR_W (svn_io_file_write_full (log_fp, log_accum->data, 
-                                         log_accum->len, NULL, pool),
-                 apr_psprintf (pool, _("Error writing log for '%s'"),
-                               svn_path_local_style (path, pool)));
-
-      SVN_ERR (svn_wc__close_adm_file (log_fp, parent, SVN_WC__ADM_LOG,
-                                       1, /* sync */ pool));
+      SVN_ERR (svn_wc__write_log (adm_access, 0, log_accum, pool));
       SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
     }
 
@@ -344,7 +368,7 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
                      apr_pool_t *pool,
                      svn_stringbuf_t **entry_accum)
 {
-  int i, slash;
+  int i;
   svn_boolean_t is_dir;
 
   const char *entryname;
@@ -363,11 +387,9 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
   apr_file_t *reject_tmp_fp = NULL;       /* the temporary conflicts file */
   const char *reject_tmp_path = NULL;
 
-  /* Empty path and paths ending in / don't need an extra slash removed */
-  if (access_len == 0 || access_path[access_len - 1] == '/')
-    slash = 0;
-  else
-    slash = 1;
+  /* Non-empty path without trailing slash need an extra slash removed */
+  if (access_len != 0 && access_path[access_len - 1] != '/')
+    access_len++;
 
   if (name == NULL)
     {
@@ -474,13 +496,24 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
         {
           if (! working_val)  /* ... but it's not in the working_props */
             {
-              conflict = TRUE;
-              conflict_description = 
-                svn_string_createf 
-                (pool, 
-                 _("Trying to change property '%s' from '%s' to '%s',\n"
-                   "but the property does not exist."),
-                 propname, from_val->data, to_val->data);
+              if (to_val)
+                {
+                  conflict = TRUE;
+                  conflict_description = 
+                    svn_string_createf 
+                    (pool, 
+                     _("Trying to change property '%s' from '%s' to '%s',\n"
+                       "but the property does not exist."),
+                     propname, from_val->data, to_val->data);
+                }
+              else
+                {
+                  /* The property to be deleted doesn't exist, so it's
+                     a 'clean merge'. */
+                  if (state && is_normal
+                      && (*state != svn_wc_notify_state_conflicted))
+                    *state = svn_wc_notify_state_merged;
+                }
             }
           
           else  /* property already exists */
@@ -491,6 +524,16 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
                      fine to set it to the 'to' value.  */
                   apr_hash_set (working_props, propname,
                                 APR_HASH_KEY_STRING, to_val);
+                }
+
+              else if (!to_val && !svn_string_compare (from_val, working_val))
+                {
+                  conflict = TRUE;
+                  conflict_description =
+                    svn_string_createf
+                    (pool, _("Trying to delete property '%s' but value"
+                             " has been modified from '%s' to '%s'."),
+                     propname, from_val->data, working_val->data);
                 }
 
               else if (svn_string_compare (working_val, to_val))
@@ -526,32 +569,10 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
             continue;   /* skip to next incoming change */
           
           if (! reject_tmp_fp)
-            {
-              /* This is the very first prop conflict found on this item. */
-              const char *tmppath, *tmpname;
-              
-              /* Get path to temporary local prop file, and reserve a
-                 .prej filename based on it. */
-              SVN_ERR (svn_wc__prop_path (&tmppath, full_path, adm_access,
-                                          TRUE, pool));              
-              SVN_ERR (svn_io_open_unique_file (&reject_tmp_fp,
-                                                &reject_tmp_path,
-                                                tmppath, SVN_WC__PROP_REJ_EXT,
-                                                FALSE, pool));
-              
-              /* reject_tmp_path is an absolute path at this point,
-                 but that's no good for us.  We need to convert this
-                 path to a *relative* path to use in the logfile. */
-              tmpname = svn_path_basename (reject_tmp_path, pool);
-              
-              if (is_dir)  /* Dealing with directory "path" */                
-                reject_tmp_path = svn_wc__adm_path ("", TRUE, /* use tmp */
-                                                    pool, tmpname, NULL);
-              else /* Dealing with file "path/name" */
-                reject_tmp_path = svn_wc__adm_path ("", TRUE, pool,
-                                                    SVN_WC__ADM_PROPS,
-                                                    tmpname, NULL);
-            }
+            /* This is the very first prop conflict found on this item. */
+            SVN_ERR (open_reject_tmp_file (&reject_tmp_fp, &reject_tmp_path,
+                                           full_path, adm_access, is_dir,
+                                           pool));
           
           /* Append the conflict to the open tmp/PROPS/---.prej file */
           SVN_ERR (append_prop_conflict (reject_tmp_fp, conflict_description,
@@ -578,28 +599,17 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
   /* Compute pathnames for the "mv" log entries.  Notice that these
      paths are RELATIVE pathnames (each beginning with ".svn/"), so
      that each .svn subdir remains separable when executing run_log().  */
-  tmp_props = apr_pstrdup (pool, local_prop_tmp_path + access_len + slash);
-  real_props = apr_pstrdup (pool, local_propfile_path + access_len + slash);
+  tmp_props = apr_pstrdup (pool, local_prop_tmp_path + access_len);
+  real_props = apr_pstrdup (pool, local_propfile_path + access_len);
   
   /* Write log entry to move working tmp copy to real working area. */
-  svn_xml_make_open_tag (entry_accum,
-                         pool,
-                         svn_xml_self_closing,
-                         SVN_WC__LOG_MV,
-                         SVN_WC__LOG_ATTR_NAME,
-                         tmp_props,
-                         SVN_WC__LOG_ATTR_DEST,
-                         real_props,
-                         NULL);
+  SVN_ERR (svn_wc__loggy_move (entry_accum, NULL,
+                               adm_access, tmp_props, real_props,
+                               FALSE, pool));
 
   /* Make props readonly */
-  svn_xml_make_open_tag (entry_accum,
-                         pool,
-                         svn_xml_self_closing,
-                         SVN_WC__LOG_READONLY,
-                         SVN_WC__LOG_ATTR_NAME,
-                         real_props,
-                         NULL);
+  SVN_ERR (svn_wc__loggy_set_readonly (entry_accum, adm_access,
+                                       real_props, pool));
 
   /* Repeat the above steps for the base properties if required. */
   if (base_merge)
@@ -610,28 +620,15 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
                                        adm_access, TRUE, pool));
       SVN_ERR (svn_wc__save_prop_file (base_prop_tmp_path, base_props, pool));
 
-      tmp_prop_base = apr_pstrdup (pool,
-                                   base_prop_tmp_path + access_len + slash);
-      real_prop_base = apr_pstrdup (pool,
-                                    base_propfile_path + access_len + slash);
+      tmp_prop_base = apr_pstrdup (pool, base_prop_tmp_path + access_len);
+      real_prop_base = apr_pstrdup (pool, base_propfile_path + access_len);
 
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_MV,
-                             SVN_WC__LOG_ATTR_NAME,
-                             tmp_prop_base,
-                             SVN_WC__LOG_ATTR_DEST,
-                             real_prop_base,
-                             NULL);
+      SVN_ERR (svn_wc__loggy_move (entry_accum, NULL, adm_access,
+                                    tmp_prop_base, real_prop_base,
+                                   FALSE, pool));
 
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_READONLY,
-                             SVN_WC__LOG_ATTR_NAME,
-                             real_prop_base,
-                             NULL);
+      SVN_ERR (svn_wc__loggy_set_readonly (entry_accum, adm_access,
+                                           real_prop_base, pool));
     }
 
   if (reject_tmp_fp)
@@ -678,36 +675,26 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
 
       /* We've now guaranteed that some kind of .prej file exists
          above the .svn/ dir.  We write log entries to append our
-         conflicts to it. */      
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_APPEND,
-                             SVN_WC__LOG_ATTR_NAME,
-                             reject_tmp_path,
-                             SVN_WC__LOG_ATTR_DEST,
-                             reject_path,
-                             NULL);
+         conflicts to it. */
+      SVN_ERR (svn_wc__loggy_append (entry_accum, adm_access,
+                                     reject_tmp_path, reject_path, pool));
 
       /* And of course, delete the temporary reject file. */
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_RM,
-                             SVN_WC__LOG_ATTR_NAME,
-                             reject_tmp_path,
-                             NULL);
+      SVN_ERR (svn_wc__loggy_remove (entry_accum, adm_access,
+                                     reject_tmp_path, pool));
       
       /* Mark entry as "conflicted" with a particular .prej file. */
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_MODIFY_ENTRY,
-                             SVN_WC__LOG_ATTR_NAME,
-                             entryname,
-                             SVN_WC__ENTRY_ATTR_PREJFILE,
-                             reject_path,
-                             NULL);      
+      {
+        svn_wc_entry_t entry;
+
+        entry.prejfile = reject_path;
+        SVN_ERR (svn_wc__loggy_entry_modify (entry_accum,
+                                             adm_access,
+                                             entryname,
+                                             &entry,
+                                             SVN_WC__ENTRY_MODIFY_PREJFILE,
+                                             pool));
+      }
 
     } /* if (reject_tmp_fp) */
   
@@ -741,7 +728,6 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
 
   const char *access_path = svn_wc_adm_access_path (adm_access);
   int access_len = strlen (access_path);
-  int slash;
 
   const char *entryname;
   const char *full_path;
@@ -758,11 +744,9 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
   apr_file_t *reject_tmp_fp = NULL;       /* the temporary conflicts file */
   const char *reject_tmp_path = NULL;
 
-  /* Empty path and paths ending in / don't need an extra slash removed */
-  if (access_len == 0 || access_path[access_len - 1] == '/')
-    slash = 0;
-  else
-    slash = 1;
+  /* Non-empty path without trailing slash need an extra slash removed */
+  if (access_len != 0 && access_path[access_len - 1] != '/')
+    access_len++;
 
   if (name == NULL)
     {
@@ -871,51 +855,10 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
                 continue;
 
               if (! reject_tmp_fp)
-                {
-                  /* This is the very first prop conflict found on this
-                     node. */
-                  const char *tmppath;
-                  const char *tmpname;
-
-                  /* Get path to /temporary/ local prop file */
-                  SVN_ERR (svn_wc__prop_path (&tmppath, full_path, adm_access,
-                                              TRUE, pool));
-
-                  /* Reserve a .prej file based on it.  */
-                  SVN_ERR (svn_io_open_unique_file (&reject_tmp_fp,
-                                                    &reject_tmp_path,
-                                                    tmppath,
-                                                    SVN_WC__PROP_REJ_EXT,
-                                                    FALSE,
-                                                    pool));
-
-                  /* reject_tmp_path is an absolute path at this point,
-                     but that's no good for us.  We need to convert this
-                     path to a *relative* path to use in the logfile. */
-                  tmpname = svn_path_basename (reject_tmp_path, pool);
-
-                  if (is_dir)
-                    {
-                      /* Dealing with directory "path" */
-                      reject_tmp_path = 
-                        svn_wc__adm_path ("",
-                                          TRUE, /* use tmp */
-                                          pool,
-                                          tmpname,
-                                          NULL);
-                    }
-                  else
-                    {
-                      /* Dealing with file "path/name" */
-                      reject_tmp_path = 
-                        svn_wc__adm_path ("",
-                                          TRUE, 
-                                          pool,
-                                          SVN_WC__ADM_PROPS,
-                                          tmpname,
-                                          NULL);
-                    }               
-                }
+                /* This is the very first prop conflict found on this item. */
+                SVN_ERR (open_reject_tmp_file (&reject_tmp_fp, &reject_tmp_path,
+                                               full_path, adm_access, is_dir,
+                                               pool));
 
               /* Append the conflict to the open tmp/PROPS/---.prej file */
               SVN_ERR (append_prop_conflict (reject_tmp_fp,
@@ -960,28 +903,16 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
   /* Compute pathnames for the "mv" log entries.  Notice that these
      paths are RELATIVE pathnames (each beginning with ".svn/"), so
      that each .svn subdir remains separable when executing run_log().  */
-  tmp_props = apr_pstrdup (pool, local_prop_tmp_path + access_len + slash);
-  real_props = apr_pstrdup (pool, local_propfile_path + access_len + slash);
+  tmp_props = apr_pstrdup (pool, local_prop_tmp_path + access_len);
+  real_props = apr_pstrdup (pool, local_propfile_path + access_len);
   
   /* Write log entry to move working tmp copy to real working area. */
-  svn_xml_make_open_tag (entry_accum,
-                         pool,
-                         svn_xml_self_closing,
-                         SVN_WC__LOG_MV,
-                         SVN_WC__LOG_ATTR_NAME,
-                         tmp_props,
-                         SVN_WC__LOG_ATTR_DEST,
-                         real_props,
-                         NULL);
+  SVN_ERR (svn_wc__loggy_move (entry_accum, NULL, adm_access,
+                               tmp_props, real_props, FALSE, pool));
 
   /* Make props readonly */
-  svn_xml_make_open_tag (entry_accum,
-                         pool,
-                         svn_xml_self_closing,
-                         SVN_WC__LOG_READONLY,
-                         SVN_WC__LOG_ATTR_NAME,
-                         real_props,
-                         NULL);
+  SVN_ERR (svn_wc__loggy_set_readonly (entry_accum, adm_access,
+                                       real_props, pool));
 
   /* Repeat the above steps for the base properties if required */
   if (base_merge)
@@ -990,27 +921,14 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
                                        adm_access, TRUE, pool));
       SVN_ERR (svn_wc__save_prop_file (base_prop_tmp_path, basehash, pool));
 
-      tmp_prop_base = apr_pstrdup (pool,
-                                   base_prop_tmp_path + access_len + slash);
-      real_prop_base = apr_pstrdup (pool,
-                                    base_propfile_path + access_len + slash);
+      tmp_prop_base = apr_pstrdup (pool, base_prop_tmp_path + access_len);
+      real_prop_base = apr_pstrdup (pool, base_propfile_path + access_len);
 
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_MV,
-                             SVN_WC__LOG_ATTR_NAME,
-                             tmp_prop_base,
-                             SVN_WC__LOG_ATTR_DEST,
-                             real_prop_base,
-                             NULL);
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_READONLY,
-                             SVN_WC__LOG_ATTR_NAME,
-                             real_prop_base,
-                             NULL);
+      SVN_ERR (svn_wc__loggy_move (entry_accum, NULL, adm_access,
+                                   tmp_prop_base, real_prop_base,
+                                   FALSE, pool));
+      SVN_ERR (svn_wc__loggy_set_readonly (entry_accum, adm_access,
+                                           real_prop_base, pool));
     }
 
 
@@ -1062,36 +980,26 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
 
       /* We've now guaranteed that some kind of .prej file exists
          above the .svn/ dir.  We write log entries to append our
-         conflicts to it. */      
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_APPEND,
-                             SVN_WC__LOG_ATTR_NAME,
-                             reject_tmp_path,
-                             SVN_WC__LOG_ATTR_DEST,
-                             reject_path,
-                             NULL);
+         conflicts to it. */
+      SVN_ERR (svn_wc__loggy_append (entry_accum, adm_access,
+                                     reject_tmp_path, reject_path, pool));
 
       /* And of course, delete the temporary reject file. */
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_RM,
-                             SVN_WC__LOG_ATTR_NAME,
-                             reject_tmp_path,
-                             NULL);
-      
+      SVN_ERR (svn_wc__loggy_remove (entry_accum, adm_access,
+                                     reject_tmp_path, pool));
+
       /* Mark entry as "conflicted" with a particular .prej file. */
-      svn_xml_make_open_tag (entry_accum,
-                             pool,
-                             svn_xml_self_closing,
-                             SVN_WC__LOG_MODIFY_ENTRY,
-                             SVN_WC__LOG_ATTR_NAME,
-                             entryname,
-                             SVN_WC__ENTRY_ATTR_PREJFILE,
-                             reject_path,
-                             NULL);      
+      {
+        svn_wc_entry_t entry;
+
+        entry.prejfile = reject_path;
+        SVN_ERR (svn_wc__loggy_entry_modify (entry_accum,
+                                             adm_access,
+                                             entryname,
+                                             &entry,
+                                             SVN_WC__ENTRY_MODIFY_PREJFILE,
+                                             pool));
+      }
 
     } /* if (reject_tmp_fp) */
   
@@ -1116,7 +1024,6 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
   const svn_wc_entry_t *entry;
   const char *parent, *base_name;
   svn_stringbuf_t *log_accum;
-  apr_file_t *log_fp = NULL;
 
   SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
   if (entry == NULL)
@@ -1141,12 +1048,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
     }
 
   if (! dry_run)
-    {
-      SVN_ERR (svn_wc__open_adm_file (&log_fp, parent, SVN_WC__ADM_LOG,
-                                      (APR_WRITE | APR_CREATE), /* not excl */
-                                      pool));
-      log_accum = svn_stringbuf_create ("", pool);
-    }
+    log_accum = svn_stringbuf_create ("", pool);
   
   /* Note that while this routine does the "real" work, it's only
      prepping tempfiles and writing log commands.  */
@@ -1156,13 +1058,7 @@ svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
 
   if (! dry_run)
     {
-      SVN_ERR_W (svn_io_file_write_full (log_fp, log_accum->data, 
-                                         log_accum->len, NULL, pool),
-                 apr_psprintf (pool, _("Error writing log for '%s'"),
-                               svn_path_local_style (path, pool)));
-
-      SVN_ERR (svn_wc__close_adm_file (log_fp, parent, SVN_WC__ADM_LOG,
-                                       1, /* sync */ pool));
+      SVN_ERR (svn_wc__write_log (adm_access, 0, log_accum, pool));
       SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
     }
 
@@ -1434,7 +1330,7 @@ validate_eol_prop_against_file (const char *path,
      here is whether or not the function fails on inconsistent line
      endings.  The function is "translating" to an empty stream.  This
      is sneeeeeeeeeeeaky. */
-  err = svn_subst_translate_stream2 (read_stream, write_stream, 
+  err = svn_subst_translate_stream3 (read_stream, write_stream,
                                      "", FALSE, NULL, FALSE, pool);
   if (err && err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
     return svn_error_createf (SVN_ERR_ILLEGAL_TARGET, err,
@@ -1459,7 +1355,7 @@ svn_wc_prop_set2 (const char *name,
   svn_error_t *err;
   apr_hash_t *prophash;
   apr_file_t *fp = NULL;
-  svn_subst_keywords_t *old_keywords;
+  apr_hash_t *old_keywords;
   svn_stringbuf_t *new_value = NULL;
   svn_node_kind_t kind;
   enum svn_prop_kind prop_kind = svn_property_kind (NULL, name);
@@ -1619,11 +1515,11 @@ svn_wc_prop_set2 (const char *name,
 
   if (kind == svn_node_file && strcmp (name, SVN_PROP_KEYWORDS) == 0)
     {
-      svn_subst_keywords_t *new_keywords;
+      apr_hash_t *new_keywords;
       SVN_ERR (svn_wc__get_keywords (&new_keywords, path, adm_access, NULL,
                                      pool));
 
-      if (svn_subst_keywords_differ (old_keywords, new_keywords, FALSE))
+      if (svn_subst_keywords_differ2 (old_keywords, new_keywords, FALSE, pool))
         {
           const char *base_name;
           svn_wc_entry_t tmp_entry;
@@ -1682,9 +1578,9 @@ svn_wc_is_entry_prop (const char *name)
 
 /* Helper to optimize svn_wc_props_modified_p().
 
-   If PATH_TO_PROP_FILE is nonexistent, or is of size 4 bytes ("END"),
-   then set EMPTY_P to true.   Otherwise set EMPTY_P to false, which
-   means that the file must contain real properties.  */
+   If PATH_TO_PROP_FILE is nonexistent, is empty, or is of size 4 bytes
+   ("END\n"), then set EMPTY_P to true.   Otherwise set EMPTY_P to false,
+   which means that the file must contain real properties.  */
 static svn_error_t *
 empty_props_p (svn_boolean_t *empty_p,
                const char *path_to_prop_file,
@@ -1710,14 +1606,14 @@ empty_props_p (svn_boolean_t *empty_p,
 
 
       /* If we remove props from a propfile, eventually the file will
+         be empty, or, for working copies written by pre-1.3 libraries, will
          contain nothing but "END\n" */
-      if (finfo.filetype == APR_REG && finfo.size == 4)  
+      if (finfo.filetype == APR_REG && (finfo.size == 4 || finfo.size == 0))
         *empty_p = TRUE;
-
       else
         *empty_p = FALSE;
 
-      /* If the size is < 4, then something is corrupt.
+      /* If the size is between 1 and 4, then something is corrupt.
          If the size is between 4 and 16, then something is corrupt,
          because 16 is the -smallest- the file can possibly be if it
          contained only one property.  So long as we say it is "not
@@ -1760,35 +1656,9 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   svn_boolean_t bempty, wempty;
   const char *prop_path;
   const char *prop_base_path;
-  svn_node_kind_t kind;
   svn_boolean_t different_filesizes, equal_timestamps;
   const svn_wc_entry_t *entry;
   apr_pool_t *subpool = svn_pool_create (pool);
-  int wc_format = svn_wc__adm_wc_format (adm_access);
-
-  SVN_ERR (svn_wc_entry (&entry, path, adm_access, TRUE, subpool));  
-
-  /* For newer WCs, if there is an entry for the path, we have a fast
-   * and nice way to retrieve the information from the entry. */
-  if (wc_format > SVN_WC__NO_PROPCACHING_VERSION)
-    {
-      if (entry)
-        *modified_p = entry->prop_mods;
-      else
-        {
-          SVN_ERR (svn_wc__prop_path (&prop_path, path, adm_access,
-                                      FALSE, pool));
-          SVN_ERR (svn_io_check_path (path, &kind, pool));
-
-          /* An existing props file implies property changes. */
-          *modified_p = (kind != svn_node_none);
-        }
-
-      return SVN_NO_ERROR;
-    }
-      
-
-  /* So, we have a WC in an older format... We... Have some work to do... */
 
   /* First, get the paths of the working and 'base' prop files. */
   SVN_ERR (svn_wc__prop_path (&prop_path, path, adm_access, FALSE, subpool));
@@ -1802,6 +1672,7 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   /* If something is scheduled for replacement, we do *not* want to
      pay attention to any base-props;  they might be residual from the
      old deleted file. */
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, TRUE, subpool));  
   if (entry && (entry->schedule == svn_wc_schedule_replace))
     {
       *modified_p = wempty ? FALSE : TRUE;
@@ -2115,4 +1986,29 @@ svn_wc_parse_externals_description (apr_hash_t **externals_p,
         }
     }
   return SVN_NO_ERROR;
+}
+
+svn_boolean_t
+svn_wc__has_special_property (apr_hash_t *props)
+{
+  return apr_hash_get (props, SVN_PROP_SPECIAL, APR_HASH_KEY_STRING) != NULL;
+}
+
+svn_boolean_t
+svn_wc__has_magic_property (apr_array_header_t *properties)
+{
+  int i;
+
+  for (i = 0; i < properties->nelts; i++)
+    {
+      svn_prop_t *property = &APR_ARRAY_IDX (properties, i, svn_prop_t);
+
+      if (strcmp (property->name, SVN_PROP_EXECUTABLE) == 0
+          || strcmp (property->name, SVN_PROP_KEYWORDS) == 0
+          || strcmp (property->name, SVN_PROP_EOL_STYLE) == 0
+          || strcmp (property->name, SVN_PROP_SPECIAL) == 0
+          || strcmp (property->name, SVN_PROP_NEEDS_LOCK) == 0)
+        return TRUE;
+    }
+  return FALSE;
 }

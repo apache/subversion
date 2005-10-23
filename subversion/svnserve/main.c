@@ -54,6 +54,7 @@ enum connection_handling_mode {
 
 /* The mode in which to run svnserve */
 enum run_mode {
+  run_mode_unspecified,
   run_mode_inetd,
   run_mode_daemon,
   run_mode_tunnel,
@@ -230,7 +231,7 @@ check_lib_versions(void)
 
 int main(int argc, const char *const *argv)
 {
-  enum run_mode run_mode;
+  enum run_mode run_mode = run_mode_unspecified;
   svn_boolean_t foreground = FALSE;
   apr_socket_t *sock, *usock;
   apr_file_t *in_file, *out_file;
@@ -373,6 +374,14 @@ int main(int argc, const char *const *argv)
   if (os->ind != argc)
     usage(argv[0], pool);
 
+  if (mode_opt_count != 1)
+    {
+      svn_error_clear(svn_cmdline_fputs
+                      (_("You must specify exactly one of -d, -i, -t or -X.\n"),
+                       stderr, pool));
+      usage(argv[0], pool);
+    }
+
   if (params.tunnel_user && run_mode != run_mode_tunnel)
     {
       svn_error_clear
@@ -380,14 +389,6 @@ int main(int argc, const char *const *argv)
            (stderr, pool,
             _("Option --tunnel-user is only valid in tunnel mode.\n")));
       exit(1);
-    }
-
-  if (mode_opt_count != 1)
-    {
-      svn_error_clear(svn_cmdline_fputs
-                      (_("You must specify exactly one of -d, -i, -t or -X.\n"),
-                       stderr, pool));
-      usage(argv[0], pool);
     }
 
   if (run_mode == run_mode_inetd || run_mode == run_mode_tunnel)
@@ -592,5 +593,5 @@ int main(int argc, const char *const *argv)
         }
     }
 
-  return 0;
+  /* NOTREACHED */
 }

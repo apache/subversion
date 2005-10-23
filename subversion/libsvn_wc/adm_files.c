@@ -27,6 +27,7 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 #include <apr_strings.h>
+
 #include "svn_types.h"
 #include "svn_error.h"
 #include "svn_io.h"
@@ -43,9 +44,68 @@
 
 /*** File names in the adm area. ***/
 
+/* The default name of the WC admin directory. This name is always
+   checked by svn_wc_is_adm_dir. */
+static const char default_adm_dir_name[] = ".svn";
+
+/* The name that is actually used for the WC admin directory.  The
+   commonest case where this won't be the default is in Windows
+   ASP.NET development environments, which choke on ".svn". */
+static const char *adm_dir_name = default_adm_dir_name;
+
+
+svn_boolean_t
+svn_wc_is_adm_dir (const char *name, apr_pool_t *pool)
+{
+  (void)pool;  /* Silence compiler warnings about unused parameter. */
+  return (0 == strcmp (name, adm_dir_name)
+          || 0 == strcmp (name, default_adm_dir_name));
+}
+
+
+const char *
+svn_wc_get_adm_dir (apr_pool_t *pool)
+{
+  (void)pool;  /* Silence compiler warnings about unused parameter. */
+  return adm_dir_name;
+}
+
+
+svn_error_t *
+svn_wc_set_adm_dir (const char *name, apr_pool_t *pool)
+{
+  /* This is the canonical list of administrative directory names.
+
+     FIXME:
+     An identical list is used in
+       libsvn_subr/opt.c:svn_opt_args_to_target_array2(),
+     but that function can't use this list, because that use would
+     create a circular dependency between libsvn_wc and libsvn_subr.
+     Make sure changes to the lists are always synchronized! */
+  static const char *valid_dir_names[] = {
+    default_adm_dir_name,
+    "_svn",
+    NULL
+  };
+
+  const char **dir_name;
+  for (dir_name = valid_dir_names; *dir_name; ++dir_name)
+    if (0 == strcmp (name, *dir_name))
+      {
+        /* Use the pointer to the statically allocated string
+           constant, to avoid potential pool lifetime issues. */
+        adm_dir_name = *dir_name;
+        return SVN_NO_ERROR;
+      }
+  return svn_error_createf
+    (SVN_ERR_BAD_FILENAME, NULL,
+     _("'%s' is not a valid administrative directory name"),
+     svn_path_local_style (name, pool));
+}
+
 
 /* Return the path to something in PATH's administrative area.
- * 
+ *
  * First, the adm subdir is appended to PATH as a component, then the
  * "tmp" directory is added iff USE_TMP is set, then each of the
  * varargs in AP (char *'s) is appended as a path component.  The list
@@ -67,7 +127,7 @@ v_extend_with_adm_name (const char *path,
   const char *this;
 
   /* Tack on the administrative subdirectory. */
-  path = svn_path_join (path, SVN_WC_ADM_DIR_NAME, pool);
+  path = svn_path_join (path, adm_dir_name, pool);
 
   /* If this is a tmp file, name it into the tmp area. */
   if (use_tmp)
@@ -272,13 +332,37 @@ svn_wc__text_base_path (const char *path,
                                NULL);
 }
 
+const char *
+svn_wc__text_revert_path (const char *path,
+                          svn_boolean_t tmp,
+                          apr_pool_t *pool)
+{
+  const char *newpath, *base_name;
+
+  svn_path_split (path, &newpath, &base_name, pool);
+  return extend_with_adm_name (newpath,
+                               SVN_WC__REVERT_EXT,
+                               tmp,
+                               pool,
+                               SVN_WC__ADM_TEXT_BASE,
+                               base_name,
+                               NULL);
+}
+
+/* Kind for prop_path_internal. */
+typedef enum prop_path_kind_t
+{
+  prop_path_kind_base = 0,
+  prop_path_kind_revert,
+  prop_path_kind_wcprop,
+  prop_path_kind_working
+} prop_path_kind_t;
 
 static svn_error_t *
 prop_path_internal (const char **prop_path,
                     const char *path,
                     svn_wc_adm_access_t *adm_access,
-                    svn_boolean_t base,
-                    svn_boolean_t wcprop,
+                    prop_path_kind_t path_kind,
                     svn_boolean_t tmp,
                     apr_pool_t *pool)
 {
@@ -289,25 +373,44 @@ prop_path_internal (const char **prop_path,
 
   if (entry && entry->kind == svn_node_dir)  /* It's a working copy dir */
     {
+      static const char * names[] = {
+        SVN_WC__ADM_DIR_PROP_BASE,    /* prop_path_kind_base */
+        SVN_WC__ADM_DIR_PROP_REVERT,  /* prop_path_kind_revert */
+        SVN_WC__ADM_DIR_WCPROPS,      /* prop_path_kind_wcprop */
+        SVN_WC__ADM_DIR_PROPS         /* prop_path_kind_working */
+      };
+
       *prop_path = extend_with_adm_name
         (path,
          NULL,
          tmp,
          pool,
-         base ? SVN_WC__ADM_DIR_PROP_BASE
-         : (wcprop ? SVN_WC__ADM_DIR_WCPROPS : SVN_WC__ADM_DIR_PROPS),
+         names[path_kind],
          NULL);
     }
   else  /* It's either a file, or a non-wc dir (i.e., maybe an ex-file) */
     {
+      static const char * extensions[] = {
+        SVN_WC__BASE_EXT,     /* prop_path_kind_base */
+        SVN_WC__REVERT_EXT,   /* prop_path_kind_revert */
+        SVN_WC__WORK_EXT,     /* prop_path_kind_wcprop */
+        SVN_WC__WORK_EXT      /* prop_path_kind_working */
+      };
+
+      static const char * dirs[] = {
+        SVN_WC__ADM_PROP_BASE,  /* prop_path_kind_base */
+        SVN_WC__ADM_PROP_BASE,  /* prop_path_kind_revert */
+        SVN_WC__ADM_WCPROPS,    /* prop_path_kind_wcprop */
+        SVN_WC__ADM_PROPS       /* prop_path_kind_working */
+      };
+
       svn_path_split (path, prop_path, &entry_name, pool);
       *prop_path = extend_with_adm_name
         (*prop_path,
-         base ? SVN_WC__BASE_EXT : SVN_WC__WORK_EXT,
+         extensions[path_kind],
          tmp,
          pool,
-         base ? SVN_WC__ADM_PROP_BASE
-         : (wcprop ? SVN_WC__ADM_WCPROPS : SVN_WC__ADM_PROPS),
+         dirs[path_kind],
          entry_name,
          NULL);
     }
@@ -325,8 +428,8 @@ svn_wc__wcprop_path (const char **wcprop_path,
                      svn_boolean_t tmp,
                      apr_pool_t *pool)
 {
-  return prop_path_internal (wcprop_path, path, adm_access, FALSE, TRUE, tmp,
-                             pool);
+  return prop_path_internal (wcprop_path, path, adm_access,
+                             prop_path_kind_wcprop, tmp, pool);
 }
 
 
@@ -339,8 +442,8 @@ svn_wc__prop_path (const char **prop_path,
                    svn_boolean_t tmp,
                    apr_pool_t *pool)
 {
-  return prop_path_internal (prop_path, path, adm_access, FALSE, FALSE, tmp,
-                             pool);
+  return prop_path_internal (prop_path, path, adm_access,
+                             prop_path_kind_working, tmp, pool);
 }
 
 
@@ -351,11 +454,21 @@ svn_wc__prop_base_path (const char **prop_path,
                         svn_boolean_t tmp,
                         apr_pool_t *pool)
 {
-  return prop_path_internal (prop_path, path, adm_access, TRUE, FALSE, tmp,
-                             pool);
+  return prop_path_internal (prop_path, path, adm_access, 
+                             prop_path_kind_base, tmp, pool);
 }
 
 
+svn_error_t *
+svn_wc__prop_revert_path (const char **prop_path,
+                          const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t tmp,
+                          apr_pool_t *pool)
+{
+  return prop_path_internal (prop_path, path, adm_access,
+                             prop_path_kind_revert, tmp, pool);
+}
 
 
 /*** Opening and closing files in the adm area. ***/
@@ -872,27 +985,27 @@ check_adm_exists (svn_boolean_t *exists,
                                   _("No entry for '%s'"),
                                   svn_path_local_style (path, pool));
 
-      /* The revisions must match except when adding a directory with a
-         name that matches a directory scheduled for deletion. That's
-         because the deleted directory's administrative dir will still be
-         in place but will have an arbitrary revision. */
-      if (entry->revision != revision
-          && !(entry->schedule == svn_wc_schedule_delete && revision == 0))
-        return
-          svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           _("Revision %ld doesn't match existing revision %ld in '%s'"),
-           revision, entry->revision,
-           svn_path_local_style (path, pool));
+      /* When the directory exists and is scheduled for deletion do not
+       * check the revision or the URL.  The revision can be any 
+       * arbitrary revision and the URL may differ if the add is
+       * being driven from a merge which will have a different URL. */
+      if (entry->schedule != svn_wc_schedule_delete)
+        {
+          if (entry->revision != revision)
+            return
+              svn_error_createf
+              (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+               _("Revision %ld doesn't match existing revision %ld in '%s'"),
+               revision, entry->revision, path);
 
-      /** ### comparing URLs, should they be canonicalized first? */
-      if (strcmp (entry->url, url) != 0)
-        return
-          svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           _("URL '%s' doesn't match existing URL '%s' in '%s'"),
-           url, entry->url,
-           svn_path_local_style (path, pool));
+          /** ### comparing URLs, should they be canonicalized first? */
+          if (strcmp (entry->url, url) != 0)
+            return
+              svn_error_createf
+              (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+               _("URL '%s' doesn't match existing URL '%s' in '%s'"),
+               url, entry->url, path);
+	}
     }
 
   *exists = wc_exists;
@@ -1114,23 +1227,44 @@ svn_wc__adm_cleanup_tmp_area (svn_wc_adm_access_t *adm_access,
 
 
 svn_error_t *
+svn_wc_create_tmp_file2 (apr_file_t **fp,
+                         const char **new_name,
+                         const char *path,
+                         svn_boolean_t delete_on_close,
+                         apr_pool_t *pool)
+{
+  const char *ignored_filename;
+  apr_file_t *file;
+
+  assert (fp || new_name);
+
+  /* Use a self-explanatory name for the file :-) . */
+  path = svn_wc__adm_path (path, TRUE, pool, "tempfile", NULL);
+
+  /* Open a unique file;  use APR_DELONCLOSE. */
+  SVN_ERR (svn_io_open_unique_file (&file, &ignored_filename,
+                                    path, ".tmp", delete_on_close, pool));
+
+  if (new_name)
+    *new_name = ignored_filename;
+
+  if (fp)
+    *fp = file;
+  else
+    SVN_ERR (svn_io_file_close (file, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc_create_tmp_file (apr_file_t **fp,
                         const char *path,
                         svn_boolean_t delete_on_close,
                         apr_pool_t *pool)
 {
-  const char *ignored_filename;
-
-  /* Use a self-explanatory name for the file :-) . */
-  path = svn_wc__adm_path (path, TRUE, pool, "tempfile", NULL);
-
-  /* Open a unique file;  use APR_DELONCLOSE. */  
-  SVN_ERR (svn_io_open_unique_file (fp, &ignored_filename,
-                                    path, ".tmp", delete_on_close, pool));
-
-  return SVN_NO_ERROR;
+  return svn_wc_create_tmp_file2 (fp, NULL, path, delete_on_close, pool);
 }
-
 
 svn_error_t *
 svn_wc__prep_file_for_replacement (const char *path,

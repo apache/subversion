@@ -23,18 +23,16 @@ import os
 from svn import core, fs, delta, repos
 
 class SVNLook:
-  def __init__(self, pool, path, cmd, rev, txn):
-    self.pool = pool
-
-    repos_ptr = repos.open(path, pool)
+  def __init__(self, path, cmd, rev, txn):
+    repos_ptr = repos.open(path)
     self.fs_ptr = repos.fs(repos_ptr)
 
     if txn:
-      self.txn_ptr = fs.open_txn(self.fs_ptr, txn, pool)
+      self.txn_ptr = fs.open_txn(self.fs_ptr, txn)
     else:
       self.txn_ptr = None
       if rev is None:
-        rev = fs.youngest_rev(self.fs_ptr, pool)
+        rev = fs.youngest_rev(self.fs_ptr)
     self.rev = rev
 
     getattr(self, 'cmd_' + cmd)()
@@ -57,7 +55,7 @@ class SVNLook:
     else:
       date = self._get_property(core.SVN_PROP_REVISION_DATE)
       if date:
-        aprtime = core.svn_time_from_cstring(date, self.pool)
+        aprtime = core.svn_time_from_cstring(date)
         # ### convert to a time_t; this requires intimate knowledge of
         # ### the apr_time_t type
         secs = aprtime / 1000000  # aprtime is microseconds; make seconds
@@ -94,8 +92,8 @@ class SVNLook:
 
   def _get_property(self, name):
     if self.txn_ptr:
-      return fs.txn_prop(self.txn_ptr, name, self.pool)
-    return fs.revision_prop(self.fs_ptr, self.rev, name, self.pool)
+      return fs.txn_prop(self.txn_ptr, name)
+    return fs.revision_prop(self.fs_ptr, self.rev, name)
 
   def _print_tree(self, e_factory, base_rev=None, pass_root=0):
     if base_rev is None:
@@ -108,12 +106,12 @@ class SVNLook:
 
     # get the current root
     if self.txn_ptr:
-      root = fs.txn_root(self.txn_ptr, self.pool)
+      root = fs.txn_root(self.txn_ptr)
     else:
-      root = fs.revision_root(self.fs_ptr, self.rev, self.pool)
+      root = fs.revision_root(self.fs_ptr, self.rev)
 
     # the base of the comparison
-    base_root = fs.revision_root(self.fs_ptr, base_rev, self.pool)
+    base_root = fs.revision_root(self.fs_ptr, base_rev)
 
     if pass_root:
       editor = e_factory(root, base_root)
@@ -121,13 +119,13 @@ class SVNLook:
       editor = e_factory()
 
     # construct the editor for printing these things out
-    e_ptr, e_baton = delta.make_editor(editor, self.pool)
+    e_ptr, e_baton = delta.make_editor(editor)
 
     # compute the delta, printing as we go
     def authz_cb(root, path, pool):
       return 1
     repos.dir_delta(base_root, '', '', root, '',
-		    e_ptr, e_baton, authz_cb, 0, 1, 0, 0, self.pool)
+		    e_ptr, e_baton, authz_cb, 0, 1, 0, 0)
 
 
 class Editor(delta.Editor):
@@ -138,11 +136,11 @@ class Editor(delta.Editor):
     self.indent = ''
 
   def open_root(self, base_revision, dir_pool):
-    print '/' + self._get_id('/', dir_pool)
+    print '/' + self._get_id('/')
     self.indent = self.indent + ' '    # indent one space
 
   def add_directory(self, path, *args):
-    id = self._get_id(path, args[-1])
+    id = self._get_id(path)
     print self.indent + _basename(path) + '/' + id
     self.indent = self.indent + ' '    # indent one space
 
@@ -155,16 +153,16 @@ class Editor(delta.Editor):
     self.indent = self.indent[:-1]
 
   def add_file(self, path, *args):
-    id = self._get_id(path, args[-1])
+    id = self._get_id(path)
     print self.indent + _basename(path) + id
 
   # we cheat. one method implementation for two entry points.
   open_file = add_file
 
-  def _get_id(self, path, pool):
+  def _get_id(self, path):
     if self.root:
-      id = fs.node_id(self.root, path, pool)
-      return ' <%s>' % fs.unparse_id(id, pool)
+      id = fs.node_id(self.root, path)
+      return ' <%s>' % fs.unparse_id(id)
     return ''
 
 
@@ -211,7 +209,7 @@ class ChangedEditor(delta.Editor):
 
   def delete_entry(self, path, revision, parent_baton, pool):
     ### need more logic to detect 'replace'
-    if fs.is_dir(self.base_root, '/' + path, pool):
+    if fs.is_dir(self.base_root, '/' + path):
       print 'D   ' + path + '/'
     else:
       print 'D   ' + path
@@ -262,7 +260,7 @@ class DiffEditor(delta.Editor):
     self.root = root
     self.base_root = base_root
 
-  def _do_diff(self, base_path, path, pool):
+  def _do_diff(self, base_path, path):
     if base_path is None:
       print "Added: " + path
       label = path
@@ -281,7 +279,7 @@ class DiffEditor(delta.Editor):
     args.append(label + "\t(new)")
     args.append("-u")
     differ = fs.FileDiff(self.base_root, base_path, self.root,
-                         path, pool, args)
+                         path, diffoptions=args)
     pobj = differ.get_pipe()
     while 1:
       line = pobj.readline()
@@ -292,16 +290,16 @@ class DiffEditor(delta.Editor):
     
   def delete_entry(self, path, revision, parent_baton, pool):
     ### need more logic to detect 'replace'
-    if not fs.is_dir(self.base_root, '/' + path, pool):
-      self._do_diff(path, None, pool)
+    if not fs.is_dir(self.base_root, '/' + path):
+      self._do_diff(path, None)
 
   def add_file(self, path, parent_baton,
                copyfrom_path, copyfrom_revision, file_pool):
-    self._do_diff(None, path, file_pool)
-    return [ '_', ' ', None, file_pool ]
+    self._do_diff(None, path)
+    return [ '_', ' ', None ]
 
   def open_file(self, path, parent_baton, base_revision, file_pool):
-    return [ '_', ' ', path, file_pool ]
+    return [ '_', ' ', path ]
 
   def apply_textdelta(self, file_baton, base_checksum):
     if file_baton[2] is not None:
@@ -382,7 +380,7 @@ def main():
   if not hasattr(SVNLook, 'cmd_' + cmd):
     usage(1)
 
-  core.run_app(SVNLook, sys.argv[1], cmd, rev, txn)
+  SVNLook(sys.argv[1], cmd, rev, txn)
 
 if __name__ == '__main__':
   main()

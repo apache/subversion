@@ -228,7 +228,7 @@ compose_handler (svn_txdelta_window_t *window, void *baton)
       /* Copy the (first) window into the baton. */
       apr_pool_t *window_pool = svn_pool_create (cb->trail->pool);
       assert (cb->window_pool == NULL);
-      cb->window = svn_txdelta__copy_window (window, window_pool);
+      cb->window = svn_txdelta_window_dup (window, window_pool);
       cb->window_pool = window_pool;
       cb->done = (window->sview_len == 0 || window->src_ops == 0);
     }
@@ -368,7 +368,10 @@ rep_undeltify_range (svn_fs_t *fs,
                    (fs, fulltext->contents.fulltext.string_key,
                     source_buf, cb.window->sview_offset, &source_len, 
                     trail, pool));
-          assert (source_len == cb.window->sview_len);
+          if (source_len != cb.window->sview_len)
+            return svn_error_create
+                (SVN_ERR_FS_CORRUPT, NULL,
+                 _("Svndiff source length inconsistency"));
         }
       else
         {
@@ -474,6 +477,9 @@ rep_read_range (svn_fs_t *fs,
         *len = 0;
       else
         {
+          svn_error_t *err;
+          /* Preserve for potential use in error message. */
+          const char *first_rep_key = rep_key;
           /* Make a list of all the rep's we need to undeltify this range.
              We'll have to read them within this trail anyway, so we might
              as well do it once and up front. */
@@ -510,8 +516,19 @@ rep_read_range (svn_fs_t *fs,
 
           if (rep->kind == rep_kind_delta)
             rep = NULL;         /* Don't use source data */
-          SVN_ERR (rep_undeltify_range (fs, reps, rep, cur_chunk, buf, 
-                                        chunk_offset, len, trail, pool));
+          
+          err = rep_undeltify_range (fs, reps, rep, cur_chunk, buf,
+                                     chunk_offset, len, trail, pool);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_FS_CORRUPT)
+                return svn_error_createf 
+                  (SVN_ERR_FS_CORRUPT, err,
+                   _("Corruption detected whilst reading delta chain from "
+                     "representation '%s' to '%s'"), first_rep_key, rep_key);
+              else
+                return err;
+            }
         }
     }
   else /* unknown kind */

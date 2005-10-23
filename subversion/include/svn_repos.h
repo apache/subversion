@@ -97,12 +97,18 @@ typedef enum
 /** Callback type for checking authorization on paths produced by
  * the repository commit editor.
  *
- * Set @a *allowed to TRUE to indicate that the @a required_access on
+ * Set @a *allowed to TRUE to indicate that the @a required access on
  * @a path in @a root is authorized, or set it to FALSE to indicate
  * unauthorized (presumable according to state stored in @a baton).
  *
+ * If @a path is NULL, the callback should perform a global authz
+ * lookup for the @a required access.  That is, the lookup should
+ * check if the @a required access is granted for at least one path of
+ * the repository, and set @a *allowed to TRUE if so.  @a root may
+ * also be NULL if @a path is NULL.
+ *
  * This callback is very similar to svn_repos_authz_func_t, with the
- * exception of the addition of the @a required_access parameter.
+ * exception of the addition of the @a required parameter.
  * This is due to historical reasons: when authz was first implemented
  * for svn_repos_dir_delta(), it seemed there would need only checks
  * for read and write operations, hence the svn_repos_authz_func_t
@@ -661,7 +667,30 @@ svn_repos_replay (svn_fs_root_t *root,
  * NULL).  Callers who supply their own transactions are responsible
  * for cleaning them up (either by committing them, or aborting them).
  *
+ * @since New in 1.4.
+ */
+svn_error_t *
+svn_repos_get_commit_editor4 (const svn_delta_editor_t **editor,
+                              void **edit_baton,
+                              svn_repos_t *repos,
+                              svn_fs_txn_t *txn,
+                              const char *repos_url,
+                              const char *base_path,
+                              const char *user,
+                              const char *log_msg,
+                              svn_commit_callback2_t callback,
+                              void *callback_baton,
+                              svn_repos_authz_callback_t authz_callback,
+                              void *authz_baton,
+                              apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_get_commit_editor4(), but
+ * uses the svn_commit_callback_t type.
+ *
  * @since New in 1.3.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 svn_error_t *
 svn_repos_get_commit_editor3 (const svn_delta_editor_t **editor,
@@ -672,8 +701,8 @@ svn_repos_get_commit_editor3 (const svn_delta_editor_t **editor,
                               const char *base_path,
                               const char *user,
                               const char *log_msg,
-                              svn_commit_callback_t commit_callback,
-                              void *commit_callback_baton,
+                              svn_commit_callback_t callback,
+                              void *callback_baton,
                               svn_repos_authz_callback_t authz_callback,
                               void *authz_baton,
                               apr_pool_t *pool);
@@ -1683,7 +1712,7 @@ svn_repos_get_fs_build_parser2 (const svn_repos_parse_fns2_t **parser,
 
 /**
  * A vtable that is driven by svn_repos_parse_dumpstream().
- * Similar to svn_repos_parse_fns2_t except that it lacks
+ * Similar to @c svn_repos_parse_fns2_t except that it lacks
  * the delete_node_property and apply_textdelta callbacks.
  *
  * @deprecated Provided for backward compatibility with the 1.0 API.
@@ -1783,6 +1812,11 @@ svn_repos_authz_read (svn_authz_t **authz_p, const char *file,
  * repos_name with the @a required_access.  @a authz lists the ACLs to
  * check against.  Set @a *access_granted to indicate if the requested
  * access is granted.
+ *
+ * If @a path is NULL, then check whether @a user has the @a
+ * required_access anywhere in the repository.  Set @a *access_granted
+ * to TRUE if at least one path is accessible with the @a
+ * required_access.
  *
  * @since New in 1.3.
  */

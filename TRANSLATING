@@ -40,7 +40,7 @@ Software version requirements
 =============================
 
 The Makefile build targets locale-gnu-* (used to maintain po files)
-require GNU gettext 0.12 or newer.  Note that this is not a requirement
+require GNU gettext 0.13 or newer.  Note that this is not a requirement
 for those wanting to compile the *.po files into *.mo's.
 
 

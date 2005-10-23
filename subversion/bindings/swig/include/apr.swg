@@ -1,5 +1,5 @@
 /*
- * apr.i :  SWIG interface file for selected APR types
+ * apr.swg :  SWIG include file for selected APR types
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
@@ -31,7 +31,7 @@
 %include typemaps.i
 
 #ifdef SWIGRUBY
-#if SVN_SWIG_VERSION <= 103024
+#if SWIG_VERSION <= 0x010324
 /* for SWIG bug */
 %define OUTPUT_TYPEMAP(type, converter, convtype)
 %typemap(in,numinputs=0) type *OUTPUT($*1_ltype temp), type &OUTPUT($*1_ltype temp) "$1 = &temp;";
@@ -48,17 +48,67 @@ OUTPUT_TYPEMAP(unsigned long long, ULL2NUM, (unsigned long long));
 
 #undef OUTPUT_TYPEMAP
 #endif
+
+%apply unsigned int { apr_uint32_t };
+%apply unsigned int *OUTPUT { apr_uint32_t * };
+%apply size_t { apr_size_t };
+%apply size_t *OUTPUT { apr_size_t * };
+
 #endif
 
 /* ----------------------------------------------------------------------- */
 
-%include apr.h
-
 /* ### be nice to have all the error values and macros. there are some
    ### problems including this file, tho. SWIG isn't smart enough with some
    ### of the preprocessing and thinks there is a macro redefinition */
-//%include apr_errno.h
+//%include apr_errno_h.swg
 typedef int apr_status_t;
+
+/* -----------------------------------------------------------------------
+   Create perl5 typemaps for long long datatypes
+*/
+%typemap(perl5, out) long long {
+    char temp[256];
+    sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t) $1);
+    ST(argvi) = sv_newmortal();
+    sv_setpv((SV*)ST(argvi++), temp);
+}
+%apply long long { apr_int64_t }
+
+%typemap(perl5, out) unsigned long long {
+    char temp[256];
+    sprintf(temp, "%" APR_UINT64_T_FMT, (apr_uint64_t) $1);
+    ST(argvi) = sv_newmortal();
+    sv_setpv((SV*)ST(argvi++), temp);
+}
+%apply unsigned long long { apr_uint64_t }
+
+%typemap(perl5, argout) long long *OUTPUT, long long &OUTPUT {
+  char temp[256];
+  if (argvi >= items) {
+    EXTEND(sp,1);
+  }
+  sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t)*($1));
+  $result = sv_newmortal();
+  sv_setpv($result,temp);
+  argvi++;
+}
+
+%typemap(perl5, argout) unsigned long long *OUTPUT, unsigned long long &OUTPUT {
+  char temp[256];
+  if (argvi >= items) {
+    EXTEND(sp,1);
+  }
+  sprintf(temp, "%" APR_UINT64_T_FMT, (apr_uint64_t)*($1));
+  $result = sv_newmortal();
+  sv_setpv($result,temp);
+  argvi++;
+}
+
+/* -----------------------------------------------------------------------
+ * apr_byte_t
+ */
+%apply unsigned char { apr_byte_t }
 
 /* -----------------------------------------------------------------------
    apr_time_t
@@ -73,11 +123,7 @@ typedef apr_int64_t apr_time_t;
    (e.g. /usr/lib/gcc-lib/plat/ver/include). */
 typedef apr_int32_t time_t;
 
-#if APR_INT64_T_FMT == "ld"
-    %apply long *OUTPUT { apr_time_t * };
-#else
-    %apply long long *OUTPUT { apr_time_t * };
-#endif
+%apply long long *OUTPUT { apr_time_t * };
 
 /* -----------------------------------------------------------------------
    create an OUTPUT argument typemap for an apr_hash_t **
@@ -111,8 +157,10 @@ typedef apr_int32_t time_t;
 }
 
 %typemap(ruby,in,numinputs=0) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
-%typemap(ruby,argout) apr_hash_t **PROPHASH {
-    $result = svn_swig_rb_apr_hash_to_hash_svn_string(*$1);
+%typemap(ruby, argout, fragment="output_helper") apr_hash_t **PROPHASH
+{
+  $result = output_helper($result,
+                          svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
 }
 
 /* -----------------------------------------------------------------------
@@ -141,7 +189,7 @@ typedef apr_int32_t time_t;
 %typemap(python, argout, fragment="output_helper")
      apr_array_header_t **OUTPUT_OF_PROP
 {
-  $result = $1; /* ### WRONG! */
+  /* FIXME: Actually do something here. */
 }
 
 %typemap(ruby, in, numinputs=0)
@@ -205,7 +253,8 @@ apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
 %typemap(python,argout,fragment="t_output_helper") apr_file_t **
     "$result = t_output_helper(
         $result,
-        SWIG_NewPointerObj(*$1, $*1_descriptor, 0));";
+        svn_swig_NewPointerObj(*$1, $*1_descriptor, 
+           _global_svn_swig_py_pool));";
 
 %typemap(perl5, argout) apr_file_t ** {
     ST(argvi) = sv_newmortal();

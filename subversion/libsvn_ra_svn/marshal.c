@@ -206,6 +206,9 @@ static svn_error_t *writebuf_write(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 static svn_error_t *writebuf_printf(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     const char *fmt, ...)
+    __attribute__ ((format (printf, 3, 4)));
+static svn_error_t *writebuf_printf(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                    const char *fmt, ...)
 {
   va_list ap;
   char *str;

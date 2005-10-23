@@ -137,7 +137,10 @@ end
 def copied_files(info)
   changed_files("Copied", info.copied_files) do |rv, files|
     rv << files.collect do |file, from_file, from_rev|
-      "    #{file} (from rev #{from_rev}, #{from_file})\n"
+      <<-INFO
+    #{file}
+      (from rev #{from_rev}, #{from_file})
+INFO
     end.join("")
   end
 end
@@ -195,11 +198,14 @@ def changed_dirs_info(info, uri)
   (info.added_dirs.collect do |dir|
      "  Added: #{dir}\n"
    end + info.copied_dirs.collect do |dir, from_dir, from_rev|
-     "  Copied: #{dir} (from rev #{from_rev}, #{from_dir})\n"
+     <<-INFO
+  Copied: #{dir}
+    (from rev #{from_rev}, #{from_dir})
+INFO
    end + info.deleted_dirs.collect do |dir|
      <<-INFO
   Deleted: #{dir}
-    % svn ls -r #{rev} #{[uri, dir].compact.join("/")}
+    % svn ls #{[uri, dir].compact.join("/")}@#{rev - 1}
 INFO
    end + info.updated_dirs.collect do |dir|
      "  Modified: #{dir}\n"
@@ -211,24 +217,26 @@ def diff_info(info, uri, add_diff)
     [
       key,
       values.collect do |type, value|
+        args = []
+        rev = info.revision
         case type
         when :added
           command = "cat"
-          rev = info.revision.to_s
         when :modified, :property_changed
           command = "diff"
-          rev = "#{info.revision - 1}:#{info.revision}"
+          args.concat(["-r", "#{info.revision - 1}:#{info.revision}"])
         when :deleted
           command = "cat"
-          rev = (info.revision - 1).to_s
+          rev -= 1
         when :copied
           command = "cat"
-          rev = (info.revision - 1).to_s
         else
           raise "unknown diff type: #{value.type}"
         end
 
-        link = [uri, key].compact.join("/")
+        command += " #{args.join(' ')}" unless args.empty?
+
+        link = [uri, key].compact.join("/") + "@#{rev}"
 
         line_info = "+#{value.added_line} -#{value.deleted_line}"
         desc = <<-HEADER
@@ -240,7 +248,7 @@ HEADER
           desc << value.body
         else
           desc << <<-CONTENT
-    % svn #{command} -r #{rev} #{link}
+    % svn #{command} #{link}
 CONTENT
         end
       

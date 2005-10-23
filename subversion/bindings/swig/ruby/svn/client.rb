@@ -4,6 +4,7 @@ require "svn/error"
 require "svn/util"
 require "svn/core"
 require "svn/wc"
+require "svn/ra"
 require "svn/ext/client"
 
 module Svn
@@ -17,17 +18,30 @@ module Svn
       end
     end
 
-    class CommitInfo
+    class CommitItem2
       class << self
         undef new
       end
-
-      alias _date date
-      def date
-        Util.string_to_time(_date)
-      end
     end
 
+    class Info
+      alias url URL
+    end
+
+    PropListItem = ProplistItem
+    class PropListItem
+      alias name node_name
+      alias props prop_hash
+
+      def method_missing(meth, *args)
+        _props = props
+        if _props.respond_to?(meth)
+          _props.__send__(meth, *args)
+        else
+          super
+        end
+      end
+    end
     
     Context = Ctx
     class Context
@@ -63,12 +77,12 @@ module Svn
 
       def mkdir(*paths)
         paths = paths.first if paths.size == 1 and paths.first.is_a?(Array)
-        Client.mkdir(normalize_path(paths), self)
+        Client.mkdir2(normalize_path(paths), self)
       end
 
       def commit(targets, recurse=true, keep_locks=false)
         targets = [targets] unless targets.is_a?(Array)
-        Client.commit2(targets, recurse, keep_locks, self)
+        Client.commit3(targets, recurse, keep_locks, self)
       end
       alias ci commit
 
@@ -79,6 +93,7 @@ module Svn
                        recurse, get_all, update, no_ignore,
                        ignore_externals, self)
       end
+      alias st status
 
       def add(path, recurse=true, force=false, no_ignore=false)
         Client.add3(path, recurse, force, no_ignore, self)
@@ -86,7 +101,7 @@ module Svn
 
       def delete(paths, force=false)
         paths = [paths] unless paths.is_a?(Array)
-        Client.delete(paths, force, self)
+        Client.delete2(paths, force, self)
       end
       alias del delete
       alias remove delete
@@ -122,6 +137,10 @@ module Svn
         paths = [paths] unless paths.is_a?(Array)
         Client.revert(paths, recurse, self)
       end
+
+      def resolved(path, recurse=true)
+        Client.resolved(path, recurse, self)
+      end
       
       def propset(name, value, target, recurse=true, force=false)
         Client.propset2(name, value, target, recurse, force, self)
@@ -136,16 +155,38 @@ module Svn
       alias prop_del propdel
       alias pdel propdel
       alias pd propdel
+
+      def propget(name, target, rev=nil, peg_rev=nil, recurse=true)
+        rev ||= "HEAD"
+        peg_rev ||= rev
+        Client.propget2(name, target, rev, peg_rev, recurse, self)
+      end
+      alias prop_get propget
+      alias pget propget
+      alias pg propget
+
+      def proplist(target, rev=nil, peg_rev=nil, recurse=true)
+        rev ||= "HEAD"
+        peg_rev ||= rev
+        Client.proplist2(target, rev, peg_rev, recurse, self)
+      end
+      alias prop_list proplist
+      alias plist proplist
+      alias pl proplist
       
       def copy(src_path, dst_path, rev=nil)
-        Client.copy(src_path, rev || "HEAD", dst_path, self)
+        Client.copy2(src_path, rev || "HEAD", dst_path, self)
       end
       alias cp copy
       
-      def move(src_path, dst_path, rev=nil, force=false)
-        Client.move(src_path, rev || "HEAD", dst_path, force, self)
+      def move(src_path, dst_path, force=false)
+        Client.move3(src_path, dst_path, force, self)
       end
       alias mv move
+
+      def mv_f(src_path, dst_path)
+        move(src_path, dst_path, true)
+      end
 
       def diff(options, path1, rev1, path2, rev2,
                out_file, err_file, recurse=true,
@@ -190,19 +231,7 @@ module Svn
                          force, dry_run, self)
       end
       
-      def cat(path, rev="HEAD", output=nil)
-        used_string_io = output.nil?
-        output ||= StringIO.new
-        Client.cat(output, path, rev, self)
-        if used_string_io
-          output.rewind
-          output.read
-        else
-          output
-        end
-      end
-      
-      def cat2(path, peg_rev=nil, rev="HEAD", output=nil)
+      def cat(path, rev="HEAD", peg_rev=nil, output=nil)
         used_string_io = output.nil?
         output ||= StringIO.new
         Client.cat2(output, path, peg_rev, rev, self)
@@ -213,12 +242,47 @@ module Svn
           output
         end
       end
+
+      def lock(targets, comment=nil, steal_lock=false)
+        targets = [targets] unless targets.is_a?(Array)
+        Client.lock(targets, comment, steal_lock, self)
+      end
+      
+      def unlock(targets, break_lock=false)
+        targets = [targets] unless targets.is_a?(Array)
+        Client.unlock(targets, break_lock, self)
+      end
+
+      def info(path_or_uri, rev=nil, peg_rev=nil, recurse=false)
+        rev ||= URI(path_or_uri).scheme ? "HEAD" : "BASE"
+        peg_rev ||= rev
+        receiver = Proc.new do |path, info|
+          yield(path, info)
+        end
+        Client.info(path_or_uri, rev, peg_rev, receiver, recurse, self)
+      end
+
+      def url_from_path(path)
+        Client.url_from_path(path)
+      end
+      
+      def uuid_from_path(path, adm)
+        Client.uuid_from_path(path, adm, self)
+      end
+      
+      def uuid_from_url(url)
+        Client.uuid_from_url(url, self)
+      end
+
+      def open_ra_session(url)
+        Client.open_ra_session(url, self)
+      end
       
       def log(paths, start_rev, end_rev, limit,
               discover_changed_paths, strict_node_history)
         paths = [paths] unless paths.is_a?(Array)
         receiver = Proc.new do |changed_paths, rev, author, date, message|
-          date = Util.string_to_time(date) if date
+          date = Time.from_svn_format(date) if date
           yield(changed_paths, rev, author, date, message)
         end
         Client.log2(paths, start_rev, end_rev, limit,
@@ -249,7 +313,8 @@ module Svn
         end_rev ||= URI(path_or_uri).scheme ? "HEAD" : "BASE"
         peg_rev ||= end_rev
         receiver = Proc.new do |line_no, revision, author, date, line|
-          yield(line_no, revision, author, Util.string_to_time(date), line)
+          date = Time.from_svn_format(date) if date
+          yield(line_no, revision, author, date, line)
         end
         Client.blame2(path_or_uri, peg_rev, start_rev,
                       end_rev, receiver, self)
@@ -262,6 +327,7 @@ module Svn
         value, = revprop_get(name, uri, rev)
         value
       end
+      alias rp revprop
       
       def revprop_get(name, uri, rev)
         result = Client.revprop_get(name, uri, rev, self)
@@ -271,13 +337,43 @@ module Svn
           [nil, result]
         end
       end
+      alias rpget revprop_get
+      alias rpg revprop_get
       
       def revprop_set(name, value, uri, rev, force=false)
         Client.revprop_set(name, value, uri, rev, force, self)
       end
+      alias rpset revprop_set
+      alias rps revprop_set
       
       def revprop_del(name, uri, rev, force=false)
         Client.revprop_set(name, nil, uri, rev, force, self)
+      end
+      alias rpdel revprop_del
+      alias rpd revprop_del
+
+      def revprop_list(uri, rev)
+        props, rev = Client.revprop_list(uri, rev, self)
+        if props.has_key?(Svn::Core::PROP_REVISION_DATE)
+          props[Svn::Core::PROP_REVISION_DATE] =
+            Time.from_svn_format(props[Svn::Core::PROP_REVISION_DATE])
+        end
+        [props, rev]
+      end
+      alias rplist revprop_list
+      alias rpl revprop_list
+
+      def export(from, to, rev=nil, peg_rev=nil,
+                 force=false, ignore_externals=false,
+                 recurse=true, native_eol=nil)
+        Client.export3(from, to, rev, peg_rev, force,
+                       ignore_externals, recurse, native_eol, self)
+      end
+      
+      def ls(path_or_uri, rev=nil, peg_rev=nil, recurse=false)
+        rev ||= URI(path_or_uri).scheme ? "HEAD" : "BASE"
+        peg_rev ||= rev
+        Client.ls3(path_or_uri, rev, peg_rev, recurse, self)
       end
       
       def switch(path, uri, rev=nil, recurse=true)
@@ -329,21 +425,18 @@ module Svn
       end
 
       def set_log_msg_func(callback=Proc.new)
-        self.log_msg_func = nil
         @log_msg_baton = callback
-        self.log_msg_baton = callback
+        Client.set_log_msg_func2(self, callback)
       end
       
       def set_notify_func(callback=Proc.new)
-        self.notify_func2 = nil
         @notify_baton2 = callback
-        self.notify_baton2 = callback
+        Client.set_notify_func2(self, callback)
       end
       
       def set_cancel_func(callback=Proc.new)
-        self.cancel_func = nil
         @cancel_baton = callback
-        self.cancel_baton = callback
+        Client.set_cancel_func(self, callback)
       end
       
       private

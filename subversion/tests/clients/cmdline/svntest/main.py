@@ -184,9 +184,11 @@ greek_state = wc.State('', {
 def get_admin_name():
   "Return name of SVN administrative subdirectory."
 
-  # todo: One day this sucker will try to intelligently discern what
-  # the admin dir is.  For now, '.svn' will suffice.
-  return '.svn'
+  if (windows or sys.platform == 'cygwin') \
+      and os.environ.has_key('SVN_ASP_DOT_NET_HACK'):
+    return '_svn'
+  else:
+    return '.svn'
 
 def get_start_commit_hook_path(repo_dir):
   "Return the path of the start-commit-hook conf file in REPO_DIR."
@@ -275,6 +277,28 @@ def reset_config_dir():
   global default_config_dir
 
   config_dir = default_config_dir
+
+def create_config_dir(cfgdir,
+                      config_contents = '#\n',
+                      server_contents = '#\n'):
+  "Create config directories and files"
+
+  # config file names
+  cfgfile_cfg = os.path.join(cfgdir, 'config')
+  cfgfile_srv = os.path.join(cfgdir, 'server')
+
+  # create the directory
+  if not os.path.isdir(cfgdir):
+    os.makedirs(cfgdir)
+
+  fd = open(cfgfile_cfg, 'w')
+  fd.write(config_contents)
+  fd.close()
+
+  fd = open(cfgfile_srv, 'w')
+  fd.write(server_contents)
+  fd.close()
+
 
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
@@ -454,16 +478,35 @@ def canonize_url(input):
 # Sandbox handling
 
 class Sandbox:
-  "Manages a sandbox for a test to operate within."
+  """Manages a sandbox (one or more repository/working copy pairs) for
+  a test to operate within."""
+
+  dependents = None
 
   def __init__(self, module, idx):
-    self.name = '%s-%d' % (module, idx)
+    self._set_name("%s-%d" % (module, idx))
+
+  def _set_name(self, name):
+    """A convenience method for renaming a sandbox, useful when
+    working with multiple repositories in the same unit test."""
+    self.name = name
     self.wc_dir = os.path.join(general_wc_dir, self.name)
     self.repo_dir = os.path.join(general_repo_dir, self.name)
     self.repo_url = test_area_url + '/' + self.repo_dir
     if windows == 1:
       self.repo_url = string.replace(self.repo_url, '\\', '/')
     self.test_paths = [self.wc_dir, self.repo_dir]
+
+  def clone_dependent(self):
+    """A convenience method for creating a near-duplicate of this
+    sandbox, useful when working with multiple repositories in the
+    same unit test.  Any necessary cleanup operations are triggered
+    by cleanup of the original sandbox."""
+    if not self.dependents:
+      self.dependents = []
+    self.dependents.append(copy.deepcopy(self))
+    self.dependents[-1]._set_name("%s-%d" % (self.name, len(self.dependents)))
+    return self.dependents[-1]
 
   def build(self):
     if actions.make_repo_and_wc(self):
@@ -486,6 +529,11 @@ class Sandbox:
     return path
 
   def cleanup_test_paths(self):
+    "Clean up detritus from this sandbox, and any dependents."
+    if self.dependents:
+      # Recursively cleanup any dependent sandboxes.
+      for sbox in self.dependents:
+        sbox.cleanup_test_paths()
     for path in self.test_paths:
       _cleanup_test_path(path)
 
@@ -598,7 +646,7 @@ def run_tests(test_list):
     opts, args = my_getopt(sys.argv[1:], 'v',
                            ['url=', 'fs-type=', 'verbose', 'cleanup'])
   except getopt.GetoptError:
-    args = []
+    opts, args = [], []
 
   for arg in args:
     if arg == "list":

@@ -15,7 +15,7 @@
  * ====================================================================
  */
 
-#include <svn_time.h>
+#include "svn_time.h"
 #include "svn_error.h"
 
 #include "svn_private_config.h"

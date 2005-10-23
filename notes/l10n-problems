@@ -179,7 +179,19 @@ localization must occur on the server, or significantly increase the
 complexity of marshalling messages from the server as
 unlocalized/unformatted data structures and localizing them on the
 client side using some additional wrapper APIs to handle the
-unmarshalling and message formatting.
+unmarshalling and message formatting.  Additionally, client and server
+versions may not match up, meaning that message keys and format string
+values provided by the server may not correspond to what's available
+on the client.
+
+Paul Querna suggested a variation on this scheme involving requesting
+(once) and caching the localizations (to the local disk) for each
+server version, along with sending the message key (for lookup of
+localized text) and an already formatted text (to use as the default
+when no localization bundle is available).  In addition to the
+complications mentioned previously, this has the downside of crippling
+the localization of server-generated messages when no write access to
+the local disk is available to the client.
 
 
 

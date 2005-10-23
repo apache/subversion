@@ -50,7 +50,7 @@
 
 
 svn_error_t *
-svn_cl__print_commit_info (svn_client_commit_info2_t *commit_info,
+svn_cl__print_commit_info (svn_commit_info_t *commit_info,
                            apr_pool_t *pool)
 {
   if ((commit_info) 
@@ -130,9 +130,9 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
   if (as_text)
     {
       const char *translated;
-      SVN_ERR (svn_subst_translate_cstring (contents->data, &translated,
-                                            APR_EOL_STR, FALSE,
-                                            NULL, FALSE, pool));
+      SVN_ERR (svn_subst_translate_cstring2 (contents->data, &translated,
+                                             APR_EOL_STR, FALSE,
+                                             NULL, FALSE, pool));
       translated_contents = svn_string_create ("", pool);
       if (encoding)
         SVN_ERR (svn_utf_cstring_from_utf8_ex (&translated_contents->data,
@@ -273,6 +273,8 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
       /* Only report remove error if there was no previous error. */
       if (! err && err2)
         err = err2;
+      else
+        svn_error_clear (err2);
     }
 
  cleanup2:
@@ -430,17 +432,17 @@ truncate_buffer_at_prefix (apr_size_t *new_len,
         }
     }
 
-  return;
+  /* NOTREACHED */
 }
 
 
 #define EDITOR_EOF_PREFIX  _("--This line, and those below, will be ignored--")
 
-/* This function is of type svn_client_get_commit_log_t. */
+/* This function is of type svn_client_get_commit_log2_t. */
 svn_error_t *
 svn_cl__get_log_message (const char **log_msg,
                          const char **tmp_file,
-                         apr_array_header_t *commit_items,
+                         const apr_array_header_t *commit_items,
                          void *baton,
                          apr_pool_t *pool)
 {
@@ -488,8 +490,8 @@ svn_cl__get_log_message (const char **log_msg,
 
       for (i = 0; i < commit_items->nelts; i++)
         {
-          svn_client_commit_item_t *item
-            = ((svn_client_commit_item_t **) commit_items->elts)[i];
+          svn_client_commit_item2_t *item
+            = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item2_t *);
           const char *path = item->path;
           char text_mod = '_', prop_mod = ' ', unlock = ' ';
 

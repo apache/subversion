@@ -26,9 +26,11 @@
 
 %include typemaps.i
 
-%import apr.i
-%import svn_types.i
-%import svn_string.i
+%include svn_global.swg
+%import apr.swg
+%import core.i
+%import svn_types.swg
+%import svn_string.swg
 %import svn_delta.i
 
 /* -----------------------------------------------------------------------
@@ -38,6 +40,9 @@
    destroy the things).
 */
 %nodefault;
+
+/* Redundant from 1.1 onwards, so not worth manually wrapping the callback. */
+%ignore svn_fs_set_berkeley_errcall;
 
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
@@ -65,8 +70,11 @@
 %apply const char *MAY_BE_NULL {
     const char *base_checksum,
     const char *result_checksum,
-    const char *token
+    const char *token,
+    const char *comment
 };
+
+%apply apr_hash_t *STRING_TO_STRING { apr_hash_t *fs_config };
 
 /* svn_fs_parse_id() */
 %apply (const char *PTR, apr_size_t LEN) {
@@ -91,11 +99,13 @@
 %typemap(python,argout,fragment="t_output_helper") apr_hash_t **entries_p {
     $result = t_output_helper(
         $result,
-        svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_fs_dirent_t));
+        svn_swig_py_convert_hash(*$1, $descriptor(svn_fs_dirent_t *),
+          _global_svn_swig_py_pool));
 }
 %typemap(perl5,in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
 %typemap(perl5,argout) apr_hash_t **entries_p {
-    ST(argvi++) = svn_swig_pl_convert_hash(*$1, SWIGTYPE_p_svn_fs_dirent_t);
+    ST(argvi++) = svn_swig_pl_convert_hash(*$1, 
+      $descriptor(svn_fs_dirent_t *));
 }
 %typemap(ruby,in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
 %typemap(ruby,argout) apr_hash_t **entries_p {
@@ -111,12 +121,21 @@
 %typemap(python, argout, fragment="t_output_helper") apr_hash_t **changed_paths_p {
     $result = t_output_helper(
         $result,
-        svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_fs_path_change_t));
+        svn_swig_py_convert_hash(*$1, $descriptor(svn_fs_path_change_t *),
+          _global_svn_swig_py_pool));
 }
 
 %typemap(perl5, in,numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
 %typemap(perl5, argout) apr_hash_t **changed_paths_p {
-    ST(argvi++) = svn_swig_pl_convert_hash(*$1, SWIGTYPE_p_svn_fs_path_change_t);
+    ST(argvi++) = svn_swig_pl_convert_hash(*$1, 
+      $descriptor(svn_fs_path_change_t *));
+}
+
+%typemap(ruby, in, numinputs=0) apr_hash_t **changed_paths_p = apr_hash_t **OUTPUT;
+%typemap(ruby, argout) apr_hash_t **changed_paths_p
+{
+  $result = svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
+                                                   "svn_fs_path_change_t *");
 }
 
 /* -----------------------------------------------------------------------
@@ -125,6 +144,12 @@
 %typemap(python, in) (svn_fs_get_locks_callback_t get_locks_func, void *get_locks_baton) {
   $1 = svn_swig_py_fs_get_locks_func;
   $2 = $input; /* our function is the baton. */
+}
+
+%typemap(ruby, in) (svn_fs_get_locks_callback_t get_locks_func, void *get_locks_baton)
+{
+  $1 = svn_swig_rb_fs_get_locks_callback;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -147,7 +172,6 @@
 
 %{
 #include "svn_md5.h"
-#include "svn_fs.h"
 
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
@@ -162,4 +186,28 @@
 #endif
 %}
 
-%include svn_fs.h
+#ifdef SWIGRUBY
+%ignore svn_fs_set_warning_func;
+%ignore svn_fs_root_fs;
+#endif
+
+%include svn_fs_h.swg
+
+#ifdef SWIGRUBY
+%inline %{
+static void
+svn_fs_set_warning_func_wrapper(svn_fs_t *fs,
+                                svn_fs_warning_callback_t warning,
+                                void *warning_baton,
+                                apr_pool_t *pool)
+{
+  svn_fs_set_warning_func(fs, warning, warning_baton);
+}
+
+static svn_fs_t *
+svn_fs_root_fs_wrapper(svn_fs_root_t *root, apr_pool_t *pool)
+{
+  return svn_fs_root_fs(root);
+}
+%}
+#endif

@@ -88,7 +88,7 @@ public class BasicTests extends SVNTests
                     null, true);
             fail("missing exception");
         }
-        catch (ClientException e)
+        catch (ClientException expected)
         {
         }
         // modify file A/mu
@@ -531,21 +531,24 @@ public class BasicTests extends SVNTests
         OneTest thisTest = new OneTest();
 
         // create a lock file in A/B
-        File adminLock = new File(thisTest.getWorkingCopy(),"A/B/.svn/lock");
+        File adminLock = new File(thisTest.getWorkingCopy(),"A/B/" +
+                                  getAdminDirectoryName() + "/lock");
         PrintWriter pw = new PrintWriter(new FileOutputStream(adminLock));
         pw.print("stop looking!");
         pw.close();
         thisTest.getWc().setItemIsLocked("A/B", true);
 
         // create a lock file in A/D/G
-        adminLock = new File(thisTest.getWorkingCopy(),"A/D/G/.svn/lock");
+        adminLock = new File(thisTest.getWorkingCopy(),"A/D/G/" +
+                             getAdminDirectoryName() + "/lock");
         pw = new PrintWriter(new FileOutputStream(adminLock));
         pw.print("stop looking!");
         pw.close();
         thisTest.getWc().setItemIsLocked("A/D/G", true);
 
         // create a lock file in A/C
-        adminLock = new File(thisTest.getWorkingCopy(),"A/C/.svn/lock");
+        adminLock = new File(thisTest.getWorkingCopy(),"A/C/" +
+                             getAdminDirectoryName() + "/lock");
         pw = new PrintWriter(new FileOutputStream(adminLock));
         pw.print("stop looking!");
         pw.close();
@@ -780,7 +783,7 @@ public class BasicTests extends SVNTests
                     null, false);
             fail("missing exception");
         }
-        catch(ClientException e)
+        catch(ClientException expected)
         {
         }
 
@@ -792,7 +795,7 @@ public class BasicTests extends SVNTests
                     false);
             fail("missing exception");
         }
-        catch(ClientException e)
+        catch(ClientException expected)
         {
         }
 
@@ -804,7 +807,7 @@ public class BasicTests extends SVNTests
                     null, false);
             fail("missing exception");
         }
-        catch(ClientException e)
+        catch(ClientException expected)
         {
         }
 
@@ -816,7 +819,7 @@ public class BasicTests extends SVNTests
                     false);
             fail("missing exception");
         }
-        catch(ClientException e)
+        catch(ClientException expected)
         {
         }
 
@@ -828,7 +831,7 @@ public class BasicTests extends SVNTests
                     false);
             fail("missing exception");
         }
-        catch(ClientException e)
+        catch(ClientException expected)
         {
         }
 
@@ -840,7 +843,7 @@ public class BasicTests extends SVNTests
                     false);
             fail("missing exception");
         }
-        catch(ClientException e)
+        catch(ClientException expected)
         {
         }
 
@@ -852,7 +855,7 @@ public class BasicTests extends SVNTests
                     null, false);
             fail("missing exception");
         }
-        catch(ClientException e)
+        catch(ClientException expected)
         {
         }
 
@@ -864,7 +867,7 @@ public class BasicTests extends SVNTests
                     false);
             fail("missing exception");
         }
-        catch(ClientException e)
+        catch(ClientException expected)
         {
         }
 
@@ -875,7 +878,7 @@ public class BasicTests extends SVNTests
                     false);
             fail("missing exception");
         }
-        catch(ClientException e)
+        catch(ClientException expected)
         {
         }
 
@@ -1367,6 +1370,17 @@ public class BasicTests extends SVNTests
         assertEquals("rev number from commit",-1, client.commit(
                 new String[]{thisTest.getWCPath()},"message", true));
         assertEquals("file should be read write now", true, f.canWrite());
+
+        try
+        {
+            // Attempt to lock an invalid path
+            client.lock(new String[]{thisTest.getWCPath()+"/A/mu2"}, "comment",
+                        false);
+            fail("missing exception");
+        }
+        catch (ClientException expected)
+        {
+        }
     }
 
     /**

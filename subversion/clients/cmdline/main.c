@@ -371,8 +371,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "\n"
        "  Print information about each TARGET (default: '.')\n"
        "  TARGET may be either a working-copy path or URL.\n"),
-    {'r', 'R', svn_cl__targets_opt, SVN_CL__AUTH_OPTIONS, 
-     svn_cl__config_dir_opt} },
+    {'r', 'R', svn_cl__targets_opt, svn_cl__incremental_opt, svn_cl__xml_opt,
+     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
  
   { "list", svn_cl__ls, {"ls"},
     N_("List directory entries in the repository.\n"
@@ -393,7 +393,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "\n"
        "    Revision number of the last commit\n"
        "    Author of the last commit\n"
-       "    If locked, the owner of the lock\n"
+       "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
        "    Size (in bytes)\n"
        "    Date and time of the last commit\n"),
     {'r', 'v', 'R', svn_cl__incremental_opt, svn_cl__xml_opt,
@@ -845,6 +845,16 @@ main (int argc, const char * const *argv)
   if (err)
     return svn_cmdline_handle_exit_error (err, pool, "svn: ");
 
+#if defined(WIN32) || defined(__CYGWIN__)
+  /* Set the working copy administrative directory name. */
+  if (getenv ("SVN_ASP_DOT_NET_HACK"))
+    {
+      err = svn_wc_set_adm_dir ("_svn", pool);
+      if (err)
+        return svn_cmdline_handle_exit_error (err, pool, "svn: ");
+    }
+#endif
+
   /* Initialize the RA library. */
   err = svn_ra_initialize (pool);
   if (err)
@@ -1102,6 +1112,7 @@ main (int argc, const char * const *argv)
             svn_pool_destroy (pool);
             return EXIT_FAILURE;
           }
+        break;
       case svn_cl__no_unlock_opt:
         opt_state.no_unlock = TRUE;
         break;
@@ -1298,7 +1309,7 @@ main (int argc, const char * const *argv)
 
   cfg = apr_hash_get (ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
                       APR_HASH_KEY_STRING);
-  
+
   /* Update the options in the config */
   /* XXX: Only diff_cmd for now, overlay rest later and stop passing
      opt_state altogether? */
@@ -1331,8 +1342,8 @@ main (int argc, const char * const *argv)
                          SVN_CONFIG_OPTION_NO_UNLOCK, TRUE);
 
   /* Set the log message callback function.  Note that individual
-     subcommands will populate the ctx->log_msg_baton */
-  ctx->log_msg_func = svn_cl__get_log_message;
+     subcommands will populate the ctx->log_msg_baton2 */
+  ctx->log_msg_func2 = svn_cl__get_log_message;
 
   /* Authentication set-up. */
   {
@@ -1341,7 +1352,7 @@ main (int argc, const char * const *argv)
 
     /* The whole list of registered providers */
     apr_array_header_t *providers
-      = apr_array_make (pool, 10, sizeof (svn_auth_provider_object_t *));
+      = apr_array_make (pool, 11, sizeof (svn_auth_provider_object_t *));
 
     /* The main disk-caching auth providers, for both
        'username/password' creds and 'username' creds.  */

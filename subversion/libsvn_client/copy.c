@@ -271,7 +271,7 @@ path_driver_cb_func (void **dir_baton,
 
 
 static svn_error_t *
-repos_to_repos_copy (svn_client_commit_info2_t **commit_info,
+repos_to_repos_copy (svn_commit_info_t **commit_info_p,
                      const char *src_url, 
                      const svn_opt_revision_t *src_revision, 
                      const char *dst_url, 
@@ -334,7 +334,7 @@ repos_to_repos_copy (svn_client_commit_info2_t **commit_info,
                                               ctx, pool);
 
   /* If the two URLs appear not to be in the same repository, then
-     top_url will be empty and the call to svn_ra_open()
+     top_url will be empty and the call to svn_ra_open2()
      above will have failed.  Below we check for that, and propagate a
      descriptive error back to the user.
    
@@ -420,9 +420,9 @@ repos_to_repos_copy (svn_client_commit_info2_t **commit_info,
     }
 
   /* Create a new commit item and add it to the array. */
-  if (ctx->log_msg_func)
+  if (ctx->log_msg_func || ctx->log_msg_func2)
     {
-      svn_client_commit_item_t *item;
+      svn_client_commit_item2_t *item;
       const char *tmp_file;
       apr_array_header_t *commit_items 
         = apr_array_make (pool, 2, sizeof (item));
@@ -430,17 +430,16 @@ repos_to_repos_copy (svn_client_commit_info2_t **commit_info,
       item = apr_pcalloc (pool, sizeof (*item));
       item->url = svn_path_join (top_url, dst_rel, pool);
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-      (*((svn_client_commit_item_t **) apr_array_push (commit_items))) = item;
+      APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
       if (is_move && (! resurrection))
         {
           item = apr_pcalloc (pool, sizeof (*item));
           item->url = svn_path_join (top_url, src_rel, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
-          (*((svn_client_commit_item_t **) apr_array_push (commit_items))) = 
-            item;
+          APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
         }
-      SVN_ERR ((*ctx->log_msg_func) (&message, &tmp_file, commit_items, 
-                                     ctx->log_msg_baton, pool));
+      SVN_ERR (svn_client__get_log_msg(&message, &tmp_file, commit_items,
+                                       ctx, pool));
       if (! message)
         return SVN_NO_ERROR;
     }
@@ -449,12 +448,13 @@ repos_to_repos_copy (svn_client_commit_info2_t **commit_info,
 
 
   /* Fetch RA commit editor. */
-  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
-  SVN_ERR (svn_ra_get_commit_editor (ra_session, &editor, &edit_baton, message,
-                                     svn_client__commit_callback,
-                                     commit_baton, 
-                                     NULL, TRUE, /* No lock tokens */
-                                     pool));
+  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info_p, pool));
+  SVN_ERR (svn_ra_get_commit_editor2 (ra_session, &editor, &edit_baton,
+                                      message,
+                                      svn_client__commit_callback,
+                                      commit_baton, 
+                                      NULL, TRUE, /* No lock tokens */
+                                      pool));
 
   /* Setup our PATHS for the path-based editor drive. */
   APR_ARRAY_PUSH (paths, const char *) = dst_rel;
@@ -579,7 +579,7 @@ reconcile_errors (svn_error_t *commit_err,
 
 
 static svn_error_t *
-wc_to_repos_copy (svn_client_commit_info2_t **commit_info,
+wc_to_repos_copy (svn_commit_info_t **commit_info_p,
                   const char *src_path, 
                   const char *dst_url, 
                   svn_client_ctx_t *ctx,
@@ -647,19 +647,19 @@ wc_to_repos_copy (svn_client_commit_info2_t **commit_info,
     }
 
   /* Create a new commit item and add it to the array. */
-  if (ctx->log_msg_func)
+  if (ctx->log_msg_func || ctx->log_msg_func2)
     {
-      svn_client_commit_item_t *item;
+      svn_client_commit_item2_t *item;
       const char *tmp_file;
 
       commit_items = apr_array_make (pool, 1, sizeof (item));      
       item = apr_pcalloc (pool, sizeof (*item));
       item->url = base_url;
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-      (*((svn_client_commit_item_t **) apr_array_push (commit_items))) = item;
-      
-      SVN_ERR ((*ctx->log_msg_func) (&message, &tmp_file, commit_items, 
-                                     ctx->log_msg_baton, pool));
+      APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
+
+      SVN_ERR (svn_client__get_log_msg (&message, &tmp_file, commit_items,
+                                        ctx, pool));
       if (! message)
         return SVN_NO_ERROR;
     }
@@ -705,13 +705,13 @@ wc_to_repos_copy (svn_client_commit_info2_t **commit_info,
     goto cleanup;
 
   /* Fetch RA commit editor. */
-  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
-  if ((cmt_err = svn_ra_get_commit_editor (ra_session, &editor, &edit_baton, 
-                                           message,
-                                           svn_client__commit_callback,
-                                           commit_baton, 
-                                           NULL, TRUE, /* No lock tokens */
-                                           pool)))
+  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info_p, pool));
+  if ((cmt_err = svn_ra_get_commit_editor2 (ra_session, &editor, &edit_baton, 
+                                            message,
+                                            svn_client__commit_callback,
+                                            commit_baton, 
+                                            NULL, TRUE, /* No lock tokens */
+                                            pool)))
     goto cleanup;
 
   /* Make a note that we have a commit-in-progress. */
@@ -852,7 +852,8 @@ repos_to_wc_copy (const char *src_url,
     const svn_wc_entry_t *ent;
 
     SVN_ERR (svn_wc_entry (&ent, dst_path, adm_access, FALSE, pool));
-    if (ent && (ent->kind != svn_node_dir))
+    if (ent && (ent->kind != svn_node_dir) && 
+        (ent->schedule != svn_wc_schedule_delete))
       return svn_error_createf
         (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
          _("Entry for '%s' exists (though the working file is missing)"),
@@ -975,9 +976,9 @@ repos_to_wc_copy (const char *src_url,
       if (! SVN_IS_VALID_REVNUM (src_revnum))
         src_revnum = real_rev;
 
-      err = svn_wc_add_repos_file
+      err = svn_wc_add_repos_file2
         (dst_path, adm_access,
-         new_text_path, new_props,
+         new_text_path, NULL, new_props, NULL,
          same_repositories ? src_url : NULL,
          same_repositories ? src_revnum : SVN_INVALID_REVNUM,
          pool);
@@ -1006,7 +1007,7 @@ repos_to_wc_copy (const char *src_url,
 
 
 static svn_error_t *
-setup_copy (svn_client_commit_info2_t **commit_info,
+setup_copy (svn_commit_info_t **commit_info_p,
             const char *src_path,
             const svn_opt_revision_t *src_revision,
             const char *dst_path,
@@ -1095,7 +1096,7 @@ setup_copy (svn_client_commit_info2_t **commit_info,
     }
   else if ((! src_is_url) && (dst_is_url))
     {
-      SVN_ERR (wc_to_repos_copy (commit_info, src_path, dst_path, 
+      SVN_ERR (wc_to_repos_copy (commit_info_p, src_path, dst_path, 
                                  ctx, pool));
     }
   else if ((src_is_url) && (! dst_is_url))
@@ -1106,7 +1107,7 @@ setup_copy (svn_client_commit_info2_t **commit_info,
     }
   else
     {
-      SVN_ERR (repos_to_repos_copy (commit_info, src_path, src_revision,
+      SVN_ERR (repos_to_repos_copy (commit_info_p, src_path, src_revision,
                                     dst_path, ctx, is_move, pool));
     }
 
@@ -1118,14 +1119,14 @@ setup_copy (svn_client_commit_info2_t **commit_info,
 /* Public Interfaces */
 
 svn_error_t *
-svn_client_copy2 (svn_client_commit_info2_t **commit_info,
+svn_client_copy2 (svn_commit_info_t **commit_info_p,
                   const char *src_path,
                   const svn_opt_revision_t *src_revision,
                   const char *dst_path,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  return setup_copy (commit_info, 
+  return setup_copy (commit_info_p,
                      src_path, src_revision, dst_path,
                      FALSE /* is_move */,
                      TRUE /* force, set to avoid deletion check */,
@@ -1135,25 +1136,25 @@ svn_client_copy2 (svn_client_commit_info2_t **commit_info,
 
 
 svn_error_t *
-svn_client_copy (svn_client_commit_info_t **commit_info,
+svn_client_copy (svn_client_commit_info_t **commit_info_p,
                  const char *src_path,
                  const svn_opt_revision_t *src_revision,
                  const char *dst_path,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  svn_client_commit_info2_t *commit_info2 = NULL;
+  svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
 
-  err = svn_client_copy2 (&commit_info2, src_path, src_revision, dst_path,
+  err = svn_client_copy2 (&commit_info, src_path, src_revision, dst_path,
                           ctx, pool);
   /* These structs have the same layout for the common fields. */
-  *commit_info = (svn_client_commit_info_t *) commit_info2;
+  *commit_info_p = (svn_client_commit_info_t *) commit_info;
   return err;
 }
 
 svn_error_t *
-svn_client_move3 (svn_client_commit_info2_t **commit_info,
+svn_client_move3 (svn_commit_info_t **commit_info_p,
                   const char *src_path,
                   const char *dst_path,
                   svn_boolean_t force,
@@ -1163,7 +1164,7 @@ svn_client_move3 (svn_client_commit_info2_t **commit_info,
   const svn_opt_revision_t src_revision
     = { svn_opt_revision_unspecified, { 0 } };
 
-  return setup_copy (commit_info,
+  return setup_copy (commit_info_p,
                      src_path, &src_revision, dst_path,
                      TRUE /* is_move */,
                      force,
@@ -1172,25 +1173,25 @@ svn_client_move3 (svn_client_commit_info2_t **commit_info,
 }
 
 svn_error_t *
-svn_client_move2 (svn_client_commit_info_t **commit_info,
+svn_client_move2 (svn_client_commit_info_t **commit_info_p,
                   const char *src_path,
                   const char *dst_path,
                   svn_boolean_t force,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  svn_client_commit_info2_t *commit_info2 = NULL;
+  svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
 
-  err = svn_client_move3 (&commit_info2, src_path, dst_path, force, ctx, pool);
+  err = svn_client_move3 (&commit_info, src_path, dst_path, force, ctx, pool);
   /* These structs have the same layout for the common fields. */
-  *commit_info = (svn_client_commit_info_t *) commit_info2;
+  *commit_info_p = (svn_client_commit_info_t *) commit_info;
   return err;
 }
 
 
 svn_error_t *
-svn_client_move (svn_client_commit_info_t **commit_info,
+svn_client_move (svn_client_commit_info_t **commit_info_p,
                  const char *src_path,
                  const svn_opt_revision_t *src_revision,
                  const char *dst_path,
@@ -1198,7 +1199,7 @@ svn_client_move (svn_client_commit_info_t **commit_info,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  svn_client_commit_info2_t *commit_info2 = NULL;
+  svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
   /* It doesn't make sense to specify revisions in a move. */
 
@@ -1215,13 +1216,13 @@ svn_client_move (svn_client_commit_info_t **commit_info,
          _("Cannot specify revisions (except HEAD) with move operations"));
     }
  
-  err = setup_copy (&commit_info2,
+  err = setup_copy (&commit_info,
                     src_path, src_revision, dst_path,
                     TRUE /* is_move */,
                     force,
                     ctx,
                     pool);
   /* These structs have the same layout for the common fields. */
-  *commit_info = (svn_client_commit_info_t *) commit_info2;
+  *commit_info_p = (svn_client_commit_info_t *) commit_info;
   return err;
 }

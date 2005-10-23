@@ -159,6 +159,8 @@ store_locks_callback (void *baton,
  *
  * If *COMMON_PARENT is a URL, then the values are a pointer to
  * SVN_INVALID_REVNUM (allocated in pool) if DO_LOCK, else "".
+ *
+ * TARGETS may not be empty.
  */
 static svn_error_t *
 organize_lock_targets (const char **common_parent,
@@ -413,6 +415,9 @@ svn_client_lock (const apr_array_header_t *targets,
   struct lock_baton cb;
   svn_boolean_t is_url;
 
+  if (apr_is_empty_array (targets))
+    return SVN_NO_ERROR;
+
   /* Enforce that the comment be xml-escapable. */
   if (comment)
     {
@@ -468,6 +473,9 @@ svn_client_unlock (const apr_array_header_t *targets,
   apr_hash_t *path_tokens, *urls_to_paths;
   struct lock_baton cb;
   svn_boolean_t is_url;
+
+  if (apr_is_empty_array (targets))
+    return SVN_NO_ERROR;
 
   SVN_ERR (organize_lock_targets (&common_parent, &entry, &adm_access,
                                   &path_tokens, &urls_to_paths, targets, 

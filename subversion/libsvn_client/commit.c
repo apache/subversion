@@ -110,7 +110,7 @@ send_file_contents (const char *path,
      Keywords get unexpanded.  */
   if (eol_style_val || keywords_val || special)
     {
-      svn_subst_keywords_t keywords = {0};
+      apr_hash_t *keywords = NULL;
       const char *temp_dir;
       apr_file_t *tmp_f;
 
@@ -124,14 +124,14 @@ send_file_contents (const char *path,
 
       /* Generate a keyword structure. */
       if (keywords_val)
-        SVN_ERR (svn_subst_build_keywords (&keywords, keywords_val->data, 
-                                           APR_STRINGIFY(SVN_INVALID_REVNUM),
-                                           "", 0, "", pool));
+        SVN_ERR (svn_subst_build_keywords2 (&keywords, keywords_val->data,
+                                            APR_STRINGIFY(SVN_INVALID_REVNUM),
+                                            "", 0, "", pool));
       
-      if ((err = svn_subst_copy_and_translate2 (path, tmpfile_path,
+      if ((err = svn_subst_copy_and_translate3 (path, tmpfile_path,
                                                 eol_style_val ? "\n" : NULL,
                                                 FALSE,
-                                                keywords_val ? &keywords : NULL,
+                                                keywords_val ? keywords : NULL,
                                                 FALSE,
                                                 special,
                                                 pool)))
@@ -335,7 +335,7 @@ import_dir (const svn_delta_editor_t *editor,
       if (ctx->cancel_func)
         SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
 
-      if (strcmp (filename, SVN_WC_ADM_DIR_NAME) == 0)
+      if (svn_wc_is_adm_dir (filename, subpool))
         {
           /* If someone's trying to import a directory named the same
              as our administrative directories, that's probably not
@@ -588,7 +588,7 @@ get_ra_editor (svn_ra_session_t **ra_session,
                svn_wc_adm_access_t *base_access,
                const char *log_msg,
                apr_array_header_t *commit_items,
-               svn_client_commit_info2_t **commit_info,
+               svn_commit_info_t **commit_info_p,
                svn_boolean_t is_commit,
                apr_hash_t *lock_tokens,
                svn_boolean_t keep_locks,
@@ -622,18 +622,18 @@ get_ra_editor (svn_ra_session_t **ra_session,
     SVN_ERR (svn_ra_get_latest_revnum (*ra_session, latest_rev, pool));
   
   /* Fetch RA commit editor. */
-  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
-  return svn_ra_get_commit_editor (*ra_session, editor, edit_baton, log_msg,
-                                   svn_client__commit_callback,
-                                   commit_baton, lock_tokens, keep_locks,
-                                   pool);
+  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info_p, pool));
+  return svn_ra_get_commit_editor2 (*ra_session, editor, edit_baton, log_msg,
+                                    svn_client__commit_callback,
+                                    commit_baton, lock_tokens, keep_locks,
+                                    pool);
 }
 
 
 /*** Public Interfaces. ***/
 
 svn_error_t *
-svn_client_import2 (svn_client_commit_info2_t **commit_info,
+svn_client_import2 (svn_commit_info_t **commit_info_p,
                     const char *path,
                     const char *url,
                     svn_boolean_t nonrecursive,
@@ -656,12 +656,12 @@ svn_client_import2 (svn_client_commit_info2_t **commit_info,
   apr_pool_t *subpool;
 
   /* Create a new commit item and add it to the array. */
-  if (ctx->log_msg_func)
+  if (ctx->log_msg_func || ctx->log_msg_func2)
     {
       /* If there's a log message gatherer, create a temporary commit
          item array solely to help generate the log message.  The
          array is not used for the import itself. */
-      svn_client_commit_item_t *item;
+      svn_client_commit_item2_t *item;
       const char *tmp_file;
       apr_array_header_t *commit_items 
         = apr_array_make (pool, 1, sizeof (item));
@@ -669,10 +669,10 @@ svn_client_import2 (svn_client_commit_info2_t **commit_info,
       item = apr_pcalloc (pool, sizeof (*item));
       item->path = apr_pstrdup (pool, path);
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-      (*((svn_client_commit_item_t **) apr_array_push (commit_items))) = item;
+      APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
       
-      SVN_ERR ((*ctx->log_msg_func) (&log_msg, &tmp_file, commit_items, 
-                                     ctx->log_msg_baton, pool));
+      SVN_ERR (svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
+                                       ctx, pool));
       if (! log_msg)
         return SVN_NO_ERROR;
       if (tmp_file)
@@ -717,7 +717,7 @@ svn_client_import2 (svn_client_commit_info2_t **commit_info,
     }
   while ((err = get_ra_editor (&ra_session, NULL,
                                &editor, &edit_baton, ctx, url, base_dir,
-                               NULL, log_msg, NULL, commit_info,
+                               NULL, log_msg, NULL, commit_info_p,
                                FALSE, NULL, TRUE, subpool)));
 
   /* Reverse the order of the components we added to our NEW_ENTRIES array. */
@@ -747,15 +747,20 @@ svn_client_import2 (svn_client_commit_info2_t **commit_info,
 
   /* The repository doesn't know about the reserved administrative
      directory. */
-  if (new_entries->nelts && 
-      (strcmp (APR_ARRAY_IDX (new_entries, 
-                              new_entries->nelts - 1, 
-                              const char *), SVN_WC_ADM_DIR_NAME) == 0))
+  if (new_entries->nelts
+      /* What's this, what's this?  This assignment is here because we
+         use the value to construct the error message just below.  It
+         may not be asethetically pleasing, but it's less ugly than
+         calling APR_ARRAY_IDX twice. */
+      && svn_wc_is_adm_dir (temp = APR_ARRAY_IDX (new_entries,
+                                                  new_entries->nelts - 1,
+                                                  const char *),
+                            pool))
     return svn_error_createf
       (SVN_ERR_CL_ADM_DIR_RESERVED, NULL,
        _("'%s' is a reserved name and cannot be imported"),
        /* ### Is svn_path_local_style() really necessary for this? */
-       svn_path_local_style (SVN_WC_ADM_DIR_NAME, pool));
+       svn_path_local_style (temp, pool));
 
 
   /* If an error occurred during the commit, abort the edit and return
@@ -768,17 +773,17 @@ svn_client_import2 (svn_client_commit_info2_t **commit_info,
     }
 
   /* Transfer *COMMIT_INFO from the subpool to the callers pool */
-  if (*commit_info)
+  if (*commit_info_p)
     {
-      svn_client_commit_info2_t *tmp_commit_info;
+      svn_commit_info_t *tmp_commit_info;
 
-      tmp_commit_info = svn_client_create_commit_info (pool);
-      *tmp_commit_info = **commit_info;
+      tmp_commit_info = svn_create_commit_info (pool);
+      *tmp_commit_info = **commit_info_p;
       if (tmp_commit_info->date)
         tmp_commit_info->date = apr_pstrdup (pool, tmp_commit_info->date);
       if (tmp_commit_info->author)
         tmp_commit_info->author = apr_pstrdup (pool, tmp_commit_info->author);
-      *commit_info = tmp_commit_info;
+      *commit_info_p = tmp_commit_info;
     }
 
   svn_pool_destroy (subpool);
@@ -787,21 +792,21 @@ svn_client_import2 (svn_client_commit_info2_t **commit_info,
 }
 
 svn_error_t *
-svn_client_import (svn_client_commit_info_t **commit_info,
+svn_client_import (svn_client_commit_info_t **commit_info_p,
                     const char *path,
                     const char *url,
                     svn_boolean_t nonrecursive,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
-  svn_client_commit_info2_t *commit_info2 = NULL;
+  svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
 
-  err = svn_client_import2 (&commit_info2,
+  err = svn_client_import2 (&commit_info,
                             path, url, nonrecursive,
                             FALSE, ctx, pool);
   /* These structs have the same layout for the common fields. */
-  *commit_info = (svn_client_commit_info_t *) commit_info2;
+  *commit_info_p = (svn_client_commit_info_t *) commit_info;
   return err;
 }
 
@@ -923,8 +928,8 @@ have_processed_parent (apr_array_header_t *commit_items,
   int i;
   for (i = 0; i < processed && i < commit_items->nelts; ++i)
     {
-      svn_client_commit_item_t *item
-        = ((svn_client_commit_item_t **) commit_items->elts)[i];
+      svn_client_commit_item2_t *item
+        = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item2_t *);
 
       if (svn_path_is_child (item->path, path, pool))
         return TRUE;
@@ -1170,20 +1175,9 @@ collect_lock_tokens (apr_hash_t **result,
   return SVN_NO_ERROR;
 }
 
-svn_client_commit_info2_t *
-svn_client_create_commit_info (apr_pool_t *pool)
-{
-  svn_client_commit_info2_t *commit_info
-    = apr_pcalloc (pool, sizeof (svn_client_commit_info2_t));
-
-  commit_info->revision = SVN_INVALID_REVNUM;
-  /* All other fields were initialized to NULL above. */
-
-  return commit_info;
-}
 
 svn_error_t *
-svn_client_commit3 (svn_client_commit_info2_t **commit_info,
+svn_client_commit3 (svn_commit_info_t **commit_info_p,
                     const apr_array_header_t *targets,
                     svn_boolean_t recurse,
                     svn_boolean_t keep_locks,
@@ -1460,8 +1454,8 @@ svn_client_commit3 (svn_client_commit_info2_t **commit_info,
 
     for (i = 0; i < commit_items->nelts; ++i)
       {
-        svn_client_commit_item_t *item;
-        item = APR_ARRAY_IDX (commit_items, i, svn_client_commit_item_t *);
+        svn_client_commit_item2_t *item;
+        item = APR_ARRAY_IDX (commit_items, i, svn_client_commit_item2_t *);
         
         if (item->state_flags != SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN) 
           {
@@ -1476,11 +1470,12 @@ svn_client_commit3 (svn_client_commit_info2_t **commit_info,
 
   /* Go get a log message.  If an error occurs, or no log message is
      specified, abort the operation. */
-  if (ctx->log_msg_func)
+  if (ctx->log_msg_func ||  ctx->log_msg_func2)
     {
       const char *tmp_file;
-      cmt_err = (*ctx->log_msg_func)(&log_msg, &tmp_file, commit_items, 
-                                     ctx->log_msg_baton, pool);
+      cmt_err = svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
+                                        ctx, pool);
+
       if (cmt_err || (! log_msg))
         goto cleanup;
     }
@@ -1501,7 +1496,7 @@ svn_client_commit3 (svn_client_commit_info2_t **commit_info,
   if ((cmt_err = get_ra_editor (&ra_session, NULL,
                                 &editor, &edit_baton, ctx,
                                 base_url, base_dir, base_dir_access,
-                                log_msg, commit_items, commit_info,
+                                log_msg, commit_items, commit_info_p,
                                 TRUE, lock_tokens, keep_locks, pool)))
     goto cleanup;
 
@@ -1531,8 +1526,8 @@ svn_client_commit3 (svn_client_commit_info2_t **commit_info,
 
       for (i = 0; i < commit_items->nelts; i++)
         {
-          svn_client_commit_item_t *item
-            = ((svn_client_commit_item_t **) commit_items->elts)[i];
+          svn_client_commit_item2_t *item
+            = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item2_t *);
           svn_boolean_t loop_recurse = FALSE;
           const char *adm_access_path;
           svn_wc_adm_access_t *adm_access;
@@ -1600,15 +1595,16 @@ svn_client_commit3 (svn_client_commit_info2_t **commit_info,
 
           remove_lock = (! keep_locks && (item->state_flags
                                           & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN));
-          assert (*commit_info);
-          if ((bump_err = svn_wc_process_committed2 (item->path, adm_access,
-                                                     loop_recurse,
-                                                     (*commit_info)->revision,
-                                                     (*commit_info)->date,
-                                                     (*commit_info)->author,
-                                                     item->wcprop_changes,
-                                                     remove_lock,
-                                                     subpool)))
+          assert (*commit_info_p);
+          if ((bump_err = svn_wc_process_committed2
+               (item->path, adm_access,
+                loop_recurse,
+                (*commit_info_p)->revision,
+                (*commit_info_p)->date,
+                (*commit_info_p)->author,
+                item->wcprop_changes,
+                remove_lock,
+                subpool)))
             break;
 
         }
@@ -1642,31 +1638,31 @@ svn_client_commit3 (svn_client_commit_info2_t **commit_info,
 }
 
 svn_error_t *
-svn_client_commit2 (svn_client_commit_info_t **commit_info,
+svn_client_commit2 (svn_client_commit_info_t **commit_info_p,
                     const apr_array_header_t *targets,
                     svn_boolean_t recurse,
                     svn_boolean_t keep_locks,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool)
 {
-  svn_client_commit_info2_t *commit_info2 = NULL;
+  svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
 
-  err = svn_client_commit3 (&commit_info2, targets, recurse, keep_locks,
+  err = svn_client_commit3 (&commit_info, targets, recurse, keep_locks,
                             ctx, pool);
   /* These structs have the same layout for the common fields. */
-  *commit_info = (svn_client_commit_info_t *) commit_info2;
+  *commit_info_p = (svn_client_commit_info_t *) commit_info;
   return err;
 }
 
 svn_error_t *
-svn_client_commit (svn_client_commit_info_t **commit_info,
+svn_client_commit (svn_client_commit_info_t **commit_info_p,
                    const apr_array_header_t *targets,
                    svn_boolean_t nonrecursive,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  return svn_client_commit2 (commit_info, targets, 
+  return svn_client_commit2 (commit_info_p, targets,
                              nonrecursive ? FALSE : TRUE, 
                              TRUE,
                              ctx, pool);

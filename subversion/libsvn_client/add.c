@@ -328,7 +328,7 @@ add_dir_recursive (const char *dirname,
         SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
       
       /* Skip over SVN admin directories. */
-      if (strcmp (this_entry.name, SVN_WC_ADM_DIR_NAME) == 0)
+      if (svn_wc_is_adm_dir (this_entry.name, subpool))
         continue;
 
       /* Skip entries for this dir and its parent.  */
@@ -495,7 +495,7 @@ path_driver_cb_func (void **dir_baton,
 
 
 static svn_error_t *
-mkdir_urls (svn_client_commit_info2_t **commit_info,
+mkdir_urls (svn_commit_info_t **commit_info_p,
             const apr_array_header_t *paths,
             svn_client_ctx_t *ctx,
             apr_pool_t *pool)
@@ -548,9 +548,9 @@ mkdir_urls (svn_client_commit_info2_t **commit_info,
     }
 
   /* Create new commit items and add them to the array. */
-  if (ctx->log_msg_func)
+  if (ctx->log_msg_func || ctx->log_msg_func2)
     {
-      svn_client_commit_item_t *item;
+      svn_client_commit_item2_t *item;
       const char *tmp_file;
       apr_array_header_t *commit_items 
         = apr_array_make (pool, targets->nelts, sizeof (item));
@@ -561,10 +561,12 @@ mkdir_urls (svn_client_commit_info2_t **commit_info,
           item = apr_pcalloc (pool, sizeof (*item));
           item->url = svn_path_join (common, path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-          APR_ARRAY_PUSH (commit_items, svn_client_commit_item_t *) = item;
+          APR_ARRAY_PUSH (commit_items, svn_client_commit_item2_t *) = item;
         }
-      SVN_ERR ((*ctx->log_msg_func) (&log_msg, &tmp_file, commit_items, 
-                                     ctx->log_msg_baton, pool));
+
+      SVN_ERR (svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
+                                       ctx, pool));
+
       if (! log_msg)
         return SVN_NO_ERROR;
     }
@@ -586,12 +588,12 @@ mkdir_urls (svn_client_commit_info2_t **commit_info,
     }
 
   /* Fetch RA commit editor */
-  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info, pool));
-  SVN_ERR (svn_ra_get_commit_editor (ra_session, &editor, &edit_baton,
-                                     log_msg, svn_client__commit_callback,
-                                     commit_baton, 
-                                       NULL, TRUE, /* No lock tokens */
-                                     pool));
+  SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info_p, pool));
+  SVN_ERR (svn_ra_get_commit_editor2 (ra_session, &editor, &edit_baton,
+                                      log_msg, svn_client__commit_callback,
+                                      commit_baton, 
+                                      NULL, TRUE, /* No lock tokens */
+                                      pool));
   
   /* Call the path-based editor driver. */
   err = svn_delta_path_driver (editor, edit_baton, SVN_INVALID_REVNUM, 
@@ -612,7 +614,7 @@ mkdir_urls (svn_client_commit_info2_t **commit_info,
 
 
 svn_error_t *
-svn_client_mkdir2 (svn_client_commit_info2_t **commit_info,
+svn_client_mkdir2 (svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *paths,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
@@ -622,7 +624,7 @@ svn_client_mkdir2 (svn_client_commit_info2_t **commit_info,
   
   if (svn_path_is_url (APR_ARRAY_IDX (paths, 0, const char *)))
     {
-      SVN_ERR (mkdir_urls (commit_info, paths, ctx, pool));
+      SVN_ERR (mkdir_urls (commit_info_p, paths, ctx, pool));
     }
   else
     {
@@ -663,16 +665,16 @@ svn_client_mkdir2 (svn_client_commit_info2_t **commit_info,
 
 
 svn_error_t *
-svn_client_mkdir (svn_client_commit_info_t **commit_info,
+svn_client_mkdir (svn_client_commit_info_t **commit_info_p,
                   const apr_array_header_t *paths,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  svn_client_commit_info2_t *commit_info2 = NULL;
+  svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
 
-  err = svn_client_mkdir2 (&commit_info2, paths, ctx, pool);
+  err = svn_client_mkdir2 (&commit_info, paths, ctx, pool);
   /* These structs have the same layout for the common fields. */
-  *commit_info = (svn_client_commit_info_t *) commit_info2;
+  *commit_info_p = (svn_client_commit_info_t *) commit_info;
   return err;
 }

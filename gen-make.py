@@ -16,7 +16,6 @@ sys.path.insert(0, os.path.join('build', 'generator'))
 # for getversion
 sys.path.insert(1, 'build')
 
-
 gen_modules = {
   'make' : ('gen_make', 'Makefiles for POSIX systems'),
   'dsp' : ('gen_msvc_dsp', 'MSVC 6.x project files'),
@@ -36,8 +35,8 @@ def main(fname, gentype, verfname=None,
     generator.compute_hdr_deps()
 
   generator.write()
-
-  if other_options and ('--debug', '') in other_options:
+  
+  if ('--debug', '') in other_options:
     for dep_type, target_dict in generator.graph.deps.items():
       sorted_targets = target_dict.keys(); sorted_targets.sort()
       for target in sorted_targets:
@@ -81,6 +80,16 @@ def _usage_exit():
   print
   print "           The default generator type is 'make'"
   print
+  print "  Makefile-specific options:"
+  print
+  print "  --assume-shared-libs"
+  print "           omit dependencies on libraries, on the assumption that"
+  print "           shared libraries will be built, so that it is unnecessary"
+  print "           to relink executables when the libraries that they depend"
+  print "           on change.  This is an option for developers who want to"
+  print "           increase the speed of frequent rebuilds."
+  print "           *** Do not use unless you understand the consequences. ***"
+  print
   print "  Windows-specific options:"
   print
   print "  --with-apr=DIR"
@@ -93,7 +102,7 @@ def _usage_exit():
   print "           the APR-Iconv sources are in DIR"
   print
   print "  --with-berkeley-db=DIR"
-  print "           look for Berkley DB headers and libs in"
+  print "           look for Berkeley DB headers and libs in"
   print "           DIR"
   print
   print "  --with-neon=DIR"
@@ -117,9 +126,12 @@ def _usage_exit():
   print "           tell neon to look for ZLib headers and"
   print "           libs in DIR"
   print
-  print "  --with-junit=PATH"
+  print "  --with-junit=DIR"
   print "           look for the junit jar here"
   print "           junit is for testing the java bindings"
+  print
+  print "  --with-swig=DIR"
+  print "           look for the swig program in DIR"
   print
   print "  --enable-pool-debug"
   print "           turn on APR pool debugging"
@@ -160,6 +172,7 @@ if __name__ == '__main__':
     opts, args = getopt.getopt(sys.argv[1:], 'st:',
                                ['debug',
                                 'reload',
+                                'assume-shared-libs',
                                 'with-apr=',
                                 'with-apr-util=',
                                 'with-apr-iconv=',
@@ -170,6 +183,7 @@ if __name__ == '__main__':
                                 'with-openssl=',
                                 'with-zlib=',
                                 'with-junit=',
+                                'with-swig=',
                                 'enable-pool-debug',
                                 'enable-purify',
                                 'enable-quantify',

@@ -276,7 +276,7 @@ def import_avoid_empty_revision(sbox):
   os.makedirs(empty_dir)
 
   url = svntest.main.current_repo_url  
-  svntest.actions.run_and_verify_svn(None, None, None, 'import',
+  svntest.actions.run_and_verify_svn(None, None, [], 'import',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', 'Log message for new import', 
@@ -286,7 +286,7 @@ def import_avoid_empty_revision(sbox):
 
   # Verify that an empty revision has not been created
   svntest.actions.run_and_verify_svn(None, [ "At revision 1.\n"], 
-                                     None, "update", 
+                                     [], "update", 
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      empty_dir) 

@@ -3,6 +3,7 @@ use warnings;
 
 package SVN::Wc;
 use SVN::Base qw(Wc svn_wc_);
+use SVN::Core;
 
 =head1 NAME
 
@@ -15,6 +16,8 @@ Incomplete
 =head1 OBJECTS
 
 =cut 
+
+swig_init_asp_dot_net_hack($SVN::Core::gpool);
 
 package _p_svn_wc_t;
 
@@ -419,7 +422,7 @@ An unversioned resource is in the way of the versioned resource.
 
 =item $SVN::Wc::Status::external
 
-An unversioned path populated by an svn:external property.
+An unversioned path populated by an svn:externals property.
 
 =item $SVN::Wc::Status::incomplete
 

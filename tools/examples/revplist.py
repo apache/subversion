@@ -21,28 +21,28 @@ import getopt
 
 from svn import fs, core
 
-def plist(pool, rev=None, home='.', *props):
+def plist(rev=None, home='.', *props):
 
   db_path = os.path.join(home, 'db')
   if not os.path.exists(db_path):
     db_path = home
 
-  fs_ptr = fs.new(None, pool)
+  fs_ptr = fs.new(None)
   fs.open_berkeley(fs_ptr, db_path)
 
   if rev is None:
-    rev = fs.youngest_rev(fs_ptr, pool)
+    rev = fs.youngest_rev(fs_ptr)
 
   print 'Properties for revision:', rev
   if props:
     for propname in props:
-      value = fs.revision_prop(fs_ptr, rev, propname, pool)
+      value = fs.revision_prop(fs_ptr, rev, propname)
       if value is None:
         print '%s: <not present>' % propname
       else:
         print '%s: %s' % (propname, value)
   else:
-    proplist = fs.revision_proplist(fs_ptr, rev, pool)
+    proplist = fs.revision_proplist(fs_ptr, rev)
     for propname, value in proplist.items():
       print '%s: %s' % (propname, value)
 
@@ -61,7 +61,7 @@ def main():
     elif name == '-h':
       home = value
 
-  apply(core.run_app, (plist, rev, home) + tuple(args))
+  apply(plist, (rev, home) + tuple(args))
 
 if __name__ == '__main__':
   main()

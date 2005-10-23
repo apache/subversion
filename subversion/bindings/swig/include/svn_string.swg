@@ -1,5 +1,5 @@
 /*
- * svn_string.i :  SWIG interface file for svn_string.h
+ * svn_string.swg :  SWIG include file for svn_string.h
  *
  * ====================================================================
  * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
@@ -19,8 +19,8 @@
 /* This interface file does not include a %module line because it should
    only be imported by other modules. */
 
-%import apr.i
-%import svn_types.i
+%import apr.swg
+%import svn_types.swg
 
 typedef struct svn_stringbuf_t svn_stringbuf_t;
 typedef struct svn_string_t svn_string_t;
@@ -42,7 +42,7 @@ typedef struct svn_string_t svn_string_t;
     else {
         s = PyString_FromStringAndSize((*$1)->data, (*$1)->len);
         if (s == NULL)
-            return NULL;
+            SWIG_fail;
     }
     $result = t_output_helper($result, s);
 }
@@ -76,7 +76,7 @@ typedef struct svn_string_t svn_string_t;
 %typemap(python,in) svn_stringbuf_t * {
     if (!PyString_Check($input)) {
         PyErr_SetString(PyExc_TypeError, "not a string");
-        return NULL;
+        SWIG_fail;
     }
     $1 = svn_stringbuf_ncreate(PyString_AS_STRING($input),
                                PyString_GET_SIZE($input),
@@ -101,6 +101,34 @@ typedef struct svn_string_t svn_string_t;
     }
 }
 
+%typemap(ruby, in) svn_stringbuf_t *
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+  } else {
+    $1 = svn_stringbuf_ncreate(StringValuePtr($input),
+                               RSTRING($input)->len,
+                               _global_pool);
+  }
+}
+
+%typemap(ruby, in) svn_stringbuf_t *node_name
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+  } else {
+    VALUE rb_pool;
+    apr_pool_t *pool;
+
+    svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &pool);
+        
+    $1 = svn_stringbuf_ncreate(StringValuePtr($input),
+                               RSTRING($input)->len,
+                               pool);
+  }
+}
+
+
 %typemap(python,out) svn_stringbuf_t * {
     $result = PyString_FromStringAndSize($1->data, $1->len);
 }
@@ -110,6 +138,16 @@ typedef struct svn_string_t svn_string_t;
     sv_setpvn(sv,$1->data,$1->len);
     $result = sv;
     argvi++;
+}
+
+%typemap(ruby, out) svn_stringbuf_t *
+{
+  $result = rb_str_new($1->data, $1->len);
+}
+
+%typemap(ruby, argout) svn_stringbuf_t *output
+{
+  $result = rb_str_new($1->data, $1->len);
 }
 
 /* -----------------------------------------------------------------------
@@ -123,7 +161,7 @@ typedef struct svn_string_t svn_string_t;
     else {
         if (!PyString_Check($input)) {
             PyErr_SetString(PyExc_TypeError, "not a string");
-            return NULL;
+            SWIG_fail;
         }
         value.data = PyString_AS_STRING($input);
         value.len = PyString_GET_SIZE($input);
@@ -194,7 +232,7 @@ typedef struct svn_string_t svn_string_t;
     else {
         s = PyString_FromString(*$1);
         if (s == NULL)
-            return NULL;
+            SWIG_fail;
     }
     $result = t_output_helper($result, s);
 }
@@ -224,7 +262,7 @@ typedef struct svn_string_t svn_string_t;
     $1 = (apr_array_header_t *) svn_swig_py_strings_to_array($input,
                                                              _global_pool);
     if ($1 == NULL)
-        return NULL;
+        SWIG_fail;
 }
 %typemap(perl5,in) const apr_array_header_t *STRINGLIST {
     $1 = (apr_array_header_t *) svn_swig_pl_strings_to_array($input,

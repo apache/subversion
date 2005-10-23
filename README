@@ -29,10 +29,10 @@ I.    A FEW POINTERS
 II.   DOCUMENTATION
 
       The main documentation is the Subversion Book, written in
-      DocBook XML, which lives in the doc/ tree.  If you wish to build
-      the documentation from source, read doc/book/README.  Otherwise,
-      an on-line version of the book can be found at
-      http://svnbook.red-bean.com.
+      DocBook XML, which lives at http://svn.red-bean.com/svnbook.  If
+      you wish to build the documentation from source, read
+      src/en/README.  Otherwise, an on-line version of the book can be
+      found at http://svnbook.red-bean.com.
 
       See COPYING for copyright information.
       See INSTALL for installation information.
@@ -81,7 +81,7 @@ IV.   QUICKSTART GUIDE
             the newly created 'repos' directory.
 
           - understand that the repository is mainly a collection of
-            BerkeleyDB files;  you won't actually see your versioned
+            Berkeley DB files;  you won't actually see your versioned
             data if you peek in there.
 
      2.  svn import /tmp/project file:///path/to/repos -m "Initial import"

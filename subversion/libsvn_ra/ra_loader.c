@@ -28,10 +28,12 @@
 #include <apr_dso.h>
 
 #include "svn_version.h"
+#include "svn_types.h"
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "svn_xml.h"
+#include "svn_path.h"
 #include "ra_loader.h"
 #include "svn_private_config.h"
 
@@ -230,12 +232,28 @@ svn_error_t *svn_ra_initialize (apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
-                          const char *repos_URL,
-                          const svn_ra_callbacks_t *callbacks,
-                          void *callback_baton,
-                          apr_hash_t *config,
-                          apr_pool_t *pool)
+/* Please note: the implementation of svn_ra_create_callbacks is
+ * duplicated in libsvn_ra/wrapper_template.h:compat_open() .  This
+ * duplication is intentional, is there to avoid a circular
+ * dependancy, and is justified in great length in the code of
+ * compat_open() in libsvn_ra/wrapper_template.h.  If you modify the
+ * implementation of svn_ra_create_callbacks(), be sure to keep the
+ * code in wrapper_template.h:compat_open() in sync with your
+ * changes. */
+svn_error_t *
+svn_ra_create_callbacks (svn_ra_callbacks2_t **callbacks,
+                         apr_pool_t *pool)
+{
+  *callbacks = apr_pcalloc (pool, sizeof (**callbacks));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_ra_open2 (svn_ra_session_t **session_p,
+                           const char *repos_URL,
+                           const svn_ra_callbacks2_t *callbacks,
+                           void *callback_baton,
+                           apr_hash_t *config,
+                           apr_pool_t *pool)
 {
   svn_ra_session_t *session;
   const struct ra_lib_defn *defn;
@@ -281,6 +299,47 @@ svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
+                          const char *repos_URL,
+                          const svn_ra_callbacks_t *callbacks,
+                          void *callback_baton,
+                          apr_hash_t *config,
+                          apr_pool_t *pool)
+{
+  /* Deprecated function. Copy the contents of the svn_ra_callbacks_t
+     to a new svn_ra_callbacks2_t and call svn_ra_open2(). */
+  svn_ra_callbacks2_t *callbacks2;
+  SVN_ERR (svn_ra_create_callbacks (&callbacks2, pool));
+  callbacks2->open_tmp_file = callbacks->open_tmp_file;
+  callbacks2->auth_baton = callbacks->auth_baton;
+  callbacks2->get_wc_prop = callbacks->get_wc_prop;
+  callbacks2->set_wc_prop = callbacks->set_wc_prop;
+  callbacks2->push_wc_prop = callbacks->push_wc_prop;
+  callbacks2->invalidate_wc_props = callbacks->invalidate_wc_props;
+  callbacks2->progress_func = NULL;
+  callbacks2->progress_baton = NULL;
+  return svn_ra_open2 (session_p, repos_URL,
+                       callbacks2, callback_baton,
+                       config, pool);
+}
+
+svn_error_t *svn_ra_reparent (svn_ra_session_t *session,
+                              const char *url,
+                              apr_pool_t *pool)
+{
+  const char *repos_root;
+
+  /* Make sure the new URL is in the same repository, so that the
+     implementations don't have to do it. */
+  SVN_ERR (svn_ra_get_repos_root (session, &repos_root, pool));
+  if (! svn_path_is_ancestor (repos_root, url))
+    return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("'%s' isn't in the same repository as '%s'"),
+                             url, repos_root);
+
+  return session->vtable->reparent (session, url, pool);
+}
+
 svn_error_t *svn_ra_get_latest_revnum (svn_ra_session_t *session,
                                        svn_revnum_t *latest_revnum,
                                        apr_pool_t *pool)
@@ -322,6 +381,21 @@ svn_error_t *svn_ra_rev_prop (svn_ra_session_t *session,
   return session->vtable->rev_prop (session, rev, name, value, pool);
 }
 
+svn_error_t *svn_ra_get_commit_editor2 (svn_ra_session_t *session,
+                                        const svn_delta_editor_t **editor,
+                                        void **edit_baton,
+                                        const char *log_msg,
+                                        svn_commit_callback2_t callback,
+                                        void *callback_baton,
+                                        apr_hash_t *lock_tokens,
+                                        svn_boolean_t keep_locks,
+                                        apr_pool_t *pool)
+{
+  return session->vtable->get_commit_editor (session, editor, edit_baton,
+                                             log_msg, callback, callback_baton,
+                                             lock_tokens, keep_locks, pool);
+}
+
 svn_error_t *svn_ra_get_commit_editor (svn_ra_session_t *session,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
@@ -332,9 +406,17 @@ svn_error_t *svn_ra_get_commit_editor (svn_ra_session_t *session,
                                        svn_boolean_t keep_locks,
                                        apr_pool_t *pool)
 {
-  return session->vtable->get_commit_editor (session, editor, edit_baton,
-                                             log_msg, callback, callback_baton,
-                                             lock_tokens, keep_locks, pool);
+  svn_commit_callback2_t callback2;
+  void *callback2_baton;
+
+  svn_compat_wrap_commit_callback (callback, callback_baton,
+                                   &callback2, &callback2_baton,
+                                   pool);
+
+  return svn_ra_get_commit_editor2 (session, editor, edit_baton,
+                                    log_msg, callback2,
+                                    callback2_baton, lock_tokens,
+                                    keep_locks, pool);
 }
 
 svn_error_t *svn_ra_get_file (svn_ra_session_t *session,
@@ -409,6 +491,25 @@ svn_error_t *svn_ra_do_status (svn_ra_session_t *session,
                                      status_editor, status_baton, pool);
 }
 
+svn_error_t *svn_ra_do_diff2 (svn_ra_session_t *session,
+                              const svn_ra_reporter2_t **reporter,
+                              void **report_baton,
+                              svn_revnum_t revision,
+                              const char *diff_target,
+                              svn_boolean_t recurse,
+                              svn_boolean_t ignore_ancestry,
+                              svn_boolean_t text_deltas,
+                              const char *versus_url,
+                              const svn_delta_editor_t *diff_editor,
+                              void *diff_baton,
+                              apr_pool_t *pool)
+{
+  return session->vtable->do_diff (session, reporter, report_baton, revision,
+                                   diff_target, recurse, ignore_ancestry,
+                                   text_deltas, versus_url, diff_editor,
+                                   diff_baton, pool);
+}
+
 svn_error_t *svn_ra_do_diff (svn_ra_session_t *session,
                              const svn_ra_reporter2_t **reporter,
                              void **report_baton,
@@ -421,9 +522,9 @@ svn_error_t *svn_ra_do_diff (svn_ra_session_t *session,
                              void *diff_baton,
                              apr_pool_t *pool)
 {
-  return session->vtable->do_diff (session, reporter, report_baton, revision,
-                                   diff_target, recurse, ignore_ancestry,
-                                   versus_url, diff_editor, diff_baton, pool);
+  return svn_ra_do_diff2 (session, reporter, report_baton, revision,
+                          diff_target, recurse, ignore_ancestry, TRUE,
+                          versus_url, diff_editor, diff_baton, pool);
 }
 
 svn_error_t *svn_ra_get_log (svn_ra_session_t *session,

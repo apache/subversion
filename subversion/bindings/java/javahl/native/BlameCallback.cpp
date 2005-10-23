@@ -21,7 +21,7 @@
 
 #include "BlameCallback.h"
 #include "JNIUtil.h"
-#include <svn_time.h>
+#include "svn_time.h"
 /**
  * Create a BlameCallback object
  * @param jcallback the java callback object.
@@ -85,13 +85,17 @@ void BlameCallback::callback(svn_revnum_t revision, const char *author,
     {
         return;
     }
-    apr_time_t timeTemp;
-    svn_time_from_cstring (&timeTemp, date, pool);
-
-    jobject jdate = JNIUtil::createDate(timeTemp);
-    if(JNIUtil::isJavaExceptionThrown())
+    jobject jdate = NULL;
+    if(date != NULL && *date != '\0')
     {
-        return;
+        apr_time_t timeTemp;
+        svn_time_from_cstring (&timeTemp, date, pool);
+
+        jdate = JNIUtil::createDate(timeTemp);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return;
+        }
     }
     jstring jline = JNIUtil::makeJString(line);
     if(JNIUtil::isJavaExceptionThrown())

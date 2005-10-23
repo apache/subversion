@@ -8,6 +8,8 @@ import string
 import fnmatch
 import re
 import glob
+import generator.swig.header_wrappers
+import generator.swig.external_runtime
 
 try:
   from cStringIO import StringIO
@@ -38,11 +40,13 @@ class WinGeneratorBase(GeneratorBase):
     self.apr_iconv_path = 'apr-iconv'
     self.bdb_path = 'db4-win32'
     self.neon_path = 'neon'
+    self.neon_ver = 24007
     self.httpd_path = None
     self.libintl_path = None
     self.zlib_path = None
     self.openssl_path = None
     self.junit_path = None
+    self.swig_path = None
     self.vsnet_version = '7.00'
     self.vsnet_proj_ver = '7.00'
     self.skip_sections = { 'mod_dav_svn': None,
@@ -79,6 +83,8 @@ class WinGeneratorBase(GeneratorBase):
         self.junit_path = val
       elif opt == '--with-zlib':
         self.zlib_path = val
+      elif opt == '--with-swig':
+        self.swig_path = val
       elif opt == '--with-openssl':
         self.openssl_path = val
       elif opt == '--enable-purify':
@@ -132,6 +138,10 @@ class WinGeneratorBase(GeneratorBase):
     # Look for ML
     if self.zlib_path:
       self._find_ml()
+      
+    # Find neon version
+    if self.neon_path:
+      self._find_neon()
 
     # Run apr-util's w32locatedb.pl script
     self._configure_apr_util()
@@ -195,6 +205,21 @@ class WinGeneratorBase(GeneratorBase):
     #Here we can add additional modes to compile for
     self.configs = ['Debug','Release']
 
+    if self.swig_libdir:
+      
+      # Generate SWIG header wrappers
+      header_wrappers = \
+        generator.swig.header_wrappers.Generator("build.conf", self.swig_exe)
+      header_wrappers.write()
+      
+      # Generate external runtime
+      runtime = \
+        generator.swig.external_runtime.Generator("build.conf", self.swig_exe)
+      runtime.write()
+    
+    else:
+      print "%s not found; skipping SWIG file generation..." % self.swig_exe
+      
   def path(self, *paths):
     """Convert build path to msvc path and prepend root"""
     return msvc_path_join(self.rootpath, *map(msvc_path, paths))
@@ -301,44 +326,9 @@ class WinGeneratorBase(GeneratorBase):
                                  custom_build=cbuild, custom_target=jarfile))
 
     if isinstance(target, gen_base.TargetSWIG):
-      swig_options = ["-" + target.lang]
+      swig_options = string.split(self.swig.opts[target.lang])
+      swig_options.append('-DWIN32')
       swig_deps = []
-
-      if self.swig_vernum >= 103024:
-        pass
-      elif self.swig_vernum >= 103020:
-        if target.include_runtime:
-          swig_options.append("-runtime")
-        else:
-          swig_options.append("-noruntime")
-      else:
-        if not target.include_runtime:
-          swig_options.append("-c")
-
-      if target.lang == "perl":
-        if self.swig_vernum >= 103020:
-          swig_options.append("-noproxy")
-        swig_options.append("-nopm")
-
-        objects = (("svn_delta_editor_t", "svn_delta.h", "delta_editor.hi"),
-                   ("svn_ra_plugin_t", "svn_ra.h", "ra_plugin.hi"),
-                   ("svn_ra_reporter_t", "svn_ra.h", "ra_reporter.hi"))
-
-        pfile = self.path("subversion/bindings/swig/perl/native/h2i.pl")
-
-        for objname, header, output in objects:
-          ifile = self.path("subversion/include", header)
-          ofile = self.path("subversion/bindings/swig", output)
-
-          obuild = "perl %s %s %s > %s" % (pfile, ifile, objname,
-                                           ofile)
-
-          sources.append(ProjectItem(path=ifile, reldir=None,
-                                     custom_build=obuild,
-                                     custom_target=ofile,
-                                     user_deps=()))
-
-          swig_deps.append(ofile)
 
       for include_dir in self.get_win_includes(target):
         swig_options.append("-I%s" % self.quote(include_dir))
@@ -349,14 +339,7 @@ class WinGeneratorBase(GeneratorBase):
             if isinstance(cobj, gen_base.SWIGObject):
               csrc = self.path(cobj.filename)
 
-              if self.swig_vernum < 103020 and target.lang == "python":
-                # workaround for a bug in the python module of old swigs.
-                # output path passed to swig has to use forward slashes,
-                # otherwise the generated python files (for shadow
-                # classes) will be saved to the wrong directory
-                cout = string.replace(csrc, '\\', '/')
-              else:
-                cout = csrc
+              cout = csrc
 
               # included header files that the generated c file depends on
               user_deps = swig_deps[:]
@@ -368,8 +351,8 @@ class WinGeneratorBase(GeneratorBase):
                   user_deps.append(isrc)
                   continue
 
-                cbuild = "swig %s -o %s $(InputPath)" \
-                         % (string.join(swig_options), cout)
+                cbuild = '%s %s -o %s $(InputPath)' \
+                         % (self.swig_exe, string.join(swig_options), cout)
 
                 sources.append(ProjectItem(path=isrc, reldir=None,
                                            custom_build=cbuild,
@@ -593,10 +576,6 @@ class WinGeneratorBase(GeneratorBase):
 
     if isinstance(target, gen_base.TargetSWIG):
       fakedefines.append("SWIG_GLOBAL")
-      fakedefines.append(self.swig_defines)
-
-    if isinstance(target, gen_base.TargetSWIGLib):
-      fakedefines.append(self.swig_defines)
 
     if cfg == 'Debug':
       fakedefines.extend(["_DEBUG","SVN_DEBUG"])
@@ -610,6 +589,10 @@ class WinGeneratorBase(GeneratorBase):
     # check if they wanted nls
     if self.enable_nls:
       fakedefines.append("ENABLE_NLS")
+      
+    # check if we have a newer neon (0.25.x)
+    if self.neon_ver >= 25000:
+      fakedefines.append("SVN_NEON_0_25=1")
 
     return fakedefines
 
@@ -631,6 +614,8 @@ class WinGeneratorBase(GeneratorBase):
                       % (target.lang,
                          gen_base.lang_utillib_suffix[target.lang])
       fakeincludes = [ self.path("subversion/bindings/swig"),
+                       self.path("subversion/bindings/swig/proxy"),
+                       self.path("subversion/bindings/swig/include"),
                        self.path("subversion/include"),
                        self.path(util_includes),
                        self.apath(self.apr_path, "include"),
@@ -642,6 +627,7 @@ class WinGeneratorBase(GeneratorBase):
                        self.apath(self.apr_util_path, "xml/expat/lib"),
                        self.apath(self.neon_path, "src"),
                        self.apath(self.bdb_path, "include"),
+                       self.path("subversion/bindings/swig/proxy"),
                        self.path("subversion") ]
 
     if self.libintl_path:
@@ -798,7 +784,7 @@ class WinGeneratorBase(GeneratorBase):
 
   def _find_bdb(self):
     "Find the Berkley DB library and version"
-    for lib in ("libdb43", "libdb42", "libdb41", "libdb40"):
+    for lib in ("libdb44", "libdb43", "libdb42", "libdb41", "libdb40"):
       path = os.path.join(self.bdb_path, "lib")
       if os.path.exists(os.path.join(path, lib + ".lib")):
         sys.stderr.write("Found %s.lib in %s\n" % (lib, path))
@@ -827,12 +813,19 @@ class WinGeneratorBase(GeneratorBase):
       fp.close()
 
   def _find_swig(self):
-    # Require (and assume) version 1.3.19
-    base_version = '1.3.19'
-    vernum = base_vernum = 103019
+    # Require 1.3.24. If not found, assume 1.3.25.
+    default_version = '1.3.25'
+    minimum_version = '1.3.24'
+    vernum = 103025
+    minimum_vernum = 103024
     libdir = ''
 
-    infp, outfp = os.popen4('swig -version')
+    if self.swig_path is not None:
+      self.swig_exe = os.path.join(self.swig_path, 'swig')
+    else:
+      self.swig_exe = 'swig'
+
+    infp, outfp = os.popen4(self.swig_exe + ' -version')
     infp.close()
     try:
       txt = outfp.read()
@@ -849,24 +842,23 @@ class WinGeneratorBase(GeneratorBase):
         # build/ac-macros/swig.m4 explains the next incantation
         vernum = int('%d%02d%03d' % version)
         sys.stderr.write('Found installed SWIG version %d.%d.%d\n' % version)
-        if vernum < base_vernum:
+        if vernum < minimum_vernum:
           sys.stderr.write('WARNING: Subversion requires version %s\n'
-                           % base_version)
+                           % minimum_version)
 
         libdir = self._find_swig_libdir()
       else:
         sys.stderr.write('Could not find installed SWIG,'
-                         ' assuming version %s\n' % base_version)
+                         ' assuming version %s\n' % default_version)
         self.swig_libdir = ''
     finally:
       outfp.close()
 
-    self.swig_defines = 'SVN_SWIG_VERSION=%d' % vernum
     self.swig_vernum = vernum
     self.swig_libdir = libdir
 
   def _find_swig_libdir(self):
-    fp = os.popen('swig -swiglib', 'r')
+    fp = os.popen(self.swig_exe + ' -swiglib', 'r')
     try:
       libdir = string.rstrip(fp.readline())
       if libdir:
@@ -893,6 +885,26 @@ class WinGeneratorBase(GeneratorBase):
     finally:
       fp.close()
 
+  def _find_neon(self):
+    "Find the neon version"
+    msg = 'WARNING: Unable to determine neon version\n'
+    try:
+      fp = open(os.path.join(self.neon_path, '.version'))
+      txt = fp.read()
+      vermatch = re.compile(r'(\d+)\.(\d+)\.(\d+)$', re.M) \
+                   .search(txt)
+  
+      if (vermatch):
+        version = (int(vermatch.group(1)),
+                   int(vermatch.group(2)),
+                   int(vermatch.group(3)))
+        # build/ac-macros/swig.m4 explains the next incantation
+        self.neon_ver = int('%d%02d%03d' % version)
+        msg = 'Found neon version %d.%d.%d\n' % version
+    except:
+      msg = 'WARNING: Error while determining neon version\n'
+    sys.stderr.write(msg)
+    
   def _configure_apr_util(self):
     if not self.configure_apr_util:
       return

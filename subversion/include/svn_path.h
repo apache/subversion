@@ -351,6 +351,9 @@ svn_boolean_t svn_path_is_backpath_present (const char *path);
  * Both paths must be in canonical form, and must either be absolute,
  * or contain no ".." components.
  *
+ * If @a path2 is the same as @a path1, it is not considered a child, so the
+ * result is @c NULL; an empty string is never returned.
+ *
  * ### todo: the ".." restriction is unfortunate, and would ideally
  * be lifted by making the implementation smarter.  But this is not
  * trivial: if the path is "../foo", how do you know whether or not

@@ -337,6 +337,48 @@ svn_error_t *svn_wc_locked (svn_boolean_t *locked,
                             apr_pool_t *pool);
 
 
+/**
+ * Return @c TRUE if @a name is the name of the WC administrative
+ * directory.  Use @a pool for any temporary allocations.  Only works
+ * with base directory names, not paths or URIs.
+ *
+ * For compatibility, the default name (.svn) will always be treated
+ * as an admin dir name, even if the working copy is actually using an
+ * alternative name.
+ *
+ * @since New in 1.3.
+ */
+svn_boolean_t svn_wc_is_adm_dir (const char *name, apr_pool_t *pool);
+
+
+/**
+ * Return the name of the administrative directory.
+ * Use @a pool for any temporary allocations.
+ *
+ * The returned pointer will refer to either a statically allocated
+ * string, or to a string allocated in @a pool.
+ *
+ * @since New in 1.3.
+ */
+const char *svn_wc_get_adm_dir (apr_pool_t *pool);
+
+
+/**
+ * Use @a name for the administrative directory in the working copy.
+ * Use @a pool for any temporary allocations.
+ *
+ * The list of valid names is limited.  Currently only ".svn" (the
+ * default) and "_svn" are allowed.
+ *
+ * @note This function changes global (per-process) state and must be
+ * called in a single-threaded context during the initialization of a
+ * Subversion client.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *svn_wc_set_adm_dir (const char *name, apr_pool_t *pool);
+
+
 
 /** Traversal information is information gathered by a working copy
  * crawl or update.  For example, the before and after values of the
@@ -399,6 +441,17 @@ typedef struct svn_wc_external_item_t
   svn_opt_revision_t revision;
 
 } svn_wc_external_item_t;
+
+
+/**
+ * Return a duplicate of @a item, allocated in @a pool.  No part of the new
+ * item will be shared with @a item.
+ *
+ * @since New in 1.3.
+ */
+svn_wc_external_item_t *
+svn_wc_external_item_dup (const svn_wc_external_item_t *item,
+                          apr_pool_t *pool);
 
 
 /**
@@ -1023,6 +1076,8 @@ svn_error_t *svn_wc_props_modified_p (svn_boolean_t *modified_p,
  * who knew the adm subdir's name).  However, import wants to protect
  * against importing administrative subdirs, so now the name is a
  * matter of public record.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 #define SVN_WC_ADM_DIR_NAME   ".svn"
 
@@ -1067,7 +1122,7 @@ typedef struct svn_wc_entry_t
   /** url in repository */
   const char *url;
 
-  /** canonical repository URL */
+  /** canonical repository URL or NULL if not known */
   const char *repos;
 
   /** repository uuid */
@@ -1151,15 +1206,6 @@ typedef struct svn_wc_entry_t
    * @since New in 1.2.
    */
   apr_time_t lock_creation_date;
-
-  /** Whether this entry has property modifications.
-   *
-   * @note For working copies in older formats, this flag is not valid.
-   *
-   * @see svn_wc_props_modified_p().
-   *
-   * @since New in 1.3. */
-  svn_boolean_t prop_mods;
 
   /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup() to see
      if you need to extend that as well. */
@@ -1352,10 +1398,10 @@ svn_error_t *svn_wc_mark_missing_deleted (const char *path,
  * initialize it to an unlocked state.
  *
  * If the administrative area already exists then the given @a url
- * must match the URL in the administrative area or an error will be
- * returned. The given @a revision must also match except for the
- * special case of adding a directory that has a name matching one
- * scheduled for deletion, in which case @a revision must be zero.
+ * must match the URL in the administrative area and the given
+ * @a revision must match the BASE of the working copy dir unless
+ * the admin directory is scheduled for deletion or the
+ * SVN_ERR_WC_OBSTRUCTED_UPDATE error will be returned.
  *
  * Do not ensure existence of @a path itself; if @a path does not
  * exist, return error.
@@ -1442,7 +1488,7 @@ enum svn_wc_status_kind
     /** is not a versioned thing in this wc */
     svn_wc_status_unversioned,
 
-    /** exists, but uninteresting. */
+    /** exists, but uninteresting */
     svn_wc_status_normal,
 
     /** is scheduled for addition */
@@ -1472,10 +1518,10 @@ enum svn_wc_status_kind
     /** an unversioned resource is in the way of the versioned resource */
     svn_wc_status_obstructed,
 
-    /** an unversioned path populated by an svn:external property */
+    /** an unversioned path populated by an svn:externals property */
     svn_wc_status_external,
 
-    /** a directory doesn't contain a complete entries list  */
+    /** a directory doesn't contain a complete entries list */
     svn_wc_status_incomplete
 };
 
@@ -1525,12 +1571,57 @@ typedef struct svn_wc_status2_t
   /** The entry's lock in the repository, if any. */
   svn_lock_t *repos_lock;
 
+  /** Set to the URI (actual or expected) of the item.
+   * @since New in 1.3
+   */
+  const char *url;
+
+  /**
+   * @defgroup svn_wc_status_ood WC out of date info from the repository
+   * @{
+   *
+   * When the working copy item is out of date compared to the
+   * repository, the following fields represent the state of the
+   * youngest revision of the item in the repository.  If the working
+   * copy is not out of date, the fields are initialized as described
+   * below.
+   */
+
+  /** Set to the youngest committed revision, or @c SVN_INVALID_REVNUM
+   * if not out of date.
+   * @since New in 1.3
+   */
+  svn_revnum_t ood_last_cmt_rev;
+
+  /** Set to the most recent commit date, or @c 0 if not out of date.
+   * @since New in 1.3
+   */
+  apr_time_t ood_last_cmt_date;
+
+  /** Set to the node kind of the youngest commit, or @c svn_node_none
+   * if not out of date.
+   * @since New in 1.3
+   */
+  svn_node_kind_t ood_kind;
+
+  /** Set to the user name of the youngest commit, or @c NULL if not
+   * out of date or non-existent.  Because a non-existent @c
+   * svn:author property has the same behavior as an out of date
+   * working copy, examine @c ood_last_cmt_rev to determine whether
+   * the working copy is out of date.
+   * @since New in 1.3
+   */
+  const char *ood_last_cmt_author;
+
+  /** @} */
+
+  /* NOTE! Please update svn_wc_dup_status2() when adding new fields here. */
 } svn_wc_status2_t;
 
 
 
 /**
- * Same as svn_wc_status2_t, but without the svn_lock_t 'repos_lock' field.
+ * Same as @c svn_wc_status2_t, but without the svn_lock_t 'repos_lock' field.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
@@ -1938,13 +2029,20 @@ svn_error_t *svn_wc_add (const char *path,
                          void *notify_baton,
                          apr_pool_t *pool);
 
-/** Add a file to a working copy at @a dst_path, obtaining the file's
- * contents from @a new_text_path and its properties from @a new_props,
- * which normally come from the repository file represented by the
- * copyfrom args, see below.  The new file will be scheduled for
- * addition with history.
+/** Add a file to a working copy at @a dst_path, obtaining the base-text's
+ * contents from @a new_text_base_path, the wc file's content from
+ * @a new_text_path, its base properties from @a new_base_props and
+ * wc properties from @a new_props.
+ * The base text and props normally come from the repository file
+ * represented by the copyfrom args, see below.  The new file will
+ * be scheduled for addition with history.
  *
- * Automatically remove @a new_text_path upon successful completion.
+ * Automatically remove @a new_text_path and @a new_text_path upon
+ * successful completion.
+ *
+ * @a new_text_path and @a new_props may be null, in which case
+ * the working copy text and props are taken from the base files with
+ * appropriate translation of the file's content.
  *
  * @a adm_access, or an access baton in its associated set, must
  * contain a write lock for the parent of @a dst_path.
@@ -1966,7 +2064,27 @@ svn_error_t *svn_wc_add (const char *path,
  * doc string about how that's really weird, outside its core mission,
  * etc, etc.  So another part of the Ideal Plan is that that
  * functionality of svn_wc_add() would move into a separate function.
+ *
+ * @since New in 1.4
  */
+
+svn_error_t *svn_wc_add_repos_file2 (const char *dst_path,
+                                     svn_wc_adm_access_t *adm_access,
+                                     const char *new_text_base_path,
+                                     const char *new_text_path,
+                                     apr_hash_t *new_base_props,
+                                     apr_hash_t *new_props,
+                                     const char *copyfrom_url,
+                                     svn_revnum_t copyfrom_rev,
+                                     apr_pool_t *pool);
+
+/** Same as svn_wc_add_repos_file2(), except that it doesn't have the
+ * new_text_base_path and new_base_props arguments.
+ *
+ * @deprecated Provided for compatibility with the 1.3 API
+ *
+ */
+
 svn_error_t *svn_wc_add_repos_file (const char *dst_path,
                                     svn_wc_adm_access_t *adm_access,
                                     const char *new_text_path,
@@ -2928,13 +3046,28 @@ svn_wc_revert (const char *path,
 /* Tmp files */
 
 /** Create a unique temporary file in administrative tmp/ area of
- * directory @a path.  Return a handle in @a *fp.
+ * directory @a path.  Return a handle in @a *fp and the path
+ * in @a *new_name. Either @a fp or @a new_name can be null.
  *
  * The flags will be <tt>APR_WRITE | APR_CREATE | APR_EXCL</tt> and
  * optionally @c APR_DELONCLOSE (if the @a delete_on_close argument is 
  * set @c TRUE).
  *
  * This means that as soon as @a fp is closed, the tmp file will vanish.
+ *
+ * @since New in 1.4
+ */
+svn_error_t *
+svn_wc_create_tmp_file2 (apr_file_t **fp,
+                         const char **new_name,
+                         const char *path,
+                         svn_boolean_t delete_on_close,
+                         apr_pool_t *pool);
+
+
+/** Same as svn_wc_add_repos_file2(), but without the path return value
+ *
+ * @deprecated For compatibility with 1.3 API
  */
 svn_error_t *
 svn_wc_create_tmp_file (apr_file_t **fp,
@@ -2944,7 +3077,7 @@ svn_wc_create_tmp_file (apr_file_t **fp,
 
 
 
-/* Eol conversion and keyword expansion. */
+/* EOL conversion and keyword expansion. */
 
 /** Set @a *xlated_p to a path to a possibly translated copy of versioned
  * file @a vfile, or to @a vfile itself if no translation is necessary.

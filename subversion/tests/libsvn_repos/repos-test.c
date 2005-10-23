@@ -797,7 +797,12 @@ node_locations (const char **msg,
         { 2, "/mu.new" },
         { 0 }
       };
+
+    /* Test this twice, once with a leading slash, once without,
+       because we know that the "without" form has caused us trouble
+       in the past. */
     SVN_ERR (check_locations (fs, info, "/mu.new", 2, pool));
+    SVN_ERR (check_locations (fs, info, "mu.new", 2, pool));
   }
   svn_pool_clear (subpool);
   
@@ -1117,6 +1122,9 @@ authz (const char **msg,
        of subpaths. */
     { "/A/D", "plato", svn_authz_read | svn_authz_recursive, TRUE },
     { "/A/D", NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    /* Test global write access lookups. */
+    { NULL, "plato", svn_authz_read, TRUE },
+    { NULL, NULL, svn_authz_write, FALSE },
     /* Sentinel */
     { NULL, NULL, svn_authz_none, FALSE }
   };
@@ -1297,6 +1305,7 @@ authz (const char **msg,
 
 /* Callback for the commit editor tests that relays requests to
    authz. */
+static
 svn_error_t *commit_authz_cb (svn_repos_authz_access_t required,
                               svn_boolean_t *allowed,
                               svn_fs_root_t *root,
@@ -1315,7 +1324,7 @@ svn_error_t *commit_authz_cb (svn_repos_authz_access_t required,
 
 /* Test that the commit editor is taking authz into account
    properly */
-svn_error_t *
+static svn_error_t *
 commit_editor_authz  (const char **msg,
                       svn_boolean_t msg_only,
                       svn_test_opts_t *opts,
@@ -1406,7 +1415,7 @@ commit_editor_authz  (const char **msg,
 
   /* Create a new commit editor in which we're going to play with
      authz */
-  SVN_ERR (svn_repos_get_commit_editor3 (&editor, &edit_baton, repos,
+  SVN_ERR (svn_repos_get_commit_editor4 (&editor, &edit_baton, repos,
                                          NULL, "file://test", "/",
                                          "plato", "test commit", NULL,
                                          NULL, commit_authz_cb, authz_file,

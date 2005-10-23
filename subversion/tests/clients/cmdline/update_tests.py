@@ -998,7 +998,8 @@ def update_receive_illegal_name(sbox):
   # This tests the revision 4334 fix for issue #1068.
   
   legal_url = svntest.main.current_repo_url + '/A/D/G/svn'
-  illegal_url = svntest.main.current_repo_url + '/A/D/G/.svn'
+  illegal_url = (svntest.main.current_repo_url
+                 + '/A/D/G/' + svntest.main.get_admin_name())
   # Ha!  The client doesn't allow us to mkdir a '.svn' but it does
   # allow us to copy to a '.svn' so ...
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1117,7 +1118,7 @@ def another_hudson_problem(sbox):
 
   # Delete directory G from the repository
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 3.\n'], None,
+                                     ['\n', 'Committed revision 3.\n'], [],
                                      'rm', '-m', 'log msg',
                                      svntest.main.current_repo_url + '/A/D/G')
 
@@ -1132,7 +1133,7 @@ def another_hudson_problem(sbox):
   # of issue 919 as far as I can tell)
   svntest.actions.run_and_verify_svn(None,
                                      ['D    '+G_path+'\n',
-                                      'Updated to revision 3.\n'], None,
+                                      'Updated to revision 3.\n'], [],
                                      'up', G_path)
 
   # Both G and gamma should be 'deleted', update should produce no output
@@ -1173,9 +1174,9 @@ def update_deleted_targets(sbox):
                                          wc_dir)
 
   # Explicit update must not remove the 'deleted=true' entries
-  svntest.actions.run_and_verify_svn(None, ['At revision 2.\n'], None,
+  svntest.actions.run_and_verify_svn(None, ['At revision 2.\n'], [],
                                      'update', gamma_path)
-  svntest.actions.run_and_verify_svn(None, ['At revision 2.\n'], None,
+  svntest.actions.run_and_verify_svn(None, ['At revision 2.\n'], [],
                                      'update', F_path)
 
   # Update to r1 to restore items, since the parent directory is already
@@ -1206,7 +1207,7 @@ def new_dir_with_spaces(sbox):
 
   # Create a new directory ("spacey dir") directly in repository
   svntest.actions.run_and_verify_svn(None,
-                                     ['\n', 'Committed revision 2.\n'], None,
+                                     ['\n', 'Committed revision 2.\n'], [],
                                      'mkdir', '-m', 'log msg',
                                      svntest.main.current_repo_url
                                      + '/A/spacey%20dir')

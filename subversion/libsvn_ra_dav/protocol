@@ -1,0 +1,115 @@
+This file documents Subversion's use of the WebDAV/DeltaV protocol.
+
+
+IMPORTANT RFCs and LINKS
+========================
+
+  * RFC 2518  (WebDAV)
+
+  * RFC 3253  (DeltaV)
+
+  * Subversion's limited uses of DeltaV, as well as interoperability
+    issues, are explained in the "WebDAV" appendix of the free
+    Subversion book (at http://svnbook.red-bean.com)
+
+
+
+
+HTTP METHODS USED, indexed by svn commands that access network
+==============================================================
+
+
+Read Commands  :  (OPTIONS, PROPFIND, GET, REPORT)
+-------------
+
+  Most commands have to resolve peg-revisions before starting:
+
+  * -r X foo@Y      REPORT                        ('get-locations')
+
+       ...if an old server doesn't support 'get-locations' report, the
+       client traces history using the 'log-report' instead.
+
+  And any command which has to convert a date to a revision:
+
+  * -r {DATE}       REPORT                        ('dated-rev-report')
+
+
+  The following group of commands all use the custom 'update-report'
+  request, which is just a fancy way of driving svn_repos_dir_delta():
+
+  * svn checkout:   OPTIONS, PROPFIND, REPORT     ('update-report')
+
+  * svn export:     OPTIONS, PROPFIND, REPORT     ('update-report')
+
+  * svn update:     OPTIONS, PROPFIND, REPORT     ('update-report')
+
+  * svn switch:     OPTIONS, PROPFIND, REPORT     ('update-report')
+
+  * svn diff:       OPTIONS, PROPFIND, REPORT     ('update-report')
+                    ... then many GETs
+
+  * svn merge:      OPTIONS, PROPFIND, REPORT     ('update-report')
+                    ... then many GETs
+
+  * svn status -u:  OPTIONS, PROPFIND, REPORT     ('update-report' and
+                                                   'get-locks-report')
+
+  * svn cp URL wc:  OPTIONS, PROPFIND, REPORT     ('update-report')
+                    (this is just like checkout)
+
+
+  And these guys are left over:
+
+  * svn log:        OPTIONS, PROPFIND, REPORT     ('log-report')
+
+  * svn blame:      OPTIONS, PROPFIND, REPORT     ('file-revs-report')
+                    [older clients use GET
+                     and different REPORT]        ('log-report')
+
+  * svn ls:         PROPFIND, REPORT              ('get-locks-report')
+
+  * svn cat:        PROPFIND, GET
+
+  * svn info URL:   PROPFIND
+
+  * svn plist URL:  PROPFIND
+
+  * svn pget URL:   PROPFIND
+ 
+
+
+
+Write Commands  :  (MKACTIVITY, PROPPATCH, PUT, CHECKOUT, MKCOL, MOVE,
+--------------      COPY, DELETE, LOCK, UNLOCK, MERGE)
+
+  With the exception of LOCK/UNLOCK, every write command performs some
+  sort of DeltaV commit operation.  In DeltaV, a commit always starts
+  by creating a transaction (MKACTIVITY), applies a log message
+  (PROPPATCH), does some other write methods, and then ends by
+  committing the transaction (MERGE).  If the MERGE fails, the client
+  may try to remove the transaction with a DELETE.
+
+  * svn commit:     OPTIONS, PROPFIND, MKACTIVITY, 
+                    {CHECKOUT, COPY, MOVE, DELETE, PROPPATCH, PUT, MKCOL},
+                    MERGE (DELETE)
+
+  * svn import:     OPTIONS, PROPFIND, MKACTIVITY,
+                    {PROPPATCH, PUT, MKCOL},
+                    MERGE (DELETE)
+
+  * svn lock:       PROPFIND, LOCK
+  
+  * svn unlock:     PROPFIND, UNLOCK
+
+  * svn cp URL URL: OPTIONS, PROPFIND, MKACTIVITY, PROPPATCH,
+                    COPY, MERGE.  (DELETE)
+
+  * svn mv URL URL: OPTIONS, PROPFIND, MKACTIVITY, PROPPATCH,
+                    COPY, DELETE, MERGE.  (DELETE)
+
+  * svn rm URL:     OPTIONS, PROPFIND, MKACTIVITY, PROPPATCH, DELETE, MERGE.
+
+  * svn mkdir URL:  OPTIONS, PROPFIND, MKACTIVITY, PROPPATCH, MKCOL, MERGE.
+
+  * svn pset --revprop:  PROPPATCH
+

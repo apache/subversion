@@ -899,6 +899,19 @@ svn_io_file_rename (const char *from_path, const char *to_path,
                     apr_pool_t *pool);
 
 
+/** Move the file from @a from_path to @a to_path, even across device
+ * boundaries. Overwrite @a to_path if it exists.
+ *
+ * @note This function is different from svn_io_file_rename in that the
+ * latter fails in the 'across device boundaries' case.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_io_file_move (const char *from_path, const char *to_path,
+                  apr_pool_t *pool);
+
+
 /** Wrapper for apr_dir_make(), which see.  @a path is utf8-encoded. */
 svn_error_t *
 svn_io_dir_make (const char *path, apr_fileperms_t perm, apr_pool_t *pool);

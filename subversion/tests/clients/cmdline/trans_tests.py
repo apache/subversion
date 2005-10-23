@@ -332,8 +332,8 @@ def keywords_from_birth(sbox):
     '$URL::x%sx$\n' % (' ' * len(url_expand_test_data))
     ]
   
-  fp = open(os.path.join(wc_dir, '.svn', 'text-base',
-			 'fixed_length_keywords.svn-base'), 'r')
+  fp = open(os.path.join(wc_dir, svntest.main.get_admin_name(),
+                         'text-base', 'fixed_length_keywords.svn-base'), 'r')
   actual_textbase_kw = fp.readlines()
   fp.close()
   check_keywords(actual_textbase_kw, kw_textbase, "text base")
@@ -526,7 +526,8 @@ def eol_change_is_text_mod(sbox):
   else:
     if contents != "1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n":
       raise svntest.Failure
-  f = open(os.path.join(wc_dir, '.svn', 'text-base', 'foo.svn-base'), 'rb')
+  f = open(os.path.join(wc_dir, svntest.main.get_admin_name(),
+                        'text-base', 'foo.svn-base'), 'rb')
   base_contents = f.read()
   f.close()
   if contents != base_contents:
@@ -616,7 +617,7 @@ def cat_keyword_expansion(sbox):
   # At one stage the keywords were expanded to values for the requested
   # revision, not to those committed revision
   svntest.actions.run_and_verify_svn (None, [ "This is the file 'mu'.\n",
-                                              "$Rev: 2 $" ], None,
+                                              "$Rev: 2 $" ], [],
                                       'cat', '-r', 'HEAD', mu_path)
   
 
@@ -693,7 +694,7 @@ def propset_commit_checkout_nocrash(sbox):
   other_wc_dir = sbox.add_wc_path('other')
   mu_other_path = os.path.join(other_wc_dir, 'A', 'mu')
   
-  svntest.actions.run_and_verify_svn (None, None, None, 'checkout',
+  svntest.actions.run_and_verify_svn (None, None, [], 'checkout',
                                       '--username', svntest.main.wc_author,
                                       '--password', svntest.main.wc_passwd,
                                       svntest.main.current_repo_url,

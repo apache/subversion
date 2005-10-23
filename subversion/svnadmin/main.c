@@ -33,6 +33,7 @@
 #include "svn_version.h"
 #include "svn_props.h"
 #include "svn_time.h"
+#include "svn_user.h"
 
 #include "svn_private_config.h"
 
@@ -179,6 +180,7 @@ check_lib_versions (void)
 /** Subcommands. **/
 
 static svn_opt_subcommand_t
+  subcommand_crashtest,
   subcommand_create,
   subcommand_deltify,
   subcommand_dump,
@@ -290,6 +292,12 @@ static const apr_getopt_option_t options_table[] =
  */
 static const svn_opt_subcommand_desc_t cmd_table[] =
   {
+    {"crashtest", subcommand_crashtest, {0},
+     N_("usage: svnadmin crashtest REPOS_PATH\n\n"
+        "Open the repository at REPOS_PATH, then abort, thus simulating\n"
+        "a process that crashes while holding an open repository handle.\n"),
+     {0} },
+
     {"create", subcommand_create, {0},
      N_("usage: svnadmin create REPOS_PATH\n\n"
      "Create a new, empty repository at REPOS_PATH.\n"),
@@ -1060,19 +1068,9 @@ subcommand_rmlocks (apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* svn_fs_unlock() demands that some username be associated with the
      filesystem, so just use the UID of the person running 'svnadmin'.*/
-  {
-    apr_uid_t uid;
-    apr_gid_t gid;
-    char *un;
-    if (apr_uid_current (&uid, &gid, pool) == APR_SUCCESS &&
-        apr_uid_name_get (&un, uid, pool) == APR_SUCCESS)
-      {
-        err = svn_utf_cstring_to_utf8 (&username, un, pool);
-        svn_error_clear (err);
-        if (err)
-          username = "administrator";
-        }
-  }
+  username = svn_user_get_name(pool);
+  if (! username)
+    username = "administrator";
 
   /* Create an access context describing the current user. */
   SVN_ERR (svn_fs_create_access (&access, username, pool));
@@ -1451,4 +1449,18 @@ main (int argc, const char * const *argv)
       }
       return EXIT_SUCCESS;
     }
+}
+
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_crashtest (apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_repos_t *repos;
+
+  SVN_ERR (open_repos (&repos, opt_state->repository_path, pool));
+  abort();
+
+  return SVN_NO_ERROR;
 }

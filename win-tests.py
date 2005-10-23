@@ -10,6 +10,7 @@ Usage: python win-tests.py [option] [test-path]
 
     --svnserve-args=list   comma-separated list of arguments for svnserve;
                            default is '-d,-r,<test-path-root>'
+    --asp.net-hack     use '_svn' instead of '.svn' for the admin dir name
 """
 
 import os, sys
@@ -17,6 +18,7 @@ import filecmp
 import shutil
 import traceback
 import ConfigParser
+import string
 
 import getopt
 try:
@@ -37,7 +39,7 @@ client_tests = filter(lambda x: x.startswith('subversion/tests/clients/'),
 
 opts, args = my_getopt(sys.argv[1:], 'rdvcu:f:',
                        ['release', 'debug', 'verbose', 'cleanup', 'url=',
-                        'svnserve-args=', 'fs-type='])
+                        'svnserve-args=', 'fs-type=', 'asp.net-hack'])
 if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
@@ -76,6 +78,8 @@ for opt, val in opts:
   elif opt == '--svnserve-args':
     svnserve_args = val.split(',')
     run_svnserve = 1
+  elif opt == '--asp.net-hack':
+    os.environ['SVN_ASP_DOT_NET_HACK'] = opt
 
 
 # Calculate the source and test directory names
@@ -156,6 +160,20 @@ def locate_libs():
 
   os.environ['APR_ICONV_PATH'] = apriconv_so_path
   os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
+  
+def fix_case(path):
+    path = os.path.normpath(path)
+    parts = string.split(path, os.path.sep)
+    drive = string.upper(parts[0])
+    parts = parts[1:]
+    path = drive + os.path.sep
+    for part in parts:
+        dirs = os.listdir(path)
+        for dir in dirs:
+            if string.lower(dir) == string.lower(part):
+                path = os.path.join(path, dir)
+                break
+    return path
 
 class Svnserve:
   "Run svnserve for ra_svn tests"
@@ -223,6 +241,8 @@ if create_dirs:
   else:
     os.chdir(old_cwd)
 
+# Ensure the tests directory is correctly cased
+abs_builddir = fix_case(abs_builddir)
 
 # Run the tests
 if run_svnserve:

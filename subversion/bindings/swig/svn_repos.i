@@ -26,9 +26,11 @@
 
 %include typemaps.i
 
-%import apr.i
-%import svn_types.i
-%import svn_string.i
+%include svn_global.swg
+%import apr.swg
+%import core.i
+%import svn_types.swg
+%import svn_string.swg
 %import svn_delta.i
 %import svn_fs.i
 
@@ -37,6 +39,8 @@
 */
 %apply SWIGTYPE **OUTPARAM {
     svn_repos_t **,
+    svn_dirent_t **,
+    svn_authz_t **,
     const svn_delta_editor_t **editor,
     void **edit_baton
 };
@@ -45,8 +49,14 @@
     const char *src_entry,
     const char *unused_1,
     const char *unused_2,
-    const char *token
+    const char *token,
+    const char *user,
+    const char *log_msg,
+    const char *lock_token,
+    const char *tgt_path
 };
+
+%apply apr_hash_t *STRING_TO_STRING { apr_hash_t *fs_config };
 
 /* svn_repos_db_logfiles() */
 %apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
@@ -69,7 +79,7 @@
     $1 = (apr_array_header_t *) svn_swig_py_revnums_to_array($input,
                                                              _global_pool);
     if ($1 == NULL)
-        return NULL;
+        SWIG_fail;
 }
 
 /* -----------------------------------------------------------------------
@@ -96,6 +106,12 @@
   $2 = $input; /* our function is the baton. */
 }
 
+%typemap(ruby, in) (svn_repos_history_func_t history_func, void *history_baton)
+{
+  $1 = svn_swig_rb_repos_history_func;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+
 /* -----------------------------------------------------------------------
    handle svn_repos_fs_get_locks
 */
@@ -103,7 +119,8 @@
 %typemap(python,argout,fragment="t_output_helper") apr_hash_t **locks {
     $result = t_output_helper(
         $result,
-        svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_lock_t));
+        svn_swig_py_convert_hash(*$1, $descriptor(svn_lock_t *),
+          _global_svn_swig_py_pool));
 }
 
 
@@ -127,28 +144,82 @@
   $2 = $input; /* our function is the baton. */
 }
 
-%typemap(ruby, in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton) {
-  $1 = svn_swig_rb_repos_authz_func;
-  $2 = (void *)$input;
+%typemap(ruby, in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton)
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+    $2 = NULL;
+  } else {
+    $1 = svn_swig_rb_repos_authz_func;
+    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+  }
 }
 
 /* -----------------------------------------------------------------------
-   handle config and fs_config in svn_repos_create
+   handle start_callback of svn_repos_recover2().
+*/
+
+/* cause SWIG syntax error.
+%typemap(ruby, in) (svn_error_t *(*)(void *baton) start_callback, void *start_callback_baton)
+{
+  $1 = svn_swig_rb_just_call;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+*/
+
+/* -----------------------------------------------------------------------
+   handle svn_repos_file_rev_handler_t/baton pairs
+*/
+
+%typemap(ruby, in) (svn_repos_file_rev_handler_t handler,
+                    void *handler_baton)
+{
+  $1 = svn_swig_rb_repos_file_rev_handler;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+
+/* -----------------------------------------------------------------------
+   handle svn_repos_authz_func_t/baton pairs
+*/
+
+%typemap(ruby, in) (svn_repos_authz_func_t authz_read_func,
+                    void *authz_read_baton)
+{
+  $1 = svn_swig_rb_repos_authz_func;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+
+/* -----------------------------------------------------------------------
+   handle svn_repos_authz_callback_t/baton pairs
+*/
+
+%typemap(ruby, in) (svn_repos_authz_callback_t authz_callback,
+                    void *authz_baton)
+{
+  $1 = svn_swig_rb_repos_authz_callback;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+}
+
+/* -----------------------------------------------------------------------
+   handle svn_repos_fs_revision_proplist().
+*/
+
+%typemap(ruby, in, numinputs=0) apr_hash_t **table_p = apr_hash_t **OUTPUT;
+%typemap(ruby, argout, fragment="output_helper") apr_hash_t **dirents
+{
+  $result = output_helper($result,
+                          svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
+}
+
+/* -----------------------------------------------------------------------
+   handle config in svn_repos_create
 */
 
 /* ### TODO: %typemap(python, in) apr_hash_t *config {} */
 
-%typemap(python, in) apr_hash_t *fs_config {
-    $1 = svn_swig_py_stringhash_from_dict ($input, _global_pool);
-}
-    
 %typemap(perl5, in) apr_hash_t *config {
     $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
 					   _global_pool);
-}
-
-%typemap(perl5, in) apr_hash_t *fs_config {
-    $1 = svn_swig_pl_strings_to_hash ($input, _global_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -162,8 +233,6 @@
 /* ----------------------------------------------------------------------- */
 
 %{
-#include "svn_repos.h"
-
 #ifdef SWIGPYTHON
 #include "swigutil_py.h"
 #endif
@@ -177,4 +246,18 @@
 #endif
 %}
 
-%include svn_repos.h
+#ifdef SWIGRUBY
+%ignore svn_repos_fs;
+#endif
+
+%include svn_repos_h.swg
+
+#ifdef SWIGRUBY
+%inline %{
+static svn_fs_t *
+svn_repos_fs_wrapper(svn_repos_t *fs, apr_pool_t *pool)
+{
+  return svn_repos_fs(fs);
+}
+%}
+#endif

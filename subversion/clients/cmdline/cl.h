@@ -226,7 +226,7 @@ svn_error_t *svn_cl__check_cancel (void *baton);
 
 /* Print out commit information found in COMMIT_INFO to the console.
  * POOL is used for temporay allocations. */
-svn_error_t *svn_cl__print_commit_info (svn_client_commit_info2_t *commit_info,
+svn_error_t *svn_cl__print_commit_info (svn_commit_info_t *commit_info,
                                         apr_pool_t *pool);
 
 
@@ -432,10 +432,10 @@ svn_error_t *svn_cl__make_log_msg_baton (void **baton,
                                          apr_hash_t *config,
                                          apr_pool_t *pool);
 
-/* A function of type svn_client_get_commit_log_t. */
+/* A function of type svn_client_get_commit_log2_t. */
 svn_error_t *svn_cl__get_log_message (const char **log_msg,
                                       const char **tmp_file,
-                                      apr_array_header_t *commit_items,
+                                      const apr_array_header_t *commit_items,
                                       void *baton,
                                       apr_pool_t *pool);
 

@@ -537,27 +537,6 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
       }
   }
   
-  /* prop-mods flag. */
-  {
-    const char *prop_mods_str
-      = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_PROP_MODS,
-                      APR_HASH_KEY_STRING);
-        
-    if (prop_mods_str)
-      {
-        if (! strcmp (prop_mods_str, "true"))
-          entry->prop_mods = TRUE;
-        else if (strcmp (prop_mods_str, "false"))
-          return svn_error_createf 
-            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
-             _("Entry '%s' has invalid '%s' value"),
-             (name ? name : SVN_WC_ENTRY_THIS_DIR),
-             SVN_WC__ENTRY_ATTR_PROP_MODS);
-
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_PROP_MODS;
-      }
-  }
-
   *new_entry = entry;
   return SVN_NO_ERROR;
 }
@@ -1117,11 +1096,6 @@ write_entry (svn_stringbuf_t **output,
                   APR_HASH_KEY_STRING,
                   svn_time_to_cstring (entry->lock_creation_date, pool));
 
-  /* Prop-mods. */
-  if (entry->prop_mods)
-    apr_hash_set (atts, SVN_WC__ENTRY_ATTR_PROP_MODS,
-                  APR_HASH_KEY_STRING, "true");
-
   /*** Now, remove stuff that can be derived through inheritance rules. ***/
 
   /* We only want to write out 'revision' and 'url' for the
@@ -1302,7 +1276,7 @@ svn_wc__entries_write (apr_hash_t *entries,
    already exists, the requested changes will be folded (merged) into
    the entry's existing state.  If the entry doesn't exist, the entry
    will be created with exactly those properties described by the set
-   of changes.
+   of changes. Also cleanups meaningless fields combinations.
 
    POOL may be used to allocate memory referenced by ENTRIES.
  */
@@ -1442,10 +1416,6 @@ fold_entry (apr_hash_t *entries,
   if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE)
     cur_entry->lock_creation_date = entry->lock_creation_date;
 
-  /* prop-mods flag */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_PROP_MODS)
-    cur_entry->prop_mods = entry->prop_mods;
-
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */
   if (cur_entry->kind != svn_node_dir)
@@ -1454,6 +1424,27 @@ fold_entry (apr_hash_t *entries,
         = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
       if (default_entry)
         take_from_entry (default_entry, cur_entry, pool);
+    }
+
+  /* Cleanup meaningless fields */
+
+  /* ### svn_wc_schedule_delete is the minimal value. We need it because it's
+     impossible to NULLify copyfrom_url with log-instructions.
+
+     Note that I tried to find the smallest collection not to clear these
+     fields for, but this condition still fails the test suite:
+
+     !(entry->schedule == svn_wc_schedule_add
+       || entry->schedule == svn_wc_schedule_replace
+       || (entry->schedule == svn_wc_schedule_normal && entry->copied)))
+
+  */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE
+      && entry->schedule == svn_wc_schedule_delete)
+    {
+      cur_entry->copied = FALSE;
+      cur_entry->copyfrom_rev = SVN_INVALID_REVNUM;
+      cur_entry->copyfrom_url = NULL;
     }
 
   /* Make sure the entry exists in the entries hash.  Possibly it
@@ -1635,6 +1626,9 @@ fold_scheduling (apr_hash_t *entries,
       switch (*schedule)
         {
         case svn_wc_schedule_normal:
+          /* Reverting a delete results in normal */
+          return SVN_NO_ERROR;
+
         case svn_wc_schedule_delete:
           /* These are no-op cases. */
           *modify_flags &= ~SVN_WC__ENTRY_MODIFY_SCHEDULE;
@@ -1661,7 +1655,9 @@ fold_scheduling (apr_hash_t *entries,
       switch (*schedule)
         {
         case svn_wc_schedule_normal:
-          /* These are all no-op cases. */
+          /* Reverting replacements results normal. */
+          return SVN_NO_ERROR;
+        
         case svn_wc_schedule_add:
           /* Adding a to-be-replaced entry breaks down to ((delete +
              add) + add) which might deserve a warning, but we'll just
@@ -1775,7 +1771,7 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
 svn_wc_entry_t *
 svn_wc_entry_dup (const svn_wc_entry_t *entry, apr_pool_t *pool)
 {
-  svn_wc_entry_t *dupentry = apr_pcalloc (pool, sizeof(*dupentry));
+  svn_wc_entry_t *dupentry = apr_palloc (pool, sizeof (*dupentry));
 
   /* Perform a trivial copy ... */
   *dupentry = *entry;

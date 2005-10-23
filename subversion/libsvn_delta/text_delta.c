@@ -154,8 +154,8 @@ compute_window (const char *data, apr_size_t source_len, apr_size_t target_len,
 
 
 svn_txdelta_window_t *
-svn_txdelta__copy_window (const svn_txdelta_window_t *window,
-                          apr_pool_t *pool)
+svn_txdelta_window_dup (const svn_txdelta_window_t *window,
+                        apr_pool_t *pool)
 {
   svn_txdelta__ops_baton_t build_baton = { 0 };
   svn_txdelta_window_t *new_window;
@@ -176,6 +176,16 @@ svn_txdelta__copy_window (const svn_txdelta_window_t *window,
   return new_window;
 }
 
+/* This is a private interlibrary compatibility wrapper. */
+svn_txdelta_window_t *
+svn_txdelta__copy_window (const svn_txdelta_window_t *window,
+                          apr_pool_t *pool);
+svn_txdelta_window_t *
+svn_txdelta__copy_window (const svn_txdelta_window_t *window,
+                          apr_pool_t *pool)
+{
+  return svn_txdelta_window_dup (window, pool);
+}
 
 
 /* Insert a delta op into a delta window. */

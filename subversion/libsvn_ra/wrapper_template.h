@@ -37,6 +37,7 @@
 #error Missing define for RA compatibility wrapper.
 #endif
 
+
 static svn_error_t *compat_open (void **session_baton,
                                  const char *repos_URL,
                                  const svn_ra_callbacks_t *callbacks,
@@ -44,10 +45,35 @@ static svn_error_t *compat_open (void **session_baton,
                                  apr_hash_t *config,
                                  apr_pool_t *pool)
 {
+  /* Here, we should be calling svn_ra_create_callbacks to initialize
+   * the svn_ra_callbacks2_t structure.  However, doing that
+   * introduces a circular dependancy between libsvn_ra and
+   * libsvn_ra_{local,dav,svn}, which include wrapper_template.h.  In
+   * turn, circular dependancies break the build on win32 (and
+   * possibly other systems).
+   *
+   * In order to avoid this happening at all, the code of
+   * svn_ra_create_callbacks is duplicated here.  This is evil, but
+   * the alternative (creating a new ra_util library) would be massive
+   * overkill for the time being.  Just be sure to keep the following
+   * line and the code of svn_ra_create_callbacks in sync.  */
+  svn_ra_callbacks2_t *callbacks2 = apr_pcalloc (pool,
+                                                 sizeof (*callbacks2));
+
   svn_ra_session_t *sess = apr_pcalloc (pool, sizeof (svn_ra_session_t));
   sess->vtable = &VTBL;
   sess->pool = pool;
-  SVN_ERR (VTBL.open (sess, repos_URL, callbacks, callback_baton,
+
+  callbacks2->open_tmp_file = callbacks->open_tmp_file;
+  callbacks2->auth_baton = callbacks->auth_baton;
+  callbacks2->get_wc_prop = callbacks->get_wc_prop;
+  callbacks2->set_wc_prop = callbacks->set_wc_prop;
+  callbacks2->push_wc_prop = callbacks->push_wc_prop;
+  callbacks2->invalidate_wc_props = callbacks->invalidate_wc_props;
+  callbacks2->progress_func = NULL;
+  callbacks2->progress_baton = NULL;
+
+  SVN_ERR (VTBL.open (sess, repos_URL, callbacks2, callback_baton,
                       config, pool));
   *session_baton = sess;
   return SVN_NO_ERROR;
@@ -103,8 +129,15 @@ static svn_error_t *compat_get_commit_editor (void *session_baton,
                                               void *callback_baton,
                                               apr_pool_t *pool)
 {
+  svn_commit_callback2_t callback2;
+  void *callback2_baton;
+
+  svn_compat_wrap_commit_callback (callback, callback_baton,
+                                   &callback2, &callback2_baton,
+                                   pool);
   return VTBL.get_commit_editor (session_baton, editor, edit_baton, log_msg,
-                                 callback, callback_baton, NULL, TRUE, pool);
+                                 callback2, callback2_baton,
+                                 NULL, TRUE, pool);
 }
 
 static svn_error_t *compat_get_file (void *session_baton,
@@ -287,8 +320,8 @@ static svn_error_t *compat_do_diff (void *session_baton,
   void *baton2;
   
   SVN_ERR (VTBL.do_diff (session_baton, &reporter2, &baton2, revision,
-                         diff_target, recurse, ignore_ancestry, versus_url,
-                         diff_editor, diff_baton, pool));
+                         diff_target, recurse, ignore_ancestry, TRUE,
+                         versus_url, diff_editor, diff_baton, pool));
 
   compat_wrap_reporter (reporter, report_baton, reporter2, baton2, pool);
 

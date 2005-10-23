@@ -422,7 +422,7 @@ svn_io_copy_link (const char *src,
 
 
 #if 1 /* TODO: Remove this code when APR 0.9.6 is released. */
-#include "apr_env.h"
+#include <apr_env.h>
 
 /* Try to open a temporary file in the temporary dir, write to it,
    and then close it. */
@@ -1726,6 +1726,19 @@ svn_io_get_dirents (apr_hash_t **dirents,
   return svn_io_get_dirents2 (dirents, path, pool);
 }
 
+/* Handle an error from the child process (before command execution) by
+   printing DESC and the error string corresponding to STATUS to stderr. */
+static void
+handle_child_process_error (apr_pool_t *pool, apr_status_t status,
+                            const char *desc)
+{
+  char errbuf[256];
+
+  /* What we get from APR is in native encoding. */
+  fprintf (stderr, "%s: %s", desc, apr_strerror (status, errbuf,
+                                                 sizeof (errbuf)));
+}
+
 
 svn_error_t *
 svn_io_start_cmd (apr_proc_t *cmd_proc,
@@ -1795,6 +1808,13 @@ svn_io_start_cmd (apr_proc_t *cmd_proc,
         return svn_error_wrap_apr
           (apr_err, _("Can't set process '%s' child errfile"), cmd);
     }
+
+  /* Have the child print any problems executing its program to stderr. */
+  apr_err = apr_procattr_child_errfn_set (cmdproc_attr,
+                                          handle_child_process_error);
+  if (apr_err)
+    return svn_error_wrap_apr
+      (apr_err, _("Can't set process '%s' error handler"), cmd);
 
   /* Convert cmd and args from UTF-8 */
   SVN_ERR (svn_path_cstring_from_utf8 (&cmd_apr, cmd, pool));
@@ -2425,6 +2445,46 @@ svn_io_file_rename (const char *from_path, const char *to_path,
 }
 
 
+svn_error_t *
+svn_io_file_move (const char *from_path, const char *to_path,
+                  apr_pool_t *pool)
+{
+  svn_error_t *err = svn_io_file_rename (from_path, to_path, pool);
+
+  if (err && APR_STATUS_IS_EXDEV (err->apr_err))
+    {
+      const char *tmp_to_path;
+      apr_file_t *fp;
+
+      svn_error_clear (err);
+
+      SVN_ERR (svn_io_open_unique_file (&fp, &tmp_to_path,
+                                        to_path, "tmp", FALSE, pool));
+      apr_file_close (fp);
+
+      err = svn_io_copy_file (from_path, tmp_to_path, TRUE, pool);
+      if (err)
+        goto failed_tmp;
+
+      err = svn_io_file_rename (tmp_to_path, to_path, pool);
+      if (err)
+        goto failed_tmp;
+
+      err = svn_io_remove_file (from_path, pool);
+      if (! err)
+        return SVN_NO_ERROR;
+
+      svn_error_clear (svn_io_remove_file (to_path, pool));
+
+      return err;
+
+    failed_tmp:
+      svn_error_clear (svn_io_remove_file (tmp_to_path, pool));
+    }
+
+  return err;
+}
+
 /* Common implementation of svn_io_dir_make and svn_io_dir_make_hidden.
    HIDDEN determines if the hidden attribute
    should be set on the newly created directory. */
@@ -2904,8 +2964,11 @@ contents_identical_p (svn_boolean_t *identical_p,
       err2 = svn_io_file_read_full (file2_h, buf2, 
                                     sizeof(buf2), &bytes_read2, pool);
       if (err2 && !APR_STATUS_IS_EOF(err2->apr_err))
-        return err2;
-      
+        {
+          svn_error_clear (err1);
+          return err2;
+        }
+
       if ((bytes_read1 != bytes_read2)
           || (memcmp (buf1, buf2, bytes_read1)))
         {

@@ -90,8 +90,11 @@ dnl
 dnl SVN_CONFIG_SCRIPT(path)
 dnl
 dnl Make AC_OUTPUT create an executable file.
+dnl Accumulate filenames in $SVN_CONFIG_SCRIPT_FILES for AC_SUBSTing to
+dnl use in, for example, Makefile distclean rules.
 dnl
 AC_DEFUN(SVN_CONFIG_SCRIPT, [
+  SVN_CONFIG_SCRIPT_FILES="$SVN_CONFIG_SCRIPT_FILES $1"
   AC_CONFIG_FILES([$1], [chmod +x $1])])
 
 dnl Iteratively interpolate the contents of the second argument

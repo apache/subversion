@@ -235,6 +235,32 @@ install_dependency neon "$NEON_PATH"
 
 find "$DISTPATH" -name config.nice -print | xargs rm -f
 
+# Massage the new version number into svn_version.h.  We need to do
+# this before running autogen.sh --release on the subversion code,
+# because otherwise svn_version.h's mtime makes SWIG files regenerate
+# on end-user's systems, when they should just be compiled by the
+# Release Manager and left at that.
+
+ver_major=`echo $VERSION | cut -d '.' -f 1`
+ver_minor=`echo $VERSION | cut -d '.' -f 2`
+ver_patch=`echo $VERSION | cut -d '.' -f 3`
+
+vsn_file="$DISTPATH/subversion/include/svn_version.h"
+
+sed \
+ -e "/#define *SVN_VER_MAJOR/s/[0-9]\+/$ver_major/" \
+ -e "/#define *SVN_VER_MINOR/s/[0-9]\+/$ver_minor/" \
+ -e "/#define *SVN_VER_PATCH/s/[0-9]\+/$ver_patch/" \
+ -e "/#define *SVN_VER_MICRO/s/[0-9]\+/$ver_patch/" \
+ -e "/#define *SVN_VER_TAG/s/\".*\"/\" ($VER_TAG)\"/" \
+ -e "/#define *SVN_VER_NUMTAG/s/\".*\"/\"$VER_NUMTAG\"/" \
+ -e "/#define *SVN_VER_REVISION/s/[0-9]\+/$REVISION_SVN/" \
+  < "$vsn_file" > "$vsn_file.tmp"
+
+mv -f "$vsn_file.tmp" "$vsn_file"
+
+cp "$vsn_file" "svn_version.h.dist"
+
 echo "Running ./autogen.sh in sandbox, to create ./configure ..."
 (cd "$DISTPATH" && ./autogen.sh --release) || exit 1
 
@@ -274,26 +300,6 @@ If you want to see changes since Subversion went self-hosting,
 you probably want to use the "svn log" command -- and if it 
 does not do what you need, please send in a patch!
 EOF
-
-ver_major=`echo $VERSION | cut -d '.' -f 1`
-ver_minor=`echo $VERSION | cut -d '.' -f 2`
-ver_patch=`echo $VERSION | cut -d '.' -f 3`
-
-vsn_file="$DISTPATH/subversion/include/svn_version.h"
-
-sed \
- -e "/#define *SVN_VER_MAJOR/s/[0-9]\+/$ver_major/" \
- -e "/#define *SVN_VER_MINOR/s/[0-9]\+/$ver_minor/" \
- -e "/#define *SVN_VER_PATCH/s/[0-9]\+/$ver_patch/" \
- -e "/#define *SVN_VER_MICRO/s/[0-9]\+/$ver_patch/" \
- -e "/#define *SVN_VER_TAG/s/\".*\"/\" ($VER_TAG)\"/" \
- -e "/#define *SVN_VER_NUMTAG/s/\".*\"/\"$VER_NUMTAG\"/" \
- -e "/#define *SVN_VER_REVISION/s/[0-9]\+/$REVISION_SVN/" \
-  < "$vsn_file" > "$vsn_file.tmp"
-
-mv -f "$vsn_file.tmp" "$vsn_file"
-
-cp "$vsn_file" "svn_version.h.dist"
 
 if [ -z "$ZIP" ]; then
   # Do not use tar, it's probably GNU tar which produces tar files that are

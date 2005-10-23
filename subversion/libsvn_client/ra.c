@@ -92,8 +92,9 @@ get_wc_prop (void *baton,
       int i;
       for (i = 0; i < cb->commit_items->nelts; i++)
         {
-          svn_client_commit_item_t *item
-            = ((svn_client_commit_item_t **) cb->commit_items->elts)[i];
+          svn_client_commit_item2_t *item
+            = APR_ARRAY_IDX(cb->commit_items, i,
+                            svn_client_commit_item2_t *);
           if (! strcmp (relpath, 
                         svn_path_uri_decode (item->url, pool)))
             return svn_wc_prop_get (value, name, item->path, cb->base_access,
@@ -133,8 +134,8 @@ push_wc_prop (void *baton,
 
   for (i = 0; i < cb->commit_items->nelts; i++)
     {
-      svn_client_commit_item_t *item
-        = ((svn_client_commit_item_t **) cb->commit_items->elts)[i];
+      svn_client_commit_item2_t *item
+        = APR_ARRAY_IDX(cb->commit_items, i, svn_client_commit_item2_t *);
       
       if (strcmp (relpath, svn_path_uri_decode (item->url, pool)) == 0)
         {
@@ -269,7 +270,7 @@ svn_client__open_ra_session_internal (svn_ra_session_t **ra_session,
                                       svn_client_ctx_t *ctx,
                                       apr_pool_t *pool)
 {
-  svn_ra_callbacks_t *cbtable = apr_pcalloc (pool, sizeof(*cbtable));
+  svn_ra_callbacks2_t *cbtable = apr_pcalloc (pool, sizeof(*cbtable));
   svn_client__callback_baton_t *cb = apr_pcalloc (pool, sizeof(*cb));
   
   cbtable->open_tmp_file = use_admin ? open_admin_tmp_file : open_tmp_file;
@@ -278,6 +279,8 @@ svn_client__open_ra_session_internal (svn_ra_session_t **ra_session,
   cbtable->push_wc_prop = commit_items ? push_wc_prop : NULL;
   cbtable->invalidate_wc_props = read_only_wc ? NULL : invalidate_wc_props;
   cbtable->auth_baton = ctx->auth_baton; /* new-style */
+  cbtable->progress_func = ctx->progress_func;
+  cbtable->progress_baton = ctx->progress_baton;
 
   cb->base_dir = base_dir;
   cb->base_access = base_access;
@@ -285,7 +288,8 @@ svn_client__open_ra_session_internal (svn_ra_session_t **ra_session,
   cb->commit_items = commit_items;
   cb->ctx = ctx;
 
-  SVN_ERR (svn_ra_open (ra_session, base_url, cbtable, cb, ctx->config, pool));
+  SVN_ERR (svn_ra_open2 (ra_session, base_url, cbtable, cb,
+                         ctx->config, pool));
 
   return SVN_NO_ERROR;
 }
@@ -676,6 +680,7 @@ svn_client__repos_locations (const char **start_url,
                              svn_opt_revision_t **start_revision,
                              const char **end_url,
                              svn_opt_revision_t **end_revision,
+                             svn_ra_session_t *ra_session,
                              const char *path,
                              const svn_opt_revision_t *revision,
                              const svn_opt_revision_t *start,
@@ -691,7 +696,6 @@ svn_client__repos_locations (const char **start_url,
   svn_revnum_t start_revnum, end_revnum;
   apr_array_header_t *revs;
   apr_hash_t *rev_locs;
-  svn_ra_session_t *ra_session;
   apr_pool_t *subpool = svn_pool_create (pool);
   svn_error_t *err;
 
@@ -718,6 +722,11 @@ svn_client__repos_locations (const char **start_url,
         {
           url = entry->copyfrom_url;
           peg_revnum = entry->copyfrom_rev;
+          if (!entry->url || strcmp (entry->url, entry->copyfrom_url) != 0)
+            {
+              /* We can't use the caller provided RA session in this case */
+              ra_session = NULL;
+            }
         }
       else if (entry->url)
         {
@@ -739,10 +748,11 @@ svn_client__repos_locations (const char **start_url,
      WORKING revisions, we should already have the correct URL:s, so we
      don't need to do anything more here in that case. */
 
-  /* Open a RA session to this URL. */
-  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, url, NULL,
-                                                 NULL, NULL, FALSE, TRUE,
-                                                 ctx, subpool));
+  /* Open a RA session to this URL if we don't have one already. */
+  if (! ra_session)
+    SVN_ERR (svn_client__open_ra_session_internal (&ra_session, url, NULL,
+                                                   NULL, NULL, FALSE, TRUE,
+                                                   ctx, subpool));
 
   /* Resolve the opt_revision_ts. */
   if (peg_revnum == SVN_INVALID_REVNUM)
@@ -809,12 +819,12 @@ svn_client__repos_locations (const char **start_url,
   /* We'd better have all the paths we were looking for! */
   if (! start_path)
     return svn_error_createf 
-      (APR_EGENERAL, NULL,
+      (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
        _("Unable to find repository location for '%s' in revision %ld"),
        path, start_revnum);
   if (! end_path)
     return svn_error_createf 
-      (APR_EGENERAL, NULL,
+      (SVN_ERR_CLIENT_UNRELATED_RESOURCES, NULL,
        _("The location for '%s' for revision %ld does not exist in the "
          "repository or refers to an unrelated object"),
        path, end_revnum);
@@ -900,21 +910,25 @@ svn_client__ra_session_from_path (svn_ra_session_t **ra_session_p,
         peg_revision = *peg_revision_p;
     }
   
+  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, initial_url,
+                                                 NULL, NULL, NULL,
+                                                 FALSE, FALSE, ctx, pool));
+
   dead_end_rev.kind = svn_opt_revision_unspecified;
   
   /* Run the history function to get the object's (possibly
      different) url in REVISION. */
   SVN_ERR (svn_client__repos_locations (&url, &new_rev,
                                         &ignored_url, &ignored_rev,
+                                        ra_session,
                                         path_or_url, &peg_revision,
                                         /* search range: */
                                         &start_rev, &dead_end_rev,
                                         ctx, pool));
   good_rev = new_rev;
 
-  SVN_ERR (svn_client__open_ra_session_internal (&ra_session, url,
-                                                 NULL, NULL, NULL,
-                                                 FALSE, FALSE, ctx, pool));
+  /* Make the session point to the real URL. */
+  SVN_ERR (svn_ra_reparent (ra_session, url, pool));
 
   /* Resolve good_rev into a real revnum. */
   SVN_ERR (svn_client__get_revision_number (&rev, ra_session,

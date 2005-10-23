@@ -68,18 +68,21 @@ void svn_wc__eol_value_from_string (const char **value,
 
 /* Expand keywords for the file at PATH, by parsing a
    whitespace-delimited list of keywords.  If any keywords are found
-   in the list, allocate *KEYWORDS from POOL, and then populate its
-   entries with the related keyword values (also allocated in POOL).
-   If no keywords are found in the list, or if there is no list, set
-   *KEYWORDS to NULL.  ADM_ACCESS must be an access baton for PATH.
+   in the list, allocate *KEYWORDS from POOL and populate it with
+   mappings from (const char *) keywords to their (svn_string_t *)
+   values (also allocated in POOL).
+
+   If a keyword is in the list, but no corresponding value is
+   available, do not create a hash entry for it.  If no keywords are
+   found in the list, or if there is no list, set *KEYWORDS to NULL.
+
+   ADM_ACCESS must be an access baton for PATH.
 
    If FORCE_LIST is non-null, use it as the list; else use the
    SVN_PROP_KEYWORDS property for PATH.  In either case, use PATH to
-   expand keyword values.  If a keyword is in the list, but no
-   corresponding value is available, set that element of *KEYWORDS to
-   the empty string ("").
+   expand keyword values.
 */
-svn_error_t *svn_wc__get_keywords (svn_subst_keywords_t **keywords,
+svn_error_t *svn_wc__get_keywords (apr_hash_t **keywords,
                                    const char *path,
                                    svn_wc_adm_access_t *adm_access,
                                    const char *force_list,

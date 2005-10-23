@@ -5681,8 +5681,9 @@ msgid "Can't remove directory '%s'"
 msgstr "無法移除目錄 '%s'"
 
 #: libsvn_subr/io.c:2553
+#, fuzzy
 msgid "Can't read directory"
-msgstr "無法讀取目錄 '%s'"
+msgstr "無法讀取目錄"
 
 #: libsvn_subr/io.c:2624
 #, c-format

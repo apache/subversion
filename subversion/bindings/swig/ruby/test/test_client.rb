@@ -154,29 +154,29 @@ class SvnClientTest < Test::Unit::TestCase
 
     ctx = make_context(log)
 
-    notify_info = []
+    infos = []
     ctx.set_notify_func do |notify|
-      notify_info << [notify.path, notify.action]
+      infos << [notify.path, notify]
     end
     
     dirs_path.each do |path|
       assert(!File.exist?(path))
     end
     ctx.mkdir(dirs_path)
-    assert_equal(dirs_path.collect do |d|
-                   [d, Svn::Wc::NOTIFY_STATE_INAPPLICABLE]
-                 end,
-                 notify_info)
+    assert_equal(dirs_path.sort,
+                 infos.collect{|path, notify| path}.sort)
+    assert_equal(dirs_path.collect{true},
+                 infos.collect{|path, notify| notify.add?})
     dirs_path.each do |path|
       assert(File.exist?(path))
     end
 
-    notify_info.clear
+    infos.clear
     ctx.commit(@wc_path)
-    assert_equal(dirs_path.collect do |d|
-                   [d, Svn::Wc::NOTIFY_COMMIT_ADDED]
-                 end,
-                 notify_info)
+    assert_equal(dirs_path.sort,
+                 infos.collect{|path, notify| path}.sort)
+    assert_equal(dirs_path.collect{true},
+                 infos.collect{|path, notify| notify.commit_added?})
   end
 
   def test_mkdir_multiple2
@@ -189,29 +189,29 @@ class SvnClientTest < Test::Unit::TestCase
 
     ctx = make_context(log)
 
-    notify_info = []
+    infos = []
     ctx.set_notify_func do |notify|
-      notify_info << [notify.path, notify.action]
+      infos << [notify.path, notify]
     end
     
     dirs_path.each do |path|
       assert(!File.exist?(path))
     end
     ctx.mkdir(*dirs_path)
-    assert_equal(dirs_path.collect do |d|
-                   [d, Svn::Wc::NOTIFY_STATE_INAPPLICABLE]
-                 end,
-                 notify_info)
+    assert_equal(dirs_path.sort,
+                 infos.collect{|path, notify| path}.sort)
+    assert_equal(dirs_path.collect{true},
+                 infos.collect{|path, notify| notify.add?})
     dirs_path.each do |path|
       assert(File.exist?(path))
     end
 
-    notify_info.clear
+    infos.clear
     ctx.commit(@wc_path)
-    assert_equal(dirs_path.collect do |d|
-                   [d, Svn::Wc::NOTIFY_COMMIT_ADDED]
-                 end,
-                 notify_info)
+    assert_equal(dirs_path.sort,
+                 infos.collect{|path, notify| path}.sort)
+    assert_equal(dirs_path.collect{true},
+                 infos.collect{|path, notify| notify.commit_added?})
   end
 
   def test_delete
@@ -340,24 +340,84 @@ class SvnClientTest < Test::Unit::TestCase
 
   def test_status
     log = "sample log"
+    file1 = "sample1.txt"
+    file2 = "sample2.txt"
     dir = "dir"
     dir_path = File.join(@wc_path, dir)
+    path1 = File.join(@wc_path, file1)
+    path2 = File.join(dir_path, file2)
     
     ctx = make_context(log)
+    File.open(path1, "w") {}
+    ctx.add(path1)
+    rev1 = ctx.commit(@wc_path).revision
 
+    
     ctx.mkdir(dir_path)
+    File.open(path2, "w") {}
+    
     infos = []
     rev = ctx.status(@wc_path) do |path, status|
       infos << [path, status]
     end
 
-    assert_equal(0, rev)
-    assert_equal(1, infos.size)
-    result_path, status = infos.first
-    assert_equal(result_path, dir_path)
-    assert(status.text_added?)
-    assert(status.entry.dir?)
-    assert(status.entry.add?)
+    assert_equal(youngest_rev, rev)
+    assert_equal([dir_path, path2].sort,
+                 infos.collect{|path, status| path}.sort)
+    dir_status = infos.assoc(dir_path).last
+    assert(dir_status.text_added?)
+    assert(dir_status.entry.dir?)
+    assert(dir_status.entry.add?)
+    path2_status = infos.assoc(path2).last
+    assert(!path2_status.text_added?)
+    assert_nil(path2_status.entry)
+
+
+    infos = []
+    rev = ctx.st(@wc_path, rev1, true, true) do |path, status|
+      infos << [path, status]
+    end
+    
+    assert_equal(rev1, rev)
+    assert_equal([@wc_path, dir_path, path1, path2].sort,
+                 infos.collect{|path, status| path}.sort)
+    wc_status = infos.assoc(@wc_path).last
+    assert(wc_status.text_normal?)
+    assert(wc_status.entry.dir?)
+    assert(wc_status.entry.normal?)
+    dir_status = infos.assoc(dir_path).last
+    assert(dir_status.text_added?)
+    assert(dir_status.entry.dir?)
+    assert(dir_status.entry.add?)
+    path1_status = infos.assoc(path1).last
+    assert(path1_status.text_normal?)
+    assert(path1_status.entry.file?)
+    assert(path1_status.entry.normal?)
+    path2_status = infos.assoc(path2).last
+    assert(!path2_status.text_added?)
+    assert_nil(path2_status.entry)
+
+
+    ctx.prop_set(Svn::Core::PROP_IGNORE, file2, dir_path)
+
+    infos = []
+    rev = ctx.status(@wc_path, nil, true, true, true, false) do |path, status|
+      infos << [path, status]
+    end
+    
+    assert_equal(rev1, rev)
+    assert_equal([@wc_path, dir_path, path1].sort,
+                 infos.collect{|path, status| path}.sort)
+
+
+    infos = []
+    rev = ctx.status(@wc_path, nil, true, true, true, true) do |path, status|
+      infos << [path, status]
+    end
+    
+    assert_equal(rev1, rev)
+    assert_equal([@wc_path, dir_path, path1, path2].sort,
+                 infos.collect{|path, status| path}.sort)
   end
 
   def test_checkout
@@ -765,6 +825,269 @@ class SvnClientTest < Test::Unit::TestCase
       ctx.cat(path)
     end
   end
+
+  def test_resolved
+    log = "sample log"
+    file = "sample.txt"
+    dir = "dir"
+    src1 = "before\n"
+    src2 = "after\n"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+
+    ctx = make_context(log)
+    ctx.mkdir(dir_path)
+    File.open(path, "w") {}
+    ctx.add(path)
+    rev1 = ctx.ci(@wc_path).revision
+
+    File.open(path, "w") {|f| f.print(src1)}
+    rev2 = ctx.ci(@wc_path).revision
+
+    ctx.up(@wc_path, rev1)
+
+    File.open(path, "w") {|f| f.print(src2)}
+    ctx.up(@wc_path)
+
+    assert_raises(Svn::Error::WC_FOUND_CONFLICT) do
+      ctx.ci(@wc_path)
+    end
+
+    ctx.resolved(dir_path, false)
+    assert_raises(Svn::Error::WC_FOUND_CONFLICT) do
+      ctx.ci(@wc_path)
+    end
+
+    ctx.resolved(dir_path)
+    info = nil
+    assert_nothing_raised do
+      info = ctx.ci(@wc_path)
+    end
+    assert_not_nil(info)
+    assert_equal(rev2 + 1, info.revision)
+  end
+
+  def test_copy
+    log = "sample log"
+    src = "source\n"
+    file1 = "sample1.txt"
+    file2 = "sample2.txt"
+    path1 = File.join(@wc_path, file1)
+    path2 = File.join(@wc_path, file2)
+
+    ctx = make_context(log)
+    File.open(path1, "w") {|f| f.print(src)}
+    ctx.add(path1)
+
+    ctx.ci(@wc_path)
+
+    ctx.cp(path1, path2)
+
+    infos = []
+    ctx.set_notify_func do |notify|
+      infos << [notify.path, notify]
+    end
+    ctx.ci(@wc_path)
+
+    assert_equal([path2].sort,
+                 infos.collect{|path, notify| path}.sort)
+    path2_notify = infos.assoc(path2)[1]
+    assert(path2_notify.commit_added?)
+    assert_equal(File.open(path1) {|f| f.read},
+                 File.open(path2) {|f| f.read})
+  end
+  
+  def test_move
+    log = "sample log"
+    src = "source\n"
+    file1 = "sample1.txt"
+    file2 = "sample2.txt"
+    path1 = File.join(@wc_path, file1)
+    path2 = File.join(@wc_path, file2)
+
+    ctx = make_context(log)
+    File.open(path1, "w") {|f| f.print(src)}
+    ctx.add(path1)
+
+    ctx.ci(@wc_path)
+
+    ctx.mv(path1, path2)
+
+    infos = []
+    ctx.set_notify_func do |notify|
+      infos << [notify.path, notify]
+    end
+    ctx.ci(@wc_path)
+
+    assert_equal([path1, path2].sort,
+                 infos.collect{|path, notify| path}.sort)
+    path1_notify = infos.assoc(path1)[1]
+    assert(path1_notify.commit_deleted?)
+    path2_notify = infos.assoc(path2)[1]
+    assert(path2_notify.commit_added?)
+    assert_equal(src, File.open(path2) {|f| f.read})
+  end
+  
+  def test_move_force
+    log = "sample log"
+    src1 = "source1\n"
+    src2 = "source2\n"
+    file1 = "sample1.txt"
+    file2 = "sample2.txt"
+    path1 = File.join(@wc_path, file1)
+    path2 = File.join(@wc_path, file2)
+
+    ctx = make_context(log)
+    File.open(path1, "w") {|f| f.print(src1)}
+    ctx.add(path1)
+
+    ctx.ci(@wc_path)
+
+    File.open(path1, "w") {|f| f.print(src2)}
+
+    assert_raises(Svn::Error::CLIENT_MODIFIED) do
+      ctx.mv(path1, path2)
+    end
+    ctx.cleanup(@wc_path)
+
+    assert_nothing_raised do
+      ctx.mv_f(path1, path2)
+    end
+
+    infos = []
+    ctx.set_notify_func do |notify|
+      infos << [notify.path, notify]
+    end
+    ctx.ci(@wc_path)
+
+    assert_equal([path1, path2].sort,
+                 infos.collect{|path, notify| path}.sort)
+    path1_notify = infos.assoc(path1)[1]
+    assert(path1_notify.commit_deleted?)
+    path2_notify = infos.assoc(path2)[1]
+    assert(path2_notify.commit_added?)
+    assert_equal(src2, File.open(path2) {|f| f.read})
+  end
+
+  def test_prop
+    log = "sample log"
+    dir = "dir"
+    file = "sample.txt"
+    dir_path = File.join(@wc_path, dir)
+    dir_uri = "#{@repos_uri}/#{dir}"
+    path = File.join(dir_path, file)
+    uri = "#{dir_uri}/#{file}"
+    prop_name = "sample-prop"
+    prop_value = "sample value"
+    invalid_mime_type_prop_value = "image"
+
+    ctx = make_context(log)
+
+    ctx.mkdir(dir_path)
+    File.open(path, "w") {}
+    ctx.add(path)
+
+    ctx.commit(@wc_path)
+
+    assert_equal({}, ctx.prop_get(prop_name, path))
+    ctx.prop_set(prop_name, prop_value, path)
+    ctx.commit(@wc_path)
+    assert_equal({uri => prop_value}, ctx.pget(prop_name, path))
+    
+    ctx.prop_del(prop_name, path)
+    ctx.commit(@wc_path)
+    assert_equal({}, ctx.pg(prop_name, path))
+    
+    ctx.ps(prop_name, prop_value, path)
+    ctx.commit(@wc_path)
+    assert_equal({uri => prop_value}, ctx.pg(prop_name, path))
+
+    ctx.ps(prop_name, nil, path)
+    ctx.commit(@wc_path)
+    assert_equal({}, ctx.pg(prop_name, path))
+
+    ctx.up(@wc_path)
+    ctx.ps(prop_name, prop_value, dir_path)
+    ctx.ci(@wc_path)
+    assert_equal({
+                   dir_uri => prop_value,
+                   uri => prop_value,
+                 },
+                 ctx.pg(prop_name, dir_path))
+
+    ctx.up(@wc_path)
+    ctx.pdel(prop_name, dir_path, false)
+    ctx.ci(@wc_path)
+    assert_equal({uri => prop_value}, ctx.pg(prop_name, dir_path))
+    
+    ctx.up(@wc_path)
+    ctx.pd(prop_name, dir_path)
+    ctx.ci(@wc_path)
+    assert_equal({}, ctx.pg(prop_name, dir_path))
+    
+    ctx.up(@wc_path)
+    ctx.ps(prop_name, prop_value, dir_path, false)
+    ctx.ci(@wc_path)
+    assert_equal({dir_uri => prop_value}, ctx.pg(prop_name, dir_path))
+
+    assert_raises(Svn::Error::BAD_MIME_TYPE) do
+      ctx.ps(Svn::Core::PROP_MIME_TYPE,
+             invalid_mime_type_prop_value,
+             path)
+    end
+    ctx.cleanup(@wc_path)
+
+    assert_nothing_raised do
+      ctx.ps(Svn::Core::PROP_MIME_TYPE,
+             invalid_mime_type_prop_value,
+             path, false, true)
+    end
+    ctx.commit(@wc_path)
+    assert_equal({uri => invalid_mime_type_prop_value},
+                 ctx.pg(Svn::Core::PROP_MIME_TYPE, path))
+  end
+  
+  def test_prop_list
+    log = "sample log"
+    dir = "dir"
+    file = "sample.txt"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+    dir_uri = "#{@repos_uri}/#{dir}"
+    uri = "#{dir_uri}/#{file}"
+    name1 = "name1"
+    name2 = "name2"
+    value1 = "value1"
+    value2 = "value2"
+
+    ctx = make_context(log)
+
+    ctx.mkdir(dir_path)
+    File.open(path, "w") {}
+    ctx.add(path)
+
+    ctx.ci(@wc_path)
+
+    assert_equal([], ctx.prop_list(path))
+    
+    ctx.ps(name1, value1, path)
+    ctx.ci(@wc_path)
+    assert_equal([uri], ctx.prop_list(path).collect{|item| item.node_name})
+    assert_equal([{name1 => value1}],
+                 ctx.plist(path).collect{|item| item.prop_hash})
+    assert_equal([value1], ctx.pl(path).collect{|item| item[name1]})
+
+    ctx.up(@wc_path)
+    ctx.ps(name2, value2, dir_path)
+    ctx.ci(@wc_path)
+    assert_equal([uri, dir_uri].sort,
+                 ctx.prop_list(dir_path).collect{|item| item.name})
+    prop_list = ctx.plist(dir_path).collect{|item| [item.name, item.props]}
+    props = prop_list.assoc(uri)[1]
+    dir_props = prop_list.assoc(dir_uri)[1]
+    assert_equal({name1 => value1, name2 => value2}, props)
+    assert_equal({name2 => value2}, dir_props)
+  end
   
   def test_cat
     log = "sample log"
@@ -793,6 +1116,91 @@ class SvnClientTest < Test::Unit::TestCase
     assert_equal(src2, ctx.cat(path))
   end
 
+  def test_lock
+    log = "sample log"
+    src = "source\n"
+    file = "sample.txt"
+    path = File.join(@wc_path, file)
+
+    File.open(path, "w") {|f| f.print(src)}
+
+    ctx = make_context(log)
+    ctx.add(path)
+    ctx.commit(@wc_path)
+
+    infos = []
+    ctx.set_notify_func do |notify|
+      infos << [notify.path, notify]
+    end
+    ctx.lock(path)
+
+    assert_equal([file], infos.collect{|path, notify| path})
+    file_notify = infos.assoc(file)[1]
+    assert(file_notify.locked?)
+  end
+  
+  def test_unlock
+    log = "sample log"
+    src = "source\n"
+    file = "sample.txt"
+    path = File.join(@wc_path, file)
+
+    File.open(path, "w") {|f| f.print(src)}
+
+    ctx = make_context(log)
+    ctx.add(path)
+    ctx.commit(@wc_path)
+
+    ctx.lock(path)
+
+    infos = []
+    ctx.set_notify_func do |notify|
+      infos << [notify.path, notify]
+    end
+    ctx.unlock(path)
+    assert_equal([file], infos.collect{|path, notify| path})
+    file_notify = infos.assoc(file)[1]
+    assert(file_notify.unlocked?)
+  end
+
+  def test_info
+    log = "sample log"
+    ctx = make_context(log)
+    repos_base = File.basename(@repos_path)
+
+    infos = []
+    ctx.info(@wc_path) do |path, info|
+      infos << [path, info]
+    end
+    assert_equal([repos_base],
+                 infos.collect{|path, info| path})
+    top_info = infos.assoc(repos_base)[1]
+    assert_equal(@repos_uri, top_info.url)
+  end
+
+  def test_url_from_path
+    log = "sample log"
+    ctx = make_context(log)
+    assert_equal(@repos_uri, ctx.url_from_path(@wc_path))
+    assert_equal(@repos_uri, Svn::Client.url_from_path(@wc_path))
+  end
+  
+  def test_uuid
+    log = "sample log"
+    ctx = make_context(log)
+    Svn::Wc::AdmAccess.open(nil, @wc_path, false, 0) do |adm|
+      assert_equal(ctx.uuid_from_url(@repos_uri),
+                   ctx.uuid_from_path(@wc_path, adm))
+    end
+  end
+
+  def test_open_ra_session
+    log = "sample log"
+    ctx = make_context(log)
+
+    assert_instance_of(Svn::Ra::Session, ctx.open_ra_session(@repos_uri))
+  end
+  
   def test_revprop
     log = "sample log"
     new_log = "new sample log"
@@ -806,6 +1214,16 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.add(path)
     info = ctx.commit(@wc_path)
 
+    assert_equal([
+                   {
+                     Svn::Core::PROP_REVISION_AUTHOR => @author,
+                     Svn::Core::PROP_REVISION_DATE => info.date,
+                     Svn::Core::PROP_REVISION_LOG => log,
+                   },
+                   info.revision
+                 ],
+                 ctx.revprop_list(@repos_uri, info.revision))
+    
     assert_equal([log, info.revision],
                  ctx.revprop_get(Svn::Core::PROP_REVISION_LOG,
                                  @repos_uri, info.revision))
@@ -817,21 +1235,97 @@ class SvnClientTest < Test::Unit::TestCase
                  ctx.revprop_set(Svn::Core::PROP_REVISION_LOG, new_log,
                                  @repos_uri, info.revision))
     assert_equal([new_log, info.revision],
-                 ctx.revprop_get(Svn::Core::PROP_REVISION_LOG,
-                                 @repos_uri, info.revision))
+                 ctx.rpget(Svn::Core::PROP_REVISION_LOG,
+                           @repos_uri, info.revision))
     assert_equal(new_log,
-                 ctx.revprop(Svn::Core::PROP_REVISION_LOG,
-                             @repos_uri, info.revision))
-
+                 ctx.rp(Svn::Core::PROP_REVISION_LOG,
+                        @repos_uri, info.revision))
+    assert_equal([
+                   {
+                     Svn::Core::PROP_REVISION_AUTHOR => @author,
+                     Svn::Core::PROP_REVISION_DATE => info.date,
+                     Svn::Core::PROP_REVISION_LOG => new_log,
+                   },
+                   info.revision
+                 ],
+                 ctx.rplist(@repos_uri, info.revision))
+    
     assert_equal(info.revision,
                  ctx.revprop_del(Svn::Core::PROP_REVISION_LOG,
                                  @repos_uri, info.revision))
     assert_equal([nil, info.revision],
-                 ctx.revprop_get(Svn::Core::PROP_REVISION_LOG,
-                                 @repos_uri, info.revision))
+                 ctx.rpg(Svn::Core::PROP_REVISION_LOG,
+                         @repos_uri, info.revision))
     assert_equal(nil,
-                 ctx.revprop(Svn::Core::PROP_REVISION_LOG,
-                             @repos_uri, info.revision))
+                 ctx.rp(Svn::Core::PROP_REVISION_LOG,
+                        @repos_uri, info.revision))
+
+    assert_equal(info.revision,
+                 ctx.rpset(Svn::Core::PROP_REVISION_LOG, new_log,
+                           @repos_uri, info.revision))
+    assert_equal(new_log,
+                 ctx.rp(Svn::Core::PROP_REVISION_LOG,
+                        @repos_uri, info.revision))
+    assert_equal(info.revision,
+                 ctx.rps(Svn::Core::PROP_REVISION_LOG, nil,
+                         @repos_uri, info.revision))
+    assert_equal(nil,
+                 ctx.rp(Svn::Core::PROP_REVISION_LOG,
+                        @repos_uri, info.revision))
+    
+    assert_equal([
+                   {
+                     Svn::Core::PROP_REVISION_AUTHOR => @author,
+                     Svn::Core::PROP_REVISION_DATE => info.date,
+                   },
+                   info.revision
+                 ],
+                 ctx.rpl(@repos_uri, info.revision))
+  end
+  
+  def test_export
+    log = "sample log"
+    src = "source\n"
+    file = "sample.txt"
+    dir = "sample"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(dir_path, file)
+    tmp_base_path = File.join(@tmp_path, "tmp")
+    tmp_dir_path = File.join(tmp_base_path, dir)
+    tmp_path = File.join(tmp_dir_path, file)
+
+    ctx = make_context(log)
+
+    ctx.mkdir(dir_path)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(path)
+    rev = ctx.ci(@wc_path).revision
+
+    assert_equal(rev, ctx.export(@repos_uri, tmp_base_path))
+    assert_equal(src, File.open(tmp_path) {|f| f.read})
+  end
+
+  def test_ls
+    log = "sample log"
+    src = "source\n"
+    file = "sample.txt"
+    dir = "sample"
+    dir_path = File.join(@wc_path, dir)
+    path = File.join(@wc_path, file)
+
+    ctx = make_context(log)
+
+    ctx.mkdir(dir_path)
+    File.open(path, "w") {|f| f.print(src)}
+    ctx.add(path)
+    rev = ctx.ci(@wc_path).revision
+
+    dirents, locks = ctx.ls(@wc_path, rev)
+    assert_equal([dir, file].sort, dirents.keys.sort)
+    dir_dirent = dirents[dir]
+    assert(dir_dirent.directory?)
+    file_dirent = dirents[file]
+    assert(file_dirent.file?)
   end
   
   def test_switch
@@ -1074,9 +1568,6 @@ class SvnClientTest < Test::Unit::TestCase
   def test_not_new
     assert_raise(NoMethodError) do
       Svn::Client::CommitItem.new
-    end
-    assert_raise(NoMethodError) do
-      Svn::Client::CommitInfo.new
     end
   end
 end

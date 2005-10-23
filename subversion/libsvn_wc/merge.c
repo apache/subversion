@@ -48,7 +48,7 @@ svn_wc_merge (const char *left,
   const char *mt_pt, *mt_bn;
   apr_file_t *tmp_f, *result_f;
   svn_boolean_t is_binary;
-  svn_subst_keywords_t *keywords;
+  apr_hash_t *keywords;
   const char *eol;
   const svn_wc_entry_t *entry;
   svn_boolean_t contains_conflicts, special;
@@ -235,12 +235,12 @@ svn_wc_merge (const char *left,
                                           pool));
           SVN_ERR (svn_wc__get_special (&special, merge_target, adm_access,
                                         pool));
-          SVN_ERR (svn_subst_copy_and_translate2 (left, 
+          SVN_ERR (svn_subst_copy_and_translate3 (left,
                                                   left_copy,
                                                   eol, eol ? TRUE : FALSE, 
                                                   keywords, TRUE, special,
                                                   pool));
-          SVN_ERR (svn_subst_copy_and_translate2 (right,
+          SVN_ERR (svn_subst_copy_and_translate3 (right,
                                                   right_copy,
                                                   eol, eol ? TRUE : FALSE, 
                                                   keywords, TRUE, special,
@@ -294,7 +294,7 @@ svn_wc_merge (const char *left,
                                           pool));
           SVN_ERR (svn_wc__get_special (&special, merge_target, adm_access,
                                         pool));
-          SVN_ERR (svn_subst_copy_and_translate2 (result_target, merge_target,
+          SVN_ERR (svn_subst_copy_and_translate3 (result_target, merge_target,
                                                   eol, eol ? TRUE : FALSE, 
                                                   keywords, TRUE, special,
                                                   pool));

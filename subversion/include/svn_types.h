@@ -39,7 +39,7 @@ extern "C" {
 
 /** Subversion error object.
  *
- * Defined here, rather than in svn_error.h, to avoid a recursive #include 
+ * Defined here, rather than in svn_error.h, to avoid a recursive @#include 
  * situation.
  */
 typedef struct svn_error_t
@@ -66,12 +66,23 @@ typedef struct svn_error_t
 
 
 
+/** @defgroup APR_ARRAY_compat_macros APR Array Compatibility Helper Macros
+ * These macros are provided by APR itself from version 1.3.
+ * Definitions are provided here for when using older versions of APR.
+ * @{
+ */
+
 /** index into an apr_array_header_t */
+#ifndef APR_ARRAY_IDX
 #define APR_ARRAY_IDX(ary,i,type) (((type *)(ary)->elts)[i])
+#endif
 
 /** easier array-pushing syntax */
+#ifndef APR_ARRAY_PUSH
 #define APR_ARRAY_PUSH(ary,type) (*((type *)apr_array_push (ary)))
+#endif
 
+/** @} */
 
 /** The various types of nodes in the Subversion filesystem. */
 typedef enum
@@ -286,6 +297,58 @@ typedef struct svn_dirent_t
 /** @} */
 
 
+/** All information about a commit.
+ *
+ * @note Objects of this type should always be created using the
+ * svn_create_commit_info() function.
+ *
+ * @since New in 1.3.
+ */
+typedef struct svn_commit_info_t
+{
+  /** just-committed revision. */
+  svn_revnum_t revision;
+
+  /** server-side date of the commit. */
+  const char *date;
+
+  /** author of the commit. */
+  const char *author;
+
+  /** error message from post-commit hook, or NULL. */
+  const char *post_commit_err;
+
+} svn_commit_info_t;
+
+
+/**
+ * Allocate an object of type @c svn_commit_info_t in @a pool and
+ * return it.
+ *
+ * The @c revision field of the new struct is set to @c
+ * SVN_INVALID_REVNUM.  All other fields are initialized to @c NULL.
+ *
+ * @note Any object of the type @c svn_commit_info_t should
+ * be created using this function.
+ * This is to provide for extending the svn_commit_info_t in
+ * the future.
+ *
+ * @since New in 1.3.
+ */
+svn_commit_info_t *
+svn_create_commit_info (apr_pool_t *pool);
+
+
+/**
+ * Return a deep copy @a src_commit_info allocated in @a pool.
+ *
+ * @since New in 1.4.
+ */
+svn_commit_info_t *
+svn_commit_info_dup (const svn_commit_info_t *src_commit_info,
+                     apr_pool_t *pool);
+
+
 /** A structure to represent a path that changed for a log entry. */
 typedef struct svn_log_changed_path_t
 {
@@ -299,6 +362,15 @@ typedef struct svn_log_changed_path_t
   svn_revnum_t copyfrom_rev;
 
 } svn_log_changed_path_t;
+
+
+/**
+ * Return a deep copy of @a changed_path, allocated in @a pool.
+ *
+ * @since New in 1.3.
+ */
+svn_log_changed_path_t *svn_log_changed_path_dup (
+  const svn_log_changed_path_t *changed_path, apr_pool_t *pool);
 
 
 /** The callback invoked by log message loopers, such as
@@ -342,15 +414,43 @@ typedef svn_error_t *(*svn_log_message_receiver_t)
 
 /** Callback function type for commits.
  *
- * When a commit succeeds, an instance of this is invoked on the @a
- * new_revision, @a date, and @a author of the commit, along with the
- * @a baton closure.
+ * When a commit succeeds, an instance of this is invoked with the
+ * @a commit_info, along with the @a baton closure.
+ * @a pool can be used for temporary allocations.
+ *
+ * @since New in 1.4.
+ */
+typedef svn_error_t * (*svn_commit_callback2_t) (
+    const svn_commit_info_t *commit_info,
+    void *baton,
+    apr_pool_t *pool);
+
+/** Same as @c svn_commit_callback2_t, but uses individual
+ * data elements instead of the @c svn_commit_info_t structure
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 typedef svn_error_t * (*svn_commit_callback_t) (
     svn_revnum_t new_revision,
     const char *date,
     const char *author,
     void *baton);
+
+
+/** Return, in @a *callback2 and @a *callback2_baton a function/baton that
+ * will call @a callback/@a callback_baton, allocating the @a *callback2_baton
+ * in @a pool.
+ *
+ * @note This is used by compatibility wrappers, which exist in more than
+ * Subversion core library.
+ *
+ * @since New in 1.4.
+ */
+void svn_compat_wrap_commit_callback (svn_commit_callback_t callback,
+                                      void *callback_baton,
+                                      svn_commit_callback2_t *callback2,
+                                      void **callback2_baton,
+                                      apr_pool_t *pool);
 
 
 /** The maximum amount we (ideally) hold in memory at a time when
