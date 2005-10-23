@@ -48,18 +48,15 @@ OUTPUT_TYPEMAP(unsigned long long, ULL2NUM, (unsigned long long));
 
 #undef OUTPUT_TYPEMAP
 #endif
+
+%apply unsigned int { apr_uint32_t };
+%apply unsigned int *OUTPUT { apr_uint32_t * };
+%apply size_t { apr_size_t };
+%apply size_t *OUTPUT { apr_size_t * };
+
 #endif
 
 /* ----------------------------------------------------------------------- */
-
-#ifdef WIN32
-/* Fool SWIG into understanding the __int64 datatype */
-#define __int64 long long
-#endif
-%import apr.h
-#ifdef WIN32
-#undef __int64
-#endif
 
 /* ### be nice to have all the error values and macros. there are some
    ### problems including this file, tho. SWIG isn't smart enough with some
@@ -76,6 +73,7 @@ typedef int apr_status_t;
     ST(argvi) = sv_newmortal();
     sv_setpv((SV*)ST(argvi++), temp);
 }
+%apply long long { apr_int64_t }
 
 %typemap(perl5, out) unsigned long long {
     char temp[256];
@@ -83,6 +81,7 @@ typedef int apr_status_t;
     ST(argvi) = sv_newmortal();
     sv_setpv((SV*)ST(argvi++), temp);
 }
+%apply unsigned long long { apr_uint64_t }
 
 %typemap(perl5, argout) long long *OUTPUT, long long &OUTPUT {
   char temp[256];
@@ -107,6 +106,11 @@ typedef int apr_status_t;
 }
 
 /* -----------------------------------------------------------------------
+ * apr_byte_t
+ */
+%apply unsigned char { apr_byte_t }
+
+/* -----------------------------------------------------------------------
    apr_time_t
 */
 
@@ -119,11 +123,7 @@ typedef apr_int64_t apr_time_t;
    (e.g. /usr/lib/gcc-lib/plat/ver/include). */
 typedef apr_int32_t time_t;
 
-#if APR_INT64_T_FMT == "ld"
-    %apply long *OUTPUT { apr_time_t * };
-#else
-    %apply long long *OUTPUT { apr_time_t * };
-#endif
+%apply long long *OUTPUT { apr_time_t * };
 
 /* -----------------------------------------------------------------------
    create an OUTPUT argument typemap for an apr_hash_t **

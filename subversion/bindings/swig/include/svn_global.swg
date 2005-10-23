@@ -24,6 +24,9 @@
 static PyObject * _global_svn_swig_py_pool = NULL;
 %}
 
+/* SWIG can't understand __attribute__(x), so we make it go away */
+#define __attribute__(x)
+
 /* The SWIG $argnum variable reports the current argument number
    in the underlying C code. This is a bit counterintuitive for
    Python programmers, because the underlying C function may have
