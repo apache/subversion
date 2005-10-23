@@ -59,5 +59,14 @@ Candidate changes:
      Votes:
        +1: djames
 
+   * r16923
+     Apply unsigned int typemaps to apr_uint32_t.
+     Apply size_t typemaps to apr_size_t.
+     Justification:
+       Fix check-swig-rb problem caused by r16903.
+     Depends: r16903
+     Votes:
+       +1: kou
+
 Approved changes:
 
