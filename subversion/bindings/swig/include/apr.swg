@@ -48,6 +48,12 @@ OUTPUT_TYPEMAP(unsigned long long, ULL2NUM, (unsigned long long));
 
 #undef OUTPUT_TYPEMAP
 #endif
+
+%apply unsigned int { apr_uint32_t };
+%apply unsigned int *OUTPUT { apr_uint32_t * };
+%apply size_t { apr_size_t };
+%apply size_t *OUTPUT { apr_size_t * };
+
 #endif
 
 /* ----------------------------------------------------------------------- */
