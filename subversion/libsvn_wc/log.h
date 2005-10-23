@@ -43,7 +43,7 @@ const char *svn_wc__logfile_path (int log_number,
                                   apr_pool_t *pool);
 
 
-/* Extend **LOG_ACCUM with xml instructions to append the contents
+/* Extend **LOG_ACCUM with log instructions to append the contents
    of SRC to DST.
 */
 
@@ -54,7 +54,7 @@ svn_wc__loggy_append (svn_stringbuf_t **log_accum,
                       apr_pool_t *pool);
 
 
-/* Extend **LOG_ACCUM with xml instructions to mark PATH as committed
+/* Extend **LOG_ACCUM with log instructions to mark PATH as committed
    with revision REVNUM.
 */
 
@@ -65,7 +65,7 @@ svn_wc__loggy_committed (svn_stringbuf_t **log_accum,
                          apr_pool_t *pool);
 
 
-/* Extend **LOG_ACCUM with xml instructions to copy the file SRC_PATH to
+/* Extend **LOG_ACCUM with log instructions to copy the file SRC_PATH to
    DST_PATH, if it exists. If it doesn't and REMOVE_DST_IF_NO_SRC is TRUE
    the file at DST_PATH will be deleted if any.
 
@@ -98,7 +98,7 @@ svn_wc__loggy_copy (svn_stringbuf_t **log_accum,
                     apr_pool_t *pool);
 
 
-/* Extend **LOG_ACCUM with xml instructions to delete the entry
+/* Extend **LOG_ACCUM with log instructions to delete the entry
    associated with PATH from the entries file.
 */
 svn_error_t *
@@ -108,7 +108,7 @@ svn_wc__loggy_delete_entry (svn_stringbuf_t **log_accum,
                             apr_pool_t *pool);
 
 
-/* Extend **LOG_ACCUM with xml instructions to delete lock related
+/* Extend **LOG_ACCUM with log instructions to delete lock related
    fields from the entry belonging to PATH.
 */
 
@@ -148,7 +148,7 @@ svn_wc__loggy_entry_modify_hash (svn_stringbuf_t **log_accum,
                                  apr_pool_t *pool);
 
 
-/* Extend **LOG_ACCUM with xml instructions to modify wcprop PROPNAME
+/* Extend **LOG_ACCUM with log instructions to modify wcprop PROPNAME
    for PATH, setting it to PROPVAL.
 */
 
@@ -160,7 +160,7 @@ svn_wc__loggy_modify_wcprop (svn_stringbuf_t **log_accum,
                              const char *propval,
                              apr_pool_t *pool);
 
-/* Extend **LOG_ACCUM with xml instructions to merge changes between
+/* Extend **LOG_ACCUM with log instructions to merge changes between
    LEFT and RIGHT into TARGET, marking conflicts with the appropriate labels.
 */
 
@@ -176,7 +176,7 @@ svn_wc__loggy_merge (svn_stringbuf_t **log_accum,
                      apr_pool_t *pool);
 
 
-/* Extend **LOG_ACCUM with xml instructions to move the file SRC_PATH to
+/* Extend **LOG_ACCUM with log instructions to move the file SRC_PATH to
    DST_PATH, if it exists. If it doesn't and REMOVE_DST_IF_NO_SRC is TRUE
    the file at DST_PATH will be deleted if any.
 
@@ -191,7 +191,7 @@ svn_wc__loggy_move (svn_stringbuf_t **log_accum,
                     svn_boolean_t remove_dst_if_no_src,
                     apr_pool_t *pool);
 
-/* Extend **LOG_ACCUM with xml instructions to set permissions of PATH
+/* Extend **LOG_ACCUM with log instructions to set permissions of PATH
    to 'readonly' if it has the 'needs-lock' property set and there is
    no lock for the file in the working copy.
 */
@@ -203,7 +203,10 @@ svn_wc__loggy_maybe_set_readonly (svn_stringbuf_t **log_accum,
                                   apr_pool_t *pool);
 
 
-/* Extend **LOG_ACCUM with xml instructions to set the timestamp of PATH.
+/* Extend **LOG_ACCUM with log instructions to set the timestamp of PATH
+   in the entry field with name TIME_PROP.
+
+   Use SVN_WC__ENTRY_ATTR_* values for TIME_PROP.
 */
 
 svn_error_t *
@@ -213,7 +216,7 @@ svn_wc__loggy_set_entry_timestamp_from_wc (svn_stringbuf_t **log_accum,
                                            const char *time_prop,
                                            apr_pool_t *pool);
 
-/* Extend **LOG_ACCUM with xml instructions to set permissions of PATH
+/* Extend **LOG_ACCUM with log instructions to set permissions of PATH
    to 'readonly'.
 */
 
@@ -223,7 +226,7 @@ svn_wc__loggy_set_readonly (svn_stringbuf_t **log_accum,
                             const char *path,
                             apr_pool_t *pool);
 
-/* Extend **LOG_ACCUM with xml instructions to set the timestamp of PATH.
+/* Extend **LOG_ACCUM with log instructions to set the timestamp of PATH.
 */
 
 svn_error_t *
@@ -233,7 +236,7 @@ svn_wc__loggy_set_timestamp (svn_stringbuf_t **log_accum,
                              const char *timestr,
                              apr_pool_t *pool);
 
-/* Extend **LOG_ACCUM with xml instructions to remove the file
+/* Extend **LOG_ACCUM with log instructions to remove the file
    BASE_NAME, if it exists.
 */
 svn_error_t *
