@@ -21,6 +21,7 @@
 # Translation dictionary
 # ======================
 #
+# abort                   中断
 # ancestor                祖先
 # ancestry                系統
 # attempted ...           〜しようとしました
@@ -143,8 +144,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-10-13 14:51+0900\n"
-"PO-Revision-Date: 2005-10-11 02:19+0900\n"
+"POT-Creation-Date: 2005-10-23 11:54+0900\n"
+"PO-Revision-Date: 2005-10-23 11:28+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -488,7 +489,7 @@ msgstr ""
 # * Description for 'svn{,admin,dumpfilter,look} --help'.
 # * 29 half-size characters are displayed on the left.
 #: clients/cmdline/main.c:66 clients/cmdline/main.c:67 svnadmin/main.c:228
-#: svnadmin/main.c:231 svndumpfilter/main.c:756 svndumpfilter/main.c:759
+#: svnadmin/main.c:231 svndumpfilter/main.c:781 svndumpfilter/main.c:784
 #: svnlook/main.c:93 svnlook/main.c:96
 msgid "show help on a subcommand"
 msgstr "サブコマンドに関するヘルプを表示します"
@@ -1896,12 +1897,12 @@ msgstr "--auto-props と --no-auto-props は互いに排他的です"
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "native-eol の引数 '%s' 中で構文エラーが生じました"
 
-#: clients/cmdline/main.c:1155 svndumpfilter/main.c:1167 svnlook/main.c:2146
+#: clients/cmdline/main.c:1155 svndumpfilter/main.c:1192 svnlook/main.c:2146
 #, c-format
 msgid "Subcommand argument required\n"
 msgstr "サブコマンドに引数が必要です\n"
 
-#: clients/cmdline/main.c:1173 svnadmin/main.c:1348 svndumpfilter/main.c:1185
+#: clients/cmdline/main.c:1173 svnadmin/main.c:1348 svndumpfilter/main.c:1210
 #: svnlook/main.c:2164
 #, c-format
 msgid "Unknown command: '%s'\n"
@@ -2434,7 +2435,7 @@ msgid ""
 msgstr ""
 "\n"
 "ログメッセージの変更または指定がなされていません\n"
-"中止 (a), 続行 (c), 編集 (e)\n"
+"中断 (a), 続行 (c), 編集 (e)\n"
 
 #: clients/cmdline/util.c:653
 msgid "Use --force to override this restriction"
@@ -3315,7 +3316,7 @@ msgstr "'%s' は未知またはバージョン管理できない形式です"
 msgid "New entry name required when importing a file"
 msgstr "ファイルのインポートをするときは新しいエントリ名が必要です"
 
-#: libsvn_client/commit.c:556 libsvn_wc/props.c:1215 libsvn_wc/questions.c:62
+#: libsvn_client/commit.c:556 libsvn_wc/props.c:1217 libsvn_wc/questions.c:62
 #, c-format
 msgid "'%s' does not exist"
 msgstr "'%s' は存在しません"
@@ -3386,7 +3387,7 @@ msgstr "エントリ '%s' が特殊なステータスを突然変更しました
 #: libsvn_client/commit_util.c:324
 #, c-format
 msgid "Aborting commit: '%s' remains in conflict"
-msgstr "コミットを中止しています: '%s' がまだ衝突しています"
+msgstr "コミットを中断しています: '%s' がまだ衝突しています"
 
 #: libsvn_client/commit_util.c:390
 #, c-format
@@ -3411,8 +3412,8 @@ msgstr ""
 #: libsvn_client/revisions.c:89 libsvn_client/status.c:256
 #: libsvn_client/switch.c:104 libsvn_wc/adm_ops.c:2247
 #: libsvn_wc/adm_ops.c:2273 libsvn_wc/adm_ops.c:2310 libsvn_wc/copy.c:449
-#: libsvn_wc/entries.c:1498 libsvn_wc/entries.c:1990 libsvn_wc/props.c:283
-#: libsvn_wc/props.c:1142 libsvn_wc/questions.c:171
+#: libsvn_wc/entries.c:1498 libsvn_wc/entries.c:1990 libsvn_wc/props.c:285
+#: libsvn_wc/props.c:1144 libsvn_wc/questions.c:171
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "'%s' はバージョン管理下におかれていません"
@@ -4545,7 +4546,7 @@ msgstr "トランザクションが死んでいます: '%s'"
 
 #: libsvn_fs_base/revs-txns.c:981
 msgid "Transaction aborted, but cleanup failed"
-msgstr "トランザクションが破棄されましたが、掃除が失敗しました"
+msgstr "トランザクションが中断されましたが、掃除が失敗しました"
 
 #: libsvn_fs_base/tree.c:391 libsvn_fs_fs/tree.c:311
 #, c-format
@@ -4971,7 +4972,7 @@ msgstr "バージョン管理されたリソースの URL を保存できませ�
 #: libsvn_ra_dav/fetch.c:398
 #, c-format
 msgid "Could not get content-type from response."
-msgstr "レスポンスから content-type を取得できませんでした"
+msgstr "レスポンスから content-type を取得できませんでした。"
 
 #: libsvn_ra_dav/fetch.c:443
 #, c-format
@@ -6536,7 +6537,7 @@ msgstr "ネイティブのパスエンコーディングを決定できません
 msgid "Invalid control character '0x%02x' in path '%s'"
 msgstr "不正な制御文字 '0x%02x' がパス '%s' にあります"
 
-#: libsvn_subr/subst.c:1237 libsvn_wc/props.c:1459
+#: libsvn_subr/subst.c:1237 libsvn_wc/props.c:1461
 #, c-format
 msgid "File '%s' has inconsistent newlines"
 msgstr "ファイル '%s' は改行文字が一貫していません"
@@ -6649,7 +6650,7 @@ msgstr ""
 
 #: libsvn_wc/adm_crawler.c:633
 msgid "Error aborting report"
-msgstr "報告を中止する際にエラーが発生しました"
+msgstr "報告を中断する際にエラーが発生しました"
 
 #: libsvn_wc/adm_crawler.c:823
 #, c-format
@@ -7193,22 +7194,22 @@ msgstr ""
 msgid "Can't parse '%s'"
 msgstr "'%s' をパースできません"
 
-#: libsvn_wc/props.c:198
+#: libsvn_wc/props.c:200
 #, c-format
 msgid "Can't write property hash to '%s'"
 msgstr "属性のハッシュを '%s' に書き込めません"
 
-#: libsvn_wc/props.c:248
+#: libsvn_wc/props.c:250
 #, c-format
 msgid "Can't find entry '%s' in '%s'"
 msgstr "エントリ '%s' が '%s' で見つかりません"
 
-#: libsvn_wc/props.c:320 libsvn_wc/props.c:1179 libsvn_wc/update_editor.c:2320
+#: libsvn_wc/props.c:322 libsvn_wc/props.c:1181 libsvn_wc/update_editor.c:2320
 #, c-format
 msgid "Error writing log for '%s'"
 msgstr "'%s' のログを書いている際にエラーが発生しました"
 
-#: libsvn_wc/props.c:456
+#: libsvn_wc/props.c:458
 #, c-format
 msgid ""
 "Trying to add new property '%s' with value '%s',\n"
@@ -7217,7 +7218,7 @@ msgstr ""
 "新しい属性 '%s' に値 '%s' を与えて追加しようとしています。\n"
 "しかし属性には値 '%s' が既についています。"
 
-#: libsvn_wc/props.c:480
+#: libsvn_wc/props.c:482
 #, c-format
 msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
@@ -7226,7 +7227,7 @@ msgstr ""
 "属性 '%s' を '%s' から '%s' に変更しようとしています。\n"
 "しかしその属性は存在しません。"
 
-#: libsvn_wc/props.c:509
+#: libsvn_wc/props.c:511
 #, c-format
 msgid ""
 "Trying to delete property '%s' but value has been modified from '%s' to '%s'."
@@ -7234,7 +7235,7 @@ msgstr ""
 "属性 '%s' を削除しようとしています。しかし値が '%s' から '%s' に変更されてい"
 "ます。"
 
-#: libsvn_wc/props.c:528
+#: libsvn_wc/props.c:530
 #, c-format
 msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
@@ -7243,52 +7244,52 @@ msgstr ""
 "属性 '%s' を '%s' から '%s' に変更しようとしています。\n"
 "しかし属性には値 '%s' が既についています。"
 
-#: libsvn_wc/props.c:1220
+#: libsvn_wc/props.c:1222
 #, c-format
 msgid "Unknown node kind: '%s'"
 msgstr "ノード種別が不明です: '%s'"
 
-#: libsvn_wc/props.c:1256 libsvn_wc/props.c:1278 libsvn_wc/props.c:1362
-#: libsvn_wc/props.c:1600
+#: libsvn_wc/props.c:1258 libsvn_wc/props.c:1280 libsvn_wc/props.c:1364
+#: libsvn_wc/props.c:1602
 msgid "Failed to load properties from disk"
 msgstr "ディスクから属性をロードできませんでした"
 
-#: libsvn_wc/props.c:1294 libsvn_wc/props.c:1630
+#: libsvn_wc/props.c:1296 libsvn_wc/props.c:1632
 #, c-format
 msgid "Cannot write property hash for '%s'"
 msgstr "'%s' の属性のハッシュを書き込めません"
 
-#: libsvn_wc/props.c:1354 libsvn_wc/props.c:1492
+#: libsvn_wc/props.c:1356 libsvn_wc/props.c:1494
 #, c-format
 msgid "Property '%s' is an entry property"
 msgstr "属性 '%s' はエントリ属性です"
 
-#: libsvn_wc/props.c:1399
+#: libsvn_wc/props.c:1401
 #, c-format
 msgid "Cannot set '%s' on a directory ('%s')"
 msgstr "'%s' をディレクトリ ('%s') に設定できません"
 
-#: libsvn_wc/props.c:1407
+#: libsvn_wc/props.c:1409
 #, c-format
 msgid "Cannot set '%s' on a file ('%s')"
 msgstr "'%s' をファイル ('%s') に設定できません"
 
-#: libsvn_wc/props.c:1413
+#: libsvn_wc/props.c:1415
 #, c-format
 msgid "'%s' is not a file or directory"
 msgstr "'%s' はファイルでもディレクトリでもありません"
 
-#: libsvn_wc/props.c:1437
+#: libsvn_wc/props.c:1439
 #, c-format
 msgid "File '%s' has binary mime type property"
 msgstr "ファイル '%s' の MIME タイプ属性はバイナリです"
 
-#: libsvn_wc/props.c:2056
+#: libsvn_wc/props.c:2058
 #, c-format
 msgid "Error parsing %s property on '%s': '%s'"
 msgstr "属性 %s を '%s' においてパースする際にエラーが発生しました: '%s'"
 
-#: libsvn_wc/props.c:2069
+#: libsvn_wc/props.c:2071
 #, c-format
 msgid ""
 "Invalid %s property on '%s': target involves '.' or '..' or is an absolute "
@@ -7446,7 +7447,7 @@ msgstr "'%s' は URL です。そこはパスで指定するべきです"
 
 # * Description for 'svn{admin,dumpfilter,look,serve,version} --version'.
 # * 29 half-size characters are displayed on the left.
-#: svnadmin/main.c:234 svndumpfilter/main.c:762 svnlook/main.c:99
+#: svnadmin/main.c:234 svndumpfilter/main.c:787 svnlook/main.c:99
 #: svnserve/main.c:112 svnversion/main.c:182
 msgid "show version information"
 msgstr "バージョン情報を表示します"
@@ -7574,8 +7575,8 @@ msgid ""
 msgstr ""
 "使用方法: svnadmin crashtest <リポジトリパス>\n"
 "\n"
-"<リポジトリパス> にあるリポジトリを開いてから破棄します。すなわち、開いたリ\n"
-"ポジトリハンドルを握っている間に強制終了する過程をシミュレートします。\n"
+"<リポジトリパス> にあるリポジトリを開いてそのまま中断します。すなわち、開い\n"
+"たリポジトリハンドルを握っている間に強制終了する過程をシミュレートします。\n"
 
 # * Description for 'svnadmin create'.
 # * "create: " is displayed at the head of the first line.
@@ -8002,44 +8003,44 @@ msgstr ""
 "使用方法を知りたいときは 'svnadmin help %s' と打ってください。\n"
 
 # * Each empty revision only contains date and this log message.
-#: svndumpfilter/main.c:325
+#: svndumpfilter/main.c:319
 msgid "This is an empty revision for padding."
 msgstr "単に番号が飛ばないようにするための空のリビジョンです。"
 
-#: svndumpfilter/main.c:378
+#: svndumpfilter/main.c:389
 #, c-format
 msgid "Revision %ld committed as %ld.\n"
 msgstr "リビジョン %ld は %ld としてコミットされました。\n"
 
-#: svndumpfilter/main.c:386
+#: svndumpfilter/main.c:412
 #, c-format
 msgid "Revision %ld skipped.\n"
 msgstr "リビジョン %ld は飛ばされました。\n"
 
-#: svndumpfilter/main.c:489
+#: svndumpfilter/main.c:514
 #, c-format
 msgid "Invalid copy source path '%s'"
 msgstr "コピー元のパス '%s' が不正です。"
 
-#: svndumpfilter/main.c:532
+#: svndumpfilter/main.c:558
 #, c-format
-msgid "Node with dropped parent sneaked in"
-msgstr "親が取り除かれたノードが入ってしまっています"
+msgid "No valid copyfrom revision in filtered stream"
+msgstr "フィルタ通過後のストリーム中に適切なコピー元リビジョンがありません"
 
-#: svndumpfilter/main.c:638
+#: svndumpfilter/main.c:663
 msgid "Delta property block detected - not supported by svndumpfilter"
 msgstr ""
 "delta 属性ブロックが検出されました - svndumpfilter ではサポートされません"
 
 # * Description for 'svndumpfilter --quiet'.
 # * 29 half-size characters are displayed on the left.
-#: svndumpfilter/main.c:764
+#: svndumpfilter/main.c:789
 msgid "Do not display filtering statistics."
 msgstr "フィルタリングを行うときに統計を表示しません。"
 
 # * Description for 'svndumpfilter --drop-empty-revs'.
 # * 29 half-size characters are displayed on the left.
-#: svndumpfilter/main.c:766
+#: svndumpfilter/main.c:791
 msgid "Remove revisions emptied by filtering."
 msgstr ""
 "フィルタをかけたために空になったリビジョンを取り\n"
@@ -8047,7 +8048,7 @@ msgstr ""
 
 # * Description for 'svndumpfilter --renumber-revs'.
 # * 29 half-size characters are displayed on the left.
-#: svndumpfilter/main.c:768
+#: svndumpfilter/main.c:793
 msgid "Renumber revisions left after filtering."
 msgstr ""
 "フィルタをかけた後に残ったリビジョンに番号をふり\n"
@@ -8055,13 +8056,13 @@ msgstr ""
 
 # * Description for 'svndumpfilter --preserve-revprops'.
 # * 29 half-size characters are displayed on the left.
-#: svndumpfilter/main.c:770
+#: svndumpfilter/main.c:795
 msgid "Don't filter revision properties."
 msgstr "リビジョン属性にはフィルタをかけません。"
 
 # * Description for 'svndumpfilter exclude'.
 # * "exclude: " is displayed at the head of the first line.
-#: svndumpfilter/main.c:781
+#: svndumpfilter/main.c:806
 msgid ""
 "Filter out nodes with given prefixes from dumpstream.\n"
 "usage: svndumpfilter exclude PATH_PREFIX...\n"
@@ -8072,7 +8073,7 @@ msgstr ""
 
 # * Description for 'svndumpfilter include'.
 # * "include: " is displayed at the head of the first line.
-#: svndumpfilter/main.c:787
+#: svndumpfilter/main.c:812
 msgid ""
 "Filter out nodes without given prefixes from dumpstream.\n"
 "usage: svndumpfilter include PATH_PREFIX...\n"
@@ -8083,7 +8084,7 @@ msgstr ""
 
 # * Description for 'svndumpfilter help'.
 # * "help: " is displayed at the head of the first line.
-#: svndumpfilter/main.c:793
+#: svndumpfilter/main.c:818
 msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: svndumpfilter help [SUBCOMMAND...]\n"
@@ -8092,7 +8093,7 @@ msgstr ""
 "使用方法: svndumpfilter help [<サブコマンド>...]\n"
 
 # * Description for svndumpfilter.
-#: svndumpfilter/main.c:863
+#: svndumpfilter/main.c:889
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
@@ -8105,31 +8106,31 @@ msgstr ""
 "\n"
 "利用可能なサブコマンド:\n"
 
-#: svndumpfilter/main.c:917
+#: svndumpfilter/main.c:943
 #, c-format
 msgid "Excluding (and dropping empty revisions for) prefixes:\n"
 msgstr ""
 "次のプレフィックスをもつノードを取り除きます (空になったリビジョンは落としま"
 "す):\n"
 
-#: svndumpfilter/main.c:919
+#: svndumpfilter/main.c:945
 #, c-format
 msgid "Excluding prefixes:\n"
 msgstr "次のプレフィックスをもつノードを取り除きます:\n"
 
-#: svndumpfilter/main.c:921
+#: svndumpfilter/main.c:947
 #, c-format
 msgid "Including (and dropping empty revisions for) prefixes:\n"
 msgstr ""
 "次のプレフィックスをもつノードを残します (空になったリビジョンは落としま"
 "す):\n"
 
-#: svndumpfilter/main.c:923
+#: svndumpfilter/main.c:949
 #, c-format
 msgid "Including prefixes:\n"
 msgstr "次のプレフィックスをもつノードを残します:\n"
 
-#: svndumpfilter/main.c:950
+#: svndumpfilter/main.c:976
 #, c-format
 msgid ""
 "Dropped %d revision(s).\n"
@@ -8138,21 +8139,21 @@ msgstr ""
 "%d 個のリビジョンを取り除きました。\n"
 "\n"
 
-#: svndumpfilter/main.c:956
+#: svndumpfilter/main.c:982
 msgid "Revisions renumbered as follows:\n"
 msgstr "以下のようにリビジョン番号がふりなおされました:\n"
 
-#: svndumpfilter/main.c:984
+#: svndumpfilter/main.c:1009
 #, c-format
 msgid "   %ld => (dropped)\n"
 msgstr "   %ld => (取り除かれました)\n"
 
-#: svndumpfilter/main.c:999
+#: svndumpfilter/main.c:1024
 #, c-format
 msgid "Dropped %d node(s):\n"
 msgstr "%d 個のノードを取り除きました:\n"
 
-#: svndumpfilter/main.c:1204
+#: svndumpfilter/main.c:1229
 #, c-format
 msgid ""
 "\n"
@@ -8161,7 +8162,7 @@ msgstr ""
 "\n"
 "プレフィックスが与えられていません。\n"
 
-#: svndumpfilter/main.c:1247
+#: svndumpfilter/main.c:1272
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -8884,11 +8885,20 @@ msgstr "エクスポートされたものです%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
 
-#~ msgid "No valid copyfrom revision in filtered stream"
-#~ msgstr "フィルタ通過後のストリーム中に適切なコピー元リビジョンがありません"
+#~ msgid "Can't set process '%s' error handler"
+#~ msgstr "プロセス '%s' に対してエラーハンドラを設定できません"
+
+#~ msgid "Could not get content-type from response"
+#~ msgstr "レスポンスから content-type を取得できませんでした"
+
+#~ msgid "'%s' isn't in the same repository as '%s'"
+#~ msgstr "'%s' は '%s' と同じリポジトリにありません"
 
 #~ msgid "Summarizing diff can only compare repository to repository"
 #~ msgstr "差分の要約はリポジトリとリポジトリとの比較にしか使えません"
+
+#~ msgid "Node with dropped parent sneaked in"
+#~ msgstr "親が取り除かれたノードが入ってしまっています"
 
 #~ msgid "Move failed"
 #~ msgstr "移動できませんでした"
