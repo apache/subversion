@@ -69,6 +69,13 @@ Candidate changes:
        function is a SWIG/C wrapper.
      Votes:
        +1: djames
+   
+   * r16948
+     Disable call to svn_wc__get_special() unless HAVE_SYMLINK defined.
+     Justification:
+       It is really improve performance of "svn status" on Windows.
+     Votes:
+       +1: zhakov
 
 Approved changes:
 
