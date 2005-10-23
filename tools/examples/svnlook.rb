@@ -244,57 +244,17 @@ class SvnLook
   end
 
   
-  # Output directories that have been changed
-  class DirsChangedEditor < Svn::Delta::BaseEditor
-
-    # Recurse through the root node
-    def open_root(base_revision)
-      [true, '']
-    end
-
-    # If a file is deleted, output that its parent has
-    # been changed
-    def delete_entry(path, revision, parent_baton)
-      dir_changed(parent_baton)
-    end
-
-    # If a directory is added, output that its parent has been
-    # changed and recurse through the child directory's contents
-    def add_directory(path, parent_baton,
-                      copyfrom_path, copyfrom_revision)
-      dir_changed(parent_baton)
-      [true, path]
-    end
-
-    # Recurse through directories
-    def open_directory(path, parent_baton, base_revision)
-      [true, path]
-    end
-
-    # If the properties of this directory have been changed,
-    # output that the directory has been changed
-    def change_dir_prop(dir_baton, name, value)
-      dir_changed(dir_baton)
-    end
-
-    # If a file is added to this directory,
-    # output that the directory has been changed 
-    def add_file(path, parent_baton,
-                 copyfrom_path, copyfrom_revision)
-      dir_changed(parent_baton)
-    end
-
-    # If a file is opened in this directory,
-    # output that the directory has been changed 
-    def open_file(path, parent_baton, base_revision)
-      dir_changed(parent_baton)
-    end
+  # Output directories that have been changed.
+  # In this class, methods such as open_root and add_file
+  # are inherited from Svn::Delta::ChangedDirsEditor.
+  class DirsChangedEditor < Svn::Delta::ChangedDirsEditor
 
     # Private functions
     private
 
     # Print out the name of a directory if it has been changed.
     # But only do so once.
+    # This behaves in a way like a callback function does.
     def dir_changed(baton)
       if baton[0]
         # The directory hasn't been printed yet,
