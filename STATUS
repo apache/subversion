@@ -21,7 +21,7 @@ Candidate changes:
      Justification:
        It really improves performance of "svn status" on Windows.
      Votes:
-       +1: zhakov
+       +1: zhakov, lundblad
 
    * r16953
      Fix regression in repos commit editor.
