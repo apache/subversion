@@ -30,7 +30,7 @@ Candidate changes:
    * r16972
      Fix autogen.sh-time SWIG Makefile to work with Solaris /bin/sh.
      Votes:
-      +1: jerenkrantz
+      +1: jerenkrantz, dlr
 
 Approved changes:
 
