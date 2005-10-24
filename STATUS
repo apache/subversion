@@ -77,9 +77,20 @@ Candidate changes:
    * r16948
      Disable call to svn_wc__get_special() unless HAVE_SYMLINK defined.
      Justification:
-       It is really improve performance of "svn status" on Windows.
+       It really improves performance of "svn status" on Windows.
      Votes:
        +1: zhakov
+
+  * r16953
+    Fix regression in repos commit editor.
+    Branch: 1.3.x-r16953
+    Notes:
+      svn_repos_get_commit_editor4 was introduced after 1.3.x was branched;
+      affects only the added test.
+    Justification:
+      Breaks svk.
+    Votes:
+      +1: lundblad
 
 Approved changes:
 
