@@ -247,15 +247,14 @@ This can be either absolute or looked up on `exec-path'."
   :group 'psvn)
 (put 'svn-status-svn-executable 'risky-local-variable t)
 
-;; TODO: bind `process-environment' instead of running env?
-;; That would probably work more reliably in Windows.
 (defcustom svn-status-svn-environment-var-list '()
   "*A list of environment variables that should be set for that svn process.
-If you set that variable, svn is called with that environment variables set.
-That is done via the env program.
+Each element is either a string \"VARIABLE=VALUE\" which will be added to
+the environment when svn is run, or just \"VARIABLE\" which causes that
+variable to be entirely removed from the environment. 
 
-You could set it for example to '(\"LANG=C\")"
-  :type '(repeat (string :valid-regexp "=" :value "LANG=C"))
+You could set this for example to '(\"LANG=C\")"
+  :type '(repeat string)
   :group 'psvn)
 (put 'svn-status-svn-environment-var-list 'risky-local-variable t)
 
@@ -810,6 +809,25 @@ If ARG then pass the -u argument to `svn status'."
         (svn-status dir)
       (error "%s is not a directory" dir))))
 
+(defun svn-process-environment ()
+  "Construct the environment for the svn process.
+It is a combination of `svn-status-svn-environment-var-list' and
+the usual `process-environment'."
+  ;; If there are duplicate elements in `process-environment', then GNU
+  ;; Emacs 21.4 guarantees that the first one wins; but GNU Emacs 20.7
+  ;; and XEmacs 21.4.17 don't document what happens.  We'll just remove
+  ;; any duplicates ourselves, then.  This also gives us an opportunity
+  ;; to handle the "VARIABLE" syntax that none of them supports.
+  (loop with found = '()
+        for elt in (append svn-status-svn-environment-var-list
+                           process-environment)
+        for has-value = (string-match "=" elt)
+        for name = (substring elt 0 has-value)
+        unless (member name found)
+          do (push name found)
+          and when has-value
+            collect elt))
+
 (defun svn-run-svn (run-asynchron clear-process-buffer cmdtype &rest arglist)
   "Run svn with arguments ARGLIST.
 
@@ -857,20 +875,17 @@ is prompted for give extra arguments, which are appended to ARGLIST."
             (setq svn-status-mode-line-process-status (format " running %s" cmdtype))
             (svn-status-update-mode-line)
             (sit-for 0.1)
-            (when svn-status-svn-environment-var-list
-              (setq arglist (append svn-status-svn-environment-var-list
-                                    (list svn-status-svn-executable)
-                                    arglist))
-              (setq svn-exe "env"))
             (if run-asynchron
                 (progn
                   ;;(message "running asynchron: %s %S" svn-exe arglist)
-                  (setq svn-proc (apply 'start-process "svn" proc-buf svn-exe arglist))
+                  (let ((process-environment (svn-process-environment)))
+                    (setq svn-proc (apply 'start-process "svn" proc-buf svn-exe arglist)))
                   (set-process-sentinel svn-proc 'svn-process-sentinel)
                   (when svn-status-track-user-input
                     (set-process-filter svn-proc 'svn-process-filter)))
               ;;(message "running synchron: %s %S" svn-exe arglist)
-              (apply 'call-process svn-exe nil proc-buf nil arglist)
+              (let ((process-environment (svn-process-environment)))
+                (apply 'call-process svn-exe nil proc-buf nil arglist))
               (setq svn-status-mode-line-process-status "")
               (svn-status-update-mode-line)))))
     (error "You can only run one svn process at once!")))
