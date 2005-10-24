@@ -49,11 +49,6 @@ OUTPUT_TYPEMAP(unsigned long long, ULL2NUM, (unsigned long long));
 #undef OUTPUT_TYPEMAP
 #endif
 
-%apply unsigned int { apr_uint32_t };
-%apply unsigned int *OUTPUT { apr_uint32_t * };
-%apply size_t { apr_size_t };
-%apply size_t *OUTPUT { apr_size_t * };
-
 #endif
 
 /* ----------------------------------------------------------------------- */
@@ -73,7 +68,6 @@ typedef int apr_status_t;
     ST(argvi) = sv_newmortal();
     sv_setpv((SV*)ST(argvi++), temp);
 }
-%apply long long { apr_int64_t }
 
 %typemap(perl5, out) unsigned long long {
     char temp[256];
@@ -81,7 +75,6 @@ typedef int apr_status_t;
     ST(argvi) = sv_newmortal();
     sv_setpv((SV*)ST(argvi++), temp);
 }
-%apply unsigned long long { apr_uint64_t }
 
 %typemap(perl5, argout) long long *OUTPUT, long long &OUTPUT {
   char temp[256];
@@ -106,9 +99,38 @@ typedef int apr_status_t;
 }
 
 /* -----------------------------------------------------------------------
- * apr_byte_t
+ * APR datatypes (from apr.h)
  */
 %apply unsigned char { apr_byte_t }
+%apply short { apr_int16_t }
+%apply unsigned short { apr_uint16_t }
+%apply int { apr_int32_t }
+%apply unsigned int { apr_uint32_t }
+%apply unsigned long { apr_size_t }
+%apply signed long { apr_ssize_t }
+%apply long long { apr_int64_t }
+%apply unsigned long long { apr_uint64_t }
+
+%apply unsigned int *OUTPUT { apr_uint32_t * }
+%apply unsigned long *OUTPUT { apr_size_t * }
+
+/* We assume here that apr_off_t is no bigger than a 64-bit integer.
+ * In some cases, apr_off_t might be as big as 128-bits. In those cases,
+ * we'll simply truncate apr_off_t to a 64-bit integer.
+ */
+
+%typemap(perl5, in) apr_off_t {
+  $1 = (apr_off_t) strtoll(SvPV($input, PL_na), 0, 0);
+}
+
+%typemap(python, in) apr_off_t {
+  $1 = (apr_off_t) PyLong_AsLongLong($input);
+}
+
+%typemap(ruby, in) apr_off_t {
+  $1 = (apr_off_t) NUM2LL($input);
+}
+
 
 /* -----------------------------------------------------------------------
    apr_time_t
