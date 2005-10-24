@@ -65,7 +65,7 @@ svn_md5_digest_to_cstring (const unsigned char digest[], apr_pool_t *pool)
 
 
 svn_boolean_t
-svn_md5_digests_match (unsigned const char d1[], unsigned const char d2[])
+svn_md5_digests_match (const unsigned char d1[], const unsigned char d2[])
 {
   static const unsigned char zeros[APR_MD5_DIGESTSIZE] = { 0 };
 
