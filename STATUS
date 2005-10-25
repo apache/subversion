@@ -15,6 +15,7 @@ Candidate changes:
        "long long" is not portable.
      Votes:
        +1: djames
+       +0: lundblad
 
    * r16980, r16982
      Fix broken "long long *OUTPUT" typemaps in Perl and Python bindings.
