@@ -305,7 +305,16 @@ to ask for review on the developer mailing list.</p>
 </li>
 <li><p><tt>tools/</tt><br />
     Stuff that works with Subversion, but that Subversion doesn't
-    depend on.</p>
+    depend on.  Code in tools/ is maintained collectively by the
+    Subversion project, and is under the same open source copyright as
+    Subversion itself.</p>
+</li>
+<li><p><tt>contrib/</tt><br />
+    Stuff that works with Subversion, but that Subversion doesn't
+    depend on, and that is maintained by individuals who may or may
+    not participate in Subversion development.  Code in contrib/ is
+    open source, but may have a different license or copyright holder
+    than Subversion itself.</p>
 </li>
 <li><p><tt>packages/</tt><br />
     Stuff to help packaging systems, like rpm and dpkg.</p>
@@ -1440,9 +1449,11 @@ made.</p>
 <p>It is very important to record code contributions in a consistent
 and parseable way.  This allows us to write scripts to figure out who
 has been actively contributing&nbsp;&mdash;&nbsp;and what they have
-contributed&nbsp;&mdash;&nbsp;so we can spot potential new committers
-quickly.  The Subversion project uses human-readable but
-machine-parseable fields in log messages to accomplish this.</p>
+contributed&nbsp;&mdash;&nbsp;so we can <a
+href="http://www.red-bean.com/svnproject/contribulyzer/">spot
+potential new committers quickly</a>.  The Subversion project uses
+human-readable but machine-parseable fields in log messages to
+accomplish this.</p>
 
 <p>When committing a patch written by someone else, use
 "Patch&nbsp;by:&nbsp;" at the beginning of a line to indicate the
@@ -1770,6 +1781,16 @@ committers are people who have not made major code contributions, but
 rather lots of small, clean fixes, each of which was an unambiguous
 improvement to the code.</p>
 
+<p>To assist developers in discovering new committers, we record
+patches and other contributions in a <a href="#crediting">special
+crediting format</a>, which is then parsed to produce a
+browser-friendly <a
+href="http://www.red-bean.com/svnproject/contribulyzer/">contribution
+list</a>, updated nightly.  If you're thinking of proposing someone
+for commit access and want to look over all their changes, that <a
+href="http://www.red-bean.com/svnproject/contribulyzer/">contribution
+list</a> might be the most convenient place to do it.</p>
+
 </div>
 
 <div class="h3" id="partial-commit-access" title="partial-commit-access">
@@ -1792,6 +1813,22 @@ log message, like so:</p>
 <pre>
    Approved by: lundblad
 </pre>
+
+</div>
+
+<div class="h3" id="contrib-area" title="contrib-area">
+<h3>The contrib/ area</h3>
+
+<p>When a tool is accepted into the <i>contrib/</i> area, we
+automatically offer its author partial commit access to maintain the
+tool there.  Any full committer can sponsor this.  Usually no
+discussion or vote is necessary, though if there are objections then
+the usual decision-making procedures apply (attempt to reach consensus
+first, then vote among the full committers if consensus cannot be
+reached).</p>
+
+<p>Code under contrib/ must be open source, but need not have the same
+license or copyright holder as Subversion itself.</p>
 
 </div>
 
