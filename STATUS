@@ -9,11 +9,8 @@ Status of 1.3.0:
 
 Candidate changes:
 
-   * r16984, r16985
-     Update APR typemaps to be more portable, so that they will work on
-     platforms with non-standard integer sizes.
-     Votes:
-       +1: djames, dberlin
+   (none)
 
 Approved changes:
 
+   (none)
