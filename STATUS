@@ -53,8 +53,7 @@ Candidate changes:
      Justification:
        Unable to include svn_md5 functions in bindings.
      Votes:
-       +1: djames
-       +0: clkao (r16966 only)
+       +1: djames, clkao
 
    * r16930, r16975, r16989, r16990
      Actually fix the cause of perl bindings segfault by allocating for
