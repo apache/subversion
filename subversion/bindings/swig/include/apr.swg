@@ -76,7 +76,9 @@ typedef int apr_status_t;
     sv_setpv((SV*)ST(argvi++), temp);
 }
 
-%typemap(perl5, argout) long long *OUTPUT, long long &OUTPUT {
+%typemap(perl5, in, numinputs=0) long long *OUTPUT (apr_int64_t temp)
+    "$1 = &temp;";
+%typemap(perl5, argout) long long *OUTPUT {
   char temp[256];
   if (argvi >= items) {
     EXTEND(sp,1);
@@ -87,7 +89,9 @@ typedef int apr_status_t;
   argvi++;
 }
 
-%typemap(perl5, argout) unsigned long long *OUTPUT, unsigned long long &OUTPUT {
+%typemap(perl5, in, numinputs=0) unsigned long long *OUTPUT (apr_uint64_t temp)
+    "$1 = &temp;";
+%typemap(perl5, argout) unsigned long long *OUTPUT {
   char temp[256];
   if (argvi >= items) {
     EXTEND(sp,1);
