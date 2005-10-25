@@ -624,6 +624,7 @@ PyObject *svn_swig_py_exception_type(void);
 %include svn_io_h.swg
 
 #ifdef SWIGPERL
+%include svn_md5_h.swg
 %include svn_diff_h.swg
 %include svn_error_h.swg
 #endif
