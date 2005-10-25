@@ -929,6 +929,15 @@ use SVN::Base qw(Core SVN_AUTH_SSL_);
 package _p_svn_lock_t;
 use SVN::Base qw(Core svn_lock_t_);
 
+package SVN::MD5;
+use overload
+    '""' => sub { SVN::Core::md5_digest_to_cstring(${$_[0]})};
+
+sub new {
+    my ($class, $digest) = @_;
+    bless \$digest, $class;
+}
+
 =head1 AUTHORS
 
 Chia-liang Kao E<lt>clkao@clkao.orgE<gt>

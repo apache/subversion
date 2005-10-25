@@ -110,7 +110,7 @@ sub apply {
 	my @ret = SVN::_Delta::svn_txdelta_apply(@_);
 	return @ret[1,2];
     }
-    goto &SVN::_Delta::svn_txdelta_apply;
+    goto \&SVN::_Delta::svn_txdelta_apply;
 }
 
 package _p_svn_txdelta_op_t;
