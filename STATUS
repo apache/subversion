@@ -27,6 +27,27 @@ Candidate changes:
      Votes:
        +1: lundblad, jerenkrantz
 
+   * r16979
+     Use apr_int64_t and apr_uint64_t in place of "long long" in Ruby typemaps.
+     Justification:
+       "long long" is not portable.
+     Votes:
+       +1: djames
+
+   * r16980, r16982
+     Fix broken "long long *OUTPUT" typemaps in Perl and Python bindings.
+     Justification:
+       Broken typemaps can lead to incorrect bindings.
+     Votes:
+       +1: djames
+
+   * r16984, r16985
+     Update APR typemaps to be more portable, so that they will work on
+     platforms with non-standard integer sizes.
+     Depends: r16903, r16920, r16923, r16950
+     Votes:
+       +1: djames
+
 Approved changes:
 
    * r16918
