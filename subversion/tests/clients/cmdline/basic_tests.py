@@ -647,8 +647,9 @@ def basic_revert(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Modify some files.
+  # Modify some files and props.
   beta_path = os.path.join(wc_dir, 'A', 'B', 'E', 'beta')
+  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   iota_path = os.path.join(wc_dir, 'iota')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
   zeta_path = os.path.join(wc_dir, 'A', 'D', 'H', 'zeta')
@@ -659,10 +660,18 @@ def basic_revert(sbox):
 
   svntest.actions.run_and_verify_svn("Add command", None, [],
                                      'add', zeta_path)
+  svntest.actions.run_and_verify_svn("Add prop command", None, [],
+                                     'ps', 'random-prop', 'propvalue',
+                                     gamma_path)
+  svntest.actions.run_and_verify_svn("Add prop command", None, [],
+                                     'ps', 'random-prop', 'propvalue',
+                                     iota_path)
 
   # Verify modified status.
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_output.tweak('A/B/E/beta', 'iota', 'A/D/G/rho', status='M ')
+  expected_output.tweak('A/B/E/beta', 'A/D/G/rho', status='M ')
+  expected_output.tweak('iota', status='MM')
+  expected_output.tweak('A/D/gamma', status=' M')
   expected_output.add({
     'A/D/H/zeta' : Item(status='A ', wc_rev=0),
     })
@@ -672,6 +681,9 @@ def basic_revert(sbox):
   # Run revert (### todo: revert doesn't currently print anything)
   svntest.actions.run_and_verify_svn("Revert command", None, [],
                                      'revert', beta_path)
+
+  svntest.actions.run_and_verify_svn("Revert command", None, [],
+                                     'revert', gamma_path)
 
   svntest.actions.run_and_verify_svn("Revert command", None, [],
                                      'revert', iota_path)
