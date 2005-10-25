@@ -45,9 +45,3 @@ Approved changes:
        +1 (build generator changes only): lundblad, djames, dberlin
        +0 (the rest): djames, dberlin
 
-   * r16948
-     Disable call to svn_wc__get_special() unless HAVE_SYMLINK defined.
-     Justification:
-       It really improves performance of "svn status" on Windows.
-     Votes:
-       +1: zhakov, lundblad, rooneg
