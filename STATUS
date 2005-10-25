@@ -58,14 +58,3 @@ Approved changes:
        +1: clkao
        +1 (build generator changes only): lundblad, djames, dberlin
        +0 (the rest): djames, dberlin
-
-   * r16953
-     Fix regression in repos commit editor.
-     Branch: 1.3.x-r16953
-     Notes:
-       svn_repos_get_commit_editor4 was introduced after 1.3.x was branched;
-       affects only the added test.
-     Justification:
-       Breaks svk.
-     Votes:
-       +1: lundblad, jerenkrantz, dberlin
