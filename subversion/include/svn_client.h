@@ -474,7 +474,7 @@ typedef svn_error_t *
  */
 typedef enum svn_client_diff_summarize_kind_t
 {
-  /** An item with no text modification.s */
+  /** An item with no text modifications */
   svn_client_diff_summarize_kind_normal,
 
   /** An added item */
@@ -502,11 +502,11 @@ typedef struct svn_client_diff_summarize_t
   /** Path relative to the target. */
   const char *path;
 
-  /** Set if @a path was copied from @a path_copyfrom, else NULL. */
+  /** The path from which this item was copied, else NULL. */
   const char *copyfrom_path;
   
-  /** Copy-from revision, os @C SVN_INVALID_REVNUM if @c copyfrom_path is NULL.
-   */
+  /** The revision from which this item was copied, else
+   * @c SVN_INVALID_REVNUM. */
   svn_revnum_t copyfrom_rev;
 
   /** Change kind */
@@ -520,8 +520,8 @@ typedef struct svn_client_diff_summarize_t
 } svn_client_diff_summarize_t;  
 
 
-/** A callback used in svn_client_diff_summarize/svn_client_diff_summarize_peg
- * for reporting a @a diff summary. 
+/** A callback used in svn_client_diff_summarize() and
+ * svn_client_diff_summarize_peg() for reporting a @a diff summary.
  *
  * All allocations should be performed in @a pool.
  *
@@ -1473,7 +1473,7 @@ svn_client_diff_summarize (const char *path1,
  * The function may report false positives if @a ignore_ancestry is false,
  * as described in the documentation for svn_client_diff_summarize().
  *
- * Call @a summarize_func with @a sumarize_baton for each difference
+ * Call @a summarize_func with @a summarize_baton for each difference
  * with a @c svn_client_diff_summarize_t structure describing the difference.
  *
  * See svn_client_diff_peg3() for a description of the other parameters.
