@@ -48,6 +48,25 @@ Candidate changes:
      Votes:
        +1: djames
 
+   * r16966
+     Use "const unsigned char", because SWIG cannot parse "unsigned const char".
+     Justification:
+       Unable to include svn_md5 functions in bindings.
+     Votes:
+       +1: clkao
+
+   * r16975, r16989, r16990
+     Actually fix the cause of perl bindings segfault by allocating for
+     result_digest, and make it overloaded object that actually reads
+     the digest when accessing.
+     Depends: r16930, r16966
+     Justification:
+       Bindings segfaults.
+     Notes:
+       Actually reverts r16930.
+     Votes:
+       +1: clkao
+
 Approved changes:
 
    * r16903
