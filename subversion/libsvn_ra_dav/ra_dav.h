@@ -790,7 +790,7 @@ svn_ra_dav__request_interrogator(ne_request *request,
    specified (e.g. as 200); use 0 for OKAY_2 if a second result code is
    not allowed.
 
-   #if SVN_NEON_0_25
+   #ifdef SVN_NEON_0_25
 
       If INTERROGATOR is non-NULL, invoke it with the Neon request,
       the dispatch result, and INTERROGATOR_BATON.  This is done
@@ -814,7 +814,7 @@ svn_ra_dav__request_dispatch(int *code_p,
                              const char *url,
                              int okay_1,
                              int okay_2,
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
                              svn_ra_dav__request_interrogator interrogator,
                              void *interrogator_baton,
 #endif /* SVN_NEON_0_25 */
