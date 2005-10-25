@@ -27,11 +27,6 @@ Candidate changes:
      Votes:
        +1: lundblad, jerenkrantz
 
-   * r16972
-     Fix autogen.sh-time SWIG Makefile to work with Solaris /bin/sh.
-     Votes:
-      +1: jerenkrantz, dlr
-
 Approved changes:
 
    * r16918
@@ -98,3 +93,8 @@ Approved changes:
        function is a SWIG/C wrapper.
      Votes:
        +1: djames, jerenkrantz
+
+   * r16972
+     Fix autogen.sh-time SWIG Makefile to work with Solaris /bin/sh.
+     Votes:
+      +1: jerenkrantz, dlr, djames
