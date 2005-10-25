@@ -50,13 +50,6 @@ Candidate changes:
 
 Approved changes:
 
-   * r16918
-     Don't hardcode the packager's build directory in the release tarball.
-     Notes:
-       Critical fix. Blocker for release candidate.
-     Votes:
-       +1: djames, jerenkrantz, rooneg
-
    * r16903
      Remove dependencies on APR in the SWIG code and build scripts,
      that prevent running autogen.sh --release through to completion.
