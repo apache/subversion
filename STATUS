@@ -9,13 +9,6 @@ Status of 1.3.0:
 
 Candidate changes:
 
-   * r16980, r16982
-     Fix broken "long long *OUTPUT" typemaps in Perl and Python bindings.
-     Justification:
-       Broken typemaps can lead to incorrect bindings.
-     Votes:
-       +1: djames, dberlin
-
    * r16984, r16985
      Update APR typemaps to be more portable, so that they will work on
      platforms with non-standard integer sizes.
