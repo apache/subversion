@@ -519,14 +519,38 @@
                           rb_str_new2(svn_md5_digest_to_cstring($1, _global_pool)));
 }
 
+/* svn_md5_* functions takes const ones as input */
+%typemap(perl5, in) const unsigned char digest[] {
+    SWIG_ConvertPtr($input, (void **)&$1, $1_descriptor, 0);
+}
+%typemap(perl5, argout) const unsigned char digest[] {}
+
 /*
    svn_txdelta_send_stream() uses *digest not digest[] .
    svn_txdelta_apply() uses *result_digest not digest[] .
 */
+
+%typemap(in, numinputs=0) unsigned char *digest {
+    $1 = (unsigned char *)apr_palloc(_global_pool, APR_MD5_DIGESTSIZE);
+}
+
+%typemap(perl5, argout) unsigned char *digest {
+    ST(argvi) = sv_newmortal();
+    ST(argvi++) = svn_swig_pl_from_md5($1);
+}
+
+%apply unsigned char *digest {
+    unsigned char *result_digest
+};
+
+#ifndef SWIGPERL
+
 %apply unsigned char digest[ANY] {
     unsigned char *digest,
     unsigned char *result_digest
 };
+
+#endif
 
 /* -----------------------------------------------------------------------
   useful convertors for svn_opt_revision_t
