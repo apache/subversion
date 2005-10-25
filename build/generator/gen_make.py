@@ -206,8 +206,8 @@ class Generator(gen_base.GeneratorBase):
         'autogen-swig-%s: copy-swig-%s\n' % (short[objname.lang], objname) +
         'copy-swig-%s: %s\n' % (objname, objname) +
         '\t@if test $(abs_srcdir) != $(abs_builddir) -a ' +
-        '-e $(abs_srcdir)/%s -a ' % objname + 
-        '! -e $(abs_builddir)/%s; then ' % objname +
+        '-r $(abs_srcdir)/%s -a ' % objname + 
+        '! -r $(abs_builddir)/%s; then ' % objname +
         'cp -pf $(abs_srcdir)/%s $(abs_builddir)/%s; fi\n' % (objname, objname)
       )
 
