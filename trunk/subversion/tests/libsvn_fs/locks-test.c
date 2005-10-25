@@ -110,6 +110,9 @@ lock_only (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-lock-only", 
                                 opts->fs_type, pool));
@@ -127,7 +130,9 @@ lock_only (const char **msg,
   /* Lock /A/D/G/rho. */
   SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", NULL, "", 0, 0,
                         SVN_INVALID_REVNUM, FALSE, pool));
-
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   return SVN_NO_ERROR;
 }
 
@@ -156,6 +161,9 @@ lookup_lock_by_path (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-lookup-lock-by-path", 
                                 opts->fs_type, pool));
@@ -176,6 +184,9 @@ lookup_lock_by_path (const char **msg,
 
   /* Can we look up the lock by path? */
   SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if ((! somelock) || (strcmp (somelock->token, mylock->token) != 0))
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Couldn't look up a lock by pathname.");
@@ -206,6 +217,9 @@ attach_lock (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-attach-lock", 
                                 opts->fs_type, pool));
@@ -228,13 +242,22 @@ attach_lock (const char **msg,
 
   /* Can we look up the lock by path? */
   SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if ((! somelock) || (strcmp (somelock->token, mylock->token) != 0))
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Couldn't look up a lock by pathname.");
 
   /* Unlock /A/D/G/rho, and verify that it's gone. */
   SVN_ERR (svn_fs_unlock (fs, mylock->path, mylock->token, 0, pool));
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if (somelock)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Removed a lock, but it's still there.");
@@ -265,6 +288,9 @@ get_locks (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-get-locks", 
                                 opts->fs_type, pool));
@@ -374,6 +400,9 @@ get_locks (const char **msg,
     SVN_ERR (verify_matching_lock_paths (get_locks_baton, expected_paths,
                                          num_expected_paths, pool));
   }
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -400,6 +429,9 @@ basic_lock (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-basic-lock", 
                                 opts->fs_type, pool));
@@ -420,13 +452,22 @@ basic_lock (const char **msg,
 
   /* Can we look up the lock by path? */
   SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if ((! somelock) || (strcmp (somelock->token, mylock->token) != 0))
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Couldn't look up a lock by pathname.");
     
   /* Unlock /A/D/G/rho, and verify that it's gone. */
   SVN_ERR (svn_fs_unlock (fs, mylock->path, mylock->token, 0, pool));
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if (somelock)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Removed a lock, but it's still there.");
@@ -458,6 +499,9 @@ lock_credentials (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-lock-credentials", 
                                 opts->fs_type, pool));
@@ -484,6 +528,9 @@ lock_credentials (const char **msg,
   SVN_ERR (svn_fs_txn_root (&txn_root, txn, pool));
   SVN_ERR (svn_test__set_file_contents (txn_root, "/A/D/G/rho",
                                         "new contents", pool));
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
   /* We are no longer 'bubba'.  We're nobody. */
   SVN_ERR (svn_fs_set_access (fs, NULL));
@@ -497,7 +544,13 @@ lock_credentials (const char **msg,
   svn_error_clear (err);
     
   /* We are now 'hortense'. */
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   SVN_ERR (svn_fs_create_access (&access, "hortense", pool));
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   SVN_ERR (svn_fs_set_access (fs, access));
 
   /* Try to commit the file change.  Should fail, because we're 'hortense'. */
@@ -508,9 +561,15 @@ lock_credentials (const char **msg,
        "Uhoh, able to commit locked file as non-owner.");
   svn_error_clear (err);
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   /* Be 'bubba' again. */
   SVN_ERR (svn_fs_create_access (&access, "bubba", pool));
   SVN_ERR (svn_fs_set_access (fs, access));
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   
   /* Try to commit the file change.  Should fail, because there's no token. */
   err = svn_fs_commit_txn (&conflict, &newrev, txn, pool);
@@ -555,6 +614,9 @@ final_lock_check (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-final-lock-check", 
                                 opts->fs_type, pool));
@@ -583,6 +645,9 @@ final_lock_check (const char **msg,
      the deleted directory is locked by someone else. */
   err = svn_fs_commit_txn (&conflict, &newrev, txn, pool);
   if (! err)
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
     return svn_error_create 
       (SVN_ERR_TEST_FAILED, NULL,
        "Uhoh, able to commit dir deletion when a child is locked.");
@@ -619,6 +684,9 @@ lock_dir_propchange (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-lock-dir-propchange", 
                                 opts->fs_type, pool));
@@ -644,6 +712,9 @@ lock_dir_propchange (const char **msg,
   SVN_ERR (svn_fs_change_node_prop (txn_root, "/A",
                                     "foo", svn_string_create ("bar", pool),
                                     pool));
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
   /* Commit should succeed;  this means we're doing a non-recursive
      lock-check on directory, rather than a recursive one.  */
@@ -676,6 +747,9 @@ lock_name_reservation (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-lock-name-reservation", 
                                 opts->fs_type, pool));
@@ -703,6 +777,9 @@ lock_name_reservation (const char **msg,
      the copy is reserved by someone else. */
   SVN_ERR (svn_fs_revision_root (&rev_root, fs, 1, pool));
   err = svn_fs_copy (rev_root, "/A/D/G", txn_root, "/A/D/G2", pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if (! err)
     return svn_error_create 
       (SVN_ERR_TEST_FAILED, NULL,
@@ -735,6 +812,9 @@ directory_locks_kinda (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-directory-locks-kinda", 
                                 opts->fs_type, pool));
@@ -786,6 +866,9 @@ directory_locks_kinda (const char **msg,
     SVN_ERR (verify_matching_lock_paths (get_locks_baton, expected_paths,
                                          num_expected_paths, pool));
   }
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -813,6 +896,9 @@ lock_expiration (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-lock-expiration", 
                                 opts->fs_type, pool));
@@ -844,6 +930,9 @@ lock_expiration (const char **msg,
   /* Try to commit.  Should fail because we're 'nobody', and the lock
      hasn't expired yet. */
   err = svn_fs_commit_txn (&conflict, &newrev, txn, pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if (! err)
     return svn_error_create 
       (SVN_ERR_TEST_FAILED, NULL,
@@ -852,6 +941,9 @@ lock_expiration (const char **msg,
 
   /* Check that the lock is there, by getting it via the paths parent. */
   {
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
     static const char *expected_paths [] = {
       "/A/D/G/rho"
     };
@@ -878,7 +970,9 @@ lock_expiration (const char **msg,
     SVN_ERR (verify_matching_lock_paths (get_locks_baton, expected_paths,
                                          num_expected_paths, pool));
   }
-
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   SVN_ERR (svn_fs_commit_txn (&conflict, &newrev, txn, pool));
 
   return SVN_NO_ERROR;
@@ -904,6 +998,9 @@ lock_break_steal_refresh (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-steal-refresh", 
                                 opts->fs_type, pool));
@@ -926,18 +1023,30 @@ lock_break_steal_refresh (const char **msg,
   SVN_ERR (svn_fs_unlock (fs, mylock->path, mylock->token,
                           1 /* FORCE BREAK */, pool));
   SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if (somelock)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Tried to break a lock, but it's still there.");
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   /* As hortense, create a new lock, and verify that we own it. */
   SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", NULL, "", 0, 0,
                         SVN_INVALID_REVNUM, FALSE, pool));
   SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if (strcmp (somelock->owner, mylock->owner) != 0)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Made a lock, but we don't seem to own it.");
-  
+
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif  
   /* As bubba, steal hortense's lock, creating a new one that expires. */
   SVN_ERR (svn_fs_create_access (&access, "bubba", pool));
   SVN_ERR (svn_fs_set_access (fs, access));
@@ -947,13 +1056,18 @@ lock_break_steal_refresh (const char **msg,
                         TRUE /* FORCE STEAL */,
                         pool));
   SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if (strcmp (somelock->owner, mylock->owner) != 0)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Made a lock, but we don't seem to own it.");
   if (! somelock->expiration_date)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Made expiring lock, but seems not to expire.");
-    
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif   
   /* Refresh the lock, so that it never expires. */
   SVN_ERR (svn_fs_lock (&somelock, fs, somelock->path, somelock->token, 
                         somelock->comment, 0, 0,
@@ -961,6 +1075,9 @@ lock_break_steal_refresh (const char **msg,
                         TRUE /* FORCE STEAL */,
                         pool));
   SVN_ERR (svn_fs_get_lock (&somelock, fs, "/A/D/G/rho", pool));
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if (somelock->expiration_date)
     return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                              "Made non-expirirng lock, but it expires.");  
@@ -991,6 +1108,9 @@ lock_out_of_date (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   /* Prepare a filesystem and a new txn. */
   SVN_ERR (svn_test__create_fs (&fs, "test-repo-lock-out-of-date", 
                                 opts->fs_type, pool));
@@ -1014,12 +1134,18 @@ lock_out_of_date (const char **msg,
 
   /* Try to lock /A/D/G/rho, but claim that we still have r1 of the file. */
   err = svn_fs_lock (&mylock, fs, "/A/D/G/rho", NULL, "", 0, 0, 1, FALSE, pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if (! err)
     return svn_error_create 
       (SVN_ERR_TEST_FAILED, NULL,
        "Uhoh, able to lock an out-of-date file.");
   svn_error_clear (err);
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   /* Attempt lock again, this time claiming to have r2. */
   SVN_ERR (svn_fs_lock (&mylock, fs, "/A/D/G/rho", NULL, "", 0, 
                         0, 2, FALSE, pool));
@@ -1031,6 +1157,9 @@ lock_out_of_date (const char **msg,
                      1,
                      TRUE /* FORCE STEAL */,
                      pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if (! err)
     return svn_error_create 
       (SVN_ERR_TEST_FAILED, NULL,

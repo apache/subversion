@@ -302,7 +302,8 @@ def basic_corruption(sbox):
 
   # Modify mu's text-base, so we get a checksum failure the first time
   # we try to commit.
-  tb_dir_path = os.path.join (wc_dir, 'A', '.svn', 'text-base')
+  tb_dir_path = os.path.join (wc_dir, 'A',
+                              svntest.main.get_admin_name(), 'text-base')
   mu_tb_path = os.path.join (tb_dir_path, 'mu.svn-base')
   mu_saved_tb_path = mu_tb_path + "-saved"
   tb_dir_saved_mode = os.stat(tb_dir_path)[stat.ST_MODE]
@@ -348,7 +349,8 @@ def basic_corruption(sbox):
   
   # Modify mu's text-base, so we get a checksum failure the first time
   # we try to update.
-  tb_dir_path = os.path.join (other_wc, 'A', '.svn', 'text-base')
+  tb_dir_path = os.path.join (other_wc, 'A',
+                              svntest.main.get_admin_name(), 'text-base')
   mu_tb_path = os.path.join (tb_dir_path, 'mu.svn-base')
   mu_saved_tb_path = mu_tb_path + "-saved"
   tb_dir_saved_mode = os.stat(tb_dir_path)[stat.ST_MODE]
@@ -506,16 +508,16 @@ def basic_conflict(sbox):
   # Make a couple of local mods to files which will be committed
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.main.file_append (mu_path, '\nOriginal appended text for mu')
-  svntest.main.file_append (rho_path, '\nOriginal appended text for rho')
+  svntest.main.file_append (mu_path, 'Original appended text for mu\n')
+  svntest.main.file_append (rho_path, 'Original appended text for rho\n')
 
   # Make a couple of local mods to files which will be conflicted
   mu_path_backup = os.path.join(wc_backup, 'A', 'mu')
   rho_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
   svntest.main.file_append (mu_path_backup,
-                             '\nConflicting appended text for mu')
+                             'Conflicting appended text for mu\n')
   svntest.main.file_append (rho_path_backup,
-                             '\nConflicting appended text for rho')
+                             'Conflicting appended text for rho\n')
 
   # Created expected output tree for 'svn ci'
   expected_output = wc.State(wc_dir, {
@@ -542,17 +544,19 @@ def basic_conflict(sbox):
   
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/mu', contents="""<<<<<<< .mine
-This is the file 'mu'.
-Conflicting appended text for mu=======
-This is the file 'mu'.
-Original appended text for mu>>>>>>> .r2
+  expected_disk.tweak('A/mu', contents="""This is the file 'mu'.
+<<<<<<< .mine
+Conflicting appended text for mu
+=======
+Original appended text for mu
+>>>>>>> .r2
 """)
-  expected_disk.tweak('A/D/G/rho', contents="""<<<<<<< .mine
-This is the file 'rho'.
-Conflicting appended text for rho=======
-This is the file 'rho'.
-Original appended text for rho>>>>>>> .r2
+  expected_disk.tweak('A/D/G/rho', contents="""This is the file 'rho'.
+<<<<<<< .mine
+Conflicting appended text for rho
+=======
+Original appended text for rho
+>>>>>>> .r2
 """)
 
   # Create expected status tree for the update.
@@ -648,10 +652,10 @@ def basic_revert(sbox):
   iota_path = os.path.join(wc_dir, 'iota')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
   zeta_path = os.path.join(wc_dir, 'A', 'D', 'H', 'zeta')
-  svntest.main.file_append(beta_path, "Added some text to 'beta'.")
-  svntest.main.file_append(iota_path, "Added some text to 'iota'.")
-  svntest.main.file_append(rho_path, "Added some text to 'rho'.")
-  svntest.main.file_append(zeta_path, "Added some text to 'zeta'.")
+  svntest.main.file_append(beta_path, "Added some text to 'beta'.\n")
+  svntest.main.file_append(iota_path, "Added some text to 'iota'.\n")
+  svntest.main.file_append(rho_path, "Added some text to 'rho'.\n")
+  svntest.main.file_append(zeta_path, "Added some text to 'zeta'.\n")
 
   svntest.actions.run_and_verify_svn("Add command", None, [],
                                      'add', zeta_path)
@@ -686,22 +690,22 @@ def basic_revert(sbox):
   # Now, really make sure the contents are back to their original state.
   fp = open(beta_path, 'r')
   lines = fp.readlines()
-  if not ((len (lines) == 1) and (lines[0] == "This is the file 'beta'.")):
+  if not ((len (lines) == 1) and (lines[0] == "This is the file 'beta'.\n")):
     print "Revert failed to restore original text."
     raise svntest.Failure
   fp = open(iota_path, 'r')
   lines = fp.readlines()
-  if not ((len (lines) == 1) and (lines[0] == "This is the file 'iota'.")):
+  if not ((len (lines) == 1) and (lines[0] == "This is the file 'iota'.\n")):
     print "Revert failed to restore original text."
     raise svntest.Failure
   fp = open(rho_path, 'r')
   lines = fp.readlines()
-  if not ((len (lines) == 1) and (lines[0] == "This is the file 'rho'.")):
+  if not ((len (lines) == 1) and (lines[0] == "This is the file 'rho'.\n")):
     print "Revert failed to restore original text."
     raise svntest.Failure
   fp = open(zeta_path, 'r')
   lines = fp.readlines()
-  if not ((len (lines) == 1) and (lines[0] == "Added some text to 'zeta'.")):
+  if not ((len (lines) == 1) and (lines[0] == "Added some text to 'zeta'.\n")):
     ### we should raise a less generic error here. which?
     raise svntest.Failure
 
@@ -849,9 +853,9 @@ def basic_switch(sbox):
                       contents=expected_disk.desc['A/D/gamma'].contents)
   expected_disk.remove('A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
   expected_disk.add({
-    'A/D/H/pi' : Item("This is the file 'pi'."),
-    'A/D/H/rho' : Item("This is the file 'rho'."),
-    'A/D/H/tau' : Item("This is the file 'tau'."),
+    'A/D/H/pi' : Item("This is the file 'pi'.\n"),
+    'A/D/H/rho' : Item("This is the file 'rho'.\n"),
+    'A/D/H/tau' : Item("This is the file 'tau'.\n"),
     })
 
   # Create expected status
@@ -1084,7 +1088,7 @@ def basic_delete(sbox):
   iota_URL = svntest.main.current_repo_url + '/iota'
 
   svntest.actions.run_and_verify_svn(None,
-                                     ["\n", "Committed revision 2.\n"], None,
+                                     ["\n", "Committed revision 2.\n"], [],
                                      'rm', '-m', 'delete iota URL',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -1262,8 +1266,8 @@ def basic_cat(sbox):
 
   # Get repository text even if wc is modified
   svntest.main.file_append(mu_path, "some text")
-  svntest.actions.run_and_verify_svn(None, ["This is the file 'mu'."],
-                                     None, 'cat',
+  svntest.actions.run_and_verify_svn(None, ["This is the file 'mu'.\n"],
+                                     [], 'cat',
                                      ###TODO is user/pass really necessary?
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -1286,7 +1290,7 @@ def basic_ls(sbox):
     os.chdir(wc_dir)
     svntest.actions.run_and_verify_svn("ls implicit current directory",
                                        ["A/\n", "iota\n"],
-                                       None, 'ls',
+                                       [], 'ls',
                                        '--username', svntest.main.wc_author,
                                        '--password', svntest.main.wc_passwd)
   finally:
@@ -1294,28 +1298,28 @@ def basic_ls(sbox):
 
   svntest.actions.run_and_verify_svn('ls the root of working copy',
                                      ['A/\n', 'iota\n'],
-                                     None, 'ls',
+                                     [], 'ls',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      wc_dir)
 
   svntest.actions.run_and_verify_svn('ls a working copy directory',
                                      ['B/\n', 'C/\n', 'D/\n', 'mu\n'],
-                                     None, 'ls',
+                                     [], 'ls',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      os.path.join(wc_dir, 'A'))
 
   svntest.actions.run_and_verify_svn('ls working copy directory with -r BASE',
                                      ['B/\n', 'C/\n', 'D/\n', 'mu\n'],
-                                     None, 'ls', '-r', 'BASE',
+                                     [], 'ls', '-r', 'BASE',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      os.path.join(wc_dir, 'A'))
 
   svntest.actions.run_and_verify_svn('ls a single file',
                                      ['mu\n'],
-                                     None, 'ls',
+                                     [], 'ls',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      os.path.join(wc_dir, 'A', 'mu'))
@@ -1412,9 +1416,6 @@ def basic_add_ignores(sbox):
   #
   # where dir contains some items that match the ignore list and some
   # do not would add all items, ignored or not.
-  #
-  # This has been fixed, by testing each item with the new
-  # svn_wc_is_ignored function.
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1428,7 +1429,7 @@ def basic_add_ignores(sbox):
   open(foo_o_path, 'w')
 
   output, err = svntest.actions.run_and_verify_svn(
-    "No output where some expected", SVNAnyOutput, None,
+    "No output where some expected", SVNAnyOutput, [],
     'add', dir_path)
 
   for line in output:
@@ -1438,6 +1439,55 @@ def basic_add_ignores(sbox):
 
   # Else never matched the unwanted output, so the test passed.
 
+
+#----------------------------------------------------------------------
+def basic_add_local_ignores(sbox):
+  'ignore files matching local ignores in added dirs'
+
+  #Issue #2243 
+  #svn add command not keying off svn:ignore value
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  dir_path = os.path.join(wc_dir, 'dir')
+  file_path = os.path.join(dir_path, 'app.lock')
+
+  svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
+                                     'mkdir', dir_path)
+  svntest.main.run_svn(None, 'propset', 'svn:ignore', '*.lock', dir_path) 
+  open(file_path, 'w')
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'add', '--force', dir_path)
+
+#----------------------------------------------------------------------
+def basic_add_no_ignores(sbox):
+  'add ignored files in added dirs'
+
+  # add ignored files using the '--no-ignore' option
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  dir_path = os.path.join(wc_dir, 'dir')
+  foo_c_path = os.path.join(dir_path, 'foo.c')
+  # add a few files that match the default ignore patterns
+  foo_o_path = os.path.join(dir_path, 'foo.o')
+  foo_lo_path = os.path.join(dir_path, 'foo.lo')
+  foo_rej_path = os.path.join(dir_path, 'foo.rej')
+
+  os.mkdir(dir_path, 0755)
+  open(foo_c_path, 'w')
+  open(foo_o_path, 'w')
+  open(foo_lo_path, 'w')
+  open(foo_rej_path, 'w')
+
+  output, err = svntest.actions.run_and_verify_svn(
+    "No output where some expected", SVNAnyOutput, [],
+    'add', '--no-ignore', dir_path)
+
+  for line in output:
+    # If we don't see ignores in the add output, fail the test.
+    if not re.match(r'^A\s+.*(foo.(o|rej|lo|c)|dir)$', line):
+      raise svntest.actions.SVNUnexpectedOutput
 
 #----------------------------------------------------------------------
 def uri_syntax(sbox):
@@ -1507,6 +1557,60 @@ def basic_info(sbox):
   finally:
     os.chdir(cwd)
 
+def repos_root(sbox):
+  "check that repos root gets set on checkout"
+
+  def check_repos_root(lines):
+    for line in lines:
+      if line == "Repository Root: " + svntest.main.current_repo_url + "\n":
+        break
+    else:
+      print "Bad or missing repository root"
+      raise svntest.Failure
+
+  sbox.build()
+
+  output, errput = svntest.main.run_svn (None, "info",
+                                         sbox.wc_dir)
+  check_repos_root(output)
+
+  output, errput = svntest.main.run_svn (None, "info",
+                                         os.path.join(sbox.wc_dir, "A"))
+  check_repos_root(output)
+
+  output, errput = svntest.main.run_svn (None, "info",
+                                         os.path.join(sbox.wc_dir, "A", "B", 
+                                                      "lambda"))
+  check_repos_root(output)
+
+def basic_peg_revision(sbox):
+  "checks peg revision on filename with @ sign"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repos_dir = sbox.repo_url
+  filename = 'abc@abc'
+
+  wc_file = wc_dir + '/' + filename
+  url = repos_dir + '/' + filename
+
+  svntest.main.file_append(wc_file, 'xyz\n')
+  svntest.main.run_svn(None, 'add', wc_file)
+  svntest.main.run_svn(None, 'ci', '-m', 'secret log msg', wc_file)
+
+  # Without the trailing "@", expect failure.
+  output, errlines = svntest.actions.run_and_verify_svn(\
+    None, None, ".*Syntax error parsing revision 'abc'", 'cat', wc_file)
+  output, errlines = svntest.actions.run_and_verify_svn(\
+    None, None, ".*Syntax error parsing revision 'abc'", 'cat', url)
+
+  # With the trailing "@", expect success.
+  output, errlines = svntest.actions.run_and_verify_svn(None, ["xyz\n"], [],
+                                                        'cat', wc_file+'@')
+  output, errlines = svntest.actions.run_and_verify_svn(None, ["xyz\n"], [],
+                                                        'cat', url+'@')
+
+
 #----------------------------------------------------------------------
 ########################################################################
 # Run the tests
@@ -1537,6 +1641,10 @@ test_list = [ None,
               uri_syntax,
               basic_checkout_file,
               basic_info,
+              basic_add_local_ignores,
+              basic_add_no_ignores,
+              repos_root,
+              basic_peg_revision,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.

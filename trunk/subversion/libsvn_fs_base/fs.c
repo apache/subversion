@@ -594,7 +594,8 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
                                        | DB_INIT_LOCK
                                        | DB_INIT_LOG
                                        | DB_INIT_MPOOL
-                                       | DB_INIT_TXN),
+                                       | DB_INIT_TXN
+                                       | SVN_BDB_AUTO_RECOVER),
                                       0666));
   if (svn_err) goto error;
 
@@ -665,10 +666,8 @@ error:
    number is not the same as the format number supported by this
    Subversion. */
 static svn_error_t *
-check_format (svn_fs_t *fs)
+check_format (int format)
 {
-  int format = ((base_fs_data_t *) fs->fsap_data)->format;
-
   if (format != SVN_FS_BASE__FORMAT_NUMBER)
     {
       return svn_error_createf 
@@ -712,7 +711,8 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
                                        | DB_INIT_LOCK
                                        | DB_INIT_LOG
                                        | DB_INIT_MPOOL
-                                       | DB_INIT_TXN),
+                                       | DB_INIT_TXN
+                                       | SVN_BDB_AUTO_RECOVER),
                                       0666));
   if (svn_err) goto error;
 
@@ -776,7 +776,7 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   
   /* Now we've got a format number no matter what. */
   ((base_fs_data_t *) fs->fsap_data)->format = format;
-  SVN_ERR (check_format (fs));
+  SVN_ERR (check_format (format));
 
   return SVN_NO_ERROR;
 
@@ -860,7 +860,8 @@ base_bdb_logfiles (apr_array_header_t **logfiles,
   SVN_ERR (svn_utf_cstring_from_utf8 (&path_native, path, pool));
   SVN_BDB_ERR (ec_baton, env->open (env, path_native,
                                     (DB_CREATE | DB_INIT_LOCK | DB_INIT_LOG
-                                     | DB_INIT_MPOOL | DB_INIT_TXN),
+                                     | DB_INIT_MPOOL | DB_INIT_TXN
+                                     | SVN_BDB_AUTO_RECOVER),
                           0666));
   SVN_BDB_ERR (ec_baton, env->log_archive (env, &filelist, flags));
 
@@ -974,7 +975,8 @@ check_env_flags (svn_boolean_t *match,
 
   SVN_BDB_ERR (ec_baton, env->open (env, path_native,
                                     (DB_CREATE | DB_INIT_LOCK | DB_INIT_LOG
-                                     | DB_INIT_MPOOL | DB_INIT_TXN),
+                                     | DB_INIT_MPOOL | DB_INIT_TXN
+                                     | SVN_BDB_AUTO_RECOVER),
                           0666));
 
   SVN_BDB_ERR (ec_baton, env->get_flags (env, &envflags));
@@ -1007,7 +1009,8 @@ get_db_pagesize (u_int32_t *pagesize,
 
   SVN_BDB_ERR (ec_baton, env->open (env, path_native,
                                     (DB_CREATE | DB_INIT_LOCK | DB_INIT_LOG
-                                     | DB_INIT_MPOOL | DB_INIT_TXN),
+                                     | DB_INIT_MPOOL | DB_INIT_TXN
+                                     | SVN_BDB_AUTO_RECOVER),
                           0666));
 
   /* ### We're only asking for the pagesize on the 'nodes' table.
@@ -1126,8 +1129,18 @@ base_hotcopy (const char *src_path,
   svn_error_t *err;
   u_int32_t pagesize;
   svn_boolean_t log_autoremove = FALSE;
-  svn_node_kind_t kind;
-  const char *format_path;
+  int format;
+
+  /* Check the FS format number to be certain that we know how to
+     hotcopy this FS.  Pre-1.2 filesystems did not have a format file (you
+     could say they were format "0"), so we will error here.  This is not
+     optimal, but since this has been the case since 1.2.0, and no one has
+     complained, it apparently isn't much of a concern.  (We did not check
+     the 'format' file in 1.2.x, but we did blindly try to copy 'locks',
+     which would have errored just the same.)  */
+  SVN_ERR (svn_io_read_version_file
+           (&format, svn_path_join (src_path, FORMAT_FILE, pool), pool));
+  SVN_ERR (check_format (format));
 
   /* If using DB 4.2 or later, note whether the DB_LOG_AUTOREMOVE
      feature is on.  If it is, we have a potential race condition:
@@ -1138,13 +1151,6 @@ base_hotcopy (const char *src_path,
   SVN_ERR (check_env_flags (&log_autoremove, DB_LOG_AUTOREMOVE,
                             src_path, pool));
 #endif
-
-  /* Copy the format file if it exists -- it is assumed to be format 1
-     if it does not exist. */
-  format_path = svn_path_join (src_path, FORMAT_FILE, pool);
-  SVN_ERR (svn_io_check_path (format_path, &kind, pool));
-  if (kind == svn_node_file)
-    SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, FORMAT_FILE, pool));
 
   /* Copy the DB_CONFIG file. */
   SVN_ERR (svn_io_dir_file_copy (src_path, dest_path, "DB_CONFIG", pool));
@@ -1239,6 +1245,11 @@ base_hotcopy (const char *src_path,
       else
         return err;
     }
+
+  /* Only now that the hotcopied filesystem is complete,
+     stamp it with a format file. */
+  SVN_ERR (svn_io_write_version_file
+           (svn_path_join (dest_path, FORMAT_FILE, pool), format, pool));
 
   if (clean_logs == TRUE)
     SVN_ERR (svn_fs_base__clean_logs (src_path, dest_path, pool));

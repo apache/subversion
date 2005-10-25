@@ -164,12 +164,10 @@ get_library_vtable (fs_library_vtable_t **vtable, const char *fs_type,
                             _("Unknown FS type '%s'"), fs_type);
 }
 
-/* Fetch the library vtable for an existing FS. */
-static svn_error_t *
-fs_library_vtable (fs_library_vtable_t **vtable, const char *path,
-                   apr_pool_t *pool)
+svn_error_t *
+svn_fs_type (const char **fs_type, const char *path, apr_pool_t *pool)
 {
-  const char *filename, *fs_type;
+  const char *filename;
   char buf[128];
   svn_error_t *err;
   apr_file_t *file;
@@ -181,17 +179,28 @@ fs_library_vtable (fs_library_vtable_t **vtable, const char *path,
   if (err && APR_STATUS_IS_ENOENT (err->apr_err))
     {
       svn_error_clear (err);
-      fs_type = SVN_FS_TYPE_BDB;
+      *fs_type = apr_pstrdup (pool, SVN_FS_TYPE_BDB);
+      return SVN_NO_ERROR;
     }
   else if (err)
     return err;
-  else
-    {
-      len = sizeof(buf);
-      SVN_ERR (svn_io_read_length_line (file, buf, &len, pool));
-      SVN_ERR (svn_io_file_close (file, pool));
-      fs_type = buf;
-    }
+
+  len = sizeof(buf);
+  SVN_ERR (svn_io_read_length_line (file, buf, &len, pool));
+  SVN_ERR (svn_io_file_close (file, pool));
+  *fs_type = apr_pstrdup (pool, buf);
+
+  return SVN_NO_ERROR;
+}
+
+/* Fetch the library vtable for an existing FS. */
+static svn_error_t *
+fs_library_vtable (fs_library_vtable_t **vtable, const char *path,
+                   apr_pool_t *pool)
+{
+  const char *fs_type;
+
+  SVN_ERR (svn_fs_type (&fs_type, path, pool));
 
   /* Fetch the library vtable by name, now that we've chosen one. */
   return get_library_vtable (vtable, fs_type, pool);
@@ -719,6 +728,13 @@ svn_fs_copied_from (svn_revnum_t *rev_p, const char **path_p,
                     svn_fs_root_t *root, const char *path, apr_pool_t *pool)
 {
   return root->vtable->copied_from (rev_p, path_p, root, path, pool);
+}
+
+svn_error_t *
+svn_fs_closest_copy (svn_fs_root_t **root_p, const char **path_p,
+                     svn_fs_root_t *root, const char *path, apr_pool_t *pool)
+{
+  return root->vtable->closest_copy (root_p, path_p, root, path, pool);
 }
 
 svn_error_t *

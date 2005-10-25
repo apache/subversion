@@ -19,6 +19,7 @@
 
 #include "svn_diff.h"
 #include "svn_pools.h"
+#include "svn_ebcdic.h"
 
 #include "../svn_test.h"
 
@@ -69,10 +70,13 @@ make_random_file (const char *filename,
   apr_file_t *file;
   apr_status_t status;
   int num_lines;
-
+  const char *filename_native = filename;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(&filename_native, filename, pool));
+#endif
   num_lines = range_rand (min_lines, max_lines);
 
-  status = apr_file_open (&file, filename,
+  status = apr_file_open (&file, filename_native,
                           APR_WRITE | APR_CREATE | APR_TRUNCATE, APR_OS_DEFAULT,
                           pool);
   if (status)
@@ -107,8 +111,12 @@ make_file (const char *filename,
 {
   apr_file_t *file;
   apr_status_t status;
+  const char *filename_native = filename;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(&filename_native, filename, pool));
+#endif
 
-  status = apr_file_open (&file, filename,
+  status = apr_file_open (&file, filename_native,
                           APR_WRITE | APR_CREATE | APR_TRUNCATE, APR_OS_DEFAULT,
                           pool);
   if (status)
@@ -148,15 +156,19 @@ three_way_merge (const char *filename1,
   svn_stream_t *ostream;
   apr_status_t status;
   svn_stringbuf_t *actual;
-  char *merge_name = apr_psprintf (pool, "merge-%s-%s-%s",
-                                   filename1, filename2, filename3);
+  char *merge_name = APR_PSPRINTF2 (pool, "merge-%s-%s-%s",
+                                    filename1, filename2, filename3);
+  const char *merge_name_native = merge_name;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(&merge_name_native, merge_name, pool));
+#endif
 
   SVN_ERR (make_file (filename1, contents1, pool));
   SVN_ERR (make_file (filename2, contents2, pool));
   SVN_ERR (make_file (filename3, contents3, pool));
 
   SVN_ERR (svn_diff_file_diff3 (&diff, filename1, filename2, filename3, pool));
-  status = apr_file_open (&output, merge_name,
+  status = apr_file_open (&output, merge_name_native,
                           APR_WRITE | APR_CREATE | APR_TRUNCATE, APR_OS_DEFAULT,
                           pool);
   if (status)
@@ -210,15 +222,20 @@ two_way_diff (const char *filename1,
   svn_stream_t *ostream;
   apr_status_t status;
   svn_stringbuf_t *actual;
-  char *diff_name = apr_psprintf (pool, "diff-%s-%s", filename1, filename2);
-
+  char *diff_name = APR_PSPRINTF2 (pool, "diff-%s-%s", filename1, filename2);
+  const char *diff_name_native = diff_name;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(&diff_name_native, diff_name, pool));
+#endif
+  
   SVN_ERR (make_file (filename1, contents1, pool));
   SVN_ERR (make_file (filename2, contents2, pool));
+
 
   /* Check that two-way diff between contents1 and contents2 produces
      expected output. */
   SVN_ERR (svn_diff_file_diff (&diff, filename1, filename2, pool));
-  status = apr_file_open (&output, diff_name,
+  status = apr_file_open (&output, diff_name_native,
                           APR_WRITE | APR_CREATE | APR_TRUNCATE, APR_OS_DEFAULT,
                           pool);
   if (status)
@@ -304,8 +321,11 @@ make_random_merge_file (const char *filename,
   apr_file_t *file;
   apr_status_t status;
   int i;
-
-  status = apr_file_open (&file, filename,
+  const char *filename_native = filename;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(&filename_native, filename, pool));
+#endif
+  status = apr_file_open (&file, filename_native,
                           APR_WRITE | APR_CREATE | APR_TRUNCATE, APR_OS_DEFAULT,
                           pool);
   if (status)
@@ -323,14 +343,26 @@ make_random_merge_file (const char *filename,
           switch (mod_lines[j].mod)
             {
             case 0:
+#if !APR_CHARSET_EBCDIC
               apr_file_printf (file, "replace line %d\n", i);
+#else
+              svn_ebcdic_file_printf2 (pool, file, "replace line %d\n", i);
+#endif
               break;
             case 1:
-              apr_file_printf (file,
+#if !APR_CHARSET_EBCDIC
+              apr_file_printf (pool, file,
                                "added line %d\n"
                                "unmodified line %d\n"
                                "added line %d\n",
                                i, i, i);
+#else
+              svn_ebcdic_file_printf2 (pool, file,
+                                       "added line %d\n"
+                                       "unmodified line %d\n"
+                                       "added line %d\n",
+                                       i, i, i);                               
+#endif
               break;
             default:
               ; /* Delete the line */
@@ -338,7 +370,11 @@ make_random_merge_file (const char *filename,
         }
       else
         {
+#if !APR_CHARSET_EBCDIC
           apr_file_printf (file, "unmodified line %d\n", i);
+#else
+          svn_ebcdic_file_printf2 (pool, file, "unmodified line %d\n", i);
+#endif        
         }
     }
 
@@ -359,6 +395,9 @@ dump_core (const char **msg,
            apr_pool_t *pool)
 {
   *msg = "these dump core";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   if (msg_only)
     return SVN_NO_ERROR;
 
@@ -408,7 +447,13 @@ test_two_way_unified (const char **msg,
                       svn_test_opts_t *opts,
                       apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "2-way unified diff and trivial merge";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   if (msg_only)
     return SVN_NO_ERROR;
 
@@ -733,7 +778,13 @@ test_two_way_unified_suspect (const char **msg,
                               svn_test_opts_t *opts,
                               apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "2-way unified diff where output is suspect";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   if (msg_only)
     return SVN_NO_ERROR;
 
@@ -851,7 +902,13 @@ test_three_way_merge_no_overlap (const char **msg,
                                  svn_test_opts_t *opts,
                                  apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "3-way merge, non-overlapping changes";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   if (msg_only)
     return SVN_NO_ERROR;
 
@@ -1051,7 +1108,13 @@ test_three_way_merge_with_overlap (const char **msg,
                                    svn_test_opts_t *opts,
                                    apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "3-way merge, non-conflicting overlapping changes";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   if (msg_only)
     return SVN_NO_ERROR;
 
@@ -1209,7 +1272,13 @@ test_three_way_merge_with_conflict (const char **msg,
                                     svn_test_opts_t *opts,
                                     apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "3-way merge, conflicting overlapping changes";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   if (msg_only)
     return SVN_NO_ERROR;
 
@@ -1312,14 +1381,23 @@ random_trivial_merge (const char **msg,
   int i;
   apr_pool_t *subpool = svn_pool_create (pool);
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = apr_psprintf (pool, "random trivial merge (seed:%u)", seed_val());
   if (msg_only)
     return SVN_NO_ERROR;
 
   for (i = 0; i < 5; ++i)
     {
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
       const char *filename1 = "trivial1";
       const char *filename2 = "trivial2";
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
       int min_lines = 1000;
       int max_lines = 1100;
       int var_lines = 50;
@@ -1371,10 +1449,16 @@ random_three_way_merge (const char **msg,
 
   for (i = 0; i < 20; ++i)
     {
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
       const char *filename1 = "original";
       const char *filename2 = "modified1";
       const char *filename3 = "modified2";
       const char *filename4 = "combined";
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
       svn_stringbuf_t *original, *modified1, *modified2, *combined;
       int num_lines = 100, num_src = 10, num_dst = 10;
       svn_boolean_t *lines = apr_pcalloc (subpool, sizeof (*lines) * num_lines);
@@ -1441,10 +1525,16 @@ merge_with_part_already_present (const char **msg,
 
   for (i = 0; i < 20; ++i)
     {
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
       const char *filename1 = "pap-original";
       const char *filename2 = "pap-modified1";
       const char *filename3 = "pap-modified2";
       const char *filename4 = "pap-combined";
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
       svn_stringbuf_t *original, *modified1, *modified2, *combined;
       int num_lines = 200, num_src = 20, num_dst = 20;
       svn_boolean_t *lines = apr_pcalloc (subpool, sizeof (*lines) * num_lines);
@@ -1509,6 +1599,9 @@ merge_adjacent_changes (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   SVN_ERR (three_way_merge ("adj1", "adj2", "adj3",
 
                             "foo\n"

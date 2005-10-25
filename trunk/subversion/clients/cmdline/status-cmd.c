@@ -137,7 +137,7 @@ print_status (void *baton,
       if (!sb->had_print_error)
         {
           sb->had_print_error = TRUE;
-          svn_handle_error (err, stderr, FALSE);
+          svn_handle_error2 (err, stderr, FALSE, "svn: ");
         }
       svn_error_clear (err);
     }

@@ -46,7 +46,7 @@ svn_cl__commit (apr_getopt_t *os,
   const char *base_dir;
   svn_config_t *cfg;
   svn_boolean_t no_unlock = FALSE;
-  svn_client_commit_info_t *commit_info = NULL;
+  svn_commit_info_t *commit_info = NULL;
 
   SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
                                           opt_state->targets, pool));
@@ -86,19 +86,19 @@ svn_cl__commit (apr_getopt_t *os,
      to store the temp file, instead of the current working directory.  The 
      client might not have write access to their working directory, but they 
      better have write access to the directory they're committing.  */
-  SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton),
+  SVN_ERR (svn_cl__make_log_msg_baton (&(ctx->log_msg_baton2),
                                        opt_state, base_dir, 
                                        ctx->config, pool));
 
   /* Commit. */
   SVN_ERR (svn_cl__cleanup_log_msg
-           (ctx->log_msg_baton, svn_client_commit2 (&commit_info,
-                                                    targets,
-                                                    opt_state->nonrecursive
-                                                    ? FALSE : TRUE,
-                                                    no_unlock,
-                                                    ctx,
-                                                    pool)));
+           (ctx->log_msg_baton2, svn_client_commit3 (&commit_info,
+                                                     targets,
+                                                     opt_state->nonrecursive
+                                                     ? FALSE : TRUE,
+                                                     no_unlock,
+                                                     ctx,
+                                                     pool)));
   if (commit_info && ! opt_state->quiet)
     SVN_ERR (svn_cl__print_commit_info (commit_info, pool));
 

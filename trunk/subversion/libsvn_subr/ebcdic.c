@@ -609,7 +609,7 @@ svn_ebcdic_set_file_ccsid (const char *path,
                        (char *) chg_cod_pag,
                        sizeof(*chg_cod_pag),
                        QP0L_FOLLOW_SYMLNK);
-
+                       
   if (result)
     return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
                              "Attempt to set ccsid of '%s' to '%d' failed " \
@@ -644,7 +644,81 @@ svn_ebcdic_set_file_mtime(const char *fname,
                      fname);
 
   return QzshSystem(cmd);
-}  
+} 
+ 
+//apr_status_t
+//svn_ebcdic_set_file_mtime(const char *path,
+//                          apr_time_t mtime,
+//                          apr_pool_t *pool)
+//{
+//  const char *cmd;
+//  apr_status_t status;
+//  apr_time_exp_t *timex = apr_palloc(pool, sizeof(apr_time_exp_t)); 
+//  
+//  status = apr_time_exp_lt(timex, mtime);
+//  if (status)
+//    return status; 
+//
+//  cmd = apr_psprintf(pool,
+//                     "touch -acfm -t %4i%02i%02i%02i%02i.%02i \"%s\"",
+//                     /*              YYYYMMDDHHMM.SS */
+//                     timex->tm_year + 1900,
+//                     timex->tm_mon,
+//                     timex->tm_mday,
+//                     timex->tm_hour,
+//                     timex->tm_min,
+//                     timex->tm_sec,
+//                     path);
+//
+//  return QzshSystem(cmd);
+//}
+//  /* Modified from code by jack j. woehr jax@softwoehr.com
+//   * http://www.well.com/~jax/rcfb/as400examp/CHGCCSID.MBR */ 
+//  typedef struct t_chg_cod_pag
+//  {
+//    Qp0l_Attr_Header_t attr_hdr;
+//    apr_time_t time;
+//  } chg_cod_pag_t;
+//
+//  typedef struct t_path_name
+//  {
+//    Qlg_Path_Name_T qlg_path_name;
+//    char ifs_path [FILENAME_MAX];
+//  } path_name_t;
+//  
+//  int result;
+//  char *path_native;
+//  chg_cod_pag_t chg_cod_pag;
+//  path_name_t path_name;
+//  
+//  SVN_ERR (svn_utf_cstring_from_utf8(&path_native, path, pool));
+//
+//  chg_cod_pag.attr_hdr.Next_Attr_Offset = 0;
+//  chg_cod_pag.attr_hdr.Attr_ID          = QP0L_ATTR_MODIFY_TIME;
+//  chg_cod_pag.attr_hdr.Attr_Size        = sizeof (apr_time_t);
+//  /* Using strncpy here and below because we don't want null termination. */
+//  strncpy (chg_cod_pag.attr_hdr.Reserved, "\0\0\0", 4);
+//  chg_cod_pag.code_page = mtime;
+//
+//  path_name.qlg_path_name.CCSID = 37;
+//  strncpy(path_name.qlg_path_name.Country_ID , "US", 2);  /* !I18N */
+//  strncpy(path_name.qlg_path_name.Language_ID, "ENU", 3); /* !I18N */
+//  strncpy(path_name.qlg_path_name.Reserved, "\0\0", 3);
+//  path_name.qlg_path_name.Path_Type = 0;
+//  path_name.qlg_path_name.Path_Length = strlen(path_native);
+//  strncpy(path_name.qlg_path_name.Path_Name_Delimiter, "/", 2);
+//  strncpy(path_name.qlg_path_name.Reserved2, "\0\0\0\0\0\0\0\0\0", 10);
+//  strncpy(path_name.ifs_path, path_native, strlen(path_native));
+//
+//  /* Make the call */
+//  result = Qp0lSetAttr((Qlg_Path_Name_T *) &path_name,
+//                       (char *) &chg_cod_pag,
+//                       sizeof(chg_cod_pag),
+//                       QP0L_FOLLOW_SYMLNK);
+//
+//  if (result)
+//    return errno;
+//  return result; 
 
 
 svn_error_t *
@@ -849,63 +923,63 @@ svn_ebcdic_file_transfer_contents(const char *from_path,
 #define PATH_SEPARATOR '/'
 
 /* Remove trailing separators that don't affect the meaning of PATH. */
-static const char *
-path_canonicalize (const char *path, apr_pool_t *pool)
-{
-    /* At some point this could eliminate redundant components.  For
-     * now, it just makes sure there is no trailing slash. */
-    apr_size_t len = strlen (path);
-    apr_size_t orig_len = len;
-    
-    while ((len > 0) && (path[len - 1] == PATH_SEPARATOR))
-        len--;
-    
-    if (len != orig_len)
-        return apr_pstrndup (pool, path, len);
-    else
-        return path;
-}
-
-/* Remove one component off the end of PATH. */
-static char *
-path_remove_last_component(const char *path,
-                           apr_pool_t *pool)
-{
-  const char *newpath = path_canonicalize (path, pool);
-  int i;
-    
-  for (i = (strlen(newpath) - 1); i >= 0; i--)
-  {
-    if (path[i] == PATH_SEPARATOR)
-      break;
-  }
-  return apr_pstrndup (pool, path, (i < 0) ? 0 : i);
-}
-
-apr_status_t
-apr_dir_make_recursive(const char *path,
-                       apr_fileperms_t perm,
-                       apr_pool_t *pool) 
-{
-  apr_status_t apr_err = 0;
-    
-  apr_err = apr_dir_make (path, perm, pool); /* Try to make PATH right out */
-
-  if (apr_err == EEXIST) /* It's OK if PATH exists */
-    return APR_SUCCESS;
-    
-  if (apr_err == ENOENT)
-  { 
-    /* Missing an intermediate dir */
-    char *dir;
-         
-    dir = path_remove_last_component(path, pool);
-    apr_err = apr_dir_make_recursive(dir, perm, pool);
-         
-    if (!apr_err) 
-      apr_err = apr_dir_make (path, perm, pool);
-  }
-
-  return apr_err;
-}
+//static const char *
+//path_canonicalize (const char *path, apr_pool_t *pool)
+//{
+//    /* At some point this could eliminate redundant components.  For
+//     * now, it just makes sure there is no trailing slash. */
+//    apr_size_t len = strlen (path);
+//    apr_size_t orig_len = len;
+//    
+//    while ((len > 0) && (path[len - 1] == PATH_SEPARATOR))
+//        len--;
+//    
+//    if (len != orig_len)
+//        return apr_pstrndup (pool, path, len);
+//    else
+//        return path;
+//}
+//
+///* Remove one component off the end of PATH. */
+//static char *
+//path_remove_last_component(const char *path,
+//                           apr_pool_t *pool)
+//{
+//  const char *newpath = path_canonicalize (path, pool);
+//  int i;
+//    
+//  for (i = (strlen(newpath) - 1); i >= 0; i--)
+//  {
+//    if (path[i] == PATH_SEPARATOR)
+//      break;
+//  }
+//  return apr_pstrndup (pool, path, (i < 0) ? 0 : i);
+//}
+//
+//apr_status_t
+//apr_dir_make_recursive(const char *path,
+//                       apr_fileperms_t perm,
+//                       apr_pool_t *pool) 
+//{
+//  apr_status_t apr_err = 0;
+//    
+//  apr_err = apr_dir_make (path, perm, pool); /* Try to make PATH right out */
+//
+//  if (apr_err == EEXIST) /* It's OK if PATH exists */
+//    return APR_SUCCESS;
+//    
+//  if (apr_err == ENOENT)
+//  { 
+//    /* Missing an intermediate dir */
+//    char *dir;
+//         
+//    dir = path_remove_last_component(path, pool);
+//    apr_err = apr_dir_make_recursive(dir, perm, pool);
+//         
+//    if (!apr_err) 
+//      apr_err = apr_dir_make (path, perm, pool);
+//  }
+//
+//  return apr_err;
+//}
 #endif /* AS400 */

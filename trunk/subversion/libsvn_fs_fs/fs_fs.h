@@ -249,7 +249,7 @@ svn_error_t *svn_fs_fs__set_proplist (svn_fs_t *fs,
                                       apr_hash_t *proplist,
                                       apr_pool_t *pool);
 
-/* Commit the transaction TXN in filesystem FS and return it's new
+/* Commit the transaction TXN in filesystem FS and return its new
    revision number in *REV.  If the transaction is out of date, return
    the error SVN_ERR_FS_TXN_OUT_OF_DATE.  Use POOL for temporary
    allocations. */

@@ -127,14 +127,22 @@ extern "C" {
         /* ".tmpl" */
 
 
-/* In the repository conf directory, look for these files. */
+/* The configuration file for svnserve, in the repository conf directory. */
 #define SVN_REPOS__CONF_SVNSERVE_CONF \
         "\x73\x76\x6e\x73\x65\x72\x76\x65\x2e\x63\x6f\x6e\x66"
         /* "svnserve.conf" */
 
+/* In the svnserve default configuration, these are the suggested
+   locations for the passwd and authz files (in the repository conf
+   directory), and we put example templates there. */ 
 #define SVN_REPOS__CONF_PASSWD \
         "\x70\x61\x73\x73\x77\x64"
         /* "passwd" */
+
+#define SVN_REPOS__CONF_AUTHZ \
+        "\x61\x75\x74\x68\x7a"
+        /* "authz" */
+
 
 /* The Repository object, created by svn_repos_open() and
    svn_repos_create(), allocated in POOL. */
@@ -163,6 +171,9 @@ struct svn_repos_t
 
   /* The format number of this repository. */
   int format;
+
+  /* The FS backend in use within this repository. */
+  const char *fs_type;
 };
 
 

@@ -288,7 +288,7 @@ decode_size (apr_size_t *val,
 
 /* Decode an instruction into OP, returning a pointer to the text
    after the instruction.  Note that if the action code is
-   svn_txdelta_new, the opcode field of *OP will not be set.  */
+   svn_txdelta_new, the offset field of *OP will not be set.  */
 
 static const unsigned char *
 decode_instruction (svn_txdelta_op_t *op,
@@ -567,7 +567,7 @@ write_handler (void *baton,
       db->subpool = newpool;
     }
 
-  return SVN_NO_ERROR;
+  /* NOTREACHED */
 }
 
 

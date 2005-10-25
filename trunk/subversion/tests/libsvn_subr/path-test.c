@@ -36,6 +36,9 @@ test_path_is_child (const char **msg,
   int i, j;
 #define NUM_TEST_PATHS 9
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
   static const char * const paths[NUM_TEST_PATHS] = { 
     "/foo/bar",
     "/foo/baz",
@@ -60,6 +63,9 @@ test_path_is_child (const char **msg,
     { "foo/bar", "foo/baz", "foo/bar/baz", "flu/blar/blaz",
       "foo/bar/baz/bing/boom", 0, 0, 0, 0 }
   };
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
   
   *msg = "test svn_path_is_child";
 
@@ -80,9 +86,15 @@ test_path_is_child (const char **msg,
             return svn_error_createf
               (SVN_ERR_TEST_FAILED, NULL,
                "svn_path_is_child (%s, %s) returned '%s' instead of '%s'",
-               paths[i], paths[j], 
+               paths[i], paths[j],
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif  
                remainder ? remainder : "(null)",
                remainders[i][j] ? remainders[i][j] : "(null)" );
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
         }
     }
 #undef NUM_TEST_PATHS
@@ -98,6 +110,9 @@ test_path_split (const char **msg,
 {
   apr_size_t i;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
   static const char * const paths[][3] = { 
     { "/foo/bar",        "/foo",          "bar" },
     { "/foo/bar/ ",       "/foo/bar",      " " },
@@ -113,7 +128,9 @@ test_path_split (const char **msg,
     { SVN_EMPTY_PATH,   SVN_EMPTY_PATH,   SVN_EMPTY_PATH },
     { "/flu\\b/\\blarg", "/flu\\b",       "\\blarg" },
   };
-  
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif   
   *msg = "test svn_path_split";
 
   if (msg_only)
@@ -151,6 +168,9 @@ test_is_url (const char **msg,
 {
   apr_size_t i;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
   /* Paths to test. */
   static const char * const paths[] = { 
     "://blah/blah",
@@ -161,6 +181,9 @@ test_is_url (const char **msg,
     "file://",
     "file:/",
   };
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
 
   /* Expected results of the tests. */
   static const svn_boolean_t retvals[] = {
@@ -187,7 +210,13 @@ test_is_url (const char **msg,
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_path_is_url (%s) returned %s instead of %s",
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
            paths[i], retval ? "TRUE" : "FALSE", retvals[i] ? "TRUE" : "FALSE");
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
     }
 
   return SVN_NO_ERROR;
@@ -202,6 +231,9 @@ test_is_uri_safe (const char **msg,
 {
   apr_size_t i;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
   /* Paths to test. */
   static const char * const paths[] = { 
     "http://svn.collab.net/repos",
@@ -214,6 +246,9 @@ test_is_uri_safe (const char **msg,
     "http://svn.collab.net/repos%2a",
     "http://svn.collab.net/repos%2a/svn",
   };
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
 
   /* Expected results of the tests. */
   static const svn_boolean_t retvals[] = {
@@ -241,7 +276,13 @@ test_is_uri_safe (const char **msg,
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_path_is_uri_safe (%s) returned %s instead of %s",
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
            paths[i], retval ? "TRUE" : "FALSE", retvals[i] ? "TRUE" : "FALSE");
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
     }
 
   return SVN_NO_ERROR;
@@ -256,6 +297,9 @@ test_uri_encode (const char **msg,
 {
   int i;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
   const char *paths[5][2] = { 
     { "http://subversion.tigris.org", 
          "http://subversion.tigris.org"},
@@ -268,6 +312,9 @@ test_uri_encode (const char **msg,
     { "\"Ouch!\"  \"Did that hurt?\"", 
          "%22Ouch!%22%20%20%22Did%20that%20hurt%3F%22" }
   };
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
   
   *msg = "test svn_path_uri_[en/de]code";
 
@@ -310,6 +357,9 @@ test_uri_decode (const char **msg,
 {
   int i;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
   const char *paths[3][2] = { 
     { "http://c.r.a/s%\0008me", 
          "http://c.r.a/s%"},
@@ -318,6 +368,9 @@ test_uri_decode (const char **msg,
     { "http://c.r.a/s%68me",
          "http://c.r.a/shme" },
   };
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
   
   *msg = "test svn_path_uri_decode with invalid escape";
 
@@ -348,10 +401,16 @@ test_uri_autoescape (const char **msg,
                      svn_test_opts_t *opts,
                      apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
   static const char *paths[3][2] = {
     { "http://svn.collab.net/", "http://svn.collab.net/" },
     { "file:///<>\" {}|\\^`", "file:///%3C%3E%22%20%7B%7D%7C%5C%5E%60" },
     { "http://[::1]", "http://[::1]" }
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
   };
   int i;
 
@@ -396,11 +455,17 @@ test_uri_from_iri (const char **msg,
   static const char p2[] = {
     '\x66', '\x69', '\x6C', '\x65', '\x3A', '\x2F', '\x2F', '\x2F',
     '\x61', '\x62', '\x25', '\x32', '\x30', '\x63', '\x64', '\0' };
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
   static const char *paths[2][2] = {
     { p1,
       "file:///r%C3%A4ksm%C3%B6rg%C3%A5s" },
     { p2,
       "file:///ab%20cd" }
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
   };
   int i;
 
@@ -437,6 +502,9 @@ test_join (const char **msg,
   int i;
   char *result;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
   static const char * const joins[][3] = {
     { "abc", "def", "abc/def" },
     { "a", "def", "a/def" },
@@ -453,6 +521,9 @@ test_join (const char **msg,
     { "abc", SVN_EMPTY_PATH, "abc" },
     { SVN_EMPTY_PATH, "/abc", "/abc" },
     { SVN_EMPTY_PATH, SVN_EMPTY_PATH, SVN_EMPTY_PATH },
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
   };
 
   *msg = "test svn_path_join(_many)";
@@ -488,7 +559,9 @@ test_join (const char **msg,
                              "expected \"%s\"", \
                              result, expect); \
   else
-
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
   TEST_MANY((pool, "abc", NULL), "abc");
   TEST_MANY((pool, "/abc", NULL), "/abc");
   TEST_MANY((pool, "/", NULL), "/");
@@ -520,6 +593,9 @@ test_join (const char **msg,
   TEST_MANY((pool, "/", SVN_EMPTY_PATH, SVN_EMPTY_PATH, NULL), "/");
   TEST_MANY((pool, SVN_EMPTY_PATH, "/", SVN_EMPTY_PATH, NULL), "/");
   TEST_MANY((pool, SVN_EMPTY_PATH, SVN_EMPTY_PATH, "/", NULL), "/");
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
 
   /* ### probably need quite a few more tests... */
 
@@ -536,6 +612,9 @@ test_basename (const char **msg,
   int i;
   char *result;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
   static const char * const paths[][2] = {
     { "abc", "abc" },
     { "/abc", "abc" },
@@ -550,6 +629,9 @@ test_basename (const char **msg,
     { "/b/a", "a" },
     { "/", "/" },
     { SVN_EMPTY_PATH, SVN_EMPTY_PATH }
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
   };
 
   *msg = "test svn_path_basename";
@@ -579,6 +661,9 @@ test_decompose (const char **msg,
                 svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
   static const char * const paths[] = {
     "/", "/", NULL,
     "foo", "foo", NULL,
@@ -589,6 +674,9 @@ test_decompose (const char **msg,
     /* Are these canonical? Should the middle bits produce SVN_EMPTY_PATH? */
     "foo/bar", "foo", "bar", NULL,
     NULL,
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
   };
   int i = 0;
 
@@ -636,6 +724,9 @@ test_canonicalize (const char **msg,
                    svn_test_opts_t *opts,
                    apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
   const char *paths[][2] = {
     { "",                     "" },
     { ".",                    "" },
@@ -679,6 +770,9 @@ test_canonicalize (const char **msg,
     { "//hst/./",             "/hst" },
 #endif /* WIN32 or Cygwin */
     { NULL, NULL }
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
   };
   int i;
 
@@ -708,6 +802,9 @@ test_remove_component (const char **msg,
                        svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
   const char *paths[][2] = {
     { "",                     "" },
     { "/",                    "/" },
@@ -716,6 +813,9 @@ test_remove_component (const char **msg,
     { "/foo/bar",             "/foo" },
     { "/foo",                 "/" },
     { NULL, NULL }
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
   };
   int i;
   svn_stringbuf_t *buf;

@@ -499,23 +499,6 @@ svn_error_t *svn_fs_base__things_different (svn_boolean_t *props_changed,
                                             apr_pool_t *pool);
 
 
-/* Set *IS_ANCESTOR to non-zero IFF NODE1 is an ancestor of NODE2.
-   Perform this test under TRAIL.  */
-svn_error_t *svn_fs_base__dag_is_ancestor (svn_boolean_t *is_ancestor,
-                                           dag_node_t *node1,
-                                           dag_node_t *node2,
-                                           trail_t *trail,
-                                           apr_pool_t *pool);
-
-
-/* Set *IS_PARENT to non-zero IFF NODE1 is the parent of NODE2.
-   Perform this test under TRAIL.  */
-svn_error_t *svn_fs_base__dag_is_parent (svn_boolean_t *is_ancestor,
-                                         dag_node_t *node1,
-                                         dag_node_t *node2,
-                                         trail_t *trail,
-                                         apr_pool_t *pool);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

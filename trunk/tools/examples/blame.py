@@ -11,33 +11,33 @@ from svn import fs, core, repos
 
 CHUNK_SIZE = 100000
 
-def getfile(pool, path, filename, rev=None):
+def blame(path, filename, rev=None):
   
   annotresult = {}
   if path[-1] == "/":
      path = path[:-1]
 
-  repos_ptr = repos.open(path, pool)
+  repos_ptr = repos.open(path)
   fsob = repos.fs(repos_ptr)
  
   if rev is None:
-    rev = fs.youngest_rev(fsob, pool)
+    rev = fs.youngest_rev(fsob)
   filedata = '' 
   for i in xrange(0, rev+1):
-    root = fs.revision_root(fsob, i, pool)
-    if fs.check_path(root, filename, pool) != core.svn_node_none:
+    root = fs.revision_root(fsob, i)
+    if fs.check_path(root, filename) != core.svn_node_none:
       first = i
       break
   print "First revision is %d" % first
   print "Last revision is %d" % rev
   for i in xrange(first, rev+1):
     previousroot = root
-    root = fs.revision_root(fsob, i, pool)
+    root = fs.revision_root(fsob, i)
     if i != first:
-      if not fs.contents_changed(root, filename, previousroot, filename, pool):
+      if not fs.contents_changed(root, filename, previousroot, filename):
         continue
       
-    file = fs.file_contents(root, filename, pool)
+    file = fs.file_contents(root, filename)
     previousdata = filedata
     filedata = ''
     while 1:
@@ -84,7 +84,7 @@ def main():
   for name, value in opts:
     if name == '-r':
       rev = int(value)
-  core.run_app(getfile, args[0], args[1], rev)
+  blame(args[0], args[1], rev)
 
 if __name__ == '__main__':
   main()

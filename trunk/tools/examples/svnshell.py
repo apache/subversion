@@ -26,18 +26,16 @@ from svn import fs, core, repos
 
 
 class SVNShell(Cmd):
-  def __init__(self, pool, path):
+  def __init__(self, path):
     """initialize an SVNShell object"""
     Cmd.__init__(self)
     if path[-1] == '/':
       path = path[:-1]
-    self.pool = pool
-    self.taskpool = core.svn_pool_create(pool)
-    self.fs_ptr = repos.fs(repos.open(path, pool))
+    self.fs_ptr = repos.fs(repos.open(path))
     self.is_rev = 1
-    self.rev = fs.youngest_rev(self.fs_ptr, pool)
+    self.rev = fs.youngest_rev(self.fs_ptr)
     self.txn = None
-    self.root = fs.revision_root(self.fs_ptr, self.rev, pool)
+    self.root = fs.revision_root(self.fs_ptr, self.rev)
     self.path = "/"
     self._setup_prompt()
     self.cmdloop()
@@ -68,7 +66,7 @@ class SVNShell(Cmd):
       print "You must supply a file path."
       return
     catpath = self._parse_path(arg)
-    kind = fs.check_path(self.root, catpath, self.taskpool)
+    kind = fs.check_path(self.root, catpath)
     if kind == core.svn_node_none:
       print "Path '%s' does not exist." % catpath
       return
@@ -76,8 +74,8 @@ class SVNShell(Cmd):
       print "Path '%s' is not a file." % catpath
       return
     ### be nice to get some paging in here.
-    filelen = fs.file_length(self.root, catpath, self.taskpool)
-    stream = fs.file_contents(self.root, catpath, self.taskpool)
+    filelen = fs.file_length(self.root, catpath)
+    stream = fs.file_contents(self.root, catpath)
     while filelen > core.SVN_STREAM_CHUNK_SIZE:
       print core.svn_stream_read(stream, int(core.SVN_STREAM_CHUNK_SIZE))
     print core.svn_stream_read(stream, int(filelen))
@@ -87,32 +85,31 @@ class SVNShell(Cmd):
     newpath = self._parse_path(arg)
     
     # make sure that path actually exists in the filesystem as a directory
-    kind = fs.check_path(self.root, newpath, self.taskpool)
+    kind = fs.check_path(self.root, newpath)
     if kind != core.svn_node_dir:
       print "Path '%s' is not a valid filesystem directory." % newpath
       return
     self.path = newpath
-    core.svn_pool_clear(self.taskpool)
 
   def do_ls(self, arg):
     """list the contents of the current directory or provided path"""
     parent = self.path
     if not len(arg):
       # no arg -- show a listing for the current directory.
-      entries = fs.dir_entries(self.root, self.path, self.taskpool)
+      entries = fs.dir_entries(self.root, self.path)
     else:
       # arg?  show a listing of that path.
       newpath = self._parse_path(arg)
-      kind = fs.check_path(self.root, newpath, self.taskpool)
+      kind = fs.check_path(self.root, newpath)
       if kind == core.svn_node_dir:
         parent = newpath
-        entries = fs.dir_entries(self.root, parent, self.taskpool)
+        entries = fs.dir_entries(self.root, parent)
       elif kind == core.svn_node_file:
         parts = self._path_to_parts(newpath)
         name = parts.pop(-1)
         parent = self._parts_to_path(parts)
         print parent + ':' + name
-        tmpentries = fs.dir_entries(self.root, parent, self.taskpool)
+        tmpentries = fs.dir_entries(self.root, parent)
         if not tmpentries.get(name, None):
           return
         entries = {}
@@ -130,32 +127,31 @@ class SVNShell(Cmd):
     for entry in keys:
       fullpath = parent + '/' + entry
       size = ''
-      is_dir = fs.is_dir(self.root, fullpath, self.taskpool)
+      is_dir = fs.is_dir(self.root, fullpath)
       if is_dir:
         name = entry + '/'
       else:
-        size = str(fs.file_length(self.root, fullpath, self.taskpool))
+        size = str(fs.file_length(self.root, fullpath))
         name = entry
-      node_id = fs.unparse_id(entries[entry].id, self.taskpool)
-      created_rev = fs.node_created_rev(self.root, fullpath, self.taskpool)
+      node_id = fs.unparse_id(entries[entry].id)
+      created_rev = fs.node_created_rev(self.root, fullpath)
       author = fs.revision_prop(self.fs_ptr, created_rev,
-                                core.SVN_PROP_REVISION_AUTHOR, self.taskpool)
+                                core.SVN_PROP_REVISION_AUTHOR)
       if not author:
         author = ""
       date = fs.revision_prop(self.fs_ptr, created_rev,
-                              core.SVN_PROP_REVISION_DATE, self.taskpool)
+                              core.SVN_PROP_REVISION_DATE)
       if not date:
         date = ""
       else:
-        date = self._format_date(date, self.taskpool)
+        date = self._format_date(date)
      
       print "%6s %8s <%10s> %8s %12s %s" % (created_rev, author[:8],
                                             node_id, size, date, name)
-    core.svn_pool_clear(self.taskpool)
   
   def do_lstxns(self, arg):
     """list the transactions available for browsing"""
-    txns = fs.list_transactions(self.fs_ptr, self.taskpool)
+    txns = fs.list_transactions(self.fs_ptr)
     txns.sort()
     counter = 0
     for txn in txns:
@@ -165,18 +161,17 @@ class SVNShell(Cmd):
         print ""
         counter = 0
     print ""
-    core.svn_pool_clear(self.taskpool)
     
   def do_pcat(self, arg):
     """list the properties of a path"""
     catpath = self.path
     if len(arg):
       catpath = self._parse_path(arg)
-    kind = fs.check_path(self.root, catpath, self.taskpool)
+    kind = fs.check_path(self.root, catpath)
     if kind == core.svn_node_none:
       print "Path '%s' does not exist." % catpath
       return
-    plist = fs.node_proplist(self.root, catpath, self.taskpool)
+    plist = fs.node_proplist(self.root, catpath)
     if not plist:
       return
     for pkey, pval in plist.items():
@@ -190,7 +185,7 @@ class SVNShell(Cmd):
     """set the current revision to view"""
     try:
       rev = int(arg)
-      newroot = fs.revision_root(self.fs_ptr, rev, self.pool)
+      newroot = fs.revision_root(self.fs_ptr, rev)
     except:
       print "Error setting the revision to '" + str(rev) + "'."
       return
@@ -203,8 +198,8 @@ class SVNShell(Cmd):
   def do_settxn(self, arg):
     """set the current transaction to view"""
     try:
-      txnobj = fs.open_txn(self.fs_ptr, arg, self.pool)
-      newroot = fs.txn_root(txnobj, self.pool)
+      txnobj = fs.open_txn(self.fs_ptr, arg)
+      newroot = fs.txn_root(txnobj)
     except:
       print "Error setting the transaction to '" + arg + "'."
       return
@@ -216,9 +211,8 @@ class SVNShell(Cmd):
   
   def do_youngest(self, arg):
     """list the youngest revision available for browsing"""
-    rev = fs.youngest_rev(self.fs_ptr, self.taskpool)
+    rev = fs.youngest_rev(self.fs_ptr)
     print rev
-    core.svn_pool_clear(self.taskpool)
 
   def do_exit(self, arg):
     sys.exit(0)
@@ -254,8 +248,8 @@ class SVNShell(Cmd):
     # finally, return the calculated path
     return self._parts_to_path(finalparts)
     
-  def _format_date(self, date, pool):
-    date = core.svn_time_from_cstring(date, pool)
+  def _format_date(self, date):
+    date = core.svn_time_from_cstring(date)
     date = time.asctime(time.localtime(date / 1000000))
     return date[4:-8]
   
@@ -264,7 +258,7 @@ class SVNShell(Cmd):
     not_found = 1
     newpath = self.path
     while not_found:
-      kind = fs.check_path(self.root, newpath, self.taskpool)
+      kind = fs.check_path(self.root, newpath)
       if kind == core.svn_node_dir:
         not_found = 0
       else:
@@ -272,7 +266,6 @@ class SVNShell(Cmd):
         parts.pop(-1)
         newpath = self._parts_to_path(parts)
     self.path = newpath
-    core.svn_pool_clear(self.taskpool)
 
   def _setup_prompt(self):
     """present the prompt and handle the user's input"""
@@ -300,7 +293,7 @@ class SVNShell(Cmd):
 
       canon_dir = self._parse_path(user_dir)
 
-      entries = fs.dir_entries(self.root, canon_dir, self.taskpool)
+      entries = fs.dir_entries(self.root, canon_dir)
       acceptable_completions = []
       for name, dirent_t in entries.items():
         if not name.startswith(user_elem):
@@ -361,7 +354,7 @@ def main():
   if len(sys.argv) != 2:
     usage(1)
 
-  core.run_app(SVNShell, sys.argv[1])
+  SVNShell(sys.argv[1])
 
 if __name__ == '__main__':
   main()

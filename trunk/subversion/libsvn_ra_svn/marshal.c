@@ -233,6 +233,9 @@ static svn_error_t *writebuf_write(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 static svn_error_t *writebuf_printf(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     const char *fmt, ...)
+    __attribute__ ((format (printf, 3, 4)));
+static svn_error_t *writebuf_printf(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                    const char *fmt, ...)
 {
   va_list ap;
   char *str;
@@ -768,17 +771,57 @@ svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 /* --- READING AND WRITING COMMANDS AND RESPONSES --- */
 
+svn_error_t *svn_ra_svn__handle_failure_status(apr_array_header_t *params,
+                                               apr_pool_t *pool)
+{
+  const char *message, *file;
+  svn_error_t *err = NULL;
+  svn_ra_svn_item_t *elt;
+  int i;
+  apr_uint64_t apr_err, line;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  if (params->nelts == 0)
+    return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                            _("Empty error list"));
+
+  /* Rebuild the error list from the end, to avoid reversing the order. */
+  for (i = params->nelts - 1; i >= 0; i--)
+    {
+      svn_pool_clear(subpool);
+      elt = &((svn_ra_svn_item_t *) params->elts)[i];
+      if (elt->kind != SVN_RA_SVN_LIST)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                _("Malformed error list"));
+      SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, subpool, "nccn", &apr_err,
+                                      &message, &file, &line));
+      /* The message field should have been optional, but we can't
+         easily change that, so "" means a nonexistent message. */
+      if (!*message)
+        message = NULL;
+      err = svn_error_create(apr_err, err, message);
+      err->file = apr_pstrdup(err->pool, file);
+#if APR_CHARSET_EBCDIC
+      /* ebcdic platforms assume string components of svn_error_t are
+       * encoded in ebcdic. */
+      SVN_ERR(svn_utf_cstring_from_utf8(&(err->message), err->message, pool));
+      SVN_ERR(svn_utf_cstring_from_utf8(&(err->file), err->file, pool)); 
+#endif
+      err->line = line;
+    }
+
+  svn_pool_destroy(subpool);
+  return err;
+}
+
 svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
                                           apr_pool_t *pool,
                                           const char *fmt, ...)
 {
   va_list ap;
-  const char *status, *message, *file;
+  const char *status;
   apr_array_header_t *params;
   svn_error_t *err;
-  svn_ra_svn_item_t *elt;
-  int i;
-  apr_uint64_t apr_err, line;
 
   SVN_ERR(svn_ra_svn_read_tuple(conn, pool, "wl", &status, &params));
   if (strcmp(status, SUCCESS_STR) == 0)
@@ -790,33 +833,7 @@ svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
     }
   else if (strcmp(status, FAILURE_STR) == 0)
     {
-      /* Rebuild the error list from the end, to avoid reversing the order. */
-      if (params->nelts == 0)
-        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                _("Empty error list"));
-      err = NULL;
-      for (i = params->nelts - 1; i >= 0; i--)
-        {
-          elt = &((svn_ra_svn_item_t *) params->elts)[i];
-          if (elt->kind != SVN_RA_SVN_LIST)
-            return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                    _("Malformed error list"));
-          SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "nccn", &apr_err,
-                                         &message, &file, &line));
-          /* The message field should have been optional, but we can't
-             easily change that, so "" means a nonexistent message. */
-          if (!*message)
-            message = NULL;
-#if APR_CHARSET_EBCDIC
-          /* On ebcdic platforms we always assume errors are created with 
-           * natively encoded messages. */
-          SVN_ERR (svn_utf_cstring_from_utf8(&message, message, pool));
-#endif
-          err = svn_error_create(apr_err, err, message);
-          err->file = apr_pstrdup(err->pool, file);
-          err->line = line;
-        }
-      return err;
+      return svn_ra_svn__handle_failure_status(params, pool);
     }
 
   return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,

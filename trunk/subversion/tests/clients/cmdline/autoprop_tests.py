@@ -54,37 +54,21 @@ def check_proplist(path, exp_out):
 def create_config(config_dir, enable_flag):
   "create config directories and files"
 
-  # config file names
-  cfgfile_cfg = os.path.join(config_dir, 'config')
-  cfgfile_srv = os.path.join(config_dir, 'server')
+  # contents of the file 'config'
+  config_contents = '''\
+[miscellany]
+enable-auto-props = %s
 
-  # create the directory
-  if not os.path.isdir(config_dir):
-    os.makedirs(config_dir)
+[auto-props]
+*.c = cfile=yes
+*.jpg = jpgfile=ja
+fubar* = tarfile=si
+foobar.lha = lhafile=da;lzhfile=niet
+spacetest = abc = def ; ghi = ; = j 
+* = auto=oui
+''' % (enable_flag and 'yes' or 'no')
 
-  # create the file 'config'
-  fd = open(cfgfile_cfg, 'w')
-  fd.write('[miscellany]\n')
-  if enable_flag:
-    fd.write('enable-auto-props = yes\n')
-  else:
-    fd.write('enable-auto-props = no\n')
-  fd.write('\n')
-  fd.write('[auto-props]\n')
-  fd.write('*.c = cfile=yes\n')
-  fd.write('*.jpg = jpgfile=ja\n')
-  fd.write('fubar* = tarfile=si\n')
-  fd.write('foobar.lha = lhafile=da;lzhfile=niet\n')
-  fd.write('spacetest = abc = def ; ghi = ; = j \n')
-  fd.write('* = auto=oui\n')
-  fd.write('\n')
-  fd.close()
-
-  # create the file 'server'
-  fd = open(cfgfile_srv, 'w')
-  fd.write('#\n')
-  fd.close()
-
+  svntest.main.create_config_dir(config_dir, config_contents)
 
 #----------------------------------------------------------------------
 

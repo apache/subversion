@@ -25,11 +25,16 @@
 
 /* All these variables should refer to the same point in time. */
 apr_time_t test_timestamp = APR_TIME_C(1021316450966679);
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 const char *test_timestring =
 "2002-05-13T19:00:50.966679Z";
 const char *test_old_timestring = 
 "Mon 13 May 2002 22:00:50.966679 (day 133, dst 1, gmt_off 010800)";
-
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
 static svn_error_t *
 test_time_to_cstring (const char **msg,
@@ -89,6 +94,9 @@ test_time_from_cstring (const char **msg,
 /* Before editing these tests cases please see the comment in
  * test_time_from_cstring_old regarding the requirements to exercise the bug
  * that they exist to test. */
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 static const char *failure_old_tests[] = {
   /* Overflow Day */
   "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
@@ -103,7 +111,9 @@ static const char *failure_old_tests[] = {
   "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
   "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
   " 2000 HH:MM:SS.UUU (day 277, dst 1, gmt_off -18000)",
-
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   NULL
 };
 
@@ -200,10 +210,15 @@ struct date_test {
 /* These date strings do not specify a time zone, so we expand the
    svn_parse_date result it in the local time zone and verify that
    against the desired values. */
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 static struct date_test localtz_tests[] = {
-  /* YYYY-MM-DD */
+  /* YYYY-M[M]-D[D] */
   { "2013-01-25",                      2013,  1, 25,  0,  0,  0,      0 },
-  /* YYYY-MM-DD[Thh:mm[:ss[.u[u[u[u[u[u] */
+  { "2013-1-25",                       2013,  1, 25,  0,  0,  0,      0 },
+  { "2013-01-2",                       2013,  1,  2,  0,  0,  0,      0 },
+  /* YYYY-M[M]-D[D][Th[h]:mm[:ss[.u[u[u[u[u[u] */
   { "2015-04-26T00:01:59.652655",      2015,  4, 26,  0,  1, 59, 652655 },
   { "2034-07-20T17:03:36.11379",       2034,  7, 20, 17,  3, 36, 113790 },
   { "1975-10-29T17:23:56.3859",        1975, 10, 29, 17, 23, 56, 385900 },
@@ -212,14 +227,18 @@ static struct date_test localtz_tests[] = {
   { "2017-01-28T07:21:13.2",           2017,  1, 28,  7, 21, 13, 200000 },
   { "2013-05-18T13:52:49",             2013,  5, 18, 13, 52, 49,      0 },
   { "2020-05-14T15:28",                2020,  5, 14, 15, 28,  0,      0 },
+  { "2032-05-14T7:28",                 2032,  5, 14,  7, 28,  0,      0 },
+  { "2020-5-14T15:28",                 2020,  5, 14, 15, 28,  0,      0 },
+  { "2020-05-1T15:28",                 2020,  5,  1, 15, 28,  0,      0 },
   /* YYYYMMDD */
   { "20100226",                        2010,  2, 26,  0,  0,  0,      0 },
   /* YYYYMMDD[Thhmm[ss[.u[u[u[u[u[u] */
   { "19860214T050745.6",               1986,  2, 14,  5,  7, 45, 600000 },
   { "20230219T0045",                   2023,  2, 19,  0, 45,  0,      0 },
-  /* YYYY-MM-DD hh:mm[:ss[.u[u[u[u[u[u] */
+  /* YYYY-M[M]-D[D] [h]h:mm[:ss[.u[u[u[u[u[u] */
   { "1975-07-11 06:31:49.749504",      1975,  7, 11,  6, 31, 49, 749504 },
   { "2037-05-06 00:08",                2037,  5,  6,  0,  8,  0,      0 },
+  { "2037-5-6 7:01",                  2037,  5,  6,  7,  1,  0,      0 },
   /* Make sure we can do leap days. */
   { "1976-02-29",                      1976, 02, 29,  0,  0,  0,      0 },
   { "2000-02-29",                      2000, 02, 29,  0,  0,  0,      0 },
@@ -263,6 +282,7 @@ static const char *failure_tests[] = {
   "2000-00-02",           /* Invalid month */
   "2000-13-02",           /* Invalid month */
   "2000-01-32",           /* Invalid day */
+  "2000-01-00",           /* Invalid day */
   "1999-02-29",           /* Invalid leap day */
   "2000-01-01 24:00:00",  /* Invalid hour */
   "2000-01-01 00:60:00",  /* Invalid minute */
@@ -278,6 +298,9 @@ static const char *failure_tests[] = {
   "2000-01-01 10",
   NULL
 };
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
 static svn_error_t *
 compare_results (struct date_test *dt,

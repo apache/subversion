@@ -1027,6 +1027,13 @@ dav_svn_append_locks(dav_lockdb *lockdb,
   apr_table_setn(info->r->headers_out, SVN_DAV_LOCK_OWNER_HEADER,
                  slock_owner);
 
+  /* Log the locking as a 'high-level' action. */
+  apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION",
+                apr_psprintf(resource->info->r->pool,
+                             "lock '%s'",
+                             svn_path_uri_encode(slock->path,
+                                                 resource->info->r->pool)));
+
   return 0;
 }
 
@@ -1132,6 +1139,13 @@ dav_svn_remove_lock(dav_lockdb *lockdb,
                                    "Failed to remove a lock.",
                                    resource->pool);
     }
+
+  /* Log the unlocking as a 'high-level' action. */
+  apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION",
+                apr_psprintf(resource->info->r->pool,
+                             "unlock '%s'",
+                             svn_path_uri_encode(resource->info->repos_path,
+                                                 resource->info->r->pool)));
 
   return 0;
 }

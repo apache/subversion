@@ -169,6 +169,20 @@ typedef svn_error_t *(*svn_ra_lock_callback_t) (void *baton,
                                                 svn_error_t *ra_err,
                                                 apr_pool_t *pool);
 
+/**
+ * Callback function type for progress notification.
+ *
+ * @a progress is the number of bytes already transferred, @a total is
+ * the total number of bytes to transfer or -1 if it's not known, @a
+ * baton is the callback baton.
+ *
+ * @since New in 1.3.
+ */
+typedef void (*svn_ra_progress_notify_func_t) (apr_off_t progress,
+                                               apr_off_t total,
+                                               void *baton,
+                                               apr_pool_t *pool);
+
 
 /**
  * The update Reporter.
@@ -246,13 +260,16 @@ typedef struct svn_ra_reporter2_t
 
   /** WC calls this when the state report is finished; any directories
    * or files not explicitly `set' are assumed to be at the
-   * baseline revision originally passed into do_update().
+   * baseline revision originally passed into do_update().  No other
+   * reporting functions, including abort_report, should be called after
+   * calling this function.
    */
   svn_error_t *(*finish_report) (void *report_baton,
                                  apr_pool_t *pool);
 
   /** If an error occurs during a report, this routine should cause the
-   * filesystem transaction to be aborted & cleaned up.
+   * filesystem transaction to be aborted & cleaned up.  No other reporting
+   * functions should be called after calling this function.
    */
   svn_error_t *(*abort_report) (void *report_baton,
                                 apr_pool_t *pool);
@@ -305,8 +322,13 @@ typedef struct svn_ra_reporter_t
  *
  * Each routine takes a @a callback_baton originally provided with the
  * vtable.
+ *
+ * Clients must use svn_ra_create_callbacks() to allocate and
+ * initialize this structure.
+ *
+ * @since New in 1.3.
  */
-typedef struct svn_ra_callbacks_t
+typedef struct svn_ra_callbacks2_t
 {
   /** Open a unique temporary file for writing in the working copy.
    * This file will be automatically deleted when @a fp is closed.
@@ -314,7 +336,7 @@ typedef struct svn_ra_callbacks_t
   svn_error_t *(*open_tmp_file) (apr_file_t **fp,
                                  void *callback_baton,
                                  apr_pool_t *pool);
-  
+
   /** An authentication baton, created by the application, which is
    * capable of retrieving all known types of credentials.
    */
@@ -344,6 +366,36 @@ typedef struct svn_ra_callbacks_t
   /** Invalidate working copy properties. */
   svn_ra_invalidate_wc_props_func_t invalidate_wc_props;
 
+  /** Notification callback used for progress information.
+   * May be NULL if not used.
+   */
+  svn_ra_progress_notify_func_t progress_func;
+
+  /** Notification callback baton, used with progress_func. */
+  void *progress_baton;
+} svn_ra_callbacks2_t;
+
+/** Similar to svn_ra_callbacks2_t, except that the progress
+ * notification function and baton is missing.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
+ */
+typedef struct svn_ra_callbacks_t
+{
+  svn_error_t *(*open_tmp_file) (apr_file_t **fp,
+                                 void *callback_baton,
+                                 apr_pool_t *pool);
+  
+  svn_auth_baton_t *auth_baton;
+
+  svn_ra_get_wc_prop_func_t get_wc_prop;
+
+  svn_ra_set_wc_prop_func_t set_wc_prop;
+
+  svn_ra_push_wc_prop_func_t push_wc_prop;
+
+  svn_ra_invalidate_wc_props_func_t invalidate_wc_props;
+
 } svn_ra_callbacks_t;
 
 
@@ -364,6 +416,18 @@ typedef struct svn_ra_callbacks_t
 svn_error_t *
 svn_ra_initialize (apr_pool_t *pool);
 
+/** Initialize a callback structure.
+* Set @a *callbacks to a ra callbacks object, allocated in @a pool.
+*
+* Clients must use this function to allocate and initialize @c
+* svn_ra_callbacks2_t structures.
+*
+* @since New in 1.3.
+*/
+svn_error_t *
+svn_ra_create_callbacks (svn_ra_callbacks2_t **callbacks,
+                         apr_pool_t *pool);
+
 /**
  * A repository access session.  This object is used to perform requests
  * to a repository, identified by an URL.
@@ -377,7 +441,7 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  * representing this session in @a *session_p, allocated in @a pool.
  *
  * @a callbacks/@a callback_baton is a table of callbacks provided by the
- * client; see @c svn_ra_callbacks_t.
+ * client; see @c svn_ra_callbacks2_t.
  *
  * @a config is a hash mapping <tt>const char *</tt> keys to 
  * @c svn_config_t * values.  For example, the @c svn_config_t for the 
@@ -388,7 +452,19 @@ typedef struct svn_ra_session_t svn_ra_session_t;
  *
  * @see svn_client_open_ra_session().
  *
+ * @since New in 1.3.
+ */
+svn_error_t *svn_ra_open2 (svn_ra_session_t **session_p,
+                          const char *repos_URL,
+                          const svn_ra_callbacks2_t *callbacks,
+                          void *callback_baton,
+                          apr_hash_t *config,
+                          apr_pool_t *pool);
+
+/**
+ * @see svn_ra_open2().
  * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *svn_ra_open (svn_ra_session_t **session_p,
                           const char *repos_URL,
@@ -1029,6 +1105,10 @@ svn_error_t *svn_ra_get_lock (svn_ra_session_t *session,
  * The hashtable maps (const char *) absolute fs paths to (const
  * svn_lock_t *) structures.  The hashtable -- and all keys and
  * values -- are allocated in @a pool.
+ *
+ * @note This functionality is not available in pre-1.2 servers.  If the
+ * server doesn't implement it, an @c SVN_ERR_RA_NOT_IMPLEMENTED error is
+ * returned.
  *
  * @since New in 1.2.
  */

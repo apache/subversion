@@ -10,11 +10,11 @@ import sys, os
 import getopt
 import re
 
-__author__ = "Gustavo Niemeyer <niemeyer@conectiva.com>"
+__author__ = "Gustavo Niemeyer <gustavo@niemeyer.net>"
 
 class Error(Exception): pass
 
-SECTION = re.compile(r'\[([^]]+)\]')
+SECTION = re.compile(r'\[([^]]+?)(?:\s+extends\s+([^]]+))?\]')
 OPTION = re.compile(r'(\S+)\s*=\s*(.*)$')
 
 class Config:
@@ -43,8 +43,19 @@ class Config:
                 m = SECTION.match(line)
                 if m:
                     sectname = m.group(1)
-                    cursectdict = self._sections_dict.setdefault(sectname, {})
-                    cursectlist = []
+                    parentsectname = m.group(2)
+                    if parentsectname is None:
+                        # No parent section defined, so start a new section
+                        cursectdict = self._sections_dict.setdefault \
+                            (sectname, {})
+                        cursectlist = []
+                    else:
+                        # Copy the parent section into the new section
+                        parentsectdict = self._sections_dict.get \
+                            (parentsectname, {})
+                        cursectdict = self._sections_dict.setdefault \
+                            (sectname, parentsectdict.copy())
+                        cursectlist = self.walk(parentsectname)
                     self._sections_list.append((sectname, cursectlist))
                     optname = None
                 elif cursectdict is None:

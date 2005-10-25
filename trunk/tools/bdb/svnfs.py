@@ -66,7 +66,7 @@ class Ctx:
     try:
       rec = cur.set(key)
       if rec is None:
-        raise DbNotFoundError
+        raise DBNotFoundError
       str = ""
       while rec:
         str = str + (rec[1] or "")

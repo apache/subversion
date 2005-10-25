@@ -54,6 +54,7 @@ svn_client__update_internal (svn_revnum_t *result_rev,
   void *report_baton;
   const svn_wc_entry_t *entry;
   const char *anchor, *target;
+  const char *repos_root;
   svn_error_t *err;
   svn_revnum_t revnum;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
@@ -111,6 +112,16 @@ svn_client__update_internal (svn_revnum_t *result_rev,
      to take a URL as easily as a local path?  */
   SVN_ERR (svn_client__get_revision_number
            (&revnum, ra_session, revision, path, pool));
+
+  /* Take the chance to set the repository root on the target.
+     Why do we bother doing this for old working copies?
+     There are two reasons: first, it's nice to get this information into
+     old WCs so they are "ready" when we start depending on it.  (We can
+     never *depend* upon it in a strict sense, however.)
+     Second, if people mix old and new clients, this information will
+     be dropped by the old clients, which might be annoying. */
+  SVN_ERR (svn_ra_get_repos_root (ra_session, &repos_root, pool));
+  SVN_ERR (svn_wc_maybe_set_repos_root (dir_access, path, repos_root, pool));
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */

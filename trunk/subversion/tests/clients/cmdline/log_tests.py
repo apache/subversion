@@ -69,6 +69,8 @@ def guarantee_repos_and_wc(sbox):
 
   sbox.build()
   wc_path = sbox.wc_dir
+  msg_file=os.path.join (sbox.repo_dir, 'log-msg')
+  msg_file=os.path.abspath (msg_file)
 
   # Now we have a repos and wc at revision 1.
 
@@ -94,8 +96,11 @@ def guarantee_repos_and_wc(sbox):
   msg=""" Log message for revision 2 
   but with multiple lines
   to test the code"""
+  log_file=open (msg_file, 'w')
+  log_file.write (msg)
+  log_file.close ()
   svntest.main.file_append (iota_path, "2")
-  svntest.main.run_svn (None, 'ci', '-m', msg)
+  svntest.main.run_svn (None, 'ci', '-F', msg_file)
   svntest.main.run_svn (None, 'up')
 
   # Revision 3: edit A/D/H/omega, A/D/G/pi, A/D/G/rho, and A/B/E/alpha
@@ -110,10 +115,13 @@ def guarantee_repos_and_wc(sbox):
   msg=""" Log message for revision 4 
   but with multiple lines
   to test the code"""
+  log_file=open (msg_file, 'w')
+  log_file.write (msg)
+  log_file.close ()
   svntest.main.file_append (iota_path, "4")
   svntest.main.file_append (epsilon_path, "4")
   svntest.main.run_svn (None, 'add', epsilon_path)
-  svntest.main.run_svn (None, 'ci', '-m', msg)
+  svntest.main.run_svn (None, 'ci', '-F', msg_file)
   svntest.main.run_svn (None, 'up')
 
   # Revision 5: edit A/C/epsilon, delete A/D/G/rho
@@ -126,9 +134,12 @@ def guarantee_repos_and_wc(sbox):
   msg=""" Log message for revision 6 
   but with multiple lines
   to test the code"""
+  log_file=open (msg_file, 'w')
+  log_file.write (msg)
+  log_file.close ()
   svntest.main.run_svn (None, 'ps', 'blue', 'azul', B_path)  
   svntest.main.file_append (psi_path, "6")
-  svntest.main.run_svn (None, 'ci', '-m', msg)
+  svntest.main.run_svn (None, 'ci', '-F', msg_file)
   svntest.main.run_svn (None, 'up')
 
   # Revision 7: edit A/mu, prop change on A/mu
@@ -141,10 +152,13 @@ def guarantee_repos_and_wc(sbox):
   msg=""" Log message for revision 8 
   but with multiple lines
   to test the code"""
+  log_file=open (msg_file, 'w')
+  log_file.write (msg)
+  log_file.close ()
   svntest.main.file_append (iota_path, "8")
   svntest.main.file_append (rho_path, "8")
   svntest.main.run_svn (None, 'add', rho_path)
-  svntest.main.run_svn (None, 'ci', '-m', msg)
+  svntest.main.run_svn (None, 'ci', '-F', msg_file)
   svntest.main.run_svn (None, 'up')
 
   # Revision 9: edit A/B/E/beta, delete A/B/E/alpha
@@ -478,6 +492,8 @@ def log_through_copyfrom_history(sbox):
   "'svn log TGT' with copyfrom history"
   sbox.build()
   wc_dir = sbox.wc_dir
+  msg_file=os.path.join (sbox.repo_dir, 'log-msg')
+  msg_file=os.path.abspath (msg_file)
 
   mu_path = os.path.join (wc_dir, 'A', 'mu')
   mu2_path = os.path.join (wc_dir, 'A', 'mu2')
@@ -496,23 +512,32 @@ def log_through_copyfrom_history(sbox):
   but with multiple lines
   to test the code"""
 
+  log_file=open (msg_file, 'w')
+  log_file.write (msg2)
+  log_file.close ()
   svntest.main.file_append (mu_path, "2")
   svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
-                                      '-m', msg2)
+                                      '-F', msg_file)
   svntest.main.file_append (mu2_path, "this is mu2")
   svntest.actions.run_and_verify_svn (None, None, [], 'add', mu2_path)
   svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
                                       '-m', "Log message for revision 3")
   svntest.actions.run_and_verify_svn (None, None, [], 'rm', mu2_path)
+  log_file=open (msg_file, 'w')
+  log_file.write (msg4)
+  log_file.close ()
   svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
-                                      '-m', msg4)
+                                      '-F', msg_file)
   svntest.main.file_append (mu_path, "5")
   svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
                                       '-m', "Log message for revision 5")
 
+  log_file=open (msg_file, 'w')
+  log_file.write (msg6)
+  log_file.close ()
   svntest.actions.run_and_verify_svn (None, None, [],
                                       'cp', '-r', '5', mu_URL, mu2_URL,
-                                      '-m', msg6)
+                                      '-F', msg_file)
   svntest.actions.run_and_verify_svn (None, None, [], 'up', wc_dir)
 
   # The full log for mu2 is relatively unsurprising
@@ -621,6 +646,76 @@ PROPS-END
     raise svntest.Failure ("log message not transmitted properly:" +
                            str(output) + "\n" + "error: " + str(errput))
 
+#----------------------------------------------------------------------
+def log_xml_empty_date(sbox):
+  "svn log --xml must not print empty date elements"
+  sbox.build()
+
+  # Create the revprop-change hook for this test
+  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+
+  date_re = re.compile('<date');
+
+  # Ensure that we get a date before we delete the property.
+  output, errput = svntest.actions.run_and_verify_svn("", None, [],
+                                                      'log', '--xml', '-r1',
+                                                      sbox.wc_dir)
+  matched = 0
+  for line in output:
+    if date_re.search(line):
+      matched = 1
+  if not matched:
+    raise svntest.Failure ("log contains no date element")
+
+  # Set the svn:date revprop to the empty string on revision 1.
+  svntest.actions.run_and_verify_svn("", None, [],
+                                     'pdel', '--revprop', '-r1', 'svn:date',
+                                     sbox.wc_dir)
+
+  output, errput = svntest.actions.run_and_verify_svn("", None, [],
+                                                      'log', '--xml', '-r1',
+                                                      sbox.wc_dir)
+  for line in output:  
+    if date_re.search(line):
+      raise svntest.Failure ("log contains date element when svn:date is empty")
+
+#----------------------------------------------------------------------
+def log_limit(sbox):
+  "svn log --limit"
+  guarantee_repos_and_wc(sbox)
+
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'log', '--limit', '2',
+                                                svntest.main.current_repo_url)
+  log_chain = parse_log_output (out)
+  if check_log_chain (log_chain, [9, 8]):
+    raise svntest.Failure
+
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'log', '--limit', '2',
+                                                svntest.main.current_repo_url,
+                                                'A/B')
+  log_chain = parse_log_output (out)
+  if check_log_chain (log_chain, [9, 6]):
+    raise svntest.Failure
+
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'log', '--limit', '2',
+                                                '--revision', '2:HEAD',
+                                                svntest.main.current_repo_url,
+                                                'A/B')
+  log_chain = parse_log_output (out)
+  if check_log_chain (log_chain, [3, 6]):
+    raise svntest.Failure
+
+  out, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                'log', '--limit', '2',
+                                                '--revision', '1',
+                                                svntest.main.current_repo_url,
+                                                'A/B')
+  log_chain = parse_log_output (out)
+  if check_log_chain (log_chain, [1]):
+    raise svntest.Failure
 
 ########################################################################
 # Run the tests
@@ -637,6 +732,8 @@ test_list = [ None,
               url_missing_in_head,
               log_through_copyfrom_history,
               escape_control_chars,
+              log_xml_empty_date,
+              log_limit,
              ]
 
 if __name__ == '__main__':

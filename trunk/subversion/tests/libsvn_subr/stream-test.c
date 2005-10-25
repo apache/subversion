@@ -36,6 +36,9 @@ test_stream_from_string (const char **msg,
 #define NUM_TEST_STRINGS 4
 #define TEST_BUF_SIZE 10
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
   static const char * const strings[NUM_TEST_STRINGS] = { 
     /* 0 */
     "",
@@ -51,7 +54,9 @@ test_stream_from_string (const char **msg,
     "it--but I feel that it is safe to assume that I'm far longer than my "
     "peers.  And that demands some amount of respect, wouldn't you say?"
   };
-  
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif   
   *msg = "test svn_stream_from_string";
 
   if (msg_only)
@@ -77,11 +82,10 @@ test_stream_from_string (const char **msg,
           /* ... and append the chunk to the stringbuf. */
           svn_stringbuf_appendbytes (outbuf, buffer, len);
         }
-      
+
       if (! svn_stringbuf_compare (inbuf, outbuf))
         return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                                  "Got unexpected result.");
-
       svn_pool_clear (subpool);
     }
 
@@ -109,7 +113,6 @@ test_stream_from_string (const char **msg,
       if (! svn_stringbuf_compare (inbuf, outbuf))
         return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                                  "Got unexpected result.");
-
       svn_pool_clear (subpool);
     }
 
@@ -160,6 +163,9 @@ test_stream_compressed (const char **msg,
   svn_stringbuf_t *bufs[NUM_TEST_STRINGS];
   apr_pool_t *subpool = svn_pool_create (pool);
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
   static const char * const strings[NUM_TEST_STRINGS - 1] = { 
     /* 0 */
     "",
@@ -175,7 +181,9 @@ test_stream_compressed (const char **msg,
     "it--but I feel that it is safe to assume that I'm far longer than my "
     "peers.  And that demands some amount of respect, wouldn't you say?"
   };
-
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
 
   *msg = "test compressed streams";
   
@@ -217,7 +225,7 @@ test_stream_compressed (const char **msg,
           if (len > 0)
             svn_stringbuf_appendbytes (inbuf, buf, len);
         }
-      
+
       if (! svn_stringbuf_compare (inbuf, origbuf))
         return svn_error_create (SVN_ERR_TEST_FAILED, NULL,
                                  "Got unexpected result.");

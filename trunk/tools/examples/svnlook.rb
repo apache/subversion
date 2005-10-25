@@ -1,33 +1,59 @@
 #!/usr/bin/env ruby
+#
+# svnlook.rb : a Ruby-based replacement for svnlook
+#
+######################################################################
+#
+# Copyright (c) 2000-2005 CollabNet.  All rights reserved.
+#
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
+#
+######################################################################
+#
 
 require "svn/core"
 require "svn/fs"
 require "svn/delta"
 require "svn/repos"
 
+# Chomp off trailing slashes
 def basename(path)
   path.chomp("/")
 end
 
+# SvnLook: a Ruby-based replacement for svnlook
 class SvnLook
-  def initialize(pool, path, rev, txn)
-    @pool = pool
-    @fs = Svn::Repos.open(path, @pool).fs
 
+  # Initialize the SvnLook application
+  def initialize(path, rev, txn)
+    # Open a repository
+    @fs = Svn::Repos.open(path).fs
+
+    # If a transaction was specified, open it
     if txn
       @txn = @fs.open_txn(txn)
     else
+      # Use the latest revision from the repo,
+      # if they haven't specified a revision
       @txn = nil
       rev ||= @fs.youngest_rev
     end
+
     @rev = rev
   end
 
+  # Dispatch all commands to appropriate subroutines
   def run(cmd, *args)
     dispatch(cmd, *args)
   end
 
   private
+  
+  # Dispatch all commands to appropriate subroutines
   def dispatch(cmd, *args)
     if respond_to?("cmd_#{cmd}", true)
       begin
@@ -42,64 +68,85 @@ class SvnLook
     end
   end
 
+  # Default command: Run the 'info' and 'tree' commands
   def cmd_default
     cmd_info
     cmd_tree
   end
 
+  # Print the 'author' of the specified revision or transaction
   def cmd_author
     puts(property(Svn::Core::PROP_REVISION_AUTHOR) || "")
   end
 
+  # Not implemented yet
   def cmd_cat
   end
-
+  
+  # Find out what has changed in the specified revision or transaction
   def cmd_changed
     print_tree(ChangedEditor, nil, true)
   end
   
+  # Output the date that the current revision was committed.
   def cmd_date
     if @txn
+      # It's not committed yet, so output nothing
       puts
     else
+      # Get the time the revision was committed
       date = property(Svn::Core::PROP_REVISION_DATE)
+
       if date
+        # Print out the date in a nice format
         time = str_to_time(date)
         puts time.strftime('%Y-%m-%d %H:%M(%Z)')
       else
+        # The specified revision doesn't have an associated date.
+        # Output just a blank line.
         puts
       end
     end
   end
 
+  # Output what changed in the specified revision / transaction
   def cmd_diff
     print_tree(DiffEditor, nil, true)
   end
   
+  # Output what directories changed in the specified revision / transaction
   def cmd_dirs_changed
     print_tree(DirsChangedEditor)
   end
   
+  # Output the tree, with node ids
   def cmd_ids
     print_tree(Editor, 0, true)
   end
   
+  # Output the author, date, and the log associated with the specified
+  # revision / transaction
   def cmd_info
     cmd_author
     cmd_date
     cmd_log(true)
   end
 
+  # Output the log message associated with the specified revision / transaction
   def cmd_log(print_size=false)
     log = property(Svn::Core::PROP_REVISION_LOG) || ''
     puts log.length if print_size
     puts log
   end
 
+  # Output the tree associated with the provided tree
   def cmd_tree
     print_tree(Editor, 0)
   end
 
+  # Return a property of the specified revision or transaction.
+  # Name: the ID of the property you want to retrieve. 
+  #       E.g. Svn::Core::PROP_REVISION_LOG
   def property(name)
     if @txn
       @txn.prop(name)
@@ -108,38 +155,53 @@ class SvnLook
     end
   end
 
+  # Print a tree of differences between two revisions
   def print_tree(editor_class, base_rev=nil, pass_root=false)
     if base_rev.nil?
       if @txn
+        # Output changes since the base revision of the transaction
         base_rev = @txn.base_revision
       else
+        # Output changes since the previous revision
         base_rev = @rev - 1
       end
     end
 
+    # Get the root of the specified transaction or revision
     if @txn
       root = @txn.root
     else
       root = @fs.root(@rev)
     end
 
+    # Get the root of the base revision
     base_root = @fs.root(base_rev)
 
+    # Does the provided editor need to know
+    # the revision and base revision we're working with?
     if pass_root
+      # Create a new editor with the provided root and base_root
       editor = editor_class.new(root, base_root)
     else
+      # Create a new editor with nil root and base_roots
       editor = editor_class.new
     end
 
+    # Do a directory delta between the two roots with 
+    # the specified editor
     base_root.editor = editor
     base_root.dir_delta('', '', root, '')
   end
 
+  # Convert a string to an SVN date/time object
   def str_to_time(str)
-    Svn::Util.string_to_time(str, @pool)
+    Svn::Util.string_to_time(str)
   end
   
+  # Output the current tree for a specified revision 
   class Editor < Svn::Delta::Editor
+
+    # Initialize the Editor object
     def initialize(root=nil, base_root=nil)
       @root = root
       # base_root ignored
@@ -147,143 +209,201 @@ class SvnLook
       @indent = ""
     end
     
-    def open_root(base_revision, dir_pool)
-      puts "/#{id('/', dir_pool)}"
+    # Recurse through the root (and increase the indent level)
+    def open_root(base_revision)
+      puts "/#{id('/')}"
       @indent << ' '
     end
 
+    # If a directory is added, output this and increase
+    # the indent level
     def add_directory(path, *args)
-      puts "#{@indent}#{basename(path)}/#{id(path, args[-1])}"
+      puts "#{@indent}#{basename(path)}/#{id(path)}"
       @indent << ' '
     end
 
     alias open_directory add_directory
 
+    # If a directory is closed, reduce the ident level
     def close_directory(baton)
       @indent.chop!
     end
 
+    # If a file is added, output that it has been changed
     def add_file(path, *args)
-      puts "#{@indent}#{basename(path)}#{id(path, args[-1])}"
+      puts "#{@indent}#{basename(path)}#{id(path)}"
     end
     
     alias open_file add_file
 
+    # Private methods
     private
-    def id(path, pool)
+
+    # Get the node id of a particular path
+    def id(path)
       if @root
-        fs_id = @root.node_id(path, pool)
-        " <#{fs_id.unparse(pool)}>"
+        fs_id = @root.node_id(path)
+        " <#{fs_id.unparse}>"
       else
         ""
       end
     end
   end
 
+  
+  # Output directories that have been changed
   class DirsChangedEditor < Svn::Delta::Editor
-    def open_root(base_revision, dir_pool)
+
+    # Recurse through the root node
+    def open_root(base_revision)
       [true, '']
     end
 
-    def delete_entry(path, revision, parent_baton, pool)
+    # If a file is deleted, output that its parent has
+    # been changed
+    def delete_entry(path, revision, parent_baton)
       dir_changed(parent_baton)
     end
 
+    # If a directory is added, output that its parent has been
+    # changed and recurse through the child directory's contents
     def add_directory(path, parent_baton,
-                      copyfrom_path, copyfrom_revision, dir_pool)
+                      copyfrom_path, copyfrom_revision)
       dir_changed(parent_baton)
       [true, path]
     end
 
-    def open_directory(path, parent_baton, base_revision, dir_pool)
+    # Recurse through directories
+    def open_directory(path, parent_baton, base_revision)
       [true, path]
     end
 
-    def change_dir_prop(dir_baton, name, value, pool)
+    # If the properties of this directory have been changed,
+    # output that the directory has been changed
+    def change_dir_prop(dir_baton, name, value)
       dir_changed(dir_baton)
     end
 
+    # If a file is added to this directory,
+    # output that the directory has been changed 
     def add_file(path, parent_baton,
-                 copyfrom_path, copyfrom_revision, file_pool)
+                 copyfrom_path, copyfrom_revision)
       dir_changed(parent_baton)
     end
 
-    def open_file(path, parent_baton, base_revision, file_pool)
+    # If a file is opened in this directory,
+    # output that the directory has been changed 
+    def open_file(path, parent_baton, base_revision)
       dir_changed(parent_baton)
     end
 
+    # Private functions
     private
-    def dir_changed( baton)
+
+    # Print out the name of a directory if it has been changed.
+    # But only do so once.
+    def dir_changed(baton)
       if baton[0]
-        # the directory hasn't been printed yet. do it.
+        # The directory hasn't been printed yet,
+        # so print it out.
         puts baton[1] + '/'
+
+        # Make sure we don't print this directory out twice
         baton[0] = nil
       end
     end
   end
     
+  # Output files that have been changed between two roots
   class ChangedEditor < Svn::Delta::Editor
+
+    # Constructor
     def initialize(root, base_root)
       @root = root
       @base_root = base_root
     end
 
-    def open_root(base_revision, dir_pool)
+    # Look at the root node
+    def open_root(base_revision)
+      # Nothing has been printed out yet, so return 'true'.
       [true, '']
     end
 
-    def delete_entry(path, revision, parent_baton, pool)
+    # Output deleted files
+    def delete_entry(path, revision, parent_baton)
+      # Output deleted paths with a D in front of them        
       print "D   #{path}"
-      if @base_root.dir?('/' + path, pool)
+
+      # If we're deleting a directory,
+      # indicate this with a trailing slash
+      if @base_root.dir?('/' + path)
         puts "/"
       else
         puts
       end
     end
 
+    # Output that a directory has been added
     def add_directory(path, parent_baton,
-                      copyfrom_path, copyfrom_revision, dir_pool)
+                      copyfrom_path, copyfrom_revision)
+      # Output 'A' to indicate that the directory was added.
+      # Also put a trailing slash since it's a directory.
       puts "A   #{path}/"
+
+      # The directory has been printed -- don't print it again.
       [false, path]
     end
 
-    def open_directory(path, parent_baton, base_revision, dir_pool)
+    # Recurse inside directories
+    def open_directory(path, parent_baton, base_revision)
+      # Nothing has been printed out yet, so return true.
       [true, path]
     end
 
-    def change_dir_prop(dir_baton, name, value, pool)
+    def change_dir_prop(dir_baton, name, value)
+      # Has the directory been printed yet?
       if dir_baton[0]
-        # the directory hasn't been printed yet. do it.
+        # Print the directory
         puts "_U  #{dir_baton[1]}/"
+
+        # Don't let this directory get printed again.
         dir_baton[0] = false
       end
     end
 
     def add_file(path, parent_baton,
-                 copyfrom_path, copyfrom_revision, file_pool)
+                 copyfrom_path, copyfrom_revision)
+      # Output that a directory has been added
       puts "A   #{path}"
+
+      # We've already printed out this entry, so return '_'
+      # to prevent it from being printed again
       ['_', ' ', nil]
     end
 
-    def open_file(path, parent_baton, base_revision, file_pool)
+    
+    def open_file(path, parent_baton, base_revision)
+      # Changes have been made -- return '_' to indicate as such
       ['_', ' ', path]
     end
 
-    def apply_textdelta(file_baton, base_checksum, pool)
+    def apply_textdelta(file_baton, base_checksum)
+      # The file has been changed -- we'll print that out later.
       file_baton[0] = 'U'
       nil
     end
 
-    def change_file_prop(file_baton, name, value, pool)
+    def change_file_prop(file_baton, name, value)
+      # The file has been changed -- we'll print that out later.
       file_baton[1] = 'U'
     end
     
     def close_file(file_baton, text_checksum)
       text_mod, prop_mod, path = file_baton
-      # test the path. it will be None if we added this file.
+      # Test the path. It will be nil if we added this file.
       if path
         status = text_mod + prop_mod
-        # was there some kind of change?
+        # Was there some kind of change?
         if status != '_ '
           puts "#{status}  #{path}"
         end
@@ -291,30 +411,40 @@ class SvnLook
     end
   end
         
+  # Output diffs of files that have been changed
   class DiffEditor < Svn::Delta::Editor
 
+    # Constructor
     def initialize(root, base_root)
       @root = root
       @base_root = base_root
     end
 
-    def delete_entry(path, revision, parent_baton, pool)
-      unless @base_root.dir?('/' + path, pool)
-        do_diff(path, nil, pool)
+    # Handle deleted files and directories
+    def delete_entry(path, revision, parent_baton)
+      # Print out diffs of deleted files, but not
+      # deleted directories
+      unless @base_root.dir?('/' + path)
+        do_diff(path, nil)
       end
     end
 
+    # Handle added files
     def add_file(path, parent_baton,
-                 copyfrom_path, copyfrom_revision, file_pool)
-      do_diff(nil, path, file_pool)
-      ['_', ' ', nil, file_pool]
+                 copyfrom_path, copyfrom_revision)
+      # If a file has been added, print out the diff.
+      do_diff(nil, path)
+
+      ['_', ' ', nil]
     end
 
-    def open_file(path, parent_baton, base_revision, file_pool)
-      ['_', ' ', path, file_pool]
+    # Handle files
+    def open_file(path, parent_baton, base_revision)
+      ['_', ' ', path]
     end
 
-    def apply_textdelta(file_baton, base_checksum, pool)
+    # If a file is changed, print out the diff
+    def apply_textdelta(file_baton, base_checksum)
       if file_baton[2].nil?
         nil
       else
@@ -323,29 +453,39 @@ class SvnLook
     end
 
     private
-    def do_diff(base_path, path, pool)
+
+    # Print out a diff between two paths 
+    def do_diff(base_path, path)
       if base_path.nil?
+        # If there's no base path, then the file
+        # must have been added
         puts("Added: #{path}")
-        name = path
+        name = path      
       elsif path.nil?
+        # If there's no new path, then the file
+        # must have been deleted
         puts("Removed: #{base_path}")
         name = base_path
       else
+        # Otherwise, the file must have been modified
         puts "Modified: #{path}"
         name = path
       end
       
+      # Set up labels for the two files
       base_label = "#{name} (original)"
       label = "#{name} (new)"
-      differ = Svn::Fs::FileDiff.new(@base_root, base_path, @root, path, pool)
       
+      # Output a unified diff between the two files
       puts "=" * 78
+      differ = Svn::Fs::FileDiff.new(@base_root, base_path, @root, path)
       puts differ.unified(base_label, label)
       puts
     end
   end
 end
 
+# Output usage message and exit
 def usage
   messages = [
     "usage: #{$0} REPOS_PATH rev REV [COMMAND] - inspect revision REV",
@@ -374,15 +514,18 @@ def usage
   exit(1)
 end
 
+# Output usage if necessary
 if ARGV.empty?
   usage
 end
 
+# Process arguments
 path = ARGV.shift
 cmd = ARGV.shift
 rev = nil
 txn = nil
-case cmd
+
+case cmd  
 when "rev"
   rev = Integer(ARGV.shift)
   cmd = ARGV.shift
@@ -390,8 +533,12 @@ when "txn"
   txn = ARGV.shift
   cmd = ARGV.shift
 end
+
+# If no command is specified, use the default
 cmd ||= "default"
 
-Svn::Core::Pool.new do |pool|
-  SvnLook.new(pool, path, rev, txn).run(cmd.gsub(/-/, '_'))
-end
+# Replace dashes in the command with underscores
+cmd = cmd.gsub(/-/, '_')
+
+# Start SvnLook with the specified command 
+SvnLook.new(path, rev, txn).run(cmd)

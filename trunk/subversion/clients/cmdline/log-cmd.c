@@ -341,24 +341,17 @@ log_message_receiver_xml (void *baton,
   svn_xml_make_open_tag (&sb, pool, svn_xml_normal, LOGENTRY_STR,
                          REVISION_STR, revstr, NULL);
 
-  if (author)
-    {
-      /* <author>xxx</author> */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, AUTHOR_STR,
-                             NULL);
-      svn_xml_escape_cdata_cstring (&sb, author, pool);
-      svn_xml_make_close_tag (&sb, pool, AUTHOR_STR);
-    }
+  /* <author>xxx</author> */
+  svn_cl__xml_tagged_cdata (&sb, pool, AUTHOR_STR, author);
 
-  if (date)
-    {
-      /* Print the full, uncut, date.  This is machine output. */
-      /* <date>xxx</date> */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, DATE_STR,
-                             NULL);
-      svn_xml_escape_cdata_cstring (&sb, date, pool);
-      svn_xml_make_close_tag (&sb, pool, DATE_STR);
-    }
+  /* Print the full, uncut, date.  This is machine output. */
+  /* According to the docs for svn_log_message_receiver_t, either
+     NULL or the empty string represents no date.  Avoid outputting an
+     empty date element. */
+  if (date && date[0] == '\0')
+    date = NULL;
+  /* <date>xxx</date> */
+  svn_cl__xml_tagged_cdata (&sb, pool, DATE_STR, date);
 
   if (changed_paths)
     {
@@ -385,7 +378,7 @@ log_message_receiver_xml (void *baton,
           if (log_item->copyfrom_path
               && SVN_IS_VALID_REVNUM (log_item->copyfrom_rev))
             {
-              /* <path action="X" copyfrom-path="aaa" copyfrom-rev="> */
+              /* <path action="X" copyfrom-path="xxx" copyfrom-rev="xxx"> */
               svn_stringbuf_t *escpath = svn_stringbuf_create ("", pool);
               svn_xml_escape_attr_cstring (&escpath,
                                            log_item->copyfrom_path, pool);
@@ -417,9 +410,7 @@ log_message_receiver_xml (void *baton,
         msg = "";
 
       /* <msg>xxx</msg> */
-      svn_xml_make_open_tag (&sb, pool, svn_xml_protect_pcdata, MSG_STR, NULL);
-      svn_xml_escape_cdata_cstring (&sb, msg, pool);
-      svn_xml_make_close_tag (&sb, pool, MSG_STR);
+      svn_cl__xml_tagged_cdata (&sb, pool, MSG_STR, msg);
     }
 
   /* </logentry> */

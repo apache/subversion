@@ -16,7 +16,6 @@ sys.path.insert(0, os.path.join('build', 'generator'))
 # for getversion
 sys.path.insert(1, 'build')
 
-
 gen_modules = {
   'make' : ('gen_make', 'Makefiles for POSIX systems'),
   'dsp' : ('gen_msvc_dsp', 'MSVC 6.x project files'),
@@ -36,7 +35,7 @@ def main(fname, gentype, verfname=None,
     generator.compute_hdr_deps()
 
   generator.write()
-
+  
   if other_options and ('--debug', '') in other_options:
     for dep_type, target_dict in generator.graph.deps.items():
       sorted_targets = target_dict.keys(); sorted_targets.sort()
@@ -117,9 +116,12 @@ def _usage_exit():
   print "           tell neon to look for ZLib headers and"
   print "           libs in DIR"
   print
-  print "  --with-junit=PATH"
+  print "  --with-junit=DIR"
   print "           look for the junit jar here"
   print "           junit is for testing the java bindings"
+  print
+  print "  --with-swig=DIR"
+  print "           look for the swig program in DIR"
   print
   print "  --enable-pool-debug"
   print "           turn on APR pool debugging"
@@ -170,6 +172,7 @@ if __name__ == '__main__':
                                 'with-openssl=',
                                 'with-zlib=',
                                 'with-junit=',
+                                'with-swig=',
                                 'enable-pool-debug',
                                 'enable-purify',
                                 'enable-quantify',

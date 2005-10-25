@@ -39,7 +39,7 @@ extern "C" {
 
 /** Subversion error object.
  *
- * Defined here, rather than in svn_error.h, to avoid a recursive #include 
+ * Defined here, rather than in svn_error.h, to avoid a recursive @#include 
  * situation.
  */
 typedef struct svn_error_t
@@ -66,12 +66,23 @@ typedef struct svn_error_t
 
 
 
+/** @defgroup APR_ARRAY_compat_macros APR Array Compatibility Helper Macros
+ * These macros are provided by APR itself from version 1.3.
+ * Definitions are provided here for when using older versions of APR.
+ * @{
+ */
+
 /** index into an apr_array_header_t */
+#ifndef APR_ARRAY_IDX
 #define APR_ARRAY_IDX(ary,i,type) (((type *)(ary)->elts)[i])
+#endif
 
 /** easier array-pushing syntax */
+#ifndef APR_ARRAY_PUSH
 #define APR_ARRAY_PUSH(ary,type) (*((type *)apr_array_push (ary)))
+#endif
 
+/** @} */
 
 /** The various types of nodes in the Subversion filesystem. */
 typedef enum
@@ -92,7 +103,7 @@ typedef enum
 /** About Special Files in Subversion
  *
  * Subversion denotes files that cannot be portably created or
- * modified as special files (svn_node_special).  It stores these
+ * modified as "special" files (svn_node_special).  It stores these
  * files in the repository as a plain text file with the svn:special
  * property set.  The file contents contain: a platform-specific type
  * string, a space character, then any information necessary to create
@@ -305,6 +316,48 @@ typedef struct svn_dirent_t
         /* "Id" */
 
 /** @} */
+
+
+/** All information about a commit.
+ *
+ * @note Objects of this type should always be created using the
+ * svn_create_commit_info() function.
+ *
+ * @since New in 1.3.
+ */
+typedef struct svn_commit_info_t
+{
+  /** just-committed revision. */
+  svn_revnum_t revision;
+
+  /** server-side date of the commit. */
+  const char *date;
+
+  /** author of the commit. */
+  const char *author;
+
+  /** error message from post-commit hook, or NULL. */
+  const char *post_commit_err;
+
+} svn_commit_info_t;
+
+
+/**
+ * Allocate an object of type @c svn_commit_info_t in @a pool and
+ * return it.
+ *
+ * The @c revision field of the new struct is set to @c
+ * SVN_INVALID_REVNUM.  All other fields are initialized to @c NULL.
+ *
+ * @note Any object of the type @c svn_commit_info_t should
+ * be created using this function.
+ * This is to provide for extending the svn_commit_info_t in
+ * the future.
+ *
+ * @since New in 1.3.
+ */
+svn_commit_info_t *
+svn_create_commit_info (apr_pool_t *pool);
 
 
 /** A structure to represent a path that changed for a log entry. */

@@ -448,24 +448,24 @@ int Prompter::askTrust(const char *question, bool maySave)
             {
                 return -1;
             }
-            jstring jquestion = JNIUtil::makeJString(question);
-            if(JNIUtil::isJavaExceptionThrown())
-            {
-                return -1;
-            }
-            jint ret = env->CallIntMethod(m_prompter, mid, jquestion, 
-                                          maySave ? JNI_TRUE : JNI_FALSE);
-            if(JNIUtil::isJavaExceptionThrown())
-            {
-                return -1;
-            }
-            env->DeleteLocalRef(jquestion);
-            if(JNIUtil::isJavaExceptionThrown())
-            {
-                return -1;
-            }
-            return ret;
         }
+        jstring jquestion = JNIUtil::makeJString(question);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return -1;
+        }
+        jint ret = env->CallIntMethod(m_prompter, mid, jquestion, 
+                                      maySave ? JNI_TRUE : JNI_FALSE);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return -1;
+        }
+        env->DeleteLocalRef(jquestion);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return -1;
+        }
+        return ret;
     }
     else
     {
@@ -731,7 +731,7 @@ svn_error_t *Prompter::ssl_server_trust_prompt(
     svn_auth_cred_ssl_server_trust_t *ret = 
             (svn_auth_cred_ssl_server_trust_t*)apr_pcalloc(pool, sizeof(*ret));
 
-    std::string question = _("Error validating server certificate for");
+    std::string question = _("Error validating server certificate for ");
     question += realm;
     question += ":\n";
 

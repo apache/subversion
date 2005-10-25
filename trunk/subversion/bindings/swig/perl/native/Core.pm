@@ -48,8 +48,10 @@ functions.
 
 BEGIN {
     SVN::_Core::apr_initialize();
-
 }
+
+our $gpool = SVN::Pool->new_default;
+SVN::Core::utf_initialize($gpool);
 
 END {
     SVN::_Core::apr_terminate();
@@ -199,7 +201,7 @@ sub getline
     my $self = shift;
     *$self->{pool} ||= SVN::Core::pool_create (undef);
     my ($buf, $eof) = *$self->{svn_stream}->readline ($/, *$self->{pool});
-    return undef if $eof && !$buf;
+    return undef if $eof && !length($buf);
     return $eof ? $buf : $buf.$/;
 }
 
@@ -217,14 +219,15 @@ sub READLINE
     my $self = shift;
     unless (defined $/) {
 	my $buf = '';
-	while (my $chunk = *$self->{svn_stream}->read
-	       ($SVN::Core::STREAM_CHUNK_SIZE)) {
+	while (length( my $chunk = *$self->{svn_stream}->read
+	       ($SVN::Core::STREAM_CHUNK_SIZE)) ) {
 	    $buf .= $chunk;
 	}
 	return $buf;
     }
     elsif (ref $/) {
-        return *$self->{svn_stream}->read (${$/}) || undef;
+        my $buf = *$self->{svn_stream}->read (${$/});
+	return length($buf) ? $buf : undef;
     }
     return wantarray ? $self->getlines : $self->getline;
 }
@@ -922,6 +925,9 @@ do not handle yet.
 
 package SVN::Auth::SSL;
 use SVN::Base qw(Core SVN_AUTH_SSL_);
+
+package _p_svn_lock_t;
+use SVN::Base qw(Core svn_lock_t_);
 
 =head1 AUTHORS
 

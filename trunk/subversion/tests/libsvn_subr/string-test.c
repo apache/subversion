@@ -32,9 +32,10 @@
 #include "svn_io.h"
 #include "svn_error.h"
 #include "svn_string.h"   /* This includes <apr_*.h> */
+#include "svn_ebcdic.h"
+#include "svn_utf.h"
 
 #include "../svn_test.h"
-
 
 /* A quick way to create error messages.  */
 static svn_error_t *
@@ -42,9 +43,11 @@ fail (apr_pool_t *pool, const char *fmt, ...)
 {
   va_list ap;
   char *msg;
-
+//#if APR_CHARSET_EBCDIC
+//  SVN_ERR(svn_utf_cstring_from_utf8(&fmt, fmt, pool));
+//#endif
   va_start (ap, fmt);
-  msg = apr_pvsprintf (pool, fmt, ap);
+  msg = APR_PVSPRINTF2 (pool, fmt, ap);
   va_end (ap);
 
   return svn_error_create (SVN_ERR_TEST_FAILED, 0, msg);
@@ -54,9 +57,14 @@ fail (apr_pool_t *pool, const char *fmt, ...)
 /* Some of our own global variables, for simplicity.  Yes,
    simplicity. */
 svn_stringbuf_t *a = NULL, *b = NULL, *c = NULL;
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 const char *phrase_1 = "hello, ";
 const char *phrase_2 = "a longish phrase of sorts, longer than 16 anyway";
-
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
 
 
@@ -145,11 +153,17 @@ test4 (const char **msg,
     return SVN_NO_ERROR;
 
   a = svn_stringbuf_create (phrase_1, pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   svn_stringbuf_appendcstr (a, "new bytes to append");
   
   /* Test that length, data, and null-termination are correct. */
   if (svn_stringbuf_compare 
       (a, svn_stringbuf_create ("hello, new bytes to append", pool)))
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
     return SVN_NO_ERROR;
   else
     return fail (pool, "test failed");
@@ -168,11 +182,17 @@ test5 (const char **msg,
     return SVN_NO_ERROR;
 
   a = svn_stringbuf_create (phrase_1, pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   svn_stringbuf_appendbytes (a, "new bytes to append", 9);
 
   /* Test that length, data, and null-termination are correct. */
   if (svn_stringbuf_compare 
       (a, svn_stringbuf_create ("hello, new bytes", pool)))
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
     return SVN_NO_ERROR;
   else
     return fail (pool, "test failed");
@@ -267,13 +287,18 @@ test9 (const char **msg,
     return SVN_NO_ERROR;
 
   a = svn_stringbuf_create (phrase_1, pool);
-
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   svn_stringbuf_fillchar (a, '#');
 
   if ((strcmp (a->data, "#######") == 0)
       && ((strncmp (a->data, "############", a->len - 1)) == 0)
       && (a->data[(a->len - 1)] == '#')
       && (a->data[(a->len)] == '\0'))
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
     return SVN_NO_ERROR;
   else
     return fail (pool, "test failed");
@@ -298,11 +323,17 @@ test10 (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   s = svn_stringbuf_create ("a small string", pool);
   len_1       = (s->len);
   block_len_1 = (s->blocksize);
   
   t = svn_stringbuf_create (", plus a string more than twice as long", pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   svn_stringbuf_appendstr (s, t);
   len_2       = (s->len);
   block_len_2 = (s->blocksize);
@@ -334,12 +365,21 @@ test11 (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  s = svn_stringbuf_createf (pool, 
+  s = svn_stringbuf_createf (pool,
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
                           "This %s is used in test %d.",
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
                           "string",
                           12);
   
   if (strcmp (s->data, "This string is used in test 12.") == 0)
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
     return SVN_NO_ERROR;
   else
     return fail (pool, "test failed");
@@ -392,14 +432,21 @@ test12 (const char **msg,
 {
   svn_stringbuf_t *s;
   const char fname[] = "string-test.tmp";
+  const char *fname_native = fname;
   apr_file_t *file;
   apr_status_t status;
   apr_size_t len;
   int i, repeat;
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   const char ftext[] =
     "Just some boring text. Avoiding newlines 'cos I don't know"
     "if any of the Subversion platfoms will mangle them! There's no"
     "need to test newline handling here anyway, it's not relevant.";
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
   *msg = "create string from file";
 
@@ -438,7 +485,10 @@ test12 (const char **msg,
   if (status)
     return fail (pool, "closing file");
 
-  SVN_ERR (svn_stringbuf_from_file (&s, fname, pool));
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_to_utf8(&fname_native, fname, pool));
+#endif
+  SVN_ERR (svn_stringbuf_from_file (&s, fname_native, pool));
   SVN_ERR (check_string_contents (s, ftext, sizeof(ftext) - 1, repeat, pool));
 
   /* Reset to avoid false positives */
@@ -488,10 +538,16 @@ test13 (const char **msg,
         apr_pool_t *pool)
 {
   *msg = "find_char_backward; middle case";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   a = svn_stringbuf_create ("test, test", pool);
 
   return
     test_find_char_backward (a->data, a->len, ',', 4, msg_only, pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 }
 
 static svn_error_t *
@@ -502,10 +558,16 @@ test14 (const char **msg,
 {
   *msg = "find_char_backward; 0 case";
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   a = svn_stringbuf_create (",test test", pool);
 
   return
     test_find_char_backward (a->data, a->len, ',', 0, msg_only, pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 }
 
 static svn_error_t *
@@ -516,6 +578,9 @@ test15 (const char **msg,
 {
   *msg = "find_char_backward; strlen - 1 case";
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   a = svn_stringbuf_create ("testing,", pool);
 
   return test_find_char_backward (a->data,
@@ -524,6 +589,9 @@ test15 (const char **msg,
                                   a->len - 1,
                                   msg_only,
                                   pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 }
 
 static svn_error_t *
@@ -537,7 +605,13 @@ test16 (const char **msg,
   a = svn_stringbuf_create ("", pool);
 
   return
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
     test_find_char_backward (a->data, a->len, ',', 0, msg_only, pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 }
 
 static svn_error_t *
@@ -548,6 +622,9 @@ test17 (const char **msg,
 {
   *msg = "find_char_backward; no occurence case";
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   a = svn_stringbuf_create ("test test test", pool);
 
   return test_find_char_backward (a->data,
@@ -556,6 +633,9 @@ test17 (const char **msg,
                                   a->len,
                                   msg_only,
                                   pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 }
 
 static svn_error_t *
@@ -587,7 +667,13 @@ test18 (const char **msg,
 {
   *msg = "check whitespace removal; common case";
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   return test_first_non_whitespace ("   \ttest", 4, msg_only, pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 }
 
 static svn_error_t *
@@ -598,7 +684,13 @@ test19 (const char **msg,
 {
   *msg = "check whitespace removal; no whitespace case";
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   return test_first_non_whitespace ("test", 0, msg_only, pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 }
 
 static svn_error_t *
@@ -609,7 +701,13 @@ test20 (const char **msg,
 {
   *msg = "check whitespace removal; all whitespace case";
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   return test_first_non_whitespace ("   ", 3, msg_only, pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 }
 
 static svn_error_t *
@@ -623,8 +721,14 @@ test21 (const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   a = svn_stringbuf_create ("    \ttest\t\t  \t  ", pool);
   b = svn_stringbuf_create ("test", pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 
   svn_stringbuf_strip_whitespace (a);
 
@@ -660,7 +764,13 @@ test22 (const char **msg,
 {
   *msg = "compare stringbufs; different lengths";
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   return test_stringbuf_unequal ("abc", "abcd", msg_only, pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 }
 
 static svn_error_t *
@@ -671,7 +781,13 @@ test23 (const char **msg,
 {
   *msg = "compare stringbufs; same length, different content";
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   return test_stringbuf_unequal ("abc", "abb", msg_only, pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
 }
 
 /*

@@ -62,6 +62,10 @@ extern "C" {
         "\x75\x72\x6c"
         /* "url" */
 
+#define SVN_WC__ENTRY_ATTR_REPOS \
+        "\x72\x65\x70\x6f\x73"
+        /* "repos" */
+        
 #define SVN_WC__ENTRY_ATTR_KIND \
         "\x6b\x69\x6e\x64"
         /* "kind" */
@@ -172,7 +176,8 @@ extern "C" {
 
 /* Initialize an entries file based on URL at INITIAL_REV, in the adm
    area for PATH.  The adm area must not already have an entries
-   file.  UUID is the repository UUID, and may be NULL.
+   file.  UUID is the repository UUID, and may be NULL.  REPOS is the
+   repository root URL and, if not NULL, must be a prefix of URL.
 
    If initial rev is valid and non-zero, then mark the 'this_dir'
    entry as being incomplete.
@@ -180,6 +185,7 @@ extern "C" {
 svn_error_t *svn_wc__entries_init (const char *path,
                                    const char *uuid,
                                    const char *url,
+                                   const char *repos,
                                    svn_revnum_t initial_rev,
                                    apr_pool_t *pool);
 
@@ -207,31 +213,32 @@ svn_error_t *svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
 /* The MODIFY_FLAGS that tell svn_wc__entry_modify which parameters to
    pay attention to.  ### These should track the changes made to the
    SVN_WC__ENTRY_ATTR_* #defines! */
-#define SVN_WC__ENTRY_MODIFY_REVISION      0x00000001
-#define SVN_WC__ENTRY_MODIFY_URL           0x00000002
-#define SVN_WC__ENTRY_MODIFY_KIND          0x00000004
-#define SVN_WC__ENTRY_MODIFY_TEXT_TIME     0x00000008
-#define SVN_WC__ENTRY_MODIFY_PROP_TIME     0x00000010
-#define SVN_WC__ENTRY_MODIFY_CHECKSUM      0x00000020
-#define SVN_WC__ENTRY_MODIFY_SCHEDULE      0x00000040
-#define SVN_WC__ENTRY_MODIFY_COPIED        0x00000080
-#define SVN_WC__ENTRY_MODIFY_DELETED       0x00000100
-#define SVN_WC__ENTRY_MODIFY_COPYFROM_URL  0x00000200
-#define SVN_WC__ENTRY_MODIFY_COPYFROM_REV  0x00000400
-#define SVN_WC__ENTRY_MODIFY_CONFLICT_OLD  0x00000800
-#define SVN_WC__ENTRY_MODIFY_CONFLICT_NEW  0x00001000
-#define SVN_WC__ENTRY_MODIFY_CONFLICT_WRK  0x00002000
-#define SVN_WC__ENTRY_MODIFY_PREJFILE      0x00004000
-#define SVN_WC__ENTRY_MODIFY_CMT_REV       0x00008000
-#define SVN_WC__ENTRY_MODIFY_CMT_DATE      0x00010000
-#define SVN_WC__ENTRY_MODIFY_CMT_AUTHOR    0x00020000
-#define SVN_WC__ENTRY_MODIFY_UUID          0x00040000
-#define SVN_WC__ENTRY_MODIFY_INCOMPLETE    0x00080000
-#define SVN_WC__ENTRY_MODIFY_ABSENT        0x00100000
-#define SVN_WC__ENTRY_MODIFY_LOCK_TOKEN    0x00200000
-#define SVN_WC__ENTRY_MODIFY_LOCK_OWNER    0x00400000
-#define SVN_WC__ENTRY_MODIFY_LOCK_COMMENT  0x00800000
-#define SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE 0x01000000
+#define SVN_WC__ENTRY_MODIFY_REVISION           0x00000001
+#define SVN_WC__ENTRY_MODIFY_URL                0x00000002
+#define SVN_WC__ENTRY_MODIFY_REPOS              0x00000004
+#define SVN_WC__ENTRY_MODIFY_KIND               0x00000008
+#define SVN_WC__ENTRY_MODIFY_TEXT_TIME          0x00000010
+#define SVN_WC__ENTRY_MODIFY_PROP_TIME          0x00000020
+#define SVN_WC__ENTRY_MODIFY_CHECKSUM           0x00000040
+#define SVN_WC__ENTRY_MODIFY_SCHEDULE           0x00000080
+#define SVN_WC__ENTRY_MODIFY_COPIED             0x00000100
+#define SVN_WC__ENTRY_MODIFY_DELETED            0x00000200
+#define SVN_WC__ENTRY_MODIFY_COPYFROM_URL       0x00000400
+#define SVN_WC__ENTRY_MODIFY_COPYFROM_REV       0x00000800
+#define SVN_WC__ENTRY_MODIFY_CONFLICT_OLD       0x00001000
+#define SVN_WC__ENTRY_MODIFY_CONFLICT_NEW       0x00002000
+#define SVN_WC__ENTRY_MODIFY_CONFLICT_WRK       0x00004000
+#define SVN_WC__ENTRY_MODIFY_PREJFILE           0x00008000
+#define SVN_WC__ENTRY_MODIFY_CMT_REV            0x00010000
+#define SVN_WC__ENTRY_MODIFY_CMT_DATE           0x00020000
+#define SVN_WC__ENTRY_MODIFY_CMT_AUTHOR         0x00040000
+#define SVN_WC__ENTRY_MODIFY_UUID               0x00080000
+#define SVN_WC__ENTRY_MODIFY_INCOMPLETE         0x00100000
+#define SVN_WC__ENTRY_MODIFY_ABSENT             0x00200000
+#define SVN_WC__ENTRY_MODIFY_LOCK_TOKEN         0x00400000
+#define SVN_WC__ENTRY_MODIFY_LOCK_OWNER         0x00800000
+#define SVN_WC__ENTRY_MODIFY_LOCK_COMMENT       0x01000000
+#define SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE 0x02000000
 
 
 /* ...or perhaps this to mean all of those above... */
@@ -279,6 +286,9 @@ void svn_wc__entry_remove (apr_hash_t *entries, const char *name);
 /* Tweak the entry NAME within hash ENTRIES.  If NEW_URL is non-null,
  * make this the entry's new url.  If NEW_REV is valid, make this the
  * entry's working revision.  (This is purely an in-memory operation.)
+ * If REPOS is non-NULL, set the repository root on the entry to REPOS,
+ * provided it is a prefix of the entry's URL (and if it is the THIS_DIR
+ * entry, all child URLs also match.)
  * If ALLOW_REMOVAL is TRUE the tweaks might cause the entry NAME to
  * be removed from the hash, if ALLOW_REMOVAL is FALSE this will not
  * happen.
@@ -293,6 +303,7 @@ svn_error_t *
 svn_wc__tweak_entry (apr_hash_t *entries,
                      const char *name,
                      const char *new_url,
+                     const char *repos,
                      svn_revnum_t new_rev,
                      svn_boolean_t allow_removal,
                      svn_boolean_t *write_required,

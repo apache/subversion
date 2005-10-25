@@ -337,6 +337,35 @@ svn_error_t *svn_wc_locked (svn_boolean_t *locked,
                             apr_pool_t *pool);
 
 
+/**
+ * Return @c TRUE if @a name is the name of the WC administrative
+ * directory.  Use @a pool for any temporary allocations.
+ *
+ * For compatibility, the default name (.svn) will always be treated
+ * as an admin dir name, even if the working copy is actually using an
+ * alternative name.
+ *
+ * @since New in 1.3.
+ */
+svn_boolean_t svn_wc_is_adm_dir (const char *name, apr_pool_t *pool);
+
+
+/**
+ * Use @a name for the administrative directory in the working copy.
+ * Use @a pool for any temporary allocations.
+ *
+ * The list of valid names is limited.  Currently only ".svn" (the
+ * default) and "_svn" are allowed.
+ *
+ * @note This function changes global (per-process) state and should,
+ * to maintain consistency, be called in a single-threaded context
+ * during the initialization of a Subversion client.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *svn_wc_set_adm_dir (const char *name, apr_pool_t *pool);
+
+
 
 /** Traversal information is information gathered by a working copy
  * crawl or update.  For example, the before and after values of the
@@ -1023,6 +1052,8 @@ svn_error_t *svn_wc_props_modified_p (svn_boolean_t *modified_p,
  * who knew the adm subdir's name).  However, import wants to protect
  * against importing administrative subdirs, so now the name is a
  * matter of public record.
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 #define SVN_WC_ADM_DIR_NAME  "\x2e\x73\x76\x6e" /* ".svn" */
 
@@ -1067,7 +1098,7 @@ typedef struct svn_wc_entry_t
   /** url in repository */
   const char *url;
 
-  /** canonical repository URL */
+  /** canonical repository URL or NULL if not known */
   const char *repos;
 
   /** repository uuid */
@@ -1335,7 +1366,9 @@ svn_error_t *svn_wc_mark_missing_deleted (const char *path,
 
 /** Ensure that an administrative area exists for @a path, so that @a
  * path is a working copy subdir based on @a url at @a revision, and
- * with repository UUID @a uuid.  @a uuid may be @c NULL.
+ * with repository UUID @a uuid and repository root URL @a repos.
+ * @a uuid and @a repos may be @c NULL.  If non-@c NULL, @a repos must be a
+ * prefix of @a url.
  *
  * If the administrative area does not exist, then create it and
  * initialize it to an unlocked state.
@@ -1348,6 +1381,20 @@ svn_error_t *svn_wc_mark_missing_deleted (const char *path,
  *
  * Do not ensure existence of @a path itself; if @a path does not
  * exist, return error.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *svn_wc_ensure_adm2 (const char *path,
+                                 const char *uuid,
+                                 const char *url,
+                                 const char *repos,
+                                 svn_revnum_t revision,
+                                 apr_pool_t *pool);
+
+
+/** Similar to svn_wc_ensure_adm2(), but with @a repos set to @c NULL.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.2 API.
  */
 svn_error_t *svn_wc_ensure_adm (const char *path,
                                 const char *uuid,
@@ -1355,6 +1402,27 @@ svn_error_t *svn_wc_ensure_adm (const char *path,
                                 svn_revnum_t revision,
                                 apr_pool_t *pool);
 
+
+/** Set the repository root URL of @a path to @a repos, if possible.
+ *
+ * @a adm_access must contain @a path and be write-locked, if @a path
+ * is versioned.  Return no error if path is missing or unversioned.
+ * Use @a pool for temporary allocations.
+ *
+ * @note In some circumstances, the repository root can't be set
+ * without making the working copy corrupt.  In such cases, this
+ * function just returns no error, without modifying the @a path entry.
+ *
+ * @note This function exists to make it possible to try to set the repository
+ * root in old working copies; new working copies normally get this set at
+ * creation time.
+ * 
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_wc_maybe_set_repos_root (svn_wc_adm_access_t *adm_access,
+                             const char *path, const char *repos,
+                             apr_pool_t *pool);
 
 
 /** 
@@ -1396,7 +1464,7 @@ enum svn_wc_status_kind
     /** is not a versioned thing in this wc */
     svn_wc_status_unversioned,
 
-    /** exists, but uninteresting. */
+    /** exists, but uninteresting */
     svn_wc_status_normal,
 
     /** is scheduled for addition */
@@ -1426,10 +1494,10 @@ enum svn_wc_status_kind
     /** an unversioned resource is in the way of the versioned resource */
     svn_wc_status_obstructed,
 
-    /** an unversioned path populated by an svn:external property */
+    /** an unversioned path populated by an svn:externals property */
     svn_wc_status_external,
 
-    /** a directory doesn't contain a complete entries list  */
+    /** a directory doesn't contain a complete entries list */
     svn_wc_status_incomplete
 };
 
@@ -1484,7 +1552,7 @@ typedef struct svn_wc_status2_t
 
 
 /**
- * Same as svn_wc_status2_t, but without the svn_lock_t 'repos_lock' field.
+ * Same as @c svn_wc_status2_t, but without the svn_lock_t 'repos_lock' field.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
@@ -1542,8 +1610,7 @@ svn_wc_status_t *svn_wc_dup_status (svn_wc_status_t *orig_stat,
 
 
 /**
- * Fill @a *status for @a path, allocating in @a pool, with the exception 
- * of the @c repos_rev field, which is normally filled in by the caller.
+ * Fill @a *status for @a path, allocating in @a pool.
  * @a adm_access must be an access baton for @a path.
  *
  * Here are some things to note about the returned structure.  A quick
@@ -1629,9 +1696,7 @@ typedef void (*svn_wc_status_func_t) (void *baton,
  *
  * If the editor driver calls @a editor's set_target_revision() vtable
  * function, then when the edit drive is completed, @a *edit_revision
- * will contain the revision delivered via that interface, and any
- * status items reported during the drive will have their @c repos_rev
- * field set to this same revision.
+ * will contain the revision delivered via that interface.
  *
  * @a config is a hash mapping @c SVN_CONFIG_CATEGORY's to @c
  * svn_config_t's.
@@ -1953,7 +2018,7 @@ svn_error_t *svn_wc_add_repos_file (const char *dst_path,
  * SVN_ERR_WC_LEFT_LOCAL_MOD the instant a locally modified file is
  * encountered.  Otherwise, leave locally modified files in place and
  * return the error only after all the recursion is complete.
-
+ *
  * If @a cancel_func is non-null, call it with @a cancel_baton at
  * various points during the removal.  If it returns an error
  * (typically @c SVN_ERR_CANCELLED), return that error immediately.
@@ -2309,7 +2374,7 @@ svn_error_t *svn_wc_get_switch_editor2 (svn_revnum_t *target_revision,
  * Similar to svn_wc_get_switch_editor2(), but takes an
  * @c svn_wc_notify_func_t instead.
  *
- * @deprecated Provided for backward compatibility with the 1.2 API.
+ * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 svn_error_t *svn_wc_get_switch_editor (svn_revnum_t *target_revision,
                                        svn_wc_adm_access_t *anchor,
@@ -2693,9 +2758,11 @@ svn_error_t *svn_wc_merge (const char *left,
                            apr_pool_t *pool);
 
 
-/** Given a @a path under version control, merge an array of @a propchanges
- * into the path's existing properties.  @a propchanges is an array of
- * @c svn_prop_t objects.  @a adm_access is an access baton for the directory
+/** Given a @a path under version control, merge an array of @a
+ * propchanges into the path's existing properties.  @a propchanges is
+ * an array of @c svn_prop_t objects, and @a baseprops is a hash
+ * representing the original set of properties that @a propchanges is
+ * working against.  @a adm_access is an access baton for the directory
  * containing @a path.
  *
  * If @a base_merge is @c FALSE only the working properties will be changed,
@@ -2712,6 +2779,28 @@ svn_error_t *svn_wc_merge (const char *left,
  *
  * If @a path is not under version control, return the error
  * SVN_ERR_UNVERSIONED_RESOURCE and don't touch anyone's properties.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *
+svn_wc_merge_props (svn_wc_notify_state_t *state,
+                    const char *path,
+                    svn_wc_adm_access_t *adm_access,
+                    apr_hash_t *baseprops,
+                    const apr_array_header_t *propchanges,
+                    svn_boolean_t base_merge,
+                    svn_boolean_t dry_run,
+                    apr_pool_t *pool);
+
+
+/** 
+ * Similar to svn_wc_merge_props(), but no baseprops are given.
+ * Instead, it's assumed that the incoming propchanges are based
+ * against the working copy's own baseprops.  While this assumption is
+ * correct for 'svn update', it's incorrect for 'svn merge', and can
+ * cause flawed behavior.  (See issue #2035.)
+ *
+ * @deprecated Provided for backward compatibility with the 1.2 API.
  */
 svn_error_t *
 svn_wc_merge_prop_diffs (svn_wc_notify_state_t *state,
@@ -2877,7 +2966,7 @@ svn_wc_create_tmp_file (apr_file_t **fp,
 
 
 
-/* Eol conversion and keyword expansion. */
+/* EOL conversion and keyword expansion. */
 
 /** Set @a *xlated_p to a path to a possibly translated copy of versioned
  * file @a vfile, or to @a vfile itself if no translation is necessary.
@@ -2973,6 +3062,18 @@ svn_error_t *svn_wc_transmit_prop_deltas (const char *path,
 svn_error_t *svn_wc_get_default_ignores (apr_array_header_t **patterns,
                                          apr_hash_t *config,
                                          apr_pool_t *pool);
+
+/** Get the list of ignore patterns from the @c svn_config_t's in the 
+ * @a config hash and the local ignore patterns from the directory
+ * in @a adm_access, and store them in @a *patterns.
+ * Allocate @a *patterns and its contents in @a pool.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *svn_wc_get_ignores (apr_array_header_t **patterns,
+                                 apr_hash_t *config,
+                                 svn_wc_adm_access_t *adm_access,
+                                 apr_pool_t *pool);
 
 
 /** Add @a lock to the working copy for @a path.  @a adm_access must contain

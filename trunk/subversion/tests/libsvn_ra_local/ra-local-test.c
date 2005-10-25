@@ -34,6 +34,8 @@
 #include "svn_delta.h"
 #include "svn_ra.h"
 #include "svn_client.h"
+#include "svn_utf.h"
+#include "svn_ebcdic.h"
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
@@ -62,11 +64,11 @@ current_directory_url (const char **url,
   SVN_ERR (svn_utf_cstring_to_utf8 (&utf8_ls_curdir, curdir, pool));
   utf8_is_curdir = svn_path_internal_style (utf8_ls_curdir, pool);
 
-  unencoded_url = apr_psprintf (pool, "file://%s%s%s%s",
-                                (utf8_is_curdir[0] != '/') ? "/" : "",
-                                utf8_is_curdir,
-                                (suffix[0] && suffix[0] != '/') ? "/" : "",
-                                suffix);
+  unencoded_url = APR_PSPRINTF2 (pool, "file://%s%s%s%s",
+                                 (utf8_is_curdir[0] != SVN_UTF8_FSLASH) ? SVN_UTF8_FSLASH_STR : "",
+                                 utf8_is_curdir,
+                                 (suffix[0] && suffix[0] != SVN_UTF8_FSLASH) ? SVN_UTF8_FSLASH_STR : "",
+                                 suffix);
 
   *url = svn_path_uri_encode (unencoded_url, pool);
 
@@ -90,6 +92,9 @@ make_and_open_local_repos (svn_ra_plugin_t **plugin,
   SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
 
   /* Get the plugin which handles "file:" URLs */
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   SVN_ERR (svn_ra_get_ra_library (plugin, ra_baton, "file:", pool));
 
   SVN_ERR (current_directory_url (&url, repos_name, pool));
@@ -114,9 +119,13 @@ open_ra_session (const char **msg,
 {
   svn_ra_plugin_t *plugin;
   void *session;
-
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "open an ra session to a local repository";
-
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   if (msg_only)
     return SVN_NO_ERROR;
 
@@ -138,8 +147,13 @@ get_youngest_rev (const char **msg,
   void *session;
   svn_revnum_t latest_rev;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "get the youngest revision in a repository";
-
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   if (msg_only)
     return SVN_NO_ERROR;
 
@@ -149,7 +163,9 @@ get_youngest_rev (const char **msg,
 
   /* Get the youngest revision and make sure it's 0. */
   SVN_ERR (plugin->get_latest_revnum (session, &latest_rev, pool));
-  
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if (latest_rev != 0)
       return svn_error_create (SVN_ERR_FS_GENERAL, NULL,
                                "youngest rev isn't 0!");
@@ -196,21 +212,39 @@ split_url_syntax (const char **msg,
      require a filesystem) */
 
   /* Use `blah' for scheme instead of `file' */
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   apr_err = try_split_url ("blah:///bin/svn", pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if (apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
        "svn_ra_local__split_URL failed to catch bad URL (scheme)");
 
   /* Use only single slash after scheme */
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   apr_err = try_split_url ("file:/path/to/repos", pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if (apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
        "svn_ra_local__split_URL failed to catch bad URL (slashes)");
 
   /* Use only a hostname, with no path */
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   apr_err = try_split_url ("file://hostname", pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if (apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
@@ -228,12 +262,17 @@ split_url_bad_host (const char **msg,
   apr_status_t apr_err;
 
   *msg = "svn_ra_local__split_URL: invalid host names";
-
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   if (msg_only)
     return SVN_NO_ERROR;
 
   /* Give a hostname other than `' or `localhost' */
   apr_err = try_split_url ("file://myhost/repos/path", pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if (apr_err != SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_create 
       (SVN_ERR_TEST_FAILED, NULL,
@@ -252,18 +291,27 @@ split_url_host (const char **msg,
 
   *msg = "svn_ra_local__split_URL: valid host names";
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   if (msg_only)
     return SVN_NO_ERROR;
 
   /* Make sure we *don't* fuss about a good URL (note that this URL
      still doesn't point to an existing versioned resource) */
   apr_err = try_split_url ("file:///repos/path", pool);
+
   if (apr_err == SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
        "svn_ra_local__split_URL cried foul about a good URL (no hostname)");
-
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   apr_err = try_split_url ("file://localhost/repos/path", pool);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if (apr_err == SVN_ERR_RA_ILLEGAL_URL)
     return svn_error_create
       (SVN_ERR_TEST_FAILED, NULL,
@@ -316,6 +364,9 @@ split_url_test (const char **msg,
 {
   *msg = "test svn_ra_local__split_URL correctness";
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   if (msg_only)
     return SVN_NO_ERROR;
 

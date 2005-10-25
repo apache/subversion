@@ -34,12 +34,16 @@
 #include <apr_file_io.h>
 #include <svn_wc.h>
 #include "svn_subst.h"
+#include "svn_utf.h"
 
 #include "../svn_test.h"
 
 
 /*** Helpers ***/
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 /* (Almost) all the tests share the same test data. */
 const char *lines[] =
   {
@@ -145,7 +149,9 @@ random_eol_marker (void)
      off the linecount on the output side, and fouls up substitute_and_verify.
   */
   const char *eol_markers[] = { "\n", "\r\n" };
-
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   if (! seeded)
     {
       srand (1729);  /* we want errors to be reproducible */
@@ -168,8 +174,11 @@ create_file (const char *fname, const char *eol_str, apr_pool_t *pool)
   apr_status_t apr_err;
   apr_file_t *f;
   apr_size_t i, j;
-
-  apr_err = apr_file_open (&f, fname,
+  const char *fname_native = fname;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(&fname_native, fname, pool));
+#endif
+  apr_err = apr_file_open (&f, fname_native,
                            (APR_WRITE | APR_CREATE | APR_EXCL | APR_BINARY),
                            APR_OS_DEFAULT, pool);
   if (apr_err)
@@ -179,13 +188,21 @@ create_file (const char *fname, const char *eol_str, apr_pool_t *pool)
     {
       const char *this_eol_str = eol_str ? eol_str : random_eol_marker ();
           
-      apr_err = apr_file_printf (f, lines[i]);
+      apr_err = apr_file_printf (f, "%s", lines[i]);
 
       /* Is it overly paranoid to use putc(), because of worry about
          fprintf() doing a newline conversion? */ 
       for (j = 0; this_eol_str[j]; j++)
         {
+#if !APR_CHARSET_EBCDIC
           apr_err = apr_file_putc (this_eol_str[j], f);
+#else
+          /* IBM's implmentation of apr_file_putc is broken and returns 1 even
+           * when apr_file_putc is successful.  Until this is fixed, the work
+           * around is to call apr_file_write for one byte. */
+          apr_size_t one_byte = 1;
+          apr_err = apr_file_write(f, this_eol_str + j, &one_byte);     
+#endif          
           if (apr_err)
             return svn_error_create (apr_err, NULL, fname);
         }
@@ -206,12 +223,15 @@ remove_file (const char *fname, apr_pool_t *pool)
 {
   apr_status_t apr_err;
   apr_finfo_t finfo;
-
-  if (apr_stat (&finfo, fname, APR_FINFO_TYPE, pool) == APR_SUCCESS)
+  const char *fname_native = fname;
+#if APR_CHARSET_EBCDIC
+  SVN_ERR (svn_utf_cstring_from_utf8(&fname_native, fname, pool));
+#endif
+  if (apr_stat (&finfo, fname_native, APR_FINFO_TYPE, pool) == APR_SUCCESS)
     {
       if (finfo.filetype == APR_REG)
         {
-          apr_err = apr_file_remove (fname, pool);
+          apr_err = apr_file_remove (fname_native, pool);
           if (apr_err)
             return svn_error_create (apr_err, NULL, fname);
         }
@@ -263,26 +283,62 @@ substitute_and_verify (const char *test_name,
 {
   svn_error_t *err;
   svn_stringbuf_t *contents;
-  svn_subst_keywords_t keywords;
+  apr_hash_t *keywords = apr_hash_make (pool);
   apr_size_t idx = 0;
   apr_size_t i;
   const char *expect[(sizeof (lines) / sizeof (*lines))];
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   const char *src_fname = apr_pstrcat (pool, test_name, ".src", NULL);
   const char *dst_fname = apr_pstrcat (pool, test_name, ".dst", NULL);
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
+  svn_string_t *val;
 
   /** Clean up from previous tests, set up src data, and convert. **/
   SVN_ERR (remove_file (src_fname, pool));
   SVN_ERR (remove_file (dst_fname, pool));
   SVN_ERR (create_file (src_fname, src_eol, pool));
 
-  keywords.revision = rev    ? svn_string_create (rev, pool)    : NULL;
-  keywords.date     = date   ? svn_string_create (date, pool)   : NULL;
-  keywords.author   = author ? svn_string_create (author, pool) : NULL;
-  keywords.url      = url    ? svn_string_create (url, pool)    : NULL;
-  keywords.id       = NULL;
+  if (rev)
+    {
+      val = svn_string_create (rev, pool);
+      apr_hash_set (keywords, SVN_KEYWORD_REVISION_LONG,
+                    APR_HASH_KEY_STRING, val);
+      apr_hash_set (keywords, SVN_KEYWORD_REVISION_MEDIUM,
+                    APR_HASH_KEY_STRING, val);
+      apr_hash_set (keywords, SVN_KEYWORD_REVISION_SHORT,
+                    APR_HASH_KEY_STRING, val);
+    }
+  if (date)
+    {
+      val = svn_string_create (date, pool);
+      apr_hash_set (keywords, SVN_KEYWORD_DATE_LONG,
+                    APR_HASH_KEY_STRING, val);
+      apr_hash_set (keywords, SVN_KEYWORD_DATE_SHORT,
+                    APR_HASH_KEY_STRING, val);
+    }
+  if (author)
+    {
+      val = svn_string_create (author, pool);
+      apr_hash_set (keywords, SVN_KEYWORD_AUTHOR_LONG,
+                    APR_HASH_KEY_STRING, val);
+      apr_hash_set (keywords, SVN_KEYWORD_AUTHOR_SHORT,
+                    APR_HASH_KEY_STRING, val);
+    }
+  if (url)
+    {
+      val = svn_string_create (url, pool);
+      apr_hash_set (keywords, SVN_KEYWORD_URL_LONG,
+                    APR_HASH_KEY_STRING, val);
+      apr_hash_set (keywords, SVN_KEYWORD_URL_SHORT,
+                    APR_HASH_KEY_STRING, val);
+    }
 
-  err = svn_subst_copy_and_translate (src_fname, dst_fname, dst_eol, repair,
-                                      &keywords, expand, pool);
+  err = svn_subst_copy_and_translate3 (src_fname, dst_fname, dst_eol, repair,
+                                       keywords, expand, FALSE, pool);
 
 
   /* Conversion should have failed, if src has mixed eol, and the
@@ -309,6 +365,7 @@ substitute_and_verify (const char *test_name,
       else
         {
           svn_error_clear (err);
+          SVN_ERR (remove_file (src_fname, pool));
           return SVN_NO_ERROR;
         }
 
@@ -327,6 +384,9 @@ substitute_and_verify (const char *test_name,
     {
       if (expand)
         {
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
           expect[3 - 1] =
             apr_pstrcat (pool, "Line 3: ",
                          "Valid $LastChangedRevision: ",
@@ -607,6 +667,9 @@ substitute_and_verify (const char *test_name,
                          NULL);
         }
     }
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   /* Else neither author nor date, so Line 24 remains unchanged. */
 
   /** Ready to verify. **/
@@ -643,6 +706,9 @@ substitute_and_verify (const char *test_name,
         }
       else  /* allow any eol style, even inconsistent ones, loosely */
         {
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
           while ((*(contents->data + idx) == '\r')
                  || (*(contents->data + idx) == '\n'))
             idx++;
@@ -664,7 +730,13 @@ noop (const char **msg,
       svn_test_opts_t *opts,
       apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "no conversions";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -695,7 +767,13 @@ crlf_to_crlf (const char **msg,
               svn_test_opts_t *opts,
               apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "convert CRLF to CRLF";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -714,7 +792,13 @@ lf_to_crlf (const char **msg,
             svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "convert LF to CRLF";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -732,7 +816,13 @@ cr_to_crlf (const char **msg,
             svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "convert CR to CRLF";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -750,7 +840,13 @@ mixed_to_crlf (const char **msg,
                svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "convert mixed line endings to CRLF";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -769,7 +865,13 @@ lf_to_lf (const char **msg,
           svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "convert LF to LF";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -787,7 +889,13 @@ crlf_to_lf (const char **msg,
             svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "convert CRLF to LF";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -805,7 +913,13 @@ cr_to_lf (const char **msg,
           svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "convert CR to LF";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -823,7 +937,13 @@ mixed_to_lf (const char **msg,
              svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "convert mixed line endings to LF";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -841,7 +961,13 @@ crlf_to_cr (const char **msg,
             svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "convert CRLF to CR";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -859,7 +985,13 @@ lf_to_cr (const char **msg,
           svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "convert LF to CR";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -877,7 +1009,13 @@ cr_to_cr (const char **msg,
           svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "convert CR to CR";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -895,7 +1033,13 @@ mixed_to_cr (const char **msg,
              svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "convert mixed line endings to CR";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -913,7 +1057,13 @@ mixed_no_repair (const char **msg,
                  svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "keep mixed line endings without repair flag";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -939,7 +1089,13 @@ expand_author (const char **msg,
                svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "expand author";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -960,7 +1116,13 @@ expand_date (const char **msg,
              svn_test_opts_t *opts,
              apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "expand date";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -983,7 +1145,13 @@ expand_author_date (const char **msg,
                     svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "expand author and date";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1006,7 +1174,13 @@ expand_author_rev (const char **msg,
                    svn_test_opts_t *opts,
                    apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "expand author and rev";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1029,7 +1203,13 @@ expand_rev (const char **msg,
             svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "expand rev";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1052,7 +1232,13 @@ expand_rev_url (const char **msg,
                 svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "expand rev and url";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1075,7 +1261,13 @@ expand_author_date_rev_url (const char **msg,
                             svn_test_opts_t *opts,
                             apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "expand author, date, rev, and url";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1109,7 +1301,13 @@ lf_to_crlf_expand_author (const char **msg,
                           svn_test_opts_t *opts,
                           apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "lf_to_crlf; expand author";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1128,7 +1326,13 @@ mixed_to_lf_expand_author_date (const char **msg,
                                 svn_test_opts_t *opts,
                                 apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "mixed_to_lf; expand author and date";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1147,7 +1351,13 @@ crlf_to_cr_expand_author_rev (const char **msg,
                               svn_test_opts_t *opts,
                               apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "crlf_to_cr; expand author and rev";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1166,7 +1376,13 @@ cr_to_crlf_expand_rev (const char **msg,
                        svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "cr_to_crlf; expand rev";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1185,7 +1401,13 @@ cr_to_crlf_expand_rev_url (const char **msg,
                            svn_test_opts_t *opts,
                            apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "cr_to_crlf; expand rev and url";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1204,7 +1426,13 @@ mixed_to_crlf_expand_author_date_rev_url (const char **msg,
                                           svn_test_opts_t *opts,
                                           apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "mixed_to_crlf; expand author, date, rev, and url";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1231,7 +1459,13 @@ unexpand_author (const char **msg,
                  svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "unexpand author";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1252,7 +1486,13 @@ unexpand_date (const char **msg,
                svn_test_opts_t *opts,
                apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "unexpand date";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1275,7 +1515,13 @@ unexpand_author_date (const char **msg,
                       svn_test_opts_t *opts,
                       apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "unexpand author and date";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1298,7 +1544,13 @@ unexpand_author_rev (const char **msg,
                      svn_test_opts_t *opts,
                      apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "unexpand author and rev";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1321,7 +1573,13 @@ unexpand_rev (const char **msg,
               svn_test_opts_t *opts,
               apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "unexpand rev";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1344,7 +1602,13 @@ unexpand_rev_url (const char **msg,
                   svn_test_opts_t *opts,
                   apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "unexpand rev and url";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1367,7 +1631,13 @@ unexpand_author_date_rev_url (const char **msg,
                               svn_test_opts_t *opts,
                               apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "unexpand author, date, rev, and url";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1401,7 +1671,13 @@ lf_to_crlf_unexpand_author (const char **msg,
                             svn_test_opts_t *opts,
                             apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "lf_to_crlf; unexpand author";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1420,7 +1696,13 @@ mixed_to_lf_unexpand_author_date (const char **msg,
                                   svn_test_opts_t *opts,
                                   apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "mixed_to_lf; unexpand author and date";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1439,7 +1721,13 @@ crlf_to_cr_unexpand_author_rev (const char **msg,
                                 svn_test_opts_t *opts,
                                 apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "crlf_to_cr; unexpand author and rev";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1458,7 +1746,13 @@ cr_to_crlf_unexpand_rev (const char **msg,
                          svn_test_opts_t *opts,
                          apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "cr_to_crlf; unexpand rev";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1477,7 +1771,13 @@ cr_to_crlf_unexpand_rev_url (const char **msg,
                              svn_test_opts_t *opts,
                              apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "cr_to_crlf; unexpand rev and url";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -1496,7 +1796,13 @@ mixed_to_crlf_unexpand_author_date_rev_url (const char **msg,
                                             svn_test_opts_t *opts,
                                             apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   *msg = "mixed_to_crlf; unexpand author, date, rev, url";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
 
   if (msg_only)
     return SVN_NO_ERROR;

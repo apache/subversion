@@ -65,6 +65,7 @@ typedef struct svn_fs_t svn_fs_t;
         "\x75\x74\x6f\x72\x65\x6d\x6f\x76\x65"
         /* "bdb-log-autoremove" */
 
+/* See also svn_fs_type(). */
 /** @since New in 1.1. */
 #define SVN_FS_CONFIG_FS_TYPE  "\x66\x73\x2d\x74\x79\x70\x65"  /* "fs-type" */
 /** @since New in 1.1. */
@@ -173,6 +174,24 @@ svn_error_t *svn_fs_create (svn_fs_t **fs_p, const char *path,
  */
 svn_error_t *svn_fs_open (svn_fs_t **fs_p, const char *path,
                           apr_hash_t *config, apr_pool_t *pool);
+
+/**
+ * Return, in @a *fs_type, a string identifying the back-end type of
+ * the Subversion filesystem located in @a path.  Allocate @a *fs_type
+ * in @a pool.
+ *
+ * The string should be equal to one of the @c SVN_FS_TYPE_* defined
+ * constants, unless the filesystem is a new back-end type added in
+ * a later version of Subversion.
+ *
+ * In general, the type should make no difference in the filesystem's
+ * semantics, but there are a few situations (such as backups) where
+ * it might matter.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *svn_fs_type (const char **fs_type, const char *path,
+                          apr_pool_t *pool);
 
 /**
  * Return the path to @a fs's repository, allocated in @a pool.
@@ -1073,6 +1092,26 @@ svn_error_t *svn_fs_copied_from (svn_revnum_t *rev_p,
                                  svn_fs_root_t *root,
                                  const char *path,
                                  apr_pool_t *pool);
+
+
+/* Set @a *root_p and @a *path_p to the revision root and path of the
+ * destination of the most recent copy event that caused @a path to
+ * exist where it does in @a root, or to null if no such copy exists.
+ * When non-null, allocate @a *root_p and @a *path_p in @a pool.
+ *
+ * @a *path_p might be a parent of @a path, rather than @a path
+ * itself.  However, it will always be the deepest relevant path.
+ * That is, if a copy occurs underneath another copy in the same txn,
+ * this function makes sure to set @a *path_p to the longest copy
+ * destination path that is still a parent of or equal to @a path.
+ *
+ * @since New in 1.3.
+ */
+svn_error_t *svn_fs_closest_copy (svn_fs_root_t **root_p,
+                                  const char **path_p,
+                                  svn_fs_root_t *root,
+                                  const char *path,
+                                  apr_pool_t *pool);
 
 
 /** Merge changes between two nodes into a third node.

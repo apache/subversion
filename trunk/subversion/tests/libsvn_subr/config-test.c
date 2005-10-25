@@ -30,6 +30,8 @@
 
 #include "svn_error.h"
 #include "svn_config.h"
+#include "svn_utf.h"
+#include "svn_ebcdic.h"
 
 #include "../svn_test.h"
 
@@ -59,6 +61,9 @@ static svn_error_t *init_params (apr_pool_t *pool)
         {
         case 'S':
           srcdir = opt_arg;
+#if APR_CHARSET_EBCDIC
+          SVN_ERR(svn_utf_cstring_to_utf8(&srcdir, srcdir, pool));
+#endif 
           break;
         }
     }
@@ -76,15 +81,20 @@ fail (apr_pool_t *pool, const char *fmt, ...)
 {
   va_list ap;
   char *msg;
-
+#if APR_CHARSET_EBCDIC
+  SVN_ERR(svn_utf_cstring_from_utf8(&fmt, fmt, pool));
+#endif 
   va_start(ap, fmt);
-  msg = apr_pvsprintf(pool, fmt, ap);
+  msg = APR_PVSPRINTF2(pool, fmt, ap);
   va_end(ap);
 
   return svn_error_create (SVN_ERR_TEST_FAILED, 0, msg);
 }
 
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
 static const char *config_keys[] = { "foo", "a", "b", "c", "d", "e", "f", "g",
                                      "h", "i", NULL };
 static const char *config_values[] = { "bar", "Aa", "100", "bar",
@@ -103,7 +113,13 @@ test1 (const char **msg,
   int i;
   const char *cfg_file;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
   *msg = "test svn_config";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
 
   if (msg_only)
     return SVN_NO_ERROR;
@@ -129,8 +145,7 @@ test1 (const char **msg,
 #endif
       /* Fail iff one value is null, or the strings don't match. */
       if ((c_val == NULL) != (py_val == NULL)
-          || (c_val != NULL && py_val != NULL
-              && apr_strnatcmp(c_val, py_val) != 0))
+          || (c_val != NULL && py_val != NULL && strcmp(c_val, py_val) != 0))
         return fail(pool, "Expected value '%s' not equal to '%s' for "
                     "option '%s'", py_val, c_val, key);
     }
@@ -153,7 +168,13 @@ test2 (const char **msg,
   int i;
   const char *cfg_file;
 
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
   *msg = "test svn_config boolean conversion";
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
 
   if (msg_only)
     return SVN_NO_ERROR;

@@ -56,6 +56,9 @@ utf_validate (const char **msg,
               svn_test_opts_t *opts,
               apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   struct data {
     svn_boolean_t valid;
     char string[20];
@@ -144,6 +147,10 @@ utf_validate (const char **msg,
 
     {-1},
   };
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
+
   int i = 0;
 
   *msg = "test is_valid/last_valid";

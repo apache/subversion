@@ -35,6 +35,9 @@ test_parse_peg_rev (const char **msg,
       const char *path; /* NULL means an error is expected. */
       svn_opt_revision_t peg;
   } const tests[] = {
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
     { "foo/bar",              "foo/bar",      {svn_opt_revision_unspecified} },
     { "foo/bar@13",           "foo/bar",      {svn_opt_revision_number, {13}} },
     { "foo/bar@HEAD",         "foo/bar",      {svn_opt_revision_head} },
@@ -43,12 +46,15 @@ test_parse_peg_rev (const char **msg,
     { "http://a/b@COMMITTED", "http://a/b",   {svn_opt_revision_committed} },
     { "foo/bar@1:2",          NULL,           {svn_opt_revision_unspecified} },
     { "foo/bar@baz",          NULL,           {svn_opt_revision_unspecified} },
-    { "foo/bar@",             NULL,           {svn_opt_revision_unspecified} },
+    { "foo/bar@",             "foo/bar",      {svn_opt_revision_base} },
     { "foo/bar/@13",          "foo/bar",      {svn_opt_revision_number, {13}} },
     { "foo/bar@@13",          "foo/bar@",     {svn_opt_revision_number, {13}} },
     { "foo/@bar@HEAD",        "foo/@bar",     {svn_opt_revision_head} },
     { "foo@/bar",             "foo@/bar",     {svn_opt_revision_unspecified} },
     { "foo@HEAD/bar",         "foo@HEAD/bar", {svn_opt_revision_unspecified} },
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
   };
 
   *msg = "test svn_opt_parse_path";
@@ -83,7 +89,13 @@ test_parse_peg_rev (const char **msg,
             return svn_error_createf
               (SVN_ERR_TEST_FAILED, NULL,
                "svn_opt_parse_path ('%s') returned '%s' instead of '%s'", tests[i].input,
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif 
                path ? path : "NULL", tests[i].path ? tests[i].path : "NULL");
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif 
         }
     }
   

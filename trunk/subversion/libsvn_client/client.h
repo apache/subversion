@@ -150,16 +150,19 @@ svn_client__repos_locations (const char **start_url,
 
 
 /* Given PATH_OR_URL, which contains either a working copy path or an
-   absolute url, a peg revision PEG_REVISON, and a desired revision
+   absolute URL, a peg revision PEG_REVISION, and a desired revision
    REVISION, create an RA connection to that object as it exists in
    that revision, following copy history if necessary.  If REVISION is
    younger than PEG_REVISION, then PATH_OR_URL will be checked to see
-   that it is the same node in both PEG_REVISION and REVISON.  If it
+   that it is the same node in both PEG_REVISION and REVISION.  If it
    is not, then @c SVN_ERR_CLIENT_UNRELATED_RESOURCES is returned.
+
+   If PEG_REVISION's kind is svn_opt_revision_unspecified, it is
+   interpreted as "head" for a URL or "working" for a working-copy path.
 
    Store the resulting ra_session in *RA_SESSION_P.  Store the actual
    revision number of the object in *REV_P, and the final resulting
-   url in *URL_P.
+   URL in *URL_P.
 
    Use authentication baton cached in CTX to authenticate against the
    repository.
@@ -191,7 +194,7 @@ typedef struct
   const char *base_dir;
   svn_wc_adm_access_t *base_access;
 
-  /* An array of svn_client_commit_item_t * structures, present only
+  /* An array of svn_client_commit_item2_t * structures, present only
      during working copy commits. */
   apr_array_header_t *commit_items;
 
@@ -249,7 +252,7 @@ svn_client__open_ra_session_internal (svn_ra_session_t **ra_session,
 
 /* Get the commit_baton to be used in couple with commit_callback. */
 svn_error_t *svn_client__commit_get_baton (void **baton,
-                                           svn_client_commit_info_t **info,
+                                           svn_commit_info_t **info,
                                            apr_pool_t *pool);
 
 /* The commit_callback function for storing svn_client_commit_info_t
@@ -636,6 +639,16 @@ svn_client__do_external_status (svn_wc_traversal_info_t *traversal_info,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *pool);
 
+
+
+/* Retrieves log message using *CTX->log_msg_func or
+ * *CTX->log_msg_func2 callbacks.
+ * Other argements same as svn_client_get_commit_log2_t */
+svn_error_t * svn_client__get_log_msg(const char **log_msg,
+                                      const char **tmp_file,
+                                      const apr_array_header_t *commit_items,
+                                      svn_client_ctx_t *ctx,
+                                      apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

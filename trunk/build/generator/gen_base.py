@@ -9,6 +9,7 @@ import glob
 import re
 import fileinput
 import ConfigParser
+import generator.swig
 
 import getversion
 
@@ -38,6 +39,8 @@ class GeneratorBase:
     parser = ConfigParser.ConfigParser()
     parser.read(fname)
 
+    self.conf = build_path(os.path.abspath(fname))
+
     self.sections = { }
     self.graph = DependencyGraph()
 
@@ -52,6 +55,8 @@ class GeneratorBase:
     # Read in the global options
     self.includes = \
         _collect_paths(parser.get('options', 'includes'))
+    self.swig_includes = \
+        _collect_paths(parser.get('options', 'swig-includes'))
     self.apache_files = \
         _collect_paths(parser.get('options', 'static-apache-files'))
     self.scripts = \
@@ -59,8 +64,15 @@ class GeneratorBase:
     self.bdb_scripts = \
         _collect_paths(parser.get('options', 'bdb-test-scripts'))
 
+    self.include_dirs = parser.get('options','include-dirs')
+    self.swig_include_dirs = parser.get('options','swig-include-dirs')
+    self.include_wildcards = \
+      string.split(parser.get('options', 'include-wildcards'))
     self.swig_lang = string.split(parser.get('options', 'swig-languages'))
     self.swig_dirs = string.split(parser.get('options', 'swig-dirs'))
+
+    # SWIG Generator
+    self.swig = generator.swig.Generator(self.conf, "swig")
 
     # Visual C++ projects - contents are either TargetProject instances,
     # or other targets with an external-project attribute.
@@ -121,13 +133,19 @@ class GeneratorBase:
             self.graph.bulk_add(dep_type, target.name,
                                 dep_section.get_dep_targets(target))
 
-  def compute_hdr_deps(self):
-    all_includes = map(native_path, self.includes)
+  def compute_hdrs(self):
+    """Get a list of the header files"""
+    all_includes = map(native_path, self.includes + self.swig_includes)
     for d in unique(self.target_dirs):
-      hdrs = glob.glob(os.path.join(native_path(d), '*.h'))
-      all_includes.extend(hdrs)
+      for wildcard in self.include_wildcards:
+        hdrs = glob.glob(os.path.join(native_path(d), wildcard))
+        all_includes.extend(hdrs)
+    return all_includes
+  
+  def compute_hdr_deps(self):
+    """Compute the dependencies of each header file"""
 
-    include_deps = IncludeDependencyInfo(all_includes)
+    include_deps = IncludeDependencyInfo(self.compute_hdrs())
 
     for objectfile, sources in self.graph.get_deps(DT_OBJECT):
       assert len(sources) == 1
@@ -485,6 +503,9 @@ class TargetSWIG(TargetLib):
     self.link_cmd = '$(LINK_%s_WRAPPER)' % string.upper(lang_abbrev[lang])
 
   def add_dependencies(self):
+    # Look in source directory for dependencies
+    self.gen_obj.target_dirs.append(self.path)
+
     sources = _collect_paths(self.sources, self.path)
     assert len(sources) == 1  ### simple assertions for now
 
@@ -509,6 +530,8 @@ class TargetSWIG(TargetLib):
 
     self.name = self.lang + '_' + module_name
     self.path = build_path_join(self.path, self.lang)
+    if self.lang == "perl":
+      self.path = build_path_join(self.path, "native")
     self.filename = build_path_join(self.path, lib_filename)
 
     ifile = SWIGSource(ipath)
@@ -882,7 +905,7 @@ class IncludeDependencyInfo:
       hdrs.update(self._deps[h])
     return (len(keys) != len(hdrs))
 
-  _re_include = re.compile(r'^#\s*include\s*[<"]([^<"]+)[>"]')
+  _re_include = re.compile(r'^\s*[#%]\s*(?:include|import)\s*[<"]?([^<">;\s]+)')
   def _scan_for_includes(self, fname):
     """Scan C source file FNAME and return the basenames of any headers
     which are directly included, and within the set defined when this
@@ -896,6 +919,8 @@ class IncludeDependencyInfo:
       if match:
         include_param = native_path(match.group(1))
         bname = os.path.basename(include_param)
+        if not self._domain.has_key(bname):
+          bname = string.replace(bname, "_h.swg", ".h")
         if self._domain.has_key(bname):
           include_fnames = self._domain[bname]
           if len(include_fnames) == 1:

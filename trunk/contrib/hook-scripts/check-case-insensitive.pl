@@ -13,6 +13,13 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
+
+# This script is deprecated, please use check-case-insensitve.py instead.
+
 use strict;
 require 5.004; # This is when locale support was added.
 # This 'use encoding' and setting the LANG environment variable has the
@@ -238,13 +245,19 @@ close SVNLOOK;
 
 my $failmsg;
 
+my %newtree;
 foreach my $newfile (@added) {
   print STDERR "Checking \$tree{lc($newfile)}\n" if ($debug > 1);
   # Without the following line it gets the lc() wrong.
   my $junk = "x$newfile";
-  if (exists($tree{lc($newfile)})) {
+  my $lcnewfile = lc($newfile);
+  if (exists($tree{$lcnewfile})) {
     $failmsg .= "\n  $newfile already exists as " . $tree{lc($newfile)};
   }
+  elsif (exists($newtree{$lcnewfile})) {
+    $failmsg .= "\n  $newfile also added as " . $newtree{lc($newfile)};
+  }
+  $newtree{$lcnewfile} = $newfile;
 }
 if (defined($failmsg)) {
   print STDERR "\nFile name case conflict found:\n" . $failmsg . "\n";

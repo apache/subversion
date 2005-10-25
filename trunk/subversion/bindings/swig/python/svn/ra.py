@@ -17,7 +17,7 @@
 ######################################################################
 
 from libsvn.ra import *
-from core import _unprefix_names
+from svn.core import _unprefix_names
 _unprefix_names(locals(), 'svn_ra_')
 _unprefix_names(locals(), 'SVN_RA_')
 del _unprefix_names

@@ -23,6 +23,7 @@
 #include "svn_fs.h"
 #include "svn_path.h"
 #include "svn_delta.h"
+#include "svn_utf.h"
 
 #include "svn_test.h"
 #include "svn_test_fs.h"
@@ -65,7 +66,7 @@ make_fs_config (const char *fs_type,
 {
   apr_hash_t *fs_config = apr_hash_make (pool);
   apr_hash_set (fs_config, SVN_FS_CONFIG_BDB_TXN_NOSYNC,
-                APR_HASH_KEY_STRING, "1");
+                APR_HASH_KEY_STRING, SVN_UTF8_1_STR);
   apr_hash_set (fs_config, SVN_FS_CONFIG_FS_TYPE,
                 APR_HASH_KEY_STRING,
                 fs_type);
@@ -356,10 +357,13 @@ svn_test__validate_tree (svn_fs_root_t *root,
                 corrupt_entries = svn_stringbuf_create ("", subpool);
 
               /* Append this entry name to the list of corrupt entries. */
-              svn_stringbuf_appendcstr (corrupt_entries, "   "); 
+              svn_stringbuf_appendcstr (corrupt_entries,
+                                        SVN_UTF8_SPACE_STR \
+                                        SVN_UTF8_SPACE_STR \
+                                        SVN_UTF8_SPACE_STR); 
               svn_stringbuf_appendbytes (corrupt_entries, (const char *)key,
                                          keylen);
-              svn_stringbuf_appendcstr (corrupt_entries, "\n"); 
+              svn_stringbuf_appendcstr (corrupt_entries, SVN_UTF8_NEWLINE_STR); 
             }
 
           apr_hash_set (tree_entries, key, keylen, NULL);
@@ -371,10 +375,13 @@ svn_test__validate_tree (svn_fs_root_t *root,
             missing_entries = svn_stringbuf_create ("", subpool);
 
           /* Append this entry name to the list of missing entries. */
-          svn_stringbuf_appendcstr (missing_entries, "   "); 
+          svn_stringbuf_appendcstr (missing_entries,
+                                    SVN_UTF8_SPACE_STR \
+                                    SVN_UTF8_SPACE_STR \
+                                    SVN_UTF8_SPACE_STR); 
           svn_stringbuf_appendbytes (missing_entries, (const char *)key,
                                      keylen);
-          svn_stringbuf_appendcstr (missing_entries, "\n"); 
+          svn_stringbuf_appendcstr (missing_entries, SVN_UTF8_NEWLINE_STR); 
         } 
     }
 
@@ -395,9 +402,12 @@ svn_test__validate_tree (svn_fs_root_t *root,
         extra_entries = svn_stringbuf_create ("", subpool);
       
       /* Append this entry name to the list of missing entries. */
-      svn_stringbuf_appendcstr (extra_entries, "   "); 
+      svn_stringbuf_appendcstr (extra_entries,
+                                SVN_UTF8_SPACE_STR \
+                                SVN_UTF8_SPACE_STR \
+                                SVN_UTF8_SPACE_STR); 
       svn_stringbuf_appendbytes (extra_entries, (const char *)key, keylen);
-      svn_stringbuf_appendcstr (extra_entries, "\n"); 
+      svn_stringbuf_appendcstr (extra_entries, SVN_UTF8_NEWLINE_STR); 
     }
 
   if (missing_entries || extra_entries || corrupt_entries)
@@ -437,7 +447,7 @@ svn_test__txn_script_exec (svn_fs_root_t *txn_root,
  
       switch (cmd)
         {
-        case 'a':
+        case SVN_UTF8_a:
           if (is_dir)
             {
               SVN_ERR (svn_fs_make_dir (txn_root, path, pool));
@@ -450,7 +460,7 @@ svn_test__txn_script_exec (svn_fs_root_t *txn_root,
             }
           break;
 
-        case 'c':
+        case SVN_UTF8_c:
           {
             svn_revnum_t youngest;
             svn_fs_root_t *rev_root;
@@ -462,11 +472,11 @@ svn_test__txn_script_exec (svn_fs_root_t *txn_root,
           }
           break;
 
-        case 'd':
+        case SVN_UTF8_d:
           SVN_ERR (svn_fs_delete (txn_root, path, pool));
           break;
 
-        case 'e':
+        case SVN_UTF8_e:
           if (! is_dir)
             {
               SVN_ERR (svn_test__set_file_contents (txn_root, path, 
@@ -494,6 +504,9 @@ svn_test__check_greek_tree (svn_fs_root_t *root,
 
   const char *file_contents[12][2] =
   {
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
     { "iota", "This is the file 'iota'.\n" },
     { "A/mu", "This is the file 'mu'.\n" },
     { "A/B/lambda", "This is the file 'lambda'.\n" },
@@ -506,6 +519,9 @@ svn_test__check_greek_tree (svn_fs_root_t *root,
     { "A/D/H/chi", "This is the file 'chi'.\n" },
     { "A/D/H/psi", "This is the file 'psi'.\n" },
     { "A/D/H/omega", "This is the file 'omega'.\n" }
+#if APR_CHARSET_EBCDIC
+#pragma convert(37)
+#endif
   };
 
   /* Loop through the list of files, checking for matching content. */
@@ -529,6 +545,9 @@ svn_error_t *
 svn_test__create_greek_tree (svn_fs_root_t *txn_root,
                              apr_pool_t *pool)
 {
+#if APR_CHARSET_EBCDIC
+#pragma convert(1208)
+#endif
   SVN_ERR (svn_fs_make_file (txn_root, "iota", pool));
   SVN_ERR (svn_test__set_file_contents 
            (txn_root, "iota", "This is the file 'iota'.\n", pool));

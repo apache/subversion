@@ -225,10 +225,12 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
              'perl/site/lib/SVN': FileGlob('%(bindsrc)s/swig/perl/native/*.pm'),
              'perl/site/lib/auto': None,
              'perl/site/lib/auto/SVN': None,
-             # Pearl module DLLs defined below
+             # Perl module DLLs defined below
 
              'python': None,
-             'python/libsvn': (FileGlob('%(bindsrc)s/swig/python/*.py'),
+             'python/libsvn': (FileGlob('%(binddir)s/swig/python/libsvn_swig_py/*.dll'),
+                               FileGlob('%(binddir)s/swig/python/libsvn_swig_py/*.pdb'),
+                               FileGlob('%(bindsrc)s/swig/python/*.py'),
                                FileGlob('%(binddir)s/swig/python/*.dll'),
                                FileGlob('%(binddir)s/swig/python/*.pdb'),
                                ),
@@ -244,11 +246,11 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
              'share/locale': InstallMoFiles('%(svndir)s/po'),
              }
 
-# Define perl module DLLs
+# Define Perl module DLLs
 for module in ('Client', 'Core', 'Delta', 'Fs', 'Ra', 'Repos', 'Wc'):
   _disttree['perl/site/lib/auto/SVN/_' + module] = (
-    File('%(binddir)s/swig/perl/_' + module + '.dll'),
-    File('%(binddir)s/swig/perl/_' + module + '.pdb'))
+    File('%(binddir)s/swig/perl/native/_' + module + '.dll'),
+    File('%(binddir)s/swig/perl/native/_' + module + '.pdb'))
 
 def _system(command):
   def reopen_log():

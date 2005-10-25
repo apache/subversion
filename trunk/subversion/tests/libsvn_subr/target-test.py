@@ -72,7 +72,9 @@ def _run_test(cmdline):
   else:
     progname = './target-test'
 
-  infile, outfile, errfile = os.popen3(progname + ' ' + cmdline)
+#  infile, outfile, errfile = os.popen3(progname + ' ' + cmdline)
+  infile, outfile = os.pipe()
+  errfile = outfile 
   stdout_lines = outfile.readlines()
   stderr_lines = errfile.readlines()
 
