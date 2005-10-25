@@ -102,14 +102,6 @@ Approved changes:
        +1: kou (r16923 only)
        +0: jerenkrantz (too hacky; need a more portable solution)
 
-   * r16929
-     Fix parameter name in svn_wc_external_item_dup to be consistent with
-     documentation.
-     Justification:
-       Trivial fix.
-     Votes:
-       +1: djames, jerenkrantz, lundblad
- 
    * r16930
      Tweak Perl bindings to avoid use of goto in svn_txdelta_apply.
      Justification:
