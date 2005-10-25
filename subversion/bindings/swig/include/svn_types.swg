@@ -67,11 +67,7 @@
 %apply long *OUTPUT { svn_node_kind_t * };
 
 /* svn_config_get_server_setting_int() */
-#if APR_INT64_T_FMT == "ld"
-%apply long *OUTPUT { apr_int64_t * };
-#else
 %apply long long *OUTPUT { apr_int64_t * };
-#endif
 
 /* -----------------------------------------------------------------------
    Create a typemap for specifying string args that may be NULL.
@@ -209,17 +205,6 @@
 %typemap(ruby,in,numinputs=0) svn_filesize_t * (svn_filesize_t temp)
     "$1 = &temp;";
 
-/* We have to use APR_INT64_T_FMT because SWIG won't convert the
-   SVN_FILESIZE_T_FMT to the actual value only APR_INT64_T_FMT */
-#if APR_INT64_T_FMT == "ld"
-
-%typemap(python,argout,fragment="t_output_helper") svn_filesize_t *
-    "$result = t_output_helper($result,PyLong_FromLong((long) (*$1)));";
-
-%apply long *OUTPUT { svn_filesize_t * };
-
-#else
-
 %typemap(python,argout,fragment="t_output_helper") svn_filesize_t *
     "$result = t_output_helper($result,
                                PyLong_FromLongLong((apr_int64_t) (*$1)));";
@@ -234,7 +219,6 @@
 
 %typemap(ruby,argout,fragment="output_helper") svn_filesize_t *
     "$result = output_helper($result, LL2NUM((apr_int64_t) (*$1)));";
-#endif 
 
 /* -----------------------------------------------------------------------
    Define a general ptr/len typemap. This takes a single script argument

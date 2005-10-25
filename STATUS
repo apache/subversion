@@ -69,14 +69,6 @@ Candidate changes:
 
 Approved changes:
 
-   * r16914, r16919
-     Remove unused and unnecessary portability typemaps from the SWIG
-     bindings. Followup to r16903.
-     Justification:
-       Unused, invalid, and unnecessary portability typemaps can mislead.
-     Votes:
-       +1: djames, jerenkrantz
-
    * r16930
      Tweak Perl bindings to avoid use of goto in svn_txdelta_apply.
      Justification:
