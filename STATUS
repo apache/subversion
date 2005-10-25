@@ -32,17 +32,3 @@ Candidate changes:
 
 Approved changes:
 
-   * r16930, r16975, r16989, r16990
-     Actually fix the cause of perl bindings segfault by allocating for
-     result_digest, and make it overloaded object that actually reads
-     the digest when accessing.
-     Justification:
-       Bindings segfaults.
-     Notes:
-       r16975 actually reverts r16930.
-     Depends: r16966
-     Votes:
-       +1: clkao
-       +1 (build generator changes only): lundblad, djames, dberlin
-       +0 (the rest): djames, dberlin
-
