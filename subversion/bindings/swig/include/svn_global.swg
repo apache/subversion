@@ -79,19 +79,12 @@ static PyObject * _global_svn_swig_py_pool = NULL;
 %typemap (in, parse="L") apr_time_t, apr_int64_t, long long, __int64 "";
 %typemap (in, parse="K") apr_uint64_t, unsigned long long, unsigned __int64 "";
 
-/* For compatibility with Python 2.2 */
-%{
-#if defined(LONG_LONG) && !defined(PY_LONG_LONG)
-#define PY_LONG_LONG LONG_LONG
-#endif
-%}
-
-/* These typemaps use PY_LONG_LONG so that they will work on Win32 and Unix */
+/* These typemaps use apr_int64_t so that they will work on Win32 and Unix */
 %typemap (out) apr_time_t, apr_int64_t, long long, __int64 
-  " $result = PyLong_FromLongLong((PY_LONG_LONG)($1)); ";
+  " $result = PyLong_FromLongLong((apr_int64_t)($1)); ";
 
 %typemap (out) apr_uint64_t, unsigned long long, unsigned __int64
-  " $result = PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG)($1)); ";
+  " $result = PyLong_FromUnsignedLongLong((apr_uint64_t)($1)); ";
 
 %typemap(in,numinputs=0) long long *OUTPUT (apr_int64_t temp)
     "$1 = &temp;";
