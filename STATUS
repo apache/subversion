@@ -36,13 +36,6 @@ Candidate changes:
      Votes:
        +1: djames
 
-   * r16966, r16967
-     Use "const unsigned char", because SWIG cannot parse "unsigned const char".
-     Justification:
-       Unable to include svn_md5 functions in bindings.
-     Votes:
-       +1: djames, dberlin
-
 Approved changes:
 
    * r16930, r16975, r16989, r16990
@@ -58,3 +51,10 @@ Approved changes:
        +1: clkao
        +1 (build generator changes only): lundblad, djames, dberlin
        +0 (the rest): djames, dberlin
+
+   * r16966, r16967
+     Use "const unsigned char", because SWIG cannot parse "unsigned const char".
+     Justification:
+       Unable to include svn_md5 functions in bindings.
+     Votes:
+       +1: djames, dberlin, rooneg
