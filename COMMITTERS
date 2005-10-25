@@ -82,6 +82,8 @@ Commit access for specific areas:
         offby1   Eric Hanchrow <offby1@blarg.net>            (doc)
        nomis80   Simon Perreault <nomis80@nomis80.org>       (svn-clean)
       jlvarner   Joshua Varner <jlvarner@gmail.com>          (doc)
+          nori   KOBAYASHI Noritada                          (Ruby tools,
+                 <nori1@dolphin.c.u-tokyo.ac.jp>              po: ja)
 
   Translation:
 
@@ -92,7 +94,6 @@ Commit access for specific areas:
     khmarbaise   Karl Heinz Marbaise <khmarbaise@gmx.de>     (doc: de)
       oyvindmo   Øyvind Møll <svn@moll.no>                   (doc, po: nb)
       sunny256   Øyvind A. Holm <sunny@sunbase.org>          (doc, po: nb)
-          nori   KOBAYASHI Noritada <nori1@dolphin.c.u-tokyo.ac.jp> (po: ja)
         jzgoda   Jaroslaw Zgoda <jzgoda@o2.pl>               (po: pl)
       karolszk   Karol Szkudlarek <karol@mikronika.com.pl>   (po: pl)
         plasma   Wei-Hon Chen <plasma@ms9.hinet.net>         (po: zh_TW)
