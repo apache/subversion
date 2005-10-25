@@ -55,7 +55,7 @@ Candidate changes:
      Votes:
        +1: clkao
 
-   * r16975, r16989, r16990
+   * r16930, r16975, r16989, r16990
      Actually fix the cause of perl bindings segfault by allocating for
      result_digest, and make it overloaded object that actually reads
      the digest when accessing.
@@ -63,21 +63,13 @@ Candidate changes:
      Justification:
        Bindings segfaults.
      Notes:
-       Actually reverts r16930.
+       r16975 actually reverts r16930.
      Votes:
        +1: clkao
+       +1 (build generator changes only), lundblad, djames
+       +0 (the rest): djames
 
 Approved changes:
-
-   * r16930
-     Tweak Perl bindings to avoid use of goto in svn_txdelta_apply.
-     Justification:
-       Prevents segfaults in the Perl test suite.
-     Notes:
-       The goto &function syntax can cause segfaults, if the supplied
-       function is a SWIG/C wrapper.
-     Votes:
-       +1: djames, jerenkrantz
 
    * r16972
      Fix autogen.sh-time SWIG Makefile to work with Solaris /bin/sh.
