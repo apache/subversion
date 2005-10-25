@@ -145,11 +145,7 @@ typedef apr_int64_t apr_time_t;
    (e.g. /usr/lib/gcc-lib/plat/ver/include). */
 typedef apr_int32_t time_t;
 
-#if APR_INT64_T_FMT == "ld"
-    %apply long *OUTPUT { apr_time_t * };
-#else
-    %apply long long *OUTPUT { apr_time_t * };
-#endif
+%apply long long *OUTPUT { apr_time_t * };
 
 /* -----------------------------------------------------------------------
    create an OUTPUT argument typemap for an apr_hash_t **
