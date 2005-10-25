@@ -1444,7 +1444,7 @@ struct diff_paths
   /* path1 is a repos url? */
   svn_boolean_t is_repos_path1;
 
-  /* path2 is a repos url?, not used by check_paths when peg is true */
+  /* path2 is a repos url?  Not used for pegged diffs. */
   svn_boolean_t is_repos_path2;
 };
 
@@ -2210,7 +2210,7 @@ do_diff (const struct diff_parameters *diff_param,
   struct diff_paths diff_paths;
 
   /* Check if paths/revisions are urls/local. */ 
-  SVN_ERR (check_paths(diff_param, &diff_paths, FALSE));
+  SVN_ERR (check_paths (diff_param, &diff_paths, FALSE));
 
   if (diff_paths.is_repos_path1) /* path1 is (effectively) a URL */
     {
@@ -2267,7 +2267,7 @@ do_diff_peg (const struct diff_parameters *diff_param,
   struct diff_paths diff_paths;
 
   /* Check if paths/revisions are urls/local. */ 
-  SVN_ERR (check_paths(diff_param, &diff_paths, TRUE));
+  SVN_ERR (check_paths (diff_param, &diff_paths, TRUE));
 
   if (! diff_paths.is_local_rev1) /* path1 is (effectively) a URL */
     {
@@ -2313,7 +2313,7 @@ do_diff_peg (const struct diff_parameters *diff_param,
   return SVN_NO_ERROR;
 }
 
-/* Perform a diff preview between two repository paths. */ 
+/* Perform a diff summary between two repository paths. */
 static svn_error_t *
 diff_summarize_repos_repos (const struct diff_parameters *diff_param,
                             svn_client_diff_summarize_func_t summarize_func,
@@ -2390,7 +2390,7 @@ do_diff_summarize (const struct diff_parameters *diff_param,
       SVN_ERR (diff_summarize_repos_repos (diff_param, summarize_func,
                                            summarize_baton, ctx, pool));
     }
-  else /* path1 is a working copy path */
+  else
     return unsupported_diff_summarize ();
 
   return SVN_NO_ERROR;
