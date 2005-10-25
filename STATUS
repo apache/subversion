@@ -69,20 +69,6 @@ Candidate changes:
 
 Approved changes:
 
-   * r16903
-     Remove dependencies on APR in the SWIG code and build scripts,
-     that prevent running autogen.sh --release through to completion.
-     Branch: 1.3.x-r16903
-     Justification:
-       We can't release a tarball that doesn't depend on SWIG without
-       this, because apr.h is system-dependent.
-     Notes:
-       Change backported in branches/1.3.x-r16903 to resolve conflicts
-       with regard to the altered build system in trunk.
-     Followups: r16914, r16919, r16920, r16923, r16950
-     Votes:
-       +1: danderson, djames, jerenkrantz
-
    * r16914, r16919
      Remove unused and unnecessary portability typemaps from the SWIG
      bindings. Followup to r16903.
@@ -90,17 +76,6 @@ Approved changes:
        Unused, invalid, and unnecessary portability typemaps can mislead.
      Votes:
        +1: djames, jerenkrantz
-
-   * r16920, r16923, r16950
-     Define typemaps for APR datatypes in all SWIG bindings.
-     Justification:
-       Fixes check-swig-pl on 64 bit platforms.
-       Fixes check-swig-rb.
-     Depends: r16903
-     Votes:
-       +1: djames
-       +1: kou (r16923 only)
-       +0: jerenkrantz (too hacky; need a more portable solution)
 
    * r16930
      Tweak Perl bindings to avoid use of goto in svn_txdelta_apply.
