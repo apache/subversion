@@ -193,32 +193,9 @@
 }
 
 /* -----------------------------------------------------------------------
-   Define an OUTPUT typemap for 'svn_filesize_t *'.  For now, we'll
-   treat it as a 'long' even if that isn't entirely correct...  
+   Define an OUTPUT typemap for 'svn_filesize_t *'
 */
-%typemap(python,in,numinputs=0) svn_filesize_t * (svn_filesize_t temp)
-    "$1 = &temp;";
-
-%typemap(perl5,in,numinputs=0) svn_filesize_t * (svn_filesize_t temp)
-    "$1 = &temp;";
-
-%typemap(ruby,in,numinputs=0) svn_filesize_t * (svn_filesize_t temp)
-    "$1 = &temp;";
-
-%typemap(python,argout,fragment="t_output_helper") svn_filesize_t *
-    "$result = t_output_helper($result,
-                               PyLong_FromLongLong((apr_int64_t) (*$1)));";
-
-/* XXX: apply long long *OUTPUT doesn't track $1 correctly */
-%typemap(perl5,argout) svn_filesize_t * {
-    char temp[256];
-    sprintf(temp,"%" APR_INT64_T_FMT, *$1);
-    ST(argvi) = sv_newmortal();
-    sv_setpv((SV*)ST(argvi++), temp);
-};
-
-%typemap(ruby,argout,fragment="output_helper") svn_filesize_t *
-    "$result = output_helper($result, LL2NUM((apr_int64_t) (*$1)));";
+%apply long long *OUTPUT { svn_filesize_t * }
 
 /* -----------------------------------------------------------------------
    Define a general ptr/len typemap. This takes a single script argument
