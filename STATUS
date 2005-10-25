@@ -16,17 +16,6 @@ Candidate changes:
      Votes:
        +1: zhakov, lundblad
 
-   * r16953
-     Fix regression in repos commit editor.
-     Branch: 1.3.x-r16953
-     Notes:
-       svn_repos_get_commit_editor4 was introduced after 1.3.x was branched;
-       affects only the added test.
-     Justification:
-       Breaks svk.
-     Votes:
-       +1: lundblad, jerenkrantz, dberlin
-
    * r16979
      Use apr_int64_t and apr_uint64_t in place of "long long" in Ruby typemaps.
      Justification:
@@ -44,7 +33,6 @@ Candidate changes:
    * r16984, r16985
      Update APR typemaps to be more portable, so that they will work on
      platforms with non-standard integer sizes.
-     Depends: r16903, r16920, r16923, r16950
      Votes:
        +1: djames
 
@@ -55,20 +43,29 @@ Candidate changes:
      Votes:
        +1: djames, dberlin
 
+Approved changes:
+
    * r16930, r16975, r16989, r16990
      Actually fix the cause of perl bindings segfault by allocating for
      result_digest, and make it overloaded object that actually reads
      the digest when accessing.
-     Depends: r16966
      Justification:
        Bindings segfaults.
      Notes:
        r16975 actually reverts r16930.
+     Depends: r16966
      Votes:
        +1: clkao
-       +1 (build generator changes only), lundblad, djames, dberlin
+       +1 (build generator changes only): lundblad, djames, dberlin
        +0 (the rest): djames, dberlin
 
-Approved changes:
-
-   (none)
+   * r16953
+     Fix regression in repos commit editor.
+     Branch: 1.3.x-r16953
+     Notes:
+       svn_repos_get_commit_editor4 was introduced after 1.3.x was branched;
+       affects only the added test.
+     Justification:
+       Breaks svk.
+     Votes:
+       +1: lundblad, jerenkrantz, dberlin
