@@ -520,6 +520,12 @@
     unsigned char *digest
 };
 
+#ifndef SWIGPERL
+%apply unsigned char digest[ANY] {
+    unsigned char *result_digest
+};
+#endif
+
 /* -----------------------------------------------------------------------
   useful convertors for svn_opt_revision_t
 */
