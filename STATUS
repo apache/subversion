@@ -14,7 +14,7 @@ Candidate changes:
      Justification:
        "long long" is not portable.
      Votes:
-       +1: djames
+       +1: djames, dberlin
        +0: lundblad
 
    * r16980, r16982
@@ -22,13 +22,13 @@ Candidate changes:
      Justification:
        Broken typemaps can lead to incorrect bindings.
      Votes:
-       +1: djames
+       +1: djames, dberlin
 
    * r16984, r16985
      Update APR typemaps to be more portable, so that they will work on
      platforms with non-standard integer sizes.
      Votes:
-       +1: djames
+       +1: djames, dberlin
 
 Approved changes:
 
