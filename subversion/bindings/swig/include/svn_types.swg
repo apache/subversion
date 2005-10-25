@@ -507,27 +507,18 @@
    svn_txdelta_apply() uses *result_digest not digest[] .
 */
 
-%typemap(in, numinputs=0) unsigned char *digest {
+%typemap(in, numinputs=0) unsigned char *result_digest {
     $1 = (unsigned char *)apr_palloc(_global_pool, APR_MD5_DIGESTSIZE);
 }
 
-%typemap(perl5, argout) unsigned char *digest {
+%typemap(perl5, argout) unsigned char *result_digest {
     ST(argvi) = sv_newmortal();
     ST(argvi++) = svn_swig_pl_from_md5($1);
 }
 
-%apply unsigned char *digest {
-    unsigned char *result_digest
-};
-
-#ifndef SWIGPERL
-
 %apply unsigned char digest[ANY] {
-    unsigned char *digest,
-    unsigned char *result_digest
+    unsigned char *digest
 };
-
-#endif
 
 /* -----------------------------------------------------------------------
   useful convertors for svn_opt_revision_t
