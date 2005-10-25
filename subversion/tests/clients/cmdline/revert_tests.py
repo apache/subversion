@@ -138,6 +138,85 @@ def revert_replacement_with_props(sbox, wc_copy):
 
 #----------------------------------------------------------------------
 
+def revert_from_wc_root(sbox):
+  "revert relative to wc root"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  saved_dir = os.getcwd()
+
+  try:
+    os.chdir(wc_dir)
+
+    # Mostly taken from basic_revert
+    # Modify some files and props.
+    beta_path = os.path.join('A', 'B', 'E', 'beta')
+    gamma_path = os.path.join('A', 'D', 'gamma')
+    iota_path = 'iota'
+    rho_path = os.path.join('A', 'D', 'G', 'rho')
+    zeta_path = os.path.join('A', 'D', 'H', 'zeta')
+    svntest.main.file_append(beta_path, "Added some text to 'beta'.\n")
+    svntest.main.file_append(iota_path, "Added some text to 'iota'.\n")
+    svntest.main.file_append(rho_path, "Added some text to 'rho'.\n")
+    svntest.main.file_append(zeta_path, "Added some text to 'zeta'.\n")
+
+    svntest.actions.run_and_verify_svn("Add command", None, [],
+                                       'add', zeta_path)
+    svntest.actions.run_and_verify_svn("Add prop command", None, [],
+                                       'ps', 'random-prop', 'propvalue',
+                                       gamma_path)
+    svntest.actions.run_and_verify_svn("Add prop command", None, [],
+                                       'ps', 'random-prop', 'propvalue',
+                                       iota_path)
+    svntest.actions.run_and_verify_svn("Add prop command", None, [],
+                                       'ps', 'random-prop', 'propvalue',
+                                       '.')
+    svntest.actions.run_and_verify_svn("Add prop command", None, [],
+                                       'ps', 'random-prop', 'propvalue',
+                                       'A')
+
+    # Verify modified status.
+    expected_output = svntest.actions.get_virginal_state('', 1)
+    expected_output.tweak('A/B/E/beta', 'A/D/G/rho', status='M ')
+    expected_output.tweak('iota', status='MM')
+    expected_output.tweak('', 'A/D/gamma', 'A', status=' M')
+    expected_output.add({
+      'A/D/H/zeta' : Item(status='A ', wc_rev=0),
+      })
+
+    svntest.actions.run_and_verify_status ('', expected_output)
+
+    # Run revert
+    svntest.actions.run_and_verify_svn("Revert command", None, [],
+                                       'revert', beta_path)
+
+    svntest.actions.run_and_verify_svn("Revert command", None, [],
+                                       'revert', gamma_path)
+
+    svntest.actions.run_and_verify_svn("Revert command", None, [],
+                                       'revert', iota_path)
+
+    svntest.actions.run_and_verify_svn("Revert command", None, [],
+                                       'revert', rho_path)
+
+    svntest.actions.run_and_verify_svn("Revert command", None, [],
+                                       'revert', zeta_path)
+
+    svntest.actions.run_and_verify_svn("Revert command", None, [],
+                                       'revert', '.')
+
+    svntest.actions.run_and_verify_svn("Revert command", None, [],
+                                       'revert', 'A')
+
+    # Verify unmodified status.
+    expected_output = svntest.actions.get_virginal_state('', 1)
+
+    svntest.actions.run_and_verify_status ('', expected_output)
+
+  finally:
+    os.chdir(saved_dir)
+
+
 def revert_reexpand_keyword(sbox):
   "revert reexpands manually contracted keyword"
 
@@ -443,6 +522,7 @@ def revert_after_second_replace(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
+              revert_from_wc_root,
               XFail(revert_reexpand_keyword),
               revert_replaced_file_without_props,
               XFail(revert_moved_file),
