@@ -25,7 +25,7 @@ Candidate changes:
      Justification:
        Breaks svk.
      Votes:
-       +1: lundblad, jerenkrantz
+       +1: lundblad, jerenkrantz, dberlin
 
    * r16979
      Use apr_int64_t and apr_uint64_t in place of "long long" in Ruby typemaps.
@@ -53,7 +53,7 @@ Candidate changes:
      Justification:
        Unable to include svn_md5 functions in bindings.
      Votes:
-       +1: djames, clkao
+       +1: djames, clkao, dberlin
 
    * r16930, r16975, r16989, r16990
      Actually fix the cause of perl bindings segfault by allocating for
@@ -66,8 +66,8 @@ Candidate changes:
        r16975 actually reverts r16930.
      Votes:
        +1: clkao
-       +1 (build generator changes only), lundblad, djames
-       +0 (the rest): djames
+       +1 (build generator changes only), lundblad, djames, dberlin
+       +0 (the rest): djames, dberlin
 
 Approved changes:
 
