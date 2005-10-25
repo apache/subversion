@@ -68,18 +68,31 @@ static PyObject * _global_svn_swig_py_pool = NULL;
 %typemap (in, parse="s")
   char *, char const *, char * const, char const * const "";
 %typemap (in, parse="c") char "";
-%typemap (in, parse="B") unsigned char "";
-%typemap (in, parse="h") short "";
-%typemap (in, parse="H") unsigned short "";
-%typemap (in, parse="i") int, enum SWIGTYPE, svn_boolean_t, apr_seek_where_t, \
-  apr_fileperms_t "";
-%typemap (in, parse="I") unsigned int "";
-%typemap (in, parse="l") long, ssize_t "";
-%typemap (in, parse="k") unsigned long, size_t "";
-%typemap (in, parse="L") apr_time_t, apr_int64_t, long long, __int64 "";
-%typemap (in, parse="K") apr_uint64_t, unsigned long long, unsigned __int64 "";
+%typemap (in, fragment=SWIG_As_frag(long)) long
+{
+  $1 = ($1_ltype)SWIG_As(long)($input);
+  if (SWIG_arg_fail($svn_argnum)) {
+    SWIG_fail;
+  }
+}
+%typemap (in, fragment=SWIG_As_frag(unsigned long)) unsigned long
+{
+  $1 = ($1_ltype)SWIG_As(unsigned long)($input);
+  if (SWIG_arg_fail($svn_argnum)) {
+    SWIG_fail;
+  }
+}
+%apply long { short, int, ssize_t, enum SWIGTYPE, svn_boolean_t,
+              apr_seek_where_t, apr_fileperms_t }
+%apply unsigned long { unsigned char, unsigned short, unsigned int, size_t }
 
 /* These typemaps use apr_int64_t so that they will work on Win32 and Unix */
+%typemap (in) long long
+  " $1 = ($1_ltype) PyLong_AsLongLong($input); ";
+
+%typemap (in) unsigned long long
+  " $1 = ($1_ltype) PyLong_AsUnsignedLongLong($input); ";
+
 %typemap (out) apr_time_t, apr_int64_t, long long, __int64 
   " $result = PyLong_FromLongLong((apr_int64_t)($1)); ";
 
