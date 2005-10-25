@@ -143,6 +143,16 @@ class SvnLook
     print_tree(Editor, 0)
   end
 
+  # Output the repository's UUID.
+  def cmd_uuid
+    puts @fs.uuid
+  end
+
+  # Output the repository's youngest revision.
+  def cmd_youngest
+    puts @fs.youngest_rev
+  end
+
   # Return a property of the specified revision or transaction.
   # Name: the ID of the property you want to retrieve. 
   #       E.g. Svn::Core::PROP_REVISION_LOG
@@ -462,6 +472,8 @@ def usage
     "   info:          print the author, data, log_size, and log message.",
     "   log:           print log message.",
     "   tree:          print the tree.",
+    "   uuid:          print the repository's UUID (REV and TXN ignored).",
+    "   youngest:      print the youngest revision number (REV and TXN ignored).",
   ]
   puts(messages.join("\n"))
   exit(1)
