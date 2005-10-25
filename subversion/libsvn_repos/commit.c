@@ -668,7 +668,7 @@ close_edit (void *edit_baton,
   /* If no transaction has been created (ie. if open_root wasn't
      called before close_edit), abort the operation here with an
      error. */
-  if ((! eb->txn) || (! eb->txn_owner))
+  if (! eb->txn)
     return svn_error_create(SVN_ERR_REPOS_BAD_ARGS, NULL,
                             "No valid transaction supplied to close_edit");
 
