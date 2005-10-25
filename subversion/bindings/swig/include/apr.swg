@@ -42,9 +42,9 @@
 %enddef
 
 OUTPUT_TYPEMAP(long, INT2NUM, (long));
-OUTPUT_TYPEMAP(long long, LL2NUM, (long long));
+OUTPUT_TYPEMAP(long long, LL2NUM, (apr_int64_t));
 OUTPUT_TYPEMAP(unsigned long, UINT2NUM, (unsigned long));
-OUTPUT_TYPEMAP(unsigned long long, ULL2NUM, (unsigned long long));
+OUTPUT_TYPEMAP(unsigned long long, ULL2NUM, (apr_uint64_t));
 
 #undef OUTPUT_TYPEMAP
 #endif
