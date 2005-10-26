@@ -28,6 +28,7 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include <apr_errno.h>
 #include <apr_strings.h>
 #include <apr_tables.h>
 #include <apr_general.h>
@@ -170,6 +171,27 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
      PREFIX. */
   err = svn_io_open_unique_file (&tmp_file, &tmpfile_name,
                                  prefix, ".tmp", FALSE, pool);
+
+  if (err && APR_STATUS_IS_EACCES (err->apr_err))
+    {
+      char *temp_dir_apr;
+
+      svn_error_clear (err);
+
+      SVN_ERR (svn_io_temp_dir (&base_dir, pool));
+
+      SVN_ERR (svn_path_cstring_from_utf8 (&temp_dir_apr, base_dir, pool));
+      apr_err = apr_filepath_set (temp_dir_apr, pool);
+      if (apr_err)
+        {
+          return svn_error_wrap_apr
+            (apr_err, _("Can't change working directory to '%s'"), base_dir);
+        }
+
+      err = svn_io_open_unique_file (&tmp_file, &tmpfile_name,
+                                     prefix, ".tmp", FALSE, pool);
+    }
+
   if (err)
     goto cleanup2;
 
