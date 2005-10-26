@@ -17,5 +17,12 @@ Candidate changes:
    Votes:
     +1: dionisos, rooneg
 
+ * r17038
+   Correct md5 function in swigutil_pl.h
+   Remark:
+     Causes a warning and is a really simple fix.
+   Votes:
+    +1: rooneg
+
 Approved changes:
 
