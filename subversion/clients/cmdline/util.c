@@ -174,7 +174,7 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
 
   if (err && APR_STATUS_IS_EACCES (err->apr_err))
     {
-      char *temp_dir_apr;
+      const char *temp_dir_apr;
 
       svn_error_clear (err);
 
