@@ -961,6 +961,13 @@ def relocate_beyond_repos_root(sbox):
                                      'switch', '--relocate',
                                      A_url, other_B_url, A_wc_dir)
 
+  # Another way of trying to change the fs path, leading to an invalid
+  # repository root.
+  svntest.actions.run_and_verify_svn(None, None,
+                                     ".*is not the root.*",
+                                     'switch', '--relocate',
+                                     repo_url, other_B_url, A_wc_dir)
+
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'switch', '--relocate',
                                      A_url, other_A_url, A_wc_dir)

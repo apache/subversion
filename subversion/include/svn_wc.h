@@ -2959,16 +2959,33 @@ svn_wc_cleanup (const char *path,
 
 /** Relocation validation callback typedef.
  *
- * Called for each relocated file/directory.  @a uuid contains the
- * expected repository UUID, @a url contains the tentative URL.
+ * Called for each relocated file/directory.  @a uuid, if non-null, contains
+ * the expected repository UUID, @a url contains the tentative URL.
  *
  * @a baton is a closure object; it should be provided by the
  * implementation, and passed by the caller.
+ *
+ * If @a root is true, then the implementation should make sure that @a url
+ * is the repository root.  Else, it can be an URL inside the repository.
+ * @a pool may be used for temporary allocations.
+ *
+ * @since New in 1.4.
+ */
+typedef svn_error_t *(*svn_wc_relocation_validator2_t) (void *baton,
+                                                        const char *uuid,
+                                                        const char *url,
+                                                        svn_boolean_t root,
+                                                        apr_pool_t *pool);
+
+/** Similar to @c svn_wc_relocation_validator2_t, but without
+ * the @a root and @a pool arguments.  @a uuid will not be NULL in this version
+ * of the function.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
 typedef svn_error_t *(*svn_wc_relocation_validator_t) (void *baton,
                                                        const char *uuid,
                                                        const char *url);
-
 
 /** Change repository references at @a path that begin with @a from
  * to begin with @a to instead.  Perform necessary allocations in @a pool. 
@@ -2978,6 +2995,19 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t) (void *baton,
  * @a adm_access is an access baton for the directory containing
  * @a path.
  */
+svn_error_t *
+svn_wc_relocate2 (const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 const char *from,
+                 const char *to,
+                 svn_boolean_t recurse,
+                 svn_wc_relocation_validator2_t validator,
+                 void *validator_baton,
+                 apr_pool_t *pool);
+
+/** Similar to svn_wc_relocate2(), but uses @c svn_wc_relocation_validator_t.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.3 API. */
 svn_error_t *
 svn_wc_relocate (const char *path,
                  svn_wc_adm_access_t *adm_access,
