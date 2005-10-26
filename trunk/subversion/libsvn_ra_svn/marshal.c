@@ -934,8 +934,10 @@ svn_error_t *svn_ra_svn_write_cmd_failure(svn_ra_svn_conn_t *conn,
 #if APR_CHARSET_EBCDIC
       /* ebcdic platforms must convert the string representation of 
        * err->message and err->file to utf8. */
-      SVN_ERR(svn_utf_cstring_to_utf8(&(err->message), err->message, pool));
-      SVN_ERR(svn_utf_cstring_to_utf8(&(err->file), err->file, pool)); 
+      if(err->message)
+        SVN_ERR(svn_utf_cstring_to_utf8(&(err->message), err->message, pool));
+      if(err->file)
+        SVN_ERR(svn_utf_cstring_to_utf8(&(err->file), err->file, pool)); 
 #endif
       /* The message string should have been optional, but we can't
          easily change that, so marshal nonexistent messages as "". */
