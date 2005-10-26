@@ -1,0 +1,19 @@
+Microsoft Visual Studio Solution File, Format Version [version]
+[for targets]Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "[targets.name]", "[targets.path]", "[targets.guid]"
+EndProject
+[end]Global
+	GlobalSection(SolutionConfiguration) = preSolution
+[for configs]		ConfigName.[configs.index] = [configs.name]
+[end]	EndGlobalSection
+	GlobalSection(ProjectDependencies) = postSolution
+[for targets][for targets.depends]		[targets.guid].[targets.depends.index] = [targets.depends.guid]
+[end][end]	EndGlobalSection
+	GlobalSection(ProjectConfiguration) = postSolution
+[for guids][for platforms][for configs]		[guids].[configs.name].ActiveCfg = [configs.name]|[platforms]
+[end][for configs]		[guids].[configs.name].Build.0 = [configs.name]|[platforms]
+[end][end][end]	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+EndGlobal

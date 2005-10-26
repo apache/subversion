@@ -1,0 +1,213 @@
+
+Issues (and their resolutions) when using gettext for message translation
+
+Contents
+========
+
+ * Windows issues
+ * Automatic characterset conversion
+ * Translations on the client
+ * No translations on the server
+ * Translating plural forms (ngettext() support)
+
+
+
+Windows issues
+==============
+
+On Windows, Subversion is linked against a modified version of GNU gettext.
+This resolves several issues:
+
+ - Eliminated need to link against libiconv (which would be the second
+   iconv library, since we already link against apr-iconv)
+ - No automatic charset conversion (guaranteed UTF-8 strings returned by
+   gettext() calls without performance penalties)
+
+More in the paragraphs below...
+
+
+Automatic characterset conversion
+=================================
+
+Some gettext implementations automatically convert the strings in the
+message catalogue to the active system characterset.  The source encoding
+is stored in the "" message id.  The message string looks somewhat like
+a mime header and contains a "Content-Encoding" line. It's typically GNU's
+gettext which does this.
+
+Subversion uses UTF-8 to encode strings internally, which may not be the
+systems default character encoding.  To prevent internal corruption,
+libsvn_subr:svn_cmdline_init2() explicitly tells gettext to return UTF-8
+encoded strings if it has bind_textdomain_codeset().
+
+Some gettext implementations don't contain automatic string recoding.  In
+order to work with both recoding and non-recoding implementations, the
+source strings must be UTF-8 encoded.  This is achieved by requiring .po
+files to be UTF-8 encoded.  [Note: a pre-commit hook has been installed to
+ensure this.]
+
+On Windows Subversion links against a version of GNU gettext, which has
+been modified not to do character conversions.  This eliminates the
+requirement to link against libiconv which would mean Subversion being
+linked against 2 iconv libraries (apr_iconv as well as libiconv).
+
+
+Translations on the client
+==========================
+
+The translation effort is to translate all error messages generated on
+the system on which the user has invoked his subversion command (svnadmin,
+svnlook, svndumpfilter, svnversion or svn).
+
+This means that in all layers of the libraries strings have been marked for
+translation, either with _() or N_().
+
+Parameters are sprintf-ed straight into errorstrings at the time they are
+added to the error structure, so most strings are marked with _() and
+translated directly into the language for which the client was set up.
+[Note: The N_() macro marks strings for delayed translation.]
+
+
+
+Translations on the server
+==========================
+
+On systems which define the LC_MESSAGES constant, setlocale() can be used
+to set string translation for all (error) strings even those outside
+the Subversion domain.
+
+Windows doesn't define LC_MESSAGES.  Instead GNU gettext uses the environ-
+ment variables LANGUAGE, LC_ALL, LC_MESSAGES and LANG (in that order) to
+find out what language to translate to.  If none of these are defined, the
+system and user default locales are queried.  Though setting one of
+the aforementioned variables before starting the server will avoid
+localization by Subversion to the default locale, messages generated
+by the system itself are likely to still be in its default locale
+(they are on Windows).
+
+While systems which have the LC_MESSAGES flag (or setenv() - of which
+Windows has neither) allow languages to be switched at run time, this cannot
+be done portably.
+
+Any attempt to use setlocale() in an Apache environment may conflict
+with settings other modules expect to be setup (even when using a
+prefork MPM).  On the svnserve side, having no portable way to change
+languages dynamically means that the environment has to be set up
+correctly from the start.  Futhermore, the svnserve protocol doesn't
+yet support content negotiation.
+
+In other words, there is no way -- programmatically -- to ensure that
+messages are served in any specific language using a traditional
+gettext implementation.  Current consensus is that gettext must be
+replaced on the server side with a more flexible implementation.
+
+Server requirement(s):
+ - Language negotiation on a per-client session basis.  For a
+   stateless protocol like HTTP, this means per-request.  For a
+   stateful protocol like the one used by svnserve, this means
+   per-connection.
+ - Avoid contamination of environment used by other code (e.g. other
+   Apache modules running in the same server as mod_dav_svn).
+ - Allow for propogation of the language to use to hook scripts.
+ - Continue to inter-op with generic HTTP/DAV clients, and stay
+   compatible with SVN clients of various versions (as per existing
+   compatibility rules).
+
+I18N module requirement(s):
+ - Cross-platform.
+ - Interoperable with gettext tools (e.g. for .po files).
+ - Non-viral license which allows for any necessary modifications.
+ - gettext-like API (needn't be an exact match).
+
+Implementation guidelines:
+ - The L10N API will be uniform across all libraries, clients, and
+   servers.  Server-negotiated language will be recorded in either a
+   context baton (e.g. apr_pool_t.userdata), or in thread-local
+   storage (TLS).
+ - Implemented on top of a new gettext-like module with per-struct or
+   per-thread locale mutator functions and storage for name/value
+   pairs (a glorified apr_hash_t).  (See implementation from Nicolás
+   Lichtmaier noted below.)
+ - Language chosen by the server will be negotiated based on a ranked
+   list of preferences provided by the client.
+ - Language used by httpd/mod_dav_svn will be derived from the
+   Accept-Language HTTP header, and setup by mod_negotiation (when
+   available), or by mod_dav_svn on a per-request basis.
+ - Language used by svnserve derived from additions to the protocol
+   which allow for HTTP-style content negotiation on a per-connection
+   basis.  The protocol extension would use the same sort of q-value
+   list found in the Accept-Language header to specify user language
+   preferences.
+
+Investigation: A brief canvasing of developers (on IRC) indicated that
+no thorough investigation of existing solutions which might meet the
+above requirements has been done.  This incomplete canvasing may not
+paint an accurate picture, however.
+
+A branch <https://svn.collab.net/repos/svn/branches/server-l10n> has
+been created to explore a solution to the above requirements.  While
+the L10N module is important, how that module is applied to both the
+server-side and client-side is possibly even more so; an
+implementation which meets the requirements should not dramatically
+impact the solution used across the code base for the general L10N
+API, nor the necessary server-side machinations.
+
+Nicolás Lichtmaier wrote something along the lines of the module
+referenced in the "Possible implementation" section
+<http://svn.haxx.se/dev/archive-2004-04/0788.shtml>, which has been
+committed to the server-l10n branch.  However, it depends upon the GNU
+gettext .mo format, and the GNU implementation may not be available on
+all platforms (unless re-implemented).  This module will need to be
+enhanced or replaced, ideally completely obviating the need for
+linkage against a platform's own gettext implementation.
+
+Whether to use TLS or a context baton for the L10N API is under
+discussion.  TLS can provide a more friendly API (albeit somewhat
+underhanded), while use of a context baton more resilient to change
+(e.g. if httpd someday allowed more than one thread to service a
+request).  Here's a sample:
+ - No localization:                          "A message to localize"
+ - Localization w/ TLS or gloabl preference: _("A message to localize")
+ - Localization w/ a context baton:          _("A message to localize", pool)
+
+Historical note: Original consensus indicated that messages from the
+server side should stay untranslated for transmission to the client.
+However, client side localization is not an option, because by then
+the parameter values have been inserted into the string, meaning that
+it can't be looked up in the messages catalogue anymore.  So any
+localization must occur on the server, or significantly increase the
+complexity of marshalling messages from the server as
+unlocalized/unformatted data structures and localizing them on the
+client side using some additional wrapper APIs to handle the
+unmarshalling and message formatting.  Additionally, client and server
+versions may not match up, meaning that message keys and format string
+values provided by the server may not correspond to what's available
+on the client.
+
+Paul Querna suggested a variation on this scheme involving requesting
+(once) and caching the localizations (to the local disk) for each
+server version, along with sending the message key (for lookup of
+localized text) and an already formatted text (to use as the default
+when no localization bundle is available).  In addition to the
+complications mentioned previously, this has the downside of crippling
+the localization of server-generated messages when no write access to
+the local disk is available to the client.
+
+
+
+Translating plural forms (ngettext() support)
+=============================================
+
+The code below works in english and can be translated to a number of
+languages.  However in some languages more than 2 forms are required
+to do a correct translation.  The ngettext() function takes care of
+grabbing the right translation for those languages.  Unfortunately,
+the function is a GNU extention and thus non-portable.
+
+  message = (n > 1) ? _("1 File found") :
+                      apr_sprintf (pool, _("%d Files found"), n);
+
+Because of this limitation, some strings in the client have not been
+marked for translation.
+
+*** We're looking for good suggestions to work around this.

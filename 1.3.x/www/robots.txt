@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /source/
+Disallow: /search/
+Disallow: /issues/
+Disallow: /servlets/

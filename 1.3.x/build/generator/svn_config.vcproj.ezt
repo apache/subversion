@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding = "Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="[version]"
+	Name="__CONFIG__"
+	SccProjectName=""
+	SccLocalPath=""
+	Keyword="MakeFileProj">
+	<Platforms>
+		<Platform
+			Name="Win32"/>
+	</Platforms>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="."
+			IntermediateDirectory="."
+			ConfigurationType="10"
+			UseOfMFC="0"
+			DeleteExtensionsOnClean="*.obj;*.ilk;*.pdb;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;$(TargetPath)"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName="./svn_config.tlb"
+				HeaderFileName=""/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory="."
+			IntermediateDirectory="."
+			ConfigurationType="10"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE"
+			DeleteExtensionsOnClean="*.obj;*.ilk;*.pdb;*.tlb;*.tli;*.tlh;*.tmp;*.rsp;$(TargetPath)">
+			<Tool
+				Name="VCCustomBuildTool"/>
+			<Tool
+				Name="VCMIDLTool"
+				TypeLibraryName="./svn_config.tlb"
+				HeaderFileName=""/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+		</Configuration>
+	</Configurations>
+	<Files>
+		<File
+			RelativePath="..\..\subversion\svn_private_config.h">
+			<FileConfiguration
+				Name="Debug|Win32"
+				ExcludedFromBuild="TRUE">
+				<Tool
+					Name="VCCustomBuildTool"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|Win32"
+				ExcludedFromBuild="TRUE">
+				<Tool
+					Name="VCCustomBuildTool"/>
+			</FileConfiguration>
+		</File>
+		<File
+			RelativePath="..\..\subversion\svn_private_config.hw">
+			<FileConfiguration
+				Name="Debug|Win32">
+				<Tool
+					Name="VCCustomBuildTool"
+					Description="Creating svn_private_config.h from svn_private_config.hw."
+					CommandLine="copy ..\..\subversion\svn_private_config.hw ..\..\subversion\svn_private_config.h &gt; nul
+"
+					Outputs="..\..\subversion\svn_private_config.h"/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|Win32">
+				<Tool
+					Name="VCCustomBuildTool"
+					Description="Creating svn_private_config.h from svn_private_config.hw."
+					CommandLine="copy ..\..\subversion\svn_private_config.hw ..\..\subversion\svn_private_config.h &gt; nul
+"
+					Outputs="..\..\subversion\svn_private_config.h"/>
+			</FileConfiguration>
+		</File>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>
+
