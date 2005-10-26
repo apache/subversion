@@ -15,7 +15,7 @@ Candidate changes:
      Commits in read-only directories therefore fail.  This revision adds
      gracefull fallback.
    Votes:
-    +1: dionisos
+    +1: dionisos, rooneg
 
  * r17037, r17042
    Fix svn log --limit when run over DAV against a server that doesn't
