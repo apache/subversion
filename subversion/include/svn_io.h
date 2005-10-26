@@ -700,6 +700,10 @@ svn_error_t *svn_io_dir_walk (const char *dirname,
  * @a inherit sets whether the invoked program shall inherit its environment or
  * run "clean".
  *
+ * @note On some platforms, failure to execute @a cmd in the child process
+ * will result in error output being written to the child's stderr, and
+ * a non-zero exit status being returned to the parent process.
+ *
  * @since New in 1.3.
  */
 svn_error_t *svn_io_start_cmd (apr_proc_t *cmd_proc,

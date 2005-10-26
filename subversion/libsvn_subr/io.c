@@ -1733,10 +1733,14 @@ handle_child_process_error (apr_pool_t *pool, apr_status_t status,
                             const char *desc)
 {
   char errbuf[256];
+  apr_file_t *stderr_handle;
+
+  apr_file_open_stderr (&stderr_handle, pool);
 
   /* What we get from APR is in native encoding. */
-  fprintf (stderr, "%s: %s", desc, apr_strerror (status, errbuf,
-                                                 sizeof (errbuf)));
+  apr_file_printf (stderr_handle, "%s: %s",
+                   desc, apr_strerror (status, errbuf,
+                                       sizeof (errbuf)));
 }
 
 
