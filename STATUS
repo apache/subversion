@@ -9,7 +9,13 @@ Status of 1.3.0:
 
 Candidate changes:
 
-   (none)
+ * r17039
+   Fix issue 767: Commit uses temporary file in current directory
+   Remark:
+     Commits in read-only directories therefore fail.  This revision adds
+     gracefull fallback.
+   Votes:
+    +1: dionisos
 
 Approved changes:
 
