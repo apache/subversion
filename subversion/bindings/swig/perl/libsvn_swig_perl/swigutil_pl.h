@@ -220,7 +220,8 @@ apr_file_t *svn_swig_pl_make_file (SV *file, apr_pool_t *pool);
 void svn_swig_pl_hold_ref_in_pool (apr_pool_t *pool, SV *sv);
 
 /* md5 access class */
-void svn_swig_pl_make_md5 (unsigned char *digest);
+SV *svn_swig_pl_from_md5 (unsigned char *digest);
+
 
 #ifdef __cplusplus
 }
