@@ -79,7 +79,7 @@ struct log_baton
      be able to tell that the error we returned wasn't actually a
      problem, so if this is TRUE it means we can safely ignore that
      error and return success. */
-  int limit_compat_bailout;
+  svn_boolean_t limit_compat_bailout;
 
   /* If `receiver' returns error, it is stored here. */
   svn_error_t *err;
