@@ -69,7 +69,9 @@ dav_error * dav_svn_convert_err(svn_error_t *serr, int status,
       }
 
     derr = dav_svn__new_error_tag(pool, status, serr->apr_err,
-                                  apr_pstrdup(pool, serr->message),
+                                  (serr->message ?
+                                   apr_pstrdup(pool, serr->message) :
+                                   NULL),
                                   SVN_DAV_ERROR_NAMESPACE,
                                   SVN_DAV_ERROR_TAG);
     if (message != NULL)
