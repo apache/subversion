@@ -657,6 +657,11 @@ svn_error_t *svn_ra_get_file (svn_ra_session_t *session,
  * entry names (<tt>const char *</tt>), and the values dirents 
  * (<tt>@c svn_dirent_t *</tt>).  Use @a pool for all allocations.
  *
+ * @a dirent_fields controls which portions of the <tt>@c svn_dirent_t</tt>
+ * objects are filled in.  To have them completely filled in just pass
+ * @c SVN_DIRENT_ALL, otherwise pass the bitwise OR of all the @c SVN_DIRENT_
+ * fields you would like to have returned to you.
+ *
  * @a path is interpreted relative to the URL in @a session.
  *
  * If @a revision is @c SVN_INVALID_REVNUM (meaning 'head') and
@@ -671,7 +676,24 @@ svn_error_t *svn_ra_get_file (svn_ra_session_t *session,
  * etc.)  The keys are <tt>const char *</tt>, values are 
  * <tt>@c svn_string_t *</tt>.
  *
+ * @since New in 1.4.
+ */
+svn_error_t *svn_ra_get_dir2 (svn_ra_session_t *session,
+                              const char *path,
+                              svn_revnum_t revision,
+                              apr_uint32_t dirent_fields,
+                              apr_hash_t **dirents,
+                              svn_revnum_t *fetched_rev,
+                              apr_hash_t **props,
+                              apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_ra_get_dir2, but with @c SVN_DIRENT_ALL for the
+ * @a dirent_fields parameter.
+ *
  * @since New in 1.2.
+ *
+ * @deprecated Provided for compatibility with the 1.3 API.
  */
 svn_error_t *svn_ra_get_dir (svn_ra_session_t *session,
                              const char *path,

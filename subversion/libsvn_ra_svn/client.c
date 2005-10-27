@@ -1018,8 +1018,10 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session, const char *path,
-                                   svn_revnum_t rev, apr_hash_t **dirents,
+static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
+                                   const char *path, svn_revnum_t rev,
+                                   apr_uint32_t dirent_fields,
+                                   apr_hash_t **dirents,
                                    svn_revnum_t *fetched_rev,
                                    apr_hash_t **props,
                                    apr_pool_t *pool)
@@ -1035,8 +1037,36 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session, const char *path,
   apr_uint64_t size;
   svn_dirent_t *dirent;
 
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-dir", "c(?r)bb", path,
-                               rev, (props != NULL), (dirents != NULL)));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c(?r)bb(!", "get-dir", path,
+                                 rev, (props != NULL), (dirents != NULL)));
+  if (dirent_fields & SVN_DIRENT_KIND)
+    {
+      SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_DIRENT_KIND));
+    }
+  if (dirent_fields & SVN_DIRENT_SIZE)
+    {
+      SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_DIRENT_SIZE));
+    }
+  if (dirent_fields & SVN_DIRENT_HAS_PROPS)
+    {
+      SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_DIRENT_HAS_PROPS));
+    }
+  if (dirent_fields & SVN_DIRENT_CREATED_REV)
+    {
+      SVN_ERR(svn_ra_svn_write_word(conn, pool,
+                                    SVN_RA_SVN_DIRENT_CREATED_REV));
+    }
+  if (dirent_fields & SVN_DIRENT_TIME)
+    {
+      SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_DIRENT_TIME));
+    }
+  if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
+    {
+      SVN_ERR(svn_ra_svn_write_word(conn, pool,
+                                    SVN_RA_SVN_DIRENT_LAST_AUTHOR));
+    }
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
+
   SVN_ERR(handle_auth_request(sess_baton, pool));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "rll", &rev, &proplist,
                                        &dirlist));
@@ -1074,7 +1104,6 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session, const char *path,
 
   return SVN_NO_ERROR;
 }
-
 
 static svn_error_t *ra_svn_update(svn_ra_session_t *session,
                                   const svn_ra_reporter2_t **reporter,

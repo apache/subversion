@@ -2146,7 +2146,31 @@ svn_client_export (svn_revnum_t *result_rev,
  * If @a recurse is true (and @a path_or_url is a directory) this will
  * be a recursive operation.
  *
+ * @a dirent_fields controls which fields in the @c svn_dirent_t's are
+ * filled in.  To have them totally filled in use @c SVN_DIRENT_ALL, 
+ * otherwise simply bitwise OR together the combination of @c SVN_DIRENT_
+ * fields you care about.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *
+svn_client_ls4 (apr_hash_t **dirents,
+                apr_hash_t **locks,
+                const char *path_or_url,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *revision,
+                svn_boolean_t recurse,
+                apr_uint32_t dirent_fields,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
+
+/**
+ * Same as svn_client_ls4(), but always passes @c SVN_DIRENT_ALL for
+ * the @a dirent_fields argument.
+ *
  * @since New in 1.3.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 svn_error_t *
 svn_client_ls3 (apr_hash_t **dirents,

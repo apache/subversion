@@ -1062,9 +1062,45 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_fs_root_t *root;
   apr_pool_t *subpool;
   svn_boolean_t want_props, want_contents;
+  apr_uint64_t dirent_fields;
+  apr_array_header_t *dirent_fields_list = NULL;
+  svn_ra_svn_item_t *elt;
+  int i;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)bb", &path, &rev,
-                                 &want_props, &want_contents));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c(?r)bb?l", &path, &rev,
+                                 &want_props, &want_contents,
+                                 &dirent_fields_list));
+
+  if (! dirent_fields_list)
+    {
+      dirent_fields = SVN_DIRENT_ALL;
+    }
+  else
+    {
+      dirent_fields = 0;
+
+      for (i = 0; i < dirent_fields_list->nelts; ++i)
+        {
+          elt = &APR_ARRAY_IDX(dirent_fields_list, i, svn_ra_svn_item_t);
+
+          if (elt->kind != SVN_RA_SVN_WORD)
+            return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                    "Dirent field not a string");
+
+          if (strcmp(SVN_RA_SVN_DIRENT_KIND, elt->u.word) == 0)
+            dirent_fields |= SVN_DIRENT_KIND;
+          else if (strcmp(SVN_RA_SVN_DIRENT_SIZE, elt->u.word) == 0)
+            dirent_fields |= SVN_DIRENT_SIZE;
+          else if (strcmp(SVN_RA_SVN_DIRENT_HAS_PROPS, elt->u.word) == 0)
+            dirent_fields |= SVN_DIRENT_HAS_PROPS;
+          else if (strcmp(SVN_RA_SVN_DIRENT_CREATED_REV, elt->u.word) == 0)
+            dirent_fields |= SVN_DIRENT_CREATED_REV;
+          else if (strcmp(SVN_RA_SVN_DIRENT_TIME, elt->u.word) == 0)
+            dirent_fields |= SVN_DIRENT_TIME;
+          else if (strcmp(SVN_RA_SVN_DIRENT_LAST_AUTHOR, elt->u.word) == 0)
+            dirent_fields |= SVN_DIRENT_LAST_AUTHOR;
+        }
+    }
 
   full_path = svn_path_join(b->fs_path->data,
                             svn_path_canonicalize(path, pool), pool);
@@ -1102,30 +1138,48 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           file_path = svn_path_join(full_path, name, subpool);
           entry = apr_pcalloc(pool, sizeof(*entry));
 
-          /* kind */
-          entry->kind = fsent->kind;
+          if (dirent_fields & SVN_DIRENT_KIND)
+            {
+              /* kind */
+              entry->kind = fsent->kind;
+            }
 
-          /* size */
-          if (entry->kind == svn_node_dir)
-            entry->size = 0;
-          else
-            SVN_CMD_ERR(svn_fs_file_length(&entry->size, root, file_path,
-                                           subpool));
+          if (dirent_fields & SVN_DIRENT_SIZE)
+            {
+              /* size */
+              if (entry->kind == svn_node_dir)
+                entry->size = 0;
+              else
+                SVN_CMD_ERR(svn_fs_file_length(&entry->size, root, file_path,
+                                               subpool));
+            }
 
-          /* has_props */
-          SVN_CMD_ERR(svn_fs_node_proplist(&file_props, root, file_path,
-                                           subpool));
-          entry->has_props = (apr_hash_count(file_props) > 0) ? TRUE : FALSE;
+          if (dirent_fields & SVN_DIRENT_HAS_PROPS)
+            {
+              /* has_props */
+              SVN_CMD_ERR(svn_fs_node_proplist(&file_props, root, file_path,
+                                               subpool));
+              entry->has_props = (apr_hash_count(file_props) > 0) ? TRUE
+                                                                  : FALSE;
+            }
 
-          /* created_rev, last_author, time */
-          SVN_CMD_ERR(svn_repos_get_committed_info(&entry->created_rev, &cdate,
-                                                   &cauthor, root, file_path,
-                                                   subpool));
-          entry->last_author = apr_pstrdup(pool, cauthor);
-          if (cdate)
-            SVN_CMD_ERR(svn_time_from_cstring(&entry->time, cdate, subpool));
-          else
-            entry->time = (time_t) -1;
+          if ((dirent_fields & SVN_DIRENT_LAST_AUTHOR)
+              || (dirent_fields & SVN_DIRENT_TIME)
+              || (dirent_fields & SVN_DIRENT_CREATED_REV))
+            {
+              /* created_rev, last_author, time */
+              SVN_CMD_ERR(svn_repos_get_committed_info(&entry->created_rev,
+                                                       &cdate,
+                                                       &cauthor, root,
+                                                       file_path,
+                                                       subpool));
+              entry->last_author = apr_pstrdup(pool, cauthor);
+              if (cdate)
+                SVN_CMD_ERR(svn_time_from_cstring(&entry->time, cdate,
+                                                  subpool));
+              else
+                entry->time = (time_t) -1;
+            }
 
           /* Store the entry. */
           apr_hash_set(entries, name, APR_HASH_KEY_STRING, entry);
