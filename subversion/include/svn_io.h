@@ -953,10 +953,10 @@ svn_error_t *
 svn_io_dir_remove_nonrecursive (const char *dirname, apr_pool_t *pool);
 
 
-/** Wrapper for apr_dir_read(), which see.  Ensures that @a finfo->name is
- * utf8-encoded, which means allocating @a finfo->name in @a pool, which may
- * or may not be the same as @a finfo's pool.  Use @a pool for error allocation
- * as well.
+/** Wrapper for apr_dir_read().  Ensures that @a finfo->name is
+ * utf8-encoded, which means allocating @a finfo->name in @a pool,
+ * which may or may not be the same as @a finfo's pool.  Use @a pool
+ * for error allocation as well.
  */
 svn_error_t *
 svn_io_dir_read (apr_finfo_t *finfo,
