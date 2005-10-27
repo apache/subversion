@@ -262,11 +262,13 @@ say "HTTPD is good, starting the tests..."
 
 if [ $# == 0 ]; then
   time make check "BASE_URL=$BASE_URL"
+  r=$?
 else
   pushd "$ABS_BUILDDIR/subversion/tests/clients/cmdline/" >/dev/null
   TEST="$1"
   shift
   time "./${TEST}_tests.py" "--url=$BASE_URL" $*
+  r=$?
   popd >/dev/null
 fi
 
@@ -281,3 +283,5 @@ query 'Delete HTTPD root directory' y \
   && rm -fr "$HTTPD_ROOT/"
 
 say 'Done'
+
+exit $r
