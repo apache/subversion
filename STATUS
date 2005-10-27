@@ -23,7 +23,15 @@ Candidate changes:
       Trivial change to a test helper script.  Makes it easier
       to script testing of tarballs without having to configure a web server.
     Votes:
-      +1: lundblad
+      +1: lundblad, dlr
+
+  * r17059
+    Correct implementation of the ASP.Net/admin directory name-related
+    APIs for the thread-safe JavaHL client.
+    Justification:
+      APIs for thread-safe client are otherwise broken.
+    Votes:
+     +1: dlr
 
 Approved changes:
 
