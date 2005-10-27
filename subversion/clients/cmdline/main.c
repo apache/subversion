@@ -69,7 +69,7 @@ const apr_getopt_option_t svn_cl__options[] =
     {"quiet",         'q', 0, N_("print as little as possible")},
     {"recursive",     'R', 0, N_("descend recursively")},
     {"non-recursive", 'N', 0, N_("operate on single directory only")},
-    {"change",        'c', 1, N_("Shorthand for the revision range NUMBER-1:NUMBER")},
+    {"change",        'c', 1, N_("the change made by revision ARG (like -r ARG-1:ARG)")},
     {"revision",      'r', 1, N_
      ("ARG (some commands also take ARG1:ARG2 range)\n"
       "                             A revision argument can be one of:\n"
@@ -447,7 +447,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     N_("Apply the differences between two sources to a working copy path.\n"
        "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
        "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-       "       3. merge [-c M |-r N:M] SOURCE[@REV] [WCPATH]\n"
+       "       3. merge [-c M | -r N:M] SOURCE[@REV] [WCPATH]\n"
        "\n"
        "  1. In the first form, the source URLs are specified at revisions\n"
        "     N and M.  These are the two sources to be compared.  The "
@@ -934,13 +934,19 @@ main (int argc, const char * const *argv)
           if (end == opt_arg || *end != '\0')
             {
               err = svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                      _("Non-numeric change argument given"));
+                                      _("Non-numeric change argument given to -c"));
               return svn_cmdline_handle_exit_error (err, pool, "svn: ");
             }
           else if (opt_state.end_revision.value.number == 0)
             {
               err = svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                       _("There is no change 0"));
+              return svn_cmdline_handle_exit_error (err, pool, "svn: ");
+            }
+          else if (opt_state.end_revision.value.number < 0)
+            {
+              err = svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                      _("Argument to -c must be positive"));
               return svn_cmdline_handle_exit_error (err, pool, "svn: ");
             }
           opt_state.start_revision.value.number = opt_state.end_revision.value.number - 1;
