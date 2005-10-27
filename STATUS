@@ -25,7 +25,7 @@ Candidate changes:
     Votes:
       +1: lundblad, dlr
 
-  * r17059
+  * r17060
     Correct implementation of the ASP.Net/admin directory name-related
     APIs for the thread-safe JavaHL client.
     Justification:
