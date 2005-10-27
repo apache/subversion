@@ -17,13 +17,15 @@ Candidate changes:
    Votes:
     +1: dionisos, rooneg
 
+Approved changes:
+
   * r17057
     Make davautocheck.sh return the return code from the tests.
     Justification:
       Trivial change to a test helper script.  Makes it easier
       to script testing of tarballs without having to configure a web server.
     Votes:
-      +1: lundblad, dlr
+      +1: lundblad, dlr, rooneg
 
   * r17060
     Correct implementation of the ASP.Net/admin directory name-related
@@ -32,7 +34,4 @@ Candidate changes:
       APIs for thread-safe client are otherwise broken.
     Votes:
      +1: dlr
-
-Approved changes:
-
-  (none)
+     +0: rooneg
