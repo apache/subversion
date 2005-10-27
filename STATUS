@@ -19,11 +19,4 @@ Candidate changes:
 
 Approved changes:
 
-  * r17060
-    Correct implementation of the ASP.Net/admin directory name-related
-    APIs for the thread-safe JavaHL client.
-    Justification:
-      APIs for thread-safe client are otherwise broken.
-    Votes:
-     +1: dlr
-     +0: rooneg
+  (none)
