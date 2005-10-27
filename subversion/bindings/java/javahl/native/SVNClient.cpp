@@ -675,8 +675,8 @@ void SVNClient::add(const char *path, bool recurse, bool force)
     {
         return;
     }
-    Err = svn_client_add2 (intPath.c_str (), recurse, force, 
-                                        ctx, apr_pool);
+    Err = svn_client_add3 (intPath.c_str (), recurse, force, FALSE,
+			   ctx, apr_pool);
 
     if(Err != NULL)
          JNIUtil::handleSVNError(Err);
