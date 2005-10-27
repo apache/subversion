@@ -1336,6 +1336,13 @@ def basic_ls(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      os.path.join(wc_dir, 'A', 'mu'))
 
+  svntest.actions.run_and_verify_svn('recursive ls',
+                                     ['E/\n', 'E/alpha\n', 'E/beta\n', 'F/\n',
+                                      'lambda\n' ], [], 'ls', '-R',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     os.path.join(wc_dir, 'A', 'B'))
+
 
 #----------------------------------------------------------------------
 def nonexistent_repository(sbox):
