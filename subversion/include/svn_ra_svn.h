@@ -42,6 +42,33 @@ extern "C" {
 /** Currently-defined capabilities. */
 #define SVN_RA_SVN_CAP_EDIT_PIPELINE "edit-pipeline"
 
+/** ra_svn passes @c svn_dirent_t fields over the wire as a list of
+ * words, these are the values used to represent each field.
+ *
+ * @defgroup ra_svn_dirent_fields ra_svn dirent fields
+ * @{
+ */
+
+/** The ra_svn way of saying @c SVN_DIRENT_KIND. */
+#define SVN_RA_SVN_DIRENT_KIND "kind"
+
+/** The ra_svn way of saying @c SVN_DIRENT_SIZE. */
+#define SVN_RA_SVN_DIRENT_SIZE "size"
+
+/** The ra_svn way of saying @c SVN_DIRENT_HAS_PROPS. */
+#define SVN_RA_SVN_DIRENT_HAS_PROPS "has-props"
+
+/** The ra_svn way of saying @c SVN_DIRENT_CREATED_REV. */
+#define SVN_RA_SVN_DIRENT_CREATED_REV "created-rev"
+
+/** The ra_svn way of saying @c SVN_DIRENT_TIME. */
+#define SVN_RA_SVN_DIRENT_TIME "time"
+
+/** The ra_svn way of saying @c SVN_DIRENT_LAST_AUTHOR. */
+#define SVN_RA_SVN_DIRENT_LAST_AUTHOR "last-author"
+
+/** @} */
+
 /** A value used to indicate an optional number element in a tuple that was
  * not received.
  */

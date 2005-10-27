@@ -278,6 +278,7 @@ svn_cl__ls (apr_getopt_t *os,
   apr_array_header_t *targets;
   int i;
   apr_pool_t *subpool = svn_pool_create (pool); 
+  apr_uint32_t dirent_fields;
 
   SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
                                           opt_state->targets, pool));
@@ -307,6 +308,11 @@ svn_cl__ls (apr_getopt_t *os,
                                    "mode"));
     }
 
+  if (opt_state->verbose || opt_state->xml)
+    dirent_fields = SVN_DIRENT_ALL;
+  else
+    dirent_fields = SVN_DIRENT_KIND; /* the only thing we actually need... */
+
   /* For each target, try to list it. */
   for (i = 0; i < targets->nelts; i++)
     {
@@ -324,12 +330,13 @@ svn_cl__ls (apr_getopt_t *os,
       SVN_ERR (svn_opt_parse_path (&peg_revision, &truepath, target,
                                    subpool));
 
-      SVN_ERR (svn_client_ls3 (&dirents,
+      SVN_ERR (svn_client_ls4 (&dirents,
                                (opt_state->xml || opt_state->verbose)
                                  ? &locks : NULL,
                                truepath, &peg_revision,
                                &(opt_state->start_revision),
-                               opt_state->recursive, ctx, subpool));
+                               opt_state->recursive, dirent_fields,
+                               ctx, subpool));
 
       if (opt_state->xml)
         SVN_ERR (print_dirents_xml (dirents, locks, truepath, ctx, subpool));
