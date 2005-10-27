@@ -211,7 +211,7 @@ public class SVNTests extends TestCase
 
         // create and configure the needed subversion objects
         admin = new SVNAdmin();
-        client = new SVNClient();
+        client = new SVNClientSynchronized();
         client.notification2(new MyNotifier());
         client.commitMessageHandler(new MyCommitMessage());
         client.username("jrandom");
