@@ -59,7 +59,13 @@ public class SVNClientSynchronized implements SVNClientInterface
      * on Windows.
      * @since 1.3
      */
-    public native String getAdminDirectoryName();
+    public String getAdminDirectoryName()
+    {
+        synchronized(clazz)
+        {
+            return worker.getAdminDirectoryName();
+        }
+    }
 
     /**
      * @param name The name of the directory to compare.
@@ -67,7 +73,13 @@ public class SVNClientSynchronized implements SVNClientInterface
      * administrative directory.
      * @since 1.3
      */
-    public native boolean isAdminDirectory(String name);
+    public boolean isAdminDirectory(String name)
+    {
+        synchronized(clazz)
+        {
+            return worker.isAdminDirectory(name);
+        }
+    }
 
     /**
      * Returns the last destination path submitted.
