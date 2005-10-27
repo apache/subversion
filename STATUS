@@ -17,6 +17,14 @@ Candidate changes:
    Votes:
     +1: dionisos, rooneg
 
+  * r17057
+    Make davautocheck.sh return the return code from the tests.
+    Justification:
+      Trivial change to a test helper script.  Makes it easier
+      to script testing of tarballs without having to configure a web server.
+    Votes:
+      +1: lundblad
+
 Approved changes:
 
   (none)
