@@ -344,12 +344,12 @@ get_file_from_ra (struct file_baton *b)
 static svn_error_t *
 get_dirprops_from_ra (struct dir_baton *b)
 {
-  SVN_ERR (svn_ra_get_dir (b->edit_baton->ra_session,
-                           b->path,
-                           b->edit_baton->revision,
-                           NULL, NULL,
-                           &(b->pristine_props),
-                           b->pool));
+  SVN_ERR (svn_ra_get_dir2 (b->edit_baton->ra_session,
+                            b->path,
+                            b->edit_baton->revision,
+                            0, NULL, NULL,
+                            &(b->pristine_props),
+                            b->pool));
 
   return SVN_NO_ERROR;
 }
