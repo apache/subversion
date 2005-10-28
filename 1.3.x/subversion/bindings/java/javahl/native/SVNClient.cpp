@@ -132,6 +132,24 @@ void SVNClient::finalize()
     JNIUtil::putFinalizedClient(this);
 }
 
+jstring SVNClient::getAdminDirectoryName()
+{
+    Pool requestPool;
+    jstring name =
+        JNIUtil::makeJString(svn_wc_get_adm_dir(requestPool.pool()));
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    return name;
+}
+
+jboolean SVNClient::isAdminDirectory(const char *name)
+{
+    Pool requestPool;
+    return svn_wc_is_adm_dir(name, requestPool.pool()) ? JNI_TRUE : JNI_FALSE;
+}
+
 const char * SVNClient::getLastPath()
 {
     return m_lastPath.c_str();
@@ -1806,7 +1824,8 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
             "(Ljava/lang/String;Ljava/lang/String;IJJJLjava/lang/String;IIIIZZ"
              "Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
              "Ljava/lang/String;JZLjava/lang/String;Ljava/lang/String;"
-             "Ljava/lang/String;JLorg/tigris/subversion/javahl/Lock;)V");
+             "Ljava/lang/String;JLorg/tigris/subversion/javahl/Lock;"
+             "JJILjava/lang/String;)V");
         if(JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
@@ -1843,9 +1862,13 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
     jstring jLockOwner = NULL;
     jlong jLockCreationDate = 0;
     jobject jLock = NULL;
+    jlong jOODLastCmtRevision =
+                    org_tigris_subversion_javahl_Revision_SVN_INVALID_REVNUM;
+    jlong jOODLastCmtDate = 0;
+    jint jOODKind = org_tigris_subversion_javahl_NodeKind_none;
+    jstring jOODLastCmtAuthor = NULL;
     if(status != NULL)
     {
-
         jTextType = EnumMapper::mapStatusKind(status->text_status);
         jPropType = EnumMapper::mapStatusKind(status->prop_status);
         jRepositoryTextType = EnumMapper::mapStatusKind(status->repos_text_status);
@@ -1858,14 +1881,23 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
         {
             return NULL;
         }
+        jUrl = JNIUtil::makeJString(status->url);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+        jOODLastCmtRevision = status->ood_last_cmt_rev;
+        jOODLastCmtDate = status->ood_last_cmt_date;
+        jOODKind = EnumMapper::mapNodeKind(status->ood_kind);
+        jOODLastCmtAuthor = JNIUtil::makeJString(status->ood_last_cmt_author);
+        if(JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+
         svn_wc_entry_t * entry = status->entry;
         if (entry != NULL)
         {
-            jUrl = JNIUtil::makeJString(entry->url);
-            if(JNIUtil::isJavaExceptionThrown())
-            {
-                return NULL;
-            }
             jNodeKind = EnumMapper::mapNodeKind(entry->kind);
             jRevision = entry->revision;
             jLastChangedRevision = entry->cmt_rev;
@@ -1921,7 +1953,8 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
         jTextType, jPropType, jRepositoryTextType, jRepositoryPropType, 
         jIsLocked, jIsCopied, jConflictOld, jConflictNew, jConflictWorking,
         jURLCopiedFrom, jRevisionCopiedFrom, jIsSwitched, jLockToken, 
-        jLockOwner, jLockComment, jLockCreationDate, jLock);
+        jLockOwner, jLockComment, jLockCreationDate, jLock,
+        jOODLastCmtRevision, jOODLastCmtDate, jOODKind, jOODLastCmtAuthor);
     if(JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
@@ -1982,6 +2015,11 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
         return NULL;
     }
     env->DeleteLocalRef(jLock);
+    if(JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    env->DeleteLocalRef(jOODLastCmtAuthor);
     if(JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
@@ -2747,14 +2785,9 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     {
         return;
     }
-    svn_error_t * error = svn_client_blame2 (intPath.c_str(),
-                                            pegRevision.revision(),
-                                            revisionStart.revision(),
-                                            revisionEnd.revision(),
-                                            blame_receiver2,
-                                            callback,
-                                            ctx,
-                                            apr_pool);
+    Err = svn_client_blame2 (intPath.c_str(), pegRevision.revision(),
+			     revisionStart.revision(), revisionEnd.revision(),
+			     blame_receiver2, callback, ctx, apr_pool);
     if(Err != SVN_NO_ERROR)
     {
         JNIUtil::handleSVNError(Err);

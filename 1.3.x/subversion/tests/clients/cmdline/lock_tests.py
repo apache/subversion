@@ -1357,6 +1357,78 @@ def unlock_already_unlocked_files(sbox):
   expected_status.tweak('iota', 'A/B/E/alpha', writelocked=None)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+#----------------------------------------------------------------------
+def info_moved_path(sbox):
+  "show correct lock info on moved path"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  fname = os.path.join(wc_dir, "iota")
+  fname2 = os.path.join(wc_dir, "iota2")
+
+  # Move iota, creating r2.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "mv", fname, fname2)
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota2' : Item(verb='Adding'),
+    'iota' : Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    "iota2" : Item(status='  ', wc_rev=2)
+    })
+  expected_status.remove("iota")
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None,
+                                         None, None,
+                                         None, None,
+                                         wc_dir)
+
+  # Create a new, unrelated iota, creating r3.
+  svntest.main.file_append(fname, "Another iota")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "add", fname)
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Adding'),
+    })
+  expected_status.add({
+    "iota" : Item(status='  ', wc_rev=3)
+    })
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None,
+                                         None, None,
+                                         None, None,
+                                         wc_dir)
+
+  # Lock the new iota.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "lock", fname,
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd)
+  expected_status.tweak("iota", writelocked="K")
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Get info for old iota at r1. This shouldn't give us any lock info.
+  output, errput = svntest.actions.run_and_verify_svn(None, None, [],
+                                                      'info',
+                                                      fname2, '-r1')
+  # Since we want to make sure that there is *no* lock info, to make this
+  # more robust, we also check that the info command actually output some info.
+  got_url = False
+  for line in output:
+    if line.find("URL:") >= 0:
+      got_url = True
+    if line.find("Lock Token:") >= 0:
+      print fname2 + " was reported as locked."
+      raise svntest.Failure
+  if not got_url:
+    print "Info didn't output an URL."
+    raise svntest.Falure
+
 ########################################################################
 # Run the tests
 
@@ -1391,6 +1463,7 @@ test_list = [ None,
               commit_xml_unsafe_file_unlock,
               repos_lock_with_info,
               unlock_already_unlocked_files,
+              info_moved_path,
             ]
 
 if __name__ == '__main__':

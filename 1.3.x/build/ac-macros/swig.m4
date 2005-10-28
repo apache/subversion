@@ -67,7 +67,6 @@ AC_DEFUN(SVN_FIND_SWIG,
                       -e 's/\.\([[0-9]][[0-9]]\)$/.0\1/' \
                       -e 's/\.\([[0-9]]\)\./0\1/; s/\.//g;'`"
     AC_MSG_RESULT([$SWIG_VERSION_RAW])
-    AC_SUBST(SWIG_VERSION)
     # If you change the required swig version number, don't forget to update:
     #   subversion/bindings/swig/INSTALL
     #   subversion/bindings/swig/NOTES
@@ -89,7 +88,6 @@ AC_DEFUN(SVN_FIND_SWIG,
   SWIG_PY_LINK="none"
   if test "$PYTHON" != "none"; then
     AC_MSG_NOTICE([Configuring python swig binding])
-    SWIG_CLEAN_RULES="$SWIG_CLEAN_RULES clean-swig-py" 
 
     AC_CACHE_CHECK([for Python includes], [ac_cv_python_includes],[
       ac_cv_python_includes="`$PYTHON ${abs_srcdir}/build/get-py-info.py --includes`"
@@ -158,7 +156,6 @@ AC_DEFUN(SVN_FIND_SWIG,
     PERL_VERSION="`$PERL -e 'q([[); print $]] * 1000000,$/;'`"
     AC_MSG_RESULT([$PERL_VERSION])
     if test "$PERL_VERSION" -ge "5008000"; then
-      SWIG_CLEAN_RULES="$SWIG_CLEAN_RULES clean-swig-pl" 
       SWIG_PL_INCLUDES="\$(SWIG_INCLUDES) `$PERL -MExtUtils::Embed -e ccopts`"
     else
       AC_MSG_WARN([perl bindings require perl 5.8.0 or newer.])
@@ -170,7 +167,6 @@ AC_DEFUN(SVN_FIND_SWIG,
   if test "$RUBY" != "none"; then
 
     AC_MSG_NOTICE([Configuring Ruby SWIG binding])
-    SWIG_CLEAN_RULES="$SWIG_CLEAN_RULES clean-swig-rb" 
 
     AC_CACHE_CHECK([for Ruby include path], [svn_cv_ruby_includes],[
     svn_cv_ruby_includes="-I. -I`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(archdir))'`"
@@ -225,7 +221,6 @@ AC_DEFUN(SVN_FIND_SWIG,
       AC_MSG_RESULT([$SWIG_RB_TEST_VERBOSE])
   fi
   AC_SUBST(SWIG)
-  AC_SUBST(SWIG_CLEAN_RULES)
   AC_SUBST(SWIG_PY_INCLUDES)
   AC_SUBST(SWIG_PY_COMPILE)
   AC_SUBST(SWIG_PY_LINK)

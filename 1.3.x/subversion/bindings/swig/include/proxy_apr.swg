@@ -39,6 +39,10 @@ class GenericSWIGWrapper:
     self.assert_valid()
     return self.this
  
+def _mark_weakpool_invalid(weakpool):
+  if weakpool and weakpool() and hasattr(weakpool(), "_is_valid"):
+    del weakpool()._is_valid
+
 %}
 
 struct apr_pool_t {
@@ -53,19 +57,14 @@ struct apr_pool_t {
   
         # Protect important functions from GC
         self._apr_pool_destroy = _core.apr_pool_destroy
-        self._apr_terminate = _core.apr_terminate
         self._svn_swig_py_clear_application_pool = \
           _core.svn_swig_py_clear_application_pool
   
         # If we are an application-level pool,
-        # then initialize APR and set this pool
-        # to be the application-level pool
+        # then set this pool to be the application-level pool
         if not self._parent_pool:
-          apr_initialize()
           svn_swig_py_set_application_pool(self, self)
           application_pool = self
-  
-        svn_swig_py_register_cleanup(self, self)
   
       def valid(self):
         """Check whether this memory pool and its parents
@@ -95,13 +94,16 @@ struct apr_pool_t {
         # Destroy pool
         self._apr_pool_destroy(self)
   
-        # Clear application pool and terminate APR if necessary
+        # Clear application pool if necessary
         if is_application_pool:
           application_pool = None
           self._svn_swig_py_clear_application_pool()
-          self._apr_terminate()
   
-        del self._parent_pool
+        # Mark self as invalid
+        if hasattr(self, "_parent_pool"):
+          del self._parent_pool
+        if hasattr(self, "_is_valid"):
+          del self._is_valid
   
       def __del__(self):
         """Automatically destroy memory pools, if necessary"""
@@ -110,9 +112,23 @@ struct apr_pool_t {
   
       def _mark_valid(self):
         """Mark pool as valid"""
+
+        self._weakparent = None
+
         if self._parent_pool:
+          import weakref
+
           # Make sure that the parent object is valid
-          self._parent_pool.assert_valid();
+          self._parent_pool.assert_valid()
+
+          # Refer to self using a weakrefrence so that we don't
+          # create a reference cycle
+          weakself = weakref.ref(self)
+
+          # Set up callbacks to mark pool as invalid when parents
+          # are destroyed
+          self._weakparent = weakref.ref(self._parent_pool._is_valid,
+            lambda x: _mark_weakpool_invalid(weakself))
   
         # Mark pool as valid
         self._is_valid = lambda: 1
@@ -123,11 +139,17 @@ struct apr_pool_t {
         if hasattr(obj, "set_parent_pool"):
           obj.set_parent_pool(self)
           return obj 
+        elif obj is None:
+          return None
         else:
           return GenericSWIGWrapper(obj, self)
 
     %}
   }
 };
+%pythoncode %{
+# Initialize a global pool
+svn_pool_create()
+%}
 #endif
 

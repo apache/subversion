@@ -55,7 +55,12 @@
 
 %apply const char *MAY_BE_NULL {
     const char *comment
-}
+};
+
+%apply apr_hash_t *STRING_TO_STRING {
+  apr_hash_t *lock_tokens,
+  apr_hash_t *path_tokens
+};
 
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
@@ -115,32 +120,18 @@
 %typemap(ruby, in) (svn_ra_lock_callback_t lock_func, void *lock_baton)
 {
   $1 = svn_swig_rb_ra_lock_callback;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 %typemap(ruby, in) (svn_ra_file_rev_handler_t handler, void *handler_baton)
 {
   $1 = svn_swig_rb_ra_file_rev_handler;
-  $2 = (void *)$input;
-}
-
-%typemap(perl5, in) apr_hash_t *lock_tokens {
-    $1 = svn_swig_pl_strings_to_hash ($input, _global_pool);
-}
-
-%typemap(ruby, in) apr_hash_t *lock_tokens
-{
-  $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 %typemap(ruby, in) apr_hash_t *path_revs
 {
   $1 = svn_swig_rb_hash_to_apr_hash_revnum($input, _global_pool);
-}
-
-%typemap(ruby, in) apr_hash_t *path_tokens
-{
-  $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
 }
 
 /* ----------------------------------------------------------------------- */

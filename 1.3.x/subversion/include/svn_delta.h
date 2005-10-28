@@ -175,6 +175,13 @@ typedef struct svn_txdelta_window_t
 
 } svn_txdelta_window_t;
 
+/**
+ * Return a deep copy of @a window, allocated in @a pool.
+ *
+ * @since New in 1.3.
+ */
+svn_txdelta_window_t *svn_txdelta_window_dup (
+  const svn_txdelta_window_t *window, apr_pool_t *pool);
 
 /** A typedef for functions that consume a series of delta windows, for
  * use in caller-pushes interfaces.  Such functions will typically

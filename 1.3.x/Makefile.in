@@ -326,7 +326,7 @@ local-extraclean: local-distclean
               ac-helpers/ltmain.sh
 
 # clean everything, including test output.
-local-clean: fast-clean check-clean @SWIG_CLEAN_RULES@ 
+local-clean: fast-clean check-clean clean-swig
 
 # clean everything, including test output.
 local-distclean: fast-distclean check-clean
@@ -471,7 +471,9 @@ doc: doc-design doc-misc-docs doc-api
 # Generate API documentation for the C libraries.
 ### This could also generate JavaDoc for JavaHL, POD for swig-perl, etc.
 doc-api:
-	doxygen $(top_srcdir)/doc/doxygen.conf
+	( cd $(top_srcdir) && \
+	  sed "s,\(OUTPUT_DIRECTORY *= *\),\1$(abs_builddir)/," \
+	  doc/doxygen.conf | doxygen - )
 
 # Build all types of a certain doc.
 doc-misc-docs: doc-misc-docs-html doc-misc-docs-pdf doc-misc-docs-ps
@@ -592,6 +594,8 @@ install-info: doc-all-info
           $(INSTALL_DATA) $$file $(DESTDIR)$(infodir)/$$inst;         \
         done
 
+clean-swig: clean-swig-py clean-swig-pl clean-swig-rb
+
 install-swig-py: install-swig-py-lib
 install-swig-rb: install-swig-rb-lib
 
@@ -640,7 +644,7 @@ $(SWIG_PY_DIR)/libsvn:
 	ln -sf $(SWIG_PY_DIR) $(SWIG_PY_DIR)/libsvn
 
 copy-swig-py: autogen-swig-py
-	@if test $(top_srcdir) != .; then \
+	@if test ! -e $(SWIG_PY_DIR)/__init__.py ; then \
 	  cp -pf $(SWIG_PY_SRC_DIR)/__init__.py $(SWIG_PY_DIR); \
 	  if test -e $(SWIG_PY_SRC_DIR)/core.py -a \
 	     ! -e $(SWIG_SRC_DIR)/core.py; then \

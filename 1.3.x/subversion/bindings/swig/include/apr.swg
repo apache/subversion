@@ -31,7 +31,7 @@
 %include typemaps.i
 
 #ifdef SWIGRUBY
-#if SVN_SWIG_VERSION <= 103024
+#if SWIG_VERSION <= 0x010324
 /* for SWIG bug */
 %define OUTPUT_TYPEMAP(type, converter, convtype)
 %typemap(in,numinputs=0) type *OUTPUT($*1_ltype temp), type &OUTPUT($*1_ltype temp) "$1 = &temp;";
@@ -52,7 +52,14 @@ OUTPUT_TYPEMAP(unsigned long long, ULL2NUM, (unsigned long long));
 
 /* ----------------------------------------------------------------------- */
 
-%include apr_h.swg
+#ifdef WIN32
+/* Fool SWIG into understanding the __int64 datatype */
+#define __int64 long long
+#endif
+%import apr.h
+#ifdef WIN32
+#undef __int64
+#endif
 
 /* ### be nice to have all the error values and macros. there are some
    ### problems including this file, tho. SWIG isn't smart enough with some
@@ -182,7 +189,7 @@ typedef apr_int32_t time_t;
 %typemap(python, argout, fragment="output_helper")
      apr_array_header_t **OUTPUT_OF_PROP
 {
-  $result = $1; /* ### WRONG! */
+  /* FIXME: Actually do something here. */
 }
 
 %typemap(ruby, in, numinputs=0)

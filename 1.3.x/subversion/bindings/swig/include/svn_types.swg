@@ -125,6 +125,21 @@
 }
 
 /* -----------------------------------------------------------------------
+   Input of scripting hash/dictionary (string => string)
+   converted to apr_hash_t (const char * => const char *)
+*/
+%typemap(python, in) apr_hash_t *STRING_TO_STRING {
+    $1 = svn_swig_py_stringhash_from_dict ($input, _global_pool);
+}
+%typemap(perl5, in) apr_hash_t *STRING_TO_STRING {
+    $1 = svn_swig_pl_strings_to_hash ($input, _global_pool);
+}
+%typemap(ruby, in) apr_hash_t *STRING_TO_STRING {
+    $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
+}
+
+
+/* -----------------------------------------------------------------------
    Define a more refined 'memberin' typemap for 'const char *' members. This
    is used in place of the 'char *' handler defined automatically.
 
@@ -278,12 +293,11 @@
 #endif
 
 %typemap(python, default) apr_pool_t *(apr_pool_t *_global_pool,
-  PyObject *_global_svn_swig_py_pool, int _global_svn_swig_py_is_local_pool,
-  int _global_is_default_pool)
+  PyObject *_global_svn_swig_py_pool, int _global_pool_is_default_pool)
 {
   int argnum = PyTuple_GET_SIZE(args) - 1;
-  _global_svn_swig_py_is_local_pool = 1;
-  _global_is_default_pool = 1;
+  _global_pool_is_application_pool = 0;
+  _global_pool_is_default_pool = 1;
   if (argnum >= 0) {
     PyObject *input = PyTuple_GET_ITEM(args, argnum);
     if (input != Py_None &&
@@ -295,7 +309,7 @@
       }
       _global_svn_swig_py_pool = input;
       Py_XINCREF(_global_svn_swig_py_pool);
-      _global_is_default_pool = 0;
+      _global_pool_is_default_pool = 0;
     } else {
       if (PyErr_Occurred()) {
         PyErr_Clear();
@@ -312,7 +326,7 @@
 }
 
 %typemap(python, in) apr_pool_t * {
-  if ($input != Py_None && _global_is_default_pool == 1) {
+  if ($input != Py_None && _global_pool_is_default_pool == 1) {
     svn_swig_py_pool_check($input)
     _global_pool = svn_swig_MustGetPtr($input, $1_descriptor, $svn_argnum, 
       NULL);
@@ -411,7 +425,7 @@
 %typemap(ruby, in) (svn_log_message_receiver_t receiver, 
                     void *receiver_baton) {
     $1 = svn_swig_rb_log_receiver;
-    $2 = (void *)$input;
+    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -429,7 +443,7 @@
 %typemap(ruby, in) (svn_commit_callback_t callback, void *callback_baton)
 {
   $1 = svn_swig_rb_commit_callback;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 };
 
 /* -----------------------------------------------------------------------
@@ -444,7 +458,7 @@
 %typemap(ruby, in) (svn_cancel_func_t cancel_func, void *cancel_baton)
 {
   $1 = svn_swig_rb_cancel_func;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -454,7 +468,7 @@
 %typemap(ruby, in) (svn_info_receiver_t receiver, void *receiver_baton)
 {
   $1 = svn_swig_rb_info_receiver;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -463,9 +477,10 @@
 
 %typemap(ruby, in) (svn_fs_warning_callback_t warning, void *warning_baton)
 {
-  svn_swig_rb_fs_warning_callback_baton_register($input, _global_pool);
+  VALUE baton = svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+  svn_swig_rb_fs_warning_callback_baton_register(baton, _global_pool);
   $1 = svn_swig_rb_fs_warning_callback;
-  $2 = (void *)$input;
+  $2 = (void *)baton;
 }
 
 /* -----------------------------------------------------------------------

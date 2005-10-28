@@ -576,10 +576,6 @@ class WinGeneratorBase(GeneratorBase):
 
     if isinstance(target, gen_base.TargetSWIG):
       fakedefines.append("SWIG_GLOBAL")
-      fakedefines.append(self.swig_defines)
-
-    if isinstance(target, gen_base.TargetSWIGLib):
-      fakedefines.append(self.swig_defines)
 
     if cfg == 'Debug':
       fakedefines.extend(["_DEBUG","SVN_DEBUG"])
@@ -858,7 +854,6 @@ class WinGeneratorBase(GeneratorBase):
     finally:
       outfp.close()
 
-    self.swig_defines = 'SVN_SWIG_VERSION=%d' % vernum
     self.swig_vernum = vernum
     self.swig_libdir = libdir
 
