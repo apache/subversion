@@ -1825,7 +1825,7 @@ svn_io_start_cmd (apr_proc_t *cmd_proc,
   apr_err = apr_pool_userdata_set (errfile, ERRFILE_KEY, NULL, pool);
   if (apr_err)
     return svn_error_wrap_apr
-      (apr_err, _("Can't sett process '%s' child errfile for error handler"),
+      (apr_err, _("Can't set process '%s' child errfile for error handler"),
        cmd);
   apr_err = apr_procattr_child_errfn_set (cmdproc_attr,
                                           handle_child_process_error);
