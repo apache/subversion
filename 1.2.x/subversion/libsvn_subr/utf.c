@@ -1094,7 +1094,8 @@ get_fstonet_xlate_handle_node (xlate_handle_node_t **ret, apr_pool_t *pool)
    * byte and there is no going back to the original utf-8 value. */	
   return get_xlate_handle_node (ret,
                                 DefaultNetCCSID != -1 ? DefaultNetCCSID : 819,
-                                DefaultFsCCSID != -1 ? DefaultFsCCSID : 0,
+                                DefaultFsCCSID != -1
+                                ? DefaultFsCCSID : APR_DEFAULT_CHARSET,
                                 SVN_UTF_FSTONET_XLATE_HANDLE, pool);
 }
 
@@ -1107,7 +1108,8 @@ get_nettofs_xlate_handle_node (xlate_handle_node_t **ret, apr_pool_t *pool)
   /* See note in get_fstonet_xlate_handle_node re DefaultFsCCSID and 
    * DefaultNetCCSID */
   return get_xlate_handle_node (ret,
-                                DefaultFsCCSID != -1 ? DefaultFsCCSID : 0,
+                                DefaultFsCCSID != -1
+                                ? DefaultFsCCSID : APR_DEFAULT_CHARSET,
                                 DefaultNetCCSID != -1 ? DefaultNetCCSID : 819,
                                 SVN_UTF_NETTOFS_XLATE_HANDLE, pool);
 }
