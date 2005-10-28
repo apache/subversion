@@ -415,7 +415,7 @@ svn_handle_warning2 (FILE *stream, svn_error_t *err, const char *prefix)
   svn_error_clear (svn_cmdline_fprintf
                    (stream, err->pool,
                     _("%swarning: %s\n"),
-                    prefix, svn_err_best_message (err, buf, 256)));
+                    prefix, svn_err_best_message (err, buf, sizeof (buf))));
   fflush (stream);
 }
 
