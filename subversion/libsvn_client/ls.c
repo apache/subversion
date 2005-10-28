@@ -132,8 +132,8 @@ svn_client_ls4 (apr_hash_t **dirents,
                                                      TRUE, ctx, pool));
 
       /* Get all parent's entries, no props. */
-      SVN_ERR (svn_ra_get_dir (ra_session, "", rev, &parent_ents, 
-                               NULL, NULL, pool));
+      SVN_ERR (svn_ra_get_dir2 (ra_session, "", rev, dirent_fields,
+                                &parent_ents, NULL, NULL, pool));
 
       /* Copy the relevant entry into the caller's hash. */
       *dirents = apr_hash_make (pool);
