@@ -534,8 +534,10 @@ static void handle_child_process_error(apr_pool_t *pool, apr_status_t status,
   apr_file_t *in_file, *out_file;
   svn_error_t *err;
 
-  apr_file_open_stdin(&in_file, pool);
-  apr_file_open_stdout(&out_file, pool);
+  if (apr_file_open_stdin(&in_file, pool)
+      || apr_file_open_stdout(&out_file, pool))
+    return;
+
   conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
   err = svn_error_wrap_apr(status, _("Error in child process: %s"), desc);
   svn_error_clear(svn_ra_svn_write_cmd_failure(conn, pool, err));
