@@ -701,7 +701,7 @@ svn_error_t *svn_io_dir_walk (const char *dirname,
  * run "clean".
  *
  * @note On some platforms, failure to execute @a cmd in the child process
- * will result in error output being written to the child's stderr, and
+ * will result in error output being written to @a errfile, if non-NULL, and
  * a non-zero exit status being returned to the parent process.
  *
  * @since New in 1.3.

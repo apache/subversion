@@ -1726,6 +1726,9 @@ svn_io_get_dirents (apr_hash_t **dirents,
   return svn_io_get_dirents2 (dirents, path, pool);
 }
 
+/* Pool userdata key for the error file passed to svn_io_start_cmd(). */
+#define ERRFILE_KEY "svn-io-start-cmd-errfile"
+
 /* Handle an error from the child process (before command execution) by
    printing DESC and the error string corresponding to STATUS to stderr. */
 static void
@@ -1733,14 +1736,19 @@ handle_child_process_error (apr_pool_t *pool, apr_status_t status,
                             const char *desc)
 {
   char errbuf[256];
-  apr_file_t *stderr_handle;
+  apr_file_t *errfile;
+  void *p;
 
-  apr_file_open_stderr (&stderr_handle, pool);
+  /* We can't do anything if we get an error here, so just return. */
+  if (apr_pool_userdata_get (&p, ERRFILE_KEY, pool))
+    return;
+  errfile = p;
 
-  /* What we get from APR is in native encoding. */
-  apr_file_printf (stderr_handle, "%s: %s",
-                   desc, apr_strerror (status, errbuf,
-                                       sizeof (errbuf)));
+  if (errfile)
+    /* What we get from APR is in native encoding. */
+    apr_file_printf (errfile, "%s: %s",
+                     desc, apr_strerror (status, errbuf,
+                                         sizeof (errbuf)));
 }
 
 
@@ -1813,7 +1821,12 @@ svn_io_start_cmd (apr_proc_t *cmd_proc,
           (apr_err, _("Can't set process '%s' child errfile"), cmd);
     }
 
-  /* Have the child print any problems executing its program to stderr. */
+  /* Have the child print any problems executing its program to errfile. */
+  apr_err = apr_pool_userdata_set (errfile, ERRFILE_KEY, NULL, pool);
+  if (apr_err)
+    return svn_error_wrap_apr
+      (apr_err, _("Can't sett process '%s' child errfile for error handler"),
+       cmd);
   apr_err = apr_procattr_child_errfn_set (cmdproc_attr,
                                           handle_child_process_error);
   if (apr_err)
@@ -1845,6 +1858,8 @@ svn_io_start_cmd (apr_proc_t *cmd_proc,
 
   return SVN_NO_ERROR;
 }
+
+#undef ERRFILE_KEY
 
 svn_error_t *
 svn_io_wait_for_cmd (apr_proc_t *cmd_proc,
