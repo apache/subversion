@@ -410,14 +410,23 @@ svn_handle_warning (FILE *stream, svn_error_t *err)
 void
 svn_handle_warning2 (FILE *stream, svn_error_t *err, const char *prefix)
 {
+  char buf[256];
+
   svn_error_clear (svn_cmdline_fprintf
                    (stream, err->pool,
                     _("%swarning: %s\n"),
-                    prefix, (err->message ? err->message :
-                             "[no further information available]")));
+                    prefix, svn_err_best_message (err, buf, 256)));
   fflush (stream);
 }
 
+const char *
+svn_err_best_message (svn_error_t *err, char *buf, apr_size_t bufsize)
+{
+  if (err->message)
+    return err->message;
+  else
+    return svn_strerror (err->apr_err, buf, bufsize);
+}
 
 
 /* svn_strerror() and helpers */

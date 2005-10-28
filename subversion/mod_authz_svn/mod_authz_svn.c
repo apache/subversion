@@ -108,6 +108,7 @@ static int req_check_access(request_rec *r,
     svn_error_t *svn_err;
     const char *cache_key;
     void *user_data;
+    char errbuf[256];
 
     switch (r->method_number) {
     /* All methods requiring read access to all subtrees of r->uri */
@@ -239,9 +240,7 @@ static int req_check_access(request_rec *r,
                             svn_err->apr_err < APR_OS_START_CANONERR) ?
                            0 : svn_err->apr_err),
                           r, "Failed to load the AuthzSVNAccessFile: %s",
-                          (svn_err->message ?
-                           svn_err->message :
-                           "[no further information available]"));
+                          svn_err_best_message(svn_err, errbuf, 256));
             svn_error_clear(svn_err);
 
             return DECLINED;
@@ -291,9 +290,7 @@ static int req_check_access(request_rec *r,
                           svn_err->apr_err < APR_OS_START_CANONERR) ?
                          0 : svn_err->apr_err),
                         r, "Failed to perform access control: %s",
-                        (svn_err->message ?
-                         svn_err->message :
-                         "[no further information available]"));
+                        svn_err_best_message(svn_err, errbuf, 256));
           svn_error_clear(svn_err);
 
           return DECLINED;
@@ -339,9 +336,7 @@ static int req_check_access(request_rec *r,
                           svn_err->apr_err < APR_OS_START_CANONERR) ?
                          0 : svn_err->apr_err),
                         r, "Failed to perform access control: %s",
-                        (svn_err->message ?
-                         svn_err->message :
-                         "[no further information available]"));
+                        svn_err_best_message(svn_err, errbuf, 256));
           svn_error_clear(svn_err);
 
           return DECLINED;
