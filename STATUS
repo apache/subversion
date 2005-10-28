@@ -19,10 +19,4 @@ Candidate changes:
 
 Approved changes:
 
- * r17082
-   Fix atexit handler in Python bindings to only destroy the application
-   pool if it is still valid.
-   Justification:
-     Destroying an invalid application pool is bad.
-   Votes:
-     +1: djames, dlr
+ (none)

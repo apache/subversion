@@ -19,7 +19,12 @@
 from libsvn.core import *
 import libsvn.core as _core
 import atexit as _atexit
-_atexit.register(lambda: _core.application_pool.destroy())
+
+def _cleanup_application_pool():
+  """Cleanup the application pool before exiting"""
+  if application_pool and application_pool.valid():
+    application_pool.destroy()
+_atexit.register(_cleanup_application_pool)
 
 def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
   for name, value in symbol_dict.items():
