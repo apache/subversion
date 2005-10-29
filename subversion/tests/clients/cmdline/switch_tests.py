@@ -1057,7 +1057,7 @@ test_list = [ None,
               failed_anchor_is_target,
               bad_intermediate_urls,
               obstructed_switch,
-              XFail(commit_mods_below_switch),
+              commit_mods_below_switch,
               relocate_beyond_repos_root,
               XFail(refresh_read_only_attribute),
              ]
