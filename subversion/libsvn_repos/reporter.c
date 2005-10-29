@@ -351,7 +351,7 @@ change_file_prop (report_baton_t *b, void *file_baton, const char *name,
 static svn_error_t *
 delta_proplists (report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                  const char *t_path, const char *lock_token,
-		 proplist_change_fn_t *change_fn,
+                 proplist_change_fn_t *change_fn,
                  void *object, apr_pool_t *pool)
 {
   svn_fs_root_t *s_root;
@@ -837,10 +837,15 @@ drive (report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
   if (info_is_set_path && !s_entry)
     s_fullpath = NULL;
 
+  /* Check if the target path exists first.  */
+  if (!*b->s_operand && !(t_entry))
+    return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, NULL,
+                             _("Target path does not exist"));
+
   /* If the anchor is the operand, the source and target must be dirs.
      Check this before opening the root to avoid modifying the wc. */
-  if (!*b->s_operand && (!s_entry || s_entry->kind != svn_node_dir
-                         || !t_entry || t_entry->kind != svn_node_dir))
+  else if (!*b->s_operand && (!s_entry || s_entry->kind != svn_node_dir
+                              || t_entry->kind != svn_node_dir))
     return svn_error_create (SVN_ERR_FS_PATH_SYNTAX, NULL,
                              _("Cannot replace a directory from within"));
 
