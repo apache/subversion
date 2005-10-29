@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+7#!/usr/bin/env python
 #
 #  main.py: a shared, automated test suite for Subversion
 #
@@ -65,6 +65,10 @@ from svntest import wc
 import tree
 SVNTreeUnequal = tree.SVNTreeUnequal
 
+class SVNProcessTerminatedBySignal(Failure):
+  "Exception raised if a spawned process segfaulted, aborted, etc."
+  pass
+
 class SVNLineUnequal(Failure):
   "Exception raised if two lines are unequal"
   pass
@@ -91,6 +95,13 @@ else:
   windows = 0
   file_scheme_prefix = 'file://'
   _exe = ''
+
+# os.wait() specifics
+try:
+  from os import wait
+  platform_with_os_wait = 1
+except ImportError:
+  platform_with_os_wait = 0
 
 # The locations of the svn, svnadmin and svnlook binaries, relative to
 # the only scripts that import this file right now (they live in ../).
@@ -253,6 +264,15 @@ def run_command_stdin(command, error_expected, binary_mode=0,
 
   outfile.close()
   errfile.close()
+
+  if platform_with_os_wait:
+    pid, wait_code = os.wait()
+
+    exit_code = int(wait_code / 256)
+    exit_signal = wait_code % 256
+
+    if exit_signal != 0:
+      raise SVNProcessTerminatedBySignal
 
   if verbose_mode:
     stop = time.time()
