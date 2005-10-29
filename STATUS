@@ -17,13 +17,12 @@ Candidate changes:
    Votes:
      +1: dionisos, rooneg
 
+Approved changes:
+
  * r17093, r17095
    Avoid usage of $< in SWIG header wrapper generator rules.
    Justification:
      Necessary for compatibility with BSD make.
    Votes:
-     +1: djames
+     +1: djames, danderson, lundblad
 
-Approved changes:
-
- (none)
