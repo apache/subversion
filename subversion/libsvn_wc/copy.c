@@ -135,7 +135,7 @@ copy_file_administratively (const char *src_path,
 {
   svn_node_kind_t dst_kind;
   const svn_wc_entry_t *src_entry, *dst_entry;
-  const char *src_wprop, *src_bprop, *dst_wprop;
+  const char *src_wprop, *src_bprop;
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
   const char *dst_path
@@ -145,13 +145,11 @@ copy_file_administratively (const char *src_path,
   const char *src_txtb = svn_wc__text_base_path (src_path, FALSE, pool);
   const char *tmp_txtb = svn_wc__text_base_path (dst_path, TRUE, pool);
 
-  /* Discover the paths to the four prop files */
+  /* Discover the paths to the two source prop files */
   SVN_ERR (svn_wc__prop_path (&src_wprop, src_path,
                               src_access, FALSE, pool));
   SVN_ERR (svn_wc__prop_base_path (&src_bprop, src_path,
                                    src_access, FALSE, pool));
-  SVN_ERR (svn_wc__prop_path (&dst_wprop, dst_path,
-                              dst_parent, FALSE, pool));
 
   /* Sanity check:  if dst file exists already, don't allow overwrite. */
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
