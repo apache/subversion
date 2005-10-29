@@ -25,6 +25,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_repos.h"
+#include "svn_utf.h"
 #include "repos.h"
 #include "svn_private_config.h"
 
@@ -91,10 +92,11 @@ run_hook_cmd (const char *name,
     }
   else
     {
-      svn_stringbuf_t *error;
+      svn_stringbuf_t *native_error;
+      const char *error;
       svn_error_t *err2;
 
-      err2 = svn_stringbuf_from_aprfile (&error, read_errhandle, pool);
+      err2 = svn_stringbuf_from_aprfile (&native_error, read_errhandle, pool);
 
       err = svn_io_wait_for_cmd(&cmd_proc, cmd, &exitcode, &exitwhy, pool);
       if (! err)
@@ -103,10 +105,13 @@ run_hook_cmd (const char *name,
             {
               if (read_errstream && ! err2)
                 {
-                  err = svn_error_createf
-                    (SVN_ERR_REPOS_HOOK_FAILURE, err,
-                     _("'%s' hook failed with error output:\n%s"),
-                     name, error->data);
+                  err2 = svn_utf_cstring_to_utf8 (&error, native_error->data,
+                                                  pool);
+                  if (! err2)
+                    err = svn_error_createf
+                      (SVN_ERR_REPOS_HOOK_FAILURE, err,
+                       _("'%s' hook failed with error output:\n%s"),
+                       name, error);
                 }
               else
                 {
