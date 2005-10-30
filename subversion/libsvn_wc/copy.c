@@ -213,13 +213,11 @@ copy_file_administratively (const char *src_path,
 
     /* Copy working copy file to temporary location */
     {
-      apr_file_t *fp;
       svn_boolean_t special;
 
-      SVN_ERR (svn_wc_create_tmp_file2 (&fp, &tmp_wc_text,
+      SVN_ERR (svn_wc_create_tmp_file2 (NULL, &tmp_wc_text,
                                         svn_wc_adm_access_path (dst_parent),
                                         FALSE, pool));
-      SVN_ERR (svn_io_file_close (fp, pool));
 
       SVN_ERR (svn_wc__get_special (&special, src_path, src_access, pool));
       if (special)

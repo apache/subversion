@@ -2944,15 +2944,13 @@ svn_wc_add_repos_file2 (const char *dst_path,
 
   if (new_text_path)
     {
-      apr_file_t *file;
       const char *tmp_text_path;
       const char *adm_path = svn_wc_adm_access_path (adm_access);
       apr_size_t adm_path_len = strlen (adm_path) + 1;
 
       /* Move new text to temporary file in adm_access. */
-      SVN_ERR (svn_wc_create_tmp_file2 (&file, &tmp_text_path,
+      SVN_ERR (svn_wc_create_tmp_file2 (NULL, &tmp_text_path,
                                         adm_path, FALSE, pool));
-      SVN_ERR (svn_io_file_close (file, pool));
       SVN_ERR (svn_io_file_move (new_text_path, tmp_text_path, pool));
 
       /* Translate/rename new temporary text file to working text. */
