@@ -152,11 +152,11 @@ run_hook_cmd (const char *name,
 static svn_error_t *
 create_temp_file (apr_file_t **f, const svn_string_t *value, apr_pool_t *pool)
 {
-  const char *dir, *fname;
+  const char *dir;
   apr_off_t offset = 0;
 
   SVN_ERR (svn_io_temp_dir (&dir, pool));
-  SVN_ERR (svn_io_open_unique_file (f, &fname,
+  SVN_ERR (svn_io_open_unique_file (f, NULL,
                                     svn_path_join (dir, "hook-input", pool),
                                     "", TRUE /* delete on close */, pool));
   SVN_ERR (svn_io_file_write_full (*f, value->data, value->len, NULL, pool));

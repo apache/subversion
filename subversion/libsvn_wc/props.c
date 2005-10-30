@@ -382,7 +382,6 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
   const char *tmp_props, *real_props;      
   const char *access_path = svn_wc_adm_access_path (adm_access);
   int access_len = strlen (access_path);
-  apr_file_t *reject_fp = NULL;           /* the real conflicts file */
   const char *reject_path = NULL;
   apr_file_t *reject_tmp_fp = NULL;       /* the temporary conflicts file */
   const char *reject_tmp_path = NULL;
@@ -657,13 +656,11 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
           full_reject_path = svn_path_join 
             (access_path, is_dir ? SVN_WC__THIS_DIR_PREJ : name, pool);
 
-          SVN_ERR (svn_io_open_unique_file (&reject_fp, &reserved_path,
+          SVN_ERR (svn_io_open_unique_file (NULL, &reserved_path,
                                             full_reject_path,
                                             SVN_WC__PROP_REJ_EXT,
                                             FALSE, pool));
 
-          SVN_ERR (svn_io_file_close (reject_fp, pool));
-          
           /* This file will be overwritten when the log is run; that's
              ok, because at least now we have a reservation on
              disk. */
@@ -738,7 +735,6 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
   apr_hash_t *basehash;    /* all `pristine' properties */
 
   /* For writing conflicts to a .prej file */
-  apr_file_t *reject_fp = NULL;           /* the real conflicts file */
   const char *reject_path = NULL;
 
   apr_file_t *reject_tmp_fp = NULL;       /* the temporary conflicts file */
@@ -960,15 +956,13 @@ svn_wc__merge_prop_diffs (svn_wc_notify_state_t *state,
                              is_dir ? SVN_WC__THIS_DIR_PREJ : name,
                              pool);
 
-          SVN_ERR (svn_io_open_unique_file (&reject_fp,
+          SVN_ERR (svn_io_open_unique_file (NULL,
                                             &reserved_path,
                                             full_reject_path,
                                             SVN_WC__PROP_REJ_EXT,
                                             FALSE,
                                             pool));
 
-          SVN_ERR (svn_io_file_close (reject_fp, pool));
-          
           /* This file will be overwritten when the log is run; that's
              ok, because at least now we have a reservation on
              disk. */

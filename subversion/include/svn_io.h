@@ -121,7 +121,7 @@ svn_error_t *svn_io_check_resolved_path (const char *path,
  *
  * @a *unique_name_p will never be exactly the same as @a path, even
  * if @a path does not exist.
- * 
+ *
  * It doesn't matter if @a path is a file or directory, the unique name will
  * be in @a path's parent either way.
  *
@@ -135,6 +135,11 @@ svn_error_t *svn_io_check_resolved_path (const char *path,
  *
  *    - tmpnam() is not thread-safe.
  *    - tempname() tries standard system tmp areas first.
+ *
+ * @note In 1.4 the API was extended to require either @a f or
+ *       @a unique_name_p (the other can be NULL).  Before that, both were
+ *       required.
+ *
  */
 svn_error_t *svn_io_open_unique_file (apr_file_t **f,
                                       const char **unique_name_p,
