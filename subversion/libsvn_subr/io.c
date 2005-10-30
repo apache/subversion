@@ -184,8 +184,11 @@ svn_io_open_unique_file (apr_file_t **f,
                          apr_pool_t *pool)
 {
   unsigned int i;
+  apr_file_t *file;
   const char *unique_name;
   const char *unique_name_apr;
+
+  assert (f || unique_name_p);
 
   for (i = 1; i <= 99999; i++)
     {
@@ -219,7 +222,7 @@ svn_io_open_unique_file (apr_file_t **f,
       SVN_ERR (svn_path_cstring_from_utf8 (&unique_name_apr, unique_name,
                                            pool));
 
-      apr_err = apr_file_open (f, unique_name_apr, flag,
+      apr_err = apr_file_open (&file, unique_name_apr, flag,
                                APR_OS_DEFAULT, pool);
 
       if (APR_STATUS_IS_EEXIST (apr_err))
@@ -243,20 +246,25 @@ svn_io_open_unique_file (apr_file_t **f,
                  return the original error. */
             }
 
-          *f = NULL;
-          *unique_name_p = NULL;
+          if (f) *f = NULL;
+          if (unique_name_p) *unique_name_p = NULL;
           return svn_error_wrap_apr (apr_err, _("Can't open '%s'"),
                                      svn_path_local_style (unique_name, pool));
         }
       else
         {
-          *unique_name_p = unique_name;
+          if (f)
+            *f = file;
+          else
+            apr_file_close (file);
+          if (unique_name_p) *unique_name_p = unique_name;
+
           return SVN_NO_ERROR;
         }
     }
 
-  *f = NULL;
-  *unique_name_p = NULL;
+  if (f) *f = NULL;
+  if (unique_name_p) *unique_name_p = NULL;
   return svn_error_createf (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
                             NULL,
                             _("Unable to make name for '%s'"),
@@ -545,7 +553,6 @@ svn_io_copy_file (const char *src,
                   svn_boolean_t copy_perms,
                   apr_pool_t *pool)
 {
-  apr_file_t *d;
   apr_status_t apr_err;
   const char *src_apr, *dst_tmp_apr;
   const char *dst_tmp;
@@ -555,10 +562,8 @@ svn_io_copy_file (const char *src,
   /* For atomicity, we translate to a tmp file and then rename the tmp
      file over the real destination. */
 
-  SVN_ERR (svn_io_open_unique_file (&d, &dst_tmp, dst, ".tmp", FALSE, pool));
+  SVN_ERR (svn_io_open_unique_file (NULL, &dst_tmp, dst, ".tmp", FALSE, pool));
   SVN_ERR (svn_path_cstring_from_utf8 (&dst_tmp_apr, dst_tmp, pool));
-
-  SVN_ERR (svn_io_file_close (d, pool));
 
   apr_err = apr_file_copy (src_apr, dst_tmp_apr, APR_OS_DEFAULT, pool);
   if (apr_err)
@@ -987,12 +992,10 @@ static svn_error_t *
 reown_file (const char *path_apr,
             apr_pool_t *pool)
 {
-  apr_file_t *fp;
   const char *unique_name;
 
-  SVN_ERR (svn_io_open_unique_file (&fp, &unique_name, path_apr,
+  SVN_ERR (svn_io_open_unique_file (NULL, &unique_name, path_apr,
                                     ".tmp", FALSE, pool));
-  SVN_ERR (svn_io_file_close (fp, pool));
   SVN_ERR (svn_io_file_rename (path_apr, unique_name, pool));
   SVN_ERR (svn_io_copy_file (unique_name, path_apr, TRUE, pool));
   SVN_ERR (svn_io_remove_file (unique_name, pool));
@@ -2473,13 +2476,11 @@ svn_io_file_move (const char *from_path, const char *to_path,
   if (err && APR_STATUS_IS_EXDEV (err->apr_err))
     {
       const char *tmp_to_path;
-      apr_file_t *fp;
 
       svn_error_clear (err);
 
-      SVN_ERR (svn_io_open_unique_file (&fp, &tmp_to_path,
+      SVN_ERR (svn_io_open_unique_file (NULL, &tmp_to_path,
                                         to_path, "tmp", FALSE, pool));
-      apr_file_close (fp);
 
       err = svn_io_copy_file (from_path, tmp_to_path, TRUE, pool);
       if (err)

@@ -131,7 +131,7 @@ store_delta (apr_file_t **tempfile, svn_filesize_t *len,
              svn_fs_root_t *oldroot, const char *oldpath,
              svn_fs_root_t *newroot, const char *newpath, apr_pool_t *pool)
 {
-  const char *tempdir, *name;
+  const char *tempdir;
   svn_stream_t *temp_stream;
   apr_off_t offset = 0;
   svn_txdelta_stream_t *delta_stream;
@@ -140,7 +140,7 @@ store_delta (apr_file_t **tempfile, svn_filesize_t *len,
 
   /* Create a temporary file and open a stream to it. */
   SVN_ERR (svn_io_temp_dir (&tempdir, pool));
-  SVN_ERR (svn_io_open_unique_file (tempfile, &name,
+  SVN_ERR (svn_io_open_unique_file (tempfile, NULL,
                                     apr_psprintf (pool, "%s/dump", tempdir),
                                     ".tmp", TRUE, pool));
   temp_stream = svn_stream_from_aprfile (*tempfile, pool);
