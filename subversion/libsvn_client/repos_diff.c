@@ -364,26 +364,19 @@ create_empty_file (const char **empty_file,
                    svn_wc_adm_access_t *adm_access,
                    apr_pool_t *pool)
 {
-  apr_file_t *file;
-  const char *temp_path;
-
   if (adm_access && svn_wc_adm_locked (adm_access))
-    {
-      SVN_ERR (svn_wc_create_tmp_file (&file,
-                                       svn_wc_adm_access_path (adm_access),
-                                       FALSE, pool));
-      apr_file_name_get (empty_file, file);
-    }
+    SVN_ERR (svn_wc_create_tmp_file2 (NULL, empty_file,
+                                      svn_wc_adm_access_path (adm_access),
+                                      FALSE, pool));
   else
     {
       const char *temp_dir;
+
       SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
-      temp_path = svn_path_join (temp_dir, "tmp", pool);
-      SVN_ERR (svn_io_open_unique_file (&file, empty_file, temp_path,
+      SVN_ERR (svn_io_open_unique_file (NULL, empty_file,
+                                        svn_path_join (temp_dir, "tmp", pool),
                                         "", FALSE, pool));
     }
-
-  SVN_ERR (svn_io_file_close (file, pool));
 
   return SVN_NO_ERROR;
 }
