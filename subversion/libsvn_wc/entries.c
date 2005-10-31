@@ -276,25 +276,44 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
   
   /* Is this entry in a state of mental torment (conflict)? */
   {
-    if ((entry->prejfile 
-         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_PREJFILE, 
+    if ((entry->prejfile
+         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_PREJFILE,
                          APR_HASH_KEY_STRING)))
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_PREJFILE;
+      {
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_PREJFILE;
+        /* Normalize "" (used by the log runner) to NULL */
+        entry->prejfile = *(entry->prejfile) ? entry->prejfile : NULL;
+      }
 
-    if ((entry->conflict_old 
-         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CONFLICT_OLD, 
+    if ((entry->conflict_old
+         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
                          APR_HASH_KEY_STRING)))
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD;
+      {
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD;
+        /* Normalize "" (used by the log runner) to NULL */
+        entry->conflict_old =
+          *(entry->conflict_old) ? entry->conflict_old : NULL;
+      }
 
-    if ((entry->conflict_new 
-         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CONFLICT_NEW, 
+    if ((entry->conflict_new
+         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
                          APR_HASH_KEY_STRING)))
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_NEW;
+      {
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_NEW;
+        /* Normalize "" (used by the log runner) to NULL */
+        entry->conflict_new =
+          *(entry->conflict_new) ? entry->conflict_new : NULL;
+      }
 
-    if ((entry->conflict_wrk 
-         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CONFLICT_WRK, 
+    if ((entry->conflict_wrk
+         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
                          APR_HASH_KEY_STRING)))
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_WRK;
+      {
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_WRK;
+        /* Normalize "" (used by the log runner) to NULL */
+        entry->conflict_wrk =
+          *(entry->conflict_wrk) ? entry->conflict_wrk : NULL;
+      }
   }
 
   /* Is this entry copied? */
