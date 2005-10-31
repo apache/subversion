@@ -631,12 +631,20 @@ def diff_pure_repository_update_a_file(sbox):
 def diff_only_property_change(sbox):
   "diff when property was changed but text was not"
 
-  ### FIXME: Subversion erroneously tried to run an external diff
-  ### program and aborted.  This test catches that problem, but it
-  ### really ought to check that the property diff gets output.
-
   sbox.build()
   wc_dir = sbox.wc_dir
+
+  expected_output = [
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Name: svn:eol-style\n",
+    "   + native\n",
+    "\n" ]
+
+  expected_reverse_output = list(expected_output)
+  expected_reverse_output[4] = "   - native\n"
+
 
   current_dir = os.getcwd()
   os.chdir(sbox.wc_dir)
@@ -648,14 +656,18 @@ def diff_only_property_change(sbox):
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'ci', '-m', 'empty-msg')
 
-    svntest.actions.run_and_verify_svn(None, None, [],
+    svntest.actions.run_and_verify_svn(None, expected_output, [],
                                        'diff', '-r', '1:2')
 
-    svntest.actions.run_and_verify_svn(None, None, [],
+    svntest.actions.run_and_verify_svn(None, expected_reverse_output, [],
                                        'diff', '-r', '2:1')
 
-    svntest.actions.run_and_verify_svn(None, None, [],
+    svntest.actions.run_and_verify_svn(None, expected_output, [],
                                        'diff', '-r', '1')
+
+    svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                       'diff', '-r', 'PREV', 'iota')
+
 
   finally:
     os.chdir(current_dir)
