@@ -57,7 +57,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-03-30 01:34+0200\n"
+"POT-Creation-Date: 2005-10-31 23:01+0100\n"
 "PO-Revision-Date: 2004-07-13 11:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -1327,7 +1327,7 @@ msgstr "Fanget signal"
 msgid ""
 "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr ""
-"Flere revisjonsargument ble brukt. Prøv «-r M:N» i stedet for «-r M -r N»"
+"Flere revisjonsargumenter ble brukt, prøv «-r M:N» i stedet for «-r M -r N»"
 
 #: clients/cmdline/main.c:834 svnadmin/main.c:1023
 #, c-format
@@ -2161,7 +2161,7 @@ msgstr "En påhakning i depotet feilet"
 
 #: include/svn_error_codes.h:515
 msgid "Incorrect arguments supplied"
-msgstr "Det er gitt feilaktige argument"
+msgstr "Feilaktige argumenter angitt"
 
 #: include/svn_error_codes.h:519
 msgid "A report cannot be generated because no data was supplied"
@@ -4935,7 +4935,7 @@ msgstr "Kun ett filargument behøves"
 
 #: svnadmin/main.c:1121 svnlook/main.c:1945
 msgid "subcommand argument required\n"
-msgstr "Delkommandoen må ha et argument\n"
+msgstr "delkommandoen må ha et argument\n"
 
 #: svnadmin/main.c:1211
 #, c-format
