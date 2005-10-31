@@ -940,7 +940,7 @@ change_file_prop (void *file_baton,
    * date instead of the value */
   if (strcmp (name, SVN_PROP_TEXT_TIME) == 0)
     {
-      SVN_ERR (populate_finfo(b, name, pool));
+      SVN_ERR (populate_finfo(b, b->path, pool));
       propchange->value=svn_string_create( 
                                           svn_time_to_cstring (b->file_info->mtime, b->pool),
                                           b->pool );
@@ -948,17 +948,17 @@ change_file_prop (void *file_baton,
   /* do likewise for owner, group, mode */
   else if (strcmp (name, SVN_PROP_OWNER) == 0)
     {
-      SVN_ERR (populate_finfo(b, name, pool));
+      SVN_ERR (populate_finfo(b, b->path, pool));
       propchange->value=svn_io_file_owner_string( b->file_info->user, b->pool);
     }
   else if (strcmp (name, SVN_PROP_GROUP) == 0)
     {
-      SVN_ERR (populate_finfo(b, name, pool));
+      SVN_ERR (populate_finfo(b, b->path, pool));
       propchange->value=svn_io_file_group_string( b->file_info->group, b->pool);
     }
   else if (strcmp (name, SVN_PROP_UNIX_MODE) == 0)
     {
-      SVN_ERR (populate_finfo(b, name, pool));
+      SVN_ERR (populate_finfo(b, b->path, pool));
       propchange->value=svn_io_file_mode_string( b->file_info->protection, pool);
     }
   else
@@ -986,17 +986,17 @@ change_dir_prop (void *dir_baton,
   /* use the current values for meta-data-properties */
   if (strcmp (name, SVN_PROP_OWNER) == 0)
     {
-      SVN_ERR (populate_finfo(db, name, pool));
+      SVN_ERR (populate_finfo(db, db->path, pool));
       propchange->value=svn_io_file_owner_string( db->file_info->user, db->pool);
     }
   else if (strcmp (name, SVN_PROP_GROUP) == 0)
     {
-      SVN_ERR (populate_finfo(db, name, pool));
+      SVN_ERR (populate_finfo(db, db->path, pool));
       propchange->value=svn_io_file_group_string( db->file_info->group, db->pool);
     }
   else if (strcmp (name, SVN_PROP_UNIX_MODE) == 0)
     {
-      SVN_ERR (populate_finfo(db, name, pool));
+      SVN_ERR (populate_finfo(db, db->path, pool));
       propchange->value=svn_io_file_mode_string( db->file_info->protection, pool);
     }
   else
