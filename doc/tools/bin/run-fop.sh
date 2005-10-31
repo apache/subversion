@@ -4,10 +4,10 @@
 #
 # Usage:    run-fop.sh BOOK_TOP [FOP_ARGS...]
 #
-# This script is meant to be invoked by subversion/doc/book/Makefile.
-# The first argument is the top of the book directory, that is,
-# subversion/doc/book (*not* subversion/doc/book/book), and the
-# remaining arguments are passed along to `fop'.
+# This script is meant to be invoked by doc/Makefile.
+# The first argument (BOOK_TOP) is the path to the `doc' subdirectory
+# of the subversion source, and the remaining arguments are passed
+# along to `fop'.
 
 BOOK_TOP=${1}
 
@@ -17,6 +17,11 @@ if [ "${BOOK_TOP}X" = X ]; then
 fi
 
 shift
+
+# If the user has a .foprc, source it.
+if [ -f ${HOME}/.foprc ]; then
+  . ${HOME}/.foprc
+fi
 
 # The fop of last resort.
 DESPERATION_FOP_DIR=${BOOK_TOP}/tools/fop
@@ -34,6 +39,7 @@ fi
 # different systems seem to package it different ways.
 SAVED_IFS=${IFS}
 IFS=:
+PATH=${PATH}:${FOP_HOME}
 for dir in ${PATH}; do
    if [ -x ${dir}/fop -a "${FOP_PGM}X" = X ]; then
      FOP_PGM=${dir}/fop

@@ -1,14 +1,15 @@
+# Paths which you may wish to customize:
 XSLTPROC = xsltproc
+XMLLINT = xmllint
 INSTALL_DIR = $(DESTDIR)/usr/share/doc/subversion
 INSTALL = install
-
-## You shouldn't normally need to edit anything below here.
-SHELL = /bin/sh
 SVNVERSION = svnversion
 
-DOC_TOP = .
+# You should not normally need to edit anything below here.
+SHELL = /bin/sh
 
-MDOCS_DIR = ${DOC_TOP}/misc-docs
+TOOLS_DIR = tools
+MDOCS_DIR = misc-docs
 MDOCS_HTML_TARGET = $(MDOCS_DIR)/misc-docs.html
 MDOCS_PDF_TARGET = $(MDOCS_DIR)/misc-docs.pdf
 MDOCS_PS_TARGET = $(MDOCS_DIR)/misc-docs.ps
@@ -17,70 +18,71 @@ MDOCS_XML_SOURCE = $(MDOCS_DIR)/misc-docs.xml
 MDOCS_ALL_SOURCE = $(MDOCS_DIR)/*.xml
 MDOCS_INSTALL_DIR = $(INSTALL_DIR)/misc-docs
 
-XSL_FO = ${DOC_TOP}/tools/fo-stylesheet.xsl
-XSL_HTML = $(DOC_TOP)/tools/html-stylesheet.xsl
-XSL_HTML_CHUNK = $(DOC_TOP)/tools/chunk-stylesheet.xsl
+ENSURE_XSL = if ! test -e "$(TOOLS_DIR)/xsl"; \
+	     then $(TOOLS_DIR)/bin/find-xsl.py; fi
 
-RUN_FOP = ${DOC_TOP}/tools/bin/run-fop.sh
-
-# Book xsltproc options for HTML output
-# Note: --stringparam arguments no longer go here; 
-# see tools/html-stylesheet.xsl and tools/chunk-stylesheet.xsl
-DOC_HTML_XSLTPROC_OPTS = 
-
-# Book xsltproc options for PDF and PostScript output
-# DOC_PDF_XSLTPROC_OPTS = --stringparam page.height 9in --stringparam page.width 6.4in
-# DOC_PS_XSLTPROC_OPTS = --stringparam page.height 9in --stringparam page.width 6.4in
+# Customization hooks for xsltproc options
+MDOCS_HTML_XSLTPROC_OPTS = 
+MDOCS_FO_XSLTPROC_OPTS =
+# FO example: --stringparam page.height 9in --stringparam page.width 6.4in
 
 # Uncomment the following line if you'd like to print on A4 paper
-# DOC_PDF_XSLTPROC_OPTS = --stringparam paper.type A4
+# MDOCS_FO_XSLTPROC_OPTS = --stringparam paper.type A4
 
-all: all-html all-pdf all-ps
-
-install: install-misc-docs
-
+# Grouping targets
+all: all-misc-docs
+all-misc-docs: misc-docs-html misc-docs-pdf misc-docs-ps
 all-html: misc-docs-html
-
 all-pdf: misc-docs-pdf
-
 all-ps: misc-docs-ps
 
-all-misc-docs: misc-docs-html misc-docs-pdf
-
-install-misc-docs: install-misc-html install-misc-pdf \
-                   install-misc-ps
+install: install-misc-docs
+install-misc-docs: install-misc-docs-html \
+	      install-misc-docs-pdf install-misc-docs-ps
 
 clean: misc-docs-clean
 
+# Build targets
 misc-docs-html: $(MDOCS_HTML_TARGET)
-
 $(MDOCS_HTML_TARGET): $(MDOCS_ALL_SOURCE)
-	$(XSLTPROC) $(XSL_HTML) $(MDOCS_XML_SOURCE) > $(MDOCS_HTML_TARGET)
+	$(ENSURE_XSL)
+	$(XSLTPROC) $(MDOCS_HTML_XSLTPROC_OPTS) --output $(MDOCS_HTML_TARGET) \
+	  $(TOOLS_DIR)/html-stylesheet.xsl $(MDOCS_XML_SOURCE)
+
+$(MDOCS_FO_TARGET): $(MDOCS_ALL_SOURCE)
+	$(ENSURE_XSL)
+	$(XSLTPROC) $(MDOCS_FO_XSLTPROC_OPTS) --output $(MDOCS_FO_TARGET) \
+	  $(TOOLS_DIR)/fo-stylesheet.xsl $(MDOCS_XML_SOURCE)
 
 misc-docs-pdf: $(MDOCS_PDF_TARGET)
+$(MDOCS_PDF_TARGET): $(MDOCS_FO_TARGET)
+	$(TOOLS_DIR)/bin/run-fop.sh . -fo $(MDOCS_FO_TARGET) \
+	  -pdf $(MDOCS_PDF_TARGET)
 
 misc-docs-ps: $(MDOCS_PS_TARGET)
+$(MDOCS_PS_TARGET): $(MDOCS_FO_TARGET)
+	$(TOOLS_DIR)/bin/run-fop.sh . -fo $(MDOCS_FO_TARGET) \
+	  -ps $(MDOCS_PS_TARGET)
 
-$(MDOCS_PDF_TARGET): $(MDOCS_ALL_SOURCE)
-	$(XSLTPROC) $(XSL_FO) $(MDOCS_XML_SOURCE) > $(MDOCS_FO_TARGET)
-	$(RUN_FOP) $(DOC_TOP) -fo $(MDOCS_FO_TARGET) -pdf $(MDOCS_PDF_TARGET)
-
-$(MDOCS_PS_TARGET): $(MDOCS_ALL_SOURCE)
-	$(XSLTPROC) $(XSL_FO) $(MDOCS_XML_SOURCE) > $(MDOCS_FO_TARGET)
-	$(RUN_FOP) $(DOC_TOP) -fo $(MDOCS_FO_TARGET) -ps $(MDOCS_PS_TARGET)
-
-misc-docs-clean:
-	rm -f $(MDOCS_HTML_TARGET) $(MDOCS_FO_TARGET)
-	rm -f $(MDOCS_PDF_TARGET) $(MDOCS_PS_TARGET)
-
+# Install targets
 $(MDOCS_INSTALL_DIR):
 	$(INSTALL) -d $(MDOCS_INSTALL_DIR)
 
-install-misc-html: $(MDOCS_HTML_TARGET) $(MDOCS_INSTALL_DIR)
+install-misc-docs-html: $(MDOCS_HTML_TARGET) $(MDOCS_INSTALL_DIR)
 	$(INSTALL) $(MDOCS_HTML_TARGET) $(MDOCS_INSTALL_DIR)
 
-install-misc-pdf: $(MDOCS_PDF_TARGET) $(MDOCS_INSTALL_DIR)
+install-misc-docs-pdf: $(MDOCS_PDF_TARGET) $(MDOCS_INSTALL_DIR)
 	$(INSTALL) $(MDOCS_PDF_TARGET) $(MDOCS_INSTALL_DIR)
 
-install-misc-ps: $(MDOCS_PS_TARGET) $(MDOCS_INSTALL_DIR)
+install-misc-docs-ps: $(MDOCS_PS_TARGET) $(MDOCS_INSTALL_DIR)
 	$(INSTALL) $(MDOCS_PS_TARGET) $(MDOCS_INSTALL_DIR)
+
+# Clean targets
+misc-docs-clean:
+	rm -f $(MDOCS_HTML_TARGET) $(MDOCS_FO_TARGET)
+	rm -f $(MDOCS_PDF_TARGET) $(MDOCS_PS_TARGET) 
+
+# Utility targets
+valid:
+	$(XMLLINT) --noout --nonet --valid $(MDOCS_XML_SOURCE)
+
