@@ -58,7 +58,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-10-31 18:42+0100\n"
-"PO-Revision-Date: 2005-10-31 20:57+0100\n"
+"PO-Revision-Date: 2005-10-31 22:52+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2505,7 +2505,7 @@ msgstr "En påhakning i depotet feilet"
 
 #: include/svn_error_codes.h:595
 msgid "Incorrect arguments supplied"
-msgstr "Det er gitt feilaktige argument"
+msgstr "Feilaktige argumenter angitt"
 
 #: include/svn_error_codes.h:599
 msgid "A report cannot be generated because no data was supplied"
@@ -7437,12 +7437,12 @@ msgstr "Fjernet lås på «%s».\n"
 msgid ""
 "Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
 msgstr ""
-"Flere revisjonsargument ble brukt. Prøv «-r M:N» i stedet for «-r M -r N»"
+"Flere revisjonsargumenter ble brukt, prøv «-r M:N» i stedet for «-r M -r N»"
 
 #: svnadmin/main.c:1322
 #, c-format
 msgid "subcommand argument required\n"
-msgstr "Delkommandoen må ha et argument\n"
+msgstr "delkommandoen må ha et argument\n"
 
 #: svnadmin/main.c:1407
 #, c-format
