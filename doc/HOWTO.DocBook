@@ -70,12 +70,12 @@ II. COMPILING THE DOCS
      If you don't want to compile libxslt, you can just fetch the
      appropriate OS binary package.  
 
-   * From the book directory, do 
+   * From the this directory, do 
 
-        $ make all-html
+        $ make misc-docs-html
 
      This produces an HTML version for the Subversion DocBook docs in
-     misc-docs/misc-docs.html.
+     misc-docs/svn-misc-docs.html.
 
          
 3. Make a PDF file.
@@ -136,10 +136,10 @@ II. COMPILING THE DOCS
 
    * From this directory, do
 
-        $ make all-pdf
+        $ make misc-docs-pdf
 
      This produces PDF for the Subversion DocBook documents in
-     misc-docs/misc-docs.pdf.
+     misc-docs/svn-misc-docs.pdf.
 
 
 III. HACKING ON THE DOCS
