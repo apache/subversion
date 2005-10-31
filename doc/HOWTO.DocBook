@@ -70,7 +70,7 @@ II. COMPILING THE DOCS
      If you don't want to compile libxslt, you can just fetch the
      appropriate OS binary package.  
 
-   * From the this directory, do 
+   * From this directory, do
 
         $ make misc-docs-html
 
