@@ -58,7 +58,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-10-31 18:42+0100\n"
-"PO-Revision-Date: 2005-09-30 02:41+0200\n"
+"PO-Revision-Date: 2005-10-31 20:57+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -415,7 +415,7 @@ msgstr "jobb kun i én katalog"
 
 #: clients/cmdline/main.c:72
 msgid "the change made by revision ARG (like -r ARG-1:ARG)"
-msgstr ""
+msgstr "forandringen gjort av revisjon ARG (samme som -r ARG-1:ARG)"
 
 #: clients/cmdline/main.c:74
 msgid ""
@@ -735,7 +735,6 @@ msgstr ""
 "     umiddelbar innsending.\n"
 
 #: clients/cmdline/main.c:279
-#, fuzzy
 msgid ""
 "Display the differences between two paths.\n"
 "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
@@ -766,8 +765,8 @@ msgid ""
 "  Use just 'svn diff' to display local modifications in a working copy.\n"
 msgstr ""
 "Vis forskjellene mellom to stier.\n"
-"bruk: 1. diff [-r N[:M]] [MÅL[@REV]...]\n"
-"      2. diff [-r N[:M]] --old=GML-MÅL[@GMLREV] [--new=NYTT-MÅL[@NYREV]] \\\n"
+"bruk: 1. diff [-c M | -r N[:M]] [MÅL[@REV]...]\n"
+"      2. diff [-c M | -r N[:M]] --old=GML-MÅL[@GMLREV] [--new=NYTT-MÅL[@NYREV]] \\\n"
 "              [STI...]\n"
 "      3. diff GML-URL[@GMLREV] NY-URL[@NYREV]\n"
 "\n"
@@ -777,7 +776,7 @@ msgstr ""
 "     N sin standardverdi er BASE hvis et vilkårlig MÅL er en sti til en\n"
 "     arbeidskopi, men må angis ellers. M sin standardverdi er den gjeldende\n"
 "     arbeidsversjonen hvis et vilkårlig MÅL er en sti til en arbeidskopi,\n"
-"     eller HEAD hvis ikke.\n"
+"     eller HEAD hvis ikke. «-c M»-valget tilsvarer «-r N:M» der N = M-1.\n"
 "\n"
 "  2. Vis endringene mellom GML-MÅL slik det var i GMLREV og NYTT-MÅL slik "
 "det\n"
@@ -785,8 +784,8 @@ msgstr ""
 "     og begrenser utdataene til endringer for de angitte stiene. GML-MÅL og\n"
 "     NYTT-MÅL kan være arbeidskopi-stier eller URL[@REV]. NYTT-MÅL sin\n"
 "     standardverdi er GML-MÅL hvis ikke angitt. -r N setter GMLREV sin\n"
-"     standardverdi til N, mens -r N:M setter GMLREV sin standardverdi til N\n"
-"     og NYREV sin til M.\n"
+"     standardverdi til N, -r N:M setter GMLREV sin standardverdi til N\n"
+"     og NYREV sin til M, -c setter GMLREV til M-1 som standard og NYREV til M.\n"
 "\n"
 "  3. Kortform for «svn diff --old=GML-URL[@GMLREV] --new=NY-URL[@NYREV]».\n"
 "\n"
@@ -980,7 +979,6 @@ msgstr ""
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
 #: clients/cmdline/main.c:447
-#, fuzzy
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -1009,7 +1007,7 @@ msgstr ""
 "Flett forskjellene mellom to kilder inn i en arbeidskopi.\n"
 "bruk: 1. merge kildeURL1[@N] kildeURL2[@M] [AKSTI]\n"
 "      2. merge kildeAKSTI1@N kildeAKSTI2@M [AKSTI]\n"
-"      3. merge -r N:M KILDE[@REV] [AKSTI]\n"
+"      3. merge [-c M | -r N:M] KILDE[@REV] [AKSTI]\n"
 "\n"
 "  1. I den første formen angis kilde-URLene med revisjonene N og M.\n"
 "     Dette er de to kildefilene som sammenlignes. Hvis revisjonene\n"
@@ -1022,7 +1020,8 @@ msgstr ""
 "  3. I den tredje formen kan KILDE være en URL eller en arbeidskopi.\n"
 "     Tilsvarende URL brukes hvis arbeidskopi velges. URLen ved revisjon\n"
 "     REV blir sammenlignet slik den var mellom revisjonene N og M. Hvis\n"
-"     REV utelates, settes den til HEAD.\n"
+"     REV utelates, settes den til HEAD. Valget «-c M» tilsvarer «-r N:M»\n"
+"     der N = M-1.\n"
 "\n"
 "  AKSTI er filstien for arbeidskopien som mottar endringene. Hvis\n"
 "  AKSTI utelates, er standardverdien «.» med mindre kildene har\n"
@@ -1523,34 +1522,30 @@ msgid "Non-numeric limit argument given"
 msgstr "Ikke-numerisk begrensningsargument angitt"
 
 #: clients/cmdline/main.c:928
-#, fuzzy
 msgid ""
 "Multiple revision arguments encountered; can't specify -c twice, or both -c "
 "and -r"
 msgstr ""
-"Flere revisjonsargument ble brukt. Prøv «-r M:N» i stedet for «-r M -r N»"
+"Flere revisjonsargumenter ble brukt; kan ikke spesifisere -c flere ganger, heller ikke -c og -r samtidig"
 
 #: clients/cmdline/main.c:937
-#, fuzzy
 msgid "Non-numeric change argument given to -c"
-msgstr "Ikke-numerisk begrensningsargument angitt"
+msgstr "Ikke-numerisk forandringsargument angitt med -c"
 
 #: clients/cmdline/main.c:943
-#, fuzzy
 msgid "There is no change 0"
-msgstr "forandring opprettes"
+msgstr "Det finnes ingen forandring 0"
 
 #: clients/cmdline/main.c:949
 msgid "Argument to -c must be positive"
-msgstr ""
+msgstr "Argumentet til -c må være et positivt tall"
 
 #: clients/cmdline/main.c:961
-#, fuzzy
 msgid ""
 "Multiple revision arguments encountered; can't specify -r and -c, or try '-r "
 "M:N' instead of '-r M -r N'"
 msgstr ""
-"Flere revisjonsargument ble brukt. Prøv «-r M:N» i stedet for «-r M -r N»"
+"Flere revisjonsargumenter ble brukt; -r og -c kan ikke brukes samtidig, eller prøv «-r M:N» i stedet for «-r M -r N»"
 
 #: clients/cmdline/main.c:974 svnadmin/main.c:1231
 #, c-format
@@ -3297,7 +3292,7 @@ msgstr "Katalogen «%s» mangler adresse"
 
 #: libsvn_client/diff.c:2371
 msgid "Summarizing diff can only compare repository to repository"
-msgstr ""
+msgstr "Oppsummeringsdiff kan bare sammenligne depot med depot"
 
 #: libsvn_client/diff.c:2767 libsvn_client/diff.c:2773
 #: libsvn_client/diff.c:2888 libsvn_client/locking_commands.c:254
@@ -3459,9 +3454,9 @@ msgstr ""
 "til et urelatert objekt"
 
 #: libsvn_client/relocate.c:101
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not the root of the repository"
-msgstr "«%s» er ikke låst i depotet"
+msgstr "«%s» er ikke roten i depotet"
 
 #: libsvn_client/relocate.c:108
 #, c-format
@@ -4497,12 +4492,10 @@ msgid "Unrecognized URL scheme for '%s'"
 msgstr "Ukjent URL-skjema for «%s»"
 
 #: libsvn_ra/ra_loader.c:337
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' isn't in the same repository as '%s'"
 msgstr ""
-"«%s»\n"
-"er ikke samme depot som\n"
-"«%s»"
+"«%s» er ikke det samme depotet som «%s»"
 
 #: libsvn_ra/ra_loader.c:696
 #, c-format
@@ -4566,9 +4559,9 @@ msgid "Could not save the URL of the version resource"
 msgstr "Kunne ikke lagre adressen på den versjonerte ressursen"
 
 #: libsvn_ra_dav/fetch.c:406
-#, fuzzy, c-format
+#, c-format
 msgid "Could not get content-type from response"
-msgstr "Klarte ikke å lese innholdstype (content-type) fra responsen."
+msgstr "Klarte ikke å lese innholdstype (content-type) fra responsen"
 
 #: libsvn_ra_dav/fetch.c:451
 #, c-format
@@ -5454,9 +5447,8 @@ msgid "Not authorized to open root of edit operation"
 msgstr "Ikke autorisert til å åpne roten for redigeringsoperasjonen"
 
 #: libsvn_repos/reporter.c:843
-#, fuzzy
 msgid "Target path does not exist"
-msgstr "Filstien «%s» finnes ikke"
+msgstr "Målstien finnes ikke"
 
 #: libsvn_repos/reporter.c:850
 msgid "Cannot replace a directory from within"
@@ -5841,14 +5833,14 @@ msgid "Can't set process '%s' child errfile"
 msgstr "Kan ikke sette «%s»-feilfil for barneprosess"
 
 #: libsvn_subr/io.c:1831
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set process '%s' child errfile for error handler"
-msgstr "Kan ikke sette «%s»-feilfil for barneprosess"
+msgstr "Kan ikke sette «%s»-prosessens barnefeilfil for feilbehandler"
 
 #: libsvn_subr/io.c:1837
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set process '%s' error handler"
-msgstr "Kan ikke sette «%s»-feilfil for barneprosess"
+msgstr "Kan ikke sette «%s»-prosessens feilbehandler"
 
 #: libsvn_subr/io.c:1860
 #, c-format
@@ -8076,39 +8068,39 @@ msgid "Option --tunnel-user is only valid in tunnel mode.\n"
 msgstr "Valget --tunnel-user er bare gyldig i tunnelmodus.\n"
 
 #: svnserve/main.c:446
-#, fuzzy, c-format
+#, c-format
 msgid "Can't get address info"
-msgstr "Kan ikke hente adresseinfo: %s\n"
+msgstr "Kan ikke hente adresseinfo"
 
 #: svnserve/main.c:462
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create server socket"
-msgstr "Kan ikke opprette tjenersokkel: %s\n"
+msgstr "Kan ikke opprette tjenersokkel"
 
 #: svnserve/main.c:475
-#, fuzzy, c-format
+#, c-format
 msgid "Can't bind server socket"
-msgstr "Kan ikke binde tjenersokkel: %s\n"
+msgstr "Kan ikke binde tjenersokkel"
 
 #: svnserve/main.c:518
-#, fuzzy, c-format
+#, c-format
 msgid "Can't accept client connection"
-msgstr "Kan ikke akseptere klienttilkobling: %s\n"
+msgstr "Kan ikke akseptere klienttilkobling"
 
 #: svnserve/main.c:572
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create threadattr"
-msgstr "Kan ikke opprette trådegenskap: %s\n"
+msgstr "Kan ikke opprette trådegenskap"
 
 #: svnserve/main.c:580
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set detached state"
-msgstr "Kan ikke kjøre i bakgrunnen: %s\n"
+msgstr "Kan ikke kjøre i bakgrunnen"
 
 #: svnserve/main.c:593
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create thread"
-msgstr "Kan ikke opprette tråd: %s\n"
+msgstr "Kan ikke opprette tråd"
 
 #: svnversion/main.c:90
 #, c-format
