@@ -409,13 +409,15 @@ completely transparent.  That is, your working copies will go on
 working, even with older clients.</p>
 
 <p>However, programs that interact with the working copy property
-files without going through the official Subversion API or binaries
-may experience problems.  JavaSVN is the only project that we know of
-that falls into this category, and they have been notified
-accordingly.  If you happen to be using or developing software which
-reads working copy properties without the help of svn, then you may
-need to make a minor alteration to the parsing routines.  See revision
-16855 of the Subversion repository for details.</p>
+files without using the official Subversion APIs or binaries may
+experience problems.  <a href="http://tmate.org/svn/">JavaSVN</a> is
+the only project that we know of that falls into this category, and
+they have been notified accordingly.  If you happen to be using or
+developing software that, similarly, bypasses the Subversion APIs,
+then you may need to make a minor alteration to the parsing routines.
+See <a
+href="http://svn.collab.net/viewcvs/svn/trunk/subversion/libsvn_wc/props.c?r1=16854&r2=16855&diff_format=h">revision
+16855</a> of the Subversion repository for details.</p>
 
 </div>  <!-- wc-props-change -->
 </div>  <!-- enhancements -->
