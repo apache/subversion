@@ -67,11 +67,7 @@
 %apply long *OUTPUT { svn_node_kind_t * };
 
 /* svn_config_get_server_setting_int() */
-#if APR_INT64_T_FMT == "ld"
-%apply long *OUTPUT { apr_int64_t * };
-#else
 %apply long long *OUTPUT { apr_int64_t * };
-#endif
 
 /* -----------------------------------------------------------------------
    Create a typemap for specifying string args that may be NULL.
@@ -209,17 +205,6 @@
 %typemap(ruby,in,numinputs=0) svn_filesize_t * (svn_filesize_t temp)
     "$1 = &temp;";
 
-/* We have to use APR_INT64_T_FMT because SWIG won't convert the
-   SVN_FILESIZE_T_FMT to the actual value only APR_INT64_T_FMT */
-#if APR_INT64_T_FMT == "ld"
-
-%typemap(python,argout,fragment="t_output_helper") svn_filesize_t *
-    "$result = t_output_helper($result,PyLong_FromLong((long) (*$1)));";
-
-%apply long *OUTPUT { svn_filesize_t * };
-
-#else
-
 %typemap(python,argout,fragment="t_output_helper") svn_filesize_t *
     "$result = t_output_helper($result,
                                PyLong_FromLongLong((apr_int64_t) (*$1)));";
@@ -234,7 +219,6 @@
 
 %typemap(ruby,argout,fragment="output_helper") svn_filesize_t *
     "$result = output_helper($result, LL2NUM((apr_int64_t) (*$1)));";
-#endif 
 
 /* -----------------------------------------------------------------------
    Define a general ptr/len typemap. This takes a single script argument
@@ -535,14 +519,35 @@
                           rb_str_new2(svn_md5_digest_to_cstring($1, _global_pool)));
 }
 
+/* svn_md5_* functions takes const ones as input */
+%typemap(perl5, in) const unsigned char digest[] {
+    SWIG_ConvertPtr($input, (void **)&$1, $1_descriptor, 0);
+}
+%typemap(perl5, argout) const unsigned char digest[] {}
+
 /*
    svn_txdelta_send_stream() uses *digest not digest[] .
    svn_txdelta_apply() uses *result_digest not digest[] .
 */
+
+%typemap(in, numinputs=0) unsigned char *result_digest {
+    $1 = (unsigned char *)apr_palloc(_global_pool, APR_MD5_DIGESTSIZE);
+}
+
+%typemap(perl5, argout) unsigned char *result_digest {
+    ST(argvi) = sv_newmortal();
+    ST(argvi++) = svn_swig_pl_from_md5($1);
+}
+
 %apply unsigned char digest[ANY] {
-    unsigned char *digest,
+    unsigned char *digest
+};
+
+#ifndef SWIGPERL
+%apply unsigned char digest[ANY] {
     unsigned char *result_digest
 };
+#endif
 
 /* -----------------------------------------------------------------------
   useful convertors for svn_opt_revision_t

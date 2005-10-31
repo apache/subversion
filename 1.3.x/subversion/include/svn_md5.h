@@ -56,8 +56,8 @@ const char *svn_md5_digest_to_cstring (const unsigned char digest[],
  * If neither is all zeros, and they do not match, then return false;
  * else return true.
  */
-svn_boolean_t svn_md5_digests_match (unsigned const char d1[],
-                                     unsigned const char d2[]);
+svn_boolean_t svn_md5_digests_match (const unsigned char d1[],
+                                     const unsigned char d2[]);
 
 #ifdef __cplusplus
 }

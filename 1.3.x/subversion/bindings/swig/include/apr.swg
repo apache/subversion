@@ -42,24 +42,16 @@
 %enddef
 
 OUTPUT_TYPEMAP(long, INT2NUM, (long));
-OUTPUT_TYPEMAP(long long, LL2NUM, (long long));
+OUTPUT_TYPEMAP(long long, LL2NUM, (apr_int64_t));
 OUTPUT_TYPEMAP(unsigned long, UINT2NUM, (unsigned long));
-OUTPUT_TYPEMAP(unsigned long long, ULL2NUM, (unsigned long long));
+OUTPUT_TYPEMAP(unsigned long long, ULL2NUM, (apr_uint64_t));
 
 #undef OUTPUT_TYPEMAP
 #endif
+
 #endif
 
 /* ----------------------------------------------------------------------- */
-
-#ifdef WIN32
-/* Fool SWIG into understanding the __int64 datatype */
-#define __int64 long long
-#endif
-%import apr.h
-#ifdef WIN32
-#undef __int64
-#endif
 
 /* ### be nice to have all the error values and macros. there are some
    ### problems including this file, tho. SWIG isn't smart enough with some
@@ -84,7 +76,9 @@ typedef int apr_status_t;
     sv_setpv((SV*)ST(argvi++), temp);
 }
 
-%typemap(perl5, argout) long long *OUTPUT, long long &OUTPUT {
+%typemap(perl5, in, numinputs=0) long long *OUTPUT (apr_int64_t temp)
+    "$1 = &temp;";
+%typemap(perl5, argout) long long *OUTPUT {
   char temp[256];
   if (argvi >= items) {
     EXTEND(sp,1);
@@ -95,7 +89,9 @@ typedef int apr_status_t;
   argvi++;
 }
 
-%typemap(perl5, argout) unsigned long long *OUTPUT, unsigned long long &OUTPUT {
+%typemap(perl5, in, numinputs=0) unsigned long long *OUTPUT (apr_uint64_t temp)
+    "$1 = &temp;";
+%typemap(perl5, argout) unsigned long long *OUTPUT {
   char temp[256];
   if (argvi >= items) {
     EXTEND(sp,1);
@@ -105,6 +101,20 @@ typedef int apr_status_t;
   sv_setpv($result,temp);
   argvi++;
 }
+
+/* -----------------------------------------------------------------------
+ * APR datatypes (from apr.h)
+ */
+
+/* Integers for which sizeof(type) <= sizeof(long) */
+%apply long { apr_int16_t, apr_int32_t, apr_ssize_t }
+%apply unsigned long { apr_byte_t, apr_uint16_t, apr_uint32_t, apr_size_t }
+%apply unsigned long *OUTPUT { apr_uint32_t *, apr_size_t * }
+
+/* If sizeof(apr_off_t) > sizeof(apr_int64_t), apr_off_t will get truncated
+ * to a 64-bit integer */ 
+%apply long long { apr_off_t, apr_int64_t }
+%apply unsigned long long { apr_uint64_t }
 
 /* -----------------------------------------------------------------------
    apr_time_t
@@ -119,11 +129,7 @@ typedef apr_int64_t apr_time_t;
    (e.g. /usr/lib/gcc-lib/plat/ver/include). */
 typedef apr_int32_t time_t;
 
-#if APR_INT64_T_FMT == "ld"
-    %apply long *OUTPUT { apr_time_t * };
-#else
-    %apply long long *OUTPUT { apr_time_t * };
-#endif
+%apply long long *OUTPUT { apr_time_t * };
 
 /* -----------------------------------------------------------------------
    create an OUTPUT argument typemap for an apr_hash_t **

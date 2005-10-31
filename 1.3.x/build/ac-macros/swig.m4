@@ -74,7 +74,8 @@ AC_DEFUN(SVN_FIND_SWIG,
     #   packages/rpm/redhat-7.x/subversion.spec
     #   packages/rpm/rhel-3/subversion.spec
     #   packages/rpm/rhel-4/subversion.spec
-    if test -n "$SWIG_VERSION" && test "$SWIG_VERSION" -ge "103024"; then
+    if test -n "$SWIG_VERSION" && test "$SWIG_VERSION" -ge "103024" -a \
+               "$SWIG_VERSION" -le "103025"; then
       SWIG_SUITABLE=yes
     else
       SWIG_SUITABLE=no

@@ -114,9 +114,10 @@ class Generator(gen_base.GeneratorBase):
         string.replace(build_path_basename(fname),".h","_h.swg"))
       python_script = "$(abs_srcdir)/build/generator/swig/header_wrappers.py"
       self.ofile.write(
-        '%s: %s %s\n\t$(PYTHON) %s %s $(SWIG) $<\n' % ( 
-          wrapper_fname, fname, python_script,
-          python_script, self.conf))
+        '%s: %s %s\n\t' % (wrapper_fname, fname, python_script) +
+        '$(PYTHON) %s $(abs_srcdir)/build.conf $(SWIG) $(abs_srcdir)/%s\n' % 
+          (python_script, fname)
+      )
       self.ofile.write(
         'swig-headers: %s\n' % wrapper_fname +
         'extraclean-swig-headers-%s:\n' % wrapper_fname + 
@@ -206,8 +207,8 @@ class Generator(gen_base.GeneratorBase):
         'autogen-swig-%s: copy-swig-%s\n' % (short[objname.lang], objname) +
         'copy-swig-%s: %s\n' % (objname, objname) +
         '\t@if test $(abs_srcdir) != $(abs_builddir) -a ' +
-        '-e $(abs_srcdir)/%s -a ' % objname + 
-        '! -e $(abs_builddir)/%s; then ' % objname +
+        '-r $(abs_srcdir)/%s -a ' % objname + 
+        '! -r $(abs_builddir)/%s; then ' % objname +
         'cp -pf $(abs_srcdir)/%s $(abs_builddir)/%s; fi\n' % (objname, objname)
       )
 
@@ -528,16 +529,11 @@ class Generator(gen_base.GeneratorBase):
     standalone.write('abs_builddir = %s\n' % os.getcwd())
     standalone.write('SWIG = swig\n')
     standalone.write('PYTHON = python\n')
-    swig_includes = ['-Iapr/include', '-Iapr-util/include']
+    swig_includes = []
     for dirs in self.include_dirs, self.swig_include_dirs:
       for dir in string.split(string.strip(dirs)):
         swig_includes.append("-I%s" % dir)
         swig_includes.append("-I$(abs_srcdir)/%s" % dir)
-    if not os.path.exists("apr/include"):
-      try:
-        swig_includes.append("-I%s" % _exec.output("apr-config --includedir"))
-      except AssertionError:
-        pass
     standalone.write('SWIG_INCLUDES = %s\n' % string.join(swig_includes))
     standalone.write(open("build-outputs.mk","r").read())
     standalone.close()
