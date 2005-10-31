@@ -37,8 +37,8 @@ II. COMPILING THE DOCS
   
       http://sourceforge.net/project/showfiles.php?group_id=21935
 
-   Download the latest version of docbook-xsl, unpack it, then
-   rename the unpacked directory to tools/xsl, something like this:
+   Download the latest version of docbook-xsl, unpack it, then rename
+   the unpacked directory to tools/xsl, something like this:
 
       $ cd doc/book/tools
       $ tar zxvf docbook-xsl-X.YY.Z.tar.gz
@@ -72,7 +72,7 @@ II. COMPILING THE DOCS
 
    * From the book directory, do 
 
-        make all-html
+        $ make all-html
 
      This produces an HTML version for the Subversion DocBook docs in
      misc-docs/misc-docs.html.
@@ -92,16 +92,16 @@ II. COMPILING THE DOCS
      installed FOP some other way, that's fine, then you can ignore
      the following recipe:
 
-        1. Download the latest from 
+        1. Download the latest version from 
            http://www.apache.org/dyn/closer.cgi/xml/fop, for example,
-           fop-0.20.4-bin.tar.gz.  Just get a binary distribution,
+           fop-0.20.5-bin.tar.gz.  Just get a binary distribution,
            there's no need for the Java source.
 
         2. Unpack it into tools/fop/
 
            $ cd doc/book/tools
-           $ tar zxvf fop-0.20.4-bin.tar.gz
-           $ mv fop-0.20.4 fop
+           $ tar zxvf fop-0.20.5-bin.tar.gz
+           $ mv fop-0.20.5 fop
 
      That should be enough.  The Makefile will actually invoke
      tools/bin/run-fop.sh.  That script attempts to find FOP already
@@ -113,13 +113,13 @@ II. COMPILING THE DOCS
      already have that.
 
      Sometimes building the DocBook documents can use more memory than
-     Java is willing to allocate by default, and you may need to
-     increase the default heap size.  With Sun's JVM, this is
-     accomplished by passing the arguments "-Xms100m -Xmx200m" (known
-     to work with versions 1.2.x-1.4.x, and likely different for JVMs
-     from other vendors).  To tell fop.sh about these arguments, pass
-     them via the environment variable FOP_OPTS (which is also
-     configurable in your ~/.foprc).
+     Java is willing to allocate by default, and you may need to increase
+     the default heap size.  With Sun's JVM, this is accomplished by
+     passing the arguments "-Xms100m -Xmx200m" (known to work with
+     versions 1.2.x-1.4.x, and likely different for JVMs from other
+     vendors).  To tell fop.sh about these arguments, pass them via
+     the environment variable FOP_OPTS (which is also configurable in
+     your ~/.foprc).
 
         $ export FOP_OPTS="-Xms100m -Xmx200m"
 
@@ -134,9 +134,9 @@ II. COMPILING THE DOCS
 
      Poof!  You now have PNG support.
 
-   * From the book directory, do
+   * From this directory, do
 
-        make all-pdf
+        $ make all-pdf
 
      This produces PDF for the Subversion DocBook documents in
      misc-docs/misc-docs.pdf.
@@ -165,16 +165,14 @@ In addition to everything in section II:
 
 2. Get a validating parser.
 
-   We recommend nsgmls, a parser written by James Clark:
-   http://www.jclark.com/sp/nsgmls.  It's nice to check that the XML
-   you write has matching tags, and follows the DTD correctly.
+   Actually, if you have what you need to compile the documentation,
+   then you almost certainly have an XML validator installed already -
+   it is called xmllint, and comes as part of libxml2.
 
-   Here is one command you can use to validate your xml:
-
-   $ SP_CHARSET_FIXED=YES SP_ENCODING=XML nsgmls -wxml \
-       -mdeclaration/xml.soc -ges                      \
-       /path/to/your/declaration/xml.dcl book.xml
-
+   The makefile is preconfigured with a suitable invocation of it,
+   so simply run:
+   
+      $ make valid
 
 
 3. Read about the DocBook lite tags.
