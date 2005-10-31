@@ -1383,21 +1383,15 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
 
       /* Log to update prop-time attribute */
       apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_PROP_TIME,
-                    APR_HASH_KEY_STRING, NULL);
+                    APR_HASH_KEY_STRING, SVN_WC__TIMESTAMP_WC);
     }
   else if (entry->schedule == svn_wc_schedule_replace)
     {
       /* If the replacement is a copy need to clean up the
        * related things in entries */
       if (entry->copied) 
-        {
-          apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_COPIED,
-                        APR_HASH_KEY_STRING, "false");
-          apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_COPYFROM_URL,
-                        APR_HASH_KEY_STRING, NULL);
-          apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_COPYFROM_REV,
-                        APR_HASH_KEY_STRING, NULL);
-        }
+        apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_COPIED,
+                      APR_HASH_KEY_STRING, "false");
 
       /* Edge case: we're reverting a replacement, and
          svn_wc_props_modified_p thinks there's no property mods.
@@ -1415,7 +1409,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
         {
           /* Log to update prop-time attribute */
           apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_PROP_TIME,
-                        APR_HASH_KEY_STRING, NULL);
+                        APR_HASH_KEY_STRING, SVN_WC__TIMESTAMP_WC);
         }
     }
 
@@ -1473,7 +1467,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
 
           /* Modify our entry structure. */
           apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_TEXT_TIME,
-                        APR_HASH_KEY_STRING, NULL);
+                        APR_HASH_KEY_STRING, SVN_WC__TIMESTAMP_WC);
 
         }
     }
@@ -1483,7 +1477,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
   if (entry->conflict_old)
     {
       apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
-                    APR_HASH_KEY_STRING, NULL);
+                    APR_HASH_KEY_STRING, "");
       SVN_ERR (svn_wc__loggy_remove (&log_accum, adm_access,
                                      entry->conflict_old, pool));
     }
@@ -1491,7 +1485,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
   if (entry->conflict_new)
     {
       apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
-                    APR_HASH_KEY_STRING, NULL);
+                    APR_HASH_KEY_STRING, "");
       SVN_ERR (svn_wc__loggy_remove (&log_accum, adm_access,
                                     entry->conflict_new, pool));
     }
@@ -1499,7 +1493,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
   if (entry->conflict_wrk)
     {
       apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
-                    APR_HASH_KEY_STRING, NULL);
+                    APR_HASH_KEY_STRING, "");
       SVN_ERR (svn_wc__loggy_remove (&log_accum, adm_access,
                                      entry->conflict_wrk, pool));
     }
@@ -1508,7 +1502,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
   if (entry->prejfile)
     {
       apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_PREJFILE,
-                    APR_HASH_KEY_STRING, NULL);
+                    APR_HASH_KEY_STRING, "");
       SVN_ERR (svn_wc__loggy_remove (&log_accum, adm_access,
                                      entry->prejfile, pool));
     }
