@@ -15,7 +15,7 @@ Candidate changes:
      Commits in read-only directories therefore fail.  This revision adds
      graceful fallback.
    Votes:
-     +1: dionisos, rooneg
+     +1: dionisos, rooneg, jerenkrantz
 
  * r16568, r17123
    Make svn info not error out on paths that don't exist in future revs.
@@ -24,7 +24,7 @@ Candidate changes:
    Notes:
      r16568 is just a docstring fix to avoid conflicts.
    Votes:
-     +1: lundblad
+     +1: lundblad, jerenkrantz
 
  * r17127
    Fix broken JavaHL status API for retrieving last committed revision.
@@ -32,7 +32,7 @@ Candidate changes:
      The previous implementation use wrong return type (it's amazing
      it even compiled), and thus not usable by Subclipse.
    Votes:
-     +1: dlr
+     +1: dlr, jerenkrantz
 
  * r17129
    Fix broken tests in svnmerge_test.py by disabling keyword expansion.
