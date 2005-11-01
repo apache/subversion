@@ -1630,6 +1630,44 @@ def basic_peg_revision(sbox):
                                                         'cat', url+'@')
 
 
+def info_nonhead(sbox):
+  "info on file not existing in HEAD"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+  fname = os.path.join(wc_dir, 'iota')
+  furl = repo_url + "/iota"
+
+  # Remove iota and commit.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     "delete", fname)
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Deleting'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove("iota")
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None,
+                                         None, None,
+                                         None, None,
+                                         wc_dir)
+  # Get info for old iota at r1.
+  output, errput = svntest.actions.run_and_verify_svn(None, None, [],
+                                                      'info',
+                                                      furl + '@1', '-r1')
+  got_url = False
+  for line in output:
+    if line.find("URL:") >= 0:
+      got_url = True
+  if not got_url:
+    print "Info didn't output an URL."
+    raise svntest.Falure
+
+
+
 #----------------------------------------------------------------------
 ########################################################################
 # Run the tests
@@ -1664,6 +1702,7 @@ test_list = [ None,
               basic_add_no_ignores,
               repos_root,
               basic_peg_revision,
+              info_nonhead,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.
