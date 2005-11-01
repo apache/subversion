@@ -1017,7 +1017,6 @@ def refresh_read_only_attribute(sbox):
 
   # Switch to the branch with the WC state from before the propset of
   # svn:needs-lock.
-  # TODO
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu' : Item(status=' U'),
     })
@@ -1031,11 +1030,25 @@ def refresh_read_only_attribute(sbox):
                                         expected_disk,
                                         expected_status)
 
-  # The switch file should now be writable, but is still read-only (on
-  # Windows only?).
+  # The file with we set svn:needs-lock on should now be writable, but
+  # is still read-only!
   if not os.access(mu_path, os.W_OK):
-    raise svntest.Failure("'%s' expected to be writable" % mu_path)
+    raise svntest.Failure("'%s' expected to be writable after being switched "
+                          "to a branch on which its svn:needs-lock property "
+                          "is not set" % mu_path)
 
+  # Though the previous check is failing, oddly a switch-to-trunk and
+  # switch-back-to-branch sets the file's read-only flag as expected
+  # (on Linux).
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', url, A_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', branch_url, A_path)
+  # The file should still be writable.
+  if not os.access(mu_path, os.W_OK):
+    raise svntest.Failure("'%s' expected to be writable after being switched "
+                          "to a branch on which its svn:needs-lock property "
+                          "is not set" % mu_path)
 
 ########################################################################
 # Run the tests
