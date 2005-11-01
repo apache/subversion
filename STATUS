@@ -45,14 +45,3 @@ Candidate changes:
 
 Approved changes:
 
- * r17131
-   Fix some useless stat'ing and reading of property files on
-   commit
-   Justification:
-     Long standing issue, and significantly improves commit
-     performance.
-   Notes:
-     This is a single line fix that is easy to verify the
-     correctness of.
-   Votes:
-     +1 dberlin, dlr, rooneg
