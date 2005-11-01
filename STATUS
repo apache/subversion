@@ -17,5 +17,14 @@ Candidate changes:
    Votes:
      +1: dionisos, rooneg
 
+  * r16568, r17123
+    Make svn info not error out on paths that don't exist in future revs.
+    Justification:
+      Regression with a simple fix; affects TSVN.
+    Notes:
+      r16568 is just a docstring fix to avoid conflicts.
+    Votes:
+      +1: lundblad
+
 Approved changes:
 
