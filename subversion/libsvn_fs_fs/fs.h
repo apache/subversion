@@ -36,12 +36,18 @@ extern "C" {
    independent of any other FS back ends. */
 #define SVN_FS_FS__FORMAT_NUMBER   1
 
+/* Maximum number of directories to cache dirents for. 
+   This *must* be a power of 2 for DIR_CACHE_ENTRIES_INDEX
+   to work.  */
+#define NUM_DIR_CACHE_ENTRIES 128
+#define DIR_CACHE_ENTRIES_MASK(x) ((x) & (NUM_DIR_CACHE_ENTRIES - 1))
+
 typedef struct
 {
   /* A cache of the last directory opened within the filesystem. */
-  svn_fs_id_t *dir_cache_id;
-  apr_hash_t *dir_cache;
-  apr_pool_t *dir_cache_pool;
+  svn_fs_id_t *dir_cache_id[NUM_DIR_CACHE_ENTRIES];
+  apr_hash_t *dir_cache[NUM_DIR_CACHE_ENTRIES];
+  apr_pool_t *dir_cache_pool[NUM_DIR_CACHE_ENTRIES];
 
   /* The format number of this FS. */
   int format;
