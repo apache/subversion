@@ -90,12 +90,12 @@ $(MDOCS_FO_TARGET): $(MDOCS_ALL_SOURCE) $(MDOCS_VERSION_SOURCE)
 
 misc-docs-pdf: $(MDOCS_PDF_TARGET)
 $(MDOCS_PDF_TARGET): $(MDOCS_FO_TARGET)
-	$(TOOLS_DIR)/bin/run-fop.sh . -fo $(MDOCS_FO_TARGET) \
+	$(TOOLS_DIR)/bin/run-fop.sh -fo $(MDOCS_FO_TARGET) \
 	  -pdf $(MDOCS_PDF_TARGET)
 
 misc-docs-ps: $(MDOCS_PS_TARGET)
 $(MDOCS_PS_TARGET): $(MDOCS_FO_TARGET)
-	$(TOOLS_DIR)/bin/run-fop.sh . -fo $(MDOCS_FO_TARGET) \
+	$(TOOLS_DIR)/bin/run-fop.sh -fo $(MDOCS_FO_TARGET) \
 	  -ps $(MDOCS_PS_TARGET)
 
 # Install targets

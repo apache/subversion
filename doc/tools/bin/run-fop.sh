@@ -2,21 +2,10 @@
 
 # run-fop: Attempt to run fop (or fop.sh), fail articulately otherwise.
 #
-# Usage:    run-fop.sh BOOK_TOP [FOP_ARGS...]
+# Usage:    run-fop.sh [FOP_ARGS...]
 #
-# This script is meant to be invoked by doc/Makefile.
-# The first argument (BOOK_TOP) is the path to the `doc' subdirectory
-# of the subversion source, and the remaining arguments are passed
-# along to `fop'.
-
-BOOK_TOP=${1}
-
-if [ "${BOOK_TOP}X" = X ]; then
-  echo "usage:  run-fop.sh BOOK_TOP [FOP_ARGS...]"
-  exit 1
-fi
-
-shift
+# This script is meant to be invoked by book translation Makefiles.
+# Arguments are passed along to `fop'.
 
 # If the user has a .foprc, source it.
 if [ -f ${HOME}/.foprc ]; then
@@ -24,7 +13,7 @@ if [ -f ${HOME}/.foprc ]; then
 fi
 
 # The fop of last resort.
-DESPERATION_FOP_DIR=${BOOK_TOP}/tools/fop
+DESPERATION_FOP_DIR="`dirname \"$0\"`/../fop"
 DESPERATION_FOP_PGM=${DESPERATION_FOP_DIR}/fop.sh
 
 if [ "${FOP_HOME}X" = X ]; then
