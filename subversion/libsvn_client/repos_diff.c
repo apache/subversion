@@ -55,8 +55,7 @@ struct edit_baton {
   /* DRY_RUN is TRUE if this is a dry-run diff, false otherwise. */
   svn_boolean_t dry_run;
 
-  /* RA_LIB is the vtable for making requests to the RA layer, RA_SESSION
-     is the open session for these requests */
+  /* RA_SESSION is the open session for making requests to the RA layer */
   svn_ra_session_t *ra_session;
 
   /* The rev1 from the '-r Rev1:Rev2' command line option */
@@ -255,7 +254,7 @@ get_file_mime_types (const char **mimetype1,
 }
 
 
-/* An apr pool cleanup handler, this deletes one of the temporary files.
+/* An APR pool cleanup handler that deletes one of the temporary files.
  */
 static apr_status_t
 temp_file_plain_cleanup_handler (void *arg)
@@ -267,7 +266,8 @@ temp_file_plain_cleanup_handler (void *arg)
   return apr_file_remove (s->path, s->pool);
 }
 
-/* An apr pool cleanup handler, this removes a cleanup handler.
+/* An APR pool cleanup handler that does nothing (just removes the
+ * cleanup handler).
  */
 static apr_status_t
 temp_file_child_cleanup_handler (void *arg)
@@ -280,9 +280,6 @@ temp_file_child_cleanup_handler (void *arg)
 }
 
 /* Register a pool cleanup to delete PATH when POOL is destroyed.
- *
- * PATH is not copied; caller should probably ensure that it is
- * allocated in a pool at least as long-lived as POOL.
  *
  * The main "gotcha" is that if the process forks a child by calling
  * apr_proc_create, then the child's copy of the cleanup handler will run
@@ -308,10 +305,6 @@ temp_file_cleanup_register (const char *path,
 /* Get the repository version of a file. This makes an RA request to
  * retrieve the file contents. A pool cleanup handler is installed to
  * delete this file.
- *
- * ### TODO: The editor calls this function to get REV1 of the file. Can we
- * get the file props as well?  Then get_wc_prop() could return them later
- * on enabling the REV1:REV2 request to send diffs.
  */
 static svn_error_t *
 get_file_from_ra (struct file_baton *b)
@@ -672,7 +665,7 @@ open_file (const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  Do the work of applying the text delta.  */
+/* Do the work of applying the text delta.  */
 static svn_error_t *
 window_handler (svn_txdelta_window_t *window,
                 void *window_baton)
