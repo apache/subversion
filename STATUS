@@ -34,5 +34,14 @@ Candidate changes:
    Votes:
      +1: dlr
 
+ * r17129
+   Fix broken tests in svnmerge_test.py by disabling keyword expansion.
+   Justification:
+     It is a new test for a new program. It got broken while importing
+     it into the repository. The patch just disables keyword expansion
+     and restore the original text.
+   Votes:
+
+
 Approved changes:
 
