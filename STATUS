@@ -39,9 +39,21 @@ Candidate changes:
    Justification:
      It is a new test for a new program. It got broken while importing
      it into the repository. The patch just disables keyword expansion
-     and restore the original text.
+     and restores the original text.
    Votes:
      +0: dlr (haven't tested it)
+
+ * r17139
+   svnmerge.py: Fix traceback on wrong command line.
+   Justification:
+     While it is not critical, two stupid bugs can cause tracebacks
+     instead of nice error messages on wrong command lines.
+   Note:
+     The fix is pretty safe, and contains a new set of exhaustive
+     tests to make sure nothing else is broken about command line
+     handling.
+   Votes:
+
 
 Approved changes:
 
