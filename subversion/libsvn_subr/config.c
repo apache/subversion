@@ -326,8 +326,6 @@ rmex_callback (void *baton, cfg_section_t *section, cfg_option_t *option)
       option->expanded = FALSE;
     }
 
-  (void)(baton);                /* Unused parameter. */
-  (void)(section);              /* Unused parameter. */
   return FALSE;
 }
 
