@@ -57,7 +57,6 @@ static const char *adm_dir_name = default_adm_dir_name;
 svn_boolean_t
 svn_wc_is_adm_dir (const char *name, apr_pool_t *pool)
 {
-  (void)pool;  /* Silence compiler warnings about unused parameter. */
   return (0 == strcmp (name, adm_dir_name)
           || 0 == strcmp (name, default_adm_dir_name));
 }
@@ -66,7 +65,6 @@ svn_wc_is_adm_dir (const char *name, apr_pool_t *pool)
 const char *
 svn_wc_get_adm_dir (apr_pool_t *pool)
 {
-  (void)pool;  /* Silence compiler warnings about unused parameter. */
   return adm_dir_name;
 }
 
