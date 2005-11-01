@@ -109,7 +109,7 @@ check_prop_mods (svn_boolean_t *props_changed,
 
   *eol_prop_changed = *props_changed = FALSE;
   SVN_ERR (svn_wc_props_modified_p (props_changed, path, adm_access, pool));
-  if (! props_changed)
+  if (! *props_changed)
     return SVN_NO_ERROR;
   SVN_ERR (svn_wc_get_prop_diffs (&prop_mods, NULL, path, adm_access, pool));
   for (i = 0; i < prop_mods->nelts; i++)
