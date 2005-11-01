@@ -9,6 +9,18 @@ Status of 1.3.0:
 
 Candidate changes:
 
+ * r17131
+   Fix some useless stat'ing and reading of property files on
+   commit
+   Justification:
+     Long standing issue, and significantly improves commit
+     performance.
+   Notes:
+     This is a single line fix that is easy to verify the
+     correctness of.
+   Votes:
+     +1 dberlin
+
  * r17039, r17051
    Fix issue 767: Commit uses temporary file in current directory.
    Remark:
