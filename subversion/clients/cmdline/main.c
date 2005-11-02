@@ -960,7 +960,7 @@ main (int argc, const char * const *argv)
               (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                _("Multiple revision arguments encountered; "
                  "can't specify -r and -c, or "
-                 "try '-r M:N' instead of '-r M -r N'"));
+                 "try '-r N:M' instead of '-r N -r M'"));
             return svn_cmdline_handle_exit_error (err, pool, "svn: ");
           }
         if (svn_opt_parse_revision (&(opt_state.start_revision),
