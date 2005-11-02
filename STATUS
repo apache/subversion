@@ -42,6 +42,7 @@ Candidate changes:
      and restores the original text.
    Votes:
      +0: dlr (haven't tested it)
+     +1: blair
 
  * r17139
    svnmerge.py: Fix traceback on wrong command line.
@@ -53,6 +54,7 @@ Candidate changes:
      tests to make sure nothing else is broken about command line
      handling.
    Votes:
+     +1: blair
 
 
 Approved changes:
