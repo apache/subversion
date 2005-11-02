@@ -206,7 +206,10 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_SECTION_GENERAL \
         "\x67\x65\x6e\x65\x72\x61\x6c"
         /* "general" */
-#define SVN_CONFIG_OPTION_AUTHZ_DB                  "authz-db"
+        
+#define SVN_CONFIG_OPTION_AUTHZ_DB \
+        "\x61\x75\x74\x68\x7a\x2d\x64\x62"
+        /* "authz-db" */
 
 #define SVN_CONFIG_OPTION_ANON_ACCESS \
         "\x61\x6e\x6f\x6e\x2d\x61\x63\x63\x65\x73\x73"
