@@ -493,8 +493,8 @@ translate_keyword_subst (char *buf,
               apr_size_t vallen = value->len;
 
               /* "$keyword: value $" */
-              if (vallen > (SVN_KEYWORD_MAX_LEN - 5))
-                vallen = SVN_KEYWORD_MAX_LEN - 5;
+              if (vallen > (SVN_KEYWORD_MAX_LEN - 5 - keyword_len))
+                vallen = SVN_KEYWORD_MAX_LEN - 5 - keyword_len;
               strncpy (buf_ptr + 2, value->data, vallen);
               buf_ptr[2 + vallen] = ' ';
               buf_ptr[2 + vallen + 1] = '$';
