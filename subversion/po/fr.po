@@ -4060,7 +4060,7 @@ msgstr ""
 
 #: libsvn_fs_base/fs.c:1357
 msgid "Module for working with a Berkeley DB repository."
-msgstr ""
+msgstr "Module destiné à travailler avec un dépôt Berkeley DB."
 
 #: libsvn_fs_base/fs.c:1390
 #, c-format
@@ -4503,17 +4503,17 @@ msgstr "Le chemin '%s' n'existe pas à la révision de tête (HEAD)"
 #: libsvn_fs_fs/lock.c:741
 #, c-format
 msgid "Lock failed: newer version of '%s' exists"
-msgstr ""
+msgstr "Échec du verrouillage : il existe une version plus récente de '%s'"
 
 #: libsvn_ra/ra_loader.c:214
 #, c-format
 msgid "Mismatched RA version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
-msgstr ""
+msgstr "Problème de version pour '%s': %d.%d.%d%s trouvé, %d.%d.%d%s attendu"
 
 #: libsvn_ra/ra_loader.c:286
 #, c-format
 msgid "Unrecognized URL scheme for '%s'"
-msgstr ""
+msgstr "Schéma d'URL non reconnu pour '%s'"
 
 #: libsvn_ra/ra_loader.c:337
 #, c-format
@@ -4523,12 +4523,12 @@ msgstr "'%s' n'est pas dans le même dépôt que '%s'"
 #: libsvn_ra/ra_loader.c:696
 #, c-format
 msgid "  - handles '%s' scheme\n"
-msgstr ""
+msgstr "  - gère le schéma d'URL '%s'\n"
 
 #: libsvn_ra/ra_loader.c:782
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
-msgstr ""
+msgstr "Schéma d'URL non reconnu '%s'"
 
 #: libsvn_ra_dav/commit.c:193
 #, c-format
@@ -4767,11 +4767,11 @@ msgstr ""
 
 #: libsvn_ra_dav/session.c:543
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
-msgstr ""
+msgstr "Module pour accéder à un dépôt via le protocole WebDAV/DeltaV."
 
 #: libsvn_ra_dav/session.c:598
 msgid "Malformed URL for repository"
-msgstr ""
+msgstr "URL du dépôt malformée."
 
 #: libsvn_ra_dav/session.c:633
 msgid "Network socket initialization failed"
@@ -4881,7 +4881,7 @@ msgstr ""
 #. * The RA vtable routines *
 #: libsvn_ra_local/ra_plugin.c:245
 msgid "Module for accessing a repository on local disk."
-msgstr ""
+msgstr "Module pour accéder à un dépôt sur le disque local."
 
 #: libsvn_ra_local/ra_plugin.c:285
 msgid "Unable to open an ra_local session to URL"
@@ -5000,7 +5000,7 @@ msgstr ""
 
 #: libsvn_ra_svn/client.c:705
 msgid "Module for accessing a repository using the svn network protocol."
-msgstr "Module pour accéder à un dépôt avec le protocole réseau propre de svn"
+msgstr "Module pour accéder à un dépôt avec le protocole réseau propre de svn."
 
 #: libsvn_ra_svn/client.c:853
 msgid "Server did not send repository root"
