@@ -25,6 +25,7 @@
 #include "svn_fs.h"
 #include "err.h"
 #include "id.h"
+
 #include "../libsvn_fs/fs-loader.h"
 
 svn_error_t *
@@ -55,7 +56,7 @@ svn_error_t *
 svn_fs_base__err_corrupt_node_revision (svn_fs_t *fs, const svn_fs_id_t *id)
 {
   return
-    corrupt_id ("Corrupt node revision for node '%s' in filesystem '%s'",
+    corrupt_id (_("Corrupt node revision for node '%s' in filesystem '%s'"),
                 id, fs);
 }
 
@@ -72,8 +73,8 @@ svn_fs_base__err_corrupt_fs_revision (svn_fs_t *fs, svn_revnum_t rev)
 
 svn_error_t *
 svn_fs_base__err_corrupt_clone (svn_fs_t *fs,
-                           const char *svn_txn,
-                           const char *base_path)
+                                const char *svn_txn,
+                                const char *base_path)
 {
   return
     svn_error_createf
@@ -87,7 +88,7 @@ svn_error_t *
 svn_fs_base__err_corrupt_id (svn_fs_t *fs, const svn_fs_id_t *id)
 {
   return
-    corrupt_id ("Corrupt node revision id '%s' appears in filesystem '%s'",
+    corrupt_id (_("Corrupt node revision id '%s' appears in filesystem '%s'"),
                 id, fs);
 }
 
@@ -136,7 +137,7 @@ svn_fs_base__err_corrupt_next_id (svn_fs_t *fs, const char *table)
 
 svn_error_t *
 svn_fs_base__err_corrupt_txn (svn_fs_t *fs,
-                         const char *txn)
+                              const char *txn)
 {
   return
     svn_error_createf
@@ -293,6 +294,7 @@ svn_fs_base__err_no_user (svn_fs_t *fs)
      _("No username is currently associated with filesystem '%s'"),
      fs->path);
 }
+
 
 svn_error_t *
 svn_fs_base__err_lock_owner_mismatch (svn_fs_t *fs,
