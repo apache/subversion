@@ -35,7 +35,7 @@ Candidate changes:
    Justification:
      Removes difficult-to-exploit security hole in the client.
    Votes:
-     +1: dlr
+     +1: dlr, rooneg
 
 Approved changes:
 
