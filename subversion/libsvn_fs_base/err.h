@@ -129,10 +129,10 @@ svn_error_t *svn_fs_base__err_no_such_lock (svn_fs_t *fs, const char *path);
 /* SVN_ERR_FS_LOCK_EXPIRED: TOKEN's lock in FS has been auto-expired. */
 svn_error_t *svn_fs_base__err_lock_expired (svn_fs_t *fs, const char *token);
 
-/* SVN_ERR_FS_NO_USER: there is username associated with FS.  */
+/* SVN_ERR_FS_NO_USER: FS does not have a user associated with it. */
 svn_error_t *svn_fs_base__err_no_user (svn_fs_t *fs);
 
-/* SVN_ERR_FS_LOCK_OWNER_MISMATCH: trying to use a lock whose OWNER
+/* SVN_ERR_FS_LOCK_OWNER_MISMATCH: trying to use a lock whose LOCK_OWNER
    doesn't match the USERNAME associated with FS.  */
 svn_error_t *svn_fs_base__err_lock_owner_mismatch (svn_fs_t *fs,
                                                    const char *username,
