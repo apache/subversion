@@ -26,16 +26,6 @@ Candidate changes:
    Votes:
      +1: lundblad, jerenkrantz
 
- * r17129
-   Fix broken tests in svnmerge_test.py by disabling keyword expansion.
-   Justification:
-     It is a new test for a new program. It got broken while importing
-     it into the repository. The patch just disables keyword expansion
-     and restores the original text.
-   Votes:
-     +0: dlr (haven't tested it)
-     +1: blair
-
  * r17139
    svnmerge.py: Fix traceback on wrong command line.
    Justification:
