@@ -922,11 +922,12 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
      adding tokens (if we have any), and subsequently fail if a lock
      violates authz. */
   SVN_ERR(must_have_access(conn, pool, b, svn_authz_write,
-                           NULL, lock_tokens ? TRUE : FALSE));
+                           NULL,
+                           (lock_tokens && lock_tokens->nelts) ? TRUE : FALSE));
 
   /* Authorize the lock tokens and give them to the FS if we got
      any. */
-  if (lock_tokens)
+  if (lock_tokens && lock_tokens->nelts)
     SVN_CMD_ERR(add_lock_tokens(conn, lock_tokens, b, pool));
 
   ccb.pool = pool;
@@ -955,7 +956,7 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         SVN_ERR(svn_fs_deltify_revision(b->fs, new_rev, pool));
 
       /* Unlock the paths. */
-      if (! keep_locks && lock_tokens)
+      if (! keep_locks && lock_tokens && lock_tokens->nelts)
         SVN_ERR(unlock_paths(lock_tokens, b, pool));
 
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "r(?c)(?c)",
