@@ -9,14 +9,6 @@ Status of 1.3.0:
 
 Candidate changes:
 
- * r17039, r17051
-   Fix issue 767: Commit uses temporary file in current directory.
-   Remark:
-     Commits in read-only directories therefore fail.  This revision adds
-     graceful fallback.
-   Votes:
-     +1: dionisos, rooneg, jerenkrantz
-
  * r16568, r17123
    Make svn info not error out on paths that don't exist in future revs.
    Justification:
