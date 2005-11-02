@@ -26,14 +26,6 @@ Candidate changes:
    Votes:
      +1: lundblad, jerenkrantz
 
- * r17127
-   Fix broken JavaHL status API for retrieving last committed revision.
-   Justification:
-     The previous implementation use wrong return type (it's amazing
-     it even compiled), and thus not usable by Subclipse.
-   Votes:
-     +1: dlr, jerenkrantz
-
  * r17129
    Fix broken tests in svnmerge_test.py by disabling keyword expansion.
    Justification:
