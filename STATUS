@@ -56,6 +56,13 @@ Candidate changes:
    Votes:
      +1: blair
 
+ * r17150
+   Fix a bug that caused anonymous write access over ra_svn to
+   fail with "Authorization failed" errors.
+   Justification:
+     Incorrectly denying access is not good.  Also an easy fix.
+   Votes:
+     +1: danderson
 
 Approved changes:
 
