@@ -30,5 +30,12 @@ Candidate changes:
    Votes:
      +1: blair
 
+ * r17149
+   Remove possibility of buffer overflow in keyword expansion.
+   Justification:
+     Removes difficult-to-exploit security hole in the client.
+   Votes:
+     +1: dlr
+
 Approved changes:
 
