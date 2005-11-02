@@ -44,7 +44,7 @@ Candidate changes:
    Justification:
      Incorrectly denying access is not good.  Also an easy fix.
    Votes:
-     +1: danderson
+     +1: danderson, dlr
 
 Approved changes:
 
