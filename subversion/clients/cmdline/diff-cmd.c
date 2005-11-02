@@ -130,7 +130,7 @@ svn_cl__diff (apr_getopt_t *os,
     {
       svn_boolean_t working_copy_present = FALSE, url_present = FALSE;
       
-      /* The 'svn diff [-r M[:N]] [TARGET[@REV]...]' case matches. */
+      /* The 'svn diff [-r N[:M]] [TARGET[@REV]...]' case matches. */
 
       /* Here each target is a pegged object. Find out the starting
          and ending paths for each target. */
