@@ -1228,7 +1228,7 @@ svn_error_t *
 svn_wc_create_tmp_file2 (apr_file_t **fp,
                          const char **new_name,
                          const char *path,
-                         svn_boolean_t delete_on_close,
+                         svn_io_file_del_t delete_when,
                          apr_pool_t *pool)
 {
   apr_file_t *file;
@@ -1239,8 +1239,8 @@ svn_wc_create_tmp_file2 (apr_file_t **fp,
   path = svn_wc__adm_path (path, TRUE, pool, "tempfile", NULL);
 
   /* Open a unique file;  use APR_DELONCLOSE. */
-  SVN_ERR (svn_io_open_unique_file (&file, new_name,
-                                    path, ".tmp", delete_on_close, pool));
+  SVN_ERR (svn_io_open_unique_file2 (&file, new_name,
+                                     path, ".tmp", delete_when, pool));
 
 
   if (fp)
