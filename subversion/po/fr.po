@@ -1554,7 +1554,7 @@ msgid ""
 "Multiple revision arguments encountered; can't specify -r and -c, or try '-r "
 "M:N' instead of '-r M -r N'"
 msgstr ""
-"Arguments de révision multiples : me pas utiliser à la fois -r et -c, ou "
+"Arguments de révision multiples : ne pas utiliser à la fois -r et -c, ou "
 "essayer '-r M:N' au lieu de '-r M -r N'"
 
 #: clients/cmdline/main.c:974 svnadmin/main.c:1231
@@ -3575,7 +3575,8 @@ msgstr "Échec au chargement du module de stockage (FS) '%s'"
 #, c-format
 msgid ""
 "Mismatched FS module version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
-msgstr ""
+msgstr "Problème de version de module FS pour '%s': %d.%d.%d%s trouvé, "
+"%d.%d.%d%s attendu"
 
 #: libsvn_fs/fs-loader.c:163
 #, c-format
@@ -4508,7 +4509,8 @@ msgstr "Échec du verrouillage : il existe une version plus récente de '%s'"
 #: libsvn_ra/ra_loader.c:214
 #, c-format
 msgid "Mismatched RA version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
-msgstr "Problème de version pour '%s': %d.%d.%d%s trouvé, %d.%d.%d%s attendu"
+msgstr "Problème de version de module RA pour '%s': %d.%d.%d%s trouvé, "
+"%d.%d.%d%s attendu"
 
 #: libsvn_ra/ra_loader.c:286
 #, c-format
