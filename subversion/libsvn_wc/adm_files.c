@@ -638,37 +638,6 @@ svn_wc__remove_adm_file (const char *path, apr_pool_t *pool, ...)
 }
 
 
-const char *
-svn_wc__empty_file_path (const char *path,
-                         apr_pool_t *pool)
-{
-  const char *parent_path = svn_path_dirname (path, pool);
-  return extend_with_adm_name (parent_path, NULL, 0, pool,
-                               SVN_WC__ADM_EMPTY_FILE, NULL);
-}
-
-
-svn_error_t *
-svn_wc__open_empty_file (apr_file_t **handle,
-                         const char *path,
-                         apr_pool_t *pool)
-{
-  const char *parent_path = svn_path_dirname (path, pool);
-  return open_adm_file (handle, parent_path, NULL, APR_OS_DEFAULT, APR_READ,
-                        pool, SVN_WC__ADM_EMPTY_FILE, NULL);
-}
-
-
-svn_error_t *
-svn_wc__close_empty_file (apr_file_t *fp,
-                          const char *path,
-                          apr_pool_t *pool)
-{
-  const char *parent_path = svn_path_dirname (path, pool);
-  return close_adm_file (fp, parent_path, NULL, 0, pool,
-                         SVN_WC__ADM_EMPTY_FILE, NULL);
-}
-
 
 svn_error_t *
 svn_wc__open_text_base (apr_file_t **handle,
@@ -1129,16 +1098,6 @@ init_adm (const char *path,
 
   /* SVN_WC__ADM_ENTRIES */
   SVN_ERR (svn_wc__entries_init (path, uuid, url, repos, initial_rev, pool));
-
-  /* SVN_WC__ADM_EMPTY_FILE exists because sometimes an readable, empty
-     file is required (in the repository diff for example). Creating such a
-     file temporarily, only to delete it again, would appear to be less
-     efficient than just having one around. It doesn't take up much space
-     after all. */
-  SVN_ERR (svn_wc__make_adm_thing (adm_access, SVN_WC__ADM_EMPTY_FILE,
-                                   svn_node_file,
-                                   APR_UREAD | APR_GREAD | APR_WREAD,
-                                   0, pool));
 
   /* SVN_WC__ADM_README */
   SVN_ERR (init_adm_file (path, SVN_WC__ADM_README, readme_contents, pool));
