@@ -1397,7 +1397,7 @@ main (int argc, const char * const *argv)
     /* The main disk-caching auth providers, for both
        'username/password' creds and 'username' creds.  */
 #ifdef WIN32
-    svn_client_get_windows_simple_provider (&provider, pool);
+    svn_auth_get_windows_simple_provider (&provider, pool);
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 #endif
     svn_auth_get_simple_provider (&provider, pool);
