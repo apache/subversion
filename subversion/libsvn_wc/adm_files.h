@@ -163,24 +163,6 @@ svn_error_t *svn_wc__remove_adm_file (const char *path,
                                       apr_pool_t *pool,
                                       ...);
 
-/* Return the path to the empty file in the adm area of PATH */
-const char *svn_wc__empty_file_path (const char *path,
-                                     apr_pool_t *pool);
-
-
-/* Open *readonly* the empty file in the in adm area of PATH */
-svn_error_t *svn_wc__open_empty_file (apr_file_t **handle,
-                                      const char *path,
-                                      apr_pool_t *pool);
-
-/* Close the empty file in the adm area of PATH. FP was obtain from
- * svn_wc__open_empty_file().
- */
-svn_error_t *svn_wc__close_empty_file (apr_file_t *fp,
-                                       const char *path,
-                                       apr_pool_t *pool);
-
-
 /* Open the text-base for FILE.
  * FILE can be any kind of path ending with a filename.
  * Behaves like svn_wc__open_adm_file(), which see.

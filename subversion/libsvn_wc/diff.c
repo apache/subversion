@@ -149,6 +149,9 @@ struct edit_baton {
   /* Possibly show the diffs backwards. */
   svn_boolean_t reverse_order;
 
+  /* Empty file used to diff adds / deletes */
+  const char *empty_file;
+
   apr_pool_t *pool;
 };
 
@@ -339,6 +342,30 @@ make_file_baton (const char *path,
   return file_baton;
 }
 
+/* Get the empty file associated with the edit baton. This is cached so
+ * that it can be reused, all empty files are the same.
+ */
+static svn_error_t *
+get_empty_file (struct edit_baton *b,
+                const char **empty_file)
+{
+  /* Create the file if it does not exist */
+  if (!b->empty_file)
+    {
+      const char *temp_dir;
+
+      SVN_ERR (svn_io_temp_dir (&temp_dir, b->pool));
+      SVN_ERR (svn_io_open_unique_file2
+               (NULL, &(b->empty_file),
+                svn_path_join (temp_dir, "tmp", b->pool),
+                "", svn_io_file_del_on_pool_cleanup,
+                b->pool));
+    }
+
+  *empty_file = b->empty_file;
+
+  return SVN_NO_ERROR;
+}
 
 /* Helper function:  load a file_baton's base_props. */
 static svn_error_t *
@@ -498,7 +525,7 @@ file_diff (struct dir_baton *dir_baton,
 
   /* Prep these two paths early. */
   pristine_copy = svn_wc__text_base_path (path, FALSE, pool);
-  empty_file = svn_wc__empty_file_path (path, pool);
+  SVN_ERR (get_empty_file (eb, &empty_file));
 
   /* Get property diffs if this is not schedule delete. */
   if (schedule != svn_wc_schedule_delete)
@@ -798,6 +825,7 @@ delete_entry (const char *path,
   struct edit_baton *eb = pb->edit_baton;
   const svn_wc_entry_t *entry;
   struct dir_baton *b;
+  const char *empty_file;
   const char *full_path = svn_path_join (pb->edit_baton->anchor_path, path,
                                          pb->pool);
   svn_wc_adm_access_t *adm_access;
@@ -807,6 +835,7 @@ delete_entry (const char *path,
   SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, pb->edit_baton->anchor,
                                       full_path, pool));
   SVN_ERR (svn_wc_entry (&entry, full_path, adm_access, FALSE, pool));
+  SVN_ERR (get_empty_file (pb->edit_baton, &empty_file));
   switch (entry->kind)
     {
     case svn_node_file:
@@ -823,12 +852,13 @@ delete_entry (const char *path,
           /* Whenever showing a deletion, we show the text-base vanishing. */
           const char *textbase = svn_wc__text_base_path (full_path,
                                                          FALSE, pool);
+
           SVN_ERR (svn_wc_get_prop_diffs (NULL, &baseprops, full_path,
                                           adm_access, pool));
           SVN_ERR (pb->edit_baton->callbacks->file_deleted
                    (NULL, NULL, full_path,
                     textbase,
-                    svn_wc__empty_file_path (full_path, pool),
+                    empty_file,
                     pristine_mimetype,
                     NULL,
                     baseprops,
@@ -840,7 +870,7 @@ delete_entry (const char *path,
           /* ### Show the properties as well. */
           SVN_ERR (pb->edit_baton->callbacks->file_added
                    (NULL, NULL, NULL, full_path,
-                    svn_wc__empty_file_path (full_path, pool),
+                    empty_file,
                     full_path,
                     0, entry->revision,
                     NULL,
@@ -1055,10 +1085,7 @@ window_handler (svn_txdelta_window_t *window,
       SVN_ERR (svn_wc__close_text_base (b->temp_file, b->wc_path, 0, b->pool));
 
       if (b->added)
-        {
-          SVN_ERR (svn_wc__close_empty_file (b->original_file, b->wc_path,
-                                             b->pool));
-        }
+        SVN_ERR (svn_io_file_close (b->original_file, b->pool));
       else
         {
           SVN_ERR (svn_wc__close_text_base (b->original_file, b->wc_path, 0,
@@ -1098,8 +1125,11 @@ apply_textdelta (void *file_baton,
   if (b->added)
     {
       /* An empty file is the starting point if the file is being added */
-      SVN_ERR (svn_wc__open_empty_file (&b->original_file, b->wc_path,
-                                        b->pool));
+      const char *empty_file;
+
+      SVN_ERR (get_empty_file (eb, &empty_file));
+      SVN_ERR (svn_io_file_open (&b->original_file, empty_file,
+                                 APR_READ, APR_OS_DEFAULT, pool));
     }
   else
     {
@@ -1154,13 +1184,16 @@ close_file (void *file_baton,
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
   const char *pristine_mimetype, *working_mimetype;
+  const char *empty_file;
 
   /* The path to the temporary copy of the pristine repository version. */
   const char *temp_file_path;
+
   SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, b->edit_baton->anchor,
                                       b->wc_path, b->pool));
   SVN_ERR (svn_wc_entry (&entry, b->wc_path, adm_access, FALSE, b->pool));
 
+  SVN_ERR (get_empty_file (b->edit_baton, &empty_file));
   /* We want to figure out if the file from the repository has an
      svn:mime-type.  So first look for svn:mime-type in
      b->propchanges... if not there, look for it in the *pristine*
@@ -1180,9 +1213,9 @@ close_file (void *file_baton,
         /* ### Show the properties as well. */
         SVN_ERR (b->edit_baton->callbacks->file_added
                  (NULL, NULL, NULL, b->path,
-                  svn_wc__empty_file_path (b->wc_path, b->pool),
+                  empty_file,
                   temp_file_path,
-                  0, 
+                  0,
                   entry ? entry->revision : SVN_INVALID_REVNUM,
                   NULL,
                   pristine_mimetype,
@@ -1208,7 +1241,7 @@ close_file (void *file_baton,
           SVN_ERR (b->edit_baton->callbacks->file_deleted
                    (NULL, NULL, b->path,
                     temp_file_path,
-                    svn_wc__empty_file_path (b->wc_path, b->pool),
+                    empty_file,
                     pristine_mimetype,
                     NULL,
                     props,
@@ -1227,7 +1260,7 @@ close_file (void *file_baton,
           if (eb->use_text_base)
             localfile = svn_wc__text_base_path (b->path, FALSE, b->pool);
           else if (b->schedule_delete)
-            localfile = svn_wc__empty_file_path (b->wc_path, b->pool);
+            localfile = empty_file;
           else
             /* a detranslated version of the working file */
             SVN_ERR (svn_wc_translated_file (&localfile, b->path, adm_access,
