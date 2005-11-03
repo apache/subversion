@@ -31,6 +31,7 @@
 #include <apr_want.h>
 
 #include "svn_utf.h"
+#include "svn_auth.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -135,6 +136,93 @@ const char *svn_cmdline_output_encoding (apr_pool_t *pool);
 int svn_cmdline_handle_exit_error (svn_error_t *error,
                                    apr_pool_t *pool,
                                    const char *prefix);
+
+/** Prompt the user for input, using @a prompt_str for the prompt and
+ * returning the user's response in @a result, allocated in @a pool.
+ */
+svn_error_t *
+svn_cmdline_prompt_user (const char **result,
+                         const char *prompt_str,
+                         apr_pool_t *pool);
+
+/** A cancellation function/baton pair to be passed as the baton argument
+ * to the @c svn_cmdline_*_prompt functions.
+ */
+typedef struct {
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+} svn_cmdline_prompt_baton_t;
+
+/** An implementation of @c svn_auth_simple_prompt_func_t that prompts
+ * the user for keyboard input on the command line.
+ *
+ * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
+ */
+svn_error_t *
+svn_cmdline_auth_simple_prompt (svn_auth_cred_simple_t **cred_p,
+                                void *baton,
+                                const char *realm,
+                                const char *username,
+                                svn_boolean_t may_save,
+                                apr_pool_t *pool);
+
+
+/** An implementation of @c svn_auth_username_prompt_func_t that prompts
+ * the user for their username via the command line.
+ *
+ * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
+ */
+svn_error_t *
+svn_cmdline_auth_username_prompt (svn_auth_cred_username_t **cred_p,
+                                  void *baton,
+                                  const char *realm,
+                                  svn_boolean_t may_save,
+                                  apr_pool_t *pool);
+
+
+/** An implementation of @c svn_auth_ssl_server_trust_prompt_func_t that
+ * asks the user if they trust a specific ssl server via the command line.
+ *
+ * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
+ */
+svn_error_t *
+svn_cmdline_auth_ssl_server_trust_prompt (
+  svn_auth_cred_ssl_server_trust_t **cred_p,
+  void *baton,
+  const char *realm,
+  apr_uint32_t failures,
+  const svn_auth_ssl_server_cert_info_t *cert_info,
+  svn_boolean_t may_save,
+  apr_pool_t *pool);
+
+
+/** An implementation of @c svn_auth_ssl_client_cert_prompt_func_t that
+ * prompts the user for the filename of their SSL client certificate via
+ * the command line.
+ *
+ * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
+ */
+svn_error_t *
+svn_cmdline_auth_ssl_client_cert_prompt (
+  svn_auth_cred_ssl_client_cert_t **cred_p,
+  void *baton,
+  const char *realm,
+  svn_boolean_t may_save,
+  apr_pool_t *pool);
+
+
+/** An implementation of @c svn_auth_ssl_client_cert_pw_prompt_func_t that
+ * prompts the user for their SSL certificate password via the command line.
+ *
+ * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
+ */
+svn_error_t *
+svn_cmdline_auth_ssl_client_cert_pw_prompt (
+  svn_auth_cred_ssl_client_cert_pw_t **cred_p,
+  void *baton,
+  const char *realm,
+  svn_boolean_t may_save,
+  apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

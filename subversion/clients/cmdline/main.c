@@ -1415,33 +1415,35 @@ main (int argc, const char * const *argv)
 
     if (opt_state.non_interactive == FALSE)
       {
+        svn_cmdline_prompt_baton_t pb = { ctx->cancel_func,
+                                          ctx->cancel_baton };
+
         /* Two basic prompt providers: username/password, and just username. */
         svn_client_get_simple_prompt_provider (&provider,
-                                               svn_cl__auth_simple_prompt,
-                                               ctx,
+                                               svn_cmdline_auth_simple_prompt,
+                                               &pb,
                                                2, /* retry limit */
                                                pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
-        svn_client_get_username_prompt_provider (&provider,
-                                                 svn_cl__auth_username_prompt,
-                                                 ctx, 
-                                                 2, /* retry limit */
-                                                 pool);
+        svn_client_get_username_prompt_provider
+          (&provider, svn_cmdline_auth_username_prompt, &pb,
+           2, /* retry limit */ pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
         /* Three ssl prompt providers, for server-certs, client-certs,
            and client-cert-passphrases.  */
         svn_client_get_ssl_server_trust_prompt_provider
-          (&provider, svn_cl__auth_ssl_server_trust_prompt, ctx, pool);
+          (&provider, svn_cmdline_auth_ssl_server_trust_prompt, &pb, pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
         svn_client_get_ssl_client_cert_prompt_provider
-          (&provider, svn_cl__auth_ssl_client_cert_prompt, ctx, 2, pool);
+          (&provider, svn_cmdline_auth_ssl_client_cert_prompt, &pb, 2, pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
         svn_client_get_ssl_client_cert_pw_prompt_provider
-          (&provider, svn_cl__auth_ssl_client_cert_pw_prompt, ctx, 2, pool);
+          (&provider, svn_cmdline_auth_ssl_client_cert_pw_prompt, &pb, 2,
+           pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
       }
 
