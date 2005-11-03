@@ -23,7 +23,6 @@
 /*** Includes. ***/
 
 #include <apr_pools.h>
-#include "svn_client.h"
 #include "svn_auth.h"
 #include "svn_error.h"
 #include "svn_utf.h"
@@ -36,12 +35,12 @@
 /*-----------------------------------------------------------------------*/
 
 /* The keys that will be stored on disk */
-#define SVN_CLIENT__AUTHFILE_USERNAME_KEY            "username"
-#define SVN_CLIENT__AUTHFILE_PASSWORD_KEY            "password"
-#define SVN_CLIENT__AUTHFILE_PASSTYPE_KEY            "passtype"
+#define SVN_AUTH__AUTHFILE_USERNAME_KEY            "username"
+#define SVN_AUTH__AUTHFILE_PASSWORD_KEY            "password"
+#define SVN_AUTH__AUTHFILE_PASSTYPE_KEY            "passtype"
 
-#define SVN_CLIENT__SIMPLE_PASSWORD_TYPE             "simple"
-#define SVN_CLIENT__WINCRYPT_PASSWORD_TYPE           "wincrypt"
+#define SVN_AUTH__SIMPLE_PASSWORD_TYPE             "simple"
+#define SVN_AUTH__WINCRYPT_PASSWORD_TYPE           "wincrypt"
 
 
 /* A function that stores PASSWORD (or some encrypted version thereof)
@@ -76,7 +75,7 @@ simple_password_get (const char **password,
                      apr_pool_t *pool)
 {
   svn_string_t *str;
-  str = apr_hash_get (creds, SVN_CLIENT__AUTHFILE_PASSWORD_KEY,
+  str = apr_hash_get (creds, SVN_AUTH__AUTHFILE_PASSWORD_KEY,
                       APR_HASH_KEY_STRING);
   if (str && str->data)
     {
@@ -95,7 +94,7 @@ simple_password_set (apr_hash_t *creds,
                      const char *password,
                      apr_pool_t *pool)
 {
-  apr_hash_set (creds, SVN_CLIENT__AUTHFILE_PASSWORD_KEY, APR_HASH_KEY_STRING,
+  apr_hash_set (creds, SVN_AUTH__AUTHFILE_PASSWORD_KEY, APR_HASH_KEY_STRING,
                 svn_string_create (password, pool));
   return TRUE;
 }
@@ -147,7 +146,7 @@ simple_first_creds_helper (void **credentials,
           if (! username)
             {
               str = apr_hash_get (creds_hash,
-                                  SVN_CLIENT__AUTHFILE_USERNAME_KEY,
+                                  SVN_AUTH__AUTHFILE_USERNAME_KEY,
                                   APR_HASH_KEY_STRING);
               if (str && str->data)
                 username = str->data;
@@ -160,7 +159,7 @@ simple_first_creds_helper (void **credentials,
                  mangler's type, otherwise the password must be
                  interpreted by another provider. */
               str = apr_hash_get (creds_hash,
-                                  SVN_CLIENT__AUTHFILE_PASSTYPE_KEY,
+                                  SVN_AUTH__AUTHFILE_PASSTYPE_KEY,
                                   APR_HASH_KEY_STRING);
               have_passtype = (str && str->data);
               if (have_passtype && passtype
@@ -240,7 +239,7 @@ simple_save_creds_helper (svn_boolean_t *saved,
 
   /* Put the credentials in a hash and save it to disk */
   creds_hash = apr_hash_make (pool);
-  apr_hash_set (creds_hash, SVN_CLIENT__AUTHFILE_USERNAME_KEY,
+  apr_hash_set (creds_hash, SVN_AUTH__AUTHFILE_USERNAME_KEY,
                 APR_HASH_KEY_STRING,
                 svn_string_create (creds->username, pool));
   if (! dont_store_passwords)
@@ -253,7 +252,7 @@ simple_save_creds_helper (svn_boolean_t *saved,
              know which provider owns the password. */
           if (passtype)
             {
-              apr_hash_set (creds_hash, SVN_CLIENT__AUTHFILE_PASSTYPE_KEY,
+              apr_hash_set (creds_hash, SVN_AUTH__AUTHFILE_PASSTYPE_KEY,
                             APR_HASH_KEY_STRING,
                             svn_string_create (passtype, pool));
             }
@@ -286,7 +285,7 @@ simple_first_creds (void **credentials,
                                     iter_baton, provider_baton,
                                     parameters, realmstring,
                                     simple_password_get,
-                                    SVN_CLIENT__SIMPLE_PASSWORD_TYPE,
+                                    SVN_AUTH__SIMPLE_PASSWORD_TYPE,
                                     pool);
 }
 
@@ -302,7 +301,7 @@ simple_save_creds (svn_boolean_t *saved,
   return simple_save_creds_helper (saved, credentials, provider_baton,
                                    parameters, realmstring,
                                    simple_password_set,
-                                   SVN_CLIENT__SIMPLE_PASSWORD_TYPE,
+                                   SVN_AUTH__SIMPLE_PASSWORD_TYPE,
                                    pool);
 }
 
@@ -316,7 +315,7 @@ static const svn_auth_provider_t simple_provider = {
 
 /* Public API */
 void
-svn_client_get_simple_provider (svn_auth_provider_object_t **provider,
+svn_auth_get_simple_provider (svn_auth_provider_object_t **provider,
                                 apr_pool_t *pool)
 {
   svn_auth_provider_object_t *po = apr_pcalloc (pool, sizeof(*po));
@@ -388,7 +387,7 @@ prompt_for_simple_creds (svn_auth_cred_simple_t **cred_p,
           if (! err && creds_hash)
             {
               str = apr_hash_get (creds_hash,
-                                  SVN_CLIENT__AUTHFILE_USERNAME_KEY,
+                                  SVN_AUTH__AUTHFILE_USERNAME_KEY,
                                   APR_HASH_KEY_STRING);
               if (str && str->data)
                 def_username = str->data;
@@ -496,7 +495,7 @@ static const svn_auth_provider_t simple_prompt_provider = {
 
 /* Public API */
 void
-svn_client_get_simple_prompt_provider (
+svn_auth_get_simple_prompt_provider (
   svn_auth_provider_object_t **provider,
   svn_auth_simple_prompt_func_t prompt_func,
   void *prompt_baton,
@@ -668,7 +667,7 @@ windows_simple_first_creds (void **credentials,
                                     iter_baton, provider_baton,
                                     parameters, realmstring,
                                     windows_password_decrypter,
-                                    SVN_CLIENT__WINCRYPT_PASSWORD_TYPE,
+                                    SVN_AUTH__WINCRYPT_PASSWORD_TYPE,
                                     pool);
 }
 
@@ -684,7 +683,7 @@ windows_simple_save_creds (svn_boolean_t *saved,
   return simple_save_creds_helper (saved, credentials, provider_baton,
                                    parameters, realmstring,
                                    windows_password_encrypter,
-                                   SVN_CLIENT__WINCRYPT_PASSWORD_TYPE,
+                                   SVN_AUTH__WINCRYPT_PASSWORD_TYPE,
                                    pool);
 }
 
@@ -698,8 +697,8 @@ static const svn_auth_provider_t windows_simple_provider = {
 
 /* Public API */
 void
-svn_client_get_windows_simple_provider (svn_auth_provider_object_t **provider,
-                                        apr_pool_t *pool)
+svn_auth_get_windows_simple_provider (svn_auth_provider_object_t **provider,
+                                      apr_pool_t *pool)
 {
   svn_auth_provider_object_t *po = apr_pcalloc (pool, sizeof(*po));
 
