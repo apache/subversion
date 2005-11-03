@@ -236,7 +236,7 @@ def diff_info(info, uri, add_diff)
 
         command += " #{args.join(' ')}" unless args.empty?
 
-        link = [uri, key].compact.join("/") + "@#{rev}"
+        link = [uri, key].compact.join("/")
 
         line_info = "+#{value.added_line} -#{value.deleted_line}"
         desc = <<-HEADER
@@ -248,7 +248,7 @@ HEADER
           desc << value.body
         else
           desc << <<-CONTENT
-    % svn #{command} #{link}
+    % svn #{command} #{link}@#{rev}
 CONTENT
         end
       
@@ -377,8 +377,12 @@ def rss_items(items, info, repos_uri)
 end
 
 def main
-  repos, revision, to, *rest = ARGV
-  options = parse(rest)
+  if ARGV.grep(/^--help$/)
+    parse(ARGV)
+  else
+    repos, revision, to, *rest = ARGV
+    options = parse(rest)
+  end
   
   require "svn/info"
   info = Svn::Info.new(repos, revision)
