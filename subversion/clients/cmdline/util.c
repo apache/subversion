@@ -618,9 +618,10 @@ svn_cl__get_log_message (const char **log_msg,
       if (! message)
         {
           const char *reply;
-          svn_cl__prompt_user (&reply,
-                               _("\nLog message unchanged or not specified\n"
-                                 "a)bort, c)ontinue, e)dit\n"), pool);
+          svn_cmdline_prompt_user
+            (&reply,
+             _("\nLog message unchanged or not specified\n"
+               "a)bort, c)ontinue, e)dit\n"), pool);
           if (reply)
             {
               char letter = apr_tolower (reply[0]);

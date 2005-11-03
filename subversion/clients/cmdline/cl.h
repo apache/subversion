@@ -321,66 +321,6 @@ svn_cl__edit_externally (svn_string_t **edited_contents,
                          apr_pool_t *pool);
 
 
-/* Display PROMPT_STR to the user on stderr, and set *RESULT to the
-   reply back from stdin, allocated in POOL. */
-svn_error_t *
-svn_cl__prompt_user (const char **result,
-                     const char *prompt_str,
-                     apr_pool_t *pool);
-
-
-
-/** Auth prompting. **/
-
-/* This implements 'svn_auth_simple_prompt_func_t'. */
-svn_error_t *svn_cl__auth_simple_prompt (svn_auth_cred_simple_t **cred_p,
-                                         void *baton,
-                                         const char *realm,
-                                         const char *username,
-                                         svn_boolean_t may_save,
-                                         apr_pool_t *pool);
-
-
-/* This implements 'svn_auth_username_prompt_func_t'. */
-svn_error_t *svn_cl__auth_username_prompt (svn_auth_cred_username_t **cred_p,
-                                           void *baton,
-                                           const char *realm,
-                                           svn_boolean_t may_save,
-                                           apr_pool_t *pool);
-
-
-/* This implements 'svn_auth_ssl_server_trust_prompt_func_t'. */
-svn_error_t *
-svn_cl__auth_ssl_server_trust_prompt (
-  svn_auth_cred_ssl_server_trust_t **cred_p,
-  void *baton,
-  const char *realm,
-  apr_uint32_t failures,
-  const svn_auth_ssl_server_cert_info_t *cert_info,
-  svn_boolean_t may_save,
-  apr_pool_t *pool);
-
-
-/* This implements 'svn_auth_ssl_client_cert_prompt_func_t'. */
-svn_error_t *
-svn_cl__auth_ssl_client_cert_prompt (
-  svn_auth_cred_ssl_client_cert_t **cred_p,
-  void *baton,
-  const char *realm,
-  svn_boolean_t may_save,
-  apr_pool_t *pool);
-
-
-/* This implements 'svn_auth_ssl_client_cert_pw_prompt_func_t'. */
-svn_error_t *
-svn_cl__auth_ssl_client_cert_pw_prompt (
-  svn_auth_cred_ssl_client_cert_pw_t **cred_p,
-  void *baton,
-  const char *realm,
-  svn_boolean_t may_save,
-  apr_pool_t *pool);
-
-
 
 /*** Notification functions to display results on the terminal. */
 
