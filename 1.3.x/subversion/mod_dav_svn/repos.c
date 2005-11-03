@@ -42,6 +42,7 @@
 #include "svn_version.h"
 #include "svn_props.h"
 #include "svn_utf.h"
+#include "svn_ebcdic.h"
 
 #include "dav_svn.h"
 #include "mod_dav_svn.h"
@@ -3310,7 +3311,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
      header and distinguish an svn client ('svn ls') from a generic
      DAV client.  */
   apr_table_set(ctx->info.r->subprocess_env, "SVN-ACTION",
-                apr_psprintf(params->pool,
+                APR_PSPRINTF(params->pool,
                              "list-dir '%s'",
                              svn_path_uri_encode(repos_path_utf8,
                                                  params->pool)));
