@@ -348,13 +348,10 @@ load_base_props (struct file_baton *b)
      actually the working props.  that's what we do with texts,
      anyway, in the 'svn diff -rN foo' case.  */
   
-  /* also notice we're ignoring error here;  there's a chance that
-     this path might not exist in the working copy, in which case
+  /* This path might not exist in the working copy, in which case
      the baseprops remains an empty hash. */
-  svn_error_t *err = svn_wc_prop_list (&(b->baseprops), b->path,
-                                       b->edit_baton->anchor, b->pool);
-  if (err)
-    svn_error_clear (err);
+  SVN_ERR (svn_wc_prop_list (&(b->baseprops), b->path,
+                             b->edit_baton->anchor, b->pool));
   b->fetched_baseprops = TRUE;
 }
 
@@ -1315,13 +1312,10 @@ change_dir_prop (void *dir_baton,
          actually the working props.  that's what we do with texts,
          anyway, in the 'svn diff -rN foo' case.  */
 
-      /* also notice we're ignoring error here;  there's a chance that
-         this path might not exist in the working copy, in which case
+      /* This path might not exist in the working copy, in which case
          the baseprops remains an empty hash. */
-      svn_error_t *err = svn_wc_prop_list (&(db->baseprops), db->path,
-                                           db->edit_baton->anchor, db->pool);
-      if (err)
-        svn_error_clear (err);
+      SVN_ERR (svn_wc_prop_list (&(db->baseprops), db->path,
+                                 db->edit_baton->anchor, db->pool));
       db->fetched_baseprops = TRUE;
     }
 
