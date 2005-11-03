@@ -68,7 +68,7 @@ def parse(args)
     
     opts.on_tail("--help", "Show this message") do
       puts opts
-      exit
+      exit!
     end
   end
 
