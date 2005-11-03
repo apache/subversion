@@ -241,11 +241,13 @@ static int req_check_access(request_rec *r,
     if (access_conf == NULL) {
         const char *access_file_utf8 = conf->access_file;
 #if APR_CHARSET_EBCDIC
-        svn_err = svn_utf_cstring_to_utf8(&access_file_utf8, access_file_utf8,
-                                          r->connection->pool);
+        if(access_file_utf8)
+          svn_err = svn_utf_cstring_to_utf8(&access_file_utf8,
+                                            access_file_utf8,
+                                            r->connection->pool);
         if (!svn_err)
 #endif
-        svn_err = svn_repos_authz_read(&access_conf, conf->access_file,
+        svn_err = svn_repos_authz_read(&access_conf, access_file_utf8,
                                        TRUE, r->connection->pool);
         if (svn_err) {
             ap_log_rerror(APLOG_MARK, APLOG_ERR,
@@ -292,12 +294,21 @@ static int req_check_access(request_rec *r,
         || (!repos_path && (authz_svn_type & svn_authz_write)))
       {
         const char *user_utf8 = r->user;
+        const char *repos_name_utf8 = repos_name;
+        const char *repos_path_utf8 = repos_path;
 #if APR_CHARSET_EBCDIC
-        svn_err = svn_utf_cstring_to_utf8(&user_utf8, r->user, r->pool);
+        if(r->user)
+          svn_err = svn_utf_cstring_to_utf8(&user_utf8, r->user, r->pool);
+        if(repos_name && !svn_err)
+          svn_err = svn_utf_cstring_to_utf8(&repos_name_utf8, repos_name,
+                                            r->pool);
+        if(repos_path && !svn_err)
+          svn_err = svn_utf_cstring_to_utf8(&repos_path_utf8, repos_path,
+                                            r->pool);
         if (!svn_err)
 #endif
-        svn_err = svn_repos_authz_check_access(access_conf, repos_name,
-                                               repos_path, user_utf8,
+        svn_err = svn_repos_authz_check_access(access_conf, repos_name_utf8,
+                                               repos_path_utf8, user_utf8,
                                                authz_svn_type,
                                                &authz_access_granted,
                                                r->pool);
@@ -312,7 +323,7 @@ static int req_check_access(request_rec *r,
                           svn_err->apr_err < APR_OS_START_CANONERR) ?
                          0 : svn_err->apr_err),
                         r, "Failed to perform access control: %s",
-                        svn_err->message);
+                        svn_err_best_message(svn_err, errbuf, sizeof(errbuf)));
           svn_error_clear(svn_err);
 
           return DECLINED;
@@ -344,21 +355,22 @@ static int req_check_access(request_rec *r,
         const char *dest_repos_name_utf8 = dest_repos_name;
         const char *dest_repos_path_utf8 = dest_repos_path;
 #if APR_CHARSET_EBCDIC
-        svn_err = svn_utf_cstring_to_utf8(&user_utf8, user_utf8, r->pool);
-        if (!svn_err)
+        if(r->user)
+          svn_err = svn_utf_cstring_to_utf8(&user_utf8, user_utf8, r->pool);
+        if (dest_repos_name && !svn_err)
           svn_err = svn_utf_cstring_to_utf8(&dest_repos_name_utf8,
-                                            dest_repos_name_utf8,
+                                            dest_repos_name,
                                             r->pool);
-        if (!svn_err)
+        if (dest_repos_path && !svn_err)
           svn_err = svn_utf_cstring_to_utf8(&dest_repos_path_utf8,
-                                            dest_repos_path_utf8,
+                                            dest_repos_path,
                                             r->pool);
         if (!svn_err)
 #endif
         svn_err = svn_repos_authz_check_access(access_conf,
-                                               dest_repos_name,
-                                               dest_repos_path,
-                                               r->user,
+                                               dest_repos_name_utf8,
+                                               dest_repos_path_utf8,
+                                               user_utf8,
                                                svn_authz_write
                                                |svn_authz_recursive,
                                                &authz_access_granted,
