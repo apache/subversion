@@ -3091,7 +3091,7 @@ svn_error_t *
 svn_wc_create_tmp_file2 (apr_file_t **fp,
                          const char **new_name,
                          const char *path,
-                         svn_boolean_t delete_on_close,
+                         svn_io_file_del_t delete_when,
                          apr_pool_t *pool);
 
 

@@ -2931,7 +2931,7 @@ svn_wc_add_repos_file2 (const char *dst_path,
       /* Save new props to temporary file. Don't use svn_wc__prop_path()
          because install_file() will overwrite it! */
       SVN_ERR (svn_wc_create_tmp_file2 (NULL, &tmp_prop_path,
-                                        adm_path, FALSE, pool));
+                                        adm_path, svn_io_file_del_none, pool));
       SVN_ERR (svn_wc__save_prop_file (tmp_prop_path, new_props, pool));
 
       /* Rename temporary props file to working props. */
@@ -2949,8 +2949,8 @@ svn_wc_add_repos_file2 (const char *dst_path,
       apr_size_t adm_path_len = strlen (adm_path) + 1;
 
       /* Move new text to temporary file in adm_access. */
-      SVN_ERR (svn_wc_create_tmp_file2 (NULL, &tmp_text_path,
-                                        adm_path, FALSE, pool));
+      SVN_ERR (svn_wc_create_tmp_file2 (NULL, &tmp_text_path, adm_path,
+                                        svn_io_file_del_none, pool));
       SVN_ERR (svn_io_file_move (new_text_path, tmp_text_path, pool));
 
       /* Translate/rename new temporary text file to working text. */

@@ -40,6 +40,22 @@ extern "C" {
 
 
 
+/** Used as an argument when creating temporary files to indicate
+    when a file should be removed.
+
+    Not specifying any of these means no removal at all. */
+typedef enum
+{
+  /** No deletion ever */
+  svn_io_file_del_none = 0,
+  /** Remove when the file is closed */
+  svn_io_file_del_on_close,
+  /** Remove when the associated pool is cleared */
+  svn_io_file_del_on_pool_cleanup,
+} svn_io_file_del_t;
+
+
+
 /** Represents the kind and special status of a directory entry.
  *
  * @since New in 1.3.
@@ -131,10 +147,25 @@ svn_error_t *svn_io_check_resolved_path (const char *path,
  * the error returned.
  *
  * Claim of Historical Inevitability: this function was written
- * because 
+ * because
  *
  *    - tmpnam() is not thread-safe.
  *    - tempname() tries standard system tmp areas first.
+ *
+ *
+ * @since New in 1.4
+ *
+ */
+svn_error_t *svn_io_open_unique_file2 (apr_file_t **f,
+                                       const char **unique_name_p,
+                                       const char *path,
+                                       const char *suffix,
+                                       svn_io_file_del_t delete_when,
+                                       apr_pool_t *pool);
+
+/** Like svn_io_open_unique_file2, but can't delete on pool cleanup.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API
  *
  * @note In 1.4 the API was extended to require either @a f or
  *       @a unique_name_p (the other can be NULL).  Before that, both were

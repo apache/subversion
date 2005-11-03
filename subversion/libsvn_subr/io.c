@@ -175,20 +175,65 @@ svn_io_check_special_path (const char *path,
   return io_check_path (path, FALSE, is_special, kind, pool);
 }
 
+struct temp_file_cleanup_s
+{
+  apr_pool_t *pool;
+  const char *name;
+};
+
+
+static apr_status_t
+temp_file_plain_cleanup_handler (void *baton)
+{
+  struct  temp_file_cleanup_s *b = baton;
+
+  return (b->name) ? apr_file_remove (b->name, b->pool) : APR_SUCCESS;
+}
+
+
+static apr_status_t
+temp_file_child_cleanup_handler (void *baton)
+{
+  struct  temp_file_cleanup_s *b = baton;
+
+  apr_pool_cleanup_kill (b->pool, b,
+                         temp_file_plain_cleanup_handler);
+
+  return APR_SUCCESS;
+}
+
+
 svn_error_t *
-svn_io_open_unique_file (apr_file_t **f,
-                         const char **unique_name_p,
-                         const char *path,
-                         const char *suffix,
-                         svn_boolean_t delete_on_close,
-                         apr_pool_t *pool)
+svn_io_open_unique_file2 (apr_file_t **f,
+                          const char **unique_name_p,
+                          const char *path,
+                          const char *suffix,
+                          svn_io_file_del_t delete_when,
+                          apr_pool_t *pool)
 {
   unsigned int i;
   apr_file_t *file;
   const char *unique_name;
   const char *unique_name_apr;
+  struct temp_file_cleanup_s *baton;
 
   assert (f || unique_name_p);
+
+  if (delete_when == svn_io_file_del_on_pool_cleanup)
+    {
+      baton = apr_palloc (pool, sizeof(*baton));
+
+      baton->pool = pool;
+      baton->name = NULL;
+
+      /* Because cleanups are run LIFO, we need to make sure to register
+         our cleanup before the apr_file_close cleanup:
+
+         On Windows, you can't remove an open file.
+      */
+      apr_pool_cleanup_register (pool, baton, temp_file_plain_cleanup_handler,
+                                 temp_file_child_cleanup_handler);
+    }
 
   for (i = 1; i <= 99999; i++)
     {
@@ -196,7 +241,7 @@ svn_io_open_unique_file (apr_file_t **f,
       apr_int32_t flag = (APR_READ | APR_WRITE | APR_CREATE | APR_EXCL
                           | APR_BUFFERED);
 
-      if (delete_on_close)
+      if (delete_when == svn_io_file_del_on_close)
         flag |= APR_DELONCLOSE;
 
       /* Special case the first attempt -- if we can avoid having a
@@ -253,6 +298,9 @@ svn_io_open_unique_file (apr_file_t **f,
         }
       else
         {
+          if (delete_when == svn_io_file_del_on_pool_cleanup)
+            baton->name = unique_name_apr;
+
           if (f)
             *f = file;
           else
@@ -269,6 +317,22 @@ svn_io_open_unique_file (apr_file_t **f,
                             NULL,
                             _("Unable to make name for '%s'"),
                             svn_path_local_style (path, pool));
+}
+
+svn_error_t *
+svn_io_open_unique_file (apr_file_t **f,
+                         const char **unique_name_p,
+                         const char *path,
+                         const char *suffix,
+                         svn_boolean_t delete_on_close,
+                         apr_pool_t *pool)
+{
+  return svn_io_open_unique_file2 (f, unique_name_p,
+                                   path, suffix,
+                                   delete_on_close
+                                   ? svn_io_file_del_on_close
+                                   : svn_io_file_del_none,
+                                   pool);
 }
 
 svn_error_t *

@@ -217,7 +217,7 @@ copy_file_administratively (const char *src_path,
 
       SVN_ERR (svn_wc_create_tmp_file2 (NULL, &tmp_wc_text,
                                         svn_wc_adm_access_path (dst_parent),
-                                        FALSE, pool));
+                                        svn_io_file_del_none, pool));
 
       SVN_ERR (svn_wc__get_special (&special, src_path, src_access, pool));
       if (special)
