@@ -181,11 +181,9 @@ do_bool_attr (svn_boolean_t *entry_flag,
   *entry_flag = FALSE;
   if (str)
     {
-      if (! strcmp (str, "true"))
+      if (strcmp (str, "true") == 0)
         *entry_flag = TRUE;
-      else if (! strcmp (str, "false"))
-        *entry_flag = FALSE;
-      else if (! strcmp (str, ""))
+      else if (strcmp (str, "false") == 0 || strcmp (str, "") == 0)
         *entry_flag = FALSE;
       else
         return svn_error_createf
