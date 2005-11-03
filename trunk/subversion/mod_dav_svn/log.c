@@ -29,6 +29,7 @@
 #include "svn_path.h"
 #include "svn_dav.h"
 #include "svn_utf.h"
+#include "svn_ebcdic.h"
 
 #include "dav_svn.h"
 
@@ -359,12 +360,12 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   if (paths->nelts == 0)
     action = "log";
   else if (paths->nelts == 1)
-    action = apr_psprintf(resource->pool, "log-all '%s'",
+    action = APR_PSPRINTF(resource->pool, "log-all '%s'",
                           svn_path_uri_encode(APR_ARRAY_IDX
                                               (paths, 0, const char *),
                                               resource->pool));
   else
-    action = apr_psprintf(resource->pool, "log-partial '%s'",
+    action = APR_PSPRINTF(resource->pool, "log-partial '%s'",
                           svn_path_uri_encode(APR_ARRAY_IDX
                                               (paths, 0, const char *),
                                               resource->pool));

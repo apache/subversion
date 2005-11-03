@@ -27,6 +27,7 @@
 #include "svn_props.h"
 #include "svn_dav.h"
 #include "svn_utf.h"
+#include "svn_ebcdic.h"
 
 #include "dav_svn.h"
 
@@ -331,7 +332,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
 
   /* We've detected a 'high level' svn action to log. */
   apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION",
-                apr_psprintf(resource->pool, "blame '%s'",
+                APR_PSPRINTF(resource->pool, "blame '%s'",
                              svn_path_uri_encode(path, resource->pool)));
 
   /* Flush the contents of the brigade (returning an error only if we

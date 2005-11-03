@@ -34,6 +34,7 @@
 #include "svn_dav.h"
 #include "svn_props.h"
 #include "svn_utf.h"
+#include "svn_ebcdic.h"
 
 #include "dav_svn.h"
 #include <http_request.h>
@@ -1556,11 +1557,11 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
       {
         /* diff/merge don't ask for inline text-deltas. */
         if (uc.send_all)
-          action = apr_psprintf(resource->pool,
+          action = APR_PSPRINTF(resource->pool,
                                 "switch '%s' '%s'",
                                 spath, dst_path);
         else
-          action = apr_psprintf(resource->pool,
+          action = APR_PSPRINTF(resource->pool,
                                 "diff-or-merge '%s' '%s'",
                                 spath, dst_path);          
       }
@@ -1571,18 +1572,18 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
         /* svn_client_checkout() creates a single root directory, then
            reports it (and it alone) to the server as being empty. */
         if (entry_counter == 1 && entry_is_empty)
-          action = apr_psprintf(resource->pool,
+          action = APR_PSPRINTF(resource->pool,
                                 "checkout-or-export '%s'",
                                 svn_path_uri_encode(spath, resource->pool));
         else
           {
             if (text_deltas)
-              action = apr_psprintf(resource->pool,
+              action = APR_PSPRINTF(resource->pool,
                                     "update '%s'",
                                     svn_path_uri_encode(spath,
                                                         resource->pool));
             else
-              action = apr_psprintf(resource->pool,
+              action = APR_PSPRINTF(resource->pool,
                                     "remote-status '%s'",
                                     svn_path_uri_encode(spath,
                                                         resource->pool));
