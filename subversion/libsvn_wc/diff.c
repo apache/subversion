@@ -341,7 +341,7 @@ make_file_baton (const char *path,
 
 
 /* Helper function:  load a file_baton's base_props. */
-static void
+static svn_error_t *
 load_base_props (struct file_baton *b)
 {
   /* the 'base' props to compare against, in this case, are
@@ -353,6 +353,8 @@ load_base_props (struct file_baton *b)
   SVN_ERR (svn_wc_prop_list (&(b->baseprops), b->path,
                              b->edit_baton->anchor, b->pool));
   b->fetched_baseprops = TRUE;
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -388,7 +390,7 @@ get_local_mimetypes (const char **pristine_mimetype,
         {
           /* If we have the file_baton, try to use its working props. */
           if (! b->fetched_baseprops)
-            load_base_props (b);
+            SVN_ERR (load_base_props (b));
 
           working_val = apr_hash_get (b->baseprops, SVN_PROP_MIME_TYPE,
                                       strlen(SVN_PROP_MIME_TYPE));
@@ -1285,7 +1287,7 @@ change_file_prop (void *file_baton,
   
   /* Read the baseprops if you haven't already. */
   if (! b->fetched_baseprops)
-    load_base_props (b);
+    SVN_ERR (load_base_props (b));
 
   return SVN_NO_ERROR;
 }
