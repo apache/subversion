@@ -1400,17 +1400,17 @@ main (int argc, const char * const *argv)
     svn_client_get_windows_simple_provider (&provider, pool);
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 #endif
-    svn_client_get_simple_provider (&provider, pool);
+    svn_auth_get_simple_provider (&provider, pool);
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-    svn_client_get_username_provider (&provider, pool);
+    svn_auth_get_username_provider (&provider, pool);
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
     /* The server-cert, client-cert, and client-cert-password providers. */
-    svn_client_get_ssl_server_trust_file_provider (&provider, pool);
+    svn_auth_get_ssl_server_trust_file_provider (&provider, pool);
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-    svn_client_get_ssl_client_cert_file_provider (&provider, pool);
+    svn_auth_get_ssl_client_cert_file_provider (&provider, pool);
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-    svn_client_get_ssl_client_cert_pw_file_provider (&provider, pool);
+    svn_auth_get_ssl_client_cert_pw_file_provider (&provider, pool);
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
     if (opt_state.non_interactive == FALSE)
@@ -1419,29 +1419,29 @@ main (int argc, const char * const *argv)
                                           ctx->cancel_baton };
 
         /* Two basic prompt providers: username/password, and just username. */
-        svn_client_get_simple_prompt_provider (&provider,
-                                               svn_cmdline_auth_simple_prompt,
-                                               &pb,
-                                               2, /* retry limit */
-                                               pool);
+        svn_auth_get_simple_prompt_provider (&provider,
+                                             svn_cmdline_auth_simple_prompt,
+                                             &pb,
+                                             2, /* retry limit */
+                                             pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
-        svn_client_get_username_prompt_provider
+        svn_auth_get_username_prompt_provider
           (&provider, svn_cmdline_auth_username_prompt, &pb,
            2, /* retry limit */ pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
         /* Three ssl prompt providers, for server-certs, client-certs,
            and client-cert-passphrases.  */
-        svn_client_get_ssl_server_trust_prompt_provider
+        svn_auth_get_ssl_server_trust_prompt_provider
           (&provider, svn_cmdline_auth_ssl_server_trust_prompt, &pb, pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
-        svn_client_get_ssl_client_cert_prompt_provider
+        svn_auth_get_ssl_client_cert_prompt_provider
           (&provider, svn_cmdline_auth_ssl_client_cert_prompt, &pb, 2, pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
-        svn_client_get_ssl_client_cert_pw_prompt_provider
+        svn_auth_get_ssl_client_cert_pw_prompt_provider
           (&provider, svn_cmdline_auth_ssl_client_cert_pw_prompt, &pb, 2,
            pool);
         APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;

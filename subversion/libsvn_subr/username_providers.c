@@ -23,7 +23,6 @@
 /*** Includes. ***/
 
 #include <apr_pools.h>
-#include "svn_client.h"
 #include "svn_auth.h"
 #include "svn_error.h"
 #include "svn_utf.h"
@@ -147,8 +146,8 @@ static const svn_auth_provider_t username_provider = {
 
 /* Public API */
 void
-svn_client_get_username_provider (svn_auth_provider_object_t **provider,
-                                  apr_pool_t *pool)
+svn_auth_get_username_provider (svn_auth_provider_object_t **provider,
+                                apr_pool_t *pool)
 {
   svn_auth_provider_object_t *po = apr_pcalloc (pool, sizeof(*po));
 
@@ -293,7 +292,7 @@ static const svn_auth_provider_t username_prompt_provider = {
 
 /* Public API */
 void
-svn_client_get_username_prompt_provider (
+svn_auth_get_username_prompt_provider (
   svn_auth_provider_object_t **provider,
   svn_auth_username_prompt_func_t prompt_func,
   void *prompt_baton,

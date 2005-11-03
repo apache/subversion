@@ -24,7 +24,6 @@
 /*** Includes. ***/
 
 #include <apr_pools.h>
-#include "svn_client.h"
 #include "svn_auth.h"
 #include "svn_error.h"
 #include "svn_config.h"
@@ -35,8 +34,8 @@
 /*-----------------------------------------------------------------------*/
 
 /* The keys that will be stored on disk */
-#define SVN_CLIENT__AUTHFILE_ASCII_CERT_KEY            "ascii_cert"
-#define SVN_CLIENT__AUTHFILE_FAILURES_KEY              "failures"
+#define SVN_AUTH__AUTHFILE_ASCII_CERT_KEY            "ascii_cert"
+#define SVN_AUTH__AUTHFILE_FAILURES_KEY              "failures"
 
 
 /* retieve ssl server CA failure overrides (if any) from servers
@@ -77,11 +76,11 @@ ssl_server_trust_file_first_credentials (void **credentials,
       apr_uint32_t last_failures = 0;
 
       trusted_cert = apr_hash_get (creds_hash,
-                                   SVN_CLIENT__AUTHFILE_ASCII_CERT_KEY,
+                                   SVN_AUTH__AUTHFILE_ASCII_CERT_KEY,
                                    APR_HASH_KEY_STRING);
       this_cert = svn_string_create (cert_info->ascii_cert, pool);
       failstr = apr_hash_get (creds_hash,
-                              SVN_CLIENT__AUTHFILE_FAILURES_KEY,
+                              SVN_AUTH__AUTHFILE_FAILURES_KEY,
                               APR_HASH_KEY_STRING);
 
       if (failstr)
@@ -142,11 +141,11 @@ ssl_server_trust_file_save_credentials (svn_boolean_t *saved,
 
   creds_hash = apr_hash_make (pool);
   apr_hash_set (creds_hash,
-                SVN_CLIENT__AUTHFILE_ASCII_CERT_KEY,
+                SVN_AUTH__AUTHFILE_ASCII_CERT_KEY,
                 APR_HASH_KEY_STRING,
                 svn_string_create (cert_info->ascii_cert, pool));
   apr_hash_set (creds_hash,
-                SVN_CLIENT__AUTHFILE_FAILURES_KEY,
+                SVN_AUTH__AUTHFILE_FAILURES_KEY,
                 APR_HASH_KEY_STRING,
                 svn_string_createf (pool, "%lu", (unsigned long)
                                     creds->accepted_failures));
@@ -171,7 +170,7 @@ static const svn_auth_provider_t ssl_server_trust_file_provider = {
 
 /*** Public API to SSL file providers. ***/
 void 
-svn_client_get_ssl_server_trust_file_provider (
+svn_auth_get_ssl_server_trust_file_provider (
   svn_auth_provider_object_t **provider,
   apr_pool_t *pool)
 {
@@ -235,7 +234,7 @@ static const svn_auth_provider_t ssl_server_trust_prompt_provider = {
 
 /*** Public API to SSL prompting providers. ***/
 void
-svn_client_get_ssl_server_trust_prompt_provider (
+svn_auth_get_ssl_server_trust_prompt_provider (
   svn_auth_provider_object_t **provider,
   svn_auth_ssl_server_trust_prompt_func_t prompt_func,
   void *prompt_baton,

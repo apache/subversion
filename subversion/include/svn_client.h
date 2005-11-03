@@ -86,6 +86,8 @@ const svn_version_t *svn_client_version (void);
  * default arguments when svn_auth_first_credentials() is called.  If
  * svn_auth_first_credentials() fails, then @a *provider will
  * re-prompt @a retry_limit times (via svn_auth_next_credentials()).
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 void svn_client_get_simple_prompt_provider (
   svn_auth_provider_object_t **provider,
@@ -105,6 +107,8 @@ void svn_client_get_simple_prompt_provider (
  * default argument when svn_auth_first_credentials() is called.  If
  * svn_auth_first_credentials() fails, then @a *provider will
  * re-prompt @a retry_limit times (via svn_auth_next_credentials()).
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 void svn_client_get_username_prompt_provider (
   svn_auth_provider_object_t **provider,
@@ -124,6 +128,8 @@ void svn_client_get_username_prompt_provider (
  * svn_auth_first_credentials() is called.  (see @c
  * SVN_AUTH_PARAM_DEFAULT_USERNAME and @c
  * SVN_AUTH_PARAM_DEFAULT_PASSWORD). 
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 void svn_client_get_simple_provider (svn_auth_provider_object_t **provider,
                                      apr_pool_t *pool);
@@ -148,6 +154,8 @@ void svn_client_get_simple_provider (svn_auth_provider_object_t **provider,
  * @note An administrative password reset may invalidate the account's
  * secret key. This function will detect that situation and behave as
  * if the password were not cached at all.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 void svn_client_get_windows_simple_provider (
   svn_auth_provider_object_t **provider,
@@ -162,6 +170,8 @@ void svn_client_get_windows_simple_provider (
  * If a default username is available, @a *provider will honor it,
  * and return it when svn_auth_first_credentials() is called.  (see
  * @c SVN_AUTH_PARAM_DEFAULT_USERNAME). 
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 void svn_client_get_username_provider (svn_auth_provider_object_t **provider,
                                        apr_pool_t *pool);
@@ -173,6 +183,8 @@ void svn_client_get_username_provider (svn_auth_provider_object_t **provider,
  * @a *provider retrieves its credentials from the configuration
  * mechanism.  The returned credential is used to override SSL
  * security on an error.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 void svn_client_get_ssl_server_trust_file_provider (
   svn_auth_provider_object_t **provider,
@@ -185,6 +197,8 @@ void svn_client_get_ssl_server_trust_file_provider (
  * @a *provider retrieves its credentials from the configuration
  * mechanism.  The returned credential is used to load the appropriate
  * client certificate for authentication when requested by a server.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 void svn_client_get_ssl_client_cert_file_provider (
   svn_auth_provider_object_t **provider,
@@ -197,6 +211,8 @@ void svn_client_get_ssl_client_cert_file_provider (
  * @a *provider retrieves its credentials from the configuration
  * mechanism.  The returned credential is used when a loaded client
  * certificate is protected by a passphrase.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 void svn_client_get_ssl_client_cert_pw_file_provider (
   svn_auth_provider_object_t **provider,
@@ -209,6 +225,8 @@ void svn_client_get_ssl_client_cert_pw_file_provider (
  * @a *provider retrieves its credentials by using the @a prompt_func
  * and @a prompt_baton.  The returned credential is used to override
  * SSL security on an error.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 void svn_client_get_ssl_server_trust_prompt_provider (
   svn_auth_provider_object_t **provider,
@@ -224,6 +242,8 @@ void svn_client_get_ssl_server_trust_prompt_provider (
  * and @a prompt_baton.  The returned credential is used to load the
  * appropriate client certificate for authentication when requested by
  * a server.  The prompt will be retried @a retry_limit times.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 void svn_client_get_ssl_client_cert_prompt_provider (
   svn_auth_provider_object_t **provider,
@@ -240,6 +260,8 @@ void svn_client_get_ssl_client_cert_prompt_provider (
  * and @a prompt_baton.  The returned credential is used when a loaded
  * client certificate is protected by a passphrase.  The prompt will
  * be retried @a retry_limit times.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 void svn_client_get_ssl_client_cert_pw_prompt_provider (
   svn_auth_provider_object_t **provider,
