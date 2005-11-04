@@ -214,21 +214,29 @@ main (int argc, const char **argv)
     /* Make the client_ctx capable of authenticating users */
     {
       /* There are many different kinds of authentication back-end
-         "providers".  See svn_auth.h for a full overview. */
+         "providers".  See svn_auth.h for a full overview.
+
+         If you want to get the auth behavior of the 'svn' program,
+         you can use svn_cmdline_setup_auth_baton, which will give
+         you the exact set of auth providers it uses.  This program
+         doesn't use it because it's only appropriate for a command
+         line program, and this is supposed to be a general purpose
+         example. */
+
       svn_auth_provider_object_t *provider;
       apr_array_header_t *providers
         = apr_array_make (pool, 4, sizeof (svn_auth_provider_object_t *));
 
-      svn_client_get_simple_prompt_provider (&provider,
-                                             my_simple_prompt_callback,
-                                             NULL, /* baton */
-                                             2, /* retry limit */ pool);
+      svn_auth_get_simple_prompt_provider (&provider,
+                                           my_simple_prompt_callback,
+                                           NULL, /* baton */
+                                           2, /* retry limit */ pool);
       APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
-      svn_client_get_username_prompt_provider (&provider,
-                                               my_username_prompt_callback,
-                                               NULL, /* baton */
-                                               2, /* retry limit */ pool);
+      svn_auth_get_username_prompt_provider (&provider,
+                                             my_username_prompt_callback,
+                                             NULL, /* baton */
+                                             2, /* retry limit */ pool);
       APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
       /* Register the auth-providers into the context's auth_baton. */
