@@ -1,0 +1,69 @@
+# This file -  Makefile.base-vars - together with the file Makefile.base-rules,
+# make up a reusable buildsystem for DocBook XML books.
+# The split into two files is required because of the nature of Make variables:
+# In the case of variables used in commands, expansion occurs when the commands
+# are executed, so values can be overridden by defining a new value after the
+# rule definition - BUT in the case of variables used to specify targets and
+# sources, expansion occurs when Make parses the rule.  Therefore, any override
+# must take place BEFORE the rule definition.  Since this Makefile fragment
+# wishes to both provide defaults and allow overriding of target and source
+# file names, it is necessary to place the default variable definitions in
+# one file, and the rules in another, so that overrides may be specified
+# after the defaults, but before the rules - like this:
+#
+#   include ../tools/Makefile.base-vars
+#   NAME = my-book
+#   DIR = my-book-dir
+#   include ../tools/Makefile.base-rules
+#
+# Note that this is a Makefile fragment intended for inclusion.  As a result,
+# all relative paths contained within are relative to including Makefile's
+# directory, not to this fragment's directory.  The TOOLS_DIR and DIR variables
+# should be overridden if necessary to ensure proper paths are used.
+
+# Paths which you may wish to customize:
+XSLTPROC = xsltproc
+XMLLINT = xmllint
+INSTALL_DIR = $(DESTDIR)/usr/share/doc/subversion
+INSTALL = install
+SVNVERSION = svnversion
+
+# You should not normally need to edit anything below here.
+SHELL = /bin/sh
+
+NAME = OVERRIDE_ME_WITH_THE_SHORT_FILESYSTEM_NAME_OF_YOUR_BOOK
+DIR = .
+IMAGES =
+TOOLS_DIR = ../tools
+OUTNAME = svn-$(NAME)
+
+HTML_CHUNK_DIR = $(DIR)/html-chunk
+HTML_TARGET = $(DIR)/$(OUTNAME).html
+# In the HTML chunk build, index.html is created last, so serves as an 
+# acceptable timestamp file for the entire multi-file output.
+HTML_CHUNK_TARGET = $(HTML_CHUNK_DIR)/index.html
+PDF_TARGET = $(DIR)/$(OUTNAME).pdf
+PS_TARGET = $(DIR)/$(OUTNAME).ps
+FO_TARGET = $(DIR)/$(OUTNAME).fo
+XML_SOURCE = $(DIR)/$(NAME).xml
+VERSION_SOURCE = $(DIR)/version.xml
+ALL_SOURCE = $(DIR)/*.xml
+STYLESHEET = $(DIR)/styles.css
+INSTALL_SUBDIR = $(INSTALL_DIR)/$(NAME)
+
+ENSURE_XSL = if ! test -e "$(TOOLS_DIR)/xsl"; \
+	     then $(TOOLS_DIR)/bin/find-xsl.py; fi
+IFIMAGES = if test -n "$(IMAGES)"; then
+ENDIF = ; fi
+
+# Customization hooks for xsltproc options
+HTML_XSLTPROC_OPTS = 
+FO_XSLTPROC_OPTS =
+# FO example: --stringparam page.height 9in --stringparam page.width 6.4in
+
+# Uncomment the following line if you'd like to print on A4 paper
+# FO_XSLTPROC_OPTS = --stringparam paper.type A4
+
+# Override in locale-specific Makefile to localize the word in the 
+# auto-generated version file.
+L10N_REVISION = Revision
