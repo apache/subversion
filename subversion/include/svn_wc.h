@@ -3096,7 +3096,8 @@ svn_wc_create_tmp_file2 (apr_file_t **fp,
                          apr_pool_t *pool);
 
 
-/** Same as svn_wc_add_repos_file2(), but without the path return value
+/** Same as svn_wc_create_tmp_file2(), but with @a new_name set to @c NULL,
+ * and without the ability to delete the file on pool cleanup.
  *
  * @deprecated For compatibility with 1.3 API
  */
