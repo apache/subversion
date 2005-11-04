@@ -972,7 +972,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
          properties. */
       if ((SVN_DIRENT_HAS_PROPS & dirent_fields) == 0)
         {
-          apr_size_t num_props = 1; /* start with one for the final NULL */
+          int num_props = 1; /* start with one for the final NULL */
 
           if (dirent_fields & SVN_DIRENT_KIND)
             ++num_props;
