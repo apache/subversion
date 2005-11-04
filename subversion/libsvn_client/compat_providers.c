@@ -23,6 +23,7 @@
 /*** Includes. ***/
 
 #include "svn_auth.h"
+#include "svn_client.h"
 
 void svn_client_get_simple_prompt_provider (
   svn_auth_provider_object_t **provider,
