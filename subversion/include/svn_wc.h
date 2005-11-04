@@ -3081,8 +3081,8 @@ svn_wc_revert (const char *path,
  * in @a *new_name. Either @a fp or @a new_name can be null.
  *
  * The flags will be <tt>APR_WRITE | APR_CREATE | APR_EXCL</tt> and
- * optionally @c APR_DELONCLOSE (if the @a delete_on_close argument is 
- * set @c TRUE).
+ * optionally @c APR_DELONCLOSE (if the @a delete_when argument is
+ * set to @c svn_io_file_del_on_close).
  *
  * This means that as soon as @a fp is closed, the tmp file will vanish.
  *
