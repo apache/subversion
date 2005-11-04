@@ -162,7 +162,7 @@ $ svn commit -m 'Merged branch'
         through to GNU diff. Here are some useful arguments:</para>
       
       <table id="misc-docs-best_practices-table-1">
-        <title></title>
+        <title>Some useful GNU diff arguments</title>
         <tgroup cols="2">
           <thead>
             <row>
