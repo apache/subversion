@@ -703,27 +703,42 @@ log_do_modify_entry (struct log_runner *loggy,
       const char *pfile;
       svn_node_kind_t pfile_kind;
       apr_time_t prop_time;
+      const svn_wc_entry_t *tfile_entry;
 
-      err = svn_wc__prop_path (&pfile, tfile, loggy->adm_access, FALSE,
+      err = svn_wc_entry (&tfile_entry, tfile, loggy->adm_access,
+                          FALSE, loggy->pool);
+
+      if (err)
+        signal_error (loggy, err);
+
+      if (! entry)
+        return SVN_NO_ERROR;
+
+      err = svn_wc__prop_path (&pfile, tfile, tfile_entry->kind, FALSE,
                                loggy->pool);
       if (err)
         signal_error (loggy, err);
-      
+
       err = svn_io_check_path (pfile, &pfile_kind, loggy->pool);
       if (err)
         return svn_error_createf
           (pick_error_code (loggy), err,
            _("Error checking path '%s'"),
            svn_path_local_style (pfile, loggy->pool));
-      
-      err = svn_io_file_affected_time (&prop_time, pfile, loggy->pool);
-      if (err)
-        return svn_error_createf
-          (pick_error_code (loggy), NULL,
-           _("Error getting 'affected time' on '%s'"),
-           svn_path_local_style (pfile, loggy->pool));
 
-      entry->prop_time = prop_time;
+      if (pfile_kind == svn_node_none)
+        entry->prop_time = 0;
+      else
+        {
+          err = svn_io_file_affected_time (&prop_time, pfile, loggy->pool);
+          if (err)
+            return svn_error_createf
+              (pick_error_code (loggy), NULL,
+               _("Error getting 'affected time' on '%s'"),
+               svn_path_local_style (pfile, loggy->pool));
+
+          entry->prop_time = prop_time;
+        }
     }
 
   /* Now write the new entry out */
@@ -1117,12 +1132,12 @@ log_do_committed (struct log_runner *loggy,
              (&wf,
               is_this_dir
               ? svn_wc_adm_access_path (loggy->adm_access) : full_path,
-              loggy->adm_access, FALSE, pool));
+              entry->kind , FALSE, pool));
     SVN_ERR (svn_wc__prop_base_path
              (&basef,
               is_this_dir
               ? svn_wc_adm_access_path (loggy->adm_access) : full_path,
-              loggy->adm_access, FALSE, pool));
+              entry->kind, FALSE, pool));
     
     /* If this file was replaced in the commit, then we definitely
        need to begin by removing any old residual prop-base file.  */
@@ -1138,7 +1153,7 @@ log_do_committed (struct log_runner *loggy,
              (&tmpf,
               is_this_dir
               ? svn_wc_adm_access_path (loggy->adm_access) : full_path,
-              loggy->adm_access, TRUE, pool));
+              entry->kind, TRUE, pool));
     if ((err = svn_io_check_path (tmpf, &kind, pool)))
       return svn_error_createf (pick_error_code (loggy), err,
                                 _("Error checking existence of '%s'"),
