@@ -43,24 +43,6 @@ svn_fs_base__check_fs (svn_fs_t *fs)
 /* Building common error objects.  */
 
 
-static svn_error_t *
-corrupt_id (const char *fmt, const svn_fs_id_t *id, svn_fs_t *fs)
-{
-  svn_string_t *unparsed_id = svn_fs_base__id_unparse (id, fs->pool);
-  return svn_error_createf (SVN_ERR_FS_CORRUPT, 0,
-                            fmt, unparsed_id->data, fs->path);
-}
-
-
-svn_error_t *
-svn_fs_base__err_corrupt_node_revision (svn_fs_t *fs, const svn_fs_id_t *id)
-{
-  return
-    corrupt_id (_("Corrupt node revision for node '%s' in filesystem '%s'"),
-                id, fs);
-}
-
-
 svn_error_t *
 svn_fs_base__err_corrupt_fs_revision (svn_fs_t *fs, svn_revnum_t rev)
 {
@@ -68,28 +50,6 @@ svn_fs_base__err_corrupt_fs_revision (svn_fs_t *fs, svn_revnum_t rev)
     (SVN_ERR_FS_CORRUPT, 0,
      _("Corrupt filesystem revision %ld in filesystem '%s'"),
      rev, fs->path);
-}
-
-
-svn_error_t *
-svn_fs_base__err_corrupt_clone (svn_fs_t *fs,
-                                const char *svn_txn,
-                                const char *base_path)
-{
-  return
-    svn_error_createf
-    (SVN_ERR_FS_CORRUPT, 0,
-     _("Corrupt clone record for '%s' in transaction '%s' in filesystem '%s'"),
-     base_path, svn_txn, fs->path);
-}
-
-
-svn_error_t *
-svn_fs_base__err_corrupt_id (svn_fs_t *fs, const svn_fs_id_t *id)
-{
-  return
-    corrupt_id (_("Corrupt node revision id '%s' appears in filesystem '%s'"),
-                id, fs);
 }
 
 
@@ -111,27 +71,6 @@ svn_fs_base__err_dangling_rev (svn_fs_t *fs, svn_revnum_t rev)
     (SVN_ERR_FS_NO_SUCH_REVISION, 0,
      _("Reference to non-existent revision %ld in filesystem '%s'"),
      rev, fs->path);
-}
-
-
-svn_error_t *
-svn_fs_base__err_corrupt_nodes_key (svn_fs_t *fs)
-{
-  return
-    svn_error_createf
-    (SVN_ERR_FS_CORRUPT, 0,
-     _("Malformed ID as key in 'nodes' table of filesystem '%s'"), fs->path);
-}
-
-
-svn_error_t *
-svn_fs_base__err_corrupt_next_id (svn_fs_t *fs, const char *table)
-{
-  return
-    svn_error_createf
-    (SVN_ERR_FS_CORRUPT, 0,
-     _("Corrupt value for 'next-id' key in '%s' table of filesystem '%s'"),
-     table, fs->path);
 }
 
 
@@ -166,17 +105,6 @@ svn_fs_base__err_not_mutable (svn_fs_t *fs, svn_revnum_t rev, const char *path)
     (SVN_ERR_FS_NOT_MUTABLE, 0,
      _("File is not mutable: filesystem '%s', revision %ld, path '%s'"),
      fs->path, rev, path);
-}
-
-
-svn_error_t *
-svn_fs_base__err_path_syntax (svn_fs_t *fs, const char *path)
-{
-  return
-    svn_error_createf
-    (SVN_ERR_FS_PATH_SYNTAX, 0,
-     _("Search for malformed path '%s' in filesystem '%s'"),
-     path, fs->path);
 }
 
 
