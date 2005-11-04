@@ -1415,8 +1415,7 @@ main (int argc, const char * const *argv)
 
     if (opt_state.non_interactive == FALSE)
       {
-        svn_cmdline_prompt_baton_t pb = { ctx->cancel_func,
-                                          ctx->cancel_baton };
+        svn_cmdline_prompt_baton_t pb = { svn_cl__check_cancel, NULL };
 
         /* Two basic prompt providers: username/password, and just username. */
         svn_auth_get_simple_prompt_provider (&provider,
