@@ -56,7 +56,7 @@ svn_wc__remove_wcprops (svn_wc_adm_access_t *adm_access,
   /* Remove this_dir's wcprops */
   SVN_ERR (svn_wc__wcprop_path (&wcprop_path,
                                 svn_wc_adm_access_path (adm_access),
-                                adm_access, FALSE, subpool));
+                                svn_node_dir, FALSE, subpool));
   err = svn_io_remove_file (wcprop_path, subpool);
   if (err)
     svn_error_clear (err);
@@ -84,8 +84,8 @@ svn_wc__remove_wcprops (svn_wc_adm_access_t *adm_access,
       /* If a file, remove it from wcprops. */
       if (current_entry->kind == svn_node_file)
         {
-          SVN_ERR (svn_wc__wcprop_path (&wcprop_path, child_path, adm_access,
-                                        FALSE, subpool));
+          SVN_ERR (svn_wc__wcprop_path (&wcprop_path, child_path,
+                                        svn_node_file, FALSE, subpool));
           err = svn_io_remove_file (wcprop_path, subpool);
           if (err)
             svn_error_clear (err);
@@ -145,12 +145,6 @@ copy_file_administratively (const char *src_path,
   const char *src_txtb = svn_wc__text_base_path (src_path, FALSE, pool);
   const char *tmp_txtb = svn_wc__text_base_path (dst_path, TRUE, pool);
 
-  /* Discover the paths to the two source prop files */
-  SVN_ERR (svn_wc__prop_path (&src_wprop, src_path,
-                              src_access, FALSE, pool));
-  SVN_ERR (svn_wc__prop_base_path (&src_bprop, src_path,
-                                   src_access, FALSE, pool));
-
   /* Sanity check:  if dst file exists already, don't allow overwrite. */
   SVN_ERR (svn_io_check_path (dst_path, &dst_kind, pool));
   if (dst_kind != svn_node_none)
@@ -189,6 +183,12 @@ copy_file_administratively (const char *src_path,
          "try committing first"),
        svn_path_local_style (src_path, pool));
 
+
+  /* Discover the paths to the two source prop files */
+  SVN_ERR (svn_wc__prop_path (&src_wprop, src_path,
+                              src_entry->kind, FALSE, pool));
+  SVN_ERR (svn_wc__prop_base_path (&src_bprop, src_path,
+                                   src_entry->kind, FALSE, pool));
 
   /* Schedule the new file for addition in its parent, WITH HISTORY. */
   {

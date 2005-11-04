@@ -178,10 +178,18 @@ remove_revert_file(svn_stringbuf_t **logtags,
                    apr_pool_t * pool)
 {
   const char * revert_file;
+  const svn_wc_entry_t *entry;
   svn_node_kind_t kind;
-  
+
+  SVN_ERR (svn_wc_entry (&entry, base_name, adm_access, FALSE, pool));
+
+  /*### Maybe assert (entry); calling remove_revert_file
+    for an unversioned file is bogus */
+  if (! entry)
+    return SVN_NO_ERROR;
+
   if (is_prop)
-    SVN_ERR (svn_wc__prop_revert_path (&revert_file, base_name, adm_access,
+    SVN_ERR (svn_wc__prop_revert_path (&revert_file, base_name, entry->kind,
                                        FALSE, pool));
   else
     revert_file = svn_wc__text_revert_path (base_name, FALSE, pool);
@@ -913,9 +921,9 @@ svn_wc_delete2 (const char *path,
           const char *prop_base, *prop_revert;
 
           SVN_ERR (svn_wc__prop_base_path (&prop_base, base_name,
-                                           adm_access, FALSE, pool));
+                                           was_kind, FALSE, pool));
           SVN_ERR (svn_wc__prop_revert_path (&prop_revert, base_name,
-                                             adm_access, FALSE, pool));
+                                             was_kind, FALSE, pool));
 
           if (was_kind != svn_node_dir) /* Dirs don't have text-bases */
             /* Restore the original text-base */
@@ -1132,7 +1140,8 @@ svn_wc_add2 (const char *path,
   if (orig_entry && (! copyfrom_url))
     {
       const char *prop_path;
-      SVN_ERR (svn_wc__prop_path (&prop_path, path, adm_access, FALSE, pool));
+      SVN_ERR (svn_wc__prop_path (&prop_path, path,
+                                  orig_entry->kind, FALSE, pool));
       SVN_ERR (remove_file_if_present (prop_path, pool));
     }
 
@@ -1329,31 +1338,25 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
   apr_hash_t *modify_entry_atts = apr_hash_make (pool);
   svn_stringbuf_t *log_accum = svn_stringbuf_create ("", pool);
   const char *bprop, *rprop, *wprop; /* full paths */
-  const char *local_bprop, *local_rprop, *local_wprop; /* relative paths */
   const char *adm_path = svn_wc_adm_access_path (adm_access);
-  int access_len = strlen (adm_path) + 1;
 
   /* Build the full path of the thing we're reverting. */
   fullpath = svn_wc_adm_access_path (adm_access);
   if (strcmp (name, SVN_WC_ENTRY_THIS_DIR) != 0)
     fullpath = svn_path_join (fullpath, name, pool);
 
-  SVN_ERR (svn_wc__prop_base_path (&bprop, fullpath, adm_access, FALSE, pool));
-  local_bprop = apr_pstrdup(pool, bprop + access_len);
+  SVN_ERR (svn_wc__prop_base_path (&bprop, name, entry->kind, FALSE, pool));
 
-  SVN_ERR (svn_wc__prop_revert_path (&rprop, fullpath,
-                                     adm_access, FALSE, pool));
-  local_rprop = apr_pstrdup(pool, rprop + access_len);
+  SVN_ERR (svn_wc__prop_revert_path (&rprop, name, entry->kind, FALSE, pool));
 
-  SVN_ERR (svn_wc__prop_path (&wprop, fullpath, adm_access, FALSE, pool));
-  local_wprop = apr_pstrdup(pool, wprop + access_len);
+  SVN_ERR (svn_wc__prop_path (&wprop, name, entry->kind, FALSE, pool));
 
   /* Look for a revert base file. If it exists use it for
    * the prop base for the file.  If it doesn't use the normal
    * prop base. */
 
   SVN_ERR (svn_wc__loggy_move (&log_accum, NULL, adm_access,
-                               local_rprop, local_bprop, FALSE, pool));
+                               rprop, bprop, FALSE, pool));
 
   /* Check for prop changes. */
   SVN_ERR (svn_wc_props_modified_p (&modified_p, fullpath, adm_access, pool));  
@@ -1379,7 +1382,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
          file. */
       SVN_ERR (svn_wc__loggy_copy (&log_accum, NULL,
                                    adm_access, svn_wc__copy_normal,
-                                   local_bprop, local_wprop, TRUE, pool));
+                                   bprop, wprop, TRUE, pool));
 
       /* Log to update prop-time attribute */
       apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_PROP_TIME,
@@ -1403,7 +1406,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
          then we need to restore them. */
       SVN_ERR (svn_wc__loggy_copy (&log_accum, &tgt_modified,
                                    adm_access, svn_wc__copy_normal,
-                                   local_bprop, local_wprop, FALSE, pool));
+                                   bprop, wprop, FALSE, pool));
 
       if (tgt_modified)
         {
@@ -1848,18 +1851,22 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
         SVN_ERR (remove_file_if_present (svn_thang, pool));
 
         /* Working prop file. */
-        SVN_ERR (svn_wc__prop_path (&svn_thang, full_path, adm_access, FALSE,
-                                    pool));
+        SVN_ERR (svn_wc__prop_path (&svn_thang, full_path,
+                                    is_file ? svn_node_file : svn_node_dir,
+                                    FALSE, pool));
         SVN_ERR (remove_file_if_present (svn_thang, pool));
 
         /* Prop base file. */
-        SVN_ERR (svn_wc__prop_base_path (&svn_thang, full_path, adm_access,
+        SVN_ERR (svn_wc__prop_base_path (&svn_thang, full_path,
+                                         is_file ? svn_node_file
+                                         : svn_node_dir,
                                          FALSE, pool));
         SVN_ERR (remove_file_if_present (svn_thang, pool));
 
         /* wc-prop file. */
-        SVN_ERR (svn_wc__wcprop_path (&svn_thang, full_path, adm_access, FALSE,
-                                      pool));
+        SVN_ERR (svn_wc__wcprop_path (&svn_thang, full_path,
+                                      is_file ? svn_node_file : svn_node_dir,
+                                      FALSE, pool));
         SVN_ERR (remove_file_if_present (svn_thang, pool));
       }
 

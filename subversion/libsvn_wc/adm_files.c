@@ -359,17 +359,12 @@ typedef enum prop_path_kind_t
 static svn_error_t *
 prop_path_internal (const char **prop_path,
                     const char *path,
-                    svn_wc_adm_access_t *adm_access,
+                    svn_node_kind_t kind,
                     prop_path_kind_t path_kind,
                     svn_boolean_t tmp,
                     apr_pool_t *pool)
 {
-  const svn_wc_entry_t *entry;
-  const char *entry_name;
-
-  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
-
-  if (entry && entry->kind == svn_node_dir)  /* It's a working copy dir */
+  if (kind == svn_node_dir)  /* It's a working copy dir */
     {
       static const char * names[] = {
         SVN_WC__ADM_DIR_PROP_BASE,    /* prop_path_kind_base */
@@ -386,7 +381,7 @@ prop_path_internal (const char **prop_path,
          names[path_kind],
          NULL);
     }
-  else  /* It's either a file, or a non-wc dir (i.e., maybe an ex-file) */
+  else  /* It's a file */
     {
       static const char * extensions[] = {
         SVN_WC__BASE_EXT,     /* prop_path_kind_base */
@@ -402,14 +397,16 @@ prop_path_internal (const char **prop_path,
         SVN_WC__ADM_PROPS       /* prop_path_kind_working */
       };
 
-      svn_path_split (path, prop_path, &entry_name, pool);
+      const char *base_name;
+
+      svn_path_split (path, prop_path, &base_name, pool);
       *prop_path = extend_with_adm_name
         (*prop_path,
          extensions[path_kind],
          tmp,
          pool,
          dirs[path_kind],
-         entry_name,
+         base_name,
          NULL);
     }
 
@@ -422,11 +419,11 @@ prop_path_internal (const char **prop_path,
 svn_error_t *
 svn_wc__wcprop_path (const char **wcprop_path,
                      const char *path,
-                     svn_wc_adm_access_t *adm_access,
+                     svn_node_kind_t kind,
                      svn_boolean_t tmp,
                      apr_pool_t *pool)
 {
-  return prop_path_internal (wcprop_path, path, adm_access,
+  return prop_path_internal (wcprop_path, path, kind,
                              prop_path_kind_wcprop, tmp, pool);
 }
 
@@ -436,11 +433,11 @@ svn_wc__wcprop_path (const char **wcprop_path,
 svn_error_t *
 svn_wc__prop_path (const char **prop_path,
                    const char *path,
-                   svn_wc_adm_access_t *adm_access,
+                   svn_node_kind_t kind,
                    svn_boolean_t tmp,
                    apr_pool_t *pool)
 {
-  return prop_path_internal (prop_path, path, adm_access,
+  return prop_path_internal (prop_path, path, kind,
                              prop_path_kind_working, tmp, pool);
 }
 
@@ -448,11 +445,11 @@ svn_wc__prop_path (const char **prop_path,
 svn_error_t *
 svn_wc__prop_base_path (const char **prop_path,
                         const char *path,
-                        svn_wc_adm_access_t *adm_access,
+                        svn_node_kind_t kind,
                         svn_boolean_t tmp,
                         apr_pool_t *pool)
 {
-  return prop_path_internal (prop_path, path, adm_access, 
+  return prop_path_internal (prop_path, path, kind,
                              prop_path_kind_base, tmp, pool);
 }
 
@@ -460,11 +457,11 @@ svn_wc__prop_base_path (const char **prop_path,
 svn_error_t *
 svn_wc__prop_revert_path (const char **prop_path,
                           const char *path,
-                          svn_wc_adm_access_t *adm_access,
+                          svn_node_kind_t kind,
                           svn_boolean_t tmp,
                           apr_pool_t *pool)
 {
-  return prop_path_internal (prop_path, path, adm_access,
+  return prop_path_internal (prop_path, path, kind,
                              prop_path_kind_revert, tmp, pool);
 }
 

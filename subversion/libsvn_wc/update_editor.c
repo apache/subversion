@@ -1283,9 +1283,9 @@ close_directory (void *dir_baton,
             const char *pristine_prop_path;
 
             /* Get the current pristine props. */
-            old_pristine_props = apr_hash_make (db->pool);      
+            old_pristine_props = apr_hash_make (db->pool);
             SVN_ERR (svn_wc__prop_base_path (&pristine_prop_path,
-                                             db->path, adm_access, 
+                                             db->path, svn_node_dir,
                                              FALSE, db->pool));
             SVN_ERR (svn_wc__load_prop_file (pristine_prop_path,
                                              old_pristine_props, db->pool));
@@ -1914,9 +1914,9 @@ install_file (svn_stringbuf_t * log_accum,
       int i;
 
       /* Get the current pristine props. */
-      old_pristine_props = apr_hash_make (pool);      
+      old_pristine_props = apr_hash_make (pool);
       SVN_ERR (svn_wc__prop_base_path (&pristine_prop_path,
-                                       file_path, adm_access, 
+                                       file_path, svn_node_file,
                                        FALSE, pool));
       SVN_ERR (svn_wc__load_prop_file (pristine_prop_path,
                                        old_pristine_props, pool));
@@ -2880,10 +2880,10 @@ svn_wc_add_repos_file2 (const char *dst_path,
       svn_node_kind_t kind;
 
       SVN_ERR (svn_wc__prop_revert_path (&dst_rprop, base_name,
-                                         adm_access, FALSE, pool));
+                                         svn_node_file, FALSE, pool));
 
       SVN_ERR (svn_wc__prop_base_path (&dst_bprop, base_name,
-                                       adm_access, FALSE, pool));
+                                       svn_node_file, FALSE, pool));
 
       SVN_ERR (svn_wc__loggy_move (&log_accum, NULL,
                                    adm_access, dst_txtb, dst_rtext,
@@ -2935,7 +2935,7 @@ svn_wc_add_repos_file2 (const char *dst_path,
       SVN_ERR (svn_wc__save_prop_file (tmp_prop_path, new_props, pool));
 
       /* Rename temporary props file to working props. */
-      SVN_ERR (svn_wc__prop_path (&prop_path, base_name, adm_access,
+      SVN_ERR (svn_wc__prop_path (&prop_path, base_name, svn_node_file,
                                   FALSE, pool));
       SVN_ERR (svn_wc__loggy_move (&log_accum, NULL, adm_access,
                                    tmp_prop_path + adm_path_len, prop_path,
