@@ -1851,10 +1851,8 @@ svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
                        svn_wc_adm_access_t *adm_access,
                        apr_pool_t *pool)
 {
-  const char *prop_path, *prop_base_path;
-  apr_array_header_t *local_propchanges;
+  const char *prop_base_path;
   const svn_wc_entry_t *entry;
-  apr_hash_t *localprops = apr_hash_make (pool);
   apr_hash_t *baseprops = apr_hash_make (pool);
 
   /*### Maybe assert (entry); calling svn_wc_get_prop_diffs
@@ -1872,21 +1870,25 @@ svn_wc_get_prop_diffs (apr_array_header_t **propchanges,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR (svn_wc__prop_path (&prop_path, path, entry->kind, FALSE, pool));
   SVN_ERR (svn_wc__prop_base_path (&prop_base_path, path, entry->kind, FALSE,
                                    pool));
-
-  SVN_ERR (svn_wc__load_prop_file (prop_path, localprops, pool));
   SVN_ERR (svn_wc__load_prop_file (prop_base_path, baseprops, pool));
 
   if (original_props != NULL)
     *original_props = baseprops;
 
-  /* At this point, if either of the propfiles are non-existent, then
-     the corresponding hash is simply empty. */
-  
   if (propchanges != NULL)
     {
+      const char *prop_path;
+      apr_hash_t *localprops = apr_hash_make (pool);
+      apr_array_header_t *local_propchanges;
+
+      SVN_ERR (svn_wc__prop_path (&prop_path, path, entry->kind, FALSE, pool));
+      SVN_ERR (svn_wc__load_prop_file (prop_path, localprops, pool));
+
+      /* At this point, if either of the propfiles are non-existent, then
+         the corresponding hash is simply empty. */
+
       SVN_ERR (svn_prop_diffs (&local_propchanges, localprops, 
                                baseprops, pool));      
       *propchanges = local_propchanges;
