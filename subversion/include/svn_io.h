@@ -111,9 +111,12 @@ svn_error_t *svn_io_check_resolved_path (const char *path,
 /** Open a new file (for writing) with a unique name based on utf-8
  * encoded @a path, in the same directory as @a path.  The file handle is
  * returned in @a *f, and the name, which ends with @a suffix, is returned
- * in @a *unique_name_p, also utf8-encoded.  If @a delete_on_close is set,
- * then the @c APR_DELONCLOSE flag will be used when opening the file. The
- * @c APR_BUFFERED flag will always be used.
+ * in @a *unique_name_p, also utf8-encoded.  Either @a f or @a unique_name_p
+ * may be @c NULL.
+ *
+ * If @a delete_when is @c svn_io_file_del_on_close, then the @c APR_DELONCLOSE
+ * flag will be used when opening the file.  The @c APR_BUFFERED flag will
+ * always be used.
  *
  * The first attempt will just append @a suffix.  If the result is not
  * a unique name, then subsequent attempts will append a dot,
@@ -124,7 +127,7 @@ svn_error_t *svn_io_check_resolved_path (const char *path,
  *
  * then successive calls to
  *
- *    svn_io_open_unique_file(&f, &unique_name, @a path, ".tmp", pool) 
+ *    svn_io_open_unique_file2(&f, &unique_name, @a path, ".tmp", ..., pool)
  *
  * will open
  *
@@ -135,8 +138,8 @@ svn_error_t *svn_io_check_resolved_path (const char *path,
  *    tests/t1/A/D/G/pi.5.tmp
  *    ...
  *
- * @a *unique_name_p will never be exactly the same as @a path, even
- * if @a path does not exist.
+ * Assuming @a suffix is non-empty, @a *unique_name_p will never be exactly
+ * the same as @a path, even if @a path does not exist.
  *
  * It doesn't matter if @a path is a file or directory, the unique name will
  * be in @a path's parent either way.
