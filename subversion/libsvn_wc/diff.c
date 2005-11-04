@@ -855,6 +855,8 @@ delete_entry (const char *path,
          the empty file against the current working copy.  If
          'reverse_order' is set, then show a deletion. */
 
+      if (entry->schedule == svn_wc_schedule_delete)
+        SVN_ERR (get_empty_file (pb->edit_baton, &full_path));
       SVN_ERR (get_local_mimetypes (&pristine_mimetype, &working_mimetype,
                                     NULL, adm_access, full_path, pool));
 
