@@ -1385,108 +1385,6 @@ main (int argc, const char * const *argv)
      subcommands will populate the ctx->log_msg_baton2 */
   ctx->log_msg_func2 = svn_cl__get_log_message;
 
-  /* Authentication set-up. */
-  {
-    svn_boolean_t store_password_val = TRUE;
-    svn_auth_provider_object_t *provider;
-
-    /* The whole list of registered providers */
-    apr_array_header_t *providers
-      = apr_array_make (pool, 11, sizeof (svn_auth_provider_object_t *));
-
-    /* The main disk-caching auth providers, for both
-       'username/password' creds and 'username' creds.  */
-#ifdef WIN32
-    svn_auth_get_windows_simple_provider (&provider, pool);
-    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-#endif
-    svn_auth_get_simple_provider (&provider, pool);
-    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-    svn_auth_get_username_provider (&provider, pool);
-    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-
-    /* The server-cert, client-cert, and client-cert-password providers. */
-    svn_auth_get_ssl_server_trust_file_provider (&provider, pool);
-    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-    svn_auth_get_ssl_client_cert_file_provider (&provider, pool);
-    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-    svn_auth_get_ssl_client_cert_pw_file_provider (&provider, pool);
-    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-
-    if (opt_state.non_interactive == FALSE)
-      {
-        svn_cmdline_prompt_baton_t pb = { svn_cl__check_cancel, NULL };
-
-        /* Two basic prompt providers: username/password, and just username. */
-        svn_auth_get_simple_prompt_provider (&provider,
-                                             svn_cmdline_auth_simple_prompt,
-                                             &pb,
-                                             2, /* retry limit */
-                                             pool);
-        APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-
-        svn_auth_get_username_prompt_provider
-          (&provider, svn_cmdline_auth_username_prompt, &pb,
-           2, /* retry limit */ pool);
-        APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-
-        /* Three ssl prompt providers, for server-certs, client-certs,
-           and client-cert-passphrases.  */
-        svn_auth_get_ssl_server_trust_prompt_provider
-          (&provider, svn_cmdline_auth_ssl_server_trust_prompt, &pb, pool);
-        APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-
-        svn_auth_get_ssl_client_cert_prompt_provider
-          (&provider, svn_cmdline_auth_ssl_client_cert_prompt, &pb, 2, pool);
-        APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-
-        svn_auth_get_ssl_client_cert_pw_prompt_provider
-          (&provider, svn_cmdline_auth_ssl_client_cert_pw_prompt, &pb, 2,
-           pool);
-        APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-      }
-
-    /* Build an authentication baton to give to libsvn_client. */
-    svn_auth_open (&ab, providers, pool);
-    ctx->auth_baton = ab;
-
-    /* Place any default --username or --password credentials into the
-       auth_baton's run-time parameter hash. */
-    if (opt_state.auth_username)
-      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_USERNAME,
-                             opt_state.auth_username);
-    if (opt_state.auth_password)
-      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
-                             opt_state.auth_password);
-
-    /* Same with the --non-interactive option. */
-    if (opt_state.non_interactive)
-      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NON_INTERACTIVE, "");
-
-    if (opt_state.config_dir)
-      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_CONFIG_DIR,
-                             opt_state.config_dir);
-
-    if ((err = svn_config_get_bool (cfg, &store_password_val,
-                                    SVN_CONFIG_SECTION_AUTH,
-                                    SVN_CONFIG_OPTION_STORE_PASSWORDS,
-                                    TRUE)))
-      svn_handle_error2 (err, stderr, TRUE, "svn: ");
-    if (! store_password_val)
-      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
-
-    /* There are two different ways the user can disable disk caching
-       of credentials:  either via --no-auth-cache, or in the config
-       file ('store-auth-creds = no'). */
-    if ((err = svn_config_get_bool (cfg, &store_password_val,
-                                    SVN_CONFIG_SECTION_AUTH,
-                                    SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
-                                    TRUE)))
-      svn_handle_error2 (err, stderr, TRUE, "svn: ");
-    if (opt_state.no_auth_cache || ! store_password_val)
-      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
-  }
-
   /* Set up our cancellation support. */
   ctx->cancel_func = svn_cl__check_cancel;
   apr_signal (SIGINT, signal_handler);
@@ -1505,6 +1403,21 @@ main (int argc, const char * const *argv)
   /* Disable SIGPIPE generation for the platforms that have it. */
   apr_signal(SIGPIPE, SIG_IGN);
 #endif
+
+  /* Set up Authentication stuff. */
+  if ((err = svn_cmdline_setup_auth_baton (&ab,
+                                           opt_state.non_interactive,
+                                           opt_state.auth_username,
+                                           opt_state.auth_password,
+                                           opt_state.config_dir,
+                                           opt_state.no_auth_cache,
+                                           cfg,
+                                           ctx->cancel_func,
+                                           ctx->cancel_baton,
+                                           pool)))
+      svn_handle_error2 (err, stderr, TRUE, "svn: ");
+
+  ctx->auth_baton = ab;
 
   /* And now we finally run the subcommand. */
   err = (*subcommand->cmd_func) (os, &command_baton, pool);
