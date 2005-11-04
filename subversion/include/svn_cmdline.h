@@ -32,6 +32,7 @@
 
 #include "svn_utf.h"
 #include "svn_auth.h"
+#include "svn_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -223,6 +224,28 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt (
   const char *realm,
   svn_boolean_t may_save,
   apr_pool_t *pool);
+
+/** Initialize auth baton @a ab with the standard set of authentication
+ * providers used by the command line client.  @a non_interactive,
+ * @a username, @a password, @a config_dir, and @a auth_cache are the 
+ * values of the command line options of the same names.  @a cfg is the
+ * @c SVN_CONFIG_CATEGORY_CONFIG configuration, and @a cancel_func and
+ * @a cancel_baton control the cancellation of the prompting providers
+ * that are initialized.  @a pool is used for all allocations.
+ *
+ * @since New in 1.4.
+ */
+svn_error_t *
+svn_cmdline_setup_auth_baton (svn_auth_baton_t **ab,
+                              svn_boolean_t non_interactive,
+                              const char *username,
+                              const char *password,
+                              const char *config_dir,
+                              svn_boolean_t no_auth_cache,
+                              svn_config_t *cfg,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
