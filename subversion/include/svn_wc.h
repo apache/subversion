@@ -2510,8 +2510,9 @@ svn_error_t *svn_wc_get_switch_editor (svn_revnum_t *target_revision,
 /** Set @a *props to a hash table mapping <tt>char *</tt> names onto
  * <tt>svn_string_t *</tt> values for all the regular properties of 
  * @a path.  Allocate the table, names, and values in @a pool.  If 
- * the node has no properties, an empty hash is returned.  @a adm_access
- * is an access baton set that contains @a path.
+ * the node has no properties, or does not exist in the working copy,
+ * then an empty hash is returned.  @a adm_access is an access baton
+ * set that contains @a path.
  */
 svn_error_t *svn_wc_prop_list (apr_hash_t **props,
                                const char *path,
