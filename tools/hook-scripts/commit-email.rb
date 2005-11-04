@@ -377,7 +377,7 @@ def rss_items(items, info, repos_uri)
 end
 
 def main
-  if ARGV.grep(/^--help$/)
+  if ARGV.find {|arg| arg == "--help"}
     parse(ARGV)
   else
     repos, revision, to, *rest = ARGV
