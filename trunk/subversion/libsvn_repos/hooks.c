@@ -38,6 +38,44 @@
 #define HOOK_INPUT_STR \
         "\x68\x6f\x6f\x6b\x2d\x69\x6e\x70\x75\x74"
         /* "hook-input" */
+        
+#define POST_COMMIT_STR \
+        "\x70\x6f\x73\x74\x2d\x63\x6f\x6d\x6d\x69\x74"
+        /* "post-commit" */
+
+#define POST_LOCK_STR \
+        "\x70\x6f\x73\x74\x2d\x6c\x6f\x63\x6b"
+        /* "post-lock" */
+
+#define POST_REVPROP_CHANGE_STR \
+        "\x70\x6f\x73\x74\x2d\x72\x65\x76\x70\x72\x6f\x70\x2d\x63\x68\x61" \
+        "\x6e\x67\x65"
+        /* "post-revprop-change" */
+
+#define POST_UNLOCK_STR \
+        "\x70\x6f\x73\x74\x2d\x75\x6e\x6c\x6f\x63\x6b"
+        /* "post-unlock" */
+
+#define PRE_COMMIT_STR \
+        "\x70\x72\x65\x2d\x63\x6f\x6d\x6d\x69\x74"
+        /* "pre-commit" */
+
+#define PRE_LOCK_STR \
+        "\x70\x72\x65\x2d\x6c\x6f\x63\x6b"
+        /* "pre-lock" */
+
+#define PRE_UNLOCK_STR \
+        "\x70\x72\x65\x2d\x75\x6e\x6c\x6f\x63\x6b"
+        /* "pre-unlock" */
+
+#define PRE_REVPROP_CHANGE_STR \
+        "\x70\x72\x65\x2d\x72\x65\x76\x70\x72\x6f\x70\x2d\x63\x68\x61\x6e" \
+        "\x67\x65"
+        /* "pre-revprop-change" */
+
+#define START_COMMIT_STR \
+        "\x73\x74\x61\x72\x74\x2d\x63\x6f\x6d\x6d\x69\x74"
+        /* "start-commit" */
 
 /*** Hook drivers. ***/
 
@@ -265,7 +303,7 @@ svn_repos__hooks_start_commit (svn_repos_t *repos,
       args[2] = user ? user : "";
       args[3] = NULL;
 
-      SVN_ERR (run_hook_cmd ("start-commit", hook, args, TRUE, NULL, pool));
+      SVN_ERR (run_hook_cmd (START_COMMIT_STR, hook, args, TRUE, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -293,7 +331,7 @@ svn_repos__hooks_pre_commit (svn_repos_t *repos,
       args[2] = txn_name;
       args[3] = NULL;
 
-      SVN_ERR (run_hook_cmd ("pre-commit", hook, args, TRUE, NULL, pool));
+      SVN_ERR (run_hook_cmd (PRE_COMMIT_STR, hook, args, TRUE, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -321,7 +359,7 @@ svn_repos__hooks_post_commit (svn_repos_t *repos,
       args[2] = APR_PSPRINTF2 (pool, "%ld", rev);
       args[3] = NULL;
 
-      SVN_ERR (run_hook_cmd ("post-commit", hook, args, FALSE, NULL, pool));
+      SVN_ERR (run_hook_cmd (POST_COMMIT_STR, hook, args, FALSE, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -368,7 +406,7 @@ svn_repos__hooks_pre_revprop_change (svn_repos_t *repos,
       args[5] = action_string;
       args[6] = NULL;
 
-      SVN_ERR (run_hook_cmd ("pre-revprop-change", hook, args, TRUE,
+      SVN_ERR (run_hook_cmd (PRE_REVPROP_CHANGE_STR, hook, args, TRUE,
                              stdin_handle, pool));
 
       SVN_ERR (svn_io_file_close (stdin_handle, pool));
@@ -430,7 +468,7 @@ svn_repos__hooks_post_revprop_change (svn_repos_t *repos,
       args[5] = action_string;
       args[6] = NULL;
 
-      SVN_ERR (run_hook_cmd ("post-revprop-change", hook, args, FALSE,
+      SVN_ERR (run_hook_cmd (POST_REVPROP_CHANGE_STR, hook, args, FALSE,
                              stdin_handle, pool));
       
       SVN_ERR (svn_io_file_close (stdin_handle, pool));
@@ -464,7 +502,7 @@ svn_repos__hooks_pre_lock (svn_repos_t *repos,
       args[3] = username;
       args[4] = NULL;
 
-      SVN_ERR (run_hook_cmd ("pre-lock", hook, args, TRUE, NULL, pool));
+      SVN_ERR (run_hook_cmd (PRE_LOCK_STR, hook, args, TRUE, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -500,7 +538,7 @@ svn_repos__hooks_post_lock (svn_repos_t *repos,
       args[3] = NULL;
       args[4] = NULL;
 
-      SVN_ERR (run_hook_cmd ("post-lock", hook, args, FALSE, 
+      SVN_ERR (run_hook_cmd (POST_LOCK_STR, hook, args, FALSE, 
                              stdin_handle, pool));
 
       SVN_ERR (svn_io_file_close (stdin_handle, pool));
@@ -533,7 +571,7 @@ svn_repos__hooks_pre_unlock (svn_repos_t *repos,
       args[3] = username ? username : "";
       args[4] = NULL;
 
-      SVN_ERR (run_hook_cmd ("pre-unlock", hook, args, TRUE, NULL, pool));
+      SVN_ERR (run_hook_cmd (PRE_UNLOCK_STR, hook, args, TRUE, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -569,7 +607,7 @@ svn_repos__hooks_post_unlock (svn_repos_t *repos,
       args[3] = NULL;
       args[4] = NULL;
 
-      SVN_ERR (run_hook_cmd ("post-unlock", hook, args, FALSE, 
+      SVN_ERR (run_hook_cmd (POST_UNLOCK_STR, hook, args, FALSE, 
                              stdin_handle, pool));
 
       SVN_ERR (svn_io_file_close (stdin_handle, pool));

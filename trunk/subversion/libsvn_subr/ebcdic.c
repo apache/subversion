@@ -759,7 +759,12 @@ svn_ebcdic_run_unix_type_script (const char *path,
   *exitcode = QzshSystem(native_cmd->data);
   svn_pool_destroy(temp_subpool);
   if (!check_exitcode)
+  {
+    /* Caller is claiming not to care about exit_why, but to be on the
+     * safe side set it to something. */
+    *exitwhy = APR_PROC_EXIT;
     return SVN_NO_ERROR;  
+  }
   else if (WIFEXITED(*exitcode))
   {
     /* WIFEXITED - Evaluates to a nonzero value if the status was returned
