@@ -43,56 +43,6 @@ svn_fs_fs__check_fs (svn_fs_t *fs)
 /* Building common error objects.  */
 
 
-static svn_error_t *
-corrupt_id (const char *fmt, const svn_fs_id_t *id, svn_fs_t *fs)
-{
-  svn_string_t *unparsed_id = svn_fs_fs__id_unparse (id, fs->pool);
-  return svn_error_createf (SVN_ERR_FS_CORRUPT, 0,
-                            fmt, unparsed_id->data, fs->path);
-}
-
-
-svn_error_t *
-svn_fs_fs__err_corrupt_node_revision (svn_fs_t *fs, const svn_fs_id_t *id)
-{
-  return
-    corrupt_id (_("Corrupt node revision for node '%s' in filesystem '%s'"),
-                id, fs);
-}
-
-
-svn_error_t *
-svn_fs_fs__err_corrupt_fs_revision (svn_fs_t *fs, svn_revnum_t rev)
-{
-  return svn_error_createf
-    (SVN_ERR_FS_CORRUPT, 0,
-     _("Corrupt filesystem revision %ld in filesystem '%s'"),
-     rev, fs->path);
-}
-
-
-svn_error_t *
-svn_fs_fs__err_corrupt_clone (svn_fs_t *fs,
-                              const char *svn_txn,
-                              const char *base_path)
-{
-  return
-    svn_error_createf
-    (SVN_ERR_FS_CORRUPT, 0,
-     _("Corrupt clone record for '%s' in transaction '%s' in filesystem '%s'"),
-     base_path, svn_txn, fs->path);
-}
-
-
-svn_error_t *
-svn_fs_fs__err_corrupt_id (svn_fs_t *fs, const svn_fs_id_t *id)
-{
-  return
-    corrupt_id (_("Corrupt node revision id '%s' appears in filesystem '%s'"),
-                id, fs);
-}
-
-
 svn_error_t *
 svn_fs_fs__err_dangling_id (svn_fs_t *fs, const svn_fs_id_t *id)
 {
@@ -101,60 +51,6 @@ svn_fs_fs__err_dangling_id (svn_fs_t *fs, const svn_fs_id_t *id)
     (SVN_ERR_FS_ID_NOT_FOUND, 0,
      _("Reference to non-existent node '%s' in filesystem '%s'"),
      id_str->data, fs->path);
-}
-
-
-svn_error_t *
-svn_fs_fs__err_dangling_rev (svn_fs_t *fs, svn_revnum_t rev)
-{
-  return svn_error_createf
-    (SVN_ERR_FS_NO_SUCH_REVISION, 0,
-     _("Reference to non-existent revision %ld in filesystem '%s'"),
-     rev, fs->path);
-}
-
-
-svn_error_t *
-svn_fs_fs__err_corrupt_nodes_key (svn_fs_t *fs)
-{
-  return
-    svn_error_createf
-    (SVN_ERR_FS_CORRUPT, 0,
-     _("Malformed ID as key in 'nodes' table of filesystem '%s'"), fs->path);
-}
-
-
-svn_error_t *
-svn_fs_fs__err_corrupt_next_id (svn_fs_t *fs, const char *table)
-{
-  return
-    svn_error_createf
-    (SVN_ERR_FS_CORRUPT, 0,
-     _("Corrupt value for 'next-id' key in '%s' table of filesystem '%s'"),
-     table, fs->path);
-}
-
-
-svn_error_t *
-svn_fs_fs__err_corrupt_txn (svn_fs_t *fs,
-                            const char *txn)
-{
-  return
-    svn_error_createf
-    (SVN_ERR_FS_CORRUPT, 0,
-     _("Corrupt entry in 'transactions' table for '%s'"
-       " in filesystem '%s'"), txn, fs->path);
-}
-
-
-svn_error_t *
-svn_fs_fs__err_corrupt_copy (svn_fs_t *fs, const char *copy_id)
-{
-  return
-    svn_error_createf
-    (SVN_ERR_FS_CORRUPT, 0,
-     _("Corrupt entry in 'copies' table for '%s' in filesystem '%s'"),
-     copy_id, fs->path);
 }
 
 
@@ -170,28 +66,6 @@ svn_fs_fs__err_not_mutable (svn_fs_t *fs, svn_revnum_t rev, const char *path)
 
 
 svn_error_t *
-svn_fs_fs__err_path_syntax (svn_fs_t *fs, const char *path)
-{
-  return
-    svn_error_createf
-    (SVN_ERR_FS_PATH_SYNTAX, 0,
-     _("Search for malformed path '%s' in filesystem '%s'"),
-     path, fs->path);
-}
-
-
-svn_error_t *
-svn_fs_fs__err_no_such_txn (svn_fs_t *fs, const char *txn)
-{
-  return
-    svn_error_createf
-    (SVN_ERR_FS_NO_SUCH_TRANSACTION, 0,
-     _("No transaction named '%s' in filesystem '%s'"),
-     txn, fs->path);
-}
-
-
-svn_error_t *
 svn_fs_fs__err_txn_not_mutable (svn_fs_t *fs, const char *txn)
 {
   return
@@ -199,16 +73,6 @@ svn_fs_fs__err_txn_not_mutable (svn_fs_t *fs, const char *txn)
     (SVN_ERR_FS_TRANSACTION_NOT_MUTABLE, 0,
      _("Cannot modify transaction named '%s' in filesystem '%s'"),
      txn, fs->path);
-}
-
-
-svn_error_t *
-svn_fs_fs__err_no_such_copy (svn_fs_t *fs, const char *copy_id)
-{
-  return
-    svn_error_createf
-    (SVN_ERR_FS_NO_SUCH_COPY, 0,
-     _("No copy with id '%s' in filesystem '%s'"), copy_id, fs->path);
 }
 
 
@@ -231,17 +95,6 @@ svn_fs_fs__err_not_file (svn_fs_t *fs, const char *path)
     (SVN_ERR_FS_NOT_FILE, 0,
      _("'%s' is not a file in filesystem '%s'"),
      path, fs->path);
-}
-
-
-svn_error_t *
-svn_fs_fs__err_bad_lock_token (svn_fs_t *fs, const char *lock_token)
-{
-  return
-    svn_error_createf
-    (SVN_ERR_FS_BAD_LOCK_TOKEN, 0,
-     _("Token '%s' does not point to any existing lock in filesystem '%s'"),
-     lock_token, fs->path);
 }
 
 
