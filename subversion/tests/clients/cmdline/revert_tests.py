@@ -522,7 +522,7 @@ def revert_after_second_replace(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              XFail(revert_from_wc_root),
+              revert_from_wc_root,
               XFail(revert_reexpand_keyword),
               revert_replaced_file_without_props,
               XFail(revert_moved_file),

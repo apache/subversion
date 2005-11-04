@@ -182,7 +182,7 @@ svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
     {
       const char *prop_path;
 
-      SVN_ERR (svn_wc__prop_path (&prop_path, path, adm_access, FALSE, pool));
+      SVN_ERR (svn_wc__prop_path (&prop_path, path, entry->kind, FALSE, pool));
       SVN_ERR (svn_io_file_affected_time (&wfile_time, prop_path, pool));
       entrytime = entry->prop_time;
     }
