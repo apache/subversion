@@ -302,7 +302,7 @@ svn_repos__hooks_post_commit (svn_repos_t *repos,
       args[2] = apr_psprintf (pool, "%ld", rev);
       args[3] = NULL;
 
-      SVN_ERR (run_hook_cmd ("post-commit", hook, args, FALSE, NULL, pool));
+      SVN_ERR (run_hook_cmd ("post-commit", hook, args, TRUE, NULL, pool));
     }
 
   return SVN_NO_ERROR;
