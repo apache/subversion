@@ -481,7 +481,9 @@ This is nil if the log entry is for a new commit.")
   (expand-file-name
    (or
     (when (boundp 'temporary-file-directory) temporary-file-directory) ;emacs
-    (when (fboundp 'temp-directory) (temp-directory))                  ;xemacs
+    ;; XEmacs 21.4.17 can return "/tmp/kalle" from (temp-directory).
+    ;; `file-name-as-directory' adds a slash so we can append a file name.
+    (when (fboundp 'temp-directory) (file-name-as-directory (temp-directory)))
     "/tmp/")) "The directory that is used to store temporary files for psvn.")
 ;; Because `temporary-file-directory' is not a risky local variable in
 ;; GNU Emacs 22.0.51, we don't mark `svn-status-temp-dir' as such either.
