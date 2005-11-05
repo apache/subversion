@@ -58,6 +58,8 @@ static const svn_ra_dav__xml_elm_t merge_elements[] =
   { "DAV:", "collection", ELEM_collection, 0 },
   { "DAV:", "baseline", ELEM_baseline, 0 },
   { "DAV:", "version-name", ELEM_version_name, SVN_RA_DAV__XML_CDATA },
+  { SVN_XML_NAMESPACE, "post-commit-err",
+    ELEM_post_commit_err, SVN_RA_DAV__XML_CDATA },
   { "DAV:", "creationdate", ELEM_creationdate, SVN_RA_DAV__XML_CDATA },
   { "DAV:", "creator-displayname", ELEM_creator_displayname,
     SVN_RA_DAV__XML_CDATA },
@@ -104,6 +106,8 @@ typedef struct {
   svn_stringbuf_t *committed_date; /* DAV:creationdate for this resource */
   svn_stringbuf_t *last_author;    /* DAV:creator-displayname for this
                                       resource */
+  svn_stringbuf_t *post_commit_err;/* SVN_XML_NAMESPACE:post-commit hook's
+                                      stderr */
 
   /* We only invoke set_prop() on targets listed in valid_targets.
      Some entities (such as directories that have had changes
@@ -136,7 +140,6 @@ static svn_boolean_t okay_to_bump_path (const char *path,
   /* Easy check:  if path itself is in the hash, then it's legit. */
   if (apr_hash_get (valid_targets, path, APR_HASH_KEY_STRING))
     return TRUE;
-
   /* Otherwise, this path is bumpable IFF one of its parents is in the
      hash and marked with a 'recursion' flag. */
   parent_path = svn_stringbuf_create (path, pool);
@@ -341,6 +344,7 @@ static int validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
           || child == ELEM_version_name
           || child == ELEM_creationdate
           || child == ELEM_creator_displayname
+          || child == ELEM_post_commit_err
           /* other props */)
         return SVN_RA_DAV__XML_VALID;
       else
@@ -524,6 +528,10 @@ static int end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
       svn_stringbuf_set(mc->vsn_name, cdata);
       break;
 
+    case ELEM_post_commit_err:
+      svn_stringbuf_set(mc->post_commit_err, cdata);
+      break;
+
     case ELEM_creationdate:
       svn_stringbuf_set(mc->committed_date, cdata);
       break;
@@ -656,6 +664,7 @@ svn_error_t * svn_ra_dav__merge_activity(
     svn_revnum_t *new_rev,
     const char **committed_date,
     const char **committed_author,
+    const char **post_commit_err,
     svn_ra_dav__session_t *ras,
     const char *repos_url,
     const char *activity_url,
@@ -686,6 +695,8 @@ svn_error_t * svn_ra_dav__merge_activity(
   mc.vsn_url = MAKE_BUFFER(pool);
   mc.committed_date = MAKE_BUFFER(pool);
   mc.last_author = MAKE_BUFFER(pool);
+  if (post_commit_err)
+    mc.post_commit_err = MAKE_BUFFER(pool);
 
   if (disable_merge_response 
       || (! keep_locks))
@@ -749,6 +760,9 @@ svn_error_t * svn_ra_dav__merge_activity(
   if (committed_author)
     *committed_author = mc.last_author->len 
                         ? apr_pstrdup(pool, mc.last_author->data) : NULL;
+  if (post_commit_err)
+    *post_commit_err = mc.post_commit_err->len
+                        ? apr_pstrdup(pool, mc.post_commit_err->data) : NULL;
 
   svn_pool_destroy(mc.scratchpool);
 

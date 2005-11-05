@@ -890,10 +890,12 @@ static svn_error_t *ra_svn_end_commit(void *baton)
   svn_commit_info_t *commit_info = svn_create_commit_info (ccb->pool);
 
   SVN_ERR(handle_auth_request(ccb->sess_baton, ccb->pool));
-  SVN_ERR(svn_ra_svn_read_tuple(ccb->sess_baton->conn, ccb->pool, "r(?c)(?c)",
-                                &(commit_info->revision),
-                                &(commit_info->date),
-                                &(commit_info->author)));
+  SVN_ERR(svn_ra_svn_read_tuple(ccb->sess_baton->conn, ccb->pool,
+                                "r(?c)(?c)?(?c)",
+                                 &(commit_info->revision),
+                                 &(commit_info->date),
+                                 &(commit_info->author),
+                                 &(commit_info->post_commit_err)));
 
   return ccb->callback(commit_info, ccb->callback_baton, ccb->pool);
 
