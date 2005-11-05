@@ -1214,7 +1214,11 @@ svn_wc_create_tmp_file (apr_file_t **fp,
                         svn_boolean_t delete_on_close,
                         apr_pool_t *pool)
 {
-  return svn_wc_create_tmp_file2 (fp, NULL, path, delete_on_close, pool);
+  return svn_wc_create_tmp_file2 (fp, NULL, path,
+                                  delete_on_close
+                                  ? svn_io_file_del_on_close
+                                  : svn_io_file_del_none,
+                                  pool);
 }
 
 svn_error_t *
