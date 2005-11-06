@@ -935,6 +935,17 @@ svn_wc_delete2 (const char *path,
                                        adm_access, prop_revert, prop_base,
                                        TRUE, pool));
         }
+      if (was_schedule == svn_wc_schedule_add)
+        {
+          /* remove the properties file */
+          const char *svn_thang;
+
+          /* Working prop file. */
+          SVN_ERR (svn_wc__prop_path (&svn_thang, base_name, was_kind, FALSE,
+                                      pool));
+          SVN_ERR (svn_wc__loggy_remove (&log_accum, adm_access,
+                                         svn_thang, pool));
+        }
 
       SVN_ERR (svn_wc__write_log (adm_access, 0, log_accum, pool));
 
