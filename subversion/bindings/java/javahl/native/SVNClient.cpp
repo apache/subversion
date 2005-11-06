@@ -2083,7 +2083,10 @@ svn_error_t *SVNClient::messageReceiver (void *baton, apr_hash_t *changed_paths,
     if(date != NULL && *date != '\0')
     {
         apr_time_t timeTemp;
-        svn_time_from_cstring (&timeTemp, date, pool);
+        
+        svn_error_t * err = svn_time_from_cstring (&timeTemp, date, pool);
+        if(err != SVN_NO_ERROR)
+            return err;
 
         jdate = JNIUtil::createDate(timeTemp);
         if(JNIUtil::isJavaExceptionThrown())
@@ -2757,8 +2760,7 @@ blame_receiver2 (void *baton,
                 const char *line,
                 apr_pool_t *pool)
 {
-    ((BlameCallback *)baton)->callback(revision, author, date, line, pool);
-    return NULL;
+    return ((BlameCallback *)baton)->callback(revision, author, date, line, pool);
 }
 void SVNClient::blame(const char *path, Revision &pegRevision, 
                       Revision &revisionStart,
