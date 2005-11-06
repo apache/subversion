@@ -1114,13 +1114,12 @@ def removal_schedule_added_props(sbox):
   newfile_path = os.path.join(wc_dir, 'newfile')
   
   # create new fs file
-  touch_command = "touch " + newfile_path
-  os.system(touch_command)
+  svntest.main.file_append(newfile_path, "")
   svntest.main.run_svn(None, 'add', newfile_path)
   svntest.main.run_svn(None, 'propset', 'newprop', 'newvalue', newfile_path)
   svntest.main.run_svn(None, 'rm', '--force', newfile_path)
   # recreate the file and add it again
-  os.system(touch_command)
+  svntest.main.file_append(newfile_path, "")
   svntest.main.run_svn(None, 'add', newfile_path)
 
   # check the properties
