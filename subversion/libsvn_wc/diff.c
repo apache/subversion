@@ -410,10 +410,6 @@ get_local_mimetypes (const char **pristine_mimetype,
                      apr_pool_t *pool)
 {
   const svn_string_t *working_val;
-  const svn_wc_entry_t *entry;
-
-  /*### Maybe assert (entry); calling get_local_mimetypes
-    for an unversioned path is bogus */
 
   if (working_mimetype)
     {
@@ -459,19 +455,9 @@ get_local_mimetypes (const char **pristine_mimetype,
       if (! pristine_val)
         {
           /* otherwise, try looking in the pristine props in the wc */
-          const char *props_base_path;
-          apr_hash_t *baseprops = apr_hash_make (pool);
-
-          SVN_ERR (svn_wc_entry (&entry, path, adm_access, TRUE, pool));
-          if (! entry)
-            {
-              *pristine_mimetype = NULL;
-              return SVN_NO_ERROR;
-            }
-
-          SVN_ERR (svn_wc__prop_base_path (&props_base_path, path,
-                                           entry->kind, FALSE, pool));
-          SVN_ERR (svn_wc__load_prop_file (props_base_path, baseprops, pool));
+          apr_hash_t *baseprops;
+          SVN_ERR (svn_wc_get_prop_diffs (NULL, &baseprops,
+                                          path, adm_access, pool));
           pristine_val = apr_hash_get (baseprops, SVN_PROP_MIME_TYPE,
                                        strlen(SVN_PROP_MIME_TYPE));
         }
