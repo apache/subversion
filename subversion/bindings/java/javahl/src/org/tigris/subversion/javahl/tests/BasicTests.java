@@ -1403,7 +1403,7 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * thest the basic SVNClient.merge functionality
+     * test the basic SVNClient.merge functionality
      * @throws Throwable
      * @since 1.2
      */
@@ -1475,5 +1475,53 @@ public class BasicTests extends SVNTests
                       true), 5);
  
     }
-
+    /**
+     * test the basic SVNClient.isAdminDirectory functionality
+     * @throws Throwable
+     * @since 1.2
+     */
+    public void testBasicIsAdminDirectory() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        Notify2 notify = new Notify2(){
+            public void onNotify(NotifyInformation info)
+            {
+                client.isAdminDirectory(".svn");
+            }
+        };
+        client.notification2(notify);
+        // update the test
+        assertEquals("wrong revision number from update",
+                client.update(thisTest.getWCPath(), null, true), 1);
+    }
+    public void testBasicCancelOperation() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        Notify2 notify = new Notify2(){
+            public void onNotify(NotifyInformation info)
+            {
+                try
+                {
+                    client.cancelOperation();
+                }
+                catch (ClientException e)
+                {
+                    fail(e.getMessage());
+                }
+            }
+        };
+        client.notification2(notify);
+        // update the test to try to cancel an operation
+        try
+        {
+            client.update(thisTest.getWCPath(), null, true);
+            fail("missing exception for canceled operation");
+        }
+        catch (ClientException e)
+        {
+            // this is expected
+        }
+    }
 }
