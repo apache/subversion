@@ -961,8 +961,9 @@ repos_to_wc_copy (const char *src_url,
       apr_hash_t *new_props;
       svn_error_t *err;
 
-      SVN_ERR (svn_io_open_unique_file
-               (&fp, &new_text_path, dst_path, ".tmp", FALSE, pool));
+      SVN_ERR (svn_io_open_unique_file2
+               (&fp, &new_text_path, dst_path, ".tmp",
+                svn_io_file_del_none, pool));
 
       fstream = svn_stream_from_aprfile (fp, pool);
       SVN_ERR (svn_ra_get_file (ra_session, "", src_revnum, fstream, &real_rev,

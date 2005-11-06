@@ -179,8 +179,8 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
 
   /* Ask the working copy for a temporary file that starts with
      PREFIX. */
-  err = svn_io_open_unique_file (&tmp_file, &tmpfile_name,
-                                 prefix, ".tmp", FALSE, pool);
+  err = svn_io_open_unique_file2 (&tmp_file, &tmpfile_name,
+                                  prefix, ".tmp", svn_io_file_del_none, pool);
 
   if (err && APR_STATUS_IS_EACCES (err->apr_err))
     {
@@ -198,8 +198,9 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
             (apr_err, _("Can't change working directory to '%s'"), base_dir);
         }
 
-      err = svn_io_open_unique_file (&tmp_file, &tmpfile_name,
-                                     prefix, ".tmp", FALSE, pool);
+      err = svn_io_open_unique_file2 (&tmp_file, &tmpfile_name,
+                                      prefix, ".tmp",
+                                      svn_io_file_del_none, pool);
     }
 
   if (err)

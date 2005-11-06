@@ -115,10 +115,10 @@ send_file_contents (const char *path,
 
       /* Now create a new tempfile, and open a stream to it. */
       SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
-      SVN_ERR (svn_io_open_unique_file
+      SVN_ERR (svn_io_open_unique_file2
                (NULL, &tmpfile_path,
                 svn_path_join (temp_dir, "svn-import", pool),
-                ".tmp", FALSE, pool));
+                ".tmp", svn_io_file_del_none, pool));
 
       /* Generate a keyword structure. */
       if (keywords_val)

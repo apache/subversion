@@ -588,8 +588,9 @@ apply_textdelta (void *file_baton,
   struct file_baton *fb = file_baton;
   struct handler_baton *hb = apr_palloc (pool, sizeof (*hb));
 
-  SVN_ERR (svn_io_open_unique_file (&fb->tmp_file, &(fb->tmppath),
-                                    fb->path, ".tmp", FALSE, fb->pool));
+  SVN_ERR (svn_io_open_unique_file2 (&fb->tmp_file, &(fb->tmppath),
+                                     fb->path, ".tmp",
+                                     svn_io_file_del_none, fb->pool));
 
   hb->pool = pool;
   hb->tmppath = fb->tmppath;
@@ -802,9 +803,9 @@ svn_client_export3 (svn_revnum_t *result_rev,
           fb->pool = pool;
           
           /* Copied from apply_textdelta(). */
-          SVN_ERR (svn_io_open_unique_file (&fb->tmp_file, &(fb->tmppath),
-                                            fb->path, ".tmp", FALSE,
-                                            fb->pool));
+          SVN_ERR (svn_io_open_unique_file2 (&fb->tmp_file, &(fb->tmppath),
+                                             fb->path, ".tmp",
+                                             svn_io_file_del_none, fb->pool));
 
           /* Step outside the editor-likeness for a moment, to actually talk
            * to the repository. */

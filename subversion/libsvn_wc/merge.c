@@ -77,32 +77,32 @@ svn_wc_merge (const char *left,
         {
           /* The target is already in repository form, so we just need to
              make a verbatim copy of it. */
-          SVN_ERR (svn_io_open_unique_file (NULL, &tmp_target,
-                                            merge_target,
-                                            SVN_WC__TMP_EXT,
-                                            FALSE, pool));
+          SVN_ERR (svn_io_open_unique_file2 (NULL, &tmp_target,
+                                             merge_target,
+                                             SVN_WC__TMP_EXT,
+                                             svn_io_file_del_none, pool));
           SVN_ERR (svn_io_copy_file (merge_target,
                                      tmp_target, TRUE, pool));
         }
 
       /* Open a second temporary file for writing; this is where diff3
          will write the merged results. */
-      SVN_ERR (svn_io_open_unique_file (&result_f, &result_target,
-                                        merge_target, SVN_WC__TMP_EXT,
-                                        FALSE, pool));
+      SVN_ERR (svn_io_open_unique_file2 (&result_f, &result_target,
+                                         merge_target, SVN_WC__TMP_EXT,
+                                         svn_io_file_del_none, pool));
 
       /* LEFT and RIGHT might be in totally different directories than
          MERGE_TARGET, and our diff3 command wants them all to be in
          the same directory.  So make temporary copies of LEFT and
          RIGHT right next to the target. */
-      SVN_ERR (svn_io_open_unique_file (NULL, &tmp_left,
-                                        tmp_target,
-                                        SVN_WC__TMP_EXT,
-                                        FALSE, pool));
-      SVN_ERR (svn_io_open_unique_file (NULL, &tmp_right,
-                                        tmp_target,
-                                        SVN_WC__TMP_EXT,
-                                        FALSE, pool));
+      SVN_ERR (svn_io_open_unique_file2 (NULL, &tmp_left,
+                                         tmp_target,
+                                         SVN_WC__TMP_EXT,
+                                         svn_io_file_del_none, pool));
+      SVN_ERR (svn_io_open_unique_file2 (NULL, &tmp_right,
+                                         tmp_target,
+                                         SVN_WC__TMP_EXT,
+                                         svn_io_file_del_none, pool));
 
       SVN_ERR (svn_io_copy_file (left, tmp_left, TRUE, pool));
       SVN_ERR (svn_io_copy_file (right, tmp_right, TRUE, pool));
@@ -177,33 +177,33 @@ svn_wc_merge (const char *left,
       
           /* I miss Lisp. */
 
-          SVN_ERR (svn_io_open_unique_file (NULL,
-                                            &left_copy,
-                                            merge_target,
-                                            left_label,
-                                            FALSE,
-                                            pool));
+          SVN_ERR (svn_io_open_unique_file2 (NULL,
+                                             &left_copy,
+                                             merge_target,
+                                             left_label,
+                                             svn_io_file_del_none,
+                                             pool));
 
           /* Have I mentioned how much I miss Lisp? */
 
-          SVN_ERR (svn_io_open_unique_file (NULL,
-                                            &right_copy,
-                                            merge_target,
-                                            right_label,
-                                            FALSE,
-                                            pool));
+          SVN_ERR (svn_io_open_unique_file2 (NULL,
+                                             &right_copy,
+                                             merge_target,
+                                             right_label,
+                                             svn_io_file_del_none,
+                                             pool));
 
           /* Why, how much more pleasant to be forced to unroll my loops.
              If I'd been writing in Lisp, I might have mapped an inline
              lambda form over a list, or something equally disgusting.
              Thank goodness C was here to protect me! */
 
-          SVN_ERR (svn_io_open_unique_file (NULL,
-                                            &target_copy,
-                                            merge_target,
-                                            target_label,
-                                            FALSE,
-                                            pool));
+          SVN_ERR (svn_io_open_unique_file2 (NULL,
+                                             &target_copy,
+                                             merge_target,
+                                             target_label,
+                                             svn_io_file_del_none,
+                                             pool));
 
           /* We preserve all the files with keywords expanded and line
              endings in local (working) form. */
@@ -317,19 +317,19 @@ svn_wc_merge (const char *left,
       svn_wc_entry_t tmp_entry;
       
       /* reserve names for backups of left and right fulltexts */
-      SVN_ERR (svn_io_open_unique_file (NULL,
-                                        &left_copy,
-                                        merge_target,
-                                        left_label,
-                                        FALSE,
-                                        pool));
+      SVN_ERR (svn_io_open_unique_file2 (NULL,
+                                         &left_copy,
+                                         merge_target,
+                                         left_label,
+                                         svn_io_file_del_none,
+                                         pool));
 
-      SVN_ERR (svn_io_open_unique_file (NULL,
-                                        &right_copy,
-                                        merge_target,
-                                        right_label,
-                                        FALSE,
-                                        pool));
+      SVN_ERR (svn_io_open_unique_file2 (NULL,
+                                         &right_copy,
+                                         merge_target,
+                                         right_label,
+                                         svn_io_file_del_none,
+                                         pool));
 
       /* create the backup files */
       SVN_ERR (svn_io_copy_file (left,

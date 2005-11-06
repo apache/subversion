@@ -1020,8 +1020,8 @@ detranslate_special_file (const char *src,
 
   /* Open a temporary destination that we will eventually atomically
      rename into place. */
-  SVN_ERR (svn_io_open_unique_file (&d, &dst_tmp, dst,
-                                    ".tmp", FALSE, pool));
+  SVN_ERR (svn_io_open_unique_file2 (&d, &dst_tmp, dst,
+                                     ".tmp", svn_io_file_del_none, pool));
 
   dst_stream = svn_stream_from_aprfile (d, pool);
   
@@ -1077,8 +1077,8 @@ create_special_file (const char *src,
 
   if (is_special)
     {
-      SVN_ERR (svn_io_open_unique_file (NULL, &src_tmp, dst, ".tmp", FALSE,
-                                        pool));
+      SVN_ERR (svn_io_open_unique_file2 (NULL, &src_tmp, dst, ".tmp",
+                                         svn_io_file_del_none, pool));
       SVN_ERR (detranslate_special_file (src, src_tmp, pool));
       src = src_tmp;
     }
@@ -1127,8 +1127,8 @@ create_special_file (const char *src,
         {
           svn_error_clear (err);
           /* Fall back to just copying the text-base. */
-          SVN_ERR (svn_io_open_unique_file (NULL, &dst_tmp, dst, ".tmp", FALSE,
-                                            pool));
+          SVN_ERR (svn_io_open_unique_file2 (NULL, &dst_tmp, dst, ".tmp",
+                                             svn_io_file_del_none, pool));
           SVN_ERR (svn_io_copy_file (src, dst_tmp, TRUE, pool));
         }
       else
@@ -1206,8 +1206,8 @@ svn_subst_copy_and_translate3 (const char *src,
   /* For atomicity, we translate to a tmp file and
      then rename the tmp file over the real destination. */
 
-  err = svn_io_open_unique_file (&d, &dst_tmp, dst,
-                                 ".tmp", FALSE, subpool);
+  err = svn_io_open_unique_file2 (&d, &dst_tmp, dst,
+                                  ".tmp", svn_io_file_del_none, subpool);
 
   /* Move the file name to a more permanent pool. */
   if (dst_tmp)

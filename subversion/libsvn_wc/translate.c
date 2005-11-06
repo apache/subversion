@@ -72,12 +72,12 @@ svn_wc_translated_file (const char **xlated_p,
       tmp_vfile = svn_wc__adm_path (tmp_dir, 1, pool,
                                     tmp_vfile, NULL);
 
-      SVN_ERR (svn_io_open_unique_file (NULL,
-                                        &tmp_vfile,
-                                        tmp_vfile,
-                                        SVN_WC__TMP_EXT,
-                                        FALSE,
-                                        pool));
+      SVN_ERR (svn_io_open_unique_file2 (NULL,
+                                         &tmp_vfile,
+                                         tmp_vfile,
+                                         SVN_WC__TMP_EXT,
+                                         svn_io_file_del_none,
+                                         pool));
 
       if (style == svn_subst_eol_style_fixed)
         {

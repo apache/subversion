@@ -78,25 +78,6 @@ struct delta_baton {
   const char *filename;
 };
 
-/* Remove a temporary file F, which is of type apr_file_t *.  First, try
-   to close the file, ignoring any errors.  Return an error if the remove
-   fails. */
-static apr_status_t
-cleanup_tempfile (void *f)
-{
-  apr_file_t *file = f;
-  apr_status_t apr_err;
-  const char *fname;
-
-  /* the file may or may not have been closed; try it */
-  apr_file_close (file);
-
-  apr_err = apr_file_name_get (&fname, file);
-  if (apr_err == APR_SUCCESS)
-    apr_err = apr_file_remove (fname, apr_file_pool_get (file));
-
-  return apr_err;
-}
 
 
 
@@ -442,12 +423,12 @@ file_rev_handler (void *baton, const char *path, svn_revnum_t revnum,
   last_stream = svn_stream_from_aprfile (delta_baton->source_file, pool);
 
   SVN_ERR (svn_io_temp_dir (&temp_dir, frb->currpool));
-  SVN_ERR (svn_io_open_unique_file (&delta_baton->file, &delta_baton->filename,
-                                    svn_path_join (temp_dir, "tmp",
-                                                   frb->currpool),
-                                    ".tmp", FALSE, frb->currpool));
-  apr_pool_cleanup_register (frb->currpool, delta_baton->file,
-                             cleanup_tempfile, apr_pool_cleanup_null);
+  SVN_ERR (svn_io_open_unique_file2 (&delta_baton->file,
+                                     &delta_baton->filename,
+                                     svn_path_join (temp_dir, "tmp",
+                                                    frb->currpool),
+                                     ".tmp", svn_io_file_del_on_pool_cleanup,
+                                     frb->currpool));
   cur_stream = svn_stream_from_aprfile (delta_baton->file, frb->currpool);
 
   /* Get window handler for applying delta. */
@@ -750,12 +731,10 @@ old_blame (const char *target, const char *url,
       
       apr_pool_clear (frb->currpool);
       SVN_ERR (svn_io_temp_dir (&temp_dir, frb->currpool));
-      SVN_ERR (svn_io_open_unique_file (&file, &tmp,
-                 svn_path_join (temp_dir, "tmp", frb->currpool), ".tmp",
-                                        FALSE, frb->currpool));
-
-      apr_pool_cleanup_register (frb->currpool, file, cleanup_tempfile,
-                                 apr_pool_cleanup_null);
+      SVN_ERR (svn_io_open_unique_file2
+               (&file, &tmp,
+                svn_path_join (temp_dir, "tmp", frb->currpool), ".tmp",
+                svn_io_file_del_on_pool_cleanup, frb->currpool));
 
       stream = svn_stream_from_aprfile (file, frb->currpool);
       SVN_ERR (svn_ra_get_file (ra_session, rev->path + 1, rev->revision,

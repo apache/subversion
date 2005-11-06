@@ -1049,8 +1049,9 @@ authz_get_handle (svn_authz_t **authz_p, const char *authz_contents,
   svn_error_t *err;
 
   /* Create a temporary file, and fetch its name. */
-  SVN_ERR_W (svn_io_open_unique_file (&authz_file, &authz_file_path,
-                                      "authz_file", "tmp", FALSE, pool),
+  SVN_ERR_W (svn_io_open_unique_file2 (&authz_file, &authz_file_path,
+                                       "authz_file", "tmp",
+                                       svn_io_file_del_none, pool),
              "Opening temporary file");
 
   /* Write the authz ACLs to the file. */

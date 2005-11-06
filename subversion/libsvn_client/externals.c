@@ -121,8 +121,8 @@ relegate_external (const char *path,
       svn_error_clear (err);
 
       /* Reserve the new dir name. */
-      SVN_ERR (svn_io_open_unique_file
-               (NULL, &new_path, path, ".OLD", FALSE, pool));
+      SVN_ERR (svn_io_open_unique_file2
+               (NULL, &new_path, path, ".OLD", svn_io_file_del_none, pool));
 
       /* Sigh...  We must fall ever so slightly from grace.
 

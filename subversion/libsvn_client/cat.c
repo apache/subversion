@@ -233,9 +233,10 @@ svn_client_cat2 (svn_stream_t *out,
 
       /* grab a temporary file to write the target to. */
       SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
-      SVN_ERR (svn_io_open_unique_file (&tmp_file, &tmp_filename,
-                 svn_path_join (temp_dir, "tmp", pool), ".tmp",
-                 TRUE, pool));
+      SVN_ERR (svn_io_open_unique_file2
+               (&tmp_file, &tmp_filename,
+                svn_path_join (temp_dir, "tmp", pool), ".tmp",
+                svn_io_file_del_on_close, pool));
 
       tmp_stream = svn_stream_from_aprfile (tmp_file, pool);
 

@@ -139,8 +139,9 @@ open_tmp_file (apr_file_t **fp,
   path = svn_path_join (path, "tempfile", pool);
 
   /* Open a unique file, with delete-on-close set. */
-  SVN_ERR (svn_io_open_unique_file (fp, &ignored_filename,
-                                    path, ".tmp", TRUE, pool));
+  SVN_ERR (svn_io_open_unique_file2 (fp, &ignored_filename,
+                                     path, ".tmp",
+                                     svn_io_file_del_on_close, pool));
 
   return SVN_NO_ERROR;
 }
