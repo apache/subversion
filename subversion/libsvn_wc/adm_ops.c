@@ -1384,6 +1384,9 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
       /* Log to update prop-time attribute */
       apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_PROP_TIME,
                     APR_HASH_KEY_STRING, NULL);
+      apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_PROP_MODS,
+                    APR_HASH_KEY_STRING, "false");
+      /* ### TODO: Update properties flags when we have such flags. */
     }
   else if (entry->schedule == svn_wc_schedule_replace)
     {

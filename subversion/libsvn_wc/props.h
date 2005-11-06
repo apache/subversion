@@ -148,6 +148,17 @@ svn_boolean_t svn_wc__has_special_property (apr_hash_t *props);
    changing the working file. */
 svn_boolean_t svn_wc__has_magic_property (apr_array_header_t *properties);
 
+/* Extend LOG_ACCUM with log entries to install PROPS and, if WRITE_BASE_PROPS
+   is true, BASE_PROPS for the path NAME in ADM_ACCESS, updating the wc entry
+   to reflect the changes.  Use POOL for temporary allocations. */
+svn_error_t *svn_wc__install_props (svn_stringbuf_t **log_accum,
+                                    svn_wc_adm_access_t *adm_access,
+                                    const char *name,
+                                    apr_hash_t *base_props,
+                                    apr_hash_t *props,
+                                    svn_boolean_t write_base_props,
+                                    apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

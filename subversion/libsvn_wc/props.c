@@ -47,6 +47,7 @@
 #include "props.h"
 #include "translate.h"
 #include "questions.h"
+#include "lock.h"
 
 #include "svn_private_config.h"
 
@@ -294,7 +295,105 @@ svn_wc__get_existing_prop_reject_file (const char **reject_file,
   return SVN_NO_ERROR;
 }
 
+/*---------------------------------------------------------------------*/
+
+/*** Installing new properties. ***/
+svn_error_t *
+svn_wc__install_props (svn_stringbuf_t **log_accum,
+                       svn_wc_adm_access_t *adm_access,
+                       const char *name,
+                       apr_hash_t *base_props,
+                       apr_hash_t *working_props,
+                       svn_boolean_t write_base_props,
+                       apr_pool_t *pool)
+{
+  const char *working_propfile_path, *working_prop_tmp_path;
+  const char *tmp_props, *real_props;      
+  const char *full_path;
+  const char *access_path = svn_wc_adm_access_path (adm_access);
+  int access_len = strlen (access_path);
+  apr_array_header_t *prop_diffs;
+  svn_wc_entry_t tmp_entry;
 
+  /* Non-empty path without trailing slash need an extra slash removed */
+  if (access_len != 0 && access_path[access_len - 1] != '/')
+    access_len++;
+
+  /* ### TODO: Is this check needed? */
+  if (name == NULL)
+    /* We must be working with props on the directory PATH  */
+    full_path = access_path;
+  else
+    /* We must be working with props on the file PATH/NAME */
+    full_path = svn_path_join (access_path, name, pool);
+
+  /* Check if the props are modified. */
+  SVN_ERR (svn_prop_diffs (&prop_diffs, base_props, working_props, pool));
+  tmp_entry.prop_mods = (prop_diffs->nelts > 0);
+
+  /* ### TODO: Check props in working props and update flags for specific
+     props when we have such flags. */
+
+  SVN_ERR (svn_wc__loggy_entry_modify (log_accum, adm_access, name, &tmp_entry,
+                                       SVN_WC__ENTRY_MODIFY_PROP_MODS, pool));
+
+  /* Write our property hashes into temporary files.  Notice that the
+     paths computed are ABSOLUTE pathnames, which is what our disk
+     routines require. */
+  SVN_ERR (svn_wc__prop_path (&working_propfile_path, full_path, adm_access,
+                              FALSE, pool)); 
+  SVN_ERR (svn_wc__prop_path (&working_prop_tmp_path, full_path,
+                              adm_access, TRUE, pool));
+  
+  /* Write the working prop hash to path/.svn/tmp/props/name or
+     path/.svn/tmp/dir-props */
+  SVN_ERR (svn_wc__save_prop_file (working_prop_tmp_path, working_props, pool));
+  
+  /* Compute pathnames for the "mv" log entries.  Notice that these
+     paths are RELATIVE pathnames (each beginning with ".svn/"), so
+     that each .svn subdir remains separable when executing run_log().  */
+  tmp_props = apr_pstrdup (pool, working_prop_tmp_path + access_len);
+  real_props = apr_pstrdup (pool, working_propfile_path + access_len);
+  
+  /* Write log entry to move working tmp copy to real working area. */
+  /* ### TODO: If the properties are not modified, remove the working props
+     file instead. */
+  SVN_ERR (svn_wc__loggy_move (log_accum, NULL,
+                               adm_access, tmp_props, real_props,
+                               FALSE, pool));
+
+  /* Make props read-only */
+  SVN_ERR (svn_wc__loggy_set_readonly (log_accum, adm_access,
+                                       real_props, pool));
+
+  /* Repeat the above steps for the base properties if required. */
+  if (write_base_props)
+    {
+      const char *base_propfile_path, *base_prop_tmp_path;
+      const char *tmp_prop_base, *real_prop_base;
+
+      SVN_ERR (svn_wc__prop_base_path (&base_propfile_path, full_path,
+                                       adm_access, FALSE, pool));
+
+      SVN_ERR (svn_wc__prop_base_path (&base_prop_tmp_path, full_path,
+                                       adm_access, TRUE, pool));
+      /* ### TODO: Make sure base prop file is removed if there are no
+         base props. */
+      SVN_ERR (svn_wc__save_prop_file (base_prop_tmp_path, base_props, pool));
+
+      tmp_prop_base = apr_pstrdup (pool, base_prop_tmp_path + access_len);
+      real_prop_base = apr_pstrdup (pool, base_propfile_path + access_len);
+
+      SVN_ERR (svn_wc__loggy_move (log_accum, NULL, adm_access,
+                                   tmp_prop_base, real_prop_base,
+                                   FALSE, pool));
+
+      SVN_ERR (svn_wc__loggy_set_readonly (log_accum, adm_access,
+                                           real_prop_base, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
 
 /*---------------------------------------------------------------------*/
 
@@ -377,9 +476,7 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
   apr_hash_t *base_props;    /* all `pristine' properties */
   
   /* Zillions of pathnames to compute!  yeargh!  */
-  const char *base_propfile_path, *local_propfile_path;
-  const char *base_prop_tmp_path, *local_prop_tmp_path;
-  const char *tmp_props, *real_props;      
+  const char *local_propfile_path, *base_propfile_path;
   const char *access_path = svn_wc_adm_access_path (adm_access);
   int access_len = strlen (access_path);
   apr_file_t *reject_fp = NULL;           /* the real conflicts file */
@@ -447,9 +544,8 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
                 
       working_val = apr_hash_get (working_props, propname, APR_HASH_KEY_STRING);
 
-      /* Apply the update_change to the pristine hash while we're
-         here.  We may or may not write this hash back out later on. */
-      apr_hash_set (base_props, propname, APR_HASH_KEY_STRING, to_val);
+      if (base_merge)
+        apr_hash_set (base_props, propname, APR_HASH_KEY_STRING, to_val);
       
       /* We already know that state is at least `modified', so mark
          that, but remember that we may later upgrade to `merged' or
@@ -586,50 +682,9 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
   if (dry_run)
     return SVN_NO_ERROR;
 
-  /* Write our property hashes into temporary files.  Notice that the
-     paths computed are ABSOLUTE pathnames, which is what our disk
-     routines require.*/
-  SVN_ERR (svn_wc__prop_path (&local_prop_tmp_path, full_path,
-                              adm_access, TRUE, pool));
-  
-  /* Write the merged working prop hash to path/.svn/tmp/props/name or
-     path/.svn/tmp/dir-props */
-  SVN_ERR (svn_wc__save_prop_file (local_prop_tmp_path, working_props, pool));
-  
-  /* Compute pathnames for the "mv" log entries.  Notice that these
-     paths are RELATIVE pathnames (each beginning with ".svn/"), so
-     that each .svn subdir remains separable when executing run_log().  */
-  tmp_props = apr_pstrdup (pool, local_prop_tmp_path + access_len);
-  real_props = apr_pstrdup (pool, local_propfile_path + access_len);
-  
-  /* Write log entry to move working tmp copy to real working area. */
-  SVN_ERR (svn_wc__loggy_move (entry_accum, NULL,
-                               adm_access, tmp_props, real_props,
-                               FALSE, pool));
-
-  /* Make props readonly */
-  SVN_ERR (svn_wc__loggy_set_readonly (entry_accum, adm_access,
-                                       real_props, pool));
-
-  /* Repeat the above steps for the base properties if required. */
-  if (base_merge)
-    {
-      const char *tmp_prop_base, *real_prop_base;
-
-      SVN_ERR (svn_wc__prop_base_path (&base_prop_tmp_path, full_path,
-                                       adm_access, TRUE, pool));
-      SVN_ERR (svn_wc__save_prop_file (base_prop_tmp_path, base_props, pool));
-
-      tmp_prop_base = apr_pstrdup (pool, base_prop_tmp_path + access_len);
-      real_prop_base = apr_pstrdup (pool, base_propfile_path + access_len);
-
-      SVN_ERR (svn_wc__loggy_move (entry_accum, NULL, adm_access,
-                                    tmp_prop_base, real_prop_base,
-                                   FALSE, pool));
-
-      SVN_ERR (svn_wc__loggy_set_readonly (entry_accum, adm_access,
-                                           real_prop_base, pool));
-    }
+  SVN_ERR (svn_wc__install_props (entry_accum, adm_access, entryname,
+                                  base_props, working_props, base_merge,
+                                  pool));
 
   if (reject_tmp_fp)
     {
@@ -1353,12 +1408,15 @@ svn_wc_prop_set2 (const char *name,
                   apr_pool_t *pool)
 {
   svn_error_t *err;
-  apr_hash_t *prophash;
-  apr_file_t *fp = NULL;
+  apr_hash_t *prophash, *base_prophash;
+  const char *prop_base_path;
   apr_hash_t *old_keywords;
   svn_stringbuf_t *new_value = NULL;
   svn_node_kind_t kind;
   enum svn_prop_kind prop_kind = svn_property_kind (NULL, name);
+  const char *base_name;
+  svn_stringbuf_t *log_accum = svn_stringbuf_create ("", pool);;
+  const svn_wc_entry_t *entry;
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
 
@@ -1477,6 +1535,11 @@ svn_wc_prop_set2 (const char *name,
       svn_error_quick_wrap
       (err, _("Failed to load properties from disk"));
 
+  SVN_ERR (svn_wc__prop_base_path (&prop_base_path, path, adm_access, FALSE,
+                                   pool));
+
+  base_prophash = apr_hash_make (pool);
+  SVN_ERR (svn_wc__load_prop_file (prop_base_path, base_prophash, pool));
   /* If we're changing this file's list of expanded keywords, then
    * we'll need to invalidate its text timestamp, since keyword
    * expansion affects the comparison of working file to text base.
@@ -1495,24 +1558,19 @@ svn_wc_prop_set2 (const char *name,
     value = svn_string_create_from_buf (new_value, pool);
   apr_hash_set (prophash, name, APR_HASH_KEY_STRING, value);
   
-  /* Open the propfile for writing. */
-  SVN_ERR (svn_wc__open_props (&fp, 
-                               path, /* open in PATH */
-                               (APR_WRITE | APR_CREATE | APR_BUFFERED),
-                               0, /* not base props */
-                               0, /* not wcprops */
-                               pool));
-  /* Write. */
-  SVN_ERR_W (svn_hash_write (prophash, fp, pool),
-             apr_psprintf (pool, 
-                           _("Cannot write property hash for '%s'"),
-                           svn_path_local_style (path, pool)));
-  
-  /* Close file, and doing an atomic "move". */
-  SVN_ERR (svn_wc__close_props (fp, path, 0, 0,
-                                1, /* sync! */
-                                pool));
+  /* Get the entry name for this path. */
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, FALSE, pool));
+  if (entry && entry->kind == svn_node_dir)
+    base_name = SVN_WC_ENTRY_THIS_DIR;
+  else
+    svn_path_split (path, NULL, &base_name, pool);
 
+  SVN_ERR (svn_wc__install_props (&log_accum, adm_access, base_name,
+                                  base_prophash, prophash, FALSE, pool));
+  SVN_ERR (svn_wc__write_log (adm_access, 0, log_accum, pool));
+  SVN_ERR (svn_wc__run_log (adm_access, NULL, pool));
+
+  /* ### TODO: Make the rest of this function loggy. */
   if (kind == svn_node_file && strcmp (name, SVN_PROP_KEYWORDS) == 0)
     {
       apr_hash_t *new_keywords;
@@ -1521,13 +1579,11 @@ svn_wc_prop_set2 (const char *name,
 
       if (svn_subst_keywords_differ2 (old_keywords, new_keywords, FALSE, pool))
         {
-          const char *base_name;
           svn_wc_entry_t tmp_entry;
 
           /* If we changed the keywords or newlines, void the entry
              timestamp for this file, so svn_wc_text_modified_p() does
              a real (albeit slow) check later on. */
-          svn_path_split (path, NULL, &base_name, pool);
           tmp_entry.kind = svn_node_file;
           tmp_entry.text_time = 0;
           SVN_ERR (svn_wc__entry_modify (adm_access, base_name, &tmp_entry,
@@ -1659,6 +1715,20 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   svn_boolean_t different_filesizes, equal_timestamps;
   const svn_wc_entry_t *entry;
   apr_pool_t *subpool = svn_pool_create (pool);
+  int wc_format = svn_wc__adm_wc_format (adm_access);
+
+  SVN_ERR (svn_wc_entry (&entry, path, adm_access, TRUE, subpool));  
+
+  /* For newer WCs, if there is an entry for the path, we have a fast
+   * and nice way to retrieve the information from the entry. */
+  if (wc_format > SVN_WC__NO_PROPCACHING_VERSION && entry)
+    {
+      *modified_p = entry->prop_mods;
+      return SVN_NO_ERROR;
+    }
+      
+
+  /* So, we have a WC in an older format... We... Have some work to do... */
 
   /* First, get the paths of the working and 'base' prop files. */
   SVN_ERR (svn_wc__prop_path (&prop_path, path, adm_access, FALSE, subpool));
@@ -1672,7 +1742,6 @@ svn_wc_props_modified_p (svn_boolean_t *modified_p,
   /* If something is scheduled for replacement, we do *not* want to
      pay attention to any base-props;  they might be residual from the
      old deleted file. */
-  SVN_ERR (svn_wc_entry (&entry, path, adm_access, TRUE, subpool));  
   if (entry && (entry->schedule == svn_wc_schedule_replace))
     {
       *modified_p = wempty ? FALSE : TRUE;

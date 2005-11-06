@@ -1271,6 +1271,8 @@ log_do_committed (struct log_runner *loggy,
   entry->prejfile = NULL;
   entry->copyfrom_url = NULL;
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
+  entry->prop_mods = FALSE;
+  /* ### Update property flags when we have such flags. */
   if ((err = svn_wc__entry_modify (loggy->adm_access, name, entry,
                                    (SVN_WC__ENTRY_MODIFY_REVISION 
                                     | SVN_WC__ENTRY_MODIFY_SCHEDULE 
@@ -1288,6 +1290,7 @@ log_do_committed (struct log_runner *loggy,
                                     | (prop_time
                                        ? SVN_WC__ENTRY_MODIFY_PROP_TIME
                                        : 0)
+                                    | SVN_WC__ENTRY_MODIFY_PROP_MODS
                                     | SVN_WC__ENTRY_MODIFY_FORCE),
                                    FALSE, pool)))
     return svn_error_createf
@@ -1948,6 +1951,10 @@ svn_wc__loggy_entry_modify (svn_stringbuf_t **log_accum,
   ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE,
                   SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE,
                   svn_time_to_cstring (entry->lock_creation_date, pool));
+
+  ADD_ENTRY_ATTR (SVN_WC__ENTRY_MODIFY_PROP_MODS,
+                  SVN_WC__ENTRY_ATTR_PROP_MODS,
+                  entry->prop_mods ? "true" : "false");
 
 #undef ADD_ENTRY_ATTR
 
