@@ -293,15 +293,18 @@ get_dirprops_from_ra (struct dir_baton *b)
 /* Create an empty file, the path to the file is returned in EMPTY_FILE.
  * If ADM_ACCESS is not NULL and a lock is held, create the file in the
  * adm tmp/ area, otherwise use a system temp dir.
+ *
+ * If FILE is non-NULL, an open file is returned in *FILE.
  */
 static svn_error_t *
-create_empty_file (const char **empty_file,
+create_empty_file (apr_file_t **file,
+                   const char **empty_file,
                    svn_wc_adm_access_t *adm_access,
                    svn_io_file_del_t delete_when,
                    apr_pool_t *pool)
 {
   if (adm_access && svn_wc_adm_locked (adm_access))
-    SVN_ERR (svn_wc_create_tmp_file2 (NULL, empty_file,
+    SVN_ERR (svn_wc_create_tmp_file2 (file, empty_file,
                                       svn_wc_adm_access_path (adm_access),
                                       delete_when, pool));
   else
@@ -309,7 +312,7 @@ create_empty_file (const char **empty_file,
       const char *temp_dir;
 
       SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
-      SVN_ERR (svn_io_open_unique_file2 (NULL, empty_file,
+      SVN_ERR (svn_io_open_unique_file2 (file, empty_file,
                                         svn_path_join (temp_dir, "tmp", pool),
                                         "", delete_when, pool));
     }
@@ -377,7 +380,7 @@ get_empty_file (struct edit_baton *b,
 {
   /* Create the file if it does not exist */
   if (!b->empty_file)
-    SVN_ERR (create_empty_file (&(b->empty_file), b->adm_access,
+    SVN_ERR (create_empty_file (NULL, &(b->empty_file), b->adm_access,
                                 svn_io_file_del_on_pool_cleanup, b->pool));
 
 
@@ -655,10 +658,9 @@ apply_textdelta (void *file_baton,
     }
   else
     adm_access = NULL;
-  SVN_ERR (create_empty_file (&(b->path_end_revision), adm_access,
+  SVN_ERR (create_empty_file (&(b->file_end_revision),
+                              &(b->path_end_revision), adm_access,
                               svn_io_file_del_on_pool_cleanup, b->pool));
-  SVN_ERR (svn_io_file_open (&(b->file_end_revision), b->path_end_revision,
-                             APR_WRITE, APR_OS_DEFAULT, b->pool));
 
   svn_txdelta_apply (svn_stream_from_aprfile (b->file_start_revision, b->pool),
                      svn_stream_from_aprfile (b->file_end_revision, b->pool),
