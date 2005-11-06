@@ -381,17 +381,17 @@ module Svn
       end
       
       def add_simple_provider
-        add_provider(Client.get_simple_provider)
+        add_provider(Core.auth_get_simple_provider)
       end
 
-      if Client.respond_to?(:get_windows_simple_provider)
+      if Core.respond_to?(:get_windows_simple_provider)
         def add_windows_simple_provider
-          add_provider(Client.get_windows_simple_provider)
+          add_provider(Core.auth_get_windows_simple_provider)
         end
       end
       
       def add_username_provider
-        add_provider(Client.get_username_provider)
+        add_provider(Core.auth_get_username_provider)
       end
       
       def add_simple_prompt_provider(retry_limit, prompt=Proc.new)
@@ -460,7 +460,8 @@ module Svn
           prompt.call(cred, *prompt_args)
           cred
         end
-        pro = Client.__send__("get_#{name}_prompt_provider", real_prompt, *args)
+        method_name = "auth_get_#{name}_prompt_provider"
+        pro = Core.__send__(method_name, real_prompt, *args)
         @prompts << real_prompt
         add_provider(pro)
       end
