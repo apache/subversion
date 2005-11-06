@@ -224,7 +224,7 @@ write_digest_file (apr_hash_t *children,
                               svn_stream_from_aprfile (fd, pool),
                               SVN_HASH_TERMINATOR, pool)))
     {
-      (void) svn_io_file_close (fd, pool); /* error is relatively unexciting */
+      svn_error_clear (svn_io_file_close (fd, pool));
       return svn_error_createf (err->apr_err,
                                 err,
                                 _("Cannot write lock/entries hashfile '%s'"),
@@ -280,7 +280,7 @@ read_digest_file (apr_hash_t **children_p,
                              svn_stream_from_aprfile (fd, pool),
                              SVN_HASH_TERMINATOR, pool)))
     {
-      (void) svn_io_file_close (fd, pool); /* error is relatively unexciting */
+      svn_error_clear (svn_io_file_close (fd, pool));
       return svn_error_createf (err->apr_err,
                                 err,
                                 _("Can't parse lock/entries hashfile '%s'"),

@@ -439,8 +439,21 @@ svn_error_t *svn_ra_get_dir (svn_ra_session_t *session,
                              apr_hash_t **props,
                              apr_pool_t *pool)
 {
-  return session->vtable->get_dir (session, path, revision, dirents,
-                                   fetched_rev, props, pool);
+  return session->vtable->get_dir (session, path, revision, SVN_DIRENT_ALL,
+                                   dirents, fetched_rev, props, pool);
+}
+
+svn_error_t *svn_ra_get_dir2 (svn_ra_session_t *session,
+                              const char *path,
+                              svn_revnum_t revision,
+                              apr_uint32_t dirent_fields,
+                              apr_hash_t **dirents,
+                              svn_revnum_t *fetched_rev,
+                              apr_hash_t **props,
+                              apr_pool_t *pool)
+{
+  return session->vtable->get_dir (session, path, revision, dirent_fields,
+                                   dirents, fetched_rev, props, pool);
 }
 
 svn_error_t *svn_ra_do_update (svn_ra_session_t *session,

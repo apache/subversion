@@ -534,8 +534,10 @@ static void handle_child_process_error(apr_pool_t *pool, apr_status_t status,
   apr_file_t *in_file, *out_file;
   svn_error_t *err;
 
-  apr_file_open_stdin(&in_file, pool);
-  apr_file_open_stdout(&out_file, pool);
+  if (apr_file_open_stdin(&in_file, pool)
+      || apr_file_open_stdout(&out_file, pool))
+    return;
+
   conn = svn_ra_svn_create_conn(NULL, in_file, out_file, pool);
   err = svn_error_wrap_apr(status, _("Error in child process: %s"), desc);
   svn_error_clear(svn_ra_svn_write_cmd_failure(conn, pool, err));
@@ -888,10 +890,12 @@ static svn_error_t *ra_svn_end_commit(void *baton)
   svn_commit_info_t *commit_info = svn_create_commit_info (ccb->pool);
 
   SVN_ERR(handle_auth_request(ccb->sess_baton, ccb->pool));
-  SVN_ERR(svn_ra_svn_read_tuple(ccb->sess_baton->conn, ccb->pool, "r(?c)(?c)",
-                                &(commit_info->revision),
-                                &(commit_info->date),
-                                &(commit_info->author)));
+  SVN_ERR(svn_ra_svn_read_tuple(ccb->sess_baton->conn, ccb->pool,
+                                "r(?c)(?c)?(?c)",
+                                 &(commit_info->revision),
+                                 &(commit_info->date),
+                                 &(commit_info->author),
+                                 &(commit_info->post_commit_err)));
 
   return ccb->callback(commit_info, ccb->callback_baton, ccb->pool);
 
@@ -1018,8 +1022,10 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session, const char *path,
-                                   svn_revnum_t rev, apr_hash_t **dirents,
+static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
+                                   const char *path, svn_revnum_t rev,
+                                   apr_uint32_t dirent_fields,
+                                   apr_hash_t **dirents,
                                    svn_revnum_t *fetched_rev,
                                    apr_hash_t **props,
                                    apr_pool_t *pool)
@@ -1035,8 +1041,36 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session, const char *path,
   apr_uint64_t size;
   svn_dirent_t *dirent;
 
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "get-dir", "c(?r)bb", path,
-                               rev, (props != NULL), (dirents != NULL)));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c(?r)bb(!", "get-dir", path,
+                                 rev, (props != NULL), (dirents != NULL)));
+  if (dirent_fields & SVN_DIRENT_KIND)
+    {
+      SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_DIRENT_KIND));
+    }
+  if (dirent_fields & SVN_DIRENT_SIZE)
+    {
+      SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_DIRENT_SIZE));
+    }
+  if (dirent_fields & SVN_DIRENT_HAS_PROPS)
+    {
+      SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_DIRENT_HAS_PROPS));
+    }
+  if (dirent_fields & SVN_DIRENT_CREATED_REV)
+    {
+      SVN_ERR(svn_ra_svn_write_word(conn, pool,
+                                    SVN_RA_SVN_DIRENT_CREATED_REV));
+    }
+  if (dirent_fields & SVN_DIRENT_TIME)
+    {
+      SVN_ERR(svn_ra_svn_write_word(conn, pool, SVN_RA_SVN_DIRENT_TIME));
+    }
+  if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
+    {
+      SVN_ERR(svn_ra_svn_write_word(conn, pool,
+                                    SVN_RA_SVN_DIRENT_LAST_AUTHOR));
+    }
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
+
   SVN_ERR(handle_auth_request(sess_baton, pool));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "rll", &rev, &proplist,
                                        &dirlist));
@@ -1074,7 +1108,6 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session, const char *path,
 
   return SVN_NO_ERROR;
 }
-
 
 static svn_error_t *ra_svn_update(svn_ra_session_t *session,
                                   const svn_ra_reporter2_t **reporter,

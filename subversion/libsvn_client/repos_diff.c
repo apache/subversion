@@ -35,6 +35,8 @@
 
 #include "client.h"
 
+#include "svn_private_config.h"
+
 /* Overall crawler editor baton.  */
 struct edit_baton {
   /* TARGET is a working-copy directory which corresponds to the base
@@ -55,8 +57,7 @@ struct edit_baton {
   /* DRY_RUN is TRUE if this is a dry-run diff, false otherwise. */
   svn_boolean_t dry_run;
 
-  /* RA_LIB is the vtable for making requests to the RA layer, RA_SESSION
-     is the open session for these requests */
+  /* RA_SESSION is the open session for making requests to the RA layer */
   svn_ra_session_t *ra_session;
 
   /* The rev1 from the '-r Rev1:Rev2' command line option */
@@ -151,14 +152,6 @@ struct file_baton {
   apr_pool_t *pool;
 };
 
-/* Data used by the apr pool temp file cleanup handler */
-struct temp_file_cleanup_s {
-  /* The path to the file to be deleted.  NOTE: this path is
-     APR-encoded, _not_ utf8-encoded! */
-  const char *path;
-  /* The pool to which the deletion of the file is linked. */
-  apr_pool_t *pool;
-};
 
 /* Create a new directory baton for PATH in POOL.  ADDED is set if
  * this directory is being added rather than replaced. PARENT_BATON is
@@ -255,63 +248,9 @@ get_file_mime_types (const char **mimetype1,
 }
 
 
-/* An apr pool cleanup handler, this deletes one of the temporary files.
- */
-static apr_status_t
-temp_file_plain_cleanup_handler (void *arg)
-{
-  struct temp_file_cleanup_s *s = arg;
-
-  /* Note to UTF-8 watchers: this is ok because the path is already in
-     APR internal encoding. */ 
-  return apr_file_remove (s->path, s->pool);
-}
-
-/* An apr pool cleanup handler, this removes a cleanup handler.
- */
-static apr_status_t
-temp_file_child_cleanup_handler (void *arg)
-{
-  struct temp_file_cleanup_s *s = arg;
-
-  apr_pool_cleanup_kill (s->pool, s, temp_file_plain_cleanup_handler);
-
-  return APR_SUCCESS;
-}
-
-/* Register a pool cleanup to delete PATH when POOL is destroyed.
- *
- * PATH is not copied; caller should probably ensure that it is
- * allocated in a pool at least as long-lived as POOL.
- *
- * The main "gotcha" is that if the process forks a child by calling
- * apr_proc_create, then the child's copy of the cleanup handler will run
- * and delete the file while the parent still expects it to be around. To
- * avoid this a child cleanup handler is also installed to kill the plain
- * cleanup handler in the child.
- *
- * ### TODO: This a candidate to be a general utility function.
- */
-static svn_error_t *
-temp_file_cleanup_register (const char *path,
-                            apr_pool_t *pool)
-{
-  struct temp_file_cleanup_s *s = apr_palloc (pool, sizeof (*s));
-  SVN_ERR (svn_path_cstring_from_utf8 (&(s->path), path, pool));
-  s->pool = pool;
-  apr_pool_cleanup_register (s->pool, s, temp_file_plain_cleanup_handler,
-                             temp_file_child_cleanup_handler);
-  return SVN_NO_ERROR;
-}
-
-
 /* Get the repository version of a file. This makes an RA request to
  * retrieve the file contents. A pool cleanup handler is installed to
  * delete this file.
- *
- * ### TODO: The editor calls this function to get REV1 of the file. Can we
- * get the file props as well?  Then get_wc_prop() could return them later
- * on enabling the REV1:REV2 request to send diffs.
  */
 static svn_error_t *
 get_file_from_ra (struct file_baton *b)
@@ -321,12 +260,10 @@ get_file_from_ra (struct file_baton *b)
   const char *temp_dir;
 
   SVN_ERR (svn_io_temp_dir (&temp_dir, b->pool));
-  SVN_ERR (svn_io_open_unique_file (&file, &(b->path_start_revision),
-                                    svn_path_join (temp_dir, "tmp", b->pool),
-                                    "", FALSE, b->pool));
-
-  /* Install a pool cleanup handler to delete the file */
-  SVN_ERR (temp_file_cleanup_register (b->path_start_revision, b->pool));
+  SVN_ERR (svn_io_open_unique_file2 (&file, &(b->path_start_revision),
+                                     svn_path_join (temp_dir, "tmp", b->pool),
+                                     "", svn_io_file_del_on_pool_cleanup,
+                                     b->pool));
 
   fstream = svn_stream_from_aprfile (file, b->pool);
   SVN_ERR (svn_ra_get_file (b->edit_baton->ra_session,
@@ -344,46 +281,56 @@ get_file_from_ra (struct file_baton *b)
 static svn_error_t *
 get_dirprops_from_ra (struct dir_baton *b)
 {
-  SVN_ERR (svn_ra_get_dir (b->edit_baton->ra_session,
-                           b->path,
-                           b->edit_baton->revision,
-                           NULL, NULL,
-                           &(b->pristine_props),
-                           b->pool));
+  SVN_ERR (svn_ra_get_dir2 (b->edit_baton->ra_session,
+                            b->path,
+                            b->edit_baton->revision,
+                            0, NULL, NULL,
+                            &(b->pristine_props),
+                            b->pool));
 
   return SVN_NO_ERROR;
 }
 
 
 /* Create an empty file, the path to the file is returned in EMPTY_FILE.
+ * If FILE is provided, an open file handle is returned in *FILE.
+ * Use FOR_OUTPUT to indicate the intention to write to the file
+ * (and read back from it).
  * If ADM_ACCESS is not NULL and a lock is held, create the file in the
  * adm tmp/ area, otherwise use a system temp dir.
+ *
+ * If FILE is non-NULL, an open file is returned in *FILE.
  */
 static svn_error_t *
-create_empty_file (const char **empty_file,
+create_empty_file (apr_file_t **file,
+                   const char **empty_file,
                    svn_wc_adm_access_t *adm_access,
+                   svn_io_file_del_t delete_when,
+                   svn_boolean_t for_output,
                    apr_pool_t *pool)
 {
-  apr_file_t *file;
-  const char *temp_path;
-
-  if (adm_access && svn_wc_adm_locked (adm_access))
+  if (for_output && adm_access && svn_wc_adm_locked (adm_access))
+    SVN_ERR (svn_wc_create_tmp_file2 (file, empty_file,
+                                      svn_wc_adm_access_path (adm_access),
+                                      delete_when, pool));
+  else if (! for_output)
     {
-      SVN_ERR (svn_wc_create_tmp_file (&file,
-                                       svn_wc_adm_access_path (adm_access),
-                                       FALSE, pool));
-      apr_file_name_get (empty_file, file);
+      *empty_file = SVN_NULL_DEVICE_NAME;
+
+      if (file)
+        SVN_ERR (svn_io_file_open (file, *empty_file,
+                                   APR_READ | APR_WRITE | APR_BUFFERED,
+                                   APR_OS_DEFAULT, pool));
     }
-  else
+  else /* for_output && adm_access && ! adm_locked */
     {
       const char *temp_dir;
-      SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
-      temp_path = svn_path_join (temp_dir, "tmp", pool);
-      SVN_ERR (svn_io_open_unique_file (&file, empty_file, temp_path,
-                                        "", FALSE, pool));
-    }
 
-  SVN_ERR (svn_io_file_close (file, pool));
+      SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
+      SVN_ERR (svn_io_open_unique_file2 (file, empty_file,
+                                        svn_path_join (temp_dir, "tmp", pool),
+                                        "", delete_when, pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -448,12 +395,10 @@ get_empty_file (struct edit_baton *b,
 {
   /* Create the file if it does not exist */
   if (!b->empty_file)
-    {
-      SVN_ERR (create_empty_file (&(b->empty_file), b->adm_access, b->pool));
+    SVN_ERR (create_empty_file (NULL, &(b->empty_file), b->adm_access,
+                                svn_io_file_del_on_pool_cleanup,
+                                FALSE, b->pool));
 
-      /* Install a pool cleanup handler to delete the file */
-      SVN_ERR (temp_file_cleanup_register (b->empty_file, b->pool));
-    }
 
   *empty_file = b->empty_file;
 
@@ -679,7 +624,7 @@ open_file (const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  Do the work of applying the text delta.  */
+/* Do the work of applying the text delta.  */
 static svn_error_t *
 window_handler (svn_txdelta_window_t *window,
                 void *window_baton)
@@ -729,10 +674,9 @@ apply_textdelta (void *file_baton,
     }
   else
     adm_access = NULL;
-  SVN_ERR (create_empty_file (&(b->path_end_revision), adm_access, b->pool));
-  SVN_ERR (temp_file_cleanup_register (b->path_end_revision, b->pool));
-  SVN_ERR (svn_io_file_open (&(b->file_end_revision), b->path_end_revision,
-                             APR_WRITE, APR_OS_DEFAULT, b->pool));
+  SVN_ERR (create_empty_file (&(b->file_end_revision),
+                              &(b->path_end_revision), adm_access,
+                              svn_io_file_del_on_pool_cleanup, TRUE, b->pool));
 
   svn_txdelta_apply (svn_stream_from_aprfile (b->file_start_revision, b->pool),
                      svn_stream_from_aprfile (b->file_end_revision, b->pool),

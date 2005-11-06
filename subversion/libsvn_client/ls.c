@@ -28,7 +28,8 @@
 #include "svn_private_config.h"
 
 static svn_error_t *
-get_dir_contents (apr_hash_t *dirents,
+get_dir_contents (apr_uint32_t dirent_fields,
+                  apr_hash_t *dirents,
                   const char *dir,
                   svn_revnum_t rev,
                   svn_ra_session_t *ra_session,
@@ -41,8 +42,8 @@ get_dir_contents (apr_hash_t *dirents,
   apr_hash_index_t *hi;
 
   /* Get the directory's entries, but not its props. */
-  SVN_ERR (svn_ra_get_dir (ra_session, dir, rev, &tmpdirents, 
-                           NULL, NULL, pool));
+  SVN_ERR (svn_ra_get_dir2 (ra_session, dir, rev, dirent_fields, &tmpdirents, 
+                            NULL, NULL, pool));
 
   if (ctx->cancel_func)
     SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
@@ -64,20 +65,21 @@ get_dir_contents (apr_hash_t *dirents,
       apr_hash_set (dirents, path, APR_HASH_KEY_STRING, val);
 
       if (recurse && the_ent->kind == svn_node_dir)
-        SVN_ERR (get_dir_contents (dirents, path, rev, ra_session,
-                                   recurse, ctx, pool));
+        SVN_ERR (get_dir_contents (dirent_fields, dirents, path, rev,
+                                   ra_session, recurse, ctx, pool));
     }
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_client_ls3 (apr_hash_t **dirents,
+svn_client_ls4 (apr_hash_t **dirents,
                 apr_hash_t **locks,
                 const char *path_or_url,
                 const svn_opt_revision_t *peg_revision,
                 const svn_opt_revision_t *revision,
-                svn_boolean_t recurse,               
+                svn_boolean_t recurse,
+                apr_uint32_t dirent_fields,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
@@ -87,6 +89,10 @@ svn_client_ls3 (apr_hash_t **dirents,
   const char *url;
   const char *repos_root;
   const char *rel_path;
+
+  /* We use the kind field to determine if we should recurse, so we
+     always need it. */
+  dirent_fields |= SVN_DIRENT_KIND;
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR (svn_client__ra_session_from_path (&ra_session, &rev,
@@ -105,8 +111,8 @@ svn_client_ls3 (apr_hash_t **dirents,
     {
       *dirents = apr_hash_make (pool);
 
-      SVN_ERR (get_dir_contents (*dirents, "", rev, ra_session, recurse,
-                                 ctx, pool));
+      SVN_ERR (get_dir_contents (dirent_fields, *dirents, "", rev, ra_session,
+                                 recurse, ctx, pool));
     }
   else if (url_kind == svn_node_file)
     {
@@ -126,8 +132,8 @@ svn_client_ls3 (apr_hash_t **dirents,
                                                      TRUE, ctx, pool));
 
       /* Get all parent's entries, no props. */
-      SVN_ERR (svn_ra_get_dir (ra_session, "", rev, &parent_ents, 
-                               NULL, NULL, pool));
+      SVN_ERR (svn_ra_get_dir2 (ra_session, "", rev, dirent_fields,
+                                &parent_ents, NULL, NULL, pool));
 
       /* Copy the relevant entry into the caller's hash. */
       *dirents = apr_hash_make (pool);
@@ -184,6 +190,19 @@ svn_client_ls3 (apr_hash_t **dirents,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_client_ls3 (apr_hash_t **dirents,
+                apr_hash_t **locks,
+                const char *path_or_url,
+                const svn_opt_revision_t *peg_revision,
+                const svn_opt_revision_t *revision,
+                svn_boolean_t recurse,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  return svn_client_ls4 (dirents, locks, path_or_url, peg_revision,
+                         revision, recurse, SVN_DIRENT_ALL, ctx, pool);
+}
 
 svn_error_t *
 svn_client_ls2 (apr_hash_t **dirents,

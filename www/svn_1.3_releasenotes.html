@@ -183,7 +183,7 @@ above may be of concern to you.</p>
 <p><b>svnserve</b>, the stand-alone subversion server, is now able to
 restrict both read and write access using the same
 authorization-policy files used by <b>mod_authz_svn</b>.  (Previously,
-the most one could do with svnserve is restrict write-access via
+the most one could do with svnserve was restrict write-access via
 pre-commit hook scripts.)</p>
 
 <p>The authorization file format is the same
@@ -346,7 +346,7 @@ APIs: <b>svn_wc_is_adm_dir</b>, <b>svn_wc_get_adm_dir</b>, and
 environment variable only works for the above-mentioned client
 programs, and only on Windows.  It doesn't work for libraries; users
 of the libraries should call the new APIs, which are
-platform-indepndent. See <a
+platform-independent. See <a
 href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=105810"
 >this mail</a> and its thread for more details.</p>
 
@@ -361,7 +361,7 @@ href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=105810"
   href="http://subversion.tigris.org/issues/show_bug.cgi?id=1970"
   >issue #1970</a> for details.</p>
 
-<p>It's particularly noticeable when <b>svn blame</b> on a file with a
+<p>It's particularly noticeable when <b>svn blame</b> is run on a file with a
   large amount of history, or when invoking any command on an older
   "peg" revision.</p>
 
@@ -385,7 +385,7 @@ href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=105810"
   <li>The repository root URL is now being stored as a separate field
     in .svn/entries.</li>
 
-  <li>Many APIs have been "revved" to newer versions.</li>
+  <li>Many APIs have been revised to newer versions.</li>
 </ul>
 
 </div>  <!-- apis -->
@@ -409,13 +409,15 @@ completely transparent.  That is, your working copies will go on
 working, even with older clients.</p>
 
 <p>However, programs that interact with the working copy property
-files without going through the official Subversion API or binaries
-may experience problems.  JavaSVN is the only project that we know of
-that falls into this category, and they have been notified
-accordingly.  If you happen to be using or developing software which
-reads working copy properties without the help of svn, then you may
-need to make a minor alteration to the parsing routines.  See revision
-16855 of the Subversion repository for details.</p>
+files without using the official Subversion APIs or binaries may
+experience problems.  <a href="http://tmate.org/svn/">JavaSVN</a> is
+the only project that we know of that falls into this category, and
+they have been notified accordingly.  If you happen to be using or
+developing software that, similarly, bypasses the Subversion APIs,
+then you may need to make a minor alteration to the parsing routines.
+See <a
+href="http://svn.collab.net/viewcvs/svn/trunk/subversion/libsvn_wc/props.c?r1=16854&amp;r2=16855&amp;diff_format=h">revision
+16855</a> of the Subversion repository for details.</p>
 
 </div>  <!-- wc-props-change -->
 </div>  <!-- enhancements -->

@@ -116,15 +116,13 @@ relegate_external (const char *path,
 
   if (err && (err->apr_err == SVN_ERR_WC_LEFT_LOCAL_MOD))
     {
-      apr_file_t *f;
       const char *new_path;
 
       svn_error_clear (err);
 
       /* Reserve the new dir name. */
       SVN_ERR (svn_io_open_unique_file
-               (&f, &new_path, path, ".OLD", FALSE, pool));
-      apr_file_close (f);  /* toss error */
+               (NULL, &new_path, path, ".OLD", FALSE, pool));
 
       /* Sigh...  We must fall ever so slightly from grace.
 

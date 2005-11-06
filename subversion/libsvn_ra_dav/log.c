@@ -73,6 +73,14 @@ struct log_baton
   int limit;
   int count;
 
+  /* If we're in backwards compatibility mode for the svn log --limit
+     stuff, we need to be able to bail out while parsing log messages.
+     The way we do that is returning an error to neon, but we need to
+     be able to tell that the error we returned wasn't actually a
+     problem, so if this is TRUE it means we can safely ignore that
+     error and return success. */
+  svn_boolean_t limit_compat_bailout;
+
   /* If `receiver' returns error, it is stored here. */
   svn_error_t *err;
 };
@@ -213,6 +221,7 @@ log_end_element(void *userdata,
         if (lb->limit && (++lb->count > lb->limit))
           {
             lb->err = SVN_NO_ERROR;
+            lb->limit_compat_bailout = TRUE;
             return SVN_RA_DAV__XML_INVALID;
           }
  
@@ -409,6 +418,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
   lb.err = NULL;
   lb.limit = limit;
   lb.count = 0;
+  lb.limit_compat_bailout = FALSE;
   reset_log_item (&lb);
 
   /* ras's URL may not exist in HEAD, and thus it's not safe to send
@@ -449,6 +459,9 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
     }
 
   svn_pool_destroy (lb.subpool);
+
+  if (err && lb.limit_compat_bailout)
+    return SVN_NO_ERROR;
 
   return err;
 }

@@ -106,6 +106,13 @@ build_info_from_entry (svn_info_t **info,
 }
 
 
+/* The dirent fields we care about for our calls to svn_ra_get_dir2. */
+#define DIRENT_FIELDS ( SVN_DIRENT_KIND | \
+                        SVN_DIRENT_CREATED_REV | \
+                        SVN_DIRENT_TIME | \
+                        SVN_DIRENT_LAST_AUTHOR )
+
+
 /* Helper func for recursively fetching svn_dirent_t's from a remote
    directory and pushing them at an info-receiver callback. */
 static svn_error_t *
@@ -127,8 +134,8 @@ push_dir_info (svn_ra_session_t *ra_session,
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create (pool);
 
-  SVN_ERR (svn_ra_get_dir (ra_session, dir, rev, &tmpdirents, 
-                           NULL, NULL, pool));
+  SVN_ERR (svn_ra_get_dir2 (ra_session, dir, rev, DIRENT_FIELDS, &tmpdirents, 
+                            NULL, NULL, pool));
 
   for (hi = apr_hash_first (pool, tmpdirents); hi; hi = apr_hash_next (hi))
     {
@@ -282,7 +289,9 @@ same_resource_in_head (svn_boolean_t *same_p,
                                      url, &peg_rev,
                                      &start_rev, &end_rev,
                                      ctx, pool);
-  if (err && err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES)
+  if (err && 
+      ((err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES) ||
+       (err->apr_err == SVN_ERR_FS_NOT_FOUND)))
     {
       svn_error_clear (err);
       *same_p = FALSE;
@@ -385,8 +394,8 @@ svn_client_info (const char *path_or_url,
                                                      ctx, pool));
       
       /* Get all parent's entries, and find the item's dirent in the hash. */
-      SVN_ERR (svn_ra_get_dir (parent_ra_session, "", rev, &parent_ents, 
-                               NULL, NULL, pool));
+      SVN_ERR (svn_ra_get_dir2 (parent_ra_session, "", rev, DIRENT_FIELDS,
+                                &parent_ents, NULL, NULL, pool));
       the_ent = apr_hash_get (parent_ents, base_name, APR_HASH_KEY_STRING);
       if (the_ent == NULL)
         return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,

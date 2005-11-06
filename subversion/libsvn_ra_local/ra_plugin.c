@@ -950,6 +950,7 @@ static svn_error_t *
 svn_ra_local__get_dir (svn_ra_session_t *session,
                        const char *path,
                        svn_revnum_t revision,
+                       apr_uint32_t dirent_fields,
                        apr_hash_t **dirents,
                        svn_revnum_t *fetched_rev,
                        apr_hash_t **props,
@@ -1010,32 +1011,49 @@ svn_ra_local__get_dir (svn_ra_session_t *session,
           apr_hash_this (hi, &key, NULL, &val);
           entryname = (const char *) key;
           fs_entry = (svn_fs_dirent_t *) val;
-          
-          /* node kind */
+
           fullpath = svn_path_join (abs_path, entryname, subpool);
-          entry->kind = fs_entry->kind;
-          
-          /* size  */
-          if (entry->kind == svn_node_dir)
-            entry->size = 0;
-          else
-            SVN_ERR (svn_fs_file_length (&(entry->size), root,
-                                         fullpath, subpool));
-          
-          /* has_props? */
-          SVN_ERR (svn_fs_node_proplist (&prophash, root, fullpath, subpool));
-          entry->has_props = (apr_hash_count (prophash)) ? TRUE : FALSE;
-          
-          /* created_rev & friends */
-          SVN_ERR (svn_repos_get_committed_info (&(entry->created_rev),
-                                                 &datestring,
-                                                 &(entry->last_author),
-                                                 root, fullpath, subpool));
-          if (datestring)
-            SVN_ERR (svn_time_from_cstring (&(entry->time), datestring, pool));
-          if (entry->last_author)
-            entry->last_author = apr_pstrdup (pool, entry->last_author);
-          
+        
+          if (dirent_fields & SVN_DIRENT_KIND)
+            {  
+              /* node kind */
+              entry->kind = fs_entry->kind;
+            }
+
+          if (dirent_fields & SVN_DIRENT_SIZE)
+            {          
+              /* size  */
+              if (entry->kind == svn_node_dir)
+                entry->size = 0;
+              else
+                SVN_ERR (svn_fs_file_length (&(entry->size), root,
+                                             fullpath, subpool));
+            }
+
+          if (dirent_fields & SVN_DIRENT_HAS_PROPS)
+            { 
+              /* has_props? */
+              SVN_ERR (svn_fs_node_proplist (&prophash, root, fullpath,
+                                             subpool));
+              entry->has_props = (apr_hash_count (prophash)) ? TRUE : FALSE;
+            }
+
+          if ((dirent_fields & SVN_DIRENT_TIME)
+              || (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
+              || (dirent_fields & SVN_DIRENT_CREATED_REV))
+            { 
+              /* created_rev & friends */
+              SVN_ERR (svn_repos_get_committed_info (&(entry->created_rev),
+                                                     &datestring,
+                                                     &(entry->last_author),
+                                                     root, fullpath, subpool));
+              if (datestring)
+                SVN_ERR (svn_time_from_cstring (&(entry->time), datestring,
+                                                pool));
+              if (entry->last_author)
+                entry->last_author = apr_pstrdup (pool, entry->last_author);
+            }
+ 
           /* Store. */
           apr_hash_set (*dirents, entryname, APR_HASH_KEY_STRING, entry);
         }

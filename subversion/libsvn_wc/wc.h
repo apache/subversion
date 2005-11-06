@@ -124,7 +124,6 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_DIR_WCPROPS         "dir-wcprops"
 #define SVN_WC__ADM_LOG                 "log"
 #define SVN_WC__ADM_KILLME              "KILLME"
-#define SVN_WC__ADM_EMPTY_FILE          "empty-file"
 
 
 /* The basename of the ".prej" file, if a directory ever has property

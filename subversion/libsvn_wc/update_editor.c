@@ -1283,9 +1283,9 @@ close_directory (void *dir_baton,
             const char *pristine_prop_path;
 
             /* Get the current pristine props. */
-            old_pristine_props = apr_hash_make (db->pool);      
+            old_pristine_props = apr_hash_make (db->pool);
             SVN_ERR (svn_wc__prop_base_path (&pristine_prop_path,
-                                             db->path, adm_access, 
+                                             db->path, svn_node_dir,
                                              FALSE, db->pool));
             SVN_ERR (svn_wc__load_prop_file (pristine_prop_path,
                                              old_pristine_props, db->pool));
@@ -1914,9 +1914,9 @@ install_file (svn_stringbuf_t * log_accum,
       int i;
 
       /* Get the current pristine props. */
-      old_pristine_props = apr_hash_make (pool);      
+      old_pristine_props = apr_hash_make (pool);
       SVN_ERR (svn_wc__prop_base_path (&pristine_prop_path,
-                                       file_path, adm_access, 
+                                       file_path, svn_node_file,
                                        FALSE, pool));
       SVN_ERR (svn_wc__load_prop_file (pristine_prop_path,
                                        old_pristine_props, pool));
@@ -2880,10 +2880,10 @@ svn_wc_add_repos_file2 (const char *dst_path,
       svn_node_kind_t kind;
 
       SVN_ERR (svn_wc__prop_revert_path (&dst_rprop, base_name,
-                                         adm_access, FALSE, pool));
+                                         svn_node_file, FALSE, pool));
 
       SVN_ERR (svn_wc__prop_base_path (&dst_bprop, base_name,
-                                       adm_access, FALSE, pool));
+                                       svn_node_file, FALSE, pool));
 
       SVN_ERR (svn_wc__loggy_move (&log_accum, NULL,
                                    adm_access, dst_txtb, dst_rtext,
@@ -2931,11 +2931,11 @@ svn_wc_add_repos_file2 (const char *dst_path,
       /* Save new props to temporary file. Don't use svn_wc__prop_path()
          because install_file() will overwrite it! */
       SVN_ERR (svn_wc_create_tmp_file2 (NULL, &tmp_prop_path,
-                                        adm_path, FALSE, pool));
+                                        adm_path, svn_io_file_del_none, pool));
       SVN_ERR (svn_wc__save_prop_file (tmp_prop_path, new_props, pool));
 
       /* Rename temporary props file to working props. */
-      SVN_ERR (svn_wc__prop_path (&prop_path, base_name, adm_access,
+      SVN_ERR (svn_wc__prop_path (&prop_path, base_name, svn_node_file,
                                   FALSE, pool));
       SVN_ERR (svn_wc__loggy_move (&log_accum, NULL, adm_access,
                                    tmp_prop_path + adm_path_len, prop_path,
@@ -2944,15 +2944,13 @@ svn_wc_add_repos_file2 (const char *dst_path,
 
   if (new_text_path)
     {
-      apr_file_t *file;
       const char *tmp_text_path;
       const char *adm_path = svn_wc_adm_access_path (adm_access);
       apr_size_t adm_path_len = strlen (adm_path) + 1;
 
       /* Move new text to temporary file in adm_access. */
-      SVN_ERR (svn_wc_create_tmp_file2 (&file, &tmp_text_path,
-                                        adm_path, FALSE, pool));
-      SVN_ERR (svn_io_file_close (file, pool));
+      SVN_ERR (svn_wc_create_tmp_file2 (NULL, &tmp_text_path, adm_path,
+                                        svn_io_file_del_none, pool));
       SVN_ERR (svn_io_file_move (new_text_path, tmp_text_path, pool));
 
       /* Translate/rename new temporary text file to working text. */

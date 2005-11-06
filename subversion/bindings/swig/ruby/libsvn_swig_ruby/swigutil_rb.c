@@ -3,6 +3,8 @@
 #include "swigutil_rb.h"
 #include <st.h>
 
+#include "svn_nls.h"
+
 
 #define POOL_P(obj) (RTEST(rb_obj_is_kind_of(obj, rb_svn_core_pool())))
 #define CONTEXT_P(obj) (RTEST(rb_obj_is_kind_of(obj, rb_svn_client_context())))
@@ -97,6 +99,16 @@ rb_ary_aref1(VALUE ary, VALUE arg)
   return rb_ary_aref(1, args, ary);
 }
 
+
+
+/* initialize */
+void
+svn_swig_rb_initialize(void)
+{
+  apr_initialize();
+  atexit(apr_terminate);
+  svn_nls_init();
+}
 
 
 /* constant getter */

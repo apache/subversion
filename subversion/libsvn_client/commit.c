@@ -112,15 +112,13 @@ send_file_contents (const char *path,
     {
       apr_hash_t *keywords = NULL;
       const char *temp_dir;
-      apr_file_t *tmp_f;
 
       /* Now create a new tempfile, and open a stream to it. */
       SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
-      SVN_ERR (svn_io_open_unique_file 
-               (&tmp_f, &tmpfile_path,
+      SVN_ERR (svn_io_open_unique_file
+               (NULL, &tmpfile_path,
                 svn_path_join (temp_dir, "svn-import", pool),
                 ".tmp", FALSE, pool));
-      SVN_ERR (svn_io_file_close (tmp_f, pool));
 
       /* Generate a keyword structure. */
       if (keywords_val)
@@ -1279,36 +1277,33 @@ svn_client_commit3 (svn_commit_info_t **commit_info_p,
       for (i = 0; i < rel_targets->nelts; i++)
         {
           const char *parent_dir, *name;
+          svn_node_kind_t kind;
 
           svn_pool_clear (subpool);
+
           target = svn_path_join (base_dir,
                                   APR_ARRAY_IDX (rel_targets, i, const char *),
                                   subpool);
-          SVN_ERR (svn_wc_get_actual_target (target, &parent_dir, 
-                                             &name, subpool));
 
-          if (*name)
+          SVN_ERR (svn_io_check_path (target, &kind, subpool));
+
+          /* If the final target is a dir, we want to lock it */
+          if (kind == svn_node_dir)
             {
-              svn_node_kind_t kind;
-
-              target = svn_path_join (parent_dir, name, subpool);
-          
-              SVN_ERR (svn_io_check_path (target, &kind, subpool));
-
-              /* If the final target is a dir, we want to recursively
-                 lock it */
-              if (kind == svn_node_dir)
-                {
-                  if (recurse)
-                    APR_ARRAY_PUSH (dirs_to_lock_recursive, 
-                                    const char *) = apr_pstrdup (pool, target);
-                  else
-                    APR_ARRAY_PUSH (dirs_to_lock, 
-                                    const char *) = apr_pstrdup (pool, target);
-                }
+              if (recurse)
+                APR_ARRAY_PUSH (dirs_to_lock_recursive, 
+                                const char *) = apr_pstrdup (pool, target);
+              else
+                APR_ARRAY_PUSH (dirs_to_lock, 
+                                const char *) = apr_pstrdup (pool, target);
             }
 
+          /* Now we need to iterate over the parent paths of this path
+             adding them to the set of directories we want to lock. */
+          svn_path_split (target, &parent_dir, &name, subpool);
+
           target = parent_dir;
+
           while (strcmp (target, base_dir))
             {
               if (target[0] == '/' && target[1] == '\0')

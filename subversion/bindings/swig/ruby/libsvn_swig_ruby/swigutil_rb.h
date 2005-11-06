@@ -22,7 +22,7 @@ extern "C" {
 
 #include <rubyio.h>
 
-void svn_swig_rb_nls_initialize(void);
+void svn_swig_rb_initialize(void);
 
 VALUE svn_swig_rb_svn_delta_editor(void);
 VALUE svn_swig_rb_svn_delta_text_delta_window_handler(void);

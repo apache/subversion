@@ -332,7 +332,10 @@ dav_error *dav_svn_convert_err(svn_error_t *serr, int status,
 
 /* A wrapper around mod_dav's dav_new_error_tag, mod_dav_svn uses this
    instead of the mod_dav function to enable special mod_dav_svn specific
-   processing.  See dav_new_error_tag for parameter documentation. */
+   processing.  See dav_new_error_tag for parameter documentation.
+   Note that DESC may be null (it's hard to track this down from
+   dav_new_error_tag()'s documentation, but see the dav_error type,
+   which says that its desc field may be NULL). */
 dav_error *dav_svn__new_error_tag(apr_pool_t *pool, int status,
                                   int errno_id, const char *desc,
                                   const char *namespace,
@@ -507,6 +510,7 @@ dav_error * dav_svn_resource_kind (request_rec *r,
 dav_error * dav_svn__merge_response(ap_filter_t *output,
                                     const dav_svn_repos *repos,
                                     svn_revnum_t new_rev,
+                                    char *post_commit_err,
                                     apr_xml_elem *prop_elem,
                                     svn_boolean_t disable_merge_response,
                                     apr_pool_t *pool);

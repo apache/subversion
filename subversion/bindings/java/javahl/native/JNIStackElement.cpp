@@ -22,6 +22,7 @@
 #include "JNIStackElement.h"
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
+#include "JNIThreadData.h"
 #include <apr_strings.h>
 /**
  * Create a new object and generate a log message,if requested
@@ -105,7 +106,6 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
  */
 JNIStackElement::~JNIStackElement()
 {
-    JNIUtil::setEnv(NULL);
     if(m_clazz != NULL)
     {
         // generate a log message
@@ -113,4 +113,5 @@ JNIStackElement::~JNIStackElement()
         apr_snprintf(buffer, JNIUtil::formatBufferSize, "exit class %s method %s object %s", m_clazz, m_method, m_objectID);
         JNIUtil::logMessage(buffer);
     }
+	JNIThreadData::popThreadData();
 }

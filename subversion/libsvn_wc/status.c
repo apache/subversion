@@ -238,7 +238,9 @@ assemble_status (svn_wc_status2_t **status,
   svn_boolean_t prop_modified_p = FALSE;
   svn_boolean_t locked_p = FALSE;
   svn_boolean_t switched_p = FALSE;
+#ifdef HAVE_SYMLINK          
   svn_boolean_t wc_special;
+#endif /* HAVE_SYMLINK */
 
   /* Defaults for two main variables. */
   enum svn_wc_status_kind final_text_status = svn_wc_status_normal;
@@ -357,10 +359,12 @@ assemble_status (svn_wc_status2_t **status,
       SVN_ERR (svn_wc_props_modified_p (&prop_modified_p, path, adm_access,
                                         pool));
 
+#ifdef HAVE_SYMLINK
       if (has_props)
         SVN_ERR (svn_wc__get_special (&wc_special, path, adm_access, pool));
       else
         wc_special = FALSE;
+#endif /* HAVE_SYMLINK */
 
       /* If the entry is a file, check for textual modifications */
       if ((entry->kind == svn_node_file)
@@ -447,12 +451,12 @@ assemble_status (svn_wc_status2_t **status,
         }
       else if (path_kind != entry->kind)
         final_text_status = svn_wc_status_obstructed;
-      else if (((! wc_special) && (path_special))
 #ifdef HAVE_SYMLINK      
+      else if (((! wc_special) && (path_special))
                || (wc_special && (! path_special))
-#endif /* HAVE_SYMLINK */
                )
         final_text_status = svn_wc_status_obstructed;
+#endif /* HAVE_SYMLINK */
 
       if (path_kind == svn_node_dir && entry->kind == svn_node_dir)
         SVN_ERR (svn_wc_locked (&locked_p, path, pool));

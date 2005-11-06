@@ -321,3 +321,123 @@ svn_cmdline_handle_exit_error (svn_error_t *err,
     svn_pool_destroy (pool);
   return EXIT_FAILURE;
 }
+
+svn_error_t *
+svn_cmdline_setup_auth_baton (svn_auth_baton_t **ab,
+                              svn_boolean_t non_interactive,
+                              const char *auth_username,
+                              const char *auth_password,
+                              const char *config_dir,
+                              svn_boolean_t no_auth_cache,
+                              svn_config_t *cfg,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool)
+{
+  svn_boolean_t store_password_val = TRUE;
+  svn_auth_provider_object_t *provider;
+
+  /* The whole list of registered providers */
+  apr_array_header_t *providers
+    = apr_array_make (pool, 11, sizeof (svn_auth_provider_object_t *));
+
+  /* The main disk-caching auth providers, for both
+     'username/password' creds and 'username' creds.  */
+#ifdef WIN32
+  svn_auth_get_windows_simple_provider (&provider, pool);
+  APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+#endif
+  svn_auth_get_simple_provider (&provider, pool);
+  APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+  svn_auth_get_username_provider (&provider, pool);
+  APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+
+  /* The server-cert, client-cert, and client-cert-password providers. */
+  svn_auth_get_ssl_server_trust_file_provider (&provider, pool);
+  APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+  svn_auth_get_ssl_client_cert_file_provider (&provider, pool);
+  APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+  svn_auth_get_ssl_client_cert_pw_file_provider (&provider, pool);
+  APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+
+  if (non_interactive == FALSE)
+    {
+      svn_cmdline_prompt_baton_t *pb = NULL;
+
+      if (cancel_func)
+        {
+          pb = apr_palloc (pool, sizeof (*pb));
+
+          pb->cancel_func = cancel_func;
+          pb->cancel_baton = cancel_baton;
+        }
+
+      /* Two basic prompt providers: username/password, and just username. */
+      svn_auth_get_simple_prompt_provider (&provider,
+                                           svn_cmdline_auth_simple_prompt,
+                                           &pb,
+                                           2, /* retry limit */
+                                           pool);
+      APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+
+      svn_auth_get_username_prompt_provider
+        (&provider, svn_cmdline_auth_username_prompt, &pb,
+         2, /* retry limit */ pool);
+      APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+
+      /* Three ssl prompt providers, for server-certs, client-certs,
+         and client-cert-passphrases.  */
+      svn_auth_get_ssl_server_trust_prompt_provider
+        (&provider, svn_cmdline_auth_ssl_server_trust_prompt, &pb, pool);
+      APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+
+      svn_auth_get_ssl_client_cert_prompt_provider
+        (&provider, svn_cmdline_auth_ssl_client_cert_prompt, &pb, 2, pool);
+      APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+
+      svn_auth_get_ssl_client_cert_pw_prompt_provider
+        (&provider, svn_cmdline_auth_ssl_client_cert_pw_prompt, &pb, 2, pool);
+      APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
+    }
+
+  /* Build an authentication baton to give to libsvn_client. */
+  svn_auth_open (ab, providers, pool);
+
+  /* Place any default --username or --password credentials into the
+     auth_baton's run-time parameter hash. */
+  if (auth_username)
+    svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_DEFAULT_USERNAME,
+                           auth_username);
+  if (auth_password)
+    svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
+                           auth_password);
+
+  /* Same with the --non-interactive option. */
+  if (non_interactive)
+    svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_NON_INTERACTIVE, "");
+
+  if (config_dir)
+    svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_CONFIG_DIR,
+                           config_dir);
+
+  SVN_ERR (svn_config_get_bool (cfg, &store_password_val,
+                                SVN_CONFIG_SECTION_AUTH,
+                                SVN_CONFIG_OPTION_STORE_PASSWORDS,
+                                TRUE));
+
+  if (! store_password_val)
+    svn_auth_set_parameter (*ab, SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
+
+  /* There are two different ways the user can disable disk caching
+     of credentials:  either via --no-auth-cache, or in the config
+     file ('store-auth-creds = no'). */
+  SVN_ERR (svn_config_get_bool (cfg, &store_password_val,
+                                SVN_CONFIG_SECTION_AUTH,
+                                SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
+                                TRUE));
+
+  if (no_auth_cache || ! store_password_val)
+    svn_auth_set_parameter (*ab, SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
+
+  return SVN_NO_ERROR;
+}

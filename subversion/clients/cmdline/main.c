@@ -69,6 +69,7 @@ const apr_getopt_option_t svn_cl__options[] =
     {"quiet",         'q', 0, N_("print as little as possible")},
     {"recursive",     'R', 0, N_("descend recursively")},
     {"non-recursive", 'N', 0, N_("operate on single directory only")},
+    {"change",        'c', 1, N_("the change made by revision ARG (like -r ARG-1:ARG)")},
     {"revision",      'r', 1, N_
      ("ARG (some commands also take ARG1:ARG2 range)\n"
       "                             A revision argument can be one of:\n"
@@ -276,8 +277,8 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
   
   { "diff", svn_cl__diff, {"di"},
     N_("Display the differences between two paths.\n"
-       "usage: 1. diff [-r N[:M]] [TARGET[@REV]...]\n"
-       "       2. diff [-r N[:M]] --old=OLD-TGT[@OLDREV] "
+       "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
+       "       2. diff [-c M | -r N[:M]] --old=OLD-TGT[@OLDREV] "
        "[--new=NEW-TGT[@NEWREV]] \\\n"
        "               [PATH...]\n"
        "       3. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n"
@@ -291,6 +292,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "     must be specified.  M defaults to the current working version if "
        "any\n"
        "     TARGET is a working copy path, otherwise it defaults to HEAD.\n"
+       "     The \"-c M\" option is equivalent to \"-r N:M\" where N = M-1.\n"
        "\n"
        "  2. Display the differences between OLD-TGT as it was seen in OLDREV "
        "and\n"
@@ -302,14 +304,15 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "URL[@REV]. \n"
        "     NEW-TGT defaults to OLD-TGT if not specified.  -r N makes OLDREV "
        "default\n"
-       "     to N, -r N:M makes OLDREV default to N and NEWREV default to M.\n"
+       "     to N, -r N:M makes OLDREV default to N and NEWREV default to M,\n"
+       "     -c M makes OLDREV default to M-1 and NEWREV default to M.\n"
        "\n"
        "  3. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] "
        "--new=NEW-URL[@NEWREV]'\n"
        "\n"
        "  Use just 'svn diff' to display local modifications in "
        "a working copy.\n"),
-    {'r', svn_cl__old_cmd_opt, svn_cl__new_cmd_opt, 'N',
+    {'r', 'c', svn_cl__old_cmd_opt, svn_cl__new_cmd_opt, 'N',
      svn_cl__diff_cmd_opt, 'x', svn_cl__no_diff_deleted,
      svn_cl__notice_ancestry_opt, svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
      svn_cl__config_dir_opt} },
@@ -444,7 +447,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
     N_("Apply the differences between two sources to a working copy path.\n"
        "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
        "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-       "       3. merge -r N:M SOURCE[@REV] [WCPATH]\n"
+       "       3. merge [-c M | -r N:M] SOURCE[@REV] [WCPATH]\n"
        "\n"
        "  1. In the first form, the source URLs are specified at revisions\n"
        "     N and M.  These are the two sources to be compared.  The "
@@ -460,13 +463,14 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "  3. In the third form, SOURCE can be a URL, or working copy item\n"
        "     in which case the corresponding URL is used.  This URL in\n"
        "     revision REV is compared as it existed between revisions N and \n"
-       "     M.  If REV is not specified, HEAD is assumed.\n"
+       "     M.  If REV is not specified, HEAD is assumed.  The \"-c M\"\n"
+       "     option is equivalent to \"-r N:M\" where N = M-1.\n"
        "\n"
        "  WCPATH is the working copy path that will receive the changes.\n"
        "  If WCPATH is omitted, a default value of '.' is assumed, unless\n"
        "  the sources have identical basenames that match a file within '.':\n"
        "  in which case, the differences will be applied to that file.\n"),
-    {'r', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run_opt,
+    {'r', 'c', 'N', 'q', svn_cl__force_opt, svn_cl__dry_run_opt,
      svn_cl__merge_cmd_opt, svn_cl__ignore_ancestry_opt, 
      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
   
@@ -914,13 +918,49 @@ main (int argc, const char * const *argv)
         opt_state.message = apr_pstrdup (pool, opt_arg);
         dash_m_arg = opt_arg;
         break;
+      case 'c':
+        {
+          char *end;
+          if (opt_state.start_revision.kind != svn_opt_revision_unspecified)
+            {
+              err = svn_error_create
+                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                 _("Multiple revision arguments encountered; "
+                   "can't specify -c twice, or both -c and -r"));
+              return svn_cmdline_handle_exit_error (err, pool, "svn: ");
+            }
+          opt_state.end_revision.value.number = strtol (opt_arg, &end, 10);
+          opt_state.end_revision.kind = svn_opt_revision_number;
+          if (end == opt_arg || *end != '\0')
+            {
+              err = svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                      _("Non-numeric change argument given to -c"));
+              return svn_cmdline_handle_exit_error (err, pool, "svn: ");
+            }
+          else if (opt_state.end_revision.value.number == 0)
+            {
+              err = svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                      _("There is no change 0"));
+              return svn_cmdline_handle_exit_error (err, pool, "svn: ");
+            }
+          else if (opt_state.end_revision.value.number < 0)
+            {
+              err = svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                      _("Argument to -c must be positive"));
+              return svn_cmdline_handle_exit_error (err, pool, "svn: ");
+            }
+          opt_state.start_revision.value.number = opt_state.end_revision.value.number - 1;
+          opt_state.start_revision.kind = svn_opt_revision_number;      
+        }
+        break;
       case 'r':
         if (opt_state.start_revision.kind != svn_opt_revision_unspecified)
           {
             err = svn_error_create
               (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                _("Multiple revision arguments encountered; "
-                 "try '-r M:N' instead of '-r M -r N'"));
+                 "can't specify -r and -c, or "
+                 "try '-r N:M' instead of '-r N -r M'"));
             return svn_cmdline_handle_exit_error (err, pool, "svn: ");
           }
         if (svn_opt_parse_revision (&(opt_state.start_revision),
@@ -1345,107 +1385,6 @@ main (int argc, const char * const *argv)
      subcommands will populate the ctx->log_msg_baton2 */
   ctx->log_msg_func2 = svn_cl__get_log_message;
 
-  /* Authentication set-up. */
-  {
-    svn_boolean_t store_password_val = TRUE;
-    svn_auth_provider_object_t *provider;
-
-    /* The whole list of registered providers */
-    apr_array_header_t *providers
-      = apr_array_make (pool, 11, sizeof (svn_auth_provider_object_t *));
-
-    /* The main disk-caching auth providers, for both
-       'username/password' creds and 'username' creds.  */
-#ifdef WIN32
-    svn_client_get_windows_simple_provider (&provider, pool);
-    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-#endif
-    svn_client_get_simple_provider (&provider, pool);
-    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-    svn_client_get_username_provider (&provider, pool);
-    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-
-    /* The server-cert, client-cert, and client-cert-password providers. */
-    svn_client_get_ssl_server_trust_file_provider (&provider, pool);
-    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-    svn_client_get_ssl_client_cert_file_provider (&provider, pool);
-    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-    svn_client_get_ssl_client_cert_pw_file_provider (&provider, pool);
-    APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-
-    if (opt_state.non_interactive == FALSE)
-      {
-        /* Two basic prompt providers: username/password, and just username. */
-        svn_client_get_simple_prompt_provider (&provider,
-                                               svn_cl__auth_simple_prompt,
-                                               ctx,
-                                               2, /* retry limit */
-                                               pool);
-        APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-
-        svn_client_get_username_prompt_provider (&provider,
-                                                 svn_cl__auth_username_prompt,
-                                                 ctx, 
-                                                 2, /* retry limit */
-                                                 pool);
-        APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-
-        /* Three ssl prompt providers, for server-certs, client-certs,
-           and client-cert-passphrases.  */
-        svn_client_get_ssl_server_trust_prompt_provider
-          (&provider, svn_cl__auth_ssl_server_trust_prompt, ctx, pool);
-        APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-
-        svn_client_get_ssl_client_cert_prompt_provider
-          (&provider, svn_cl__auth_ssl_client_cert_prompt, ctx, 2, pool);
-        APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-
-        svn_client_get_ssl_client_cert_pw_prompt_provider
-          (&provider, svn_cl__auth_ssl_client_cert_pw_prompt, ctx, 2, pool);
-        APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
-      }
-
-    /* Build an authentication baton to give to libsvn_client. */
-    svn_auth_open (&ab, providers, pool);
-    ctx->auth_baton = ab;
-
-    /* Place any default --username or --password credentials into the
-       auth_baton's run-time parameter hash. */
-    if (opt_state.auth_username)
-      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_USERNAME,
-                             opt_state.auth_username);
-    if (opt_state.auth_password)
-      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DEFAULT_PASSWORD,
-                             opt_state.auth_password);
-
-    /* Same with the --non-interactive option. */
-    if (opt_state.non_interactive)
-      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NON_INTERACTIVE, "");
-
-    if (opt_state.config_dir)
-      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_CONFIG_DIR,
-                             opt_state.config_dir);
-
-    if ((err = svn_config_get_bool (cfg, &store_password_val,
-                                    SVN_CONFIG_SECTION_AUTH,
-                                    SVN_CONFIG_OPTION_STORE_PASSWORDS,
-                                    TRUE)))
-      svn_handle_error2 (err, stderr, TRUE, "svn: ");
-    if (! store_password_val)
-      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
-
-    /* There are two different ways the user can disable disk caching
-       of credentials:  either via --no-auth-cache, or in the config
-       file ('store-auth-creds = no'). */
-    if ((err = svn_config_get_bool (cfg, &store_password_val,
-                                    SVN_CONFIG_SECTION_AUTH,
-                                    SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
-                                    TRUE)))
-      svn_handle_error2 (err, stderr, TRUE, "svn: ");
-    if (opt_state.no_auth_cache || ! store_password_val)
-      svn_auth_set_parameter(ab, SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
-  }
-
   /* Set up our cancellation support. */
   ctx->cancel_func = svn_cl__check_cancel;
   apr_signal (SIGINT, signal_handler);
@@ -1464,6 +1403,21 @@ main (int argc, const char * const *argv)
   /* Disable SIGPIPE generation for the platforms that have it. */
   apr_signal(SIGPIPE, SIG_IGN);
 #endif
+
+  /* Set up Authentication stuff. */
+  if ((err = svn_cmdline_setup_auth_baton (&ab,
+                                           opt_state.non_interactive,
+                                           opt_state.auth_username,
+                                           opt_state.auth_password,
+                                           opt_state.config_dir,
+                                           opt_state.no_auth_cache,
+                                           cfg,
+                                           ctx->cancel_func,
+                                           ctx->cancel_baton,
+                                           pool)))
+      svn_handle_error2 (err, stderr, TRUE, "svn: ");
+
+  ctx->auth_baton = ab;
 
   /* And now we finally run the subcommand. */
   err = (*subcommand->cmd_func) (os, &command_baton, pool);

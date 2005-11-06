@@ -46,30 +46,6 @@ module Svn
     Util.set_constants(Ext::Core, self)
     Util.set_methods(Ext::Core, self)
 
-    apr_initialize
-    at_exit do
-      if $DEBUG
-        i = 0
-        loop do
-          i += 1
-          print "number of pools before GC(#{i}): "
-          before_pools = Svn::Core::Pool.number_of_pools
-          p before_pools
-          GC.start
-          after_pools = Svn::Core::Pool.number_of_pools
-          print "number of pools after GC(#{i}): "
-          p after_pools
-          break if before_pools == after_pools
-        end
-        puts "GC ran #{i} times"
-      end
-      
-      # We don't need to call apr_termintae because pools
-      # are destroyed by ruby's GC.
-      # Svn::Core.apr_terminate
-    end
-    nls_init
-    
     class << self
       alias binary_mime_type? mime_type_is_binary
     end

@@ -28,6 +28,7 @@
 #include <ctype.h>
 #include <assert.h>
 
+#include <apr_errno.h>
 #include <apr_strings.h>
 #include <apr_tables.h>
 #include <apr_general.h>
@@ -53,10 +54,20 @@ svn_error_t *
 svn_cl__print_commit_info (svn_commit_info_t *commit_info,
                            apr_pool_t *pool)
 {
-  if ((commit_info) 
-      && (SVN_IS_VALID_REVNUM (commit_info->revision)))
-    SVN_ERR (svn_cmdline_printf (pool, _("\nCommitted revision %ld.\n"),
+  if (commit_info) 
+    {
+      if (SVN_IS_VALID_REVNUM (commit_info->revision))
+        SVN_ERR (svn_cmdline_printf (pool, _("\nCommitted revision %ld.\n"),
                                  commit_info->revision));
+     
+      /* Writing to stdout, as there maybe systems that consider the
+       * presence of stderr as an indication of commit failure.
+       * OTOH, this is only of informational nature to the user as
+       * the commit has succeeded. */
+      if (commit_info->post_commit_err)
+        SVN_ERR (svn_cmdline_printf (pool, _("\nWarning:%s\n"),
+                                 commit_info->post_commit_err));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -170,6 +181,27 @@ svn_cl__edit_externally (svn_string_t **edited_contents /* UTF-8! */,
      PREFIX. */
   err = svn_io_open_unique_file (&tmp_file, &tmpfile_name,
                                  prefix, ".tmp", FALSE, pool);
+
+  if (err && APR_STATUS_IS_EACCES (err->apr_err))
+    {
+      const char *temp_dir_apr;
+
+      svn_error_clear (err);
+
+      SVN_ERR (svn_io_temp_dir (&base_dir, pool));
+
+      SVN_ERR (svn_path_cstring_from_utf8 (&temp_dir_apr, base_dir, pool));
+      apr_err = apr_filepath_set (temp_dir_apr, pool);
+      if (apr_err)
+        {
+          return svn_error_wrap_apr
+            (apr_err, _("Can't change working directory to '%s'"), base_dir);
+        }
+
+      err = svn_io_open_unique_file (&tmp_file, &tmpfile_name,
+                                     prefix, ".tmp", FALSE, pool);
+    }
+
   if (err)
     goto cleanup2;
 
@@ -596,9 +628,10 @@ svn_cl__get_log_message (const char **log_msg,
       if (! message)
         {
           const char *reply;
-          svn_cl__prompt_user (&reply,
-                               _("\nLog message unchanged or not specified\n"
-                                 "a)bort, c)ontinue, e)dit\n"), pool);
+          svn_cmdline_prompt_user
+            (&reply,
+             _("\nLog message unchanged or not specified\n"
+               "a)bort, c)ontinue, e)dit\n"), pool);
           if (reply)
             {
               char letter = apr_tolower (reply[0]);

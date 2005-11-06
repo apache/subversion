@@ -160,8 +160,8 @@ static svn_error_t *compat_get_dir (void *session_baton,
                                     apr_hash_t **props,
                                     apr_pool_t *pool)
 {
-  return VTBL.get_dir (session_baton, path, revision, dirents, fetched_rev,
-                       props, pool);
+  return VTBL.get_dir (session_baton, path, revision, SVN_DIRENT_ALL, dirents,
+                       fetched_rev, props, pool);
 }
 
 struct compat_report_baton {

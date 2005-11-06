@@ -898,7 +898,7 @@ svn_wc_transmit_prop_deltas (const char *path,
   SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, adm_access, path, pool));
 
   /* First, get the prop_path from the original path */
-  SVN_ERR (svn_wc__prop_path (&props, path, adm_access, FALSE, pool));
+  SVN_ERR (svn_wc__prop_path (&props, path, entry->kind, FALSE, pool));
   
   /* Get the full path of the prop-base `pristine' file */
   if (entry->schedule == svn_wc_schedule_replace)
@@ -910,11 +910,11 @@ svn_wc_transmit_prop_deltas (const char *path,
     }
   else
     /* the real prop-base hash */
-    SVN_ERR (svn_wc__prop_base_path (&props_base, path, adm_access, FALSE,
+    SVN_ERR (svn_wc__prop_base_path (&props_base, path, entry->kind, FALSE,
                                      pool));
 
   /* Copy the local prop file to the administrative temp area */
-  SVN_ERR (svn_wc__prop_path (&props_tmp, path, adm_access, TRUE, pool));
+  SVN_ERR (svn_wc__prop_path (&props_tmp, path, entry->kind, TRUE, pool));
   SVN_ERR (svn_io_copy_file (props, props_tmp, FALSE, pool));
 
   /* Alert the caller that we have created a temporary file that might

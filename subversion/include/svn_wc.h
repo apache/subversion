@@ -2519,8 +2519,9 @@ svn_error_t *svn_wc_get_switch_editor (svn_revnum_t *target_revision,
 /** Set @a *props to a hash table mapping <tt>char *</tt> names onto
  * <tt>svn_string_t *</tt> values for all the regular properties of 
  * @a path.  Allocate the table, names, and values in @a pool.  If 
- * the node has no properties, an empty hash is returned.  @a adm_access
- * is an access baton set that contains @a path.
+ * the node has no properties, or does not exist in the working copy,
+ * then an empty hash is returned.  @a adm_access is an access baton
+ * set that contains @a path.
  */
 svn_error_t *svn_wc_prop_list (apr_hash_t **props,
                                const char *path,
@@ -2968,16 +2969,33 @@ svn_wc_cleanup (const char *path,
 
 /** Relocation validation callback typedef.
  *
- * Called for each relocated file/directory.  @a uuid contains the
- * expected repository UUID, @a url contains the tentative URL.
+ * Called for each relocated file/directory.  @a uuid, if non-null, contains
+ * the expected repository UUID, @a url contains the tentative URL.
  *
  * @a baton is a closure object; it should be provided by the
  * implementation, and passed by the caller.
+ *
+ * If @a root is true, then the implementation should make sure that @a url
+ * is the repository root.  Else, it can be an URL inside the repository.
+ * @a pool may be used for temporary allocations.
+ *
+ * @since New in 1.4.
+ */
+typedef svn_error_t *(*svn_wc_relocation_validator2_t) (void *baton,
+                                                        const char *uuid,
+                                                        const char *url,
+                                                        svn_boolean_t root,
+                                                        apr_pool_t *pool);
+
+/** Similar to @c svn_wc_relocation_validator2_t, but without
+ * the @a root and @a pool arguments.  @a uuid will not be NULL in this version
+ * of the function.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
 typedef svn_error_t *(*svn_wc_relocation_validator_t) (void *baton,
                                                        const char *uuid,
                                                        const char *url);
-
 
 /** Change repository references at @a path that begin with @a from
  * to begin with @a to instead.  Perform necessary allocations in @a pool. 
@@ -2987,6 +3005,19 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t) (void *baton,
  * @a adm_access is an access baton for the directory containing
  * @a path.
  */
+svn_error_t *
+svn_wc_relocate2 (const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 const char *from,
+                 const char *to,
+                 svn_boolean_t recurse,
+                 svn_wc_relocation_validator2_t validator,
+                 void *validator_baton,
+                 apr_pool_t *pool);
+
+/** Similar to svn_wc_relocate2(), but uses @c svn_wc_relocation_validator_t.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.3 API. */
 svn_error_t *
 svn_wc_relocate (const char *path,
                  svn_wc_adm_access_t *adm_access,
@@ -3059,8 +3090,8 @@ svn_wc_revert (const char *path,
  * in @a *new_name. Either @a fp or @a new_name can be null.
  *
  * The flags will be <tt>APR_WRITE | APR_CREATE | APR_EXCL</tt> and
- * optionally @c APR_DELONCLOSE (if the @a delete_on_close argument is 
- * set @c TRUE).
+ * optionally @c APR_DELONCLOSE (if the @a delete_when argument is
+ * set to @c svn_io_file_del_on_close).
  *
  * This means that as soon as @a fp is closed, the tmp file will vanish.
  *
@@ -3070,11 +3101,12 @@ svn_error_t *
 svn_wc_create_tmp_file2 (apr_file_t **fp,
                          const char **new_name,
                          const char *path,
-                         svn_boolean_t delete_on_close,
+                         svn_io_file_del_t delete_when,
                          apr_pool_t *pool);
 
 
-/** Same as svn_wc_add_repos_file2(), but without the path return value
+/** Same as svn_wc_create_tmp_file2(), but with @a new_name set to @c NULL,
+ * and without the ability to delete the file on pool cleanup.
  *
  * @deprecated For compatibility with 1.3 API
  */

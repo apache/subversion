@@ -570,7 +570,7 @@ def diff_pure_repository_update_a_file(sbox):
 
   url = svntest.main.current_repo_url
 
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2',
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-c', '2',
                                                  '--username',
                                                  svntest.main.wc_author,
                                                  '--password',
@@ -587,7 +587,7 @@ def diff_pure_repository_update_a_file(sbox):
   os.chdir(was_cwd)
   if check_update_a_file(diff_output): raise svntest.Failure
 
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '2:3',
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-c', '3',
                                                  '--username',
                                                  svntest.main.wc_author,
                                                  '--password',
@@ -604,7 +604,7 @@ def diff_pure_repository_update_a_file(sbox):
   os.chdir(was_cwd)
   if check_add_a_file_in_a_subdir(diff_output): raise svntest.Failure
 
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '4:5',
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-c', '5',
                                                  '--username',
                                                  svntest.main.wc_author,
                                                  '--password',
@@ -631,12 +631,20 @@ def diff_pure_repository_update_a_file(sbox):
 def diff_only_property_change(sbox):
   "diff when property was changed but text was not"
 
-  ### FIXME: Subversion erroneously tried to run an external diff
-  ### program and aborted.  This test catches that problem, but it
-  ### really ought to check that the property diff gets output.
-
   sbox.build()
   wc_dir = sbox.wc_dir
+
+  expected_output = [
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Name: svn:eol-style\n",
+    "   + native\n",
+    "\n" ]
+
+  expected_reverse_output = list(expected_output)
+  expected_reverse_output[4] = "   - native\n"
+
 
   current_dir = os.getcwd()
   os.chdir(sbox.wc_dir)
@@ -648,14 +656,18 @@ def diff_only_property_change(sbox):
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'ci', '-m', 'empty-msg')
 
-    svntest.actions.run_and_verify_svn(None, None, [],
+    svntest.actions.run_and_verify_svn(None, expected_output, [],
                                        'diff', '-r', '1:2')
 
-    svntest.actions.run_and_verify_svn(None, None, [],
+    svntest.actions.run_and_verify_svn(None, expected_reverse_output, [],
                                        'diff', '-r', '2:1')
 
-    svntest.actions.run_and_verify_svn(None, None, [],
+    svntest.actions.run_and_verify_svn(None, expected_output, [],
                                        'diff', '-r', '1')
+
+    svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                       'diff', '-r', 'PREV', 'iota')
+
 
   finally:
     os.chdir(current_dir)
@@ -1856,6 +1868,90 @@ def diff_renamed_dir(sbox):
   os.chdir(was_cwd)
 
 
+#----------------------------------------------------------------------
+def diff_property_changes_to_base(sbox):
+  "diff to BASE with local property mods"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  expected_output_r1_r2 = [
+    "\n",
+    "Property changes on: A\n",
+    "___________________________________________________________________\n",
+    "Name: dirprop\n",
+    "   + r2value\n",
+    "\n",
+    "\n",
+    "Property changes on: iota\n",
+    "___________________________________________________________________\n",
+    "Name: fileprop\n",
+    "   + r2value\n",
+    "\n" ]
+
+  expected_output_r2_r1 = list(expected_output_r1_r2)
+  expected_output_r2_r1[4] = "   - r2value\n"
+  expected_output_r2_r1[10] = "   - r2value\n"
+
+
+  current_dir = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  try:
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset',
+                                       'fileprop', 'r2value', 'iota')
+
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset',
+                                       'dirprop', 'r2value', 'A')
+
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'ci', '-m', 'empty-msg')
+
+    # Check that forward and reverse repos-repos diffs are as expected.
+    svntest.actions.run_and_verify_svn(None, expected_output_r1_r2, [],
+                                       'diff', '-r', '1:2')
+
+    svntest.actions.run_and_verify_svn(None, expected_output_r2_r1, [],
+                                       'diff', '-r', '2:1')
+
+    # Now check repos->WORKING, repos->BASE, and BASE->repos.
+    # (BASE is r1, and WORKING has no local mods, so this should produce
+    # the same output as above).
+    svntest.actions.run_and_verify_svn(None, expected_output_r1_r2, [],
+                                       'diff', '-r', '1')
+
+    svntest.actions.run_and_verify_svn(None, expected_output_r1_r2, [],
+                                       'diff', '-r', '1:BASE')
+
+    svntest.actions.run_and_verify_svn(None, expected_output_r2_r1, [],
+                                       'diff', '-r', 'BASE:1')
+
+    # Modify some properties.
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset',
+                                       'fileprop', 'workingvalue', 'iota')
+
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset',
+                                       'dirprop', 'workingvalue', 'A')
+
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset',
+                                       'fileprop', 'workingvalue', 'A/mu')
+
+    # Check that the earlier diffs against BASE are unaffected by the
+    # presence of local mods.
+    svntest.actions.run_and_verify_svn(None, expected_output_r1_r2, [],
+                                       'diff', '-r', '1:BASE')
+
+    svntest.actions.run_and_verify_svn(None, expected_output_r2_r1, [],
+                                       'diff', '-r', 'BASE:1')
+
+
+  finally:
+    os.chdir(current_dir)
+
 
 ########################################################################
 #Run the tests
@@ -1889,7 +1985,8 @@ test_list = [ None,
               diff_prop_on_named_dir,
               diff_keywords,
               diff_force,
-              XFail(diff_renamed_dir)
+              XFail(diff_renamed_dir),
+              XFail(diff_property_changes_to_base),
               ]
 
 if __name__ == '__main__':

@@ -312,7 +312,7 @@ static int ra_dav_error_accepter(void *userdata,
      in neon 0.25.0, trying to parse a 401 response as XML using
      ne_xml_parse_v aborts the response; so the auth hooks never got a
      chance. */
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
   ne_content_type ctype;
 
   /* Only accept non-2xx responses with text/xml content-type */
@@ -505,7 +505,7 @@ typedef struct spool_reader_baton_t
 
 
 /* This implements the ne_block_reader() callback interface. */
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
 static int
 #else /* ! SVN_NEON_0_25 */
 static void
@@ -519,7 +519,7 @@ spool_reader(void *userdata,
     baton->error = svn_io_file_write_full(baton->spool_file, buf, 
                                           len, NULL, baton->pool);
 
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
   if (baton->error)
     /* ### Call ne_set_error(), as ne_block_reader doc implies? */
     return 1;
@@ -727,7 +727,7 @@ parsed_request(ne_session *sess,
         }
     }
 
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
   if (decompress_main)
     ne_decompress_destroy(decompress_main);
 
@@ -948,7 +948,7 @@ svn_ra_dav__request_dispatch(int *code_p,
                              const char *url,
                              int okay_1,
                              int okay_2,
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
                              svn_ra_dav__request_interrogator interrogator,
                              void *interrogator_baton,
 #endif /* SVN_NEON_0_25 */
@@ -961,7 +961,7 @@ svn_ra_dav__request_dispatch(int *code_p,
   int code;
   const char *msg;
   svn_error_t *err = SVN_NO_ERROR;
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
   svn_error_t *err2 = SVN_NO_ERROR;
 #endif /* SVN_NEON_0_25 */
 
@@ -982,7 +982,7 @@ svn_ra_dav__request_dispatch(int *code_p,
   if (code_p)
      *code_p = code;
 
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
   if (interrogator)
     err2 = (*interrogator)(request, rv, interrogator_baton);
 #endif /* SVN_NEON_0_25 */
@@ -990,7 +990,7 @@ svn_ra_dav__request_dispatch(int *code_p,
   ne_request_destroy(request);
   ne_xml_destroy(error_parser);
 
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
   /* If the request interrogator returned error, pass that along now. */
   if (err2)
     {

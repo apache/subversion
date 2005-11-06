@@ -199,6 +199,38 @@ enum svn_recurse_kind
   svn_recursive
 };
 
+/**
+ * It is sometimes convenient to indicate which parts of an @c svn_dirent_t
+ * object you are actually interested in, so that calculating and sending
+ * the data corresponding to the other fields can be avoided.  These values
+ * can be used for that purpose.
+ *
+ * @defgroup svn_dirent_fields dirent fields
+ * @{
+ */
+
+/** An indication that you are interested in the @c kind field */
+#define SVN_DIRENT_KIND        0x00001
+
+/** An indication that you are interested in the @c size field */
+#define SVN_DIRENT_SIZE        0x00002
+
+/** An indication that you are interested in the @c has_props field */
+#define SVN_DIRENT_HAS_PROPS   0x00004
+
+/** An indication that you are interested in the @c created_rev field */
+#define SVN_DIRENT_CREATED_REV 0x00008
+
+/** An indication that you are interested in the @c time field */
+#define SVN_DIRENT_TIME        0x00010
+
+/** An indication that you are interested in the @c last_author field */
+#define SVN_DIRENT_LAST_AUTHOR 0x00020
+
+/** A combination of all the dirent fields */
+#define SVN_DIRENT_ALL ~((apr_uint32_t ) 0)
+
+/** @} */
 
 /** A general subversion directory entry. */
 typedef struct svn_dirent_t

@@ -483,9 +483,9 @@ remote_propget (apr_hash_t *props,
   
   if (kind == svn_node_dir)
     {
-      SVN_ERR (svn_ra_get_dir (ra_session, target_relative, revnum,
-                               (recurse ? &dirents : NULL),
-                               NULL, &prop_hash, pool));
+      SVN_ERR (svn_ra_get_dir2 (ra_session, target_relative, revnum,
+                                SVN_DIRENT_KIND, (recurse ? &dirents : NULL),
+                                NULL, &prop_hash, pool));
     }
   else if (kind == svn_node_file)
     {
@@ -742,9 +742,9 @@ remote_proplist (apr_array_header_t *proplist,
  
   if (kind == svn_node_dir)
     {
-      SVN_ERR (svn_ra_get_dir (ra_session, target_relative, revnum,
-                               (recurse ? &dirents : NULL),
-                               NULL, &prop_hash, scratchpool));
+      SVN_ERR (svn_ra_get_dir2 (ra_session, target_relative, revnum,
+                                SVN_DIRENT_KIND, (recurse ? &dirents : NULL),
+                                NULL, &prop_hash, scratchpool));
     }
   else if (kind == svn_node_file)
     {

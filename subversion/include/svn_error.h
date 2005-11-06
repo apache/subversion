@@ -57,6 +57,19 @@ void svn_error__locate (const char *file, long line);
 char *svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize);
 
 
+/** If @a err has a custom error message, return that, otherwise
+ * store the generic error string associated with @a err->apr_err into
+ * @a buf (terminating with null) and return @a buf.
+ *
+ * @since New in 1.4.
+ *
+ * @note @a buf and @a bufsize are provided in the interface so that
+ * this function is thread-safe and yet does no allocation.
+ */
+const char *svn_err_best_message (svn_error_t *err,
+                                  char *buf, apr_size_t bufsize);
+
+
 
 /** SVN error creation and destruction. 
  *

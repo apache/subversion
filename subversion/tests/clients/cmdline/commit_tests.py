@@ -1955,6 +1955,47 @@ def local_mods_are_not_commits(sbox):
                                      os.path.join(wc_dir, 'A', 'yu'))
 
 
+#----------------------------------------------------------------------
+# Test if the post-commit error message is returned back to the svn
+# client and is displayed as a warning.
+#
+def post_commit_hook_test(sbox):
+  "post commit hook failure case testing"
+
+  sbox.build()
+
+  # Get paths to the working copy and repository
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  # Setup the hook configs to echo data back
+  post_commit_hook = svntest.main.get_post_commit_hook_path (repo_dir)
+  svntest.main.file_append (post_commit_hook,
+                            """#!/bin/sh
+                            echo "Post-commit Hook says nothing doing on stderr" > /dev/stderr
+                            exit -1
+                            """)
+  os.chmod (post_commit_hook, 0755)
+
+  # Modify iota just so there is something to commit.
+  iota_path = os.path.join (wc_dir, "iota")
+  svntest.main.file_append (iota_path, "lakalakalakalaka")
+
+  # Now, commit and examine the output (we happen to know that the
+  # filesystem will report an absolute path because that's the way the
+  # filesystem is created by this test suite.
+  expected_output = [ "Sending        "+ iota_path + "\n",
+                      "Transmitting file data .\n",
+                      "Committed revision 2.\n",
+                      "\n",
+                      "Warning:'post-commit' hook failed with error output:\n",
+                      "Post-commit Hook says nothing doing on stderr\n",
+                      "\n"]
+
+  svntest.actions.run_and_verify_svn (None, expected_output, [],
+                                      'ci', '-m', 'log msg', iota_path)
+
+
 ########################################################################
 # Run the tests
 
@@ -1994,6 +2035,7 @@ test_list = [ None,
               mods_in_schedule_delete,
               Skip(tab_test, (os.name != 'posix' or sys.platform == 'cygwin')),
               local_mods_are_not_commits,
+              post_commit_hook_test
              ]
 
 if __name__ == '__main__':

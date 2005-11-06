@@ -554,7 +554,7 @@ ra_dav_get_schemes (apr_pool_t *pool)
   static const char *schemes_no_ssl[] = { "http", NULL };
   static const char *schemes_ssl[] = { "http", "https", NULL };
 
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
   return ne_has_support(NE_FEATURE_SSL) ? schemes_ssl : schemes_no_ssl;
 #else /* ! SVN_NEON_0_25 */
   return ne_supports_ssl() ? schemes_ssl : schemes_no_ssl;
@@ -639,7 +639,7 @@ svn_ra_dav__open (svn_ra_session_t *session,
   is_ssl_session = (strcasecmp(uri.scheme, "https") == 0);
   if (is_ssl_session)
     {
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
       if (ne_has_support(NE_FEATURE_SSL) == 0)
 #else /* ! SVN_NEON_0_25 */
       if (ne_supports_ssl() == 0)
@@ -1035,7 +1035,7 @@ pre_send_hook(ne_request *req,
                                 &(lrb->err), lrb->pool);
 }
 
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
 /* A callback of type ne_post_send_fn;  called after neon has sent a
    request and received a response header back. */
 static int
@@ -1096,7 +1096,7 @@ setup_neon_request_hook(svn_ra_dav__session_t *ras)
 
       ne_hook_create_request(ras->sess, create_request_hook, lrb);
       ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
       ne_hook_post_send(ras->sess, post_send_hook, lrb);
 #endif /* SVN_NEON_0_25 */
 
@@ -1441,7 +1441,7 @@ lock_receiver(void *userdata,
 
   if (lock)
     {
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
       /* The post_send hook has not run at this stage; so grab the 
          response headers early.  As Joe Orton explains in Issue
          #2297: "post_send hooks run much later than the name might

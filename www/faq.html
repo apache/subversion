@@ -110,6 +110,11 @@ I avoid having to type it so often?</a></li>
 <tt>svnserve</tt> binary is in a directory that isn't on my
 users' default <tt>PATH</tt>s, they use svn+ssh, and I can't figure
 out how to modify their <tt>PATH</tt> so that they can run <tt>svnserve</tt>.</a></li>
+<li><a href="#ssh-authorized-keys-trick">
+I want to allow access via svn+ssh://, but am paranoid.  I hate the
+idea of giving each user a login; I would then have to worry about
+what they are and are not allowed to access on my machine.
+</a></li>
 <li><a href="#auto-props">How can I set certain properties on
 everything in the repository?  Also, how can I make sure that every
 new file coming into the repository has these properties?</a></li>
@@ -1695,7 +1700,18 @@ export SVN_SSH
 </pre>
 
 </div>
-      
+
+<![CDATA[=========================================================]]>
+
+<div class="h3" id="ssh-authorized-keys-trick" title="ssh-authorized-keys-trick">
+<h3>I want to allow access via svn+ssh://, but am paranoid.  I hate the
+idea of giving each user a login; I would then have to worry about
+what they are and are not allowed to access on my machine.</h3>
+<p>See the section about hacking
+the <tt>~/.ssh/authorized_keys</tt> file in the answer
+to <a href="#ssh-svnserve-location">this other question</a>; ignore the stuff
+about getting <tt>svnserve</tt> on your PATH.</p>
+</div>      
 
 <![CDATA[=========================================================]]>
 
@@ -1853,7 +1869,7 @@ happened?</h3>
 <p>You don't.  It's a bad idea to try.</p>
 
 <p>The basic design of the working copy has two rules: (1) edit files
-as you please, and (2) use a Subversion cilent to make any
+as you please, and (2) use a Subversion client to make any
 tree-changes (add, delete, move, copy).  If these rules are followed,
 the client can sucessfully manage the working copy.  If renames or
 other rearrangements happen outside of Subversion, then the UI has

@@ -175,17 +175,65 @@ svn_io_check_special_path (const char *path,
   return io_check_path (path, FALSE, is_special, kind, pool);
 }
 
+struct temp_file_cleanup_s
+{
+  apr_pool_t *pool;
+  const char *name;
+};
+
+
+static apr_status_t
+temp_file_plain_cleanup_handler (void *baton)
+{
+  struct  temp_file_cleanup_s *b = baton;
+
+  return (b->name) ? apr_file_remove (b->name, b->pool) : APR_SUCCESS;
+}
+
+
+static apr_status_t
+temp_file_child_cleanup_handler (void *baton)
+{
+  struct  temp_file_cleanup_s *b = baton;
+
+  apr_pool_cleanup_kill (b->pool, b,
+                         temp_file_plain_cleanup_handler);
+
+  return APR_SUCCESS;
+}
+
+
 svn_error_t *
-svn_io_open_unique_file (apr_file_t **f,
-                         const char **unique_name_p,
-                         const char *path,
-                         const char *suffix,
-                         svn_boolean_t delete_on_close,
-                         apr_pool_t *pool)
+svn_io_open_unique_file2 (apr_file_t **f,
+                          const char **unique_name_p,
+                          const char *path,
+                          const char *suffix,
+                          svn_io_file_del_t delete_when,
+                          apr_pool_t *pool)
 {
   unsigned int i;
+  apr_file_t *file;
   const char *unique_name;
   const char *unique_name_apr;
+  struct temp_file_cleanup_s *baton;
+
+  assert (f || unique_name_p);
+
+  if (delete_when == svn_io_file_del_on_pool_cleanup)
+    {
+      baton = apr_palloc (pool, sizeof(*baton));
+
+      baton->pool = pool;
+      baton->name = NULL;
+
+      /* Because cleanups are run LIFO, we need to make sure to register
+         our cleanup before the apr_file_close cleanup:
+
+         On Windows, you can't remove an open file.
+      */
+      apr_pool_cleanup_register (pool, baton, temp_file_plain_cleanup_handler,
+                                 temp_file_child_cleanup_handler);
+    }
 
   for (i = 1; i <= 99999; i++)
     {
@@ -193,7 +241,7 @@ svn_io_open_unique_file (apr_file_t **f,
       apr_int32_t flag = (APR_READ | APR_WRITE | APR_CREATE | APR_EXCL
                           | APR_BUFFERED);
 
-      if (delete_on_close)
+      if (delete_when == svn_io_file_del_on_close)
         flag |= APR_DELONCLOSE;
 
       /* Special case the first attempt -- if we can avoid having a
@@ -219,7 +267,7 @@ svn_io_open_unique_file (apr_file_t **f,
       SVN_ERR (svn_path_cstring_from_utf8 (&unique_name_apr, unique_name,
                                            pool));
 
-      apr_err = apr_file_open (f, unique_name_apr, flag,
+      apr_err = apr_file_open (&file, unique_name_apr, flag,
                                APR_OS_DEFAULT, pool);
 
       if (APR_STATUS_IS_EEXIST (apr_err))
@@ -243,24 +291,48 @@ svn_io_open_unique_file (apr_file_t **f,
                  return the original error. */
             }
 
-          *f = NULL;
-          *unique_name_p = NULL;
+          if (f) *f = NULL;
+          if (unique_name_p) *unique_name_p = NULL;
           return svn_error_wrap_apr (apr_err, _("Can't open '%s'"),
                                      svn_path_local_style (unique_name, pool));
         }
       else
         {
-          *unique_name_p = unique_name;
+          if (delete_when == svn_io_file_del_on_pool_cleanup)
+            baton->name = unique_name_apr;
+
+          if (f)
+            *f = file;
+          else
+            apr_file_close (file);
+          if (unique_name_p) *unique_name_p = unique_name;
+
           return SVN_NO_ERROR;
         }
     }
 
-  *f = NULL;
-  *unique_name_p = NULL;
+  if (f) *f = NULL;
+  if (unique_name_p) *unique_name_p = NULL;
   return svn_error_createf (SVN_ERR_IO_UNIQUE_NAMES_EXHAUSTED,
                             NULL,
                             _("Unable to make name for '%s'"),
                             svn_path_local_style (path, pool));
+}
+
+svn_error_t *
+svn_io_open_unique_file (apr_file_t **f,
+                         const char **unique_name_p,
+                         const char *path,
+                         const char *suffix,
+                         svn_boolean_t delete_on_close,
+                         apr_pool_t *pool)
+{
+  return svn_io_open_unique_file2 (f, unique_name_p,
+                                   path, suffix,
+                                   delete_on_close
+                                   ? svn_io_file_del_on_close
+                                   : svn_io_file_del_none,
+                                   pool);
 }
 
 svn_error_t *
@@ -545,7 +617,6 @@ svn_io_copy_file (const char *src,
                   svn_boolean_t copy_perms,
                   apr_pool_t *pool)
 {
-  apr_file_t *d;
   apr_status_t apr_err;
   const char *src_apr, *dst_tmp_apr;
   const char *dst_tmp;
@@ -555,10 +626,8 @@ svn_io_copy_file (const char *src,
   /* For atomicity, we translate to a tmp file and then rename the tmp
      file over the real destination. */
 
-  SVN_ERR (svn_io_open_unique_file (&d, &dst_tmp, dst, ".tmp", FALSE, pool));
+  SVN_ERR (svn_io_open_unique_file (NULL, &dst_tmp, dst, ".tmp", FALSE, pool));
   SVN_ERR (svn_path_cstring_from_utf8 (&dst_tmp_apr, dst_tmp, pool));
-
-  SVN_ERR (svn_io_file_close (d, pool));
 
   apr_err = apr_file_copy (src_apr, dst_tmp_apr, APR_OS_DEFAULT, pool);
   if (apr_err)
@@ -987,12 +1056,10 @@ static svn_error_t *
 reown_file (const char *path_apr,
             apr_pool_t *pool)
 {
-  apr_file_t *fp;
   const char *unique_name;
 
-  SVN_ERR (svn_io_open_unique_file (&fp, &unique_name, path_apr,
+  SVN_ERR (svn_io_open_unique_file (NULL, &unique_name, path_apr,
                                     ".tmp", FALSE, pool));
-  SVN_ERR (svn_io_file_close (fp, pool));
   SVN_ERR (svn_io_file_rename (path_apr, unique_name, pool));
   SVN_ERR (svn_io_copy_file (unique_name, path_apr, TRUE, pool));
   SVN_ERR (svn_io_remove_file (unique_name, pool));
@@ -1726,6 +1793,9 @@ svn_io_get_dirents (apr_hash_t **dirents,
   return svn_io_get_dirents2 (dirents, path, pool);
 }
 
+/* Pool userdata key for the error file passed to svn_io_start_cmd(). */
+#define ERRFILE_KEY "svn-io-start-cmd-errfile"
+
 /* Handle an error from the child process (before command execution) by
    printing DESC and the error string corresponding to STATUS to stderr. */
 static void
@@ -1733,10 +1803,19 @@ handle_child_process_error (apr_pool_t *pool, apr_status_t status,
                             const char *desc)
 {
   char errbuf[256];
+  apr_file_t *errfile;
+  void *p;
 
-  /* What we get from APR is in native encoding. */
-  fprintf (stderr, "%s: %s", desc, apr_strerror (status, errbuf,
-                                                 sizeof (errbuf)));
+  /* We can't do anything if we get an error here, so just return. */
+  if (apr_pool_userdata_get (&p, ERRFILE_KEY, pool))
+    return;
+  errfile = p;
+
+  if (errfile)
+    /* What we get from APR is in native encoding. */
+    apr_file_printf (errfile, "%s: %s",
+                     desc, apr_strerror (status, errbuf,
+                                         sizeof (errbuf)));
 }
 
 
@@ -1809,7 +1888,12 @@ svn_io_start_cmd (apr_proc_t *cmd_proc,
           (apr_err, _("Can't set process '%s' child errfile"), cmd);
     }
 
-  /* Have the child print any problems executing its program to stderr. */
+  /* Have the child print any problems executing its program to errfile. */
+  apr_err = apr_pool_userdata_set (errfile, ERRFILE_KEY, NULL, pool);
+  if (apr_err)
+    return svn_error_wrap_apr
+      (apr_err, _("Can't set process '%s' child errfile for error handler"),
+       cmd);
   apr_err = apr_procattr_child_errfn_set (cmdproc_attr,
                                           handle_child_process_error);
   if (apr_err)
@@ -1841,6 +1925,8 @@ svn_io_start_cmd (apr_proc_t *cmd_proc,
 
   return SVN_NO_ERROR;
 }
+
+#undef ERRFILE_KEY
 
 svn_error_t *
 svn_io_wait_for_cmd (apr_proc_t *cmd_proc,
@@ -2454,13 +2540,11 @@ svn_io_file_move (const char *from_path, const char *to_path,
   if (err && APR_STATUS_IS_EXDEV (err->apr_err))
     {
       const char *tmp_to_path;
-      apr_file_t *fp;
 
       svn_error_clear (err);
 
-      SVN_ERR (svn_io_open_unique_file (&fp, &tmp_to_path,
+      SVN_ERR (svn_io_open_unique_file (NULL, &tmp_to_path,
                                         to_path, "tmp", FALSE, pool));
-      apr_file_close (fp);
 
       err = svn_io_copy_file (from_path, tmp_to_path, TRUE, pool);
       if (err)

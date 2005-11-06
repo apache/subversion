@@ -80,10 +80,10 @@ svn_wc__text_revert_path (const char *path,
 
 
 /* Return a path to the 'wcprop' file for PATH, possibly in TMP area.
-   ADM_ACCESS is an access baton set that contains PATH. */
+   Valid values for KIND are svn_node_dir and svn_node_file. */
 svn_error_t *svn_wc__wcprop_path (const char **wcprop_path,
                                   const char *path,
-                                  svn_wc_adm_access_t *adm_access,
+                                  svn_node_kind_t kind,
                                   svn_boolean_t tmp,
                                   apr_pool_t *pool);
 
@@ -91,11 +91,11 @@ svn_error_t *svn_wc__wcprop_path (const char **wcprop_path,
 /* Set *PROP_PATH to PATH's working properties file.
    If TMP is set, return a path to the tmp working property file. 
    PATH can be a directory or file, and even have changed w.r.t. the
-   working copy's adm knowledge. ADM_ACCESS is an access baton set
-   that contains PATH. */
+   working copy's adm knowledge. Valid values for KIND are svn_node_dir
+   and svn_node_file. */
 svn_error_t *svn_wc__prop_path (const char **prop_path,
                                 const char *path,
-                                svn_wc_adm_access_t *adm_access,
+                                svn_node_kind_t kind,
                                 svn_boolean_t tmp,
                                 apr_pool_t *pool);
 
@@ -103,11 +103,11 @@ svn_error_t *svn_wc__prop_path (const char **prop_path,
 /* Set *PROP_PATH to PATH's `pristine' properties file.
    If TMP is set, return a path to the tmp working property file. 
    PATH can be a directory or file, and even have changed w.r.t. the
-   working copy's adm knowledge. ADM_ACCESS is an access baton set
-   that contains PATH. */
+   working copy's adm knowledge. Valid values for KIND are svn_node_dir
+   and svn_node_file. */
 svn_error_t *svn_wc__prop_base_path (const char **prop_path,
                                      const char *path,
-                                     svn_wc_adm_access_t *adm_access,
+                                     svn_node_kind_t kind,
                                      svn_boolean_t tmp,
                                      apr_pool_t *pool);
 
@@ -115,11 +115,11 @@ svn_error_t *svn_wc__prop_base_path (const char **prop_path,
 /* Set *PROP_PATH to PATH's revert properties file.
    If TMP is set, return a path to the tmp working property file. 
    PATH can be a directory or file, and even have changed w.r.t. the
-   working copy's adm knowledge. ADM_ACCESS is an access baton set
-   that contains PATH. */
+   working copy's adm knowledge. Valid values for KIND are svn_node_dir
+   and svn_node_file. */
 svn_error_t *svn_wc__prop_revert_path (const char **prop_path,
                                        const char *path,
-                                       svn_wc_adm_access_t *adm_access,
+                                       svn_node_kind_t kind,
                                        svn_boolean_t tmp,
                                        apr_pool_t *pool);
 
@@ -162,24 +162,6 @@ svn_error_t *svn_wc__close_adm_file (apr_file_t *fp,
 svn_error_t *svn_wc__remove_adm_file (const char *path,
                                       apr_pool_t *pool,
                                       ...);
-
-/* Return the path to the empty file in the adm area of PATH */
-const char *svn_wc__empty_file_path (const char *path,
-                                     apr_pool_t *pool);
-
-
-/* Open *readonly* the empty file in the in adm area of PATH */
-svn_error_t *svn_wc__open_empty_file (apr_file_t **handle,
-                                      const char *path,
-                                      apr_pool_t *pool);
-
-/* Close the empty file in the adm area of PATH. FP was obtain from
- * svn_wc__open_empty_file().
- */
-svn_error_t *svn_wc__close_empty_file (apr_file_t *fp,
-                                       const char *path,
-                                       apr_pool_t *pool);
-
 
 /* Open the text-base for FILE.
  * FILE can be any kind of path ending with a filename.

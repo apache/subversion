@@ -1614,6 +1614,7 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
   svn_fs_txn_t *txn;
   const char *conflict;
   svn_error_t *serr;
+  char *post_commit_err = NULL;
   svn_revnum_t new_rev;
   apr_hash_t *locks;
   svn_boolean_t disable_merge_response = FALSE;
@@ -1694,7 +1695,11 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
       return dav_svn_convert_err(serr, HTTP_CONFLICT, msg, pool);
     }
   else if (serr)
-    svn_error_clear(serr);
+    {
+      if (serr->child && serr->child->message)
+        post_commit_err = apr_pstrdup (pool, serr->child->message);
+      svn_error_clear(serr);
+    }
 
   /* Commit was successful, so schedule deltification. */
   register_deltification_cleanup(source->info->repos->repos, new_rev,
@@ -1740,7 +1745,8 @@ static dav_error *dav_svn_merge(dav_resource *target, dav_resource *source,
 
   /* process the response for the new revision. */
   return dav_svn__merge_response(output, source->info->repos, new_rev,
-                                 prop_elem, disable_merge_response, pool);
+                                 post_commit_err, prop_elem,
+                                 disable_merge_response, pool);
 }
 
 const dav_hooks_vsn dav_svn_hooks_vsn = {

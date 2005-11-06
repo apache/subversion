@@ -229,11 +229,6 @@
     $1 = svn_swig_py_auth_simple_prompt_func;
     $2 = $input;
 }
-%typemap(ruby, in) (svn_auth_simple_prompt_func_t prompt_func,
-                    void *prompt_baton) {
-    $1 = svn_swig_rb_auth_simple_prompt_func;
-    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
 
 %typemap(perl5, in) (svn_auth_username_prompt_func_t prompt_func,
                      void *prompt_baton) {
@@ -245,11 +240,6 @@
                       void *prompt_baton) {
     $1 = svn_swig_py_auth_username_prompt_func;
     $2 = $input;
-}
-%typemap(ruby, in) (svn_auth_username_prompt_func_t prompt_func,
-                      void *prompt_baton) {
-    $1 = svn_swig_rb_auth_username_prompt_func;
-    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 %typemap(perl5, in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,
@@ -263,11 +253,6 @@
     $1 = svn_swig_py_auth_ssl_server_trust_prompt_func;
     $2 = $input;
 }
-%typemap(ruby, in) (svn_auth_ssl_server_trust_prompt_func_t prompt_func,
-                     void *prompt_baton) {
-    $1 = svn_swig_rb_auth_ssl_server_trust_prompt_func;
-    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
 
 %typemap(perl5, in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
                       void *prompt_baton) {
@@ -280,11 +265,6 @@
     $1 = svn_swig_py_auth_ssl_client_cert_prompt_func;
     $2 = $input;
 }
-%typemap(ruby, in) (svn_auth_ssl_client_cert_prompt_func_t prompt_func,
-                      void *prompt_baton) {
-    $1 = svn_swig_rb_auth_ssl_client_cert_prompt_func;
-    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
 
 %typemap(perl5, in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
                       void *prompt_baton) {
@@ -296,11 +276,6 @@
                       void *prompt_baton) {
     $1 = svn_swig_py_auth_ssl_client_cert_pw_prompt_func;
     $2 = $input;
-}
-%typemap(ruby, in) (svn_auth_ssl_client_cert_pw_prompt_func_t prompt_func,
-                      void *prompt_baton) {
-    $1 = svn_swig_rb_auth_ssl_client_cert_pw_prompt_func;
-    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------

@@ -1104,7 +1104,29 @@ def url_props_ops(sbox):
   verify_output([ prop1 + ' : ' + propval1, prop2 + ' : ' + propval2,
                   'Properties on ' ], output, errput)
 
+#----------------------------------------------------------------------
+def removal_schedule_added_props(sbox):
+  "removal of schedule added file with properties"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  newfile_path = os.path.join(wc_dir, 'newfile')
   
+  # create new fs file
+  svntest.main.file_append(newfile_path, "")
+  svntest.main.run_svn(None, 'add', newfile_path)
+  svntest.main.run_svn(None, 'propset', 'newprop', 'newvalue', newfile_path)
+  svntest.main.run_svn(None, 'rm', '--force', newfile_path)
+  # recreate the file and add it again
+  svntest.main.file_append(newfile_path, "")
+  svntest.main.run_svn(None, 'add', newfile_path)
+
+  # check the properties
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'proplist', '-v', newfile_path)
+
+
 ########################################################################
 # Run the tests
 
@@ -1129,6 +1151,7 @@ test_list = [ None,
               binary_props,
               recursive_base_wc_ops,
               url_props_ops,
+              removal_schedule_added_props,
              ]
 
 if __name__ == '__main__':

@@ -46,7 +46,7 @@ svn_wc_merge (const char *left,
 {
   const char *tmp_target, *result_target, *tmp_left, *tmp_right;
   const char *mt_pt, *mt_bn;
-  apr_file_t *tmp_f, *result_f;
+  apr_file_t *result_f;
   svn_boolean_t is_binary;
   apr_hash_t *keywords;
   const char *eol;
@@ -77,11 +77,10 @@ svn_wc_merge (const char *left,
         {
           /* The target is already in repository form, so we just need to
              make a verbatim copy of it. */
-          SVN_ERR (svn_io_open_unique_file (&tmp_f, &tmp_target,
+          SVN_ERR (svn_io_open_unique_file (NULL, &tmp_target,
                                             merge_target,
                                             SVN_WC__TMP_EXT,
                                             FALSE, pool));
-          SVN_ERR (svn_io_file_close (tmp_f, pool));
           SVN_ERR (svn_io_copy_file (merge_target,
                                      tmp_target, TRUE, pool));
         }
@@ -96,17 +95,15 @@ svn_wc_merge (const char *left,
          MERGE_TARGET, and our diff3 command wants them all to be in
          the same directory.  So make temporary copies of LEFT and
          RIGHT right next to the target. */
-      SVN_ERR (svn_io_open_unique_file (&tmp_f, &tmp_left,
+      SVN_ERR (svn_io_open_unique_file (NULL, &tmp_left,
                                         tmp_target,
                                         SVN_WC__TMP_EXT,
                                         FALSE, pool));
-      SVN_ERR (svn_io_file_close (tmp_f, pool));
-      SVN_ERR (svn_io_open_unique_file (&tmp_f, &tmp_right,
+      SVN_ERR (svn_io_open_unique_file (NULL, &tmp_right,
                                         tmp_target,
                                         SVN_WC__TMP_EXT,
                                         FALSE, pool));
-      SVN_ERR (svn_io_file_close (tmp_f, pool));
-    
+
       SVN_ERR (svn_io_copy_file (left, tmp_left, TRUE, pool));
       SVN_ERR (svn_io_copy_file (right, tmp_right, TRUE, pool));
 
@@ -173,7 +170,6 @@ svn_wc_merge (const char *left,
         {
           /* Preserve the three pre-merge files, and modify the
              entry (mark as conflicted, track the preserved files). */ 
-          apr_file_t *lcopy_f, *rcopy_f, *tcopy_f;
           const char *left_copy, *right_copy, *target_copy;
           const char *parentt, *left_base, *right_base, *target_base;
           svn_wc_adm_access_t *parent_access;
@@ -181,36 +177,33 @@ svn_wc_merge (const char *left,
       
           /* I miss Lisp. */
 
-          SVN_ERR (svn_io_open_unique_file (&lcopy_f,
+          SVN_ERR (svn_io_open_unique_file (NULL,
                                             &left_copy,
                                             merge_target,
                                             left_label,
                                             FALSE,
                                             pool));
-          SVN_ERR (svn_io_file_close (lcopy_f, pool));
 
           /* Have I mentioned how much I miss Lisp? */
 
-          SVN_ERR (svn_io_open_unique_file (&rcopy_f,
+          SVN_ERR (svn_io_open_unique_file (NULL,
                                             &right_copy,
                                             merge_target,
                                             right_label,
                                             FALSE,
                                             pool));
-          SVN_ERR (svn_io_file_close (rcopy_f, pool));
 
           /* Why, how much more pleasant to be forced to unroll my loops.
              If I'd been writing in Lisp, I might have mapped an inline
              lambda form over a list, or something equally disgusting.
              Thank goodness C was here to protect me! */
 
-          SVN_ERR (svn_io_open_unique_file (&tcopy_f,
+          SVN_ERR (svn_io_open_unique_file (NULL,
                                             &target_copy,
                                             merge_target,
                                             target_label,
                                             FALSE,
                                             pool));
-          SVN_ERR (svn_io_file_close (tcopy_f, pool));
 
           /* We preserve all the files with keywords expanded and line
              endings in local (working) form. */
@@ -318,28 +311,25 @@ svn_wc_merge (const char *left,
       /* ### when making the binary-file backups, should we be honoring
          keywords and eol stuff?   */
 
-      apr_file_t *lcopy_f, *rcopy_f;
       const char *left_copy, *right_copy;
       const char *parentt, *left_base, *right_base;
       svn_wc_adm_access_t *parent_access;
       svn_wc_entry_t tmp_entry;
       
       /* reserve names for backups of left and right fulltexts */
-      SVN_ERR (svn_io_open_unique_file (&lcopy_f,
+      SVN_ERR (svn_io_open_unique_file (NULL,
                                         &left_copy,
                                         merge_target,
                                         left_label,
                                         FALSE,
                                         pool));
-      SVN_ERR (svn_io_file_close (lcopy_f, pool));
 
-      SVN_ERR (svn_io_open_unique_file (&rcopy_f,
+      SVN_ERR (svn_io_open_unique_file (NULL,
                                         &right_copy,
                                         merge_target,
                                         right_label,
                                         FALSE,
                                         pool));
-      SVN_ERR (svn_io_file_close (rcopy_f, pool));
 
       /* create the backup files */
       SVN_ERR (svn_io_copy_file (left,

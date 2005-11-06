@@ -133,7 +133,8 @@ svn_error_t *svn_client__prev_log_path (const char **prev_path_p,
    one pegged by REVISION.  In other words, all three objects must
    be connected by a single line of history which exactly passes
    through PATH at REVISION.  If this sanity check fails, return
-   SVN_ERR_CLIENT_UNRELATED_RESOURCES.
+   SVN_ERR_CLIENT_UNRELATED_RESOURCES.  If PATH doesn't exist in the future
+   revision, SVN_ERR_FS_NOT_FOUND may also be returned.
 
    CTX is the client context baton.
 

@@ -240,6 +240,7 @@ svn_error_t *svn_ra_dav__get_dir(
   svn_ra_session_t *session,
   const char *path,
   svn_revnum_t revision,
+  apr_uint32_t dirent_fields,
   apr_hash_t **dirents,
   svn_revnum_t *fetched_rev,
   apr_hash_t **props,
@@ -663,6 +664,7 @@ enum {
   ELEM_updated_set,
   ELEM_vcc,
   ELEM_version_name,
+  ELEM_post_commit_err,
   ELEM_error,
 
   /* SVN elements */
@@ -717,6 +719,7 @@ svn_error_t * svn_ra_dav__merge_activity(
     svn_revnum_t *new_rev,
     const char **committed_date,
     const char **committed_author,
+    const char **post_commit_err,
     svn_ra_dav__session_t *ras,
     const char *repos_url,
     const char *activity_url,
@@ -790,7 +793,7 @@ svn_ra_dav__request_interrogator(ne_request *request,
    specified (e.g. as 200); use 0 for OKAY_2 if a second result code is
    not allowed.
 
-   #if SVN_NEON_0_25
+   #ifdef SVN_NEON_0_25
 
       If INTERROGATOR is non-NULL, invoke it with the Neon request,
       the dispatch result, and INTERROGATOR_BATON.  This is done
@@ -814,7 +817,7 @@ svn_ra_dav__request_dispatch(int *code_p,
                              const char *url,
                              int okay_1,
                              int okay_2,
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
                              svn_ra_dav__request_interrogator interrogator,
                              void *interrogator_baton,
 #endif /* SVN_NEON_0_25 */

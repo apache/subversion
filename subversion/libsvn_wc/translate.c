@@ -65,26 +65,20 @@ svn_wc_translated_file (const char **xlated_p,
   else  /* some translation is necessary */
     {
       const char *tmp_dir, *tmp_vfile;
-      apr_file_t *ignored;
 
       /* First, reserve a tmp file name. */
-
       svn_path_split (vfile, &tmp_dir, &tmp_vfile, pool);
       
       tmp_vfile = svn_wc__adm_path (tmp_dir, 1, pool,
                                     tmp_vfile, NULL);
-      
-      SVN_ERR (svn_io_open_unique_file (&ignored,
+
+      SVN_ERR (svn_io_open_unique_file (NULL,
                                         &tmp_vfile,
                                         tmp_vfile,
                                         SVN_WC__TMP_EXT,
                                         FALSE,
                                         pool));
-      
-      /* We were just reserving the name and don't actually need the
-         filehandle, so close immediately. */
-      SVN_ERR (svn_io_file_close (ignored, pool));
-      
+
       if (style == svn_subst_eol_style_fixed)
         {
           SVN_ERR (svn_subst_copy_and_translate3 (vfile,

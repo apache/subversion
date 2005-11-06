@@ -115,16 +115,6 @@
 ;; Or you can check it out from the subversion repository:
 ;;   svn co http://svn.collab.net/repos/svn/trunk/contrib/client-side/psvn psvn
 
-;; "svn-" is the package prefix used in psvn.el.  There are also longer
-;; prefixes which clarify the code and help symbol completion, but they
-;; are not intended to prevent name clashes with other packages.  All
-;; interactive commands meant to be used only in a specific mode should
-;; have names beginning with the name of that mode: for example,
-;; "svn-status-add-file" in "svn-status-mode".  "psvn" should be used
-;; only in names of files, customization groups, and features.  If SVK
-;; support is ever added, it should use "svn-svk-" when no existing
-;; prefix is applicable.
-
 ;; TODO:
 ;; * shortcut for svn propset svn:keywords "Date" psvn.el
 ;; * docstrings for the functions
@@ -133,6 +123,10 @@
 ;; * finish svn-status-property-set
 ;; * Add repository browser
 ;; * Improve support for svn blame
+;; * Get rid of all byte-compiler warnings
+;; * SVK working copy support
+;; * multiple independent buffers in svn-status-mode
+;; There are "TODO" comments in other parts of this file as well.
 
 ;; Overview over the implemented/not (yet) implemented svn sub-commands:
 ;; * add                       implemented
@@ -170,6 +164,23 @@
 
 ;; Comments / suggestions and bug reports are welcome!
 
+;; Development notes
+;; -----------------
+
+;; "svn-" is the package prefix used in psvn.el.  There are also longer
+;; prefixes which clarify the code and help symbol completion, but they
+;; are not intended to prevent name clashes with other packages.  All
+;; interactive commands meant to be used only in a specific mode should
+;; have names beginning with the name of that mode: for example,
+;; "svn-status-add-file" in "svn-status-mode".  "psvn" should be used
+;; only in names of files, customization groups, and features.  If SVK
+;; support is ever added, it should use "svn-svk-" when no existing
+;; prefix is applicable.
+
+;; Many of the variables marked as `risky-local-variable' are probably
+;; impossible to abuse, as the commands that read them are used only in
+;; buffers that are not visiting any files.  Better safe than sorry.
+
 ;;; Code:
 
 (require 'easymenu)
@@ -185,6 +196,7 @@ This can be either absolute, or relative to the default directory
 of the *svn-log-edit* buffer."
   :type 'file
   :group 'psvn)
+(put 'svn-log-edit-file-name 'risky-local-variable t)
 (defcustom svn-log-edit-insert-files-to-commit t
   "*Insert the filelist to commit in the *svn-log* buffer"
   :type 'boolean
@@ -233,17 +245,18 @@ This can be either absolute or looked up on `exec-path'."
   ;; Don't use (file :must-match t).  It doesn't know about `exec-path'.
   :type 'file
   :group 'psvn)
+(put 'svn-status-svn-executable 'risky-local-variable t)
 
-;; TODO: bind `process-environment' instead of running env?
-;; That would probably work more reliably in Windows.
 (defcustom svn-status-svn-environment-var-list '()
   "*A list of environment variables that should be set for that svn process.
-If you set that variable, svn is called with that environment variables set.
-That is done via the env program.
+Each element is either a string \"VARIABLE=VALUE\" which will be added to
+the environment when svn is run, or just \"VARIABLE\" which causes that
+variable to be entirely removed from the environment. 
 
-You could set it for example to '(\"LANG=C\")"
-  :type '(repeat (string :valid-regexp "=" :value "LANG=C"))
+You could set this for example to '(\"LANG=C\")"
+  :type '(repeat string)
   :group 'psvn)
+(put 'svn-status-svn-environment-var-list 'risky-local-variable t)
 
 (defcustom svn-browse-url-function nil
   ;; If the user hasn't changed `svn-browse-url-function', then changing
@@ -272,6 +285,8 @@ Any non-nil value overrides that variable, with the same syntax."
                             :value (("." . browse-url-default-browser))))
   :link '(emacs-commentary-link "browse-url")
   :group 'psvn)
+;; (put 'svn-browse-url-function 'risky-local-variable t)
+;; already implied by "-function" suffix
 
 (defcustom svn-status-window-alist
   '((diff "*svn-diff*") (log "*svn-log*") (info t) (blame t) (proplist t) (update t))
@@ -335,6 +350,7 @@ Otherwise: Don't display a header line"
 \(used in `svn-status-show-svn-log'; override these by giving prefixes\)."
   :type '(repeat string)
   :group 'psvn)
+(put 'svn-status-default-log-arguments 'risky-local-variable t)
 
 (defcustom svn-status-default-commit-arguments '()
   "*List of arguments to pass to svn commit.
@@ -345,6 +361,7 @@ Subversion and the operating system may treat that as a file name
 equivalent to \".\", so you would commit more than you intended."
   :type '(repeat string)
   :group 'psvn)
+(put 'svn-status-default-commit-arguments 'risky-local-variable t)
 
 (defcustom svn-status-default-diff-arguments '()
   "*A list of arguments that is passed to the svn diff command.
@@ -352,6 +369,7 @@ If you'd like to suppress whitespace changes use the following value:
 '(\"--diff-cmd\" \"diff\" \"-x\" \"-wbBu\")"
   :type '(repeat string)
   :group 'psvn)
+(put 'svn-status-default-diff-arguments 'risky-local-variable t)
 
 (defvar svn-trac-project-root nil
   "Path for an eventual existing trac issue tracker.
@@ -366,6 +384,9 @@ This can be set with \\[svn-status-set-module-name].")
 ;;; hooks
 (defvar svn-log-edit-mode-hook nil "Hook run when entering `svn-log-edit-mode'.")
 (defvar svn-log-edit-done-hook nil "Hook run after commiting files via svn.")
+;; (put 'svn-log-edit-mode-hook 'risky-local-variable t)
+;; (put 'svn-log-edit-done-hook 'risky-local-variable t)
+;; already implied by "-hook" suffix
 
 (defvar svn-status-coding-system nil
   "A special coding system is needed for the output of svn.
@@ -441,6 +462,9 @@ This is always set together with `svn-status-recursive-commit'.")
 (defvar svn-status-recursive-commit nil
   "Non-nil if the next commit should be recursive.
 This is always set together with `svn-status-files-to-commit'.")
+(defvar svn-log-edit-update-log-entry nil
+  "Revision number whose log entry is being edited.
+This is nil if the log entry is for a new commit.")
 (defvar svn-status-pre-commit-window-configuration nil)
 (defvar svn-status-pre-propedit-window-configuration nil)
 (defvar svn-status-head-revision nil)
@@ -457,16 +481,49 @@ This is always set together with `svn-status-files-to-commit'.")
   (expand-file-name
    (or
     (when (boundp 'temporary-file-directory) temporary-file-directory) ;emacs
-    (when (fboundp 'temp-directory) (temp-directory))                  ;xemacs
+    ;; XEmacs 21.4.17 can return "/tmp/kalle" from (temp-directory).
+    ;; `file-name-as-directory' adds a slash so we can append a file name.
+    (when (fboundp 'temp-directory) (file-name-as-directory (temp-directory)))
     "/tmp/")) "The directory that is used to store temporary files for psvn.")
+;; Because `temporary-file-directory' is not a risky local variable in
+;; GNU Emacs 22.0.51, we don't mark `svn-status-temp-dir' as such either.
 (defvar svn-temp-suffix (make-temp-name "."))
+(put 'svn-temp-suffix 'risky-local-variable t)
 (defvar svn-status-temp-file-to-remove nil)
+(put 'svn-status-temp-file-to-remove 'risky-local-variable t)
 (defvar svn-status-temp-arg-file (concat svn-status-temp-dir "svn.arg" svn-temp-suffix))
+(put 'svn-status-temp-arg-file 'risky-local-variable t)
 (defvar svn-status-options nil)
+(defvar svn-status-remote)
 (defvar svn-status-commit-rev-number nil)
 (defvar svn-status-operated-on-dot nil)
 (defvar svn-status-elided-list nil)
 (defvar svn-status-custom-hide-function nil)
+;; (put 'svn-status-custom-hide-function 'risky-local-variable t)
+;; already implied by "-function" suffix
+(defvar svn-status-get-specific-revision-file-info)
+(defvar svn-status-last-output-buffer-name)
+(defvar svn-transient-buffers)
+(defvar svn-ediff-windows)
+(defvar svn-ediff-result)
+
+;; Emacs 21 defines these in ediff-init.el but it seems more robust
+;; to just declare the variables here than try to load that file.
+;; It is Ediff's job to declare these as risky-local-variable if needed.
+(defvar ediff-buffer-A)
+(defvar ediff-buffer-B)
+(defvar ediff-buffer-C)
+(defvar ediff-quit-hook)
+
+;; Ditto for log-edit.el.
+(defvar log-edit-initial-files)
+(defvar log-edit-callback)
+(defvar log-edit-listfun)
+
+;; Ediff does not use this variable in GNU Emacs 20.7, GNU Emacs 21.4,
+;; nor XEmacs 21.4.17.  However, pcl-cvs (a.k.a. pcvs) does.
+;; TODO: Check if this should be moved into the "svn-" namespace.
+(defvar ediff-after-quit-destination-buffer)
 
 ;; That is an example for the svn-status-custom-hide-function:
 ;; (setq svn-status-custom-hide-function 'svn-status-hide-pyc-files)
@@ -643,6 +700,7 @@ Use this instead of `alist', for XEmacs 21.4 compatibility."
 
 (defvar svn-global-keymap nil "Global keymap for psvn.el.
 To bind this to a different key, customize `svn-status-prefix-key'.")
+(put 'svn-global-keymap 'risky-local-variable t)
 (when (not svn-global-keymap)
   (setq svn-global-keymap (make-sparse-keymap))
   (define-key svn-global-keymap (kbd "s") 'svn-status-this-directory)
@@ -653,6 +711,7 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
 
 (defvar svn-global-trac-map ()
   "Subkeymap used in `svn-global-keymap' for trac issue tracker commands.")
+(put 'svn-global-trac-map 'risky-local-variable t) ;for Emacs 20.7
 (when (not svn-global-trac-map)
   (setq svn-global-trac-map (make-sparse-keymap))
   (define-key svn-global-trac-map (kbd "t") 'svn-trac-browse-timeline)
@@ -752,6 +811,25 @@ If ARG then pass the -u argument to `svn status'."
         (svn-status dir)
       (error "%s is not a directory" dir))))
 
+(defun svn-process-environment ()
+  "Construct the environment for the svn process.
+It is a combination of `svn-status-svn-environment-var-list' and
+the usual `process-environment'."
+  ;; If there are duplicate elements in `process-environment', then GNU
+  ;; Emacs 21.4 guarantees that the first one wins; but GNU Emacs 20.7
+  ;; and XEmacs 21.4.17 don't document what happens.  We'll just remove
+  ;; any duplicates ourselves, then.  This also gives us an opportunity
+  ;; to handle the "VARIABLE" syntax that none of them supports.
+  (loop with found = '()
+        for elt in (append svn-status-svn-environment-var-list
+                           process-environment)
+        for has-value = (string-match "=" elt)
+        for name = (substring elt 0 has-value)
+        unless (member name found)
+          do (push name found)
+          and when has-value
+            collect elt))
+
 (defun svn-run-svn (run-asynchron clear-process-buffer cmdtype &rest arglist)
   "Run svn with arguments ARGLIST.
 
@@ -799,20 +877,17 @@ is prompted for give extra arguments, which are appended to ARGLIST."
             (setq svn-status-mode-line-process-status (format " running %s" cmdtype))
             (svn-status-update-mode-line)
             (sit-for 0.1)
-            (when svn-status-svn-environment-var-list
-              (setq arglist (append svn-status-svn-environment-var-list
-                                    (list svn-status-svn-executable)
-                                    arglist))
-              (setq svn-exe "env"))
             (if run-asynchron
                 (progn
                   ;;(message "running asynchron: %s %S" svn-exe arglist)
-                  (setq svn-proc (apply 'start-process "svn" proc-buf svn-exe arglist))
+                  (let ((process-environment (svn-process-environment)))
+                    (setq svn-proc (apply 'start-process "svn" proc-buf svn-exe arglist)))
                   (set-process-sentinel svn-proc 'svn-process-sentinel)
                   (when svn-status-track-user-input
                     (set-process-filter svn-proc 'svn-process-filter)))
               ;;(message "running synchron: %s %S" svn-exe arglist)
-              (apply 'call-process svn-exe nil proc-buf nil arglist)
+              (let ((process-environment (svn-process-environment)))
+                (apply 'call-process svn-exe nil proc-buf nil arglist))
               (setq svn-status-mode-line-process-status "")
               (svn-status-update-mode-line)))))
     (error "You can only run one svn process at once!")))
@@ -1125,14 +1200,22 @@ A and B must be line-info's."
   (error (message "psvn: could not install menu")))
 
 (defvar svn-status-mode-map () "Keymap used in `svn-status-mode' buffers.")
+(put 'svn-status-mode-map 'risky-local-variable t) ;for Emacs 20.7
+(defvar svn-status-mode-mark-map ()
+  "Subkeymap used in `svn-status-mode' for mark commands.")
+(put 'svn-status-mode-mark-map      'risky-local-variable t) ;for Emacs 20.7
 (defvar svn-status-mode-property-map ()
   "Subkeymap used in `svn-status-mode' for property commands.")
+(put 'svn-status-mode-property-map  'risky-local-variable t) ;for Emacs 20.7
 (defvar svn-status-mode-options-map ()
   "Subkeymap used in `svn-status-mode' for option commands.")
+(put 'svn-status-mode-options-map   'risky-local-variable t) ;for Emacs 20.7
 (defvar svn-status-mode-trac-map ()
   "Subkeymap used in `svn-status-mode' for trac issue tracker commands.")
+(put 'svn-status-mode-trac-map      'risky-local-variable t) ;for Emacs 20.7
 (defvar svn-status-mode-extension-map ()
   "Subkeymap used in `svn-status-mode' for some seldom used commands.")
+(put 'svn-status-mode-extension-map 'risky-local-variable t) ;for Emacs 20.7
 
 (when (not svn-status-mode-map)
   (setq svn-status-mode-map (make-sparse-keymap))
@@ -3181,6 +3264,7 @@ When called with a prefix argument, it is possible to enter a new property."
 ;; --------------------------------------------------------------------------------
 
 (defvar svn-prop-edit-mode-map () "Keymap used in `svn-prop-edit-mode' buffers.")
+(put 'svn-prop-edit-mode-map 'risky-local-variable t) ;for Emacs 20.7
 
 (when (not svn-prop-edit-mode-map)
   (setq svn-prop-edit-mode-map (make-sparse-keymap))
@@ -3264,6 +3348,9 @@ Commands:
 ;; --------------------------------------------------------------------------------
 
 (defvar svn-log-edit-mode-map () "Keymap used in `svn-log-edit-mode' buffers.")
+(put 'svn-log-edit-mode-map 'risky-local-variable t) ;for Emacs 20.7
+
+(defvar svn-log-edit-mode-menu) ;really defined with `easy-menu-define' below.
 
 (if svn-log-edit-use-log-edit-mode
     (define-derived-mode svn-log-edit-mode log-edit-mode "svn-log-edit"
@@ -3313,6 +3400,7 @@ Commands:
                     ["Show files to commit" svn-log-edit-show-files-to-commit t]
                     ["Erase buffer" svn-log-edit-erase-edit-buffer]
                     ["Abort" svn-log-edit-abort t]))
+(put 'svn-log-edit-mode-menu 'risky-local-variable t)
 
 (defun svn-log-edit-abort ()
   (interactive)
@@ -3423,6 +3511,7 @@ If ARG then show diff between some other version of the selected files."
 ;; --------------------------------------------------------------------------------
 
 (defvar svn-log-view-mode-map () "Keymap used in `svn-log-view-mode' buffers.")
+(put 'svn-log-view-mode-map 'risky-local-variable t) ;for Emacs 20.7
 
 (when (not svn-log-view-mode-map)
   (setq svn-log-view-mode-map (make-sparse-keymap))
@@ -3442,6 +3531,7 @@ If ARG then show diff between some other version of the selected files."
 (defvar svn-log-view-font-lock-keywords
   '(("^r.+" . font-lock-keyword-face)
   "Keywords in svn-log-view-mode."))
+(put 'svn-log-view-font-lock-keywords 'risky-local-variable t) ;for Emacs 20.7
 
 
 (define-derived-mode svn-log-view-mode fundamental-mode "svn-log-view"

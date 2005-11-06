@@ -40,6 +40,22 @@ extern "C" {
 
 
 
+/** Used as an argument when creating temporary files to indicate
+    when a file should be removed.
+
+    Not specifying any of these means no removal at all. */
+typedef enum
+{
+  /** No deletion ever */
+  svn_io_file_del_none = 0,
+  /** Remove when the file is closed */
+  svn_io_file_del_on_close,
+  /** Remove when the associated pool is cleared */
+  svn_io_file_del_on_pool_cleanup,
+} svn_io_file_del_t;
+
+
+
 /** Represents the kind and special status of a directory entry.
  *
  * @since New in 1.3.
@@ -95,9 +111,12 @@ svn_error_t *svn_io_check_resolved_path (const char *path,
 /** Open a new file (for writing) with a unique name based on utf-8
  * encoded @a path, in the same directory as @a path.  The file handle is
  * returned in @a *f, and the name, which ends with @a suffix, is returned
- * in @a *unique_name_p, also utf8-encoded.  If @a delete_on_close is set,
- * then the @c APR_DELONCLOSE flag will be used when opening the file. The
- * @c APR_BUFFERED flag will always be used.
+ * in @a *unique_name_p, also utf8-encoded.  Either @a f or @a unique_name_p
+ * may be @c NULL.
+ *
+ * If @a delete_when is @c svn_io_file_del_on_close, then the @c APR_DELONCLOSE
+ * flag will be used when opening the file.  The @c APR_BUFFERED flag will
+ * always be used.
  *
  * The first attempt will just append @a suffix.  If the result is not
  * a unique name, then subsequent attempts will append a dot,
@@ -108,7 +127,7 @@ svn_error_t *svn_io_check_resolved_path (const char *path,
  *
  * then successive calls to
  *
- *    svn_io_open_unique_file(&f, &unique_name, @a path, ".tmp", pool) 
+ *    svn_io_open_unique_file2(&f, &unique_name, @a path, ".tmp", ..., pool)
  *
  * will open
  *
@@ -119,9 +138,9 @@ svn_error_t *svn_io_check_resolved_path (const char *path,
  *    tests/t1/A/D/G/pi.5.tmp
  *    ...
  *
- * @a *unique_name_p will never be exactly the same as @a path, even
- * if @a path does not exist.
- * 
+ * Assuming @a suffix is non-empty, @a *unique_name_p will never be exactly
+ * the same as @a path, even if @a path does not exist.
+ *
  * It doesn't matter if @a path is a file or directory, the unique name will
  * be in @a path's parent either way.
  *
@@ -131,10 +150,30 @@ svn_error_t *svn_io_check_resolved_path (const char *path,
  * the error returned.
  *
  * Claim of Historical Inevitability: this function was written
- * because 
+ * because
  *
  *    - tmpnam() is not thread-safe.
  *    - tempname() tries standard system tmp areas first.
+ *
+ *
+ * @since New in 1.4
+ *
+ */
+svn_error_t *svn_io_open_unique_file2 (apr_file_t **f,
+                                       const char **unique_name_p,
+                                       const char *path,
+                                       const char *suffix,
+                                       svn_io_file_del_t delete_when,
+                                       apr_pool_t *pool);
+
+/** Like svn_io_open_unique_file2, but can't delete on pool cleanup.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API
+ *
+ * @note In 1.4 the API was extended to require either @a f or
+ *       @a unique_name_p (the other can be NULL).  Before that, both were
+ *       required.
+ *
  */
 svn_error_t *svn_io_open_unique_file (apr_file_t **f,
                                       const char **unique_name_p,
@@ -700,6 +739,10 @@ svn_error_t *svn_io_dir_walk (const char *dirname,
  * @a inherit sets whether the invoked program shall inherit its environment or
  * run "clean".
  *
+ * @note On some platforms, failure to execute @a cmd in the child process
+ * will result in error output being written to @a errfile, if non-NULL, and
+ * a non-zero exit status being returned to the parent process.
+ *
  * @since New in 1.3.
  */
 svn_error_t *svn_io_start_cmd (apr_proc_t *cmd_proc,
@@ -949,10 +992,10 @@ svn_error_t *
 svn_io_dir_remove_nonrecursive (const char *dirname, apr_pool_t *pool);
 
 
-/** Wrapper for apr_dir_read(), which see.  Ensures that @a finfo->name is
- * utf8-encoded, which means allocating @a finfo->name in @a pool, which may
- * or may not be the same as @a finfo's pool.  Use @a pool for error allocation
- * as well.
+/** Wrapper for apr_dir_read().  Ensures that @a finfo->name is
+ * utf8-encoded, which means allocating @a finfo->name in @a pool,
+ * which may or may not be the same as @a finfo's pool.  Use @a pool
+ * for error allocation as well.
  */
 svn_error_t *
 svn_io_dir_read (apr_finfo_t *finfo,

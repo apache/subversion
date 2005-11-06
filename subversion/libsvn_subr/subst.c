@@ -493,8 +493,8 @@ translate_keyword_subst (char *buf,
               apr_size_t vallen = value->len;
 
               /* "$keyword: value $" */
-              if (vallen > (SVN_KEYWORD_MAX_LEN - 5))
-                vallen = SVN_KEYWORD_MAX_LEN - 5;
+              if (vallen > (SVN_KEYWORD_MAX_LEN - 5 - keyword_len))
+                vallen = SVN_KEYWORD_MAX_LEN - 5 - keyword_len;
               strncpy (buf_ptr + 2, value->data, vallen);
               buf_ptr[2 + vallen] = ' ';
               buf_ptr[2 + vallen + 1] = '$';
@@ -1077,11 +1077,8 @@ create_special_file (const char *src,
 
   if (is_special)
     {
-      apr_file_t *fp;
-      
-      SVN_ERR (svn_io_open_unique_file (&fp, &src_tmp, dst, ".tmp", FALSE,
+      SVN_ERR (svn_io_open_unique_file (NULL, &src_tmp, dst, ".tmp", FALSE,
                                         pool));
-      SVN_ERR (svn_io_file_close (fp, pool));
       SVN_ERR (detranslate_special_file (src, src_tmp, pool));
       src = src_tmp;
     }
@@ -1128,13 +1125,10 @@ create_special_file (const char *src,
     {
       if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
         {
-          apr_file_t *fp;
-          
           svn_error_clear (err);
           /* Fall back to just copying the text-base. */
-          SVN_ERR (svn_io_open_unique_file (&fp, &dst_tmp, dst, ".tmp", FALSE,
+          SVN_ERR (svn_io_open_unique_file (NULL, &dst_tmp, dst, ".tmp", FALSE,
                                             pool));
-          SVN_ERR (svn_io_file_close (fp, pool));
           SVN_ERR (svn_io_copy_file (src, dst_tmp, TRUE, pool));
         }
       else

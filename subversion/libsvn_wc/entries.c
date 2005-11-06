@@ -167,6 +167,36 @@ alloc_entry (apr_pool_t *pool)
 }
 
 
+/* If attribute ATTR_NAME appears in hash ATTS, set *ENTRY_FLAG to its
+ * boolean value and add MODIFY_FLAG into *MODIFY_FLAGS, else set *ENTRY_FLAG
+ * false.  ENTRY_NAME is the name of the WC-entry. */
+static svn_error_t *
+do_bool_attr (svn_boolean_t *entry_flag,
+              apr_uint32_t *modify_flags, apr_uint32_t modify_flag,
+              apr_hash_t *atts, const char *attr_name,
+              const char *entry_name)
+{
+  const char *str = apr_hash_get (atts, attr_name, APR_HASH_KEY_STRING);
+
+  *entry_flag = FALSE;
+  if (str)
+    {
+      if (strcmp (str, "true") == 0)
+        *entry_flag = TRUE;
+      else if (strcmp (str, "false") == 0 || strcmp (str, "") == 0)
+        *entry_flag = FALSE;
+      else
+        return svn_error_createf
+          (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+           _("Entry '%s' has invalid '%s' value"),
+           (entry_name ? entry_name : SVN_WC_ENTRY_THIS_DIR), attr_name);
+
+      *modify_flags |= modify_flag;
+    }
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
                        apr_uint32_t *modify_flags,
@@ -276,52 +306,52 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
   
   /* Is this entry in a state of mental torment (conflict)? */
   {
-    if ((entry->prejfile 
-         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_PREJFILE, 
+    if ((entry->prejfile
+         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_PREJFILE,
                          APR_HASH_KEY_STRING)))
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_PREJFILE;
+      {
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_PREJFILE;
+        /* Normalize "" (used by the log runner) to NULL */
+        entry->prejfile = *(entry->prejfile) ? entry->prejfile : NULL;
+      }
 
-    if ((entry->conflict_old 
-         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CONFLICT_OLD, 
+    if ((entry->conflict_old
+         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CONFLICT_OLD,
                          APR_HASH_KEY_STRING)))
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD;
+      {
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_OLD;
+        /* Normalize "" (used by the log runner) to NULL */
+        entry->conflict_old =
+          *(entry->conflict_old) ? entry->conflict_old : NULL;
+      }
 
-    if ((entry->conflict_new 
-         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CONFLICT_NEW, 
+    if ((entry->conflict_new
+         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CONFLICT_NEW,
                          APR_HASH_KEY_STRING)))
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_NEW;
+      {
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_NEW;
+        /* Normalize "" (used by the log runner) to NULL */
+        entry->conflict_new =
+          *(entry->conflict_new) ? entry->conflict_new : NULL;
+      }
 
-    if ((entry->conflict_wrk 
-         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CONFLICT_WRK, 
+    if ((entry->conflict_wrk
+         = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_CONFLICT_WRK,
                          APR_HASH_KEY_STRING)))
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_WRK;
+      {
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_CONFLICT_WRK;
+        /* Normalize "" (used by the log runner) to NULL */
+        entry->conflict_wrk =
+          *(entry->conflict_wrk) ? entry->conflict_wrk : NULL;
+      }
   }
 
   /* Is this entry copied? */
+  SVN_ERR (do_bool_attr (&entry->copied,
+                         modify_flags, SVN_WC__ENTRY_MODIFY_COPIED,
+                         atts, SVN_WC__ENTRY_ATTR_COPIED, name));
   {
-    const char *copiedstr, *revstr;
-      
-    copiedstr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_COPIED, 
-                              APR_HASH_KEY_STRING);
-        
-    entry->copied = FALSE;
-    if (copiedstr)
-      {
-        if (! strcmp (copiedstr, "true"))
-          entry->copied = TRUE;
-        else if (! strcmp (copiedstr, "false"))
-          entry->copied = FALSE;
-        else if (! strcmp (copiedstr, ""))
-          entry->copied = FALSE;
-        else
-          return svn_error_createf 
-            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
-             _("Entry '%s' has invalid '%s' value"),
-             (name ? name : SVN_WC_ENTRY_THIS_DIR),
-             SVN_WC__ENTRY_ATTR_COPIED);
-
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
-      }
+    const char *revstr;
 
     entry->copyfrom_url = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_COPYFROM_URL,
                                         APR_HASH_KEY_STRING);
@@ -338,85 +368,19 @@ svn_wc__atts_to_entry (svn_wc_entry_t **new_entry,
   }
 
   /* Is this entry deleted? */
-  {
-    const char *deletedstr;
-      
-    deletedstr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_DELETED, 
-                               APR_HASH_KEY_STRING);
-        
-    entry->deleted = FALSE;
-    if (deletedstr)
-      {
-        if (! strcmp (deletedstr, "true"))
-          entry->deleted = TRUE;
-        else if (! strcmp (deletedstr, "false"))
-          entry->deleted = FALSE;
-        else if (! strcmp (deletedstr, ""))
-          entry->deleted = FALSE;
-        else
-          return svn_error_createf 
-            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
-             _("Entry '%s' has invalid '%s' value"),
-             (name ? name : SVN_WC_ENTRY_THIS_DIR),
-             SVN_WC__ENTRY_ATTR_DELETED);
-
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_DELETED;
-      }
-  }
+  SVN_ERR (do_bool_attr (&entry->deleted,
+                         modify_flags, SVN_WC__ENTRY_MODIFY_DELETED,
+                         atts, SVN_WC__ENTRY_ATTR_DELETED, name));
 
   /* Is this entry absent? */
-  {
-    const char *absentstr;
-      
-    absentstr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_ABSENT, 
-                               APR_HASH_KEY_STRING);
-        
-    entry->absent = FALSE;
-    if (absentstr)
-      {
-        if (! strcmp (absentstr, "true"))
-          entry->absent = TRUE;
-        else if (! strcmp (absentstr, "false"))
-          entry->absent = FALSE;
-        else if (! strcmp (absentstr, ""))
-          entry->absent = FALSE;
-        else
-          return svn_error_createf 
-            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
-             _("Entry '%s' has invalid '%s' value"),
-             (name ? name : SVN_WC_ENTRY_THIS_DIR),
-             SVN_WC__ENTRY_ATTR_ABSENT);
-
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_ABSENT;
-      }
-  }
+  SVN_ERR (do_bool_attr (&entry->absent,
+                         modify_flags, SVN_WC__ENTRY_MODIFY_ABSENT,
+                         atts, SVN_WC__ENTRY_ATTR_ABSENT, name));
 
   /* Is this entry incomplete? */
-  {
-    const char *incompletestr;
-      
-    incompletestr = apr_hash_get (atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, 
-                                  APR_HASH_KEY_STRING);
-        
-    entry->incomplete = FALSE;
-    if (incompletestr)
-      {
-        if (! strcmp (incompletestr, "true"))
-          entry->incomplete = TRUE;
-        else if (! strcmp (incompletestr, "false"))
-          entry->incomplete = FALSE;
-        else if (! strcmp (incompletestr, ""))
-          entry->incomplete = FALSE;
-        else
-          return svn_error_createf 
-            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
-             _("Entry '%s' has invalid '%s' value"),
-             (name ? name : SVN_WC_ENTRY_THIS_DIR),
-             SVN_WC__ENTRY_ATTR_INCOMPLETE);
-
-        *modify_flags |= SVN_WC__ENTRY_MODIFY_INCOMPLETE;
-      }
-  }
+  SVN_ERR (do_bool_attr (&entry->incomplete,
+                         modify_flags, SVN_WC__ENTRY_MODIFY_INCOMPLETE,
+                         atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, name));
 
 
   /* Attempt to set up timestamps. */

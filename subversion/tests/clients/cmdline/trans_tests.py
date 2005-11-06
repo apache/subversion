@@ -586,9 +586,10 @@ def cat_keyword_expansion(sbox):
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
 
   # Set up A/mu to do $Rev$ keyword expansion
-  svntest.main.file_append (mu_path , "$Rev$")
+  svntest.main.file_append (mu_path , "$Rev$\n$Author$")
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset', 'svn:keywords', 'Rev', mu_path)
+                                     'propset', 'svn:keywords', 'Rev Author',
+                                     mu_path)
 
   expected_output = wc.State(wc_dir, {
     'A/mu' : Item(verb='Sending'),
@@ -600,6 +601,19 @@ def cat_keyword_expansion(sbox):
                                          expected_output, expected_status,
                                          None, None, None, None, None,
                                          wc_dir)
+
+  # Change the author to value which will get truncated on expansion
+  full_author = "x" * 400 
+  key_author = "x" * 244
+  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+  svntest.actions.run_and_verify_svn("", None, [],
+                                     'propset', '--revprop', '-r2',
+                                     'svn:author', full_author,
+                                     sbox.wc_dir)
+  svntest.actions.run_and_verify_svn("", [ full_author ], [],
+                                     'propget', '--revprop', '-r2',
+                                     'svn:author', '--strict',
+                                     sbox.wc_dir)
 
   # Make another commit so that the last changed revision for A/mu is
   # not HEAD.
@@ -616,8 +630,10 @@ def cat_keyword_expansion(sbox):
 
   # At one stage the keywords were expanded to values for the requested
   # revision, not to those committed revision
-  svntest.actions.run_and_verify_svn (None, [ "This is the file 'mu'.\n",
-                                              "$Rev: 2 $" ], [],
+  svntest.actions.run_and_verify_svn (None,
+                                      [ "This is the file 'mu'.\n",
+                                        "$Rev: 2 $\n",
+                                        "$Author: " + key_author + " $"], [],
                                       'cat', '-r', 'HEAD', mu_path)
   
 

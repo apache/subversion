@@ -29,6 +29,7 @@
 #include "svn_props.h"
 
 #include "dav_svn.h"
+#include "svn_xml.h"
 
 
 /* #################################################################
@@ -200,6 +201,7 @@ static svn_error_t *do_resources(const dav_svn_repos *repos,
 dav_error * dav_svn__merge_response(ap_filter_t *output,
                                     const dav_svn_repos *repos,
                                     svn_revnum_t new_rev,
+                                    char *post_commit_err,
                                     apr_xml_elem *prop_elem,
                                     svn_boolean_t disable_merge_response,
                                     apr_pool_t *pool)
@@ -210,6 +212,8 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   const char *vcc;
   const char *rev;
   svn_string_t *creationdate, *creator_displayname;
+  const char *post_commit_err_elem = NULL,
+             *post_commit_header_info = NULL;
 
   serr = svn_fs_revision_root(&root, repos->fs, new_rev, pool);
   if (serr != NULL)
@@ -230,6 +234,24 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
 
   /* the version-name of the baseline is the revision number */
   rev = apr_psprintf(pool, "%ld", new_rev);
+
+  /* get the post-commit hook stderr, if any */
+  if (post_commit_err)
+    {
+      post_commit_header_info = apr_psprintf (pool,
+                                              " xmlns:S=\"%s\"",
+                                              SVN_XML_NAMESPACE);
+      post_commit_err_elem = apr_psprintf (pool,
+                                           "<S:post-commit-err>%s"
+                                           "</S:post-commit-err>",
+                                           post_commit_err);
+    }
+  else
+    {
+      post_commit_header_info = "" ;
+      post_commit_err_elem = "" ;
+    }
+
 
   /* get the creationdate and creator-displayname of the new revision, too. */
   serr = svn_fs_revision_prop(&creationdate, repos->fs, new_rev,
@@ -252,7 +274,9 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
 
   (void) ap_fputstrs(output, bb,
                      DAV_XML_HEADER DEBUG_CR
-                     "<D:merge-response xmlns:D=\"DAV:\">" DEBUG_CR
+                     "<D:merge-response xmlns:D=\"DAV:\"",
+                     post_commit_header_info,
+                     ">" DEBUG_CR
                      "<D:updated-set>" DEBUG_CR
 
                      /* generate a response for the new baseline */
@@ -264,7 +288,8 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                      /* ### this is wrong. it's a VCC, not a baseline. but
                         ### we need to tell the client to look at *this*
                         ### resource for the version-name. */
-                     "<D:resourcetype><D:baseline/></D:resourcetype>" DEBUG_CR
+                     "<D:resourcetype><D:baseline/></D:resourcetype>" DEBUG_CR,
+                     post_commit_err_elem, DEBUG_CR
                      "<D:version-name>", rev, "</D:version-name>" DEBUG_CR,
                      NULL);
   if (creationdate)
