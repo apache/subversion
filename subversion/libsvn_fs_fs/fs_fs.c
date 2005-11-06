@@ -1175,8 +1175,8 @@ svn_fs_fs__set_revision_proplist (svn_fs_t *fs,
   const char *tmp_path;
   apr_file_t *f;
 
-  SVN_ERR (svn_io_open_unique_file
-           (&f, &tmp_path, final_path, ".tmp", FALSE, pool));
+  SVN_ERR (svn_io_open_unique_file2
+           (&f, &tmp_path, final_path, ".tmp", svn_io_file_del_none, pool));
   SVN_ERR (svn_hash_write (proplist, f, pool));
   SVN_ERR (svn_io_file_close (f, pool));
   /* We use the rev file of this revision as the perms reference,
@@ -3689,8 +3689,8 @@ write_final_current (svn_fs_t *fs,
                       new_copy_id);
 
   name = path_current (fs, pool);
-  SVN_ERR (svn_io_open_unique_file (&file, &tmp_name, name, ".tmp", FALSE,
-                                    pool));
+  SVN_ERR (svn_io_open_unique_file2 (&file, &tmp_name, name, ".tmp",
+                                     svn_io_file_del_none, pool));
 
   SVN_ERR (svn_io_file_write_full (file, buf, strlen (buf), NULL, pool));
 

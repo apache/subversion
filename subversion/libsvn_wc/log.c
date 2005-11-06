@@ -378,9 +378,9 @@ install_committed_file (svn_boolean_t *overwrote_working,
   svn_path_split (filepath, &pdir, &bname, pool);
   tmp_wfile = svn_wc__adm_path (pdir, TRUE, pool, bname, NULL);
 
-  SVN_ERR (svn_io_open_unique_file (NULL, &tmp_wfile,
-                                    tmp_wfile, SVN_WC__TMP_EXT,
-                                    FALSE, pool));
+  SVN_ERR (svn_io_open_unique_file2 (NULL, &tmp_wfile,
+                                     tmp_wfile, SVN_WC__TMP_EXT,
+                                     svn_io_file_del_none, pool));
 
   /* Is there a tmp_text_base that needs to be installed?  */
   tmp_text_base = svn_wc__text_base_path (filepath, 1, pool);
