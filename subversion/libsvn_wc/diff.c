@@ -55,8 +55,6 @@
 #include "props.h"
 #include "adm_files.h"
 
-#include "svn_private_config.h"
-
 
 /*-------------------------------------------------------------------------*/
 /* A little helper function.
@@ -352,8 +350,22 @@ static svn_error_t *
 get_empty_file (struct edit_baton *b,
                 const char **empty_file)
 {
+  /* Create the file if it does not exist */
+  /* Note that we tried to use /dev/null in r17220, but
+     that won't work on Windows: it's impossible to stat NUL */
+  if (!b->empty_file)
+    {
+      const char *temp_dir;
 
-  *empty_file = SVN_NULL_DEVICE_NAME;
+      SVN_ERR (svn_io_temp_dir (&temp_dir, b->pool));
+      SVN_ERR (svn_io_open_unique_file2
+               (NULL, &(b->empty_file),
+                svn_path_join (temp_dir, "tmp", b->pool),
+                "", svn_io_file_del_on_pool_cleanup,
+                b->pool));
+    }
+
+  *empty_file = b->empty_file;
 
   return SVN_NO_ERROR;
 }
