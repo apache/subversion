@@ -315,8 +315,8 @@ svn_wc__install_props (svn_stringbuf_t **log_accum,
   const char *access_path = svn_wc_adm_access_path (adm_access);
   int access_len = strlen (access_path);
   apr_array_header_t *prop_diffs;
-  const svn_wc_entry_t *entry;
   svn_wc_entry_t tmp_entry;
+  svn_node_kind_t kind;
 
   /* Non-empty path without trailing slash need an extra slash removed */
   if (access_len != 0 && access_path[access_len - 1] != '/')
@@ -324,17 +324,22 @@ svn_wc__install_props (svn_stringbuf_t **log_accum,
 
   /* ### TODO: Is this check needed? */
   if (name == NULL)
-    /* We must be working with props on the directory PATH  */
-    full_path = access_path;
+    {
+      name = SVN_WC_ENTRY_THIS_DIR;
+      /* We must be working with props on the directory PATH  */
+      full_path = access_path;
+    }
   else
     /* We must be working with props on the file PATH/NAME */
     full_path = svn_path_join (access_path, name, pool);
 
-  SVN_ERR (svn_wc_entry (&entry, full_path, adm_access, FALSE, pool));
-  assert (entry);
-  
+  if (strcmp (name, SVN_WC_ENTRY_THIS_DIR) == 0)
+    kind = svn_node_dir;
+  else
+    kind = svn_node_file;
+
   /* Check if the props are modified. */
-  SVN_ERR (svn_prop_diffs (&prop_diffs, base_props, working_props, pool));
+  SVN_ERR (svn_prop_diffs (&prop_diffs, working_props, base_props, pool));
   tmp_entry.prop_mods = (prop_diffs->nelts > 0);
 
   /* ### TODO: Check props in working props and update flags for specific
@@ -347,9 +352,9 @@ svn_wc__install_props (svn_stringbuf_t **log_accum,
      paths computed are ABSOLUTE pathnames, which is what our disk
      routines require. */
   SVN_ERR (svn_wc__prop_path (&working_propfile_path, full_path,
-                              entry->kind, FALSE, pool)); 
+                              kind, FALSE, pool)); 
   SVN_ERR (svn_wc__prop_path (&working_prop_tmp_path, full_path,
-                              entry->kind, TRUE, pool));
+                              kind, TRUE, pool));
   
   /* Write the working prop hash to path/.svn/tmp/props/name or
      path/.svn/tmp/dir-props */
@@ -379,10 +384,10 @@ svn_wc__install_props (svn_stringbuf_t **log_accum,
       const char *tmp_prop_base, *real_prop_base;
 
       SVN_ERR (svn_wc__prop_base_path (&base_propfile_path, full_path,
-                                       entry->kind, FALSE, pool));
+                                       kind, FALSE, pool));
 
       SVN_ERR (svn_wc__prop_base_path (&base_prop_tmp_path, full_path,
-                                       entry->kind, TRUE, pool));
+                                       kind, TRUE, pool));
       /* ### TODO: Make sure base prop file is removed if there are no
          base props. */
       SVN_ERR (svn_wc__save_prop_file (base_prop_tmp_path, base_props, pool));
@@ -1559,7 +1564,7 @@ svn_wc_prop_set2 (const char *name,
       svn_error_quick_wrap
       (err, _("Failed to load properties from disk"));
 
-  SVN_ERR (svn_wc__prop_base_path (&prop_base_path, path, FALSE, kind,
+  SVN_ERR (svn_wc__prop_base_path (&prop_base_path, path, kind, FALSE,
                                    pool));
 
   base_prophash = apr_hash_make (pool);
