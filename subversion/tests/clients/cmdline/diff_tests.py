@@ -1990,7 +1990,7 @@ test_list = [ None,
               diff_keywords,
               diff_force,
               XFail(diff_renamed_dir),
-              XFail(diff_property_changes_to_base),
+              diff_property_changes_to_base,
               ]
 
 if __name__ == '__main__':
