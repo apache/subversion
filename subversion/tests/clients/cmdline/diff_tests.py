@@ -1567,45 +1567,47 @@ def diff_within_renamed_dir(sbox):
   was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  svntest.main.run_svn(None, 'mv', os.path.join('A', 'D', 'G'),
-                                   os.path.join('A', 'D', 'I'))
-  # svntest.main.run_svn(None, 'ci', '-m', 'log_msg')
-  open(os.path.join('A', 'D', 'I', 'pi'), 'w').write("new pi")
+  try:
+    svntest.main.run_svn(None, 'mv', os.path.join('A', 'D', 'G'),
+                                     os.path.join('A', 'D', 'I'))
+    # svntest.main.run_svn(None, 'ci', '-m', 'log_msg')
+    open(os.path.join('A', 'D', 'I', 'pi'), 'w').write("new pi")
 
-  # Check a repos->wc diff
-  diff_output, err_output = svntest.main.run_svn(None, 'diff',
-                                                 os.path.join('A', 'D', 'I', 'pi'))
-  if check_diff_output(diff_output,
-                       os.path.join('A', 'D', 'I', 'pi'),
-                       'M') :
-    raise svntest.Failure
+    # Check a repos->wc diff
+    diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                   os.path.join('A', 'D', 'I', 'pi'))
+    if check_diff_output(diff_output,
+                         os.path.join('A', 'D', 'I', 'pi'),
+                         'M') :
+      raise svntest.Failure
 
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-m', 'log msg')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'ci', '-m', 'log msg')
 
-  # Check repos->wc after commit
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
-                                                 os.path.join('A', 'D', 'I', 'pi'))
-  if check_diff_output(diff_output,
-                       os.path.join('A', 'D', 'I', 'pi'),
-                       'M') :
-    raise svntest.Failure
+    # Check repos->wc after commit
+    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
+                                                   os.path.join('A', 'D', 'I', 'pi'))
+    if check_diff_output(diff_output,
+                         os.path.join('A', 'D', 'I', 'pi'),
+                         'M') :
+      raise svntest.Failure
 
-  # Test the diff while within the moved directory
-  os.chdir(os.path.join('A','D','I'))
+    # Test the diff while within the moved directory
+    os.chdir(os.path.join('A','D','I'))
 
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1')
+    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1')
 
-  if check_diff_output(diff_output, 'pi', 'M') :
-    raise svntest.Failure
+    if check_diff_output(diff_output, 'pi', 'M') :
+      raise svntest.Failure
 
-  # Test a repos->repos diff while within the moved directory
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2')
+    # Test a repos->repos diff while within the moved directory
+    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2')
 
-  if check_diff_output(diff_output, 'pi', 'M') :
-    raise svntest.Failure
+    if check_diff_output(diff_output, 'pi', 'M') :
+      raise svntest.Failure
 
-  os.chdir(was_cwd)
+  finally:
+    os.chdir(was_cwd)
 
 #----------------------------------------------------------------------
 def diff_prop_on_named_dir(sbox):
@@ -1810,62 +1812,64 @@ def diff_renamed_dir(sbox):
   was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  svntest.main.run_svn(None, 'mv', os.path.join('A', 'D', 'G'),
-                                   os.path.join('A', 'D', 'I'))
+  try:
+    svntest.main.run_svn(None, 'mv', os.path.join('A', 'D', 'G'),
+                                     os.path.join('A', 'D', 'I'))
 
-  # Check a repos->wc diff
-  diff_output, err_output = svntest.main.run_svn(None, 'diff',
-                                                 os.path.join('A', 'D'))
-  if check_diff_output(diff_output,
-                       os.path.join('A', 'D', 'G', 'pi'),
-                       'D') :
-    raise svntest.Failure
-  if check_diff_output(diff_output,
-                       os.path.join('A', 'D', 'I', 'pi'),
-                       'A') :
-    raise svntest.Failure
+    # Check a repos->wc diff
+    diff_output, err_output = svntest.main.run_svn(None, 'diff',
+                                                   os.path.join('A', 'D'))
+    if check_diff_output(diff_output,
+                         os.path.join('A', 'D', 'G', 'pi'),
+                         'D') :
+      raise svntest.Failure
+    if check_diff_output(diff_output,
+                         os.path.join('A', 'D', 'I', 'pi'),
+                         'A') :
+      raise svntest.Failure
 
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'ci', '-m', 'log msg')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'ci', '-m', 'log msg')
 
-  # Check repos->wc after commit
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
-                                                 os.path.join('A', 'D'))
-  if check_diff_output(diff_output,
-                       os.path.join('A', 'D', 'G', 'pi'),
-                       'D') :
-    raise svntest.Failure
-  if check_diff_output(diff_output,
-                       os.path.join('A', 'D', 'I', 'pi'),
-                       'A') :
-    raise svntest.Failure
+    # Check repos->wc after commit
+    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1',
+                                                   os.path.join('A', 'D'))
+    if check_diff_output(diff_output,
+                         os.path.join('A', 'D', 'G', 'pi'),
+                         'D') :
+      raise svntest.Failure
+    if check_diff_output(diff_output,
+                         os.path.join('A', 'D', 'I', 'pi'),
+                         'A') :
+      raise svntest.Failure
 
-  # Test a repos->repos diff after commit
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2')
-  if check_diff_output(diff_output,
-                       os.path.join('A', 'D', 'G', 'pi'),
-                       'D') :
-    raise svntest.Failure
-  if check_diff_output(diff_output,
-                       os.path.join('A', 'D', 'I', 'pi'),
-                       'A') :
-    raise svntest.Failure
+    # Test a repos->repos diff after commit
+    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2')
+    if check_diff_output(diff_output,
+                         os.path.join('A', 'D', 'G', 'pi'),
+                         'D') :
+      raise svntest.Failure
+    if check_diff_output(diff_output,
+                         os.path.join('A', 'D', 'I', 'pi'),
+                         'A') :
+      raise svntest.Failure
 
-  # Test the diff while within the moved directory
-  os.chdir(os.path.join('A','D','I'))
+    # Test the diff while within the moved directory
+    os.chdir(os.path.join('A','D','I'))
 
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1')
+    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1')
 
-  if check_diff_output(diff_output, 'pi', 'A') :
-    raise svntest.Failure
+    if check_diff_output(diff_output, 'pi', 'A') :
+      raise svntest.Failure
 
-  # Test a repos->repos diff while within the moved directory
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2')
+    # Test a repos->repos diff while within the moved directory
+    diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2')
 
-  if check_diff_output(diff_output, 'pi', 'A') :
-    raise svntest.Failure
+    if check_diff_output(diff_output, 'pi', 'A') :
+      raise svntest.Failure
 
-  os.chdir(was_cwd)
+  finally:
+    os.chdir(was_cwd)
 
 
 #----------------------------------------------------------------------
