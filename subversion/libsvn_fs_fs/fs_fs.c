@@ -3129,7 +3129,7 @@ rep_write_get_baton (struct rep_write_baton **wb_p,
   SVN_ERR (get_file_offset (&b->delta_start, file, b->pool));
 
   /* Prepare to write the svndiff data. */
-  svn_txdelta_to_svndiff (b->rep_stream, pool, &wh, &whb);
+  svn_txdelta_to_svndiff2 (b->rep_stream, pool, &wh, &whb, 1);
   b->delta_stream = svn_txdelta_target_push (wh, whb, source, b->pool);
       
   *wb_p = b;
