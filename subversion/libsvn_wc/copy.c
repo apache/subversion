@@ -501,14 +501,27 @@ svn_wc_copy2 (const char *src_path,
 {
   svn_wc_adm_access_t *adm_access;
   svn_node_kind_t src_kind;
+  const char *dst_path;
   const svn_wc_entry_t *dst_entry, *src_entry;
 
   SVN_ERR (svn_wc_adm_probe_open3 (&adm_access, NULL, src_path, FALSE, -1,
                                    cancel_func, cancel_baton, pool));
 
-  SVN_ERR (svn_wc_entry (&dst_entry, svn_wc_adm_access_path (dst_parent),
-                         dst_parent, FALSE, pool));
+  dst_path =  svn_wc_adm_access_path (dst_parent);
+  SVN_ERR (svn_wc_entry (&dst_entry, dst_path, dst_parent, FALSE, pool));
+  if (! dst_entry)
+    return svn_error_createf
+      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
+       _("'%s' is not under version control"),
+       svn_path_local_style (dst_path, pool));
+
   SVN_ERR (svn_wc_entry (&src_entry, src_path, adm_access, FALSE, pool));
+  if (! src_entry)
+    return svn_error_createf
+      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
+       _("'%s' is not under version control"),
+       svn_path_local_style (src_path, pool));
+
   if ((src_entry->repos != NULL && dst_entry->repos != NULL) &&
       strcmp (src_entry->repos, dst_entry->repos) != 0)
     return svn_error_createf
@@ -524,7 +537,7 @@ svn_wc_copy2 (const char *src_path,
        svn_path_local_style (svn_wc_adm_access_path (dst_parent), pool));
 
   SVN_ERR (svn_io_check_path (src_path, &src_kind, pool));
-  
+
   if (src_kind == svn_node_file)
     SVN_ERR (copy_file_administratively (src_path, adm_access,
                                          dst_parent, dst_basename,

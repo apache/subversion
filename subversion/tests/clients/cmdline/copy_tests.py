@@ -1879,7 +1879,7 @@ test_list = [ None,
               repos_to_wc_copy_replacement,
               repos_to_wc_copy_replace_with_props,
               delete_replaced_file,
-              XFail(mv_unversioned_file),
+              mv_unversioned_file,
              ]
 
 if __name__ == '__main__':
