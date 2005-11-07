@@ -953,14 +953,32 @@ close_directory (void *dir_baton,
 
   if (b->propchanges->nelts > 0)
     {
+      /* The working copy properties at the base of the wc->repos comparison:
+         either BASE or WORKING. */
+      apr_hash_t *wcprops;
+
+      if (b->edit_baton->use_text_base)
+        {
+          svn_wc_adm_access_t *adm_access;
+
+          SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access,
+                                              b->edit_baton->anchor,
+                                              b->path, b->pool));
+
+          SVN_ERR (svn_wc_get_prop_diffs (NULL, &wcprops,
+                                          b->path, adm_access, pool));
+        }
+      else
+        wcprops = b->baseprops;
+
       if (! b->edit_baton->reverse_order)
-        reverse_propchanges (b->baseprops, b->propchanges, b->pool);
+        reverse_propchanges (wcprops, b->propchanges, b->pool);
 
       SVN_ERR (b->edit_baton->callbacks->dir_props_changed
                (NULL, NULL,
                 b->path,
                 b->propchanges,
-                b->baseprops,
+                wcprops,
                 b->edit_baton->callback_baton));
     }
 
@@ -1259,12 +1277,22 @@ close_file (void *file_baton,
       else
         localfile = temp_file_path = NULL;
       
-      if (b->propchanges->nelts > 0
-          && ! eb->reverse_order)
-        reverse_propchanges (b->baseprops, b->propchanges, b->pool);
-
       if (localfile || b->propchanges->nelts > 0)
         {
+          /* The working copy properties at the base of the wc->repos
+             comparison: either BASE or WORKING. */
+          apr_hash_t *wcprops;
+
+          if (eb->use_text_base)
+            SVN_ERR (svn_wc_get_prop_diffs (NULL, &wcprops,
+                                            b->path, adm_access, pool));
+          else
+            wcprops = b->baseprops;
+
+          if (b->propchanges->nelts > 0
+              && ! eb->reverse_order)
+            reverse_propchanges (wcprops, b->propchanges, b->pool);
+
           err1 = b->edit_baton->callbacks->file_changed
             (NULL, NULL, NULL,
              b->path,
@@ -1274,7 +1302,7 @@ close_file (void *file_baton,
              eb->reverse_order ? b->edit_baton->revnum : SVN_INVALID_REVNUM,
              eb->reverse_order ? working_mimetype : pristine_mimetype,
              eb->reverse_order ? pristine_mimetype : working_mimetype,
-             b->propchanges, b->baseprops,
+             b->propchanges, wcprops,
              b->edit_baton->callback_baton);
       
           if (localfile && (! eb->use_text_base) && (! b->schedule_delete)
