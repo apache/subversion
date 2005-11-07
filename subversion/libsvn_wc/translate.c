@@ -42,11 +42,12 @@
 #include "svn_private_config.h"
 
 svn_error_t *
-svn_wc_translated_file (const char **xlated_p,
-                        const char *vfile,
-                        svn_wc_adm_access_t *adm_access,
-                        svn_boolean_t force_repair,
-                        apr_pool_t *pool)
+svn_wc_translated_file2 (const char **xlated_p,
+                         const char *vfile,
+                         svn_wc_adm_access_t *adm_access,
+                         svn_boolean_t force_repair,
+                         svn_boolean_t del_temp_on_pool_cleanup,
+                         apr_pool_t *pool)
 {
   svn_subst_eol_style_t style;
   const char *eol;
@@ -76,7 +77,9 @@ svn_wc_translated_file (const char **xlated_p,
                                          &tmp_vfile,
                                          tmp_vfile,
                                          SVN_WC__TMP_EXT,
-                                         svn_io_file_del_none,
+                                         del_temp_on_pool_cleanup
+                                         ? svn_io_file_del_on_pool_cleanup
+                                         : svn_io_file_del_none,
                                          pool));
 
       if (style == svn_subst_eol_style_fixed)
@@ -124,6 +127,18 @@ svn_wc_translated_file (const char **xlated_p,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_translated_file (const char **xlated_p,
+                        const char *vfile,
+                        svn_wc_adm_access_t *adm_access,
+                        svn_boolean_t force_repair,
+                        apr_pool_t *pool)
+{
+  return svn_wc_translated_file2 (xlated_p, vfile, adm_access,
+                                  force_repair, FALSE, pool);
 }
 
 
