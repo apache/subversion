@@ -1824,6 +1824,20 @@ def delete_replaced_file(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+def mv_unversioned_file(sbox):
+  "move an unversioned file"
+  # Issue #2436: Attempting to move an unversioned file would seg fault.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  fish_path = os.path.join(wc_dir, 'fish')
+  dest_path = os.path.join(wc_dir, 'dest')
+  file(fish_path, "w").close()
+  svntest.actions.run_and_verify_svn(None, None,
+                                     ".*fish.* is not under version control.*",
+                                     'mv', '--force',
+                                     fish_path, dest_path)
+  
+
 ########################################################################
 # Run the tests
 
@@ -1865,6 +1879,7 @@ test_list = [ None,
               repos_to_wc_copy_replacement,
               repos_to_wc_copy_replace_with_props,
               delete_replaced_file,
+              XFail(mv_unversioned_file),
              ]
 
 if __name__ == '__main__':
