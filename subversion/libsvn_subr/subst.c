@@ -1173,7 +1173,6 @@ svn_subst_copy_and_translate3 (const char *src,
   svn_stream_t *src_stream, *dst_stream;
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
   svn_error_t *err;
-  apr_pool_t *subpool;
   svn_node_kind_t kind;
   svn_boolean_t path_special;
 
@@ -1195,74 +1194,42 @@ svn_subst_copy_and_translate3 (const char *src,
   if (! (eol_str || (keywords && (apr_hash_count (keywords) > 0))))
     return svn_io_copy_file (src, dst, FALSE, pool);
 
-  subpool = svn_pool_create (pool);
-
   /* Open source file. */
-  err = svn_io_file_open (&s, src, APR_READ | APR_BUFFERED,
-                          APR_OS_DEFAULT, subpool);
-  if (err)
-    goto error;
+  SVN_ERR (svn_io_file_open (&s, src, APR_READ | APR_BUFFERED,
+                             APR_OS_DEFAULT, pool));
 
   /* For atomicity, we translate to a tmp file and
      then rename the tmp file over the real destination. */
-
-  err = svn_io_open_unique_file2 (&d, &dst_tmp, dst,
-                                  ".tmp", svn_io_file_del_none, subpool);
-
-  /* Move the file name to a more permanent pool. */
-  if (dst_tmp)
-    dst_tmp = apr_pstrdup(pool, dst_tmp);
-
-  if (err)
-    goto error;
+  SVN_ERR (svn_io_open_unique_file2 (&d, &dst_tmp, dst,
+                                     ".tmp", svn_io_file_del_on_pool_cleanup,
+                                     pool));
 
   /* Now convert our two open files into streams. */
-  src_stream = svn_stream_from_aprfile (s, subpool);
-  dst_stream = svn_stream_from_aprfile (d, subpool);
+  src_stream = svn_stream_from_aprfile (s, pool);
+  dst_stream = svn_stream_from_aprfile (d, pool);
 
   /* Translate src stream into dst stream. */
   err = svn_subst_translate_stream3 (src_stream, dst_stream, eol_str,
-                                     repair, keywords, expand, subpool);
+                                     repair, keywords, expand, pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
-        err = svn_error_createf 
+        return svn_error_createf
           (SVN_ERR_IO_INCONSISTENT_EOL, err,
            _("File '%s' has inconsistent newlines"),
            svn_path_local_style (src, pool));
-      goto error;
     }
 
   /* clean up nicely. */
-  err = svn_stream_close (src_stream);
-  if (err)
-    goto error;
-
-  err = svn_stream_close (dst_stream);
-  if (err)
-    goto error;
-
-  err = svn_io_file_close (s, subpool);
-  if (err)
-    goto error;
-
-  err = svn_io_file_close (d, subpool);
-  if (err)
-    goto error;
+  SVN_ERR (svn_stream_close (src_stream));
+  SVN_ERR (svn_stream_close (dst_stream));
+  SVN_ERR (svn_io_file_close (s, pool));
+  SVN_ERR (svn_io_file_close (d, pool));
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
-  err = svn_io_file_rename (dst_tmp, dst, subpool);
-  if (err)
-    goto error;
+  SVN_ERR (svn_io_file_rename (dst_tmp, dst, pool));
 
-  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
-
- error:
-  svn_pool_destroy (subpool);   /* Make sure all files are closed first. */
-  if (dst_tmp)
-    svn_error_clear (svn_io_remove_file (dst_tmp, pool));
-  return err;
 }
 
 
