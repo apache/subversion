@@ -544,16 +544,6 @@ def get_last_changed_date(path):
   raise svntest.Failure
 
 # Helper for timestamp_behaviour test
-def get_prop_timestamp(path):
-  "get the prop-time for path using svn info"
-  out, err = svntest.actions.run_and_verify_svn(None, None, [], 'info', path)
-  for line in out:
-    if re.match("^Properties Last Updated", line):
-      return line
-  print "Didn't find prop-time for " + path
-  raise svntest.Failure
-
-# Helper for timestamp_behaviour test
 def get_text_timestamp(path):
   "get the text-time for path using svn info"
   out, err = svntest.actions.run_and_verify_svn(None, None, [], 'info', path)
@@ -562,41 +552,6 @@ def get_text_timestamp(path):
       return line
   print "Didn't find text-time for " + path
   raise svntest.Failure
-
-# Helper for timestamp_behaviour test
-def prop_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
-  "prop-time behaviour"
-
-  # Pristine prop-time
-  pre_prop_time = get_prop_timestamp(wc_path)
-
-  # Modifying the property does not affect the prop-time
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset', 'name', 'xxx', wc_path)
-  expected_status.tweak(status_path, status=' M')
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  prop_time = get_prop_timestamp(wc_path)
-  if prop_time != pre_prop_time:
-    raise svntest.Failure
-
-  # Manually reverting the property does not affect the prop-time
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset', 'name', 'value', wc_path)
-  expected_status.tweak(status_path, status='  ')
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  prop_time = get_prop_timestamp(wc_path)
-  if prop_time != pre_prop_time:
-    raise svntest.Failure
-
-  # revert/cleanup change the prop-time even though the properties don't change
-  if cmd == 'cleanup':
-    svntest.actions.run_and_verify_svn(None, None, [], cmd, wc_dir)
-  else:
-    svntest.actions.run_and_verify_svn(None, None, [], cmd, wc_path)
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-  prop_time = get_prop_timestamp(wc_path)
-  if prop_time == pre_prop_time:
-    raise svntest.Failure
 
 # Helper for timestamp_behaviour test
 def text_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
@@ -644,38 +599,21 @@ def timestamp_behaviour(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Setup a file and directory with properties
   A_path = os.path.join(wc_dir, 'A')
   iota_path = os.path.join(wc_dir, 'iota')
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'propset', 'name', 'value',
-                                     A_path, iota_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
-                                     '--message', 'log message',
-                                     wc_dir)
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
-  expected_status.tweak('iota', 'A', wc_rev=2)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Sleep to ensure timestamps change
   time.sleep(2)
 
-  # Check behaviour of revert on prop-time
-  prop_time_behaviour(wc_dir, iota_path, 'iota', expected_status, 'revert')
-  prop_time_behaviour(wc_dir, A_path, 'A', expected_status, 'revert')
   # Check behaviour of revert on text-time
   text_time_behaviour(wc_dir, iota_path, 'iota', expected_status, 'revert')
 
   # Sleep to ensure timestamps change
   time.sleep(2)
 
-  # Check behaviour of cleanup on prop-time
-  prop_time_behaviour(wc_dir, iota_path, 'iota', expected_status, 'cleanup')
-  prop_time_behaviour(wc_dir, A_path, 'A', expected_status, 'cleanup')
   # Check behaviour of cleanup on text-time
   text_time_behaviour(wc_dir, iota_path, 'iota', expected_status, 'cleanup')
 
