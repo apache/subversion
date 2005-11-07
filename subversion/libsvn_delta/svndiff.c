@@ -217,7 +217,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   append_encoded_int (header, window->tview_len, pool);
   if (err == SVN_NO_ERROR && eb->version == 1)
     {
-      err = zlib_encode (instructions, i1);
+      SVN_ERR (zlib_encode (instructions, i1));
       instructions = i1;
     }
   append_encoded_int (header, instructions->len, pool);
@@ -225,7 +225,7 @@ window_handler (svn_txdelta_window_t *window, void *baton)
     {
       svn_stringbuf_t *temp;
       temp = svn_stringbuf_create_from_string (window->new_data, pool);
-      err = zlib_encode (temp, newdata);
+      SVN_ERR (zlib_encode (temp, newdata));
       window->new_data = svn_string_create_from_buf (newdata, pool);
     }
 
