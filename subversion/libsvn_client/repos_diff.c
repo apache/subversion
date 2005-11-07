@@ -35,8 +35,6 @@
 
 #include "client.h"
 
-#include "svn_private_config.h"
-
 /* Overall crawler editor baton.  */
 struct edit_baton {
   /* TARGET is a working-copy directory which corresponds to the base
@@ -293,9 +291,6 @@ get_dirprops_from_ra (struct dir_baton *b)
 
 
 /* Create an empty file, the path to the file is returned in EMPTY_FILE.
- * If FILE is provided, an open file handle is returned in *FILE.
- * Use FOR_OUTPUT to indicate the intention to write to the file
- * (and read back from it).
  * If ADM_ACCESS is not NULL and a lock is held, create the file in the
  * adm tmp/ area, otherwise use a system temp dir.
  *
@@ -306,23 +301,13 @@ create_empty_file (apr_file_t **file,
                    const char **empty_file,
                    svn_wc_adm_access_t *adm_access,
                    svn_io_file_del_t delete_when,
-                   svn_boolean_t for_output,
                    apr_pool_t *pool)
 {
-  if (for_output && adm_access && svn_wc_adm_locked (adm_access))
+  if (adm_access && svn_wc_adm_locked (adm_access))
     SVN_ERR (svn_wc_create_tmp_file2 (file, empty_file,
                                       svn_wc_adm_access_path (adm_access),
                                       delete_when, pool));
-  else if (! for_output)
-    {
-      *empty_file = SVN_NULL_DEVICE_NAME;
-
-      if (file)
-        SVN_ERR (svn_io_file_open (file, *empty_file,
-                                   APR_READ | APR_WRITE | APR_BUFFERED,
-                                   APR_OS_DEFAULT, pool));
-    }
-  else /* for_output && adm_access && ! adm_locked */
+  else
     {
       const char *temp_dir;
 
@@ -394,10 +379,11 @@ get_empty_file (struct edit_baton *b,
                 const char **empty_file)
 {
   /* Create the file if it does not exist */
+  /* Note that we tried to use /dev/null in r17220, but
+     that won't work on Windows: it's impossible to stat NUL */
   if (!b->empty_file)
     SVN_ERR (create_empty_file (NULL, &(b->empty_file), b->adm_access,
-                                svn_io_file_del_on_pool_cleanup,
-                                FALSE, b->pool));
+                                svn_io_file_del_on_pool_cleanup, b->pool));
 
 
   *empty_file = b->empty_file;
@@ -676,7 +662,7 @@ apply_textdelta (void *file_baton,
     adm_access = NULL;
   SVN_ERR (create_empty_file (&(b->file_end_revision),
                               &(b->path_end_revision), adm_access,
-                              svn_io_file_del_on_pool_cleanup, TRUE, b->pool));
+                              svn_io_file_del_on_pool_cleanup, b->pool));
 
   svn_txdelta_apply (svn_stream_from_aprfile (b->file_start_revision, b->pool),
                      svn_stream_from_aprfile (b->file_end_revision, b->pool),
