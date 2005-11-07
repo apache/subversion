@@ -99,10 +99,6 @@ struct svn_wc_traversal_info_t
 
 /*** Names and file/dir operations in the administrative area. ***/
 
-/* kff todo: namespace-protecting these #defines so we never have to
-   worry about them conflicting with future all-caps symbols that may
-   be defined in svn_wc.h. */
-
 /** The files within the administrative subdir. **/
 #define SVN_WC__ADM_FORMAT              "format"
 #define SVN_WC__ADM_README              "README.txt"
