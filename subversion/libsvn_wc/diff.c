@@ -206,6 +206,7 @@ struct file_baton {
     to ORIGINAL_FILE. */
   apr_file_t *original_file;
   apr_file_t *temp_file;
+  const char *temp_file_path;
 
   /* The original property hash, and the list of incoming propchanges. */
   apr_hash_t *baseprops;
@@ -1036,48 +1037,6 @@ open_file (const char *path,
   return SVN_NO_ERROR;
 }
 
-/* This is an apr cleanup handler. It is called whenever the associated
- * pool is cleared or destroyed. It is installed when the temporary file is
- * created, and removes the file when the file pool is deleted, whether in
- * the normal course of events, or if an error occurs.
- *
- * ARG is the file baton for the working copy file associated with the
- * temporary file.
- */
-static apr_status_t
-temp_file_cleanup_handler (void *arg)
-{
-  struct file_baton *b = arg;
-  svn_error_t *err;
-  apr_status_t status;
-
-  /* The path to the temporary copy of the pristine repository version. */
-  const char *temp_file_path
-    = svn_wc__text_base_path (b->wc_path, TRUE, b->pool);
-
-  err = svn_io_remove_file (temp_file_path, b->pool);
-  if (err)
-    {
-      status = err->apr_err;
-      svn_error_clear (err);
-    }
-  else
-    status = APR_SUCCESS;
-
-  return status;
-}
-
-/* This removes the temp_file_cleanup_handler in the child process before
- * exec'ing diff.
- */
-static apr_status_t
-temp_file_cleanup_handler_remover (void *arg)
-{
-  struct file_baton *b = arg;
-  apr_pool_cleanup_kill (b->pool, b, temp_file_cleanup_handler);
-  return APR_SUCCESS;
-}
-
 /* An editor function.  Do the work of applying the text delta. */
 static svn_error_t *
 window_handler (svn_txdelta_window_t *window,
@@ -1114,9 +1073,12 @@ apply_textdelta (void *file_baton,
   struct file_baton *b = file_baton;
   struct edit_baton *eb = b->edit_baton;
   const svn_wc_entry_t *entry;
+  const char *parent, *base_name;
 
   SVN_ERR (svn_wc_entry (&entry, b->wc_path, eb->anchor, FALSE, b->pool));
-  
+
+  svn_path_split (b->wc_path, &parent, &base_name, b->pool);
+
   /* Check to see if there is a schedule-add with history entry in
      the current working copy.  If so, then this is not actually
      an add, but instead a modification.*/
@@ -1147,28 +1109,17 @@ apply_textdelta (void *file_baton,
 
   /* This is the file that will contain the pristine repository version. It
      is created in the admin temporary area. This file continues to exists
-     until after the diff callback is run, at which point it is deleted. */ 
-  SVN_ERR (svn_wc__open_text_base (&b->temp_file, b->wc_path,
-                                   (APR_WRITE | APR_TRUNCATE | APR_CREATE),
-                                   b->pool));
+     until after the diff callback is run, at which point it is deleted. */
+  SVN_ERR (svn_wc_create_tmp_file2 (&b->temp_file, &b->temp_file_path,
+                                    parent, svn_io_file_del_on_pool_cleanup,
+                                    b->pool));
 
-  /* Need to ensure that the above file gets removed if the program aborts
-     with some error. So register a pool cleanup handler to delete the
-     file. This handler is removed just before deleting the file. */
-  apr_pool_cleanup_register (b->pool, file_baton, temp_file_cleanup_handler,
-                             temp_file_cleanup_handler_remover);
-
-  {
-    const char *tmp_path;
-
-    apr_file_name_get (&tmp_path, b->temp_file);
-    svn_txdelta_apply (svn_stream_from_aprfile (b->original_file, b->pool),
-                       svn_stream_from_aprfile (b->temp_file, b->pool),
-                       NULL,
-                       tmp_path,
-                       b->pool,
-                       &b->apply_handler, &b->apply_baton);
-  }
+  svn_txdelta_apply (svn_stream_from_aprfile (b->original_file, b->pool),
+                     svn_stream_from_aprfile (b->temp_file, b->pool),
+                     NULL,
+                     b->temp_file_path,
+                     b->pool,
+                     &b->apply_handler, &b->apply_baton);
 
   *handler = window_handler;
   *handler_baton = file_baton;
@@ -1210,7 +1161,7 @@ close_file (void *file_baton,
 
   if (b->added)
     {
-      temp_file_path = svn_wc__text_base_path (b->wc_path, TRUE, b->pool);
+      temp_file_path = b->temp_file_path;
 
       /* Remember that the default diff order is to show repos->wc,
          but we ask the server for a wc->repos diff.  So if
@@ -1272,7 +1223,8 @@ close_file (void *file_baton,
             /* a detranslated version of the working file */
             SVN_ERR (svn_wc_translated_file (&localfile, b->path, adm_access,
                                              TRUE, b->pool));
-          temp_file_path = svn_wc__text_base_path (b->wc_path, TRUE, b->pool);
+
+          temp_file_path = b->temp_file_path;
         }
       else
         localfile = temp_file_path = NULL;
