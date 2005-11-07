@@ -576,8 +576,8 @@ file_diff (struct dir_baton *dir_baton,
       SVN_ERR (get_local_mimetypes (NULL, &working_mimetype, NULL,
                                     adm_access, path, pool));
 
-      SVN_ERR (svn_wc_translated_file (&translated, path, adm_access,
-                                       TRUE, pool));
+      SVN_ERR (svn_wc_translated_file2 (&translated, path, adm_access,
+                                        TRUE, TRUE, pool));
 
       SVN_ERR (dir_baton->edit_baton->callbacks->file_added
                (NULL, NULL, NULL, path,
@@ -601,19 +601,17 @@ file_diff (struct dir_baton *dir_baton,
              tmp translated copy too.  But what the heck, diff is
              already expensive, translating twice for the sake of code
              modularity is liveable. */
-          SVN_ERR (svn_wc_translated_file (&translated, path, adm_access,
-                                           TRUE, pool));
+          SVN_ERR (svn_wc_translated_file2 (&translated, path, adm_access,
+                                            TRUE, TRUE, pool));
         }
 
       if (modified || propchanges->nelts > 0)
         {
-          svn_error_t *err, *err2 = SVN_NO_ERROR;
-
           /* Get svn:mime-type for both pristine and working file. */
           SVN_ERR (get_local_mimetypes (&pristine_mimetype, &working_mimetype,
                                         NULL, adm_access, path, pool));
 
-          err = dir_baton->edit_baton->callbacks->file_changed
+          SVN_ERR (dir_baton->edit_baton->callbacks->file_changed
             (NULL, NULL, NULL,
              path,
              modified ? pristine_copy : NULL,
@@ -623,20 +621,8 @@ file_diff (struct dir_baton *dir_baton,
              pristine_mimetype,
              working_mimetype,
              propchanges, baseprops,
-             dir_baton->edit_baton->callback_baton);
-          
-          if (translated && translated != path)
-            err2 = svn_io_remove_file (translated, pool);
+             dir_baton->edit_baton->callback_baton));
 
-          if (err && err2)
-            {
-              svn_error_compose (err, err2);
-              return err;
-            }
-          if (err)
-            return err;
-          if (err2)
-            return err2;
         }
     }
   return SVN_NO_ERROR;
@@ -1222,7 +1208,6 @@ close_file (void *file_baton,
     {
       /* Be careful with errors to ensure that the temporary translated
          file is deleted. */
-      svn_error_t *err1, *err2 = SVN_NO_ERROR;
       const char *localfile = NULL;
 
       if (b->temp_file) /* A props-only change will not have opened a file */
@@ -1233,8 +1218,8 @@ close_file (void *file_baton,
             localfile = empty_file;
           else
             /* a detranslated version of the working file */
-            SVN_ERR (svn_wc_translated_file (&localfile, b->path, adm_access,
-                                             TRUE, b->pool));
+            SVN_ERR (svn_wc_translated_file2 (&localfile, b->path, adm_access,
+                                              TRUE, TRUE, b->pool));
 
           temp_file_path = b->temp_file_path;
         }
@@ -1257,7 +1242,7 @@ close_file (void *file_baton,
               && ! eb->reverse_order)
             reverse_propchanges (wcprops, b->propchanges, b->pool);
 
-          err1 = b->edit_baton->callbacks->file_changed
+          SVN_ERR (b->edit_baton->callbacks->file_changed
             (NULL, NULL, NULL,
              b->path,
              eb->reverse_order ? localfile : temp_file_path,
@@ -1267,18 +1252,7 @@ close_file (void *file_baton,
              eb->reverse_order ? working_mimetype : pristine_mimetype,
              eb->reverse_order ? pristine_mimetype : working_mimetype,
              b->propchanges, wcprops,
-             b->edit_baton->callback_baton);
-      
-          if (localfile && (! eb->use_text_base) && (! b->schedule_delete)
-              && localfile != b->path)
-            err2 = svn_io_remove_file (localfile, b->pool);
-
-          if (err1 || err2)
-            {
-              if (err1 && err2)
-                svn_error_clear (err2);
-              return err1 ? err1 : err2;
-            }
+             b->edit_baton->callback_baton));
         }
     }
 
