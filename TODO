@@ -3,12 +3,11 @@ libsvn_wc performance for some operations.  Below are the items to be done
 during the lifetime of this branch.
 See <http://svn.haxx.se/dev/archive-2005-07/1380.shtml> for more information.
 
-* Keep track of whether props are modified or not in the entries file.
+* Get rid of props-time filed in entries file; resolve failing test
+  stat_tests.py 13: timestamp behaviour.
 
 * Make sure there is no props file if no props are modified and no prop-base
   if there are no props at all.
-
-* Use the above in the modification detection code for props.
 
 * Cache presence of svn:special and svn:needs-lock in entries file.
 
@@ -18,3 +17,8 @@ See <http://svn.haxx.se/dev/archive-2005-07/1380.shtml> for more information.
 
 * Implement WC format upgrading for the new format.
   (Reconsider if we need another WC format bump.)
+
+* Consider keeping track of baseprops existence in entries file.
+
+* Consier storing baseprops (and maybe working props) in a single file
+  per directory.
