@@ -41,6 +41,7 @@ extern "C" {
 
 /** Currently-defined capabilities. */
 #define SVN_RA_SVN_CAP_EDIT_PIPELINE "edit-pipeline"
+#define SVN_RA_SVN_CAP_SVNDIFF1 "svndiff1"
 
 /** ra_svn passes @c svn_dirent_t fields over the wire as a list of
  * words, these are the values used to represent each field.

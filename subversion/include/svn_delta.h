@@ -211,6 +211,16 @@ svn_error_t *svn_txdelta_next_window (svn_txdelta_window_t **window,
                                       svn_txdelta_stream_t *stream,
                                       apr_pool_t *pool);
 
+/** Set @a *window to a pointer to the next window from the delta stream
+ * @a stream.  When we have completely reconstructed the target string,
+ * set @a *window to zero.
+ *
+ * The window will be allocated in @a pool.
+ */
+svn_error_t *svn_txdelta_next_window (svn_txdelta_window_t **window,
+                                      svn_txdelta_stream_t *stream,
+                                      apr_pool_t *pool);
+
 
 /** Return the @a md5 digest for the complete fulltext deltified by
  * @a stream, or @c NULL if @a stream has not yet returned its final 
@@ -319,6 +329,19 @@ void svn_txdelta_apply (svn_stream_t *source,
 
 
 /*** Producing and consuming svndiff-format text deltas.  ***/
+
+/** Prepare to produce an svndiff-format diff from text delta windows.
+ * @a output is a writable generic stream to write the svndiff data to.
+ * Allocation takes place in a sub-pool of @a pool.  On return, @a *handler
+ * is set to a window handler function and @a *handler_baton is set to
+ * the value to pass as the @a baton argument to @a *handler. The svndiff
+ * version is @a version.
+ */
+
+void svn_txdelta_to_svndiff2 (svn_stream_t *output,
+                              apr_pool_t *pool,
+                              svn_txdelta_window_handler_t *handler,
+                              void **handler_baton, unsigned int version);
 
 /** Prepare to produce an svndiff-format diff from text delta windows.
  * @a output is a writable generic stream to write the svndiff data to.

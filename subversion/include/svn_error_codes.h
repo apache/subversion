@@ -819,6 +819,15 @@ SVN_ERROR_START
   SVN_ERRDEF (SVN_ERR_SVNDIFF_UNEXPECTED_END,
               SVN_ERR_SVNDIFF_CATEGORY_START + 4,
               "Svndiff data ends unexpectedly")
+  
+  SVN_ERRDEF (SVN_ERR_SVNDIFF_INVALID_VERSION,
+              SVN_ERR_SVNDIFF_CATEGORY_START + 5,
+              "Svndiff version greater than known max")
+
+  SVN_ERRDEF (SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA,
+              SVN_ERR_SVNDIFF_CATEGORY_START + 6,
+              "Svndiff compressed data is invalid")
+
 
   /* mod_dav_svn errors */
 

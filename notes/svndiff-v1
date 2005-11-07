@@ -1,0 +1,222 @@
+This email is long, so i sectionized it into "Introduction and
+justification", "Changes I made", "Sparkly numbers", "Time Costs and
+Backwards Compatibility"
+:)
+
+Introduction and justification:
+
+First, I should probably explain what svndiff is, and what it looks like
+( which requires a bit of history), and why it needs improving:
+
+Basically, when subversion started, it was decided to keep the internal
+diff format stored on disk and transmitted over the wire
+different from the actual diff instructions, which was a good idea.
+In other words, the instructions that make up a binary diff are add and
+copy.
+How the binary diff is actually encoded, stored, and transmitted over
+the wire is different than that, however.
+
+Thus, if you look at the diffs as they are transmitted over the network,
+or stored in the actual repository revisions, you are looking at
+"svndiff" encoded data.
+
+Back in the old days, when there was discussion about what to make this
+format look like people were on a DAV kick, and the binary delta
+algorithm vdelta was chosen as the delta algorithm.  
+At the same time, a format called "VCDIFF" was being standardized.
+VCDIFF is now rfc 3284 (http://www.faqs.org/rfcs/rfc3284.html).
+VCDIFF defines a delta encoding format that is space efficient, but
+reasonably easy to decode.
+However, VCDIFF was seen as overkill for the internal diff format
+It was assumed we would store it in some nicer thing, and if we wanted,
+transform that to VCDIFF to be sent over the wire
+This was the right decision, and for most things, VCDIFF *is* overkill
+So some things were taken from VCDIFF, and the delta format we use,
+called "SVNDIFF", was born.
+It turns out, hoewver, that svndiff0 (the current version) is not so
+efficient in some particular use cases that are not uncommon.
+Prior to now, We relied on vdelta to compress these cases, instead of
+relying on having good delta encoding, which in hindsight, was probably
+not a good idea.
+Vdelta did an okay job, but generated horrible to combine deltas in some
+cases, which caused us to move to xdelta.
+As noted in 1.2 release notes, we pay about a 15% size penalty for using
+xdelta in the common case.
+
+The not-so-uncommon case where our encoding is not efficientis  when you
+are repeatedly merging things to branches. and adding new data from
+trunk.
+To understand why, you need to know a bit more about the internal
+machinations of svndiff:
+
+svndiff is split into sections:
+
+There is an instruction section, which contains encoded copy and new
+data instructions (IE copy from this part of the source, for this
+length, or "add this new data").
+
+There is also new data section, which contains the new data used by the
+"add this new data" instructions.
+
+When you repeatedly merge things from trunk to a branch, like say, a
+ChangeLog, you end up with a lot of data new to that branch.  This in
+turns, ends up completely uncompressed in the new data section of
+svndiff.
+
+If you stare at something like the on-disk gcc repository revision
+files, which have a lot of branch data, you will see there is just tons
+of files that large pieces of plaintext data that represent merges from
+trunk to branch.
+
+In fact, we have revision files that are 30 meg each, and in each case,
+80% of the data is just the new data section of a bunch of deltas.
+
+This is pretty bad.
+
+Changes I made:
+
+To alleviate this problem, back when the earth's crust was cooling
+(2002), i came up with an svndiff version 1, which compressed the new
+data section using a secondary compressor.  At the time, it was a
+standalone range encoder.
+
+I've recently revived that patch, and brought it up to date.  I've
+changed the compressor to use zlib, which is now *everywhere*.
+
+Sparkly numbers:
+This change buys about 40% of the disk space on the gcc repository.
+8.5 gig to 5.2
+
+A repository consisting of just gcc's changelog file, from all branches,
+used to take up:
+
+583178  db/revs
+
+With the svndiff 1 patch, it now takes up
+
+356591  gccrepo/db/revs
+
+a 39% savings.
+
+Time Costs and Backwards Compatibility
+
+I should first note the cost is essentially zero in terms of time.  We
+only bother to compress if the new data section ends up being bigger
+than some minimum size (currently 1024), and even then, the
+compression/decompression time is completely lost in the noise, AFAICT.
+
+In fact, for gcc's repo, it's actually faster, since it used to read 30
+meg of revision file, and now only needs to read 5 meg, and the i/o was
+slower than the decompression time.
+
+As far as backwards compatibility, let me start by assuaging the most
+common concern:
+
+svndiff0 works perfectly, and we can always tell whether we have
+svndiff1 or 0.  This was actually not true in 2002, but part of the
+patch back then (which made it in as part of some work c-mike as doing)
+was to make the 'SVN<byte> header contain the version number in byte.
+All our current code understands and respects this version number,
+except for one small thing:
+
+svn_txdelta_to_svndiff doesn't take a version number.
+
+I've simply rev'd it to take a version number (IE made
+svn_txdelta_to_svndiff2), and made the current function always use
+version 0.
+
+
+Parsing doesn't need to take an explicit version number, we can read it
+out of the header.
+
+
+The first thing i should note is that we now simply require zlib. I
+haven't yet copied any configure magic necessary to let people point at
+a place for it.  But i don't think this is an unreasonable requirement,
+as *everyone* ships zlib.
+
+We have two things we *actually* need to worry about
+
+Communicating with clients/servers using svndiff1 over the wire
+
+and
+
+Storing svndiff1 inside fsfs and bdb repositories.
+
+The first case is actually easy to make backwards compatible, and i have
+done so.
+
+svnserve has a capabilities list it outputs from the server, and sends
+from the client.  We can simply check to make sure the side we want to
+send svndiff1 to, supports it, by introducing a new capability and
+checking  for it. Unless we find a capability called "svndiff1", we only
+send svndiff0.
+
+mod_dav_svn + ra_dav lets us do a similiar thing with headers (I haven't
+quite started this one yet, but this is what i am told)
+
+
+The more interesting question is the stuff stored in the repo.
+
+If we store svndiff1 in fsfs or bdb, only things that know about
+svndiff1 can read it.  This means older clients trying to directly
+access the repo would fail.
+
+We currently have no easy way to tell what version is in an svn
+repository, other than the "format" file.
+
+So we have two options:
+
+1. Rev the format, allow creation of old/new format (defaulting to old),
+and require dump and load to take advantage of svndiff1.
+
+or a more interesting solution that came to my head, which is to borrow
+an idea from real fs'en, and introduce a "features" file.
+
+As an example, ext3 has feature bits set on the filesystem.   There is a
+feature bit for dir indexing, for whether the fs has a journal, etc.
+
+If we added a feature file to the fsfs format (and bdb format), we could
+actually let people control the features contained in their fs, and only
+need a dump + load to change between features, instead of *requiring*
+that they use certain features.
+
+IOW, later on, if we add hash-indexing, we could make it optional simply
+by adding a feature name for it, and putting that in the feature file.
+
+If you wanted to get rid of hash indexing, you simply create a repo
+without that feature (svnadmin would be extended to turn features on and
+off, and tell you whether you need dump/load to do this right), dump the
+old repo, and load into the new one.
+
+Boom, no more hash indexing, and we didn't need to change the format
+file back to and older revision.
+
+The same could be true of svndiff1.  We can simply make it optional, and
+instead of revving the format, make it a feature, much like how in
+svnserve it is simply a capability.
+
+The advantage here is that for something like svndiff1, if you don't
+want to dump/load, if you added it to the features, it would just cause
+newer revisions to use svndiff1, and the older ones would stay the way
+they are.  
+Dunno whether we care or not.
+
+If we go with this, the features file would mostly be a written hash
+containing the features, and read on fs open. If we find a feature we
+can't support, we error out.
+
+Or we could just rev the format :)
+
+Any hoo, i've attached the current patch, which i've cross-tested 1.2.x
+against patched 1.4.x servers, patched 1.4.x against 1.2.x servers, and
+the same type of deal for 1.3.x.
+
+I've not dealt with backwards compat for repos yet.  If you use this
+patch, you're created repos will use svndiff1.
+
+I obviously have no plans to commit this until we work out these issues,
+and revise the patch.  Thus, style nits, etc, are not necessary.  I'm
+aware it's non-perfect :)
+
+--Dan

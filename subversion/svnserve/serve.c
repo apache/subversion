@@ -2166,8 +2166,8 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(nn(!", "success",
                                  (apr_uint64_t) 1, (apr_uint64_t) 2));
   SVN_ERR(send_mechs(conn, pool, &b, READ_ACCESS, FALSE));
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(w))",
-                                 SVN_RA_SVN_CAP_EDIT_PIPELINE));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(ww))",
+                                 SVN_RA_SVN_CAP_EDIT_PIPELINE, SVN_RA_SVN_CAP_SVNDIFF1));
 
   /* Read client response.  Because the client response form changed
    * between version 1 and version 2, we have to do some of this by
