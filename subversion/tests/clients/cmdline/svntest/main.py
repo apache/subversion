@@ -662,11 +662,8 @@ def run_tests(test_list):
   # log message will fail rather than invoke an editor.
   os.environ['SVN_EDITOR'] = ''
 
-  try:
-    opts, args = my_getopt(sys.argv[1:], 'v',
-                           ['url=', 'fs-type=', 'verbose', 'cleanup'])
-  except getopt.GetoptError:
-    opts, args = [], []
+  opts, args = my_getopt(sys.argv[1:], 'v',
+                         ['url=', 'fs-type=', 'verbose', 'cleanup'])
 
   for arg in args:
     if arg == "list":
@@ -683,10 +680,10 @@ def run_tests(test_list):
     if arg.startswith('BASE_URL='):
       test_area_url = arg[9:]
     else:
-      try:
-        testnum = int(arg)
-      except ValueError:
-        pass
+      if testnum is not None:
+        print 'Too many arguments: "' + arg + '"'
+        sys.exit(1)
+      testnum = int(arg)
 
   for opt, val in opts:
     if opt == "--url":
