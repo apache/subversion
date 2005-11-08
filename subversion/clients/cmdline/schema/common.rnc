@@ -1,12 +1,12 @@
 # XML RELAX NG schema for Subversion command-line client output
 # Common declarations
 
-# Datatypes
+# Data types.
 
 ## A revision number.
 revnum.type = xsd:nonNegativeInteger
 
-## A username
+## A user name.
 username.type = string
 
 ## A path or URL.
@@ -15,7 +15,7 @@ target.type = string | xsd:anyURI
 ## An UUID.
 uuid.type = string
 
-## An MD5 checksum
+## An MD5 checksum.
 md5sum.type = xsd:hexBinary { length = "16" }
 
 # Common elements
