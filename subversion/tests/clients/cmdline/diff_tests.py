@@ -1942,6 +1942,64 @@ def diff_property_changes_to_base(sbox):
     os.chdir(current_dir)
 
 
+#----------------------------------------------------------------------
+def diff_mime_type_change_to_base(sbox):
+  "diff to BASE with local svn:mime-type property mod"
+
+  sbox.build()
+
+  expected_output_r1_r2wc = [
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(revision 1)\n",
+    "+++ iota\t(working copy)\n",
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'iota'.\n",
+    "+revision 2 text.\n" ]
+
+  expected_output_r2wc_r1 = [
+    "Index: iota\n",
+    "===================================================================\n",
+    "--- iota\t(working copy)\n",
+    "+++ iota\t(revision 1)\n",
+    "@@ -1,2 +1 @@\n",
+    " This is the file 'iota'.\n",
+    "-revision 2 text.\n" ]
+
+
+  current_dir = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  try:
+    # Append some text to iota (r2).
+    svntest.main.file_append('iota', "revision 2 text.\n")
+
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'ci', '-m', 'log_msg')
+
+    # Check that forward and reverse repos-BASE diffs are as expected.
+    svntest.actions.run_and_verify_svn(None, expected_output_r1_r2wc, [],
+                                       'diff', '-r', '1:BASE')
+
+    svntest.actions.run_and_verify_svn(None, expected_output_r2wc_r1, [],
+                                       'diff', '-r', 'BASE:1')
+
+    # Mark iota as a binary file in the working copy.
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propset', 'svn:mime-type',
+                                       'application/octet-stream', 'iota')
+
+    # Check that the earlier diffs against BASE are unaffected by the
+    # presence of local svn:mime-type property mods.
+    svntest.actions.run_and_verify_svn(None, expected_output_r1_r2wc, [],
+                                       'diff', '-r', '1:BASE')
+
+    svntest.actions.run_and_verify_svn(None, expected_output_r2wc_r1, [],
+                                       'diff', '-r', 'BASE:1')
+
+  finally:
+    os.chdir(current_dir)
+
+
 ########################################################################
 #Run the tests
 
@@ -1976,6 +2034,7 @@ test_list = [ None,
               diff_force,
               XFail(diff_renamed_dir),
               diff_property_changes_to_base,
+              XFail(diff_mime_type_change_to_base),
               ]
 
 if __name__ == '__main__':
