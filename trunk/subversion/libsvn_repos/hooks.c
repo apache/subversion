@@ -105,37 +105,39 @@ run_hook_cmd (const char *name,
   const char *null_device = SVN_NULL_DEVICE_NAME;
 
   /* Create a pipe to access stderr of the child. */
+#if !AS400
   apr_err = apr_file_pipe_create(&read_errhandle, &write_errhandle, pool);
   if (apr_err)
     return svn_error_wrap_apr
       (apr_err, _("Can't create pipe for hook '%s'"), cmd);
+#endif
 
   /* Redirect stdout to the null device */
-#if APR_CHARSET_EBCDIC
-  SVN_ERR (svn_utf_cstring_from_utf8(&null_device, null_device, pool));
-#endif  
+#if !AS400  
   apr_err = apr_file_open (&null_handle, null_device, APR_WRITE,
                            APR_OS_DEFAULT, pool);
   if (apr_err)
     return svn_error_wrap_apr
       (apr_err, _("Can't create null stdout for hook '%s'"), cmd);
 
-#if !AS400
   err = svn_io_start_cmd (&cmd_proc, ".", cmd, args, FALSE,
                           stdin_handle, null_handle, write_errhandle, pool);
 #else
-  err = svn_ebcdic_run_unix_type_script (".", cmd, args, &exitcode, &exitwhy,
-                                         read_errstream, pool);
+  /* The functionality of svn_io_start_cmd and svn_io_wait_for_cmd are both 
+   * handled in svn_ebcdic_run_unix_type_script.  See below. */
+  err = NULL;
 #endif /* AS400 */
 
   /* This seems to be done automatically if we pass the third parameter of
      apr_procattr_child_in/out_set(), but svn_io_run_cmd()'s interface does
      not support those parameters. We need to close the write end of the
      pipe so we don't hang on the read end later, if we need to read it. */
+#if !AS400
   apr_err = apr_file_close (write_errhandle);
   if (!err && apr_err)
     return svn_error_wrap_apr
       (apr_err, _("Error closing write end of stderr pipe"));
+#endif
 
   if (err)
     {
@@ -147,17 +149,23 @@ run_hook_cmd (const char *name,
       svn_stringbuf_t *error;
       svn_error_t *err2;
 
-      err2 = svn_stringbuf_from_aprfile (&error, read_errhandle, pool);
 #if !AS400
+      err2 = svn_stringbuf_from_aprfile (&error, read_errhandle, pool);
       err = svn_io_wait_for_cmd(&cmd_proc, cmd, &exitcode, &exitwhy, pool);
 #else
+      err2 = SVN_NO_ERROR;
       /* IBM's iSeries implementation of apr_proc_wait (cmd_proc,
        * &exitcode_val, &exitwhy_val, APR_WAIT) called in svn_io_wait_for_cmd
        * sets exitcode_val to 0 regardless of what the command returns.
        * So the hooks always appear to succeed.  Using
        * svn_ebcdic_run_unix_type_script in place of the svn_io_start_cmd,
        * svn_io_wait_for_cmd sequence works around this problem. */
-      err = NULL;
+      err = svn_ebcdic_run_unix_type_script (SVN_UTF8_DOT_STR, cmd, args,
+                                             &exitcode, &exitwhy,
+                                             read_errstream,
+                                             FALSE, /* Ignore stdout */
+                                             TRUE,  /* Get stderr    */
+                                             pool);
 #endif
       if (! err)
         {
@@ -190,6 +198,7 @@ run_hook_cmd (const char *name,
   /* Hooks are fallible, and so hook failure is "expected" to occur at
      times.  When such a failure happens we still want to close the pipe
      and null file */
+#if !AS400
   apr_err = apr_file_close (read_errhandle);
   if (!err && apr_err)
     return svn_error_wrap_apr
@@ -198,6 +207,7 @@ run_hook_cmd (const char *name,
   apr_err = apr_file_close (null_handle);
   if (!err && apr_err)
     return svn_error_wrap_apr (apr_err, _("Error closing null file"));
+#endif
 
   return err;
 }

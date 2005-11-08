@@ -235,6 +235,12 @@ svn_ebcdic_set_file_mtime(const char *fname,
  *                       process.
  *
  *     APR_PROC_EXIT   - The script process ended because of an error condition.
+ *
+ * If @a read_stdout is TRUE, include output to stdout from the script
+ * in any returned error message.
+ * 
+ * If @a read_stderr is TRUE, include output to stderr from the script
+ * in any returned error message.
  */
 svn_error_t *
 svn_ebcdic_run_unix_type_script (const char *path,
@@ -243,6 +249,8 @@ svn_ebcdic_run_unix_type_script (const char *path,
                                  int *exitcode,
                                  apr_exit_why_e *exitwhy,
                                  svn_boolean_t check_exitcode,
+                                 svn_boolean_t read_stdout,
+                                 svn_boolean_t read_sterr,
                                  apr_pool_t *pool);
 
 
