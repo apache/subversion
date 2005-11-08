@@ -499,6 +499,7 @@ const svn_opt_subcommand_desc_t svn_cl__cmd_table[] =
        "usage: move SRC DST\n"
        "\n"
        "  Note:  this subcommand is equivalent to a 'copy' and 'delete'.\n"
+       "  Note:  the --revision option has no use and is deprecated.\n"
        "\n"
        "  SRC and DST can both be working copy (WC) paths or URLs:\n"
        "    WC  -> WC:   move and schedule for addition (with history)\n"
