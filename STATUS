@@ -9,15 +9,6 @@ Status of 1.3.0:
 
 Candidate changes:
 
- * r17190
-   Fix url->wc diff when wc contains schedule-delete files.
-   Justification:
-     Failure in common use of svn diff with a simple fix.
-   Notes:
-     Single line fix.
-   Votes:
-     +1: dberlin
-
  * r17139
    svnmerge.py: Fix traceback on wrong command line.
    Justification:
@@ -29,6 +20,23 @@ Candidate changes:
      handling.
    Votes:
      +1: blair
+
+ * r17190
+   Fix url->wc diff when wc contains schedule-delete files.
+   Justification:
+     Failure in common use of svn diff with a simple fix.
+   Notes:
+     Single line fix.
+   Votes:
+     +1: dberlin
+
+ * r17257
+   Emit workaround for bugs in SWIG 1.3.25 and earlier which cause
+   SWIG_GetModule to be called with the wrong number of arguments.
+   Justification:
+     Required for compatibility with GCC 2.95.x.
+   Votes:
+     +1: djames
 
 Approved changes:
 
