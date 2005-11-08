@@ -22,12 +22,17 @@
 #if AS400
 #include <qshell.h> /* For QzshSystem */
 #include <Qp0lstdi.h> /* For QlgSetAttr */
+#include <spawn.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #endif
 
 #include "svn_ebcdic.h"
 #include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_utf.h"
+#include "svn_path.h"
 
 
 #if APR_CHARSET_EBCDIC
@@ -728,79 +733,131 @@ svn_ebcdic_run_unix_type_script (const char *path,
                                  int *exitcode,
                                  apr_exit_why_e *exitwhy,
                                  svn_boolean_t check_exitcode,
+                                 svn_boolean_t read_stdout,
+                                 svn_boolean_t read_stderr,
                                  apr_pool_t *pool)
-{                                    	
-  /* Special handling of hook scripts on iSeries */
-  apr_pool_t *temp_subpool = svn_pool_create_ex(pool, NULL);
-  svn_stringbuf_t *native_cmd = svn_stringbuf_create("", temp_subpool);
+{
+  int rc, fd_map[3], ignoreFds[2], useFds[2];
+  char buffer[20];
+  char *xmp_envp[2] = {"QIBM_USE_DESCRIPTOR_STDIO=Y", NULL};
   const char **native_args = NULL;
-  if(args)
-  {
-    apr_size_t args_arr_size = 0;
-    apr_size_t i = 0;
+  struct inheritance xmp_inherit = {0};
+  pid_t child_pid, wait_rv;
+  svn_stringbuf_t *script_output = svn_stringbuf_create ("", pool);
+  apr_size_t args_arr_size = 0, i = 0;
 
-    /* Find number of elements in args array */
-    while(args[args_arr_size] != NULL)
-      args_arr_size++;
+  if (path)
+    SVN_ERR (svn_utf_cstring_from_utf8 (&path, path, pool));
+                                      
+  /* Find number of elements in args array */
+  while (args[args_arr_size] != NULL)
+    args_arr_size++;
 
-    /* Allocate memory for the native_args string array */
-    native_args = apr_palloc(temp_subpool, sizeof(char *) * args_arr_size);
-
-    while(args[i] != NULL)
-    {
-      SVN_ERR(svn_utf_cstring_from_utf8((const char**)(&(native_args[i])),
-                                        args[i], temp_subpool));
-      svn_stringbuf_appendcstr(native_cmd, "'");
-      svn_stringbuf_appendcstr(native_cmd, native_args[i++]);
-      svn_stringbuf_appendcstr(native_cmd, "' ");
-    }
-  }
+  /* Allocate memory for the native_args string array plus one for
+   * the ending null element. */
+  native_args = apr_palloc (pool, sizeof(char *) * args_arr_size + 1);
   
-  *exitcode = QzshSystem(native_cmd->data);
-  svn_pool_destroy(temp_subpool);
-  if (!check_exitcode)
-  {
-    /* Caller is claiming not to care about exit_why, but to be on the
-     * safe side set it to something. */
-    *exitwhy = APR_PROC_EXIT;
-    return SVN_NO_ERROR;  
-  }
-  else if (WIFEXITED(*exitcode))
-  {
-    /* WIFEXITED - Evaluates to a nonzero value if the status was returned
-     * for a child process that ended normally
-     */
-    *exitwhy = APR_PROC_EXIT;
-    if(*exitcode == 0)
-      return NULL;
-    else
+  /* Convert utf-8 args to ebcdic. */
+  while(args[i] != NULL)
+    {
+      SVN_ERR (svn_utf_cstring_from_utf8 ((const char**)(&(native_args[i])),
+                                          args[i++], pool));
+    }
+  /* Make the last element in the array a NULL pointer as required
+   * by spawn. */
+  native_args[args_arr_size] = NULL;                                      
+
+  /* Get two data pipes, allowing stdout and stderr to be separate. */
+  if (pipe (ignoreFds) != 0 || pipe (useFds) != 0)
+    {
+      return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, NULL,
+                                "Error piping hook script %s.", cmd);
+    }
+
+  /* Map stdin, stdout to the first (unused) pipe. */
+  fd_map[0] = ignoreFds[1];
+  /* Map stdin, stdout. */
+  fd_map[1] = read_stdout ? useFds[1] : ignoreFds[1];
+  fd_map[2] = read_stderr ? useFds[1] : ignoreFds[1];  
+
+  if ((child_pid = spawn (native_args[0], 3, fd_map, &xmp_inherit,
+                          native_args, xmp_envp)) == -1)
+    {
       return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                               "Script '%s' returned error exitcode %d",
-                               cmd, *exitcode);
-  }
-  else if (WIFSIGNALED(*exitcode))
-  {
-    /* WIFSIGNALED - Evaluates to a nonzero value if the status was returned
-     * for a child process that ended because of the receipt of a terminating
-     * signal that was not caught by the process.
-     */
-    *exitwhy = APR_PROC_SIGNAL;
-    return svn_error_createf
-      (SVN_ERR_EXTERNAL_PROGRAM, NULL,
-       "Process '%s' failed (exitwhy %d)", cmd, *exitwhy);
-  }
-  else if (WIFEXCEPTION(*exitcode))
-  {
-    /* WIFEXCEPTION - Evaluates to a nonzero value if the status was returned
-     * for a child process that ended because of an error condition.
-     */
-    *exitwhy = APR_PROC_EXIT; /* Not sure what to set this to in this
-                                 circumstance so this will have to do */
-    
-    return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-      "Unable to run script '%s'.  Returned error number =  %d",
-      cmd, errno);
-  }
+                               "Error spawning process for hook script %s.",
+                               cmd);
+    }
+
+  if ((wait_rv = waitpid (child_pid, exitcode, 0)) == -1)
+    {
+      return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
+                               "Error waiting for process completion of " \
+                               "hook script %s.", cmd);    
+    }
+
+  close (ignoreFds[1]);
+  close (useFds[1]);
+
+  /* Create svn_stringbuf containing any messages the script sent to
+   * stderr and/or stdout. */
+  while ((rc = read (useFds[0], buffer, sizeof(buffer))) > 0)
+    {
+      buffer[rc] = '\0';
+      svn_stringbuf_appendcstr (script_output, buffer);
+    }
+
+  close (ignoreFds[0]);
+  close (useFds[0]);
+
+  if (!check_exitcode)
+    {
+      /* Caller is claiming not to care about exit_why, but to be on the
+       * safe side set it to something. */
+      *exitwhy = APR_PROC_EXIT;
+      return SVN_NO_ERROR;  
+    }
+  else if (WIFEXITED (*exitcode))
+    {
+      /* WIFEXITED - Evaluates to a nonzero value if the status was returned
+       * for a child process that ended normally. */
+      *exitwhy = APR_PROC_EXIT;
+      if (*exitcode == 0)
+        return NULL;
+      else
+        {
+          svn_error_t *child_err = SVN_NO_ERROR;
+          if (script_output->len > 1)
+            child_err = svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, NULL,
+                                           script_output->data);
+          return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, child_err,
+                                    "Script '%s' returned error exitcode %d",
+                                    svn_path_basename (cmd, pool), *exitcode);
+        }
+    }
+  else if (WIFSIGNALED (*exitcode))
+    {
+      /* WIFSIGNALED - Evaluates to a nonzero value if the status was
+       * returned for a child process that ended because of the receipt of a
+       * terminating signal that was not caught by the process. */
+      *exitwhy = APR_PROC_SIGNAL;
+      return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, NULL,
+                                "Process '%s' failed (exitwhy %d)",
+                                cmd, *exitwhy);
+    }
+  else if (WIFEXCEPTION (*exitcode))
+    {
+      /* WIFEXCEPTION - Evaluates to a nonzero value if the status was
+       * returned for a child process that ended because of an error
+       * condition. */
+      *exitwhy = APR_PROC_EXIT; /* The best we can do in
+                                 * this circumstance(?) */
+
+      return svn_error_createf (SVN_ERR_EXTERNAL_PROGRAM, NULL,
+                                "Unable to run script '%s'.  " \
+                                "Returned error number =  %d",
+                                cmd, errno);
+    }
+  return SVN_NO_ERROR;
 }
 
 
