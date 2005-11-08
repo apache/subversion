@@ -2924,9 +2924,8 @@ svn_wc_add_repos_file2 (const char *dst_path,
 
   if (new_props)
     {
-      const char *tmp_prop_path, *prop_path;
+      const char *tmp_prop_path, *local_tmp_prop_path, *prop_path;
       const char *adm_path = svn_wc_adm_access_path (adm_access);
-      apr_size_t adm_path_len = strlen (adm_path) + 1;
 
       /* Save new props to temporary file. Don't use svn_wc__prop_path()
          because install_file() will overwrite it! */
@@ -2937,36 +2936,39 @@ svn_wc_add_repos_file2 (const char *dst_path,
       /* Rename temporary props file to working props. */
       SVN_ERR (svn_wc__prop_path (&prop_path, base_name, svn_node_file,
                                   FALSE, pool));
+
+      local_tmp_prop_path = svn_path_is_child (adm_path, tmp_prop_path, pool);
       SVN_ERR (svn_wc__loggy_move (&log_accum, NULL, adm_access,
-                                   tmp_prop_path + adm_path_len, prop_path,
+                                   local_tmp_prop_path, prop_path,
                                    FALSE, pool));
     }
 
   if (new_text_path)
     {
       const char *tmp_text_path;
+      const char *local_tmp_text_path;
       const char *adm_path = svn_wc_adm_access_path (adm_access);
-      apr_size_t adm_path_len = strlen (adm_path) + 1;
 
       /* Move new text to temporary file in adm_access. */
       SVN_ERR (svn_wc_create_tmp_file2 (NULL, &tmp_text_path, adm_path,
                                         svn_io_file_del_none, pool));
       SVN_ERR (svn_io_file_move (new_text_path, tmp_text_path, pool));
 
+      local_tmp_text_path = svn_path_is_child (adm_path, tmp_text_path, pool);
       /* Translate/rename new temporary text file to working text. */
       if (svn_wc__has_special_property (new_base_props))
         {
           SVN_ERR (svn_wc__loggy_copy (&log_accum, NULL, adm_access,
                                        svn_wc__copy_translate_special_only,
-                                       tmp_text_path + adm_path_len,
+                                       local_tmp_text_path,
                                        base_name, FALSE, pool));
           /* Remove the copy-source, making it look like a move */
           SVN_ERR (svn_wc__loggy_remove (&log_accum, adm_access,
-                                         tmp_text_path + adm_path_len, pool));
+                                         local_tmp_text_path, pool));
         }
       else
         SVN_ERR (svn_wc__loggy_move (&log_accum, NULL, adm_access,
-                                     tmp_text_path + adm_path_len, base_name,
+                                     local_tmp_text_path, base_name,
                                      FALSE, pool));
     }
 
