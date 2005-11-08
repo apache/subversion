@@ -174,10 +174,8 @@ struct dir_baton {
      hierarchy to be compared. */
   struct dir_baton *dir_baton;
 
-  /* The original property hash, and the list of incoming propchanges. */
-  apr_hash_t *baseprops;
+  /* The list of incoming wc->repos propchanges. */
   apr_array_header_t *propchanges;
-  svn_boolean_t fetched_baseprops; /* did we get the working props yet? */
 
   /* The overall crawler editor baton. */
   struct edit_baton *edit_baton;
@@ -287,7 +285,6 @@ make_dir_baton (const char *path,
   dir_baton->edit_baton = edit_baton;
   dir_baton->added = added;
   dir_baton->pool = pool;
-  dir_baton->baseprops = apr_hash_make (dir_baton->pool);
   dir_baton->propchanges = apr_array_make (pool, 1, sizeof (svn_prop_t));
   dir_baton->compared = apr_hash_make (dir_baton->pool);
   dir_baton->path = path;
@@ -968,7 +965,12 @@ close_directory (void *dir_baton,
                                           b->path, adm_access, pool));
         }
       else
-        wcprops = b->baseprops;
+        {
+          /* This path might not exist in the working copy, in which case
+             wcprops is set to an empty hash. */
+          SVN_ERR (svn_wc_prop_list (&wcprops, b->path, b->edit_baton->anchor,
+                                     pool));
+        }
 
       if (! b->edit_baton->reverse_order)
         reverse_propchanges (wcprops, b->propchanges, b->pool);
@@ -1294,20 +1296,6 @@ change_dir_prop (void *dir_baton,
   propchange = apr_array_push (db->propchanges);
   propchange->name = apr_pstrdup (db->pool, name);
   propchange->value = value ? svn_string_dup (value, db->pool) : NULL;
-
-  /* Read the baseprops if you haven't already. */
-  if (! db->fetched_baseprops)
-    {
-      /* the 'base' props to compare against, in this case, are
-         actually the working props.  that's what we do with texts,
-         anyway, in the 'svn diff -rN foo' case.  */
-
-      /* This path might not exist in the working copy, in which case
-         the baseprops remains an empty hash. */
-      SVN_ERR (svn_wc_prop_list (&(db->baseprops), db->path,
-                                 db->edit_baton->anchor, db->pool));
-      db->fetched_baseprops = TRUE;
-    }
 
   return SVN_NO_ERROR;
 }
