@@ -36,7 +36,7 @@ Candidate changes:
    Justification:
      Required for compatibility with GCC 2.95.x.
    Votes:
-     +1: djames
+     +1: djames, dberlin
 
 Approved changes:
 
