@@ -207,7 +207,6 @@ struct file_baton {
   /* The original property hash, and the list of incoming propchanges. */
   apr_hash_t *baseprops;
   apr_array_header_t *propchanges;
-  svn_boolean_t fetched_baseprops; /* did we get the working props yet? */
 
   /* APPLY_HANDLER/APPLY_BATON represent the delta applcation baton. */
   svn_txdelta_window_handler_t apply_handler;
@@ -309,7 +308,6 @@ make_file_baton (const char *path,
   file_baton->edit_baton = edit_baton;
   file_baton->added = added;
   file_baton->pool = pool;
-  file_baton->baseprops = apr_hash_make (file_baton->pool);
   file_baton->propchanges  = apr_array_make (pool, 1, sizeof (svn_prop_t));
   file_baton->path = path;
   file_baton->schedule_delete = FALSE;
@@ -379,7 +377,6 @@ load_base_props (struct file_baton *b)
      the baseprops remains an empty hash. */
   SVN_ERR (svn_wc_prop_list (&(b->baseprops), b->path,
                              b->edit_baton->anchor, b->pool));
-  b->fetched_baseprops = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -416,7 +413,7 @@ get_local_mimetypes (const char **pristine_mimetype,
       if (b)
         {
           /* If we have the file_baton, try to use its working props. */
-          if (! b->fetched_baseprops)
+          if (b->baseprops == NULL)
             SVN_ERR (load_base_props (b));
 
           working_val = apr_hash_get (b->baseprops, SVN_PROP_MIME_TYPE,
@@ -1241,6 +1238,11 @@ close_file (void *file_baton,
           else
             originalprops = b->baseprops;
 
+          /* originalprops may be NULL if we have not encountered any
+             property changes, but that's okay, since the file_changed
+             callback makes no promises about the value of originalprops
+             in that case. */
+
           if (b->propchanges->nelts > 0
               && ! eb->reverse_order)
             reverse_propchanges (originalprops, b->propchanges, b->pool);
@@ -1277,7 +1279,7 @@ change_file_prop (void *file_baton,
   propchange->value = value ? svn_string_dup (value, b->pool) : NULL;
   
   /* Read the baseprops if you haven't already. */
-  if (! b->fetched_baseprops)
+  if (b->baseprops == NULL)
     SVN_ERR (load_base_props (b));
 
   return SVN_NO_ERROR;
