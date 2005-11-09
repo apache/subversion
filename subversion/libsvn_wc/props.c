@@ -1444,7 +1444,7 @@ svn_wc_prop_set2 (const char *name,
   svn_node_kind_t kind;
   enum svn_prop_kind prop_kind = svn_property_kind (NULL, name);
   const char *base_name;
-  svn_stringbuf_t *log_accum = svn_stringbuf_create ("", pool);;
+  svn_stringbuf_t *log_accum = svn_stringbuf_create ("", pool);
   const svn_wc_entry_t *entry;
 
   SVN_ERR (svn_io_check_path (path, &kind, pool));
