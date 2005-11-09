@@ -1941,6 +1941,31 @@ def diff_property_changes_to_base(sbox):
   finally:
     os.chdir(current_dir)
 
+def diff_schedule_delete(sbox):
+  "scheduled deleted"
+  
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  current_dir = os.getcwd()
+  os.chdir(wc_dir)
+
+  try:
+    diff_output, err_output = svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+    if err_output: raise svntest.Failure
+    svntest.main.file_append('foo', "xxx")
+    svntest.main.run_svn(None, 'add', 'foo')
+    diff_output, err_output = svntest.main.run_svn(None, 'ci', '-m', 'log msg')
+    if err_output: raise svntest.Failure
+    svntest.main.run_svn(None, 'rm', 'foo')
+    expected_output = [
+    "Index: foo\n", 
+    "===================================================================\n"
+    ]
+    diff_output, err = svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                                          'diff', '-r', '1' )
+    if err: raise svntest.Failure
+  finally:
+    os.chdir(current_dir)
 
 #----------------------------------------------------------------------
 def diff_mime_type_change_to_base(sbox):
@@ -2032,6 +2057,7 @@ test_list = [ None,
               diff_prop_on_named_dir,
               diff_keywords,
               diff_force,
+              diff_schedule_delete,
               XFail(diff_renamed_dir),
               diff_property_changes_to_base,
               XFail(diff_mime_type_change_to_base),
