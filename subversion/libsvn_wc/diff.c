@@ -827,8 +827,6 @@ delete_entry (const char *path,
          the empty file against the current working copy.  If
          'reverse_order' is set, then show a deletion. */
 
-      if (entry->schedule == svn_wc_schedule_delete)
-        SVN_ERR (get_empty_file (pb->edit_baton, &full_path));
       SVN_ERR (get_local_mimetypes (&pristine_mimetype, &working_mimetype,
                                     NULL, adm_access, full_path, pool));
 
@@ -838,6 +836,8 @@ delete_entry (const char *path,
           const char *textbase = svn_wc__text_base_path (full_path,
                                                          FALSE, pool);
 
+          if (entry->schedule == svn_wc_schedule_delete)
+            SVN_ERR (get_empty_file (pb->edit_baton, &textbase));
           SVN_ERR (svn_wc_get_prop_diffs (NULL, &baseprops, full_path,
                                           adm_access, pool));
           SVN_ERR (pb->edit_baton->callbacks->file_deleted
@@ -851,12 +851,15 @@ delete_entry (const char *path,
         }
       else
         {
+          const char *secondpath = full_path;
+          if (entry->schedule == svn_wc_schedule_delete)
+            secondpath = empty_file;
           /* Or normally, show the working file being added. */
           /* ### Show the properties as well. */
           SVN_ERR (pb->edit_baton->callbacks->file_added
                    (NULL, NULL, NULL, full_path,
                     empty_file,
-                    full_path,
+                    secondpath,
                     0, entry->revision,
                     NULL,
                     working_mimetype,
