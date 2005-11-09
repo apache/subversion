@@ -680,8 +680,11 @@ typedef struct svn_delta_editor_t
   /** Change the value of a directory's property.
    * - @a dir_baton specifies the directory whose property should change.
    * - @a name is the name of the property to change.
-   * - @a value is the new value of the property, or @c NULL if the property
-   *   should be removed altogether.  
+   * - @a value is the new (final) value of the property, or @c NULL if the
+   *   property should be removed altogether.
+   *
+   * The callback is guaranteed to be called exactly once for each property
+   * whose value differs between the start and the end of the edit.
    *
    * All allocations should be performed in @a pool.
    */
@@ -776,8 +779,11 @@ typedef struct svn_delta_editor_t
   /** Change the value of a file's property.
    * - @a file_baton specifies the file whose property should change.
    * - @a name is the name of the property to change.
-   * - @a value is the new value of the property, or @c NULL if the property
-   *   should be removed altogether.
+   * - @a value is the new (final) value of the property, or @c NULL if the
+   *   property should be removed altogether.
+   *
+   * The callback is guaranteed to be called exactly once for each property
+   * whose value differs between the start and the end of the edit.
    *
    * All allocations should be performed in @a pool.
    */
