@@ -954,7 +954,7 @@ close_directory (void *dir_baton,
     {
       /* The working copy properties at the base of the wc->repos comparison:
          either BASE or WORKING. */
-      apr_hash_t *wcprops;
+      apr_hash_t *originalprops;
 
       if (b->edit_baton->use_text_base)
         {
@@ -964,25 +964,25 @@ close_directory (void *dir_baton,
                                               b->edit_baton->anchor,
                                               b->path, b->pool));
 
-          SVN_ERR (svn_wc_get_prop_diffs (NULL, &wcprops,
+          SVN_ERR (svn_wc_get_prop_diffs (NULL, &originalprops,
                                           b->path, adm_access, pool));
         }
       else
         {
           /* This path might not exist in the working copy, in which case
-             wcprops is set to an empty hash. */
-          SVN_ERR (svn_wc_prop_list (&wcprops, b->path, b->edit_baton->anchor,
-                                     pool));
+             originalprops is set to an empty hash. */
+          SVN_ERR (svn_wc_prop_list (&originalprops, b->path,
+                                     b->edit_baton->anchor, pool));
         }
 
       if (! b->edit_baton->reverse_order)
-        reverse_propchanges (wcprops, b->propchanges, b->pool);
+        reverse_propchanges (originalprops, b->propchanges, b->pool);
 
       SVN_ERR (b->edit_baton->callbacks->dir_props_changed
                (NULL, NULL,
                 b->path,
                 b->propchanges,
-                wcprops,
+                originalprops,
                 b->edit_baton->callback_baton));
     }
 
@@ -1233,17 +1233,17 @@ close_file (void *file_baton,
         {
           /* The working copy properties at the base of the wc->repos
              comparison: either BASE or WORKING. */
-          apr_hash_t *wcprops;
+          apr_hash_t *originalprops;
 
           if (eb->use_text_base)
-            SVN_ERR (svn_wc_get_prop_diffs (NULL, &wcprops,
+            SVN_ERR (svn_wc_get_prop_diffs (NULL, &originalprops,
                                             b->path, adm_access, pool));
           else
-            wcprops = b->baseprops;
+            originalprops = b->baseprops;
 
           if (b->propchanges->nelts > 0
               && ! eb->reverse_order)
-            reverse_propchanges (wcprops, b->propchanges, b->pool);
+            reverse_propchanges (originalprops, b->propchanges, b->pool);
 
           SVN_ERR (b->edit_baton->callbacks->file_changed
             (NULL, NULL, NULL,
@@ -1254,7 +1254,7 @@ close_file (void *file_baton,
              eb->reverse_order ? b->edit_baton->revnum : SVN_INVALID_REVNUM,
              eb->reverse_order ? working_mimetype : pristine_mimetype,
              eb->reverse_order ? pristine_mimetype : working_mimetype,
-             b->propchanges, wcprops,
+             b->propchanges, originalprops,
              b->edit_baton->callback_baton));
         }
     }
