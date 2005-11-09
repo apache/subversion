@@ -1021,9 +1021,22 @@ svn_io_read_version_file (int *version, const char *path, apr_pool_t *pool);
 
 /** Create (or overwrite) the file at @a path with new contents,
  * formatted as a non-negative integer @a version followed by a single
- * newline.  On successful completion the file will be read-only.  Use
+ * newline.  If @a comment is non-NULL, an aditional newline and On successful completion the file will be read-only.  Use
  * @a pool for all allocations.
+ *
+ * @since New in 1.4
+ *
  */
+svn_error_t *
+svn_io_write_version_file2 (const char *path, int version,
+                            const char *comment, apr_pool_t *pool);
+
+/** Like svn_io_write_version_file2, but does not allow for the inclusion
+ * of a comment in the format file.
+ *
+ * @deprecated Provided for compatibility with the 1.3 API
+ */
+
 svn_error_t *
 svn_io_write_version_file (const char *path, int version, apr_pool_t *pool);
 

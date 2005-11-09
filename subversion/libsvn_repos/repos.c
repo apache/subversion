@@ -1690,9 +1690,9 @@ svn_repos_create (svn_repos_t **repos_p,
     }
 
   /* This repository is ready.  Stamp it with a format number. */
-  SVN_ERR (svn_io_write_version_file 
+  SVN_ERR (svn_io_write_version_file2
            (svn_path_join (path, SVN_REPOS__FORMAT, pool),
-            SVN_REPOS__FORMAT_NUMBER, pool));
+            SVN_REPOS__FORMAT_NUMBER, NULL, pool));
 
   *repos_p = repos;
   return SVN_NO_ERROR;
@@ -2091,9 +2091,9 @@ svn_repos_hotcopy (const char *src_path,
                            clean_logs, pool));
 
   /* Destination repository is ready.  Stamp it with a format number. */
-  SVN_ERR (svn_io_write_version_file 
+  SVN_ERR (svn_io_write_version_file2
            (svn_path_join (dst_repos->path, SVN_REPOS__FORMAT, pool),
-            dst_repos->format, pool));
+            dst_repos->format, NULL, pool));
 
   return SVN_NO_ERROR;
 }
