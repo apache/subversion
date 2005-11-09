@@ -677,7 +677,8 @@ clean-swig-pl:
 	fi
 
 $(SWIG_PY_DIR)/libsvn:
-	ln -sf $(SWIG_PY_DIR) $(SWIG_PY_DIR)/libsvn
+	mkdir $(SWIG_PY_DIR)/libsvn
+	ln -sf $(SWIG_PY_DIR)/*.py $(SWIG_PY_DIR)/libsvn
 
 copy-swig-py: autogen-swig-py
 	@if test ! -e $(SWIG_PY_DIR)/__init__.py ; then \
@@ -695,7 +696,7 @@ check-swig-py: swig-py
 	  $(PYTHON) $(SWIG_PY_SRC_DIR)/tests/run_all.py
 
 clean-swig-py:
-	rm -f $(SWIG_PY_SRC_DIR)/svn/*.pyc $(SWIG_PY_SRC_DIR)/tests/*.pyc \
+	rm -rf $(SWIG_PY_SRC_DIR)/svn/*.pyc $(SWIG_PY_SRC_DIR)/tests/*.pyc \
 	      $(SWIG_PY_DIR)/libsvn
 	if test $(top_srcdir) != .; then \
 	  rm -f $(SWIG_PY_DIR)/*.py; \
