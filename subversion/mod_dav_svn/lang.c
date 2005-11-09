@@ -154,7 +154,7 @@ static int sort_lang_pref(const void *accept_rec1, const void *accept_rec2)
 {
   float diff = ((accept_rec *) accept_rec1)->quality -
       ((accept_rec *) accept_rec2)->quality;
-  return (diff == 0 ? 0 : (diff > 0 ? 1 : -1));
+  return (diff == 0 ? 0 : (diff > 0 ? -1 : 1));
 }
 
 /* It would be nice if this function could be unit-tested.  Paul
