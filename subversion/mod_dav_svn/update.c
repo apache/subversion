@@ -74,6 +74,9 @@ typedef struct {
   /* True iff client requested all data inline in the report. */
   svn_boolean_t send_all;
 
+  /* SVNDIFF version to send to client.  */
+  int svndiff_version;
+
 } update_ctx_t;
 
 typedef struct item_baton_t {
@@ -951,8 +954,9 @@ static svn_error_t * upd_apply_textdelta(void *file_baton,
   base64_stream = dav_svn_make_base64_output_stream(wb->uc->bb, wb->uc->output,
                                                     file->pool);
 
-  svn_txdelta_to_svndiff(base64_stream, file->pool,
-                         &(wb->handler), &(wb->handler_baton));
+  svn_txdelta_to_svndiff2(base64_stream, file->pool,
+                          &(wb->handler), &(wb->handler_baton), 
+                          file->uc->svndiff_version);
 
   *handler = window_handler;
   *handler_baton = wb;
@@ -1191,6 +1195,7 @@ dav_error * dav_svn__update_report(const dav_resource *resource,
                                    resource->pool);
     }
 
+  uc.svndiff_version = resource->info->svndiff_version;
   uc.resource = resource;
   uc.output = output;  
   uc.anchor = src_path;

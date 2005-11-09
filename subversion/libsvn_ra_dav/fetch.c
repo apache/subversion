@@ -2941,6 +2941,10 @@ static svn_error_t * reporter_finish_report(void *report_baton,
   report_baton_t *rb = report_baton;
   svn_error_t *err;
   const char *vcc;
+  apr_hash_t *request_headers = apr_hash_make (pool);
+  apr_hash_set(request_headers, "Accept-Encoding", APR_HASH_KEY_STRING, 
+               "svndiff1;q=0.9,svndiff;q=0.8");
+
 
 #define SVN_RA_DAV__REPORT_TAIL  "</S:update-report>" DEBUG_CR
   /* write the final closing gunk to our request body. */
@@ -2973,7 +2977,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
                                    cdata_handler,
                                    end_element,
                                    rb,
-                                   NULL, NULL,
+                                   request_headers, NULL,
                                    rb->spool_response, pool);
 
   /* we're done with the file */

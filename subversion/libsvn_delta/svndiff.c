@@ -151,7 +151,6 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   char ibuf[128], *ip;
   char abuf[128], *ap;
   const svn_txdelta_op_t *op;
-  svn_error_t *err = SVN_NO_ERROR;
   apr_size_t len;
   apr_size_t lastoffset = 0;
   apr_size_t bits = 0;  
@@ -215,13 +214,13 @@ window_handler (svn_txdelta_window_t *window, void *baton)
   append_encoded_int (header, window->sview_offset, pool);
   append_encoded_int (header, window->sview_len, pool);
   append_encoded_int (header, window->tview_len, pool);
-  if (err == SVN_NO_ERROR && eb->version == 1)
+  if (eb->version == 1)
     {
       SVN_ERR (zlib_encode (instructions, i1));
       instructions = i1;
     }
   append_encoded_int (header, instructions->len, pool);
-  if (err == SVN_NO_ERROR && eb->version == 1)
+  if (eb->version == 1)
     {
       svn_stringbuf_t *temp;
       temp = svn_stringbuf_create_from_string (window->new_data, pool);
@@ -233,20 +232,20 @@ window_handler (svn_txdelta_window_t *window, void *baton)
 
   /* Write out the window.  */
   len = header->len;
-  err = svn_stream_write (eb->output, header->data, &len);
-  if (err == SVN_NO_ERROR && instructions->len > 0)
+  SVN_ERR (svn_stream_write (eb->output, header->data, &len));
+  if (instructions->len > 0)
     {
       len = instructions->len;
-      err = svn_stream_write (eb->output, instructions->data, &len);
+      SVN_ERR (svn_stream_write (eb->output, instructions->data, &len));
     }
-  if (err == SVN_NO_ERROR && window->new_data->len > 0)
+  if (window->new_data->len > 0)
     {
       len = window->new_data->len;
-      err = svn_stream_write (eb->output, window->new_data->data, &len);
+      SVN_ERR (svn_stream_write (eb->output, window->new_data->data, &len));
     }
 
   svn_pool_destroy (pool);
-  return err;
+  return SVN_NO_ERROR;
 }
 
 void
