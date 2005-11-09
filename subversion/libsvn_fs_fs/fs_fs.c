@@ -414,8 +414,8 @@ svn_fs_fs__hotcopy (const char *src_path,
                                           NULL, pool));
 
   /* Hotcopied FS is complete. Stamp it with a format file. */
-  SVN_ERR (svn_io_write_version_file 
-           (svn_path_join (dst_path, PATH_FORMAT, pool), format, pool));
+  SVN_ERR (svn_io_write_version_file2
+           (svn_path_join (dst_path, PATH_FORMAT, pool), format, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -4026,8 +4026,8 @@ svn_fs_fs__create (svn_fs_t *fs,
   SVN_ERR (svn_fs_fs__dag_init_fs (fs));
 
   /* This filesystem is ready.  Stamp it with a format number. */
-  SVN_ERR (svn_io_write_version_file
-           (path_format (fs, pool), SVN_FS_FS__FORMAT_NUMBER, pool));
+  SVN_ERR (svn_io_write_version_file2
+           (path_format (fs, pool), SVN_FS_FS__FORMAT_NUMBER, NULL, pool));
   ((fs_fs_data_t *) fs->fsap_data)->format = SVN_FS_FS__FORMAT_NUMBER;
 
   return SVN_NO_ERROR;

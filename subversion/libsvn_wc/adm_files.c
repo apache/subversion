@@ -1018,6 +1018,19 @@ init_adm_tmp_area (svn_wc_adm_access_t *adm_access,
 }
 
 
+svn_error_t *
+svn_wc__adm_write_version_file (const char *adm_path, apr_pool_t *pool)
+{
+  return svn_io_write_version_file2
+    (extend_with_adm_name (adm_path, NULL, FALSE, pool,
+                           SVN_WC__ADM_FORMAT, NULL),
+     SVN_WC__VERSION,
+     _("                DON'T EDIT FILES IN THIS AREA\n"
+       "          MANUAL CHANGES WILL BREAK YOUR WORKING COPY\n\n"),
+     pool);
+}
+
+
 /* Set up a new adm area for PATH, with URL as the ancestor url, and
    INITIAL_REV as the starting revision.  The entries file starts out
    marked as 'incomplete.  The adm area starts out locked; remember to
@@ -1069,12 +1082,9 @@ init_adm (const char *path,
   /* SVN_WC__ADM_ENTRIES */
   SVN_ERR (svn_wc__entries_init (path, uuid, url, repos, initial_rev, pool));
 
-  /* THIS FILE MUST BE CREATED LAST: 
+  /* THIS FILE MUST BE CREATED LAST:
      After this exists, the dir is considered complete. */
-  SVN_ERR (svn_io_write_version_file 
-           (extend_with_adm_name (path, NULL, FALSE, pool,
-                                  SVN_WC__ADM_FORMAT, NULL),
-            SVN_WC__VERSION, pool));
+  SVN_ERR (svn_wc__adm_write_version_file (path, pool));
 
   /* Now unlock it.  It's now a valid working copy directory, that
      just happens to be at revision 0. */

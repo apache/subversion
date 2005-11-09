@@ -221,6 +221,14 @@ svn_error_t *svn_wc__sync_props (const char *path,
                                  svn_boolean_t wcprops,
                                  apr_pool_t *pool);
 
+
+/* Write the format file in the directory pointed to by *ADM_PATH
+   using the SVN_WC__VERSION as the version indicator.
+*/
+svn_error_t *
+svn_wc__adm_write_version_file (const char *adm_path, apr_pool_t *pool);
+
+
 /* Blow away the admistrative directory associated with the access baton
    ADM_ACCESS. This closes ADM_ACCESS, but it is safe to close ADM_ACCESS
    again, after calling this function. */
