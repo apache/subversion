@@ -870,7 +870,7 @@ delete_entry (const char *path,
     case svn_node_dir:
       b = make_dir_baton (full_path, pb, pb->edit_baton, FALSE, pool);
       /* A delete is required to change working-copy into requested
-         revision, so diff should show this as and add. Thus force the
+         revision, so diff should show this as an add. Thus force the
          directory diff to treat this as added. */
       SVN_ERR (directory_elements_diff (b, TRUE));
       break;
@@ -1037,7 +1037,7 @@ open_file (const char *path,
   return SVN_NO_ERROR;
 }
 
-/* An editor function.  Do the work of applying the text delta. */
+/* Do the work of applying the text delta. */
 static svn_error_t *
 window_handler (svn_txdelta_window_t *window,
                 void *window_baton)
@@ -1208,8 +1208,6 @@ close_file (void *file_baton,
     }
   else
     {
-      /* Be careful with errors to ensure that the temporary translated
-         file is deleted. */
       const char *localfile = NULL;
 
       if (b->temp_file) /* A props-only change will not have opened a file */
@@ -1377,7 +1375,7 @@ file_added (svn_wc_adm_access_t *adm_access,
   return SVN_NO_ERROR;
 }
 
-/* A diff_callbakcs2 function. */
+/* An svn_wc_diff_callbacks2_t function. */
 static svn_error_t *
 file_deleted (svn_wc_adm_access_t *adm_access,
               svn_wc_notify_state_t *state,
