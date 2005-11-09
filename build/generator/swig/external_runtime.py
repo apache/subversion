@@ -32,6 +32,8 @@ class Generator(generator.swig.Generator):
     self.checkout("perl5","perlrun.swg")
     self.checkout("ruby","rubydef.swg")
     self.checkout("ruby", "rubyhead.swg")
+    if self.version() >= 103026:
+      self.checkout("ruby", "rubytracking.swg")
 
     # Runtime library names
     runtime_library = {
@@ -52,6 +54,18 @@ class Generator(generator.swig.Generator):
         out_file.close()
       else:
         _exec.run("%s -%s -external-runtime %s" % (self.swig_path, lang, out))
+
+      if lang == "ruby" and self.version() >= 103026:
+        # SWIG 1.3.26-27 should include rubytracking.swg in their
+        # external runtime, but they don't.
+        # TODO: Find out whether this bug will be fixed in later versions
+        # of SWIG.
+        runtime = open(out, "r").read()
+        tracking = open("%s/rubytracking.swg" % self.proxy_dir,"r").read()
+        out_file = open(out, "w")
+        out_file.write(tracking)
+        out_file.write(runtime)
+        out_file.close()
 
       # SWIG 1.3.25 and earlier use the wrong number of arguments in calls to
       # SWIG_GetModule. We fix this below.
