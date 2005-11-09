@@ -1970,12 +1970,14 @@ def post_commit_hook_test(sbox):
 
   # Setup the hook configs to echo data back
   post_commit_hook = svntest.main.get_post_commit_hook_path (repo_dir)
-  svntest.main.file_append (post_commit_hook,
-                            """#!/bin/sh
-                            echo "Post-commit Hook says nothing doing on stderr" > /dev/stderr
-                            exit -1
-                            """)
-  os.chmod (post_commit_hook, 0755)
+
+  # Create a post-commit hook
+  post_commit_hook_code = ("import sys\n"
+                           "\n"
+                           "sys.stderr.write('Post-commit hook says hi')\n"
+                           "sys.exit(1)\n")
+  svntest.main.create_python_hook_script (post_commit_hook,
+                                          post_commit_hook_code)
 
   # Modify iota just so there is something to commit.
   iota_path = os.path.join (wc_dir, "iota")
@@ -1989,8 +1991,8 @@ def post_commit_hook_test(sbox):
                       "Committed revision 2.\n",
                       "\n",
                       "Warning:'post-commit' hook failed with error output:\n",
-                      "Post-commit Hook says nothing doing on stderr\n",
-                      "\n"]
+                      "Post-commit hook says hi\n"
+                    ]
 
   svntest.actions.run_and_verify_svn (None, expected_output, [],
                                       'ci', '-m', 'log msg', iota_path)
