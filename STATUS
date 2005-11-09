@@ -21,7 +21,7 @@ Candidate changes:
    Votes:
      +1: blair
 
- * r17190, r12271
+ * r17190, r17271
    Fix url->wc diff when wc contains schedule-delete files.
    Justification:
      Failure in common use of svn diff with a simple fix.
