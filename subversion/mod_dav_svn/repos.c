@@ -1365,8 +1365,8 @@ static apr_array_header_t *do_header_line(apr_pool_t *p,
    structure */
 static int sort_encoding_pref(const void *accept_rec1, const void *accept_rec2)
 {
-  float diff = ((accept_rec *) accept_rec1)->quality -
-      ((accept_rec *) accept_rec2)->quality;
+  float diff = ((const accept_rec *) accept_rec1)->quality -
+      ((const accept_rec *) accept_rec2)->quality;
   return (diff == 0 ? 0 : (diff > 0 ? -1 : 1));
 }
 
@@ -1376,7 +1376,7 @@ static int sort_encoding_pref(const void *accept_rec1, const void *accept_rec2)
    make_sub_request(), and noted that httpd manually constructs
    request_rec's in a few spots. */
 
-static svn_error_t *
+static void
 svn_dav__negotiate_encoding_prefs(request_rec *r,
                                   int *svndiff_version)
 {
@@ -1392,12 +1392,12 @@ svn_dav__negotiate_encoding_prefs(request_rec *r,
                                   apr_table_get(r->headers_in, 
                                                 "Accept-Encoding"));
 
-  if (apr_is_empty_array(encoding_prefs))
+  if (encoding_prefs && apr_is_empty_array(encoding_prefs))
     {
       *svndiff_version = 0;
-      return SVN_NO_ERROR;
+      return;
     }
-
+  *svndiff_version = 0;
   qsort(encoding_prefs->elts, (size_t) encoding_prefs->nelts,
         sizeof(accept_rec), sort_encoding_pref);
   for (i = 0; i < encoding_prefs->nelts; i++)
@@ -1415,7 +1415,6 @@ svn_dav__negotiate_encoding_prefs(request_rec *r,
           break;
         }
     } 
-  return SVN_NO_ERROR;
 }
 
 
@@ -2743,7 +2742,8 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
           svn_stream_set_close(o_stream, dav_svn_close_filter);
 
           /* get a handler/baton for writing into the output stream */
-          svn_txdelta_to_svndiff(o_stream, resource->pool, &handler, &h_baton);
+          svn_txdelta_to_svndiff2(o_stream, resource->pool, &handler, &h_baton,
+                                  resource->info->svndiff_version);
 
           /* got everything set up. read in delta windows and shove them into
              the handler, which pushes data into the output stream, which goes
