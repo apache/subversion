@@ -1969,7 +1969,7 @@ def post_commit_hook_test(sbox):
   repo_dir = sbox.repo_dir
 
   # Disable commits
-  svntest.actions.disable_commits (repo_dir)
+  svntest.actions.create_failing_post_commit_hook (repo_dir)
 
   # Modify iota just so there is something to commit.
   iota_path = os.path.join (wc_dir, "iota")
@@ -1983,7 +1983,7 @@ def post_commit_hook_test(sbox):
                       "Committed revision 2.\n",
                       "\n",
                       "Warning: 'post-commit' hook failed with error output:\n",
-                      "Committing has been disabled\n",
+                      "Post-commit hook failed\n",
                       "\n"
                     ]
 
