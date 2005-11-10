@@ -1968,16 +1968,8 @@ def post_commit_hook_test(sbox):
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
 
-  # Setup the hook configs to echo data back
-  post_commit_hook = svntest.main.get_post_commit_hook_path (repo_dir)
-
-  # Create a post-commit hook
-  post_commit_hook_code = ("import sys\n"
-                           "\n"
-                           "sys.stderr.write('Post-commit hook says hi')\n"
-                           "sys.exit(1)\n")
-  svntest.main.create_python_hook_script (post_commit_hook,
-                                          post_commit_hook_code)
+  # Disable commits
+  svntest.actions.disable_commits (repo_dir)
 
   # Modify iota just so there is something to commit.
   iota_path = os.path.join (wc_dir, "iota")
@@ -1991,7 +1983,8 @@ def post_commit_hook_test(sbox):
                       "Committed revision 2.\n",
                       "\n",
                       "Warning:'post-commit' hook failed with error output:\n",
-                      "Post-commit hook says hi\n"
+                      "Committing has been disabled\n",
+                      "\n"
                     ]
 
   svntest.actions.run_and_verify_svn (None, expected_output, [],
