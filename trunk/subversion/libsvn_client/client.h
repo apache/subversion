@@ -110,37 +110,40 @@ svn_error_t *svn_client__prev_log_path (const char **prev_path_p,
                                         apr_pool_t *pool);
 
 
-/** Set @a *start_url and @a *start_revision (and maybe @a *end_url
- * and @a *end_revision) to the revisions and repository URLs of one
- * (or two) points of interest along a particular versioned resource's
- * line of history.  @a path as it exists in "peg revision" @a
- * revision identifies that line of history, and @a start and @a end
- * specify the point(s) of interest (typically the revisions referred
- * to as the "operative range" for a given operation) along that history.
- *
- * @a end may be of kind svn_opt_revision_unspecified (in which case
- * @a end_url and @a end_revision are not touched by the function);
- * @a start and @a revision may not.
- *
- * A NOTE ABOUT FUTURE REPORTING:
- *
- * If either @a start or @end are greater than @a revision, then do a
- * sanity check (since we cannot search future history yet): verify
- * that @a path in the future revision(s) is the "same object" as the
- * one pegged by @a revision.  In other words, all three objects must
- * be connected by a single line of history which exactly passes
- * through @a path at @a revision.  If this sanity check fails, return
- * SVN_ERR_CLIENT_UNRELATED_RESOURCES.
- *
- * @a ctx is the client context baton.
- *
- * Use @a pool for all allocations.
- */
+/* Set *START_URL and *START_REVISION (and maybe *END_URL
+   and *END_REVISION) to the revisions and repository URLs of one
+   (or two) points of interest along a particular versioned resource's
+   line of history.  PATH as it exists in "peg revision"
+   REVISION identifies that line of history, and START and END
+   specify the point(s) of interest (typically the revisions referred
+   to as the "operative range" for a given operation) along that history.
+
+   eND may be of kind svn_opt_revision_unspecified (in which case
+   END_URL and END_REVISION are not touched by the function);
+   START and REVISION may not.
+
+   RA_SESSION should be an open RA session pointing at the URL of PATH,
+   or NULL, in which case this function will open its own temporary session.
+
+   A NOTE ABOUT FUTURE REPORTING:
+
+   If either START or END are greater than REVISION, then do a
+   sanity check (since we cannot search future history yet): verify
+   that PATH in the future revision(s) is the "same object" as the
+   one pegged by REVISION.  In other words, all three objects must
+   be connected by a single line of history which exactly passes
+   through PATH at REVISION.  If this sanity check fails, return
+   SVN_ERR_CLIENT_UNRELATED_RESOURCES.
+
+   CTX is the client context baton.
+
+   Use POOL for all allocations.  */
 svn_error_t *
 svn_client__repos_locations (const char **start_url,
                              svn_opt_revision_t **start_revision,
                              const char **end_url,
                              svn_opt_revision_t **end_revision,
+                             svn_ra_session_t *ra_session,
                              const char *path,
                              const svn_opt_revision_t *revision,
                              const svn_opt_revision_t *start,
@@ -259,10 +262,9 @@ svn_error_t *svn_client__commit_get_baton (void **baton,
    pointed by commit_baton. If the commit_info supplied by get_baton
    points to NULL after close_edit, it means the commit is a no-op.
 */
-svn_error_t *svn_client__commit_callback (svn_revnum_t revision,
-                                          const char *date,
-                                          const char *author,
-                                          void *baton);
+svn_error_t *svn_client__commit_callback (const svn_commit_info_t *commit_info,
+                                          void *baton,
+                                          apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 
@@ -400,6 +402,33 @@ svn_client__get_diff_editor (const char *target,
                              void **edit_baton,
                              apr_pool_t *pool);
 
+
+/* ---------------------------------------------------------------- */
+
+/*** Editor for diff summary ***/
+
+/* Create an editor for a repository diff summary, i.e. comparing one
+ * repository version against the other and only providing information
+ * about the changed items without the text deltas.
+ *
+ * @a summarize_func is called with @a summarize_baton as parameter by the
+ * created svn_delta_editor_t for each changed item.
+ *
+ * See svn_client__get_diff_editor() for a description of the other
+ * parameters.
+ */
+svn_error_t *
+svn_client__get_diff_summarize_editor (const char *target,
+                                       svn_client_diff_summarize_func_t
+                                       summarize_func,
+                                       void *summarize_baton,
+                                       svn_ra_session_t *ra_session, 
+                                       svn_revnum_t revision,
+                                       svn_cancel_func_t cancel_func,
+                                       void *cancel_baton,
+                                       const svn_delta_editor_t **editor,
+                                       void **edit_baton,
+                                       apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 

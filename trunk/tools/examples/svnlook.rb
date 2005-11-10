@@ -99,8 +99,7 @@ class SvnLook
 
       if date
         # Print out the date in a nice format
-        time = str_to_time(date)
-        puts time.strftime('%Y-%m-%d %H:%M(%Z)')
+        puts date.strftime('%Y-%m-%d %H:%M(%Z)')
       else
         # The specified revision doesn't have an associated date.
         # Output just a blank line.
@@ -142,6 +141,16 @@ class SvnLook
   # Output the tree associated with the provided tree
   def cmd_tree
     print_tree(Editor, 0)
+  end
+
+  # Output the repository's UUID.
+  def cmd_uuid
+    puts @fs.uuid
+  end
+
+  # Output the repository's youngest revision.
+  def cmd_youngest
+    puts @fs.youngest_rev
   end
 
   # Return a property of the specified revision or transaction.
@@ -189,17 +198,11 @@ class SvnLook
 
     # Do a directory delta between the two roots with 
     # the specified editor
-    base_root.editor = editor
-    base_root.dir_delta('', '', root, '')
+    base_root.dir_delta('', '', root, '', editor)
   end
 
-  # Convert a string to an SVN date/time object
-  def str_to_time(str)
-    Svn::Util.string_to_time(str)
-  end
-  
   # Output the current tree for a specified revision 
-  class Editor < Svn::Delta::Editor
+  class Editor < Svn::Delta::BaseEditor
 
     # Initialize the Editor object
     def initialize(root=nil, base_root=nil)
@@ -251,57 +254,17 @@ class SvnLook
   end
 
   
-  # Output directories that have been changed
-  class DirsChangedEditor < Svn::Delta::Editor
-
-    # Recurse through the root node
-    def open_root(base_revision)
-      [true, '']
-    end
-
-    # If a file is deleted, output that its parent has
-    # been changed
-    def delete_entry(path, revision, parent_baton)
-      dir_changed(parent_baton)
-    end
-
-    # If a directory is added, output that its parent has been
-    # changed and recurse through the child directory's contents
-    def add_directory(path, parent_baton,
-                      copyfrom_path, copyfrom_revision)
-      dir_changed(parent_baton)
-      [true, path]
-    end
-
-    # Recurse through directories
-    def open_directory(path, parent_baton, base_revision)
-      [true, path]
-    end
-
-    # If the properties of this directory have been changed,
-    # output that the directory has been changed
-    def change_dir_prop(dir_baton, name, value)
-      dir_changed(dir_baton)
-    end
-
-    # If a file is added to this directory,
-    # output that the directory has been changed 
-    def add_file(path, parent_baton,
-                 copyfrom_path, copyfrom_revision)
-      dir_changed(parent_baton)
-    end
-
-    # If a file is opened in this directory,
-    # output that the directory has been changed 
-    def open_file(path, parent_baton, base_revision)
-      dir_changed(parent_baton)
-    end
+  # Output directories that have been changed.
+  # In this class, methods such as open_root and add_file
+  # are inherited from Svn::Delta::ChangedDirsEditor.
+  class DirsChangedEditor < Svn::Delta::ChangedDirsEditor
 
     # Private functions
     private
 
     # Print out the name of a directory if it has been changed.
     # But only do so once.
+    # This behaves in a way like a callback function does.
     def dir_changed(baton)
       if baton[0]
         # The directory hasn't been printed yet,
@@ -315,7 +278,7 @@ class SvnLook
   end
     
   # Output files that have been changed between two roots
-  class ChangedEditor < Svn::Delta::Editor
+  class ChangedEditor < Svn::Delta::BaseEditor
 
     # Constructor
     def initialize(root, base_root)
@@ -412,7 +375,7 @@ class SvnLook
   end
         
   # Output diffs of files that have been changed
-  class DiffEditor < Svn::Delta::Editor
+  class DiffEditor < Svn::Delta::BaseEditor
 
     # Constructor
     def initialize(root, base_root)
@@ -448,7 +411,7 @@ class SvnLook
       if file_baton[2].nil?
         nil
       else
-        do_diff(file_baton[2], file_baton[2], file_baton[3])
+        do_diff(file_baton[2], file_baton[2])
       end
     end
 
@@ -509,6 +472,8 @@ def usage
     "   info:          print the author, data, log_size, and log message.",
     "   log:           print log message.",
     "   tree:          print the tree.",
+    "   uuid:          print the repository's UUID (REV and TXN ignored).",
+    "   youngest:      print the youngest revision number (REV and TXN ignored).",
   ]
   puts(messages.join("\n"))
   exit(1)

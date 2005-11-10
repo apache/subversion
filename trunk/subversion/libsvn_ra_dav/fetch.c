@@ -18,6 +18,8 @@
 
 
 
+#include <assert.h>
+
 #define APR_WANT_STRFUNC
 #include <apr_want.h> /* for strcmp() */
 
@@ -136,6 +138,9 @@ typedef struct {
 
   apr_file_t *tmpfile;
 
+  /* The pool of the report baton; used for things that must live during the
+     whole editing operation. */
+  apr_pool_t *pool;
   /* Pool initialized when the report_baton is created, and meant for
      quick scratchwork.  This is like a loop pool, but since the loop
      that drives ra_dav callbacks is in the wrong scope for us to use
@@ -178,7 +183,10 @@ typedef struct {
      This is always the empty stringbuf when not in use. */
   svn_stringbuf_t *cdata_accum;
 
-  const char *current_wcprop_path;
+  /* Are we inside a resource element? */
+  svn_boolean_t in_resource;
+  /* Valid if in_resource is true. */
+  svn_stringbuf_t *current_wcprop_path;
   svn_boolean_t is_switch;
 
   /* Named target, or NULL if none.  For example, in 'svn up wc/foo',
@@ -383,7 +391,7 @@ static svn_error_t *add_props(apr_hash_t *props,
 }
                       
 
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
 /* This implements the svn_ra_dav__request_interrogator() interface.
    USERDATA is 'ne_content_type *'. */
 static svn_error_t *interrogate_for_content_type(ne_request *request,
@@ -395,7 +403,7 @@ static svn_error_t *interrogate_for_content_type(ne_request *request,
   if (ne_get_content_type(request, ctype) != 0)
     return svn_error_createf
       (SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,
-       _("Could not get content-type from response."));
+       _("Could not get content-type from response"));
 
   return SVN_NO_ERROR;
 }
@@ -482,12 +490,12 @@ static svn_error_t *custom_get_request(ne_session *sess,
   err = svn_ra_dav__request_dispatch(NULL, req, sess, "GET", url,
                                      200 /* OK */,
                                      226 /* IM Used */,
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
                                      interrogate_for_content_type, &cgc.ctype,
 #endif /* SVN_NEON_0_25 */
                                      pool);
 
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
   if (decompress)
     ne_decompress_destroy(decompress);
 #else /* ! SVN_NEON_0_25 */
@@ -526,7 +534,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
 }
 
 /* This implements the ne_block_reader() callback interface. */
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
 static int
 #else /* ! SVN_NEON_0_25 */
 static void
@@ -539,7 +547,7 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
   if (cgc->err)
     {
       /* We must have gotten an error during the last read. */
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
       /* Abort the rest of the read. */
       /* ### Call ne_set_error(), as ne_block_reader doc implies? */
       return 1;
@@ -555,7 +563,7 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
   if (len == 0)
     {
       /* file is complete. */
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
       return 0;
 #else /* ! SVN_NEON_0_25 */
       return;
@@ -631,7 +639,7 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
 #endif
     }
 
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
   return 0;
 #endif /* SVN_NEON_0_25 */
 }
@@ -678,7 +686,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
 
 /* Helper (neon callback) for svn_ra_dav__get_file.  This implements
    the ne_block_reader() callback interface. */
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
 static int
 #else /* ! SVN_NEON_0_25 */
 static void
@@ -700,7 +708,7 @@ get_file_reader(void *userdata, const char *buf, size_t len)
   wlen = len;
   err = svn_stream_write(stream, buf, &wlen);
 
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
   /* Technically, if the write came up short then there's guaranteed
      to be an error anyway, so we only really need to check for error.
      But heck, why not gather as much information as possible about
@@ -815,7 +823,7 @@ svn_error_t *svn_ra_dav__get_file(svn_ra_session_t *session,
   svn_ra_dav_resource_t *rsrc;
   const char *final_url;
   svn_ra_dav__session_t *ras = session->priv;
-  const char *url = svn_path_url_add_component (ras->url, path, pool);
+  const char *url = svn_path_url_add_component (ras->url->data, path, pool);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
      the public URL, because that will always get HEAD. */
@@ -918,6 +926,7 @@ svn_error_t *svn_ra_dav__get_file(svn_ra_session_t *session,
 svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
                                  const char *path,
                                  svn_revnum_t revision,
+                                 apr_uint32_t dirent_fields,
                                  apr_hash_t **dirents,
                                  svn_revnum_t *fetched_rev,
                                  apr_hash_t **props,
@@ -929,7 +938,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
   const char *final_url;
   apr_size_t final_url_n_components;
   svn_ra_dav__session_t *ras = session->priv;
-  const char *url = svn_path_url_add_component (ras->url, path, pool);
+  const char *url = svn_path_url_add_component (ras->url->data, path, pool);
 
   /* If the revision is invalid (head), then we're done.  Just fetch
      the public URL, because that will always get HEAD. */
@@ -957,11 +966,83 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
 
   if (dirents)
     {
+      ne_propname *which_props;
+
+      /* if we didn't ask for the has_props field, we can get individual
+         properties. */
+      if ((SVN_DIRENT_HAS_PROPS & dirent_fields) == 0)
+        {
+          apr_size_t num_props = 1; /* start with one for the final NULL */
+
+          if (dirent_fields & SVN_DIRENT_KIND)
+            ++num_props;
+
+          if (dirent_fields & SVN_DIRENT_SIZE)
+            ++num_props;
+
+          if (dirent_fields & SVN_DIRENT_CREATED_REV)
+            ++num_props;
+
+          if (dirent_fields & SVN_DIRENT_TIME)
+            ++num_props;
+
+          if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
+            ++num_props;
+
+          which_props = apr_pcalloc (pool, num_props * sizeof (ne_propname));
+
+          --num_props; /* damn zero based arrays... */
+
+          /* first, null out the end... */
+          which_props[num_props].nspace = NULL;
+          which_props[num_props--].name = NULL;
+
+          /* Now, go through and fill in the ones we care about, moving along
+             the array as we go. */
+
+          if (dirent_fields & SVN_DIRENT_KIND)
+            {
+              which_props[num_props].nspace = "DAV:";
+              which_props[num_props--].name = "resourcetype";
+            }
+
+          if (dirent_fields & SVN_DIRENT_SIZE)
+            {
+              which_props[num_props].nspace = "DAV:";
+              which_props[num_props--].name = "getcontentlength";
+            }
+
+          if (dirent_fields & SVN_DIRENT_CREATED_REV)
+            {
+              which_props[num_props].nspace = "DAV:";
+              which_props[num_props--].name = "version-name";
+            }
+
+          if (dirent_fields & SVN_DIRENT_TIME)
+            {
+              which_props[num_props].nspace = "DAV:";
+              which_props[num_props--].name = "creationdate";
+            }
+
+          if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
+            {
+              which_props[num_props].nspace = "DAV:";
+              which_props[num_props--].name = "creator-displayname";
+            }
+
+          assert (num_props == -1);
+        }
+      else
+        {
+          /* get all props, since we need them all to do has_props */
+          which_props = NULL;
+        }
+
       /* Just like Nautilus, Cadaver, or any other browser, we do a
          PROPFIND on the directory of depth 1. */
       SVN_ERR( svn_ra_dav__get_props(&resources, ras->sess,
                                      final_url, NE_DEPTH_ONE,
-                                     NULL, NULL /* all props */, pool) );
+                                     NULL, which_props, pool) );
       
       /* Count the number of path components in final_url. */
       final_url_n_components = svn_path_component_count(final_url);
@@ -994,57 +1075,76 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
             continue;
           
           entry = apr_pcalloc (pool, sizeof(*entry));
-          
-          /* node kind */
-          entry->kind = resource->is_collection ? svn_node_dir : svn_node_file;
-          
-          /* size */
-          propval = apr_hash_get(resource->propset,
-                                 SVN_RA_DAV__PROP_GETCONTENTLENGTH,
-                                 APR_HASH_KEY_STRING);
-          if (propval == NULL)
-            entry->size = 0;
-          else
-            entry->size = svn__atoui64(propval->data);
-          
-          /* does this resource contain any 'svn' or 'custom' properties,
-             i.e.  ones actually created and set by the user? */
-          for (h = apr_hash_first (pool, resource->propset);
-               h; h = apr_hash_next (h))
+
+          if (dirent_fields & SVN_DIRENT_KIND)
             {
-              const void *kkey;
-              void *vval;
-              apr_hash_this (h, &kkey, NULL, &vval);
-              
-              if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_CUSTOM,
-                          sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1) == 0)
-                entry->has_props = TRUE;
-              
-              else if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_SVN,
-                               sizeof(SVN_DAV_PROP_NS_SVN) - 1) == 0)
-                entry->has_props = TRUE;
+              /* node kind */
+              entry->kind = resource->is_collection ? svn_node_dir
+                                                    : svn_node_file;
             }
-          
-          /* created_rev & friends */
-          propval = apr_hash_get(resource->propset,
-                                 SVN_RA_DAV__PROP_VERSION_NAME,
-                                 APR_HASH_KEY_STRING);
-          if (propval != NULL)
-            entry->created_rev = SVN_STR_TO_REV(propval->data);
-          
-          propval = apr_hash_get(resource->propset,
-                                 SVN_RA_DAV__PROP_CREATIONDATE,
-                                 APR_HASH_KEY_STRING);
-          if (propval != NULL)
-            SVN_ERR( svn_time_from_cstring(&(entry->time),
-                                           propval->data, pool) );
-          
-          propval = apr_hash_get(resource->propset,
-                                 SVN_RA_DAV__PROP_CREATOR_DISPLAYNAME,
-                                 APR_HASH_KEY_STRING);
-          if (propval != NULL)
-            entry->last_author = propval->data;
-          
+
+          if (dirent_fields & SVN_DIRENT_SIZE)
+            {
+              /* size */
+              propval = apr_hash_get(resource->propset,
+                                     SVN_RA_DAV__PROP_GETCONTENTLENGTH,
+                                     APR_HASH_KEY_STRING);
+              if (propval == NULL)
+                entry->size = 0;
+              else
+                entry->size = svn__atoui64(propval->data);
+            }
+         
+          if (dirent_fields & SVN_DIRENT_HAS_PROPS)
+            { 
+              /* does this resource contain any 'svn' or 'custom' properties,
+                 i.e.  ones actually created and set by the user? */
+              for (h = apr_hash_first (pool, resource->propset);
+                   h; h = apr_hash_next (h))
+                {
+                  const void *kkey;
+                  void *vval;
+                  apr_hash_this (h, &kkey, NULL, &vval);
+              
+                  if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_CUSTOM,
+                              sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1) == 0)
+                    entry->has_props = TRUE;
+              
+                  else if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_SVN,
+                                   sizeof(SVN_DAV_PROP_NS_SVN) - 1) == 0)
+                    entry->has_props = TRUE;
+                }
+             }
+
+          if (dirent_fields & SVN_DIRENT_CREATED_REV)
+            { 
+              /* created_rev & friends */
+              propval = apr_hash_get(resource->propset,
+                                     SVN_RA_DAV__PROP_VERSION_NAME,
+                                     APR_HASH_KEY_STRING);
+              if (propval != NULL)
+                entry->created_rev = SVN_STR_TO_REV(propval->data);
+            }
+
+          if (dirent_fields & SVN_DIRENT_TIME)
+            {
+              propval = apr_hash_get(resource->propset,
+                                     SVN_RA_DAV__PROP_CREATIONDATE,
+                                     APR_HASH_KEY_STRING);
+              if (propval != NULL)
+                SVN_ERR( svn_time_from_cstring(&(entry->time),
+                                               propval->data, pool) );
+            }
+
+          if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)    
+            {
+              propval = apr_hash_get(resource->propset,
+                                     SVN_RA_DAV__PROP_CREATOR_DISPLAYNAME,
+                                     APR_HASH_KEY_STRING);
+              if (propval != NULL)
+                entry->last_author = propval->data;
+            }
+
           apr_hash_set(*dirents, 
                        svn_path_uri_decode(svn_path_basename(childname, pool),
                                            pool),
@@ -1066,7 +1166,6 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
 }
 
 
-
 /* ------------------------------------------------------------------------- */
 
 svn_error_t *svn_ra_dav__get_latest_revnum(svn_ra_session_t *session,
@@ -1084,7 +1183,7 @@ svn_error_t *svn_ra_dav__get_latest_revnum(svn_ra_session_t *session,
                                          ras->sess, ras->root.path,
                                          SVN_INVALID_REVNUM, pool) );
 
-  SVN_ERR( svn_ra_dav__maybe_store_auth_info(ras) );
+  SVN_ERR( svn_ra_dav__maybe_store_auth_info(ras, pool) );
 
   return NULL;
 }
@@ -1288,13 +1387,13 @@ svn_ra_dav__get_locations(svn_ra_session_t *session,
   /* ras's URL may not exist in HEAD, and thus it's not safe to send
      it as the main argument to the REPORT request; it might cause
      dav_get_resource() to choke on the server.  So instead, we pass a
-     baseline-collection URL, which we get from the largest of the
-     START and END revisions. */
+     baseline-collection URL, which we get from the peg revision.  */
   SVN_ERR( svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                         ras->sess, ras->url, peg_revision,
-                                         session->pool) );
+                                         ras->sess, ras->url->data,
+                                         peg_revision,
+                                         pool) );
   final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
-                                            session->pool);
+                                            pool );
 
   err = svn_ra_dav__parsed_request(ras->sess, "REPORT", final_bc_url,
                                    request_body->data, NULL, NULL,
@@ -1617,7 +1716,7 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
   /* We always run the report on the 'public' URL, which represents
      HEAD anyway.  If the path doesn't exist in HEAD, then
      svn_ra_get_locks() *should* fail.  Lock queries are always on HEAD. */
-  url = svn_path_url_add_component (ras->url, path, pool);
+  url = svn_path_url_add_component (ras->url->data, path, pool);
 
   err = svn_ra_dav__parsed_request(ras->sess, "REPORT", url,
                                    body, NULL, NULL,
@@ -1632,7 +1731,7 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
 
   /* ### Should svn_ra_dav__parsed_request() take care of storing auth
      ### info itself? */
-  err = svn_ra_dav__maybe_store_auth_info_after_result(err, ras);
+  err = svn_ra_dav__maybe_store_auth_info_after_result(err, ras, pool);
 
   /* At this point, 'err' might represent a local error (neon choked,
      or maybe something went wrong storing auth creds).  But if
@@ -1710,7 +1809,7 @@ svn_error_t *svn_ra_dav__change_rev_prop (svn_ra_session_t *session,
   /* Get the baseline resource. */
   SVN_ERR (svn_ra_dav__get_baseline_props(NULL, &baseline,
                                           ras->sess, 
-                                          ras->url,
+                                          ras->url->data,
                                           rev,
                                           wanted_props, /* DAV:auto-version */
                                           pool));
@@ -1757,7 +1856,7 @@ svn_error_t *svn_ra_dav__rev_proplist (svn_ra_session_t *session,
   /* Main objective: do a PROPFIND (allprops) on a baseline object */  
   SVN_ERR (svn_ra_dav__get_baseline_props(NULL, &baseline,
                                           ras->sess, 
-                                          ras->url,
+                                          ras->url->data,
                                           rev,
                                           NULL, /* get ALL properties */
                                           pool));
@@ -1987,7 +2086,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
 
       CHKERR( (*rb->editor->set_target_revision)(rb->edit_baton,
                                                  SVN_STR_TO_REV(att),
-                                                 rb->ras->pool) );
+                                                 rb->pool) );
       break;
 
     case ELEM_absent_directory:
@@ -2019,7 +2118,8 @@ start_element(void *userdata, int parent_state, const char *nspace,
     case ELEM_resource:
       att = svn_xml_get_attr_value("path", atts);
       /* ### verify we got it. punt on error. */
-      rb->current_wcprop_path = apr_pstrdup(rb->ras->pool, att);
+      svn_stringbuf_set(rb->current_wcprop_path, att);
+      rb->in_resource = TRUE;
       break;
 
     case ELEM_open_directory:
@@ -2029,7 +2129,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
       if (rb->dirs->nelts == 0)
         {
           /* pathbuf has to live for the whole edit! */
-          pathbuf = svn_stringbuf_create("", rb->ras->pool);
+          pathbuf = svn_stringbuf_create("", rb->pool);
 
           /* During switch operations, we need to invalidate the
              tree's version resource URLs in case something goes
@@ -2038,10 +2138,10 @@ start_element(void *userdata, int parent_state, const char *nspace,
             {
               CHKERR( rb->ras->callbacks->invalidate_wc_props
                       (rb->ras->callback_baton, rb->target, 
-                       SVN_RA_DAV__LP_VSN_URL, rb->ras->pool) );
+                       SVN_RA_DAV__LP_VSN_URL, rb->pool) );
             }
 
-          subpool = svn_pool_create(rb->ras->pool);
+          subpool = svn_pool_create(rb->pool);
           CHKERR( (*rb->editor->open_root)(rb->edit_baton, base,
                                            subpool, &new_dir_baton) );
 
@@ -2168,7 +2268,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
       svn_stringbuf_set(rb->namestr, name);
 
       parent_dir = &TOP_DIR(rb);
-      rb->file_pool = svn_pool_create(rb->ras->pool);
+      rb->file_pool = svn_pool_create(parent_dir->pool);
       rb->result_checksum = NULL;
 
       /* Add this file's name into the directory's path buffer. It will be
@@ -2202,7 +2302,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
         }
 
       parent_dir = &TOP_DIR(rb);
-      rb->file_pool = svn_pool_create(rb->ras->pool);
+      rb->file_pool = svn_pool_create(parent_dir->pool);
       rb->result_checksum = NULL;
 
       /* Add this file's name into the directory's path buffer. It will be
@@ -2472,7 +2572,7 @@ static int cdata_handler(void *userdata, int state,
             CHKERR( svn_error_createf
                     (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
                      _("Error writing to '%s': unexpected EOF"),
-                     svn_path_local_style(rb->namestr->data, rb->ras->pool)) );
+                     svn_path_local_style(rb->namestr->data, rb->pool)) );
           }
       }
       break;
@@ -2497,12 +2597,12 @@ static int end_element(void *userdata, int state,
   switch (elm->id)
     {
     case ELEM_resource:
-      rb->current_wcprop_path = NULL;
+      rb->in_resource = FALSE;
       break;
 
     case ELEM_update_report:
       /* End of report; close up the editor. */
-      CHKERR( (*rb->editor->close_edit)(rb->edit_baton, rb->ras->pool) );
+      CHKERR( (*rb->editor->close_edit)(rb->edit_baton, rb->pool) );
       rb->edit_baton = NULL;
       break;
 
@@ -2651,18 +2751,19 @@ static int end_element(void *userdata, int state,
       /* if we're within a <resource> tag, then just call the generic
          RA set_wcprop_callback directly;  no need to use the
          update-editor.  */
-      if (rb->current_wcprop_path != NULL)
+      if (rb->in_resource)
         {
           svn_string_t href_val;
           href_val.data = rb->href->data;
           href_val.len = rb->href->len;
 
           if (rb->ras->callbacks->set_wc_prop != NULL)
-            CHKERR( rb->ras->callbacks->set_wc_prop(rb->ras->callback_baton,
-                                                    rb->current_wcprop_path,
-                                                    SVN_RA_DAV__LP_VSN_URL,
-                                                    &href_val,
-                                                    rb->scratch_pool) );
+            CHKERR( rb->ras->callbacks->set_wc_prop
+                    (rb->ras->callback_baton,
+                     rb->current_wcprop_path->data,
+                     SVN_RA_DAV__LP_VSN_URL,
+                     &href_val,
+                     rb->scratch_pool) );
           svn_pool_clear(rb->scratch_pool);
         }
       /* else we're setting a wcprop in the context of an editor drive. */
@@ -2846,20 +2947,20 @@ static svn_error_t * reporter_finish_report(void *report_baton,
   SVN_ERR( svn_io_file_write_full(rb->tmpfile,
                                   SVN_RA_DAV__REPORT_TAIL, 
                                   sizeof(SVN_RA_DAV__REPORT_TAIL) - 1,
-                                  NULL, rb->ras->pool) );
+                                  NULL, pool) );
 #undef SVN_RA_DAV__REPORT_TAIL
 
   /* get the editor process prepped */
-  rb->dirs = apr_array_make(rb->ras->pool, 5, sizeof(dir_item_t));
-  rb->namestr = MAKE_BUFFER(rb->ras->pool);
-  rb->cpathstr = MAKE_BUFFER(rb->ras->pool);
-  rb->encoding = MAKE_BUFFER(rb->ras->pool);
-  rb->href = MAKE_BUFFER(rb->ras->pool);
+  rb->dirs = apr_array_make(rb->pool, 5, sizeof(dir_item_t));
+  rb->namestr = MAKE_BUFFER(rb->pool);
+  rb->cpathstr = MAKE_BUFFER(rb->pool);
+  rb->encoding = MAKE_BUFFER(rb->pool);
+  rb->href = MAKE_BUFFER(rb->pool);
 
   /* get the VCC.  if this doesn't work out for us, don't forget to
      remove the tmpfile before returning the error. */
   if ((err = svn_ra_dav__get_vcc(&vcc, rb->ras->sess, 
-                                 rb->ras->url, rb->ras->pool)))
+                                 rb->ras->url->data, pool)))
     {
       (void) apr_file_close(rb->tmpfile);
       return err;
@@ -2873,7 +2974,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
                                    end_element,
                                    rb,
                                    NULL, NULL,
-                                   rb->spool_response, rb->ras->pool);
+                                   rb->spool_response, pool);
 
   /* we're done with the file */
   (void) apr_file_close(rb->tmpfile);
@@ -2901,7 +3002,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
     }
 
   /* store auth info if we can. */
-  SVN_ERR( svn_ra_dav__maybe_store_auth_info (rb->ras) );
+  SVN_ERR( svn_ra_dav__maybe_store_auth_info (rb->ras, pool) );
 
   return SVN_NO_ERROR;
 }
@@ -2971,14 +3072,15 @@ make_reporter (svn_ra_session_t *session,
   const char *s;
   svn_stringbuf_t *xml_s;
 
-  /* ### create a subpool for this operation? */
-
   rb = apr_pcalloc(pool, sizeof(*rb));
   rb->ras = ras;
+  rb->pool = pool;
   rb->scratch_pool = svn_pool_create(pool);
   rb->editor = editor;
   rb->edit_baton = edit_baton;
   rb->fetch_content = fetch_content;
+  rb->in_resource = FALSE;
+  rb->current_wcprop_path = svn_stringbuf_create("", pool);
   rb->is_switch = dst_path ? TRUE : FALSE;
   rb->target = target;
   rb->receiving_all = FALSE;
@@ -3004,10 +3106,6 @@ make_reporter (svn_ra_session_t *session,
   SVN_ERR(ras->callbacks->open_tmp_file (&rb->tmpfile, ras->callback_baton,
                                          pool));
 
-  /* ### register a cleanup on our (sub)pool which removes the file. this
-     ### will ensure that the file always gets tossed, even if we exit
-     ### with an error. */
-
   /* prep the file */
   s = apr_psprintf(pool, "<S:update-report send-all=\"%s\" xmlns:S=\""
                    SVN_XML_NAMESPACE "\">" DEBUG_CR, 
@@ -3019,7 +3117,7 @@ make_reporter (svn_ra_session_t *session,
      style' update-report request, older servers will just ignore this
      unknown xml element. */
   xml_s = NULL;
-  svn_xml_escape_cdata_cstring(&xml_s, ras->url, pool);
+  svn_xml_escape_cdata_cstring(&xml_s, ras->url->data, pool);
   s = apr_psprintf(pool, "<S:src-path>%s</S:src-path>" DEBUG_CR, xml_s->data);
   SVN_ERR( svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool) );
 
@@ -3196,6 +3294,7 @@ svn_error_t * svn_ra_dav__do_diff(svn_ra_session_t *session,
                                   const char *diff_target,
                                   svn_boolean_t recurse,
                                   svn_boolean_t ignore_ancestry,
+                                  svn_boolean_t text_deltas,
                                   const char *versus_url,
                                   const svn_delta_editor_t *wc_diff,
                                   void *wc_diff_baton,
@@ -3212,7 +3311,7 @@ svn_error_t * svn_ra_dav__do_diff(svn_ra_session_t *session,
                         FALSE,
                         wc_diff,
                         wc_diff_baton,
-                        TRUE, /* fetch_content */
+                        text_deltas, /* fetch_content */
                         FALSE, /* send_all */
                         TRUE, /* spool_response */
                         pool);

@@ -57,7 +57,7 @@ I.    BUILD REQUIREMENTS
       commands described in section II.B before installing the following.
 
 
-      1.  Apache Portable Runtime 0.9.5 (http://apr.apache.org/)
+      1.  Apache Portable Runtime 0.9.7 (http://apr.apache.org/)
 
       Whenever you want to build any part of Subversion, you need the
       Apache Portable Runtime (APR) and the APR Utility (APR-util)
@@ -139,7 +139,7 @@ I.    BUILD REQUIREMENTS
       newer. The autogen.sh script knows about that.
 
 
-      4.  Neon library 0.24.7 or 0.25.0 (http://www.webdav.org/neon/)
+      4.  Neon library 0.24.7 or 0.25.3 (http://www.webdav.org/neon/)
 
       The Neon library allows a Subversion client to interact with remote
       repositories over the Internet via a WebDAV based protocol.  If you
@@ -153,7 +153,7 @@ I.    BUILD REQUIREMENTS
 
           http://www.webdav.org/neon/neon-0.24.7.tar.gz
             -or-
-          http://www.webdav.org/neon/neon-0.25.0.tar.gz
+          http://www.webdav.org/neon/neon-0.25.3.tar.gz
 
       Unpack the archive using tar/gunzip and rename the resulting
       directory from ./neon-0.XX.Y to just "./neon".

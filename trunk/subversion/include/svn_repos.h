@@ -667,7 +667,30 @@ svn_repos_replay (svn_fs_root_t *root,
  * NULL).  Callers who supply their own transactions are responsible
  * for cleaning them up (either by committing them, or aborting them).
  *
+ * @since New in 1.4.
+ */
+svn_error_t *
+svn_repos_get_commit_editor4 (const svn_delta_editor_t **editor,
+                              void **edit_baton,
+                              svn_repos_t *repos,
+                              svn_fs_txn_t *txn,
+                              const char *repos_url,
+                              const char *base_path,
+                              const char *user,
+                              const char *log_msg,
+                              svn_commit_callback2_t callback,
+                              void *callback_baton,
+                              svn_repos_authz_callback_t authz_callback,
+                              void *authz_baton,
+                              apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_get_commit_editor4(), but
+ * uses the svn_commit_callback_t type.
+ *
  * @since New in 1.3.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 svn_error_t *
 svn_repos_get_commit_editor3 (const svn_delta_editor_t **editor,

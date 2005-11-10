@@ -17,8 +17,8 @@
  */
 
 #include <stdio.h>
-#include <svn_pools.h>
-#include <svn_io.h>
+#include "svn_pools.h"
+#include "svn_io.h"
 #include <apr_general.h>
 
 #include "../svn_test.h"

@@ -337,20 +337,20 @@ add_dir_recursive (const char *dirname,
     {
       const char *fullpath;
 
-      /* Check cancellation so you can cancel during an 
-       * add of a directory with lots of files. */
-      if (ctx->cancel_func)
-        SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
-      
-      /* Skip over SVN admin directories. */
-      if (svn_wc_is_adm_dir (this_entry.name, subpool))
-        continue;
-
       /* Skip entries for this dir and its parent.  */
       if (this_entry.name[0] == SVN_UTF8_DOT
           && (this_entry.name[1] == '\0'
               || (this_entry.name[1] == SVN_UTF8_DOT
                   && this_entry.name[2] == '\0')))
+        continue;
+
+      /* Check cancellation so you can cancel during an 
+       * add of a directory with lots of files. */
+      if (ctx->cancel_func)
+        SVN_ERR (ctx->cancel_func (ctx->cancel_baton));
+
+      /* Skip over SVN admin directories. */
+      if (svn_wc_is_adm_dir (this_entry.name, subpool))
         continue;
 
       if ((!no_ignore) && svn_cstring_match_glob_list (this_entry.name,
@@ -605,11 +605,11 @@ mkdir_urls (svn_commit_info_t **commit_info_p,
 
   /* Fetch RA commit editor */
   SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info_p, pool));
-  SVN_ERR (svn_ra_get_commit_editor (ra_session, &editor, &edit_baton,
-                                     log_msg, svn_client__commit_callback,
-                                     commit_baton, 
-                                       NULL, TRUE, /* No lock tokens */
-                                     pool));
+  SVN_ERR (svn_ra_get_commit_editor2 (ra_session, &editor, &edit_baton,
+                                      log_msg, svn_client__commit_callback,
+                                      commit_baton, 
+                                      NULL, TRUE, /* No lock tokens */
+                                      pool));
   
   /* Call the path-based editor driver. */
   err = svn_delta_path_driver (editor, edit_baton, SVN_INVALID_REVNUM, 

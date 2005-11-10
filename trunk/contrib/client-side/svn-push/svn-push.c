@@ -17,11 +17,11 @@
  */
 #include <stdio.h>
 
-#include <svn_pools.h>
-#include <svn_ra.h>
-#include <svn_delta.h>
-#include <svn_config.h>
-#include <svn_cmdline.h>
+#include "svn_pools.h"
+#include "svn_ra.h"
+#include "svn_delta.h"
+#include "svn_config.h"
+#include "svn_cmdline.h"
 
 static svn_error_t *
 my_commit_callback (svn_revnum_t new_revision,

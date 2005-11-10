@@ -206,6 +206,10 @@ auth-request contains an empty mechanism list, and the server proceeds
 immediately to sending the command response.)  Some commands include a
 second place for auth-request point as noted below.
 
+  reparent
+    params:   ( url:string )
+    response: ( )
+
   get-latest-rev
     params:   ( )
     response: ( rev:number )
@@ -248,11 +252,14 @@ second place for auth-request point as noted below.
      whether an error occurred during the sending of the file.
 
   get-dir
-    params:   ( path:string [ rev:number ] want-props:bool want-contents:bool )
+    params:   ( path:string [ rev:number ] want-props:bool want-contents:bool
+                ? ( field:dirent-field ... ) )
     response: ( rev:number props:proplist ( entry:dirent ... ) )]
     dirent:   ( name:string kind:node-kind size:number has-props:bool
                 created-rev:number [ created-date:string ]
                 [ last-author:string ] )
+    dirent-field: kind | size | has-props | created-rev | time | last-author
+                  | word
 
   check-path
     params:   ( path:string [ rev:number ] )
@@ -293,7 +300,7 @@ second place for auth-request point as noted below.
 
   diff
     params:   ( [ rev:number ] target:string recurse:bool ignore-ancestry:bool
-                url:string )
+                url:string ? text-deltas:bool )
     Client switches to report command set.
     Upon finish-report, server sends auth-request.
     After auth exchange completes, server switches to editor command set.

@@ -21,6 +21,7 @@
 # Translation dictionary
 # ======================
 #
+# abort                   中断
 # ancestor                祖先
 # ancestry                系統
 # attempted ...           〜しようとしました
@@ -143,20 +144,20 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2005-09-28 04:00+0900\n"
-"PO-Revision-Date: 2005-09-28 03:55+0900\n"
+"POT-Creation-Date: 2005-10-29 10:05+0900\n"
+"PO-Revision-Date: 2005-10-29 10:03+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: clients/cmdline/blame-cmd.c:236 clients/cmdline/ls-cmd.c:294
+#: clients/cmdline/blame-cmd.c:236 clients/cmdline/ls-cmd.c:295
 msgid "'verbose' option invalid in XML mode"
 msgstr "'verbose' オプションは XML モードでは無効です"
 
 #: clients/cmdline/blame-cmd.c:248 clients/cmdline/info-cmd.c:473
-#: clients/cmdline/ls-cmd.c:306 clients/cmdline/status-cmd.c:192
+#: clients/cmdline/ls-cmd.c:307 clients/cmdline/status-cmd.c:192
 msgid "'incremental' option only valid in XML mode"
 msgstr "'incremental' オプションは XML モードでのみ有効です"
 
@@ -175,15 +176,18 @@ msgstr "'%s' は URL ではないようです"
 msgid "Local, non-commit operations do not take a log message"
 msgstr "ローカルの、コミットを伴わない操作にはログメッセージは必要ありません"
 
-#: clients/cmdline/diff-cmd.c:65
+#: clients/cmdline/diff-cmd.c:65 svnserve/main.c:413
+#, c-format
 msgid "Can't open stdout"
 msgstr "標準出力を開けません"
 
 #: clients/cmdline/diff-cmd.c:67
+#, c-format
 msgid "Can't open stderr"
 msgstr "標準エラー出力を開けません"
 
 #: clients/cmdline/diff-cmd.c:156
+#, c-format
 msgid "Target lists to diff may not contain both working copy paths and URLs"
 msgstr "diff の対象に作業コピーのパスと URL を共に含めることはできません"
 
@@ -257,12 +261,12 @@ msgstr "'%s' は不正な URL です"
 msgid "'%s' has invalid revision"
 msgstr "'%s' はリビジョンが不正です"
 
-#: clients/cmdline/info-cmd.c:263 svnadmin/main.c:1035
+#: clients/cmdline/info-cmd.c:263 svnadmin/main.c:1036
 #, c-format
 msgid "Path: %s\n"
 msgstr "パス: %s\n"
 
-#: clients/cmdline/info-cmd.c:269 svnlook/main.c:782
+#: clients/cmdline/info-cmd.c:269 svnlook/main.c:802
 #, c-format
 msgid "Name: %s\n"
 msgstr "名前: %s\n"
@@ -288,34 +292,42 @@ msgid "Revision: %ld\n"
 msgstr "リビジョン: %ld\n"
 
 #: clients/cmdline/info-cmd.c:289
+#, c-format
 msgid "Node Kind: file\n"
 msgstr "ノード種別: ファイル\n"
 
 #: clients/cmdline/info-cmd.c:293
+#, c-format
 msgid "Node Kind: directory\n"
 msgstr "ノード種別: ディレクトリ\n"
 
 #: clients/cmdline/info-cmd.c:297
+#, c-format
 msgid "Node Kind: none\n"
 msgstr "ノード種別: なし\n"
 
 #: clients/cmdline/info-cmd.c:302
+#, c-format
 msgid "Node Kind: unknown\n"
 msgstr "ノード種別: 不明\n"
 
 #: clients/cmdline/info-cmd.c:311
+#, c-format
 msgid "Schedule: normal\n"
 msgstr "準備中の処理: 特になし\n"
 
 #: clients/cmdline/info-cmd.c:315
+#, c-format
 msgid "Schedule: add\n"
 msgstr "準備中の処理: 追加\n"
 
 #: clients/cmdline/info-cmd.c:319
+#, c-format
 msgid "Schedule: delete\n"
 msgstr "準備中の処理: 削除\n"
 
 #: clients/cmdline/info-cmd.c:323
+#, c-format
 msgid "Schedule: replace\n"
 msgstr "準備中の処理: 置換\n"
 
@@ -443,6 +455,7 @@ msgid "(no date)"
 msgstr "(日付の情報がありません)"
 
 #: clients/cmdline/log-cmd.c:203
+#, c-format
 msgid "Changed paths:\n"
 msgstr "変更のあったパス:\n"
 
@@ -475,9 +488,9 @@ msgstr ""
 
 # * Description for 'svn{,admin,dumpfilter,look} --help'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:66 clients/cmdline/main.c:67 svnadmin/main.c:228
-#: svnadmin/main.c:231 svndumpfilter/main.c:756 svndumpfilter/main.c:759
-#: svnlook/main.c:92 svnlook/main.c:95
+#: clients/cmdline/main.c:66 clients/cmdline/main.c:67 svnadmin/main.c:229
+#: svnadmin/main.c:232 svndumpfilter/main.c:781 svndumpfilter/main.c:784
+#: svnlook/main.c:93 svnlook/main.c:96
 msgid "show help on a subcommand"
 msgstr "サブコマンドに関するヘルプを表示します"
 
@@ -505,9 +518,17 @@ msgstr "子ノードを再帰的に辿ります"
 msgid "operate on single directory only"
 msgstr "単一のディレクトリのみに (非再帰的に) 作用します"
 
+# * Description for 'svn --change'.
+# * 29 half-size characters are displayed on the left.
+#: clients/cmdline/main.c:72
+msgid "the change made by revision ARG (like -r ARG-1:ARG)"
+msgstr ""
+"リビジョン <引数> における変更\n"
+"                             (-r <引数>-1:<引数> と同等)"
+
 # * Description for 'svn --revision'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:73
+#: clients/cmdline/main.c:74
 msgid ""
 "ARG (some commands also take ARG1:ARG2 range)\n"
 "                             A revision argument can be one of:\n"
@@ -540,13 +561,13 @@ msgstr ""
 
 # * Description for 'svn --file'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:87
+#: clients/cmdline/main.c:88
 msgid "read data from file ARG"
 msgstr "ファイル <引数> からデータを読み込みます"
 
 # * Description for 'svn --incremental'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:89
+#: clients/cmdline/main.c:90
 msgid "give output suitable for concatenation"
 msgstr ""
 "他の出力と連結するのに適した形式で出力を表示しま\n"
@@ -554,7 +575,7 @@ msgstr ""
 
 # * Description for 'svn --encoding'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:91
+#: clients/cmdline/main.c:92
 msgid "treat value as being in charset encoding ARG"
 msgstr ""
 "文字エンコーディングが <引数> であるとして処理し\n"
@@ -562,37 +583,37 @@ msgstr ""
 
 # * Description for 'svn --version'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:92
+#: clients/cmdline/main.c:93
 msgid "print client version info"
 msgstr "クライアントのバージョン情報を表示します"
 
 # * Description for 'svn --verbose'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:93
+#: clients/cmdline/main.c:94
 msgid "print extra information"
 msgstr "付加的な情報を表示します"
 
 # * Description for 'svn --show-updates'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:94
+#: clients/cmdline/main.c:95
 msgid "display update information"
 msgstr "更新情報を表示します"
 
 # * Description for 'svn --username'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:96
+#: clients/cmdline/main.c:97
 msgid "specify a username ARG"
 msgstr "ユーザ名を <引数> と指定します"
 
 # * Description for 'svn --password'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:98
+#: clients/cmdline/main.c:99
 msgid "specify a password ARG"
 msgstr "パスワードを <引数> と指定します"
 
 # * Description for 'svn --extensions'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:99
+#: clients/cmdline/main.c:100
 msgid "pass ARG to --diff-cmd as options (default: '-u')"
 msgstr ""
 "<引数> をオプションとして --diff-cmd に渡します\n"
@@ -600,7 +621,7 @@ msgstr ""
 
 # * Description for 'svn --targets'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:101
+#: clients/cmdline/main.c:102
 msgid "pass contents of file ARG as additional args"
 msgstr ""
 "ファイル <引数> の内容をサブコマンドの引数に追加\n"
@@ -608,25 +629,25 @@ msgstr ""
 
 # * Description for 'svn --xml'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:102
+#: clients/cmdline/main.c:103
 msgid "output in XML"
 msgstr "XML で出力します"
 
 # * Description for 'svn --strict'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:103
+#: clients/cmdline/main.c:104
 msgid "use strict semantics"
 msgstr "厳密なセマンティクスを用います"
 
 # * Description for 'svn --stop-on-copy'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:105
+#: clients/cmdline/main.c:106
 msgid "do not cross copies while traversing history"
 msgstr "履歴を辿るときにコピー以前には遡りません"
 
 # * Description for 'svn --no-ignore'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:107
+#: clients/cmdline/main.c:108
 msgid "disregard default and svn:ignore property ignores"
 msgstr ""
 "デフォルトや svn:ignore 属性が無視するような項目\n"
@@ -634,91 +655,91 @@ msgstr ""
 
 # * Description for 'svn --no-auth-cache'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:109
+#: clients/cmdline/main.c:110
 msgid "do not cache authentication tokens"
 msgstr "認証情報をキャッシュしません"
 
 # * Description for 'svn --non-interactive'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:111
+#: clients/cmdline/main.c:112
 msgid "do no interactive prompting"
 msgstr "対話式の認証用プロンプト表示をしません"
 
 # * Description for 'svn --dry-run'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:113
+#: clients/cmdline/main.c:114
 msgid "try operation but make no changes"
 msgstr "処理をしようとするだけで実際の変更はしません"
 
 # * Description for 'svn{,look} --no-diff-deleted'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:115 svnlook/main.c:113
+#: clients/cmdline/main.c:116 svnlook/main.c:114
 msgid "do not print differences for deleted files"
 msgstr "削除されたファイルに関しては差分を表示しません"
 
 # * Description for 'svn --notice-ancestry'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:117
+#: clients/cmdline/main.c:118
 msgid "notice ancestry when calculating differences"
 msgstr "差分を計算するときに項目の系統情報を考慮します"
 
 # * Description for 'svn --ignore-ancestry'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:119
+#: clients/cmdline/main.c:120
 msgid "ignore ancestry when calculating merges"
 msgstr "マージを計算するときに項目の系統情報を無視します"
 
 # * Description for 'svn --ignore-externals'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:121
+#: clients/cmdline/main.c:122
 msgid "ignore externals definitions"
 msgstr "外部定義を無視します"
 
 # * Description for 'svn --diff-cmd'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:123
+#: clients/cmdline/main.c:124
 msgid "use ARG as diff command"
 msgstr "diff コマンドとして <引数> を用います"
 
 # * Description for 'svn --diff3-cmd'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:125
+#: clients/cmdline/main.c:126
 msgid "use ARG as merge command"
 msgstr "merge コマンドとして <引数> を用います"
 
 # * Description for 'svn --editor-cmd'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:127
+#: clients/cmdline/main.c:128
 msgid "use ARG as external editor"
 msgstr "外部エディタとして <引数> を用います"
 
 # * Description for 'svn --old'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:129
+#: clients/cmdline/main.c:130
 msgid "use ARG as the older target"
 msgstr "二者のうち古い方として <引数> を用います"
 
 # * Description for 'svn --new'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:131
+#: clients/cmdline/main.c:132
 msgid "use ARG as the newer target"
 msgstr "二者のうち新しい方として <引数> を用います"
 
 # * Description for 'svn --revprop'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:133
+#: clients/cmdline/main.c:134
 msgid "operate on a revision property (use with -r)"
 msgstr "リビジョン属性に作用します (-r と共に用います)"
 
 # * Description for 'svn --relocate'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:135
+#: clients/cmdline/main.c:136
 msgid "relocate via URL-rewriting"
 msgstr "URL を書き換え、参照するリポジトリを変更します"
 
 # * Description for 'svn --config-dir'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:137 svnadmin/main.c:270
+#: clients/cmdline/main.c:138 svnadmin/main.c:271
 msgid "read user configuration files from directory ARG"
 msgstr ""
 "ディレクトリ <引数> からユーザ設定ファイルを読み\n"
@@ -726,19 +747,19 @@ msgstr ""
 
 # * Description for 'svn --auto-props'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:139
+#: clients/cmdline/main.c:140
 msgid "enable automatic properties"
 msgstr "自動的な属性設定を有効にします"
 
 # * Description for 'svn --no-auto-props'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:141
+#: clients/cmdline/main.c:142
 msgid "disable automatic properties"
 msgstr "自動的な属性設定を無効にします"
 
 # * Description for 'svn --native-eol'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:143
+#: clients/cmdline/main.c:144
 msgid ""
 "use a different EOL marker than the standard\n"
 "                             system marker for files with the svn:eol-style\n"
@@ -754,19 +775,19 @@ msgstr ""
 
 # * Description for 'svn --limit'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:151
+#: clients/cmdline/main.c:152
 msgid "maximum number of log entries"
 msgstr "表示するログエントリの数の最大値"
 
 # * Description for 'svn --no-unlock'.
 # * 29 half-size characters are displayed on the left.
-#: clients/cmdline/main.c:153
+#: clients/cmdline/main.c:154
 msgid "don't unlock the targets"
 msgstr "対象のロックを解除しません"
 
 # * Description for 'svn add'.
 # * "add: " is displayed at the head of the first line.
-#: clients/cmdline/main.c:192
+#: clients/cmdline/main.c:193
 msgid ""
 "Put files and directories under version control, scheduling\n"
 "them for addition to repository.  They will be added in next commit.\n"
@@ -778,7 +799,7 @@ msgstr ""
 
 # * Description for 'svn blame'.
 # * "blame (praise, annotate, ann): " is displayed at the head of the first line.
-#: clients/cmdline/main.c:200
+#: clients/cmdline/main.c:201
 msgid ""
 "Output the content of specified files or\n"
 "URLs with revision and author information in-line.\n"
@@ -795,7 +816,7 @@ msgstr ""
 
 # * Description for 'svn cat'.
 # * "cat: " is displayed at the head of the first line.
-#: clients/cmdline/main.c:210
+#: clients/cmdline/main.c:211
 msgid ""
 "Output the content of specified files or URLs.\n"
 "usage: cat TARGET[@REV]...\n"
@@ -810,7 +831,7 @@ msgstr ""
 
 # * Description for 'svn checkout'.
 # * "checkout (co): " is displayed at the head of the first line.
-#: clients/cmdline/main.c:218
+#: clients/cmdline/main.c:219
 msgid ""
 "Check out a working copy from a repository.\n"
 "usage: checkout URL[@REV]... [PATH]\n"
@@ -836,7 +857,7 @@ msgstr ""
 
 # * Description for 'svn cleanup'.
 # * "cleanup: " is displayed at the head of the first line.
-#: clients/cmdline/main.c:232
+#: clients/cmdline/main.c:233
 msgid ""
 "Recursively clean up the working copy, removing locks, resuming\n"
 "unfinished operations, etc.\n"
@@ -848,7 +869,7 @@ msgstr ""
 
 # * Description for 'svn commit'.
 # * "commit (ci): " is displayed at the head of the first line.
-#: clients/cmdline/main.c:238
+#: clients/cmdline/main.c:239
 msgid ""
 "Send changes from your working copy to the repository.\n"
 "usage: commit [PATH...]\n"
@@ -870,7 +891,7 @@ msgstr ""
 
 # * Description for 'svn copy'.
 # * "copy (cp): " is displayed at the head of the first line.
-#: clients/cmdline/main.c:249
+#: clients/cmdline/main.c:250
 msgid ""
 "Duplicate something in working copy or repository, remembering history.\n"
 "usage: copy SRC DST\n"
@@ -895,7 +916,7 @@ msgstr ""
 
 # * Description for 'svn delete'.
 # * "delete (del, remove, rm): " is displayed at the head of the first line.
-#: clients/cmdline/main.c:262
+#: clients/cmdline/main.c:263
 msgid ""
 "Remove files and directories from version control.\n"
 "usage: 1. delete PATH...\n"
@@ -929,12 +950,12 @@ msgstr ""
 
 # * Description for 'svn diff'.
 # * "diff (di): " is displayed at the head of the first line.
-#: clients/cmdline/main.c:278
+#: clients/cmdline/main.c:279
 msgid ""
 "Display the differences between two paths.\n"
-"usage: 1. diff [-r N[:M]] [TARGET[@REV]...]\n"
-"       2. diff [-r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT[@NEWREV]] "
-"\\\n"
+"usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
+"       2. diff [-c M | -r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT"
+"[@NEWREV]] \\\n"
 "               [PATH...]\n"
 "       3. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n"
 "\n"
@@ -944,6 +965,7 @@ msgid ""
 "     N defaults to BASE if any TARGET is a working copy path, otherwise it\n"
 "     must be specified.  M defaults to the current working version if any\n"
 "     TARGET is a working copy path, otherwise it defaults to HEAD.\n"
+"     The \"-c M\" option is equivalent to \"-r N:M\" where N = M-1.\n"
 "\n"
 "  2. Display the differences between OLD-TGT as it was seen in OLDREV and\n"
 "     NEW-TGT as it was seen in NEWREV.  PATHs, if given, are relative to\n"
@@ -951,15 +973,16 @@ msgid ""
 "     paths.  OLD-TGT and NEW-TGT may be working copy paths or URL[@REV]. \n"
 "     NEW-TGT defaults to OLD-TGT if not specified.  -r N makes OLDREV "
 "default\n"
-"     to N, -r N:M makes OLDREV default to N and NEWREV default to M.\n"
+"     to N, -r N:M makes OLDREV default to N and NEWREV default to M,\n"
+"     -c M makes OLDREV default to M-1 and NEWREV default to M.\n"
 "\n"
 "  3. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL[@NEWREV]'\n"
 "\n"
 "  Use just 'svn diff' to display local modifications in a working copy.\n"
 msgstr ""
 "2 つのパスの差分を表示します。\n"
-"使用方法: 1. diff [-r <N>[:<M>]] [<対象>[@<REV>]...]\n"
-"          2. diff [-r <N>[:<M>]] --old=<古い対象>[@<古い REV>] \\\n"
+"使用方法: 1. diff [-c <M> | -r <N>[:<M>]] [<対象>[@<REV>]...]\n"
+"          2. diff [-c <M> | -r <N>[:<M>]] --old=<古い対象>[@<古い REV>] \\\n"
 "                  [--new=<新しい対象>[@<新しい REV>]] [<パス>...]\n"
 "          3. diff <古い URL>[@<古い REV>] <新しい URL>[@<新しい REV>]\n"
 "\n"
@@ -974,7 +997,9 @@ msgstr ""
 "の\n"
 "     パスである場合 <M> はデフォルトで現在作業中のリビジョンですが、そうで"
 "な\n"
-"     い場合デフォルトでは HEAD です。\n"
+"     い場合デフォルトでは HEAD です。「-c <M>」オプションは <N> = <M>-1 の"
+"と\n"
+"     きの「-r <N>:<M>」に相当します。\n"
 "\n"
 "  2. リビジョン <古い REV> において <古い対象> にあった項目と、リビジョン <"
 "新\n"
@@ -991,7 +1016,9 @@ msgstr ""
 "     る場合 <古い REV> はデフォルトで <N> となります。また、-r <N>:<M> があ"
 "る\n"
 "     場合 <古い REV> はデフォルトで <N> となり、<新しい REV> はデフォルトで\n"
-"     <M> となります。\n"
+"     <M> となります。-c <M> がある場合、<古い REV> はデフォルトで <M>-1 と"
+"な\n"
+"     り、<新しい REV> はデフォルトで <M> となります。\n"
 "\n"
 "  3. 'svn diff --old=<古い URL>[@<古い REV>] --new=<新しい URL>[@<新しい "
 "REV>]'\n"
@@ -1003,7 +1030,7 @@ msgstr ""
 
 # * Description for 'svn export'.
 # * "export: " is displayed at the head of the first line.
-#: clients/cmdline/main.c:318
+#: clients/cmdline/main.c:321
 msgid ""
 "Create an unversioned copy of a tree.\n"
 "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -1056,7 +1083,7 @@ msgstr ""
 
 # * Description for 'svn help'.
 # * "help (?, h): " is displayed at the head of the first line.
-#: clients/cmdline/main.c:347
+#: clients/cmdline/main.c:350
 msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: help [SUBCOMMAND...]\n"
@@ -1066,7 +1093,7 @@ msgstr ""
 
 # * Description for 'svn import'.
 # * "import: " is displayed at the head of the first line.
-#: clients/cmdline/main.c:356
+#: clients/cmdline/main.c:359
 msgid ""
 "Commit an unversioned file or tree into the repository.\n"
 "usage: import [PATH] URL\n"
@@ -1091,7 +1118,7 @@ msgstr ""
 
 # * Description for 'svn info'.
 # * "info: " is displayed at the head of the first line.
-#: clients/cmdline/main.c:369
+#: clients/cmdline/main.c:372
 msgid ""
 "Display information about a local or remote item.\n"
 "usage: info [TARGET...]\n"
@@ -1107,7 +1134,7 @@ msgstr ""
 
 # * Description for 'svn list'.
 # * "list (ls): " is displayed at the head of the first line.
-#: clients/cmdline/main.c:378
+#: clients/cmdline/main.c:381
 msgid ""
 "List directory entries in the repository.\n"
 "usage: list [TARGET[@REV]...]\n"
@@ -1153,7 +1180,7 @@ msgstr ""
 
 # * Description for 'svn lock'.
 # * "lock: " is displayed at the head of the first line.
-#: clients/cmdline/main.c:403
+#: clients/cmdline/main.c:406
 msgid ""
 "Lock working copy paths or URLs in the repository, so that\n"
 "no other user can commit changes to them.\n"
@@ -1169,7 +1196,7 @@ msgstr ""
 
 # * Description for 'svn log'.
 # * "log: " is displayed at the head of the first line.
-#: clients/cmdline/main.c:412
+#: clients/cmdline/main.c:415
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
 "usage: 1. log [PATH]\n"
@@ -1231,12 +1258,12 @@ msgstr ""
 
 # * Description for 'svn merge'.
 # * "merge: " is displayed at the head of the first line.
-#: clients/cmdline/main.c:444
+#: clients/cmdline/main.c:447
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
 "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
-"       3. merge -r N:M SOURCE[@REV] [WCPATH]\n"
+"       3. merge [-c M | -r N:M] SOURCE[@REV] [WCPATH]\n"
 "\n"
 "  1. In the first form, the source URLs are specified at revisions\n"
 "     N and M.  These are the two sources to be compared.  The revisions\n"
@@ -1249,7 +1276,8 @@ msgid ""
 "  3. In the third form, SOURCE can be a URL, or working copy item\n"
 "     in which case the corresponding URL is used.  This URL in\n"
 "     revision REV is compared as it existed between revisions N and \n"
-"     M.  If REV is not specified, HEAD is assumed.\n"
+"     M.  If REV is not specified, HEAD is assumed.  The \"-c M\"\n"
+"     option is equivalent to \"-r N:M\" where N = M-1.\n"
 "\n"
 "  WCPATH is the working copy path that will receive the changes.\n"
 "  If WCPATH is omitted, a default value of '.' is assumed, unless\n"
@@ -1261,7 +1289,8 @@ msgstr ""
 "                   [<作業コピーパス>]\n"
 "          2. merge <マージ元作業コピーパス 1>@<N> \\\n"
 "                   <マージ元作業コピーパス 2>@<M> [<作業コピーパス>]\n"
-"          3. merge -r <N>:<M> <マージ元>[@<REV>] [<作業コピーパス>]\n"
+"          3. merge [-c <M> | -r <N>:<M>] <マージ元>[@<REV>] [<作業コピーパス"
+">]\n"
 "\n"
 "  1. 最初の形では、2 つの <マージ元 URL> は、それぞれリビジョンを <N> およ"
 "び\n"
@@ -1279,7 +1308,8 @@ msgstr ""
 "あっ\n"
 "     た項目が、リビジョン <N> から <M> まで存在したとして比較されます。"
 "<REV>\n"
-"     が指定されない場合、HEAD であると見なされます。\n"
+"     が指定されない場合、HEAD であると見なされます。「-c <M>」オプションは\n"
+"     <N> = <M>-1 のときの「-r <N>:<M>」に相当します。\n"
 "\n"
 "  <作業コピーパス> は、変更を受け取る作業コピーのパスです。<作業コピーパス>\n"
 "  が省かれた場合はデフォルトの値 '.' であると見なされます。ただし、2 つの"
@@ -1290,7 +1320,7 @@ msgstr ""
 
 # * Description for 'svn mkdir'.
 # * "mkdir: " is displayed at the head of the first line.
-#: clients/cmdline/main.c:474
+#: clients/cmdline/main.c:478
 msgid ""
 "Create a new directory under version control.\n"
 "usage: 1. mkdir PATH...\n"
@@ -1324,7 +1354,7 @@ msgstr ""
 
 # * Description for 'svn move'.
 # * "move (mv, rename, ren): " is displayed at the head of the first line.
-#: clients/cmdline/main.c:494
+#: clients/cmdline/main.c:498
 msgid ""
 "Move and/or rename something in working copy or repository.\n"
 "usage: move SRC DST\n"
@@ -1349,7 +1379,7 @@ msgstr ""
 
 # * Description for 'svn propdel'.
 # * "propdel (pdel, pd): " is displayed at the head of the first line.
-#: clients/cmdline/main.c:506
+#: clients/cmdline/main.c:510
 msgid ""
 "Remove PROPNAME from files, dirs, or revisions.\n"
 "usage: 1. propdel PROPNAME [PATH...]\n"
@@ -1370,7 +1400,7 @@ msgstr ""
 
 # * Description for 'svn propedit'.
 # * "propedit (pedit, pe): " is displayed at the head of the first line.
-#: clients/cmdline/main.c:516
+#: clients/cmdline/main.c:520
 msgid ""
 "Edit property PROPNAME with an external editor on targets.\n"
 "usage: 1. propedit PROPNAME PATH...\n"
@@ -1390,7 +1420,7 @@ msgstr ""
 
 # * Description for 'svn propget'.
 # * "propget (pget, pg): " is displayed at the head of the first line.
-#: clients/cmdline/main.c:527
+#: clients/cmdline/main.c:531
 msgid ""
 "Print value of PROPNAME on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
@@ -1431,7 +1461,7 @@ msgstr ""
 
 # * Description for 'svn proplist'.
 # * "proplist (plist, pl): " is displayed at the head of the first line.
-#: clients/cmdline/main.c:545
+#: clients/cmdline/main.c:549
 msgid ""
 "List all properties on files, dirs, or revisions.\n"
 "usage: 1. proplist [TARGET[@REV]...]\n"
@@ -1455,7 +1485,7 @@ msgstr ""
 
 # * Description for 'svn propset'.
 # * "propset (pset, ps): " is displayed at the head of the first line.
-#: clients/cmdline/main.c:556
+#: clients/cmdline/main.c:560
 msgid ""
 "Set PROPNAME to PROPVAL on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME [PROPVAL | -F VALFILE] PATH...\n"
@@ -1552,7 +1582,7 @@ msgstr ""
 
 # * Description for 'svn resolved'.
 # * "resolved: " is displayed at the head of the first line.
-#: clients/cmdline/main.c:606
+#: clients/cmdline/main.c:610
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -1572,7 +1602,7 @@ msgstr ""
 
 # * Description for 'svn revert'.
 # * "revert: " is displayed at the head of the first line.
-#: clients/cmdline/main.c:615
+#: clients/cmdline/main.c:619
 msgid ""
 "Restore pristine working copy file (undo most local edits).\n"
 "usage: revert PATH...\n"
@@ -1590,7 +1620,7 @@ msgstr ""
 
 # * Description for 'svn status'.
 # * "status (stat, st): " is displayed at the head of the first line.
-#: clients/cmdline/main.c:625
+#: clients/cmdline/main.c:629
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -1759,7 +1789,7 @@ msgstr ""
 
 # * Description for 'svn switch'.
 # * "switch (sw): " is displayed at the head of the first line.
-#: clients/cmdline/main.c:702
+#: clients/cmdline/main.c:706
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL [PATH]\n"
@@ -1794,7 +1824,7 @@ msgstr ""
 
 # * Description for 'svn unlock'.
 # * "unlock: " is displayed at the head of the first line.
-#: clients/cmdline/main.c:723
+#: clients/cmdline/main.c:727
 msgid ""
 "Unlock working copy paths or URLs.\n"
 "usage: unlock TARGET...\n"
@@ -1808,7 +1838,7 @@ msgstr ""
 
 # * Description for 'svn update'.
 # * "update (up): " is displayed at the head of the first line.
-#: clients/cmdline/main.c:731
+#: clients/cmdline/main.c:735
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -1855,46 +1885,68 @@ msgstr ""
 "は、\n"
 "  そのファイルに関するロックが破壊されたか奪われたことを意味します。\n"
 
-#: clients/cmdline/main.c:797 svnadmin/main.c:77 svnlook/main.c:284
+#: clients/cmdline/main.c:801 svnadmin/main.c:78 svnlook/main.c:290
 msgid "Caught signal"
 msgstr "シグナルを受け取りました"
 
-#: clients/cmdline/main.c:905
+#: clients/cmdline/main.c:909
 msgid "Non-numeric limit argument given"
-msgstr "limit の引数に数値以外が指定されています"
+msgstr "--limit の引数に数値以外が指定されています"
 
-#: clients/cmdline/main.c:922 svnadmin/main.c:1226
+#: clients/cmdline/main.c:928
 msgid ""
-"Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
+"Multiple revision arguments encountered; can't specify -c twice, or both -c "
+"and -r"
 msgstr ""
-"複数のリビジョン引数が指定されています。'-r M -r N' の代わりに '-r M:N' を\n"
-"使ってみてください"
+"複数のリビジョン引数が指定されています。-c を 2 つ指定したり -c と -r の両方"
+"を指定したりはできません"
 
-#: clients/cmdline/main.c:934 svnadmin/main.c:1240
+#: clients/cmdline/main.c:937
+msgid "Non-numeric change argument given to -c"
+msgstr "--change の引数に数値以外が指定されています"
+
+#: clients/cmdline/main.c:943
+msgid "There is no change 0"
+msgstr "変更 0 はありません"
+
+#: clients/cmdline/main.c:949
+msgid "Argument to -c must be positive"
+msgstr "-c に渡す引数は正でなければなりません"
+
+#: clients/cmdline/main.c:961
+msgid ""
+"Multiple revision arguments encountered; can't specify -r and -c, or try '-r "
+"M:N' instead of '-r M -r N'"
+msgstr ""
+"複数のリビジョン引数が指定されています。-r と -c を用いた指定はできません。'-"
+"r <M> -r <N>' の代わりに '-r <M>:<N>' を使ってみてください"
+
+#: clients/cmdline/main.c:974 svnadmin/main.c:1231
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "リビジョン引数 '%s' で構文エラーが生じました"
 
-#: clients/cmdline/main.c:1082 clients/cmdline/main.c:1092
+#: clients/cmdline/main.c:1122 clients/cmdline/main.c:1132
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props と --no-auto-props は互いに排他的です"
 
-#: clients/cmdline/main.c:1108
+#: clients/cmdline/main.c:1148
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "native-eol の引数 '%s' 中で構文エラーが生じました"
 
-#: clients/cmdline/main.c:1155 svndumpfilter/main.c:1167 svnlook/main.c:2121
+#: clients/cmdline/main.c:1195 svndumpfilter/main.c:1192 svnlook/main.c:2146
+#, c-format
 msgid "Subcommand argument required\n"
 msgstr "サブコマンドに引数が必要です\n"
 
-#: clients/cmdline/main.c:1173 svnadmin/main.c:1348 svndumpfilter/main.c:1185
-#: svnlook/main.c:2139
+#: clients/cmdline/main.c:1213 svnadmin/main.c:1339 svndumpfilter/main.c:1210
+#: svnlook/main.c:2164
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "未知のコマンドです: '%s'\n"
 
-#: clients/cmdline/main.c:1206
+#: clients/cmdline/main.c:1246
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -1903,19 +1955,19 @@ msgstr ""
 "サブコマンド '%s' にはオプション '%s' をつけられません。\n"
 "使用方法を知りたいときは 'svn help %s' と打ってください。\n"
 
-#: clients/cmdline/main.c:1243
+#: clients/cmdline/main.c:1283
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr ""
 "ログメッセージファイルがバージョン管理されているファイルです。無効にするには "
 "'--force-log' を用いてください"
 
-#: clients/cmdline/main.c:1250
+#: clients/cmdline/main.c:1290
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr ""
 "ロックについてのコメントのファイルがバージョン管理されているファイルです。無"
 "効にするには '--force-log' を用いてください"
 
-#: clients/cmdline/main.c:1271
+#: clients/cmdline/main.c:1311
 msgid ""
 "The log message is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -1923,7 +1975,7 @@ msgstr ""
 "ログメッセージがパス名です (-F のつもりでしたか?)。無効にするには '--force-"
 "log' を用いてください"
 
-#: clients/cmdline/main.c:1278
+#: clients/cmdline/main.c:1318
 msgid ""
 "The lock comment is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -1931,7 +1983,7 @@ msgstr ""
 "ロックについてのコメントがパス名です (-F のつもりでしたか?)。無効にするには "
 "'--force-log' を用いてください"
 
-#: clients/cmdline/main.c:1491
+#: clients/cmdline/main.c:1531
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
@@ -1956,7 +2008,7 @@ msgid "Try 'svn add' or 'svn add --non-recursive' instead?"
 msgstr ""
 "代わりに 'svn add' または 'svn add --non-recursive' を試してみてください"
 
-#: clients/cmdline/move-cmd.c:69 libsvn_client/copy.c:1214
+#: clients/cmdline/move-cmd.c:69 libsvn_client/copy.c:1216
 msgid "Cannot specify revisions (except HEAD) with move operations"
 msgstr "移動操作に (HEAD 以外の) リビジョンは指定できません"
 
@@ -2040,26 +2092,32 @@ msgid "At revision %ld.\n"
 msgstr "リビジョン %ld です。\n"
 
 #: clients/cmdline/notify.c:252
+#, c-format
 msgid "External export complete.\n"
 msgstr "外部項目のエクスポートが終わりました。\n"
 
 #: clients/cmdline/notify.c:253
+#, c-format
 msgid "Export complete.\n"
 msgstr "エクスポートが終わりました。\n"
 
 #: clients/cmdline/notify.c:260
+#, c-format
 msgid "External checkout complete.\n"
 msgstr "外部項目のチェックアウトが終わりました。\n"
 
 #: clients/cmdline/notify.c:261
+#, c-format
 msgid "Checkout complete.\n"
 msgstr "チェックアウトが終わりました。\n"
 
 #: clients/cmdline/notify.c:268
+#, c-format
 msgid "External update complete.\n"
 msgstr "外部項目の更新が終わりました。\n"
 
 #: clients/cmdline/notify.c:269
+#, c-format
 msgid "Update complete.\n"
 msgstr "更新が終わりました。\n"
 
@@ -2103,6 +2161,7 @@ msgid "Replacing      %s\n"
 msgstr "置換しています              %s\n"
 
 #: clients/cmdline/notify.c:341
+#, c-format
 msgid "Transmitting file data "
 msgstr "ファイルのデータを送信中です"
 
@@ -2116,15 +2175,18 @@ msgstr "'%s' をユーザ '%s' がロックしています。\n"
 msgid "'%s' unlocked.\n"
 msgstr "'%s' のロックが解除されました。\n"
 
-#: clients/cmdline/prompt.c:94
+#: clients/cmdline/prompt.c:94 svnserve/main.c:404
+#, c-format
 msgid "Can't open stdin"
 msgstr "標準入力を開けません"
 
 #: clients/cmdline/prompt.c:112 clients/cmdline/prompt.c:116
+#, c-format
 msgid "Can't read stdin"
 msgstr "標準入力を読めません"
 
-#: clients/cmdline/prompt.c:153 libsvn_ra_svn/client.c:330
+#: clients/cmdline/prompt.c:153 libsvn_ra_svn/client.c:332
+#, c-format
 msgid "Can't get password"
 msgstr "パスワードを取得できません"
 
@@ -2329,7 +2391,7 @@ msgstr "'%s' はロックトークンを持っていますが、ロック所有�
 msgid "'%s' to '%s' is not a valid relocation"
 msgstr "'%s' から '%s' への参照リポジトリの変更は適切でありません"
 
-#: clients/cmdline/util.c:58
+#: clients/cmdline/util.c:59
 #, c-format
 msgid ""
 "\n"
@@ -2338,7 +2400,7 @@ msgstr ""
 "\n"
 "リビジョン %ld をコミットしました。\n"
 
-#: clients/cmdline/util.c:126
+#: clients/cmdline/util.c:127
 msgid ""
 "None of the environment variables SVN_EDITOR, VISUAL or EDITOR is set, and "
 "no 'editor-cmd' run-time configuration option was found"
@@ -2346,52 +2408,54 @@ msgstr ""
 "環境変数 SVN_EDITOR, VISUAL, EDITOR のどれも設定されていなく、実行時の設定オ"
 "プション 'editor-cmd' も見つかりません"
 
-#: clients/cmdline/util.c:153
+#: clients/cmdline/util.c:154
+#, c-format
 msgid "Can't get working directory"
 msgstr "作業ディレクトリを取得できません"
 
-#: clients/cmdline/util.c:164
+#: clients/cmdline/util.c:165 clients/cmdline/util.c:188
 #, c-format
 msgid "Can't change working directory to '%s'"
 msgstr "作業ディレクトリを '%s' に変更できません"
 
-#: clients/cmdline/util.c:190
+#: clients/cmdline/util.c:212
 #, c-format
 msgid "Can't write to '%s'"
 msgstr "'%s' に書き込めません"
 
-#: clients/cmdline/util.c:205 clients/cmdline/util.c:229
-#: libsvn_fs_fs/fs_fs.c:1090 libsvn_fs_fs/fs_fs.c:3595 libsvn_subr/io.c:2359
+#: clients/cmdline/util.c:227 clients/cmdline/util.c:251
+#: libsvn_fs_fs/fs_fs.c:1090 libsvn_fs_fs/fs_fs.c:3595 libsvn_subr/io.c:2398
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "'%s' に対して stat を実行できません"
 
-#: clients/cmdline/util.c:220
+#: clients/cmdline/util.c:242
 #, c-format
 msgid "system('%s') returned %d"
 msgstr "system('%s') が値 %d を返してきました"
 
-#: clients/cmdline/util.c:287
+#: clients/cmdline/util.c:309
+#, c-format
 msgid "Can't restore working directory"
 msgstr "作業ディレクトリを元に戻すことはできません"
 
-#: clients/cmdline/util.c:327
+#: clients/cmdline/util.c:349
 msgid "Log message contains a zero byte"
 msgstr "ログメッセージにゼロバイト文字が入っています"
 
-#: clients/cmdline/util.c:387
+#: clients/cmdline/util.c:409
 msgid "Your commit message was left in a temporary file:"
 msgstr "コミットメッセージが一時ファイルに残っていました:"
 
-#: clients/cmdline/util.c:439
+#: clients/cmdline/util.c:461
 msgid "--This line, and those below, will be ignored--"
 msgstr "-- この行以下は無視されます --"
 
-#: clients/cmdline/util.c:552
+#: clients/cmdline/util.c:574
 msgid "Cannot invoke editor to get log message when non-interactive"
 msgstr "非対話的にログメッセージを取得するためのエディタを呼び出せません"
 
-#: clients/cmdline/util.c:565
+#: clients/cmdline/util.c:587
 msgid ""
 "Could not use external editor to fetch log message; consider setting the "
 "$SVN_EDITOR environment variable or using the --message (-m) or --file (-F) "
@@ -2401,7 +2465,7 @@ msgstr ""
 "変数を設定するか、--message (-m) か --file (-F) オプションを用いてみてくださ"
 "い"
 
-#: clients/cmdline/util.c:600
+#: clients/cmdline/util.c:622
 msgid ""
 "\n"
 "Log message unchanged or not specified\n"
@@ -2409,14 +2473,15 @@ msgid ""
 msgstr ""
 "\n"
 "ログメッセージの変更または指定がなされていません\n"
-"中止 (a), 続行 (c), 編集 (e)\n"
+"中断 (a), 続行 (c), 編集 (e)\n"
 
-#: clients/cmdline/util.c:653
+#: clients/cmdline/util.c:675
 msgid "Use --force to override this restriction"
 msgstr "この制限を無効にするには --force を用いてください"
 
-#: clients/cmdline/util.c:675 include/svn_error_codes.h:229
+#: clients/cmdline/util.c:697 include/svn_error_codes.h:229
 #: libsvn_subr/cmdline.c:280 libsvn_subr/cmdline.c:297
+#, c-format
 msgid "Write error"
 msgstr "書き込みエラーです"
 
@@ -3289,12 +3354,12 @@ msgstr "'%s' は未知またはバージョン管理できない形式です"
 msgid "New entry name required when importing a file"
 msgstr "ファイルのインポートをするときは新しいエントリ名が必要です"
 
-#: libsvn_client/commit.c:556 libsvn_wc/props.c:1215 libsvn_wc/questions.c:62
+#: libsvn_client/commit.c:556 libsvn_wc/props.c:1093 libsvn_wc/questions.c:62
 #, c-format
 msgid "'%s' does not exist"
 msgstr "'%s' は存在しません"
 
-#: libsvn_client/commit.c:616 libsvn_client/copy.c:81 svnlook/main.c:1263
+#: libsvn_client/commit.c:616 libsvn_client/copy.c:81 svnlook/main.c:1283
 #, c-format
 msgid "Path '%s' does not exist"
 msgstr "パス '%s' は存在しません"
@@ -3310,15 +3375,15 @@ msgstr "パス '%s' は既に存在しています"
 msgid "'%s' is a reserved name and cannot be imported"
 msgstr "'%s' は予約された名称です。インポートはできません"
 
-#: libsvn_client/commit.c:874 libsvn_client/copy.c:543
+#: libsvn_client/commit.c:874 libsvn_client/copy.c:544
 msgid "Commit failed (details follow):"
 msgstr "コミットに失敗しました (詳しい理由は以下のとおりです):"
 
-#: libsvn_client/commit.c:882 libsvn_client/copy.c:551
+#: libsvn_client/commit.c:882 libsvn_client/copy.c:552
 msgid "Commit succeeded, but other errors follow:"
 msgstr "コミットには成功しましたが、続けて他のエラーが生じました:"
 
-#: libsvn_client/commit.c:889 libsvn_client/copy.c:558
+#: libsvn_client/commit.c:889 libsvn_client/copy.c:559
 msgid "Error unlocking locked dirs (details follow):"
 msgstr ""
 "ディレクトリのロック解除中にエラーが発生しました (詳しい理由は以下のとおりで"
@@ -3330,7 +3395,7 @@ msgstr ""
 "コミット後にリビジョンを上げる際にエラーが発生しました (詳しくは以下のとおり"
 "です):"
 
-#: libsvn_client/commit.c:911 libsvn_client/copy.c:569
+#: libsvn_client/commit.c:911 libsvn_client/copy.c:570
 msgid "Error in post-commit clean-up (details follow):"
 msgstr "コミット後の掃除中にエラーが発生しました (詳しくは以下のとおりです):"
 
@@ -3339,11 +3404,11 @@ msgstr "コミット後の掃除中にエラーが発生しました (詳しく�
 msgid "'%s' is a URL, but URLs cannot be commit targets"
 msgstr "'%s' は URL です。しかし URL はコミットの対象ではありません"
 
-#: libsvn_client/commit.c:1406
+#: libsvn_client/commit.c:1403
 msgid "Are all the targets part of the same working copy?"
 msgstr "すべての対象は同じ作業コピーの一部ですか?"
 
-#: libsvn_client/commit.c:1421
+#: libsvn_client/commit.c:1418
 msgid "Cannot non-recursively commit a directory deletion"
 msgstr "非再帰的なディレクトリの削除をコミットできません"
 
@@ -3360,7 +3425,7 @@ msgstr "エントリ '%s' が特殊なステータスを突然変更しました
 #: libsvn_client/commit_util.c:324
 #, c-format
 msgid "Aborting commit: '%s' remains in conflict"
-msgstr "コミットを中止しています: '%s' がまだ衝突しています"
+msgstr "コミットを中断しています: '%s' がまだ衝突しています"
 
 #: libsvn_client/commit_util.c:390
 #, c-format
@@ -3375,18 +3440,18 @@ msgstr ""
 "りません\n"
 
 #: libsvn_client/commit_util.c:683 libsvn_client/commit_util.c:813
-#: libsvn_client/copy.c:1072 libsvn_client/delete.c:67
-#: libsvn_client/diff.c:1394 libsvn_client/diff.c:1992
-#: libsvn_client/diff.c:2514 libsvn_client/diff.c:2623
+#: libsvn_client/copy.c:1074 libsvn_client/delete.c:67
+#: libsvn_client/diff.c:1394 libsvn_client/diff.c:2131
+#: libsvn_client/diff.c:2794 libsvn_client/diff.c:2903
 #: libsvn_client/locking_commands.c:250 libsvn_client/locking_commands.c:274
 #: libsvn_client/log.c:129 libsvn_client/prop_commands.c:213
 #: libsvn_client/prop_commands.c:446 libsvn_client/prop_commands.c:602
 #: libsvn_client/prop_commands.c:951 libsvn_client/ra.c:181
 #: libsvn_client/revisions.c:89 libsvn_client/status.c:256
-#: libsvn_client/switch.c:104 libsvn_wc/adm_ops.c:2247
-#: libsvn_wc/adm_ops.c:2273 libsvn_wc/adm_ops.c:2310 libsvn_wc/copy.c:449
-#: libsvn_wc/entries.c:1498 libsvn_wc/entries.c:1990 libsvn_wc/props.c:283
-#: libsvn_wc/props.c:1142 libsvn_wc/questions.c:171
+#: libsvn_client/switch.c:104 libsvn_wc/adm_ops.c:2266
+#: libsvn_wc/adm_ops.c:2292 libsvn_wc/adm_ops.c:2329 libsvn_wc/copy.c:438
+#: libsvn_wc/entries.c:1519 libsvn_wc/entries.c:2016 libsvn_wc/props.c:321
+#: libsvn_wc/props.c:1031 libsvn_wc/questions.c:171
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "'%s' はバージョン管理下におかれていません"
@@ -3445,7 +3510,7 @@ msgstr ""
 "コミット対象の項目 '%s' にはコピーフラグがついていますが、リビジョンが不正で"
 "す"
 
-#: libsvn_client/copy.c:101 libsvn_client/copy.c:645 libsvn_client/copy.c:831
+#: libsvn_client/copy.c:101 libsvn_client/copy.c:646 libsvn_client/copy.c:832
 #: libsvn_ra_dav/commit.c:1172
 #, c-format
 msgid "File '%s' already exists"
@@ -3479,48 +3544,48 @@ msgstr "パス '%s' がリビジョン %ld に存在しません"
 msgid "Unrecognized node kind of '%s'"
 msgstr "ノード種別 '%s' を認識できません"
 
-#: libsvn_client/copy.c:789
+#: libsvn_client/copy.c:790
 #, c-format
 msgid "Path '%s' not found in revision %ld"
 msgstr "パス '%s' がリビジョン %ld に見つかりません"
 
-#: libsvn_client/copy.c:794
+#: libsvn_client/copy.c:795
 #, c-format
 msgid "Path '%s' not found in head revision"
 msgstr "パス '%s' が HEAD リビジョンに見つかりません"
 
-#: libsvn_client/copy.c:840
+#: libsvn_client/copy.c:841
 #, c-format
 msgid "'%s' is in the way"
 msgstr "'%s' が妨害しています"
 
-#: libsvn_client/copy.c:857
+#: libsvn_client/copy.c:859
 #, c-format
 msgid "Entry for '%s' exists (though the working file is missing)"
 msgstr "'%s' のエントリが存在します (それなのに作業ファイルがありません)"
 
-#: libsvn_client/copy.c:948
+#: libsvn_client/copy.c:950
 #, c-format
 msgid "Source URL '%s' is from foreign repository; leaving it as a disjoint WC"
 msgstr ""
 "コピー元 (もしくは移動元) の URL '%s' は別のリポジトリに由来しています。一緒"
 "に扱えない作業コピーのままにしておきます"
 
-#: libsvn_client/copy.c:1027
+#: libsvn_client/copy.c:1029
 #, c-format
 msgid "Cannot copy path '%s' into its own child '%s'"
 msgstr "パス '%s' は自身の子ノード '%s' にはコピーできません"
 
-#: libsvn_client/copy.c:1038
+#: libsvn_client/copy.c:1040
 #, c-format
 msgid "Cannot move path '%s' into itself"
 msgstr "パス '%s' は自身には移動できません"
 
-#: libsvn_client/copy.c:1046
+#: libsvn_client/copy.c:1048
 msgid "No support for repos <--> working copy moves"
 msgstr "リポジトリ <--> 作業コピーの移動操作はサポートされていません"
 
-#: libsvn_client/copy.c:1078
+#: libsvn_client/copy.c:1080
 #, c-format
 msgid "'%s' does not seem to have a URL associated with it"
 msgstr "'%s' に該当する URL は存在しないようです"
@@ -3600,18 +3665,29 @@ msgstr ".merge-left.r%ld"
 msgid ".merge-right.r%ld"
 msgstr ".merge-right.r%ld"
 
-#: libsvn_client/diff.c:1450 libsvn_client/diff.c:2092
-#: libsvn_client/diff.c:2172
+#: libsvn_client/diff.c:1473 libsvn_client/diff.c:1678
 msgid "Not all required revisions are specified"
 msgstr "必要なリビジョンがすべては指定されていません"
 
-#: libsvn_client/diff.c:1721
+# ? pegged diff
+#: libsvn_client/diff.c:1488
+msgid "At least one revision must be non-local for a pegged diff"
+msgstr ""
+"pegged diff を使う場合、少なくとも一方のリビジョンはローカルにあってはいけま"
+"せん"
+
+#: libsvn_client/diff.c:1599 libsvn_client/diff.c:1611
+#, c-format
+msgid "'%s' was not found in the repository at revision %ld"
+msgstr "'%s' は、リポジトリのリビジョン %ld には見つかりませんでした"
+
+#: libsvn_client/diff.c:1951
 msgid "Sorry, svn_client_diff3 was called in a way that is not yet supported"
 msgstr ""
 "すみません。まだサポートされていないやり方で svn_client_diff3 が呼び出されま"
 "した"
 
-#: libsvn_client/diff.c:1760
+#: libsvn_client/diff.c:1990
 msgid ""
 "Only diffs between a path's text-base and its working files are supported at "
 "this time"
@@ -3619,27 +3695,19 @@ msgstr ""
 "今のところ、パスのテキストベースと作業ファイルの差分しかサポートされていませ"
 "ん"
 
-#: libsvn_client/diff.c:1875 libsvn_client/diff.c:1880
-#, c-format
-msgid "'%s' was not found in the repository at revision %ld"
-msgstr "'%s' は、リポジトリのリビジョン %ld には見つかりませんでした"
-
-#: libsvn_client/diff.c:1996 libsvn_client/switch.c:108
+#: libsvn_client/diff.c:2135 libsvn_client/switch.c:108
 #, c-format
 msgid "Directory '%s' has no URL"
 msgstr "ディレクトリ '%s' に URL はありません"
 
-# ? pegged diff
-#: libsvn_client/diff.c:2183
-msgid "At least one revision must be non-local for a pegged diff"
-msgstr ""
-"pegged diff を使う場合、少なくとも一方のリビジョンはローカルにあってはいけま"
-"せん"
+#: libsvn_client/diff.c:2371
+msgid "Summarizing diff can only compare repository to repository"
+msgstr "差分の要約はリポジトリとリポジトリとの比較にしか使えません"
 
-#: libsvn_client/diff.c:2487 libsvn_client/diff.c:2493
-#: libsvn_client/diff.c:2608 libsvn_client/locking_commands.c:254
+#: libsvn_client/diff.c:2767 libsvn_client/diff.c:2773
+#: libsvn_client/diff.c:2888 libsvn_client/locking_commands.c:254
 #: libsvn_client/locking_commands.c:278 libsvn_client/ra.c:372
-#: libsvn_client/ra.c:733 libsvn_client/ra.c:869
+#: libsvn_client/ra.c:738 libsvn_client/ra.c:875
 #, c-format
 msgid "'%s' has no URL"
 msgstr "'%s' に URL がありません"
@@ -3665,18 +3733,18 @@ msgstr "'%s' は存在します。そしてディレクトリではありませ�
 msgid "'%s' already exists"
 msgstr "'%s' は既に存在します"
 
-#: libsvn_client/export.c:686 libsvn_wc/update_editor.c:1635
-#: libsvn_wc/update_editor.c:2395
+#: libsvn_client/export.c:686 libsvn_wc/update_editor.c:1603
+#: libsvn_wc/update_editor.c:2281
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "'%s' のチェックサムが一致しませんでした。予想: '%s', 実際: '%s'"
 
-#: libsvn_client/info.c:234
+#: libsvn_client/info.c:241
 #, c-format
 msgid "Cannot read entry for '%s'"
 msgstr "'%s' のエントリが読み込めません"
 
-#: libsvn_client/info.c:321 libsvn_client/info.c:346 libsvn_client/info.c:356
+#: libsvn_client/info.c:375 libsvn_client/info.c:400 libsvn_client/info.c:410
 #, c-format
 msgid "URL '%s' non-existent in revision '%ld'"
 msgstr "URL '%s' は、リビジョン '%ld' には存在しません"
@@ -3699,8 +3767,8 @@ msgstr "'%s' はこの作業コピーでロックされていません"
 msgid "'%s' is not locked"
 msgstr "'%s' はロックされていません"
 
-#: libsvn_client/locking_commands.c:427 libsvn_fs/fs-loader.c:912
-#: libsvn_ra/ra_loader.c:552
+#: libsvn_client/locking_commands.c:427 libsvn_fs/fs-loader.c:895
+#: libsvn_ra/ra_loader.c:626
 msgid "Lock comment has illegal characters"
 msgstr "ロックについてのコメントに不正な文字が含まれています"
 
@@ -3718,7 +3786,7 @@ msgstr "エントリ '%s' に URL がありません"
 msgid "No commits in repository"
 msgstr "リポジトリにコミット内容がありません"
 
-#: libsvn_client/ls.c:137 libsvn_client/ls.c:145
+#: libsvn_client/ls.c:143 libsvn_client/ls.c:151
 #, c-format
 msgid "URL '%s' non-existent in that revision"
 msgstr "URL '%s' は、そのリビジョンには存在しません"
@@ -3774,7 +3842,7 @@ msgstr "'%s' (リビジョン %ld) にはパス変更情報がありません"
 msgid "path '%s' doesn't exist in revision %ld"
 msgstr "パス '%s' はリビジョン %ld に存在しません"
 
-#: libsvn_client/ra.c:660 libsvn_client/ra.c:817
+#: libsvn_client/ra.c:660 libsvn_client/ra.c:823
 #, c-format
 msgid "Unable to find repository location for '%s' in revision %ld"
 msgstr "'%s' (リビジョン %ld) のリポジトリの位置が見つかりません"
@@ -3784,7 +3852,7 @@ msgstr "'%s' (リビジョン %ld) のリポジトリの位置が見つかりま
 msgid "'%s' in revision %ld is an unrelated object"
 msgstr "'%s' (リビジョン %ld) は無関係のオブジェクトです"
 
-#: libsvn_client/ra.c:822
+#: libsvn_client/ra.c:828
 #, c-format
 msgid ""
 "The location for '%s' for revision %ld does not exist in the repository or "
@@ -3793,7 +3861,12 @@ msgstr ""
 "'%s' (リビジョン %ld) の位置は、リポジトリに存在しないか無関係のオブジェクト"
 "を参照しています"
 
-#: libsvn_client/relocate.c:53
+#: libsvn_client/relocate.c:101
+#, c-format
+msgid "'%s' is not the root of the repository"
+msgstr "'%s' はリポジトリのルートではありません"
+
+#: libsvn_client/relocate.c:108
 #, c-format
 msgid "The repository at '%s' has uuid '%s', but the WC has '%s'"
 msgstr "リポジトリ '%s' の UUID は '%s' ですが、作業コピーのものは '%s' です"
@@ -3879,8 +3952,8 @@ msgstr "%s\\ ファイルの末尾に改行がありません%s"
 msgid "Failed to delete mmap '%s'"
 msgstr "メモリへのマップ '%s' を削除できませんでした"
 
-#: libsvn_fs/fs-loader.c:105 libsvn_ra/ra_loader.c:157
-#: libsvn_ra/ra_loader.c:170
+#: libsvn_fs/fs-loader.c:105 libsvn_ra/ra_loader.c:159
+#: libsvn_ra/ra_loader.c:172
 #, c-format
 msgid "'%s' does not define '%s()'"
 msgstr "'%s' は '%s()' を定義しません"
@@ -3904,18 +3977,21 @@ msgid "Unknown FS type '%s'"
 msgstr "未知のファイルシステム形式 '%s' です"
 
 #: libsvn_fs/fs-loader.c:253
+#, c-format
 msgid "Can't allocate FS mutex"
 msgstr "ファイルシステム相互排除ロックを割り当てられません"
 
 #: libsvn_fs/fs-loader.c:289
+#, c-format
 msgid "Can't grab FS mutex"
 msgstr "ファイルシステム相互排除ロックを奪えません"
 
 #: libsvn_fs/fs-loader.c:295
+#, c-format
 msgid "Can't ungrab FS mutex"
 msgstr "ファイルシステム相互排除ロックを手放せません"
 
-#: libsvn_fs/fs-loader.c:918
+#: libsvn_fs/fs-loader.c:901
 msgid "Negative expiration date passed to svn_fs_lock"
 msgstr "svn_fs_lock に渡された有効期限の値が負です"
 
@@ -4097,10 +4173,12 @@ msgid "Attempted to create a node with an illegal name '%s'"
 msgstr "不正な名前 '%s' をもつノードを作成しようとしました"
 
 #: libsvn_fs_base/dag.c:487 libsvn_fs_base/dag.c:721 libsvn_fs_fs/dag.c:392
+#, c-format
 msgid "Attempted to clone child of non-mutable node"
 msgstr "変更できないノードの子を複製しようとしました"
 
 #: libsvn_fs_base/dag.c:494
+#, c-format
 msgid "Attempted to create entry that already exists"
 msgstr "既に存在するエントリを作成しようとしました"
 
@@ -4143,26 +4221,32 @@ msgid "Delete failed: directory has no entry '%s'"
 msgstr "削除が失敗しました: ディレクトリにエントリ '%s' がありません"
 
 #: libsvn_fs_base/dag.c:962
+#, c-format
 msgid "Attempted removal of immutable node"
 msgstr "変更できないノードを削除しようとしました"
 
 #: libsvn_fs_base/dag.c:1082
+#, c-format
 msgid "Attempted to get textual contents of a *non*-file node"
 msgstr "ファイルでないノードのテキストを取得しようとしました"
 
 #: libsvn_fs_base/dag.c:1117
+#, c-format
 msgid "Attempted to get length of a *non*-file node"
 msgstr "ファイルでないノードの長さを取得しようとしました"
 
 #: libsvn_fs_base/dag.c:1143
+#, c-format
 msgid "Attempted to get checksum of a *non*-file node"
 msgstr "ファイルでないノードのチェックサムを取得しようとしました"
 
 #: libsvn_fs_base/dag.c:1174 libsvn_fs_base/dag.c:1228
+#, c-format
 msgid "Attempted to set textual contents of a *non*-file node"
 msgstr "ファイルでないノードにテキストを設定しようとしました"
 
 #: libsvn_fs_base/dag.c:1180 libsvn_fs_base/dag.c:1234
+#, c-format
 msgid "Attempted to set textual contents of an immutable node"
 msgstr "変更できないノードにはテキストを設定できません"
 
@@ -4343,37 +4427,37 @@ msgstr ""
 msgid "Filesystem object already open"
 msgstr "ファイルシステムのオブジェクトが既に開いています"
 
-#: libsvn_fs_base/fs.c:675 libsvn_fs_fs/fs_fs.c:273
+#: libsvn_fs_base/fs.c:676 libsvn_fs_fs/fs_fs.c:273
 #, c-format
 msgid "Expected FS format '%d'; found format '%d'"
 msgstr "予想されるファイルシステム形式は '%d' ですが、実際の形式は '%d' です"
 
-#: libsvn_fs_base/fs.c:1058
+#: libsvn_fs_base/fs.c:1059
 #, c-format
 msgid "Can't open file '%s' for reading"
 msgstr "読み込み用にファイル '%s' を開けません"
 
-#: libsvn_fs_base/fs.c:1067
+#: libsvn_fs_base/fs.c:1068
 #, c-format
 msgid "Can't open file '%s' for writing"
 msgstr "書き込み用にファイル '%s' を開けません"
 
-#: libsvn_fs_base/fs.c:1087
+#: libsvn_fs_base/fs.c:1088
 #, c-format
 msgid "Error reading file '%s'"
 msgstr "ファイル '%s' の読み込み中にエラーが発生しました"
 
-#: libsvn_fs_base/fs.c:1098
+#: libsvn_fs_base/fs.c:1099
 #, c-format
 msgid "Error writing file '%s'"
 msgstr "ファイル '%s' に書き込み中にエラーが発生しました"
 
-#: libsvn_fs_base/fs.c:1106 libsvn_fs_base/fs.c:1110 libsvn_subr/io.c:2210
+#: libsvn_fs_base/fs.c:1107 libsvn_fs_base/fs.c:1111 libsvn_subr/io.c:2249
 #, c-format
 msgid "Can't close file '%s'"
 msgstr "ファイル '%s' を閉じられません"
 
-#: libsvn_fs_base/fs.c:1222
+#: libsvn_fs_base/fs.c:1223
 msgid ""
 "Error copying logfile;  the DB_LOG_AUTOREMOVE feature \n"
 "may be interfering with the hotcopy algorithm.  If \n"
@@ -4385,7 +4469,7 @@ msgstr ""
 "問題が起き続けるようであれば、DB_CONFIG でこの機能を無効にしてみてください"
 
 # ? catastrophic recovery
-#: libsvn_fs_base/fs.c:1241
+#: libsvn_fs_base/fs.c:1242
 msgid ""
 "Error running catastrophic recovery on hotcopy;  the \n"
 "DB_LOG_AUTOREMOVE feature may be interfering with the \n"
@@ -4396,7 +4480,7 @@ msgstr ""
 "DB_LOG_AUTOREMOVE 機能が hotcopy アルゴリズムを妨害しているかもしれません。\n"
 "問題が起き続けるようであれば、DB_CONFIG でこの機能を無効にしてみてください"
 
-#: libsvn_fs_base/fs.c:1356
+#: libsvn_fs_base/fs.c:1357
 msgid "Module for working with a Berkeley DB repository."
 msgstr "Berkeley DB リポジトリを扱うためのモジュール。"
 
@@ -4508,7 +4592,7 @@ msgstr "トランザクションが死んでいます: '%s'"
 
 #: libsvn_fs_base/revs-txns.c:981
 msgid "Transaction aborted, but cleanup failed"
-msgstr "トランザクションが破棄されましたが、掃除が失敗しました"
+msgstr "トランザクションが中断されましたが、掃除が失敗しました"
 
 #: libsvn_fs_base/tree.c:391 libsvn_fs_fs/tree.c:311
 #, c-format
@@ -4641,18 +4725,21 @@ msgid "Corrupt lockfile for path '%s' in filesystem '%s'"
 msgstr "パス '%s' (ファイルシステム '%s') のロックファイルが壊れています"
 
 #: libsvn_fs_fs/fs.c:98
+#, c-format
 msgid "Can't fetch FSFS mutex"
 msgstr "FSFS 相互排除ロックを取得できません"
 
 #: libsvn_fs_fs/fs.c:105
+#, c-format
 msgid "Can't create FSFS mutex"
 msgstr "FSFS 相互排除ロックを作成できません"
 
 #: libsvn_fs_fs/fs.c:109
+#, c-format
 msgid "Can't store FSFS mutex"
 msgstr "FSFS 相互排除ロックを保存できません"
 
-#: libsvn_fs_fs/fs.c:334
+#: libsvn_fs_fs/fs.c:335
 msgid "Module for working with a plain file (FSFS) repository."
 msgstr "プレインファイル (FSFS) リポジトリを扱うためのモジュール。"
 
@@ -4705,11 +4792,13 @@ msgid "Corrupt node-id in node-rev"
 msgstr "node-rev の node-id が壊れています"
 
 #: libsvn_fs_fs/fs_fs.c:1038
+#, c-format
 msgid "Revision file lacks trailing newline"
 msgstr "リビジョンファイルの末尾に改行がありません"
 
 # character: byte 単位の処理での文字数
 #: libsvn_fs_fs/fs_fs.c:1050
+#, c-format
 msgid "Final line in revision file longer than 64 characters"
 msgstr "リビジョンファイルの最終行が 64 bytes 以上です"
 
@@ -4815,10 +4904,12 @@ msgid "Corrupt current file"
 msgstr "現在のファイルは壊れています"
 
 #: libsvn_fs_fs/fs_fs.c:3736
+#, c-format
 msgid "Can't grab FSFS repository mutex"
 msgstr "FSFS リポジトリ相互排除ロックを奪えません"
 
 #: libsvn_fs_fs/fs_fs.c:3750
+#, c-format
 msgid "Can't ungrab FSFS repository mutex"
 msgstr "FSFS リポジトリ相互排除ロックを手放せません"
 
@@ -4850,23 +4941,28 @@ msgstr "パス '%s' は HEAD リビジョンに存在しません"
 msgid "Lock failed: newer version of '%s' exists"
 msgstr "ロックが失敗しました: '%s' の新しいバージョンが存在します"
 
-#: libsvn_ra/ra_loader.c:212
+#: libsvn_ra/ra_loader.c:214
 #, c-format
 msgid "Mismatched RA version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
 msgstr ""
 "'%s' 用 RA のバージョンが一致しません: 実際 %d.%d.%d%s, 予想 %d.%d.%d%s"
 
-#: libsvn_ra/ra_loader.c:284
+#: libsvn_ra/ra_loader.c:286
 #, c-format
 msgid "Unrecognized URL scheme for '%s'"
 msgstr "'%s' 用の URL スキームを認識できません"
 
-#: libsvn_ra/ra_loader.c:622
+#: libsvn_ra/ra_loader.c:337
+#, c-format
+msgid "'%s' isn't in the same repository as '%s'"
+msgstr "'%s' は '%s' と同じリポジトリにありません"
+
+#: libsvn_ra/ra_loader.c:696
 #, c-format
 msgid "  - handles '%s' scheme\n"
 msgstr "  - '%s' スキームを操作します\n"
 
-#: libsvn_ra/ra_loader.c:708
+#: libsvn_ra/ra_loader.c:782
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
 msgstr "URL スキーム '%s' を認識できません"
@@ -4906,6 +5002,7 @@ msgid "Could not create a DELETE request (%s)"
 msgstr "DELETE リクエストを作成できませんでした (%s)"
 
 #: libsvn_ra_dav/commit.c:1310
+#, c-format
 msgid "Could not write svndiff to temp file"
 msgstr "svndiff を一時ファイルに書き込めませんでした"
 
@@ -4914,34 +5011,35 @@ msgstr "svndiff を一時ファイルに書き込めませんでした"
 msgid "Could not create a PUT request (%s)"
 msgstr "PUT リクエストを作成できませんでした (%s)"
 
-#: libsvn_ra_dav/commit.c:1564
+#: libsvn_ra_dav/commit.c:1561
 #, c-format
 msgid "applying log message to %s"
 msgstr "ログメッセージを %s に適用しています"
 
-#: libsvn_ra_dav/fetch.c:277
+#: libsvn_ra_dav/fetch.c:285
 msgid "Could not save the URL of the version resource"
 msgstr "バージョン管理されたリソースの URL を保存できません"
 
-#: libsvn_ra_dav/fetch.c:398
-msgid "Could not get content-type from response."
+#: libsvn_ra_dav/fetch.c:406
+#, c-format
+msgid "Could not get content-type from response"
 msgstr "レスポンスから content-type を取得できませんでした"
 
-#: libsvn_ra_dav/fetch.c:443
+#: libsvn_ra_dav/fetch.c:451
 #, c-format
 msgid "Could not create a GET request for '%s'"
 msgstr "'%s' に対して GET リクエストを作成できませんでした"
 
-#: libsvn_ra_dav/fetch.c:518
+#: libsvn_ra_dav/fetch.c:526
 #, c-format
 msgid "GET request failed for '%s'"
 msgstr "'%s' に対する GET リクエストが失敗しました"
 
-#: libsvn_ra_dav/fetch.c:657
+#: libsvn_ra_dav/fetch.c:665
 msgid "Could not save file"
 msgstr "ファイルを保存できませんでした"
 
-#: libsvn_ra_dav/fetch.c:898 libsvn_ra_svn/client.c:932
+#: libsvn_ra_dav/fetch.c:906 libsvn_ra_svn/client.c:1014
 #, c-format
 msgid ""
 "Checksum mismatch for '%s':\n"
@@ -4952,29 +5050,29 @@ msgstr ""
 "   予想:  %s\n"
 "   実際:  %s\n"
 
-#: libsvn_ra_dav/fetch.c:1163
+#: libsvn_ra_dav/fetch.c:1262
 msgid "Server does not support date-based operations"
 msgstr "日時を使った操作をサーバがサポートしていません"
 
-#: libsvn_ra_dav/fetch.c:1170
+#: libsvn_ra_dav/fetch.c:1269
 msgid "Invalid server response to dated-rev request"
 msgstr "dated-rev リクエストへのサーバのレスポンスが不正です"
 
-#: libsvn_ra_dav/fetch.c:1309
+#: libsvn_ra_dav/fetch.c:1408
 msgid "'get-locations' REPORT not implemented"
 msgstr "'get-locations' REPORT は実装されていません"
 
-#: libsvn_ra_dav/fetch.c:1482 libsvn_ra_dav/session.c:1153
-#: libsvn_ra_dav/session.c:1439
+#: libsvn_ra_dav/fetch.c:1581 libsvn_ra_dav/session.c:1174
+#: libsvn_ra_dav/session.c:1460
 msgid "Incomplete lock data returned"
 msgstr "不完全なロックデータが返されました"
 
-#: libsvn_ra_dav/fetch.c:1651 libsvn_ra_dav/fetch.c:1659
-#: libsvn_ra_dav/fetch.c:1663
+#: libsvn_ra_dav/fetch.c:1750 libsvn_ra_dav/fetch.c:1758
+#: libsvn_ra_dav/fetch.c:1762
 msgid "Server does not support locking features"
 msgstr "ロック機能をサーバがサポートしていません"
 
-#: libsvn_ra_dav/fetch.c:1740
+#: libsvn_ra_dav/fetch.c:1839
 msgid ""
 "DAV request failed; it's possible that the repository's pre-revprop-change "
 "hook either failed or is non-existent"
@@ -4982,17 +5080,18 @@ msgstr ""
 "DAV リクエストに失敗しました。リポジトリの pre-revprop-change フックが機能不"
 "全であるか存在しない可能性があります"
 
-#: libsvn_ra_dav/fetch.c:2474
+#: libsvn_ra_dav/fetch.c:2574
 #, c-format
 msgid "Error writing to '%s': unexpected EOF"
 msgstr "'%s' への書き込み中にエラーが発生しました: 予想外の EOF です"
 
-#: libsvn_ra_dav/fetch.c:2619
+#: libsvn_ra_dav/fetch.c:2719
 #, c-format
 msgid "Unknown XML encoding: '%s'"
 msgstr "未知の XML エンコーディングです: '%s'"
 
-#: libsvn_ra_dav/fetch.c:2900
+#: libsvn_ra_dav/fetch.c:3001
+#, c-format
 msgid "REPORT response handling failed to complete the editor drive"
 msgstr "REPORT レスポンスの処理はエディタの実行を終えるのに失敗しました"
 
@@ -5124,53 +5223,53 @@ msgstr "不正な設定です: デバッグマスクの値が不正な文字で�
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
 msgstr "WebDAV (DeltaV) プロトコルを使ってリポジトリにアクセスするモジュール。"
 
-#: libsvn_ra_dav/session.c:613
+#: libsvn_ra_dav/session.c:598
 msgid "Malformed URL for repository"
 msgstr "リポジトリの URL が不正です"
 
-#: libsvn_ra_dav/session.c:621
+#: libsvn_ra_dav/session.c:633
 msgid "Network socket initialization failed"
 msgstr "ネットワークソケットを初期化できませんでした"
 
-#: libsvn_ra_dav/session.c:638
+#: libsvn_ra_dav/session.c:650
 msgid "SSL is not supported"
 msgstr "SSL はサポートされていません"
 
-#: libsvn_ra_dav/session.c:784
+#: libsvn_ra_dav/session.c:791
 #, c-format
 msgid "Invalid config: unable to load certificate file '%s'"
 msgstr "不正な設定です: 証明書ファイル '%s' をロードできません"
 
-#: libsvn_ra_dav/session.c:876
+#: libsvn_ra_dav/session.c:897
 msgid "The UUID property was not found on the resource or any of its parents"
 msgstr "UUID 属性を、リソースやその親に見つけられませんでした"
 
-#: libsvn_ra_dav/session.c:884
+#: libsvn_ra_dav/session.c:905
 msgid "Please upgrade the server to 0.19 or later"
 msgstr "サーバをバージョン 0.19 以降にアップグレードしてください"
 
-#: libsvn_ra_dav/session.c:1125 libsvn_ra_dav/session.c:1262
+#: libsvn_ra_dav/session.c:1146 libsvn_ra_dav/session.c:1283
 msgid "Failed to parse URI"
 msgstr "URI をパースできませんでした"
 
-#: libsvn_ra_dav/session.c:1148
+#: libsvn_ra_dav/session.c:1169
 msgid "Lock request failed"
 msgstr "ロックのリクエストが失敗しました"
 
-#: libsvn_ra_dav/session.c:1277
+#: libsvn_ra_dav/session.c:1298
 #, c-format
 msgid "'%s' is not locked in the repository"
 msgstr "'%s' はリポジトリでロックされていません"
 
-#: libsvn_ra_dav/session.c:1314
+#: libsvn_ra_dav/session.c:1335
 msgid "Unlock request failed"
 msgstr "ロック解除のリクエストが失敗しました"
 
-#: libsvn_ra_dav/session.c:1525
+#: libsvn_ra_dav/session.c:1546
 msgid "Failed to fetch lock information"
 msgstr "ロックの情報を取得できませんでした"
 
-#: libsvn_ra_dav/session.c:1596
+#: libsvn_ra_dav/session.c:1618
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_dav"
 msgstr ""
@@ -5189,6 +5288,7 @@ msgid "timed out waiting for server"
 msgstr "サーバからの応答を待っているうちにタイムアウトしました"
 
 #: libsvn_ra_dav/util.c:489
+#, c-format
 msgid "Can't calculate the request body size"
 msgstr "リクエストのボディのサイズを計算できません"
 
@@ -5206,7 +5306,7 @@ msgstr "パス '%s' が見つかりません"
 # * Arguments are (1) method and (2) url.
 #. We either have a neon error, or some other error
 #. that we didn't expect.
-#: libsvn_ra_dav/util.c:778 libsvn_ra_dav/util.c:1011
+#: libsvn_ra_dav/util.c:778 libsvn_ra_dav/util.c:1013
 #, c-format
 msgid "%s of '%s'"
 msgstr "%s (URL: '%s')"
@@ -5228,7 +5328,7 @@ msgstr ""
 msgid "%s request failed on '%s'"
 msgstr "%s リクエスト (相手: '%s') が失敗しました"
 
-#: libsvn_ra_local/ra_plugin.c:103 libsvn_ra_local/ra_plugin.c:576
+#: libsvn_ra_local/ra_plugin.c:103 libsvn_ra_local/ra_plugin.c:587
 #, c-format
 msgid ""
 "'%s'\n"
@@ -5250,7 +5350,7 @@ msgstr "ローカルディスク上のリポジトリにアクセスするモジ
 msgid "Unable to open an ra_local session to URL"
 msgstr "URL に対し ra_local セッションを開始できません"
 
-#: libsvn_ra_local/ra_plugin.c:1286
+#: libsvn_ra_local/ra_plugin.c:1318
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_local"
 msgstr ""
@@ -5266,194 +5366,197 @@ msgstr "ローカルの URL '%s' にプレフィックス 'file://' が含まれ
 msgid "Local URL '%s' contains only a hostname, no path"
 msgstr "ローカルの URL '%s' にホスト名しか含まれていません。パスが必要です"
 
-#: libsvn_ra_local/split_url.c:74
+#: libsvn_ra_local/split_url.c:117
 #, c-format
 msgid "Local URL '%s' contains unsupported hostname"
 msgstr "ローカルの URL '%s' に含まれているホスト名はサポートされていません"
 
-#: libsvn_ra_local/split_url.c:128 libsvn_ra_local/split_url.c:135
+#: libsvn_ra_local/split_url.c:127 libsvn_ra_local/split_url.c:134
 #, c-format
 msgid "Unable to open repository '%s'"
 msgstr "リポジトリ '%s' を開けませんでした"
 
-#: libsvn_ra_svn/client.c:125
+#: libsvn_ra_svn/client.c:127
 #, c-format
 msgid "Unknown hostname '%s'"
 msgstr "ホスト名 '%s' が不明です"
 
-#: libsvn_ra_svn/client.c:137
+#: libsvn_ra_svn/client.c:139
+#, c-format
 msgid "Can't create socket"
 msgstr "ソケットを作成できません"
 
-#: libsvn_ra_svn/client.c:157
+#: libsvn_ra_svn/client.c:159
+#, c-format
 msgid "Can't set timeout"
 msgstr "タイムアウト時間を設定できません"
 
-#: libsvn_ra_svn/client.c:161
+#: libsvn_ra_svn/client.c:163
 #, c-format
 msgid "Can't connect to host '%s'"
 msgstr "ホスト '%s' に接続できません"
 
-#: libsvn_ra_svn/client.c:182
+#: libsvn_ra_svn/client.c:184
 msgid "Proplist element not a list"
 msgstr "proplist 要素がリストではありません"
 
-#: libsvn_ra_svn/client.c:206
+#: libsvn_ra_svn/client.c:208
 msgid "Prop diffs element not a list"
 msgstr "prop diffs 要素がリストではありません"
 
-#: libsvn_ra_svn/client.c:244
+#: libsvn_ra_svn/client.c:246
 #, c-format
 msgid "Unrecognized node kind '%s' from server"
 msgstr "サーバから送られてきたノード種別 '%s' を認識できません"
 
-#: libsvn_ra_svn/client.c:289 libsvn_ra_svn/client.c:343
+#: libsvn_ra_svn/client.c:291 libsvn_ra_svn/client.c:345
 #, c-format
 msgid "Authentication error from server: %s"
 msgstr "サーバの認証エラーです: %s"
 
-#: libsvn_ra_svn/client.c:292 libsvn_ra_svn/cram.c:194
+#: libsvn_ra_svn/client.c:294 libsvn_ra_svn/cram.c:194
 #: libsvn_ra_svn/cram.c:212
 msgid "Unexpected server response to authentication"
 msgstr "認証に対する予想外のサーバのレスポンスです"
 
-#: libsvn_ra_svn/client.c:350
+#: libsvn_ra_svn/client.c:352
 msgid "Cannot negotiate authentication mechanism"
 msgstr "認証機構と交渉できません"
 
-#: libsvn_ra_svn/client.c:481
+#: libsvn_ra_svn/client.c:483
 #, c-format
 msgid "Undefined tunnel scheme '%s'"
 msgstr "トンネルスキーマ '%s' は未定義です"
 
-#: libsvn_ra_svn/client.c:498
+#: libsvn_ra_svn/client.c:500
 #, c-format
 msgid "Tunnel scheme %s requires environment variable %s to be defined"
 msgstr ""
 "トンネルスキーマ %s を使うには環境変数 %s が定義されている必要があります"
 
-#: libsvn_ra_svn/client.c:509
+#: libsvn_ra_svn/client.c:511
 #, c-format
 msgid "Can't tokenize command '%s'"
 msgstr "コマンド '%s' をトークン化できません"
 
-#: libsvn_ra_svn/client.c:538
+#: libsvn_ra_svn/client.c:542
 #, c-format
 msgid "Error in child process: %s"
 msgstr "子プロセスにおいてエラーが発生しました: %s"
 
-#: libsvn_ra_svn/client.c:561
+#: libsvn_ra_svn/client.c:565
+#, c-format
 msgid "Can't create tunnel"
 msgstr "トンネルを作成できません"
 
-#: libsvn_ra_svn/client.c:590
-msgid "Module for accessing a repository using the svn network protocol."
-msgstr "svn ネットワークプロトコルを使ってリポジトリにアクセスするモジュール。"
-
-#: libsvn_ra_svn/client.c:627
+#: libsvn_ra_svn/client.c:604
 #, c-format
 msgid "Illegal svn repository URL '%s'"
 msgstr "Subversion リポジトリの URL '%s' が不正です"
 
-#: libsvn_ra_svn/client.c:653
+#: libsvn_ra_svn/client.c:643
 #, c-format
 msgid "Server requires minimum version %d"
 msgstr "バージョン %d 以上をサーバが必要としています"
 
-#: libsvn_ra_svn/client.c:703
+#: libsvn_ra_svn/client.c:696
 msgid "Impossibly long repository root from server"
 msgstr "サーバから送られてきたリポジトリのルートが長すぎます"
 
-#: libsvn_ra_svn/client.c:770
+#: libsvn_ra_svn/client.c:707
+msgid "Module for accessing a repository using the svn network protocol."
+msgstr "svn ネットワークプロトコルを使ってリポジトリにアクセスするモジュール。"
+
+#: libsvn_ra_svn/client.c:855
 msgid "Server did not send repository root"
 msgstr "サーバがリポジトリのルートを送信しませんでした"
 
-#: libsvn_ra_svn/client.c:912
+#: libsvn_ra_svn/client.c:994
 msgid "Non-string as part of file contents"
 msgstr "ファイルの一部に文字列以外が含まれています"
 
-#: libsvn_ra_svn/client.c:980
+#: libsvn_ra_svn/client.c:1092
 msgid "Dirlist element not a list"
 msgstr "dirlist 要素がリストではありません"
 
-#: libsvn_ra_svn/client.c:1136
+#: libsvn_ra_svn/client.c:1249
 msgid "Log entry not a list"
 msgstr "log エントリがリストではありません"
 
-#: libsvn_ra_svn/client.c:1149
+#: libsvn_ra_svn/client.c:1262
 msgid "Changed-path entry not a list"
 msgstr "changed-path エントリがリストではありません"
 
-#: libsvn_ra_svn/client.c:1228
+#: libsvn_ra_svn/client.c:1341
 msgid "'stat' not implemented"
 msgstr "'stat' は実装されていません"
 
-#: libsvn_ra_svn/client.c:1285
+#: libsvn_ra_svn/client.c:1398
 msgid "'get-locations' not implemented"
 msgstr "'get-locations' は実装されていません"
 
-#: libsvn_ra_svn/client.c:1297
+#: libsvn_ra_svn/client.c:1410
 msgid "Location entry not a list"
 msgstr "location エントリがリストではありません"
 
-#: libsvn_ra_svn/client.c:1347
+#: libsvn_ra_svn/client.c:1460
 msgid "'get-file-revs' not implemented"
 msgstr "'get-file-revs' は実装されていません"
 
-#: libsvn_ra_svn/client.c:1360
+#: libsvn_ra_svn/client.c:1473
 msgid "Revision entry not a list"
 msgstr "revision エントリはリストではありません"
 
 # ? text delta chunk
-#: libsvn_ra_svn/client.c:1373 libsvn_ra_svn/client.c:1398
+#: libsvn_ra_svn/client.c:1486 libsvn_ra_svn/client.c:1511
 msgid "Text delta chunk not a string"
 msgstr "テキスト差分の塊が文字列ではありません"
 
-#: libsvn_ra_svn/client.c:1410
+#: libsvn_ra_svn/client.c:1523
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "コマンド get-file-revs がリビジョンを返しませんでした"
 
-#: libsvn_ra_svn/client.c:1458
+#: libsvn_ra_svn/client.c:1571
 msgid "Server doesn't support the lock command"
 msgstr "ロック (lock) コマンドをサーバがサポートしていません"
 
-#: libsvn_ra_svn/client.c:1522
+#: libsvn_ra_svn/client.c:1635
 msgid "Server doesn't support the unlock command"
 msgstr "ロック解除 (unlock) コマンドをサーバがサポートしていません"
 
-#: libsvn_ra_svn/client.c:1619
+#: libsvn_ra_svn/client.c:1732
 msgid "Lock response not a list"
 msgstr "lock レスポンスがリストではありません"
 
-#: libsvn_ra_svn/client.c:1633
+#: libsvn_ra_svn/client.c:1746
 msgid "Unknown status for lock command"
 msgstr "lock コマンドに関するステータスが未知です"
 
-#: libsvn_ra_svn/client.c:1655
+#: libsvn_ra_svn/client.c:1768
 msgid "Didn't receive end marker for lock responses"
 msgstr "lock レスポンスに対する終了記号を受け取れませんでした"
 
-#: libsvn_ra_svn/client.c:1742
+#: libsvn_ra_svn/client.c:1855
 msgid "Unlock response not a list"
 msgstr "unlock レスポンスがリストではありません"
 
-#: libsvn_ra_svn/client.c:1756
+#: libsvn_ra_svn/client.c:1869
 msgid "Unknown status for unlock command"
 msgstr "unlock コマンドに関するステータスが未知です"
 
-#: libsvn_ra_svn/client.c:1777
+#: libsvn_ra_svn/client.c:1890
 msgid "Didn't receive end marker for unlock responses"
 msgstr "unlock レスポンスに対する終了記号を受け取れませんでした"
 
-#: libsvn_ra_svn/client.c:1801 libsvn_ra_svn/client.c:1829
+#: libsvn_ra_svn/client.c:1914 libsvn_ra_svn/client.c:1942
 msgid "Server doesn't support the get-lock command"
 msgstr "ロック取得 (get-lock) コマンドをサーバがサポートしていません"
 
-#: libsvn_ra_svn/client.c:1842
+#: libsvn_ra_svn/client.c:1955
 msgid "Lock element not a list"
 msgstr "lock 要素がリストではありません"
 
-#: libsvn_ra_svn/client.c:1901
+#: libsvn_ra_svn/client.c:2015
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr ""
@@ -5489,10 +5592,12 @@ msgid "Capability entry is not a word"
 msgstr "capability エントリが単語ではありません"
 
 #: libsvn_ra_svn/marshal.c:160
+#, c-format
 msgid "Can't write to connection"
 msgstr "接続に書き込めません"
 
 #: libsvn_ra_svn/marshal.c:253
+#, c-format
 msgid "Can't read from connection"
 msgstr "接続を読めません"
 
@@ -5648,6 +5753,7 @@ msgid "Can't create null stdout for hook '%s'"
 msgstr "フック '%s' 用の空の標準出力を作成できません"
 
 #: libsvn_repos/hooks.c:85
+#, c-format
 msgid "Error closing write end of stderr pipe"
 msgstr "標準エラー出力パイプの書き込みの終点を閉じる際にエラーが発生しました"
 
@@ -5671,10 +5777,12 @@ msgid "'%s' hook failed; no error output available"
 msgstr "'%s' フックが失敗しました。利用できるエラー出力はありません"
 
 #: libsvn_repos/hooks.c:134
+#, c-format
 msgid "Error closing read end of stderr pipe"
 msgstr "標準エラー出力パイプの読み込みの終点を閉じる際にエラーが発生しました"
 
 #: libsvn_repos/hooks.c:138
+#, c-format
 msgid "Error closing null file"
 msgstr "空のファイルを閉じる際にエラーが発生しました"
 
@@ -5835,79 +5943,75 @@ msgstr "対象がないのにトップレベルの報告が 2 つあります"
 msgid "'%s' exists and is non-empty"
 msgstr "'%s' は存在します。そして空ではありません"
 
-#: libsvn_repos/repos.c:200
+#: libsvn_repos/repos.c:238
 msgid "Creating db logs lock file"
 msgstr "DB ログロックファイルを作成しています"
 
-#: libsvn_repos/repos.c:225
+#: libsvn_repos/repos.c:256
 msgid "Creating db lock file"
 msgstr "DB ロックファイルを作成しています"
 
-#: libsvn_repos/repos.c:235
+#: libsvn_repos/repos.c:266
 msgid "Creating lock dir"
 msgstr "ロック用のディレクトリを作成しています"
 
-#: libsvn_repos/repos.c:276
+#: libsvn_repos/repos.c:307
 msgid "Creating hook directory"
 msgstr "フック用のディレクトリを作成しています"
 
-#: libsvn_repos/repos.c:382
+#: libsvn_repos/repos.c:413
 msgid "Creating start-commit hook"
 msgstr "start-commit フックを作成しています"
 
-#: libsvn_repos/repos.c:519
+#: libsvn_repos/repos.c:550
 msgid "Creating pre-commit hook"
 msgstr "pre-commit フックを作成しています"
 
-#: libsvn_repos/repos.c:651
+#: libsvn_repos/repos.c:682
 msgid "Creating pre-revprop-change hook"
 msgstr "pre-revprop-change フックを作成しています"
 
-#: libsvn_repos/repos.c:1026
+#: libsvn_repos/repos.c:1057
 msgid "Creating post-commit hook"
 msgstr "post-commit フックを作成しています"
 
-#: libsvn_repos/repos.c:1346
+#: libsvn_repos/repos.c:1377
 msgid "Creating post-revprop-change hook"
 msgstr "post-revprop-change フックを作成しています"
 
-#: libsvn_repos/repos.c:1356
+#: libsvn_repos/repos.c:1387
 msgid "Creating conf directory"
 msgstr "設定用のディレクトリを作成しています"
 
-#: libsvn_repos/repos.c:1422
+#: libsvn_repos/repos.c:1453
 msgid "Creating svnserve.conf file"
 msgstr "svnserve.conf ファイルを作成しています"
 
-#: libsvn_repos/repos.c:1447
+#: libsvn_repos/repos.c:1478
 msgid "Creating passwd file"
 msgstr "パスワードファイルを作成しています"
 
-#: libsvn_repos/repos.c:1496
+#: libsvn_repos/repos.c:1527
 msgid "Creating authz file"
 msgstr "認証ファイルを作成しています"
 
-#: libsvn_repos/repos.c:1529
+#: libsvn_repos/repos.c:1560
 msgid "Could not create top-level directory"
 msgstr "トップレベルのディレクトリを作成できませんでした"
 
-#: libsvn_repos/repos.c:1533
+#: libsvn_repos/repos.c:1564
 msgid "Creating DAV sandbox dir"
 msgstr "DAV サンドボックスディレクトリを作成しています"
 
-#: libsvn_repos/repos.c:1576
-msgid "Creating readme file"
-msgstr "readme ファイルを作成しています"
-
-#: libsvn_repos/repos.c:1604
+#: libsvn_repos/repos.c:1645
 msgid "Error opening db lockfile"
 msgstr "DB ロックファイルを開く際にエラーが発生しました"
 
-#: libsvn_repos/repos.c:1628
+#: libsvn_repos/repos.c:1676
 msgid "Repository creation failed"
 msgstr "リポジトリの作成に失敗しました"
 
-#: libsvn_repos/repos.c:1714
+#: libsvn_repos/repos.c:1756
 #, c-format
 msgid "Expected format '%d' of repository; found format '%d'"
 msgstr "予想されるリポジトリ形式は '%d' ですが、実際の形式は '%d' です"
@@ -5963,27 +6067,30 @@ msgstr "書き込み用に認証ファイルを開けません"
 msgid "Error writing hash to '%s'"
 msgstr "'%s' にハッシュを書き込む際にエラーが発生しました"
 
-#: libsvn_subr/config_file.c:393
+#: libsvn_subr/config_file.c:370
 #, c-format
 msgid "Can't open config file '%s'"
 msgstr "設定ファイル '%s' を開けません"
 
-#: libsvn_subr/config_file.c:397
+#: libsvn_subr/config_file.c:374
 #, c-format
 msgid "Can't find config file '%s'"
 msgstr "設定ファイル '%s' が見つかりません"
 
 #: libsvn_subr/date.c:204
+#, c-format
 msgid "Can't manipulate current date"
 msgstr "現在の日時を処理できません"
 
 #: libsvn_subr/date.c:278 libsvn_subr/date.c:286
+#, c-format
 msgid "Can't calculate requested date"
 msgstr "要求された日時を計算できません"
 
 # * Error from apr_time_exp_lt, a function to convert a time to its human
 #   readable components in local timezone.
 #: libsvn_subr/date.c:281
+#, c-format
 msgid "Can't expand time"
 msgstr "時刻を人間の読める形に変換できません"
 
@@ -5991,7 +6098,7 @@ msgstr "時刻を人間の読める形に変換できません"
 msgid "Can't recode error string from APR"
 msgstr "APR からのエラー文字列を再エンコードできません"
 
-#: libsvn_subr/error.c:414
+#: libsvn_subr/error.c:417
 #, c-format
 msgid "%swarning: %s\n"
 msgstr "%s警告: %s\n"
@@ -6016,10 +6123,12 @@ msgid "Symbolic links are not supported on this platform"
 msgstr "シンボリックリンクはこのプラットフォームではサポートされていません"
 
 #: libsvn_subr/io.c:377
+#, c-format
 msgid "Can't read contents of link"
 msgstr "リンクの内容を読めません"
 
 #: libsvn_subr/io.c:519 libsvn_subr/io.c:529
+#, c-format
 msgid "Can't find a temporary directory"
 msgstr "一時ディレクトリが見つかりません"
 
@@ -6059,7 +6168,7 @@ msgid "Can't read directory '%s'"
 msgstr "ディレクトリ '%s' を読めません"
 
 #: libsvn_subr/io.c:741 libsvn_subr/io.c:1641 libsvn_subr/io.c:1712
-#: libsvn_subr/io.c:2695
+#: libsvn_subr/io.c:2774
 #, c-format
 msgid "Error closing directory '%s'"
 msgstr "ディレクトリ '%s' を閉じる際にエラーが発生しました"
@@ -6114,6 +6223,7 @@ msgid "Can't change executability of file '%s'"
 msgstr "ファイル '%s' の実行権限を変更できません"
 
 #: libsvn_subr/io.c:1266
+#, c-format
 msgid "Error getting UID of process"
 msgstr "プロセスの UID を取得する際にエラーが発生しました"
 
@@ -6133,10 +6243,12 @@ msgid "Can't flush file '%s'"
 msgstr "ファイル '%s' をフラッシュできません"
 
 #: libsvn_subr/io.c:1383
+#, c-format
 msgid "Can't flush stream"
 msgstr "ストリームをフラッシュできません"
 
 #: libsvn_subr/io.c:1395 libsvn_subr/io.c:1412
+#, c-format
 msgid "Can't flush file to disk"
 msgstr "ファイルをディスクにフラッシュできません"
 
@@ -6145,6 +6257,7 @@ msgid "Reading from stdin is currently broken, so disabled"
 msgstr "標準入力からの読み込みが現在こわれており、使用できません"
 
 #: libsvn_subr/io.c:1454
+#, c-format
 msgid "Can't get file name"
 msgstr "ファイル名を取得できません"
 
@@ -6158,7 +6271,7 @@ msgstr "ファイル '%s' を削除できません"
 msgid "Can't rewind directory '%s'"
 msgstr "ディレクトリ '%s' の読み込み位置を先頭に戻せません"
 
-#: libsvn_subr/io.c:1586 libsvn_subr/io.c:2544 libsvn_subr/io.c:2632
+#: libsvn_subr/io.c:1586 libsvn_subr/io.c:2623 libsvn_subr/io.c:2711
 #, c-format
 msgid "Can't open directory '%s'"
 msgstr "ディレクトリ '%s' を開けません"
@@ -6168,62 +6281,74 @@ msgstr "ディレクトリ '%s' を開けません"
 msgid "Can't remove '%s'"
 msgstr "'%s' を削除できません"
 
-#: libsvn_subr/io.c:1751
+#: libsvn_subr/io.c:1776
 #, c-format
 msgid "Can't create process '%s' attributes"
 msgstr "プロセス '%s' の属性を作成できません"
 
-#: libsvn_subr/io.c:1757
+#: libsvn_subr/io.c:1782
 #, c-format
 msgid "Can't set process '%s' cmdtype"
 msgstr "プロセス '%s' に対してコマンドタイプを設定できません"
 
-#: libsvn_subr/io.c:1769
+#: libsvn_subr/io.c:1794
 #, c-format
 msgid "Can't set process '%s' directory"
 msgstr "プロセス '%s' に対してディレクトリを設定できません"
 
-#: libsvn_subr/io.c:1782
+#: libsvn_subr/io.c:1807
 #, c-format
 msgid "Can't set process '%s' child input"
 msgstr "プロセス '%s' に対して子の入力を設定できません"
 
-#: libsvn_subr/io.c:1789
+#: libsvn_subr/io.c:1814
 #, c-format
 msgid "Can't set process '%s' child outfile"
 msgstr "プロセス '%s' に対して子の出力ファイルを設定できません"
 
-#: libsvn_subr/io.c:1796
+#: libsvn_subr/io.c:1821
 #, c-format
 msgid "Can't set process '%s' child errfile"
 msgstr "プロセス '%s' に対して子のエラー出力ファイルを設定できません"
 
-#: libsvn_subr/io.c:1820
+#: libsvn_subr/io.c:1828
+#, c-format
+msgid "Can't set process '%s' child errfile for error handler"
+msgstr ""
+"プロセス '%s' に対してエラーハンドラ用の子のエラー出力ファイルを設定できませ"
+"ん"
+
+#: libsvn_subr/io.c:1834
+#, c-format
+msgid "Can't set process '%s' error handler"
+msgstr "プロセス '%s' に対してエラーハンドラを設定できません"
+
+#: libsvn_subr/io.c:1857
 #, c-format
 msgid "Can't start process '%s'"
 msgstr "プロセス '%s' を開始できません"
 
-#: libsvn_subr/io.c:1842
+#: libsvn_subr/io.c:1881
 #, c-format
 msgid "Error waiting for process '%s'"
 msgstr "プロセス '%s' を待っている際にエラーが発生しました"
 
-#: libsvn_subr/io.c:1850
+#: libsvn_subr/io.c:1889
 #, c-format
 msgid "Process '%s' failed (exitwhy %d)"
 msgstr "プロセス '%s' は失敗しました (終了理由 %d)"
 
-#: libsvn_subr/io.c:1857
+#: libsvn_subr/io.c:1896
 #, c-format
 msgid "Process '%s' returned error exitcode %d"
 msgstr "プロセス '%s' はエラー終了コード %d を返しました"
 
-#: libsvn_subr/io.c:1968
+#: libsvn_subr/io.c:2007
 #, c-format
 msgid "'%s' returned %d"
 msgstr "'%s' が %d を返しました"
 
-#: libsvn_subr/io.c:2071
+#: libsvn_subr/io.c:2110
 #, c-format
 msgid ""
 "Error running '%s':  exitcode was %d, args were:\n"
@@ -6239,120 +6364,126 @@ msgstr ""
 "%s\n"
 "%s"
 
-#: libsvn_subr/io.c:2107
+#: libsvn_subr/io.c:2146
 #, c-format
 msgid "Can't detect MIME type of non-file '%s'"
 msgstr "ファイルでない '%s' の MIME タイプを検出できません"
 
-#: libsvn_subr/io.c:2174
+#: libsvn_subr/io.c:2213
 #, c-format
 msgid "Can't open file '%s'"
 msgstr "ファイル '%s' を開けません"
 
-#: libsvn_subr/io.c:2211
+#: libsvn_subr/io.c:2250
+#, c-format
 msgid "Can't close stream"
 msgstr "ストリームを閉じられません"
 
-#: libsvn_subr/io.c:2221 libsvn_subr/io.c:2245 libsvn_subr/io.c:2258
+#: libsvn_subr/io.c:2260 libsvn_subr/io.c:2284 libsvn_subr/io.c:2297
 #, c-format
 msgid "Can't read file '%s'"
 msgstr "ファイル '%s' を読めません"
 
-#: libsvn_subr/io.c:2222 libsvn_subr/io.c:2246 libsvn_subr/io.c:2259
+#: libsvn_subr/io.c:2261 libsvn_subr/io.c:2285 libsvn_subr/io.c:2298
+#, c-format
 msgid "Can't read stream"
 msgstr "ストリームを読めません"
 
-#: libsvn_subr/io.c:2233
+#: libsvn_subr/io.c:2272
 #, c-format
 msgid "Can't get attribute information from file '%s'"
 msgstr "ファイル '%s' から属性情報を取得できません"
 
-#: libsvn_subr/io.c:2234
+#: libsvn_subr/io.c:2273
+#, c-format
 msgid "Can't get attribute information from stream"
 msgstr "ストリームから属性情報を取得できません"
 
-#: libsvn_subr/io.c:2270
+#: libsvn_subr/io.c:2309
 #, c-format
 msgid "Can't set position pointer in file '%s'"
 msgstr "ファイル '%s' 中に位置ポインタを設定できません"
 
-#: libsvn_subr/io.c:2271
+#: libsvn_subr/io.c:2310
+#, c-format
 msgid "Can't set position pointer in stream"
 msgstr "ストリーム中に位置ポインタを設定できません"
 
-#: libsvn_subr/io.c:2282 libsvn_subr/io.c:2295
+#: libsvn_subr/io.c:2321 libsvn_subr/io.c:2334
 #, c-format
 msgid "Can't write to file '%s'"
 msgstr "ファイル '%s' に書き込めません"
 
-#: libsvn_subr/io.c:2283 libsvn_subr/io.c:2296
+#: libsvn_subr/io.c:2322 libsvn_subr/io.c:2335
+#, c-format
 msgid "Can't write to stream"
 msgstr "ストリームに書き込めません"
 
-#: libsvn_subr/io.c:2336
+#: libsvn_subr/io.c:2375
 #, c-format
 msgid "Can't read length line in file '%s'"
 msgstr "ファイル '%s' 中の長さの行を読めません"
 
-#: libsvn_subr/io.c:2340
+#: libsvn_subr/io.c:2379
 msgid "Can't read length line in stream"
 msgstr "ストリーム中の長さの行を読めません"
 
-#: libsvn_subr/io.c:2415
+#: libsvn_subr/io.c:2454
 #, c-format
 msgid "Can't move '%s' to '%s'"
 msgstr "'%s' から '%s' にファイル名を変更できません"
 
-#: libsvn_subr/io.c:2460
+#: libsvn_subr/io.c:2539
 #, c-format
 msgid "Can't create directory '%s'"
 msgstr "ディレクトリ '%s' を作成できません"
 
-#: libsvn_subr/io.c:2471 libsvn_wc/copy.c:304
+#: libsvn_subr/io.c:2550 libsvn_wc/copy.c:293
 #, c-format
 msgid "Can't hide directory '%s'"
 msgstr "ディレクトリ '%s' を隠せません"
 
-#: libsvn_subr/io.c:2484
+#: libsvn_subr/io.c:2563
 #, c-format
 msgid "Can't stat directory '%s'"
 msgstr "ディレクトリ '%s' に対して stat を実行できません"
 
-#: libsvn_subr/io.c:2500
+#: libsvn_subr/io.c:2579
 #, c-format
 msgid "Can't stat new directory '%s'"
 msgstr "新しいディレクトリ '%s' に対して stat を実行できません"
 
-#: libsvn_subr/io.c:2562
+#: libsvn_subr/io.c:2641
 #, c-format
 msgid "Can't remove directory '%s'"
 msgstr "ディレクトリ '%s' を削除できません"
 
-#: libsvn_subr/io.c:2580
+#: libsvn_subr/io.c:2659
+#, c-format
 msgid "Can't read directory"
 msgstr "ディレクトリを読めません"
 
-#: libsvn_subr/io.c:2651
+#: libsvn_subr/io.c:2730
 #, c-format
 msgid "Can't read directory entry in '%s'"
 msgstr "'%s' 中のディレクトリエントリを読めません"
 
-#: libsvn_subr/io.c:2776
+#: libsvn_subr/io.c:2855
 #, c-format
 msgid "Can't check directory '%s'"
 msgstr "ディレクトリ '%s' をチェックできません"
 
-#: libsvn_subr/io.c:2798
+#: libsvn_subr/io.c:2877
 #, c-format
 msgid "Version %d is not non-negative"
 msgstr "バージョン %d が非負の数でありません"
 
-#: libsvn_subr/io.c:2845
+#: libsvn_subr/io.c:2924
 #, c-format
 msgid "Reading '%s'"
 msgstr "'%s' を読んでいます"
 
-#: libsvn_subr/io.c:2861
+#: libsvn_subr/io.c:2940
 #, c-format
 msgid "First line of '%s' contains non-digit"
 msgstr "'%s' の 1 行目に数字以外が含まれています"
@@ -6460,6 +6591,7 @@ msgid "'%s' is neither a file nor a directory name"
 msgstr "'%s' はファイル名でもディレクトリ名でもありません"
 
 #: libsvn_subr/path.c:1204
+#, c-format
 msgid "Can't determine the native path encoding"
 msgstr "ネイティブのパスエンコーディングを決定できません"
 
@@ -6468,7 +6600,7 @@ msgstr "ネイティブのパスエンコーディングを決定できません
 msgid "Invalid control character '0x%02x' in path '%s'"
 msgstr "不正な制御文字 '0x%02x' がパス '%s' にあります"
 
-#: libsvn_subr/subst.c:1237 libsvn_wc/props.c:1459
+#: libsvn_subr/subst.c:1237 libsvn_wc/props.c:1337
 #, c-format
 msgid "File '%s' has inconsistent newlines"
 msgstr "ファイル '%s' は改行文字が一貫していません"
@@ -6581,7 +6713,7 @@ msgstr ""
 
 #: libsvn_wc/adm_crawler.c:633
 msgid "Error aborting report"
-msgstr "報告を中止する際にエラーが発生しました"
+msgstr "報告を中断する際にエラーが発生しました"
 
 #: libsvn_wc/adm_crawler.c:823
 #, c-format
@@ -6592,20 +6724,20 @@ msgstr "'%s' のチェックサムが一致しませんでした。予想: '%s',
 msgid "Error opening local file"
 msgstr "ローカルのファイルを開く際にエラーが発生しました"
 
-#: libsvn_wc/adm_files.c:113
+#: libsvn_wc/adm_files.c:102
 #, c-format
 msgid "'%s' is not a valid administrative directory name"
 msgstr "'%s' は、適切な管理用ディレクトリ名ではありません"
 
-#: libsvn_wc/adm_files.c:273
+#: libsvn_wc/adm_files.c:262
 msgid "Bad type indicator"
 msgstr "型指示子が不正です"
 
-#: libsvn_wc/adm_files.c:465
+#: libsvn_wc/adm_files.c:507
 msgid "APR_APPEND not supported for adm files"
 msgstr "管理用のファイルでは APR_APPEND はサポートされていません"
 
-#: libsvn_wc/adm_files.c:508
+#: libsvn_wc/adm_files.c:550
 msgid ""
 "Your .svn/tmp directory may be missing or corrupt; run 'svn cleanup' and try "
 "again"
@@ -6613,65 +6745,59 @@ msgstr ""
 ".svn/tmp ディレクトリが欠落しているか壊れています。'svn cleanup' を実行してか"
 "らもう一度試してみてください"
 
-#: libsvn_wc/adm_files.c:683 libsvn_wc/lock.c:378 libsvn_wc/lock.c:631
+#: libsvn_wc/adm_files.c:725 libsvn_wc/lock.c:378 libsvn_wc/lock.c:631
 #, c-format
 msgid "'%s' is not a working copy"
 msgstr "'%s' は作業コピーではありません"
 
-#: libsvn_wc/adm_files.c:690 libsvn_wc/adm_files.c:758
-#: libsvn_wc/adm_files.c:820
+#: libsvn_wc/adm_files.c:732 libsvn_wc/adm_files.c:800
+#: libsvn_wc/adm_files.c:862
 msgid "No such thing as 'base' working copy properties!"
 msgstr "作業コピーの属性に 'BASE' なんてありません!"
 
-#: libsvn_wc/adm_files.c:889 libsvn_wc/util.c:51
+#: libsvn_wc/adm_files.c:931 libsvn_wc/util.c:51
 #, c-format
 msgid "'%s' is not a directory"
 msgstr "'%s' はディレクトリではありません"
 
-#: libsvn_wc/adm_files.c:943
+#: libsvn_wc/adm_files.c:985
 #, c-format
 msgid "No entry for '%s'"
 msgstr "'%s' のエントリがありません"
 
-#: libsvn_wc/adm_files.c:955
+#: libsvn_wc/adm_files.c:998
 #, c-format
 msgid "Revision %ld doesn't match existing revision %ld in '%s'"
 msgstr ""
 "リビジョン %ld が、対象において現存するリビジョン %ld と一致しません (対象: "
 "'%s')"
 
-#: libsvn_wc/adm_files.c:964
+#: libsvn_wc/adm_files.c:1006
 #, c-format
 msgid "URL '%s' doesn't match existing URL '%s' in '%s'"
 msgstr "URL '%s' が、対象において現存する URL '%s' と一致しません (対象: '%s')"
 
-#: libsvn_wc/adm_ops.c:223
+#: libsvn_wc/adm_ops.c:250
 #, c-format
 msgid "Unrecognized node kind: '%s'"
 msgstr "認識できないノード種別です: '%s'"
 
-#: libsvn_wc/adm_ops.c:443 libsvn_wc/update_editor.c:947
-#: libsvn_wc/update_editor.c:1348
-#, c-format
-msgid "Error writing log file for '%s'"
-msgstr "'%s' のログファイルを書いている最中にエラーが発生しました"
-
-#: libsvn_wc/adm_ops.c:977
+#: libsvn_wc/adm_ops.c:1019
 #, c-format
 msgid "'%s' not found"
 msgstr "'%s' が見つかりません"
 
-#: libsvn_wc/adm_ops.c:981
+#: libsvn_wc/adm_ops.c:1023
 #, c-format
 msgid "Unsupported node kind for path '%s'"
 msgstr "パス '%s' のノード種別はサポートされていません"
 
-#: libsvn_wc/adm_ops.c:1011
+#: libsvn_wc/adm_ops.c:1053
 #, c-format
 msgid "'%s' is already under version control"
 msgstr "'%s' は既にバージョン管理下におかれています"
 
-#: libsvn_wc/adm_ops.c:1023
+#: libsvn_wc/adm_ops.c:1065
 #, c-format
 msgid ""
 "Can't replace '%s' with a node of a differing type; commit the deletion, "
@@ -6680,53 +6806,43 @@ msgstr ""
 "'%s' は、異なる形式のノードに置換できません。削除をコミットし親ディレクトリ"
 "で update を実行してから、'%s' を追加してください"
 
-#: libsvn_wc/adm_ops.c:1039
+#: libsvn_wc/adm_ops.c:1081
 #, c-format
 msgid "Can't find parent directory's entry while trying to add '%s'"
 msgstr ""
 "'%s' を追加しようとしましたが、親ディレクトリのエントリが見つかりませんでした"
 
-#: libsvn_wc/adm_ops.c:1044
+#: libsvn_wc/adm_ops.c:1086
 #, c-format
 msgid "Can't add '%s' to a parent directory scheduled for deletion"
 msgstr "削除準備中の親ディレクトリに '%s' を加えることはできません"
 
-#: libsvn_wc/adm_ops.c:1060
+#: libsvn_wc/adm_ops.c:1102
 #, c-format
 msgid "The URL '%s' has a different repository root than its parent"
 msgstr "URL '%s' のリポジトリルートが親と異なっています"
 
-#: libsvn_wc/adm_ops.c:1320 libsvn_wc/adm_ops.c:1325 libsvn_wc/adm_ops.c:1361
-#, c-format
-msgid "Error restoring props for '%s'"
-msgstr "'%s' の属性を元に戻す際にエラーが発生しました"
-
-#: libsvn_wc/adm_ops.c:1335
-#, c-format
-msgid "Error removing props for '%s'"
-msgstr "'%s' の属性を削除する際にエラーが発生しました"
-
-#: libsvn_wc/adm_ops.c:1407
+#: libsvn_wc/adm_ops.c:1437
 #, c-format
 msgid "Error restoring text for '%s'"
 msgstr "'%s' のテキストを元に戻す際にエラーが発生しました"
 
-#: libsvn_wc/adm_ops.c:1508
+#: libsvn_wc/adm_ops.c:1569
 #, c-format
 msgid "Cannot revert: '%s' is not under version control"
 msgstr "元に戻せません: '%s' はバージョン管理下におかれていません"
 
-#: libsvn_wc/adm_ops.c:1536
+#: libsvn_wc/adm_ops.c:1597
 #, c-format
 msgid "Cannot revert '%s': unsupported entry node kind"
 msgstr "'%s' を元に戻せません: エントリのノード種別がサポートされていません"
 
-#: libsvn_wc/adm_ops.c:1547
+#: libsvn_wc/adm_ops.c:1608
 #, c-format
 msgid "Cannot revert '%s': unsupported node kind in working copy"
 msgstr "'%s' を元に戻せません: 作業コピーのノード種別がサポートされていません"
 
-#: libsvn_wc/adm_ops.c:1595
+#: libsvn_wc/adm_ops.c:1655
 msgid ""
 "Cannot revert addition of current directory; please try again from the "
 "parent directory"
@@ -6734,42 +6850,33 @@ msgstr ""
 "カレントディレクトリの追加は元に戻せません。親ディレクトリでもう一度試してみ"
 "てください"
 
-#: libsvn_wc/adm_ops.c:1617
+#: libsvn_wc/adm_ops.c:1677
 #, c-format
 msgid "Unknown or unexpected kind for path '%s'"
 msgstr "パス '%s' の種別が不明または予想外です"
 
-#: libsvn_wc/adm_ops.c:1820
+#: libsvn_wc/adm_ops.c:1839
 #, c-format
 msgid "File '%s' has local modifications"
 msgstr "ファイル '%s' にはローカルでの変更が加えられています"
 
-#: libsvn_wc/copy.c:148
+#: libsvn_wc/copy.c:160
 #, c-format
 msgid "'%s' already exists and is in the way"
 msgstr "'%s' が既に存在しており、妨害しています"
 
-#: libsvn_wc/copy.c:160
-#, c-format
-msgid ""
-"'%s' is scheduled for deletion; it must be committed before it can be "
-"overwritten"
-msgstr ""
-"'%s' は削除準備中です。上書きする可能性がある場合、その前にコミットしなければ"
-"なりません"
-
-#: libsvn_wc/copy.c:166
+#: libsvn_wc/copy.c:172
 #, c-format
 msgid "There is already a versioned item '%s'"
 msgstr "既にバージョン管理下にある項目 '%s' があります"
 
-#: libsvn_wc/copy.c:177
+#: libsvn_wc/copy.c:183
 #, c-format
 msgid "Cannot copy or move '%s': it's not under version control"
 msgstr ""
 "'%s' のコピーや移動はできません: それはまだバージョン管理下にありません"
 
-#: libsvn_wc/copy.c:184
+#: libsvn_wc/copy.c:190
 #, c-format
 msgid ""
 "Cannot copy or move '%s': it's not in the repository yet; try committing "
@@ -6778,7 +6885,7 @@ msgstr ""
 "'%s' のコピーや移動はできません: それはまだリポジトリに入っていないので、最初"
 "にコミットしてみてください"
 
-#: libsvn_wc/copy.c:456
+#: libsvn_wc/copy.c:445
 #, c-format
 msgid ""
 "Cannot copy or move '%s': it is not in the repository yet; try committing "
@@ -6787,14 +6894,14 @@ msgstr ""
 "'%s' のコピーや移動はできません: それはまだリポジトリに入っていないので、最初"
 "にコミットしてみてください"
 
-#: libsvn_wc/copy.c:532
+#: libsvn_wc/copy.c:520
 #, c-format
 msgid "Cannot copy to '%s', as it is not from repository '%s'; it is from '%s'"
 msgstr ""
 "'%s' へのコピーはできません。それはリポジトリ '%s' ではなく '%s' に由来してい"
 "ます。"
 
-#: libsvn_wc/copy.c:539
+#: libsvn_wc/copy.c:527
 #, c-format
 msgid "Cannot copy to '%s' as it is scheduled for deletion"
 msgstr "削除準備中のディレクトリ '%s' にはコピーできません"
@@ -6890,7 +6997,7 @@ msgstr "ディレクトリ '%s' にデフォルトのエントリはありませ
 msgid "Error writing to '%s'"
 msgstr "'%s' に書き込み中にエラーが発生しました"
 
-#: libsvn_wc/entries.c:1525
+#: libsvn_wc/entries.c:1546
 #, c-format
 msgid ""
 "Can't add '%s' to deleted directory; try undeleting its parent directory "
@@ -6899,7 +7006,7 @@ msgstr ""
 "削除されたディレクトリに '%s' を追加できません。まず親ディレクトリの削除を無"
 "効にしてみてください"
 
-#: libsvn_wc/entries.c:1531
+#: libsvn_wc/entries.c:1552
 #, c-format
 msgid ""
 "Can't replace '%s' in deleted directory; try undeleting its parent directory "
@@ -6908,37 +7015,37 @@ msgstr ""
 "削除されたディレクトリの '%s' を置換できません。まず親ディレクトリの削除を無"
 "効にしてみてください"
 
-#: libsvn_wc/entries.c:1540
+#: libsvn_wc/entries.c:1561
 #, c-format
 msgid "'%s' is marked as absent, so it cannot be scheduled for addition"
 msgstr "'%s' には「欠如」マークがついているので追加準備できません"
 
-#: libsvn_wc/entries.c:1569
+#: libsvn_wc/entries.c:1590
 #, c-format
 msgid "Entry '%s' is already under version control"
 msgstr "エントリ '%s' は既にバージョン管理下におかれています"
 
-#: libsvn_wc/entries.c:1661
+#: libsvn_wc/entries.c:1687
 #, c-format
 msgid "Entry '%s' has illegal schedule"
 msgstr "エントリ '%s' は準備中の処理が不正です"
 
-#: libsvn_wc/entries.c:1802
+#: libsvn_wc/entries.c:1828
 #, c-format
 msgid "No such entry: '%s'"
 msgstr "そのようなエントリはありません: '%s'"
 
-#: libsvn_wc/entries.c:1913
+#: libsvn_wc/entries.c:1939
 #, c-format
 msgid "Directory '%s' has no THIS_DIR entry"
 msgstr "ディレクトリ '%s' には THIS_DIR エントリがありません"
 
-#: libsvn_wc/entries.c:2002
+#: libsvn_wc/entries.c:2028
 #, c-format
 msgid "'%s' has an unrecognized node kind"
 msgstr "'%s' には認識できないノード種別があります"
 
-#: libsvn_wc/entries.c:2038
+#: libsvn_wc/entries.c:2064
 #, c-format
 msgid "Unexpectedly found '%s': path is marked 'missing'"
 msgstr ""
@@ -6975,121 +7082,126 @@ msgstr "'%s' には書き込み用のロックがかけられていません"
 msgid "Lock file '%s' is not a regular file"
 msgstr "ロック用のファイル '%s' は正常なファイルではありません"
 
-#: libsvn_wc/log.c:183
+#: libsvn_wc/log.c:307
 msgid "Can't move source to dest"
 msgstr "移動元から移動先へ移動できません"
 
-#: libsvn_wc/log.c:339
+#: libsvn_wc/log.c:463
 #, c-format
 msgid "In directory '%s'"
 msgstr "現在のディレクトリ: '%s'"
 
-#: libsvn_wc/log.c:365
+#: libsvn_wc/log.c:489
 #, c-format
 msgid "Missing 'left' attribute in '%s'"
 msgstr "'%s' には 'left' 属性がありません"
 
-#: libsvn_wc/log.c:372
+#: libsvn_wc/log.c:496
 #, c-format
 msgid "Missing 'right' attribute in '%s'"
 msgstr "'%s' には 'right' 属性がありません"
 
-#: libsvn_wc/log.c:415
+#: libsvn_wc/log.c:542
 #, c-format
 msgid "Missing 'dest' attribute in '%s'"
 msgstr "'%s' には 'dest' 属性がありません"
 
-#: libsvn_wc/log.c:475
+#: libsvn_wc/log.c:602
 #, c-format
 msgid "Missing 'timestamp' attribute in '%s'"
 msgstr "'%s' には「タイムスタンプ」属性がありません"
 
-#: libsvn_wc/log.c:551 libsvn_wc/log.c:584
+#: libsvn_wc/log.c:685 libsvn_wc/log.c:718
 #, c-format
 msgid "Error checking path '%s'"
 msgstr "パス '%s' のチェック中にエラーが発生しました"
 
-#: libsvn_wc/log.c:558 libsvn_wc/log.c:591
+#: libsvn_wc/log.c:692 libsvn_wc/log.c:725
 #, c-format
 msgid "Error getting 'affected time' on '%s'"
 msgstr "'%s' の 'affected time' を取得している際にエラーが発生しました"
 
-#: libsvn_wc/log.c:602
+#: libsvn_wc/log.c:736
 #, c-format
 msgid "Error modifying entry for '%s'"
 msgstr "'%s' のエントリを変更中にエラーが発生しました"
 
-#: libsvn_wc/log.c:628
+#: libsvn_wc/log.c:762
 #, c-format
 msgid "Error removing lock from entry for '%s'"
 msgstr "'%s' のエントリからロックを削除する際にエラーが発生しました"
 
-#: libsvn_wc/log.c:759
+#: libsvn_wc/log.c:893
 #, c-format
 msgid "Missing 'revision' attribute for '%s'"
 msgstr "'%s' には「リビジョン」属性がありません"
 
-#: libsvn_wc/log.c:773
+#: libsvn_wc/log.c:907
 #, c-format
 msgid "Log command for directory '%s' is mislocated"
 msgstr "ログコマンドはディレクトリ '%s' には実行できません"
 
-#: libsvn_wc/log.c:940 libsvn_wc/log.c:1012
+#: libsvn_wc/log.c:1074 libsvn_wc/log.c:1146
 #, c-format
 msgid "Error checking existence of '%s'"
 msgstr "'%s' の存在を確認している際にエラーが発生しました"
 
-#: libsvn_wc/log.c:951 libsvn_wc/log.c:1023
+#: libsvn_wc/log.c:1085 libsvn_wc/log.c:1157
 #, c-format
 msgid "Error comparing '%s' and '%s'"
 msgstr "'%s' と '%s' の比較中にエラーが発生しました"
 
-#: libsvn_wc/log.c:963
+#: libsvn_wc/log.c:1097
 #, c-format
 msgid "Error getting 'affected time' for '%s'"
 msgstr "'%s' の 'affected time' を取得している際にエラーが発生しました"
 
-#: libsvn_wc/log.c:1034 libsvn_wc/log.c:1121
+#: libsvn_wc/log.c:1168 libsvn_wc/log.c:1255
 #, c-format
 msgid "Error getting 'affected time' of '%s'"
 msgstr "'%s' の 'affected time' を取得している際にエラーが発生しました"
 
-#: libsvn_wc/log.c:1092
+#: libsvn_wc/log.c:1226
 #, c-format
 msgid "Error replacing text-base of '%s'"
 msgstr "'%s' のテキストベースを置換している際にエラーが発生しました"
 
-#: libsvn_wc/log.c:1161 libsvn_wc/log.c:1210
+#: libsvn_wc/log.c:1295 libsvn_wc/log.c:1344
 #, c-format
 msgid "Error modifying entry of '%s'"
 msgstr "'%s' のエントリを変更している際にエラーが発生しました"
 
-#: libsvn_wc/log.c:1269
+#: libsvn_wc/log.c:1403
 #, c-format
 msgid "Log entry missing 'name' attribute (entry '%s' for directory '%s')"
 msgstr ""
 "ログエントリに「名前」属性がありません (エントリ: '%s', ディレクトリ: '%s')"
 
-#: libsvn_wc/log.c:1331
+#: libsvn_wc/log.c:1465
 #, c-format
 msgid "Unrecognized logfile element '%s' in '%s'"
 msgstr "ログファイルの要素 '%s' を '%s' において認識できません"
 
-#: libsvn_wc/log.c:1342
+#: libsvn_wc/log.c:1476
 #, c-format
 msgid "Error processing command '%s' in '%s'"
 msgstr "コマンド '%s' を '%s' 内で処理しているときにエラーが発生しました"
 
-#: libsvn_wc/log.c:1464
+#: libsvn_wc/log.c:1598
 msgid "Couldn't open log"
 msgstr "ログを開けません"
 
-#: libsvn_wc/log.c:1475
+#: libsvn_wc/log.c:1609
 #, c-format
 msgid "Error reading administrative log file in '%s'"
 msgstr "管理用のログファイルを '%s' で読んでいるときにエラーが発生しました"
 
-#: libsvn_wc/log.c:1569
+#: libsvn_wc/log.c:2156
+#, c-format
+msgid "Error writing log for '%s'"
+msgstr "'%s' のログを書いている際にエラーが発生しました"
+
+#: libsvn_wc/log.c:2204
 #, c-format
 msgid "'%s' is not a working copy directory"
 msgstr "'%s' は作業コピーのディレクトリではありません"
@@ -7125,22 +7237,17 @@ msgstr ""
 msgid "Can't parse '%s'"
 msgstr "'%s' をパースできません"
 
-#: libsvn_wc/props.c:198
+#: libsvn_wc/props.c:199
 #, c-format
 msgid "Can't write property hash to '%s'"
 msgstr "属性のハッシュを '%s' に書き込めません"
 
-#: libsvn_wc/props.c:248
+#: libsvn_wc/props.c:287
 #, c-format
 msgid "Can't find entry '%s' in '%s'"
 msgstr "エントリ '%s' が '%s' で見つかりません"
 
-#: libsvn_wc/props.c:320 libsvn_wc/props.c:1179 libsvn_wc/update_editor.c:2330
-#, c-format
-msgid "Error writing log for '%s'"
-msgstr "'%s' のログを書いている際にエラーが発生しました"
-
-#: libsvn_wc/props.c:456
+#: libsvn_wc/props.c:481
 #, c-format
 msgid ""
 "Trying to add new property '%s' with value '%s',\n"
@@ -7149,7 +7256,7 @@ msgstr ""
 "新しい属性 '%s' に値 '%s' を与えて追加しようとしています。\n"
 "しかし属性には値 '%s' が既についています。"
 
-#: libsvn_wc/props.c:480
+#: libsvn_wc/props.c:505
 #, c-format
 msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
@@ -7158,7 +7265,7 @@ msgstr ""
 "属性 '%s' を '%s' から '%s' に変更しようとしています。\n"
 "しかしその属性は存在しません。"
 
-#: libsvn_wc/props.c:509
+#: libsvn_wc/props.c:534
 #, c-format
 msgid ""
 "Trying to delete property '%s' but value has been modified from '%s' to '%s'."
@@ -7166,7 +7273,7 @@ msgstr ""
 "属性 '%s' を削除しようとしています。しかし値が '%s' から '%s' に変更されてい"
 "ます。"
 
-#: libsvn_wc/props.c:528
+#: libsvn_wc/props.c:553
 #, c-format
 msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
@@ -7175,52 +7282,52 @@ msgstr ""
 "属性 '%s' を '%s' から '%s' に変更しようとしています。\n"
 "しかし属性には値 '%s' が既についています。"
 
-#: libsvn_wc/props.c:1220
+#: libsvn_wc/props.c:1098
 #, c-format
 msgid "Unknown node kind: '%s'"
 msgstr "ノード種別が不明です: '%s'"
 
-#: libsvn_wc/props.c:1256 libsvn_wc/props.c:1278 libsvn_wc/props.c:1362
-#: libsvn_wc/props.c:1600
+#: libsvn_wc/props.c:1134 libsvn_wc/props.c:1156 libsvn_wc/props.c:1240
+#: libsvn_wc/props.c:1478 libsvn_wc/translate.c:235
 msgid "Failed to load properties from disk"
 msgstr "ディスクから属性をロードできませんでした"
 
-#: libsvn_wc/props.c:1294 libsvn_wc/props.c:1630
+#: libsvn_wc/props.c:1172 libsvn_wc/props.c:1508
 #, c-format
 msgid "Cannot write property hash for '%s'"
 msgstr "'%s' の属性のハッシュを書き込めません"
 
-#: libsvn_wc/props.c:1354 libsvn_wc/props.c:1492
+#: libsvn_wc/props.c:1232 libsvn_wc/props.c:1370
 #, c-format
 msgid "Property '%s' is an entry property"
 msgstr "属性 '%s' はエントリ属性です"
 
-#: libsvn_wc/props.c:1399
+#: libsvn_wc/props.c:1277
 #, c-format
 msgid "Cannot set '%s' on a directory ('%s')"
 msgstr "'%s' をディレクトリ ('%s') に設定できません"
 
-#: libsvn_wc/props.c:1407
+#: libsvn_wc/props.c:1285
 #, c-format
 msgid "Cannot set '%s' on a file ('%s')"
 msgstr "'%s' をファイル ('%s') に設定できません"
 
-#: libsvn_wc/props.c:1413
+#: libsvn_wc/props.c:1291
 #, c-format
 msgid "'%s' is not a file or directory"
 msgstr "'%s' はファイルでもディレクトリでもありません"
 
-#: libsvn_wc/props.c:1437
+#: libsvn_wc/props.c:1315
 #, c-format
 msgid "File '%s' has binary mime type property"
 msgstr "ファイル '%s' の MIME タイプ属性はバイナリです"
 
-#: libsvn_wc/props.c:2056
+#: libsvn_wc/props.c:1934
 #, c-format
 msgid "Error parsing %s property on '%s': '%s'"
 msgstr "属性 %s を '%s' においてパースする際にエラーが発生しました: '%s'"
 
-#: libsvn_wc/props.c:2069
+#: libsvn_wc/props.c:1947
 #, c-format
 msgid ""
 "Invalid %s property on '%s': target involves '.' or '..' or is an absolute "
@@ -7262,28 +7369,33 @@ msgstr ""
 msgid "Relocate can only change the repository part of an URL"
 msgstr "relocate は、URL のリポジトリ部分しか変更できません"
 
-#: libsvn_wc/translate.c:124
+#: libsvn_wc/translate.c:125
 #, c-format
 msgid "'%s' has unknown value for svn:eol-style property"
 msgstr "'%s' は、svn:eol-style 属性として未知の値をもっています"
 
-#: libsvn_wc/update_editor.c:386
+#: libsvn_wc/update_editor.c:387
 #, c-format
 msgid "No '.' entry in: '%s'"
 msgstr "'.' エントリはありません: '%s'"
 
-#: libsvn_wc/update_editor.c:864
+#: libsvn_wc/update_editor.c:869
 #, c-format
 msgid "Won't delete locally modified directory '%s'"
 msgstr "ローカルで変更されたディレクトリ '%s' は削除できません"
 
-#: libsvn_wc/update_editor.c:1050
+#: libsvn_wc/update_editor.c:943
+#, c-format
+msgid "Error writing log file for '%s'"
+msgstr "'%s' のログファイルを書いている最中にエラーが発生しました"
+
+#: libsvn_wc/update_editor.c:1046
 #, c-format
 msgid "Failed to add directory '%s': object of the same name already exists"
 msgstr ""
 "ディレクトリ '%s' を追加できませんでした: 同名のオブジェクトが既にあります"
 
-#: libsvn_wc/update_editor.c:1058
+#: libsvn_wc/update_editor.c:1054
 #, c-format
 msgid ""
 "Failed to add directory '%s': object of the same name as the administrative "
@@ -7292,14 +7404,14 @@ msgstr ""
 "ディレクトリ '%s' を追加できませんでした: 同名の管理用ディレクトリと同じ名前"
 "のオブジェクトです"
 
-#: libsvn_wc/update_editor.c:1072
+#: libsvn_wc/update_editor.c:1068
 #, c-format
 msgid "Failed to add directory '%s': copyfrom arguments not yet supported"
 msgstr ""
 "ディレクトリ '%s' を追加できませんでした: コピー元の引数がサポートされていま"
 "せん"
 
-#: libsvn_wc/update_editor.c:1093
+#: libsvn_wc/update_editor.c:1089
 #, c-format
 msgid ""
 "Failed to add directory '%s': object of the same name is already scheduled "
@@ -7308,11 +7420,11 @@ msgstr ""
 "ディレクトリ '%s' を追加できませんでした: 同名のオブジェクトが既に追加準備さ"
 "れています"
 
-#: libsvn_wc/update_editor.c:1316
+#: libsvn_wc/update_editor.c:1300
 msgid "Couldn't do property merge"
 msgstr "属性のマージはできません"
 
-#: libsvn_wc/update_editor.c:1410
+#: libsvn_wc/update_editor.c:1378
 #, c-format
 msgid ""
 "Failed to mark '%s' absent: item of the same name is already scheduled for "
@@ -7321,13 +7433,13 @@ msgstr ""
 "'%s' に「欠如」マークをつけられませんでした: 同名の項目が既に追加準備されてい"
 "ます"
 
-#: libsvn_wc/update_editor.c:1502
+#: libsvn_wc/update_editor.c:1470
 #, c-format
 msgid "Failed to add file '%s': object of the same name already exists"
 msgstr ""
 "ファイル '%s' を追加できませんでした: 同名のオブジェクトが既に存在します"
 
-#: libsvn_wc/update_editor.c:1523
+#: libsvn_wc/update_editor.c:1491
 #, c-format
 msgid ""
 "Failed to add file '%s': object of the same name is already scheduled for "
@@ -7336,28 +7448,24 @@ msgstr ""
 "ファイル '%s' を追加できませんでした: 同名のオブジェクトが既に追加準備されて"
 "います"
 
-#: libsvn_wc/update_editor.c:1531
+#: libsvn_wc/update_editor.c:1499
 #, c-format
 msgid "File '%s' in directory '%s' is not a versioned resource"
 msgstr ""
 "ファイル '%s' (ディレクトリ '%s' 内のもの) はバージョン管理されていないリソー"
 "スです"
 
-#: libsvn_wc/update_editor.c:1643
+#: libsvn_wc/update_editor.c:1611
 #, c-format
 msgid "Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"
 msgstr "'%s' のチェックサムが一致しませんでした。記録: '%s', 実際: '%s'"
 
-#: libsvn_wc/update_editor.c:1954
-msgid "Move failed"
-msgstr "移動できませんでした"
-
-#: libsvn_wc/update_editor.c:2872
+#: libsvn_wc/update_editor.c:2768
 #, c-format
 msgid "'%s' has no ancestry information"
 msgstr "'%s' には系統情報がありません"
 
-#: libsvn_wc/update_editor.c:2960
+#: libsvn_wc/update_editor.c:2859
 #, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
 msgstr "コピー元の URL '%s' のリポジトリルートが、'%s' と異なっています"
@@ -7366,29 +7474,30 @@ msgstr "コピー元の URL '%s' のリポジトリルートが、'%s' と異な
 msgid "Unable to make any directories"
 msgstr "ディレクトリを作れません"
 
-#: svnadmin/main.c:94 svndumpfilter/main.c:62
+#: svnadmin/main.c:95 svndumpfilter/main.c:62
+#, c-format
 msgid "Can't open stdio file"
 msgstr "標準入出力のファイルを開けません"
 
-#: svnadmin/main.c:123
+#: svnadmin/main.c:124
 msgid "Repository argument required"
 msgstr "リポジトリの引数が必要です"
 
-#: svnadmin/main.c:128
+#: svnadmin/main.c:129
 #, c-format
 msgid "'%s' is an URL when it should be a path"
 msgstr "'%s' は URL です。そこはパスで指定するべきです"
 
 # * Description for 'svn{admin,dumpfilter,look,serve,version} --version'.
 # * 29 half-size characters are displayed on the left.
-#: svnadmin/main.c:234 svndumpfilter/main.c:762 svnlook/main.c:98
-#: svnserve/main.c:111 svnversion/main.c:182
+#: svnadmin/main.c:235 svndumpfilter/main.c:787 svnlook/main.c:99
+#: svnserve/main.c:112 svnversion/main.c:182
 msgid "show version information"
 msgstr "バージョン情報を表示します"
 
 # * Description for 'svnadmin --revision'.
 # * 29 half-size characters are displayed on the left.
-#: svnadmin/main.c:237
+#: svnadmin/main.c:238
 msgid "specify revision number ARG (or X:Y range)"
 msgstr ""
 "リビジョン番号を <引数> (または範囲 X:Y) と指定\n"
@@ -7396,25 +7505,25 @@ msgstr ""
 
 # * Description for 'svnadmin --incremental'.
 # * 29 half-size characters are displayed on the left.
-#: svnadmin/main.c:240
+#: svnadmin/main.c:241
 msgid "dump incrementally"
 msgstr "増分のみをダンプします"
 
 # * Description for 'svnadmin --deltas'.
 # * 29 half-size characters are displayed on the left.
-#: svnadmin/main.c:243
+#: svnadmin/main.c:244
 msgid "use deltas in dump output"
 msgstr "ダンプの出力として差分を用います"
 
 # * Description for 'svnadmin --bypass-hooks'.
 # * 29 half-size characters are displayed on the left.
-#: svnadmin/main.c:246
+#: svnadmin/main.c:247
 msgid "bypass the repository hook system"
 msgstr "リポジトリフックシステムを回避します"
 
 # * Description for 'svnadmin --quiet'.
 # * 29 half-size characters are displayed on the left.
-#: svnadmin/main.c:249
+#: svnadmin/main.c:250
 msgid "no progress (only errors) to stderr"
 msgstr ""
 "標準エラー出力に (エラー以外の) 進行状況を出力し\n"
@@ -7422,7 +7531,7 @@ msgstr ""
 
 # * Description for 'svnadmin --ignore--uuid'.
 # * 29 half-size characters are displayed on the left.
-#: svnadmin/main.c:252
+#: svnadmin/main.c:253
 msgid "ignore any repos UUID found in the stream"
 msgstr ""
 "ストリーム中にリポジトリ UUID があっても無視しま\n"
@@ -7430,7 +7539,7 @@ msgstr ""
 
 # * Description for 'svnadmin --force--uuid'.
 # * 29 half-size characters are displayed on the left.
-#: svnadmin/main.c:255
+#: svnadmin/main.c:256
 msgid "set repos UUID to that found in stream, if any"
 msgstr ""
 "ストリーム中に UUID があればリポジトリに設定しま\n"
@@ -7438,19 +7547,19 @@ msgstr ""
 
 # * Description for 'svnadmin --fs-type'.
 # * 29 half-size characters are displayed on the left.
-#: svnadmin/main.c:258
+#: svnadmin/main.c:259
 msgid "type of repository: 'fsfs' (default) or 'bdb'"
 msgstr "リポジトリ形式: 'fsfs' (デフォルト) または 'bdb'"
 
 # * Description for 'svnadmin --parent-dir'.
 # * 29 half-size characters are displayed on the left.
-#: svnadmin/main.c:261
+#: svnadmin/main.c:262
 msgid "load at specified directory in repository"
 msgstr "リポジトリ内の指定したディレクトリでロードします"
 
 # * Description for 'svnadmin --bdb-txn-nosync'.
 # * 29 half-size characters are displayed on the left.
-#: svnadmin/main.c:264
+#: svnadmin/main.c:265
 msgid "disable fsync at transaction commit [Berkeley DB]"
 msgstr ""
 "トランザクションコミット時の fsync を無効にしま\n"
@@ -7458,7 +7567,7 @@ msgstr ""
 
 # * Description for 'svnadmin --bdb-log-keep'.
 # * 29 half-size characters are displayed on the left.
-#: svnadmin/main.c:267
+#: svnadmin/main.c:268
 msgid "disable automatic log file removal [Berkeley DB]"
 msgstr ""
 "ログファイルの自動削除を無効にします [Berkeley\n"
@@ -7466,7 +7575,7 @@ msgstr ""
 
 # * Description for 'svnadmin --clean-logs'.
 # * 29 half-size characters are displayed on the left.
-#: svnadmin/main.c:273
+#: svnadmin/main.c:274
 msgid "remove redundant log files from source repository"
 msgstr ""
 "ソースリポジトリから不要なログファイルを削除しま\n"
@@ -7474,7 +7583,7 @@ msgstr ""
 
 # * Description for 'svnadmin --use-pre-commit-hook'.
 # * 29 half-size characters are displayed on the left.
-#: svnadmin/main.c:276
+#: svnadmin/main.c:277
 msgid "call pre-commit hook before committing revisions"
 msgstr ""
 "リビジョンをコミットする前に pre-commit フックを\n"
@@ -7482,7 +7591,7 @@ msgstr ""
 
 # * Description for 'svnadmin --use-post-commit-hook'.
 # * 29 half-size characters are displayed on the left.
-#: svnadmin/main.c:279
+#: svnadmin/main.c:280
 msgid "call post-commit hook after committing revisions"
 msgstr ""
 "リビジョンをコミットした後に post-commit フックを\n"
@@ -7490,7 +7599,7 @@ msgstr ""
 
 # * Description for 'svnadmin --wait'
 # * 29 half-size characters are displayed on the left.
-#: svnadmin/main.c:282
+#: svnadmin/main.c:283
 msgid ""
 "wait instead of exit if the repository is in\n"
 "                             use by another process"
@@ -7500,7 +7609,7 @@ msgstr ""
 
 # * Description for 'svnadmin crashtest'.
 # * "crashtest: " is displayed at the head of the first line.
-#: svnadmin/main.c:295
+#: svnadmin/main.c:296
 msgid ""
 "usage: svnadmin crashtest REPOS_PATH\n"
 "\n"
@@ -7509,12 +7618,12 @@ msgid ""
 msgstr ""
 "使用方法: svnadmin crashtest <リポジトリパス>\n"
 "\n"
-"<リポジトリパス> にあるリポジトリを開いてから破棄します。すなわち、開いたリ\n"
-"ポジトリハンドルを握っている間に強制終了する過程をシミュレートします。\n"
+"<リポジトリパス> にあるリポジトリを開いてそのまま中断します。すなわち、開い\n"
+"たリポジトリハンドルを握っている間に強制終了する過程をシミュレートします。\n"
 
 # * Description for 'svnadmin create'.
 # * "create: " is displayed at the head of the first line.
-#: svnadmin/main.c:301
+#: svnadmin/main.c:302
 msgid ""
 "usage: svnadmin create REPOS_PATH\n"
 "\n"
@@ -7526,7 +7635,7 @@ msgstr ""
 
 # * Description for 'svnadmin deltify'.
 # * "deltify: " is displayed at the head of the first line.
-#: svnadmin/main.c:307
+#: svnadmin/main.c:308
 msgid ""
 "usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n"
 "\n"
@@ -7548,7 +7657,7 @@ msgstr ""
 
 # * Description for 'svnadmin dump'.
 # * "dump: " is displayed at the head of the first line.
-#: svnadmin/main.c:316
+#: svnadmin/main.c:317
 msgid ""
 "usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n"
 "\n"
@@ -7578,7 +7687,7 @@ msgstr ""
 
 # * Description for 'svnadmin help'.
 # * "help: " is displayed at the head of the first line.
-#: svnadmin/main.c:327
+#: svnadmin/main.c:328
 msgid ""
 "usage: svnadmin help [SUBCOMMAND...]\n"
 "\n"
@@ -7590,7 +7699,7 @@ msgstr ""
 
 # * Description for 'svnadmin hotcopy'.
 # * "hotcopy: " is displayed at the head of the first line.
-#: svnadmin/main.c:332
+#: svnadmin/main.c:333
 msgid ""
 "usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n"
 "\n"
@@ -7602,7 +7711,7 @@ msgstr ""
 
 # * Description for 'svnadmin list-dblogs'.
 # * "list-dblogs: " is displayed at the head of the first line.
-#: svnadmin/main.c:337
+#: svnadmin/main.c:338
 msgid ""
 "usage: svnadmin list-dblogs REPOS_PATH\n"
 "\n"
@@ -7621,7 +7730,7 @@ msgstr ""
 
 # * Description for 'svnadmin list-unused-dblogs'.
 # * "list-unused-dblogs: " is displayed at the head of the first line.
-#: svnadmin/main.c:344
+#: svnadmin/main.c:345
 msgid ""
 "usage: svnadmin list-unused-dblogs REPOS_PATH\n"
 "\n"
@@ -7634,7 +7743,7 @@ msgstr ""
 
 # * Description for 'svnadmin load'.
 # * "load: " is displayed at the head of the first line.
-#: svnadmin/main.c:349
+#: svnadmin/main.c:350
 msgid ""
 "usage: svnadmin load REPOS_PATH\n"
 "\n"
@@ -7655,7 +7764,7 @@ msgstr ""
 
 # * Description for 'svnadmin lslocks'.
 # * "lslocks: " is displayed at the head of the first line.
-#: svnadmin/main.c:360
+#: svnadmin/main.c:361
 msgid ""
 "usage: svnadmin lslocks REPOS_PATH\n"
 "\n"
@@ -7667,7 +7776,7 @@ msgstr ""
 
 # * Description for 'svnadmin lstxns'.
 # * "lstxns: " is displayed at the head of the first line.
-#: svnadmin/main.c:365
+#: svnadmin/main.c:366
 msgid ""
 "usage: svnadmin lstxns REPOS_PATH\n"
 "\n"
@@ -7679,7 +7788,7 @@ msgstr ""
 
 # * Description for 'svnadmin recover'.
 # * "recover: " is displayed at the head of the first line.
-#: svnadmin/main.c:370
+#: svnadmin/main.c:371
 msgid ""
 "usage: svnadmin recover REPOS_PATH\n"
 "\n"
@@ -7698,7 +7807,7 @@ msgstr ""
 
 # * Description for 'svnadmin rmlocks'.
 # * "rmlocks: " is displayed at the head of the first line.
-#: svnadmin/main.c:378
+#: svnadmin/main.c:379
 msgid ""
 "usage: svnadmin rmlocks REPOS_PATH LOCKED_PATH...\n"
 "\n"
@@ -7710,7 +7819,7 @@ msgstr ""
 
 # * Description for 'svnadmin rmtxns'.
 # * "rmtxns: " is displayed at the head of the first line.
-#: svnadmin/main.c:383
+#: svnadmin/main.c:384
 msgid ""
 "usage: svnadmin rmtxns REPOS_PATH TXN_NAME...\n"
 "\n"
@@ -7722,7 +7831,7 @@ msgstr ""
 
 # * Description for 'svnadmin setlog'.
 # * "setlog: " is displayed at the head of the first line.
-#: svnadmin/main.c:388
+#: svnadmin/main.c:389
 msgid ""
 "usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n"
 "\n"
@@ -7754,7 +7863,7 @@ msgstr ""
 
 # * Description for 'svnadmin verify'.
 # * "verify: " is displayed at the head of the first line.
-#: svnadmin/main.c:402
+#: svnadmin/main.c:403
 msgid ""
 "usage: svnadmin verify REPOS_PATH\n"
 "\n"
@@ -7764,30 +7873,31 @@ msgstr ""
 "\n"
 "リポジトリに保存されたデータを検証します。\n"
 
-#: svnadmin/main.c:455
+#: svnadmin/main.c:456
 msgid "Invalid revision specifier"
 msgstr "リビジョン識別子が不正です"
 
-#: svnadmin/main.c:460
+#: svnadmin/main.c:461
 #, c-format
 msgid "Revisions must not be greater than the youngest revision (%ld)"
 msgstr "リビジョンは、最新のリビジョン (%ld) よりも大きくてはいけません"
 
-#: svnadmin/main.c:528 svnadmin/main.c:610
+#: svnadmin/main.c:529 svnadmin/main.c:611
 msgid "First revision cannot be higher than second"
 msgstr "最初のリビジョンが 2 以上であることはありません"
 
-#: svnadmin/main.c:537
+#: svnadmin/main.c:538
 #, c-format
 msgid "Deltifying revision %ld..."
 msgstr "リビジョン %ld を差分化しています..."
 
-#: svnadmin/main.c:541
+#: svnadmin/main.c:542
+#, c-format
 msgid "done.\n"
 msgstr "完了しました。\n"
 
 # * Description for svnadmin.
-#: svnadmin/main.c:641
+#: svnadmin/main.c:642
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
 "Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
@@ -7802,7 +7912,7 @@ msgstr ""
 "\n"
 "利用可能なサブコマンド:\n"
 
-#: svnadmin/main.c:648 svnlook/main.c:1765 svnserve/main.c:158
+#: svnadmin/main.c:649 svnlook/main.c:1786 svnserve/main.c:159
 msgid ""
 "The following repository back-end (FS) modules are available:\n"
 "\n"
@@ -7810,7 +7920,8 @@ msgstr ""
 "以下のリポジトリバックエンド (FS) モジュールが利用できます:\n"
 "\n"
 
-#: svnadmin/main.c:731
+#: svnadmin/main.c:732
+#, c-format
 msgid ""
 "Repository lock acquired.\n"
 "Please wait; recovering the repository may take some time...\n"
@@ -7818,7 +7929,7 @@ msgstr ""
 "リポジトリのロックを取得しました。\n"
 "お待ちください。リポジトリの復旧にはいくらか時間がかかります...\n"
 
-#: svnadmin/main.c:766
+#: svnadmin/main.c:767
 msgid ""
 "Failed to get exclusive repository access; perhaps another process\n"
 "such as httpd, svnserve or svn has it open?"
@@ -7827,13 +7938,15 @@ msgstr ""
 "svnserve,\n"
 "svn などといった他のプロセスがリポジトリを開いてしまったのでしょう。"
 
-#: svnadmin/main.c:771
+#: svnadmin/main.c:772
+#, c-format
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
 msgstr ""
 "リポジトリにロックがかかるのを待ち続けています。おそらく別のプロセスが\n"
 "リポジトリを開いてしまったのでしょう。\n"
 
-#: svnadmin/main.c:778
+#: svnadmin/main.c:779
+#, c-format
 msgid ""
 "\n"
 "Recovery completed.\n"
@@ -7841,49 +7954,52 @@ msgstr ""
 "\n"
 "復旧が終わりました。\n"
 
-#: svnadmin/main.c:785
+#: svnadmin/main.c:786
 #, c-format
 msgid "The latest repos revision is %ld.\n"
 msgstr "リポジトリの最新のリビジョンは %ld です。\n"
 
-#: svnadmin/main.c:895
+#: svnadmin/main.c:896
 #, c-format
 msgid "Transaction '%s' removed.\n"
 msgstr "トランザクション '%s' が削除されました。\n"
 
-#: svnadmin/main.c:919
+#: svnadmin/main.c:920
+#, c-format
 msgid "Missing revision"
 msgstr "リビジョンが欠落しています"
 
-#: svnadmin/main.c:922
+#: svnadmin/main.c:923
+#, c-format
 msgid "Only one revision allowed"
 msgstr "リビジョンの指定は 1 つだけしかできません"
 
-#: svnadmin/main.c:928
+#: svnadmin/main.c:929
+#, c-format
 msgid "Exactly one file argument required"
 msgstr "ファイルの引数が 1 つだけ必要です"
 
-#: svnadmin/main.c:1036 svnlook/main.c:1830
+#: svnadmin/main.c:1037 svnlook/main.c:1851
 #, c-format
 msgid "UUID Token: %s\n"
 msgstr "UUID トークン: %s\n"
 
-#: svnadmin/main.c:1037 svnlook/main.c:1831
+#: svnadmin/main.c:1038 svnlook/main.c:1852
 #, c-format
 msgid "Owner: %s\n"
 msgstr "所有者: %s\n"
 
-#: svnadmin/main.c:1038 svnlook/main.c:1832
+#: svnadmin/main.c:1039 svnlook/main.c:1853
 #, c-format
 msgid "Created: %s\n"
 msgstr "作成日時: %s\n"
 
-#: svnadmin/main.c:1039 svnlook/main.c:1833
+#: svnadmin/main.c:1040 svnlook/main.c:1854
 #, c-format
 msgid "Expires: %s\n"
 msgstr "有効期限: %s\n"
 
-#: svnadmin/main.c:1041
+#: svnadmin/main.c:1042
 #, c-format
 msgid ""
 "Comment (%i lines):\n"
@@ -7894,7 +8010,7 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: svnadmin/main.c:1042
+#: svnadmin/main.c:1043
 #, c-format
 msgid ""
 "Comment (%i line):\n"
@@ -7905,21 +8021,29 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: svnadmin/main.c:1109
+#: svnadmin/main.c:1100
 #, c-format
 msgid "Path '%s' isn't locked.\n"
 msgstr "パス '%s' はロックされていません。\n"
 
-#: svnadmin/main.c:1121
+#: svnadmin/main.c:1112
 #, c-format
 msgid "Removed lock on '%s'.\n"
 msgstr "'%s' のロックを解除しました。\n"
 
-#: svnadmin/main.c:1331
+#: svnadmin/main.c:1217
+msgid ""
+"Multiple revision arguments encountered; try '-r M:N' instead of '-r M -r N'"
+msgstr ""
+"複数のリビジョン引数が指定されています。'-r <M> -r <N>' の代わりに '-r <M>:"
+"<N>' を使ってみてください"
+
+#: svnadmin/main.c:1322
+#, c-format
 msgid "subcommand argument required\n"
 msgstr "サブコマンドに引数が必要です\n"
 
-#: svnadmin/main.c:1416
+#: svnadmin/main.c:1407
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -7929,43 +8053,44 @@ msgstr ""
 "使用方法を知りたいときは 'svnadmin help %s' と打ってください。\n"
 
 # * Each empty revision only contains date and this log message.
-#: svndumpfilter/main.c:325
+#: svndumpfilter/main.c:319
 msgid "This is an empty revision for padding."
 msgstr "単に番号が飛ばないようにするための空のリビジョンです。"
 
-#: svndumpfilter/main.c:378
+#: svndumpfilter/main.c:389
 #, c-format
 msgid "Revision %ld committed as %ld.\n"
 msgstr "リビジョン %ld は %ld としてコミットされました。\n"
 
-#: svndumpfilter/main.c:386
+#: svndumpfilter/main.c:412
 #, c-format
 msgid "Revision %ld skipped.\n"
 msgstr "リビジョン %ld は飛ばされました。\n"
 
-#: svndumpfilter/main.c:489
+#: svndumpfilter/main.c:514
 #, c-format
 msgid "Invalid copy source path '%s'"
 msgstr "コピー元のパス '%s' が不正です。"
 
-#: svndumpfilter/main.c:532
-msgid "Node with dropped parent sneaked in"
-msgstr "親が取り除かれたノードが入ってしまっています"
+#: svndumpfilter/main.c:558
+#, c-format
+msgid "No valid copyfrom revision in filtered stream"
+msgstr "フィルタ通過後のストリーム中に適切なコピー元リビジョンがありません"
 
-#: svndumpfilter/main.c:638
+#: svndumpfilter/main.c:663
 msgid "Delta property block detected - not supported by svndumpfilter"
 msgstr ""
 "delta 属性ブロックが検出されました - svndumpfilter ではサポートされません"
 
 # * Description for 'svndumpfilter --quiet'.
 # * 29 half-size characters are displayed on the left.
-#: svndumpfilter/main.c:764
+#: svndumpfilter/main.c:789
 msgid "Do not display filtering statistics."
 msgstr "フィルタリングを行うときに統計を表示しません。"
 
 # * Description for 'svndumpfilter --drop-empty-revs'.
 # * 29 half-size characters are displayed on the left.
-#: svndumpfilter/main.c:766
+#: svndumpfilter/main.c:791
 msgid "Remove revisions emptied by filtering."
 msgstr ""
 "フィルタをかけたために空になったリビジョンを取り\n"
@@ -7973,7 +8098,7 @@ msgstr ""
 
 # * Description for 'svndumpfilter --renumber-revs'.
 # * 29 half-size characters are displayed on the left.
-#: svndumpfilter/main.c:768
+#: svndumpfilter/main.c:793
 msgid "Renumber revisions left after filtering."
 msgstr ""
 "フィルタをかけた後に残ったリビジョンに番号をふり\n"
@@ -7981,13 +8106,13 @@ msgstr ""
 
 # * Description for 'svndumpfilter --preserve-revprops'.
 # * 29 half-size characters are displayed on the left.
-#: svndumpfilter/main.c:770
+#: svndumpfilter/main.c:795
 msgid "Don't filter revision properties."
 msgstr "リビジョン属性にはフィルタをかけません。"
 
 # * Description for 'svndumpfilter exclude'.
 # * "exclude: " is displayed at the head of the first line.
-#: svndumpfilter/main.c:781
+#: svndumpfilter/main.c:806
 msgid ""
 "Filter out nodes with given prefixes from dumpstream.\n"
 "usage: svndumpfilter exclude PATH_PREFIX...\n"
@@ -7998,7 +8123,7 @@ msgstr ""
 
 # * Description for 'svndumpfilter include'.
 # * "include: " is displayed at the head of the first line.
-#: svndumpfilter/main.c:787
+#: svndumpfilter/main.c:812
 msgid ""
 "Filter out nodes without given prefixes from dumpstream.\n"
 "usage: svndumpfilter include PATH_PREFIX...\n"
@@ -8009,7 +8134,7 @@ msgstr ""
 
 # * Description for 'svndumpfilter help'.
 # * "help: " is displayed at the head of the first line.
-#: svndumpfilter/main.c:793
+#: svndumpfilter/main.c:818
 msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: svndumpfilter help [SUBCOMMAND...]\n"
@@ -8018,7 +8143,7 @@ msgstr ""
 "使用方法: svndumpfilter help [<サブコマンド>...]\n"
 
 # * Description for svndumpfilter.
-#: svndumpfilter/main.c:863
+#: svndumpfilter/main.c:889
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
@@ -8031,27 +8156,31 @@ msgstr ""
 "\n"
 "利用可能なサブコマンド:\n"
 
-#: svndumpfilter/main.c:917
+#: svndumpfilter/main.c:943
+#, c-format
 msgid "Excluding (and dropping empty revisions for) prefixes:\n"
 msgstr ""
 "次のプレフィックスをもつノードを取り除きます (空になったリビジョンは落としま"
 "す):\n"
 
-#: svndumpfilter/main.c:919
+#: svndumpfilter/main.c:945
+#, c-format
 msgid "Excluding prefixes:\n"
 msgstr "次のプレフィックスをもつノードを取り除きます:\n"
 
-#: svndumpfilter/main.c:921
+#: svndumpfilter/main.c:947
+#, c-format
 msgid "Including (and dropping empty revisions for) prefixes:\n"
 msgstr ""
 "次のプレフィックスをもつノードを残します (空になったリビジョンは落としま"
 "す):\n"
 
-#: svndumpfilter/main.c:923
+#: svndumpfilter/main.c:949
+#, c-format
 msgid "Including prefixes:\n"
 msgstr "次のプレフィックスをもつノードを残します:\n"
 
-#: svndumpfilter/main.c:950
+#: svndumpfilter/main.c:976
 #, c-format
 msgid ""
 "Dropped %d revision(s).\n"
@@ -8060,21 +8189,22 @@ msgstr ""
 "%d 個のリビジョンを取り除きました。\n"
 "\n"
 
-#: svndumpfilter/main.c:956
+#: svndumpfilter/main.c:982
 msgid "Revisions renumbered as follows:\n"
 msgstr "以下のようにリビジョン番号がふりなおされました:\n"
 
-#: svndumpfilter/main.c:984
+#: svndumpfilter/main.c:1009
 #, c-format
 msgid "   %ld => (dropped)\n"
 msgstr "   %ld => (取り除かれました)\n"
 
-#: svndumpfilter/main.c:999
+#: svndumpfilter/main.c:1024
 #, c-format
 msgid "Dropped %d node(s):\n"
 msgstr "%d 個のノードを取り除きました:\n"
 
-#: svndumpfilter/main.c:1204
+#: svndumpfilter/main.c:1229
+#, c-format
 msgid ""
 "\n"
 "Error: no prefixes supplied.\n"
@@ -8082,7 +8212,7 @@ msgstr ""
 "\n"
 "プレフィックスが与えられていません。\n"
 
-#: svndumpfilter/main.c:1247
+#: svndumpfilter/main.c:1272
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -8093,43 +8223,43 @@ msgstr ""
 
 # * Description for 'svnlook --revision'.
 # * 29 half-size characters are displayed on the left.
-#: svnlook/main.c:101
+#: svnlook/main.c:102
 msgid "specify revision number ARG"
 msgstr "リビジョン番号を <引数> と指定します"
 
 # * Description for 'svnlook --transaction'.
 # * 29 half-size characters are displayed on the left.
-#: svnlook/main.c:104
+#: svnlook/main.c:105
 msgid "specify transaction name ARG"
 msgstr "トランザクション名を <引数> と指定します"
 
 # * Description for 'svnlook --verbose'.
 # * 29 half-size characters are displayed on the left.
-#: svnlook/main.c:107
+#: svnlook/main.c:108
 msgid "be verbose"
 msgstr "冗長モードになります"
 
 # * Description for 'svnlook --show-ids'.
 # * 29 half-size characters are displayed on the left.
-#: svnlook/main.c:110
+#: svnlook/main.c:111
 msgid "show node revision ids for each path"
 msgstr "各パスについてノードのリビジョン ID を表示します"
 
 # * Description for 'svnlook --no-diff-added'.
 # * 29 half-size characters are displayed on the left.
-#: svnlook/main.c:116
+#: svnlook/main.c:117
 msgid "do not print differences for added files"
 msgstr "追加されたファイルに関しては差分を表示しません"
 
 # * Description for 'svnlook --diff-copy-from'.
 # * 29 half-size characters are displayed on the left.
-#: svnlook/main.c:119
+#: svnlook/main.c:120
 msgid "print differences against the copy source"
 msgstr "コピー元に対する差分を表示します"
 
 # * Description for 'svnlook --revprop'.
 # * 29 half-size characters are displayed on the left.
-#: svnlook/main.c:122
+#: svnlook/main.c:123
 msgid "operate on a revision property (use with -r or -t)"
 msgstr ""
 "リビジョン属性に作用します (-r または -t と共に\n"
@@ -8137,15 +8267,21 @@ msgstr ""
 
 # * Description for 'svnlook --full-paths'.
 # * 29 half-size characters are displayed on the left.
-#: svnlook/main.c:125
+#: svnlook/main.c:126
 msgid "show full paths instead of indenting them"
 msgstr ""
 "インデントを使った表現を用いずにフルパスを表示し\n"
 "                             ます"
 
+# * Description for 'svnlook --copy-info'.
+# * 29 half-size characters are displayed on the left.
+#: svnlook/main.c:129
+msgid "show details for copies"
+msgstr "コピーに関する詳細を表示します"
+
 # * Description for 'svnlook author'.
 # * "author: " is displayed at the head of the first line.
-#: svnlook/main.c:138
+#: svnlook/main.c:142
 msgid ""
 "usage: svnlook author REPOS_PATH\n"
 "\n"
@@ -8157,7 +8293,7 @@ msgstr ""
 
 # * Description for 'svnlook cat'.
 # * "cat: " is displayed at the head of the first line.
-#: svnlook/main.c:143
+#: svnlook/main.c:147
 msgid ""
 "usage: svnlook cat REPOS_PATH FILE_PATH\n"
 "\n"
@@ -8169,7 +8305,7 @@ msgstr ""
 
 # * Description for 'svnlook changed'.
 # * "changed: " is displayed at the head of the first line.
-#: svnlook/main.c:149
+#: svnlook/main.c:153
 msgid ""
 "usage: svnlook changed REPOS_PATH\n"
 "\n"
@@ -8181,7 +8317,7 @@ msgstr ""
 
 # * Description for 'svnlook date'.
 # * "date: " is displayed at the head of the first line.
-#: svnlook/main.c:154
+#: svnlook/main.c:158
 msgid ""
 "usage: svnlook date REPOS_PATH\n"
 "\n"
@@ -8193,7 +8329,7 @@ msgstr ""
 
 # * Description for 'svnlook diff'.
 # * "diff: " is displayed at the head of the first line.
-#: svnlook/main.c:159
+#: svnlook/main.c:163
 msgid ""
 "usage: svnlook diff REPOS_PATH\n"
 "\n"
@@ -8205,7 +8341,7 @@ msgstr ""
 
 # * Description for 'svnlook dirs-changed'.
 # * "dirs-changed: " is displayed at the head of the first line.
-#: svnlook/main.c:165
+#: svnlook/main.c:169
 msgid ""
 "usage: svnlook dirs-changed REPOS_PATH\n"
 "\n"
@@ -8220,7 +8356,7 @@ msgstr ""
 
 # * Description for 'svnlook help'.
 # * "help: " is displayed at the head of the first line.
-#: svnlook/main.c:171
+#: svnlook/main.c:175
 msgid ""
 "usage: svnlook help [SUBCOMMAND...]\n"
 "\n"
@@ -8232,7 +8368,7 @@ msgstr ""
 
 # * Description for 'svnlook history'.
 # * "history: " is displayed at the head of the first line.
-#: svnlook/main.c:176
+#: svnlook/main.c:180
 msgid ""
 "usage: svnlook history REPOS_PATH [PATH_IN_REPOS]\n"
 "\n"
@@ -8247,7 +8383,7 @@ msgstr ""
 
 # * Description for 'svnlook info'.
 # * "info: " is displayed at the head of the first line.
-#: svnlook/main.c:182
+#: svnlook/main.c:186
 msgid ""
 "usage: svnlook info REPOS_PATH\n"
 "\n"
@@ -8259,7 +8395,7 @@ msgstr ""
 
 # * Description for 'svnlook lock'.
 # * "lock: " is displayed at the head of the first line.
-#: svnlook/main.c:187
+#: svnlook/main.c:191
 msgid ""
 "usage: svnlook lock REPOS_PATH PATH_IN_REPOS\n"
 "\n"
@@ -8271,7 +8407,7 @@ msgstr ""
 
 # * Description for 'svnlook log'.
 # * "log: " is displayed at the head of the first line.
-#: svnlook/main.c:192
+#: svnlook/main.c:196
 msgid ""
 "usage: svnlook log REPOS_PATH\n"
 "\n"
@@ -8283,7 +8419,7 @@ msgstr ""
 
 # * Description for 'svnlook propget'.
 # * "propget: " is displayed at the head of the first line.
-#: svnlook/main.c:197
+#: svnlook/main.c:201
 msgid ""
 "usage: svnlook propget REPOS_PATH PROPNAME [PATH_IN_REPOS]\n"
 "\n"
@@ -8299,7 +8435,7 @@ msgstr ""
 
 # * Description for 'svnlook proplist'.
 # * "proplist: " is displayed at the head of the first line.
-#: svnlook/main.c:203
+#: svnlook/main.c:207
 msgid ""
 "usage: svnlook proplist REPOS_PATH [PATH_IN_REPOS]\n"
 "\n"
@@ -8315,7 +8451,7 @@ msgstr ""
 
 # * Description for 'svnlook tree'.
 # * "tree: " is displayed at the head of the first line.
-#: svnlook/main.c:210
+#: svnlook/main.c:214
 msgid ""
 "usage: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n"
 "\n"
@@ -8332,7 +8468,7 @@ msgstr ""
 
 # * Description for 'svnlook uuid'.
 # * "uuid: " is displayed at the head of the first line.
-#: svnlook/main.c:216
+#: svnlook/main.c:220
 msgid ""
 "usage: svnlook uuid REPOS_PATH\n"
 "\n"
@@ -8344,7 +8480,7 @@ msgstr ""
 
 # * Description for 'svnlook youngest'.
 # * "youngest: " is displayed at the head of the first line.
-#: svnlook/main.c:221
+#: svnlook/main.c:225
 msgid ""
 "usage: svnlook youngest REPOS_PATH\n"
 "\n"
@@ -8354,70 +8490,73 @@ msgstr ""
 "\n"
 "最新のリビジョン番号を表示します。\n"
 
-#: svnlook/main.c:589
+#: svnlook/main.c:609
 #, c-format
 msgid "Error creating dir '%s' (path exists)"
 msgstr "ディレクトリ '%s' の作成中にエラーが発生しました (パスが存在します)"
 
 # * This message replaces 'Index: ...' in the header of each diff in the output
 #   from 'svnlook diff'.
-#: svnlook/main.c:863
+#: svnlook/main.c:883
 #, c-format
 msgid "Copied: %s (from rev %ld, %s)\n"
 msgstr "コピーによる追加: %s (コピー元: リビジョン %ld, %s)\n"
 
 # * This message replaces 'Index' in the header of each diff in the output from
 #   'svnlook diff'.
-#: svnlook/main.c:941
+#: svnlook/main.c:961
 msgid "Added"
 msgstr "追加"
 
 # * This message replaces 'Index' in the header of each diff in the output from
 #   'svnlook diff'.
-#: svnlook/main.c:942
+#: svnlook/main.c:962
 msgid "Deleted"
 msgstr "削除"
 
 # * This message replaces 'Index' in the header of each diff in the output from
 #   'svnlook diff'.
-#: svnlook/main.c:943
+#: svnlook/main.c:963
 msgid "Modified"
 msgstr "変更"
 
 # * This message replaces 'Index' in the header of each diff in the output from
 #   'svnlook diff'.
-#: svnlook/main.c:944
+#: svnlook/main.c:964
 msgid "Index"
 msgstr "見出し"
 
-#: svnlook/main.c:956
+#: svnlook/main.c:976
+#, c-format
 msgid "(Binary files differ)\n"
 msgstr "(バイナリファイルが異なっています)\n"
 
-#: svnlook/main.c:1085
+#: svnlook/main.c:1105
 msgid "unknown"
 msgstr "不明です"
 
-#: svnlook/main.c:1230 svnlook/main.c:1323 svnlook/main.c:1393
+#: svnlook/main.c:1250 svnlook/main.c:1343 svnlook/main.c:1413
 #, c-format
 msgid "Transaction '%s' is not based on a revision; how odd"
 msgstr "トランザクション '%s' はリビジョンに基づいていません。おかしいですね"
 
-#: svnlook/main.c:1260
+#: svnlook/main.c:1280
 #, c-format
 msgid "'%s' is a URL, probably should be a path"
 msgstr "'%s' は URL です。おそらくそこはパスで指定するべきです"
 
-#: svnlook/main.c:1287
+#: svnlook/main.c:1307
 #, c-format
 msgid "Path '%s' is not a file"
 msgstr "パス '%s' はファイルではありません"
 
-#: svnlook/main.c:1373
+#: svnlook/main.c:1393
+#, c-format
 msgid "Can't create temporary directory"
 msgstr "一時ディレクトリを作成できません"
 
-#: svnlook/main.c:1473
+#: svnlook/main.c:1493
+#, c-format
 msgid ""
 "REVISION   PATH <ID>\n"
 "--------   ---------\n"
@@ -8425,7 +8564,8 @@ msgstr ""
 "リビジョン パス <ID>\n"
 "--------   ---------\n"
 
-#: svnlook/main.c:1478
+#: svnlook/main.c:1498
+#, c-format
 msgid ""
 "REVISION   PATH\n"
 "--------   ----\n"
@@ -8433,22 +8573,23 @@ msgstr ""
 "リビジョン パス\n"
 "--------   ----\n"
 
-#: svnlook/main.c:1523
+#: svnlook/main.c:1543
 #, c-format
 msgid "Property '%s' not found on revision %ld"
 msgstr "属性 '%s' がリビジョン %ld に見つかりません"
 
-#: svnlook/main.c:1527
+#: svnlook/main.c:1547
 #, c-format
 msgid "Property '%s' not found on path '%s' in revision %ld"
 msgstr "属性 '%s' がパス '%s' に見つかりません (リビジョン: %ld)"
 
-#: svnlook/main.c:1695 svnlook/main.c:1909
+#: svnlook/main.c:1716 svnlook/main.c:1930
+#, c-format
 msgid "Missing repository path argument"
 msgstr "リポジトリパスの引数が指定されていません"
 
 # * Description for svnlook.
-#: svnlook/main.c:1756
+#: svnlook/main.c:1777
 msgid ""
 "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
 "Note: any subcommand which takes the '--revision' and '--transaction'\n"
@@ -8471,11 +8612,11 @@ msgstr ""
 "\n"
 "利用可能なサブコマンド:\n"
 
-#: svnlook/main.c:1811
+#: svnlook/main.c:1832
 msgid "Missing path argument"
 msgstr "パスが引数に指定されていません"
 
-#: svnlook/main.c:1836
+#: svnlook/main.c:1857
 #, c-format
 msgid ""
 "Comment (%i lines):\n"
@@ -8484,7 +8625,7 @@ msgstr ""
 "コメント (%i 行):\n"
 "%s\n"
 
-#: svnlook/main.c:1837
+#: svnlook/main.c:1858
 #, c-format
 msgid ""
 "Comment (%i line):\n"
@@ -8493,37 +8634,40 @@ msgstr ""
 "コメント (%i 行):\n"
 "%s\n"
 
-#: svnlook/main.c:1883
+#: svnlook/main.c:1904
+#, c-format
 msgid "Missing propname argument"
 msgstr "属性名が引数に指定されていません"
 
-#: svnlook/main.c:1884
+#: svnlook/main.c:1905
+#, c-format
 msgid "Missing propname and repository path arguments"
 msgstr "引数に属性名とリポジトリパスがありません"
 
-#: svnlook/main.c:1890
+#: svnlook/main.c:1911
 msgid "Missing propname or repository path argument"
 msgstr "引数に属性名かリポジトリパスがありません"
 
-#: svnlook/main.c:2045
+#: svnlook/main.c:2066
 msgid "Invalid revision number supplied"
 msgstr "与えられたリビジョン番号が不正です"
 
-#: svnlook/main.c:2103
+#: svnlook/main.c:2128
 msgid ""
 "The '--transaction' (-t) and '--revision' (-r) arguments can not co-exist"
 msgstr "'--transaction' (-t) と '--revision' (-r) の引数は一緒に指定できません"
 
-#: svnlook/main.c:2172
+#: svnlook/main.c:2197
+#, c-format
 msgid "Repository argument required\n"
 msgstr "リポジトリの引数が必要です\n"
 
-#: svnlook/main.c:2181
+#: svnlook/main.c:2206
 #, c-format
 msgid "'%s' is a URL when it should be a path\n"
 msgstr "'%s' は URL です。そこはパスで指定するべきです\n"
 
-#: svnlook/main.c:2229
+#: svnlook/main.c:2254
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -8534,13 +8678,13 @@ msgstr ""
 
 # * Description for 'svnserve --daemon'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:102
+#: svnserve/main.c:103
 msgid "daemon mode"
 msgstr "デーモンモード"
 
 # * Description for 'svnserve --listen-port'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:104
+#: svnserve/main.c:105
 msgid "listen port (for daemon mode)"
 msgstr ""
 "指定されたポート番号で待ち受けます (デーモンモー\n"
@@ -8548,7 +8692,7 @@ msgstr ""
 
 # * Description for 'svnserve --listen-host'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:106
+#: svnserve/main.c:107
 msgid "listen hostname or IP address (for daemon mode)"
 msgstr ""
 "指定されたホスト名または IP アドレスで待ち受けま\n"
@@ -8556,31 +8700,31 @@ msgstr ""
 
 # * Description for 'svnserve --foreground'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:108
+#: svnserve/main.c:109
 msgid "run in foreground (useful for debugging)"
 msgstr "フォアグラウンドで実行します (デバッグに便利です)"
 
 # * Description for 'svn{serve,version} --help'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:109 svnversion/main.c:181
+#: svnserve/main.c:110 svnversion/main.c:181
 msgid "display this help"
 msgstr "このヘルプを表示します"
 
 # * Description for 'svnserve --inetd'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:112
+#: svnserve/main.c:113
 msgid "inetd mode"
 msgstr "inetd モード"
 
 # * Description for 'svnserve --root'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:113
+#: svnserve/main.c:114
 msgid "root of directory to serve"
 msgstr "サービスを提供するディレクトリのルート"
 
 # * Description for 'svnserve --read-only'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:114
+#: svnserve/main.c:115
 msgid "deprecated; use repository config file"
 msgstr ""
 "推奨されません。リポジトリ内の設定ファイルを利用\n"
@@ -8588,13 +8732,13 @@ msgstr ""
 
 # * Description for 'svnserve --tunnel'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:115
+#: svnserve/main.c:116
 msgid "tunnel mode"
 msgstr "トンネルモード"
 
 # * Description for 'svnserve --tunnel-user'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:117
+#: svnserve/main.c:118
 msgid "tunnel username (default is current uid's name)"
 msgstr ""
 "トンネルモードでのユーザ名 (デフォルトは現在の\n"
@@ -8602,23 +8746,23 @@ msgstr ""
 
 # * Description for 'svnserve --threads'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:119
+#: svnserve/main.c:120
 msgid "use threads instead of fork"
 msgstr "fork の代わりにスレッドを用います"
 
 # * Description for 'svnserve --listen-once'.
 # * 29 half-size characters are displayed on the left.
-#: svnserve/main.c:121
+#: svnserve/main.c:122
 msgid "listen once (useful for debugging)"
 msgstr "一度だけ待ち受けます (デバッグに便利です)"
 
-#: svnserve/main.c:132
+#: svnserve/main.c:133
 #, c-format
 msgid "Type '%s --help' for usage.\n"
 msgstr "使用方法を知りたいときは '%s --help' と打ってください。\n"
 
 # * Description for svnserve.
-#: svnserve/main.c:141
+#: svnserve/main.c:142
 msgid ""
 "Usage: svnserve [options]\n"
 "\n"
@@ -8628,7 +8772,8 @@ msgstr ""
 "\n"
 "有効なオプション:\n"
 
-#: svnserve/main.c:359
+#: svnserve/main.c:362
+#, c-format
 msgid ""
 "Warning: -R is deprecated.\n"
 "Anonymous access is now read-only by default.\n"
@@ -8646,55 +8791,58 @@ msgstr ""
 "  auth-access = read|write|none (default write)\n"
 "今のところすべてのアクセスを強制的に読み取り専用としています\n"
 
-#: svnserve/main.c:381
-msgid "Option --tunnel-user is only valid in tunnel mode.\n"
-msgstr "オプション --tunnel-user はトンネルモードでのみ有効です。\n"
-
-#: svnserve/main.c:388
+#: svnserve/main.c:382
 msgid "You must specify exactly one of -d, -i, -t or -X.\n"
 msgstr "-d, -i, -t, -X のいずれかを一つだけ指定しなければいけません。\n"
 
-#: svnserve/main.c:429
+#: svnserve/main.c:392
 #, c-format
-msgid "Can't get address info: %s\n"
-msgstr "アドレス情報を取得できません: %s\n"
+msgid "Option --tunnel-user is only valid in tunnel mode.\n"
+msgstr "オプション --tunnel-user はトンネルモードでのみ有効です。\n"
 
 #: svnserve/main.c:446
 #, c-format
-msgid "Can't create server socket: %s\n"
-msgstr "サーバソケットを作成できません: %s\n"
+msgid "Can't get address info"
+msgstr "アドレス情報を取得できません"
 
-#: svnserve/main.c:460
+#: svnserve/main.c:462
 #, c-format
-msgid "Can't bind server socket: %s\n"
-msgstr "サーバソケットをバインドできません: %s\n"
+msgid "Can't create server socket"
+msgstr "サーバソケットを作成できません"
 
-#: svnserve/main.c:503
+#: svnserve/main.c:475
 #, c-format
-msgid "Can't accept client connection: %s\n"
-msgstr "クライアントの接続を受け入れることができません: %s\n"
+msgid "Can't bind server socket"
+msgstr "サーバソケットをバインドできません"
 
-#: svnserve/main.c:558
+#: svnserve/main.c:518
 #, c-format
-msgid "Can't create threadattr: %s\n"
-msgstr "スレッド属性を作成できません: %s\n"
+msgid "Can't accept client connection"
+msgstr "クライアントの接続を受け入れることができません"
 
-#: svnserve/main.c:567
+#: svnserve/main.c:572
 #, c-format
-msgid "Can't set detached state: %s\n"
-msgstr "独立した状態を設定できません: '%s'\n"
+msgid "Can't create threadattr"
+msgstr "スレッド属性を作成できません"
 
-#: svnserve/main.c:581
+#: svnserve/main.c:580
 #, c-format
-msgid "Can't create thread: %s\n"
-msgstr "スレッドを作成できません: %s\n"
+msgid "Can't set detached state"
+msgstr "独立した状態を設定できません"
+
+#: svnserve/main.c:593
+#, c-format
+msgid "Can't create thread"
+msgstr "スレッドを作成できません"
 
 #: svnversion/main.c:90
+#, c-format
 msgid "Type 'svnversion --help' for usage.\n"
 msgstr "使用方法を知りたいときは 'svnversion --help' と打ってください。\n"
 
 # * Description for svnversion.
 #: svnversion/main.c:101
+#, c-format
 msgid ""
 "usage: svnversion [OPTIONS] [WC_PATH [TRAIL_URL]]\n"
 "\n"
@@ -8786,6 +8934,33 @@ msgstr "エクスポートされたものです%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
+
+#~ msgid "Can't sett process '%s' child errfile for error handler"
+#~ msgstr ""
+#~ "プロセス '%s' に対してエラーハンドラ用の子のエラー出力ファイルを設定できま"
+#~ "せん"
+
+#~ msgid ""
+#~ "'%s' is scheduled for deletion; it must be committed before it can be "
+#~ "overwritten"
+#~ msgstr ""
+#~ "'%s' は削除準備中です。上書きする可能性がある場合、その前にコミットしなけ"
+#~ "ればなりません"
+
+#~ msgid "Error removing props for '%s'"
+#~ msgstr "'%s' の属性を削除する際にエラーが発生しました"
+
+#~ msgid "Error restoring props for '%s'"
+#~ msgstr "'%s' の属性を元に戻す際にエラーが発生しました"
+
+#~ msgid "Node with dropped parent sneaked in"
+#~ msgstr "親が取り除かれたノードが入ってしまっています"
+
+#~ msgid "Move failed"
+#~ msgstr "移動できませんでした"
+
+#~ msgid "Creating readme file"
+#~ msgstr "readme ファイルを作成しています"
 
 #~ msgid "Unable to parse lock data"
 #~ msgstr "ロックデータをパースできません"
@@ -10761,3 +10936,166 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "'%s' is scheduled for deletion; it must be committed before being "
 #~ "overwritten"
 #~ msgstr "'%s' は削除準備中です。上書きする前にコミットしてください"
+
+#~ msgid "Could not get content-type from response."
+#~ msgstr "レスポンスから content-type を取得できませんでした。"
+
+# * Description for 'svn diff'.
+# * "diff (di): " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Display the differences between two paths.\n"
+#~ "usage: 1. diff [-r N[:M]] [TARGET[@REV]...]\n"
+#~ "       2. diff [-r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT[@NEWREV]] "
+#~ "\\\n"
+#~ "               [PATH...]\n"
+#~ "       3. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n"
+#~ "\n"
+#~ "  1. Display the changes made to TARGETs as they are seen in REV between\n"
+#~ "     two revisions.  TARGETs may be working copy paths or URLs.\n"
+#~ "\n"
+#~ "     N defaults to BASE if any TARGET is a working copy path, otherwise "
+#~ "it\n"
+#~ "     must be specified.  M defaults to the current working version if "
+#~ "any\n"
+#~ "     TARGET is a working copy path, otherwise it defaults to HEAD.\n"
+#~ "\n"
+#~ "  2. Display the differences between OLD-TGT as it was seen in OLDREV "
+#~ "and\n"
+#~ "     NEW-TGT as it was seen in NEWREV.  PATHs, if given, are relative to\n"
+#~ "     OLD-TGT and NEW-TGT and restrict the output to differences for "
+#~ "those\n"
+#~ "     paths.  OLD-TGT and NEW-TGT may be working copy paths or URL"
+#~ "[@REV]. \n"
+#~ "     NEW-TGT defaults to OLD-TGT if not specified.  -r N makes OLDREV "
+#~ "default\n"
+#~ "     to N, -r N:M makes OLDREV default to N and NEWREV default to M.\n"
+#~ "\n"
+#~ "  3. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL"
+#~ "[@NEWREV]'\n"
+#~ "\n"
+#~ "  Use just 'svn diff' to display local modifications in a working copy.\n"
+#~ msgstr ""
+#~ "2 つのパスの差分を表示します。\n"
+#~ "使用方法: 1. diff [-r <N>[:<M>]] [<対象>[@<REV>]...]\n"
+#~ "          2. diff [-r <N>[:<M>]] --old=<古い対象>[@<古い REV>] \\\n"
+#~ "                  [--new=<新しい対象>[@<新しい REV>]] [<パス>...]\n"
+#~ "          3. diff <古い URL>[@<古い REV>] <新しい URL>[@<新しい REV>]\n"
+#~ "\n"
+#~ "  1. リビジョン <REV> において <対象> にあった項目の、2 つのリビジョン間で"
+#~ "の\n"
+#~ "     差分を表示します。<対象> は、作業コピーのパスでも URL でもかまいませ"
+#~ "ん。\n"
+#~ "\n"
+#~ "     <対象> がすべて作業コピーのパスである場合 <N> はデフォルトで BASE で"
+#~ "すが、\n"
+#~ "     そうでない場合は指定されなければなりません。<対象> がすべて作業コピー"
+#~ "の\n"
+#~ "     パスである場合 <M> はデフォルトで現在作業中のリビジョンですが、そうで"
+#~ "な\n"
+#~ "     い場合デフォルトでは HEAD です。\n"
+#~ "\n"
+#~ "  2. リビジョン <古い REV> において <古い対象> にあった項目と、リビジョン "
+#~ "<新\n"
+#~ "     しい REV> において <新しい対象> にあった項目との差分を表示します。<パ"
+#~ "ス>\n"
+#~ "     に <古い対象> と <新しい対象> に対する相対パスを与え、それらのパスに"
+#~ "関す\n"
+#~ "     る差分だけを出力するようにすることができます。<古い対象> と <新しい対"
+#~ "象>\n"
+#~ "     は作業コピーのパスでも URL[@<REV>] でもかまいません。<新しい対象> "
+#~ "は、明\n"
+#~ "     示的に指定されない場合はデフォルトで <古い対象> となります。-r <N> が"
+#~ "あ\n"
+#~ "     る場合 <古い REV> はデフォルトで <N> となります。また、-r <N>:<M> が"
+#~ "ある\n"
+#~ "     場合 <古い REV> はデフォルトで <N> となり、<新しい REV> はデフォルト"
+#~ "で\n"
+#~ "     <M> となります。\n"
+#~ "\n"
+#~ "  3. 'svn diff --old=<古い URL>[@<古い REV>] --new=<新しい URL>[@<新しい "
+#~ "REV>]'\n"
+#~ "     の短縮形です。\n"
+#~ "\n"
+#~ "  作業コピーにローカルで加えられた変更を見るには、単に 'svn diff' を使って"
+#~ "く\n"
+#~ "  ださい。\n"
+
+# * Description for 'svn merge'.
+# * "merge: " is displayed at the head of the first line.
+#~ msgid ""
+#~ "Apply the differences between two sources to a working copy path.\n"
+#~ "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
+#~ "       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
+#~ "       3. merge -r N:M SOURCE[@REV] [WCPATH]\n"
+#~ "\n"
+#~ "  1. In the first form, the source URLs are specified at revisions\n"
+#~ "     N and M.  These are the two sources to be compared.  The revisions\n"
+#~ "     default to HEAD if omitted.\n"
+#~ "\n"
+#~ "  2. In the second form, the URLs corresponding to the source working\n"
+#~ "     copy paths define the sources to be compared.  The revisions must\n"
+#~ "     be specified.\n"
+#~ "\n"
+#~ "  3. In the third form, SOURCE can be a URL, or working copy item\n"
+#~ "     in which case the corresponding URL is used.  This URL in\n"
+#~ "     revision REV is compared as it existed between revisions N and \n"
+#~ "     M.  If REV is not specified, HEAD is assumed.\n"
+#~ "\n"
+#~ "  WCPATH is the working copy path that will receive the changes.\n"
+#~ "  If WCPATH is omitted, a default value of '.' is assumed, unless\n"
+#~ "  the sources have identical basenames that match a file within '.':\n"
+#~ "  in which case, the differences will be applied to that file.\n"
+#~ msgstr ""
+#~ "マージ元 2 つの間の差分を作業コピーのパスに適用します。\n"
+#~ "使用方法: 1. merge <マージ元 URL1>[@<N>] <マージ元 URL2>[@<M>] \\\n"
+#~ "                   [<作業コピーパス>]\n"
+#~ "          2. merge <マージ元作業コピーパス 1>@<N> \\\n"
+#~ "                   <マージ元作業コピーパス 2>@<M> [<作業コピーパス>]\n"
+#~ "          3. merge -r <N>:<M> <マージ元>[@<REV>] [<作業コピーパス>]\n"
+#~ "\n"
+#~ "  1. 最初の形では、2 つの <マージ元 URL> は、それぞれリビジョンを <N> およ"
+#~ "び\n"
+#~ "     <M> に指定されています。これらは、比較される 2 つのマージ元です。省略"
+#~ "さ\n"
+#~ "     れた場合のデフォルトは HEAD です。\n"
+#~ "\n"
+#~ "  2. 2 番目の形では、2 つの <マージ元作業コピーパス> に対応する URL が、比"
+#~ "較\n"
+#~ "     されるマージ元です。リビジョンは指定されなければなりません。\n"
+#~ "\n"
+#~ "  3. 3 番目の形では、<マージ元> は URL または作業コピー内の項目で、後者の"
+#~ "場合\n"
+#~ "     は対応する URL が比較に利用されます。リビジョン <REV> でこの URL に"
+#~ "あっ\n"
+#~ "     た項目が、リビジョン <N> から <M> まで存在したとして比較されます。"
+#~ "<REV>\n"
+#~ "     が指定されない場合、HEAD であると見なされます。\n"
+#~ "\n"
+#~ "  <作業コピーパス> は、変更を受け取る作業コピーのパスです。<作業コピーパス"
+#~ ">\n"
+#~ "  が省かれた場合はデフォルトの値 '.' であると見なされます。ただし、2 つの"
+#~ "マー\n"
+#~ "  ジ元のベース名が同一でその名前のファイルが '.' に存在する場合、差分はそ"
+#~ "のファ\n"
+#~ "  イルに適用されます。\n"
+
+#~ msgid "Can't get address info: %s\n"
+#~ msgstr "アドレス情報を取得できません: %s\n"
+
+#~ msgid "Can't create server socket: %s\n"
+#~ msgstr "サーバソケットを作成できません: %s\n"
+
+#~ msgid "Can't bind server socket: %s\n"
+#~ msgstr "サーバソケットをバインドできません: %s\n"
+
+#~ msgid "Can't accept client connection: %s\n"
+#~ msgstr "クライアントの接続を受け入れることができません: %s\n"
+
+#~ msgid "Can't create threadattr: %s\n"
+#~ msgstr "スレッド属性を作成できません: %s\n"
+
+#~ msgid "Can't set detached state: %s\n"
+#~ msgstr "独立した状態を設定できません: '%s'\n"
+
+#~ msgid "Can't create thread: %s\n"
+#~ msgstr "スレッドを作成できません: %s\n"

@@ -14,6 +14,13 @@ import generator.swig
 import getversion
 
 
+def _warning(msg):
+  sys.stderr.write("WARNING: %s\n" % msg)
+
+def _error(msg):
+  sys.stderr.write("ERROR: %s\n" % msg)
+  sys.exit(1)
+
 class GeneratorBase:
 
   #
@@ -55,8 +62,10 @@ class GeneratorBase:
     # Read in the global options
     self.includes = \
         _collect_paths(parser.get('options', 'includes'))
-    self.swig_includes = \
-        _collect_paths(parser.get('options', 'swig-includes'))
+    self.private_includes = \
+        _collect_paths(parser.get('options', 'private-includes'))
+    self.private_built_includes = \
+        string.split(parser.get('options', 'private-built-includes'))
     self.apache_files = \
         _collect_paths(parser.get('options', 'static-apache-files'))
     self.scripts = \
@@ -64,8 +73,6 @@ class GeneratorBase:
     self.bdb_scripts = \
         _collect_paths(parser.get('options', 'bdb-test-scripts'))
 
-    self.include_dirs = parser.get('options','include-dirs')
-    self.swig_include_dirs = parser.get('options','swig-include-dirs')
     self.include_wildcards = \
       string.split(parser.get('options', 'include-wildcards'))
     self.swig_lang = string.split(parser.get('options', 'swig-languages'))
@@ -135,7 +142,7 @@ class GeneratorBase:
 
   def compute_hdrs(self):
     """Get a list of the header files"""
-    all_includes = map(native_path, self.includes + self.swig_includes)
+    all_includes = map(native_path, self.includes + self.private_includes)
     for d in unique(self.target_dirs):
       for wildcard in self.include_wildcards:
         hdrs = glob.glob(os.path.join(native_path(d), wildcard))
@@ -145,7 +152,8 @@ class GeneratorBase:
   def compute_hdr_deps(self):
     """Compute the dependencies of each header file"""
 
-    include_deps = IncludeDependencyInfo(self.compute_hdrs())
+    include_deps = IncludeDependencyInfo(self.compute_hdrs(),
+        map(native_path, self.private_built_includes))
 
     for objectfile, sources in self.graph.get_deps(DT_OBJECT):
       assert len(sources) == 1
@@ -547,11 +555,6 @@ class TargetSWIG(TargetLib):
     # the library depends upon the object
     self.gen_obj.graph.add(DT_LINK, self.name, ofile)
 
-    # Some languages may depend on swig runtime libraries
-    if self.lang in ('python', 'perl'):
-      self.gen_obj.graph.add(DT_LINK, self.name,
-                             TargetSWIGRuntime(self.lang, {}, self.gen_obj))
-
     # the specified install area depends upon the library
     self.gen_obj.graph.add(DT_INSTALL, 'swig-' + lang_abbrev[self.lang], self)
 
@@ -570,23 +573,10 @@ class TargetSWIG(TargetLib):
       target = self.targets.get(target.lang, None)
       return target and [target] or [ ]
 
-class TargetSWIGRuntime(TargetLinked):
-  def __init__(self, lang, options, gen_obj):
-    name = "<SWIG Runtime Library for " + lang_full_name[lang] + ">"
-    TargetLinked.__init__(self, name, options, gen_obj)
-    self.external_lib = "$(LSWIG" + string.upper(lang_abbrev[lang]) + ")"
-
 class TargetSWIGLib(TargetLib):
   def __init__(self, name, options, gen_obj):
     TargetLib.__init__(self, name, options, gen_obj)
     self.lang = options.get('lang')
-
-  def add_dependencies(self):
-    TargetLib.add_dependencies(self)
-    # Some languages may depend on swig runtime libraries
-    if self.lang in ('python', 'perl'):
-      self.gen_obj.graph.add(DT_LINK, self.name,
-                             TargetSWIGRuntime(self.lang, {}, self.gen_obj))
 
   class Section(TargetLib.Section):
     def get_dep_targets(self, target):
@@ -843,6 +833,13 @@ def _collect_paths(pats, path=None):
 
   return result
 
+_re_public_include = re.compile(r'^subversion/include/(\w+)\.h$')
+def _is_public_include(fname):
+  return _re_public_include.match(build_path(fname))
+
+def _swig_include_wrapper(fname):
+  return native_path(_re_public_include.sub(
+    r"subversion/bindings/swig/proxy/\1_h.swg", build_path(fname)))
 
 class IncludeDependencyInfo:
   """Finds all dependencies between a named set of headers, and computes
@@ -852,18 +849,25 @@ class IncludeDependencyInfo:
 
   This class works exclusively in native-style paths."""
 
-  def __init__(self, filenames):
-    """Scan all files in FILENAMES, which should be a sequence of paths to
-    all header files that this IncludeDependencyInfo instance should
-    consider as interesting when following and reporting dependencies - i.e.
-    all the Subversion header files, no system header files."""
+  def __init__(self, filenames, fnames_nonexist):
+    """FILENAMES and FNAMES_NONEXIST together, which should be sequences of
+    paths to header files, define the headers that this IncludeDependencyInfo
+    instance should consider as interesting when following and reporting
+    dependencies - i.e.  all the Subversion header files, no system header
+    files.  FILENAMES are those includes that exist, and are to be scanned to
+    gather dependency info.  FNAMES_NONEXIST are those includes which will be
+    created as part of the build process, so cannot be scanned now - 
+    dependencies on these files will be reported, and they are assumed to not
+    depend themselves on any further interesting includes.
+    In addition to these two parameters, special handling for SWIG proxy
+    includes is hardcoded."""
     
     # This defines the domain (i.e. set of files) in which dependencies are
     # being located. Its structure is:
     # { 'basename.h': [ 'path/to/something/named/basename.h',
     #                   'path/to/another/named/basename.h', ] }
     self._domain = {}
-    for fname in filenames:
+    for fname in filenames + fnames_nonexist:
       bname = os.path.basename(fname)
       if not self._domain.has_key(bname):
         self._domain[bname] = []
@@ -874,6 +878,8 @@ class IncludeDependencyInfo:
     self._deps = {}
     for fname in filenames:
       self._deps[fname] = self._scan_for_includes(fname)
+    for fname in fnames_nonexist:
+      self._deps[fname] = {}
 
     # Keep recomputing closures until we see no more changes
     while 1:
@@ -881,7 +887,25 @@ class IncludeDependencyInfo:
       for fname in filenames:
         changes = self._include_closure(self._deps[fname]) or changes
       if not changes:
-        return
+        break
+
+    # Extend self._deps and self._domain with dependency information for
+    # autogenerated SWIG header files
+    for fname in filenames:
+      if _is_public_include(fname):
+        hdrs = { self._domain["proxy.swg"][0]: None,
+                 self._domain["apr.swg"][0]: None,
+                 fname: None }
+        for h in self._deps[fname].keys():
+          if _is_public_include(h):
+            hdrs[_swig_include_wrapper(h)] = None
+          else:
+            raise RuntimeError, "Public include '%s' depends on '%s', " \
+                "which is not a public include! What's going on?" % (fname, h)
+        swig_fname = _swig_include_wrapper(fname)
+        swig_bname = os.path.basename(swig_fname)
+        self._deps[swig_fname] = hdrs
+        self._domain[swig_bname] = [ swig_fname ]
 
   def query(self, fname):
     """Scan the C file FNAME, and return the full paths of each include file
@@ -905,7 +929,8 @@ class IncludeDependencyInfo:
       hdrs.update(self._deps[h])
     return (len(keys) != len(hdrs))
 
-  _re_include = re.compile(r'^\s*[#%]\s*(?:include|import)\s*[<"]?([^<">;\s]+)')
+  _re_include = \
+      re.compile(r'^\s*([#%])\s*(?:include|import)\s*([<"])?([^<">;\s]+)')
   def _scan_for_includes(self, fname):
     """Scan C source file FNAME and return the basenames of any headers
     which are directly included, and within the set defined when this
@@ -916,27 +941,40 @@ class IncludeDependencyInfo:
     hdrs = { }
     for line in fileinput.input(fname):
       match = self._re_include.match(line)
-      if match:
-        include_param = native_path(match.group(1))
-        bname = os.path.basename(include_param)
-        if not self._domain.has_key(bname):
-          bname = string.replace(bname, "_h.swg", ".h")
-        if self._domain.has_key(bname):
-          include_fnames = self._domain[bname]
-          if len(include_fnames) == 1:
-            include_fname = include_fnames[0]
-          else:
-            include_fname = os.path.normpath(os.path.join(
-              os.path.dirname(fname), include_param))
-            if include_fname not in include_fnames:
-              raise RuntimeError, (
-                  """Unable to determine which file is being included
-                  Include Parameter: '%s'
-                  Including File: '%s'
-                  Expected but not found: '%s'
-                  Possibilities: '%s'"""
-                  % (include_param, fname, include_fname, include_fnames))
-          hdrs[include_fname] = None
+      if not match:
+        continue
+      include_param = native_path(match.group(3))
+      direct_possibility_fname = os.path.normpath(os.path.join(
+        os.path.dirname(fname), include_param))
+      domain_fnames = self._domain.get(os.path.basename(include_param), [])
+      if direct_possibility_fname in domain_fnames:
+        hdrs[direct_possibility_fname] = None
+      elif include_param.find(os.sep) == -1 and len(domain_fnames) == 1:
+        hdrs[domain_fnames[0]] = None
+      else:
+        # None found
+        if include_param.find(os.sep) == -1 and len(domain_fnames) > 1:
+          _error(
+              "Unable to determine which file is being included\n"
+              "  Include Parameter: '%s'\n"
+              "  Including File: '%s'\n"
+              "  Direct possibility: '%s'\n"
+              "  Other possibilities: %s\n"
+              % (include_param, fname, direct_possibility_fname,
+                domain_fnames))
+        if match.group(2) == '"':
+          _warning('"%s" header not found, file %s' % (include_param, fname))
+        continue
+      if match.group(2) == '<':
+        _warning('<%s> header *found*, file %s' % (include_param, fname))
+      # The above warnings help to avoid the following problems:
+      # - If header is uses the correct <> or "" convention, then the warnings
+      #   reveal if the build generator does/does not make dependencies for it 
+      #   when it should not/should - e.g. might reveal changes needed to
+      #   build.conf.
+      #   ...and...
+      # - If the generator is correct, them the warnings reveal incorrect use
+      #   of <>/"" convention.
     return hdrs
 
 

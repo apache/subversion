@@ -1,0 +1,6 @@
+This directory contains tools that work with Subversion, but that
+Subversion does not depend on for normal operations.  These tools are
+maintained collectively by the Subversion project, and are under the
+same open source copyright as Subversion itself.
+
+See also ../contrib/.

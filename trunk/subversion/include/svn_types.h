@@ -199,6 +199,38 @@ enum svn_recurse_kind
   svn_recursive
 };
 
+/**
+ * It is sometimes convenient to indicate which parts of an @c svn_dirent_t
+ * object you are actually interested in, so that calculating and sending
+ * the data corresponding to the other fields can be avoided.  These values
+ * can be used for that purpose.
+ *
+ * @defgroup svn_dirent_fields dirent fields
+ * @{
+ */
+
+/** An indication that you are interested in the @c kind field */
+#define SVN_DIRENT_KIND        0x00001
+
+/** An indication that you are interested in the @c size field */
+#define SVN_DIRENT_SIZE        0x00002
+
+/** An indication that you are interested in the @c has_props field */
+#define SVN_DIRENT_HAS_PROPS   0x00004
+
+/** An indication that you are interested in the @c created_rev field */
+#define SVN_DIRENT_CREATED_REV 0x00008
+
+/** An indication that you are interested in the @c time field */
+#define SVN_DIRENT_TIME        0x00010
+
+/** An indication that you are interested in the @c last_author field */
+#define SVN_DIRENT_LAST_AUTHOR 0x00020
+
+/** A combination of all the dirent fields */
+#define SVN_DIRENT_ALL ~((apr_uint32_t ) 0)
+
+/** @} */
 
 /** A general subversion directory entry. */
 typedef struct svn_dirent_t
@@ -360,6 +392,16 @@ svn_commit_info_t *
 svn_create_commit_info (apr_pool_t *pool);
 
 
+/**
+ * Return a deep copy @a src_commit_info allocated in @a pool.
+ *
+ * @since New in 1.4.
+ */
+svn_commit_info_t *
+svn_commit_info_dup (const svn_commit_info_t *src_commit_info,
+                     apr_pool_t *pool);
+
+
 /** A structure to represent a path that changed for a log entry. */
 typedef struct svn_log_changed_path_t
 {
@@ -373,6 +415,15 @@ typedef struct svn_log_changed_path_t
   svn_revnum_t copyfrom_rev;
 
 } svn_log_changed_path_t;
+
+
+/**
+ * Return a deep copy of @a changed_path, allocated in @a pool.
+ *
+ * @since New in 1.3.
+ */
+svn_log_changed_path_t *svn_log_changed_path_dup (
+  const svn_log_changed_path_t *changed_path, apr_pool_t *pool);
 
 
 /** The callback invoked by log message loopers, such as
@@ -416,15 +467,43 @@ typedef svn_error_t *(*svn_log_message_receiver_t)
 
 /** Callback function type for commits.
  *
- * When a commit succeeds, an instance of this is invoked on the @a
- * new_revision, @a date, and @a author of the commit, along with the
- * @a baton closure.
+ * When a commit succeeds, an instance of this is invoked with the
+ * @a commit_info, along with the @a baton closure.
+ * @a pool can be used for temporary allocations.
+ *
+ * @since New in 1.4.
+ */
+typedef svn_error_t * (*svn_commit_callback2_t) (
+    const svn_commit_info_t *commit_info,
+    void *baton,
+    apr_pool_t *pool);
+
+/** Same as @c svn_commit_callback2_t, but uses individual
+ * data elements instead of the @c svn_commit_info_t structure
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 typedef svn_error_t * (*svn_commit_callback_t) (
     svn_revnum_t new_revision,
     const char *date,
     const char *author,
     void *baton);
+
+
+/** Return, in @a *callback2 and @a *callback2_baton a function/baton that
+ * will call @a callback/@a callback_baton, allocating the @a *callback2_baton
+ * in @a pool.
+ *
+ * @note This is used by compatibility wrappers, which exist in more than
+ * Subversion core library.
+ *
+ * @since New in 1.4.
+ */
+void svn_compat_wrap_commit_callback (svn_commit_callback_t callback,
+                                      void *callback_baton,
+                                      svn_commit_callback2_t *callback2,
+                                      void **callback2_baton,
+                                      apr_pool_t *pool);
 
 
 /** The maximum amount we (ideally) hold in memory at a time when

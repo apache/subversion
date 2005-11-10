@@ -18,22 +18,14 @@
 
 #ifdef SWIGPYTHON
 
-#if SVN_SWIG_VERSION >= 103024
 %feature("autodoc",1);
-#else
-/* Old versions of SWIG can't handle __attribute__ */
-#define __attribute__(x)
-
-/* Old versions of SWIG can't handle functions
-   where the pool is not the last argument */
-%ignore svn_stream_printf;
-%ignore svn_stream_printf_from_utf8;
-%ignore svn_opt_print_generic_help;
-#endif
 
 %{
 static PyObject * _global_svn_swig_py_pool = NULL;
 %}
+
+/* SWIG can't understand __attribute__(x), so we make it go away */
+#define __attribute__(x)
 
 /* The SWIG $argnum variable reports the current argument number
    in the underlying C code. This is a bit counterintuitive for
@@ -47,8 +39,10 @@ static PyObject * _global_svn_swig_py_pool = NULL;
 
 /* Pointers, references, and arrays */
 %typemap (arginit) POOLINIT ( \
-  PyObject *_global_svn_swig_py_pool, apr_pool_t *_global_pool) 
+  PyObject *_global_svn_swig_py_pool, apr_pool_t *_global_pool,
+  int _global_pool_is_application_pool) 
 {
+  _global_pool_is_application_pool = 1;
   svn_swig_get_application_pool(&_global_svn_swig_py_pool, &_global_pool); 
 }
 %apply POOLINIT { void *, SWIGTYPE *, SWIGTYPE [] };
@@ -57,7 +51,7 @@ static PyObject * _global_svn_swig_py_pool = NULL;
 %typemap (in) void *, SWIGTYPE *, SWIGTYPE []
 {
   $1 = ($1_ltype)svn_swig_MustGetPtr($input, $descriptor, $svn_argnum,
-    _global_svn_swig_py_is_local_pool ? NULL : &_global_svn_swig_py_pool);
+    _global_pool_is_application_pool ? &_global_svn_swig_py_pool : NULL);
   if (PyErr_Occurred()) {
     SWIG_fail;
   }
@@ -74,36 +68,41 @@ static PyObject * _global_svn_swig_py_pool = NULL;
 %typemap (in, parse="s")
   char *, char const *, char * const, char const * const "";
 %typemap (in, parse="c") char "";
-%typemap (in, parse="B") unsigned char "";
-%typemap (in, parse="h") short "";
-%typemap (in, parse="H") unsigned short "";
-%typemap (in, parse="i") int, enum SWIGTYPE, svn_boolean_t, apr_seek_where_t, \
-  apr_fileperms_t "";
-%typemap (in, parse="I") unsigned int "";
-%typemap (in, parse="l") long, ssize_t "";
-%typemap (in, parse="k") unsigned long, size_t "";
-%typemap (in, parse="L") apr_time_t, apr_int64_t, long long, __int64 "";
-%typemap (in, parse="K") apr_uint64_t, unsigned long long, unsigned __int64 "";
+%typemap (in, fragment=SWIG_As_frag(long)) long
+{
+  $1 = ($1_ltype)SWIG_As(long)($input);
+  if (SWIG_arg_fail($svn_argnum)) {
+    SWIG_fail;
+  }
+}
+%typemap (in, fragment=SWIG_As_frag(unsigned long)) unsigned long
+{
+  $1 = ($1_ltype)SWIG_As(unsigned long)($input);
+  if (SWIG_arg_fail($svn_argnum)) {
+    SWIG_fail;
+  }
+}
+%apply long { short, int, ssize_t, enum SWIGTYPE, svn_boolean_t,
+              apr_seek_where_t, apr_fileperms_t }
+%apply unsigned long { unsigned char, unsigned short, unsigned int, size_t }
 
-/* For compatibility with Python 2.2 */
-%{
-#if defined(LONG_LONG) && !defined(PY_LONG_LONG)
-#define PY_LONG_LONG LONG_LONG
-#endif
-%}
+/* These typemaps use apr_int64_t so that they will work on Win32 and Unix */
+%typemap (in) long long
+  " $1 = ($1_ltype) PyLong_AsLongLong($input); ";
 
-/* These typemaps use PY_LONG_LONG so that they will work on Win32 and Unix */
+%typemap (in) unsigned long long
+  " $1 = ($1_ltype) PyLong_AsUnsignedLongLong($input); ";
+
 %typemap (out) apr_time_t, apr_int64_t, long long, __int64 
-  " $result = PyLong_FromLongLong((PY_LONG_LONG)($1)); ";
+  " $result = PyLong_FromLongLong((apr_int64_t)($1)); ";
 
 %typemap (out) apr_uint64_t, unsigned long long, unsigned __int64
-  " $result = PyLong_FromUnsignedLongLong((unsigned PY_LONG_LONG)($1)); ";
+  " $result = PyLong_FromUnsignedLongLong((apr_uint64_t)($1)); ";
 
-%typemap(argout) \
-  long long *OUTPUT, apr_int64_t *OUTPUT, __int64 *OUTPUT, apr_time_t *OUTPUT
-   "$result = t_output_helper($result, ((res$argnum == SWIG_NEWOBJ) ?
-       PyLong_FromLongLong((*$1)) :
-       SWIG_NewPointerObj((void*)($1), $1_descriptor, 0)));";
+%typemap(in,numinputs=0) long long *OUTPUT (apr_int64_t temp)
+    "$1 = &temp;";
+%typemap(argout) long long *OUTPUT
+   "$result = t_output_helper($result, PyLong_FromLongLong((*$1)));";
 
 /* We assume here that Subversion functions have no more than
    20 fixed parameters. If you want to wrap a function that has
@@ -146,5 +145,5 @@ static VALUE _global_svn_swig_rb_pool = Qnil;
 
 %{
 #include "svn_time.h"
-#include <svn_pools.h>
+#include "svn_pools.h"
 %}

@@ -1469,7 +1469,7 @@ commit_editor_authz  (const char **msg,
 
   /* Create a new commit editor in which we're going to play with
      authz */
-  SVN_ERR (svn_repos_get_commit_editor3 (&editor, &edit_baton, repos,
+  SVN_ERR (svn_repos_get_commit_editor4 (&editor, &edit_baton, repos,
                                          NULL, "file://test", "/",
                                          "plato", "test commit", NULL,
                                          NULL, commit_authz_cb, authz_file,
@@ -1620,6 +1620,130 @@ commit_editor_authz  (const char **msg,
   return SVN_NO_ERROR;
 }
 
+/* This implements svn_commit_callback2_t. */
+static svn_error_t *
+dummy_commit_cb(const svn_commit_info_t *commit_info,
+                void *baton, apr_pool_t *pool)
+{
+  return SVN_NO_ERROR;
+}
+
+/* Test using explicit txns during a commit. */
+static svn_error_t *
+commit_continue_txn (const char **msg,
+                     svn_boolean_t msg_only,
+                     svn_test_opts_t *opts,
+                     apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *revision_root;
+  svn_revnum_t youngest_rev;
+  void *edit_baton;
+  void *root_baton, *file_baton;
+  const svn_delta_editor_t *editor;
+  apr_pool_t *subpool = svn_pool_create (pool);
+  const char *txn_name;
+
+  *msg = "test commit with explicit txn";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* The Test Plan
+   *
+   * We create a greek tree repository, then create a transaction and
+   * a commit editor from that txn.  We do one change, abort the edit, reopen
+   * the txn and create a new commit editor, do anyther change and commit.
+   * We check that both changes were done.
+   */
+
+  /* Create a filesystem and repository. */
+  SVN_ERR (svn_test__create_repos (&repos, "test-repo-commit-continue",
+                                   opts->fs_type, subpool));
+  fs = svn_repos_fs (repos);
+
+  /* Prepare a txn to receive the greek tree. */
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, 0, subpool));
+  SVN_ERR (svn_fs_txn_root (&txn_root, txn, subpool));
+  SVN_ERR (svn_test__create_greek_tree (txn_root, subpool));
+  SVN_ERR (svn_repos_fs_commit_txn (NULL, repos, &youngest_rev, txn, subpool));
+
+  SVN_ERR (svn_fs_begin_txn (&txn, fs, youngest_rev, subpool));
+  SVN_ERR (svn_fs_txn_name (&txn_name, txn, subpool));
+  SVN_ERR (svn_repos_get_commit_editor4 (&editor, &edit_baton, repos,
+                                         txn, "file://test", "/",
+                                         "plato", "test commit",
+                                         dummy_commit_cb, NULL, NULL, NULL,
+                                         subpool));
+
+  SVN_ERR (editor->open_root (edit_baton, 1, subpool, &root_baton));
+
+  SVN_ERR (editor->add_file ("/f1", root_baton, NULL, SVN_INVALID_REVNUM,
+                             subpool, &file_baton));
+  SVN_ERR (editor->close_file (file_baton, NULL, subpool));
+  /* This should leave the transaction. */
+  SVN_ERR (editor->abort_edit (edit_baton, subpool));
+
+  /* Reopen the transaction. */
+  SVN_ERR (svn_fs_open_txn (&txn, fs, txn_name, subpool));
+  SVN_ERR (svn_repos_get_commit_editor4 (&editor, &edit_baton, repos,
+                                         txn, "file://test", "/",
+                                         "plato", "test commit",
+                                         dummy_commit_cb,
+                                         NULL, NULL, NULL,
+                                         subpool));
+
+  SVN_ERR (editor->open_root (edit_baton, 1, subpool, &root_baton));
+
+  SVN_ERR (editor->add_file ("/f2", root_baton, NULL, SVN_INVALID_REVNUM,
+                             subpool, &file_baton));
+  SVN_ERR (editor->close_file (file_baton, NULL, subpool));
+
+  /* Finally, commit it. */
+  SVN_ERR (editor->close_edit (edit_baton, subpool));
+  
+  /* Check that the edits really happened. */
+  {
+    static svn_test__tree_entry_t expected_entries[] = {
+      /* path, contents (0 = dir) */
+      { "iota",        "This is the file 'iota'.\n" },
+      { "A",           0 },
+      { "A/mu",        "This is the file 'mu'.\n" },
+      { "A/B",         0 },
+      { "A/B/lambda",  "This is the file 'lambda'.\n" },
+      { "A/B/E",       0 },
+      { "A/B/E/alpha", "This is the file 'alpha'.\n" },
+      { "A/B/E/beta",  "This is the file 'beta'.\n" },
+      { "A/B/F",       0 },
+      { "A/C",         0 },
+      { "A/D",         0 },
+      { "A/D/gamma",   "This is the file 'gamma'.\n" },
+      { "A/D/G",       0 },
+      { "A/D/G/pi",    "This is the file 'pi'.\n" },
+      { "A/D/G/rho",   "This is the file 'rho'.\n" },
+      { "A/D/G/tau",   "This is the file 'tau'.\n" },
+      { "A/D/H",       0 },
+      { "A/D/H/chi",   "This is the file 'chi'.\n" },
+      { "A/D/H/psi",   "This is the file 'psi'.\n" },
+      { "A/D/H/omega", "This is the file 'omega'.\n" },
+      { "f1",          "" },
+      { "f2",          "" }
+    };
+    SVN_ERR (svn_fs_revision_root (&revision_root, fs, 
+                                   2, subpool)); 
+    SVN_ERR (svn_test__validate_tree 
+             (revision_root, expected_entries,
+              sizeof (expected_entries) / sizeof(expected_entries[0]),
+              subpool));
+  }
+
+  svn_pool_destroy (subpool);
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* The test table.  */
@@ -1634,5 +1758,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS (rmlocks),
     SVN_TEST_PASS (authz),
     SVN_TEST_PASS (commit_editor_authz),
+    SVN_TEST_PASS (commit_continue_txn),
     SVN_TEST_NULL
   };

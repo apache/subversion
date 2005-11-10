@@ -16,7 +16,7 @@
  * ====================================================================
  */
 
-#include <svn_delta.h>
+#include "svn_delta.h"
 
 struct edit_baton
 {

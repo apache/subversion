@@ -483,7 +483,7 @@ apr_status_t apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
 
 apr_pool_t *current_pool;
 
-#if SWIG_VERSION <= 0x10324
+#if SWIG_VERSION <= 0x010324
 %{
 #define SVN_SWIGEXPORT(t) SWIGEXPORT(t)
 %}
@@ -535,13 +535,13 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %typemap(ruby, in) (svn_config_enumerator2_t callback, void *baton)
 {
   $1 = svn_swig_rb_config_enumerator;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 };
 
 %typemap(ruby, in) (svn_config_section_enumerator2_t callback, void *baton)
 {
   $1 = svn_swig_rb_config_section_enumerator;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 };
 
 %typemap(python,in,numinputs=0) apr_hash_t **cfg_hash = apr_hash_t **OUTPUT;
@@ -624,6 +624,7 @@ PyObject *svn_swig_py_exception_type(void);
 %include svn_io_h.swg
 
 #ifdef SWIGPERL
+%include svn_md5_h.swg
 %include svn_diff_h.swg
 %include svn_error_h.swg
 #endif
@@ -632,9 +633,13 @@ PyObject *svn_swig_py_exception_type(void);
 
 void svn_swig_py_set_application_pool(PyObject *py_pool, apr_pool_t *pool);
 void svn_swig_py_clear_application_pool();
-PyObject *svn_swig_py_register_cleanup(PyObject *py_pool, apr_pool_t *pool);
 
 %init %{
+/* Theoretically, we should be checking for errors here,
+   but I do not know of any useful way to signal an error to Python
+   from within a module initialization function. */
+svn_swig_py_initialize();
+
 /* This is a hack.  I dunno if we can count on SWIG calling the module "m" */
 PyModule_AddObject(m, "SubversionException", 
                    svn_swig_py_register_exception());

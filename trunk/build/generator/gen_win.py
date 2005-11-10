@@ -576,10 +576,6 @@ class WinGeneratorBase(GeneratorBase):
 
     if isinstance(target, gen_base.TargetSWIG):
       fakedefines.append("SWIG_GLOBAL")
-      fakedefines.append(self.swig_defines)
-
-    if isinstance(target, gen_base.TargetSWIGLib):
-      fakedefines.append(self.swig_defines)
 
     if cfg == 'Debug':
       fakedefines.extend(["_DEBUG","SVN_DEBUG"])
@@ -858,7 +854,6 @@ class WinGeneratorBase(GeneratorBase):
     finally:
       outfp.close()
 
-    self.swig_defines = 'SVN_SWIG_VERSION=%d' % vernum
     self.swig_vernum = vernum
     self.swig_libdir = libdir
 
@@ -892,7 +887,7 @@ class WinGeneratorBase(GeneratorBase):
 
   def _find_neon(self):
     "Find the neon version"
-    msg = 'WARNING: Unable to determine neon version'
+    msg = 'WARNING: Unable to determine neon version\n'
     try:
       fp = open(os.path.join(self.neon_path, '.version'))
       txt = fp.read()
@@ -907,7 +902,7 @@ class WinGeneratorBase(GeneratorBase):
         self.neon_ver = int('%d%02d%03d' % version)
         msg = 'Found neon version %d.%d.%d\n' % version
     except:
-      msg = 'WARNING: Error while determining neon version'
+      msg = 'WARNING: Error while determining neon version\n'
     sys.stderr.write(msg)
     
   def _configure_apr_util(self):

@@ -57,7 +57,7 @@ extern "C" {
  * Modify when new functionality is added or new interfaces are
  * defined, but all changes are backward compatible.
  */
-#define SVN_VER_MINOR      3
+#define SVN_VER_MINOR      4
 
 /**
  * Patch number.

@@ -36,7 +36,7 @@ def main(fname, gentype, verfname=None,
 
   generator.write()
   
-  if other_options and ('--debug', '') in other_options:
+  if ('--debug', '') in other_options:
     for dep_type, target_dict in generator.graph.deps.items():
       sorted_targets = target_dict.keys(); sorted_targets.sort()
       for target in sorted_targets:
@@ -80,6 +80,16 @@ def _usage_exit():
   print
   print "           The default generator type is 'make'"
   print
+  print "  Makefile-specific options:"
+  print
+  print "  --assume-shared-libs"
+  print "           omit dependencies on libraries, on the assumption that"
+  print "           shared libraries will be built, so that it is unnecessary"
+  print "           to relink executables when the libraries that they depend"
+  print "           on change.  This is an option for developers who want to"
+  print "           increase the speed of frequent rebuilds."
+  print "           *** Do not use unless you understand the consequences. ***"
+  print
   print "  Windows-specific options:"
   print
   print "  --with-apr=DIR"
@@ -92,7 +102,7 @@ def _usage_exit():
   print "           the APR-Iconv sources are in DIR"
   print
   print "  --with-berkeley-db=DIR"
-  print "           look for Berkley DB headers and libs in"
+  print "           look for Berkeley DB headers and libs in"
   print "           DIR"
   print
   print "  --with-neon=DIR"
@@ -162,6 +172,7 @@ if __name__ == '__main__':
     opts, args = getopt.getopt(sys.argv[1:], 'st:',
                                ['debug',
                                 'reload',
+                                'assume-shared-libs',
                                 'with-apr=',
                                 'with-apr-util=',
                                 'with-apr-iconv=',

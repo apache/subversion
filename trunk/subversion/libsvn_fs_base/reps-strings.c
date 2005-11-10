@@ -228,7 +228,7 @@ compose_handler (svn_txdelta_window_t *window, void *baton)
       /* Copy the (first) window into the baton. */
       apr_pool_t *window_pool = svn_pool_create (cb->trail->pool);
       assert (cb->window_pool == NULL);
-      cb->window = svn_txdelta__copy_window (window, window_pool);
+      cb->window = svn_txdelta_window_dup (window, window_pool);
       cb->window_pool = window_pool;
       cb->done = (window->sview_len == 0 || window->src_ops == 0);
     }

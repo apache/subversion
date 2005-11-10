@@ -570,7 +570,7 @@ def diff_pure_repository_update_a_file(sbox):
 
   url = svntest.main.current_repo_url
 
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '1:2',
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-c', '2',
                                                  '--username',
                                                  svntest.main.wc_author,
                                                  '--password',
@@ -587,7 +587,7 @@ def diff_pure_repository_update_a_file(sbox):
   os.chdir(was_cwd)
   if check_update_a_file(diff_output): raise svntest.Failure
 
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '2:3',
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-c', '3',
                                                  '--username',
                                                  svntest.main.wc_author,
                                                  '--password',
@@ -604,7 +604,7 @@ def diff_pure_repository_update_a_file(sbox):
   os.chdir(was_cwd)
   if check_add_a_file_in_a_subdir(diff_output): raise svntest.Failure
 
-  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-r', '4:5',
+  diff_output, err_output = svntest.main.run_svn(None, 'diff', '-c', '5',
                                                  '--username',
                                                  svntest.main.wc_author,
                                                  '--password',
@@ -1854,7 +1854,6 @@ def diff_renamed_dir(sbox):
     raise svntest.Failure
 
   os.chdir(was_cwd)
-
 
 
 ########################################################################

@@ -35,6 +35,8 @@ extern "C" {
 #define SVN_WC__TMP_EXT \
         "\x2e\x74\x6d\x70"
         /* ".tmp" */
+#define SVN_WC__REVERT_EXT    ".svn-revert" /* for reverting a replaced
+                                               file */
 
 #define SVN_WC__TEXT_REJ_EXT \
         "\x2e\x72\x65\x6a"
@@ -69,9 +71,12 @@ extern "C" {
  * The change from 3 to 4 was the renaming of the magic "svn:this_dir"
  * entry name to "".
  *
+ * The change from 4 to 5 was the addition of support for replacing files
+ * with history.
+ *
  * Please document any further format changes here.
  */
-#define SVN_WC__VERSION       4
+#define SVN_WC__VERSION       5
 
 
 /*** Update traversals. ***/
@@ -150,6 +155,10 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_DIR_PROPS \
         "\x64\x69\x72\x2d\x70\x72\x6f\x70\x73"
         /* "dir-props" */
+
+#define SVN_WC__ADM_DIR_PROP_REVERT \
+        "\x64\x69\x72\x2d\x70\x72\x6f\x70\x2d\x72\x65\x76\x65\x72\x74"
+        /* "dir-prop-revert" */
 
 #define SVN_WC__ADM_DIR_PROP_BASE \
        "\x64\x69\x72\x2d\x70\x72\x6f\x70\x2d\x62\x61\x73\x65"

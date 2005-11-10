@@ -73,6 +73,14 @@ struct log_baton
   int limit;
   int count;
 
+  /* If we're in backwards compatibility mode for the svn log --limit
+     stuff, we need to be able to bail out while parsing log messages.
+     The way we do that is returning an error to neon, but we need to
+     be able to tell that the error we returned wasn't actually a
+     problem, so if this is TRUE it means we can safely ignore that
+     error and return success. */
+  svn_boolean_t limit_compat_bailout;
+
   /* If `receiver' returns error, it is stored here. */
   svn_error_t *err;
 };
@@ -213,6 +221,7 @@ log_end_element(void *userdata,
         if (lb->limit && (++lb->count > lb->limit))
           {
             lb->err = SVN_NO_ERROR;
+            lb->limit_compat_bailout = TRUE;
             return SVN_RA_DAV__XML_INVALID;
           }
  
@@ -317,7 +326,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
 
   int i;
   svn_ra_dav__session_t *ras = session->priv;
-  svn_stringbuf_t *request_body = svn_stringbuf_create("", ras->pool);
+  svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
   struct log_baton lb;
   svn_string_t bc_url, bc_relative;
   const char *final_bc_url;
@@ -359,31 +368,31 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
   /* Construct the request body. */
   svn_stringbuf_appendcstr(request_body, log_request_head);
   svn_stringbuf_appendcstr(request_body,
-                           apr_psprintf(ras->pool,
+                           apr_psprintf(pool,
                                         "<S:start-revision>%ld"
                                         "</S:start-revision>", start));
   svn_stringbuf_appendcstr(request_body,
-                           apr_psprintf(ras->pool,
+                           apr_psprintf(pool,
                                         "<S:end-revision>%ld"
                                         "</S:end-revision>", end));
   if (limit)
     {
       svn_stringbuf_appendcstr(request_body,
-                               apr_psprintf(ras->pool,
+                               apr_psprintf(pool,
                                             "<S:limit>%d</S:limit>", limit));
     }
 
   if (discover_changed_paths)
     {
       svn_stringbuf_appendcstr(request_body,
-                               apr_psprintf(ras->pool,
+                               apr_psprintf(pool,
                                             "<S:discover-changed-paths/>"));
     }
 
   if (strict_node_history)
     {
       svn_stringbuf_appendcstr(request_body,
-                               apr_psprintf(ras->pool,
+                               apr_psprintf(pool,
                                             "<S:strict-node-history/>"));
     }
 
@@ -392,7 +401,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
       for (i = 0; i < paths->nelts; i++)
         {
           const char *this_path =
-            apr_xml_quote_string(ras->pool,
+            apr_xml_quote_string(pool,
                                  ((const char **)paths->elts)[i],
                                  0);
           svn_stringbuf_appendcstr(request_body, "<S:path>");
@@ -405,10 +414,11 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
 
   lb.receiver = receiver;
   lb.receiver_baton = receiver_baton;
-  lb.subpool = svn_pool_create (ras->pool);
+  lb.subpool = svn_pool_create (pool);
   lb.err = NULL;
   lb.limit = limit;
   lb.count = 0;
+  lb.limit_compat_bailout = FALSE;
   reset_log_item (&lb);
 
   /* ras's URL may not exist in HEAD, and thus it's not safe to send
@@ -418,10 +428,10 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
      START and END revisions. */
   use_rev = (start > end) ? start : end;
   SVN_ERR( svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                         ras->sess, ras->url, use_rev,
-                                         ras->pool) );
+                                         ras->sess, ras->url->data, use_rev,
+                                         pool) );
   final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
-                                            ras->pool);
+                                            pool);
 
 
   err = svn_ra_dav__parsed_request_compat(ras->sess,
@@ -438,7 +448,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
                                           NULL, 
                                           NULL,
                                           FALSE,
-                                          ras->pool);
+                                          pool);
   
   if (lb.err)
     {
@@ -449,6 +459,9 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
     }
 
   svn_pool_destroy (lb.subpool);
+
+  if (err && lb.limit_compat_bailout)
+    return SVN_NO_ERROR;
 
   return err;
 }

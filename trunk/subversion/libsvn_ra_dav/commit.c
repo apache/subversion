@@ -114,7 +114,7 @@ typedef struct
   const char *log_msg;
 
   /* The commit callback and baton */
-  svn_commit_callback_t callback;
+  svn_commit_callback2_t callback;
   void *callback_baton;
 
   /* The hash of lock-tokens owned by the working copy. */
@@ -211,7 +211,7 @@ static svn_error_t * simple_request(svn_ra_dav__session_t *ras,
   /* run the request and get the resulting status code (and svn_error_t) */
   return svn_ra_dav__request_dispatch(code, req, ras->sess,
                                       method, url, okay_1, okay_2,
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
                                       NULL, NULL,
 #endif /* SVN_NEON_0_25 */
                                       pool);
@@ -439,7 +439,7 @@ static svn_error_t * add_child(resource_t **child,
   return SVN_NO_ERROR;
 }
 
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
 /* This implements the svn_ra_dav__request_interrogator() interface.
    USERDATA is 'char **'. */
 static svn_error_t *interrogate_for_location(ne_request *request,
@@ -516,7 +516,7 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
                                      "CHECKOUT", vsn_url,
                                      201 /* Created */,
                                      allow_404 ? 404 /* Not Found */ : 0,
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
                                      interrogate_for_location, locn,
 #endif /* SVN_NEON_0_25 */
                                      pool);
@@ -799,7 +799,7 @@ static svn_error_t * commit_delete_entry(const char *path,
           const char *token_header_val;
           const char *token_uri;
 
-          token_uri = svn_path_url_add_component(parent->cc->ras->url,
+          token_uri = svn_path_url_add_component(parent->cc->ras->url->data,
                                                  path, pool);
           token_header_val = apr_psprintf(pool, "<%s> (<%s>)",
                                           token_uri, token);
@@ -890,7 +890,7 @@ static svn_error_t * commit_delete_entry(const char *path,
                                           "DELETE", child,
                                           204 /* Created */,
                                           404 /* Not Found */,
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
                                           NULL, NULL,
 #endif /* SVN_NEON_0_25 */
                                           pool);
@@ -1408,7 +1408,7 @@ static svn_error_t * commit_close_file(void *file_baton,
           const char *token_header_val;
           const char *token_uri;
 
-          token_uri = svn_path_url_add_component(cc->ras->url,
+          token_uri = svn_path_url_add_component(cc->ras->url->data,
                                                  file->rsrc->url, pool);
           token_header_val = apr_psprintf(pool, "<%s> (<%s>)",
                                           token_uri, file->token);
@@ -1436,7 +1436,7 @@ static svn_error_t * commit_close_file(void *file_baton,
       err = svn_ra_dav__request_dispatch(&code, req, sess, "PUT", url,
                                          201 /* Created */,
                                          204 /* No Content */,
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
                                          NULL, NULL,
 #endif /* SVN_NEON_0_25 */
                                          pool);
@@ -1460,13 +1460,11 @@ static svn_error_t * commit_close_edit(void *edit_baton,
                                        apr_pool_t *pool)
 {
   commit_ctx_t *cc = edit_baton;
-  svn_revnum_t new_rev;
-  const char *committed_date;
-  const char *committed_author;
+  svn_commit_info_t *commit_info = svn_create_commit_info (pool);
 
-  SVN_ERR( svn_ra_dav__merge_activity(&new_rev,
-                                      &committed_date,
-                                      &committed_author,
+  SVN_ERR( svn_ra_dav__merge_activity(&(commit_info->revision),
+                                      &(commit_info->date),
+                                      &(commit_info->author),
                                       cc->ras,
                                       cc->ras->root.path,
                                       cc->activity_url,
@@ -1476,11 +1474,10 @@ static svn_error_t * commit_close_edit(void *edit_baton,
                                       cc->disable_merge_response,
                                       pool) );
   SVN_ERR( delete_activity(edit_baton, pool) );
-  SVN_ERR( svn_ra_dav__maybe_store_auth_info(cc->ras) );
+  SVN_ERR( svn_ra_dav__maybe_store_auth_info(cc->ras, pool) );
 
-  if (new_rev != SVN_INVALID_REVNUM)
-    SVN_ERR( cc->callback (new_rev, committed_date, committed_author,
-                           cc->callback_baton));
+  if (commit_info->revision != SVN_INVALID_REVNUM)
+    SVN_ERR( cc->callback (commit_info, cc->callback_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1573,7 +1570,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
                                             const svn_delta_editor_t **editor,
                                             void **edit_baton,
                                             const char *log_msg,
-                                            svn_commit_callback_t callback,
+                                            svn_commit_callback2_t callback,
                                             void *callback_baton,
                                             apr_hash_t *lock_tokens,
                                             svn_boolean_t keep_locks,

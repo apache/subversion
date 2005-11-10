@@ -140,6 +140,9 @@ svn_error_t *svn_wc__remove_wcprops (svn_wc_adm_access_t *adm_access,
                                      svn_boolean_t recurse,
                                      apr_pool_t *pool);
 
+/* Returns TRUE if PROPS contains the svn:special property */
+svn_boolean_t svn_wc__has_special_property (apr_hash_t *props);
+
 /* Given PROPERTIES is array of @c svn_prop_t structures. Returns TRUE if any
    of the PROPERTIES are the known "magic" ones that might require
    changing the working file. */

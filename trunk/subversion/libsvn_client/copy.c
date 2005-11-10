@@ -451,11 +451,12 @@ repos_to_repos_copy (svn_commit_info_t **commit_info_p,
 
   /* Fetch RA commit editor. */
   SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info_p, pool));
-  SVN_ERR (svn_ra_get_commit_editor (ra_session, &editor, &edit_baton, message,
-                                     svn_client__commit_callback,
-                                     commit_baton, 
-                                     NULL, TRUE, /* No lock tokens */
-                                     pool));
+  SVN_ERR (svn_ra_get_commit_editor2 (ra_session, &editor, &edit_baton,
+                                      message,
+                                      svn_client__commit_callback,
+                                      commit_baton, 
+                                      NULL, TRUE, /* No lock tokens */
+                                      pool));
 
   /* Setup our PATHS for the path-based editor drive. */
   APR_ARRAY_PUSH (paths, const char *) = dst_rel;
@@ -707,12 +708,12 @@ wc_to_repos_copy (svn_commit_info_t **commit_info_p,
 
   /* Fetch RA commit editor. */
   SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info_p, pool));
-  if ((cmt_err = svn_ra_get_commit_editor (ra_session, &editor, &edit_baton, 
-                                           message,
-                                           svn_client__commit_callback,
-                                           commit_baton, 
-                                           NULL, TRUE, /* No lock tokens */
-                                           pool)))
+  if ((cmt_err = svn_ra_get_commit_editor2 (ra_session, &editor, &edit_baton, 
+                                            message,
+                                            svn_client__commit_callback,
+                                            commit_baton, 
+                                            NULL, TRUE, /* No lock tokens */
+                                            pool)))
     goto cleanup;
 
   /* Make a note that we have a commit-in-progress. */
@@ -853,7 +854,8 @@ repos_to_wc_copy (const char *src_url,
     const svn_wc_entry_t *ent;
 
     SVN_ERR (svn_wc_entry (&ent, dst_path, adm_access, FALSE, pool));
-    if (ent && (ent->kind != svn_node_dir))
+    if (ent && (ent->kind != svn_node_dir) && 
+        (ent->schedule != svn_wc_schedule_delete))
       return svn_error_createf
         (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
          _("Entry for '%s' exists (though the working file is missing)"),
@@ -976,9 +978,9 @@ repos_to_wc_copy (const char *src_url,
       if (! SVN_IS_VALID_REVNUM (src_revnum))
         src_revnum = real_rev;
 
-      err = svn_wc_add_repos_file
+      err = svn_wc_add_repos_file2
         (dst_path, adm_access,
-         new_text_path, new_props,
+         new_text_path, NULL, new_props, NULL,
          same_repositories ? src_url : NULL,
          same_repositories ? src_revnum : SVN_INVALID_REVNUM,
          pool);

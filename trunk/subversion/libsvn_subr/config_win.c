@@ -31,7 +31,7 @@
    have to build Subversion with APR sources. This being Win32-only,
    that should be fine for now, but a better solution must be found in
    combination with issue #850. */
-#include "arch/win32/apr_arch_utf8.h"
+#include <arch/win32/apr_arch_utf8.h>
 
 #include "svn_error.h"
 #include "svn_path.h"

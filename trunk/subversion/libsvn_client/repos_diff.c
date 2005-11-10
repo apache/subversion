@@ -1,4 +1,4 @@
-	/*
+/*
  * repos_diff.c -- The diff editor for comparing two repository versions
  *
  * ====================================================================
@@ -348,42 +348,45 @@ get_file_from_ra (struct file_baton *b)
 static svn_error_t *
 get_dirprops_from_ra (struct dir_baton *b)
 {
-  SVN_ERR (svn_ra_get_dir (b->edit_baton->ra_session,
-                           b->path,
-                           b->edit_baton->revision,
-                           NULL, NULL,
-                           &(b->pristine_props),
-                           b->pool));
+  SVN_ERR (svn_ra_get_dir2 (b->edit_baton->ra_session,
+                            b->path,
+                            b->edit_baton->revision,
+                            0, NULL, NULL,
+                            &(b->pristine_props),
+                            b->pool));
 
   return SVN_NO_ERROR;
 }
 
 
 /* Create an empty file, the path to the file is returned in EMPTY_FILE.
- * If HAVE_WRITE_LOCK is true, create the file in the working directory,
- * otherwise use a system temp dir.
+ * If ADM_ACCESS is not NULL and a lock is held, create the file in the
+ * adm tmp/ area, otherwise use a system temp dir.
  */
 static svn_error_t *
 create_empty_file (const char **empty_file,
-                   svn_boolean_t have_write_lock,
+                   svn_wc_adm_access_t *adm_access,
                    apr_pool_t *pool)
 {
   apr_file_t *file;
   const char *temp_path;
 
-  if (have_write_lock)
+  if (adm_access && svn_wc_adm_locked (adm_access))
     {
-      temp_path = TMP_STR;
+      SVN_ERR (svn_wc_create_tmp_file (&file,
+                                       svn_wc_adm_access_path (adm_access),
+                                       FALSE, pool));
+      apr_file_name_get (empty_file, file);
     }
-  else 
+  else
     {
       const char *temp_dir;
       SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
       temp_path = svn_path_join (temp_dir, TMP_STR, pool);
+      SVN_ERR (svn_io_open_unique_file (&file, empty_file, temp_path,
+                                        "", FALSE, pool));
     }
 
-  SVN_ERR (svn_io_open_unique_file (&file, empty_file, temp_path,
-                                    "", FALSE, pool));
   SVN_ERR (svn_io_file_close (file, pool));
 
   return SVN_NO_ERROR;
@@ -450,9 +453,7 @@ get_empty_file (struct edit_baton *b,
   /* Create the file if it does not exist */
   if (!b->empty_file)
     {
-      svn_boolean_t have_lock;
-      have_lock = (b->adm_access && svn_wc_adm_locked (b->adm_access));
-      SVN_ERR (create_empty_file (&(b->empty_file), have_lock, b->pool));
+      SVN_ERR (create_empty_file (&(b->empty_file), b->adm_access, b->pool));
 
       /* Install a pool cleanup handler to delete the file */
       SVN_ERR (temp_file_cleanup_register (b->empty_file, b->pool));
@@ -709,7 +710,7 @@ apply_textdelta (void *file_baton,
                  void **handler_baton)
 {
   struct file_baton *b = file_baton;
-  svn_boolean_t have_lock;
+  svn_wc_adm_access_t *adm_access;
 
   /* Open the file to be used as the base for second revision */
   SVN_ERR (svn_io_file_open (&(b->file_start_revision),
@@ -718,9 +719,21 @@ apply_textdelta (void *file_baton,
 
   /* Open the file that will become the second revision after applying the
      text delta, it starts empty */
-  have_lock = (b->edit_baton->adm_access 
-               && svn_wc_adm_locked (b->edit_baton->adm_access));
-  SVN_ERR (create_empty_file (&(b->path_end_revision), have_lock, b->pool));
+  if (b->edit_baton->adm_access)
+    {
+      svn_error_t *err;
+
+      err = svn_wc_adm_probe_retrieve (&adm_access, b->edit_baton->adm_access,
+                                       b->wcpath, pool);
+      if (err)
+        {
+          svn_error_clear (err);
+          adm_access = NULL;
+        }
+    }
+  else
+    adm_access = NULL;
+  SVN_ERR (create_empty_file (&(b->path_end_revision), adm_access, b->pool));
   SVN_ERR (temp_file_cleanup_register (b->path_end_revision, b->pool));
   SVN_ERR (svn_io_file_open (&(b->file_end_revision), b->path_end_revision,
                              APR_WRITE, APR_OS_DEFAULT, b->pool));
@@ -815,11 +828,6 @@ close_file (void *file_baton,
                   b->edit_baton->diff_cmd_baton));
     }
 
-
-  /* ### Is b->path the repos path?  Probably.  This doesn't really
-     matter while issue #748 (svn merge only happens in ".") is
-     outstanding.  But when we take a wc_path as an argument to
-     merge, then we'll need to pass around a wc path somehow. */
 
   if ((content_state == svn_wc_notify_state_missing)
       || (content_state == svn_wc_notify_state_obstructed))

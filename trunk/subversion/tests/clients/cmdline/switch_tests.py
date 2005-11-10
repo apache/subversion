@@ -961,6 +961,13 @@ def relocate_beyond_repos_root(sbox):
                                      'switch', '--relocate',
                                      A_url, other_B_url, A_wc_dir)
 
+  # Another way of trying to change the fs path, leading to an invalid
+  # repository root.
+  svntest.actions.run_and_verify_svn(None, None,
+                                     ".*is not the root.*",
+                                     'switch', '--relocate',
+                                     repo_url, other_B_url, A_wc_dir)
+
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'switch', '--relocate',
                                      A_url, other_A_url, A_wc_dir)
@@ -970,6 +977,65 @@ def relocate_beyond_repos_root(sbox):
   svntest.actions.run_and_verify_svn(None, '^URL: ' + other_A_url + '$', [],
                                      'info', '-rHEAD', A_wc_dir)
                                      
+#----------------------------------------------------------------------
+# Issue 2306.
+def refresh_read_only_attribute(sbox):
+  "refresh the WC file system read-only attribute "
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a branch.
+  url = svntest.main.current_repo_url + '/A'
+  branch_url = svntest.main.current_repo_url + '/A-branch'
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 'Committed revision 2.\n'], [],
+                                     'cp', '-m', 'svn:needs-lock not set',
+                                     url, branch_url)
+
+  # Set the svn:needs-lock property on a file from the "trunk".
+  A_path = os.path.join(wc_dir, 'A')
+  mu_path = os.path.join(A_path, 'mu')
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'ps', 'svn:needs-lock', '1', mu_path)
+
+  # Commit the propset of svn:needs-lock.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('A/mu', wc_rev=3)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        mu_path)
+
+  # The file on which svn:needs-lock was set is now expected to be read-only.
+  if os.access(mu_path, os.W_OK):
+    raise svntest.Failure("'%s' expected to be read-only after having had "
+                          "its svn:needs-lock property set" % mu_path)
+
+  # Switch to the branch with the WC state from before the propset of
+  # svn:needs-lock.
+  # TODO
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(status=' U'),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak('', wc_rev=1)
+  expected_status.tweak('iota', wc_rev=1)
+  expected_status.tweak('A', switched='S')
+  svntest.actions.run_and_verify_switch(wc_dir, A_path, branch_url,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+  # The switch file should now be writable, but is still read-only (on
+  # Windows only?).
+  if not os.access(mu_path, os.W_OK):
+    raise svntest.Failure("'%s' expected to be writable" % mu_path)
+
 
 ########################################################################
 # Run the tests
@@ -991,8 +1057,9 @@ test_list = [ None,
               failed_anchor_is_target,
               bad_intermediate_urls,
               obstructed_switch,
-              XFail(commit_mods_below_switch),
+              commit_mods_below_switch,
               relocate_beyond_repos_root,
+              XFail(refresh_read_only_attribute),
              ]
 
 if __name__ == '__main__':

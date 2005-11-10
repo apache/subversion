@@ -20,14 +20,11 @@ class Generator(generator.swig.Generator):
     generator.swig.Generator.__init__(self, conf, swig_path)
 
     # Build list of header files
-    self.header_files = []
-    for include_dir in string.split(self.include_dirs):
-      hdrs = glob.glob(os.path.join(native_path(include_dir), "*.h"))
-      self.header_files.extend(hdrs)
+    self.header_files = map(native_path, self.includes)
     self.header_basenames = map(os.path.basename, self.header_files)
 
   # Ignore svn_md5.h because SWIG can't parse it
-  _ignores = ["svn_md5.h", "svn_repos_parse_fns_t"]
+  _ignores = ["svn_repos_parse_fns_t"]
 
   def proxy_filename(self, include_filename):
     """Convert a .h filename into a _h.swg filename"""
@@ -106,10 +103,12 @@ class Generator(generator.swig.Generator):
   _re_includes = re.compile(r'#\s*include\s*[<"]([^<">;\s]+)')
 
   """Regular expression for parsing structs from a C header file"""
-  _re_structs = re.compile(r'\btypedef\s+struct\s+(svn_[a-z_0-9]+_t)\b\s*(\{?)')
+  _re_structs = re.compile(r'\btypedef\s+(?:struct|union)\s+'
+                           r'(svn_[a-z_0-9]+)\b\s*(\{?)')
 
   """Regular expression for parsing callbacks from a C header file"""
-  _re_callbacks = re.compile(r'\btypedef\s+struct\s+(svn_[a-z_0-9]+_t)\b|'
+  _re_callbacks = re.compile(r'\btypedef\s+(?:struct|union)\s+'
+                             r'(svn_[a-z_0-9]+)\b|'
                              r'\n\s*svn_error_t\s*\*\(\*(\w+)\)\s*\(([^)]+)\);')
 
   """Regular expression for parsing parameter names from a parameter list"""

@@ -67,11 +67,7 @@
 %apply long *OUTPUT { svn_node_kind_t * };
 
 /* svn_config_get_server_setting_int() */
-#if APR_INT64_T_FMT == "ld"
-%apply long *OUTPUT { apr_int64_t * };
-#else
 %apply long long *OUTPUT { apr_int64_t * };
-#endif
 
 /* -----------------------------------------------------------------------
    Create a typemap for specifying string args that may be NULL.
@@ -123,6 +119,21 @@
     $1 = (char *)APR_LOCALE_CHARSET;
   }
 }
+
+/* -----------------------------------------------------------------------
+   Input of scripting hash/dictionary (string => string)
+   converted to apr_hash_t (const char * => const char *)
+*/
+%typemap(python, in) apr_hash_t *STRING_TO_STRING {
+    $1 = svn_swig_py_stringhash_from_dict ($input, _global_pool);
+}
+%typemap(perl5, in) apr_hash_t *STRING_TO_STRING {
+    $1 = svn_swig_pl_strings_to_hash ($input, _global_pool);
+}
+%typemap(ruby, in) apr_hash_t *STRING_TO_STRING {
+    $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
+}
+
 
 /* -----------------------------------------------------------------------
    Define a more refined 'memberin' typemap for 'const char *' members. This
@@ -182,44 +193,9 @@
 }
 
 /* -----------------------------------------------------------------------
-   Define an OUTPUT typemap for 'svn_filesize_t *'.  For now, we'll
-   treat it as a 'long' even if that isn't entirely correct...  
+   Define an OUTPUT typemap for 'svn_filesize_t *'
 */
-%typemap(python,in,numinputs=0) svn_filesize_t * (svn_filesize_t temp)
-    "$1 = &temp;";
-
-%typemap(perl5,in,numinputs=0) svn_filesize_t * (svn_filesize_t temp)
-    "$1 = &temp;";
-
-%typemap(ruby,in,numinputs=0) svn_filesize_t * (svn_filesize_t temp)
-    "$1 = &temp;";
-
-/* We have to use APR_INT64_T_FMT because SWIG won't convert the
-   SVN_FILESIZE_T_FMT to the actual value only APR_INT64_T_FMT */
-#if APR_INT64_T_FMT == "ld"
-
-%typemap(python,argout,fragment="t_output_helper") svn_filesize_t *
-    "$result = t_output_helper($result,PyLong_FromLong((long) (*$1)));";
-
-%apply long *OUTPUT { svn_filesize_t * };
-
-#else
-
-%typemap(python,argout,fragment="t_output_helper") svn_filesize_t *
-    "$result = t_output_helper($result,
-                               PyLong_FromLongLong((apr_int64_t) (*$1)));";
-
-/* XXX: apply long long *OUTPUT doesn't track $1 correctly */
-%typemap(perl5,argout) svn_filesize_t * {
-    char temp[256];
-    sprintf(temp,"%" APR_INT64_T_FMT, *$1);
-    ST(argvi) = sv_newmortal();
-    sv_setpv((SV*)ST(argvi++), temp);
-};
-
-%typemap(ruby,argout,fragment="output_helper") svn_filesize_t *
-    "$result = output_helper($result, LL2NUM((apr_int64_t) (*$1)));";
-#endif 
+%apply long long *OUTPUT { svn_filesize_t * }
 
 /* -----------------------------------------------------------------------
    Define a general ptr/len typemap. This takes a single script argument
@@ -278,12 +254,11 @@
 #endif
 
 %typemap(python, default) apr_pool_t *(apr_pool_t *_global_pool,
-  PyObject *_global_svn_swig_py_pool, int _global_svn_swig_py_is_local_pool,
-  int _global_is_default_pool)
+  PyObject *_global_svn_swig_py_pool, int _global_pool_is_default_pool)
 {
   int argnum = PyTuple_GET_SIZE(args) - 1;
-  _global_svn_swig_py_is_local_pool = 1;
-  _global_is_default_pool = 1;
+  _global_pool_is_application_pool = 0;
+  _global_pool_is_default_pool = 1;
   if (argnum >= 0) {
     PyObject *input = PyTuple_GET_ITEM(args, argnum);
     if (input != Py_None &&
@@ -295,7 +270,7 @@
       }
       _global_svn_swig_py_pool = input;
       Py_XINCREF(_global_svn_swig_py_pool);
-      _global_is_default_pool = 0;
+      _global_pool_is_default_pool = 0;
     } else {
       if (PyErr_Occurred()) {
         PyErr_Clear();
@@ -312,7 +287,7 @@
 }
 
 %typemap(python, in) apr_pool_t * {
-  if ($input != Py_None && _global_is_default_pool == 1) {
+  if ($input != Py_None && _global_pool_is_default_pool == 1) {
     svn_swig_py_pool_check($input)
     _global_pool = svn_swig_MustGetPtr($input, $1_descriptor, $svn_argnum, 
       NULL);
@@ -411,7 +386,7 @@
 %typemap(ruby, in) (svn_log_message_receiver_t receiver, 
                     void *receiver_baton) {
     $1 = svn_swig_rb_log_receiver;
-    $2 = (void *)$input;
+    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -429,7 +404,7 @@
 %typemap(ruby, in) (svn_commit_callback_t callback, void *callback_baton)
 {
   $1 = svn_swig_rb_commit_callback;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 };
 
 /* -----------------------------------------------------------------------
@@ -444,7 +419,7 @@
 %typemap(ruby, in) (svn_cancel_func_t cancel_func, void *cancel_baton)
 {
   $1 = svn_swig_rb_cancel_func;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -454,7 +429,7 @@
 %typemap(ruby, in) (svn_info_receiver_t receiver, void *receiver_baton)
 {
   $1 = svn_swig_rb_info_receiver;
-  $2 = (void *)$input;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 
 /* -----------------------------------------------------------------------
@@ -463,9 +438,10 @@
 
 %typemap(ruby, in) (svn_fs_warning_callback_t warning, void *warning_baton)
 {
-  svn_swig_rb_fs_warning_callback_baton_register($input, _global_pool);
+  VALUE baton = svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+  svn_swig_rb_fs_warning_callback_baton_register(baton, _global_pool);
   $1 = svn_swig_rb_fs_warning_callback;
-  $2 = (void *)$input;
+  $2 = (void *)baton;
 }
 
 /* -----------------------------------------------------------------------
@@ -520,14 +496,35 @@
                           rb_str_new2(svn_md5_digest_to_cstring($1, _global_pool)));
 }
 
+/* svn_md5_* functions takes const ones as input */
+%typemap(perl5, in) const unsigned char digest[] {
+    SWIG_ConvertPtr($input, (void **)&$1, $1_descriptor, 0);
+}
+%typemap(perl5, argout) const unsigned char digest[] {}
+
 /*
    svn_txdelta_send_stream() uses *digest not digest[] .
    svn_txdelta_apply() uses *result_digest not digest[] .
 */
+
+%typemap(in, numinputs=0) unsigned char *result_digest {
+    $1 = (unsigned char *)apr_palloc(_global_pool, APR_MD5_DIGESTSIZE);
+}
+
+%typemap(perl5, argout) unsigned char *result_digest {
+    ST(argvi) = sv_newmortal();
+    ST(argvi++) = svn_swig_pl_from_md5($1);
+}
+
 %apply unsigned char digest[ANY] {
-    unsigned char *digest,
+    unsigned char *digest
+};
+
+#ifndef SWIGPERL
+%apply unsigned char digest[ANY] {
     unsigned char *result_digest
 };
+#endif
 
 /* -----------------------------------------------------------------------
   useful convertors for svn_opt_revision_t

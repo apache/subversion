@@ -211,7 +211,7 @@ public class SVNTests extends TestCase
 
         // create and configure the needed subversion objects
         admin = new SVNAdmin();
-        client = new SVNClient();
+        client = new SVNClientSynchronized();
         client.notification2(new MyNotifier());
         client.commitMessageHandler(new MyCommitMessage());
         client.username("jrandom");
@@ -358,6 +358,25 @@ public class SVNTests extends TestCase
             key = path;
         expectedCommitItems.put(key, new MyCommitItem(path, nodeKind,
                 stateFlags, url));
+    }
+
+    /**
+     * Intended to be called as part of test method execution
+     * (post-{@link #setUp()}).  Calls <code>fail()</code> if the
+     * directory name cannot be determined.
+     *
+     * @return The name of the working copy administrative directory.
+     * @since 1.3
+     */
+    protected String getAdminDirectoryName() {
+        String admDirName = null;
+        if (this.client != null) {
+            admDirName = client.getAdminDirectoryName();
+        }
+        if (admDirName == null) {
+            fail("Unable to determine the WC admin directory name");
+        }
+        return admDirName;
     }
 
     /**

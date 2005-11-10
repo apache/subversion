@@ -54,6 +54,10 @@ typedef struct svn_ra__vtable_t {
                         void *callback_baton,
                         apr_hash_t *config,
                         apr_pool_t *pool);
+  /* URL is guaranteed to have what get_repos_root() returns as a prefix. */
+  svn_error_t *(*reparent) (svn_ra_session_t *session,
+                            const char *url,
+                            apr_pool_t *pool);
   svn_error_t *(*get_latest_revnum) (svn_ra_session_t *session,
                                      svn_revnum_t *latest_revnum,
                                      apr_pool_t *pool);
@@ -80,7 +84,7 @@ typedef struct svn_ra__vtable_t {
                                      const svn_delta_editor_t **editor,
                                      void **edit_baton,
                                      const char *log_msg,
-                                     svn_commit_callback_t callback,
+                                     svn_commit_callback2_t callback,
                                      void *callback_baton,
                                      apr_hash_t *lock_tokens,
                                      svn_boolean_t keep_locks,
@@ -95,6 +99,7 @@ typedef struct svn_ra__vtable_t {
   svn_error_t *(*get_dir) (svn_ra_session_t *session,
                            const char *path,
                            svn_revnum_t revision,
+                           apr_uint32_t dirent_fields,
                            apr_hash_t **dirents,
                            svn_revnum_t *fetched_rev,
                            apr_hash_t **props,
@@ -134,6 +139,7 @@ typedef struct svn_ra__vtable_t {
                            const char *diff_target,
                            svn_boolean_t recurse,
                            svn_boolean_t ignore_ancestry,
+                           svn_boolean_t text_deltas,
                            const char *versus_url,
                            const svn_delta_editor_t *diff_editor,
                            void *diff_baton,

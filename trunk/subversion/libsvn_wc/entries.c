@@ -1312,7 +1312,7 @@ svn_wc__entries_write (apr_hash_t *entries,
    already exists, the requested changes will be folded (merged) into
    the entry's existing state.  If the entry doesn't exist, the entry
    will be created with exactly those properties described by the set
-   of changes.
+   of changes. Also cleanups meaningless fields combinations.
 
    POOL may be used to allocate memory referenced by ENTRIES.
  */
@@ -1460,6 +1460,27 @@ fold_entry (apr_hash_t *entries,
         = apr_hash_get (entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
       if (default_entry)
         take_from_entry (default_entry, cur_entry, pool);
+    }
+
+  /* Cleanup meaningless fields */
+
+  /* ### svn_wc_schedule_delete is the minimal value. We need it because it's
+     impossible to NULLify copyfrom_url with log-instructions.
+
+     Note that I tried to find the smallest collection not to clear these
+     fields for, but this condition still fails the test suite:
+
+     !(entry->schedule == svn_wc_schedule_add
+       || entry->schedule == svn_wc_schedule_replace
+       || (entry->schedule == svn_wc_schedule_normal && entry->copied)))
+
+  */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE
+      && entry->schedule == svn_wc_schedule_delete)
+    {
+      cur_entry->copied = FALSE;
+      cur_entry->copyfrom_rev = SVN_INVALID_REVNUM;
+      cur_entry->copyfrom_url = NULL;
     }
 
   /* Make sure the entry exists in the entries hash.  Possibly it
@@ -1641,6 +1662,9 @@ fold_scheduling (apr_hash_t *entries,
       switch (*schedule)
         {
         case svn_wc_schedule_normal:
+          /* Reverting a delete results in normal */
+          return SVN_NO_ERROR;
+
         case svn_wc_schedule_delete:
           /* These are no-op cases. */
           *modify_flags &= ~SVN_WC__ENTRY_MODIFY_SCHEDULE;
@@ -1667,7 +1691,9 @@ fold_scheduling (apr_hash_t *entries,
       switch (*schedule)
         {
         case svn_wc_schedule_normal:
-          /* These are all no-op cases. */
+          /* Reverting replacements results normal. */
+          return SVN_NO_ERROR;
+        
         case svn_wc_schedule_add:
           /* Adding a to-be-replaced entry breaks down to ((delete +
              add) + add) which might deserve a warning, but we'll just
@@ -1781,7 +1807,7 @@ svn_wc__entry_modify (svn_wc_adm_access_t *adm_access,
 svn_wc_entry_t *
 svn_wc_entry_dup (const svn_wc_entry_t *entry, apr_pool_t *pool)
 {
-  svn_wc_entry_t *dupentry = apr_pcalloc (pool, sizeof(*dupentry));
+  svn_wc_entry_t *dupentry = apr_palloc (pool, sizeof (*dupentry));
 
   /* Perform a trivial copy ... */
   *dupentry = *entry;

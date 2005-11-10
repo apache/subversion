@@ -1399,3 +1399,14 @@ void svn_swig_pl_hold_ref_in_pool (apr_pool_t *pool, SV *sv)
     SvREFCNT_inc(sv);
     apr_pool_cleanup_register (pool, sv, cleanup_refcnt, apr_pool_cleanup_null);
 }
+
+SV *svn_swig_pl_from_md5 (unsigned char *digest)
+{
+    SV *ret;
+
+    svn_swig_pl_callback_thunk (CALL_METHOD, (void *)"new", &ret, "sS",
+			        "SVN::MD5", digest,
+                                _SWIG_TYPE("unsigned char *"));
+
+    return sv_2mortal (ret);
+}

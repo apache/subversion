@@ -3,6 +3,7 @@ use warnings;
 
 package SVN::Wc;
 use SVN::Base qw(Wc svn_wc_);
+use SVN::Core;
 
 =head1 NAME
 
@@ -15,6 +16,8 @@ Incomplete
 =head1 OBJECTS
 
 =cut 
+
+swig_init_asp_dot_net_hack($SVN::Core::gpool);
 
 package _p_svn_wc_t;
 

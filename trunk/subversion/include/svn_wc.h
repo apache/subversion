@@ -339,7 +339,8 @@ svn_error_t *svn_wc_locked (svn_boolean_t *locked,
 
 /**
  * Return @c TRUE if @a name is the name of the WC administrative
- * directory.  Use @a pool for any temporary allocations.
+ * directory.  Use @a pool for any temporary allocations.  Only works
+ * with base directory names, not paths or URIs.
  *
  * For compatibility, the default name (.svn) will always be treated
  * as an admin dir name, even if the working copy is actually using an
@@ -351,15 +352,27 @@ svn_boolean_t svn_wc_is_adm_dir (const char *name, apr_pool_t *pool);
 
 
 /**
+ * Return the name of the administrative directory.
+ * Use @a pool for any temporary allocations.
+ *
+ * The returned pointer will refer to either a statically allocated
+ * string, or to a string allocated in @a pool.
+ *
+ * @since New in 1.3.
+ */
+const char *svn_wc_get_adm_dir (apr_pool_t *pool);
+
+
+/**
  * Use @a name for the administrative directory in the working copy.
  * Use @a pool for any temporary allocations.
  *
  * The list of valid names is limited.  Currently only ".svn" (the
  * default) and "_svn" are allowed.
  *
- * @note This function changes global (per-process) state and should,
- * to maintain consistency, be called in a single-threaded context
- * during the initialization of a Subversion client.
+ * @note This function changes global (per-process) state and must be
+ * called in a single-threaded context during the initialization of a
+ * Subversion client.
  *
  * @since New in 1.3.
  */
@@ -428,6 +441,17 @@ typedef struct svn_wc_external_item_t
   svn_opt_revision_t revision;
 
 } svn_wc_external_item_t;
+
+
+/**
+ * Return a duplicate of @a item, allocated in @a pool.  No part of the new
+ * item will be shared with @a item.
+ *
+ * @since New in 1.3.
+ */
+svn_wc_external_item_t *
+svn_wc_external_item_dup (const svn_wc_external_item_t *item,
+                          apr_pool_t *pool);
 
 
 /**
@@ -1374,10 +1398,10 @@ svn_error_t *svn_wc_mark_missing_deleted (const char *path,
  * initialize it to an unlocked state.
  *
  * If the administrative area already exists then the given @a url
- * must match the URL in the administrative area or an error will be
- * returned. The given @a revision must also match except for the
- * special case of adding a directory that has a name matching one
- * scheduled for deletion, in which case @a revision must be zero.
+ * must match the URL in the administrative area and the given
+ * @a revision must match the BASE of the working copy dir unless
+ * the admin directory is scheduled for deletion or the
+ * SVN_ERR_WC_OBSTRUCTED_UPDATE error will be returned.
  *
  * Do not ensure existence of @a path itself; if @a path does not
  * exist, return error.
@@ -1547,6 +1571,51 @@ typedef struct svn_wc_status2_t
   /** The entry's lock in the repository, if any. */
   svn_lock_t *repos_lock;
 
+  /** Set to the URI (actual or expected) of the item.
+   * @since New in 1.3
+   */
+  const char *url;
+
+  /**
+   * @defgroup svn_wc_status_ood WC out of date info from the repository
+   * @{
+   *
+   * When the working copy item is out of date compared to the
+   * repository, the following fields represent the state of the
+   * youngest revision of the item in the repository.  If the working
+   * copy is not out of date, the fields are initialized as described
+   * below.
+   */
+
+  /** Set to the youngest committed revision, or @c SVN_INVALID_REVNUM
+   * if not out of date.
+   * @since New in 1.3
+   */
+  svn_revnum_t ood_last_cmt_rev;
+
+  /** Set to the most recent commit date, or @c 0 if not out of date.
+   * @since New in 1.3
+   */
+  apr_time_t ood_last_cmt_date;
+
+  /** Set to the node kind of the youngest commit, or @c svn_node_none
+   * if not out of date.
+   * @since New in 1.3
+   */
+  svn_node_kind_t ood_kind;
+
+  /** Set to the user name of the youngest commit, or @c NULL if not
+   * out of date or non-existent.  Because a non-existent @c
+   * svn:author property has the same behavior as an out of date
+   * working copy, examine @c ood_last_cmt_rev to determine whether
+   * the working copy is out of date.
+   * @since New in 1.3
+   */
+  const char *ood_last_cmt_author;
+
+  /** @} */
+
+  /* NOTE! Please update svn_wc_dup_status2() when adding new fields here. */
 } svn_wc_status2_t;
 
 
@@ -1960,13 +2029,20 @@ svn_error_t *svn_wc_add (const char *path,
                          void *notify_baton,
                          apr_pool_t *pool);
 
-/** Add a file to a working copy at @a dst_path, obtaining the file's
- * contents from @a new_text_path and its properties from @a new_props,
- * which normally come from the repository file represented by the
- * copyfrom args, see below.  The new file will be scheduled for
- * addition with history.
+/** Add a file to a working copy at @a dst_path, obtaining the base-text's
+ * contents from @a new_text_base_path, the wc file's content from
+ * @a new_text_path, its base properties from @a new_base_props and
+ * wc properties from @a new_props.
+ * The base text and props normally come from the repository file
+ * represented by the copyfrom args, see below.  The new file will
+ * be scheduled for addition with history.
  *
- * Automatically remove @a new_text_path upon successful completion.
+ * Automatically remove @a new_text_path and @a new_text_path upon
+ * successful completion.
+ *
+ * @a new_text_path and @a new_props may be null, in which case
+ * the working copy text and props are taken from the base files with
+ * appropriate translation of the file's content.
  *
  * @a adm_access, or an access baton in its associated set, must
  * contain a write lock for the parent of @a dst_path.
@@ -1988,7 +2064,27 @@ svn_error_t *svn_wc_add (const char *path,
  * doc string about how that's really weird, outside its core mission,
  * etc, etc.  So another part of the Ideal Plan is that that
  * functionality of svn_wc_add() would move into a separate function.
+ *
+ * @since New in 1.4
  */
+
+svn_error_t *svn_wc_add_repos_file2 (const char *dst_path,
+                                     svn_wc_adm_access_t *adm_access,
+                                     const char *new_text_base_path,
+                                     const char *new_text_path,
+                                     apr_hash_t *new_base_props,
+                                     apr_hash_t *new_props,
+                                     const char *copyfrom_url,
+                                     svn_revnum_t copyfrom_rev,
+                                     apr_pool_t *pool);
+
+/** Same as svn_wc_add_repos_file2(), except that it doesn't have the
+ * new_text_base_path and new_base_props arguments.
+ *
+ * @deprecated Provided for compatibility with the 1.3 API
+ *
+ */
+
 svn_error_t *svn_wc_add_repos_file (const char *dst_path,
                                     svn_wc_adm_access_t *adm_access,
                                     const char *new_text_path,
@@ -2863,16 +2959,33 @@ svn_wc_cleanup (const char *path,
 
 /** Relocation validation callback typedef.
  *
- * Called for each relocated file/directory.  @a uuid contains the
- * expected repository UUID, @a url contains the tentative URL.
+ * Called for each relocated file/directory.  @a uuid, if non-null, contains
+ * the expected repository UUID, @a url contains the tentative URL.
  *
  * @a baton is a closure object; it should be provided by the
  * implementation, and passed by the caller.
+ *
+ * If @a root is true, then the implementation should make sure that @a url
+ * is the repository root.  Else, it can be an URL inside the repository.
+ * @a pool may be used for temporary allocations.
+ *
+ * @since New in 1.4.
+ */
+typedef svn_error_t *(*svn_wc_relocation_validator2_t) (void *baton,
+                                                        const char *uuid,
+                                                        const char *url,
+                                                        svn_boolean_t root,
+                                                        apr_pool_t *pool);
+
+/** Similar to @c svn_wc_relocation_validator2_t, but without
+ * the @a root and @a pool arguments.  @a uuid will not be NULL in this version
+ * of the function.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.3 API.
  */
 typedef svn_error_t *(*svn_wc_relocation_validator_t) (void *baton,
                                                        const char *uuid,
                                                        const char *url);
-
 
 /** Change repository references at @a path that begin with @a from
  * to begin with @a to instead.  Perform necessary allocations in @a pool. 
@@ -2882,6 +2995,19 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t) (void *baton,
  * @a adm_access is an access baton for the directory containing
  * @a path.
  */
+svn_error_t *
+svn_wc_relocate2 (const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 const char *from,
+                 const char *to,
+                 svn_boolean_t recurse,
+                 svn_wc_relocation_validator2_t validator,
+                 void *validator_baton,
+                 apr_pool_t *pool);
+
+/** Similar to svn_wc_relocate2(), but uses @c svn_wc_relocation_validator_t.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.3 API. */
 svn_error_t *
 svn_wc_relocate (const char *path,
                  svn_wc_adm_access_t *adm_access,
@@ -2950,13 +3076,28 @@ svn_wc_revert (const char *path,
 /* Tmp files */
 
 /** Create a unique temporary file in administrative tmp/ area of
- * directory @a path.  Return a handle in @a *fp.
+ * directory @a path.  Return a handle in @a *fp and the path
+ * in @a *new_name. Either @a fp or @a new_name can be null.
  *
  * The flags will be <tt>APR_WRITE | APR_CREATE | APR_EXCL</tt> and
  * optionally @c APR_DELONCLOSE (if the @a delete_on_close argument is 
  * set @c TRUE).
  *
  * This means that as soon as @a fp is closed, the tmp file will vanish.
+ *
+ * @since New in 1.4
+ */
+svn_error_t *
+svn_wc_create_tmp_file2 (apr_file_t **fp,
+                         const char **new_name,
+                         const char *path,
+                         svn_boolean_t delete_on_close,
+                         apr_pool_t *pool);
+
+
+/** Same as svn_wc_add_repos_file2(), but without the path return value
+ *
+ * @deprecated For compatibility with 1.3 API
  */
 svn_error_t *
 svn_wc_create_tmp_file (apr_file_t **fp,

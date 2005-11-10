@@ -113,7 +113,7 @@ svn_error_t *Inputer::read(void *baton, char *buffer, apr_size_t *len)
     }
 
     // catch when the java method tells us, it read to much data.
-    if(jread > *len)
+    if(jread > (jint) *len)
         jread = -1;
 
     // in the case of success, copy the data back to the subversion buffer

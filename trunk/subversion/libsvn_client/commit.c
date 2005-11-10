@@ -633,10 +633,10 @@ get_ra_editor (svn_ra_session_t **ra_session,
   
   /* Fetch RA commit editor. */
   SVN_ERR (svn_client__commit_get_baton (&commit_baton, commit_info_p, pool));
-  return svn_ra_get_commit_editor (*ra_session, editor, edit_baton, log_msg,
-                                   svn_client__commit_callback,
-                                   commit_baton, lock_tokens, keep_locks,
-                                   pool);
+  return svn_ra_get_commit_editor2 (*ra_session, editor, edit_baton, log_msg,
+                                    svn_client__commit_callback,
+                                    commit_baton, lock_tokens, keep_locks,
+                                    pool);
 }
 
 
@@ -1289,36 +1289,33 @@ svn_client_commit3 (svn_commit_info_t **commit_info_p,
       for (i = 0; i < rel_targets->nelts; i++)
         {
           const char *parent_dir, *name;
+          svn_node_kind_t kind;
 
           svn_pool_clear (subpool);
+
           target = svn_path_join (base_dir,
                                   APR_ARRAY_IDX (rel_targets, i, const char *),
                                   subpool);
-          SVN_ERR (svn_wc_get_actual_target (target, &parent_dir, 
-                                             &name, subpool));
 
-          if (*name)
+          SVN_ERR (svn_io_check_path (target, &kind, subpool));
+
+          /* If the final target is a dir, we want to lock it */
+          if (kind == svn_node_dir)
             {
-              svn_node_kind_t kind;
-
-              target = svn_path_join (parent_dir, name, subpool);
-          
-              SVN_ERR (svn_io_check_path (target, &kind, subpool));
-
-              /* If the final target is a dir, we want to recursively
-                 lock it */
-              if (kind == svn_node_dir)
-                {
-                  if (recurse)
-                    APR_ARRAY_PUSH (dirs_to_lock_recursive, 
-                                    const char *) = apr_pstrdup (pool, target);
-                  else
-                    APR_ARRAY_PUSH (dirs_to_lock, 
-                                    const char *) = apr_pstrdup (pool, target);
-                }
+              if (recurse)
+                APR_ARRAY_PUSH (dirs_to_lock_recursive, 
+                                const char *) = apr_pstrdup (pool, target);
+              else
+                APR_ARRAY_PUSH (dirs_to_lock, 
+                                const char *) = apr_pstrdup (pool, target);
             }
 
+          /* Now we need to iterate over the parent paths of this path
+             adding them to the set of directories we want to lock. */
+          svn_path_split (target, &parent_dir, &name, subpool);
+
           target = parent_dir;
+
           while (strcmp (target, base_dir))
             {
               if (target[0] == SVN_UTF8_FSLASH && target[1] == '\0')

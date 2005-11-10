@@ -28,7 +28,7 @@
 #include <apr.h>
 #include <apr_pools.h>
 #include <apr_network_io.h>
-#include <svn_config.h>
+#include "svn_config.h"
 
 #include "svn_delta.h"
 
@@ -43,6 +43,45 @@ extern "C" {
 #define SVN_RA_SVN_CAP_EDIT_PIPELINE "\x65\x64\x69\x74\x2d\x70\x69\x70\x65" \
                                      "\x6c\x69\x6e\x65"
                                      /* "edit-pipeline" */
+
+/** ra_svn passes @c svn_dirent_t fields over the wire as a list of
+ * words, these are the values used to represent each field.
+ *
+ * @defgroup ra_svn_dirent_fields ra_svn dirent fields
+ * @{
+ */
+
+/** The ra_svn way of saying @c SVN_DIRENT_KIND. */
+#define SVN_RA_SVN_DIRENT_KIND \
+        "\x6b\x69\x6e\x64"
+        /* "kind" */
+
+/** The ra_svn way of saying @c SVN_DIRENT_SIZE. */
+#define SVN_RA_SVN_DIRENT_SIZE \
+        "\x73\x69\x7a\x65"
+        /* "size" */
+
+/** The ra_svn way of saying @c SVN_DIRENT_HAS_PROPS. */
+#define SVN_RA_SVN_DIRENT_HAS_PROPS \
+        "\x68\x61\x73\x2d\x70\x72\x6f\x70\x73"
+        /* "has-props" */
+
+/** The ra_svn way of saying @c SVN_DIRENT_CREATED_REV. */
+#define SVN_RA_SVN_DIRENT_CREATED_REV \
+        "\x63\x72\x65\x61\x74\x65\x64\x2d\x72\x65\x76"
+        /* "created-rev" */
+
+/** The ra_svn way of saying @c SVN_DIRENT_TIME. */
+#define SVN_RA_SVN_DIRENT_TIME \
+        "\x74\x69\x6d\x65"
+        /* "time" */
+
+/** The ra_svn way of saying @c SVN_DIRENT_LAST_AUTHOR. */
+#define SVN_RA_SVN_DIRENT_LAST_AUTHOR \
+        "\x6c\x61\x73\x74\x2d\x61\x75\x74\x68\x6f\x72"
+        /* "last-author" */
+
+/** @} */
 
 /** A value used to indicate an optional number element in a tuple that was
  * not received.

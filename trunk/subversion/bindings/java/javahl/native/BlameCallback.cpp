@@ -21,7 +21,7 @@
 
 #include "BlameCallback.h"
 #include "JNIUtil.h"
-#include <svn_time.h>
+#include "svn_time.h"
 /**
  * Create a BlameCallback object
  * @param jcallback the java callback object.

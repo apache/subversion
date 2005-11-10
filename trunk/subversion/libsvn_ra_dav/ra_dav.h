@@ -34,6 +34,7 @@
 #include "svn_delta.h"
 #include "svn_ra.h"
 #include "svn_dav.h"
+#include "svn_private_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -153,7 +154,7 @@ struct lock_request_baton
 
 typedef struct {
   apr_pool_t *pool;
-  const char *url;                      /* original, unparsed session url */
+  svn_stringbuf_t *url;                 /* original, unparsed session url */
   ne_uri root;                          /* parsed version of above */
   const char *repos_root;               /* URL for repository root */
 
@@ -220,7 +221,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(
   const svn_delta_editor_t **editor,
   void **edit_baton,
   const char *log_msg,
-  svn_commit_callback_t callback,
+  svn_commit_callback2_t callback,
   void *callback_baton,
   apr_hash_t *lock_tokens,
   svn_boolean_t keep_locks,
@@ -239,6 +240,7 @@ svn_error_t *svn_ra_dav__get_dir(
   svn_ra_session_t *session,
   const char *path,
   svn_revnum_t revision,
+  apr_uint32_t dirent_fields,
   apr_hash_t **dirents,
   svn_revnum_t *fetched_rev,
   apr_hash_t **props,
@@ -290,6 +292,7 @@ svn_error_t * svn_ra_dav__do_diff(
   const char *diff_target,
   svn_boolean_t recurse,
   svn_boolean_t ignore_ancestry,
+  svn_boolean_t text_deltas,
   const char *versus_url,
   const svn_delta_editor_t *wc_diff,
   void *wc_diff_baton,
@@ -736,9 +739,10 @@ void svn_ra_dav__copy_href(svn_stringbuf_t *dst, const char *src);
 
 
 /* If RAS contains authentication info, attempt to store it via client
-   callbacks.  */
+   callbacks and using POOL for temporary allocations.  */
 svn_error_t *
-svn_ra_dav__maybe_store_auth_info (svn_ra_dav__session_t *ras);
+svn_ra_dav__maybe_store_auth_info (svn_ra_dav__session_t *ras,
+                                   apr_pool_t *pool);
 
 
 /* Like svn_ra_dav__maybe_store_auth_info(), but conditional on ERR.
@@ -749,7 +753,8 @@ svn_ra_dav__maybe_store_auth_info (svn_ra_dav__session_t *ras);
    store auth info, else return SVN_NO_ERROR. */
 svn_error_t *
 svn_ra_dav__maybe_store_auth_info_after_result(svn_error_t *err,
-                                               svn_ra_dav__session_t *ras);
+                                               svn_ra_dav__session_t *ras,
+                                               apr_pool_t *pool);
 
 
 /* Create an error object for an error from neon in the given session,
@@ -786,7 +791,7 @@ svn_ra_dav__request_interrogator(ne_request *request,
    specified (e.g. as 200); use 0 for OKAY_2 if a second result code is
    not allowed.
 
-   #if SVN_NEON_0_25
+   #ifdef SVN_NEON_0_25
 
       If INTERROGATOR is non-NULL, invoke it with the Neon request,
       the dispatch result, and INTERROGATOR_BATON.  This is done
@@ -810,7 +815,7 @@ svn_ra_dav__request_dispatch(int *code_p,
                              const char *url,
                              int okay_1,
                              int okay_2,
-#if SVN_NEON_0_25
+#ifdef SVN_NEON_0_25
                              svn_ra_dav__request_interrogator interrogator,
                              void *interrogator_baton,
 #endif /* SVN_NEON_0_25 */

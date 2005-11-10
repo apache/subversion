@@ -78,6 +78,8 @@ void svn_swig_rb_make_delta_editor(svn_delta_editor_t **editor,
                                    VALUE rb_editor,
                                    apr_pool_t *pool);
 
+VALUE svn_swig_rb_make_baton(VALUE proc, VALUE pool);
+
 svn_error_t *svn_swig_rb_log_receiver(void *baton,
                                       apr_hash_t *changed_paths,
                                       svn_revnum_t revision,
@@ -99,12 +101,11 @@ svn_error_t *svn_swig_rb_repos_authz_callback(svn_repos_authz_access_t required,
                                               void *baton,
                                               apr_pool_t *pool);
   
-svn_error_t *svn_swig_rb_get_commit_log_func(const char **log_msg,
-                                             const char **tmp_file,
-                                             apr_array_header_t *commit_items,
-                                             void *baton,
-                                             apr_pool_t *pool);
-
+svn_error_t *svn_swig_rb_get_commit_log_func2(const char **log_msg,
+                                              const char **tmp_file,
+                                              const apr_array_header_t *commit_items,
+                                              void *baton,
+                                              apr_pool_t *pool);
 
 void svn_swig_rb_notify_func2(void *baton,
                               const svn_wc_notify_t *notify,

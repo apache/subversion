@@ -42,7 +42,7 @@ relocate_entry (svn_wc_adm_access_t *adm_access,
                 const svn_wc_entry_t *entry,
                 const char *from,
                 const char *to,
-                svn_wc_relocation_validator_t validator,
+                svn_wc_relocation_validator2_t validator,
                 void *validator_baton,
                 svn_boolean_t do_sync,
                 apr_pool_t *pool)
@@ -58,7 +58,7 @@ relocate_entry (svn_wc_adm_access_t *adm_access,
          if this part is identical in both strings. */
       apr_size_t repos_len = strlen (entry->repos);
            
-      if (from_len > repos_len)
+      if (from_len >= repos_len)
         {
           apr_size_t to_len = strlen (to);
           apr_size_t fs_path_len = from_len - repos_len;
@@ -79,6 +79,9 @@ relocate_entry (svn_wc_adm_access_t *adm_access,
           entry2.repos = apr_psprintf (svn_wc_adm_access_pool (adm_access),
                                        "%s%s", to, entry->repos + from_len);
           flags |= SVN_WC__ENTRY_MODIFY_REPOS;
+          /* Make sure to is really the repository root. */
+          SVN_ERR (validator (validator_baton, entry->uuid, entry2.repos,
+                              TRUE, pool));
         }
     }
 
@@ -87,7 +90,8 @@ relocate_entry (svn_wc_adm_access_t *adm_access,
       entry2.url = APR_PSPRINTF2 (svn_wc_adm_access_pool (adm_access),
                                   "%s%s", to, entry->url + from_len);
       if (entry->uuid)
-        SVN_ERR (validator (validator_baton, entry->uuid, entry2.url));
+        SVN_ERR (validator (validator_baton, entry->uuid, entry2.url, FALSE,
+                            pool));
       flags |= SVN_WC__ENTRY_MODIFY_URL;
     }
 
@@ -97,7 +101,8 @@ relocate_entry (svn_wc_adm_access_t *adm_access,
                                            "%s%s", to,
                                            entry->copyfrom_url + from_len);
       if (entry->uuid)
-        SVN_ERR (validator (validator_baton, entry->uuid, entry2.copyfrom_url));
+        SVN_ERR (validator (validator_baton, entry->uuid,
+                            entry2.copyfrom_url, FALSE, pool));
       flags |= SVN_WC__ENTRY_MODIFY_COPYFROM_URL;
     }
 
@@ -108,14 +113,14 @@ relocate_entry (svn_wc_adm_access_t *adm_access,
 }
 
 svn_error_t *
-svn_wc_relocate (const char *path,
-                 svn_wc_adm_access_t *adm_access,
-                 const char *from,
-                 const char *to,
-                 svn_boolean_t recurse,
-                 svn_wc_relocation_validator_t validator,
-                 void *validator_baton,
-                 apr_pool_t *pool)
+svn_wc_relocate2 (const char *path,
+                  svn_wc_adm_access_t *adm_access,
+                  const char *from,
+                  const char *to,
+                  svn_boolean_t recurse,
+                  svn_wc_relocation_validator2_t validator,
+                  void *validator_baton,
+                  apr_pool_t *pool)
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
@@ -154,7 +159,9 @@ svn_wc_relocate (const char *path,
       if (strcmp (key, SVN_WC_ENTRY_THIS_DIR) == 0)
         continue;
 
-      if (recurse && (entry->kind == svn_node_dir))
+      if (recurse && (entry->kind == svn_node_dir)
+          && (! entry->deleted || (entry->schedule == svn_wc_schedule_add))
+          && ! entry->absent)
         {
           svn_wc_adm_access_t *subdir_access;
           const char *subdir = svn_path_join (path, key, pool);
@@ -162,9 +169,9 @@ svn_wc_relocate (const char *path,
             continue;
           SVN_ERR (svn_wc_adm_retrieve (&subdir_access, adm_access, 
                                         subdir, pool));
-          SVN_ERR (svn_wc_relocate (subdir, subdir_access, from, to,
-                                    recurse, validator, 
-                                    validator_baton, pool));
+          SVN_ERR (svn_wc_relocate2 (subdir, subdir_access, from, to,
+                                     recurse, validator, 
+                                     validator_baton, pool));
         }
       SVN_ERR (relocate_entry (adm_access, entry, from, to,
                                validator, validator_baton, FALSE, pool));
@@ -175,3 +182,42 @@ svn_wc_relocate (const char *path,
   return SVN_NO_ERROR;
 }
 
+/* Compatibility baton and wrapper. */
+struct compat_baton {
+  svn_wc_relocation_validator_t validator;
+  void *baton;
+};
+
+/* This implements svn_wc_relocate_validator2_t. */
+static svn_error_t *
+compat_validator (void *baton,
+                  const char *uuid,
+                  const char *url,
+                  svn_boolean_t root,
+                  apr_pool_t *pool)
+{
+  struct compat_baton *cb = baton;
+  /* The old callback type doesn't allow uuid to be NULL. */
+  if (uuid)
+    return cb->validator (cb->baton, uuid, url);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_relocate (const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 const char *from,
+                 const char *to,
+                 svn_boolean_t recurse,
+                 svn_wc_relocation_validator_t validator,
+                 void *validator_baton,
+                 apr_pool_t *pool)
+{
+  struct compat_baton cb;
+
+  cb.validator = validator;
+  cb.baton = validator_baton;
+
+  return svn_wc_relocate2 (path, adm_access, from, to, recurse,
+                           compat_validator, &cb, pool);
+}
