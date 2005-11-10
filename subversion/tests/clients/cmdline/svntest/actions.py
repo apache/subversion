@@ -815,12 +815,12 @@ pre-revprop-change hook script and (if appropriate) making it executable."""
   hook_path = main.get_pre_revprop_change_hook_path (repo_dir)
   main.create_python_hook_script (hook_path, 'import sys; sys.exit(0)')
 
-def disable_commits(repo_dir):
+def create_failing_post_commit_hook(repo_dir):
   """Disable commits in a repository REPOS_DIR by creating a post-commit hook
 script which always reports errors."""
 
   hook_path = main.get_post_commit_hook_path (repo_dir)
   main.create_python_hook_script (hook_path, 'import sys; '
-    'print >>sys.stderr, "Committing has been disabled"; '
+    'print >>sys.stderr, "Post-commit hook failed"; '
     'sys.exit(1)')
 ### End of file.
