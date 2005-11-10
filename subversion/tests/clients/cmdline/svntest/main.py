@@ -500,23 +500,20 @@ def canonize_url(input):
     return input
 
 
-def create_python_hook_script (hook_name, hook_script_code):
-  """Create a Python hook script named HOOK_NAME with the specified
+def create_python_hook_script (hook_path, hook_script_code):
+  """Create a Python hook script at HOOK_PATH with the specified
      HOOK_SCRIPT_CODE."""
 
   if sys.platform == 'win32':
-    # On windows, create a batch file wrapper to the python script.
-    hook_py = os.path.join (hook_name, ".py")
-    hook = os.path.join (hook_name, ".bat")
     # Fill the python file.
-    file_append (hook_py, hook_script_code)
+    file_append ("%s.py" % hook_path, hook_script_code)
     # Fill the batch wrapper file.
-    file_append (hook, "@%s %s\n" % (sys.executable, hook_py))
+    file_append ("%s.bat" % hook_path,
+                 "@%s %s.py\n" % (sys.executable, hook_path))
   else:
     # For all other platforms
-    file_append (hook_name, "#!%s\n" % sys.executable)
-    file_append (hook_name, hook_script_code)
-    os.chmod (hook_name, 0755)
+    file_append (hook_path, "#!%s\n%s" % (sys.executable, hook_script_code))
+    os.chmod (hook_path, 0755)
 
 
 ######################################################################
