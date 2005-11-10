@@ -33,7 +33,8 @@ Candidate changes:
      I applied this patch to 1.3.x branch and verified it fixes problems in
      Subclipse.
    Votes:
-     +1 (non-binding): markphip
+     +1: (non-binding): markphip
+     -1: dlr (mail to dev list pending)
 
  * r17279
    Don't use recursive symbolic links in our build tree.
