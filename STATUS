@@ -26,7 +26,7 @@ Candidate changes:
    Justification:
      Failure in common use of svn diff with a simple fix.
    Votes:
-     +1: dberlin
+     +1: dberlin, rooneg
 
  * r17214
    Fix crash because of reentrant call to javahl and close race condition
