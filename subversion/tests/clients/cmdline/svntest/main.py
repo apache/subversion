@@ -218,6 +218,11 @@ def get_post_commit_hook_path(repo_dir):
 
   return os.path.join(repo_dir, "hooks", "post-commit")
 
+def get_pre_revprop_change_hook_path(repo_dir):
+  "Return the path of the pre-revprop-change hook script in REPO_DIR."
+
+  return os.path.join(repo_dir, "hooks", "pre-revprop-change")
+
 
 # Run any binary, logging the command line (TODO: and return code)
 def run_command(command, error_expected, binary_mode=0, *varargs):
