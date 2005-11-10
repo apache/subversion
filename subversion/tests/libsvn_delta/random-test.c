@@ -468,8 +468,8 @@ do_random_combine_test (const char **msg,
                 composite->sview_len = 0;
               }
             else
-              composite = svn_txdelta__compose_windows (window_A, window_B,
-                                                        wpool);
+              composite = svn_txdelta_compose_windows (window_A, window_B,
+                                                       wpool);
             if (print_windows)
               delta_window_print (composite, "AB", stdout);
 

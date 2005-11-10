@@ -183,6 +183,37 @@ typedef struct svn_txdelta_window_t
 svn_txdelta_window_t *svn_txdelta_window_dup (
   const svn_txdelta_window_t *window, apr_pool_t *pool);
 
+/**
+ * Compose two delta windows, yielding a third, allocated in @a pool.
+ *
+ * @since New in 1.4
+ *
+ */
+svn_txdelta_window_t *
+svn_txdelta_compose_windows (const svn_txdelta_window_t *window_A,
+                             const svn_txdelta_window_t *window_B,
+                             apr_pool_t *pool);
+
+/**
+ * Apply the instructions from @a window to a source view @a sbuf to
+ *  produce a target view @a tbuf.  
+ *
+ * @a sbuf is assumed to have @a window->sview_len bytes of data and
+ * @a tbuf is assumed to have room for @a tlen bytes of output.  @a
+ * tlen may be more than @a window->tview_len, so return the actual
+ * number of bytes written.  @a sbuf is not touched and may be NULL if
+ * @a window contains no source-copy operations. This is purely a
+ * memory operation; nothing can go wrong as long as we have a valid
+ * window. 
+ *
+ * @since New in 1.4
+ *
+ */
+void
+svn_txdelta_apply_instructions (svn_txdelta_window_t *window,
+                                const char *sbuf, char *tbuf,
+                                apr_size_t *tlen);
+
 /** A typedef for functions that consume a series of delta windows, for
  * use in caller-pushes interfaces.  Such functions will typically
  * apply the delta windows to produce some file, or save the windows

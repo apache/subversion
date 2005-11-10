@@ -729,9 +729,9 @@ copy_source_ops (apr_size_t offset, apr_size_t limit,
 
 
 svn_txdelta_window_t *
-svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
-                              const svn_txdelta_window_t *window_B,
-                              apr_pool_t *pool)
+svn_txdelta_compose_windows (const svn_txdelta_window_t *window_A,
+                             const svn_txdelta_window_t *window_B,
+                             apr_pool_t *pool)
 {
   svn_txdelta__ops_baton_t build_baton = { 0 };
   svn_txdelta_window_t *composite;

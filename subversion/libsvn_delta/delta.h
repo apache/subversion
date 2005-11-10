@@ -84,26 +84,6 @@ void svn_txdelta__xdelta (svn_txdelta__ops_baton_t *build_baton,
                           apr_size_t target_len,
                           apr_pool_t *pool);
 
-/* Compose two delta windows, yielding a third, allocated from POOL. */
-svn_txdelta_window_t *
-svn_txdelta__compose_windows (const svn_txdelta_window_t *window_A,
-                              const svn_txdelta_window_t *window_B,
-                              apr_pool_t *pool);
-
-
-/* Apply the instructions from WINDOW to a source view SBUF to produce
-   a target view TBUF.  SBUF is assumed to have WINDOW->sview_len
-   bytes of data and TBUF is assumed to have room for TLEN bytes of
-   output.  TLEN may be more than WINDOW->tview_len, so return the
-   actual number of bytes written.  SBUF is not touched and may be
-   NULL if WINDOW contains no source-copy operations. This is purely a
-   memory operation; nothing can go wrong as long as we have a valid
-   window.  */
-void
-svn_txdelta__apply_instructions (svn_txdelta_window_t *window,
-                                 const char *sbuf, char *tbuf,
-                                 apr_size_t *tlen);
-
 
 #ifdef __cplusplus
 }
