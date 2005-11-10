@@ -808,19 +808,11 @@ def lock_admin_dir(wc_dir):
   path = os.path.join(wc_dir, main.get_admin_name(), 'lock')
   main.file_append(path, "stop looking!")
 
-def enable_revprop_changes(repos_dir):
+def enable_revprop_changes(repo_dir):
   """Enable revprop changes in a repository REPOS_DIR by creating a
 pre-revprop-change hook script and (if appropriate) making it executable."""
-  if os.name == 'posix':
-    hook = os.path.join(repos_dir,
-                        'hooks', 'pre-revprop-change')
-    main.file_append(hook, "#!/bin/sh\n\nexit 0\n")
-    os.chmod(hook, 0755)
-  elif sys.platform == 'win32':
-    hook = os.path.join(repos_dir,
-                        'hooks', 'pre-revprop-change.bat')
-    main.file_append(hook, "@exit 0\n")
 
-
+  hook_path = main.get_pre_revprop_change_hook_path (repo_dir)
+  main.create_python_hook_script (hook_path, 'import sys; sys.exit(0)')
 
 ### End of file.
