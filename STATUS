@@ -21,13 +21,6 @@ Candidate changes:
    Votes:
      +1: blair
 
- * r17190, r17271
-   Fix url->wc diff when wc contains schedule-delete files.
-   Justification:
-     Failure in common use of svn diff with a simple fix.
-   Votes:
-     +1: dberlin, rooneg
-
  * r17214
    Fix crash because of reentrant call to javahl and close race condition
    window.
@@ -51,6 +44,13 @@ Candidate changes:
      +1: djames
 
 Approved changes:
+
+ * r17190, r17271
+   Fix url->wc diff when wc contains schedule-delete files.
+   Justification:
+     Failure in common use of svn diff with a simple fix.
+   Votes:
+     +1: dberlin, rooneg, philip
 
  * r17257
    Emit workaround for bugs in SWIG 1.3.25 and earlier which cause
