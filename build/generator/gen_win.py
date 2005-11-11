@@ -569,7 +569,8 @@ class WinGeneratorBase(GeneratorBase):
     "Return the list of defines for target"
 
     fakedefines = ["WIN32","_WINDOWS","alloca=_alloca",
-                   "snprintf=_snprintf"]
+                   "snprintf=_snprintf", "_CRT_SECURE_NO_DEPRECATE",
+                   "_CRT_NONSTDC_NO_DEPRECATE"]
     if isinstance(target, gen_base.TargetApacheMod):
       if target.name == 'mod_dav_svn':
         fakedefines.extend(["AP_DECLARE_EXPORT"])
@@ -646,7 +647,8 @@ class WinGeneratorBase(GeneratorBase):
     libcfg = string.replace(string.replace(cfg, "Debug", "LibD"),
                             "Release", "LibR")
 
-    fakelibdirs = [ self.apath(self.bdb_path, "lib") ]
+    fakelibdirs = [ self.apath(self.bdb_path, "lib"),
+                    self.apath(self.neon_path) ]
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
       if target.name == 'mod_dav_svn':
@@ -659,6 +661,7 @@ class WinGeneratorBase(GeneratorBase):
     "Return the list of external libraries needed for target"
 
     dblib = self.bdb_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
+    neonlib = self.neon_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
 
     if not isinstance(target, gen_base.TargetLinked):
       return []
@@ -688,6 +691,9 @@ class WinGeneratorBase(GeneratorBase):
       if dep.external_lib == '$(SVN_DB_LIBS)':
         nondeplibs.append(dblib)
 
+      if dep.external_lib == '$(NEON_LIBS)':
+        nondeplibs.append(neonlib)
+        
     return gen_base.unique(nondeplibs)
 
   def get_win_sources(self, target, reldir_prefix=''):
@@ -889,6 +895,7 @@ class WinGeneratorBase(GeneratorBase):
     "Find the neon version"
     msg = 'WARNING: Unable to determine neon version\n'
     try:
+      self.neon_lib = "libneon"
       fp = open(os.path.join(self.neon_path, '.version'))
       txt = fp.read()
       vermatch = re.compile(r'(\d+)\.(\d+)\.(\d+)$', re.M) \
