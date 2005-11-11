@@ -824,8 +824,11 @@ delete_entry (const char *path,
           /* Whenever showing a deletion, we show the text-base vanishing. */
           const char *textbase = svn_wc__text_base_path (full_path,
                                                          FALSE, pool);
+          if (entry->schedule == svn_wc_schedule_delete)
+            textbase = svn_wc__empty_file_path (full_path, pool);
           SVN_ERR (svn_wc_get_prop_diffs (NULL, &baseprops, full_path,
                                           adm_access, pool));
+      
           SVN_ERR (pb->edit_baton->callbacks->file_deleted
                    (NULL, NULL, full_path,
                     textbase,
@@ -837,12 +840,16 @@ delete_entry (const char *path,
         }
       else
         {
+          const char *secondpath = full_path;
+          if (entry->schedule == svn_wc_schedule_delete)
+            secondpath = svn_wc__empty_file_path (full_path, pool);
           /* Or normally, show the working file being added. */
           /* ### Show the properties as well. */
+      
           SVN_ERR (pb->edit_baton->callbacks->file_added
                    (NULL, NULL, NULL, full_path,
                     svn_wc__empty_file_path (full_path, pool),
-                    full_path,
+                    secondpath,
                     0, entry->revision,
                     NULL,
                     working_mimetype,
