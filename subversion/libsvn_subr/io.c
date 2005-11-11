@@ -2929,16 +2929,13 @@ svn_io_dir_empty (svn_boolean_t *is_empty_p,
 /*** Version/format files ***/
 
 svn_error_t *
-svn_io_write_version_file2 (const char *path,
-                            int version,
-                            const char *comment,
-                            apr_pool_t *pool)
+svn_io_write_version_file (const char *path,
+                           int version,
+                           apr_pool_t *pool)
 {
   apr_file_t *format_file = NULL;
   const char *path_tmp;
-  const char *format_contents =
-    apr_psprintf (pool, "%d\n%s%s",
-                  version, comment ? "\n" : "", comment ? comment : "");
+  const char *format_contents = apr_psprintf (pool, "%d\n", version);
 
   /* We only promise to handle non-negative integers. */
   if (version < 0)
@@ -2948,11 +2945,11 @@ svn_io_write_version_file2 (const char *path,
   /* Create a temporary file to write the data to */
   SVN_ERR (svn_io_open_unique_file2 (&format_file, &path_tmp, path, ".tmp",
                                      svn_io_file_del_none, pool));
-
+  		  
   /* ...dump out our version number string... */
   SVN_ERR (svn_io_file_write_full (format_file, format_contents,
                                    strlen (format_contents), NULL, pool));
-
+  
   /* ...and close the file. */
   SVN_ERR (svn_io_file_close (format_file, pool));
 
@@ -2967,17 +2964,10 @@ svn_io_write_version_file2 (const char *path,
 
   /* And finally remove the perms to make it read only */
   SVN_ERR (svn_io_set_file_read_only (path, FALSE, pool));
-
+  
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_io_write_version_file (const char *path,
-                           int version,
-                           apr_pool_t *pool)
-{
-  return svn_io_write_version_file2 (path, version, NULL, pool);
-}
 
 svn_error_t *
 svn_io_read_version_file (int *version,
