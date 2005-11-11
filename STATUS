@@ -53,10 +53,3 @@ Approved changes:
    Votes:
      +1: dberlin, rooneg, philip
 
- * r17257
-   Emit workaround for bugs in SWIG 1.3.25 and earlier which cause
-   SWIG_GetModule to be called with the wrong number of arguments.
-   Justification:
-     Required for compatibility with GCC 2.95.x.
-   Votes:
-     +1: djames, dberlin, rooneg
