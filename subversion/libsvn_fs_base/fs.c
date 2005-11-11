@@ -647,9 +647,9 @@ base_create (svn_fs_t *fs, const char *path, apr_pool_t *pool)
   if (svn_err) goto error;
 
   /* This filesystem is ready.  Stamp it with a format number. */
-  svn_err = svn_io_write_version_file2
+  svn_err = svn_io_write_version_file
     (svn_path_join (fs->path, FORMAT_FILE, pool),
-     SVN_FS_BASE__FORMAT_NUMBER, NULL, pool);
+     SVN_FS_BASE__FORMAT_NUMBER, pool);
   if (svn_err) goto error;
 
   return SVN_NO_ERROR;
@@ -768,8 +768,8 @@ base_open (svn_fs_t *fs, const char *path, apr_pool_t *pool)
          they were format "0"), so they get upgraded on the fly. */
       svn_error_clear (svn_err);
       format = SVN_FS_BASE__FORMAT_NUMBER;
-      svn_err = svn_io_write_version_file2
-        (svn_path_join (fs->path, FORMAT_FILE, pool), format, NULL, pool);
+      svn_err = svn_io_write_version_file
+        (svn_path_join (fs->path, FORMAT_FILE, pool), format, pool);
       if (svn_err) goto error;
     }
   else if (svn_err)
@@ -1249,8 +1249,8 @@ base_hotcopy (const char *src_path,
 
   /* Only now that the hotcopied filesystem is complete,
      stamp it with a format file. */
-  SVN_ERR (svn_io_write_version_file2
-           (svn_path_join (dest_path, FORMAT_FILE, pool), format, NULL, pool));
+  SVN_ERR (svn_io_write_version_file
+           (svn_path_join (dest_path, FORMAT_FILE, pool), format, pool));
 
   if (clean_logs == TRUE)
     SVN_ERR (svn_fs_base__clean_logs (src_path, dest_path, pool));
