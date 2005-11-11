@@ -486,12 +486,12 @@ file_diff (struct dir_baton *dir_baton,
            apr_pool_t *pool)
 {
   struct edit_baton *eb = dir_baton->edit_baton;
-  const char *pristine_copy, *empty_file;
+  const char *textbase, *empty_file;
   svn_boolean_t modified;
   enum svn_wc_schedule_t schedule = entry->schedule;
   svn_boolean_t copied = entry->copied;
   svn_wc_adm_access_t *adm_access;
-  const char *pristine_mimetype, *working_mimetype;
+  const char *base_mimetype, *working_mimetype;
   const char *translated = NULL;
   apr_array_header_t *propchanges = NULL;
   apr_hash_t *baseprops = NULL;
@@ -518,7 +518,7 @@ file_diff (struct dir_baton *dir_baton,
     schedule = svn_wc_schedule_normal;
 
   /* Prep these two paths early. */
-  pristine_copy = svn_wc__text_base_path (path, FALSE, pool);
+  textbase = svn_wc__text_base_path (path, FALSE, pool);
   SVN_ERR (get_empty_file (eb, &empty_file));
 
   /* Get property diffs if this is not schedule delete. */
@@ -533,7 +533,6 @@ file_diff (struct dir_baton *dir_baton,
     }
   else
     {
-      /* Get pristine properties. */
       SVN_ERR (svn_wc_get_prop_diffs (NULL, &baseprops, path,
                                       adm_access, pool));
     }
@@ -548,15 +547,15 @@ file_diff (struct dir_baton *dir_baton,
       /* Delete compares text-base against empty file, modifications to the
          working-copy version of the deleted file are not wanted. */
 
-      /* Get svn:mime-type from pristine props of PATH. */
-      SVN_ERR (get_local_mimetypes (&pristine_mimetype, NULL, NULL,
+      /* Get svn:mime-type from BASE props of PATH. */
+      SVN_ERR (get_local_mimetypes (&base_mimetype, NULL, NULL,
                                     adm_access, path, pool));
 
       SVN_ERR (dir_baton->edit_baton->callbacks->file_deleted
                (NULL, NULL, path, 
-                pristine_copy, 
+                textbase,
                 empty_file,
-                pristine_mimetype,
+                base_mimetype,
                 NULL,
                 baseprops,
                 dir_baton->edit_baton->callback_baton));
@@ -601,22 +600,21 @@ file_diff (struct dir_baton *dir_baton,
 
       if (modified || propchanges->nelts > 0)
         {
-          /* Get svn:mime-type for both pristine and working file. */
-          SVN_ERR (get_local_mimetypes (&pristine_mimetype, &working_mimetype,
+          /* Get svn:mime-type for both base and working file. */
+          SVN_ERR (get_local_mimetypes (&base_mimetype, &working_mimetype,
                                         NULL, adm_access, path, pool));
 
           SVN_ERR (dir_baton->edit_baton->callbacks->file_changed
             (NULL, NULL, NULL,
              path,
-             modified ? pristine_copy : NULL,
+             modified ? textbase : NULL,
              translated,
              entry->revision,
              SVN_INVALID_REVNUM,
-             pristine_mimetype,
+             base_mimetype,
              working_mimetype,
              propchanges, baseprops,
              dir_baton->edit_baton->callback_baton));
-
         }
     }
   return SVN_NO_ERROR;
@@ -809,8 +807,7 @@ delete_entry (const char *path,
   const char *full_path = svn_path_join (pb->edit_baton->anchor_path, path,
                                          pb->pool);
   svn_wc_adm_access_t *adm_access;
-  const char *working_mimetype, *pristine_mimetype;
-  apr_hash_t *baseprops;
+  const char *working_mimetype, *base_mimetype;
 
   SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, pb->edit_baton->anchor,
                                       full_path, pool));
@@ -824,7 +821,7 @@ delete_entry (const char *path,
          the empty file against the current working copy.  If
          'reverse_order' is set, then show a deletion. */
 
-      SVN_ERR (get_local_mimetypes (&pristine_mimetype, &working_mimetype,
+      SVN_ERR (get_local_mimetypes (&base_mimetype, &working_mimetype,
                                     NULL, adm_access, full_path, pool));
 
       if (eb->reverse_order)
@@ -832,6 +829,7 @@ delete_entry (const char *path,
           /* Whenever showing a deletion, we show the text-base vanishing. */
           const char *textbase = svn_wc__text_base_path (full_path,
                                                          FALSE, pool);
+          apr_hash_t *baseprops = NULL;
 
           if (entry->schedule == svn_wc_schedule_delete)
             SVN_ERR (get_empty_file (pb->edit_baton, &textbase));
@@ -841,7 +839,7 @@ delete_entry (const char *path,
                    (NULL, NULL, full_path,
                     textbase,
                     empty_file,
-                    pristine_mimetype,
+                    base_mimetype,
                     NULL,
                     baseprops,
                     pb->edit_baton->callback_baton));
@@ -1141,7 +1139,7 @@ close_file (void *file_baton,
   struct edit_baton *eb = b->edit_baton;
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *entry;
-  const char *pristine_mimetype, *working_mimetype;
+  const char *repos_mimetype, *working_mimetype;
   const char *empty_file;
 
   /* The path to the temporary copy of the pristine repository version. */
@@ -1156,7 +1154,7 @@ close_file (void *file_baton,
      svn:mime-type.  So first look for svn:mime-type in
      b->propchanges... if not there, look for it in the *pristine*
      properties of path. */
-  SVN_ERR (get_local_mimetypes (&pristine_mimetype, &working_mimetype,
+  SVN_ERR (get_local_mimetypes (&repos_mimetype, &working_mimetype,
                                 b, adm_access, b->wc_path, pool));
 
   if (b->added)
@@ -1176,7 +1174,7 @@ close_file (void *file_baton,
                   0,
                   entry ? entry->revision : SVN_INVALID_REVNUM,
                   NULL,
-                  pristine_mimetype,
+                  repos_mimetype,
                   apr_array_make (pool, 1, sizeof (svn_prop_t)), NULL,
                   b->edit_baton->callback_baton));
       else
@@ -1200,7 +1198,7 @@ close_file (void *file_baton,
                    (NULL, NULL, b->path,
                     temp_file_path,
                     empty_file,
-                    pristine_mimetype,
+                    repos_mimetype,
                     NULL,
                     props,
                     b->edit_baton->callback_baton));
@@ -1254,8 +1252,8 @@ close_file (void *file_baton,
              eb->reverse_order ? temp_file_path : localfile,
              eb->reverse_order ? SVN_INVALID_REVNUM : b->edit_baton->revnum,
              eb->reverse_order ? b->edit_baton->revnum : SVN_INVALID_REVNUM,
-             eb->reverse_order ? working_mimetype : pristine_mimetype,
-             eb->reverse_order ? pristine_mimetype : working_mimetype,
+             eb->reverse_order ? working_mimetype : repos_mimetype,
+             eb->reverse_order ? repos_mimetype : working_mimetype,
              b->propchanges, originalprops,
              b->edit_baton->callback_baton));
         }
@@ -1265,6 +1263,7 @@ close_file (void *file_baton,
 }
 
 
+/* An editor function. */
 static svn_error_t *
 change_file_prop (void *file_baton,
                   const char *name,
