@@ -208,10 +208,13 @@ struct file_baton {
   apr_hash_t *baseprops;
   apr_array_header_t *propchanges;
 
-  /* The value of the svn:mime-type property from the above propchanges.
-     If NULL, the repository version has the same property value as the
-     wc version (BASE or WORKING, depending on whether we're comparing
-     against the text-base or the working copy). */
+  /* If HAS_REPOS_CHANGED_MIME_TYPE is TRUE, REPOS_CHANGED_MIME_TYPE is
+     The value of the svn:mime-type property from the above propchanges
+     (or NULL if the property has been deleted).  Otherwise, the
+     repository version has the same property value as the wc version
+     (BASE or WORKING, depending on whether we're comparing against the
+     text-base or the working copy). */
+  svn_boolean_t has_repos_changed_mime_type;
   const svn_string_t *repos_changed_mime_type;
 
   /* APPLY_HANDLER/APPLY_BATON represent the delta applcation baton. */
@@ -437,12 +440,11 @@ get_local_mimetypes (const char **pristine_mimetype,
 
   if (pristine_mimetype)
     {
-      const svn_string_t *pristine_val = NULL;
+      const svn_string_t *pristine_val;
 
-      if (b)
+      if (b && b->has_repos_changed_mime_type)
         pristine_val = b->repos_changed_mime_type;
-
-      if (! pristine_val)
+      else
         {
           /* otherwise, try looking in the pristine props in the wc */
           apr_hash_t *baseprops;
@@ -1277,7 +1279,10 @@ change_file_prop (void *file_baton,
   /* Cache the new value of svn:mime-type, to save us looking for it
      again. */
   if (strcmp (name, SVN_PROP_MIME_TYPE) == 0)
-    b->repos_changed_mime_type = propchange->value;
+    {
+      b->has_repos_changed_mime_type = TRUE;
+      b->repos_changed_mime_type = propchange->value;
+    }
 
   return SVN_NO_ERROR;
 }
