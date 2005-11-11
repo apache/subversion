@@ -887,7 +887,6 @@ log_do_committed (struct log_runner *loggy,
   const svn_wc_entry_t *orig_entry;
   svn_wc_entry_t *entry;
   apr_time_t text_time = 0; /* By default, don't override old stamp. */
-  apr_time_t prop_time = 0; /* By default, don't override old stamp. */
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
 
@@ -1160,27 +1159,6 @@ log_do_committed (struct log_runner *loggy,
                                 svn_path_local_style (tmpf, pool));
     if (kind == svn_node_file)
       {
-        svn_boolean_t same;
-        const char *chosen;
-        
-        /* We need to decide which prop-timestamp to use, just like we
-           did with text-time above. */
-        if ((err = svn_io_files_contents_same_p (&same, wf, tmpf, pool)))
-          return svn_error_createf (pick_error_code (loggy), err,
-                                    _("Error comparing '%s' and '%s'"),
-                                    svn_path_local_style (wf, pool),
-                                    svn_path_local_style (tmpf, pool));
-
-        /* If they are the same, use the working file's timestamp,
-           else use the tmp_base file's timestamp. */
-        chosen = same ? wf : tmpf;
-
-        /* Get the timestamp of our chosen file. */
-        if ((err = svn_io_file_affected_time (&prop_time, chosen, pool)))
-          return svn_error_createf (pick_error_code (loggy), err,
-                                    _("Error getting 'affected time' of '%s'"),
-                                    svn_path_local_style (chosen, pool));
-
         /* Examine propchanges here before installing the new
            propbase.  If the executable prop was -deleted-, then set a
            flag that will remind us to run -x after our call to
@@ -1270,14 +1248,13 @@ log_do_committed (struct log_runner *loggy,
     }
     
   /* Files have been moved, and timestamps have been found.  It is now
-     fime for The Big Entry Modification. */
+     time for The Big Entry Modification. */
   entry->revision = SVN_STR_TO_REV (rev);
   entry->kind = is_this_dir ? svn_node_dir : svn_node_file;
   entry->schedule = svn_wc_schedule_normal;
   entry->copied = FALSE;
   entry->deleted = FALSE;
   entry->text_time = text_time;
-  entry->prop_time = prop_time;
   entry->conflict_old = NULL;
   entry->conflict_new = NULL;
   entry->conflict_wrk = NULL;
@@ -1299,9 +1276,6 @@ log_do_committed (struct log_runner *loggy,
                                     | SVN_WC__ENTRY_MODIFY_PREJFILE
                                     | (text_time
                                        ? SVN_WC__ENTRY_MODIFY_TEXT_TIME
-                                       : 0)
-                                    | (prop_time
-                                       ? SVN_WC__ENTRY_MODIFY_PROP_TIME
                                        : 0)
                                     | SVN_WC__ENTRY_MODIFY_PROP_MODS
                                     | SVN_WC__ENTRY_MODIFY_FORCE),

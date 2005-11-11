@@ -1395,9 +1395,6 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
                                    adm_access, svn_wc__copy_normal,
                                    bprop, wprop, TRUE, pool));
 
-      /* Log to update prop-time attribute */
-      apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_PROP_TIME,
-                    APR_HASH_KEY_STRING, SVN_WC__TIMESTAMP_WC);
       apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_PROP_MODS,
                     APR_HASH_KEY_STRING, "false");
       /* ### TODO: Update properties flags when we have such flags. */
@@ -1421,14 +1418,9 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
       SVN_ERR (svn_wc__loggy_copy (&log_accum, &tgt_modified,
                                    adm_access, svn_wc__copy_normal,
                                    bprop, wprop, FALSE, pool));
-
-      if (tgt_modified)
-        {
-          /* Log to update prop-time attribute */
-          apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_PROP_TIME,
-                        APR_HASH_KEY_STRING, SVN_WC__TIMESTAMP_WC);
-        }
     }
+
+  /* ### TODO: Update props flags when we have them. */
 
   if (entry->kind == svn_node_file)
     {
