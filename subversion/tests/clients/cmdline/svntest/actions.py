@@ -821,6 +821,6 @@ script which always reports errors."""
 
   hook_path = main.get_post_commit_hook_path (repo_dir)
   main.create_python_hook_script (hook_path, 'import sys; '
-    'print >>sys.stderr, "Post-commit hook failed"; '
+    'sys.stderr.write("Post-commit hook failed"); '
     'sys.exit(1)')
 ### End of file.

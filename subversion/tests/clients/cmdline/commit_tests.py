@@ -1984,7 +1984,6 @@ def post_commit_hook_test(sbox):
                       "\n",
                       "Warning: 'post-commit' hook failed with error output:\n",
                       "Post-commit hook failed\n",
-                      "\n"
                     ]
 
   svntest.actions.run_and_verify_svn (None, expected_output, [],
