@@ -113,7 +113,7 @@ out how to modify their <tt>PATH</tt> so that they can run <tt>svnserve</tt>.</a
 <li><a href="#ssh-authorized-keys-trick">
 I want to allow access via svn+ssh://, but am paranoid.  I hate the
 idea of giving each user a login; I would then have to worry about
-what they are and are not allowed to access on my machine.
+what they are, and are not, allowed to access on my machine.
 </a></li>
 <li><a href="#auto-props">How can I set certain properties on
 everything in the repository?  Also, how can I make sure that every
@@ -1437,7 +1437,11 @@ svn update
 
 <p>As you can see, adding a file with the wrong case is tricky to fix on
 an operating system that has a case insensitive filesystem.  Do try to
-get it right when you add the file the first time!</p>
+get it right when you add the file the first time!  To prevent the
+problem from occurring in the first place, you can create a pre-commit hook that
+calls the file <tt>check-case-insensitive.pl</tt>.  That file lives
+in the Subversion
+source tarball, in the directory <tt>contrib/hook-scripts</tt>.</p>
 
 </div>
 
@@ -1706,7 +1710,7 @@ export SVN_SSH
 <div class="h3" id="ssh-authorized-keys-trick" title="ssh-authorized-keys-trick">
 <h3>I want to allow access via svn+ssh://, but am paranoid.  I hate the
 idea of giving each user a login; I would then have to worry about
-what they are and are not allowed to access on my machine.</h3>
+what they are, and are not, allowed to access on my machine.</h3>
 <p>See the section about hacking
 the <tt>~/.ssh/authorized_keys</tt> file in the answer
 to <a href="#ssh-svnserve-location">this other question</a>; ignore the stuff
