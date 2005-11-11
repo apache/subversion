@@ -208,6 +208,12 @@ struct file_baton {
   apr_hash_t *baseprops;
   apr_array_header_t *propchanges;
 
+  /* The value of the svn:mime-type property from the above propchanges.
+     If NULL, the repository version has the same property value as the
+     wc version (BASE or WORKING, depending on whether we're comparing
+     against the text-base or the working copy). */
+  const svn_string_t *repos_changed_mime_type;
+
   /* APPLY_HANDLER/APPLY_BATON represent the delta applcation baton. */
   svn_txdelta_window_handler_t apply_handler;
   void *apply_baton;
@@ -433,22 +439,9 @@ get_local_mimetypes (const char **pristine_mimetype,
     {
       const svn_string_t *pristine_val = NULL;
 
-      if (b && b->propchanges)
-        {
-          /* first search any new propchanges from the repository */
-          int i;
-          svn_prop_t *propchange;
-                    
-          for (i = 0; i < b->propchanges->nelts; i++)
-            {
-              propchange = &APR_ARRAY_IDX(b->propchanges, i, svn_prop_t);
-              if (strcmp (propchange->name, SVN_PROP_MIME_TYPE) == 0)
-                {
-                  pristine_val = propchange->value;
-                  break;
-                }
-            }          
-        }
+      if (b)
+        pristine_val = b->repos_changed_mime_type;
+
       if (! pristine_val)
         {
           /* otherwise, try looking in the pristine props in the wc */
@@ -1280,6 +1273,11 @@ change_file_prop (void *file_baton,
   /* Read the baseprops if you haven't already. */
   if (b->baseprops == NULL)
     SVN_ERR (load_base_props (b));
+
+  /* Cache the new value of svn:mime-type, to save us looking for it
+     again. */
+  if (strcmp (name, SVN_PROP_MIME_TYPE) == 0)
+    b->repos_changed_mime_type = propchange->value;
 
   return SVN_NO_ERROR;
 }
