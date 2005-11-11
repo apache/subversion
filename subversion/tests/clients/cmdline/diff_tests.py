@@ -1968,12 +1968,12 @@ def diff_schedule_delete(sbox):
     os.chdir(current_dir)
 
 #----------------------------------------------------------------------
-def diff_mime_type_change_to_base(sbox):
-  "diff to BASE with local svn:mime-type property mod"
+def diff_mime_type_changes(sbox):
+  "repos-wc diffs with local svn:mime-type prop mods"
 
   sbox.build()
 
-  expected_output_r1_r2wc = [
+  expected_output_r1_wc = [
     "Index: iota\n",
     "===================================================================\n",
     "--- iota\t(revision 1)\n",
@@ -1982,7 +1982,7 @@ def diff_mime_type_change_to_base(sbox):
     " This is the file 'iota'.\n",
     "+revision 2 text.\n" ]
 
-  expected_output_r2wc_r1 = [
+  expected_output_wc_r1 = [
     "Index: iota\n",
     "===================================================================\n",
     "--- iota\t(working copy)\n",
@@ -2002,10 +2002,10 @@ def diff_mime_type_change_to_base(sbox):
                                        'ci', '-m', 'log_msg')
 
     # Check that forward and reverse repos-BASE diffs are as expected.
-    svntest.actions.run_and_verify_svn(None, expected_output_r1_r2wc, [],
+    svntest.actions.run_and_verify_svn(None, expected_output_r1_wc, [],
                                        'diff', '-r', '1:BASE')
 
-    svntest.actions.run_and_verify_svn(None, expected_output_r2wc_r1, [],
+    svntest.actions.run_and_verify_svn(None, expected_output_wc_r1, [],
                                        'diff', '-r', 'BASE:1')
 
     # Mark iota as a binary file in the working copy.
@@ -2015,11 +2015,24 @@ def diff_mime_type_change_to_base(sbox):
 
     # Check that the earlier diffs against BASE are unaffected by the
     # presence of local svn:mime-type property mods.
-    svntest.actions.run_and_verify_svn(None, expected_output_r1_r2wc, [],
+    svntest.actions.run_and_verify_svn(None, expected_output_r1_wc, [],
                                        'diff', '-r', '1:BASE')
 
-    svntest.actions.run_and_verify_svn(None, expected_output_r2wc_r1, [],
+    svntest.actions.run_and_verify_svn(None, expected_output_wc_r1, [],
                                        'diff', '-r', 'BASE:1')
+
+    # Commit the change (r3) (so that BASE has the binary MIME type), then
+    # mark iota as a text file again in the working copy.
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'ci', '-m', 'log_msg')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'propdel', 'svn:mime-type', 'iota')
+
+    # Now diffs against BASE will fail, but diffs against WORKNG should be
+    # fine.
+    svntest.actions.run_and_verify_svn(None, expected_output_r1_wc, [],
+                                       'diff', '-r', '1')
+
 
   finally:
     os.chdir(current_dir)
@@ -2060,7 +2073,7 @@ test_list = [ None,
               diff_schedule_delete,
               XFail(diff_renamed_dir),
               diff_property_changes_to_base,
-              XFail(diff_mime_type_change_to_base),
+              XFail(diff_mime_type_changes),
               ]
 
 if __name__ == '__main__':
