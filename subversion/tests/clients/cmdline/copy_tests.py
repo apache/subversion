@@ -1836,8 +1836,53 @@ def mv_unversioned_file(sbox):
                                      ".*fish.* is not under version control.*",
                                      'mv', '--force',
                                      fish_path, dest_path)
-  
 
+def force_move(sbox):
+  "'move --force' should not lose local mods"
+  # Issue #2435: 'svn move' / 'svn mv' can lose local modifications.
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+  
+  # modify the content
+  file_handle = file(file_path, "a")
+  file_handle.write("Added contents\n")
+  file_handle.close()
+  expected_file_content = [ "This is the file 'iota'.\n",
+                            "Added contents\n",
+                          ]
+
+  # check for the new content
+  file_handle = file(file_path, "r")
+  modified_file_content = file_handle.readlines()
+  file_handle.close()
+  if modified_file_content != expected_file_content:
+    raise svntest.Failure("Test setup failed. Incorrect file contents.")
+
+  # force move the file
+  move_output = [ "A         dest\n", 
+                  "D         iota\n",
+                ]
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  try:
+    svntest.actions.run_and_verify_svn(None, move_output,
+                                       [],
+                                       'move', '--force', 
+                                       file_name, "dest")
+  finally:
+    os.chdir(was_cwd)
+
+  # check for the new content
+  file_handle = file(os.path.join(sbox.wc_dir, "dest"), "r")
+  modified_file_content = file_handle.readlines()
+  file_handle.close()
+  # Error if we dont find the modified contents...
+  if modified_file_content != expected_file_content:
+    raise svntest.Failure("File modifications were lost on 'move --force'")
+
+  
 ########################################################################
 # Run the tests
 
@@ -1880,6 +1925,7 @@ test_list = [ None,
               repos_to_wc_copy_replace_with_props,
               delete_replaced_file,
               mv_unversioned_file,
+              force_move,
              ]
 
 if __name__ == '__main__':
