@@ -215,7 +215,7 @@ svn_io_open_unique_file2 (apr_file_t **f,
   apr_file_t *file;
   const char *unique_name;
   const char *unique_name_apr;
-  struct temp_file_cleanup_s *baton;
+  struct temp_file_cleanup_s *baton = NULL;
 
   assert (f || unique_name_p);
 
