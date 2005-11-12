@@ -174,7 +174,7 @@ struct dir_baton {
      hierarchy to be compared. */
   struct dir_baton *dir_baton;
 
-  /* The list of incoming wc->repos propchanges. */
+  /* The list of incoming BASE->repos propchanges. */
   apr_array_header_t *propchanges;
 
   /* The overall crawler editor baton. */
@@ -204,16 +204,15 @@ struct file_baton {
   apr_file_t *temp_file;
   const char *temp_file_path;
 
-  /* The original property hash, and the list of incoming propchanges. */
+  /* The original WORKING property hash, and the list of incoming
+     BASE->repos propchanges. */
   apr_hash_t *baseprops;
   apr_array_header_t *propchanges;
 
   /* If HAS_REPOS_CHANGED_MIME_TYPE is TRUE, REPOS_CHANGED_MIME_TYPE is
      The value of the svn:mime-type property from the above propchanges
      (or NULL if the property has been deleted).  Otherwise, the
-     repository version has the same property value as the wc version
-     (BASE or WORKING, depending on whether we're comparing against the
-     text-base or the working copy). */
+     repository version has the same property value as BASE. */
   svn_boolean_t has_repos_changed_mime_type;
   const svn_string_t *repos_changed_mime_type;
 
@@ -963,6 +962,9 @@ close_directory (void *dir_baton,
              originalprops is set to an empty hash. */
           SVN_ERR (svn_wc_prop_list (&originalprops, b->path,
                                      b->edit_baton->anchor, pool));
+          /* ### need to combine the BASE->repos changes in b->propchanges
+             with the WORKING->BASE propchanges, if any, so that
+             b->propchanges becomes WORKING->repos. */
         }
 
       if (! b->edit_baton->reverse_order)
@@ -1218,7 +1220,11 @@ close_file (void *file_baton,
         }
       else
         localfile = temp_file_path = NULL;
-      
+
+      /* ### need to combine the BASE->repos changes in b->propchanges
+         with the WORKING->BASE propchanges, if any, so that
+         b->propchanges becomes WORKING->repos. */
+
       if (localfile || b->propchanges->nelts > 0)
         {
           /* The working copy properties at the base of the wc->repos
