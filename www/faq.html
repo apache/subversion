@@ -118,6 +118,7 @@ what they are, and are not, allowed to access on my machine.
 <li><a href="#auto-props">How can I set certain properties on
 everything in the repository?  Also, how can I make sure that every
 new file coming into the repository has these properties?</a></li>
+<li><a href="#svn-editor">How do I handle spaces in the editor path?</a></li>
 <li><a href="#divining-bdb-version">How do I determine which version of
 Berkeley DB a repository is using?</a></li>
 <li><a href="#website-auto-update">I'm managing a website in my
@@ -1761,6 +1762,69 @@ auto-props settings.  There's already a feature request filed for this
 href="http://subversion.tigris.org/issues/show_bug.cgi?id=1974">issue
 1974</a>), though this feature is still being debated by developers,
 and isn't being worked on yet.</p>
+
+</div>
+
+<![CDATA[=========================================================]]>
+
+<div class="h3" id="svn-editor" title="auto-props">
+<h3>How do I deal with spaces in the editor path?&nbsp; Also, how can
+I define command line options for the editor?</h3>
+
+<p>The Subversion command line client will invoke the editor defined
+in the environment variable SVN_EDITOR.&nbsp; This environment variable
+is passed directly to the operating system along with the name of a
+temporary file used to enter/edit the log message.</p>
+
+<p>Due to the fact that the SVN_EDITOR string is passed as-is to the
+system's command shell, spaces in the editor name, or in the path name
+to the editor, will not work unless the editor name is in quotes.<p>
+
+<p>For example, on Windows if your editor is in
+<code>C:\Program&nbsp;Files\Posix&nbsp;Tools\bin\vi</code> you would
+want to set the variable as follows:
+</p>
+<pre>
+   set SVN_EDITOR="C:\Program Files\Posix Tools\bin\vi"
+</pre>
+
+<p>Note that there is no need to escape the quotes in the Windows
+shell as they are not part of the syntax for the <code>set</code>
+command.
+</p>
+
+<p>On UNIX systems you would need to follow your shell's specific
+methods for setting the variable.&nbsp; For example, in a bash shell,
+the following should work:
+</p>
+<pre>
+   SVN_EDITOR='"/usr/local/more editors/bin/xemacs"'
+   export SVN_EDITOR
+</pre>
+
+<p>In case a command line option would be needed for the invocation
+of the editor, just add that after the editor name in the SVN_EDITOR
+environment variable just like you would us on the command line.&nbsp;
+For example, if the options <code>-nx -r</code> would be wanted for
+the above editors, the following will provide those options:
+</p>
+
+<p>For Windows:</p>
+<pre>
+   set SVN_EDITOR="C:\Program Files\Posix Tools\bin\vi" -nx -r
+</pre>
+
+<p>For UNIX/bash:</p>
+<pre>
+   SVN_EDITOR='"/usr/local/more editors/bin/xemacs" -nx -r'
+   export SVN_EDITOR
+</pre>
+
+<p>Note that SVN_EDITOR is the Subversion specific environment variable
+setting for the editor selection.&nbsp; Subversion also supports
+using the more generic EDITOR variable but if you need special behaviors
+with Subversion it is best to use the SVN_EDITOR variable.
+</p>
 
 </div>
 
