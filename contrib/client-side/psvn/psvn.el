@@ -880,13 +880,25 @@ is prompted for give extra arguments, which are appended to ARGLIST."
             (if run-asynchron
                 (progn
                   ;;(message "running asynchron: %s %S" svn-exe arglist)
-                  (let ((process-environment (svn-process-environment)))
+                  (let ((process-environment (svn-process-environment))
+                        (process-connection-type nil))
+                    ;; Communicate with the subprocess via pipes rather
+                    ;; than via a pseudoterminal, so that if the svn+ssh
+                    ;; scheme is being used, SSH will not ask for a
+                    ;; passphrase via stdio; psvn.el is currently unable
+                    ;; to answer such prompts.  Instead, SSH will run
+                    ;; x11-ssh-askpass if possible.  If Emacs is being
+                    ;; run on a TTY without $DISPLAY, this will fail; in
+                    ;; such cases, the user should start ssh-agent and
+                    ;; then run ssh-add explicitly.
                     (setq svn-proc (apply 'start-process "svn" proc-buf svn-exe arglist)))
                   (set-process-sentinel svn-proc 'svn-process-sentinel)
                   (when svn-status-track-user-input
                     (set-process-filter svn-proc 'svn-process-filter)))
               ;;(message "running synchron: %s %S" svn-exe arglist)
               (let ((process-environment (svn-process-environment)))
+                ;; `call-process' ignores `process-connection-type' and
+                ;; never opens a pseudoterminal.
                 (apply 'call-process svn-exe nil proc-buf nil arglist))
               (setq svn-status-mode-line-process-status "")
               (svn-status-update-mode-line)))))
