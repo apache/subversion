@@ -31,11 +31,6 @@ extern "C" {
 
 /* Newline and keyword translation properties */
 
-/* The text-base eol style for files using svn_subst_eol_style_native
-   style.  */
-#define SVN_WC__DEFAULT_EOL_MARKER "\n"
-
-
 /* Query the SVN_PROP_EOL_STYLE property on file PATH.  If STYLE is
    non-null, set *STYLE to PATH's eol style.  Set *EOL to
 

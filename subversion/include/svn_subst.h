@@ -74,6 +74,38 @@ svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
                                 const char **eol,
                                 const char *value);
 
+/** Returns the @a eol and @a force_repair parameters needed to
+ * translate @a style to its normal form (used for working copy text
+ * bases and in the repository). @a eol is assumed to point to a
+ * valid eol translation string and may be returned unmodified.
+ *
+ * @note For more information about line-endings see
+ *       notes/line-endings-and-keywords.txt
+ *
+ * @since New in 1.4
+ *
+ */
+svn_error_t *
+svn_subst_eol_style_normalize (svn_boolean_t *force_repair,
+                               const char **eol,
+                               svn_subst_eol_style_t style);
+
+
+/** Indicates whether the working copy and normalized versions of a file
+ * with the given the parameters differ.  If @a force_eol_check is true,
+ * the routine also accounts for all translations required due to repairing
+ * fixed eol styles.
+ *
+ * @since New in 1.4
+ *
+ */
+svn_boolean_t
+svn_subst_translation_required (svn_subst_eol_style_t style,
+                                const char *eol,
+                                apr_hash_t *keywords,
+                                svn_boolean_t special,
+                                svn_boolean_t force_eol_check);
+
 
 /** Values used in keyword expansion.
  *
@@ -340,6 +372,22 @@ svn_subst_translate_cstring (const char *src,
                              svn_boolean_t expand,
                              apr_pool_t *pool);
 
+/** Convenience routine (wrapper around svn_subst_copy_and_translate3)
+ * which detranslates the given @a src into @a dst.  The parameters
+ * specified should be those immediately taken from the files'
+ * properties.
+ *
+ * @since New in 1.4
+ *
+ */
+svn_error_t *
+svn_subst_translate_to_normal_form (const char *src,
+                                    const char *dst,
+                                    svn_subst_eol_style_t eol_style,
+                                    const char *eol_str,
+                                    apr_hash_t *keywords,
+                                    svn_boolean_t special,
+                                    apr_pool_t *pool);
 
 /* EOL conversion and character encodings */
 

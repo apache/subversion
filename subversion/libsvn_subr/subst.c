@@ -40,6 +40,11 @@
 
 #include "svn_private_config.h"
 
+/* The Repository Default EOL used for files which
+ * use the 'native' eol style.
+ */
+#define SVN_SUBST__DEFAULT_EOL_STR "\n"
+
 /**
  * The textual elements of a detranslated special file.  One of these
  * strings must appear as the first element of any special file as it
@@ -89,6 +94,71 @@ svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
       if (style)
         *style = svn_subst_eol_style_unknown;
     }
+}
+
+
+svn_error_t *
+svn_subst_eol_style_normalize (svn_boolean_t *force_repair,
+                               const char **eol,
+                               svn_subst_eol_style_t style)
+{
+  *force_repair = style == svn_subst_eol_style_fixed;
+  switch (style)
+    {
+    case svn_subst_eol_style_fixed:
+      break;
+
+    case svn_subst_eol_style_native:
+      *eol = SVN_SUBST__DEFAULT_EOL_STR;
+      break;
+
+    case svn_subst_eol_style_none:
+      *eol = NULL;
+      break;
+
+    default:
+      return svn_error_create (SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_boolean_t
+svn_subst_translation_required (svn_subst_eol_style_t style,
+                                const char *eol,
+                                apr_hash_t *keywords,
+                                svn_boolean_t special,
+                                svn_boolean_t force_eol_check)
+{
+  return (special || keywords
+          || (style != svn_subst_eol_style_none && force_eol_check)
+          || (style == svn_subst_eol_style_native &&
+              strcmp (APR_EOL_STR, SVN_SUBST__DEFAULT_EOL_STR) != 0)
+          || (style == svn_subst_eol_style_fixed &&
+              strcmp (APR_EOL_STR, eol) != 0));
+}
+
+
+svn_error_t *
+svn_subst_translate_to_normal_form (const char *src,
+                                    const char *dst,
+                                    svn_subst_eol_style_t eol_style,
+                                    const char *eol_str,
+                                    apr_hash_t *keywords,
+                                    svn_boolean_t special,
+                                    apr_pool_t *pool)
+{
+  svn_boolean_t force_repair;
+
+  SVN_ERR (svn_subst_eol_style_normalize (&force_repair, &eol_str,
+                                          eol_style));
+
+  return svn_subst_copy_and_translate3 (src, dst, eol_str, force_repair,
+                                        keywords,
+                                        FALSE /* contract keywords */,
+                                        special,
+                                        pool);
 }
 
 
