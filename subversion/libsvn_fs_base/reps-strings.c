@@ -33,8 +33,6 @@
 #include "bdb/reps-table.h"
 #include "bdb/strings-table.h"
 
-#include "../libsvn_delta/delta.h"
-
 #include "svn_private_config.h"
 
 
@@ -205,8 +203,8 @@ compose_handler (svn_txdelta_window_t *window, void *baton)
           apr_size_t source_len = window->tview_len;
           assert (cb->window->sview_len == source_len);
           cb->source_buf = apr_palloc (cb->window_pool, source_len);
-          svn_txdelta__apply_instructions (window, NULL,
-                                           cb->source_buf, &source_len);
+          svn_txdelta_apply_instructions (window, NULL,
+                                          cb->source_buf, &source_len);
           cb->done = TRUE;
         }
       else
@@ -215,8 +213,8 @@ compose_handler (svn_txdelta_window_t *window, void *baton)
           apr_pool_t *composite_pool = svn_pool_create (cb->trail->pool);
           svn_txdelta_window_t *composite;
 
-          composite = svn_txdelta__compose_windows (window, cb->window,
-                                                    composite_pool);
+          composite = svn_txdelta_compose_windows (window, cb->window,
+                                                   composite_pool);
           svn_pool_destroy (cb->window_pool);
           cb->window = composite;
           cb->window_pool = composite_pool;
@@ -389,8 +387,8 @@ rep_undeltify_range (svn_fs_t *fs,
           target_buf = buf;
         }
 
-      svn_txdelta__apply_instructions (cb.window, source_buf,
-                                       target_buf, &target_len);
+      svn_txdelta_apply_instructions (cb.window, source_buf,
+                                      target_buf, &target_len);
       if (offset > 0)
         {
           assert (target_len > offset);

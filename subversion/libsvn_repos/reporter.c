@@ -1047,9 +1047,9 @@ svn_repos_begin_report (void **report_baton,
   b->authz_read_baton = authz_read_baton;
 
   SVN_ERR (svn_io_temp_dir (&tempdir, pool));
-  SVN_ERR (svn_io_open_unique_file (&b->tempfile, NULL,
-                                    apr_psprintf (pool, "%s/report", tempdir),
-                                    ".tmp", TRUE, pool));
+  SVN_ERR (svn_io_open_unique_file2 (&b->tempfile, NULL,
+                                     apr_psprintf (pool, "%s/report", tempdir),
+                                     ".tmp", svn_io_file_del_on_close, pool));
 
   /* Hand reporter back to client. */
   *report_baton = b;

@@ -487,9 +487,9 @@ size_buffer (char **buf, apr_size_t *buf_size,
 
 
 void
-svn_txdelta__apply_instructions (svn_txdelta_window_t *window,
-                                 const char *sbuf, char *tbuf,
-                                 apr_size_t *tlen)
+svn_txdelta_apply_instructions (svn_txdelta_window_t *window,
+                                const char *sbuf, char *tbuf,
+                                apr_size_t *tlen)
 {
   const svn_txdelta_op_t *op;
   apr_size_t i, j, tpos = 0;
@@ -540,6 +540,19 @@ svn_txdelta__apply_instructions (svn_txdelta_window_t *window,
   /* Check that we produced the right amount of data.  */
   assert (tpos == window->tview_len);
   *tlen = tpos;
+}
+
+/* This is a private interlibrary compatibility wrapper. */
+void
+svn_txdelta__apply_instructions (svn_txdelta_window_t *window,
+                                 const char *sbuf, char *tbuf,
+                                 apr_size_t *tlen);
+void
+svn_txdelta__apply_instructions (svn_txdelta_window_t *window,
+                                 const char *sbuf, char *tbuf,
+                                 apr_size_t *tlen)
+{
+  svn_txdelta_apply_instructions (window, sbuf, tbuf, tlen);
 }
 
 
@@ -611,7 +624,7 @@ apply_window (svn_txdelta_window_t *window, void *baton)
   /* Apply the window instructions to the source view to generate
      the target view.  */
   len = window->tview_len;
-  svn_txdelta__apply_instructions (window, ab->sbuf, ab->tbuf, &len);
+  svn_txdelta_apply_instructions (window, ab->sbuf, ab->tbuf, &len);
   assert (len == window->tview_len);
 
   /* Write out the output. */

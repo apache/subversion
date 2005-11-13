@@ -675,9 +675,10 @@ parsed_request(ne_session *sess,
         goto cleanup;
 
       tmpfile_path = svn_path_join(tmpfile_path, "dav-spool", pool);
-      err = svn_io_open_unique_file (&spool_reader_baton.spool_file, 
-                                     &spool_reader_baton.spool_file_name,
-                                     tmpfile_path, "", FALSE, pool);
+      err = svn_io_open_unique_file2 (&spool_reader_baton.spool_file,
+                                      &spool_reader_baton.spool_file_name,
+                                      tmpfile_path, "",
+                                      svn_io_file_del_none, pool);
       if (err)
         goto cleanup;
       spool_reader_baton.pool = pool;

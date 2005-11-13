@@ -22,7 +22,7 @@ attlist.entry &=
   ## Path inside the target.
   attribute path { text }
 
-## STatus of the entry in the working copy.
+## Status of the entry in the working copy.
 wc-status = element wc-status { attlist.wc-status, commit?, lock? }
 
 attlist.wc-status &=
@@ -57,10 +57,6 @@ attlist.repos-status &=
   attribute props { "modified" | "none" }
 
 against = element against { attlist.against, empty }
-# revision: revision number at which the repository information was
-
-# obtained
 attlist.against &=
-  ## REvision number at which the repository information was
-  ## retrieved.
+  ## Revision number at which the repository information was obtained.
   attribute revision { revnum.type }

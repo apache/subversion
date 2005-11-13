@@ -85,10 +85,12 @@ send_file_contents (const char *path,
   svn_stream_t *contents;
   svn_txdelta_window_handler_t handler;
   void *handler_baton;
-  apr_file_t *f = NULL;
-  svn_error_t *err = SVN_NO_ERROR;
+  apr_file_t *f;
   const svn_string_t *eol_style_val = NULL, *keywords_val = NULL;
   svn_boolean_t special = FALSE;
+  svn_subst_eol_style_t eol_style;
+  const char *eol;
+  apr_hash_t *keywords;
 
   /* If there are properties, look for EOL-style and keywords ones. */
   if (properties)
@@ -105,65 +107,53 @@ send_file_contents (const char *path,
   SVN_ERR (editor->apply_textdelta (file_baton, NULL, pool,
                                     &handler, &handler_baton));
 
-  /* If we have EOL styles or keywords to de-translate, do it.  Any
-     EOL style gets translated to "\n", the repository-normal format.
-     Keywords get unexpanded.  */
-  if (eol_style_val || keywords_val || special)
+  if (eol_style_val)
+    svn_subst_eol_style_from_value (&eol_style, &eol, eol_style_val->data);
+  else
     {
-      apr_hash_t *keywords = NULL;
+      eol = NULL;
+      eol_style = svn_subst_eol_style_none;
+    }
+
+  if (keywords_val)
+    SVN_ERR (svn_subst_build_keywords2 (&keywords, keywords_val->data,
+                                        APR_STRINGIFY(SVN_INVALID_REVNUM),
+                                        "", 0, "", pool));
+  else
+    keywords = NULL;
+
+  /* If we have EOL styles or keywords to de-translate, do it.  */
+  if (svn_subst_translation_required (eol_style, eol, keywords, special, TRUE))
+    {
       const char *temp_dir;
 
       /* Now create a new tempfile, and open a stream to it. */
       SVN_ERR (svn_io_temp_dir (&temp_dir, pool));
-      SVN_ERR (svn_io_open_unique_file
+      SVN_ERR (svn_io_open_unique_file2
                (NULL, &tmpfile_path,
                 svn_path_join (temp_dir, "svn-import", pool),
-                ".tmp", FALSE, pool));
+                ".tmp", svn_io_file_del_on_pool_cleanup, pool));
 
-      /* Generate a keyword structure. */
-      if (keywords_val)
-        SVN_ERR (svn_subst_build_keywords2 (&keywords, keywords_val->data,
-                                            APR_STRINGIFY(SVN_INVALID_REVNUM),
-                                            "", 0, "", pool));
-      
-      if ((err = svn_subst_copy_and_translate3 (path, tmpfile_path,
-                                                eol_style_val ? "\n" : NULL,
-                                                FALSE,
-                                                keywords_val ? keywords : NULL,
-                                                FALSE,
-                                                special,
-                                                pool)))
-        goto cleanup;
+      SVN_ERR (svn_subst_translate_to_normal_form
+               (path, tmpfile_path, eol_style, eol, keywords, special, pool));
     }
 
   /* Open our contents file, either the original path or the temporary
      copy we might have made above. */
-  if ((err = svn_io_file_open (&f, tmpfile_path ? tmpfile_path : path, 
-                               APR_READ, APR_OS_DEFAULT, pool)))
-    goto cleanup;
+  SVN_ERR (svn_io_file_open (&f, tmpfile_path ? tmpfile_path : path,
+                             APR_READ, APR_OS_DEFAULT, pool));
   contents = svn_stream_from_aprfile (f, pool);
 
   /* Send the file's contents to the delta-window handler. */
-  if ((err = svn_txdelta_send_stream (contents, handler, handler_baton,
-                                      digest, pool)))
-    goto cleanup;
+  SVN_ERR (svn_txdelta_send_stream (contents, handler, handler_baton,
+                                    digest, pool));
 
   /* Close our contents file. */
-  if ((err = svn_io_file_close (f, pool)))
-    goto cleanup;
+  SVN_ERR (svn_io_file_close (f, pool));
 
- cleanup:
-  if (tmpfile_path)
-    {
-      /* If we used a tempfile, we need to close and remove it, too. */
-      svn_error_t *err2 = svn_io_remove_file (tmpfile_path, pool);
-      if (err && err2)
-        svn_error_compose (err, err2);
-      else if (err2)
-        err = err2;
-    }
+  /* The temp file is removed by the pool cleanup run by the caller */
 
-  return err;
+  return SVN_NO_ERROR;
 }
 
 

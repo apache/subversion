@@ -215,7 +215,7 @@ svn_io_open_unique_file2 (apr_file_t **f,
   apr_file_t *file;
   const char *unique_name;
   const char *unique_name_apr;
-  struct temp_file_cleanup_s *baton;
+  struct temp_file_cleanup_s *baton = NULL;
 
   assert (f || unique_name_p);
 
@@ -626,7 +626,8 @@ svn_io_copy_file (const char *src,
   /* For atomicity, we translate to a tmp file and then rename the tmp
      file over the real destination. */
 
-  SVN_ERR (svn_io_open_unique_file (NULL, &dst_tmp, dst, ".tmp", FALSE, pool));
+  SVN_ERR (svn_io_open_unique_file2 (NULL, &dst_tmp, dst, ".tmp",
+                                     svn_io_file_del_none, pool));
   SVN_ERR (svn_path_cstring_from_utf8 (&dst_tmp_apr, dst_tmp, pool));
 
   apr_err = apr_file_copy (src_apr, dst_tmp_apr, APR_OS_DEFAULT, pool);
@@ -1058,8 +1059,8 @@ reown_file (const char *path_apr,
 {
   const char *unique_name;
 
-  SVN_ERR (svn_io_open_unique_file (NULL, &unique_name, path_apr,
-                                    ".tmp", FALSE, pool));
+  SVN_ERR (svn_io_open_unique_file2 (NULL, &unique_name, path_apr,
+                                     ".tmp", svn_io_file_del_none, pool));
   SVN_ERR (svn_io_file_rename (path_apr, unique_name, pool));
   SVN_ERR (svn_io_copy_file (unique_name, path_apr, TRUE, pool));
   SVN_ERR (svn_io_remove_file (unique_name, pool));
@@ -1085,8 +1086,8 @@ get_default_file_perms (const char *path, apr_fileperms_t *perms,
 
   /* Get the perms for a newly created file to find out what write
    * bits should be set. */
-  SVN_ERR (svn_io_open_unique_file (&fd, &tmp_path, path, 
-                                    ".tmp", TRUE, pool));
+  SVN_ERR (svn_io_open_unique_file2 (&fd, &tmp_path, path,
+                                    ".tmp", svn_io_file_del_on_close, pool));
   status = apr_stat (&tmp_finfo, tmp_path, APR_FINFO_PROT, pool);
   if (status)
     return svn_error_wrap_apr (status, _("Can't get default file perms "
@@ -2543,8 +2544,8 @@ svn_io_file_move (const char *from_path, const char *to_path,
 
       svn_error_clear (err);
 
-      SVN_ERR (svn_io_open_unique_file (NULL, &tmp_to_path,
-                                        to_path, "tmp", FALSE, pool));
+      SVN_ERR (svn_io_open_unique_file2 (NULL, &tmp_to_path, to_path,
+                                         "tmp", svn_io_file_del_none, pool));
 
       err = svn_io_copy_file (from_path, tmp_to_path, TRUE, pool);
       if (err)
@@ -2942,8 +2943,8 @@ svn_io_write_version_file (const char *path,
                               _("Version %d is not non-negative"), version);
 
   /* Create a temporary file to write the data to */
-  SVN_ERR (svn_io_open_unique_file (&format_file, &path_tmp, path, ".tmp",
-                                    FALSE, pool));
+  SVN_ERR (svn_io_open_unique_file2 (&format_file, &path_tmp, path, ".tmp",
+                                     svn_io_file_del_none, pool));
   		  
   /* ...dump out our version number string... */
   SVN_ERR (svn_io_file_write_full (format_file, format_contents,

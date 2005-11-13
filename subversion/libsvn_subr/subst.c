@@ -40,6 +40,11 @@
 
 #include "svn_private_config.h"
 
+/* The Repository Default EOL used for files which
+ * use the 'native' eol style.
+ */
+#define SVN_SUBST__DEFAULT_EOL_STR "\n"
+
 /**
  * The textual elements of a detranslated special file.  One of these
  * strings must appear as the first element of any special file as it
@@ -89,6 +94,71 @@ svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
       if (style)
         *style = svn_subst_eol_style_unknown;
     }
+}
+
+
+svn_error_t *
+svn_subst_eol_style_normalize (svn_boolean_t *force_repair,
+                               const char **eol,
+                               svn_subst_eol_style_t style)
+{
+  *force_repair = style == svn_subst_eol_style_fixed;
+  switch (style)
+    {
+    case svn_subst_eol_style_fixed:
+      break;
+
+    case svn_subst_eol_style_native:
+      *eol = SVN_SUBST__DEFAULT_EOL_STR;
+      break;
+
+    case svn_subst_eol_style_none:
+      *eol = NULL;
+      break;
+
+    default:
+      return svn_error_create (SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_boolean_t
+svn_subst_translation_required (svn_subst_eol_style_t style,
+                                const char *eol,
+                                apr_hash_t *keywords,
+                                svn_boolean_t special,
+                                svn_boolean_t force_eol_check)
+{
+  return (special || keywords
+          || (style != svn_subst_eol_style_none && force_eol_check)
+          || (style == svn_subst_eol_style_native &&
+              strcmp (APR_EOL_STR, SVN_SUBST__DEFAULT_EOL_STR) != 0)
+          || (style == svn_subst_eol_style_fixed &&
+              strcmp (APR_EOL_STR, eol) != 0));
+}
+
+
+svn_error_t *
+svn_subst_translate_to_normal_form (const char *src,
+                                    const char *dst,
+                                    svn_subst_eol_style_t eol_style,
+                                    const char *eol_str,
+                                    apr_hash_t *keywords,
+                                    svn_boolean_t special,
+                                    apr_pool_t *pool)
+{
+  svn_boolean_t force_repair;
+
+  SVN_ERR (svn_subst_eol_style_normalize (&force_repair, &eol_str,
+                                          eol_style));
+
+  return svn_subst_copy_and_translate3 (src, dst, eol_str, force_repair,
+                                        keywords,
+                                        FALSE /* contract keywords */,
+                                        special,
+                                        pool);
 }
 
 
@@ -1020,8 +1090,8 @@ detranslate_special_file (const char *src,
 
   /* Open a temporary destination that we will eventually atomically
      rename into place. */
-  SVN_ERR (svn_io_open_unique_file (&d, &dst_tmp, dst,
-                                    ".tmp", FALSE, pool));
+  SVN_ERR (svn_io_open_unique_file2 (&d, &dst_tmp, dst,
+                                     ".tmp", svn_io_file_del_none, pool));
 
   dst_stream = svn_stream_from_aprfile (d, pool);
   
@@ -1077,8 +1147,8 @@ create_special_file (const char *src,
 
   if (is_special)
     {
-      SVN_ERR (svn_io_open_unique_file (NULL, &src_tmp, dst, ".tmp", FALSE,
-                                        pool));
+      SVN_ERR (svn_io_open_unique_file2 (NULL, &src_tmp, dst, ".tmp",
+                                         svn_io_file_del_none, pool));
       SVN_ERR (detranslate_special_file (src, src_tmp, pool));
       src = src_tmp;
     }
@@ -1127,8 +1197,8 @@ create_special_file (const char *src,
         {
           svn_error_clear (err);
           /* Fall back to just copying the text-base. */
-          SVN_ERR (svn_io_open_unique_file (NULL, &dst_tmp, dst, ".tmp", FALSE,
-                                            pool));
+          SVN_ERR (svn_io_open_unique_file2 (NULL, &dst_tmp, dst, ".tmp",
+                                             svn_io_file_del_none, pool));
           SVN_ERR (svn_io_copy_file (src, dst_tmp, TRUE, pool));
         }
       else
@@ -1173,7 +1243,6 @@ svn_subst_copy_and_translate3 (const char *src,
   svn_stream_t *src_stream, *dst_stream;
   apr_file_t *s = NULL, *d = NULL;  /* init to null important for APR */
   svn_error_t *err;
-  apr_pool_t *subpool;
   svn_node_kind_t kind;
   svn_boolean_t path_special;
 
@@ -1195,74 +1264,42 @@ svn_subst_copy_and_translate3 (const char *src,
   if (! (eol_str || (keywords && (apr_hash_count (keywords) > 0))))
     return svn_io_copy_file (src, dst, FALSE, pool);
 
-  subpool = svn_pool_create (pool);
-
   /* Open source file. */
-  err = svn_io_file_open (&s, src, APR_READ | APR_BUFFERED,
-                          APR_OS_DEFAULT, subpool);
-  if (err)
-    goto error;
+  SVN_ERR (svn_io_file_open (&s, src, APR_READ | APR_BUFFERED,
+                             APR_OS_DEFAULT, pool));
 
   /* For atomicity, we translate to a tmp file and
      then rename the tmp file over the real destination. */
-
-  err = svn_io_open_unique_file (&d, &dst_tmp, dst,
-                                 ".tmp", FALSE, subpool);
-
-  /* Move the file name to a more permanent pool. */
-  if (dst_tmp)
-    dst_tmp = apr_pstrdup(pool, dst_tmp);
-
-  if (err)
-    goto error;
+  SVN_ERR (svn_io_open_unique_file2 (&d, &dst_tmp, dst,
+                                     ".tmp", svn_io_file_del_on_pool_cleanup,
+                                     pool));
 
   /* Now convert our two open files into streams. */
-  src_stream = svn_stream_from_aprfile (s, subpool);
-  dst_stream = svn_stream_from_aprfile (d, subpool);
+  src_stream = svn_stream_from_aprfile (s, pool);
+  dst_stream = svn_stream_from_aprfile (d, pool);
 
   /* Translate src stream into dst stream. */
   err = svn_subst_translate_stream3 (src_stream, dst_stream, eol_str,
-                                     repair, keywords, expand, subpool);
+                                     repair, keywords, expand, pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
-        err = svn_error_createf 
+        return svn_error_createf
           (SVN_ERR_IO_INCONSISTENT_EOL, err,
            _("File '%s' has inconsistent newlines"),
            svn_path_local_style (src, pool));
-      goto error;
     }
 
   /* clean up nicely. */
-  err = svn_stream_close (src_stream);
-  if (err)
-    goto error;
-
-  err = svn_stream_close (dst_stream);
-  if (err)
-    goto error;
-
-  err = svn_io_file_close (s, subpool);
-  if (err)
-    goto error;
-
-  err = svn_io_file_close (d, subpool);
-  if (err)
-    goto error;
+  SVN_ERR (svn_stream_close (src_stream));
+  SVN_ERR (svn_stream_close (dst_stream));
+  SVN_ERR (svn_io_file_close (s, pool));
+  SVN_ERR (svn_io_file_close (d, pool));
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
-  err = svn_io_file_rename (dst_tmp, dst, subpool);
-  if (err)
-    goto error;
+  SVN_ERR (svn_io_file_rename (dst_tmp, dst, pool));
 
-  svn_pool_destroy (subpool);
   return SVN_NO_ERROR;
-
- error:
-  svn_pool_destroy (subpool);   /* Make sure all files are closed first. */
-  if (dst_tmp)
-    svn_error_clear (svn_io_remove_file (dst_tmp, pool));
-  return err;
 }
 
 

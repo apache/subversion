@@ -67,7 +67,7 @@ void svn_client_get_windows_simple_provider (
 void svn_client_get_username_provider (svn_auth_provider_object_t **provider,
                                        apr_pool_t *pool)
 {
-  svn_client_get_username_provider (provider, pool);
+  svn_auth_get_username_provider (provider, pool);
 }
 
 void svn_client_get_ssl_server_trust_file_provider (

@@ -6,11 +6,10 @@ include "common.rnc"
 start = log
 
 log = element log { logentry* }
+
 logentry =
   element logentry { attlist.logentry, author?, date?, paths?, msg? }
-
 attlist.logentry &=
-  ## Revision number.
   attribute revision { revnum.type }
 
 ## Changed paths information.

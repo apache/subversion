@@ -51,7 +51,7 @@
 
 
 /*
-** resource_t: identify the relevant pieces of a resource on the server
+** version_rsrc_t: identify the relevant pieces of a resource on the server
 **
 ** REVISION is the resource's revision, or SVN_INVALID_REVNUM if it is
 ** new or is the HEAD.
@@ -75,7 +75,7 @@ typedef struct
   const char *local_path;
   apr_pool_t *pool; /* pool in which this resource is allocated. */
 
-} resource_t;
+} version_rsrc_t;
 
 
 /* Context for parsing <D:error> bodies, used when we call ne_copy(). */
@@ -138,7 +138,7 @@ typedef struct
 typedef struct
 {
   commit_ctx_t *cc;
-  resource_t *rsrc;
+  version_rsrc_t *rsrc;
   apr_hash_t *prop_changes; /* name/values pairs of new/changed properties. */
   apr_array_header_t *prop_deletes; /* names of properties to delete. */
   svn_boolean_t created; /* set if this is an add rather than an update */
@@ -158,9 +158,9 @@ static const ne_propname fetch_props[] =
 static const ne_propname log_message_prop = { SVN_DAV_PROP_NS_SVN, "log" };
 
 /* perform a deep copy of BASE into POOL, and return the result. */
-static resource_t * dup_resource(resource_t *base, apr_pool_t *pool)
+static version_rsrc_t * dup_resource(version_rsrc_t *base, apr_pool_t *pool)
 {
-  resource_t *rsrc = apr_pcalloc(pool, sizeof(*rsrc));
+  version_rsrc_t *rsrc = apr_pcalloc(pool, sizeof(*rsrc));
   rsrc->pool = pool;
   rsrc->revision = base->revision;
   rsrc->url = base->url ?
@@ -230,7 +230,7 @@ static svn_error_t * delete_activity(void *edit_baton,
 /* Get the version resource URL for RSRC, storing it in
    RSRC->vsn_url.  Use POOL for all temporary allocations. */
 static svn_error_t * get_version_url(commit_ctx_t *cc,
-                                     resource_t *rsrc,
+                                     version_rsrc_t *rsrc,
                                      svn_boolean_t force,
                                      apr_pool_t *pool)
 {
@@ -398,15 +398,15 @@ static svn_error_t * create_activity(commit_ctx_t *cc,
 
 /* Add a child resource.  POOL should be as "temporary" as possible,
    but probably not as far as requiring a new temp pool. */
-static svn_error_t * add_child(resource_t **child,
+static svn_error_t * add_child(version_rsrc_t **child,
                                commit_ctx_t *cc,
-                               const resource_t *parent,
+                               const version_rsrc_t *parent,
                                const char *name,
                                int created,
                                svn_revnum_t revision,
                                apr_pool_t *pool)
 {
-  resource_t *rsrc;
+  version_rsrc_t *rsrc;
 
   /* ### todo:  This from Yoshiki Hayashi <yoshiki@xemacs.org>:
 
@@ -526,7 +526,7 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
 
 
 static svn_error_t * checkout_resource(commit_ctx_t *cc,
-                                       resource_t *rsrc,
+                                       version_rsrc_t *rsrc,
                                        svn_boolean_t allow_404,
                                        const char *token,
                                        apr_pool_t *pool)
@@ -658,7 +658,7 @@ really a big deal I guess.
 
 */
 static svn_error_t * do_proppatch(svn_ra_dav__session_t *ras,
-                                  const resource_t *rsrc,
+                                  const version_rsrc_t *rsrc,
                                   resource_baton_t *rb,
                                   apr_pool_t *pool)
 {
@@ -699,7 +699,7 @@ static svn_error_t * commit_open_root(void *edit_baton,
 {
   commit_ctx_t *cc = edit_baton;
   resource_baton_t *root;
-  resource_t *rsrc;
+  version_rsrc_t *rsrc;
 
   /* create the root resource. no wr_url (yet). */
   rsrc = apr_pcalloc(dir_pool, sizeof(*rsrc));
@@ -957,7 +957,7 @@ static svn_error_t * commit_add_dir(const char *path,
   int code;
   const char *name = svn_path_basename(path, dir_pool);
   apr_pool_t *workpool = svn_pool_create(dir_pool);
-  resource_t *rsrc = NULL;
+  version_rsrc_t *rsrc = NULL;
 
   /* check out the parent resource so that we can create the new collection
      as one of its children. */
@@ -1054,7 +1054,7 @@ static svn_error_t * commit_open_dir(const char *path,
   resource_baton_t *child = apr_pcalloc(dir_pool, sizeof(*child));
   const char *name = svn_path_basename(path, dir_pool);
   apr_pool_t *workpool = svn_pool_create(dir_pool);
-  resource_t *rsrc = NULL;
+  version_rsrc_t *rsrc = NULL;
 
   child->pool = dir_pool;
   child->cc = parent->cc;
@@ -1121,7 +1121,7 @@ static svn_error_t * commit_add_file(const char *path,
   resource_baton_t *file;
   const char *name = svn_path_basename(path, file_pool);
   apr_pool_t *workpool = svn_pool_create(file_pool);
-  resource_t *rsrc = NULL;
+  version_rsrc_t *rsrc = NULL;
 
   /*
   ** To add a new file into the repository, we CHECKOUT the parent
@@ -1269,7 +1269,7 @@ static svn_error_t * commit_open_file(const char *path,
   resource_baton_t *file;
   const char *name = svn_path_basename(path, file_pool);
   apr_pool_t *workpool = svn_pool_create(file_pool);
-  resource_t *rsrc = NULL;
+  version_rsrc_t *rsrc = NULL;
 
   file = apr_pcalloc(file_pool, sizeof(*file));
   file->pool = file_pool;
@@ -1497,7 +1497,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
 {
   const svn_string_t *vcc;
   const svn_string_t *baseline_url;
-  resource_t baseline_rsrc = { SVN_INVALID_REVNUM };
+  version_rsrc_t baseline_rsrc = { SVN_INVALID_REVNUM };
   ne_proppatch_operation po[2] = { { 0 } };
   int rv;
   svn_stringbuf_t *xml_data;

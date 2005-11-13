@@ -3140,18 +3140,35 @@ svn_wc_create_tmp_file (apr_file_t **fp,
  * This function is generally used to get a file that can be compared
  * meaningfully against @a vfile's text base.
  *
- * If @a *xlated_p is different from @a vfile, then choose @a *xlated_p's 
- * name using svn_io_open_unique_file() with @c SVN_WC__TMP_EXT, and 
+ * If @a *xlated_p is different from @a vfile, then choose @a *xlated_p's
+ * name using svn_io_open_unique_file() with @c SVN_WC__TMP_EXT, and
  * allocate it in @a pool.  Also use @a pool for any temporary allocation.
  *
+ * If @a del_temp_on_pool_cleanup is true, a pool cleanup handler is
+ * registered on *xlated_p if it points to a temporary file.
+ *
  * If an error is returned, the effect on @a *xlated_p is undefined.
+ *
+ * @since New in 1.4
+ */
+svn_error_t *svn_wc_translated_file2 (const char **xlated_p,
+                                      const char *vfile,
+                                      svn_wc_adm_access_t *adm_access,
+                                      svn_boolean_t force_repair,
+                                      svn_boolean_t del_temp_on_pool_cleanup,
+                                      apr_pool_t *pool);
+
+
+/** Same as svn_wc_translated_file2, but will never clean up
+ * temporary files.
+ *
+ * @deprecated Provided for compatibility with the 1.3 API
  */
 svn_error_t *svn_wc_translated_file (const char **xlated_p,
                                      const char *vfile,
                                      svn_wc_adm_access_t *adm_access,
                                      svn_boolean_t force_repair,
                                      apr_pool_t *pool);
-
 
 
 /* Text/Prop Deltas Using an Editor */

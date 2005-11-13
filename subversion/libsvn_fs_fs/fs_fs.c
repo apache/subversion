@@ -35,7 +35,6 @@
 #include "svn_hash.h"
 #include "svn_md5.h"
 #include "svn_sorts.h"
-#include "../libsvn_delta/delta.h"
 
 #include "fs.h"
 #include "err.h"
@@ -1175,8 +1174,8 @@ svn_fs_fs__set_revision_proplist (svn_fs_t *fs,
   const char *tmp_path;
   apr_file_t *f;
 
-  SVN_ERR (svn_io_open_unique_file
-           (&f, &tmp_path, final_path, ".tmp", FALSE, pool));
+  SVN_ERR (svn_io_open_unique_file2
+           (&f, &tmp_path, final_path, ".tmp", svn_io_file_del_none, pool));
   SVN_ERR (svn_hash_write (proplist, f, pool));
   SVN_ERR (svn_io_file_close (f, pool));
   /* We use the rev file of this revision as the perms reference,
@@ -1451,7 +1450,7 @@ get_combined_window (svn_txdelta_window_t **result,
       /* Combine this window with the current one.  Cycles pools so that we
          only need to hold three windows at a time. */
       new_pool = svn_pool_create (rb->pool);
-      window = svn_txdelta__compose_windows (nwin, window, new_pool);
+      window = svn_txdelta_compose_windows (nwin, window, new_pool);
       svn_pool_destroy (pool);
       pool = new_pool;
     }
@@ -1573,8 +1572,8 @@ get_contents (struct rep_read_baton *rb,
               /* Apply lwindow to source. */
               tlen = lwindow->tview_len;
               tbuf = apr_palloc (rb->pool, tlen);
-              svn_txdelta__apply_instructions (lwindow, sbuf, tbuf,
-                                               &tlen);
+              svn_txdelta_apply_instructions (lwindow, sbuf, tbuf,
+                                              &tlen);
               if (tlen != lwindow->tview_len)
                 return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                                          _("svndiff window length is "
@@ -1590,8 +1589,8 @@ get_contents (struct rep_read_baton *rb,
             {
               rb->buf_len = cwindow->tview_len;
               rb->buf = apr_palloc (rb->pool, rb->buf_len);
-              svn_txdelta__apply_instructions (cwindow, sbuf, rb->buf,
-                                               &rb->buf_len);
+              svn_txdelta_apply_instructions (cwindow, sbuf, rb->buf,
+                                              &rb->buf_len);
               if (rb->buf_len != cwindow->tview_len)
                 return svn_error_create (SVN_ERR_FS_CORRUPT, NULL,
                                          _("svndiff window length is "
@@ -3689,8 +3688,8 @@ write_final_current (svn_fs_t *fs,
                       new_copy_id);
 
   name = path_current (fs, pool);
-  SVN_ERR (svn_io_open_unique_file (&file, &tmp_name, name, ".tmp", FALSE,
-                                    pool));
+  SVN_ERR (svn_io_open_unique_file2 (&file, &tmp_name, name, ".tmp",
+                                     svn_io_file_del_none, pool));
 
   SVN_ERR (svn_io_file_write_full (file, buf, strlen (buf), NULL, pool));
 

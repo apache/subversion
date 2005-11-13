@@ -987,26 +987,6 @@ make_empty_adm (const char *path, apr_pool_t *pool)
 }
 
 
-/* Init an adm file with some contents. 
-   Don't call this until a tmp area exists in adm. */
-static svn_error_t *
-init_adm_file (const char *path,
-               const char *thing,
-               const char *contents,
-               apr_pool_t *pool)
-{
-  apr_file_t *f = NULL;
-
-  SVN_ERR (svn_wc__open_adm_file (&f, path, thing, 
-                                  APR_WRITE | APR_CREATE, pool));
-  SVN_ERR (svn_io_file_write_full (f, contents, 
-                                   strlen (contents), NULL, pool));
-  SVN_ERR (svn_wc__close_adm_file (f, path, thing, 1, pool));
-  
-  return SVN_NO_ERROR;
-}
-
-
 static svn_error_t *
 init_adm_tmp_area (svn_wc_adm_access_t *adm_access,
                    apr_pool_t *pool)
@@ -1055,13 +1035,6 @@ init_adm (const char *path,
   /* Default perms */
   apr_fileperms_t perms = APR_OS_DEFAULT;
 
-  /* Initial contents for certain adm files. */
-  const char *readme_contents =
-    "This is a Subversion working copy administrative directory."
-    APR_EOL_STR
-    "Visit http://subversion.tigris.org/ for more information."
-    APR_EOL_STR;
-
   /* First, make an empty administrative area. */
   make_empty_adm (path, pool);
 
@@ -1095,9 +1068,6 @@ init_adm (const char *path,
 
   /* SVN_WC__ADM_ENTRIES */
   SVN_ERR (svn_wc__entries_init (path, uuid, url, repos, initial_rev, pool));
-
-  /* SVN_WC__ADM_README */
-  SVN_ERR (init_adm_file (path, SVN_WC__ADM_README, readme_contents, pool));
 
   /* THIS FILE MUST BE CREATED LAST: 
      After this exists, the dir is considered complete. */

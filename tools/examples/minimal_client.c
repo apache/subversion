@@ -36,6 +36,7 @@
 
 
 #include "svn_client.h"
+#include "svn_cmdline.h"
 #include "svn_pools.h"
 #include "svn_config.h"
 #include "svn_fs.h"

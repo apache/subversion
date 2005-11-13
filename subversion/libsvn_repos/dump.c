@@ -140,9 +140,9 @@ store_delta (apr_file_t **tempfile, svn_filesize_t *len,
 
   /* Create a temporary file and open a stream to it. */
   SVN_ERR (svn_io_temp_dir (&tempdir, pool));
-  SVN_ERR (svn_io_open_unique_file (tempfile, NULL,
-                                    apr_psprintf (pool, "%s/dump", tempdir),
-                                    ".tmp", TRUE, pool));
+  SVN_ERR (svn_io_open_unique_file2 (tempfile, NULL,
+                                     apr_psprintf (pool, "%s/dump", tempdir),
+                                     ".tmp", svn_io_file_del_on_close, pool));
   temp_stream = svn_stream_from_aprfile (*tempfile, pool);
 
   /* Compute the delta and send it to the temporary file. */

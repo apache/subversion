@@ -180,8 +180,8 @@ write_digest_file (apr_hash_t *children,
   SVN_ERR (ensure_dir_exists (svn_path_join (fs->path, LOCK_ROOT_DIR, pool), 
                               fs, pool));
   SVN_ERR (ensure_dir_exists (svn_path_dirname (digest_path, pool), fs, pool));
-  SVN_ERR (svn_io_open_unique_file 
-           (&fd, &tmp_path, digest_path, ".tmp", FALSE, pool));
+  SVN_ERR (svn_io_open_unique_file2
+           (&fd, &tmp_path, digest_path, ".tmp", svn_io_file_del_none, pool));
 
   if (lock)
     {

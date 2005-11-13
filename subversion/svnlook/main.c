@@ -705,8 +705,8 @@ prepare_tmpfiles (const char **tmpfile1,
   apr_file_close (fh);
 
   /* The second file is constructed from the first one's path. */
-  SVN_ERR (svn_io_open_unique_file (&fh, tmpfile1, *tmpfile2, 
-                                    ".tmp", FALSE, pool));
+  SVN_ERR (svn_io_open_unique_file2 (&fh, tmpfile1, *tmpfile2,
+                                     ".tmp", svn_io_file_del_none, pool));
   if (root1)
     SVN_ERR (dump_contents (fh, root1, path1, pool));
   apr_file_close (fh);

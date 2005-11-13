@@ -230,25 +230,14 @@ svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
 {
   svn_boolean_t same;
   const char *tmp_vfile;
-  svn_error_t *err = SVN_NO_ERROR, *err2 = SVN_NO_ERROR;
 
-  SVN_ERR (svn_wc_translated_file (&tmp_vfile, versioned_file, adm_access,
-                                   TRUE, pool));
-  
-  err = svn_io_files_contents_same_p (&same, tmp_vfile, base_file, pool);
+  SVN_ERR (svn_wc_translated_file2 (&tmp_vfile, versioned_file, adm_access,
+                                    TRUE, TRUE, pool));
+
+  SVN_ERR (svn_io_files_contents_same_p (&same, tmp_vfile, base_file, pool));
   *modified_p = (! same);
-  
-  if (tmp_vfile != versioned_file)
-    err2 = svn_io_remove_file (tmp_vfile, pool);
 
-  if (err)
-    {
-      if (err2)
-        svn_error_compose (err, err2);
-      return err;
-    }
-
-  return err2;
+  return SVN_NO_ERROR;
 }
 
 
@@ -269,14 +258,13 @@ compare_and_verify (svn_boolean_t *modified_p,
 
 {
   const char *tmp_vfile;
-  svn_error_t *err = SVN_NO_ERROR, *err2 = SVN_NO_ERROR;
   const svn_wc_entry_t *entry;
 
   SVN_ERR (svn_wc_entry (&entry, versioned_file, adm_access, TRUE, pool));
 
 
-  SVN_ERR (svn_wc_translated_file (&tmp_vfile, versioned_file, adm_access,
-                                   TRUE, pool));
+  SVN_ERR (svn_wc_translated_file2 (&tmp_vfile, versioned_file, adm_access,
+                                    TRUE, TRUE, pool));
 
   /* Compare the files, while maybe calculating the base file's checksum. */
   {
@@ -360,18 +348,8 @@ compare_and_verify (svn_boolean_t *modified_p,
 
     *modified_p = ! identical;
   }
-  
-  if (tmp_vfile != versioned_file)
-    err2 = svn_io_remove_file (tmp_vfile, pool);
 
-  if (err)
-    {
-      if (err2)
-        svn_error_compose (err, err2);
-      return err;
-    }
-
-  return err2;
+  return SVN_NO_ERROR;
 }
 
 

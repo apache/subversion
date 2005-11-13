@@ -1,4 +1,4 @@
-# XML RELAX NG for Subversion command-line client output
+# XML RELAX NG schema for Subversion command-line client output
 # For "svn list"
 
 include "common.rnc"
