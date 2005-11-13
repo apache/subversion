@@ -88,6 +88,9 @@ send_file_contents (const char *path,
   apr_file_t *f;
   const svn_string_t *eol_style_val = NULL, *keywords_val = NULL;
   svn_boolean_t special = FALSE;
+  svn_subst_eol_style_t eol_style;
+  const char *eol;
+  apr_hash_t *keywords;
 
   /* If there are properties, look for EOL-style and keywords ones. */
   if (properties)
@@ -104,12 +107,24 @@ send_file_contents (const char *path,
   SVN_ERR (editor->apply_textdelta (file_baton, NULL, pool,
                                     &handler, &handler_baton));
 
-  /* If we have EOL styles or keywords to de-translate, do it.  Any
-     EOL style gets translated to "\n", the repository-normal format.
-     Keywords get unexpanded.  */
-  if (eol_style_val || keywords_val || special)
+  if (eol_style_val)
+    svn_subst_eol_style_from_value (&eol_style, &eol, eol_style_val->data);
+  else
     {
-      apr_hash_t *keywords = NULL;
+      eol = NULL;
+      eol_style = svn_subst_eol_style_none;
+    }
+
+  if (keywords_val)
+    SVN_ERR (svn_subst_build_keywords2 (&keywords, keywords_val->data,
+                                        APR_STRINGIFY(SVN_INVALID_REVNUM),
+                                        "", 0, "", pool));
+  else
+    keywords = NULL;
+
+  /* If we have EOL styles or keywords to de-translate, do it.  */
+  if (svn_subst_translation_required (eol_style, eol, keywords, special, TRUE))
+    {
       const char *temp_dir;
 
       /* Now create a new tempfile, and open a stream to it. */
@@ -119,19 +134,8 @@ send_file_contents (const char *path,
                 svn_path_join (temp_dir, "svn-import", pool),
                 ".tmp", svn_io_file_del_on_pool_cleanup, pool));
 
-      /* Generate a keyword structure. */
-      if (keywords_val)
-        SVN_ERR (svn_subst_build_keywords2 (&keywords, keywords_val->data,
-                                            APR_STRINGIFY(SVN_INVALID_REVNUM),
-                                            "", 0, "", pool));
-
-      SVN_ERR (svn_subst_copy_and_translate3 (path, tmpfile_path,
-                                              eol_style_val ? "\n" : NULL,
-                                              FALSE,
-                                              keywords_val ? keywords : NULL,
-                                              FALSE,
-                                              special,
-                                              pool));
+      SVN_ERR (svn_subst_translate_to_normal_form
+               (path, tmpfile_path, eol_style, eol, keywords, special, pool));
     }
 
   /* Open our contents file, either the original path or the temporary
