@@ -54,7 +54,7 @@ typedef enum svn_subst_eol_style
 
 } svn_subst_eol_style_t;
 
-/** Set @a *style to the appropriate @c svn_subst_eol_style_t and @a *eol to 
+/** Set @a *style to the appropriate @c svn_subst_eol_style_t and @a *eol to
  * the appropriate cstring for a given svn:eol-style property value.
  *
  * Set @a *eol to
@@ -63,11 +63,11 @@ typedef enum svn_subst_eol_style
  *
  *    - a null-terminated C string containing the native eol marker
  *      for this platform, for @c svn_subst_eol_style_native, or
- *            
+ *
  *    - a null-terminated C string containing the eol marker indicated
  *      by the property value, for @c svn_subst_eol_style_fixed.
  *
- * If @a *style is @c NULL, then @a value was not a valid property value.
+ * If @a *style is NULL, it is ignored.
  */
 void
 svn_subst_eol_style_from_value (svn_subst_eol_style_t *style,
