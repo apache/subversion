@@ -58,7 +58,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2005-11-13 18:38+0100\n"
-"PO-Revision-Date: 2005-10-31 22:52+0100\n"
+"PO-Revision-Date: 2005-11-13 18:53+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1063,7 +1063,6 @@ msgstr ""
 "\n"
 
 #: clients/cmdline/main.c:498
-#, fuzzy
 msgid ""
 "Move and/or rename something in working copy or repository.\n"
 "usage: move SRC DST\n"
@@ -1081,6 +1080,7 @@ msgstr ""
 "\n"
 "  Merk: Dette er det samme som å bruke delkommandoene «copy» etterfulgt\n"
 "  av «delete».\n"
+"  Merk: «--revision»-valget er avlegs og brukes ikke.\n"
 "\n"
 "  Både KILDE og MÅL kan være filstier til arbeidskopi (AK) eller nett-\n"
 "  adresser:\n"
@@ -1546,13 +1546,12 @@ msgid "Argument to -c must be positive"
 msgstr "Argumentet til -c må være et positivt tall"
 
 #: clients/cmdline/main.c:962
-#, fuzzy
 msgid ""
 "Multiple revision arguments encountered; can't specify -r and -c, or try '-r "
 "N:M' instead of '-r N -r M'"
 msgstr ""
 "Flere revisjonsargumenter ble brukt; -r og -c kan ikke brukes samtidig, "
-"eller prøv «-r M:N» i stedet for «-r M -r N»"
+"eller prøv «-r N:M» i stedet for «-r N -r M»"
 
 #: clients/cmdline/main.c:975 svnadmin/main.c:1231
 #, c-format
@@ -1941,11 +1940,13 @@ msgstr ""
 "La inn revisjon %ld.\n"
 
 #: clients/cmdline/util.c:68
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "\n"
 "Warning: %s\n"
-msgstr "%sadvarsel: %s\n"
+msgstr ""
+"\n"
+"Advarsel: %s\n"
 
 #: clients/cmdline/util.c:136
 msgid ""
@@ -7412,11 +7413,10 @@ msgid "Removed lock on '%s'.\n"
 msgstr "Fjernet lås på «%s».\n"
 
 #: svnadmin/main.c:1217
-#, fuzzy
 msgid ""
 "Multiple revision arguments encountered; try '-r N:M' instead of '-r N -r M'"
 msgstr ""
-"Flere revisjonsargumenter ble brukt, prøv «-r M:N» i stedet for «-r M -r N»"
+"Flere revisjonsargumenter ble brukt, prøv «-r N:M» i stedet for «-r N -r M»"
 
 #: svnadmin/main.c:1322
 #, c-format
