@@ -2002,19 +2002,20 @@ merge_file (svn_stringbuf_t *log_accum,
          only involves propchanges, but that some of those props still
          require a retranslation of the working file. */
 
-      const char *tmptext = svn_wc__text_base_path (base_name, TRUE, pool);
+      const char *tmptext;
 
       /* A log command which copies and DEtranslates the working file
          to a tmp-text-base. */
-      SVN_ERR (svn_wc__loggy_copy (&log_accum, NULL, adm_access,
-                                   svn_wc__copy_detranslate,
-                                   base_name, tmptext, FALSE, pool));
+      SVN_ERR (svn_wc_translated_file2 (&tmptext, file_path, adm_access,
+                                        TRUE, FALSE, pool));
 
+      tmptext = svn_path_is_child (parent_dir, tmptext, pool);
       /* A log command that copies the tmp-text-base and REtranslates
          the tmp-text-base back to the working file. */
       SVN_ERR (svn_wc__loggy_copy (&log_accum, NULL, adm_access,
                                    svn_wc__copy_translate,
                                    tmptext, base_name, FALSE, pool));
+
     }
 
   /* Set the new revision and URL in the entry and clean up some other
