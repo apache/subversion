@@ -58,7 +58,7 @@ svn_wc_translated_file2 (const char **xlated_p,
   SVN_ERR (svn_wc__get_keywords (&keywords, vfile, adm_access, NULL, pool));
   SVN_ERR (svn_wc__get_special (&special, vfile, adm_access, pool));
 
-  if ((style == svn_subst_eol_style_none) && (! keywords) && (! special))
+  if (! svn_subst_translation_required (style, eol, keywords, special, TRUE))
     {
       /* Translation would be a no-op, so return the original file. */
       *xlated_p = vfile;
@@ -82,46 +82,8 @@ svn_wc_translated_file2 (const char **xlated_p,
                                          : svn_io_file_del_none,
                                          pool));
 
-      if (style == svn_subst_eol_style_fixed)
-        {
-          SVN_ERR (svn_subst_copy_and_translate3 (vfile,
-                                                  tmp_vfile,
-                                                  eol,
-                                                  TRUE,
-                                                  keywords,
-                                                  FALSE,
-                                                  special,
-                                                  pool));
-        }
-      else if (style == svn_subst_eol_style_native)
-        {
-          SVN_ERR (svn_subst_copy_and_translate3 (vfile,
-                                                  tmp_vfile,
-                                                  SVN_WC__DEFAULT_EOL_MARKER,
-                                                  force_repair,
-                                                  keywords,
-                                                  FALSE,
-                                                  special,
-                                                  pool));
-        }
-      else if (style == svn_subst_eol_style_none)
-        {
-          SVN_ERR (svn_subst_copy_and_translate3 (vfile,
-                                                  tmp_vfile,
-                                                  NULL,
-                                                  force_repair,
-                                                  keywords,
-                                                  FALSE,
-                                                  special,
-                                                  pool));
-        }
-      else
-        {
-          return svn_error_createf
-            (SVN_ERR_IO_UNKNOWN_EOL, NULL,
-             _("'%s' has unknown value for svn:eol-style property"),
-             svn_path_local_style (vfile, pool));
-        }
+      SVN_ERR (svn_subst_translate_to_normal_form
+               (vfile, tmp_vfile, style, eol, keywords, special, pool));
 
       *xlated_p = tmp_vfile;
     }
