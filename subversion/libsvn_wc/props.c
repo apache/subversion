@@ -2056,13 +2056,13 @@ svn_wc__has_special_property (apr_hash_t *props)
 }
 
 svn_boolean_t
-svn_wc__has_magic_property (apr_array_header_t *properties)
+svn_wc__has_magic_property (const apr_array_header_t *properties)
 {
   int i;
 
   for (i = 0; i < properties->nelts; i++)
     {
-      svn_prop_t *property = &APR_ARRAY_IDX (properties, i, svn_prop_t);
+      const svn_prop_t *property = &APR_ARRAY_IDX (properties, i, svn_prop_t);
 
       if (strcmp (property->name, SVN_PROP_EXECUTABLE) == 0
           || strcmp (property->name, SVN_PROP_KEYWORDS) == 0
