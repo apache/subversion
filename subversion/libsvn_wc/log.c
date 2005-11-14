@@ -270,7 +270,8 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
 
         if (translate_tgt != full_dest_path)
           {
-            SVN_ERR (svn_wc__prep_file_for_replacement (full_dest_path, pool));
+            SVN_ERR (svn_wc__prep_file_for_replacement (full_dest_path, TRUE,
+                                                        pool));
             SVN_ERR (svn_io_file_rename (translate_tgt, full_dest_path, pool));
           }
 
