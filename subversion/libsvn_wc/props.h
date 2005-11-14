@@ -159,6 +159,16 @@ svn_error_t *svn_wc__install_props (svn_stringbuf_t **log_accum,
                                     svn_boolean_t write_base_props,
                                     apr_pool_t *pool);
 
+/* Load the base and working props for NAME in ADM_ACCESS returning them
+   in *BASE_PROPS_P and *PROPS_P, respectively.  BASE_PROPS or PROPS may be null.
+   Do all allocations in POOL.  */
+svn_error_t *
+svn_wc__load_props (apr_hash_t **base_props_p,
+                    apr_hash_t **props_p,
+                    svn_wc_adm_access_t *adm_access,
+                    const char *name,
+                    apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

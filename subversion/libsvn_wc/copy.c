@@ -135,7 +135,6 @@ copy_file_administratively (const char *src_path,
 {
   svn_node_kind_t dst_kind;
   const svn_wc_entry_t *src_entry, *dst_entry;
-  const char *src_wprop, *src_bprop;
 
   /* The 'dst_path' is simply dst_parent/dst_basename */
   const char *dst_path
@@ -184,12 +183,6 @@ copy_file_administratively (const char *src_path,
        svn_path_local_style (src_path, pool));
 
 
-  /* Discover the paths to the two source prop files */
-  SVN_ERR (svn_wc__prop_path (&src_wprop, src_path,
-                              src_entry->kind, FALSE, pool));
-  SVN_ERR (svn_wc__prop_base_path (&src_bprop, src_path,
-                                   src_entry->kind, FALSE, pool));
-
   /* Schedule the new file for addition in its parent, WITH HISTORY. */
   {
     char *copyfrom_url;
@@ -200,13 +193,9 @@ copy_file_administratively (const char *src_path,
     SVN_ERR (svn_wc_get_ancestry (&copyfrom_url, &copyfrom_rev,
                                   src_path, src_access, pool));
 
-    /* Load source base props. */
-    base_props = apr_hash_make (pool);
-    SVN_ERR (svn_wc__load_prop_file (src_bprop, base_props, pool));
-
-    /* Load source working props. */
-    props = apr_hash_make (pool);
-    SVN_ERR (svn_wc__load_prop_file (src_wprop, props, pool));
+    /* Load source base and working props. */
+    SVN_ERR (svn_wc__load_props (&base_props, &props, src_access,
+                                 src_entry->name, pool));
 
     /* Copy pristine text-base to temporary location. */
     SVN_ERR (svn_io_copy_file (src_txtb, tmp_txtb, TRUE, pool));

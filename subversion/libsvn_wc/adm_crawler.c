@@ -42,6 +42,7 @@
 #include "props.h"
 #include "translate.h"
 #include "entries.h"
+#include "lock.h"
 
 #include "svn_private_config.h"
 
@@ -896,6 +897,11 @@ svn_wc_transmit_prop_deltas (const char *path,
   
   /* Get the right access baton for the job. */
   SVN_ERR (svn_wc_adm_probe_retrieve (&adm_access, adm_access, path, pool));
+
+  /* For an enough recent WC, we can have a really easy out. */
+  if (svn_wc__adm_wc_format (adm_access) > SVN_WC__NO_PROPCACHING_VERSION
+      && ! entry->prop_mods)
+    return SVN_NO_ERROR;
 
   /* First, get the prop_path from the original path */
   SVN_ERR (svn_wc__prop_path (&props, path, entry->kind, FALSE, pool));

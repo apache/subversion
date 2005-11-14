@@ -1118,7 +1118,7 @@ log_do_committed (struct log_runner *loggy,
      Also, we have to again decide which timestamp to use (see the
      text-time case above).  */
   {
-    const char *wf, *tmpf, *basef;
+    const char *tmpf, *basef;
 
     /* Get property file pathnames (not from the `tmp' area) depending
        on whether we're examining a file or THIS_DIR */
@@ -1127,11 +1127,6 @@ log_do_committed (struct log_runner *loggy,
        as loggy->adm_access->path, I think.  In which case we don't need the
        inline conditionals below... */
     
-    SVN_ERR (svn_wc__prop_path
-             (&wf,
-              is_this_dir
-              ? svn_wc_adm_access_path (loggy->adm_access) : full_path,
-              entry->kind , FALSE, pool));
     SVN_ERR (svn_wc__prop_base_path
              (&basef,
               is_this_dir
@@ -1284,6 +1279,24 @@ log_do_committed (struct log_runner *loggy,
       (pick_error_code (loggy), err,
        _("Error modifying entry of '%s'"), name);
   loggy->entries_modified = TRUE;
+
+  /* Remove the working props file if it exists.
+     This is done here, after resetting the prop_mods flag, since
+     the text-base install stuff above will need this file if
+     props_mod was set. */
+  {
+    const char *wf;
+    SVN_ERR (svn_wc__prop_path
+             (&wf,
+              is_this_dir
+              ? svn_wc_adm_access_path (loggy->adm_access) : full_path,
+              entry->kind, FALSE, pool));
+    if ((err = svn_io_remove_file (wf, pool))
+        && APR_STATUS_IS_ENOENT (err->apr_err))
+      svn_error_clear (err);
+    else if (err)
+      return err;
+  }
 
   /* If we aren't looking at "this dir" (meaning we are looking at a
      file), we are finished.  From here on out, it's all about a

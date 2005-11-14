@@ -1349,6 +1349,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
   apr_hash_t *modify_entry_atts = apr_hash_make (pool);
   svn_stringbuf_t *log_accum = svn_stringbuf_create ("", pool);
   const char *bprop, *rprop, *wprop; /* full paths */
+  apr_hash_t *baseprops;
   const char *adm_path = svn_wc_adm_access_path (adm_access);
 
   /* Build the full path of the thing we're reverting. */
@@ -1377,27 +1378,13 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
 
       /* Get the full list of property changes and see if any magic
          properties were changed. */
-      SVN_ERR (svn_wc_get_prop_diffs (&propchanges, NULL, fullpath,
+      SVN_ERR (svn_wc_get_prop_diffs (&propchanges, &baseprops, fullpath,
                                       adm_access, pool));
       
       /* Determine if any of the propchanges are the "magic" ones that
          might require changing the working file. */
       target_needs_retranslation = svn_wc__has_magic_property (propchanges);
   
-      /* There may be a base props file but no working props file, if
-         the mod was that the working file was `R'eplaced by a new
-         file with no props.
-
-         If there is a pristing property file, copy it out as the
-         working property file, else just remove the working property
-         file. */
-      SVN_ERR (svn_wc__loggy_copy (&log_accum, NULL,
-                                   adm_access, svn_wc__copy_normal,
-                                   bprop, wprop, TRUE, pool));
-
-      apr_hash_set (modify_entry_atts, SVN_WC__ENTRY_ATTR_PROP_MODS,
-                    APR_HASH_KEY_STRING, "false");
-      /* ### TODO: Update properties flags when we have such flags. */
     }
   else if (entry->schedule == svn_wc_schedule_replace)
     {
@@ -1413,14 +1400,14 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
          svn_wc_props_modified_p is deliberately ignoring the
          base-props; it's "no" answer simply means that there are no
          working props.  It's *still* possible that the base-props
-         exist, however, from the original replaced file.  If they do,
-         then we need to restore them. */
-      SVN_ERR (svn_wc__loggy_copy (&log_accum, &tgt_modified,
-                                   adm_access, svn_wc__copy_normal,
-                                   bprop, wprop, FALSE, pool));
+         exist, however, from the original replaced file.  */
+      baseprops = apr_hash_make (pool);
+      SVN_ERR (svn_wc__load_prop_file (rprop, baseprops, pool));
     }
 
-  /* ### TODO: Update props flags when we have them. */
+  if (modified_p || entry->schedule == svn_wc_schedule_replace)
+    SVN_ERR (svn_wc__install_props (&log_accum, adm_access, name, baseprops,
+                                    baseprops, FALSE, pool));
 
   if (entry->kind == svn_node_file)
     {
@@ -1430,7 +1417,7 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
       SVN_ERR (svn_io_check_path (fullpath, &kind, pool));
       base_thing = svn_wc__text_base_path (name, 0, pool);
 
-      /* Check for text base presense. */
+      /* Check for text base presence. */
       SVN_ERR (svn_io_check_path (svn_path_join(adm_path,
                                                 base_thing, pool),
                                   &disk_kind, pool));
