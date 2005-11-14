@@ -14,11 +14,14 @@ See <http://svn.haxx.se/dev/archive-2005-07/1380.shtml> for more information.
 * Consider caching presence of other props.
 
 * Implement WC format upgrading for the new format.
-  (Reconsider if we need another WC format bump.)
 
+* Require MD5 checksums on entries and include this in the WC format
+  bump. (dionisos)
+  NOTE: Done on this branch to avoid another wc format bump on trunk.
 * Consider keeping track of baseprops existence in entries file.
 
 * Consider storing baseprops (and maybe working props) in a single file
   per directory.
 
 * Investigate the use of svn_wc__has_props in the status code.
+
