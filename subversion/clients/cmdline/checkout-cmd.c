@@ -73,10 +73,8 @@ svn_cl__checkout (apr_getopt_t *os,
   SVN_ERR (svn_opt_args_to_target_array2 (&targets, os, 
                                           opt_state->targets, pool));
 
-  /* If there are no targets at all, then let's just give the user a
-     friendly help message, rather than silently exiting.  */
-  if (targets->nelts < 1)
-    return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
+  if (! targets->nelts)
+    return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
   /* Add a path if the user only specified URLs */
   local_dir = ((const char **) (targets->elts))[targets->nelts - 1];

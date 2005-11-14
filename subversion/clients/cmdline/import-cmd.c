@@ -78,7 +78,7 @@ svn_cl__import (apr_getopt_t *os,
 
   if (targets->nelts < 1)
     return svn_error_create
-      (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+      (SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
        _("Repository URL required when importing"));
   else if (targets->nelts > 2)
     return svn_error_create

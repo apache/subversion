@@ -445,8 +445,7 @@ svn_opt_parse_num_args (apr_array_header_t **args_p,
     {
       if (os->ind >= os->argc)
         {
-          return svn_error_create (SVN_ERR_CL_ARG_PARSING_ERROR, 
-                                   0, _("Too few arguments"));
+          return svn_error_create (SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
         }
       array_push_str (args, os->argv[os->ind++], pool);
     }
