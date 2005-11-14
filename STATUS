@@ -34,7 +34,7 @@ Candidate changes:
      Subclipse.
    Votes:
      +1: (non-binding): markphip
-     -1: dlr (mail to dev list pending)
+     -0: dlr
 
  * r17279
    Don't use recursive symbolic links in our build tree.
