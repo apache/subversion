@@ -237,6 +237,7 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
         apr_hash_t *keywords = NULL;
         const char *eol_str = NULL;
         svn_boolean_t special = FALSE;
+        const char *translate_tgt;
 
         if (! special_only)
           {
@@ -249,14 +250,29 @@ file_xfer_under_path (svn_wc_adm_access_t *adm_access,
         SVN_ERR (svn_wc__get_special (&special, full_dest_path, adm_access,
                                       pool));
 
+        if (strcmp (full_from_path, full_dest_path) == 0)
+          SVN_ERR (svn_io_open_unique_file2 (NULL, &translate_tgt,
+                                             full_from_path,
+                                             ".tmp",
+                                             svn_io_file_del_on_pool_cleanup,
+                                             pool));
+        else
+          translate_tgt = full_dest_path;
+
         SVN_ERR (svn_subst_copy_and_translate3 (full_from_path,
-                                                full_dest_path,
+                                                translate_tgt,
                                                 eol_str,
                                                 TRUE,
                                                 keywords,
                                                 TRUE,
                                                 special,
                                                 pool));
+
+        if (translate_tgt != full_dest_path)
+          {
+            SVN_ERR (svn_wc__prep_file_for_replacement (full_dest_path, pool));
+            SVN_ERR (svn_io_file_rename (translate_tgt, full_dest_path, pool));
+          }
 
         SVN_ERR (svn_wc__maybe_set_read_only (NULL, full_dest_path,
                                               adm_access, pool));
