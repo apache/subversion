@@ -42,7 +42,7 @@ Candidate changes:
      Recursive symbolic links can cause issues with commonly used tools such
      as scp and python.
    Votes:
-     +1: djames
+     +1: djames, rooneg
 
 Approved changes:
 
