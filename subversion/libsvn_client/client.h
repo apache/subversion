@@ -118,7 +118,7 @@ svn_error_t *svn_client__prev_log_path (const char **prev_path_p,
    specify the point(s) of interest (typically the revisions referred
    to as the "operative range" for a given operation) along that history.
 
-   eND may be of kind svn_opt_revision_unspecified (in which case
+   END may be of kind svn_opt_revision_unspecified (in which case
    END_URL and END_REVISION are not touched by the function);
    START and REVISION may not.
 
