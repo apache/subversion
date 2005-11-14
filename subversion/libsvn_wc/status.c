@@ -372,8 +372,8 @@ assemble_status (svn_wc_status2_t **status,
           && (wc_special == path_special)
 #endif /* HAVE_SYMLINK */          
           )
-        SVN_ERR (svn_wc_text_modified_p (&text_modified_p, path, FALSE,
-                                         adm_access, pool));
+        SVN_ERR (svn_wc_text_modified_p2 (&text_modified_p, path, FALSE,
+                                          adm_access, TRUE, pool));
 
       if (text_modified_p)
         final_text_status = svn_wc_status_modified;

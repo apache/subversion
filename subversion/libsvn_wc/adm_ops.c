@@ -1458,8 +1458,8 @@ revert_admin_things (svn_wc_adm_access_t *adm_access,
            target_needs_retranslation, we don't need to check if
            the working file is modified
          */
-        SVN_ERR (svn_wc_text_modified_p (&modified_p, fullpath, FALSE,
-                                         adm_access, pool));
+        SVN_ERR (svn_wc_text_modified_p2 (&modified_p, fullpath, FALSE,
+                                          adm_access, FALSE, pool));
       if (modified_p || kind == svn_node_none || target_needs_retranslation)
         {
           /* If there are textual mods (or if the working file is
@@ -1839,8 +1839,8 @@ svn_wc_remove_from_revision_control (svn_wc_adm_access_t *adm_access,
       full_path = svn_path_join (full_path, name, pool);
 
       /* Check for local mods. before removing entry */
-      SVN_ERR (svn_wc_text_modified_p (&text_modified_p, full_path, 
-                                       FALSE, adm_access, pool));
+      SVN_ERR (svn_wc_text_modified_p2 (&text_modified_p, full_path,
+                                        FALSE, adm_access, TRUE, pool));
       if (text_modified_p && instant_error)
         return svn_error_createf (SVN_ERR_WC_LEFT_LOCAL_MOD, NULL,
                                   _("File '%s' has local modifications"),
