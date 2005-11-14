@@ -3,11 +3,6 @@ libsvn_wc performance for some operations.  Below are the items to be done
 during the lifetime of this branch.
 See <http://svn.haxx.se/dev/archive-2005-07/1380.shtml> for more information.
 
-* Get rid of props-time field in entries file. (lundblad)
-
-* Make sure there is no props file if no props are modified and no prop-base
-  if there are no props at all. (lundblad)
-
 * Make sure prop-mods flag work on copy (write test for it) after the
   install_file patch has been committed and merged from trunk. (lundblad)
 
@@ -25,3 +20,5 @@ See <http://svn.haxx.se/dev/archive-2005-07/1380.shtml> for more information.
 
 * Consider storing baseprops (and maybe working props) in a single file
   per directory.
+
+* Investigate the use of svn_wc__has_props in the status code.
