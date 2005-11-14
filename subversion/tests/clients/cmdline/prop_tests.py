@@ -1112,19 +1112,36 @@ def removal_schedule_added_props(sbox):
 
   wc_dir = sbox.wc_dir
   newfile_path = os.path.join(wc_dir, 'newfile')
-  
+  file_add_output = ("A         svn-test-work/working_copies/"
+                     "prop_tests-16/newfile")
+  propset_output = ("property 'newprop' set on 'svn-test-work/"
+                    "working_copies/prop_tests-16/newfile")
+  file_rm_output = ("D         svn-test-work/working_copies/"
+                    "prop_tests-16/newfile")
+  propls_output = [ 
+     "Properties on 'svn-test-work/working_copies/prop_tests-16/newfile':\n",
+     "  newprop : newvalue\n",
+                  ]
+   
   # create new fs file
-  svntest.main.file_append(newfile_path, "")
-  svntest.main.run_svn(None, 'add', newfile_path)
-  svntest.main.run_svn(None, 'propset', 'newprop', 'newvalue', newfile_path)
-  svntest.main.run_svn(None, 'rm', '--force', newfile_path)
+  open(newfile_path, 'w').close()
+  # Add it and set a property
+  svntest.actions.run_and_verify_svn(None, file_add_output, [], 'add', newfile_path)
+  svntest.actions.run_and_verify_svn(None, propset_output, [], 'propset',
+                                     'newprop', 'newvalue', newfile_path)
+  svntest.actions.run_and_verify_svn(None, propls_output, [],
+                                     'proplist', '-v', newfile_path)
+  # remove the file
+  svntest.actions.run_and_verify_svn(None, file_rm_output, [],
+                                     'rm', '--force', newfile_path)
   # recreate the file and add it again
-  svntest.main.file_append(newfile_path, "")
-  svntest.main.run_svn(None, 'add', newfile_path)
+  open(newfile_path, 'w').close()
+  svntest.actions.run_and_verify_svn(None, file_add_output, [], 'add', newfile_path)
 
-  # check the properties
+  # Now there should be NO properties leftover...
   svntest.actions.run_and_verify_svn(None, [], [],
                                      'proplist', '-v', newfile_path)
+
 
 
 ########################################################################
