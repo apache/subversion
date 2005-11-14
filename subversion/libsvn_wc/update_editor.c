@@ -1276,28 +1276,14 @@ close_directory (void *dir_baton,
                 }
             }
 
-          {
-            apr_hash_t *old_pristine_props;
-            const char *pristine_prop_path;
-
-            /* Get the current pristine props. */
-            old_pristine_props = apr_hash_make (db->pool);
-            SVN_ERR (svn_wc__prop_base_path (&pristine_prop_path,
-                                             db->path, svn_node_dir,
-                                             FALSE, db->pool));
-            SVN_ERR (svn_wc__load_prop_file (pristine_prop_path,
-                                             old_pristine_props, db->pool));
-
-            /* Merge pending properties into temporary files (ignoring
-               conflicts). */
-            SVN_ERR_W (svn_wc__merge_props (&prop_state,
-                                            adm_access, NULL,
-                                            old_pristine_props,
-                                            regular_props, TRUE, FALSE,
-                                            db->pool, &entry_accum),
-                       _("Couldn't do property merge"));
-          }
-
+          /* Merge pending properties into temporary files (ignoring
+             conflicts). */
+          SVN_ERR_W (svn_wc__merge_props (&prop_state,
+                                          adm_access, NULL,
+                                          NULL /* use baseprops */,
+                                          regular_props, TRUE, FALSE,
+                                          db->pool, &entry_accum),
+                     _("Couldn't do property merge"));
         }
 
       SVN_ERR (accumulate_entry_props (entry_accum, NULL,
@@ -1723,23 +1709,12 @@ merge_props (svn_stringbuf_t *log_accum,
   /* Merge the 'regular' props into the existing working proplist. */
   if (regular_props)
     {
-      apr_hash_t *old_pristine_props;
-      const char *pristine_prop_path;
-
-      /* Get the current pristine props. */
-      old_pristine_props = apr_hash_make (pool);
-      SVN_ERR (svn_wc__prop_base_path (&pristine_prop_path,
-                                       file_path, svn_node_file,
-                                       FALSE, pool));
-      SVN_ERR (svn_wc__load_prop_file (pristine_prop_path,
-                                       old_pristine_props, pool));
-      
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
          props.  */
       SVN_ERR (svn_wc__merge_props (prop_state,
                                     adm_access, base_name,
-                                    old_pristine_props,
+                                    NULL /* use base props */,
                                     regular_props, TRUE, FALSE, pool,
                                     &log_accum));
     }

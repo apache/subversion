@@ -92,6 +92,9 @@ svn_error_t *svn_wc__save_prop_file (const char *propfile_path,
    SERVER_BASEPROPS, merge the changes into the working copy.
    Necessary log entries will be appended to ENTRY_ACCUM.
 
+   If SERVER_BASEPROPS is NULL than base props will be used as
+   PROPCHANGES base.
+
    If we are attempting to merge changes to a directory, simply pass
    ADM_ACCESS and NULL for NAME.
 

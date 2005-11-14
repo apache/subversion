@@ -605,7 +605,9 @@ svn_wc__merge_props (svn_wc_notify_state_t *state,
   /* Load the base & working property files into hashes */
   SVN_ERR (svn_wc__load_props (&base_props, &working_props,
                                adm_access, entryname, pool));
-  
+  if (!server_baseprops)
+    server_baseprops = base_props;
+
   if (state)
     {
       /* Start out assuming no conflicts.  Don't bother to examine
